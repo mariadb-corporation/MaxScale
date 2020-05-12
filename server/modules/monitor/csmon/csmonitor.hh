@@ -76,10 +76,6 @@ public:
     bool command_rollback(json_t** ppOutput, CsMonitorServer* pServer);
 #endif
 
-    using ResponseHandler = std::function<void(CsMonitorServer*,
-                                               const mxb::http::Response&,
-                                               json_t*)>;
-
 
 private:
     bool ready_to_run(json_t** ppOutput) const;

@@ -104,7 +104,7 @@ bool get_value(xmlNode* pNode,
 //static
 int64_t CsMonitorServer::Status::s_uptime = 1;
 
-CsMonitorServer::Config::Config(const http::Response& response)
+CsMonitorServer::Result::Result(const http::Response& response)
     : response(response)
 {
     if (response.is_success())
@@ -112,34 +112,7 @@ CsMonitorServer::Config::Config(const http::Response& response)
         json_error_t error;
         sJson.reset(json_loadb(response.body.c_str(), response.body.length(), 0, &error));
 
-        if (sJson)
-        {
-            json_t* pConfig = json_object_get(sJson.get(), cs::keys::CONFIG);
-            json_t* pTimestamp = json_object_get(sJson.get(), cs::keys::TIMESTAMP);
-
-            if (pConfig && pTimestamp)
-            {
-                const char* zXml = json_string_value(pConfig);
-                const char* zTimestamp = json_string_value(pTimestamp);
-
-                bool b1 = cs::from_string(zXml, &sXml);
-                bool b2 = cs::from_string(zTimestamp, &timestamp);
-
-                if (!b1 || !b2)
-                {
-                    MXS_ERROR("Could not convert '%s' and/or '%s' to actual values.",
-                              zXml, zTimestamp);
-                    mxb_assert(!true);
-                }
-            }
-            else
-            {
-                MXS_ERROR("Obtained config object does not have the keys '%s' and/or '%s': %s",
-                          cs::keys::CONFIG, cs::keys::TIMESTAMP, response.body.c_str());
-                mxb_assert(!true);
-            }
-        }
-        else
+        if (!sJson)
         {
             MXS_ERROR("Could not parse returned response '%s' as JSON: %s",
                       response.body.c_str(),
@@ -156,6 +129,38 @@ CsMonitorServer::Config::Config(const http::Response& response)
     {
         MXS_ERROR("Unexpected response from server: (%d) %s",
                   response.code, http::Response::to_string(response.code));
+    }
+}
+
+CsMonitorServer::Config::Config(const http::Response& response)
+    : Result(response)
+{
+    if (sJson)
+    {
+        json_t* pConfig = json_object_get(sJson.get(), cs::keys::CONFIG);
+        json_t* pTimestamp = json_object_get(sJson.get(), cs::keys::TIMESTAMP);
+
+        if (pConfig && pTimestamp)
+        {
+            const char* zXml = json_string_value(pConfig);
+            const char* zTimestamp = json_string_value(pTimestamp);
+
+            bool b1 = cs::from_string(zXml, &sXml);
+            bool b2 = cs::from_string(zTimestamp, &timestamp);
+
+            if (!b1 || !b2)
+            {
+                MXS_ERROR("Could not convert '%s' and/or '%s' to actual values.",
+                          zXml, zTimestamp);
+                mxb_assert(!true);
+            }
+        }
+        else
+        {
+            MXS_ERROR("Obtained config object does not have the keys '%s' and/or '%s': %s",
+                      cs::keys::CONFIG, cs::keys::TIMESTAMP, response.body.c_str());
+            mxb_assert(!true);
+        }
     }
 }
 
@@ -196,6 +201,55 @@ bool CsMonitorServer::Config::get_value(const char* zElement_name,
     return rv;
 }
 
+CsMonitorServer::Status::Status(const http::Response& response)
+    : Result(response)
+{
+    if (sJson)
+    {
+        json_t* pCluster_mode = json_object_get(sJson.get(), cs::keys::CLUSTER_MODE);
+        json_t* pDbrm_mode = json_object_get(sJson.get(), cs::keys::DBRM_MODE);
+        json_t* pDbroots = json_object_get(sJson.get(), cs::keys::DBROOTS);
+        json_t* pServices = json_object_get(sJson.get(), cs::keys::SERVICES);
+
+        if (pCluster_mode && pDbrm_mode && pDbroots && pServices)
+        {
+            const char* zCluster_mode = json_string_value(pCluster_mode);
+            const char* zDbrm_mode = json_string_value(pDbrm_mode);
+
+            bool b1 = cs::from_string(zCluster_mode, &cluster_mode);
+            bool b2 = cs::from_string(zDbrm_mode, &dbrm_mode);
+            bool b3 = cs::dbroots_from_array(pDbroots, &dbroots);
+            bool b4 = cs::services_from_array(pServices, &services);
+
+            if (!b1 || !b2 || !b3 || !b4)
+            {
+                MXS_ERROR("Could not convert values '%s' and/or '%s', and/or arrays '%s' and/or '%s' "
+                          "to actual values.",
+                          zCluster_mode, zDbrm_mode, cs::keys::DBROOTS, cs::keys::SERVICES);
+                mxb_assert(!true);
+            }
+        }
+        else
+        {
+            MXS_ERROR("Obtained status object does not have the keys '%s', '%s', '%s' or '%s: %s",
+                      cs::keys::CLUSTER_MODE,
+                      cs::keys::DBRM_MODE,
+                      cs::keys::DBROOTS,
+                      cs::keys::SERVICES,
+                      response.body.c_str());
+            mxb_assert(!true);
+        }
+    }
+}
+
+using Config = CsMonitorServer::Config;
+using Result = CsMonitorServer::Result;
+using Status = CsMonitorServer::Status;
+
+using Configs = CsMonitorServer::Configs;
+using Results = CsMonitorServer::Results;
+using Statuses = CsMonitorServer::Statuses;
+
 CsMonitorServer::CsMonitorServer(SERVER* pServer,
                                  const SharedSettings& shared,
                                  const CsConfig* pCs_config,
@@ -210,75 +264,11 @@ CsMonitorServer::~CsMonitorServer()
 {
 }
 
-CsMonitorServer::Config CsMonitorServer::fetch_config() const
+Config CsMonitorServer::fetch_config() const
 {
     http::Response response = http::get(create_url(cs::rest::CONFIG), m_http_config);
 
     return Config(response);
-}
-
-CsMonitorServer::Status::Status(const http::Response& response)
-    : response(response)
-{
-    if (response.is_success())
-    {
-        json_error_t error;
-        sJson.reset(json_loadb(response.body.c_str(), response.body.length(), 0, &error));
-
-        if (sJson)
-        {
-            json_t* pCluster_mode = json_object_get(sJson.get(), cs::keys::CLUSTER_MODE);
-            json_t* pDbrm_mode = json_object_get(sJson.get(), cs::keys::DBRM_MODE);
-            json_t* pDbroots = json_object_get(sJson.get(), cs::keys::DBROOTS);
-            json_t* pServices = json_object_get(sJson.get(), cs::keys::SERVICES);
-
-            if (pCluster_mode && pDbrm_mode && pDbroots && pServices)
-            {
-                const char* zCluster_mode = json_string_value(pCluster_mode);
-                const char* zDbrm_mode = json_string_value(pDbrm_mode);
-
-                bool b1 = cs::from_string(zCluster_mode, &cluster_mode);
-                bool b2 = cs::from_string(zDbrm_mode, &dbrm_mode);
-                bool b3 = cs::dbroots_from_array(pDbroots, &dbroots);
-                bool b4 = cs::services_from_array(pServices, &services);
-
-                if (!b1 || !b2 || !b3 || !b4)
-                {
-                    MXS_ERROR("Could not convert values '%s' and/or '%s', and/or arrays '%s' and/or '%s' "
-                              "to actual values.",
-                              zCluster_mode, zDbrm_mode, cs::keys::DBROOTS, cs::keys::SERVICES);
-                    mxb_assert(!true);
-                }
-            }
-            else
-            {
-                MXS_ERROR("Obtained status object does not have the keys '%s', '%s', '%s' or '%s: %s",
-                          cs::keys::CLUSTER_MODE,
-                          cs::keys::DBRM_MODE,
-                          cs::keys::DBROOTS,
-                          cs::keys::SERVICES,
-                          response.body.c_str());
-                mxb_assert(!true);
-            }
-        }
-        else
-        {
-            MXS_ERROR("Could not parse returned response '%s' as JSON: %s",
-                      response.body.c_str(),
-                      error.text);
-            mxb_assert(!true);
-        }
-    }
-    else if (response.is_error())
-    {
-        MXS_ERROR("REST-API call failed: (%d) %s",
-                  response.code, http::Response::to_string(response.code));
-    }
-    else
-    {
-        MXS_ERROR("Unexpected response from server: (%d) %s",
-                  response.code, http::Response::to_string(response.code));
-    }
 }
 
 bool CsMonitorServer::update_state(const Config& config, json_t* pOutput)
@@ -314,7 +304,7 @@ bool CsMonitorServer::update_state(const Config& config, json_t* pOutput)
     return rv;
 }
 
-CsMonitorServer::Status CsMonitorServer::fetch_status() const
+Status CsMonitorServer::fetch_status() const
 {
     http::Response response = http::get(create_url(cs::rest::STATUS), m_http_config);
 
@@ -338,7 +328,7 @@ string begin_body(const std::chrono::seconds& timeout, const std::string& id)
 
 }
 
-http::Response CsMonitorServer::begin(const std::chrono::seconds& timeout, const std::string& id)
+Result CsMonitorServer::begin(const std::chrono::seconds& timeout, const std::string& id)
 {
     if (m_trx_state != TRX_INACTIVE)
     {
@@ -353,10 +343,10 @@ http::Response CsMonitorServer::begin(const std::chrono::seconds& timeout, const
         m_trx_state = TRX_ACTIVE;
     }
 
-    return response;
+    return Result(response);
 }
 
-http::Response CsMonitorServer::commit()
+Result CsMonitorServer::commit()
 {
     if (m_trx_state != TRX_ACTIVE)
     {
@@ -369,10 +359,10 @@ http::Response CsMonitorServer::commit()
     // Whatever the response, we consider a transaction as not being active.
     m_trx_state = TRX_INACTIVE;
 
-    return response;
+    return Result(response);
 }
 
-http::Response CsMonitorServer::rollback()
+Result CsMonitorServer::rollback()
 {
     // Always ok to send a rollback.
     http::Response response = http::put(create_url(cs::rest::ROLLBACK), "{}", m_http_config);
@@ -380,7 +370,7 @@ http::Response CsMonitorServer::rollback()
     // Whatever the response, we consider a transaction as not being active.
     m_trx_state = TRX_INACTIVE;
 
-    return response;
+    return Result(response);
 }
 
 bool CsMonitorServer::set_mode(cs::ClusterMode mode, json_t** ppError)
@@ -477,8 +467,8 @@ bool CsMonitorServer::fetch_statuses(const std::vector<CsMonitorServer*>& server
 }
 
 //static
-CsMonitorServer::Configs CsMonitorServer::fetch_configs(const std::vector<CsMonitorServer*>& servers,
-                                                        const http::Config& http_config)
+Configs CsMonitorServer::fetch_configs(const std::vector<CsMonitorServer*>& servers,
+                                       const http::Config& http_config)
 {
     Configs rv;
     fetch_configs(servers, http_config, &rv);
@@ -518,7 +508,7 @@ bool CsMonitorServer::begin(const std::vector<CsMonitorServer*>& servers,
                             const std::chrono::seconds& timeout,
                             const std::string& id,
                             const http::Config& http_config,
-                            http::Responses* pResponses)
+                            Results* pResults)
 {
     auto it = std::find_if(servers.begin(), servers.end(), [](const CsMonitorServer* pServer) {
             return pServer->in_trx();
@@ -542,6 +532,8 @@ bool CsMonitorServer::begin(const std::vector<CsMonitorServer*>& servers,
     auto end = servers.end();
     auto jt = responses.begin();
 
+    pResults->clear();
+
     while (it != end)
     {
         auto* pServer = *it;
@@ -559,30 +551,30 @@ bool CsMonitorServer::begin(const std::vector<CsMonitorServer*>& servers,
             pServer->m_trx_state = TRX_INACTIVE;
         }
 
+        pResults->emplace_back(response);
+
         ++it;
         ++jt;
     }
-
-    pResponses->swap(responses);
 
     return rv;
 }
 
 //static
-http::Responses CsMonitorServer::begin(const std::vector<CsMonitorServer*>& servers,
-                                       const std::chrono::seconds& timeout,
-                                       const std::string& id,
-                                       const http::Config& http_config)
+Results CsMonitorServer::begin(const std::vector<CsMonitorServer*>& servers,
+                               const std::chrono::seconds& timeout,
+                               const std::string& id,
+                               const http::Config& http_config)
 {
-    Responses responses;
-    begin(servers, timeout, id, http_config, &responses);
-    return responses;
+    Results results;
+    begin(servers, timeout, id, http_config, &results);
+    return results;
 }
 
 //static
 bool CsMonitorServer::commit(const std::vector<CsMonitorServer*>& servers,
                              const http::Config& http_config,
-                             Responses* pResponses)
+                             Results* pResults)
 {
     auto it = std::find_if(servers.begin(), servers.end(), [](const CsMonitorServer* pServer) {
             return !pServer->in_trx();
@@ -606,6 +598,8 @@ bool CsMonitorServer::commit(const std::vector<CsMonitorServer*>& servers,
     auto end = servers.end();
     auto jt = responses.begin();
 
+    pResults->clear();
+
     while (it != end)
     {
         auto* pServer = *it;
@@ -620,52 +614,58 @@ bool CsMonitorServer::commit(const std::vector<CsMonitorServer*>& servers,
 
         pServer->m_trx_state = TRX_INACTIVE;
 
+        pResults->emplace_back(response);
+
         ++it;
         ++jt;
     }
-
-    pResponses->swap(responses);
 
     return rv;
 }
 
 //statis
-http::Responses CsMonitorServer::commit(const std::vector<CsMonitorServer*>& servers,
-                                        const http::Config& http_config)
+Results CsMonitorServer::commit(const std::vector<CsMonitorServer*>& servers,
+                                const http::Config& http_config)
 {
-    Responses responses;
-    commit(servers, http_config, &responses);
-    return responses;
+    Results results;
+    commit(servers, http_config, &results);
+    return results;
 }
 
 //static
 bool CsMonitorServer::ping(const std::vector<CsMonitorServer*>& servers,
                            const mxb::http::Config& http_config,
-                           Responses* pResponses)
+                           Results* pResults)
 {
+    bool rv = true;
     vector<string> urls = create_urls(servers, cs::rest::PING);
     http::Responses responses = http::get(urls, http_config);
 
-    bool rv = std::all_of(responses.begin(), responses.end(), std::mem_fun_ref(&http::Response::is_success));
-
-    pResponses->swap(responses);
+    pResults->clear();
+    transform(responses.begin(), responses.end(), back_inserter(*pResults), [&rv](const auto& response) {
+            if (!response.is_success())
+            {
+                rv = false;
+            }
+            return Result(response);
+        });
 
     return rv;
 }
 
 //static
-http::Responses CsMonitorServer::ping(const std::vector<CsMonitorServer*>& servers,
-                                      const mxb::http::Config& config)
+Results CsMonitorServer::ping(const std::vector<CsMonitorServer*>& servers,
+                              const mxb::http::Config& config)
 {
-    Responses responses;
-    ping(servers, config, &responses);
-    return responses;
+    Results results;
+    ping(servers, config, &results);
+    return results;
 }
 
 //static
 bool CsMonitorServer::rollback(const std::vector<CsMonitorServer*>& servers,
                                const http::Config& http_config,
-                               Responses* pResponses)
+                               Results* pResults)
 {
     auto it = std::find_if(servers.begin(), servers.end(), [](const CsMonitorServer* pServer) {
             return !pServer->in_trx();
@@ -689,6 +689,8 @@ bool CsMonitorServer::rollback(const std::vector<CsMonitorServer*>& servers,
     auto end = servers.end();
     auto jt = responses.begin();
 
+    pResults->clear();
+
     while (it != end)
     {
         auto* pServer = *it;
@@ -703,31 +705,42 @@ bool CsMonitorServer::rollback(const std::vector<CsMonitorServer*>& servers,
 
         pServer->m_trx_state = TRX_INACTIVE;
 
+        pResults->push_back(Result(response));
         ++it;
         ++jt;
     }
-
-    pResponses->swap(responses);
 
     return rv;
 }
 
 //static
-http::Responses CsMonitorServer::rollback(const std::vector<CsMonitorServer*>& servers,
-                                          const http::Config& http_config)
+Results CsMonitorServer::rollback(const std::vector<CsMonitorServer*>& servers,
+                                             const http::Config& http_config)
 {
-    Responses responses;
-    rollback(servers, http_config, &responses);
-    return responses;
+    Results results;
+    rollback(servers, http_config, &results);
+    return results;
 }
 
 //static
-http::Responses CsMonitorServer::shutdown(const std::vector<CsMonitorServer*>& servers,
-                                          const std::chrono::seconds& timeout,
-                                          const http::Config& http_config)
+Results CsMonitorServer::shutdown(const std::vector<CsMonitorServer*>& servers,
+                                  const std::chrono::seconds& timeout,
+                                  const http::Config& http_config)
 {
-    string tail;
+    Results results;
+    shutdown(servers, timeout, http_config, &results);
+    return results;
+}
 
+//static
+bool CsMonitorServer::shutdown(const std::vector<CsMonitorServer*>& servers,
+                               const std::chrono::seconds& timeout,
+                               const mxb::http::Config& http_config,
+                               Results* pResults)
+{
+    bool rv = true;
+
+    string tail;
     if (timeout.count() != 0)
     {
         tail += "timeout=";
@@ -739,43 +752,37 @@ http::Responses CsMonitorServer::shutdown(const std::vector<CsMonitorServer*>& s
 
     mxb_assert(urls.size() == responses.size());
 
-    return responses;
-}
-
-//static
-bool CsMonitorServer::shutdown(const std::vector<CsMonitorServer*>& servers,
-                               const std::chrono::seconds& timeout,
-                               const mxb::http::Config& http_config,
-                               Responses* pResponses)
-{
-    Responses responses = shutdown(servers, timeout, http_config);
-
-    bool rv = true;
+    pResults->clear();
 
     for (const auto& response : responses)
     {
         if (!response.is_success())
         {
             rv = false;
-            break;
         }
-    }
 
-    pResponses->swap(responses);
+        pResults->push_back(Result(response));
+    }
 
     return rv;
 }
 
 //static
-http::Responses CsMonitorServer::start(const std::vector<CsMonitorServer*>& servers,
-                                       const http::Config& http_config)
+Results CsMonitorServer::start(const std::vector<CsMonitorServer*>& servers,
+                               const http::Config& http_config)
 {
     vector<string> urls = create_urls(servers, cs::rest::START);
     vector<http::Response> responses = http::put(urls, "{}", http_config);
 
     mxb_assert(urls.size() == responses.size());
 
-    return responses;
+    Results results;
+    for (const auto& response : responses)
+    {
+        results.emplace_back(response);
+    }
+
+    return results;
 }
 
 //static
@@ -841,34 +848,35 @@ bool CsMonitorServer::set_mode(const std::vector<CsMonitorServer*>& servers,
 bool CsMonitorServer::set_config(const std::vector<CsMonitorServer*>& servers,
                                  const std::string& body,
                                  const mxb::http::Config& http_config,
-                                 Responses* pResponses)
+                                 Results* pResults)
 {
-    Responses responses = set_config(servers, body, http_config);
-
     bool rv = true;
 
+    vector<string> urls = create_urls(servers, cs::rest::CONFIG);
+    vector<http::Response> responses = http::put(urls, body, http_config);
+
+    pResults->clear();
     for (const auto& response : responses)
     {
         if (!response.is_success())
         {
             rv = false;
-            break;
         }
-    }
 
-    pResponses->swap(responses);
+        pResults->emplace_back(response);
+    }
 
     return rv;
 }
 
 //static
-http::Responses CsMonitorServer::set_config(const std::vector<CsMonitorServer*>& servers,
-                                            const std::string& body,
-                                            const mxb::http::Config& http_config)
+Results CsMonitorServer::set_config(const std::vector<CsMonitorServer*>& servers,
+                                    const std::string& body,
+                                    const mxb::http::Config& http_config)
 {
-    vector<string> urls = create_urls(servers, cs::rest::CONFIG);
-
-    return http::put(urls, body, http_config);
+    Results results;
+    set_config(servers, body, http_config, &results);
+    return results;
 }
 
 string CsMonitorServer::create_url(cs::rest::Action action, const std::string& tail) const

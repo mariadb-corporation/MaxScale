@@ -30,6 +30,14 @@ using std::vector;
 using maxscale::MonitorServer;
 namespace http = mxb::http;
 
+using Config = CsMonitorServer::Config;
+using Result = CsMonitorServer::Result;
+using Status = CsMonitorServer::Status;
+
+using Configs = CsMonitorServer::Configs;
+using Results = CsMonitorServer::Results;
+using Statuses = CsMonitorServer::Statuses;
+
 namespace
 {
 
@@ -174,62 +182,6 @@ bool get_minor_version(const vector<CsMonitorServer*>& servers, cs::Version* pMi
     return rv;
 }
 
-json_t* create_response(const vector<CsMonitorServer*>& servers,
-                        const vector<http::Response>&     responses,
-                        CsMonitor::ResponseHandler      handler = nullptr)
-{
-    mxb_assert(servers.size() == responses.size());
-
-    json_t* pResponse = json_object();
-
-    auto it = servers.begin();
-    auto end = servers.end();
-    auto jt = responses.begin();
-
-    while (it != end)
-    {
-        auto* pServer = *it;
-        const auto& response = *jt;
-
-        if (handler)
-        {
-            handler(pServer, response, pResponse);
-        }
-        else
-        {
-            json_t* pResult = json_object();
-            json_object_set_new(pResult, "code", json_integer(response.code));
-            json_object_set_new(pResult, "message", json_string(response.body.c_str()));
-
-            json_object_set_new(pResponse, pServer->name(), pResult);
-        }
-
-        ++it;
-        ++jt;
-    }
-
-    return pResponse;
-}
-
-json_t* create_response(const vector<CsMonitorServer*>& servers,
-                        const http::Async&              async,
-                        CsMonitor::ResponseHandler      handler = nullptr)
-{
-    json_t* pResult = nullptr;
-
-    if (async.status() == http::Async::ERROR)
-    {
-        LOG_APPEND_JSON_ERROR(&pResult, "Fatal HTTP error.");
-    }
-    else
-    {
-        pResult = create_response(servers, async.responses(), handler);
-    }
-
-    return pResult;
-}
-
-
 vector<http::Response>::const_iterator find_first_failed(const vector<http::Response>& responses)
 {
     return std::find_if(responses.begin(), responses.end(), [](const http::Response& response) -> bool {
@@ -244,28 +196,13 @@ vector<http::Response>::iterator find_first_failed(vector<http::Response>& respo
         });
 }
 
-int code_from_result(const CsMonitorServer::Config& config)
-{
-    return config.response.code;
-}
-
-int code_from_result(const CsMonitorServer::Status& status)
-{
-    return status.response.code;
-}
-
-int code_from_result(const http::Response& response)
-{
-    return response.code;
-}
-
-json_t* result_to_json(const CsMonitorServer& server, const CsMonitorServer::Config& config)
+json_t* result_to_json(const CsMonitorServer& server, const CsMonitorServer::Result& result)
 {
     json_t* pResult = nullptr;
 
-    if (config.sJson)
+    if (result.sJson)
     {
-        pResult = config.sJson.get();
+        pResult = result.sJson.get();
         json_incref(pResult);
     }
 
@@ -289,37 +226,6 @@ json_t* result_to_json(const CsMonitorServer& server, const CsMonitorServer::Sta
     return pResult;
 }
 
-json_t* result_to_json(const CsMonitorServer& server, const http::Response& response)
-{
-    json_t* pResult = nullptr;
-
-    if (!response.body.empty())
-    {
-        json_error_t error;
-        pResult = json_loadb(response.body.c_str(), response.body.length(), 0, &error);
-
-        if (!pResult)
-        {
-            MXS_ERROR("Server '%s' returned '%s' that is not valid JSON: %s",
-                      server.name(), response.body.c_str(), error.text);
-        }
-    }
-
-    return pResult;
-}
-
-template<class T>
-inline bool is_ok(const T& t)
-{
-    return t.ok();
-}
-
-inline bool is_ok(const http::Response& response)
-{
-    return response.is_success();
-}
-
-
 template<class T>
 size_t results_to_json(const vector<CsMonitorServer*>& servers,
                        const vector<T>& results,
@@ -338,7 +244,7 @@ size_t results_to_json(const vector<CsMonitorServer*>& servers,
         auto* pServer = *it;
         const auto& result = *jt;
 
-        if (is_ok(result))
+        if (result.ok())
         {
             ++n;
         }
@@ -347,7 +253,7 @@ size_t results_to_json(const vector<CsMonitorServer*>& servers,
 
         json_t* pObject = json_object();
         json_object_set_new(pObject, "name", json_string(pServer->name()));
-        json_object_set_new(pObject, "code", json_integer(code_from_result(result)));
+        json_object_set_new(pObject, "code", json_integer(result.response.code));
         if (pResult)
         {
             json_object_set_new(pObject, "result", pResult);
@@ -1132,10 +1038,10 @@ void CsMonitor::cs_config_set(json_t** ppOutput, mxb::Semaphore* pSem,
         sv = servers();
     }
 
-    http::Responses responses = CsMonitorServer::set_config(sv, body, m_http_config);
+    Results results = CsMonitorServer::set_config(sv, body, m_http_config);
 
     json_t* pServers = nullptr;
-    size_t n = results_to_json(sv, responses, &pServers);
+    size_t n = results_to_json(sv, results, &pServers);
 
     if (n == servers().size())
     {
@@ -1201,10 +1107,10 @@ void CsMonitor::cs_ping(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer
         sv = servers();
     }
 
-    http::Responses responses = CsMonitorServer::ping(sv, m_http_config);
+    Results results = CsMonitorServer::ping(sv, m_http_config);
 
     json_t* pServers = nullptr;
-    size_t n = results_to_json(sv, responses, &pServers);
+    size_t n = results_to_json(sv, results, &pServers);
 
     if (n == servers().size())
     {
@@ -1240,8 +1146,8 @@ void CsMonitor::cs_remove_node(json_t** ppOutput,
 
     string trx_id = next_trx_id("remove-node");
 
-    http::Responses responses;
-    if (CsMonitorServer::begin(sv, timeout, trx_id, m_http_config, &responses))
+    Results results;
+    if (CsMonitorServer::begin(sv, timeout, trx_id, m_http_config, &results))
     {
         CsMonitorServer::Statuses statuses;
         if (CsMonitorServer::fetch_statuses(sv, m_http_config, &statuses))
@@ -1284,15 +1190,15 @@ void CsMonitor::cs_remove_node(json_t** ppOutput,
 
                     string body = create_remove_config(config, pRemove_server, force, is_critical);
 
-                    http::Responses responses;
-                    if (CsMonitorServer::set_config(sv, body, m_http_config, &responses))
+                    Results results;
+                    if (CsMonitorServer::set_config(sv, body, m_http_config, &results))
                     {
                         success = true;
                     }
                     else
                     {
                         LOG_APPEND_JSON_ERROR(&pOutput, "Could not send new config to all servers.");
-                        results_to_json(sv, responses, &pServers);
+                        results_to_json(sv, results, &pServers);
                     }
                 }
                 else
@@ -1315,17 +1221,17 @@ void CsMonitor::cs_remove_node(json_t** ppOutput,
     else
     {
         LOG_APPEND_JSON_ERROR(&pOutput, "Could not start a transaction on all nodes.");
-        results_to_json(sv, responses, &pServers);
+        results_to_json(sv, results, &pServers);
     }
 
     if (success)
     {
-        success = CsMonitorServer::commit(sv, m_http_config, &responses);
+        success = CsMonitorServer::commit(sv, m_http_config, &results);
 
         if (success)
         {
             std::chrono::seconds shutdown_timeout(0);
-            if (!CsMonitorServer::shutdown({pRemove_server}, shutdown_timeout, m_http_config, &responses))
+            if (!CsMonitorServer::shutdown({pRemove_server}, shutdown_timeout, m_http_config, &results))
             {
                 MXS_ERROR("Could not shutdown '%s'.", pRemove_server->name());
             }
@@ -1335,20 +1241,20 @@ void CsMonitor::cs_remove_node(json_t** ppOutput,
         else
         {
             LOG_APPEND_JSON_ERROR(&pOutput, "Could not commit changes, will attempt rollback.");
-            results_to_json(sv, responses, &pServers);
+            results_to_json(sv, results, &pServers);
         }
     }
 
     if (!success)
     {
-        if (!CsMonitorServer::rollback(sv, m_http_config, &responses))
+        if (!CsMonitorServer::rollback(sv, m_http_config, &results))
         {
             LOG_APPEND_JSON_ERROR(&pOutput, "Could not rollback changes, cluster state unknown.");
             if (pServers)
             {
                 json_decref(pServers);
             }
-            results_to_json(sv, responses, &pServers);
+            results_to_json(sv, results, &pServers);
         }
     }
 
@@ -1378,8 +1284,8 @@ void CsMonitor::cs_scan(json_t** ppOutput,
 
     string trx_id = next_trx_id("scan");
 
-    http::Responses responses;
-    if (CsMonitorServer::begin(sv, timeout, trx_id, m_http_config, &responses))
+    Results results;
+    if (CsMonitorServer::begin(sv, timeout, trx_id, m_http_config, &results))
     {
         auto status = pServer->fetch_status();
         if (status.ok())
@@ -1391,15 +1297,15 @@ void CsMonitor::cs_scan(json_t** ppOutput,
                 // TODO: Update roots in config accordingly.
                 string body = config.response.body;
 
-                http::Responses responses;
-                if (CsMonitorServer::set_config(sv, body, m_http_config, &responses))
+                Results results;
+                if (CsMonitorServer::set_config(sv, body, m_http_config, &results))
                 {
                     success = true;
                 }
                 else
                 {
                     LOG_APPEND_JSON_ERROR(&pOutput, "Could not set the configuration to all nodes.");
-                    results_to_json(sv, responses, &pServers);
+                    results_to_json(sv, results, &pServers);
                 }
             }
             else
@@ -1425,30 +1331,30 @@ void CsMonitor::cs_scan(json_t** ppOutput,
     else
     {
         LOG_APPEND_JSON_ERROR(&pOutput, "Could not start a transaction on all nodes.");
-        results_to_json(sv, responses, &pServers);
+        results_to_json(sv, results, &pServers);
     }
 
     if (success)
     {
-        success = CsMonitorServer::commit(sv, m_http_config, &responses);
+        success = CsMonitorServer::commit(sv, m_http_config, &results);
 
         if (!success)
         {
             LOG_APPEND_JSON_ERROR(ppOutput, "Could not commit changes, will attempt rollback.");
-            results_to_json(sv, responses, &pServers);
+            results_to_json(sv, results, &pServers);
         }
     }
 
     if (!success)
     {
-        if (!CsMonitorServer::rollback(sv, m_http_config, &responses))
+        if (!CsMonitorServer::rollback(sv, m_http_config, &results))
         {
             LOG_APPEND_JSON_ERROR(&pOutput, "Could not rollback changes, cluster state unknown.");
             if (pServers)
             {
                 json_decref(pServers);
             }
-            results_to_json(sv, responses, &pServers);
+            results_to_json(sv, results, &pServers);
         }
     }
 
@@ -1497,9 +1403,9 @@ void CsMonitor::cs_shutdown(json_t** ppOutput,
 
     if (success)
     {
-        vector<http::Response> responses = CsMonitorServer::shutdown(sv, timeout, m_http_config);
+        Results results = CsMonitorServer::shutdown(sv, timeout, m_http_config);
 
-        size_t n = results_to_json(sv, responses, &pServers);
+        size_t n = results_to_json(sv, results, &pServers);
 
         if (n == sv.size())
         {
@@ -1533,10 +1439,10 @@ void CsMonitor::cs_start(json_t** ppOutput, mxb::Semaphore* pSem)
 
     const ServerVector& sv = servers();
 
-    vector<http::Response> responses = CsMonitorServer::start(sv, m_http_config);
+    Results results = CsMonitorServer::start(sv, m_http_config);
 
     json_t* pServers = nullptr;
-    size_t n = results_to_json(sv, responses, &pServers);
+    size_t n = results_to_json(sv, results, &pServers);
 
     if (n == sv.size())
     {
@@ -1583,7 +1489,7 @@ void CsMonitor::cs_status(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServ
         sv = servers();
     }
 
-    CsMonitorServer::Statuses statuses = CsMonitorServer::fetch_statuses(sv, m_http_config);
+    Statuses statuses = CsMonitorServer::fetch_statuses(sv, m_http_config);
 
     json_t* pServers = nullptr;
     size_t n = results_to_json(sv, statuses, &pServers);
@@ -1630,10 +1536,10 @@ void CsMonitor::cs_begin(json_t** ppOutput,
     }
 
     string trx_id = next_trx_id("begin");
-    http::Responses responses = CsMonitorServer::begin(sv, timeout, trx_id, m_http_config);
+    Results results = CsMonitorServer::begin(sv, timeout, trx_id, m_http_config);
 
     json_t* pServers = nullptr;
-    size_t n = results_to_json(sv, responses, &pServers);
+    size_t n = results_to_json(sv, results, &pServers);
 
     if (n == sv.size())
     {
@@ -1671,10 +1577,10 @@ void CsMonitor::cs_commit(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServ
         sv = servers();
     }
 
-    http::Responses responses = CsMonitorServer::commit(sv, m_http_config);
+    Results results = CsMonitorServer::commit(sv, m_http_config);
 
     json_t* pServers = nullptr;
-    size_t n = results_to_json(sv, responses, &pServers);
+    size_t n = results_to_json(sv, results, &pServers);
 
     if (n == sv.size())
     {
@@ -1712,10 +1618,10 @@ void CsMonitor::cs_rollback(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorSe
         sv = servers();
     }
 
-    http::Responses responses = CsMonitorServer::rollback(sv, m_http_config);
+    Results results = CsMonitorServer::rollback(sv, m_http_config);
 
     json_t* pServers = nullptr;
-    size_t n = results_to_json(sv, responses, &pServers);
+    size_t n = results_to_json(sv, results, &pServers);
 
     if (n == sv.size())
     {
@@ -1747,9 +1653,9 @@ bool CsMonitor::cs_add_first_multi_node(json_t* pOutput,
 
     string trx_id = next_trx_id("add-node");
 
-    auto response = pServer->begin(timeout, trx_id);
+    auto result = pServer->begin(timeout, trx_id);
 
-    if (response.is_success())
+    if (result.ok())
     {
         const char* zTrx_id = trx_id.c_str();
         const char* zName = pServer->name();
@@ -1782,9 +1688,9 @@ bool CsMonitor::cs_add_first_multi_node(json_t* pOutput,
             {
                 MXS_NOTICE("%s: Updated config on '%s'.", zTrx_id, zName);
 
-                response = pServer->commit();
+                result = pServer->commit();
 
-                if (response.is_success())
+                if (result.ok())
                 {
                     MXS_NOTICE("%s: Committed changes on '%s'.", zTrx_id, zName);
                     success = true;
@@ -1793,7 +1699,7 @@ bool CsMonitor::cs_add_first_multi_node(json_t* pOutput,
                 {
                     LOG_APPEND_JSON_ERROR(&pOutput, "Could not commit changes to '%s': %s",
                                           pServer->name(),
-                                          response.body.c_str());
+                                          result.response.body.c_str());
                 }
             }
             else
@@ -1814,11 +1720,11 @@ bool CsMonitor::cs_add_first_multi_node(json_t* pOutput,
 
         if (!success)
         {
-            response = pServer->rollback();
+            result = pServer->rollback();
 
-            if (!response.is_success())
+            if (!result.ok())
             {
-                MXS_ERROR("Could not perform a rollback on '%s': %s", zName, response.body.c_str());
+                MXS_ERROR("Could not perform a rollback on '%s': %s", zName, result.response.body.c_str());
             }
         }
     }
@@ -1841,8 +1747,8 @@ bool CsMonitor::cs_add_additional_multi_node(json_t* pOutput,
 
     string trx_id = next_trx_id("add-node");
 
-    http::Responses responses;
-    if (CsMonitorServer::begin(sv, timeout, trx_id, m_http_config, &responses))
+    Results results;
+    if (CsMonitorServer::begin(sv, timeout, trx_id, m_http_config, &results))
     {
         auto status = pServer->fetch_status();
 
@@ -1877,14 +1783,14 @@ bool CsMonitor::cs_add_additional_multi_node(json_t* pOutput,
 
                 if (pServer->set_config(config.response.body, &pOutput))
                 {
-                    if (CsMonitorServer::set_config(sv, body, m_http_config, &responses))
+                    if (CsMonitorServer::set_config(sv, body, m_http_config, &results))
                     {
                         success = true;
                     }
                     else
                     {
                         LOG_APPEND_JSON_ERROR(&pOutput, "Could not update configs of existing nodes.");
-                        results_to_json(sv, responses, &pServers);
+                        results_to_json(sv, results, &pServers);
                     }
                 }
                 else
@@ -1910,30 +1816,30 @@ bool CsMonitor::cs_add_additional_multi_node(json_t* pOutput,
     else
     {
         LOG_APPEND_JSON_ERROR(&pOutput, "Could not start a transaction on all nodes.");
-        results_to_json(sv, responses, &pServers);
+        results_to_json(sv, results, &pServers);
     }
 
     if (success)
     {
-        success = CsMonitorServer::commit(sv, m_http_config, &responses);
+        success = CsMonitorServer::commit(sv, m_http_config, &results);
 
         if (!success)
         {
             LOG_APPEND_JSON_ERROR(&pOutput, "Could not commit changes, will attempt rollback.");
-            results_to_json(sv, responses, &pServers);
+            results_to_json(sv, results, &pServers);
         }
     }
 
     if (!success)
     {
-        if (!CsMonitorServer::rollback(sv, m_http_config, &responses))
+        if (!CsMonitorServer::rollback(sv, m_http_config, &results))
         {
             LOG_APPEND_JSON_ERROR(&pOutput, "Could not rollback changes, cluster state unknown.");
             if (pServers)
             {
                 json_decref(pServers);
             }
-            results_to_json(sv, responses, &pServers);
+            results_to_json(sv, results, &pServers);
         }
     }
 

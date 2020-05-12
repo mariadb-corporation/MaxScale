@@ -31,13 +31,13 @@ public:
                     mxb::http::Config* pHttp_config);
     virtual ~CsMonitorServer();
 
-    class Status
+    class Result
     {
     public:
-        Status(const mxb::http::Response& response);
+        Result(const mxb::http::Response& response);
 
-        Status(Status&& other) = default;
-        Status& operator=(Status&& rhs) = default;
+        Result(Result&& other) = default;
+        Result& operator=(Result&& rhs) = default;
 
         bool ok() const
         {
@@ -45,18 +45,28 @@ public:
         }
 
         mxb::http::Response     response;
-        cs::ClusterMode         cluster_mode = cs::READ_ONLY;
-        cs::DbrmMode            dbrm_mode = cs::SLAVE;
-        cs::DbRoots             dbroots;
-        cs::Services            services;
         std::unique_ptr<json_t> sJson;
-        std::chrono::seconds    uptime;
+    };
+
+    class Status : public Result
+    {
+    public:
+        Status(const mxb::http::Response& response);
+
+        Status(Status&& other) = default;
+        Status& operator=(Status&& rhs) = default;
+
+        cs::ClusterMode      cluster_mode = cs::READ_ONLY;
+        cs::DbrmMode         dbrm_mode = cs::SLAVE;
+        cs::DbRoots          dbroots;
+        cs::Services         services;
+        std::chrono::seconds uptime;
 
     private:
         static int64_t s_uptime;
     };
 
-    class Config
+    class Config : public Result
     {
     public:
         Config(const mxb::http::Response& response);
@@ -66,7 +76,7 @@ public:
 
         bool ok() const
         {
-            return response.is_success() && sJson && sXml;
+            return Result::ok() && sXml;
         }
 
         bool get_dbrm_controller_ip(std::string* pIp, json_t* pOutput = nullptr) const
@@ -86,9 +96,7 @@ public:
 
         using time_point = std::chrono::system_clock::time_point;
 
-        mxb::http::Response     response;
         time_point              timestamp;
-        std::unique_ptr<json_t> sJson;
         std::unique_ptr<xmlDoc> sXml;
 
     private:
@@ -100,6 +108,7 @@ public:
 
     using Response  = mxb::http::Response;
     using Responses = mxb::http::Responses;
+    using Results   = std::vector<Result>;
     using Statuses  = std::vector<Status>;
     using Configs   = std::vector<Config>;
 
@@ -205,9 +214,9 @@ public:
         return m_trx_state == TRX_ACTIVE;
     }
 
-    Response begin(const std::chrono::seconds& timeout, const std::string& id);
-    Response rollback();
-    Response commit();
+    Result begin(const std::chrono::seconds& timeout, const std::string& id);
+    Result rollback();
+    Result commit();
 
     bool set_mode(cs::ClusterMode mode, json_t** ppError = nullptr);
     bool set_config(const std::string& body, json_t** ppError = nullptr);
@@ -224,39 +233,39 @@ public:
                               const mxb::http::Config& config,
                               Configs* pConfigs);
 
-    static Responses begin(const std::vector<CsMonitorServer*>& servers,
-                           const std::chrono::seconds& timeout,
-                           const std::string& id,
-                           const mxb::http::Config& config);
+    static Results begin(const std::vector<CsMonitorServer*>& servers,
+                         const std::chrono::seconds& timeout,
+                         const std::string& id,
+                         const mxb::http::Config& config);
     static bool begin(const std::vector<CsMonitorServer*>& servers,
                       const std::chrono::seconds& timeout,
                       const std::string& id,
                       const mxb::http::Config& config,
-                      Responses* pResponses);
-    static Responses commit(const std::vector<CsMonitorServer*>& servers,
-                            const mxb::http::Config& config);
+                      Results* pResults);
+    static Results commit(const std::vector<CsMonitorServer*>& servers,
+                          const mxb::http::Config& config);
     static bool commit(const std::vector<CsMonitorServer*>& servers,
                        const mxb::http::Config& config,
-                       Responses* pResponses);
-    static Responses ping(const std::vector<CsMonitorServer*>& servers,
-                          const mxb::http::Config& config);
+                       Results* pResults);
+    static Results ping(const std::vector<CsMonitorServer*>& servers,
+                        const mxb::http::Config& config);
     static bool ping(const std::vector<CsMonitorServer*>& servers,
                      const mxb::http::Config& config,
-                     Responses* pResponses);
-    static Responses rollback(const std::vector<CsMonitorServer*>& servers,
-                              const mxb::http::Config& config);
+                     Results* pResults);
+    static Results rollback(const std::vector<CsMonitorServer*>& servers,
+                            const mxb::http::Config& config);
     static bool rollback(const std::vector<CsMonitorServer*>& servers,
                          const mxb::http::Config& config,
-                         Responses* pResponses);
-    static Responses shutdown(const std::vector<CsMonitorServer*>& servers,
-                              const std::chrono::seconds& timeout,
-                              const mxb::http::Config& config);
+                         Results* pResults);
+    static Results shutdown(const std::vector<CsMonitorServer*>& servers,
+                            const std::chrono::seconds& timeout,
+                            const mxb::http::Config& config);
     static bool shutdown(const std::vector<CsMonitorServer*>& servers,
                          const std::chrono::seconds& timeout,
                          const mxb::http::Config& config,
-                         Responses* pResponses);
-    static Responses start(const std::vector<CsMonitorServer*>& servers,
-                           const mxb::http::Config& config);
+                         Results* pResults);
+    static Results start(const std::vector<CsMonitorServer*>& servers,
+                         const mxb::http::Config& config);
     static bool set_mode(const std::vector<CsMonitorServer*>& servers,
                          cs::ClusterMode mode,
                          const mxb::http::Config& config,
@@ -265,10 +274,10 @@ public:
     static bool set_config(const std::vector<CsMonitorServer*>& servers,
                            const std::string& body,
                            const mxb::http::Config& http_config,
-                           Responses* pResponses);
-    static Responses set_config(const std::vector<CsMonitorServer*>& servers,
-                                const std::string& body,
-                                const mxb::http::Config& http_config);
+                           Results* pResults);
+    static Results set_config(const std::vector<CsMonitorServer*>& servers,
+                              const std::string& body,
+                              const mxb::http::Config& http_config);
 
 private:
     bool set_status(const mxb::http::Response& response, json_t** ppError);
