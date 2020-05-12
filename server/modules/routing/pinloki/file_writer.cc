@@ -104,19 +104,31 @@ void FileWriter::rotate_event(const maxsql::MariaRplEvent& rpl_event)
 
 void FileWriter::open_existing_file(const std::string& file_name)
 {
-    m_current_pos.name = file_name;
-    m_current_pos.file.open(m_current_pos.name, std::ios_base::in
-                            | std::ios_base::out
-                            | std::ios_base::binary);
-    m_current_pos.file.seekp(0, std::ios_base::end);
-    m_sync_pos = m_current_pos.file.tellp();
-    m_current_pos.write_pos = m_sync_pos;
-
-    if (!m_current_pos.file.good())
+    if (m_current_pos.name != file_name)
     {
-        MXB_THROW(BinlogWriteError,
-                  "Could not open " << m_current_pos.name << " for read/write: "
-                                    << errno << ", " << mxb_strerror(errno));
+        m_current_pos.name = file_name;
+        m_current_pos.file.open(m_current_pos.name, std::ios_base::in
+                                | std::ios_base::out
+                                | std::ios_base::binary);
+        m_current_pos.file.seekp(0, std::ios_base::end);
+        m_sync_pos = m_current_pos.file.tellp();
+        m_current_pos.write_pos = m_sync_pos;
+
+        if (!m_current_pos.file.good())
+        {
+            MXB_THROW(BinlogWriteError,
+                      "Could not open " << m_current_pos.name << " for read/write: "
+                                        << errno << ", " << mxb_strerror(errno));
+        }
+    }
+    else
+    {
+        // Sometimes two ROTATE events are sent back to back which are identical with the exception of the
+        // artificial flag: the first one has it off and the second one has it on. To avoid opening the same
+        // file twice, we can check whether the file is already open (i.e. filenames are identical).
+        //
+        // TODO: Figure out if there's a consistent way the events are sent, checking for filename equality is
+        //       a bit crude.
     }
 }
 
