@@ -450,15 +450,17 @@ bool CsMonitorServer::fetch_statuses(const std::vector<CsMonitorServer*>& server
 
     bool rv = true;
 
-    vector<Status> statuses;
+    Statuses statuses;
     for (auto& response : responses)
     {
-        statuses.emplace_back(Status(response));
+        Status status(response);
 
-        if (!response.is_success() || !statuses.back().sJson)
+        if (!status.ok())
         {
             rv = false;
         }
+
+        statuses.emplace_back(std::move(status));
     }
 
     pStatuses->swap(statuses);
@@ -487,15 +489,17 @@ bool CsMonitorServer::fetch_configs(const std::vector<CsMonitorServer*>& servers
 
     bool rv = true;
 
-    vector<Config> configs;
+    Configs configs;
     for (auto& response : responses)
     {
-        configs.emplace_back(Config(response));
+        Config config(response);
 
-        if (!response.is_success() || !configs.back().sJson)
+        if (!config.ok())
         {
             rv = false;
         }
+
+        configs.emplace_back(std::move(config));
     }
 
     pConfigs->swap(configs);
@@ -532,14 +536,15 @@ bool CsMonitorServer::begin(const std::vector<CsMonitorServer*>& servers,
     auto end = servers.end();
     auto jt = responses.begin();
 
-    pResults->clear();
-
+    Results results;
     while (it != end)
     {
         auto* pServer = *it;
         const auto& response = *jt;
 
-        if (response.is_success())
+        Result result(response);
+
+        if (result.ok())
         {
             pServer->m_trx_state = TRX_ACTIVE;
         }
@@ -551,11 +556,13 @@ bool CsMonitorServer::begin(const std::vector<CsMonitorServer*>& servers,
             pServer->m_trx_state = TRX_INACTIVE;
         }
 
-        pResults->emplace_back(response);
+        results.emplace_back(std::move(result));
 
         ++it;
         ++jt;
     }
+
+    pResults->swap(results);
 
     return rv;
 }
@@ -566,9 +573,9 @@ Results CsMonitorServer::begin(const std::vector<CsMonitorServer*>& servers,
                                const std::string& id,
                                const http::Config& http_config)
 {
-    Results results;
-    begin(servers, timeout, id, http_config, &results);
-    return results;
+    Results rv;
+    begin(servers, timeout, id, http_config, &rv);
+    return rv;
 }
 
 //static
@@ -598,14 +605,15 @@ bool CsMonitorServer::commit(const std::vector<CsMonitorServer*>& servers,
     auto end = servers.end();
     auto jt = responses.begin();
 
-    pResults->clear();
-
+    Results results;
     while (it != end)
     {
         auto* pServer = *it;
         const auto& response = *jt;
 
-        if (!response.is_success())
+        Result result(response);
+
+        if (!result.ok())
         {
             MXS_ERROR("Committing transaction on '%s' failed: %s",
                       pServer->name(), response.body.c_str());
@@ -614,11 +622,13 @@ bool CsMonitorServer::commit(const std::vector<CsMonitorServer*>& servers,
 
         pServer->m_trx_state = TRX_INACTIVE;
 
-        pResults->emplace_back(response);
+        results.emplace_back(std::move(result));
 
         ++it;
         ++jt;
     }
+
+    pResults->swap(results);
 
     return rv;
 }
@@ -627,9 +637,9 @@ bool CsMonitorServer::commit(const std::vector<CsMonitorServer*>& servers,
 Results CsMonitorServer::commit(const std::vector<CsMonitorServer*>& servers,
                                 const http::Config& http_config)
 {
-    Results results;
-    commit(servers, http_config, &results);
-    return results;
+    Results rv;
+    commit(servers, http_config, &rv);
+    return rv;
 }
 
 //static
@@ -659,14 +669,15 @@ bool CsMonitorServer::rollback(const std::vector<CsMonitorServer*>& servers,
     auto end = servers.end();
     auto jt = responses.begin();
 
-    pResults->clear();
-
+    Results results;
     while (it != end)
     {
         auto* pServer = *it;
         const auto& response = *jt;
 
-        if (!response.is_success())
+        Result result(response);
+
+        if (!result.ok())
         {
             MXS_ERROR("Rollbacking transaction on '%s' failed: %s",
                       pServer->name(), response.body.c_str());
@@ -675,10 +686,13 @@ bool CsMonitorServer::rollback(const std::vector<CsMonitorServer*>& servers,
 
         pServer->m_trx_state = TRX_INACTIVE;
 
-        pResults->push_back(Result(response));
+        results.emplace_back(std::move(result));
+
         ++it;
         ++jt;
     }
+
+    pResults->swap(results);
 
     return rv;
 }
@@ -687,9 +701,9 @@ bool CsMonitorServer::rollback(const std::vector<CsMonitorServer*>& servers,
 Results CsMonitorServer::rollback(const std::vector<CsMonitorServer*>& servers,
                                              const http::Config& http_config)
 {
-    Results results;
-    rollback(servers, http_config, &results);
-    return results;
+    Results rv;
+    rollback(servers, http_config, &rv);
+    return rv;
 }
 
 //static
@@ -697,9 +711,9 @@ Results CsMonitorServer::shutdown(const std::vector<CsMonitorServer*>& servers,
                                   const std::chrono::seconds& timeout,
                                   const http::Config& http_config)
 {
-    Results results;
-    shutdown(servers, timeout, http_config, &results);
-    return results;
+    Results rv;
+    shutdown(servers, timeout, http_config, &rv);
+    return rv;
 }
 
 //static
@@ -722,17 +736,20 @@ bool CsMonitorServer::shutdown(const std::vector<CsMonitorServer*>& servers,
 
     mxb_assert(urls.size() == responses.size());
 
-    pResults->clear();
-
+    Results results;
     for (const auto& response : responses)
     {
-        if (!response.is_success())
+        Result result(response);
+
+        if (!result.ok())
         {
             rv = false;
         }
 
-        pResults->push_back(Result(response));
+        results.emplace_back(std::move(result));
     }
+
+    pResults->swap(results);
 
     return rv;
 }
@@ -741,6 +758,18 @@ bool CsMonitorServer::shutdown(const std::vector<CsMonitorServer*>& servers,
 Results CsMonitorServer::start(const std::vector<CsMonitorServer*>& servers,
                                const http::Config& http_config)
 {
+    Results rv;
+    start(servers, http_config, &rv);
+    return rv;
+}
+
+//static
+bool CsMonitorServer::start(const std::vector<CsMonitorServer*>& servers,
+                            const http::Config& http_config,
+                            Results* pResults)
+{
+    bool rv = true;
+
     vector<string> urls = create_urls(servers, cs::rest::START);
     vector<http::Response> responses = http::put(urls, "{}", http_config);
 
@@ -749,10 +778,19 @@ Results CsMonitorServer::start(const std::vector<CsMonitorServer*>& servers,
     Results results;
     for (const auto& response : responses)
     {
-        results.emplace_back(response);
+        Result result(response);
+
+        if (!result.ok())
+        {
+            rv = false;
+        }
+
+        results.emplace_back(std::move(result));
     }
 
-    return results;
+    pResults->swap(results);
+
+    return rv;
 }
 
 //static
@@ -825,16 +863,20 @@ bool CsMonitorServer::set_config(const std::vector<CsMonitorServer*>& servers,
     vector<string> urls = create_urls(servers, cs::rest::CONFIG);
     vector<http::Response> responses = http::put(urls, body, http_config);
 
-    pResults->clear();
+    Results results;
     for (const auto& response : responses)
     {
-        if (!response.is_success())
+        Result result(response);
+
+        if (!result.ok())
         {
             rv = false;
         }
 
-        pResults->emplace_back(response);
+        results.emplace_back(std::move(result));
     }
+
+    pResults->swap(results);
 
     return rv;
 }
@@ -844,9 +886,9 @@ Results CsMonitorServer::set_config(const std::vector<CsMonitorServer*>& servers
                                     const std::string& body,
                                     const mxb::http::Config& http_config)
 {
-    Results results;
-    set_config(servers, body, http_config, &results);
-    return results;
+    Results rv;
+    set_config(servers, body, http_config, &rv);
+    return rv;
 }
 
 string CsMonitorServer::create_url(cs::rest::Action action, const std::string& tail) const

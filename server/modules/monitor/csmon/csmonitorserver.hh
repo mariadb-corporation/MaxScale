@@ -259,6 +259,9 @@ public:
                          Results* pResults);
     static Results start(const std::vector<CsMonitorServer*>& servers,
                          const mxb::http::Config& config);
+    static bool start(const std::vector<CsMonitorServer*>& servers,
+                      const mxb::http::Config& config,
+                      Results* pResults);
     static bool set_mode(const std::vector<CsMonitorServer*>& servers,
                          cs::ClusterMode mode,
                          const mxb::http::Config& config,
