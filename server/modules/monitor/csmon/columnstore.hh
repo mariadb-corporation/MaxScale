@@ -169,7 +169,6 @@ enum Action {
     BEGIN,
     COMMIT,
     CONFIG,
-    PING,
     ROLLBACK,
     SHUTDOWN,
     START,

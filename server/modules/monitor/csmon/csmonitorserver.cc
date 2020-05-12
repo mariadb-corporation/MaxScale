@@ -633,36 +633,6 @@ Results CsMonitorServer::commit(const std::vector<CsMonitorServer*>& servers,
 }
 
 //static
-bool CsMonitorServer::ping(const std::vector<CsMonitorServer*>& servers,
-                           const mxb::http::Config& http_config,
-                           Results* pResults)
-{
-    bool rv = true;
-    vector<string> urls = create_urls(servers, cs::rest::PING);
-    http::Responses responses = http::get(urls, http_config);
-
-    pResults->clear();
-    transform(responses.begin(), responses.end(), back_inserter(*pResults), [&rv](const auto& response) {
-            if (!response.is_success())
-            {
-                rv = false;
-            }
-            return Result(response);
-        });
-
-    return rv;
-}
-
-//static
-Results CsMonitorServer::ping(const std::vector<CsMonitorServer*>& servers,
-                              const mxb::http::Config& config)
-{
-    Results results;
-    ping(servers, config, &results);
-    return results;
-}
-
-//static
 bool CsMonitorServer::rollback(const std::vector<CsMonitorServer*>& servers,
                                const http::Config& http_config,
                                Results* pResults)

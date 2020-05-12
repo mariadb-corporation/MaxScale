@@ -152,9 +152,6 @@ const char* rest::to_string(rest::Action action)
     case CONFIG:
         return "config";
 
-    case PING:
-        return "ping";
-
     case ROLLBACK:
         return "rollback";
 

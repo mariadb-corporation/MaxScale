@@ -159,8 +159,6 @@ public:
         this->server->set_status(bit);
     }
 
-    bool ping(json_t** ppError = nullptr);
-
     Config fetch_config() const;
     Status fetch_status() const;
 
@@ -247,11 +245,6 @@ public:
     static bool commit(const std::vector<CsMonitorServer*>& servers,
                        const mxb::http::Config& config,
                        Results* pResults);
-    static Results ping(const std::vector<CsMonitorServer*>& servers,
-                        const mxb::http::Config& config);
-    static bool ping(const std::vector<CsMonitorServer*>& servers,
-                     const mxb::http::Config& config,
-                     Results* pResults);
     static Results rollback(const std::vector<CsMonitorServer*>& servers,
                             const mxb::http::Config& config);
     static bool rollback(const std::vector<CsMonitorServer*>& servers,

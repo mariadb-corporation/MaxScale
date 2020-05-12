@@ -674,24 +674,6 @@ bool CsMonitor::command_mode_set(json_t** ppOutput, const char* zMode)
     return rv;
 }
 
-bool CsMonitor::command_ping(json_t** ppOutput, CsMonitorServer* pServer)
-{
-    mxb::Semaphore sem;
-
-    auto cmd = [this, &sem, pServer, ppOutput] () {
-        if (ready_to_run(ppOutput))
-        {
-            cs_ping(ppOutput, &sem, pServer);
-        }
-        else
-        {
-            sem.post();
-        }
-    };
-
-    return command(ppOutput, sem, "ping", cmd);
-}
-
 bool CsMonitor::command_remove_node(json_t** ppOutput,
                                     CsMonitorServer* pServer,
                                     const std::chrono::seconds& timeout,
@@ -1084,48 +1066,6 @@ void CsMonitor::cs_mode_set(json_t** ppOutput, mxb::Semaphore* pSem, cs::Cluster
 
     json_object_set_new(pOutput, csmon::keys::SUCCESS, json_boolean(success));
     json_object_set_new(pOutput, csmon::keys::MESSAGE, json_string(message.str().c_str()));
-
-    *ppOutput = pOutput;
-
-    pSem->post();
-}
-
-void CsMonitor::cs_ping(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer* pServer)
-{
-    json_t* pOutput = json_object();
-    bool success = false;
-    ostringstream message;
-
-    ServerVector sv;
-
-    if (pServer)
-    {
-        sv.push_back(pServer);
-    }
-    else
-    {
-        sv = servers();
-    }
-
-    Results results = CsMonitorServer::ping(sv, m_http_config);
-
-    json_t* pServers = nullptr;
-    size_t n = results_to_json(sv, results, &pServers);
-
-    if (n == servers().size())
-    {
-        message << "Pinged all servers.";
-        success = true;
-    }
-    else
-    {
-        message << "Successfully pinged " << n
-                << " servers out of " << servers().size() << ".";
-    }
-
-    json_object_set_new(pOutput, csmon::keys::SUCCESS, json_boolean(success));
-    json_object_set_new(pOutput, csmon::keys::MESSAGE, json_string(message.str().c_str()));
-    json_object_set_new(pOutput, csmon::keys::SERVERS, pServers);
 
     *ppOutput = pOutput;
 
