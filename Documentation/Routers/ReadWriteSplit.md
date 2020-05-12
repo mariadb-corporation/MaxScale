@@ -479,48 +479,6 @@ failure of a master node without any visible effects to the client.
 If no replacement node becomes available before the timeout controlled by
 `delayed_retry_timeout` is exceeded, the client connection is closed.
 
-#### Transaction Replay Limitations
-
-If the results from the replacement server are not identical when the
-transaction is replayed, the client connection is closed. This means that any
-transaction with a server specific result (e.g. `NOW()`, `@@server_id`) cannot
-be replayed successfully but it will still be attempted.
-
-Any changes to the session state (e.g. autocommit state, SQL mode) done inside a
-transaction will remain in effect even if the connection to the server where the
-transaction is being executed fails. When readwritesplit creates a new
-connection to a server to replay the transaction, it will first restore the
-session state by executing all session commands that were executed. This means
-that if the session state is changed mid-transaction in a way that affects the
-results, transaction replay will fail.
-
-The following partial transaction demonstrates the problem by using
-[`SQL_MODE`](https://mariadb.com/kb/en/library/sql-mode/) inside a transaction.
-
-```
-SET SQL_MODE='';            -- A session command
-BEGIN;
-SELECT "hello world";       -- Returns the string "hello world"
-SET SQL_MODE='ANSI_QUOTES'; -- A session command
-SELECT 'hello world';       -- Returns the string "hello world"
-```
-
-If this transaction has to be replayed the actual SQL that gets executed is the
-following.
-
-```
-SET SQL_MODE='';            -- Replayed session command
-SET SQL_MODE='ANSI_QUOTES'; -- Replayed session command
-BEGIN;
-SELECT "hello world";       -- Returns an error
-SELECT 'hello world';       -- Returns the string "hello world"
-```
-
-First the session state is restored by executing all commands that changed the
-state after which the actual transaction is replayed. Due to the fact that the
-SQL_MODE was changed mid-transaction, one of the queries will now return an
-error instead of the result we expected leading to a transaction replay failure.
-
 ### `transaction_replay_max_size`
 
 The limit on transaction size for transaction replay in bytes. Any transaction
@@ -804,6 +762,54 @@ Read queries are routed to the master server in the following situations:
 * statement includes a stored procedure or an UDF call
 * if there are multiple statements inside one query e.g.
   `INSERT INTO ... ; SELECT LAST_INSERT_ID();`
+
+### Prepares Statement Limitations
+
+If a prepared statement targets a temporary table on the master, the slave
+servers will fail to execute it. This will cause all slave connections to be
+closed (MXS-1816).
+
+### Transaction Replay Limitations
+
+If the results from the replacement server are not identical when the
+transaction is replayed, the client connection is closed. This means that any
+transaction with a server specific result (e.g. `NOW()`, `@@server_id`) cannot
+be replayed successfully but it will still be attempted.
+
+Any changes to the session state (e.g. autocommit state, SQL mode) done inside a
+transaction will remain in effect even if the connection to the server where the
+transaction is being executed fails. When readwritesplit creates a new
+connection to a server to replay the transaction, it will first restore the
+session state by executing all session commands that were executed. This means
+that if the session state is changed mid-transaction in a way that affects the
+results, transaction replay will fail.
+
+The following partial transaction demonstrates the problem by using
+[`SQL_MODE`](https://mariadb.com/kb/en/library/sql-mode/) inside a transaction.
+
+```
+SET SQL_MODE='';            -- A session command
+BEGIN;
+SELECT "hello world";       -- Returns the string "hello world"
+SET SQL_MODE='ANSI_QUOTES'; -- A session command
+SELECT 'hello world';       -- Returns the string "hello world"
+```
+
+If this transaction has to be replayed the actual SQL that gets executed is the
+following.
+
+```
+SET SQL_MODE='';            -- Replayed session command
+SET SQL_MODE='ANSI_QUOTES'; -- Replayed session command
+BEGIN;
+SELECT "hello world";       -- Returns an error
+SELECT 'hello world';       -- Returns the string "hello world"
+```
+
+First the session state is restored by executing all commands that changed the
+state after which the actual transaction is replayed. Due to the fact that the
+SQL_MODE was changed mid-transaction, one of the queries will now return an
+error instead of the result we expected leading to a transaction replay failure.
 
 ### Legacy Configuration
 
