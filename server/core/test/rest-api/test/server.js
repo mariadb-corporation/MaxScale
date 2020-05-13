@@ -6,7 +6,7 @@ var server = {
         type: "servers",
         attributes: {
             parameters: {
-                port: 3003,
+                port: 3004,
                 address: "127.0.0.1",
                 protocol: "MariaDBBackend"
             }
@@ -46,9 +46,16 @@ describe("Server", function() {
             .should.be.rejected
     });
 
-    it("create new server", function() {
+    it("rejects new server with conflicting port", function() {
         server.data.attributes.parameters.address = '127.0.0.1'
         server.data.attributes.parameters.port = 3000
+        return request.post(base_url + "/servers/", {json: server })
+            .should.be.rejected
+    });
+
+    it("create new server", function() {
+        server.data.attributes.parameters.address = '127.0.0.1'
+        server.data.attributes.parameters.port = 3005
         return request.post(base_url + "/servers/", {json: server })
             .should.be.fulfilled
     });
@@ -226,6 +233,7 @@ describe("Server State", function() {
     before(startMaxScale)
 
     it("create new server", function() {
+        server.data.attributes.parameters.port = 3006
         return request.post(base_url + "/servers/", {json: server })
             .should.be.fulfilled
     });

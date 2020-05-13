@@ -103,8 +103,18 @@ Server* ServerManager::create_server(const char* name, json_t* json)
     Server* server = Server::create(name, json);
     if (server)
     {
-        // This keeps the order of the servers the same as in 2.2
-        this_unit.insert_front(server);
+        if (auto other = ServerManager::find_by_address(server->address(), server->port()))
+        {
+            MXS_ERROR("Cannot create server '%s' at '[%s]:%d', server '%s' exists there already.",
+                      name, other->address(), other->port(), other->name());
+            delete server;
+            server = nullptr;
+        }
+        else
+        {
+            // This keeps the order of the servers the same as in 2.2
+            this_unit.insert_front(server);
+        }
     }
     return server;
 }
@@ -136,6 +146,22 @@ Server* ServerManager::find_by_unique_name(const string& name)
     this_unit.foreach_server(
         [&rval, name](Server* server) {
             if (server->active() && server->name() == name)
+            {
+                rval = server;
+                return false;
+            }
+            return true;
+        }
+        );
+    return rval;
+}
+
+Server* ServerManager::find_by_address(const string& address, uint16_t port)
+{
+    Server* rval = nullptr;
+    this_unit.foreach_server(
+        [&rval, address, port](Server* server) {
+            if (server->active() && server->address() == address && server->port() == port)
             {
                 rval = server;
                 return false;

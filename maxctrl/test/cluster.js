@@ -135,7 +135,7 @@ describe("Cluster Sync", function () {
   });
 
   it("sync after server creation", function () {
-    return doCommand("create server server5 127.0.0.1 3003 --hosts " + secondary_host).then(() =>
+    return doCommand("create server server5 127.0.0.1 3004 --hosts " + secondary_host).then(() =>
       verifyCommand("cluster sync " + secondary_host + " --hosts " + primary_host, "servers/server5")
     );
   });
@@ -287,7 +287,7 @@ describe("Cluster Diff", function () {
   before(startDoubleMaxScale);
 
   it("diff after server creation", function () {
-    return doCommand("create server server5 127.0.0.1 3003 --hosts " + secondary_host)
+    return doCommand("create server server5 127.0.0.1 3004 --hosts " + secondary_host)
       .then(() => doCommand("cluster diff " + secondary_host + " --hosts " + primary_host))
       .then(function (res) {
         var d = parseDiff(res);

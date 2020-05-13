@@ -59,6 +59,16 @@ public:
     static Server* find_by_unique_name(const std::string& name);
 
     /**
+     * Find a server by address and port
+     *
+     * @param address The network address
+     * @param port    The network port
+     *
+     * @return The server that exists at this address or NULL if no server is found
+     */
+    static Server* find_by_address(const std::string& address, uint16_t port);
+
+    /**
      * Convert all servers into JSON format
      *
      * @param host    Hostname of this server

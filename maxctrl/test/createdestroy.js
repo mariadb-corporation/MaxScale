@@ -70,7 +70,7 @@ describe("Create/Destroy Commands", function () {
   });
 
   it("create server", function () {
-    return verifyCommand("create server server5 127.0.0.1 3003", "servers/server5").should.be.fulfilled;
+    return verifyCommand("create server server5 127.0.0.1 3004", "servers/server5").should.be.fulfilled;
   });
 
   it("destroy server", function () {
@@ -87,7 +87,7 @@ describe("Create/Destroy Commands", function () {
 
   it("create server with options", function () {
     return verifyCommand(
-      "create server server5 127.0.0.1 3003 --authenticator GSSAPIBackendAuth",
+      "create server server5 127.0.0.1 3004 --authenticator GSSAPIBackendAuth",
       "servers/server5"
     ).should.be.fulfilled;
   });
