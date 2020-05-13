@@ -275,7 +275,7 @@ bool get_timeout(const char* zTimeout, std::chrono::seconds* pTimeout, json_t** 
 
 #define CALL_IF_CS_15(expression)\
     do\
-        if (pMonitor->config().version == cs::CS_15)\
+        if (pMonitor->context().config().version == cs::CS_15)      \
         {\
             rv = expression;\
         }\

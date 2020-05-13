@@ -279,11 +279,8 @@ string next_trx_id(const char* zWhat)
 
 CsMonitor::CsMonitor(const std::string& name, const std::string& module)
     : MonitorWorkerSimple(name, module)
-    , m_config(name)
+    , m_context(name)
 {
-    // The CS daemon uses a self-signed certificate.
-    m_http_config.ssl_verifypeer = false;
-    m_http_config.ssl_verifyhost = false;
 }
 
 CsMonitor::~CsMonitor()
@@ -301,11 +298,11 @@ namespace
 
 bool check_15_server_states(const char* zName,
                             const vector<CsMonitorServer*>& servers,
-                            const http::Config& http_config)
+                            CsContext& context)
 {
     bool rv = true;
 
-    auto configs = CsMonitorServer::fetch_configs(servers, http_config);
+    auto configs = CsMonitorServer::fetch_configs(servers, context);
 
     auto it = servers.begin();
     auto end = servers.end();
@@ -374,7 +371,7 @@ bool check_15_server_states(const char* zName,
 
 bool CsMonitor::has_sufficient_permissions()
 {
-    bool rv = test_permissions(get_alive_query(m_config.version));
+    bool rv = test_permissions(get_alive_query(m_context.config().version));
 
     if (rv)
     {
@@ -383,11 +380,11 @@ bool CsMonitor::has_sufficient_permissions()
 
         if (rv)
         {
-            if (version == m_config.version)
+            if (version == m_context.config().version)
             {
-                if (m_config.version == cs::CS_15)
+                if (m_context.config().version == cs::CS_15)
                 {
-                    rv = check_15_server_states(name(), servers(), m_http_config);
+                    rv = check_15_server_states(name(), servers(), m_context);
                 }
             }
             else if (version == cs::CS_UNKNOWN)
@@ -402,7 +399,7 @@ bool CsMonitor::has_sufficient_permissions()
                           "is Columnstore %s. You need specify 'version=%s' in the configuration "
                           "file.",
                           name(),
-                          cs::to_version_string(m_config.version),
+                          cs::to_version_string(m_context.config().version),
                           cs::to_version_string(version),
                           cs::to_config_string(version));
                 rv = false;
@@ -437,7 +434,7 @@ void CsMonitor::update_server_status(MonitorServer* pS)
         {
             pServer->set_version_number(version_number);
 
-            if (pServer->minor_version() != m_config.version)
+            if (pServer->minor_version() != m_context.config().version)
             {
                 MXS_ERROR("Version of '%s' is different from the cluster version; server will be ignored.",
                           pServer->name());
@@ -447,11 +444,11 @@ void CsMonitor::update_server_status(MonitorServer* pS)
 
     int status_mask = 0;
 
-    if (pServer->minor_version() == m_config.version)
+    if (pServer->minor_version() == m_context.config().version)
     {
-        if (do_query(pServer, get_alive_query(m_config.version)) == "1")
+        if (do_query(pServer, get_alive_query(m_context.config().version)) == "1")
         {
-            if (m_config.version == cs::CS_15)
+            if (m_context.config().version == cs::CS_15)
             {
                 status_mask = get_15_server_status(pServer);
             }
@@ -460,7 +457,7 @@ void CsMonitor::update_server_status(MonitorServer* pS)
                 CS_DEBUG("'%s' is alive.", pServer->name());
                 status_mask |= SERVER_RUNNING;
 
-                switch (m_config.version)
+                switch (m_context.config().version)
                 {
                 case cs::CS_10:
                     status_mask |= get_10_server_status(pServer);
@@ -487,7 +484,7 @@ void CsMonitor::update_server_status(MonitorServer* pS)
 
 int CsMonitor::get_10_server_status(CsMonitorServer* pServer)
 {
-    return pServer->server == m_config.pPrimary ? SERVER_MASTER : SERVER_SLAVE;
+    return pServer->server == m_context.config().pPrimary ? SERVER_MASTER : SERVER_SLAVE;
 }
 
 int CsMonitor::get_12_server_status(CsMonitorServer* pServer)
@@ -539,13 +536,10 @@ int CsMonitor::get_15_server_status(CsMonitorServer* pServer)
 
 bool CsMonitor::configure(const mxs::ConfigParameters* pParams)
 {
-    bool rv = m_config.configure(*pParams);
+    bool rv = m_context.configure(*pParams);
 
     if (rv)
     {
-        m_http_config.headers["X-API-KEY"] = m_config.api_key;
-        m_http_config.headers["Content-Type"] = "application/json";
-
         rv = MonitorWorkerSimple::configure(pParams);
     }
 
@@ -974,7 +968,7 @@ void CsMonitor::cs_config_get(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitor
         sv = servers();
     }
 
-    CsMonitorServer::Configs configs = CsMonitorServer::fetch_configs(sv, m_http_config);
+    CsMonitorServer::Configs configs = CsMonitorServer::fetch_configs(sv, m_context);
 
     json_t* pServers = nullptr;
     size_t n = results_to_json(sv, configs, &pServers);
@@ -1017,7 +1011,7 @@ void CsMonitor::cs_config_set(json_t** ppOutput, mxb::Semaphore* pSem,
         sv = servers();
     }
 
-    Results results = CsMonitorServer::set_config(sv, body, m_http_config);
+    Results results = CsMonitorServer::set_config(sv, body, m_context);
 
     json_t* pServers = nullptr;
     size_t n = results_to_json(sv, results, &pServers);
@@ -1050,7 +1044,7 @@ void CsMonitor::cs_mode_set(json_t** ppOutput, mxb::Semaphore* pSem, cs::Cluster
 
     const ServerVector& sv = servers();
 
-    success = CsMonitorServer::set_mode(sv, mode, m_http_config, &pOutput);
+    success = CsMonitorServer::set_mode(sv, mode, m_context, &pOutput);
 
     if (success)
     {
@@ -1084,13 +1078,13 @@ void CsMonitor::cs_remove_node(json_t** ppOutput,
     string trx_id = next_trx_id("remove-node");
 
     Results results;
-    if (CsMonitorServer::begin(sv, timeout, trx_id, m_http_config, &results))
+    if (CsMonitorServer::begin(sv, timeout, trx_id, m_context, &results))
     {
         CsMonitorServer::Statuses statuses;
-        if (CsMonitorServer::fetch_statuses(sv, m_http_config, &statuses))
+        if (CsMonitorServer::fetch_statuses(sv, m_context, &statuses))
         {
             CsMonitorServer::Configs configs;
-            if (CsMonitorServer::fetch_configs(sv, m_http_config, &configs))
+            if (CsMonitorServer::fetch_configs(sv, m_context, &configs))
             {
                 auto it = std::find(sv.begin(), sv.end(), pRemove_server);
                 mxb_assert(it != sv.end());
@@ -1128,7 +1122,7 @@ void CsMonitor::cs_remove_node(json_t** ppOutput,
                     string body = create_remove_config(config, pRemove_server, force, is_critical);
 
                     Results results;
-                    if (CsMonitorServer::set_config(sv, body, m_http_config, &results))
+                    if (CsMonitorServer::set_config(sv, body, m_context, &results))
                     {
                         success = true;
                     }
@@ -1163,12 +1157,12 @@ void CsMonitor::cs_remove_node(json_t** ppOutput,
 
     if (success)
     {
-        success = CsMonitorServer::commit(sv, m_http_config, &results);
+        success = CsMonitorServer::commit(sv, m_context, &results);
 
         if (success)
         {
             std::chrono::seconds shutdown_timeout(0);
-            if (!CsMonitorServer::shutdown({pRemove_server}, shutdown_timeout, m_http_config, &results))
+            if (!CsMonitorServer::shutdown({pRemove_server}, shutdown_timeout, m_context, &results))
             {
                 MXS_ERROR("Could not shutdown '%s'.", pRemove_server->name());
             }
@@ -1184,7 +1178,7 @@ void CsMonitor::cs_remove_node(json_t** ppOutput,
 
     if (!success)
     {
-        if (!CsMonitorServer::rollback(sv, m_http_config, &results))
+        if (!CsMonitorServer::rollback(sv, m_context, &results))
         {
             LOG_APPEND_JSON_ERROR(&pOutput, "Could not rollback changes, cluster state unknown.");
             if (pServers)
@@ -1222,7 +1216,7 @@ void CsMonitor::cs_scan(json_t** ppOutput,
     string trx_id = next_trx_id("scan");
 
     Results results;
-    if (CsMonitorServer::begin(sv, timeout, trx_id, m_http_config, &results))
+    if (CsMonitorServer::begin(sv, timeout, trx_id, m_context, &results))
     {
         auto status = pServer->fetch_status();
         if (status.ok())
@@ -1235,7 +1229,7 @@ void CsMonitor::cs_scan(json_t** ppOutput,
                 string body = config.response.body;
 
                 Results results;
-                if (CsMonitorServer::set_config(sv, body, m_http_config, &results))
+                if (CsMonitorServer::set_config(sv, body, m_context, &results))
                 {
                     success = true;
                 }
@@ -1273,7 +1267,7 @@ void CsMonitor::cs_scan(json_t** ppOutput,
 
     if (success)
     {
-        success = CsMonitorServer::commit(sv, m_http_config, &results);
+        success = CsMonitorServer::commit(sv, m_context, &results);
 
         if (!success)
         {
@@ -1284,7 +1278,7 @@ void CsMonitor::cs_scan(json_t** ppOutput,
 
     if (!success)
     {
-        if (!CsMonitorServer::rollback(sv, m_http_config, &results))
+        if (!CsMonitorServer::rollback(sv, m_context, &results))
         {
             LOG_APPEND_JSON_ERROR(&pOutput, "Could not rollback changes, cluster state unknown.");
             if (pServers)
@@ -1330,7 +1324,7 @@ void CsMonitor::cs_shutdown(json_t** ppOutput,
     if (timeout != std::chrono::seconds(0))
     {
         // If there is a timeout, then the cluster must first be made read-only.
-        success = CsMonitorServer::set_mode(sv, cs::READ_ONLY, m_http_config, &pOutput);
+        success = CsMonitorServer::set_mode(sv, cs::READ_ONLY, m_context, &pOutput);
 
         if (!success)
         {
@@ -1340,7 +1334,7 @@ void CsMonitor::cs_shutdown(json_t** ppOutput,
 
     if (success)
     {
-        Results results = CsMonitorServer::shutdown(sv, timeout, m_http_config);
+        Results results = CsMonitorServer::shutdown(sv, timeout, m_context);
 
         size_t n = results_to_json(sv, results, &pServers);
 
@@ -1376,14 +1370,14 @@ void CsMonitor::cs_start(json_t** ppOutput, mxb::Semaphore* pSem)
 
     const ServerVector& sv = servers();
 
-    Results results = CsMonitorServer::start(sv, m_http_config);
+    Results results = CsMonitorServer::start(sv, m_context);
 
     json_t* pServers = nullptr;
     size_t n = results_to_json(sv, results, &pServers);
 
     if (n == sv.size())
     {
-        success = CsMonitorServer::set_mode(sv, cs::READ_WRITE, m_http_config, &pOutput);
+        success = CsMonitorServer::set_mode(sv, cs::READ_WRITE, m_context, &pOutput);
 
         if (success)
         {
@@ -1426,7 +1420,7 @@ void CsMonitor::cs_status(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServ
         sv = servers();
     }
 
-    Statuses statuses = CsMonitorServer::fetch_statuses(sv, m_http_config);
+    Statuses statuses = CsMonitorServer::fetch_statuses(sv, m_context);
 
     json_t* pServers = nullptr;
     size_t n = results_to_json(sv, statuses, &pServers);
@@ -1473,7 +1467,7 @@ void CsMonitor::cs_begin(json_t** ppOutput,
     }
 
     string trx_id = next_trx_id("begin");
-    Results results = CsMonitorServer::begin(sv, timeout, trx_id, m_http_config);
+    Results results = CsMonitorServer::begin(sv, timeout, trx_id, m_context);
 
     json_t* pServers = nullptr;
     size_t n = results_to_json(sv, results, &pServers);
@@ -1514,7 +1508,7 @@ void CsMonitor::cs_commit(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServ
         sv = servers();
     }
 
-    Results results = CsMonitorServer::commit(sv, m_http_config);
+    Results results = CsMonitorServer::commit(sv, m_context);
 
     json_t* pServers = nullptr;
     size_t n = results_to_json(sv, results, &pServers);
@@ -1555,7 +1549,7 @@ void CsMonitor::cs_rollback(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorSe
         sv = servers();
     }
 
-    Results results = CsMonitorServer::rollback(sv, m_http_config);
+    Results results = CsMonitorServer::rollback(sv, m_context);
 
     json_t* pServers = nullptr;
     size_t n = results_to_json(sv, results, &pServers);
@@ -1604,7 +1598,7 @@ bool CsMonitor::cs_add_first_multi_node(json_t* pOutput,
         {
             CS_DEBUG("%s: Fetched current config from '%s'.", zTrx_id, zName);
 
-            cs::upsert(*config.sXml, "ClusterManager", m_config.local_address.c_str());
+            cs::upsert(*config.sXml, "ClusterManager", m_context.config().local_address.c_str());
             int n = cs::update_if(*config.sXml, "//IPAddr", pServer->address(), "127.0.0.1");
             mxb_assert(n >= 0);
 
@@ -1685,7 +1679,7 @@ bool CsMonitor::cs_add_additional_multi_node(json_t* pOutput,
     string trx_id = next_trx_id("add-node");
 
     Results results;
-    if (CsMonitorServer::begin(sv, timeout, trx_id, m_http_config, &results))
+    if (CsMonitorServer::begin(sv, timeout, trx_id, m_context, &results))
     {
         auto status = pServer->fetch_status();
 
@@ -1700,7 +1694,7 @@ bool CsMonitor::cs_add_additional_multi_node(json_t* pOutput,
                 });
 
             CsMonitorServer::Configs configs;
-            if (CsMonitorServer::fetch_configs(existing_servers, m_http_config, &configs))
+            if (CsMonitorServer::fetch_configs(existing_servers, m_context, &configs))
             {
                 auto cb = configs.begin();
                 auto ce = configs.end();
@@ -1720,7 +1714,7 @@ bool CsMonitor::cs_add_additional_multi_node(json_t* pOutput,
 
                 if (pServer->set_config(config.response.body, &pOutput))
                 {
-                    if (CsMonitorServer::set_config(sv, body, m_http_config, &results))
+                    if (CsMonitorServer::set_config(sv, body, m_context, &results))
                     {
                         success = true;
                     }
@@ -1758,7 +1752,7 @@ bool CsMonitor::cs_add_additional_multi_node(json_t* pOutput,
 
     if (success)
     {
-        success = CsMonitorServer::commit(sv, m_http_config, &results);
+        success = CsMonitorServer::commit(sv, m_context, &results);
 
         if (!success)
         {
@@ -1769,7 +1763,7 @@ bool CsMonitor::cs_add_additional_multi_node(json_t* pOutput,
 
     if (!success)
     {
-        if (!CsMonitorServer::rollback(sv, m_http_config, &results))
+        if (!CsMonitorServer::rollback(sv, m_context, &results))
         {
             LOG_APPEND_JSON_ERROR(&pOutput, "Could not rollback changes, cluster state unknown.");
             if (pServers)
@@ -1806,5 +1800,5 @@ string CsMonitor::create_remove_config(CsMonitorServer::Config& config,
 CsMonitorServer* CsMonitor::create_server(SERVER* pServer,
                                           const mxs::MonitorServer::SharedSettings& shared)
 {
-    return new CsMonitorServer(pServer, shared, &m_config, &m_http_config);
+    return new CsMonitorServer(pServer, shared, &m_context);
 }

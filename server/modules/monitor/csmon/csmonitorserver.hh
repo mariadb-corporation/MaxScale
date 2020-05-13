@@ -17,7 +17,7 @@
 #include <maxscale/jansson.hh>
 #include "columnstore.hh"
 
-class CsConfig;
+class CsContext;
 
 class CsMonitorServer : public maxscale::MonitorServer
 {
@@ -27,8 +27,7 @@ public:
 
     CsMonitorServer(SERVER* pServer,
                     const SharedSettings& shared,
-                    const CsConfig* pCs_config,
-                    mxb::http::Config* pHttp_config);
+                    CsContext* pCs_context);
     virtual ~CsMonitorServer();
 
     class Result
@@ -220,60 +219,60 @@ public:
     bool set_config(const std::string& body, json_t** ppError = nullptr);
 
     static Statuses fetch_statuses(const std::vector<CsMonitorServer*>& servers,
-                                   const mxb::http::Config& config);
+                                   CsContext& context);
     static bool fetch_statuses(const std::vector<CsMonitorServer*>& servers,
-                               const mxb::http::Config& config,
+                               CsContext& context,
                                Statuses* pStatuses);
 
     static Configs fetch_configs(const std::vector<CsMonitorServer*>& servers,
-                                 const mxb::http::Config& config);
+                                 CsContext& context);
     static bool fetch_configs(const std::vector<CsMonitorServer*>& servers,
-                              const mxb::http::Config& config,
+                              CsContext& context,
                               Configs* pConfigs);
 
     static Results begin(const std::vector<CsMonitorServer*>& servers,
                          const std::chrono::seconds& timeout,
                          const std::string& id,
-                         const mxb::http::Config& config);
+                         CsContext& context);
     static bool begin(const std::vector<CsMonitorServer*>& servers,
                       const std::chrono::seconds& timeout,
                       const std::string& id,
-                      const mxb::http::Config& config,
+                      CsContext& context,
                       Results* pResults);
     static Results commit(const std::vector<CsMonitorServer*>& servers,
-                          const mxb::http::Config& config);
+                          CsContext& context);
     static bool commit(const std::vector<CsMonitorServer*>& servers,
-                       const mxb::http::Config& config,
+                       CsContext& context,
                        Results* pResults);
     static Results rollback(const std::vector<CsMonitorServer*>& servers,
-                            const mxb::http::Config& config);
+                            CsContext& context);
     static bool rollback(const std::vector<CsMonitorServer*>& servers,
-                         const mxb::http::Config& config,
+                         CsContext& context,
                          Results* pResults);
     static Results shutdown(const std::vector<CsMonitorServer*>& servers,
                             const std::chrono::seconds& timeout,
-                            const mxb::http::Config& config);
+                            CsContext& context);
     static bool shutdown(const std::vector<CsMonitorServer*>& servers,
                          const std::chrono::seconds& timeout,
-                         const mxb::http::Config& config,
+                         CsContext& context,
                          Results* pResults);
     static Results start(const std::vector<CsMonitorServer*>& servers,
-                         const mxb::http::Config& config);
+                         CsContext& context);
     static bool start(const std::vector<CsMonitorServer*>& servers,
-                      const mxb::http::Config& config,
+                      CsContext& context,
                       Results* pResults);
     static bool set_mode(const std::vector<CsMonitorServer*>& servers,
                          cs::ClusterMode mode,
-                         const mxb::http::Config& config,
+                         CsContext& context,
                          json_t** ppError = nullptr);
 
     static bool set_config(const std::vector<CsMonitorServer*>& servers,
                            const std::string& body,
-                           const mxb::http::Config& http_config,
+                           CsContext& context,
                            Results* pResults);
     static Results set_config(const std::vector<CsMonitorServer*>& servers,
                               const std::string& body,
-                              const mxb::http::Config& http_config);
+                              CsContext& context);
 
 private:
     bool set_status(const mxb::http::Response& response, json_t** ppError);
@@ -284,10 +283,9 @@ private:
                                                 const std::string& tail = std::string());
 
 private:
-    State                    m_state = UNKNOWN;
-    const CsConfig&          m_cs_config;
-    const mxb::http::Config& m_http_config;
-    TrxState                 m_trx_state = TRX_INACTIVE;
-    cs::Version              m_minor_version = cs::CS_UNKNOWN;
-    int                      m_version_number = -1;
+    State       m_state = UNKNOWN;
+    CsContext&  m_context;
+    TrxState    m_trx_state = TRX_INACTIVE;
+    cs::Version m_minor_version = cs::CS_UNKNOWN;
+    int         m_version_number = -1;
 };

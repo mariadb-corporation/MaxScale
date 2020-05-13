@@ -17,7 +17,7 @@
 #include <maxbase/http.hh>
 #include <maxbase/semaphore.hh>
 #include <maxscale/modulecmd.hh>
-#include "csconfig.hh"
+#include "cscontext.hh"
 #include "csmonitorserver.hh"
 #include "columnstore.hh"
 
@@ -35,9 +35,9 @@ public:
 public:
     using ServerVector = std::vector<CsMonitorServer*>;
 
-    const CsConfig& config() const
+    const CsContext& context() const
     {
-        return m_config;
+        return m_context;
     }
 
     ServerVector get_monitored_serverlist(const std::string& key, bool* error_out)
@@ -128,6 +128,5 @@ private:
     CsMonitor(const std::string& name, const std::string& module);
     bool configure(const mxs::ConfigParameters* pParams) override;
 
-    CsConfig          m_config;
-    mxb::http::Config m_http_config;
+    CsContext m_context;
 };

@@ -5,6 +5,7 @@ include_directories(${LIBXML2_INCLUDE_DIR})
 add_library(csmon SHARED
   columnstore.cc
   csconfig.cc
+  cscontext.cc
   csmon.cc
   csmonitor.cc
   csmonitorserver.cc)
