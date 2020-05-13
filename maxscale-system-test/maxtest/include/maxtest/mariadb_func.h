@@ -276,15 +276,28 @@ public:
     }
 
     Connection(Connection&& rhs)
-        : m_host(rhs.m_host)
-        , m_port(rhs.m_port)
-        , m_user(rhs.m_user)
-        , m_pw(rhs.m_pw)
-        , m_db(rhs.m_db)
-        , m_ssl(rhs.m_ssl)
-        , m_conn(rhs.m_conn)
+        : m_host(std::move(rhs.m_host))
+        , m_port(std::move(rhs.m_port))
+        , m_user(std::move(rhs.m_user))
+        , m_pw(std::move(rhs.m_pw))
+        , m_db(std::move(rhs.m_db))
+        , m_ssl(std::move(rhs.m_ssl))
+        , m_conn(std::move(rhs.m_conn))
     {
         rhs.m_conn = nullptr;
+    }
+
+    Connection& operator=(Connection&& rhs)
+    {
+        m_host = std::move(rhs.m_host);
+        m_port = std::move(rhs.m_port);
+        m_user = std::move(rhs.m_user);
+        m_pw = std::move(rhs.m_pw);
+        m_db = std::move(rhs.m_db);
+        m_ssl = std::move(rhs.m_ssl);
+        m_conn = std::move(rhs.m_conn);
+        rhs.m_conn = nullptr;
+        return *this;
     }
 
     virtual ~Connection()
