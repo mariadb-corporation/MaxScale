@@ -1935,11 +1935,12 @@ bool runtime_alter_server_from_json(Server* server, json_t* new_json)
     if (is_valid_resource_body(new_json))
     {
         rval = true;
+        json_t* new_parameters = nullptr;
 
         if (json_t* parameters = mxs_json_pointer(new_json, MXS_JSON_PTR_PARAMETERS))
         {
             rval = false;
-            json_t* new_parameters = mxs_json_pointer(old_json.get(), MXS_JSON_PTR_PARAMETERS);
+            new_parameters = mxs_json_pointer(old_json.get(), MXS_JSON_PTR_PARAMETERS);
             json_object_update(new_parameters, parameters);
             remove_json_nulls_from_object(new_parameters);
 
@@ -1952,23 +1953,34 @@ bool runtime_alter_server_from_json(Server* server, json_t* new_json)
                     MXS_ERROR("Cannot update server '%s' to '[%s]:%d', server '%s' exists there already.",
                               server->name(), other->address(), other->port(), other->name());
                 }
-                else if (server_to_object_relations(server, old_json.get(), new_json))
+                else
                 {
-                    server->configure(new_parameters);
-                    std::ostringstream ss;
-                    server->persist(ss);
-                    rval = runtime_save_config(server->name(), ss.str());
+                    rval = true;
+                }
+            }
+        }
 
-                    // Restart the monitor that monitors this server to propagate the configuration changes
-                    // forward. This causes the monitor to pick up on new timeouts and addresses immediately.
-                    if (auto mon = MonitorManager::server_is_monitored(server))
-                    {
-                        if (mon->is_running())
-                        {
-                            mon->stop();
-                            mon->start();
-                        }
-                    }
+        if (rval)
+        {
+            rval = server_to_object_relations(server, old_json.get(), new_json);
+        }
+
+        if (rval && new_parameters)
+        {
+            server->configure(new_parameters);
+
+            std::ostringstream ss;
+            server->persist(ss);
+            rval = runtime_save_config(server->name(), ss.str());
+
+            // Restart the monitor that monitors this server to propagate the configuration changes
+            // forward. This causes the monitor to pick up on new timeouts and addresses immediately.
+            if (auto mon = MonitorManager::server_is_monitored(server))
+            {
+                if (mon->is_running())
+                {
+                    mon->stop();
+                    mon->start();
                 }
             }
         }

@@ -227,6 +227,19 @@ describe("Server Relationships", function() {
             })
     });
 
+    it("add relationships with minimal JSON", function() {
+        payload = {data: {relationships: {services: {data: [{type: "services", id: "RW-Split-Router"}]}}}}
+        return request.patch(base_url + "/servers/" + rel_server.data.id, {json: payload})
+            .should.be.fulfilled
+            .then(() => request.get(base_url + "/servers/" + rel_server.data.id, {json: true}))
+            .then((res) => {
+                res.data.relationships.services.data[0].id.should.equal("RW-Split-Router")
+                payload.data.relationships.services.data = null
+            })
+            .then(() => request.patch(base_url + "/servers/" + rel_server.data.id, {json: payload}))
+            .should.be.fulfilled
+    });
+
     it("destroy server", function() {
         return request.delete(base_url + "/servers/" + rel_server.data.id)
             .should.be.fulfilled
