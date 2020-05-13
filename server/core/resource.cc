@@ -160,7 +160,9 @@ bool Resource::matching_variable_path(const string& path, const string& target) 
             || (path == ":server" && ServerManager::find_by_unique_name(target))
             || (path == ":filter" && filter_find(target.c_str()))
             || (path == ":monitor" && MonitorManager::find_monitor(target.c_str()))
-            || (path == ":module" && (get_module(target.c_str(), NULL) || target == CN_CORE))
+            || (path == ":module" && (get_module(target.c_str(), NULL)
+                                      || target == mxs::Config::get().specification().module()
+                                      || target == Server::specification().module()))
             || (path == ":inetuser" && admin_inet_user_exists(target.c_str()))
             || (path == ":listener" && listener_find(target.c_str())))
         {
@@ -861,9 +863,13 @@ HttpResponse cb_module(const HttpRequest& request)
 {
     json_t* json;
 
-    if (request.last_uri_part() == CN_CORE)
+    if (request.last_uri_part() == mxs::Config::get().specification().module())
     {
-        json = core_module_to_json(request.host());
+        json = spec_module_to_json(request.host(), mxs::Config::get().specification());
+    }
+    else if (request.last_uri_part() == Server::specification().module())
+    {
+        json = spec_module_to_json(request.host(), Server::specification());
     }
     else
     {
@@ -1162,7 +1168,7 @@ public:
 
         m_get.emplace_back(cb_all_users, "users");
         m_get.emplace_back(cb_all_inet_users, "users", "inet");
-        m_get.emplace_back(cb_all_unix_users, "users", "unix"); // For backward compatibility.
+        m_get.emplace_back(cb_all_unix_users, "users", "unix");     // For backward compatibility.
         m_get.emplace_back(cb_inet_user, "users", "inet", ":inetuser");
 
         /** Debug utility endpoints */

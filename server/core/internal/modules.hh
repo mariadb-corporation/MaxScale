@@ -15,6 +15,7 @@
 #include <maxscale/ccdefs.hh>
 #include <maxscale/dcb.hh>
 #include <maxscale/modinfo.hh>
+#include <maxscale/config2.hh>
 
 /* Module types */
 #define MODULE_PROTOCOL         "Protocol"          /**< A protocol module type */
@@ -159,10 +160,11 @@ json_t* module_list_to_json(const char* host);
 const char* mxs_module_get_effective_name(const char* name);
 
 /**
- * @brief Convert "virtual" core module to JSON
+ * @brief Convert configuration specification to a MaxScale module in JSON format
  *
- * @param host   Hostname of this server
+ * @param host Hostname of this server
+ * @param spec The configuration specification to convert
  *
- * @return The core module in JSON format
+ * @return The specification as a MaxScale module in JSON format
  */
-json_t* core_module_to_json(const char* host);
+json_t* spec_module_to_json(const char* host, const mxs::config::Specification& spec);

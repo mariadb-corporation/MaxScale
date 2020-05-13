@@ -41,6 +41,7 @@
 #include "internal/modules.hh"
 #include "internal/config.hh"
 #include "internal/monitor.hh"
+#include "internal/server.hh"
 #include "internal/service.hh"
 #include "internal/listener.hh"
 
@@ -607,34 +608,34 @@ json_t* module_to_json(const MXS_MODULE* module, const char* host)
     return mxs_json_resource(host, MXS_JSON_API_MODULES, data);
 }
 
-json_t* core_module_json_data(const char* host)
+json_t* spec_module_json_data(const char* host, const mxs::config::Specification& spec)
 {
     json_t* commands = json_array();
     // TODO: The following data will now be somewhat different compared to
     // TODO: what the modules that do not use the new configuration mechanism
     // TODO: return.
-    json_t* params = mxs::Config::get().specification().to_json();
+    json_t* params = spec.to_json();
 
     json_t* attr = json_object();
-    json_object_set_new(attr, "module_type", json_string(CN_CORE));
+    json_object_set_new(attr, "module_type", json_string(spec.module().c_str()));
     json_object_set_new(attr, "version", json_string(MAXSCALE_VERSION));
-    json_object_set_new(attr, CN_DESCRIPTION, json_string(CN_CORE));
+    json_object_set_new(attr, CN_DESCRIPTION, json_string(spec.module().c_str()));
     json_object_set_new(attr, "maturity", json_string("GA"));
     json_object_set_new(attr, "commands", commands);
     json_object_set_new(attr, CN_PARAMETERS, params);
 
     json_t* obj = json_object();
-    json_object_set_new(obj, CN_ID, json_string(CN_CORE));
+    json_object_set_new(obj, CN_ID, json_string(spec.module().c_str()));
     json_object_set_new(obj, CN_TYPE, json_string(CN_MODULE));
     json_object_set_new(obj, CN_ATTRIBUTES, attr);
-    json_object_set_new(obj, CN_LINKS, mxs_json_self_link(host, CN_MODULES, CN_CORE));
+    json_object_set_new(obj, CN_LINKS, mxs_json_self_link(host, CN_MODULES, spec.module().c_str()));
 
     return obj;
 }
 
-json_t* core_module_to_json(const char* host)
+json_t* spec_module_to_json(const char* host, const mxs::config::Specification& spec)
 {
-    json_t* data = core_module_json_data(host);
+    json_t* data = spec_module_json_data(host, spec);
 
     return mxs_json_resource(host, MXS_JSON_API_MODULES, data);
 }
@@ -643,7 +644,8 @@ json_t* module_list_to_json(const char* host)
 {
     json_t* arr = json_array();
 
-    json_array_append_new(arr, core_module_json_data(host));
+    json_array_append_new(arr, spec_module_json_data(host, mxs::Config::get().specification()));
+    json_array_append_new(arr, spec_module_json_data(host, Server::specification()));
 
     for (LOADED_MODULE* ptr = registered; ptr; ptr = ptr->next)
     {

@@ -129,7 +129,7 @@ protected:
 static const auto NO_QUOTES = cfg::ParamString::IGNORED;
 static const auto AT_RUNTIME = cfg::Param::AT_RUNTIME;
 
-static ServerSpec s_spec("server", cfg::Specification::SERVER);
+static ServerSpec s_spec(CN_SERVERS, cfg::Specification::SERVER);
 
 static cfg::ParamString s_type(&s_spec, CN_TYPE, "Object type", "server", NO_QUOTES);
 static cfg::ParamString s_protocol(&s_spec, CN_PROTOCOL, "Server protocol (deprecated)", "", NO_QUOTES);
@@ -491,9 +491,9 @@ bool Server::Settings::post_configure()
 }
 
 // static
-cfg::Specification* Server::specification()
+const cfg::Specification& Server::specification()
 {
-    return &s_spec;
+    return s_spec;
 }
 
 Server* Server::create(const char* name, const mxs::ConfigParameters& params)

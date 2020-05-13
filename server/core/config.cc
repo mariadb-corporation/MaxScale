@@ -99,7 +99,6 @@ constexpr char CN_LOG_THROTTLING[] = "log_throttling";
 constexpr char CN_LOG_WARNING[] = "log_warning";
 constexpr char CN_LOG_WARN_SUPER_USER[] = "log_warn_super_user";
 constexpr char CN_MAX_AUTH_ERRORS_UNTIL_BLOCK[] = "max_auth_errors_until_block";
-constexpr char CN_MAXSCALE[] = "maxscale";
 constexpr char CN_MS_TIMESTAMP[] = "ms_timestamp";
 constexpr char CN_PASSIVE[] = "passive";
 constexpr char CN_QUERY_CLASSIFIER_ARGS[] = "query_classifier_args";
@@ -521,7 +520,7 @@ namespace maxscale
 {
 
 Config::Config()
-    : config::Configuration("maxscale", &s_specification)
+    : config::Configuration(CN_MAXSCALE, &s_specification)
     , log_debug(this, &s_log_debug, [](bool enable) {
 #ifndef SS_DEBUG
                     MXS_WARNING("The 'log_debug' option has no effect in release mode.");

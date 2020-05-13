@@ -125,7 +125,7 @@ async function getDiffs(a, b) {
 
 // Returns a set with the parameters that can be modified at runtime.
 async function getModifiableParams(host) {
-  var module = await simpleRequest(host, "maxscale/modules/core");
+  var module = await simpleRequest(host, "maxscale/modules/maxscale");
   var modifiable = _.filter(module.data.attributes.parameters, (v) => v.modifiable);
   return new Set(_.map(modifiable, (v) => v.name));
 }

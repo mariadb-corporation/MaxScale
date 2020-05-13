@@ -175,7 +175,7 @@ public:
     /**
      * Get server configuration specification
      */
-    static mxs::config::Specification* specification();
+    static const mxs::config::Specification& specification();
 
     /**
      * Configure the server

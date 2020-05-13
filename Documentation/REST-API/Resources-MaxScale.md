@@ -388,7 +388,13 @@ GET /v1/maxscale/modules/:name
 ```
 
 Retrieve information about a loaded module. The _:name_ must be the name of a
-valid loaded module.
+valid loaded module or either `maxscale` or `servers`.
+
+The `maxscale` module will display the global configuration options
+(i.e. everything under the `[maxscale]` section) as a module.
+
+The `servers` module displays the server object type and the configuration
+parameters it accepts as a module.
 
 #### Response
 

@@ -1944,7 +1944,7 @@ bool runtime_alter_server_from_json(Server* server, json_t* new_json)
             json_object_update(new_parameters, parameters);
             remove_json_nulls_from_object(new_parameters);
 
-            if (Server::specification()->validate(new_parameters))
+            if (Server::specification().validate(new_parameters))
             {
                 auto other = get_server_by_address(new_parameters);
 
