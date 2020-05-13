@@ -1661,12 +1661,25 @@ void prepare_for_destruction(Service* service)
 
     service->set_filters({});
 }
+
 void prepare_for_destruction(Monitor* monitor)
 {
     for (auto svc : service_uses_monitor(monitor))
     {
         runtime_unlink_target(monitor->name(), svc->name());
     }
+}
+
+Server* get_server_by_address(json_t* params)
+{
+    auto addr_js = json_object_get(params, CN_ADDRESS);
+    auto port_js = json_object_get(params, CN_PORT);
+    auto socket_js = json_object_get(params, CN_SOCKET);
+
+    int port = json_integer_value(port_js);
+    std::string addr = json_string_value(addr_js ? addr_js : socket_js);
+
+    return ServerManager::find_by_address(addr, port);
 }
 }
 
@@ -1925,18 +1938,26 @@ bool runtime_alter_server_from_json(Server* server, json_t* new_json)
 
         if (json_t* parameters = mxs_json_pointer(new_json, MXS_JSON_PTR_PARAMETERS))
         {
+            rval = false;
             json_t* new_parameters = mxs_json_pointer(old_json.get(), MXS_JSON_PTR_PARAMETERS);
             json_object_update(new_parameters, parameters);
             remove_json_nulls_from_object(new_parameters);
 
             if (Server::specification()->validate(new_parameters))
             {
-                if (server_to_object_relations(server, old_json.get(), new_json))
+                auto other = get_server_by_address(new_parameters);
+
+                if (other && other != server)
+                {
+                    MXS_ERROR("Cannot update server '%s' to '[%s]:%d', server '%s' exists there already.",
+                              server->name(), other->address(), other->port(), other->name());
+                }
+                else if (server_to_object_relations(server, old_json.get(), new_json))
                 {
                     server->configure(new_parameters);
                     std::ostringstream ss;
                     server->persist(ss);
-                    runtime_save_config(server->name(), ss.str());
+                    rval = runtime_save_config(server->name(), ss.str());
 
                     // Restart the monitor that monitors this server to propagate the configuration changes
                     // forward. This causes the monitor to pick up on new timeouts and addresses immediately.
@@ -1949,10 +1970,6 @@ bool runtime_alter_server_from_json(Server* server, json_t* new_json)
                         }
                     }
                 }
-            }
-            else
-            {
-                rval = false;
             }
         }
     }

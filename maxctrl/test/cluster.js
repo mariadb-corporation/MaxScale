@@ -141,12 +141,12 @@ describe("Cluster Sync", function () {
   });
 
   it("sync after server alteration", function () {
-    return doCommand("alter server server2 port 3000 --hosts " + secondary_host)
+    return doCommand("alter server server2 port 3005 --hosts " + secondary_host)
       .then(() =>
         verifyCommand("cluster sync " + secondary_host + " --hosts " + primary_host, "servers/server2")
       )
       .then(function (res) {
-        res.data.attributes.parameters.port.should.equal(3000);
+        res.data.attributes.parameters.port.should.equal(3005);
       });
   });
 
@@ -298,12 +298,12 @@ describe("Cluster Diff", function () {
   });
 
   it("diff after server alteration", function () {
-    return doCommand("alter server server2 port 3000 --hosts " + secondary_host)
+    return doCommand("alter server server2 port 3005 --hosts " + secondary_host)
       .then(() => doCommand("cluster diff " + secondary_host + " --hosts " + primary_host))
       .then(function (res) {
         var d = parseDiff(res);
         d.changed.server2["attributes.parameters.port"].ours.should.equal(3001);
-        d.changed.server2["attributes.parameters.port"].theirs.should.equal(3000);
+        d.changed.server2["attributes.parameters.port"].theirs.should.equal(3005);
       })
       .then(() => doCommand("cluster sync " + secondary_host + " --hosts " + primary_host));
   });

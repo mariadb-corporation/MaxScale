@@ -71,6 +71,12 @@ describe("Server", function() {
             .should.be.fulfilled
     });
 
+    it("rejects update with conflicting port", function() {
+        server.data.attributes.parameters.port = 3000
+        return request.patch(base_url + "/servers/" + server.data.id, { json: server})
+            .should.be.rejected
+    });
+
     it("rejects invalid `address`", function() {
         var payload = {
             data: {
