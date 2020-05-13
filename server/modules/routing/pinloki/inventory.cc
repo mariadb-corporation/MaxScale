@@ -39,11 +39,8 @@ Inventory::Inventory(const Config& config)
 void Inventory::add(const std::string& file_name)
 {
     std::unique_lock<std::mutex> lock(m_mutex);
-    std::string full_name = m_config.path(file_name);
-
-    std::ofstream ofs(m_config.inventory_file_path(), std::ios_base::app);
-    ofs << full_name << '\n';
-    m_file_names.push_back(full_name);
+    m_file_names.push_back(m_config.path(file_name));
+    persist();
 }
 
 void Inventory::remove(const std::string& file_name)
@@ -51,6 +48,20 @@ void Inventory::remove(const std::string& file_name)
     std::unique_lock<std::mutex> lock(m_mutex);
     std::string full_name = m_config.path(file_name);
     m_file_names.erase(std::remove(m_file_names.begin(), m_file_names.end(), full_name), m_file_names.end());
+    persist();
+}
+
+void Inventory::persist()
+{
+    std::string tmp = m_config.inventory_file_path() + ".tmp";
+    std::ofstream ofs(tmp, std::ios_base::trunc);
+
+    for (const auto& file : m_file_names)
+    {
+        ofs << file << '\n';
+    }
+
+    rename(tmp.c_str(), m_config.inventory_file_path().c_str());
 }
 
 std::vector<std::string> Inventory::file_names() const

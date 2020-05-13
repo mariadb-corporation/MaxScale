@@ -443,9 +443,11 @@ void PinlokiSession::master_gtid_wait(const std::string& gtid, int timeout)
 
 void PinlokiSession::purge_logs(const std::string& up_to)
 {
-    auto files = m_router->inventory()->file_names();
+    // TODO: This will prune logs even if a slave is actively reading them. This will trigger a debug
+    //       assertion: file_reader.cc:117 failed: event->mask & IN_MODIFY
 
-    auto it = std::find(files.begin(), files.end(), up_to);
+    auto files = m_router->inventory()->file_names();
+    auto it = std::find(files.begin(), files.end(), m_router->config().path(up_to));
 
     if (it != files.end())
     {

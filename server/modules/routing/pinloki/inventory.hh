@@ -69,6 +69,9 @@ public:
     }
 
 private:
+    // Saves the file list on disk
+    void persist();
+
     // The configuration used to create this inventory
     const Config& m_config;
 
