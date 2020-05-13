@@ -419,8 +419,13 @@ int sqlite3GetToken(const unsigned char *z, int *tokenType){
     }
     case CC_BANG: {
       if( z[1]!='=' ){
+#ifdef MAXSCALE
+        *tokenType = TK_NOT;
+        return 1;
+#else
         *tokenType = TK_ILLEGAL;
         return 2;
+#endif
       }else{
         *tokenType = TK_NE;
         return 2;
