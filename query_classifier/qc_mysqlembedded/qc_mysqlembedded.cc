@@ -2180,7 +2180,8 @@ int32_t qc_mysql_get_preparable_stmt(GWBUF* stmt, GWBUF** preparable_stmt)
                 {
                     const char* preparable_stmt;
                     size_t preparable_stmt_len;
-#if MYSQL_VERSION_MINOR >= 3
+// MYSQL_VERSION_PATCH might be smaller, but this was detected with 10.2.32.
+#if MYSQL_VERSION_MINOR >= 3 || (MYSQL_VERSION_MINOR == 2 && MYSQL_VERSION_PATCH >= 32)
                     preparable_stmt = lex->prepared_stmt_code->str_value.ptr();
                     preparable_stmt_len = lex->prepared_stmt_code->str_value.length();
 #else
