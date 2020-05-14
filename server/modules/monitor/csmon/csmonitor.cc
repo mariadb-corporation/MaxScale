@@ -1133,9 +1133,9 @@ void CsMonitor::cs_remove_node(json_t** ppOutput,
                 if (success)
                 {
                     MXB_AT_DEBUG(int n);
-                    MXB_AT_DEBUG(n =) cs::remove(*remove_config.sXml.get(), "//ClusterManager");
+                    MXB_AT_DEBUG(n =) cs::xml::remove(*remove_config.sXml.get(), "//ClusterManager");
                     mxb_assert(n == 1);
-                    MXB_AT_DEBUG(n =) cs::update_if_not(*remove_config.sXml.get(), "//IPAddr", "127.0.0.1", "0.0.0.0");
+                    MXB_AT_DEBUG(n =) cs::xml::update_if_not(*remove_config.sXml.get(), "//IPAddr", "127.0.0.1", "0.0.0.0");
                     mxb_assert(n >= 0);
 
                     xmlChar* pConfig = nullptr;
@@ -1636,8 +1636,8 @@ bool CsMonitor::cs_add_first_multi_node(json_t* pOutput,
         {
             CS_DEBUG("Fetched current config from '%s'.", zName);
 
-            cs::upsert(*config.sXml, "ClusterManager", m_context.config().local_address.c_str());
-            int n = cs::update_if(*config.sXml, "//IPAddr", pServer->address(), "127.0.0.1");
+            cs::xml::upsert(*config.sXml, "ClusterManager", m_context.config().local_address.c_str());
+            int n = cs::xml::update_if(*config.sXml, "//IPAddr", pServer->address(), "127.0.0.1");
             mxb_assert(n >= 0);
 
             xmlChar* pConfig = nullptr;

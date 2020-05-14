@@ -58,7 +58,7 @@ void insert(xmlDoc& xml, int argc, char* argv[])
     const char* zKey = argv[0];
     const char* zValue = argv[1];
 
-    cs::insert(xml, zKey, zValue);
+    cs::xml::insert(xml, zKey, zValue);
 }
 
 void remove(xmlDoc& xml, int argc, char* argv[])
@@ -70,7 +70,7 @@ void remove(xmlDoc& xml, int argc, char* argv[])
 
     const char* zXpath = argv[0];
 
-    cs::remove(xml, zXpath);
+    cs::xml::remove(xml, zXpath);
 }
 
 void update_if(xmlDoc& xml, int argc, char* argv[])
@@ -84,7 +84,7 @@ void update_if(xmlDoc& xml, int argc, char* argv[])
     const char* zNew_value = argv[1];
     const char* zIf_value = argc == 3 ? argv[2] : nullptr;
 
-    cs::update_if(xml, zXpath, zNew_value, zIf_value);
+    cs::xml::update_if(xml, zXpath, zNew_value, zIf_value);
 }
 
 void update_if_not(xmlDoc& xml, int argc, char* argv[])
@@ -98,7 +98,7 @@ void update_if_not(xmlDoc& xml, int argc, char* argv[])
     const char* zNew_value = argv[1];
     const char* zIf_value = argc == 3 ? argv[2] : nullptr;
 
-    cs::update_if_not(xml, zXpath, zNew_value, zIf_value);
+    cs::xml::update_if_not(xml, zXpath, zNew_value, zIf_value);
 }
 
 void upsert(xmlDoc& xml, int argc, char* argv[])
@@ -111,7 +111,7 @@ void upsert(xmlDoc& xml, int argc, char* argv[])
     const char* zXpath = argv[0];
     const char* zValue = argv[1];
 
-    cs::upsert(xml, zXpath, zValue);
+    cs::xml::upsert(xml, zXpath, zValue);
 }
 
 

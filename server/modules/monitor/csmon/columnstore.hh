@@ -61,6 +61,9 @@ bool from_string(const char* zXml, std::unique_ptr<xmlDoc>* psDoc);
 bool dbroots_from_array(json_t* pArray, DbRoots* pDbroots);
 bool services_from_array(json_t* pArray, Services* pServices);
 
+namespace xml
+{
+
 /**
  * Update value of key(s) in XML document.
  *
@@ -136,6 +139,8 @@ int upsert(xmlDoc& xmlDoc,
  *         the number of removed keys.
  */
 int remove(xmlDoc& xmlDoc, const char* zXPath);
+
+}
 
 namespace keys
 {

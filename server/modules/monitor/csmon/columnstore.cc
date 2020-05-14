@@ -220,7 +220,7 @@ enum class UpdateWhen
     IF_NOT
 };
 
-int update(xmlNodeSet* pNodes, const char* zNew_value, const char* zIf_value, UpdateWhen update_when)
+int xml_update(xmlNodeSet* pNodes, const char* zNew_value, const char* zIf_value, UpdateWhen update_when)
 {
     int n = 0;
     int nNodes = pNodes ? pNodes->nodeNr : 0;
@@ -289,11 +289,11 @@ int update(xmlNodeSet* pNodes, const char* zNew_value, const char* zIf_value, Up
     return n;
 }
 
-int update(xmlXPathContext& xpathContext,
-           const char* zXpath,
-           const char* zNew_value,
-           const char* zIf_value,
-           UpdateWhen update_when)
+int xml_update(xmlXPathContext& xpathContext,
+               const char* zXpath,
+               const char* zNew_value,
+               const char* zIf_value,
+               UpdateWhen update_when)
 {
     int n = -1;
 
@@ -303,7 +303,7 @@ int update(xmlXPathContext& xpathContext,
 
     if (pXpath_object)
     {
-        n = update(pXpath_object->nodesetval, zNew_value, zIf_value, update_when);
+        n = xml_update(pXpath_object->nodesetval, zNew_value, zIf_value, update_when);
         xmlXPathFreeObject(pXpath_object);
     }
 
@@ -312,7 +312,7 @@ int update(xmlXPathContext& xpathContext,
 
 }
 
-int update_if(xmlDoc& xmlDoc, const char* zXpath, const char* zNew_value, const char* zIf_value)
+int xml::update_if(xmlDoc& xmlDoc, const char* zXpath, const char* zNew_value, const char* zIf_value)
 {
     int n = -1;
 
@@ -321,14 +321,14 @@ int update_if(xmlDoc& xmlDoc, const char* zXpath, const char* zNew_value, const 
 
     if (pXpath_context)
     {
-        n = update(*pXpath_context, zXpath, zNew_value, zIf_value, UpdateWhen::IF);
+        n = xml_update(*pXpath_context, zXpath, zNew_value, zIf_value, UpdateWhen::IF);
         xmlXPathFreeContext(pXpath_context);
     }
 
     return n;
 }
 
-int update_if_not(xmlDoc& xmlDoc, const char* zXpath, const char* zNew_value, const char* zIf_value)
+int xml::update_if_not(xmlDoc& xmlDoc, const char* zXpath, const char* zNew_value, const char* zIf_value)
 {
     int n = -1;
 
@@ -337,14 +337,14 @@ int update_if_not(xmlDoc& xmlDoc, const char* zXpath, const char* zNew_value, co
 
     if (pXpath_context)
     {
-        n = update(*pXpath_context, zXpath, zNew_value, zIf_value, UpdateWhen::IF_NOT);
+        n = xml_update(*pXpath_context, zXpath, zNew_value, zIf_value, UpdateWhen::IF_NOT);
         xmlXPathFreeContext(pXpath_context);
     }
 
     return n;
 }
 
-bool insert(xmlDoc& xmlDoc, const char* zKey, const char* zValue, XmlLocation location)
+bool xml::insert(xmlDoc& xmlDoc, const char* zKey, const char* zValue, XmlLocation location)
 {
     bool rv = false;
 
@@ -381,9 +381,9 @@ bool insert(xmlDoc& xmlDoc, const char* zKey, const char* zValue, XmlLocation lo
     return rv;
 }
 
-int upsert(xmlDoc& xmlDoc, const char* zXpath, const char* zValue, XmlLocation location)
+int xml::upsert(xmlDoc& xmlDoc, const char* zXpath, const char* zValue, XmlLocation location)
 {
-    int rv = update_if(xmlDoc, zXpath, zValue);
+    int rv = xml::update_if(xmlDoc, zXpath, zValue);
 
     if (rv == 0)
     {
@@ -396,7 +396,7 @@ int upsert(xmlDoc& xmlDoc, const char* zXpath, const char* zValue, XmlLocation l
             key = key.substr(pos);
         }
 
-        if (insert(xmlDoc, key.c_str(), zValue, location))
+        if (xml::insert(xmlDoc, key.c_str(), zValue, location))
         {
             rv = 1;
         }
@@ -408,7 +408,7 @@ int upsert(xmlDoc& xmlDoc, const char* zXpath, const char* zValue, XmlLocation l
 namespace
 {
 
-int remove(xmlNodeSet* pNodes)
+int xml_remove(xmlNodeSet* pNodes)
 {
     int nNodes = pNodes ? pNodes->nodeNr : 0;
 
@@ -439,7 +439,7 @@ int remove(xmlNodeSet* pNodes)
     return nNodes;
 }
 
-int remove(xmlXPathContext& xpathContext, const char* zXpath)
+int xml_remove(xmlXPathContext& xpathContext, const char* zXpath)
 {
     int n = -1;
 
@@ -449,7 +449,7 @@ int remove(xmlXPathContext& xpathContext, const char* zXpath)
 
     if (pXpath_object)
     {
-        n = remove(pXpath_object->nodesetval);
+        n = xml_remove(pXpath_object->nodesetval);
         xmlXPathFreeObject(pXpath_object);
     }
 
@@ -458,7 +458,7 @@ int remove(xmlXPathContext& xpathContext, const char* zXpath)
 
 }
 
-int remove(xmlDoc& xmlDoc, const char* zXpath)
+int xml::remove(xmlDoc& xmlDoc, const char* zXpath)
 {
     int n = -1;
     xmlXPathContext* pXpath_context = xmlXPathNewContext(&xmlDoc);
@@ -466,7 +466,7 @@ int remove(xmlDoc& xmlDoc, const char* zXpath)
 
     if (pXpath_context)
     {
-        n = remove(*pXpath_context, zXpath);
+        n = xml_remove(*pXpath_context, zXpath);
         xmlXPathFreeContext(pXpath_context);
     }
 
