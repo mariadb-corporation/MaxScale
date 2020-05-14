@@ -108,7 +108,9 @@ int64_t CsMonitorServer::Status::s_uptime = 1;
 CsMonitorServer::Result::Result(const http::Response& response)
     : response(response)
 {
-    if (response.is_success())
+    mxb_assert(!response.is_client_error());
+
+    if (!response.body.empty())
     {
         json_error_t error;
         sJson.reset(json_loadb(response.body.c_str(), response.body.length(), 0, &error));
@@ -121,12 +123,18 @@ CsMonitorServer::Result::Result(const http::Response& response)
             mxb_assert(!true);
         }
     }
-    else if (response.is_error())
+
+    if (response.is_fatal())
     {
         MXS_ERROR("REST-API call failed: (%d) %s",
                   response.code, http::Response::to_string(response.code));
     }
-    else
+    else if (response.is_server_error())
+    {
+        MXS_ERROR("Server error: (%d) %s",
+                  response.code, http::Response::to_string(response.code));
+    }
+    else if (!response.is_success())
     {
         MXS_ERROR("Unexpected response from server: (%d) %s",
                   response.code, http::Response::to_string(response.code));
@@ -136,7 +144,7 @@ CsMonitorServer::Result::Result(const http::Response& response)
 CsMonitorServer::Config::Config(const http::Response& response)
     : Result(response)
 {
-    if (sJson)
+    if (response.is_success() && sJson)
     {
         json_t* pConfig = json_object_get(sJson.get(), cs::keys::CONFIG);
         json_t* pTimestamp = json_object_get(sJson.get(), cs::keys::TIMESTAMP);
@@ -205,7 +213,7 @@ bool CsMonitorServer::Config::get_value(const char* zElement_name,
 CsMonitorServer::Status::Status(const http::Response& response)
     : Result(response)
 {
-    if (sJson)
+    if (response.is_success() && sJson)
     {
         json_t* pCluster_mode = json_object_get(sJson.get(), cs::keys::CLUSTER_MODE);
         json_t* pDbrm_mode = json_object_get(sJson.get(), cs::keys::DBRM_MODE);
