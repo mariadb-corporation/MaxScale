@@ -94,7 +94,22 @@ struct Response
         return this->code >= SUCCESS && this->code < REDIRECTION;
     }
 
+    bool is_client_error() const
+    {
+        return this->code >= CLIENT_ERROR && this->code < SERVER_ERROR;
+    }
+
+    bool is_server_error() const
+    {
+        return this->code >= SERVER_ERROR;
+    }
+
     bool is_error() const
+    {
+        return is_client_error() || is_server_error();
+    }
+
+    bool is_fatal() const
     {
         return this->code < 0;
     }
