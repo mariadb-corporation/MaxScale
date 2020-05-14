@@ -117,13 +117,16 @@ then
          gnupg pcre-devel flex rpmdevtools git wget tcl tcl-devel openssl libuuid-devel xz-devel \
          sqlite sqlite-devel pkgconfig lua lua-devel rpm-build createrepo yum-utils \
          gnutls-devel libgcrypt-devel pam-devel libcurl-devel libatomic \
-         cyrus-sasl-devel libxml2-devel boost-devel
+         cyrus-sasl-devel libxml2-devel
 
     # Attempt to install libasan, it'll only work on CentOS 7
     sudo yum install -y --nogpgcheck libasan
 
     # Attempt to install systemd-devel, doesn't work on CentOS 6
     sudo yum install -y systemd-devel
+
+    # Boost 1.69 is from EPEL but as long as we only use the headers from it, we can use it.
+    sudo yum install -y boost169-devel
 
     # Enable the devtoolkit to get a newer compiler
 
