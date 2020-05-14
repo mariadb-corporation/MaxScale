@@ -53,7 +53,8 @@ const modulecmd_arg_type_t csmon_config_set_argv[] =
 const modulecmd_arg_type_t csmon_mode_set_argv[]
 {
     { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC },
-    { MODULECMD_ARG_STRING, "Cluster mode; readonly or readwrite" }
+    { MODULECMD_ARG_STRING, "Cluster mode; readonly or readwrite" },
+    { MODULECMD_ARG_STRING | MODULECMD_ARG_OPTIONAL, "Timeout, 0 means no timeout." }
 };
 
 const modulecmd_arg_type_t csmon_remove_node_argv[] =
@@ -139,18 +140,26 @@ bool get_args(const MODULECMD_ARG* pArgs,
 bool get_args(const MODULECMD_ARG* pArgs,
               json_t** ppOutput,
               CsMonitor** ppMonitor,
-              const char** pzText)
+              const char** pzText1,
+              const char** pzText2 = nullptr)
 {
     bool rv = true;
 
     mxb_assert(MODULECMD_GET_TYPE(&pArgs->argv[0].type) == MODULECMD_ARG_MONITOR);
-    mxb_assert(pArgs->argc == 1 || MODULECMD_GET_TYPE(&pArgs->argv[1].type) == MODULECMD_ARG_STRING);
+    mxb_assert(pArgs->argc <= 1 || MODULECMD_GET_TYPE(&pArgs->argv[1].type) == MODULECMD_ARG_STRING);
+    mxb_assert(pArgs->argc <= 2 || MODULECMD_GET_TYPE(&pArgs->argv[2].type) == MODULECMD_ARG_STRING);
 
     CsMonitor* pMonitor = static_cast<CsMonitor*>(pArgs->argv[0].value.monitor);
-    const char* zText = pArgs->argc >= 2 ? pArgs->argv[1].value.string : nullptr;
+    const char* zText1 = pArgs->argc >= 2 ? pArgs->argv[1].value.string : nullptr;
+    const char* zText2 = pArgs->argc >= 3 ? pArgs->argv[2].value.string : nullptr;
 
     *ppMonitor = pMonitor;
-    *pzText = zText;
+    *pzText1 = zText1;
+
+    if (pzText2)
+    {
+        *pzText2 = zText2;
+    }
 
     return true;
 }
@@ -343,12 +352,27 @@ bool csmon_mode_set(const MODULECMD_ARG* pArgs, json_t** ppOutput)
 {
     CsMonitor* pMonitor;
     const char* zMode;
+    const char* zTimeout;
 
-    bool rv = get_args(pArgs, ppOutput, &pMonitor, &zMode);
+    bool rv = get_args(pArgs, ppOutput, &pMonitor, &zMode, &zTimeout);
 
     if (rv)
     {
-        CALL_IF_CS_15(pMonitor->command_mode_set(ppOutput, zMode));
+        std::chrono::seconds timeout(0);
+
+        if (zTimeout)
+        {
+            rv = get_timeout(zTimeout, &timeout, ppOutput);
+        }
+        else
+        {
+            timeout = pMonitor->context().config().timeout;
+        }
+
+        if (rv)
+        {
+            CALL_IF_CS_15(pMonitor->command_mode_set(ppOutput, zMode, timeout));
+        }
     }
 
     return rv;

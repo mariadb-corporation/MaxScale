@@ -628,7 +628,7 @@ bool CsMonitor::command_config_set(json_t** ppOutput, const char* zJson, CsMonit
     return rv;
 }
 
-bool CsMonitor::command_mode_set(json_t** ppOutput, const char* zMode)
+bool CsMonitor::command_mode_set(json_t** ppOutput, const char* zMode, const std::chrono::seconds& timeout)
 {
     bool rv = false;
     cs::ClusterMode mode;
@@ -637,10 +637,10 @@ bool CsMonitor::command_mode_set(json_t** ppOutput, const char* zMode)
     {
         mxb::Semaphore sem;
 
-        auto cmd = [this, ppOutput, &sem, mode] () {
+        auto cmd = [this, ppOutput, &sem, mode, timeout] () {
             if (ready_to_run(ppOutput))
             {
-                cs_mode_set(ppOutput, &sem, mode);
+                cs_mode_set(ppOutput, &sem, mode, timeout);
             }
             else
             {
@@ -1029,7 +1029,8 @@ void CsMonitor::cs_config_set(json_t** ppOutput, mxb::Semaphore* pSem,
     pSem->post();
 }
 
-void CsMonitor::cs_mode_set(json_t** ppOutput, mxb::Semaphore* pSem, cs::ClusterMode mode)
+void CsMonitor::cs_mode_set(json_t** ppOutput, mxb::Semaphore* pSem, cs::ClusterMode mode,
+                            const std::chrono::seconds& timeout)
 {
     json_t* pOutput = json_object();
     bool success = false;
@@ -1037,7 +1038,6 @@ void CsMonitor::cs_mode_set(json_t** ppOutput, mxb::Semaphore* pSem, cs::Cluster
 
     const ServerVector& sv = servers();
 
-    std::chrono::seconds timeout {1};
     success = CsMonitorServer::set_cluster_mode(sv, mode, timeout, m_context, pOutput);
 
     if (success)
