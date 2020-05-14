@@ -148,8 +148,6 @@ bool get_minor_version(const vector<CsMonitorServer*>& servers, cs::Version* pMi
 
                 pServer->set_version_number(version_number);
 
-                CS_DEBUG("Version of '%s': %d", pServer->name(), version_number);
-
                 if (minor_version == cs::CS_UNKNOWN)
                 {
                     minor_version = pServer->minor_version();
@@ -447,7 +445,6 @@ void CsMonitor::update_server_status(MonitorServer* pS)
             }
             else
             {
-                CS_DEBUG("'%s' is alive.", pServer->name());
                 status_mask |= SERVER_RUNNING;
 
                 switch (m_context.config().version)
@@ -465,10 +462,6 @@ void CsMonitor::update_server_status(MonitorServer* pS)
                     mxb_assert(!true);
                 }
             }
-        }
-        else
-        {
-            CS_DEBUG("'%s' is not alive.", pServer->name());
         }
     }
 
@@ -498,8 +491,6 @@ int CsMonitor::get_15_server_status(CsMonitorServer* pServer)
 
         if (status.ok())
         {
-            CS_DEBUG("'%s' is tentatively alive.", pServer->name());
-
             // If services are empty, it is an indication that Columnstore actually
             // is not running _even_ if we were able to connect to the MariaDB server.
             if (!status.services.empty())
