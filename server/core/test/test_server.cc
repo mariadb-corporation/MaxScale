@@ -116,6 +116,9 @@ bool test_serialize()
     server->persist(ss);
     TEST(runtime_save_config(server->name(), ss.str()), "Failed to synchronize original server");
 
+    // Deactivate the server to prevent port conflicts
+    server->deactivate();
+
     /** Load it again */
     TEST(test_load_config(config_name, server), "Failed to load the serialized server");
 

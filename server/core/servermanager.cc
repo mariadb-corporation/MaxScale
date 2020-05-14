@@ -51,10 +51,26 @@ public:
         }
     }
 
-    void insert_front(Server* server)
+    Server* add_server(std::unique_ptr<Server> server)
     {
-        Guard guard(m_all_servers_lock);
-        m_all_servers.insert(m_all_servers.begin(), server);
+        Server* rval = nullptr;
+
+        if (server)
+        {
+            if (auto other = ServerManager::find_by_address(server->address(), server->port()))
+            {
+                MXS_ERROR("Cannot create server '%s' at '[%s]:%d', server '%s' exists there already.",
+                          server->name(), other->address(), other->port(), other->name());
+            }
+            else
+            {
+                Guard guard(m_all_servers_lock);
+                // This keeps the order of the servers the same as in 2.2
+                rval = *m_all_servers.insert(m_all_servers.begin(), server.release());
+            }
+        }
+
+        return rval;
     }
 
     void erase(Server* server)
@@ -88,35 +104,13 @@ ThisUnit this_unit;
 Server* ServerManager::create_server(const char* name, const mxs::ConfigParameters& params)
 {
     mxb::LogScope scope(name);
-    Server* server = Server::create(name, params);
-    if (server)
-    {
-        // This keeps the order of the servers the same as in 2.2
-        this_unit.insert_front(server);
-    }
-    return server;
+    return this_unit.add_server(Server::create(name, params));
 }
 
 Server* ServerManager::create_server(const char* name, json_t* json)
 {
     mxb::LogScope scope(name);
-    Server* server = Server::create(name, json);
-    if (server)
-    {
-        if (auto other = ServerManager::find_by_address(server->address(), server->port()))
-        {
-            MXS_ERROR("Cannot create server '%s' at '[%s]:%d', server '%s' exists there already.",
-                      name, other->address(), other->port(), other->name());
-            delete server;
-            server = nullptr;
-        }
-        else
-        {
-            // This keeps the order of the servers the same as in 2.2
-            this_unit.insert_front(server);
-        }
-    }
-    return server;
+    return this_unit.add_server(Server::create(name, json));
 }
 
 void ServerManager::server_free(Server* server)

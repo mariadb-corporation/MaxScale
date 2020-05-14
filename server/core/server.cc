@@ -496,9 +496,9 @@ const cfg::Specification& Server::specification()
     return s_spec;
 }
 
-Server* Server::create(const char* name, const mxs::ConfigParameters& params)
+std::unique_ptr<Server> Server::create(const char* name, const mxs::ConfigParameters& params)
 {
-    Server* rval = nullptr;
+    std::unique_ptr<Server> rval;
 
     if (s_spec.validate(params))
     {
@@ -509,7 +509,7 @@ Server* Server::create(const char* name, const mxs::ConfigParameters& params)
             if (auto server = std::make_unique<Server>(name, std::move(ssl.second)))
             {
                 server->configure(params);
-                rval = server.release();
+                rval = std::move(server);
             }
         }
     }
@@ -517,9 +517,9 @@ Server* Server::create(const char* name, const mxs::ConfigParameters& params)
     return rval;
 }
 
-Server* Server::create(const char* name, json_t* json)
+std::unique_ptr<Server> Server::create(const char* name, json_t* json)
 {
-    Server* rval = nullptr;
+    std::unique_ptr<Server> rval;
 
     if (s_spec.validate(json))
     {
@@ -530,7 +530,7 @@ Server* Server::create(const char* name, json_t* json)
             if (auto server = std::make_unique<Server>(name, std::move(ssl.second)))
             {
                 server->configure(json);
-                rval = server.release();
+                rval = std::move(server);
             }
         }
     }

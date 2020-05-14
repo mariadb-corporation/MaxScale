@@ -29,6 +29,8 @@
 class Server : public SERVER
 {
 public:
+    friend class ServerManager;
+
     static const int MAX_ADDRESS_LEN = 1024;
     static const int MAX_MONUSER_LEN = 512;
     static const int MAX_MONPW_LEN = 512;
@@ -155,16 +157,6 @@ public:
     void print_to_dcb(DCB* dcb) const;
 
     /**
-     * Allocates a new server. Should only be called from ServerManager::create_server().
-     *
-     * @param name Server name
-     * @param params Configuration
-     * @return The new server or NULL on error
-     */
-    static Server* create(const char* name, const mxs::ConfigParameters& params);
-    static Server* create(const char* name, json_t* json);
-
-    /**
      * Creates a server without any configuration. This should be used in unit tests in place of
      * a default ctor.
      *
@@ -243,15 +235,6 @@ public:
 
     std::string monitor_user() const;
     std::string monitor_password() const;
-
-    /**
-     * Convert server to json. This does not add relations to other objects and should only be called from
-     * ServerManager::server_to_json_data_relations().
-     *
-     * @param host Hostname of this server
-     * @return Server as json
-     */
-    json_t* to_json_data(const char* host) const;
 
     /**
      * Convert a status string to a status bit. Only converts one status element.
@@ -336,6 +319,26 @@ public:
 
 private:
     bool create_server_config(const char* filename) const;
+
+    /**
+     * Allocates a new server. Can only be called from ServerManager::create_server().
+     *
+     * @param name   Server name
+     * @param params Configuration
+     *
+     * @return The new server if creation was successful
+     */
+    static std::unique_ptr<Server> create(const char* name, const mxs::ConfigParameters& params);
+    static std::unique_ptr<Server> create(const char* name, json_t* json);
+
+    /**
+     * Convert server to json. This does not add relations to other objects and can only be called from
+     * ServerManager::server_to_json_data_relations().
+     *
+     * @param host Hostname of this server
+     * @return Server as json
+     */
+    json_t* to_json_data(const char* host) const;
 
     struct Settings : public mxs::config::Configuration
     {
