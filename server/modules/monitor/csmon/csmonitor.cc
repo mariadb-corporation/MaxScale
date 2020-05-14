@@ -1123,6 +1123,12 @@ void CsMonitor::cs_remove_node(json_t** ppOutput,
                         LOG_PREPEND_JSON_ERROR(&pOutput, "Could not find current DDLProc/DMLProc.");
                     }
                 }
+                else
+                {
+                    // If we are in the process of removing the last server, then at this point
+                    // we are all set.
+                    success = true;
+                }
 
                 if (success)
                 {
@@ -1140,6 +1146,13 @@ void CsMonitor::cs_remove_node(json_t** ppOutput,
                     json_t* pBody = json_object();
                     json_object_set_new(pBody, cs::keys::CONFIG,
                                         json_stringn(reinterpret_cast<const char*>(pConfig), size));
+                    json_object_set_new(pBody, cs::keys::REVISION,
+                                        json_integer(m_context.revision()));
+                    json_object_set_new(pBody, cs::keys::MANAGER,
+                                        json_string(m_context.manager().c_str()));
+                    json_object_set_new(pBody, cs::keys::TIMEOUT,
+                                        json_integer(timeout.count()));
+
                     xmlFree(pConfig);
 
                     char* zBody = json_dumps(pBody, 0);
@@ -1148,6 +1161,10 @@ void CsMonitor::cs_remove_node(json_t** ppOutput,
                     if (pRemove_server->set_config(zBody, &pOutput))
                     {
                         MXS_NOTICE("Updated config on '%s'.", pRemove_server->name());
+                    }
+                    else
+                    {
+                        success = false;
                     }
                 }
             }
@@ -1183,6 +1200,7 @@ void CsMonitor::cs_remove_node(json_t** ppOutput,
                 MXS_ERROR("Could not shutdown '%s'.", pRemove_server->name());
             }
 
+            pRemove_server->set_state(CsMonitorServer::SINGLE_NODE);
             pRemove_server->set_status(SERVER_MAINT);
         }
         else
@@ -1203,6 +1221,15 @@ void CsMonitor::cs_remove_node(json_t** ppOutput,
             }
             results_to_json(sv, results, &pServers);
         }
+    }
+
+    if (success)
+    {
+        message << "Server '" << pRemove_server->name() << "' removed from the cluster.";
+    }
+    else
+    {
+        message << "The removing of server '" << pRemove_server->name() << "' from the cluster failed.";
     }
 
     json_object_set_new(pOutput, csmon::keys::SUCCESS, json_boolean(success));
@@ -1621,8 +1648,8 @@ bool CsMonitor::cs_add_first_multi_node(json_t* pOutput,
             json_t* pBody = json_object();
             json_object_set_new(pBody, cs::keys::CONFIG,
                                 json_stringn(reinterpret_cast<const char*>(pConfig), size));
-            json_object_set_new(pBody, cs::keys::REVISION, json_integer(1));
-            json_object_set_new(pBody, cs::keys::MANAGER, json_string("MaxScale"));
+            json_object_set_new(pBody, cs::keys::REVISION, json_integer(m_context.revision()));
+            json_object_set_new(pBody, cs::keys::MANAGER, json_string(m_context.manager().c_str()));
             json_object_set_new(pBody, cs::keys::TIMEOUT, json_integer(timeout.count()));
 
             xmlFree(pConfig);
