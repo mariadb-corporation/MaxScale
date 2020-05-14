@@ -450,19 +450,22 @@ enum class Location
 
 json_t* json_error_insert_new(json_t* obj, json_t* err, Location location)
 {
-    json_t* arr;
-    if (obj)
-    {
-        arr = json_object_get(obj, ERRORS);
-        mxb_assert(arr);
-        mxb_assert(json_is_array(arr));
-    }
-    else
+    if (!obj)
     {
         obj = json_object();
+    }
+
+    mxb_assert(obj);
+    json_t* arr = json_object_get(obj, ERRORS);
+
+    if (!arr)
+    {
         arr = json_array();
         json_object_set_new(obj, ERRORS, arr);
     }
+
+    mxb_assert(arr);
+    mxb_assert(json_is_array(arr));
 
     if (location == Location::BACK)
     {
