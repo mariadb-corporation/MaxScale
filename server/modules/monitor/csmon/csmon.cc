@@ -74,12 +74,13 @@ const modulecmd_arg_type_t csmon_scan_argv[] =
 const modulecmd_arg_type_t csmon_shutdown_argv[] =
 {
     { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC },
-    { MODULECMD_ARG_STRING, "Timeout, 0 means no timeout." }
+    { MODULECMD_ARG_STRING | MODULECMD_ARG_OPTIONAL, "Timeout, 0 means no timeout." }
 };
 
 const modulecmd_arg_type_t csmon_start_argv[] =
 {
-    { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC }
+    { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC },
+    { MODULECMD_ARG_STRING | MODULECMD_ARG_OPTIONAL, "Timeout, 0 means no timeout." }
 };
 
 const modulecmd_arg_type_t csmon_status_argv[] =
@@ -142,17 +143,16 @@ bool get_args(const MODULECMD_ARG* pArgs,
 {
     bool rv = true;
 
-    mxb_assert(pArgs->argc >= 2);
     mxb_assert(MODULECMD_GET_TYPE(&pArgs->argv[0].type) == MODULECMD_ARG_MONITOR);
-    mxb_assert(MODULECMD_GET_TYPE(&pArgs->argv[1].type) == MODULECMD_ARG_STRING);
+    mxb_assert(pArgs->argc == 1 || MODULECMD_GET_TYPE(&pArgs->argv[1].type) == MODULECMD_ARG_STRING);
 
     CsMonitor* pMonitor = static_cast<CsMonitor*>(pArgs->argv[0].value.monitor);
-    const char* zText = pArgs->argv[1].value.string;
+    const char* zText = pArgs->argc >= 2 ? pArgs->argv[1].value.string : nullptr;
 
     *ppMonitor = pMonitor;
     *pzText = zText;
 
-    return rv;
+    return true;
 }
 
 bool get_args(const MODULECMD_ARG* pArgs,
@@ -408,7 +408,16 @@ bool csmon_shutdown(const MODULECMD_ARG* pArgs, json_t** ppOutput)
     {
         std::chrono::seconds timeout(0);
 
-        if (get_timeout(zTimeout, &timeout, ppOutput))
+        if (zTimeout)
+        {
+            rv = get_timeout(zTimeout, &timeout, ppOutput);
+        }
+        else
+        {
+            timeout = pMonitor->context().config().timeout;
+        }
+
+        if (rv)
         {
             CALL_IF_CS_15(pMonitor->command_shutdown(ppOutput, timeout));
         }
@@ -420,12 +429,27 @@ bool csmon_shutdown(const MODULECMD_ARG* pArgs, json_t** ppOutput)
 bool csmon_start(const MODULECMD_ARG* pArgs, json_t** ppOutput)
 {
     CsMonitor* pMonitor;
+    const char* zTimeout;
 
-    bool rv = get_args(pArgs, ppOutput, &pMonitor);
+    bool rv = get_args(pArgs, ppOutput, &pMonitor, &zTimeout);
 
     if (rv)
     {
-        CALL_IF_CS_15(pMonitor->command_start(ppOutput));
+        std::chrono::seconds timeout(0);
+
+        if (zTimeout)
+        {
+            rv = get_timeout(zTimeout, &timeout, ppOutput);
+        }
+        else
+        {
+            timeout = pMonitor->context().config().timeout;
+        }
+
+        if (rv)
+        {
+            CALL_IF_CS_15(pMonitor->command_start(ppOutput, timeout));
+        }
     }
 
     return rv;

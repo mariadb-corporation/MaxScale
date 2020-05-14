@@ -724,14 +724,14 @@ bool CsMonitor::command_shutdown(json_t** ppOutput, const std::chrono::seconds& 
     return command(ppOutput, sem, "shutdown", cmd);
 }
 
-bool CsMonitor::command_start(json_t** ppOutput)
+bool CsMonitor::command_start(json_t** ppOutput, const std::chrono::seconds& timeout)
 {
     mxb::Semaphore sem;
 
-    auto cmd = [this, &sem, ppOutput] () {
+    auto cmd = [this, &sem, timeout, ppOutput] () {
         if (ready_to_run(ppOutput))
         {
-            cs_start(ppOutput, &sem);
+            cs_start(ppOutput, &sem, timeout);
         }
         else
         {
@@ -1362,7 +1362,7 @@ void CsMonitor::cs_shutdown(json_t** ppOutput,
     pSem->post();
 }
 
-void CsMonitor::cs_start(json_t** ppOutput, mxb::Semaphore* pSem)
+void CsMonitor::cs_start(json_t** ppOutput, mxb::Semaphore* pSem, const std::chrono::seconds& timeout)
 {
     json_t* pOutput = json_object();
     bool success = false;
@@ -1377,7 +1377,7 @@ void CsMonitor::cs_start(json_t** ppOutput, mxb::Semaphore* pSem)
 
     if (n == sv.size())
     {
-        success = CsMonitorServer::set_mode(sv, cs::READ_WRITE, m_context, &pOutput);
+        success = CsMonitorServer::set_mode(sv, cs::READWRITE, m_context, &pOutput);
 
         if (success)
         {

@@ -66,7 +66,7 @@ public:
                              CsMonitorServer* pServer, const std::chrono::seconds& timeout, bool force);
     bool command_scan(json_t** ppOutput, CsMonitorServer* pServer, const std::chrono::seconds& timeout);
     bool command_shutdown(json_t** ppOutput, const std::chrono::seconds& timeout);
-    bool command_start(json_t** ppOutput);
+    bool command_start(json_t** ppOutput, const std::chrono::seconds& timeout);
     bool command_status(json_t** ppOutput, CsMonitorServer* pServer);
 
 #if defined(CSMON_EXPOSE_TRANSACTIONS)
@@ -94,7 +94,7 @@ private:
                  CsMonitorServer* pServer,
                  const std::chrono::seconds& timeout);
     void cs_shutdown(json_t** ppOutput, mxb::Semaphore* pSem, const std::chrono::seconds& timeout);
-    void cs_start(json_t** ppOutput, mxb::Semaphore* pSem);
+    void cs_start(json_t** ppOutput, mxb::Semaphore* pSem,  const std::chrono::seconds& timeout);
     void cs_status(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer* pServer);
 #if defined(CSMON_EXPOSE_TRANSACTIONS)
     void cs_begin(json_t** ppOutput, mxb::Semaphore* pSem,
