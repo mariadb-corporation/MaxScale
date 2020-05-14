@@ -267,5 +267,12 @@ describe("Create/Destroy Commands", function() {
             .should.be.fulfilled
     })
 
+    it('create filter with equals sign in parameters', function() {
+        return verifyCommand('create filter test-filter regexfilter match=/this=is=a=test/ replace=test-passed',
+                            'filters/test-filter')
+            .then(() => doCommand('destroy filter test-filter'))
+            .should.be.fulfilled
+    })
+
     after(stopMaxScale)
 });
