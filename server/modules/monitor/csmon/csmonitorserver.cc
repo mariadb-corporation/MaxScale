@@ -284,7 +284,7 @@ Config CsMonitorServer::fetch_config() const
     return Config(response);
 }
 
-bool CsMonitorServer::update_state(const Config& config, json_t* pOutput)
+bool CsMonitorServer::set_node_mode(const Config& config, json_t* pOutput)
 {
     bool rv = true;
     mxb_assert(config.ok());
@@ -294,11 +294,11 @@ bool CsMonitorServer::update_state(const Config& config, json_t* pOutput)
     {
         if (ip == "127.0.0.1")
         {
-            set_state(CsMonitorServer::SINGLE_NODE);
+            set_node_mode(CsMonitorServer::SINGLE_NODE);
         }
         else if (ip == address())
         {
-            set_state(CsMonitorServer::MULTI_NODE);
+            set_node_mode(CsMonitorServer::MULTI_NODE);
         }
         else
         {

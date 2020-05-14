@@ -313,7 +313,7 @@ bool check_15_server_states(const char* zName,
             {
                 if (ip == "127.0.0.1")
                 {
-                    pServer->set_state(CsMonitorServer::SINGLE_NODE);
+                    pServer->set_node_mode(CsMonitorServer::SINGLE_NODE);
 
                     MXS_WARNING("Server '%s' configured as a single node. It must be added "
                                 "'maxctrl call command add-node %s %s' before it can be used "
@@ -323,7 +323,7 @@ bool check_15_server_states(const char* zName,
                 }
                 else if (ip == pServer->address())
                 {
-                    pServer->set_state(CsMonitorServer::MULTI_NODE);
+                    pServer->set_node_mode(CsMonitorServer::MULTI_NODE);
                 }
                 else
                 {
@@ -885,7 +885,7 @@ void CsMonitor::cs_add_node(json_t** ppOutput,
     {
         auto config = pServer->fetch_config();
         // TODO: Propagate any errors to caller.
-        success = config.ok() && pServer->update_state(config, pOutput);
+        success = config.ok() && pServer->set_node_mode(config, pOutput);
 
         if (!success)
         {
@@ -1200,7 +1200,7 @@ void CsMonitor::cs_remove_node(json_t** ppOutput,
                 MXS_ERROR("Could not shutdown '%s'.", pRemove_server->name());
             }
 
-            pRemove_server->set_state(CsMonitorServer::SINGLE_NODE);
+            pRemove_server->set_node_mode(CsMonitorServer::SINGLE_NODE);
             pRemove_server->set_status(SERVER_MAINT);
         }
         else
@@ -1693,7 +1693,7 @@ bool CsMonitor::cs_add_first_multi_node(json_t* pOutput,
 
         if (success)
         {
-            pServer->set_mode(CsMonitorServer::MULTI_NODE);
+            pServer->set_node_mode(CsMonitorServer::MULTI_NODE);
         }
         else
         {

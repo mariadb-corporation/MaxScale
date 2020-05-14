@@ -161,43 +161,38 @@ public:
     Config fetch_config() const;
     Status fetch_status() const;
 
-    enum State
+    enum NodeMode
     {
         MULTI_NODE,  // The server is configured for a multi-node cluster.
         SINGLE_NODE, // The server is not configured for a multi-node cluster.
-        UNKNOWN      // We do not know or care what the server is configured for.
+        UNKNOWN_MODE // We do not know or care what the server is configured for.
     };
 
-    State state() const
+    NodeMode node_mode() const
     {
-        return m_state;
+        return m_node_mode;
     }
 
-    void set_state(State state)
+    void set_node_mode(NodeMode node_mode)
     {
-        m_state = state;
+        m_node_mode = node_mode;
     }
 
-    bool update_state(const Config& config, json_t* pOutput);
+    bool set_node_mode(const Config& config, json_t* pOutput);
 
     bool is_multi_node() const
     {
-        return m_state == MULTI_NODE;
+        return m_node_mode == MULTI_NODE;
     }
 
     bool is_single_node() const
     {
-        return m_state == SINGLE_NODE;
+        return m_node_mode == SINGLE_NODE;
     }
 
     bool is_unknown_mode() const
     {
-        return m_state == UNKNOWN;
-    }
-
-    void set_mode(State state)
-    {
-        m_state = state;
+        return m_node_mode == UNKNOWN_MODE;
     }
 
     enum TrxState
@@ -292,7 +287,7 @@ private:
                                                 const std::string& tail = std::string());
 
 private:
-    State       m_state = UNKNOWN;
+    NodeMode    m_node_mode = UNKNOWN_MODE;
     CsContext&  m_context;
     TrxState    m_trx_state = TRX_INACTIVE;
     cs::Version m_minor_version = cs::CS_UNKNOWN;
