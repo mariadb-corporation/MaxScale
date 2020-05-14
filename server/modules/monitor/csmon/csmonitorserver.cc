@@ -324,23 +324,6 @@ Status CsMonitorServer::fetch_status() const
     return Status(response);
 }
 
-namespace
-{
-
-string begin_body(const std::chrono::seconds& timeout, int id)
-{
-    ostringstream body;
-    body << "{\"" << cs::keys::TIMEOUT << "\": "
-         << timeout.count()
-         << ", \"" << cs::keys::ID << "\": "
-         << id
-         << "}";
-
-    return body.str();
-}
-
-}
-
 Result CsMonitorServer::begin(const std::chrono::seconds& timeout, json_t* pOutput)
 {
     if (m_trx_state != TRX_INACTIVE)
@@ -350,7 +333,7 @@ Result CsMonitorServer::begin(const std::chrono::seconds& timeout, json_t* pOutp
     }
 
     http::Response response = http::put(create_url(cs::rest::BEGIN),
-                                        begin_body(timeout, m_context.next_trx_id()),
+                                        cs::body::begin(timeout, m_context.next_trx_id()),
                                         m_context.http_config());
 
     if (response.is_success())
@@ -559,7 +542,7 @@ bool CsMonitorServer::begin(const std::vector<CsMonitorServer*>& servers,
 
     vector<string> urls = create_urls(servers, cs::rest::BEGIN);
     vector<http::Response> responses = http::put(urls,
-                                                 begin_body(timeout, context.next_trx_id()),
+                                                 cs::body::begin(timeout, context.next_trx_id()),
                                                  context.http_config());
 
     mxb_assert(urls.size() == responses.size());
@@ -749,23 +732,6 @@ Results CsMonitorServer::shutdown(const std::vector<CsMonitorServer*>& servers,
     return rv;
 }
 
-namespace
-{
-
-string shutdown_body(const std::chrono::seconds& timeout)
-{
-    ostringstream body;
-    body << "{";
-
-    body << "\"" << cs::keys::TIMEOUT << "\": " << timeout.count();
-
-    body << "}";
-
-    return body.str();
-}
-
-}
-
 //static
 bool CsMonitorServer::shutdown(const std::vector<CsMonitorServer*>& servers,
                                const std::chrono::seconds& timeout,
@@ -775,7 +741,7 @@ bool CsMonitorServer::shutdown(const std::vector<CsMonitorServer*>& servers,
     bool rv = true;
 
     vector<string> urls = create_urls(servers, cs::rest::SHUTDOWN);
-    vector<http::Response> responses = http::put(urls, shutdown_body(timeout), context.http_config());
+    vector<http::Response> responses = http::put(urls, cs::body::shutdown(timeout), context.http_config());
 
     mxb_assert(urls.size() == responses.size());
 

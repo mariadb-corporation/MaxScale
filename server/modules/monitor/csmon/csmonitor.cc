@@ -1132,33 +1132,12 @@ void CsMonitor::cs_remove_node(json_t** ppOutput,
 
                 if (success)
                 {
-                    MXB_AT_DEBUG(int n);
-                    MXB_AT_DEBUG(n =) cs::xml::remove(*remove_config.sXml.get(), "//ClusterManager");
-                    mxb_assert(n == 1);
-                    MXB_AT_DEBUG(n =) cs::xml::update_if_not(*remove_config.sXml.get(), "//IPAddr", "127.0.0.1", "0.0.0.0");
-                    mxb_assert(n >= 0);
+                    auto body = cs::body::config_reset_node(*remove_config.sXml,
+                                                            m_context.revision(),
+                                                            m_context.manager(),
+                                                            timeout);
 
-                    xmlChar* pConfig = nullptr;
-                    int size = 0;
-
-                    xmlDocDumpMemory(remove_config.sXml.get(), &pConfig, &size);
-
-                    json_t* pBody = json_object();
-                    json_object_set_new(pBody, cs::keys::CONFIG,
-                                        json_stringn(reinterpret_cast<const char*>(pConfig), size));
-                    json_object_set_new(pBody, cs::keys::REVISION,
-                                        json_integer(m_context.revision()));
-                    json_object_set_new(pBody, cs::keys::MANAGER,
-                                        json_string(m_context.manager().c_str()));
-                    json_object_set_new(pBody, cs::keys::TIMEOUT,
-                                        json_integer(timeout.count()));
-
-                    xmlFree(pConfig);
-
-                    char* zBody = json_dumps(pBody, 0);
-                    json_decref(pBody);
-
-                    if (pRemove_server->set_config(zBody, &pOutput))
+                    if (pRemove_server->set_config(body, &pOutput))
                     {
                         MXS_NOTICE("Updated config on '%s'.", pRemove_server->name());
                     }
@@ -1636,28 +1615,13 @@ bool CsMonitor::cs_add_first_multi_node(json_t* pOutput,
         {
             CS_DEBUG("Fetched current config from '%s'.", zName);
 
-            cs::xml::upsert(*config.sXml, "ClusterManager", m_context.config().local_address.c_str());
-            int n = cs::xml::update_if(*config.sXml, "//IPAddr", pServer->address(), "127.0.0.1");
-            mxb_assert(n >= 0);
+            auto body = cs::body::config_first_multi_node(*config.sXml,
+                                                          m_context.revision(),
+                                                          m_context.manager(),
+                                                          pServer->address(),
+                                                          timeout);
 
-            xmlChar* pConfig = nullptr;
-            int size = 0;
-
-            xmlDocDumpMemory(config.sXml.get(), &pConfig, &size);
-
-            json_t* pBody = json_object();
-            json_object_set_new(pBody, cs::keys::CONFIG,
-                                json_stringn(reinterpret_cast<const char*>(pConfig), size));
-            json_object_set_new(pBody, cs::keys::REVISION, json_integer(m_context.revision()));
-            json_object_set_new(pBody, cs::keys::MANAGER, json_string(m_context.manager().c_str()));
-            json_object_set_new(pBody, cs::keys::TIMEOUT, json_integer(timeout.count()));
-
-            xmlFree(pConfig);
-
-            char* zBody = json_dumps(pBody, 0);
-            json_decref(pBody);
-
-            if (pServer->set_config(zBody, &pOutput))
+            if (pServer->set_config(body, &pOutput))
             {
                 MXS_NOTICE("Updated config on '%s'.", zName);
 
@@ -1679,8 +1643,6 @@ bool CsMonitor::cs_add_first_multi_node(json_t* pOutput,
             {
                 LOG_PREPEND_JSON_ERROR(&pOutput, "Could not set new config of '%s'.", zName);
             }
-
-            MXS_FREE(zBody);
         }
         else
         {

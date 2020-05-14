@@ -145,6 +145,7 @@ int remove(xmlDoc& xmlDoc, const char* zXPath);
 namespace keys
 {
 
+//JSON
 const char CONFIG[]       = "config";
 const char CLUSTER_MODE[] = "cluster_mode";
 const char DBRM_MODE[]    = "dbrm_mode";
@@ -159,6 +160,9 @@ const char SERVICES[]     = "services";
 const char TIMEOUT[]      = "timeout";
 const char TIMESTAMP[]    = "timestamp";
 const char TXN[]          = "txn";
+
+//XML
+const char CLUSTERMANAGER[] = "ClusterManager";
 
 }
 
@@ -195,4 +199,70 @@ inline std::string create_url(const mxs::MonitorServer& mserver,
 }
 
 }
+
+namespace body
+{
+
+/**
+ * @brief JSON body to be used with PUT /node/begin
+ *
+ * @param timeout  The timeout.
+ * @param id       The tranaction id.
+ *
+ * @return REST-API body.
+ */
+std::string begin(const std::chrono::seconds& timeout, int id);
+
+/**
+ * @brief JSON body to be used with PUT /node/config
+ *
+ * This call will replace all occurences of "127.0.0.1" in the XML configuration
+ * with the public IP-address of the node and add a ClusterManager entry. This is
+ * to be used when the very first (currently single mode) node is added to the
+ * cluster.
+ *
+ * @param xmlDoc    The original Columnstore configuration of the node.
+ *                  NOTE: Will be modified as a result of the call.
+ * @param revision  The revision of the configuration.
+ * @param manager   The manager doing the modification.
+ * @param address   The current public IP address of the node.
+ * @param timeout   The timeout.
+ *
+ * @return REST-API body.
+ */
+std::string config_first_multi_node(xmlDoc& xmlDoc,
+                                    int revision,
+                                    const std::string& manager,
+                                    const std::string& address,
+                                    const std::chrono::seconds& timeout);
+
+/**
+ * @brief JSON body to be used with PUT /node/config
+ *
+ * This call will replace all occurences of the public IP address of the node with
+ * "127.0.0.1" and remove the a ClusterManager entry. This is to be used when a
+ * node is removed from the cluster.
+ *
+ * @param xmlDoc    The original Columnstore configuration of the node.
+ *                  NOTE: Will be modified as a result of the call.
+ * @param revision  The revision of the configuration.
+ * @param manager   The manager doing the modification.
+ * @param timeout   The timeout.
+ *
+ * @return REST-API body.
+ */
+std::string config_reset_node(xmlDoc& xmlDoc,
+                              int revision,
+                              const std::string& manager,
+                              const std::chrono::seconds& timeout);
+
+/**
+ * @brief JSON body to be used with PUT /node/shutdown
+ *
+ * @param timeout  The timeout.
+ */
+std::string shutdown(const std::chrono::seconds& timeout);
+
+}
+
 }

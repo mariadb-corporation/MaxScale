@@ -473,10 +473,10 @@ int xml::remove(xmlDoc& xmlDoc, const char* zXpath)
     return n;
 }
 
-std::string rest::create_url(const SERVER& server,
-                             int64_t port,
-                             const std::string& rest_base,
-                             rest::Action action)
+string rest::create_url(const SERVER& server,
+                        int64_t port,
+                        const string& rest_base,
+                        rest::Action action)
 {
     string url("https://");
     url += server.address();
@@ -490,4 +490,96 @@ std::string rest::create_url(const SERVER& server,
     return url;
 }
 
+namespace body
+{
+
+string begin(const std::chrono::seconds& timeout, int id)
+{
+    std::ostringstream body;
+    body << "{\"" << cs::keys::TIMEOUT << "\": "
+         << timeout.count()
+         << ", \"" << cs::keys::ID << "\": "
+         << id
+         << "}";
+
+    return body.str();
+}
+
+namespace
+{
+
+string create_config_body(xmlDoc& xmlDoc,
+                          int revision,
+                          const string& manager,
+                          const std::chrono::seconds& timeout)
+{
+    xmlChar* pConfig = nullptr;
+    int size = 0;
+
+    xmlDocDumpMemory(&xmlDoc, &pConfig, &size);
+
+    json_t* pBody = json_object();
+    json_object_set_new(pBody, keys::CONFIG, json_stringn(reinterpret_cast<const char*>(pConfig), size));
+    json_object_set_new(pBody, keys::REVISION, json_integer(revision));
+    json_object_set_new(pBody, keys::MANAGER, json_string(manager.c_str()));
+    json_object_set_new(pBody, keys::TIMEOUT, json_integer(timeout.count()));
+
+    xmlFree(pConfig);
+
+    char* zBody = json_dumps(pBody, 0);
+    json_decref(pBody);
+
+    string body(zBody);
+    MXS_FREE(zBody);
+
+    return body;
+}
+
+}
+
+string config_first_multi_node(xmlDoc& xmlDoc,
+                               int revision,
+                               const string& manager,
+                               const string& server_address,
+                               const std::chrono::seconds& timeout)
+{
+    // Ensure there is a "ClusterManager" key whose value is 'manager'.
+    xml::upsert(xmlDoc, keys::CLUSTERMANAGER, manager.c_str());
+
+    // Replace all "IPAddr" values, irrespective of where they occur, with 'server_address'
+    // if the current value is "127.0.0.1".
+    int n = xml::update_if(xmlDoc, "//IPAddr", server_address.c_str(), "127.0.0.1");
+    mxb_assert(n >= 0);
+
+    return create_config_body(xmlDoc, revision, manager, timeout);
+}
+
+string config_reset_node(xmlDoc& xmlDoc,
+                         int revision,
+                         const std::string& manager,
+                         const std::chrono::seconds& timeout)
+{
+    int n;
+    // Remove the "ClusterManager" key.
+    n = xml::remove(xmlDoc, keys::CLUSTERMANAGER);
+    mxb_assert(n == 1);
+    // Replace all "IPAddr" values, irrespective of where they occur, with "127.0.0.1", provided
+    // the current value is not "0.0.0.0".
+    n = xml::update_if_not(xmlDoc, "//IPAddr", "127.0.0.1", "0.0.0.0");
+    mxb_assert(n >= 0);
+
+    return create_config_body(xmlDoc, revision, manager, timeout);
+}
+
+string shutdown(const std::chrono::seconds& timeout)
+{
+    std::ostringstream body;
+    body << "{"
+         << "\"" << cs::keys::TIMEOUT << "\": " << timeout.count()
+         << "}";
+
+    return body.str();
+}
+
+}
 }
