@@ -159,8 +159,8 @@ bool get_minor_version(const vector<CsMonitorServer*>& servers, cs::Version* pMi
                 {
                     MXS_ERROR("Minor version %s of '%s' is at least different than minor version %s "
                               "of '%s'.",
-                              cs::to_version_string(pServer->minor_version()), pServer->name(),
-                              cs::to_version_string(pCurrent->minor_version()), pCurrent->name());
+                              cs::to_string(pServer->minor_version()), pServer->name(),
+                              cs::to_string(pCurrent->minor_version()), pCurrent->name());
                     rv = false;
                 }
             }
@@ -399,9 +399,9 @@ bool CsMonitor::has_sufficient_permissions()
                           "is Columnstore %s. You need specify 'version=%s' in the configuration "
                           "file.",
                           name(),
-                          cs::to_version_string(m_context.config().version),
-                          cs::to_version_string(version),
-                          cs::to_config_string(version));
+                          cs::to_string(m_context.config().version),
+                          cs::to_string(version),
+                          cs::to_string(version));
                 rv = false;
             }
         }
@@ -1324,7 +1324,7 @@ void CsMonitor::cs_shutdown(json_t** ppOutput,
     if (timeout != std::chrono::seconds(0))
     {
         // If there is a timeout, then the cluster must first be made read-only.
-        success = CsMonitorServer::set_mode(sv, cs::READ_ONLY, m_context, &pOutput);
+        success = CsMonitorServer::set_mode(sv, cs::READONLY, m_context, &pOutput);
 
         if (!success)
         {

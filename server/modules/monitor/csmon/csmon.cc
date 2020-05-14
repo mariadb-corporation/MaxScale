@@ -282,7 +282,7 @@ bool get_timeout(const char* zTimeout, std::chrono::seconds* pTimeout, json_t** 
         else\
         {\
             LOG_APPEND_JSON_ERROR(ppOutput, "The call command is supported only with Columnstore %s.",\
-                                  cs::to_version_string(cs::CS_15));\
+                                  cs::to_string(cs::CS_15));\
             rv = false;\
         }\
     while (false)

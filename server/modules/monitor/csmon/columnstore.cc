@@ -19,40 +19,18 @@ using std::vector;
 namespace cs
 {
 
-const char* to_version_string(Version version)
+const char* to_string(Version version)
 {
     switch (version)
     {
     case CS_10:
-        return "1.0";
+        return ZCS_10;
 
     case CS_12:
-        return "1.2";
+        return ZCS_12;
 
     case CS_15:
-        return "1.5";
-
-    case CS_UNKNOWN:
-        return "unknown";
-
-    default:
-        mxb_assert(!true);
-        return "unknown";
-    }
-}
-
-const char* to_config_string(Version version)
-{
-    switch (version)
-    {
-    case CS_10:
-        return CS_10_CONFIG_STRING;
-
-    case CS_12:
-        return CS_12_CONFIG_STRING;
-
-    case CS_15:
-        return CS_15_CONFIG_STRING;
+        return ZCS_15;
 
     case CS_UNKNOWN:
         return "unknown";
@@ -67,10 +45,10 @@ const char* to_string(ClusterMode cluster_mode)
 {
     switch (cluster_mode)
     {
-    case READ_ONLY:
+    case READONLY:
         return "readonly";
 
-    case READ_WRITE:
+    case READWRITE:
         return "readwrite";
 
     default:
@@ -83,17 +61,13 @@ bool from_string(const char* zCluster_mode, ClusterMode* pCluster_mode)
 {
     bool rv = true;
 
-    if (strcmp(zCluster_mode, "readonly") == 0
-        || strcmp(zCluster_mode, "read_only") == 0
-        || strcmp(zCluster_mode, "readonly") == 0)
+    if (strcmp(zCluster_mode, "readonly") == 0)
     {
-        *pCluster_mode = READ_ONLY;
+        *pCluster_mode = READONLY;
     }
-    else if (strcmp(zCluster_mode, "read-write") == 0
-             || strcmp(zCluster_mode, "read_write") == 0
-             || strcmp(zCluster_mode, "readwrite") == 0)
+    else if (strcmp(zCluster_mode, "readwrite") == 0)
     {
-        *pCluster_mode = READ_WRITE;
+        *pCluster_mode = READWRITE;
     }
     else
     {

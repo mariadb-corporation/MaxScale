@@ -55,7 +55,7 @@ public:
         Status(Status&& other) = default;
         Status& operator=(Status&& rhs) = default;
 
-        cs::ClusterMode      cluster_mode = cs::READ_ONLY;
+        cs::ClusterMode      cluster_mode = cs::READONLY;
         cs::DbrmMode         dbrm_mode = cs::SLAVE;
         cs::DbRoots          dbroots;
         cs::Services         services;
