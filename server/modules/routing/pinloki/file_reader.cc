@@ -79,8 +79,6 @@ FileReader::FileReader(const maxsql::Gtid& gtid, const Inventory* inv)
     {
         open(m_inventory.file_names().front());
     }
-
-    set_inotify_fd();
 }
 
 FileReader::~FileReader()
@@ -99,6 +97,8 @@ void FileReader::open(const std::string& file_name)
     }
     m_read_pos.next_pos = PINLOKI_MAGIC.size();     // should check that it really is PINLOKI_MAGIC
     m_read_pos.name = file_name;
+
+    set_inotify_fd();
 }
 
 void FileReader::fd_notify(uint32_t events)
@@ -114,7 +114,9 @@ void FileReader::fd_notify(uint32_t events)
     for (auto ptr = buf; ptr < buf + len; ptr += sizeof(inotify_event) + event->len)
     {
         event = reinterpret_cast<inotify_event*>(ptr);
-        mxb_assert(event->mask & IN_MODIFY);
+        // We only expect the file to be modified. The IN_IGNORED event is sent when we close the previous
+        // file and open a new one.
+        mxb_assert(event->mask & (IN_MODIFY | IN_IGNORED));
     }
 #endif
 
