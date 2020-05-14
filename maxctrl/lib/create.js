@@ -12,27 +12,27 @@
  */
 require('./common.js')()
 
-// Converts an array of key=value pairs into an object
+// Converts a key=value string into an object
 function to_obj(obj, value) {
-    var kv = value.split('=')
-    obj[kv[0]] = kv[1]
-    return obj
+  var pos = value.indexOf("=");
+  obj[value.slice(0, pos)] = value.slice(pos + 1);
+  return obj;
 }
 
 function validateParams(argv, params) {
-    var rval = null;
-    params.forEach((value) => {
-        try {
-            var kv = value.split('=')
-            if (!kv || kv.length != 2) {
-                rval = 'Not a key-value parameter: ' + value
-            }
-        } catch (err) {
-            rval = 'Not a key-value parameter: ' + value
-        }
-    })
+  var rval = null;
+  params.forEach((value) => {
+    try {
+      var pos = value.indexOf("=");
+      if (pos == -1) {
+        rval = "Not a key-value parameter: " + value;
+      }
+    } catch (err) {
+      rval = "Not a key-value parameter: " + value;
+    }
+  });
 
-    return rval
+  return rval;
 }
 
 exports.command = 'create <command>'
