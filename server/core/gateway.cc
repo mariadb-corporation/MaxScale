@@ -1948,7 +1948,7 @@ int main(int argc, char** argv)
     }
 
     /** Load the admin users */
-    admin_users_init();
+    rest_users_init();
 
     /**
      * The following lambda function is executed as the first event on the main worker. This is what starts

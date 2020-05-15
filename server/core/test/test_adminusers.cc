@@ -78,7 +78,7 @@ int main(int argc, char** argv)
 
     unlink(buf);
 
-    admin_users_init();
+    rest_users_init();
     result += test1();
 
     exit(result);

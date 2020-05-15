@@ -30,6 +30,7 @@
 #include <maxscale/json_api.hh>
 #include <maxscale/utils.hh>
 #include <maxscale/event.hh>
+#include <maxbase/format.hh>
 
 #include "internal/adminusers.hh"
 /**
@@ -44,15 +45,12 @@ using mxs::USER_ACCOUNT_BASIC;
 
 namespace
 {
-Users inet_users;
+Users rest_users;
 
-bool load_users(const char* fname, Users* output);
+bool load_rest_users();
 
 const char INET_USERS_FILE_NAME[] = "passwd";
-const int LINELEN = 80;
 
-const char INET_DEFAULT_USERNAME[] = "admin";
-const char INET_DEFAULT_PASSWORD[] = "mariadb";
 
 /** Return values for the functions */
 const char ADMIN_ERR_FILEOPEN[] = "Unable to create password file";
@@ -65,9 +63,12 @@ const char* ADMIN_SUCCESS = nullptr;
 /**
  * Admin Users initialisation
  */
-void admin_users_init()
+void rest_users_init()
 {
-    if (!load_users(INET_USERS_FILE_NAME, &inet_users))
+    const char INET_DEFAULT_USERNAME[] = "admin";
+    const char INET_DEFAULT_PASSWORD[] = "mariadb";
+
+    if (!load_rest_users())
     {
         admin_add_inet_user(INET_DEFAULT_USERNAME, INET_DEFAULT_PASSWORD, USER_ACCOUNT_ADMIN);
     }
@@ -236,9 +237,9 @@ json_t* admin_all_users_to_json(const char* host)
     std::string path = MXS_JSON_API_USERS;
     path += CN_INET;
 
-    if (!inet_users.empty())
+    if (!rest_users.empty())
     {
-        user_types_to_json(&inet_users, arr, host);
+        user_types_to_json(&rest_users, arr, host);
     }
 
     return mxs_json_resource(host, path.c_str(), arr);
@@ -247,14 +248,14 @@ json_t* admin_all_users_to_json(const char* host)
 namespace
 {
 
-bool load_legacy_users(FILE* fp, Users* output)
+bool load_legacy_users(FILE* fp, const std::string& path, Users* output)
 {
     Users rval;
-    char path[PATH_MAX];
-    char uname[80];
+    const int LINELEN = 80;
+    char uname[LINELEN];
     bool error = false;
 
-    while (fgets(uname, sizeof(uname), fp))
+    while (fgets(uname, LINELEN, fp))
     {
         char* nl = strchr(uname, '\n');
         if (nl)
@@ -264,7 +265,7 @@ bool load_legacy_users(FILE* fp, Users* output)
         else if (!feof(fp))
         {
             MXS_ERROR("Line length exceeds %d characters, possibly corrupted 'passwd' file in: %s",
-                      LINELEN, path);
+                      LINELEN, path.c_str());
             error = true;
             break;
         }
@@ -294,18 +295,19 @@ bool load_legacy_users(FILE* fp, Users* output)
 }
 
 /**
- * Load the admin users.
+ * Load the rest-api users.
  *
- * @param fname Name of the file in the datadir to load
- * @param output Result output
  * @return True on success
  */
-bool load_users(const char* fname, Users* output)
+bool load_rest_users()
 {
-    char path[PATH_MAX];
-    snprintf(path, sizeof(path), "%s/%s", mxs::datadir(), fname);
+    const char* fname = INET_USERS_FILE_NAME;
+    Users& output = rest_users;
 
-    FILE* fp = fopen(path, "r");
+    const std::string path = mxb::string_printf("%s/%s", mxs::datadir(), fname);
+    const char* pathc = path.c_str();
+
+    FILE* fp = fopen(pathc, "r");
     if (fp)
     {
         json_error_t err;
@@ -313,40 +315,32 @@ bool load_users(const char* fname, Users* output)
         if (json)
         {
             /** New format users */
-            output->load_json(json);
+            output.load_json(json);
             json_decref(json);
         }
         else
         {
             /** Old style users file */
-            if (load_legacy_users(fp, output))
+            if (load_legacy_users(fp, path, &output))
             {
                 /** Users loaded successfully, back up the original file and
                  * replace it with the new one */
-                const char backup_suffix[] = ".backup";
-                char newpath[strlen(path) + sizeof(backup_suffix)];
-                sprintf(newpath, "%s%s", path, backup_suffix);
+                const std::string old_users_bu = path + ".backup";
+                const char* old_users_buc = old_users_bu.c_str();
 
-                if (rename(path, newpath) != 0)
+                if (rename(pathc, old_users_buc) != 0)
                 {
-                    MXS_ERROR("Failed to rename old users file: %d, %s",
-                              errno,
-                              mxs_strerror(errno));
+                    MXS_ERROR("Failed to rename old users file: %d, %s", errno, mxs_strerror(errno));
                 }
-                else if (!admin_dump_users(output, fname))
+                else if (admin_dump_users(&output, fname))
                 {
-                    MXS_ERROR("Failed to dump new users. Please rename the file "
-                              "'%s' manually to '%s' and restart MaxScale to "
-                              "attempt again.",
-                              newpath,
-                              path);
+                    MXS_NOTICE("Upgraded users file at '%s' to new format, backup of the old file is stored "
+                               "in '%s'.", pathc, old_users_buc);
                 }
                 else
                 {
-                    MXS_NOTICE("Upgraded users file at '%s' to new format, "
-                               "backup of the old file is stored in '%s'.",
-                               newpath,
-                               path);
+                    MXS_ERROR("Failed to dump new users. Please rename the file '%s' manually to '%s' and "
+                              "restart MaxScale to attempt again.", old_users_buc, pathc);
                 }
             }
         }
@@ -368,7 +362,7 @@ bool load_users(const char* fname, Users* output)
  */
 const char* admin_add_inet_user(const char* uname, const char* password, enum user_account_type type)
 {
-    return admin_add_user(&inet_users, INET_USERS_FILE_NAME, uname, password, type);
+    return admin_add_user(&rest_users, INET_USERS_FILE_NAME, uname, password, type);
 }
 
 /**
@@ -381,7 +375,7 @@ const char* admin_add_inet_user(const char* uname, const char* password, enum us
  */
 const char* admin_alter_inet_user(const char* uname, const char* password)
 {
-    return admin_alter_user(&inet_users, INET_USERS_FILE_NAME, uname, password);
+    return admin_alter_user(&rest_users, INET_USERS_FILE_NAME, uname, password);
 }
 
 /**
@@ -394,7 +388,7 @@ const char* admin_alter_inet_user(const char* uname, const char* password)
  */
 const char* admin_remove_inet_user(const char* uname)
 {
-    return admin_remove_user(&inet_users, INET_USERS_FILE_NAME, uname);
+    return admin_remove_user(&rest_users, INET_USERS_FILE_NAME, uname);
 }
 
 /**
@@ -406,7 +400,7 @@ const char* admin_remove_inet_user(const char* uname)
  */
 bool admin_inet_user_exists(const char* uname)
 {
-    return inet_users.get(uname);
+    return rest_users.get(uname);
 }
 
 /**
@@ -419,7 +413,7 @@ bool admin_inet_user_exists(const char* uname)
  */
 bool admin_verify_inet_user(const char* username, const char* password)
 {
-    bool authenticated = inet_users.authenticate(username, password);
+    bool authenticated = rest_users.authenticate(username, password);
 
     // If normal authentication didn't work, try PAM.
     // TODO: The reason for 'users_auth' failing is not known here. If the username existed but pw was wrong,
@@ -439,7 +433,7 @@ bool admin_user_is_inet_admin(const char* username, const char* password)
         password = "";
     }
 
-    bool is_admin = users_is_admin(&inet_users, username, password);
+    bool is_admin = users_is_admin(&rest_users, username, password);
     if (!is_admin)
     {
         is_admin = admin_user_is_pam_account(username, password, USER_ACCOUNT_ADMIN);

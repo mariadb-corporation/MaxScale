@@ -21,7 +21,7 @@
 
 extern const char* ADMIN_SUCCESS;
 
-void        admin_users_init();
+void        rest_users_init();
 const char* admin_add_inet_user(const char* uname, const char* password, mxs::user_account_type type);
 const char* admin_alter_inet_user(const char* uname, const char* password);
 const char* admin_remove_inet_user(const char* uname);
