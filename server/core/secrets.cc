@@ -17,6 +17,7 @@
 #include <fcntl.h>
 #include <openssl/aes.h>
 #include <sys/stat.h>
+#include <linux/limits.h>
 #include <maxbase/alloc.h>
 #include <maxscale/paths.hh>
 #include <maxscale/random.h>
