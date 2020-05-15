@@ -20,6 +20,7 @@
 #include <libxml/parser.h>
 #include <libxml/xpath.h>
 #include <libxml/xpathInternals.h>
+#include <maxbase/log.hh>
 
 using namespace std;
 
@@ -29,12 +30,17 @@ namespace
 void print_usage_and_exit()
 {
     cout << "usage: csxml xml-file ...\n"
+         << "create_first ip manager\n"
+         << "    Create multi-node config for first node.\n"
+         << "\n"
          << "insert key value\n"
          << "    Unconditionally insert new key/value pair.\n"
          << "\n"
-         << "\n"
          << "remove xpath-expr\n"
          << "    Remove key(s)\n"
+         << "\n"
+         << "reset\n"
+         << "    Convert multi-node config to single-node config.\n"
          << "\n"
          << "update_if xpath-expr new_value [if_value]\n"
          << "    Update value at path, optionally only if existing value matches specified value\n"
@@ -46,6 +52,19 @@ void print_usage_and_exit()
          << "    Update value of matching key(s), or insert new value.\n"
          << endl;
     exit(EXIT_FAILURE);
+}
+
+void create_first(xmlDoc& xml, int argc, char* argv[])
+{
+    if (argc < 2)
+    {
+        print_usage_and_exit();
+    }
+
+    const char* zIp = argv[0];
+    const char* zManager = argv[1];
+
+    cs::xml::convert_to_first_multi_node(xml, zManager, zIp);
 }
 
 void insert(xmlDoc& xml, int argc, char* argv[])
@@ -71,6 +90,11 @@ void remove(xmlDoc& xml, int argc, char* argv[])
     const char* zXpath = argv[0];
 
     cs::xml::remove(xml, zXpath);
+}
+
+void reset(xmlDoc& xml, int argc, char* argv[])
+{
+    cs::xml::convert_to_single_node(xml);
 }
 
 void update_if(xmlDoc& xml, int argc, char* argv[])
@@ -117,8 +141,10 @@ void upsert(xmlDoc& xml, int argc, char* argv[])
 
 map<string, void (*)(xmlDoc&, int, char**)> commands =
 {
+    { "create_first", &create_first },
     { "insert", &insert },
     { "remove", &remove },
+    { "reset", &reset },
     { "update_if", &update_if },
     { "update_if_not", &update_if_not },
     { "upsert", &upsert }
@@ -129,6 +155,8 @@ map<string, void (*)(xmlDoc&, int, char**)> commands =
 int main(int argc, char* argv[])
 {
     int rv = EXIT_FAILURE;
+
+    mxb::Log log;
 
     if (argc < 3)
     {
