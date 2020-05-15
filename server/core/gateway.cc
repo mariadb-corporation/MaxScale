@@ -52,7 +52,6 @@
 #include <maxbase/watchdognotifier.hh>
 #include <maxsql/mariadb.hh>
 #include <maxbase/alloc.h>
-#include <maxscale/adminusers.hh>
 #include <maxscale/dcb.hh>
 #include <maxscale/housekeeper.h>
 #include <maxscale/mainworker.hh>
@@ -70,6 +69,7 @@
 #include <maxscale/version.h>
 
 #include "internal/admin.hh"
+#include "internal/adminusers.hh"
 #include "internal/config.hh"
 #include "internal/maxscale.hh"
 #include "internal/modules.hh"

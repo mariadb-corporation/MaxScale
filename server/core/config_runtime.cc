@@ -36,6 +36,7 @@
 #include <maxscale/router.hh>
 #include <maxscale/users.hh>
 
+#include "internal/adminusers.hh"
 #include "internal/config.hh"
 #include "internal/filter.hh"
 #include "internal/listener.hh"

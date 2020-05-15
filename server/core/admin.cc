@@ -35,9 +35,9 @@
 #include <maxscale/config.hh>
 #include <maxscale/clock.h>
 #include <maxscale/http.hh>
-#include <maxscale/adminusers.hh>
 #include <maxscale/paths.hh>
 
+#include "internal/adminusers.hh"
 #include "internal/resource.hh"
 
 using std::string;

@@ -22,10 +22,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <maxscale/paths.hh>
-#include <maxscale/adminusers.hh>
 #include <maxbase/alloc.h>
 #include <maxscale/utils.h>
 #include <maxscale/users.hh>
+#include "../internal/adminusers.hh"
 
 using mxs::USER_ACCOUNT_ADMIN;
 

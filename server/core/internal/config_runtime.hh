@@ -18,7 +18,6 @@
 
 #include <maxscale/ccdefs.hh>
 
-#include <maxscale/adminusers.hh>
 #include <maxscale/monitor.hh>
 #include <maxscale/service.hh>
 

@@ -22,7 +22,6 @@
 #include <sys/stat.h>
 #include <string>
 
-#include <maxscale/adminusers.hh>
 #include <maxbase/alloc.h>
 #include <maxscale/cn_strings.hh>
 #include <maxscale/users.hh>
@@ -32,6 +31,7 @@
 #include <maxscale/utils.hh>
 #include <maxscale/event.hh>
 
+#include "internal/adminusers.hh"
 /**
  * @file adminusers.c - Administration user account management
  */
@@ -50,7 +50,17 @@ bool load_users(const char* fname, Users* output);
 
 const char INET_USERS_FILE_NAME[] = "passwd";
 const int LINELEN = 80;
+
+const char INET_DEFAULT_USERNAME[] = "admin";
+const char INET_DEFAULT_PASSWORD[] = "mariadb";
+
+/** Return values for the functions */
+const char ADMIN_ERR_FILEOPEN[] = "Unable to create password file";
+const char ADMIN_ERR_DUPLICATE[] = "Duplicate username specified";
+const char ADMIN_ERR_USERNOTFOUND[] = "User not found";
 }
+
+const char* ADMIN_SUCCESS = nullptr;
 
 /**
  * Admin Users initialisation
@@ -435,17 +445,6 @@ bool admin_user_is_inet_admin(const char* username, const char* password)
         is_admin = admin_user_is_pam_account(username, password, USER_ACCOUNT_ADMIN);
     }
     return is_admin;
-}
-
-bool admin_have_admin()
-{
-    return inet_users.admin_count() > 0;
-}
-
-bool admin_is_last_admin(const char* user)
-{
-    return admin_user_is_inet_admin(user, nullptr)
-           && (inet_users.admin_count() == 1);
 }
 
 bool admin_user_is_pam_account(const std::string& username, const std::string& password,

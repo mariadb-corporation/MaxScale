@@ -16,7 +16,6 @@
 #include <map>
 #include <sstream>
 
-#include <maxscale/adminusers.hh>
 #include <maxbase/alloc.h>
 #include <maxbase/string.hh>
 #include <maxscale/cn_strings.hh>
@@ -28,6 +27,7 @@
 #include <maxscale/modulecmd.hh>
 #include <maxscale/routingworker.hh>
 
+#include "internal/adminusers.hh"
 #include "internal/config.hh"
 #include "internal/config_runtime.hh"
 #include "internal/filter.hh"

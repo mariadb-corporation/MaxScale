@@ -19,40 +19,15 @@
 #include <maxscale/ccdefs.hh>
 #include <maxscale/users.hh>
 
-/* Max length of fields in for admin users */
-#define ADMIN_USER_MAXLEN       128
-#define ADMIN_PASSWORD_MAXLEN   128
+extern const char* ADMIN_SUCCESS;
 
-/** Default user for the administrative interface */
-#define DEFAULT_ADMIN_USER "@DEFAULT_ADMIN_USER@"
-
-static const char INET_DEFAULT_USERNAME[] = "admin";
-static const char INET_DEFAULT_PASSWORD[] = "mariadb";
-
-/** Return values for the functions */
-static const char *ADMIN_ERR_NOMEM            = "Out of memory";
-static const char *ADMIN_ERR_FILEOPEN         = "Unable to create password file";
-static const char *ADMIN_ERR_DUPLICATE        = "Duplicate username specified";
-static const char *ADMIN_ERR_USERNOTFOUND     = "User not found";
-static const char *ADMIN_ERR_AUTHENTICATION   = "Authentication failed";
-static const char *ADMIN_ERR_FILEAPPEND       = "Unable to append to password file";
-static const char *ADMIN_ERR_PWDFILEOPEN      = "Failed to open password file";
-static const char *ADMIN_ERR_TMPFILEOPEN      = "Failed to open temporary password file";
-static const char *ADMIN_ERR_PWDFILEACCESS    = "Failed to access password file";
-static const char *ADMIN_ERR_DELLASTUSER      = "Deleting the last user is forbidden";
-static const char *ADMIN_ERR_DELROOT          = "Deleting the default admin user is forbidden";
-static const char *ADMIN_SUCCESS              = NULL;
-
-void admin_users_init();
-
-const char* admin_add_inet_user(const char *uname, const char *password, mxs::user_account_type type);
+void        admin_users_init();
+const char* admin_add_inet_user(const char* uname, const char* password, mxs::user_account_type type);
 const char* admin_alter_inet_user(const char* uname, const char* password);
 const char* admin_remove_inet_user(const char* uname);
-bool admin_inet_user_exists(const char *uname);
-bool admin_verify_inet_user(const char *uname, const char *password);
-bool admin_user_is_inet_admin(const char* username, const char *password);
-bool admin_have_admin();
-bool admin_is_last_admin(const char* user);
+bool        admin_inet_user_exists(const char* uname);
+bool        admin_verify_inet_user(const char* uname, const char* password);
+bool        admin_user_is_inet_admin(const char* username, const char* password);
 
 /**
  * @brief Convert all admin users to JSON
@@ -85,5 +60,3 @@ json_t* admin_user_to_json(const char* host, const char* user);
  */
 bool admin_user_is_pam_account(const std::string& username, const std::string& password,
                                mxs::user_account_type min_acc_type = mxs::USER_ACCOUNT_BASIC);
-
-void dcb_PrintAdminUsers(DCB *dcb);

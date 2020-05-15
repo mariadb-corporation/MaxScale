@@ -43,7 +43,6 @@
 #include <maxbase/atomic.hh>
 #include <maxbase/format.hh>
 #include <maxbase/pretty_print.hh>
-#include <maxscale/adminusers.hh>
 #include <maxscale/clock.h>
 #include <maxscale/housekeeper.h>
 #include <maxscale/http.hh>
@@ -59,6 +58,7 @@
 #include <maxscale/utils.hh>
 #include <maxscale/version.h>
 
+#include "internal/adminusers.hh"
 #include "internal/config.hh"
 #include "internal/event.hh"
 #include "internal/filter.hh"
