@@ -478,11 +478,11 @@ void xml::convert_to_first_multi_node(xmlDoc& xmlDoc,
                                       const string& server_address)
 {
     // Ensure there is a "ClusterManager" key whose value is 'manager'.
-    xml::upsert(xmlDoc, keys::CLUSTERMANAGER, manager.c_str());
+    xml::upsert(xmlDoc, CLUSTERMANAGER, manager.c_str());
 
     // Replace all "IPAddr" values, irrespective of where they occur, with 'server_address'
     // if the current value is "127.0.0.1".
-    int n = xml::update_if(xmlDoc, "//IPAddr", server_address.c_str(), "127.0.0.1");
+    int n = xml::update_if(xmlDoc, XPATH_IPADDR, server_address.c_str(), "127.0.0.1");
     mxb_assert(n >= 0);
 }
 
@@ -490,13 +490,11 @@ void xml::convert_to_single_node(xmlDoc& xmlDoc)
 {
     int n;
     // Remove the "ClusterManager" key.
-    string xpath("//");
-    xpath += keys::CLUSTERMANAGER;
-    n = xml::remove(xmlDoc, xpath.c_str());
+    n = xml::remove(xmlDoc, XPATH_CLUSTERMANAGER);
     mxb_assert(n == 1);
     // Replace all "IPAddr" values, irrespective of where they occur, with "127.0.0.1", provided
     // the current value is not "0.0.0.0".
-    n = xml::update_if_not(xmlDoc, "//IPAddr", "127.0.0.1", "0.0.0.0");
+    n = xml::update_if_not(xmlDoc, XPATH_IPADDR, "127.0.0.1", "0.0.0.0");
     mxb_assert(n >= 0);
 }
 
@@ -523,9 +521,9 @@ namespace body
 string begin(const std::chrono::seconds& timeout, int id)
 {
     std::ostringstream body;
-    body << "{\"" << cs::keys::TIMEOUT << "\": "
+    body << "{\"" << TIMEOUT << "\": "
          << timeout.count()
-         << ", \"" << cs::keys::ID << "\": "
+         << ", \"" << ID << "\": "
          << id
          << "}";
 
@@ -546,10 +544,10 @@ string create_config_body(xmlDoc& xmlDoc,
     xmlDocDumpMemory(&xmlDoc, &pConfig, &size);
 
     json_t* pBody = json_object();
-    json_object_set_new(pBody, keys::CONFIG, json_stringn(reinterpret_cast<const char*>(pConfig), size));
-    json_object_set_new(pBody, keys::REVISION, json_integer(revision));
-    json_object_set_new(pBody, keys::MANAGER, json_string(manager.c_str()));
-    json_object_set_new(pBody, keys::TIMEOUT, json_integer(timeout.count()));
+    json_object_set_new(pBody, CONFIG, json_stringn(reinterpret_cast<const char*>(pConfig), size));
+    json_object_set_new(pBody, REVISION, json_integer(revision));
+    json_object_set_new(pBody, MANAGER, json_string(manager.c_str()));
+    json_object_set_new(pBody, TIMEOUT, json_integer(timeout.count()));
 
     xmlFree(pConfig);
 
@@ -589,7 +587,7 @@ string shutdown(const std::chrono::seconds& timeout)
 {
     std::ostringstream body;
     body << "{"
-         << "\"" << cs::keys::TIMEOUT << "\": " << timeout.count()
+         << "\"" << TIMEOUT << "\": " << timeout.count()
          << "}";
 
     return body.str();

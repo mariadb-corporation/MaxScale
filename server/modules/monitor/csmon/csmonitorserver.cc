@@ -152,8 +152,8 @@ CsMonitorServer::Config::Config(const http::Response& response)
 {
     if (response.is_success() && sJson)
     {
-        json_t* pConfig = json_object_get(sJson.get(), cs::keys::CONFIG);
-        json_t* pTimestamp = json_object_get(sJson.get(), cs::keys::TIMESTAMP);
+        json_t* pConfig = json_object_get(sJson.get(), cs::body::CONFIG);
+        json_t* pTimestamp = json_object_get(sJson.get(), cs::body::TIMESTAMP);
 
         if (pConfig && pTimestamp)
         {
@@ -173,7 +173,7 @@ CsMonitorServer::Config::Config(const http::Response& response)
         else
         {
             MXS_ERROR("Obtained config object does not have the keys '%s' and/or '%s': %s",
-                      cs::keys::CONFIG, cs::keys::TIMESTAMP, response.body.c_str());
+                      cs::body::CONFIG, cs::body::TIMESTAMP, response.body.c_str());
             mxb_assert(!true);
         }
     }
@@ -221,10 +221,10 @@ CsMonitorServer::Status::Status(const http::Response& response)
 {
     if (response.is_success() && sJson)
     {
-        json_t* pCluster_mode = json_object_get(sJson.get(), cs::keys::CLUSTER_MODE);
-        json_t* pDbrm_mode = json_object_get(sJson.get(), cs::keys::DBRM_MODE);
-        json_t* pDbroots = json_object_get(sJson.get(), cs::keys::DBROOTS);
-        json_t* pServices = json_object_get(sJson.get(), cs::keys::SERVICES);
+        json_t* pCluster_mode = json_object_get(sJson.get(), cs::body::CLUSTER_MODE);
+        json_t* pDbrm_mode = json_object_get(sJson.get(), cs::body::DBRM_MODE);
+        json_t* pDbroots = json_object_get(sJson.get(), cs::body::DBROOTS);
+        json_t* pServices = json_object_get(sJson.get(), cs::body::SERVICES);
 
         if (pCluster_mode && pDbrm_mode && pDbroots && pServices)
         {
@@ -240,17 +240,17 @@ CsMonitorServer::Status::Status(const http::Response& response)
             {
                 MXS_ERROR("Could not convert values '%s' and/or '%s', and/or arrays '%s' and/or '%s' "
                           "to actual values.",
-                          zCluster_mode, zDbrm_mode, cs::keys::DBROOTS, cs::keys::SERVICES);
+                          zCluster_mode, zDbrm_mode, cs::body::DBROOTS, cs::body::SERVICES);
                 mxb_assert(!true);
             }
         }
         else
         {
             MXS_ERROR("Obtained status object does not have the keys '%s', '%s', '%s' or '%s: %s",
-                      cs::keys::CLUSTER_MODE,
-                      cs::keys::DBRM_MODE,
-                      cs::keys::DBROOTS,
-                      cs::keys::SERVICES,
+                      cs::body::CLUSTER_MODE,
+                      cs::body::DBRM_MODE,
+                      cs::body::DBROOTS,
+                      cs::body::SERVICES,
                       response.body.c_str());
             mxb_assert(!true);
         }
@@ -398,10 +398,10 @@ bool CsMonitorServer::set_cluster_mode(cs::ClusterMode mode,
 {
     ostringstream body;
     body << "{"
-         << "\"" << cs::keys::CLUSTER_MODE << "\": " << "\"" << cs::to_string(mode) << "\", "
-         << "\"" << cs::keys::REVISION << "\": " << m_context.revision() << ","
-         << "\"" << cs::keys::TIMEOUT << "\": " << timeout.count() << ","
-         << "\"" << cs::keys::MANAGER << "\": " << "\"" << m_context.manager() << "\""
+         << "\"" << cs::body::CLUSTER_MODE << "\": " << "\"" << cs::to_string(mode) << "\", "
+         << "\"" << cs::body::REVISION << "\": " << m_context.revision() << ","
+         << "\"" << cs::body::TIMEOUT << "\": " << timeout.count() << ","
+         << "\"" << cs::body::MANAGER << "\": " << "\"" << m_context.manager() << "\""
          << "}";
 
     string url = create_url(cs::rest::CONFIG);

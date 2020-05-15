@@ -64,6 +64,15 @@ bool services_from_array(json_t* pArray, Services* pServices);
 namespace xml
 {
 
+const char CLUSTERMANAGER[]  = "ClusterManager";
+const char DBRM_CONTROLLER[] = "DBRM_Controller";
+const char DDLPROC[]         = "DDLProc";
+const char DMLPROC[]         = "DMLProc";
+const char IPADDR[]          = "IPAddr";
+
+const char XPATH_CLUSTERMANAGER[] = "//ClusterManager";
+const char XPATH_IPADDR[]         = "//IPAddr";
+
 /**
  * Update value of key(s) in XML document.
  *
@@ -166,38 +175,6 @@ void convert_to_single_node(xmlDoc& xmlDoc);
 
 }
 
-namespace keys
-{
-
-//JSON
-const char CONFIG[]       = "config";
-const char CLUSTER_MODE[] = "cluster_mode";
-const char DBRM_MODE[]    = "dbrm_mode";
-const char DBROOTS[]      = "dbroots";
-const char ID[]           = "id";
-const char MANAGER[]      = "manager";
-const char MODE[]         = "mode";
-const char NAME[]         = "name";
-const char PID[]          = "pid";
-const char REVISION[]     = "revision";
-const char SERVICES[]     = "services";
-const char TIMEOUT[]      = "timeout";
-const char TIMESTAMP[]    = "timestamp";
-const char TXN[]          = "txn";
-
-//XML
-const char CLUSTERMANAGER[] = "ClusterManager";
-
-}
-
-namespace xml
-{
-const char DBRM_CONTROLLER[] = "DBRM_Controller";
-const char DDLPROC[]         = "DDLProc";
-const char DMLPROC[]         = "DMLProc";
-const char IPADDR[]          = "IPAddr";
-}
-
 namespace rest
 {
 enum Action {
@@ -226,6 +203,21 @@ inline std::string create_url(const mxs::MonitorServer& mserver,
 
 namespace body
 {
+
+const char CONFIG[]       = "config";
+const char CLUSTER_MODE[] = "cluster_mode";
+const char DBRM_MODE[]    = "dbrm_mode";
+const char DBROOTS[]      = "dbroots";
+const char ID[]           = "id";
+const char MANAGER[]      = "manager";
+const char MODE[]         = "mode";
+const char NAME[]         = "name";
+const char PID[]          = "pid";
+const char REVISION[]     = "revision";
+const char SERVICES[]     = "services";
+const char TIMEOUT[]      = "timeout";
+const char TIMESTAMP[]    = "timestamp";
+const char TXN[]          = "txn";
 
 /**
  * @brief JSON body to be used with PUT /node/begin
