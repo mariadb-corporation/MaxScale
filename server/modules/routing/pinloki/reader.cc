@@ -131,14 +131,8 @@ bool Reader::generate_heartbeats(mxb::Worker::Call::action_t action)
     if (action == mxb::Worker::Call::EXECUTE
         && now - m_last_event >= m_heartbeat_interval && m_dcid == 0)
     {
-        // TODO: Figure out why inotify doesn't seem to always work
-        handle_messages();
-
-        if (now - m_last_event >= m_heartbeat_interval && m_dcid == 0)
-        {
-            m_cb(m_file_reader.create_heartbeat_event());
-            m_last_event = now;
-        }
+        m_cb(m_file_reader.create_heartbeat_event());
+        m_last_event = now;
     }
 
     return true;
