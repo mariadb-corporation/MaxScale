@@ -150,11 +150,4 @@ private:
 #define MXB_SNOTICE(mxb_msg_str__)  MXB_STREAM_LOG_HELPER(LOG_NOTICE, mxb_msg_str__)
 #define MXB_SINFO(mxb_msg_str__)    MXB_STREAM_LOG_HELPER(LOG_INFO, mxb_msg_str__)
 #define MXB_SDEBUG(mxb_msg_str__)   MXB_STREAM_LOG_HELPER(LOG_DEBUG, mxb_msg_str__)
-
-#define MXS_SALERT   MXB_SALERT
-#define MXS_SERROR   MXB_SERROR
-#define MXS_SWARNING MXB_SWARNING
-#define MXS_SNOTICE  MXB_SNOTICE
-#define MXS_SINFO    MXB_SINFO
-#define MXS_SDEBUG   MXB_SDEBUG
 }
