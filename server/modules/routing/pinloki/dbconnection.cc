@@ -193,6 +193,8 @@ void Connection::_connect()
                            (uint) m_details.host.port(),
                            nullptr, m_details.flags) == nullptr)
     {
+        mysql_close(m_conn);
+        m_conn = nullptr;
         MXB_THROWCode(DatabaseError, mysql_errno(m_conn),
                       "Could not connect to " << m_details.host << " : mysql_error "
                                               << mysql_error(m_conn));
