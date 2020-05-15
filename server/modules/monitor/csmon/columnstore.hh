@@ -273,6 +273,20 @@ std::string config_reset_node(xmlDoc& xmlDoc,
                               const std::chrono::seconds& timeout);
 
 /**
+ * @brief JSON body to be used with PUT /node/config
+ *
+ * @param mode     The cluster mode.
+ * @param revision The revision of the configuration.
+ * @param manager  The manager doing the modification.
+ * @param timeout  The timeout.
+ *
+ * @return REST-API body.
+ */
+std::string config_set_cluster_mode(ClusterMode mode,
+                                    int revision,
+                                    const std::string& manager,
+                                    const std::chrono::seconds& timeout);
+/**
  * @brief JSON body to be used with PUT /node/shutdown
  *
  * @param timeout  The timeout.

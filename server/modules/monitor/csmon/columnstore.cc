@@ -583,6 +583,22 @@ string config_reset_node(xmlDoc& xmlDoc,
     return create_config_body(xmlDoc, revision, manager, timeout);
 }
 
+std::string config_set_cluster_mode(ClusterMode mode,
+                                    int revision,
+                                    const std::string& manager,
+                                    const std::chrono::seconds& timeout)
+{
+    std::ostringstream body;
+    body << "{"
+         << "\"" << CLUSTER_MODE << "\": " << "\"" << cs::to_string(mode) << "\", "
+         << "\"" << REVISION << "\": " << revision << ","
+         << "\"" << TIMEOUT << "\": " << timeout.count() << ","
+         << "\"" << MANAGER << "\": " << "\"" << manager << "\""
+         << "}";
+
+    return body.str();
+}
+
 string shutdown(const std::chrono::seconds& timeout)
 {
     std::ostringstream body;

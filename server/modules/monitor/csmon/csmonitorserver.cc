@@ -396,16 +396,10 @@ bool CsMonitorServer::set_cluster_mode(cs::ClusterMode mode,
                                        const std::chrono::seconds& timeout,
                                        json_t* pOutput)
 {
-    ostringstream body;
-    body << "{"
-         << "\"" << cs::body::CLUSTER_MODE << "\": " << "\"" << cs::to_string(mode) << "\", "
-         << "\"" << cs::body::REVISION << "\": " << m_context.revision() << ","
-         << "\"" << cs::body::TIMEOUT << "\": " << timeout.count() << ","
-         << "\"" << cs::body::MANAGER << "\": " << "\"" << m_context.manager() << "\""
-         << "}";
+    auto body = cs::body::config_set_cluster_mode(mode, m_context.revision(), m_context.manager(), timeout);
 
     string url = create_url(cs::rest::CONFIG);
-    http::Response response = http::put(url, body.str(), m_context.http_config());
+    http::Response response = http::put(url, body, m_context.http_config());
 
     if (!response.is_success())
     {
