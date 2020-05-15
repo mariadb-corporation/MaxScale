@@ -61,10 +61,7 @@ constexpr const char* get_alive_query(cs::Version version)
         return ZALIVE_QUERY_15;
 
     case cs::CS_UNKNOWN:
-        return nullptr;
-
     default:
-        mxb_assert(!true);
         return nullptr;
     }
 }
