@@ -128,7 +128,7 @@ int32_t PinlokiSession::routeQuery(GWBUF* pPacket)
         }
         catch (const BinlogReadError& err)
         {
-            MXS_ERROR("%s", err.what());
+            MXS_ERROR("Binlog read error: %s", err.what());
         }
         break;
 

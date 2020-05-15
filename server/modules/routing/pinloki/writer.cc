@@ -48,6 +48,7 @@ Writer::Writer(Generator generator, mxb::Worker* worker, Inventory* inv)
 Writer::~Writer()
 {
     m_running = false;
+    m_cond.notify_one();
     m_thread.join();
 }
 
@@ -131,7 +132,11 @@ void Writer::run()
         }
         catch (const std::exception& x)
         {
-            MXS_ERROR("%s", x.what());
+            MXS_ERROR("Error received during replication: %s", x.what());
+            std::unique_lock<std::mutex> guard(m_lock);
+            m_cond.wait_for(guard, std::chrono::seconds(10), [this]() {
+                                return !m_running;
+                            });
         }
     }
 }

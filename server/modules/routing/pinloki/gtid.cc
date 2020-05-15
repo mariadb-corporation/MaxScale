@@ -15,7 +15,7 @@
 
 #include "gtid.hh"
 #include <maxbase/string.hh>
-#include <maxbase/log.hh>
+#include <maxscale/log.hh>
 #include <algorithm>
 #include <sstream>
 #include <mysql.h>

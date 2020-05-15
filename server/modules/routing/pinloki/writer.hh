@@ -23,6 +23,7 @@
 #include <atomic>
 #include <memory>
 #include <thread>
+#include <condition_variable>
 
 namespace pinloki
 {
@@ -40,15 +41,17 @@ public:
     mxq::GtidList get_gtid_io_pos() const;
 
 private:
-    Generator          m_generator;
-    mxb::Worker*       m_worker;
-    Inventory&         m_inventory;
-    bool               m_is_bootstrap = false;
-    bool               m_commit_on_query = false;
-    maxsql::GtidList   m_current_gtid_list;
-    std::atomic<bool>  m_running {true};
-    std::thread        m_thread;
-    mutable std::mutex m_lock;
+    Generator         m_generator;
+    mxb::Worker*      m_worker;
+    Inventory&        m_inventory;
+    bool              m_is_bootstrap = false;
+    bool              m_commit_on_query = false;
+    maxsql::GtidList  m_current_gtid_list;
+    std::atomic<bool> m_running {true};
+    std::thread       m_thread;
+
+    mutable std::mutex              m_lock;
+    mutable std::condition_variable m_cond;
 
     void save_gtid_list();
     void update_gtid_list(const mxq::Gtid& gtid);

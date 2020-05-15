@@ -12,7 +12,7 @@
  */
 
 #include "dbconnection.hh"
-#include <maxbase/log.hh>
+#include <maxscale/log.hh>
 #include <algorithm>
 #include <cassert>
 #include <iostream>
@@ -46,8 +46,8 @@ Connection::~Connection()
 
 void Connection::start_replication(unsigned int server_id, maxsql::GtidList gtid)
 {
-    std::ostringstream gtid_start_pos;
-    gtid_start_pos << "SET @slave_connect_state='" << (gtid.is_valid() ? gtid.to_string() : "") << '\'';
+    std::string gtid_str = gtid.is_valid() ? gtid.to_string() : "";
+    MXS_INFO("Starting replication from GTID '%s'", gtid_str.c_str());
 
     // The heartbeat period is in nanoseconds. We need frequent updates to keep get_rpl_msg responsive.
     auto hb = "SET @master_heartbeat_period=1000000000";
@@ -58,7 +58,7 @@ void Connection::start_replication(unsigned int server_id, maxsql::GtidList gtid
         hb,
         "SET @master_binlog_checksum = @@global.binlog_checksum",
         "SET @mariadb_slave_capability=4",
-        gtid_start_pos.str(),
+        "SET @slave_connect_state='" + gtid_str + "'",
         "SET @slave_gtid_strict_mode=1",
         "SET @slave_gtid_ignore_duplicates=1",
         "SET NAMES latin1"
@@ -93,7 +93,7 @@ MariaRplEvent Connection::get_rpl_msg()
     auto ptr = mariadb_rpl_fetch(m_rpl, nullptr);
     if (!ptr)
     {
-        throw std::runtime_error(mariadb_error_str());
+        throw std::runtime_error("Failed to fetch binlog event from master: " + mariadb_error_str());
     }
 
     return MariaRplEvent {ptr, m_rpl};
