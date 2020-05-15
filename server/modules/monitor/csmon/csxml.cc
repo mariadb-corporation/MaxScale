@@ -33,8 +33,11 @@ void print_usage_and_exit()
          << "create_first ip manager\n"
          << "    Create multi-node config for first node.\n"
          << "\n"
-         << "insert key value\n"
-         << "    Unconditionally insert new key/value pair.\n"
+         << "insert_b key value\n"
+         << "    Unconditionally insert new key/value pair at beginning.\n"
+         << "\n"
+         << "insert_e key value\n"
+         << "    Unconditionally insert new key/value pair at end.\n"
          << "\n"
          << "remove xpath-expr\n"
          << "    Remove key(s)\n"
@@ -67,7 +70,7 @@ void create_first(xmlDoc& xml, int argc, char* argv[])
     cs::xml::convert_to_first_multi_node(xml, zManager, zIp);
 }
 
-void insert(xmlDoc& xml, int argc, char* argv[])
+void insert_b(xmlDoc& xml, int argc, char* argv[])
 {
     if (argc < 2)
     {
@@ -77,7 +80,20 @@ void insert(xmlDoc& xml, int argc, char* argv[])
     const char* zKey = argv[0];
     const char* zValue = argv[1];
 
-    cs::xml::insert(xml, zKey, zValue);
+    cs::xml::insert(xml, zKey, zValue, cs::xml::XmlLocation::AT_BEGINNING);
+}
+
+void insert_e(xmlDoc& xml, int argc, char* argv[])
+{
+    if (argc < 2)
+    {
+        print_usage_and_exit();
+    }
+
+    const char* zKey = argv[0];
+    const char* zValue = argv[1];
+
+    cs::xml::insert(xml, zKey, zValue, cs::xml::XmlLocation::AT_END);
 }
 
 void remove(xmlDoc& xml, int argc, char* argv[])
@@ -142,7 +158,8 @@ void upsert(xmlDoc& xml, int argc, char* argv[])
 map<string, void (*)(xmlDoc&, int, char**)> commands =
 {
     { "create_first", &create_first },
-    { "insert", &insert },
+    { "insert_b", &insert_b },
+    { "insert_e", &insert_e },
     { "remove", &remove },
     { "reset", &reset },
     { "update_if", &update_if },

@@ -361,17 +361,25 @@ bool xml::insert(xmlDoc& xmlDoc, const char* zKey, const char* zValue, XmlLocati
         if (location == XmlLocation::AT_BEGINNING && pSibling)
         {
             xmlAddPrevSibling(pSibling, pChild);
-            // TODO: Sniff the indentation from the document.
-            xmlNode* pLinebreak = xmlNewText(reinterpret_cast<const xmlChar*>("\n    "));
-            xmlAddPrevSibling(pChild, pLinebreak);
+            xmlNode* pIndentation = xmlNewText(reinterpret_cast<const xmlChar*>("\n\t"));
+            xmlAddPrevSibling(pChild, pIndentation);
         }
         else
         {
-            // TODO: Sniff the indentation from the document.
-            xmlNode* pSpace = xmlNewText(reinterpret_cast<const xmlChar*>("    "));
-            xmlNode* pLinebreak = xmlNewText(reinterpret_cast<const xmlChar*>("\n"));
             xmlAddChild(pRoot, pChild);
-            xmlAddPrevSibling(pChild, pSpace);
+            if (pChild->prev
+                && pChild->prev->type == XML_TEXT_NODE
+                && strcmp(reinterpret_cast<char*>(xmlNodeGetContent(pChild->prev)), "\n") == 0)
+            {
+                xmlNodeSetContent(pChild->prev, reinterpret_cast<const xmlChar*>("\n\t"));
+            }
+            else
+            {
+                xmlNode* pIndentation = xmlNewText(reinterpret_cast<const xmlChar*>("\n\t"));
+                xmlAddPrevSibling(pChild, pIndentation);
+            }
+
+            xmlNode* pLinebreak = xmlNewText(reinterpret_cast<const xmlChar*>("\n"));
             xmlAddNextSibling(pChild, pLinebreak);
         }
 
@@ -430,6 +438,15 @@ int xml_remove(xmlNodeSet* pNodes)
         if (pNode->type != XML_NAMESPACE_DECL)
         {
             pNodes->nodeTab[i] = NULL;
+        }
+
+        if (pNode->prev
+            && pNode->prev->type == XML_TEXT_NODE
+            && strcmp(reinterpret_cast<char*>(xmlNodeGetContent(pNode->prev)), "\n\t") == 0)
+        {
+            auto pPrev = pNode->prev;
+            xmlUnlinkNode(pPrev);
+            xmlFreeNode(pPrev);
         }
 
         xmlUnlinkNode(pNode);
