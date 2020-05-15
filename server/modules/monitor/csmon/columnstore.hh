@@ -140,6 +140,30 @@ int upsert(xmlDoc& xmlDoc,
  */
 int remove(xmlDoc& xmlDoc, const char* zXPath);
 
+/**
+ * @brief Convert single-node XML configuration to first multi-node configuration.
+ *
+ * This call will replace all occurences of "127.0.0.1" in the XML configuration
+ * with the provided IP-address of the node and add a ClusterManager entry.
+ *
+ * @param xmlDoc    Single-node configuration.
+ * @param manager   The manager doing the modification.
+ * @param address   The current public IP address of the node.
+ */
+void convert_to_first_multi_node(xmlDoc& xmlDoc,
+                                 const std::string& manager,
+                                 const std::string& address);
+
+/**
+ * @brief Convert multi-node XML configuration to single-node configuration.
+ *
+ * This call will replace all occurences of the public IP address of the node with
+ * "127.0.0.1" and remove the a ClusterManager entry.
+ *
+ * @param xmlDoc    Multi-node configuration.
+ */
+void convert_to_single_node(xmlDoc& xmlDoc);
+
 }
 
 namespace keys

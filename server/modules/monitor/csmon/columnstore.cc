@@ -473,6 +473,33 @@ int xml::remove(xmlDoc& xmlDoc, const char* zXpath)
     return n;
 }
 
+void xml::convert_to_first_multi_node(xmlDoc& xmlDoc,
+                                      const string& manager,
+                                      const string& server_address)
+{
+    // Ensure there is a "ClusterManager" key whose value is 'manager'.
+    xml::upsert(xmlDoc, keys::CLUSTERMANAGER, manager.c_str());
+
+    // Replace all "IPAddr" values, irrespective of where they occur, with 'server_address'
+    // if the current value is "127.0.0.1".
+    int n = xml::update_if(xmlDoc, "//IPAddr", server_address.c_str(), "127.0.0.1");
+    mxb_assert(n >= 0);
+}
+
+void xml::convert_to_single_node(xmlDoc& xmlDoc)
+{
+    int n;
+    // Remove the "ClusterManager" key.
+    string xpath("//");
+    xpath += keys::CLUSTERMANAGER;
+    n = xml::remove(xmlDoc, xpath.c_str());
+    mxb_assert(n == 1);
+    // Replace all "IPAddr" values, irrespective of where they occur, with "127.0.0.1", provided
+    // the current value is not "0.0.0.0".
+    n = xml::update_if_not(xmlDoc, "//IPAddr", "127.0.0.1", "0.0.0.0");
+    mxb_assert(n >= 0);
+}
+
 string rest::create_url(const SERVER& server,
                         int64_t port,
                         const string& rest_base,
@@ -543,13 +570,7 @@ string config_first_multi_node(xmlDoc& xmlDoc,
                                const string& server_address,
                                const std::chrono::seconds& timeout)
 {
-    // Ensure there is a "ClusterManager" key whose value is 'manager'.
-    xml::upsert(xmlDoc, keys::CLUSTERMANAGER, manager.c_str());
-
-    // Replace all "IPAddr" values, irrespective of where they occur, with 'server_address'
-    // if the current value is "127.0.0.1".
-    int n = xml::update_if(xmlDoc, "//IPAddr", server_address.c_str(), "127.0.0.1");
-    mxb_assert(n >= 0);
+    xml::convert_to_first_multi_node(xmlDoc, manager, server_address);
 
     return create_config_body(xmlDoc, revision, manager, timeout);
 }
@@ -559,14 +580,7 @@ string config_reset_node(xmlDoc& xmlDoc,
                          const std::string& manager,
                          const std::chrono::seconds& timeout)
 {
-    int n;
-    // Remove the "ClusterManager" key.
-    n = xml::remove(xmlDoc, keys::CLUSTERMANAGER);
-    mxb_assert(n == 1);
-    // Replace all "IPAddr" values, irrespective of where they occur, with "127.0.0.1", provided
-    // the current value is not "0.0.0.0".
-    n = xml::update_if_not(xmlDoc, "//IPAddr", "127.0.0.1", "0.0.0.0");
-    mxb_assert(n >= 0);
+    xml::convert_to_single_node(xmlDoc);
 
     return create_config_body(xmlDoc, revision, manager, timeout);
 }
