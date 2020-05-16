@@ -155,21 +155,19 @@ int main(int argc, char** argv)
     mxs_log_set_priority_enabled(LOG_INFO, false);
     mxs_log_set_priority_enabled(LOG_DEBUG, false);
 
-    int rval = EXIT_SUCCESS;
+    int rval = EXIT_FAILURE;
 
-    char* enc = encrypt_password(path, password);
-    if (enc)
+    std::string enc = encrypt_password(path, password);
+    if (!enc.empty())
     {
-        printf("%s\n", enc);
-        MXS_FREE(enc);
+        printf("%s\n", enc.c_str());
+        rval = EXIT_SUCCESS;
     }
     else
     {
         fprintf(stderr, "error: Failed to encode the password.\n");
-        rval = EXIT_FAILURE;
     }
 
     mxs_log_finish();
-
     return rval;
 }

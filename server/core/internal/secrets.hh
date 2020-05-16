@@ -18,17 +18,18 @@
 
 #include <maxscale/secrets.hh>
 
-#define MAXSCALE_KEYLEN 32
-#define MAXSCALE_IV_LEN 16
-
 /**
  * The key structure held in the secrets file
  */
-struct MAXKEYS
+struct EncryptionKeys
 {
-    unsigned char enckey[MAXSCALE_KEYLEN];
-    unsigned char initvector[MAXSCALE_IV_LEN];
+    static constexpr int key_len = 32; // For AES256
+    static constexpr int iv_len = 16;
+    static constexpr int total_len = key_len + iv_len;
+
+    unsigned char enckey[key_len] {0};
+    unsigned char initvector[iv_len] {0};
 };
 
-int   secrets_write_keys(const char* directory);
-char* encrypt_password(const char*, const char*);
+int         secrets_write_keys(const char* directory);
+std::string encrypt_password(const char*, const char*);

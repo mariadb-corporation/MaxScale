@@ -25,23 +25,30 @@
 
 #include "internal/secrets.hh"
 
+using std::string;
+
+namespace
+{
+
 /**
  * Generate a random printable character
  *
  * @return A random printable character
  */
-static unsigned char secrets_randomchar()
+unsigned char secrets_randomchar()
 {
-    return (char) ((mxs_random() % ('~' - ' ')) + ' ');
+    return (char)((mxs_random() % ('~' - ' ')) + ' ');
 }
 
-static int secrets_random_str(unsigned char* output, int len)
+int secrets_random_str(unsigned char* output, int len)
 {
     for (int i = 0; i < len; ++i)
     {
         output[i] = secrets_randomchar();
     }
     return 0;
+}
+
 }
 
 /**
@@ -51,11 +58,10 @@ static int secrets_random_str(unsigned char* output, int len)
  * containing the .secrets file. Otherwise the default location is used.
  * @return  The keys structure or NULL on error
  */
-static MAXKEYS* secrets_readKeys(const char* path)
+std::unique_ptr<EncryptionKeys> secrets_readKeys(const char* path)
 {
     static const char NAME[] = ".secrets";
     char secret_file[PATH_MAX + 1 + sizeof(NAME)];      // Worst case: maximum path + "/" + name.
-    MAXKEYS* keys;
     struct stat secret_stats;
     static int reported = 0;
 
@@ -158,7 +164,7 @@ static MAXKEYS* secrets_readKeys(const char* path)
         return NULL;
     }
 
-    if (secret_stats.st_size != sizeof(MAXKEYS))
+    if (secret_stats.st_size != sizeof(EncryptionKeys))
     {
         int eno = errno;
         errno = 0;
@@ -179,7 +185,8 @@ static MAXKEYS* secrets_readKeys(const char* path)
         return NULL;
     }
 
-    if ((keys = (MAXKEYS*) MXS_MALLOC(sizeof(MAXKEYS))) == NULL)
+    auto keys = std::make_unique<EncryptionKeys>();
+    if (!keys)
     {
         close(fd);
         return NULL;
@@ -187,23 +194,17 @@ static MAXKEYS* secrets_readKeys(const char* path)
 
     /**
      * Read all data from file.
-     * MAXKEYS (secrets.h) is struct for key, _not_ length-related macro.
+     * EncryptionKeys (secrets.h) is struct for key, _not_ length-related macro.
      */
-    ssize_t len = read(fd, keys, sizeof(MAXKEYS));
+    ssize_t len = read(fd, keys.get(), sizeof(EncryptionKeys));
 
-    if (len != sizeof(MAXKEYS))
+    if (len != sizeof(EncryptionKeys))
     {
         int eno = errno;
         errno = 0;
         close(fd);
-        MXS_FREE(keys);
-        MXS_ERROR("Read from secrets file "
-                  "%s failed. Read %ld, expected %d bytes. Error %d, %s.",
-                  secret_file,
-                  len,
-                  (int)sizeof(MAXKEYS),
-                  eno,
-                  mxs_strerror(eno));
+        MXS_ERROR("Read from secrets file %s failed. Read %ld, expected %d bytes. Error %d, %s.",
+                  secret_file, len, (int)sizeof(EncryptionKeys), eno, mxs_strerror(eno));
         return NULL;
     }
 
@@ -212,7 +213,6 @@ static MAXKEYS* secrets_readKeys(const char* path)
     {
         int eno = errno;
         errno = 0;
-        MXS_FREE(keys);
         MXS_ERROR("Failed closing the "
                   "secrets file %s. Error %d, %s.",
                   secret_file,
@@ -245,7 +245,7 @@ int secrets_write_keys(const char* dir)
 {
     int fd, randfd;
     unsigned int randval;
-    MAXKEYS key;
+    EncryptionKeys key;
     char secret_file[PATH_MAX + 10];
 
     if (strlen(dir) > PATH_MAX)
@@ -293,8 +293,8 @@ int secrets_write_keys(const char* dir)
     }
 
     close(randfd);
-    secrets_random_str(key.enckey, MAXSCALE_KEYLEN);
-    secrets_random_str(key.initvector, MAXSCALE_IV_LEN);
+    secrets_random_str(key.enckey, EncryptionKeys::key_len);
+    secrets_random_str(key.initvector, EncryptionKeys::iv_len);
 
     /* Write data */
     if (write(fd, &key, sizeof(key)) < 0)
@@ -339,9 +339,8 @@ int secrets_write_keys(const char* dir)
  * @param crypt The encrypted password
  * @return The decrypted password
  */
-std::string decrypt_password(const std::string& crypt)
+string decrypt_password(const string& crypt)
 {
-    using std::string;
     // If the input is not a HEX string, return the input as is. Likely it was not encrypted.
     for (auto c : crypt)
     {
@@ -351,7 +350,7 @@ std::string decrypt_password(const std::string& crypt)
         }
     }
 
-    MAXKEYS* keys = secrets_readKeys(NULL);
+    auto keys = secrets_readKeys(NULL);
     if (!keys)
     {
         // Reading failed. This probably means that password encryption is not used, so return original.
@@ -363,14 +362,13 @@ std::string decrypt_password(const std::string& crypt)
     mxs::hex2bin(crypt.c_str(), len, encrypted);
 
     AES_KEY aeskey;
-    AES_set_decrypt_key(keys->enckey, 8 * MAXSCALE_KEYLEN, &aeskey);
+    AES_set_decrypt_key(keys->enckey, 8 * EncryptionKeys::key_len, &aeskey);
 
     int enlen = len / 2;
     unsigned char plain[enlen + 1];
 
     AES_cbc_encrypt(encrypted, plain, enlen, &aeskey, keys->initvector, AES_DECRYPT);
     plain[enlen] = '\0';
-    MXS_FREE(keys);
 
     return (char*)plain;
 }
@@ -378,41 +376,29 @@ std::string decrypt_password(const std::string& crypt)
 /**
  * Encrypt a password that can be stored in the MaxScale configuration file.
  *
- * Note the return is always a malloc'd string that the caller must free
- * @param path      Path the the .secrets file
- * @param password  The password to encrypt
- * @return  The encrypted password
+ * @param path   Path to the the .secrets file
+ * @param input  The plaintext password to encrypt.
+ * @return The encrypted password, or empty on failure.
  */
-char* encrypt_password(const char* path, const char* password)
+string encrypt_password(const char* path, const char* input)
 {
-    MAXKEYS* keys;
+    auto keys = secrets_readKeys(path);
+    if (!keys)
+    {
+        return "";
+    }
+
     AES_KEY aeskey;
-    int padded_len;
-    char* hex_output;
-    size_t len = strlen(password);
-    padded_len = ((len / AES_BLOCK_SIZE) + 1) * AES_BLOCK_SIZE;
+    AES_set_encrypt_key(keys->enckey, 8 * EncryptionKeys::key_len, &aeskey);
+
+    size_t len = strlen(input);
+    size_t padded_len = ((len / AES_BLOCK_SIZE) + 1) * AES_BLOCK_SIZE;
     unsigned char encrypted[padded_len + 1];
 
-    if ((keys = secrets_readKeys(path)) == NULL)
-    {
-        return NULL;
-    }
+    AES_cbc_encrypt((const unsigned char*) input, encrypted, padded_len,
+                    &aeskey, keys->initvector, AES_ENCRYPT);
 
-
-    AES_set_encrypt_key(keys->enckey, 8 * MAXSCALE_KEYLEN, &aeskey);
-
-    AES_cbc_encrypt((const unsigned char*) password,
-                    encrypted,
-                    padded_len,
-                    &aeskey,
-                    keys->initvector,
-                    AES_ENCRYPT);
-    hex_output = (char*) MXS_MALLOC(padded_len * 2 + 1);
-    if (hex_output)
-    {
-        mxs::bin2hex(encrypted, padded_len, hex_output);
-    }
-    MXS_FREE(keys);
-
+    char hex_output[2 * padded_len + 1];
+    mxs::bin2hex(encrypted, padded_len, hex_output);
     return hex_output;
 }
