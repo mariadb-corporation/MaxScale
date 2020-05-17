@@ -70,7 +70,6 @@ private:
     int              m_inotify_fd;
     int              m_inotify_descriptor = -1;
     ReadPosition     m_read_pos;
-    std::string      m_inotify_file;
     uint32_t         m_server_id;
     const Inventory& m_inventory;
 };

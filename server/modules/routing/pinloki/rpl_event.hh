@@ -64,7 +64,7 @@ public:
      * @brief RplEvent
      * @param raw - the full buffer: header and data
      */
-    RplEvent(std::vector<char>&& raw);
+    explicit RplEvent(std::vector<char>&& raw);
 
     static int get_event_length(const std::vector<char>& header);
 

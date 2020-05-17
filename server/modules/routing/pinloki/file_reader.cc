@@ -95,10 +95,10 @@ void FileReader::open(const std::string& file_name)
         MXB_THROW(BinlogReadError,
                   "Could not open " << file_name << " for reading: " << errno << ", " << mxb_strerror(errno));
     }
-    m_read_pos.next_pos = PINLOKI_MAGIC.size();     // should check that it really is PINLOKI_MAGIC
+    m_read_pos.next_pos = PINLOKI_MAGIC.size();     // TODO should check that it really is PINLOKI_MAGIC
     m_read_pos.name = file_name;
 
-    set_inotify_fd();
+    set_inotify_fd();   // Always set inotify. Avoids all race conditions, extra notifications are fine.
 }
 
 void FileReader::fd_notify(uint32_t events)
@@ -136,10 +136,8 @@ maxsql::RplEvent FileReader::fetch_event()
 
     if (m_read_pos.file.tellg() != m_read_pos.next_pos + HEADER_LEN)
     {
-        // What! Why am I throwing here, isn't this just an end of file condition, where
-        // the writer has written only the header (hm, maybe the write is atomic).
+        // Partial, or no header. Wait for more via inotify.
         return maxsql::RplEvent();
-        MXB_THROW(BinlogReadError, "fetch_raw: failed to read event header, file " << m_read_pos.name);
     }
 
     auto event_length = maxsql::RplEvent::get_event_length(raw);
@@ -149,13 +147,8 @@ maxsql::RplEvent FileReader::fetch_event()
 
     if (m_read_pos.file.tellg() != m_read_pos.next_pos + event_length)
     {
-        if (m_inotify_file != m_read_pos.name)
-        {
-            set_inotify_fd();
-            // TODO. I think there is a race condition. One notification should happen immediately after
-            //       this, or just do fetch_event again. Could not make the race happen.
-        }
-        return std::vector<char>();
+        // Wait for more via inotify.
+        return maxsql::RplEvent();
     }
 
     maxsql::RplEvent rpl(std::move(raw));
@@ -185,7 +178,6 @@ void FileReader::set_inotify_fd()
         inotify_rm_watch(m_inotify_fd, m_inotify_descriptor);
     }
 
-    m_inotify_file = m_read_pos.name;
     m_inotify_descriptor = inotify_add_watch(m_inotify_fd, m_read_pos.name.c_str(), IN_MODIFY);
 
     if (m_inotify_descriptor == -1)
