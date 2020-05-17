@@ -223,51 +223,51 @@ DECLARE_ATTR_RULE(grammar, "grammar", Command);
 const auto eq_def = x3::omit['='];
 const auto str_def = x3::lexeme[+(x3::ascii::alnum | x3::char_("_@."))];
 const auto func_def = str
-    > x3::lit("(") > x3::omit[*(x3::ascii::char_ - ')')] > x3::lit(")")
+    >> x3::lit("(") >> x3::omit[*(x3::ascii::char_ - ')')] >> x3::lit(")")
     >> x3::attr(std::string("()"));     // Must be std::string, otherwise the null character is included
-const auto sq_str_def = x3::lexeme[x3::lit('\'') > *(x3::char_ - '\'') > x3::lit('\'')];
-const auto dq_str_def = x3::lexeme[x3::lit('"') > *(x3::char_ - '"') > x3::lit('"')];
+const auto sq_str_def = x3::lexeme[x3::lit('\'') >> *(x3::char_ - '\'') >> x3::lit('\'')];
+const auto dq_str_def = x3::lexeme[x3::lit('"') >> *(x3::char_ - '"') >> x3::lit('"')];
 const auto q_str_def = sq_str | dq_str;
 
 // Generic fields and key-values
 const auto field_def = sq_str | dq_str | x3::double_ | x3::int_ | func | str;
-const auto variable_def = str > eq > field;
+const auto variable_def = str >> eq >> field;
 
 // Preliminary SELECT MASTER_GTID_WAIT support. This isn't the prettiest solution but it allows testing
 // without modifications to the SELECT grammar.
 //
 // TODO: Evaluate whether adding it to the SELECT grammar is worth it.
-const auto master_gtid_wait_def = x3::lit("SELECT") > x3::lit("MASTER_GTID_WAIT")
-    > x3::lit("(")
-    > q_str > -(x3::lit(",") > x3::int_)
-    > x3::lit(")");
+const auto master_gtid_wait_def = x3::lit("SELECT") >> x3::lit("MASTER_GTID_WAIT")
+    >> x3::lit("(")
+    >> q_str >> -(x3::lit(",") >> x3::int_)
+    >> x3::lit(")");
 
 // SET and SELECT commands
-const auto select_def = x3::lit("SELECT") > field % ',' >> -x3::omit[x3::lit("LIMIT") > x3::int_ % ','];
+const auto select_def = x3::lit("SELECT") >> field % ',' >> -x3::omit[x3::lit("LIMIT") >> x3::int_ % ','];
 
-const auto set_names_def = x3::string("NAMES") > (str | q_str);
+const auto set_names_def = x3::string("NAMES") >> (str | q_str);
 const auto global_or_session_def = -x3::omit[x3::lit("GLOBAL") | x3::lit("SESSION") | x3::lit("@@global.")];
-const auto set_def = x3::lit("SET") > global_or_session > (set_names | (variable % ','));
+const auto set_def = x3::lit("SET") >> global_or_session >> (set_names | (variable % ','));
 
 // CHANGE MASTER TO, only accepts a limited set of keys
-const auto change_master_variable_def = change_master_sym > eq > field;
-const auto change_master_def = x3::lit("CHANGE") > x3::lit("MASTER") > x3::lit("TO")
-    > (change_master_variable % ',');
+const auto change_master_variable_def = change_master_sym >> eq >> field;
+const auto change_master_def = x3::lit("CHANGE") >> x3::lit("MASTER") >> x3::lit("TO")
+    >> (change_master_variable % ',');
 
 // START SLAVE et al.
-const auto slave_def = slave_sym > "SLAVE";
+const auto slave_def = slave_sym >> "SLAVE";
 
 // PURGE {BINARY | MASTER} LOGS TO '<binlog name>'
-const auto purge_logs_def = x3::lit("PURGE") > (x3::lit("BINARY") | x3::lit("MASTER")) > x3::lit("LOGS")
-    > x3::lit("TO") > q_str;
+const auto purge_logs_def = x3::lit("PURGE") >> (x3::lit("BINARY") | x3::lit("MASTER")) >> x3::lit("LOGS")
+    >> x3::lit("TO") >> q_str;
 
 // SHOW commands
-const auto show_master_def = x3::lit("MASTER") > x3::lit("STATUS") >> x3::attr(ShowType::MASTER_STATUS);
-const auto show_slave_def = x3::lit("SLAVE") > x3::lit("STATUS") >> x3::attr(ShowType::SLAVE_STATUS);
-const auto show_binlogs_def = x3::lit("BINARY") > x3::lit("LOGS") >> x3::attr(ShowType::BINLOGS);
-const auto show_variables_def = x3::lit("VARIABLES") > x3::lit("LIKE") > q_str;
+const auto show_master_def = x3::lit("MASTER") >> x3::lit("STATUS") >> x3::attr(ShowType::MASTER_STATUS);
+const auto show_slave_def = x3::lit("SLAVE") >> x3::lit("STATUS") >> x3::attr(ShowType::SLAVE_STATUS);
+const auto show_binlogs_def = x3::lit("BINARY") >> x3::lit("LOGS") >> x3::attr(ShowType::BINLOGS);
+const auto show_variables_def = x3::lit("VARIABLES") >> x3::lit("LIKE") >> q_str;
 const auto show_options_def = (show_master | show_slave | show_binlogs | show_variables);
-const auto show_def = x3::lit("SHOW") > show_options;
+const auto show_def = x3::lit("SHOW") >> show_options;
 const auto end_of_input_def = x3::eoi;
 
 // The complete grammar, case insensitive
@@ -278,7 +278,7 @@ const auto grammar_def = x3::no_case[
     | change_master
     | slave
     | show
-    | purge_logs] > end_of_input;
+    | purge_logs] >> end_of_input;
 
 // Boost magic that combines the rule declarations and definitions (definitions _must_ end in a _def suffix)
 BOOST_SPIRIT_DEFINE(str, sq_str, dq_str, field, variable, select, set, eq, q_str,
