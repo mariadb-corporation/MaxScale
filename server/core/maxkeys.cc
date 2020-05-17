@@ -16,12 +16,11 @@
  */
 #include <maxscale/ccdefs.hh>
 #include <getopt.h>
-#include <sys/types.h>
 #include <pwd.h>
-#include <stdio.h>
+#include <cstdio>
 #include <unistd.h>
+#include <maxbase/log.hh>
 #include <maxscale/paths.hh>
-#include <maxscale/random.h>
 #include "internal/secrets.hh"
 
 #ifdef HAVE_GLIBC
@@ -57,6 +56,7 @@ void print_usage(const char* executable, const char* directory)
 
 int main(int argc, char** argv)
 {
+    mxb::Log log(MXB_LOG_TARGET_STDOUT);
     std::string directory = mxs::datadir();
     std::string username = "maxscale";
 
@@ -96,9 +96,7 @@ int main(int argc, char** argv)
         directory = argv[optind];
     }
 
-    mxs_log_init(NULL, NULL, MXS_LOG_TARGET_DEFAULT);
-
-    if (secrets_write_keys(directory.c_str()) == 0)
+    if (secrets_write_keys(directory) == 0)
     {
         std::string filename = directory + "/.secrets";
 
@@ -121,8 +119,6 @@ int main(int argc, char** argv)
         fprintf(stderr, "Failed to create the .secrets file.\n");
         rval = EXIT_FAILURE;
     }
-
-    mxs_log_finish();
 
     return rval;
 }

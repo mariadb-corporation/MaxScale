@@ -22,6 +22,7 @@
 #include <maxscale/paths.hh>
 #include <maxscale/random.h>
 #include <maxscale/utils.hh>
+#include <maxbase/format.hh>
 
 #include "internal/secrets.hh"
 
@@ -60,57 +61,56 @@ int secrets_random_str(unsigned char* output, int len)
  */
 std::unique_ptr<EncryptionKeys> secrets_readKeys(const char* path)
 {
-    static const char NAME[] = ".secrets";
-    char secret_file[PATH_MAX + 1 + sizeof(NAME)];      // Worst case: maximum path + "/" + name.
-    struct stat secret_stats;
-    static int reported = 0;
+    const char NAME[] = ".secrets";
+    string secret_file;
+    struct stat secret_stats {0};
 
-    if (path != NULL)
+    if (path != nullptr)
     {
         size_t len = strlen(path);
         if (len > PATH_MAX)
         {
             MXS_ERROR("Too long (%lu > %d) path provided.", len, PATH_MAX);
-            return NULL;
+            return nullptr;
         }
 
         if (stat(path, &secret_stats) == 0)
         {
             if (S_ISDIR(secret_stats.st_mode))
             {
-                sprintf(secret_file, "%s/%s", path, NAME);
+                secret_file = mxb::string_printf("%s/%s", path, NAME);
             }
             else
             {
                 // If the provided path does not refer to a directory, then the
                 // file name *must* be ".secrets".
-                char* file;
-                if ((file = strrchr(secret_file, '.')) == NULL || strcmp(file, NAME) != 0)
+                const char* file = strrchr(secret_file.c_str(), '.');
+                if (file == nullptr || strcmp(file, NAME) != 0)
                 {
-                    MXS_ERROR("The name of the secrets file must be \"%s\".", NAME);
-                    return NULL;
+                    MXS_ERROR("The name of the secrets file must be '%s'.", NAME);
+                    return nullptr;
                 }
             }
         }
         else
         {
-            MXS_ERROR("The provided path \"%s\" does not exist or cannot be accessed. "
-                      "Error: %d, %s.",
-                      path,
-                      errno,
-                      mxs_strerror(errno));
-            return NULL;
+            MXS_ERROR("The provided path '%s' does not exist or cannot be accessed. Error: %d, %s.",
+                      path, errno, mxs_strerror(errno));
+            return nullptr;
         }
 
-        strcpy(secret_file, clean_up_pathname(secret_file).c_str());
+        secret_file = clean_up_pathname(secret_file);
     }
     else
     {
         // We assume that mxs::datadir() returns a path shorter than PATH_MAX.
-        sprintf(secret_file, "%s/%s", mxs::datadir(), NAME);
+        secret_file = mxb::string_printf("%s/%s", mxs::datadir(), NAME);
     }
+
+    static int reported = 0;
     /* Try to access secrets file */
-    if (access(secret_file, R_OK) == -1)
+    const char* secret_filez = secret_file.c_str();
+    if (access(secret_filez, R_OK) == -1)
     {
         int eno = errno;
         errno = 0;
@@ -118,36 +118,27 @@ std::unique_ptr<EncryptionKeys> secrets_readKeys(const char* path)
         {
             if (!reported)
             {
-                MXS_NOTICE("Encrypted password file %s can't be accessed "
-                           "(%s). Password encryption is not used.",
-                           secret_file,
-                           mxs_strerror(eno));
+                MXS_NOTICE("Encrypted password file %s can't be accessed (%s). Password encryption is "
+                           "not used.", secret_filez, mxs_strerror(eno));
                 reported = 1;
             }
         }
         else
         {
-            MXS_ERROR("Access for secrets file "
-                      "[%s] failed. Error %d, %s.",
-                      secret_file,
-                      eno,
-                      mxs_strerror(eno));
+            MXS_ERROR("Access for secrets file [%s] failed. Error %d, %s.",
+                      secret_filez, eno, mxs_strerror(eno));
         }
-        return NULL;
+        return nullptr;
     }
 
     /* open secret file */
-    int fd = open(secret_file, O_RDONLY);
+    int fd = open(secret_filez, O_RDONLY);
     if (fd < 0)
     {
         int eno = errno;
         errno = 0;
-        MXS_ERROR("Failed opening secret "
-                  "file [%s]. Error %d, %s.",
-                  secret_file,
-                  eno,
-                  mxs_strerror(eno));
-        return NULL;
+        MXS_ERROR("Failed opening secret file [%s]. Error %d, %s.", secret_filez, eno, mxs_strerror(eno));
+        return nullptr;
     }
 
     /* accessing file details */
@@ -156,12 +147,8 @@ std::unique_ptr<EncryptionKeys> secrets_readKeys(const char* path)
         int eno = errno;
         errno = 0;
         close(fd);
-        MXS_ERROR("fstat for secret file %s "
-                  "failed. Error %d, %s.",
-                  secret_file,
-                  eno,
-                  mxs_strerror(eno));
-        return NULL;
+        MXS_ERROR("fstat for secret file %s failed. Error %d, %s.", secret_filez, eno, mxs_strerror(eno));
+        return nullptr;
     }
 
     if (secret_stats.st_size != sizeof(EncryptionKeys))
@@ -169,27 +156,23 @@ std::unique_ptr<EncryptionKeys> secrets_readKeys(const char* path)
         int eno = errno;
         errno = 0;
         close(fd);
-        MXS_ERROR("Secrets file %s has "
-                  "incorrect size. Error %d, %s.",
-                  secret_file,
-                  eno,
-                  mxs_strerror(eno));
-        return NULL;
+        MXS_ERROR("Secrets file %s has incorrect size. Error %d, %s.", secret_filez, eno, mxs_strerror(eno));
+        return nullptr;
     }
+
     if (secret_stats.st_mode != (S_IRUSR | S_IFREG))
     {
         close(fd);
-        MXS_ERROR("Ignoring secrets file %s, invalid permissions."
-                  "The only permission on the file should be owner:read.",
-                  secret_file);
-        return NULL;
+        MXS_ERROR("Ignoring secrets file %s, invalid permissions. The only permission on the file should be "
+                  "owner:read.", secret_filez);
+        return nullptr;
     }
 
     auto keys = std::make_unique<EncryptionKeys>();
     if (!keys)
     {
         close(fd);
-        return NULL;
+        return nullptr;
     }
 
     /**
@@ -204,8 +187,8 @@ std::unique_ptr<EncryptionKeys> secrets_readKeys(const char* path)
         errno = 0;
         close(fd);
         MXS_ERROR("Read from secrets file %s failed. Read %ld, expected %d bytes. Error %d, %s.",
-                  secret_file, len, (int)sizeof(EncryptionKeys), eno, mxs_strerror(eno));
-        return NULL;
+                  secret_filez, len, (int)sizeof(EncryptionKeys), eno, mxs_strerror(eno));
+        return nullptr;
     }
 
     /* Close the file */
@@ -213,19 +196,15 @@ std::unique_ptr<EncryptionKeys> secrets_readKeys(const char* path)
     {
         int eno = errno;
         errno = 0;
-        MXS_ERROR("Failed closing the "
-                  "secrets file %s. Error %d, %s.",
-                  secret_file,
-                  eno,
-                  mxs_strerror(eno));
+        MXS_ERROR("Failed closing the secrets file %s. Error %d, %s.",
+                  secret_filez, eno, mxs_strerror(eno));
         return NULL;
     }
-    mxb_assert(keys != NULL);
 
     /** Successfully loaded keys, log notification */
     if (!reported)
     {
-        MXS_NOTICE("Using encrypted passwords. Encryption key: '%s'.", secret_file);
+        MXS_NOTICE("Using encrypted passwords. Encryption key: '%s'.", secret_filez);
         reported = 1;
     }
 
@@ -241,69 +220,41 @@ std::unique_ptr<EncryptionKeys> secrets_readKeys(const char* path)
  * @param dir The directory where the ".secrets" file should be created.
  * @return 0 on success and 1 on failure
  */
-int secrets_write_keys(const char* dir)
+int secrets_write_keys(const string& dir)
 {
-    int fd, randfd;
-    unsigned int randval;
-    EncryptionKeys key;
-    char secret_file[PATH_MAX + 10];
-
-    if (strlen(dir) > PATH_MAX)
+    if (dir.length() > PATH_MAX)
     {
         MXS_ERROR("Pathname too long.");
         return 1;
     }
 
-    snprintf(secret_file, PATH_MAX + 9, "%s/.secrets", dir);
-    strcpy(secret_file, clean_up_pathname(secret_file).c_str());
+    string secret_file = dir + "/.secrets";
+    secret_file = clean_up_pathname(secret_file);
+    auto secret_filez = secret_file.c_str();
 
     /* Open for writing | Create | Truncate the file for writing */
-    if ((fd = open(secret_file, O_EXCL | O_CREAT | O_WRONLY | O_TRUNC, S_IRUSR)) < 0)
+    int fd = open(secret_filez, O_EXCL | O_CREAT | O_WRONLY | O_TRUNC, S_IRUSR);
+    if (fd < 0)
     {
         if (errno == EEXIST)
         {
             fprintf(stderr, "Key [%s] already exists, remove it manually to create a new one. \n",
-                    secret_file);
+                    secret_filez);
         }
 
-        MXS_ERROR("failed opening secret "
-                  "file [%s]. Error %d, %s.",
-                  secret_file,
-                  errno,
-                  mxs_strerror(errno));
+        MXS_ERROR("failed opening secret file [%s]. Error %d, %s.", secret_filez, errno, mxs_strerror(errno));
         return 1;
     }
 
-    /* Open for writing | Create | Truncate the file for writing */
-    if ((randfd = open("/dev/random", O_RDONLY)) < 0)
-    {
-        MXS_ERROR("failed opening /dev/random. Error %d, %s.",
-                  errno,
-                  mxs_strerror(errno));
-        close(fd);
-        return 1;
-    }
-
-    if (read(randfd, (void*) &randval, sizeof(unsigned int)) < 1)
-    {
-        MXS_ERROR("failed to read /dev/random.");
-        close(fd);
-        close(randfd);
-        return 1;
-    }
-
-    close(randfd);
+    EncryptionKeys key;
     secrets_random_str(key.enckey, EncryptionKeys::key_len);
     secrets_random_str(key.initvector, EncryptionKeys::iv_len);
 
     /* Write data */
     if (write(fd, &key, sizeof(key)) < 0)
     {
-        MXS_ERROR("failed writing into "
-                  "secret file [%s]. Error %d, %s.",
-                  secret_file,
-                  errno,
-                  mxs_strerror(errno));
+        MXS_ERROR("failed writing into secret file [%s]. Error %d, %s.",
+                  secret_filez, errno, mxs_strerror(errno));
         close(fd);
         return 1;
     }
@@ -311,20 +262,14 @@ int secrets_write_keys(const char* dir)
     /* close file */
     if (close(fd) < 0)
     {
-        MXS_ERROR("failed closing the "
-                  "secret file [%s]. Error %d, %s.",
-                  secret_file,
-                  errno,
-                  mxs_strerror(errno));
+        MXS_ERROR("failed closing the secret file [%s]. Error %d, %s.",
+                  secret_filez, errno, mxs_strerror(errno));
     }
 
-    if (chmod(secret_file, S_IRUSR) < 0)
+    if (chmod(secret_filez, S_IRUSR) < 0)
     {
-        MXS_ERROR("failed to change the permissions of the"
-                  "secret file [%s]. Error %d, %s.",
-                  secret_file,
-                  errno,
-                  mxs_strerror(errno));
+        MXS_ERROR("failed to change the permissions of the secret file [%s]. Error %d, %s.",
+                  secret_filez, errno, mxs_strerror(errno));
     }
 
     return 0;
