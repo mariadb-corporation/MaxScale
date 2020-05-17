@@ -117,7 +117,6 @@ bool search_file(const std::string& file_name,
 
     long file_pos = PINLOKI_MAGIC.size();
 
-    file.seekg(file_pos);
     // Special rule: if it is the first file, it has no gtid list and we search for the gtid.
     // If old files have been purged, there is a gtid list.
     bool found_file = first_file;

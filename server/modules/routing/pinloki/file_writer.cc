@@ -134,15 +134,20 @@ void FileWriter::open_existing_file(const std::string& file_name)
 
 void FileWriter::write_to_file(WritePosition& fn, const maxsql::MariaRplEvent& rpl_event)
 {
-    fn.file.seekp(fn.write_pos);
+    mxb_assert_message(fn.file.tellp() <= fn.write_pos, "File should not be ahead of current position");
     fn.file.write(rpl_event.raw_data(), rpl_event.raw_data_size());
-    fn.write_pos = rpl_event.event().next_event_pos;
 
     if (!fn.file.good())
     {
-        MXB_THROW(BinlogWriteError, "Could not write event to " << fn.name);
+        MXB_THROW(BinlogWriteError,
+                  "Could not write event to " << fn.name << ": " << errno << ", " << mxb_strerror(errno));
     }
 
+    // Adjust the file to point to the next position after it is written. This will always write the first
+    // event at the position the previous event expects it to be at. This prevents logical gaps in the binlog
+    // even if it causes physical gaps in the file.
+    fn.write_pos = rpl_event.event().next_event_pos;
+    fn.file.seekp(fn.write_pos);
     fn.file.flush();
 }
 }
