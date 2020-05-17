@@ -28,8 +28,17 @@
 #include <iomanip>
 #include <getopt.h>
 
-pinloki::Config config("test");
-pinloki::Inventory inv(config);
+const pinloki::Config& config()
+{
+    static pinloki::Config cfg("test");
+    return cfg;
+}
+
+pinloki::Inventory& inventory()
+{
+    static pinloki::Inventory inv(config());
+    return inv;
+}
 
 // for apropos tests
 bool test_it(int argc, char* argv[])
@@ -37,7 +46,7 @@ bool test_it(int argc, char* argv[])
     return false;
 
     auto gtid = maxsql::Gtid::from_string("0-0-9");
-    pinloki::GtidPosition pos = pinloki::find_gtid_position(gtid, &inv);
+    pinloki::GtidPosition pos = pinloki::find_gtid_position(gtid, &inventory());
 
     std::cout << "pos.file_name = " << pos.file_name << "\n";
     std::cout << "pos.pos = " << pos.file_pos << "\n";
@@ -67,7 +76,7 @@ void prog_main(const maxsql::GtidList& gtid_list, const std::string& host,
     {
         pinloki::Writer writer([&]() {
                                    return details;
-                               }, &worker, &inv);
+                               }, &worker, &inventory());
         worker.start();
         worker.join();
     }
@@ -76,7 +85,7 @@ void prog_main(const maxsql::GtidList& gtid_list, const std::string& host,
         pinloki::Reader reader([](const auto& event) {
                                    std::cout << event << std::endl;
                                    return true;
-                               }, &inv, &worker, gtid, 30s);
+                               }, &inventory(), &worker, gtid, 30s);
         worker.start();
         worker.join();
     }
@@ -97,8 +106,8 @@ try
     maxsql::GtidList override_gtid_list;
     int port = 3306;
     std::string host = "127.0.0.1";
-    std::string user = "root";
-    std::string pw = "";
+    std::string user = "maxskysql";
+    std::string pw = "skysql";
 
     static struct option long_options[] = {
         {"help",     no_argument,       nullptr, '?'},
@@ -191,7 +200,7 @@ try
 
     if (override_gtid_list.is_valid())
     {
-        std::ofstream ofs(config.gtid_file_path());
+        std::ofstream ofs(config().gtid_file_path());
         ofs << override_gtid_list;
     }
 
