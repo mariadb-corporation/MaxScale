@@ -15,18 +15,20 @@
 
 #include <cctype>
 #include <fcntl.h>
-#include <openssl/aes.h>
+#include <fstream>
 #include <sys/stat.h>
 #include <linux/limits.h>
-#include <maxbase/alloc.h>
+#include <openssl/aes.h>
+
+#include <maxbase/format.hh>
 #include <maxscale/paths.hh>
 #include <maxscale/random.h>
 #include <maxscale/utils.hh>
-#include <maxbase/format.hh>
-
 #include "internal/secrets.hh"
 
 using std::string;
+
+const char* const SECRETS_FILENAME = ".secrets";
 
 namespace
 {
@@ -58,162 +60,90 @@ int secrets_random_str(unsigned char* output, int len)
 }
 
 /**
- * This routine reads data from a binary file named ".secrets" and extracts the AES encryption key
- * and the AES Init Vector.
- * If the path parameter is not null the custom path is interpreted as a folder
- * containing the .secrets file. Otherwise the default location is used.
- * @return  The keys structure or NULL on error
+ * Reads binary data from file and extracts the AES encryption key and init vector. The source file needs to
+ * be a certain size and have expected permissions. If the source file does not exist, returns empty results.
+ *
+ * @param filepath Path to binary file.
+ * @return Result structure. Ok if file was loaded successfully or if file did not exist. False on error.
  */
-std::unique_ptr<EncryptionKeys> secrets_readKeys(const char* path)
+
+ReadKeyResult secrets_readkeys(const string& filepath)
 {
-    const char NAME[] = ".secrets";
-    string secret_file;
-    struct stat secret_stats { 0 };
+    ReadKeyResult rval;
+    auto filepathc = filepath.c_str();
 
-    if (path != nullptr)
+    // Before opening the file, check its size and permissions.
+    struct stat filestats { 0 };
+    bool stat_error = false;
+    errno = 0;
+    if (stat(filepathc, &filestats) == 0)
     {
-        size_t len = strlen(path);
-        if (len > PATH_MAX)
+        auto filesize = filestats.st_size;
+        if (filesize != EncryptionKeys::total_len)
         {
-            MXS_ERROR("Too long (%lu > %d) path provided.", len, PATH_MAX);
-            return nullptr;
+            MXS_ERROR("Size of secrets file '%s' is %li when %i was expected.",
+                      filepathc, filesize, EncryptionKeys::total_len);
+            stat_error = true;
         }
 
-        if (stat(path, &secret_stats) == 0)
+        auto filemode = filestats.st_mode;
+        if (!S_ISREG(filemode))
         {
-            if (S_ISDIR(secret_stats.st_mode))
-            {
-                secret_file = mxb::string_printf("%s/%s", path, NAME);
-            }
-            else
-            {
-                // If the provided path does not refer to a directory, then the
-                // file name *must* be ".secrets".
-                const char* file = strrchr(secret_file.c_str(), '.');
-                if (file == nullptr || strcmp(file, NAME) != 0)
-                {
-                    MXS_ERROR("The name of the secrets file must be '%s'.", NAME);
-                    return nullptr;
-                }
-            }
+            MXS_ERROR("Secrets file '%s' is not a regular file.", filepathc);
+            stat_error = true;
         }
-        else
+        else if ((filemode & (S_IRWXU | S_IRWXG | S_IRWXO)) != S_IRUSR)
         {
-            MXS_ERROR("The provided path '%s' does not exist or cannot be accessed. Error: %d, %s.",
-                      path, errno, mxs_strerror(errno));
-            return nullptr;
+            MXS_ERROR("Secrets file '%s' permissions are wrong. The only permission on the file should be "
+                      "owner:read.", filepathc);
+            stat_error = true;
         }
-
-        secret_file = clean_up_pathname(secret_file);
+    }
+    else if (errno == ENOENT)
+    {
+        // The file does not exist. This is ok. Return empty result.
+        rval.ok = true;
+        return rval;
     }
     else
     {
-        // We assume that mxs::datadir() returns a path shorter than PATH_MAX.
-        secret_file = mxb::string_printf("%s/%s", mxs::datadir(), NAME);
+        MXS_ERROR("stat() for secrets file '%s' failed. Error %d, %s.",
+                  filepathc, errno, mxs_strerror(errno));
+        stat_error = true;
     }
 
-    static int reported = 0;
-    /* Try to access secrets file */
-    const char* secret_filez = secret_file.c_str();
-    if (access(secret_filez, R_OK) == -1)
+    if (stat_error)
     {
-        int eno = errno;
-        errno = 0;
-        if (eno == ENOENT)
+        return rval;
+    }
+
+    // Open file in binary read mode.
+    errno = 0;
+    std::ifstream file(filepath, std::ios_base::binary);
+    if (file.is_open())
+    {
+        // Read all data from file.
+        char readbuf[EncryptionKeys::total_len];
+        file.read(readbuf, sizeof(readbuf));
+        if (file.good())
         {
-            if (!reported)
-            {
-                MXS_NOTICE("Encrypted password file %s can't be accessed (%s). Password encryption is "
-                           "not used.", secret_filez, mxs_strerror(eno));
-                reported = 1;
-            }
+            // Success, copy contents to key structure.
+            rval.key = std::make_unique<EncryptionKeys>();
+            memcpy(rval.key->enckey, readbuf, EncryptionKeys::key_len);
+            memcpy(rval.key->initvector, readbuf + EncryptionKeys::key_len, EncryptionKeys::iv_len);
+            rval.ok = true;
         }
         else
         {
-            MXS_ERROR("Access for secrets file [%s] failed. Error %d, %s.",
-                      secret_filez, eno, mxs_strerror(eno));
+            MXS_ERROR("Read from secrets file %s failed. Read %li, expected %i bytes. Error %d, %s.",
+                      filepathc, file.gcount(), EncryptionKeys::total_len, errno, mxs_strerror(errno));
         }
-        return nullptr;
     }
-
-    /* open secret file */
-    int fd = open(secret_filez, O_RDONLY);
-    if (fd < 0)
+    else
     {
-        int eno = errno;
-        errno = 0;
-        MXS_ERROR("Failed opening secret file [%s]. Error %d, %s.", secret_filez, eno, mxs_strerror(eno));
-        return nullptr;
+        MXS_ERROR("Could not open secrets file '%s'. Error %d, %s.", filepathc, errno, mxs_strerror(errno));
     }
-
-    /* accessing file details */
-    if (fstat(fd, &secret_stats) < 0)
-    {
-        int eno = errno;
-        errno = 0;
-        close(fd);
-        MXS_ERROR("fstat for secret file %s failed. Error %d, %s.", secret_filez, eno, mxs_strerror(eno));
-        return nullptr;
-    }
-
-    if (secret_stats.st_size != sizeof(EncryptionKeys))
-    {
-        int eno = errno;
-        errno = 0;
-        close(fd);
-        MXS_ERROR("Secrets file %s has incorrect size. Error %d, %s.", secret_filez, eno, mxs_strerror(eno));
-        return nullptr;
-    }
-
-    if (secret_stats.st_mode != (S_IRUSR | S_IFREG))
-    {
-        close(fd);
-        MXS_ERROR("Ignoring secrets file %s, invalid permissions. The only permission on the file should be "
-                  "owner:read.", secret_filez);
-        return nullptr;
-    }
-
-    auto keys = std::make_unique<EncryptionKeys>();
-    if (!keys)
-    {
-        close(fd);
-        return nullptr;
-    }
-
-    /**
-     * Read all data from file.
-     * EncryptionKeys (secrets.h) is struct for key, _not_ length-related macro.
-     */
-    ssize_t len = read(fd, keys.get(), sizeof(EncryptionKeys));
-
-    if (len != sizeof(EncryptionKeys))
-    {
-        int eno = errno;
-        errno = 0;
-        close(fd);
-        MXS_ERROR("Read from secrets file %s failed. Read %ld, expected %d bytes. Error %d, %s.",
-                  secret_filez, len, (int)sizeof(EncryptionKeys), eno, mxs_strerror(eno));
-        return nullptr;
-    }
-
-    /* Close the file */
-    if (close(fd) < 0)
-    {
-        int eno = errno;
-        errno = 0;
-        MXS_ERROR("Failed closing the secrets file %s. Error %d, %s.",
-                  secret_filez, eno, mxs_strerror(eno));
-        return NULL;
-    }
-
-    /** Successfully loaded keys, log notification */
-    if (!reported)
-    {
-        MXS_NOTICE("Using encrypted passwords. Encryption key: '%s'.", secret_filez);
-        reported = 1;
-    }
-
-    return keys;
+    return rval;
 }
 
 /**
@@ -336,23 +266,18 @@ string decrypt_password(const string& crypt)
  * @param input  The plaintext password to encrypt.
  * @return The encrypted password, or empty on failure.
  */
-string encrypt_password(const char* path, const char* input)
+string encrypt_password(const EncryptionKeys* key, const string& input)
 {
-    auto keys = secrets_readKeys(path);
-    if (!keys)
-    {
-        return "";
-    }
-
     AES_KEY aeskey;
-    AES_set_encrypt_key(keys->enckey, 8 * EncryptionKeys::key_len, &aeskey);
+    AES_set_encrypt_key(key->enckey, 8 * EncryptionKeys::key_len, &aeskey);
 
-    size_t len = strlen(input);
-    size_t padded_len = ((len / AES_BLOCK_SIZE) + 1) * AES_BLOCK_SIZE;
+    size_t padded_len = ((input.length() / AES_BLOCK_SIZE) + 1) * AES_BLOCK_SIZE;
     unsigned char encrypted[padded_len + 1];
 
-    AES_cbc_encrypt((const unsigned char*) input, encrypted, padded_len,
-                    &aeskey, keys->initvector, AES_ENCRYPT);
+    unsigned char init_vector[EncryptionKeys::iv_len];
+    memcpy(init_vector, key->initvector, EncryptionKeys::iv_len);
+    AES_cbc_encrypt((const unsigned char*) input.c_str(), encrypted, padded_len,
+                    &aeskey, init_vector, AES_ENCRYPT);
 
     char hex_output[2 * padded_len + 1];
     mxs::bin2hex(encrypted, padded_len, hex_output);
@@ -361,12 +286,22 @@ string encrypt_password(const char* path, const char* input)
 
 bool load_encryption_keys()
 {
-    auto keys = secrets_readKeys(nullptr);
-    if (keys)
+    mxb_assert(this_unit.keys == nullptr);
+    string path(mxs::datadir());
+    path.append("/").append(SECRETS_FILENAME);
+    auto ret = secrets_readkeys(path);
+    if (ret.ok)
     {
-        mxb_assert(this_unit.keys == nullptr);
-        this_unit.keys = move(keys);
+        if (ret.key)
+        {
+            MXB_NOTICE("Using encrypted passwords. Encryption key read from '%s'.", path.c_str());
+            this_unit.keys = move(ret.key);
+        }
+        else
+        {
+            MXB_NOTICE("Password encryption key file '%s' not found, using configured passwords as "
+                       "plaintext.", path.c_str());
+        }
     }
-    // TODO: return error if failed unexpectedly.
-    return true;
+    return ret.ok;
 }

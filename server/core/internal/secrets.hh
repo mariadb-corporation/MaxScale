@@ -17,6 +17,9 @@
  */
 
 #include <maxscale/secrets.hh>
+#include <memory>
+
+extern const char* const SECRETS_FILENAME;
 
 /**
  * The key structure held in the secrets file
@@ -32,5 +35,12 @@ struct EncryptionKeys
 };
 
 int         secrets_write_keys(const std::string& directory);
-std::string encrypt_password(const char*, const char*);
+std::string encrypt_password(const EncryptionKeys* key, const std::string& input);
 bool        load_encryption_keys();
+
+struct ReadKeyResult
+{
+    bool                            ok {false};
+    std::unique_ptr<EncryptionKeys> key;
+};
+ReadKeyResult secrets_readkeys(const std::string& filepath);

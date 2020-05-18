@@ -28,6 +28,8 @@
 
 #include "internal/secrets.hh"
 
+using std::string;
+
 #ifdef HAVE_GLIBC
 struct option options[] =
 {
@@ -157,7 +159,9 @@ int main(int argc, char** argv)
 
     int rval = EXIT_FAILURE;
 
-    std::string enc = encrypt_password(path, password);
+    string filepath = string(path) + "/" + SECRETS_FILENAME;
+    auto keys = secrets_readkeys(filepath);
+    std::string enc = encrypt_password(keys.key.get(), password);
     if (!enc.empty())
     {
         printf("%s\n", enc.c_str());
