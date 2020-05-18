@@ -1126,10 +1126,10 @@ void CsMonitor::cs_remove_node(json_t** ppOutput,
 
                 if (success)
                 {
-                    int n;
-                    n = cs::remove(*remove_config.sXml.get(), "//ClusterManager");
+                    MXB_AT_DEBUG(int n);
+                    MXB_AT_DEBUG(n =) cs::remove(*remove_config.sXml.get(), "//ClusterManager");
                     mxb_assert(n == 1);
-                    n = cs::update_if_not(*remove_config.sXml.get(), "//IPAddr", "127.0.0.1", "0.0.0.0");
+                    MXB_AT_DEBUG(n =) cs::update_if_not(*remove_config.sXml.get(), "//IPAddr", "127.0.0.1", "0.0.0.0");
                     mxb_assert(n >= 0);
 
                     xmlChar* pConfig = nullptr;
