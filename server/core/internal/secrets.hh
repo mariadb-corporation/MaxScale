@@ -23,7 +23,7 @@
  */
 struct EncryptionKeys
 {
-    static constexpr int key_len = 32; // For AES256
+    static constexpr int key_len = 32;      // For AES256
     static constexpr int iv_len = 16;
     static constexpr int total_len = key_len + iv_len;
 
@@ -33,3 +33,4 @@ struct EncryptionKeys
 
 int         secrets_write_keys(const std::string& directory);
 std::string encrypt_password(const char*, const char*);
+bool        load_encryption_keys();

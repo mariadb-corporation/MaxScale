@@ -31,6 +31,12 @@ using std::string;
 namespace
 {
 
+struct ThisUnit
+{
+    std::unique_ptr<EncryptionKeys> keys;
+};
+ThisUnit this_unit;
+
 /**
  * Generate a random printable character
  *
@@ -49,7 +55,6 @@ int secrets_random_str(unsigned char* output, int len)
     }
     return 0;
 }
-
 }
 
 /**
@@ -63,7 +68,7 @@ std::unique_ptr<EncryptionKeys> secrets_readKeys(const char* path)
 {
     const char NAME[] = ".secrets";
     string secret_file;
-    struct stat secret_stats {0};
+    struct stat secret_stats { 0 };
 
     if (path != nullptr)
     {
@@ -286,6 +291,13 @@ int secrets_write_keys(const string& dir)
  */
 string decrypt_password(const string& crypt)
 {
+    const auto* keys = this_unit.keys.get();
+    if (!keys)
+    {
+        // Password encryption is not used, so return original.
+        return crypt;
+    }
+
     // If the input is not a HEX string, return the input as is. Likely it was not encrypted.
     for (auto c : crypt)
     {
@@ -295,27 +307,26 @@ string decrypt_password(const string& crypt)
         }
     }
 
-    auto keys = secrets_readKeys(NULL);
-    if (!keys)
-    {
-        // Reading failed. This probably means that password encryption is not used, so return original.
-        return crypt;
-    }
-
-    size_t len = crypt.length();
-    unsigned char encrypted[len];
-    mxs::hex2bin(crypt.c_str(), len, encrypted);
+    // Convert to binary.
+    size_t hex_len = crypt.length();
+    auto bin_len = hex_len / 2;
+    unsigned char encrypted_bin[bin_len];
+    mxs::hex2bin(crypt.c_str(), hex_len, encrypted_bin);
 
     AES_KEY aeskey;
     AES_set_decrypt_key(keys->enckey, 8 * EncryptionKeys::key_len, &aeskey);
 
-    int enlen = len / 2;
-    unsigned char plain[enlen + 1];
+    auto plain_len = bin_len + 1;   // Decryption output cannot be longer than input data.
+    unsigned char plain[plain_len];
+    memset(plain, '\0', plain_len);
 
-    AES_cbc_encrypt(encrypted, plain, enlen, &aeskey, keys->initvector, AES_DECRYPT);
-    plain[enlen] = '\0';
+    // Need to copy the init vector as it's modified during decryption.
+    unsigned char init_vector[EncryptionKeys::iv_len];
+    memcpy(init_vector, keys->initvector, EncryptionKeys::iv_len);
+    AES_cbc_encrypt(encrypted_bin, plain, bin_len, &aeskey, init_vector, AES_DECRYPT);
 
-    return (char*)plain;
+    string rval((char*)plain);
+    return rval;
 }
 
 /**
@@ -346,4 +357,16 @@ string encrypt_password(const char* path, const char* input)
     char hex_output[2 * padded_len + 1];
     mxs::bin2hex(encrypted, padded_len, hex_output);
     return hex_output;
+}
+
+bool load_encryption_keys()
+{
+    auto keys = secrets_readKeys(nullptr);
+    if (keys)
+    {
+        mxb_assert(this_unit.keys == nullptr);
+        this_unit.keys = move(keys);
+    }
+    // TODO: return error if failed unexpectedly.
+    return true;
 }

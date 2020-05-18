@@ -77,6 +77,7 @@
 #include "internal/poll.hh"
 #include "internal/service.hh"
 #include "internal/listener.hh"
+#include "internal/secrets.hh"
 #include "internal/servermanager.hh"
 
 #if !defined (OPENSSL_THREADS)
@@ -1944,6 +1945,14 @@ int main(int argc, char** argv)
     {
         log_startup_error("Failed to initialise query classifier library.");
         rc = MAXSCALE_INTERNALERROR;
+        return rc;
+    }
+
+    // Load the password encryption/decryption key, as monitors and services may need it.
+    if (!load_encryption_keys())
+    {
+        log_startup_error("Error loading password decryption key.");
+        rc = MAXSCALE_SHUTDOWN;
         return rc;
     }
 
