@@ -125,8 +125,16 @@ then
     # Attempt to install systemd-devel, doesn't work on CentOS 6
     sudo yum install -y systemd-devel
 
-    # Boost 1.69 is from EPEL but as long as we only use the headers from it, we can use it.
-    sudo yum install -y boost169-devel
+    # Install Boost development headers
+    grep "release 7" /etc/redhat-release
+    if [ $? -eq 0 ]
+    then
+        # Boost 1.69 is from EPEL but as long as we only use the headers from it, we can use it.
+        sudo yum install -y boost169-devel
+    else
+        # Everything else should have a new enough boost in the standard repos
+        sudo yum install -y boost-devel
+    fi
 
     # Enable the devtoolkit to get a newer compiler
 
