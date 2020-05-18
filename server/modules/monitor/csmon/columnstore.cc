@@ -260,6 +260,56 @@ vector<xmlNode*> xml::find_children_by_prefix(xmlNode& parent, const char* zPref
     return nodes;
 }
 
+bool xml::find_node_id(xmlDoc& xmlDoc, const string& address, string* pNid)
+{
+    bool rv = false;
+
+    xmlNode* pSmc = xml::find_node_by_xpath(xmlDoc, "/Columnstore/SystemModuleConfig");
+
+    if (pSmc)
+    {
+        const char ZMODULEIPADDR[] = "ModuleIPAddr";
+        auto nodes = xml::find_children_by_prefix(*pSmc, ZMODULEIPADDR);
+
+        for (auto* pNode : nodes)
+        {
+            const char* zName = reinterpret_cast<const char*>(pNode->name);
+            // zName is now "ModuleIPAddrX-Y-Z", where X is the node id, Y a sequence number,
+            // and Z the role. IF Z is 3, the node in question is a performance node and that's
+            // what we are interested in now. The content of the node is an IP-address, and if
+            // that matches the address we are looking for, then we will know the node id
+            // corresponding to that address.
+
+            string tail(zName + (sizeof(ZMODULEIPADDR) - 1));
+            vector<string> parts = mxb::strtok(tail, "-");
+
+            if (parts.size() == 3)
+            {
+                string role = parts[2];
+
+                if (role == "3")
+                {
+                    const char* zContent = reinterpret_cast<const char*>(xmlNodeGetContent(pNode));
+
+                    if (zContent && (address == zContent))
+                    {
+                        *pNid = parts[0];
+                        rv = true;
+                        break;
+                    }
+                }
+            }
+            else
+            {
+                MXS_ERROR("Found in Columnstore XML configuration a ModUleIPAddr entry of "
+                          "unexpected format: '%s'", zName);
+            }
+        }
+    }
+
+    return rv;
+}
+
 namespace
 {
 

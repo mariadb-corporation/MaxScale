@@ -105,6 +105,17 @@ xmlNode* find_node_by_xpath(xmlDoc& xml, const char* zXpath);
 std::vector<xmlNode*> find_children_by_prefix(xmlNode& parent, const char* zPrefix);
 
 /**
+ * Find node id from Columnstore XML configuration.
+ *
+ * @param xmlDoc   The XML document.
+ * @param address  The IP address of the node.
+ * @param pNid     On successful return, will contain the node id.
+ *
+ * @return True, if the node id was found, false otherwise.
+ */
+bool find_node_id(xmlDoc& xmlDoc, const std::string& address, std::string* pNid);
+
+/**
  * Update value of key(s) in XML document.
  *
  * @param xmlDoc      The XML document.
