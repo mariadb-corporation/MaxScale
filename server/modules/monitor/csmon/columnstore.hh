@@ -74,6 +74,37 @@ const char XPATH_CLUSTERMANAGER[] = "//ClusterManager";
 const char XPATH_IPADDR[]         = "//IPAddr";
 
 /**
+ * Find nodes in document corresponding to particular xpath.
+ *
+ * @param xmlDoc  The XML document.
+ * @param zXpath  The xpath.
+ *
+ * @return The nodes corresponding to the xpath.
+ */
+std::vector<xmlNode*> find_nodes_by_xpath(xmlDoc& xml, const char* zXpath);
+/**
+ * Find node in document corresponding to particular xpath.
+ *
+ * @note Should only be used with an xpath that can only identify a single.
+ *
+ * @param xmlDoc  The XML document.
+ * @param zXpath  The xpath.
+ *
+ * @return The node corresponding to the xpath, or NULL if none do.
+ */
+xmlNode* find_node_by_xpath(xmlDoc& xml, const char* zXpath);
+
+/**
+ * Find children whose names begins with a certain prefix.
+ *
+ * @param parent   The parent node.
+ * @param zPrefix  The prefix the name of a child should have to be included.
+ *
+ * @return Children that fulfill the requirement.
+ */
+std::vector<xmlNode*> find_children_by_prefix(xmlNode& parent, const char* zPrefix);
+
+/**
  * Update value of key(s) in XML document.
  *
  * @param xmlDoc      The XML document.

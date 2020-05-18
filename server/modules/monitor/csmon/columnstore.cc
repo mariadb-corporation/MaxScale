@@ -211,6 +211,55 @@ bool services_from_array(json_t* pArray, Services* pServices)
     return rv;
 }
 
+std::vector<xmlNode*> xml::find_nodes_by_xpath(xmlDoc& xml, const char* zXpath)
+{
+    vector<xmlNode*> nodes;
+
+    xmlXPathContext* pXpath_context = xmlXPathNewContext(&xml);
+    mxb_assert(pXpath_context);
+    xmlXPathObject* pXpath_object = xmlXPathEvalExpression(reinterpret_cast<const xmlChar*>(zXpath), pXpath_context);
+
+    xmlNodeSet* pNodes = pXpath_object->nodesetval;
+
+    for (int i = 0; i < pNodes->nodeNr; ++i)
+    {
+        nodes.push_back(pNodes->nodeTab[i]);
+    }
+
+    xmlXPathFreeObject(pXpath_object);
+    xmlXPathFreeContext(pXpath_context);
+
+    return nodes;
+}
+
+xmlNode* xml::find_node_by_xpath(xmlDoc& xml, const char* zXpath)
+{
+    vector<xmlNode*> nodes = find_nodes_by_xpath(xml, zXpath);
+    mxb_assert(nodes.empty() || nodes.size() == 1);
+
+    return nodes.empty() ? nullptr : nodes.front();
+}
+
+vector<xmlNode*> xml::find_children_by_prefix(xmlNode& parent, const char* zPrefix)
+{
+    vector<xmlNode*> nodes;
+
+    int n = strlen(zPrefix);
+    xmlNode* pChild = parent.children;
+
+    while (pChild)
+    {
+        if (strncmp(reinterpret_cast<const char*>(pChild->name), zPrefix, n) == 0)
+        {
+            nodes.push_back(pChild);
+        }
+
+        pChild = pChild->next;
+    }
+
+    return nodes;
+}
+
 namespace
 {
 
