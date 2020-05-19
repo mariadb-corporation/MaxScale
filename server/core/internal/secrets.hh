@@ -34,7 +34,6 @@ struct EncryptionKeys
     unsigned char initvector[iv_len] {0};
 };
 
-int         secrets_write_keys(const std::string& directory);
 std::string encrypt_password(const EncryptionKeys* key, const std::string& input);
 bool        load_encryption_keys();
 

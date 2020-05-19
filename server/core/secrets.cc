@@ -14,10 +14,8 @@
 #include <maxscale/secrets.hh>
 
 #include <cctype>
-#include <fcntl.h>
 #include <fstream>
 #include <sys/stat.h>
-#include <linux/limits.h>
 #include <openssl/aes.h>
 
 #include <maxbase/format.hh>
@@ -144,70 +142,6 @@ ReadKeyResult secrets_readkeys(const string& filepath)
         MXS_ERROR("Could not open secrets file '%s'. Error %d, %s.", filepathc, errno, mxs_strerror(errno));
     }
     return rval;
-}
-
-/**
- * secrets_writeKeys
- *
- * This routine writes into a binary file the AES encryption key
- * and the AES Init Vector
- *
- * @param dir The directory where the ".secrets" file should be created.
- * @return 0 on success and 1 on failure
- */
-int secrets_write_keys(const string& dir)
-{
-    if (dir.length() > PATH_MAX)
-    {
-        MXS_ERROR("Pathname too long.");
-        return 1;
-    }
-
-    string secret_file = dir + "/.secrets";
-    secret_file = clean_up_pathname(secret_file);
-    auto secret_filez = secret_file.c_str();
-
-    /* Open for writing | Create | Truncate the file for writing */
-    int fd = open(secret_filez, O_EXCL | O_CREAT | O_WRONLY | O_TRUNC, S_IRUSR);
-    if (fd < 0)
-    {
-        if (errno == EEXIST)
-        {
-            fprintf(stderr, "Key [%s] already exists, remove it manually to create a new one. \n",
-                    secret_filez);
-        }
-
-        MXS_ERROR("failed opening secret file [%s]. Error %d, %s.", secret_filez, errno, mxs_strerror(errno));
-        return 1;
-    }
-
-    EncryptionKeys key;
-    secrets_random_str(key.enckey, EncryptionKeys::key_len);
-    secrets_random_str(key.initvector, EncryptionKeys::iv_len);
-
-    /* Write data */
-    if (write(fd, &key, sizeof(key)) < 0)
-    {
-        MXS_ERROR("failed writing into secret file [%s]. Error %d, %s.",
-                  secret_filez, errno, mxs_strerror(errno));
-        close(fd);
-        return 1;
-    }
-
-    /* close file */
-    if (close(fd) < 0)
-    {
-        MXS_ERROR("failed closing the secret file [%s]. Error %d, %s.",
-                  secret_filez, errno, mxs_strerror(errno));
-    }
-
-    if (chmod(secret_filez, S_IRUSR) < 0)
-    {
-        MXS_ERROR("failed to change the permissions of the secret file [%s]. Error %d, %s.",
-                  secret_filez, errno, mxs_strerror(errno));
-    }
-
-    return 0;
 }
 
 /**
