@@ -149,5 +149,10 @@ private:
 #define MXB_SWARNING(mxb_msg_str__) MXB_STREAM_LOG_HELPER(LOG_WARNING, mxb_msg_str__)
 #define MXB_SNOTICE(mxb_msg_str__)  MXB_STREAM_LOG_HELPER(LOG_NOTICE, mxb_msg_str__)
 #define MXB_SINFO(mxb_msg_str__)    MXB_STREAM_LOG_HELPER(LOG_INFO, mxb_msg_str__)
-#define MXB_SDEBUG(mxb_msg_str__)   MXB_STREAM_LOG_HELPER(LOG_DEBUG, mxb_msg_str__)
+
+#if defined (SS_DEBUG)
+#define MXB_SDEBUG(mxb_msg_str__) MXB_STREAM_LOG_HELPER(LOG_DEBUG, mxb_msg_str__)
+#else
+#define MXB_SDEBUG(mxb_msg_str__)
+#endif
 }
