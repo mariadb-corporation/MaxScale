@@ -209,13 +209,12 @@ maxsql::RplEvent read_event(std::istream& file, long* file_pos)
 
     if (file.eof())
     {
-        MXS_INFO("End of file: %d, %s", errno, mxb_strerror(errno));
         return maxsql::RplEvent();      // trying to read passed end of file
     }
     else if (!file.good())
     {
         MXS_ERROR("Error reading event at position %ld: %d, %s", *file_pos, errno, mxb_strerror(errno));
-        return maxsql::RplEvent();      // trying to read passed end of file
+        return maxsql::RplEvent();
     }
 
     auto event_length = maxsql::RplEvent::get_event_length(raw);
@@ -225,13 +224,12 @@ maxsql::RplEvent read_event(std::istream& file, long* file_pos)
 
     if (file.eof())
     {
-        MXS_INFO("End of file: %d, %s", errno, mxb_strerror(errno));
         return maxsql::RplEvent();      // trying to read passed end of file
     }
     else if (!file.good())
     {
         MXS_ERROR("Error reading event at position %ld: %d, %s", *file_pos, errno, mxb_strerror(errno));
-        return maxsql::RplEvent();      // trying to read passed end of file
+        return maxsql::RplEvent();
     }
 
     maxsql::RplEvent rpl(std::move(raw));
