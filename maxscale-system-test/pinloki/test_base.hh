@@ -5,6 +5,12 @@
 class TestCase
 {
 public:
+    enum class GtidPos
+    {
+        SLAVE,
+        CURRENT
+    };
+
     TestCase(TestConnections& t)
         : test(t)
         , master(test.repl->get_connection(0))
@@ -95,9 +101,9 @@ protected:
         test.set_timeout(130);
         auto gtid = src.field("SELECT @@gtid_current_pos");
         auto start_gtid = dest.field("SELECT @@gtid_current_pos");
-        auto res = dest.field("SELECT MASTER_GTID_WAIT('" + gtid + "', 120)");
+        auto res = dest.field("SELECT MASTER_GTID_WAIT('" + gtid + "', 30)");
         test.expect(res == "0",
-                    "`MASTER_GTID_WAIT('%s', 120)` returned: %s (error: %s). "
+                    "`MASTER_GTID_WAIT('%s', 30)` returned: %s (error: %s). "
                     "Target GTID: %s Starting GTID: %s",
                     gtid.c_str(), res.c_str(), slave.error(), gtid.c_str(), start_gtid.c_str());
     }
@@ -119,6 +125,7 @@ protected:
     }
 
     std::string change_master_sql(const char* host, int port,
+                                  GtidPos type = GtidPos::SLAVE,
                                   const char* user = "maxskysql",
                                   const char* password = "skysql")
     {
@@ -126,7 +133,7 @@ protected:
 
         ss << "CHANGE MASTER TO MASTER_HOST='" << host << "', MASTER_PORT=" << port
            << ", MASTER_USER='" << user << "', MASTER_PASSWORD='" << password
-           << "', MASTER_USE_GTID=SLAVE_POS";
+           << "', MASTER_USE_GTID=" << (type == GtidPos::SLAVE ? "SLAVE_POS" : "CURRENT_POS");
 
         return ss.str();
     }
