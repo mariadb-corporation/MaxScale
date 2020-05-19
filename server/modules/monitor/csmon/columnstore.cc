@@ -211,13 +211,32 @@ bool services_from_array(json_t* pArray, Services* pServices)
     return rv;
 }
 
-std::vector<xmlNode*> xml::find_nodes_by_xpath(xmlDoc& xml, const char* zXpath)
+namespace
+{
+
+xmlNode& get_root(xmlDoc& csXml)
+{
+    xmlNode* pRoot = xmlDocGetRootElement(&csXml);
+    mxb_assert(pRoot);
+    mxb_assert(strcmp(reinterpret_cast<const char*>(pRoot->name), "Columnstore") == 0);
+    return *pRoot;
+}
+
+}
+
+std::vector<xmlNode*> xml::find_nodes_by_xpath(xmlNode& node, const char* zXpath)
 {
     vector<xmlNode*> nodes;
 
-    xmlXPathContext* pXpath_context = xmlXPathNewContext(&xml);
+    xmlXPathContext* pXpath_context = xmlXPathNewContext(node.doc);
     mxb_assert(pXpath_context);
-    xmlXPathObject* pXpath_object = xmlXPathEvalExpression(reinterpret_cast<const xmlChar*>(zXpath), pXpath_context);
+
+    string path(zXpath);
+    path = "./" + path;
+    xmlXPathObject* pXpath_object = xmlXPathNodeEval(&node,
+                                                     reinterpret_cast<const xmlChar*>(path.c_str()),
+                                                     pXpath_context);
+
 
     xmlNodeSet* pNodes = pXpath_object->nodesetval;
 
@@ -232,12 +251,22 @@ std::vector<xmlNode*> xml::find_nodes_by_xpath(xmlDoc& xml, const char* zXpath)
     return nodes;
 }
 
-xmlNode* xml::find_node_by_xpath(xmlDoc& xml, const char* zXpath)
+std::vector<xmlNode*> xml::find_nodes_by_xpath(xmlDoc& csXml, const char* zXpath)
 {
-    vector<xmlNode*> nodes = find_nodes_by_xpath(xml, zXpath);
+    return find_nodes_by_xpath(get_root(csXml), zXpath);
+}
+
+xmlNode* xml::find_node_by_xpath(xmlNode& node, const char* zXpath)
+{
+    vector<xmlNode*> nodes = find_nodes_by_xpath(node, zXpath);
     mxb_assert(nodes.empty() || nodes.size() == 1);
 
     return nodes.empty() ? nullptr : nodes.front();
+}
+
+xmlNode* xml::find_node_by_xpath(xmlDoc& csXml, const char* zXpath)
+{
+    return find_node_by_xpath(get_root(csXml), zXpath);
 }
 
 vector<xmlNode*> xml::find_children_by_prefix(xmlNode& parent, const char* zPrefix)
@@ -312,6 +341,42 @@ bool xml::find_node_id(xmlDoc& xmlDoc, const string& address, string* pNid)
 
 namespace
 {
+
+void xml_insert_leaf(xmlNode& parent, const char* zKey, const char* zValue, xml::XmlLocation location)
+{
+    mxb_assert(strchr(zKey, '/') == nullptr);
+
+    xmlNode* pChild = xmlNewNode(NULL, reinterpret_cast<const xmlChar*>(zKey));
+    xmlNode* pContent = xmlNewText(reinterpret_cast<const xmlChar*>(zValue));
+    xmlAddChild(pChild, pContent);
+
+    xmlNode* pSibling = parent.xmlChildrenNode;
+
+    if (location == xml::XmlLocation::AT_BEGINNING && pSibling)
+    {
+        xmlAddPrevSibling(pSibling, pChild);
+        xmlNode* pIndentation = xmlNewText(reinterpret_cast<const xmlChar*>("\n\t"));
+        xmlAddPrevSibling(pChild, pIndentation);
+    }
+    else
+    {
+        xmlAddChild(&parent, pChild);
+        if (pChild->prev
+            && pChild->prev->type == XML_TEXT_NODE
+            && strcmp(reinterpret_cast<char*>(xmlNodeGetContent(pChild->prev)), "\n") == 0)
+        {
+            xmlNodeSetContent(pChild->prev, reinterpret_cast<const xmlChar*>("\n\t"));
+        }
+        else
+        {
+            xmlNode* pIndentation = xmlNewText(reinterpret_cast<const xmlChar*>("\n\t"));
+            xmlAddPrevSibling(pChild, pIndentation);
+        }
+
+        xmlNode* pLinebreak = xmlNewText(reinterpret_cast<const xmlChar*>("\n"));
+        xmlAddNextSibling(pChild, pLinebreak);
+    }
+}
 
 enum class UpdateWhen
 {
@@ -388,7 +453,8 @@ int xml_update(xmlNodeSet* pNodes, const char* zNew_value, const char* zIf_value
     return n;
 }
 
-int xml_update(xmlXPathContext& xpathContext,
+int xml_update(xmlNode& node,
+               xmlXPathContext& xpath_context,
                const char* zXpath,
                const char* zNew_value,
                const char* zIf_value,
@@ -396,8 +462,12 @@ int xml_update(xmlXPathContext& xpathContext,
 {
     int n = -1;
 
-    xmlXPathObject* pXpath_object = xmlXPathEvalExpression(reinterpret_cast<const xmlChar*>(zXpath),
-                                                           &xpathContext);
+    string path(zXpath);
+    path = "./" + path;
+
+    xmlXPathObject* pXpath_object = xmlXPathNodeEval(&node,
+                                                     reinterpret_cast<const xmlChar*>(path.c_str()),
+                                                     &xpath_context);
     mxb_assert(pXpath_object);
 
     if (pXpath_object)
@@ -411,16 +481,39 @@ int xml_update(xmlXPathContext& xpathContext,
 
 }
 
-int xml::update_if(xmlDoc& xmlDoc, const char* zXpath, const char* zNew_value, const char* zIf_value)
+int xml::update_if(xmlNode& node, const char* zXpath, const char* zNew_value, const char* zIf_value)
 {
     int n = -1;
-
-    xmlXPathContext* pXpath_context = xmlXPathNewContext(&xmlDoc);
+    xmlXPathContext* pXpath_context = xmlXPathNewContext(node.doc);
     mxb_assert(pXpath_context);
 
     if (pXpath_context)
     {
-        n = xml_update(*pXpath_context, zXpath, zNew_value, zIf_value, UpdateWhen::IF);
+        n = xml_update(node, *pXpath_context, zXpath, zNew_value, zIf_value, UpdateWhen::IF);
+        xmlXPathFreeContext(pXpath_context);
+    }
+
+    return n;
+}
+
+int xml::update_if(xmlDoc& xmlDoc, const char* zXpath, const char* zNew_value, const char* zIf_value)
+{
+    xmlNode* pRoot = xmlDocGetRootElement(&xmlDoc);
+    mxb_assert(pRoot);
+
+    return update_if(*pRoot, zXpath, zNew_value, zIf_value);
+}
+
+int xml::update_if_not(xmlNode& node, const char* zXpath, const char* zNew_value, const char* zIf_value)
+{
+    int n = -1;
+
+    xmlXPathContext* pXpath_context = xmlXPathNewContext(node.doc);
+    mxb_assert(pXpath_context);
+
+    if (pXpath_context)
+    {
+        n = xml_update(node, *pXpath_context, zXpath, zNew_value, zIf_value, UpdateWhen::IF_NOT);
         xmlXPathFreeContext(pXpath_context);
     }
 
@@ -429,84 +522,80 @@ int xml::update_if(xmlDoc& xmlDoc, const char* zXpath, const char* zNew_value, c
 
 int xml::update_if_not(xmlDoc& xmlDoc, const char* zXpath, const char* zNew_value, const char* zIf_value)
 {
-    int n = -1;
+    xmlNode* pRoot = xmlDocGetRootElement(&xmlDoc);
+    mxb_assert(pRoot);
 
-    xmlXPathContext* pXpath_context = xmlXPathNewContext(&xmlDoc);
-    mxb_assert(pXpath_context);
-
-    if (pXpath_context)
-    {
-        n = xml_update(*pXpath_context, zXpath, zNew_value, zIf_value, UpdateWhen::IF_NOT);
-        xmlXPathFreeContext(pXpath_context);
-    }
-
-    return n;
+    return update_if_not(*pRoot, zXpath, zNew_value, zIf_value);
 }
 
-bool xml::insert(xmlDoc& xmlDoc, const char* zKey, const char* zValue, XmlLocation location)
+bool xml::insert(xmlNode& parent, const char* zKey, const char* zValue, XmlLocation location)
 {
+    mxb_assert(*zKey != '/');
+
     bool rv = false;
 
-    xmlNode* pRoot = xmlDocGetRootElement(&xmlDoc);
+    string key(zKey);
+    auto pos = key.find_last_of("/");
 
-    if (pRoot)
+    if (pos == string::npos)
     {
-        xmlNode* pChild = xmlNewNode(NULL, reinterpret_cast<const xmlChar*>(zKey));
-        xmlNode* pContent = xmlNewText(reinterpret_cast<const xmlChar*>(zValue));
-        xmlAddChild(pChild, pContent);
-
-        xmlNode* pSibling = pRoot->xmlChildrenNode;
-
-        if (location == XmlLocation::AT_BEGINNING && pSibling)
-        {
-            xmlAddPrevSibling(pSibling, pChild);
-            xmlNode* pIndentation = xmlNewText(reinterpret_cast<const xmlChar*>("\n\t"));
-            xmlAddPrevSibling(pChild, pIndentation);
-        }
-        else
-        {
-            xmlAddChild(pRoot, pChild);
-            if (pChild->prev
-                && pChild->prev->type == XML_TEXT_NODE
-                && strcmp(reinterpret_cast<char*>(xmlNodeGetContent(pChild->prev)), "\n") == 0)
-            {
-                xmlNodeSetContent(pChild->prev, reinterpret_cast<const xmlChar*>("\n\t"));
-            }
-            else
-            {
-                xmlNode* pIndentation = xmlNewText(reinterpret_cast<const xmlChar*>("\n\t"));
-                xmlAddPrevSibling(pChild, pIndentation);
-            }
-
-            xmlNode* pLinebreak = xmlNewText(reinterpret_cast<const xmlChar*>("\n"));
-            xmlAddNextSibling(pChild, pLinebreak);
-        }
-
+        // zKey is a name and not a path.
+        xml_insert_leaf(parent, zKey, zValue, location);
         rv = true;
+    }
+    else
+    {
+        string path = key.substr(0, pos);
+        string name = key.substr(pos + 1);
+
+        mxb_assert(&parent.doc);
+        xmlXPathContext* pXpath_context = xmlXPathNewContext(parent.doc);
+        mxb_assert(pXpath_context);
+
+        path = ".//" + path; // Search from the current node.
+        xmlXPathObject* pXpath_object = xmlXPathNodeEval(&parent,
+                                                         reinterpret_cast<const xmlChar*>(path.c_str()),
+                                                         pXpath_context);
+
+        xmlNodeSet* pNodes = pXpath_object->nodesetval;
+
+        if (pNodes->nodeNr != 0)
+        {
+            mxb_assert(pNodes->nodeNr == 1);
+
+            xml_insert_leaf(*pNodes->nodeTab[0], name.c_str(), zValue, location);
+            rv = true;
+        }
+
+        xmlXPathFreeObject(pXpath_object);
+        xmlXPathFreeContext(pXpath_context);
     }
 
     return rv;
 }
 
-int xml::upsert(xmlDoc& xmlDoc, const char* zXpath, const char* zValue, XmlLocation location)
+bool xml::insert(xmlDoc& csXml, const char* zKey, const char* zValue, XmlLocation location)
 {
-    int rv = xml::update_if(xmlDoc, zXpath, zValue);
+    mxb_assert(*zKey != '/');
+    return insert(get_root(csXml), zKey, zValue, location);
+}
 
-    if (rv == 0)
+bool xml::upsert(xmlDoc& csXml, const char* zKey, const char* zValue, XmlLocation location)
+{
+    bool rv = true;
+
+    vector<xmlNode*> nodes = find_nodes_by_xpath(csXml, zKey);
+    mxb_assert(nodes.empty() || nodes.size() == 1);
+
+    if (nodes.size() == 1)
     {
-        // We assume zXpath is like "/key" or "//key".
-        string key(zXpath);
-        auto pos = key.find_last_of("/");
+        auto* pNode = nodes.front();
 
-        if (pos != string::npos)
-        {
-            key = key.substr(pos);
-        }
-
-        if (xml::insert(xmlDoc, key.c_str(), zValue, location))
-        {
-            rv = 1;
-        }
+        xmlNodeSetContent(pNode, reinterpret_cast<const xmlChar*>(zValue));
+    }
+    else
+    {
+        rv = insert(csXml, zKey, zValue, location);
     }
 
     return rv;
@@ -555,12 +644,15 @@ int xml_remove(xmlNodeSet* pNodes)
     return nNodes;
 }
 
-int xml_remove(xmlXPathContext& xpathContext, const char* zXpath)
+int xml_remove(xmlNode& node, xmlXPathContext& xpath_context, const char* zXpath)
 {
     int n = -1;
 
-    xmlXPathObject* pXpath_object = xmlXPathEvalExpression(reinterpret_cast<const xmlChar*>(zXpath),
-                                                           &xpathContext);
+    string path(zXpath);
+    path = "./" + path;
+    xmlXPathObject* pXpath_object = xmlXPathNodeEval(&node,
+                                                     reinterpret_cast<const xmlChar*>(path.c_str()),
+                                                     &xpath_context);
     mxb_assert(pXpath_object);
 
     if (pXpath_object)
@@ -574,19 +666,24 @@ int xml_remove(xmlXPathContext& xpathContext, const char* zXpath)
 
 }
 
-int xml::remove(xmlDoc& xmlDoc, const char* zXpath)
+int xml::remove(xmlNode& node, const char* zXpath)
 {
     int n = -1;
-    xmlXPathContext* pXpath_context = xmlXPathNewContext(&xmlDoc);
+    xmlXPathContext* pXpath_context = xmlXPathNewContext(node.doc);
     mxb_assert(pXpath_context);
 
     if (pXpath_context)
     {
-        n = xml_remove(*pXpath_context, zXpath);
+        n = xml_remove(node, *pXpath_context, zXpath);
         xmlXPathFreeContext(pXpath_context);
     }
 
     return n;
+}
+
+int xml::remove(xmlDoc& xmlDoc, const char* zXpath)
+{
+    return remove(get_root(xmlDoc), zXpath);
 }
 
 void xml::convert_to_first_multi_node(xmlDoc& xmlDoc,
@@ -594,11 +691,11 @@ void xml::convert_to_first_multi_node(xmlDoc& xmlDoc,
                                       const string& server_address)
 {
     // Ensure there is a "ClusterManager" key whose value is 'manager'.
-    xml::upsert(xmlDoc, CLUSTERMANAGER, manager.c_str());
+    xml::upsert(xmlDoc, "ClusterManager", manager.c_str());
 
     // Replace all "IPAddr" values, irrespective of where they occur, with 'server_address'
     // if the current value is "127.0.0.1".
-    int n = xml::update_if(xmlDoc, XPATH_IPADDR, server_address.c_str(), "127.0.0.1");
+    int n = xml::update_if(xmlDoc, "/IPAddr", server_address.c_str(), "127.0.0.1");
     mxb_assert(n >= 0);
 }
 
@@ -606,11 +703,11 @@ void xml::convert_to_single_node(xmlDoc& xmlDoc)
 {
     MXB_AT_DEBUG(int n);
     // Remove the "ClusterManager" key.
-    MXB_AT_DEBUG(n =) xml::remove(xmlDoc, XPATH_CLUSTERMANAGER);
+    MXB_AT_DEBUG(n =) xml::remove(xmlDoc, CLUSTERMANAGER);
     mxb_assert(n == 1);
     // Replace all "IPAddr" values, irrespective of where they occur, with "127.0.0.1", provided
     // the current value is not "0.0.0.0".
-    MXB_AT_DEBUG(n =) xml::update_if_not(xmlDoc, XPATH_IPADDR, "127.0.0.1", "0.0.0.0");
+    MXB_AT_DEBUG(n =) xml::update_if_not(xmlDoc, "/IPAddr", "127.0.0.1", "0.0.0.0");
     mxb_assert(n >= 0);
 }
 

@@ -70,29 +70,51 @@ const char DDLPROC[]         = "DDLProc";
 const char DMLPROC[]         = "DMLProc";
 const char IPADDR[]          = "IPAddr";
 
-const char XPATH_CLUSTERMANAGER[] = "//ClusterManager";
-const char XPATH_IPADDR[]         = "//IPAddr";
+/**
+ * Find descendant nodes corresponding to particular xpath.
+ *
+ * @param node    The node to use as root when searching.
+ * @param zXpath  The xpath, defined relative to @c node.
+ *
+ * @return The nodes corresponding to the xpath.
+ */
+std::vector<xmlNode*> find_nodes_by_xpath(xmlNode& node, const char* zXpath);
 
 /**
- * Find nodes in document corresponding to particular xpath.
+ * Find in Columnstore XML configuration nodes corresponding to particular xpath.
  *
- * @param xmlDoc  The XML document.
- * @param zXpath  The xpath.
+ * @param csXml   Columnstore XML configuration.
+ * @param zXpath  The xpath, defined relative to "/Columnstore".
+ *
+ * @note @c csXml must have a root object whose name is "Columnstore".
  *
  * @return The nodes corresponding to the xpath.
  */
 std::vector<xmlNode*> find_nodes_by_xpath(xmlDoc& xml, const char* zXpath);
+
 /**
- * Find node in document corresponding to particular xpath.
+ * Find descendant nodes corresponding to particular xpath.
  *
- * @note Should only be used with an xpath that can only identify a single.
+ * @note Should only be used with an xpath that can only identify a single node.
  *
- * @param xmlDoc  The XML document.
- * @param zXpath  The xpath.
+ * @param node    The node to use as root when searching.
+ * @param zXpath  The xpath, defined relative to @c node.
  *
  * @return The node corresponding to the xpath, or NULL if none do.
  */
-xmlNode* find_node_by_xpath(xmlDoc& xml, const char* zXpath);
+xmlNode* find_node_by_xpath(xmlNode& node, const char* zXpath);
+
+/**
+ * Find in Columnstore XML configuration nodes corresponding to particular xpath.
+ *
+ * @note Should only be used with an xpath that can only identify a single node.
+ *
+ * @param csXml   Columnstore XML configuration.
+ * @param zXpath  The xpath, defined relative to "/Columnstore".
+ *
+ * @return The node corresponding to the xpath, or NULL if none do.
+ */
+xmlNode* find_node_by_xpath(xmlDoc& csXml, const char* zXpath);
 
 /**
  * Find children whose names begins with a certain prefix.
@@ -107,18 +129,18 @@ std::vector<xmlNode*> find_children_by_prefix(xmlNode& parent, const char* zPref
 /**
  * Find node id from Columnstore XML configuration.
  *
- * @param xmlDoc   The XML document.
+ * @param csXml    The XML document.
  * @param address  The IP address of the node.
  * @param pNid     On successful return, will contain the node id.
  *
  * @return True, if the node id was found, false otherwise.
  */
-bool find_node_id(xmlDoc& xmlDoc, const std::string& address, std::string* pNid);
+bool find_node_id(xmlDoc& csXml, const std::string& address, std::string* pNid);
 
 /**
  * Update value of key(s) in XML document.
  *
- * @param xmlDoc      The XML document.
+ * @param node        The node to use as root.
  * @param zXpath      The XML path that identifies the key(s).
  * @param zNew_value  The new value.
  * @param zIf_value   If non-NULL, what the previous value must be for the replacement to be done.
@@ -126,12 +148,25 @@ bool find_node_id(xmlDoc& xmlDoc, const std::string& address, std::string* pNid)
  * @return -1 in case of some low-level error (that outside development should not occur), otherwise
  *         the number of replacements made.
  */
-int update_if(xmlDoc& xmlDoc, const char* zXpath, const char* zNew_value, const char* zIf_value = nullptr);
+int update_if(xmlNode& node, const char* zXpath, const char* zNew_value, const char* zIf_value = nullptr);
+
+/**
+ * Update value of key(s) in Columnstore XML configuration.
+ *
+ * @param csXml       The XML document.
+ * @param zXpath      The XML path that identifies the key(s).
+ * @param zNew_value  The new value.
+ * @param zIf_value   If non-NULL, what the previous value must be for the replacement to be done.
+ *
+ * @return -1 in case of some low-level error (that outside development should not occur), otherwise
+ *         the number of replacements made.
+ */
+int update_if(xmlDoc& csXml, const char* zXpath, const char* zNew_value, const char* zIf_value = nullptr);
 
 /**
  * Update value of key(s) in XML document.
  *
- * @param xmlDoc      The XML document.
+ * @param csXml       The XML document.
  * @param zXpath      The XML path that identifies the key(s).
  * @param zNew_value  The new value.
  * @param zIf_value   If non-NULL, what the previous value must *NOT* be for the replacement to be done.
@@ -139,7 +174,20 @@ int update_if(xmlDoc& xmlDoc, const char* zXpath, const char* zNew_value, const 
  * @return -1 in case of some low-level error (that outside development should not occur), otherwise
  *         the number of replacements made.
  */
-int update_if_not(xmlDoc& xmlDoc, const char* zXpath, const char* zNew_value, const char* zIf_value = nullptr);
+int update_if_not(xmlNode& node, const char* zXpath, const char* zNew_value, const char* zIf_value = nullptr);
+
+/**
+ * Update value of key(s) in Columnstore XML configuration.
+ *
+ * @param csXml       The XML document.
+ * @param zXpath      The XML path that identifies the key(s).
+ * @param zNew_value  The new value.
+ * @param zIf_value   If non-NULL, what the previous value must *NOT* be for the replacement to be done.
+ *
+ * @return -1 in case of some low-level error (that outside development should not occur), otherwise
+ *         the number of replacements made.
+ */
+int update_if_not(xmlDoc& csXml, const char* zXpath, const char* zNew_value, const char* zIf_value = nullptr);
 
 enum class XmlLocation
 {
@@ -150,14 +198,33 @@ enum class XmlLocation
 /**
  * Insert new key/value to XML document.
  *
- * @param xmlDoc   The XML document.
- * @param zKey     The key.
+ * @param parent   The parent node.
+ * @param zKey     The key. May be a path (not starting with '/') in which case
+ *                 the hierarchy starting at @c pParent is first traversed.
  * @param zValue   The value.
  * @param location Where the element should be added.
  *
- * @return True, whether the value could be added.
+ * @return True, if the key/value could be added. A return value of false
+ *         means that a path was specified, but the beginning path did not exist.
  */
-bool insert(xmlDoc& xmlDoc,
+bool insert(xmlNode& parent,
+            const char* zKey,
+            const char* zValue,
+            XmlLocation location = XmlLocation::AT_BEGINNING);
+
+/**
+ * Insert new key/value to Columnstore XML configuration.
+ *
+ * @param csXml    The XML document.
+ * @param zKey     The key. May be a path (not starting with '/') in which case
+ *                 the hierarchy starting at @c pParent is first traversed.
+ * @param zValue   The value.
+ * @param location Where the element should be added.
+ *
+ * @return True, if the key/value could be added. A return value of false
+ *         means that a path was specified, but the beginning path did not exist.
+ */
+bool insert(xmlDoc& csXml,
             const char* zKey,
             const char* zValue,
             XmlLocation location = XmlLocation::AT_BEGINNING);
@@ -165,31 +232,42 @@ bool insert(xmlDoc& xmlDoc,
 /**
  * Update or insert a key/value to XML document.
  *
- * @param xmlDoc   The XML document.
- * @param zXpath   The XML path identifying the key(s).
+ * @param csXml    The XML document.
+ * @param zKey     The XML path identifying the key.
  * @param zValue   The value.
  * @param location If inserted, where the element should be added.
  *
- * If an existing key is not found, the new key is deduced from @c zXpath.
- *
- * @return -1 in case of some low-level error (that outside development should not occur), otherwise
- *         the number of updates/inserts made.
+ * @return True, if the key/value could be updated or inserted. A return value
+ *         of false means that the path did not identify an existing element
+ *         and that the beginning path did not exist, so the key could not be
+ *         added either.
  */
-int upsert(xmlDoc& xmlDoc,
-           const char* zXpath,
-           const char* zValue,
-           XmlLocation location = XmlLocation::AT_BEGINNING);
+bool upsert(xmlDoc& csXml,
+            const char* zKey,
+            const char* zValue,
+            XmlLocation location = XmlLocation::AT_BEGINNING);
 
 /**
  * Remove key(s)
  *
- * @param xmlDoc   The XML document.
+ * @param node    The node to use as root.
+ * @param zXpath  The XML path identifying the key(s).
+ *
+ * @return -1 in case of some low-level error (that outside development should not occur), otherwise
+ *         the number of removed keys.
+ */
+int remove(xmlNode& node, const char* zXPath);
+
+/**
+ * Remove key(s)
+ *
+ * @param csDoc    Columnstore XML configuration.
  * @param zXpath   The XML path identifying the key(s).
  *
  * @return -1 in case of some low-level error (that outside development should not occur), otherwise
  *         the number of removed keys.
  */
-int remove(xmlDoc& xmlDoc, const char* zXPath);
+int remove(xmlDoc& csXml, const char* zXPath);
 
 /**
  * @brief Convert single-node XML configuration to first multi-node configuration.
@@ -197,11 +275,11 @@ int remove(xmlDoc& xmlDoc, const char* zXPath);
  * This call will replace all occurences of "127.0.0.1" in the XML configuration
  * with the provided IP-address of the node and add a ClusterManager entry.
  *
- * @param xmlDoc    Single-node configuration.
+ * @param csXml     Single-node configuration.
  * @param manager   The manager doing the modification.
  * @param address   The current public IP address of the node.
  */
-void convert_to_first_multi_node(xmlDoc& xmlDoc,
+void convert_to_first_multi_node(xmlDoc& csXml,
                                  const std::string& manager,
                                  const std::string& address);
 
@@ -211,9 +289,9 @@ void convert_to_first_multi_node(xmlDoc& xmlDoc,
  * This call will replace all occurences of the public IP address of the node with
  * "127.0.0.1" and remove the a ClusterManager entry.
  *
- * @param xmlDoc    Multi-node configuration.
+ * @param csXml  Multi-node configuration.
  */
-void convert_to_single_node(xmlDoc& xmlDoc);
+void convert_to_single_node(xmlDoc& csXml);
 
 }
 
@@ -279,7 +357,7 @@ std::string begin(const std::chrono::seconds& timeout, int id);
  * to be used when the very first (currently single mode) node is added to the
  * cluster.
  *
- * @param xmlDoc    The original Columnstore configuration of the node.
+ * @param csXml     The original Columnstore configuration of the node.
  *                  NOTE: Will be modified as a result of the call.
  * @param revision  The revision of the configuration.
  * @param manager   The manager doing the modification.
@@ -288,7 +366,7 @@ std::string begin(const std::chrono::seconds& timeout, int id);
  *
  * @return REST-API body.
  */
-std::string config_first_multi_node(xmlDoc& xmlDoc,
+std::string config_first_multi_node(xmlDoc& csXml,
                                     int revision,
                                     const std::string& manager,
                                     const std::string& address,
@@ -301,7 +379,7 @@ std::string config_first_multi_node(xmlDoc& xmlDoc,
  * "127.0.0.1" and remove the a ClusterManager entry. This is to be used when a
  * node is removed from the cluster.
  *
- * @param xmlDoc    The original Columnstore configuration of the node.
+ * @param csXml     The original Columnstore configuration of the node.
  *                  NOTE: Will be modified as a result of the call.
  * @param revision  The revision of the configuration.
  * @param manager   The manager doing the modification.
@@ -309,7 +387,7 @@ std::string config_first_multi_node(xmlDoc& xmlDoc,
  *
  * @return REST-API body.
  */
-std::string config_reset_node(xmlDoc& xmlDoc,
+std::string config_reset_node(xmlDoc& csXml,
                               int revision,
                               const std::string& manager,
                               const std::chrono::seconds& timeout);

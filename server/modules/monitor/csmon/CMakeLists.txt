@@ -17,3 +17,7 @@ if (BUILD_TOOLS)
   add_executable(csxml csxml.cc)
   target_link_libraries(csxml csmon maxscale-common ${LIBXML2_LIBRARIES})
 endif()
+
+if(BUILD_TESTS)
+  add_subdirectory(test)
+endif()
