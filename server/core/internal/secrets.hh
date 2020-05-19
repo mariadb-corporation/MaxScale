@@ -34,8 +34,8 @@ struct EncryptionKeys
     unsigned char initvector[iv_len] {0};
 };
 
-std::string encrypt_password(const EncryptionKeys* key, const std::string& input);
 bool        load_encryption_keys();
+std::string encrypt_password(const EncryptionKeys& key, const std::string& input);
 
 struct ReadKeyResult
 {

@@ -20,7 +20,6 @@
 
 #include <maxbase/format.hh>
 #include <maxscale/paths.hh>
-#include <maxscale/random.h>
 #include <maxscale/utils.hh>
 #include "internal/secrets.hh"
 
@@ -37,24 +36,6 @@ struct ThisUnit
 };
 ThisUnit this_unit;
 
-/**
- * Generate a random printable character
- *
- * @return A random printable character
- */
-unsigned char secrets_randomchar()
-{
-    return (char)((mxs_random() % ('~' - ' ')) + ' ');
-}
-
-int secrets_random_str(unsigned char* output, int len)
-{
-    for (int i = 0; i < len; ++i)
-    {
-        output[i] = secrets_randomchar();
-    }
-    return 0;
-}
 }
 
 /**
@@ -196,20 +177,20 @@ string decrypt_password(const string& crypt)
 /**
  * Encrypt a password that can be stored in the MaxScale configuration file.
  *
- * @param path   Path to the the .secrets file
- * @param input  The plaintext password to encrypt.
+ * @param key Encryption key and init vector
+ * @param input The plaintext password to encrypt.
  * @return The encrypted password, or empty on failure.
  */
-string encrypt_password(const EncryptionKeys* key, const string& input)
+string encrypt_password(const EncryptionKeys& key, const string& input)
 {
     AES_KEY aeskey;
-    AES_set_encrypt_key(key->enckey, 8 * EncryptionKeys::key_len, &aeskey);
+    AES_set_encrypt_key(key.enckey, 8 * EncryptionKeys::key_len, &aeskey);
 
     size_t padded_len = ((input.length() / AES_BLOCK_SIZE) + 1) * AES_BLOCK_SIZE;
     unsigned char encrypted[padded_len + 1];
 
     unsigned char init_vector[EncryptionKeys::iv_len];
-    memcpy(init_vector, key->initvector, EncryptionKeys::iv_len);
+    memcpy(init_vector, key.initvector, EncryptionKeys::iv_len);
     AES_cbc_encrypt((const unsigned char*) input.c_str(), encrypted, padded_len,
                     &aeskey, init_vector, AES_ENCRYPT);
 

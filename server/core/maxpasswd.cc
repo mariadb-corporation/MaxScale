@@ -17,161 +17,107 @@
 
 #include <maxscale/ccdefs.hh>
 
-#include <stdio.h>
-#include <errno.h>
-#include <sys/stat.h>
+#include <cstdio>
 #include <getopt.h>
-
+#include <maxbase/log.hh>
 #include <maxscale/paths.hh>
-#include <maxscale/random.h>
-#include <maxbase/alloc.h>
 
 #include "internal/secrets.hh"
 
 using std::string;
 
-#ifdef HAVE_GLIBC
 struct option options[] =
 {
-    {
-        "help",
-        no_argument,
-        NULL,
-        'h'
-    },
-    {NULL, 0, NULL, 0}
+    {"help",  no_argument, nullptr, 'h'},
+    {nullptr, 0,           nullptr, 0  }
 };
-#endif
 
 void print_usage(const char* executable, const char* directory)
 {
-    printf("usage: %s [-h|--help] [path] password\n"
-           "\n"
-           "This utility creates an encrypted password using a .secrets file\n"
-           "that has earlier been created using maxkeys.\n"
-           "\n"
-           "-h, --help: Display this help.\n"
-           "\n"
-           "path : The directory where the .secrets file is located, or the path\n"
-           "       of the .secrets file itself. Note that the name of the file\n"
-           "       must be .secrets.\n"
-           "\n"
-           "If a path is not provided, the .secrets file is looked for in the\n"
-           "directory %s.\n",
-           executable,
-           directory);
-}
+    const char msg[] =
+        R"(Usage: %s [-h|--help] [path] password
 
-bool path_is_ok(const char* path)
-{
-    // TODO: The check here is superfluous, in the sense that encryptPassword
-    // TODO: checks the same. However, so as not to get annoying notice output
-    // TODO: on success, notices are turned off and the absence of the file is
-    // TODO: reported as a notice. Thus, without this check maxpasswd would
-    // TODO: simply fail, without telling the cause.
+Encrypt a MaxScale plaintext password using the encryption key in the key file
+'%s'. The key file may be generated using the 'maxkeys'-utility.
 
-    bool rv = false;
+  -h, --help  Display this help.
 
-    struct stat st;
-
-    if (stat(path, &st) == 0)
-    {
-        if (S_ISDIR(st.st_mode))
-        {
-            const char TAIL[] = "/.secrets";
-
-            char file[strlen(path) + sizeof(TAIL)];
-            strcpy(file, path);
-            strcat(file, TAIL);
-
-            rv = path_is_ok(file);
-        }
-        else
-        {
-            // encryptPassword reports of any errors.
-            rv = true;
-        }
-    }
-    else
-    {
-        fprintf(stderr, "error: Could not access %s: %s.\n", path, strerror(errno));
-    }
-
-    return rv;
+  path        The directory where the key file is located (default: '%s')
+  password    The plaintext password to encrypt
+)";
+    printf(msg, executable, SECRETS_FILENAME, directory);
 }
 
 int main(int argc, char** argv)
 {
-    const char* path = mxs::datadir();
+    mxb::Log log(MXB_LOG_TARGET_STDOUT);
+    const char* default_directory = mxs::datadir();
 
     int c;
-#ifdef HAVE_GLIBC
     while ((c = getopt_long(argc, argv, "h", options, NULL)) != -1)
-#else
-    while ((c = getopt(argc, argv, "h")) != -1)
-#endif
     {
         switch (c)
         {
         case 'h':
-            print_usage(argv[0], path);
-            exit(EXIT_SUCCESS);
-            break;
+            print_usage(argv[0], default_directory);
+            return EXIT_SUCCESS;
 
         default:
-            print_usage(argv[0], path);
-            exit(EXIT_FAILURE);
-            break;
+            print_usage(argv[0], default_directory);
+            return EXIT_FAILURE;
         }
     }
 
-    char* password;
+    string plaintext_pw;
+    string path = default_directory;
 
     switch (argc - optind)
     {
     case 2:
         // Two args provided.
         path = argv[optind];
-        if (!path_is_ok(path))
-        {
-            exit(EXIT_FAILURE);
-        }
-        password = argv[optind + 1];
+        plaintext_pw = argv[optind + 1];
         break;
 
     case 1:
         // One arg provided.
-        password = argv[optind];
+        plaintext_pw = argv[optind];
         break;
 
     default:
-        print_usage(argv[0], path);
-        exit(EXIT_FAILURE);
-        break;
+        print_usage(argv[0], default_directory);
+        return EXIT_FAILURE;
     }
 
-    // We'll ignore errors and steam ahead.
-    (void)mxs_log_init(NULL, NULL, MXS_LOG_TARGET_DEFAULT);
-
-    mxs_log_set_priority_enabled(LOG_NOTICE, false);
-    mxs_log_set_priority_enabled(LOG_INFO, false);
-    mxs_log_set_priority_enabled(LOG_DEBUG, false);
-
     int rval = EXIT_FAILURE;
+    string filepath = path;
+    filepath.append("/").append(SECRETS_FILENAME);
 
-    string filepath = string(path) + "/" + SECRETS_FILENAME;
     auto keys = secrets_readkeys(filepath);
-    std::string enc = encrypt_password(keys.key.get(), password);
-    if (!enc.empty())
+    if (keys.ok)
     {
-        printf("%s\n", enc.c_str());
-        rval = EXIT_SUCCESS;
+        if (keys.key)
+        {
+            std::string enc = encrypt_password(*keys.key, plaintext_pw);
+            if (!enc.empty())
+            {
+                printf("%s\n", enc.c_str());
+                rval = EXIT_SUCCESS;
+            }
+            else
+            {
+                printf("Password encryption failed.\n");
+            }
+        }
+        else
+        {
+            printf("Password encryption key file '%s' not found, cannot encrypt password.\n",
+                   filepath.c_str());
+        }
     }
     else
     {
-        fprintf(stderr, "error: Failed to encode the password.\n");
+        printf("Could not read encryption key file '%s'.\n", filepath.c_str());
     }
-
-    mxs_log_finish();
     return rval;
 }
