@@ -1231,7 +1231,7 @@ void CsMonitor::cs_scan(json_t** ppOutput,
                         const std::chrono::seconds& timeout)
 {
     json_t* pOutput = json_object();
-    bool success = false;
+    cs::xml::DbRoots::Status dbroots_status = cs::xml::DbRoots::ERROR;
     ostringstream message;
     json_t* pServers = nullptr;
 
@@ -1246,19 +1246,24 @@ void CsMonitor::cs_scan(json_t** ppOutput,
             auto config = pServer->fetch_config();
             if (config.ok())
             {
-                // TODO: Check roots from status.
-                // TODO: Update roots in config accordingly.
-                string body = config.response.body;
+                dbroots_status = cs::xml::update_dbroots(*config.sXml.get(),
+                                                         pServer->address(),
+                                                         status.dbroots,
+                                                         pOutput);
 
-                Results results;
-                if (CsMonitorServer::set_config(sv, body, m_context, &results))
+                if (dbroots_status == cs::xml::DbRoots::UPDATED)
                 {
-                    success = true;
-                }
-                else
-                {
-                    LOG_APPEND_JSON_ERROR(&pOutput, "Could not set the configuration to all nodes.");
-                    results_to_json(sv, results, &pServers);
+                    string body = cs::body::config(*config.sXml.get(),
+                                                   m_context.revision(),
+                                                   m_context.manager(),
+                                                   timeout);
+
+                    if (!CsMonitorServer::set_config(sv, body, m_context, &results))
+                    {
+                        LOG_APPEND_JSON_ERROR(&pOutput, "Could not set the configuration to all nodes.");
+                        results_to_json(sv, results, &pServers);
+                        dbroots_status = cs::xml::DbRoots::ERROR;
+                    }
                 }
             }
             else
@@ -1287,18 +1292,17 @@ void CsMonitor::cs_scan(json_t** ppOutput,
         results_to_json(sv, results, &pServers);
     }
 
-    if (success)
+    if (dbroots_status == cs::xml::DbRoots::UPDATED)
     {
-        success = CsMonitorServer::commit(sv, m_context, &results);
-
-        if (!success)
+        if (!CsMonitorServer::commit(sv, m_context, &results))
         {
             LOG_APPEND_JSON_ERROR(ppOutput, "Could not commit changes, will attempt rollback.");
             results_to_json(sv, results, &pServers);
+            dbroots_status = cs::xml::DbRoots::ERROR;
         }
     }
 
-    if (!success)
+    if (dbroots_status != cs::xml::DbRoots::UPDATED)
     {
         if (!CsMonitorServer::rollback(sv, m_context, &results))
         {
@@ -1311,13 +1315,23 @@ void CsMonitor::cs_scan(json_t** ppOutput,
         }
     }
 
-    if (success)
+    bool success = false;
+
+    switch (dbroots_status)
     {
-        message << "Scanned '" << pServer->name() << "' for dbroots and updated cluster.";
-    }
-    else
-    {
+    case cs::xml::DbRoots::NO_CHANGE:
+        success = true;
+        message << "No change in DB roots of '" << pServer->name() << "', nothing needs to be done.";
+        break;
+
+    case cs::xml::DbRoots::ERROR:
         message << "Failed to scan '" << pServer->name() << "' for dbroots and/or to update cluster.";
+        break;
+
+    case cs::xml::DbRoots::UPDATED:
+        success = true;
+        message << "Scanned '" << pServer->name() << "' for dbroots and updated cluster.";
+        break;
     }
 
     json_object_set_new(pOutput, csmon::keys::SUCCESS, json_boolean(success));
