@@ -169,6 +169,17 @@ bool PinlokiSession::handleError(mxs::ErrorType type, GWBUF* pMessage,
     return false;
 }
 
+mxs::Buffer PinlokiSession::package(const uint8_t* ptr, size_t size)
+{
+    mxs::Buffer buffer(MYSQL_HEADER_LEN + size);
+
+    mariadb::set_byte3(buffer.data(), size);
+    buffer.data()[3] = m_seq++;
+    memcpy(buffer.data() + MYSQL_HEADER_LEN, ptr, size);
+
+    return buffer;
+}
+
 bool PinlokiSession::send_event(const maxsql::RplEvent& event)
 {
     // Not the prettiest way of detecting a full network buffer but it should work
@@ -176,15 +187,24 @@ bool PinlokiSession::send_event(const maxsql::RplEvent& event)
 
     if (can_write)
     {
-        mxs::Buffer buffer(5 + event.data().size());
+        std::vector<uint8_t> data = {0};    // The OK command byte
+        data.insert(data.end(), event.data().begin(), event.data().end());
+        size_t size = data.size();
+        const uint8_t* ptr = data.data();
 
-        // Wrap the events in a protocol packet with a command byte of 0x0
-        mariadb::set_byte3(buffer.data(), event.data().size() + 1);
-        buffer.data()[3] = m_seq++;
-        buffer.data()[4] = 0x0;
-        mempcpy(buffer.data() + 5, event.data().data(), event.data().size());
+        while (size > 0)
+        {
+            size_t payload_len = std::min(size, (size_t)GW_MYSQL_MAX_PACKET_LEN);
+            send(package(ptr, payload_len).release());
 
-        send(buffer.release());
+            if (size == GW_MYSQL_MAX_PACKET_LEN)
+            {
+                send(package(nullptr, 0).release());
+            }
+
+            ptr += payload_len;
+            size -= payload_len;
+        }
     }
     else
     {

@@ -62,6 +62,8 @@ private:
     std::unique_ptr<Reader> m_reader;
     int64_t                 m_heartbeat_period = 0;
 
+    mxs::Buffer package(const uint8_t* ptr, size_t size);
+
     bool send_event(const maxsql::RplEvent& event);
     void send(GWBUF* buffer);
 };

@@ -21,3 +21,7 @@ add_test_executable_ex(NAME pinloki_restart SOURCE pinloki_restart.cc
 # Promote a slave to a master and demote the master to a slave
 add_test_executable_ex(NAME pinloki_change_master SOURCE pinloki_change_master.cc
   CONFIG pinloki.cnf VMS repl_backend LABELS pinloki BREAKS_REPL)
+
+# Replicate large events (larger than 16MB)
+add_test_executable_ex(NAME pinloki_large_event SOURCE pinloki_large_event.cc
+  CONFIG pinloki.cnf VMS repl_backend LABELS pinloki BREAKS_REPL)
