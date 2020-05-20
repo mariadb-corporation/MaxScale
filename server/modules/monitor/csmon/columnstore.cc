@@ -505,13 +505,13 @@ void xml::convert_to_first_multi_node(xmlDoc& xmlDoc,
 
 void xml::convert_to_single_node(xmlDoc& xmlDoc)
 {
-    int n;
+    MXB_AT_DEBUG(int n);
     // Remove the "ClusterManager" key.
-    n = xml::remove(xmlDoc, XPATH_CLUSTERMANAGER);
+    MXB_AT_DEBUG(n =) xml::remove(xmlDoc, XPATH_CLUSTERMANAGER);
     mxb_assert(n == 1);
     // Replace all "IPAddr" values, irrespective of where they occur, with "127.0.0.1", provided
     // the current value is not "0.0.0.0".
-    n = xml::update_if_not(xmlDoc, XPATH_IPADDR, "127.0.0.1", "0.0.0.0");
+    MXB_AT_DEBUG(n =) xml::update_if_not(xmlDoc, XPATH_IPADDR, "127.0.0.1", "0.0.0.0");
     mxb_assert(n >= 0);
 }
 
