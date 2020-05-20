@@ -64,11 +64,13 @@ bool services_from_array(json_t* pArray, ServiceVector* pServices);
 namespace xml
 {
 
-const char CLUSTERMANAGER[]  = "ClusterManager";
-const char DBRM_CONTROLLER[] = "DBRM_Controller";
-const char DDLPROC[]         = "DDLProc";
-const char DMLPROC[]         = "DMLProc";
-const char IPADDR[]          = "IPAddr";
+const char CLUSTERMANAGER[]     = "ClusterManager";
+const char DBRM_CONTROLLER[]    = "DBRM_Controller";
+const char DDLPROC[]            = "DDLProc";
+const char DMLPROC[]            = "DMLProc";
+const char IPADDR[]             = "IPAddr";
+const char MODULEDBROOTID[]     = "ModuleDBRootID";
+const char SYSTEMMODULECONFIG[] = "SystemModuleConfig";
 
 /**
  * Find descendant nodes corresponding to particular xpath.
@@ -293,6 +295,34 @@ void convert_to_first_multi_node(xmlDoc& csXml,
  */
 void convert_to_single_node(xmlDoc& csXml);
 
+namespace DbRoots
+{
+
+enum Status
+{
+    ERROR,
+    NO_CHANGE,
+    UPDATED
+};
+
+}
+
+/**
+ * @brief Update configuration dbroots.
+ *
+ * @param csXml    The Columnstore configuration.
+ * @param address  The address of the server in question.
+ * @param dbroots  The db roots of the server in question.
+ * @param pOutput  Object where errors can be stored.
+ *
+ * @return What was done. If DbRoots::UPDATED, then @c csXml
+ *         has been updated to reflect the reality.
+ */
+DbRoots::Status update_dbroots(xmlDoc& csXml,
+                               const std::string& address,
+                               const std::vector<int>& dbroots,
+                               json_t* pOutput);
+
 }
 
 namespace rest
@@ -378,6 +408,8 @@ std::string config_set_cluster_mode(ClusterMode mode,
                                     int revision,
                                     const std::string& manager,
                                     const std::chrono::seconds& timeout);
+
+
 /**
  * @brief JSON body to be used with PUT /node/shutdown
  *

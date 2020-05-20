@@ -302,7 +302,7 @@ bool xml::find_node_id(xmlDoc& xmlDoc, const string& address, string* pNid)
 {
     bool rv = false;
 
-    xmlNode* pSmc = xml::find_node_by_xpath(xmlDoc, "/Columnstore/SystemModuleConfig");
+    xmlNode* pSmc = xml::find_node_by_xpath(xmlDoc, SYSTEMMODULECONFIG);
 
     if (pSmc)
     {
@@ -718,6 +718,165 @@ void xml::convert_to_single_node(xmlDoc& xmlDoc)
     // the current value is not "0.0.0.0".
     MXB_AT_DEBUG(n =) xml::update_if_not(xmlDoc, "/IPAddr", "127.0.0.1", "0.0.0.0");
     mxb_assert(n >= 0);
+}
+
+xml::DbRoots::Status xml::update_dbroots(xmlDoc& csXml,
+                                         const std::string& address,
+                                         const std::vector<int>& dbroots,
+                                         json_t* pOutput)
+{
+    DbRoots::Status rv = DbRoots::ERROR;
+
+    string nid;
+    if (xml::find_node_id(csXml, address.c_str(), &nid))
+    {
+        xmlNode* pSmc = xml::find_node_by_xpath(csXml, xml::SYSTEMMODULECONFIG);
+
+        if (pSmc)
+        {
+            rv = DbRoots::NO_CHANGE;
+
+            string prefix(xml::MODULEDBROOTID);
+            prefix += nid;
+            vector<xmlNode*> nodes = xml::find_children_by_prefix(*pSmc, prefix.c_str());
+
+            // Irrespective of the dbroots values, the ModuleDBRootID entries are numbered
+            // consecutively, starting from 1. So we just need the count.
+            int n = 0;
+            xmlNode* pLast_dbroot = nullptr;
+
+            for (auto* pNode : nodes)
+            {
+                const char* zName = reinterpret_cast<const char*>(pNode->name);
+                string tail(zName + prefix.size() - 1); // zName is "ModuleDBRootIDX-Y-Z", we want "X-Y-Z"
+                vector<string> parts = mxb::strtok(tail, "-");
+
+                if (parts.size() == 3)
+                {
+                    const string& role = parts[2];
+
+                    if (role == "3") // Magic number that denotes a PM that can have DB roots.
+                    {
+                        pLast_dbroot = pNode;
+                        ++n;
+                    }
+                }
+                else
+                {
+                    LOG_APPEND_JSON_ERROR(&pOutput,
+                                          "'%s' is an invalid entry for a ModuleDBRootID entry. "
+                                          "There does not seem to be a proper trailing "
+                                          "node-sequence-role part.", zName);
+                    mxb_assert(!true);
+                    rv = DbRoots::ERROR;
+                }
+            }
+
+            if (rv != DbRoots::ERROR)
+            {
+                int nRoots = dbroots.size();
+                if (n == nRoots)
+                {
+                    MXS_NOTICE("The DB roots for '%s' in the Columnstore configuration matches "
+                               "what the node itself reports.",
+                               address.c_str());
+                    mxb_assert(rv == DbRoots::NO_CHANGE);
+                }
+                else if (n < nRoots)
+                {
+                    rv = DbRoots::ERROR;
+
+                    for (int i = n + 1; i <= nRoots; ++i)
+                    {
+                        string key(prefix);
+                        key += "-";
+                        key += std::to_string(i);
+                        key += "-";
+                        key += "3";
+                        auto zKey = reinterpret_cast<const xmlChar*>(key.c_str());
+                        auto zNid = reinterpret_cast<const xmlChar*>(nid.c_str());
+                        xmlNode* pNew_dbroot = xmlNewNode(nullptr, zKey);
+                        xmlNode* pContent = xmlNewText(zNid);
+                        xmlAddChild(pNew_dbroot, pContent);
+
+                        xmlAddNextSibling(pLast_dbroot, pNew_dbroot);
+                        pLast_dbroot = pNew_dbroot;
+                    }
+
+                    string key("SystemModuleConfig/ModuleDBRootCount");
+                    key += nid;
+                    key += "-";
+                    key += "3";
+
+                    int nUpdated = xml::update_if(csXml, key.c_str(), std::to_string(nRoots).c_str());
+
+                    if (nUpdated == 1)
+                    {
+                        xmlNode* pRoot_count = xml::find_node_by_xpath(csXml, "SystemConfig/DBRootCount");
+                        mxb_assert(pRoot_count);
+
+                        if (pRoot_count)
+                        {
+                            auto zCount = reinterpret_cast<const char*>(xmlNodeGetContent(pRoot_count));
+                            int count = atoi(zCount);
+
+                            count += (nRoots - n);
+
+                            xmlNodeSetContent(pRoot_count,
+                                              reinterpret_cast<const xmlChar*>(std::to_string(count).c_str()));
+
+                            for (auto i : dbroots)
+                            {
+                                auto suffix = std::to_string(i);
+                                string key("SystemConfig/DBRoot");
+                                key += suffix;
+
+                                string value("/var/lib/columnstore/data");
+                                value += suffix;
+
+                                xml::upsert(csXml, key.c_str(), value.c_str());
+                            }
+
+                            rv = DbRoots::UPDATED;
+                        }
+                        else
+                        {
+                            LOG_APPEND_JSON_ERROR(&pOutput,
+                                                  "The XML configuration lacks a %s entry.",
+                                                  "SystemConfig/DBRootCount");
+                            mxb_assert(!true);
+                        }
+                    }
+                    else
+                    {
+                        LOG_APPEND_JSON_ERROR(&pOutput,
+                                              "Could not update key '%s', db roots will not be updated.",
+                                              key.c_str());
+                    }
+                }
+                else
+                {
+                    mxb_assert(n > nRoots);
+                    mxb_assert(!true); // NIY
+                }
+            }
+        }
+        else
+        {
+            LOG_APPEND_JSON_ERROR(&pOutput,
+                                  "The XML configuration lacks a Columnstore/%s entry.",
+                                  xml::SYSTEMMODULECONFIG);
+            mxb_assert(!true);
+        }
+    }
+    else
+    {
+        LOG_APPEND_JSON_ERROR(&pOutput,
+                              "Cannot figure out node id for server '%s' from XML configuration.",
+                              address.c_str());
+    }
+
+    return rv;
 }
 
 string rest::create_url(const SERVER& server,
