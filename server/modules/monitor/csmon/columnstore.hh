@@ -352,45 +352,17 @@ std::string begin(const std::chrono::seconds& timeout, int id);
 /**
  * @brief JSON body to be used with PUT /node/config
  *
- * This call will replace all occurences of "127.0.0.1" in the XML configuration
- * with the public IP-address of the node and add a ClusterManager entry. This is
- * to be used when the very first (currently single mode) node is added to the
- * cluster.
- *
- * @param csXml     The original Columnstore configuration of the node.
- *                  NOTE: Will be modified as a result of the call.
- * @param revision  The revision of the configuration.
- * @param manager   The manager doing the modification.
- * @param address   The current public IP address of the node.
- * @param timeout   The timeout.
- *
- * @return REST-API body.
- */
-std::string config_first_multi_node(xmlDoc& csXml,
-                                    int revision,
-                                    const std::string& manager,
-                                    const std::string& address,
-                                    const std::chrono::seconds& timeout);
-
-/**
- * @brief JSON body to be used with PUT /node/config
- *
- * This call will replace all occurences of the public IP address of the node with
- * "127.0.0.1" and remove the a ClusterManager entry. This is to be used when a
- * node is removed from the cluster.
- *
- * @param csXml     The original Columnstore configuration of the node.
- *                  NOTE: Will be modified as a result of the call.
+ * @param csXml     The Columnstore configuration.
  * @param revision  The revision of the configuration.
  * @param manager   The manager doing the modification.
  * @param timeout   The timeout.
  *
  * @return REST-API body.
  */
-std::string config_reset_node(xmlDoc& csXml,
-                              int revision,
-                              const std::string& manager,
-                              const std::chrono::seconds& timeout);
+std::string config(const xmlDoc& csXml,
+                   int revision,
+                   const std::string& manager,
+                   const std::chrono::seconds& timeout);
 
 /**
  * @brief JSON body to be used with PUT /node/config

@@ -1132,10 +1132,12 @@ void CsMonitor::cs_remove_node(json_t** ppOutput,
 
                 if (success)
                 {
-                    auto body = cs::body::config_reset_node(*remove_config.sXml,
-                                                            m_context.revision(),
-                                                            m_context.manager(),
-                                                            timeout);
+                    cs::xml::convert_to_single_node(*remove_config.sXml);
+
+                    auto body = cs::body::config(*remove_config.sXml,
+                                                 m_context.revision(),
+                                                 m_context.manager(),
+                                                 timeout);
 
                     if (pRemove_server->set_config(body, &pOutput))
                     {
@@ -1615,11 +1617,12 @@ bool CsMonitor::cs_add_first_multi_node(json_t* pOutput,
         {
             CS_DEBUG("Fetched current config from '%s'.", zName);
 
-            auto body = cs::body::config_first_multi_node(*config.sXml,
-                                                          m_context.revision(),
-                                                          m_context.manager(),
-                                                          pServer->address(),
-                                                          timeout);
+            cs::xml::convert_to_first_multi_node(*config.sXml, m_context.manager(), pServer->address());
+
+            auto body = cs::body::config(*config.sXml,
+                                         m_context.revision(),
+                                         m_context.manager(),
+                                         timeout);
 
             if (pServer->set_config(body, &pOutput))
             {

@@ -752,18 +752,15 @@ string begin(const std::chrono::seconds& timeout, int id)
     return body.str();
 }
 
-namespace
-{
-
-string create_config_body(xmlDoc& xmlDoc,
-                          int revision,
-                          const string& manager,
-                          const std::chrono::seconds& timeout)
+string config(const xmlDoc& csXml,
+              int revision,
+              const string& manager,
+              const std::chrono::seconds& timeout)
 {
     xmlChar* pConfig = nullptr;
     int size = 0;
 
-    xmlDocDumpMemory(&xmlDoc, &pConfig, &size);
+    xmlDocDumpMemory(const_cast<xmlDoc*>(&csXml), &pConfig, &size);
 
     json_t* pBody = json_object();
     json_object_set_new(pBody, CONFIG, json_stringn(reinterpret_cast<const char*>(pConfig), size));
@@ -780,29 +777,6 @@ string create_config_body(xmlDoc& xmlDoc,
     MXS_FREE(zBody);
 
     return body;
-}
-
-}
-
-string config_first_multi_node(xmlDoc& xmlDoc,
-                               int revision,
-                               const string& manager,
-                               const string& server_address,
-                               const std::chrono::seconds& timeout)
-{
-    xml::convert_to_first_multi_node(xmlDoc, manager, server_address);
-
-    return create_config_body(xmlDoc, revision, manager, timeout);
-}
-
-string config_reset_node(xmlDoc& xmlDoc,
-                         int revision,
-                         const std::string& manager,
-                         const std::chrono::seconds& timeout)
-{
-    xml::convert_to_single_node(xmlDoc);
-
-    return create_config_body(xmlDoc, revision, manager, timeout);
 }
 
 std::string config_set_cluster_mode(ClusterMode mode,
