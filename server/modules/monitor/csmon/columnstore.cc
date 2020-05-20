@@ -196,12 +196,21 @@ bool services_from_array(json_t* pArray, Services* pServices)
         json_t* pService;
         json_array_foreach(pArray, i, pService)
         {
-            const char* zName;
-            json_t* pPid;
-            json_object_foreach(pService, zName, pPid)
+            json_t* pName = json_object_get(pService, cs::body::NAME);
+            mxb_assert(pName);
+            json_t* pPid = json_object_get(pService, cs::body::PID);
+            mxb_assert(pPid);
+
+            if (pName && pPid)
             {
-                int pid = json_integer_value(pPid);
+                auto zName = json_string_value(pName);
+                auto pid = json_integer_value(pPid);
+
                 services.emplace_back(zName, pid);
+            }
+            else
+            {
+                MXS_ERROR("Object in services array does not have 'name' and/or 'pid' fields.");
             }
         }
 
