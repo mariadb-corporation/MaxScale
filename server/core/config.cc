@@ -4705,6 +4705,18 @@ static bool create_global_config(const char* filename)
     dprintf(file, "%s=%ld\n", CN_AUTH_WRITE_TIMEOUT, gateway.auth_write_timeout);
     dprintf(file, "%s=%s\n", CN_ADMIN_AUTH, gateway.admin_auth ? "true" : "false");
     dprintf(file, "%s=%u\n", CN_PASSIVE, gateway.passive);
+    dprintf(file, "%s=%s\n", CN_ADMIN_LOG_AUTH_FAILURES, gateway.admin_log_auth_failures ? "true" : "false");
+    dprintf(file, "%s=%ld\n", CN_QUERY_CLASSIFIER_CACHE_SIZE, gateway.qc_cache_properties.max_size);
+    dprintf(file, "%s=%lu\n", CN_WRITEQ_HIGH_WATER, gateway.writeq_high_water);
+    dprintf(file, "%s=%lu\n", CN_WRITEQ_LOW_WATER, gateway.writeq_low_water);
+    dprintf(file, "%s=%s\n", CN_MS_TIMESTAMP, mxb_log_is_highprecision_enabled() ? "true" : "false");
+    dprintf(file, "%s=%s\n", CN_SKIP_PERMISSION_CHECKS, gateway.skip_permission_checks ? "true" : "false");
+    dprintf(file, "%s=%d\n", CN_QUERY_RETRIES, gateway.query_retries);
+    dprintf(file, "%s=%ld\n", CN_QUERY_RETRY_TIMEOUT, gateway.query_retry_timeout);
+    dprintf(file, "%s=%u\n", CN_RETAIN_LAST_STATEMENTS, session_get_retain_last_statements());
+    dprintf(file, "%s=%s\n", CN_DUMP_LAST_STATEMENTS, session_get_dump_statements_str());
+    dprintf(file, "%s=%d\n", CN_MAX_AUTH_ERRORS_UNTIL_BLOCK, gateway.max_auth_errors_until_block);
+    dprintf(file, "%s=%u\n", CN_SESSION_TRACE, session_get_session_trace());
 
     close(file);
 
