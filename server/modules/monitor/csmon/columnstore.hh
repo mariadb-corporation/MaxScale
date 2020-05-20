@@ -53,13 +53,13 @@ enum DbrmMode
 const char* to_string(DbrmMode dbrm_mode);
 bool from_string(const char* zDbrm_mode, DbrmMode* pDbrm_mode);
 
-using DbRoots = std::vector<int>;
-using Services = std::vector<std::pair<std::string,int>>;
+using DbRootIdVector = std::vector<int>;
+using ServiceVector = std::vector<std::pair<std::string,int>>;
 
 bool from_string(const char* zTimestamp, std::chrono::system_clock::time_point* pTimestamp);
 bool from_string(const char* zXml, std::unique_ptr<xmlDoc>* psDoc);
-bool dbroots_from_array(json_t* pArray, DbRoots* pDbroots);
-bool services_from_array(json_t* pArray, Services* pServices);
+bool dbroots_from_array(json_t* pArray, DbRootIdVector* pDbroots);
+bool services_from_array(json_t* pArray, ServiceVector* pServices);
 
 namespace xml
 {

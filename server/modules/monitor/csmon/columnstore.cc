@@ -163,13 +163,13 @@ bool from_string(const char* zTimestamp, std::chrono::system_clock::time_point* 
     return rv;
 }
 
-bool dbroots_from_array(json_t* pArray, DbRoots* pDbroots)
+bool dbroots_from_array(json_t* pArray, DbRootIdVector* pDbroots)
 {
     bool rv = json_is_array(pArray);
 
     if (rv)
     {
-        DbRoots dbroots;
+        DbRootIdVector dbroots;
 
         size_t i;
         json_t* pValue;
@@ -184,13 +184,13 @@ bool dbroots_from_array(json_t* pArray, DbRoots* pDbroots)
     return rv;
 }
 
-bool services_from_array(json_t* pArray, Services* pServices)
+bool services_from_array(json_t* pArray, ServiceVector* pServices)
 {
     bool rv = json_is_array(pArray);
 
     if (rv)
     {
-        Services services;
+        ServiceVector services;
 
         size_t i;
         json_t* pService;

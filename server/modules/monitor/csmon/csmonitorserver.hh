@@ -57,8 +57,8 @@ public:
 
         cs::ClusterMode      cluster_mode = cs::READONLY;
         cs::DbrmMode         dbrm_mode = cs::SLAVE;
-        cs::DbRoots          dbroots;
-        cs::Services         services;
+        cs::DbRootIdVector   dbroots;
+        cs::ServiceVector    services;
         std::chrono::seconds uptime;
 
     private:
