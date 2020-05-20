@@ -23,6 +23,7 @@
 #include <maxbase/log.hh>
 
 using namespace std;
+namespace xml = cs::xml;
 
 namespace
 {
@@ -45,6 +46,9 @@ void print_usage_and_exit()
          << "reset\n"
          << "    Convert multi-node config to single-node config.\n"
          << "\n"
+         << "scan\n"
+         << "    Scan DB roots\n"
+         << "\n"
          << "update_if xpath-expr new_value [if_value]\n"
          << "    Update value at path, optionally only if existing value matches specified value\n"
          << "\n"
@@ -57,7 +61,7 @@ void print_usage_and_exit()
     exit(EXIT_FAILURE);
 }
 
-void create_first(xmlDoc& xml, int argc, char* argv[])
+bool create_first(xmlDoc& xml, int argc, char* argv[])
 {
     if (argc < 2)
     {
@@ -67,10 +71,11 @@ void create_first(xmlDoc& xml, int argc, char* argv[])
     const char* zIp = argv[0];
     const char* zManager = argv[1];
 
-    cs::xml::convert_to_first_multi_node(xml, zManager, zIp);
+    xml::convert_to_first_multi_node(xml, zManager, zIp);
+    return true;
 }
 
-void insert_b(xmlDoc& xml, int argc, char* argv[])
+bool insert_b(xmlDoc& xml, int argc, char* argv[])
 {
     if (argc < 2)
     {
@@ -80,10 +85,11 @@ void insert_b(xmlDoc& xml, int argc, char* argv[])
     const char* zKey = argv[0];
     const char* zValue = argv[1];
 
-    cs::xml::insert(xml, zKey, zValue, cs::xml::XmlLocation::AT_BEGINNING);
+    xml::insert(xml, zKey, zValue, xml::XmlLocation::AT_BEGINNING);
+    return true;
 }
 
-void insert_e(xmlDoc& xml, int argc, char* argv[])
+bool insert_e(xmlDoc& xml, int argc, char* argv[])
 {
     if (argc < 2)
     {
@@ -93,10 +99,11 @@ void insert_e(xmlDoc& xml, int argc, char* argv[])
     const char* zKey = argv[0];
     const char* zValue = argv[1];
 
-    cs::xml::insert(xml, zKey, zValue, cs::xml::XmlLocation::AT_END);
+    xml::insert(xml, zKey, zValue, xml::XmlLocation::AT_END);
+    return true;
 }
 
-void remove(xmlDoc& xml, int argc, char* argv[])
+bool remove(xmlDoc& xml, int argc, char* argv[])
 {
     if (argc < 1)
     {
@@ -105,15 +112,54 @@ void remove(xmlDoc& xml, int argc, char* argv[])
 
     const char* zXpath = argv[0];
 
-    cs::xml::remove(xml, zXpath);
+    xml::remove(xml, zXpath);
+    return true;
 }
 
-void reset(xmlDoc& xml, int argc, char* argv[])
+bool reset(xmlDoc& xml, int argc, char* argv[])
 {
-    cs::xml::convert_to_single_node(xml);
+    xml::convert_to_single_node(xml);
+    return true;
 }
 
-void update_if(xmlDoc& xml, int argc, char* argv[])
+bool scan(xmlDoc& xml, int argc, char* argv[])
+{
+    if (argc < 2)
+    {
+        print_usage_and_exit();
+    }
+
+    const char* zAddress = argv[0];
+    int nRoots = atoi(argv[1]);
+
+    vector<int> dbroots;
+
+    for (auto i = 1; i <= nRoots; ++i)
+    {
+        dbroots.push_back(i);
+    }
+
+    json_t* pOutput = json_object();
+
+    switch (xml::update_dbroots(xml, zAddress, dbroots, pOutput))
+    {
+    case xml::DbRoots::NO_CHANGE:
+        cout << "success: No change in dbroots." << endl;
+        break;
+
+    case xml::DbRoots::UPDATED:
+        cout << "success: dbroots updated." << endl;
+        break;
+
+    case xml::DbRoots::ERROR:
+        cout << "error: Could not update dbroots." << endl;
+        break;
+    }
+
+    return true;
+}
+
+bool update_if(xmlDoc& xml, int argc, char* argv[])
 {
     if (argc < 2)
     {
@@ -124,10 +170,11 @@ void update_if(xmlDoc& xml, int argc, char* argv[])
     const char* zNew_value = argv[1];
     const char* zIf_value = argc == 3 ? argv[2] : nullptr;
 
-    cs::xml::update_if(xml, zXpath, zNew_value, zIf_value);
+    xml::update_if(xml, zXpath, zNew_value, zIf_value);
+    return true;
 }
 
-void update_if_not(xmlDoc& xml, int argc, char* argv[])
+bool update_if_not(xmlDoc& xml, int argc, char* argv[])
 {
     if (argc < 2)
     {
@@ -138,10 +185,11 @@ void update_if_not(xmlDoc& xml, int argc, char* argv[])
     const char* zNew_value = argv[1];
     const char* zIf_value = argc == 3 ? argv[2] : nullptr;
 
-    cs::xml::update_if_not(xml, zXpath, zNew_value, zIf_value);
+    xml::update_if_not(xml, zXpath, zNew_value, zIf_value);
+    return true;
 }
 
-void upsert(xmlDoc& xml, int argc, char* argv[])
+bool upsert(xmlDoc& xml, int argc, char* argv[])
 {
     if (argc < 2)
     {
@@ -151,17 +199,19 @@ void upsert(xmlDoc& xml, int argc, char* argv[])
     const char* zXpath = argv[0];
     const char* zValue = argv[1];
 
-    cs::xml::upsert(xml, zXpath, zValue);
+    xml::upsert(xml, zXpath, zValue);
+    return true;
 }
 
 
-map<string, void (*)(xmlDoc&, int, char**)> commands =
+map<string, bool (*)(xmlDoc&, int, char**)> commands =
 {
     { "create_first", &create_first },
     { "insert_b", &insert_b },
     { "insert_e", &insert_e },
     { "remove", &remove },
     { "reset", &reset },
+    { "scan", &scan },
     { "update_if", &update_if },
     { "update_if_not", &update_if_not },
     { "upsert", &upsert }
@@ -201,8 +251,10 @@ int main(int argc, char* argv[])
 
             if (sDoc)
             {
-                command(*sDoc.get(), argc - 3, &argv[3]);
-                xmlDocDump(stdout, sDoc.get());
+                if (command(*sDoc.get(), argc - 3, &argv[3]))
+                {
+                    xmlDocDump(stdout, sDoc.get());
+                }
                 rv = EXIT_SUCCESS;
             }
             else
