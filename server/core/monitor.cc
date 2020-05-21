@@ -831,6 +831,23 @@ json_t* Monitor::monitored_server_json_attributes(const SERVER* srv) const
     return rval;
 }
 
+void Monitor::wait_for_status_change()
+{
+    mxb_assert(is_running());
+    mxb_assert(Monitor::is_main_worker());
+
+    // Store the tick count before we request the change
+    auto start = ticks();
+
+    // Set a flag so the next loop happens sooner.
+    m_status_change_pending.store(true, std::memory_order_release);
+
+    while (start == ticks())
+    {
+        std::this_thread::sleep_for(milliseconds(100));
+    }
+}
+
 void MonitorServer::stash_current_status()
 {
     mon_prev_status = server->status();
@@ -1785,8 +1802,9 @@ bool Monitor::set_server_status(SERVER* srv, int bit, string* errmsg_out)
 
             msrv->add_status_request(request);
             written = true;
-            // Also set a flag so the next loop happens sooner.
-            m_status_change_pending.store(true, std::memory_order_release);
+
+            // Wait until the monitor picks up the change
+            wait_for_status_change();
         }
     }
     else
@@ -1838,8 +1856,9 @@ bool Monitor::clear_server_status(SERVER* srv, int bit, string* errmsg_out)
 
             msrv->add_status_request(request);
             written = true;
-            // Also set a flag so the next loop happens sooner.
-            m_status_change_pending.store(true, std::memory_order_release);
+
+            // Wait until the monitor picks up the change
+            wait_for_status_change();
         }
     }
     else

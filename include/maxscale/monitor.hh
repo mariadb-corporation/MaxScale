@@ -642,6 +642,9 @@ private:
     int     get_data_file_path(char* path) const;
     json_t* parameters_to_json() const;
 
+    // Waits until the status change request is processed
+    void wait_for_status_change();
+
     mxb::StopWatch   m_disk_space_checked;              /**< When was disk space checked the last time */
     std::atomic_bool m_status_change_pending {false};   /**< Set when admin requests a status change. */
     uint8_t          m_journal_hash[SHA_DIGEST_LENGTH]; /**< SHA1 hash of the latest written journal */
