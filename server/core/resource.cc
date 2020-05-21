@@ -1182,7 +1182,7 @@ public:
         m_post.emplace_back(cb_create_service_listener, "services", ":service", "listeners");
         m_post.emplace_back(cb_create_listener, "listeners");
         m_post.emplace_back(cb_create_user, "users", "inet");
-        m_post.emplace_back(cb_create_user, "users", "unix");
+        m_post.emplace_back(cb_create_user, "users", "unix");       // For backward compatibility.
 
         /** All of the above require a request body */
         for (auto& r : m_post)

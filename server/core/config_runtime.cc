@@ -2407,6 +2407,10 @@ bool runtime_create_user_from_json(json_t* json)
             MXS_NOTICE("Create network user '%s'", user);
             rval = true;
         }
+        else if (strtype == CN_UNIX)
+        {
+            config_runtime_error("UNIX users are no longer supported.");
+        }
         else if (err)
         {
             config_runtime_error("Failed to add user '%s': %s", user, err);
