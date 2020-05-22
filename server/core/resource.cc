@@ -1463,7 +1463,7 @@ static HttpResponse handle_request(const HttpRequest& request)
         [](auto level, const auto& msg) {
             if (level < LOG_WARNING)    // Lower is more severe
             {
-                config_runtime_error("%s", msg.c_str());
+                config_runtime_add_error(msg);
                 return true;
             }
 

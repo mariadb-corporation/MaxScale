@@ -180,8 +180,8 @@ std::pair<bool, mxs::ConfigParameters> load_defaults(const char* name,
     }
     else
     {
-        config_runtime_error("Failed to load module '%s': %s",
-                             name, errno ? mxs_strerror(errno) : "See MaxScale logs for details");
+        MXS_ERROR("Failed to load module '%s': %s",
+                  name, errno ? mxs_strerror(errno) : "See MaxScale logs for details");
     }
 
     return {rval, params};
@@ -238,8 +238,7 @@ bool link_service_to_monitor(Service* service, mxs::Monitor* monitor)
         std::string err = service->cluster() ?
             "Service already uses cluster '"s + service->cluster()->name() + "'" :
             "Service uses targets";
-        config_runtime_error("Service '%s' cannot use cluster '%s': %s",
-                             service->name(), monitor->name(), err.c_str());
+        MXS_ERROR("Service '%s' cannot use cluster '%s': %s", service->name(), monitor->name(), err.c_str());
     }
 
     return ok;
@@ -251,7 +250,7 @@ bool unlink_service_from_monitor(Service* service, mxs::Monitor* monitor)
 
     if (!ok)
     {
-        config_runtime_error("Service '%s' does not use monitor '%s'", service->name(), monitor->name());
+        MXS_ERROR("Service '%s' does not use monitor '%s'", service->name(), monitor->name());
     }
 
     return ok;
@@ -269,20 +268,19 @@ bool runtime_link_target(const std::string& subject, const std::string& target)
         }
         else if (auto cluster = service->cluster())
         {
-            config_runtime_error("The servers of the service '%s' are defined by the monitor '%s'. "
-                                 "Servers cannot explicitly be added to the service.",
-                                 service->name(), cluster->name());
+            MXS_ERROR("The servers of the service '%s' are defined by the monitor '%s'. "
+                      "Servers cannot explicitly be added to the service.",
+                      service->name(), cluster->name());
         }
         else if (auto tgt = mxs::Target::find(subject))
         {
             if (service == tgt)
             {
-                config_runtime_error("Cannot link '%s' to itself", service->name());
+                MXS_ERROR("Cannot link '%s' to itself", service->name());
             }
             else if (service->has_target(tgt))
             {
-                config_runtime_error("Service '%s' already uses target '%s'",
-                                     service->name(), subject.c_str());
+                MXS_ERROR("Service '%s' already uses target '%s'", service->name(), subject.c_str());
             }
             else
             {
@@ -290,8 +288,8 @@ bool runtime_link_target(const std::string& subject, const std::string& target)
 
                 if (!cycle.empty())
                 {
-                    config_runtime_error("Linking '%s' to '%s' would result in a circular configuration: %s",
-                                         subject.c_str(), service->name(), cycle.c_str());
+                    MXS_ERROR("Linking '%s' to '%s' would result in a circular configuration: %s",
+                              subject.c_str(), service->name(), cycle.c_str());
                 }
                 else
                 {
@@ -302,7 +300,7 @@ bool runtime_link_target(const std::string& subject, const std::string& target)
         }
         else
         {
-            config_runtime_error("Could not find target with name '%s'", subject.c_str());
+            MXS_ERROR("Could not find target with name '%s'", subject.c_str());
         }
 
         if (rval)
@@ -323,7 +321,7 @@ bool runtime_link_target(const std::string& subject, const std::string& target)
             }
             else
             {
-                config_runtime_error("%s", error_msg.c_str());
+                MXS_ERROR("%s", error_msg.c_str());
             }
         }
         else if (auto service = Service::find(subject))
@@ -332,12 +330,12 @@ bool runtime_link_target(const std::string& subject, const std::string& target)
         }
         else
         {
-            config_runtime_error("No server or service named '%s' found", subject.c_str());
+            MXS_ERROR("No server or service named '%s' found", subject.c_str());
         }
     }
     else
     {
-        config_runtime_error("No monitor or service named '%s' found", target.c_str());
+        MXS_ERROR("No monitor or service named '%s' found", target.c_str());
     }
 
     if (rval)
@@ -360,9 +358,9 @@ bool runtime_unlink_target(const std::string& subject, const std::string& target
         }
         else if (auto cluster = service->cluster())
         {
-            config_runtime_error("The servers of the service '%s' are defined by the monitor '%s'. "
-                                 "Servers cannot explicitly be removed from the service.",
-                                 service->name(), cluster->name());
+            MXS_ERROR("The servers of the service '%s' are defined by the monitor '%s'. "
+                      "Servers cannot explicitly be removed from the service.",
+                      service->name(), cluster->name());
         }
         else if (auto tgt = mxs::Target::find(subject))
         {
@@ -371,7 +369,7 @@ bool runtime_unlink_target(const std::string& subject, const std::string& target
         }
         else
         {
-            config_runtime_error("Target '%s' not found", subject.c_str());
+            MXS_ERROR("Target '%s' not found", subject.c_str());
         }
 
         if (rval)
@@ -392,7 +390,7 @@ bool runtime_unlink_target(const std::string& subject, const std::string& target
             }
             else
             {
-                config_runtime_error("%s", error_msg.c_str());
+                MXS_ERROR("%s", error_msg.c_str());
             }
         }
         else if (auto service = Service::find(subject))
@@ -401,12 +399,12 @@ bool runtime_unlink_target(const std::string& subject, const std::string& target
         }
         else
         {
-            config_runtime_error("No server named '%s' found", subject.c_str());
+            MXS_ERROR("No server named '%s' found", subject.c_str());
         }
     }
     else
     {
-        config_runtime_error("No monitor or service named '%s' found", target.c_str());
+        MXS_ERROR("No monitor or service named '%s' found", target.c_str());
     }
 
     if (rval)
@@ -454,7 +452,7 @@ bool undefined_mandatory_parameter(const MXS_MODULE_PARAM* mod_params,
     {
         if ((mod_params[i].options & MXS_MODULE_OPT_REQUIRED) && !params->contains(mod_params[i].name))
         {
-            config_runtime_error("Mandatory parameter '%s' is not defined.", mod_params[i].name);
+            MXS_ERROR("Mandatory parameter '%s' is not defined.", mod_params[i].name);
             rval = true;
         }
     }
@@ -471,7 +469,7 @@ bool validate_param(const MXS_MODULE_PARAM* basic,
     bool rval = validate_param(basic, module, key, value, &error);
     if (!rval)
     {
-        config_runtime_error("%s", error.c_str());
+        MXS_ERROR("%s", error.c_str());
     }
     return rval;
 }
@@ -576,16 +574,16 @@ bool runtime_create_listener(Service* service,
 
     if (!ok)
     {
-        config_runtime_error("Failed to load module '%s'", proto);
+        MXS_ERROR("Failed to load module '%s'", proto);
     }
     else if (listener_find(name))
     {
-        config_runtime_error("Listener '%s' already exists", name);
+        MXS_ERROR("Listener '%s' already exists", name);
     }
     else if (old_listener)
     {
-        config_runtime_error("Listener '%s' already listens on [%s]:%u", old_listener->name(),
-                             old_listener->address(), old_listener->port());
+        MXS_ERROR("Listener '%s' already listens on [%s]:%u", old_listener->name(),
+                  old_listener->address(), old_listener->port());
     }
     else if (config_is_valid_name(name, &reason))
     {
@@ -603,20 +601,20 @@ bool runtime_create_listener(Service* service,
             }
             else
             {
-                config_runtime_error("Listener '%s' was created but failed to start it.", name);
+                MXS_ERROR("Listener '%s' was created but failed to start it.", name);
                 Listener::destroy(listener);
                 mxb_assert(!listener_find(name));
             }
         }
         else
         {
-            config_runtime_error("Failed to create listener '%s'. Read the MaxScale error log "
-                                 "for more details.", name);
+            MXS_ERROR("Failed to create listener '%s'. Read the MaxScale error log "
+                      "for more details.", name);
         }
     }
     else
     {
-        config_runtime_error("%s", reason.c_str());
+        MXS_ERROR("%s", reason.c_str());
     }
 
     return rval;
@@ -642,7 +640,7 @@ bool runtime_create_filter(const char* name, const char* module, mxs::ConfigPara
 
             if (!(filter = filter_alloc(name, module, &parameters)))
             {
-                config_runtime_error("Could not create filter '%s' with module '%s'", name, module);
+                MXS_ERROR("Could not create filter '%s' with module '%s'", name, module);
             }
         }
 
@@ -660,7 +658,7 @@ bool runtime_create_filter(const char* name, const char* module, mxs::ConfigPara
     }
     else
     {
-        config_runtime_error("Can't create filter '%s', it already exists", name);
+        MXS_ERROR("Can't create filter '%s', it already exists", name);
     }
 
     return rval;
@@ -803,7 +801,7 @@ bool runtime_is_string_or_null(json_t* json, const char* path)
 
     if (value && !json_is_string(value) && !json_is_null(value))
     {
-        config_runtime_error("Parameter '%s' is not a string but %s", path, json_type_to_string(value));
+        MXS_ERROR("Parameter '%s' is not a string but %s", path, json_type_to_string(value));
         rval = false;
     }
 
@@ -817,7 +815,7 @@ bool runtime_is_bool_or_null(json_t* json, const char* path)
 
     if (value && !json_is_boolean(value) && !json_is_null(value))
     {
-        config_runtime_error("Parameter '%s' is not a boolean but %s", path, json_type_to_string(value));
+        MXS_ERROR("Parameter '%s' is not a boolean but %s", path, json_type_to_string(value));
         rval = false;
     }
 
@@ -833,15 +831,14 @@ bool runtime_is_size_or_null(json_t* json, const char* path)
     {
         if (!json_is_integer(value) && !json_is_string(value) && !json_is_null(value))
         {
-            config_runtime_error("Parameter '%s' is not an integer or a string but %s",
-                                 path,
-                                 json_type_to_string(value));
+            MXS_ERROR("Parameter '%s' is not an integer or a string but %s",
+                      path, json_type_to_string(value));
             rval = false;
         }
         else if ((json_is_integer(value) && json_integer_value(value) < 0)
                  || (json_is_string(value) && !get_suffixed_size(json_string_value(value), nullptr)))
         {
-            config_runtime_error("Parameter '%s' is not a valid size", path);
+            MXS_ERROR("Parameter '%s' is not a valid size", path);
             rval = false;
         }
     }
@@ -858,12 +855,12 @@ bool runtime_is_count_or_null(json_t* json, const char* path)
     {
         if (!json_is_integer(value) && !json_is_null(value))
         {
-            config_runtime_error("Parameter '%s' is not an integer but %s", path, json_type_to_string(value));
+            MXS_ERROR("Parameter '%s' is not an integer but %s", path, json_type_to_string(value));
             rval = false;
         }
         else if (json_is_integer(value) && json_integer_value(value) < 0)
         {
-            config_runtime_error("Parameter '%s' is a negative integer", path);
+            MXS_ERROR("Parameter '%s' is a negative integer", path);
             rval = false;
         }
     }
@@ -878,7 +875,7 @@ bool is_valid_resource_body(json_t* json)
 
     if (mxs_json_pointer(json, MXS_JSON_PTR_DATA) == NULL)
     {
-        config_runtime_error("No '%s' field defined", MXS_JSON_PTR_DATA);
+        MXS_ERROR("No '%s' field defined", MXS_JSON_PTR_DATA);
         rval = false;
     }
     else
@@ -898,7 +895,7 @@ bool is_valid_resource_body(json_t* json)
 
             if (j && !json_is_object(j))
             {
-                config_runtime_error("Relationship '%s' is not an object", *it);
+                MXS_ERROR("Relationship '%s' is not an object", *it);
                 rval = false;
             }
         }
@@ -914,11 +911,11 @@ bool server_contains_required_fields(json_t* json)
 
     if (!err.empty())
     {
-        config_runtime_error("%s", err.c_str());
+        MXS_ERROR("%s", err.c_str());
     }
     else if (!mxs_json_pointer(json, MXS_JSON_PTR_PARAMETERS))
     {
-        config_runtime_error("Field '%s' is not defined", MXS_JSON_PTR_PARAMETERS);
+        MXS_ERROR("Field '%s' is not defined", MXS_JSON_PTR_PARAMETERS);
     }
     else
     {
@@ -997,25 +994,21 @@ bool validate_ssl_json(json_t* params, object_type type)
 
         if (type == OT_LISTENER && !(key && cert && ca_cert))
         {
-            config_runtime_error("SSL configuration for listeners requires "
-                                 "'%s', '%s' and '%s' parameters",
-                                 CN_SSL_KEY,
-                                 CN_SSL_CERT,
-                                 CN_SSL_CA_CERT);
+            MXS_ERROR("SSL configuration for listeners requires '%s', '%s' and '%s' parameters",
+                      CN_SSL_KEY, CN_SSL_CERT, CN_SSL_CA_CERT);
             rval = false;
         }
         else if (type == OT_SERVER)
         {
             if (!ca_cert)
             {
-                config_runtime_error("SSL configuration for servers requires "
-                                     "at least the '%s' parameter",
-                                     CN_SSL_CA_CERT);
+                MXS_ERROR("SSL configuration for servers requires at least the '%s' parameter",
+                          CN_SSL_CA_CERT);
                 rval = false;
             }
             else if ((key == nullptr) != (cert == nullptr))
             {
-                config_runtime_error("Both '%s' and '%s' must be defined", CN_SSL_KEY, CN_SSL_CERT);
+                MXS_ERROR("Both '%s' and '%s' must be defined", CN_SSL_KEY, CN_SSL_CERT);
                 rval = false;
             }
         }
@@ -1025,7 +1018,7 @@ bool validate_ssl_json(json_t* params, object_type type)
 
         if (ssl_version_str && string_to_ssl_method_type(ssl_version_str) == SERVICE_SSL_UNKNOWN)
         {
-            config_runtime_error("Invalid value for '%s': %s", CN_SSL_VERSION, ssl_version_str);
+            MXS_ERROR("Invalid value for '%s': %s", CN_SSL_VERSION, ssl_version_str);
             rval = false;
         }
     }
@@ -1095,12 +1088,12 @@ bool is_valid_relationship_body(json_t* json)
 
     if (!obj)
     {
-        config_runtime_error("Field '%s' is not defined", MXS_JSON_PTR_DATA);
+        MXS_ERROR("Field '%s' is not defined", MXS_JSON_PTR_DATA);
         rval = false;
     }
     else if (!json_is_array(obj) && !json_is_null(obj))
     {
-        config_runtime_error("Field '%s' is not an array", MXS_JSON_PTR_DATA);
+        MXS_ERROR("Field '%s' is not an array", MXS_JSON_PTR_DATA);
         rval = false;
     }
 
@@ -1122,7 +1115,7 @@ bool validate_object_json(json_t* json)
 
     if (!err.empty())
     {
-        config_runtime_error("%s", err.c_str());
+        MXS_ERROR("%s", err.c_str());
     }
 
     return err.empty();
@@ -1210,7 +1203,7 @@ std::pair<bool, mxs::ConfigParameters> extract_and_validate_params(json_t* json,
     }
     else
     {
-        config_runtime_error("Unknown module: %s", module);
+        MXS_ERROR("Unknown module: %s", module);
     }
 
     return {ok, params};
@@ -1260,7 +1253,7 @@ bool object_to_server_relations(const std::string& target, json_t* old_json, jso
 
     if (!rval)
     {
-        config_runtime_error("Could not find all servers that '%s' relates to", target.c_str());
+        MXS_ERROR("Could not find all servers that '%s' relates to", target.c_str());
     }
 
     return rval;
@@ -1272,7 +1265,7 @@ bool service_to_service_relations(const std::string& target, json_t* old_json, j
 
     if (!rval)
     {
-        config_runtime_error("Could not find all services that '%s' relates to", target.c_str());
+        MXS_ERROR("Could not find all services that '%s' relates to", target.c_str());
     }
 
     return rval;
@@ -1304,7 +1297,7 @@ bool service_to_filter_relations(Service* service, json_t* old_json, json_t* new
     else
     {
 
-        config_runtime_error("Could not find all filters that '%s' relates to", service->name());
+        MXS_ERROR("Could not find all filters that '%s' relates to", service->name());
     }
 
     return rval;
@@ -1316,7 +1309,7 @@ bool service_to_monitor_relations(const std::string& target, json_t* old_json, j
 
     if (!rval)
     {
-        config_runtime_error("Could not find the monitor that '%s' relates to", target.c_str());
+        MXS_ERROR("Could not find the monitor that '%s' relates to", target.c_str());
     }
 
     return rval;
@@ -1328,7 +1321,7 @@ bool monitor_to_service_relations(const std::string& target, json_t* old_json, j
 
     if (!rval)
     {
-        config_runtime_error("Could not find the service that '%s' relates to", target.c_str());
+        MXS_ERROR("Could not find the service that '%s' relates to", target.c_str());
     }
 
     return rval;
@@ -1377,19 +1370,19 @@ bool validate_listener_json(json_t* json)
 
     if (!(param = mxs_json_pointer(json, MXS_JSON_PTR_ID)))
     {
-        config_runtime_error("Value not found: '%s'", MXS_JSON_PTR_ID);
+        MXS_ERROR("Value not found: '%s'", MXS_JSON_PTR_ID);
     }
     else if (!json_is_string(param))
     {
-        config_runtime_error("Value '%s' is not a string", MXS_JSON_PTR_ID);
+        MXS_ERROR("Value '%s' is not a string", MXS_JSON_PTR_ID);
     }
     else if (!(param = mxs_json_pointer(json, MXS_JSON_PTR_PARAMETERS)))
     {
-        config_runtime_error("Value not found: '%s'", MXS_JSON_PTR_PARAMETERS);
+        MXS_ERROR("Value not found: '%s'", MXS_JSON_PTR_PARAMETERS);
     }
     else if (!json_is_object(param))
     {
-        config_runtime_error("Value '%s' is not an object", MXS_JSON_PTR_PARAMETERS);
+        MXS_ERROR("Value '%s' is not an object", MXS_JSON_PTR_PARAMETERS);
     }
     else if (runtime_is_count_or_null(param, CN_PORT)
              && runtime_is_string_or_null(param, CN_ADDRESS)
@@ -1413,31 +1406,31 @@ bool validate_user_json(json_t* json)
 
     if (!id)
     {
-        config_runtime_error("Request body does not define the '%s' field", MXS_JSON_PTR_ID);
+        MXS_ERROR("Request body does not define the '%s' field", MXS_JSON_PTR_ID);
     }
     else if (!json_is_string(id))
     {
-        config_runtime_error("The '%s' field is not a string", MXS_JSON_PTR_ID);
+        MXS_ERROR("The '%s' field is not a string", MXS_JSON_PTR_ID);
     }
     else if (!type)
     {
-        config_runtime_error("Request body does not define the '%s' field", MXS_JSON_PTR_TYPE);
+        MXS_ERROR("Request body does not define the '%s' field", MXS_JSON_PTR_TYPE);
     }
     else if (!json_is_string(type))
     {
-        config_runtime_error("The '%s' field is not a string", MXS_JSON_PTR_TYPE);
+        MXS_ERROR("The '%s' field is not a string", MXS_JSON_PTR_TYPE);
     }
     else if (!account)
     {
-        config_runtime_error("Request body does not define the '%s' field", MXS_JSON_PTR_ACCOUNT);
+        MXS_ERROR("Request body does not define the '%s' field", MXS_JSON_PTR_ACCOUNT);
     }
     else if (!json_is_string(account))
     {
-        config_runtime_error("The '%s' field is not a string", MXS_JSON_PTR_ACCOUNT);
+        MXS_ERROR("The '%s' field is not a string", MXS_JSON_PTR_ACCOUNT);
     }
     else if (json_to_account_type(account) == mxs::USER_ACCOUNT_UNKNOWN)
     {
-        config_runtime_error("The '%s' field is not a valid account value", MXS_JSON_PTR_ACCOUNT);
+        MXS_ERROR("The '%s' field is not a valid account value", MXS_JSON_PTR_ACCOUNT);
     }
     else
     {
@@ -1445,11 +1438,11 @@ bool validate_user_json(json_t* json)
         {
             if (!password)
             {
-                config_runtime_error("Request body does not define the '%s' field", MXS_JSON_PTR_PASSWORD);
+                MXS_ERROR("Request body does not define the '%s' field", MXS_JSON_PTR_PASSWORD);
             }
             else if (!json_is_string(password))
             {
-                config_runtime_error("The '%s' field is not a string", MXS_JSON_PTR_PASSWORD);
+                MXS_ERROR("The '%s' field is not a string", MXS_JSON_PTR_PASSWORD);
             }
             else
             {
@@ -1462,9 +1455,7 @@ bool validate_user_json(json_t* json)
         }
         else
         {
-            config_runtime_error("Invalid value for field '%s': %s",
-                                 MXS_JSON_PTR_TYPE,
-                                 json_string_value(type));
+            MXS_ERROR("Invalid value for field '%s': %s", MXS_JSON_PTR_TYPE, json_string_value(type));
         }
     }
 
@@ -1501,7 +1492,7 @@ bool validate_monitor_json(json_t* json)
         {
             if (!mxs_json_pointer(params, a))
             {
-                config_runtime_error("Mandatory parameter '%s' is not defined", a);
+                MXS_ERROR("Mandatory parameter '%s' is not defined", a);
                 rval = false;
                 break;
             }
@@ -1509,7 +1500,7 @@ bool validate_monitor_json(json_t* json)
 
         if (!mxs_json_is_type(json, MXS_JSON_PTR_MODULE, JSON_STRING))
         {
-            config_runtime_error("Field '%s' is not a string", MXS_JSON_PTR_MODULE);
+            MXS_ERROR("Field '%s' is not a string", MXS_JSON_PTR_MODULE);
             rval = false;
         }
     }
@@ -1525,7 +1516,7 @@ bool validate_filter_json(json_t* json)
     {
         if (!mxs_json_is_type(json, MXS_JSON_PTR_MODULE, JSON_STRING))
         {
-            config_runtime_error("Field '%s' is not a string", MXS_JSON_PTR_MODULE);
+            MXS_ERROR("Field '%s' is not a string", MXS_JSON_PTR_MODULE);
             rval = false;
         }
     }
@@ -1545,12 +1536,12 @@ bool validate_service_json(json_t* json)
 
         if (json_array_size(monitors) && (json_array_size(servers) || json_array_size(services)))
         {
-            config_runtime_error("A service must use either servers and services or monitors, not both");
+            MXS_ERROR("A service must use either servers and services or monitors, not both");
             rval = false;
         }
         else if (!mxs_json_is_type(json, MXS_JSON_PTR_ROUTER, JSON_STRING))
         {
-            config_runtime_error("Field '%s' is not a string", MXS_JSON_PTR_ROUTER);
+            MXS_ERROR("Field '%s' is not a string", MXS_JSON_PTR_ROUTER);
             rval = false;
         }
     }
@@ -1684,14 +1675,9 @@ Server* get_server_by_address(json_t* params)
 }
 }
 
-void config_runtime_error(const char* fmt, ...)
+void config_runtime_add_error(const std::string& error)
 {
-    char errmsg[RUNTIME_ERRMSG_BUFSIZE];
-    va_list list;
-    va_start(list, fmt);
-    vsnprintf(errmsg, sizeof(errmsg), fmt, list);
-    va_end(list);
-    runtime_errmsg.push_back(errmsg);
+    runtime_errmsg.push_back(error);
 }
 
 json_t* runtime_get_json_error()
@@ -1727,13 +1713,12 @@ bool runtime_create_volatile_server(const std::string& name, const std::string& 
         }
         else
         {
-            config_runtime_error("Failed to create server '%s', see error log for more details",
-                                 name.c_str());
+            MXS_ERROR("Failed to create server '%s', see error log for more details", name.c_str());
         }
     }
     else
     {
-        config_runtime_error("Server '%s' already exists", name.c_str());
+        MXS_ERROR("Server '%s' already exists", name.c_str());
     }
 
     return rval;
@@ -1750,10 +1735,8 @@ bool runtime_destroy_server(Server* server, bool force)
 
     if (!service_server_in_use(server).empty() || MonitorManager::server_is_monitored(server))
     {
-        const char* err = "Cannot destroy server '%s' as it is used by at least "
-                          "one service or monitor";
-        config_runtime_error(err, server->name());
-        MXS_ERROR(err, server->name());
+        MXS_ERROR("Cannot destroy server '%s' as it is used by at least one service or monitor",
+                  server->name());
     }
     else if (runtime_remove_config(server->name()))
     {
@@ -1802,8 +1785,7 @@ bool runtime_destroy_filter(const SFilterDef& filter, bool force)
     }
     else
     {
-        config_runtime_error("Filter '%s' cannot be destroyed: Remove it from all services first",
-                             filter->name.c_str());
+        MXS_ERROR("Filter '%s' cannot be destroyed: Remove it from all services first", filter->name.c_str());
     }
 
     return rval;
@@ -1829,9 +1811,8 @@ bool runtime_destroy_service(Service* service, bool force)
     }
     else
     {
-        config_runtime_error("Service '%s' cannot be destroyed: Remove all servers and "
-                             "destroy all listeners first",
-                             service->name());
+        MXS_ERROR("Service '%s' cannot be destroyed: Remove all servers and destroy all listeners first",
+                  service->name());
     }
 
     return rval;
@@ -1848,11 +1829,11 @@ bool runtime_destroy_monitor(Monitor* monitor, bool force)
 
     if (!monitor->servers().empty() && !force)
     {
-        config_runtime_error("Cannot destroy monitor '%s', it is monitoring servers.", monitor->name());
+        MXS_ERROR("Cannot destroy monitor '%s', it is monitoring servers.", monitor->name());
     }
     else if (!service_uses_monitor(monitor).empty())
     {
-        config_runtime_error("Monitor '%s' cannot be destroyed as it is used by services.", monitor->name());
+        MXS_ERROR("Monitor '%s' cannot be destroyed as it is used by services.", monitor->name());
     }
     else if (runtime_remove_config(monitor->name()))
     {
@@ -1880,7 +1861,7 @@ bool runtime_create_server_from_json(json_t* json)
 
         if (ServerManager::find_by_unique_name(name))
         {
-            config_runtime_error("Server '%s' already exists", name);
+            MXS_ERROR("Server '%s' already exists", name);
         }
         else if (Server* server = ServerManager::create_server(name, params))
         {
@@ -1998,7 +1979,7 @@ bool runtime_create_monitor_from_json(json_t* json)
 
         if (MonitorManager::find_monitor(name))
         {
-            config_runtime_error("Can't create monitor '%s', it already exists", name);
+            MXS_ERROR("Can't create monitor '%s', it already exists", name);
         }
         else
         {
@@ -2028,7 +2009,7 @@ bool runtime_create_monitor_from_json(json_t* json)
                 }
                 else
                 {
-                    config_runtime_error("Could not create monitor '%s' with module '%s'", name, module);
+                    MXS_ERROR("Could not create monitor '%s' with module '%s'", name, module);
                 }
             }
         }
@@ -2102,19 +2083,19 @@ bool runtime_create_service_from_json(json_t* json)
                         }
                         else
                         {
-                            config_runtime_error("Failed to serialize service '%s'", name);
+                            MXS_ERROR("Failed to serialize service '%s'", name);
                         }
                     }
                 }
                 else
                 {
-                    config_runtime_error("Could not create service '%s' with module '%s'", name, router);
+                    MXS_ERROR("Could not create service '%s' with module '%s'", name, router);
                 }
             }
         }
         else
         {
-            config_runtime_error("Can't create service '%s', it already exists", name);
+            MXS_ERROR("Can't create service '%s', it already exists", name);
         }
     }
 
@@ -2214,17 +2195,15 @@ bool can_modify_service_params(Service* service, const mxs::ConfigParameters& pa
             if (!service->router->configureInstance
                 || (service->capabilities() & RCAP_TYPE_RUNTIME_CONFIG) == 0)
             {
-                config_runtime_error("Router '%s' does not support reconfiguration.",
-                                     service->router_name());
+                MXS_ERROR("Router '%s' does not support reconfiguration.", service->router_name());
                 rval = false;
                 break;
             }
         }
         else if (!is_dynamic_param(a.first))
         {
-            config_runtime_error("Runtime modifications to static service "
-                                 "parameters is not supported: %s=%s",
-                                 a.first.c_str(), a.second.c_str());
+            MXS_ERROR("Runtime modifications to static service parameters is not supported: %s=%s",
+                      a.first.c_str(), a.second.c_str());
             rval = false;
         }
     }
@@ -2254,8 +2233,8 @@ bool runtime_alter_service_from_json(Service* service, json_t* new_json)
                 if (!service->router->configureInstance(service->router_instance, &params))
                 {
                     rval = false;
-                    config_runtime_error("Reconfiguration of service '%s' failed. See log "
-                                         "file for more details.", service->name());
+                    MXS_ERROR("Reconfiguration of service '%s' failed. See log file for more details.",
+                              service->name());
                 }
             }
 
@@ -2409,11 +2388,11 @@ bool runtime_create_user_from_json(json_t* json)
         }
         else if (strtype == CN_UNIX)
         {
-            config_runtime_error("UNIX users are no longer supported.");
+            MXS_ERROR("UNIX users are no longer supported.");
         }
         else if (err)
         {
-            config_runtime_error("Failed to add user '%s': %s", user, err);
+            MXS_ERROR("Failed to add user '%s': %s", user, err);
         }
     }
 
@@ -2432,7 +2411,7 @@ bool runtime_remove_user(const char* id)
     }
     else
     {
-        config_runtime_error("Failed to remove user '%s': %s", id, err);
+        MXS_ERROR("Failed to remove user '%s': %s", id, err);
     }
 
     return rval;
@@ -2445,15 +2424,15 @@ bool runtime_alter_user(const std::string& user, const std::string& type, json_t
 
     if (!password)
     {
-        config_runtime_error("No password provided");
+        MXS_ERROR("No password provided");
     }
     else if (type != CN_INET)
     {
-        config_runtime_error("Users of type '%s' are not supported", type.c_str());
+        MXS_ERROR("Users of type '%s' are not supported", type.c_str());
     }
     else if (const char* err = admin_alter_inet_user(user.c_str(), password))
     {
-        config_runtime_error("%s", err);
+        MXS_ERROR("%s", err);
     }
     else
     {
@@ -2501,21 +2480,20 @@ bool runtime_alter_maxscale_from_json(json_t* json)
                             }
                             else
                             {
-                                config_runtime_error("Invalid value for '%s': %s",
-                                                     key, mxs::json_dump(new_val).c_str());
+                                MXS_ERROR("Invalid value for '%s': %s", key, mxs::json_dump(new_val).c_str());
                                 rval = false;
                             }
                         }
                         else
                         {
-                            config_runtime_error("Global parameter '%s' cannot be modified at runtime", key);
+                            MXS_ERROR("Global parameter '%s' cannot be modified at runtime", key);
                             rval = false;
                         }
                     }
                 }
                 else
                 {
-                    config_runtime_error("Unknown global parameter: %s", key);
+                    MXS_ERROR("Unknown global parameter: %s", key);
                     rval = false;
                 }
             }
@@ -2555,19 +2533,17 @@ bool runtime_thread_rebalance(mxs::RoutingWorker& from,
             }
             else
             {
-                config_runtime_error("The 'recipient' value '%s' does not refer to a worker.",
-                                     recipient.c_str());
+                MXS_ERROR("The 'recipient' value '%s' does not refer to a worker.", recipient.c_str());
             }
         }
         else
         {
-            config_runtime_error("'recipient' argument not provided, or value is not a valid integer.");
+            MXS_ERROR("'recipient' argument not provided, or value is not a valid integer.");
         }
     }
     else
     {
-        config_runtime_error("'sessions' argument provided, but value '%s' is not a valid integer.",
-                             sessions.c_str());
+        MXS_ERROR("'sessions' argument provided, but value '%s' is not a valid integer.", sessions.c_str());
     }
 
     return rv;
@@ -2586,7 +2562,7 @@ bool runtime_threads_rebalance(const std::string& arg_threshold)
         std::string message;
         if (!config.rebalance_threshold.parameter().from_string(arg_threshold, &threshold, &message))
         {
-            config_runtime_error("%s", message.c_str());
+            MXS_ERROR("%s", message.c_str());
             rv = false;
         }
     }

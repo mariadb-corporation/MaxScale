@@ -32,15 +32,14 @@ class RoutingWorker;
 }
 
 /**
- * @brief Log error to be returned to client
+ * Log error to be returned to client
  *
- * This function logs an error message that later will be returned to
- * the client. Note that each call to this function will overwrite
- * an already logged error message.
+ * This function logs an error message that later will be returned to the client. Note that each call to this
+ * function will append a new error to the list of errors that are returned to the client.
  *
- * @param fmt  Printf format string.
+ * @param error The error to log
  */
-void config_runtime_error(const char* fmt, ...) mxs_attribute((format (printf, 1, 2)));
+void config_runtime_add_error(const std::string& error);
 
 /**
  * This function creates a new "volatile" server. Such servers are not persisted to any config files and are
