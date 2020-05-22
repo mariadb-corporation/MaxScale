@@ -150,7 +150,7 @@ bool find_node_id(xmlDoc& csXml, const std::string& address, std::string* pNid);
  * @return -1 in case of some low-level error (that outside development should not occur), otherwise
  *         the number of replacements made.
  */
-int update_if(xmlNode& node, const char* zXpath, const char* zNew_value, const char* zIf_value = nullptr);
+int update_if(xmlNode& node, const char* zXpath, const char* zNew_value, const char* zIf_value);
 
 /**
  * Update value of key(s) in Columnstore XML configuration.
@@ -163,7 +163,37 @@ int update_if(xmlNode& node, const char* zXpath, const char* zNew_value, const c
  * @return -1 in case of some low-level error (that outside development should not occur), otherwise
  *         the number of replacements made.
  */
-int update_if(xmlDoc& csXml, const char* zXpath, const char* zNew_value, const char* zIf_value = nullptr);
+int update_if(xmlDoc& csXml, const char* zXpath, const char* zNew_value, const char* zIf_value);
+
+/**
+ * Update value of key(s) in XML document.
+ *
+ * @param node        The node to use as root.
+ * @param zXpath      The XML path that identifies the key(s).
+ * @param zNew_value  The new value.
+ *
+ * @return -1 in case of some low-level error (that outside development should not occur), otherwise
+ *         the number of replacements made.
+ */
+inline int update(xmlNode& node, const char* zXpath, const char* zNew_value)
+{
+    return update_if(node, zXpath, zNew_value, nullptr);
+}
+
+/**
+ * Update value of key(s) in Columnstore XML configuration.
+ *
+ * @param csXml       The XML document.
+ * @param zXpath      The XML path that identifies the key(s).
+ * @param zNew_value  The new value.
+ *
+ * @return -1 in case of some low-level error (that outside development should not occur), otherwise
+ *         the number of replacements made.
+ */
+inline int update(xmlDoc& csXml, const char* zXpath, const char* zNew_value)
+{
+    return update_if(csXml, zXpath, zNew_value, nullptr);
+}
 
 /**
  * Update value of key(s) in XML document.
@@ -227,6 +257,24 @@ bool insert(xmlNode& parent,
  *         means that a path was specified, but the beginning path did not exist.
  */
 bool insert(xmlDoc& csXml,
+            const char* zKey,
+            const char* zValue,
+            XmlLocation location = XmlLocation::AT_BEGINNING);
+
+/**
+ * Update or insert a key/value to XML node.
+ *
+ * @param parent   An XML node.
+ * @param zKey     The XML path identifying the key.
+ * @param zValue   The value.
+ * @param location If inserted, where the element should be added.
+ *
+ * @return True, if the key/value could be updated or inserted. A return value
+ *         of false means that the path did not identify an existing element
+ *         and that the beginning path did not exist, so the key could not be
+ *         added either.
+ */
+bool upsert(xmlNode& parent,
             const char* zKey,
             const char* zValue,
             XmlLocation location = XmlLocation::AT_BEGINNING);

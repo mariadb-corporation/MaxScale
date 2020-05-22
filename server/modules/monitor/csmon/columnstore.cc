@@ -589,11 +589,11 @@ bool xml::insert(xmlDoc& csXml, const char* zKey, const char* zValue, XmlLocatio
     return insert(get_root(csXml), zKey, zValue, location);
 }
 
-bool xml::upsert(xmlDoc& csXml, const char* zKey, const char* zValue, XmlLocation location)
+bool xml::upsert(xmlNode& parent, const char* zKey, const char* zValue, XmlLocation location)
 {
     bool rv = true;
 
-    vector<xmlNode*> nodes = find_nodes_by_xpath(csXml, zKey);
+    vector<xmlNode*> nodes = find_nodes_by_xpath(parent, zKey);
     mxb_assert(nodes.empty() || nodes.size() == 1);
 
     if (nodes.size() == 1)
@@ -604,10 +604,15 @@ bool xml::upsert(xmlDoc& csXml, const char* zKey, const char* zValue, XmlLocatio
     }
     else
     {
-        rv = insert(csXml, zKey, zValue, location);
+        rv = insert(parent, zKey, zValue, location);
     }
 
     return rv;
+}
+
+bool xml::upsert(xmlDoc& csXml, const char* zKey, const char* zValue, XmlLocation location)
+{
+    return upsert(get_root(csXml), zKey, zValue, location);
 }
 
 namespace
@@ -766,7 +771,7 @@ xml::DbRoots::Status add_dbroots(xmlDoc& csXml,
     key += "-";
     key += "3";
 
-    int nUpdated = xml::update_if(csXml, key.c_str(), std::to_string(nRoots).c_str());
+    int nUpdated = xml::update(csXml, key.c_str(), std::to_string(nRoots).c_str());
 
     if (nUpdated == 1)
     {
