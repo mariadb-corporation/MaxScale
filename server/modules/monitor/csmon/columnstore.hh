@@ -66,10 +66,14 @@ namespace xml
 
 const char CLUSTERMANAGER[]     = "ClusterManager";
 const char DBRM_CONTROLLER[]    = "DBRM_Controller";
+const char DBROOT[]             = "DBRoot";
+const char DBROOTCOUNT[]        = "DBRootCount";
 const char DDLPROC[]            = "DDLProc";
 const char DMLPROC[]            = "DMLProc";
 const char IPADDR[]             = "IPAddr";
+const char MODULEDBROOTCOUNT[]  = "ModuleDBRootCount";
 const char MODULEDBROOTID[]     = "ModuleDBRootID";
+const char SYSTEMCONFIG[]       = "SystemConfig";
 const char SYSTEMMODULECONFIG[] = "SystemModuleConfig";
 
 /**

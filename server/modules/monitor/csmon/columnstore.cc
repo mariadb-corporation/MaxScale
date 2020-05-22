@@ -728,11 +728,11 @@ void xml::convert_to_single_node(xmlDoc& xmlDoc)
 namespace
 {
 
-xml::DbRoots::Status add_dbroots(xmlDoc& csXml,
+xml::DbRoots::Status add_dbroots(xmlNode& smc,
+                                 xmlNode& sc,
                                  const std::string& nid,
                                  const std::vector<int>& dbroots,
                                  int n,
-                                 xmlNode* pSmc,
                                  xmlNode* pLast_dbroot,
                                  json_t* pOutput)
 {
@@ -750,9 +750,10 @@ xml::DbRoots::Status add_dbroots(xmlDoc& csXml,
         key += "-";
         key += "3";
         auto zKey = reinterpret_cast<const xmlChar*>(key.c_str());
-        auto zNid = reinterpret_cast<const xmlChar*>(nid.c_str());
+        string dbroot = std::to_string(dbroots[i - 1]);
+        auto zDbroot = reinterpret_cast<const xmlChar*>(dbroot.c_str());
         xmlNode* pNew_dbroot = xmlNewNode(nullptr, zKey);
-        xmlNode* pContent = xmlNewText(zNid);
+        xmlNode* pContent = xmlNewText(zDbroot);
         xmlAddChild(pNew_dbroot, pContent);
 
         if (pLast_dbroot)
@@ -761,21 +762,21 @@ xml::DbRoots::Status add_dbroots(xmlDoc& csXml,
         }
         else
         {
-            xmlAddChild(pNew_dbroot, pContent);
+            xmlAddChild(&smc, pNew_dbroot);
         }
         pLast_dbroot = pNew_dbroot;
     }
 
-    string key("SystemModuleConfig/ModuleDBRootCount");
+    string key(xml::MODULEDBROOTCOUNT);
     key += nid;
     key += "-";
     key += "3";
 
-    int nUpdated = xml::update(csXml, key.c_str(), std::to_string(nRoots).c_str());
+    int nUpdated = xml::update(smc, key.c_str(), std::to_string(nRoots).c_str());
 
     if (nUpdated == 1)
     {
-        xmlNode* pRoot_count = xml::find_node_by_xpath(csXml, "SystemConfig/DBRootCount");
+        xmlNode* pRoot_count = xml::find_node_by_xpath(sc, xml::DBROOTCOUNT);
         mxb_assert(pRoot_count);
 
         if (pRoot_count)
@@ -791,13 +792,13 @@ xml::DbRoots::Status add_dbroots(xmlDoc& csXml,
             for (auto i : dbroots)
             {
                 auto suffix = std::to_string(i);
-                string key("SystemConfig/DBRoot");
+                string key(xml::DBROOT);
                 key += suffix;
 
                 string value("/var/lib/columnstore/data");
                 value += suffix;
 
-                xml::upsert(csXml, key.c_str(), value.c_str());
+                xml::upsert(sc, key.c_str(), value.c_str());
             }
 
             rv = xml::DbRoots::UPDATED;
@@ -820,17 +821,48 @@ xml::DbRoots::Status add_dbroots(xmlDoc& csXml,
     return rv;
 }
 
-xml::DbRoots::Status remove_dbroots(xmlDoc& csXml,
+xml::DbRoots::Status remove_dbroots(xmlNode& smc,
+                                    xmlNode& sc,
                                     const std::string& nid,
                                     const std::vector<int>& dbroots,
                                     int n,
-                                    xmlNode* pSmc,
-                                    xmlNode* pLast_dbroot,
                                     json_t* pOutput)
 {
     xml::DbRoots::Status rv = xml::DbRoots::ERROR;
 
-    mxb_assert(!true); // NIY
+    int nRoots = dbroots.size();
+    for (int i = n; i > nRoots; --i)
+    {
+        string key(xml::MODULEDBROOTID);
+        key += nid;
+        key += "-";
+        key += std::to_string(i);
+        key += "-";
+        key += "3";
+
+        xmlNode* pNode = xml::find_node_by_xpath(smc, key.c_str());
+        mxb_assert(pNode);
+        const char* zId = reinterpret_cast<const char*>(xmlNodeGetContent(pNode));
+
+        MXB_AT_DEBUG(int nRemoved =) xml::remove(smc, key.c_str());
+        mxb_assert(nRemoved == 1);
+
+        key = xml::DBROOT;
+        key += zId;
+
+        MXB_AT_DEBUG(nRemoved =) xml::remove(sc, key.c_str());
+        mxb_assert(nRemoved == 1);
+    }
+
+    string key(xml::MODULEDBROOTCOUNT);
+    key += nid;
+    key += "-";
+    key += "3";
+
+    MXB_AT_DEBUG(int nUpdated =) xml::update(smc, key.c_str(), std::to_string(dbroots.size()).c_str());
+    mxb_assert(nUpdated);
+
+    rv = xml::DbRoots::UPDATED;
 
     return rv;
 }
@@ -892,6 +924,9 @@ xml::DbRoots::Status xml::update_dbroots(xmlDoc& csXml,
             if (rv != DbRoots::ERROR)
             {
                 int nRoots = dbroots.size();
+                xmlNode* pSc = xml::find_node_by_xpath(csXml, xml::SYSTEMCONFIG);
+                mxb_assert(pSc);
+
                 if (n == nRoots)
                 {
                     MXS_NOTICE("The DB roots for '%s' in the Columnstore configuration matches "
@@ -901,12 +936,12 @@ xml::DbRoots::Status xml::update_dbroots(xmlDoc& csXml,
                 }
                 else if (n < nRoots)
                 {
-                    rv = add_dbroots(csXml, nid, dbroots, n, pSmc, pLast_dbroot, pOutput);
+                    rv = add_dbroots(*pSmc, *pSc, nid, dbroots, n, pLast_dbroot, pOutput);
                 }
                 else
                 {
                     mxb_assert(n > nRoots);
-                    rv = remove_dbroots(csXml, nid, dbroots, n, pSmc, pLast_dbroot, pOutput);
+                    rv = remove_dbroots(*pSmc, *pSc, nid, dbroots, n, pOutput);
                 }
             }
         }
