@@ -406,10 +406,19 @@ loss of a master server.
 |error_on_write | If no master is available and a write query is received, an error is returned stating that the connection is in read-only mode.|
 
 These also apply to new sessions created after the master has failed. This means
-that in _fail_on_write_ or _error_on_write_ mode, connections are accepted as
+that in `fail_on_write` or `error_on_write` mode, connections are accepted as
 long as slave servers are available.
 
-**Note:** If _master_failure_mode_ is set to _error_on_write_ and the connection
+When configured with `fail_on_write` or `error_on_write`, sessions that are idle
+will not be closed even if all backend connections for that session have
+failed. This is done in the hopes that before the next query from the idle
+session arrives, a reconnection to one of the slaves is made. However, this can
+leave idle connections around unless the client application actively closes
+them. To prevent this, use the
+[connection_timeout](../Getting-Started/Configuration-Guide.md#connection_timeout)
+parameter.
+
+**Note:** If `master_failure_mode` is set to `error_on_write` and the connection
 to the master is lost, by default, clients will not be able to execute write
 queries without reconnecting to MariaDB MaxScale once a new master is
 available. If [`master_reconnection`](#master_reconnection) is enabled, the
