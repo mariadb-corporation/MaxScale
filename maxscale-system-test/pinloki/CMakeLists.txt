@@ -29,3 +29,7 @@ add_test_executable_ex(NAME pinloki_change_master SOURCE pinloki_change_master.c
 # Replicate large events (larger than 16MB)
 add_test_executable_ex(NAME pinloki_large_event SOURCE pinloki_large_event.cc
   CONFIG pinloki.cnf VMS repl_backend LABELS pinloki BREAKS_REPL)
+
+# Test automatic master selection
+add_test_executable_ex(NAME pinloki_select_master SOURCE pinloki_select_master.cc
+  CONFIG pinloki_select_master.cnf VMS repl_backend LABELS pinloki BREAKS_REPL)
