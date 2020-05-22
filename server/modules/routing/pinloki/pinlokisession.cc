@@ -255,16 +255,18 @@ void PinlokiSession::select(const std::vector<std::string>& fields)
         }
         else if (val == "@@version_comment")
         {
-            a = "";     // No version comment
+            a = "pinloki";      // Helps detect when something is replicating from pinloki.
         }
         else if (val == "@@global.gtid_domain_id")
         {
-            // TODO: Get this from either the master or the configuration
-            a = "1";
+            // Note: The slave that requests this doesn't use it for anything. It's only used
+            //       to check whether the variable exists. Return the default domain 0.
+            a = "0";
         }
         else if (val == "@master_binlog_checksum")
         {
-            // TODO: Store the master's response to this
+            // TODO: Store the master's response to this (Connector-C doesn't
+            //       seem to work without replication checksums).
             a = "CRC32";
         }
         else if (gtid_pos_sel_var.count(val))
