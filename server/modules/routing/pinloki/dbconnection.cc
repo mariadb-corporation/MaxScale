@@ -183,7 +183,40 @@ void Connection::_connect()
     mysql_optionsv(m_conn, MYSQL_OPT_WRITE_TIMEOUT, &timeout);
     mysql_optionsv(m_conn, MYSQL_OPT_CONNECT_TIMEOUT, &timeout);
 
-    // mysql_options(m_conn, MYSQL_OPT_NONBLOCK, 0);
+    if (m_details.ssl)
+    {
+        if (!m_details.ssl_key.empty())
+        {
+            mysql_optionsv(m_conn, MYSQL_OPT_SSL_KEY, m_details.ssl_key.c_str());
+        }
+        if (!m_details.ssl_cert.empty())
+        {
+            mysql_optionsv(m_conn, MYSQL_OPT_SSL_CERT, m_details.ssl_cert.c_str());
+        }
+        if (!m_details.ssl_ca.empty())
+        {
+            mysql_optionsv(m_conn, MYSQL_OPT_SSL_CA, m_details.ssl_ca.c_str());
+        }
+        if (!m_details.ssl_capath.empty())
+        {
+            mysql_optionsv(m_conn, MYSQL_OPT_SSL_CAPATH, m_details.ssl_capath.c_str());
+        }
+        if (!m_details.ssl_cipher.empty())
+        {
+            mysql_optionsv(m_conn, MYSQL_OPT_SSL_CIPHER, m_details.ssl_cipher.c_str());
+        }
+        if (!m_details.ssl_crl.empty())
+        {
+            mysql_optionsv(m_conn, MYSQL_OPT_SSL_CRL, m_details.ssl_crl.c_str());
+        }
+        if (!m_details.ssl_crlpath.empty())
+        {
+            mysql_optionsv(m_conn, MYSQL_OPT_SSL_CRLPATH, m_details.ssl_crlpath.c_str());
+        }
+
+        uint8_t verify = m_details.ssl_verify_server_cert;
+        mysql_optionsv(m_conn, MYSQL_OPT_SSL_VERIFY_SERVER_CERT, &verify);
+    }
 
     if (mysql_real_connect(m_conn,
                            m_details.host.address().c_str(),

@@ -180,6 +180,17 @@ maxsql::Connection::ConnectionDetails Pinloki::generate_details()
                 details.host = mxb::Host(srv->address(), srv->port());
                 details.user = m_pService->config()->user;
                 details.password = m_pService->config()->password;
+
+                if (auto ssl = srv->ssl().config())
+                {
+                    details.ssl = true;
+                    details.ssl_ca = ssl->ca;
+                    details.ssl_cert = ssl->cert;
+                    details.ssl_crl = ssl->crl;
+                    details.ssl_key = ssl->key;
+                    details.ssl_cipher = ssl->cipher;
+                    details.ssl_verify_server_cert = ssl->verify_peer;
+                }
                 break;
             }
         }
@@ -189,6 +200,19 @@ maxsql::Connection::ConnectionDetails Pinloki::generate_details()
         details.host = mxb::Host(m_master_config.host, m_master_config.port);
         details.user = m_master_config.user;
         details.password = m_master_config.password;
+
+        if (m_master_config.ssl)
+        {
+            details.ssl = true;
+            details.ssl_ca = m_master_config.ssl_ca;
+            details.ssl_capath = m_master_config.ssl_capath;
+            details.ssl_cert = m_master_config.ssl_cert;
+            details.ssl_crl = m_master_config.ssl_crl;
+            details.ssl_crlpath = m_master_config.ssl_crlpath;
+            details.ssl_key = m_master_config.ssl_key;
+            details.ssl_cipher = m_master_config.ssl_cipher;
+            details.ssl_verify_server_cert = m_master_config.ssl_verify_server_cert;
+        }
     }
 
     return details;

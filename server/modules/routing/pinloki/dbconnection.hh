@@ -53,6 +53,17 @@ public:
         std::string          password;
         unsigned long        flags = 0;
         std::chrono::seconds timeout = std::chrono::seconds(30);
+
+        // TLS variables
+        bool        ssl = false;
+        std::string ssl_ca;
+        std::string ssl_capath;
+        std::string ssl_cert;
+        std::string ssl_crl;
+        std::string ssl_crlpath;
+        std::string ssl_key;
+        std::string ssl_cipher;
+        bool        ssl_verify_server_cert = false;
     };
 
     Connection(const ConnectionDetails& details);
