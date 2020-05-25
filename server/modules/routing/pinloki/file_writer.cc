@@ -45,6 +45,7 @@ namespace pinloki
 {
 FileWriter::FileWriter(Inventory* inv)
     : m_inventory(*inv)
+    , m_sync_with_server(m_inventory.count())
 {
 }
 
@@ -59,21 +60,17 @@ void FileWriter::add_event(const maxsql::MariaRplEvent& rpl_event)
     {
         rotate_event(rpl_event);
     }
-    else if (m_sync_pos == 0)
+    else if (is_artificial)
     {
-        if (is_artificial)
+        m_current_pos.write_pos = rpl_event.event().next_event_pos;
+        if (m_sync_with_server && rpl_event.event().event_type == GTID_LIST_EVENT)
         {
-            m_current_pos.write_pos = rpl_event.event().next_event_pos;
-        }
-        else
-        {
-            write_to_file(m_current_pos, rpl_event);
+            m_sync_with_server = false;     // sync done, start writing
         }
     }
-    else if (rpl_event.event().next_event_pos >= m_sync_pos)
+    else if (!m_sync_with_server)
     {
-        MXS_INFO("Position %ld reached", m_sync_pos);
-        m_sync_pos = 0;
+        write_to_file(m_current_pos, rpl_event);
     }
 }
 
@@ -85,13 +82,17 @@ void FileWriter::rotate_event(const maxsql::MariaRplEvent& rpl_event)
     auto name = get_rotate_name(rpl_event.raw_data(), rpl_event.raw_data_size());
     std::string file_name = m_inventory.config().path(name);
 
-    if (m_inventory.is_listed(file_name))
+    if (m_sync_with_server)
     {
         open_existing_file(file_name);
     }
-    else
+    else if ((is_artificial && m_inventory.count() <= 1) || !is_artificial)
     {
-        m_sync_pos = 0;
+        if (m_inventory.is_listed(file_name))
+        {
+            MXB_THROW(BinlogWriteError, file_name << " already listed in index!");
+        }
+
         m_previous_pos = std::move(m_current_pos);
 
         m_current_pos.name = file_name;
@@ -106,59 +107,52 @@ void FileWriter::rotate_event(const maxsql::MariaRplEvent& rpl_event)
         {
             write_to_file(m_previous_pos, rpl_event);
             m_previous_pos.file.close();
+            if (!m_previous_pos.file.good())
+            {
+                MXB_THROW(BinlogWriteError,
+                          "File " << m_previous_pos.name
+                                  << " did not close (flush) properly during rotate: "
+                                  << errno << ", " << mxb_strerror(errno));
+            }
         }
     }
 }
 
 void FileWriter::open_existing_file(const std::string& file_name)
 {
-    if (m_current_pos.name != file_name)
+    if (m_current_pos.file.is_open())
     {
-        m_current_pos.name = file_name;
-        m_current_pos.file.open(m_current_pos.name, std::ios_base::in
-                                | std::ios_base::out
-                                | std::ios_base::binary);
-        m_current_pos.file.seekp(0, std::ios_base::end);
-        m_sync_pos = m_current_pos.file.tellp();
-        m_current_pos.write_pos = m_sync_pos;
-
-        MXS_INFO("Waiting until position %ld is reached", m_sync_pos);
-
+        m_current_pos.file.close();
         if (!m_current_pos.file.good())
         {
             MXB_THROW(BinlogWriteError,
-                      "Could not open " << m_current_pos.name << " for read/write: "
-                                        << errno << ", " << mxb_strerror(errno));
+                      "File " << m_current_pos.name << " did not close (flush) properly: "
+                              << errno << ", " << mxb_strerror(errno));
         }
     }
-    else
+
+    m_current_pos.name = file_name;
+    m_current_pos.file.open(m_current_pos.name, std::ios_base::in
+                            | std::ios_base::out
+                            | std::ios_base::binary);
+    m_current_pos.write_pos = PINLOKI_MAGIC.size();
+
+    if (!m_current_pos.file.good())
     {
-        // Sometimes two ROTATE events are sent back to back which are identical with the exception of the
-        // artificial flag: the first one has it off and the second one has it on. To avoid opening the same
-        // file twice, we can check whether the file is already open (i.e. filenames are identical).
-        //
-        // TODO: Figure out if there's a consistent way the events are sent, checking for filename equality is
-        //       a bit crude.
+        MXB_THROW(BinlogWriteError, "Could not open " << m_current_pos.name << " for read/write");
     }
 }
 
 void FileWriter::write_to_file(WritePosition& fn, const maxsql::MariaRplEvent& rpl_event)
 {
-    mxb_assert_message(fn.file.tellp() <= fn.write_pos,
-                       "File should not be ahead of current position. "
-                       "Attempted to write at %d when file end is at %d",
-                       fn.write_pos, (int)fn.file.tellp());
-
     fn.file.seekp(fn.write_pos);
     fn.file.write(rpl_event.raw_data(), rpl_event.raw_data_size());
     fn.write_pos = rpl_event.event().next_event_pos;
+    fn.file.flush();
 
     if (!fn.file.good())
     {
-        MXB_THROW(BinlogWriteError,
-                  "Could not write event to " << fn.name << ": " << errno << ", " << mxb_strerror(errno));
+        MXB_THROW(BinlogWriteError, "Could not write event to " << fn.name);
     }
-
-    fn.file.flush();
 }
 }
