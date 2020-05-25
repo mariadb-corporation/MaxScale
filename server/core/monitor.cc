@@ -1236,7 +1236,7 @@ MonitorServer::ping_or_connect_to_db(const MonitorServer::ConnectionSettings& se
         passwd = srv.monitor_password();
     }
 
-    auto dpwd = decrypt_password(passwd);
+    auto dpwd = mxs::decrypt_password(passwd);
 
     ConnectResult conn_result = ConnectResult::REFUSED;
 

@@ -262,7 +262,7 @@ int CDCAuthenticatorModule::set_service_user(SERVICE* service)
     const char* service_passwd = NULL;
     serviceGetUser(service, &service_user, &service_passwd);
 
-    auto dpwd = decrypt_password(service_passwd);
+    auto dpwd = mxs::decrypt_password(service_passwd);
     std::string newpasswd = mxs::create_hex_sha1_sha1_passwd(dpwd.c_str());
     if (newpasswd.empty())
     {

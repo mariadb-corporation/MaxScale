@@ -520,7 +520,7 @@ bool ClustrixMonitor::refresh_using_persisted_nodes(std::set<string>& ips_checke
     {
         const std::string& username = conn_settings().username;
         const std::string& password = conn_settings().password;
-        const std::string dec_password = decrypt_password(password.c_str());
+        const std::string dec_password = mxs::decrypt_password(password);
 
         auto it = nodes.begin();
 

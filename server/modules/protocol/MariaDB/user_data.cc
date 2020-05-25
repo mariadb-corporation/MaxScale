@@ -270,7 +270,7 @@ bool MariaDBUserManager::update_users()
     backends = m_backends;
     lock.unlock();
 
-    sett.password = decrypt_password(sett.password);
+    sett.password = mxs::decrypt_password(sett.password);
     sett.multiquery = true;
 
     mxs::Config& glob_config = mxs::Config::get();

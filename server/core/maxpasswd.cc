@@ -28,8 +28,9 @@ using std::string;
 
 struct option options[] =
 {
-    {"help",  no_argument, nullptr, 'h'},
-    {nullptr, 0,           nullptr, 0  }
+    {"help",    no_argument, nullptr, 'h'},
+    {"decrypt", no_argument, nullptr, 'd'},
+    {nullptr,   0,           nullptr, 0  }
 };
 
 void print_usage(const char* executable, const char* directory)
@@ -40,10 +41,11 @@ void print_usage(const char* executable, const char* directory)
 Encrypt a MaxScale plaintext password using the encryption key in the key file
 '%s'. The key file may be generated using the 'maxkeys'-utility.
 
-  -h, --help  Display this help.
+  -h, --help    Display this help.
+  -d, --decrypt Decrypt an encrypted password instead
 
-  path        The directory where the key file is located (default: '%s')
-  password    The plaintext password to encrypt
+  path      The key file directory (default: '%s')
+  password  The password to encrypt or decrypt
 )";
     printf(msg, executable, SECRETS_FILENAME, directory);
 }
@@ -53,8 +55,16 @@ int main(int argc, char** argv)
     mxb::Log log(MXB_LOG_TARGET_STDOUT);
     const char* default_directory = mxs::datadir();
 
+    enum class Mode
+    {
+        ENCRYPT,
+        DECRYPT
+    };
+
+    auto mode = Mode::ENCRYPT;
+
     int c;
-    while ((c = getopt_long(argc, argv, "h", options, NULL)) != -1)
+    while ((c = getopt_long(argc, argv, "hd", options, NULL)) != -1)
     {
         switch (c)
         {
@@ -62,13 +72,17 @@ int main(int argc, char** argv)
             print_usage(argv[0], default_directory);
             return EXIT_SUCCESS;
 
+        case 'd':
+            mode = Mode::DECRYPT;
+            break;
+
         default:
             print_usage(argv[0], default_directory);
             return EXIT_FAILURE;
         }
     }
 
-    string plaintext_pw;
+    string input;
     string path = default_directory;
 
     switch (argc - optind)
@@ -76,12 +90,12 @@ int main(int argc, char** argv)
     case 2:
         // Two args provided.
         path = argv[optind];
-        plaintext_pw = argv[optind + 1];
+        input = argv[optind + 1];
         break;
 
     case 1:
         // One arg provided.
-        plaintext_pw = argv[optind];
+        input = argv[optind];
         break;
 
     default:
@@ -98,15 +112,39 @@ int main(int argc, char** argv)
     {
         if (keys.key)
         {
-            std::string enc = encrypt_password(*keys.key, plaintext_pw);
-            if (!enc.empty())
+            if (mode == Mode::ENCRYPT)
             {
-                printf("%s\n", enc.c_str());
-                rval = EXIT_SUCCESS;
+                std::string enc = encrypt_password(*keys.key, input);
+                if (!enc.empty())
+                {
+                    printf("%s\n", enc.c_str());
+                    rval = EXIT_SUCCESS;
+                }
+                else
+                {
+                    printf("Password encryption failed.\n");
+                }
             }
             else
             {
-                printf("Password encryption failed.\n");
+                auto is_hex = std::all_of(input.begin(), input.end(), isxdigit);
+                if (is_hex && input.length() % 2 == 0)
+                {
+                    std::string decrypted = decrypt_password(*keys.key, input);
+                    if (!decrypted.empty())
+                    {
+                        printf("%s\n", decrypted.c_str());
+                        rval = EXIT_SUCCESS;
+                    }
+                    else
+                    {
+                        printf("Password decryption failed.\n");
+                    }
+                }
+                else
+                {
+                    printf("Input is not a valid hex-encoded encrypted password.\n");
+                }
             }
         }
         else

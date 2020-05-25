@@ -220,7 +220,7 @@ bool MariaDBMonitor::set_replication_credentials(const mxs::ConfigParameters* pa
     }
 
     m_settings.shared.replication_user = repl_user;
-    m_settings.shared.replication_password = decrypt_password(repl_pw);
+    m_settings.shared.replication_password = mxs::decrypt_password(repl_pw);
     return true;
 }
 

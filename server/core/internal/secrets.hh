@@ -36,6 +36,7 @@ struct EncryptionKeys
 
 bool        load_encryption_keys();
 std::string encrypt_password(const EncryptionKeys& key, const std::string& input);
+std::string decrypt_password(const EncryptionKeys& key, const std::string& input);
 
 struct ReadKeyResult
 {

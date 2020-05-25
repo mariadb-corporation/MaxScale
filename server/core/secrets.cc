@@ -125,19 +125,12 @@ ReadKeyResult secrets_readkeys(const string& filepath)
     return rval;
 }
 
-/**
- * Decrypt a password that is stored in the MaxScale configuration file.
- * If the password is not encrypted, ie is not a HEX string, then the
- * original is returned, this allows for backward compatibility with
- * unencrypted password.
- *
- * @param crypt The encrypted password
- * @return The decrypted password
- */
+namespace maxscale
+{
 string decrypt_password(const string& crypt)
 {
-    const auto* keys = this_unit.keys.get();
-    if (!keys)
+    const auto* key = this_unit.keys.get();
+    if (!key)
     {
         // Password encryption is not used, so return original.
         return crypt;
@@ -152,14 +145,21 @@ string decrypt_password(const string& crypt)
         }
     }
 
+    return decrypt_password(*key, crypt);
+}
+}
+
+
+std::string decrypt_password(const EncryptionKeys& key, const std::string& input)
+{
     // Convert to binary.
-    size_t hex_len = crypt.length();
+    size_t hex_len = input.length();
     auto bin_len = hex_len / 2;
     unsigned char encrypted_bin[bin_len];
-    mxs::hex2bin(crypt.c_str(), hex_len, encrypted_bin);
+    mxs::hex2bin(input.c_str(), hex_len, encrypted_bin);
 
     AES_KEY aeskey;
-    AES_set_decrypt_key(keys->enckey, 8 * EncryptionKeys::key_len, &aeskey);
+    AES_set_decrypt_key(key.enckey, 8 * EncryptionKeys::key_len, &aeskey);
 
     auto plain_len = bin_len + 1;   // Decryption output cannot be longer than input data.
     unsigned char plain[plain_len];
@@ -167,7 +167,7 @@ string decrypt_password(const string& crypt)
 
     // Need to copy the init vector as it's modified during decryption.
     unsigned char init_vector[EncryptionKeys::iv_len];
-    memcpy(init_vector, keys->initvector, EncryptionKeys::iv_len);
+    memcpy(init_vector, key.initvector, EncryptionKeys::iv_len);
     AES_cbc_encrypt(encrypted_bin, plain, bin_len, &aeskey, init_vector, AES_DECRYPT);
 
     string rval((char*)plain);
