@@ -13,6 +13,8 @@
 
 #include <iostream>
 #include "columnstore.hh"
+#include <libxml/xpath.h>
+#include <maxbase/log.hh>
 
 using namespace std;
 
@@ -60,95 +62,204 @@ const char ZFIRST_MULTI_NODE[] =
     "  </ProcMgr>"
     "</Columnstore>";
 
-string remove_whitespace(const string& in)
+unique_ptr<xmlDoc> compile_xml(const char* zXml)
 {
-    int level = 0;
-    string out;
-    for (auto c : in)
+    unique_ptr<xmlDoc> sDoc(xmlReadMemory(zXml, strlen(zXml), "cs.xml", NULL, 0));
+    return sDoc;
+}
+
+bool equal(const string& path,
+           xmlNode& lhs, xmlXPathContext& lContext,
+           xmlNode& rhs, xmlXPathContext& rContext);
+
+bool equal_children(const string& path,
+                    xmlNode& lhs, xmlXPathContext& lContext,
+                    xmlNode& rhs, xmlXPathContext& rContext)
+{
+    bool rv = true;
+    mxb_assert(strcmp(reinterpret_cast<const char*>(lhs.name),
+                      reinterpret_cast<const char*>(rhs.name)) == 0);
+
+    xmlNode* pL_child = lhs.children;
+
+    if (pL_child
+        && pL_child->type == XML_TEXT_NODE
+        && !pL_child->next
+        && !pL_child->children)
     {
-        if (c == '<')
+        // Only one child that is text without children.
+        xmlNode* pR_child = rhs.children;
+
+        if (pR_child
+            && pR_child->type == XML_TEXT_NODE
+            && !pR_child->next
+            && !pR_child->children)
         {
-            out += c;
-            ++level;
-        }
-        else if (c == '>')
-        {
-            out += c;
-            --level;
+            // Also only one child that is text without children.
+            auto* pL_content = xmlNodeGetContent(&lhs);
+            auto* pR_content = xmlNodeGetContent(&rhs);
+
+            const char* zL_content = reinterpret_cast<const char*>(pL_content);
+            const char* zR_content = reinterpret_cast<const char*>(pR_content);
+
+            if (zL_content && zR_content)
+            {
+                if (strcmp(zL_content, zR_content) != 0)
+                {
+                    cout << path << "(L): " << zL_content << endl;
+                    cout << path << "(R): " << zR_content << endl;
+                    rv = false;
+                }
+            }
+            else if (pL_content && !pR_content)
+            {
+                cout << path << "(L): " << zL_content << endl;
+                cout << path << "(R): NO CONTENT" << endl;
+                rv = false;
+            }
+            else if (pR_content && !pL_content)
+            {
+                cout << path << "(L): NO CONTENT" << endl;
+                cout << path << "(R): " << zR_content << endl;
+                rv = false;
+            }
         }
         else
         {
-            if (level != 0 || !isspace(c))
+            cout << path << "(L): Single text node child." << endl;
+            cout << path << "(R): NOT single text node child." << endl;
+            rv = false;
+        }
+    }
+    else
+    {
+        while (rv && pL_child)
+        {
+            if (pL_child->type == XML_ELEMENT_NODE)
             {
-                out += c;
+                mxb_assert(pL_child->name);
+
+                string name(reinterpret_cast<const char*>(pL_child->name));
+                string full_name = path + "/" + name;
+                string xpath = "./" + name;
+                const xmlChar* pXpath = reinterpret_cast<const xmlChar*>(xpath.c_str());
+
+                xmlXPathObject* pXpath_object = xmlXPathNodeEval(&rhs, pXpath, &rContext);
+                xmlNodeSet* pNodes = pXpath_object->nodesetval;
+                mxb_assert(pNodes->nodeNr <= 1);
+
+                if (pNodes->nodeNr == 0)
+                {
+                    cout << "\"" << full_name << "\" found in first document, but not in other." << endl;
+                    rv = false;
+                }
+                else
+                {
+                    mxb_assert(pNodes->nodeNr == 1);
+
+                    xmlNode* pR_node = pNodes->nodeTab[0];
+
+                    rv = equal(full_name, *pL_child, lContext, *pR_node, rContext);
+                }
             }
+
+            pL_child = pL_child->next;
         }
     }
 
-    return out;
+    return rv;
 }
 
-string dump_xml(xmlDoc& doc)
+bool equal(const string& path,
+           xmlNode& lhs, xmlXPathContext& lContext,
+           xmlNode& rhs, xmlXPathContext& rContext)
 {
-    xmlBuffer* pBuffer = xmlBufferCreate();
-    xmlNodeDump(pBuffer, &doc, xmlDocGetRootElement(&doc), 0, 0);
-    xmlChar* pConfig = xmlBufferDetach(pBuffer);
-    const char* zConfig = reinterpret_cast<const char*>(pConfig);
+    mxb_assert(strcmp(reinterpret_cast<const char*>(lhs.name),
+                      reinterpret_cast<const char*>(rhs.name)) == 0);
 
-    string config(zConfig);
+    bool rv = equal_children(path, lhs, lContext, rhs, rContext);
+    if (rv)
+    {
+        rv = equal_children(path, rhs, rContext, lhs, lContext);
+    }
 
-    MXS_FREE(pConfig);
-    xmlBufferFree(pBuffer);
-
-    return remove_whitespace(config);
+    return rv;
 }
 
-void complain(const char* zWhat, const string& expected, const string& obtained)
+bool equal(xmlNode& lhs, xmlNode& rhs)
 {
-    cout << zWhat << endl;
-    cout << "EXPECTED\n"
-         << expected
-         << endl;
-    cout << "OBTAINED\n"
-         << obtained
-         << endl;
+    bool rv = false;
+
+    const char* zLeft_name = reinterpret_cast<const char*>(lhs.name);
+    const char* zRight_name = reinterpret_cast<const char*>(rhs.name);
+
+    if (strcmp(zLeft_name, zRight_name) == 0)
+    {
+        xmlXPathContext* pL_context = xmlXPathNewContext(lhs.doc);
+        xmlXPathContext* pR_context = xmlXPathNewContext(rhs.doc);
+        mxb_assert(pL_context && pR_context);
+
+        rv = equal(zLeft_name, lhs, *pL_context, rhs, *pR_context);
+
+        xmlXPathFreeContext(pR_context);
+        xmlXPathFreeContext(pL_context);
+    }
+    else
+    {
+        cout << zLeft_name << " != " << zRight_name << endl;
+    }
+
+    return rv;
+}
+
+bool equal(const xmlDoc& lhs, const xmlDoc& rhs)
+{
+    xmlNode* pL = xmlDocGetRootElement(&lhs);
+    xmlNode* pR = xmlDocGetRootElement(&rhs);
+
+    mxb_assert(pL && pR);
+
+    return equal(*pL, *pR);
+}
+
+bool equal(const unique_ptr<xmlDoc>& sLhs, const unique_ptr<xmlDoc>& sRhs)
+{
+    return equal(*sLhs.get(), *sRhs.get());
 }
 
 int test_convert_to_first_multi_node()
 {
     int rv = 0;
-    unique_ptr<xmlDoc> sDoc(xmlReadMemory(ZSINGLE_NODE, sizeof(ZSINGLE_NODE) - 1, "cs.xml", NULL, 0));
+    unique_ptr<xmlDoc> sDoc = compile_xml(ZSINGLE_NODE);
 
     const char IP[] = "123.45.67.89";
     const char MANAGER[] = "MaxScale";
 
     cs::xml::convert_to_first_multi_node(*sDoc.get(), MANAGER, IP);
 
-    string expected = remove_whitespace(ZFIRST_MULTI_NODE);
-    string obtained = dump_xml(*sDoc.get());
+    unique_ptr<xmlDoc> sExpected = compile_xml(ZFIRST_MULTI_NODE);
 
-    if (expected == obtained)
+    if (equal(sExpected, sDoc))
     {
         cout << "Single -> Multi Conversion ok" << endl;
 
         cs::xml::convert_to_single_node(*sDoc.get());
 
-        expected = remove_whitespace(ZSINGLE_NODE);
-        obtained = dump_xml(*sDoc.get());
+        sExpected = compile_xml(ZSINGLE_NODE);
 
-        if (expected == obtained)
+        if (equal(sExpected, sDoc))
         {
             cout << "Multi -> Single Conversion ok" << endl;
         }
         else
         {
-            complain("Multi -> Single Conversion NOT ok.", expected, obtained);
+            cout << "Multi -> Single Conversion NOT ok." << endl;
             rv = 1;
         }
     }
     else
     {
-        complain("Single -> Multi Conversion NOT ok.", expected, obtained);
+        cout << "Single -> Multi Conversion NOT ok." << endl;
         rv = 1;
     }
 
@@ -159,6 +270,8 @@ int test_convert_to_first_multi_node()
 
 int main()
 {
+    mxb::Log log(MXB_LOG_TARGET_STDOUT);
+
     int rv = 0;
     rv += test_convert_to_first_multi_node();
     return rv;
