@@ -21,46 +21,110 @@ using namespace std;
 namespace
 {
 
-const char ZSINGLE_NODE[] =
-    "<Columnstore Version=\"V1.0.0\">"
-    "  <DBRoot1>"
-    "    <PreallocSpace>OFF</PreallocSpace>"
-    "  </DBRoot1>"
-    "  <ExeMgr1>"
-    "    <IPAddr>127.0.0.1</IPAddr>"
-    "    <Port>8601</Port>"
-    "    <Module>pm1</Module>"
-    "  </ExeMgr1>"
-    "  <JobProc>"
-    "    <IPAddr>0.0.0.0</IPAddr>"
-    "    <Port>8602</Port>"
-    "  </JobProc>"
-    "  <ProcMgr>"
-    "    <IPAddr>127.0.0.1</IPAddr>"
-    "    <Port>8603</Port>"
-    "  </ProcMgr>"
-    "</Columnstore>";
+unique_ptr<xmlDoc> compile_xml(const char* zXml);
 
-const char ZFIRST_MULTI_NODE[] =
-    "<Columnstore Version=\"V1.0.0\">"
-    "  <ClusterManager>MaxScale</ClusterManager>"
-    "  <DBRoot1>"
-    "    <PreallocSpace>OFF</PreallocSpace>"
-    "  </DBRoot1>"
-    "  <ExeMgr1>"
-    "    <IPAddr>123.45.67.89</IPAddr>"
-    "    <Port>8601</Port>"
-    "    <Module>pm1</Module>"
-    "  </ExeMgr1>"
-    "  <JobProc>"
-    "    <IPAddr>0.0.0.0</IPAddr>"
-    "    <Port>8602</Port>"
-    "  </JobProc>"
-    "  <ProcMgr>"
-    "    <IPAddr>123.45.67.89</IPAddr>"
-    "    <Port>8603</Port>"
-    "  </ProcMgr>"
-    "</Columnstore>";
+bool equal(xmlNode& lhs, xmlNode& rhs);
+bool equal(const xmlDoc& lhs, const xmlDoc& rhs);
+bool equal(const unique_ptr<xmlDoc>& sLhs, const unique_ptr<xmlDoc>& sRhs);
+
+}
+
+namespace
+{
+
+const char ZSINGLE_NODE[] = R"(
+<Columnstore Version="V1.0.0">
+  <DBRoot1>
+    <PreallocSpace>OFF</PreallocSpace>
+  </DBRoot1>
+  <ExeMgr1>
+    <IPAddr>127.0.0.1</IPAddr>
+    <Port>8601</Port>
+    <Module>pm1</Module>
+  </ExeMgr1>
+  <JobProc>
+    <IPAddr>0.0.0.0</IPAddr>
+    <Port>8602</Port>
+  </JobProc>
+  <ProcMgr>
+    <IPAddr>127.0.0.1</IPAddr>
+    <Port>8603</Port>
+  </ProcMgr>
+</Columnstore>)";
+
+const char ZFIRST_MULTI_NODE[] = R"(
+<Columnstore Version="V1.0.0">
+  <ClusterManager>MaxScale</ClusterManager>
+  <DBRoot1>
+    <PreallocSpace>OFF</PreallocSpace>
+  </DBRoot1>
+  <ExeMgr1>
+    <IPAddr>123.45.67.89</IPAddr>
+    <Port>8601</Port>
+    <Module>pm1</Module>
+  </ExeMgr1>
+  <JobProc>
+    <IPAddr>0.0.0.0</IPAddr>
+    <Port>8602</Port>
+  </JobProc>
+  <ProcMgr>
+    <IPAddr>123.45.67.89</IPAddr>
+    <Port>8603</Port>
+  </ProcMgr>
+</Columnstore>)";
+
+int test_convert_to_first_multi_node()
+{
+    int rv = 0;
+    unique_ptr<xmlDoc> sDoc = compile_xml(ZSINGLE_NODE);
+
+    const char IP[] = "123.45.67.89";
+    const char MANAGER[] = "MaxScale";
+
+    cs::xml::convert_to_first_multi_node(*sDoc.get(), MANAGER, IP);
+
+    unique_ptr<xmlDoc> sExpected = compile_xml(ZFIRST_MULTI_NODE);
+
+    if (equal(sExpected, sDoc))
+    {
+        cout << "Single -> Multi Conversion ok" << endl;
+
+        cs::xml::convert_to_single_node(*sDoc.get());
+
+        sExpected = compile_xml(ZSINGLE_NODE);
+
+        if (equal(sExpected, sDoc))
+        {
+            cout << "Multi -> Single Conversion ok" << endl;
+        }
+        else
+        {
+            cout << "Multi -> Single Conversion NOT ok." << endl;
+            rv = 1;
+        }
+    }
+    else
+    {
+        cout << "Single -> Multi Conversion NOT ok." << endl;
+        rv = 1;
+    }
+
+    return rv;
+}
+
+}
+
+int main()
+{
+    mxb::Log log(MXB_LOG_TARGET_STDOUT);
+
+    int rv = 0;
+    rv += test_convert_to_first_multi_node();
+    return rv;
+}
+
+namespace
+{
 
 unique_ptr<xmlDoc> compile_xml(const char* zXml)
 {
@@ -226,53 +290,4 @@ bool equal(const unique_ptr<xmlDoc>& sLhs, const unique_ptr<xmlDoc>& sRhs)
 {
     return equal(*sLhs.get(), *sRhs.get());
 }
-
-int test_convert_to_first_multi_node()
-{
-    int rv = 0;
-    unique_ptr<xmlDoc> sDoc = compile_xml(ZSINGLE_NODE);
-
-    const char IP[] = "123.45.67.89";
-    const char MANAGER[] = "MaxScale";
-
-    cs::xml::convert_to_first_multi_node(*sDoc.get(), MANAGER, IP);
-
-    unique_ptr<xmlDoc> sExpected = compile_xml(ZFIRST_MULTI_NODE);
-
-    if (equal(sExpected, sDoc))
-    {
-        cout << "Single -> Multi Conversion ok" << endl;
-
-        cs::xml::convert_to_single_node(*sDoc.get());
-
-        sExpected = compile_xml(ZSINGLE_NODE);
-
-        if (equal(sExpected, sDoc))
-        {
-            cout << "Multi -> Single Conversion ok" << endl;
-        }
-        else
-        {
-            cout << "Multi -> Single Conversion NOT ok." << endl;
-            rv = 1;
-        }
-    }
-    else
-    {
-        cout << "Single -> Multi Conversion NOT ok." << endl;
-        rv = 1;
-    }
-
-    return rv;
-}
-
-}
-
-int main()
-{
-    mxb::Log log(MXB_LOG_TARGET_STDOUT);
-
-    int rv = 0;
-    rv += test_convert_to_first_multi_node();
-    return rv;
 }
