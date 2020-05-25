@@ -332,6 +332,13 @@ bool runtime_link_target(const std::string& subject, const std::string& target)
         {
             MXS_ERROR("No server or service named '%s' found", subject.c_str());
         }
+
+        if (rval)
+        {
+            std::ostringstream ss;
+            MonitorManager::monitor_persist(monitor, ss);
+            rval = runtime_save_config(monitor->name(), ss.str());
+        }
     }
     else
     {
@@ -400,6 +407,13 @@ bool runtime_unlink_target(const std::string& subject, const std::string& target
         else
         {
             MXS_ERROR("No server named '%s' found", subject.c_str());
+        }
+
+        if (rval)
+        {
+            std::ostringstream ss;
+            MonitorManager::monitor_persist(monitor, ss);
+            rval = runtime_save_config(monitor->name(), ss.str());
         }
     }
     else
