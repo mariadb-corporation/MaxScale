@@ -62,9 +62,9 @@ int main(int argc, char** argv)
 
     int c;
 #ifdef HAVE_GLIBC
-    while ((c = getopt_long(argc, argv, "h", options, NULL)) != -1)
+    while ((c = getopt_long(argc, argv, "hu:", options, NULL)) != -1)
 #else
-    while ((c = getopt(argc, argv, "h")) != -1)
+    while ((c = getopt(argc, argv, "hu:")) != -1)
 #endif
     {
         switch (c)
