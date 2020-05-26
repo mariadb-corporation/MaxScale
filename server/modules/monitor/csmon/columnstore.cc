@@ -700,6 +700,21 @@ int xml::remove(xmlDoc& xmlDoc, const char* zXpath)
     return remove(get_root(xmlDoc), zXpath);
 }
 
+string xml::dump(xmlDoc& doc)
+{
+    xmlBuffer* pBuffer = xmlBufferCreate();
+    xmlNodeDump(pBuffer, &doc, xmlDocGetRootElement(&doc), 0, 0);
+    xmlChar* pXml = xmlBufferDetach(pBuffer);
+    const char* zXml = reinterpret_cast<const char*>(pXml);
+
+    string xml(zXml);
+
+    MXS_FREE(pXml);
+    xmlBufferFree(pBuffer);
+
+    return xml;
+}
+
 void xml::convert_to_first_multi_node(xmlDoc& xmlDoc,
                                       const string& manager,
                                       const string& server_address)
@@ -828,7 +843,7 @@ xml::DbRoots::Status remove_dbroots(xmlNode& smc,
                                     int n,
                                     json_t* pOutput)
 {
-    xml::DbRoots::Status rv = xml::DbRoots::ERROR;
+    xml::DbRoots::Status rv = xml::DbRoots::UPDATED;
 
     int nRoots = dbroots.size();
     for (int i = n; i > nRoots; --i)
@@ -841,28 +856,110 @@ xml::DbRoots::Status remove_dbroots(xmlNode& smc,
         key += "3";
 
         xmlNode* pNode = xml::find_node_by_xpath(smc, key.c_str());
-        mxb_assert(pNode);
-        const char* zId = reinterpret_cast<const char*>(xmlNodeGetContent(pNode));
 
-        MXB_AT_DEBUG(int nRemoved =) xml::remove(smc, key.c_str());
-        mxb_assert(nRemoved == 1);
+        if (pNode)
+        {
+            const char* zId = reinterpret_cast<const char*>(xmlNodeGetContent(pNode));
 
-        key = xml::DBROOT;
-        key += zId;
+            int nRemoved = xml::remove(smc, key.c_str());
 
-        MXB_AT_DEBUG(nRemoved =) xml::remove(sc, key.c_str());
-        mxb_assert(nRemoved == 1);
+            if (nRemoved == 1)
+            {
+                key = xml::DBROOT;
+                key += zId;
+
+                nRemoved = xml::remove(sc, key.c_str());
+
+                if (nRemoved != 1)
+                {
+                    LOG_APPEND_JSON_ERROR(&pOutput,
+                                          "The key '%s' in the Columnstore configuration "
+                                          "lacks the child '%s'.",
+                                          xml::SYSTEMCONFIG, key.c_str());
+                    rv = xml::DbRoots::ERROR;
+                }
+            }
+            else
+            {
+                LOG_APPEND_JSON_ERROR(&pOutput,
+                                      "The key '%s' in the Columnstore configuration "
+                                      "lacks the child '%s'.",
+                                      xml::SYSTEMMODULECONFIG, key.c_str());
+                rv = xml::DbRoots::ERROR;
+            }
+        }
+        else
+        {
+            LOG_APPEND_JSON_ERROR(&pOutput,
+                                  "The key '%s' in the Columnstore configuration "
+                                  "lacks the child '%s'.",
+                                  xml::SYSTEMMODULECONFIG, key.c_str());
+            rv = xml::DbRoots::ERROR;
+        }
     }
 
-    string key(xml::MODULEDBROOTCOUNT);
-    key += nid;
-    key += "-";
-    key += "3";
+    if (rv == xml::DbRoots::UPDATED)
+    {
+        string key(xml::MODULEDBROOTCOUNT);
+        key += nid;
+        key += "-";
+        key += "3";
 
-    MXB_AT_DEBUG(int nUpdated =) xml::update(smc, key.c_str(), std::to_string(dbroots.size()).c_str());
-    mxb_assert(nUpdated);
+        int nUpdated = xml::update(smc, key.c_str(), std::to_string(dbroots.size()).c_str());
 
-    rv = xml::DbRoots::UPDATED;
+        if (nUpdated == 1)
+        {
+            xmlNode* pDbrc = xml::find_node_by_xpath(sc, xml::DBROOTCOUNT);
+
+            if (pDbrc)
+            {
+                const auto* zValue = reinterpret_cast<const char*>(xmlNodeGetContent(pDbrc));
+                char* zEnd;
+                errno = 0;
+                long l = strtol(zValue, &zEnd, 10);
+
+                bool valid = (l > 1 && errno == 0 && zEnd != zValue && *zEnd == 0);
+
+                if (valid)
+                {
+                    l -= (n - nRoots);
+                    mxb_assert(l >= 1);
+
+                    nUpdated = xml::update(sc, xml::DBROOTCOUNT, std::to_string(l).c_str());
+
+                    if (nUpdated != 1)
+                    {
+                        LOG_APPEND_JSON_ERROR(&pOutput,
+                                              "Could not update the value of '%s/%s' in the "
+                                              "Columnstore configuration.",
+                                              xml::SYSTEMMODULECONFIG, key.c_str());
+                        rv = xml::DbRoots::ERROR;
+                    }
+                }
+                else
+                {
+                    LOG_APPEND_JSON_ERROR(&pOutput,
+                                          "Could not convert value '%s' of '%s/%s' to a positive integer.",
+                                          zValue, xml::SYSTEMCONFIG, xml::DBROOTCOUNT);
+                    rv = xml::DbRoots::ERROR;
+                }
+            }
+            else
+            {
+                LOG_APPEND_JSON_ERROR(&pOutput,
+                                      "Could not find the key '%s/%s' in the Columnstore configuration.",
+                                      xml::SYSTEMCONFIG, key.c_str());
+                rv = xml::DbRoots::ERROR;
+            }
+        }
+        else
+        {
+            LOG_APPEND_JSON_ERROR(&pOutput,
+                                  "Could not update the value of '%s/%s' in the Columnstore configuration.",
+                                  xml::SYSTEMMODULECONFIG, key.c_str());
+            rv = xml::DbRoots::ERROR;
+        }
+    }
 
     return rv;
 }

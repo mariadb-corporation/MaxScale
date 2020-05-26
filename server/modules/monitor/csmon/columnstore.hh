@@ -324,6 +324,20 @@ int remove(xmlNode& node, const char* zXPath);
 int remove(xmlDoc& csXml, const char* zXPath);
 
 /**
+ * Convert XML document to a string.
+ *
+ * @param doc  XML document to dump to a string.
+ *
+ * @return The XML document as a string.
+ */
+std::string dump(xmlDoc& doc);
+
+inline std::string dump(const std::unique_ptr<xmlDoc>& sDoc)
+{
+    return dump(*sDoc.get());
+}
+
+/**
  * @brief Convert single-node XML configuration to first multi-node configuration.
  *
  * This call will replace all occurences of "127.0.0.1" in the XML configuration
