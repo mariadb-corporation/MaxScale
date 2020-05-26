@@ -24,7 +24,7 @@ namespace
 unique_ptr<xmlDoc> compile_xml(const char* zXml);
 
 bool equal(xmlNode& lhs, xmlNode& rhs);
-bool equal(const xmlDoc& lhs, const xmlDoc& rhs);
+bool equal(xmlDoc& lhs, xmlDoc& rhs);
 bool equal(const unique_ptr<xmlDoc>& sLhs, const unique_ptr<xmlDoc>& sRhs);
 
 }
@@ -276,7 +276,7 @@ bool equal(xmlNode& lhs, xmlNode& rhs)
     return rv;
 }
 
-bool equal(const xmlDoc& lhs, const xmlDoc& rhs)
+bool equal(xmlDoc& lhs, xmlDoc& rhs)
 {
     xmlNode* pL = xmlDocGetRootElement(&lhs);
     xmlNode* pR = xmlDocGetRootElement(&rhs);
