@@ -69,7 +69,7 @@ int main(int argc, char** argv)
     string username = default_user;
 
     int c;
-    while ((c = getopt_long(argc, argv, "h", options, nullptr)) != -1)
+    while ((c = getopt_long(argc, argv, "hu:", options, nullptr)) != -1)
     {
         switch (c)
         {
