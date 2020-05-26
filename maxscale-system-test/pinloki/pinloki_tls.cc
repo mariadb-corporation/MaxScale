@@ -1,0 +1,39 @@
+#include <testconnections.h>
+#include "test_base.hh"
+
+using namespace std::literals::string_literals;
+
+class TlsTest : public TestCase
+{
+public:
+    using TestCase::TestCase;
+
+    void run() override
+    {
+        auto change_master = change_master_sql(test.repl->ip(0), test.repl->port[0]);
+        change_master += ", MASTER_SSL=1, MASTER_SSL_CA='"s
+            + test.maxscales->access_homedir[0]
+            + "/certs/ca.pem'";
+
+        test.expect(maxscale.query("STOP SLAVE"), "STOP SLAVE failed: %s", maxscale.error());
+        test.expect(maxscale.query(change_master), "CHANGE MASTER failed: %s", maxscale.error());
+        test.expect(maxscale.query("START SLAVE"), "START SLAVE failed: %s", maxscale.error());
+
+        test.expect(master.query("CREATE TABLE test.t1(id INT)"), "CREATE failed: %s", maxscale.error());
+        test.expect(master.query("INSERT INTO test.t1 VALUES(1)"), "INSERT failed: %s", maxscale.error());
+
+        sync_all();
+        check_gtid();
+
+        test.expect(master.query("DROP TABLE test.t1"), "DROP failed: %s", maxscale.error());
+        sync_all();
+        check_gtid();
+    }
+};
+
+int main(int argc, char** argv)
+{
+    Mariadb_nodes::require_gtid(true);
+    TestConnections test(argc, argv);
+    return TlsTest(test).result();
+}

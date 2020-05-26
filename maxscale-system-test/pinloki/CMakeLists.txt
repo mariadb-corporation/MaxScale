@@ -33,3 +33,7 @@ add_test_executable_ex(NAME pinloki_large_event SOURCE pinloki_large_event.cc
 # Test automatic master selection
 add_test_executable_ex(NAME pinloki_select_master SOURCE pinloki_select_master.cc
   CONFIG pinloki_select_master.cnf VMS repl_backend LABELS pinloki BREAKS_REPL)
+
+# TLS for master replication
+add_test_executable_ex(NAME pinloki_tls SOURCE pinloki_tls.cc
+  CONFIG pinloki.cnf VMS repl_backend LABELS pinloki BREAKS_REPL BACKEND_SSL)
