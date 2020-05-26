@@ -17,6 +17,9 @@
 #include <fstream>
 #include <sys/stat.h>
 #include <openssl/aes.h>
+#include <openssl/err.h>
+#include <openssl/evp.h>
+#include <openssl/ossl_typ.h>
 
 #include <maxbase/format.hh>
 #include <maxscale/paths.hh>
@@ -36,6 +39,89 @@ struct ThisUnit
 };
 ThisUnit this_unit;
 
+enum class ProcessingMode
+{
+    ENCRYPT,
+    DECRYPT,
+    DECRYPT_IGNORE_ERRORS
+};
+void print_openSSL_errors(const char* operation);
+
+/**
+ * Encrypt or decrypt the input buffer to output buffer.
+ *
+ * @param key Encryption key
+ * @param mode Encrypting or decrypting
+ * @param input Input buffer
+ * @param input_len Input length
+ * @param output Output buffer
+ * @param output_len Produced output length is written here
+ * @return True on success
+ */
+bool encrypt_or_decrypt(const EncryptionKeys& key, ProcessingMode mode,
+                        const uint8_t* input, int input_len, uint8_t* output, int* output_len)
+{
+    auto ctx = EVP_CIPHER_CTX_new();
+    int enc = (mode == ProcessingMode::ENCRYPT) ? AES_ENCRYPT : AES_DECRYPT;
+    bool ignore_errors = (mode == ProcessingMode::DECRYPT_IGNORE_ERRORS);
+    bool ok = false;
+
+    if (EVP_CipherInit_ex(ctx, EVP_aes_256_cbc(), nullptr, key.enckey, key.initvector,
+                          enc) == 1 || ignore_errors)
+    {
+        int output_written = 0;
+        if (EVP_CipherUpdate(ctx, output, &output_written, input, input_len) == 1 || ignore_errors)
+        {
+            int total_output_len = output_written;
+            if (EVP_CipherFinal_ex(ctx, output + total_output_len, &output_written) == 1 || ignore_errors)
+            {
+                total_output_len += output_written;
+                *output_len = total_output_len;
+                ok = true;
+            }
+        }
+    }
+
+    EVP_CIPHER_CTX_free(ctx);
+    if (!ok)
+    {
+        const char* operation = (mode == ProcessingMode::ENCRYPT) ? "when encrypting password" :
+            "when decrypting password";
+        print_openSSL_errors(operation);
+    }
+    return ok;
+}
+
+void print_openSSL_errors(const char* operation)
+{
+    // It's unclear how thread(unsafe) OpenSSL error functions are. Minimize such possibilities by
+    // using a local buffer.
+    constexpr size_t bufsize = 256;     // Should be enough according to some googling.
+    char buf[bufsize];
+    buf[0] = '\0';
+
+    auto errornum = ERR_get_error();
+    auto errornum2 = ERR_get_error();
+    ERR_error_string_n(errornum, buf, bufsize);
+
+    if (errornum2 == 0)
+    {
+        // One error.
+        MXB_ERROR("OpenSSL error %s. %s", operation, buf);
+    }
+    else
+    {
+        // Multiple errors, print all as separate messages.
+        MXB_ERROR("Multiple OpenSSL errors %s. Detailed messages below.", operation);
+        MXB_ERROR("%s", buf);
+        while (errornum2 != 0)
+        {
+            ERR_error_string_n(errornum2, buf, bufsize);
+            MXB_ERROR("%s", buf);
+            errornum2 = ERR_get_error();
+        }
+    }
+}
 }
 
 /**
@@ -149,28 +235,25 @@ string decrypt_password(const string& crypt)
 }
 }
 
-
 std::string decrypt_password(const EncryptionKeys& key, const std::string& input)
 {
+    string rval;
     // Convert to binary.
     size_t hex_len = input.length();
     auto bin_len = hex_len / 2;
     unsigned char encrypted_bin[bin_len];
     mxs::hex2bin(input.c_str(), hex_len, encrypted_bin);
 
-    AES_KEY aeskey;
-    AES_set_decrypt_key(key.enckey, 8 * EncryptionKeys::key_len, &aeskey);
-
-    auto plain_len = bin_len + 1;   // Decryption output cannot be longer than input data.
-    unsigned char plain[plain_len];
-    memset(plain, '\0', plain_len);
-
-    // Need to copy the init vector as it's modified during decryption.
-    unsigned char init_vector[EncryptionKeys::iv_len];
-    memcpy(init_vector, key.initvector, EncryptionKeys::iv_len);
-    AES_cbc_encrypt(encrypted_bin, plain, bin_len, &aeskey, init_vector, AES_DECRYPT);
-
-    string rval((char*)plain);
+    unsigned char plain[bin_len];   // Decryption output cannot be longer than input data.
+    int decrypted_len = 0;
+    // TODO: detect old encryption key and use correct decryption mode
+    if (encrypt_or_decrypt(key, ProcessingMode::DECRYPT_IGNORE_ERRORS, encrypted_bin, bin_len, plain,
+                           &decrypted_len))
+    {
+        // Decrypted data should be text.
+        auto output_data = reinterpret_cast<const char*>(plain);
+        rval.assign(output_data, decrypted_len);
+    }
     return rval;
 }
 
@@ -183,20 +266,23 @@ std::string decrypt_password(const EncryptionKeys& key, const std::string& input
  */
 string encrypt_password(const EncryptionKeys& key, const string& input)
 {
-    AES_KEY aeskey;
-    AES_set_encrypt_key(key.enckey, 8 * EncryptionKeys::key_len, &aeskey);
+    string rval;
+    // Output can be a block length longer than input.
+    auto input_len = input.length();
+    unsigned char encrypted_bin[input_len + AES_BLOCK_SIZE];
 
-    size_t padded_len = ((input.length() / AES_BLOCK_SIZE) + 1) * AES_BLOCK_SIZE;
-    unsigned char encrypted[padded_len + 1];
-
-    unsigned char init_vector[EncryptionKeys::iv_len];
-    memcpy(init_vector, key.initvector, EncryptionKeys::iv_len);
-    AES_cbc_encrypt((const unsigned char*) input.c_str(), encrypted, padded_len,
-                    &aeskey, init_vector, AES_ENCRYPT);
-
-    char hex_output[2 * padded_len + 1];
-    mxs::bin2hex(encrypted, padded_len, hex_output);
-    return hex_output;
+    // Although input is text, interpret as binary.
+    auto input_data = reinterpret_cast<const uint8_t*>(input.c_str());
+    int encrypted_len = 0;
+    if (encrypt_or_decrypt(key, ProcessingMode::ENCRYPT,
+                           input_data, input_len, encrypted_bin, &encrypted_len))
+    {
+        int hex_len = 2 * encrypted_len;
+        char hex_output[hex_len + 1];
+        mxs::bin2hex(encrypted_bin, encrypted_len, hex_output);
+        rval.assign(hex_output, hex_len);
+    }
+    return rval;
 }
 
 bool load_encryption_keys()
