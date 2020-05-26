@@ -306,8 +306,7 @@ bool xml::find_node_id(xmlDoc& xmlDoc, const string& address, string* pNid)
 
     if (pSmc)
     {
-        const char ZMODULEIPADDR[] = "ModuleIPAddr";
-        auto nodes = xml::find_children_by_prefix(*pSmc, ZMODULEIPADDR);
+        auto nodes = xml::find_children_by_prefix(*pSmc, xml::MODULEIPADDR);
 
         for (auto* pNode : nodes)
         {
@@ -318,14 +317,14 @@ bool xml::find_node_id(xmlDoc& xmlDoc, const string& address, string* pNid)
             // that matches the address we are looking for, then we will know the node id
             // corresponding to that address.
 
-            string tail(zName + (sizeof(ZMODULEIPADDR) - 1));
+            string tail(zName + strlen(xml::MODULEIPADDR));
             vector<string> parts = mxb::strtok(tail, "-");
 
             if (parts.size() == 3)
             {
                 string role = parts[2];
 
-                if (role == "3")
+                if (role == xml::ROLE_PM)
                 {
                     const char* zContent = reinterpret_cast<const char*>(xmlNodeGetContent(pNode));
 
@@ -763,7 +762,7 @@ xml::DbRoots::Status add_dbroots(xmlNode& smc,
         key += "-";
         key += std::to_string(i);
         key += "-";
-        key += "3";
+        key += xml::ROLE_PM;
         auto zKey = reinterpret_cast<const xmlChar*>(key.c_str());
         string dbroot = std::to_string(dbroots[i - 1]);
         auto zDbroot = reinterpret_cast<const xmlChar*>(dbroot.c_str());
@@ -785,7 +784,7 @@ xml::DbRoots::Status add_dbroots(xmlNode& smc,
     string key(xml::MODULEDBROOTCOUNT);
     key += nid;
     key += "-";
-    key += "3";
+    key += xml::ROLE_PM;
 
     int nUpdated = xml::update(smc, key.c_str(), std::to_string(nRoots).c_str());
 
@@ -853,7 +852,7 @@ xml::DbRoots::Status remove_dbroots(xmlNode& smc,
         key += "-";
         key += std::to_string(i);
         key += "-";
-        key += "3";
+        key += xml::ROLE_PM;
 
         xmlNode* pNode = xml::find_node_by_xpath(smc, key.c_str());
 
@@ -903,7 +902,7 @@ xml::DbRoots::Status remove_dbroots(xmlNode& smc,
         string key(xml::MODULEDBROOTCOUNT);
         key += nid;
         key += "-";
-        key += "3";
+        key += xml::ROLE_PM;
 
         int nUpdated = xml::update(smc, key.c_str(), std::to_string(dbroots.size()).c_str());
 
@@ -1001,7 +1000,7 @@ xml::DbRoots::Status xml::update_dbroots(xmlDoc& csXml,
                 {
                     const string& role = parts[2];
 
-                    if (role == "3") // Magic number that denotes a PM that can have DB roots.
+                    if (role == xml::ROLE_PM)
                     {
                         pLast_dbroot = pNode;
                         ++n;

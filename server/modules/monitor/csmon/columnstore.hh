@@ -71,10 +71,17 @@ const char DBROOTCOUNT[]        = "DBRootCount";
 const char DDLPROC[]            = "DDLProc";
 const char DMLPROC[]            = "DMLProc";
 const char IPADDR[]             = "IPAddr";
+const char MODULEIPADDR[]       = "ModuleIPAddr";
 const char MODULEDBROOTCOUNT[]  = "ModuleDBRootCount";
 const char MODULEDBROOTID[]     = "ModuleDBRootID";
 const char SYSTEMCONFIG[]       = "SystemConfig";
 const char SYSTEMMODULECONFIG[] = "SystemModuleConfig";
+
+// In the config as various identifiers there is a trailing "X-Y-Z", where
+// X is the node id, Y a sequence number and Z a number identifying the role
+// of the entity identified by the identifier. The number "3" identifies a
+// PM module, the only kind of node we are interested in.
+const char ROLE_PM[] = "3";
 
 /**
  * Find descendant nodes corresponding to particular xpath.
