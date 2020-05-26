@@ -16,7 +16,7 @@
 
 #include <string>
 #include <vector>
-#include <unordered_map>
+#include <map>
 
 namespace pinloki
 {
@@ -43,7 +43,7 @@ enum class ChangeMasterType
 namespace parser
 {
 
-using ChangeMasterValues = std::unordered_map<ChangeMasterType, std::string>;
+using ChangeMasterValues = std::map<ChangeMasterType, std::string>;
 
 struct Handler
 {
