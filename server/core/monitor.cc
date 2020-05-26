@@ -567,10 +567,10 @@ bool Monitor::configure(const mxs::ConfigParameters* params)
 
     if (!error)
     {
+        // Store the parameters, needed for serialization.
+        m_parameters = *params;
         // Store module name into parameter storage.
         m_parameters.set(CN_MODULE, m_module);
-        // Add all config settings to text-mode storage. Needed for serialization.
-        m_parameters.set_multiple(*params);
     }
     return !error;
 }
