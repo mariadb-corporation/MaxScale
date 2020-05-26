@@ -22,8 +22,8 @@ idle connections alive (MXS-2505).
 The default timeout values for user loading have been changed.
 
 * `auth_connect_timeout` changed from 3 to 10 second
-* `auth_read_timeout` changed from 1 to 10 seconds
-* `auth_write_timeout` changed from 2 to 10 seconds
+* `auth_read_timeout` deprecated and ignored
+* `auth_write_timeout` deprecated and ignored
 
 ### Setting a server to maintenance or draining mode
 

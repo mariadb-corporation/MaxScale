@@ -255,7 +255,7 @@ config::ParamBool Config::s_maxlog(
 config::ParamSeconds Config::s_auth_conn_timeout(
     &Config::s_specification,
     CN_AUTH_CONNECT_TIMEOUT,
-    "Connection timeout for the user authentication.",
+    "Connection timeout for fetching user accounts.",
     mxs::config::INTERPRET_AS_SECONDS,
     std::chrono::seconds(DEFAULT_AUTH_CONNECT_TIMEOUT),
     config::Param::Modifiable::AT_RUNTIME);
@@ -263,7 +263,7 @@ config::ParamSeconds Config::s_auth_conn_timeout(
 config::ParamSeconds Config::s_auth_read_timeout(
     &Config::s_specification,
     CN_AUTH_READ_TIMEOUT,
-    "Read timeout for the user authentication.",
+    "Read timeout for fetching user accounts (deprecated).",
     mxs::config::INTERPRET_AS_SECONDS,
     std::chrono::seconds(DEFAULT_AUTH_READ_TIMEOUT),
     config::Param::Modifiable::AT_RUNTIME);
@@ -271,7 +271,7 @@ config::ParamSeconds Config::s_auth_read_timeout(
 config::ParamSeconds Config::s_auth_write_timeout(
     &Config::s_specification,
     CN_AUTH_WRITE_TIMEOUT,
-    "Write timeout for the user authentication.",
+    "Write timeout for for fetching user accounts (deprecated).",
     mxs::config::INTERPRET_AS_SECONDS,
     std::chrono::seconds(DEFAULT_AUTH_WRITE_TIMEOUT),
     config::Param::Modifiable::AT_RUNTIME);
