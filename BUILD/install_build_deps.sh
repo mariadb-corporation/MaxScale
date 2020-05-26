@@ -73,7 +73,7 @@ then
        perl libtool libpcre3-dev tcl tcl-dev uuid \
        uuid-dev libsqlite3-dev liblzma-dev libpam0g-dev pkg-config \
        libedit-dev libcurl4-openssl-dev libatomic1 \
-       libsasl2-dev libxml2-dev libboost-dev
+       libsasl2-dev libxml2-dev
 
   # One of these will work, older systems use libsystemd-daemon-dev
   sudo apt-get install -y libsystemd-dev || \
@@ -125,17 +125,6 @@ then
     # Attempt to install systemd-devel, doesn't work on CentOS 6
     sudo yum install -y systemd-devel
 
-    # Install Boost development headers
-    grep "release 7" /etc/redhat-release
-    if [ $? -eq 0 ]
-    then
-        # Boost 1.69 is from EPEL but as long as we only use the headers from it, we can use it.
-        sudo yum install -y boost169-devel
-    else
-        # Everything else should have a new enough boost in the standard repos
-        sudo yum install -y boost-devel
-    fi
-
     # Enable the devtoolkit to get a newer compiler
 
     # CentOS: install the centos-release-scl repo
@@ -174,7 +163,7 @@ then
          pcre-devel git wget tcl tcl-devel libuuid-devel \
          xz-devel sqlite3 sqlite3-devel pkg-config lua lua-devel \
          gnutls-devel libgcrypt-devel pam-devel systemd-devel libcurl-devel libatomic1 \
-         cyrus-sasl-devel libxml2-devel boost-devel
+         cyrus-sasl-devel libxml2-devel
     sudo zypper -n install rpm-build
     cat /etc/*-release | grep "SUSE Linux Enterprise Server 11"
 

@@ -1,38 +1,44 @@
-# This hint points the FindBoost.cmake to the location where the newer Boost
-# version is installed on CentOS 7 by the boost169-devel package.
-set(BOOST_INCLUDEDIR "/usr/include/boost169")
+# Boost 1.73
+ExternalProject_Add(boost
+  URL "https://dl.bintray.com/boostorg/release/1.73.0/source/boost_1_73_0.tar.gz"
+  SOURCE_DIR ${CMAKE_BINARY_DIR}/boost/
+  BINARY_DIR ${CMAKE_BINARY_DIR}/boost/
+  CONFIGURE_COMMAND ""
+  BUILD_COMMAND ""
+  INSTALL_COMMAND ""
+  LOG_DOWNLOAD 1
+  LOG_UPDATE 1
+  LOG_CONFIGURE 1
+  LOG_BUILD 1
+  LOG_INSTALL 1)
 
-find_package(Boost 1.60)
+# Make sure we include the custom headers before the system boost headers
+include_directories(BEFORE ${CMAKE_BINARY_DIR}/boost/)
 
-if (Boost_FOUND)
-  include_directories(${Boost_INCLUDE_DIRS})
+add_library(pinloki-core
+  config.cc
+  dbconnection.cc
+  file_reader.cc
+  file_writer.cc
+  find_gtid.cc
+  gtid.cc
+  inventory.cc
+  maria_rpl_event.cc
+  reader.cc
+  resultset.cc
+  rpl_event.cc
+  writer.cc
+  parser.cc
+  )
 
-  add_library(pinloki-core
-    config.cc
-    dbconnection.cc
-    file_reader.cc
-    file_writer.cc
-    find_gtid.cc
-    gtid.cc
-    inventory.cc
-    maria_rpl_event.cc
-    reader.cc
-    resultset.cc
-    rpl_event.cc
-    writer.cc
-    parser.cc
-    )
+add_dependencies(pinloki-core boost)
+target_link_libraries(pinloki-core maxbase mariadbclient uuid)
 
-  target_link_libraries(pinloki-core maxbase mariadbclient uuid)
+add_library(pinloki SHARED pinloki.cc pinlokisession.cc)
+target_link_libraries(pinloki pinloki-core maxscale-common)
+set_target_properties(pinloki PROPERTIES VERSION "1.0.0"  LINK_FLAGS -Wl,-z,defs)
+install_module(pinloki core)
 
-  add_library(pinloki SHARED pinloki.cc pinlokisession.cc)
-  target_link_libraries(pinloki pinloki-core maxscale-common)
-  set_target_properties(pinloki PROPERTIES VERSION "1.0.0"  LINK_FLAGS -Wl,-z,defs)
-  install_module(pinloki core)
-
-  if (BUILD_TESTS)
-    add_subdirectory(test)
-  endif()
-else()
-  message(FATAL_ERROR "Boost 1.60 or newer is not installed, cannot build Pinloki")
+if (BUILD_TESTS)
+  add_subdirectory(test)
 endif()
