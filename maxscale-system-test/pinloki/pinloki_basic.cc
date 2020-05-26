@@ -14,8 +14,7 @@ public:
         test.expect(master.query("FLUSH LOGS"), "FLUSH failed: %s", master.error());
         test.expect(master.query("CREATE TABLE test.t2 (id INT)"), "CREATE failed: %s", master.error());
         test.expect(master.query("INSERT INTO test.t2 VALUES (1)"), "INSERT failed: %s", master.error());
-        sync(master, maxscale);
-        sync(maxscale, slave);
+        sync_all();
     }
 
     void run() override

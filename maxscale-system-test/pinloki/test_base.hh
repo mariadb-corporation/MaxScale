@@ -108,6 +108,13 @@ protected:
                     gtid.c_str(), res.c_str(), slave.error(), gtid.c_str(), start_gtid.c_str());
     }
 
+    // Syncs maxscale with master and then the slave with master
+    void sync_all()
+    {
+        sync(master, maxscale);
+        sync(maxscale, slave);
+    }
+
     // Checks that `master`, `maxscale` and `slave` all report the same GTID position
     void check_gtid()
     {

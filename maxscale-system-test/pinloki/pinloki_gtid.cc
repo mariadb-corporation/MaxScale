@@ -20,8 +20,7 @@ private:
     {
         test.tprintf("Create table and replicate it");
         test.expect(master.query("CREATE TABLE test.t1(id INT)"), "CREATE failed: %s", master.error());
-        sync(master, maxscale);
-        sync(maxscale, slave);
+        sync_all();
 
         test.tprintf("Stop replication on the slave and MaxScale");
         maxscale.query("STOP SLAVE");

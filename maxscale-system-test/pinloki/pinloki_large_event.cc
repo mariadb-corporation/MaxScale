@@ -34,8 +34,7 @@ public:
                         "%ld byte INSERT should work: %s", a, master.error());
         }
 
-        sync(master, maxscale);
-        sync(maxscale, slave);
+        sync_all();
         check_gtid();
     }
 

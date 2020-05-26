@@ -9,8 +9,7 @@ public:
     void pre() override
     {
         test.expect(master.query("CREATE TABLE test.t1(id INT)"), "CREATE failed: %s", master.error());
-        sync(master, maxscale);
-        sync(maxscale, slave);
+        sync_all();
     }
 
     void run() override
@@ -25,8 +24,7 @@ public:
         }
 
         test.stop_timeout();
-        sync(master, maxscale);
-        sync(maxscale, slave);
+        sync_all();
 
         // All servers should be at the same GTID
         check_gtid();
