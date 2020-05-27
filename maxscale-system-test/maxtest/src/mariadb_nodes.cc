@@ -1175,16 +1175,10 @@ int Mariadb_nodes::configure_ssl(bool require)
 
 int Mariadb_nodes::disable_ssl()
 {
-    int local_result = 0;
-    char str[1024];
-
-    local_result += connect();
-    sprintf(str,
-            "DROP USER %s;  grant all privileges on *.*  to '%s'@'%%' identified by '%s';",
-            user_name,
-            user_name,
-            password);
-    local_result += execute_query(nodes[0], "%s", "");
+    int local_result = connect();
+    local_result += execute_query(
+        nodes[0], "DROP USER %s;  grant all privileges on *.*  to '%s'@'%%' identified by '%s';",
+        user_name, user_name, password);
     close_connections();
 
     for (int i = 0; i < N; i++)
