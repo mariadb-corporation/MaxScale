@@ -88,7 +88,7 @@ private:
         std::string ssl_crlpath;
         std::string ssl_key;
         std::string ssl_cipher;
-        bool        ssl_verify_server_cert;
+        bool        ssl_verify_server_cert = false;
 
         void save(const Config& config) const;
         bool load(const Config& config);

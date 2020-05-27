@@ -154,7 +154,7 @@ private:
     ConnectionDetails m_details;
     int               m_nesting_level = 0;
 
-    void _connect();
+    void connect();
 };
 
 template<typename R, typename ... Args>

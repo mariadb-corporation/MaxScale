@@ -32,7 +32,7 @@ bool is_connection_lost(uint mariadb_err)
 Connection::Connection(const ConnectionDetails& details)
     : m_details(details)
 {
-    _connect();
+    connect();
 }
 
 Connection::~Connection()
@@ -162,7 +162,7 @@ int Connection::nesting_level()
     return m_nesting_level;
 }
 
-void Connection::_connect()
+void Connection::connect()
 {
     if (m_conn != nullptr)
     {
@@ -185,6 +185,9 @@ void Connection::_connect()
 
     if (m_details.ssl)
     {
+        uint8_t yes = 1;
+        mysql_optionsv(m_conn, MYSQL_OPT_SSL_ENFORCE, &yes);
+
         if (!m_details.ssl_key.empty())
         {
             mysql_optionsv(m_conn, MYSQL_OPT_SSL_KEY, m_details.ssl_key.c_str());
@@ -213,9 +216,10 @@ void Connection::_connect()
         {
             mysql_optionsv(m_conn, MYSQL_OPT_SSL_CRLPATH, m_details.ssl_crlpath.c_str());
         }
-
-        uint8_t verify = m_details.ssl_verify_server_cert;
-        mysql_optionsv(m_conn, MYSQL_OPT_SSL_VERIFY_SERVER_CERT, &verify);
+        if (m_details.ssl_verify_server_cert)
+        {
+            mysql_optionsv(m_conn, MYSQL_OPT_SSL_VERIFY_SERVER_CERT, &yes);
+        }
     }
 
     if (mysql_real_connect(m_conn,
@@ -226,11 +230,18 @@ void Connection::_connect()
                            (uint) m_details.host.port(),
                            nullptr, m_details.flags) == nullptr)
     {
+        std::string error = mysql_error(m_conn);
+        auto errnum = mysql_errno(m_conn);
         mysql_close(m_conn);
         m_conn = nullptr;
-        MXB_THROWCode(DatabaseError, mysql_errno(m_conn),
-                      "Could not connect to " << m_details.host << " : mysql_error "
-                                              << mysql_error(m_conn));
+        MXB_THROWCode(DatabaseError, errnum,
+                      "Could not connect to " << m_details.host << " : mysql_error " << error);
+    }
+    else if (m_details.ssl && !mysql_get_ssl_cipher(m_conn))
+    {
+        mysql_close(m_conn);
+        m_conn = nullptr;
+        MXB_THROW(DatabaseError, "Could not establish an encrypted connection");
     }
 
     // LOGI("Connection ok: " << _details.host);
