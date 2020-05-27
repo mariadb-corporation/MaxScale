@@ -707,10 +707,7 @@ libdir=/home/user/lib64/
 
 ### `cachedir`
 
-Configure the directory MariaDB MaxScale uses to store cached data. An example
-of cached data is the authentication data fetched from the backend servers.
-MariaDB MaxScale stores this in case a connection to the backend server is not
-possible.
+Configure the directory MariaDB MaxScale uses to store cached data.
 
 ```
 cachedir=/tmp/maxscale_cache/
@@ -1311,85 +1308,20 @@ cluster=TheMonitor
 **NOTE:** The `cluster` parameter is mutually exclusive with the `servers` and
   `targets` parameters.
 
-### `user`
+### `user` and `password`
 
-The user parameter, along with the password parameter are used to define the
-credentials used to connect to the backend servers to extract the list of
-database users from the backend database that is used for the client
-authentication.
+These settings define the credentials the service uses to fetch user account
+information from backends. The *password* may be either a plain text password or
+an [encrypted password](#encrypting-passwords).
 
 ```
 user=maxscale
 password=Mhu87p2D
 ```
 
-Authentication of incoming connections is performed by MariaDB MaxScale itself
-rather than by the database server to which the client is connected. The client
-will authenticate itself with MariaDB MaxScale, using the username, hostname and
-password information that MariaDB MaxScale has extracted from the backend
-database servers. For a detailed discussion of how this impacts the
-authentication process please see the "Authentication" section below.
-
-The host matching criteria is restricted to IPv4, IPv6 will be added in a future
-release.
-
-Existing user configuration in the backend databases must be checked and may be
-updated before successful MariaDB MaxScale authentication:
-
-In order for MariaDB MaxScale to obtain all the data it must be given a username
-it can use to connect to the database and retrieve that data. This is the
-parameter that gives MariaDB MaxScale the username to use for this purpose.
-
-The account used must be able to select from the mysql.user table, the following
-is an example showing how to create this user.
-
-```
-CREATE USER 'maxscale'@'maxscalehost' IDENTIFIED BY 'maxscale-password';
-```
-
-Additionally, `SELECT` privileges on the `mysql.user`, `mysql.db` and `mysql.tables_priv`
-tables and `SHOW DATABASES` privileges are required in order to load databases
-name and grants suitable for database name authorization.
-
-```
-GRANT SELECT ON mysql.user TO 'maxscale'@'maxscalehost';
-GRANT SELECT ON mysql.db TO 'maxscale'@'maxscalehost';
-GRANT SELECT ON mysql.tables_priv TO 'maxscale'@'maxscalehost';
-GRANT SELECT ON mysql.roles_mapping TO 'maxscale'@'maxscalehost';
-GRANT SHOW DATABASES ON *.* TO 'maxscale'@'maxscalehost';
-
--- MariaDB from 10.2.2 to 10.2.10 requires extra grants
-GRANT SELECT ON mysql.* TO 'maxscale'@'maxscalehost';
-```
-
-**Note:** MariaDB versions 10.2.10 and older require a `SELECT` grant on
-  `mysql.*` in addition to the normal grants. This is to work around MDEV-13453
-  which was fixed in MariaDB 10.2.11.
-
-If you are using MariaDB ColumnStore, the follwing grant is requried.
-
-```
-GRANT ALL ON infinidb_vtable.* TO 'maxscale'@'maxscalehost';
-```
-
-See [MaxScale Troubleshooting](https://mariadb.com/kb/en/mariadb-enterprise/maxscale-troubleshooting/)
-for more information on how to troubleshoot authentication related problems.
-
-### `password`
-
-The password parameter provides the password information for the above user and
-may be either a plain text password or it may be an encrypted password.  See the
-section on encrypting passwords for use in the maxscale.cnf file. This user must
-be capable of connecting to the backend database and executing these SQL
-statements to load database names and grants from the backends:
-
-* `SELECT user, host, password,Select_priv FROM mysql.user`.
-* `SELECT user, host, db FROM mysql.db`
-* `SELECT * FROM INFORMATION_SCHEMA.SCHEMATA`
-* `SELECT GRANTEE,PRIVILEGE_TYPE FROM INFORMATION_SCHEMA.USER_PRIVILEGES`
-
-**Note:** In older versions of MaxScale this parameter was called `passwd`. The
-  use of `passwd` was deprecated in MaxScale 2.3.0.
+See [MySQL protocol authentication documentation](../Authenticators/Authentication-Modules.md)
+for more information (such as required grants) and troubleshooting tips
+regarding user account management and client authentication.
 
 ### `enable_root_user`
 
@@ -2203,50 +2135,6 @@ The current limitations of MaxScale are listed in the [Limitations](../About/Lim
 For a list of common problems and their solutions, read the
 [MaxScale Troubleshooting](https://mariadb.com/kb/en/maxscale-troubleshooting/)
 article on the MariaDB Knowledge Base.
-
-## Authentication
-
-MariaDB uses username, passwords and the client host in order to authenticate a
-user, so a typical user would be defined as user X at host Y and would be given
-a password to connect. MariaDB MaxScale uses exactly the same rules as MariaDB
-when users connect to the MariaDB MaxScale instance, i.e. it will check the
-address from which the client is connecting and treat this in exactly the same
-way that MariaDB would. MariaDB MaxScale will pull the authentication data from
-one of the backend servers (a master server if one is available) and use this to
-match the incoming connections. MaxScale assumes that all the backend servers
-for a particular service will share the same set of user credentials.
-
-It is important to understand, however, that when MariaDB MaxScale itself makes
-connections to the backend servers the backend server will see all connections
-as originating from the host that runs MariaDB MaxScale and not the original
-host from which the client connected to MariaDB MaxScale. Therefore the backend
-servers should be configured to allow connections from the MariaDB MaxScale host
-for every user that can connect from any host. Since there is only a single
-password within the database server for a given host, this limits the
-configuration such that a given user name must have the same password for every
-host from which they can connect. These limitations do not apply when
-[`proxy_protocol`](#proxy_protocol) is in use.
-
-To clarify, if a user *X* is defined as using password *pass1* from host *A* and
-*pass2* from host *B* then there must be an entry in the `user` table for user
-*X* from the MariaDB MaxScale host, say *pass1*.
-
-This would result in rows in the user table as follows
-
-Username|Password|Client Host
---------|--------|-----------
-   X    |  pass1 | A
-   X    |  pass2 | B
-   X    |  pass1 | MaxScale
-
-In this case the user *X* would be able to connect to MariaDB MaxScale from host
-a giving the password of *pass1*. In addition MariaDB MaxScale would be able to
-create connections for this user to the backend servers using the username *X*
-and password *pass1*, since the MariaDB MaxScale host is also defined to have
-password *pass1*. User *X* would not however be able to connect from host *b*
-since they would need to provide the password *pass2* in order to connect to
-MariaDB MaxScale, but then MariaDB MaxScale would not be able to connect to the
-backends as it would also use the password *pass2* for these connections.
 
 ## Systemd Watchdog
 
