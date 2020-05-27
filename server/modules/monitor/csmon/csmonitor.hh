@@ -71,7 +71,7 @@ public:
 
 #if defined(CSMON_EXPOSE_TRANSACTIONS)
     bool command_begin(json_t** ppOutput, const std::chrono::seconds& timeout, CsMonitorServer* pServer);
-    bool command_commit(json_t** ppOutput, CsMonitorServer* pServer);
+    bool command_commit(json_t** ppOutput, const std::chrono::seconds& timeout, CsMonitorServer* pServer);
     bool command_rollback(json_t** ppOutput, CsMonitorServer* pServer);
 #endif
 
@@ -100,7 +100,8 @@ private:
 #if defined(CSMON_EXPOSE_TRANSACTIONS)
     void cs_begin(json_t** ppOutput, mxb::Semaphore* pSem,
                   const std::chrono::seconds& timeout, CsMonitorServer* pServer);
-    void cs_commit(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer* pServer);
+    void cs_commit(json_t** ppOutput, mxb::Semaphore* pSem,
+                   const std::chrono::seconds& timeout, CsMonitorServer* pServer);
     void cs_rollback(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer* pServer);
 #endif
 

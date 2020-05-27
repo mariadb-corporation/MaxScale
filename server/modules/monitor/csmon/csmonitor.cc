@@ -765,14 +765,16 @@ bool CsMonitor::command_begin(json_t** ppOutput,
     return command(ppOutput, sem, "begin", cmd);
 }
 
-bool CsMonitor::command_commit(json_t** ppOutput, CsMonitorServer* pServer)
+bool CsMonitor::command_commit(json_t** ppOutput,
+                               const std::chrono::seconds& timeout,
+                               CsMonitorServer* pServer)
 {
     mxb::Semaphore sem;
 
-    auto cmd = [this, &sem, ppOutput, pServer] () {
+    auto cmd = [this, &sem, timeout, ppOutput, pServer] () {
         if (ready_to_run(ppOutput))
         {
-            cs_commit(ppOutput, &sem, pServer);
+            cs_commit(ppOutput, &sem, timeout, pServer);
         }
         else
         {
@@ -1171,7 +1173,7 @@ void CsMonitor::cs_remove_node(json_t** ppOutput,
 
     if (success)
     {
-        success = CsMonitorServer::commit(sv, m_context, &results);
+        success = CsMonitorServer::commit(sv, timeout, m_context, &results);
 
         if (success)
         {
@@ -1294,7 +1296,7 @@ void CsMonitor::cs_scan(json_t** ppOutput,
 
     if (dbroots_status == cs::xml::DbRoots::UPDATED)
     {
-        if (!CsMonitorServer::commit(sv, m_context, &results))
+        if (!CsMonitorServer::commit(sv, timeout, m_context, &results))
         {
             LOG_APPEND_JSON_ERROR(ppOutput, "Could not commit changes, will attempt rollback.");
             results_to_json(sv, results, &pServers);
@@ -1527,7 +1529,10 @@ void CsMonitor::cs_begin(json_t** ppOutput,
     pSem->post();
 }
 
-void CsMonitor::cs_commit(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer* pServer)
+void CsMonitor::cs_commit(json_t** ppOutput,
+                          mxb::Semaphore* pSem,
+                          const std::chrono::seconds& timeout,
+                          CsMonitorServer* pServer)
 {
     json_t* pOutput = json_object();
     bool success = false;
@@ -1544,7 +1549,7 @@ void CsMonitor::cs_commit(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServ
         sv = servers();
     }
 
-    Results results = CsMonitorServer::commit(sv, m_context);
+    Results results = CsMonitorServer::commit(sv, timeout, m_context);
 
     json_t* pServers = nullptr;
     size_t n = results_to_json(sv, results, &pServers);
@@ -1642,7 +1647,7 @@ bool CsMonitor::cs_add_first_multi_node(json_t* pOutput,
             {
                 MXS_NOTICE("Updated config on '%s'.", zName);
 
-                result = pServer->commit();
+                result = pServer->commit(timeout);
 
                 if (result.ok())
                 {
@@ -1776,7 +1781,7 @@ bool CsMonitor::cs_add_additional_multi_node(json_t* pOutput,
 
     if (success)
     {
-        success = CsMonitorServer::commit(sv, m_context, &results);
+        success = CsMonitorServer::commit(sv, timeout, m_context, &results);
 
         if (!success)
         {

@@ -509,6 +509,7 @@ const modulecmd_arg_type_t csmon_begin_argv[] =
 const modulecmd_arg_type_t csmon_commit_argv[] =
 {
     { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC },
+    { MODULECMD_ARG_STRING, "Timeout, 0 means no timeout." },
     { MODULECMD_ARG_SERVER | MODULECMD_ARG_OPTIONAL, "Specific server to commit transaction on" }
 };
 
@@ -542,13 +543,19 @@ bool csmon_begin(const MODULECMD_ARG* pArgs, json_t** ppOutput)
 bool csmon_commit(const MODULECMD_ARG* pArgs, json_t** ppOutput)
 {
     CsMonitor* pMonitor;
+    const char* zTimeout;
     CsMonitorServer* pServer;
 
-    bool rv = get_args(pArgs, ppOutput, &pMonitor, &pServer);
+    bool rv = get_args(pArgs, ppOutput, &pMonitor, &zTimeout, &pServer);
 
     if (rv)
     {
-        CALL_IF_CS_15(pMonitor->command_commit(ppOutput, pServer));
+        std::chrono::seconds timeout(0);
+
+        if (get_timeout(zTimeout, &timeout, ppOutput))
+        {
+            CALL_IF_CS_15(pMonitor->command_commit(ppOutput, timeout, pServer));
+        }
     }
 
     return rv;

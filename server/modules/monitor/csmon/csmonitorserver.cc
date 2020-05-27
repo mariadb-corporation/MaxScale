@@ -351,7 +351,7 @@ Result CsMonitorServer::begin(const std::chrono::seconds& timeout, json_t* pOutp
     return result;
 }
 
-Result CsMonitorServer::commit(json_t* pOutput)
+Result CsMonitorServer::commit(const std::chrono::seconds& timeout, json_t* pOutput)
 {
     if (m_trx_state != TRX_ACTIVE)
     {
@@ -359,7 +359,9 @@ Result CsMonitorServer::commit(json_t* pOutput)
         mxb_assert(!true);
     }
 
-    http::Response response = http::put(create_url(cs::rest::COMMIT), "{}", m_context.http_config());
+    http::Response response = http::put(create_url(cs::rest::COMMIT),
+                                        cs::body::commit(timeout, m_context.current_trx_id()),
+                                        m_context.http_config());
 
     // Whatever the response, we consider a transaction as not being active.
     m_trx_state = TRX_INACTIVE;
@@ -377,7 +379,9 @@ Result CsMonitorServer::commit(json_t* pOutput)
 Result CsMonitorServer::rollback(json_t* pOutput)
 {
     // Always ok to send a rollback.
-    http::Response response = http::put(create_url(cs::rest::ROLLBACK), "{}", m_context.http_config());
+    http::Response response = http::put(create_url(cs::rest::ROLLBACK),
+                                        cs::body::rollback(m_context.current_trx_id()),
+                                        m_context.http_config());
 
     // Whatever the response, we consider a transaction as not being active.
     m_trx_state = TRX_INACTIVE;
@@ -590,6 +594,7 @@ Results CsMonitorServer::begin(const std::vector<CsMonitorServer*>& servers,
 
 //static
 bool CsMonitorServer::commit(const std::vector<CsMonitorServer*>& servers,
+                             const std::chrono::seconds& timeout,
                              CsContext& context,
                              Results* pResults)
 {
@@ -605,7 +610,9 @@ bool CsMonitorServer::commit(const std::vector<CsMonitorServer*>& servers,
     }
 
     vector<string> urls = create_urls(servers, cs::rest::COMMIT);
-    vector<http::Response> responses = http::put(urls, "{}", context.http_config());
+    vector<http::Response> responses = http::put(urls,
+                                                 cs::body::commit(timeout, context.current_trx_id()),
+                                                 context.http_config());
 
     mxb_assert(urls.size() == responses.size());
 
@@ -645,10 +652,11 @@ bool CsMonitorServer::commit(const std::vector<CsMonitorServer*>& servers,
 
 //statis
 Results CsMonitorServer::commit(const std::vector<CsMonitorServer*>& servers,
+                                const std::chrono::seconds& timeout,
                                 CsContext& context)
 {
     Results rv;
-    commit(servers, context, &rv);
+    commit(servers, timeout, context, &rv);
     return rv;
 }
 
@@ -669,7 +677,9 @@ bool CsMonitorServer::rollback(const std::vector<CsMonitorServer*>& servers,
     }
 
     vector<string> urls = create_urls(servers, cs::rest::ROLLBACK);
-    vector<http::Response> responses = http::put(urls, "{}", context.http_config());
+    vector<http::Response> responses = http::put(urls,
+                                                 cs::body::rollback(context.current_trx_id()),
+                                                 context.http_config());
 
     mxb_assert(urls.size() == responses.size());
 
@@ -709,7 +719,7 @@ bool CsMonitorServer::rollback(const std::vector<CsMonitorServer*>& servers,
 
 //static
 Results CsMonitorServer::rollback(const std::vector<CsMonitorServer*>& servers,
-                                             CsContext& context)
+                                  CsContext& context)
 {
     Results rv;
     rollback(servers, context, &rv);
@@ -820,7 +830,7 @@ bool CsMonitorServer::set_cluster_mode(const std::vector<CsMonitorServer*>& serv
 
             if (rv)
             {
-                result = pMaster->commit(pOutput);
+                result = pMaster->commit(timeout, pOutput);
 
                 if (!result.ok())
                 {

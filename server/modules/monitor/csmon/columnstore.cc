@@ -1079,7 +1079,9 @@ string rest::create_url(const SERVER& server,
 namespace body
 {
 
-string begin(const std::chrono::seconds& timeout, int id)
+namespace
+{
+string begin_or_commit(const std::chrono::seconds& timeout, int id)
 {
     std::ostringstream body;
     body << "{\"" << TIMEOUT << "\": "
@@ -1089,6 +1091,17 @@ string begin(const std::chrono::seconds& timeout, int id)
          << "}";
 
     return body.str();
+}
+}
+
+string begin(const std::chrono::seconds& timeout, int id)
+{
+    return begin_or_commit(timeout, id);
+}
+
+string commit(const std::chrono::seconds& timeout, int id)
+{
+    return begin_or_commit(timeout, id);
 }
 
 string config(const xmlDoc& csXml,
@@ -1129,6 +1142,16 @@ std::string config_set_cluster_mode(ClusterMode mode,
          << "\"" << REVISION << "\": " << revision << ","
          << "\"" << TIMEOUT << "\": " << timeout.count() << ","
          << "\"" << MANAGER << "\": " << "\"" << manager << "\""
+         << "}";
+
+    return body.str();
+}
+
+string rollback(int id)
+{
+    std::ostringstream body;
+    body << "{"
+         << "\"" << ID << "\": " << id
          << "}";
 
     return body.str();

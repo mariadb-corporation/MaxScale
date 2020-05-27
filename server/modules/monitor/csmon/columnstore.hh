@@ -446,11 +446,21 @@ const char TXN[]          = "txn";
  * @brief JSON body to be used with PUT /node/begin
  *
  * @param timeout  The timeout.
- * @param id       The tranaction id.
+ * @param id       The transaction id.
  *
  * @return REST-API body.
  */
 std::string begin(const std::chrono::seconds& timeout, int id);
+
+/**
+ * @brief JSON body to be used with PUT /node/commit
+ *
+ * @param timeout  The timeout.
+ * @param id       The transaction id.
+ *
+ * @return REST-API body.
+ */
+std::string commit(const std::chrono::seconds& timeout, int id);
 
 /**
  * @brief JSON body to be used with PUT /node/config
@@ -482,6 +492,15 @@ std::string config_set_cluster_mode(ClusterMode mode,
                                     const std::string& manager,
                                     const std::chrono::seconds& timeout);
 
+
+/**
+ * @brief JSON body to be used with PUT /node/rollback
+ *
+ * @param id  The transaction id.
+ *
+ * @return REST-API body.
+ */
+std::string rollback(int id);
 
 /**
  * @brief JSON body to be used with PUT /node/shutdown

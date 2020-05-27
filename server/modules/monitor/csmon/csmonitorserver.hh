@@ -212,8 +212,8 @@ public:
     }
 
     Result begin(const std::chrono::seconds& timeout, json_t* pOutput = nullptr);
+    Result commit(const std::chrono::seconds& timeout, json_t* pOutput = nullptr);
     Result rollback(json_t* pOutput = nullptr);
-    Result commit(json_t* pOutput = nullptr);
 
     bool set_cluster_mode(cs::ClusterMode mode,
                           const std::chrono::seconds& timeout,
@@ -240,8 +240,10 @@ public:
                       CsContext& context,
                       Results* pResults);
     static Results commit(const std::vector<CsMonitorServer*>& servers,
+                          const std::chrono::seconds& timeout,
                           CsContext& context);
     static bool commit(const std::vector<CsMonitorServer*>& servers,
+                       const std::chrono::seconds& timeout,
                        CsContext& context,
                        Results* pResults);
     static Results rollback(const std::vector<CsMonitorServer*>& servers,
