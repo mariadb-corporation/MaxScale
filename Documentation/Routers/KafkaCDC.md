@@ -154,10 +154,6 @@ describes the parameter as follows:
 The connection and read timeout for the replication stream. The default
 value is 10 seconds.
 
-When a `kafkacdc` service is being destryed and no events are replicated,
-the replication thread waits for a read to time out before exiting. This
-can cause slow shutdowns when `timeout` is configured to a large value.
-
 ## Example Configuration
 
 The following configuration defines the minimal setup for streaming replication

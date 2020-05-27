@@ -165,6 +165,7 @@ bool Replicator::Imp::connect()
         // Queries required to start GTID replication
         std::vector<std::string> queries =
         {
+            "SET @master_heartbeat_period=1000000000",
             "SET @master_binlog_checksum = @@global.binlog_checksum",
             "SET @mariadb_slave_capability=4",
             gtid_start_pos,
