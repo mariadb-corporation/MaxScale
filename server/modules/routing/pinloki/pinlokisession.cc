@@ -89,6 +89,10 @@ PinlokiSession::PinlokiSession(MXS_SESSION* pSession, Pinloki* router)
 
 void PinlokiSession::close()
 {
+    if (m_mgw_dcid)
+    {
+        mxs::RoutingWorker::get_current()->cancel_delayed_call(m_mgw_dcid);
+    }
 }
 
 int32_t PinlokiSession::routeQuery(GWBUF* pPacket)
@@ -424,6 +428,7 @@ void PinlokiSession::show_variables(const std::string& like)
 
 void PinlokiSession::master_gtid_wait(const std::string& gtid, int timeout)
 {
+    mxb_assert(m_mgw_dcid == 0);
     auto header = "master_gtid_wait('" + gtid + "', " + std::to_string(timeout) + ")";
     auto target = mxq::GtidList::from_string(gtid);
     auto start = steady_clock::now();
@@ -436,10 +441,12 @@ void PinlokiSession::master_gtid_wait(const std::string& gtid, int timeout)
                 if (m_router->gtid_io_pos().is_included(target))
                 {
                     send(create_resultset({header}, {"0"}));
+                    m_mgw_dcid = 0;
                 }
                 else if (duration_cast<seconds>(steady_clock::now() - start).count() > timeout)
                 {
                     send(create_resultset({header}, {"-1"}));
+                    m_mgw_dcid = 0;
                 }
                 else
                 {
@@ -454,7 +461,7 @@ void PinlokiSession::master_gtid_wait(const std::string& gtid, int timeout)
     {
         if (cb(mxb::Worker::Call::EXECUTE))
         {
-            mxs::RoutingWorker::get_current()->delayed_call(1000, cb);
+            m_mgw_dcid = mxs::RoutingWorker::get_current()->delayed_call(1000, cb);
         }
     }
     else

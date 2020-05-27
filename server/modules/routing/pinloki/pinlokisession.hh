@@ -61,6 +61,7 @@ private:
     mxq::Gtid               m_gtid;
     std::unique_ptr<Reader> m_reader;
     int64_t                 m_heartbeat_period = 0;
+    uint32_t                m_mgw_dcid = 0; // MASTER_GTID_WAIT delayed call
 
     mxs::Buffer package(const uint8_t* ptr, size_t size);
 
