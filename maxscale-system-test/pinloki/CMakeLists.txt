@@ -36,4 +36,4 @@ add_test_executable_ex(NAME pinloki_select_master SOURCE pinloki_select_master.c
 
 # TLS for master replication
 add_test_executable_ex(NAME pinloki_tls SOURCE pinloki_tls.cc
-  CONFIG pinloki.cnf VMS repl_backend LABELS pinloki BREAKS_REPL BACKEND_SSL)
+  CONFIG pinloki.cnf VMS repl_backend backend_ssl LABELS pinloki BREAKS_REPL)
