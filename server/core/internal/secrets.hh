@@ -19,6 +19,9 @@
 #include <maxscale/secrets.hh>
 #include <memory>
 
+using ByteVec = std::vector<uint8_t>;
+
+struct evp_cipher_st;
 extern const char* const SECRETS_FILENAME;
 
 /**
@@ -34,13 +37,27 @@ struct EncryptionKeys
     unsigned char initvector[iv_len] {0};
 };
 
+/**
+ * Returns the cipher used for password encryption.
+ *
+ * @return Cipher
+ */
+const evp_cipher_st* secrets_AES_cipher();
+int                  secrets_keylen();
+
 bool        load_encryption_keys();
-std::string encrypt_password(const EncryptionKeys& key, const std::string& input);
-std::string decrypt_password(const EncryptionKeys& key, const std::string& input);
+std::string encrypt_password_old(const EncryptionKeys& key, const std::string& input);
+std::string encrypt_password(const ByteVec& key, const std::string& input);
+
+std::string decrypt_password_old(const EncryptionKeys& key, const std::string& input);
+std::string decrypt_password(const ByteVec& key, const std::string& input);
 
 struct ReadKeyResult
 {
     bool                            ok {false};
-    std::unique_ptr<EncryptionKeys> key;
+    std::unique_ptr<EncryptionKeys> old_key;
+    ByteVec                         new_key;
 };
 ReadKeyResult secrets_readkeys(const std::string& filepath);
+ReadKeyResult secrets_readkeys2(const std::string& filepath);
+bool          secrets_write_keys(const ByteVec& key, const std::string& filepath, const std::string& owner);

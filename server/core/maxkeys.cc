@@ -20,6 +20,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <openssl/err.h>
+#include <openssl/evp.h>
 #include <openssl/rand.h>
 
 #include <maxbase/log.hh>
@@ -27,6 +28,7 @@
 #include "internal/secrets.hh"
 
 using std::string;
+using ByteVec = std::vector<uint8_t>;
 
 struct option options[] =
 {
@@ -37,8 +39,14 @@ struct option options[] =
 
 const string default_user = "maxscale";
 
-bool write_keys(const EncryptionKeys& key, const string& filepath, const string& owner);
+bool write_keys(const EncryptionKeys& key,
+                const string& filepath,
+                const string& owner);
+bool secrets_write_keys(const ByteVec& key,
+                        const string& filepath,
+                        const string& owner);
 std::unique_ptr<EncryptionKeys> gen_random_key();
+ByteVec                         generate_AES_key();
 
 void print_usage(const char* executable, const char* default_directory)
 {
@@ -111,8 +119,8 @@ int main(int argc, char** argv)
     }
 
     int rval = EXIT_FAILURE;
-    auto new_key = gen_random_key();
-    if (new_key && write_keys(*new_key, filepath, username))
+    auto new_key = generate_AES_key();
+    if (!new_key.empty() && secrets_write_keys(new_key, filepath, username))
     {
         rval = EXIT_SUCCESS;
     }
@@ -212,6 +220,20 @@ std::unique_ptr<EncryptionKeys> gen_random_key()
     {
         auto errornum = ERR_get_error();
         printf("OpenSSL RAND_bytes() failed. %s.\n", ERR_error_string(errornum, nullptr));
+    }
+    return key;
+}
+
+ByteVec generate_AES_key()
+{
+    int keylen = EVP_CIPHER_key_length(secrets_AES_cipher());
+    ByteVec key(keylen);
+    // Generate random bytes using OpenSSL.
+    if (RAND_bytes(key.data(), keylen) != 1)
+    {
+        auto errornum = ERR_get_error();
+        printf("OpenSSL RAND_bytes() failed. %s.\n", ERR_error_string(errornum, nullptr));
+        key.clear();
     }
     return key;
 }

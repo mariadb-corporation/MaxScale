@@ -107,50 +107,50 @@ int main(int argc, char** argv)
     string filepath = path;
     filepath.append("/").append(SECRETS_FILENAME);
 
-    auto keys = secrets_readkeys(filepath);
+    auto keys = secrets_readkeys2(filepath);
     if (keys.ok)
     {
-        if (keys.key)
+        bool encrypting = (mode == Mode::ENCRYPT);
+        if (keys.new_key.empty() && !keys.old_key)
         {
-            if (mode == Mode::ENCRYPT)
+            printf("Password encryption key file '%s' not found, cannot %s password.\n",
+                   filepath.c_str(), encrypting ? "encrypt" : "decrypt");
+        }
+        else if (encrypting)
+        {
+            string enc = !keys.new_key.empty() ? encrypt_password(keys.new_key, input) :
+                encrypt_password_old(*keys.old_key, input);
+            if (!enc.empty())
             {
-                std::string enc = encrypt_password(*keys.key, input);
-                if (!enc.empty())
-                {
-                    printf("%s\n", enc.c_str());
-                    rval = EXIT_SUCCESS;
-                }
-                else
-                {
-                    printf("Password encryption failed.\n");
-                }
+                printf("%s\n", enc.c_str());
+                rval = EXIT_SUCCESS;
             }
             else
             {
-                auto is_hex = std::all_of(input.begin(), input.end(), isxdigit);
-                if (is_hex && input.length() % 2 == 0)
-                {
-                    std::string decrypted = decrypt_password(*keys.key, input);
-                    if (!decrypted.empty())
-                    {
-                        printf("%s\n", decrypted.c_str());
-                        rval = EXIT_SUCCESS;
-                    }
-                    else
-                    {
-                        printf("Password decryption failed.\n");
-                    }
-                }
-                else
-                {
-                    printf("Input is not a valid hex-encoded encrypted password.\n");
-                }
+                printf("Password encryption failed.\n");
             }
         }
         else
         {
-            printf("Password encryption key file '%s' not found, cannot encrypt password.\n",
-                   filepath.c_str());
+            auto is_hex = std::all_of(input.begin(), input.end(), isxdigit);
+            if (is_hex && input.length() % 2 == 0)
+            {
+                std::string decrypted = !keys.new_key.empty() ? decrypt_password(keys.new_key, input) :
+                    decrypt_password_old(*keys.old_key, input);
+                if (!decrypted.empty())
+                {
+                    printf("%s\n", decrypted.c_str());
+                    rval = EXIT_SUCCESS;
+                }
+                else
+                {
+                    printf("Password decryption failed.\n");
+                }
+            }
+            else
+            {
+                printf("Input is not a valid hex-encoded encrypted password.\n");
+            }
         }
     }
     else
