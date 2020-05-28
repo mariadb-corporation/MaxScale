@@ -11,6 +11,7 @@
  * Public License.
  */
 #include "columnstore.hh"
+#include "csxml.hh"
 
 using std::string;
 using std::vector;
@@ -303,6 +304,177 @@ void xml::convert_to_single_node(xmlDoc& csDoc)
     // the current value is not "0.0.0.0".
     MXB_AT_DEBUG(n =) mxb::xml::update_if_not(cs, "/IPAddr", "127.0.0.1", "0.0.0.0");
     mxb_assert(n >= 0);
+}
+
+namespace
+{
+
+long get_next_node_id(xmlNode& cs)
+{
+    long nNext_node_id = 0;
+    xmlNode* pNext_node_id = mxb::xml::find_descendant(cs, xml::NEXTNODEID);
+
+    if (pNext_node_id)
+    {
+        nNext_node_id = mxb::xml::get_content_as<long>(*pNext_node_id);
+    }
+    else
+    {
+        MXS_NOTICE("Cluster 'Columnstore/%s' does not exist, counting the nodes instead.", xml::NEXTNODEID);
+        xmlNode& smc = mxb::xml::get_descendant(cs, xml::SYSTEMMODULECONFIG);
+
+        auto nodes = mxb::xml::find_children_by_prefix(smc, xml::MODULEIPADDR);
+
+        for (auto* pNode : nodes)
+        {
+            const char* zName = reinterpret_cast<const char*>(pNode->name);
+            // zName is now "ModuleIPAddrX-Y-Z", where X is the node id, Y a sequence number,
+            // and Z the role. IF Z is 3, the node in question is a performance node and that's
+            // what we are interested in now. The content of the node is an IP-address, and if
+            // that matches the address we are looking for, then we will know the node id
+            // corresponding to that address.
+
+            string tail(zName + strlen(xml::MODULEIPADDR));
+            vector<string> parts = mxb::strtok(tail, "-");
+            mxb_assert(parts.size() == 3);
+
+            if (parts.size() == 3)
+            {
+                long id = atoi(parts[0].c_str());
+
+                if (id > nNext_node_id)
+                {
+                    nNext_node_id = id;
+                }
+            }
+        }
+
+        nNext_node_id += 1;
+    }
+
+    return nNext_node_id;
+}
+
+long get_next_dbroot_id(xmlNode& cs)
+{
+    long nNext_dbroot_id = 0;
+    xmlNode* pNext_dbroot_id = mxb::xml::find_descendant(cs, xml::NEXTDBROOTID);
+
+    if (pNext_dbroot_id)
+    {
+        nNext_dbroot_id = mxb::xml::get_content_as<long>(*pNext_dbroot_id);
+    }
+    else
+    {
+        MXS_NOTICE("Cluster 'Columnstore/%s' does not exist, counting the dbroots instead.", xml::NEXTDBROOTID);
+        xmlNode& sc = mxb::xml::get_descendant(cs, xml::SYSTEMCONFIG);
+
+        auto nodes = mxb::xml::find_children_by_prefix(sc, xml::DBROOT);
+
+        for (auto* pNode : nodes)
+        {
+            const char* zName = reinterpret_cast<const char*>(pNode->name);
+            const char* zTail = zName + 6; // strlen(xml::DBROOT)
+
+            if (strcmp(zTail, xml::COUNT) != 0)
+            {
+                // Ok, not the "DBRootCount" entry, must be a "DBRootN" entry.
+
+                long id = atoi(zTail);
+
+                if (id > nNext_dbroot_id)
+                {
+                    nNext_dbroot_id = id;
+                }
+            }
+        }
+
+        nNext_dbroot_id += 1;
+    }
+
+    return nNext_dbroot_id;
+}
+
+void xadd_multi_node(xmlDoc& clusterDoc, xmlDoc& nodeDoc, const std::string& address, json_t* pOutput)
+{
+    xmlNode& cluster = xml::get_root(clusterDoc);
+    xmlNode& node = xml::get_root(nodeDoc);
+
+    xmlNode& scNode = mxb::xml::get_descendant(node, xml::SYSTEMCONFIG);
+    long nNode_roots = mxb::xml::get_content_as<long>(scNode, xml::DBROOTCOUNT);
+
+    xmlNode& scCluster = mxb::xml::get_descendant(cluster, xml::SYSTEMCONFIG);
+    long nCluster_roots = mxb::xml::get_content_as<long>(scCluster, xml::DBROOTCOUNT);
+
+    long nNext_node_id = get_next_node_id(cluster);
+    long nNext_dbroot_id = get_next_dbroot_id(cluster);
+
+    MXS_NOTICE("Using %ld as node id of new node.", nNext_node_id);
+    MXS_NOTICE("Numbering dbroots of new node from %ld as node id of new node.", nNext_dbroot_id);
+
+    for (long i = 0; i < nNode_roots; ++i)
+    {
+        string name(xml::DBROOT);
+        name += std::to_string(nNext_dbroot_id + i);
+
+        string content("/var/lib/columnstore/data");
+        content += std::to_string(nNext_dbroot_id);
+
+        mxb::xml::upsert(scCluster, name.c_str(), content.c_str());
+    }
+
+    nCluster_roots += nNode_roots;
+    mxb::xml::set_content(scCluster, xml::DBROOTCOUNT, nCluster_roots);
+
+    xmlNode& smcCluster = mxb::xml::get_descendant(cluster, xml::SYSTEMMODULECONFIG);
+
+    string nid = std::to_string(nNext_node_id);
+
+    string module_ipaddr(xml::MODULEIPADDR);
+    module_ipaddr += nid;
+    module_ipaddr += "-1-3";
+    mxb::xml::upsert(smcCluster, module_ipaddr.c_str(), address.c_str());
+
+    string module_dbroot_count(xml::MODULEDBROOTCOUNT);
+    module_dbroot_count += nid;
+    module_dbroot_count += "-3";
+    mxb::xml::upsert(smcCluster, module_dbroot_count.c_str(), std::to_string(nNode_roots).c_str());
+
+    for (long i = 0; i < nNode_roots; ++i)
+    {
+        string module_dbroot_id(xml::MODULEDBROOTID);
+        module_dbroot_id += nid;
+        module_dbroot_id += "-";
+        module_dbroot_id += std::to_string(i + 1);
+        module_dbroot_id += "-3";
+
+        mxb::xml::upsert(smcCluster, module_dbroot_id.c_str(), std::to_string(nNext_dbroot_id + i).c_str());
+    }
+
+    nNext_dbroot_id += nNode_roots;
+    mxb::xml::upsert(cluster, xml::NEXTDBROOTID, std::to_string(nNext_dbroot_id).c_str());
+
+    nNext_node_id += 1;
+    mxb::xml::upsert(cluster, xml::NEXTNODEID, std::to_string(nNext_node_id).c_str());
+}
+
+}
+
+bool xml::add_multi_node(xmlDoc& clusterDoc, xmlDoc& nodeDoc, const std::string& address, json_t* pOutput)
+{
+    bool rv = true;
+
+    try
+    {
+        xadd_multi_node(clusterDoc, nodeDoc, address, pOutput);
+    }
+    catch (const std::exception& x)
+    {
+        LOG_APPEND_JSON_ERROR(&pOutput, "%s", x.what());
+        rv = false;
+    }
+
+    return rv;
 }
 
 namespace

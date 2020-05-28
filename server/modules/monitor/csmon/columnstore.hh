@@ -65,6 +65,7 @@ namespace xml
 {
 
 const char CLUSTERMANAGER[]     = "ClusterManager";
+const char COUNT[]              = "Count";
 const char DBRM_CONTROLLER[]    = "DBRM_Controller";
 const char DBROOT[]             = "DBRoot";
 const char DBROOTCOUNT[]        = "DBRootCount";
@@ -74,6 +75,8 @@ const char IPADDR[]             = "IPAddr";
 const char MODULEIPADDR[]       = "ModuleIPAddr";
 const char MODULEDBROOTCOUNT[]  = "ModuleDBRootCount";
 const char MODULEDBROOTID[]     = "ModuleDBRootID";
+const char NEXTDBROOTID[]       = "NextDBRootId";
+const char NEXTNODEID[]         = "NextNodeId";
 const char SYSTEMCONFIG[]       = "SystemConfig";
 const char SYSTEMMODULECONFIG[] = "SystemModuleConfig";
 
@@ -126,6 +129,22 @@ void convert_to_first_multi_node(xmlDoc& csXml,
  * @param csXml  Multi-node configuration.
  */
 void convert_to_single_node(xmlDoc& csXml);
+
+/**
+ * @bried Add additional node to cluster.
+ *
+ * @param clusterDoc  The current cluster XML configuration document.
+ * @param nodeDoc     Configuration of node to be added.
+ * @param address     Public address of new node.
+ * @param pOutput     Json object for errors.
+ *
+ * @return True, if @c clusterDoc could be modified, false otherwise. A return value
+ *         of false indicates that the documents are broken.
+ */
+bool add_multi_node(xmlDoc& clusterDoc,
+                    xmlDoc& nodeDoc,
+                    const std::string& address,
+                    json_t* pOutput);
 
 namespace DbRoots
 {
