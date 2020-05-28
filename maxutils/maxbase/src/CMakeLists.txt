@@ -1,3 +1,7 @@
+find_package(LibXml2 REQUIRED)
+
+include_directories(${LIBXML2_INCLUDE_DIR})
+
 add_library(maxbase STATIC
   alloc.cc
   atomic.cc
@@ -26,6 +30,7 @@ add_library(maxbase STATIC
   watchdognotifier.cc
   worker.cc
   workertask.cc
+  xml.cc
   )
 
 if(HAVE_SYSTEMD)
