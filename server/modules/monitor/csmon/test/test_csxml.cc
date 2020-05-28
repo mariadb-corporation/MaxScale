@@ -28,6 +28,11 @@ bool equal(xmlNode& lhs, xmlNode& rhs);
 bool equal(xmlDoc& lhs, xmlDoc& rhs);
 bool equal(const unique_ptr<xmlDoc>& sLhs, const unique_ptr<xmlDoc>& sRhs);
 
+string dump(const std::unique_ptr<xmlDoc>& sDoc)
+{
+    return mxb::xml::dump(*sDoc.get());
+}
+
 }
 
 
@@ -225,9 +230,9 @@ bool update_dbroots(const char* zCase,
             {
                 cout << zCase << ": Config updated, but result not the expected one.\n"
                      << "\n"
-                     << "EXPECTED:\n" << xml::dump(sExpected) << "\n"
+                     << "EXPECTED:\n" << dump(sExpected) << "\n"
                      << "\n"
-                     << "OBTAINED:\n" << xml::dump(sDoc) << endl;
+                     << "OBTAINED:\n" << dump(sDoc) << endl;
             }
         }
         break;

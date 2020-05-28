@@ -219,17 +219,12 @@ bool services_from_array(json_t* pArray, ServiceVector* pServices)
     return rv;
 }
 
-namespace
-{
-
-xmlNode& get_root(xmlDoc& csXml)
+xmlNode& xml::get_root(xmlDoc& csXml)
 {
     xmlNode* pRoot = xmlDocGetRootElement(&csXml);
     mxb_assert(pRoot);
     mxb_assert(strcmp(reinterpret_cast<const char*>(pRoot->name), "Columnstore") == 0);
     return *pRoot;
-}
-
 }
 
 bool xml::find_node_id(xmlDoc& xmlDoc, const string& address, string* pNid)
@@ -281,53 +276,32 @@ bool xml::find_node_id(xmlDoc& xmlDoc, const string& address, string* pNid)
     return rv;
 }
 
-int xml::update_if(xmlDoc& xmlDoc, const char* zXpath, const char* zNew_value, const char* zIf_value)
-{
-    return mxb::xml::update_if(get_root(xmlDoc), zXpath, zNew_value, zIf_value);
-}
-
-int xml::update_if_not(xmlDoc& xmlDoc, const char* zXpath, const char* zNew_value, const char* zIf_value)
-{
-    return mxb::xml::update_if_not(get_root(xmlDoc), zXpath, zNew_value, zIf_value);
-}
-
-bool xml::insert(xmlDoc& csXml, const char* zKey, const char* zValue, mxb::xml::XmlLocation location)
-{
-    return mxb::xml::insert(get_root(csXml), zKey, zValue, location);
-}
-
-bool xml::upsert(xmlDoc& csXml, const char* zKey, const char* zValue, mxb::xml::XmlLocation location)
-{
-    return mxb::xml::upsert(get_root(csXml), zKey, zValue, location);
-}
-
-int xml::remove(xmlDoc& xmlDoc, const char* zXpath)
-{
-    return mxb::xml::remove(get_root(xmlDoc), zXpath);
-}
-
-void xml::convert_to_first_multi_node(xmlDoc& xmlDoc,
+void xml::convert_to_first_multi_node(xmlDoc& csDoc,
                                       const string& manager,
                                       const string& server_address)
 {
+    xmlNode& cs = get_root(csDoc);
+
     // Ensure there is a "ClusterManager" key whose value is 'manager'.
-    xml::upsert(xmlDoc, "ClusterManager", manager.c_str());
+    mxb::xml::upsert(cs, "ClusterManager", manager.c_str());
 
     // Replace all "IPAddr" values, irrespective of where they occur, with 'server_address'
     // if the current value is "127.0.0.1".
-    int n = xml::update_if(xmlDoc, "/IPAddr", server_address.c_str(), "127.0.0.1");
+    int n = mxb::xml::update_if(cs, "/IPAddr", server_address.c_str(), "127.0.0.1");
     mxb_assert(n >= 0);
 }
 
-void xml::convert_to_single_node(xmlDoc& xmlDoc)
+void xml::convert_to_single_node(xmlDoc& csDoc)
 {
+    xmlNode& cs = get_root(csDoc);
+
     MXB_AT_DEBUG(int n);
     // Remove the "ClusterManager" key.
-    MXB_AT_DEBUG(n =) xml::remove(xmlDoc, CLUSTERMANAGER);
+    MXB_AT_DEBUG(n =) mxb::xml::remove(cs, CLUSTERMANAGER);
     mxb_assert(n == 1);
     // Replace all "IPAddr" values, irrespective of where they occur, with "127.0.0.1", provided
     // the current value is not "0.0.0.0".
-    MXB_AT_DEBUG(n =) xml::update_if_not(xmlDoc, "/IPAddr", "127.0.0.1", "0.0.0.0");
+    MXB_AT_DEBUG(n =) mxb::xml::update_if_not(cs, "/IPAddr", "127.0.0.1", "0.0.0.0");
     mxb_assert(n >= 0);
 }
 

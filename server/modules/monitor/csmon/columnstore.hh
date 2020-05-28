@@ -84,6 +84,15 @@ const char SYSTEMMODULECONFIG[] = "SystemModuleConfig";
 const char ROLE_PM[] = "3";
 
 /**
+ * @brief Return the root node.
+ *
+ * @param csXml  The Columnstore configuration
+ *
+ * @return The root node.
+ */
+xmlNode& get_root(xmlDoc& csXml);
+
+/**
  * Find node id from Columnstore XML configuration.
  *
  * @param csXml    The XML document.
@@ -93,98 +102,6 @@ const char ROLE_PM[] = "3";
  * @return True, if the node id was found, false otherwise.
  */
 bool find_node_id(xmlDoc& csXml, const std::string& address, std::string* pNid);
-
-/**
- * Update value of key(s) in Columnstore XML configuration.
- *
- * @param csXml       The XML document.
- * @param zXpath      The XML path that identifies the key(s).
- * @param zNew_value  The new value.
- * @param zIf_value   If non-NULL, what the previous value must be for the replacement to be done.
- *
- * @return -1 in case of some low-level error (that outside development should not occur), otherwise
- *         the number of replacements made.
- */
-int update_if(xmlDoc& csXml, const char* zXpath, const char* zNew_value, const char* zIf_value);
-
-/**
- * Update value of key(s) in Columnstore XML configuration.
- *
- * @param csXml       The XML document.
- * @param zXpath      The XML path that identifies the key(s).
- * @param zNew_value  The new value.
- *
- * @return -1 in case of some low-level error (that outside development should not occur), otherwise
- *         the number of replacements made.
- */
-inline int update(xmlDoc& csXml, const char* zXpath, const char* zNew_value)
-{
-    return update_if(csXml, zXpath, zNew_value, nullptr);
-}
-
-/**
- * Update value of key(s) in Columnstore XML configuration.
- *
- * @param csXml       The XML document.
- * @param zXpath      The XML path that identifies the key(s).
- * @param zNew_value  The new value.
- * @param zIf_value   If non-NULL, what the previous value must *NOT* be for the replacement to be done.
- *
- * @return -1 in case of some low-level error (that outside development should not occur), otherwise
- *         the number of replacements made.
- */
-int update_if_not(xmlDoc& csXml, const char* zXpath, const char* zNew_value, const char* zIf_value = nullptr);
-
-/**
- * Insert new key/value to Columnstore XML configuration.
- *
- * @param csXml    The XML document.
- * @param zKey     The key. May be a path (not starting with '/') in which case
- *                 the hierarchy starting at @c pParent is first traversed.
- * @param zValue   The value.
- * @param location Where the element should be added.
- *
- * @return True, if the key/value could be added. A return value of false
- *         means that a path was specified, but the beginning path did not exist.
- */
-bool insert(xmlDoc& csXml,
-            const char* zKey,
-            const char* zValue,
-            mxb::xml::XmlLocation location = mxb::xml::XmlLocation::AT_BEGINNING);
-
-/**
- * Update or insert a key/value to XML document.
- *
- * @param csXml    The XML document.
- * @param zKey     The XML path identifying the key.
- * @param zValue   The value.
- * @param location If inserted, where the element should be added.
- *
- * @return True, if the key/value could be updated or inserted. A return value
- *         of false means that the path did not identify an existing element
- *         and that the beginning path did not exist, so the key could not be
- *         added either.
- */
-bool upsert(xmlDoc& csXml,
-            const char* zKey,
-            const char* zValue,
-            mxb::xml::XmlLocation location = mxb::xml::XmlLocation::AT_BEGINNING);
-
-/**
- * Remove key(s)
- *
- * @param csDoc    Columnstore XML configuration.
- * @param zXpath   The XML path identifying the key(s).
- *
- * @return -1 in case of some low-level error (that outside development should not occur), otherwise
- *         the number of removed keys.
- */
-int remove(xmlDoc& csXml, const char* zXPath);
-
-inline std::string dump(const std::unique_ptr<xmlDoc>& sDoc)
-{
-    return mxb::xml::dump(*sDoc.get());
-}
 
 /**
  * @brief Convert single-node XML configuration to first multi-node configuration.

@@ -61,7 +61,7 @@ void print_usage_and_exit()
     exit(EXIT_FAILURE);
 }
 
-bool create_first(xmlDoc& xml, int argc, char* argv[])
+bool create_first(xmlDoc& csDoc, int argc, char* argv[])
 {
     if (argc < 2)
     {
@@ -71,11 +71,11 @@ bool create_first(xmlDoc& xml, int argc, char* argv[])
     const char* zIp = argv[0];
     const char* zManager = argv[1];
 
-    xml::convert_to_first_multi_node(xml, zManager, zIp);
+    xml::convert_to_first_multi_node(csDoc, zManager, zIp);
     return true;
 }
 
-bool insert_b(xmlDoc& xml, int argc, char* argv[])
+bool insert_b(xmlDoc& csDoc, int argc, char* argv[])
 {
     if (argc < 2)
     {
@@ -85,11 +85,11 @@ bool insert_b(xmlDoc& xml, int argc, char* argv[])
     const char* zKey = argv[0];
     const char* zValue = argv[1];
 
-    xml::insert(xml, zKey, zValue, mxb::xml::XmlLocation::AT_BEGINNING);
+    mxb::xml::insert(xml::get_root(csDoc), zKey, zValue, mxb::xml::XmlLocation::AT_BEGINNING);
     return true;
 }
 
-bool insert_e(xmlDoc& xml, int argc, char* argv[])
+bool insert_e(xmlDoc& csDoc, int argc, char* argv[])
 {
     if (argc < 2)
     {
@@ -99,11 +99,11 @@ bool insert_e(xmlDoc& xml, int argc, char* argv[])
     const char* zKey = argv[0];
     const char* zValue = argv[1];
 
-    xml::insert(xml, zKey, zValue, mxb::xml::XmlLocation::AT_END);
+    mxb::xml::insert(xml::get_root(csDoc), zKey, zValue, mxb::xml::XmlLocation::AT_END);
     return true;
 }
 
-bool remove(xmlDoc& xml, int argc, char* argv[])
+bool remove(xmlDoc& csDoc, int argc, char* argv[])
 {
     if (argc < 1)
     {
@@ -112,17 +112,17 @@ bool remove(xmlDoc& xml, int argc, char* argv[])
 
     const char* zXpath = argv[0];
 
-    xml::remove(xml, zXpath);
+    mxb::xml::remove(xml::get_root(csDoc), zXpath);
     return true;
 }
 
-bool reset(xmlDoc& xml, int argc, char* argv[])
+bool reset(xmlDoc& csDoc, int argc, char* argv[])
 {
-    xml::convert_to_single_node(xml);
+    xml::convert_to_single_node(csDoc);
     return true;
 }
 
-bool scan(xmlDoc& xml, int argc, char* argv[])
+bool scan(xmlDoc& csDoc, int argc, char* argv[])
 {
     if (argc < 2)
     {
@@ -141,7 +141,7 @@ bool scan(xmlDoc& xml, int argc, char* argv[])
 
     json_t* pOutput = json_object();
 
-    switch (xml::update_dbroots(xml, zAddress, dbroots, pOutput))
+    switch (xml::update_dbroots(csDoc, zAddress, dbroots, pOutput))
     {
     case xml::DbRoots::NO_CHANGE:
         cout << "success: No change in dbroots." << endl;
@@ -159,7 +159,7 @@ bool scan(xmlDoc& xml, int argc, char* argv[])
     return true;
 }
 
-bool update_if(xmlDoc& xml, int argc, char* argv[])
+bool update_if(xmlDoc& csDoc, int argc, char* argv[])
 {
     if (argc < 2)
     {
@@ -170,11 +170,11 @@ bool update_if(xmlDoc& xml, int argc, char* argv[])
     const char* zNew_value = argv[1];
     const char* zIf_value = argc == 3 ? argv[2] : nullptr;
 
-    xml::update_if(xml, zXpath, zNew_value, zIf_value);
+    mxb::xml::update_if(xml::get_root(csDoc), zXpath, zNew_value, zIf_value);
     return true;
 }
 
-bool update_if_not(xmlDoc& xml, int argc, char* argv[])
+bool update_if_not(xmlDoc& csDoc, int argc, char* argv[])
 {
     if (argc < 2)
     {
@@ -185,11 +185,11 @@ bool update_if_not(xmlDoc& xml, int argc, char* argv[])
     const char* zNew_value = argv[1];
     const char* zIf_value = argc == 3 ? argv[2] : nullptr;
 
-    xml::update_if_not(xml, zXpath, zNew_value, zIf_value);
+    mxb::xml::update_if_not(xml::get_root(csDoc), zXpath, zNew_value, zIf_value);
     return true;
 }
 
-bool upsert(xmlDoc& xml, int argc, char* argv[])
+bool upsert(xmlDoc& csDoc, int argc, char* argv[])
 {
     if (argc < 2)
     {
@@ -199,7 +199,7 @@ bool upsert(xmlDoc& xml, int argc, char* argv[])
     const char* zXpath = argv[0];
     const char* zValue = argv[1];
 
-    xml::upsert(xml, zXpath, zValue);
+    mxb::xml::upsert(xml::get_root(csDoc), zXpath, zValue);
     return true;
 }
 
