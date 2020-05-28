@@ -438,7 +438,8 @@ int mxb::xml::remove(xmlNode& node, const char* zXpath)
 string mxb::xml::dump(const xmlDoc& doc)
 {
     xmlBuffer* pBuffer = xmlBufferCreate();
-    xmlNodeDump(pBuffer, const_cast<xmlDoc*>(&doc), xmlDocGetRootElement(&doc), 0, 0);
+    xmlDoc* pDoc = const_cast<xmlDoc*>(&doc);
+    xmlNodeDump(pBuffer, pDoc, xmlDocGetRootElement(pDoc), 0, 0);
     xmlChar* pXml = xmlBufferDetach(pBuffer);
     const char* zXml = reinterpret_cast<const char*>(pXml);
 
