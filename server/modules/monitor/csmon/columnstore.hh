@@ -84,62 +84,6 @@ const char SYSTEMMODULECONFIG[] = "SystemModuleConfig";
 const char ROLE_PM[] = "3";
 
 /**
- * Find descendant nodes corresponding to particular xpath.
- *
- * @param node    The node to use as root when searching.
- * @param zXpath  The xpath, defined relative to @c node.
- *
- * @return The nodes corresponding to the xpath.
- */
-std::vector<xmlNode*> find_nodes_by_xpath(xmlNode& node, const char* zXpath);
-
-/**
- * Find in Columnstore XML configuration nodes corresponding to particular xpath.
- *
- * @param csXml   Columnstore XML configuration.
- * @param zXpath  The xpath, defined relative to "/Columnstore".
- *
- * @note @c csXml must have a root object whose name is "Columnstore".
- *
- * @return The nodes corresponding to the xpath.
- */
-std::vector<xmlNode*> find_nodes_by_xpath(xmlDoc& xml, const char* zXpath);
-
-/**
- * Find descendant nodes corresponding to particular xpath.
- *
- * @note Should only be used with an xpath that can only identify a single node.
- *
- * @param node    The node to use as root when searching.
- * @param zXpath  The xpath, defined relative to @c node.
- *
- * @return The node corresponding to the xpath, or NULL if none do.
- */
-xmlNode* find_node_by_xpath(xmlNode& node, const char* zXpath);
-
-/**
- * Find in Columnstore XML configuration nodes corresponding to particular xpath.
- *
- * @note Should only be used with an xpath that can only identify a single node.
- *
- * @param csXml   Columnstore XML configuration.
- * @param zXpath  The xpath, defined relative to "/Columnstore".
- *
- * @return The node corresponding to the xpath, or NULL if none do.
- */
-xmlNode* find_node_by_xpath(xmlDoc& csXml, const char* zXpath);
-
-/**
- * Find children whose names begins with a certain prefix.
- *
- * @param parent   The parent node.
- * @param zPrefix  The prefix the name of a child should have to be included.
- *
- * @return Children that fulfill the requirement.
- */
-std::vector<xmlNode*> find_children_by_prefix(xmlNode& parent, const char* zPrefix);
-
-/**
  * Find node id from Columnstore XML configuration.
  *
  * @param csXml    The XML document.

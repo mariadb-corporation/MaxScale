@@ -11,6 +11,7 @@
  * Public License.
  */
 #include "columnstore.hh"
+#include <maxbase/xml.hh>
 #include <libxml/xpath.h>
 
 using std::string;
@@ -233,80 +234,15 @@ xmlNode& get_root(xmlDoc& csXml)
 
 }
 
-std::vector<xmlNode*> xml::find_nodes_by_xpath(xmlNode& node, const char* zXpath)
-{
-    vector<xmlNode*> nodes;
-
-    xmlXPathContext* pXpath_context = xmlXPathNewContext(node.doc);
-    mxb_assert(pXpath_context);
-
-    string path(zXpath);
-    path = "./" + path;
-    xmlXPathObject* pXpath_object = xmlXPathNodeEval(&node,
-                                                     reinterpret_cast<const xmlChar*>(path.c_str()),
-                                                     pXpath_context);
-
-
-    xmlNodeSet* pNodes = pXpath_object->nodesetval;
-
-    for (int i = 0; i < pNodes->nodeNr; ++i)
-    {
-        nodes.push_back(pNodes->nodeTab[i]);
-    }
-
-    xmlXPathFreeObject(pXpath_object);
-    xmlXPathFreeContext(pXpath_context);
-
-    return nodes;
-}
-
-std::vector<xmlNode*> xml::find_nodes_by_xpath(xmlDoc& csXml, const char* zXpath)
-{
-    return find_nodes_by_xpath(get_root(csXml), zXpath);
-}
-
-xmlNode* xml::find_node_by_xpath(xmlNode& node, const char* zXpath)
-{
-    vector<xmlNode*> nodes = find_nodes_by_xpath(node, zXpath);
-    mxb_assert(nodes.empty() || nodes.size() == 1);
-
-    return nodes.empty() ? nullptr : nodes.front();
-}
-
-xmlNode* xml::find_node_by_xpath(xmlDoc& csXml, const char* zXpath)
-{
-    return find_node_by_xpath(get_root(csXml), zXpath);
-}
-
-vector<xmlNode*> xml::find_children_by_prefix(xmlNode& parent, const char* zPrefix)
-{
-    vector<xmlNode*> nodes;
-
-    int n = strlen(zPrefix);
-    xmlNode* pChild = parent.children;
-
-    while (pChild)
-    {
-        if (strncmp(reinterpret_cast<const char*>(pChild->name), zPrefix, n) == 0)
-        {
-            nodes.push_back(pChild);
-        }
-
-        pChild = pChild->next;
-    }
-
-    return nodes;
-}
-
 bool xml::find_node_id(xmlDoc& xmlDoc, const string& address, string* pNid)
 {
     bool rv = false;
 
-    xmlNode* pSmc = xml::find_node_by_xpath(xmlDoc, SYSTEMMODULECONFIG);
+    xmlNode* pSmc = mxb::xml::find_descendant_by_xpath(get_root(xmlDoc), SYSTEMMODULECONFIG);
 
     if (pSmc)
     {
-        auto nodes = xml::find_children_by_prefix(*pSmc, xml::MODULEIPADDR);
+        auto nodes = mxb::xml::find_children_by_prefix(*pSmc, xml::MODULEIPADDR);
 
         for (auto* pNode : nodes)
         {
@@ -592,7 +528,7 @@ bool xml::upsert(xmlNode& parent, const char* zKey, const char* zValue, XmlLocat
 {
     bool rv = true;
 
-    vector<xmlNode*> nodes = find_nodes_by_xpath(parent, zKey);
+    vector<xmlNode*> nodes = mxb::xml::find_descendants_by_xpath(parent, zKey);
     mxb_assert(nodes.empty() || nodes.size() == 1);
 
     if (nodes.size() == 1)
@@ -790,7 +726,7 @@ xml::DbRoots::Status add_dbroots(xmlNode& smc,
 
     if (nUpdated == 1)
     {
-        xmlNode* pRoot_count = xml::find_node_by_xpath(sc, xml::DBROOTCOUNT);
+        xmlNode* pRoot_count = mxb::xml::find_descendant_by_xpath(sc, xml::DBROOTCOUNT);
         mxb_assert(pRoot_count);
 
         if (pRoot_count)
@@ -854,7 +790,7 @@ xml::DbRoots::Status remove_dbroots(xmlNode& smc,
         key += "-";
         key += xml::ROLE_PM;
 
-        xmlNode* pNode = xml::find_node_by_xpath(smc, key.c_str());
+        xmlNode* pNode = mxb::xml::find_descendant_by_xpath(smc, key.c_str());
 
         if (pNode)
         {
@@ -908,7 +844,7 @@ xml::DbRoots::Status remove_dbroots(xmlNode& smc,
 
         if (nUpdated == 1)
         {
-            xmlNode* pDbrc = xml::find_node_by_xpath(sc, xml::DBROOTCOUNT);
+            xmlNode* pDbrc = mxb::xml::find_descendant_by_xpath(sc, xml::DBROOTCOUNT);
 
             if (pDbrc)
             {
@@ -975,7 +911,7 @@ xml::DbRoots::Status xml::update_dbroots(xmlDoc& csXml,
     string nid;
     if (xml::find_node_id(csXml, address.c_str(), &nid))
     {
-        xmlNode* pSmc = xml::find_node_by_xpath(csXml, xml::SYSTEMMODULECONFIG);
+        xmlNode* pSmc = mxb::xml::find_descendant_by_xpath(get_root(csXml), xml::SYSTEMMODULECONFIG);
 
         if (pSmc)
         {
@@ -983,7 +919,7 @@ xml::DbRoots::Status xml::update_dbroots(xmlDoc& csXml,
 
             string prefix(xml::MODULEDBROOTID);
             prefix += nid;
-            vector<xmlNode*> nodes = xml::find_children_by_prefix(*pSmc, prefix.c_str());
+            vector<xmlNode*> nodes = mxb::xml::find_children_by_prefix(*pSmc, prefix.c_str());
 
             // Irrespective of the dbroots values, the ModuleDBRootID entries are numbered
             // consecutively, starting from 1. So we just need the count.
@@ -1020,7 +956,7 @@ xml::DbRoots::Status xml::update_dbroots(xmlDoc& csXml,
             if (rv != DbRoots::ERROR)
             {
                 int nRoots = dbroots.size();
-                xmlNode* pSc = xml::find_node_by_xpath(csXml, xml::SYSTEMCONFIG);
+                xmlNode* pSc = mxb::xml::find_descendant_by_xpath(get_root(csXml), xml::SYSTEMCONFIG);
                 mxb_assert(pSc);
 
                 if (n == nRoots)
