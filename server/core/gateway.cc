@@ -194,6 +194,7 @@ static void   enable_module_unloading(const char* arg);
 static void   enable_statement_logging(const char* arg);
 static void   disable_statement_logging(const char* arg);
 static void   enable_cors(const char* arg);
+static void   allow_duplicate_servers(const char* arg);
 static void   redirect_output_to_file(const char* arg);
 static bool   user_is_acceptable(const char* specified_user);
 static bool   init_sqlite3();
@@ -248,6 +249,10 @@ const DEBUG_ARGUMENT debug_arguments[] =
     {
         "enable-cors", enable_cors,
         "enable CORS support in the REST API"
+    },
+    {
+        "allow-duplicate-servers", allow_duplicate_servers,
+        "allow multiple servers to have the same address/port combination"
     },
     {NULL, NULL, NULL}
 };
@@ -2982,6 +2987,11 @@ static void disable_statement_logging(const char* arg)
 static void enable_cors(const char* arg)
 {
     mxs_admin_enable_cors();
+}
+
+static void allow_duplicate_servers(const char* arg)
+{
+    ServerManager::set_allow_duplicates(true);
 }
 
 static void redirect_output_to_file(const char* arg)

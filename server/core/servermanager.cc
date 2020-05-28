@@ -57,16 +57,18 @@ public:
 
         if (server)
         {
-            if (auto other = ServerManager::find_by_address(server->address(), server->port()))
-            {
-                MXS_ERROR("Cannot create server '%s' at '[%s]:%d', server '%s' exists there already.",
-                          server->name(), other->address(), other->port(), other->name());
-            }
-            else
+            auto other = ServerManager::find_by_address(server->address(), server->port());
+
+            if (!other || m_allow_duplicates)
             {
                 Guard guard(m_all_servers_lock);
                 // This keeps the order of the servers the same as in 2.2
                 rval = *m_all_servers.insert(m_all_servers.begin(), server.release());
+            }
+            else
+            {
+                MXS_ERROR("Cannot create server '%s' at '[%s]:%d', server '%s' exists there already.",
+                          server->name(), other->address(), other->port(), other->name());
             }
         }
 
@@ -93,9 +95,15 @@ public:
         m_all_servers.clear();
     }
 
+    void set_allow_duplicates(bool value)
+    {
+        m_allow_duplicates = value;
+    }
+
 private:
     std::mutex           m_all_servers_lock;/**< Protects access to array */
     std::vector<Server*> m_all_servers;     /**< Global list of servers, in configuration file order */
+    bool                 m_allow_duplicates = false;
 };
 
 ThisUnit this_unit;
@@ -185,6 +193,11 @@ json_t* ServerManager::server_to_json_resource(const Server* server, const char*
     string self = MXS_JSON_API_SERVERS;
     self += server->name();
     return mxs_json_resource(host, self.c_str(), server_to_json_data_relations(server, host));
+}
+
+void ServerManager::set_allow_duplicates(bool value)
+{
+    this_unit.set_allow_duplicates(value);
 }
 
 json_t* ServerManager::server_to_json_data_relations(const Server* server, const char* host)

@@ -84,6 +84,13 @@ public:
      */
     static json_t* server_to_json_resource(const Server* server, const char* host);
 
+    /**
+     * Set whether servers with duplicate host/port combinations are allowed
+     *
+     * @param value Whether to allow duplicate servers
+     */
+    static void set_allow_duplicates(bool value);
+
 private:
     static json_t* server_to_json_data_relations(const Server* server, const char* host);
     static json_t* server_to_json_attributes(const Server* server);
