@@ -85,7 +85,7 @@ bool insert_b(xmlDoc& xml, int argc, char* argv[])
     const char* zKey = argv[0];
     const char* zValue = argv[1];
 
-    xml::insert(xml, zKey, zValue, xml::XmlLocation::AT_BEGINNING);
+    xml::insert(xml, zKey, zValue, mxb::xml::XmlLocation::AT_BEGINNING);
     return true;
 }
 
@@ -99,7 +99,7 @@ bool insert_e(xmlDoc& xml, int argc, char* argv[])
     const char* zKey = argv[0];
     const char* zValue = argv[1];
 
-    xml::insert(xml, zKey, zValue, xml::XmlLocation::AT_END);
+    xml::insert(xml, zKey, zValue, mxb::xml::XmlLocation::AT_END);
     return true;
 }
 

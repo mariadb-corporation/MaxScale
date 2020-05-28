@@ -11,8 +11,6 @@
  * Public License.
  */
 #include "columnstore.hh"
-#include <maxbase/xml.hh>
-#include <libxml/xpath.h>
 
 using std::string;
 using std::vector;
@@ -283,371 +281,29 @@ bool xml::find_node_id(xmlDoc& xmlDoc, const string& address, string* pNid)
     return rv;
 }
 
-namespace
-{
-
-void xml_insert_leaf(xmlNode& parent, const char* zKey, const char* zValue, xml::XmlLocation location)
-{
-    mxb_assert(strchr(zKey, '/') == nullptr);
-
-    xmlNode* pChild = xmlNewNode(NULL, reinterpret_cast<const xmlChar*>(zKey));
-    xmlNode* pContent = xmlNewText(reinterpret_cast<const xmlChar*>(zValue));
-    xmlAddChild(pChild, pContent);
-
-    xmlNode* pSibling = parent.xmlChildrenNode;
-
-    if (location == xml::XmlLocation::AT_BEGINNING && pSibling)
-    {
-        xmlAddPrevSibling(pSibling, pChild);
-        xmlNode* pIndentation = xmlNewText(reinterpret_cast<const xmlChar*>("\n\t"));
-        xmlAddPrevSibling(pChild, pIndentation);
-    }
-    else
-    {
-        xmlAddChild(&parent, pChild);
-        if (pChild->prev
-            && pChild->prev->type == XML_TEXT_NODE
-            && strcmp(reinterpret_cast<char*>(xmlNodeGetContent(pChild->prev)), "\n") == 0)
-        {
-            xmlNodeSetContent(pChild->prev, reinterpret_cast<const xmlChar*>("\n\t"));
-        }
-        else
-        {
-            xmlNode* pIndentation = xmlNewText(reinterpret_cast<const xmlChar*>("\n\t"));
-            xmlAddPrevSibling(pChild, pIndentation);
-        }
-
-        xmlNode* pLinebreak = xmlNewText(reinterpret_cast<const xmlChar*>("\n"));
-        xmlAddNextSibling(pChild, pLinebreak);
-    }
-}
-
-enum class UpdateWhen
-{
-    IF,
-    IF_NOT
-};
-
-int xml_update(xmlNodeSet* pNodes, const char* zNew_value, const char* zIf_value, UpdateWhen update_when)
-{
-    int n = 0;
-    int nNodes = pNodes ? pNodes->nodeNr : 0;
-
-    // From the XML sample.
-    /*
-     * NOTE: the nodes are processed in reverse order, i.e. reverse document
-     *       order because xmlNodeSetContent can actually free up descendant
-     *       of the node and such nodes may have been selected too ! Handling
-     *       in reverse order ensure that descendant are accessed first, before
-     *       they get removed. Mixing XPath and modifications on a tree must be
-     *       done carefully !
-     */
-
-    for (int i = nNodes - 1; i >= 0; --i)
-    {
-        const char* zValue = nullptr;
-        auto* pNode = pNodes->nodeTab[i];
-
-        if (zIf_value)
-        {
-            zValue = reinterpret_cast<const char*>(xmlNodeGetContent(pNode));
-        }
-
-        bool do_update = false;
-
-        if (update_when == UpdateWhen::IF)
-        {
-            do_update = !zIf_value || (zValue && strcmp(zIf_value, zValue) == 0);
-        }
-        else
-        {
-            do_update = !zIf_value || (!zValue || strcmp(zIf_value, zValue) != 0);
-        }
-
-        if (do_update)
-        {
-            ++n;
-            xmlNodeSetContent(pNode, reinterpret_cast<const xmlChar*>(zNew_value));
-
-            // From the XML sample.
-            /*
-             * All the elements returned by an XPath query are pointers to
-             * elements from the tree *except* namespace nodes where the XPath
-             * semantic is different from the implementation in libxml2 tree.
-             * As a result when a returned node set is freed when
-             * xmlXPathFreeObject() is called, that routine must check the
-             * element type. But node from the returned set may have been removed
-             * by xmlNodeSetContent() resulting in access to freed data.
-             * This can be exercised by running
-             *       valgrind xpath2 test3.xml '//discarded' discarded
-             * There is 2 ways around it:
-             *   - make a copy of the pointers to the nodes from the result set
-             *     then call xmlXPathFreeObject() and then modify the nodes
-             * or
-             *   - remove the reference to the modified nodes from the node set
-             *     as they are processed, if they are not namespace nodes.
-             */
-            if (pNode->type != XML_NAMESPACE_DECL)
-            {
-                pNodes->nodeTab[i] = NULL;
-            }
-        }
-    }
-
-    return n;
-}
-
-int xml_update(xmlNode& node,
-               xmlXPathContext& xpath_context,
-               const char* zXpath,
-               const char* zNew_value,
-               const char* zIf_value,
-               UpdateWhen update_when)
-{
-    int n = -1;
-
-    string path(zXpath);
-    path = "./" + path;
-
-    xmlXPathObject* pXpath_object = xmlXPathNodeEval(&node,
-                                                     reinterpret_cast<const xmlChar*>(path.c_str()),
-                                                     &xpath_context);
-    mxb_assert(pXpath_object);
-
-    if (pXpath_object)
-    {
-        n = xml_update(pXpath_object->nodesetval, zNew_value, zIf_value, update_when);
-        xmlXPathFreeObject(pXpath_object);
-    }
-
-    return n;
-}
-
-}
-
-int xml::update_if(xmlNode& node, const char* zXpath, const char* zNew_value, const char* zIf_value)
-{
-    int n = -1;
-    xmlXPathContext* pXpath_context = xmlXPathNewContext(node.doc);
-    mxb_assert(pXpath_context);
-
-    if (pXpath_context)
-    {
-        n = xml_update(node, *pXpath_context, zXpath, zNew_value, zIf_value, UpdateWhen::IF);
-        xmlXPathFreeContext(pXpath_context);
-    }
-
-    return n;
-}
-
 int xml::update_if(xmlDoc& xmlDoc, const char* zXpath, const char* zNew_value, const char* zIf_value)
 {
-    xmlNode* pRoot = xmlDocGetRootElement(&xmlDoc);
-    mxb_assert(pRoot);
-
-    return update_if(*pRoot, zXpath, zNew_value, zIf_value);
-}
-
-int xml::update_if_not(xmlNode& node, const char* zXpath, const char* zNew_value, const char* zIf_value)
-{
-    int n = -1;
-
-    xmlXPathContext* pXpath_context = xmlXPathNewContext(node.doc);
-    mxb_assert(pXpath_context);
-
-    if (pXpath_context)
-    {
-        n = xml_update(node, *pXpath_context, zXpath, zNew_value, zIf_value, UpdateWhen::IF_NOT);
-        xmlXPathFreeContext(pXpath_context);
-    }
-
-    return n;
+    return mxb::xml::update_if(get_root(xmlDoc), zXpath, zNew_value, zIf_value);
 }
 
 int xml::update_if_not(xmlDoc& xmlDoc, const char* zXpath, const char* zNew_value, const char* zIf_value)
 {
-    xmlNode* pRoot = xmlDocGetRootElement(&xmlDoc);
-    mxb_assert(pRoot);
-
-    return update_if_not(*pRoot, zXpath, zNew_value, zIf_value);
+    return mxb::xml::update_if_not(get_root(xmlDoc), zXpath, zNew_value, zIf_value);
 }
 
-bool xml::insert(xmlNode& parent, const char* zKey, const char* zValue, XmlLocation location)
+bool xml::insert(xmlDoc& csXml, const char* zKey, const char* zValue, mxb::xml::XmlLocation location)
 {
-    mxb_assert(*zKey != '/');
-
-    bool rv = false;
-
-    string key(zKey);
-    auto pos = key.find_last_of("/");
-
-    if (pos == string::npos)
-    {
-        // zKey is a name and not a path.
-        xml_insert_leaf(parent, zKey, zValue, location);
-        rv = true;
-    }
-    else
-    {
-        string path = key.substr(0, pos);
-        string name = key.substr(pos + 1);
-
-        mxb_assert(&parent.doc);
-        xmlXPathContext* pXpath_context = xmlXPathNewContext(parent.doc);
-        mxb_assert(pXpath_context);
-
-        path = ".//" + path; // Search from the current node.
-        xmlXPathObject* pXpath_object = xmlXPathNodeEval(&parent,
-                                                         reinterpret_cast<const xmlChar*>(path.c_str()),
-                                                         pXpath_context);
-
-        xmlNodeSet* pNodes = pXpath_object->nodesetval;
-
-        if (pNodes->nodeNr != 0)
-        {
-            mxb_assert(pNodes->nodeNr == 1);
-
-            xml_insert_leaf(*pNodes->nodeTab[0], name.c_str(), zValue, location);
-            rv = true;
-        }
-
-        xmlXPathFreeObject(pXpath_object);
-        xmlXPathFreeContext(pXpath_context);
-    }
-
-    return rv;
+    return mxb::xml::insert(get_root(csXml), zKey, zValue, location);
 }
 
-bool xml::insert(xmlDoc& csXml, const char* zKey, const char* zValue, XmlLocation location)
+bool xml::upsert(xmlDoc& csXml, const char* zKey, const char* zValue, mxb::xml::XmlLocation location)
 {
-    mxb_assert(*zKey != '/');
-    return insert(get_root(csXml), zKey, zValue, location);
-}
-
-bool xml::upsert(xmlNode& parent, const char* zKey, const char* zValue, XmlLocation location)
-{
-    bool rv = true;
-
-    vector<xmlNode*> nodes = mxb::xml::find_descendants_by_xpath(parent, zKey);
-    mxb_assert(nodes.empty() || nodes.size() == 1);
-
-    if (nodes.size() == 1)
-    {
-        auto* pNode = nodes.front();
-
-        xmlNodeSetContent(pNode, reinterpret_cast<const xmlChar*>(zValue));
-    }
-    else
-    {
-        rv = insert(parent, zKey, zValue, location);
-    }
-
-    return rv;
-}
-
-bool xml::upsert(xmlDoc& csXml, const char* zKey, const char* zValue, XmlLocation location)
-{
-    return upsert(get_root(csXml), zKey, zValue, location);
-}
-
-namespace
-{
-
-int xml_remove(xmlNodeSet* pNodes)
-{
-    int nNodes = pNodes ? pNodes->nodeNr : 0;
-
-    // From the XML sample.
-    /*
-     * NOTE: the nodes are processed in reverse order, i.e. reverse document
-     *       order because xmlNodeSetContent can actually free up descendant
-     *       of the node and such nodes may have been selected too ! Handling
-     *       in reverse order ensure that descendant are accessed first, before
-     *       they get removed. Mixing XPath and modifications on a tree must be
-     *       done carefully !
-     */
-
-    for (int i = nNodes - 1; i >= 0; --i)
-    {
-        const char* zValue = nullptr;
-        auto* pNode = pNodes->nodeTab[i];
-
-        if (pNode->type != XML_NAMESPACE_DECL)
-        {
-            pNodes->nodeTab[i] = NULL;
-        }
-
-        if (pNode->prev
-            && pNode->prev->type == XML_TEXT_NODE
-            && strcmp(reinterpret_cast<char*>(xmlNodeGetContent(pNode->prev)), "\n\t") == 0)
-        {
-            auto pPrev = pNode->prev;
-            xmlUnlinkNode(pPrev);
-            xmlFreeNode(pPrev);
-        }
-
-        xmlUnlinkNode(pNode);
-        xmlFreeNode(pNode);
-    }
-
-    return nNodes;
-}
-
-int xml_remove(xmlNode& node, xmlXPathContext& xpath_context, const char* zXpath)
-{
-    int n = -1;
-
-    string path(zXpath);
-    path = "./" + path;
-    xmlXPathObject* pXpath_object = xmlXPathNodeEval(&node,
-                                                     reinterpret_cast<const xmlChar*>(path.c_str()),
-                                                     &xpath_context);
-    mxb_assert(pXpath_object);
-
-    if (pXpath_object)
-    {
-        n = xml_remove(pXpath_object->nodesetval);
-        xmlXPathFreeObject(pXpath_object);
-    }
-
-    return n;
-}
-
-}
-
-int xml::remove(xmlNode& node, const char* zXpath)
-{
-    int n = -1;
-    xmlXPathContext* pXpath_context = xmlXPathNewContext(node.doc);
-    mxb_assert(pXpath_context);
-
-    if (pXpath_context)
-    {
-        n = xml_remove(node, *pXpath_context, zXpath);
-        xmlXPathFreeContext(pXpath_context);
-    }
-
-    return n;
+    return mxb::xml::upsert(get_root(csXml), zKey, zValue, location);
 }
 
 int xml::remove(xmlDoc& xmlDoc, const char* zXpath)
 {
-    return remove(get_root(xmlDoc), zXpath);
-}
-
-string xml::dump(xmlDoc& doc)
-{
-    xmlBuffer* pBuffer = xmlBufferCreate();
-    xmlNodeDump(pBuffer, &doc, xmlDocGetRootElement(&doc), 0, 0);
-    xmlChar* pXml = xmlBufferDetach(pBuffer);
-    const char* zXml = reinterpret_cast<const char*>(pXml);
-
-    string xml(zXml);
-
-    MXS_FREE(pXml);
-    xmlBufferFree(pBuffer);
-
-    return xml;
+    return mxb::xml::remove(get_root(xmlDoc), zXpath);
 }
 
 void xml::convert_to_first_multi_node(xmlDoc& xmlDoc,
@@ -722,7 +378,7 @@ xml::DbRoots::Status add_dbroots(xmlNode& smc,
     key += "-";
     key += xml::ROLE_PM;
 
-    int nUpdated = xml::update(smc, key.c_str(), std::to_string(nRoots).c_str());
+    int nUpdated = mxb::xml::update(smc, key.c_str(), std::to_string(nRoots).c_str());
 
     if (nUpdated == 1)
     {
@@ -748,7 +404,7 @@ xml::DbRoots::Status add_dbroots(xmlNode& smc,
                 string value("/var/lib/columnstore/data");
                 value += suffix;
 
-                xml::upsert(sc, key.c_str(), value.c_str());
+                mxb::xml::upsert(sc, key.c_str(), value.c_str());
             }
 
             rv = xml::DbRoots::UPDATED;
@@ -796,14 +452,14 @@ xml::DbRoots::Status remove_dbroots(xmlNode& smc,
         {
             const char* zId = reinterpret_cast<const char*>(xmlNodeGetContent(pNode));
 
-            int nRemoved = xml::remove(smc, key.c_str());
+            int nRemoved = mxb::xml::remove(smc, key.c_str());
 
             if (nRemoved == 1)
             {
                 key = xml::DBROOT;
                 key += zId;
 
-                nRemoved = xml::remove(sc, key.c_str());
+                nRemoved = mxb::xml::remove(sc, key.c_str());
 
                 if (nRemoved != 1)
                 {
@@ -840,7 +496,7 @@ xml::DbRoots::Status remove_dbroots(xmlNode& smc,
         key += "-";
         key += xml::ROLE_PM;
 
-        int nUpdated = xml::update(smc, key.c_str(), std::to_string(dbroots.size()).c_str());
+        int nUpdated = mxb::xml::update(smc, key.c_str(), std::to_string(dbroots.size()).c_str());
 
         if (nUpdated == 1)
         {
@@ -860,7 +516,7 @@ xml::DbRoots::Status remove_dbroots(xmlNode& smc,
                     l -= (n - nRoots);
                     mxb_assert(l >= 1);
 
-                    nUpdated = xml::update(sc, xml::DBROOTCOUNT, std::to_string(l).c_str());
+                    nUpdated = mxb::xml::update(sc, xml::DBROOTCOUNT, std::to_string(l).c_str());
 
                     if (nUpdated != 1)
                     {
