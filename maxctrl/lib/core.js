@@ -110,6 +110,7 @@ program
     .command(require('./stop.js'))
     .command(require('./alter.js'))
     .command(require('./rotate.js'))
+    .command(require('./reload.js'))
     .command(require('./call.js'))
     .command(require('./cluster.js'))
     .command(require('./api.js'))
