@@ -291,6 +291,8 @@ void Replicator::Imp::process_events()
             break;
         }
     }
+
+    qc_thread_end(QC_INIT_BOTH);
 }
 
 std::string to_gtid_string(const MARIADB_RPL_EVENT& event)

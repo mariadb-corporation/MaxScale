@@ -64,6 +64,8 @@ public:
     }
 };
 
+static KafkaLogger kafka_logger;
+
 class KafkaEventHandler : public RowEventHandler
 {
 public:
@@ -117,6 +119,11 @@ public:
                     partitions.push_back(RdKafka::TopicPartition::create(m_topic, 0, high - 1));
                     consumer->assign(partitions);
                     auto msg = consumer->consume(m_timeout);
+
+                    for (auto p : partitions)
+                    {
+                        delete p;
+                    }
 
                     if (msg->err() == RdKafka::ERR_NO_ERROR)
                     {
@@ -303,7 +310,7 @@ private:
 
         if (cnf)
         {
-            if (cnf->set("event_cb", new KafkaLogger, err) != OK)
+            if (cnf->set("event_cb", &kafka_logger, err) != OK)
             {
                 MXS_ERROR("Failed to set Kafka event logger: %s", err.c_str());
                 cnf.reset();
