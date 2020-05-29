@@ -24,7 +24,7 @@ string mxb::xml::get_qualified_name(const xmlNode& node)
 
     const xmlNode* pParent = node.parent;
 
-    while (pParent)
+    while (pParent && pParent->type != XML_DOCUMENT_NODE)
     {
         s = string(reinterpret_cast<const char*>(pParent->name)) + "/" + s;
         pParent = pParent->parent;
