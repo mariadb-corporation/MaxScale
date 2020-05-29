@@ -16,6 +16,7 @@
 #include <memory>
 #include <sstream>
 #include <stdexcept>
+#include <maxbase/alloc.h>
 
 // This is likely to be included in <maxbase/xml.hh>, hence here also
 // placed in the maxbase::xml namespace.
@@ -93,10 +94,19 @@ inline std::string get_content_as<std::string>(const xmlChar* pContent)
  *
  * @throws @c Exception if the content cannot be converted to the type.
  */
+
 template<class T>
 T get_content_as(xmlNode& node)
 {
-    std::unique_ptr<xmlChar> sContent(xmlNodeGetContent(&node));
+    struct Deleter
+    {
+        void operator()(xmlChar* pContent)
+        {
+            MXS_FREE(pContent);
+        }
+    };
+
+    std::unique_ptr<xmlChar, Deleter> sContent(xmlNodeGetContent(&node));
     return mxb::xml::get_content_as<T>(sContent.get());
 }
 
