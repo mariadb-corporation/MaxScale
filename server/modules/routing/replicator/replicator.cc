@@ -385,7 +385,6 @@ bool Replicator::Imp::process_one_event(SQL::Event& event)
         {
             // End of a transaction, a safe place to stop
             m_safe_to_stop = true;
-            break;
         }
         break;
 
@@ -402,6 +401,13 @@ bool Replicator::Imp::process_one_event(SQL::Event& event)
         {
             m_implicit_commit = false;
             commit = true;
+        }
+        break;
+
+    case HEARTBEAT_EVENT:
+        if (m_should_stop)
+        {
+            m_safe_to_stop = true;
         }
         break;
 

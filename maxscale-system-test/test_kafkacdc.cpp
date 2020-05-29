@@ -69,8 +69,12 @@ int main(int argc, char** argv)
     test.repl->stop_slaves();
     auto conn = test.repl->get_connection(0);
 
+    // Connect to Kafka
+    prepare_consumer(test);
+
     test.tprintf("Inserting data");
     conn.connect();
+    conn.query("RESET MASTER");
     conn.query("CREATE TABLE t1(id INT)");
     conn.query("INSERT INTO t1 VALUES (1), (2), (3)");
     conn.query("UPDATE t1 SET id = 4 WHERE id = 2");
@@ -79,9 +83,6 @@ int main(int argc, char** argv)
 
     test.tprintf("Give MaxScale some time to process the events");
     sleep(5);
-
-    // Connect to Kafka
-    prepare_consumer(test);
 
     read_messages(test, 7);
 
