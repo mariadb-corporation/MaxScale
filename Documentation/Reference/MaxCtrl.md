@@ -31,6 +31,7 @@ For more information about the MaxScale REST API, refer to the
 * [stop](#stop)
 * [alter](#alter)
 * [rotate](#rotate)
+* [reload](#reload)
 * [call](#call)
 * [cluster](#cluster)
 * [api](#api)
@@ -49,7 +50,8 @@ All command accept the following global options.
                   and each value must be separated by a comma.
                                             [string] [default: "localhost:8989"]
   -t, --timeout   Request timeout in milliseconds      [number] [default: 10000]
-  -q, --quiet     Silence all output                  [boolean] [default: false]
+  -q, --quiet     Silence all output. Ignored while in interactive mode.
+                                                      [boolean] [default: false]
   --tsv           Print tab separated output          [boolean] [default: false]
 
 HTTPS/TLS Options:
@@ -271,6 +273,7 @@ Show detailed information about a server. The `Parameters` field contains the cu
   Address          | Address where the server listens
   Port             | The port on which the server listens
   State            | Server state
+  Version          | Server version
   Last Event       | The type of the latest event
   Triggered At     | Time when the latest event was triggered at
   Services         | Services that use this server
@@ -294,6 +297,7 @@ Show detailed information about all servers.
   Address          | Address where the server listens
   Port             | The port on which the server listens
   State            | Server state
+  Version          | Server version
   Last Event       | The type of the latest event
   Triggered At     | Time when the latest event was triggered at
   Services         | Services that use this server
@@ -320,6 +324,7 @@ Show detailed information about a service. The `Parameters` field contains the c
   Current Connections | Current connection count
   Total Connections   | Total connection count
   Servers             | Servers that the service uses
+  Filters             | Filters that the service uses
   Parameters          | Service parameter
   Router Diagnostics  | Diagnostics provided by the router module
 
@@ -339,6 +344,7 @@ Show detailed information about all services.
   Current Connections | Current connection count
   Total Connections   | Total connection count
   Servers             | Servers that the service uses
+  Filters             | Filters that the service uses
   Parameters          | Service parameter
   Router Diagnostics  | Diagnostics provided by the router module
 
@@ -770,7 +776,8 @@ The new listener will be taken into use immediately.
 
 The created user can be used with the MaxScale REST API as well as the MaxAdmin
 network interface. By default the created user will have read-only privileges.
-To make the user an administrative user, use the `--type=admin` option.
+To make the user an administrative user, use the `--type=admin` option. Basic
+users can only perform `list` and `show` commands.
 
 ## destroy
 
@@ -1106,6 +1113,20 @@ Commands:
 
 This command is intended to be used with the `logrotate` command.
 
+## reload
+
+```
+Usage: reload <command>
+
+Commands:
+  service <service>  Reloads the database users of this service
+
+```
+
+### reload service
+
+`Usage: reload service <service>`
+
 ## call
 
 ```
@@ -1146,12 +1167,15 @@ format
 `Usage: cluster sync <target>`
 
 This command will alter all MaxScale instances given in the --hosts option to
-represent the <target> MaxScale. If the synchronization of a MaxScale instance
-fails, it will be disabled by executing the `stop maxscale` command on that
-instance. Synchronization can be attempted again if a previous attempt failed
-due to a network failure or some other ephemeral error. Any other errors require
-manual synchronization of the MaxScale configuration files and a restart of the
-failed Maxscale.
+represent the <target> MaxScale. Value of <target> must be in HOST:PORT format.
+Synchronization can be attempted again if a previous attempt failed due to a
+network failure or some other ephemeral error. Any other errors require manual
+synchronization of the MaxScale configuration files and a restart of the failed
+Maxscale.
+
+Note: New objects created by `cluster sync` will have a placeholder value and
+must be manually updated. Passwords for existing objects will not be updated by
+`cluster sync` and must also be manually updated.
 
 ## api
 
