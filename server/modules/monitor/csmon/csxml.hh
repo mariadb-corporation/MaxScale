@@ -165,5 +165,31 @@ void set_content(xmlNode& ancestor, const char* zPath, const T& t)
     set_content(node, t);
 }
 
+/**
+ * @brief Compare two nodes for equality. Two node are considered equal if
+ *        both nodes have the same elements with the same content. However,
+ *        the order of the elements need not be the same.
+ *
+ * @param lhs   One node.
+ * @param rhs   Another node.
+ * @param pErr  If non-NULL, user readable mismatches are written here.
+ *
+ * @return True, if the nodes are equal, false otherwise.
+ */
+bool equal(const xmlNode& lhs, const xmlNode& rhs, std::ostream* pErr = nullptr);
+
+/**
+ * @brief Compare two documents for equality. Two documents are considered equal if
+ *        both documents have the same elements with the same content. However,
+ *        the order of the elements need not be the same.
+ *
+ * @param lhs      One document.
+ * @param rhs      Another document.
+ * @param pErrors  If non-NULL, user readable mismatches are written here.
+ *
+ * @return True, if the nodes are equal, false otherwise.
+ */
+bool equal(const xmlDoc& lhs, const xmlDoc& rhs, std::ostream* pErr = nullptr);
+
 }
 }
