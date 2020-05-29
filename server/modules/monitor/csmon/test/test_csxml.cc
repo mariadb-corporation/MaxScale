@@ -22,8 +22,6 @@ namespace xml = cs::xml;
 namespace
 {
 
-unique_ptr<xmlDoc> compile_xml(const char* zXml);
-
 bool equal(xmlNode& lhs, xmlNode& rhs);
 bool equal(xmlDoc& lhs, xmlDoc& rhs);
 bool equal(const unique_ptr<xmlDoc>& sLhs, const unique_ptr<xmlDoc>& sRhs);
@@ -83,14 +81,14 @@ const char ZFIRST_MULTI_NODE[] = R"(
 int test_convert_to_first_multi_node()
 {
     int rv = 0;
-    unique_ptr<xmlDoc> sDoc = compile_xml(ZSINGLE_NODE);
+    unique_ptr<xmlDoc> sDoc = mxb::xml::load(ZSINGLE_NODE);
 
     const char IP[] = "198.168.0.1";
     const char MANAGER[] = "10.11.12.13";
 
     xml::convert_to_first_multi_node(*sDoc.get(), MANAGER, IP);
 
-    unique_ptr<xmlDoc> sExpected = compile_xml(ZFIRST_MULTI_NODE);
+    unique_ptr<xmlDoc> sExpected = mxb::xml::load(ZFIRST_MULTI_NODE);
 
     if (equal(sExpected, sDoc))
     {
@@ -98,7 +96,7 @@ int test_convert_to_first_multi_node()
 
         xml::convert_to_single_node(*sDoc.get());
 
-        sExpected = compile_xml(ZSINGLE_NODE);
+        sExpected = mxb::xml::load(ZSINGLE_NODE);
 
         if (equal(sExpected, sDoc))
         {
@@ -219,7 +217,7 @@ bool update_dbroots(const char* zCase,
     {
     case xml::DbRoots::UPDATED:
         {
-            auto sExpected = compile_xml(zExpected);
+            auto sExpected = mxb::xml::load(zExpected);
 
             if (equal(sDoc, sExpected))
             {
@@ -256,7 +254,7 @@ bool update_dbroots(const char* zCase,
 int test_scan_for_dbroots()
 {
     int rv = 0;
-    unique_ptr<xmlDoc> sDoc = compile_xml(ZSCAN_1_2);
+    unique_ptr<xmlDoc> sDoc = mxb::xml::load(ZSCAN_1_2);
 
     json_t* pOutput = json_object();
     string address { "192.168.0.1" };
@@ -559,13 +557,13 @@ int test_add_multi_node()
     int rv = 1;
     json_t* pOutput = json_object();
 
-    unique_ptr<xmlDoc> sCluster = compile_xml(ZCLUSTER_CONFIG);
-    unique_ptr<xmlDoc> sNode = compile_xml(ZNODE_CONFIG);
+    unique_ptr<xmlDoc> sCluster = mxb::xml::load(ZCLUSTER_CONFIG);
+    unique_ptr<xmlDoc> sNode = mxb::xml::load(ZNODE_CONFIG);
 
     bool added = cs::xml::add_multi_node(*sCluster.get(), *sNode.get(), "192.168.0.3", pOutput);
     mxb_assert(added);
 
-    unique_ptr<xmlDoc> sMerged = compile_xml(ZMERGED_CONFIG);
+    unique_ptr<xmlDoc> sMerged = mxb::xml::load(ZMERGED_CONFIG);
 
     if (equal(sCluster, sMerged))
     {
@@ -597,12 +595,6 @@ int main()
 
 namespace
 {
-
-unique_ptr<xmlDoc> compile_xml(const char* zXml)
-{
-    unique_ptr<xmlDoc> sDoc(xmlReadMemory(zXml, strlen(zXml), "cs.xml", NULL, 0));
-    return sDoc;
-}
 
 bool equal(const string& path,
            xmlNode& lhs, xmlXPathContext& lContext,

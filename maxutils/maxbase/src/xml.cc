@@ -18,6 +18,12 @@
 
 using namespace std;
 
+std::unique_ptr<xmlDoc> mxb::xml::load(const char* zXml, size_t len, const std::string& url)
+{
+    unique_ptr<xmlDoc> sDoc(xmlReadMemory(zXml, strlen(zXml), url.c_str(), NULL, 0));
+    return sDoc;
+}
+
 string mxb::xml::get_content(const xmlNode& node)
 {
     xmlChar* pContent = xmlNodeGetContent(const_cast<xmlNode*>(&node));

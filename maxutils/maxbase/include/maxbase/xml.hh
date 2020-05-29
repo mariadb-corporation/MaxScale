@@ -13,15 +13,51 @@
 #pragma once
 
 #include <maxbase/ccdefs.hh>
+#include <cstring>
+#include <memory>
 #include <string>
 #include <vector>
 #include <libxml/tree.h>
+
+namespace std
+{
+template<>
+class default_delete<xmlDoc>
+{
+public:
+    void operator()(xmlDoc* pDoc)
+    {
+        xmlFreeDoc(pDoc);
+    }
+};
+}
 
 namespace maxbase
 {
 
 namespace xml
 {
+
+/**
+ * @brief Compile textual XML into an XML document object.
+ *
+ * @param zXml The XML text.
+ * @param len  The length of the text.
+ * @param url  Base URL of the document.
+ *
+ * @param A XML document object or NULL if the text could not be compiled.
+ */
+std::unique_ptr<xmlDoc> load(const char* zXml, size_t len, const std::string& url = "noname.xml");
+
+inline std::unique_ptr<xmlDoc> load(const char* zXml, const std::string& url = "noname.xml")
+{
+    return load(zXml, strlen(zXml), url);
+}
+
+inline std::unique_ptr<xmlDoc> load(const std::string& xml, const std::string& url = "noname.xml")
+{
+    return load(xml.c_str(), xml.length(), url);
+}
 
 /**
  * @brief Get the content of a node.

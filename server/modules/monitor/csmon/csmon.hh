@@ -16,10 +16,9 @@
 
 #include <maxscale/ccdefs.hh>
 #include <memory>
-#include <libxml/parser.h>
-#include <libxml/tree.h>
 #include <maxscale/json_api.hh>
 #include <maxscale/monitor.hh>
+#include "csxml.hh"
 
 #if defined(SS_DEBUG)
 // This will expose the begin|commit|rollback as module call commands. Only
@@ -61,19 +60,6 @@ inline bool cs_is_not_null_workaround(json_t** ppJson)
             *ppJson = mxs_json_error_push_front_new(*ppJson, mxs_json_error(zFormat, ##__VA_ARGS__)); \
         } \
     } while (false)
-
-namespace std
-{
-
-template<>
-struct default_delete<xmlDoc>
-{
-    void operator()(xmlDocPtr pDoc)
-    {
-        xmlFreeDoc(pDoc);
-    }
-};
-}
 
 namespace csmon
 {
