@@ -18,6 +18,14 @@
 
 using namespace std;
 
+string mxb::xml::get_content(const xmlNode& node)
+{
+    xmlChar* pContent = xmlNodeGetContent(const_cast<xmlNode*>(&node));
+    string content(reinterpret_cast<const char*>(pContent));
+    MXS_FREE(pContent);
+    return content;
+}
+
 string mxb::xml::get_qualified_name(const xmlNode& node)
 {
     string s(reinterpret_cast<const char*>(node.name));

@@ -24,6 +24,15 @@ namespace xml
 {
 
 /**
+ * @brief Get the content of a node.
+ *
+ * @param node  The node whose content to get.
+ *
+ * @return The content.
+ */
+std::string get_content(const xmlNode& node);
+
+/**
  * @brief Get the fully qualified name of a node.
  *
  * @param node  The node.
