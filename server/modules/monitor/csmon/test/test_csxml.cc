@@ -61,12 +61,12 @@ const char ZSINGLE_NODE[] = R"(
 
 const char ZFIRST_MULTI_NODE[] = R"(
 <Columnstore Version="V1.0.0">
-  <ClusterManager>MaxScale</ClusterManager>
+  <ClusterManager>10.11.12.13</ClusterManager>
   <DBRoot1>
     <PreallocSpace>OFF</PreallocSpace>
   </DBRoot1>
   <ExeMgr1>
-    <IPAddr>123.45.67.89</IPAddr>
+    <IPAddr>198.168.0.1</IPAddr>
     <Port>8601</Port>
     <Module>pm1</Module>
   </ExeMgr1>
@@ -75,7 +75,7 @@ const char ZFIRST_MULTI_NODE[] = R"(
     <Port>8602</Port>
   </JobProc>
   <ProcMgr>
-    <IPAddr>123.45.67.89</IPAddr>
+    <IPAddr>198.168.0.1</IPAddr>
     <Port>8603</Port>
   </ProcMgr>
 </Columnstore>)";
@@ -85,8 +85,8 @@ int test_convert_to_first_multi_node()
     int rv = 0;
     unique_ptr<xmlDoc> sDoc = compile_xml(ZSINGLE_NODE);
 
-    const char IP[] = "123.45.67.89";
-    const char MANAGER[] = "MaxScale";
+    const char IP[] = "198.168.0.1";
+    const char MANAGER[] = "10.11.12.13";
 
     xml::convert_to_first_multi_node(*sDoc.get(), MANAGER, IP);
 
@@ -338,6 +338,251 @@ int test_scan_for_dbroots()
 }
 }
 
+namespace
+{
+
+const char ZCLUSTER_CONFIG[] = R"(
+<Columnstore Version="V1.0.0">
+  <ClusterManager>10.11.12.13</ClusterManager>
+  <SystemConfig>
+    <DBRootCount>3</DBRootCount>
+    <DBRoot1>/var/lib/columnstore/data1</DBRoot1>
+    <DBRoot2>/var/lib/columnstore/data2</DBRoot2>
+    <DBRoot3>/var/lib/columnstore/data3</DBRoot3>
+  </SystemConfig>
+  <SystemModuleConfig>
+    <ModuleIPAddr1-1-3>192.168.0.1</ModuleIPAddr1-1-3>
+    <ModuleDBRootCount1-3>2</ModuleDBRootCount1-3>
+    <ModuleDBRootID1-1-3>1</ModuleDBRootID1-1-3>
+    <ModuleDBRootID1-2-3>3</ModuleDBRootID1-2-3>
+    <ModuleIPAddr2-1-3>192.168.0.2</ModuleIPAddr2-1-3>
+    <ModuleDBRootCount2-3>1</ModuleDBRootCount2-3>
+    <ModuleDBRootID2-1-3>2</ModuleDBRootID2-1-3>
+  </SystemModuleConfig>
+  <PrimitiveServers>
+    <Count>2</Count>
+  </PrimitiveServers>
+  <PMS1>
+    <IPAddr>192.168.0.1</IPAddr>
+    <Port>8620</Port>
+  </PMS1>
+  <PMS2>
+    <IPAddr>192.168.0.2</IPAddr>
+    <Port>8620</Port>
+  </PMS2>
+  <PMS3>
+    <IPAddr>192.168.0.1</IPAddr>
+    <Port>8620</Port>
+  </PMS3>
+  <PMS4>
+    <IPAddr>192.168.0.2</IPAddr>
+    <Port>8620</Port>
+  </PMS4>
+  <PMS5>
+    <IPAddr>192.168.0.1</IPAddr>
+    <Port>8620</Port>
+  </PMS5>
+  <PMS6>
+    <IPAddr>192.168.0.2</IPAddr>
+    <Port>8620</Port>
+  </PMS6>
+  <PMS7>
+    <IPAddr>192.168.0.1</IPAddr>
+    <Port>8620</Port>
+  </PMS7>
+  <PMS8>
+    <IPAddr>192.168.0.2</IPAddr>
+    <Port>8620</Port>
+  </PMS8>
+  <PMS9>
+    <IPAddr>192.168.0.1</IPAddr>
+    <Port>8620</Port>
+  </PMS9>
+  <PMS10>
+    <IPAddr>192.168.0.2</IPAddr>
+    <Port>8620</Port>
+  </PMS10>
+  <PMS11>
+    <IPAddr>192.168.0.1</IPAddr>
+    <Port>8620</Port>
+  </PMS11>
+  <PMS12>
+    <IPAddr>192.168.0.2</IPAddr>
+    <Port>8620</Port>
+  </PMS12>
+</Columnstore>
+)";
+
+const char ZNODE_CONFIG[] = R"(
+<Columnstore Version="V1.0.0">
+  <ClusterManager>10.11.12.13</ClusterManager>
+  <SystemConfig>
+    <DBRootCount>1</DBRootCount>
+    <DBRoot1>/var/lib/columnstore/data1</DBRoot1>
+  </SystemConfig>
+  <SystemModuleConfig>
+    <ModuleIPAddr1-1-3>127.0.0.1</ModuleIPAddr1-1-3>
+    <ModuleDBRootCount1-3>1</ModuleDBRootCount1-3>
+    <ModuleDBRootID1-1-3>1</ModuleDBRootID1-1-3>
+  </SystemModuleConfig>
+  <PMS1>
+    <IPAddr>127.0.0.1</IPAddr>
+    <Port>8620</Port>
+  </PMS1>
+  <PMS2>
+    <IPAddr>127.0.0.1</IPAddr>
+    <Port>8620</Port>
+  </PMS2>
+  <PMS3>
+    <IPAddr>127.0.0.1</IPAddr>
+    <Port>8620</Port>
+  </PMS3>
+  <PMS4>
+    <IPAddr>127.0.0.1</IPAddr>
+    <Port>8620</Port>
+  </PMS4>
+  <PMS5>
+    <IPAddr>127.0.0.1</IPAddr>
+    <Port>8620</Port>
+  </PMS5>
+  <PMS6>
+    <IPAddr>127.0.0.1</IPAddr>
+    <Port>8620</Port>
+  </PMS6>
+  <PMS7>
+    <IPAddr>127.0.0.1</IPAddr>
+    <Port>8620</Port>
+  </PMS7>
+  <PMS8>
+    <IPAddr>127.0.0.1</IPAddr>
+    <Port>8620</Port>
+  </PMS8>
+  <PMS9>
+    <IPAddr>127.0.0.1</IPAddr>
+    <Port>8620</Port>
+  </PMS9>
+  <PMS10>
+    <IPAddr>127.0.0.1</IPAddr>
+    <Port>8620</Port>
+  </PMS10>
+  <PMS11>
+    <IPAddr>127.0.0.1</IPAddr>
+    <Port>8620</Port>
+  </PMS11>
+  <PMS12>
+    <IPAddr>127.0.0.1</IPAddr>
+    <Port>8620</Port>
+  </PMS12>
+</Columnstore>
+)";
+
+const char ZMERGED_CONFIG[] = R"(
+<Columnstore Version="V1.0.0">
+  <ClusterManager>10.11.12.13</ClusterManager>
+  <NextNodeId>4</NextNodeId>
+  <NextDBRootId>5</NextDBRootId>
+  <SystemConfig>
+    <DBRootCount>4</DBRootCount>
+    <DBRoot1>/var/lib/columnstore/data1</DBRoot1>
+    <DBRoot2>/var/lib/columnstore/data2</DBRoot2>
+    <DBRoot3>/var/lib/columnstore/data3</DBRoot3>
+    <DBRoot4>/var/lib/columnstore/data4</DBRoot4>
+  </SystemConfig>
+  <SystemModuleConfig>
+    <ModuleIPAddr1-1-3>192.168.0.1</ModuleIPAddr1-1-3>
+    <ModuleDBRootCount1-3>2</ModuleDBRootCount1-3>
+    <ModuleDBRootID1-1-3>1</ModuleDBRootID1-1-3>
+    <ModuleDBRootID1-2-3>3</ModuleDBRootID1-2-3>
+    <ModuleIPAddr2-1-3>192.168.0.2</ModuleIPAddr2-1-3>
+    <ModuleDBRootCount2-3>1</ModuleDBRootCount2-3>
+    <ModuleDBRootID2-1-3>2</ModuleDBRootID2-1-3>
+    <ModuleIPAddr3-1-3>192.168.0.3</ModuleIPAddr3-1-3>
+    <ModuleDBRootCount3-3>1</ModuleDBRootCount3-3>
+    <ModuleDBRootID3-1-3>4</ModuleDBRootID3-1-3>
+  </SystemModuleConfig>
+  <PrimitiveServers>
+    <Count>3</Count>
+  </PrimitiveServers>
+  <PMS1>
+    <IPAddr>192.168.0.1</IPAddr>
+    <Port>8620</Port>
+  </PMS1>
+  <PMS2>
+    <IPAddr>192.168.0.2</IPAddr>
+    <Port>8620</Port>
+  </PMS2>
+  <PMS3>
+    <IPAddr>192.168.0.3</IPAddr>
+    <Port>8620</Port>
+  </PMS3>
+  <PMS4>
+    <IPAddr>192.168.0.1</IPAddr>
+    <Port>8620</Port>
+  </PMS4>
+  <PMS5>
+    <IPAddr>192.168.0.2</IPAddr>
+    <Port>8620</Port>
+  </PMS5>
+  <PMS6>
+    <IPAddr>192.168.0.3</IPAddr>
+    <Port>8620</Port>
+  </PMS6>
+  <PMS7>
+    <IPAddr>192.168.0.1</IPAddr>
+    <Port>8620</Port>
+  </PMS7>
+  <PMS8>
+    <IPAddr>192.168.0.2</IPAddr>
+    <Port>8620</Port>
+  </PMS8>
+  <PMS9>
+    <IPAddr>192.168.0.3</IPAddr>
+    <Port>8620</Port>
+  </PMS9>
+  <PMS10>
+    <IPAddr>192.168.0.1</IPAddr>
+    <Port>8620</Port>
+  </PMS10>
+  <PMS11>
+    <IPAddr>192.168.0.2</IPAddr>
+    <Port>8620</Port>
+  </PMS11>
+  <PMS12>
+    <IPAddr>192.168.0.3</IPAddr>
+    <Port>8620</Port>
+  </PMS12>
+</Columnstore>
+)";
+
+int test_add_multi_node()
+{
+    int rv = 1;
+    json_t* pOutput = json_object();
+
+    unique_ptr<xmlDoc> sCluster = compile_xml(ZCLUSTER_CONFIG);
+    unique_ptr<xmlDoc> sNode = compile_xml(ZNODE_CONFIG);
+
+    bool added = cs::xml::add_multi_node(*sCluster.get(), *sNode.get(), "192.168.0.3", pOutput);
+    mxb_assert(added);
+
+    unique_ptr<xmlDoc> sMerged = compile_xml(ZMERGED_CONFIG);
+
+    if (equal(sCluster, sMerged))
+    {
+        cout << "Node added successfully." << endl;
+        rv = 0;
+    }
+    else
+    {
+        cout << "Node NOT added successfully." << endl;
+    }
+
+    json_decref(pOutput);
+
+    return rv;
+}
+}
+
 int main()
 {
     mxb::Log log;
@@ -345,6 +590,7 @@ int main()
     int rv = 0;
     rv += test_convert_to_first_multi_node();
     rv += test_scan_for_dbroots();
+    rv += test_add_multi_node();
 
     return rv;
 }
