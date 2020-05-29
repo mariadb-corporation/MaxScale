@@ -94,6 +94,11 @@ public:
     bool refresh_users();
 
     /**
+     * Unconditionally refreshes the users for all listeners of the service
+     */
+    void load_users();
+
+    /**
      * Dump service configuration into a file
      *
      * @param filename File where the configuration should be written
@@ -130,6 +135,9 @@ private:
 
     // Update the local filter list on the current worker
     void update_local_filters();
+
+    // Load the users
+    bool do_load_users();
 
     // Callback for updating the local filter list
     static void update_filters_cb(void* data)

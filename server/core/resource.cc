@@ -683,6 +683,16 @@ HttpResponse cb_flush(const HttpRequest& request)
     return HttpResponse(code);
 }
 
+HttpResponse cb_reload_users(const HttpRequest& request)
+{
+    Service* service = service_internal_find(request.uri_part(1).c_str());
+    mxb_assert(service);
+
+    service->load_users();
+
+    return HttpResponse(MHD_HTTP_NO_CONTENT);
+}
+
 HttpResponse cb_all_threads(const HttpRequest& request)
 {
     return HttpResponse(MHD_HTTP_OK, mxs_rworker_list_to_json(request.host()));
@@ -1051,6 +1061,7 @@ public:
         /** For all module commands that modify state/data */
         m_post.push_back(SResource(new Resource(cb_modulecmd, 4, "maxscale", "modules", ":module", "?")));
         m_post.push_back(SResource(new Resource(cb_flush, 3, "maxscale", "logs", "flush")));
+        m_post.push_back(SResource(new Resource(cb_reload_users, 3, "services", ":service", "reload")));
 
         /** Update resources */
         m_patch.push_back(SResource(new Resource(cb_alter_server, 2, "servers", ":server")));

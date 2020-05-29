@@ -1070,6 +1070,50 @@ void dListListeners(DCB* dcb)
     }
 }
 
+bool Service::do_load_users()
+{
+    bool ret = true;
+
+    for (const auto& listener : listener_find_by_service(this))
+    {
+        switch (listener->load_users())
+        {
+        case MXS_AUTH_LOADUSERS_FATAL:
+            MXS_ERROR("[%s] Fatal error when loading users for listener '%s', authentication will not work.",
+                      name(), listener->name());
+            ret = false;
+            break;
+
+        case MXS_AUTH_LOADUSERS_ERROR:
+            MXS_WARNING("[%s] Failed to load users for listener '%s', authentication  might not work.",
+                        name(), listener->name());
+            ret = false;
+            break;
+
+        default:
+            break;
+        }
+    }
+
+    return ret;
+}
+
+void Service::load_users()
+{
+    if (capabilities & ACAP_TYPE_ASYNC)
+    {
+        mxs::RoutingWorker::execute_concurrently(
+            [this]() {
+                do_load_users();
+            });
+    }
+    else
+    {
+        std::lock_guard<std::mutex> guard(lock);
+        do_load_users();
+    }
+}
+
 bool Service::refresh_users()
 {
     mxs::WatchdogWorkaround workaround;
@@ -1109,33 +1153,7 @@ bool Service::refresh_users()
     {
         m_rate_limits[self].last = now;
         m_rate_limits[self].warned = false;
-
-        for (const auto& listener : listener_find_by_service(this))
-        {
-            /** Load the authentication users before before starting the listener */
-
-            switch (listener->load_users())
-            {
-            case MXS_AUTH_LOADUSERS_FATAL:
-                MXS_ERROR("[%s] Fatal error when loading users for listener '%s',"
-                          " authentication will not work.",
-                          name(),
-                          listener->name());
-                ret = false;
-                break;
-
-            case MXS_AUTH_LOADUSERS_ERROR:
-                MXS_WARNING("[%s] Failed to load users for listener '%s', authentication"
-                            " might not work.",
-                            name(),
-                            listener->name());
-                ret = false;
-                break;
-
-            default:
-                break;
-            }
-        }
+        ret = do_load_users();
     }
 
     return ret;
