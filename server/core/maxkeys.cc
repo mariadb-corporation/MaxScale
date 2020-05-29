@@ -14,10 +14,7 @@
 #include <maxscale/ccdefs.hh>
 #include <chrono>
 #include <cstdio>
-#include <fstream>
 #include <getopt.h>
-#include <pwd.h>
-#include <sys/stat.h>
 #include <unistd.h>
 #include <openssl/err.h>
 #include <openssl/evp.h>
@@ -32,21 +29,14 @@ using ByteVec = std::vector<uint8_t>;
 
 struct option options[] =
 {
-    {"help",  no_argument,        nullptr,                 'h'},
-    {"user",  required_argument,  nullptr,                 'u'},
-    {nullptr, 0,                  nullptr,                 0  }
+    {"help",  no_argument,       nullptr, 'h'},
+    {"user",  required_argument, nullptr, 'u'},
+    {nullptr, 0,                 nullptr, 0  }
 };
 
 const string default_user = "maxscale";
 
-bool write_keys(const EncryptionKeys& key,
-                const string& filepath,
-                const string& owner);
-bool secrets_write_keys(const ByteVec& key,
-                        const string& filepath,
-                        const string& owner);
-std::unique_ptr<EncryptionKeys> gen_random_key();
-ByteVec                         generate_AES_key();
+ByteVec generate_encryption_key();
 
 void print_usage(const char* executable, const char* default_directory)
 {
@@ -119,7 +109,7 @@ int main(int argc, char** argv)
     }
 
     int rval = EXIT_FAILURE;
-    auto new_key = generate_AES_key();
+    auto new_key = generate_encryption_key();
     if (!new_key.empty() && secrets_write_keys(new_key, filepath, username))
     {
         rval = EXIT_SUCCESS;
@@ -127,106 +117,9 @@ int main(int argc, char** argv)
     return rval;
 }
 
-/**
- * Write encryption key and init vector to binary file. Also sets file permissions and owner.
- *
- * @param key Key data
- * @param filepath The full path to the file to write to.
- * @param owner The final owner of the file. Changing the owner may not succeed.
- * @return True on total success. Even if false is returned, the file may have been written.
- */
-bool write_keys(const EncryptionKeys& key, const string& filepath, const string& owner)
+ByteVec generate_encryption_key()
 {
-    auto filepathz = filepath.c_str();
-    bool write_ok = false;
-    {
-        errno = 0;
-        std::ofstream file(filepath, std::ios_base::binary);
-        if (file.is_open())
-        {
-            file.write((const char*)key.enckey, EncryptionKeys::key_len);
-            file.write((const char*)key.initvector, EncryptionKeys::iv_len);
-            if (file.good())
-            {
-                write_ok = true;
-                printf("Encryption key written to secrets file '%s'.\n", filepathz);
-            }
-            else
-            {
-                printf("Write to secrets file '%s' failed. Error %d, %s.\n",
-                       filepathz, errno, mxs_strerror(errno));
-            }
-            file.close();
-        }
-        else
-        {
-            printf("Could not open secrets file '%s' for writing. Error %d, %s.\n",
-                   filepathz, errno, mxs_strerror(errno));
-        }
-    }
-
-    bool rval = false;
-    if (write_ok)
-    {
-        // Change file permissions to prevent modifications.
-        errno = 0;
-        if (chmod(filepathz, S_IRUSR) == 0)
-        {
-            printf("Permissions of '%s' set to owner:read.\n", filepathz);
-            auto ownerz = owner.c_str();
-            auto userinfo = getpwnam(ownerz);
-            if (userinfo)
-            {
-                if (chown(filepathz, userinfo->pw_uid, userinfo->pw_gid) == 0)
-                {
-                    printf("Ownership of '%s' given to %s.\n", filepathz, ownerz);
-                    rval = true;
-                }
-                else
-                {
-                    printf("Failed to give '%s' ownership of '%s': %d, %s.\n",
-                           ownerz, filepathz, errno, mxb_strerror(errno));
-                }
-            }
-            else
-            {
-                printf("Could not find user '%s' when attempting to change ownership of '%s': %d, %s.\n",
-                       ownerz, filepathz, errno, mxb_strerror(errno));
-            }
-        }
-        else
-        {
-            printf("Failed to change the permissions of the secrets file '%s'. Error %d, %s.\n",
-                   filepathz, errno, mxs_strerror(errno));
-        }
-    }
-    return rval;
-}
-
-std::unique_ptr<EncryptionKeys> gen_random_key()
-{
-    const auto buflen = EncryptionKeys::total_len;
-    uint8_t rand_buffer[buflen];
-
-    std::unique_ptr<EncryptionKeys> key;
-    // Need 48 bytes of random data. Generate it using OpenSSL.
-    if (RAND_bytes(rand_buffer, buflen) == 1)
-    {
-        key = std::make_unique<EncryptionKeys>();
-        memcpy(key->enckey, rand_buffer, EncryptionKeys::key_len);
-        memcpy(key->initvector, rand_buffer + EncryptionKeys::key_len, EncryptionKeys::iv_len);
-    }
-    else
-    {
-        auto errornum = ERR_get_error();
-        printf("OpenSSL RAND_bytes() failed. %s.\n", ERR_error_string(errornum, nullptr));
-    }
-    return key;
-}
-
-ByteVec generate_AES_key()
-{
-    int keylen = EVP_CIPHER_key_length(secrets_AES_cipher());
+    int keylen = EVP_CIPHER_key_length(secrets_cipher());
     ByteVec key(keylen);
     // Generate random bytes using OpenSSL.
     if (RAND_bytes(key.data(), keylen) != 1)

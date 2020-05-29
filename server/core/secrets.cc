@@ -38,7 +38,8 @@ namespace
 
 struct ThisUnit
 {
-    std::unique_ptr<EncryptionKeys> keys;
+    ByteVec key;    /**< Password decryption key, assigned at startup */
+    ByteVec iv;     /**< Decryption init vector, assigned at startup. Only used with old-format keys */
 };
 ThisUnit this_unit;
 
@@ -81,7 +82,7 @@ bool encrypt_or_decrypt(const uint8_t* key, const uint8_t* iv, ProcessingMode mo
     bool ignore_errors = (mode == ProcessingMode::DECRYPT_IGNORE_ERRORS);
     bool ok = false;
 
-    if (EVP_CipherInit_ex(ctx, secrets_AES_cipher(), nullptr, key, iv, enc) == 1 || ignore_errors)
+    if (EVP_CipherInit_ex(ctx, secrets_cipher(), nullptr, key, iv, enc) == 1 || ignore_errors)
     {
         int output_written = 0;
         if (EVP_CipherUpdate(ctx, output, &output_written, input, input_len) == 1 || ignore_errors)
@@ -138,112 +139,37 @@ void print_openSSL_errors(const char* operation)
 }
 }
 
-const EVP_CIPHER* secrets_AES_cipher()
+const EVP_CIPHER* secrets_cipher()
 {
     return SECRETS_CIPHER();
 }
 
 int secrets_keylen()
 {
-    return EVP_CIPHER_key_length(secrets_AES_cipher());
+    return EVP_CIPHER_key_length(secrets_cipher());
 }
 
 int secrets_ivlen()
 {
-    return EVP_CIPHER_iv_length(secrets_AES_cipher());
+    return EVP_CIPHER_iv_length(secrets_cipher());
 }
 
 /**
- * Reads binary data from file and extracts the AES encryption key and init vector. The source file needs to
- * be a certain size and have expected permissions. If the source file does not exist, returns empty results.
+ * Reads binary or text data from file and extracts the encryption key and, if old key format is used,
+ * the init vector. The source file needs to have expected permissions. If the source file does not exist,
+ * returns empty results.
  *
- * @param filepath Path to binary file.
+ * @param filepath Path to key file.
  * @return Result structure. Ok if file was loaded successfully or if file did not exist. False on error.
  */
-
 ReadKeyResult secrets_readkeys(const string& filepath)
 {
     ReadKeyResult rval;
     auto filepathc = filepath.c_str();
 
-    // Before opening the file, check its size and permissions.
-    struct stat filestats { 0 };
-    bool stat_error = false;
-    errno = 0;
-    if (stat(filepathc, &filestats) == 0)
-    {
-        auto filesize = filestats.st_size;
-        if (filesize != EncryptionKeys::total_len)
-        {
-            MXS_ERROR("Size of secrets file '%s' is %li when %i was expected.",
-                      filepathc, filesize, EncryptionKeys::total_len);
-            stat_error = true;
-        }
-
-        auto filemode = filestats.st_mode;
-        if (!S_ISREG(filemode))
-        {
-            MXS_ERROR("Secrets file '%s' is not a regular file.", filepathc);
-            stat_error = true;
-        }
-        else if ((filemode & (S_IRWXU | S_IRWXG | S_IRWXO)) != S_IRUSR)
-        {
-            MXS_ERROR("Secrets file '%s' permissions are wrong. The only permission on the file should be "
-                      "owner:read.", filepathc);
-            stat_error = true;
-        }
-    }
-    else if (errno == ENOENT)
-    {
-        // The file does not exist. This is ok. Return empty result.
-        rval.ok = true;
-        return rval;
-    }
-    else
-    {
-        MXS_ERROR("stat() for secrets file '%s' failed. Error %d, %s.",
-                  filepathc, errno, mxs_strerror(errno));
-        stat_error = true;
-    }
-
-    if (stat_error)
-    {
-        return rval;
-    }
-
-    // Open file in binary read mode.
-    errno = 0;
-    std::ifstream file(filepath, std::ios_base::binary);
-    if (file.is_open())
-    {
-        // Read all data from file.
-        char readbuf[EncryptionKeys::total_len];
-        file.read(readbuf, sizeof(readbuf));
-        if (file.good())
-        {
-            // Success, copy contents to key structure.
-            rval.old_key = std::make_unique<EncryptionKeys>();
-            memcpy(rval.old_key->enckey, readbuf, EncryptionKeys::key_len);
-            memcpy(rval.old_key->initvector, readbuf + EncryptionKeys::key_len, EncryptionKeys::iv_len);
-            rval.ok = true;
-        }
-        else
-        {
-            MXS_ERROR("Read from secrets file %s failed. Read %li, expected %i bytes. Error %d, %s.",
-                      filepathc, file.gcount(), EncryptionKeys::total_len, errno, mxs_strerror(errno));
-        }
-    }
-    else
-    {
-        MXS_ERROR("Could not open secrets file '%s'. Error %d, %s.", filepathc, errno, mxs_strerror(errno));
-    }
-    return rval;
-}
-
-ReadKeyResult secrets_readkeys2(const string& filepath)
-{
-    ReadKeyResult rval;
-    auto filepathc = filepath.c_str();
+    const int binary_key_len = secrets_keylen();
+    const int binary_iv_len = secrets_ivlen();
+    const int binary_total_len = binary_key_len + binary_iv_len;
 
     // Before opening the file, check its size and permissions.
     struct stat filestats { 0 };
@@ -253,11 +179,11 @@ ReadKeyResult secrets_readkeys2(const string& filepath)
     if (stat(filepathc, &filestats) == 0)
     {
         auto filesize = filestats.st_size;
-        if (filesize == EncryptionKeys::total_len)
+        if (filesize == binary_total_len)
         {
             old_format = true;
-            MXB_WARNING("File format of '%s' is deprecated. Generating a new encryption key ('maxkeys') "
-                        "and re-encrypting passwords ('maxpasswd') is recommended.", filepathc);
+            MXB_WARNING("File format of '%s' is deprecated. Please generate a new encryption key ('maxkeys') "
+                        "and re-encrypt passwords ('maxpasswd').", filepathc);
         }
 
         auto filemode = filestats.st_mode;
@@ -298,27 +224,25 @@ ReadKeyResult secrets_readkeys2(const string& filepath)
         if (file.is_open())
         {
             // Read all data from file.
-            char readbuf[EncryptionKeys::total_len];
-            file.read(readbuf, sizeof(readbuf));
+            char readbuf[binary_total_len];
+            file.read(readbuf, binary_total_len);
             if (file.good())
             {
                 // Success, copy contents to key structure.
-                rval.old_key = std::make_unique<EncryptionKeys>();
-                memcpy(rval.old_key->enckey, readbuf, EncryptionKeys::key_len);
-                memcpy(rval.old_key->initvector, readbuf + EncryptionKeys::key_len, EncryptionKeys::iv_len);
+                rval.key.assign(readbuf, readbuf + binary_key_len);
+                rval.iv.assign(readbuf + binary_key_len, readbuf + binary_total_len);
                 rval.ok = true;
             }
             else
             {
-                MXS_ERROR(
-                    "Read from secrets file %s failed. Read %li, expected %i bytes. Error %d, %s.",
-                    filepathc, file.gcount(), EncryptionKeys::total_len, errno, mxs_strerror(errno));
+                MXS_ERROR("Read from secrets file %s failed. Read %li, expected %i bytes. Error %d, %s.",
+                          filepathc, file.gcount(), binary_total_len, errno, mxs_strerror(errno));
             }
         }
         else
         {
-            MXS_ERROR("Could not open secrets file '%s'. Error %d, %s.", filepathc, errno,
-                      mxs_strerror(errno));
+            MXS_ERROR("Could not open secrets file '%s'. Error %d, %s.",
+                      filepathc, errno, mxs_strerror(errno));
         }
     }
     else
@@ -333,18 +257,18 @@ ReadKeyResult secrets_readkeys2(const string& filepath)
             bool cipher_ok = enc_cipher && (strcmp(enc_cipher, CIPHER_NAME) == 0);
             if (cipher_ok && enc_key)
             {
-                int hexkey_len = strlen(enc_key);
-                int expected_hexkey_len = 2 * secrets_keylen();
-                if (hexkey_len == expected_hexkey_len)
+                int read_hex_key_len = strlen(enc_key);
+                int expected_hex_key_len = 2 * binary_key_len;
+                if (read_hex_key_len == expected_hex_key_len)
                 {
-                    rval.new_key.resize(hexkey_len / 2);
-                    mxs::hex2bin(enc_key, hexkey_len, rval.new_key.data());
+                    rval.key.resize(binary_key_len);
+                    mxs::hex2bin(enc_key, read_hex_key_len, rval.key.data());
                     rval.ok = true;
                 }
                 else
                 {
                     MXB_ERROR("Wrong encryption key length in secrets file '%s': found %i, expected %i.",
-                              filepathc, hexkey_len, expected_hexkey_len);
+                              filepathc, read_hex_key_len, expected_hex_key_len);
                 }
             }
             else
@@ -365,29 +289,34 @@ ReadKeyResult secrets_readkeys2(const string& filepath)
 
 namespace maxscale
 {
-string decrypt_password(const string& crypt)
+string decrypt_password(const string& input)
 {
-    const auto* key = this_unit.keys.get();
-    if (!key)
+    const auto& key = this_unit.key;
+    string rval;
+    if (key.empty())
     {
-        // Password encryption is not used, so return original.
-        return crypt;
+        // Password encryption is not used, return original.
+        rval = input;
     }
-
-    // If the input is not a HEX string, return the input as is. Likely it was not encrypted.
-    for (auto c : crypt)
+    else
     {
-        if (!isxdigit(c))
+        // If the input is not a HEX string, return the input as is.
+        auto is_hex = std::all_of(input.begin(), input.end(), isxdigit);
+        if (is_hex)
         {
-            return crypt;
+            const auto& iv = this_unit.iv;
+            rval = iv.empty() ? ::decrypt_password(key, input) : decrypt_password_old(key, iv, input);
+        }
+        else
+        {
+            rval = input;
         }
     }
-
-    return decrypt_password_old(*key, crypt);
+    return rval;
 }
 }
 
-string decrypt_password_old(const EncryptionKeys& key, const std::string& input)
+string decrypt_password_old(const ByteVec& key, const ByteVec& iv, const std::string& input)
 {
     string rval;
     // Convert to binary.
@@ -398,8 +327,7 @@ string decrypt_password_old(const EncryptionKeys& key, const std::string& input)
 
     unsigned char plain[bin_len];   // Decryption output cannot be longer than input data.
     int decrypted_len = 0;
-    // TODO: detect old encryption key and use correct decryption mode
-    if (encrypt_or_decrypt(key.enckey, key.initvector, ProcessingMode::DECRYPT_IGNORE_ERRORS, encrypted_bin,
+    if (encrypt_or_decrypt(key.data(), iv.data(), ProcessingMode::DECRYPT_IGNORE_ERRORS, encrypted_bin,
                            bin_len, plain, &decrypted_len))
     {
         // Decrypted data should be text.
@@ -449,7 +377,7 @@ string decrypt_password(const ByteVec& key, const std::string& input)
  * @param input The plaintext password to encrypt.
  * @return The encrypted password, or empty on failure.
  */
-string encrypt_password_old(const EncryptionKeys& key, const string& input)
+string encrypt_password_old(const ByteVec& key, const ByteVec& iv, const string& input)
 {
     string rval;
     // Output can be a block length longer than input.
@@ -459,7 +387,7 @@ string encrypt_password_old(const EncryptionKeys& key, const string& input)
     // Although input is text, interpret as binary.
     auto input_data = reinterpret_cast<const uint8_t*>(input.c_str());
     int encrypted_len = 0;
-    if (encrypt_or_decrypt(key.enckey, key.initvector, ProcessingMode::ENCRYPT,
+    if (encrypt_or_decrypt(key.data(), iv.data(), ProcessingMode::ENCRYPT,
                            input_data, input_len, encrypted_bin, &encrypted_len))
     {
         int hex_len = 2 * encrypted_len;
@@ -484,7 +412,7 @@ string encrypt_password(const ByteVec& key, const string& input)
 
     // Output can be a block length longer than input.
     auto input_len = input.length();
-    unsigned char encrypted_bin[input_len + EVP_CIPHER_block_size(secrets_AES_cipher())];
+    unsigned char encrypted_bin[input_len + EVP_CIPHER_block_size(secrets_cipher())];
 
     // Although input is text, interpret as binary.
     auto input_data = reinterpret_cast<const uint8_t*>(input.c_str());
@@ -506,16 +434,18 @@ string encrypt_password(const ByteVec& key, const string& input)
 
 bool load_encryption_keys()
 {
-    mxb_assert(this_unit.keys == nullptr);
+    mxb_assert(this_unit.key.empty() && this_unit.iv.empty());
+
     string path(mxs::datadir());
     path.append("/").append(SECRETS_FILENAME);
     auto ret = secrets_readkeys(path);
     if (ret.ok)
     {
-        if (ret.old_key)
+        if (!ret.key.empty())
         {
             MXB_NOTICE("Using encrypted passwords. Encryption key read from '%s'.", path.c_str());
-            this_unit.keys = move(ret.old_key);
+            this_unit.key = move(ret.key);
+            this_unit.iv = move(ret.iv);
         }
         else
         {

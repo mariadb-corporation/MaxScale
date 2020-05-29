@@ -25,39 +25,39 @@ struct evp_cipher_st;
 extern const char* const SECRETS_FILENAME;
 
 /**
- * The key structure held in the secrets file
- */
-struct EncryptionKeys
-{
-    static constexpr int key_len = 32;      // For AES256
-    static constexpr int iv_len = 16;
-    static constexpr int total_len = key_len + iv_len;
-
-    unsigned char enckey[key_len] {0};
-    unsigned char initvector[iv_len] {0};
-};
-
-/**
  * Returns the cipher used for password encryption.
  *
  * @return Cipher
  */
-const evp_cipher_st* secrets_AES_cipher();
-int                  secrets_keylen();
+const evp_cipher_st* secrets_cipher();
+
+/**
+ * Returns encryption key length.
+ *
+ * @return Encryption key length
+ */
+int secrets_keylen();
+
+/**
+ * Returns initialization vector length.
+ *
+ * @return initialization vector length
+ */
+int secrets_ivlen();
 
 bool        load_encryption_keys();
-std::string encrypt_password_old(const EncryptionKeys& key, const std::string& input);
+std::string encrypt_password_old(const ByteVec& key, const ByteVec& iv, const std::string& input);
 std::string encrypt_password(const ByteVec& key, const std::string& input);
 
-std::string decrypt_password_old(const EncryptionKeys& key, const std::string& input);
+std::string decrypt_password_old(const ByteVec& key, const ByteVec& iv, const std::string& input);
 std::string decrypt_password(const ByteVec& key, const std::string& input);
 
 struct ReadKeyResult
 {
-    bool                            ok {false};
-    std::unique_ptr<EncryptionKeys> old_key;
-    ByteVec                         new_key;
+    bool    ok {false};
+    ByteVec key;
+    ByteVec iv;
 };
+
 ReadKeyResult secrets_readkeys(const std::string& filepath);
-ReadKeyResult secrets_readkeys2(const std::string& filepath);
 bool          secrets_write_keys(const ByteVec& key, const std::string& filepath, const std::string& owner);

@@ -24,8 +24,8 @@ namespace maxscale
  * Decrypt an encrypted password using the key loaded at startup. If the password is not encrypted,
  * ie is not a HEX string, return the original.
  *
- * @param crypt The encrypted password
+ * @param input The encrypted password
  * @return The decrypted password.
  */
-std::string decrypt_password(const std::string& crypt);
+std::string decrypt_password(const std::string& input);
 }

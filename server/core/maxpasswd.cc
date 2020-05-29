@@ -107,22 +107,23 @@ int main(int argc, char** argv)
     string filepath = path;
     filepath.append("/").append(SECRETS_FILENAME);
 
-    auto keys = secrets_readkeys2(filepath);
-    if (keys.ok)
+    auto keydata = secrets_readkeys(filepath);
+    if (keydata.ok)
     {
         bool encrypting = (mode == Mode::ENCRYPT);
-        if (keys.new_key.empty() && !keys.old_key)
+        bool new_mode = keydata.iv.empty();     // false -> constant IV from file
+        if (keydata.key.empty())
         {
             printf("Password encryption key file '%s' not found, cannot %s password.\n",
                    filepath.c_str(), encrypting ? "encrypt" : "decrypt");
         }
         else if (encrypting)
         {
-            string enc = !keys.new_key.empty() ? encrypt_password(keys.new_key, input) :
-                encrypt_password_old(*keys.old_key, input);
-            if (!enc.empty())
+            string encrypted = new_mode ? encrypt_password(keydata.key, input) :
+                encrypt_password_old(keydata.key, keydata.iv, input);
+            if (!encrypted.empty())
             {
-                printf("%s\n", enc.c_str());
+                printf("%s\n", encrypted.c_str());
                 rval = EXIT_SUCCESS;
             }
             else
@@ -135,8 +136,8 @@ int main(int argc, char** argv)
             auto is_hex = std::all_of(input.begin(), input.end(), isxdigit);
             if (is_hex && input.length() % 2 == 0)
             {
-                std::string decrypted = !keys.new_key.empty() ? decrypt_password(keys.new_key, input) :
-                    decrypt_password_old(*keys.old_key, input);
+                string decrypted = new_mode ? decrypt_password(keydata.key, input) :
+                    decrypt_password_old(keydata.key, keydata.iv, input);
                 if (!decrypted.empty())
                 {
                     printf("%s\n", decrypted.c_str());
