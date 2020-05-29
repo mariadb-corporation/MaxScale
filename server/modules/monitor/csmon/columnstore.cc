@@ -11,10 +11,39 @@
  * Public License.
  */
 #include "columnstore.hh"
+#include <map>
 #include "csxml.hh"
 
+using std::map;
 using std::string;
 using std::vector;
+
+namespace
+{
+
+bool get_number(const char* zNumber, long* pNumber)
+{
+    char* zEnd;
+    errno = 0;
+    long number = strtol(zNumber, &zEnd, 10);
+
+    bool valid = (errno == 0 && zEnd != zNumber && *zEnd == 0);
+
+    if (valid)
+    {
+        *pNumber = number;
+    }
+
+    return valid;
+}
+
+bool is_positive_number(const char* zNumber)
+{
+    long number;
+    return get_number(zNumber, &number) && number > 0;
+}
+
+}
 
 namespace cs
 {
@@ -309,7 +338,40 @@ void xml::convert_to_single_node(xmlDoc& csDoc)
 namespace
 {
 
-long get_next_node_id(xmlNode& cs)
+map<long,string> get_ids_and_ips(xmlNode& cs)
+{
+    map<long, string> rv;
+
+    xmlNode& smc = mxb::xml::get_descendant(cs, xml::SYSTEMMODULECONFIG);
+
+    auto nodes = mxb::xml::find_children_by_prefix(smc, xml::MODULEIPADDR);
+
+    for (auto* pNode : nodes)
+    {
+        const char* zName = reinterpret_cast<const char*>(pNode->name);
+        // zName is now "ModuleIPAddrX-Y-Z", where X is the node id, Y a sequence number,
+        // and Z the role. IF Z is 3, the node in question is a performance node and that's
+        // what we are interested in now. The content of the node is an IP-address, and if
+        // that matches the address we are looking for, then we will know the node id
+        // corresponding to that address.
+
+        string tail(zName + strlen(xml::MODULEIPADDR));
+        vector<string> parts = mxb::strtok(tail, "-");
+        mxb_assert(parts.size() == 3);
+
+        if (parts.size() == 3)
+        {
+            long id = atoi(parts[0].c_str());
+            string ip = mxb::xml::get_content_as<string>(*pNode);
+
+            rv.emplace(id, ip);
+        }
+    }
+
+    return rv;
+}
+
+long get_next_node_id(xmlNode& cs, const map<long,string>& iis)
 {
     long nNext_node_id = 0;
     xmlNode* pNext_node_id = mxb::xml::find_descendant(cs, xml::NEXTNODEID);
@@ -321,33 +383,11 @@ long get_next_node_id(xmlNode& cs)
     else
     {
         MXS_NOTICE("Cluster 'Columnstore/%s' does not exist, counting the nodes instead.", xml::NEXTNODEID);
-        xmlNode& smc = mxb::xml::get_descendant(cs, xml::SYSTEMMODULECONFIG);
 
-        auto nodes = mxb::xml::find_children_by_prefix(smc, xml::MODULEIPADDR);
+        auto it = iis.end();
+        --it;
 
-        for (auto* pNode : nodes)
-        {
-            const char* zName = reinterpret_cast<const char*>(pNode->name);
-            // zName is now "ModuleIPAddrX-Y-Z", where X is the node id, Y a sequence number,
-            // and Z the role. IF Z is 3, the node in question is a performance node and that's
-            // what we are interested in now. The content of the node is an IP-address, and if
-            // that matches the address we are looking for, then we will know the node id
-            // corresponding to that address.
-
-            string tail(zName + strlen(xml::MODULEIPADDR));
-            vector<string> parts = mxb::strtok(tail, "-");
-            mxb_assert(parts.size() == 3);
-
-            if (parts.size() == 3)
-            {
-                long id = atoi(parts[0].c_str());
-
-                if (id > nNext_node_id)
-                {
-                    nNext_node_id = id;
-                }
-            }
-        }
+        nNext_node_id = it->first;
 
         nNext_node_id += 1;
     }
@@ -406,7 +446,9 @@ void xadd_multi_node(xmlDoc& clusterDoc, xmlDoc& nodeDoc, const std::string& add
     xmlNode& scCluster = mxb::xml::get_descendant(cluster, xml::SYSTEMCONFIG);
     long nCluster_roots = mxb::xml::get_content_as<long>(scCluster, xml::DBROOTCOUNT);
 
-    long nNext_node_id = get_next_node_id(cluster);
+    map<long,string> iis = get_ids_and_ips(cluster);
+
+    long nNext_node_id = get_next_node_id(cluster, iis);
     long nNext_dbroot_id = get_next_dbroot_id(cluster);
 
     MXS_NOTICE("Using %ld as node id of new node.", nNext_node_id);
@@ -451,11 +493,46 @@ void xadd_multi_node(xmlDoc& clusterDoc, xmlDoc& nodeDoc, const std::string& add
         mxb::xml::upsert(smcCluster, module_dbroot_id.c_str(), std::to_string(nNext_dbroot_id + i).c_str());
     }
 
+    iis.emplace(nNext_node_id, address);
+
+    // Update <Columnstore/NextDBRootId> with the next dbroot id to be used. Can
+    // only grow and will not be decreased even if dbroots are removed.
     nNext_dbroot_id += nNode_roots;
     mxb::xml::upsert(cluster, xml::NEXTDBROOTID, std::to_string(nNext_dbroot_id).c_str());
 
+    // Update <Columnstore/NextNodeId> with the next node id to be used. Can
+    // only grow and will not be decreased even if nodes are removed.
     nNext_node_id += 1;
     mxb::xml::upsert(cluster, xml::NEXTNODEID, std::to_string(nNext_node_id).c_str());
+
+    // Update <Columnstore/PrimitiveServer> with the current number of nodes.
+    xmlNode& ps = mxb::xml::get_descendant(cluster, xml::PRIMITIVESERVERS);
+    long nCount = mxb::xml::get_content_as<long>(ps, xml::COUNT);
+    nCount += 1;
+    mxb::xml::set_content(ps, xml::COUNT, nCount);
+
+    // Distribute all <Columnstore/PMSN> entries evenly across all nodes.
+    auto it = iis.begin();
+
+    vector<xmlNode*> pmss = mxb::xml::find_children_by_prefix(cluster, xml::PMS);
+
+    for (auto* pPms : pmss)
+    {
+        const char* zName = reinterpret_cast<const char*>(pPms->name);
+        const char* zId = zName + 3; // strlen("PMS")
+
+        if (is_positive_number(zId))
+        {
+            mxb::xml::set_content(*pPms, xml::IPADDR, it->second);
+        }
+
+        ++it;
+
+        if (it == iis.end())
+        {
+            it = iis.begin();
+        }
+    }
 }
 
 }

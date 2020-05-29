@@ -133,6 +133,12 @@ void set_content(xmlNode& node, const T& t)
     xmlNodeSetContent(&node, reinterpret_cast<const xmlChar*>(ss.str().c_str()));
 }
 
+template<>
+inline void set_content(xmlNode& node, const std::string& t)
+{
+    xmlNodeSetContent(&node, reinterpret_cast<const xmlChar*>(t.c_str()));
+}
+
 /**
  * @brief Set the content of a node.
  *

@@ -77,6 +77,8 @@ const char MODULEDBROOTCOUNT[]  = "ModuleDBRootCount";
 const char MODULEDBROOTID[]     = "ModuleDBRootID";
 const char NEXTDBROOTID[]       = "NextDBRootId";
 const char NEXTNODEID[]         = "NextNodeId";
+const char PMS[]                = "PMS";
+const char PRIMITIVESERVERS[]   = "PrimitiveServers";
 const char SYSTEMCONFIG[]       = "SystemConfig";
 const char SYSTEMMODULECONFIG[] = "SystemModuleConfig";
 
