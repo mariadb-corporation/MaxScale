@@ -365,10 +365,12 @@ void add_content_type_header(MHD_Response* response, const std::string& path)
     };
 
     auto pos = path.find_last_of('.');
+    std::string suffix;
 
     if (pos != std::string::npos)
     {
-        auto it = content_types.find(path.substr(pos));
+        suffix = path.substr(pos);
+        auto it = content_types.find(suffix);
 
         if (it != content_types.end())
         {
@@ -376,7 +378,17 @@ void add_content_type_header(MHD_Response* response, const std::string& path)
         }
     }
 
-    MHD_add_response_header(response, "Cache-Control", "public, max-age=604800, immutable");
+
+    if (suffix == ".html")
+    {
+        // The GUI HTML files should be validated by the browser, this causes MaxScale upgrades to eventually
+        // trigger a reloading of the GUI.
+        MHD_add_response_header(response, "Cache-Control", "public, no-cache");
+    }
+    else
+    {
+        MHD_add_response_header(response, "Cache-Control", "public, max-age=31536000");
+    }
 }
 
 bool is_auth_endpoint(const HttpRequest& request)
