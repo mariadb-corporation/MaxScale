@@ -15,8 +15,11 @@ void prepare_consumer(TestConnections& test)
     cnf->set("group.id", "kafkacdc", err);
 
     consumer.reset(RdKafka::KafkaConsumer::create(cnf, err));
-    consumer->subscribe({"kafkacdc"});
+    auto topic = RdKafka::TopicPartition::create("kafkacdc", 0);
+    topic->set_offset(RdKafka::Topic::OFFSET_BEGINNING);
+    consumer->assign({topic});
     delete cnf;
+    delete topic;
 }
 
 int consume_messages(TestConnections& test)
