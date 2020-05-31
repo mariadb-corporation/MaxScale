@@ -89,7 +89,10 @@ void Writer::run()
             {
                 auto rpl_msg = conn.get_rpl_msg();
                 const auto& rpl_event = rpl_msg.event();
-                MXB_SDEBUG(rpl_msg);
+                if (rpl_msg.event().event_type != HEARTBEAT_LOG_EVENT)
+                {
+                    MXB_SDEBUG(rpl_msg);
+                }
 
                 switch (rpl_event.event_type)
                 {
