@@ -22,25 +22,6 @@
 #include <iomanip>
 #include <assert.h>
 
-/** Notes.
- * 1.  For the very first file, the server sends only one artifical rotate to end the file,
- *     while it sends both an artificial and real rotate for all other files.
- * 1b. Will this work when the first file has been deleted on the server, and pinloki tries
- *     to bootstrap from a gtid in the new first file?
- * 2.  The m_sync_with_server flag is used to know to open an existing file for read/write when
- *     pinloki starts from a known gtid. And further, to avoid writing duplicate events to
- *     that file.
- * 3.  Everything works, but it does not hurt to add some more verification to the file (e.g.,
- *     that the events pinloki avoids to write match what is already in the file.
- * 4. Is it possible that the file to open is the one before the last.
- *
- *    TODO Houston, we have a problem. There were 4 binlogs, I changed the domain on the master and did
- *    a few transaction. After that the server sent binlog 3 only as a an artificial event, and
- *    the next event was rotate to 4. The events that used to be in binlog 3 were missing.
- *    An exception is thrown when that happens.
- *    The cure is just to adjust the flags, or some kind of logic to know if the intention is to
- *    create a new file, open an existing one or ignore the rotate.
- */
 namespace pinloki
 {
 FileWriter::FileWriter(Inventory* inv)
@@ -56,7 +37,7 @@ void FileWriter::add_event(const maxsql::MariaRplEvent& rpl_event)
     {
         // Heartbeat event, don't process it
     }
-    else if (rpl_event.event().event_type == ROTATE_EVENT)
+    else if (is_artificial && rpl_event.event().event_type == ROTATE_EVENT)
     {
         rotate_event(rpl_event);
     }
@@ -76,23 +57,16 @@ void FileWriter::add_event(const maxsql::MariaRplEvent& rpl_event)
 
 void FileWriter::rotate_event(const maxsql::MariaRplEvent& rpl_event)
 {
-    bool is_artificial = rpl_event.event().flags & LOG_EVENT_ARTIFICIAL_F;
     auto& rotate = rpl_event.event().event.rotate;
-
     auto name = get_rotate_name(rpl_event.raw_data(), rpl_event.raw_data_size());
     std::string file_name = m_inventory.config().path(name);
 
-    if (m_sync_with_server)
+    if (m_inventory.is_listed(file_name))
     {
         open_existing_file(file_name);
     }
-    else if ((is_artificial && m_inventory.count() <= 1) || !is_artificial)
+    else
     {
-        if (m_inventory.is_listed(file_name))
-        {
-            MXB_THROW(BinlogWriteError, file_name << " already listed in index!");
-        }
-
         m_previous_pos = std::move(m_current_pos);
 
         m_current_pos.name = file_name;
@@ -105,7 +79,6 @@ void FileWriter::rotate_event(const maxsql::MariaRplEvent& rpl_event)
 
         if (m_previous_pos.file.is_open())
         {
-            write_to_file(m_previous_pos, rpl_event);
             m_previous_pos.file.close();
             if (!m_previous_pos.file.good())
             {
