@@ -56,7 +56,7 @@ program
     })
     .option('q', {
         alias: 'quiet',
-        describe: 'Silence all output. This option is not used in the interactive mode.',
+        describe: 'Silence all output. Ignored while in interactive mode.',
         default: false,
         type: 'boolean'
     })
