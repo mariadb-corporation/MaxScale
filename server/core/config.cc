@@ -4535,6 +4535,10 @@ bool config_param_is_valid(const MXS_MODULE_PARAM* params,
                             /** Either the only defined enum value is not valid
                              * or multiple values were defined */
                             valid = false;
+                        }
+
+                        if (!valid)
+                        {
                             break;
                         }
                     }

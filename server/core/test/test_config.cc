@@ -91,6 +91,7 @@ int test_validity()
     TEST(config_param_is_valid(params, "p5", "c,a,b", &ctx));
     TEST(!config_param_is_valid(params, "p5", "d", &ctx));
     TEST(!config_param_is_valid(params, "p5", "a,d", &ctx));
+    TEST(!config_param_is_valid(params, "p5", "d,a", &ctx));
     TEST(!config_param_is_valid(params, "p5", "a,b,c,d", &ctx));
 
     /** Path parameter */
