@@ -63,6 +63,12 @@ public:
      */
     bool exists(const std::string& file_name) const;
 
+    /**
+     * @brief The last file in the inventory
+     * @return Last file name or empty string
+     */
+    std::string last() const;
+
     const Config& config() const
     {
         return m_config;

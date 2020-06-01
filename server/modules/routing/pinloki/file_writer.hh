@@ -47,6 +47,7 @@ private:
     void rotate_event(const maxsql::MariaRplEvent& rpl_event);
     void write_to_file(WritePosition& fn, const maxsql::MariaRplEvent& rpl_event);
     void open_existing_file(const std::string& file_name);
+    void write_stop(const std::string& file_name);
 
     Inventory&    m_inventory;
     bool          m_sync_with_server;

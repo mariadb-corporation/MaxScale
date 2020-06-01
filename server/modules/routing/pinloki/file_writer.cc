@@ -16,7 +16,7 @@
 #include "file_reader.hh"
 #include "config.hh"
 
-#include <mysql.h>
+#include <maxscale/protocol/mariadb/mysql.hh>
 #include <mariadb_rpl.h>
 #include <iostream>
 #include <iomanip>
@@ -68,6 +68,7 @@ void FileWriter::rotate_event(const maxsql::MariaRplEvent& rpl_event)
     else
     {
         m_previous_pos = std::move(m_current_pos);
+        auto last_file = m_inventory.last();
 
         m_current_pos.name = file_name;
         m_current_pos.file.open(m_current_pos.name, std::ios_base::out | std::ios_base::binary);
@@ -87,6 +88,14 @@ void FileWriter::rotate_event(const maxsql::MariaRplEvent& rpl_event)
                                   << " did not close (flush) properly during rotate: "
                                   << errno << ", " << mxb_strerror(errno));
             }
+        }
+        else
+        {
+            if (!last_file.empty())
+            {
+                write_stop(last_file);
+            }
+            m_sync_with_server = false;
         }
     }
 }
@@ -126,6 +135,61 @@ void FileWriter::write_to_file(WritePosition& fn, const maxsql::MariaRplEvent& r
     if (!fn.file.good())
     {
         MXB_THROW(BinlogWriteError, "Could not write event to " << fn.name);
+    }
+}
+
+void FileWriter::write_stop(const std::string& file_name)
+{
+    MXB_SINFO("write stop to " << file_name);
+
+    auto file = std::fstream(file_name, std::ios_base::in | std::ios_base::out | std::ios_base::binary);
+    if (!file.good())
+    {
+        MXB_THROW(BinlogWriteError,
+                  "Could not open " << file_name << " for  STOP_EVENT addition");
+    }
+
+    constexpr int HEADER_LEN = 19;
+    const size_t EVENT_LEN = HEADER_LEN + 4;        // header plus crc
+
+    file.seekp(0, std::ios_base::end);
+    const size_t end_pos = file.tellp();
+
+    std::vector<char> data(EVENT_LEN);
+    uint8_t* ptr = (uint8_t*)&data[0];
+
+    // Zero timestamp
+    mariadb::set_byte4(ptr, 0);
+    ptr += 4;
+
+    // A stop event
+    *ptr++ = STOP_EVENT;
+
+    // server id
+    mariadb::set_byte4(ptr, m_inventory.config().server_id());
+    ptr += 4;
+
+    // Event length
+    mariadb::set_byte4(ptr, EVENT_LEN);
+    ptr += 4;
+
+    // Next position
+    mariadb::set_byte4(ptr, end_pos + EVENT_LEN);
+    ptr += 4;
+
+    // No flags (this is a real event)
+    mariadb::set_byte2(ptr, 0);
+    ptr += 2;
+
+    // Checksum
+    mariadb::set_byte4(ptr, crc32(0, (uint8_t*)data.data(), data.size() - 4));
+
+    file.write(data.data(), data.size());
+    file.flush();
+
+    if (!file.good())
+    {
+        MXB_THROW(BinlogWriteError, "Could not open write STOP_EVENT to " << file_name);
     }
 }
 }

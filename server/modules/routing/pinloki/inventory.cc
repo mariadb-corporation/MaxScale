@@ -94,4 +94,17 @@ bool Inventory::exists(const std::string& file_name) const
     std::ifstream ofs(full_name);
     return ofs.good();
 }
+
+std::string Inventory::last() const
+{
+    std::unique_lock<std::mutex> lock(m_mutex);
+    if (m_file_names.empty())
+    {
+        return "";
+    }
+    else
+    {
+        return m_file_names.back();
+    }
+}
 }
