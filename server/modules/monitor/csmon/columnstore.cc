@@ -311,6 +311,12 @@ namespace
 
 using namespace cs::xml;
 
+void set_ipaddr(xmlNode& cs, const char* zNode, const string& address)
+{
+    xmlNode& node = mxb::xml::get_descendant(cs, zNode);
+    mxb::xml::set_content(node, IPADDR, address);
+}
+
 void xconvert_to_first_multi_node(xmlDoc& csDoc,
                                   const string& manager,
                                   const string& server_address)
@@ -318,12 +324,40 @@ void xconvert_to_first_multi_node(xmlDoc& csDoc,
     xmlNode& cs = get_root(csDoc);
 
     // Ensure there is a "ClusterManager" key whose value is 'manager'.
-    mxb::xml::upsert(cs, "ClusterManager", manager.c_str());
+    mxb::xml::upsert(cs, CLUSTERMANAGER, manager.c_str());
 
-    // Replace all "IPAddr" values, irrespective of where they occur, with 'server_address'
-    // if the current value is "127.0.0.1".
-    int n = mxb::xml::update_if(cs, "/IPAddr", server_address.c_str(), "127.0.0.1");
-    mxb_assert(n >= 0);
+    long revision = 0;
+    xmlNode* pConfig_revision = mxb::xml::find_descendant(cs, CONFIGREVISION);
+
+    if (pConfig_revision)
+    {
+        revision = mxb::xml::get_content_as<long>(*pConfig_revision);
+    }
+
+    ++revision;
+    mxb::xml::upsert(cs, CONFIGREVISION, std::to_string(revision).c_str());
+
+    set_ipaddr(cs, EXEMGR1, server_address);
+    set_ipaddr(cs, DDLPROC, server_address);
+    set_ipaddr(cs, DMLPROC, server_address);
+    set_ipaddr(cs, DBRM_CONTROLLER, server_address);
+    set_ipaddr(cs, DBRM_WORKER1, server_address);
+    set_ipaddr(cs, PM1_PROCESSMONITOR, server_address);
+    set_ipaddr(cs, PM1_SERVERMONITOR, server_address);
+    set_ipaddr(cs, PM1_WRITEENGINESERVER, server_address);
+
+    vector<xmlNode*> pmss = mxb::xml::find_children_by_prefix(cs, xml::PMS);
+
+    for (auto* pPms : pmss)
+    {
+        const char* zName = reinterpret_cast<const char*>(pPms->name);
+        const char* zId = zName + 3; // strlen("PMS")
+
+        if (is_positive_number(zId))
+        {
+            mxb::xml::set_content(*pPms, xml::IPADDR, server_address);
+        }
+    }
 }
 
 }

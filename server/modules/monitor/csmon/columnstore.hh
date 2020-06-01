@@ -64,23 +64,29 @@ bool services_from_array(json_t* pArray, ServiceVector* pServices);
 namespace xml
 {
 
-const char CLUSTERMANAGER[]     = "ClusterManager";
-const char COUNT[]              = "Count";
-const char DBRM_CONTROLLER[]    = "DBRM_Controller";
-const char DBROOT[]             = "DBRoot";
-const char DBROOTCOUNT[]        = "DBRootCount";
-const char DDLPROC[]            = "DDLProc";
-const char DMLPROC[]            = "DMLProc";
-const char IPADDR[]             = "IPAddr";
-const char MODULEIPADDR[]       = "ModuleIPAddr";
-const char MODULEDBROOTCOUNT[]  = "ModuleDBRootCount";
-const char MODULEDBROOTID[]     = "ModuleDBRootID";
-const char NEXTDBROOTID[]       = "NextDBRootId";
-const char NEXTNODEID[]         = "NextNodeId";
-const char PMS[]                = "PMS";
-const char PRIMITIVESERVERS[]   = "PrimitiveServers";
-const char SYSTEMCONFIG[]       = "SystemConfig";
-const char SYSTEMMODULECONFIG[] = "SystemModuleConfig";
+const char CLUSTERMANAGER[]        = "ClusterManager";
+const char CONFIGREVISION[]        = "ConfigRevision";
+const char COUNT[]                 = "Count";
+const char DBRM_CONTROLLER[]       = "DBRM_Controller";
+const char DBRM_WORKER1[]          = "DBRM_Worker1";
+const char DBROOT[]                = "DBRoot";
+const char DBROOTCOUNT[]           = "DBRootCount";
+const char DDLPROC[]               = "DDLProc";
+const char DMLPROC[]               = "DMLProc";
+const char EXEMGR1[]               = "ExeMgr1";
+const char IPADDR[]                = "IPAddr";
+const char MODULEIPADDR[]          = "ModuleIPAddr";
+const char MODULEDBROOTCOUNT[]     = "ModuleDBRootCount";
+const char MODULEDBROOTID[]        = "ModuleDBRootID";
+const char NEXTDBROOTID[]          = "NextDBRootId";
+const char NEXTNODEID[]            = "NextNodeId";
+const char PM1_PROCESSMONITOR[]    = "pm1_ProcessMonitor";
+const char PM1_SERVERMONITOR[]     = "pm1_ServerMonitor";
+const char PM1_WRITEENGINESERVER[] = "pm1_WriteEngineServer";
+const char PMS[]                   = "PMS";
+const char PRIMITIVESERVERS[]      = "PrimitiveServers";
+const char SYSTEMCONFIG[]          = "SystemConfig";
+const char SYSTEMMODULECONFIG[]    = "SystemModuleConfig";
 
 // In the config as various identifiers there is a trailing "X-Y-Z", where
 // X is the node id, Y a sequence number and Z a number identifying the role
