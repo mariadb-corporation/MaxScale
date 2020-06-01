@@ -117,10 +117,15 @@ bool find_node_id(xmlDoc& csXml, const std::string& address, std::string* pNid);
  * @param csXml     Single-node configuration.
  * @param manager   The manager doing the modification.
  * @param address   The current public IP address of the node.
+ * @param pOutput   Json object for errors.
+ *
+ * @return True, if the document could be converted, false otherwise. A return value
+ *         of false indicates that the document is broken.
  */
-void convert_to_first_multi_node(xmlDoc& csXml,
+bool convert_to_first_multi_node(xmlDoc& csXml,
                                  const std::string& manager,
-                                 const std::string& address);
+                                 const std::string& address,
+                                 json_t* pOutput);
 
 /**
  * @brief Convert multi-node XML configuration to single-node configuration.

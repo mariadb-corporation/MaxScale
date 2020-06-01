@@ -71,7 +71,9 @@ bool create_first(xmlDoc& csDoc, int argc, char* argv[])
     const char* zIp = argv[0];
     const char* zManager = argv[1];
 
-    xml::convert_to_first_multi_node(csDoc, zManager, zIp);
+    json_t* pOutput = json_object();
+    xml::convert_to_first_multi_node(csDoc, zManager, zIp, pOutput);
+    json_decref(pOutput);
     return true;
 }
 
@@ -155,6 +157,8 @@ bool scan(xmlDoc& csDoc, int argc, char* argv[])
         cout << "error: Could not update dbroots." << endl;
         break;
     }
+
+    json_decref(pOutput);
 
     return true;
 }

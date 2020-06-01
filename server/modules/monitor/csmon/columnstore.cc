@@ -306,9 +306,14 @@ bool xml::find_node_id(xmlDoc& xmlDoc, const string& address, string* pNid)
     return rv;
 }
 
-void xml::convert_to_first_multi_node(xmlDoc& csDoc,
-                                      const string& manager,
-                                      const string& server_address)
+namespace
+{
+
+using namespace cs::xml;
+
+void xconvert_to_first_multi_node(xmlDoc& csDoc,
+                                  const string& manager,
+                                  const string& server_address)
 {
     xmlNode& cs = get_root(csDoc);
 
@@ -319,6 +324,28 @@ void xml::convert_to_first_multi_node(xmlDoc& csDoc,
     // if the current value is "127.0.0.1".
     int n = mxb::xml::update_if(cs, "/IPAddr", server_address.c_str(), "127.0.0.1");
     mxb_assert(n >= 0);
+}
+
+}
+
+bool xml::convert_to_first_multi_node(xmlDoc& csDoc,
+                                      const string& manager,
+                                      const string& server_address,
+                                      json_t* pOutput)
+{
+    bool rv = true;
+
+    try
+    {
+        xconvert_to_first_multi_node(csDoc, manager, server_address);
+    }
+    catch (const std::exception& x)
+    {
+        LOG_APPEND_JSON_ERROR(&pOutput, "%s", x.what());
+        rv = false;
+    }
+
+    return rv;
 }
 
 void xml::convert_to_single_node(xmlDoc& csDoc)

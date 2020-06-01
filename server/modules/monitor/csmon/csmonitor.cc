@@ -1636,34 +1636,43 @@ bool CsMonitor::cs_add_first_multi_node(json_t* pOutput,
         {
             CS_DEBUG("Fetched current config from '%s'.", zName);
 
-            cs::xml::convert_to_first_multi_node(*config.sXml, m_context.manager(), pServer->address());
-
-            auto body = cs::body::config(*config.sXml,
-                                         m_context.revision(),
-                                         m_context.manager(),
-                                         timeout);
-
-            if (pServer->set_config(body, &pOutput))
+            if (cs::xml::convert_to_first_multi_node(*config.sXml,
+                                                     m_context.manager(),
+                                                     pServer->address(),
+                                                     pOutput))
             {
-                MXS_NOTICE("Updated config on '%s'.", zName);
+                auto body = cs::body::config(*config.sXml,
+                                             m_context.revision(),
+                                             m_context.manager(),
+                                             timeout);
 
-                result = pServer->commit(timeout);
-
-                if (result.ok())
+                if (pServer->set_config(body, &pOutput))
                 {
-                    MXS_NOTICE("Committed changes on '%s'.", zName);
-                    success = true;
+                    MXS_NOTICE("Updated config on '%s'.", zName);
+
+                    result = pServer->commit(timeout);
+
+                    if (result.ok())
+                    {
+                        MXS_NOTICE("Committed changes on '%s'.", zName);
+                        success = true;
+                    }
+                    else
+                    {
+                        LOG_APPEND_JSON_ERROR(&pOutput, "Could not commit changes to '%s': %s",
+                                              pServer->name(),
+                                              result.response.body.c_str());
+                    }
                 }
                 else
                 {
-                    LOG_APPEND_JSON_ERROR(&pOutput, "Could not commit changes to '%s': %s",
-                                          pServer->name(),
-                                          result.response.body.c_str());
+                    LOG_PREPEND_JSON_ERROR(&pOutput, "Could not set new config of '%s'.", zName);
                 }
             }
             else
             {
-                LOG_PREPEND_JSON_ERROR(&pOutput, "Could not set new config of '%s'.", zName);
+                LOG_PREPEND_JSON_ERROR(&pOutput, "Could not convert single node configuration to "
+                                       "first multi-node configuration.");
             }
         }
         else

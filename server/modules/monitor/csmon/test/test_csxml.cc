@@ -97,7 +97,9 @@ int test_convert_to_first_multi_node()
     const char IP[] = "198.168.0.1";
     const char MANAGER[] = "10.11.12.13";
 
-    xml::convert_to_first_multi_node(*sDoc.get(), MANAGER, IP);
+    json_t* pOutput = json_object();
+    xml::convert_to_first_multi_node(*sDoc.get(), MANAGER, IP, pOutput);
+    json_decref(pOutput);
 
     unique_ptr<xmlDoc> sExpected = mxb::xml::load(ZFIRST_MULTI_NODE);
 
