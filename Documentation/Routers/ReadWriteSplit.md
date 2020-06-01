@@ -446,8 +446,16 @@ be replayed successfully but it will still be attempted.
 ### `transaction_replay_max_size`
 
 The limit on transaction size for transaction replay in bytes. Any transaction
-that exceeds this limit will not be replayed. The default size limit is 1
-MiB. Read [the configuration guide](../Getting-Started/Configuration-Guide.md#sizes)
+that exceeds this limit will not be replayed. The default value is 1 MiB. This
+limit applies at a session level which means that the total peak memory
+consumption can be `transaction_replay_max_size` times the number of client
+connections.
+
+The amount of memory needed to store a particular transaction will be slightly
+larger than the length in bytes of the SQL used in the transaction. If the limit
+is ever exceeded, a message will be logged at the info level.
+
+Read [the configuration guide](../Getting-Started/Configuration-Guide.md#sizes)
 for more details on size type parameters in MaxScale.
 
 ### `optimistic_trx`
