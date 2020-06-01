@@ -57,6 +57,7 @@ class RplEvent
 {
 public:
     RplEvent() = default;   // => is_empty() == true
+    RplEvent(const RplEvent&) = default;
     RplEvent(RplEvent&&) = default;
     RplEvent& operator=(RplEvent&&) = default;
 

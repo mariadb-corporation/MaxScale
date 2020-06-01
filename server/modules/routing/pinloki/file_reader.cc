@@ -25,6 +25,7 @@
 #include <thread>
 #include <sys/inotify.h>
 #include <unistd.h>
+#include <string.h>
 
 #include <maxscale/protocol/mariadb/mysql.hh>
 
@@ -50,6 +51,7 @@ using namespace std::literals::chrono_literals;
 
 namespace pinloki
 {
+
 constexpr int HEADER_LEN = 19;
 
 FileReader::FileReader(const maxsql::Gtid& gtid, const Inventory* inv)
@@ -69,8 +71,6 @@ FileReader::FileReader(const maxsql::Gtid& gtid, const Inventory* inv)
         {
             MXB_THROW(GtidNotFoundError, "Could not find '" << gtid << "' in any of the binlogs");
         }
-
-        // This is where the initial events need to be generated. I deque of events will be fine.
 
         open(gtid_pos.file_name);
         m_read_pos.next_pos = gtid_pos.file_pos;
@@ -130,6 +130,13 @@ maxsql::RplEvent FileReader::fetch_event()
 {
     std::vector<char> raw(HEADER_LEN);
 
+    if (m_generate_rotate)
+    {
+        m_generate_rotate = false;
+        std::string full_name = m_inventory.next(m_read_pos.name);
+        return create_rotate_event(basename(full_name.c_str()));
+    }
+
     m_read_pos.file.clear();
     m_read_pos.file.seekg(m_read_pos.next_pos);
     m_read_pos.file.read(raw.data(), HEADER_LEN);
@@ -155,8 +162,29 @@ maxsql::RplEvent FileReader::fetch_event()
 
     if (rpl.event_type() == ROTATE_EVENT)
     {
+        /* TODO TEMP sleep. Recent changes mean the rotate is written before the new file */
+        std::this_thread::sleep_for(100ms);
+
         auto file_name = m_inventory.config().path(rpl.rotate().file_name);
         open(file_name);
+    }
+    else if (rpl.event_type() == STOP_EVENT)
+    {
+        auto file_name = m_inventory.next(m_read_pos.name);
+        if (!file_name.empty())
+        {
+            MXB_SINFO("STOP_EVENT in file " << m_read_pos.name
+                                            << ".  The next event will be a generated, artificial ROTATE_EVENT to "
+                                            << file_name);
+            m_generate_rotate = true;
+            open(file_name);
+        }
+        else
+        {
+            MXB_THROW(BinlogReadError,
+                      "Sequence error,  binlog file " << m_read_pos.name << " has a STOP_EVENT"
+                                                      << " but the Inventory has no successor for it");
+        }
     }
     else
     {
@@ -210,7 +238,7 @@ mxq::RplEvent FileReader::create_heartbeat_event() const
     ptr += 4;
 
     // Next position is the current next_pos value
-    mariadb::set_byte4(ptr, m_read_pos.next_pos);
+    mariadb::set_byte4(ptr, -1);
     ptr += 4;
 
     // This is an artificial event
@@ -220,6 +248,49 @@ mxq::RplEvent FileReader::create_heartbeat_event() const
     // The binlog name as the payload (not null-terminated)
     memcpy(ptr, filename.c_str(), filename.size());
     ptr += filename.size();
+
+    // Checksum of the whole event
+    mariadb::set_byte4(ptr, crc32(0, (uint8_t*)data.data(), data.size() - 4));
+
+    return mxq::RplEvent(std::move(data));
+}
+
+mxq::RplEvent FileReader::create_rotate_event(const std::string& file_name) const
+{
+    std::vector<char> data(HEADER_LEN + file_name.size() + 12);
+    uint8_t* ptr = (uint8_t*)&data[0];
+
+    // Timestamp, hm.
+    mariadb::set_byte4(ptr, 0);
+    ptr += 4;
+
+    // This is a rotate event
+    *ptr++ = ROTATE_EVENT;
+
+    // server_id
+    mariadb::set_byte4(ptr, m_inventory.config().server_id());
+    ptr += 4;
+
+    // Event length
+    mariadb::set_byte4(ptr, data.size());
+    ptr += 4;
+
+    // Next position is the current next_pos value (weird)
+    mariadb::set_byte4(ptr, m_read_pos.next_pos);
+    ptr += 4;
+
+    // This is an artificial event
+    mariadb::set_byte2(ptr, LOG_EVENT_ARTIFICIAL_F);
+    ptr += 2;
+
+    // PAYLOAD
+    // The position in the new file. Always sizeof magic.
+    mariadb::set_byte8(ptr, PINLOKI_MAGIC.size());
+    ptr += 8;
+
+    // The binlog name  (not null-terminated)
+    memcpy(ptr, file_name.c_str(), file_name.size());
+    ptr += file_name.size();
 
     // Checksum of the whole event
     mariadb::set_byte4(ptr, crc32(0, (uint8_t*)data.data(), data.size() - 4));

@@ -107,4 +107,21 @@ std::string Inventory::last() const
         return m_file_names.back();
     }
 }
+
+std::string Inventory::next(const std::string& file_name) const
+{
+    auto s = config().path(file_name);
+    std::unique_lock<std::mutex> lock(m_mutex);
+
+    // search in reverse since the file is likely at the end of the vector
+    auto rite = std::find(rbegin(m_file_names), rend(m_file_names), s);
+    if (rite != rend(m_file_names) && (rite != rbegin(m_file_names)))
+    {
+        return *--rite;
+    }
+    else
+    {
+        return "";
+    }
+}
 }

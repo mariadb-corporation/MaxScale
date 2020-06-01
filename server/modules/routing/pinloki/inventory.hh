@@ -69,6 +69,13 @@ public:
      */
     std::string last() const;
 
+    /**
+     * @brief next - next file in inventory
+     * @param file_name
+     * @return the next file in the inventory or an empty string
+     */
+    std::string next(const std::string& file_name) const;
+
     const Config& config() const
     {
         return m_config;

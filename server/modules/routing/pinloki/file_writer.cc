@@ -189,7 +189,7 @@ void FileWriter::write_stop(const std::string& file_name)
 
     if (!file.good())
     {
-        MXB_THROW(BinlogWriteError, "Could not open write STOP_EVENT to " << file_name);
+        MXB_THROW(BinlogWriteError, "Could not write STOP_EVENT to " << file_name);
     }
 }
 }

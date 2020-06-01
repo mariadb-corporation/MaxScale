@@ -64,13 +64,15 @@ private:
         int           next_pos;
     };
 
-    void open(const std::string& file_name);
-    void set_inotify_fd();
+    void             open(const std::string& file_name);
+    void             set_inotify_fd();
+    maxsql::RplEvent create_rotate_event(const std::string& file_name) const;
 
     int              m_inotify_fd;
     int              m_inotify_descriptor = -1;
     ReadPosition     m_read_pos;
     uint32_t         m_server_id;
     const Inventory& m_inventory;
+    bool             m_generate_rotate = false;
 };
 }
