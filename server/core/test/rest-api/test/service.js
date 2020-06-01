@@ -280,5 +280,10 @@ describe("Service", function() {
             .should.be.fulfilled
     });
 
+    it("reload users", function() {
+        return request.post(base_url + "/services/RW-Split-Router/reload")
+            .should.be.fulfilled
+    });
+
     after(stopMaxScale)
 });

@@ -820,6 +820,16 @@ HttpResponse cb_threads_rebalance(const HttpRequest& request)
     return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
 }
 
+HttpResponse cb_reload_users(const HttpRequest& request)
+{
+    Service* service = Service::find(request.uri_part(1).c_str());
+    mxb_assert(service);
+
+    service->user_account_manager()->update_user_accounts();
+
+    return HttpResponse(MHD_HTTP_NO_CONTENT);
+}
+
 HttpResponse cb_all_threads(const HttpRequest& request)
 {
     return HttpResponse(MHD_HTTP_OK, mxs_rworker_list_to_json(request.host()));
@@ -1199,6 +1209,7 @@ public:
         m_post.emplace_back(cb_flush, "maxscale", "logs", "flush");
         m_post.emplace_back(cb_thread_rebalance, "maxscale", "threads", ":thread", "rebalance");
         m_post.emplace_back(cb_threads_rebalance, "maxscale", "threads", "rebalance");
+        m_post.emplace_back(cb_reload_users, "services", ":service", "reload");
 
         /** Update resources */
         m_patch.emplace_back(cb_alter_server, "servers", ":server");
