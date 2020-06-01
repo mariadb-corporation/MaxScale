@@ -28,7 +28,7 @@
 #include <iomanip>
 #include <getopt.h>
 
-const pinloki::Config& config()
+pinloki::Config& config()
 {
     static pinloki::Config cfg("test");
     return cfg;
@@ -104,7 +104,7 @@ try
     bool help = false;
     std::string mode;
     maxsql::GtidList override_gtid_list;
-    int port = 3306;
+    int port = 4001;
     std::string host = "127.0.0.1";
     std::string user = "maxskysql";
     std::string pw = "skysql";
@@ -198,11 +198,21 @@ try
         return EXIT_SUCCESS;
     }
 
+    // This is for the reader
     if (override_gtid_list.is_valid())
     {
         std::ofstream ofs(config().gtid_file_path());
         ofs << override_gtid_list;
     }
+
+    // This is for the writer, normally done in pinloki.cc
+    if (auto ifs = std::ifstream(config().gtid_file_path()))
+    {
+        std::string gtid_list_str;
+        ifs >> gtid_list_str;
+        config().set_boot_strap_gtid_list(gtid_list_str);
+    }
+
 
     prog_main(override_gtid_list, host + ":" + std::to_string(port), user, pw);
 }
