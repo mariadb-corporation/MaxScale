@@ -80,11 +80,11 @@ exports.builder = function(yargs) {
     // Create server
         .group(['services', 'monitors'], 'Create server options:')
         .option('services', {
-            describe: 'Link the created server to these services',
+            describe: 'Link the created server to these services. All non-option arguments after --services are interpreted as service names e.g. `--services my-service-1 my-service-2`.',
             type: 'array'
         })
         .option('monitors', {
-            describe: 'Link the created server to these monitors',
+            describe: 'Link the created server to this monitor',
             type: 'array'
         })
         .command('server <name> <host> <port>', 'Create a new server', function(yargs) {
@@ -135,7 +135,7 @@ exports.builder = function(yargs) {
     // Create monitor
         .group(['servers', 'monitor-user', 'monitor-password'], 'Create monitor options:')
         .option('servers', {
-            describe: 'Link the created monitor to these servers',
+            describe: 'Link the created monitor to these servers. All non-option arguments after --servers are interpreted as server names e.g. `--servers srv1 srv2 srv3`.',
             type: 'array'
         })
         .option('monitor-user', {
@@ -194,7 +194,7 @@ exports.builder = function(yargs) {
     // Create service
         .group(['servers', 'filters'], 'Create service options:')
         .option('servers', {
-            describe: 'Link the created service to these servers',
+            describe: 'Link the created service to these servers. All non-option arguments after --servers are interpreted as server names e.g. `--servers srv1 srv2 srv3`.',
             type: 'array'
         })
         .option('filters', {
