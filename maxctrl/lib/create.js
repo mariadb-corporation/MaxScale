@@ -83,9 +83,10 @@ exports.builder = function(yargs) {
             describe: 'Link the created server to these services. All non-option arguments after --services are interpreted as service names e.g. `--services my-service-1 my-service-2`.',
             type: 'array'
         })
-        .option('monitors', {
+        .option('monitor', {
+            alias: 'monitors',
             describe: 'Link the created server to this monitor',
-            type: 'array'
+            type: 'string'
         })
         .command('server <name> <host> <port>', 'Create a new server', function(yargs) {
             return yargs.epilog('The created server will not be used by any services or monitors ' +
@@ -121,10 +122,8 @@ exports.builder = function(yargs) {
                 }
             }
 
-            if (argv.monitors) {
-                for (i = 0; i < argv.monitors.length; i++) {
-                    _.set(server, 'data.relationships.monitors.data[' + i + ']', {id: argv.monitors[i], type: 'monitors'})
-                }
+            if (argv.monitor) {
+                _.set(server, 'data.relationships.monitors.data[0]', {id: argv.monitor, type: 'monitors'})
             }
 
             maxctrl(argv, function(host) {
