@@ -25,6 +25,7 @@
 #include <getopt.h>
 
 #include <maxscale/log.hh>
+#include <maxbase/alloc.h>
 
 static int verbose = 0;
 static uint64_t seekto = 0;
@@ -70,10 +71,13 @@ int check_file(const char* filename)
             while (num_rows != 0 && (row = maxavro_record_read_json(file)))
             {
                 char* json = json_dumps(row, JSON_PRESERVE_ORDER);
+                json_decref(row);
+
                 if (json)
                 {
                     printf("%s\n", json);
-                    json_decref(row);
+                    MXS_FREE(json);
+
                     if (num_rows > 0)
                     {
                         num_rows--;
