@@ -599,3 +599,17 @@ Starts a stopped service.
 Service is started:
 
 `Status: 204 No Content`
+
+### Reload users of a service
+
+```
+POST /v1/services/:name/reload
+```
+
+Reloads the list of database users used for authentication.
+
+#### Response
+
+Users are reloaded:
+
+`Status: 204 No Content`
