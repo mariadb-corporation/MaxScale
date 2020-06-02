@@ -260,8 +260,8 @@ bool mxb::xml::equal(const xmlNode& lhs, const xmlNode& rhs, std::ostream* pErr)
 
 bool mxb::xml::equal(const xmlDoc& lhs, const xmlDoc& rhs, std::ostream* pErrors)
 {
-    xmlNode* pL = xmlDocGetRootElement(&lhs);
-    xmlNode* pR = xmlDocGetRootElement(&rhs);
+    xmlNode* pL = xmlDocGetRootElement(const_cast<xmlDoc*>(&lhs));
+    xmlNode* pR = xmlDocGetRootElement(const_cast<xmlDoc*>(&rhs));
 
     mxb_assert(pL && pR);
 
