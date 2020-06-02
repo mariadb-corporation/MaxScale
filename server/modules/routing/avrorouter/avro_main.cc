@@ -70,6 +70,11 @@ MXS_ROUTER* createInstance(SERVICE* service, mxs::ConfigParameters* params)
     return router;
 }
 
+void destroyInstance(MXS_ROUTER* router)
+{
+    delete static_cast<Avro*>(router);
+}
+
 /**
  * Associate a new session with this instance of the router.
  *
@@ -454,7 +459,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         clientReply,
         errorReply,
         getCapabilities,
-        NULL
+        destroyInstance
     };
 
     static uint64_t caps = RCAP_TYPE_NO_RSESSION | RCAP_TYPE_NO_AUTH;

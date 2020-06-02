@@ -246,6 +246,8 @@ bool AvroConverter::commit(const Table& create, const gtid_pos_t& gtid)
         rval = false;
     }
 
+    avro_value_decref(&m_record);
+
     return rval;
 }
 
