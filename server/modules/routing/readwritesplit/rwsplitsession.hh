@@ -147,8 +147,8 @@ private:
 
     bool route_session_write(GWBUF* querybuf, uint8_t command, uint32_t type);
     void continue_large_session_write(GWBUF* querybuf, uint32_t type);
-    bool route_stmt(GWBUF* querybuf);
-    bool route_single_stmt(GWBUF* querybuf);
+    bool route_stmt(mxs::Buffer&& querybuf);
+    bool route_single_stmt(mxs::Buffer&& buffer);
     bool route_stored_query();
     void close_stale_connections();
 
@@ -163,17 +163,17 @@ private:
     // The main target selection function
     mxs::RWBackend* get_target(GWBUF* querybuf, route_target_t route_target);
 
-    bool            handle_target_is_all(GWBUF* querybuf);
+    bool            handle_target_is_all(mxs::Buffer&& buffer);
     mxs::RWBackend* handle_hinted_target(GWBUF* querybuf, route_target_t route_target);
     mxs::RWBackend* handle_slave_is_target(uint8_t cmd, uint32_t stmt_id);
     mxs::RWBackend* handle_master_is_target();
-    bool            handle_got_target(GWBUF* querybuf, mxs::RWBackend* target, bool store);
-    bool            handle_routing_failure(GWBUF* querybuf, route_target_t route_target);
+    bool            handle_got_target(mxs::Buffer&& buffer, mxs::RWBackend* target, bool store);
+    bool            handle_routing_failure(mxs::Buffer&& buffer, route_target_t route_target);
     bool            prepare_target(mxs::RWBackend* target, route_target_t route_target);
     bool            prepare_connection(mxs::RWBackend* target);
     bool            create_one_connection_for_sescmd();
     void            retry_query(GWBUF* querybuf, int delay = 1);
-    void            process_stmt_execute(GWBUF** buffer, uint32_t id, mxs::RWBackend* target);
+    void            process_stmt_execute(mxs::Buffer* buffer, uint32_t id, mxs::RWBackend* target);
 
     // Transaction state helpers
     bool trx_is_starting() const;
@@ -239,7 +239,7 @@ private:
      *
      * @return Whether the current statement should be stored for the duration of the query
      */
-    bool track_optimistic_trx(GWBUF** buffer);
+    bool track_optimistic_trx(mxs::Buffer* buffer);
 
 private:
     // QueryClassifier::Handler

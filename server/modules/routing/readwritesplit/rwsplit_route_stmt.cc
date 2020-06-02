@@ -108,7 +108,7 @@ bool RWSplitSession::should_try_trx_on_slave(route_target_t route_target) const
            && m_qc.is_trx_still_read_only();// The start of the transaction is a read-only statement
 }
 
-bool RWSplitSession::track_optimistic_trx(GWBUF** buffer)
+bool RWSplitSession::track_optimistic_trx(mxs::Buffer* buffer)
 {
     bool store_stmt = true;
 
@@ -121,15 +121,14 @@ bool RWSplitSession::track_optimistic_trx(GWBUF** buffer)
         // Not a plain SELECT, roll it back on the slave and start it on the master
         MXS_INFO("Rolling back current optimistic transaction");
 
-        // Note: This clone is here because routeQuery will always free the buffer
-        m_current_query.reset(gwbuf_clone(*buffer));
-
         /**
          * Store the actual statement we were attempting to execute and
          * replace it with a ROLLBACK. The storing of the statement is
          * done here to avoid storage of the ROLLBACK.
          */
-        *buffer = modutil_create_query("ROLLBACK");
+        m_current_query.reset(buffer->release());
+        buffer->reset(modutil_create_query("ROLLBACK"));
+
         store_stmt = false;
         m_otrx_state = OTRX_ROLLBACK;
     }
@@ -144,11 +143,11 @@ bool RWSplitSession::track_optimistic_trx(GWBUF** buffer)
  *
  * @return True if routing was successful
  */
-bool RWSplitSession::handle_target_is_all(GWBUF* querybuf)
+bool RWSplitSession::handle_target_is_all(mxs::Buffer&& buffer)
 {
     const QueryClassifier::RouteInfo& info = m_qc.current_route_info();
     bool result = false;
-    bool is_large = is_large_query(querybuf);
+    bool is_large = is_large_query(buffer.get());
 
     if (m_qc.large_query())
     {
@@ -156,10 +155,10 @@ bool RWSplitSession::handle_target_is_all(GWBUF* querybuf)
         MXS_INFO("Large session write, have to disable session command history");
         m_config.disable_sescmd_history = true;
 
-        continue_large_session_write(querybuf, info.type_mask());
+        continue_large_session_write(buffer.get(), info.type_mask());
         result = true;
     }
-    else if (route_session_write(gwbuf_clone(querybuf), info.command(), info.type_mask()))
+    else if (route_session_write(buffer.release(), info.command(), info.type_mask()))
     {
         result = true;
         mxb::atomic::add(&m_router->stats().n_all, 1, mxb::atomic::RELAXED);
@@ -171,19 +170,19 @@ bool RWSplitSession::handle_target_is_all(GWBUF* querybuf)
     return result;
 }
 
-bool RWSplitSession::handle_routing_failure(GWBUF* querybuf, route_target_t route_target)
+bool RWSplitSession::handle_routing_failure(mxs::Buffer&& buffer, route_target_t route_target)
 {
     bool ok = true;
     auto next_master = get_master_backend();
 
     if (should_migrate_trx(next_master))
     {
-        ok = start_trx_migration(next_master, querybuf);
+        ok = start_trx_migration(next_master, buffer.get());
     }
     else if (can_retry_query() || can_continue_trx_replay())
     {
-        retry_query(gwbuf_clone(querybuf));
-        MXS_INFO("Delaying routing: %s", extract_sql(querybuf).c_str());
+        MXS_INFO("Delaying routing: %s", extract_sql(buffer.get()).c_str());
+        retry_query(buffer.release());
     }
     else if (m_config.master_failure_mode == RW_ERROR_ON_WRITE)
     {
@@ -200,8 +199,8 @@ bool RWSplitSession::handle_routing_failure(GWBUF* querybuf, route_target_t rout
     else
     {
         MXS_ERROR("Could not find valid server for target type %s (%s: %s), closing connection.\n%s",
-                  route_target_to_string(route_target), STRPACKETTYPE(GWBUF_DATA(querybuf)[4]),
-                  mxs::extract_sql(querybuf).c_str(), get_verbose_status().c_str());
+                  route_target_to_string(route_target), STRPACKETTYPE(buffer.data()[4]),
+                  mxs::extract_sql(buffer.get()).c_str(), get_verbose_status().c_str());
         ok = false;
     }
 
@@ -253,14 +252,14 @@ bool RWSplitSession::query_not_supported(GWBUF* querybuf)
 }
 
 /**
- * Routing function. Find out query type, backend type, and target DCB(s).
- * Then route query to found target(s).
- * @param querybuf  GWBUF including the query
+ * Routes a buffer containing a single packet
  *
- * @return true if routing succeed or if it failed due to unsupported query.
- * false if backend failure was encountered.
+ * @param buffer The buffer to route
+ *
+ * @return True if routing succeed or if it failed due to unsupported query.
+ *         false if backend failure was encountered.
  */
-bool RWSplitSession::route_stmt(GWBUF* querybuf)
+bool RWSplitSession::route_stmt(mxs::Buffer&& buffer)
 {
     const QueryClassifier::RouteInfo& info = m_qc.current_route_info();
     route_target_t route_target = info.target();
@@ -276,21 +275,21 @@ bool RWSplitSession::route_stmt(GWBUF* querybuf)
         replace_master(next_master);
     }
 
-    if (query_not_supported(querybuf))
+    if (query_not_supported(buffer.get()))
     {
         return true;
     }
     else if (TARGET_IS_ALL(route_target) && !should_route_sescmd_to_master())
     {
-        return handle_target_is_all(querybuf);
+        return handle_target_is_all(std::move(buffer));
     }
     else
     {
-        return route_single_stmt(querybuf);
+        return route_single_stmt(std::move(buffer));
     }
 }
 
-bool RWSplitSession::route_single_stmt(GWBUF* querybuf)
+bool RWSplitSession::route_single_stmt(mxs::Buffer&& buffer)
 {
     const QueryClassifier::RouteInfo& info = m_qc.current_route_info();
     route_target_t route_target = should_route_sescmd_to_master() ? TARGET_MASTER : info.target();
@@ -324,13 +323,13 @@ bool RWSplitSession::route_single_stmt(GWBUF* querybuf)
         /** We are speculatively executing a transaction to the slave, keep
          * routing queries to the same server. If the query modifies data,
          * a rollback is initiated on the slave server. */
-        store_stmt = track_optimistic_trx(&querybuf);
+        store_stmt = track_optimistic_trx(&buffer);
         route_target = TARGET_LAST_USED;
     }
 
     bool ok = true;
 
-    if (auto target = get_target(querybuf, route_target))
+    if (auto target = get_target(buffer.get(), route_target))
     {
         // We have a valid target, reset retry duration
         m_retry_duration = 0;
@@ -343,18 +342,18 @@ bool RWSplitSession::route_single_stmt(GWBUF* querybuf)
         else if (target->has_session_commands())
         {
             // We need to wait until the session commands are executed
-            m_query_queue.emplace_front(gwbuf_clone(querybuf));
+            m_query_queue.emplace_front(std::move(buffer));
             MXS_INFO("Queuing query until '%s' completes session command", target->name());
         }
         else
         {
             // Target server was found and is in the correct state
-            ok = handle_got_target(querybuf, target, store_stmt);
+            ok = handle_got_target(std::move(buffer), target, store_stmt);
         }
     }
     else
     {
-        ok = handle_routing_failure(querybuf, route_target);
+        ok = handle_routing_failure(std::move(buffer), route_target);
     }
 
     return ok;
@@ -951,9 +950,9 @@ RWBackend* RWSplitSession::handle_master_is_target()
     return rval;
 }
 
-void RWSplitSession::process_stmt_execute(GWBUF** buf, uint32_t id, RWBackend* target)
+void RWSplitSession::process_stmt_execute(mxs::Buffer* buf, uint32_t id, RWBackend* target)
 {
-    GWBUF* buffer = *buf;
+    GWBUF* buffer = buf->release();
     mxb_assert(gwbuf_is_contiguous(buffer));
     mxb_assert(mxs_mysql_get_command(buffer) == MXS_COM_STMT_EXECUTE);
 
@@ -982,8 +981,9 @@ void RWSplitSession::process_stmt_execute(GWBUF** buf, uint32_t id, RWBackend* t
         tmp = gwbuf_append(tmp, param_types);
         buffer = buffer ? gwbuf_append(tmp, buffer) : tmp;
         gw_mysql_set_byte3(GWBUF_DATA(buffer), gwbuf_length(buffer) - MYSQL_HEADER_LEN);
-        *buf = buffer;
     }
+
+    buf->reset(buffer);
 }
 
 /**
@@ -991,7 +991,7 @@ void RWSplitSession::process_stmt_execute(GWBUF** buf, uint32_t id, RWBackend* t
  *
  *  @return True on success
  */
-bool RWSplitSession::handle_got_target(GWBUF* querybuf, RWBackend* target, bool store)
+bool RWSplitSession::handle_got_target(mxs::Buffer&& buffer, RWBackend* target, bool store)
 {
     mxb_assert_message(target->in_use(), "Target must be in use before routing to it");
     mxb_assert_message(!target->has_session_commands(), "The session command cursor must not be active");
@@ -1012,16 +1012,16 @@ bool RWSplitSession::handle_got_target(GWBUF* querybuf, RWBackend* target, bool 
     }
 
     mxs::Backend::response_type response = mxs::Backend::NO_RESPONSE;
-    uint8_t cmd = mxs_mysql_get_command(querybuf);
-    GWBUF* send_buf = gwbuf_clone(querybuf);
+    uint8_t cmd = mxs_mysql_get_command(buffer.get());
 
     if (cmd == MXS_COM_QUERY && target->is_slave()
         && ((m_config.causal_reads == CausalReads::LOCAL && !m_gtid_pos.empty())
             || m_config.causal_reads == CausalReads::GLOBAL))
     {
         // Perform the causal read only when the query is routed to a slave
-
-        send_buf = add_prefix_wait_gtid(m_router->service()->get_version(SERVICE_VERSION_MIN), send_buf);
+        auto tmp = add_prefix_wait_gtid(m_router->service()->get_version(SERVICE_VERSION_MIN),
+                                        buffer.release());
+        buffer.reset(tmp);
         m_wait_gtid = WAITING_FOR_HEADER;
 
         // The storage for causal reads is done inside add_prefix_wait_gtid
@@ -1029,7 +1029,7 @@ bool RWSplitSession::handle_got_target(GWBUF* querybuf, RWBackend* target, bool 
     }
     else if (m_config.causal_reads != CausalReads::NONE && target->is_master())
     {
-        gwbuf_set_type(querybuf, GWBUF_TYPE_TRACK_STATE);
+        gwbuf_set_type(buffer.get(), GWBUF_TYPE_TRACK_STATE);
     }
 
     if (m_qc.load_data_state() != QueryClassifier::LOAD_DATA_ACTIVE
@@ -1038,22 +1038,22 @@ bool RWSplitSession::handle_got_target(GWBUF* querybuf, RWBackend* target, bool 
         response = mxs::Backend::EXPECT_RESPONSE;
     }
 
-    bool large_query = is_large_query(send_buf);
+    bool large_query = is_large_query(buffer.get());
     uint32_t orig_id = 0;
 
     if (!is_locked_to_master() && mxs_mysql_is_ps_command(cmd) && !m_qc.large_query())
     {
         // Store the original ID in case routing fails
-        orig_id = extract_binary_ps_id(send_buf);
+        orig_id = extract_binary_ps_id(buffer.get());
         // Replace the ID with our internal one, the backends will replace it with their own ID
         auto new_id = m_qc.current_route_info().stmt_id();
-        replace_binary_ps_id(send_buf, new_id);
+        replace_binary_ps_id(buffer.get(), new_id);
 
         if (cmd == MXS_COM_STMT_EXECUTE)
         {
             // The metadata in COM_STMT_EXECUTE is optional. If the statement contains the metadata, store it
             // for later use. If it doesn't, add it if the current target has never gotten it.
-            process_stmt_execute(&send_buf, new_id, target);
+            process_stmt_execute(&buffer, new_id, target);
         }
     }
 
@@ -1063,19 +1063,19 @@ bool RWSplitSession::handle_got_target(GWBUF* querybuf, RWBackend* target, bool 
      * will do the replacement of PS IDs which must not be done if we are
      * continuing an ongoing query.
      */
-    bool success = target->write(send_buf, response);
+    bool success = target->write(gwbuf_clone(buffer.get()), response);
 
     if (orig_id)
     {
         // Put the original ID back in case we try to route the query again
-        replace_binary_ps_id(querybuf, orig_id);
+        replace_binary_ps_id(buffer.get(), orig_id);
     }
 
     if (success)
     {
         if (store)
         {
-            m_current_query.copy_from(querybuf);
+            m_current_query.copy_from(buffer);
         }
 
         mxb::atomic::add(&m_router->stats().n_queries, 1, mxb::atomic::RELAXED);
@@ -1097,7 +1097,7 @@ bool RWSplitSession::handle_got_target(GWBUF* querybuf, RWBackend* target, bool 
             {
                 /** The final packet in a LOAD DATA LOCAL INFILE is an empty packet
                  * to which the server responds with an OK or an ERR packet */
-                mxb_assert(gwbuf_length(querybuf) == 4);
+                mxb_assert(buffer.length() == 4);
                 m_qc.set_load_data_state(QueryClassifier::LOAD_DATA_INACTIVE);
                 session_set_load_active(m_pSession, false);
             }
