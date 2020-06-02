@@ -37,6 +37,7 @@
  */
 
 static MXS_FILTER*         createInstance(const char* name, mxs::ConfigParameters* params);
+static void                destroyInstance(MXS_FILTER* instance);
 static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance,
                                       MXS_SESSION* session,
                                       SERVICE* service,
@@ -121,7 +122,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         clientReply,
         diagnostics,
         getCapabilities,
-        NULL,
+        destroyInstance,
     };
 
     static const char description[] = "A query rewrite filter that uses regular "
@@ -243,6 +244,23 @@ static MXS_FILTER* createInstance(const char* name, mxs::ConfigParameters* param
     }
 
     return (MXS_FILTER*) my_instance;
+}
+
+static void destroyInstance(MXS_FILTER* instance)
+{
+    RegexInstance* my_instance = reinterpret_cast<RegexInstance*>(instance);
+    MXS_FREE(my_instance->match);
+    MXS_FREE(my_instance->replace);
+    MXS_FREE(my_instance->source);
+    MXS_FREE(my_instance->user);
+    pcre2_code_free(my_instance->re);
+
+    if (my_instance->logfile)
+    {
+        fclose(my_instance->logfile);
+    }
+
+    MXS_FREE(my_instance);
 }
 
 bool matching_connection(RegexInstance* my_instance, MXS_SESSION* session)
