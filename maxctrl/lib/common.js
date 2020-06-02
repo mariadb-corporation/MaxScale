@@ -197,7 +197,7 @@ module.exports = function() {
                 row = []
 
                 fields.forEach(function(p) {
-                    var v = _.getPath(i, p[p.name], '')
+                    var v = _.getPath(i, p.path, '')
 
                     if (Array.isArray(v) && typeof(v[0]) != 'object') {
                         v = v.join(', ')

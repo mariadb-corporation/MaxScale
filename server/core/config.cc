@@ -2487,7 +2487,7 @@ static int handle_global_item(const char* name, const char* value)
             return 0;
         }
     }
-    else if (strcmp(name, "sql_mode") == 0)
+    else if (strcmp(name, CN_SQL_MODE) == 0)
     {
         if (strcasecmp(value, "default") == 0)
         {
@@ -4609,62 +4609,61 @@ std::vector<string> config_break_list_string(const string& list_string)
 
 json_t* config_maxscale_to_json(const char* host)
 {
-    json_t* param = json_object();
-    json_object_set_new(param, "libdir", json_string(get_libdir()));
-    json_object_set_new(param, "datadir", json_string(get_datadir()));
-    json_object_set_new(param, "process_datadir", json_string(get_process_datadir()));
-    json_object_set_new(param, "cachedir", json_string(get_cachedir()));
-    json_object_set_new(param, "configdir", json_string(get_configdir()));
-    json_object_set_new(param, "config_persistdir", json_string(get_config_persistdir()));
-    json_object_set_new(param, "module_configdir", json_string(get_module_configdir()));
-    json_object_set_new(param, "piddir", json_string(get_piddir()));
-    json_object_set_new(param, "logdir", json_string(get_logdir()));
-    json_object_set_new(param, "langdir", json_string(get_langdir()));
-    json_object_set_new(param, "execdir", json_string(get_execdir()));
-    json_object_set_new(param, "connector_plugindir", json_string(get_connector_plugindir()));
-    json_object_set_new(param, CN_THREADS, json_integer(config_threadcount()));
-    json_object_set_new(param, CN_THREAD_STACK_SIZE, json_integer(config_thread_stack_size()));
-    json_object_set_new(param, CN_WRITEQ_HIGH_WATER, json_integer(config_writeq_high_water()));
-    json_object_set_new(param, CN_WRITEQ_LOW_WATER, json_integer(config_writeq_low_water()));
-
     MXS_CONFIG* cnf = config_get_global_options();
+    json_t* param = json_object();
 
+
+    json_object_set_new(param, CN_ADMIN_AUTH, json_boolean(cnf->admin_auth));
+    json_object_set_new(param, CN_ADMIN_ENABLED, json_boolean(cnf->admin_enabled));
+    json_object_set_new(param, CN_ADMIN_HOST, json_string(cnf->admin_host));
+    json_object_set_new(param, CN_ADMIN_LOG_AUTH_FAILURES, json_boolean(cnf->admin_log_auth_failures));
+    json_object_set_new(param, CN_ADMIN_PAM_READONLY_SERVICE, json_string(cnf->admin_pam_ro_service.c_str()));
+    json_object_set_new(param, CN_ADMIN_PAM_READWRITE_SERVICE,
+                        json_string(cnf->admin_pam_rw_service.c_str()));
+    json_object_set_new(param, CN_ADMIN_PORT, json_integer(cnf->admin_port));
+    json_object_set_new(param, CN_ADMIN_SSL_CA_CERT, json_string(cnf->admin_ssl_ca_cert));
+    json_object_set_new(param, CN_ADMIN_SSL_CERT, json_string(cnf->admin_ssl_cert));
+    json_object_set_new(param, CN_ADMIN_SSL_KEY, json_string(cnf->admin_ssl_key));
     json_object_set_new(param, CN_AUTH_CONNECT_TIMEOUT, json_integer(cnf->auth_conn_timeout));
     json_object_set_new(param, CN_AUTH_READ_TIMEOUT, json_integer(cnf->auth_read_timeout));
     json_object_set_new(param, CN_AUTH_WRITE_TIMEOUT, json_integer(cnf->auth_write_timeout));
-    json_object_set_new(param, CN_SKIP_PERMISSION_CHECKS, json_boolean(cnf->skip_permission_checks));
-    json_object_set_new(param, CN_ADMIN_AUTH, json_boolean(cnf->admin_auth));
-    json_object_set_new(param, CN_ADMIN_ENABLED, json_boolean(cnf->admin_enabled));
-    json_object_set_new(param, CN_ADMIN_LOG_AUTH_FAILURES, json_boolean(cnf->admin_log_auth_failures));
-    json_object_set_new(param, CN_ADMIN_HOST, json_string(cnf->admin_host));
-    json_object_set_new(param, CN_ADMIN_PORT, json_integer(cnf->admin_port));
-    json_object_set_new(param, CN_ADMIN_SSL_KEY, json_string(cnf->admin_ssl_key));
-    json_object_set_new(param, CN_ADMIN_SSL_CERT, json_string(cnf->admin_ssl_cert));
-    json_object_set_new(param, CN_ADMIN_SSL_CA_CERT, json_string(cnf->admin_ssl_ca_cert));
-    json_object_set_new(param, CN_ADMIN_PAM_READWRITE_SERVICE,
-                        json_string(cnf->admin_pam_rw_service.c_str()));
-    json_object_set_new(param, CN_ADMIN_PAM_READONLY_SERVICE,
-                        json_string(cnf->admin_pam_ro_service.c_str()));
-
-    json_object_set_new(param, CN_PASSIVE, json_boolean(cnf->passive));
-
-    json_object_set_new(param, CN_QUERY_CLASSIFIER, json_string(cnf->qc_name));
-
-    if (cnf->qc_args)
-    {
-        json_object_set_new(param, CN_QUERY_CLASSIFIER_ARGS, json_string(cnf->qc_args));
-    }
-
-    json_object_set_new(param,
-                        CN_QUERY_CLASSIFIER_CACHE_SIZE,
-                        json_integer(cnf->qc_cache_properties.max_size));
-
-    json_object_set_new(param, CN_RETAIN_LAST_STATEMENTS, json_integer(session_get_retain_last_statements()));
+    json_object_set_new(param, CN_CACHEDIR, json_string(get_cachedir()));
+    json_object_set_new(param, CN_CONNECTOR_PLUGINDIR, json_string(get_connector_plugindir()));
+    json_object_set_new(param, CN_DATADIR, json_string(get_datadir()));
     json_object_set_new(param, CN_DUMP_LAST_STATEMENTS, json_string(session_get_dump_statements_str()));
-    json_object_set_new(param, CN_SESSION_TRACE, json_integer(session_get_session_trace()));
+    json_object_set_new(param, CN_EXECDIR, json_string(get_execdir()));
+    json_object_set_new(param, CN_LANGUAGE, json_string(get_langdir()));
+    json_object_set_new(param, CN_LIBDIR, json_string(get_libdir()));
     json_object_set_new(param, CN_LOAD_PERSISTED_CONFIGS, json_boolean(cnf->load_persisted_configs));
+    json_object_set_new(param,
+                        CN_LOCAL_ADDRESS,
+                        cnf->local_address ? json_string(cnf->local_address) : json_null());
+    json_object_set_new(param, CN_LOGDIR, json_string(get_logdir()));
     json_object_set_new(param, CN_MAX_AUTH_ERRORS_UNTIL_BLOCK,
                         json_integer(cnf->max_auth_errors_until_block));
+    json_object_set_new(param, CN_MODULE_CONFIGDIR, json_string(get_module_configdir()));
+    json_object_set_new(param, CN_PASSIVE, json_boolean(cnf->passive));
+    json_object_set_new(param, CN_PERSISTDIR, json_string(get_config_persistdir()));
+    json_object_set_new(param, CN_PIDDIR, json_string(get_piddir()));
+    json_object_set_new(param, CN_QUERY_CLASSIFIER, json_string(cnf->qc_name));
+    json_object_set_new(param,
+                        CN_QUERY_CLASSIFIER_ARGS,
+                        cnf->qc_args ? json_string(cnf->qc_args) : json_null());
+    json_object_set_new(param, CN_QUERY_CLASSIFIER_CACHE_SIZE,
+                        json_integer(cnf->qc_cache_properties.max_size));
+    json_object_set_new(param, CN_QUERY_RETRIES, json_integer(cnf->query_retries));
+    json_object_set_new(param, CN_QUERY_RETRY_TIMEOUT, json_integer(cnf->query_retry_timeout));
+    json_object_set_new(param, CN_RETAIN_LAST_STATEMENTS, json_integer(session_get_retain_last_statements()));
+    json_object_set_new(param, CN_SESSION_TRACE, json_integer(session_get_session_trace()));
+    json_object_set_new(param, CN_SKIP_PERMISSION_CHECKS, json_boolean(cnf->skip_permission_checks));
+    json_object_set_new(param, CN_SQL_MODE,
+                        json_string(cnf->qc_sql_mode == QC_SQL_MODE_DEFAULT ? "default" : "oracle"));
+    json_object_set_new(param, CN_SUBSTITUTE_VARIABLES, json_boolean(cnf->substitute_variables));
+    json_object_set_new(param, CN_THREADS, json_integer(config_threadcount()));
+    json_object_set_new(param, CN_THREAD_STACK_SIZE, json_integer(config_thread_stack_size()));
+    json_object_set_new(param, CN_USERS_REFRESH_TIME, json_integer(cnf->users_refresh_time));
+    json_object_set_new(param, CN_WRITEQ_HIGH_WATER, json_integer(config_writeq_high_water()));
+    json_object_set_new(param, CN_WRITEQ_LOW_WATER, json_integer(config_writeq_low_water()));
 
     json_t* attr = json_object();
     time_t started = maxscale_started();
@@ -4675,6 +4674,7 @@ json_t* config_maxscale_to_json(const char* host)
     json_object_set_new(attr, "started_at", json_string(http_to_date(started).c_str()));
     json_object_set_new(attr, "activated_at", json_string(http_to_date(activated).c_str()));
     json_object_set_new(attr, "uptime", json_integer(maxscale_uptime()));
+    json_object_set_new(attr, "process_datadir", json_string(get_process_datadir()));
 
     json_t* obj = json_object();
     json_object_set_new(obj, CN_ATTRIBUTES, attr);

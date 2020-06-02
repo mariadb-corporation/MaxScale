@@ -55,9 +55,10 @@ exports.builder = function(yargs) {
                     describe: 'Link the created server to these services',
                     type: 'array'
                 })
-                .option('monitors', {
-                    describe: 'Link the created server to these monitors',
-                    type: 'array'
+                .option('monitor', {
+                    alias: 'monitors',
+                    describe: 'Link the created server to this monitor',
+                    type: 'string'
                 })
                 .option('protocol', {
                     describe: 'Protocol module name',
@@ -126,10 +127,8 @@ exports.builder = function(yargs) {
                 }
             }
 
-            if (argv.monitors) {
-                for (i = 0; i < argv.monitors.length; i++) {
-                    _.set(server, 'data.relationships.monitors.data[' + i + ']', {id: argv.monitors[i], type: 'monitors'})
-                }
+            if (argv.monitor) {
+                _.set(server, 'data.relationships.monitors.data[0]', {id: argv.monitor, type: 'monitors'})
             }
 
             maxctrl(argv, function(host) {
@@ -146,7 +145,7 @@ exports.builder = function(yargs) {
                 .usage('Usage: create monitor <name> <module> [params...]')
                 .group(['servers', 'monitor-user', 'monitor-password'], 'Create monitor options:')
                 .option('servers', {
-                    describe: 'Link the created monitor to these servers',
+                    describe: 'Link the created service to these servers. All non-option arguments after --servers are interpreted as server names e.g. `--servers srv1 srv2 srv3`.',
                     type: 'array'
                 })
                 .option('monitor-user', {
@@ -204,7 +203,7 @@ exports.builder = function(yargs) {
                 .usage('Usage: service <name> <router> <params...>')
                 .group(['servers', 'filters'], 'Create service options:')
                 .option('servers', {
-                    describe: 'Link the created service to these servers',
+                    describe: 'Link the created service to these servers. All non-option arguments after --servers are interpreted as server names e.g. `--servers srv1 srv2 srv3`.',
                     type: 'array'
                 })
                 .option('filters', {
