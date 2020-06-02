@@ -50,7 +50,6 @@ private:
     void write_stop(const std::string& file_name);
 
     Inventory&    m_inventory;
-    bool          m_sync_with_server;
     WritePosition m_previous_pos;       // This does not really need to be a member.
     WritePosition m_current_pos;
 };

@@ -26,7 +26,6 @@ namespace pinloki
 {
 FileWriter::FileWriter(Inventory* inv)
     : m_inventory(*inv)
-    , m_sync_with_server(m_inventory.count())
 {
 }
 
@@ -37,19 +36,18 @@ void FileWriter::add_event(const maxsql::MariaRplEvent& rpl_event)
     {
         // Heartbeat event, don't process it
     }
-    else if (is_artificial && rpl_event.event().event_type == ROTATE_EVENT)
-    {
-        rotate_event(rpl_event);
-    }
     else if (is_artificial)
     {
-        m_current_pos.write_pos = rpl_event.event().next_event_pos;
-        if (m_sync_with_server && rpl_event.event().event_type == GTID_LIST_EVENT)
+        if (rpl_event.event().event_type == ROTATE_EVENT)
         {
-            m_sync_with_server = false;     // sync done, start writing
+            rotate_event(rpl_event);
+        }
+        else
+        {
+            m_current_pos.write_pos = rpl_event.event().next_event_pos;
         }
     }
-    else if (!m_sync_with_server)
+    else
     {
         write_to_file(m_current_pos, rpl_event);
     }
@@ -95,7 +93,6 @@ void FileWriter::rotate_event(const maxsql::MariaRplEvent& rpl_event)
             {
                 write_stop(last_file);
             }
-            m_sync_with_server = false;
         }
     }
 }
@@ -127,10 +124,17 @@ void FileWriter::open_existing_file(const std::string& file_name)
 
 void FileWriter::write_to_file(WritePosition& fn, const maxsql::MariaRplEvent& rpl_event)
 {
-    fn.file.seekp(fn.write_pos);
-    fn.file.write(rpl_event.raw_data(), rpl_event.raw_data_size());
+    fn.file.seekp(0, std::ios_base::end);
+    auto end_pos = fn.file.tellp();
+
+    if (fn.write_pos >= end_pos)
+    {
+        fn.file.seekp(fn.write_pos);
+        fn.file.write(rpl_event.raw_data(), rpl_event.raw_data_size());
+        fn.file.flush();
+    }
+
     fn.write_pos = rpl_event.event().next_event_pos;
-    fn.file.flush();
 
     if (!fn.file.good())
     {
