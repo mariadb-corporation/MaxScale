@@ -50,7 +50,7 @@ public:
     /**
      * Queue a new query for execution
      *
-     * @param buffer Buffer containing the query
+     * @param buffer Buffer containing the query. The function takes ownership of the buffer.
      *
      * @return True if query was successfully queued
      */

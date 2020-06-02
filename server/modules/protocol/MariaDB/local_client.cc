@@ -30,6 +30,11 @@ bool LocalClient::queue_query(GWBUF* buffer)
     {
         rval = m_down->routeQuery(buffer);
     }
+    else
+    {
+        gwbuf_free(buffer);
+    }
+
 
     return rval;
 }
