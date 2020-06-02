@@ -338,7 +338,7 @@ HINT* HintParser::parse_one(InputIter it, InputIter end)
                 if (hint)
                 {
                     // Preparation of a named hint
-                    m_named_hints[key] = std::unique_ptr<HINT>(hint_dup(hint));
+                    m_named_hints[key] = std::unique_ptr<HINT>(hint);
                 }
             }
             else if (t == TOK_START)
