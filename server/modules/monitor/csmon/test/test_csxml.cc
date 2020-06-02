@@ -11,16 +11,23 @@
  * Public License.
  */
 
+#include <unistd.h>
+#include <fstream>
 #include <iostream>
-#include "columnstore.hh"
 #include <libxml/xpath.h>
 #include <maxbase/log.hh>
+#include "columnstore.hh"
 
 using namespace std;
 namespace xml = cs::xml;
 
 namespace
 {
+
+const string TEST_DIR_PATH { "../../../../../../server/modules/monitor/csmon/test" };
+
+const string PATH_CS_SINGLE_NODE { TEST_DIR_PATH + "/" + "cs-single-node.xml" };
+const string PATH_CS_FIRST_MULTI_NODE { TEST_DIR_PATH + "/" + "cs-first-multi-node.xml" };
 
 bool equal(const xmlNode& lhs, const xmlNode& rhs)
 {
@@ -42,57 +49,55 @@ string dump(const std::unique_ptr<xmlDoc>& sDoc)
     return mxb::xml::dump(*sDoc.get());
 }
 
+xmlNode& get_root(xmlDoc& csXml)
+{
+    xmlNode* pRoot = xmlDocGetRootElement(&csXml);
+    mxb_assert(pRoot);
+    mxb_assert(strcmp(reinterpret_cast<const char*>(pRoot->name), "Columnstore") == 0);
+    return *pRoot;
+}
+
+xmlNode& get_root(const unique_ptr<xmlDoc>& sXml)
+{
+    return get_root(*sXml.get());
+}
+
+}
+
+namespace maxbase
+{
+namespace xml
+{
+unique_ptr<xmlDoc> load_file(const std::string& path)
+{
+    unique_ptr<xmlDoc> sDoc;
+
+    std::ifstream in(path, std::ios::ate);
+
+    if (in)
+    {
+        auto size = in.tellg();
+        std::string s(size, '\0');
+        in.seekg(0);
+        if (in.read(&s[0], size))
+        {
+            sDoc = mxb::xml::load(s);
+        }
+    }
+
+    return sDoc;
+}
+}
 }
 
 
 namespace
 {
 
-const char ZSINGLE_NODE[] = R"(
-<Columnstore Version="V1.0.0">
-  <DBRoot1>
-    <PreallocSpace>OFF</PreallocSpace>
-  </DBRoot1>
-  <ExeMgr1>
-    <IPAddr>127.0.0.1</IPAddr>
-    <Port>8601</Port>
-    <Module>pm1</Module>
-  </ExeMgr1>
-  <JobProc>
-    <IPAddr>0.0.0.0</IPAddr>
-    <Port>8602</Port>
-  </JobProc>
-  <ProcMgr>
-    <IPAddr>127.0.0.1</IPAddr>
-    <Port>8603</Port>
-  </ProcMgr>
-</Columnstore>)";
-
-const char ZFIRST_MULTI_NODE[] = R"(
-<Columnstore Version="V1.0.0">
-  <ClusterManager>10.11.12.13</ClusterManager>
-  <DBRoot1>
-    <PreallocSpace>OFF</PreallocSpace>
-  </DBRoot1>
-  <ExeMgr1>
-    <IPAddr>198.168.0.1</IPAddr>
-    <Port>8601</Port>
-    <Module>pm1</Module>
-  </ExeMgr1>
-  <JobProc>
-    <IPAddr>0.0.0.0</IPAddr>
-    <Port>8602</Port>
-  </JobProc>
-  <ProcMgr>
-    <IPAddr>198.168.0.1</IPAddr>
-    <Port>8603</Port>
-  </ProcMgr>
-</Columnstore>)";
-
 int test_convert_to_first_multi_node()
 {
     int rv = 0;
-    unique_ptr<xmlDoc> sDoc = mxb::xml::load(ZSINGLE_NODE);
+    unique_ptr<xmlDoc> sDoc = mxb::xml::load_file(PATH_CS_SINGLE_NODE);
 
     const char IP[] = "198.168.0.1";
     const char MANAGER[] = "10.11.12.13";
@@ -101,25 +106,17 @@ int test_convert_to_first_multi_node()
     xml::convert_to_first_multi_node(*sDoc.get(), MANAGER, IP, pOutput);
     json_decref(pOutput);
 
-    unique_ptr<xmlDoc> sExpected = mxb::xml::load(ZFIRST_MULTI_NODE);
+    unique_ptr<xmlDoc> sExpected = mxb::xml::load_file(PATH_CS_FIRST_MULTI_NODE);
+
+    // The revision must be updated as otherwise there will be a discrepancy.
+    string revision = mxb::xml::get_content_as<string>(get_root(sDoc), cs::xml::CONFIGREVISION);
+    mxb::xml::set_content(get_root(sExpected), cs::xml::CONFIGREVISION, revision);
 
     if (equal(sExpected, sDoc))
     {
         cout << "Single -> Multi Conversion ok" << endl;
 
         xml::convert_to_single_node(*sDoc.get());
-
-        sExpected = mxb::xml::load(ZSINGLE_NODE);
-
-        if (equal(sExpected, sDoc))
-        {
-            cout << "Multi -> Single Conversion ok" << endl;
-        }
-        else
-        {
-            cout << "Multi -> Single Conversion NOT ok." << endl;
-            rv = 1;
-        }
     }
     else
     {

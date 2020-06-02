@@ -317,12 +317,12 @@ void set_ipaddr(xmlNode& cs, const char* zNode, const string& address)
     mxb::xml::set_content(node, IPADDR, address);
 }
 
-void xconvert_to_first_multi_node(xmlDoc& csDoc,
+void xconvert_to_first_multi_node(xmlNode& cs,
                                   const string& manager,
-                                  const string& server_address)
+                                  const string& server_address,
+                                  const string& nid,
+                                  json_t* pOutput)
 {
-    xmlNode& cs = get_root(csDoc);
-
     // Ensure there is a "ClusterManager" key whose value is 'manager'.
     mxb::xml::upsert(cs, CLUSTERMANAGER, manager.c_str());
 
@@ -337,14 +337,28 @@ void xconvert_to_first_multi_node(xmlDoc& csDoc,
     ++revision;
     mxb::xml::upsert(cs, CONFIGREVISION, std::to_string(revision).c_str());
 
-    set_ipaddr(cs, EXEMGR1, server_address);
-    set_ipaddr(cs, DDLPROC, server_address);
-    set_ipaddr(cs, DMLPROC, server_address);
+    xmlNode& dbrm_controller = mxb::xml::get_descendant(cs, DBRM_CONTROLLER);
+    xmlNode& num_workers = mxb::xml::get_descendant(dbrm_controller, NUMWORKERS);
+    mxb::xml::set_content(num_workers, 1);
+
     set_ipaddr(cs, DBRM_CONTROLLER, server_address);
     set_ipaddr(cs, DBRM_WORKER1, server_address);
+    set_ipaddr(cs, DDLPROC, server_address);
+    set_ipaddr(cs, DMLPROC, server_address);
+    set_ipaddr(cs, EXEMGR1, server_address);
     set_ipaddr(cs, PM1_PROCESSMONITOR, server_address);
     set_ipaddr(cs, PM1_SERVERMONITOR, server_address);
     set_ipaddr(cs, PM1_WRITEENGINESERVER, server_address);
+    set_ipaddr(cs, PROCMGR, server_address);
+    set_ipaddr(cs, PROCMGR_ALARM, server_address);
+    set_ipaddr(cs, PROCSTATUSCONTROL, server_address);
+
+    xmlNode& smc = mxb::xml::get_descendant(cs, SYSTEMMODULECONFIG);
+    string name { MODULEIPADDR };
+    name += nid;
+    name += "-1-3";
+    xmlNode& module_ip_addr = mxb::xml::get_descendant(smc, name.c_str());
+    mxb::xml::set_content(module_ip_addr, server_address);
 
     vector<xmlNode*> pmss = mxb::xml::find_children_by_prefix(cs, xml::PMS);
 
@@ -360,6 +374,40 @@ void xconvert_to_first_multi_node(xmlDoc& csDoc,
     }
 }
 
+bool xconvert_to_first_multi_node(xmlDoc& csDoc,
+                                  const string& manager,
+                                  const string& server_address,
+                                  json_t* pOutput)
+{
+    bool rv = false;
+
+    string nid;
+
+    // If the node id is found using "127.0.0.1", then this is really
+    // a new single-node.
+    if (!find_node_id(csDoc, "127.0.0.1", &nid))
+    {
+        // If found using the actual address, then this is probably a node
+        // that earlier was removed, but now is added back.
+        find_node_id(csDoc, server_address, &nid);
+    }
+
+    if (!nid.empty())
+    {
+        xconvert_to_first_multi_node(get_root(csDoc), manager, server_address, nid, pOutput);
+        rv = true;
+    }
+    else
+    {
+        LOG_APPEND_JSON_ERROR(&pOutput,
+                              "Could not find node-id using neither \"127.0.0.1\" "
+                              "nor \"%s\", node cannot be added to cluster.",
+                              server_address.c_str());
+    }
+
+    return rv;
+}
+
 }
 
 bool xml::convert_to_first_multi_node(xmlDoc& csDoc,
@@ -367,16 +415,15 @@ bool xml::convert_to_first_multi_node(xmlDoc& csDoc,
                                       const string& server_address,
                                       json_t* pOutput)
 {
-    bool rv = true;
+    bool rv = false;
 
     try
     {
-        xconvert_to_first_multi_node(csDoc, manager, server_address);
+        rv = xconvert_to_first_multi_node(csDoc, manager, server_address, pOutput);
     }
     catch (const std::exception& x)
     {
         LOG_APPEND_JSON_ERROR(&pOutput, "%s", x.what());
-        rv = false;
     }
 
     return rv;
