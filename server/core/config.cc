@@ -3943,6 +3943,10 @@ bool config_param_is_valid(const MXS_MODULE_PARAM* params,
                             /** Either the only defined enum value is not valid
                              * or multiple values were defined */
                             valid = false;
+                        }
+
+                        if (!valid)
+                        {
                             break;
                         }
                     }
@@ -4037,30 +4041,19 @@ std::vector<string> config_break_list_string(const string& list_string)
 json_t* config_maxscale_to_json(const char* host)
 {
     json_t* param = json_object();
-    json_object_set_new(param, "libdir", json_string(mxs::libdir()));
-    json_object_set_new(param, "datadir", json_string(mxs::datadir()));
-    json_object_set_new(param, "process_datadir", json_string(mxs::process_datadir()));
-    json_object_set_new(param, "cachedir", json_string(mxs::cachedir()));
-    json_object_set_new(param, "configdir", json_string(mxs::configdir()));
-    json_object_set_new(param, "config_persistdir", json_string(mxs::config_persistdir()));
-    json_object_set_new(param, "module_configdir", json_string(mxs::module_configdir()));
-    json_object_set_new(param, "piddir", json_string(mxs::piddir()));
-    json_object_set_new(param, "logdir", json_string(mxs::logdir()));
-    json_object_set_new(param, "langdir", json_string(mxs::langdir()));
-    json_object_set_new(param, "execdir", json_string(mxs::execdir()));
-    json_object_set_new(param, "connector_plugindir", json_string(mxs::connector_plugindir()));
-    json_object_set_new(param, CN_THREADS, json_integer(config_threadcount()));
-    json_object_set_new(param, CN_THREAD_STACK_SIZE, json_integer(config_thread_stack_size()));
+
+    json_object_set_new(param, CN_CACHEDIR, json_string(mxs::cachedir()));
+    json_object_set_new(param, CN_CONNECTOR_PLUGINDIR, json_string(mxs::connector_plugindir()));
+    json_object_set_new(param, CN_DATADIR, json_string(mxs::datadir()));
+    json_object_set_new(param, CN_EXECDIR, json_string(mxs::execdir()));
+    json_object_set_new(param, CN_LANGUAGE, json_string(mxs::langdir()));
+    json_object_set_new(param, CN_LIBDIR, json_string(mxs::libdir()));
+    json_object_set_new(param, CN_LOGDIR, json_string(mxs::logdir()));
+    json_object_set_new(param, CN_MODULE_CONFIGDIR, json_string(mxs::module_configdir()));
+    json_object_set_new(param, CN_PERSISTDIR, json_string(mxs::config_persistdir()));
+    json_object_set_new(param, CN_PIDDIR, json_string(mxs::piddir()));
 
     const mxs::Config& cnf = mxs::Config::get();
-
-    json_object_set_new(param,
-                        CN_QUERY_CLASSIFIER_CACHE_SIZE,
-                        json_integer(cnf.qc_cache_properties.max_size));
-
-    json_object_set_new(param, CN_DUMP_LAST_STATEMENTS, json_string(session_get_dump_statements_str()));
-    json_object_set_new(param, CN_SESSION_TRACE, json_integer(session_get_session_trace()));
-
     // This will dump all parameters defined using the new configuration mechanism.
     cnf.fill(param);
 
@@ -4073,6 +4066,7 @@ json_t* config_maxscale_to_json(const char* host)
     json_object_set_new(attr, "started_at", json_string(http_to_date(started).c_str()));
     json_object_set_new(attr, "activated_at", json_string(http_to_date(activated).c_str()));
     json_object_set_new(attr, "uptime", json_integer(maxscale_uptime()));
+    json_object_set_new(attr, "process_datadir", json_string(mxs::process_datadir()));
 
     json_t* obj = json_object();
     json_object_set_new(obj, CN_ATTRIBUTES, attr);

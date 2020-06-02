@@ -202,7 +202,9 @@ exports.builder = function (yargs) {
           .usage("Usage: create monitor <name> <module> [params...]")
           .group(["servers", "monitor-user", "monitor-password"], "Create monitor options:")
           .option("servers", {
-            describe: "Link the created monitor to these servers",
+            describe:
+              "Link the created monitor to these servers. All non-option arguments " +
+              "after --servers are interpreted as server names e.g. `--servers srv1 srv2 srv3`.",
             type: "array",
           })
           .option("monitor-user", {
@@ -270,11 +272,15 @@ exports.builder = function (yargs) {
           .usage("Usage: service <name> <router> <params...>")
           .group(["servers", "filters", "services", "cluster"], "Create service options:")
           .option("servers", {
-            describe: "Link the created service to these servers",
+            describe:
+              "Link the created service to these servers. All non-option arguments " +
+              "after --servers are interpreted as server names e.g. `--servers srv1 srv2 srv3`.",
             type: "array",
           })
           .option("services", {
-            describe: "Link the created service to these services",
+            describe:
+              "Link the created service to these services. All non-option arguments " +
+              "after --services are interpreted as service names e.g. `--services svc1 svc2 svc3`.",
             type: "array",
           })
           .option("cluster", {
@@ -282,7 +288,9 @@ exports.builder = function (yargs) {
             type: "string",
           })
           .option("filters", {
-            describe: "Link the created service to these filters",
+            describe:
+              "Link the created service to these filters. All non-option arguments " +
+              "after --filters are interpreted as filter names e.g. `--filters f1 f2 f3`.",
             type: "array",
           });
       },

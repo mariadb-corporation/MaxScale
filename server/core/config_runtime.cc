@@ -1574,18 +1574,16 @@ bool ignored_core_parameters(const char* key)
 {
     static const std::unordered_set<std::string> params =
     {
-        "libdir",
-        "datadir",
-        "process_datadir",
-        "cachedir",
-        "configdir",
-        "config_persistdir",
-        "module_configdir",
-        "piddir",
-        "logdir",
-        "langdir",
-        "execdir",
-        "connector_plugindir",
+        CN_CACHEDIR,
+        CN_CONNECTOR_PLUGINDIR,
+        CN_DATADIR,
+        CN_EXECDIR,
+        CN_LANGUAGE,
+        CN_LIBDIR,
+        CN_LOGDIR,
+        CN_MODULE_CONFIGDIR,
+        CN_PERSISTDIR,
+        CN_PIDDIR,
         "thread_stack_size",
     };
 

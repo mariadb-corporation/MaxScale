@@ -56,6 +56,15 @@ describe("Diagnostic Commands", function () {
     });
   });
 
+  it("MXS-2984: Malformed `list listeners` output", function () {
+    return doCommand("list listeners RW-Split-Router --tsv").then((res) => {
+      var d = res.split("\t");
+      d[0].should.equal("RW-Split-Listener");
+      d[1].should.equal("4006");
+      d[2].should.equal("::");
+    });
+  });
+
   after(closeConnection);
   after(stopMaxScale);
 });

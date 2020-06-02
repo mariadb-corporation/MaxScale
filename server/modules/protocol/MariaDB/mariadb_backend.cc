@@ -31,6 +31,8 @@
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/protocol/mariadb/client_connection.hh>
 
+#include <openssl/rand.h>
+
 // For setting server status through monitor
 #include "../../../core/internal/monitormanager.hh"
 
@@ -172,7 +174,7 @@ void MariaDBBackendConnection::finish_connection()
 
     if (m_state == State::HANDSHAKING)
     {
-        memset(m_auth_data.scramble, 0, sizeof(m_auth_data.scramble));
+        RAND_bytes(m_auth_data.scramble, sizeof(m_auth_data.scramble));
         m_dcb->writeq_append(gw_generate_auth_response(false, false, 0));
     }
 
