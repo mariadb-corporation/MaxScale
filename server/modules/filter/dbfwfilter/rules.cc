@@ -36,6 +36,7 @@ Rule::Rule(std::string name, std::string type)
 
 Rule::~Rule()
 {
+    MXS_FREE(active);
 }
 
 bool Rule::matches_query(DbfwSession* session, GWBUF* buffer, char** msg) const
