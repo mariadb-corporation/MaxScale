@@ -165,6 +165,10 @@ DCB::DCB(int fd,
     , m_high_water(config_writeq_high_water())
     , m_low_water(config_writeq_low_water())
 {
+    auto now = mxs_clock();
+    m_last_read = now;
+    m_last_write = now;
+
     if (m_manager)
     {
         m_manager->add(this);
