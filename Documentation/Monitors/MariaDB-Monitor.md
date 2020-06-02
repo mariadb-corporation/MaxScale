@@ -132,43 +132,13 @@ has not been established. MaxScale will only trust the value if the monitor has
 seen the slave connection IO thread connected at least once. If this is not the
 case, the slave connection is ignored.
 
-### `detect_replication_lag`
-
-Deprecated and unused as of MaxScale 2.3. Can be defined but is ignored.
-
-Is effectively always on. The monitor uses the "Seconds_Behind_Master"-field of
-"SHOW SLAVE STATUS" to get the replication lag.
-
 ### `detect_stale_master`
 
-Deprecated and ignored.
+Deprecated and ignored. See [master_requirements](master_requirements) below.
 
 ### `detect_stale_slave`
 
-Boolean, default: ON. Treat running slaves servers without a running master as
-valid slave servers.
-
-If a slave server does not have a live connection to the master, either because
-the master is *Down* or because the slave cannot connect, replication is
-effectively paused. The slave may still have up-to-date data and may be usable
-for reading. *detect_stale_slave* controls whether such a slave is marked *Slave*
-and used for query routing.
-
-If this feature is disabled, a server is considered a valid slave only if it has
-a running master server and the replication connection is working properly. In a
-multi-level topology, each link would also need to be replicating properly.
-
-```
-detect_stale_slave=true
-```
-
-### `mysql51_replication`
-
-Deprecated and unused as of MaxScale 2.3. Can be defined but is ignored.
-
-### `multimaster`
-
-Deprecated and unused as of MaxScale 2.3. Can be defined but is ignored.
+Deprecated and ignored. See [slave_requirements](slave_requirements) below.
 
 ### `ignore_external_masters`
 
@@ -181,13 +151,72 @@ Server*-status. If this setting is enabled, the status is not set.
 
 ### `detect_standalone_master`
 
-Boolean, default: ON. This setting controls whether a standalone server can be a
-master. A standalone server is a server from which no other server in the
-cluster is attempting to replicate from.
+Deprecated and ignored. See [master_requirements](master_requirements) below.
 
-If disabled, a solitary server cannot gain *Master*-status. If MaxScale cannot
-connect to a slave but the slave was previously replicating, then the master is
-still assumed to have a slave, and this setting does not apply.
+### `master_requirements`
+
+Designate additional requirements for *Master*-status. Normally, if a suitable
+master candidate server is found as described in
+[Master selection](master-selection), MaxScale designates it *Master*. This
+enables write query routing to the server. The server loses its *Master*-status
+if it's set *read_only* or if a [primary monitor](cooperative-monitoring)
+selects another master. *master_requirements* sets additional conditions for a
+master server. This setting is an enum, allowing multiple conditions to be set
+simultaneously.
+
+The available conditions are:
+
+1. none : No additional conditions
+2. connecting_slave : At least one immediate slave (not behind relay) is
+attempting to replicate or is replicating from the master (Slave_IO_Running is
+'Yes' or 'Connecting', Slave_SQL_Running is 'Yes'). The slave may be currently
+down.
+3. connected_slave : Same as above, with the difference that the replication
+connection must be up (Slave_IO_Running is 'Yes').
+4. running_slave : Same as *connecting_slave*, with the addition that the
+slave must be also *Running*.
+5. primary_monitor_master : If this MaxScale is
+[cooperating](cooperative-monitoring) with another MaxScale and this is the
+secondary MaxScale, require that the candidate master is selected also by the
+primary MaxScale.
+
+The default value of this setting is
+`master_requirements=primary_monitor_master` to ensure that both monitors use
+the same master server when cooperating.
+
+For example, to require that the master must have a slave which is both
+connected and running, set
+```
+master_requirements=connected_slave,running_slave
+```
+
+
+### `slave_requirements`
+
+Designate additional requirements for *Slave*-status, i.e qualified for read
+queries. Normally, a server is *Slave* if it is at least attempting to replicate
+from the master candidate or a relay. The master does not even need to be
+writable. *slave_requirements* sets additional conditions for a slave server.
+This setting is an enum, allowing multiple conditions to be set simultaneously.
+
+The available conditions are:
+
+1. none : No additional conditions. This is the default value.
+2. linked_master : The slave must be connected to the master (Slave_IO_Running
+and Slave_SQL_Running are 'Yes') and the master must be *Running*. The same
+applies to any relays between the slave and the master.
+3. running_master : The master must be running. Does not apply to relays.
+4. writable_master : The master must be writable. Does not apply to relays.
+5. primary_monitor_master : If this MaxScale is
+[cooperating](cooperative-monitoring) with another MaxScale and this is the
+secondary MaxScale, require that the candidate master is selected also by the
+primary MaxScale.
+
+For example, to require that the master server of the cluster must be running
+and writable for any servers to have *Slave*-status, set
+```
+slave_requirements=running_master,writable_master
+```
 
 ### `failcount`
 
@@ -211,10 +240,6 @@ multiplying that by `failcount`:
 ```
 (monitor_interval + backend_connect_timeout) * failcount
 ```
-
-### `allow_cluster_recovery`
-
-Deprecated and unused as of MaxScale 2.3. Can be defined but is ignored.
 
 ### `enforce_read_only_slaves`
 
