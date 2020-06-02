@@ -167,7 +167,8 @@ bool xml_equal_children(const string& path,
     }
     else
     {
-        while (rv && pL_child)
+        // If we are producing output, we will not bail out at first error.
+        while (pL_child && (rv || pErr))
         {
             if (pL_child->type == XML_ELEMENT_NODE)
             {
@@ -196,7 +197,10 @@ bool xml_equal_children(const string& path,
 
                     xmlNode* pR_node = pNodes->nodeTab[0];
 
-                    rv = xml_equal(full_name, *pL_child, lContext, *pR_node, rContext, pErr);
+                    if (!xml_equal(full_name, *pL_child, lContext, *pR_node, rContext, pErr))
+                    {
+                        rv = false;
+                    }
                 }
             }
 
@@ -216,6 +220,7 @@ bool xml_equal(const string& path,
                       reinterpret_cast<const char*>(rhs.name)) == 0);
 
     bool rv = xml_equal_children(path, lhs, lContext, rhs, rContext, pErr);
+
     if (rv)
     {
         rv = xml_equal_children(path, rhs, rContext, lhs, lContext, pErr);
