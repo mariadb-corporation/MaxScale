@@ -516,43 +516,65 @@ void MariaDBMonitor::assign_server_roles()
         server->m_replication_lag = mxs::Target::RLAG_UNDEFINED;
     }
 
-    // Check the the master node, label it as the [Master] if
-    // 1) the node has slaves, even if their slave sql threads are stopped
-    // 2) or detect standalone master is on.
-    if (m_master && (!m_master->m_node.children.empty() || m_settings.detect_standalone_master))
+    // Check the the master node, label it as the [Master] if it meets the requirements. It must at least
+    // be running and writable.
+    if (m_master)
     {
         if (m_master->is_running())
         {
             // Master gets replication lag 0 even if it's replicating from an external server.
             m_master->m_replication_lag = 0;
-            if (m_master->is_read_only())
+
+            // Check that all master requirements are fulfilled.
+            bool master_conds_ok = true;
+            const uint64_t master_reqs = m_settings.master_reqs;
+            const bool req_connecting_slave = master_reqs & MasterReqs::MREQ_CONNECTING_S;
+            const bool req_connected_slave = master_reqs & MasterReqs::MREQ_CONNECTED_S;
+            const bool req_running_slave = master_reqs & MasterReqs::MREQ_RUNNING_S;
+            if (req_connecting_slave || req_connected_slave || req_running_slave)
             {
-                // Special case: read_only is ON on a running master but there is no alternative master.
-                // In this case, label the master as a slave and proceed normally.
-                m_master->set_status(SERVER_SLAVE);
+                // Check that at least one slave fulfills the given conditions. Only check immediate slaves,
+                // not slaves behind relays.
+                bool slave_found = false;
+                for (const auto slave : m_master->m_node.children)
+                {
+                    bool is_connected =
+                        (slave->slave_connection_status(m_master)->slave_io_running
+                         == SlaveStatus::SLAVE_IO_YES);
+                    bool is_running = slave->is_running();
+
+                    // req_connecting_slave is always met by m_node->children
+                    bool slave_is_ok = !((req_connected_slave && !is_connected)
+                                         || (req_running_slave && !is_running));
+                    if (slave_is_ok)
+                    {
+                        slave_found = true;
+                        break;
+                    }
+                }
+
+                if (!slave_found)
+                {
+                    master_conds_ok = false;
+                }
             }
-            else if (is_slave_maxscale() && !m_master->marked_as_master())
+
+            if (master_conds_ok && (master_reqs& MasterReqs::MREQ_COOP_M) && is_slave_maxscale()
+                && !m_master->marked_as_master())
             {
-                // Another special case: masterlock is not correctly set but topology analysis didn't find
-                // a better master server. Set as slave to prevent writes.
-                m_master->set_status(SERVER_SLAVE);
+                // Master was not marked as such by primary monitor.
+                master_conds_ok = false;
             }
-            else
+
+            if (master_conds_ok && !m_master->is_read_only())
             {
-                // Master is running and writable.
                 m_master->set_status(SERVER_MASTER | SERVER_WAS_MASTER);
             }
-        }
-        else if (m_settings.detect_stale_master && (m_master->had_status(SERVER_WAS_MASTER)))
-        {
-            // The master is not running but it was the master last round and
-            // may have running slaves who have up-to-date events.
-            m_master->set_status(SERVER_WAS_MASTER);
         }
 
         // Run another graph search, this time assigning slaves.
         reset_node_index_info();
-        assign_slave_and_relay_master(m_master);
+        assign_slave_and_relay_master();
     }
 
     if (!m_settings.ignore_external_masters)
@@ -571,12 +593,10 @@ void MariaDBMonitor::assign_server_roles()
 /**
  * Check if the servers replicating from the given node qualify for [Slave] and mark them. Continue the
  * search to any found slaves. Also updates replication lag.
- *
- * @param start_node The root master node where the search begins. The node itself is not marked [Slave].
  */
-void MariaDBMonitor::assign_slave_and_relay_master(MariaDBServer* start_node)
+void MariaDBMonitor::assign_slave_and_relay_master()
 {
-    mxb_assert(start_node->m_node.index == NodeData::INDEX_NOT_VISITED);
+    mxb_assert(m_master->m_node.index == NodeData::INDEX_NOT_VISITED);
     // Combines a node with its connection state. The state tracks whether there is a series of
     // running slave connections all the way to the master server. If even one server is down or
     // a connection is broken in the series, the link is considered stale.
@@ -594,11 +614,34 @@ void MariaDBMonitor::assign_slave_and_relay_master(MariaDBServer* start_node)
      * nodes have been processed does the search expand to downed or disconnected nodes. */
     std::priority_queue<QueueElement, std::vector<QueueElement>, decltype(compare)> open_set(compare);
 
+    const uint64_t slave_reqs = m_settings.slave_reqs;
+    const bool req_running_master = slave_reqs & SlaveReqs::SREQ_RUNNING_M;
+    const bool req_writable_master = slave_reqs & SlaveReqs::SREQ_WRITABLE_M;
+    const bool req_coop_master = slave_reqs & SlaveReqs::SREQ_COOP_M;
+
+    // First, check conditions that immediately prevent any [Slave]s from being tagged:
+    // 1) Require writable master yet master is not a valid master.
+    // 2) Require master set by primary monitor in a co-op situation yet none found.
+    // 3) Require running master yet master is down.
+    if ((req_writable_master && !m_master->is_master())
+        || (req_coop_master && is_slave_maxscale() && !m_master->marked_as_master())
+        || (req_running_master && m_master->is_down()))
+    {
+        return;
+    }
+
+    // Second, check if the start node itself should be labeled [Slave]. This is the case if the master
+    // fulfills general slave requirements but is not labeled [Master].
+    if (m_master->is_running() && !m_master->is_master())
+    {
+        m_master->set_status(SERVER_SLAVE);
+    }
+
     // Begin by adding the starting node to the open_set. Then keep running until no more nodes can be found.
-    QueueElement start = {start_node, start_node->is_running()};
+    QueueElement start = {m_master, m_master->is_running()};
     open_set.push(start);
     int next_index = NodeData::INDEX_FIRST;
-    const bool allow_stale_slaves = m_settings.detect_stale_slave;
+    const bool allow_stale_slaves = !(slave_reqs & SlaveReqs::SREQ_LINKED_M);
 
     while (!open_set.empty())
     {
@@ -851,6 +894,7 @@ void MariaDBMonitor::update_topology()
         update_master();
     }
 }
+
 void MariaDBMonitor::update_master()
 {
     // Check if current master is still valid.

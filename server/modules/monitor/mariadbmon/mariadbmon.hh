@@ -45,7 +45,7 @@ public:
     class Test;
     friend class Test;
 
-    // Weakly-typed enum since cast to integer.
+    // Weakly-typed enums since cast to integer.
     enum RequireLocks
     {
         LOCKS_NONE = 0,
@@ -53,6 +53,23 @@ public:
         LOCKS_MAJORITY_ALL
     };
 
+    enum MasterReqs
+    {
+        MREQ_NONE         = 0,
+        MREQ_CONNECTING_S = 1 << 0,
+        MREQ_CONNECTED_S  = 1 << 1,
+        MREQ_RUNNING_S    = 1 << 2,
+        MREQ_COOP_M       = 1 << 3
+    };
+
+    enum SlaveReqs
+    {
+        SREQ_NONE       = 0,
+        SREQ_LINKED_M   = 1 << 0,
+        SREQ_RUNNING_M  = 1 << 1,
+        SREQ_WRITABLE_M = 1 << 2,
+        SREQ_COOP_M     = 1 << 3
+    };
 
     /**
      * Create the monitor instance and return the instance data.
@@ -312,6 +329,9 @@ private:
          * Used in multi-Maxscale situations. */
         RequireLocks require_server_locks {LOCKS_NONE};
 
+        MasterReqs master_reqs {MREQ_COOP_M};
+        SlaveReqs  slave_reqs {SREQ_NONE};
+
         // Cluster operations additional settings
         int  failover_timeout {10};             /* Time limit in seconds for failover */
         int  switchover_timeout {10};           /* Time limit in seconds for switchover */
@@ -355,7 +375,7 @@ private:
     void find_graph_cycles();
     bool master_is_valid(std::string* reason_out);
     void assign_server_roles();
-    void assign_slave_and_relay_master(MariaDBServer* start_node);
+    void assign_slave_and_relay_master();
     void check_cluster_operations_support();
     bool try_acquire_locks_this_tick();
     void update_cluster_lock_status();
