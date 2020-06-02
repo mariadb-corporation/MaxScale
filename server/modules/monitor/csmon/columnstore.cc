@@ -372,6 +372,12 @@ void xconvert_to_first_multi_node(xmlNode& cs,
             mxb::xml::set_content(*pPms, xml::IPADDR, server_address);
         }
     }
+
+    string next_nid = std::to_string(std::stol(nid) + 1);
+    string dbrootid { "2" }; // TODO: Has to be dug out from the config.
+
+    mxb::xml::upsert(cs, xml::NEXTNODEID, next_nid.c_str());
+    mxb::xml::upsert(cs, xml::NEXTDBROOTID, dbrootid.c_str());
 }
 
 bool xconvert_to_first_multi_node(xmlDoc& csDoc,

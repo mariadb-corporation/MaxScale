@@ -6,6 +6,8 @@
   -->
   <ClusterManager>10.11.12.13</ClusterManager>
   <ConfigRevision>1</ConfigRevision>
+  <NextNodeId>2</NextNodeId>
+  <NextDBRootId>2</NextDBRootId>
   <ExeMgr1>
     <IPAddr>198.168.0.1</IPAddr>
     <Port>8601</Port>
