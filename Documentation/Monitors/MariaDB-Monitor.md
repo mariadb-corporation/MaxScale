@@ -141,34 +141,22 @@ Is effectively always on. The monitor uses the "Seconds_Behind_Master"-field of
 
 ### `detect_stale_master`
 
-Allow previous master to be available even in case of stopped or misconfigured
-replication.
-
-Starting from MaxScale 2.0.0 this feature is enabled by default. It is disabled
-by default in MaxScale 1.4.3 and below.
-
-This allows services that depend on master and slave roles to continue
-functioning as long as the master server is available. This is a situation
-which can happen if all slave servers are unreachable or the replication
-breaks for some reason.
-
-```
-detect_stale_master=true
-```
+Deprecated and ignored.
 
 ### `detect_stale_slave`
 
-Treat running slaves servers without a master server as valid slave servers.
+Boolean, default: ON. Treat running slaves servers without a running master as
+valid slave servers.
 
-This feature is enabled by default.
+If a slave server does not have a live connection to the master, either because
+the master is *Down* or because the slave cannot connect, replication is
+effectively paused. The slave may still have up-to-date data and may be usable
+for reading. *detect_stale_slave* controls whether such a slave is marked *Slave*
+and used for query routing.
 
-If a slave server loses its master server, the replication is considered broken.
-With this parameter, slaves that have lost their master but have been slaves of
-a master server can retain their slave status even without a master. This means
-that when a slave loses its master, it can still be used for reads.
-
-If this feature is disabled, a server is considered a valid slave if and only if
-it has a running master server monitored by this monitor.
+If this feature is disabled, a server is considered a valid slave only if it has
+a running master server and the replication connection is working properly. In a
+multi-level topology, each link would also need to be replicating properly.
 
 ```
 detect_stale_slave=true
@@ -184,29 +172,22 @@ Deprecated and unused as of MaxScale 2.3. Can be defined but is ignored.
 
 ### `ignore_external_masters`
 
-Ignore any servers that are not monitored by this monitor but are a part of the
-replication topology. This option was added in MaxScale 2.1.12 and is disabled
-by default.
+Boolean, default: OFF. Ignore any servers that are not monitored by this monitor
+but are a part of the replication topology.
 
-MaxScale detects if a master server replicates from an external server. When
-this is detected, the server is assigned the `Slave` and `Slave of External
-Server` labels and will be treated as a slave server. Most of the time this
-topology is used when MaxScale is used for read scale-out without master
-servers, a Galera cluster with read replicas being a prime example of this
-setup. Sometimes this is not the desired behavior and the external master server
-should be ignored. Most of the time this is due to multi-source replication.
-
-When this option is enabled, all servers that have the `Master, Slave, Slave of
-External Server, Running` labels will instead get the `Master, Running` labels.
+An external server is a server not monitored by this monitor. If a server is
+replicating from an external server, it typically gains the *Slave of External
+Server*-status. If this setting is enabled, the status is not set.
 
 ### `detect_standalone_master`
 
-Detect standalone master servers. This feature takes a boolean parameter and is
-enabled by default.
+Boolean, default: ON. This setting controls whether a standalone server can be a
+master. A standalone server is a server from which no other server in the
+cluster is attempting to replicate from.
 
-This setting controls whether a standalone server can be a master. A standalone
-server is a server from which no other server in the cluster is attempting to
-replicate from. In most cases this should be left on.
+If disabled, a solitary server cannot gain *Master*-status. If MaxScale cannot
+connect to a slave but the slave was previously replicating, then the master is
+still assumed to have a slave, and this setting does not apply.
 
 ### `failcount`
 
