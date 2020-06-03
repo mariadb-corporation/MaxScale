@@ -802,10 +802,21 @@ int Mariadb_nodes::check_replication()
     if ((res = get_versions()) != 0)
     {
         cout << "Failed to get versions" << endl;
+        return 1;
     }
 
     for (int i = 0; i < N && res == 0; i++)
     {
+        if (mysql_query(nodes[i], "SELECT COUNT(*) FROM mysql.user") == 0)
+        {
+            mysql_free_result(mysql_store_result(nodes[i]));
+        }
+        else
+        {
+            cout << mysql_error(nodes[i]) << endl;
+            res = 1;
+        }
+
         if (i == master)
         {
             if (!check_master_node(nodes[i]))
@@ -865,8 +876,7 @@ bool Mariadb_nodes::fix_replication()
             if (check_replication() == 0)
             {
                 cout << "Replication is fixed" << endl;
-                flush_hosts();
-                rval = true;
+                rval = flush_hosts();
             }
             else
             {
