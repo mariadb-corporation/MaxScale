@@ -531,10 +531,6 @@ add_test_executable(mxs1418.cpp mxs1418 replication LABELS readwritesplit maxsca
 # https://jira.mariadb.org/browse/MXS-1295
 add_test_executable(mxs1295_sp_call.cpp mxs1295_sp_call mxs1295 LABELS maxscale readwritesplit REPL_BACKEND)
 
-# MXS-1451: Password is not stored with skip_authentication=true
-# https://jira.mariadb.org/browse/MXS-1451
-add_test_executable(mxs1451_skip_auth.cpp mxs1451_skip_auth mxs1451_skip_auth LABELS maxscale REPL_BACKEND)
-
 # MXS-1457: Deleted servers are not ignored when users are loaded
 # https://jira.mariadb.org/browse/MXS-1457
 add_test_executable(mxs1457_ignore_deleted.cpp mxs1457_ignore_deleted mxs1457_ignore_deleted LABELS REPL_BACKEND)
