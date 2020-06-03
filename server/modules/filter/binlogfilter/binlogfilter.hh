@@ -35,6 +35,15 @@ struct BinlogConfig
     {
     }
 
+    ~BinlogConfig()
+    {
+        pcre2_code_free(match);
+        pcre2_match_data_free(md_match);
+        pcre2_code_free(exclude);
+        pcre2_match_data_free(md_exclude);
+        pcre2_code_free(rewrite_src);
+    }
+
     pcre2_code*       match;
     pcre2_match_data* md_match;
     pcre2_code*       exclude;
