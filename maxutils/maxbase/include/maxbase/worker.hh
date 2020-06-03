@@ -391,6 +391,15 @@ public:
     RandomEngine& random_engine();
 
     /**
+     * Write random bytes to a buffer using the random generator of this worker. Should be only used
+     * from within a worker thread.
+     *
+     * @param pOutput Output buffer
+     * @param nBytes Bytes to write
+     */
+    static void gen_random_bytes(uint8_t* pOutput, size_t nBytes);
+
+    /**
      * Returns the TimePoint when epoll_tick() was called. Use this in worker threads
      * instead of maxbase::Clock::now() for timeouts, time tracking etc. where absolute
      * precision is not needed (i.e. almost always).

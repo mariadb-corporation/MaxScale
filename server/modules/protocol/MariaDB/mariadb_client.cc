@@ -353,10 +353,9 @@ int MariaDBClientConnection::send_mysql_client_handshake()
     uint8_t mysql_scramble_len = 21;
     uint8_t mysql_filler_ten[10] = {};
     /* uint8_t mysql_last_byte = 0x00; not needed */
-    char server_scramble[GW_MYSQL_SCRAMBLE_SIZE + 1] = "";
+    uint8_t server_scramble[GW_MYSQL_SCRAMBLE_SIZE] {};
+    mxb::Worker::gen_random_bytes(server_scramble, sizeof(server_scramble));
     bool is_maria = supports_extended_caps(service);
-
-    gw_generate_random_str(server_scramble, GW_MYSQL_SCRAMBLE_SIZE);
 
     // copy back to the caller
     memcpy(m_session_data->scramble, server_scramble, GW_MYSQL_SCRAMBLE_SIZE);

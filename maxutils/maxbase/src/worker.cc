@@ -359,6 +359,22 @@ Worker::RandomEngine& Worker::random_engine()
     return m_random_engine;
 }
 
+void Worker::gen_random_bytes(uint8_t* pOutput, size_t nBytes)
+{
+    auto pWorker = mxb::Worker::get_current(); // Must be in a worker thread.
+    auto& rand_eng = pWorker->m_random_engine;
+    size_t bytes_written = 0;
+    while (bytes_written < nBytes)
+    {
+        auto random_num = rand_eng.rand();
+        auto random_num_size = sizeof(random_num);
+        auto bytes_left = nBytes - bytes_written;
+        auto writable = std::min(bytes_left, random_num_size);
+        memcpy(pOutput + bytes_written, &random_num, writable);
+        bytes_written += writable;
+    }
+}
+
 bool Worker::add_fd(int fd, uint32_t events, MXB_POLL_DATA* pData)
 {
     bool rv = true;
