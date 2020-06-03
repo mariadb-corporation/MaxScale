@@ -289,6 +289,10 @@ int MaskingFilterSession::routeQuery(GWBUF* pPacket)
     {
         rv = FilterSession::routeQuery(pPacket);
     }
+    else
+    {
+        gwbuf_free(pPacket);
+    }
 
     return rv;
 }
