@@ -34,6 +34,7 @@ public:
 private:
     bool post_configure();
 
+    bool check_api_key(const std::string& dir);
     bool check_invalid();
     bool check_mandatory();
 };

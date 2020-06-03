@@ -11,13 +11,39 @@
  * Public License.
  */
 #include "csconfig.hh"
+#include <sys/stat.h>
+#include <fstream>
+#include <random>
+#include <maxscale/paths.hh>
 
 namespace config = mxs::config;
+using namespace std;
+
+namespace
+{
+
+string get_random_string(int length)
+{
+    mt19937 generator { random_device{}() };
+
+    uniform_int_distribution<int> distribution{'a', 'z'};
+
+    string s(length, '\0');
+    for (auto& c : s)
+    {
+        c = distribution(generator);
+    }
+
+    return s;
+}
+}
 
 namespace csmon
 {
 
-using seconds = std::chrono::seconds;
+const char ZAPI_KEY_FILE_NAME[] = "api_key.txt";
+
+using seconds = chrono::seconds;
 
 const config::ParamCount::value_type   DEFAULT_ADMIN_PORT      = 8630;
 const config::ParamString::value_type  DEFAULT_ADMIN_BASE_PATH = "/cmapi/0.3.0";
@@ -81,7 +107,7 @@ config::ParamDuration<seconds> timeout(
 }
 
 
-CsConfig::CsConfig(const std::string& name)
+CsConfig::CsConfig(const string& name)
     : mxs::config::Configuration(name, &csmon::specification)
 {
     add_native(&this->version, &csmon::version);
@@ -102,14 +128,14 @@ void CsConfig::populate(MXS_MODULE& info)
 namespace
 {
 
-void complain_invalid(cs::Version version, const std::string& param)
+void complain_invalid(cs::Version version, const string& param)
 {
     MXS_ERROR("When csmon is configured for Columnstore %s, "
               "the parameter '%s' is invalid.",
               cs::to_string(version), param.c_str());
 }
 
-void complain_mandatory(cs::Version version, const std::string& param)
+void complain_mandatory(cs::Version version, const string& param)
 {
     MXS_ERROR("When csmon is configured for Columnstore %s, "
               "the parameter '%s' is mandatory.",
@@ -122,6 +148,25 @@ bool CsConfig::post_configure()
 {
     bool rv = true;
 
+    string path { mxs::datadir() };
+    path += "/";
+    path += name();
+
+    // We do not bail out at first error, better to complain as much as we can.
+
+    if (mxs_mkdir_all(path.c_str(), S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IXGRP))
+    {
+        if (!check_api_key(path))
+        {
+            rv = false;
+        }
+    }
+    else
+    {
+        MXS_ERROR("Could not access or create directory '%s'.", path.c_str());
+        rv = false;
+    }
+
     if (!check_mandatory())
     {
         rv = false;
@@ -130,6 +175,97 @@ bool CsConfig::post_configure()
     if (!check_invalid())
     {
         rv = false;
+    }
+
+    return rv;
+}
+
+namespace
+{
+
+string read_api_key(const string& path)
+{
+    string key;
+
+    ifstream in(path);
+
+    if (in)
+    {
+        in >> key;
+    }
+    else
+    {
+        MXS_NOTICE("Could not open '%s', no api key yet stored.", path.c_str());
+    }
+
+    return key;
+}
+
+bool write_api_key(const string& path, const string& key)
+{
+    bool rv = false;
+
+    ofstream out(path, ios_base::out | ios_base::trunc);
+
+    if (out)
+    {
+        out << key << endl;
+
+        if (out.bad())
+        {
+            MXS_ERROR("Could not write new api key to '%s'.", path.c_str());
+        }
+        else
+        {
+            MXS_NOTICE("Stored new api key in '%s'.", path.c_str());
+            rv = true;
+        }
+    }
+    else
+    {
+        MXS_ERROR("Could not open '%s' for writing, the Columnstore api key can not be stored.",
+                  path.c_str());
+    }
+
+    return rv;
+}
+}
+
+bool CsConfig::check_api_key(const string& dir)
+{
+    bool rv = true;
+
+    if (this->version == cs::CS_15)
+    {
+        string path = dir;
+        path += "/";
+        path += csmon::ZAPI_KEY_FILE_NAME;
+
+        string stored_key = read_api_key(path);
+
+        if (this->api_key.empty())
+        {
+            if (stored_key.empty())
+            {
+                MXS_NOTICE("No api-key specified and no stored api-key found, generating one.");
+
+                string new_key = get_random_string(16);
+
+                new_key = "maxscale-" + new_key;
+                this->api_key = new_key;
+            }
+            else
+            {
+                MXS_NOTICE("Using api-key from '%s'.", path.c_str());
+                this->api_key = stored_key;
+            }
+        }
+
+        if (this->api_key != stored_key)
+        {
+            MXS_NOTICE("Specified api key is different from stored one, storing the specified one.");
+            rv = write_api_key(path, this->api_key);
+        }
     }
 
     return rv;
@@ -161,7 +297,7 @@ bool CsConfig::check_mandatory()
 
         if (this->local_address == csmon::DEFAULT_LOCAL_ADDRESS)
         {
-            std::string local_address = mxs::Config::get().local_address;
+            string local_address = mxs::Config::get().local_address;
 
             if (!local_address.empty())
             {
