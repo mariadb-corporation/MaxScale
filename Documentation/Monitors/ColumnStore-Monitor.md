@@ -20,32 +20,86 @@ GRANT ALL ON infinidb_vtable.* TO 'maxuser'@'%';
 
 ## Master Selection
 
-The automatic master detection only works with ColumnStore 1.2. Older versions
-of ColumnStore do not implement the required functionality to automatically
-detect which of the servers is the primary UM.
+The Columnstore Monitor in MaxScale 2.5 supports Columnstore 1.0, 1.2 and 1.5,
+and the master selection is done differently for each version.
 
-With older versions the `primary` parameter must be defined to tell the monitor
-which of the servers is the primary UM node. This guarantees that DDL statements
-are only executed on the primary UM.
+If the version is 1.0, the master server must be specified using the `primary`
+parameter.
+
+If the version is 1.2, the master server is selected automatically using
+the Columnstore function `mcsSystemPrimary()`.
+
+If the version is 1.5, the master server is selected automatically by
+querying the Columnstore daemon running on each node.
 
 ## Configuration
 
 Read the [Monitor Common](Monitor-Common.md) document for a list of supported
 common monitor parameters.
 
+### `version`
+
+With this mandatory parameter the used Columnstore version is specified.
+The allowed values are `1.0`, `1.2` and `1.5`.
+
 ### `primary`
+
+Required by and only allowed when the value of `version` is `1.0`.
 
 The `primary` parameter controls which server is chosen as the master
 server. This is an optional parameter.
 
 If the server pointed to by this parameter is available and is ready to process
-queries, it receives the _Master_ status. If the parameter is not defined and
-the ColumnStore server does not support the `mcsSystemPrimary` function, no
-master server is chosen.
+queries, it receives the _Master_ status.
 
-Note that this parameter is only used when the server does not implement the
-required functionality. Otherwise the parameter is ignored as the information
-from ColumnStore itself is more reliable.
+### `admin_port`
+
+Allowed only when the value of version is `1.5`.
+
+This optional parameter specifies the port of the Columnstore administrative
+daemon. The default value is `8630`. Note that the daemons of all nodes must
+be listening on the same port.
+
+### `admin_base_path`
+
+Allowed only when the value of version is `1.5`.
+
+This optional parameter specifies the base path of the Columnstore
+administrative daemon. The default value is `/cmapi/0.3.0`.
+
+### `api_key`
+
+Allowed only when the value of version is `1.5`.
+
+This optional parameter specifies the API key to be used in the
+communication with the Columnstore administrative daemon. If no
+key is specified, then a key will be generated and stored to the
+file `api_key.txt` in the directory with the same name as the
+monitor in data directory of MaxScale. Typically that will
+be `/var/lib/maxscale/<monitor-section>/api_key.txt`.
+
+Note that Columnstore will store the first key provided and
+thereafter require it, so changing the key requires the
+resetting of the key on the Columnstore nodes as well.
+
+### `local_address`
+
+Allowed only when the value of version is `1.5`.
+
+With this parameter it is specified what IP MaxScale should
+tell the Columnstore nodes it resides at. Either it or
+`local_address` at the global level in the MaxScale
+configuration file must be specified. If both have been
+specified, then the one specified for the monitor overrides.
+
+### `timeout`
+
+Allowed only when the value of version is `1.5`.
+
+This optional parameter specifies the timeout to used if one
+is not explicitly provided to a module command. The timeout
+can be specified as explained
+[here](../Getting-Started/Configuration-Guide.md#durations).
 
 ## Commands
 
@@ -56,34 +110,97 @@ a client such as curl or using maxctrl.
 All commands require the monitor instance name as the first parameters.
 Additional parameters must be provided depending on the command.
 
-### _Cluster Start_
+In the following, assume a configuration like this:
+```
+[CsNode1]
+type=server
+...
+
+[CsNode2]
+type=server
+...
+
+[CsNode3]
+type=server
+...
+
+[CsMonitor]
+type=monitor
+module=csmon
+servers=CsNode1,CsNode2,CsNode3
+...
+
+```
+
+### _Start_
+```
+call command csmon start <monitor-name> [<timeout>]
+```
 Starts the Columnstore cluster.
+
+Example
 ```
-call command csmon cluster-start MyMonitor
+call command csmon start CsMonitor 20s
 ```
 
-### _Cluster Stop_
-Stops the Columnstore cluster.
+### _Shutdown_
 ```
-call command csmon cluster-stop MyMonitor
+call command csmon shutdown <monitor-name> [<timeout>]
 ```
-
-### _Cluster Shutdown_
 Shuts down the Columnstore cluster.
+
+Example
 ```
-call command csmon cluster-shutdown MyMonitor
+call command csmon shutdown CsMonitor 20s
 ```
 
-### _Cluster Add Node_
-Adds a new node to the Columnstore cluster.
+### _Status_
 ```
-call command csmon cluster-add-node MyMonitor
+call command csmon status <monitor-name> [<server>]
+```
+Returns the status of all servers in the cluster or of
+a specific one.
+
+Example
+```
+call command csmon status CsMonitor CsNode1
 ```
 
-### _Cluster Remove Node_
-Removes a node from the Columnstore cluster.
+### _Set Mode_
 ```
-call command csmon cluster-remove-node MyMonitor
+call command csmon mode-set <monitor-name> (readonly|readwrite) [<timeout>]
+```
+Sets the mode of the cluster.
+
+Example
+```
+call command csmon mode-set CsMonitor readonly 20s
+```
+
+### _Get Config_
+```
+call command csmon config-get <monitor-name> [<server-name>]
+```
+Returns the configs of all servers in the cluster or of a specific one.
+
+Example
+```
+call command csmon config-get CsMonitor CsNode2
+```
+
+### _Set Config_
+```
+call command csmon config-set <monitor-name> <config> [<server-name>]
+```
+Sets the config on all servers in the cluster or on a specific one.
+The config should be a JSON object enclosed in quotes.
+
+*NOTE* MaxScale does not verify the provided configuration object in
+any way, other than ensuring that is really is a JSON object, but
+simply sends it forward to the servers in question.
+
+```
+call command csmon config-set CsMonitor "{ ... }"
 ```
 
 ## Example
@@ -91,14 +208,13 @@ call command csmon cluster-remove-node MyMonitor
 The following is an example of a `csmon` configuration.
 
 ```
-[CS-Monitor]
+[CSMonitor]
 type=monitor
 module=csmon
-servers=um1,um2,um3
+version=1.5
+servers=CsNode1,CsNode2,CsNode3
 user=myuser
 passwd=mypwd
 monitor_interval=5000
-primary=um1
+api_key=somekey1234
 ```
-
-It defines a set of three UMs and defines the UM `um1` as the primary UM.
