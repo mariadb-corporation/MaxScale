@@ -142,7 +142,7 @@ or MaxCtrl can be used with either MaxAdmin or MaxCtrl.
 Note that if MaxAdmin (when used over a TCP/IP socket) or MaxCtrl are
 invoked without explicitly providing a user and password then they will
 by default use `admin` and `mariadb`. That means that when the default
-user is removed, the credentials must always be provded.
+user is removed, the credentials must always be provided.
 
 ## Static Configuration Parameters
 
