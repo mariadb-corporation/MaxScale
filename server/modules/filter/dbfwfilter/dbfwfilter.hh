@@ -245,6 +245,16 @@ public:
     }
 
     /**
+     * Whether unsupported SQL is an error
+     *
+     * @return True if unsupported SQL is an error
+     */
+    bool strict() const
+    {
+        return m_strict;
+    }
+
+    /**
      * Get logging option bitmask
      *
      * @return the logging option bitmask
@@ -292,6 +302,7 @@ private:
     mutable std::mutex m_lock;      /*< Instance spinlock */
     std::string        m_filename;  /*< Path to the rule file */
     int                m_version;   /*< Latest rule file version, incremented on reload */
+    bool               m_strict;
 
     Dbfw(MXS_CONFIG_PARAMETER* param);
     bool do_reload_rules(std::string filename);

@@ -635,6 +635,11 @@ MXS_MODULE* MXS_CREATE_MODULE()
                 MXS_MODULE_PARAM_BOOL,
                 "true"
             },
+            {
+                "strict",
+                MXS_MODULE_PARAM_BOOL,
+                "true"
+            },
             {MXS_END_MODULE_PARAMS}
         }
     };
@@ -1254,6 +1259,7 @@ Dbfw::Dbfw(MXS_CONFIG_PARAMETER* params)
     , m_treat_string_arg_as_field(params->get_bool("treat_string_arg_as_field"))
     , m_filename(params->get_string("rules"))
     , m_version(atomic_add(&global_version, 1))
+    , m_strict(params->get_bool("strict"))
 {
     if (params->get_bool("log_match"))
     {
@@ -1533,7 +1539,7 @@ int DbfwSession::routeQuery(GWBUF* buffer)
         type = qc_get_type_mask(buffer);
     }
 
-    if (modutil_is_SQL(buffer) && modutil_count_statements(buffer) > 1)
+    if (m_instance->strict() && modutil_is_SQL(buffer) && modutil_count_statements(buffer) > 1)
     {
         set_error("This filter does not support multi-statements.");
         rval = send_error();
@@ -1810,13 +1816,16 @@ bool rule_matches(Dbfw* my_instance,
     {
         qc_parse_result_t parse_result = qc_parse(queue, QC_COLLECT_ALL);
 
-        if (parse_result == QC_QUERY_INVALID)
+        if (my_instance->strict())
         {
-            msg = create_parse_error(my_instance, "tokenized", query, &matches);
-        }
-        else if (parse_result != QC_QUERY_PARSED && rule->need_full_parsing(queue))
-        {
-            msg = create_parse_error(my_instance, "parsed completely", query, &matches);
+            if (parse_result == QC_QUERY_INVALID)
+            {
+                msg = create_parse_error(my_instance, "tokenized", query, &matches);
+            }
+            else if (parse_result != QC_QUERY_PARSED && rule->need_full_parsing(queue))
+            {
+                msg = create_parse_error(my_instance, "parsed completely", query, &matches);
+            }
         }
     }
 
