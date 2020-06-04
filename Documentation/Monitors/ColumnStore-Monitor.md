@@ -110,6 +110,16 @@ a client such as curl or using maxctrl.
 All commands require the monitor instance name as the first parameters.
 Additional parameters must be provided depending on the command.
 
+Note that as maxctrl itself has a timeout of 10000 milliseconds, if a
+timeout larger than that is provided to any command, the timeout of
+maxctrl must also be increased. For instance:
+```
+maxctrl --timeout 30000 call command csmon shutdown CsMonitor 20s
+```
+Here a 30 second timeout is specified for maxctrl to ensure
+that it does not expire before the timeout of 20s provided for
+the shutdown command possibly does.
+
 In the following, assume a configuration like this:
 ```
 [CsNode1]
