@@ -116,34 +116,40 @@ CsMonitorServer::Result::Result(const http::Response& response)
     }
 #endif
 
-    if (!response.body.empty())
-    {
-        json_error_t error;
-        sJson.reset(json_loadb(response.body.c_str(), response.body.length(), 0, &error));
-
-        if (!sJson)
-        {
-            MXS_ERROR("Could not parse returned response '%s' as JSON: %s",
-                      response.body.c_str(),
-                      error.text);
-            mxb_assert(!true);
-        }
-    }
-
     if (response.is_fatal())
     {
-        MXS_ERROR("REST-API call failed: (%d) %s",
-                  response.code, http::Response::to_string(response.code));
+        MXS_ERROR("REST-API call failed: (%d) %s: %s",
+                  response.code,
+                  http::Response::to_string(response.code),
+                  response.body.empty() ? "" : response.body.c_str());
     }
-    else if (response.is_server_error())
+    else
     {
-        MXS_ERROR("Server error: (%d) %s",
-                  response.code, http::Response::to_string(response.code));
-    }
-    else if (!response.is_success())
-    {
-        MXS_ERROR("Unexpected response from server: (%d) %s",
-                  response.code, http::Response::to_string(response.code));
+        // In all other cases, a JSON body should be returned.
+        if (!response.body.empty())
+        {
+            json_error_t error;
+            sJson.reset(json_loadb(response.body.c_str(), response.body.length(), 0, &error));
+
+            if (!sJson)
+            {
+                MXS_ERROR("Could not parse returned response '%s' as JSON: %s",
+                          response.body.c_str(),
+                          error.text);
+                mxb_assert(!true);
+            }
+        }
+
+        if (response.is_server_error())
+        {
+            MXS_ERROR("Server error: (%d) %s",
+                      response.code, http::Response::to_string(response.code));
+        }
+        else if (!response.is_success())
+        {
+            MXS_ERROR("Unexpected response from server: (%d) %s",
+                      response.code, http::Response::to_string(response.code));
+        }
     }
 }
 
@@ -334,7 +340,7 @@ Result CsMonitorServer::begin(const std::chrono::seconds& timeout, json_t* pOutp
 
     http::Response response = http::put(create_url(cs::rest::BEGIN),
                                         cs::body::begin(timeout, m_context.next_trx_id()),
-                                        m_context.http_config());
+                                        m_context.http_config(timeout));
 
     if (response.is_success())
     {
@@ -361,7 +367,7 @@ Result CsMonitorServer::commit(const std::chrono::seconds& timeout, json_t* pOut
 
     http::Response response = http::put(create_url(cs::rest::COMMIT),
                                         cs::body::commit(timeout, m_context.current_trx_id()),
-                                        m_context.http_config());
+                                        m_context.http_config(timeout));
 
     // Whatever the response, we consider a transaction as not being active.
     m_trx_state = TRX_INACTIVE;
@@ -403,7 +409,7 @@ bool CsMonitorServer::set_cluster_mode(cs::ClusterMode mode,
     auto body = cs::body::config_set_cluster_mode(mode, m_context.revision(), m_context.manager(), timeout);
 
     string url = create_url(cs::rest::CONFIG);
-    http::Response response = http::put(url, body, m_context.http_config());
+    http::Response response = http::put(url, body, m_context.http_config(timeout));
 
     if (!response.is_success())
     {
@@ -541,7 +547,7 @@ bool CsMonitorServer::begin(const std::vector<CsMonitorServer*>& servers,
     vector<string> urls = create_urls(servers, cs::rest::BEGIN);
     vector<http::Response> responses = http::put(urls,
                                                  cs::body::begin(timeout, context.next_trx_id()),
-                                                 context.http_config());
+                                                 context.http_config(timeout));
 
     mxb_assert(urls.size() == responses.size());
 
@@ -612,7 +618,7 @@ bool CsMonitorServer::commit(const std::vector<CsMonitorServer*>& servers,
     vector<string> urls = create_urls(servers, cs::rest::COMMIT);
     vector<http::Response> responses = http::put(urls,
                                                  cs::body::commit(timeout, context.current_trx_id()),
-                                                 context.http_config());
+                                                 context.http_config(timeout));
 
     mxb_assert(urls.size() == responses.size());
 
@@ -745,7 +751,8 @@ bool CsMonitorServer::shutdown(const std::vector<CsMonitorServer*>& servers,
     bool rv = true;
 
     vector<string> urls = create_urls(servers, cs::rest::SHUTDOWN);
-    vector<http::Response> responses = http::put(urls, cs::body::shutdown(timeout), context.http_config());
+    vector<http::Response> responses = http::put(urls, cs::body::shutdown(timeout),
+                                                 context.http_config(timeout));
 
     mxb_assert(urls.size() == responses.size());
 

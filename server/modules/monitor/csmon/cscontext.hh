@@ -51,6 +51,17 @@ public:
         return m_http_config;
     }
 
+    mxb::http::Config http_config(const std::chrono::seconds& timeout) const
+    {
+        mxb::http::Config http_config(m_http_config);
+
+        // We set the timeout to larger than the timeout specified to the
+        // Columnstore daemon, so that the timeout surely expires first in
+        // the daemon and only then in the HTTP library.
+        http_config.timeout = timeout + std::chrono::seconds(mxb::http::DEFAULT_TIMEOUT);
+        return http_config;
+    }
+
     int current_trx_id() const
     {
         return m_next_trx_id;
