@@ -16,6 +16,7 @@
 #include <iostream>
 #include <libxml/xpath.h>
 #include <maxbase/log.hh>
+#include <maxscale/maxscale_test.h>
 #include "columnstore.hh"
 
 using namespace std;
@@ -24,7 +25,7 @@ namespace xml = cs::xml;
 namespace
 {
 
-const string TEST_DIR_PATH { "../../../../../../server/modules/monitor/csmon/test" };
+const string TEST_DIR_PATH { SOURCE_DIR "/server/modules/monitor/csmon/test" };
 
 const string PATH_CS_SINGLE_NODE { TEST_DIR_PATH + "/" + "cs-single-node.xml" };
 const string PATH_CS_FIRST_MULTI_NODE { TEST_DIR_PATH + "/" + "cs-first-multi-node.xml" };

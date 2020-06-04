@@ -14,6 +14,8 @@
  * Public License.
  */
 
+#define SOURCE_DIR "@CMAKE_SOURCE_DIR@"
+
 #define TEST_DIR "@CMAKE_BINARY_DIR@"
 #define TEST_LOG_DIR "@CMAKE_BINARY_DIR@/log"
 #define TEST_BIN_DIR "@CMAKE_BINARY_DIR@/bin"
