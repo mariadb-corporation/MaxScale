@@ -40,7 +40,7 @@ enum class Expectation
 
 void check_state(TestConnections& test,
                  const string& server,
-                 Expectation   expectation,
+                 Expectation expectation,
                  const string& what)
 {
     if (expectation == Expectation::INCLUDES)
@@ -142,27 +142,18 @@ void test_rws(TestConnections& test)
     check_connections(test, server2, 2);
     check_connections(test, server3, 1);
 
-    // Drain the master
-    set_drain(test, server1);
     // Still works?
     smoke_test(test, conn1);
     smoke_test(test, conn2);
 
-    Connection conn3 = test.maxscales->rwsplit();
-    // This should fail, as the master is being drained.
-    test.expect(!conn3.connect(), "Connection unexpectedly succeeded.");
-
-    // Undrain server1 and server3.
-    clear_drain(test, server1);
+    // Undrain server3 and drain server2.
     clear_drain(test, server3);
-
-    // And for the heck of it, drain server2.
     set_drain(test, server2);
 
     // This should work as the master (server1) and one slave (server3) is available.
-    Connection conn4 = test.maxscales->rwsplit();
-    test.expect(conn4.connect(), "Connection failed: %s", conn4.error());
-    smoke_test(test, conn4);
+    Connection conn3 = test.maxscales->rwsplit();
+    test.expect(conn3.connect(), "Connection failed: %s", conn3.error());
+    smoke_test(test, conn3);
 
     // A connection should have been created to the server1 (master) and server3,
     // so there should now be 3,2,2 connections.
@@ -174,9 +165,9 @@ void test_rws(TestConnections& test)
     clear_drain(test, server2);
 
     // So, this should work.
-    Connection conn5 = test.maxscales->rwsplit();
-    test.expect(conn5.connect(), "Connection failed: %s", conn5.error());
-    smoke_test(test, conn5);
+    Connection conn4 = test.maxscales->rwsplit();
+    test.expect(conn4.connect(), "Connection failed: %s", conn4.error());
+    smoke_test(test, conn4);
 
     // And all connections shold have been bumped by one.
     check_connections(test, server1, 4);
@@ -192,14 +183,9 @@ void test_rcr(TestConnections& test)
     test.expect(conn1.connect(), "Connection failed: %s", conn1.error());
     smoke_test(test, conn1);
 
-    set_drain(test, server1);
-    smoke_test(test, conn1);
-
     // Drain server2 and server3.
     set_drain(test, server2);
     set_drain(test, server3);
-
-    clear_drain(test, server1);
 
     Connection conn2 = test.maxscales->readconn_master();
     test.expect(conn2.connect(), "Connection failed: %s", conn2.error());
@@ -207,20 +193,14 @@ void test_rcr(TestConnections& test)
 
     clear_drain(test, server2);
     clear_drain(test, server3);
-    set_drain(test, server1);
 
     smoke_test(test, conn1);
-    smoke_test(test, conn2);
-
-    Connection conn3 = test.maxscales->readconn_master();
-    test.expect(!conn3.connect(), "Connection unexpectedly succeeded.");
     smoke_test(test, conn2);
 
     check_connections(test, server1, 2);
     check_connections(test, server2, 0);
     check_connections(test, server3, 0);
 
-    clear_drain(test, server1);
     set_drain(test, server2);
 
     Connection conn4 = test.maxscales->readconn_slave();
@@ -260,6 +240,10 @@ void test_rcr(TestConnections& test)
 int main(int argc, char* argv[])
 {
     TestConnections test(argc, argv);
+
+    // As of 2.5.0, the master cannot be drained
+    auto res = test.maxctrl("set server server1 drain");
+    test.expect(res.first != 0, "Should not be able to set master into `Draining` state");
 
     test_rws(test);
     test_rcr(test);
