@@ -323,6 +323,7 @@ add_test_executable(fwf_logging.cpp fwf_logging fwf_logging LABELS dbfwfilter RE
 add_test_executable(fwf_reload.cpp fwf_reload fwf LABELS dbfwfilter REPL_BACKEND)
 add_test_executable(fwf_syntax.cpp fwf_syntax fwf_syntax LABELS dbfwfilter REPL_BACKEND)
 add_test_executable(fwf_com_ping.cpp fwf_com_ping fwf_com_ping LABELS dbfwfilter REPL_BACKEND)
+add_test_executable(fwf_strict.cpp fwf_strict fwf_strict LABELS dbfwfilter REPL_BACKEND)
 add_test_executable(mxs1583_fwf.cpp mxs1583_fwf mxs1583_fwf LABELS dbfwfilter REPL_BACKEND)
 
 # Block and unblock Master and check that Maxscale survived

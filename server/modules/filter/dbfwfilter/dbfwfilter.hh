@@ -12,7 +12,7 @@
  */
 #pragma once
 
-#if !defined(MXS_MODULE_NAME)
+#if !defined (MXS_MODULE_NAME)
 #define MXS_MODULE_NAME "dbfwfilter"
 #endif
 #include <maxscale/ccdefs.hh>
@@ -235,6 +235,16 @@ public:
     bool treat_string_arg_as_field() const
     {
         return m_config.treat_string_arg_as_field;
+    }
+
+    /**
+     * Whether unsupported SQL is an error
+     *
+     * @return True if unsupported SQL is an error
+     */
+    bool strict() const
+    {
+        return m_config.strict;
     }
 
     /**

@@ -113,30 +113,45 @@ Log all queries that do not match a rule. The matched user and the query is
 logged. The log messages are logged at the notice level.
 
 #### `treat_string_as_field`
+
 This optional parameter specifies how the database firewall should treat
 strings. If true, they will be handled as fields, which will cause column
 blocking rules to match even if `ANSI_QUOTES` has been enabled and `"` is
 used instead of backtick.
+
 ```
 treat_string_as_field=false
 ```
+
 The default value is `true`.
 
 Note that this may cause a false positive, if a "true" string contains the
 name of a column to be blocked.
 
 #### `treat_string_arg_as_field`
+
 This optional parameter specifies how the database firewall should treat
 strings used as arguments to functions. If true, they will be handled
 as fields, which will cause function column blocking rules to match even
 even if `ANSI_QUOTES` has been enabled and `"` is used instead of backtick.
+
 ```
 treat_string_arg_as_field=false
 ```
+
 The default value is `true`.
 
 Note that this may cause a false positive, if a "true" string contains the
 name of a column to be blocked.
+
+#### `strict`
+
+Whether to treat unsupported SQL or multi-statement SQL as an error. This is a
+boolean parameter and the default value is `true`.
+
+When disabled, SQL that cannot be fully parsed is allowed to pass if the rules
+do not cause it to be blocked. This can be used to provide a best-effort mode
+where uncertainly about the SQL is allowed.
 
 ## Rule syntax
 

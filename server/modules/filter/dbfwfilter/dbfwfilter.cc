@@ -1477,7 +1477,7 @@ int DbfwSession::routeQuery(GWBUF* buffer)
         type = qc_get_type_mask(buffer);
     }
 
-    if (modutil_is_SQL(buffer) && modutil_count_statements(buffer) > 1)
+    if (m_instance->strict() && modutil_is_SQL(buffer) && modutil_count_statements(buffer) > 1)
     {
         set_error("This filter does not support multi-statements.");
         rval = send_error();
@@ -1754,13 +1754,16 @@ bool rule_matches(Dbfw* my_instance,
     {
         qc_parse_result_t parse_result = qc_parse(queue, QC_COLLECT_ALL);
 
-        if (parse_result == QC_QUERY_INVALID)
+        if (my_instance->strict())
         {
-            msg = create_parse_error(my_instance, "tokenized", query, &matches);
-        }
-        else if (parse_result != QC_QUERY_PARSED && rule->need_full_parsing(queue))
-        {
-            msg = create_parse_error(my_instance, "parsed completely", query, &matches);
+            if (parse_result == QC_QUERY_INVALID)
+            {
+                msg = create_parse_error(my_instance, "tokenized", query, &matches);
+            }
+            else if (parse_result != QC_QUERY_PARSED && rule->need_full_parsing(queue))
+            {
+                msg = create_parse_error(my_instance, "parsed completely", query, &matches);
+            }
         }
     }
 

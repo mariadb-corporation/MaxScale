@@ -12,7 +12,7 @@
  */
 #pragma once
 
-#if !defined(MXS_MODULE_NAME)
+#if !defined (MXS_MODULE_NAME)
 #define MXS_MODULE_NAME "dbfwfilter"
 #endif
 #include <maxscale/ccdefs.hh>
@@ -45,5 +45,6 @@ public:
     bool        log_no_match;
     bool        treat_string_as_field;
     bool        treat_string_arg_as_field;
+    bool        strict;
     fw_actions  action;
 };

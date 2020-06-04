@@ -62,16 +62,23 @@ config::ParamBool treat_string_arg_as_field(
     true
     );
 
+config::ParamBool strict(
+    &specification,
+    "strict",
+    "Whether to treat unsupported SQL or multi-statement SQL as an error.",
+    true
+    );
+
 config::ParamEnum<fw_actions> action(
     &specification,
     "action",
     "Optional enumeration parameter specifying the action to be taken when a rule matches. "
     "Default is to block.",
-    {
-        {FW_ACTION_ALLOW, "allow"},
-        {FW_ACTION_BLOCK, "block"},
-        {FW_ACTION_IGNORE, "ignore"},
-    },
+        {
+            {FW_ACTION_ALLOW, "allow"},
+            {FW_ACTION_BLOCK, "block"},
+            {FW_ACTION_IGNORE, "ignore"},
+        },
     FW_ACTION_BLOCK
     );
 }
@@ -86,9 +93,10 @@ DbfwConfig::DbfwConfig(const std::string& name)
     add_native(&treat_string_as_field, &dbfwfilter::treat_string_as_field);
     add_native(&treat_string_arg_as_field, &dbfwfilter::treat_string_arg_as_field);
     add_native(&action, &dbfwfilter::action);
-};
+    add_native(&strict, &dbfwfilter::strict);
+}
 
-//static
+// static
 void DbfwConfig::populate(MXS_MODULE& module)
 {
     dbfwfilter::specification.populate(module);
