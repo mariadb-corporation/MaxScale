@@ -1243,7 +1243,7 @@ std::unique_ptr<json_t> RoutingWorker::get_qc_stats_as_json(const char* zHost)
 // static
 RoutingWorker* RoutingWorker::pick_worker()
 {
-    static int id_generator = 0;
+    static uint32_t id_generator = 0;
     int id = this_unit.id_min_worker
         + (mxb::atomic::add(&id_generator, 1, mxb::atomic::RELAXED) % this_unit.nWorkers);
     return get(id);
