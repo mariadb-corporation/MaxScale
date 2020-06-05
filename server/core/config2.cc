@@ -1295,11 +1295,13 @@ bool ParamSize::from_json(const json_t* pJson,
 {
     bool rv = false;
 
-    if (json_is_string(pJson))
+    if (json_is_integer(pJson))
     {
-        const char* z = json_string_value(pJson);
-
-        rv = from_string(z, pValue, pMessage);
+        rv = from_value(json_integer_value(pJson), pValue, pMessage);
+    }
+    else if (json_is_string(pJson))
+    {
+        rv = from_string(json_string_value(pJson), pValue, pMessage);
     }
     else
     {
