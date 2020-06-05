@@ -117,8 +117,7 @@ bool search_file(const std::string& file_name,
 
     long file_pos = PINLOKI_MAGIC.size();
 
-    // Special rule: if it is the first file, it has no gtid list and we search for the gtid.
-    // If old files have been purged, there is a gtid list.
+    // If this is the first file, skip gtid-list search as there might not be a gtid-list
     bool found_file = first_file;
 
     while (!found_file)
@@ -136,9 +135,11 @@ bool search_file(const std::string& file_name,
             for (const auto& tid : event.gtid_list.gtids())
             {
                 if (tid.domain_id() == gtid.domain_id()
-                    && tid.sequence_nr() <= gtid.sequence_nr())
+                    && tid.sequence_nr() < gtid.sequence_nr())
                 {
-                    found_file = true;      // this is the file, the gtid should be here
+                    // The gtid should be in this file, unless the master has rebooted,
+                    // in which case there can be several files with the same gtid list.
+                    found_file = true;
                 }
             }
         }
@@ -152,14 +153,6 @@ bool search_file(const std::string& file_name,
         {
             ret_pos->file_name = file_name;
             ret_pos->file_pos = gtid_pos;
-        }
-        else
-        {
-            if (found_file && !gtid_pos)
-            {
-                MXB_SERROR("The gtid " << gtid << " should have been in " << file_name
-                                       << " but was not found");
-            }
         }
     }
 
