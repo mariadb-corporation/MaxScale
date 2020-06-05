@@ -2121,6 +2121,10 @@ bool ParamDuration<T>::from_json(const json_t* pJson,
         *pValue = std::chrono::duration_cast<value_type>(ms);
         rv = true;
     }
+    else if (json_is_string(pJson))
+    {
+        return from_string(json_string_value(pJson), pValue, pMessage);
+    }
     else
     {
         *pMessage = "Expected a json integer, but got a json ";
