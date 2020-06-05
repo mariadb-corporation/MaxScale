@@ -94,6 +94,9 @@ void Writer::run()
                     MXB_SDEBUG(rpl_msg);
                 }
 
+
+                file.add_event(rpl_msg);
+
                 switch (rpl_event.event_type)
                 {
                 case GTID_EVENT:
@@ -129,8 +132,6 @@ void Writer::run()
                 default:
                     break;
                 }
-
-                file.add_event(rpl_msg);
             }
         }
         catch (const std::exception& x)
