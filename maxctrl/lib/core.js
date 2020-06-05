@@ -55,9 +55,35 @@ program
   })
   .option("t", {
     alias: "timeout",
-    describe: "Request timeout in milliseconds",
-    default: 10000,
-    type: "number",
+    describe:
+      "Request timeout in plain milliseconds, e.g '-t 1000', " +
+      "or as duration with suffix [h|m|s|ms], e.g. '-t 10s'",
+    default: "10000",
+    type: "string",
+  })
+  .coerce("t", opt => {
+    var pos=opt.search(/[^\d]/)
+    var duration=parseInt(pos == -1 ? opt : opt.substring(0, pos))
+    if (isNaN(duration)) {
+      throw Error('\'' + opt + '\' is not a valid duration.')
+    }
+    if (pos != -1) {
+      var suffix=opt.substr(pos);
+      switch (suffix) {
+      case 'h':
+        duration *= 24;
+      case 'm':
+        duration *= 60;
+      case 's':
+        duration *= 1000;
+      case 'ms':
+        break;
+
+      default:
+        throw Error('\'' + suffix + '\' in \'' + opt + '\' is not a valid duration suffix.')
+      }
+    }
+    return duration;
   })
   .option("q", {
     alias: "quiet",
