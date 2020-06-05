@@ -1,4 +1,4 @@
-# MariaDB MaxScale 2.3.20 Release Notes
+# MariaDB MaxScale 2.3.20 Release Notes -- 2020-06-05
 
 Release 2.3.20 is a GA release.
 
