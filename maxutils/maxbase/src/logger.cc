@@ -132,7 +132,7 @@ std::unique_ptr<Logger> FileLogger::create(const std::string& filename)
         }
     }
 
-    return std::move(logger);
+    return logger;
 }
 
 FileLogger::~FileLogger()
