@@ -36,7 +36,6 @@ extern const string FIELD_DEF_ROLE;
 extern const string FIELD_HAS_PROXY;
 extern const string FIELD_IS_ROLE;
 extern const string FIELD_ROLE;
-extern const int NUM_FIELDS;
 
 extern const char* SQLITE_OPEN_FAIL;
 extern const char* SQLITE_OPEN_OOM;

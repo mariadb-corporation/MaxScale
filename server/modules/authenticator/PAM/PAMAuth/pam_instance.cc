@@ -491,7 +491,6 @@ void PamInstance::diagnostic(DCB* dcb)
 
 static int diag_cb_json(json_t* data, int columns, char** row, char** field_names)
 {
-    mxb_assert(columns == NUM_FIELDS);
     json_t* obj = json_object();
     for (int i = 0; i < columns; i++)
     {

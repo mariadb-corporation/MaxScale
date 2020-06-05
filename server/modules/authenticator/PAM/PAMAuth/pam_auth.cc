@@ -40,8 +40,6 @@ const string FIELD_HAS_PROXY = "proxy_grant";
 const string FIELD_DB = "db";
 const string FIELD_ROLE = "role";
 
-const int NUM_FIELDS = 6;
-
 const char* SQLITE_OPEN_FAIL = "Failed to open SQLite3 handle for file '%s': '%s'";
 const char* SQLITE_OPEN_OOM = "Failed to allocate memory for SQLite3 handle for file '%s'.";
 
