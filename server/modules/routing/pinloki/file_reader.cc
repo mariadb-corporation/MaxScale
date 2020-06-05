@@ -73,11 +73,20 @@ FileReader::FileReader(const maxsql::Gtid& gtid, const Inventory* inv)
         }
 
         open(gtid_pos.file_name);
-        m_read_pos.next_pos = gtid_pos.file_pos;
+        // Generate initial rotate and read format description, gtid list and any
+        // binlog checkpoints from the file before jumping to gtid (or end of file).
+        m_generate_rotate_to = gtid_pos.file_name;
+        m_read_pos.next_pos = PINLOKI_MAGIC.size();
+
+        // Once the preamble is done, jump to this file position
+        m_initial_gtid_file_pos = gtid_pos.file_pos;
     }
     else
     {
         open(m_inventory.file_names().front());
+        // Preamble just means send the initial rotate and then the whole file
+        m_generate_rotate_to = m_inventory.file_names().front();
+        m_read_pos.next_pos = PINLOKI_MAGIC.size();
     }
 }
 
@@ -126,16 +135,9 @@ void FileReader::fd_notify(uint32_t events)
     }
 }
 
-maxsql::RplEvent FileReader::fetch_event()
+std::vector<char> FileReader::fetch_raw()
 {
     std::vector<char> raw(HEADER_LEN);
-
-    if (m_generate_rotate)
-    {
-        m_generate_rotate = false;
-        std::string full_name = m_inventory.next(m_read_pos.name);
-        return create_rotate_event(basename(full_name.c_str()));
-    }
 
     m_read_pos.file.clear();
     m_read_pos.file.seekg(m_read_pos.next_pos);
@@ -144,7 +146,7 @@ maxsql::RplEvent FileReader::fetch_event()
     if (m_read_pos.file.tellg() != m_read_pos.next_pos + HEADER_LEN)
     {
         // Partial, or no header. Wait for more via inotify.
-        return maxsql::RplEvent();
+        return std::vector<char>();
     }
 
     auto event_length = maxsql::RplEvent::get_event_length(raw);
@@ -155,10 +157,52 @@ maxsql::RplEvent FileReader::fetch_event()
     if (m_read_pos.file.tellg() != m_read_pos.next_pos + event_length)
     {
         // Wait for more via inotify.
+        return std::vector<char>();
+    }
+
+    return raw;
+}
+
+maxsql::RplEvent FileReader::fetch_event()
+{
+    if (!m_generate_rotate_to.empty())
+    {
+        auto tmp = m_generate_rotate_to;
+        m_generate_rotate_to.clear();
+        return create_rotate_event(basename(tmp.c_str()));
+    }
+
+    auto raw = fetch_raw();
+
+    if (raw.empty())
+    {
         return maxsql::RplEvent();
     }
 
     maxsql::RplEvent rpl(std::move(raw));
+
+    if (m_generating_preamble)
+    {
+        if (rpl.event_type() != GTID_LIST_EVENT
+            && rpl.event_type() != FORMAT_DESCRIPTION_EVENT
+            && rpl.event_type() != BINLOG_CHECKPOINT_EVENT)
+        {
+            m_generating_preamble = false;
+            if (m_initial_gtid_file_pos)
+            {
+                m_read_pos.next_pos = m_initial_gtid_file_pos;
+
+                auto raw = fetch_raw();
+
+                if (raw.empty())
+                {
+                    return maxsql::RplEvent();
+                }
+
+                rpl = maxsql::RplEvent(std::move(raw));
+            }
+        }
+    }
 
     if (rpl.event_type() == ROTATE_EVENT)
     {
@@ -170,14 +214,13 @@ maxsql::RplEvent FileReader::fetch_event()
     }
     else if (rpl.event_type() == STOP_EVENT)
     {
-        auto file_name = m_inventory.next(m_read_pos.name);
-        if (!file_name.empty())
+        m_generate_rotate_to = m_inventory.next(m_read_pos.name);
+        if (!m_generate_rotate_to.empty())
         {
             MXB_SINFO("STOP_EVENT in file " << m_read_pos.name
                                             << ".  The next event will be a generated, artificial ROTATE_EVENT to "
-                                            << file_name);
-            m_generate_rotate = true;
-            open(file_name);
+                                            << m_generate_rotate_to);
+            open(m_generate_rotate_to);
         }
         else
         {

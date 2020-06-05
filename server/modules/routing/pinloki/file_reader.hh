@@ -22,6 +22,7 @@
 #include <maxbase/exception.hh>
 #include <maxbase/worker.hh>
 
+#include "pinloki.hh"
 #include "gtid.hh"
 #include "inventory.hh"
 #include "rpl_event.hh"
@@ -64,15 +65,18 @@ private:
         int           next_pos;
     };
 
-    void             open(const std::string& file_name);
-    void             set_inotify_fd();
-    maxsql::RplEvent create_rotate_event(const std::string& file_name) const;
+    void              open(const std::string& file_name);
+    void              set_inotify_fd();
+    std::vector<char> fetch_raw();
+    maxsql::RplEvent  create_rotate_event(const std::string& file_name) const;
 
     int              m_inotify_fd;
     int              m_inotify_descriptor = -1;
     ReadPosition     m_read_pos;
     uint32_t         m_server_id;
     const Inventory& m_inventory;
-    bool             m_generate_rotate = false;
+    std::string      m_generate_rotate_to;
+    bool             m_generating_preamble = true;
+    int              m_initial_gtid_file_pos = 0;
 };
 }
