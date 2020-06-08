@@ -31,6 +31,12 @@ In the case of a regular MariaDB cluster (monitored by the MariaDB monitor),
 it is no longer possible to set the the master server to maintenance or
 draining mode, but a switchover must be performed first.
 
+### Password encryption
+
+The encrypted passwords feature has been updated to be more secure. Users are
+recommended to generate a new encryption key and and re-encrypt their passwords
+using the `maxkeys` and `maxpasswd` utilities. Old passwords still work.
+
 ## Dropped Features
 
 ### Configuration parameters
