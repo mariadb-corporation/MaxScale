@@ -63,6 +63,8 @@ static const char CN_REPLICATION_MASTER_SSL[] = "replication_master_ssl";
 
 namespace
 {
+const char DETECT_STALE_MASTER[] = "detect_stale_master";
+const char DETECT_STALE_SLAVE[] = "detect_stale_slave";
 
 const char CLUSTER_OP_REQUIRE_LOCKS[] = "cooperative_monitoring_locks";
 const MXS_ENUM_VALUE lock_none = {"none", MariaDBMonitor::LOCKS_NONE};
@@ -90,7 +92,7 @@ MXS_ENUM_VALUE master_conds_values[] =
 const char SLAVE_CONDITIONS[] = "slave_conditions";
 const MXS_ENUM_VALUE slave_conds_def = {"none", MariaDBMonitor::SCOND_NONE};
 
-static MXS_ENUM_VALUE slave_conds_values[] =
+MXS_ENUM_VALUE slave_conds_values[] =
 {
     {"linked_master",          MariaDBMonitor::SCOND_LINKED_M  },
     {"running_master",         MariaDBMonitor::SCOND_RUNNING_M },
@@ -267,9 +269,6 @@ bool MariaDBMonitor::configure(const mxs::ConfigParameters* params)
         return false;
     }
 
-    m_settings.detect_stale_master = params->get_bool("detect_stale_master");
-    m_settings.detect_stale_slave = params->get_bool("detect_stale_slave");
-    m_settings.detect_standalone_master = params->get_bool(CN_DETECT_STANDALONE_MASTER);
     m_settings.ignore_external_masters = params->get_bool("ignore_external_masters");
     m_settings.assume_unique_hostnames = params->get_bool(CN_ASSUME_UNIQUE_HOSTNAMES);
     m_settings.failcount = params->get_integer(CN_FAILCOUNT);
@@ -291,12 +290,11 @@ bool MariaDBMonitor::configure(const mxs::ConfigParameters* params)
     m_settings.require_server_locks =
         static_cast<RequireLocks>(params->get_enum(CLUSTER_OP_REQUIRE_LOCKS, require_lock_values));
     m_settings.shared.server_locks_enabled = (m_settings.require_server_locks != RequireLocks::LOCKS_NONE);
-    m_settings.master_conds = static_cast<MasterConds>(params->get_enum(MASTER_CONDITIONS,
-                                                                        master_conds_values));
-    m_settings.slave_conds = static_cast<SlaveConds>(params->get_enum(SLAVE_CONDITIONS, slave_conds_values));
+
+    m_settings.master_conds = params->get_enum(MASTER_CONDITIONS, master_conds_values);
+    m_settings.slave_conds = params->get_enum(SLAVE_CONDITIONS, slave_conds_values);
 
     m_settings.excluded_servers.clear();
-
     /* Reset all monitored state info. The server dependent values must be reset as servers could have been
      * added, removed and modified. */
     reset_server_info();
@@ -360,6 +358,48 @@ bool MariaDBMonitor::configure(const mxs::ConfigParameters* params)
         {
             MXB_ERROR(requires, CN_AUTO_REJOIN, CN_ASSUME_UNIQUE_HOSTNAMES);
             settings_ok = false;
+        }
+    }
+
+    // Check if conflicting settings are in use.
+    auto check_if_both_set = [&params, &settings_ok](bool s1_modified, const string& s1, const string& s2) {
+            if (params->contains(s2))
+            {
+                if (s1_modified)
+                {
+                    MXB_ERROR("'%s' and '%s' cannot both be defined.", s1.c_str(), s2.c_str());
+                    settings_ok = false;
+                }
+                else
+                {
+                    MXB_WARNING("'%s' is deprecated and should not be used. Use '%s' instead.",
+                                s2.c_str(), s1.c_str());
+                }
+            }
+        };
+
+    bool master_conds_modified = (m_settings.master_conds != (int64_t)master_conds_def.enum_value);
+    check_if_both_set(master_conds_modified, MASTER_CONDITIONS, CN_DETECT_STANDALONE_MASTER);
+    check_if_both_set(master_conds_modified, MASTER_CONDITIONS, DETECT_STALE_MASTER);
+    bool slave_conds_modified = (m_settings.slave_conds != (int64_t)slave_conds_def.enum_value);
+    check_if_both_set(slave_conds_modified, SLAVE_CONDITIONS, DETECT_STALE_SLAVE);
+
+    if (settings_ok)
+    {
+        // If any of the settings 'detect_standalone_master' or 'detect_stale_master/slave' are set,
+        // add the equivalent master/slave conditions.
+        if (params->contains(CN_DETECT_STANDALONE_MASTER)
+            && params->get_bool(CN_DETECT_STANDALONE_MASTER) == false)
+        {
+            m_settings.master_conds |= MasterConds::MCOND_CONNECTING_S;
+        }
+        if (params->contains(DETECT_STALE_MASTER) && params->get_bool(DETECT_STALE_MASTER) == false)
+        {
+            m_settings.master_conds |= MasterConds::MCOND_RUNNING_S;
+        }
+        if (params->contains(DETECT_STALE_SLAVE) && params->get_bool(DETECT_STALE_SLAVE) == false)
+        {
+            m_settings.slave_conds |= SlaveConds::SCOND_LINKED_M;
         }
     }
     return settings_ok;
@@ -1195,13 +1235,13 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
                 MXS_MODULE_OPT_DEPRECATED
             },
             {
-                "detect_stale_master",               MXS_MODULE_PARAM_BOOL,      "true"
+                DETECT_STALE_MASTER,                 MXS_MODULE_PARAM_BOOL,      nullptr
             },
             {
-                "detect_stale_slave",                MXS_MODULE_PARAM_BOOL,      "true"
+                DETECT_STALE_SLAVE,                  MXS_MODULE_PARAM_BOOL,      nullptr
             },
             {
-                CN_DETECT_STANDALONE_MASTER,         MXS_MODULE_PARAM_BOOL,      "true"
+                CN_DETECT_STANDALONE_MASTER,         MXS_MODULE_PARAM_BOOL,      nullptr
             },
             {
                 CN_FAILCOUNT,                        MXS_MODULE_PARAM_COUNT,     "5"

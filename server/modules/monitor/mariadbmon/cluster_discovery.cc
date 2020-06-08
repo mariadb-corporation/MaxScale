@@ -527,7 +527,7 @@ void MariaDBMonitor::assign_server_roles()
 
             // Check that all master requirements are fulfilled.
             bool master_conds_ok = true;
-            const uint64_t master_conds = m_settings.master_conds;
+            const auto master_conds = m_settings.master_conds;
             const bool req_connecting_slave = master_conds & MasterConds::MCOND_CONNECTING_S;
             const bool req_connected_slave = master_conds & MasterConds::MCOND_CONNECTED_S;
             const bool req_running_slave = master_conds & MasterConds::MCOND_RUNNING_S;
@@ -614,7 +614,7 @@ void MariaDBMonitor::assign_slave_and_relay_master()
      * nodes have been processed does the search expand to downed or disconnected nodes. */
     std::priority_queue<QueueElement, std::vector<QueueElement>, decltype(compare)> open_set(compare);
 
-    const uint64_t slave_conds = m_settings.slave_conds;
+    const auto slave_conds = m_settings.slave_conds;
     const bool req_running_master = slave_conds & SlaveConds::SCOND_RUNNING_M;
     const bool req_writable_master = slave_conds & SlaveConds::SCOND_WRITABLE_M;
     const bool req_coop_master = slave_conds & SlaveConds::SCOND_COOP_M;

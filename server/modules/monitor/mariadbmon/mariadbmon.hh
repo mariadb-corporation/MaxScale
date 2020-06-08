@@ -300,11 +300,6 @@ private:
 
         // Replication topology detection settings.
 
-        bool detect_stale_master {true};        /* Allow stale masters. TODO: Remove this */
-        bool detect_stale_slave {true};         /* Allow stale slaves: a running slave behind a downed
-                                                 * master/relay is still a valid slave */
-        bool detect_standalone_master {true};   /* Allow writes to a master without any slaves.
-                                                 * TODO: think about removing */
         bool ignore_external_masters {false};   /* Ignore masters outside of the monitor configuration.
                                                  * TODO: requires work */
         bool assume_unique_hostnames {true};    /* Are server hostnames consistent between MaxScale and
@@ -329,8 +324,8 @@ private:
          * Used in multi-Maxscale situations. */
         RequireLocks require_server_locks {LOCKS_NONE};
 
-        MasterConds master_conds {MCOND_COOP_M};
-        SlaveConds  slave_conds {SCOND_NONE};
+        int64_t master_conds {MCOND_COOP_M};
+        int64_t slave_conds {SCOND_NONE};
 
         // Cluster operations additional settings
         int  failover_timeout {10};             /* Time limit in seconds for failover */
