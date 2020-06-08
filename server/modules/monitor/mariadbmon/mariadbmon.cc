@@ -76,26 +76,27 @@ const MXS_ENUM_VALUE require_lock_values[] =
 };
 
 const char MASTER_CONDITIONS[] = "master_conditions";
-const MXS_ENUM_VALUE master_reqs_def = {"primary_monitor_master", MariaDBMonitor::MREQ_COOP_M};
-MXS_ENUM_VALUE master_reqs_values[] =
+const MXS_ENUM_VALUE master_conds_def = {"primary_monitor_master", MariaDBMonitor::MCOND_COOP_M};
+MXS_ENUM_VALUE master_conds_values[] =
 {
-    {"none",             MariaDBMonitor::MREQ_NONE        },
-    {"connecting_slave", MariaDBMonitor::MREQ_CONNECTING_S},
-    {"connected_slave",  MariaDBMonitor::MREQ_CONNECTED_S },
-    {"running_slave",    MariaDBMonitor::MREQ_RUNNING_S   },
-    master_reqs_def,
+    {"none",             MariaDBMonitor::MCOND_NONE        },
+    {"connecting_slave", MariaDBMonitor::MCOND_CONNECTING_S},
+    {"connected_slave",  MariaDBMonitor::MCOND_CONNECTED_S },
+    {"running_slave",    MariaDBMonitor::MCOND_RUNNING_S   },
+    master_conds_def,
     {nullptr}
 };
 
 const char SLAVE_CONDITIONS[] = "slave_conditions";
-const MXS_ENUM_VALUE slave_reqs_def = {"none", MariaDBMonitor::SREQ_NONE};
-static MXS_ENUM_VALUE slave_reqs_values[] =
+const MXS_ENUM_VALUE slave_conds_def = {"none", MariaDBMonitor::SCOND_NONE};
+
+static MXS_ENUM_VALUE slave_conds_values[] =
 {
-    slave_reqs_def,
-    {"linked_master",MariaDBMonitor::SREQ_LINKED_M   },
-    {"running_master",MariaDBMonitor::SREQ_RUNNING_M  },
-    {"writable_master",MariaDBMonitor::SREQ_WRITABLE_M },
-    {"primary_monitor_master",MariaDBMonitor::SREQ_COOP_M     },
+    {"linked_master",          MariaDBMonitor::SCOND_LINKED_M  },
+    {"running_master",         MariaDBMonitor::SCOND_RUNNING_M },
+    {"writable_master",        MariaDBMonitor::SCOND_WRITABLE_M},
+    {"primary_monitor_master", MariaDBMonitor::SCOND_COOP_M    },
+    slave_conds_def,
     {nullptr}
 };
 }
@@ -290,8 +291,9 @@ bool MariaDBMonitor::configure(const mxs::ConfigParameters* params)
     m_settings.require_server_locks =
         static_cast<RequireLocks>(params->get_enum(CLUSTER_OP_REQUIRE_LOCKS, require_lock_values));
     m_settings.shared.server_locks_enabled = (m_settings.require_server_locks != RequireLocks::LOCKS_NONE);
-    m_settings.master_reqs = static_cast<MasterReqs>(params->get_enum(MASTER_CONDITIONS, master_reqs_values));
-    m_settings.slave_reqs = static_cast<SlaveReqs>(params->get_enum(SLAVE_CONDITIONS, slave_reqs_values));
+    m_settings.master_conds = static_cast<MasterConds>(params->get_enum(MASTER_CONDITIONS,
+                                                                        master_conds_values));
+    m_settings.slave_conds = static_cast<SlaveConds>(params->get_enum(SLAVE_CONDITIONS, slave_conds_values));
 
     m_settings.excluded_servers.clear();
 
@@ -1265,17 +1267,16 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
                 CN_ENFORCE_SIMPLE_TOPOLOGY,          MXS_MODULE_PARAM_BOOL,      "false"
             },
             {
-                CLUSTER_OP_REQUIRE_LOCKS,            MXS_MODULE_PARAM_ENUM,
-                lock_none.name,
+                CLUSTER_OP_REQUIRE_LOCKS,            MXS_MODULE_PARAM_ENUM,      lock_none.name,
                 MXS_MODULE_OPT_ENUM_UNIQUE,          require_lock_values
             },
             {
-                MASTER_CONDITIONS,                   MXS_MODULE_PARAM_ENUM,      master_reqs_def.name,
-                MXS_MODULE_OPT_NONE,                 master_reqs_values
+                MASTER_CONDITIONS,                   MXS_MODULE_PARAM_ENUM,      master_conds_def.name,
+                MXS_MODULE_OPT_NONE,                 master_conds_values
             },
             {
-                SLAVE_CONDITIONS,                    MXS_MODULE_PARAM_ENUM,      slave_reqs_def.name,
-                MXS_MODULE_OPT_NONE,                 slave_reqs_values
+                SLAVE_CONDITIONS,                    MXS_MODULE_PARAM_ENUM,      slave_conds_def.name,
+                MXS_MODULE_OPT_NONE,                 slave_conds_values
             },
             {MXS_END_MODULE_PARAMS}
         }

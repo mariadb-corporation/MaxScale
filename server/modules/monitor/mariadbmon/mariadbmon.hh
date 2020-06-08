@@ -53,22 +53,22 @@ public:
         LOCKS_MAJORITY_ALL
     };
 
-    enum MasterReqs
+    enum MasterConds
     {
-        MREQ_NONE         = 0,
-        MREQ_CONNECTING_S = 1 << 0,
-        MREQ_CONNECTED_S  = 1 << 1,
-        MREQ_RUNNING_S    = 1 << 2,
-        MREQ_COOP_M       = 1 << 3
+        MCOND_NONE         = 0,
+        MCOND_CONNECTING_S = 1 << 0,
+        MCOND_CONNECTED_S  = 1 << 1,
+        MCOND_RUNNING_S    = 1 << 2,
+        MCOND_COOP_M       = 1 << 3
     };
 
-    enum SlaveReqs
+    enum SlaveConds
     {
-        SREQ_NONE       = 0,
-        SREQ_LINKED_M   = 1 << 0,
-        SREQ_RUNNING_M  = 1 << 1,
-        SREQ_WRITABLE_M = 1 << 2,
-        SREQ_COOP_M     = 1 << 3
+        SCOND_NONE       = 0,
+        SCOND_LINKED_M   = 1 << 0,
+        SCOND_RUNNING_M  = 1 << 1,
+        SCOND_WRITABLE_M = 1 << 2,
+        SCOND_COOP_M     = 1 << 3
     };
 
     /**
@@ -329,8 +329,8 @@ private:
          * Used in multi-Maxscale situations. */
         RequireLocks require_server_locks {LOCKS_NONE};
 
-        MasterReqs master_reqs {MREQ_COOP_M};
-        SlaveReqs  slave_reqs {SREQ_NONE};
+        MasterConds master_conds {MCOND_COOP_M};
+        SlaveConds  slave_conds {SCOND_NONE};
 
         // Cluster operations additional settings
         int  failover_timeout {10};             /* Time limit in seconds for failover */

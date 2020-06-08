@@ -527,10 +527,10 @@ void MariaDBMonitor::assign_server_roles()
 
             // Check that all master requirements are fulfilled.
             bool master_conds_ok = true;
-            const uint64_t master_reqs = m_settings.master_reqs;
-            const bool req_connecting_slave = master_reqs & MasterReqs::MREQ_CONNECTING_S;
-            const bool req_connected_slave = master_reqs & MasterReqs::MREQ_CONNECTED_S;
-            const bool req_running_slave = master_reqs & MasterReqs::MREQ_RUNNING_S;
+            const uint64_t master_conds = m_settings.master_conds;
+            const bool req_connecting_slave = master_conds & MasterConds::MCOND_CONNECTING_S;
+            const bool req_connected_slave = master_conds & MasterConds::MCOND_CONNECTED_S;
+            const bool req_running_slave = master_conds & MasterConds::MCOND_RUNNING_S;
             if (req_connecting_slave || req_connected_slave || req_running_slave)
             {
                 // Check that at least one slave fulfills the given conditions. Only check immediate slaves,
@@ -559,7 +559,7 @@ void MariaDBMonitor::assign_server_roles()
                 }
             }
 
-            if (master_conds_ok && (master_reqs& MasterReqs::MREQ_COOP_M) && is_slave_maxscale()
+            if (master_conds_ok && (master_conds & MasterConds::MCOND_COOP_M) && is_slave_maxscale()
                 && !m_master->marked_as_master())
             {
                 // Master was not marked as such by primary monitor.
@@ -614,10 +614,10 @@ void MariaDBMonitor::assign_slave_and_relay_master()
      * nodes have been processed does the search expand to downed or disconnected nodes. */
     std::priority_queue<QueueElement, std::vector<QueueElement>, decltype(compare)> open_set(compare);
 
-    const uint64_t slave_reqs = m_settings.slave_reqs;
-    const bool req_running_master = slave_reqs & SlaveReqs::SREQ_RUNNING_M;
-    const bool req_writable_master = slave_reqs & SlaveReqs::SREQ_WRITABLE_M;
-    const bool req_coop_master = slave_reqs & SlaveReqs::SREQ_COOP_M;
+    const uint64_t slave_conds = m_settings.slave_conds;
+    const bool req_running_master = slave_conds & SlaveConds::SCOND_RUNNING_M;
+    const bool req_writable_master = slave_conds & SlaveConds::SCOND_WRITABLE_M;
+    const bool req_coop_master = slave_conds & SlaveConds::SCOND_COOP_M;
 
     // First, check conditions that immediately prevent any [Slave]s from being tagged:
     // 1) Require writable master yet master is not a valid master.
@@ -641,7 +641,7 @@ void MariaDBMonitor::assign_slave_and_relay_master()
     QueueElement start = {m_master, m_master->is_running()};
     open_set.push(start);
     int next_index = NodeData::INDEX_FIRST;
-    const bool allow_stale_slaves = !(slave_reqs & SlaveReqs::SREQ_LINKED_M);
+    const bool allow_stale_slaves = !(slave_conds & SlaveConds::SCOND_LINKED_M);
 
     while (!open_set.empty())
     {
