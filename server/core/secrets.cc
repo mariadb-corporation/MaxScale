@@ -316,6 +316,15 @@ string decrypt_password(const string& input)
 }
 }
 
+/**
+ * Decrypt passwords encrypted with an old (pre 2.5) .secrets-file. The decryption also depends on whether
+ * the password was encrypted using maxpasswd 2.4 or 2.5.
+ *
+ * @param key Encryption key
+ * @param iv Init vector
+ * @param input Encrypted password in hex form
+ * @return Decrypted password or empty on error
+ */
 string decrypt_password_old(const ByteVec& key, const ByteVec& iv, const std::string& input)
 {
     string rval;
@@ -330,9 +339,22 @@ string decrypt_password_old(const ByteVec& key, const ByteVec& iv, const std::st
     if (encrypt_or_decrypt(key.data(), iv.data(), ProcessingMode::DECRYPT_IGNORE_ERRORS, encrypted_bin,
                            bin_len, plain, &decrypted_len))
     {
-        // Decrypted data should be text.
-        auto output_data = reinterpret_cast<const char*>(plain);
-        rval.assign(output_data, decrypted_len);
+        if (decrypted_len > 0)
+        {
+            // Success, password was encrypted using 2.5. Decrypted data should be text.
+            auto output_data = reinterpret_cast<const char*>(plain);
+            rval.assign(output_data, decrypted_len);
+        }
+        else
+        {
+            // Failure, password was likely encrypted in 2.4. Try to decrypt using 2.4 code.
+            AES_KEY aeskey;
+            AES_set_decrypt_key(key.data(), 8 * key.size(), &aeskey);
+            auto iv_copy = iv;
+            memset(plain, '\0', bin_len);
+            AES_cbc_encrypt(encrypted_bin, plain, bin_len, &aeskey, iv_copy.data(), AES_DECRYPT);
+            rval = reinterpret_cast<const char*>(plain);
+        }
     }
     return rval;
 }
