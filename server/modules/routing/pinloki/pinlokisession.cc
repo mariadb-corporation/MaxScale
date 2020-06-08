@@ -17,10 +17,6 @@
 #include <maxscale//protocol/mariadb/resultset.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <unistd.h>
-
 using std::chrono::duration_cast;
 using std::chrono::seconds;
 using std::chrono::steady_clock;
@@ -52,30 +48,6 @@ GWBUF* create_select_master_error()
     return modutil_create_mysql_err_msg(
         1, 0, 1198, "HY000",
         "Manual master configuration is not possible when `select_master=true` is used.");
-}
-
-std::pair<std::string, std::string> get_file_name_and_size(const std::string& filepath)
-{
-    std::string file = filepath;
-    std::string size = "0";
-
-    if (!file.empty())
-    {
-        auto pos = file.find_last_of('/');
-
-        if (pos != std::string::npos)
-        {
-            file = file.substr(pos + 1);
-        }
-
-        struct stat st;
-        if (stat(filepath.c_str(), &st) == 0)
-        {
-            size = std::to_string(st.st_size);
-        }
-    }
-
-    return {file, size};
 }
 }
 

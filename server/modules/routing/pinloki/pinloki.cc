@@ -18,8 +18,36 @@
 #include <maxscale/json.hh>
 #include <fstream>
 
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+
 namespace pinloki
 {
+
+std::pair<std::string, std::string> get_file_name_and_size(const std::string& filepath)
+{
+    std::string file = filepath;
+    std::string size = "0";
+
+    if (!file.empty())
+    {
+        auto pos = file.find_last_of('/');
+
+        if (pos != std::string::npos)
+        {
+            file = file.substr(pos + 1);
+        }
+
+        struct stat st;
+        if (stat(filepath.c_str(), &st) == 0)
+        {
+            size = std::to_string(st.st_size);
+        }
+    }
+
+    return {file, size};
+}
 
 Pinloki::Pinloki(SERVICE* pService, Config&& config)
     : Router<Pinloki, PinlokiSession>(pService)
@@ -266,6 +294,9 @@ GWBUF* Pinloki::show_slave_status() const
 {
     std::lock_guard<std::mutex> guard(m_lock);
 
+    const auto& files = m_inventory.file_names();
+    auto file_and_pos = get_file_name_and_size(files.empty() ? "" : files.back());
+
     auto rset = ResultSet::create({});
     rset->add_row({});
 
@@ -274,8 +305,8 @@ GWBUF* Pinloki::show_slave_status() const
     rset->add_column("Master_User", m_master_config.user);
     rset->add_column("Master_Port", std::to_string(m_master_config.port));
     rset->add_column("Connect_Retry", "1");
-    rset->add_column("Master_Log_File", "TODO: Read from writer");
-    rset->add_column("Read_Master_Log_Pos", "TODO: Read from writer");
+    rset->add_column("Master_Log_File", file_and_pos.first.c_str());
+    rset->add_column("Read_Master_Log_Pos", file_and_pos.second.c_str());
     rset->add_column("Relay_Log_File", "mysqld-relay-bin.000001");
     rset->add_column("Relay_Log_Pos", "4");
     rset->add_column("Relay_Master_Log_File", "binlog.000001");
@@ -290,7 +321,7 @@ GWBUF* Pinloki::show_slave_status() const
     rset->add_column("Last_Errno", "0");
     rset->add_column("Last_Error", "");
     rset->add_column("Skip_Counter", "0");
-    rset->add_column("Exec_Master_Log_Pos", "TODO: Read from writer");
+    rset->add_column("Exec_Master_Log_Pos", file_and_pos.second.c_str());
     rset->add_column("Relay_Log_Space", "0");
     rset->add_column("Until_Condition", "None");
     rset->add_column("Until_Log_File", "");

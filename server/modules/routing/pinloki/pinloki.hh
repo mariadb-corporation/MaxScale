@@ -100,4 +100,6 @@ private:
     MasterConfig            m_master_config;
     mutable std::mutex      m_lock;
 };
+
+std::pair<std::string, std::string> get_file_name_and_size(const std::string& filepath);
 }
