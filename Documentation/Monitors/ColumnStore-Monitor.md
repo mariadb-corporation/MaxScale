@@ -23,13 +23,11 @@ GRANT ALL ON infinidb_vtable.* TO 'maxuser'@'%';
 The Columnstore Monitor in MaxScale 2.5 supports Columnstore 1.0, 1.2 and 1.5,
 and the master selection is done differently for each version.
 
-If the version is 1.0, the master server must be specified using the `primary`
+* If the version is 1.0, the master server must be specified using the `primary`
 parameter.
-
-If the version is 1.2, the master server is selected automatically using
+* If the version is 1.2, the master server is selected automatically using
 the Columnstore function `mcsSystemPrimary()`.
-
-If the version is 1.5, the master server is selected automatically by
+* If the version is 1.5, the master server is selected automatically by
 querying the Columnstore daemon running on each node.
 
 ## Configuration
@@ -114,11 +112,13 @@ Note that as maxctrl itself has a timeout of 10000 milliseconds, if a
 timeout larger than that is provided to any command, the timeout of
 maxctrl must also be increased. For instance:
 ```
-maxctrl --timeout 30000 call command csmon shutdown CsMonitor 20s
+maxctrl --timeout 30s call command csmon shutdown CsMonitor 20s
 ```
 Here a 30 second timeout is specified for maxctrl to ensure
 that it does not expire before the timeout of 20s provided for
 the shutdown command possibly does.
+
+The output is always a JSON object.
 
 In the following, assume a configuration like this:
 ```
