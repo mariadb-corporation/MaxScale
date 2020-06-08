@@ -1019,23 +1019,32 @@ The session trace log is also exposed by REST API and is shown with
 
 ### `writeq_high_water`
 
-High water mark for network write buffer. Controls when network traffic
-throtting is started. The parameter accepts [size type values](#sizes).
+High water mark for network write buffer. When the size of the outbound network
+buffer for a single connection exceeds this value, network traffic throtting for
+that connectino is started. The parameter accepts [size type
+values](#sizes). The default value is 16777216 bytes.
 
 More specifically, if the client side write queue is above this value, it will
 block traffic coming from backend servers. If the backend side write queue is
-above this value, it will block traffic from client. the minimum allowed size is
-4096 bytes.
+above this value, it will block traffic from client.
 
-Only when both `writeq_high_water` and `writeq_low_water` are set, traffic
-throtting is enabled. By default, traffic throttling is disabled.
+Network throttling is only enabled when both `writeq_high_water` and
+`writeq_low_water` have a non-zero value. To disable throttling, set the value
+to 0.
 
 ### `writeq_low_water`
 
 Low water mark for network write buffer. Once the traffic throttling is enabled,
-it will only be disabled when the write queue is below `writeq_low_water`. The
-parameter accepts [size type values](#sizes). The minimum allowed size is 512
-bytes. `writeq_high_water` must always be greater than `writeq_low_water`.
+it will only be disabled when the network write buffer is below
+`writeq_low_water` bytes. The parameter accepts [size type values](#sizes). The
+default value is 8192 bytes.
+
+The value of `writeq_high_water` must always be greater than the value of
+`writeq_low_water`.
+
+Network throttling is only enabled when both `writeq_high_water` and
+`writeq_low_water` have a non-zero value. To disable throttling, set the value
+to 0.
 
 ### `load_persisted_configs`
 
