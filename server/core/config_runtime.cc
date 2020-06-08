@@ -1476,24 +1476,6 @@ bool validate_user_json(json_t* json)
     return rval;
 }
 
-bool validate_maxscale_json(json_t* json)
-{
-    bool rval = false;
-    json_t* param = mxs_json_pointer(json, MXS_JSON_PTR_PARAMETERS);
-
-    if (param)
-    {
-        rval = runtime_is_count_or_null(param, CN_AUTH_CONNECT_TIMEOUT)
-            && runtime_is_count_or_null(param, CN_AUTH_READ_TIMEOUT)
-            && runtime_is_count_or_null(param, CN_AUTH_WRITE_TIMEOUT)
-            && runtime_is_bool_or_null(param, CN_ADMIN_LOG_AUTH_FAILURES)
-            && runtime_is_size_or_null(param, CN_QUERY_CLASSIFIER_CACHE_SIZE)
-            && runtime_is_count_or_null(param, CN_REBALANCE_THRESHOLD);
-    }
-
-    return rval;
-}
-
 bool validate_monitor_json(json_t* json)
 {
     bool rval = validate_object_json(json);
@@ -2458,7 +2440,7 @@ bool runtime_alter_maxscale_from_json(json_t* json)
 {
     bool rval = false;
 
-    if (validate_maxscale_json(json))
+    if (validate_object_json(json))
     {
         rval = true;
         json_t* params = mxs_json_pointer(json, MXS_JSON_PTR_PARAMETERS);
