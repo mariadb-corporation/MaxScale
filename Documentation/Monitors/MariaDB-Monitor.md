@@ -134,33 +134,32 @@ case, the slave connection is ignored.
 
 ### `detect_stale_master`
 
-Deprecated and ignored. See [master_requirements](master_requirements) below.
+Boolean, default: ON. Deprecated. If set to OFF, *running_slave* is added to
+[master_requirements](master_requirements). Both settings may not be defined
+simultaneously.
 
 ### `detect_stale_slave`
 
-Deprecated and ignored. See [slave_requirements](slave_requirements) below.
-
-### `ignore_external_masters`
-
-Boolean, default: OFF. Ignore any servers that are not monitored by this monitor
-but are a part of the replication topology.
-
-An external server is a server not monitored by this monitor. If a server is
-replicating from an external server, it typically gains the *Slave of External
-Server*-status. If this setting is enabled, the status is not set.
+Boolean, default: ON. Deprecated. If set to OFF, *linked_master* is added to
+[slave_requirements](slave_requirements). Both settings may not be defined
+simultaneously.
 
 ### `detect_standalone_master`
 
-Deprecated and ignored. See [master_requirements](master_requirements) below.
+Boolean, default: ON. Deprecated. If set to OFF, *connecting_slave* is added to
+[master_requirements](master_requirements). Both settings may not be defined
+simultaneously.
 
-### `master_requirements`
+### `master_conditions`
 
-Designate additional requirements for *Master*-status. Normally, if a suitable
-master candidate server is found as described in
-[Master selection](master-selection), MaxScale designates it *Master*. This
-enables write query routing to the server. The server loses its *Master*-status
-if it's set *read_only* or if a [primary monitor](cooperative-monitoring)
-selects another master. *master_requirements* sets additional conditions for a
+Enum, default: *primary_monitor_master*. Designate additional conditions for
+*Master*-status, i.e qualified for read and write queries.
+
+Normally, if a suitable master candidate server is found as described in
+[Master selection](master-selection), MaxScale designates it *Master*. The
+server loses its *Master*-status if it's set *read_only* or if a
+[primary monitor](cooperative-monitoring)
+selects another master. *master_conditions* sets additional conditions for a
 master server. This setting is an enum, allowing multiple conditions to be set
 simultaneously.
 
@@ -187,14 +186,15 @@ the same master server when cooperating.
 For example, to require that the master must have a slave which is both
 connected and running, set
 ```
-master_requirements=connected_slave,running_slave
+master_conditions=connected_slave,running_slave
 ```
 
+### `slave_conditions`
 
-### `slave_requirements`
+Enum, default: *none*. Designate additional conditions for *Slave*-status,
+i.e qualified for read queries.
 
-Designate additional requirements for *Slave*-status, i.e qualified for read
-queries. Normally, a server is *Slave* if it is at least attempting to replicate
+Normally, a server is *Slave* if it is at least attempting to replicate
 from the master candidate or a relay. The master does not even need to be
 writable. *slave_requirements* sets additional conditions for a slave server.
 This setting is an enum, allowing multiple conditions to be set simultaneously.
@@ -205,8 +205,8 @@ The available conditions are:
 2. linked_master : The slave must be connected to the master (Slave_IO_Running
 and Slave_SQL_Running are 'Yes') and the master must be *Running*. The same
 applies to any relays between the slave and the master.
-3. running_master : The master must be running. Does not apply to relays.
-4. writable_master : The master must be writable. Does not apply to relays.
+3. running_master : The master must be running. Relays may be down.
+4. writable_master : The master must be writable.
 5. primary_monitor_master : If this MaxScale is
 [cooperating](cooperative-monitoring) with another MaxScale and this is the
 secondary MaxScale, require that the candidate master is selected also by the
@@ -215,8 +215,17 @@ primary MaxScale.
 For example, to require that the master server of the cluster must be running
 and writable for any servers to have *Slave*-status, set
 ```
-slave_requirements=running_master,writable_master
+slave_conditions=running_master,writable_master
 ```
+
+### `ignore_external_masters`
+
+Boolean, default: OFF. Ignore any servers that are not monitored by this monitor
+but are a part of the replication topology.
+
+An external server is a server not monitored by this monitor. If a server is
+replicating from an external server, it typically gains the *Slave of External
+Server*-status. If this setting is enabled, the status is not set.
 
 ### `failcount`
 

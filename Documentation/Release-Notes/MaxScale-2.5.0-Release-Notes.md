@@ -31,6 +31,13 @@ In the case of a regular MariaDB cluster (monitored by the MariaDB monitor),
 it is no longer possible to set the the master server to maintenance or
 draining mode, but a switchover must be performed first.
 
+### MariaDBMonitor deprecated settings
+
+The settings `detect_stale_master`, `detect_standalone_master` and
+`detect_stale_slave`  are replaced by `master_conditions` and
+`slave_conditions`. The old settings may still be used, but will be removed in
+a later version.
+
 ### Password encryption
 
 The encrypted passwords feature has been updated to be more secure. Users are
