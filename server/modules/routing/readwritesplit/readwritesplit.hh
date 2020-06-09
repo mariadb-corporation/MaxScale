@@ -27,6 +27,7 @@
 #include <mutex>
 #include <functional>
 
+#include <maxbase/shared_mutex.hh>
 #include <maxscale/dcb.hh>
 #include <maxscale/queryclassifier.hh>
 #include <maxscale/router.hh>
@@ -397,5 +398,6 @@ private:
     mxs::WorkerGlobal<RWSConfig>          m_config;
     Stats                                 m_stats;
     mxs::WorkerGlobal<TargetSessionStats> m_server_stats;
-    std::atomic<gtid>                     m_last_gtid {{0, 0, 0}};
+    gtid                                  m_last_gtid {0, 0, 0};
+    mutable mxb::shared_mutex             m_last_gtid_lock;
 };

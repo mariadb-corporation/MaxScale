@@ -167,28 +167,14 @@ maxscale::TargetSessionStats RWSplit::all_server_stats() const
 
 std::string RWSplit::last_gtid() const
 {
-    return m_last_gtid.load(std::memory_order_relaxed).to_string();
+    mxb::shared_lock<mxb::shared_mutex> guard(m_last_gtid_lock);
+    return m_last_gtid.to_string();
 }
 
 void RWSplit::set_last_gtid(const std::string& str)
 {
-    gtid current_gtid;
-    gtid next_gtid;
-    gtid generated_gtid = gtid::from_string(str);
-
-    do
-    {
-        current_gtid = m_last_gtid.load(std::memory_order_relaxed);
-        auto next_gtid = generated_gtid;
-
-        if (current_gtid.domain == next_gtid.domain && current_gtid.sequence >= next_gtid.sequence)
-        {
-            break;
-        }
-    }
-    while (!m_last_gtid.compare_exchange_weak(current_gtid, next_gtid,
-                                              std::memory_order_relaxed,
-                                              std::memory_order_relaxed));
+    std::lock_guard<mxb::shared_mutex> guard(m_last_gtid_lock);
+    m_last_gtid = gtid::from_string(str);
 }
 
 int RWSplit::max_slave_count() const
