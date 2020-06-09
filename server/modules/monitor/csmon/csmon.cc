@@ -14,6 +14,12 @@
 #include "csmonitor.hh"
 #include <chrono>
 
+// How nodes are added and removed, and how dbroots are managed is
+// under development. The way it is implemented now, will change,
+// so for the time being no advanced cluster operation commands are
+// exposed.
+#undef CSMON_ADVANCED_CLUSTER_OPERATIONS
+
 namespace
 {
 
@@ -581,11 +587,6 @@ bool csmon_rollback(const MODULECMD_ARG* pArgs, json_t** ppOutput)
 
 void register_commands()
 {
-    modulecmd_register_command(MXS_MODULE_NAME, "add-node", MODULECMD_TYPE_ACTIVE,
-                               csmon_add_node,
-                               MXS_ARRAY_NELEMS(csmon_add_node_argv), csmon_add_node_argv,
-                               CSMON_ADD_NODE_DESC);
-
     modulecmd_register_command(MXS_MODULE_NAME, "config-get", MODULECMD_TYPE_PASSIVE,
                                csmon_config_get,
                                MXS_ARRAY_NELEMS(csmon_config_get_argv), csmon_config_get_argv,
@@ -601,16 +602,6 @@ void register_commands()
                                MXS_ARRAY_NELEMS(csmon_mode_set_argv), csmon_mode_set_argv,
                                CSMON_MODE_SET_DESC);
 
-    modulecmd_register_command(MXS_MODULE_NAME, "remove-node", MODULECMD_TYPE_ACTIVE,
-                               csmon_remove_node,
-                               MXS_ARRAY_NELEMS(csmon_remove_node_argv), csmon_remove_node_argv,
-                               CSMON_REMOVE_NODE_DESC);
-
-    modulecmd_register_command(MXS_MODULE_NAME, "scan", MODULECMD_TYPE_ACTIVE,
-                               csmon_scan,
-                               MXS_ARRAY_NELEMS(csmon_scan_argv), csmon_scan_argv,
-                               CSMON_SCAN_DESC);
-
     modulecmd_register_command(MXS_MODULE_NAME, "shutdown", MODULECMD_TYPE_ACTIVE,
                                csmon_shutdown,
                                MXS_ARRAY_NELEMS(csmon_shutdown_argv), csmon_shutdown_argv,
@@ -625,6 +616,23 @@ void register_commands()
                                csmon_status,
                                MXS_ARRAY_NELEMS(csmon_status_argv), csmon_status_argv,
                                CSMON_STATUS_DESC);
+
+#if defined(CSMON_ADVANCED_CLUSTER_OPERATIONS)
+    modulecmd_register_command(MXS_MODULE_NAME, "add-node", MODULECMD_TYPE_ACTIVE,
+                               csmon_add_node,
+                               MXS_ARRAY_NELEMS(csmon_add_node_argv), csmon_add_node_argv,
+                               CSMON_ADD_NODE_DESC);
+
+    modulecmd_register_command(MXS_MODULE_NAME, "remove-node", MODULECMD_TYPE_ACTIVE,
+                               csmon_remove_node,
+                               MXS_ARRAY_NELEMS(csmon_remove_node_argv), csmon_remove_node_argv,
+                               CSMON_REMOVE_NODE_DESC);
+
+    modulecmd_register_command(MXS_MODULE_NAME, "scan", MODULECMD_TYPE_ACTIVE,
+                               csmon_scan,
+                               MXS_ARRAY_NELEMS(csmon_scan_argv), csmon_scan_argv,
+                               CSMON_SCAN_DESC);
+#endif
 
 #if defined(CSMON_EXPOSE_TRANSACTIONS)
     modulecmd_register_command(MXS_MODULE_NAME, "begin", MODULECMD_TYPE_PASSIVE,
