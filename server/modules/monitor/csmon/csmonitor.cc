@@ -499,7 +499,18 @@ int CsMonitor::get_15_server_status(CsMonitorServer* pServer)
             // Seems to be running.
             if (status.dbrm_mode == cs::MASTER)
             {
-                status_mask |= SERVER_MASTER;
+                // The node that claims to be master gets
+                // - the master bit if the cluster is readwrite,
+                // - the slave bit if it is the only server (i.e. probably a single node installation),
+                // - otherwise only the running bit (the master node in a readonly multi-node cluster).
+                if (status.cluster_mode == cs::READWRITE)
+                {
+                    status_mask |= SERVER_MASTER;
+                }
+                else if (servers().size() == 1)
+                {
+                    status_mask |= SERVER_SLAVE;
+                }
             }
             else
             {
