@@ -1,7 +1,6 @@
 [maxscale]
 threads=###threads###
 log_warning=1
-log_debug=1
 
 [server1]
 type=server
@@ -55,6 +54,14 @@ monitor_interval=1000
 type=monitor
 module=mariadbmon
 servers=server4
+user=maxskysql
+password=skysql
+monitor_interval=1000
+
+[InternalMonitor]
+type=monitor
+module=mariadbmon
+servers=RWS1-As-Server, RWS2-As-Server, RWS3-As-Server, RWS4-As-Server
 user=maxskysql
 password=skysql
 monitor_interval=1000
