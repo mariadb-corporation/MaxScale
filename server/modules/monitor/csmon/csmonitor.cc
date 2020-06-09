@@ -299,7 +299,7 @@ bool check_15_server_states(const char* zName,
     auto end = servers.end();
     auto jt = configs.begin();
 
-    size_t n = 0;
+    int nSingle_nodes = 0;
 
     while (it != end)
     {
@@ -315,11 +315,12 @@ bool check_15_server_states(const char* zName,
                 {
                     pServer->set_node_mode(CsMonitorServer::SINGLE_NODE);
 
-                    MXS_WARNING("Server '%s' configured as a single node. It must be added "
-                                "'maxctrl call command add-node %s %s' before it can be used "
-                                "in a multi-node cluster.",
-                                pServer->name(), zName, pServer->name());
-                    ++n;
+                    if (servers.size() > 1)
+                    {
+                        MXS_WARNING("Server '%s' configured as a single node, even though multiple "
+                                    "servers has been specified.", pServer->name());
+                    }
+                    ++nSingle_nodes;
                 }
                 else if (ip == pServer->address())
                 {
@@ -350,9 +351,12 @@ bool check_15_server_states(const char* zName,
         ++jt;
     }
 
-    if (n == servers.size())
+    if (nSingle_nodes >= 1 && servers.size() > 1)
     {
-        MXS_WARNING("No server is configured as multi-node.");
+        MXS_WARNING("Out of %d servers in total, %d are configured as single-nodes. "
+                    "You are likely to see multiples servers marked as being master, "
+                    "which is not likely to work as intended.",
+                    (int)servers.size(), nSingle_nodes);
     }
 
     return rv;
@@ -482,37 +486,31 @@ int CsMonitor::get_15_server_status(CsMonitorServer* pServer)
 {
     int status_mask = 0;
 
-    // A server may be single-node if it has recently been added. In has_sufficient_permissions()
-    // we logged that it needs to be added to the cluster, so we won't log anything here as that
-    // would be spamming.
-    if (pServer->is_multi_node())
+    auto status = pServer->fetch_status();
+
+    if (status.ok())
     {
-        auto status = pServer->fetch_status();
-
-        if (status.ok())
+        // If services are empty, it is an indication that Columnstore actually
+        // is not running _even_ if we were able to connect to the MariaDB server.
+        if (!status.services.empty())
         {
-            // If services are empty, it is an indication that Columnstore actually
-            // is not running _even_ if we were able to connect to the MariaDB server.
-            if (!status.services.empty())
-            {
-                status_mask |= SERVER_RUNNING;
+            status_mask |= SERVER_RUNNING;
 
-                // Seems to be running.
-                if (status.dbrm_mode == cs::MASTER)
-                {
-                    status_mask |= SERVER_MASTER;
-                }
-                else
-                {
-                    status_mask |= SERVER_SLAVE;
-                }
+            // Seems to be running.
+            if (status.dbrm_mode == cs::MASTER)
+            {
+                status_mask |= SERVER_MASTER;
+            }
+            else
+            {
+                status_mask |= SERVER_SLAVE;
             }
         }
-        else
-        {
-            MXS_ERROR("Could not fetch status using REST-API from '%s': (%d) %s",
-                      pServer->name(), status.response.code, status.response.body.c_str());
-        }
+    }
+    else
+    {
+        MXS_ERROR("Could not fetch status using REST-API from '%s': (%d) %s",
+                  pServer->name(), status.response.code, status.response.body.c_str());
     }
 
     return status_mask;
