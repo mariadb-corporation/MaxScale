@@ -830,7 +830,7 @@ bool CsMonitorServer::set_cluster_mode(const std::vector<CsMonitorServer*>& serv
 
         if (result.ok())
         {
-            if (pMaster->set_cluster_mode(cs::READWRITE, timeout, pOutput))
+            if (pMaster->set_cluster_mode(mode, timeout, pOutput))
             {
                 rv = true;
             }
