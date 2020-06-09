@@ -3,7 +3,7 @@
 set(JANSSON_REPO "https://github.com/akheron/jansson.git" CACHE STRING "Jansson Git repository")
 
 # Release 2.9 of Jansson
-set(JANSSON_TAG "v2.9" CACHE STRING "Jansson Git tag")
+set(JANSSON_TAG "v2.13" CACHE STRING "Jansson Git tag")
 
 ExternalProject_Add(jansson
   GIT_REPOSITORY ${JANSSON_REPO}

@@ -132,5 +132,5 @@ private:
 
     void remove_fields_from_resource(json_t* obj, const std::string& type,
                                      const std::unordered_set<std::string>& fields);
-    void remove_fields_from_object(json_t* obj, const std::unordered_set<std::string>& fields);
+    void remove_fields_from_object(json_t* obj, std::vector<std::string>&& field);
 };

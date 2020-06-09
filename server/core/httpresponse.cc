@@ -101,18 +101,33 @@ const HttpResponse::Headers& HttpResponse::get_headers() const
     return m_headers;
 }
 
-void HttpResponse::remove_fields_from_object(json_t* obj, const std::unordered_set<std::string>& fields)
+void HttpResponse::remove_fields_from_object(json_t* obj, std::vector<std::string>&& fields)
 {
-    void* tmp;
-    const char* key;
-    json_t* value;
-
-    json_object_foreach_safe(obj, tmp, key, value)
+    if (fields.empty())
     {
-        if (fields.count(key) == 0)
+        return;
+    }
+
+    if (json_is_object(obj))
+    {
+        if (json_t* p = json_object_get(obj, fields.front().c_str()))
         {
-            json_object_del(obj, key);
+            // Remove all other keys
+            json_incref(p);
+            json_object_clear(obj);
+            json_object_set_new(obj, fields.front().c_str(), p);
+
+            fields.erase(fields.begin());
+            remove_fields_from_object(p, std::move(fields));
         }
+        else
+        {
+            json_object_clear(obj);
+        }
+    }
+    else
+    {
+        json_object_clear(obj);
     }
 }
 
@@ -125,9 +140,19 @@ void HttpResponse::remove_fields_from_resource(json_t* obj, const std::string& t
     {
         if (auto attr = json_object_get(obj, CN_ATTRIBUTES))
         {
-            remove_fields_from_object(attr, fields);
+            auto newattr = json_object();
 
-            if (json_object_size(attr) == 0)
+            for (const auto& a : fields)
+            {
+                auto tmp = json_deep_copy(attr);
+                remove_fields_from_object(tmp, mxb::strtok(a, "/"));
+                json_object_update_recursive(newattr, tmp);
+                json_decref(tmp);
+            }
+
+            json_object_set_new(obj, CN_ATTRIBUTES, newattr);
+
+            if (json_object_size(newattr) == 0)
             {
                 json_object_del(obj, CN_ATTRIBUTES);
             }
@@ -135,9 +160,19 @@ void HttpResponse::remove_fields_from_resource(json_t* obj, const std::string& t
 
         if (auto rel = json_object_get(obj, CN_RELATIONSHIPS))
         {
-            remove_fields_from_object(rel, fields);
+            auto newrel = json_object();
 
-            if (json_object_size(rel) == 0)
+            for (const auto& a : fields)
+            {
+                auto tmp = json_deep_copy(rel);
+                remove_fields_from_object(tmp, mxb::strtok(a, "/"));
+                json_object_update_recursive(newrel, tmp);
+                json_decref(tmp);
+            }
+
+            json_object_set_new(obj, CN_RELATIONSHIPS, newrel);
+
+            if (json_object_size(newrel) == 0)
             {
                 json_object_del(obj, CN_RELATIONSHIPS);
             }

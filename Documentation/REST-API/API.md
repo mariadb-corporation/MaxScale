@@ -228,14 +228,17 @@ parameters. Parameters are given in the HTTP query string:
     response. The `TYPE` value in the `fields` parameter must be the resource
     type that is being retrieved (i.e. the `servers` in `/v1/servers` and
     `/v1/server/server1`). The value of the parameter must be a comma-separated
-    list of field names to return. Only top-level fields in the `attributes` and
-    `relationships` objects are inspected (e.g. `data.attributes.state` is a
-    top-level attribute whereas `data.attributes.statistics.connections` is
-    not).
+    list of [JSON Pointers](https://tools.ietf.org/html/rfc6901) that mark which
+    fields of the object to return. Only fields in objects in the `attributes`
+    and `relationships` objects are inspected. This means that if the path
+    marked by the JSON Pointer contains an array in it, it will not advance past
+    this array.
 
     For example, to return only the server state output from the `/servers`
     endpoint, the `fields[servers]=state` parameter can be used. This would
-    return only the `data.attributes.state` part of the resource.
+    return only the `data.attributes.state` part of the resource. To return the
+    nested value `data.attributes.statistics.connections`, the corresponding
+    parameter would be `fields[servers]=statistics/connections`.
 
 - `filter=json_ptr=json_value`
 
