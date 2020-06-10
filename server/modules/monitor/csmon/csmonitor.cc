@@ -1000,6 +1000,7 @@ void CsMonitor::cs_config_set(json_t** ppOutput,
     json_t* pOutput = json_object();
     bool success = false;
     ostringstream message;
+    json_t* pServers = nullptr;
 
     ServerVector sv;
 
@@ -1012,20 +1013,55 @@ void CsMonitor::cs_config_set(json_t** ppOutput,
         sv = servers();
     }
 
-    Results results = CsMonitorServer::set_config(sv, body, m_context);
-
-    json_t* pServers = nullptr;
-    size_t n = results_to_json(sv, results, &pServers);
-
-    if (n == servers().size())
+    Results results;
+    if (CsMonitorServer::begin(sv, timeout, m_context, &results))
     {
-        message << "Config set on all servers.";
-        success = true;
+        if (CsMonitorServer::set_config(sv, body, m_context, &results))
+        {
+            if (CsMonitorServer::commit(sv, timeout, m_context, &results))
+            {
+                message << "Config set on all servers.";
+                results_to_json(sv, results, &pServers);
+                success = true;
+            }
+            else
+            {
+                LOG_APPEND_JSON_ERROR(&pOutput, "Could not commit changes, will attempt rollback.");
+                results_to_json(sv, results, &pServers);
+            }
+        }
+        else
+        {
+            LOG_APPEND_JSON_ERROR(&pOutput, "Could not set config on all nodes.");
+            results_to_json(sv, results, &pServers);
+        }
     }
     else
     {
-        message << "Config successfully set on " << n
-                << " servers out of " << servers().size() << ".";
+        LOG_APPEND_JSON_ERROR(&pOutput, "Could not start a transaction on all nodes.");
+        results_to_json(sv, results, &pServers);
+    }
+
+    if (!success)
+    {
+        if (!CsMonitorServer::rollback(sv, m_context, &results))
+        {
+            LOG_APPEND_JSON_ERROR(&pOutput, "Could not rollback changes, cluster state unknown.");
+            if (pServers)
+            {
+                json_decref(pServers);
+            }
+            results_to_json(sv, results, &pServers);
+        }
+    }
+
+    if (success)
+    {
+        message << "Config applied to all servers.";
+    }
+    else
+    {
+        message << "Could not set config to all servers.";
     }
 
     json_object_set_new(pOutput, csmon::keys::SUCCESS, json_boolean(success));
