@@ -115,7 +115,6 @@
  #  servers=server4,server2,server3,server5
  #  user=massi
  #  passwd=massi
- #  detect_replication_lag=1
  #  monitor_interval=10001
  #
  #

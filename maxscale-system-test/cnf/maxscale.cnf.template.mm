@@ -8,7 +8,6 @@ module=mariadbmon
 servers= server1, server2
 user=maxskysql
 password= skysql
-detect_stale_master=0
 monitor_interval=1000
 
 [RW-Split-Router]

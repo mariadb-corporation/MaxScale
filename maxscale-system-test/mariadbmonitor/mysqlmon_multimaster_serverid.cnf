@@ -8,7 +8,6 @@ module=mysqlmon
 servers= server1, server2, server3, server4
 user=maxskysql
 password= skysql
-detect_stale_master=0
 monitor_interval=1000
 assume_unique_hostnames=false
 

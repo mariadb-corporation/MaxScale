@@ -11,7 +11,6 @@ servers=server1,server2,server3,server4
 user=maxskysql
 password=skysql
 monitor_interval=1000
-detect_stale_master=false
 backend_connect_timeout=1
 backend_read_timeout=1
 backend_write_timeout=1

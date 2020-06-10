@@ -9,7 +9,6 @@ servers= server1, server2,server3  ,server4
 user=maxskysql
 password= skysql
 monitor_interval=500
-detect_replication_lag=1
 
 [RW-Split-Router]
 type=service
