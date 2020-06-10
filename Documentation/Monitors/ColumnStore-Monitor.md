@@ -108,7 +108,7 @@ a client such as curl or using maxctrl.
 All commands require the monitor instance name as the first parameters.
 Additional parameters must be provided depending on the command.
 
-Note that as maxctrl itself has a timeout of 10000 milliseconds, if a
+Note that as maxctrl itself has a timeout of 10 seconds, if a
 timeout larger than that is provided to any command, the timeout of
 maxctrl must also be increased. For instance:
 ```
@@ -144,7 +144,7 @@ servers=CsNode1,CsNode2,CsNode3
 
 ### _Start_
 ```
-call command csmon start <monitor-name> [<timeout>]
+call command csmon start <monitor-name> <timeout>
 ```
 Starts the Columnstore cluster.
 
@@ -155,7 +155,7 @@ call command csmon start CsMonitor 20s
 
 ### _Shutdown_
 ```
-call command csmon shutdown <monitor-name> [<timeout>]
+call command csmon shutdown <monitor-name> <timeout>
 ```
 Shuts down the Columnstore cluster.
 
@@ -178,7 +178,7 @@ call command csmon status CsMonitor CsNode1
 
 ### _Set Mode_
 ```
-call command csmon mode-set <monitor-name> (readonly|readwrite) [<timeout>]
+call command csmon mode-set <monitor-name> (readonly|readwrite) <timeout>
 ```
 Sets the mode of the cluster.
 
@@ -196,21 +196,6 @@ Returns the configs of all servers in the cluster or of a specific one.
 Example
 ```
 call command csmon config-get CsMonitor CsNode2
-```
-
-### _Set Config_
-```
-call command csmon config-set <monitor-name> <config> [<server-name>]
-```
-Sets the config on all servers in the cluster or on a specific one.
-The config should be a JSON object enclosed in quotes.
-
-*NOTE* MaxScale does not verify the provided configuration object in
-any way, other than ensuring that is really is a JSON object, but
-simply sends it forward to the servers in question.
-
-```
-call command csmon config-set CsMonitor "{ ... }"
 ```
 
 ## Example
