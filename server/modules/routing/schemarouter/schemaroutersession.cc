@@ -262,7 +262,7 @@ int32_t SchemaRouterSession::routeQuery(GWBUF* pPacket)
         return 0;
     }
 
-    if (m_shard.empty())
+    if (m_shard.empty() && (m_state & INIT_MAPPING) == 0)
     {
         /* Generate database list */
         query_databases();
@@ -527,6 +527,7 @@ void SchemaRouterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& dow
 
     if (reply.is_complete())
     {
+        MXS_INFO("Reply complete from '%s'", bref->name());
         bref->ack_write();
     }
 
@@ -549,7 +550,6 @@ void SchemaRouterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& dow
             route_queued_query();
         }
     }
-
     else if (m_queue.size())
     {
         mxb_assert(m_state == INIT_READY);
@@ -1229,6 +1229,8 @@ void SchemaRouterSession::query_databases()
     {
         b->set_mapped(false);
     }
+
+    mxb_assert((m_state & INIT_MAPPING) == 0);
 
     m_state |= INIT_MAPPING;
     m_state &= ~INIT_UNINT;
