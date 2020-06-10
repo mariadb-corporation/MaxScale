@@ -21,3 +21,17 @@ a later version.
 The encrypted passwords feature has been updated to be more secure. Users are
 recommended to generate a new encryption key and and re-encrypt their passwords
 using the `maxkeys` and `maxpasswd` utilities. Old passwords still work.
+
+## Columnstore Monitor
+
+It is now mandatory to specify in the configuration what version the
+monitored Columnstore cluster is.
+```
+[CSMonitor]
+type=monitor
+module=csmon
+version=1.2
+...
+```
+Please see the [documentation](../Monitors/ColumnStore-Monitor.md#master-selection)
+for details.
