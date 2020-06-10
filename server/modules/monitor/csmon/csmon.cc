@@ -400,7 +400,7 @@ bool csmon_config_set(const MODULECMD_ARG* pArgs, json_t** ppOutput)
 
         if (get_timeout(zTimeout, &timeout, ppOutput))
         {
-            CALL_IF_CS_15(pMonitor->command_config_set(ppOutput, zJson, pServer));
+            CALL_IF_CS_15(pMonitor->command_config_set(ppOutput, zJson, timeout, pServer));
         }
     }
 

@@ -60,7 +60,8 @@ public:
     // Only to be called by the module call command mechanism.
     bool command_add_node(json_t** ppOutput, CsMonitorServer* pServer, const std::chrono::seconds& timeout);
     bool command_config_get(json_t** ppOutput, CsMonitorServer* pServer);
-    bool command_config_set(json_t** ppOutput, const char* zJson, CsMonitorServer* pServer);
+    bool command_config_set(json_t** ppOutput,
+                            const char* zJson, const std::chrono::seconds& timeout, CsMonitorServer* pServer);
     bool command_mode_set(json_t** ppOutput, const char* zEnum, const std::chrono::seconds& timeout);
     bool command_remove_node(json_t** ppOutput,
                              CsMonitorServer* pServer, const std::chrono::seconds& timeout, bool force);
@@ -86,7 +87,7 @@ private:
                      CsMonitorServer* pServer, const std::chrono::seconds& timeout);
     void cs_config_get(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer* pServer);
     void cs_config_set(json_t** ppOutput, mxb::Semaphore* pSem,
-                       std::string&& body, CsMonitorServer* pServer);
+                       std::string&& body, const std::chrono::seconds& timeout, CsMonitorServer* pServer);
     void cs_mode_set(json_t** ppOuput, mxb::Semaphore* pSem,
                      cs::ClusterMode mode, const std::chrono::seconds& timeout);
     void cs_remove_node(json_t** ppOutput, mxb::Semaphore* pSem,

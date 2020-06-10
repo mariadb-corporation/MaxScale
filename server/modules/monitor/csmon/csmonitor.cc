@@ -601,7 +601,10 @@ bool CsMonitor::command_config_get(json_t** ppOutput, CsMonitorServer* pServer)
     return command(ppOutput, sem, "config-get", cmd);
 }
 
-bool CsMonitor::command_config_set(json_t** ppOutput, const char* zJson, CsMonitorServer* pServer)
+bool CsMonitor::command_config_set(json_t** ppOutput,
+                                   const char* zJson,
+                                   const std::chrono::seconds& timeout,
+                                   CsMonitorServer* pServer)
 {
     bool rv = false;
 
@@ -611,10 +614,10 @@ bool CsMonitor::command_config_set(json_t** ppOutput, const char* zJson, CsMonit
         mxb::Semaphore sem;
         string body(zJson, zJson + len);
 
-        auto cmd = [this, ppOutput, &sem, &body, pServer] () {
+        auto cmd = [this, ppOutput, &sem, &body, timeout, pServer] () {
             if (ready_to_run(ppOutput))
             {
-                cs_config_set(ppOutput, &sem, std::move(body), pServer);
+                cs_config_set(ppOutput, &sem, std::move(body), timeout, pServer);
             }
             else
             {
@@ -988,8 +991,11 @@ void CsMonitor::cs_config_get(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitor
     pSem->post();
 }
 
-void CsMonitor::cs_config_set(json_t** ppOutput, mxb::Semaphore* pSem,
-                              string&& body, CsMonitorServer* pServer)
+void CsMonitor::cs_config_set(json_t** ppOutput,
+                              mxb::Semaphore* pSem,
+                              string&& body,
+                              const std::chrono::seconds& timeout,
+                              CsMonitorServer* pServer)
 {
     json_t* pOutput = json_object();
     bool success = false;
