@@ -587,7 +587,7 @@ bool SchemaRouterSession::handleError(mxs::ErrorType type,
     SRBackend* bref = static_cast<SRBackend*>(pProblem->get_userdata());
     mxb_assert(bref);
 
-    if (bref->is_waiting_result())
+    if (bref->is_waiting_result() && (m_state & INIT_MAPPING) == 0)
     {
         /** If the client is waiting for a reply, send an error. */
         mxs::ReplyRoute route;
