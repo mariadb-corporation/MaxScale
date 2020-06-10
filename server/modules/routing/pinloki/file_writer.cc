@@ -29,6 +29,27 @@ FileWriter::FileWriter(Inventory* inv)
 {
 }
 
+void FileWriter::begin_txn()
+{
+    mxb_assert(m_in_transaction == false);
+    m_in_transaction = true;
+}
+
+void FileWriter::commit_txn()
+{
+    mxb_assert(m_in_transaction == true);
+    m_in_transaction = false;
+
+    m_current_pos.file.seekp(m_current_pos.write_pos);
+    const auto& buf = m_tx_buffer.str();
+    m_current_pos.file.write(buf.data(), buf.size());
+
+    m_current_pos.write_pos = m_current_pos.file.tellp();
+    m_current_pos.file.flush();
+
+    m_tx_buffer.str("");
+}
+
 void FileWriter::add_event(const maxsql::MariaRplEvent& rpl_event)
 {
     bool is_artificial = rpl_event.event().flags & LOG_EVENT_ARTIFICIAL_F;      // MariaRplEvent::is_artificial
@@ -49,7 +70,14 @@ void FileWriter::add_event(const maxsql::MariaRplEvent& rpl_event)
     }
     else
     {
-        write_to_file(m_current_pos, rpl_event);
+        if (m_in_transaction)
+        {
+            m_tx_buffer.write(rpl_event.raw_data(), rpl_event.raw_data_size());
+        }
+        else
+        {
+            write_to_file(m_current_pos, rpl_event);
+        }
     }
 }
 

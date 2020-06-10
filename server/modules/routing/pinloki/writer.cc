@@ -101,6 +101,7 @@ void Writer::run()
                 {
                 case GTID_EVENT:
                     {
+                        file.begin_txn();
                         auto& egtid = rpl_event.event.gtid;
                         auto gtid = maxsql::Gtid(egtid.domain_id, rpl_event.server_id, egtid.sequence_nr);
                         update_gtid_list(gtid);
@@ -115,18 +116,18 @@ void Writer::run()
                 case QUERY_EVENT:
                     if (m_commit_on_query)
                     {
-                        save_gtid_list();
+                        save_gtid_list(file);
                         m_commit_on_query = false;
                     }
                     else if (strncasecmp("COMMIT", rpl_event.event.query.statement.str,
                                          rpl_event.event.query.statement.length) == 0)
                     {
-                        save_gtid_list();
+                        save_gtid_list(file);
                     }
                     break;
 
                 case XID_EVENT:
-                    save_gtid_list();
+                    save_gtid_list(file);
                     break;
 
                 default:
@@ -145,10 +146,12 @@ void Writer::run()
     }
 }
 
-void Writer::save_gtid_list()
+void Writer::save_gtid_list(FileWriter& file_writer)
 {
     if (m_current_gtid_list.is_valid())
     {
+        file_writer.commit_txn();
+
         std::ofstream ofs(m_inventory.config().gtid_file_path());
         ofs << m_current_gtid_list;
         // m_current_gtid_list.clear(); TODO change of logic after gitid => gtid list change

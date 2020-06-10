@@ -27,7 +27,8 @@
 
 namespace pinloki
 {
-// TODO rename to?
+class FileWriter;
+
 class Writer
 {
 public:
@@ -53,7 +54,7 @@ private:
     mutable std::mutex              m_lock;
     mutable std::condition_variable m_cond;
 
-    void save_gtid_list();
+    void save_gtid_list(FileWriter& writer);
     void update_gtid_list(const mxq::Gtid& gtid);
 
     mxq::Connection::ConnectionDetails get_connection_details();

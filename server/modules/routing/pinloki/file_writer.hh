@@ -35,7 +35,9 @@ class FileWriter    // : public Storage
 public:
     FileWriter(Inventory* inv);
 
+    void begin_txn();
     void add_event(const maxsql::MariaRplEvent& rpl_event);
+    void commit_txn();
 private:
     struct WritePosition
     {
@@ -52,5 +54,8 @@ private:
     Inventory&    m_inventory;
     WritePosition m_previous_pos;       // This does not really need to be a member.
     WritePosition m_current_pos;
+
+    bool               m_in_transaction = false;
+    std::ostringstream m_tx_buffer;
 };
 }
