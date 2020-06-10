@@ -55,6 +55,12 @@ public:
     mxs::Target* get_location(std::string db);
     mxs::Target* get_location(const std::vector<std::string>& db);
 
+    /**
+     * Same as get_location except returns all servers that have it
+     */
+    std::set<mxs::Target*> get_all_locations(std::string db);
+    std::set<mxs::Target*> get_all_locations(const std::vector<std::string>& db);
+
     void         add_statement(std::string stmt, mxs::Target* target);
     void         add_statement(uint32_t id, mxs::Target* target);
     void         add_ps_handle(uint32_t id, uint32_t handle);
@@ -103,9 +109,6 @@ private:
     BinaryPSMap m_binary_map;
     PSHandleMap m_ps_handles;
     time_t      m_last_updated;
-
-    std::set<mxs::Target*> get_all_locations(std::string db);
-    std::set<mxs::Target*> get_all_locations(const std::vector<std::string>& db);
 };
 
 typedef std::unordered_map<std::string, Shard> ShardMap;

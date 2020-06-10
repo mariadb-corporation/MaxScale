@@ -515,6 +515,23 @@ void SchemaRouterSession::process_sescmd_response(SRBackend* bref, GWBUF** ppPac
     }
 }
 
+void SchemaRouterSession::handle_default_db_response()
+{
+    mxb_assert(m_num_init_db > 0);
+
+    if (--m_num_init_db == 0)
+    {
+        m_state &= ~INIT_USE_DB;
+        m_current_db = m_connect_db;
+        mxb_assert(m_state == INIT_READY);
+
+        if (m_queue.size())
+        {
+            route_queued_query();
+        }
+    }
+}
+
 void SchemaRouterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
     SRBackend* bref = static_cast<SRBackend*>(down.back()->get_userdata());
@@ -537,18 +554,10 @@ void SchemaRouterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& dow
     }
     else if (m_state & INIT_USE_DB)
     {
-        MXS_DEBUG("Reply to USE '%s' received for session %p", m_connect_db.c_str(), m_pSession);
-        m_state &= ~INIT_USE_DB;
-        m_current_db = m_connect_db;
-        mxb_assert(m_state == INIT_READY);
-
+        MXS_INFO("Reply to USE '%s' received for session %p", m_connect_db.c_str(), m_pSession);
         gwbuf_free(pPacket);
         pPacket = NULL;
-
-        if (m_queue.size())
-        {
-            route_queued_query();
-        }
+        handle_default_db_response();
     }
     else if (m_queue.size())
     {
@@ -587,11 +596,19 @@ bool SchemaRouterSession::handleError(mxs::ErrorType type,
     SRBackend* bref = static_cast<SRBackend*>(pProblem->get_userdata());
     mxb_assert(bref);
 
-    if (bref->is_waiting_result() && (m_state & INIT_MAPPING) == 0)
+    if (bref->is_waiting_result())
     {
-        /** If the client is waiting for a reply, send an error. */
-        mxs::ReplyRoute route;
-        RouterSession::clientReply(gwbuf_clone(pMessage), route, mxs::Reply());
+        if ((m_state & (INIT_USE_DB | INIT_MAPPING)) == INIT_USE_DB)
+        {
+            handle_default_db_response();
+        }
+
+        if ((m_state & INIT_MAPPING) == 0)
+        {
+            /** If the client is waiting for a reply, send an error. */
+            mxs::ReplyRoute route;
+            RouterSession::clientReply(gwbuf_clone(pMessage), route, mxs::Reply());
+        }
     }
 
     bref->close(type == mxs::ErrorType::PERMANENT ? Backend::CLOSE_FATAL : Backend::CLOSE_NORMAL);
@@ -847,40 +864,29 @@ write_error_to_client(MariaDBClientConnection* conn, int errnum, const char* mys
 bool SchemaRouterSession::handle_default_db()
 {
     bool rval = false;
-    mxs::Target* target = m_shard.get_location(m_connect_db);
 
-    if (target)
+    for (auto target : m_shard.get_all_locations(m_connect_db))
     {
         /* Send a COM_INIT_DB packet to the server with the right database
          * and set it as the client's active database */
-
         unsigned int qlen = m_connect_db.length();
         GWBUF* buffer = gwbuf_alloc(qlen + 5);
+        uint8_t* data = GWBUF_DATA(buffer);
 
-        if (buffer)
-        {
-            uint8_t* data = GWBUF_DATA(buffer);
-            gw_mysql_set_byte3(data, qlen + 1);
-            data[3] = 0x0;
-            data[4] = 0x2;
-            memcpy(data + 5, m_connect_db.c_str(), qlen);
+        gw_mysql_set_byte3(data, qlen + 1);
+        data[3] = 0x0;
+        data[4] = MXS_COM_INIT_DB;
+        memcpy(data + 5, m_connect_db.c_str(), qlen);
 
-            if (SRBackend* backend = get_shard_backend(target->name()))
-            {
-                backend->write(buffer);
-                rval = true;
-            }
-            else
-            {
-                MXS_INFO("Couldn't find target DCB for '%s'.", target->name());
-            }
-        }
-        else
+        if (auto backend = get_shard_backend(target->name()))
         {
-            MXS_ERROR("Buffer allocation failed.");
+            backend->write(buffer);
+            ++m_num_init_db;
+            rval = true;
         }
     }
-    else
+
+    if (!rval)
     {
         /** Unknown database, hang up on the client*/
         MXS_INFO("Connecting to a non-existent database '%s'", m_connect_db.c_str());

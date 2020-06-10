@@ -113,6 +113,7 @@ private:
     SRBackend*   get_shard_backend(const char* name);
     bool         have_servers();
     bool         handle_default_db();
+    void         handle_default_db_response();
     bool         ignore_duplicate_table(const std::string& data);
     mxs::Target* get_query_target(GWBUF* buffer);
     mxs::Target* get_ps_target(GWBUF* buffer, uint32_t qtype, qc_query_op_t op);
@@ -155,5 +156,6 @@ private:
     uint64_t               m_replied_sescmd;/**< The last session command reply that was sent to the client */
     mxs::Target*           m_load_target;   /**< Target for LOAD DATA LOCAL INFILE */
     SRBackend*             m_sescmd_replier {nullptr};
+    int                    m_num_init_db = 0;
 };
 }
