@@ -40,7 +40,7 @@ const modulecmd_arg_type_t csmon_add_node_argv[] =
 {
     { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC },
     { MODULECMD_ARG_SERVER, "Server to add to Columnstore cluster" },
-    { MODULECMD_ARG_STRING, "Timeout, 0 means no timeout." }
+    { MODULECMD_ARG_STRING, "Timeout." }
 };
 
 const modulecmd_arg_type_t csmon_config_get_argv[] =
@@ -53,6 +53,7 @@ const modulecmd_arg_type_t csmon_config_set_argv[] =
 {
     { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC },
     { MODULECMD_ARG_STRING, "Configuration as JSON object" },
+    { MODULECMD_ARG_STRING, "Timeout." },
     { MODULECMD_ARG_SERVER | MODULECMD_ARG_OPTIONAL, "Specific server to configure" }
 };
 
@@ -60,14 +61,14 @@ const modulecmd_arg_type_t csmon_mode_set_argv[]
 {
     { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC },
     { MODULECMD_ARG_STRING, "Cluster mode; readonly or readwrite" },
-    { MODULECMD_ARG_STRING | MODULECMD_ARG_OPTIONAL, "Timeout, 0 means no timeout." }
+    { MODULECMD_ARG_STRING, "Timeout." }
 };
 
 const modulecmd_arg_type_t csmon_remove_node_argv[] =
 {
     { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC },
     { MODULECMD_ARG_SERVER, "Server to remove from Columnstore cluster" },
-    { MODULECMD_ARG_STRING, "Timeout, 0 means no timeout." },
+    { MODULECMD_ARG_STRING, "Timeout." },
     { MODULECMD_ARG_BOOLEAN, "Whether force should be in effect or not" }
 };
 
@@ -75,19 +76,19 @@ const modulecmd_arg_type_t csmon_scan_argv[] =
 {
     { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC },
     { MODULECMD_ARG_SERVER, "Server to scan" },
-    { MODULECMD_ARG_STRING, "Timeout, 0 means no timeout." }
+    { MODULECMD_ARG_STRING, "Timeout." }
 };
 
 const modulecmd_arg_type_t csmon_shutdown_argv[] =
 {
     { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC },
-    { MODULECMD_ARG_STRING | MODULECMD_ARG_OPTIONAL, "Timeout, 0 means no timeout." }
+    { MODULECMD_ARG_STRING, "Timeout." }
 };
 
 const modulecmd_arg_type_t csmon_start_argv[] =
 {
     { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC },
-    { MODULECMD_ARG_STRING | MODULECMD_ARG_OPTIONAL, "Timeout, 0 means no timeout." }
+    { MODULECMD_ARG_STRING, "Timeout." }
 };
 
 const modulecmd_arg_type_t csmon_status_argv[] =
@@ -256,33 +257,79 @@ bool get_args(const MODULECMD_ARG* pArgs,
     return rv;
 }
 
+bool get_args(const MODULECMD_ARG* pArgs,
+              json_t** ppOutput,
+              CsMonitor** ppMonitor,
+              const char** pzText1,
+              const char** pzText2,
+              CsMonitorServer** ppServer)
+{
+    bool rv = true;
+
+    mxb_assert(MODULECMD_GET_TYPE(&pArgs->argv[0].type) == MODULECMD_ARG_MONITOR);
+    mxb_assert(pArgs->argc <= 1 || MODULECMD_GET_TYPE(&pArgs->argv[1].type) == MODULECMD_ARG_STRING);
+    mxb_assert(pArgs->argc <= 2 || MODULECMD_GET_TYPE(&pArgs->argv[2].type) == MODULECMD_ARG_STRING);
+    mxb_assert(pArgs->argc <= 3 || MODULECMD_GET_TYPE(&pArgs->argv[3].type) == MODULECMD_ARG_SERVER);
+
+    CsMonitor* pMonitor = static_cast<CsMonitor*>(pArgs->argv[0].value.monitor);
+    const char* zText1 = nullptr;
+    const char* zText2 = nullptr;
+    CsMonitorServer* pServer = nullptr;
+
+    if (pArgs->argc >= 2)
+    {
+        zText1 = pArgs->argv[1].value.string;
+
+        if (pArgs->argc >= 3)
+        {
+            zText2 = pArgs->argv[2].value.string;
+
+            if (pArgs->argc >= 4)
+            {
+                pServer = pMonitor->get_monitored_server(pArgs->argv[3].value.server);
+
+                if (!pServer)
+                {
+                    LOG_APPEND_JSON_ERROR(ppOutput,
+                                          "The provided server '%s' is not monitored by this monitor.",
+                                          pArgs->argv[3].value.server->name());
+                    rv = false;
+                }
+            }
+        }
+    }
+
+    *ppMonitor = pMonitor;
+    *pzText1 = zText1;
+    *pzText2 = zText2;
+    *ppServer = pServer;
+
+    return rv;
+}
+
 bool get_timeout(const char* zTimeout, std::chrono::seconds* pTimeout, json_t** ppOutput)
 {
     bool rv = true;
 
-    *pTimeout = std::chrono::seconds(0);
+    std::chrono::milliseconds duration;
+    mxs::config::DurationUnit unit;
+    rv = get_suffixed_duration(zTimeout, mxs::config::NO_INTERPRETATION, &duration, &unit);
 
-    if (strcmp(zTimeout, "0") != 0)
+    if (rv)
     {
-        std::chrono::milliseconds duration;
-        mxs::config::DurationUnit unit;
-        rv = get_suffixed_duration(zTimeout, mxs::config::NO_INTERPRETATION, &duration, &unit);
-
-        if (rv)
+        if (unit == mxs::config::DURATION_IN_MILLISECONDS)
         {
-            if (unit == mxs::config::DURATION_IN_MILLISECONDS)
-            {
-                MXS_WARNING("Duration specified in milliseconds, will be converted to seconds.");
-            }
+            MXS_WARNING("Duration specified in milliseconds, will be converted to seconds.");
+        }
 
-            *pTimeout = std::chrono::duration_cast<std::chrono::seconds>(duration);
-        }
-        else
-        {
-            LOG_APPEND_JSON_ERROR(ppOutput,
-                                  "The timeout must be 0, or specified with a s, m, or h suffix");
-            rv = false;
-        }
+        *pTimeout = std::chrono::duration_cast<std::chrono::seconds>(duration);
+    }
+    else
+    {
+        LOG_APPEND_JSON_ERROR(ppOutput,
+                              "The timeout must be specified with a 's', 'm', or 'h' suffix. "
+                              "'ms' is accepted but the time will be converted to seconds.");
+        rv = false;
     }
 
     return rv;
@@ -342,13 +389,19 @@ bool csmon_config_set(const MODULECMD_ARG* pArgs, json_t** ppOutput)
 {
     CsMonitor* pMonitor;
     const char* zJson;
+    const char* zTimeout;
     CsMonitorServer* pServer;
 
-    bool rv = get_args(pArgs, ppOutput, &pMonitor, &zJson, &pServer);
+    bool rv = get_args(pArgs, ppOutput, &pMonitor, &zJson, &zTimeout, &pServer);
 
     if (rv)
     {
-        CALL_IF_CS_15(pMonitor->command_config_set(ppOutput, zJson, pServer));
+        std::chrono::seconds timeout(0);
+
+        if (get_timeout(zTimeout, &timeout, ppOutput))
+        {
+            CALL_IF_CS_15(pMonitor->command_config_set(ppOutput, zJson, pServer));
+        }
     }
 
     return rv;
@@ -366,16 +419,7 @@ bool csmon_mode_set(const MODULECMD_ARG* pArgs, json_t** ppOutput)
     {
         std::chrono::seconds timeout(0);
 
-        if (zTimeout)
-        {
-            rv = get_timeout(zTimeout, &timeout, ppOutput);
-        }
-        else
-        {
-            timeout = pMonitor->context().config().timeout;
-        }
-
-        if (rv)
+        if (get_timeout(zTimeout, &timeout, ppOutput))
         {
             CALL_IF_CS_15(pMonitor->command_mode_set(ppOutput, zMode, timeout));
         }
@@ -438,16 +482,7 @@ bool csmon_shutdown(const MODULECMD_ARG* pArgs, json_t** ppOutput)
     {
         std::chrono::seconds timeout(0);
 
-        if (zTimeout)
-        {
-            rv = get_timeout(zTimeout, &timeout, ppOutput);
-        }
-        else
-        {
-            timeout = pMonitor->context().config().timeout;
-        }
-
-        if (rv)
+        if (get_timeout(zTimeout, &timeout, ppOutput))
         {
             CALL_IF_CS_15(pMonitor->command_shutdown(ppOutput, timeout));
         }
@@ -467,16 +502,7 @@ bool csmon_start(const MODULECMD_ARG* pArgs, json_t** ppOutput)
     {
         std::chrono::seconds timeout(0);
 
-        if (zTimeout)
-        {
-            rv = get_timeout(zTimeout, &timeout, ppOutput);
-        }
-        else
-        {
-            timeout = pMonitor->context().config().timeout;
-        }
-
-        if (rv)
+        if (get_timeout(zTimeout, &timeout, ppOutput))
         {
             CALL_IF_CS_15(pMonitor->command_start(ppOutput, timeout));
         }
@@ -508,14 +534,14 @@ const char CSMON_ROLLBACK_DESC[] = "Rollback a trancation.";
 const modulecmd_arg_type_t csmon_begin_argv[] =
 {
     { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC },
-    { MODULECMD_ARG_STRING, "Timeout, 0 means no timeout." },
+    { MODULECMD_ARG_STRING, "Timeout." },
     { MODULECMD_ARG_SERVER | MODULECMD_ARG_OPTIONAL, "Specific server to begin transaction on" }
 };
 
 const modulecmd_arg_type_t csmon_commit_argv[] =
 {
     { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC },
-    { MODULECMD_ARG_STRING, "Timeout, 0 means no timeout." },
+    { MODULECMD_ARG_STRING, "Timeout." },
     { MODULECMD_ARG_SERVER | MODULECMD_ARG_OPTIONAL, "Specific server to commit transaction on" }
 };
 
