@@ -23,7 +23,7 @@ serve MaxGUI
 To access the dashboard, credentials need to be provided. MaxGUI uses the same credentials as `maxctrl`.
 By default , username is `admin` and password is `mariadb`.
 
-MaxGUI using JWT as an authentication method to persist user's session. By default, if "Remember me" checkbox is ticked, it will persist user's session for 8 hours, otherwise, as soon as user close the tab from the browser, user's session is expired.
+MaxGUI using [JSON Web Tokens](https://jwt.io/introduction/) as an authentication method to persist user's session. By default, if "Remember me" checkbox is ticked, it will persist user's session for 8 hours, otherwise, as soon as user close the tab from the browser, user's session is expired.
 
 To log out, simply clicking username section in the top right corner of page header to show logout menu.
 
