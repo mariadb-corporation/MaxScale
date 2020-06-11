@@ -935,7 +935,7 @@ for just the server process. See
 for information on settings *tcp_keepalive_interval*, *tcp_keepalive_probes* and
 *tcp_keepalive_time*. These settings can also be set on the operating system
 level, as described
-[here](#http://www.tldp.org/HOWTO/TCP-Keepalive-HOWTO/usingkeepalive.html).
+[here](http://www.tldp.org/HOWTO/TCP-Keepalive-HOWTO/usingkeepalive.html).
 
 A monitor can also be ordered to manually release its locks via the module
 command *release-locks*. This is useful for manually changing the primary
