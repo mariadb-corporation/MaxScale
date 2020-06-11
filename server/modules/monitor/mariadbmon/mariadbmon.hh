@@ -267,8 +267,6 @@ private:
     int64_t m_master_gtid_domain = GTID_DOMAIN_UNKNOWN;     /* gtid_domain_id most recently seen on
                                                              * the master */
 
-    // Fields controlling logging of various events. TODO: Check these
-    bool m_log_no_master {true};                /* Should it be logged that there is no master? */
     bool m_warn_current_master_invalid {true};  /* Print warning if current master is not valid? */
     bool m_warn_cannot_find_master {true};      /* Print warning if a master cannot be found? */
     bool m_warn_master_down {true};             /* Print warning that failover may happen soon? */
@@ -447,7 +445,6 @@ private:
 
     bool check_sql_files();
     void enforce_read_only_on_slaves();
-    void log_master_changes();
     void set_low_disk_slaves_maintenance();
 };
 

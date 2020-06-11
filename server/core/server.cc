@@ -689,14 +689,13 @@ uint64_t Server::status_from_string(const char* str)
 {
     static std::vector<std::pair<const char*, uint64_t>> status_bits =
     {
-        {"running",     SERVER_RUNNING   },
-        {"master",      SERVER_MASTER    },
-        {"slave",       SERVER_SLAVE     },
-        {"synced",      SERVER_JOINED    },
-        {"maintenance", SERVER_MAINT     },
-        {"maint",       SERVER_MAINT     },
-        {"stale",       SERVER_WAS_MASTER},
-        {"drain",       SERVER_DRAINING  }
+        {"running",     SERVER_RUNNING },
+        {"master",      SERVER_MASTER  },
+        {"slave",       SERVER_SLAVE   },
+        {"synced",      SERVER_JOINED  },
+        {"maintenance", SERVER_MAINT   },
+        {"maint",       SERVER_MAINT   },
+        {"drain",       SERVER_DRAINING}
     };
 
     for (const auto& a : status_bits)

@@ -48,13 +48,13 @@ extern const char* DEFAULT_RANK;
 #define SERVER_DRAINING             (1 << 5)    /**<< The server is being drained, i.e. no new connection
                                                  * should be created. */
 #define SERVER_DISK_SPACE_EXHAUSTED (1 << 6)    /**<< The disk space of the server is exhausted */
+
 // Bits used by MariaDB Monitor (mostly)
-#define SERVER_SLAVE_OF_EXT_MASTER (1 << 16)    /**<< Server is slave of a non-monitored master */
-#define SERVER_RELAY               (1 << 17)    /**<< Server is a relay */
-#define SERVER_WAS_MASTER          (1 << 18)    /**<< Server was a master but lost all slaves. */
+#define SERVER_SLAVE_OF_EXT_MASTER (1 << 10)    /**<< Server is slave of a non-monitored master */
+#define SERVER_RELAY               (1 << 11)    /**<< Server is a relay */
 // Bits used by other monitors
-#define SERVER_JOINED            (1 << 19)      /**<< The server is joined in a Galera cluster */
-#define SERVER_MASTER_STICKINESS (1 << 20)      /**<< Server Master stickiness */
+#define SERVER_JOINED            (1 << 20)      /**<< The server is joined in a Galera cluster */
+#define SERVER_MASTER_STICKINESS (1 << 21)      /**<< Server Master stickiness */
 
 inline bool status_is_connectable(uint64_t status)
 {

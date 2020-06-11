@@ -508,8 +508,7 @@ void MariaDBMonitor::assign_server_roles()
 {
     // Remove any existing [Master], [Slave] etc flags from 'pending_status', they are still available in
     // 'mon_prev_status'.
-    const uint64_t remove_bits = SERVER_MASTER | SERVER_WAS_MASTER | SERVER_SLAVE | SERVER_RELAY
-        | SERVER_SLAVE_OF_EXT_MASTER;
+    const uint64_t remove_bits = SERVER_MASTER | SERVER_SLAVE | SERVER_RELAY | SERVER_SLAVE_OF_EXT_MASTER;
     for (auto server : servers())
     {
         server->clear_status(remove_bits);
@@ -568,7 +567,7 @@ void MariaDBMonitor::assign_server_roles()
 
             if (master_conds_ok && !m_master->is_read_only())
             {
-                m_master->set_status(SERVER_MASTER | SERVER_WAS_MASTER);
+                m_master->set_status(SERVER_MASTER);
             }
         }
 

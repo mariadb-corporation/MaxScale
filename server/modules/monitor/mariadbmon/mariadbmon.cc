@@ -599,7 +599,6 @@ void MariaDBMonitor::tick()
         check_acquire_masterlock();
     }
 
-    log_master_changes();
     flush_server_status();
     process_state_changes();
     hangup_failed_servers();
@@ -708,40 +707,6 @@ void MariaDBMonitor::update_gtid_domain()
                    m_master_gtid_domain, domain);
     }
     m_master_gtid_domain = domain;
-}
-
-void MariaDBMonitor::log_master_changes()
-{
-    MonitorServer* root_master = m_master;
-    if (root_master && root_master->status_changed()
-        && !(root_master->pending_status & SERVER_WAS_MASTER))
-    {
-        if ((root_master->pending_status & SERVER_MASTER) && m_master->is_running())
-        {
-            if (!(root_master->mon_prev_status & SERVER_WAS_MASTER)
-                && !(root_master->pending_status & SERVER_MAINT))
-            {
-                MXS_NOTICE("A Master Server is now available: %s:%i",
-                           root_master->server->address(),
-                           root_master->server->port());
-            }
-        }
-        else
-        {
-            MXS_ERROR("No Master can be determined. Last known was %s:%i",
-                      root_master->server->address(),
-                      root_master->server->port());
-        }
-        m_log_no_master = true;
-    }
-    else
-    {
-        if (!root_master && m_log_no_master)
-        {
-            MXS_ERROR("No Master can be determined");
-            m_log_no_master = false;
-        }
-    }
 }
 
 void MariaDBMonitor::assign_new_master(MariaDBServer* new_master)
