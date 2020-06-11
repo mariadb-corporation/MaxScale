@@ -1810,6 +1810,24 @@ authenticator specific documentation for more details.
 Specify the sql mode for the listener similarly to global `sql_mode` setting.
 If both are used this setting will override the global setting for this listener.
 
+### `connection_init_sql_file`
+
+Path to a text file with sql queries. Any sessions created from the listener
+will send the contents of the file to backends after authentication. Each
+non-empty line in the file is interpreted as a query. Each query must succeed
+for the backend connection to be usable for client queries. The queries should
+not return any data.
+
+```
+connection_init_sql_file=/home/dba/init_queries.txt
+```
+Example query file:
+```
+set @myvar = 'mytext';
+set @myvar2 = 4;
+```
+
+
 # Available Protocols
 
 The protocols supported by MariaDB MaxScale are implemented as external modules
