@@ -85,7 +85,6 @@ struct ThisUnit
 } this_unit;
 
 const char CN_AUTH_ALL_SERVERS[] = "auth_all_servers";
-const char CN_CONNECTION_INIT_SQL_FILE[] = "connection_init_sql_file";
 const char CN_LOCALHOST_MATCH_WILDCARD_HOST[] = "localhost_match_wildcard_host";
 const char CN_LOG_AUTH_WARNINGS[] = "log_auth_warnings";
 const char CN_MAX_CONNECTIONS[] = "max_connections";
@@ -133,11 +132,6 @@ Service* Service::create(const char* name, const char* router, mxs::ConfigParame
     if (router_api->getCapabilities)
     {
         service->m_capabilities |= router_api->getCapabilities(service->router_instance);
-    }
-    if (!service->read_connection_init_sql())
-    {
-        delete service;
-        return nullptr;
     }
 
     LockGuard guard(this_unit.lock);
@@ -231,7 +225,6 @@ Service::Config::Config(mxs::ConfigParameters* params)
     , connection_keepalive(params->get_duration<std::chrono::seconds>(CN_CONNECTION_KEEPALIVE).count())
     , strip_db_esc(params->get_bool(CN_STRIP_DB_ESC))
     , rank(params->get_enum(CN_RANK, rank_values))
-    , connection_init_sql_file(params->get_string(CN_CONNECTION_INIT_SQL_FILE))
 {
 }
 
@@ -1233,9 +1226,6 @@ const MXS_MODULE_PARAM* common_service_params()
             CN_RANK, MXS_MODULE_PARAM_ENUM, DEFAULT_RANK, MXS_MODULE_OPT_ENUM_UNIQUE, rank_values
         },
         {CN_CONNECTION_KEEPALIVE, MXS_MODULE_PARAM_DURATION, "300s",     MXS_MODULE_OPT_DURATION_S},
-        {
-            CN_CONNECTION_INIT_SQL_FILE, MXS_MODULE_PARAM_PATH, nullptr, MXS_MODULE_OPT_PATH_R_OK
-        },
         {NULL}
     };
     return config_service_params;
@@ -1802,63 +1792,6 @@ bool Service::check_update_user_account_manager(mxs::ProtocolModule* protocol_mo
         }
     }
     return rval;
-}
-
-const SERVICE::ConnectionInitSql& Service::connection_init_sql() const
-{
-    return m_conn_init_sql_data;
-}
-
-/**
- * Read in connection init sql file. Should only be called during service creation.
- *
- * @return True on success, or if setting was not set.
- */
-bool Service::read_connection_init_sql()
-{
-    mxb_assert(m_conn_init_sql_data.queries.empty() && m_conn_init_sql_data.buffer_contents.empty());
-
-    string filename = m_config->connection_init_sql_file;
-    bool file_ok = true;
-    if (!filename.empty())
-    {
-        auto& queries = m_conn_init_sql_data.queries;
-
-        std::ifstream inputfile(filename);
-        if (inputfile.is_open())
-        {
-            string line;
-            while (std::getline(inputfile, line))
-            {
-                if (!line.empty())
-                {
-                    queries.push_back(line);
-                }
-            }
-            MXB_NOTICE("Read %lu queries from connection init file '%s' to '%s'.",
-                       queries.size(), filename.c_str(), name());
-        }
-        else
-        {
-            MXB_ERROR("Could not open connection init file '%s'.", filename.c_str());
-            file_ok = false;
-        }
-
-        if (file_ok)
-        {
-            // Construct a buffer with all the queries. The protocol can send the entire buffer as is.
-            mxs::Buffer total_buf;
-            for (const auto& query : queries)
-            {
-                auto querybuf = modutil_create_query(query.c_str());
-                total_buf.append(querybuf);
-            }
-            auto total_len = total_buf.length();
-            m_conn_init_sql_data.buffer_contents.resize(total_len);
-            gwbuf_copy_data(total_buf.get(), 0, total_len, m_conn_init_sql_data.buffer_contents.data());
-        }
-    }
-    return file_ok;
 }
 
 void Service::set_cluster(mxs::Monitor* monitor)

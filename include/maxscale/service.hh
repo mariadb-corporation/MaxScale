@@ -105,9 +105,6 @@ public:
                                  * character. Currently unused as the real use case is unknown. */
 
         int64_t rank;   /*< The ranking of this service */
-
-        /** File with queries to send to backend. Only supported by mariadb-protocol module. */
-        std::string connection_init_sql_file;
     };
 
     State              state {State::ALLOC};        /**< The service state */
@@ -190,13 +187,6 @@ public:
      * @param client Client connection to remove
      */
     virtual void unmark_for_wakeup(mxs::ClientConnection* client) = 0;
-
-    struct ConnectionInitSql
-    {
-        std::vector<std::string> queries;
-        std::vector<uint8_t>     buffer_contents;
-    };
-    virtual const ConnectionInitSql& connection_init_sql() const = 0;
 
     /**
      * Has a connection limit been reached?

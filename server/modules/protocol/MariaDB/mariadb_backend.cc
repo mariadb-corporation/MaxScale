@@ -20,6 +20,7 @@
 #include <maxbase/format.hh>
 #include <maxsql/mariadb.hh>
 #include <maxscale/clock.h>
+#include <maxscale/listener.hh>
 #include <maxscale/mainworker.hh>
 #include <maxscale/modinfo.hh>
 #include <maxscale/modutil.hh>
@@ -2422,7 +2423,7 @@ MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::send_connect
     case InitQueryStatus::State::SENDING:
         {
             // First time in this function.
-            const auto& init_query_data = m_session->service->connection_init_sql();
+            const auto& init_query_data = m_session->listener_data()->m_conn_init_sql;
             const auto& query_contents = init_query_data.buffer_contents;
             if (query_contents.empty())
             {
@@ -2484,7 +2485,7 @@ MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::send_connect
                 else
                 {
                     // Query failed or gave weird results.
-                    const auto& init_queries = m_session->service->connection_init_sql().queries;
+                    const auto& init_queries = m_session->listener_data()->m_conn_init_sql.queries;
                     const string& errored_query = init_queries[m_init_query_status.ok_packets_received];
                     string errmsg = mxb::string_printf("Connection initialization query '%s' returned %s.",
                                                        errored_query.c_str(), wrong_packet_type.c_str());

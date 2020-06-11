@@ -45,6 +45,15 @@ public:
     using SProtocol = std::unique_ptr<mxs::ProtocolModule>;
     using SAuthenticator = std::unique_ptr<mxs::AuthenticatorModule>;
 
+    struct ConnectionInitSql
+    {
+        ConnectionInitSql() = default;
+        ConnectionInitSql(const ConnectionInitSql& rhs) = default;
+
+        std::vector<std::string> queries;
+        std::vector<uint8_t>     buffer_contents;
+    };
+
     /**
      * Create listener data object for test purposes. The parameters should still be valid listener
      * settings, as they are parsed normally. Returns a shared_ptr as that is typically used by tests.
@@ -56,7 +65,7 @@ public:
 
     ListenerSessionData(SSLContext ssl, qc_sql_mode_t default_sql_mode, SERVICE* service,
                         SProtocol protocol_module, const std::string& listener_name,
-                        std::vector<SAuthenticator>&& authenticators);
+                        std::vector<SAuthenticator>&& authenticators, ConnectionInitSql&& init_sql);
 
     ListenerSessionData(const ListenerSessionData&) = delete;
     ListenerSessionData& operator=(const ListenerSessionData&) = delete;
@@ -72,5 +81,8 @@ public:
      * an authenticator module during authentication.
      */
     const std::vector<SAuthenticator> m_authenticators;
+
+    /** Connection init sql queries. Only used by MariaDB-protocol module .*/
+    const ConnectionInitSql m_conn_init_sql;
 };
 }

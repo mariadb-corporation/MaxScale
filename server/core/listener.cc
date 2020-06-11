@@ -14,14 +14,12 @@
 #include <maxscale/listener.hh>
 
 #include <arpa/inet.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <fcntl.h>
+#include <cstdio>
+#include <cstring>
 #include <sys/stat.h>
 
-#include <algorithm>
 #include <chrono>
+#include <fstream>
 #include <list>
 #include <memory>
 #include <mutex>
@@ -30,15 +28,14 @@
 #include <unordered_set>
 
 #include <maxbase/log.hh>
-#include <maxscale/paths.hh>
 #include <maxscale/ssl.hh>
 #include <maxscale/protocol2.hh>
 #include <maxbase/alloc.h>
-#include <maxscale/users.hh>
 #include <maxscale/service.hh>
 #include <maxscale/poll.hh>
 #include <maxscale/routingworker.hh>
 #include <maxscale/json_api.hh>
+#include <maxscale/modutil.hh>
 
 #include "internal/listener.hh"
 #include "internal/modules.hh"
@@ -60,6 +57,9 @@ constexpr int BLOCK_TIME = 60;
 
 namespace
 {
+
+const char CN_CONNECTION_INIT_SQL_FILE[] = "connection_init_sql_file";
+
 class RateLimit
 {
 public:
@@ -974,6 +974,13 @@ Listener::create_shared_data(const mxs::ConfigParameters& params, const std::str
         return nullptr;
     }
 
+    string init_sql_file = params.get_string(CN_CONNECTION_INIT_SQL_FILE);
+    ListenerSessionData::ConnectionInitSql init_sql;
+    if (!read_connection_init_sql(init_sql_file, &init_sql))
+    {
+        return nullptr;
+    }
+
     bool auth_ok = true;
     std::vector<mxs::SAuthenticatorModule> authenticators;
     if (protocol_module->capabilities() & mxs::ProtocolModule::CAP_AUTH_MODULES)
@@ -990,13 +997,65 @@ Listener::create_shared_data(const mxs::ConfigParameters& params, const std::str
     {
         auto service = static_cast<Service*>(params.get_service(CN_SERVICE));
         return std::make_unique<ListenerSessionData>(move(ssl), sql_mode, service, move(protocol_module),
-                                                     listener_name, move(authenticators));
+                                                     listener_name, move(authenticators), move(init_sql));
     }
     else
     {
         MXB_ERROR("Authenticator creation for listener '%s' failed.", listener_namez);
         return nullptr;
     }
+}
+
+/**
+ * Read in connection init sql file.
+ *
+ * @param filepath Path to text file
+ * @param output Output object
+ * @return True on success, or if setting was not set.
+ */
+bool
+Listener::read_connection_init_sql(const string& filepath, ListenerSessionData::ConnectionInitSql* output)
+{
+    bool file_ok = true;
+    if (!filepath.empty())
+    {
+        auto& queries = output->queries;
+
+        std::ifstream inputfile(filepath);
+        if (inputfile.is_open())
+        {
+            string line;
+            while (std::getline(inputfile, line))
+            {
+                if (!line.empty())
+                {
+                    queries.push_back(line);
+                }
+            }
+            MXB_NOTICE("Read %zu queries from connection init file '%s'.",
+                       queries.size(), filepath.c_str());
+        }
+        else
+        {
+            MXB_ERROR("Could not open connection init file '%s'.", filepath.c_str());
+            file_ok = false;
+        }
+
+        if (file_ok)
+        {
+            // Construct a buffer with all the queries. The protocol can send the entire buffer as is.
+            mxs::Buffer total_buf;
+            for (const auto& query : queries)
+            {
+                auto querybuf = modutil_create_query(query.c_str());
+                total_buf.append(querybuf);
+            }
+            auto total_len = total_buf.length();
+            output->buffer_contents.resize(total_len);
+            gwbuf_copy_data(total_buf.get(), 0, total_len, output->buffer_contents.data());
+        }
+    }
+    return file_ok;
 }
 
 namespace maxscale
@@ -1013,13 +1072,15 @@ void mark_auth_as_failed(const std::string& remote)
 ListenerSessionData::ListenerSessionData(SSLContext ssl, qc_sql_mode_t default_sql_mode, SERVICE* service,
                                          std::unique_ptr<mxs::ProtocolModule> protocol_module,
                                          const std::string& listener_name,
-                                         std::vector<SAuthenticator>&& authenticators)
+                                         std::vector<SAuthenticator>&& authenticators,
+                                         ListenerSessionData::ConnectionInitSql&& init_sql)
     : m_ssl(move(ssl))
     , m_default_sql_mode(default_sql_mode)
     , m_service(*service)
     , m_proto_module(move(protocol_module))
     , m_listener_name(listener_name)
     , m_authenticators(move(authenticators))
+    , m_conn_init_sql(init_sql)
 {
 }
 
@@ -1072,6 +1133,9 @@ const MXS_MODULE_PARAM* common_listener_params()
         },
         {
             CN_SQL_MODE, MXS_MODULE_PARAM_STRING, NULL
+        },
+        {
+            CN_CONNECTION_INIT_SQL_FILE, MXS_MODULE_PARAM_PATH, nullptr, MXS_MODULE_OPT_PATH_R_OK
         },
         {NULL}
     };

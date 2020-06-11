@@ -175,9 +175,6 @@ private:
     uint16_t    m_port;             /**< Port to listen on */
     std::string m_address;          /**< Address to listen with */
 
-    // Protocol module. Ownership shared with sessions created from this listener.
-    std::shared_ptr<mxs::ProtocolModule> m_proto_module;
-
     Service*              m_service;        /**< The service to which new sessions are sent */
     mxs::ConfigParameters m_params;         /**< Configuration parameters */
 
@@ -260,6 +257,9 @@ private:
 
     // Handler for EPOLL_IN events
     static uint32_t poll_handler(MXB_POLL_DATA* data, MXB_WORKER* worker, uint32_t events);
+
+    static bool read_connection_init_sql(const std::string& filepath,
+                                         mxs::ListenerSessionData::ConnectionInitSql* output);
 };
 
 /**
