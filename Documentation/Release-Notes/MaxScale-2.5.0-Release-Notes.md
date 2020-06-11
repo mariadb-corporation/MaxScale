@@ -31,7 +31,7 @@ In the case of a regular MariaDB cluster (monitored by the MariaDB monitor),
 it is no longer possible to set the the master server to maintenance or
 draining mode, but a switchover must be performed first.
 
-### MariaDBMonitor deprecated settings
+### MariaDB-Monitor deprecated settings
 
 The settings `detect_stale_master`, `detect_standalone_master` and
 `detect_stale_slave`  are replaced by `master_conditions` and
@@ -71,6 +71,9 @@ The following deprecated parameters have been removed.
 ## New Features
 
 * Listeners support multiple authenticators.
+* MariaDB-Monitor supports cooperative monitoring. See
+[cooperative monitoring](../Monitors/MariaDB-Monitor.md#cooperative-monitoring)
+for more information.
 
 ### MaxGUI
 
