@@ -61,8 +61,7 @@ config::ParamEnum<cs::Version> version(
         { cs::CS_10, cs::ZCS_10 },
         { cs::CS_12, cs::ZCS_12 },
         { cs::CS_15, cs::ZCS_15 }
-    },
-    cs::CS_15);
+    });
 
 config::ParamServer primary(
     &specification,

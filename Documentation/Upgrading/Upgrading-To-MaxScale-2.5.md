@@ -30,7 +30,7 @@ monitored Columnstore cluster is.
 [CSMonitor]
 type=monitor
 module=csmon
-version=1.2
+version=1.5
 ...
 ```
 Please see the [documentation](../Monitors/ColumnStore-Monitor.md#master-selection)
