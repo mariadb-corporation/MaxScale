@@ -68,7 +68,6 @@ private:
     void              open(const std::string& file_name);
     void              set_inotify_fd();
     std::vector<char> fetch_raw();
-    maxsql::RplEvent  create_rotate_event(const std::string& file_name) const;
 
     int              m_inotify_fd;
     int              m_inotify_descriptor = -1;

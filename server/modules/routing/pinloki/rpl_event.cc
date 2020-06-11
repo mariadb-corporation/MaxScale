@@ -16,6 +16,7 @@
 
 #include <maxscale/protocol/mariadb/mysql.hh>
 
+#include <zlib.h>
 #include <chrono>
 #include <iostream>
 #include <iomanip>
@@ -244,5 +245,47 @@ std::ostream& operator<<(std::ostream& os, const RplEvent& rpl_msg)
 {
     os << dump_rpl_msg(rpl_msg, Verbosity::All);
     return os;
+}
+
+std::vector<char> create_rotate_event(const std::string& file_name, uint32_t server_id, uint32_t pos)
+{
+    std::vector<char> data(HEADER_LEN + file_name.size() + 12);
+    uint8_t* ptr = (uint8_t*)&data[0];
+
+    // Timestamp, hm.
+    mariadb::set_byte4(ptr, 0);
+    ptr += 4;
+
+    // This is a rotate event
+    *ptr++ = ROTATE_EVENT;
+
+    // server_id
+    mariadb::set_byte4(ptr, server_id);
+    ptr += 4;
+
+    // Event length
+    mariadb::set_byte4(ptr, data.size());
+    ptr += 4;
+
+    mariadb::set_byte4(ptr, pos);
+    ptr += 4;
+
+    // This is an artificial event
+    mariadb::set_byte2(ptr, LOG_EVENT_ARTIFICIAL_F);
+    ptr += 2;
+
+    // PAYLOAD
+    // The position in the new file. Always sizeof magic.
+    mariadb::set_byte8(ptr, 4);
+    ptr += 8;
+
+    // The binlog name  (not null-terminated)
+    memcpy(ptr, file_name.c_str(), file_name.size());
+    ptr += file_name.size();
+
+    // Checksum of the whole event
+    mariadb::set_byte4(ptr, crc32(0, (uint8_t*)data.data(), data.size() - 4));
+
+    return data;
 }
 }

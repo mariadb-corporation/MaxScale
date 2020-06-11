@@ -149,6 +149,8 @@ private:
 // TODO, turn this into an iterator. Used in find_gtid, but not yet in file_reader.
 maxsql::RplEvent read_event(std::istream& file, long* file_pos);
 
+std::vector<char> create_rotate_event(const std::string& file_name, uint32_t server_id, uint32_t pos);
+
 std::string   dump_rpl_msg(const RplEvent& rpl_event, Verbosity v);
 std::ostream& operator<<(std::ostream& os, const RplEvent& rpl_msg);        // Verbosity::All
 }
