@@ -21,6 +21,31 @@
 #include <iostream>
 #include <iomanip>
 
+namespace
+{
+
+/** The next file name has the same base name as the file from the master, but
+ *    the counter portion is generated here.  By using the master base_name the
+ *    event length stays the same, which means the 'next_pos' in the events do
+ *    not have to be modifed.
+ */
+std::string next_file_name(const std::string& master, const std::string& prev)
+{
+    using namespace  std;
+
+    auto base_name = master.substr(0, master.find_last_of('.'));
+
+    auto num = 1;
+    if (!prev.empty())
+    {
+        auto num_str = prev.substr(prev.find_last_of(".") + 1);
+        num = 1 + atoi(num_str.c_str());
+    }
+
+    return MAKE_STR(base_name << '.' << setfill('0') << setw(6) << num);
+}
+}
+
 namespace pinloki
 {
 FileWriter::FileWriter(Inventory* inv)
@@ -84,46 +109,40 @@ void FileWriter::add_event(const maxsql::MariaRplEvent& rpl_event)
 void FileWriter::rotate_event(const maxsql::MariaRplEvent& rpl_event)
 {
     auto& rotate = rpl_event.event().event.rotate;
-    auto name = get_rotate_name(rpl_event.raw_data(), rpl_event.raw_data_size());
-    std::string file_name = m_inventory.config().path(name);
+    auto master_file_name = get_rotate_name(rpl_event.raw_data(), rpl_event.raw_data_size());
+    auto last_file_name = m_inventory.last();
 
-    if (m_inventory.is_listed(file_name))
+    auto new_file_name = next_file_name(master_file_name, last_file_name);
+    auto file_name = m_inventory.config().path(new_file_name);
+
+    m_previous_pos = std::move(m_current_pos);
+
+    m_current_pos.name = file_name;
+    m_current_pos.file.open(m_current_pos.name, std::ios_base::out | std::ios_base::binary);
+    m_current_pos.file.write(PINLOKI_MAGIC.data(), PINLOKI_MAGIC.size());
+    m_current_pos.write_pos = PINLOKI_MAGIC.size();
+    m_current_pos.file.flush();
+
+    m_inventory.add(m_current_pos.name);
+
+    if (m_previous_pos.file.is_open())
     {
-        open_existing_file(file_name);
+        write_rotate(m_previous_pos, file_name);
+        m_previous_pos.file.close();
+
+        if (!m_previous_pos.file.good())
+        {
+            MXB_THROW(BinlogWriteError,
+                      "File " << m_previous_pos.name
+                              << " did not close (flush) properly during rotate: "
+                              << errno << ", " << mxb_strerror(errno));
+        }
     }
     else
     {
-        m_previous_pos = std::move(m_current_pos);
-        auto last_file = m_inventory.last();
-
-        m_current_pos.name = file_name;
-        m_current_pos.file.open(m_current_pos.name, std::ios_base::out | std::ios_base::binary);
-        m_current_pos.file.write(PINLOKI_MAGIC.data(), PINLOKI_MAGIC.size());
-        m_current_pos.write_pos = PINLOKI_MAGIC.size();
-        m_current_pos.file.flush();
-
-        m_inventory.add(m_current_pos.name);
-
-        if (m_previous_pos.file.is_open())
+        if (!last_file_name.empty())
         {
-            write_rotate(m_previous_pos, file_name);
-
-            m_previous_pos.file.close();
-
-            if (!m_previous_pos.file.good())
-            {
-                MXB_THROW(BinlogWriteError,
-                          "File " << m_previous_pos.name
-                                  << " did not close (flush) properly during rotate: "
-                                  << errno << ", " << mxb_strerror(errno));
-            }
-        }
-        else
-        {
-            if (!last_file.empty())
-            {
-                write_stop(last_file);
-            }
+            write_stop(last_file_name);
         }
     }
 }
