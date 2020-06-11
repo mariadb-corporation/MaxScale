@@ -985,76 +985,14 @@ add_test_derived(sql_queries_ssl sql_queries ssl LABELS readwritesplit REPL_BACK
 ############################################
 
 ############################################
-# BEGIN: binlogrouter and avrorouter tests #
+# BEGIN: avrorouter tests                  #
 ############################################
 
-# MXS-1980: Support Galera cluster nodes as masters for Binlog Router
-# https://jira.mariadb.org/browse/MXS-1980
-#add_test_executable(mxs1980_blr_galera_server_ids.cpp mxs1980_blr_galera_server_ids mxs1980_blr_galera_server_ids LABELS binlogrouter GALERA_BACKEND REPL_BACKEND)
-
-# Binlogrouter tests, these heavily alter the replication so they are run last
-add_test_executable(avro.cpp avro avro LABELS avrorouter binlogrouter LIGHT BREAKS_REPL REPL_BACKEND)
-add_test_executable(avro_alter.cpp avro_alter avro LABELS avrorouter binlogrouter LIGHT BREAKS_REPL REPL_BACKEND)
-
-# Test avrorouter file compression
-#add_test_script(avro_compression avro avro_compression LABELS avrorouter binlogrouter LIGHT BREAKS_REPL REPL_BACKEND)
-
-# In the binlog router setup stop Master and promote one of the Slaves to be new Master
-#add_test_executable(binlog_change_master.cpp binlog_change_master setup_binlog_tx_safe LABELS binlogrouter BREAKS_REPL REPL_BACKEND)
-
-# trying to start binlog setup with incomplete Maxscale.cnf
-#add_test_executable(binlog_incompl.cpp binlog_incompl binlog_incompl LABELS binlogrouter BREAKS_REPL REPL_BACKEND)
-
-# configure binlog router setup, execute queries and transactions, check data; install semysync plugin, router options semisync=1,transaction_safety=1
-#add_test_executable(binlog_semisync.cpp binlog_semisync setup_binlog_semisync LABELS binlogrouter HEAVY BREAKS_REPL REPL_BACKEND)
-
-# configure binlog router setup, execute queries and transactions, check data; install semysync plugin, router options semisync=0,transaction_safety=0
-#add_test_derived(binlog_semisync_txs0_ss0 binlog_semisync setup_binlog_semisync_txs0_ss0 LABELS binlogrouter HEAVY BREAKS_REPL REPL_BACKEND)
-
-# configure binlog router setup, execute queries and transactions, check data; install semysync plugin, router options semisync=0,transaction_safety=1
-#add_test_derived(binlog_semisync_txs0_ss1 binlog_semisync setup_binlog_semisync_txs0_ss1 LABELS binlogrouter HEAVY BREAKS_REPL REPL_BACKEND)
-
-# configure binlog router setup, execute queries and transactions, check data; install semysync plugin, router options semisync=1,transaction_safety=0
-#add_test_derived(binlog_semisync_txs1_ss0 binlog_semisync setup_binlog_semisync_txs1_ss0 LABELS binlogrouter HEAVY BREAKS_REPL REPL_BACKEND)
-
-#set_tests_properties(binlog_semisync PROPERTIES TIMEOUT 3600)
-#set_tests_properties(binlog_semisync_txs0_ss0 PROPERTIES TIMEOUT 3600)
-#set_tests_properties(binlog_semisync_txs0_ss1 PROPERTIES TIMEOUT 3600)
-#set_tests_properties(binlog_semisync_txs1_ss0 PROPERTIES TIMEOUT 3600)
-
-#
-# The encryption tests don't work as they require the file key management plugin
-#
-# Binlog encription test (aes_cbr encryption)
-#add_test_executable(mxs1073_binlog_enc.cpp mxs1073_binlog_enc binlog_enc_aes_cbc LABELS binlogrouter 10.1 BREAKS_REPL REPL_BACKEND)
-# Binlog encription test (aes_ctr encryption)
-#add_test_script(mxs1073_binlog_enc_aes_ctr mxs1073_binlog_enc binlog_enc_aes_ctr LABELS binlogrouter 10.1 BREAKS_REPL REPL_BACKEND)
+add_test_executable(avro.cpp avro avro LABELS avrorouter LIGHT BREAKS_REPL REPL_BACKEND)
+add_test_executable(avro_alter.cpp avro_alter avro LABELS avrorouter LIGHT BREAKS_REPL REPL_BACKEND)
 
 # Test of CDC protocol (avro listener)
-add_test_executable(cdc_client.cpp cdc_client avro LABELS avrorouter binlogrouter BREAKS_REPL REPL_BACKEND)
-
-# Tries INSERTs with size close to 0x0ffffff * N (with binlog backend)
-#add_test_executable(different_size_binlog.cpp different_size_binlog setup_binlog LABELS binlogrouter HEAVY BREAKS_REPL REPL_BACKEND)
-
-# Try to configure binlog router to use wrong password for Master and check 'slave status' on binlog
-#add_test_executable(mxs781_binlog_wrong_passwrd.cpp mxs781_binlog_wrong_passwrd setup_binlog LABELS binlogrouter BREAKS_REPL REPL_BACKEND)
-
-# Regression case for crash if long host name is used for binlog router (in 'change master to ...')
-#add_test_executable(mxs813_long_hostname.cpp mxs813_long_hostname setup_binlog LABELS binlogrouter BREAKS_REPL REPL_BACKEND)
-
-# configure binlog router setup, execute queries and transactions, check data;
-#add_test_executable(setup_binlog.cpp setup_binlog setup_binlog LABELS binlogrouter BREAKS_REPL REPL_BACKEND)
-
-# configure binlog router setup, execute queries and transactions, check data;
-#add_test_executable(setup_binlog_gtid.cpp setup_binlog_gtid setup_binlog_gtid LABELS binlogrouter BREAKS_REPL REPL_BACKEND)
-
-# configure binlog router setup, execute queries and transactions, check data; install semysync plugin, backends started with --binlog-checksum=CRC32 option
-# disabled because it is included into setup_binlog test, separate test was created for debugging
-# add_test_executable(setup_binlog_crc_32.cpp setup_binlog_crc_32 setup_binlog LABELS binlogrouter BREAKS_REPL REPL_BACKEND)
-
-# configure binlog router setup, execute queries and transactions, check data; install semysync plugin, backends started with --binlog-checksum=NONE option
-# disabled because it is included into setup_binlog test, separate test was created for debugging
-# add_test_executable(setup_binlog_crc_none.cpp setup_binlog_crc_none setup_binlog LABELS binlogrouter LIGHT BREAKS_REPL REPL_BACKEND)
+add_test_executable(cdc_client.cpp cdc_client avro LABELS avrorouter BREAKS_REPL REPL_BACKEND)
 
 # MXS-1542: Check that UTF16 strings work
 # https://jira.mariadb.org/browse/MXS-1542
@@ -1064,13 +1002,6 @@ add_test_executable(mxs1542.cpp mxs1542 avro LABELS avrorouter REPL_BACKEND)
 # https://jira.mariadb.org/browse/MXS-1543
 add_test_executable(mxs1543.cpp mxs1543 avro LABELS avrorouter REPL_BACKEND)
 
-# In the binlog router setup stop Master and promote one of the Slaves to be new Master (use GTID)
-#add_test_executable(binlog_change_master_gtid.cpp binlog_change_master_gtid setup_binlog_tx_safe_gtid LABELS binlogrouter BREAKS_REPL REPL_BACKEND)
-
-# MXS-701: Binlog filtering
-# https://jira.mariadb.org/browse/MXS-701
-#add_test_executable(mxs701_binlog_filter.cpp mxs701_binlog_filter mxs701_binlog_filter LABELS bilogrouter REPL_BACKEND)
-
 # MXS-1949: Warning for user load failure logged even when service has no users
 # https://jira.mariadb.org/browse/MXS-1949
 add_test_executable(mxs1949_warn_user_injection.cpp mxs1949_warn_user_injection avro LABELS REPL_BACKEND)
@@ -1079,7 +1010,7 @@ add_test_executable(mxs1949_warn_user_injection.cpp mxs1949_warn_user_injection 
 add_test_executable(mxs2106_avro_null.cpp mxs2106_avro_null avro LABELS avrorouter REPL_BACKEND)
 
 ############################################
-# END: binlogrouter and avrorouter tests   #
+# END: avrorouter tests                    #
 ############################################
 
 ############################################

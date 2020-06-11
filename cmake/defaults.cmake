@@ -4,7 +4,6 @@
 # configuring the build.
 
 option(BUILD_FILTERS "Build filter modules" ON)
-option(BUILD_BINLOG "Build binlog router" OFF)
 option(BUILD_CDC "Build Avro router" ON)
 option(BUILD_KAFKACDC "Build MariaDB-to-Kafka CDC module" ON)
 option(BUILD_LUAFILTER "Build Luafilter" ON)

@@ -11,10 +11,6 @@ if(BUILD_KAFKACDC)
   add_subdirectory(kafkacdc)
 endif()
 
-if(BUILD_BINLOG)
-  add_subdirectory(binlogrouter)
-endif()
-
 add_subdirectory(cat)
 add_subdirectory(hintrouter)
 add_subdirectory(readconnroute)
