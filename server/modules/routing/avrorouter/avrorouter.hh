@@ -111,8 +111,7 @@ public:
 private:
     std::unique_ptr<cdc::Replicator> m_replicator;
 
-    Avro(SERVICE* service, mxs::ConfigParameters* params, SERVICE* source);
-    void read_source_service_options(SERVICE* source);
+    Avro(SERVICE* service, mxs::ConfigParameters* params);
 };
 
 class AvroSession : public MXS_ROUTER_SESSION

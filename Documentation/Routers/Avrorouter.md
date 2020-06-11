@@ -92,6 +92,10 @@ replication mode. The default value is 1234.
 
 #### `source`
 
+**Note:** This parameter has been removed in MaxScale 2.5.0. As the
+          binlogrouter has been removed, this feature could no longer
+          work.
+
 The source for the binary logs. This is an optional parameter and is ignored if
 the router is configured in direct replication mode.
 

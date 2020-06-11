@@ -47,78 +47,14 @@
 
 using namespace maxscale;
 
-/**
- * @brief Read router options from an external binlogrouter service
- *
- * This reads common options used by both the avrorouter and the binlogrouter
- * from a service that uses the binlogrouter. This way the basic configuration
- * details can be read from another service without the need to configure the
- * avrorouter with identical router options.
- *
- * @param inst Avro router instance
- * @param options The @c router_options of a binlogrouter instance
- */
-void Avro::read_source_service_options(SERVICE* source)
-{
-    const auto& params = source->params();
-    binlogdir = params.get_string("binlogdir");
-    filestem = params.get_string("filestem");
-    mxb_assert(!binlogdir.empty() && !filestem.empty());
-
-    for (const auto& opt : mxs::strtok(params.get_string("router_options"), ", \t"))
-    {
-        auto kv = mxs::strtok(opt, "=");
-
-        if (kv[0] == "binlogdir")
-        {
-            binlogdir = kv[1];
-        }
-        else if (kv[0] == "filestem")
-        {
-            filestem = kv[1];
-        }
-    }
-}
-
 // static
 Avro* Avro::create(SERVICE* service)
 {
-    SERVICE* source_service = NULL;
-    std::string source_name = service->params().get_string("source");
-
-    if (!source_name.empty())
-    {
-        SERVICE* source = service_find(source_name.c_str());
-        mxb_assert(source);
-
-        if (source)
-        {
-            if (strcmp(source->router_name(), "binlogrouter") == 0)
-            {
-                MXS_INFO("Using configuration options from service '%s'.", source->name());
-                source_service = source;
-            }
-            else
-            {
-                MXS_ERROR("Service '%s' uses router module '%s' instead of "
-                          "'binlogrouter'.",
-                          source->name(),
-                          source->router_name());
-                return NULL;
-            }
-        }
-        else
-        {
-            MXS_ERROR("Service '%s' not found.", source_name.c_str());
-            return NULL;
-        }
-    }
-
     auto params = service->params();
-    return new(std::nothrow) Avro(service, &params, source_service);
+    return new(std::nothrow) Avro(service, &params);
 }
 
-Avro::Avro(SERVICE* service, mxs::ConfigParameters* params, SERVICE* source)
+Avro::Avro(SERVICE* service, mxs::ConfigParameters* params)
     : service(service)
     , filestem(params->get_string("filestem"))
     , binlogdir(params->get_string("binlogdir"))
@@ -162,11 +98,6 @@ Avro::Avro(SERVICE* service, mxs::ConfigParameters* params, SERVICE* source)
                     SRowEventHandler(new AvroConverter(service, avrodir, block_size, codec)),
                     params->get_compiled_regex("match", 0, NULL).release(),
                     params->get_compiled_regex("exclude", 0, NULL).release()));
-
-        if (source)
-        {
-            read_source_service_options(source);
-        }
 
         char filename[BINLOG_FNAMELEN + 1];
         snprintf(filename,

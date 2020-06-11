@@ -496,7 +496,6 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
                 | MXS_MODULE_OPT_PATH_X_OK
                 | MXS_MODULE_OPT_PATH_CREAT
             },
-            {"source",                MXS_MODULE_PARAM_SERVICE},
             {"filestem",              MXS_MODULE_PARAM_STRING, BINLOG_NAME_ROOT},
             {"group_rows",            MXS_MODULE_PARAM_COUNT, "1000"},
             {"group_trx",             MXS_MODULE_PARAM_COUNT, "1"},
