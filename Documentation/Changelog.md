@@ -10,13 +10,14 @@
 * Server parameters *protocol* and *authenticator* have been deprecated. Any
   definitions are ignored.
 * Listeners support multiple authenticators.
-
 * The replication lag of a slave server must now be less than
   [`max_slave_replication_lag`](Routers/ReadWriteSplit.md#max_slave_replication_lag)
   whereas in older versions the replication lag had to be less than or
   equal to the configured limit.
 * The global settings *auth_read_timeout* and *auth_write_timeout* have been
   deprecated. Any definitions are ignored.
+* The Columnstore monitor is now capable of monitoring Columnstore 1.5 in
+  addition to 1.0 and 1.2.
 
 ## MariaDB MaxScale 2.4
 
