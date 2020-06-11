@@ -234,6 +234,7 @@ GCUpdater<SD>::GCUpdater(typename SD::DataType* initial_copy,
     , m_order_updates(order_updates)
 {
     mxb_assert(cap_copies != 1);
+    m_all_ptrs.push_back(m_pLatest_data);
 
     for (int i = 0; i < m_num_clients; ++i)
     {
