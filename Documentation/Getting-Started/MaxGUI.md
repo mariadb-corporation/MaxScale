@@ -10,12 +10,11 @@ to the command line tool `maxctrl`.
 
 # Enabling MaxGUI
 
-In order to make MaxGUI works, the following parameter al least needs to be enabled in MaxScale configuration file:
+In order to make MaxGUI works, the following parameters al least needs to be enabled in MaxScale configuration file:
 `admin_enabled`, `admin_gui`, `admin_ssl_key`, `admin_ssl_cert`. Check [Configuration-Guide](./Configuration-Guide.md) for information.
 
 The root REST API resource (i.e. `http://localhost:8989/`) will
-serve the GUI. When disabled, the REST API will respond with a 200 OK to the
-request.
+serve MaxGUI
 
 # Features
 
