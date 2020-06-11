@@ -42,10 +42,10 @@ The allowed values are `1.0`, `1.2` and `1.5`.
 
 ### `primary`
 
-Required by and only allowed when the value of `version` is `1.0`.
+Required and only allowed when the value of `version` is `1.0`.
 
 The `primary` parameter controls which server is chosen as the master
-server. This is an optional parameter.
+server.
 
 If the server pointed to by this parameter is available and is ready to process
 queries, it receives the _Master_ status.
@@ -89,15 +89,6 @@ tell the Columnstore nodes it resides at. Either it or
 `local_address` at the global level in the MaxScale
 configuration file must be specified. If both have been
 specified, then the one specified for the monitor overrides.
-
-### `timeout`
-
-Allowed only when the value of version is `1.5`.
-
-This optional parameter specifies the timeout to used if one
-is not explicitly provided to a module command. The timeout
-can be specified as explained
-[here](../Getting-Started/Configuration-Guide.md#durations).
 
 ## Commands
 

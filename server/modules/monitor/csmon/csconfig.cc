@@ -50,7 +50,6 @@ const config::ParamString::value_type  DEFAULT_ADMIN_BASE_PATH = "/cmapi/0.3.0";
 const config::ParamString::value_type  DEFAULT_API_KEY         = "";
 const config::ParamString::value_type  DEFAULT_LOCAL_ADDRESS   = "";
 const config::ParamServer::value_type  DEFAULT_PRIMARY         = nullptr;
-const config::ParamSeconds::value_type DEFAULT_TIMEOUT         = seconds(10);
 
 config::Specification specification(MXS_MODULE_NAME, config::Specification::MONITOR);
 
@@ -97,13 +96,6 @@ config::ParamString local_address(
     "Local address to provide as IP of MaxScale to Columnstore cluster. Need not be "
     "specified if global 'local_address' has been set.",
     DEFAULT_LOCAL_ADDRESS);
-
-config::ParamDuration<seconds> timeout(
-    &specification,
-    "timeout",
-    "Default timeout for Columnstore daemon transactions.",
-    mxs::config::NO_INTERPRETATION,
-    DEFAULT_TIMEOUT);
 }
 
 
@@ -116,7 +108,6 @@ CsConfig::CsConfig(const string& name)
     add_native(&this->admin_base_path, &csmon::admin_base_path);
     add_native(&this->api_key, &csmon::api_key);
     add_native(&this->local_address, &csmon::local_address);
-    add_native(&this->timeout, &csmon::timeout);
 }
 
 //static
