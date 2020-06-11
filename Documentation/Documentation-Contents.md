@@ -12,6 +12,7 @@
  - [MariaDB MaxScale Installation Guide](Getting-Started/MariaDB-MaxScale-Installation-Guide.md)
  - [Building MariaDB MaxScale from Source Code](Getting-Started/Building-MaxScale-from-Source-Code.md)
  - [Configuration Guide](Getting-Started/Configuration-Guide.md)
+ - [MaxGUI](Getting-Started/MaxGUI.md)
 
 ## Upgrading MariaDB MaxScale
 

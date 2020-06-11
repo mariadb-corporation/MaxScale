@@ -3,6 +3,8 @@
 ## MariaDB MaxScale 2.5
 
 * MaxAdmin has been removed.
+* MaxGUI, a new browser based tool for configuring and managing
+  MaxScale is introduced.
 * MaxInfo-router and the related httpd-protocol have been removed.
 * Server weights have been removed.
 * Services can now directly route to other services with the help of the

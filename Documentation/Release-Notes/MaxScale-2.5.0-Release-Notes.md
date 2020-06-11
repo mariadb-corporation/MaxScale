@@ -72,6 +72,15 @@ The following deprecated parameters have been removed.
 
 * Listeners support multiple authenticators.
 
+### MaxGUI
+
+MaxGUI is a new browser based configuration and management tool for
+MaxScale that complements the command line tool `maxctrl`.
+
+Please see the
+[documentation](../Getting-Started/MaxGUI.md)
+for more information.
+
 ### Cache Invalidation
 
 The MaxScale cache is now capable of performing invalidation of cache
