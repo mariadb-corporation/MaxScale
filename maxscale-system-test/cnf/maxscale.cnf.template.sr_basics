@@ -34,6 +34,14 @@ user=maxskysql
 password=skysql
 monitor_interval=1000
 
+[Internal-Monitor]
+type=monitor
+module=mysqlmon
+servers=RWS1-As-Server, RWS2-As-Server
+user=maxskysql
+password=skysql
+monitor_interval=1000
+
 [RWS1]
 type=service
 router=readwritesplit
@@ -46,12 +54,13 @@ slave_selection_criteria=LEAST_ROUTER_CONNECTIONS
 type=listener
 service=RWS1
 protocol=mariadbclient
-socket=/tmp/rws1.sock
+port=5000
 
 [RWS1-As-Server]
 type=server
 protocol=mariadbbackend
-socket=/tmp/rws1.sock
+address=127.0.0.1
+port=5000
 
 [RWS2]
 type=service
@@ -65,12 +74,13 @@ slave_selection_criteria=LEAST_ROUTER_CONNECTIONS
 type=listener
 service=RWS2
 protocol=MySQLClient
-socket=/tmp/rws2.sock
+port=5001
 
 [RWS2-As-Server]
 type=server
 protocol=mariadbbackend
-socket=/tmp/rws2.sock
+address=127.0.0.1
+port=5001
 
 [SQ]
 type=service
