@@ -20,7 +20,6 @@
 #include <mariadb_rpl.h>
 #include <iostream>
 #include <iomanip>
-#include <assert.h>
 
 namespace pinloki
 {
@@ -53,13 +52,14 @@ void FileWriter::commit_txn()
 void FileWriter::add_event(const maxsql::MariaRplEvent& rpl_event)
 {
     bool is_artificial = rpl_event.event().flags & LOG_EVENT_ARTIFICIAL_F;      // MariaRplEvent::is_artificial
-    if (rpl_event.event().event_type == HEARTBEAT_LOG_EVENT)
+    auto etype = rpl_event.event().event_type;
+    if (etype == HEARTBEAT_LOG_EVENT)
     {
         // Heartbeat event, don't process it
     }
     else if (is_artificial)
     {
-        if (rpl_event.event().event_type == ROTATE_EVENT)
+        if (etype == ROTATE_EVENT)
         {
             rotate_event(rpl_event);
         }
@@ -74,7 +74,7 @@ void FileWriter::add_event(const maxsql::MariaRplEvent& rpl_event)
         {
             m_tx_buffer.write(rpl_event.raw_data(), rpl_event.raw_data_size());
         }
-        else
+        else if (etype != STOP_EVENT && etype != ROTATE_EVENT)
         {
             write_to_file(m_current_pos, rpl_event);
         }
@@ -106,7 +106,10 @@ void FileWriter::rotate_event(const maxsql::MariaRplEvent& rpl_event)
 
         if (m_previous_pos.file.is_open())
         {
+            write_rotate(m_previous_pos, file_name);
+
             m_previous_pos.file.close();
+
             if (!m_previous_pos.file.good())
             {
                 MXB_THROW(BinlogWriteError,
@@ -184,6 +187,8 @@ void FileWriter::write_stop(const std::string& file_name)
     constexpr int HEADER_LEN = 19;
     const size_t EVENT_LEN = HEADER_LEN + 4;        // header plus crc
 
+    // TODO this probably always works, but the position should be read from
+    // the next_pos of the last event in the file.
     file.seekp(0, std::ios_base::end);
     const size_t end_pos = file.tellp();
 
@@ -222,6 +227,23 @@ void FileWriter::write_stop(const std::string& file_name)
     if (!file.good())
     {
         MXB_THROW(BinlogWriteError, "Could not write STOP_EVENT to " << file_name);
+    }
+}
+
+void FileWriter::write_rotate(FileWriter::WritePosition& fn, const std::string& to_file_name)
+{
+    auto vec = maxsql::create_rotate_event(basename(to_file_name.c_str()),
+                                           m_inventory.config().server_id(),
+                                           fn.write_pos,
+                                           false);      // real, not artificial event
+
+    fn.file.seekp(fn.write_pos);
+    fn.file.write(vec.data(), vec.size());
+    fn.file.flush();
+
+    if (!fn.file.good())
+    {
+        MXB_THROW(BinlogWriteError, "Could not write final ROTATE to " << fn.name);
     }
 }
 }
