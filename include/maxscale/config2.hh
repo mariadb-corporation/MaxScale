@@ -2277,7 +2277,7 @@ void ParamEnum<T>::populate(MXS_MODULE_PARAM& param) const
     Param::populate(param);
 
     param.accepted_values = &m_enum_values[0];
-    param.options = MXS_MODULE_OPT_ENUM_UNIQUE;
+    param.options |= MXS_MODULE_OPT_ENUM_UNIQUE;
 }
 
 template<class T>
