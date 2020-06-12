@@ -88,10 +88,6 @@ void FileWriter::add_event(const maxsql::MariaRplEvent& rpl_event)
         {
             rotate_event(rpl_event);
         }
-        else
-        {
-            m_current_pos.write_pos = rpl_event.event().next_event_pos;
-        }
     }
     else
     {
