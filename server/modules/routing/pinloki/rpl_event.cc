@@ -291,4 +291,49 @@ std::vector<char> create_rotate_event(const std::string& file_name,
 
     return data;
 }
+
+std::vector<char> create_binlog_checkpoint(const std::string& file_name, uint32_t server_id,
+                                           uint32_t next_pos)
+{
+    std::vector<char> data(HEADER_LEN + 4 + file_name.size() + 4);
+    uint8_t* ptr = (uint8_t*)&data[0];
+
+    // Timestamp, hm.
+    mariadb::set_byte4(ptr, -1);
+    ptr += 4;
+
+    // This is a rotate event
+    *ptr++ = BINLOG_CHECKPOINT_EVENT;
+
+    // server_id
+    mariadb::set_byte4(ptr, server_id);
+    ptr += 4;
+
+    // Event length
+    mariadb::set_byte4(ptr, data.size());
+    ptr += 4;
+
+    // Next pos
+    mariadb::set_byte4(ptr, next_pos);
+    ptr += 4;
+
+    // Flags
+    mariadb::set_byte2(ptr, 0);
+    ptr += 2;
+
+    // PAYLOAD
+
+    // Length of name
+    mariadb::set_byte4(ptr, file_name.size());
+    ptr += 4;
+
+    // The binlog name  (not null-terminated)
+    memcpy(ptr, file_name.c_str(), file_name.size());
+    ptr += file_name.size();
+
+    // Checksum of the whole event
+    mariadb::set_byte4(ptr, crc32(0, (uint8_t*)data.data(), data.size() - 4));
+
+    return data;
+}
 }

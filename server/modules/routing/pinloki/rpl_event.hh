@@ -154,6 +154,9 @@ std::vector<char> create_rotate_event(const std::string& file_name,
                                       uint32_t pos,
                                       bool is_artificial);
 
+std::vector<char> create_binlog_checkpoint(const std::string& file_name, uint32_t server_id,
+                                           uint32_t curr_pos);
+
 std::string   dump_rpl_msg(const RplEvent& rpl_event, Verbosity v);
 std::ostream& operator<<(std::ostream& os, const RplEvent& rpl_msg);        // Verbosity::All
 }
