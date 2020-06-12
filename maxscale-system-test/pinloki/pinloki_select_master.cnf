@@ -13,7 +13,7 @@ monitor_interval=5000
 
 [pinloki-service]
 type=service
-router=pinloki
+router=binlogrouter
 user=maxskysql
 password=skysql
 cluster=mariadb-cluster
