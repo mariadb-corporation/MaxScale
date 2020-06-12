@@ -23,6 +23,13 @@
 * MariaDB-Monitor supports cooperative monitoring. See
   [cooperative monitoring](../Monitors/MariaDB-Monitor.md#cooperative-monitoring)
   for more information.
+* The MaxScale cache can now be shared between two or MaxScale instances,
+  in which case either memcached or Redis can be used as cache storage.
+  Further, the cache can now also perform table level invalidations.
+* A completely new binlog router implemenation.
+
+For more details, please refer to:
+* [MariaDB MaxScale 2.5.0 Release Notes](Release-Notes/MaxScale-2.5.0-Release-Notes.md)
 
 ## MariaDB MaxScale 2.4
 

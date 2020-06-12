@@ -95,6 +95,10 @@ for more information.
 
 The following storage modules have been added:
 * [storage_memcached](../Filters/Cache.md#storage_memcached)
+* [storage_redis](../Filters/Cache.md#storage_redis)
+
+When either of these are used, the cache can be shared between
+two MaxScale instances.
 
 ### Load Rebalancing
 
