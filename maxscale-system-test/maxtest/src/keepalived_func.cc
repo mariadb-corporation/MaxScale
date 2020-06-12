@@ -1,6 +1,6 @@
 #include "keepalived_func.h"
 #include "get_my_ip.h"
-#include "testconnections.h"
+#include <maxtest/testconnections.h>
 
 char* print_version_string(TestConnections* Test)
 {

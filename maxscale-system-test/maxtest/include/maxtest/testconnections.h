@@ -1,9 +1,9 @@
 #pragma once
 
-#include "mariadb_nodes.h"
-#include "clustrix_nodes.h"
-#include "maxscales.hh"
-#include "test_dir.hh"
+#include <maxtest/mariadb_nodes.h>
+#include <maxtest/clustrix_nodes.h>
+#include <maxtest/maxscales.hh>
+#include <maxtest/test_dir.hh>
 #include <fcntl.h>
 #include <pthread.h>
 #include <sys/time.h>

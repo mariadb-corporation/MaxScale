@@ -1,4 +1,4 @@
-#include "test_info.hh"
+#include <maxtest/test_info.hh>
 
 const TestDefinition test_definitions_arr[] =
 {

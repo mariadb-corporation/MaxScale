@@ -12,7 +12,7 @@
  */
 #pragma once
 
-#include "testconnections.h"
+#include <maxtest/testconnections.h>
 #include <maxscale/jansson.hh>
 
 /**

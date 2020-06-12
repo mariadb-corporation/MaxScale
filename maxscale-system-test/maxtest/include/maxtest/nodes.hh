@@ -6,7 +6,7 @@
 #include <string>
 
 #include <maxbase/ccdefs.hh>
-#include "mariadb_func.h"
+#include <maxtest/mariadb_func.h>
 
 typedef std::set<std::string> StringSet;
 

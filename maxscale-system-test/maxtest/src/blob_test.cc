@@ -1,4 +1,4 @@
-#include "blob_test.h"
+#include <maxtest/blob_test.h>
 
 int test_longblob(TestConnections* Test,
                   MYSQL* conn,

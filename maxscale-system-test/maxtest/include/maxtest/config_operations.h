@@ -1,6 +1,6 @@
 #pragma once
 
-#include "testconnections.h"
+#include <maxtest/testconnections.h>
 #include <string>
 #include <set>
 

@@ -1,8 +1,8 @@
-#include "sql_t1.h"
+#include <maxtest/sql_t1.h>
 
 #include <cstdio>
 #include <pthread.h>
-#include "mariadb_func.h"
+#include <maxtest/mariadb_func.h>
 
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 static char** sql = NULL;

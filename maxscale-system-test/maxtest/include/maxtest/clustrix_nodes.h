@@ -23,8 +23,8 @@
 
 #include <errno.h>
 #include <string>
-#include "nodes.hh"
-#include "mariadb_nodes.h"
+#include <maxtest/nodes.hh>
+#include <maxtest/mariadb_nodes.h>
 
 #define CLUSTRIX_DEPS_YUM "yum install -y bzip2 wget screen ntp ntpdate vim htop mdadm"
 #define WGET_CLUSTRIX     "wget http://files.clustrix.com/releases/software/clustrix-9.1.4.el7.tar.bz2"

@@ -17,12 +17,12 @@
 #include <maxbase/stacktrace.hh>
 #include <algorithm>
 
-#include "mariadb_func.h"
+#include <maxtest/mariadb_func.h>
 #include "maxadmin_operations.h"
-#include "sql_t1.h"
-#include "testconnections.h"
-#include "test_info.hh"
-#include "envv.hh"
+#include <maxtest/sql_t1.h>
+#include <maxtest/testconnections.h>
+#include <maxtest/test_info.hh>
+#include <maxtest/envv.hh>
 
 using namespace mxb;
 using std::cout;

@@ -11,8 +11,8 @@
  */
 
 
-#include "mariadb_func.h"
-#include "test_dir.hh"
+#include <maxtest/mariadb_func.h>
+#include <maxtest/test_dir.hh>
 #include <ctype.h>
 #include <sstream>
 
