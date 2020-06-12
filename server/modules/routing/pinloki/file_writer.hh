@@ -54,7 +54,6 @@ private:
     void write_rotate(WritePosition& fn, const std::string& to_file_name);
 
     Inventory&    m_inventory;
-    WritePosition m_previous_pos;       // This does not really need to be a member.
     WritePosition m_current_pos;
 
     bool               m_in_transaction = false;

@@ -149,10 +149,12 @@ private:
 // TODO, turn this into an iterator. Used in find_gtid, but not yet in file_reader.
 maxsql::RplEvent read_event(std::istream& file, long* file_pos);
 
+enum class Kind {Real, Artificial};
+
 std::vector<char> create_rotate_event(const std::string& file_name,
                                       uint32_t server_id,
                                       uint32_t pos,
-                                      bool is_artificial);
+                                      Kind kind);
 
 std::vector<char> create_binlog_checkpoint(const std::string& file_name, uint32_t server_id,
                                            uint32_t curr_pos);

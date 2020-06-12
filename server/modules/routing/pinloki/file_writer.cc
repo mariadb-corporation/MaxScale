@@ -124,7 +124,7 @@ void FileWriter::rotate_event(const maxsql::MariaRplEvent& rpl_event)
     auto new_file_name = next_file_name(master_file_name, last_file_name);
     auto file_name = m_inventory.config().path(new_file_name);
 
-    m_previous_pos = std::move(m_current_pos);
+    WritePosition previous_pos {std::move(m_current_pos)};
 
     m_current_pos.name = file_name;
     m_current_pos.file.open(m_current_pos.name, std::ios_base::out | std::ios_base::binary);
@@ -134,15 +134,15 @@ void FileWriter::rotate_event(const maxsql::MariaRplEvent& rpl_event)
 
     m_inventory.add(m_current_pos.name);
 
-    if (m_previous_pos.file.is_open())
+    if (previous_pos.file.is_open())
     {
-        write_rotate(m_previous_pos, file_name);
-        m_previous_pos.file.close();
+        write_rotate(previous_pos, file_name);
+        previous_pos.file.close();
 
-        if (!m_previous_pos.file.good())
+        if (!previous_pos.file.good())
         {
             MXB_THROW(BinlogWriteError,
-                      "File " << m_previous_pos.name
+                      "File " << previous_pos.name
                               << " did not close (flush) properly during rotate: "
                               << errno << ", " << mxb_strerror(errno));
         }
@@ -286,7 +286,7 @@ void FileWriter::write_rotate(FileWriter::WritePosition& fn, const std::string& 
     auto vec = maxsql::create_rotate_event(basename(to_file_name.c_str()),
                                            m_inventory.config().server_id(),
                                            fn.write_pos,
-                                           false);      // real, not artificial event
+                                           mxq::Kind::Real);
 
     fn.file.seekp(fn.write_pos);
     fn.file.write(vec.data(), vec.size());

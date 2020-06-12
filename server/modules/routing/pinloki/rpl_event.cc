@@ -250,7 +250,7 @@ std::ostream& operator<<(std::ostream& os, const RplEvent& rpl_msg)
 std::vector<char> create_rotate_event(const std::string& file_name,
                                       uint32_t server_id,
                                       uint32_t pos,
-                                      bool is_artificial)
+                                      Kind kind)
 {
     std::vector<char> data(HEADER_LEN + file_name.size() + 12);
     uint8_t* ptr = (uint8_t*)&data[0];
@@ -274,7 +274,7 @@ std::vector<char> create_rotate_event(const std::string& file_name,
     ptr += 4;
 
     // Flags
-    mariadb::set_byte2(ptr, is_artificial ? LOG_EVENT_ARTIFICIAL_F : 0);
+    mariadb::set_byte2(ptr, kind == Kind::Artificial ? LOG_EVENT_ARTIFICIAL_F : 0);
     ptr += 2;
 
     // PAYLOAD

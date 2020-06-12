@@ -172,7 +172,7 @@ maxsql::RplEvent FileReader::fetch_event()
         // Next position is the current next_pos value (weird)
         auto vec = mxq::create_rotate_event(basename(tmp.c_str()),
                                             m_inventory.config().server_id(),
-                                            m_read_pos.next_pos, true);     // artificial
+                                            m_read_pos.next_pos, mxq::Kind::Artificial);
 
         return mxq::RplEvent(std::move(vec));
     }
