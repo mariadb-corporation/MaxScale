@@ -18,7 +18,7 @@ add_subdirectory(readwritesplit)
 add_subdirectory(schemarouter)
 add_subdirectory(smartrouter)
 
-if (BUILD_PINLOKI)
+if (BUILD_BINLOG)
   add_subdirectory(pinloki)
 endif()
 

@@ -3,8 +3,10 @@
 # You can change these through CMake by adding -D<variable>=<value> when
 # configuring the build.
 
-option(BUILD_FILTERS "Build filter modules" ON)
+option(BUILD_BINLOG "Build binlog router" ON)
 option(BUILD_CDC "Build Avro router" ON)
+option(BUILD_FILTERS "Build filter modules" ON)
+option(BUILD_GUI "Build MaxScale admin GUI" OFF)
 option(BUILD_KAFKACDC "Build MariaDB-to-Kafka CDC module" ON)
 option(BUILD_LUAFILTER "Build Luafilter" ON)
 option(BUILD_MAXCTRL "Build MaxCtrl" ON)
@@ -15,8 +17,6 @@ option(BUILD_STORAGE_REDIS "Build Redis-based storage for Cache" ON)
 option(BUILD_SYSTEM_TESTS "Build system tests" OFF)
 option(BUILD_TESTS "Build tests" ON)
 option(BUILD_TOOLS "Build extra utility tools" ON)
-option(BUILD_GUI "Build MaxScale admin GUI" OFF)
-option(BUILD_PINLOKI "Build pinloki router" ON)
 option(GCOV "Use gcov build flags" OFF)
 option(INSTALL_EXPERIMENTAL "Install experimental modules" OK)
 option(PACKAGE "Enable package building (this disables local installation of system files)" OFF)

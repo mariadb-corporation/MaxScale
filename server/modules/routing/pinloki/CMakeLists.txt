@@ -34,10 +34,10 @@ add_library(pinloki-core
 add_dependencies(pinloki-core boost)
 target_link_libraries(pinloki-core maxbase mariadbclient uuid)
 
-add_library(pinloki SHARED pinloki.cc pinlokisession.cc)
-target_link_libraries(pinloki pinloki-core maxscale-common)
-set_target_properties(pinloki PROPERTIES VERSION "1.0.0"  LINK_FLAGS -Wl,-z,defs)
-install_module(pinloki core)
+add_library(binlogrouter SHARED pinloki.cc pinlokisession.cc)
+target_link_libraries(binlogrouter pinloki-core maxscale-common)
+set_target_properties(binlogrouter PROPERTIES VERSION "1.0.0"  LINK_FLAGS -Wl,-z,defs)
+install_module(binlogrouter core)
 
 if (BUILD_TESTS)
   add_subdirectory(test)
