@@ -11,9 +11,10 @@ to the command line tool `maxctrl`.
 # Enabling MaxGUI
 
 In order to make MaxGUI works, the following parameters al least needs to
-be enabled in MaxScale configuration file:
-`admin_enabled`, `admin_gui`, `admin_ssl_key`, `admin_ssl_cert`.
+be set in MaxScale configuration file: `admin_ssl_key`, `admin_ssl_cert`.
 Check [Configuration-Guide](./Configuration-Guide.md) for information.
+
+To prevent the use of MaxGUI, disable `admin_gui` in the configuration file.
 
 The root REST API resource (i.e. `http://localhost:8989/`) will
 serve MaxGUI
@@ -26,10 +27,10 @@ To access the dashboard, credentials need to be provided.
 MaxGUI uses the same credentials as `maxctrl`.
 By default , username is `admin` and password is `mariadb`.
 
-MaxGUI using [JSON Web Tokens](https://jwt.io/introduction/) as an
+MaxGUI uses [JSON Web Tokens](https://jwt.io/introduction/) as an
 authentication method to persist user's session.
 By default, if "Remember me" checkbox is ticked, it will persist
-user's session for 8 hours, otherwise, as soon as user close the tab
+user's session for 8 hours, otherwise, as soon as user closes the tab
 from the browser, user's session is expired.
 
 To log out, simply clicking username section in the top right corner of
@@ -39,14 +40,14 @@ page header to show logout menu.
 
 Dashboard shows three graphs:
 
-Sessions graph illustrates the total number of current sessions
-updating every 10 seconds.
+-   Sessions graph illustrates the total number of current sessions
+    updating every 10 seconds.
 
-Connections graph shows servers current connections
-updating every 10 seconds.
+-   Connections graph shows servers current connections
+    updating every 10 seconds.
 
-Load graph shows the last second load of thread
-which is updated every second.
+-   Load graph shows the last second load of thread
+    which is updated every second.
 
 Under the graphs section, there is a tab navigation allowing to switch
 table view which contains overview information of the
@@ -61,10 +62,11 @@ It can be accessed by clicking resource name on the dashboard page.
 
 In details page, resource parameters as well as relationships
 can be modified in its parameters section.
-Deletion of a resource or other settings can be done by clicking the
+
+Deletion of a resource or other actions can be done by clicking the
 setting icon located next to the resource name.
-Eg: Clicking the setting icon in Monitor detail page will popup three icons
-allowing to stop, start and delete monitor, respectively.
+e.g. Clicking the setting icon in Monitor detail page will popup three
+icons allowing to stop, start and delete monitor, respectively.
 
 For Server, monitor relationship can be modified by hovering rectangular
 "Monitor" block section at the top of the page.
@@ -84,12 +86,12 @@ navigation.
 ## Global search
 
 The global search input located next to the "+ Create New" button allows to
-search for keywords in tables. Eg: type undefined in dashboard page, tab
+search for keywords in tables. e.g. type undefined in dashboard page, tab
 servers will show records with undefined values.
 
 # Limitations
 
-For all resource creation such as filters, services, monitors and listeners,
-only loaded modules will be available. Eg: If there is no filter modules is
-loaded when run MaxScale, MaxGui can not get filter modules,
-therefore, filter resource can no be created.
+For all resource creation such as filters, services, monitors and
+listeners, only loaded modules will be available. e.g. If there is no
+filter modules is loaded when run MaxScale, MaxGui can not get filter
+modules, therefore, filter resource can no be created.
