@@ -35,3 +35,11 @@ version=1.5
 ```
 Please see the [documentation](../Monitors/ColumnStore-Monitor.md#master-selection)
 for details.
+
+## New binlog router
+
+The binlog router delivered with MaxScale 2.5 is completely new and
+not 100% backward compatible with the binlog router delivered with
+earlier MaxScale versions. If you use the binlog router, carefully
+assess whether the functionality provided by the new one fulfills
+your requirements, before upgrading MaxScale.
