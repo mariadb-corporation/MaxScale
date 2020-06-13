@@ -879,6 +879,7 @@ mxs::Target* ServerEndpoint::target() const
 
 bool ServerEndpoint::connect()
 {
+    mxb_assert(!is_open());
     mxb::LogScope scope(m_server->name());
     auto worker = mxs::RoutingWorker::get_current();
 
@@ -893,6 +894,7 @@ bool ServerEndpoint::connect()
 void ServerEndpoint::close()
 {
     mxb::LogScope scope(m_server->name());
+    mxb_assert(is_open());
     DCB::close(m_dcb);
     m_dcb = nullptr;
 
@@ -907,12 +909,14 @@ bool ServerEndpoint::is_open() const
 int32_t ServerEndpoint::routeQuery(GWBUF* buffer)
 {
     mxb::LogScope scope(m_server->name());
+    mxb_assert(is_open());
     return m_dcb->protocol_write(buffer);
 }
 
 int32_t ServerEndpoint::clientReply(GWBUF* buffer, mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
     mxb::LogScope scope(m_server->name());
+    mxb_assert(is_open());
     down.push_back(this);
     return m_up->clientReply(buffer, down, reply);
 }
@@ -921,6 +925,7 @@ bool ServerEndpoint::handleError(mxs::ErrorType type, GWBUF* error,
                                  mxs::Endpoint* down, const mxs::Reply& reply)
 {
     mxb::LogScope scope(m_server->name());
+    mxb_assert(is_open());
     return m_up->handleError(type, error, this, reply);
 }
 

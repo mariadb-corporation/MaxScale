@@ -47,10 +47,13 @@ void LocalClient::self_destruct()
 
 LocalClient* LocalClient::create(MXS_SESSION* session, mxs::Target* target)
 {
-    LocalClient* relay = new(std::nothrow) LocalClient;
+    LocalClient* relay = nullptr;
+    auto state = session->state();
 
-    if (relay)
+    if (state == MXS_SESSION::State::STARTED || state == MXS_SESSION::State::CREATED)
     {
+        relay = new LocalClient;
+
         if (!(relay->m_down = target->get_connection(relay, session)))
         {
             delete relay;
