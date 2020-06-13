@@ -100,18 +100,9 @@ void FileWriter::add_event(const maxsql::MariaRplEvent& maria_event)
         {
             m_tx_buffer.write(rpl_event.data().data(), rpl_event.data().size());
         }
-        else if (etype != STOP_EVENT && etype != ROTATE_EVENT)
+        else if (etype != STOP_EVENT && etype != ROTATE_EVENT && etype != BINLOG_CHECKPOINT_EVENT)
         {
-            if (etype == BINLOG_CHECKPOINT_EVENT)
-            {
-                write_binlog_checkpoint(m_current_pos,
-                                        m_current_pos.name,
-                                        rpl_event.next_event_pos());
-            }
-            else
-            {
-                write_to_file(m_current_pos, rpl_event);
-            }
+            write_to_file(m_current_pos, rpl_event);
         }
     }
 }
