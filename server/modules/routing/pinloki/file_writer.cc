@@ -148,54 +148,6 @@ void FileWriter::rotate_event(const maxsql::MariaRplEvent& rpl_event)
     }
 }
 
-void FileWriter::open_existing_file(const std::string& file_name)
-{
-    if (m_current_pos.file.is_open())
-    {
-        m_current_pos.file.close();
-        if (!m_current_pos.file.good())
-        {
-            MXB_THROW(BinlogWriteError,
-                      "File " << m_current_pos.name << " did not close (flush) properly: "
-                              << errno << ", " << mxb_strerror(errno));
-        }
-    }
-
-    m_current_pos.name = file_name;
-    m_current_pos.file.open(m_current_pos.name, std::ios_base::in
-                            | std::ios_base::out
-                            | std::ios_base::binary);
-    m_current_pos.write_pos = PINLOKI_MAGIC.size();
-
-    if (!m_current_pos.file.good())
-    {
-        MXB_THROW(BinlogWriteError, "Could not open " << m_current_pos.name << " for read/write");
-    }
-}
-
-void FileWriter::write_binlog_checkpoint(FileWriter::WritePosition& fn,
-                                         const std::string& file_name,
-                                         uint32_t next_pos)
-{
-    // TODO: There must be a binlog checkpoint in the file, so currently the code simply writes one
-    // for each file, with a reference to itself. What and when should actually be written?
-    auto vec = maxsql::create_binlog_checkpoint(basename(file_name.c_str()),
-                                                m_inventory.config().server_id(),
-                                                next_pos);
-
-    fn.file.seekp(fn.write_pos);
-    fn.file.write(vec.data(), vec.size());
-    fn.file.flush();
-
-    fn.write_pos = next_pos;
-
-    if (!fn.file.good())
-    {
-        MXB_THROW(BinlogWriteError, "Could not write final ROTATE to " << fn.name);
-    }
-}
-
-
 void FileWriter::write_to_file(WritePosition& fn, const maxsql::RplEvent& rpl_event)
 {
     fn.file.seekp(fn.write_pos);

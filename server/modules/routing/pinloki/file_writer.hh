@@ -48,8 +48,6 @@ private:
 
     void rotate_event(const maxsql::MariaRplEvent& rpl_event);
     void write_to_file(WritePosition& fn, const maxsql::RplEvent& rpl_event);
-    void open_existing_file(const std::string& file_name);
-    void write_binlog_checkpoint(WritePosition& fn, const std::string& file_name, uint32_t next_pos);
     void write_stop(const std::string& file_name);
     void write_rotate(WritePosition& fn, const std::string& to_file_name);
 
