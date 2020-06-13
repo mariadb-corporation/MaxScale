@@ -74,10 +74,10 @@ void FileWriter::commit_txn()
     m_tx_buffer.str("");
 }
 
-void FileWriter::add_event(const maxsql::MariaRplEvent& rpl_event)
+void FileWriter::add_event(const maxsql::MariaRplEvent& maria_event)
 {
-    bool is_artificial = rpl_event.event().flags & LOG_EVENT_ARTIFICIAL_F;      // MariaRplEvent::is_artificial
-    auto etype = rpl_event.event().event_type;
+    bool is_artificial = maria_event.event().flags & LOG_EVENT_ARTIFICIAL_F;
+    auto etype = maria_event.event().event_type;
     if (etype == HEARTBEAT_LOG_EVENT)
     {
         // Heartbeat event, don't process it
@@ -86,14 +86,19 @@ void FileWriter::add_event(const maxsql::MariaRplEvent& rpl_event)
     {
         if (etype == ROTATE_EVENT)
         {
-            rotate_event(rpl_event);
+            rotate_event(maria_event);
         }
     }
     else
     {
+        maxsql::RplEvent rpl_event(maria_event);    // If warranted, make less raw data copies.
+
+        rpl_event.set_next_pos(m_current_pos.write_pos + rpl_event.data().size()
+                               + m_tx_buffer.str().size());
+
         if (m_in_transaction)
         {
-            m_tx_buffer.write(rpl_event.raw_data(), rpl_event.raw_data_size());
+            m_tx_buffer.write(rpl_event.data().data(), rpl_event.data().size());
         }
         else if (etype != STOP_EVENT && etype != ROTATE_EVENT)
         {
@@ -101,7 +106,7 @@ void FileWriter::add_event(const maxsql::MariaRplEvent& rpl_event)
             {
                 write_binlog_checkpoint(m_current_pos,
                                         m_current_pos.name,
-                                        rpl_event.event().next_event_pos);
+                                        rpl_event.next_event_pos());
             }
             else
             {
@@ -200,19 +205,13 @@ void FileWriter::write_binlog_checkpoint(FileWriter::WritePosition& fn,
 }
 
 
-void FileWriter::write_to_file(WritePosition& fn, const maxsql::MariaRplEvent& rpl_event)
+void FileWriter::write_to_file(WritePosition& fn, const maxsql::RplEvent& rpl_event)
 {
-    fn.file.seekp(0, std::ios_base::end);
-    auto end_pos = fn.file.tellp();
+    fn.file.seekp(fn.write_pos);
+    fn.file.write(rpl_event.data().data(), rpl_event.data().size());
+    fn.file.flush();
 
-    if (fn.write_pos >= end_pos)
-    {
-        fn.file.seekp(fn.write_pos);
-        fn.file.write(rpl_event.raw_data(), rpl_event.raw_data_size());
-        fn.file.flush();
-    }
-
-    fn.write_pos = rpl_event.event().next_event_pos;
+    fn.write_pos = rpl_event.next_event_pos();
 
     if (!fn.file.good())
     {

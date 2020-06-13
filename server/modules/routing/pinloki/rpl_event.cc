@@ -33,6 +33,12 @@ int RplEvent::get_event_length(const std::vector<char>& header)
     return *((uint32_t*) (header.data() + 4 + 1 + 4));
 }
 
+RplEvent::RplEvent(const MariaRplEvent& maria_event)
+    : m_raw(maria_event.raw_data(), maria_event.raw_data() + maria_event.raw_data_size())
+{
+    init();
+}
+
 RplEvent::RplEvent(std::vector<char>&& raw_)
     : m_raw(std::move(raw_))
 {
@@ -40,24 +46,48 @@ RplEvent::RplEvent(std::vector<char>&& raw_)
     {
         return;
     }
-    // todo use ntohxxx, or whatever is in maxscale,
-    // or use mariadb_rpl (with modifications)
 
-    auto dptr = pHeader();
-    m_timestamp = *((uint32_t*) dptr);
-    dptr += 4;
-    m_event_type = mariadb_rpl_event(*((unsigned char*) dptr));
-    dptr += 1;
-    m_server_id = *((uint32_t*) dptr);
-    dptr += 4;
-    m_event_length = *((uint32_t*) dptr);
-    dptr += 4;
-    m_next_event_pos = *((uint32_t*) dptr);
-    dptr += 4;
-    m_flags = *((uint32_t*) dptr);
-    dptr += 2;
-    m_checksum = *((uint32_t*) (m_raw.data() + m_raw.size() - 4));
+    init();
 }
+
+void RplEvent::init()
+{
+    auto buf = reinterpret_cast<uint8_t*>(&m_raw[0]);
+
+    m_timestamp = mariadb::get_byte4(buf);
+    buf += 4;
+    m_event_type = mariadb_rpl_event(*buf);
+    buf += 1;
+    m_server_id = mariadb::get_byte4(buf);
+    buf += 4;
+    m_event_length = mariadb::get_byte4(buf);
+    buf += 4;
+    m_next_event_pos = mariadb::get_byte4(buf);
+    buf += 4;
+    m_flags = mariadb::get_byte2(buf);
+    buf += 2;
+
+    auto pCrc = reinterpret_cast<const uint8_t*>(m_raw.data() + m_raw.size() - 4);
+    m_checksum = mariadb::get_byte4(pCrc);
+}
+
+void RplEvent::set_next_pos(uint32_t next_pos)
+{
+    m_next_event_pos = next_pos;
+
+    auto buf = reinterpret_cast<uint8_t*>(&m_raw[4 + 1 + 4 + 4]);
+    mariadb::set_byte4(buf, m_next_event_pos);
+
+    recalculate_crc();
+}
+
+void RplEvent::recalculate_crc()
+{
+    m_checksum = crc32(0, (uint8_t*)m_raw.data(), m_raw.size() - 4);
+    auto pCrc = reinterpret_cast<uint8_t*>(m_raw.data() + m_raw.size() - 4);
+    mariadb::set_byte4(pCrc, m_checksum);
+}
+
 
 Rotate RplEvent::rotate() const
 {

@@ -60,6 +60,7 @@ public:
     RplEvent(const RplEvent&) = default;
     RplEvent(RplEvent&&) = default;
     RplEvent& operator=(RplEvent&&) = default;
+    RplEvent(const MariaRplEvent& maria_event);
 
     /**
      * @brief RplEvent
@@ -135,12 +136,20 @@ public:
         return m_raw;
     }
 
+    void set_next_pos(uint32_t next_pos);
+
 private:
+    // An instance is created for every incoming event.
+    // Might not matter much, but could drop most members
+    // since they are basically for debug output. Read
+    // m_raw when asked instead.
+    void init();
+    void recalculate_crc();
     mariadb_rpl_event m_event_type;
     unsigned int      m_timestamp;
     unsigned int      m_server_id;
     unsigned int      m_event_length;
-    long              m_next_event_pos;
+    uint32_t          m_next_event_pos;
     unsigned short    m_flags;
     std::vector<char> m_raw;
     unsigned int      m_checksum;
