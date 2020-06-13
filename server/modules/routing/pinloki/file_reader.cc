@@ -211,9 +211,6 @@ maxsql::RplEvent FileReader::fetch_event()
 
     if (rpl.event_type() == ROTATE_EVENT)
     {
-        /* TODO TEMP sleep. Recent changes mean the rotate is written before the new file */
-        std::this_thread::sleep_for(100ms);
-
         auto file_name = m_inventory.config().path(rpl.rotate().file_name);
         open(file_name);
     }
