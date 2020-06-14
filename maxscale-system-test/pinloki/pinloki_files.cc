@@ -18,12 +18,16 @@ public:
 
     void run() override
     {
-        auto orig = master.pretty_rows("SHOW BINARY LOGS");
-        auto mxs = maxscale.pretty_rows("SHOW BINARY LOGS");
-        test.expect(mxs == orig,
-                    "SHOW BINARY LOGS should return the same result:\n"
-                    "Master:\n%s\nMaxScale:\n%s",
-                    orig.c_str(), mxs.c_str());
+        auto orig = master.rows("SHOW BINARY LOGS");
+        auto mxs = maxscale.rows("SHOW BINARY LOGS");
+
+        for (size_t i = 0; i < orig.size() && i < mxs.size(); i++)
+        {
+            test.expect(mxs[i][0] == orig[i][0],
+                        "SHOW BINARY LOGS should return the same result:\n"
+                        "Master:\n%s\nMaxScale:\n%s",
+                        orig[i][0].c_str(), mxs[i][0].c_str());
+        }
 
         auto index = test.maxscales->ssh_output("cat /var/lib/maxscale/binlogs/binlog.index");
         test.expect(index.first == 0, "binlog.index should exist");
