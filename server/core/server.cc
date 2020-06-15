@@ -375,7 +375,7 @@ Server::ParamSSL::ParamSSL(cfg::Specification* pSpecification, const char* zName
 
 std::string Server::ParamSSL::type() const
 {
-    return "boolean";
+    return "bool";
 }
 
 std::string Server::ParamSSL::to_string(Server::ParamSSL::value_type value) const

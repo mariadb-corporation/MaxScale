@@ -1885,7 +1885,7 @@ server does.
 This enables SSL connections when set to true. The parameter takes a boolean
 value and is disabled by default. The parameter also accepts the special values
 `required` and `disabled` which were the only supported values before MaxScale
-2.3.0.
+2.3.0. The use of `required` and `disabled` is deprecated.
 
 If enabled, the certificate files mentioned above must also be
 supplied. MaxScale connections to will then be encrypted with TLS/SSL.
