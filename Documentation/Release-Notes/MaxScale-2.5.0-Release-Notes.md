@@ -46,6 +46,10 @@ using the `maxkeys` and `maxpasswd` utilities. Old passwords still work.
 
 ## Dropped Features
 
+### MaxAdmin has been removed.
+
+Use maxctrl or maxgui instead.
+
 ### No concept of Unix users anymore
 
 As maxadmin, that could be used over a unix domain socket, has been
@@ -80,6 +84,8 @@ The following deprecated parameters have been removed.
 * MariaDB-Monitor supports cooperative monitoring. See
 [cooperative monitoring](../Monitors/MariaDB-Monitor.md#cooperative-monitoring)
 for more information.
+* The timeout to maxctrl can now be specified using duration suffixes, e.g.
+  `--timeout 5s`.
 
 ### MaxGUI
 
@@ -90,14 +96,16 @@ Please see the
 [documentation](../Getting-Started/MaxGUI.md)
 for more information.
 
-### Cache Invalidation
+### Cache
+
+#### Invalidation
 
 The MaxScale cache is now capable of performing invalidation of cache
 entries. See the
 [documentation](../Filters/Cache.md#invalidation)
 for more information.
 
-### New Cache Storage Modules
+#### New Cache Storage Modules
 
 The following storage modules have been added:
 * [storage_memcached](../Filters/Cache.md#storage_memcached)
@@ -105,6 +113,17 @@ The following storage modules have been added:
 
 When either of these are used, the cache can be shared between
 two MaxScale instances.
+
+#### User specific cache
+
+It is now possible to specify that each user should have a
+cache of his/her own. Having a user-specific cache ensures that
+it is impossible for a user to obtain access to data he/she should
+not have access to, something which may be possible if a shared
+cache is used, as the cache filter is not aware of grants.
+Please see the
+[documentation](../Filters/Cache.md#users)
+for details.
 
 ### Load Rebalancing
 

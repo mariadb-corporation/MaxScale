@@ -25,7 +25,8 @@
   for more information.
 * The MaxScale cache can now be shared between two MaxScale instances,
   in which case either memcached or Redis can be used as cache storage.
-  Further, the cache can now also perform table level invalidations.
+  Further, the cache can now also perform table level invalidations
+  and be specific to a particular user.
 * A completely new binlog router implemenation.
 
 For more details, please refer to:
