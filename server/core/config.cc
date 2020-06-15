@@ -869,13 +869,42 @@ bool Config::ParamLogThrottling::from_json(const json_t* pJson,
         json_t* pSuppress = json_object_get(pJson, "suppress");
 
         if (pCount && json_is_integer(pCount)
-            && pWindow && json_is_integer(pWindow)
-            && pSuppress && json_is_integer(pSuppress))
+            && pWindow && (json_is_integer(pWindow) || json_is_string(pWindow))
+            && pSuppress && (json_is_integer(pSuppress) || json_is_string(pSuppress)))
         {
-            pValue->count = json_integer_value(pCount);
-            pValue->window_ms = json_integer_value(pWindow);
-            pValue->suppress_ms = json_integer_value(pSuppress);
+            time_t w;
+            time_t s;
+
             rv = true;
+            pValue->count = json_integer_value(pCount);
+
+            if (json_is_integer(pWindow))
+            {
+                pValue->window_ms = json_integer_value(pWindow);
+            }
+            else if (get_milliseconds(name().c_str(), json_string_value(pWindow), json_string_value(pWindow),
+                                      &w))
+            {
+                pValue->window_ms = w;
+            }
+            else
+            {
+                rv = false;
+            }
+
+            if (json_is_integer(pSuppress))
+            {
+                pValue->suppress_ms = json_integer_value(pSuppress);
+            }
+            else if (get_milliseconds(name().c_str(), json_string_value(pSuppress),
+                                      json_string_value(pSuppress), &s))
+            {
+                pValue->suppress_ms = s;
+            }
+            else
+            {
+                rv = false;
+            }
         }
         else if (pMessage)
         {
