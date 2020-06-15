@@ -10,6 +10,23 @@ report at [Jira](https://jira.mariadb.org).
 
 ## Changed Features
 
+* Network throttling (writeq_high_water and writeq_low_water) is now on by
+  default. This will prevent MaxScale from running out of memory when large
+  database dumps are restored through it. This change will not affect
+  performance in any significant way.
+
+* Servers with duplicate network details (address and port) are
+  treated as a configuration error. There should exist only one
+  server object in MaxScale for each actual database.
+
+* Server parameters are now checked and unknown parameters are
+  treated as a configuration error. This can cause old
+  configurations with unknown parameters to fail.
+
+* Servers without a monitor now start in the Down state instead
+  of the Running state. This means that servers without a monitor
+  need to have their state set manually.
+
 ### `connection_keepalive`
 
 Previously this feature was a readwritesplit feature. In MaxScale 2.5.0 it has
@@ -49,6 +66,11 @@ using the `maxkeys` and `maxpasswd` utilities. Old passwords still work.
 Several changes, see [here](../Authenticators/Authentication-Modules.md)
 for more details.
 
+### REST API
+
+* Listeners are now a separate resource from services. The old
+  listeners entry point is deprecated and its use is discouraged.
+
 ## Dropped Features
 
 ### MaxAdmin has been removed.
@@ -87,6 +109,12 @@ The following deprecated parameters have been removed.
 
 * The timeout to maxctrl can now be specified using duration suffixes, e.g.
   `--timeout 5s`.
+* The new `targets` parameter for services can be used to list
+  both servers and other services as routing targets. This allows
+  complex setups to be used where one service routes the query to
+  another service.
+* MariaDB connection attributes are now forwarded to the backend
+  servers.
 
 ### MaxGUI
 
@@ -159,6 +187,63 @@ for more information.
 See [configuration guide](../Getting-Started/Configuration-Guide.md#authenticator)
 and [pam plugin documentation](../Authenticators/PAM-Authenticator.md)
 for more details.
+
+### TLS
+
+* Added support for peer hostname verification in connections
+  that use TLS.
+
+* Added support for certificate revocation lists
+
+### Readwritesplit
+
+* The causal reads feature has been extended with a global mode,
+  which uses latest known GTID and waits for slave to replicate,
+  and a fast mode, which routes queries to the master if no
+  up-to-date slave is found.
+
+### Schemarouter
+
+* The router now supports setups where multiple servers contain
+  the same database or table. This allows a more resilient setup
+  where a failure of one shard doesn't cause a complete outage.
+
+* The credentials the clients use to connect to the schemarouter
+  no longer need to exist on all of the databases used by the
+  service. This reduces the amount of access required by the
+  clients that use the schemarouter.
+
+### Mirror Router
+
+* The `mirror` router is a new router designed for data
+  consistency and database behavior verification during system
+  upgrades. It can export the measured data as JSON into either a
+  file or into a Kafka broker.
+
+### KafkaCDC
+
+* New module that replicates data changes in a MariaDB master
+  into a Kafka broker formatted as JSON objects. Refer to the
+  KafkaCDC documentation for more details.
+
+### REST API
+
+* Token authentication via JWT.
+
+* Sparse fieldsets allow reduced network overhead for requests.
+
+* Result filtering allows retrieval of a subset of a resource collection.
+
+* REST API resources now use the SHA1 of the returned result as
+  the object ETag. This fixes the problem where the ETag was not
+  updated even when the result changed due to internal MaxScale
+  processes.
+
+* Module parameter types are now described for the server and
+  core MaxScale objects.
+
+* Listeners are now a separate resource from services. The old
+  listeners entry point is deprecated and its use is discouraged.
 
 ## Bug fixes
 
