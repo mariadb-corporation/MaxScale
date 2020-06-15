@@ -771,7 +771,7 @@ std::string Config::ParamLogThrottling::type() const
 std::string Config::ParamLogThrottling::to_string(const value_type& value) const
 {
     std::stringstream ss;
-    ss << value.count << "," << value.window_ms << "ms" << value.suppress_ms << "ms";
+    ss << value.count << "," << value.window_ms << "ms," << value.suppress_ms << "ms";
     return ss.str();
 }
 
@@ -1459,7 +1459,11 @@ int config_cb(const char* fpath, const struct stat* sb, int typeflag, struct FTW
                 mxb_assert(current_dcontext);
                 mxb_assert(current_ccontext);
 
-                if (!config_load_single_file(fpath, current_dcontext, current_ccontext))
+                if (strcmp(filename, "maxscale.cnf") == 0 && !config_load_global(fpath))
+                {
+                    rval = -1;
+                }
+                else if (!config_load_single_file(fpath, current_dcontext, current_ccontext))
                 {
                     rval = -1;
                 }
