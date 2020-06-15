@@ -34,7 +34,7 @@ draining mode, but a switchover must be performed first.
 ### MariaDB-Monitor deprecated settings
 
 The settings `detect_stale_master`, `detect_standalone_master` and
-`detect_stale_slave`  are replaced by `master_conditions` and
+`detect_stale_slave`  are replaced by the more flexible `master_conditions` and
 `slave_conditions`. The old settings may still be used, but will be removed in
 a later version.
 
@@ -43,6 +43,11 @@ a later version.
 The encrypted passwords feature has been updated to be more secure. Users are
 recommended to generate a new encryption key and and re-encrypt their passwords
 using the `maxkeys` and `maxpasswd` utilities. Old passwords still work.
+
+### Authenticator options
+
+Several changes, see [here](../Authenticators/Authentication-Modules.md)
+for more details.
 
 ## Dropped Features
 
@@ -80,10 +85,6 @@ The following deprecated parameters have been removed.
 
 ## New Features
 
-* Listeners support multiple authenticators.
-* MariaDB-Monitor supports cooperative monitoring. See
-[cooperative monitoring](../Monitors/MariaDB-Monitor.md#cooperative-monitoring)
-for more information.
 * The timeout to maxctrl can now be specified using duration suffixes, e.g.
   `--timeout 5s`.
 
@@ -142,6 +143,22 @@ versions 1.0, 1.2 and 1.5. In addition, some cluster management
 operations are available for Columnstore 1.5. Please see the
 [documentation](../Monitors/ColumnStore-Monitor.md)
 for details.
+
+### Cooperative monitoring
+
+MariaDB-Monitor supports cooperative monitoring. See
+[cooperative monitoring](../Monitors/MariaDB-Monitor.md#cooperative-monitoring)
+for more information.
+
+### Listeners and authenticators
+
+* multiple authenticators
+* connection_init_sql_file
+* mysql_clear_password support for PAM authenticator
+
+See [configuration guide](../Getting-Started/Configuration-Guide.md#authenticator)
+and [pam plugin documentation](../Authenticators/PAM-Authenticator.md)
+for more details.
 
 ## Bug fixes
 
