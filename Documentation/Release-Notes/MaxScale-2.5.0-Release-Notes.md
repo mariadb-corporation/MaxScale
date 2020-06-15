@@ -150,9 +150,9 @@ MariaDB-Monitor supports cooperative monitoring. See
 [cooperative monitoring](../Monitors/MariaDB-Monitor.md#cooperative-monitoring)
 for more information.
 
-### Listeners and authenticators
+### Listener and authenticator settings
 
-* multiple authenticators
+* multiple authenticators per listener
 * connection_init_sql_file
 * mysql_clear_password support for PAM authenticator
 
