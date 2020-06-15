@@ -3,7 +3,7 @@ if (BUILD_GUI)
 
   ExternalProject_Add(maxgui
     GIT_REPOSITORY ${MAXGUI_REPO}
-    GIT_TAG "master"
+    GIT_TAG "2.5.0"
     CONFIGURE_COMMAND ""
     BUILD_IN_SOURCE 1
     UPDATE_COMMAND ""

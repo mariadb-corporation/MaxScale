@@ -6,7 +6,7 @@
 option(BUILD_BINLOG "Build binlog router" ON)
 option(BUILD_CDC "Build Avro router" ON)
 option(BUILD_FILTERS "Build filter modules" ON)
-option(BUILD_GUI "Build MaxScale admin GUI" OFF)
+option(BUILD_GUI "Build MaxScale admin GUI" ON)
 option(BUILD_KAFKACDC "Build MariaDB-to-Kafka CDC module" ON)
 option(BUILD_LUAFILTER "Build Luafilter" ON)
 option(BUILD_MAXCTRL "Build MaxCtrl" ON)
