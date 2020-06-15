@@ -16,6 +16,7 @@
 
 ## Upgrading MariaDB MaxScale
 
+- [Upgrading MariaDB MaxScale from 2.4 to 2.5](Upgrading/Upgrading-To-MaxScale-2.5.md)
 - [Upgrading MariaDB MaxScale from 2.3 to 2.4](Upgrading/Upgrading-To-MaxScale-2.4.md)
 - [Upgrading MariaDB MaxScale from 2.2 to 2.3](Upgrading/Upgrading-To-MaxScale-2.3.md)
 - [Upgrading MariaDB MaxScale from 2.1 to 2.2](Upgrading/Upgrading-To-MaxScale-2.2.md)
@@ -25,10 +26,9 @@
 ## Reference
 
  - [MaxCtrl - Command Line Admin Interface](Reference/MaxCtrl.md)
- - [Routing Hints](Reference/Hint-Syntax.md)
- - [MaxBinlogCheck](Reference/MaxBinlogCheck.md)
  - [MaxScale REST API](REST-API/API.md)
  - [Module Commands](Reference/Module-Commands.md)
+ - [Routing Hints](Reference/Hint-Syntax.md)
 
 ## Tutorials
 
@@ -38,24 +38,18 @@ The main tutorial for MariaDB MaxScale consist of setting up MariaDB MaxScale fo
 
 These tutorials are for specific use cases and module combinations.
 
- - [Connection Routing Tutorial](Tutorials/Connection-Routing-Tutorial.md)
- - [Read Write Splitting Tutorial](Tutorials/Read-Write-Splitting-Tutorial.md)
  - [Administration Tutorial](Tutorials/Administration-Tutorial.md)
  - [Avro Router Tutorial](Tutorials/Avrorouter-Tutorial.md)
- - [MaxScale Failover with Keepalived and MaxCtrl](Tutorials/MaxScale-Failover-with-Keepalived-and-MaxCtrl.md)
- - [MariaDB Monitor Failover Tutorial](Tutorials/MariaDB-Monitor-Failover.md)
- - [MariaDB MaxScale Information Schema Tutorial](Tutorials/MaxScale-Information-Schema.md)
- - [Replication Proxy with the Binlog Router Tutorial](Tutorials/Replication-Proxy-Binlog-Router-Tutorial.md)
- - [Simple Schema Sharding Tutorial](Tutorials/Simple-Sharding-Tutorial.md)
- - [Filter Tutorial](Tutorials/Filter-Tutorial.md)
- - [RabbitMQ and Tee Filter Data Archiving Tutorial](Tutorials/RabbitMQ-And-Tee-Archiving.md)
- - [RabbitMQ Setup and MariaDB MaxScale Integration Tutorial](Tutorials/RabbitMQ-Setup-And-MaxScale-Integration.md)
  - [Clustrix Monitor Tutorial](Tutorials/Configuring-Clustrix-Monitor.md)
- - [MaxScale Clustrix Tutorial](Tutorials/MaxScale-Clustrix-Tutorial.md)
+ - [Clustrix Usage Tutorial](Tutorials/MaxScale-Clustrix-Tutorial.md)
+ - [Connection Routing Tutorial](Tutorials/Connection-Routing-Tutorial.md)
+ - [Filter Tutorial](Tutorials/Filter-Tutorial.md)
+ - [MariaDB Monitor Failover Tutorial](Tutorials/MariaDB-Monitor-Failover.md)
+ - [Read Write Splitting Tutorial](Tutorials/Read-Write-Splitting-Tutorial.md)
+ - [Simple Schema Sharding Tutorial](Tutorials/Simple-Sharding-Tutorial.md)
 
 Here are tutorials on monitoring and managing MariaDB MaxScale in cluster environments.
 
- - [MariaDB MaxScale HA with Lsyncd](Tutorials/MaxScale-HA-with-lsyncd.md)
  - [REST API Tutorial](Tutorials/REST-API-Tutorial.md)
 
 ## Routers
@@ -68,6 +62,8 @@ of their use.
  - [Binlogrouter](Routers/Binlogrouter.md)
  - [Cat](Routers/Cat.md)
  - [HintRouter](Routers/HintRouter.md)
+ - [KafkaCDC](Routers/KafkaCDC.md)
+ - [MirrorRouter](Routers/Mirror.md)
  - [Read Connection Router](Routers/ReadConnRoute.md)
  - [Read Write Split](Routers/ReadWriteSplit.md)
  - [Schemarouter](Routers/SchemaRouter.md)
@@ -77,23 +73,22 @@ of their use.
 
 Here are detailed documents about the filters MariaDB MaxScale offers. They contain configuration guides and example use cases. Before reading these, you should have read the filter tutorial so that you know how they work and how to configure them.
 
+ - [Binlog Filter](Filters/BinlogFilter.md)
  - [Cache](Filters/Cache.md)
  - [Consistent Critical Read Filter](Filters/CCRFilter.md)
  - [Database Firewall Filter](Filters/Database-Firewall-Filter.md)
+ - [Hint Filter](Filters/Hintfilter.md)
  - [Insert Stream Filter](Filters/Insert-Stream-Filter.md)
  - [Luafilter](Filters/Luafilter.md)
  - [Masking Filter](Filters/Masking.md)
  - [Maxrows Filter](Filters/Maxrows.md)
  - [Named Server Filter](Filters/Named-Server-Filter.md)
  - [Query Log All](Filters/Query-Log-All-Filter.md)
- - [Hint Filter](Filters/Hintfilter.md)
- - [RabbitMQ Filter](Filters/RabbitMQ-Filter.md)
  - [Regex Filter](Filters/Regex-Filter.md)
  - [Tee Filter](Filters/Tee-Filter.md)
  - [Throttle Filter](Filters/Throttle.md)
  - [Top N Filter](Filters/Top-N-Filter.md)
  - [Transaction Performance Monitoring Filter](Filters/Transaction-Performance-Monitoring-Filter.md)
- - [Binlog Filter](Filters/BinlogFilter.md)
 
 ## Monitors
 
@@ -103,11 +98,11 @@ Common options for all monitor modules.
 
 Module specific documentation.
 
- - [MariaDB Monitor](Monitors/MariaDB-Monitor.md)
- - [Galera Monitor](Monitors/Galera-Monitor.md)
- - [ColumnStore Monitor](Monitors/ColumnStore-Monitor.md)
  - [Aurora Monitor](Monitors/Aurora-Monitor.md)
  - [Clustrix Monitor](Monitors/Clustrix-Monitor.md)
+ - [ColumnStore Monitor](Monitors/ColumnStore-Monitor.md)
+ - [Galera Monitor](Monitors/Galera-Monitor.md)
+ - [MariaDB Monitor](Monitors/MariaDB-Monitor.md)
 
 ## Protocols
 
@@ -128,10 +123,6 @@ document.
 
  - [MySQL Authenticator](Authenticators/MySQL-Authenticator.md)
  - [GSSAPI Authenticator](Authenticators/GSSAPI-Authenticator.md)
-
-## Utilities
-
- - [RabbitMQ Consumer Client](Filters/RabbitMQ-Consumer-Client.md)
 
 ## Design Documents
 
