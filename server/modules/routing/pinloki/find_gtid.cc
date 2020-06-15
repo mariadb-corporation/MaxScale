@@ -132,14 +132,21 @@ bool search_file(const std::string& file_name,
         {
             maxsql::GtidListEvent event = rpl.gtid_list();
 
-            for (const auto& tid : event.gtid_list.gtids())
+            if (event.gtid_list.gtids().empty())
             {
-                if (tid.domain_id() == gtid.domain_id()
-                    && tid.sequence_nr() < gtid.sequence_nr())
+                found_file = true;          // Possibly found file
+            }
+            else
+            {
+                for (const auto& tid : event.gtid_list.gtids())
                 {
-                    // The gtid should be in this file, unless the master has rebooted,
-                    // in which case there can be several files with the same gtid list.
-                    found_file = true;
+                    if (tid.domain_id() == gtid.domain_id()
+                        && tid.sequence_nr() < gtid.sequence_nr())
+                    {
+                        // The gtid should be in this file, unless the master has rebooted,
+                        // in which case there can be several files with the same gtid list.
+                        found_file = true;
+                    }
                 }
             }
         }
