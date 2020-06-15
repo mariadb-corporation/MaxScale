@@ -1,10 +1,9 @@
 /*
  * MXS-173 throttling filter
- *
  */
 
+#include <maxbase/stopwatch.hh>
 #include "testconnections.h"
-#include "stopwatch.hh"
 #include "appexception.hh"
 #include <iostream>
 #include <memory>
@@ -61,13 +60,13 @@ void insert_rows(MYSQL* conn)
 struct ReadSpeed
 {
     bool           error;
-    base::Duration duration;
+    mxb::Duration  duration;
     float          qps;
 };
 
 ReadSpeed read_rows(MYSQL* conn, int num_rows, int max_qps, bool expect_error)
 {
-    base::StopWatch sw;
+    mxb::StopWatch sw;
     for (int i = 0; i < num_rows; ++i)
     {
         int index = rand() % NUM_ROWS;
@@ -78,7 +77,7 @@ ReadSpeed read_rows(MYSQL* conn, int num_rows, int max_qps, bool expect_error)
         {
             if (expect_error)
             {
-                base::Duration dur = sw.lap();
+                mxb::Duration dur = sw.lap();
                 return {true, dur, i / std::chrono::duration<float>(dur).count()};
             }
             else
@@ -117,7 +116,7 @@ ReadSpeed read_rows(MYSQL* conn, int num_rows, int max_qps, bool expect_error)
         }
     }
 
-    base::Duration dur = sw.lap();
+    mxb::Duration dur = sw.lap();
     return ReadSpeed {false, dur, num_rows / std::chrono::duration<float>(dur).count()};
 }
 

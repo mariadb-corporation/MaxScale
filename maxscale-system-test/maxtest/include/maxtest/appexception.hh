@@ -46,6 +46,6 @@ private:
 
 #define THROW(Type, msg_str) \
     do { \
-        std::ostringstream os; \
-        os << __FILE__ << ':' << __LINE__ << '\n' << msg_str; \
-        throw Type(os.str(), __FILE__, __LINE__);} while (false)
+        std::ostringstream exception_msg_ss; \
+        exception_msg_ss << __FILE__ << ':' << __LINE__ << '\n' << msg_str; \
+        throw Type(exception_msg_ss.str(), __FILE__, __LINE__);} while (false)

@@ -17,7 +17,6 @@ add_library(maxtest SHARED
         nodes.cc
         rds_vpc.cc
         sql_t1.cc
-        stopwatch.cc
         tcp_connection.cc
         test_binlog_fnc.cc
         testconnections.cc
