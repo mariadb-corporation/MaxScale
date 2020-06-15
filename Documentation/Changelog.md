@@ -21,7 +21,7 @@
 * The Columnstore monitor is now capable of monitoring Columnstore 1.5 in
   addition to 1.0 and 1.2.
 * MariaDB-Monitor supports cooperative monitoring. See
-  [cooperative monitoring](../Monitors/MariaDB-Monitor.md#cooperative-monitoring)
+  [cooperative monitoring](Monitors/MariaDB-Monitor.md#cooperative-monitoring)
   for more information.
 * The MaxScale cache can now be shared between two MaxScale instances,
   in which case either memcached or Redis can be used as cache storage.

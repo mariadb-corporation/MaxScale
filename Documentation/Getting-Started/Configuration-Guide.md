@@ -2063,7 +2063,6 @@ can add a filter to a service and combine multiple filters in one service.
 * [Top Filter](../Filters/Top-N-Filter.md)
 * [Database Firewall Filter](../Filters/Database-Firewall-Filter.md)
 * [Query Redirection Filter](../Filters/Named-Server-Filter.md)
-* [RabbitMQ Filter](../Filters/RabbitMQ-Filter.md)
 
 # Encrypting Passwords
 

@@ -86,5 +86,4 @@ port=4000
 ```
 
 For more information about the binlogrouter and how to use it, refer to the
-[binlogrouter documentation](../Routers/Binlogrouter.md) and the
-[binlogrouter tutorial](../Tutorials/Replication-Proxy-Binlog-Router-Tutorial.md).
+[binlogrouter documentation](../Routers/Binlogrouter.md).

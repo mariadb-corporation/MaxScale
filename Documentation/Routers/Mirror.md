@@ -6,8 +6,8 @@
 
 The `mirror` router is designed for data consistency and database behavior
 verification during system upgrades. It allows statement duplication to multiple
-servers in a manner similar to that of the [Tee filter](../Filters/Tee.md) with
-exporting of collected query metrics.
+servers in a manner similar to that of the
+[Tee filter](../Filters/Tee-Filter.md) with exporting of collected query metrics.
 
 For each executed query the router exports a JSON object that describes the
 query results and has the following fields:

@@ -479,12 +479,3 @@ master_host=192.168.121.148
 master_host=192.168.121.76
 ...
 ```
-
-## Examples
-
-The [Replication Proxy](../Tutorials/Replication-Proxy-Binlog-Router-Tutorial.md)
-tutorial will show you how to configure and administrate a binlogrouter installation.
-
-Tutorial also includes SSL communication setup to the master server and SSL
-client connections setup to MaxScale Binlog Server.
->>>>>>> Stashed changes

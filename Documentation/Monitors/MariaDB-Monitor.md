@@ -984,7 +984,3 @@ controlled by the setting [assume_unique_hostnames](#assume_unique_hostnames).
 Since MaxScale 2.2 it's possible to detect a replication setup
 which includes Binlog Server: the required action is to add the
 binlog server to the list of servers only if _master_id_ identity is set.
-
-For addition information read the
-[Replication Proxy](../Tutorials/Replication-Proxy-Binlog-Router-Tutorial.md)
-tutorial.
