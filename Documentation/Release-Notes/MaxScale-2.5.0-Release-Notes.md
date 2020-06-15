@@ -46,6 +46,12 @@ using the `maxkeys` and `maxpasswd` utilities. Old passwords still work.
 
 ## Dropped Features
 
+### No concept of Unix users anymore
+
+As maxadmin, that could be used over a unix domain socket, has been
+removed it is no longer possible to enable/disable unix users as
+MaxScale administrators.
+
 ### Configuration parameters
 
 The following deprecated parameters have been removed.
@@ -109,6 +115,14 @@ so that all threads are evenly utilized. Please refer to
 and
 [rebalance_threshold](../Getting-Started/Configuration-Guide.md#rebalance_threshold)
 for more information.
+
+### Columnstore support
+
+The Columnstore monitor is now capable of monitoring Columnstore
+versions 1.0, 1.2 and 1.5. In addition, some cluster management
+operations are available for Columnstore 1.5. Please see the
+[documentation](../Monitors/ColumnStore-Monitor.md)
+for details.
 
 ## Bug fixes
 
