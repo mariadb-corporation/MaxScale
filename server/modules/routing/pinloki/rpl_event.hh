@@ -131,7 +131,7 @@ public:
         return ++ret;
     }
 
-    const std::vector<char>& data() const
+    const std::vector<char>& buffer() const
     {
         return m_raw;
     }

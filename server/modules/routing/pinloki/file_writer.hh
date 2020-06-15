@@ -26,14 +26,16 @@ namespace pinloki
 {
 DEFINE_EXCEPTION(BinlogWriteError);
 
+class Writer;
+
 /**
  * @brief FileWriter - This is a pretty straightforward writer of binlog events to files.
  *                     The class represents a series of files.
  */
-class FileWriter    // : public Storage
+class FileWriter
 {
 public:
-    FileWriter(Inventory* inv);
+    FileWriter(Inventory* inv, const Writer& writer);
 
     void begin_txn();
     void add_event(const maxsql::MariaRplEvent& maria_event);
@@ -50,8 +52,10 @@ private:
     void write_to_file(WritePosition& fn, const maxsql::RplEvent& rpl_event);
     void write_stop(const std::string& file_name);
     void write_rotate(WritePosition& fn, const std::string& to_file_name);
+    void write_gtid_list(WritePosition& fn);
 
     Inventory&    m_inventory;
+    const Writer& m_writer;
     WritePosition m_current_pos;
 
     bool               m_in_transaction = false;

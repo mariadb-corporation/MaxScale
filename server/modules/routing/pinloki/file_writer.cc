@@ -48,8 +48,9 @@ std::string next_file_name(const std::string& master, const std::string& prev)
 
 namespace pinloki
 {
-FileWriter::FileWriter(Inventory* inv)
+FileWriter::FileWriter(Inventory* inv, const Writer& writer)
     : m_inventory(*inv)
+    , m_writer(writer)
 {
 }
 
@@ -93,12 +94,16 @@ void FileWriter::add_event(const maxsql::MariaRplEvent& maria_event)
     {
         maxsql::RplEvent rpl_event(maria_event);    // If warranted, make less raw data copies.
 
-        rpl_event.set_next_pos(m_current_pos.write_pos + rpl_event.data().size()
+        rpl_event.set_next_pos(m_current_pos.write_pos + rpl_event.buffer().size()
                                + m_tx_buffer.str().size());
 
         if (m_in_transaction)
         {
-            m_tx_buffer.write(rpl_event.data().data(), rpl_event.data().size());
+            m_tx_buffer.write(rpl_event.buffer().data(), rpl_event.buffer().size());
+        }
+        else if (etype == GTID_LIST_EVENT)
+        {
+            write_gtid_list(m_current_pos);
         }
         else if (etype != STOP_EVENT && etype != ROTATE_EVENT && etype != BINLOG_CHECKPOINT_EVENT)
         {
@@ -151,7 +156,7 @@ void FileWriter::rotate_event(const maxsql::MariaRplEvent& rpl_event)
 void FileWriter::write_to_file(WritePosition& fn, const maxsql::RplEvent& rpl_event)
 {
     fn.file.seekp(fn.write_pos);
-    fn.file.write(rpl_event.data().data(), rpl_event.data().size());
+    fn.file.write(rpl_event.buffer().data(), rpl_event.buffer().size());
     fn.file.flush();
 
     fn.write_pos = rpl_event.next_event_pos();
@@ -233,6 +238,67 @@ void FileWriter::write_rotate(FileWriter::WritePosition& fn, const std::string& 
     if (!fn.file.good())
     {
         MXB_THROW(BinlogWriteError, "Could not write final ROTATE to " << fn.name);
+    }
+}
+
+void FileWriter::write_gtid_list(WritePosition& fn)
+{
+    constexpr int HEADER_LEN = 19;
+    auto gtid_list = m_writer.get_gtid_io_pos();
+    const auto NUM_GTIDS = gtid_list.gtids().size();
+    const size_t EVENT_LEN = HEADER_LEN + 4 + NUM_GTIDS * (4 + 4 + 8) + 4;
+
+    std::vector<char> data(EVENT_LEN);
+    uint8_t* ptr = (uint8_t*)&data[0];
+
+    // Zero timestamp
+    mariadb::set_byte4(ptr, 0);
+    ptr += 4;
+
+    // The event
+    *ptr++ = GTID_LIST_EVENT;
+
+    // server id
+    mariadb::set_byte4(ptr, m_inventory.config().server_id());
+    ptr += 4;
+
+    // Event length
+    mariadb::set_byte4(ptr, EVENT_LEN);
+    ptr += 4;
+
+    // Next position
+    mariadb::set_byte4(ptr, fn.write_pos + EVENT_LEN);
+    ptr += 4;
+
+    // No flags (this is a real event)
+    mariadb::set_byte2(ptr, 0);
+    ptr += 2;
+
+    // Number of gtids to follow:
+    mariadb::set_byte4(ptr, NUM_GTIDS);
+    ptr += 4;
+    // Gtids:
+    for (const auto& gtid : gtid_list.gtids())
+    {
+        mariadb::set_byte4(ptr, gtid.domain_id());
+        ptr += 4;
+        mariadb::set_byte4(ptr, gtid.server_id());
+        ptr += 4;
+        mariadb::set_byte8(ptr, gtid.sequence_nr());
+        ptr += 8;
+    }
+
+
+    // Checksum
+    mariadb::set_byte4(ptr, crc32(0, (uint8_t*)data.data(), data.size() - 4));
+
+    fn.file.write(data.data(), data.size());
+    fn.file.flush();
+    fn.write_pos += EVENT_LEN;
+
+    if (!fn.file.good())
+    {
+        MXB_THROW(BinlogWriteError, "Could not write GTID_EVENT to " << fn.name);
     }
 }
 }

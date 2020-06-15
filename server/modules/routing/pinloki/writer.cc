@@ -81,7 +81,7 @@ void Writer::run()
     {
         try
         {
-            FileWriter file(&m_inventory);
+            FileWriter file(&m_inventory, *this);
             mxq::Connection conn(get_connection_details());
             conn.start_replication(m_inventory.config().server_id(), m_current_gtid_list);
 
