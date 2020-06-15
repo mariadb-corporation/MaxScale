@@ -4,9 +4,9 @@
 #include <thread>
 #include <vector>
 
-#include "nodes.hh"
-#include "mariadb_func.h"
-#include "mariadb_nodes.h"
+#include <maxtest/nodes.hh>
+#include <maxtest/mariadb_func.h>
+#include <maxtest/mariadb_nodes.h>
 
 class Maxscales: public Nodes
 {

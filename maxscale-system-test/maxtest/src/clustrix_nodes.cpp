@@ -14,8 +14,7 @@
 #include <fstream>
 #include <iostream>
 #include <regex>
-#include <sstream>
-#include "clustrix_nodes.h"
+#include <maxtest/clustrix_nodes.h>
 
 int Clustrix_nodes::prepare_server(int m)
 {

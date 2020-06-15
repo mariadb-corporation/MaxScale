@@ -3,7 +3,7 @@
 #include <iostream>
 #include <unistd.h>
 #include <jansson.h>
-#include "testconnections.h"
+#include <maxtest/testconnections.h>
 
 class RDS
 {

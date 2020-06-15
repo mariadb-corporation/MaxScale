@@ -1,7 +1,7 @@
-#include "maxscales.hh"
+#include <maxtest/maxscales.hh>
 #include <string>
 #include <maxbase/string.hh>
-#include "envv.hh"
+#include <maxtest/envv.hh>
 
 #define DEFAULT_MAXSCALE_CNF "/etc/maxscale.cnf"
 #define DEFAULT_MAXSCALE_LOG_DIR "/var/log/maxscale/"

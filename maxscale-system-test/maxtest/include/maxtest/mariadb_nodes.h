@@ -13,10 +13,10 @@
  */
 
 
-#include "mariadb_func.h"
+#include <maxtest/mariadb_func.h>
 #include <errno.h>
 #include <string>
-#include "nodes.hh"
+#include <maxtest/nodes.hh>
 
 /**
  * @brief A class to handle backend nodes

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "testconnections.h"
+#include <maxtest/testconnections.h>
 
 /**
  * @brief create_event_size Creates SQL query to generate even of given size

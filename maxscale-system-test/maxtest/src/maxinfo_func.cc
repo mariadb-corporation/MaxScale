@@ -1,6 +1,6 @@
 #include <iostream>
 #include <unistd.h>
-#include "testconnections.h"
+#include <maxtest/testconnections.h>
 
 #include <stdio.h>
 #include <sys/socket.h>

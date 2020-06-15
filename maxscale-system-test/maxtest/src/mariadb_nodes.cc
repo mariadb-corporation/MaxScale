@@ -10,7 +10,7 @@
  * @endverbatim
  */
 
-#include "mariadb_nodes.h"
+#include <maxtest/mariadb_nodes.h>
 #include <climits>
 #include <string>
 #include <sstream>
@@ -19,7 +19,7 @@
 #include <future>
 #include <functional>
 #include <algorithm>
-#include "envv.hh"
+#include <maxtest/envv.hh>
 
 using std::cout;
 using std::endl;

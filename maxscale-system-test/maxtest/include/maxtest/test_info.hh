@@ -1,5 +1,5 @@
 #pragma once
-#include "test_dir.hh"
+#include <maxtest/test_dir.hh>
 
 struct TestDefinition
 {

@@ -19,11 +19,11 @@
 #include <maxbase/string.hh>
 #include <algorithm>
 
-#include "mariadb_func.h"
-#include "sql_t1.h"
-#include "testconnections.h"
-#include "test_info.hh"
-#include "envv.hh"
+#include <maxtest/mariadb_func.h>
+#include <maxtest/sql_t1.h>
+#include <maxtest/testconnections.h>
+#include <maxtest/test_info.hh>
+#include <maxtest/envv.hh>
 
 using namespace mxb;
 using std::cout;

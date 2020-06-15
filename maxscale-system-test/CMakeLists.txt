@@ -26,6 +26,7 @@ include_directories(${CMAKE_BINARY_DIR})
 # Include the CDC connector headers
 include_directories(${CMAKE_SOURCE_DIR}/../connectors/cdc-connector/)
 include_directories(maxtest/include/maxtest)
+include_directories(maxtest/include)
 
 # Tool used to check backend state
 add_test_executable_notest(check_backend.cpp check_backend check_backend LABELS CONFIG REPL_BACKEND GALERA_BACKEND SECOND_MAXSCALE)
