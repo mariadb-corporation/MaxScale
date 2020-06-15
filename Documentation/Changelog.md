@@ -28,6 +28,10 @@
   Further, the cache can now also perform table level invalidations
   and be specific to a particular user.
 * A completely new binlog router implemenation.
+* New routers, [mirror](Routers/Mirror.md) and [kafkacdc](Routers/KafkaCDC.md).
+* Service-to-service routing is now possible with the `targets` parameter.
+* TLS CRL and peer host verification support.
+* Multiple modes of operation for `causal_reads`.
 
 For more details, please refer to:
 * [MariaDB MaxScale 2.5.0 Release Notes](Release-Notes/MaxScale-2.5.0-Release-Notes.md)
