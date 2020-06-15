@@ -44,12 +44,126 @@ The major differences between the new and old binlog router are:
  * _Secondary masters_ are not supported, but the functionality provided by
    `select_master` is roughly equivalent.
 
+ * The new binlogrouter will write its own binlog files to prevent problems that
+   could happen when the master changes. This causes the binlog names to be
+   different in the binlogrouter when compared to the ones on the master.
+
 The documentation for the binlogrouter in MaxScale 2.4 is provided for reference
 [here](Binlogrouter-2.4.md).
 
 ## Supported SQL Commands
 
-TODO: Document these
+The binlogrouter supports a subset of the SQL constructs that the MariaDB server
+supports. The following commands are supported:
+
+ * `CHANGE MASTER TO`
+
+The binlogrouter supports the same syntax as the MariaDB server but only the
+following values are allowed:
+
+   * `MASTER_HOST`
+   * `MASTER_PORT`
+   * `MASTER_USER`
+   * `MASTER_PASSWORD`
+   * `MASTER_USE_GTID`
+   * `MASTER_SSL`
+   * `MASTER_SSL_CA`
+   * `MASTER_SSL_CAPATH`
+   * `MASTER_SSL_CERT`
+   * `MASTER_SSL_CRL`
+   * `MASTER_SSL_CRLPATH`
+   * `MASTER_SSL_KEY`
+   * `MASTER_SSL_CIPHER`
+   * `MASTER_SSL_VERIFY_SERVER_CERT`
+
+ * `STOP SLAVE`
+
+   * Stops replication, same as MariaDB.
+
+ * `START SLAVE`
+
+   * Starts replication, same as MariaDB.
+
+ * `RESET SLAVE`
+
+   * Resets replication. Note that the `RESET SLAVE ALL` form that is supported
+     by MariaDB isn't supported by the binlogrouter.
+
+ * `SHOW BINARY LOGS`
+
+   * Lists the current files and their sizes. These will be different from the
+     ones listed by the original master where the binlogrouter is replicating
+     from.
+
+ * `PURGE { BINARY | MASTER } LOGS TO <filename>`
+
+   * Purges binary logs up to but not including the given file. The file name
+     must be one of the names shown in `SHOW BINARY LOGS`. The version of this
+     command which accepts a timestamp is not currently supported.
+
+ * `SHOW MASTER STATUS`
+
+   * Shows the current binlog and position in that file where the binlogrouter
+     is writing the replicated data. These file names will be different from the
+     ones shown by the original master.
+
+ * `SHOW SLAVE STATUS`
+
+   * Shows the slave status information similar to what a normal MariaDB slave
+     server shows. Some of the values are replaced with constants values that
+     never change. The following values are not constant:
+
+     * `Slave_IO_State`: Set to `Waiting for master to send event` when
+       replication is ongoing.
+
+     * `Master_Host`: Address of the current master.
+
+     * `Master_User`: The user used to replicate.
+
+     * `Master_Port`: The port the master is listening on.
+
+     * `Master_Log_File`: The name of the latest file that the binlogrouter is
+       writing to.
+
+     * `Read_Master_Log_Pos`: The current position where the last event was
+       written in the latest binlog.
+
+     * `Slave_IO_Running`: Set to `Yes` if replication running and `No` if it's
+       not.
+
+     * `Slave_SQL_Running` Set to `Yes` if replication running and `No` if it's
+       not.
+
+     * `Exec_Master_Log_Pos`: Same as `Read_Master_Log_Pos`.
+
+     * `Gtid_IO_Pos`: The latest replicated GTID.
+
+ * `SELECT { Field } ...`
+
+   * The binlogrouter implements a small subset of the MariaDB SELECT syntax as
+     it is mainly used by the replicating slaves to query various parameters. If
+     a field queried by a client is not known to the binlogrouter, the value
+     will be returned back as-is. The following list of functions and variables
+     are understood by the binlogrouter and are replaced with actual values:
+
+     * `@@gtid_slave_pos`, `@@gtid_current_pos` or `@@gtid_binlog_pos`: All of
+       these return the latest GTID replicated from the master.
+
+     * `version()` or `@@version`: The version string returned by MaxScale when
+       a client connects to it.
+
+     * `UNIX_TIMESTAMP()`: The current timestamp.
+
+     * `@@version_comment`: Always `pinloki`.
+
+     * `@@global.gtid_domain_id`: Always `0`.
+
+     * `@master_binlog_checksum`: Always `CRC32`.
+
+ * `SET`
+
+   * This is only for replication purposes and should not be used by actual
+     clients.
 
 ## Configuration Parameters
 
