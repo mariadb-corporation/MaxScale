@@ -12,7 +12,7 @@
  */
 
 #include <maxtest/testconnections.h>
-#include "fail_switch_rejoin_common.cpp"
+#include "mariadbmonitor/fail_switch_rejoin_common.cpp"
 #include <iostream>
 #include <string>
 
