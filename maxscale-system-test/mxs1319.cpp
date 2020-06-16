@@ -2,7 +2,7 @@
  * Check that SQL_MODE='PAD_CHAR_TO_FULL_LENGTH' doesn't break authentication
  */
 
-#include "testconnections.h"
+#include <maxtest/testconnections.h>
 
 int main(int argc, char* argv[])
 {

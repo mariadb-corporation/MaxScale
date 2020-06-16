@@ -2,7 +2,7 @@
  * MXS-2326: Routing hints aren't cloned in gwbuf_clone
  */
 
-#include "testconnections.h"
+#include <maxtest/testconnections.h>
 
 int main(int argc, char** argv)
 {

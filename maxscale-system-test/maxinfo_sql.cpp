@@ -2,7 +2,7 @@
  * Test MaxInfo with the SQL interface
  */
 
-#include "testconnections.h"
+#include <maxtest/testconnections.h>
 #include <string>
 #include <thread>
 #include <vector>

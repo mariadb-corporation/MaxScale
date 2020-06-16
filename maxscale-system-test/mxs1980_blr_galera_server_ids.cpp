@@ -18,7 +18,7 @@
 #include <sstream>
 #include <maxbase/assert.h>
 #include <maxbase/log.hh>
-#include "testconnections.h"
+#include <maxtest/testconnections.h>
 
 using namespace std;
 

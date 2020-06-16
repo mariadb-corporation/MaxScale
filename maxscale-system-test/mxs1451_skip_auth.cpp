@@ -4,7 +4,7 @@
  * Check that connection through MaxScale work even if authentication is disabled
  */
 
-#include "testconnections.h"
+#include <maxtest/testconnections.h>
 
 int main(int argc, char* argv[])
 {

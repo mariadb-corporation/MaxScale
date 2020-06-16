@@ -22,9 +22,9 @@
 
 
 #include <iostream>
-#include "testconnections.h"
-#include "maxadmin_operations.h"
-#include "sql_t1.h"
+#include <maxtest/testconnections.h>
+#include <maxtest/maxadmin_operations.h>
+#include <maxtest/sql_t1.h>
 
 int check_conf(TestConnections& test, int blocked_node)
 {

@@ -2,7 +2,7 @@
  * @file avro_alter.cpp Test ALTER TABLE handling of avrorouter
  */
 
-#include "testconnections.h"
+#include <maxtest/testconnections.h>
 #include <jansson.h>
 #include <sstream>
 #include <iostream>

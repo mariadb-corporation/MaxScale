@@ -2,8 +2,8 @@
  * @file connect_to_nonexisting_db.cpp Tries to connect to non existing DB, expects no crash
  */
 
-#include "testconnections.h"
-#include "sql_t1.h"
+#include <maxtest/testconnections.h>
+#include <maxtest/sql_t1.h>
 
 bool try_connect(TestConnections& test)
 {

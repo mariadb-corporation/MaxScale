@@ -3,7 +3,7 @@
  * - Check that retried reads work with persistent connections
  */
 
-#include "testconnections.h"
+#include <maxtest/testconnections.h>
 
 void* async_block(void* data)
 {

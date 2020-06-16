@@ -3,7 +3,7 @@
  * https://jira.mariadb.org/browse/MXS-2521
  */
 
-#include "testconnections.h"
+#include <maxtest/testconnections.h>
 
 void do_test(TestConnections& test, MYSQL* conn)
 {

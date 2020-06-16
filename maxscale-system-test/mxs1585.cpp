@@ -5,7 +5,7 @@
  * mode when master_failure_mode is fail_on_write.
  */
 
-#include "testconnections.h"
+#include <maxtest/testconnections.h>
 #include <vector>
 
 static bool running = true;

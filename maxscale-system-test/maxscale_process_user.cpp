@@ -2,7 +2,7 @@
  * Check if Maxscale priocess is running as 'maxscale'
  */
 
-#include "testconnections.h"
+#include <maxtest/testconnections.h>
 
 int main(int argc, char* argv[])
 {

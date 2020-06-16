@@ -6,7 +6,7 @@
  */
 
 
-#include "testconnections.h"
+#include <maxtest/testconnections.h>
 
 void create_data_file(char* filename, size_t size)
 {

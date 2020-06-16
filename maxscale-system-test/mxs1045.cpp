@@ -11,7 +11,7 @@
  * - Check that script execution doesn't leave zombie processes
  */
 
-#include "testconnections.h"
+#include <maxtest/testconnections.h>
 
 int main(int argc, char* argv[])
 {

@@ -3,7 +3,7 @@
  *
  * https://jira.mariadb.org/browse/MXS-359
  */
-#include "testconnections.h"
+#include <maxtest/testconnections.h>
 #include <vector>
 #include <iostream>
 #include <sstream>

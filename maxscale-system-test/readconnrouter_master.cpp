@@ -2,7 +2,7 @@
  * Connect to readconnroute in master mode and check that it always connects to the master
  */
 
-#include "testconnections.h"
+#include <maxtest/testconnections.h>
 
 int main(int argc, char* argv[])
 {

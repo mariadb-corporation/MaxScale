@@ -6,7 +6,7 @@
  * should get slave status if replication is running.
  */
 
-#include "testconnections.h"
+#include <maxtest/testconnections.h>
 
 #include <algorithm>
 #include <string>

@@ -9,8 +9,8 @@
  * - Sleep and check if Maxscale is alive
  */
 
-#include "testconnections.h"
-#include "maxadmin_operations.h"
+#include <maxtest/testconnections.h>
+#include <maxtest/maxadmin_operations.h>
 
 int main(int argc, char* argv[])
 {

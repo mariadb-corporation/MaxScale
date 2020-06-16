@@ -1,4 +1,4 @@
-#include "testconnections.h"
+#include <maxtest/testconnections.h>
 #include <functional>
 
 void run_test(TestConnections& test, std::function<void(MYSQL*)> cb)

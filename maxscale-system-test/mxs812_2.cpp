@@ -6,7 +6,7 @@
  * - checks "Current no. of conns" after the test, expect 0
  */
 
-#include "testconnections.h"
+#include <maxtest/testconnections.h>
 
 int test_ps(TestConnections* Test, MYSQL* conn)
 {

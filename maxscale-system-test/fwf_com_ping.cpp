@@ -4,8 +4,8 @@
  * Check that COM_PING is allowed with `action=allow`
  */
 
-#include "testconnections.h"
-#include "fw_copy_rules.h"
+#include <maxtest/testconnections.h>
+#include <maxtest/fw_copy_rules.h>
 
 const char* rules = "rule test1 deny regex '.*'\n"
                     "users %@% match any rules test1\n";

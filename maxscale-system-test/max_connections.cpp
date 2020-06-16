@@ -7,7 +7,7 @@
  * - close all connections
  */
 
-#include "testconnections.h"
+#include <maxtest/testconnections.h>
 
 #define CONNECTIONS 21
 #define ITER        25

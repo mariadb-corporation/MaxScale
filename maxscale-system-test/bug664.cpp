@@ -6,7 +6,7 @@
  * - An error should be logged about the failed branch session
  */
 
-#include "testconnections.h"
+#include <maxtest/testconnections.h>
 
 int main(int argc, char* argv[])
 {

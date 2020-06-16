@@ -2,7 +2,7 @@
  * Check that old-style passwords are detected
  */
 
-#include "testconnections.h"
+#include <maxtest/testconnections.h>
 
 int main(int argc, char* argv[])
 {

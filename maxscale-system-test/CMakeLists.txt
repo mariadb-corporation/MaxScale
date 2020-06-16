@@ -19,13 +19,8 @@ set(TEST_DEFINITIONS "" CACHE INTERNAL "")
 include(utilities.cmake)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
-include_directories(${CMAKE_CURRENT_BINARY_DIR})
-include_directories(${CMAKE_SOURCE_DIR}/connectors/cdc-connector)
-
-include_directories(${CMAKE_BINARY_DIR})
 # Include the CDC connector headers
-include_directories(${CMAKE_SOURCE_DIR}/../connectors/cdc-connector/)
-include_directories(maxtest/include/maxtest)
+include_directories(${CMAKE_SOURCE_DIR}/connectors/cdc-connector)
 include_directories(maxtest/include)
 
 # Tool used to check backend state

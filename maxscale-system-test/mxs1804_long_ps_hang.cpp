@@ -4,7 +4,7 @@
  * https://jira.mariadb.org/browse/MXS-1804
  */
 
-#include "testconnections.h"
+#include <maxtest/testconnections.h>
 
 int sql_str_size(int sqlsize)
 {

@@ -3,7 +3,7 @@
  *
  * https://jira.mariadb.org/browse/MXS-1743
  */
-#include "testconnections.h"
+#include <maxtest/testconnections.h>
 #include <vector>
 
 int main(int argc, char** argv)

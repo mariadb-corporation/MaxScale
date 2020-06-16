@@ -11,8 +11,8 @@
  * - check that data from main t1 is not affected
  */
 
-#include "testconnections.h"
-#include "sql_t1.h"
+#include <maxtest/testconnections.h>
+#include <maxtest/sql_t1.h>
 
 using namespace std;
 

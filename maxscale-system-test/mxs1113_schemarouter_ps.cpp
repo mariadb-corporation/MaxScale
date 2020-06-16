@@ -4,7 +4,7 @@
  * https://jira.mariadb.org/browse/MXS-1113
  */
 
-#include "testconnections.h"
+#include <maxtest/testconnections.h>
 
 
 void test_text_protocol(TestConnections& test, MYSQL* conn)

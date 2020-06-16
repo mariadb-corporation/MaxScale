@@ -5,9 +5,7 @@
 
 
 #include <iostream>
-#include "testconnections.h"
-#include "maxadmin_operations.h"
-#include "sql_t1.h"
+#include <maxtest/testconnections.h>
 
 int main(int argc, char* argv[])
 {

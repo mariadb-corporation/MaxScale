@@ -1,7 +1,7 @@
 /**
  * Test that binary protocol cursors work as expected
  */
-#include "testconnections.h"
+#include <maxtest/testconnections.h>
 #include <iostream>
 
 using std::cout;

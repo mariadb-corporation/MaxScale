@@ -12,8 +12,8 @@
 #include <unistd.h>
 #include <cstdlib>
 #include <string>
-#include "testconnections.h"
-#include "maxadmin_operations.h"
+#include <maxtest/testconnections.h>
+#include <maxtest/maxadmin_operations.h>
 
 using namespace std;
 

@@ -1,8 +1,8 @@
 #include <iostream>
 #include <ctime>
-#include "testconnections.h"
-#include "maxadmin_operations.h"
-#include "sql_t1.h"
+#include <maxtest/testconnections.h>
+#include <maxtest/maxadmin_operations.h>
+#include <maxtest/sql_t1.h>
 
 int main(int argc, char* argv[])
 {

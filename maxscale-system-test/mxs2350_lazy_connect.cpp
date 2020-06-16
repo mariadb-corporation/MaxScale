@@ -3,7 +3,7 @@
  * https://jira.mariadb.org/browse/MXS-2350
  */
 
-#include "testconnections.h"
+#include <maxtest/testconnections.h>
 #include <maxbase/string.hh>
 
 int main(int argc, char* argv[])

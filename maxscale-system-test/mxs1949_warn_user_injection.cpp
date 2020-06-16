@@ -5,7 +5,7 @@
  * 'inject_service_user' is enabled.
  */
 
-#include "testconnections.h"
+#include <maxtest/testconnections.h>
 
 int main(int argc, char* argv[])
 {

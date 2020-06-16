@@ -5,8 +5,8 @@
  * properly handled.
  */
 
-#include "testconnections.h"
-#include "fw_copy_rules.h"
+#include <maxtest/testconnections.h>
+#include <maxtest/fw_copy_rules.h>
 
 const char* rules = "rule test1 deny columns c on_queries select\n"
                     "users %@% match any rules test1\n";

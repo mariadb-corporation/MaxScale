@@ -18,7 +18,7 @@
 #include <algorithm>
 
 #include <maxtest/mariadb_func.h>
-#include "maxadmin_operations.h"
+#include <maxtest/maxadmin_operations.h>
 #include <maxtest/sql_t1.h>
 #include <maxtest/testconnections.h>
 #include <maxtest/test_info.hh>

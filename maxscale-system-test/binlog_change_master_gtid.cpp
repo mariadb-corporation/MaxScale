@@ -2,7 +2,7 @@
  * The GTID version of binlog_change_master
  */
 
-#include "testconnections.h"
+#include <maxtest/testconnections.h>
 #include "binlog_change_master_common.cpp"
 
 int main(int argc, char* argv[])

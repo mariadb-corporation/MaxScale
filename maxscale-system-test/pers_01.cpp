@@ -29,8 +29,8 @@
  */
 
 
-#include "testconnections.h"
-#include "maxadmin_operations.h"
+#include <maxtest/testconnections.h>
+#include <maxtest/maxadmin_operations.h>
 
 void check_pers_conn(TestConnections* Test, int pers_conn_expected[], char* server)
 {
