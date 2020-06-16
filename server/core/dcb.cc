@@ -274,12 +274,6 @@ int DCB::read(GWBUF** head, int maxbytes)
         nreadtotal = gwbuf_length(*head);
     }
 
-    if (nreadtotal != 0)
-    {
-        // If we return data from the read or fake queue it is counted as a read.
-        m_last_read = mxs_clock();
-    }
-
     if (m_encryption.state == SSLState::ESTABLISHED)
     {
         int n = read_SSL(head);
@@ -315,6 +309,7 @@ int DCB::read(GWBUF** head, int maxbytes)
             buffer = basic_read(bytes_available, maxbytes, nreadtotal, &nsingleread);
             if (buffer)
             {
+                m_last_read = mxs_clock();
                 nreadtotal += nsingleread;
                 MXS_DEBUG("Read %d bytes from dcb %p in state %s fd %d.",
                           nsingleread,
