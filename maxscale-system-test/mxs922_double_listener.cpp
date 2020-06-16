@@ -4,7 +4,7 @@
  * Check that MaxScale doesn't crash when the same listeners are created twice.
  */
 
-#include "config_operations.h"
+#include <maxtest/config_operations.h>
 
 int main(int argc, char* argv[])
 {

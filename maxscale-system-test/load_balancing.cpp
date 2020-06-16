@@ -14,13 +14,8 @@
  * more then 10% of quesries went to Master
  */
 
-
-
-#include "testconnections.h"
-#include "sql_t1.h"
-#include "get_com_select_insert.h"
-
-#include "big_load.h"
+#include <maxtest/big_load.h>
+#include <maxtest/testconnections.h>
 
 int main(int argc, char* argv[])
 {

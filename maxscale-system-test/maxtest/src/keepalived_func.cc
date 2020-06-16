@@ -1,5 +1,5 @@
-#include "keepalived_func.h"
-#include "get_my_ip.h"
+#include <maxtest/keepalived_func.h>
+#include <maxtest/get_my_ip.h>
 #include <maxtest/testconnections.h>
 
 char* print_version_string(TestConnections* Test)

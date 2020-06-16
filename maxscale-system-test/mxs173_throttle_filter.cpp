@@ -2,13 +2,14 @@
  * MXS-173 throttling filter
  */
 
-#include <maxbase/stopwatch.hh>
-#include "testconnections.h"
-#include "appexception.hh"
 #include <iostream>
 #include <memory>
 #include <sstream>
 #include <cmath>
+
+#include <maxbase/stopwatch.hh>
+#include <maxtest/appexception.hh>
+#include <maxtest/testconnections.h>
 
 DEFINE_EXCEPTION(Whoopsy);
 

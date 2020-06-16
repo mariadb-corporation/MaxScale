@@ -2,8 +2,8 @@
  * @file mxs922_listener_ssl.cpp MXS-922: Dynamic SSL test
  */
 
-#include "testconnections.h"
-#include "config_operations.h"
+#include <maxtest/config_operations.h>
+#include <maxtest/testconnections.h>
 
 int main(int argc, char* argv[])
 {
