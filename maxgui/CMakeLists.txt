@@ -1,5 +1,5 @@
 if (BUILD_GUI)
-  set(MAXGUI_REPO "https://github.com:mariadb-corporation/MaxGui.git" CACHE STRING "The MaxGui repository")
+  set(MAXGUI_REPO "https://github.com/mariadb-corporation/MaxGui.git" CACHE STRING "The MaxGui repository")
 
   ExternalProject_Add(maxgui
     GIT_REPOSITORY ${MAXGUI_REPO}
