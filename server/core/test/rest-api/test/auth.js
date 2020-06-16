@@ -123,15 +123,23 @@ describe("Authentication", function() {
 describe("JSON Web Tokens", function() {
     before(startMaxScale)
 
-    it("generates valid token", function() {
+    it("rejects /auth endpoint without HTTPS", function() {
         var token = ''
-        return request.get(base_url + "/auth", {json: true})
-            .then((res) => {
-                token = res.meta.token
-            })
-            .then(() => request.get("http://" + host + "/servers", {headers: {'Authorization': 'Bearer ' + token}}))
-            .should.be.fulfilled
+        return request.get(base_url + "/auth")
+            .should.be.rejected
     })
+
+    // TODO: Enable this when the test suite uses TLS
+
+    // it("generates valid token", function() {
+    //     var token = ''
+    //     return request.get(base_url + "/auth", {json: true})
+    //         .then((res) => {
+    //             token = res.meta.token
+    //         })
+    //         .then(() => request.get("http://" + host + "/servers", {headers: {'Authorization': 'Bearer ' + token}}))
+    //         .should.be.fulfilled
+    // })
 
     it("rejects invalid token with correct credentials", function() {
         var token = 'thisisnotavalidjsonwebtoken'

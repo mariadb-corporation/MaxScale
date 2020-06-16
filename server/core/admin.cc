@@ -47,6 +47,33 @@ namespace
 {
 
 static char auth_failure_response[] = "{\"errors\": [ { \"detail\": \"Access denied\" } ] }";
+static char no_https_response[] = "{\"errors\": [ { \"detail\": \"Connection is not encrypted\" } ] }";
+
+// The page served when the GUI is accessed without HTTPS
+const char* gui_not_secure_page =
+    R"EOF(
+<!DOCTYPE html>
+<html>
+  <head>
+    <style>code {color: grey; background-color: #f1f1f1; padding: 2px;}</style>
+    <meta charset="UTF-8">
+    <title>Connection Not Secure</title>
+  </head>
+  <body>
+    <p>
+      The MaxScale GUI requires HTTPS to work, please enable it by configuring the
+      <a href="https://mariadb.com/kb/en/mariadb-maxscale-24-mariadb-maxscale-configuration-guide/#admin_ssl_key">admin_ssl_key</a>
+      and <a href="https://mariadb.com/kb/en/mariadb-maxscale-24-mariadb-maxscale-configuration-guide/#admin_ssl_cert">admin_ssl_cert</a> parameters. To disable
+      this page, add  <code>admin_gui=false</code> under the <code>[maxscale]</code> section.
+    </p>
+    <p>
+      For more information about securing the admin interface of your MaxScale installation, refer to the
+      <a href="https://mariadb.com/kb/en/mariadb-maxscale-24-rest-api-tutorial/#configuration-and-hardening">Configuration and Hardening</a>
+      section of the REST API tutorial.
+    </p>
+  </body>
+</html>
+)EOF";
 
 const std::string TOKEN_BODY = "token_body";
 const std::string TOKEN_SIG = "token_sig";
@@ -192,12 +219,24 @@ std::string load_file(const std::string& file)
 
 std::string get_file(const std::string& file)
 {
-    if (this_unit.files.find(file) == this_unit.files.end())
+    std::string rval;
+
+    if (this_unit.using_ssl)
     {
-        this_unit.files[file] = load_file(file);
+        if (this_unit.files.find(file) == this_unit.files.end())
+        {
+            this_unit.files[file] = load_file(file);
+        }
+
+        rval = this_unit.files[file];
+    }
+    else
+    {
+        // Don't serve files over insecure connections
+        rval = gui_not_secure_page;
     }
 
-    return this_unit.files[file];
+    return rval;
 }
 
 std::string get_filename(const HttpRequest& request)
@@ -433,6 +472,17 @@ void Client::send_token_auth_error() const
     MHD_Response* response =
         MHD_create_response_from_buffer(sizeof(auth_failure_response) - 1,
                                         auth_failure_response,
+                                        MHD_RESPMEM_PERSISTENT);
+
+    MHD_queue_response(m_connection, MHD_HTTP_UNAUTHORIZED, response);
+    MHD_destroy_response(response);
+}
+
+void Client::send_no_https_error() const
+{
+    MHD_Response* response =
+        MHD_create_response_from_buffer(sizeof(no_https_response) - 1,
+                                        no_https_response,
                                         MHD_RESPMEM_PERSISTENT);
 
     MHD_queue_response(m_connection, MHD_HTTP_UNAUTHORIZED, response);
@@ -760,10 +810,13 @@ bool Client::auth(MHD_Connection* connection, const char* url, const char* metho
 
     if (mxs::Config::get().admin_auth)
     {
+        HttpRequest request(m_connection, url, MHD_HTTP_METHOD_GET, nullptr);
+        request.fix_api_version();
         bool done = false;
 
-        if (!is_auth_endpoint(HttpRequest(connection, url, method, nullptr)))
+        if (!is_auth_endpoint(request))
         {
+            // Not the /auth endpoint, use the cookie or Bearer token
             auto cookie_token = get_cookie_token(m_connection);
             auto token = get_header(MHD_HTTP_HEADER_AUTHORIZATION);
 
@@ -787,6 +840,13 @@ bool Client::auth(MHD_Connection* connection, const char* url, const char* metho
                     rval = false;
                 }
             }
+        }
+        else if (!this_unit.using_ssl)
+        {
+            // The /auth endpoint must be used with an encrypted connection
+            done = true;
+            rval = false;
+            send_no_https_error();
         }
 
         if (!done)
@@ -821,9 +881,6 @@ bool Client::auth(MHD_Connection* connection, const char* url, const char* metho
 
             if (!rval)
             {
-                HttpRequest request(m_connection, url, MHD_HTTP_METHOD_GET, nullptr);
-                request.fix_api_version();
-
                 if (is_auth_endpoint(request))
                 {
                     send_token_auth_error();
@@ -865,6 +922,12 @@ bool mxs_admin_init()
         {
             options |= MHD_USE_SSL;
             MXS_NOTICE("The REST API will be encrypted, all requests must use HTTPS.");
+        }
+        else if (mxs::Config::get().gui)
+        {
+            MXS_WARNING("The MaxScale GUI is enabled but encryption for the REST API is not enabled, "
+                        "the GUI will not be enabled. Configure `admin_ssl_key` and `admin_ssl_cert` "
+                        "to enable HTTPS or add `admin_gui=false` to disable this warning.");
         }
 
         // The port argument is ignored and the port in the struct sockaddr is used instead

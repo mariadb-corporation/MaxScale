@@ -55,6 +55,9 @@ the following form.
 }
 ```
 
+Note that the `/auth` endpoint requires the connection to be encrypted (HTTPS)
+and attempts to use it without encryption will be treated as an error.
+
 If the token is used to authenticate users in a web browser, the token can be
 optionally stored in cookies. This can be enabled with the `persist` parameter.
 
