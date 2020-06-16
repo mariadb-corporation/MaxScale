@@ -979,7 +979,7 @@ void CsMonitor::cs_config_get(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitor
     else
     {
         message << "Successfully fetched config from " << n
-                << " servers out of " << servers().size() << ".";
+                << " servers out of " << sv.size() << ".";
     }
 
     json_object_set_new(pOutput, csmon::keys::SUCCESS, json_boolean(success));
@@ -1433,7 +1433,7 @@ void CsMonitor::cs_shutdown(json_t** ppOutput,
         }
         else
         {
-            message << n << " servers out of " << servers().size() << " shut down.";
+            message << n << " servers out of " << sv.size() << " shut down.";
             success = false;
         }
     }
@@ -1480,7 +1480,7 @@ void CsMonitor::cs_start(json_t** ppOutput, mxb::Semaphore* pSem, const std::chr
     }
     else
     {
-        message << n << " servers out of " << servers().size() << " started successfully, "
+        message << n << " servers out of " << sv.size() << " started successfully, "
                 << "cluster left in a readonly state.";
     }
 
@@ -1515,7 +1515,7 @@ void CsMonitor::cs_status(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServ
     json_t* pServers = nullptr;
     size_t n = results_to_json(sv, statuses, &pServers);
 
-    if (n == servers().size())
+    if (n == sv.size())
     {
         message << "Fetched the status from all servers.";
         success = true;
