@@ -12,10 +12,9 @@
  * TODO: replace 'yum' call with executing Chef recipe
  */
 
-
 #include <iostream>
-#include "testconnections.h"
-#include "keepalived_func.h"
+#include <maxtest/keepalived_func.h>
+#include <maxtest/testconnections.h>
 
 int main(int argc, char* argv[])
 {

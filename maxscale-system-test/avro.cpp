@@ -6,17 +6,12 @@
  * - check that data in avro file is correct
  */
 
-
-#include "testconnections.h"
-#include "maxadmin_operations.h"
-#include "sql_t1.h"
-
-#include "test_binlog_fnc.h"
-#include <jansson.h>
-#include "maxinfo_func.h"
-
 #include <sstream>
 #include <iostream>
+#include <maxtest/maxadmin_operations.h>
+#include <maxtest/maxinfo_func.h>
+#include <maxtest/sql_t1.h>
+#include <maxtest/testconnections.h>
 
 using std::cout;
 using std::endl;

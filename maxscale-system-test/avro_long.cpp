@@ -4,13 +4,11 @@
  * - put some data to t1 in the loop
  */
 
-
 #include <iostream>
-#include "testconnections.h"
-#include "maxadmin_operations.h"
-#include "sql_t1.h"
-
-#include "test_binlog_fnc.h"
+#include <maxtest/maxadmin_operations.h>
+#include <maxtest/sql_t1.h>
+#include <maxtest/test_binlog_fnc.h>
+#include <maxtest/testconnections.h>
 
 int main(int argc, char* argv[])
 {

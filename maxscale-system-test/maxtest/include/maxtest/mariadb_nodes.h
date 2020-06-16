@@ -12,10 +12,9 @@
  * @endverbatim
  */
 
-
-#include <maxtest/mariadb_func.h>
-#include <errno.h>
+#include <cerrno>
 #include <string>
+#include <maxtest/mariadb_func.h>
 #include <maxtest/nodes.hh>
 
 /**

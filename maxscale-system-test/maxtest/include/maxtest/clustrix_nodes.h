@@ -21,10 +21,10 @@
  * TODO: move functionality of install_clustrix() to MDBCI
  */
 
-#include <errno.h>
+#include <cerrno>
 #include <string>
-#include <maxtest/nodes.hh>
 #include <maxtest/mariadb_nodes.h>
+#include <maxtest/nodes.hh>
 
 #define CLUSTRIX_DEPS_YUM "yum install -y bzip2 wget screen ntp ntpdate vim htop mdadm"
 #define WGET_CLUSTRIX     "wget http://files.clustrix.com/releases/software/clustrix-9.1.4.el7.tar.bz2"

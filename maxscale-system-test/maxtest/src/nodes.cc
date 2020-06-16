@@ -1,12 +1,12 @@
 #include <maxtest/nodes.hh>
-#include <string>
+
+#include <algorithm>
 #include <cstring>
-#include <iostream>
 #include <future>
 #include <functional>
-#include <algorithm>
-#include <signal.h>
-
+#include <iostream>
+#include <string>
+#include <csignal>
 #include <maxtest/envv.hh>
 
 Nodes::Nodes(const char* pref,

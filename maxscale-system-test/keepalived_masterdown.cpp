@@ -2,11 +2,10 @@
  * @file keepalived:masterdown.cpp
  */
 
-
 #include <iostream>
-#include "testconnections.h"
-#include "keepalived_func.h"
-#include "failover_common.cpp"
+#include <maxtest/failover_common.cpp>
+#include <maxtest/keepalived_func.h>
+#include <maxtest/testconnections.h>
 
 static bool check_maxscale_passive(TestConnections& test, int node);
 static void expect_maxscale_active_passive(TestConnections& test, int active_node);

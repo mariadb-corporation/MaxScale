@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstdlib>
+
 class TestConnections;
 
 int   create_tcp_socket();

@@ -1,9 +1,9 @@
 #pragma once
 
 #include <string>
-#include <maxtest/nodes.hh>
 #include <maxtest/mariadb_func.h>
 #include <maxtest/mariadb_nodes.h>
+#include <maxtest/nodes.hh>
 
 class Maxscales: public Nodes
 {

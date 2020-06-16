@@ -11,8 +11,8 @@
  * Public License.
  */
 
-#include "mariadb_func.h"
-#include "testconnections.h"
+#include <maxtest/mariadb_func.h>
+#include <maxtest/testconnections.h>
 
 int main(int argc, char* argv[])
 {
