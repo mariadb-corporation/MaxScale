@@ -232,7 +232,6 @@ install_file(${CMAKE_SOURCE_DIR}/README.md core)
 install_file(${CMAKE_SOURCE_DIR}/LICENSE.TXT core)
 install_file(${CMAKE_SOURCE_DIR}/LICENSE25.TXT core)
 install_file(${CMAKE_SOURCE_DIR}/LICENSE-THIRDPARTY.TXT core)
-install_file(etc/lsyncd_example.conf core)
 install_manual(Documentation/maxscale.1 1 core)
 install_file(${CMAKE_SOURCE_DIR}/etc/logrotate.d/maxscale_logrotate core)
 

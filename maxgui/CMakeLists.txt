@@ -10,5 +10,5 @@ if (BUILD_GUI)
     BUILD_COMMAND npm install && buildPath=${CMAKE_CURRENT_BINARY_DIR}/ npm run build
     INSTALL_COMMAND "")
 
-  install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/gui/ DESTINATION ${MAXSCALE_SHAREDIR}/gui COMPONENT "core")
+  install_directory(${CMAKE_CURRENT_BINARY_DIR}/gui/ ${MAXSCALE_SHAREDIR}/gui core)
 endif()
