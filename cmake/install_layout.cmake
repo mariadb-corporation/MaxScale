@@ -188,3 +188,18 @@ function(install_custom_file file dest component)
   endif()
 
 endfunction()
+
+# Install a directory with files
+#
+# @param Directory to install
+# @param Destination where to install the directory
+# @param Component where this file should be included
+function(install_directory dir dest component)
+
+  list(FIND TARGET_COMPONENT ${component} BUILD_COMPONENT)
+
+  if(BUILD_COMPONENT GREATER -1 OR BUILD_ALL GREATER -1)
+    install(DIRECTORY ${dir} DESTINATION ${dest} COMPONENT "${component}")
+  endif()
+
+endfunction()
