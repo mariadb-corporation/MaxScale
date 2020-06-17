@@ -1,5 +1,6 @@
 [maxscale]
 threads=###threads###
+debug=allow-duplicate-servers
 
 [MariaDB-Monitor1A]
 type=monitor

@@ -1856,6 +1856,12 @@ int main(int argc, char** argv)
         return rc;
     }
 
+    if (!mxs::Config::get().debug.empty() && !handle_debug_args(&mxs::Config::get().debug[0]))
+    {
+        rc = MAXSCALE_INTERNALERROR;
+        return rc;
+    }
+
     if (!this_unit.redirect_output_to.empty())
     {
         if (!redirect_stdout_and_stderr(this_unit.redirect_output_to))

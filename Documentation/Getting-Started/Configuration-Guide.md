@@ -1072,6 +1072,12 @@ max_auth_errors_until_block` where `max_auth_errors_until_block` is the
 configured value of this parameter and `threads` is the number of configured
 threads.
 
+### `debug`
+
+Define debug options from the --debug command line option. Either the command
+line option or the parameter should be used, not both. The debug options are
+only for testing purposes and are not to be used in production.
+
 ### REST API Configuration
 
 The MaxScale REST API is an HTTP interface that provides JSON format data

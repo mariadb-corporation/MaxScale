@@ -88,6 +88,7 @@ constexpr char CN_ADMIN_SSL_CA_CERT[] = "admin_ssl_ca_cert";
 constexpr char CN_ADMIN_SSL_CERT[] = "admin_ssl_cert";
 constexpr char CN_ADMIN_SSL_KEY[] = "admin_ssl_key";
 constexpr char CN_AUTO[] = "auto";
+constexpr char CN_DEBUG[] = "debug";
 constexpr char CN_DUMP_LAST_STATEMENTS[] = "dump_last_statements";
 constexpr char CN_GATEWAY[] = "gateway";
 constexpr char CN_LOAD_PERSISTED_CONFIGS[] = "load_persisted_configs";
@@ -494,6 +495,12 @@ config::ParamBool Config::s_gui(
     CN_ADMIN_GUI,
     "Enable admin GUI.",
     true);
+
+config::ParamString Config::s_debug(
+    &Config::s_specification,
+    CN_DEBUG,
+    "Debug options",
+    "");
 }
 
 namespace
@@ -606,6 +613,7 @@ Config::Config()
     add_native(&load_persisted_configs, &s_load_persisted_configs);
     add_native(&log_warn_super_user, &s_log_warn_super_user);
     add_native(&gui, &s_gui);
+    add_native(&debug, &s_debug);
 
     this->qc_cache_properties.max_size = get_total_memory() * 0.15;
 
