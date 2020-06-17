@@ -97,13 +97,21 @@ FileReader::~FileReader()
 
 void FileReader::open(const std::string& file_name)
 {
-    m_read_pos.file.close();
+    auto previous_pos = std::move(m_read_pos);
     m_read_pos.file.open(file_name, std::ios_base::in | std::ios_base::binary);
     if (!m_read_pos.file.good())
     {
         MXB_THROW(BinlogReadError,
                   "Could not open " << file_name << " for reading: " << errno << ", " << mxb_strerror(errno));
     }
+
+    // Close the previous file after the new one has been opened.
+    // Ensures that PinlokiSession::purge_logs() stops when needed.
+    if (previous_pos.file.is_open())
+    {
+        previous_pos.file.close();
+    }
+
     m_read_pos.next_pos = PINLOKI_MAGIC.size();     // TODO should check that it really is PINLOKI_MAGIC
     m_read_pos.name = file_name;
 
