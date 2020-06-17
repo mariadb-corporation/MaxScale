@@ -91,8 +91,20 @@ void run(TestConnections& test, int port, Expect expect)
 const int PORT_LOCAL_CACHE = 4006;
 const int PORT_REDIS_CACHE = 4007;
 
+void install_and_start_redis()
+{
+    // This will install memcached as well, but that's ok.
+
+    string path(test_dir);
+    path += "/cache_install_and_start_storages.sh";
+
+    system(path.c_str());
+}
+
 int main(int argc, char* argv[])
 {
+    install_and_start_redis();
+
     TestConnections test(argc, argv);
 
     auto maxscales = test.maxscales;
