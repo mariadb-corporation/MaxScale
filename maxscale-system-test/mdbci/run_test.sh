@@ -84,7 +84,7 @@ then
     echo "Building MaxScale from source on maxscale_000"
 
     # Start the MaxScale machine by running the sanity check test
-    ctest --timeout 900 -V -R sanity_check || exit 1
+    ctest -V -R sanity_check || exit 1
 
     # Configure SSH options
     export sshuser=`mdbci ssh --command 'whoami' --silent $mdbci_config_name/maxscale_000 2> /dev/null | tr -d '\r'`
@@ -104,8 +104,8 @@ if [ ! -z "${named_test}" ] ; then
     eval ${named_test}
 else
     eval "arguments=(${test_set})"
-    ctest --timeout 900 -N "${arguments[@]}"
-    ctest --timeout 900 -VV "${arguments[@]}"
+    ctest -N "${arguments[@]}"
+    ctest -VV "${arguments[@]}"
 fi
 
 if [[ "$name" =~ '-gcov' ]]

@@ -1,5 +1,5 @@
 # Default test timeout
-set(TEST_TIMEOUT 3600)
+set(TEST_TIMEOUT 900)
 
 # Adds linebreaks to curly brackets in a variable.
 function(add_linebreaks source_var dest_var)

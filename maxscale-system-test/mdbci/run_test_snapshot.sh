@@ -79,7 +79,7 @@ fi
 
 
 ulimit -c unlimited
-ctest --timeout 900 $test_set -VV
+ctest $test_set -VV
 cp core.* ${logs_publish_dir}
 ${script_dir}/copy_logs.sh
 
