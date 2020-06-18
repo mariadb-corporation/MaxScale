@@ -348,6 +348,7 @@ static Keyword aKeywordTable[] = {
 #ifdef MAXSCALE
   { "MASTER",           "TK_MASTER",       ALWAYS                 },
   { "MERGE",            "TK_MERGE",        ALWAYS                 },
+  { "MODE",             "TK_MODE",         ALWAYS                 },
   { "NAMES",            "TK_NAMES",        ALWAYS                 },
 #endif
   { "NATURAL",          "TK_JOIN_KW",      ALWAYS                 },
@@ -436,6 +437,7 @@ static Keyword aKeywordTable[] = {
 #ifdef MAXSCALE
   { "SESSION",          "TK_SESSION",      ALWAYS                 },
   { "SEPARATOR",        "TK_SEPARATOR",    ALWAYS                 },
+  { "SHARE",            "TK_SHARE",        ALWAYS                 },
   { "SHOW",             "TK_SHOW",         ALWAYS                 },
   { "SLAVE",            "TK_SLAVE",        ALWAYS                 },
   { "SPATIAL",          "TK_SPATIAL",      ALWAYS                 },

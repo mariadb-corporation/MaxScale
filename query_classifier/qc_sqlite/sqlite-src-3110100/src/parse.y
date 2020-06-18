@@ -630,14 +630,14 @@ columnid(A) ::= nm(X). {
   IF IMMEDIATE INITIALLY INSTEAD
   /*KEY*/
   /*LIKE_KW*/
-  MASTER /*MATCH*/ MERGE
+  MASTER /*MATCH*/ MERGE MODE
   NAMES NEXT
   NO
   OF OFFSET OPEN
   PARTITIONS PASSWORD PREVIOUS
   QUICK
   RAISE RECURSIVE /*REINDEX*/ RELEASE /*RENAME*/ /*REPLACE*/ RESTRICT ROLLBACK ROLLUP ROW
-  SAVEPOINT SELECT_OPTIONS_KW /*SEQUENCE*/ SLAVE /*START*/ STATEMENT STATUS
+  SAVEPOINT SELECT_OPTIONS_KW /*SEQUENCE*/ SHARE SLAVE /*START*/ STATEMENT STATUS
   TABLES TEMP TEMPTABLE /*TRIGGER*/
   /*TRUNCATE*/
   // TODO: UNSIGNED is a reserved word and should not automatically convert into an identifer.
@@ -1036,7 +1036,11 @@ select(A) ::= with(W) selectnowith(X). {
 %ifdef MAXSCALE
 selectnowithsuffix(A) ::= selectnowith(X). {A = X;}
 
-selectnowithsuffix(A) ::= selectnowith(X) FOR UPDATE. {
+for_something ::= FOR UPDATE.
+for_something ::= FOR SHARE.
+for_something ::= LOCK IN SHARE MODE.
+
+selectnowithsuffix(A) ::= selectnowith(X) for_something. {
   A = X;
   maxscale_set_type_mask(QUERY_TYPE_WRITE);
 }
