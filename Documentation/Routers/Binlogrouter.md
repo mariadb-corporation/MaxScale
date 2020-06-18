@@ -1,6 +1,6 @@
 #  Binlogrouter
 
-**NOTE:** The binlog router delivered with 2.5 is completely new and is ***not**
+**NOTE:** The binlog router delivered with 2.5 is completely new and is **not**
           100% backward compatible with the binlog router delivered with earlier
           versions of MaxScale.
 
@@ -58,23 +58,23 @@ supports. The following commands are supported:
 
  * `CHANGE MASTER TO`
 
-The binlogrouter supports the same syntax as the MariaDB server but only the
-following values are allowed:
+   * The binlogrouter supports the same syntax as the MariaDB server but only the
+     following values are allowed:
 
-   * `MASTER_HOST`
-   * `MASTER_PORT`
-   * `MASTER_USER`
-   * `MASTER_PASSWORD`
-   * `MASTER_USE_GTID`
-   * `MASTER_SSL`
-   * `MASTER_SSL_CA`
-   * `MASTER_SSL_CAPATH`
-   * `MASTER_SSL_CERT`
-   * `MASTER_SSL_CRL`
-   * `MASTER_SSL_CRLPATH`
-   * `MASTER_SSL_KEY`
-   * `MASTER_SSL_CIPHER`
-   * `MASTER_SSL_VERIFY_SERVER_CERT`
+     * `MASTER_HOST`
+     * `MASTER_PORT`
+     * `MASTER_USER`
+     * `MASTER_PASSWORD`
+     * `MASTER_USE_GTID`
+     * `MASTER_SSL`
+     * `MASTER_SSL_CA`
+     * `MASTER_SSL_CAPATH`
+     * `MASTER_SSL_CERT`
+     * `MASTER_SSL_CRL`
+     * `MASTER_SSL_CRLPATH`
+     * `MASTER_SSL_KEY`
+     * `MASTER_SSL_CIPHER`
+     * `MASTER_SSL_VERIFY_SERVER_CERT`
 
  * `STOP SLAVE`
 
