@@ -625,6 +625,7 @@ columnid(A) ::= nm(X). {
   /*EACH*/ END ENGINE ENUM EXCLUSIVE /*EXPLAIN*/ EXTENDED
   FIELDS FIRST FLUSH /*FOR*/ FORMAT
   GLOBAL
+  HANDLER
   // TODO: IF is a reserved word and should not automatically convert into an identifer.
   IF IMMEDIATE INITIALLY INSTEAD
   /*KEY*/
