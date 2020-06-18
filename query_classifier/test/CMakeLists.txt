@@ -36,11 +36,12 @@ target_link_libraries(crash_qc_sqlite maxscale-common)
 
 add_test(TestQC_Crash_qcsqlite crash_qc_sqlite)
 
+add_test(TestQC_SqLite classify qc_sqlite ${CMAKE_CURRENT_SOURCE_DIR}/input.sql ${CMAKE_CURRENT_SOURCE_DIR}/expected.sql)
+
 if (BUILD_QC_MYSQLEMBEDDED)
   # TestQC_MySQLEmbedded excluded, classify is now solely used for verifying the
   # functionality of qc_sqlite.
   #add_test(TestQC_MySQLEmbedded classify qc_mysqlembedded ${CMAKE_CURRENT_SOURCE_DIR}/input.sql ${CMAKE_CURRENT_SOURCE_DIR}/expected.sql)
-  add_test(TestQC_SqLite classify qc_sqlite ${CMAKE_CURRENT_SOURCE_DIR}/input.sql ${CMAKE_CURRENT_SOURCE_DIR}/expected.sql)
 
   add_test(TestQC_CompareCreate compare -v 2 ${CMAKE_CURRENT_SOURCE_DIR}/create.test)
   add_test(TestQC_CompareDelete compare -v 2 ${CMAKE_CURRENT_SOURCE_DIR}/delete.test)
