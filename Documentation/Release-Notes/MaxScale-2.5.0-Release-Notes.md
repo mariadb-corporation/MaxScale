@@ -1,4 +1,4 @@
-# MariaDB MaxScale 2.5.0 Release Notes
+# MariaDB MaxScale 2.5.0 Release Notes -- 2020-06-18
 
 Release 2.5.0 is a Beta release.
 
