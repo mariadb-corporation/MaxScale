@@ -42,7 +42,6 @@ These tutorials are for specific use cases and module combinations.
  - [Read Write Splitting Tutorial](Tutorials/Read-Write-Splitting-Tutorial.md)
  - [Administration Tutorial](Tutorials/Administration-Tutorial.md)
  - [Avro Router Tutorial](Tutorials/Avrorouter-Tutorial.md)
- - [MaxScale Failover with Keepalived and MaxCtrl](Tutorials/MaxScale-Failover-with-Keepalived-and-MaxCtrl.md)
  - [MariaDB Monitor Failover Tutorial](Tutorials/MariaDB-Monitor-Failover.md)
  - [MariaDB MaxScale Information Schema Tutorial](Tutorials/MaxScale-Information-Schema.md)
  - [Replication Proxy with the Binlog Router Tutorial](Tutorials/Replication-Proxy-Binlog-Router-Tutorial.md)
@@ -55,7 +54,6 @@ These tutorials are for specific use cases and module combinations.
 
 Here are tutorials on monitoring and managing MariaDB MaxScale in cluster environments.
 
- - [MariaDB MaxScale HA with Lsyncd](Tutorials/MaxScale-HA-with-lsyncd.md)
  - [REST API Tutorial](Tutorials/REST-API-Tutorial.md)
 
 ## Routers
