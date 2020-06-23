@@ -111,13 +111,13 @@ public:
     const char* ip(int i = 0) const;
 
     /**
-     * @brief Generate command line to execute command on the node via ssh
-     * @param cmd result
-     * @param index index number of the node (index)
-     * @param ssh command to execute
-     * @param sudo if true the command is executed with root privelegues
+     * Generate the command line to execute a given command on the node via ssh.
+     *
+     * @param node Node index
+     * @param cmd command to execute
+     * @param sudo Execute command as root
      */
-    void generate_ssh_cmd(char* cmd, int node, const char* ssh, bool sudo);
+    std::string generate_ssh_cmd(int node, const std::string& cmd, bool sudo);
 
     /**
      * @brief executes shell command on the node using ssh
@@ -127,18 +127,16 @@ public:
      * @param pointer to variable to store process exit code
      * @return output of the command
      */
-    char* ssh_node_output_f(int node,
-                            bool sudo,
-                            int* exit_code,
-                            const char* format,
-                            ...) mxb_attribute((format(printf, 5, 6)));
-    char* ssh_node_output(int node, const char* ssh, bool sudo, int* exit_code);
+    char* ssh_node_output_f(int node, bool sudo, int* exit_code, const char* format, ...)
+    mxb_attribute((format(printf, 5, 6)));
+
+    char* ssh_node_output(int node, const std::string& cmd, bool sudo, int* exit_code_out = nullptr);
 
     // Simplified C++ version
     std::pair<int, std::string> ssh_output(std::string ssh, int node = 0, bool sudo = true)
     {
         int rc;
-        char* out = ssh_node_output(node, ssh.c_str(), sudo, &rc);
+        char* out = ssh_node_output(node, ssh, sudo, &rc);
         std::string rval(out);
         mxb::rtrim(rval);
         free(out);
