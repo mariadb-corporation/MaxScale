@@ -4,7 +4,7 @@
  * - check SELECT from backend
  */
 
-#include "testconnections.h"
+#include <maxtest/testconnections.h>
 
 void check_val(MYSQL* conn, TestConnections& test)
 {

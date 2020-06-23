@@ -3,7 +3,7 @@
  *
  * https://jira.mariadb.org/browse/MXS-1549
  */
-#include "testconnections.h"
+#include <maxtest/testconnections.h>
 #include <functional>
 #include <iostream>
 #include <vector>

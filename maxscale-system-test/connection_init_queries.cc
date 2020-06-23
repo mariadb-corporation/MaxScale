@@ -1,7 +1,7 @@
-#include "testconnections.h"
 #include <iostream>
 #include <string>
 #include <maxbase/format.hh>
+#include <maxtest/testconnections.h>
 
 using std::string;
 using std::cout;

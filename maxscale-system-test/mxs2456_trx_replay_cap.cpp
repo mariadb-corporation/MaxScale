@@ -3,7 +3,7 @@
  * https://jira.mariadb.org/browse/MXS-2456
  */
 
-#include "testconnections.h"
+#include <maxtest/testconnections.h>
 
 #define EXPECT(a) test.expect(a, "%s", "Assertion failed: " #a)
 

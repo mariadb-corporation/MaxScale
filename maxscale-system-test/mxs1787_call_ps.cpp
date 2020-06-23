@@ -2,7 +2,7 @@
  * MXS-1787: Crash with PS: CALL p1((SELECT f1()), ?)
  */
 
-#include "testconnections.h"
+#include <maxtest/testconnections.h>
 
 using namespace std;
 

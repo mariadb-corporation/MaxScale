@@ -11,7 +11,7 @@
  * Public License.
  */
 
-#include "testconnections.h"
+#include <maxtest/testconnections.h>
 #include "fail_switch_rejoin_common.cpp"
 #include <iostream>
 #include <string>

@@ -11,7 +11,7 @@
  * Public License.
  */
 
-#include "testconnections.h"
+#include <maxtest/testconnections.h>
 #include <algorithm>
 #include <iostream>
 #include <iterator>

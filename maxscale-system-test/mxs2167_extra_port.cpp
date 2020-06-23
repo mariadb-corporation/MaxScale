@@ -2,7 +2,7 @@
  * MXS-2167: Monitors should be able to use extra_port
  */
 
-#include "testconnections.h"
+#include <maxtest/testconnections.h>
 #include <iostream>
 
 using std::cout;

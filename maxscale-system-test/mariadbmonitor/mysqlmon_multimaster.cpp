@@ -21,9 +21,8 @@
 #include <iostream>
 #include <string>
 #include <set>
-#include "testconnections.h"
-
-#include "sql_t1.h"
+#include <maxtest/testconnections.h>
+#include <maxtest/sql_t1.h>
 #include <jansson.h>
 #include <maxbase/string.hh>
 

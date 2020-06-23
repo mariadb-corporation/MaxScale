@@ -2,7 +2,7 @@
  * @file cdc_connect.cpp Test the CDC protocol
  */
 
-#include "testconnections.h"
+#include <maxtest/testconnections.h>
 #include <cdc_connector.h>
 #include "cdc_result.h"
 #include <iostream>

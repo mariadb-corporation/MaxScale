@@ -1,7 +1,7 @@
 /**
  * Test monitoring and failover with ignore_external_masters=true
  */
-#include "testconnections.h"
+#include <maxtest/testconnections.h>
 #include "fail_switch_rejoin_common.cpp"
 #include <atomic>
 #include <thread>

@@ -11,7 +11,7 @@
  * to lowest priority.
  */
 
-#include "testconnections.h"
+#include <maxtest/testconnections.h>
 
 void check_server_id(TestConnections& test, const std::string& id)
 {

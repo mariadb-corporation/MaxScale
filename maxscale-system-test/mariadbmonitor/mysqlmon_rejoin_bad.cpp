@@ -14,7 +14,7 @@
 #include <iostream>
 #include <vector>
 
-#include "testconnections.h"
+#include <maxtest/testconnections.h>
 #include "fail_switch_rejoin_common.cpp"
 
 using std::string;

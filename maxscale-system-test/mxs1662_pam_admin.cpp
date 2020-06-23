@@ -2,7 +2,7 @@
  * MXS-1662: PAM authenticator for admin users
  */
 
-#include "testconnections.h"
+#include <maxtest/testconnections.h>
 
 int main(int argc, char** argv)
 {

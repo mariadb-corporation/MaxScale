@@ -4,7 +4,7 @@
  * This test is only enabled when the backend version is 10.3
  */
 
-#include "testconnections.h"
+#include <maxtest/testconnections.h>
 #include <vector>
 
 int main(int argc, char** argv)

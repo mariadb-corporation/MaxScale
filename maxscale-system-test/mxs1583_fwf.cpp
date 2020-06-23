@@ -7,8 +7,8 @@
 
 #include <iostream>
 #include <unistd.h>
-#include "testconnections.h"
-#include "fw_copy_rules.h"
+#include <maxtest/testconnections.h>
+#include <maxtest/fw_copy_rules.h>
 
 int main(int argc, char** argv)
 {

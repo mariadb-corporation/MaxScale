@@ -4,7 +4,7 @@
  * https://jira.mariadb.org/browse/MXS-1824
  */
 
-#include "testconnections.h"
+#include <maxtest/testconnections.h>
 
 void double_cursor(TestConnections& test, MYSQL* conn)
 {

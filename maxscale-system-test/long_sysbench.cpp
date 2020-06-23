@@ -8,7 +8,7 @@
  */
 
 
-#include "testconnections.h"
+#include <maxtest/testconnections.h>
 #include "sysbench_commands.h"
 
 int main(int argc, char* argv[])

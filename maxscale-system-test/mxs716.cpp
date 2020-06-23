@@ -9,8 +9,8 @@
 
 #include <iostream>
 #include <unistd.h>
-#include "testconnections.h"
-#include "sql_t1.h"
+#include <maxtest/testconnections.h>
+#include <maxtest/sql_t1.h>
 
 void run_test(TestConnections* Test, const char* database)
 {

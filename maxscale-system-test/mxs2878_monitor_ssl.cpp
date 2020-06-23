@@ -4,7 +4,7 @@
  * MXS-2896: Server wrongly in Running state after failure to connect
  */
 
-#include "testconnections.h"
+#include <maxtest/testconnections.h>
 #include <sstream>
 
 std::string join(StringSet st)

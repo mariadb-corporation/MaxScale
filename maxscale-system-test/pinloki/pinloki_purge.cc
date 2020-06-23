@@ -1,4 +1,4 @@
-#include <testconnections.h>
+#include <maxtest/testconnections.h>
 #include "test_base.hh"
 
 class PurgeTest : public TestCase

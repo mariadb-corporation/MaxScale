@@ -2,7 +2,7 @@
  * Test that service-to-service routing can be done at runtime and that the persisted configuration is valid
  */
 
-#include "testconnections.h"
+#include <maxtest/testconnections.h>
 
 int main(int argc, char* argv[])
 {

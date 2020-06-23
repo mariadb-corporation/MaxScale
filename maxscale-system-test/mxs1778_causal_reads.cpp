@@ -4,7 +4,7 @@
  * https://jira.mariadb.org/browse/MXS-1778
  */
 
-#include "testconnections.h"
+#include <maxtest/testconnections.h>
 
 static std::string master;
 

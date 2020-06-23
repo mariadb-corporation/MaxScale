@@ -1,7 +1,7 @@
 /**
  * Test smartrouter routing to readwritesplit services
  */
-#include "testconnections.h"
+#include <maxtest/testconnections.h>
 #include <sstream>
 
 int main(int argc, char* argv[])

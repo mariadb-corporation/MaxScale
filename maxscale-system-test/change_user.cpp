@@ -12,7 +12,7 @@
  * - try INSERT again expecting success (user should not be changed)
  */
 
-#include "testconnections.h"
+#include <maxtest/testconnections.h>
 
 void run_test(TestConnections& test, MYSQL* conn)
 {

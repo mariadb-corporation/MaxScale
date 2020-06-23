@@ -2,7 +2,7 @@
  * MXS-1160: LOAD DATA LOCAL INFILE with schemarouter
  */
 
-#include "testconnections.h"
+#include <maxtest/testconnections.h>
 
 #include <fstream>
 #include <sstream>

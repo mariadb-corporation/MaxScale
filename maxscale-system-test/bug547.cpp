@@ -18,7 +18,7 @@
 // also relates to bug594
 // all slaves in MaxScale config have wrong IP
 
-#include "testconnections.h"
+#include <maxtest/testconnections.h>
 
 int main(int argc, char* argv[])
 {

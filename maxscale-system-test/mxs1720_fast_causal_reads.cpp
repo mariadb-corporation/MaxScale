@@ -4,7 +4,7 @@
  * https://jira.mariadb.org/browse/MXS-1720
  */
 
-#include "testconnections.h"
+#include <maxtest/testconnections.h>
 
 void basic_test(TestConnections& test)
 {

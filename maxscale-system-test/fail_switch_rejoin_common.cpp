@@ -1,4 +1,4 @@
-#include "testconnections.h"
+#include <maxtest/testconnections.h>
 
 int inserts = 0;
 bool interactive = false;

@@ -4,7 +4,7 @@
  * - 20 threads are opening and immediatelly closing connection in the loop
  */
 
-#include "testconnections.h"
+#include <maxtest/testconnections.h>
 
 #include <atomic>
 #include <vector>

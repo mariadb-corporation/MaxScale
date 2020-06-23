@@ -7,7 +7,7 @@
  * https://mariadb.com/kb/en/library/com_stmt_execute/#statement-id
  */
 
-#include "testconnections.h"
+#include <maxtest/testconnections.h>
 
 int main(int argc, char** argv)
 {

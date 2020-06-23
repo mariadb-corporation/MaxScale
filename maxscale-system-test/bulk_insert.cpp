@@ -5,7 +5,7 @@
  * https://mariadb.com/kb/en/mariadb/bulk-insert-column-wise-binding/
  */
 
-#include "testconnections.h"
+#include <maxtest/testconnections.h>
 
 static int show_mysql_error(MYSQL* mysql)
 {

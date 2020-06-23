@@ -12,7 +12,7 @@
 #include <unistd.h>
 #include <cstdlib>
 #include <string>
-#include "testconnections.h"
+#include <maxtest/testconnections.h>
 
 using namespace std;
 

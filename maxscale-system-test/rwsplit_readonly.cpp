@@ -10,7 +10,7 @@
 #include <unistd.h>
 #include <cstdlib>
 #include <string>
-#include "testconnections.h"
+#include <maxtest/testconnections.h>
 
 void test_all_ok(TestConnections* Test)
 {

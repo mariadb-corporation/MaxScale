@@ -14,7 +14,7 @@
 #include <iostream>
 #include <string>
 #include <vector>
-#include "testconnections.h"
+#include <maxtest/testconnections.h>
 
 using namespace std;
 

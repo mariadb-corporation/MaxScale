@@ -6,7 +6,7 @@
 
 
 #include <iostream>
-#include "testconnections.h"
+#include <maxtest/testconnections.h>
 
 #define SERVER1 0
 #define SERVER2 1

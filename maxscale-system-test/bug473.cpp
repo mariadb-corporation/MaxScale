@@ -50,7 +50,7 @@
 
 #include <iostream>
 #include <unistd.h>
-#include "testconnections.h"
+#include <maxtest/testconnections.h>
 
 using namespace std;
 

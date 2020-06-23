@@ -10,8 +10,8 @@
 #include <iostream>
 #include <unistd.h>
 #include <linux/limits.h>
-#include "testconnections.h"
-#include "fw_copy_rules.h"
+#include <maxtest/testconnections.h>
+#include <maxtest/fw_copy_rules.h>
 
 const char* temp_rules = "rules_tmp.txt";
 

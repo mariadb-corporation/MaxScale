@@ -2,7 +2,7 @@
  * Test false server state changes when manually clearing master bit
  */
 
-#include "testconnections.h"
+#include <maxtest/testconnections.h>
 
 int main(int argc, char* argv[])
 {

@@ -18,7 +18,7 @@
 #include <thread>
 #include <vector>
 #include <random>
-#include "testconnections.h"
+#include <maxtest/testconnections.h>
 #include "fail_switch_rejoin_common.cpp"
 
 using namespace std;
