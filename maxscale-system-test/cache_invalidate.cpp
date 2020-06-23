@@ -91,8 +91,12 @@ void run(TestConnections& test, int port, Expect expect)
 const int PORT_LOCAL_CACHE = 4006;
 const int PORT_REDIS_CACHE = 4007;
 
-void install_and_start_redis()
+void install_and_start_redis(Maxscales& maxscales)
 {
+    setenv("maxscale_000_keyfile", maxscales.sshkey[0], 0);
+    setenv("maxscale_000_whoami", maxscales.user_name, 0);
+    setenv("maxscale_000_network", maxscales.IP[0], 0);
+
     // This will install memcached as well, but that's ok.
 
     string path(test_dir);
@@ -103,11 +107,14 @@ void install_and_start_redis()
 
 int main(int argc, char* argv[])
 {
-    install_and_start_redis();
-
+    TestConnections::skip_maxscale_start(true);
     TestConnections test(argc, argv);
 
     auto maxscales = test.maxscales;
+
+    install_and_start_redis(*maxscales);
+
+    maxscales->start();
 
     if (maxscales->connect_rwsplit() == 0)
     {
