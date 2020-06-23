@@ -1,19 +1,19 @@
 #pragma once
 
-#include <maxtest/mariadb_nodes.h>
-#include <maxtest/clustrix_nodes.h>
-#include <maxtest/maxscales.hh>
-#include <maxtest/test_dir.hh>
-#include <fcntl.h>
-#include <pthread.h>
-#include <sys/time.h>
 #include <set>
 #include <string>
 #include <vector>
 #include <thread>
 #include <functional>
+#include <fcntl.h>
+#include <pthread.h>
+#include <sys/time.h>
 
 #include <maxbase/ccdefs.hh>
+#include <maxtest/clustrix_nodes.h>
+#include <maxtest/mariadb_nodes.h>
+#include <maxtest/maxscales.hh>
+#include <maxtest/test_dir.hh>
 
 typedef std::set<std::string> StringSet;
 

@@ -1,5 +1,5 @@
+#include <maxtest/rds_vpc.h>
 #include <maxtest/execute_cmd.hh>
-#include "rds_vpc.h"
 
 RDS::RDS(char* cluster)
 {

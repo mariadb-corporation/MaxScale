@@ -6,12 +6,10 @@
  * - check that data in avro file is correct
  */
 
-
-#include "testconnections.h"
-#include "sql_t1.h"
-#include "maxinfo_func.h"
-
 #include <sstream>
+#include <maxtest/maxinfo_func.h>
+#include <maxtest/sql_t1.h>
+#include <maxtest/testconnections.h>
 
 int main(int argc, char* argv[])
 {

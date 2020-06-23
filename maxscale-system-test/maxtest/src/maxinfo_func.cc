@@ -1,19 +1,17 @@
+#include <maxtest/maxinfo_func.h>
+
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 #include <iostream>
 #include <unistd.h>
-#include <maxtest/testconnections.h>
-
-#include <stdio.h>
-#include <sys/socket.h>
 #include <arpa/inet.h>
-#include <stdlib.h>
-#include <netdb.h>
-#include <string.h>
-
-#include <openssl/sha.h>
-#include "maxinfo_func.h"
-#include <sys/epoll.h>
-#include <jansson.h>
 #include <fcntl.h>
+#include <netdb.h>
+#include <sys/socket.h>
+#include <jansson.h>
+#include <openssl/sha.h>
+#include <maxtest/testconnections.h>
 
 using namespace std;
 

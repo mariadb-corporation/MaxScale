@@ -1,12 +1,10 @@
-#include "tcp_connection.hh"
+#include <maxtest/tcp_connection.hh>
 
-#include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <unistd.h>
 #include <string.h>
 #include <netdb.h>
-
 
 namespace
 {

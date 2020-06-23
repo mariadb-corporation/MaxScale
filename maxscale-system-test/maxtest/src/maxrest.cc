@@ -11,7 +11,7 @@
  * Public License.
  */
 
-#include "maxrest.hh"
+#include <maxtest/maxrest.hh>
 
 using namespace std;
 

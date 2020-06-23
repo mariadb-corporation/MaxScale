@@ -6,23 +6,21 @@
  * - read data from avro listener, comapre it with inserted data
  */
 
+#include <atomic>
+#include <chrono>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 #include <iostream>
+#include <thread>
 #include <unistd.h>
-#include "testconnections.h"
-
-#include <stdio.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
-#include <stdlib.h>
-#include <netdb.h>
-#include <string.h>
-#include <openssl/sha.h>
-#include "maxinfo_func.h"
-#include "sql_t1.h"
 #include <sys/epoll.h>
-#include <atomic>
-#include <thread>
-#include <chrono>
+
+#include <maxtest/maxinfo_func.h>
+#include <maxtest/sql_t1.h>
+#include <maxtest/testconnections.h>
 
 using namespace std;
 char reg_str[] = "REGISTER UUID=XXX-YYY_YYY, TYPE=JSON";

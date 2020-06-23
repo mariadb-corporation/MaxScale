@@ -13,8 +13,8 @@
 
 #include <iostream>
 #include <map>
-#include "testconnections.h"
-#include "maxrest.hh"
+#include <maxtest/maxrest.hh>
+#include <maxtest/testconnections.h>
 
 using namespace std;
 

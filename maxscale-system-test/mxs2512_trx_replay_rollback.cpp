@@ -11,11 +11,11 @@
  * Public License.
  */
 
+#include <iostream>
 #include <maxbase/assert.h>
 #include <maxbase/semaphore.hh>
-#include "mariadb_func.h"
-#include "testconnections.h"
-#include <iostream>
+#include <maxtest/mariadb_func.h>
+#include <maxtest/testconnections.h>
 
 using namespace std;
 
