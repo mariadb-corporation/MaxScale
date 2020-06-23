@@ -3,15 +3,15 @@
  * Use getsockname and a udp connection
  */
 
-#include <stdio.h>      // printf
-#include <string.h>     // memset
-#include <errno.h>      // errno
-#include <sys/socket.h> // socket
-#include <netinet/in.h> // sockaddr_in
-#include <arpa/inet.h>  // getsockname
-#include <unistd.h>     // close
+#include <maxtest/get_my_ip.h>
 
-#include "get_my_ip.h"
+#include <cstdio>      // printf
+#include <cstring>     // memset
+#include <cerrno>      // errno
+#include <unistd.h>     // close
+#include <arpa/inet.h>  // getsockname
+#include <netinet/in.h> // sockaddr_in
+#include <sys/socket.h> // socket
 
 int get_my_ip(char* remote_ip, char* my_ip)
 {

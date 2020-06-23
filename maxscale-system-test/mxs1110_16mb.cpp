@@ -4,10 +4,9 @@
  * - read data via RWsplit, ReadConn master, ReadConn slave, compare with inserted data
  */
 
-
-#include "testconnections.h"
-#include "blob_test.h"
-#include "fw_copy_rules.h"
+#include <maxtest/blob_test.h>
+#include <maxtest/fw_copy_rules.h>
+#include <maxtest/testconnections.h>
 
 int main(int argc, char* argv[])
 {
