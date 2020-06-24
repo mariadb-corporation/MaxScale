@@ -27,12 +27,11 @@ int main(int argc, char** argv)
     print_gtids(test);
 
     int node0_id = -1;
-    int ec = -1;
 
     // Part 1
     node0_id = prepare_test_1(test);
 
-    test.maxscales->ssh_node_output(0, FAILOVER_CMD, true, &ec);
+    test.maxscales->ssh_output(FAILOVER_CMD);
     test.maxscales->wait_for_monitor();
 
     check_test_1(test, node0_id);
@@ -44,7 +43,7 @@ int main(int argc, char** argv)
     // Part 2
     prepare_test_2(test);
 
-    test.maxscales->ssh_node_output(0, FAILOVER_CMD, true, &ec);
+    test.maxscales->ssh_output(FAILOVER_CMD);
     test.maxscales->wait_for_monitor();
 
     check_test_2(test);
@@ -56,7 +55,7 @@ int main(int argc, char** argv)
     // Part 3
     prepare_test_3(test);
 
-    test.maxscales->ssh_node_output(0, FAILOVER_CMD, true, &ec);
+    test.maxscales->ssh_output(FAILOVER_CMD);
     test.maxscales->wait_for_monitor();
 
     check_test_3(test);

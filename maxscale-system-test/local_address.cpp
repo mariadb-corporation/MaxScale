@@ -78,10 +78,8 @@ string extract_ip(string s)
 void get_maxscale_ips(TestConnections& test, vector<string>* pIps)
 {
     static const char COMMAND[] = "export PATH=$PATH:/sbin:/usr/sbin; ip addr|fgrep inet|fgrep -v ::";
-    int exit_code;
-    string output(test.maxscales->ssh_node_output(0, COMMAND, false, &exit_code));
-
-    to_collection(output, "\n", pIps);
+    auto res = test.maxscales->ssh_output(COMMAND, 0, false);
+    to_collection(res.output, "\n", pIps);
     transform(pIps->begin(), pIps->end(), pIps->begin(), extract_ip);
 
     // Remove 127.0.0.1 if it is present.
@@ -216,12 +214,10 @@ bool can_connect_to_maxscale(const char* zHost, int port, const char* zUser, con
 
 string get_local_ip(TestConnections& test)
 {
-    int exit_code;
-    string output(test.maxscales->ssh_node_output(0,
-                                                  "nslookup maxscale|fgrep Server:|sed s/Server://",
-                                                  false,
-                                                  &exit_code));
-    return trim(output);
+    auto res = test.maxscales->ssh_output("nslookup maxscale|fgrep Server:|sed s/Server://",
+                                          0, false);
+
+    return trim(res.output);
 }
 
 string get_gateway_ip(TestConnections& test)

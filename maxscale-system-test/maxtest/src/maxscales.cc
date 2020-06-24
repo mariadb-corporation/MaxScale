@@ -272,11 +272,10 @@ int Maxscales::stop_maxscale(int m)
 
 long unsigned Maxscales::get_maxscale_memsize(int m)
 {
-    int exit_code;
-    char* ps_out = ssh_node_output(m, "ps -e -o pid,vsz,comm= | grep maxscale", false, &exit_code);
+    auto res = ssh_output("ps -e -o pid,vsz,comm= | grep maxscale", m, false);
     long unsigned mem = 0;
     pid_t pid;
-    sscanf(ps_out, "%d %lu", &pid, &mem);
+    sscanf(res.output.c_str(), "%d %lu", &pid, &mem);
     return mem;
 }
 

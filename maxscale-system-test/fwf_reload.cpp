@@ -99,11 +99,9 @@ int main(int argc, char* argv[])
     Test->tprintf("Trying rules with syntax error\n");
     copy_rules(Test, (char*) "rules_syntax_error", rules_dir);
 
-    char* output = Test->maxscales->ssh_node_output(0,
-                                                    "maxctrl call command dbfwfilter rules/reload Database-Firewall",
-                                                    true,
-                                                    &exit_code);
-    Test->add_result(strcasestr(output, "Failed") == NULL, "Reloading rules should fail with syntax errors");
+    auto res = Test->maxscales->ssh_output("maxctrl call command dbfwfilter rules/reload Database-Firewall");
+    Test->add_result(strcasestr(res.output.c_str(), "Failed") == nullptr,
+                     "Reloading rules should fail with syntax errors");
 
     Test->check_maxscale_processes(0, 1);
     int rval = Test->global_result;

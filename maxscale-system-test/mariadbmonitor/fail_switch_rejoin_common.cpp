@@ -20,16 +20,15 @@ void get_output(TestConnections& test)
     {
         test.tprintf("MaxScale output:");
     }
-    char* str = test.maxscales->ssh_node_output(0,
-                                                "cat /var/log/maxscale/maxscale.log | sudo tee -a /var/log/maxscale/maxscale_backup.log && "
-                                                "sudo truncate -s 0 /var/log/maxscale/maxscale.log",
-                                                true,
-                                                &ec);
+
+    std::string cmd = "cat /var/log/maxscale/maxscale.log | "
+                      "sudo tee -a /var/log/maxscale/maxscale_backup.log "
+                      "&& sudo truncate -s 0 /var/log/maxscale/maxscale.log";
+    auto res = test.maxscales->ssh_output(cmd);
     if (test.verbose)
     {
-        test.tprintf("%s", str);
+        test.tprintf("%s", res.output.c_str());
     }
-    free(str);
 }
 
 void check(TestConnections& test)
