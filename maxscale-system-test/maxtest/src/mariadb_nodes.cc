@@ -379,6 +379,22 @@ void Mariadb_nodes::create_users(int node)
                user_name, password, access_homedir[0], socket_cmd[0]);
 }
 
+int Mariadb_nodes::create_users()
+{
+    for (int i = 0; i < N; i++)
+    {
+        if (start_node(i, (char*) ""))
+        {
+            printf("Start of node %d failed\n", i);
+            return 1;
+        }
+
+        create_users(i);
+    }
+
+    return 0;
+}
+
 int Mariadb_nodes::start_replication()
 {
     int local_result = 0;

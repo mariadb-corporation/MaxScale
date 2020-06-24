@@ -241,6 +241,13 @@ public:
     void create_users(int node);
 
     /**
+     * Create the default users used by all tests on all nodes.
+     *
+     * @return 0 in case of success.
+     */
+    int create_users();
+
+    /**
      * @brif BlockNode setup firewall on a backend node to block MariaDB port
      * @param node Index of node to block
      * @return 0 in case of success
