@@ -285,11 +285,11 @@ StringSet Maxscales::get_server_status(const std::string& name, int m)
     StringSet rval;
     auto res = maxctrl("api get servers/" + name + " data.attributes.state", m);
 
-    if (res.first == 0 && res.second.length() > 2)
+    if (res.rc == 0 && res.output.length() > 2)
     {
-        auto status = res.second.substr(1, res.second.length() - 2);
+        auto status = res.output.substr(1, res.output.length() - 2);
 
-        for (auto a : mxb::strtok(status, ","))
+        for (const auto& a : mxb::strtok(status, ","))
         {
             rval.insert(mxb::trimmed_copy(a));
         }

@@ -38,10 +38,10 @@ map<int,int> get_thread_connections(TestConnections& test)
 {
     map<int,int> rv;
     auto result = test.maxctrl("api get maxscale/threads");
-    mxb_assert(result.first == 0);
+    mxb_assert(result.rc == 0);
 
     json_error_t error;
-    json_t* pJson = json_loads(result.second.c_str(), 0, &error);
+    json_t* pJson = json_loads(result.output.c_str(), 0, &error);
 
     json_t* pDatas = json_object_get(pJson, "data");
 
@@ -77,9 +77,9 @@ void move_connections_to_thread(TestConnections& test, int tid, const map<int,in
 
             cout << curl << endl;
 
-            auto result = test.maxscales->ssh_output(curl.c_str());
+            auto result = test.maxscales->ssh_output(curl);
 
-            cout << result.second << endl;
+            cout << result.output << endl;
         }
     }
 }

@@ -30,13 +30,13 @@ public:
         }
 
         auto index = test.maxscales->ssh_output("cat /var/lib/maxscale/binlogs/binlog.index");
-        test.expect(index.first == 0, "binlog.index should exist");
-        test.expect(!index.second.empty(), "binlog.index should not be empty");
+        test.expect(index.rc == 0, "binlog.index should exist");
+        test.expect(!index.output.empty(), "binlog.index should not be empty");
 
-        for (const auto& a : mxb::strtok(index.second, "\n"))
+        for (const auto& a : mxb::strtok(index.output, "\n"))
         {
             auto file = test.maxscales->ssh_output("test -f " + a);
-            test.expect(file.first == 0, "File '%s' does not exist.", a.c_str());
+            test.expect(file.rc == 0, "File '%s' does not exist.", a.c_str());
         }
     }
 

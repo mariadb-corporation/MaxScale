@@ -123,9 +123,9 @@ bool stop_server(TestConnections& test, const std::string& name, int node, int t
     Clustrix_nodes* pClustrix = test.clustrix;
 
     auto rv = pClustrix->ssh_output("service clustrix stop", node, true);
-    test.expect(rv.first == 0, "Could not stop Clustrix on node %d.", node);
+    test.expect(rv.rc == 0, "Could not stop Clustrix on node %d.", node);
 
-    if (rv.first == 0)
+    if (rv.rc == 0)
     {
         if (wait_for_state(test, name, timeout, "Down"))
         {
@@ -144,9 +144,9 @@ bool start_server(TestConnections& test, const std::string& name, int node, int 
     Clustrix_nodes* pClustrix = test.clustrix;
 
     auto rv = pClustrix->ssh_output("service clustrix start", node, true);
-    test.expect(rv.first == 0, "Could not start Clustrix on node %d.", node);
+    test.expect(rv.rc == 0, "Could not start Clustrix on node %d.", node);
 
-    if (rv.first == 0)
+    if (rv.rc == 0)
     {
         if (wait_for_state(test, name, timeout, "Master"))
         {

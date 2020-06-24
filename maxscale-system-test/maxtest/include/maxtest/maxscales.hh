@@ -303,7 +303,7 @@ public:
      *
      * @return The exit code and output of MaxCtrl
      */
-    std::pair<int, std::string> maxctrl(std::string cmd, int m = 0, bool sudo = true)
+    SshResult maxctrl(const std::string& cmd, int m = 0, bool sudo = true)
     {
         return ssh_output("maxctrl " + cmd, m, sudo);
     }

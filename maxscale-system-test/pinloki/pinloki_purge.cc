@@ -26,10 +26,10 @@ public:
                     maxscale.pretty_rows("SHOW BINARY LOGS").c_str());
 
         auto index = test.maxscales->ssh_output("cat /var/lib/maxscale/binlogs/binlog.index");
-        test.expect(index.first == 0, "binlog.index should exist");
-        test.expect(!index.second.empty(), "binlog.index should not be empty");
+        test.expect(index.rc == 0, "binlog.index should exist");
+        test.expect(!index.output.empty(), "binlog.index should not be empty");
 
-        auto files = mxb::strtok(index.second, "\n");
+        auto files = mxb::strtok(index.output, "\n");
         test.expect(files.size() == 1, "Only the latest binlog should be listed");
 
         auto pos = files[0].find_last_of('/');
@@ -41,7 +41,7 @@ public:
         for (const auto& a : old_logs)
         {
             auto file = test.maxscales->ssh_output("test -f " + filepath + "/" + a[0]);
-            test.expect(file.first != 0, "File '%s' should not exist.", a[0].c_str());
+            test.expect(file.rc != 0, "File '%s' should not exist.", a[0].c_str());
         }
     }
 };

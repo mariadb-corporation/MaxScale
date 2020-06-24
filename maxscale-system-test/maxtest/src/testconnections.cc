@@ -949,7 +949,7 @@ void TestConnections::copy_one_mariadb_log(Mariadb_nodes* nrepl, int i, std::str
 
     for (auto cmd : log_retrive_commands)
     {
-        auto output = nrepl->ssh_output(cmd, i).second;
+        auto output = nrepl->ssh_output(cmd, i).output;
 
         if (!output.empty())
         {
@@ -2147,7 +2147,7 @@ void TestConnections::check_current_operations(int m, int value)
                            + std::to_string(i + 1)
                            + " data.attributes.statistics.active_operations", m);
 
-        expect(std::stoi(res.second) == value,
+        expect(std::stoi(res.output) == value,
                "Current no. of operations is not %d for server%d", value, i + 1);
     }
 }
@@ -2160,7 +2160,7 @@ void TestConnections::check_current_connections(int m, int value)
                            + std::to_string(i + 1)
                            + " data.attributes.statistics.connections", m);
 
-        expect(std::stoi(res.second) == value,
+        expect(std::stoi(res.output) == value,
                "Current no. of conns is not %d for server%d", value, i + 1);
     }
 }
@@ -2170,9 +2170,9 @@ void TestConnections::check_current_persistent_connections(int m, const std::str
     auto res = maxctrl("api get servers/" + name
                        + " data.attributes.statistics.persistent_connections", m);
 
-    expect(atoi(res.second.c_str()) == value,
+    expect(atoi(res.output.c_str()) == value,
            "Current no. of persistent conns is '%s' not '%d' for %s",
-           res.second.c_str(), value, name.c_str());
+           res.output.c_str(), value, name.c_str());
 }
 
 int TestConnections::take_snapshot(char* snapshot_name)

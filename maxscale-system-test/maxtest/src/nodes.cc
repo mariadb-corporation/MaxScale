@@ -488,3 +488,16 @@ int Nodes::stop_vm(int node)
 {
     return (system(stop_vm_command[node]));
 }
+
+Nodes::SshResult Nodes::ssh_output(const std::string& ssh, int node, bool sudo)
+{
+    Nodes::SshResult rval;
+    char* out = ssh_node_output(node, ssh, sudo, &rval.rc);
+    if (out)
+    {
+        rval.output = out;
+        free(out);
+        mxb::rtrim(rval.output);
+    }
+    return rval;
+}

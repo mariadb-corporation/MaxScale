@@ -510,20 +510,20 @@ public:
      *
      * @return The exit code and output of MaxCtrl
      */
-    std::pair<int, std::string> maxctrl(std::string cmd, int m = 0, bool sudo = true)
+    Nodes::SshResult maxctrl(const std::string& cmd, int m = 0, bool sudo = true)
     {
         return maxscales->maxctrl(cmd, m, sudo);
     }
 
-    void check_maxctrl(std::string cmd, int m = 0, bool sudo = true)
+    void check_maxctrl(const std::string& cmd, int m = 0, bool sudo = true)
     {
         auto result = maxctrl(cmd, m, sudo);
-        expect(result.first == 0, "Command '%s' should work: %s", cmd.c_str(), result.second.c_str());
+        expect(result.rc == 0, "Command '%s' should work: %s", cmd.c_str(), result.output.c_str());
     }
 
-    void print_maxctrl(std::string cmd, int m = 0, bool sudo = true)
+    void print_maxctrl(const std::string& cmd, int m = 0, bool sudo = true)
     {
-        tprintf("\n%s", maxctrl(cmd, m, sudo).second.c_str());
+        tprintf("\n%s", maxctrl(cmd, m, sudo).output.c_str());
     }
 
     void check_current_operations(int m, int value);

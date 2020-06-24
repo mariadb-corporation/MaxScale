@@ -21,7 +21,7 @@ int main(int argc, char* argv[])
 
     test.maxscales->wait_for_monitor();
 
-    auto output = mxb::strtok(test.maxctrl("list servers").second, "\n");
+    auto output = mxb::strtok(test.maxctrl("list servers").output, "\n");
     int n_slaves = std::count_if(output.begin(), output.end(), [](const std::string& line) {
                                      return line.find("Slave") != std::string::npos;
                                  });

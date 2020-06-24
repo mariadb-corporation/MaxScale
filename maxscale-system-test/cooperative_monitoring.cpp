@@ -158,9 +158,9 @@ bool monitor_is_primary(TestConnections& test, const MonitorInfo& mon_info)
     auto res = test.maxctrl(cmd, maxscale_ind);
     // If the MaxCtrl-command failed, assume it's because the target MaxScale machine is down.
     bool rval = false;
-    if (res.first == 0)
+    if (res.rc == 0)
     {
-        string& output = res.second;
+        string& output = res.output;
         if (output == "true")
         {
             cout << mon_info.name << " from MaxScale " << maxscale_ind << " is the primary monitor.\n";
@@ -183,7 +183,7 @@ bool release_monitor_locks(TestConnections& test, const MonitorInfo& mon_info)
 {
     string cmd = "call command mariadbmon release-locks " + mon_info.name;
     auto res = test.maxctrl(cmd, mon_info.maxscale_ind);
-    bool success = res.first == 0 && res.second == "OK";
+    bool success = res.rc == 0 && res.output == "OK";
     test.expect(success, "MaxCtrl command failed.");
     return success;
 }

@@ -18,12 +18,12 @@ int main(int argc, char** argv)
             test.set_timeout(60);
             auto rv = test.maxscales->ssh_output("maxctrl " + cmd);
 
-            if (rv.first != 0 && print)
+            if (rv.rc != 0 && print)
             {
-                cout << "MaxCtrl: " << rv.second << endl;
+                cout << "MaxCtrl: " << rv.output << endl;
             }
 
-            return rv.first == 0;
+            return rv.rc == 0;
         };
 
     Connection c1 = test.maxscales->rwsplit();

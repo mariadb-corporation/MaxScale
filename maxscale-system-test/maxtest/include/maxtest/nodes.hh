@@ -133,15 +133,12 @@ public:
     char* ssh_node_output(int node, const std::string& cmd, bool sudo, int* exit_code_out = nullptr);
 
     // Simplified C++ version
-    std::pair<int, std::string> ssh_output(std::string ssh, int node = 0, bool sudo = true)
+    struct SshResult
     {
-        int rc;
-        char* out = ssh_node_output(node, ssh, sudo, &rc);
-        std::string rval(out);
-        mxb::rtrim(rval);
-        free(out);
-        return {rc, rval};
-    }
+        int rc {-1};
+        std::string output;
+    };
+    SshResult ssh_output(const std::string& ssh, int node = 0, bool sudo = true);
 
     /**
      * @brief executes shell command on the node using ssh

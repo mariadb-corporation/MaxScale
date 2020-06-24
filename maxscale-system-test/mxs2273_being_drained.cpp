@@ -54,19 +54,19 @@ void check_state(TestConnections& test,
 
     string command = "api get servers/" + server + " data.attributes.state";
 
-    pair<int, string> result = test.maxctrl(command);
+    auto result = test.maxctrl(command);
 
-    bool found = std::regex_search(result.second, std::regex(what));
+    bool found = std::regex_search(result.output, std::regex(what));
 
     if (expectation == Expectation::INCLUDES)
     {
         test.expect(found, "%s: State '%s' did not contain '%s'.",
-                    server.c_str(), result.second.c_str(), what.c_str());
+                    server.c_str(), result.output.c_str(), what.c_str());
     }
     else
     {
         test.expect(!found, "%s: State '%s' unexpectedly contained '%s'.",
-                    server.c_str(), result.second.c_str(), what.c_str());
+                    server.c_str(), result.output.c_str(), what.c_str());
     }
 }
 
@@ -97,9 +97,9 @@ void check_connections(TestConnections& test, const string& server, int nExpecte
     test.tprintf("%s: Expecting %d connections.", server.c_str(), nExpected);
     string command = "api get servers/" + server + " data.attributes.statistics.connections";
 
-    pair<int, string> result = test.maxctrl(command);
+    auto result = test.maxctrl(command);
 
-    int nConnections = atoi(result.second.c_str());
+    int nConnections = atoi(result.output.c_str());
 
     test.expect(nConnections == nExpected, "%s: expected %d connections, found %d.",
                 server.c_str(), nExpected, nConnections);
@@ -243,7 +243,7 @@ int main(int argc, char* argv[])
 
     // As of 2.5.0, the master cannot be drained
     auto res = test.maxctrl("set server server1 drain");
-    test.expect(res.first != 0, "Should not be able to set master into `Draining` state");
+    test.expect(res.rc != 0, "Should not be able to set master into `Draining` state");
 
     test_rws(test);
     test_rcr(test);

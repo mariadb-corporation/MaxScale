@@ -104,7 +104,7 @@ int main(int argc, char** argv)
     TestConnections test(argc, argv);
 
     auto connections = [&]() {
-            return test.maxctrl("api get servers/server1 data.attributes.statistics.connections").second;
+            return test.maxctrl("api get servers/server1 data.attributes.statistics.connections").output;
         };
 
     test.expect(connections()[0] == '0', "The master should have no connections");
