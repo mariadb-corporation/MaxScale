@@ -519,15 +519,14 @@ TestConnections::TestConnections(int argc, char* argv[])
 
     if (mdbci_call_needed)
     {
-        int ec;
-        char* ver = maxscales->ssh_node_output(0, "maxscale --version-full", false, &ec);
-        if (ec)
+        auto res = maxscales->ssh_output("maxscale --version-full", 0, false);
+        if (res.rc != 0)
         {
-            tprintf("Error retrival of Maxscale version info");
+            tprintf("Error retrieving MaxScale version info");
         }
         else
         {
-            tprintf("Maxscale_full_version_start:\n%s\nMaxscale_full_version_end\n", ver);
+            tprintf("Maxscale_full_version_start:\n%s\nMaxscale_full_version_end\n", res.output.c_str());
         }
     }
 
@@ -1570,32 +1569,28 @@ int TestConnections::check_maxscale_processes(int m, int expected)
         "ps ax | grep valgrind | grep maxscale | grep -v grep | wc -l" :
         "ps -C maxscale | grep maxscale | wc -l";
 
-    int exit_code;
-    char* maxscale_num = maxscales->ssh_node_output(m, ps_cmd, false, &exit_code);
-
-    if ((maxscale_num == NULL) || (exit_code != 0))
+    auto maxscale_num = maxscales->ssh_output(ps_cmd, m, false);
+    if (maxscale_num.output.empty() || (maxscale_num.rc != 0))
     {
         return -1;
     }
-    char* nl = strchr(maxscale_num, '\n');
-    if (nl)
-    {
-        *nl = '\0';
-    }
 
-    if (atoi(maxscale_num) != expected)
+    maxscale_num.output = cutoff_string(maxscale_num.output, '\n');
+
+    if (atoi(maxscale_num.output.c_str()) != expected)
     {
-        tprintf("%s maxscale processes detected, trying again in 5 seconds\n", maxscale_num);
+        tprintf("%s maxscale processes detected, trying again in 5 seconds\n", maxscale_num.output.c_str());
         sleep(5);
-        maxscale_num = maxscales->ssh_node_output(m, ps_cmd, false, &exit_code);
+        maxscale_num = maxscales->ssh_output(ps_cmd, m, false);
 
-        if (atoi(maxscale_num) != expected)
+        if (atoi(maxscale_num.output.c_str()) != expected)
         {
-            add_result(1, "Number of MaxScale processes is not %d, it is %s\n", expected, maxscale_num);
+            add_result(1, "Number of MaxScale processes is not %d, it is %s\n",
+                expected, maxscale_num.output.c_str());
         }
     }
 
-    return exit_code;
+    return maxscale_num.rc;
 }
 
 int TestConnections::stop_maxscale(int m)
@@ -2308,6 +2303,7 @@ std::string dump_status(const StringSet& current, const StringSet& expected)
 
     return ss.str();
 }
+
 int TestConnections::reinstall_maxscales()
 {
     char sys[m_target.length() + m_mdbci_config_name.length() + strlen(maxscales->prefix) + 70];
@@ -2385,4 +2381,10 @@ void TestConnections::set_mdbci_labels()
     }
     m_required_mdbci_labels = mdbci_labels;
     m_mdbci_labels_str = mdbci_labels_str;
+}
+
+std::string cutoff_string(const string& source, char cutoff)
+{
+    auto pos = source.find(cutoff);
+    return (pos != string::npos) ? source.substr(0, pos) : source;
 }

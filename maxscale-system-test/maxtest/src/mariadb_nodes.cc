@@ -23,6 +23,7 @@
 
 using std::cout;
 using std::endl;
+using std::string;
 
 namespace
 {
@@ -1151,28 +1152,25 @@ int Mariadb_nodes::execute_query_all_nodes(const char* sql)
 
 int Mariadb_nodes::get_version(int i)
 {
-    char* str;
-    int ec;
     int local_result = 0;
     if (find_field(nodes[i], "SELECT @@version", "@@version", version[i]))
     {
         cout << "Failed to get version: " << mysql_error(nodes[i])
              << ", trying ssh node and use MariaDB client" << endl;
-        str = ssh_node_output(i, "mysql --batch --silent  -e \"select @@version\"", true, &ec);
-        if (ec)
+        auto res = ssh_output("mysql --batch --silent  -e \"select @@version\"", i, true);
+        if (res.rc)
         {
             local_result++;
             cout << "Failed to get version, node " << i << " is broken" << endl;
         }
         else
         {
-            strcpy(version[i], str);
-            free(str);
+            strcpy(version[i], res.output.c_str());
         }
     }
     strcpy(version_number[i], version[i]);
-    str = strchr(version_number[i], '-');
-    if (str != NULL)
+    char* str = strchr(version_number[i], '-');
+    if (str)
     {
         str[0] = 0;
     }
@@ -1481,11 +1479,11 @@ void Mariadb_nodes::reset_server_settings()
  * @param version String returned by 'mysqld --version'
  * @return pointer to the string with version number
  */
-char* extract_version_from_string(char* version)
+string extract_version_from_string(const string& version)
 {
     int pos1 = 0;
     int pos2 = 0;
-    int l = strlen(version);
+    int l = version.length();
     while ((!isdigit(version[pos1])) && (pos1 < l))
     {
         pos1++;
@@ -1495,8 +1493,7 @@ char* extract_version_from_string(char* version)
     {
         pos2++;
     }
-    version[pos2] = '\0';
-    return &version[pos1];
+    return version.substr(pos1, pos2 - pos1);
 }
 
 int Mariadb_nodes::prepare_server(int i)
@@ -1510,38 +1507,37 @@ int Mariadb_nodes::prepare_server(int i)
                 "sudo service apparmor restart && "
                 "chmod a+r -R /etc/my.cnf.d/*", true);
 
-    int ec;
-    char* version = ssh_node_output(i, "/usr/sbin/mysqld --version", false, &ec);
+    int rval;
+    auto res_version = ssh_output("/usr/sbin/mysqld --version", i, false);
+    rval = res_version.rc;
 
-    if (ec == 0)
+    if (res_version.rc == 0)
     {
-        char* version_digits;
-        char* tmp_pass;
-        version_digits = extract_version_from_string(version);
-        printf("Detected server version on node %d is %s\n", i, version_digits);
+        string version_digits = extract_version_from_string(res_version.output);
+        auto version_digitsc = version_digits.c_str();
 
-        if (memcmp(version_digits, "5.", 2) == 0)
+        printf("Detected server version on node %d is %s\n", i, version_digitsc);
+
+        if (memcmp(version_digitsc, "5.", 2) == 0)
         {
             ssh_node(i, "sed -i \"s/binlog_row_image=full//\" /etc/my.cnf.d/*.cnf", true);
         }
-        if (memcmp(version_digits, "5.7", 3) == 0)
+        if (memcmp(version_digitsc, "5.7", 3) == 0)
         {
             // Disable 'validate_password' plugin, searach for random temporal
             // password in the log and reseting passord to empty string
             ssh_node(i, "/usr/sbin/mysqld --initialize; sudo chown -R mysql:mysql /var/lib/mysql", true);
             ssh_node(i, start_db_command[i], true);
-            tmp_pass = ssh_node_output(i,
-                                       "cat /var/log/mysqld.log | grep \"temporary password\" | sed -n -e 's/^.*: //p'",
-                                       true,
-                                       &ec);
-            ssh_node_f(i, true, "mysqladmin -uroot -p'%s' password '%s'", tmp_pass, tmp_pass);
-            ssh_node_f(i,
-                       false,
-                       "echo \"UNINSTALL PLUGIN validate_password\" | sudo mysql -uroot -p'%s'",
-                       tmp_pass);
+            auto res_temp_pw = ssh_output("cat /var/log/mysqld.log | grep \"temporary password\" | sed -n -e 's/^.*: //p'",
+                                          i, true);
+            rval = res_temp_pw.rc;
+            auto temp_pw = res_temp_pw.output.c_str();
+            ssh_node_f(i, true, "mysqladmin -uroot -p'%s' password '%s'", temp_pw, temp_pw);
+            ssh_node_f(i, false,
+                       "echo \"UNINSTALL PLUGIN validate_password\" | sudo mysql -uroot -p'%s'", temp_pw);
             ssh_node(i, stop_db_command[i], true);
             ssh_node(i, start_db_command[i], true);
-            ssh_node_f(i, true, "mysqladmin -uroot -p'%s' password ''", tmp_pass);
+            ssh_node_f(i, true, "mysqladmin -uroot -p'%s' password ''", temp_pw);
         }
         else
         {
@@ -1550,8 +1546,7 @@ int Mariadb_nodes::prepare_server(int i)
         }
     }
 
-    free(version);
-    return ec;
+    return rval;
 }
 
 int Mariadb_nodes::prepare_servers()

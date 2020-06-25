@@ -1,5 +1,5 @@
 #include <iostream>
-#include <maxtest/testconnections.h>
+#include <maxbase/format.hh>
 #include <maxtest/sql_t1.h>
 #include <maxtest/test_binlog_fnc.h>
 #include <maxtest/testconnections.h>
@@ -13,14 +13,12 @@ int check_sha1(TestConnections* Test)
     }
     else
     {
-        char sys[1024];
         char* x;
         int local_result = 0;
         int i;
         int exit_code;
 
         char* s_maxscale;
-        char* s;
 
         Test->set_timeout(50);
         Test->tprintf("ls before FLUSH LOGS");
@@ -92,19 +90,15 @@ int check_sha1(TestConnections* Test)
                 Test->tprintf("Binlog checksum from Maxscale %s", s_maxscale);
             }
 
-            sprintf(sys, "sha1sum /var/lib/mysql/mar-bin.00000%d", i);
+            std::string sys = mxb::string_printf("sha1sum /var/lib/mysql/mar-bin.00000%d", i);
             Test->set_timeout(50);
-            s = Test->repl->ssh_node_output(0, sys, true, &exit_code);
-            if (s != NULL)
+            auto sha = Test->repl->ssh_output(sys);
+            if (!sha.output.empty())
             {
-                x = strchr(s, ' ');
-                if (x != NULL)
-                {
-                    x[0] = 0;
-                }
-                Test->tprintf("Binlog checksum from master %s", s);
+                sha.output = cutoff_string(sha.output, ' ');
+                Test->tprintf("Binlog checksum from master %s", sha.output.c_str());
             }
-            if (strcmp(s_maxscale, s) != 0)
+            if (sha.output != s_maxscale)
             {
                 Test->tprintf("Binlog from master checksum is not equal to binlog checksum from Maxscale node");
                 local_result++;

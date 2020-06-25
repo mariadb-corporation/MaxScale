@@ -130,8 +130,6 @@ public:
     char* ssh_node_output_f(int node, bool sudo, int* exit_code, const char* format, ...)
     mxb_attribute((format(printf, 5, 6)));
 
-    char* ssh_node_output(int node, const std::string& cmd, bool sudo, int* exit_code_out = nullptr);
-
     // Simplified C++ version
     struct SshResult
     {

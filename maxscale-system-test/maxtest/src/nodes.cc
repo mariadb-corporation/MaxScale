@@ -92,47 +92,11 @@ char* Nodes::ssh_node_output_f(int node, bool sudo, int* exit_code, const char* 
     auto cmd = string_printf(format, valist);
     va_end(valist);
 
-    char* result = ssh_node_output(node, cmd, sudo, exit_code);
-    return result;
+    auto result = ssh_output(cmd, node, sudo);
+    *exit_code = result.rc;
+    return strdup(result.output.c_str());
 }
 
-
-char* Nodes::ssh_node_output(int node, const string& cmd, bool sudo, int* exit_code_out)
-{
-    string ssh_cmd = generate_ssh_cmd(node, cmd, sudo);
-    FILE* output_pipe = popen(ssh_cmd.c_str(), "r");
-    if (!output_pipe)
-    {
-        printf("Error opening ssh %s\n", strerror(errno));
-        return nullptr;
-    }
-
-    const size_t buflen = 1024;
-    string collected_output;
-    collected_output.reserve(buflen);   // May end up larger.
-
-    char buffer[buflen];
-    while (fgets(buffer, buflen, output_pipe))
-    {
-        collected_output.append(buffer);
-    }
-    int exit_code = pclose(output_pipe);
-
-    if (exit_code_out)
-    {
-        if (WIFEXITED(exit_code))
-        {
-            *exit_code_out = WEXITSTATUS(exit_code);
-        }
-        else
-        {
-            *exit_code_out = 256;
-        }
-    }
-
-    // Callers expect a malloc'd string.
-    return strdup(collected_output.c_str());
-}
 
 FILE* Nodes::open_ssh_connection(int node)
 {
@@ -479,12 +443,27 @@ int Nodes::stop_vm(int node)
 Nodes::SshResult Nodes::ssh_output(const std::string& cmd, int node, bool sudo)
 {
     Nodes::SshResult rval;
-    char* out = ssh_node_output(node, cmd, sudo, &rval.rc);
-    if (out)
+    string ssh_cmd = generate_ssh_cmd(node, cmd, sudo);
+    FILE* output_pipe = popen(ssh_cmd.c_str(), "r");
+    if (!output_pipe)
     {
-        rval.output = out;
-        free(out);
-        mxb::rtrim(rval.output);
+        printf("Error opening ssh %s\n", strerror(errno));
+        return rval;
     }
+
+    const size_t buflen = 1024;
+    string collected_output;
+    collected_output.reserve(buflen);   // May end up larger.
+
+    char buffer[buflen];
+    while (fgets(buffer, buflen, output_pipe))
+    {
+        collected_output.append(buffer);
+    }
+    mxb::rtrim(collected_output);
+    rval.output = std::move(collected_output);
+
+    int exit_code = pclose(output_pipe);
+    rval.rc = (WIFEXITED(exit_code)) ? WEXITSTATUS(exit_code) : 256;
     return rval;
 }
