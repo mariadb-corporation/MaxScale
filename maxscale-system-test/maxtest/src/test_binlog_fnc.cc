@@ -13,12 +13,7 @@ int check_sha1(TestConnections* Test)
     }
     else
     {
-        char* x;
         int local_result = 0;
-        int i;
-        int exit_code;
-
-        char* s_maxscale;
 
         Test->set_timeout(50);
         Test->tprintf("ls before FLUSH LOGS");
@@ -70,24 +65,17 @@ int check_sha1(TestConnections* Test)
         Test->maxscales->ssh_node(0, "ls -la /var/lib/mysql/mar-bin.0000*", false);
 
 
-        for (i = 1; i < 3; i++)
+        for (int i = 1; i < 3; i++)
         {
             Test->tprintf("FILE: 000000%d", i);
             Test->set_timeout(50);
-            s_maxscale = Test->maxscales->ssh_node_output_f(0,
-                                                            true,
-                                                            &exit_code,
-                                                            "sha1sum %s/mar-bin.00000%d",
-                                                            Test->maxscales->maxscale_binlog_dir[0],
-                                                            i);
-            if (s_maxscale != NULL)
+            std::string cmd = mxb::string_printf("sha1sum %s/mar-bin.00000%d",
+                                                 Test->maxscales->maxscale_binlog_dir[0], i);
+            auto s_maxscale = Test->maxscales->ssh_output(cmd);
+            if (!s_maxscale.output.empty())
             {
-                x = strchr(s_maxscale, ' ');
-                if (x != NULL)
-                {
-                    x[0] = 0;
-                }
-                Test->tprintf("Binlog checksum from Maxscale %s", s_maxscale);
+                s_maxscale.output = cutoff_string(s_maxscale.output, ' ');
+                Test->tprintf("Binlog checksum from Maxscale %s", s_maxscale.output.c_str());
             }
 
             std::string sys = mxb::string_printf("sha1sum /var/lib/mysql/mar-bin.00000%d", i);
@@ -98,7 +86,7 @@ int check_sha1(TestConnections* Test)
                 sha.output = cutoff_string(sha.output, ' ');
                 Test->tprintf("Binlog checksum from master %s", sha.output.c_str());
             }
-            if (sha.output != s_maxscale)
+            if (sha.output != s_maxscale.output)
             {
                 Test->tprintf("Binlog from master checksum is not equal to binlog checksum from Maxscale node");
                 local_result++;

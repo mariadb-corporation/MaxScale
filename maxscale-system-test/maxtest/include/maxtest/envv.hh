@@ -32,6 +32,4 @@ int readenv_int(const char * name, int def);
  */
 bool readenv_bool(const char * name, bool def);
 
-std::string string_printf(const char *format, ...) __attribute__ ((format (printf, 1, 2)));
-
 std::string string_printf(const char *format, va_list args);

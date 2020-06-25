@@ -9,10 +9,8 @@
 
 void list_servers(TestConnections& test)
 {
-    int rc;
-    char* output = test.maxscales->ssh_node_output_f(0, true, &rc, "maxctrl list servers");
-    test.tprintf("%s", output);
-    free(output);
+    auto output = test.maxscales->ssh_output("maxctrl list servers");
+    test.tprintf("%s", output.output.c_str());
 }
 
 void do_test(TestConnections& test, int master, int slave)

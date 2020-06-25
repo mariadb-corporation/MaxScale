@@ -84,20 +84,6 @@ string Nodes::generate_ssh_cmd(int node, const string& cmd, bool sudo)
     return rval;
 }
 
-char* Nodes::ssh_node_output_f(int node, bool sudo, int* exit_code, const char* format, ...)
-{
-
-    va_list valist;
-    va_start(valist, format);
-    auto cmd = string_printf(format, valist);
-    va_end(valist);
-
-    auto result = ssh_output(cmd, node, sudo);
-    *exit_code = result.rc;
-    return strdup(result.output.c_str());
-}
-
-
 FILE* Nodes::open_ssh_connection(int node)
 {
     std::ostringstream ss;
@@ -184,24 +170,10 @@ void Nodes::init_ssh_masters()
 int Nodes::ssh_node_f(int node, bool sudo, const char* format, ...)
 {
     va_list valist;
-
     va_start(valist, format);
-    int message_len = vsnprintf(NULL, 0, format, valist);
+    string sys = string_printf(format, valist);
     va_end(valist);
-
-    if (message_len < 0)
-    {
-        return -1;
-    }
-
-    char* sys = (char*)malloc(message_len + 1);
-
-    va_start(valist, format);
-    vsnprintf(sys, message_len + 1, format, valist);
-    va_end(valist);
-    int result = ssh_node(node, sys, sudo);
-    free(sys);
-    return result;
+    return ssh_node(node, sys.c_str(), sudo);
 }
 
 int Nodes::copy_to_node(int i, const char* src, const char* dest)
