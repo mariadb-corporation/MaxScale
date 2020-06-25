@@ -182,10 +182,6 @@ int main(int argc, char* argv[])
     Test->repl->disconnect();
 
     int rval = Test->global_result;
-
-    // Without this, the usual 'skysql:skysql' will not work for tests that follow.
-    Test->tprintf("Resetting users\n");
-    Test->repl->create_users();
     delete Test;
     return rval;
 }
