@@ -189,6 +189,7 @@ struct DCB : public MXB_POLL_DATA
                                                  *      -1: Evicted from the persistent pool and being closed.
                                                  *   non-0: Time when placed in the persistent pool.
                                                  */
+    bool           valid_for_pool = true;       // TODO: Make this private in 2.5
     SERVICE*       service = nullptr;           /**< The related service */
     void*          data = nullptr;              /**< Client protocol data, owned by client DCB */
     void*          authenticator_data = nullptr;/**< The authenticator data for this DCB */

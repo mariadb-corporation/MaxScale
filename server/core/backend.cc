@@ -61,6 +61,7 @@ void Backend::close(close_type type)
             /** Clean operation counter in bref and in SERVER */
             if (is_waiting_result())
             {
+                m_dcb->valid_for_pool = false;
                 clear_state(WAITING_RESULT);
             }
             clear_state(IN_USE);

@@ -1260,6 +1260,7 @@ static bool dcb_maybe_add_persistent(DCB* dcb)
         && strlen(dcb->user)
         && server
         && dcb->session
+        && dcb->valid_for_pool
         && session_valid_for_pool(dcb->session)
         && server->persistpoolmax()
         && (server->status & SERVER_RUNNING)
