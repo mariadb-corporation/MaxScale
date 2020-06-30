@@ -2287,7 +2287,7 @@ bool pid_file_exists()
                 log_startup_error("Locking the PID file '%s' failed. Read PID from file "
                                   "and no process found with PID %d. Confirm that no other "
                                   "process holds the lock on the PID file.",
-                                  this_unit.pidfile, pid);
+                                  pathbuf, pid);
                 close(fd);
             }
             return lock_failed;
