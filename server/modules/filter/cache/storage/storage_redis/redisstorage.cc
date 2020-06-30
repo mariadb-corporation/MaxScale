@@ -600,7 +600,7 @@ public:
     cache_result_t put_value(const CacheKey& key,
                              const vector<std::string>& invalidation_words,
                              const GWBUF* pValue,
-                             std::function<void (cache_result_t)> cb)
+                             const std::function<void (cache_result_t)>& cb)
     {
         mxb_assert(m_invalidate || invalidation_words.empty());
         vector<char> rkey = key.to_vector();
@@ -633,7 +633,7 @@ public:
     }
 
     cache_result_t del_value(const CacheKey& key,
-                             std::function<void (cache_result_t)> cb)
+                             const std::function<void (cache_result_t)>& cb)
     {
         vector<char> rkey = key.to_vector();
 
@@ -695,7 +695,7 @@ public:
     }
 
     cache_result_t invalidate(const vector<string>& words,
-                              std::function<void (cache_result_t)> cb)
+                              const std::function<void (cache_result_t)>& cb)
     {
         mxb_assert(m_invalidate);
 
@@ -1181,7 +1181,7 @@ cache_result_t RedisStorage::get_value(Storage::Token* pToken,
                                        uint32_t soft_ttl,
                                        uint32_t hard_ttl,
                                        GWBUF** ppValue,
-                                       std::function<void (cache_result_t, GWBUF*)> cb)
+                                       const std::function<void (cache_result_t, GWBUF*)>& cb)
 {
     mxb_assert(pToken);
 
@@ -1192,7 +1192,7 @@ cache_result_t RedisStorage::put_value(Token* pToken,
                                        const CacheKey& key,
                                        const vector<string>& invalidation_words,
                                        const GWBUF* pValue,
-                                       std::function<void (cache_result_t)> cb)
+                                       const std::function<void (cache_result_t)>& cb)
 {
     mxb_assert(pToken);
 
@@ -1201,7 +1201,7 @@ cache_result_t RedisStorage::put_value(Token* pToken,
 
 cache_result_t RedisStorage::del_value(Token* pToken,
                                        const CacheKey& key,
-                                       std::function<void (cache_result_t)> cb)
+                                       const std::function<void (cache_result_t)>& cb)
 {
     mxb_assert(pToken);
 
@@ -1210,7 +1210,7 @@ cache_result_t RedisStorage::del_value(Token* pToken,
 
 cache_result_t RedisStorage::invalidate(Token* pToken,
                                         const vector<string>& words,
-                                        std::function<void (cache_result_t)> cb)
+                                        const std::function<void (cache_result_t)>& cb)
 {
     mxb_assert(pToken);
 

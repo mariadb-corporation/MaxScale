@@ -163,13 +163,14 @@ public:
     /**
      * See @Storage::get_value
      */
-    virtual cache_result_t get_value(Token* pToken,
-                                     const CacheKey& key,
-                                     uint32_t flags,
-                                     uint32_t soft_ttl,
-                                     uint32_t hard_ttl,
-                                     GWBUF** ppValue,
-                                     std::function<void (cache_result_t, GWBUF*)> cb = nullptr) const = 0;
+    virtual
+    cache_result_t get_value(Token* pToken,
+                             const CacheKey& key,
+                             uint32_t flags,
+                             uint32_t soft_ttl,
+                             uint32_t hard_ttl,
+                             GWBUF** ppValue,
+                             const std::function<void (cache_result_t, GWBUF*)>& cb = nullptr) const = 0;
 
     /**
      * See @Storage::put_value
@@ -178,21 +179,21 @@ public:
                                      const CacheKey& key,
                                      const std::vector<std::string>& invalidation_words,
                                      const GWBUF* pValue,
-                                     std::function<void (cache_result_t)> cb = nullptr) = 0;
+                                     const std::function<void (cache_result_t)>& cb = nullptr) = 0;
 
     /**
      * See @Storage::del_value
      */
     virtual cache_result_t del_value(Token* pToken,
                                      const CacheKey& key,
-                                     std::function<void (cache_result_t)> cb = nullptr) = 0;
+                                     const std::function<void (cache_result_t)>& cb = nullptr) = 0;
 
     /**
      * See @Storage::invalidate
      */
     virtual cache_result_t invalidate(Token* pToken,
                                       const std::vector<std::string>& words,
-                                      std::function<void (cache_result_t)> cb = nullptr) = 0;
+                                      const std::function<void (cache_result_t)>& cb = nullptr) = 0;
 
     /**
      * See @Storage::clear
