@@ -63,6 +63,7 @@ static bool get_ip_string_and_port(struct sockaddr_storage* sa,
                                    int iplen,
                                    in_port_t* port_out);
 static bool gw_connection_established(DCB* dcb);
+static bool gw_auth_is_complete(DCB* dcb);
 json_t*     gw_json_diagnostics(DCB* dcb);
 
 extern "C"
@@ -92,6 +93,8 @@ MXS_MODULE* MXS_CREATE_MODULE()
         NULL,                               /* Connection limit reached      */
         gw_connection_established,
         gw_json_diagnostics,
+        NULL,
+        gw_auth_is_complete,
     };
 
     static MXS_MODULE info =
@@ -2016,6 +2019,24 @@ static bool gw_connection_established(DCB* dcb)
     return proto->protocol_auth_state == MXS_AUTH_STATE_COMPLETE
            && (proto->ignore_replies == 0)
            && !proto->stored_query;
+}
+
+static bool gw_auth_is_complete(DCB* dcb)
+{
+    MySQLProtocol* proto = (MySQLProtocol*)dcb->protocol;
+
+    switch (proto->protocol_auth_state)
+    {
+    case MXS_AUTH_STATE_FAILED:
+    case MXS_AUTH_STATE_HANDSHAKE_FAILED:
+    case MXS_AUTH_STATE_COMPLETE:
+        MXS_DEBUG("(%lu) Auth is complete for DCB %lu", dcb->session->ses_id, dcb->m_uid);
+        return true;
+
+    default:
+        MXS_DEBUG("(%lu) Auth not yet complete for DCB %lu", dcb->session->ses_id, dcb->m_uid);
+        return false;
+    }
 }
 
 json_t* gw_json_diagnostics(DCB* dcb)

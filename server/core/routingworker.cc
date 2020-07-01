@@ -161,6 +161,15 @@ void modules_thread_finish()
         }
     }
 }
+
+bool can_close_dcb(DCB* dcb)
+{
+    auto idle = MXS_CLOCK_TO_SEC(mxs_clock() - dcb->last_read);
+
+    return idle > 5                     // Timed out
+           || !dcb->func.can_close      // Not implemented
+           || dcb->func.can_close(dcb); // Protocol says it's OK to close
+}
 }
 
 namespace maxscale
@@ -550,6 +559,8 @@ void RoutingWorker::register_zombie(DCB* pDcb)
 
 void RoutingWorker::delete_zombies()
 {
+    Zombies not_ready;
+
     // An algorithm cannot be used, as the final closing of a DCB may cause
     // other DCBs to be registered in the zombie queue.
 
@@ -557,8 +568,18 @@ void RoutingWorker::delete_zombies()
     {
         DCB* pDcb = m_zombies.back();
         m_zombies.pop_back();
-        dcb_final_close(pDcb);
+
+        if (can_close_dcb(pDcb))
+        {
+            dcb_final_close(pDcb);
+        }
+        else
+        {
+            not_ready.push_back(pDcb);
+        }
     }
+
+    m_zombies.insert(m_zombies.end(), not_ready.begin(), not_ready.end());
 }
 
 bool RoutingWorker::pre_run()

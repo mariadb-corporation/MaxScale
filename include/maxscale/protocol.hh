@@ -179,6 +179,18 @@ struct MXS_PROTOCOL
      * @return A buffer containing the error message
      */
     GWBUF* (* reject)(const char* host);
+
+    /**
+     * Check if the DCB can be closed in a controlled manner
+     *
+     * The DCB will be unconditionally closed if this entry point is not implemented or a hard-coded timeout
+     * is exceeded.
+     *
+     * @param dcb DCB to check
+     *
+     * @return True if the DCB can be closed
+     */
+    bool (* can_close)(DCB*);
 };
 
 /**
@@ -186,7 +198,7 @@ struct MXS_PROTOCOL
  * the MXS_PROTOCOL structure is changed. See the rules defined in modinfo.h
  * that define how these numbers should change.
  */
-#define MXS_PROTOCOL_VERSION {2, 1, 0}
+#define MXS_PROTOCOL_VERSION {2, 2, 0}
 
 /**
  * Specifies capabilities specific for protocol.
