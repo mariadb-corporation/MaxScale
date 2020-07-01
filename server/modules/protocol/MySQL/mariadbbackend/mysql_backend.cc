@@ -1395,20 +1395,6 @@ static int gw_backend_close(DCB* dcb)
     mxb_assert(dcb->session || dcb->persistentstart);
     MySQLProtocol* proto = (MySQLProtocol*)dcb->protocol;
 
-    if (proto->protocol_auth_state == MXS_AUTH_STATE_INIT
-        || proto->protocol_auth_state == MXS_AUTH_STATE_PENDING_CONNECT
-        || proto->protocol_auth_state == MXS_AUTH_STATE_CONNECTED)
-    {
-        MYSQL_session client;
-        gw_get_shared_session_auth_info(dcb, &client);
-
-        // Don't use the actual client SHA1. This prevents the password from being used with the constant
-        // null scramble we use in these cases.
-        memset(client.client_sha1, 0, sizeof(client.client_sha1));
-        memset(proto->scramble, 0, sizeof(proto->scramble));
-        dcb_write(dcb, gw_generate_auth_response(&client, proto, false, false, 0));
-    }
-
     /** Send COM_QUIT to the backend being closed */
     dcb_write(dcb, mysql_create_com_quit(NULL, 0));
 
