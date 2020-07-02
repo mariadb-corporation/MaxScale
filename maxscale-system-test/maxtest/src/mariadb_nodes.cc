@@ -455,11 +455,13 @@ int Galera_nodes::start_galera()
     for (int i = 0; i < N; i++)
     {
         // Remove the grastate.dat file
-        ssh_node(i, "rm -f /var/lib/mysql/grastate.dat", true);
 
         ssh_node(i, "echo [mysqld] > cluster_address.cnf", true);
         ssh_node_f(i, true, "echo wsrep_cluster_address=gcomm://%s >>  cluster_address.cnf", gcomm.c_str());
         ssh_node(i, "cp cluster_address.cnf /etc/my.cnf.d/", true);
+
+        ssh_node(i, "rm -rf /var/lib/mysql/*", true);
+        ssh_node(i, "mysql_install_db --user=mysql", true);
 
         ssh_node_f(i,
                    true,
@@ -474,7 +476,7 @@ int Galera_nodes::start_galera()
     // Start the first node that also starts a new cluster
     ssh_node_f(0, true, "galera_new_cluster");
 
-    for (int i = 0; i < N; i++)
+    for (int i = 1; i < N; i++)
     {
         if (start_node(i, "") != 0)
         {

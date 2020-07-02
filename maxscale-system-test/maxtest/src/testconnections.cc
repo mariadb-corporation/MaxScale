@@ -1035,10 +1035,10 @@ int TestConnections::copy_maxscale_logs(double timestamp)
                                            "rm -rf %s/logs;"
                                            "mkdir %s/logs;"
                                            "cp %s/*.log %s/logs/;"
-                                           "cp /tmp/core* %s/logs/;"
+                                           "test -e /tmp/core* && cp /tmp/core* %s/logs/;"
                                            "cp %s %s/logs/;"
                                            "chmod 777 -R %s/logs;"
-                                           "ls /tmp/core* && exit 42;",
+                                           "test -e /tmp/core* && exit 42;",
                                            maxscales->access_homedir[i],
                                            maxscales->access_homedir[i],
                                            maxscales->maxscale_log_dir[i],

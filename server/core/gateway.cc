@@ -1206,6 +1206,46 @@ bool disable_signals(void)
     return true;
 }
 
+bool disable_normal_signals(void)
+{
+    sigset_t sigset;
+
+    if (sigfillset(&sigset) != 0)
+    {
+        int e = errno;
+        errno = 0;
+        static const char message[] = "Failed to initialize set the signal set for MaxScale. Exiting.";
+        print_log_n_stderr(true, true, message, message, e);
+        return false;
+    }
+
+    if (!delete_signal(&sigset, SIGHUP, "SIGHUP"))
+    {
+        return false;
+    }
+
+    if (!delete_signal(&sigset, SIGUSR1, "SIGUSR1"))
+    {
+        return false;
+    }
+
+    if (!delete_signal(&sigset, SIGTERM, "SIGTERM"))
+    {
+        return false;
+    }
+
+    if (sigprocmask(SIG_SETMASK, &sigset, NULL) != 0)
+    {
+        int e = errno;
+        errno = 0;
+        static const char message[] = "Failed to set the signal set for MaxScale. Exiting";
+        print_log_n_stderr(true, true, message, message, e);
+        return false;
+    }
+
+    return true;
+}
+
 /**
  * Configures the handling of a particular signal.
  *
@@ -1233,31 +1273,12 @@ static bool configure_signal(int signum, const char* signame, void (* handler)(i
 }
 
 /**
- * Configures signal handling of MaxScale.
+ * Configure fatal signal handlers
  *
- * @return True, if all signals could be configured, false otherwise.
+ * @return True if signal handlers were installed correctly
  */
-bool configure_signals(void)
+bool configure_critical_signals(void)
 {
-    if (!configure_signal(SIGHUP, "SIGHUP", sighup_handler))
-    {
-        return false;
-    }
-
-    if (!configure_signal(SIGUSR1, "SIGUSR1", sigusr1_handler))
-    {
-        return false;
-    }
-
-    if (!configure_signal(SIGTERM, "SIGTERM", sigterm_handler))
-    {
-        return false;
-    }
-
-    if (!configure_signal(SIGINT, "SIGINT", sigint_handler))
-    {
-        return false;
-    }
 
     if (!configure_signal(SIGSEGV, "SIGSEGV", sigfatal_handler))
     {
@@ -1285,6 +1306,36 @@ bool configure_signals(void)
         return false;
     }
 #endif
+
+    return true;
+}
+
+/**
+ * Configures signal handling of MaxScale.
+ *
+ * @return True, if all signals could be configured, false otherwise.
+ */
+bool configure_normal_signals(void)
+{
+    if (!configure_signal(SIGHUP, "SIGHUP", sighup_handler))
+    {
+        return false;
+    }
+
+    if (!configure_signal(SIGUSR1, "SIGUSR1", sigusr1_handler))
+    {
+        return false;
+    }
+
+    if (!configure_signal(SIGTERM, "SIGTERM", sigterm_handler))
+    {
+        return false;
+    }
+
+    if (!configure_signal(SIGINT, "SIGINT", sigint_handler))
+    {
+        return false;
+    }
 
     return true;
 }
@@ -1885,12 +1936,10 @@ int main(int argc, char** argv)
          * the pipe. */
         close(daemon_pipe[0]);
     }
-    /*<
-     * Set signal handlers for SIGHUP, SIGTERM, SIGINT and critical signals like SIGSEGV.
-     */
-    if (!configure_signals())
+
+    if (!configure_critical_signals())
     {
-        static const char* logerr = "Failed to configure signal handlers. Exiting.";
+        static const char* logerr = "Failed to configure fatal signal handlers. Exiting.";
 
         print_log_n_stderr(true, true, logerr, logerr, 0);
         rc = MAXSCALE_INTERNALERROR;
@@ -2252,6 +2301,15 @@ int main(int argc, char** argv)
                config_threadcount(),
                config_thread_stack_size());
 
+    if (!configure_normal_signals())
+    {
+        static const char* logerr = "Failed to configure all signal handlers. Exiting.";
+
+        print_log_n_stderr(true, true, logerr, logerr, 0);
+        rc = MAXSCALE_INTERNALERROR;
+        goto return_main;
+    }
+
     worker = RoutingWorker::get(RoutingWorker::MAIN);
     mxb_assert(worker);
 
@@ -2267,13 +2325,15 @@ int main(int argc, char** argv)
 
     main_worker->run();
 
+    disable_normal_signals();
+
     /*<
      * Wait for worker threads to exit.
      */
     RoutingWorker::join_workers();
     MXS_NOTICE("All workers have shut down.");
 
-    set_admin_worker(nullptr); // Main worker has quit, re-assign to non-worker.
+    set_admin_worker(nullptr);      // Main worker has quit, re-assign to non-worker.
 
     /*< Destroy all monitors */
     MonitorManager::destroy_all_monitors();
