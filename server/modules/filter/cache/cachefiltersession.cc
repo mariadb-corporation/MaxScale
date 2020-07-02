@@ -358,10 +358,11 @@ int CacheFilterSession::clientReply(GWBUF* pData)
 
     if (m_res.pData)
     {
-        gwbuf_append(m_res.pData, pData);
+        auto len = gwbuf_length(pData);     // pData may be a chain, so not GWBUF_LENGTH().
+        m_res.pData = gwbuf_append(m_res.pData, pData);
         m_res.pData_last = pData;
         m_res.offset_last = m_res.length;
-        m_res.length += gwbuf_length(pData);    // pData may be a chain, so not GWBUF_LENGTH().
+        m_res.length += len;
     }
     else
     {
