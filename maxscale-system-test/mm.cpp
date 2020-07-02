@@ -73,7 +73,7 @@ int main(int argc, char* argv[])
     test.start_mm(0);   // first node - slave, second - master
 
     test.set_timeout(120);
-    auto res = test.maxctrl("api get servers/server1 data.attributes.state").second;
+    auto res = test.maxctrl("api get servers/server1 data.attributes.state").output;
 
     if (strstr(res.c_str(), "Slave, Running") == NULL)
     {
@@ -82,7 +82,7 @@ int main(int argc, char* argv[])
 
     test.set_timeout(120);
 
-    res = test.maxctrl("api get servers/server2 data.attributes.state").second;
+    res = test.maxctrl("api get servers/server2 data.attributes.state").output;
 
     if (strstr(res.c_str(), "Master, Running") == NULL)
     {
@@ -98,7 +98,7 @@ int main(int argc, char* argv[])
     test.maxscales->wait_for_monitor();
     test.set_timeout(120);
 
-    res = test.maxctrl("api get servers/server1 data.attributes.state").second;
+    res = test.maxctrl("api get servers/server1 data.attributes.state").output;
 
     if (strstr(res.c_str(), "Down") == NULL)
     {
@@ -116,7 +116,7 @@ int main(int argc, char* argv[])
     test.repl->block_node(1);
     test.maxscales->wait_for_monitor();
 
-    res = test.maxctrl("api get servers/server2 data.attributes.state").second;
+    res = test.maxctrl("api get servers/server2 data.attributes.state").output;
 
     if (strstr(res.c_str(), "Down") == NULL)
     {
@@ -146,7 +146,7 @@ int main(int argc, char* argv[])
     test.set_timeout(120);
 
     test.set_timeout(60);
-    res = test.maxctrl("api get servers/server2 data.attributes.state").second;
+    res = test.maxctrl("api get servers/server2 data.attributes.state").output;
 
     if (strstr(res.c_str(), "Slave, Running") == NULL)
     {
@@ -154,7 +154,7 @@ int main(int argc, char* argv[])
     }
     test.set_timeout(60);
 
-    res = test.maxctrl("api get servers/server1 data.attributes.state").second;
+    res = test.maxctrl("api get servers/server1 data.attributes.state").output;
 
     if (strstr(res.c_str(), "Master, Running") == NULL)
     {

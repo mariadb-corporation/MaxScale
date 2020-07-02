@@ -2154,9 +2154,17 @@ bool runtime_alter_service_relationships_from_json(Service* service, const char*
 
     if (is_valid_relationship_body(json))
     {
-        auto rel = mxs_json_pointer(new_json, MXS_JSON_PTR_RELATIONSHIPS);
-        json_object_set(rel, type, json);
-        rval = update_service_relationships(service, new_json);
+        std::unique_ptr<json_t> j(json_pack("{s: {s: {s: {s: O}}}}",
+                                            "data",
+                                            "relationships",
+                                            type,
+                                            "data",
+                                            json_object_get(json, "data")));
+
+        if (runtime_alter_service_from_json(service, j.get()))
+        {
+            rval = true;
+        }
     }
 
     json_decref(new_json);

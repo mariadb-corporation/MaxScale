@@ -148,7 +148,7 @@ cache_result_t CachePT::get_value(Token* pToken,
                                   uint32_t soft_ttl,
                                   uint32_t hard_ttl,
                                   GWBUF** ppValue,
-                                  std::function<void (cache_result_t, GWBUF*)> cb) const
+                                  const std::function<void (cache_result_t, GWBUF*)>& cb) const
 {
     return thread_cache().get_value(pToken, key, flags, soft_ttl, hard_ttl, ppValue, cb);
 }
@@ -157,21 +157,21 @@ cache_result_t CachePT::put_value(Token* pToken,
                                   const CacheKey& key,
                                   const std::vector<std::string>& invalidation_words,
                                   const GWBUF* pValue,
-                                  std::function<void (cache_result_t)> cb)
+                                  const std::function<void (cache_result_t)>& cb)
 {
     return thread_cache().put_value(pToken, key, invalidation_words, pValue, cb);
 }
 
 cache_result_t CachePT::del_value(Token* pToken,
                                   const CacheKey& key,
-                                  std::function<void (cache_result_t)> cb)
+                                  const std::function<void (cache_result_t)>& cb)
 {
     return thread_cache().del_value(pToken, key, cb);
 }
 
 cache_result_t CachePT::invalidate(Token* pToken,
                                    const std::vector<std::string>& words,
-                                   std::function<void (cache_result_t)> cb)
+                                   const std::function<void (cache_result_t)>& cb)
 {
     return thread_cache().invalidate(pToken, words, cb);
 }

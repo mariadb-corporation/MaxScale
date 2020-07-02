@@ -50,8 +50,8 @@ int main(int argc, char** argv)
         test.stop_timeout();
     }
 
-    auto s1 = test.maxscales->ssh_output("maxctrl --tsv list servers|grep server1|cut -f 4").second;
-    auto s2 = test.maxscales->ssh_output("maxctrl --tsv list servers|grep server2|cut -f 4").second;
+    auto s1 = test.maxscales->ssh_output("maxctrl --tsv list servers|grep server1|cut -f 4").output;
+    auto s2 = test.maxscales->ssh_output("maxctrl --tsv list servers|grep server2|cut -f 4").output;
 
     test.expect(s1 == s2,
                 "Master and slave shoud have the same amount of connections: %s != %s",

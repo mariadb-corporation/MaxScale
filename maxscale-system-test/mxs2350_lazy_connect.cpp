@@ -12,7 +12,7 @@ int main(int argc, char* argv[])
     Connection c = test.maxscales->rwsplit();
 
     test.expect(c.connect(), "Connection should work");
-    auto output = test.maxscales->ssh_output("maxctrl list servers --tsv|cut -f 4|sort|uniq").second;
+    auto output = test.maxscales->ssh_output("maxctrl list servers --tsv|cut -f 4|sort|uniq").output;
     mxb::trim(output);
     test.expect(output == "0", "Servers should have no connections: %s", output.c_str());
     c.disconnect();

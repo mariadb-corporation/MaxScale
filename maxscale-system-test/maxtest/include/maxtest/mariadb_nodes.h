@@ -242,6 +242,13 @@ public:
     void create_users(int node);
 
     /**
+     * Create the default users used by all tests on all nodes.
+     *
+     * @return 0 in case of success.
+     */
+    int create_users();
+
+    /**
      * Blocks `src` from communicating with `dest`
      */
     void block_node_from_node(int src, int dest);

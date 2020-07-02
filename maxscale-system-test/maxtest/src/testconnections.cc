@@ -347,8 +347,10 @@ TestConnections::TestConnections(int argc, char* argv[])
     }
 
     m_get_logs_command = (string)test_dir + "/get_logs.sh";
-    m_ssl_options = string_printf("--ssl-cert=%s/ssl-cert/client-cert.pem --ssl-key=%s/ssl-cert/client-key.pem",
-                                  test_dir, test_dir);
+    m_ssl_options = string_printf(
+        "--ssl-cert=%s/ssl-cert/client-cert.pem --ssl-key=%s/ssl-cert/client-key.pem",
+        test_dir,
+        test_dir);
     setenv("ssl_options", m_ssl_options.c_str(), 1);
 
     if (maxscale::require_columnstore)
@@ -552,6 +554,11 @@ TestConnections::~TestConnections()
     {
         repl->disable_ssl();
         // galera->disable_ssl();
+
+        // TODO: Presumably that repl->disable_ssl() call should remove the SSL requirement,
+        // TODO: but that it does not do as any non-SSL test folling will not work.
+        // TODO: Creating the users seems to fix it, so for the time being we do that.
+        repl->create_users();
     }
 
     // stop all Maxscales to detect crashes on exit
@@ -944,7 +951,7 @@ void TestConnections::copy_one_mariadb_log(Mariadb_nodes* nrepl, int i, std::str
 
     for (auto cmd : log_retrive_commands)
     {
-        auto output = nrepl->ssh_output(cmd, i).second;
+        auto output = nrepl->ssh_output(cmd, i).output;
 
         if (!output.empty())
         {
@@ -1036,10 +1043,10 @@ void TestConnections::copy_one_maxscale_log(int i, double timestamp)
                                        "rm -rf %s/logs;"
                                        "mkdir %s/logs;"
                                        "cp %s/*.log %s/logs/;"
-                                       "cp /tmp/core* %s/logs/ >& /dev/null;"
+                                       "test -e /tmp/core* && cp /tmp/core* %s/logs/ >& /dev/null;"
                                        "cp %s %s/logs/;"
                                        "chmod 777 -R %s/logs;"
-                                       "ls /tmp/core* >& /dev/null && exit 42;",
+                                       "test -e /tmp/core*  && exit 42;",
                                        maxscales->access_homedir[i],
                                        maxscales->access_homedir[i],
                                        maxscales->maxscale_log_dir[i],
@@ -1824,7 +1831,8 @@ int TestConnections::get_client_ip(int m, char* ip)
 
     if (c.connect())
     {
-        std::string host = c.field("SELECT host FROM information_schema.processlist WHERE id = connection_id()");
+        std::string host = c.field(
+            "SELECT host FROM information_schema.processlist WHERE id = connection_id()");
         strcpy(ip, host.c_str());
         ret = 0;
     }
@@ -2142,7 +2150,7 @@ void TestConnections::check_current_operations(int m, int value)
                            + std::to_string(i + 1)
                            + " data.attributes.statistics.active_operations", m);
 
-        expect(std::stoi(res.second) == value,
+        expect(std::stoi(res.output) == value,
                "Current no. of operations is not %d for server%d", value, i + 1);
     }
 }
@@ -2155,7 +2163,7 @@ void TestConnections::check_current_connections(int m, int value)
                            + std::to_string(i + 1)
                            + " data.attributes.statistics.connections", m);
 
-        expect(std::stoi(res.second) == value,
+        expect(std::stoi(res.output) == value,
                "Current no. of conns is not %d for server%d", value, i + 1);
     }
 }
@@ -2165,9 +2173,9 @@ void TestConnections::check_current_persistent_connections(int m, const std::str
     auto res = maxctrl("api get servers/" + name
                        + " data.attributes.statistics.persistent_connections", m);
 
-    expect(atoi(res.second.c_str()) == value,
+    expect(atoi(res.output.c_str()) == value,
            "Current no. of persistent conns is '%s' not '%d' for %s",
-           res.second.c_str(), value, name.c_str());
+           res.output.c_str(), value, name.c_str());
 }
 
 int TestConnections::take_snapshot(char* snapshot_name)

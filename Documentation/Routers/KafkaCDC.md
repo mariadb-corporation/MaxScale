@@ -154,6 +154,13 @@ describes the parameter as follows:
 The connection and read timeout for the replication stream. The default
 value is 10 seconds.
 
+### `gtid`
+
+The initial GTID position from where the replication is started. By default the
+replication is started from the beginning. The value of this parameter is only
+used if no previously replicated events with GTID positions can be retrieved
+from Kafka.
+
 ## Example Configuration
 
 The following configuration defines the minimal setup for streaming replication

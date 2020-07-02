@@ -1129,6 +1129,40 @@ bool disable_signals(void)
     return true;
 }
 
+bool disable_normal_signals(void)
+{
+    sigset_t sigset;
+
+    if (sigfillset(&sigset) != 0)
+    {
+        log_startup_error(errno, "Failed to initialize the signal set for MaxScale");
+        return false;
+    }
+
+    if (!delete_signal(&sigset, SIGHUP, "SIGHUP"))
+    {
+        return false;
+    }
+
+    if (!delete_signal(&sigset, SIGUSR1, "SIGUSR1"))
+    {
+        return false;
+    }
+
+    if (!delete_signal(&sigset, SIGTERM, "SIGTERM"))
+    {
+        return false;
+    }
+
+    if (sigprocmask(SIG_SETMASK, &sigset, NULL) != 0)
+    {
+        log_startup_error(errno, "Failed to set the signal set for MaxScale");
+        return false;
+    }
+
+    return true;
+}
+
 /**
  * Configures the handling of a particular signal.
  *
@@ -1151,32 +1185,12 @@ static bool configure_signal(int signum, const char* signame, void (* handler)(i
 }
 
 /**
- * Configures signal handling of MaxScale.
+ * Configure fatal signal handlers
  *
- * @return True, if all signals could be configured, false otherwise.
+ * @return True if signal handlers were installed correctly
  */
-bool configure_signals(void)
+bool configure_critical_signals(void)
 {
-    if (!configure_signal(SIGHUP, "SIGHUP", sighup_handler))
-    {
-        return false;
-    }
-
-    if (!configure_signal(SIGUSR1, "SIGUSR1", sigusr1_handler))
-    {
-        return false;
-    }
-
-    if (!configure_signal(SIGTERM, "SIGTERM", sigterm_handler))
-    {
-        return false;
-    }
-
-    if (!configure_signal(SIGINT, "SIGINT", sigint_handler))
-    {
-        return false;
-    }
-
     if (!configure_signal(SIGSEGV, "SIGSEGV", sigfatal_handler))
     {
         return false;
@@ -1207,13 +1221,43 @@ bool configure_signals(void)
     return true;
 }
 
+/**
+ * Configures signal handling of MaxScale.
+ *
+ * @return True, if all signals could be configured, false otherwise.
+ */
+bool configure_normal_signals(void)
+{
+    if (!configure_signal(SIGHUP, "SIGHUP", sighup_handler))
+    {
+        return false;
+    }
+
+    if (!configure_signal(SIGUSR1, "SIGUSR1", sigusr1_handler))
+    {
+        return false;
+    }
+
+    if (!configure_signal(SIGTERM, "SIGTERM", sigterm_handler))
+    {
+        return false;
+    }
+
+    if (!configure_signal(SIGINT, "SIGINT", sigint_handler))
+    {
+        return false;
+    }
+
+    return true;
+}
+
 bool setup_signals()
 {
     bool rv = false;
 
-    if (!configure_signals())
+    if (!configure_critical_signals())
     {
-        log_startup_error("Failed to configure signal handlers.");
+        log_startup_error("Failed to configure fatal signal handlers.");
     }
     else
     {
@@ -2075,29 +2119,39 @@ int main(int argc, char** argv)
                                        config_threadcount(),
                                        config_thread_stack_size());
 
-                            if (main_worker.execute(do_startup, RoutingWorker::EXECUTE_QUEUED))
+                            if (configure_normal_signals())
                             {
-                                // This call will block until MaxScale is shut down.
-                                main_worker.run();
-                                MXS_NOTICE("MaxScale is shutting down.");
+                                if (main_worker.execute(do_startup, RoutingWorker::EXECUTE_QUEUED))
+                                {
+                                    // This call will block until MaxScale is shut down.
+                                    main_worker.run();
+                                    MXS_NOTICE("MaxScale is shutting down.");
 
-                                // Shutting down started, wait for all routing workers.
-                                RoutingWorker::join_workers();
-                                MXS_NOTICE("All workers have shut down.");
+                                    disable_normal_signals();
 
-                                MonitorManager::destroy_all_monitors();
+                                    // Shutting down started, wait for all routing workers.
+                                    RoutingWorker::join_workers();
+                                    MXS_NOTICE("All workers have shut down.");
 
-                                maxscale_start_teardown();
-                                service_destroy_instances();
-                                filter_destroy_instances();
-                                listener_destroy_instances();
-                                ServerManager::destroy_all();
+                                    MonitorManager::destroy_all_monitors();
 
-                                MXS_NOTICE("MaxScale shutdown completed.");
+                                    maxscale_start_teardown();
+                                    service_destroy_instances();
+                                    filter_destroy_instances();
+                                    listener_destroy_instances();
+                                    ServerManager::destroy_all();
+
+                                    MXS_NOTICE("MaxScale shutdown completed.");
+                                }
+                                else
+                                {
+                                    log_startup_error("Failed to queue startup task.");
+                                    rc = MAXSCALE_INTERNALERROR;
+                                }
                             }
                             else
                             {
-                                log_startup_error("Failed to queue startup task.");
+                                log_startup_error("Failed to install signal handlers.");
                                 rc = MAXSCALE_INTERNALERROR;
                             }
                         }
@@ -2287,7 +2341,7 @@ bool pid_file_exists()
                 log_startup_error("Locking the PID file '%s' failed. Read PID from file "
                                   "and no process found with PID %d. Confirm that no other "
                                   "process holds the lock on the PID file.",
-                                  this_unit.pidfile, pid);
+                                  pathbuf, pid);
                 close(fd);
             }
             return lock_failed;

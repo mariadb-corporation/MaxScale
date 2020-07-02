@@ -50,7 +50,7 @@ void basic(TestConnections& test)
 
 
     auto res = test.maxctrl("destroy filter test1");
-    test.expect(res.first != 0, "Destruction should fail when filter is in use");
+    test.expect(res.rc != 0, "Destruction should fail when filter is in use");
 
     test.check_maxctrl("alter service-filters svc1");
     test.check_maxctrl("destroy filter test1");
@@ -67,7 +67,7 @@ void visibility(TestConnections& test)
 {
     auto in_list_filters = [&](std::string value) {
             auto res = test.maxctrl("list filters --tsv");
-            return res.second.find(value) != string::npos;
+            return res.output.find(value) != string::npos;
         };
 
     test.check_maxctrl("create filter test1 hintfilter");

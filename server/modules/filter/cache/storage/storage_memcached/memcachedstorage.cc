@@ -203,7 +203,7 @@ public:
     cache_result_t put_value(const CacheKey& key,
                              const std::vector<std::string>& invalidation_words,
                              const GWBUF* pValue,
-                             std::function<void (cache_result_t)> cb)
+                             const std::function<void (cache_result_t)>& cb)
     {
         vector<char> mkey = key.to_vector();
 
@@ -249,7 +249,7 @@ public:
     }
 
     cache_result_t del_value(const CacheKey& key,
-                             std::function<void (cache_result_t)> cb)
+                             const std::function<void (cache_result_t)>& cb)
     {
         vector<char> mkey = key.to_vector();
 
@@ -476,7 +476,7 @@ cache_result_t MemcachedStorage::get_value(Storage::Token* pToken,
                                            uint32_t soft_ttl,
                                            uint32_t hard_ttl,
                                            GWBUF** ppValue,
-                                           std::function<void (cache_result_t, GWBUF*)> cb)
+                                           const std::function<void (cache_result_t, GWBUF*)>& cb)
 {
     mxb_assert(pToken);
 
@@ -487,7 +487,7 @@ cache_result_t MemcachedStorage::put_value(Token* pToken,
                                            const CacheKey& key,
                                            const std::vector<std::string>& invalidation_words,
                                            const GWBUF* pValue,
-                                           std::function<void (cache_result_t)> cb)
+                                           const std::function<void (cache_result_t)>& cb)
 {
     mxb_assert(pToken);
 
@@ -496,7 +496,7 @@ cache_result_t MemcachedStorage::put_value(Token* pToken,
 
 cache_result_t MemcachedStorage::del_value(Token* pToken,
                                            const CacheKey& key,
-                                           std::function<void (cache_result_t)> cb)
+                                           const std::function<void (cache_result_t)>& cb)
 {
     mxb_assert(pToken);
 
@@ -505,7 +505,7 @@ cache_result_t MemcachedStorage::del_value(Token* pToken,
 
 cache_result_t MemcachedStorage::invalidate(Token* pToken,
                                             const std::vector<std::string>& words,
-                                            std::function<void (cache_result_t)>)
+                                            const std::function<void (cache_result_t)>&)
 {
     mxb_assert(!true);
     return CACHE_RESULT_ERROR;

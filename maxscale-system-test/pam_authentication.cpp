@@ -468,9 +468,10 @@ int main(int argc, char** argv)
             MYSQL* conn = test.repl->nodes[0];
             test.try_query(conn, create_pam_user_fmt, pam_user, "passwd");
             // Try to login with wrong pw to ensure user data is updated.
+            sleep(1);
             bool login_success = test_pam_login(test, cleartext_port, "wrong", "wrong", "");
             test.expect(!login_success, "Login succeeded when it should not have.");
-
+            sleep(1);
             login_success = test_pam_login(test, cleartext_port, pam_user, pam_pw, "");
             test.expect(login_success, "Login with %s failed", setting_name.c_str());
             if (test.ok())

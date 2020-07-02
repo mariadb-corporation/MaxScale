@@ -154,18 +154,18 @@ unique_ptr<json_t> MaxRest::curl(Command command, const string& path) const
 
     curl_command += url;
 
-    auto result = m_test.maxscales->ssh_output(curl_command.c_str(), 0, false);
+    auto result = m_test.maxscales->ssh_output(curl_command, 0, false);
 
-    if (result.first != 0)
+    if (result.rc != 0)
     {
-        raise("Invocation of curl failed: " + to_string(result.first));
+        raise("Invocation of curl failed: " + to_string(result.rc));
     }
 
     unique_ptr<json_t> sRv;
 
-    if (!result.second.empty())
+    if (!result.output.empty())
     {
-        sRv = parse(result.second);
+        sRv = parse(result.output);
     }
 
     return sRv;

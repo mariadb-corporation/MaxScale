@@ -9,6 +9,9 @@
 #include <string>
 #include <csignal>
 #include <maxtest/envv.hh>
+#include <maxbase/format.hh>
+
+using std::string;
 
 Nodes::Nodes(const char* pref,
              const std::string& network_config,
@@ -52,63 +55,34 @@ bool Nodes::check_nodes()
     return std::all_of(f.begin(), f.end(), std::mem_fn(&std::future<bool>::get));
 }
 
-void Nodes::generate_ssh_cmd(char* cmd, int node, const char* ssh, bool sudo)
+string Nodes::generate_ssh_cmd(int node, const string& cmd, bool sudo)
 {
+    string rval;
     if (strcmp(IP[node], "127.0.0.1") == 0)
     {
-        if (sudo)
-        {
-            sprintf(cmd,
-                    "%s %s",
-                    access_sudo[node],
-                    ssh);
-        }
-        else
-        {
-            sprintf(cmd, "%s", ssh);
-        }
+        // If node is the local machine, run command as is.
+        rval = sudo ? ((string)(access_sudo[node]) + " " + cmd) : cmd;
     }
     else
     {
+        // Run command through ssh. The ControlMaster-option enables use of existing pooled connections,
+        // greatly speeding up the operation.
+        string p1 = mxb::string_printf("ssh -i %s ", sshkey[node]);
+        string p2 = "-o UserKnownHostsFile=/dev/null "
+                    "-o CheckHostIP=no "
+                    "-o ControlMaster=auto "
+                    "-o ControlPath=./maxscale-test-%r@%h:%p "
+                    "-o ControlPersist=yes "
+                    "-o StrictHostKeyChecking=no "
+                    "-o LogLevel=quiet ";
 
-        if (sudo)
-        {
-            sprintf(cmd,
-                    "ssh -i %s "
-                    "-o UserKnownHostsFile=/dev/null "
-                    "-o CheckHostIP=no "
-                    "-o ControlMaster=auto "
-                    "-o ControlPath=./maxscale-test-%%r@%%h:%%p "
-                    "-o ControlPersist=yes "
-                    "-o StrictHostKeyChecking=no "
-                    "-o LogLevel=quiet "
-                    "%s@%s '%s %s\'",
-                    sshkey[node],
-                    access_user[node],
-                    IP[node],
-                    access_sudo[node],
-                    ssh);
-        }
-        else
-        {
-            sprintf(cmd,
-                    "ssh -i %s "
-                    "-o UserKnownHostsFile=/dev/null "
-                    "-o CheckHostIP=no "
-                    "-o ControlMaster=auto "
-                    "-o ControlPath=./maxscale-test-%%r@%%h:%%p "
-                    "-o ControlPersist=yes "
-                    "-o StrictHostKeyChecking=no "
-                    "-o LogLevel=quiet "
-                    "%s@%s '%s'",
-                    sshkey[node],
-                    access_user[node],
-                    IP[node],
-                    ssh);
-        }
+        string p3 = mxb::string_printf("%s@%s ", access_user[node], IP[node]);
+        string p4 = sudo ? mxb::string_printf("'%s %s'", access_sudo[node], cmd.c_str()) :
+            mxb::string_printf("'%s'", cmd.c_str());
+        rval = p1 + p2 + p3 + p4;
     }
+    return rval;
 }
-
 
 char* Nodes::ssh_node_output_f(int node, bool sudo, int* exit_code, const char* format, ...)
 {
@@ -136,41 +110,41 @@ char* Nodes::ssh_node_output_f(int node, bool sudo, int* exit_code, const char* 
 }
 
 
-char* Nodes::ssh_node_output(int node, const char* ssh, bool sudo, int* exit_code)
+char* Nodes::ssh_node_output(int node, const string& cmd, bool sudo, int* exit_code_out)
 {
-    char* cmd = (char*)malloc(strlen(ssh) + 1024);
-
-    generate_ssh_cmd(cmd, node, ssh, sudo);
-
-    FILE* output = popen(cmd, "r");
-
-    if (output == NULL)
+    string ssh_cmd = generate_ssh_cmd(node, cmd, sudo);
+    FILE* output_pipe = popen(ssh_cmd.c_str(), "r");
+    if (!output_pipe)
     {
         printf("Error opening ssh %s\n", strerror(errno));
-        return NULL;
-    }
-    char buffer[1024];
-    size_t rsize = sizeof(buffer);
-    char* result = (char*)calloc(rsize, sizeof(char));
-
-    while (fgets(buffer, sizeof(buffer), output))
-    {
-        result = (char*)realloc(result, sizeof(buffer) + rsize);
-        rsize += sizeof(buffer);
-        strcat(result, buffer);
+        return nullptr;
     }
 
-    free(cmd);
-    int code = pclose(output);
-    if (WIFEXITED(code))
+    const size_t buflen = 1024;
+    string collected_output;
+    collected_output.reserve(buflen);   // May end up larger.
+
+    char buffer[buflen];
+    while (fgets(buffer, buflen, output_pipe))
     {
-        * exit_code = WEXITSTATUS(code);
+        collected_output.append(buffer);
     }
-    else
+    int exit_code = pclose(output_pipe);
+
+    if (exit_code_out)
     {
-        * exit_code = 256;
+        if (WIFEXITED(exit_code))
+        {
+            *exit_code_out = WEXITSTATUS(exit_code);
+        }
+        else
+        {
+            *exit_code_out = 256;
+        }
     }
-    return result;
+
+    // Callers expect a malloc'd string.
+    return strdup(collected_output.c_str());
 }
 
 FILE* Nodes::open_ssh_connection(int node)
@@ -513,4 +487,17 @@ int Nodes::start_vm(int node)
 int Nodes::stop_vm(int node)
 {
     return (system(stop_vm_command[node]));
+}
+
+Nodes::SshResult Nodes::ssh_output(const std::string& ssh, int node, bool sudo)
+{
+    Nodes::SshResult rval;
+    char* out = ssh_node_output(node, ssh, sudo, &rval.rc);
+    if (out)
+    {
+        rval.output = out;
+        free(out);
+        mxb::rtrim(rval.output);
+    }
+    return rval;
 }

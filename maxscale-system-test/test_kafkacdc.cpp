@@ -63,9 +63,9 @@ int main(int argc, char** argv)
         "sudo docker run -d -e ADVERTISED_HOST="s + test.maxscales->IP[0]
         + " -p 9092:9092 -p 2182:2181 --name=kafka spotify/kafka");
 
-    if (res.first != 0)
+    if (res.rc != 0)
     {
-        test.tprintf("Failed to start docker container: %s", res.second.c_str());
+        test.tprintf("Failed to start docker container: %s", res.output.c_str());
         return 1;
     }
 
