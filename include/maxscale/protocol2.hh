@@ -253,6 +253,13 @@ public:
     virtual void ping() = 0;
 
     /**
+     * Check if the connection can be closed in a controlled manner
+     *
+     * @return True if the connection can be closed without interruping anything
+     */
+    virtual bool can_close() const = 0;
+
+    /**
      * How many seconds has the connection been idle
      *
      * @return Number of seconds the connection has been idle

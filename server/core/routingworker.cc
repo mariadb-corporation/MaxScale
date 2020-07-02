@@ -95,6 +95,20 @@ thread_local struct this_thread
 {
     WORKER_ABSENT_ID
 };
+
+bool can_close_dcb(DCB* dcb)
+{
+    bool rval = true;
+
+    if (dcb->role() == DCB::Role::BACKEND)
+    {
+        auto b = static_cast<BackendDCB*>(dcb);
+        auto idle = MXS_CLOCK_TO_SEC(mxs_clock() - dcb->last_read());
+        rval = idle > 5 || b->protocol()->can_close();
+    }
+
+    return rval;
+}
 }
 
 namespace maxscale
@@ -441,6 +455,8 @@ void RoutingWorker::process_timeouts()
 
 void RoutingWorker::delete_zombies()
 {
+    Zombies not_ready;
+
     // An algorithm cannot be used, as the final closing of a DCB may cause
     // other DCBs to be registered in the zombie queue.
 
@@ -449,8 +465,17 @@ void RoutingWorker::delete_zombies()
         DCB* pDcb = m_zombies.back();
         m_zombies.pop_back();
 
-        DCB::Manager::call_destroy(pDcb);
+        if (can_close_dcb(pDcb))
+        {
+            DCB::Manager::call_destroy(pDcb);
+        }
+        else
+        {
+            not_ready.push_back(pDcb);
+        }
     }
+
+    m_zombies.insert(m_zombies.end(), not_ready.begin(), not_ready.end());
 }
 
 void RoutingWorker::add(DCB* pDcb)
