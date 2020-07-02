@@ -37,6 +37,7 @@ public:
     bool    reuse_connection(BackendDCB* dcb, mxs::Component* upstream) override;
     bool    established() override;
     void    ping() override;
+    bool    can_close() const override;
     int64_t seconds_idle() const override;
     json_t* diagnostics() const override;
 
@@ -181,6 +182,7 @@ private:
     bool        m_large_query = false;
     bool        m_changing_user {false};
     mxs::Reply  m_reply;
+    bool        m_send_com_quit = true;
 
     mxs::Component* m_upstream {nullptr};       /**< Upstream component, typically a router */
     MXS_SESSION*    m_session {nullptr};        /**< Generic session */

@@ -173,14 +173,11 @@ void MariaDBBackendConnection::finish_connection()
 {
     mxb_assert(m_dcb->handler());
 
-    if (m_state == State::HANDSHAKING)
+    if (m_send_com_quit && m_state == State::ROUTING)
     {
-        RAND_bytes(m_auth_data.scramble, sizeof(m_auth_data.scramble));
-        m_dcb->writeq_append(gw_generate_auth_response(false, false, 0));
+        /** Send COM_QUIT to the backend being closed */
+        m_dcb->writeq_append(mysql_create_com_quit(nullptr, 0));
     }
-
-    /** Send COM_QUIT to the backend being closed */
-    m_dcb->writeq_append(mysql_create_com_quit(nullptr, 0));
 }
 
 bool MariaDBBackendConnection::reuse_connection(BackendDCB* dcb, mxs::Component* upstream)
@@ -963,6 +960,11 @@ int32_t MariaDBBackendConnection::write(GWBUF* queue)
             }
             else
             {
+                if (cmd == MXS_COM_QUIT)
+                {
+                    m_send_com_quit = false;
+                }
+
                 if (gwbuf_is_ignorable(queue))
                 {
                     /** The response to this command should be ignored */
@@ -1353,7 +1355,7 @@ static bool get_ip_string_and_port(struct sockaddr_storage* sa,
 
 bool MariaDBBackendConnection::established()
 {
-    return m_state == State::ROUTING && (m_ignore_replies == 0) && !m_stored_query;
+    return m_state == State::ROUTING && (m_ignore_replies == 0) && !m_stored_query && m_reply.is_complete();
 }
 
 void MariaDBBackendConnection::ping()
@@ -1365,6 +1367,11 @@ void MariaDBBackendConnection::ping()
         // TODO: Think of a better mechanism for the pings, the ignorable ping mechanism isn't pretty.
         write(modutil_create_ignorable_ping());
     }
+}
+
+bool MariaDBBackendConnection::can_close() const
+{
+    return m_state == State::ROUTING || m_state == State::FAILED;
 }
 
 int64_t MariaDBBackendConnection::seconds_idle() const

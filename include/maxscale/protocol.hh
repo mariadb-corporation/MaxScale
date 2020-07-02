@@ -87,4 +87,4 @@ struct MXS_PROTOCOL_API
  * the MXS_PROTOCOL structure is changed. See the rules defined in modinfo.h
  * that define how these numbers should change.
  */
-#define MXS_PROTOCOL_VERSION {3, 1, 0}
+#define MXS_PROTOCOL_VERSION {3, 2, 0}
