@@ -347,8 +347,10 @@ TestConnections::TestConnections(int argc, char* argv[])
     }
 
     m_get_logs_command = (string)test_dir + "/get_logs.sh";
-    m_ssl_options = string_printf("--ssl-cert=%s/ssl-cert/client-cert.pem --ssl-key=%s/ssl-cert/client-key.pem",
-                                  test_dir, test_dir);
+    m_ssl_options = string_printf(
+        "--ssl-cert=%s/ssl-cert/client-cert.pem --ssl-key=%s/ssl-cert/client-key.pem",
+        test_dir,
+        test_dir);
     setenv("ssl_options", m_ssl_options.c_str(), 1);
 
     if (maxscale::require_columnstore)
@@ -1041,10 +1043,10 @@ void TestConnections::copy_one_maxscale_log(int i, double timestamp)
                                        "rm -rf %s/logs;"
                                        "mkdir %s/logs;"
                                        "cp %s/*.log %s/logs/;"
-                                       "cp /tmp/core* %s/logs/ >& /dev/null;"
+                                       "test -e /tmp/core* && cp /tmp/core* %s/logs/ >& /dev/null;"
                                        "cp %s %s/logs/;"
                                        "chmod 777 -R %s/logs;"
-                                       "ls /tmp/core* >& /dev/null && exit 42;",
+                                       "test -e /tmp/core*  && exit 42;",
                                        maxscales->access_homedir[i],
                                        maxscales->access_homedir[i],
                                        maxscales->maxscale_log_dir[i],
@@ -1829,7 +1831,8 @@ int TestConnections::get_client_ip(int m, char* ip)
 
     if (c.connect())
     {
-        std::string host = c.field("SELECT host FROM information_schema.processlist WHERE id = connection_id()");
+        std::string host = c.field(
+            "SELECT host FROM information_schema.processlist WHERE id = connection_id()");
         strcpy(ip, host.c_str());
         ret = 0;
     }
