@@ -1024,6 +1024,10 @@ int SchemaRouterSession::inspect_mapping_states(SSRBackend& bref,
                           (*it)->backend()->server->name(),
                           m_client->session);
             }
+            else if (rc == SHOWDB_FATAL_ERROR)
+            {
+                return -1;
+            }
             else
             {
                 mxb_assert(rc != SHOWDB_PARTIAL_RESPONSE);
@@ -1279,7 +1283,7 @@ enum showdb_response SchemaRouterSession::parse_mapping_response(SSRBackend& bre
         if (ptr >= (uint8_t*) buf->end)
         {
             MXS_INFO("Malformed packet for mapping query.");
-            *buffer = gwbuf_append(buf, *buffer);
+            gwbuf_free(buf);
             return SHOWDB_FATAL_ERROR;
         }
 
