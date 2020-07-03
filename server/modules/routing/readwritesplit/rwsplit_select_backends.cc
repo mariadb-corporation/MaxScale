@@ -507,7 +507,8 @@ bool RWSplitSession::open_connections()
     for (auto& backend : m_raw_backends)
     {
         if (!backend->in_use() && backend->can_connect() && valid_for_slave(backend, master)
-            && backend->server()->rank() == current_rank)
+            && backend->server()->rank() == current_rank
+            && rpl_lag_is_ok(backend, get_max_replication_lag()))
         {
             candidates.push_back(backend);
         }
