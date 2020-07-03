@@ -102,6 +102,12 @@ MYSQL* mxs_mysql_real_connect(MYSQL* con, SERVER* server, const char* user, cons
         }
     }
 
+    if (mysql && mysql_query(mysql, "SET NAMES latin1") != 0)
+    {
+        MXS_ERROR("Failed to set latin1 character set: %s", mysql_error(mysql));
+        mysql = NULL;
+    }
+
     if (mysql)
     {
         /** Copy the server charset */
