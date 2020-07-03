@@ -551,11 +551,6 @@ cache_result_t LRUStorage::get_new_node(const CACHE_KEY& key,
             mxb_assert(m_stats.items == m_max_count);
             pNode = vacate_lru();
         }
-
-        if (!pNode)
-        {
-            result = CACHE_RESULT_ERROR;
-        }
     }
     else
     {
@@ -577,6 +572,10 @@ cache_result_t LRUStorage::get_new_node(const CACHE_KEY& key,
             pNode = NULL;
             result = CACHE_RESULT_OUT_OF_RESOURCES;
         }
+    }
+    else
+    {
+        result = CACHE_RESULT_ERROR;
     }
 
     if (CACHE_RESULT_IS_OK(result))
