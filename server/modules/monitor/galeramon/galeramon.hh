@@ -69,7 +69,11 @@ private:
     std::string m_cluster_uuid;         /**< The Cluster UUID */
     bool        m_log_no_members;       /**< Should we log if no member are found. */
     NodeMap     m_info;                 /**< Contains Galera Cluster variables of all nodes */
+    NodeMap     m_prev_info;            /**< Contains the info from the previous tick */
     int         m_cluster_size;         /**< How many nodes in the cluster */
+
+    // Prevents concurrent use that might occur during the diagnostics_json call
+    mutable std::mutex m_lock;
 
     GaleraMonitor(const std::string& name, const std::string& module);
 
