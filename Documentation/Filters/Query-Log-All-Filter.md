@@ -24,6 +24,12 @@ password=mypasswd
 filters=MyLogFilter
 ```
 
+## Log Rotation
+
+The `qlafilter` logs can be rotated by executing the `maxctrl rotate logs`
+command. This will cause the log files to be reopened when the next message is
+written to the file. This applies to both unified and session type logging.
+
 ## Filter Parameters
 
 The QLA filter has one mandatory parameter, `filebase`, and a number of optional
