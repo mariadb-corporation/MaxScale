@@ -682,7 +682,7 @@ int Client::process(string url, string method, const char* upload_data, size_t* 
 
     if (json_t* js = reply.get_response())
     {
-        int flags = 0;
+        int flags = JSON_SORT_KEYS;
         string pretty = request.get_option("pretty");
 
         if (pretty == "true" || pretty.length() == 0)
