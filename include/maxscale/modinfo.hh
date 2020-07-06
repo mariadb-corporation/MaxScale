@@ -245,11 +245,11 @@ static inline const char* mxs_module_param_type_to_string(enum mxs_module_param_
     case MXS_MODULE_PARAM_STRING:
         return "string";
 
-    case MXS_MODULE_PARAM_PASSWORD:
-        return "password string";
-
     case MXS_MODULE_PARAM_QUOTEDSTRING:
         return "quoted string";
+
+    case MXS_MODULE_PARAM_PASSWORD:
+        return "password string";
 
     case MXS_MODULE_PARAM_ENUM:
         return "enum";
@@ -262,6 +262,9 @@ static inline const char* mxs_module_param_type_to_string(enum mxs_module_param_
 
     case MXS_MODULE_PARAM_SERVER:
         return "server";
+
+    case MXS_MODULE_PARAM_TARGET:
+        return "target";
 
     case MXS_MODULE_PARAM_SERVERLIST:
         return "serverlist";
