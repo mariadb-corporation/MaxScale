@@ -53,8 +53,6 @@ config::ParamEnumMask<mxs_routing_capability_t> capabilities(
 
 extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
-    MXS_NOTICE("Nullfilter module %s initialized.", VERSION_STRING);
-
     static MXS_MODULE info =
     {
         MXS_MODULE_API_FILTER,

@@ -77,8 +77,6 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
                                reload_argv,
                                "Reload masking filter rules");
 
-    MXS_NOTICE("Masking module %s initialized.", VERSION_STRING);
-
     static MXS_MODULE info =
     {
         MXS_MODULE_API_FILTER,

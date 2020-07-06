@@ -54,8 +54,6 @@ bool handle_unsoftfail(const MODULECMD_ARG* args, json_t** error_out)
  */
 extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
-    MXS_NOTICE("Initialise the MariaDB Clustrix Monitor module.");
-
     static modulecmd_arg_type_t softfail_argv[] =
     {
         {

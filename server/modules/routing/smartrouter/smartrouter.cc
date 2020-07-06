@@ -47,8 +47,6 @@ config::ParamBool
  */
 extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
-    MXS_NOTICE("Initialise smartrouter module.");
-
     static MXS_MODULE info =
     {
         MXS_MODULE_API_ROUTER,

@@ -113,8 +113,6 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
                                show_argv,
                                "Show cache filter statistics");
 
-    MXS_NOTICE("Initialized cache module %s.\n", VERSION_STRING);
-
     static MXS_MODULE info =
     {
         MXS_MODULE_API_FILTER,
