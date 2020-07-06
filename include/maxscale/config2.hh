@@ -1285,7 +1285,7 @@ public:
                 const char* zName,
                 const char* zDescription,
                 Modifiable modifiable = Modifiable::AT_STARTUP)
-        : ParamString(pSpecification, zName, zDescription, DESIRED, modifiable, Param::MANDATORY,
+        : ParamString(pSpecification, zName, zDescription, IGNORED, modifiable, Param::MANDATORY,
                       value_type())
     {
     }
@@ -1304,7 +1304,7 @@ public:
                 const char* zDescription,
                 value_type default_value,
                 Modifiable modifiable = Modifiable::AT_STARTUP)
-        : ParamString(pSpecification, zName, zDescription, DESIRED, modifiable, Param::OPTIONAL,
+        : ParamString(pSpecification, zName, zDescription, IGNORED, modifiable, Param::OPTIONAL,
                       default_value)
     {
     }
