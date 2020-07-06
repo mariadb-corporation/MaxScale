@@ -1976,6 +1976,12 @@ int main(int argc, char** argv)
     cleanup_old_process_datadirs();
     if (!cnf.config_check)
     {
+        if (!load_all_modules())
+        {
+            rc = MAXSCALE_INTERNALERROR;
+            return rc;
+        }
+
         /*
          * Set the data directory. We use a unique directory name to avoid conflicts
          * if multiple instances of MaxScale are being run on the same machine.
