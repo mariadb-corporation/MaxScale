@@ -59,6 +59,7 @@ For more details, please refer to:
 
 For more details, please refer to:
 
+* [MariaDB MaxScale 2.4.11 Release Notes](Release-Notes/MaxScale-2.4.11-Release-Notes.md)
 * [MariaDB MaxScale 2.4.10 Release Notes](Release-Notes/MaxScale-2.4.10-Release-Notes.md)
 * [MariaDB MaxScale 2.4.9 Release Notes](Release-Notes/MaxScale-2.4.9-Release-Notes.md)
 * [MariaDB MaxScale 2.4.8 Release Notes](Release-Notes/MaxScale-2.4.8-Release-Notes.md)
