@@ -138,7 +138,7 @@ public:
         int rc {-1};
         std::string output;
     };
-    SshResult ssh_output(const std::string& ssh, int node = 0, bool sudo = true);
+    SshResult ssh_output(const std::string& cmd, int node = 0, bool sudo = true);
 
     /**
      * @brief executes shell command on the node using ssh

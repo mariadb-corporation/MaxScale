@@ -49,13 +49,10 @@ void restore_servers(TestConnections& test, bool events_added)
     test.repl->unblock_node(0);
     test.repl->unblock_node(1);
     test.repl->unblock_node(2);
-    int dummy;
-    char* o1 = test.maxscales->ssh_node_output(0, "maxctrl clear server server1 Maint", true, &dummy);
-    char* o2 = test.maxscales->ssh_node_output(0, "maxctrl clear server server2 Maint", true, &dummy);
-    char* o3 = test.maxscales->ssh_node_output(0, "maxctrl clear server server3 Maint", true, &dummy);
-    free(o1);
-    free(o2);
-    free(o3);
+
+    test.maxscales->ssh_output("maxctrl clear server server1 Maint");
+    test.maxscales->ssh_output("maxctrl clear server server2 Maint");
+    test.maxscales->ssh_output("maxctrl clear server server3 Maint");
     if (events_added)
     {
         // Events have been added to server4, so it must be the real new master. Then switchover to server1.
@@ -63,10 +60,7 @@ void restore_servers(TestConnections& test, bool events_added)
         replicate_from(test, 1, 3);
         replicate_from(test, 2, 3);
         test.maxscales->wait_for_monitor();
-        o1 = test.maxscales->ssh_node_output(0,
-                                             "maxctrl call command mariadbmon switchover MySQL-Monitor server1 server4",
-                                             true,
-                                             &dummy);
+        test.maxscales->ssh_output("maxctrl call command mariadbmon switchover MySQL-Monitor server1 server4");
         test.maxscales->wait_for_monitor();
         int master_id = get_master_server_id(test);
         test.expect(master_id == 1, "Switchover failed to set server1 as master.");

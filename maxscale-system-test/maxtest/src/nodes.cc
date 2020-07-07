@@ -86,26 +86,13 @@ string Nodes::generate_ssh_cmd(int node, const string& cmd, bool sudo)
 
 char* Nodes::ssh_node_output_f(int node, bool sudo, int* exit_code, const char* format, ...)
 {
+
     va_list valist;
-
     va_start(valist, format);
-    int message_len = vsnprintf(NULL, 0, format, valist);
+    auto cmd = string_printf(format, valist);
     va_end(valist);
 
-    if (message_len < 0)
-    {
-        return NULL;
-    }
-
-    char* sys = (char*)malloc(message_len + 1);
-
-    va_start(valist, format);
-    vsnprintf(sys, message_len + 1, format, valist);
-    va_end(valist);
-
-    char* result = ssh_node_output(node, sys, sudo, exit_code);
-    free(sys);
-
+    char* result = ssh_node_output(node, cmd, sudo, exit_code);
     return result;
 }
 
@@ -489,10 +476,10 @@ int Nodes::stop_vm(int node)
     return (system(stop_vm_command[node]));
 }
 
-Nodes::SshResult Nodes::ssh_output(const std::string& ssh, int node, bool sudo)
+Nodes::SshResult Nodes::ssh_output(const std::string& cmd, int node, bool sudo)
 {
     Nodes::SshResult rval;
-    char* out = ssh_node_output(node, ssh, sudo, &rval.rc);
+    char* out = ssh_node_output(node, cmd, sudo, &rval.rc);
     if (out)
     {
         rval.output = out;

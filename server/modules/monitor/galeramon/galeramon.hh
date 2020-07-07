@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2024-06-15
+ * Change Date: 2024-07-07
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -68,7 +68,11 @@ private:
     std::string m_cluster_uuid;         /**< The Cluster UUID */
     bool        m_log_no_members;       /**< Should we log if no member are found. */
     NodeMap     m_info;                 /**< Contains Galera Cluster variables of all nodes */
+    NodeMap     m_prev_info;            /**< Contains the info from the previous tick */
     int         m_cluster_size;         /**< How many nodes in the cluster */
+
+    // Prevents concurrent use that might occur during the diagnostics_json call
+    mutable std::mutex m_lock;
 
     GaleraMonitor(const std::string& name, const std::string& module);
 

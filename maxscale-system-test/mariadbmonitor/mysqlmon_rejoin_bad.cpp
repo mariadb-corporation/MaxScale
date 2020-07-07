@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2024-06-15
+ * Change Date: 2024-07-07
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -134,9 +134,8 @@ int main(int argc, char** argv)
     }
 
     cout << "Reseting cluster...\n";
-    int ec;
     string reset_cmd = "maxctrl call command mysqlmon reset-replication MySQL-Monitor server1";
-    test.maxscales->ssh_node_output(0, reset_cmd.c_str(), true, &ec);
+    test.maxscales->ssh_output(reset_cmd);
     test.maxscales->wait_for_monitor(1);
     test.expect(get_master_server_id(test) == 1, "server1 is not the master when it should. "
                                                  "reset-replication must have failed.");

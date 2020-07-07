@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2024-06-15
+ * Change Date: 2024-07-07
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -468,7 +468,8 @@ bool RWSplitSession::open_connections()
     for (auto& backend : m_raw_backends)
     {
         if (!backend->in_use() && backend->can_connect() && valid_for_slave(backend, master)
-            && backend->target()->rank() == current_rank)
+            && backend->target()->rank() == current_rank
+            && rpl_lag_is_ok(backend, get_max_replication_lag()))
         {
             candidates.push_back(backend);
         }

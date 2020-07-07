@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2024-06-15
+ * Change Date: 2024-07-07
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -78,12 +78,7 @@ int main(int argc, char** argv)
         test.tprintf(LINE);
         test.expect(gtid_final == gtid_old_master, "Old master did not successfully rejoin the cluster.");
         // Switch master back to server1 so last check is faster
-        int ec;
-        test.maxscales->ssh_node_output(0,
-                                        "maxctrl call command mysqlmon switchover "
-                                        "MySQL-Monitor server1 server2",
-                                        true,
-                                        &ec);
+        test.maxscales->ssh_output("maxctrl call command mysqlmon switchover MySQL-Monitor server1 server2");
         test.maxscales->wait_for_monitor();     // Wait for monitor to update status
         get_output(test);
         master_id = get_master_server_id(test);

@@ -35,9 +35,8 @@ int main(int argc, char *argv[])
     Test->maxscales->close_maxscale_connections(0);
     Test->check_maxscale_alive(0);
 
-    int exit_code = 0;
-    char * ver = Test->maxscales->ssh_node_output(0, "maxscale --version-full", false, &exit_code);
-    Test->tprintf("Maxscale_full_version_start:\n%s\nMaxscale_full_version_end\n", ver);
+    auto ver = Test->maxscales->ssh_output("maxscale --version-full", 0, false);
+    Test->tprintf("Maxscale_full_version_start:\n%s\nMaxscale_full_version_end\n", ver.output.c_str());
 
     int rval = Test->global_result;
     delete Test;

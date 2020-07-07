@@ -86,11 +86,10 @@ int main(int argc, char* argv[])
     {
         char cmd[PATH_MAX];
         snprintf(cmd, sizeof(cmd), "maxavrocheck -d /var/lib/maxscale/avro/test.t1.%06d.avro", i);
-        int exit_code;
-        char* rows = test.maxscales->ssh_node_output(0, cmd, true, &exit_code);
+        auto res = test.maxscales->ssh_output(cmd);
         int nrows = 0;
         std::istringstream iss;
-        iss.str(rows);
+        iss.str(res.output);
 
         for (std::string line; std::getline(iss, line);)
         {
@@ -106,8 +105,7 @@ int main(int argc, char* argv[])
         const int nchanges = 2;
         test.add_result(nrows != nchanges,
                         "Expected %d line in file number %d, got %d: %s",
-                        nchanges, i, nrows, rows);
-        free(rows);
+                        nchanges, i, nrows, res.output.c_str());
     }
 
     test.stop_timeout();

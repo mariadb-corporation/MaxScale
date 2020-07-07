@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2024-06-15
+ * Change Date: 2024-07-07
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -102,6 +102,12 @@ MYSQL* mxs_mysql_real_connect(MYSQL* con, SERVER* server, const char* user, cons
             MXS_WARNING("Could not connect with normal port to server '%s', using extra_port",
                         server->name());
         }
+    }
+
+    if (mysql && mysql_query(mysql, "SET NAMES latin1") != 0)
+    {
+        MXS_ERROR("Failed to set latin1 character set: %s", mysql_error(mysql));
+        mysql = NULL;
     }
 
     if (mysql)

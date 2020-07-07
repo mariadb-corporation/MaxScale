@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2024-06-15
+ * Change Date: 2024-07-07
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -64,7 +64,7 @@ int main(int argc, char** argv)
         get_output(test);
         test.tprintf("and manually rejoining it to cluster.");
         const char REJOIN_CMD[] = "maxctrl call command mariadbmon rejoin MySQL-Monitor server1";
-        test.maxscales->ssh_node_output(0, REJOIN_CMD, true, &ec);
+        test.maxscales->ssh_output(REJOIN_CMD);
         test.maxscales->wait_for_monitor(2);
         get_output(test);
         test.repl->connect();
@@ -88,8 +88,7 @@ int main(int argc, char** argv)
                     "Old master did not successfully rejoin the cluster (%s != %s).",
                     gtid_final.c_str(), gtid_old_master.c_str());
         // Switch master back to server1 so last check is faster
-        test.maxscales->ssh_node_output(0,
-                "maxctrl call command mysqlmon switchover MySQL-Monitor server1 server2", true, &ec);
+        test.maxscales->ssh_output("maxctrl call command mysqlmon switchover MySQL-Monitor server1 server2");
         test.maxscales->wait_for_monitor(2);
         get_output(test);
         master_id = get_master_server_id(test);
@@ -108,14 +107,13 @@ int main(int argc, char** argv)
                            "STOP SLAVE; RESET SLAVE ALL; RESET MASTER; SET GLOBAL gtid_slave_pos='';");
             test.maxscales->wait_for_monitor();
             get_output(test);
-            auto row = get_row(conn, sstatus_query.c_str());
+            auto row = get_row(conn, sstatus_query);
             test.expect(row.empty(), "server3 is still replicating.");
             row = get_row(conn, "SELECT @@gtid_current_pos;");
             test.expect(row.empty() || row[0].empty(),
                         "server3 gtid is not empty as it should (%s).", row[0].c_str());
             cout << "Rejoining server3.\n";
-            test.maxscales->ssh_node_output(0,
-                    "maxctrl call command mysqlmon rejoin MySQL-Monitor server3", true, &ec);
+            test.maxscales->ssh_output("maxctrl call command mysqlmon rejoin MySQL-Monitor server3");
             test.maxscales->wait_for_monitor(2);
             get_output(test);
             test.repl->connect();

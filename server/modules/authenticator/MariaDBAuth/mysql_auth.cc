@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2024-06-15
+ * Change Date: 2024-07-07
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -206,7 +206,7 @@ AuthRes MariaDBClientAuthenticator::check_password(MYSQL_session* session, const
         {
             // Save reason of failure.
             rval.msg = empty_token ? "Client gave no password when one was expected" :
-                       "Client gave a password when none was expected";
+                "Client gave a password when none was expected";
         }
         return rval;
     }
@@ -335,22 +335,22 @@ extern "C"
 MXS_MODULE* MXS_CREATE_MODULE()
 {
     static MXS_MODULE info =
+    {
+        MXS_MODULE_API_AUTHENTICATOR,
+        MXS_MODULE_GA,
+        MXS_AUTHENTICATOR_VERSION,
+        "Standard MySQL/MariaDB authentication (mysql_native_password)",
+        "V2.1.0",
+        MXS_NO_MODULE_CAPABILITIES,         // Authenticator capabilities are in the instance object
+        &mxs::AuthenticatorApiGenerator<MariaDBAuthenticatorModule>::s_api,
+        NULL,           /* Process init. */
+        NULL,           /* Process finish. */
+        NULL,           /* Thread init. */
+        NULL,           /* Thread finish. */
         {
-            MXS_MODULE_API_AUTHENTICATOR,
-            MXS_MODULE_GA,
-            MXS_AUTHENTICATOR_VERSION,
-            "Standard MySQL/MariaDB authentication (mysql_native_password)",
-            "V2.1.0",
-            MXS_NO_MODULE_CAPABILITIES,     // Authenticator capabilities are in the instance object
-            &mxs::AuthenticatorApiGenerator<MariaDBAuthenticatorModule>::s_api,
-            NULL,       /* Process init. */
-            NULL,       /* Process finish. */
-            NULL,       /* Thread init. */
-            NULL,       /* Thread finish. */
-            {
-                {MXS_END_MODULE_PARAMS}
-            }
-        };
+            {MXS_END_MODULE_PARAMS}
+        }
+    };
 
     return &info;
 }

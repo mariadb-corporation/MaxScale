@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2024-06-15
+ * Change Date: 2024-07-07
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -27,12 +27,11 @@ int main(int argc, char** argv)
     print_gtids(test);
 
     int node0_id = -1;
-    int ec = -1;
 
     // Part 1
     node0_id = prepare_test_1(test);
 
-    test.maxscales->ssh_node_output(0, FAILOVER_CMD, true, &ec);
+    test.maxscales->ssh_output(FAILOVER_CMD);
     test.maxscales->wait_for_monitor();
 
     check_test_1(test, node0_id);
@@ -44,7 +43,7 @@ int main(int argc, char** argv)
     // Part 2
     prepare_test_2(test);
 
-    test.maxscales->ssh_node_output(0, FAILOVER_CMD, true, &ec);
+    test.maxscales->ssh_output(FAILOVER_CMD);
     test.maxscales->wait_for_monitor();
 
     check_test_2(test);
@@ -56,7 +55,7 @@ int main(int argc, char** argv)
     // Part 3
     prepare_test_3(test);
 
-    test.maxscales->ssh_node_output(0, FAILOVER_CMD, true, &ec);
+    test.maxscales->ssh_output(FAILOVER_CMD);
     test.maxscales->wait_for_monitor();
 
     check_test_3(test);

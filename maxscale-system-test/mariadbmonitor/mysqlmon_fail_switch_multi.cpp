@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2024-06-15
+ * Change Date: 2024-07-07
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -46,9 +46,9 @@ int main(int argc, char** argv)
     test.repl->sync_slaves(0);
     get_output(test);
     print_gtids(test);
-    int ec = -1;
+
     auto expect_server_status = [&test](const string& server_name, const string& status) {
-        bool found = (test.maxscales->get_server_status(server_name.c_str()).count(status) == 1);
+        bool found = (test.maxscales->get_server_status(server_name).count(status) == 1);
         test.expect(found, "%s was not %s as was expected.", server_name.c_str(), status.c_str());
     };
 
@@ -121,8 +121,7 @@ int main(int argc, char** argv)
         mon_wait(2);
 	    get_output(test);
         expect_server_status_multi({slave, master});
-        test.maxscales->ssh_node_output(0, "maxctrl call command mariadbmon switchover MariaDB-Monitor",
-                                        true, &ec);
+        test.maxscales->ssh_output("maxctrl call command mariadbmon switchover MariaDB-Monitor");
         mon_wait(2);
         expect_replicating_from(test, 0, 2);
         expect_replicating_from(test, 0, 3);
@@ -141,8 +140,7 @@ int main(int argc, char** argv)
     {
         test.try_query(test.repl->nodes[i], drop_query);
     }
-    test.maxscales->ssh_node_output(0, "maxctrl call command mariadbmon reset-replication "
-		                               "MariaDB-Monitor server1", true, &ec);
+    test.maxscales->ssh_output("maxctrl call command mariadbmon reset-replication MariaDB-Monitor server1");
     return test.global_result;
 }
 

@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2024-06-15
+ * Change Date: 2024-07-07
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -972,11 +972,6 @@ cache_result_t LRUStorage::get_new_node(const CacheKey& key,
             mxb_assert(m_stats.items == m_max_count);
             pNode = vacate_lru();
         }
-
-        if (!pNode)
-        {
-            result = CACHE_RESULT_ERROR;
-        }
     }
     else
     {
@@ -998,6 +993,10 @@ cache_result_t LRUStorage::get_new_node(const CacheKey& key,
             pNode = NULL;
             result = CACHE_RESULT_OUT_OF_RESOURCES;
         }
+    }
+    else
+    {
+        result = CACHE_RESULT_ERROR;
     }
 
     if (CACHE_RESULT_IS_OK(result))

@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2024-06-15
+ * Change Date: 2024-07-07
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -85,12 +85,13 @@ json_t* GaleraMonitor::diagnostics() const
     }
 
     json_t* arr = json_array();
+    std::lock_guard<std::mutex> guard(m_lock);
 
     for (auto ptr : servers())
     {
-        auto it = m_info.find(ptr);
+        auto it = m_prev_info.find(ptr);
 
-        if (it != m_info.end())
+        if (it != m_prev_info.end())
         {
             json_t* obj = json_object();
             json_object_set_new(obj, "name", json_string(it->first->server->name()));
@@ -339,7 +340,9 @@ void GaleraMonitor::calculate_cluster()
 
 void GaleraMonitor::pre_tick()
 {
-    // Clear the info before monitoring to make sure it's up to date
+    // Store the info of the previous tick in case it's used for diagnostics
+    std::lock_guard<std::mutex> guard(m_lock);
+    m_prev_info = std::move(m_info);
     m_info.clear();
 }
 

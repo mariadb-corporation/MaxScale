@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2024-06-15
+ * Change Date: 2024-07-07
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -147,7 +147,7 @@ namespace
 enum class StatementType
 {
     SELECT,
-    DUPSERT, // DELETE, UPDATE, INSERT
+    DUPSERT,    // DELETE, UPDATE, INSERT
     UNKNOWN
 };
 
@@ -317,11 +317,11 @@ CacheFilterSession::~CacheFilterSession()
 
 std::shared_ptr<CacheFilterSession> CacheFilterSession::release()
 {
-    mxb_assert(m_sThis.get()); // This function can be called once.
+    mxb_assert(m_sThis.get());      // This function can be called once.
 
-    std::shared_ptr<CacheFilterSession> sThis { m_sThis };
+    std::shared_ptr<CacheFilterSession> sThis {m_sThis};
 
-    m_sThis.reset(); // No, effect as sThis has a reference.
+    m_sThis.reset();    // No, effect as sThis has a reference.
 
     // When sThis in the caller goes out of scope, this will be deleted.
     return sThis;
@@ -530,7 +530,7 @@ int CacheFilterSession::clientReply(GWBUF* pData, const mxs::ReplyRoute& down, c
                     std::vector<std::string> invalidation_words;
                     std::copy(m_tables.begin(), m_tables.end(), std::back_inserter(invalidation_words));
 
-                    std::weak_ptr<CacheFilterSession> sWeak { m_sThis };
+                    std::weak_ptr<CacheFilterSession> sWeak {m_sThis};
 
                     cache_result_t result =
                         m_sCache->invalidate(invalidation_words,
@@ -545,8 +545,8 @@ int CacheFilterSession::clientReply(GWBUF* pData, const mxs::ReplyRoute& down, c
                                                  }
                                                  else
                                                  {
-                                                     // Ok, so the session was terminated before
-                                                     // we got a reply.
+                                                    // Ok, so the session was terminated before
+                                                    // we got a reply.
                                                      gwbuf_free(pData);
                                                  }
                                              });
@@ -755,7 +755,7 @@ void CacheFilterSession::store_and_prepare_response(const mxs::ReplyRoute& down,
         m_tables.clear();
     }
 
-    std::weak_ptr<CacheFilterSession> sWeak { m_sThis };
+    std::weak_ptr<CacheFilterSession> sWeak {m_sThis};
 
     cache_result_t result = m_sCache->put_value(m_key, invalidation_words, m_res,
                                                 [sWeak, down, reply](cache_result_t result) {
@@ -962,7 +962,8 @@ CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* p
                             }
                         }
                     }
-                    /* FALLTHROUGH */
+
+                /* FALLTHROUGH */
                 case StatementType::UNKNOWN:
                     // A bit broad, as e.g. SHOW will cause the read only state to be turned
                     // off. However, during normal use this will always be an UPDATE, INSERT
@@ -1141,39 +1142,38 @@ CacheFilterSession::routing_action_t CacheFilterSession::route_SELECT(cache_acti
 
     if (should_use(cache_action) && rules.should_use(m_pSession))
     {
-        std::weak_ptr<CacheFilterSession> sWeak { m_sThis };
+        std::weak_ptr<CacheFilterSession> sWeak {m_sThis};
 
-        auto cb = [sWeak, pPacket](cache_result_t result, GWBUF* pResponse)
-        {
-            std::shared_ptr<CacheFilterSession> sThis = sWeak.lock();
+        auto cb = [sWeak, pPacket](cache_result_t result, GWBUF* pResponse) {
+                std::shared_ptr<CacheFilterSession> sThis = sWeak.lock();
 
-            if (sThis)
-            {
-                auto routing_action = sThis->get_value_handler(pPacket, result, pResponse);
-
-                if (routing_action == ROUTING_CONTINUE)
+                if (sThis)
                 {
-                    sThis->continue_routing(pPacket);
+                    auto routing_action = sThis->get_value_handler(pPacket, result, pResponse);
+
+                    if (routing_action == ROUTING_CONTINUE)
+                    {
+                        sThis->continue_routing(pPacket);
+                    }
+                    else
+                    {
+                        mxb_assert(pResponse);
+                        // State is ROUTING_ABORT, which implies that pResponse contains the
+                        // needed response. All we need to do is to send it to the client.
+
+                        mxs::ReplyRoute down;
+                        mxs::Reply reply;
+
+                        sThis->m_up.clientReply(pResponse, down, reply);
+                    }
                 }
                 else
                 {
-                    mxb_assert(pResponse);
-                    // State is ROUTING_ABORT, which implies that pResponse contains the
-                    // needed response. All we need to do is to send it to the client.
-
-                    mxs::ReplyRoute down;
-                    mxs::Reply reply;
-
-                    sThis->m_up.clientReply(pResponse, down, reply);
+                    // Ok, so the session was terminated before we got a reply.
+                    gwbuf_free(pPacket);
+                    gwbuf_free(pResponse);
                 }
-            }
-            else
-            {
-                // Ok, so the session was terminated before we got a reply.
-                gwbuf_free(pPacket);
-                gwbuf_free(pResponse);
-            }
-        };
+            };
 
         uint32_t flags = CACHE_FLAGS_INCLUDE_STALE;
         GWBUF* pResponse;
@@ -1472,14 +1472,14 @@ bool CacheFilterSession::put_value_handler(cache_result_t result,
     {
         MXS_ERROR("Could not store new cache value, deleting a possibly existing old value.");
 
-        std::weak_ptr<CacheFilterSession> sWeak { m_sThis };
+        std::weak_ptr<CacheFilterSession> sWeak {m_sThis};
 
         result = m_sCache->del_value(m_key,
                                      [sWeak, down, reply](cache_result_t result) {
                                          auto sThis = sWeak.lock();
 
-                                         // If we do not have an sThis, then the session
-                                         // has been terminated.
+                                        // If we do not have an sThis, then the session
+                                        // has been terminated.
                                          if (sThis)
                                          {
                                              sThis->del_value_handler(result);

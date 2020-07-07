@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2024-06-15
+ * Change Date: 2024-07-07
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -89,11 +89,11 @@ int main(int argc, char** argv)
     }
     cout << "Sending rejoin commands for servers 3 & 4. Server 4 should not rejoin the cluster.\n";
     const string REJOIN_CMD = "maxctrl call command mariadbmon rejoin MySQL-Monitor";
-    int ec;
     string rejoin_s3 = REJOIN_CMD + " server3";
     string rejoin_s4 = REJOIN_CMD + " server4";
-    test.maxscales->ssh_node_output(0, rejoin_s3.c_str(), true, &ec);
-    test.maxscales->ssh_node_output(0, rejoin_s4.c_str(), true, &ec);
+
+    test.maxscales->ssh_output(rejoin_s3);
+    test.maxscales->ssh_output(rejoin_s4);
     test.maxscales->wait_for_monitor();
     get_output(test);
 
@@ -117,8 +117,8 @@ int main(int argc, char** argv)
     mysql_query(nodes[0], "START SLAVE;");
     test.maxscales->wait_for_monitor();
     string rejoin_s2 = REJOIN_CMD + " server2";
-    test.maxscales->ssh_node_output(0, rejoin_s2.c_str(), true, &ec);
-    test.maxscales->ssh_node_output(0, rejoin_s3.c_str(), true, &ec);
+    test.maxscales->ssh_output(rejoin_s2);
+    test.maxscales->ssh_output(rejoin_s3);
     test.maxscales->wait_for_monitor();
     get_output(test);
     int master_id = get_master_server_id(test);
@@ -129,11 +129,7 @@ int main(int argc, char** argv)
     test.expect(states_n0_ok, "Server 1 is not a slave when it should be.");
     if (states_n0_ok)
     {
-        int ec;
-        test.maxscales->ssh_node_output(0,
-                                        "maxctrl call command mysqlmon switchover MySQL-Monitor server1 server4",
-                                        true,
-                                        &ec);
+        test.maxscales->ssh_output("maxctrl call command mysqlmon switchover MySQL-Monitor server1 server4");
         test.maxscales->wait_for_monitor();
         master_id = get_master_server_id(test);
         test.expect(master_id == 1, "Server 1 should be the cluster master.");
