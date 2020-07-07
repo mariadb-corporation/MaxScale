@@ -80,6 +80,7 @@ namespace
 constexpr char CN_ADMIN_AUTH[] = "admin_auth";
 constexpr char CN_ADMIN_ENABLED[] = "admin_enabled";
 constexpr char CN_ADMIN_GUI[] = "admin_gui";
+constexpr char CN_ADMIN_SECURE_GUI[] = "admin_secure_gui";
 constexpr char CN_ADMIN_HOST[] = "admin_host";
 constexpr char CN_ADMIN_PAM_READONLY_SERVICE[] = "admin_pam_readonly_service";
 constexpr char CN_ADMIN_PAM_READWRITE_SERVICE[] = "admin_pam_readwrite_service";
@@ -496,6 +497,12 @@ config::ParamBool Config::s_gui(
     "Enable admin GUI.",
     true);
 
+config::ParamBool Config::s_secure_gui(
+    &Config::s_specification,
+    CN_ADMIN_SECURE_GUI,
+    "Only serve GUI over HTTPS.",
+    true);
+
 config::ParamString Config::s_debug(
     &Config::s_specification,
     CN_DEBUG,
@@ -613,6 +620,7 @@ Config::Config()
     add_native(&load_persisted_configs, &s_load_persisted_configs);
     add_native(&log_warn_super_user, &s_log_warn_super_user);
     add_native(&gui, &s_gui);
+    add_native(&secure_gui, &s_secure_gui);
     add_native(&debug, &s_debug);
 
     this->qc_cache_properties.max_size = get_total_memory() * 0.15;

@@ -221,7 +221,7 @@ std::string get_file(const std::string& file)
 {
     std::string rval;
 
-    if (this_unit.using_ssl)
+    if (this_unit.using_ssl || !mxs::Config::get().secure_gui)
     {
         if (this_unit.files.find(file) == this_unit.files.end())
         {
@@ -666,9 +666,6 @@ int Client::process(string url, string method, const char* upload_data, size_t* 
     MXS_DEBUG("Request:\n%s", request.to_string().c_str());
     request.fix_api_version();
 
-    std::string claim_cookie;
-    std::string sig_cookie;
-
     if (is_auth_endpoint(request))
     {
         reply = generate_token(request);
@@ -759,7 +756,12 @@ HttpResponse Client::generate_token(const HttpRequest& request)
         HttpResponse reply = HttpResponse(MHD_HTTP_NO_CONTENT);
 
         auto pos = token.find_last_of('.');
-        std::string cookie_opts = "; SameSite=Strict; Secure";
+        std::string cookie_opts = "; SameSite=Strict";
+
+        if (this_unit.using_ssl)
+        {
+            cookie_opts += "; Secure";
+        }
 
         if (!max_age.empty())
         {
