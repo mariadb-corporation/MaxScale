@@ -645,8 +645,11 @@ static bool mysql_auth_set_client_data(MYSQL_session* client_data,
                             else
                             {
                                 // Check that the plugin is as expected. If not, make a note so the
-                                // authentication function switches the plugin.
-                                bool correct_auth = strcmp(plugin_name, DEFAULT_MYSQL_AUTH_PLUGIN) == 0;
+                                // authentication function switches the plugin. An empty auth plugin
+                                // name should be interpreted as the connector using the same plugin
+                                // we sent in the initial handshake.
+                                bool correct_auth = strcmp(plugin_name, DEFAULT_MYSQL_AUTH_PLUGIN) == 0
+                                    || *plugin_name == '\0';
                                 client_data->correct_authenticator = correct_auth;
                                 if (!correct_auth)
                                 {
