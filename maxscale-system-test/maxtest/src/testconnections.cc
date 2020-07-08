@@ -554,6 +554,11 @@ TestConnections::~TestConnections()
     {
         repl->disable_ssl();
         // galera->disable_ssl();
+
+        // TODO: Presumably that repl->disable_ssl() call should remove the SSL requirement,
+        // TODO: but that it does not do as any non-SSL test folling will not work.
+        // TODO: Creating the users seems to fix it, so for the time being we do that.
+        repl->create_users();
     }
 
     // stop all Maxscales to detect crashes on exit
