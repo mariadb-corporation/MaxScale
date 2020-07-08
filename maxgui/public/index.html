@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="commitId" content="<%= VUE_APP_GIT_COMMIT %>" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="<%= BASE_URL %>apple-touch-icon.png" />
+  <link rel="icon" type="image/png" sizes="32x32" href="<%= BASE_URL %>favicon-32x32.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="<%= BASE_URL %>favicon-16x16.png" />
+  <link rel="mask-icon" href="<%= BASE_URL %>safari-pinned-tab.svg" color="#5bbad5" />
+  <link rel="shortcut icon" href="<%= BASE_URL %>favicon.ico" />
+  <link rel="stylesheet" href="https://use.typekit.net/vme5kwy.css">
+  <title>MaxScale</title>
+  <style>
+    body {
+      margin: 0
+    }
+
+    .global-overlay {
+      z-index: 9999;
+      position: fixed;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(1100px at 100% 89%, #2f99a3 0%, #003545 100%);
+    }
+  </style>
+</head>
+
+<body>
+  <noscript>
+    <strong>We're sorry but MaxScale GUI doesn't work properly without
+      JavaScript enabled. Please enable it to continue.</strong>
+  </noscript>
+  <div id="global-overlay" class="global-overlay"> </div>
+  <div id="app"></div>
+  <!-- built files will be auto injected -->
+</body>
+
+</html>
