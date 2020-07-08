@@ -28,7 +28,7 @@ import commonComponents from 'components/common'
 function doMount(isShallow, component, options) {
     if (isShallow) {
         /*
-            ignoring child components, if component has 
+            ignoring child components, if component has
             child components as vuetify component, use
             mount
         */

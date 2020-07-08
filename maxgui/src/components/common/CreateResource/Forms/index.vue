@@ -245,7 +245,7 @@ export default {
                             )
                             protocolParamObj.default_value = protocol.id
                             protocolParamObj.disabled = true
-                            /*TODO: "Each protocol module defines a default authentication module", 
+                            /*TODO: "Each protocol module defines a default authentication module",
                             but the authenticator parameter receives from /maxscale/module doesnt have default_value
                             The type should be enum_mask
                             */

@@ -169,7 +169,7 @@ export function formatValue(value, formatType) {
 }
 
 /**
- * Convert an object to array of object with format like this 
+ * Convert an object to array of object with format like this
         [
             {
                 nodeId: Number,
@@ -288,7 +288,7 @@ export function arrOfObjToObj(a, keyName = 'id', keyValue = 'value') {
 
                     resultObj[node.parentNodeInfo.id] = objValue
                 }
-                /* the value needs to be handled, convert from 'null' or '' to 
+                /* the value needs to be handled, convert from 'null' or '' to
                 the actual null object */
                 // leaf is undefined when the array wasn't created by objToArrOfObj
                 else if (node.leaf || node.leaf === undefined) {

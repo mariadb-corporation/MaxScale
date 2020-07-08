@@ -53,7 +53,7 @@ module.exports = {
         })
 
         config.when(process.env.NODE_ENV === 'production', config => {
-            /* 
+            /*
             optimization in production mode only as unit testing is broken when
             splitChunks is configured
             */
@@ -89,9 +89,9 @@ module.exports = {
 
         config.resolve.modules.add(path.resolve('./src'), path.resolve('./node_modules'))
 
-        /*  
+        /*
             To strip all locales except “en”, and ...
-            (“en” is built into Moment and can’t be removed) 
+            (“en” is built into Moment and can’t be removed)
         */
         config.plugin('MomentLocalesPlugin').use(require('moment-locales-webpack-plugin'), [
             {

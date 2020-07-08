@@ -40,7 +40,7 @@ describe('SelectDropdown.vue', () => {
     it(`Testing non-required props:
       - Component renders accurate placeholder value in terms of plural or singular text.
       - Component add 'error--text__bottom' class when required props is true
-      - Component renders pre-selected item or pre-selected items when defaultItems has 
+      - Component renders pre-selected item or pre-selected items when defaultItems has
         valid object or array`, async () => {
         // get the wrapper div
         let placeholderWrapper = wrapper.find('.v-select__selections').html()
@@ -78,8 +78,8 @@ describe('SelectDropdown.vue', () => {
                 { id: 'Monitor', type: 'monitors' },
                 { id: 'Monitor-test', type: 'monitors' },
             ],
-            /* 
-          defaultItems aka pre-select item, if multiple is true, 
+            /*
+          defaultItems aka pre-select item, if multiple is true,
           defaultItems should be an array
         */
             defaultItems: { id: 'Monitor', type: 'monitors' },
@@ -138,7 +138,7 @@ describe('SelectDropdown.vue', () => {
             defaultItems: { id: 'Monitor', type: 'monitors' },
         })
         let counter = 0
-        /*It returns false if new selected items are not equal to defaultItems 
+        /*It returns false if new selected items are not equal to defaultItems
           (aka pre selected items), else return true
         */
         wrapper.vm.$on('is-equal', bool => {
@@ -150,7 +150,7 @@ describe('SelectDropdown.vue', () => {
         const vSelect = wrapper.findComponent({ name: 'v-select' })
         // add new item, is-equal should return false
         await vSelect.vm.selectItem({ id: 'Monitor-Test', type: 'monitors' })
-        /* 
+        /*
             unselect selected item, is-equal should return true
             as current selected items are equal with defaultItems
         */
@@ -185,7 +185,7 @@ describe('SelectDropdown.vue', () => {
         })
 
         let counter = 0
-        /*It returns false if new selected items are not equal to defaultItems 
+        /*It returns false if new selected items are not equal to defaultItems
           (aka pre selected items), else return true
         */
         wrapper.vm.$on('is-equal', bool => {
@@ -200,7 +200,7 @@ describe('SelectDropdown.vue', () => {
             id: 'RCR-Writer',
             type: 'services',
         })
-        /* 
+        /*
             unselect selected item, is-equal should return true
             as current selected items are equal with defaultItems
         */

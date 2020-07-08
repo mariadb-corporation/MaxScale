@@ -31,8 +31,8 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-/* 
-This component takes items array props to render v-select component for selecting relationship data. 
+/*
+This component takes items array props to render v-select component for selecting relationship data.
 Eg : items=[{id:'row_server_1', type:'servers'}]
 relationshipsType props is to defined to render correct text, display what relationship type is being target
 When getSelectedItems is called by parent component, it returns selectedItems

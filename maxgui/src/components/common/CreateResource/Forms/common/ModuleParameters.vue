@@ -49,11 +49,11 @@
 /*
 This component takes modules props to render v-select component for selecting a module.
 When a module is selelcted, a parameters input table will be rendered.
-moduleName props is defined to render correct label for select input 
+moduleName props is defined to render correct label for select input
 PROPS:
 - requiredParams: accepts array of string , it simply enables required attribute in parameter-input dynamically
-- usePortOrSocket: accepts boolean , if true, get portValue, addressValue, and socketValue to pass to parameter-input 
-  for handling special input field when editting server or listener. If editing listener, 
+- usePortOrSocket: accepts boolean , if true, get portValue, addressValue, and socketValue to pass to parameter-input
+  for handling special input field when editting server or listener. If editing listener,
 - isListener: accepts boolean , if true, address won't be required
 */
 import ParametersCollapse from './ParametersCollapse'

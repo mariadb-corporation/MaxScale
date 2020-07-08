@@ -19,7 +19,7 @@ import store from 'store'
 Vue.use(Router)
 
 let router = new Router({
-    /* 
+    /*
     To use history mode, the web server needs to configure to serve it
     https://router.vuejs.org/guide/essentials/history-mode.html
    */
