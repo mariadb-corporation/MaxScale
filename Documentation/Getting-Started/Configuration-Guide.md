@@ -1142,10 +1142,12 @@ health check.
 Whether to serve the GUI only over secure HTTPS connections. The default value
 is true.
 
-To be secure by default, the GUI is only served over HTTPS connections as it
-uses a token authentication scheme. To allow use of the GUI without having to
-configure TLS certificates for the MaxScale REST API, set this parameter to
-false.
+To be secure by default, the GUI is only served over HTTPS connections as
+it uses a token authentication scheme. This also controls whether the
+`/auth` endpoint requires an encrypted connection.
+
+To allow use of the GUI without having to configure TLS certificates for
+the MaxScale REST API, set this parameter to false.
 
 ### `admin_log_auth_failures`
 

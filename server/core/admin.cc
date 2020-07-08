@@ -843,7 +843,7 @@ bool Client::auth(MHD_Connection* connection, const char* url, const char* metho
                 }
             }
         }
-        else if (!this_unit.using_ssl)
+        else if (!this_unit.using_ssl && mxs::Config::get().secure_gui)
         {
             // The /auth endpoint must be used with an encrypted connection
             done = true;
@@ -925,11 +925,11 @@ bool mxs_admin_init()
             options |= MHD_USE_SSL;
             MXS_NOTICE("The REST API will be encrypted, all requests must use HTTPS.");
         }
-        else if (mxs::Config::get().gui)
+        else if (mxs::Config::get().gui && mxs::Config::get().secure_gui)
         {
             MXS_WARNING("The MaxScale GUI is enabled but encryption for the REST API is not enabled, "
                         "the GUI will not be enabled. Configure `admin_ssl_key` and `admin_ssl_cert` "
-                        "to enable HTTPS or add `admin_gui=false` to disable this warning.");
+                        "to enable HTTPS or add `admin_secure_gui=false` to allow use of the GUI without encryption.");
         }
 
         // The port argument is ignored and the port in the struct sockaddr is used instead
