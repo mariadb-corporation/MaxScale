@@ -1,33 +1,24 @@
 # MaxGui
 
-## Developer settings
+## Developer settings for development env
 
 #### Use webpack dev-server with https
 
-Note that the application is using cookie with http-only and secure attributes for authenticating the user.
-So to run the application in localhost, webpack devServer needs to be served with https:
+When admin_secure_gui=true under the [maxscale] section of the MaxScale
+configuration file, jwt token will be sent over https only.
+Note: MaxScale also needs to be set up to use TLS/SSL. [Instructions](https://github.com/mariadb-corporation/MaxScale/blob/develop/Documentation/Getting-Started/Configuration-Guide.md#admin_ssl_key)
 
-First, install [mkcert](https://github.com/FiloSottile/mkcert), then create a new local CA by executing:
+By default, maxgui is configured to be host at localhost with https.
+Local ssl certificate and key can be found in `localSSLCert` directory,
+certificate was created using [mkcert](https://github.com/FiloSottile/mkcert) for the following name: localhost 127.0.0.1
 
-```
-mkcert -install
-```
-
-Create cert:
-
-```
-mkcert localhost 127.0.0.1
-
-```
-
-After creating CA cert for local development, create `.certs` directory in the root directory of the project and copy all created files to that folder
-Check `vue.config.js` file, `devServer` section for more configuration
-
-Note that MaxScale also needs to be set up to use TLS/SSL. [Instructions](https://github.com/mariadb-corporation/MaxScale/blob/develop/Documentation/Getting-Started/Configuration-Guide.md#admin_ssl_key)
+If admin_secure_gui=false, jwt token will be sent with plain http,
+simply remove https attribute of `devServer` object in `vue.config.js`
 
 #### Disable CORS when sending request to MaxScale REST API
 
-CORS is bypassed by using proxy in webpack devServer. Check `vue.config.js` file, `devServer` section for more configuration
+CORS is bypassed by using proxy in webpack devServer.
+Check `vue.config.js` file, `devServer` section for more configuration
 
 #### Config build path
 
@@ -37,10 +28,6 @@ Add .env.local file that contains `buildPath=dataDir`
 
 After compiling and minifying for production, the GUI can be accessed via
 https://`admin_host`:`admin_port`
-
-`admin_host`: The network interface where the REST API listens on. The default value is the IPv4 address 127.0.0.1 which only listens for local connections.
-
-`admin_port`:The port where the REST API listens on. The default value is port 8989
 
 The default is: [https://127.0.0.1:8989](https://127.0.0.1:8989)
 
@@ -90,8 +77,9 @@ npm run test:e2e
 ## App translation
 
 Create a json file in `src/locales`. For example: `es.json`
-Copy everything in `src/locales/en.json` file and paste to `es.json` then .... translate it
-Change the value of VUE_APP_I18N_LOCALE in `.env` file to the desire locale
+Copy everything in `src/locales/en.json` file and paste to `es.json`
+then translate it.
+Change the value of VUE_APP_I18N_LOCALE in `.env` file to the desire locale.
 
 #### browserslist
 

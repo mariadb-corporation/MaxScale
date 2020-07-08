@@ -33,8 +33,8 @@ module.exports = {
                 devtool: 'source-map',
                 devServer: {
                     https: {
-                        key: fs.readFileSync('./.certs/localhost+1-key.pem'),
-                        cert: fs.readFileSync('./.certs/localhost+1.pem'),
+                        key: fs.readFileSync('./dev-certs/dev-cert-key.pem'),
+                        cert: fs.readFileSync('./dev-certs/dev-cert.pem'),
                     },
                     progress: false,
                     port: 8000,
