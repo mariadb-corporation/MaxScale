@@ -57,7 +57,7 @@
  */
 /* 
 This component emits two events:
-@get-selected-items: value type is always Array regardless multiple props is true or false
+@get-selected-items always return Array regardless multiple props is true or false
 @is-equal: value = boolean
 */
 export default {

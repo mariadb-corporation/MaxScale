@@ -87,4 +87,126 @@ describe('SelectDropdown.vue', () => {
         expect(wrapper.vm.$data.selectedItems).to.be.an('object')
         expect(wrapper.vm.$data.selectedItems.id).to.be.equal('Monitor')
     })
+
+    it(`Testing get-selected-items event:
+      - get-selected-items always returns Array regardless multiple props is true or false
+       `, async () => {
+        /* ---------------  Test get-selected-items event ------------------------ */
+        await wrapper.setProps({
+            entityName: 'services',
+            multiple: true,
+            items: [
+                {
+                    id: 'RWS-Router',
+                    type: 'services',
+                },
+                {
+                    id: 'RCR-Writer',
+                    type: 'services',
+                },
+                {
+                    id: 'RCR-Router',
+                    type: 'services',
+                },
+            ],
+        })
+        let chosenItems = []
+        wrapper.vm.$on('get-selected-items', values => {
+            chosenItems = values
+        })
+
+        // mockup onchange event when selecting item
+        const vSelect = wrapper.findComponent({ name: 'v-select' })
+        vSelect.vm.selectItem({
+            id: 'RWS-Router',
+            type: 'services',
+        })
+
+        expect(chosenItems).to.be.an('array')
+        expect(chosenItems[0].id).to.be.equal('RWS-Router')
+    })
+
+    it(`Testing is-equal event when multiple props is false`, async () => {
+        /* ---------------  Test is-equal event when multiple select is enabled------------------------ */
+        await wrapper.setProps({
+            entityName: 'monitors',
+            multiple: false,
+            items: [
+                { id: 'Monitor-Test', type: 'monitors' },
+                { id: 'Monitor', type: 'monitors' },
+            ],
+            defaultItems: { id: 'Monitor', type: 'monitors' },
+        })
+        let counter = 0
+        /*It returns false if new selected items are not equal to defaultItems 
+          (aka pre selected items), else return true
+        */
+        wrapper.vm.$on('is-equal', bool => {
+            counter++
+            if (counter === 1) expect(bool).to.equal(false)
+            if (counter === 2) expect(bool).to.equal(true)
+        })
+        // mockup onchange event when selecting item
+        const vSelect = wrapper.findComponent({ name: 'v-select' })
+        // add new item, is-equal should return false
+        await vSelect.vm.selectItem({ id: 'Monitor-Test', type: 'monitors' })
+        /* 
+            unselect selected item, is-equal should return true
+            as current selected items are equal with defaultItems
+        */
+        await vSelect.vm.selectItem({ id: 'Monitor', type: 'monitors' })
+    })
+
+    it(`Testing is-equal event when multiple props is true`, async () => {
+        /* ---------------  Test is-equal event when multiple select is enabled------------------------ */
+        await wrapper.setProps({
+            entityName: 'services',
+            multiple: true,
+            items: [
+                {
+                    id: 'RWS-Router',
+                    type: 'services',
+                },
+                {
+                    id: 'RCR-Writer',
+                    type: 'services',
+                },
+                {
+                    id: 'RCR-Router',
+                    type: 'services',
+                },
+            ],
+            defaultItems: [
+                {
+                    id: 'RWS-Router',
+                    type: 'services',
+                },
+            ],
+        })
+
+        let counter = 0
+        /*It returns false if new selected items are not equal to defaultItems 
+          (aka pre selected items), else return true
+        */
+        wrapper.vm.$on('is-equal', bool => {
+            counter++
+            if (counter === 1) expect(bool).to.equal(false)
+            if (counter === 2) expect(bool).to.equal(true)
+        })
+        // mockup onchange event when selecting item
+        const vSelect = wrapper.findComponent({ name: 'v-select' })
+        // add new item, is-equal should return false
+        await vSelect.vm.selectItem({
+            id: 'RCR-Writer',
+            type: 'services',
+        })
+        /* 
+            unselect selected item, is-equal should return true
+            as current selected items are equal with defaultItems
+        */
+        await vSelect.vm.selectItem({
+            id: 'RCR-Writer',
+            type: 'services',
+        })
+    })
 })
