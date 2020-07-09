@@ -19,7 +19,9 @@ process.env.VUE_APP_VERSION = require('./package.json').version
 try {
     process.env.VUE_APP_GIT_COMMIT = gitDescribeSync().hash
 } catch (e) {
-    process.env.VUE_APP_GIT_COMMIT = 'UNKNOWN'
+    if (!process.env.VUE_APP_GIT_COMMIT) {
+        process.env.VUE_APP_GIT_COMMIT = 'UNKNOWN'
+    }
 }
 module.exports = {
     chainWebpack: config => {
