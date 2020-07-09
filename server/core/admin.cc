@@ -757,11 +757,11 @@ HttpResponse Client::generate_token(const HttpRequest& request)
         HttpResponse reply = HttpResponse(MHD_HTTP_NO_CONTENT);
 
         auto pos = token.find_last_of('.');
-        std::string cookie_opts = "; SameSite=Strict";
+        std::string cookie_opts;
 
         if (this_unit.using_ssl)
         {
-            cookie_opts += "; Secure";
+            cookie_opts = "; Secure";
         }
 
         if (!max_age.empty())
@@ -769,8 +769,8 @@ HttpResponse Client::generate_token(const HttpRequest& request)
             cookie_opts += "; Max-Age=" + std::to_string(token_age);
         }
 
-        reply.add_cookie(TOKEN_BODY + "=" + token.substr(0, pos) + cookie_opts);
-        reply.add_cookie(TOKEN_SIG + "=" + token.substr(pos) + cookie_opts + "; HttpOnly");
+        reply.add_cookie(TOKEN_BODY + "=" + token.substr(0, pos) + cookie_opts + "; SameSite=Lax");
+        reply.add_cookie(TOKEN_SIG + "=" + token.substr(pos) + cookie_opts + "; SameSite=Strict; HttpOnly");
 
         return reply;
     }
