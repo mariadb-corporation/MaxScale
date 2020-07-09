@@ -9,7 +9,7 @@
         :isSaveDisabled="isSaveDisabled"
     >
         <template v-slot:body>
-            <p>
+            <p class="select-label">
                 {{ $tc('specify', multiple ? 2 : 1) }}
 
                 {{ $tc(entityName, multiple ? 2 : 1) }}

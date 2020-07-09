@@ -80,7 +80,7 @@
 
     "sessions": "session | sessions",
     "current sessions": "current session | current sessions",
-    "monitors": "monitor",
+    "monitors": "monitor | monitors",
 
     "maxScaleParameters": "MaxScale Parameters",
     "usersAndPermissions": "Users & Permissions",
