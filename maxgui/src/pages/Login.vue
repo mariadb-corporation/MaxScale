@@ -152,6 +152,9 @@ export default {
     },
     computed: {
         ...mapState(['config']),
+        logger: function() {
+            return this.$store.Vue.Logger('Login')
+        },
     },
 
     mounted() {
@@ -207,10 +210,14 @@ export default {
                 await self.$router.push(self.$route.query.redirect || '/dashboard/servers')
             } catch (error) {
                 this.showEmptyMessage = true
-                this.errorMessage =
-                    error.response.status === 401
-                        ? this.$t('errors.wrongCredentials')
-                        : error.response.statusText
+                if (error.response) {
+                    this.errorMessage =
+                        error.response.status === 401
+                            ? this.$t('errors.wrongCredentials')
+                            : error.response.statusText
+                } else {
+                    this.logger.error(error)
+                }
             }
             this.isLoading = false
         },
