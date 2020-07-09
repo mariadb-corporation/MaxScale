@@ -1,0 +1,116 @@
+#!/usr/bin/env python3
+#
+# Copyright (c) 2018 MariaDB Corporation Ab
+#
+# Use of this software is governed by the Business Source License included
+# in the LICENSE.TXT file and at www.mariadb.com/bsl11.
+#
+# Change Date: 2024-06-02
+#
+# On the date above, in accordance with the Business Source License, use
+# of this software will be governed by version 2 or later of the General
+# Public License.
+#
+
+import getopt
+import os
+import re
+import shutil
+import sys
+import tempfile
+
+# A string literal would be a match and cause an unintended modification.
+pattern=" " + "Change Date:" + " .*"
+
+# The Change Date should be in the blurb at the beginning. We will not
+# do modifications after this threshold.
+line_threshold=20
+
+recd=re.compile(pattern)
+
+def print_usage_and_exit(name, code):
+    print("usage: " + name + " -c change-date [path]+")
+    print()
+    print("If path is a directory, the change date will recursively be set in all ")
+    print("files in that directory hierarchy.")
+    sys.exit(code)
+
+def update_change_date_in_file(changedate, filename):
+    print(filename)
+    tmp=tempfile.mkstemp()
+    fout=os.fdopen(tmp[0], "w")
+    with open(filename) as fin:
+        modified=False
+        try:
+            line=fin.readline()
+            line_number=1
+            while line:
+                match=recd.search(line)
+                if match:
+                    if line_number <= line_threshold:
+                        # 14 is the length of the pattern up until ".*", that is, we pick of the line
+                        # up until the current change date.
+                        line=line[0:match.span()[0] + 14] + changedate + "\n"
+                        modified=True
+                    else:
+                        print("WARNING: Ignoring 'Change Date' encountered on line " + str(line_number) + ".")
+
+                fout.write(line)
+                line = fin.readline()
+                line_number=line_number + 1
+        except UnicodeDecodeError:
+            print("WARNING: Could not decode file, ignoring.")
+            modified=False
+        except:
+            print("WARNING: Could not read file, ignoring.")
+            modified=False
+
+        fin.close()
+        fout.close()
+
+        if modified:
+            shutil.copyfile(tmp[1], filename)
+
+        os.remove(tmp[1])
+
+def update_change_date_in_dir(changedate, dir):
+    for file in os.listdir(dir):
+        path=dir + "/" + file
+        update_change_date_in_path(changedate, path)
+
+def update_change_date_in_path(changedate, path):
+    if not os.path.exists(path):
+        print("WARNING: " + path + " does not exist.")
+    elif os.path.isdir(path):
+        update_change_date_in_dir(changedate, path)
+    elif os.path.isfile(path):
+        update_change_date_in_file(changedate, path)
+    else:
+        print("WARNING: '" + path + "' is not a regular file or directory, ignoring.")
+
+def update_change_date_in_paths(changedate, paths):
+    for path in paths:
+        update_change_date_in_path(changedate, path)
+
+def main(argv):
+    name=argv[0]
+    try:
+        opts, args = getopt.getopt(argv[1:], "hc:")
+    except getopt.GetoptError:
+        print_usage_and_exit(name, 1)
+
+    changedate=''
+
+    for opt, arg in opts:
+        if opt == '-h':
+            print_usage_and_exit(name, 0)
+        elif opt == '-c':
+            changedate = arg
+
+    if changedate == '':
+        print_usage_and_exit(name, 1)
+
+    update_change_date_in_paths(changedate, args)
+
+if __name__ == "__main__":
+    main(sys.argv)
