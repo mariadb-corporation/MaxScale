@@ -144,13 +144,13 @@ int main(int argc, char* argv[])
 
     if (Test->verbose)
     {
-        Test->tprintf("DELETE quries without WHERE clause will be blocked during the 15 seconds");
+        Test->tprintf("DELETE quries without WHERE clause will be blocked during the 30 seconds");
         Test->tprintf("Put time to rules.txt: %s", str);
     }
     Test->maxscales->ssh_node_f(0,
                                 false,
                                 "start_time=`date +%%T`;"
-                                "stop_time=` date --date \"now +15 secs\" +%%T`;"
+                                "stop_time=` date --date \"now +30 secs\" +%%T`;"
                                 "%s sed -i \"s/###time###/$start_time-$stop_time/\" %s/rules/rules.txt",
                                 Test->maxscales->access_sudo[0],
                                 Test->maxscales->access_homedir[0]);
@@ -158,20 +158,22 @@ int main(int argc, char* argv[])
     Test->maxscales->restart_maxscale(0);
     Test->maxscales->connect_rwsplit(0);
 
+    sleep(10);
+
     Test->tprintf("Trying 'DELETE FROM t1' and expecting FAILURE");
     execute_query_silent(Test->maxscales->conn_rwsplit[0], "DELETE FROM t1");
 
     if (mysql_errno(Test->maxscales->conn_rwsplit[0]) != 1141)
     {
         Test->add_result(1,
-                         "Query succeded, but fail expected, errono is %d",
+                         "Query succeded, but fail expected, error is %d",
                          mysql_errno(Test->maxscales->conn_rwsplit[0]));
     }
 
-    Test->tprintf("Waiting 16 seconds and trying 'DELETE FROM t1', expecting OK");
+    Test->tprintf("Waiting 30 seconds and trying 'DELETE FROM t1', expecting OK");
 
     Test->stop_timeout();
-    sleep(16);
+    sleep(30);
     Test->set_timeout(180);
     Test->try_query(Test->maxscales->conn_rwsplit[0], "DELETE FROM t1");
 

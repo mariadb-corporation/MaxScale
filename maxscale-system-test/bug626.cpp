@@ -10,8 +10,7 @@ int main(int argc, char* argv[])
 
     test.repl->connect();
     execute_query(test.repl->nodes[0], "CREATE USER 'old'@'%%' IDENTIFIED BY 'old';");
-    execute_query(test.repl->nodes[0],
-                  "UPDATE mysql.user SET password = OLD_PASSWORD('old') WHERE user = 'old';");
+    execute_query(test.repl->nodes[0], "SET PASSWORD FOR 'old'@'%%' = OLD_PASSWORD('old')");
     execute_query(test.repl->nodes[0], "FLUSH PRIVILEGES");
     test.repl->sync_slaves();
 
@@ -27,7 +26,6 @@ int main(int argc, char* argv[])
     mysql_close(conn);
 
     execute_query(test.repl->nodes[0], "DROP USER 'old'@'%%'");
-    test.log_includes(0, "MaxScale does not support these old passwords");
 
     return test.global_result;
 }
