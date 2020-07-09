@@ -41,10 +41,10 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-/* 
+/*
 This component emits two events
 @selected-items: value = Array
-@onOpen: event triggered after dialog is opened
+@on-open: event triggered after dialog is opened
 */
 export default {
     name: 'select-dialog',
@@ -57,7 +57,7 @@ export default {
         onClose: { type: Function, required: true },
         onCancel: { type: Function, required: true },
         multiple: { type: Boolean, default: false },
-        itemsList: { type: Array },
+        itemsList: { type: Array, required: true },
         defaultItems: { type: [Array, Object] },
     },
     data() {
@@ -82,7 +82,7 @@ export default {
     watch: {
         value: function(val) {
             if (val) {
-                this.$emit('onOpen')
+                this.$emit('on-open')
             } else {
                 this.selectedItems.length && (this.selectedItems = [])
                 !this.isSaveDisabled && (this.isSaveDisabled = true)

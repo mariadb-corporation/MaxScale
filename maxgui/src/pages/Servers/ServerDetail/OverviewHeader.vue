@@ -75,7 +75,7 @@
             :itemsList="itemsList"
             :defaultItems="defaultItems"
             @selected-items="targetItem = $event"
-            @onOpen="getAllEntities"
+            @on-open="getAllEntities"
         />
     </v-sheet>
 </template>
