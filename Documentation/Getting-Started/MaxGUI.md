@@ -10,14 +10,20 @@ to the command line tool `maxctrl`.
 
 # Enabling MaxGUI
 
-In order to enable MaxGUI, at least the following parameters must be
-set in the MaxScale configuration file: `admin_ssl_key`, `admin_ssl_cert`.
-Check [Configuration-Guide](./Configuration-Guide.md) for details.
+To enable MaxGUI in a testing mode, add `admin_host=0.0.0.0` and
+`admin_secure_gui=false` under the `[maxscale]` section of the MaxScale
+configuration file. Once enabled, MaxGUI will be available on port 8989:
+`http://127.0.0.1:8989/`
 
-To prevent the use of MaxGUI, set `admin_gui` to `false` in the
-configuration file.
+## Securing the GUI
 
-Once enabled, MaxGUI can be accessed from `https://127.0.0.1:8989/`.
+To make MaxGUI secure, set `admin_secure_gui=true` and configure both the
+`admin_ssl_key` and `admin_ssl_cert` parameters.
+
+Check the [Configuration Guide](./Configuration-Guide.md) for the parameter
+documentation and read the _Configuration and Hardening_ section of the
+[REST API tutorial](../Tutorials/REST-API-Tutorial.md) for instructions on
+how to harden your MaxScale installation for production use.
 
 # Authentication
 

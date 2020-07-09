@@ -838,8 +838,6 @@ void GaleraMonitor::set_galera_cluster()
  */
 extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
-    MXS_NOTICE("Initialise the MySQL Galera Monitor module.");
-
     static MXS_MODULE info =
     {
         MXS_MODULE_API_MONITOR,

@@ -1,0 +1,180 @@
+{
+    "productName": "MaxScale",
+    "welcomeTo": "Welcome to",
+    "mariaDbMaxScale": "MariaDB MaxScale",
+    "welcome": "Welcome",
+    "username": "Username",
+    "password": "Password",
+    "forgotPassword": "Forgot Password",
+    "details": "Details",
+    "overview": "Overview",
+    "currentConnections": "Current Connection | Current Connections",
+    "currentSessions": "current session | current sessions",
+    "load": "Load",
+    "monitorDiagnostics": "Monitor Diagnostics",
+    "parameters": "parameter | parameters",
+    "diagnostics": "diagnostic | diagnostics",
+    "routerDiagnostics": "Router Diagnostics",
+    "others": "others",
+    "dashboards": "dashboard | dashboards",
+    "reports": "report | reports",
+    "statistics": "statistic | statistics",
+    "settings": "setting | settings",
+    "not": "Not {action}",
+    "users": "Users",
+    "connections": "Connection | connections",
+    "version": "Version",
+    "404Error": "404 Error",
+    "404ErrorMessage": "Sorry, that page doesn't exist",
+
+    "loggingOut": "Logging Out",
+    "rememberMe": "Remember me",
+    "signIn": "Sign In",
+    "initializing": "initializing",
+    "add": "Add",
+    "change": "Change",
+    "close": "Close",
+    "cancel": "Cancel",
+    "update": "Update",
+    "actions": "Actions",
+    "delete": "Delete",
+    "unlink": "Unlink",
+    "drain": "Drain",
+    "clear": "Clear",
+    "maintain": "Maintain",
+    "destroy": "Destroy",
+    "stop": "Stop",
+    "start": "Start",
+    "logout": "Logout",
+    "save": "Save",
+    "enable": "Enable",
+    "doneEditing": "Done Editing",
+    "implementChanges": "Implement Changes?",
+    "changeEntity": "Change {entityName}",
+    "addEntity": "Add {entityName}",
+    "createNew": "Create New",
+    "search": "Search",
+    "thatsRight": "That's Right",
+    "createANew": "Create a new",
+    "uptime": "uptime",
+    "aboutMaxScale": "about maxscale",
+    "resourceLabelName": "{resourceName} name",
+    "type": "type",
+    "unit": "unit",
+    "description": "description",
+    "default_value": "default value",
+    "nameYour": "Name your {resourceName}",
+    "select": "Select a {entityName} | Select {entityName}",
+    "changeTheFollowingParameter": "You've changed the following {quantity} parameter: | You've changed the following {quantity} parameters:",
+    "specify": "Specify a | Specify",
+    "noEntityAvailable": "No {entityName} available",
+    "noEntity": "No {entityName}",
+    "newUpdateAvailable": "New update available!",
+    "servers": "server | servers",
+    "currentServerState": "current server state",
+
+    "services": "service | services",
+    "router": "router | routers",
+
+    "filters": "filter | filters",
+
+    "sessions": "session | sessions",
+    "current sessions": "current session | current sessions",
+    "monitors": "monitor",
+
+    "maxScaleParameters": "MaxScale Parameters",
+    "usersAndPermissions": "Users & Permissions",
+    "protocol": "protocol | protocols",
+    "module": "module | modules",
+    "forceClosing": "Force closing",
+    "errors": {
+        "requiredInput": "{inputName} is required.",
+        "duplicatedValue": "{inputValue} already exists",
+        "nonInteger": "Accepts only integer",
+        "nonNumeric": "Does not accept non numeric values",
+        "negativeNum": "Does not accept negative values",
+        "wrongCredentials": "Incorrect password or username",
+        "networkError": "Network Error, MaxScale is down",
+        "portSocket": "Either port or socket need to be defined",
+        "addressRequired": "address is required when using port",
+        "addressRequiredEmpty": "address should be defined only when using port",
+        "serviceUnavailable": "MaxScale is temporarily unavailable.",
+        "refreshLater": "Please refresh in a few moments."
+    },
+    "confirmations": {
+        "maintain": "Are you sure you want to set {targetId} into maintenance mode?",
+        "clear": "Are you sure you want to clear current state of {targetId}?",
+        "drain": "Are you sure you want to drain {targetId}?",
+        "unlink": "Are you sure you want to unlink {targetId}?",
+        "delete": "Are you sure you want to delete {targetId}?",
+        "destroy": "Are you sure you want to destroy {targetId}?",
+        "stop": "Are you sure you want to stop {targetId}?",
+        "start": "Are you sure you want to start {targetId}?"
+    },
+    "loading": {
+        "threadsData": "Loading threads data"
+    },
+    "info": {
+        "createOrUpdateForm": "Empty value in non-required fields will be treated as null. *indicates required field.",
+        "filterDeleteModal": "A filter can only be destroyed if no service uses it. This means that the data.relationships object for the filter must be empty.",
+
+        "monitorDelete": "The monitor must not have relationships to any servers in order to be destroyed.",
+        "serverUnlink": "Make sure it is not used by any services or monitors.",
+        "serverDrain": "Server is drained of connections",
+        "serverClear": "",
+        "serverMaintenance": "By default setting a server into maintenance mode will cause connections to be closed only after the next request is sent. Check the box below to force all connections to the server to be closed immediately",
+        "serviceDelete": "A service can only be destroyed if the service uses no servers or filters and all the listeners pointing to the service have been destroyed."
+    },
+
+    "$vuetify": {
+        "badge": "Badge",
+        "close": "Close",
+        "dataIterator": {
+            "noResultsText": "No matching records found",
+            "loadingText": "Loading items..."
+        },
+        "dataTable": {
+            "itemsPerPageText": "Rows per page:",
+            "ariaLabel": {
+                "activateNone": ": Not sorted. Activate to sort ascending.",
+                "activateAscending": ": Sorted ascending. Activate to sort descending.",
+                "activateDescending": ": Sorted descending. Activate to remove sorting.",
+                "sortDescending": ": Sorted descending. Activate to remove sorting.",
+                "sortAscending": ": Sorted ascending. Activate to sort descending.",
+                "sortNone": ": Not sorted. Activate to sort ascending."
+            },
+            "sortBy": "Sort by"
+        },
+        "dataFooter": {
+            "itemsPerPageText": "Items per page:",
+            "itemsPerPageAll": "All",
+            "nextPage": "Next page",
+            "prevPage": "Previous page",
+            "firstPage": "First page",
+            "lastPage": "Last page",
+            "pageText": "{0}-{1} of {2}"
+        },
+        "dateer": {
+            "itemsSelected": "{0} selected"
+        },
+        "noDataText": "No data available",
+        "carousel": {
+            "prev": "Previous visual",
+            "next": "Next visual",
+            "ariaLabel": {
+                "delimiter": "Carousel slide {0} of {1}"
+            }
+        },
+        "calendar": {
+            "moreEvents": "{0} more"
+        },
+        "fileInput": {
+            "counter": "{0} files",
+            "counterSize": "{0} files ({1} in total)"
+        },
+        "timeer": {
+            "am": "AM",
+            "pm": "PM"
+        }
+    }
+}

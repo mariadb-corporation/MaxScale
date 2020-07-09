@@ -63,8 +63,9 @@ const char* gui_not_secure_page =
     <p>
       The MaxScale GUI requires HTTPS to work, please enable it by configuring the
       <a href="https://mariadb.com/kb/en/mariadb-maxscale-24-mariadb-maxscale-configuration-guide/#admin_ssl_key">admin_ssl_key</a>
-      and <a href="https://mariadb.com/kb/en/mariadb-maxscale-24-mariadb-maxscale-configuration-guide/#admin_ssl_cert">admin_ssl_cert</a> parameters. To disable
-      this page, add  <code>admin_gui=false</code> under the <code>[maxscale]</code> section.
+      and <a href="https://mariadb.com/kb/en/mariadb-maxscale-24-mariadb-maxscale-configuration-guide/#admin_ssl_cert">admin_ssl_cert</a> parameters.
+      To allow insecure use of the GUI, add <code>admin_secure_gui=false</code> under the <code>[maxscale]</code> section.
+      To disable the GUI completely, add  <code>admin_gui=false</code> under the <code>[maxscale]</code> section.
     </p>
     <p>
       For more information about securing the admin interface of your MaxScale installation, refer to the
@@ -221,7 +222,7 @@ std::string get_file(const std::string& file)
 {
     std::string rval;
 
-    if (this_unit.using_ssl)
+    if (this_unit.using_ssl || !mxs::Config::get().secure_gui)
     {
         if (this_unit.files.find(file) == this_unit.files.end())
         {
@@ -666,9 +667,6 @@ int Client::process(string url, string method, const char* upload_data, size_t* 
     MXS_DEBUG("Request:\n%s", request.to_string().c_str());
     request.fix_api_version();
 
-    std::string claim_cookie;
-    std::string sig_cookie;
-
     if (is_auth_endpoint(request))
     {
         reply = generate_token(request);
@@ -682,7 +680,7 @@ int Client::process(string url, string method, const char* upload_data, size_t* 
 
     if (json_t* js = reply.get_response())
     {
-        int flags = 0;
+        int flags = JSON_SORT_KEYS;
         string pretty = request.get_option("pretty");
 
         if (pretty == "true" || pretty.length() == 0)
@@ -759,15 +757,20 @@ HttpResponse Client::generate_token(const HttpRequest& request)
         HttpResponse reply = HttpResponse(MHD_HTTP_NO_CONTENT);
 
         auto pos = token.find_last_of('.');
-        std::string cookie_opts = "; SameSite=Strict; Secure";
+        std::string cookie_opts;
+
+        if (this_unit.using_ssl)
+        {
+            cookie_opts = "; Secure";
+        }
 
         if (!max_age.empty())
         {
             cookie_opts += "; Max-Age=" + std::to_string(token_age);
         }
 
-        reply.add_cookie(TOKEN_BODY + "=" + token.substr(0, pos) + cookie_opts);
-        reply.add_cookie(TOKEN_SIG + "=" + token.substr(pos) + cookie_opts + "; HttpOnly");
+        reply.add_cookie(TOKEN_BODY + "=" + token.substr(0, pos) + cookie_opts + "; SameSite=Lax");
+        reply.add_cookie(TOKEN_SIG + "=" + token.substr(pos) + cookie_opts + "; SameSite=Strict; HttpOnly");
 
         return reply;
     }
@@ -841,7 +844,7 @@ bool Client::auth(MHD_Connection* connection, const char* url, const char* metho
                 }
             }
         }
-        else if (!this_unit.using_ssl)
+        else if (!this_unit.using_ssl && mxs::Config::get().secure_gui)
         {
             // The /auth endpoint must be used with an encrypted connection
             done = true;
@@ -923,11 +926,11 @@ bool mxs_admin_init()
             options |= MHD_USE_SSL;
             MXS_NOTICE("The REST API will be encrypted, all requests must use HTTPS.");
         }
-        else if (mxs::Config::get().gui)
+        else if (mxs::Config::get().gui && mxs::Config::get().secure_gui)
         {
             MXS_WARNING("The MaxScale GUI is enabled but encryption for the REST API is not enabled, "
                         "the GUI will not be enabled. Configure `admin_ssl_key` and `admin_ssl_cert` "
-                        "to enable HTTPS or add `admin_gui=false` to disable this warning.");
+                        "to enable HTTPS or add `admin_secure_gui=false` to allow use of the GUI without encryption.");
         }
 
         // The port argument is ignored and the port in the struct sockaddr is used instead

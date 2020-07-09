@@ -1,14 +1,10 @@
 if (BUILD_GUI)
-  set(MAXGUI_REPO "https://github.com/mariadb-corporation/MaxGui.git" CACHE STRING "The MaxGui repository")
-
-  ExternalProject_Add(maxgui
-    GIT_REPOSITORY ${MAXGUI_REPO}
-    GIT_TAG "2.5.0"
-    CONFIGURE_COMMAND ""
-    BUILD_IN_SOURCE 1
-    UPDATE_COMMAND ""
-    BUILD_COMMAND npm install && buildPath=${CMAKE_CURRENT_BINARY_DIR}/ npm run build
-    INSTALL_COMMAND "")
+  file(GLOB_RECURSE MAXGUI_SOURCES ./src/* ./public/* *.json *.js)
+  add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/gui
+    DEPENDS ${MAXGUI_SOURCES}
+    COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/build.sh ${CMAKE_SOURCE_DIR}
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+  add_custom_target(maxgui ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/gui)
 
   install_directory(${CMAKE_CURRENT_BINARY_DIR}/gui/ ${MAXSCALE_SHAREDIR}/gui core)
 endif()

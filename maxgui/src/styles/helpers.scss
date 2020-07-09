@@ -1,0 +1,60 @@
+/*
+ * Copyright (c) 2020 MariaDB Corporation Ab
+ *
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
+ *
+ * Change Date: 2024-06-15
+ *
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
+ */
+tbody tr.stripe {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+.pointer {
+    cursor: pointer;
+}
+.move {
+    cursor: move;
+}
+
+.hide {
+    display: none !important;
+}
+.visibility--off {
+    visibility: hidden;
+}
+.no-underline {
+    text-decoration: none !important;
+}
+.overflow-helper {
+    overflow: scroll;
+    max-height: 500px;
+}
+
+.no-pointer {
+    cursor: initial !important;
+    user-select: all !important;
+    * {
+        cursor: initial !important;
+        user-select: all !important;
+    }
+}
+.no-pointerEvent {
+    pointer-events: none !important;
+}
+
+.field-text-info {
+    padding-left: 2px;
+    font-size: 14px;
+    line-height: 46px;
+}
+.shadow-drop {
+    box-shadow: 0px 1px 4px rgba(0, 0, 0, 0.4) !important;
+}
+.relative {
+    position: relative;
+}

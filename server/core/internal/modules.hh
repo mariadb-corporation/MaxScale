@@ -38,6 +38,13 @@ bool modules_thread_init();
 void modules_thread_finish();
 
 /**
+ * Loads all modules
+ *
+ * @return True if all modules were loaded successfully
+ */
+bool load_all_modules();
+
+/**
  *@brief Load a module
  *
  * @param module Name of the module to load

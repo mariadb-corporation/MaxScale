@@ -21,6 +21,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <dlfcn.h>
+#include <ftw.h>
 #include <algorithm>
 #include <string>
 
@@ -78,7 +79,7 @@ static NAME_MAPPING name_mappings[] =
 {
     {MODULE_MONITOR,       "mysqlmon",    "mariadbmon",    false},
     {MODULE_PROTOCOL,      "mysqlclient", "mariadbclient", false},
-    {MODULE_PROTOCOL,      "mariadb",     "mariadbclient", true},
+    {MODULE_PROTOCOL,      "mariadb",     "mariadbclient", true },
     {MODULE_AUTHENTICATOR, "mysqlauth",   "mariadbauth",   false},
 };
 
@@ -92,6 +93,33 @@ static LOADED_MODULE* register_module(const char* module,
                                       void* dlhandle,
                                       MXS_MODULE* mod_info);
 static void unregister_module(const char* module);
+
+static const char* module_type_to_str(MXS_MODULE_API type)
+{
+    switch (type)
+    {
+    case MXS_MODULE_API_PROTOCOL:
+        return MODULE_PROTOCOL;
+
+    case MXS_MODULE_API_AUTHENTICATOR:
+        return MODULE_AUTHENTICATOR;
+
+    case MXS_MODULE_API_ROUTER:
+        return MODULE_ROUTER;
+
+    case MXS_MODULE_API_MONITOR:
+        return MODULE_MONITOR;
+
+    case MXS_MODULE_API_FILTER:
+        return MODULE_FILTER;
+
+    case MXS_MODULE_API_QUERY_CLASSIFIER:
+        return MODULE_QUERY_CLASSIFIER;
+    }
+
+    mxb_assert(!true);
+    return "unknown";
+}
 
 static bool api_version_mismatch(const MXS_MODULE* mod_info, const char* module)
 {
@@ -152,41 +180,44 @@ static bool check_module(const MXS_MODULE* mod_info, const char* type, const cha
 {
     bool success = true;
 
-    if (strcmp(type, MODULE_PROTOCOL) == 0
-        && mod_info->modapi != MXS_MODULE_API_PROTOCOL)
+    if (type)
     {
-        MXS_ERROR("Module '%s' does not implement the protocol API.", module);
-        success = false;
-    }
-    if (strcmp(type, MODULE_AUTHENTICATOR) == 0
-        && mod_info->modapi != MXS_MODULE_API_AUTHENTICATOR)
-    {
-        MXS_ERROR("Module '%s' does not implement the authenticator API.", module);
-        success = false;
-    }
-    if (strcmp(type, MODULE_ROUTER) == 0
-        && mod_info->modapi != MXS_MODULE_API_ROUTER)
-    {
-        MXS_ERROR("Module '%s' does not implement the router API.", module);
-        success = false;
-    }
-    if (strcmp(type, MODULE_MONITOR) == 0
-        && mod_info->modapi != MXS_MODULE_API_MONITOR)
-    {
-        MXS_ERROR("Module '%s' does not implement the monitor API.", module);
-        success = false;
-    }
-    if (strcmp(type, MODULE_FILTER) == 0
-        && mod_info->modapi != MXS_MODULE_API_FILTER)
-    {
-        MXS_ERROR("Module '%s' does not implement the filter API.", module);
-        success = false;
-    }
-    if (strcmp(type, MODULE_QUERY_CLASSIFIER) == 0
-        && mod_info->modapi != MXS_MODULE_API_QUERY_CLASSIFIER)
-    {
-        MXS_ERROR("Module '%s' does not implement the query classifier API.", module);
-        success = false;
+        if (strcmp(type, MODULE_PROTOCOL) == 0
+            && mod_info->modapi != MXS_MODULE_API_PROTOCOL)
+        {
+            MXS_ERROR("Module '%s' does not implement the protocol API.", module);
+            success = false;
+        }
+        if (strcmp(type, MODULE_AUTHENTICATOR) == 0
+            && mod_info->modapi != MXS_MODULE_API_AUTHENTICATOR)
+        {
+            MXS_ERROR("Module '%s' does not implement the authenticator API.", module);
+            success = false;
+        }
+        if (strcmp(type, MODULE_ROUTER) == 0
+            && mod_info->modapi != MXS_MODULE_API_ROUTER)
+        {
+            MXS_ERROR("Module '%s' does not implement the router API.", module);
+            success = false;
+        }
+        if (strcmp(type, MODULE_MONITOR) == 0
+            && mod_info->modapi != MXS_MODULE_API_MONITOR)
+        {
+            MXS_ERROR("Module '%s' does not implement the monitor API.", module);
+            success = false;
+        }
+        if (strcmp(type, MODULE_FILTER) == 0
+            && mod_info->modapi != MXS_MODULE_API_FILTER)
+        {
+            MXS_ERROR("Module '%s' does not implement the filter API.", module);
+            success = false;
+        }
+        if (strcmp(type, MODULE_QUERY_CLASSIFIER) == 0
+            && mod_info->modapi != MXS_MODULE_API_QUERY_CLASSIFIER)
+        {
+            MXS_ERROR("Module '%s' does not implement the query classifier API.", module);
+            success = false;
+        }
     }
 
     if (api_version_mismatch(mod_info, module))
@@ -209,9 +240,75 @@ static bool check_module(const MXS_MODULE* mod_info, const char* type, const cha
     return success;
 }
 
+static bool is_maxscale_module(const char* fpath)
+{
+    bool rval = false;
+
+    if (void* dlhandle = dlopen(fpath, RTLD_LAZY | RTLD_LOCAL))
+    {
+        if (void* sym = dlsym(dlhandle, MXS_MODULE_SYMBOL_NAME))
+        {
+            Dl_info info;
+
+            if (dladdr(sym, &info))
+            {
+                if (strcmp(info.dli_fname, fpath) == 0)
+                {
+                    // The module entry point symbol is located in the file we're loading,
+                    // this is a MaxScale module.
+                    rval = true;
+                }
+            }
+        }
+
+        dlclose(dlhandle);
+    }
+
+    if (!rval)
+    {
+        MXS_INFO("Not a MaxScale module: %s", fpath);
+    }
+
+    return rval;
+}
+
+static int load_module_cb(const char* fpath, const struct stat* sb, int typeflag, struct FTW* ftwbuf)
+{
+    int rval = 0;
+
+    if (typeflag == FTW_F)
+    {
+        const char* filename = fpath + ftwbuf->base;
+
+        if (strncmp(filename, "lib", 3) == 0)
+        {
+            const char* name = filename + 3;
+
+            if (const char* dot = strchr(filename, '.'))
+            {
+                std::string module(name, dot);
+
+                if (is_maxscale_module(fpath) && !load_module(module.c_str(), nullptr))
+                {
+                    MXS_WARNING("Failed to load '%s'. Make sure it is not a stale library "
+                                "left over from an old installation of MaxScale.", fpath);
+                }
+            }
+        }
+    }
+
+    return rval;
+}
+
+bool load_all_modules()
+{
+    int rv = nftw(mxs::libdir(), load_module_cb, 10, FTW_PHYS);
+    return rv == 0;
+}
+
 void* load_module(const char* module, const char* type)
 {
-    mxb_assert(module && type);
+    mxb_assert(module);
     LOADED_MODULE* mod;
 
     module = mxs_module_get_effective_name(module);
@@ -263,12 +360,14 @@ void* load_module(const char* module, const char* type)
         void* (* entry_point)() = (void* (*)())sym;
         MXS_MODULE* mod_info = (MXS_MODULE*)entry_point();
 
-        if (!check_module(mod_info, type, module)
-            || (mod = register_module(module, type, dlhandle, mod_info)) == NULL)
+        if (!check_module(mod_info, type, module))
         {
             dlclose(dlhandle);
             return NULL;
         }
+
+        mod = register_module(module, module_type_to_str(mod_info->modapi), dlhandle, mod_info);
+        mxb_assert(mod);
 
         MXS_NOTICE("Loaded module %s: %s from %s", module, mod_info->version, fname);
 

@@ -10,8 +10,7 @@ int main(int argc, char* argv[])
 
     test.repl->connect();
     execute_query(test.repl->nodes[0], "CREATE USER 'old'@'%%' IDENTIFIED BY 'old';");
-    execute_query(test.repl->nodes[0],
-                  "UPDATE mysql.user SET password = OLD_PASSWORD('old') WHERE user = 'old';");
+    execute_query(test.repl->nodes[0], "SET PASSWORD FOR 'old'@'%%' = OLD_PASSWORD('old')");
     execute_query(test.repl->nodes[0], "FLUSH PRIVILEGES");
     test.repl->sync_slaves();
 

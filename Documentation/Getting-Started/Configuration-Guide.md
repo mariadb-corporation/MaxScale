@@ -1137,6 +1137,18 @@ serve the GUI. When disabled, the REST API will respond with a 200 OK to the
 request. By disabling the GUI, the root resource can be used as a low overhead
 health check.
 
+### `admin_secure_gui`
+
+Whether to serve the GUI only over secure HTTPS connections. The default value
+is true.
+
+To be secure by default, the GUI is only served over HTTPS connections as
+it uses a token authentication scheme. This also controls whether the
+`/auth` endpoint requires an encrypted connection.
+
+To allow use of the GUI without having to configure TLS certificates for
+the MaxScale REST API, set this parameter to false.
+
 ### `admin_log_auth_failures`
 
 Log authentication failures for the admin interface. This parameter expects a

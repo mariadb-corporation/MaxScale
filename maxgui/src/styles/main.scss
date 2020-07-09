@@ -1,0 +1,421 @@
+/*
+ * Copyright (c) 2020 MariaDB Corporation Ab
+ *
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
+ *
+ * Change Date: 2024-06-15
+ *
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
+ */
+@import 'constants.scss';
+@import 'class_colors';
+@import 'helpers.scss';
+// Fonts
+@import 'fonts/material-icons';
+// Vuetify helper variables
+@import 'variables.scss';
+
+// layout
+html {
+    margin: 0;
+    padding: 0;
+    //dashboard "responsive". preserve ratio
+    overflow: auto;
+    min-width: 1366px !important;
+}
+
+.v-application {
+    background-color: $background !important;
+}
+
+//https://gs.statcounter.com/screen-resolution-stats top 2 for desktop screen resolution
+.wrapper-container {
+    max-width: 1366px; // preserve ratio for larger screen
+    margin: 0 auto;
+}
+
+// --------------------------------- Vuetify custom v-overlay ----------------------------------------------------------------------
+.v-overlay__scrim {
+    width: 100vw;
+    height: 100vh;
+}
+.v-overlay__content {
+    width: 100%;
+    height: 100%;
+    .overlay {
+        display: table;
+        width: 100%;
+        height: 100%;
+        background: radial-gradient(1100px at 100% 89%, #2f99a3 0%, #003545 100%);
+        .overlay-content {
+            display: table-cell;
+            vertical-align: middle;
+        }
+        .loading-icon {
+            text-align: center;
+        }
+    }
+}
+// --------------------------------- Vuetify custom v-menu ----------------------------------------------------------------------
+.v-menu--with-arrow {
+    contain: initial;
+    overflow: visible;
+    &:after {
+        border: solid transparent;
+        content: '';
+        position: absolute;
+        pointer-events: none;
+        border-color: rgba(255, 255, 255, 0);
+        border-top-color: $background;
+        border-width: 8px;
+        border-top-width: 8px;
+    }
+    &::before {
+        content: '';
+        background: rgba(255, 255, 255, 0);
+        position: absolute;
+        width: 18px;
+        height: 18px;
+        z-index: -1;
+        box-shadow: 0px 1px 4px rgba(0, 0, 0, 0.4);
+    }
+    &--top-left {
+        margin-top: 10px;
+        &:after {
+            transform: rotate(180deg);
+            bottom: 100%;
+            left: 21px;
+        }
+        &::before {
+            top: -4px;
+            left: 20px;
+            transform: rotate(45deg);
+        }
+    }
+    &--top-right {
+        margin-top: 10px;
+        &:after {
+            transform: rotate(180deg);
+            bottom: 100%;
+            right: 21px;
+        }
+        &::before {
+            top: -4px;
+            right: 20px;
+            transform: rotate(45deg);
+        }
+    }
+}
+
+// --------------------------------- Vuetify custom v-tabs ----------------------------------------------------------------------
+.tab-navigation-wrapper {
+    .v-slide-group__wrapper {
+        border-bottom: thin solid $table-header !important;
+    }
+    .v-tabs-slider-wrapper {
+        height: 3px !important;
+    }
+    .v-tab {
+        letter-spacing: -0.01em;
+        font-weight: normal;
+        text-transform: capitalize;
+    }
+    .v-tab:not(.v-tab--active) {
+        color: $primary !important;
+    }
+
+    .v-tab--active {
+        color: $navigation !important;
+        font-weight: 600;
+    }
+}
+
+// --------------------------------- Vuetify custom restyle ----------------------------------------------------------------------
+
+.data-table-full {
+    a:hover {
+        text-decoration: underline;
+    }
+    table {
+        thead {
+            tr {
+                box-shadow: -7px 5px 7px -7px rgba(0, 0, 0, 0.1) !important;
+
+                th {
+                    background-color: $table-border;
+                    text-transform: uppercase;
+                    color: $small-text !important;
+                    font-size: 11px;
+                    border-bottom: none !important;
+                    white-space: nowrap;
+                    &.active * {
+                        color: #000 !important;
+                    }
+                    &:last-child {
+                        border-radius: 0 5px 0 0;
+                    }
+                    &:first-child {
+                        border-radius: 5px 0 0 0;
+                    }
+
+                    &:not(:last-child) {
+                        width: 1px;
+                    }
+                }
+                &:not(.v-data-table__progress) {
+                    th {
+                        padding: 0 25px;
+                    }
+                }
+            }
+        }
+
+        tbody {
+            tr:hover:not(.v-data-table__expanded__content):not(.v-data-table__empty-wrapper) {
+                background: #fafcfc !important;
+            }
+            tr:active:not(.v-data-table__expanded__content):not(.v-data-table__empty-wrapper):not(.v-data-table__editable-cell-mode) {
+                background: #f2fcff !important;
+            }
+            tr {
+                pointer-events: none !important;
+                .v-data-table__mobile-row {
+                    border-right: thin solid $table-border !important;
+                    border-left: thin solid $table-border !important;
+                }
+
+                td {
+                    padding: 0px 24px;
+                    pointer-events: all !important;
+                    border-bottom: thin solid $table-border !important;
+                    height: 45px;
+                    color: $navigation;
+                    white-space: nowrap;
+                    @media (max-width: 600px) {
+                        border-bottom: none;
+                    }
+                    &:last-child:not(.hide) {
+                        border-right: thin solid $table-border !important;
+                    }
+                    &:first-child:not(.hide) {
+                        border-left: thin solid $table-border !important;
+                    }
+                }
+
+                &:hover {
+                    td.actions button {
+                        opacity: 1;
+                    }
+                }
+
+                &.last-row {
+                    td {
+                        &:last-child {
+                            border-radius: 0 0 5px 0;
+                        }
+                        &:first-child {
+                            border-radius: 0 0 0 5px;
+                        }
+                    }
+                }
+            }
+            .v-data-table__editable-cell {
+                padding: 2px 10px;
+            }
+        }
+    }
+    .v-data-footer {
+        border-top: thin solid rgba(0, 0, 0, 0) !important;
+    }
+}
+.data-table-full--max-width-columns {
+    table {
+        thead {
+            tr {
+                th {
+                    &:not(:last-child) {
+                        width: unset;
+                    }
+                }
+            }
+        }
+    }
+}
+
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+    box-shadow: 0 0 0 30px white inset !important;
+}
+// vuetify input restyle
+
+.std.v-text-field--outlined > .v-input__control {
+    fieldset {
+        border-width: 1px;
+    }
+    & input {
+        font-size: 0.875rem;
+    }
+}
+.std.v-input--is-disabled {
+    color: $navigation !important;
+    opacity: 0.5;
+}
+.std.v-text-field--outlined:not(.v-input--is-disabled) > .v-input__control {
+    & input {
+        color: $navigation !important;
+    }
+}
+
+.v-text-field--outlined:not(.v-input--is-focused):not(.v-input--has-state)
+    > .v-input__control
+    > .v-input__slot
+    fieldset {
+    color: $text-subtle !important;
+}
+.search-restyle.v-text-field--rounded {
+    .v-input__control {
+        fieldset {
+            border-width: 1px;
+        }
+        .v-input__slot {
+            padding: 0px 15px;
+        }
+
+        & input {
+            font-size: 15px;
+            color: $navigation;
+        }
+    }
+}
+
+// vuetify input error message
+.std.v-input.v-text-field:not(.error--text) .v-text-field__details {
+    display: none;
+}
+
+.std.v-input.v-text-field.error--text .v-text-field__details {
+    padding: 4px 0px 0px;
+}
+
+.std.v-input.v-text-field.error--text:not(.error--text__bottom) .v-text-field__details {
+    position: absolute;
+    top: -2px;
+    margin: 0px;
+    transform: translateY(-100%);
+}
+
+// vuetify checkbox restyle
+.v-input.small.v-input--checkbox {
+    label {
+        font-size: 0.865rem;
+        color: $navigation;
+        left: 3px !important;
+    }
+
+    i {
+        font-size: 16px;
+    }
+
+    .v-input--selection-controls__ripple {
+        width: 16px;
+        height: 16px;
+        left: -3px;
+        top: -3px;
+    }
+
+    .v-input--selection-controls__input {
+        margin-right: 0;
+    }
+}
+
+// vuetify select restyle
+.mariadb-select-input {
+    .v-input__control {
+        min-height: 36px;
+        .v-select__selection--comma {
+            font-size: 0.875rem !important;
+            color: $navigation !important;
+        }
+        input {
+            max-height: 28px !important;
+        }
+    }
+}
+
+.mariadb-select-v-menu {
+    border-radius: 0px !important;
+
+    .v-list {
+        padding-top: 0;
+        padding-bottom: 0;
+        border-radius: 0px;
+        &-item {
+            &__title {
+                font-weight: 400 !important;
+                font-size: 0.875rem !important;
+            }
+        }
+    }
+}
+
+//-------------------------------------------------Typography
+h1 {
+    font-size: map-deep-get($headings, 'h1', 'size');
+    font-family: map-deep-get($headings, 'h1', 'font');
+    font-weight: map-deep-get($headings, 'h1', 'weight');
+    line-height: map-deep-get($headings, 'h1', 'line-height');
+    color: $navigation;
+}
+
+h2 {
+    font-size: map-deep-get($headings, 'h2', 'size');
+    font-family: map-deep-get($headings, 'h2', 'font');
+    font-weight: map-deep-get($headings, 'h2', 'weight');
+    line-height: map-deep-get($headings, 'h2', 'line-height');
+    color: $blue-azure;
+}
+
+h3 {
+    font-size: map-deep-get($headings, 'h3', 'size');
+    font-family: map-deep-get($headings, 'h3', 'font');
+    font-weight: map-deep-get($headings, 'h3', 'weight');
+    line-height: map-deep-get($headings, 'h3', 'line-height');
+    color: $deep-ocean;
+}
+
+h4 {
+    font-size: map-deep-get($headings, 'h4', 'size');
+    font-family: map-deep-get($headings, 'h4', 'font');
+    font-weight: map-deep-get($headings, 'h4', 'weight');
+    line-height: map-deep-get($headings, 'h4', 'line-height');
+    color: $accent;
+}
+
+h5 {
+    font-size: map-deep-get($headings, 'h5', 'size');
+    font-family: map-deep-get($headings, 'h5', 'font');
+    font-weight: map-deep-get($headings, 'h5', 'weight');
+    line-height: map-deep-get($headings, 'h5', 'line-height');
+    color: $accent;
+}
+
+h6 {
+    font-size: map-deep-get($headings, 'h6', 'size');
+    font-family: map-deep-get($headings, 'h6', 'font');
+    font-weight: map-deep-get($headings, 'h6', 'weight');
+    line-height: map-deep-get($headings, 'h6', 'line-height');
+    color: $deep-ocean;
+}
+
+//--------------------------------------------------v-card
+
+.v-card.v-card-custom {
+    box-shadow: 1px 1px 7px rgba(0, 0, 0, 0.1) !important;
+    border: 1px solid #e3e6ea !important;
+    border-radius: 0.625rem !important;
+}
