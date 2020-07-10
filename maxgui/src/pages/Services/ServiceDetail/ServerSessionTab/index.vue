@@ -117,7 +117,7 @@
                     :handleSave="confirmAdd"
                     :itemsList="itemsList"
                     @selected-items="targetItem = $event"
-                    @onOpen="getAllEntities"
+                    @on-open="getAllEntities"
                 />
             </v-row>
         </v-col>

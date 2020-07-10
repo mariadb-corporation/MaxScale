@@ -3,13 +3,13 @@
         <app-header />
         <navigation />
         <snackbars />
-        <v-main class="fill-height">
+        <v-content class="fill-height">
             <div class="fill-height py-6 px-10">
                 <transition name="fade" mode="out-in">
                     <router-view v-if="$route.meta.requiresAuth" />
                 </transition>
             </div>
-        </v-main>
+        </v-content>
         <v-footer
             class="pl-2 d-flex color bg-background justify-center color border-top-reflection"
             padless
