@@ -194,7 +194,7 @@ private:
     std::string m_path;
 };
 
-const char ZBASE_PATH[] = "/cmapi/0.3.0/node";
+const char ZBASE_PATH[] = "/cmapi/0.4.0/node";
 const char ZPORT[] = "8640";
 
 unique_ptr<json_t> load_json(const string& json)
@@ -370,13 +370,31 @@ int compare_returned_statuses(CSTest& cs, MaxCtrl& maxctrl)
     REQUIRE("status returns 1 row", rows.size() == 1);
 
     auto sStatus1 = load_json(response.body);
+    json_object_del(sStatus1.get(), "timestamp"); // The timestamp will be different, so we drop it.
+    json_object_del(sStatus1.get(), "uptime"); // The uptime will be different, so we drop it.
+
     auto sResult = load_json(rows.front());
     auto pMeta = json_object_get(sResult.get(), "meta");
     auto pServers = json_object_get(pMeta, "servers");
     REQUIRE("Result from one server returned.", json_array_size(pServers) == 1);
-    auto pStatus2 = json_array_get(pServers, 0);
+    auto pServer = json_array_get(pServers, 0);
+    auto pStatus2 = json_object_get(pServer, "result");
+    json_object_del(pStatus2, "timestamp");  // The timestamp will be different, so we drop it.
+    json_object_del(pStatus2, "csmon_trx_active"); // Only MaxScale return object may have this.
+    json_object_del(pStatus2, "uptime"); // The uptime will be different, so we drop it.
 
-    return json_equal(sStatus1.get(), pStatus2) == 1 ? 0 : 1;
+    bool rv = json_equal(sStatus1.get(), pStatus2) == 1 ? 0 : 1;
+
+    if (rv != 0)
+    {
+        cout << "\nsStatus1" << endl;
+        cout << mxs::json_dump(sStatus1.get(), JSON_INDENT(4)) << endl;
+
+        cout << "\npStatus1" << endl;
+        cout << mxs::json_dump(pStatus2, JSON_INDENT(4)) << endl;
+    }
+
+    return rv;
 }
 
 int can_maxscale_return_status(CSTest& cs, MaxCtrl& maxctrl)

@@ -46,7 +46,7 @@ const char ZAPI_KEY_FILE_NAME[] = "api_key.txt";
 using seconds = chrono::seconds;
 
 const config::ParamCount::value_type   DEFAULT_ADMIN_PORT      = 8630;
-const config::ParamString::value_type  DEFAULT_ADMIN_BASE_PATH = "/cmapi/0.3.0";
+const config::ParamString::value_type  DEFAULT_ADMIN_BASE_PATH = "/cmapi/0.4.0";
 const config::ParamString::value_type  DEFAULT_API_KEY         = "";
 const config::ParamString::value_type  DEFAULT_LOCAL_ADDRESS   = "";
 const config::ParamServer::value_type  DEFAULT_PRIMARY         = nullptr;
