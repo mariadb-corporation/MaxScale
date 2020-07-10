@@ -80,6 +80,7 @@ fi
 
 ulimit -c unlimited
 ctest $test_set -VV
+ctest --rerun-failed -VV
 cp core.* ${logs_publish_dir}
 ${script_dir}/copy_logs.sh
 
