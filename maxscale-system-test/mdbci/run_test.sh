@@ -106,6 +106,7 @@ else
     eval "arguments=(${test_set})"
     ctest -N "${arguments[@]}"
     ctest -VV "${arguments[@]}"
+    ctest --rerun-failed -VV
 fi
 
 if [[ "$name" =~ '-gcov' ]]
