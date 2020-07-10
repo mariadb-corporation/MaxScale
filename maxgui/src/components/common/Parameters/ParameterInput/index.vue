@@ -9,6 +9,7 @@
         v-model.trim="targetItem.value"
         :name="targetItem.id"
         class="std error--text__bottom error--text__bottom--no-margin"
+        :class="targetItem.type"
         single-line
         outlined
         dense
@@ -24,6 +25,7 @@
         v-model.trim="targetItem.value"
         :name="targetItem.id"
         class="std error--text__bottom error--text__bottom--no-margin"
+        :class="targetItem.type"
         single-line
         outlined
         dense
@@ -39,6 +41,7 @@
         v-model.trim.number="targetItem.value"
         :name="targetItem.id"
         class="std error--text__bottom error--text__bottom--no-margin"
+        :class="targetItem.type"
         single-line
         outlined
         dense
@@ -56,6 +59,7 @@
         v-model="targetItem.value"
         :name="targetItem.id"
         class="std mariadb-select-input error--text__bottom error--text__bottom--no-margin"
+        :class="targetItem.type"
         :menu-props="{ contentClass: 'mariadb-select-v-menu', bottom: true, offsetY: true }"
         :items="[true, false]"
         outlined
@@ -71,6 +75,7 @@
         v-model="targetItem.value"
         :name="targetItem.id"
         class="std mariadb-select-input error--text__bottom error--text__bottom--no-margin"
+        :class="targetItem.type"
         :menu-props="{ contentClass: 'mariadb-select-v-menu', bottom: true, offsetY: true }"
         :items="targetItem.enum_values"
         outlined
@@ -99,6 +104,7 @@
         v-model="targetItem.value"
         :name="targetItem.id"
         class="std mariadb-select-input error--text__bottom error--text__bottom--no-margin"
+        :class="targetItem.type"
         :menu-props="{ contentClass: 'mariadb-select-v-menu', bottom: true, offsetY: true }"
         :items="targetItem.enum_values"
         outlined
@@ -107,7 +113,7 @@
         @change="handleChange"
     />
 
-    <!-- count or int parameter or duration type -->
+    <!-- count, int, duration type -->
     <v-text-field
         v-else-if="
             targetItem.type === 'count' ||
@@ -119,6 +125,7 @@
         v-model.trim.number="targetItem.value"
         :name="targetItem.id"
         class="std error--text__bottom error--text__bottom--no-margin"
+        :class="targetItem.type"
         single-line
         outlined
         dense
@@ -155,7 +162,7 @@
         :id="`${targetItem.id}-${targetItem.nodeId}` || targetItem.id"
         v-model.trim="targetItem.value"
         :name="targetItem.id"
-        class="std error--text__bottom error--text__bottom--no-margin"
+        class="std error--text__bottom error--text__bottom--no-margin password-string"
         outlined
         dense
         type="password"
@@ -172,6 +179,7 @@
         v-model.trim="targetItem.value"
         :name="targetItem.id"
         class="std error--text__bottom error--text__bottom--no-margin"
+        :class="`${targetItem.type} string`"
         single-line
         outlined
         dense
@@ -260,6 +268,11 @@ export default {
                     this.targetItem.value
                 )
                 this.handleChange()
+            }
+        },
+        item: function(newItem, oldItem) {
+            if (!this.$help.lodash.isEqual(newItem, oldItem)) {
+                this.targetItem = this.processItem(this.$help.lodash.cloneDeep(newItem))
             }
         },
     },

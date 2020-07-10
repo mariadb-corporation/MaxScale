@@ -119,8 +119,8 @@ This component allows to read parameters and edit parameters. It means to be use
 
 PROPS:
 - requiredParams: accepts array of string , it simply enables required attribute in parameter-input dynamically
-- usePortOrSocket: accepts boolean , if true, get portValue, addressValue, and socketValue, 
-  passing them to parameter-input for handling special input field when editting server or listener. 
+- usePortOrSocket: accepts boolean , if true, get portValue, addressValue, and socketValue,
+  passing them to parameter-input for handling special input field when editting server or listener.
   If editing listener, addressValue will be null
 - isListener: accepts boolean , if true, address won't be required
  */
