@@ -83,6 +83,7 @@ else
     eval "arguments=(${test_set})"
     ctest -N "${arguments[@]}"
     ctest -VV "${arguments[@]}"
+    ctest --rerun-failed -VV
 fi
 cp core.* ${logs_publish_dir}
 ${script_dir}/copy_logs.sh
