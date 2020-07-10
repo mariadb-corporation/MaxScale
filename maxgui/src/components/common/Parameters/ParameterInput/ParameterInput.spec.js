@@ -14,19 +14,27 @@ import { expect } from 'chai'
 import mount from '@tests/unit/setup'
 import ParameterInput from '@/components/common/Parameters/ParameterInput'
 
-//component should render one input at a time
+/**
+ * @param {Object} wrapper A Wrapper is an object that contains a mounted component and methods to test the component
+ * component should render one input at a time
+ */
 function checkRenderOneInput(wrapper) {
     let stdClass = wrapper.findAll('.std')
     expect(stdClass.length).to.be.equal(1)
 }
 
-//component component renders accurate input type
-async function renderAccurateInputType(wrapper, item, itemType) {
+/**
+ * @param {Object} wrapper A Wrapper is an object that contains a mounted component and methods to test the component
+ * @param {Object} item a parameter object must contains at least id, value and type attributes
+ * @param {String} typeClass type class of parameter object
+ * component renders accurate input type
+ */
+async function renderAccurateInputType(wrapper, item, typeClass) {
     await wrapper.setProps({
         item: item,
     })
     checkRenderOneInput(wrapper)
-    let inputWrapper = wrapper.findAll(`.${itemType}`)
+    let inputWrapper = wrapper.findAll(`.${typeClass}`)
     expect(inputWrapper.length).to.be.equal(1)
 }
 
@@ -44,8 +52,9 @@ describe('ParameterInput.vue', () => {
         })
     })
 
-    it(`bool type: component renders v-select input that
-      only allows to select boolean value`, async () => {
+    it(`bool type:
+      - component renders v-select input that only allows to select boolean value.
+      - component emits on-input-change and returns accurate values `, async () => {
         await renderAccurateInputType(
             wrapper,
             {
@@ -56,10 +65,33 @@ describe('ParameterInput.vue', () => {
             },
             'bool'
         )
+        let count = 0
+        wrapper.vm.$on('on-input-change', (newItem, changed) => {
+            count++
+            expect(newItem.value).to.be.a('boolean')
+            if (count === 1) {
+                expect(newItem.value).to.be.equal(true)
+                expect(changed).to.be.equal(true)
+            } else if (count === 2) {
+                expect(newItem.value).to.be.equal(false)
+                expect(changed).to.be.equal(false)
+            }
+        })
+
+        // mockup onchange event when selecting item
+        const vSelect = wrapper.findComponent({ name: 'v-select' })
+        // changing from value false to true
+        vSelect.vm.selectItem(true)
+        // changing back to original value
+        vSelect.vm.selectItem(false)
+
+        expect(count).to.be.equal(2)
     })
 
-    it(`enum_mask type: component renders v-select input that
-      allows selecting multiple items`, async () => {
+    it(`enum_mask type:
+      - component takes enum_values array and
+        renders v-select input that allows selecting multiple items
+      - component emits on-input-change and returns enum_mask values as string`, async () => {
         await renderAccurateInputType(
             wrapper,
             {
@@ -77,6 +109,33 @@ describe('ParameterInput.vue', () => {
             },
             'enum_mask'
         )
+
+        let count = 0
+        wrapper.vm.$on('on-input-change', (newItem, changed) => {
+            count++
+            expect(newItem.value).to.be.a('string')
+            if (count === 1) {
+                expect(newItem.value).to.be.equal('primary_monitor_master,running_slave')
+                expect(changed).to.be.equal(true)
+            } else if (count === 2) {
+                expect(newItem.value).to.be.equal('primary_monitor_master')
+                expect(changed).to.be.equal(false)
+            } else if (count === 3) {
+                expect(newItem.value).to.be.equal('')
+                expect(changed).to.be.equal(true)
+            }
+        })
+
+        // mockup onchange event when selecting item
+        const vSelect = wrapper.findComponent({ name: 'v-select' })
+        // adding running_slave to value
+        vSelect.vm.selectItem('running_slave')
+        // removing running_slave from value
+        vSelect.vm.selectItem('running_slave')
+        // making value empty
+        vSelect.vm.selectItem('primary_monitor_master')
+
+        expect(count).to.be.equal(3)
     })
 
     it(`enum type: component renders v-select input that
@@ -92,6 +151,28 @@ describe('ParameterInput.vue', () => {
             },
             'enum'
         )
+
+        let count = 0
+        wrapper.vm.$on('on-input-change', (newItem, changed) => {
+            count++
+            expect(newItem.value).to.be.a('string')
+            if (count === 1) {
+                expect(newItem.value).to.be.equal('majority_of_running')
+                expect(changed).to.be.equal(true)
+            } else if (count === 2) {
+                expect(newItem.value).to.be.equal('none')
+                expect(changed).to.be.equal(false)
+            }
+        })
+
+        // mockup onchange event when selecting item
+        const vSelect = wrapper.findComponent({ name: 'v-select' })
+        // changing from value none to majority_of_running
+        vSelect.vm.selectItem('majority_of_running')
+        // changing back to original value
+        vSelect.vm.selectItem('none')
+
+        expect(count).to.be.equal(2)
     })
 
     it(`count type: component renders v-text-field input that only allows to enter

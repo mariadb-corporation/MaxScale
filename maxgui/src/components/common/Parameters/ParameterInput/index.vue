@@ -204,10 +204,16 @@
  */
 
 /*
+This component accepts these optional props:
+- required: input becomes required and shows error message if value is empty after validating
 - createMode: In creation mode, it will not trigger parent form validate on first render
-- portValue,_socketValue,_addressValue and _parentForm is passed if target resource is being
-  created or updated. If target resource is listener, _addressValue will be null.
-- isListener: accepts boolean , if true, address won't be required
+- portValue, socketValue, addressValue and parentForm are passed if a server is being
+  created or updated, this helps to facilitate special rules for port, socket and address parameter
+  If it is not a server being created but a listener, addressValue will be null.
+- isListener: accepts boolean , if true, address input won't be required
+
+Emits:
+- $emit('on-input-change', { targetItemCloned: object, changed: boolean })
 */
 export default {
     name: 'parameter-input',
@@ -230,7 +236,7 @@ export default {
                 requiredAddress: [val => this.handleRequiredAddress(val)],
                 requiredFieldEither: [val => this.handleRequiredFieldEither(val)],
             },
-            count: 0,
+            renderCount: 0,
             durationSuffixes: ['ms', 's', 'm', 'h'],
             sizeSuffixes: ['Ki', 'Mi', 'Gi', 'Ti', 'k', 'M', 'G', 'T'],
             chosenSuffix: null,
@@ -241,9 +247,9 @@ export default {
             this.$nextTick(() => {
                 // createMode should not trigger parent form validate on first render
                 if (this.createMode) {
-                    this.parentForm && this.count !== 0 && this.parentForm.validate()
+                    this.parentForm && this.renderCount !== 0 && this.parentForm.validate()
 
-                    this.count === 0 && (this.count = this.count + 1)
+                    this.renderCount === 0 && (this.renderCount = this.renderCount + 1)
                 } else {
                     this.parentForm && this.parentForm.validate()
                 }
