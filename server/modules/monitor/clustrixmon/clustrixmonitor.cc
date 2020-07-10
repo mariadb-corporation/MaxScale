@@ -1025,8 +1025,6 @@ void ClustrixMonitor::populate_from_bootstrap_servers()
 
 void ClustrixMonitor::update_server_statuses()
 {
-    mxb_assert(!servers().empty());
-
     for (auto* pMs : servers())
     {
         pMs->stash_current_status();

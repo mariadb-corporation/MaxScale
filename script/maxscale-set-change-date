@@ -1,0 +1,61 @@
+#!/bin/bash
+#
+# Copyright (c) 2016 MariaDB Corporation Ab
+#
+#  Use of this software is governed by the Business Source License included
+#  in the LICENSE.TXT file and at www.mariadb.com/bsl11.
+#
+#  Change Date: 2020-01-01
+#
+#  On the date above, in accordance with the Business Source License, use
+#  of this software will be governed by version 2 or later of the General
+#  Public License.
+#
+
+SCRIPT="$(cd -P "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+MAXSCALE_ROOT=${SCRIPT}/..
+
+DIRS="avro client connectors Documentation etc examples include maxctrl maxscale-system-test maxutils query_classifier script rabbitmq_consumer server"
+
+function check_dirs
+{
+    for d in ${DIRS}
+    do
+       if [ ! -d $d ]
+       then
+           echo "error: Seems like DIRS must be updated."
+           exit 1
+       fi
+    done
+}
+
+function print_usage_and_exit
+{
+    echo "usage: maxscale-set-change-date change-date"
+    echo
+    echo "Example: maxscale-set-change-date 2020-07-09"
+    echo
+    echo "This script will set the change date in all files in the"
+    echo "following directories: $DIRS"
+
+    exit 1
+}
+
+function main
+{
+    if [ $# -ne 1 ]
+    then
+        print_usage_and_exit
+    fi
+
+    cd $MAXSCALE_ROOT
+
+    check_dirs
+
+    ${SCRIPT}/set-change-date -c $1 ${DIRS}
+
+    echo
+    echo "Remember to update the Change Date in the LICENSE file."
+}
+
+main $*
