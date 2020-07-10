@@ -27,13 +27,13 @@
 
 /*
 PROPS:
-- componentId: a needed it to make v-tooltip activator works
+- componentId: an unique id needed it to make v-tooltip activator works
 - item: parameter input object
 */
 export default {
     name: 'parameter-tooltip-activator',
     props: {
-        item: { type: Object, required: true },
+        item: { type: Object, required: true }, // always require to have "id" attribute
         componentId: { type: String, required: true },
     },
 }
