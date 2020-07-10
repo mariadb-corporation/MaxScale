@@ -5,7 +5,7 @@
 #  Use of this software is governed by the Business Source License included
 #  in the LICENSE.TXT file and at www.mariadb.com/bsl11.
 #
-#  Change Date: 2020-01-01
+#  Change Date: 2024-07-15
 #
 #  On the date above, in accordance with the Business Source License, use
 #  of this software will be governed by version 2 or later of the General
@@ -15,7 +15,7 @@
 SCRIPT="$(cd -P "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MAXSCALE_ROOT=${SCRIPT}/..
 
-DIRS="avro client connectors Documentation etc examples include maxctrl maxscale-system-test maxutils query_classifier script rabbitmq_consumer server"
+DIRS="connectors Documentation etc examples include maxctrl maxscale-system-test maxutils query_classifier script server"
 
 function check_dirs
 {
@@ -23,7 +23,7 @@ function check_dirs
     do
        if [ ! -d $d ]
        then
-           echo "error: Seems like DIRS must be updated."
+           echo "error: $d does not exist, seems like DIRS must be updated."
            exit 1
        fi
     done
