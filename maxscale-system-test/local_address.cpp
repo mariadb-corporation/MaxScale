@@ -222,12 +222,8 @@ string get_local_ip(TestConnections& test)
 
 string get_gateway_ip(TestConnections& test)
 {
-    int exit_code;
-    char* output = test.maxscales->ssh_node_output(0, "echo $SSH_CLIENT", false, &exit_code);
-    *strchr(output, ' ') = '\0';
-    string rval(output);
-    free(output);
-    return rval;
+    auto res = test.maxscales->ssh_output("echo $SSH_CLIENT", 0, false);
+    return cutoff_string(res.output, ' ');
 }
 
 void start_maxscale_with_local_address(TestConnections& test,

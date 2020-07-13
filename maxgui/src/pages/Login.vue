@@ -42,11 +42,10 @@
                                 <v-text-field
                                     id="password"
                                     v-model="credential.password"
-                                    :icon="isPwdVisible ? 'visibility_off' : 'visibility'"
                                     :rules="rules.password"
                                     :error-messages="showEmptyMessage ? ' ' : errorMessage"
                                     :type="isPwdVisible ? 'text' : 'password'"
-                                    class="std mt-5"
+                                    class="std std-password mt-5"
                                     name="password"
                                     autocomplete="current-password"
                                     single-line
@@ -55,9 +54,15 @@
                                     required
                                     :placeholder="$t('password')"
                                     @input="onInput"
-                                    @click:append="isPwdVisible = !isPwdVisible"
-                                />
-
+                                >
+                                    <v-icon
+                                        slot="append"
+                                        size="20"
+                                        @click="isPwdVisible = !isPwdVisible"
+                                    >
+                                        {{ isPwdVisible ? 'visibility_off' : 'visibility' }}
+                                    </v-icon>
+                                </v-text-field>
                                 <v-checkbox
                                     v-model="rememberMe"
                                     class="small mt-2 mb-4"

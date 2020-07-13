@@ -48,19 +48,17 @@ void check_status(TestConnections& test, const string& server, const set<string>
 
 json_t* get_json_data(TestConnections& test, const char* query)
 {
-    json_t* rval = NULL;
-    int exit_code = 1;
-    char* output = test.maxscales->ssh_node_output(0, query, true, &exit_code);
-    if (output == NULL)
+    json_t* rval = nullptr;
+    auto res = test.maxscales->ssh_output(query);
+    if (res.output.empty())
     {
         test.add_result(1, "Query '%s' execution error, no output.", query);
     }
     else
     {
         json_error_t error;
-        rval = json_loads(output, 0, &error);
-        free(output);
-        if (rval == NULL)
+        rval = json_loads(res.output.c_str(), 0, &error);
+        if (!rval)
         {
             test.add_result(1, "JSON decode error: %s\n", error.text);
         }

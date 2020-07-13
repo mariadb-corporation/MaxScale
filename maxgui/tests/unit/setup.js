@@ -28,9 +28,10 @@ import commonComponents from 'components/common'
 function doMount(isShallow, component, options) {
     if (isShallow) {
         /*
-            ignoring child components, if component has
-            child components as vuetify component, use
-            mount
+            rendering child components as "stubbled components" (placeholder components).
+            If component is a wrapper of vuetify component or contains vuetify component
+            and the test needs vuetify component to react on changes of
+            the wrapper component, use mount instead.
         */
         return shallowMount(component, options)
     } else {
@@ -56,6 +57,7 @@ export default options => {
         vuetify,
         i18n,
         propsData: options.props,
+        slots: options.slots,
         attachTo: '#app',
     })
 }

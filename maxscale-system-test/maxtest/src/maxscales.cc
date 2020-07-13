@@ -256,10 +256,14 @@ int Maxscales::stop_maxscale(int m)
     int res;
     if (use_valgrind)
     {
-        res = ssh_node_f(m, true, "sudo kill $(pidof valgrind) 2>&1 > /dev/null");
-        if ((res != 0) || atoi(ssh_node_output(m, "pidof valgrind", true, &res)) > 0)
+        const char kill_vgrind[] = "kill $(pidof valgrind) 2>&1 > /dev/null";
+        res = ssh_node(m, kill_vgrind, true);
+        auto vgrind_pid = ssh_output("pidof valgrind", m);
+        bool still_running = (atoi(vgrind_pid.output.c_str()) > 0);
+        if ((res != 0) || still_running)
         {
-            res = ssh_node_f(m, true, "sudo kill -9 $(pidof valgrind) 2>&1 > /dev/null");
+            // Try again, maybe it will work.
+            res = ssh_node(m, kill_vgrind, true);
         }
     }
     else

@@ -9,6 +9,7 @@
         v-model.trim="targetItem.value"
         :name="targetItem.id"
         class="std error--text__bottom error--text__bottom--no-margin"
+        :class="targetItem.type"
         single-line
         outlined
         dense
@@ -24,6 +25,7 @@
         v-model.trim="targetItem.value"
         :name="targetItem.id"
         class="std error--text__bottom error--text__bottom--no-margin"
+        :class="targetItem.type"
         single-line
         outlined
         dense
@@ -39,6 +41,7 @@
         v-model.trim.number="targetItem.value"
         :name="targetItem.id"
         class="std error--text__bottom error--text__bottom--no-margin"
+        :class="targetItem.type"
         single-line
         outlined
         dense
@@ -56,6 +59,7 @@
         v-model="targetItem.value"
         :name="targetItem.id"
         class="std mariadb-select-input error--text__bottom error--text__bottom--no-margin"
+        :class="targetItem.type"
         :menu-props="{ contentClass: 'mariadb-select-v-menu', bottom: true, offsetY: true }"
         :items="[true, false]"
         outlined
@@ -64,22 +68,23 @@
         @change="handleChange"
     />
 
-    <!-- enum_mask parameter type -->
+    <!-- enum_mask or enum parameter type -->
     <v-select
-        v-else-if="targetItem.type === 'enum_mask'"
+        v-else-if="targetItem.type === 'enum_mask' || targetItem.type === 'enum'"
         :id="`${targetItem.id}-${targetItem.nodeId}` || targetItem.id"
         v-model="targetItem.value"
         :name="targetItem.id"
         class="std mariadb-select-input error--text__bottom error--text__bottom--no-margin"
+        :class="targetItem.type"
         :menu-props="{ contentClass: 'mariadb-select-v-menu', bottom: true, offsetY: true }"
         :items="targetItem.enum_values"
         outlined
         dense
-        multiple
+        :multiple="targetItem.type === 'enum_mask'"
         :disabled="targetItem.disabled"
         @change="handleChange"
     >
-        <template v-slot:selection="{ item, index }">
+        <template v-if="targetItem.type === 'enum_mask'" v-slot:selection="{ item, index }">
             <span v-if="index === 0" class="v-select__selection v-select__selection--comma">
                 {{ item }}
             </span>
@@ -92,22 +97,7 @@
         </template>
     </v-select>
 
-    <!-- enum parameter type -->
-    <v-select
-        v-else-if="targetItem.type === 'enum'"
-        :id="`${targetItem.id}-${targetItem.nodeId}` || targetItem.id"
-        v-model="targetItem.value"
-        :name="targetItem.id"
-        class="std mariadb-select-input error--text__bottom error--text__bottom--no-margin"
-        :menu-props="{ contentClass: 'mariadb-select-v-menu', bottom: true, offsetY: true }"
-        :items="targetItem.enum_values"
-        outlined
-        dense
-        :disabled="targetItem.disabled"
-        @change="handleChange"
-    />
-
-    <!-- count or int parameter or duration type -->
+    <!-- count, int, duration type -->
     <v-text-field
         v-else-if="
             targetItem.type === 'count' ||
@@ -119,6 +109,7 @@
         v-model.trim.number="targetItem.value"
         :name="targetItem.id"
         class="std error--text__bottom error--text__bottom--no-margin"
+        :class="targetItem.type"
         single-line
         outlined
         dense
@@ -155,15 +146,20 @@
         :id="`${targetItem.id}-${targetItem.nodeId}` || targetItem.id"
         v-model.trim="targetItem.value"
         :name="targetItem.id"
-        class="std error--text__bottom error--text__bottom--no-margin"
+        class="std std-password error--text__bottom error--text__bottom--no-margin password-string"
         outlined
         dense
-        type="password"
+        :type="isPwdVisible ? 'text' : 'password'"
         :rules="rules.required"
         autocomplete="new-password"
         :disabled="targetItem.disabled"
         @input="handleChange"
-    />
+        @click:append="isPwdVisible = !isPwdVisible"
+    >
+        <v-icon slot="append" size="20" @click="isPwdVisible = !isPwdVisible">
+            {{ isPwdVisible ? 'visibility_off' : 'visibility' }}
+        </v-icon>
+    </v-text-field>
 
     <!--others parameter types -->
     <v-text-field
@@ -172,6 +168,7 @@
         v-model.trim="targetItem.value"
         :name="targetItem.id"
         class="std error--text__bottom error--text__bottom--no-margin"
+        :class="`${targetItem.type} string`"
         single-line
         outlined
         dense
@@ -196,10 +193,16 @@
  */
 
 /*
+This component accepts these optional props:
+- required: input becomes required and shows error message if value is empty after validating
 - createMode: In creation mode, it will not trigger parent form validate on first render
-- portValue,_socketValue,_addressValue and _parentForm is passed if target resource is being
-  created or updated. If target resource is listener, _addressValue will be null.
-- isListener: accepts boolean , if true, address won't be required
+- portValue, socketValue, addressValue and parentForm are passed if a server is being
+  created or updated, this helps to facilitate special rules for port, socket and address parameter
+  If it is not a server being created but a listener, addressValue will be null.
+- isListener: accepts boolean , if true, address input won't be required
+
+Emits:
+- $emit('on-input-change', { targetItemCloned: object, changed: boolean })
 */
 export default {
     name: 'parameter-input',
@@ -222,10 +225,11 @@ export default {
                 requiredAddress: [val => this.handleRequiredAddress(val)],
                 requiredFieldEither: [val => this.handleRequiredFieldEither(val)],
             },
-            count: 0,
+            renderCount: 0,
             durationSuffixes: ['ms', 's', 'm', 'h'],
             sizeSuffixes: ['Ki', 'Mi', 'Gi', 'Ti', 'k', 'M', 'G', 'T'],
             chosenSuffix: null,
+            isPwdVisible: false,
         }
     },
     watch: {
@@ -233,9 +237,9 @@ export default {
             this.$nextTick(() => {
                 // createMode should not trigger parent form validate on first render
                 if (this.createMode) {
-                    this.parentForm && this.count !== 0 && this.parentForm.validate()
+                    this.parentForm && this.renderCount !== 0 && this.parentForm.validate()
 
-                    this.count === 0 && (this.count = this.count + 1)
+                    this.renderCount === 0 && (this.renderCount = this.renderCount + 1)
                 } else {
                     this.parentForm && this.parentForm.validate()
                 }
@@ -260,6 +264,11 @@ export default {
                     this.targetItem.value
                 )
                 this.handleChange()
+            }
+        },
+        item: function(newItem, oldItem) {
+            if (!this.$help.lodash.isEqual(newItem, oldItem)) {
+                this.targetItem = this.processItem(this.$help.lodash.cloneDeep(newItem))
             }
         },
     },

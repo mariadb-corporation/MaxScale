@@ -9,7 +9,7 @@
     >
         <template v-slot:body>
             <p v-if="!$help.isNull(item)">
-                <span>
+                <span class="confirmations-text">
                     {{ $t(`confirmations.${type}`, { targetId: item.id }) }}
                 </span>
             </p>
@@ -37,14 +37,14 @@
 export default {
     name: 'confirm-dialog',
     props: {
-        value: Boolean,
-        type: String, // delete or destroy
-        title: String,
-        item: Object,
+        value: { type: Boolean, required: true },
+        type: { type: String, required: true }, //delete, unlink, destroy, stop, start
+        title: { type: String, required: true },
         onSave: { type: Function, required: true },
-        smallInfo: String,
         onClose: { type: Function, required: true },
         onCancel: { type: Function, required: true },
+        item: { type: Object, default: null },
+        smallInfo: { type: String, default: '' },
     },
     data() {
         return {
