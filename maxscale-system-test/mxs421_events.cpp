@@ -15,7 +15,7 @@
 #include <iostream>
 #include <sstream>
 #include <string>
-#include <maxtest/testconnections.h>
+#include <maxtest/testconnections.hh>
 
 using namespace std;
 

@@ -1,7 +1,7 @@
 /**
  * Test binary protocol prepared statement routing
  */
-#include <maxtest/testconnections.h>
+#include <maxtest/testconnections.hh>
 
 int main(int argc, char** argv)
 {

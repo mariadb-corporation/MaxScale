@@ -3,7 +3,7 @@
  *
  */
 
-#include <maxtest/testconnections.h>
+#include <maxtest/testconnections.hh>
 
 #define MONITOR_NAME "mysql-monitor"
 #define SERVICE_NAME "rwsplit-service"

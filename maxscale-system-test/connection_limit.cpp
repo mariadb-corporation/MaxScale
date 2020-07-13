@@ -6,7 +6,7 @@
  * - create max num of connections and check tha N+1 connection fails
  */
 
-#include <maxtest/testconnections.h>
+#include <maxtest/testconnections.hh>
 
 void check_with_wrong_pw(int router, int max_conn, TestConnections& test);
 void check_max_conn(int router, int max_conn, TestConnections& test);

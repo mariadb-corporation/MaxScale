@@ -2,7 +2,7 @@
  * MXS-1961: Standalone master loses master status
  */
 
-#include <maxtest/testconnections.h>
+#include <maxtest/testconnections.hh>
 #include <iostream>
 #include <maxbase/assert.h>
 

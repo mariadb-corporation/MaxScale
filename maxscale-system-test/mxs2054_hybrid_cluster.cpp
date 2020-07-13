@@ -2,7 +2,7 @@
  * MXS-2054: Test "hybrid" clusters with namedserverfilter
  */
 
-#include <maxtest/testconnections.h>
+#include <maxtest/testconnections.hh>
 
 int main(int argc, char** argv)
 {

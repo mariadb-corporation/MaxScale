@@ -1,6 +1,6 @@
 
 #include <string>
-#include <maxtest/testconnections.h>
+#include <maxtest/testconnections.hh>
 #include "mariadbmonitor/failover_common.cpp"
 
 using std::string;

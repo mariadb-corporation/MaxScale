@@ -1,4 +1,4 @@
-#include <maxtest/config_operations.h>
+#include <maxtest/config_operations.hh>
 
 // The configuration should use these names for the services, listeners and monitors
 #define SERVICE_NAME1  "rwsplit-service"

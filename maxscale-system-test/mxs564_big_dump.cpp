@@ -10,8 +10,8 @@
  * - check Maxscale is alive
  */
 
-#include <maxtest/testconnections.h>
-#include <maxtest/sql_t1.h>
+#include <maxtest/testconnections.hh>
+#include <maxtest/sql_t1.hh>
 
 #include <atomic>
 #include <thread>

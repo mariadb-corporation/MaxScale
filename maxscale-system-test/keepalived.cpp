@@ -14,7 +14,7 @@
 
 #include <iostream>
 #include <maxtest/keepalived_func.h>
-#include <maxtest/testconnections.h>
+#include <maxtest/testconnections.hh>
 
 int main(int argc, char* argv[])
 {

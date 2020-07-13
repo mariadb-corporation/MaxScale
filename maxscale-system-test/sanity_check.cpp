@@ -4,7 +4,7 @@
  * Combines several old regression tests into one quick test.
  */
 
-#include <maxtest/testconnections.h>
+#include <maxtest/testconnections.hh>
 
 
 void test_rwsplit(TestConnections& test)

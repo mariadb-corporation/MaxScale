@@ -13,7 +13,7 @@
  */
 
 
-#include <maxtest/testconnections.h>
+#include <maxtest/testconnections.hh>
 
 int main(int argc, char* argv[])
 {

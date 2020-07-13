@@ -2,7 +2,7 @@
  * MXS-2146: Test case for csmon
  */
 
-#include <maxtest/testconnections.h>
+#include <maxtest/testconnections.hh>
 
 int main(int argc, char* argv[])
 {

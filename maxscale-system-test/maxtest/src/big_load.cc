@@ -1,9 +1,9 @@
-#include <maxtest/big_load.h>
+#include <maxtest/big_load.hh>
 
 #include <pthread.h>
-#include <maxtest/testconnections.h>
-#include <maxtest/sql_t1.h>
-#include <maxtest/get_com_select_insert.h>
+#include <maxtest/testconnections.hh>
+#include <maxtest/sql_t1.hh>
+#include <maxtest/get_com_select_insert.hh>
 
 
 void load(long int* new_inserts,

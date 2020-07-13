@@ -2,7 +2,7 @@
  * MXS-1123: connect_timeout setting causes frequent disconnects
  */
 
-#include <maxtest/testconnections.h>
+#include <maxtest/testconnections.hh>
 
 int main(int argc, char** argv)
 {

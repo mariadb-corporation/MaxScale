@@ -1,7 +1,7 @@
 #include <future>
 #include <iostream>
 #include <librdkafka/rdkafkacpp.h>
-#include <maxtest/testconnections.h>
+#include <maxtest/testconnections.hh>
 
 using namespace std::literals::string_literals;
 

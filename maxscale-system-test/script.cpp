@@ -34,7 +34,7 @@
 
 
 #include <iostream>
-#include <maxtest/testconnections.h>
+#include <maxtest/testconnections.hh>
 
 void test_script_monitor(TestConnections* Test, Mariadb_nodes* nodes, char* expected_filename)
 {

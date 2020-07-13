@@ -6,7 +6,7 @@
  * `match=SELECT` which should match any SELECT query.
  */
 
-#include <maxtest/testconnections.h>
+#include <maxtest/testconnections.hh>
 #include <iostream>
 
 using std::cout;

@@ -1,6 +1,6 @@
-#include <maxtest/fw_copy_rules.h>
+#include <maxtest/fw_copy_rules.hh>
 #include <sstream>
-#include <maxtest/testconnections.h>
+#include <maxtest/testconnections.hh>
 
 void copy_rules(TestConnections* Test, const char* rules_name, const char* rules_dir)
 {

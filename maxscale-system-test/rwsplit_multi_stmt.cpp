@@ -9,7 +9,7 @@
  * - Only the multi-statement query should go to the master
  */
 
-#include <maxtest/testconnections.h>
+#include <maxtest/testconnections.hh>
 
 int main(int argc, char** argv)
 {

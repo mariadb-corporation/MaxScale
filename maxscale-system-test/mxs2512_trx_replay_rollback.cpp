@@ -14,8 +14,8 @@
 #include <iostream>
 #include <maxbase/assert.h>
 #include <maxbase/semaphore.hh>
-#include <maxtest/mariadb_func.h>
-#include <maxtest/testconnections.h>
+#include <maxtest/mariadb_func.hh>
+#include <maxtest/testconnections.hh>
 
 using namespace std;
 

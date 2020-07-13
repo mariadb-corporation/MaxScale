@@ -5,7 +5,7 @@
  * - try to connect using RWSplit. First and third are expected to fail, second should succeed.
  */
 
-#include <maxtest/testconnections.h>
+#include <maxtest/testconnections.hh>
 
 int main(int argc, char* argv[])
 {

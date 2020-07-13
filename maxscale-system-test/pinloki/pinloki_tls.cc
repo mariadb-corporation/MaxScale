@@ -1,4 +1,4 @@
-#include <maxtest/testconnections.h>
+#include <maxtest/testconnections.hh>
 #include "test_base.hh"
 
 using namespace std::literals::string_literals;

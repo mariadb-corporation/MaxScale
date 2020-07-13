@@ -1,4 +1,4 @@
-#include <maxtest/testconnections.h>
+#include <maxtest/testconnections.hh>
 
 // Base class for Pinloki test cases. Provides some utility functions related to replication as well as common
 // testing functionality.

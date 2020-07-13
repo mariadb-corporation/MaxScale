@@ -18,9 +18,9 @@
 #include <arpa/inet.h>
 #include <sys/epoll.h>
 
-#include <maxtest/maxinfo_func.h>
-#include <maxtest/sql_t1.h>
-#include <maxtest/testconnections.h>
+#include <maxtest/maxinfo_func.hh>
+#include <maxtest/sql_t1.hh>
+#include <maxtest/testconnections.hh>
 
 using namespace std;
 char reg_str[] = "REGISTER UUID=XXX-YYY_YYY, TYPE=JSON";

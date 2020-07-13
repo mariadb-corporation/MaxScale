@@ -4,7 +4,7 @@
  * https://jira.mariadb.org/browse/MXS-1509
  */
 
-#include <maxtest/testconnections.h>
+#include <maxtest/testconnections.hh>
 #include <sstream>
 
 void change_master(TestConnections& test, int slave, int master, const char* name = NULL)

@@ -11,7 +11,7 @@
  * Public License.
  */
 
-#include <maxtest/testconnections.h>
+#include <maxtest/testconnections.hh>
 #include "failover_common.cpp"
 
 int main(int argc, char** argv)

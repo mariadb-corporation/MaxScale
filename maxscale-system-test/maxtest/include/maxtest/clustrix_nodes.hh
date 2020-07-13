@@ -23,7 +23,7 @@
 
 #include <cerrno>
 #include <string>
-#include <maxtest/mariadb_nodes.h>
+#include <maxtest/mariadb_nodes.hh>
 #include <maxtest/nodes.hh>
 
 #define CLUSTRIX_DEPS_YUM "yum install -y bzip2 wget screen ntp ntpdate vim htop mdadm"

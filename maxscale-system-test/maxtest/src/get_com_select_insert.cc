@@ -1,4 +1,4 @@
-#include <maxtest/mariadb_nodes.h>
+#include <maxtest/mariadb_nodes.hh>
 
 /**
  *  Reads COM_SELECT and COM_INSERT variables from all nodes and stores into 'selects' and 'inserts'

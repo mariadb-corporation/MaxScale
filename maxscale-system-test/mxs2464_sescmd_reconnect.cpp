@@ -3,7 +3,7 @@
  * https://jira.mariadb.org/browse/MXS-2464
  */
 
-#include <maxtest/testconnections.h>
+#include <maxtest/testconnections.hh>
 
 void run_test(TestConnections& test, const char* query)
 {
