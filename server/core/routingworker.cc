@@ -455,8 +455,6 @@ void RoutingWorker::process_timeouts()
 
 void RoutingWorker::delete_zombies()
 {
-    Zombies not_ready;
-
     // An algorithm cannot be used, as the final closing of a DCB may cause
     // other DCBs to be registered in the zombie queue.
 
@@ -465,17 +463,8 @@ void RoutingWorker::delete_zombies()
         DCB* pDcb = m_zombies.back();
         m_zombies.pop_back();
 
-        if (can_close_dcb(pDcb))
-        {
-            DCB::Manager::call_destroy(pDcb);
-        }
-        else
-        {
-            not_ready.push_back(pDcb);
-        }
+        DCB::Manager::call_destroy(pDcb);
     }
-
-    m_zombies.insert(m_zombies.end(), not_ready.begin(), not_ready.end());
 }
 
 void RoutingWorker::add(DCB* pDcb)
