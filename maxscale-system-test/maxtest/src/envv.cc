@@ -82,16 +82,6 @@ bool readenv_bool(const char * name, bool def)
     }
 }
 
-string string_printf(const char* format, ...)
-{
-    string rval;
-    va_list valist;
-    va_start(valist, format);
-    rval = string_printf(format, valist);
-    va_end(valist);
-    return rval;
-}
-
 std::string string_printf(const char* format, va_list args)
 {
     va_list args_copy;

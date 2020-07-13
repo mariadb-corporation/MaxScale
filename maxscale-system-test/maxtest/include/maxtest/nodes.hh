@@ -119,17 +119,6 @@ public:
      */
     std::string generate_ssh_cmd(int node, const std::string& cmd, bool sudo);
 
-    /**
-     * @brief executes shell command on the node using ssh
-     * @param index number of the node (index)
-     * @param ssh command to execute
-     * @param sudo if true the command is executed with root privelegues
-     * @param pointer to variable to store process exit code
-     * @return output of the command
-     */
-    char* ssh_node_output_f(int node, bool sudo, int* exit_code, const char* format, ...)
-    mxb_attribute((format(printf, 5, 6)));
-
     // Simplified C++ version
     struct SshResult
     {

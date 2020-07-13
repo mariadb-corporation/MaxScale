@@ -24,6 +24,7 @@
 #include <maxtest/testconnections.h>
 #include <maxtest/test_info.hh>
 #include <maxtest/envv.hh>
+#include <maxbase/format.hh>
 
 using namespace mxb;
 using std::cout;
@@ -347,10 +348,10 @@ TestConnections::TestConnections(int argc, char* argv[])
     }
 
     m_get_logs_command = (string)test_dir + "/get_logs.sh";
-    m_ssl_options = string_printf(
-        "--ssl-cert=%s/ssl-cert/client-cert.pem --ssl-key=%s/ssl-cert/client-key.pem",
-        test_dir,
-        test_dir);
+    m_ssl_options = mxb::string_printf(
+        "--ssl-cert=%s/ssl-cert/client-cert.pem "
+        "--ssl-key=%s/ssl-cert/client-key.pem",
+        test_dir, test_dir);
     setenv("ssl_options", m_ssl_options.c_str(), 1);
 
     if (maxscale::require_columnstore)
@@ -2265,11 +2266,11 @@ int TestConnections::process_mdbci_template()
     string cnf_path;
     if (product == "mysql")
     {
-        cnf_path = string_printf("%s/cnf/mysql56/", m_vm_path.c_str());
+        cnf_path = mxb::string_printf("%s/cnf/mysql56/", m_vm_path.c_str());
     }
     else
     {
-        cnf_path = string_printf("%s/cnf/", m_vm_path.c_str());
+        cnf_path = mxb::string_printf("%s/cnf/", m_vm_path.c_str());
     }
     setenv("cnf_path", cnf_path.c_str(), 1);
 
