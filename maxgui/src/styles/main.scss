@@ -271,6 +271,12 @@ input:-webkit-autofill:active {
     }
 }
 
+.std-password.primary--text {
+    button {
+        color: $primary;
+    }
+}
+
 .v-text-field--outlined:not(.v-input--is-focused):not(.v-input--has-state)
     > .v-input__control
     > .v-input__slot

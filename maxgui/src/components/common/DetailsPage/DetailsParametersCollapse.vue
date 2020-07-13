@@ -87,11 +87,16 @@
                             <div class="font-weight-bold">
                                 {{ changedParamsInfo(i, item) }}
                             </div>
-                            <p class="d-block mb-1">{{ item.id }}: {{ item.value }}</p>
+                            <p class="d-block mb-1">
+                                {{ item.id }}
+                                <span v-if="item.type !== 'password string'">
+                                    : {{ item.value }}
+                                </span>
+                            </p>
                         </div>
                         <p v-else class="d-block mt-2 ">
-                            <span class="font-weight-bold">{{ item.id }}:</span
-                            ><span> {{ item.value }}</span>
+                            <span class="font-weight-bold">{{ item.id }}</span>
+                            <span v-if="item.type !== 'password string'"> : {{ item.value }} </span>
                         </p>
                     </div>
                 </template>

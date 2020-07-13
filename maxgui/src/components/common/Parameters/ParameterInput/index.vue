@@ -162,15 +162,20 @@
         :id="`${targetItem.id}-${targetItem.nodeId}` || targetItem.id"
         v-model.trim="targetItem.value"
         :name="targetItem.id"
-        class="std error--text__bottom error--text__bottom--no-margin password-string"
+        class="std std-password error--text__bottom error--text__bottom--no-margin password-string"
         outlined
         dense
-        type="password"
+        :type="isPwdVisible ? 'text' : 'password'"
         :rules="rules.required"
         autocomplete="new-password"
         :disabled="targetItem.disabled"
         @input="handleChange"
-    />
+        @click:append="isPwdVisible = !isPwdVisible"
+    >
+        <v-icon slot="append" size="20" @click="isPwdVisible = !isPwdVisible">
+            {{ isPwdVisible ? 'visibility_off' : 'visibility' }}
+        </v-icon>
+    </v-text-field>
 
     <!--others parameter types -->
     <v-text-field
@@ -240,6 +245,7 @@ export default {
             durationSuffixes: ['ms', 's', 'm', 'h'],
             sizeSuffixes: ['Ki', 'Mi', 'Gi', 'Ti', 'k', 'M', 'G', 'T'],
             chosenSuffix: null,
+            isPwdVisible: false,
         }
     },
     watch: {
