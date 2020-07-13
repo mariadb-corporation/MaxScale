@@ -68,9 +68,9 @@
         @change="handleChange"
     />
 
-    <!-- enum_mask parameter type -->
+    <!-- enum_mask or enum parameter type -->
     <v-select
-        v-else-if="targetItem.type === 'enum_mask'"
+        v-else-if="targetItem.type === 'enum_mask' || targetItem.type === 'enum'"
         :id="`${targetItem.id}-${targetItem.nodeId}` || targetItem.id"
         v-model="targetItem.value"
         :name="targetItem.id"
@@ -80,11 +80,11 @@
         :items="targetItem.enum_values"
         outlined
         dense
-        multiple
+        :multiple="targetItem.type === 'enum_mask'"
         :disabled="targetItem.disabled"
         @change="handleChange"
     >
-        <template v-slot:selection="{ item, index }">
+        <template v-if="targetItem.type === 'enum_mask'" v-slot:selection="{ item, index }">
             <span v-if="index === 0" class="v-select__selection v-select__selection--comma">
                 {{ item }}
             </span>
@@ -96,22 +96,6 @@
             </span>
         </template>
     </v-select>
-
-    <!-- enum parameter type -->
-    <v-select
-        v-else-if="targetItem.type === 'enum'"
-        :id="`${targetItem.id}-${targetItem.nodeId}` || targetItem.id"
-        v-model="targetItem.value"
-        :name="targetItem.id"
-        class="std mariadb-select-input error--text__bottom error--text__bottom--no-margin"
-        :class="targetItem.type"
-        :menu-props="{ contentClass: 'mariadb-select-v-menu', bottom: true, offsetY: true }"
-        :items="targetItem.enum_values"
-        outlined
-        dense
-        :disabled="targetItem.disabled"
-        @change="handleChange"
-    />
 
     <!-- count, int, duration type -->
     <v-text-field

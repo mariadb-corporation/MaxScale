@@ -38,6 +38,43 @@ async function renderAccurateInputType(wrapper, item, typeClass) {
     expect(inputWrapper.length).to.be.equal(1)
 }
 
+/**
+ * @param {Object} wrapper A Wrapper is an object that contains a mounted component and methods to test the component
+ * @param {String} errorMessage a specific error message
+ * When required props is true and the input value is invalid, it should renders errorMessage
+ */
+async function requiredVTextField(wrapper, errorMessage) {
+    await wrapper.setProps({
+        required: true,
+    })
+
+    // mockup null (invalid) input event
+    await wrapper.setData({
+        targetItem: {
+            ...wrapper.vm.$data.targetItem,
+            value: null,
+        },
+    })
+    let vTextField = wrapper.findComponent({ name: 'v-text-field' })
+    expect(vTextField.vm.valid).to.be.equal(false)
+    expect(vTextField.vm.errorBucket.length).to.be.equal(1)
+    expect(vTextField.vm.errorBucket[0]).to.be.equal(errorMessage)
+}
+
+/**
+ * @param {Object} wrapper A Wrapper is an object that contains a mounted component and methods to test the component
+ * @param {String} newValueType  js types: number, boolean, string, ...
+ * @param {Number} newValue number
+ * on-input-change should be fired and returned expected value for count, int, duration or size type
+ */
+async function testReturnNumberValue(wrapper, newValueType, newValue) {
+    wrapper.vm.$on('on-input-change', (newItem, changed) => {
+        expect(newItem.value).to.be.a(newValueType)
+        expect(newItem.value).to.be.equal(newValue)
+        expect(changed).to.be.equal(true)
+    })
+}
+
 describe('ParameterInput.vue', () => {
     let wrapper
 
@@ -175,8 +212,10 @@ describe('ParameterInput.vue', () => {
         expect(count).to.be.equal(2)
     })
 
-    it(`count type: component renders v-text-field input that only allows to enter
-      number`, async () => {
+    it(`count type:
+      - component renders v-text-field input that only allows to enter number
+      - component renders error message if 'required' props is true and input value
+        is invalid`, async () => {
         await renderAccurateInputType(
             wrapper,
             {
@@ -186,19 +225,28 @@ describe('ParameterInput.vue', () => {
             },
             'count'
         )
+        await requiredVTextField(wrapper, 'extra_port is required')
+        await testReturnNumberValue(wrapper, 'number', 0)
     })
 
-    it(`int type: component renders v-text-field input that allows to enter
-      integers number i.e -1 or 1`, async () => {
+    it(`int type:
+      - component renders v-text-field input that allows to enter
+        integers number i.e -1 or 1
+      - component renders error message if 'required' props is true and input value
+        is invalid`, async () => {
         await renderAccurateInputType(
             wrapper,
             { default_value: '-1', type: 'int', value: '-1', id: 'retain_last_statements' },
             'int'
         )
+        await requiredVTextField(wrapper, 'retain_last_statements is required')
+        await testReturnNumberValue(wrapper, 'number', -1)
     })
 
-    it(`duration type: component renders v-text-field input that only allows to enter
-      number >=0`, async () => {
+    it(`duration type:
+      - component renders v-text-field input that only allows to enter number >=0
+      - component renders error message if 'required' props is true and input value
+        is invalid`, async () => {
         await renderAccurateInputType(
             wrapper,
             {
@@ -210,10 +258,14 @@ describe('ParameterInput.vue', () => {
             },
             'duration'
         )
+        await requiredVTextField(wrapper, 'connection_keepalive is required')
+        await testReturnNumberValue(wrapper, 'number', 300)
     })
 
-    it(`size type: component renders v-text-field input that only allows to enter
-      number >=0`, async () => {
+    it(`size type:
+      - component renders v-text-field input that only allows to enter number >=0
+      - component renders error message if 'required' props is true and input value
+        is invalid`, async () => {
         await renderAccurateInputType(
             wrapper,
             {
@@ -224,27 +276,74 @@ describe('ParameterInput.vue', () => {
             },
             'size'
         )
+        await requiredVTextField(wrapper, 'transaction_replay_max_size is required')
+        await testReturnNumberValue(wrapper, 'number', 1073741824)
     })
 
-    it(`password string type: Component renders v-text-field input
-    if type is password string`, async () => {
+    it(`password string type:
+      - Component renders v-text-field input if type is password string
+      - component renders error message if 'required' props is true and input value
+        is invalid`, async () => {
         await renderAccurateInputType(
             wrapper,
-            { type: 'password string', value: null, id: 'replication_password' },
+            { type: 'password string', value: '', id: 'replication_password' },
             'password-string'
         )
+        await requiredVTextField(wrapper, 'replication_password is required')
     })
 
-    it(`string type or others: Component renders v-text-field input
-      if type is string or others`, async () => {
+    it(`string type or others:
+      - Component renders v-text-field input if type is string or others
+      - component renders error message if 'required' props is true and input value
+        is invalid`, async () => {
         await renderAccurateInputType(
             wrapper,
             {
                 type: 'string',
-                value: null,
+                value: '',
+                id: 'test_parameter',
+            },
+            'string'
+        )
+        await requiredVTextField(wrapper, 'test_parameter is required')
+    })
+
+    it(`address, socket, port parameter of server:
+      - Component renders accurate input type
+      - component renders error message if 'required' props is true and input value
+        is invalid`, async () => {
+        // address parameter
+        await renderAccurateInputType(
+            wrapper,
+            {
+                type: 'string',
+                value: '',
                 id: 'address',
             },
             'string'
         )
+        await requiredVTextField(wrapper, 'address is required when using port')
+        // port parameter
+        await renderAccurateInputType(
+            wrapper,
+            {
+                type: 'count',
+                value: '',
+                id: 'port',
+            },
+            'count'
+        )
+        await requiredVTextField(wrapper, 'Either port or socket need to be defined')
+        // socket parameter
+        await renderAccurateInputType(
+            wrapper,
+            {
+                type: 'string',
+                value: '',
+                id: 'socket',
+            },
+            'string'
+        )
+        await requiredVTextField(wrapper, 'Either port or socket need to be defined')
     })
 })
