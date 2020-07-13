@@ -7,9 +7,9 @@
 
 
 #include <iostream>
-#include <maxtest/maxadmin_operations.h>
-#include <maxtest/sql_t1.h>
-#include <maxtest/testconnections.h>
+#include <maxtest/maxadmin_operations.hh>
+#include <maxtest/sql_t1.hh>
+#include <maxtest/testconnections.hh>
 
 const char* setup_binlog_wrong_passwrd
     =

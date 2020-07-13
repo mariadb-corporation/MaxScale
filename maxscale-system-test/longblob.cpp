@@ -3,8 +3,8 @@
  * - try to insert large BLOB, MEDIUMBLOB and LONGBLOB via RWSplit, ReadConn Master and directly to backend
  */
 
-#include <maxtest/blob_test.h>
-#include <maxtest/testconnections.h>
+#include <maxtest/blob_test.hh>
+#include <maxtest/testconnections.hh>
 
 int main(int argc, char* argv[])
 {

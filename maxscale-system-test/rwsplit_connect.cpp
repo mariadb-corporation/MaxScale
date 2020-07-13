@@ -4,7 +4,7 @@
  * - check number of connections on every backend, expect one active Slave and one connection to Master
  */
 
-#include <maxtest/testconnections.h>
+#include <maxtest/testconnections.hh>
 
 int main(int argc, char* argv[])
 {

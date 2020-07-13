@@ -9,8 +9,8 @@
 #include <unistd.h>
 #include <cstdlib>
 #include <string>
-#include <maxtest/testconnections.h>
-#include <maxtest/maxadmin_operations.h>
+#include <maxtest/testconnections.hh>
+#include <maxtest/maxadmin_operations.hh>
 
 #define THREADS 16
 

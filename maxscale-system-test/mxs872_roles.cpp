@@ -4,7 +4,7 @@
  * https://jira.mariadb.org/browse/MXS-872
  */
 
-#include <maxtest/testconnections.h>
+#include <maxtest/testconnections.hh>
 #include <vector>
 
 using namespace std;

@@ -5,7 +5,7 @@
  */
 
 #include <iostream>
-#include <maxtest/rds_vpc.h>
+#include <maxtest/rds_vpc.hh>
 
 int main(int argc, char* argv[])
 {

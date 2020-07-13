@@ -8,7 +8,7 @@
  */
 
 
-#include <maxtest/testconnections.h>
+#include <maxtest/testconnections.hh>
 
 void check_conn_num(TestConnections& test, int* Nc)
 {

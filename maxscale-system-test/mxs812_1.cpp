@@ -9,7 +9,7 @@
  * - repeat test 2 times
  */
 
-#include <maxtest/testconnections.h>
+#include <maxtest/testconnections.hh>
 
 void run_test(TestConnections& test, size_t size, int chunks)
 {

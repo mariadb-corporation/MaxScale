@@ -2,7 +2,7 @@
  * MXS-2300: Session command history pruning
  */
 
-#include <maxtest/testconnections.h>
+#include <maxtest/testconnections.hh>
 #include <sstream>
 
 std::vector<int> ids;

@@ -4,9 +4,9 @@
  * - playing with 'restart service' and restart Maxscale under load
  */
 
-#include <maxtest/big_load.h>
-#include <maxtest/sql_t1.h>
-#include <maxtest/testconnections.h>
+#include <maxtest/big_load.hh>
+#include <maxtest/sql_t1.hh>
+#include <maxtest/testconnections.hh>
 
 TestConnections* Test;
 

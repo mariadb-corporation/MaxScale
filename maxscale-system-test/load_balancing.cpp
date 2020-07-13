@@ -14,8 +14,8 @@
  * more then 10% of quesries went to Master
  */
 
-#include <maxtest/big_load.h>
-#include <maxtest/testconnections.h>
+#include <maxtest/big_load.hh>
+#include <maxtest/testconnections.hh>
 
 int main(int argc, char* argv[])
 {

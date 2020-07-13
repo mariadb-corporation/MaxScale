@@ -11,9 +11,9 @@
  * - execute INSERT 100 times, check COM_SELECT and COM_INSERT after every query (tolerate 2*N+1 queries)
  */
 
-#include <maxtest/get_com_select_insert.h>
-#include <maxtest/maxadmin_operations.h>
-#include <maxtest/testconnections.h>
+#include <maxtest/get_com_select_insert.hh>
+#include <maxtest/maxadmin_operations.hh>
+#include <maxtest/testconnections.hh>
 
 /**
  * @brief check_com_select Checks if COM_SELECT increase takes place only on one slave node and there is no

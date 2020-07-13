@@ -1,8 +1,8 @@
 #include <iostream>
-#include <maxtest/maxadmin_operations.h>
-#include <maxtest/sql_t1.h>
-#include <maxtest/test_binlog_fnc.h>
-#include <maxtest/testconnections.h>
+#include <maxtest/maxadmin_operations.hh>
+#include <maxtest/sql_t1.hh>
+#include <maxtest/test_binlog_fnc.hh>
+#include <maxtest/testconnections.hh>
 
 int check_sha1(TestConnections* Test)
 {

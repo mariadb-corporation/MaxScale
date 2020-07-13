@@ -10,8 +10,8 @@
 #include <sys/time.h>
 
 #include <maxbase/ccdefs.hh>
-#include <maxtest/clustrix_nodes.h>
-#include <maxtest/mariadb_nodes.h>
+#include <maxtest/clustrix_nodes.hh>
+#include <maxtest/mariadb_nodes.hh>
 #include <maxtest/maxscales.hh>
 #include <maxtest/test_dir.hh>
 

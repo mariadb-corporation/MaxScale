@@ -8,8 +8,8 @@
 
 
 #include <iostream>
-#include <maxtest/different_size.h>
-#include <maxtest/testconnections.h>
+#include <maxtest/different_size.hh>
+#include <maxtest/testconnections.hh>
 
 using namespace std;
 

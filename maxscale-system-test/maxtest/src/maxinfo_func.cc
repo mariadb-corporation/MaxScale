@@ -1,4 +1,4 @@
-#include <maxtest/maxinfo_func.h>
+#include <maxtest/maxinfo_func.hh>
 
 #include <cstdio>
 #include <cstdlib>
@@ -11,7 +11,7 @@
 #include <sys/socket.h>
 #include <jansson.h>
 #include <openssl/sha.h>
-#include <maxtest/testconnections.h>
+#include <maxtest/testconnections.hh>
 
 using namespace std;
 

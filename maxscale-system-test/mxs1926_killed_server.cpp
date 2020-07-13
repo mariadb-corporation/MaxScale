@@ -4,7 +4,7 @@
  * https://jira.mariadb.org/browse/MXS-1926
  */
 
-#include <maxtest/testconnections.h>
+#include <maxtest/testconnections.hh>
 #include <stdlib.h>
 #include <thread>
 #include <fstream>

@@ -8,7 +8,7 @@
 
 #include <iostream>
 #include <string>
-#include <maxtest/testconnections.h>
+#include <maxtest/testconnections.hh>
 
 using std::string;
 using std::cout;

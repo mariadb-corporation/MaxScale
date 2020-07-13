@@ -18,10 +18,10 @@
 
 #include <iostream>
 #include <ctime>
-#include <maxtest/testconnections.h>
-#include <maxtest/maxadmin_operations.h>
-#include <maxtest/sql_t1.h>
-#include <maxtest/fw_copy_rules.h>
+#include <maxtest/testconnections.hh>
+#include <maxtest/maxadmin_operations.hh>
+#include <maxtest/sql_t1.hh>
+#include <maxtest/fw_copy_rules.hh>
 
 int main(int argc, char* argv[])
 {

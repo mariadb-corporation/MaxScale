@@ -15,7 +15,7 @@
 #include <maxbase/string.hh>
 #include <maxscale/jansson.hh>
 #include <maxtest/maxrest.hh>
-#include <maxtest/testconnections.h>
+#include <maxtest/testconnections.hh>
 
 using namespace std;
 

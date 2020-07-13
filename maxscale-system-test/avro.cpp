@@ -8,10 +8,10 @@
 
 #include <sstream>
 #include <iostream>
-#include <maxtest/maxadmin_operations.h>
-#include <maxtest/maxinfo_func.h>
-#include <maxtest/sql_t1.h>
-#include <maxtest/testconnections.h>
+#include <maxtest/maxadmin_operations.hh>
+#include <maxtest/maxinfo_func.hh>
+#include <maxtest/sql_t1.hh>
+#include <maxtest/testconnections.hh>
 
 using std::cout;
 using std::endl;

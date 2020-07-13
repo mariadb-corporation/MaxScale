@@ -14,7 +14,7 @@
 
 #include <cerrno>
 #include <string>
-#include <maxtest/mariadb_func.h>
+#include <maxtest/mariadb_func.hh>
 #include <maxtest/nodes.hh>
 
 /**

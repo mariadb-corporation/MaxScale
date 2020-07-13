@@ -5,7 +5,7 @@
  * readwritesplit slave reconnection and execution of session commands.
  */
 
-#include <maxtest/testconnections.h>
+#include <maxtest/testconnections.hh>
 
 using namespace std;
 

@@ -1,7 +1,7 @@
 /**
  * MXS-1929: Runtime service creation
  */
-#include <maxtest/testconnections.h>
+#include <maxtest/testconnections.hh>
 
 #include <iostream>
 #include <thread>

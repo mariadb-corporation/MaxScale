@@ -11,7 +11,7 @@
  * Public License.
  */
 
-#include <maxtest/mariadb_nodes.h>
+#include <maxtest/mariadb_nodes.hh>
 #include "failover_common.cpp"
 
 int main(int argc, char** argv)

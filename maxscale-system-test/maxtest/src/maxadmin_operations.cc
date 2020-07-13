@@ -16,7 +16,7 @@
  * Copyright MariaDB Corporation Ab 2014
  */
 
-#include <maxtest/maxadmin_operations.h>
+#include <maxtest/maxadmin_operations.hh>
 
 int connectMaxScale(char* hostname, char* port)
 {

@@ -3,7 +3,7 @@
  *
  */
 
-#include <maxtest/config_operations.h>
+#include <maxtest/config_operations.hh>
 
 int main(int argc, char* argv[])
 {

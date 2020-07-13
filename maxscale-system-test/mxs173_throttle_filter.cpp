@@ -9,7 +9,7 @@
 
 #include <maxbase/stopwatch.hh>
 #include <maxtest/appexception.hh>
-#include <maxtest/testconnections.h>
+#include <maxtest/testconnections.hh>
 
 DEFINE_EXCEPTION(Whoopsy);
 

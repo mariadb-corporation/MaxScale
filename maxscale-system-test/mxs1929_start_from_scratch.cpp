@@ -3,7 +3,7 @@
  * repeated multiple times
  */
 
-#include <maxtest/testconnections.h>
+#include <maxtest/testconnections.hh>
 
 #include <atomic>
 #include <chrono>

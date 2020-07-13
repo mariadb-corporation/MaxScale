@@ -2,7 +2,7 @@
  * Double-close on bad session command result
  */
 
-#include <maxtest/testconnections.h>
+#include <maxtest/testconnections.hh>
 
 void run_test(TestConnections& test)
 {

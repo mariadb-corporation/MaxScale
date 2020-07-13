@@ -43,10 +43,10 @@
  */
 
 #include <iostream>
-#include <maxtest/blob_test.h>
-#include <maxtest/mariadb_func.h>
-#include <maxtest/sql_t1.h>
-#include <maxtest/testconnections.h>
+#include <maxtest/blob_test.hh>
+#include <maxtest/mariadb_func.hh>
+#include <maxtest/sql_t1.hh>
+#include <maxtest/testconnections.hh>
 
 using namespace std;
 

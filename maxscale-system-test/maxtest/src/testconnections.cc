@@ -17,10 +17,10 @@
 #include <maxbase/stacktrace.hh>
 #include <algorithm>
 
-#include <maxtest/mariadb_func.h>
-#include <maxtest/maxadmin_operations.h>
-#include <maxtest/sql_t1.h>
-#include <maxtest/testconnections.h>
+#include <maxtest/mariadb_func.hh>
+#include <maxtest/maxadmin_operations.hh>
+#include <maxtest/sql_t1.hh>
+#include <maxtest/testconnections.hh>
 #include <maxtest/test_info.hh>
 #include <maxtest/envv.hh>
 

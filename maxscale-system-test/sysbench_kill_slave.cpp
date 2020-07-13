@@ -8,7 +8,7 @@
  * - check if Maxscale is alive
  */
 
-#include <maxtest/testconnections.h>
+#include <maxtest/testconnections.hh>
 #include "sysbench_commands.h"
 
 TestConnections* Test;

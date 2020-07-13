@@ -4,7 +4,7 @@
  * - check if Maxscale alive
  */
 
-#include <maxtest/testconnections.h>
+#include <maxtest/testconnections.hh>
 
 using namespace std;
 

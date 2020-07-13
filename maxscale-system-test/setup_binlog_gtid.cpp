@@ -4,9 +4,9 @@
  */
 
 #include <iostream>
-#include <maxtest/maxadmin_operations.h>
-#include <maxtest/test_binlog_fnc.h>
-#include <maxtest/testconnections.h>
+#include <maxtest/maxadmin_operations.hh>
+#include <maxtest/test_binlog_fnc.hh>
+#include <maxtest/testconnections.hh>
 
 int main(int argc, char* argv[])
 {

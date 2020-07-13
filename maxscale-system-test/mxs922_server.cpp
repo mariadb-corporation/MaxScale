@@ -3,8 +3,8 @@
  *
  */
 
-#include <maxtest/config_operations.h>
-#include <maxtest/testconnections.h>
+#include <maxtest/config_operations.hh>
+#include <maxtest/testconnections.hh>
 
 int check_server_id(TestConnections* test, int idx)
 {

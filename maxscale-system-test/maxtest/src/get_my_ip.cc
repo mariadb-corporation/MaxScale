@@ -3,7 +3,7 @@
  * Use getsockname and a udp connection
  */
 
-#include <maxtest/get_my_ip.h>
+#include <maxtest/get_my_ip.hh>
 
 #include <cstdio>      // printf
 #include <cstring>     // memset

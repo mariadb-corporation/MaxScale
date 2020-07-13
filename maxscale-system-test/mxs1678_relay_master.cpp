@@ -3,7 +3,7 @@
  *
  * https://jira.mariadb.org/browse/MXS-1678
  */
-#include <maxtest/testconnections.h>
+#include <maxtest/testconnections.hh>
 #include <set>
 #include <string>
 

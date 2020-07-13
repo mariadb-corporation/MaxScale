@@ -4,7 +4,7 @@
  * Avrorouter doesn't detect MIXED or STATEMENT format replication
  */
 
-#include <maxtest/testconnections.h>
+#include <maxtest/testconnections.hh>
 
 int main(int argc, char** argv)
 {

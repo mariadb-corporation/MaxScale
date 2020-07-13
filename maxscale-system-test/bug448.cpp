@@ -5,8 +5,8 @@
  */
 
 #include <iostream>
-#include <maxtest/get_my_ip.h>
-#include <maxtest/testconnections.h>
+#include <maxtest/get_my_ip.hh>
+#include <maxtest/testconnections.hh>
 
 int main(int argc, char* argv[])
 {

@@ -11,7 +11,7 @@
  * Public License.
  */
 
-#include <maxtest/testconnections.h>
+#include <maxtest/testconnections.hh>
 #include <iostream>
 #include <maxbase/format.hh>
 

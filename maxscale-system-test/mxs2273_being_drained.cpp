@@ -16,7 +16,7 @@
  * https://jira.mariadb.org/browse/MXS-2273
  */
 
-#include <maxtest/testconnections.h>
+#include <maxtest/testconnections.hh>
 #include <iostream>
 #include <string>
 #include <regex>

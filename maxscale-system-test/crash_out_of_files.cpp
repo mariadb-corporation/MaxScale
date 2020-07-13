@@ -5,8 +5,8 @@
  * - check that no backends are disconnected with error ""refresh rate limit exceeded"
  */
 
-#include <maxtest/big_load.h>
-#include <maxtest/testconnections.h>
+#include <maxtest/big_load.hh>
+#include <maxtest/testconnections.hh>
 
 int main(int argc, char* argv[])
 {

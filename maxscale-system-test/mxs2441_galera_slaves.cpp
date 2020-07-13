@@ -3,7 +3,7 @@
  * https://jira.mariadb.org/browse/MXS-2441
  */
 
-#include <maxtest/testconnections.h>
+#include <maxtest/testconnections.hh>
 #include <iostream>
 
 #include <maxbase/string.hh>

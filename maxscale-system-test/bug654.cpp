@@ -57,8 +57,8 @@
  */
 
 
-#include <maxtest/testconnections.h>
-#include <maxtest/maxadmin_operations.h>
+#include <maxtest/testconnections.hh>
+#include <maxtest/maxadmin_operations.hh>
 
 int main(int argc, char* argv[])
 {

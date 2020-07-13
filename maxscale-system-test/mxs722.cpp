@@ -11,7 +11,7 @@
 
 #include <iostream>
 #include <unistd.h>
-#include <maxtest/testconnections.h>
+#include <maxtest/testconnections.hh>
 
 using namespace std;
 

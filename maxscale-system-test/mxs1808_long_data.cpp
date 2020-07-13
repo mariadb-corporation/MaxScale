@@ -1,4 +1,4 @@
-#include <maxtest/testconnections.h>
+#include <maxtest/testconnections.hh>
 #include <iostream>
 
 using namespace std;

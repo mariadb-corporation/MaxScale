@@ -2,7 +2,7 @@
  * @file Check that removing a server from a service doesn't break active connections
  */
 
-#include <maxtest/testconnections.h>
+#include <maxtest/testconnections.hh>
 
 static volatile bool running = true;
 
