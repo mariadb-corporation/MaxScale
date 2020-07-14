@@ -186,17 +186,7 @@ export default {
             let tableRow = this.$help.objToArrOfObj(parameters, keepPrimitiveValue, level)
 
             let moduleParameters = this.$help.lodash.cloneDeep(this.moduleParameters)
-
-            for (let o = 0; o < tableRow.length; ++o) {
-                const resourceParam = tableRow[o]
-                if (resourceParam.leaf === false) {
-                    for (let i = 0; i < resourceParam.children.length; ++i) {
-                        const childParam = resourceParam.children[i]
-                        this.assignParamsTypeInfo(childParam, moduleParameters)
-                    }
-                }
-                this.assignParamsTypeInfo(resourceParam, moduleParameters)
-            }
+            this.processingTableRow(tableRow, moduleParameters)
 
             return tableRow
         },
@@ -239,9 +229,27 @@ export default {
         },
 
         /**
+         * Return mutated tableRow Array
+         * @param {Array} tableRow  mutated processing Table row
+         * @param {Array} moduleParameters Module parameters object {id:'', value:'', type:'', unit:'',...}
+         */
+        processingTableRow(tableRow, moduleParameters) {
+            for (let o = 0; o < tableRow.length; ++o) {
+                const resourceParam = tableRow[o]
+                if (resourceParam.leaf === false) {
+                    for (let i = 0; i < resourceParam.children.length; ++i) {
+                        const childParam = resourceParam.children[i]
+                        this.assignParamsTypeInfo(childParam, moduleParameters)
+                    }
+                }
+                this.assignParamsTypeInfo(resourceParam, moduleParameters)
+            }
+        },
+
+        /**
+         * Return mutated resourceParam Object
          * @param {Object} resourceParam table object {id:'', value:''}
          * @param {Array} moduleParameters Module parameters object {id:'', value:'', type:'', unit:'',...}
-         * @return {Object} mutated resourceParam
          */
         assignParamsTypeInfo(resourceParam, moduleParameters) {
             const { id: resourceParamId } = resourceParam
@@ -316,6 +324,11 @@ export default {
             this.editableCell = false
             this.closeConfirmDialog()
             this.changedParametersArr = []
+            // this helps to assign accurate parameter info and trigger assignPortSocketDependencyValues
+            this.processingTableRow(
+                this.parametersTableRow,
+                this.$help.lodash.cloneDeep(this.moduleParameters)
+            )
         },
 
         async acceptEdit() {
