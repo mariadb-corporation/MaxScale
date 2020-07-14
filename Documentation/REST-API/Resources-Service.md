@@ -299,6 +299,10 @@ To find out whether a service is still in use after it has been destroyed, the
 [`sessions`](./Resources-Session.md) resource should be used. If a session for
 the service is still open, it has not yet been destroyed.
 
+This endpoint also supports the `force=yes` parameter that will unconditionally
+delete the service by first unlinking it from all servers and filters that it
+uses.
+
 #### Response
 
 Service is destroyed:

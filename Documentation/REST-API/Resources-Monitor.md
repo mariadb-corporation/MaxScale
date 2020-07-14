@@ -425,6 +425,9 @@ DELETE /v1/monitors/:name
 Destroy a created monitor. The monitor must not have relationships to any
 servers in order to be destroyed.
 
+This endpoint also supports the `force=yes` parameter that will unconditionally
+delete the monitor by first unlinking it from all servers that it uses.
+
 #### Response
 
 Monitor is deleted:
