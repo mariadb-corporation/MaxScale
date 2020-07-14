@@ -38,11 +38,11 @@
                             :parentForm="$refs.form"
                             :usePortOrSocket="usePortOrSocket"
                             :changedParametersArr="changedParametersArr"
-                            :assignPortSocketDependencyValues="assignPortSocketDependencyValues"
                             :portValue="portValue"
                             :socketValue="socketValue"
                             :addressValue="addressValue"
-                            @handle-change="changedParametersArr = $event"
+                            @get-changed-params="changedParametersArr = $event"
+                            @handle-change="assignPortSocketDependencyValues"
                         />
                     </template>
                 </data-table>
@@ -244,7 +244,7 @@ export default {
          * @return {Object} mutated resourceParam
          */
         assignParamsTypeInfo(resourceParam, moduleParameters) {
-            const { id: resourceParamId, value: resourceParamValue } = resourceParam
+            const { id: resourceParamId } = resourceParam
             const moduleParam = moduleParameters.find(param => param.name === resourceParamId)
 
             if (moduleParam) {
@@ -270,25 +270,25 @@ export default {
                 resourceParam['disabled'] = true
             }
 
-            this.assignPortSocketDependencyValues(resourceParamId, resourceParamValue)
+            this.assignPortSocketDependencyValues(resourceParam)
         },
 
         /**
-         * @param {String} resourceParamId Name of the parameter
-         * @param {String} resourceParamValue Value of the parameter
-         * @return assigining value to component's data: portValue, socketValue, addressValue
+         * This function helps to assign value to component's data: portValue, socketValue, addressValue
+         * @param {Object} parameter object
          */
-        assignPortSocketDependencyValues(resourceParamId, resourceParamValue) {
+        assignPortSocketDependencyValues(parameter) {
+            const { id, value } = parameter
             if (this.usePortOrSocket) {
-                switch (resourceParamId) {
+                switch (id) {
                     case 'port':
-                        this.portValue = resourceParamValue
+                        this.portValue = value
                         break
                     case 'socket':
-                        this.socketValue = resourceParamValue
+                        this.socketValue = value
                         break
                     case 'address':
-                        this.addressValue = resourceParamValue
+                        this.addressValue = value
                         break
                 }
             }

@@ -51,10 +51,11 @@ PROPS explanation:
   If it is not a server being created but a listener, addressValue will be null.
 - isListener: if true, address input won't be required
 - changedParametersArr: accepts array, it contains changed parameter objects which will be updated by parent component
-  when handle-change event is emitted
+  when get-changed-params event is emitted
 
 Emits:
-- $emit('handle-change', changedParams: object)
+- $emit('get-changed-params', changedParams: Array)
+- $emit('handle-change', newItem: Object)
 */
 export default {
     name: 'parameter-input-container',
@@ -66,7 +67,6 @@ export default {
         usePortOrSocket: { type: Boolean, default: false },
         changedParametersArr: { type: Array, required: true },
         requiredParams: { type: Array, default: () => [] },
-        assignPortSocketDependencyValues: { type: Function, required: true },
         addressValue: { type: String },
         portValue: { type: Number },
         socketValue: { type: String },
@@ -81,10 +81,9 @@ export default {
             return this.usePortOrSocket && (id === 'port' || id === 'socket' || id === 'address')
         },
 
-        /**This functions emits handle-change with new value for changedParametersArr.
-         * If changed is true, push, re-assign or splice to newItem then passing it in handle-change event
-         * Also calling assignPortSocketDependencyValues to assign value of port, socket and address for
-         * validation in parameter-input
+        /**This functions emits get-changed-params with new value for changedParametersArr.
+         * If changed is true, push, re-assign or splice to newItem then passing it in get-changed-params event
+         * Also emits handle-change with newItem
          * @param {Object} newItem Object item received from parameter-input
          * @param {Boolean} changed Detect whether the input has been modified
          */
@@ -101,18 +100,18 @@ export default {
                 // if newItem is not included in changedParametersArr
                 if (targetIndex === -1) {
                     changedParams.push(newItem)
-                    this.$emit('handle-change', changedParams)
+                    this.$emit('get-changed-params', changedParams)
                 } else {
                     // if newItem is already included in changedParametersArr,eg: value of enum_mask param has changed
                     changedParams[targetIndex] = newItem
 
-                    this.$emit('handle-change', changedParams)
+                    this.$emit('get-changed-params', changedParams)
                 }
             } else if (targetIndex > -1) {
                 changedParams.splice(targetIndex, 1)
-                this.$emit('handle-change', changedParams)
+                this.$emit('get-changed-params', changedParams)
             }
-            this.assignPortSocketDependencyValues(newItem.id, newItem.value)
+            this.$emit('handle-change', newItem)
         },
     },
 }
