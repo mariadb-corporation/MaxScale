@@ -29,22 +29,7 @@
 using std::cout;
 using std::string;
 using std::set;
-
-void check_status(TestConnections& test, const string& server, const set<string>& expected_status)
-{
-    auto srv_status = test.get_server_status(server);
-    if (srv_status.empty())
-    {
-        test.expect(false, "MaxCtrl execution error\n");
-    }
-    else if (srv_status != expected_status)
-    {
-        auto status_joined = mxb::join(srv_status, ", ");
-        auto expected_joined = mxb::join(expected_status, ", ");
-        test.expect(false, "Wrong states for '%s'. Got '%s', expected '%s'.",
-                    server.c_str(), status_joined.c_str(), expected_joined.c_str());
-    }
-}
+using std::vector;
 
 json_t* get_json_data(TestConnections& test, const char* query)
 {
@@ -175,14 +160,10 @@ void change_master(TestConnections& test, int slave, int master, const string& c
 
 int main(int argc, char* argv[])
 {
-    string master = "Master";
-    string running = "Running";
-    string slave = "Slave";
-
-    set<string> mm_master_states = {master, running};
-    set<string> mm_slave_states = {"Relay Master", slave, running};
-    set<string> slave_states = {slave, running};
-    set<string> running_state = {running};
+    auto mm_master_status = ServerInfo::MASTER | ServerInfo::RUNNING;
+    auto mm_slave_status = ServerInfo::RELAY | ServerInfo::SLAVE | ServerInfo::RUNNING;
+    auto slave_status = ServerInfo::SLAVE | ServerInfo::RUNNING;
+    auto running_status = ServerInfo::RUNNING;
 
     const char reset_query[] = "STOP SLAVE; RESET SLAVE ALL; RESET MASTER; SET GLOBAL read_only='OFF'";
     const char readonly_on_query[] = "SET GLOBAL read_only='ON'";
@@ -200,15 +181,13 @@ int main(int argc, char* argv[])
     change_master(test, 2, 0);
     change_master(test, 3, 2, "", max_rlag);
 
-    test.maxscales->wait_for_monitor(2);
+    test.maxscale()->wait_monitor_ticks(2);
     auto maxconn = test.maxscales->open_rwsplit_connection();
     test.try_query(maxconn, "FLUSH TABLES;");
-    test.maxscales->wait_for_monitor(1);
+    test.maxscale()->wait_monitor_ticks(1);
 
-    check_status(test, "server1", mm_master_states);
-    check_status(test, "server2", mm_slave_states);
-    check_status(test, "server3", mm_slave_states);
-    check_status(test, "server4", slave_states);
+    test.maxscale()->check_servers_status({mm_master_status, mm_slave_status, mm_slave_status, slave_status});
+
     check_group(test, "server1", 1);
     check_group(test, "server2", 1);
     check_group(test, "server3", 1);
@@ -224,12 +203,10 @@ int main(int argc, char* argv[])
     test.set_timeout(120);
     execute_query(test.repl->nodes[0], readonly_on_query);
     execute_query(test.repl->nodes[1], readonly_on_query);
-    test.maxscales->wait_for_monitor(1);
+    test.maxscale()->wait_monitor_ticks(1);
 
-    check_status(test, "server1", mm_slave_states);
-    check_status(test, "server2", mm_slave_states);
-    check_status(test, "server3", mm_master_states);
-    check_status(test, "server4", slave_states);
+    test.maxscale()->check_servers_status({mm_slave_status, mm_slave_status, mm_master_status, slave_status});
+
     check_group(test, "server1", 1);
     check_group(test, "server2", 1);
     check_group(test, "server3", 1);
@@ -251,17 +228,15 @@ int main(int argc, char* argv[])
 
     test.maxscales->start_maxscale();
     sleep(2);
-    test.maxscales->wait_for_monitor(1);
+    test.maxscale()->wait_monitor_ticks(1);
 
     maxconn = test.maxscales->open_rwsplit_connection();
     test.try_query(maxconn, "FLUSH TABLES;");
     mysql_close(maxconn);
-    test.maxscales->wait_for_monitor(1);
+    test.maxscale()->wait_monitor_ticks(1);
 
-    check_status(test, "server1", slave_states);
-    check_status(test, "server2", mm_master_states);
-    check_status(test, "server3", mm_slave_states);
-    check_status(test, "server4", slave_states);
+    test.maxscale()->check_servers_status({slave_status, mm_master_status, mm_slave_status, slave_status});
+
     check_group(test, "server1", 0);
     check_group(test, "server2", 1);
     check_group(test, "server3", 1);
@@ -272,12 +247,10 @@ int main(int argc, char* argv[])
 
     test.set_timeout(120);
     execute_query(test.repl->nodes[1], readonly_on_query);
-    test.maxscales->wait_for_monitor(1);
+    test.maxscale()->wait_monitor_ticks(1);
 
-    check_status(test, "server1", slave_states);
-    check_status(test, "server2", mm_slave_states);
-    check_status(test, "server3", mm_master_states);
-    check_status(test, "server4", slave_states);
+    test.maxscale()->check_servers_status({slave_status, mm_slave_status, mm_master_status, slave_status});
+
     check_group(test, "server1", 0);
     check_group(test, "server2", 1);
     check_group(test, "server3", 1);
@@ -297,16 +270,15 @@ int main(int argc, char* argv[])
 
     test.maxscales->start_maxscale();
     sleep(2);
-    test.maxscales->wait_for_monitor(1);
+    test.maxscale()->wait_monitor_ticks(1);
 
     // Even though the servers are in two distinct groups, only one of them
     // contains a master and a slave. Only one master may exist in a cluster
     // at once, since by definition this is the server to which routers may
     // direct writes.
-    check_status(test, "server1", mm_master_states);
-    check_status(test, "server2", mm_slave_states);
-    check_status(test, "server3", running_state);
-    check_status(test, "server4", running_state);
+    test.maxscale()->check_servers_status({mm_master_status, mm_slave_status,
+                                           running_status, running_status});
+
     check_group(test, "server1", 1);
     check_group(test, "server2", 1);
     check_group(test, "server3", 2);
@@ -318,12 +290,11 @@ int main(int argc, char* argv[])
     execute_query(test.repl->nodes[1], readonly_on_query);
     execute_query(test.repl->nodes[3], readonly_on_query);
 
-    test.maxscales->wait_for_monitor(1);
+    test.maxscale()->wait_monitor_ticks(1);
 
-    check_status(test, "server1", mm_master_states);
-    check_status(test, "server2", mm_slave_states);
-    check_status(test, "server3", running_state);
-    check_status(test, "server4", running_state);
+    test.maxscale()->check_servers_status({mm_master_status, mm_slave_status,
+                                           running_status, running_status});
+
     check_group(test, "server1", 1);
     check_group(test, "server2", 1);
     check_group(test, "server3", 2);
@@ -338,16 +309,14 @@ int main(int argc, char* argv[])
     change_master(test, 1, 3);
     change_master(test, 2, 3);
 
-    test.maxscales->wait_for_monitor(1);
+    test.maxscale()->wait_monitor_ticks(1);
     maxconn = test.maxscales->open_rwsplit_connection();
     test.try_query(maxconn, "FLUSH TABLES;");
-    test.maxscales->wait_for_monitor(2);
+    test.maxscale()->wait_monitor_ticks(2);
     test.try_query(maxconn, "SHOW DATABASES;");
 
-    check_status(test, "server1", slave_states);
-    check_status(test, "server2", mm_slave_states);
-    check_status(test, "server3", mm_slave_states);
-    check_status(test, "server4", mm_master_states);
+    test.maxscale()->check_servers_status({slave_status, mm_slave_status, mm_slave_status, mm_master_status});
+
     check_group(test, "server1", 0);
     check_group(test, "server2", 0);
     check_group(test, "server3", 0);
@@ -358,9 +327,9 @@ int main(int argc, char* argv[])
 
     const char remove_delay[] = "STOP SLAVE '%s'; CHANGE MASTER '%s' TO master_delay=0; START SLAVE '%s';";
     test.try_query(test.repl->nodes[0], remove_delay, "a", "a", "a");
-    test.maxscales->wait_for_monitor(2);
+    test.maxscale()->wait_monitor_ticks(2);
 
-    check_status(test, "server1", slave_states);
+    test.maxscale()->check_servers_status({slave_status});
     check_rlag(test, "server1", 0, 0);
     // Rwsplit should detects that replication lag is 0.
     test.try_query(maxconn, "SHOW DATABASES;");

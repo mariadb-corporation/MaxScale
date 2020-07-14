@@ -404,7 +404,7 @@ size_t ServersInfo::size() const
     return m_servers.size();
 }
 
-void MaxScale::check_servers_status(std::vector<uint> expected_status)
+void MaxScale::check_servers_status(std::vector<ServerInfo::bitfield> expected_status)
 {
     auto data = get_servers();
 
@@ -414,10 +414,9 @@ void MaxScale::check_servers_status(std::vector<uint> expected_status)
     {
         for (size_t i = 0; i < n_expected; i++)
         {
-            uint expected = expected_status[i];
+            auto expected = expected_status[i];
             auto& info = data.get(i);
-            uint found = info.status;
-            if (expected != found)
+            if (expected != info.status)
             {
                 string found_str = info.status_to_string();
                 string expected_str = ServerInfo::status_to_string(expected);
@@ -435,6 +434,7 @@ void MaxScale::check_servers_status(std::vector<uint> expected_status)
 void ServerInfo::status_from_string(const string& source)
 {
     auto flags = mxb::strtok(source, ",");
+    status = 0;
     for (string& flag : flags)
     {
         mxb::trim(flag);
@@ -457,12 +457,13 @@ void ServerInfo::status_from_string(const string& source)
     }
 }
 
-std::string ServerInfo::status_to_string(uint status)
+std::string ServerInfo::status_to_string(bitfield status)
 {
     std::string rval;
     if (status)
     {
         std::vector<string> items;
+        items.reserve(2);
         if (status & MASTER)
         {
             items.push_back("Master");

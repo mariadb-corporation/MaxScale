@@ -361,18 +361,19 @@ class TestConnections;
  */
 struct ServerInfo
 {
-    static constexpr uint RUNNING = (1 << 0);
-    static constexpr uint MASTER = (1 << 1);
-    static constexpr uint SLAVE = (1 << 2);
-    static constexpr uint RELAY = (1 << 3);
+    using bitfield = uint32_t;
+    static constexpr bitfield RUNNING = (1 << 0);
+    static constexpr bitfield MASTER = (1 << 1);
+    static constexpr bitfield SLAVE = (1 << 2);
+    static constexpr bitfield RELAY = (1 << 3);
 
-    static std::string status_to_string(uint status);
+    static std::string status_to_string(bitfield status);
     std::string        status_to_string() const;
 
     void status_from_string(const std::string& source);
 
     std::string name;       /**< Server name */
-    uint        status {0}; /**< Status bitfield */
+    bitfield    status {0}; /**< Status bitfield */
 };
 
 /**
@@ -414,7 +415,7 @@ public:
      * @param expected_status Expected server statuses. Each status should be a bitfield of values defined
      * in the ServerInfo-class.
      */
-    void check_servers_status(std::vector<uint> expected_status);
+    void check_servers_status(std::vector<ServerInfo::bitfield> expected_status);
 
 private:
     TestConnections& m_tester;    /**< Main tester object */
