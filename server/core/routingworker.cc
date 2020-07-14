@@ -38,6 +38,7 @@
 #include "internal/modules.hh"
 #include "internal/poll.hh"
 #include "internal/service.hh"
+#include "internal/session.hh"
 
 #define WORKER_ABSENT_ID -1
 
@@ -559,6 +560,7 @@ void RoutingWorker::register_zombie(DCB* pDcb)
 
 void RoutingWorker::delete_zombies()
 {
+    Zombies slow_zombies;
     // An algorithm cannot be used, as the final closing of a DCB may cause
     // other DCBs to be registered in the zombie queue.
 
@@ -567,8 +569,30 @@ void RoutingWorker::delete_zombies()
         DCB* pDcb = m_zombies.back();
         m_zombies.pop_back();
 
-        dcb_final_close(pDcb);
+        bool can_close = true;
+
+        if (pDcb->role == DCB::Role::CLIENT)
+        {
+            // Check if any of the backend DCBs isn't ready to be closed. If so, delay the closing of the
+            // client DCB until the backend connections have fully established and finished authenticating.
+            const auto& dcbs = static_cast<Session*>(pDcb->session)->dcb_set();
+            can_close = std::all_of(dcbs.begin(), dcbs.end(), can_close_dcb);
+        }
+
+        if (can_close)
+        {
+            MXS_DEBUG("Ready to close session %lu", pDcb->session->ses_id);
+            dcb_final_close(pDcb);
+        }
+        else
+        {
+            MXS_DEBUG("Delaying destruction of session %lu", pDcb->session->ses_id);
+            slow_zombies.push_back(pDcb);
+        }
     }
+
+    mxb_assert(m_zombies.empty());
+    m_zombies.insert(m_zombies.end(), slow_zombies.begin(), slow_zombies.end());
 }
 
 bool RoutingWorker::pre_run()
