@@ -221,6 +221,8 @@ public:
      */
     bool expect(bool result, const char* format, ...) __attribute__ ((format(printf, 3, 4)));
 
+    void add_failure(const char* format, ...) __attribute__ ((format(printf, 2, 3)));
+
     /**
      * @brief read_mdbci_info Reads name of MDBCI config and tryes to load all network info
      */
@@ -570,6 +572,8 @@ public:
      */
     int reinstall_maxscales();
 
+    MaxScale* maxscale();
+
 private:
     void report_result(const char* format, va_list argp);
     void copy_one_mariadb_log(Mariadb_nodes* nrepl, int i, std::string filename);
@@ -580,6 +584,8 @@ private:
     bool log_matches(int m, const char* pattern);
 
     bool too_many_maxscales() const;
+
+    std::unique_ptr<MaxScale> m_maxscale; /**< Main MaxScale instance */
 
     std::vector<std::function<void(void)>> m_on_destroy;
 
