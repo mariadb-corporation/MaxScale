@@ -195,7 +195,6 @@
 /*
 This component accepts these optional props:
 - required: input becomes required and shows error message if value is empty after validating
-- createMode: In creation mode, it will not trigger parent form validate on first render
 - portValue, socketValue, addressValue and parentForm are passed if a server is being
   created or updated, this helps to facilitate special rules for port, socket and address parameter
   If it is not a server being created but a listener, addressValue will be null.
@@ -209,7 +208,6 @@ export default {
     props: {
         item: { type: Object, required: true },
         required: { type: Boolean, default: false },
-        createMode: { type: Boolean, default: false },
         portValue: { type: Number },
         socketValue: { type: String },
         addressValue: { type: String },
@@ -235,14 +233,9 @@ export default {
     watch: {
         'targetItem.value'() {
             this.$nextTick(() => {
-                // createMode should not trigger parent form validate on first render
-                if (this.createMode) {
-                    this.parentForm && this.renderCount !== 0 && this.parentForm.validate()
-
-                    this.renderCount === 0 && (this.renderCount = this.renderCount + 1)
-                } else {
-                    this.parentForm && this.parentForm.validate()
-                }
+                // should not trigger parent form validate on first render
+                this.parentForm && this.renderCount !== 0 && this.parentForm.validate()
+                this.renderCount === 0 && (this.renderCount = this.renderCount + 1)
             })
         },
         chosenSuffix: function(newSuffix, oldSuffix) {
@@ -273,7 +266,7 @@ export default {
         },
     },
 
-    async created() {
+    created() {
         this.targetItem = this.processItem(this.$help.lodash.cloneDeep(this.item))
     },
 

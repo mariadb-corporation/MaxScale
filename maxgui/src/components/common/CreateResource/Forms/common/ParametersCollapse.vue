@@ -37,7 +37,6 @@
                         :socketValue="socketValue"
                         :addressValue="addressValue"
                         :isListener="isListener"
-                        createMode
                         @get-changed-params="changedParametersArr = $event"
                         @handle-change="assignPortSocketDependencyValues"
                     />

@@ -8,22 +8,15 @@
         :socketValue="socketValue"
         :addressValue="addressValue"
         :isListener="isListener"
-        :createMode="createMode"
         @on-input-change="handleItemChange"
     />
     <parameter-input
         v-else-if="requiredParams.includes(item.id)"
         :item="item"
         required
-        :createMode="createMode"
         @on-input-change="handleItemChange"
     />
-    <parameter-input
-        v-else
-        :item="item"
-        :createMode="createMode"
-        @on-input-change="handleItemChange"
-    />
+    <parameter-input v-else :item="item" @on-input-change="handleItemChange" />
 </template>
 
 <script>
@@ -63,7 +56,6 @@ export default {
         item: { type: Object, required: true },
         parentForm: { type: Object },
         isListener: { type: Boolean, default: false },
-        createMode: { type: Boolean, default: false },
         usePortOrSocket: { type: Boolean, default: false },
         changedParametersArr: { type: Array, required: true },
         requiredParams: { type: Array, default: () => [] },
