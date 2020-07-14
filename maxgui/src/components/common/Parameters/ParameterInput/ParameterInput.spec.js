@@ -386,6 +386,21 @@ describe('ParameterInput.vue', () => {
       'required' props is true and input value is invalid`, async () => {
         await requiredVTextField(wrapper, passwordParam, 'replication_password is required')
     })
+    it(`password string type, test 2: Component allows to toggle masked password`, async () => {
+        await wrapper.setProps({ item: passwordParam })
+        expect(wrapper.vm.$data.isPwdVisible).to.be.equal(false)
+        let toggleMaskPwdBtn = wrapper.findAll('.v-input__append-inner > button')
+        let inputs = wrapper.findAll('input')
+        expect(inputs.length).to.be.equal(1)
+        expect(toggleMaskPwdBtn.length).to.be.equal(1)
+
+        let input = inputs.at(0)
+        expect(input.find('[type = "password"]').exists()).to.be.equal(true)
+
+        await toggleMaskPwdBtn.at(0).trigger('click')
+        expect(wrapper.vm.$data.isPwdVisible).to.be.equal(true)
+        expect(input.find('[type = "text"]').exists()).to.be.equal(true)
+    })
 
     it(`string type or others, test 0: Component renders v-text-field
       input if type is string or others`, async () => {
