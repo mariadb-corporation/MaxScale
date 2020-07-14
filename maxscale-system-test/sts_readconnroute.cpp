@@ -2,7 +2,7 @@
  * Test routing with services as targets for other services
  */
 
-#include <maxtest/testconnections.h>
+#include <maxtest/testconnections.hh>
 
 int main(int argc, char* argv[])
 {

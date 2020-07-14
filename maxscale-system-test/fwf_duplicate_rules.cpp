@@ -4,8 +4,8 @@
  * Check if duplicate rules are detected.
  */
 
-#include <maxtest/testconnections.h>
-#include <maxtest/fw_copy_rules.h>
+#include <maxtest/testconnections.hh>
+#include <maxtest/fw_copy_rules.hh>
 
 const char* rules = "rule test1 deny no_where_clause\n"
                     "rule test1 deny columns a b c\n"

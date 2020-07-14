@@ -4,7 +4,7 @@
  */
 
 #include <iostream>
-#include <maxtest/testconnections.h>
+#include <maxtest/testconnections.hh>
 
 /** Remove old keys and create a new one */
 int create_key(TestConnections* test)

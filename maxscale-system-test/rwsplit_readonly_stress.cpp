@@ -9,7 +9,7 @@
 #include <unistd.h>
 #include <cstdlib>
 #include <string>
-#include <maxtest/testconnections.h>
+#include <maxtest/testconnections.hh>
 
 #define THREADS 16
 

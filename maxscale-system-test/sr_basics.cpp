@@ -15,7 +15,7 @@
 #include <map>
 #include <vector>
 #include <maxbase/assert.h>
-#include <maxtest/testconnections.h>
+#include <maxtest/testconnections.hh>
 
 using namespace std;
 

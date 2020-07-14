@@ -7,9 +7,9 @@
  */
 
 #include <sstream>
-#include <maxtest/maxinfo_func.h>
-#include <maxtest/sql_t1.h>
-#include <maxtest/testconnections.h>
+#include <maxtest/maxinfo_func.hh>
+#include <maxtest/sql_t1.hh>
+#include <maxtest/testconnections.hh>
 
 int main(int argc, char* argv[])
 {

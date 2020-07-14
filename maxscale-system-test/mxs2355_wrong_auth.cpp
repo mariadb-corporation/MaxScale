@@ -11,7 +11,7 @@
  * Public License.
  */
 
-#include <maxtest/testconnections.h>
+#include <maxtest/testconnections.hh>
 
 // Try to connect with mysql client using the plugin "mysql_clear_password". MaxScale should switch back
 // to "mysql_native_password".

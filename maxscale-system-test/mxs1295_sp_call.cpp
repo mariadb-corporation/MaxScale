@@ -1,7 +1,7 @@
 /**
  * Test for MXS-1295: https://jira.mariadb.org/browse/MXS-1295
  */
-#include <maxtest/testconnections.h>
+#include <maxtest/testconnections.hh>
 
 const char sp_sql[] =
     "DROP PROCEDURE IF EXISTS multi;"

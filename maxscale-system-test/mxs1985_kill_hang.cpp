@@ -2,7 +2,7 @@
  * MXS-1985: MaxScale hangs on concurrent KILL processing
  */
 
-#include <maxtest/testconnections.h>
+#include <maxtest/testconnections.hh>
 
 #include <atomic>
 #include <thread>

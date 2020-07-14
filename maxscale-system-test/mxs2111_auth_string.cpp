@@ -2,7 +2,7 @@
  * MXS-2111: The password is stored in `authentication_string` instead of `password` due to MDEV-16774
  */
 
-#include <maxtest/testconnections.h>
+#include <maxtest/testconnections.hh>
 
 int main(int argc, char** argv)
 {

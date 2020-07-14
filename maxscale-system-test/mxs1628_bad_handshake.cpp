@@ -1,5 +1,5 @@
 #include <vector>
-#include <maxtest/testconnections.h>
+#include <maxtest/testconnections.hh>
 #include <maxtest/tcp_connection.hh>
 
 int main(int argc, char* argv[])

@@ -23,7 +23,7 @@
 
 #include <iostream>
 #include <unistd.h>
-#include <maxtest/testconnections.h>
+#include <maxtest/testconnections.hh>
 
 static int master_id;
 

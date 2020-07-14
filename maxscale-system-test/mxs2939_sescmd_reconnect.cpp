@@ -2,7 +2,7 @@
  * MXS-2939: Test that session commands trigger a reconnection
  */
 
-#include <maxtest/testconnections.h>
+#include <maxtest/testconnections.hh>
 
 int main(int argc, char** argv)
 {

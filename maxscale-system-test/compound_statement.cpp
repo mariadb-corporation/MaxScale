@@ -2,7 +2,7 @@
  * Test 10.1 compound statements
  */
 
-#include <maxtest/testconnections.h>
+#include <maxtest/testconnections.hh>
 
 int main(int argc, char** argv)
 {

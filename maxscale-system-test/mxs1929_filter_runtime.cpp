@@ -2,7 +2,7 @@
  * MXS-1929: Runtime filter creation
  */
 
-#include <maxtest/testconnections.h>
+#include <maxtest/testconnections.hh>
 
 #include <iostream>
 #include <thread>

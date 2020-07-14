@@ -1,6 +1,6 @@
 #pragma once
 
-#include <maxtest/testconnections.h>
+#include <maxtest/testconnections.hh>
 
 /**
  * @brief test_longblob INSERT big amount of data into lobg_blob_table

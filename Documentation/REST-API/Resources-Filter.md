@@ -148,6 +148,9 @@ A filter can only be destroyed if no service uses it. This means that the
 → filter relationship cannot be modified from the filters resource and must be
 done via the services resource.
 
+This endpoint also supports the `force=yes` parameter that will unconditionally
+delete the filter by first removing it from all services that it uses.
+
 #### Response
 
 Filter is destroyed:

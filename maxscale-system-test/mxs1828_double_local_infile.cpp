@@ -4,7 +4,7 @@
  * https://jira.mariadb.org/browse/MXS-1828
  */
 
-#include <maxtest/testconnections.h>
+#include <maxtest/testconnections.hh>
 #include <fstream>
 
 using namespace std;

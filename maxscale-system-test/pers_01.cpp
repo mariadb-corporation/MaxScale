@@ -29,7 +29,7 @@
  */
 
 
-#include <maxtest/testconnections.h>
+#include <maxtest/testconnections.hh>
 
 void check_pers_conn(TestConnections* Test, int pers_conn_expected[], const std::string& server)
 {

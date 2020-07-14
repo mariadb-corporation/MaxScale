@@ -8,8 +8,8 @@
 
 #include <iostream>
 #include <unistd.h>
-#include <maxtest/testconnections.h>
-#include <maxtest/sql_t1.h>
+#include <maxtest/testconnections.hh>
+#include <maxtest/sql_t1.hh>
 
 using namespace std;
 

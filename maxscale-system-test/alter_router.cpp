@@ -2,7 +2,7 @@
  * Test runtime modification of router options
  */
 
-#include <maxtest/testconnections.h>
+#include <maxtest/testconnections.hh>
 #include <vector>
 #include <iostream>
 #include <functional>

@@ -4,7 +4,7 @@
  * Check that a corrupt and deleted server is not used to load users
  */
 
-#include <maxtest/testconnections.h>
+#include <maxtest/testconnections.hh>
 
 int main(int argc, char* argv[])
 {

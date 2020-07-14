@@ -10,7 +10,7 @@
  * @endverbatim
  */
 
-#include <maxtest/mariadb_nodes.h>
+#include <maxtest/mariadb_nodes.hh>
 #include <climits>
 #include <string>
 #include <sstream>

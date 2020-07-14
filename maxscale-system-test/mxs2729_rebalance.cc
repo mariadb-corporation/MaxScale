@@ -17,8 +17,8 @@
 #include <sstream>
 #include <maxbase/log.hh>
 #include <maxbase/semaphore.hh>
-#include <maxtest/testconnections.h>
-#include <maxtest/mariadb_func.h>
+#include <maxtest/testconnections.hh>
+#include <maxtest/mariadb_func.hh>
 
 using namespace std;
 

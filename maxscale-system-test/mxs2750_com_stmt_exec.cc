@@ -2,7 +2,7 @@
  * MXS-2750: Test storage of COM_STMT_EXECUTE metadata
  */
 
-#include <maxtest/testconnections.h>
+#include <maxtest/testconnections.hh>
 
 int main(int argc, char* argv[])
 {

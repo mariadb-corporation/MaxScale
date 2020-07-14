@@ -1,6 +1,6 @@
 #include <iostream>
 #include <ctime>
-#include <maxtest/testconnections.h>
+#include <maxtest/testconnections.hh>
 #include <maxtest/sql_t1.h>
 
 int main(int argc, char* argv[])

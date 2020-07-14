@@ -3,7 +3,7 @@
  * https://jira.mariadb.org/browse/MXS-2313
  */
 
-#include <maxtest/testconnections.h>
+#include <maxtest/testconnections.hh>
 #include <iostream>
 
 std::function<void(int)> block_wait;

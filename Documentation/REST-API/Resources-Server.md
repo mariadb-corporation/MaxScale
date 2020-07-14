@@ -538,6 +538,10 @@ DELETE /v1/servers/:name
 A server can only be deleted if it is not used by any services or
 monitors.
 
+This endpoint also supports the `force=yes` parameter that will unconditionally
+delete the server by first unlinking it from all services and monitors that use
+it.
+
 #### Response
 
 Server is destroyed:

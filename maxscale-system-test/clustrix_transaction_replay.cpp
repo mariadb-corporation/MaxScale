@@ -14,7 +14,7 @@
 #include <iostream>
 #include <map>
 #include <maxtest/maxrest.hh>
-#include <maxtest/testconnections.h>
+#include <maxtest/testconnections.hh>
 
 using namespace std;
 

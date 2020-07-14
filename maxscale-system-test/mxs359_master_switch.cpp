@@ -3,7 +3,7 @@
  *
  * https://jira.mariadb.org/browse/MXS-359
  */
-#include <maxtest/testconnections.h>
+#include <maxtest/testconnections.hh>
 
 TestConnections* global_test;
 

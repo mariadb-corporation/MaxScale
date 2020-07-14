@@ -14,7 +14,7 @@
 #include <iostream>
 #include <string>
 #include <sstream>
-#include <maxtest/testconnections.h>
+#include <maxtest/testconnections.hh>
 
 using std::cerr;
 using std::cout;

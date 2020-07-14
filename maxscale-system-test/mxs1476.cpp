@@ -5,7 +5,7 @@
  * https://jira.mariadb.org/browse/MXS-1476
  */
 
-#include <maxtest/testconnections.h>
+#include <maxtest/testconnections.hh>
 
 void list_servers(TestConnections& test)
 {

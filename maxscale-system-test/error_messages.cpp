@@ -6,7 +6,7 @@
  * - repeat for RWSplit, ReadConn
  */
 
-#include <maxtest/testconnections.h>
+#include <maxtest/testconnections.hh>
 #include <iostream>
 #include <algorithm>
 
