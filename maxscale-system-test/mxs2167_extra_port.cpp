@@ -50,7 +50,7 @@ int main(int argc, char** argv)
         test.repl->stash_server_settings(i);
         test.repl->add_server_setting(i, extra_port_sett.c_str());
         test.repl->add_server_setting(i, "extra_max_connections=5");
-        test.repl->ssh_node_f(i, true, "service mysql restart");
+        test.repl->ssh_node_f(i, true, "systemctl restart mariadb || service mariadb restart");
 
         // Test a direct connection to the server through the extra port, it should work.
         auto conn = open_conn_db_timeout(extra_port, test.repl->ip(i), "", user, pw, 4, false);
@@ -189,7 +189,7 @@ int main(int argc, char** argv)
         test.repl->ssh_node_f(i, true, "%s", iptables_remove_cmd.c_str());
 
         test.repl->restore_server_settings(i);
-        test.repl->ssh_node_f(i, true, "service mysql restart");
+        test.repl->ssh_node_f(i, true, "systemctl restart mariadb || service mariadb restart");
     }
     return test.global_result;
 }
