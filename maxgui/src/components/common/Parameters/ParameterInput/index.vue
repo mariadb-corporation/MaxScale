@@ -1,6 +1,6 @@
 <template>
     <!-- if targetItem has expanded property, meaning it has child object, so no need to render input -->
-    <span v-if="'expanded' in targetItem" />
+    <span v-if="'expanded' in targetItem" class="expandable-param" />
 
     <!-- Handle edge case with port, address, socket custom rules-->
     <v-text-field

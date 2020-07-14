@@ -156,6 +156,54 @@ async function testReturnNumberValue(wrapper, item, newValueType, newValue) {
     })
 }
 
+/**
+ * This function tests if on-input-change is fired and returned expected value and value type
+ * @param {Object} wrapper A Wrapper is an object that contains a mounted component and methods to test the component
+ * @param {Object} item a parameter object must contains at least id, value and type  attributes
+ * @param {String} newSuffix  New unit suffix for size: 'Ki', 'Mi', 'Gi', 'Ti', 'k', 'M', 'G', 'T'
+ * or for duration 'ms', 's', 'm', 'h'
+ * @param {String} oldSuffix  old unit suffix before updating
+ * @param {String} expectedValue Expected value after choosing new suffix
+ * @param {String} oldValue The original value before choosing new suffix
+ */
+async function testSuffixSelection(wrapper, item, newSuffix, oldSuffix, expectedValue, oldValue) {
+    await wrapper.setProps({
+        item: item,
+    })
+    let count = 0
+    wrapper.vm.$on('on-input-change', (newItem, changed) => {
+        count++
+        if (count === 1) {
+            expect(newItem.value).to.be.a('string')
+            expect(newItem.value).to.be.equal(expectedValue)
+            expect(changed).to.be.equal(true)
+        } else if (count === 2) {
+            item.type === 'size'
+                ? expect(newItem.value).to.be.a('number')
+                : expect(newItem.value).to.be.a('string')
+
+            expect(newItem.value).to.be.equal(oldValue)
+            expect(changed).to.be.equal(false)
+        }
+    })
+
+    // set to new suffix
+    await wrapper.setData({
+        chosenSuffix: newSuffix,
+    })
+    // set back to old suffix
+    if (item.type === 'size') {
+        // for size type, there is no unit, hence undefined is assigned when clear selection
+        await wrapper.setData({
+            chosenSuffix: undefined,
+        })
+    } else {
+        await wrapper.setData({
+            chosenSuffix: oldSuffix,
+        })
+    }
+}
+
 describe('ParameterInput.vue', () => {
     let wrapper
 
@@ -168,6 +216,10 @@ describe('ParameterInput.vue', () => {
                 item: {},
             },
         })
+    })
+
+    it(`Component renders empty span if a parameter item has expanded property`, async () => {
+        await renderAccurateInputType(wrapper, paramHasChild, 'expandable-param')
     })
 
     it(`bool type:
@@ -295,6 +347,17 @@ describe('ParameterInput.vue', () => {
       and returns accurate value`, async () => {
         await testReturnNumberValue(wrapper, durationParam, 'number', 300)
     })
+    it(`duration type, test 3: Component allows to select duration suffix
+      and returns accurate value`, async () => {
+        await testSuffixSelection(
+            wrapper,
+            durationParam,
+            'ms',
+            's',
+            '300000ms',
+            durationParam.value
+        )
+    })
 
     it(`size type, test 0: Component renders v-text-field input that
       only allows to enter number >=0`, async () => {
@@ -308,14 +371,19 @@ describe('ParameterInput.vue', () => {
       returns accurate value`, async () => {
         await testReturnNumberValue(wrapper, sizeParam, 'number', 8192)
     })
+    it(`size type, test 3: Component allows to select duration suffix
+      and returns accurate value`, async () => {
+        // the value will parse to int when passing to v-text-field
+        sizeParam.value = parseInt(sizeParam.value)
+        await testSuffixSelection(wrapper, sizeParam, 'Ki', '', '8Ki', sizeParam.value)
+    })
 
     it(`password string type, test 0: Component renders v-text-field
       input if type is password string`, async () => {
         await renderAccurateInputType(wrapper, passwordParam, 'password-string')
     })
     it(`password string type, test 1: Component renders error message if
-      'required' props is true and input value
-        is invalid`, async () => {
+      'required' props is true and input value is invalid`, async () => {
         await requiredVTextField(wrapper, passwordParam, 'replication_password is required')
     })
 
