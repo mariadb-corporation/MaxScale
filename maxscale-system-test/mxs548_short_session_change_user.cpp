@@ -18,23 +18,6 @@
 
 std::atomic<bool> keep_running {true};
 
-void query_thread_master(TestConnections& test)
-{
-    auto conn = test.repl->get_connection(0);
-
-    std::vector<char> sql;
-    sql.reserve(1000000);
-    create_insert_string(&sql[0], 5000, 2);
-
-    test.expect(conn.connect(), "Connection should work: %s", conn.error());
-
-    while (keep_running && test.ok())
-    {
-        test.expect(conn.query(sql.data()), "Query failed: %s", conn.error());
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
-    }
-}
-
 void query_thread(TestConnections& test)
 {
     while (keep_running && test.ok())
@@ -79,12 +62,7 @@ int main(int argc, char** argv)
     std::vector<std::thread> threads;
     test.stop_timeout();
 
-    for (int i = 0; i < 3; i++)
-    {
-        threads.emplace_back(query_thread_master, std::ref(test));
-    }
-
-    for (int i = 0; i < 40; i++)
+    for (int i = 0; i < 5; i++)
     {
         threads.emplace_back(query_thread, std::ref(test));
     }
