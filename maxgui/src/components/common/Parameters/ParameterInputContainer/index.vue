@@ -1,7 +1,6 @@
 <template>
-    <!-- rendered if usePortOrSocket -->
     <parameter-input
-        v-if="handleShowSpecialInputs(item.id)"
+        v-if="handleShowSpecialInputs"
         :parentForm="parentForm"
         :item="item"
         :portValue="portValue"
@@ -11,12 +10,11 @@
         @on-input-change="handleItemChange"
     />
     <parameter-input
-        v-else-if="requiredParams.includes(item.id)"
+        v-else
         :item="item"
-        required
+        :required="requiredParams.includes(item.id)"
         @on-input-change="handleItemChange"
     />
-    <parameter-input v-else :item="item" @on-input-change="handleItemChange" />
 </template>
 
 <script>
@@ -63,16 +61,16 @@ export default {
         portValue: { type: Number },
         socketValue: { type: String },
     },
-
-    methods: {
+    computed: {
         /**
-         * @param {String} id id of parameter
          * @return {Boolean} true if usePortOrSocket is true and id matches requirements
          */
-        handleShowSpecialInputs(id) {
-            return this.usePortOrSocket && (id === 'port' || id === 'socket' || id === 'address')
+        handleShowSpecialInputs: function() {
+            let params = ['port', 'socket', 'address']
+            return this.usePortOrSocket && params.includes(this.item.id)
         },
-
+    },
+    methods: {
         /**This functions emits get-changed-params with new value for changedParametersArr.
          * If changed is true, push, re-assign or splice to newItem then passing it in get-changed-params event
          * Also emits handle-change with newItem
@@ -100,6 +98,7 @@ export default {
                     this.$emit('get-changed-params', changedParams)
                 }
             } else if (targetIndex > -1) {
+                // remove item from changedParams at targetIndex
                 changedParams.splice(targetIndex, 1)
                 this.$emit('get-changed-params', changedParams)
             }
