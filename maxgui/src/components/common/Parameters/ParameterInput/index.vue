@@ -82,6 +82,7 @@
         dense
         :multiple="targetItem.type === 'enum_mask'"
         :disabled="targetItem.disabled"
+        :rules="rules.required"
         @change="handleChange"
     >
         <template v-if="targetItem.type === 'enum_mask'" v-slot:selection="{ item, index }">
@@ -427,7 +428,10 @@ export default {
         // ---------------------------------------------------- input validation ---------------------------------------
         validateNumber(val) {
             const isEmptyVal = this.isEmpty(val)
-
+            // required param validation
+            let customRequired = this.required && isEmptyVal
+            let moduleParamRequired = isEmptyVal && this.targetItem.mandatory
+            // type validation
             const intType = this.targetItem.type === 'int'
             const naturalType =
                 this.targetItem.type === 'count' || this.targetItem.type === 'duration'
@@ -435,7 +439,7 @@ export default {
             const isValidInt = /^[-]?\d*$/g.test(val)
             const isValidNaturalNum = /^\d*$/g.test(val)
 
-            if (this.required && isEmptyVal) {
+            if (customRequired || moduleParamRequired) {
                 return this.$t('errors.requiredInput', { inputName: this.targetItem.id })
             } else if ((intType && !isValidInt && !isEmptyVal) || val === '-') {
                 return this.$t('errors.nonInteger')
@@ -446,7 +450,10 @@ export default {
         },
 
         handleRequired(val) {
-            if (this.isEmpty(val) && this.required) {
+            // required param validation
+            let customRequired = this.isEmpty(val) && this.required
+            let moduleParamRequired = this.isEmpty(val) && this.targetItem.mandatory
+            if (customRequired || moduleParamRequired) {
                 return this.$t('errors.requiredInput', { inputName: this.targetItem.id })
             }
             return true

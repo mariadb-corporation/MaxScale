@@ -253,13 +253,21 @@ export default {
             const moduleParam = moduleParameters.find(param => param.name === resourceParamId)
 
             if (moduleParam) {
-                const { type, description, default_value, unit, enum_values } = moduleParam
+                const {
+                    mandatory = false,
+                    type,
+                    description,
+                    default_value,
+                    unit,
+                    enum_values,
+                } = moduleParam
 
                 // assign
                 type !== undefined && (resourceParam.type = type)
                 description !== undefined && (resourceParam.description = description)
                 unit !== undefined && (resourceParam.unit = unit)
                 default_value !== undefined && (resourceParam.default_value = default_value)
+                resourceParam.mandatory = mandatory
 
                 const hasModifiable = 'modifiable' in moduleParam
                 if (hasModifiable && !moduleParam.modifiable) {
