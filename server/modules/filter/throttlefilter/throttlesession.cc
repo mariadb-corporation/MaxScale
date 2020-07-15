@@ -96,6 +96,7 @@ int ThrottleSession::real_routeQuery(GWBUF* buffer, bool is_delayed)
             MXS_NOTICE("Query throttling Session %ld user %s, throttling limit reached. Disconnect.",
                        m_pSession->ses_id,
                        m_pSession->client_dcb->user);
+            gwbuf_free(buffer);
             return false;   // disconnect
         }
     }
