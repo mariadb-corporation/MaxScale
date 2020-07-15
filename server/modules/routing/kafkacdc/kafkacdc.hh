@@ -40,7 +40,7 @@ static cfg::ParamCount s_timeout(
     &s_spec, "timeout", "Connection and read timeout for replication", 10);
 
 static cfg::ParamString s_gtid(
-    &s_spec, "gtid", "The GTID position to start from");
+    &s_spec, "gtid", "The GTID position to start from", "");
 
 // Never used
 class KafkaCDCSession : public mxs::RouterSession
