@@ -132,10 +132,14 @@ async function requiredVTextField(wrapper, item, errorMessage) {
             value: null,
         },
     })
-    let vTextField = wrapper.findComponent({ name: 'v-text-field' })
-    expect(vTextField.vm.valid).to.be.equal(false)
-    expect(vTextField.vm.errorBucket.length).to.be.equal(1)
-    expect(vTextField.vm.errorBucket[0]).to.be.equal(errorMessage)
+    // Manually trigger input event in v-text-field
+    await wrapper
+        .findAll('input')
+        .at(0)
+        .trigger('input')
+
+    let errorMessageDiv = wrapper.find('.v-messages__message').html()
+    expect(errorMessageDiv).to.be.include(errorMessage)
 }
 
 /**
@@ -145,15 +149,31 @@ async function requiredVTextField(wrapper, item, errorMessage) {
  * @param {Number} newValue number
  */
 async function testReturnNumberValue(wrapper, item, newValueType, newValue) {
+    // original item
     await wrapper.setProps({
         item: item,
     })
-
+    let count = 0
     wrapper.vm.$on('on-input-change', (newItem, changed) => {
-        expect(newItem.value).to.be.a(newValueType)
-        expect(newItem.value).to.be.equal(newValue)
+        count++
+        let chosenSuffix = wrapper.vm.$data.chosenSuffix
+        expect(newItem.value).to.be.a(chosenSuffix ? `string` : newValueType)
+        expect(newItem.value).to.be.equal(chosenSuffix ? `${newValue}${chosenSuffix}` : newValue)
         expect(changed).to.be.equal(true)
     })
+
+    await wrapper.setData({
+        targetItem: {
+            ...wrapper.vm.$data.targetItem,
+            value: newValue,
+        },
+    })
+    // Manually trigger input event in v-text-field
+    await wrapper
+        .findAll('input')
+        .at(0)
+        .trigger('input')
+    expect(count).to.be.equal(1)
 }
 
 /**
@@ -319,7 +339,7 @@ describe('ParameterInput.vue', () => {
     })
     it(`count type: Component emits on-input-change event and
       returns accurate value`, async () => {
-        await testReturnNumberValue(wrapper, countParam, 'number', 0)
+        await testReturnNumberValue(wrapper, countParam, 'number', 100)
     })
 
     it(`int type: Component renders v-text-field input that
@@ -332,7 +352,7 @@ describe('ParameterInput.vue', () => {
     })
     it(`int type: Component emits on-input-change event and
       returns accurate value`, async () => {
-        await testReturnNumberValue(wrapper, intParam, 'number', -1)
+        await testReturnNumberValue(wrapper, intParam, 'number', -100)
     })
 
     it(`duration type: Component renders v-text-field input
@@ -345,7 +365,7 @@ describe('ParameterInput.vue', () => {
     })
     it(`duration type: Component emits on-input-change event
       and returns accurate value`, async () => {
-        await testReturnNumberValue(wrapper, durationParam, 'number', 300)
+        await testReturnNumberValue(wrapper, durationParam, 'string', 350)
     })
     it(`duration type: Component allows to select duration suffix
       and returns accurate value`, async () => {
@@ -369,7 +389,7 @@ describe('ParameterInput.vue', () => {
     })
     it(`size type: Component emits on-input-change event and
       returns accurate value`, async () => {
-        await testReturnNumberValue(wrapper, sizeParam, 'number', 8192)
+        await testReturnNumberValue(wrapper, sizeParam, 'number', 16384)
     })
     it(`size type: Component allows to select duration suffix
       and returns accurate value`, async () => {
