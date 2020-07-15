@@ -309,8 +309,14 @@ public:
     bool connect()
     {
         mysql_close(m_conn);
-        m_conn = open_conn_db(m_port, m_host, m_db, m_user, m_pw, m_ssl);
-        return m_conn != nullptr && mysql_errno(m_conn) == 0;
+        m_conn = mysql_init(NULL);
+
+        // MXS-2568: This fixes mxs1828_double_local_infile
+        mysql_optionsv(m_conn, MYSQL_OPT_LOCAL_INFILE, (void*)"1");
+
+        return mysql_real_connect(m_conn, m_host.c_str(), m_user.c_str(), m_pw.c_str(), m_db.c_str(), m_port,
+                                  NULL, CLIENT_MULTI_STATEMENTS)
+               && mysql_errno(m_conn) == 0;
     }
 
     void disconnect()
