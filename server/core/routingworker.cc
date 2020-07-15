@@ -96,18 +96,11 @@ thread_local struct this_thread
     WORKER_ABSENT_ID
 };
 
-bool can_close_dcb(DCB* dcb)
+bool can_close_dcb(mxs::BackendConnection* b)
 {
-    bool rval = true;
-
-    if (dcb->role() == DCB::Role::BACKEND)
-    {
-        auto b = static_cast<BackendDCB*>(dcb);
-        auto idle = MXS_CLOCK_TO_SEC(mxs_clock() - dcb->last_read());
-        rval = idle > 5 || b->protocol()->can_close();
-    }
-
-    return rval;
+    mxb_assert(b->dcb()->role() == DCB::Role::BACKEND);
+    auto idle = MXS_CLOCK_TO_SEC(mxs_clock() - b->dcb()->last_read());
+    return idle > 5 || b->can_close();
 }
 }
 
@@ -455,6 +448,7 @@ void RoutingWorker::process_timeouts()
 
 void RoutingWorker::delete_zombies()
 {
+    Zombies slow_zombies;
     // An algorithm cannot be used, as the final closing of a DCB may cause
     // other DCBs to be registered in the zombie queue.
 
@@ -463,8 +457,30 @@ void RoutingWorker::delete_zombies()
         DCB* pDcb = m_zombies.back();
         m_zombies.pop_back();
 
-        DCB::Manager::call_destroy(pDcb);
+        bool can_close = true;
+
+        if (pDcb->role() == DCB::Role::CLIENT)
+        {
+            // Check if any of the backend DCBs isn't ready to be closed. If so, delay the closing of the
+            // client DCB until the backend connections have fully established and finished authenticating.
+            const auto& dcbs = static_cast<Session*>(pDcb->session())->backend_connections();
+            can_close = std::all_of(dcbs.begin(), dcbs.end(), can_close_dcb);
+        }
+
+        if (can_close)
+        {
+            MXS_DEBUG("Ready to close session %lu", pDcb->session()->id());
+            DCB::Manager::call_destroy(pDcb);
+        }
+        else
+        {
+            MXS_DEBUG("Delaying destruction of session %lu", pDcb->session()->id());
+            slow_zombies.push_back(pDcb);
+        }
     }
+
+    mxb_assert(m_zombies.empty());
+    m_zombies.insert(m_zombies.end(), slow_zombies.begin(), slow_zombies.end());
 }
 
 void RoutingWorker::add(DCB* pDcb)
