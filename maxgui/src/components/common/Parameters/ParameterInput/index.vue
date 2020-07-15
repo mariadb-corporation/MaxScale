@@ -195,10 +195,9 @@
 /*
 This component accepts these optional props:
 - required: input becomes required and shows error message if value is empty after validating
-- portValue, socketValue, addressValue and parentForm are passed if a server is being
+- portValue, socketValue and parentForm are passed if a server is being
   created or updated, this helps to facilitate special rules for port, socket and address parameter
-  If it is not a server being created but a listener, addressValue will be null.
-- isListener: accepts boolean , if true, address input won't be required
+- isListener: accepts boolean , if true, address parameter will not be required
 
 Emits:
 - $emit('on-input-change', { targetItemCloned: object, changed: boolean })
@@ -210,7 +209,6 @@ export default {
         required: { type: Boolean, default: false },
         portValue: { type: Number },
         socketValue: { type: String },
-        addressValue: { type: String },
         parentForm: { type: Object },
         isListener: { type: Boolean, default: false },
     },

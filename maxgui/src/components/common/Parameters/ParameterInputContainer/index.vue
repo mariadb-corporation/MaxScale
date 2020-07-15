@@ -5,13 +5,13 @@
         :item="item"
         :portValue="portValue"
         :socketValue="socketValue"
-        :addressValue="addressValue"
         :isListener="isListener"
         @on-input-change="handleItemChange"
     />
     <parameter-input
         v-else
         :item="item"
+        :isListener="isListener"
         :required="requiredParams.includes(item.id)"
         @on-input-change="handleItemChange"
     />
@@ -35,11 +35,10 @@
 This component render item object to input, it's a container component for parameter-input
 PROPS explanation:
 - requiredParams: accepts array of string, it simply enables required attribute in parameter-input automatically
-- usePortOrSocket: if true, passing the value of portValue, addressValue, and socketValue props,
+- usePortOrSocket: if true, passing the value of portValue, socketValue props,
   to parameter-input for handling special input field when editting server or listener.
-- portValue, socketValue, addressValue and parentForm are passed if a server is being
+- portValue, socketValue and parentForm are passed if a server or listener is being
   created or updated, this helps to facilitate special rules for port, socket and address parameter
-  If it is not a server being created but a listener, addressValue will be null.
 - isListener: if true, address input won't be required
 - changedParametersArr: accepts array, it contains changed parameter objects which will be updated by parent component
   when get-changed-params event is emitted
@@ -57,7 +56,6 @@ export default {
         usePortOrSocket: { type: Boolean, default: false },
         changedParametersArr: { type: Array, required: true },
         requiredParams: { type: Array, default: () => [] },
-        addressValue: { type: String },
         portValue: { type: Number },
         socketValue: { type: String },
     },
