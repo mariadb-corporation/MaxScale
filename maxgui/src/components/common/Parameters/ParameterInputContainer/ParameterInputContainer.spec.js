@@ -20,12 +20,6 @@ let stringParam = {
     id: 'test_parameter',
 }
 
-let addressParam = {
-    type: 'string',
-    value: '127.0.0.1',
-    id: 'address',
-}
-
 let portParam = {
     type: 'count',
     value: 4001,
@@ -95,7 +89,6 @@ describe('ParameterInputContainer.vue', () => {
             parentForm: {}, // form ref from parent component
             portValue: portParam.value,
             socketValue: socketParam.value,
-            addressValue: addressParam.value,
             isListener: false,
         }
         await wrapper.setProps({
@@ -110,7 +103,6 @@ describe('ParameterInputContainer.vue', () => {
         expect(parameter_input_props.parentForm).to.be.equal(dependencyProps.parentForm)
         expect(parameter_input_props.portValue).to.be.equal(dependencyProps.portValue)
         expect(parameter_input_props.socketValue).to.be.equal(dependencyProps.socketValue)
-        expect(parameter_input_props.addressValue).to.be.equal(dependencyProps.addressValue)
         expect(parameter_input_props.isListener).to.be.equal(dependencyProps.isListener)
     })
 

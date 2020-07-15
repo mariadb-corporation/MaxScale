@@ -35,7 +35,6 @@
                         :changedParametersArr="changedParametersArr"
                         :portValue="portValue"
                         :socketValue="socketValue"
-                        :addressValue="addressValue"
                         :isListener="isListener"
                         @get-changed-params="changedParametersArr = $event"
                         @handle-change="assignPortSocketDependencyValues"
@@ -72,10 +71,9 @@ The component is meant to be used for creating resource
 
 PROPS:
 - requiredParams: accepts array of string , it simply enables required attribute in parameter-input dynamically
-- usePortOrSocket: accepts boolean , if true, get portValue, addressValue, and socketValue,
+- usePortOrSocket: accepts boolean , if true, get portValue, and socketValue,
   passing them to parameter-input for handling special input field when editting server or listener.
-  If editing listener, addressValue will be null
-- isListener: accepts boolean , if true, address won't be required
+- isListener: accepts boolean , if true, address parameter will not be required
 */
 export default {
     name: 'parameters-collapse',
@@ -101,7 +99,6 @@ export default {
             // parameters input
             changedParametersArr: [],
             //
-            addressValue: null,
             portValue: null,
             socketValue: null,
 
@@ -170,7 +167,7 @@ export default {
         },
 
         /**
-         * This function helps to assign value to component's data: portValue, socketValue, addressValue
+         * This function helps to assign value to component's data: portValue, socketValue
          * @param {Object} parameter object
          */
         assignPortSocketDependencyValues(parameter) {
@@ -182,9 +179,6 @@ export default {
                         break
                     case 'socket':
                         this.socketValue = value
-                        break
-                    case 'address':
-                        this.addressValue = value
                         break
                 }
             }
