@@ -14,38 +14,115 @@ import { expect } from 'chai'
 import mount from '@tests/unit/setup'
 import ParameterInput from '@/components/common/Parameters/ParameterInput'
 
-/**
- * @param {Object} wrapper A Wrapper is an object that contains a mounted component and methods to test the component
- * component should render one input at a time
- */
-function checkRenderOneInput(wrapper) {
-    let stdClass = wrapper.findAll('.std')
-    expect(stdClass.length).to.be.equal(1)
+let paramHasChild = {
+    default_value: false,
+    type: 'throttling',
+    value: '',
+    id: 'log_throttling',
+    expanded: false,
+}
+
+let boolParam = {
+    default_value: false,
+    type: 'bool',
+    value: false,
+    id: 'proxy_protocol',
+}
+
+let enumMaskParam = {
+    default_value: 'primary_monitor_master',
+    enum_values: [
+        'none',
+        'connecting_slave',
+        'connected_slave',
+        'running_slave',
+        'primary_monitor_master',
+    ],
+    type: 'enum_mask',
+    value: 'primary_monitor_master',
+    id: 'master_conditions',
+}
+
+let enumParam = {
+    default_value: 'none',
+    enum_values: ['none', 'majority_of_running', 'majority_of_all'],
+    type: 'enum',
+    value: 'none',
+    id: 'cooperative_monitoring_locks',
+}
+
+let countParam = {
+    type: 'count',
+    value: 0,
+    id: 'extra_port',
+}
+
+let intParam = { default_value: '-1', type: 'int', value: '-1', id: 'retain_last_statements' }
+
+let durationParam = {
+    default_value: '300s',
+    type: 'duration',
+    unit: 's',
+    value: '300s',
+    id: 'connection_keepalive',
+}
+
+let sizeParam = {
+    default_value: '8192',
+    type: 'size',
+    value: '8192',
+    id: 'writeq_low_water',
+}
+let passwordParam = { type: 'password string', value: '', id: 'replication_password' }
+
+let stringParam = {
+    type: 'string',
+    value: '',
+    id: 'test_parameter',
+}
+
+let addressParam = {
+    type: 'string',
+    value: '',
+    id: 'address',
+}
+
+let portParam = {
+    type: 'count',
+    value: '',
+    id: 'port',
+}
+
+let socketParam = {
+    type: 'string',
+    value: '',
+    id: 'socket',
 }
 
 /**
+ * This function tests component renders accurate input type
  * @param {Object} wrapper A Wrapper is an object that contains a mounted component and methods to test the component
  * @param {Object} item a parameter object must contains at least id, value and type attributes
  * @param {String} typeClass type class of parameter object
- * component renders accurate input type
  */
 async function renderAccurateInputType(wrapper, item, typeClass) {
     await wrapper.setProps({
         item: item,
     })
-    checkRenderOneInput(wrapper)
     let inputWrapper = wrapper.findAll(`.${typeClass}`)
     expect(inputWrapper.length).to.be.equal(1)
 }
 
 /**
- * @param {Object} wrapper A Wrapper is an object that contains a mounted component and methods to test the component
- * @param {String} errorMessage a specific error message
  * When required props is true and the input value is invalid, it should renders errorMessage
+ * @param {Object} wrapper A Wrapper is an object that contains a mounted component and methods to test the component
+ * @param {Object} item a parameter object must contains at least id, value and type attributes
+ * @param {String} errorMessage a specific error message
  */
-async function requiredVTextField(wrapper, errorMessage) {
+async function requiredVTextField(wrapper, item, errorMessage) {
     await wrapper.setProps({
         required: true,
+        item: item,
     })
 
     // mockup null (invalid) input event
@@ -62,17 +139,69 @@ async function requiredVTextField(wrapper, errorMessage) {
 }
 
 /**
+ * on-input-change should be fired and returned expected value for count, int, duration or size type
  * @param {Object} wrapper A Wrapper is an object that contains a mounted component and methods to test the component
  * @param {String} newValueType  js types: number, boolean, string, ...
  * @param {Number} newValue number
- * on-input-change should be fired and returned expected value for count, int, duration or size type
  */
-async function testReturnNumberValue(wrapper, newValueType, newValue) {
+async function testReturnNumberValue(wrapper, item, newValueType, newValue) {
+    await wrapper.setProps({
+        item: item,
+    })
+
     wrapper.vm.$on('on-input-change', (newItem, changed) => {
         expect(newItem.value).to.be.a(newValueType)
         expect(newItem.value).to.be.equal(newValue)
         expect(changed).to.be.equal(true)
     })
+}
+
+/**
+ * This function tests if on-input-change is fired and returned expected value and value type
+ * @param {Object} wrapper A Wrapper is an object that contains a mounted component and methods to test the component
+ * @param {Object} item a parameter object must contains at least id, value and type  attributes
+ * @param {String} newSuffix  New unit suffix for size: 'Ki', 'Mi', 'Gi', 'Ti', 'k', 'M', 'G', 'T'
+ * or for duration 'ms', 's', 'm', 'h'
+ * @param {String} oldSuffix  old unit suffix before updating
+ * @param {String} expectedValue Expected value after choosing new suffix
+ * @param {String} oldValue The original value before choosing new suffix
+ */
+async function testSuffixSelection(wrapper, item, newSuffix, oldSuffix, expectedValue, oldValue) {
+    await wrapper.setProps({
+        item: item,
+    })
+    let count = 0
+    wrapper.vm.$on('on-input-change', (newItem, changed) => {
+        count++
+        if (count === 1) {
+            expect(newItem.value).to.be.a('string')
+            expect(newItem.value).to.be.equal(expectedValue)
+            expect(changed).to.be.equal(true)
+        } else if (count === 2) {
+            item.type === 'size'
+                ? expect(newItem.value).to.be.a('number')
+                : expect(newItem.value).to.be.a('string')
+
+            expect(newItem.value).to.be.equal(oldValue)
+            expect(changed).to.be.equal(false)
+        }
+    })
+
+    // set to new suffix
+    await wrapper.setData({
+        chosenSuffix: newSuffix,
+    })
+    // set back to old suffix
+    if (item.type === 'size') {
+        // for size type, there is no unit, hence undefined is assigned when clear selection
+        await wrapper.setData({
+            chosenSuffix: undefined,
+        })
+    } else {
+        await wrapper.setData({
+            chosenSuffix: oldSuffix,
+        })
+    }
 }
 
 describe('ParameterInput.vue', () => {
@@ -89,19 +218,14 @@ describe('ParameterInput.vue', () => {
         })
     })
 
+    it(`Component renders empty span if a parameter item has expanded property`, async () => {
+        await renderAccurateInputType(wrapper, paramHasChild, 'expandable-param')
+    })
+
     it(`bool type:
       - component renders v-select input that only allows to select boolean value.
-      - component emits on-input-change and returns accurate values `, async () => {
-        await renderAccurateInputType(
-            wrapper,
-            {
-                default_value: false,
-                type: 'bool',
-                value: false,
-                id: 'proxy_protocol',
-            },
-            'bool'
-        )
+      - component emits on-input-change and returns accurate values`, async () => {
+        await renderAccurateInputType(wrapper, boolParam, 'bool')
         let count = 0
         wrapper.vm.$on('on-input-change', (newItem, changed) => {
             count++
@@ -129,23 +253,7 @@ describe('ParameterInput.vue', () => {
       - component takes enum_values array and
         renders v-select input that allows selecting multiple items
       - component emits on-input-change and returns enum_mask values as string`, async () => {
-        await renderAccurateInputType(
-            wrapper,
-            {
-                default_value: 'primary_monitor_master',
-                enum_values: [
-                    'none',
-                    'connecting_slave',
-                    'connected_slave',
-                    'running_slave',
-                    'primary_monitor_master',
-                ],
-                type: 'enum_mask',
-                value: 'primary_monitor_master',
-                id: 'master_conditions',
-            },
-            'enum_mask'
-        )
+        await renderAccurateInputType(wrapper, enumMaskParam, 'enum_mask')
 
         let count = 0
         wrapper.vm.$on('on-input-change', (newItem, changed) => {
@@ -175,19 +283,8 @@ describe('ParameterInput.vue', () => {
         expect(count).to.be.equal(3)
     })
 
-    it(`enum type: component renders v-select input that
-      allows selecting an item`, async () => {
-        await renderAccurateInputType(
-            wrapper,
-            {
-                default_value: 'none',
-                enum_values: ['none', 'majority_of_running', 'majority_of_all'],
-                type: 'enum',
-                value: 'none',
-                id: 'cooperative_monitoring_locks',
-            },
-            'enum'
-        )
+    it(`enum type: component renders v-select input that allows selecting an item`, async () => {
+        await renderAccurateInputType(wrapper, enumParam, 'enum')
 
         let count = 0
         wrapper.vm.$on('on-input-change', (newItem, changed) => {
@@ -212,138 +309,129 @@ describe('ParameterInput.vue', () => {
         expect(count).to.be.equal(2)
     })
 
-    it(`count type:
-      - component renders v-text-field input that only allows to enter number
-      - component renders error message if 'required' props is true and input value
-        is invalid`, async () => {
-        await renderAccurateInputType(
-            wrapper,
-            {
-                type: 'count',
-                value: 0,
-                id: 'extra_port',
-            },
-            'count'
-        )
-        await requiredVTextField(wrapper, 'extra_port is required')
-        await testReturnNumberValue(wrapper, 'number', 0)
+    it(`count type: Component renders v-text-field input that
+      only allows to enter number`, async () => {
+        await renderAccurateInputType(wrapper, countParam, 'count')
+    })
+    it(`count type: Component renders error message if
+      'required' props is true and input value is invalid`, async () => {
+        await requiredVTextField(wrapper, countParam, 'extra_port is required')
+    })
+    it(`count type: Component emits on-input-change event and
+      returns accurate value`, async () => {
+        await testReturnNumberValue(wrapper, countParam, 'number', 0)
     })
 
-    it(`int type:
-      - component renders v-text-field input that allows to enter
-        integers number i.e -1 or 1
-      - component renders error message if 'required' props is true and input value
-        is invalid`, async () => {
-        await renderAccurateInputType(
-            wrapper,
-            { default_value: '-1', type: 'int', value: '-1', id: 'retain_last_statements' },
-            'int'
-        )
-        await requiredVTextField(wrapper, 'retain_last_statements is required')
-        await testReturnNumberValue(wrapper, 'number', -1)
+    it(`int type: Component renders v-text-field input that
+      allows to enter integers number i.e -1 or 1`, async () => {
+        await renderAccurateInputType(wrapper, intParam, 'int')
+    })
+    it(`int type: Component renders error message if
+      'required' props is true and input value is invalid`, async () => {
+        await requiredVTextField(wrapper, intParam, 'retain_last_statements is required')
+    })
+    it(`int type: Component emits on-input-change event and
+      returns accurate value`, async () => {
+        await testReturnNumberValue(wrapper, intParam, 'number', -1)
     })
 
-    it(`duration type:
-      - component renders v-text-field input that only allows to enter number >=0
-      - component renders error message if 'required' props is true and input value
-        is invalid`, async () => {
-        await renderAccurateInputType(
+    it(`duration type: Component renders v-text-field input
+      that only allows to enter number >=0`, async () => {
+        await renderAccurateInputType(wrapper, durationParam, 'duration')
+    })
+    it(`duration type: Component renders error message if
+      'required' props is true and input value is invalid`, async () => {
+        await requiredVTextField(wrapper, durationParam, 'connection_keepalive is required')
+    })
+    it(`duration type: Component emits on-input-change event
+      and returns accurate value`, async () => {
+        await testReturnNumberValue(wrapper, durationParam, 'number', 300)
+    })
+    it(`duration type: Component allows to select duration suffix
+      and returns accurate value`, async () => {
+        await testSuffixSelection(
             wrapper,
-            {
-                default_value: '300s',
-                type: 'duration',
-                unit: 's',
-                value: '300s',
-                id: 'connection_keepalive',
-            },
-            'duration'
+            durationParam,
+            'ms',
+            's',
+            '300000ms',
+            durationParam.value
         )
-        await requiredVTextField(wrapper, 'connection_keepalive is required')
-        await testReturnNumberValue(wrapper, 'number', 300)
     })
 
-    it(`size type:
-      - component renders v-text-field input that only allows to enter number >=0
-      - component renders error message if 'required' props is true and input value
-        is invalid`, async () => {
-        await renderAccurateInputType(
-            wrapper,
-            {
-                default_value: '1073741824',
-                type: 'size',
-                value: '1073741824',
-                id: 'transaction_replay_max_size',
-            },
-            'size'
-        )
-        await requiredVTextField(wrapper, 'transaction_replay_max_size is required')
-        await testReturnNumberValue(wrapper, 'number', 1073741824)
+    it(`size type: Component renders v-text-field input that
+      only allows to enter number >=0`, async () => {
+        await renderAccurateInputType(wrapper, sizeParam, 'size')
+    })
+    it(`size type: Component renders error message if
+      'required' props is true and input value is invalid`, async () => {
+        await requiredVTextField(wrapper, sizeParam, 'writeq_low_water is required')
+    })
+    it(`size type: Component emits on-input-change event and
+      returns accurate value`, async () => {
+        await testReturnNumberValue(wrapper, sizeParam, 'number', 8192)
+    })
+    it(`size type: Component allows to select duration suffix
+      and returns accurate value`, async () => {
+        // the value will parse to int when passing to v-text-field
+        sizeParam.value = parseInt(sizeParam.value)
+        await testSuffixSelection(wrapper, sizeParam, 'Ki', '', '8Ki', sizeParam.value)
     })
 
-    it(`password string type:
-      - Component renders v-text-field input if type is password string
-      - component renders error message if 'required' props is true and input value
-        is invalid`, async () => {
-        await renderAccurateInputType(
-            wrapper,
-            { type: 'password string', value: '', id: 'replication_password' },
-            'password-string'
-        )
-        await requiredVTextField(wrapper, 'replication_password is required')
+    it(`password string type: Component renders v-text-field
+      input if type is password string`, async () => {
+        await renderAccurateInputType(wrapper, passwordParam, 'password-string')
+    })
+    it(`password string type: Component renders error message if
+      'required' props is true and input value is invalid`, async () => {
+        await requiredVTextField(wrapper, passwordParam, 'replication_password is required')
+    })
+    it(`password string type: Component allows to toggle masked password`, async () => {
+        await wrapper.setProps({ item: passwordParam })
+        expect(wrapper.vm.$data.isPwdVisible).to.be.equal(false)
+        let toggleMaskPwdBtn = wrapper.findAll('.v-input__append-inner > button')
+        let inputs = wrapper.findAll('input')
+        expect(inputs.length).to.be.equal(1)
+        expect(toggleMaskPwdBtn.length).to.be.equal(1)
+
+        let input = inputs.at(0)
+        expect(input.find('[type = "password"]').exists()).to.be.equal(true)
+
+        await toggleMaskPwdBtn.at(0).trigger('click')
+        expect(wrapper.vm.$data.isPwdVisible).to.be.equal(true)
+        expect(input.find('[type = "text"]').exists()).to.be.equal(true)
     })
 
-    it(`string type or others:
-      - Component renders v-text-field input if type is string or others
-      - component renders error message if 'required' props is true and input value
-        is invalid`, async () => {
-        await renderAccurateInputType(
-            wrapper,
-            {
-                type: 'string',
-                value: '',
-                id: 'test_parameter',
-            },
-            'string'
-        )
-        await requiredVTextField(wrapper, 'test_parameter is required')
+    it(`string type or others: Component renders v-text-field
+      input if type is string or others`, async () => {
+        await renderAccurateInputType(wrapper, stringParam, 'string')
+    })
+    it(`string type or others: Component renders error
+      message if 'required' props is true and input value is invalid`, async () => {
+        await requiredVTextField(wrapper, stringParam, 'test_parameter is required')
     })
 
-    it(`address, socket, port parameter of server:
-      - Component renders accurate input type
-      - component renders error message if 'required' props is true and input value
-        is invalid`, async () => {
-        // address parameter
-        await renderAccurateInputType(
-            wrapper,
-            {
-                type: 'string',
-                value: '',
-                id: 'address',
-            },
-            'string'
-        )
-        await requiredVTextField(wrapper, 'address is required when using port')
-        // port parameter
-        await renderAccurateInputType(
-            wrapper,
-            {
-                type: 'count',
-                value: '',
-                id: 'port',
-            },
-            'count'
-        )
-        await requiredVTextField(wrapper, 'Either port or socket need to be defined')
-        // socket parameter
-        await renderAccurateInputType(
-            wrapper,
-            {
-                type: 'string',
-                value: '',
-                id: 'socket',
-            },
-            'string'
-        )
-        await requiredVTextField(wrapper, 'Either port or socket need to be defined')
+    it(`address parameter: Component renders accurate input type`, async () => {
+        await renderAccurateInputType(wrapper, addressParam, 'string')
+    })
+    it(`address parameter: Component renders error message if
+      'required' props is true and input value is invalid`, async () => {
+        await requiredVTextField(wrapper, addressParam, 'address is required when using port')
+    })
+
+    it(`port parameter: Component renders accurate input type`, async () => {
+        await renderAccurateInputType(wrapper, portParam, 'count')
+    })
+    it(`port parameter: Component renders error message if
+      'required' props is true and input value is invalid`, async () => {
+        await requiredVTextField(wrapper, portParam, 'Either port or socket need to be defined')
+    })
+
+    it(`socket parameter: Component renders accurate input type`, async () => {
+        await renderAccurateInputType(wrapper, socketParam, 'string')
+    })
+    it(`socket parameter: Component renders error message if
+      'required' props is true and input value is invalid`, async () => {
+        await requiredVTextField(wrapper, socketParam, 'Either port or socket need to be defined')
     })
 })

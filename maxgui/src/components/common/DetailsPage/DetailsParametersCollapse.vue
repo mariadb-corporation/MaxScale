@@ -38,11 +38,11 @@
                             :parentForm="$refs.form"
                             :usePortOrSocket="usePortOrSocket"
                             :changedParametersArr="changedParametersArr"
-                            :assignPortSocketDependencyValues="assignPortSocketDependencyValues"
                             :portValue="portValue"
                             :socketValue="socketValue"
                             :addressValue="addressValue"
-                            @handle-change="changedParametersArr = $event"
+                            @get-changed-params="changedParametersArr = $event"
+                            @handle-change="assignPortSocketDependencyValues"
                         />
                     </template>
                 </data-table>
@@ -186,17 +186,7 @@ export default {
             let tableRow = this.$help.objToArrOfObj(parameters, keepPrimitiveValue, level)
 
             let moduleParameters = this.$help.lodash.cloneDeep(this.moduleParameters)
-
-            for (let o = 0; o < tableRow.length; ++o) {
-                const resourceParam = tableRow[o]
-                if (resourceParam.leaf === false) {
-                    for (let i = 0; i < resourceParam.children.length; ++i) {
-                        const childParam = resourceParam.children[i]
-                        this.assignParamsTypeInfo(childParam, moduleParameters)
-                    }
-                }
-                this.assignParamsTypeInfo(resourceParam, moduleParameters)
-            }
+            this.processingTableRow(tableRow, moduleParameters)
 
             return tableRow
         },
@@ -239,12 +229,30 @@ export default {
         },
 
         /**
+         * Return mutated tableRow Array
+         * @param {Array} tableRow  mutated processing Table row
+         * @param {Array} moduleParameters Module parameters object {id:'', value:'', type:'', unit:'',...}
+         */
+        processingTableRow(tableRow, moduleParameters) {
+            for (let o = 0; o < tableRow.length; ++o) {
+                const resourceParam = tableRow[o]
+                if (resourceParam.leaf === false) {
+                    for (let i = 0; i < resourceParam.children.length; ++i) {
+                        const childParam = resourceParam.children[i]
+                        this.assignParamsTypeInfo(childParam, moduleParameters)
+                    }
+                }
+                this.assignParamsTypeInfo(resourceParam, moduleParameters)
+            }
+        },
+
+        /**
+         * Return mutated resourceParam Object
          * @param {Object} resourceParam table object {id:'', value:''}
          * @param {Array} moduleParameters Module parameters object {id:'', value:'', type:'', unit:'',...}
-         * @return {Object} mutated resourceParam
          */
         assignParamsTypeInfo(resourceParam, moduleParameters) {
-            const { id: resourceParamId, value: resourceParamValue } = resourceParam
+            const { id: resourceParamId } = resourceParam
             const moduleParam = moduleParameters.find(param => param.name === resourceParamId)
 
             if (moduleParam) {
@@ -270,25 +278,25 @@ export default {
                 resourceParam['disabled'] = true
             }
 
-            this.assignPortSocketDependencyValues(resourceParamId, resourceParamValue)
+            this.assignPortSocketDependencyValues(resourceParam)
         },
 
         /**
-         * @param {String} resourceParamId Name of the parameter
-         * @param {String} resourceParamValue Value of the parameter
-         * @return assigining value to component's data: portValue, socketValue, addressValue
+         * This function helps to assign value to component's data: portValue, socketValue, addressValue
+         * @param {Object} parameter object
          */
-        assignPortSocketDependencyValues(resourceParamId, resourceParamValue) {
+        assignPortSocketDependencyValues(parameter) {
+            const { id, value } = parameter
             if (this.usePortOrSocket) {
-                switch (resourceParamId) {
+                switch (id) {
                     case 'port':
-                        this.portValue = resourceParamValue
+                        this.portValue = value
                         break
                     case 'socket':
-                        this.socketValue = resourceParamValue
+                        this.socketValue = value
                         break
                     case 'address':
-                        this.addressValue = resourceParamValue
+                        this.addressValue = value
                         break
                 }
             }
@@ -316,6 +324,11 @@ export default {
             this.editableCell = false
             this.closeConfirmDialog()
             this.changedParametersArr = []
+            // this helps to assign accurate parameter info and trigger assignPortSocketDependencyValues
+            this.processingTableRow(
+                this.parametersTableRow,
+                this.$help.lodash.cloneDeep(this.moduleParameters)
+            )
         },
 
         async acceptEdit() {

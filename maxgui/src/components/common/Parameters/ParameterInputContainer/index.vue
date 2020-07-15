@@ -8,22 +8,15 @@
         :socketValue="socketValue"
         :addressValue="addressValue"
         :isListener="isListener"
-        :createMode="createMode"
         @on-input-change="handleItemChange"
     />
     <parameter-input
         v-else-if="requiredParams.includes(item.id)"
         :item="item"
         required
-        :createMode="createMode"
         @on-input-change="handleItemChange"
     />
-    <parameter-input
-        v-else
-        :item="item"
-        :createMode="createMode"
-        @on-input-change="handleItemChange"
-    />
+    <parameter-input v-else :item="item" @on-input-change="handleItemChange" />
 </template>
 
 <script>
@@ -42,13 +35,20 @@
 
 /*
 This component render item object to input, it's a container component for parameter-input
+PROPS explanation:
+- requiredParams: accepts array of string, it simply enables required attribute in parameter-input automatically
+- usePortOrSocket: if true, passing the value of portValue, addressValue, and socketValue props,
+  to parameter-input for handling special input field when editting server or listener.
+- portValue, socketValue, addressValue and parentForm are passed if a server is being
+  created or updated, this helps to facilitate special rules for port, socket and address parameter
+  If it is not a server being created but a listener, addressValue will be null.
+- isListener: if true, address input won't be required
+- changedParametersArr: accepts array, it contains changed parameter objects which will be updated by parent component
+  when get-changed-params event is emitted
 
-PROPS:
-- requiredParams: accepts array of string , it simply enables required attribute in parameter-input dynamically
-- usePortOrSocket: accepts boolean , if true, get portValue, addressValue, and socketValue, 
-  passing them to parameter-input for handling special input field when editting server or listener. 
-  If editing listener, addressValue will be null
-- isListener: accepts boolean , if true, address won't be required
+Emits:
+- $emit('get-changed-params', changedParams: Array)
+- $emit('handle-change', newItem: Object)
 */
 export default {
     name: 'parameter-input-container',
@@ -56,11 +56,9 @@ export default {
         item: { type: Object, required: true },
         parentForm: { type: Object },
         isListener: { type: Boolean, default: false },
-        createMode: { type: Boolean, default: false },
         usePortOrSocket: { type: Boolean, default: false },
         changedParametersArr: { type: Array, required: true },
         requiredParams: { type: Array, default: () => [] },
-        assignPortSocketDependencyValues: { type: Function, required: true },
         addressValue: { type: String },
         portValue: { type: Number },
         socketValue: { type: String },
@@ -75,38 +73,37 @@ export default {
             return this.usePortOrSocket && (id === 'port' || id === 'socket' || id === 'address')
         },
 
-        /**
-         * @param {Object} newItem Object item received from parameter-input {id:'', value:"", type:""}
+        /**This functions emits get-changed-params with new value for changedParametersArr.
+         * If changed is true, push, re-assign or splice to newItem then passing it in get-changed-params event
+         * Also emits handle-change with newItem
+         * @param {Object} newItem Object item received from parameter-input
          * @param {Boolean} changed Detect whether the input has been modified
-         * @return push or re-assign or splice newItem to changedParametersArr which be rendered in showConfirmDialog
-         * Also assigining value to component's data: portValue, socketValue, addressValue for
-         * validation in parameter-input
          */
         handleItemChange(newItem, changed) {
-            let clone = this.$help.lodash.cloneDeep(this.changedParametersArr)
+            let changedParams = this.$help.lodash.cloneDeep(this.changedParametersArr)
 
-            let targetIndex = clone.findIndex(o => {
+            let targetIndex = changedParams.findIndex(o => {
                 return newItem.nodeId !== undefined
                     ? o.nodeId == newItem.nodeId
                     : o.id === newItem.id
             })
 
             if (changed) {
-                // if item is not in the changedParametersArr list
+                // if newItem is not included in changedParametersArr
                 if (targetIndex === -1) {
-                    clone.push(newItem)
-                    this.$emit('handle-change', clone)
+                    changedParams.push(newItem)
+                    this.$emit('get-changed-params', changedParams)
                 } else {
-                    // if item is already in the array,eg: value of enum_mask param has changed
-                    clone[targetIndex] = newItem
+                    // if newItem is already included in changedParametersArr,eg: value of enum_mask param has changed
+                    changedParams[targetIndex] = newItem
 
-                    this.$emit('handle-change', clone)
+                    this.$emit('get-changed-params', changedParams)
                 }
             } else if (targetIndex > -1) {
-                clone.splice(targetIndex, 1)
-                this.$emit('handle-change', clone)
+                changedParams.splice(targetIndex, 1)
+                this.$emit('get-changed-params', changedParams)
             }
-            this.assignPortSocketDependencyValues(newItem.id, newItem.value)
+            this.$emit('handle-change', newItem)
         },
     },
 }
