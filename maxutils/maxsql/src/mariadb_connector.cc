@@ -29,8 +29,10 @@ using mxq::QueryResult;
 namespace
 {
 const char no_connection[] = "MySQL-connection is not open, cannot perform query.";
-const char query_failed[] = "Query '%s' failed: %s.";
-const char no_data[] = "Query '%s' did not return any data.";
+const char query_failed[] = "Query '%s' failed. Error %li: %s.";
+const char multiq_elem_failed[] = "Multiquery element '%s' failed. Error %li: %s.";
+const char no_data[] = "Query '%s' did not return any results.";
+const char multiq_elem_no_data[] = "Multiquery element '%s' did not return any results.";
 }
 
 namespace maxsql
@@ -152,8 +154,8 @@ bool MariaDB::cmd(const std::string& sql)
         }
         else
         {
-            m_errormsg = string_printf(query_failed, sql.c_str(), mysql_error(m_conn));
             m_errornum = mysql_errno(m_conn);
+            m_errormsg = string_printf(query_failed, sql.c_str(), m_errornum, mysql_error(m_conn));
         }
     }
     else
@@ -180,20 +182,20 @@ std::unique_ptr<mxq::QueryResult> MariaDB::query(const std::string& query)
             }
             else
             {
-                m_errormsg = mxb::string_printf(no_data, query.c_str());
                 m_errornum = USER_ERROR;
+                m_errormsg = mxb::string_printf(no_data, query.c_str());
             }
         }
         else
         {
-            m_errormsg = mxb::string_printf(query_failed, query.c_str(), mysql_error(m_conn));
             m_errornum = mysql_errno(m_conn);
+            m_errormsg = mxb::string_printf(query_failed, query.c_str(), m_errornum, mysql_error(m_conn));
         }
     }
     else
     {
-        m_errormsg = no_connection;
         m_errornum = USER_ERROR;
+        m_errormsg = no_connection;
     }
 
     return rval;
@@ -218,12 +220,33 @@ vector<unique_ptr<QueryResult>> MariaDB::multiquery(const vector<string>& querie
         string multiquery = mxb::create_list_string(queries, " ");
         if (mysql_query(m_conn, multiquery.c_str()) == 0)
         {
-            auto n_queries = queries.size();
+            const auto n_queries = queries.size();
             vector<unique_ptr<QueryResult>> results;
             results.reserve(n_queries);
 
-            // Fetch all resultsets...
+            string errormsg;
+            int64_t errornum = 0;
+
+            auto set_error_info = [this, &queries, &errornum, &errormsg](size_t query_ind) {
+                    auto errored_query = (query_ind < queries.size()) ? queries[query_ind].c_str() :
+                        "<unknown-query>";
+                    auto my_errornum = mysql_errno(m_conn);
+                    if (my_errornum)
+                    {
+                        errornum = my_errornum;
+                        errormsg = string_printf(multiq_elem_failed,
+                                                 errored_query, errornum, mysql_error(m_conn));
+                    }
+                    else
+                    {
+                        errornum = USER_ERROR;
+                        errormsg = string_printf(multiq_elem_no_data, errored_query);
+                    }
+                };
+
             bool more_data = true;
+            size_t query_ind = 0;
+            // Fetch all resultsets. Check that all individual queries succeed and return valid results.
             while (more_data)
             {
                 std::unique_ptr<QueryResult> new_elem;
@@ -232,26 +255,22 @@ vector<unique_ptr<QueryResult>> MariaDB::multiquery(const vector<string>& querie
                 {
                     new_elem = std::make_unique<mxq::MariaDBQueryResult>(result);
                 }
-                results.push_back(move(new_elem));
-                more_data = (mysql_next_result(m_conn) == 0);
-            }
-
-            // and check they all returned results.
-            string errormsg;
-            int errornum = 0;
-            for (size_t i = 0; i < results.size(); i++)
-            {
-                if (results[i] == nullptr)
+                else if (!errornum)
                 {
-                    auto errored_query = (i < n_queries) ? queries[i].c_str() : "<unknown-query>";
-                    errormsg = string_printf("Multiquery element '%s' did not return any data.",
-                                             errored_query);
-                    errornum = USER_ERROR;
-                    break;
+                    set_error_info(query_ind);
+                }
+                results.push_back(move(new_elem));
+                query_ind++;
+
+                more_data = (mysql_next_result(m_conn) == 0);
+                if (!more_data && results.size() < n_queries && !errornum)
+                {
+                    // Not enough results.
+                    set_error_info(query_ind);
                 }
             }
 
-            if (errormsg.empty())
+            if (!errornum)
             {
                 if (results.size() == n_queries)
                 {
@@ -262,28 +281,28 @@ vector<unique_ptr<QueryResult>> MariaDB::multiquery(const vector<string>& querie
                 else
                 {
                     // If received wrong number of results, return nothing.
+                    m_errornum = USER_ERROR;
                     m_errormsg = string_printf("Wrong number of resultsets to multiquery '%s'. Got %zi, "
                                                "expected %zi.",
                                                multiquery.c_str(), results.size(), n_queries);
-                    m_errornum = USER_ERROR;
                 }
             }
             else
             {
-                m_errormsg = errormsg;
                 m_errornum = errornum;
+                m_errormsg = errormsg;
             }
         }
         else
         {
-            m_errormsg = string_printf(query_failed, multiquery.c_str(), mysql_error(m_conn));
             m_errornum = mysql_errno(m_conn);
+            m_errormsg = string_printf(query_failed, multiquery.c_str(), m_errornum, mysql_error(m_conn));
         }
     }
     else
     {
-        m_errormsg = no_connection;
         m_errornum = USER_ERROR;
+        m_errormsg = no_connection;
     }
     return rval;
 }
