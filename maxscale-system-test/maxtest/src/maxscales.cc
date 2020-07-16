@@ -2,10 +2,16 @@
 #include <string>
 #include <maxbase/string.hh>
 #include <maxtest/envv.hh>
+#include <maxtest/testconnections.hh>
+#include <maxbase/format.hh>
+#include <maxbase/jansson.h>
+#include <maxtest/json.hh>
 
 #define DEFAULT_MAXSCALE_CNF "/etc/maxscale.cnf"
 #define DEFAULT_MAXSCALE_LOG_DIR "/var/log/maxscale/"
 #define DEFAULT_MAXSCALE_BINLOG_DIR "/var/lib/maxscale/Binlog_Service/"
+
+using std::string;
 
 Maxscales::Maxscales(const char* pref,
                      const char* test_cwd,
@@ -322,4 +328,163 @@ void Maxscales::wait_for_monitor(int intervals, int m)
     ssh_node_f(m, false,
                "for ((i=0;i<%d;i++)); do maxctrl api get maxscale/debug/monitor_wait; done",
                intervals);
+}
+
+void MaxScale::wait_monitor_ticks(int ticks)
+{
+    for (int i = 0; i < ticks; i++)
+    {
+        auto res = curl_rest_api("maxscale/debug/monitor_wait");
+        if (res.rc)
+        {
+            m_tester.expect(false, "Monitor wait failed. Error %i, %s", res.rc, res.output.c_str());
+            break;
+        }
+    }
+}
+
+Nodes::SshResult MaxScale::curl_rest_api(const std::string& path)
+{
+    string cmd = mxb::string_printf("curl --silent --show-error http://%s:%s@%s:%s/v1/%s",
+        m_rest_user.c_str(), m_rest_pw.c_str(), m_rest_ip.c_str(), m_rest_port.c_str(), path.c_str());
+    auto res = m_tester.maxscales->ssh_output(cmd, m_node_ind, true);
+    return res;
+}
+
+MaxScale::MaxScale(TestConnections& tester, int node_ind)
+    : m_tester(tester)
+    , m_node_ind(node_ind)
+{
+}
+
+ServersInfo MaxScale::get_servers()
+{
+    ServersInfo rval;
+    auto res = curl_rest_api("servers");
+    if (res.rc == 0)
+    {
+        Json all;
+        if (all.load_string(res.output))
+        {
+            auto data = all.get_array_elems("data");
+            for (auto& elem : data)
+            {
+                ServerInfo info;
+                info.name = elem.get_string("id");
+                auto attr = elem.get_object("attributes");
+                string state = attr.get_string("state");
+                info.status_from_string(state);
+                rval.add(info);
+            }
+        }
+        else
+        {
+            m_tester.add_failure("Invalid data from REST-API servers query: %s", all.error_msg().c_str());
+        }
+    }
+    else
+    {
+        m_tester.add_failure("REST-API servers query failed. Error %i, %s", res.rc, mxb_strerror(res.rc));
+    }
+    return rval;
+}
+
+void ServersInfo::add(const ServerInfo& info)
+{
+     m_servers.push_back(info);
+}
+
+const ServerInfo& ServersInfo::get(size_t i)
+{
+    return m_servers[i];
+}
+
+size_t ServersInfo::size() const
+{
+    return m_servers.size();
+}
+
+void MaxScale::check_servers_status(std::vector<uint> expected_status)
+{
+    auto data = get_servers();
+
+    // Checking only some of the servers is ok.
+    auto n_expected = expected_status.size();
+    if (n_expected <= data.size())
+    {
+        for (size_t i = 0; i < n_expected; i++)
+        {
+            uint expected = expected_status[i];
+            auto& info = data.get(i);
+            uint found = info.status;
+            if (expected != found)
+            {
+                string found_str = info.status_to_string();
+                string expected_str = ServerInfo::status_to_string(expected);
+                m_tester.add_failure("Wrong status for %s. Got '%s', expected '%s'.",
+                                     info.name.c_str(), found_str.c_str(), expected_str.c_str());
+            }
+        }
+    }
+    else
+    {
+        m_tester.add_failure("Expected at least %zu servers, found %zu.", n_expected, data.size());
+    }
+}
+
+void ServerInfo::status_from_string(const string& source)
+{
+    auto flags = mxb::strtok(source, ",");
+    for (string& flag : flags)
+    {
+        mxb::trim(flag);
+        if (flag == "Running")
+        {
+            status |= RUNNING;
+        }
+        else if (flag == "Master")
+        {
+            status |= MASTER;
+        }
+        else if (flag == "Slave")
+        {
+            status |= SLAVE;
+        }
+        else if (flag == "Relay Master")
+        {
+            status |= RELAY;
+        }
+    }
+}
+
+std::string ServerInfo::status_to_string(uint status)
+{
+    std::string rval;
+    if (status)
+    {
+        std::vector<string> items;
+        if (status & MASTER)
+        {
+            items.push_back("Master");
+        }
+        if (status & SLAVE)
+        {
+            items.push_back("Slave");
+        }
+        if (status & RUNNING)
+        {
+            items.push_back("Running");
+        }
+        if (status & RELAY)
+        {
+            items.push_back("Relay Master");
+        }
+        rval = mxb::create_list_string(items);
+    }
+    return rval;
+}
+
+std::string ServerInfo::status_to_string() const
+{
+    return status_to_string(status);
 }

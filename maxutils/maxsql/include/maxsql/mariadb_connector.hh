@@ -113,9 +113,9 @@ public:
 private:
     void clear_errors();
 
-    st_mysql*    m_conn {nullptr};
-    std::string  m_errormsg;
-    unsigned int m_errornum {0};
+    st_mysql*   m_conn {nullptr};
+    std::string m_errormsg;
+    int64_t     m_errornum {0};
 
     ConnectionSettings m_settings;
 };

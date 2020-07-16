@@ -1,22 +1,20 @@
 <template>
-    <!-- rendered if usePortOrSocket -->
     <parameter-input
-        v-if="handleShowSpecialInputs(item.id)"
+        v-if="handleShowSpecialInputs"
         :parentForm="parentForm"
         :item="item"
         :portValue="portValue"
         :socketValue="socketValue"
-        :addressValue="addressValue"
         :isListener="isListener"
         @on-input-change="handleItemChange"
     />
     <parameter-input
-        v-else-if="requiredParams.includes(item.id)"
+        v-else
         :item="item"
-        required
+        :isListener="isListener"
+        :required="requiredParams.includes(item.id)"
         @on-input-change="handleItemChange"
     />
-    <parameter-input v-else :item="item" @on-input-change="handleItemChange" />
 </template>
 
 <script>
@@ -37,11 +35,10 @@
 This component render item object to input, it's a container component for parameter-input
 PROPS explanation:
 - requiredParams: accepts array of string, it simply enables required attribute in parameter-input automatically
-- usePortOrSocket: if true, passing the value of portValue, addressValue, and socketValue props,
+- usePortOrSocket: if true, passing the value of portValue, socketValue props,
   to parameter-input for handling special input field when editting server or listener.
-- portValue, socketValue, addressValue and parentForm are passed if a server is being
+- portValue, socketValue and parentForm are passed if a server or listener is being
   created or updated, this helps to facilitate special rules for port, socket and address parameter
-  If it is not a server being created but a listener, addressValue will be null.
 - isListener: if true, address input won't be required
 - changedParametersArr: accepts array, it contains changed parameter objects which will be updated by parent component
   when get-changed-params event is emitted
@@ -59,20 +56,19 @@ export default {
         usePortOrSocket: { type: Boolean, default: false },
         changedParametersArr: { type: Array, required: true },
         requiredParams: { type: Array, default: () => [] },
-        addressValue: { type: String },
         portValue: { type: Number },
         socketValue: { type: String },
     },
-
-    methods: {
+    computed: {
         /**
-         * @param {String} id id of parameter
          * @return {Boolean} true if usePortOrSocket is true and id matches requirements
          */
-        handleShowSpecialInputs(id) {
-            return this.usePortOrSocket && (id === 'port' || id === 'socket' || id === 'address')
+        handleShowSpecialInputs: function() {
+            let params = ['port', 'socket', 'address']
+            return this.usePortOrSocket && params.includes(this.item.id)
         },
-
+    },
+    methods: {
         /**This functions emits get-changed-params with new value for changedParametersArr.
          * If changed is true, push, re-assign or splice to newItem then passing it in get-changed-params event
          * Also emits handle-change with newItem
@@ -100,6 +96,7 @@ export default {
                     this.$emit('get-changed-params', changedParams)
                 }
             } else if (targetIndex > -1) {
+                // remove item from changedParams at targetIndex
                 changedParams.splice(targetIndex, 1)
                 this.$emit('get-changed-params', changedParams)
             }

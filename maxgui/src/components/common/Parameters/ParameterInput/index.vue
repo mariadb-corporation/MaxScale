@@ -82,6 +82,7 @@
         dense
         :multiple="targetItem.type === 'enum_mask'"
         :disabled="targetItem.disabled"
+        :rules="rules.required"
         @change="handleChange"
     >
         <template v-if="targetItem.type === 'enum_mask'" v-slot:selection="{ item, index }">
@@ -195,10 +196,9 @@
 /*
 This component accepts these optional props:
 - required: input becomes required and shows error message if value is empty after validating
-- portValue, socketValue, addressValue and parentForm are passed if a server is being
+- portValue, socketValue and parentForm are passed if a server is being
   created or updated, this helps to facilitate special rules for port, socket and address parameter
-  If it is not a server being created but a listener, addressValue will be null.
-- isListener: accepts boolean , if true, address input won't be required
+- isListener: accepts boolean , if true, address parameter will not be required
 
 Emits:
 - $emit('on-input-change', { targetItemCloned: object, changed: boolean })
@@ -210,7 +210,6 @@ export default {
         required: { type: Boolean, default: false },
         portValue: { type: Number },
         socketValue: { type: String },
-        addressValue: { type: String },
         parentForm: { type: Object },
         isListener: { type: Boolean, default: false },
     },
@@ -429,7 +428,10 @@ export default {
         // ---------------------------------------------------- input validation ---------------------------------------
         validateNumber(val) {
             const isEmptyVal = this.isEmpty(val)
-
+            // required param validation
+            let customRequired = this.required && isEmptyVal
+            let moduleParamRequired = isEmptyVal && this.targetItem.mandatory
+            // type validation
             const intType = this.targetItem.type === 'int'
             const naturalType =
                 this.targetItem.type === 'count' || this.targetItem.type === 'duration'
@@ -437,7 +439,7 @@ export default {
             const isValidInt = /^[-]?\d*$/g.test(val)
             const isValidNaturalNum = /^\d*$/g.test(val)
 
-            if (this.required && isEmptyVal) {
+            if (customRequired || moduleParamRequired) {
                 return this.$t('errors.requiredInput', { inputName: this.targetItem.id })
             } else if ((intType && !isValidInt && !isEmptyVal) || val === '-') {
                 return this.$t('errors.nonInteger')
@@ -448,7 +450,10 @@ export default {
         },
 
         handleRequired(val) {
-            if (this.isEmpty(val) && this.required) {
+            // required param validation
+            let customRequired = this.isEmpty(val) && this.required
+            let moduleParamRequired = this.isEmpty(val) && this.targetItem.mandatory
+            if (customRequired || moduleParamRequired) {
                 return this.$t('errors.requiredInput', { inputName: this.targetItem.id })
             }
             return true

@@ -599,6 +599,8 @@ static json_t* module_param_to_json(const MXS_MODULE_PARAM& param)
         json_object_set_new(p, "default_value", json_string(param.default_value));
     }
 
+    json_object_set_new(p, "mandatory", json_boolean(param.options & MXS_MODULE_OPT_REQUIRED));
+
     if (param.type == MXS_MODULE_PARAM_ENUM && param.accepted_values)
     {
         json_t* arr = json_array();

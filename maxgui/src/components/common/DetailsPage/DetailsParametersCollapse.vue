@@ -40,7 +40,6 @@
                             :changedParametersArr="changedParametersArr"
                             :portValue="portValue"
                             :socketValue="socketValue"
-                            :addressValue="addressValue"
                             @get-changed-params="changedParametersArr = $event"
                             @handle-change="assignPortSocketDependencyValues"
                         />
@@ -124,10 +123,9 @@ This component allows to read parameters and edit parameters. It means to be use
 
 PROPS:
 - requiredParams: accepts array of string , it simply enables required attribute in parameter-input dynamically
-- usePortOrSocket: accepts boolean , if true, get portValue, addressValue, and socketValue,
+- usePortOrSocket: accepts boolean , if true, get portValue, and socketValue,
   passing them to parameter-input for handling special input field when editting server or listener.
-  If editing listener, addressValue will be null
-- isListener: accepts boolean , if true, address won't be required
+  If editing listener, address parameter won't be required
  */
 
 export default {
@@ -167,7 +165,6 @@ export default {
             changedParametersArr: [],
             showConfirmDialog: false,
 
-            addressValue: null,
             portValue: null,
             socketValue: null,
 
@@ -256,13 +253,21 @@ export default {
             const moduleParam = moduleParameters.find(param => param.name === resourceParamId)
 
             if (moduleParam) {
-                const { type, description, default_value, unit, enum_values } = moduleParam
+                const {
+                    mandatory = false,
+                    type,
+                    description,
+                    default_value,
+                    unit,
+                    enum_values,
+                } = moduleParam
 
                 // assign
                 type !== undefined && (resourceParam.type = type)
                 description !== undefined && (resourceParam.description = description)
                 unit !== undefined && (resourceParam.unit = unit)
                 default_value !== undefined && (resourceParam.default_value = default_value)
+                resourceParam.mandatory = mandatory
 
                 const hasModifiable = 'modifiable' in moduleParam
                 if (hasModifiable && !moduleParam.modifiable) {
@@ -282,7 +287,7 @@ export default {
         },
 
         /**
-         * This function helps to assign value to component's data: portValue, socketValue, addressValue
+         * This function helps to assign value to component's data: portValue, socketValue
          * @param {Object} parameter object
          */
         assignPortSocketDependencyValues(parameter) {
@@ -294,9 +299,6 @@ export default {
                         break
                     case 'socket':
                         this.socketValue = value
-                        break
-                    case 'address':
-                        this.addressValue = value
                         break
                 }
             }

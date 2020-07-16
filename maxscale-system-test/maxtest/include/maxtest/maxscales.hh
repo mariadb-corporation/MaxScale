@@ -353,3 +353,77 @@ public:
     int valgring_log_num;
 
 };
+
+class TestConnections;
+
+/**
+ * Contains information about one server as seen by MaxScale.
+ */
+struct ServerInfo
+{
+    static constexpr uint RUNNING = (1 << 0);
+    static constexpr uint MASTER = (1 << 1);
+    static constexpr uint SLAVE = (1 << 2);
+    static constexpr uint RELAY = (1 << 3);
+
+    static std::string status_to_string(uint status);
+    std::string        status_to_string() const;
+
+    void status_from_string(const std::string& source);
+
+    std::string name;       /**< Server name */
+    uint        status {0}; /**< Status bitfield */
+};
+
+/**
+ * Contains information about multiple servers as seen by MaxScale.
+ */
+class ServersInfo
+{
+public:
+    void add(const ServerInfo& info);
+    const ServerInfo& get(size_t i);
+    size_t size() const;
+
+private:
+    std::vector<ServerInfo> m_servers;
+};
+
+class MaxScale
+{
+public:
+    MaxScale(TestConnections& tester, int node_ind);
+
+    /**
+     * Wait for monitors to tick.
+     *
+     * @param ticks The number of monitor ticks to wait
+     */
+    void wait_monitor_ticks(int ticks = 1);
+
+    /**
+     * Get servers info.
+     *
+     * @return Server info object
+     */
+    ServersInfo get_servers();
+
+    /**
+     * Check that server status is as expected. Increments global error counter if differences found.
+     *
+     * @param expected_status Expected server statuses. Each status should be a bitfield of values defined
+     * in the ServerInfo-class.
+     */
+    void check_servers_status(std::vector<uint> expected_status);
+
+private:
+    TestConnections& m_tester;    /**< Main tester object */
+    int m_node_ind {-1};          /**< Node index of this MaxScale */
+
+    std::string m_rest_user {"admin"};
+    std::string m_rest_pw {"mariadb"};
+    std::string m_rest_ip {"127.0.0.1"};
+    std::string m_rest_port {"8989"};
+
+    Nodes::SshResult curl_rest_api(const std::string& path);
+};
