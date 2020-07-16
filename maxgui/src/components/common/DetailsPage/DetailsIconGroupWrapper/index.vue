@@ -21,6 +21,7 @@
  */
 
 export default {
+    name: 'details-icon-group-wrapper',
     props: {
         multiIcons: { type: Boolean, default: false },
     },
