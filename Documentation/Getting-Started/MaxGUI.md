@@ -95,10 +95,3 @@ navigation.
 The global search input located next to the _+ Create New_ button can be
 used for searching for keywords in tables.
 
-# Limitations
-
-Resources that depend upon a module - i.e. filters, services, monitors and
-listeners -  can only be created using a module that already has been
-loaded by MaxScale. For instance, if no filter module has been loaded by
-MaxScale, then it will not be possible to create a filter via MaxGUI.
-This limitation will be removed before the GA release.

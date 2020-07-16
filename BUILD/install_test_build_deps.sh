@@ -11,6 +11,7 @@ command -v apt-get
 if [ $? == 0 ]
 then
   # DEB-based distro
+  export DEBIAN_FRONTEND=noninteractive
   install_libdir=/usr/lib
   source /etc/os-release
   echo "deb http://mirror.netinch.com/pub/mariadb/repo/10.3/ubuntu/ ${UBUNTU_CODENAME} main" > mariadb.list
