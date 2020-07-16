@@ -98,7 +98,7 @@ export default {
                 )
                 const {
                     attributes: {
-                        monitor_diagnostics: { server_info },
+                        monitor_diagnostics: { server_info = [] },
                     },
                 } = res.data.data
 
