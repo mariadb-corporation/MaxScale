@@ -15,10 +15,9 @@
 
 #include <set>
 #include <maxbase/pam_utils.hh>
-#include <maxscale/event.hh>
-#include "pam_instance.hh"
 #include <maxscale/protocol/mariadb/protocol_classes.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
+#include "pam_instance.hh"
 
 using maxscale::Buffer;
 using std::string;
@@ -27,22 +26,24 @@ using mariadb::UserEntry;
 
 namespace
 {
+
 /**
- * @brief Read the client's password, store it to MySQL-session
+ * Read the client's password, store it to buffer.
  *
  * @param buffer Buffer containing the password
- * @return True on success, false if memory allocation failed
+ * @param output Password output
+ * @return True on success, false if packet didn't have a valid header
  */
-bool store_client_password(MYSQL_session* session, GWBUF* buffer)
+bool store_client_password(GWBUF* buffer, mariadb::ClientAuthenticator::ByteVec* output)
 {
     bool rval = false;
     uint8_t header[MYSQL_HEADER_LEN];
 
     if (gwbuf_copy_data(buffer, 0, MYSQL_HEADER_LEN, header) == MYSQL_HEADER_LEN)
     {
-        size_t plen = gw_mysql_get_byte3(header);
-        session->auth_token.resize(plen);
-        gwbuf_copy_data(buffer, MYSQL_HEADER_LEN, plen, session->auth_token.data());
+        size_t plen = mariadb::get_byte3(header);
+        output->resize(plen);
+        gwbuf_copy_data(buffer, MYSQL_HEADER_LEN, plen, output->data());
         rval = true;
     }
     return rval;
@@ -120,8 +121,27 @@ PamClientAuthenticator::exchange(GWBUF* buffer, MYSQL_session* session, mxs::Buf
         break;
 
     case State::ASKED_FOR_PW:
-        // Client should have responses with password.
-        if (store_client_password(session, buffer))
+        // Client should have responded with password.
+        if (store_client_password(buffer, &session->auth_token))
+        {
+            if (m_mode == AuthMode::PW)
+            {
+                m_state = State::PW_RECEIVED;
+                rval = ExchRes::READY;
+            }
+            else
+            {
+                // Generate prompt for 2FA.
+                Buffer prompt = create_2fa_prompt_packet();
+                *output_packet = std::move(prompt);
+                m_state = State::ASKED_FOR_2FA;
+                rval = ExchRes::INCOMPLETE;
+            }
+        }
+        break;
+
+    case State::ASKED_FOR_2FA:
+        if (store_client_password(buffer, &session->auth_token_phase2))
         {
             m_state = State::PW_RECEIVED;
             rval = ExchRes::READY;
@@ -153,7 +173,19 @@ AuthRes PamClientAuthenticator::authenticate(const UserEntry* entry, MYSQL_sessi
     // The server PAM plugin uses "mysql" as the default service when authenticating
     // a user with no service.
     string pam_service = entry->auth_string.empty() ? "mysql" : entry->auth_string;
-    AuthResult res = mxb::pam::authenticate(username, password, session->remote, pam_service, PASSWORD);
+    AuthResult res;
+    if (m_mode == AuthMode::PW)
+    {
+        res = mxb::pam::authenticate(username, password, session->remote, pam_service, PASSWORD);
+    }
+    else
+    {
+        mxb::pam::UserData user = {username, session->remote};
+        mxb::pam::PwdData pwds = {password};
+        pwds.two_fa_code.assign((char*)session->auth_token_phase2.data(), session->auth_token_phase2.size());
+        res = mxb::pam::authenticate(AuthMode::PW_2FA, user, pwds, pam_service, {"", ""});
+    }
+
     if (res.type == AuthResult::Result::SUCCESS)
     {
         rval.status = AuthRes::Status::SUCCESS;
@@ -171,7 +203,28 @@ AuthRes PamClientAuthenticator::authenticate(const UserEntry* entry, MYSQL_sessi
     return rval;
 }
 
-PamClientAuthenticator::PamClientAuthenticator(bool cleartext_plugin)
+PamClientAuthenticator::PamClientAuthenticator(bool cleartext_plugin, AuthMode mode)
     : m_cleartext_plugin(cleartext_plugin)
+    , m_mode(mode)
 {
+}
+
+Buffer PamClientAuthenticator::create_2fa_prompt_packet() const
+{
+    /**
+     * 4 bytes     - Header
+     * byte        - Message type
+     * string[EOF] - Message
+     */
+    size_t plen = 1 + TWO_FA.length();
+    size_t buflen = MYSQL_HEADER_LEN + plen;
+    uint8_t bufdata[buflen];
+    uint8_t* pData = bufdata;
+    mariadb::set_byte3(pData, plen);
+    pData += 3;
+    *pData++ = m_sequence;
+    *pData++ = DIALOG_ECHO_DISABLED;                // Equivalent to server
+    memcpy(pData, TWO_FA.c_str(), TWO_FA.length()); // 2FA prompt
+    Buffer buffer(bufdata, buflen);
+    return buffer;
 }

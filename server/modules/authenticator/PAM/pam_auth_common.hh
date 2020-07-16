@@ -25,7 +25,7 @@ extern const int DIALOG_SIZE;       /* The total storage required */
 extern const std::string CLEAR_PW;  /* Alternative plugin */
 extern const int CLEAR_PW_SIZE;
 extern const std::string PASSWORD;      /* First query from server */
-
+extern const std::string TWO_FA;
 
 /* Magic numbers from server source
  * https://github.com/MariaDB/server/blob/10.2/plugin/auth_pam/auth_pam.c */
