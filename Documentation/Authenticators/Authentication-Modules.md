@@ -55,7 +55,12 @@ should also have the *SHOW DATABASES*-grant.
 
 ```
 CREATE USER 'maxscale'@'maxscalehost' IDENTIFIED BY 'maxscale-password';
-GRANT SELECT ON mysql.* TO 'maxscale'@'maxscalehost';
+GRANT SELECT ON mysql.user TO 'maxscale'@'maxscalehost';
+GRANT SELECT ON mysql.db TO 'maxscale'@'maxscalehost';
+GRANT SELECT ON mysql.tables_priv TO 'maxscale'@'maxscalehost';
+GRANT SELECT ON mysql.columns_priv TO 'maxscale'@'maxscalehost';
+GRANT SELECT ON mysql.proxies_priv TO 'maxscale'@'maxscalehost';
+GRANT SELECT ON mysql.roles_mapping TO 'maxscale'@'maxscalehost';
 GRANT SHOW DATABASES ON *.* TO 'maxscale'@'maxscalehost';
 ```
 
