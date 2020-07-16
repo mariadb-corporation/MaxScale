@@ -1,5 +1,5 @@
 <template>
-    <div :class="['d-flex flex-column detail-overview', cardWrapper]">
+    <div :class="['d-flex flex-column detail-overview', wrapperClass]">
         <p class="body-2 mb-3 text-uppercase color font-weight-bold text-navigation">
             <slot name="title">
                 <span :style="{ visibility: 'hidden' }">hidden</span>
@@ -40,10 +40,10 @@
  * Public License.
  */
 export default {
+    name: 'outlined-overview-card',
     props: {
         tile: { type: Boolean, default: true }, //Removes the component's border-radius.
-        cardWrapper: String,
-        cardStyle: Object,
+        wrapperClass: String,
         cardClass: String,
         hoverableCard: { type: Boolean, default: false },
     },
