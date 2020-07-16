@@ -47,7 +47,8 @@ def update_change_date_in_file(changedate, filename):
             while line:
                 match=recd.search(line)
                 if match:
-                    if line_number <= line_threshold:
+                    # Some MaxGui files (namely Vue templates) are forced to have the license blurb after actual code.
+                    if line_number <= line_threshold or filename.endswith('.vue'):
                         # 14 is the length of the pattern up until ".*", that is, we pick of the line
                         # up until the current change date.
                         line=line[0:match.span()[0] + 14] + changedate + "\n"
