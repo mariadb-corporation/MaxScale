@@ -1,4 +1,4 @@
-# MariaDB MaxScale 2.5.1 Release Notes
+# MariaDB MaxScale 2.5.1 Release Notes -- 2020-07-16
 
 Release 2.5.1 is a GA release.
 
@@ -11,7 +11,8 @@ report on [our Jira](https://jira.mariadb.org/projects/MXS).
 ## New Features
 
 * [MXS-3015](https://jira.mariadb.org/browse/MXS-3015) Sort attribute lists returned by maxctrl alphabetically
-
+* MaxGUI can now be accessed in a testing mode without configuring SSL.
+  For more information, please refer to the [MaxGUI](../Getting-Started/MaxGUI.md) document.
 ## Bug fixes
 
 * [MXS-3072](https://jira.mariadb.org/browse/MXS-3072) Failed to query server 'server1' for user account info. Wrong number of resultsets to multiquery
