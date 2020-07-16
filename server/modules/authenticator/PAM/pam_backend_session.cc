@@ -15,23 +15,26 @@
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/protocol/mariadb/protocol_classes.hh>
 
+using std::string;
+
 /**
  * Parse prompt type and message text from packet data. Advances pointer.
  *
  * @param data Data from server. The pointer is advanced.
  * @return True if all expected fields were parsed
  */
-bool PamBackendAuthenticator::parse_password_prompt(mariadb::ByteVec& data)
+PamBackendAuthenticator::PromptType
+PamBackendAuthenticator::parse_password_prompt(mariadb::ByteVec& data)
 {
     if (data.size() < 2)    // Need at least message type + message
     {
-        return false;
+        return PromptType::FAIL;
     }
 
     data.push_back('\0');   // Simplifies parsing by ensuring 0-termination.
     const uint8_t* ptr = data.data();
     const char* server_name = m_shared_data.servername;
-    bool success = false;
+    auto pw_type = PromptType::FAIL;
     int msg_type = *ptr++;
     if (msg_type == DIALOG_ECHO_ENABLED || msg_type == DIALOG_ECHO_DISABLED)
     {
@@ -52,14 +55,23 @@ bool PamBackendAuthenticator::parse_password_prompt(mariadb::ByteVec& data)
             prompt = messages;      // No additional messages.
         }
 
-        if (prompt == PASSWORD)
+        // If using normal password-only authentication, expect the server to only ask for "Password: ".
+        if (m_mode == AuthMode::PW)
         {
-            success = true;
+            if (prompt == PASSWORD)
+            {
+                pw_type = PromptType::PASSWORD;
+            }
+            else
+            {
+                MXB_ERROR("'%s' asked for '%s' when authenticating %s. '%s' was expected.",
+                          server_name, prompt, m_clienthost.c_str(), PASSWORD.c_str());
+            }
         }
         else
         {
-            MXB_ERROR("'%s' asked for '%s' when authenticating %s. '%s' was expected.",
-                      server_name, prompt, m_clienthost.c_str(), PASSWORD.c_str());
+            // In two-factor mode, any prompt other than "Password: " is assumed to ask for the 2FA-code.
+            pw_type = (prompt == PASSWORD) ? PromptType::PASSWORD : PromptType::TWO_FA;
         }
     }
     else
@@ -67,7 +79,7 @@ bool PamBackendAuthenticator::parse_password_prompt(mariadb::ByteVec& data)
         MXB_ERROR("'%s' sent an unknown message type %i when authenticating %s.",
                   server_name, msg_type, m_clienthost.c_str());
     }
-    return success;
+    return pw_type;
 }
 
 /**
@@ -75,10 +87,12 @@ bool PamBackendAuthenticator::parse_password_prompt(mariadb::ByteVec& data)
  *
  * @return Packet with password
  */
-mxs::Buffer PamBackendAuthenticator::generate_pw_packet() const
+mxs::Buffer PamBackendAuthenticator::generate_pw_packet(PromptType pw_type) const
 {
-    const auto& auth_token = m_shared_data.client_data->auth_token;     // Contains the pw from client.
-    auto auth_token_len = auth_token.size();
+    const auto& source = (pw_type == PromptType::PASSWORD) ? m_shared_data.client_data->auth_token :
+        m_shared_data.client_data->auth_token_phase2;
+
+    auto auth_token_len = source.size();
     size_t buflen = MYSQL_HEADER_LEN + auth_token_len;
     mxs::Buffer rval(buflen);
     auto* ptr = rval.data();
@@ -87,7 +101,7 @@ mxs::Buffer PamBackendAuthenticator::generate_pw_packet() const
     *ptr++ = m_sequence;
     if (auth_token_len > 0)
     {
-        memcpy(ptr, auth_token.data(), auth_token_len);
+        memcpy(ptr, source.data(), auth_token_len);
     }
     return rval;
 }
@@ -148,21 +162,25 @@ PamBackendAuthenticator::exchange(const mxs::Buffer& input, mxs::Buffer* output)
                     if (parse_res.plugin_data.empty())
                     {
                         // Just the AuthSwitchRequest, this is ok. The server now expects a password.
-                        *output = generate_pw_packet();
+                        *output = generate_pw_packet(PromptType::PASSWORD);
                         m_state = State::EXCHANGING;
                         rval = AuthRes::SUCCESS;
                     }
-                    else if (parse_password_prompt(parse_res.plugin_data))
+                    else
                     {
-                        // Got a password prompt, send answer.
-                        *output = generate_pw_packet();
-                        m_state = State::EXCHANGING;
-                        rval = AuthRes::SUCCESS;
+                        auto pw_type = parse_password_prompt(parse_res.plugin_data);
+                        if (pw_type != PromptType::FAIL)
+                        {
+                            // Got a password prompt, send answer.
+                            *output = generate_pw_packet(pw_type);
+                            m_state = State::EXCHANGING;
+                            rval = AuthRes::SUCCESS;
+                        }
                     }
                 }
                 else if (parse_res.plugin_name == CLEAR_PW)
                 {
-                    *output = generate_pw_packet();
+                    *output = generate_pw_packet(PromptType::PASSWORD);
                     m_state = State::EXCHANGE_DONE;     // Server should not ask for anything else.
                     rval = AuthRes::SUCCESS;
                 }
@@ -185,17 +203,17 @@ PamBackendAuthenticator::exchange(const mxs::Buffer& input, mxs::Buffer* output)
 
     case State::EXCHANGING:
         {
-            // The packet may contain another prompt, try parse it. Currently, it's expected to be
-            // another "Password: ". In the future other setups may be supported.
+            // The packet may contain another prompt, try parse it.
             mariadb::ByteVec data;
             data.reserve(input.length());   // reserve some extra to ensure no further allocations needed.
-            int datalen = input.length() - MYSQL_HEADER_LEN;
+            size_t datalen = input.length() - MYSQL_HEADER_LEN;
             data.resize(datalen);
             gwbuf_copy_data(input.get(), MYSQL_HEADER_LEN, datalen, data.data());
 
-            if (parse_password_prompt(data))
+            auto pw_type = parse_password_prompt(data);
+            if (pw_type != PromptType::FAIL)
             {
-                *output = generate_pw_packet();
+                *output = generate_pw_packet(pw_type);
                 rval = AuthRes::SUCCESS;
             }
         }
@@ -220,8 +238,9 @@ PamBackendAuthenticator::exchange(const mxs::Buffer& input, mxs::Buffer* output)
     return rval;
 }
 
-PamBackendAuthenticator::PamBackendAuthenticator(mariadb::BackendAuthData& shared_data)
+PamBackendAuthenticator::PamBackendAuthenticator(mariadb::BackendAuthData& shared_data, AuthMode mode)
     : m_shared_data(shared_data)
     , m_clienthost(shared_data.client_data->user_and_host())
+    , m_mode(mode)
 {
 }
