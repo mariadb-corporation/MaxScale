@@ -498,6 +498,11 @@ failure of a master node without any visible effects to the client.
 If no replacement node becomes available before the timeout controlled by
 `delayed_retry_timeout` is exceeded, the client connection is closed.
 
+Please refer to the
+[Transaction Replay Limitations](#transaction-replay-limitations) section for
+a more detailed explanation of what should and should not be done with
+transaction replay.
+
 ### `transaction_replay_max_size`
 
 The limit on transaction size for transaction replay in bytes. Any transaction
@@ -869,6 +874,27 @@ If the results from the replacement server are not identical when the
 transaction is replayed, the client connection is closed. This means that any
 transaction with a server specific result (e.g. `NOW()`, `@@server_id`) cannot
 be replayed successfully but it will still be attempted.
+
+If a transaction reads data before updating it, the rows should be locked by
+using `SELECT ... FOR UPDATE`. This will prevent overlapping transactions when
+multiple transactions are being replayed that modify the same set of rows.
+
+If the connection to the server where the transaction is being executed is lost
+when the final `COMMIT` is being executed, there is a possibility for duplicate
+transaction execution in certain cases. This can happen if the transaction
+consists of the following statement types:
+
+* INSERT of rows into a table that does not have an auto-increment primary key
+* A "blind update" of one or more rows e.g. `UPDATE t SET c = c + 1 WHERE id = 123`
+* A "blind delete" e.g. `DELETE FROM t LIMIT 100`
+
+This is not an exhaustive list and any operations that do not check the row
+contents before performing the operation on them might face this problem.
+
+In all cases the problem of duplicate transaction execution can be avoided by
+including a `SELECT ... FOR UPDATE` in the statement. This will guarantee that
+in the case that the transaction fails when it is being committed, the row is
+only modified if it matches the expected contents.
 
 Any changes to the session state (e.g. autocommit state, SQL mode) done inside a
 transaction will remain in effect even if the connection to the server where the
