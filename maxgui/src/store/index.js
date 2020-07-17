@@ -40,6 +40,7 @@ export default new Vuex.Store({
         searchKeyWord: '',
         overlay: false,
         isUpdateAvailable: false,
+        prevRoute: null,
     },
     mutations: {
         showOverlay(state, type) {
@@ -67,6 +68,9 @@ export default new Vuex.Store({
         },
         setUpdateAvailable(state, val) {
             state.isUpdateAvailable = val
+        },
+        setPrevRoute(state, prevRoute) {
+            state.prevRoute = prevRoute
         },
     },
     actions: {

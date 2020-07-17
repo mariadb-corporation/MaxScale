@@ -42,9 +42,21 @@ describe('SelectDialog.vue', () => {
         })
     })
 
-    it(`Testing props "multiple":
-      - Component renders correct label value in terms of plural or singular words`, async () => {
+    it(`Should render correct label value when multiple props is true`, async () => {
         // component need to be shallowed, ignoring child components
+        wrapper = mount({
+            shallow: true,
+            component: SelectDialog,
+            props: { ...initialProps, multiple: true },
+        })
+        // get the label p
+        let label = wrapper.find('.select-label').html()
+        // check include correct label value
+        expect(label).to.be.include('Specify monitors')
+    })
+    it(`Should render correct label value when multiple props is false`, async () => {
+        // component need to be shallowed, ignoring child components
+
         wrapper = mount({
             shallow: true,
             component: SelectDialog,
@@ -54,18 +66,9 @@ describe('SelectDialog.vue', () => {
         let label = wrapper.find('.select-label').html()
         // check include correct label value
         expect(label).to.be.include('Specify a monitor')
-
-        await wrapper.setProps({
-            multiple: true,
-        })
-
-        label = wrapper.find('.select-label').html()
-        expect(label).to.be.include('Specify monitors')
     })
 
-    it(`selected-items and on-open event:
-      - Component emits selected-items event which returns correct selected items.
-      - on-open event is emitted correctly`, async () => {
+    it(`Should emit on-open event when dialog is opened`, async () => {
         let count = 0
         wrapper.vm.$on('on-open', () => {
             count++
@@ -73,12 +76,15 @@ describe('SelectDialog.vue', () => {
         // open dialog
         await wrapper.setProps({ value: true })
         expect(count).to.be.equal(1)
+    })
 
+    it(`Should emit selected-items event and returns accurate selected items`, async () => {
         let chosenItems = []
         wrapper.vm.$on('selected-items', items => {
             chosenItems = items
         })
-
+        // open dialog
+        await wrapper.setProps({ value: true })
         // mockup onchange event when selecting item
         const vSelect = wrapper.findComponent({ name: 'v-select' })
 

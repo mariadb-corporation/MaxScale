@@ -14,6 +14,26 @@ import { expect } from 'chai'
 import mount from '@tests/unit/setup'
 import SelectDropdown from '@/components/common/SelectDropdown'
 
+let multipleChoiceItems = [
+    {
+        id: 'RWS-Router',
+        type: 'services',
+    },
+    {
+        id: 'RCR-Writer',
+        type: 'services',
+    },
+    {
+        id: 'RCR-Router',
+        type: 'services',
+    },
+]
+
+let singleChoiceItems = [
+    { id: 'Monitor-Test', type: 'monitors' },
+    { id: 'Monitor', type: 'monitors' },
+]
+
 describe('SelectDropdown.vue', () => {
     let wrapper
 
@@ -37,105 +57,127 @@ describe('SelectDropdown.vue', () => {
         })
     })
 
-    it(`Testing non-required props:
-      - Component renders accurate placeholder value in terms of plural or singular text.
-      - Component add 'error--text__bottom' class when required props is true
-      - Component renders pre-selected item or pre-selected items when defaultItems has
-        valid object or array`, async () => {
+    it(`Should render accurate placeholder when multiple props is false`, async () => {
         // get the wrapper div
         let placeholderWrapper = wrapper.find('.v-select__selections').html()
         // check include correct placeholder value
         expect(placeholderWrapper).to.be.include('placeholder="Select a server"')
-        /* ---------------  Test multiple props ------------------------ */
+    })
+    it(`Should render accurate placeholder when multiple props is true`, async () => {
         await wrapper.setProps({
             multiple: true,
         })
-
-        placeholderWrapper = wrapper.find('.v-select__selections').html()
+        // get the wrapper div
+        let placeholderWrapper = wrapper.find('.v-select__selections').html()
         // check include correct placeholder value
         expect(placeholderWrapper).to.be.include('placeholder="Select servers"')
-
-        /* ---------------  Test showPlaceHolder props ------------------------ */
+    })
+    it(`Should render empty placeholder when showPlaceHolder props is false`, async () => {
         await wrapper.setProps({
             showPlaceHolder: false,
         })
-
-        placeholderWrapper = wrapper.find('.v-select__selections').html()
+        let placeholderWrapper = wrapper.find('.v-select__selections').html()
         // check include correct placeholder value
         expect(placeholderWrapper).to.be.include('placeholder=""')
+    })
 
-        /* ---------------  Test required props ------------------------ */
+    it(`Should add 'error--text__bottom' class when required props is true`, async () => {
         await wrapper.setProps({
             required: true,
         })
         expect(wrapper.find('.error--text__bottom').exists()).to.be.true
+    })
 
-        /* ---------------  Test defaultItems props ------------------------ */
+    it(`Should render pre-selected item accurately when defaultItems props
+      is passed with a valid object and multiple props is false`, async () => {
         await wrapper.setProps({
             entityName: 'monitors',
             multiple: false,
-            items: [
-                { id: 'Monitor', type: 'monitors' },
-                { id: 'Monitor-test', type: 'monitors' },
-            ],
-            /*
-          defaultItems aka pre-select item, if multiple is true,
-          defaultItems should be an array
-        */
-            defaultItems: { id: 'Monitor', type: 'monitors' },
+            items: singleChoiceItems,
+            defaultItems: singleChoiceItems[0],
         })
-        expect(wrapper.vm.$data.selectedItems).to.be.an('object')
-        expect(wrapper.vm.$data.selectedItems.id).to.be.equal('Monitor')
+
+        let preSelectedItem = wrapper.vm.$data.selectedItems
+        expect(preSelectedItem).to.be.an('object')
+        expect(preSelectedItem.id).to.be.equal(singleChoiceItems[0].id)
+        const selectionSpans = wrapper.findAll('.v-select__selection')
+        expect(selectionSpans.length).to.be.equal(1)
+        expect(selectionSpans.at(0).html()).to.be.include(singleChoiceItems[0].id)
+    })
+    it(`Should render pre-selected items accurately when defaultItems props
+      is passed with a valid array and multiple props is true`, async () => {
+        await wrapper.setProps({
+            entityName: 'services',
+            multiple: true,
+            items: multipleChoiceItems,
+            defaultItems: [multipleChoiceItems[0], multipleChoiceItems[1]],
+        })
+
+        let preSelectedItems = wrapper.vm.$data.selectedItems
+        expect(preSelectedItems).to.be.an('array')
+        preSelectedItems.forEach((item, i) =>
+            expect(item.id).to.be.equal(multipleChoiceItems[i].id)
+        )
+        const selectionSpans = wrapper.findAll('.v-select__selection')
+        expect(selectionSpans.length).to.be.equal(2)
+        expect(selectionSpans.at(0).html()).to.be.include(multipleChoiceItems[0].id)
+        expect(selectionSpans.at(1).html()).to.be.include('(+1 others)')
     })
 
-    it(`Testing get-selected-items event:
-      - get-selected-items always returns Array regardless multiple props is true or false
-       `, async () => {
+    it(`Should emit get-selected-items and return array
+      when multiple props is true`, async () => {
         /* ---------------  Test get-selected-items event ------------------------ */
         await wrapper.setProps({
             entityName: 'services',
             multiple: true,
-            items: [
-                {
-                    id: 'RWS-Router',
-                    type: 'services',
-                },
-                {
-                    id: 'RCR-Writer',
-                    type: 'services',
-                },
-                {
-                    id: 'RCR-Router',
-                    type: 'services',
-                },
-            ],
+            items: multipleChoiceItems,
         })
         let chosenItems = []
         wrapper.vm.$on('get-selected-items', values => {
             chosenItems = values
         })
 
-        // mockup onchange event when selecting item
+        // mockup onchange event when selecting items
         const vSelect = wrapper.findComponent({ name: 'v-select' })
-        vSelect.vm.selectItem({
-            id: 'RWS-Router',
-            type: 'services',
-        })
+        vSelect.vm.selectItem(multipleChoiceItems[0])
+        vSelect.vm.selectItem(multipleChoiceItems[1])
 
         expect(chosenItems).to.be.an('array')
-        expect(chosenItems[0].id).to.be.equal('RWS-Router')
+        chosenItems.forEach((item, i) => {
+            expect(item.id).to.be.equal(multipleChoiceItems[i].id)
+        })
+    })
+    it(`Should emit get-selected-items and return array
+      when multiple props is false`, async () => {
+        /* ---------------  Test get-selected-items event ------------------------ */
+        await wrapper.setProps({
+            entityName: 'monitors',
+            multiple: false,
+            items: singleChoiceItems,
+        })
+        let chosenItems = []
+        wrapper.vm.$on('get-selected-items', values => {
+            chosenItems = values
+        })
+        // mockup onchange event when selecting an item
+        const vSelect = wrapper.findComponent({ name: 'v-select' })
+        vSelect.vm.selectItem(singleChoiceItems[0])
+
+        expect(chosenItems).to.be.an('array')
+        expect(chosenItems.length).to.be.equal(1)
+        chosenItems.forEach((item, i) => {
+            expect(item.id).to.be.equal(singleChoiceItems[i].id)
+        })
     })
 
-    it(`Testing is-equal event when multiple props is false`, async () => {
+    it(`Should emit is-equal event and return accurate value
+      when multiple props is false`, async () => {
         /* ---------------  Test is-equal event when multiple select is enabled------------------------ */
         await wrapper.setProps({
             entityName: 'monitors',
             multiple: false,
-            items: [
-                { id: 'Monitor-Test', type: 'monitors' },
-                { id: 'Monitor', type: 'monitors' },
-            ],
-            defaultItems: { id: 'Monitor', type: 'monitors' },
+            items: singleChoiceItems,
+            defaultItems: singleChoiceItems[1],
         })
         let counter = 0
         /*It returns false if new selected items are not equal to defaultItems
@@ -148,40 +190,22 @@ describe('SelectDropdown.vue', () => {
         })
         // mockup onchange event when selecting item
         const vSelect = wrapper.findComponent({ name: 'v-select' })
-        // add new item, is-equal should return false
-        await vSelect.vm.selectItem({ id: 'Monitor-Test', type: 'monitors' })
+        // Change to new item, is-equal should return false
+        await vSelect.vm.selectItem(singleChoiceItems[0])
         /*
-            unselect selected item, is-equal should return true
-            as current selected items are equal with defaultItems
+            Select original item is-equal should return true
+            as current selected item is equal with defaultItems
         */
-        await vSelect.vm.selectItem({ id: 'Monitor', type: 'monitors' })
+        await vSelect.vm.selectItem(singleChoiceItems[1])
     })
-
-    it(`Testing is-equal event when multiple props is true`, async () => {
+    it(`Should emit is-equal event and return accurate value
+       when multiple props is true`, async () => {
         /* ---------------  Test is-equal event when multiple select is enabled------------------------ */
         await wrapper.setProps({
             entityName: 'services',
             multiple: true,
-            items: [
-                {
-                    id: 'RWS-Router',
-                    type: 'services',
-                },
-                {
-                    id: 'RCR-Writer',
-                    type: 'services',
-                },
-                {
-                    id: 'RCR-Router',
-                    type: 'services',
-                },
-            ],
-            defaultItems: [
-                {
-                    id: 'RWS-Router',
-                    type: 'services',
-                },
-            ],
+            items: multipleChoiceItems,
+            defaultItems: [multipleChoiceItems[0]],
         })
 
         let counter = 0
@@ -196,17 +220,11 @@ describe('SelectDropdown.vue', () => {
         // mockup onchange event when selecting item
         const vSelect = wrapper.findComponent({ name: 'v-select' })
         // add new item, is-equal should return false
-        await vSelect.vm.selectItem({
-            id: 'RCR-Writer',
-            type: 'services',
-        })
+        await vSelect.vm.selectItem(multipleChoiceItems[1])
         /*
             unselect selected item, is-equal should return true
             as current selected items are equal with defaultItems
         */
-        await vSelect.vm.selectItem({
-            id: 'RCR-Writer',
-            type: 'services',
-        })
+        await vSelect.vm.selectItem(multipleChoiceItems[1])
     })
 })

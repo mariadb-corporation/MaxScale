@@ -35,14 +35,14 @@ describe('Collapse.vue', () => {
         })
     })
 
-    it('Component collapses when toggle arrow is clicked', () => {
+    it('Should collapse when toggle arrow is clicked', () => {
         // this calls toggleOnClick cb which is handled in parent component
         wrapper.find('.arrow-toggle').trigger('click')
         // component is collapsed when isContentVisible === false
         expect(wrapper.props().isContentVisible).to.be.false
     })
 
-    it('Display edit button when hover', async () => {
+    it('Should display edit button when hover', async () => {
         // edit button is rendered only when onEdit props is passed with a function
         await wrapper.setProps({
             onEdit: () => wrapper.vm.$store.Vue.Logger('Collapse').info('onEdit cb'),
@@ -51,8 +51,12 @@ describe('Collapse.vue', () => {
         expect(wrapper.vm.$data.showEditBtn).to.be.true
     })
 
-    it(`Display "add" button if onAddClick props is passed, onAddClick callback should be
-      triggered`, async () => {
+    it(`Should not display "add" button if onAddClick function props is null`, async () => {
+        expect(wrapper.find('.add-btn').exists()).to.be.equal(false)
+    })
+
+    it(`Should trigger onAddClick callback when onAddClick function props is passed and
+      "add" button is clicked`, async () => {
         let eventFired = 0
         // edit button is rendered only when onEdit props is passed with a function
         await wrapper.setProps({
@@ -64,8 +68,11 @@ describe('Collapse.vue', () => {
         expect(eventFired).to.equal(1)
     })
 
-    it(`Display "Done Editing" button if isEditing props is true,
-      after doneEditingCb is called, value of isEditing props should be false`, async () => {
+    it(`Should not display "Done Editing" button when isEditing props is false`, async () => {
+        expect(wrapper.find('.done-editing-btn').exists()).to.be.equal(false)
+    })
+    it(`Should trigger doneEditingCb function props when the props is passed and
+      "Done Editing" button is clicked`, async () => {
         let eventFired = 0
         // edit button is rendered only when onEdit props is passed with a function
         await wrapper.setProps({
@@ -76,8 +83,7 @@ describe('Collapse.vue', () => {
                 wrapper.setProps({ isEditing: false })
             },
         })
-        wrapper.find('.don-editing-btn').trigger('click')
+        wrapper.find('.done-editing-btn').trigger('click')
         expect(eventFired).to.equal(1)
-        expect(wrapper.props().isEditing).to.be.false
     })
 })

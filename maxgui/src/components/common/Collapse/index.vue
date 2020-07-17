@@ -47,7 +47,7 @@
                     color="primary"
                     rounded
                     small
-                    class="don-editing-btn text-capitalize"
+                    class="done-editing-btn text-capitalize"
                     @click="doneEditingCb"
                 >
                     {{ $t('doneEditing') }}
