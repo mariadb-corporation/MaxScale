@@ -3,7 +3,7 @@
         <outlined-overview-card
             v-for="(value, name, index) in getTopOverviewInfo"
             :key="name"
-            cardWrapper="mt-5"
+            wrapperClass="mt-5"
             cardClass="px-10"
             :hoverableCard="name === 'monitor'"
             @card-hover="showEditBtn = $event"

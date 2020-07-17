@@ -32,6 +32,8 @@
                             :onEditSucceeded="fetchServer"
                             :loading="overlay === OVERLAY_TRANSPARENT_LOADING"
                             :searchKeyWord="searchKeyWord"
+                            :fetchMonitorDiagnostics="fetchMonitorDiagnostics"
+                            :monitorDiagnosticsTableRow="monitorDiagnosticsTableRow"
                     /></v-tab-item>
                 </v-tabs-items>
             </v-tabs>
@@ -77,6 +79,8 @@ export default {
                 { name: `${this.$tc('parameters', 2)} & ${this.$tc('diagnostics', 2)}` },
             ],
             serviceTableRow: [],
+            //MONITOR data for parameter-diagnostics-tab
+            monitorDiagnosticsTableRow: [],
         }
     },
     computed: {
@@ -105,6 +109,33 @@ export default {
         // reuse functions for fetch loop or after finish editing
         async fetchServer() {
             await this.fetchServerById(this.$route.params.id)
+        },
+
+        async fetchMonitorDiagnostics() {
+            let self = this
+            if (!self.$help.lodash.isEmpty(self.currentServer.relationships.monitors)) {
+                const { relationships: { monitors = {} } = {} } = self.currentServer
+
+                let res = await this.axios.get(
+                    `/monitors/${monitors.data[0].id}?fields[monitors]=monitor_diagnostics`
+                )
+                const {
+                    attributes: {
+                        monitor_diagnostics: { server_info = [] },
+                    },
+                } = res.data.data
+
+                let monitorDiagnosticsObj = server_info.find(
+                    server => server.name === self.currentServer.id
+                )
+                let level = 0
+                const keepPrimitiveValue = false
+                this.monitorDiagnosticsTableRow = self.$help.objToArrOfObj(
+                    monitorDiagnosticsObj,
+                    keepPrimitiveValue,
+                    level
+                )
+            }
         },
 
         async serviceTableRowProcessing() {
@@ -150,6 +181,7 @@ export default {
                         monitors: data,
                         callback: self.fetchServer,
                     })
+                    await self.fetchMonitorDiagnostics()
                     break
                 case 'services':
                     await self.updateServerRelationship({

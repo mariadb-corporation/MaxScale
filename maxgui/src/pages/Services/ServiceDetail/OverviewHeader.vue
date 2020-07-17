@@ -1,7 +1,7 @@
 <template>
     <v-sheet class="d-flex mb-2">
         <div class="d-flex" style="width:40%">
-            <outlined-overview-card cardWrapper="mt-5">
+            <outlined-overview-card wrapperClass="mt-5">
                 <template v-slot:title>
                     {{ $t('overview') }}
                 </template>
@@ -14,7 +14,7 @@
                     </span>
                 </template>
             </outlined-overview-card>
-            <outlined-overview-card cardWrapper="mt-5">
+            <outlined-overview-card wrapperClass="mt-5">
                 <template v-slot:card-body>
                     <span class="caption text-uppercase font-weight-bold color text-deep-ocean">
                         STARTED AT
@@ -26,7 +26,7 @@
             </outlined-overview-card>
         </div>
         <div style="width:60%" class="pl-3">
-            <outlined-overview-card :tile="false" cardWrapper="mt-5">
+            <outlined-overview-card :tile="false" wrapperClass="mt-5">
                 <template v-slot:title>
                     {{ $tc('currentConnections', 2) }}
                     <span class="text-lowercase font-weight-medium">

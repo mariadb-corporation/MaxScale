@@ -1,7 +1,7 @@
 <template>
     <v-sheet class="d-flex mb-2">
         <template v-for="(value, name) in getTopOverviewInfo">
-            <outlined-overview-card :key="name" cardWrapper="mt-0" cardClass="px-10">
+            <outlined-overview-card :key="name" wrapperClass="mt-0" cardClass="px-10">
                 <template v-slot:card-body>
                     <span class="caption text-uppercase font-weight-bold color text-deep-ocean">
                         {{ name.replace('_', ' ') }}

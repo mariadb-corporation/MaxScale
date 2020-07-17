@@ -57,6 +57,8 @@ export default {
         updateServerParameters: { type: Function, required: true },
         onEditSucceeded: { type: Function, required: true },
         loading: { type: Boolean, required: true },
+        fetchMonitorDiagnostics: { type: Function, required: true },
+        monitorDiagnosticsTableRow: { type: Array, required: true },
     },
 
     data() {
@@ -66,8 +68,7 @@ export default {
             showMonitorDiagnostics: true,
             parameters: [],
             loadingModuleParams: true,
-            //MONITOR
-            monitorDiagnosticsTableRow: [],
+
             // COMMOn
             variableValueTableHeaders: [
                 { text: 'Variable', value: 'id', width: '65%' },
@@ -87,32 +88,6 @@ export default {
             self.parameters = parameters
             self.loadingModuleParams = true
             await self.$help.delay(150).then(() => (self.loadingModuleParams = false))
-        },
-        async fetchMonitorDiagnostics() {
-            let self = this
-            if (!self.$help.lodash.isEmpty(self.currentServer.relationships.monitors)) {
-                const { relationships: { monitors = {} } = {} } = self.currentServer
-
-                let res = await this.axios.get(
-                    `/monitors/${monitors.data[0].id}?fields[monitors]=monitor_diagnostics`
-                )
-                const {
-                    attributes: {
-                        monitor_diagnostics: { server_info },
-                    },
-                } = res.data.data
-
-                let monitorDiagnosticsObj = server_info.find(
-                    server => server.name === self.currentServer.id
-                )
-                let level = 0
-                const keepPrimitiveValue = false
-                this.monitorDiagnosticsTableRow = self.$help.objToArrOfObj(
-                    monitorDiagnosticsObj,
-                    keepPrimitiveValue,
-                    level
-                )
-            }
         },
     },
 }
