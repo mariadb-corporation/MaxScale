@@ -16,30 +16,32 @@
 #include <security/pam_appl.h>
 #include <maxbase/alloc.h>
 #include <maxbase/assert.h>
-#include <maxbase/log.hh>
 #include <maxbase/format.hh>
+#include <strings.h>
 
 using std::string;
 
 namespace
 {
 
-/** Used by the PAM conversation function */
-class ConversationData
-{
-public:
-    int    m_counter {0};
-    string m_client;
-    string m_password;
-    string m_client_remote;     // Client address
-    string m_expected_msg;
+const string password_query = "Password: ";
 
-    ConversationData(const string& client, const string& password, const string& client_remote,
-                     const string& expected_msg)
-        : m_client(client)
-        , m_password(password)
-        , m_client_remote(client_remote)
-        , m_expected_msg(expected_msg)
+/** Used by the PAM conversation function */
+struct ConversationData
+{
+    const mxb::pam::AuthMode      mode {mxb::pam::AuthMode::PW};
+    const mxb::pam::UserData*     userdata {nullptr};
+    const mxb::pam::PwdData*      pwds {nullptr};
+    const mxb::pam::ExpectedMsgs* exp_msgs {nullptr};
+
+    int prompt_ind {0};     /**< How many passwords have been given */
+
+    ConversationData(mxb::pam::AuthMode mode, const mxb::pam::UserData* userdata,
+                     const mxb::pam::PwdData* pwds, const mxb::pam::ExpectedMsgs* exp_msgs)
+        : mode(mode)
+        , userdata(userdata)
+        , pwds(pwds)
+        , exp_msgs(exp_msgs)
     {
     }
 };
@@ -55,7 +57,11 @@ int conversation_func(int num_msg, const struct pam_message** messages, struct p
                       void* appdata_ptr)
 {
     MXB_DEBUG("Entering PAM conversation function.");
-    ConversationData* data = static_cast<ConversationData*>(appdata_ptr);
+    auto appdata = static_cast<ConversationData*>(appdata_ptr);
+    auto mode = appdata->mode;
+    auto userdata = appdata->userdata;
+    auto pwds = appdata->pwds;
+    auto expected_msgs = appdata->exp_msgs;
 
     // The responses are saved as an array of structures. This is unlike the input messages, which is an
     // array of pointers to struct. Each message should have an answer, even if empty.
@@ -66,8 +72,8 @@ int conversation_func(int num_msg, const struct pam_message** messages, struct p
     }
 
     bool conv_error = false;
-    string userhost = data->m_client_remote.empty() ? data->m_client :
-        data->m_client + "@" + data->m_client_remote;
+    string userhost = userdata->remote.empty() ? userdata->username :
+        userdata->username + "@" + userdata->remote;
     for (int i = 0; i < num_msg; i++)
     {
         const pam_message* message = messages[i];   // This may crash on Solaris, see PAM documentation.
@@ -88,20 +94,53 @@ int conversation_func(int num_msg, const struct pam_message** messages, struct p
         }
         else if (msg_type == PAM_PROMPT_ECHO_ON || msg_type == PAM_PROMPT_ECHO_OFF)
         {
-            auto exp = data->m_expected_msg;
-            // PAM system is asking for something. We only know how to answer the expected question,
-            // anything else is an error.
-            if (data->m_expected_msg.empty() || message->msg == data->m_expected_msg)
+            auto& pwq = expected_msgs->password_query;
+            if (mode == mxb::pam::AuthMode::PW)
             {
-                response->resp = MXS_STRDUP(data->m_password.c_str());
-                // retcode should be already 0.
+                // PAM system is asking for something. We only know how to answer the expected question,
+                // anything else is an error.
+                if (pwq.empty() || (strncasecmp(pwq.c_str(), message->msg, pwq.length()) == 0))
+                {
+                    response->resp = MXS_STRDUP(pwds->password.c_str());
+                    MXB_DEBUG("PAM api asked for '%s'.", message->msg);
+                    // retcode should be already 0.
+                }
+                else
+                {
+                    MXB_ERROR("Unexpected prompt from PAM api when authenticating '%s'. Got '%s', "
+                              "expected '%s'.",
+                              userhost.c_str(), message->msg, pwq.c_str());
+                    conv_error = true;
+                }
             }
             else
             {
-                MXB_ERROR("Unexpected prompt from PAM api when authenticating '%s': '%s'. "
-                          "Only '%s' is allowed.",
-                          userhost.c_str(), message->msg, data->m_expected_msg.c_str());
-                conv_error = true;
+                // When performing two-factor auth, try to match the expected messages to the
+                // pam api messages. If no expected messages are given, answer first with password and
+                // then with 2FA. TODO: add message matching
+                if (pwq.empty() && expected_msgs->two_fa_query.empty())
+                {
+                    auto& prompt_ind = appdata->prompt_ind;
+                    if (prompt_ind == 0)
+                    {
+                        response->resp = MXS_STRDUP(pwds->password.c_str());
+                        MXB_DEBUG("PAM api asked for '%s'.", message->msg);
+                        prompt_ind++;
+                    }
+                    else if (prompt_ind == 1)
+                    {
+                        response->resp = MXS_STRDUP(pwds->two_fa_code.c_str());
+                        MXB_DEBUG("PAM api asked for '%s'.", message->msg);
+                        prompt_ind++;
+                    }
+                    else
+                    {
+                        MXB_ERROR("Unexpected prompt from PAM api when authenticating '%s'. Got '%s', "
+                                  "expected none.",
+                                  userhost.c_str(), message->msg);
+                        conv_error = true;
+                    }
+                }
             }
         }
         else
@@ -113,7 +152,6 @@ int conversation_func(int num_msg, const struct pam_message** messages, struct p
         }
     }
 
-    data->m_counter++;
     if (conv_error)
     {
         // On error, the response output should not be set.
@@ -132,22 +170,25 @@ namespace maxbase
 {
 namespace pam
 {
+
 AuthResult
-authenticate(const std::string& user, const std::string& password, const std::string& client_remote,
-             const std::string& service, const std::string& expected_msg)
+authenticate(AuthMode mode, const UserData& user, const PwdData& pwds, const std::string& service,
+             const ExpectedMsgs& exp_msgs)
 {
     const char PAM_START_ERR_MSG[] = "Failed to start PAM authentication of user '%s': '%s'.";
     const char PAM_AUTH_ERR_MSG[] = "PAM authentication of user '%s' to service '%s' failed: '%s'.";
     const char PAM_ACC_ERR_MSG[] = "PAM account check of user '%s' to service '%s' failed: '%s'.";
 
-    ConversationData appdata(user, password, client_remote, expected_msg);
+    ConversationData appdata(mode, &user, &pwds, &exp_msgs);
     pam_conv conv_struct = {conversation_func, &appdata};
+
+    auto userc = user.username.c_str();
 
     AuthResult result;
     bool authenticated = false;
     pam_handle_t* pam_handle = NULL;
 
-    int pam_status = pam_start(service.c_str(), user.c_str(), &conv_struct, &pam_handle);
+    int pam_status = pam_start(service.c_str(), userc, &conv_struct, &pam_handle);
     if (pam_status == PAM_SUCCESS)
     {
         pam_status = pam_authenticate(pam_handle, 0);
@@ -162,14 +203,14 @@ authenticate(const std::string& user, const std::string& password, const std::st
         case PAM_AUTH_ERR:
             // Normal failure, username or password was wrong.
             result.type = AuthResult::Result::WRONG_USER_PW;
-            result.error = mxb::string_printf(PAM_AUTH_ERR_MSG, user.c_str(), service.c_str(),
+            result.error = mxb::string_printf(PAM_AUTH_ERR_MSG, userc, service.c_str(),
                                               pam_strerror(pam_handle, pam_status));
             break;
 
         default:
             // More exotic error
             result.type = AuthResult::Result::MISC_ERROR;
-            result.error = mxb::string_printf(PAM_AUTH_ERR_MSG, user.c_str(), service.c_str(),
+            result.error = mxb::string_printf(PAM_AUTH_ERR_MSG, userc, service.c_str(),
                                               pam_strerror(pam_handle, pam_status));
             break;
         }
@@ -178,7 +219,7 @@ authenticate(const std::string& user, const std::string& password, const std::st
     {
         result.type = AuthResult::Result::MISC_ERROR;
         result.error = mxb::string_printf(PAM_START_ERR_MSG,
-                                          user.c_str(), pam_strerror(pam_handle, pam_status));
+                                          userc, pam_strerror(pam_handle, pam_status));
     }
 
     if (authenticated)
@@ -193,7 +234,7 @@ authenticate(const std::string& user, const std::string& password, const std::st
         default:
             // Credentials have already been checked to be ok, so this is a somewhat unexpected error.
             result.type = AuthResult::Result::ACCOUNT_INVALID;
-            result.error = mxb::string_printf(PAM_ACC_ERR_MSG, user.c_str(), service.c_str(),
+            result.error = mxb::string_printf(PAM_ACC_ERR_MSG, userc, service.c_str(),
                                               pam_strerror(pam_handle, pam_status));
             break;
         }
@@ -202,17 +243,22 @@ authenticate(const std::string& user, const std::string& password, const std::st
     return result;
 }
 
-AuthResult authenticate(const string& user, const string& password, const string& service,
-                        const string& expected_msg)
+AuthResult
+authenticate(const std::string& user, const std::string& password, const std::string& client_remote,
+             const std::string& service, const std::string& expected_msg)
 {
-    return authenticate(user, password, "", service, expected_msg);
+    UserData usr = {user, client_remote};
+    PwdData pwds = {password, ""};
+    ExpectedMsgs exp_msg = {expected_msg, ""};
+    return authenticate(AuthMode::PW, usr, pwds, service, exp_msg);
 }
 
-AuthResult
-authenticate(AuthMode mode, const UserData& user, const PwdData& pwds, const std::string& service,
-             const ExpectedMsgs& exp_msgs)
+AuthResult authenticate(const string& user, const string& password, const string& service)
 {
-    return authenticate(user.username, pwds.password, user.remote, service, exp_msgs.password_query);
+    UserData usr = {user, ""};
+    PwdData pwds = {password, ""};
+    ExpectedMsgs exp_msg = {password_query, ""};
+    return authenticate(AuthMode::PW, usr, pwds, service, exp_msg);
 }
 }
 }
