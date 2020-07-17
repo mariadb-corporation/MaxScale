@@ -17,12 +17,13 @@
 
 namespace maxbase
 {
-class PamResult
+namespace pam
 {
-public:
+struct AuthResult
+{
     enum class Result
     {
-        SUCCESS,
+        SUCCESS,                /**< Authentication succeeded */
         WRONG_USER_PW,          /**< Username or password was wrong */
         ACCOUNT_INVALID,        /**< pam_acct_mgmt returned error */
         MISC_ERROR              /**< Miscellaneous error */
@@ -30,6 +31,36 @@ public:
 
     Result      type {Result::MISC_ERROR};
     std::string error;
+};
+
+enum class AuthMode
+{
+    PW,         /**< Password only */
+    PW_2FA      /**< Password + 2FA code */
+};
+
+struct UserData
+{
+    std::string username;   /**< Username */
+    std::string remote;     /**< Client remote address */
+};
+
+/**
+ * Passwords given by client
+ */
+struct PwdData
+{
+    std::string password;
+    std::string two_fa_code;
+};
+
+/**
+ * Password prompts expected from PAM api. If these values are empty, the prompts are not checked.
+ */
+struct ExpectedMsgs
+{
+    std::string password_query;
+    std::string two_fa_query;
 };
 
 /**
@@ -43,8 +74,9 @@ public:
  * Typically "Password: ". If set to empty, the message is not checked.
  * @return A result struct with the result and an error message.
  */
-PamResult pam_authenticate(const std::string& user, const std::string& password,
-                           const std::string& service, const std::string& expected_msg = "Password: ");
+AuthResult
+authenticate(const std::string& user, const std::string& password, const std::string& service,
+             const std::string& expected_msg = "Password: ");
 
 /**
  * Check if the user & password can log into the given PAM service. This function will block until the
@@ -58,7 +90,12 @@ PamResult pam_authenticate(const std::string& user, const std::string& password,
  * Typically "Password: ". If set to empty, the message is not checked.
  * @return A result struct with the result and an error message.
  */
-PamResult
-pam_authenticate(const std::string& user, const std::string& password, const std::string& client_remote,
-                 const std::string& service, const std::string& expected_msg);
+AuthResult
+authenticate(const std::string& user, const std::string& password, const std::string& client_remote,
+             const std::string& service, const std::string& expected_msg);
+
+AuthResult
+authenticate(AuthMode mode, const UserData& user, const PwdData& pwds, const std::string& service,
+             const ExpectedMsgs& exp_msgs);
+}
 }

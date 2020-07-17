@@ -31,7 +31,7 @@ public:
     int    m_counter {0};
     string m_client;
     string m_password;
-    string m_client_remote; // Client address
+    string m_client_remote;     // Client address
     string m_expected_msg;
 
     ConversationData(const string& client, const string& password, const string& client_remote,
@@ -67,10 +67,10 @@ int conversation_func(int num_msg, const struct pam_message** messages, struct p
 
     bool conv_error = false;
     string userhost = data->m_client_remote.empty() ? data->m_client :
-            data->m_client + "@" + data->m_client_remote;
+        data->m_client + "@" + data->m_client_remote;
     for (int i = 0; i < num_msg; i++)
     {
-        const pam_message* message = messages[i]; // This may crash on Solaris, see PAM documentation.
+        const pam_message* message = messages[i];   // This may crash on Solaris, see PAM documentation.
         pam_response* response = &responses[i];
         int msg_type = message->msg_style;
         // In an ideal world, these messages would be sent to the client instead of the log. The problem
@@ -110,7 +110,6 @@ int conversation_func(int num_msg, const struct pam_message** messages, struct p
             MXB_ERROR("Unknown PAM message type '%i'.", msg_type);
             conv_error = true;
             mxb_assert(!true);
-
         }
     }
 
@@ -131,10 +130,11 @@ int conversation_func(int num_msg, const struct pam_message** messages, struct p
 
 namespace maxbase
 {
-
-PamResult
-pam_authenticate(const std::string& user, const std::string& password, const std::string& client_remote,
-                 const std::string& service, const std::string& expected_msg)
+namespace pam
+{
+AuthResult
+authenticate(const std::string& user, const std::string& password, const std::string& client_remote,
+             const std::string& service, const std::string& expected_msg)
 {
     const char PAM_START_ERR_MSG[] = "Failed to start PAM authentication of user '%s': '%s'.";
     const char PAM_AUTH_ERR_MSG[] = "PAM authentication of user '%s' to service '%s' failed: '%s'.";
@@ -143,7 +143,7 @@ pam_authenticate(const std::string& user, const std::string& password, const std
     ConversationData appdata(user, password, client_remote, expected_msg);
     pam_conv conv_struct = {conversation_func, &appdata};
 
-    PamResult result;
+    AuthResult result;
     bool authenticated = false;
     pam_handle_t* pam_handle = NULL;
 
@@ -161,14 +161,14 @@ pam_authenticate(const std::string& user, const std::string& password, const std
         case PAM_USER_UNKNOWN:
         case PAM_AUTH_ERR:
             // Normal failure, username or password was wrong.
-            result.type = PamResult::Result::WRONG_USER_PW;
+            result.type = AuthResult::Result::WRONG_USER_PW;
             result.error = mxb::string_printf(PAM_AUTH_ERR_MSG, user.c_str(), service.c_str(),
                                               pam_strerror(pam_handle, pam_status));
             break;
 
         default:
             // More exotic error
-            result.type = PamResult::Result::MISC_ERROR;
+            result.type = AuthResult::Result::MISC_ERROR;
             result.error = mxb::string_printf(PAM_AUTH_ERR_MSG, user.c_str(), service.c_str(),
                                               pam_strerror(pam_handle, pam_status));
             break;
@@ -176,7 +176,7 @@ pam_authenticate(const std::string& user, const std::string& password, const std
     }
     else
     {
-        result.type = PamResult::Result::MISC_ERROR;
+        result.type = AuthResult::Result::MISC_ERROR;
         result.error = mxb::string_printf(PAM_START_ERR_MSG,
                                           user.c_str(), pam_strerror(pam_handle, pam_status));
     }
@@ -187,12 +187,12 @@ pam_authenticate(const std::string& user, const std::string& password, const std
         switch (pam_status)
         {
         case PAM_SUCCESS:
-            result.type = PamResult::Result::SUCCESS;
+            result.type = AuthResult::Result::SUCCESS;
             break;
 
         default:
             // Credentials have already been checked to be ok, so this is a somewhat unexpected error.
-            result.type = PamResult::Result::ACCOUNT_INVALID;
+            result.type = AuthResult::Result::ACCOUNT_INVALID;
             result.error = mxb::string_printf(PAM_ACC_ERR_MSG, user.c_str(), service.c_str(),
                                               pam_strerror(pam_handle, pam_status));
             break;
@@ -202,9 +202,17 @@ pam_authenticate(const std::string& user, const std::string& password, const std
     return result;
 }
 
-PamResult pam_authenticate(const string& user, const string& password, const string& service,
-                           const string& expected_msg)
+AuthResult authenticate(const string& user, const string& password, const string& service,
+                        const string& expected_msg)
 {
-    return pam_authenticate(user, password, "", service, expected_msg);
+    return authenticate(user, password, "", service, expected_msg);
+}
+
+AuthResult
+authenticate(AuthMode mode, const UserData& user, const PwdData& pwds, const std::string& service,
+             const ExpectedMsgs& exp_msgs)
+{
+    return authenticate(user.username, pwds.password, user.remote, service, exp_msgs.password_query);
+}
 }
 }

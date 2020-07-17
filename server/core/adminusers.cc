@@ -458,13 +458,13 @@ bool admin_user_is_pam_account(const std::string& username, const std::string& p
     }
 
     bool auth_attempted = false;
-    mxb::PamResult pam_res;
+    mxb::pam::AuthResult pam_res;
     if (min_acc_type == USER_ACCOUNT_ADMIN)
     {
         // Must be a readwrite user.
         if (have_rw_srv)
         {
-            pam_res = mxb::pam_authenticate(username, password, pam_rw_srv);
+            pam_res = mxb::pam::authenticate(username, password, pam_rw_srv);
             auth_attempted = true;
         }
     }
@@ -475,21 +475,21 @@ bool admin_user_is_pam_account(const std::string& username, const std::string& p
         {
             // One PAM service is configured.
             auto pam_srv = have_ro_srv ? pam_ro_srv : pam_rw_srv;
-            pam_res = mxb::pam_authenticate(username, password, pam_srv);
+            pam_res = mxb::pam::authenticate(username, password, pam_srv);
         }
         else
         {
             // Have both, try ro first.
-            pam_res = mxb::pam_authenticate(username, password, pam_ro_srv);
-            if (pam_res.type != mxb::PamResult::Result::SUCCESS)
+            pam_res = mxb::pam::authenticate(username, password, pam_ro_srv);
+            if (pam_res.type != mxb::pam::AuthResult::Result::SUCCESS)
             {
-                pam_res = mxb::pam_authenticate(username, password, pam_rw_srv);
+                pam_res = mxb::pam::authenticate(username, password, pam_rw_srv);
             }
         }
         auth_attempted = true;
     }
 
-    if (pam_res.type == mxb::PamResult::Result::SUCCESS)
+    if (pam_res.type == mxb::pam::AuthResult::Result::SUCCESS)
     {
         return true;
     }

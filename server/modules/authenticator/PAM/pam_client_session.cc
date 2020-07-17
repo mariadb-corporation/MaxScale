@@ -138,7 +138,7 @@ PamClientAuthenticator::exchange(GWBUF* buffer, MYSQL_session* session, mxs::Buf
 
 AuthRes PamClientAuthenticator::authenticate(const UserEntry* entry, MYSQL_session* session)
 {
-    using mxb::PamResult;
+    using mxb::pam::AuthResult;
     AuthRes rval;
     mxb_assert(m_state == State::PW_RECEIVED);
 
@@ -153,14 +153,14 @@ AuthRes PamClientAuthenticator::authenticate(const UserEntry* entry, MYSQL_sessi
     // The server PAM plugin uses "mysql" as the default service when authenticating
     // a user with no service.
     string pam_service = entry->auth_string.empty() ? "mysql" : entry->auth_string;
-    PamResult res = mxb::pam_authenticate(username, password, session->remote, pam_service, PASSWORD);
-    if (res.type == PamResult::Result::SUCCESS)
+    AuthResult res = mxb::pam::authenticate(username, password, session->remote, pam_service, PASSWORD);
+    if (res.type == AuthResult::Result::SUCCESS)
     {
         rval.status = AuthRes::Status::SUCCESS;
     }
     else
     {
-        if (res.type == PamResult::Result::WRONG_USER_PW)
+        if (res.type == AuthResult::Result::WRONG_USER_PW)
         {
             rval.status = AuthRes::Status::FAIL_WRONG_PW;
         }

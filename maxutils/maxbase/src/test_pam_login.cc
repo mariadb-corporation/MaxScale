@@ -19,7 +19,7 @@
 using std::string;
 using std::cin;
 using std::cout;
-using PamResult = mxb::PamResult::Result;
+using PamResult = mxb::pam::AuthResult::Result;
 
 int main()
 {
@@ -56,7 +56,7 @@ int main()
     std::getline(cin, service);
 
     int rval = EXIT_FAILURE;
-    auto res = mxb::pam_authenticate(username, password, service);
+    auto res = mxb::pam::authenticate(username, password, service);
     if (res.type == PamResult::SUCCESS)
     {
         cout << "Authentication successful.\n";
