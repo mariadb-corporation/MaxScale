@@ -24,9 +24,7 @@ import LineChart from './LineChart.vue'
 import GlobalSearch from './GlobalSearch'
 import CreateResource from './CreateResource'
 
-import DetailsParametersCollapse from './DetailsPage/DetailsParametersCollapse'
-import DetailsPageTitle from './DetailsPage/DetailsPageTitle'
-import DetailsIconGroupWrapper from './DetailsPage/DetailsIconGroupWrapper'
+import DetailsPage from './DetailsPage'
 import Parameters from './Parameters'
 
 export default {
@@ -42,7 +40,5 @@ export default {
     collapse: Collapse,
     ...Parameters,
     'line-chart': LineChart,
-    'details-parameters-collapse': DetailsParametersCollapse,
-    'details-page-title': DetailsPageTitle,
-    'details-icon-group-wrapper': DetailsIconGroupWrapper,
+    ...DetailsPage,
 }

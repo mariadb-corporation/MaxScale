@@ -272,7 +272,7 @@ export default {
                 const hasModifiable = 'modifiable' in moduleParam
                 if (hasModifiable && !moduleParam.modifiable) {
                     resourceParam['disabled'] = true
-                } else if (!hasModifiable) resourceParam['disabled'] = false
+                } else resourceParam['disabled'] = false
 
                 if (resourceParam.type === 'duration' && unit) {
                     resourceParam.value = `${resourceParam.value}${unit}`
