@@ -243,8 +243,13 @@ describe('ParameterInput.vue', () => {
     })
 
     it(`bool type:
-      - component renders v-select input that only allows to select boolean value.
-      - component emits on-input-change and returns accurate values`, async () => {
+      - Should render v-select input that only allows to select boolean value.`, async () => {
+        await renderAccurateInputType(wrapper, boolParam, 'bool')
+        const vSelect = wrapper.findComponent({ name: 'v-select' })
+        expect(vSelect.vm.$props.items).to.be.deep.equal([true, false])
+    })
+    it(`bool type:
+      - Should emit on-input-change and return accurate values`, async () => {
         await renderAccurateInputType(wrapper, boolParam, 'bool')
         let count = 0
         wrapper.vm.$on('on-input-change', (newItem, changed) => {
@@ -270,11 +275,17 @@ describe('ParameterInput.vue', () => {
     })
 
     it(`enum_mask type:
-      - component takes enum_values array and
-        renders v-select input that allows selecting multiple items
-      - component emits on-input-change and returns enum_mask values as string`, async () => {
+      - Should render v-select input and take enum_values array as available items `, async () => {
         await renderAccurateInputType(wrapper, enumMaskParam, 'enum_mask')
-
+        const vSelect = wrapper.findComponent({ name: 'v-select' })
+        expect(vSelect.vm.$props.items).to.be.deep.equal(enumMaskParam.enum_values)
+    })
+    it(`enum_mask type:
+      - Should emit on-input-change and return accurate values as string
+        when selecting multiple items`, async () => {
+        await wrapper.setProps({
+            item: enumMaskParam,
+        })
         let count = 0
         wrapper.vm.$on('on-input-change', (newItem, changed) => {
             count++
@@ -303,8 +314,16 @@ describe('ParameterInput.vue', () => {
         expect(count).to.be.equal(3)
     })
 
-    it(`enum type: component renders v-select input that allows selecting an item`, async () => {
+    it(`enum type:
+      - Should render v-select input and take enum_values array as available items `, async () => {
         await renderAccurateInputType(wrapper, enumParam, 'enum')
+        const vSelect = wrapper.findComponent({ name: 'v-select' })
+        expect(vSelect.vm.$props.items).to.be.deep.equal(enumParam.enum_values)
+    })
+    it(`enum type:
+      - Should emit on-input-change and return accurate values as string
+        when selecting an item`, async () => {
+        await wrapper.setProps({ item: enumParam })
 
         let count = 0
         wrapper.vm.$on('on-input-change', (newItem, changed) => {
@@ -325,7 +344,6 @@ describe('ParameterInput.vue', () => {
         vSelect.vm.selectItem('majority_of_running')
         // changing back to original value
         vSelect.vm.selectItem('none')
-
         expect(count).to.be.equal(2)
     })
 
