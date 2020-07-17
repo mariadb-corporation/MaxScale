@@ -407,6 +407,25 @@ void RoutingWorker::join_workers()
     this_unit.running = false;
 }
 
+// static
+bool RoutingWorker::shutdown_complete()
+{
+    bool rval = true;
+
+    for (int i = this_unit.id_min_worker; i <= this_unit.id_max_worker; i++)
+    {
+        RoutingWorker* pWorker = this_unit.ppWorkers[i];
+        mxb_assert(pWorker);
+
+        if (pWorker->state() != Worker::FINISHED && pWorker->state() != Worker::STOPPED)
+        {
+            rval = false;
+        }
+    }
+
+    return rval;
+}
+
 RoutingWorker::SessionsById& RoutingWorker::session_registry()
 {
     return m_sessions;

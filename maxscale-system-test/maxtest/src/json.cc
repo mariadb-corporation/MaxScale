@@ -8,7 +8,7 @@ using std::string;
 namespace
 {
 const char key_not_found[] = "Key %s was not found in json data.";
-const char is_null[] = "%s is null.";
+const char val_is_null[] = "%s is null.";
 }
 
 bool Json::load_string(const string& source)
@@ -87,7 +87,7 @@ std::string Json::get_string(const string& key) const
         {
             if (json_is_null(obj))
             {
-                m_errormsg = mxb::string_printf(is_null, keyc);
+                m_errormsg = mxb::string_printf(val_is_null, keyc);
             }
             else
             {
@@ -115,7 +115,7 @@ int64_t Json::get_int(const string& key) const
         }
         else if (json_is_null(obj))
         {
-            m_errormsg = mxb::string_printf(is_null, keyc);
+            m_errormsg = mxb::string_printf(val_is_null, keyc);
         }
         else
         {
@@ -179,4 +179,39 @@ std::string Json::error_msg() const
 bool Json::valid() const
 {
     return m_obj;
+}
+
+bool Json::contains(const string& key) const
+{
+    return json_object_get(m_obj, key.c_str());
+}
+
+bool Json::is_null(const string& key) const
+{
+    bool rval = false;
+    auto keyc = key.c_str();
+    json_t* obj = json_object_get(m_obj, keyc);
+
+    if (obj)
+    {
+        rval = json_is_null(obj);
+    }
+    else
+    {
+        m_errormsg = mxb::string_printf(key_not_found, keyc);
+    }
+    return rval;
+}
+
+bool Json::try_get_int(const std::string& key, int64_t* out) const
+{
+    bool rval = false;
+    auto keyc = key.c_str();
+    json_t* obj = json_object_get(m_obj, keyc);
+    if (obj && json_is_integer(obj))
+    {
+        *out = json_integer_value(obj);
+        rval = true;
+    }
+    return rval;
 }

@@ -36,14 +36,18 @@ public:
      */
     bool load_string(const std::string& source);
 
+    bool        contains(const std::string& key) const;
+    bool        is_null(const std::string& key) const;
     Json        get_object(const std::string& key) const;
     std::string get_string(const std::string& key) const;
     int64_t     get_int(const std::string& key) const;
 
+    bool try_get_int(const std::string& key, int64_t* out) const;
+
     std::vector<Json> get_array_elems(const std::string& key) const;
 
     std::string error_msg() const;
-    bool valid() const;
+    bool        valid() const;
 
 private:
     json_t*             m_obj {nullptr};/**< Managed json-object */

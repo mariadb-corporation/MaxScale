@@ -8,7 +8,7 @@
 #include <maxtest/mariadb_nodes.hh>
 #include <maxtest/nodes.hh>
 
-class Maxscales: public Nodes
+class Maxscales : public Nodes
 {
 public:
     enum service
@@ -18,7 +18,7 @@ public:
         READCONN_SLAVE
     };
 
-    Maxscales(const char *pref, const char *test_cwd, bool verbose,
+    Maxscales(const char* pref, const char* test_cwd, bool verbose,
               const std::string& network_config);
 
     bool setup() override;
@@ -81,19 +81,19 @@ public:
     int ports[256][3];
 
     /**
-      * @brief maxscale_cnf full name of Maxscale configuration file
-      */
-    char * maxscale_cnf[256];
+     * @brief maxscale_cnf full name of Maxscale configuration file
+     */
+    char* maxscale_cnf[256];
 
     /**
-      * @brief maxscale_log_dir name of log files directory
-      */
-    char * maxscale_log_dir[256];
+     * @brief maxscale_log_dir name of log files directory
+     */
+    char* maxscale_log_dir[256];
 
     /**
-      * @brief maxscale_lbinog_dir name of binlog files (for binlog router) directory
-      */
-    char * maxscale_binlog_dir[256];
+     * @brief maxscale_lbinog_dir name of binlog files (for binlog router) directory
+     */
+    char* maxscale_binlog_dir[256];
 
     /**
      * @brief N_ports Default number of routers
@@ -351,7 +351,6 @@ public:
      * @brief valgring_log_num Counter for Maxscale restarts to avoid Valgrind log overwriting
      */
     int valgring_log_num;
-
 };
 
 class TestConnections;
@@ -361,18 +360,26 @@ class TestConnections;
  */
 struct ServerInfo
 {
-    static constexpr uint RUNNING = (1 << 0);
-    static constexpr uint MASTER = (1 << 1);
-    static constexpr uint SLAVE = (1 << 2);
-    static constexpr uint RELAY = (1 << 3);
+    using bitfield = uint32_t;
+    static constexpr bitfield RUNNING = (1 << 0);
+    static constexpr bitfield MASTER = (1 << 1);
+    static constexpr bitfield SLAVE = (1 << 2);
+    static constexpr bitfield RELAY = (1 << 3);
 
-    static std::string status_to_string(uint status);
+    static constexpr int GROUP_NONE = -1;
+    static constexpr int RLAG_NONE = -1;
+    static constexpr int SRV_ID_NONE = -1;
+
+    static std::string status_to_string(bitfield status);
     std::string        status_to_string() const;
 
     void status_from_string(const std::string& source);
 
-    std::string name;       /**< Server name */
-    uint        status {0}; /**< Status bitfield */
+    std::string name {"<unknown>"}; /**< Server name */
+    bitfield    status {0};         /**< Status bitfield */
+    int64_t     server_id {SRV_ID_NONE};
+    int64_t     master_group {GROUP_NONE};
+    int64_t     rlag {RLAG_NONE};
 };
 
 /**
@@ -381,9 +388,19 @@ struct ServerInfo
 class ServersInfo
 {
 public:
-    void add(const ServerInfo& info);
-    const ServerInfo& get(size_t i);
-    size_t size() const;
+    void              add(const ServerInfo& info);
+    const ServerInfo& get(size_t i) const;
+    size_t            size() const;
+
+    /**
+     * Check that server status is as expected. Increments global error counter if differences found.
+     *
+     * @param expected_status Expected server statuses. Each status should be a bitfield of values defined
+     * in the ServerInfo-class.
+     */
+    void check_servers_status(TestConnections& tester, std::vector<ServerInfo::bitfield> expected_status);
+
+    void check_master_groups(TestConnections& tester, const std::vector<int>& expected_groups);
 
 private:
     std::vector<ServerInfo> m_servers;
@@ -414,11 +431,11 @@ public:
      * @param expected_status Expected server statuses. Each status should be a bitfield of values defined
      * in the ServerInfo-class.
      */
-    void check_servers_status(std::vector<uint> expected_status);
+    void check_servers_status(std::vector<ServerInfo::bitfield> expected_status);
 
 private:
-    TestConnections& m_tester;    /**< Main tester object */
-    int m_node_ind {-1};          /**< Node index of this MaxScale */
+    TestConnections& m_tester;          /**< Main tester object */
+    int              m_node_ind {-1};   /**< Node index of this MaxScale */
 
     std::string m_rest_user {"admin"};
     std::string m_rest_pw {"mariadb"};

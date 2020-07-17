@@ -140,6 +140,9 @@ private:
     bool balance_workers_dc(Worker::Call::action_t action);
     void order_balancing_dc();
 
+    // Waits until all RoutingWorkers have stopped and then stops the MainWorker
+    bool wait_for_shutdown(Worker::Call::action_t action);
+
     std::map<std::string, Task> m_tasks_by_name;
     IndexedStorage              m_storage;
     uint32_t                    m_rebalancing_dc {0};

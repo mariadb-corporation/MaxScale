@@ -263,6 +263,11 @@ public:
     static void join_workers();
 
     /**
+     * Check if all workers have finished shutting down
+     */
+    static bool shutdown_complete();
+
+    /**
      * Posts a task to all workers for execution.
      *
      * @param pTask  The task to be executed.

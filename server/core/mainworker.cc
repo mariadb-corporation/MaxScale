@@ -312,11 +312,25 @@ void MainWorker::start_shutdown()
             // will exit the event loop.
             mxs::RoutingWorker::start_shutdown();
 
-            // Stop the MainWorker now that shutdown has been started
-            MainWorker::get()->shutdown();
+            // Wait until RoutingWorkers have stopped before proceeding with MainWorker shudown
+            auto self = MainWorker::get();
+            self->delayed_call(100, &MainWorker::wait_for_shutdown, self);
         };
 
     MainWorker::get()->execute(func, EXECUTE_QUEUED);
+}
+
+bool MainWorker::wait_for_shutdown(Call::action_t action)
+{
+    if (action == Call::EXECUTE)
+    {
+        if (RoutingWorker::shutdown_complete())
+        {
+            shutdown();
+        }
+    }
+
+    return true;
 }
 }
 

@@ -7,8 +7,8 @@
 #include <maxbase/jansson.h>
 #include <maxtest/json.hh>
 
-#define DEFAULT_MAXSCALE_CNF "/etc/maxscale.cnf"
-#define DEFAULT_MAXSCALE_LOG_DIR "/var/log/maxscale/"
+#define DEFAULT_MAXSCALE_CNF        "/etc/maxscale.cnf"
+#define DEFAULT_MAXSCALE_LOG_DIR    "/var/log/maxscale/"
 #define DEFAULT_MAXSCALE_BINLOG_DIR "/var/lib/maxscale/Binlog_Service/"
 
 using std::string;
@@ -346,7 +346,9 @@ void MaxScale::wait_monitor_ticks(int ticks)
 Nodes::SshResult MaxScale::curl_rest_api(const std::string& path)
 {
     string cmd = mxb::string_printf("curl --silent --show-error http://%s:%s@%s:%s/v1/%s",
-        m_rest_user.c_str(), m_rest_pw.c_str(), m_rest_ip.c_str(), m_rest_port.c_str(), path.c_str());
+                                    m_rest_user.c_str(), m_rest_pw.c_str(),
+                                    m_rest_ip.c_str(), m_rest_port.c_str(),
+                                    path.c_str());
     auto res = m_tester.maxscales->ssh_output(cmd, m_node_ind, true);
     return res;
 }
@@ -359,20 +361,40 @@ MaxScale::MaxScale(TestConnections& tester, int node_ind)
 
 ServersInfo MaxScale::get_servers()
 {
+    const string field_servers = "servers";
+    const string field_data = "data";
+    const string field_id = "id";
+    const string field_attr = "attributes";
+    const string field_state = "state";
+    const string field_mgroup = "master_group";
+    const string field_rlag = "replication_lag";
+    const string field_serverid = "server_id";
+
+    auto try_get_int = [](const Json& json, const string& key, int64_t failval) {
+            int64_t rval = failval;
+            json.try_get_int(key, &rval);
+            return rval;
+        };
+
     ServersInfo rval;
-    auto res = curl_rest_api("servers");
+    auto res = curl_rest_api(field_servers);
     if (res.rc == 0)
     {
         Json all;
         if (all.load_string(res.output))
         {
-            auto data = all.get_array_elems("data");
+            auto data = all.get_array_elems(field_data);
             for (auto& elem : data)
             {
                 ServerInfo info;
-                info.name = elem.get_string("id");
-                auto attr = elem.get_object("attributes");
-                string state = attr.get_string("state");
+                info.name = elem.get_string(field_id);
+                auto attr = elem.get_object(field_attr);
+                string state = attr.get_string(field_state);
+
+                // The following depend on the monitor and may be null.
+                info.master_group = try_get_int(attr, field_mgroup, ServerInfo::GROUP_NONE);
+                info.rlag = try_get_int(attr, field_rlag, ServerInfo::RLAG_NONE);
+                info.server_id = try_get_int(attr, field_serverid, ServerInfo::SRV_ID_NONE);
                 info.status_from_string(state);
                 rval.add(info);
             }
@@ -391,10 +413,10 @@ ServersInfo MaxScale::get_servers()
 
 void ServersInfo::add(const ServerInfo& info)
 {
-     m_servers.push_back(info);
+    m_servers.push_back(info);
 }
 
-const ServerInfo& ServersInfo::get(size_t i)
+const ServerInfo& ServersInfo::get(size_t i) const
 {
     return m_servers[i];
 }
@@ -404,37 +426,65 @@ size_t ServersInfo::size() const
     return m_servers.size();
 }
 
-void MaxScale::check_servers_status(std::vector<uint> expected_status)
+void ServersInfo::check_servers_status(TestConnections& tester,
+                                       std::vector<ServerInfo::bitfield> expected_status)
 {
-    auto data = get_servers();
-
     // Checking only some of the servers is ok.
     auto n_expected = expected_status.size();
-    if (n_expected <= data.size())
+    if (n_expected <= m_servers.size())
     {
         for (size_t i = 0; i < n_expected; i++)
         {
-            uint expected = expected_status[i];
-            auto& info = data.get(i);
-            uint found = info.status;
-            if (expected != found)
+            auto expected = expected_status[i];
+            auto& info = m_servers[i];
+            if (expected != info.status)
             {
                 string found_str = info.status_to_string();
                 string expected_str = ServerInfo::status_to_string(expected);
-                m_tester.add_failure("Wrong status for %s. Got '%s', expected '%s'.",
-                                     info.name.c_str(), found_str.c_str(), expected_str.c_str());
+                tester.add_failure("Wrong status for %s. Got '%s', expected '%s'.",
+                                   info.name.c_str(), found_str.c_str(), expected_str.c_str());
             }
         }
     }
     else
     {
-        m_tester.add_failure("Expected at least %zu servers, found %zu.", n_expected, data.size());
+        tester.add_failure("Expected at least %zu servers, found %zu.", n_expected, m_servers.size());
     }
+}
+
+void ServersInfo::check_master_groups(TestConnections& tester, const std::vector<int>& expected_groups)
+{
+    auto n_expected = expected_groups.size();
+    if (n_expected <= m_servers.size())
+    {
+        // Checking only some of the servers is ok.
+        for (size_t i = 0; i < n_expected; i++)
+        {
+            auto expected = expected_groups[i];
+            auto& info = m_servers[i];
+            if (expected != info.master_group)
+            {
+                tester.add_failure("Wrong master group for %s. Got '%li', expected '%i'.",
+                                   info.name.c_str(), info.master_group, expected);
+            }
+        }
+    }
+    else
+    {
+        tester.add_failure("Expected at least %zu servers, found %zu.", n_expected, m_servers.size());
+    }
+}
+
+void MaxScale::check_servers_status(std::vector<ServerInfo::bitfield> expected_status)
+{
+    auto data = get_servers();
+    data.check_servers_status(m_tester, expected_status);
 }
 
 void ServerInfo::status_from_string(const string& source)
 {
     auto flags = mxb::strtok(source, ",");
+    status = 0;
     for (string& flag : flags)
     {
         mxb::trim(flag);
@@ -457,12 +507,13 @@ void ServerInfo::status_from_string(const string& source)
     }
 }
 
-std::string ServerInfo::status_to_string(uint status)
+std::string ServerInfo::status_to_string(bitfield status)
 {
     std::string rval;
     if (status)
     {
         std::vector<string> items;
+        items.reserve(2);
         if (status & MASTER)
         {
             items.push_back("Master");
