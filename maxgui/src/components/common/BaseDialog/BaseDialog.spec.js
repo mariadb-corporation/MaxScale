@@ -32,14 +32,16 @@ describe('BaseDialog.vue', () => {
         })
     })
 
-    it('dialog closes when cancel button or close button is pressed', async () => {
-        //----------------case: cancel btn
+    it('Should close when cancel button is pressed', async () => {
+        // make dialog open
+        await wrapper.setProps({ value: true })
         expect(wrapper.vm.computeShowDialog).to.be.true
         await wrapper.find('.cancel').trigger('click')
         expect(wrapper.vm.computeShowDialog).to.be.false
+    })
 
-        //---------------case: close btn
-        // make dialog open again
+    it('Should close when close button is pressed', async () => {
+        // make dialog open
         await wrapper.setProps({ value: true })
         expect(wrapper.vm.computeShowDialog).to.be.true
 
@@ -48,7 +50,7 @@ describe('BaseDialog.vue', () => {
     })
 
     it('dialog closes when save button is pressed', async () => {
-        // make dialog open again
+        // make dialog open
         await wrapper.setProps({ value: true })
         expect(wrapper.vm.computeShowDialog).to.be.true
 
