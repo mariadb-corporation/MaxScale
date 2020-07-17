@@ -2,7 +2,7 @@
     <div>
         <portal to="page-header">
             <div class="d-flex align-center">
-                <v-btn class="ml-n4" icon @click="$router.go(-1)">
+                <v-btn class="ml-n4" icon @click="goBack">
                     <v-icon class="mr-1" style="transform:rotate(90deg)" size="28" color="#013646">
                         $vuetify.icons.arrowDown
                     </v-icon>
@@ -39,7 +39,22 @@
         <slot name="append"></slot>
     </div>
 </template>
-
+<script>
+import { mapState } from 'vuex'
+export default {
+    name: 'details-page-title',
+    computed: {
+        ...mapState(['prevRoute']),
+    },
+    methods: {
+        goBack() {
+            this.prevRoute.name === 'login' || this.prevRoute.name === null
+                ? this.$router.push('/dashboard/servers')
+                : this.$router.go(-1)
+        },
+    },
+}
+</script>
 <style lang="scss" scoped>
 .setting-menu {
     border-radius: 4px;

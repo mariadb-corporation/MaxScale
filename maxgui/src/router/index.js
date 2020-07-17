@@ -32,7 +32,7 @@ router.beforeEach(async (to, from, next) => {
     const token_body = getCookie('token_body')
     const user = JSON.parse(localStorage.getItem('user'))
     const isLoggedIn = user ? user.isLoggedIn : null
-
+    store.commit('setPrevRoute', from)
     if (to.matched.some(record => record.meta.requiresAuth)) {
         if (token_body && isLoggedIn) {
             if (from.path === '/login') {
