@@ -22,7 +22,8 @@ then
                  libssl-dev mariadb-client php perl \
                  coreutils libjansson-dev zlib1g-dev \
                  mariadb-test python python-pip cmake \
-                 libpam0g-dev libsqlite3-dev
+                 libpam0g-dev libsqlite3-dev \
+                 libcurl4-gnutls-dev
   sudo apt-get install -y --force-yes openjdk-8-jdk
   sudo apt-get install -y --force-yes php-mysql
   if [ $? != 0 ]
