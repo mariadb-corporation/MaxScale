@@ -70,13 +70,10 @@ struct ExpectedMsgs
  * @param user Username
  * @param password Password
  * @param service Which PAM service is the user logging to
- * @param expected_msg The first expected message from the PAM authentication system.
- * Typically "Password: ". If set to empty, the message is not checked.
  * @return A result struct with the result and an error message.
  */
 AuthResult
-authenticate(const std::string& user, const std::string& password, const std::string& service,
-             const std::string& expected_msg = "Password: ");
+authenticate(const std::string& user, const std::string& password, const std::string& service);
 
 /**
  * Check if the user & password can log into the given PAM service. This function will block until the
