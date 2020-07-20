@@ -759,6 +759,20 @@ json_t* Server::json_attributes() const
     json_t* params = json_object();
     m_settings.fill(params);
 
+    // Return either address/port or socket, not both
+    auto socket = json_object_get(params, CN_SOCKET);
+
+    if (socket && !json_is_null(socket))
+    {
+        mxb_assert(json_is_string(socket));
+        json_object_set_new(params, CN_ADDRESS, json_null());
+        json_object_set_new(params, CN_PORT, json_null());
+    }
+    else
+    {
+        json_object_set_new(params, CN_SOCKET, json_null());
+    }
+
     // Remove unwanted parameters
     json_object_del(params, CN_TYPE);
     json_object_del(params, CN_AUTHENTICATOR);
