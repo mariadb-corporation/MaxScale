@@ -142,6 +142,52 @@ function testParameterInfoAssigned(wrapper, moduleParamType, moduleParamKeys) {
         expect(resourceParam.value).to.be.equal(`${resourceParam.originalValue}${moduleParam.unit}`)
 }
 
+/**
+ * This function puts component into editable mode to mockup the changes of parameters and open
+   confirmation dialog.
+ * @param {Object} wrapper A Wrapper is an object that contains a mounted component and methods to test the component
+ * @param {String} isDual If it is true, it mocks up the changes of enum and boolean parameters, otherwise
+   only enum will be mocked up. enum_param value will change from primary to secondary, bool_param will change
+   from false to true
+ */
+async function mockupParametersChange(wrapper, isDual) {
+    const intercept = async () => {
+        // mockup selecting item on an enum parameter
+        const enumParamTd = wrapper.find(`.enum_param-cell-${1}`)
+        const enumParamVSelect = enumParamTd.findComponent({ name: 'v-select' })
+        await enumParamVSelect.vm.selectItem('secondary')
+        expect(wrapper.vm.$data.changedParametersArr.length).to.be.equal(1)
+        expect(wrapper.vm.$data.changedParametersArr[0].value).to.be.equal('secondary')
+        if (isDual) {
+            // mockup selecting item on an boolean parameter
+            const boolParamCell = wrapper.find(`.bool_param-cell-${1}`)
+            const boolParamVSelect = boolParamCell.findComponent({ name: 'v-select' })
+            await boolParamVSelect.vm.selectItem(true)
+            expect(wrapper.vm.$data.changedParametersArr.length).to.be.equal(2)
+            expect(wrapper.vm.$data.changedParametersArr[1].value).to.be.equal(true)
+        }
+    }
+    const cb = () => expect(wrapper.vm.shouldDisableSaveBtn).to.be.false
+
+    await mockupOpenDialog(wrapper, intercept, cb)
+}
+
+/**
+ * This function puts component into editable mode to mockup the changes of parameters and open confirmation dialog.
+ * @param {Object} wrapper A Wrapper is an object that contains a mounted component and methods to test the component
+ * @param {Function} intercept Callback intercept function to be executed after editable mode is on and
+   before confirmation dialog is opened
+ * @param {Function} cb Callback function to be executed after confirmation dialog is opened
+ */
+async function mockupOpenDialog(wrapper, intercept, cb) {
+    await wrapper.setData({ editableCell: true })
+    expect(wrapper.vm.$data.editableCell).to.be.true
+    typeof intercept === 'function' && (await intercept())
+    // open confirmation dialog
+    await wrapper.find('.done-editing-btn').trigger('click')
+    typeof cb === 'function' && (await cb())
+}
+
 describe('DetailsParametersCollapse.vue', () => {
     let wrapper
 
@@ -163,6 +209,12 @@ describe('DetailsParametersCollapse.vue', () => {
                 requiredParams: [], // set this to force specific parameters to be mandatory
                 isTree: false, // true if a parameter has value as an object or array,
             },
+        })
+    })
+
+    afterEach(async () => {
+        await wrapper.setProps({
+            parameters: { ...resourceParameters }, // trigger reactivity
         })
     })
 
@@ -211,7 +263,12 @@ describe('DetailsParametersCollapse.vue', () => {
     })
 
     it(`Should assign accurately bool module parameter info`, async () => {
-        testParameterInfoAssigned(wrapper, 'bool', ['name', 'description', 'mandatory'])
+        testParameterInfoAssigned(wrapper, 'bool', [
+            'name',
+            'description',
+            'mandatory',
+            'default_value',
+        ])
     })
 
     it(`Should assign accurately enum module parameter info`, async () => {
@@ -229,5 +286,149 @@ describe('DetailsParametersCollapse.vue', () => {
 
     it(`Should assign accurately unmodifiable module parameter info`, async () => {
         testParameterInfoAssigned(wrapper, 'path', ['name', 'description', 'modifiable'])
+    })
+
+    it(`Should assign port and socket value to component's state`, async () => {
+        await wrapper.setProps({
+            usePortOrSocket: true, // indicate a server is being created or updated
+        })
+
+        const { portValue, socketValue } = wrapper.vm.$data
+        expect(portValue).to.be.equals(resourceParameters.port)
+        expect(socketValue).to.be.equals(resourceParameters.socket)
+    })
+
+    it(`Should have the following classes 'color border-left-table-border'`, async () => {
+        const { wrappers: tds } = wrapper.findAll('td')
+        tds.forEach(td =>
+            expect(td.classes()).to.include.members(['color', 'border-left-table-border'])
+        )
+    })
+
+    it(`Should show edit button when component is hovered`, async () => {
+        await wrapper.find('.collapse-wrapper').trigger('mouseenter')
+        expect(wrapper.find('.edit-btn').exists()).to.be.true
+    })
+
+    it(`Should enable editable mode when edit icon is clicked`, async () => {
+        await wrapper.find('.collapse-wrapper').trigger('mouseenter')
+        let editBtn = wrapper.find('.edit-btn')
+        expect(editBtn.exists()).to.be.true
+
+        await editBtn.trigger('click')
+
+        expect(wrapper.vm.$data.editableCell).to.be.equals(true)
+
+        let paramSize = Object.keys(wrapper.vm.$props.parameters).length
+
+        expect(
+            wrapper.findAllComponents({ name: 'parameter-input-container' }).length
+        ).to.be.equals(paramSize)
+    })
+
+    it(`Should assign parameter info when hovering a cell`, async () => {
+        const { wrappers: tds } = wrapper.findAll('td')
+        await tds[0].trigger('mouseenter')
+        expect(wrapper.vm.$data.parameterTooltip.item).to.not.be.null
+    })
+
+    it(`Should assign null when hovering out a cell`, async () => {
+        const { wrappers: tds } = wrapper.findAll('td')
+        await tds[0].trigger('mouseenter')
+        expect(wrapper.vm.$data.parameterTooltip.item).to.not.be.null
+        await tds[0].trigger('mouseleave')
+        expect(wrapper.vm.$data.parameterTooltip.item).to.be.null
+    })
+
+    it(`Should render parameter-tooltip component when a cell is hovered `, async () => {
+        const { wrappers: tds } = wrapper.findAll('td')
+
+        await tds[0].trigger('mouseenter')
+        expect(wrapper.vm.$data.parameterTooltip.item).to.not.be.null
+
+        const parameterTooltip = wrapper.findAllComponents({ name: 'parameter-tooltip' })
+        expect(parameterTooltip.length).to.be.equals(1)
+        expect(tds[0].vm.$props.item.id).to.be.equals(wrapper.vm.$data.parameterTooltip.item.id)
+    })
+
+    it(`Should render total number of table row on the first row of the first column`, async () => {
+        const { wrappers: ths } = wrapper.findAll('th')
+        expect(ths.length).to.be.equals(2)
+        ths.forEach((th, i) => {
+            i === 0
+                ? expect(th.find('.total-row').exists()).to.be.true
+                : expect(th.find('.total-row').exists()).to.be.false
+        })
+    })
+
+    it(`Should not open confirmation dialog when it is not in editable mode`, async () => {
+        expect(wrapper.vm.$data.showConfirmDialog).to.be.false
+    })
+
+    it(`Should open confirmation dialog when 'Done Editing' button is clicked`, async () => {
+        await wrapper.setData({ editableCell: true })
+        await wrapper.find('.done-editing-btn').trigger('click')
+        expect(wrapper.vm.$data.showConfirmDialog).to.be.true
+    })
+
+    it(`Should disable 'That's Right' button when there is no changes`, async () => {
+        await wrapper.setData({ editableCell: true })
+        await wrapper.find('.done-editing-btn').trigger('click')
+        expect(wrapper.vm.shouldDisableSaveBtn).to.be.true
+    })
+
+    it(`Should not disable 'That's Right' button when there is changes`, async () => {
+        await mockupParametersChange(wrapper)
+        await wrapper.find('.done-editing-btn').trigger('click')
+        expect(wrapper.vm.shouldDisableSaveBtn).to.be.false
+    })
+
+    it(`Should show confirmation text correctly in a form a singular text
+      in confirmation dialog`, async () => {
+        await mockupParametersChange(wrapper)
+        // singular text
+        expect(wrapper.find('.confirmation-text').html()).to.be.includes(
+            "You've changed the following 1 parameter:"
+        )
+    })
+
+    it(`Should show confirmation text correctly in a form a plural text
+      in confirmation dialog`, async () => {
+        const twoParamChanges = true
+        await mockupParametersChange(wrapper, twoParamChanges)
+        // plural text
+        expect(wrapper.find('.confirmation-text').html()).to.be.includes(
+            "You've changed the following 2 parameters:"
+        )
+    })
+
+    it(`Should close confirmation dialog when click close icon`, async () => {
+        // open confirmation dialog
+        await mockupOpenDialog(wrapper)
+        // click close icon
+        await wrapper.find('.close').trigger('click')
+        expect(wrapper.vm.$data.showConfirmDialog).to.be.false
+    })
+
+    it(`Should change to read mode and close confirmation dialog
+      when click cancel icon`, async () => {
+        // open confirmation dialog
+        await mockupOpenDialog(wrapper)
+        // click cancel icon
+        await wrapper.find('.cancel').trigger('click')
+        expect(wrapper.vm.$data.showConfirmDialog).to.be.false
+        expect(wrapper.vm.$data.editableCell).to.be.false
+        // should clear component state
+        expect(wrapper.vm.$data.changedParametersArr).to.be.deep.equals([])
+    })
+
+    it(`Should close confirmation dialog when click "That's Right" button`, async () => {
+        await mockupParametersChange(wrapper)
+        // click "That's Right" button
+        await wrapper.find('.save').trigger('click')
+        // should clear component state and close dialog
+        expect(wrapper.vm.$data.showConfirmDialog).to.be.false
+        expect(wrapper.vm.$data.editableCell).to.be.false
+        expect(wrapper.vm.$data.changedParametersArr).to.be.deep.equals([])
     })
 })

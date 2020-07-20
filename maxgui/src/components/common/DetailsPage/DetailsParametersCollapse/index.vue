@@ -17,12 +17,12 @@
                     :editableCell="editableCell"
                     :search="searchKeyWord"
                     :loading="loading"
-                    keepPrimitiveValue
+                    :keepPrimitiveValue="keepPrimitiveValue"
                     :isTree="isTree"
                     @cell-hover="showCellTooltip"
                 >
                     <template v-slot:header-append-id>
-                        <span class="ml-1 color text-field-text">
+                        <span class="ml-1 color text-field-text total-row">
                             ({{ parametersTableRow.length }})
                         </span>
                     </template>
@@ -62,7 +62,7 @@
                 :isSaveDisabled="shouldDisableSaveBtn"
             >
                 <template v-slot:body>
-                    <span class="d-block mb-4">
+                    <span class="d-block confirmation-text mb-4">
                         {{
                             $tc(
                                 'changeTheFollowingParameter',
@@ -77,7 +77,7 @@
                     <div
                         v-for="(item, i) in changedParametersArr"
                         :key="i"
-                        class="d-block"
+                        class="d-block changed-parameter"
                         :class="[
                             item.parentNodeInfo !== null && changedParamsInfo(i, item) && 'mt-2',
                         ]"
@@ -148,6 +148,7 @@ export default {
     data() {
         return {
             // parameters
+            keepPrimitiveValue: true,
             isValid: false,
             showParameters: true,
             variableValueTableHeaders: [
@@ -178,9 +179,9 @@ export default {
     computed: {
         parametersTableRow: function() {
             const parameters = this.$help.lodash.cloneDeep(this.parameters)
-            const keepPrimitiveValue = true
+
             let level = 0
-            let tableRow = this.$help.objToArrOfObj(parameters, keepPrimitiveValue, level)
+            let tableRow = this.$help.objToArrOfObj(parameters, this.keepPrimitiveValue, level)
 
             let moduleParameters = this.$help.lodash.cloneDeep(this.moduleParameters)
             this.processingTableRow(tableRow, moduleParameters)

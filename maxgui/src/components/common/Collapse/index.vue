@@ -28,12 +28,7 @@
                     </span>
                 </p>
                 <v-fade-transition>
-                    <v-btn
-                        v-if="showEditBtn || isEditing"
-                        icon
-                        class="arrow-toggle"
-                        @click="onEdit"
-                    >
+                    <v-btn v-if="showEditBtn || isEditing" icon class="edit-btn" @click="onEdit">
                         <v-icon color="primary" size="18">
                             $vuetify.icons.edit
                         </v-icon>
@@ -91,7 +86,7 @@ export default {
     /* SLOTS available for collapse */
     // name="content"
     props: {
-        wrapperClass: String,
+        wrapperClass: { type: String, default: 'collapse-wrapper' },
         titleWrapperClass: String,
         // props for the toggle
         toggleOnClick: { type: Function, required: true },

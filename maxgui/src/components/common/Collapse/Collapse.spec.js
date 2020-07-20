@@ -24,7 +24,6 @@ describe('Collapse.vue', () => {
             shallow: false,
             component: Collapse,
             props: {
-                wrapperClass: 'collapse-wrapper',
                 isContentVisible: true,
                 title: 'Collapse title',
                 toggleOnClick: () => {
