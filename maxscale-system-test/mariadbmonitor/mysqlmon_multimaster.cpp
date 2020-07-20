@@ -44,6 +44,8 @@ int main(int argc, char* argv[])
     TestConnections::require_repl_version("10.2.3");    // Delayed replication needs this.
     TestConnections test(argc, argv);
 
+    auto& mxs = test.maxscale();
+
     test.tprintf("Test 1 - Configure all servers into a multi-master ring with one slave");
     int max_rlag = 100;
     test.set_timeout(120);
@@ -54,12 +56,12 @@ int main(int argc, char* argv[])
     change_master(test, 2, 0);
     change_master(test, 3, 2, "", max_rlag);
 
-    test.maxscale()->wait_monitor_ticks(2);
+    mxs.wait_monitor_ticks(2);
     auto maxconn = test.maxscales->open_rwsplit_connection();
     test.try_query(maxconn, "FLUSH TABLES;");
-    test.maxscale()->wait_monitor_ticks(1);
+    mxs.wait_monitor_ticks(1);
 
-    auto servers_info = test.maxscale()->get_servers();
+    auto servers_info = mxs.get_servers();
     auto phase1_2_groups = {1, 1, 1, grp_none};
     servers_info.check_servers_status(test,
                                       {mm_master_status, mm_slave_status, mm_slave_status, slave_status});
@@ -76,9 +78,9 @@ int main(int argc, char* argv[])
     test.set_timeout(120);
     execute_query(test.repl->nodes[0], readonly_on_query);
     execute_query(test.repl->nodes[1], readonly_on_query);
-    test.maxscale()->wait_monitor_ticks(1);
+    mxs.wait_monitor_ticks(1);
 
-    servers_info = test.maxscale()->get_servers();
+    servers_info = mxs.get_servers();
     servers_info.check_servers_status(test, {mm_slave_status, mm_slave_status, mm_master_status,
                                              slave_status});
     servers_info.check_master_groups(test, phase1_2_groups);
@@ -87,7 +89,7 @@ int main(int argc, char* argv[])
     test.tprintf("Test 3 - Configure nodes 1 and 2 into a master-master pair, make node 0 "
                  "a slave of node 1 and node 3 a slave of node 2");
 
-    test.maxscales->stop_maxscale();
+    mxs.stop();
     test.set_timeout(120);
     test.repl->execute_query_all_nodes(reset_query);
     test.repl->connect();
@@ -97,16 +99,16 @@ int main(int argc, char* argv[])
     change_master(test, 2, 1, "", max_rlag);
     change_master(test, 3, 2);
 
-    test.maxscales->start_maxscale();
+    mxs.start();
     sleep(2);
-    test.maxscale()->wait_monitor_ticks(1);
+    mxs.wait_monitor_ticks(1);
 
     maxconn = test.maxscales->open_rwsplit_connection();
     test.try_query(maxconn, "FLUSH TABLES;");
     mysql_close(maxconn);
-    test.maxscale()->wait_monitor_ticks(1);
+    mxs.wait_monitor_ticks(1);
 
-    servers_info = test.maxscale()->get_servers();
+    servers_info = mxs.get_servers();
     auto phase3_4_groups = {grp_none, 1, 1, grp_none};
     servers_info.check_servers_status(test, {slave_status, mm_master_status, mm_slave_status, slave_status});
     servers_info.check_master_groups(test, phase3_4_groups);
@@ -116,15 +118,15 @@ int main(int argc, char* argv[])
 
     test.set_timeout(120);
     execute_query(test.repl->nodes[1], readonly_on_query);
-    test.maxscale()->wait_monitor_ticks(1);
+    mxs.wait_monitor_ticks(1);
 
-    servers_info = test.maxscale()->get_servers();
+    servers_info = mxs.get_servers();
     servers_info.check_servers_status(test, {slave_status, mm_slave_status, mm_master_status, slave_status});
     servers_info.check_master_groups(test, phase3_4_groups);
 
     test.tprintf("Test 5 - Create two distinct groups");
 
-    test.maxscales->stop_maxscale();
+    mxs.stop();
     test.set_timeout(120);
     test.repl->execute_query_all_nodes(reset_query);
     test.repl->connect();
@@ -134,15 +136,15 @@ int main(int argc, char* argv[])
     change_master(test, 2, 3);
     change_master(test, 3, 2);
 
-    test.maxscales->start_maxscale();
+    mxs.start();
     sleep(2);
-    test.maxscale()->wait_monitor_ticks(1);
+    mxs.wait_monitor_ticks(1);
 
     // Even though the servers are in two distinct groups, only one of them
     // contains a master and a slave. Only one master may exist in a cluster
     // at once, since by definition this is the server to which routers may
     // direct writes.
-    servers_info = test.maxscale()->get_servers();
+    servers_info = mxs.get_servers();
     auto phase5_6_groups = {1, 1, 2, 2};
     auto phase5_6_status = {mm_master_status, mm_slave_status, running_status, running_status};
     servers_info.check_servers_status(test, phase5_6_status);
@@ -154,9 +156,9 @@ int main(int argc, char* argv[])
     execute_query(test.repl->nodes[1], readonly_on_query);
     execute_query(test.repl->nodes[3], readonly_on_query);
 
-    test.maxscale()->wait_monitor_ticks(1);
+    mxs.wait_monitor_ticks(1);
 
-    servers_info = test.maxscale()->get_servers();
+    servers_info = mxs.get_servers();
     servers_info.check_servers_status(test, phase5_6_status);
     servers_info.check_master_groups(test, phase5_6_groups);
 
@@ -169,13 +171,13 @@ int main(int argc, char* argv[])
     change_master(test, 1, 3);
     change_master(test, 2, 3);
 
-    test.maxscale()->wait_monitor_ticks(1);
+    mxs.wait_monitor_ticks(1);
     maxconn = test.maxscales->open_rwsplit_connection();
     test.try_query(maxconn, "FLUSH TABLES;");
-    test.maxscale()->wait_monitor_ticks(2);
+    mxs.wait_monitor_ticks(2);
     test.try_query(maxconn, "SHOW DATABASES;");
 
-    servers_info = test.maxscale()->get_servers();
+    servers_info = mxs.get_servers();
     auto phase7_8_status = {slave_status, mm_slave_status, mm_slave_status, mm_master_status};
     auto phase7_8_groups = {grp_none, grp_none, grp_none, grp_none};
     servers_info.check_servers_status(test, phase7_8_status);
@@ -186,9 +188,9 @@ int main(int argc, char* argv[])
 
     const char remove_delay[] = "STOP SLAVE '%s'; CHANGE MASTER '%s' TO master_delay=0; START SLAVE '%s';";
     test.try_query(test.repl->nodes[0], remove_delay, "a", "a", "a");
-    test.maxscale()->wait_monitor_ticks(2);
+    mxs.wait_monitor_ticks(2);
 
-    servers_info = test.maxscale()->get_servers();
+    servers_info = mxs.get_servers();
     servers_info.check_servers_status(test, phase7_8_status);
     servers_info.check_master_groups(test, phase7_8_groups);
     check_rlag(test, servers_info, 0, 0, 0);

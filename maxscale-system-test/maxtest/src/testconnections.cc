@@ -2393,9 +2393,9 @@ void TestConnections::set_mdbci_labels()
     m_mdbci_labels_str = mdbci_labels_str;
 }
 
-MaxScale* TestConnections::maxscale()
+MaxScale& TestConnections::maxscale()
 {
-    return m_maxscale.get();
+    return *m_maxscale;
 }
 
 std::string cutoff_string(const string& source, char cutoff)

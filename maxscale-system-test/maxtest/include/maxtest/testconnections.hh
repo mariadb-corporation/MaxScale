@@ -572,7 +572,7 @@ public:
      */
     int reinstall_maxscales();
 
-    MaxScale* maxscale();
+    MaxScale& maxscale();
 
 private:
     void report_result(const char* format, va_list argp);
