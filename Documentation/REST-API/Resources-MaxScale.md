@@ -407,7 +407,7 @@ parameters it accepts as a module.
     },
     "data": {
         "id": "dbfwfilter",
-        "type": "module",
+        "type": "modules",
         "attributes": {
             "module_type": "Filter",
             "version": "V1.2.0",
@@ -498,7 +498,7 @@ one to see the parameters of a module before the object is created.
     "data": [
         {
             "id": "qc_sqlite",
-            "type": "module",
+            "type": "modules",
             "attributes": {
                 "module_type": "QueryClassifier",
                 "version": "V1.0.0",
@@ -513,7 +513,7 @@ one to see the parameters of a module before the object is created.
         },
         {
             "id": "MySQLAuth",
-            "type": "module",
+            "type": "modules",
             "attributes": {
                 "module_type": "Authenticator",
                 "version": "V1.1.0",

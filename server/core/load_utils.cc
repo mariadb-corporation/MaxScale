@@ -626,7 +626,7 @@ static json_t* module_json_data(const LOADED_MODULE* mod, const char* host)
     json_t* obj = json_object();
 
     json_object_set_new(obj, CN_ID, json_string(mod->module));
-    json_object_set_new(obj, CN_TYPE, json_string(CN_MODULE));
+    json_object_set_new(obj, CN_TYPE, json_string(CN_MODULES));
 
     json_t* attr = json_object();
     json_object_set_new(attr, "module_type", json_string(mod->type));
