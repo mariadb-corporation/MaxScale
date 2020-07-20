@@ -866,6 +866,14 @@ HttpResponse cb_tasks(const HttpRequest& request)
 
 HttpResponse cb_all_modules(const HttpRequest& request)
 {
+    static bool all_modules_loaded = false;
+
+    if (!all_modules_loaded && request.get_option("load") == "all")
+    {
+        load_all_modules();
+        all_modules_loaded = true;
+    }
+
     return HttpResponse(MHD_HTTP_OK, module_list_to_json(request.host()));
 }
 

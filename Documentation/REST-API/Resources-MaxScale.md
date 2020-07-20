@@ -482,6 +482,10 @@ GET /v1/maxscale/modules
 
 Retrieve information about all loaded modules.
 
+This endpoint supports the `load=all` parameter. When defined, all modules
+located in the MaxScale module directory (`libdir`) will be loaded. This allows
+one to see the parameters of a module before the object is created.
+
 #### Response
 
 `Status: 200 OK`
