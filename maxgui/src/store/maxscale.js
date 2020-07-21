@@ -53,7 +53,7 @@ export default {
             commit('setMaxScaleOverviewInfo', res.data.data.attributes)
         },
         async fetchAllModules({ commit }) {
-            let res = await this.Vue.axios.get(`/maxscale/modules`)
+            let res = await this.Vue.axios.get(`/maxscale/modules?load=all`)
             commit('setAllModules', res.data.data)
         },
         // ---------------------------- last two second threads--------------------------

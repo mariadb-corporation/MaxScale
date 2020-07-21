@@ -407,7 +407,7 @@ parameters it accepts as a module.
     },
     "data": {
         "id": "dbfwfilter",
-        "type": "module",
+        "type": "modules",
         "attributes": {
             "module_type": "Filter",
             "version": "V1.2.0",
@@ -482,6 +482,10 @@ GET /v1/maxscale/modules
 
 Retrieve information about all loaded modules.
 
+This endpoint supports the `load=all` parameter. When defined, all modules
+located in the MaxScale module directory (`libdir`) will be loaded. This allows
+one to see the parameters of a module before the object is created.
+
 #### Response
 
 `Status: 200 OK`
@@ -494,7 +498,7 @@ Retrieve information about all loaded modules.
     "data": [
         {
             "id": "qc_sqlite",
-            "type": "module",
+            "type": "modules",
             "attributes": {
                 "module_type": "QueryClassifier",
                 "version": "V1.0.0",
@@ -509,7 +513,7 @@ Retrieve information about all loaded modules.
         },
         {
             "id": "MySQLAuth",
-            "type": "module",
+            "type": "modules",
             "attributes": {
                 "module_type": "Authenticator",
                 "version": "V1.1.0",

@@ -139,6 +139,7 @@ export default {
                     : '',
                 item.level > 0 || header.cellTruncated ? 'text-truncate cell-truncate' : '',
                 this.draggable && 'relative',
+                `${item.id}-cell-${cellIndex}`,
             ]
         },
 
