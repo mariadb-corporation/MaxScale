@@ -71,7 +71,7 @@ export default {
          * be done via the services resource.
          */
         async destroyFilter({ dispatch, commit }, id) {
-            let res = await this.Vue.axios.delete(`/filters/${id}`)
+            let res = await this.Vue.axios.delete(`/filters/${id}?force=yes`)
             if (res.status === 204) {
                 await dispatch('fetchAllFilters')
                 commit(

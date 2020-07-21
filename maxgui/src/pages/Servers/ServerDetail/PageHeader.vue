@@ -72,12 +72,12 @@
                     >
                         <template v-slot:activator="{ on }">
                             <v-btn text v-on="on" @click="handleClick('delete')">
-                                <v-icon size="22" color="error">
-                                    $vuetify.icons.unlink
+                                <v-icon size="18" color="error">
+                                    $vuetify.icons.delete
                                 </v-icon>
                             </v-btn>
                         </template>
-                        <span>{{ $t('unlink') }} {{ $tc('servers', 1) }}</span>
+                        <span>{{ $t('delete') }} {{ $tc('servers', 1) }}</span>
                     </v-tooltip>
                 </template>
             </details-icon-group-wrapper>
@@ -183,8 +183,8 @@ export default {
                 case 'delete':
                     {
                         this.mode = 'delete'
-                        this.dialogType = 'unlink'
-                        this.dialogTitle = `${this.$t('unlink')} ${this.$tc('servers', 1)}`
+                        this.dialogType = 'delete'
+                        this.dialogTitle = `${this.$t('delete')} ${this.$tc('servers', 1)}`
                         this.smallInfo = 'serverUnlink'
                     }
                     break

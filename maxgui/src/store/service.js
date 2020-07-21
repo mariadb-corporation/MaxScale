@@ -203,7 +203,7 @@ export default {
          * @param {String} id id of the service
          */
         async destroyService({ dispatch, commit }, id) {
-            let res = await this.Vue.axios.delete(`/services/${id}`)
+            let res = await this.Vue.axios.delete(`/services/${id}?force=yes`)
             // response ok
             if (res.status === 204) {
                 await dispatch('fetchAllServices')

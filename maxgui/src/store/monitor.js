@@ -114,7 +114,7 @@ export default {
                 case 'destroy':
                     /*  Destroy a created monitor.
                     The monitor must not have relationships to any servers in order to be destroyed. */
-                    res = await this.Vue.axios.delete(`/monitors/${id}`)
+                    res = await this.Vue.axios.delete(`/monitors/${id}?force=yes`)
                     message = [`Monitor ${id} is destroyed`]
                     break
                 case 'stop':
