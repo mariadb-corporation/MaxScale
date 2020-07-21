@@ -171,7 +171,7 @@ int Nodes::ssh_node_f(int node, bool sudo, const char* format, ...)
 {
     va_list valist;
     va_start(valist, format);
-    string sys = string_printf(format, valist);
+    string sys = mxb::string_vprintf(format, valist);
     va_end(valist);
     return ssh_node(node, sys.c_str(), sudo);
 }

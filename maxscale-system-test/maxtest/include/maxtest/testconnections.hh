@@ -16,6 +16,7 @@
 #include <maxtest/test_dir.hh>
 
 typedef std::set<std::string> StringSet;
+class TestLogger;
 
 /**
  * @brief Class contains references to Master/Slave and Galera test setups
@@ -575,7 +576,6 @@ public:
     MaxScale& maxscale();
 
 private:
-    void report_result(const char* format, va_list argp);
     void copy_one_mariadb_log(Mariadb_nodes* nrepl, int i, std::string filename);
     void copy_one_maxscale_log(int i, double timestamp);
 
@@ -585,7 +585,8 @@ private:
 
     bool too_many_maxscales() const;
 
-    std::unique_ptr<MaxScale> m_maxscale; /**< Main MaxScale instance */
+    std::unique_ptr<MaxScale>   m_maxscale; /**< Main MaxScale instance */
+    std::unique_ptr<TestLogger> m_logger;   /**< Error log container */
 
     std::vector<std::function<void(void)>> m_on_destroy;
 

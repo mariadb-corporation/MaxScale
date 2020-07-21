@@ -31,5 +31,3 @@ int readenv_int(const char * name, int def);
  * @return Enviromental variable value converted to bool
  */
 bool readenv_bool(const char * name, bool def);
-
-std::string string_printf(const char *format, va_list args);

@@ -2,6 +2,7 @@
 
 #include <cstring>
 #include <cstdarg>
+#include <maxbase/format.hh>
 
 using std::string;
 
@@ -43,7 +44,7 @@ string envvar_get_set(const char* name, const char* format, ...)
     {
         va_list valist;
         va_start(valist, format);
-        rval = string_printf(format, valist);
+        rval = mxb::string_vprintf(format, valist);
         va_end(valist);
         setenv(name, rval.c_str(), 1);
     }
@@ -80,22 +81,4 @@ bool readenv_bool(const char * name, bool def)
         setenv(name, def ? "true" : "false", 1);
         return def;
     }
-}
-
-std::string string_printf(const char* format, va_list args)
-{
-    va_list args_copy;
-    va_copy(args_copy, args);
-    int bytes_required = vsnprintf(nullptr, 0, format, args_copy);
-    va_end(args_copy);
-
-    string rval;
-    if (bytes_required > 0)
-    {
-        int buflen = bytes_required + 1;
-        char buf[buflen];
-        vsnprintf(buf, buflen, format, args);
-        rval = buf;
-    }
-    return rval;
 }

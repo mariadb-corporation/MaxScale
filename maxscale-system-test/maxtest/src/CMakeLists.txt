@@ -10,6 +10,7 @@ add_library(maxtest SHARED
         get_com_select_insert.cc
         get_my_ip.cc
         json.cc
+        log.cc
         mariadb_func.cc
         mariadb_nodes.cc
         maxinfo_func.cc
