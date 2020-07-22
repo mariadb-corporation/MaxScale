@@ -202,7 +202,7 @@ json_t* Cache::do_get_info(uint32_t what) const
                                                             // failure.
                 }
 
-                json_object_set(pInfo, "rules", pArray);
+                json_object_set_new(pInfo, "rules", pArray);
             }
         }
     }

@@ -530,7 +530,7 @@ static json_t* module_json_data(const LOADED_MODULE* mod, const char* host)
 
         if (mod->info->parameters[i].default_value)
         {
-            json_object_set(p, "default_value", json_string(mod->info->parameters[i].default_value));
+            json_object_set_new(p, "default_value", json_string(mod->info->parameters[i].default_value));
         }
 
         if (mod->info->parameters[i].type == MXS_MODULE_PARAM_ENUM

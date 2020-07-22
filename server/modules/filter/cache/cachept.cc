@@ -112,8 +112,7 @@ json_t* CachePT::get_info(uint32_t what) const
 
                 if (pThreadInfo)
                 {
-                    json_object_set(pInfo, key, pThreadInfo);
-                    json_decref(pThreadInfo);
+                    json_object_set_new(pInfo, key, pThreadInfo);
                 }
             }
         }
