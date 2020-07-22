@@ -135,19 +135,19 @@ case, the slave connection is ignored.
 ### `detect_stale_master`
 
 Boolean, default: ON. Deprecated. If set to OFF, *running_slave* is added to
-[master_requirements](master_requirements). Both settings may not be defined
+[master_conditions](#master_conditions). Both settings may not be defined
 simultaneously.
 
 ### `detect_stale_slave`
 
 Boolean, default: ON. Deprecated. If set to OFF, *linked_master* is added to
-[slave_requirements](slave_requirements). Both settings may not be defined
+[slave_conditions](#slave_conditions). Both settings may not be defined
 simultaneously.
 
 ### `detect_standalone_master`
 
 Boolean, default: ON. Deprecated. If set to OFF, *connecting_slave* is added to
-[master_requirements](master_requirements). Both settings may not be defined
+[master_conditions](#master_conditions). Both settings may not be defined
 simultaneously.
 
 ### `master_conditions`
@@ -156,12 +156,9 @@ Enum, default: *primary_monitor_master*. Designate additional conditions for
 *Master*-status, i.e qualified for read and write queries.
 
 Normally, if a suitable master candidate server is found as described in
-[Master selection](master-selection), MaxScale designates it *Master*. The
-server loses its *Master*-status if it's set *read_only* or if a
-[primary monitor](cooperative-monitoring)
-selects another master. *master_conditions* sets additional conditions for a
-master server. This setting is an enum, allowing multiple conditions to be set
-simultaneously.
+[Master selection](#master-selection), MaxScale designates it *Master*.
+*master_conditions* sets additional conditions for a master server. This
+setting is an enum, allowing multiple conditions to be set simultaneously.
 
 The available conditions are:
 
@@ -175,7 +172,7 @@ connection must be up (Slave_IO_Running is 'Yes').
 4. running_slave : Same as *connecting_slave*, with the addition that the
 slave must be also *Running*.
 5. primary_monitor_master : If this MaxScale is
-[cooperating](cooperative-monitoring) with another MaxScale and this is the
+[cooperating](#cooperative-monitoring) with another MaxScale and this is the
 secondary MaxScale, require that the candidate master is selected also by the
 primary MaxScale.
 
@@ -208,7 +205,7 @@ applies to any relays between the slave and the master.
 3. running_master : The master must be running. Relays may be down.
 4. writable_master : The master must be writable.
 5. primary_monitor_master : If this MaxScale is
-[cooperating](cooperative-monitoring) with another MaxScale and this is the
+[cooperating](#cooperative-monitoring) with another MaxScale and this is the
 secondary MaxScale, require that the candidate master is selected also by the
 primary MaxScale.
 

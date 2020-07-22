@@ -1627,25 +1627,13 @@ void prepare_for_destruction(const SFilterDef& filter)
 
 void prepare_for_destruction(Service* service)
 {
-    if (auto cluster = service->cluster())
-    {
-        service->remove_cluster(cluster);
-    }
-    else
-    {
-        for (const auto& e : service->get_children())
-        {
-            service->remove_target(e);
-        }
-    }
-
+    // Destroy listeners that point to the service. They are separate objects and are not managed by the
+    // service which means we can't simply ignore them.
     for (const auto& l : listener_find_by_service(service))
     {
         runtime_remove_config(l->name());
         Listener::destroy(l);
     }
-
-    service->set_filters({});
 }
 
 void prepare_for_destruction(Monitor* monitor)
@@ -1795,7 +1783,7 @@ bool runtime_destroy_service(Service* service, bool force)
         prepare_for_destruction(service);
     }
 
-    if (service->can_be_destroyed())
+    if (force || service->can_be_destroyed())
     {
         if (runtime_remove_config(service->name()))
         {
