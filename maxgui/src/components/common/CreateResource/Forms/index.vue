@@ -38,7 +38,7 @@
                     :rules="rules.resourceId"
                     name="id"
                     required
-                    class="std error--text__bottom"
+                    class="resource-id std error--text__bottom"
                     dense
                     outlined
                     :placeholder="$t('nameYour', { resourceName: selectedResource.toLowerCase() })"
@@ -125,7 +125,6 @@ export default {
             // module for monitor, service, and filter, listener
             resourceModules: [],
             //COMMON
-            isParametersTableShown: false,
             resourceId: '', // resourceId is the name of resource being created
             rules: {
                 resourceId: [val => this.validateResourceId(val)],
@@ -144,8 +143,6 @@ export default {
                 'filter',
                 'filters',
             ],
-            emittingFormValuesEvent: false,
-            formValues: {},
         }
     },
 
