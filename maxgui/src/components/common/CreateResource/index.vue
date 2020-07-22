@@ -1,7 +1,6 @@
 <template>
     <div>
         <v-btn
-            :disabled="handleShowCreateBtn"
             width="160"
             outlined
             height="36"
@@ -42,27 +41,6 @@ export default {
         return {
             createDialog: false,
         }
-    },
-    computed: {
-        currentRouteName: function() {
-            return this.$route.name
-        },
-        handleShowCreateBtn: function() {
-            const matchArr = [
-                'monitor',
-                'monitors',
-                'server',
-                'servers',
-                'service',
-                'services',
-                'session',
-                'sessions',
-                'filter',
-                'filters',
-            ]
-            if (matchArr.includes(this.currentRouteName)) return false
-            return true
-        },
     },
 
     methods: {

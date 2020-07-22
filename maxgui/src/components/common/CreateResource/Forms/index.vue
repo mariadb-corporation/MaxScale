@@ -16,7 +16,7 @@
                 name="resourceName"
                 outlined
                 dense
-                class="std mariadb-select-input error--text__bottom"
+                class="resource-select std mariadb-select-input error--text__bottom"
                 :menu-props="{
                     contentClass: 'mariadb-select-v-menu',
                     bottom: true,
@@ -151,7 +151,7 @@ export default {
 
     computed: {
         ...mapGetters({
-            allModules: 'maxscale/allModules',
+            allModulesMap: 'maxscale/allModulesMap',
             allServices: 'service/allServices',
             allServicesInfo: 'service/allServicesInfo',
 
@@ -245,17 +245,18 @@ export default {
                             )
                             protocolParamObj.default_value = protocol.id
                             protocolParamObj.disabled = true
-                            /*TODO: "Each protocol module defines a default authentication module",
-                            but the authenticator parameter receives from /maxscale/module doesnt have default_value
-                            The type should be enum_mask
+                            /*
+                             Transform authenticator parameter from string type to enum type,
                             */
-                            // add default_value for authenticator
                             let authenticatorParamObj = protocol.attributes.parameters.find(
                                 o => o.name === 'authenticator'
                             )
-                            authenticatorParamObj.type = 'enum'
-                            authenticatorParamObj.enum_values = authenticatorId
-                            authenticatorParamObj.default_value = ''
+                            if (authenticatorParamObj) {
+                                authenticatorParamObj.type = 'enum'
+                                authenticatorParamObj.enum_values = authenticatorId
+                                // add default_value for authenticator
+                                authenticatorParamObj.default_value = ''
+                            }
                         }
 
                         this.resourceModules = protocols
@@ -291,12 +292,7 @@ export default {
         },
 
         getModuleType(type) {
-            let modules = []
-            for (let i = 0; i < this.allModules.length; ++i) {
-                let moduleObj = this.allModules[i]
-                moduleObj.attributes.module_type === type && modules.push(moduleObj)
-            }
-            return modules
+            return this.allModulesMap[type]
         },
 
         handleSave() {

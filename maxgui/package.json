@@ -54,6 +54,7 @@
         "geckodriver": "^1.19.1",
         "git-describe": "^4.0.4",
         "moment-locales-webpack-plugin": "1.2.0",
+        "moxios": "0.4.0",
         "null-loader": "^3.0.0",
         "prettier": "^1.19.1",
         "sass": "^1.26.10",

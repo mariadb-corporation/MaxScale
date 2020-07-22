@@ -158,7 +158,7 @@ export default {
          * @param {String} id id of the server
          */
         async destroyServer({ dispatch, commit }, id) {
-            let res = await this.Vue.axios.delete(`/servers/${id}`)
+            let res = await this.Vue.axios.delete(`/servers/${id}?force=yes`)
             // response ok
             if (res.status === 204) {
                 await dispatch('fetchAllServers')
