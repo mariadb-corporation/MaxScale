@@ -408,7 +408,7 @@ TestConnections::TestConnections(int argc, char* argv[])
 
     maxscales = new Maxscales("maxscale", test_dir, verbose, m_network_config);
     maxscales->setup();
-    m_maxscale = std::make_unique<MaxScale>(*this, 0);
+    m_maxscale = std::make_unique<MaxScale>(maxscales, *m_logger, 0);
 
     bool maxscale_ok = maxscales->check_nodes();
     bool repl_ok = no_repl || repl_future.get();
@@ -2361,6 +2361,11 @@ void TestConnections::set_mdbci_labels()
 MaxScale& TestConnections::maxscale()
 {
     return *m_maxscale;
+}
+
+TestLogger& TestConnections::logger()
+{
+    return *m_logger;
 }
 
 std::string cutoff_string(const string& source, char cutoff)

@@ -574,6 +574,7 @@ public:
     int reinstall_maxscales();
 
     MaxScale& maxscale();
+    TestLogger& logger();
 
 private:
     void copy_one_mariadb_log(Mariadb_nodes* nrepl, int i, std::string filename);

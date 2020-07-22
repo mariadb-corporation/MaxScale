@@ -63,9 +63,8 @@ int main(int argc, char* argv[])
 
     auto servers_info = mxs.get_servers();
     auto phase1_2_groups = {1, 1, 1, grp_none};
-    servers_info.check_servers_status(test,
-                                      {mm_master_status, mm_slave_status, mm_slave_status, slave_status});
-    servers_info.check_master_groups(test, phase1_2_groups);
+    servers_info.check_servers_status({mm_master_status, mm_slave_status, mm_slave_status, slave_status});
+    servers_info.check_master_groups(phase1_2_groups);
     check_rlag(test, servers_info, 3, 1, max_rlag);
 
     // Need to send a read query so that rwsplit detects replication lag.
@@ -81,9 +80,8 @@ int main(int argc, char* argv[])
     mxs.wait_monitor_ticks(1);
 
     servers_info = mxs.get_servers();
-    servers_info.check_servers_status(test, {mm_slave_status, mm_slave_status, mm_master_status,
-                                             slave_status});
-    servers_info.check_master_groups(test, phase1_2_groups);
+    servers_info.check_servers_status({mm_slave_status, mm_slave_status, mm_master_status, slave_status});
+    servers_info.check_master_groups(phase1_2_groups);
     check_rlag(test, servers_info, 3, 1, max_rlag);
 
     test.tprintf("Test 3 - Configure nodes 1 and 2 into a master-master pair, make node 0 "
@@ -110,8 +108,8 @@ int main(int argc, char* argv[])
 
     servers_info = mxs.get_servers();
     auto phase3_4_groups = {grp_none, 1, 1, grp_none};
-    servers_info.check_servers_status(test, {slave_status, mm_master_status, mm_slave_status, slave_status});
-    servers_info.check_master_groups(test, phase3_4_groups);
+    servers_info.check_servers_status({slave_status, mm_master_status, mm_slave_status, slave_status});
+    servers_info.check_master_groups(phase3_4_groups);
     check_rlag(test, servers_info, 2, 1, max_rlag);
 
     test.tprintf("Test 4 - Set node 1 into read-only mode");
@@ -121,8 +119,8 @@ int main(int argc, char* argv[])
     mxs.wait_monitor_ticks(1);
 
     servers_info = mxs.get_servers();
-    servers_info.check_servers_status(test, {slave_status, mm_slave_status, mm_master_status, slave_status});
-    servers_info.check_master_groups(test, phase3_4_groups);
+    servers_info.check_servers_status({slave_status, mm_slave_status, mm_master_status, slave_status});
+    servers_info.check_master_groups(phase3_4_groups);
 
     test.tprintf("Test 5 - Create two distinct groups");
 
@@ -147,8 +145,8 @@ int main(int argc, char* argv[])
     servers_info = mxs.get_servers();
     auto phase5_6_groups = {1, 1, 2, 2};
     auto phase5_6_status = {mm_master_status, mm_slave_status, running_status, running_status};
-    servers_info.check_servers_status(test, phase5_6_status);
-    servers_info.check_master_groups(test, phase5_6_groups);
+    servers_info.check_servers_status(phase5_6_status);
+    servers_info.check_master_groups(phase5_6_groups);
 
     test.tprintf("Test 6 - Set nodes 1 and 3 into read-only mode");
 
@@ -159,8 +157,8 @@ int main(int argc, char* argv[])
     mxs.wait_monitor_ticks(1);
 
     servers_info = mxs.get_servers();
-    servers_info.check_servers_status(test, phase5_6_status);
-    servers_info.check_master_groups(test, phase5_6_groups);
+    servers_info.check_servers_status(phase5_6_status);
+    servers_info.check_master_groups(phase5_6_groups);
 
     test.tprintf("Test 7 - Diamond topology with delay");
 
@@ -180,8 +178,8 @@ int main(int argc, char* argv[])
     servers_info = mxs.get_servers();
     auto phase7_8_status = {slave_status, mm_slave_status, mm_slave_status, mm_master_status};
     auto phase7_8_groups = {grp_none, grp_none, grp_none, grp_none};
-    servers_info.check_servers_status(test, phase7_8_status);
-    servers_info.check_master_groups(test, phase7_8_groups);
+    servers_info.check_servers_status(phase7_8_status);
+    servers_info.check_master_groups(phase7_8_groups);
     check_rlag(test, servers_info, 0, 1, max_rlag);
 
     test.tprintf("Test 8 - Diamond topology with no delay");
@@ -191,8 +189,8 @@ int main(int argc, char* argv[])
     mxs.wait_monitor_ticks(2);
 
     servers_info = mxs.get_servers();
-    servers_info.check_servers_status(test, phase7_8_status);
-    servers_info.check_master_groups(test, phase7_8_groups);
+    servers_info.check_servers_status(phase7_8_status);
+    servers_info.check_master_groups(phase7_8_groups);
     check_rlag(test, servers_info, 0, 0, 0);
 
     // Rwsplit should detects that replication lag is 0.
