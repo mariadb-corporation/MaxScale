@@ -15,7 +15,8 @@ export default {
     namespaced: true,
     state: {
         maxScaleOverviewInfo: {},
-        allModules: [],
+
+        allModulesMap: {},
         threads: [],
         threadsChartData: {
             datasets: [],
@@ -26,8 +27,8 @@ export default {
         setMaxScaleOverviewInfo(state, payload) {
             state.maxScaleOverviewInfo = payload
         },
-        setAllModules(state, payload) {
-            state.allModules = payload
+        setAllModulesMap(state, payload) {
+            state.allModulesMap = payload
         },
         // ---------------------------- last two second threads--------------------------
         setThreads(state, payload) {
@@ -54,7 +55,15 @@ export default {
         },
         async fetchAllModules({ commit }) {
             let res = await this.Vue.axios.get(`/maxscale/modules?load=all`)
-            commit('setAllModules', res.data.data)
+            const allModules = res.data.data
+            let hashArr = {} // O(n log n)
+            for (let i = 0; i < allModules.length; ++i) {
+                const module = allModules[i]
+                const moduleType = allModules[i].attributes.module_type
+                if (hashArr[moduleType] == undefined) hashArr[moduleType] = []
+                hashArr[moduleType].push(module)
+            }
+            commit('setAllModulesMap', hashArr)
         },
         // ---------------------------- last two second threads--------------------------
         async fetchThreads({ commit }) {
@@ -127,7 +136,7 @@ export default {
     getters: {
         maxScaleParameters: state => state.maxScaleParameters,
         maxScaleOverviewInfo: state => state.maxScaleOverviewInfo,
-        allModules: state => state.allModules,
+        allModulesMap: state => state.allModulesMap,
         threadsChartData: state => state.threadsChartData,
         threads: state => state.threads,
     },
