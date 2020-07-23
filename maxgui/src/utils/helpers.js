@@ -169,18 +169,7 @@ export function formatValue(value, formatType) {
 }
 
 /**
- * Convert an object to array of object with format like this
-        [
-            {
-                nodeId: Number,
-                parentNodeId: Number,
-                level: Number,
-                parentNodeInfo: { [keyName]: key, originalValue: value },
-                keyName: String,
-                keyValue: targetObj[key],
-                originalValue: targetObj[key],
-            },
-        ]
+ * Convert an object to array of objects with tree data properties
  * @param {Object} obj Object to be converted to array
  * @param {Boolean} keepPrimitiveValue keepPrimitiveValue to whether call handleValue function or not
  * @param {Number} level depth level for nested object

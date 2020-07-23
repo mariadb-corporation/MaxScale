@@ -48,30 +48,20 @@ describe('CreateResource.vue', () => {
                 data: [
                     {
                         attributes: {
-                            api: 'filter',
-                            commands: [],
-                            description: 'A comment filter that can inject comments in sql queries',
-                            maturity: 'In development',
-                            module_type: 'Filter',
+                            module_type: 'servers',
                             parameters: [
                                 {
-                                    mandatory: true,
-                                    name: 'inject',
-                                    type: 'quoted string',
+                                    description: 'Server address',
+                                    mandatory: false,
+                                    modifiable: true,
+                                    name: 'address',
+                                    type: 'string',
                                 },
                             ],
-                            version: 'V1.0.0',
                         },
-                        id: 'comment',
-                        links: {
-                            self: 'https://127.0.0.1:8989/v1/modules/comment',
-                        },
-                        type: 'modules',
+                        id: 'servers',
                     },
                 ],
-                links: {
-                    self: 'https://127.0.0.1:8989/v1/maxscale/modules/',
-                },
             },
         })
         await wrapper.find('button').trigger('click')

@@ -50,7 +50,7 @@ export default options => {
         localVue.component(name, commonComponents[name])
     })
 
-    return doMount(options.shallow, options.component, {
+    let mountOptions = {
         localVue,
         store,
         router,
@@ -59,6 +59,8 @@ export default options => {
         propsData: options.props,
         slots: options.slots,
         attachTo: '#app',
-    })
+    }
+    options.store && (mountOptions.store = options.store)
+    return doMount(options.shallow, options.component, mountOptions)
 }
 export const router = new Router({ routes: routes })

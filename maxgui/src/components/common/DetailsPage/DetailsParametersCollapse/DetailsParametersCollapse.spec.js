@@ -144,11 +144,11 @@ function testParameterInfoAssigned(wrapper, moduleParamType, moduleParamKeys) {
 
 /**
  * This function puts component into editable mode to mockup the changes of parameters and open
-   confirmation dialog.
+ * confirmation dialog.
  * @param {Object} wrapper A Wrapper is an object that contains a mounted component and methods to test the component
  * @param {String} isDual If it is true, it mocks up the changes of enum and boolean parameters, otherwise
-   only enum will be mocked up. enum_param value will change from primary to secondary, bool_param will change
-   from false to true
+ * only enum will be mocked up. enum_param value will change from primary to secondary, bool_param will change
+ * from false to true
  */
 async function mockupParametersChange(wrapper, isDual) {
     const intercept = async () => {
@@ -176,7 +176,7 @@ async function mockupParametersChange(wrapper, isDual) {
  * This function puts component into editable mode to mockup the changes of parameters and open confirmation dialog.
  * @param {Object} wrapper A Wrapper is an object that contains a mounted component and methods to test the component
  * @param {Function} intercept Callback intercept function to be executed after editable mode is on and
-   before confirmation dialog is opened
+ * before confirmation dialog is opened
  * @param {Function} cb Callback function to be executed after confirmation dialog is opened
  */
 async function mockupOpenDialog(wrapper, intercept, cb) {

@@ -198,8 +198,8 @@ export default {
         },
 
         /**
-         * @param {Object} item object
          * This function shows truncated text in v-menu
+         * @param {Object} item object
          */
         showTruncatedMenu(item, rowIndex, cellIndex, header) {
             // auto truncated text feature

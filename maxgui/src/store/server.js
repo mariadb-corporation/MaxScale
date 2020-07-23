@@ -204,7 +204,7 @@ export default {
         },
 
         /**
-        Generate data schema for total connections of each server
+         *Generate data schema for total connections of each server
          */
         genDataSetSchema({ commit, state }) {
             const { allServers } = state

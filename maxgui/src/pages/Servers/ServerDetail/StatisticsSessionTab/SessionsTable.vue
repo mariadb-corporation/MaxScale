@@ -71,13 +71,6 @@ export default {
                 let self = this
                 let itemsArr = []
                 for (let i = 0; i < self.allSessions.length; ++i) {
-                    /**
-                     * @typedef {Object} row
-                     * @property {Number} row.id - sessions's id
-                     * @property {String} row.user - sessions's user
-                     * @property {String} row.connected - sessions's sessions
-                     * @property {Number} row.idle - idle (seconds)
-                     */
                     const {
                         id,
                         attributes: { idle, connected, user, remote, connections },

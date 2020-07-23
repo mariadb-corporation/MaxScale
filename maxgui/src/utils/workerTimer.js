@@ -17,8 +17,7 @@ function timeInterval(name, interval, _this) {
     }, Number(interval))
 }
 /**
- *Traversing parameters through traversers
- *Call the timer method
+ *Call timer method
  */
 self.onmessage = function(e) {
     e.data.map(item => {

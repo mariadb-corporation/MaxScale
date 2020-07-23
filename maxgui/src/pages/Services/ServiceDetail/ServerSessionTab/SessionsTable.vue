@@ -70,13 +70,6 @@ export default {
                 let itemsArr = []
                 let allSessions = this.$help.lodash.cloneDeep(this.sessionsByService)
                 for (let n = allSessions.length - 1; n >= 0; --n) {
-                    /**
-                     * @typedef {Object} row
-                     * @property {Number} row.id - sessions's id
-                     * @property {String} row.user - sessions's user
-                     * @property {String} row.connected - sessions's sessions
-                     * @property {Number} row.idle - idle (seconds)
-                     */
                     const {
                         id,
                         attributes: { idle, connected, user, remote },

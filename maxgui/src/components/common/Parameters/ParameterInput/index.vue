@@ -301,13 +301,13 @@ export default {
         },
 
         /**
-         * @param {Object} item target item to be processed
-         * @param {String} mode mode be processed
-         * @return {Object} new processed item
          * Processing enum_mask type for editing
          * v-select component accepts array as value type for v-model when multiple props is enabled.
          * But when sending the values back to parent component, it will be converted
          * to a string.
+         * @param {Object} item target item to be processed
+         * @param {String} mode mode be processed
+         * @return {Object} new processed item
          */
         processEnumMask(item, mode) {
             let result = item
