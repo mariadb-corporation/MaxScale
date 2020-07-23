@@ -1,11 +1,6 @@
 <template>
     <div class="mb-2">
-        <module-parameters
-            ref="moduleInputs"
-            moduleName="module"
-            :modules="resourceModules"
-            :requiredParams="['user', 'password']"
-        />
+        <module-parameters ref="moduleInputs" moduleName="module" :modules="resourceModules" />
         <resource-relationships
             ref="serversRelationship"
             relationshipsType="servers"

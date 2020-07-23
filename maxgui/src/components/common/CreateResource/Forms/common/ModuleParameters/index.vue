@@ -22,7 +22,6 @@
             v-if="selectedModule"
             ref="parametersTable"
             :parameters="getModuleParameters"
-            :requiredParams="requiredParams"
             :usePortOrSocket="usePortOrSocket"
             :isTree="isTree"
             :parentForm="parentForm"
@@ -50,7 +49,6 @@ This component takes modules props to render v-select component for selecting a 
 When a module is selelcted, a parameters input table will be rendered.
 moduleName props is defined to render correct label for select input
 PROPS:
-- requiredParams: accepts array of string , it simply enables required attribute in parameter-input dynamically
 - usePortOrSocket: accepts boolean , if true, get portValue, and socketValue to pass to parameter-input
   for handling special input field when editting server or listener.
 - isListener: accepts boolean , if true, address parameter won't be required
@@ -67,7 +65,6 @@ export default {
         modules: { type: Array, required: true },
         // specical props to manipulate required or dependent input attribute
         usePortOrSocket: { type: Boolean, default: false },
-        requiredParams: { type: Array, default: () => [] },
         parentForm: { type: Object },
         isListener: { type: Boolean, default: false },
         isTree: { type: Boolean, default: false },

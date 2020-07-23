@@ -29,7 +29,6 @@
                 <template v-slot:value="{ data: { item } }">
                     <parameter-input-container
                         :item="item"
-                        :requiredParams="requiredParams"
                         :parentForm="parentForm"
                         :usePortOrSocket="usePortOrSocket"
                         :changedParametersArr="changedParametersArr"
@@ -70,7 +69,6 @@ module parameters. All default_values will be returned as string regardless of t
 The component is meant to be used for creating resource
 
 PROPS:
-- requiredParams: accepts array of string , it simply enables required attribute in parameter-input dynamically
 - usePortOrSocket: accepts boolean , if true, get portValue, and socketValue,
   passing them to parameter-input for handling special input field when editting server or listener.
 - isListener: accepts boolean , if true, address parameter will not be required
@@ -81,7 +79,6 @@ export default {
         parameters: { type: Array, required: true },
         // specical props to manipulate required or dependent input attribute
         usePortOrSocket: { type: Boolean, default: false }, // needed for server, listener
-        requiredParams: { type: Array },
         parentForm: { type: Object }, // needed for server, listener
         isListener: { type: Boolean, default: false },
         isTree: { type: Boolean, default: false },
