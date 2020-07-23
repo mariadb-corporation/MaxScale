@@ -1,4 +1,4 @@
-/**
+ /**
  * @file bug601.cpp regression case for bug 601 ("COM_CHANGE_USER fails with correct user/pwd if executed
  * during authentication")
  * - configure Maxscale.cnf to use only one thread
