@@ -530,9 +530,19 @@ bool RWSplitSession::route_session_write(GWBUF* querybuf, uint8_t command, uint3
             }
             else
             {
-                MXS_ERROR("Failed to execute session command in %s (%s)",
-                          backend->name(),
-                          backend->uri());
+                backend->close();
+
+                if (m_config.master_failure_mode == RW_FAIL_INSTANTLY && backend == m_current_master)
+                {
+                    MXS_ERROR("Failed to execute session command in Master: %s (%s)",
+                              backend->name(), backend->uri());
+                    return false;
+                }
+                else
+                {
+                    MXS_ERROR("Failed to execute session command in %s (%s)",
+                              backend->name(), backend->uri());
+                }
             }
         }
     }
