@@ -408,6 +408,8 @@ The service has one listener listening on port 4001 for CDC protocol clients.
 [avro-converter]
 type=service
 router=avrorouter
+user=myuser
+password=mypasswd
 router_options=binlogdir=/var/lib/mysql/,
         filestem=binlog,
         avrodir=/var/lib/maxscale/avro/

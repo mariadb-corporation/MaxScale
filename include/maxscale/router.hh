@@ -224,11 +224,9 @@ typedef struct mxs_router_object
  */
 typedef enum router_capability
 {
-    RCAP_TYPE_NO_RSESSION    = 0x00010000,  /**< Router does not use router sessions */
-    RCAP_TYPE_NO_USERS_INIT  = 0x00020000,  /**< Prevent the loading of authenticator
+    RCAP_TYPE_NO_USERS_INIT  = 0x00010000,  /**< Prevent the loading of authenticator
                                              *  users when the service is started */
-    RCAP_TYPE_NO_AUTH        = 0x00040000,  /**< No `user` or `password` parameter required */
-    RCAP_TYPE_RUNTIME_CONFIG = 0x00080000,  /**< Router supports runtime cofiguration */
+    RCAP_TYPE_RUNTIME_CONFIG = 0x00020000,  /**< Router supports runtime cofiguration */
 } mxs_router_capability_t;
 
 typedef enum

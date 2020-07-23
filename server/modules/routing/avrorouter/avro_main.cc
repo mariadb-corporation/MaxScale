@@ -462,16 +462,14 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         destroyInstance
     };
 
-    static uint64_t caps = RCAP_TYPE_NO_RSESSION | RCAP_TYPE_NO_AUTH;
-
     static MXS_MODULE info =
     {
         MXS_MODULE_API_ROUTER,
         MXS_MODULE_GA,
         MXS_ROUTER_VERSION,
-        "Binlogrouter",
+        "Avrorouter",
         "V1.0.0",
-        caps,
+        0,
         &MyObject,
         NULL,
         NULL,
