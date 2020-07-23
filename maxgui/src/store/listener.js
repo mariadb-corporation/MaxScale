@@ -65,11 +65,7 @@ export default {
             }
         },
         /**
-         * @param {String} object.id Name of the filter to be destroyed,
-         * A filter can only be destroyed if no service uses it.
-         * This means that the data.relationships object for the filter must be empty.
-         * Note that the service → filter relationship cannot be modified from the filters resource and must
-         * be done via the services resource.
+         * @param {String} object.id Name of the listener to be destroyed,
          */
         async destroyListener({ dispatch, commit }, id) {
             let res = await this.Vue.axios.delete(`/listeners/${id}`)

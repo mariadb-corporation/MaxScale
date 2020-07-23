@@ -130,9 +130,9 @@ async function mockupClosingDialog(wrapper) {
 
 /**
  * This function tests whether text is transform correctly based on route changes.
-   It should capitalize first letter of current route name if current page is a dashboard page.
-   For dashboard page, it should also transform plural route name to a singular word,
-   i.e., services become Service
+ * It should capitalize first letter of current route name if current page is a dashboard page.
+ * For dashboard page, it should also transform plural route name to a singular word,
+ * i.e., services become Service
  * @param {Object} wrapper A Wrapper is an object that contains a mounted component and methods to test the component
  * @param {String} route Current route path
  * @param {String} selectedResource Selected resource to be created

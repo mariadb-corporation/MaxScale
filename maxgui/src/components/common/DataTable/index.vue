@@ -135,7 +135,7 @@ This component accepts:
   may has sortable: true || false, editableCol: true || false, align: "center || left || right",
   cellTruncated: true || false, width: String, padding: String
 
-- data props as array of objects, each object must has either item.nodeId:Number || item.id:Any, 
+- data props as array of objects, each object must has either item.nodeId:Number || item.id:Any,
   if both presents nodeId will be used
 
 SLOTS available for this component:
@@ -369,9 +369,10 @@ export default {
         },
 
         /**
+         * This function group all items have same groupdID and assign
+         * correct value for hidden and rowspan properties.
          * @param {Array} target Array of objects,
          * @return {Array} Always return new array
-         * This function group all items have same groupdID and assign correct value for hidden and rowspan properties.
          */
         handleDisplayRowspan(target) {
             let uniqueSet = new Set(target.map(item => item.groupId))
@@ -392,10 +393,10 @@ export default {
         },
 
         /**
+         * This function set background color to rows when a cell or a row is hovered
+         * It is used when rowspan feature is enabled
          * @param {Object} e event object
          * @param {Object} item object
-         * This function set background color to rows when a cell or a row is hovered
-         * This function is used when rowspan feature is enabled
          */
         setRowspanBg(e, item, rowIndex, cellIndex) {
             const target = cellIndex < this.colsHasRowSpan ? 'rowspanCell' : 'cell'

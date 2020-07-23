@@ -78,14 +78,6 @@ export default {
 
                 let allSessions = this.$help.lodash.cloneDeep(this.allSessions)
                 for (let n = allSessions.length - 1; n >= 0; --n) {
-                    /**
-                     * @typedef {Object} row
-                     * @property {Number} row.id - sessions's id
-                     * @property {String} row.user - sessions's user
-                     * @property {String} row.connected - sessions's sessions
-                     * @property {Number} row.idle - idle (seconds)
-                     * @property {Array} row.serviceIds - Sessions's services relationships
-                     */
                     const {
                         id,
                         attributes: { idle, connected, user, remote },
