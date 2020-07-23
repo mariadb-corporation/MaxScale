@@ -161,7 +161,15 @@ export default {
             return this.$store.Vue.Logger('Login')
         },
     },
-
+    watch: {
+        hasFocus: function(val) {
+            if (val) {
+                this.createCircle()
+            } else {
+                this.timer && clearTimeout(this.timer)
+            }
+        },
+    },
     mounted() {
         window.onfocus = () => {
             this.hasFocus = true
@@ -179,6 +187,11 @@ export default {
             window.requestAnimationFrame(this.draw)
         }
     },
+
+    beforeDestroy() {
+        this.timer && clearTimeout(this.timer)
+    },
+
     methods: {
         ...mapMutations({ setUser: 'user/setUser' }),
 
@@ -271,7 +284,7 @@ export default {
             window.requestAnimationFrame(this.draw)
         },
         createCircle() {
-            setTimeout(() => {
+            this.timer = setTimeout(() => {
                 if (this.hasFocus) {
                     this.circles.unshift({
                         x: window.innerWidth - 50,
@@ -280,9 +293,8 @@ export default {
                         opacity: 0.9,
                         color: 'white',
                     })
+                    this.createCircle()
                 }
-
-                this.createCircle()
             }, this.$help.range(2.5, 5) * 1000)
         },
     },
