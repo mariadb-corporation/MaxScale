@@ -10,14 +10,14 @@
             <data-table
                 :headers="variableValueTableHeaders"
                 :data="parametersTableRow"
-                showAll
-                editableCell
-                keepPrimitiveValue
+                :showAll="showAll"
+                :editableCell="editableCell"
+                :keepPrimitiveValue="keepPrimitiveValue"
                 :isTree="isTree"
                 @cell-hover="showCellTooltip"
             >
                 <template v-slot:header-append-id>
-                    <span class="ml-1 color text-field-text">
+                    <span class="ml-1 color text-field-text total-row">
                         ({{ parametersTableRow.length }})
                     </span>
                 </template>
@@ -80,14 +80,18 @@ export default {
     props: {
         parameters: { type: Array, required: true },
         // specical props to manipulate required or dependent input attribute
-        usePortOrSocket: { type: Boolean, default: false },
+        usePortOrSocket: { type: Boolean, default: false }, // needed for server, listener
         requiredParams: { type: Array },
-        parentForm: { type: Object },
+        parentForm: { type: Object }, // needed for server, listener
         isListener: { type: Boolean, default: false },
         isTree: { type: Boolean, default: false },
     },
     data: function() {
         return {
+            // for data-table
+            showAll: true,
+            editableCell: true,
+            keepPrimitiveValue: true,
             // nested form
             isValid: false,
             // Parameters table section
@@ -119,6 +123,7 @@ export default {
                 let defaultValue
                 switch (paramObj.type) {
                     case 'bool':
+                        // This won't be necessary once MXS-3090 is fixed
                         defaultValue = paramObj.default_value === 'true'
                         break
                     default:
