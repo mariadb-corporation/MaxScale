@@ -1,0 +1,10 @@
+{
+    "ubuntu_bionic": {
+        "hostname": "default",
+        "box" : "###test_vm_box###",
+        "user" : "###test_vm_user###",
+        "memory_size": "8192",
+        "cpu_count": "8"
+    }
+}
+

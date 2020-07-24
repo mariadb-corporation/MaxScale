@@ -41,8 +41,6 @@
 export vm_memory=${vm_memory:-"2048"}
 export dir=`pwd`
 
-ulimit -n
-
 # read the name of build scripts directory
 export script_dir="$(dirname $(readlink -f $0))"
 
