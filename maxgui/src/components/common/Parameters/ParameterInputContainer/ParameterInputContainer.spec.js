@@ -13,6 +13,7 @@
 import { expect } from 'chai'
 import mount from '@tests/unit/setup'
 import ParameterInputContainer from '@/components/common/Parameters/ParameterInputContainer'
+import { mockupSelection, mockupInputChange } from '@tests/unit/mockup'
 
 let stringParam = {
     type: 'string',
@@ -75,10 +76,7 @@ describe('ParameterInputContainer.vue', () => {
             expect(newItem.value).to.be.equal('new value')
         })
         // mocking input changes
-        const input = wrapper.findAll('input').at(0)
-        input.element.value = 'new value'
-        // manually triggering input event on v-text-field
-        await input.trigger('input')
+        await mockupInputChange(wrapper, 'new value')
         expect(count).to.be.equal(1)
     })
 
@@ -123,9 +121,8 @@ describe('ParameterInputContainer.vue', () => {
         })
 
         // mockup selecting item on an enum mask parameter
-        const enumMaskVSelect = wrapper.findComponent({ name: 'v-select' })
-        // adding running_slave to value
-        await enumMaskVSelect.vm.selectItem('running_slave')
+        await mockupSelection(wrapper, 'running_slave') // adding running_slave to value
+
         expect(changedParametersArr.length).to.be.equal(1)
         expect(changedParametersArr[0].value).to.be.equal('primary_monitor_master,running_slave')
     })
@@ -147,9 +144,7 @@ describe('ParameterInputContainer.vue', () => {
         })
 
         // mockup selecting item on an enum mask parameter
-        const enumMaskVSelect = wrapper.findComponent({ name: 'v-select' })
-
-        await enumMaskVSelect.vm.selectItem('primary_monitor_master')
+        await mockupSelection(wrapper, 'primary_monitor_master')
 
         expect(changedParametersArr.length).to.be.equal(1)
         expect(changedParametersArr[0].value).to.be.equal('')

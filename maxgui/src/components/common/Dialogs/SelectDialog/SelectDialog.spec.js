@@ -13,6 +13,7 @@
 import { expect } from 'chai'
 import mount from '@tests/unit/setup'
 import SelectDialog from '@/components/common/Dialogs/SelectDialog'
+import { mockupSelection } from '@tests/unit/mockup'
 
 describe('SelectDialog.vue', () => {
     let wrapper
@@ -86,9 +87,7 @@ describe('SelectDialog.vue', () => {
         // open dialog
         await wrapper.setProps({ value: true })
         // mockup onchange event when selecting item
-        const vSelect = wrapper.findComponent({ name: 'v-select' })
-
-        vSelect.vm.selectItem({ id: 'Monitor-test', type: 'monitors' })
+        await mockupSelection(wrapper, { id: 'Monitor-test', type: 'monitors' })
 
         expect(chosenItems).to.be.an('array')
         expect(chosenItems[0].id).to.be.equal('Monitor-test')

@@ -14,6 +14,7 @@
 import { expect } from 'chai'
 import mount from '@tests/unit/setup'
 import ResourceRelationships from '@CreateResource/Forms/common/ResourceRelationships'
+import { mockupSelection } from '@tests/unit/mockup'
 
 const mockupResourceItems = [
     { id: 'test-server-0', type: 'servers' },
@@ -66,8 +67,8 @@ describe('ResourceRelationships.vue', () => {
     it(`Multiple mode off: Should return selectedItems as an array
       when getSelectedItems method get called`, async () => {
         // mockup selecting a server
-        const vSelect = wrapper.findComponent({ name: 'v-select' })
-        await vSelect.vm.selectItem(mockupResourceItems[0])
+        await mockupSelection(wrapper, mockupResourceItems[0])
+
         expect(wrapper.vm.getSelectedItems()).to.be.an('array')
         expect(wrapper.vm.getSelectedItems()).to.be.deep.equals([mockupResourceItems[0]])
     })
@@ -78,10 +79,7 @@ describe('ResourceRelationships.vue', () => {
             multiple: true,
         })
         // mockup selecting multiple servers
-        const vSelect = wrapper.findComponent({ name: 'v-select' })
-        await vSelect.vm.selectItem(mockupResourceItems[0])
-        await vSelect.vm.selectItem(mockupResourceItems[1])
-        await vSelect.vm.selectItem(mockupResourceItems[2])
+        mockupResourceItems.forEach(async item => await mockupSelection(wrapper, item))
 
         expect(wrapper.vm.getSelectedItems()).to.be.an('array')
         expect(wrapper.vm.getSelectedItems()).to.be.deep.equals(mockupResourceItems)

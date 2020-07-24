@@ -13,6 +13,7 @@
 import { expect } from 'chai'
 import mount from '@tests/unit/setup'
 import ParameterInput from '@/components/common/Parameters/ParameterInput'
+import { mockupSelection } from '@tests/unit/mockup'
 
 let paramHasChild = {
     default_value: false,
@@ -265,11 +266,8 @@ describe('ParameterInput.vue', () => {
         })
 
         // mockup onchange event when selecting item
-        const vSelect = wrapper.findComponent({ name: 'v-select' })
-        // changing from value false to true
-        vSelect.vm.selectItem(true)
-        // changing back to original value
-        vSelect.vm.selectItem(false)
+        await mockupSelection(wrapper, true) // changing from value false to true
+        await mockupSelection(wrapper, false) // changing back to original value
 
         expect(count).to.be.equal(2)
     })
@@ -303,13 +301,9 @@ describe('ParameterInput.vue', () => {
         })
 
         // mockup onchange event when selecting item
-        const vSelect = wrapper.findComponent({ name: 'v-select' })
-        // adding running_slave to value
-        vSelect.vm.selectItem('running_slave')
-        // removing running_slave from value
-        vSelect.vm.selectItem('running_slave')
-        // making value empty
-        vSelect.vm.selectItem('primary_monitor_master')
+        await mockupSelection(wrapper, 'running_slave') // adding running_slave to value
+        await mockupSelection(wrapper, 'running_slave') // removing running_slave from value
+        await mockupSelection(wrapper, 'primary_monitor_master') // making value empty
 
         expect(count).to.be.equal(3)
     })
@@ -339,11 +333,9 @@ describe('ParameterInput.vue', () => {
         })
 
         // mockup onchange event when selecting item
-        const vSelect = wrapper.findComponent({ name: 'v-select' })
-        // changing from value none to majority_of_running
-        vSelect.vm.selectItem('majority_of_running')
-        // changing back to original value
-        vSelect.vm.selectItem('none')
+        await mockupSelection(wrapper, 'majority_of_running') // changing to majority_of_running
+        await mockupSelection(wrapper, 'none') // changing back to original value
+
         expect(count).to.be.equal(2)
     })
 

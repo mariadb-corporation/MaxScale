@@ -14,6 +14,7 @@
 import { expect } from 'chai'
 import mount from '@tests/unit/setup'
 import DetailsPageTitle from '@/components/common/DetailsPage/DetailsPageTitle'
+import { mockupRouteChanges } from '@tests/unit/mockup'
 
 describe('DetailsPageTitle.vue', () => {
     let wrapper
@@ -27,8 +28,7 @@ describe('DetailsPageTitle.vue', () => {
     })
     afterEach(async () => {
         //push back to dashboard/servers
-        wrapper.vm.$route.name !== 'servers' &&
-            (await wrapper.vm.$router.push('/dashboard/servers'))
+        await mockupRouteChanges(wrapper, '/dashboard/servers')
     })
 
     it(`Should render accurate page title`, async () => {
@@ -37,8 +37,7 @@ describe('DetailsPageTitle.vue', () => {
             component: DetailsPageTitle,
         })
         // go to a test page
-        await wrapper.vm.$router.push('/dashboard/servers/row_server_1')
-
+        await mockupRouteChanges(wrapper, '/dashboard/servers/row_server_1')
         let pageTitleEle = wrapper.find('.page-title')
         expect(pageTitleEle.exists()).to.be.equal(true)
         expect(pageTitleEle.html()).to.be.include('row_server_1')
