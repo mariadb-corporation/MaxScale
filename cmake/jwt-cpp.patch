@@ -1,0 +1,13 @@
+diff --git a/include/picojson/picojson.h b/include/picojson/picojson.h
+index ef4b903..6bb4bb4 100644
+--- a/include/picojson/picojson.h
++++ b/include/picojson/picojson.h
+@@ -383,7 +383,7 @@ GET(array, *u_.array_)
+ GET(object, *u_.object_)
+ #ifdef PICOJSON_USE_INT64
+ GET(double,
+-    (type_ == int64_type && (const_cast<value *>(this)->type_ = number_type, const_cast<value *>(this)->u_.number_ = u_.int64_),
++    (type_ == int64_type && (const_cast<value *>(this)->type_ = number_type, (const_cast<value *>(this)->u_.number_ = u_.int64_)),
+      u_.number_))
+ GET(int64_t, u_.int64_)
+ #else
