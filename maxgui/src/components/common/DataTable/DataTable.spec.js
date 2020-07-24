@@ -81,8 +81,6 @@ function mockupTreeData(wrapper) {
 }
 describe('DataTable.vue', () => {
     let wrapper
-    // mockup parent value passing to Collapse
-
     beforeEach(() => {
         localStorage.clear()
         wrapper = mount({

@@ -18,7 +18,6 @@ import { mockupRouteChanges } from '@tests/unit/mockup'
 
 describe('GlobalSearch.vue', () => {
     let wrapper
-    // mockup parent value passing to Collapse
 
     beforeEach(() => {
         localStorage.clear()

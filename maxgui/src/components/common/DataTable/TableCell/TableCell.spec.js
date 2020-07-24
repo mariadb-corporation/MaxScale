@@ -17,9 +17,6 @@ import TableCell from '@/components/common/DataTable/TableCell'
 
 describe('TableCell.vue', () => {
     let wrapper
-
-    // mockup parent value passing to Collapse
-
     beforeEach(() => {
         localStorage.clear()
         wrapper = mount({
@@ -76,7 +73,7 @@ describe('TableCell.vue', () => {
         expect(eventFired).to.equal(2)
     })
 
-    it(`When draggable props is true, drag icon will be rendered and 
+    it(`When draggable props is true, drag icon will be rendered and
       shown at the last column at hovered row`, async () => {
         await wrapper.setProps({
             draggable: true,
@@ -100,7 +97,7 @@ describe('TableCell.vue', () => {
         expect(dragHandle.attributes().style).to.not.include('display: none')
     })
 
-    it(`When toggle button is clicked, toggle button will be displayed at the first column 
+    it(`When toggle button is clicked, toggle button will be displayed at the first column
       and emitted "toggle-node" event `, async () => {
         await wrapper.setProps({
             cellIndex: 0,

@@ -16,8 +16,6 @@ import Collapse from '@/components/common/Collapse'
 
 describe('Collapse.vue', () => {
     let wrapper
-    // mockup parent value passing to Collapse
-
     beforeEach(() => {
         localStorage.clear()
         wrapper = mount({

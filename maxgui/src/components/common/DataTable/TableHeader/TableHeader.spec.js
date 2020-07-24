@@ -28,7 +28,6 @@ describe('TableHeader.vue', () => {
         { text: 'GTID', value: 'gtid' },
         { text: 'Services', value: 'serviceIds' },
     ]
-    // mockup parent value passing to Collapse
 
     beforeEach(() => {
         localStorage.clear()

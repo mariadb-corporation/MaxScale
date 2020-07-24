@@ -18,8 +18,6 @@ import moxios from 'moxios'
 
 describe('CreateResource.vue', () => {
     let wrapper
-    // mockup parent value passing to Collapse
-
     beforeEach(() => {
         localStorage.clear()
 

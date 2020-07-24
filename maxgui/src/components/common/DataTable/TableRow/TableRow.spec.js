@@ -18,8 +18,6 @@ import TableRow from '@/components/common/DataTable/TableRow'
 describe('TableRow.vue', () => {
     let wrapper
 
-    // mockup parent value passing to Collapse
-
     beforeEach(() => {
         localStorage.clear()
         wrapper = mount({
@@ -35,7 +33,7 @@ describe('TableRow.vue', () => {
         })
     })
 
-    it(`Component returns accurate value of indexOfHoveredRow to cell slot when 
+    it(`Component returns accurate value of indexOfHoveredRow to cell slot when
       draggable or showActionsOnHover is true`, async () => {
         const tr = wrapper.findAll('tr')
         expect(tr.length).to.equal(1)

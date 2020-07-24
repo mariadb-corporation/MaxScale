@@ -17,7 +17,7 @@ import ParameterTooltipActivator from '@/components/common/Parameters/ParameterT
 
 describe('ParameterTooltipActivator.vue', () => {
     let wrapper
-    // mockup parent value passing to Collapse
+
     let validItem = {
         nodeId: 60,
         parentNodeId: 0,
