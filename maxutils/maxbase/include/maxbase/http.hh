@@ -15,6 +15,7 @@
 #include <maxbase/ccdefs.hh>
 #include <map>
 #include <memory>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
