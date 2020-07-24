@@ -327,7 +327,7 @@ int Nodes::read_basic_env()
             // reading private IPs
             sprintf(env_name, "%s_%03d_private_ip", prefix, i);
             IP_private[i] = strdup(get_nc_item(env_name).c_str());
-            if (IP_private[i] == NULL)
+            if ((IP_private[i] == NULL) || (strlen(IP_private[i]) == 0))
             {
                 IP_private[i] = IP[i];
             }
