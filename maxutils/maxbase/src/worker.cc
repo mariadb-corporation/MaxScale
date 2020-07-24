@@ -622,7 +622,7 @@ void Worker::shutdown()
  */
 void Worker::handle_message(MessageQueue& queue, const MessageQueue::Message& msg)
 {
-    switch (msg.id())
+    switch ((int)msg.id())
     {
     case MXB_WORKER_MSG_SHUTDOWN:
         {
