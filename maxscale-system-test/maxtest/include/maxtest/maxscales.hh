@@ -409,6 +409,9 @@ private:
 class MaxScale
 {
 public:
+    MaxScale(const MaxScale& rhs) = delete;
+    MaxScale& operator=(const MaxScale& rhs) = delete;
+
     MaxScale(TestConnections& tester, int node_ind);
 
     /**
@@ -432,6 +435,9 @@ public:
      * in the ServerInfo-class.
      */
     void check_servers_status(std::vector<ServerInfo::bitfield> expected_status);
+
+    void start();
+    void stop();
 
 private:
     TestConnections& m_tester;          /**< Main tester object */

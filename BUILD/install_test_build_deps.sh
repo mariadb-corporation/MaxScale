@@ -17,13 +17,17 @@ then
   echo "deb http://mirror.netinch.com/pub/mariadb/repo/10.3/ubuntu/ ${UBUNTU_CODENAME} main" > mariadb.list
   sudo cp mariadb.list /etc/apt/sources.list.d/
   sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 0xF1656F24C74CD1D8
+  export DEBIAN_FRONTEND=noninteractive
   sudo apt-get update
-  sudo apt-get install -y --force-yes \
-                 git wget build-essential \
-                 libssl-dev mariadb-client php perl \
-                 coreutils libjansson-dev zlib1g-dev \
-                 mariadb-test python python-pip cmake \
-                 libpam0g-dev libsqlite3-dev
+  sudo -E apt-get -q -o Dpkg::Options::=--force-confold \
+       -o Dpkg::Options::=--force-confdef \
+       -y --force-yes \
+       install \
+       git wget build-essential \
+       libssl-dev mariadb-client php perl \
+       coreutils libjansson-dev zlib1g-dev \
+       mariadb-test python python-pip cmake libpam0g-dev \
+       libsqlite3-dev libcurl4-gnutls-dev
   sudo apt-get install -y --force-yes openjdk-8-jdk
   sudo apt-get install -y --force-yes php-mysql
   if [ $? != 0 ]

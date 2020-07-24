@@ -28,6 +28,9 @@ were removed as they were either redundant or not useful.
 
 The major differences between the new and old binlog router are:
 
+ * The list of servers where the database users for authentication are loaded
+   must be explicitly configured with the `servers` or `targets` parameter.
+
  * The old binlog router had both `server_id` and `master_id`, the new only
    `server_id`.
 

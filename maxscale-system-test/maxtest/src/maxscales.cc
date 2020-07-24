@@ -481,6 +481,18 @@ void MaxScale::check_servers_status(std::vector<ServerInfo::bitfield> expected_s
     data.check_servers_status(m_tester, expected_status);
 }
 
+void MaxScale::start()
+{
+    auto res = m_tester.maxscales->start_maxscale(m_node_ind);
+    m_tester.expect(res == 0, "MaxScale start failed, error %i.", res);
+}
+
+void MaxScale::stop()
+{
+    auto res = m_tester.maxscales->stop_maxscale(m_node_ind);
+    m_tester.expect(res == 0, "MaxScale stop failed, error %i.", res);
+}
+
 void ServerInfo::status_from_string(const string& source)
 {
     auto flags = mxb::strtok(source, ",");
