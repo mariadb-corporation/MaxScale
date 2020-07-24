@@ -13,7 +13,7 @@
 
 import { expect } from 'chai'
 import mount from '@tests/unit/setup'
-import ModuleParameters from '@/components/common/CreateResource/Forms/common/ModuleParameters'
+import ModuleParameters from '@CreateResource/Forms/common/ModuleParameters'
 
 const mockupModules = [
     {

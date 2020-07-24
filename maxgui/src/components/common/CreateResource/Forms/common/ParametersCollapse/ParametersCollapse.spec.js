@@ -13,7 +13,7 @@
 
 import { expect } from 'chai'
 import mount from '@tests/unit/setup'
-import ParametersCollapse from '@/components/common/CreateResource/Forms/common/ParametersCollapse'
+import ParametersCollapse from '@CreateResource/Forms/common/ParametersCollapse'
 
 const addressParam = {
     description: 'Server address',

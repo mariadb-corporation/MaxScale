@@ -12,7 +12,7 @@
  */
 import { expect } from 'chai'
 import mount from '@tests/unit/setup'
-import Forms from '@/components/common/CreateResource/Forms'
+import Forms from '@CreateResource/Forms'
 import moxios from 'moxios'
 import Vuex from 'vuex'
 //a minimized mockup allModulesMap state from vuex store
