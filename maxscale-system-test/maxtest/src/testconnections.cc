@@ -19,6 +19,7 @@
 #include <maxbase/string.hh>
 #include <algorithm>
 
+#include <maxtest/log.hh>
 #include <maxtest/mariadb_func.hh>
 #include <maxtest/sql_t1.hh>
 #include <maxtest/testconnections.hh>
@@ -156,7 +157,7 @@ TestConnections::TestConnections(int argc, char* argv[])
     signal_set(SIGBUS, sigfatal_handler);
 #endif
     gettimeofday(&m_start_time, NULL);
-
+    m_logger = std::make_unique<TestLogger>(&global_result);
     read_env();
 
     bool maxscale_init = true;
@@ -407,7 +408,7 @@ TestConnections::TestConnections(int argc, char* argv[])
 
     maxscales = new Maxscales("maxscale", test_dir, verbose, m_network_config);
     maxscales->setup();
-    m_maxscale = std::make_unique<MaxScale>(*this, 0);
+    m_maxscale = std::make_unique<MaxScale>(maxscales, *m_logger, 0);
 
     bool maxscale_ok = maxscales->check_nodes();
     bool repl_ok = no_repl || repl_future.get();
@@ -542,10 +543,17 @@ TestConnections::TestConnections(int argc, char* argv[])
     pthread_create(&log_copy_thread_p, NULL, log_copy_thread, this);
     tprintf("Starting test");
     gettimeofday(&m_start_time, NULL);
+    m_logger->reset_timer();
 }
 
 TestConnections::~TestConnections()
 {
+    if (global_result > 0)
+    {
+        printf("\nTEST FAILURES:\n");
+        printf("%s\n", m_logger->all_errors_to_string().c_str());
+    }
+
     for (auto& a : m_on_destroy)
     {
         a();
@@ -611,46 +619,23 @@ TestConnections::~TestConnections()
     }
 }
 
-void TestConnections::report_result(const char* format, va_list argp)
-{
-    timeval t2;
-    gettimeofday(&t2, NULL);
-    double elapsedTime = (t2.tv_sec - m_start_time.tv_sec);
-    elapsedTime += (double) (t2.tv_usec - m_start_time.tv_usec) / 1000000.0;
-
-    global_result += 1;
-
-    printf("%04f: TEST_FAILED! ", elapsedTime);
-
-    vprintf(format, argp);
-
-    if (format[strlen(format) - 1] != '\n')
-    {
-        printf("\n");
-    }
-}
-
 void TestConnections::add_result(bool result, const char* format, ...)
 {
     if (result)
     {
         va_list argp;
         va_start(argp, format);
-        report_result(format, argp);
+        m_logger->add_failure_v(format, argp);
         va_end(argp);
     }
 }
 
 bool TestConnections::expect(bool result, const char* format, ...)
 {
-    if (!result)
-    {
-        va_list argp;
-        va_start(argp, format);
-        report_result(format, argp);
-        va_end(argp);
-    }
-
+    va_list argp;
+    va_start(argp, format);
+    m_logger->expect_v(result, format, argp);
+    va_end(argp);
     return result;
 }
 
@@ -658,7 +643,7 @@ void TestConnections::add_failure(const char* format, ...)
 {
     va_list argp;
     va_start(argp, format);
-    report_result(format, argp);
+    m_logger->add_failure_v(format, argp);
     va_end(argp);
 }
 
@@ -1869,30 +1854,10 @@ int TestConnections::stop_timeout()
 
 void TestConnections::tprintf(const char* format, ...)
 {
-    timeval t2;
-    gettimeofday(&t2, NULL);
-    double elapsedTime = (t2.tv_sec - m_start_time.tv_sec);
-    elapsedTime += (double) (t2.tv_usec - m_start_time.tv_usec) / 1000000.0;
-
-    struct tm tm_now;
-    localtime_r(&t2.tv_sec, &tm_now);
-    unsigned int msec = t2.tv_usec / 1000;
-
-    printf("%02u:%02u:%02u.%03u %04f: ", tm_now.tm_hour, tm_now.tm_min, tm_now.tm_sec, msec, elapsedTime);
-
     va_list argp;
     va_start(argp, format);
-    vprintf(format, argp);
+    m_logger->log_msg(format, argp);
     va_end(argp);
-
-    /** Add a newline if the message doesn't have one */
-    if (format[strlen(format) - 1] != '\n')
-    {
-        printf("\n");
-    }
-
-    fflush(stdout);
-    fflush(stderr);
 }
 
 void TestConnections::log_printf(const char* format, ...)
@@ -2396,6 +2361,11 @@ void TestConnections::set_mdbci_labels()
 MaxScale& TestConnections::maxscale()
 {
     return *m_maxscale;
+}
+
+TestLogger& TestConnections::logger()
+{
+    return *m_logger;
 }
 
 std::string cutoff_string(const string& source, char cutoff)

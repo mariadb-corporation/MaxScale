@@ -13,10 +13,9 @@
 
 #include <maxbase/format.hh>
 
-#include <cmath>
 #include <cstdio>
 #include <maxbase/assert.h>
-#include <maxbase/log.hh>
+#include <maxbase/log.h>
 
 namespace
 {
@@ -60,28 +59,34 @@ namespace maxbase
 
 std::string string_printf(const char* format, ...)
 {
-    /* Use 'vsnprintf' for the formatted printing. It outputs the optimal buffer length - 1. */
     va_list args;
     va_start(args, format);
-    int characters = vsnprintf(NULL, 0, format, args);
+    std::string rval = mxb::string_vprintf(format, args);
     va_end(args);
+    return rval;
+}
+
+std::string string_vprintf(const char* format, va_list args)
+{
+    /* Use 'vsnprintf' for the formatted printing. It outputs the optimal buffer length - 1. */
+    va_list args_copy;
+    va_copy(args_copy, args);
+    int characters = vsnprintf(nullptr, 0, format, args_copy);
+    va_end(args_copy);
+
     std::string rval;
     if (characters < 0)
     {
         // Encoding (programmer) error.
         mxb_assert(!true);
-        MXB_ERROR("Could not format the string %s.", format);
+        MXB_ERROR("Could not format '%s'.", format);
     }
     else if (characters > 0)
     {
         // 'characters' does not include the \0-byte.
-        int total_size = characters + 1;
-        rval.reserve(total_size);
         rval.resize(characters);    // The final "length" of the string
-        va_start(args, format);
         // Write directly to the string internal array, avoiding any temporary arrays.
-        vsnprintf(&rval[0], total_size, format, args);
-        va_end(args);
+        vsnprintf(&rval[0], characters + 1, format, args);
     }
     return rval;
 }

@@ -354,6 +354,7 @@ public:
 };
 
 class TestConnections;
+class TestLogger;
 
 /**
  * Contains information about one server as seen by MaxScale.
@@ -388,6 +389,14 @@ struct ServerInfo
 class ServersInfo
 {
 public:
+    ServersInfo(TestLogger& log);
+
+    ServersInfo(const ServersInfo& rhs);
+    ServersInfo& operator=(const ServersInfo& rhs);
+
+    ServersInfo(ServersInfo&& rhs) noexcept;
+    ServersInfo& operator=(ServersInfo&& rhs) noexcept;
+
     void              add(const ServerInfo& info);
     const ServerInfo& get(size_t i) const;
     size_t            size() const;
@@ -398,12 +407,13 @@ public:
      * @param expected_status Expected server statuses. Each status should be a bitfield of values defined
      * in the ServerInfo-class.
      */
-    void check_servers_status(TestConnections& tester, std::vector<ServerInfo::bitfield> expected_status);
+    void check_servers_status(std::vector<ServerInfo::bitfield> expected_status);
 
-    void check_master_groups(TestConnections& tester, const std::vector<int>& expected_groups);
+    void check_master_groups(const std::vector<int>& expected_groups);
 
 private:
     std::vector<ServerInfo> m_servers;
+    TestLogger&             m_log;
 };
 
 class MaxScale
@@ -412,7 +422,7 @@ public:
     MaxScale(const MaxScale& rhs) = delete;
     MaxScale& operator=(const MaxScale& rhs) = delete;
 
-    MaxScale(TestConnections& tester, int node_ind);
+    MaxScale(Maxscales* maxscales, TestLogger& log, int node_ind);
 
     /**
      * Wait for monitors to tick.
@@ -440,8 +450,9 @@ public:
     void stop();
 
 private:
-    TestConnections& m_tester;          /**< Main tester object */
-    int              m_node_ind {-1};   /**< Node index of this MaxScale */
+    Maxscales* const m_maxscales {nullptr};
+    TestLogger&      m_log;
+    int              m_node_ind {-1};        /**< Node index of this MaxScale */
 
     std::string m_rest_user {"admin"};
     std::string m_rest_pw {"mariadb"};

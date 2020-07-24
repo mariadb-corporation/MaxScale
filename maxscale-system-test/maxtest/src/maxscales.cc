@@ -1,11 +1,12 @@
 #include <maxtest/maxscales.hh>
 #include <string>
-#include <maxbase/string.hh>
-#include <maxtest/envv.hh>
-#include <maxtest/testconnections.hh>
 #include <maxbase/format.hh>
 #include <maxbase/jansson.h>
 #include <maxtest/json.hh>
+#include <maxbase/string.hh>
+#include <maxtest/envv.hh>
+#include <maxtest/log.hh>
+#include <maxtest/testconnections.hh>
 
 #define DEFAULT_MAXSCALE_CNF        "/etc/maxscale.cnf"
 #define DEFAULT_MAXSCALE_LOG_DIR    "/var/log/maxscale/"
@@ -337,7 +338,7 @@ void MaxScale::wait_monitor_ticks(int ticks)
         auto res = curl_rest_api("maxscale/debug/monitor_wait");
         if (res.rc)
         {
-            m_tester.expect(false, "Monitor wait failed. Error %i, %s", res.rc, res.output.c_str());
+            m_log.add_failure("Monitor wait failed. Error %i, %s", res.rc, res.output.c_str());
             break;
         }
     }
@@ -349,12 +350,13 @@ Nodes::SshResult MaxScale::curl_rest_api(const std::string& path)
                                     m_rest_user.c_str(), m_rest_pw.c_str(),
                                     m_rest_ip.c_str(), m_rest_port.c_str(),
                                     path.c_str());
-    auto res = m_tester.maxscales->ssh_output(cmd, m_node_ind, true);
+    auto res = m_maxscales->ssh_output(cmd, m_node_ind, true);
     return res;
 }
 
-MaxScale::MaxScale(TestConnections& tester, int node_ind)
-    : m_tester(tester)
+MaxScale::MaxScale(Maxscales* maxscales, TestLogger& log, int node_ind)
+    : m_maxscales(maxscales)
+    , m_log(log)
     , m_node_ind(node_ind)
 {
 }
@@ -376,7 +378,7 @@ ServersInfo MaxScale::get_servers()
             return rval;
         };
 
-    ServersInfo rval;
+    ServersInfo rval(m_log);
     auto res = curl_rest_api(field_servers);
     if (res.rc == 0)
     {
@@ -401,12 +403,12 @@ ServersInfo MaxScale::get_servers()
         }
         else
         {
-            m_tester.add_failure("Invalid data from REST-API servers query: %s", all.error_msg().c_str());
+            m_log.add_failure("Invalid data from REST-API servers query: %s", all.error_msg().c_str());
         }
     }
     else
     {
-        m_tester.add_failure("REST-API servers query failed. Error %i, %s", res.rc, mxb_strerror(res.rc));
+        m_log.add_failure("REST-API servers query failed. Error %i, %s", res.rc, mxb_strerror(res.rc));
     }
     return rval;
 }
@@ -426,8 +428,7 @@ size_t ServersInfo::size() const
     return m_servers.size();
 }
 
-void ServersInfo::check_servers_status(TestConnections& tester,
-                                       std::vector<ServerInfo::bitfield> expected_status)
+void ServersInfo::check_servers_status(std::vector<ServerInfo::bitfield> expected_status)
 {
     // Checking only some of the servers is ok.
     auto n_expected = expected_status.size();
@@ -441,18 +442,18 @@ void ServersInfo::check_servers_status(TestConnections& tester,
             {
                 string found_str = info.status_to_string();
                 string expected_str = ServerInfo::status_to_string(expected);
-                tester.add_failure("Wrong status for %s. Got '%s', expected '%s'.",
+                m_log.add_failure("Wrong status for %s. Got '%s', expected '%s'.",
                                    info.name.c_str(), found_str.c_str(), expected_str.c_str());
             }
         }
     }
     else
     {
-        tester.add_failure("Expected at least %zu servers, found %zu.", n_expected, m_servers.size());
+        m_log.add_failure("Expected at least %zu servers, found %zu.", n_expected, m_servers.size());
     }
 }
 
-void ServersInfo::check_master_groups(TestConnections& tester, const std::vector<int>& expected_groups)
+void ServersInfo::check_master_groups(const std::vector<int>& expected_groups)
 {
     auto n_expected = expected_groups.size();
     if (n_expected <= m_servers.size())
@@ -464,33 +465,64 @@ void ServersInfo::check_master_groups(TestConnections& tester, const std::vector
             auto& info = m_servers[i];
             if (expected != info.master_group)
             {
-                tester.add_failure("Wrong master group for %s. Got '%li', expected '%i'.",
+                m_log.add_failure("Wrong master group for %s. Got '%li', expected '%i'.",
                                    info.name.c_str(), info.master_group, expected);
             }
         }
     }
     else
     {
-        tester.add_failure("Expected at least %zu servers, found %zu.", n_expected, m_servers.size());
+        m_log.add_failure("Expected at least %zu servers, found %zu.", n_expected, m_servers.size());
     }
+}
+
+ServersInfo::ServersInfo(TestLogger& log)
+    : m_log(log)
+{
+}
+
+ServersInfo::ServersInfo(const ServersInfo& rhs)
+    : m_servers(rhs.m_servers)
+    , m_log(rhs.m_log)
+{
+}
+
+ServersInfo& ServersInfo::operator=(const ServersInfo& rhs)
+{
+    m_servers = rhs.m_servers;
+    m_log = rhs.m_log;
+    return *this;
+}
+
+ServersInfo::ServersInfo(ServersInfo&& rhs) noexcept
+    : m_servers(std::move(rhs.m_servers))
+    , m_log(rhs.m_log)
+{
+}
+
+ServersInfo& ServersInfo::operator=(ServersInfo&& rhs) noexcept
+{
+    m_servers = std::move(rhs.m_servers);
+    m_log = rhs.m_log;
+    return *this;
 }
 
 void MaxScale::check_servers_status(std::vector<ServerInfo::bitfield> expected_status)
 {
     auto data = get_servers();
-    data.check_servers_status(m_tester, expected_status);
+    data.check_servers_status(std::move(expected_status));
 }
 
 void MaxScale::start()
 {
-    auto res = m_tester.maxscales->start_maxscale(m_node_ind);
-    m_tester.expect(res == 0, "MaxScale start failed, error %i.", res);
+    auto res = m_maxscales->start_maxscale(m_node_ind);
+    m_log.expect(res == 0, "MaxScale start failed, error %i.", res);
 }
 
 void MaxScale::stop()
 {
-    auto res = m_tester.maxscales->stop_maxscale(m_node_ind);
-    m_tester.expect(res == 0, "MaxScale stop failed, error %i.", res);
+    auto res = m_maxscales->stop_maxscale(m_node_ind);
+    m_log.expect(res == 0, "MaxScale stop failed, error %i.", res);
 }
 
 void ServerInfo::status_from_string(const string& source)
@@ -528,19 +560,19 @@ std::string ServerInfo::status_to_string(bitfield status)
         items.reserve(2);
         if (status & MASTER)
         {
-            items.push_back("Master");
+            items.emplace_back("Master");
         }
         if (status & SLAVE)
         {
-            items.push_back("Slave");
+            items.emplace_back("Slave");
         }
         if (status & RUNNING)
         {
-            items.push_back("Running");
+            items.emplace_back("Running");
         }
         if (status & RELAY)
         {
-            items.push_back("Relay Master");
+            items.emplace_back("Relay Master");
         }
         rval = mxb::create_list_string(items);
     }

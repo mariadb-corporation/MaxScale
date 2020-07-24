@@ -175,31 +175,31 @@ add_test_executable(sanity_check.cpp sanity_check replication LABELS readwritesp
 add_test_executable(backend_auth_fail.cpp backend_auth_fail replication LABELS readconnroute REPL_BACKEND)
 
 # Regression case for the bug "MaxScale ignores host in user authentication"
-add_test_executable(bug143.cpp bug143 replication LABELS MySQLAuth REPL_BACKEND)
+add_test_executable(auth_hostname.cpp auth_hostname replication LABELS MySQLAuth REPL_BACKEND)
 
 # Regression case for the bug "Wildcard in host column of mysql.user table don't work properly"
-add_test_executable(bug448.cpp bug448 replication LABELS MySQLAuth LIGHT REPL_BACKEND)
+add_test_executable(auth_wchost.cpp auth_wchost replication LABELS MySQLAuth LIGHT REPL_BACKEND)
 
 # Regression case for the bug "Routing Hints route to server sometimes doesn't work"
-add_test_executable(bug471.cpp bug471 bug471 LABELS readwritesplit hintfilter REPL_BACKEND)
+add_test_executable(rhint_basic.cpp rhint_basic rhint_basic LABELS readwritesplit hintfilter REPL_BACKEND)
 
 # Regression case for the bugs "malformed hints cause crash"
-add_test_executable(bug473.cpp bug473 hints LABELS readwritesplit hintfilter REPL_BACKEND)
+add_test_executable(rhint_crash.cpp rhint_crash hints LABELS readwritesplit hintfilter REPL_BACKEND)
 
 # Regression case for the bug "The end comment tag in hints isn't properly detected"
-add_test_executable(bug475.cpp bug475 hints LABELS readwritesplit hintfilter REPL_BACKEND)
+add_test_executable(rhint_comment.cpp rhint_comment hints LABELS readwritesplit hintfilter REPL_BACKEND)
 
 # Checks "SELECT * INTO OUTFILE" and "LOAD DATA LOCAL INFILE"
-add_test_executable(bug519.cpp bug519 replication LABELS readwritesplit REPL_BACKEND)
+add_test_executable(rwsplit_infile_outfile.cpp rwsplit_infile_outfile replication LABELS readwritesplit REPL_BACKEND)
 
 # Regression case for the bug "'Current no. of conns' not going down"
-add_test_executable(bug529.cpp bug529 replication LABELS readwritesplit readconnroute maxscale REPL_BACKEND)
+add_test_executable(router_conn_num.cpp router_conn_num replication LABELS readwritesplit readconnroute maxscale REPL_BACKEND)
 
-# Regression case for the bugs "get_dcb fails if slaves are not available" and "Maxscale fails to start without anything in the logs if there is no slave available"
-add_test_executable(bug547.cpp bug547 replication LABELS readwritesplit REPL_BACKEND)
+# Regression: Crash if no slave available
+add_test_executable(router_slaves_blocked.cpp router_slaves_blocked replication LABELS readwritesplit REPL_BACKEND)
 
 # Regression case for the bug "crash if max_slave_connections=10% and 4 or less backends are configured"
-add_test_executable(bug681.cpp bug681 bug681 LABELS readwritesplit REPL_BACKEND)
+add_test_executable(rwsplit_not_enough_servers.cpp rwsplit_not_enough_servers rwsplit_not_enough_servers LABELS readwritesplit REPL_BACKEND)
 
 # Regression case for the bug ""Different error messages from MariaDB and Maxscale"
 add_test_executable(error_messages.cpp error_messages replication LABELS MySQLAuth REPL_BACKEND)
@@ -1055,7 +1055,7 @@ add_test_derived(bug585_big bug587 bug585 LABELS regexfilter BIG_REPL_BACKEND RE
 add_test_derived(bug587_big bug587 bug587 LABELS regexfilter hintfilter BIG_REPL_BACKEND REPL_BACKEND UNSTABLE HEAVY)
 add_test_derived(bug587_1_big bug587 bug587_1 LABELS regexfilter hintfilter BIG_REPL_BACKEND REPL_BACKEND UNSTABLE HEAVY)
 # Regression case for the bug "Routing Hints route to server sometimes doesn't work"
-add_test_derived(bug471_big bug471 bug471_big LABELS readwritesplit hintfilter BIG_REPL_BACKEND REPL_BACKEND UNSTABLE HEAVY)
+add_test_derived(bug471_big rhint_basic bug471_big LABELS readwritesplit hintfilter BIG_REPL_BACKEND REPL_BACKEND UNSTABLE HEAVY)
 
 set_tests_properties(different_size_rwsplit_big PROPERTIES TIMEOUT 3600)
 set_tests_properties(different_size_rwsplit PROPERTIES TIMEOUT 3600)
