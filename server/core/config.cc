@@ -3435,8 +3435,7 @@ int create_new_service(CONFIG_CONTEXT* obj)
     const MXS_MODULE* module = get_module(router.c_str(), MODULE_ROUTER);
     mxb_assert(module);
 
-    if ((user.empty() || auth.empty())
-        && !rcap_type_required(module->module_capabilities, RCAP_TYPE_NO_AUTH))
+    if (user.empty() || auth.empty())
     {
         MXS_ERROR("Service '%s' is missing %s%s%s.",
                   obj->name(),
