@@ -32,8 +32,8 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import ResourceRelationships from './common/ResourceRelationships'
-import ModuleParameters from './common/ModuleParameters'
+import ResourceRelationships from '../common/ResourceRelationships'
+import ModuleParameters from '../common/ModuleParameters'
 
 export default {
     name: 'listener-form-input',
@@ -46,11 +46,6 @@ export default {
         allServices: { type: Array, required: true },
         parentForm: { type: Object, required: true },
     },
-    data() {
-        return {
-            parameters: [],
-        }
-    },
 
     computed: {
         //  several listeners may be associated with the same service, so list all current services
@@ -61,7 +56,6 @@ export default {
                 delete obj.attributes
                 delete obj.links
                 delete obj.relationships
-                delete obj.idNum
             }
             return cloneArr
         },
@@ -70,7 +64,6 @@ export default {
     methods: {
         getValues() {
             const { parameters } = this.$refs.moduleInputs.getModuleInputValues()
-
             return {
                 parameters: parameters,
                 relationships: {

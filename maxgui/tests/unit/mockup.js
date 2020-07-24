@@ -5,7 +5,7 @@ import { expect } from 'chai'
  * components and expect to have one v-select only, if selector param is defined, it finds component
  * using selector
  * @param {Object} wrapper A Wrapper is an object that contains a mounted component and methods to test the component
- * @param {String} selector valid DOM selector syntax. e.g. '.class' or '#id'
+ * @param {String} selector Using class only. e.g. '.class'
  * @param {*} item item to be selected
  */
 export async function mockupSelection(wrapper, item, selector = '') {
