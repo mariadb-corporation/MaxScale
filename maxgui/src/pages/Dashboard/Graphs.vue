@@ -9,9 +9,8 @@
                     <v-sheet width="100%">
                         <line-chart
                             v-if="sessionsChartData.datasets.length"
-                            id="sessions-Chart"
                             ref="sessionsChart"
-                            :styles="{ height: '70px', position: 'relative' }"
+                            :styles="chartStyle"
                             :chart-data="sessionsChartData"
                             :options="chartOptionsWithOutCallBack"
                         />
@@ -28,9 +27,8 @@
                     <v-sheet width="100%">
                         <line-chart
                             v-if="serversConnectionsChartData.datasets.length"
-                            id="servers-connection-Chart"
                             ref="connectionsChart"
-                            :styles="{ height: '70px', position: 'relative' }"
+                            :styles="chartStyle"
                             :chart-data="serversConnectionsChartData"
                             :options="chartOptionsWithOutCallBack"
                         />
@@ -47,9 +45,8 @@
                     <v-sheet width="100%">
                         <line-chart
                             v-if="threadsChartData.datasets.length"
-                            id="threads-Chart"
                             ref="threadsChart"
-                            :styles="{ height: '70px', position: 'relative' }"
+                            :styles="chartStyle"
                             :chart-data="threadsChartData"
                             :options="mainChartOptions"
                             :yAxesTicks="{ max: 100, min: 0 }"
@@ -86,6 +83,7 @@ export default {
     },
     data() {
         return {
+            chartStyle: { height: '70px', position: 'relative' },
             chartOptionsWithOutCallBack: {
                 plugins: {
                     streaming: {
@@ -195,7 +193,7 @@ export default {
                         self.genThreadsDatasetsSchema()
                     } else {
                         threadsChart.chartData.datasets[i].data.push({
-                            x: Date.now(),
+                            x: time,
                             y: thread.attributes.stats.load.last_second,
                         })
                     }

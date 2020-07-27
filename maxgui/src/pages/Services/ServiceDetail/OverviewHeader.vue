@@ -39,8 +39,6 @@
                     <v-sheet width="100%">
                         <line-chart
                             v-if="totalConnectionsChartData.datasets.length"
-                            id="total-connections-chart"
-                            ref="totalConnectionsChart"
                             :styles="{ height: '70px' }"
                             :chart-data="totalConnectionsChartData"
                             :options="options"
