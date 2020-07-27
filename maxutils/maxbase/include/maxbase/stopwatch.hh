@@ -60,7 +60,7 @@ struct Duration : public Clock::duration
  *
  *   A std::chrono::time_point to go with Clock and Duration.
  */
-using TimePoint = std::chrono::time_point<Clock, Duration>;
+using TimePoint = std::chrono::steady_clock::time_point;
 
 /**
  *  @class StopWatch
