@@ -34,7 +34,6 @@
                     <template v-if="editableCell" v-slot:value="{ data: { item } }">
                         <parameter-input-container
                             :item="item"
-                            :requiredParams="requiredParams"
                             :parentForm="$refs.form"
                             :usePortOrSocket="usePortOrSocket"
                             :changedParametersArr="changedParametersArr"
@@ -122,7 +121,6 @@
 This component allows to read parameters and edit parameters. It means to be used for details page
 
 PROPS:
-- requiredParams: accepts array of string , it simply enables required attribute in parameter-input dynamically
 - usePortOrSocket: accepts boolean , if true, get portValue, and socketValue,
   passing them to parameter-input for handling special input field when editting server or listener.
   If editing listener, address parameter won't be required
@@ -141,7 +139,6 @@ export default {
         loading: { type: Boolean, required: true },
         // specical props to manipulate required or dependent input attribute
         usePortOrSocket: { type: Boolean, default: false },
-        requiredParams: { type: Array },
         isTree: { type: Boolean, default: false },
     },
 

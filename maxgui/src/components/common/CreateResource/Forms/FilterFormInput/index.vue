@@ -1,11 +1,6 @@
 <template>
     <div class="mb-2">
-        <module-parameters
-            ref="moduleInputs"
-            moduleName="module"
-            :modules="resourceModules"
-            :requiredParams="['filebase']"
-        />
+        <module-parameters ref="moduleInputs" moduleName="module" :modules="resourceModules" />
     </div>
 </template>
 

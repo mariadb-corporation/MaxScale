@@ -115,14 +115,13 @@ async function renderAccurateInputType(wrapper, item, typeClass) {
 }
 
 /**
- * When required props is true and the input value is invalid, it should renders errorMessage
+ * When mandatory attribute of a parameter is true and the input value is invalid, it should renders errorMessage
  * @param {Object} wrapper A Wrapper is an object that contains a mounted component and methods to test the component
  * @param {Object} item a parameter object must contains at least id, value and type attributes
  * @param {String} errorMessage a specific error message
  */
 async function requiredVTextField(wrapper, item, errorMessage) {
     await wrapper.setProps({
-        required: true,
         item: item,
     })
 
@@ -344,8 +343,12 @@ describe('ParameterInput.vue', () => {
         await renderAccurateInputType(wrapper, countParam, 'count')
     })
     it(`count type: Component renders error message if
-      'required' props is true and input value is invalid`, async () => {
-        await requiredVTextField(wrapper, countParam, 'extra_port is required')
+      'mandatory' attribute is true and input value is invalid`, async () => {
+        await requiredVTextField(
+            wrapper,
+            { ...countParam, mandatory: true },
+            'extra_port is required'
+        )
     })
     it(`count type: Component emits on-input-change event and
       returns accurate value`, async () => {
@@ -357,8 +360,12 @@ describe('ParameterInput.vue', () => {
         await renderAccurateInputType(wrapper, intParam, 'int')
     })
     it(`int type: Component renders error message if
-      'required' props is true and input value is invalid`, async () => {
-        await requiredVTextField(wrapper, intParam, 'retain_last_statements is required')
+      'mandatory' attribute is true and input value is invalid`, async () => {
+        await requiredVTextField(
+            wrapper,
+            { ...intParam, mandatory: true },
+            'retain_last_statements is required'
+        )
     })
     it(`int type: Component emits on-input-change event and
       returns accurate value`, async () => {
@@ -370,8 +377,12 @@ describe('ParameterInput.vue', () => {
         await renderAccurateInputType(wrapper, durationParam, 'duration')
     })
     it(`duration type: Component renders error message if
-      'required' props is true and input value is invalid`, async () => {
-        await requiredVTextField(wrapper, durationParam, 'connection_keepalive is required')
+      'mandatory' attribute is true and input value is invalid`, async () => {
+        await requiredVTextField(
+            wrapper,
+            { ...durationParam, mandatory: true },
+            'connection_keepalive is required'
+        )
     })
     it(`duration type: Component emits on-input-change event
       and returns accurate value`, async () => {
@@ -394,8 +405,12 @@ describe('ParameterInput.vue', () => {
         await renderAccurateInputType(wrapper, sizeParam, 'size')
     })
     it(`size type: Component renders error message if
-      'required' props is true and input value is invalid`, async () => {
-        await requiredVTextField(wrapper, sizeParam, 'writeq_low_water is required')
+      'mandatory' attribute is true and input value is invalid`, async () => {
+        await requiredVTextField(
+            wrapper,
+            { ...sizeParam, mandatory: true },
+            'writeq_low_water is required'
+        )
     })
     it(`size type: Component emits on-input-change event and
       returns accurate value`, async () => {
@@ -413,8 +428,12 @@ describe('ParameterInput.vue', () => {
         await renderAccurateInputType(wrapper, passwordParam, 'password-string')
     })
     it(`password string type: Component renders error message if
-      'required' props is true and input value is invalid`, async () => {
-        await requiredVTextField(wrapper, passwordParam, 'replication_password is required')
+      'mandatory' attribute is true and input value is invalid`, async () => {
+        await requiredVTextField(
+            wrapper,
+            { ...passwordParam, mandatory: true },
+            'replication_password is required'
+        )
     })
     it(`password string type: Component allows to toggle masked password`, async () => {
         await wrapper.setProps({ item: passwordParam })
@@ -437,31 +456,47 @@ describe('ParameterInput.vue', () => {
         await renderAccurateInputType(wrapper, stringParam, 'string')
     })
     it(`string type or others: Component renders error
-      message if 'required' props is true and input value is invalid`, async () => {
-        await requiredVTextField(wrapper, stringParam, 'test_parameter is required')
+      message if 'mandatory' attribute is true and input value is invalid`, async () => {
+        await requiredVTextField(
+            wrapper,
+            { ...stringParam, mandatory: true },
+            'test_parameter is required'
+        )
     })
 
     it(`address parameter: Component renders accurate input type`, async () => {
         await renderAccurateInputType(wrapper, addressParam, 'string')
     })
     it(`address parameter: Component renders error message if
-      'required' props is true and input value is invalid`, async () => {
-        await requiredVTextField(wrapper, addressParam, 'address is required when using port')
+      'mandatory' attribute is true and input value is invalid`, async () => {
+        await requiredVTextField(
+            wrapper,
+            { ...addressParam, mandatory: true },
+            'address is required when using port'
+        )
     })
 
     it(`port parameter: Component renders accurate input type`, async () => {
         await renderAccurateInputType(wrapper, portParam, 'count')
     })
     it(`port parameter: Component renders error message if
-      'required' props is true and input value is invalid`, async () => {
-        await requiredVTextField(wrapper, portParam, 'Either port or socket need to be defined')
+      'mandatory' attribute is true and input value is invalid`, async () => {
+        await requiredVTextField(
+            wrapper,
+            { ...portParam, mandatory: true },
+            'Either port or socket need to be defined'
+        )
     })
 
     it(`socket parameter: Component renders accurate input type`, async () => {
         await renderAccurateInputType(wrapper, socketParam, 'string')
     })
     it(`socket parameter: Component renders error message if
-      'required' props is true and input value is invalid`, async () => {
-        await requiredVTextField(wrapper, socketParam, 'Either port or socket need to be defined')
+      'mandatory' attribute is true and input value is invalid`, async () => {
+        await requiredVTextField(
+            wrapper,
+            { ...socketParam, mandatory: true },
+            'Either port or socket need to be defined'
+        )
     })
 })

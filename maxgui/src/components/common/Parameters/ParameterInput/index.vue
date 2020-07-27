@@ -195,7 +195,6 @@
 
 /*
 This component accepts these optional props:
-- required: input becomes required and shows error message if value is empty after validating
 - portValue, socketValue and parentForm are passed if a server is being
   created or updated, this helps to facilitate special rules for port, socket and address parameter
 - isListener: accepts boolean , if true, address parameter will not be required
@@ -207,7 +206,6 @@ export default {
     name: 'parameter-input',
     props: {
         item: { type: Object, required: true },
-        required: { type: Boolean, default: false },
         portValue: { type: Number },
         socketValue: { type: String },
         parentForm: { type: Object },
@@ -429,7 +427,6 @@ export default {
         validateNumber(val) {
             const isEmptyVal = this.isEmpty(val)
             // required param validation
-            let customRequired = this.required && isEmptyVal
             let moduleParamRequired = isEmptyVal && this.targetItem.mandatory
             // type validation
             const intType = this.targetItem.type === 'int'
@@ -439,7 +436,7 @@ export default {
             const isValidInt = /^[-]?\d*$/g.test(val)
             const isValidNaturalNum = /^\d*$/g.test(val)
 
-            if (customRequired || moduleParamRequired) {
+            if (moduleParamRequired) {
                 return this.$t('errors.requiredInput', { inputName: this.targetItem.id })
             } else if ((intType && !isValidInt && !isEmptyVal) || val === '-') {
                 return this.$t('errors.nonInteger')
@@ -451,9 +448,8 @@ export default {
 
         handleRequired(val) {
             // required param validation
-            let customRequired = this.isEmpty(val) && this.required
             let moduleParamRequired = this.isEmpty(val) && this.targetItem.mandatory
-            if (customRequired || moduleParamRequired) {
+            if (moduleParamRequired) {
                 return this.$t('errors.requiredInput', { inputName: this.targetItem.id })
             }
             return true

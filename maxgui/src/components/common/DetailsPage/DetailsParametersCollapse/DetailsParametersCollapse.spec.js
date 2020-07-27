@@ -207,7 +207,6 @@ describe('DetailsParametersCollapse.vue', () => {
                 loading: false,
                 // specical props to manipulate required or dependent input attribute
                 usePortOrSocket: true, // set true for server resource
-                requiredParams: [], // set this to force specific parameters to be mandatory
                 isTree: false, // true if a parameter has value as an object or array,
             },
         })
