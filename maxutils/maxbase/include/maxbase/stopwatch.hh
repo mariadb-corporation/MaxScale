@@ -60,7 +60,7 @@ struct Duration : public SteadyClock::duration
  *
  *   A std::chrono::time_point to go with SteadyClock and Duration.
  */
-using TimePoint = std::chrono::time_point<SteadyClock, Duration>;
+using TimePoint = std::chrono::steady_clock::time_point;
 
 /**
  *  @brief NowType enum
