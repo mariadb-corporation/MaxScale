@@ -14,10 +14,10 @@
 import { expect } from 'chai'
 import mount from '@tests/unit/setup'
 import GlobalSearch from '@/components/common/GlobalSearch'
+import { mockupRouteChanges } from '@tests/unit/mockup'
 
 describe('GlobalSearch.vue', () => {
     let wrapper
-    // mockup parent value passing to Collapse
 
     beforeEach(() => {
         localStorage.clear()
@@ -26,18 +26,18 @@ describe('GlobalSearch.vue', () => {
             component: GlobalSearch,
         })
     })
-    afterEach(() => {
+    afterEach(async () => {
         //push back to dashboard/servers
-        wrapper.vm.$router.push('/')
+        await mockupRouteChanges(wrapper, '/dashboard/servers/')
     })
-    it(`$data.search as well as $store.getters.searchKeyWord is 
+    it(`$data.search as well as $store.getters.searchKeyWord is
       updated correctly and cleared when route changes`, async () => {
         // searching for 'row_server_1'
         await wrapper.setData({ search: 'row_server_1' })
         expect(wrapper.vm.$store.getters.searchKeyWord).to.be.equal('row_server_1')
 
         // go to settings page
-        await wrapper.vm.$router.push({ name: 'settings' })
+        await mockupRouteChanges(wrapper, '/settings')
 
         expect(wrapper.find('.search-restyle').classes()).to.include('route-settings')
         expect(wrapper.vm.$data.search).to.be.empty

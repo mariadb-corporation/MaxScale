@@ -13,6 +13,7 @@
 import { expect } from 'chai'
 import mount from '@tests/unit/setup'
 import SelectDropdown from '@/components/common/SelectDropdown'
+import { mockupSelection } from '@tests/unit/mockup'
 
 let multipleChoiceItems = [
     {
@@ -138,9 +139,9 @@ describe('SelectDropdown.vue', () => {
         })
 
         // mockup onchange event when selecting items
-        const vSelect = wrapper.findComponent({ name: 'v-select' })
-        vSelect.vm.selectItem(multipleChoiceItems[0])
-        vSelect.vm.selectItem(multipleChoiceItems[1])
+        multipleChoiceItems.forEach(async item => {
+            await mockupSelection(wrapper, item)
+        })
 
         expect(chosenItems).to.be.an('array')
         chosenItems.forEach((item, i) => {
@@ -160,8 +161,7 @@ describe('SelectDropdown.vue', () => {
             chosenItems = values
         })
         // mockup onchange event when selecting an item
-        const vSelect = wrapper.findComponent({ name: 'v-select' })
-        vSelect.vm.selectItem(singleChoiceItems[0])
+        await mockupSelection(wrapper, singleChoiceItems[0])
 
         expect(chosenItems).to.be.an('array')
         expect(chosenItems.length).to.be.equal(1)
@@ -189,14 +189,14 @@ describe('SelectDropdown.vue', () => {
             if (counter === 2) expect(bool).to.equal(true)
         })
         // mockup onchange event when selecting item
-        const vSelect = wrapper.findComponent({ name: 'v-select' })
+
         // Change to new item, is-equal should return false
-        await vSelect.vm.selectItem(singleChoiceItems[0])
+        await mockupSelection(wrapper, singleChoiceItems[0])
         /*
             Select original item is-equal should return true
             as current selected item is equal with defaultItems
         */
-        await vSelect.vm.selectItem(singleChoiceItems[1])
+        await mockupSelection(wrapper, singleChoiceItems[1])
     })
     it(`Should emit is-equal event and return accurate value
        when multiple props is true`, async () => {
@@ -218,13 +218,13 @@ describe('SelectDropdown.vue', () => {
             if (counter === 2) expect(bool).to.equal(true)
         })
         // mockup onchange event when selecting item
-        const vSelect = wrapper.findComponent({ name: 'v-select' })
+
         // add new item, is-equal should return false
-        await vSelect.vm.selectItem(multipleChoiceItems[1])
+        await mockupSelection(wrapper, multipleChoiceItems[1])
         /*
             unselect selected item, is-equal should return true
             as current selected items are equal with defaultItems
         */
-        await vSelect.vm.selectItem(multipleChoiceItems[1])
+        await mockupSelection(wrapper, multipleChoiceItems[1])
     })
 })

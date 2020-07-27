@@ -13,13 +13,11 @@
 
 import { expect } from 'chai'
 import mount from '@tests/unit/setup'
-import CreateResource from '@/components/common/CreateResource'
+import CreateResource from '@CreateResource'
 import moxios from 'moxios'
 
 describe('CreateResource.vue', () => {
     let wrapper
-    // mockup parent value passing to Collapse
-
     beforeEach(() => {
         localStorage.clear()
 

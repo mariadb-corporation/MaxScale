@@ -14,6 +14,7 @@
 import { expect } from 'chai'
 import mount from '@tests/unit/setup'
 import DetailsParametersCollapse from '@/components/common/DetailsPage/DetailsParametersCollapse'
+import { mockupSelection } from '@tests/unit/mockup'
 
 let resourceId = 'row_server_1'
 // should not have duplicated type here as this facilitates testing env
@@ -154,22 +155,22 @@ async function mockupParametersChange(wrapper, isDual) {
     const intercept = async () => {
         // mockup selecting item on an enum parameter
         const enumParamTd = wrapper.find(`.enum_param-cell-${1}`)
-        const enumParamVSelect = enumParamTd.findComponent({ name: 'v-select' })
-        await enumParamVSelect.vm.selectItem('secondary')
+        await mockupSelection(enumParamTd, 'secondary')
+
         expect(wrapper.vm.$data.changedParametersArr.length).to.be.equal(1)
         expect(wrapper.vm.$data.changedParametersArr[0].value).to.be.equal('secondary')
         if (isDual) {
             // mockup selecting item on an boolean parameter
             const boolParamCell = wrapper.find(`.bool_param-cell-${1}`)
-            const boolParamVSelect = boolParamCell.findComponent({ name: 'v-select' })
-            await boolParamVSelect.vm.selectItem(true)
+            await mockupSelection(boolParamCell, true)
+
             expect(wrapper.vm.$data.changedParametersArr.length).to.be.equal(2)
             expect(wrapper.vm.$data.changedParametersArr[1].value).to.be.equal(true)
         }
     }
     const cb = () => expect(wrapper.vm.shouldDisableSaveBtn).to.be.false
 
-    await mockupOpenDialog(wrapper, intercept, cb)
+    await mockupOpenConfirmationDialog(wrapper, intercept, cb)
 }
 
 /**
@@ -179,7 +180,7 @@ async function mockupParametersChange(wrapper, isDual) {
  * before confirmation dialog is opened
  * @param {Function} cb Callback function to be executed after confirmation dialog is opened
  */
-async function mockupOpenDialog(wrapper, intercept, cb) {
+async function mockupOpenConfirmationDialog(wrapper, intercept, cb) {
     await wrapper.setData({ editableCell: true })
     expect(wrapper.vm.$data.editableCell).to.be.true
     typeof intercept === 'function' && (await intercept())
@@ -404,7 +405,7 @@ describe('DetailsParametersCollapse.vue', () => {
 
     it(`Should close confirmation dialog when click close icon`, async () => {
         // open confirmation dialog
-        await mockupOpenDialog(wrapper)
+        await mockupOpenConfirmationDialog(wrapper)
         // click close icon
         await wrapper.find('.close').trigger('click')
         expect(wrapper.vm.$data.showConfirmDialog).to.be.false
@@ -413,7 +414,7 @@ describe('DetailsParametersCollapse.vue', () => {
     it(`Should change to read mode and close confirmation dialog
       when click cancel icon`, async () => {
         // open confirmation dialog
-        await mockupOpenDialog(wrapper)
+        await mockupOpenConfirmationDialog(wrapper)
         // click cancel icon
         await wrapper.find('.cancel').trigger('click')
         expect(wrapper.vm.$data.showConfirmDialog).to.be.false

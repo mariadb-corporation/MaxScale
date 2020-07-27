@@ -21,7 +21,9 @@
                         $expand
                     </v-icon>
                 </v-btn>
-                <p class="mb-0 body-2 font-weight-bold color text-navigation text-uppercase">
+                <p
+                    class="collapse-title mb-0 body-2 font-weight-bold color text-navigation text-uppercase"
+                >
                     {{ title }}
                     <span v-if="titleInfo || titleInfo === 0" class="ml-1 color text-field-text">
                         ({{ titleInfo }})
@@ -61,7 +63,7 @@
             </v-btn>
         </div>
         <v-expand-transition>
-            <div v-show="isContentVisible">
+            <div v-show="isContentVisible" class="collapse-content">
                 <slot name="content"></slot>
             </div>
         </v-expand-transition>

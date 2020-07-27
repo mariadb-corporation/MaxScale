@@ -12,7 +12,13 @@
  */
 import { expect } from 'chai'
 import mount from '@tests/unit/setup'
-import Forms from '@/components/common/CreateResource/Forms'
+import {
+    mockupSelection,
+    mockupOpenDialog,
+    mockupCloseDialog,
+    mockupRouteChanges,
+} from '@tests/unit/mockup'
+import Forms from '@CreateResource/Forms'
 import moxios from 'moxios'
 import Vuex from 'vuex'
 //a minimized mockup allModulesMap state from vuex store
@@ -109,39 +115,19 @@ const allModulesMap = {
 }
 
 /**
- * This function mockup the action to open form dialog
- * @param {Object} wrapper A Wrapper is an object that contains a mounted component and methods to test the component
- */
-async function mockupOpeningDialog(wrapper) {
-    await wrapper.setProps({
-        value: true,
-    })
-}
-
-/**
- * This function mockup the action to close form dialog
- * @param {Object} wrapper A Wrapper is an object that contains a mounted component and methods to test the component
- */
-async function mockupClosingDialog(wrapper) {
-    await wrapper.setProps({
-        value: false,
-    })
-}
-
-/**
  * This function tests whether text is transform correctly based on route changes.
  * It should capitalize first letter of current route name if current page is a dashboard page.
  * For dashboard page, it should also transform plural route name to a singular word,
  * i.e., services become Service
  * @param {Object} wrapper A Wrapper is an object that contains a mounted component and methods to test the component
- * @param {String} route Current route path
+ * @param {String} path Current route path
  * @param {String} selectedResource Selected resource to be created
  */
-async function testingTextTransform(wrapper, route, selectedResource) {
-    await wrapper.vm.$router.push(route)
-    await mockupOpeningDialog(wrapper)
+async function testingTextTransform(wrapper, path, selectedResource) {
+    await mockupRouteChanges(wrapper, path)
+    await mockupOpenDialog(wrapper)
     expect(wrapper.vm.$data.selectedResource).to.be.equal(selectedResource)
-    await mockupClosingDialog(wrapper)
+    await mockupCloseDialog(wrapper)
 }
 
 /**
@@ -150,11 +136,9 @@ async function testingTextTransform(wrapper, route, selectedResource) {
  * @param {String} resourceType resource to be created
  */
 async function mockupResourceSelect(wrapper, resourceType) {
-    wrapper.vm.$route.name !== 'sessions' && (await wrapper.vm.$router.push('/dashboard/sessions'))
-    !wrapper.vm.computeShowDialog && (await mockupOpeningDialog(wrapper))
-
-    let vSelect = wrapper.find('.resource-select')
-    await vSelect.vm.selectItem(resourceType)
+    await mockupRouteChanges(wrapper, '/dashboard/sessions')
+    await mockupOpenDialog(wrapper)
+    await mockupSelection(wrapper, resourceType, '.resource-select')
 }
 
 /**
@@ -163,7 +147,7 @@ async function mockupResourceSelect(wrapper, resourceType) {
  * @param {String} buttonClass button class: save, cancel, close
  */
 async function testCloseModal(wrapper, buttonClass) {
-    wrapper.vm.$route.name !== 'servers' && (await mockupResourceSelect(wrapper, 'Server'))
+    await mockupResourceSelect(wrapper, 'Server')
     let count = 0
     await wrapper.setProps({
         closeModal: async () => {
@@ -179,6 +163,7 @@ async function testCloseModal(wrapper, buttonClass) {
     expect(wrapper.vm.computeShowDialog).to.be.false
     expect(count).to.be.equals(1)
 }
+
 describe('Forms.vue', () => {
     let wrapper
     let getters, actions, store
@@ -230,16 +215,15 @@ describe('Forms.vue', () => {
 
     afterEach(async function() {
         moxios.uninstall(wrapper.vm.axios)
-        await mockupClosingDialog(wrapper)
+        await mockupCloseDialog(wrapper)
         //push back to settings page
-        wrapper.vm.$route.name !== 'settings' && (await wrapper.vm.$router.push('/settings'))
+        await mockupRouteChanges(wrapper, '/settings')
     })
 
     it(`Should show forms dialog when v-model value changes`, async () => {
         // go to page where '+ Create New' button is visible
-        wrapper.vm.$route.name !== 'servers' &&
-            (await wrapper.vm.$router.push('/dashboard/servers'))
-        await mockupOpeningDialog(wrapper)
+        await mockupRouteChanges(wrapper, '/dashboard/services')
+        await mockupOpenDialog(wrapper)
         expect(wrapper.vm.computeShowDialog).to.be.true
     })
 

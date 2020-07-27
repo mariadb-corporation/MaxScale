@@ -13,7 +13,8 @@
 
 import { expect } from 'chai'
 import mount from '@tests/unit/setup'
-import ParametersCollapse from '@/components/common/CreateResource/Forms/common/ParametersCollapse'
+import ParametersCollapse from '@CreateResource/Forms/common/ParametersCollapse'
+import { mockupSelection, mockupInputChange } from '@tests/unit/mockup'
 
 const addressParam = {
     description: 'Server address',
@@ -209,26 +210,17 @@ describe('ParametersCollapse.vue', () => {
 
     it(`Should return changed parameters as an object`, async () => {
         //mockup changed of parameters
-
+        const newRankValue = 'secondary'
         const rankParamTd = wrapper.find(`.rank-cell-${1}`)
-        const rankParamVSelect = rankParamTd.findComponent({ name: 'v-select' })
-        await rankParamVSelect.vm.selectItem('secondary') // change of rank parameter
+        await mockupSelection(rankParamTd, newRankValue) // change of rank parameter
 
         const portParamTd = wrapper.find(`.port-cell-${1}`)
-        const portParameterInput = portParamTd.findComponent({ name: 'parameter-input' })
+        const newPortValue = 4001
+        await mockupInputChange(portParamTd, newPortValue)
 
-        await portParameterInput.setData({
-            targetItem: {
-                ...wrapper.vm.$data.targetItem,
-                value: 4001,
-            },
+        expect(wrapper.vm.getParameterObj()).to.be.deep.equals({
+            rank: newRankValue,
+            port: newPortValue,
         })
-        // Manually triggering input event in v-text-field
-        await portParameterInput
-            .findAll('input')
-            .at(0)
-            .trigger('input')
-
-        expect(wrapper.vm.getParameterObj()).to.be.deep.equals({ rank: 'secondary', port: 4001 })
     })
 })

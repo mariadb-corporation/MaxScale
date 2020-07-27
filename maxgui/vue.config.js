@@ -29,6 +29,12 @@ module.exports = {
         types.forEach(type => addStyleResource(config.module.rule('scss').oneOf(type)))
         config.module.rule('js').exclude.add(/\.worker\.js$/)
         config.resolve.alias.set('@tests', path.resolve(__dirname, 'tests'))
+
+        config.resolve.alias.set(
+            '@CreateResource',
+            path.resolve(__dirname, 'src/components/common/CreateResource')
+        )
+
         config.when(process.env.NODE_ENV === 'development', config => {
             // devtool
             config.merge({

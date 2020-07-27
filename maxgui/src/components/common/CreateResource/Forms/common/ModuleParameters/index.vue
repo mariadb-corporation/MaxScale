@@ -16,12 +16,10 @@
             :menu-props="{ contentClass: 'mariadb-select-v-menu', bottom: true, offsetY: true }"
             :placeholder="$tc('select', 1, { entityName: $tc(moduleName, 1) })"
             :rules="[v => !!v || $t('errors.requiredInput', { inputName: $tc(moduleName, 1) })]"
-            required
         />
 
         <parameters-collapse
             v-if="selectedModule"
-            :key="selectedModule.id"
             ref="parametersTable"
             :parameters="getModuleParameters"
             :requiredParams="requiredParams"
@@ -57,7 +55,7 @@ PROPS:
   for handling special input field when editting server or listener.
 - isListener: accepts boolean , if true, address parameter won't be required
 */
-import ParametersCollapse from './ParametersCollapse'
+import ParametersCollapse from '../ParametersCollapse'
 
 export default {
     name: 'module-parameters',
@@ -77,7 +75,7 @@ export default {
     data: function() {
         return {
             // router module input
-            selectedModule: undefined,
+            selectedModule: null,
         }
     },
     computed: {
