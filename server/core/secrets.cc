@@ -55,7 +55,7 @@ static int secrets_random_str(unsigned char* output, int len)
 static MAXKEYS* secrets_readKeys(const char* path)
 {
     static const char NAME[] = ".secrets";
-    char secret_file[PATH_MAX + 1 + sizeof(NAME)];      // Worst case: maximum path + "/" + name.
+    char secret_file[PATH_MAX + 1 + sizeof(NAME) + 1];      // Worst case: maximum path + "/" + name+ '\0'
     MAXKEYS* keys;
     struct stat secret_stats;
     static int reported = 0;
@@ -255,7 +255,7 @@ int secrets_write_keys(const char* dir)
         return 1;
     }
 
-    snprintf(secret_file, PATH_MAX + 9, "%s/.secrets", dir);
+    snprintf(secret_file, PATH_MAX + 10, "%s/.secrets", dir);
     clean_up_pathname(secret_file);
 
     /* Open for writing | Create | Truncate the file for writing */
