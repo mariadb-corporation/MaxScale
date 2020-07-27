@@ -94,16 +94,16 @@ add_test_script(bug562.sh bug562.sh replication LABELS MySQLAuth REPL_BACKEND)
 add_test_script(bug564.sh bug564.sh replication LABELS MySQLProtocol REPL_BACKEND)
 
 # Regression case for the bug "Clients CLIENT_FOUND_ROWS setting is ignored by maxscale"
-add_test_executable(bug565.cpp bug565 replication LABELS MySQLProtocol REPL_BACKEND)
+add_test_executable(mariadb_client_found_rows.cpp mariadb_client_found_rows replication LABELS MySQLProtocol REPL_BACKEND)
 
 # Regression case for the bug "Crash if files from /dev/shm/ removed"
 add_test_script(bug567.sh bug567.sh bug567 LABELS maxscale REPL_BACKEND)
 
 # Regression case for the bug "Using regex filter hangs MaxScale"
-add_test_executable(bug571.cpp bug571 bug571 LABELS regexfilter REPL_BACKEND)
+add_test_executable(regexf_replace.cpp regexf_replace regexf_replace LABELS regexfilter REPL_BACKEND)
 
 # Attempt to use GRANT with wrong IP, expect no crash or hangs
-add_test_executable(bug572.cpp bug572 replication LABELS readwritesplit REPL_BACKEND)
+add_test_executable(auth_fail_crash.cpp auth_fail_crash replication LABELS readwritesplit REPL_BACKEND)
 
 # Regression cases for the bug "Hint filter don't work if listed before regex filter in configuration file"
 # (different filter sequence and configuration, but the same test, see .cnf for details)
@@ -112,43 +112,43 @@ add_test_executable(bug587.cpp bug587 bug587 LABELS regexfilter hintfilter REPL_
 add_test_derived(bug587_1 bug587 bug587_1 LABELS regexfilter hintfilter REPL_BACKEND)
 
 # Tries to connect Maxscale when all slaves stopped
-add_test_executable(bug592.cpp bug592 replication LABELS MySQLAuth readwritesplit REPL_BACKEND)
+add_test_executable(auth_users_from_master.cpp auth_users_from_master replication LABELS MySQLAuth readwritesplit REPL_BACKEND)
 
 # Tries to do change user in the loop, checks that autorization is still ok
-add_test_executable(bug601.cpp bug601 bug601 LABELS MySQLAuth MySQLProtocol REPL_BACKEND)
+add_test_executable(auth_change_user_loop.cpp auth_change_user_loop auth_change_user_loop LABELS MySQLAuth MySQLProtocol REPL_BACKEND)
 
 # Simple test with enable_root_user=true
-add_test_executable(bug620.cpp bug620 bug620 LABELS MySQLAuth MySQLProtocol REPL_BACKEND)
+add_test_executable(auth_enable_root.cpp auth_enable_root auth_enable_root LABELS MySQLAuth MySQLProtocol REPL_BACKEND)
 
 # Regression case for the bug "Crash when user define with old password style (before 4.1 protocol)"
-add_test_executable(bug626.cpp bug626 replication LABELS MySQLAuth MySQLProtocol REPL_BACKEND)
+add_test_executable(auth_old_pw.cpp auth_old_pw replication LABELS MySQLAuth MySQLProtocol REPL_BACKEND)
 
 # Crash when host name for some user in mysql.user is very long
-add_test_executable(bug653.cpp bug653 replication LABELS MySQLAuth MySQLProtocol REPL_BACKEND)
+add_test_executable(auth_long_hostname.cpp auth_long_hostname replication LABELS MySQLAuth MySQLProtocol REPL_BACKEND)
 
 # Crash with malformed Maxadmin command
-add_test_executable(bug654.cpp bug654 replication LABELS maxscale REPL_BACKEND)
+add_test_executable(maxadmin_cmd_crash.cpp maxadmin_cmd_crash replication LABELS maxscale REPL_BACKEND)
 
 # Block backends (master or all slaves) and tries to connect Maxscale
-add_test_executable(bug658.cpp bug658 replication LABELS readwritesplit readconnroute maxscale REPL_BACKEND)
+add_test_executable(no_backends_crash.cpp no_backends_crash replication LABELS readwritesplit readconnroute maxscale REPL_BACKEND)
 
 # Block all backends
-add_test_executable(bug662.cpp bug662 bug662 LABELS readwritesplit readconnroute maxscale REPL_BACKEND)
+add_test_executable(startup_fail_no_servers.cpp startup_fail_no_servers startup_fail_no_servers LABELS readwritesplit readconnroute maxscale REPL_BACKEND)
 
 # Bad TEE filter configuration
-add_test_executable(bug664.cpp bug664 bug664 LABELS MySQLAuth MySQLProtocol REPL_BACKEND)
+add_test_executable(teef_no_master.cpp teef_no_master teef_no_master LABELS MySQLAuth MySQLProtocol REPL_BACKEND)
 
 # Regression case for the bug "MaxScale crashes if "Users table data" is empty and "show dbusers" is executed in maxadmin"
-add_test_executable(bug673.cpp bug673 bug673 LABELS MySQLAuth REPL_BACKEND)
+add_test_executable(maxadmin_show_users_crash.cpp maxadmin_show_users_crash maxadmin_show_users_crash LABELS MySQLAuth REPL_BACKEND)
 
 # Wrong processing of 'SET GLOBAL sql_mode="ANSI"'
-add_test_executable(bug705.cpp bug705 bug705 LABELS MySQLAuth REPL_BACKEND)
+add_test_executable(auth_sqlmode_ansi.cpp auth_sqlmode_ansi auth_sqlmode_ansi LABELS MySQLAuth REPL_BACKEND)
 
 # Prepared statement from PHP application
-add_test_executable(bug729.cpp bug729 replication LABELS readwritesplit LIGHT REPL_BACKEND)
+add_test_executable(rwsplit_php_stmt.cpp rwsplit_php_stmt replication LABELS readwritesplit LIGHT REPL_BACKEND)
 
 # Regression case for the bug "Regex filter and shorter than original replacement queries MaxScale" (crash)
-add_test_executable(bug730.cpp bug730 bug730 LABELS regexfilter REPL_BACKEND)
+add_test_executable(regexf_replace_crash.cpp regexf_replace_crash regexf_replace_crash LABELS regexfilter REPL_BACKEND)
 
 # Test MariaDB 10.2 bulk inserts
 add_test_executable(bulk_insert.cpp bulk_insert bulk_insert LABELS MySQLProtocol REPL_BACKEND 10.2)
