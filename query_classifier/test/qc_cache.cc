@@ -67,7 +67,7 @@ int run(const char* zStatement, int n)
         }
     }
 
-    cout << "Time: " << diff.secs() << " s" << endl;
+    cout << "Time: " << mxb::to_secs(diff) << " s" << endl;
 
     return EXIT_SUCCESS;
 }

@@ -21,17 +21,16 @@ namespace maxbase
 {
 
 /**
- *  The MaxScale "standard" clock. Do not use this directly,
+ *  The MaxScale "standard" steady clock. Do not use this directly,
  *  use Clock declared further down (specifically, use Clock::now()).
  */
 using SteadyClock = std::chrono::steady_clock;
+using TimePoint = SteadyClock::time_point;
 
 /**
  *  @class Duration
  *
- *  Duration behaves exactly like SteadyClock::duration, but enables ADL for
- *  streaming, and adds a conveniece constructor and function secs() for
- *  seconds as a double.
+ *  Duration behaves exactly like SteadyClock::duration, and enables ADL to this namespace.
  */
 struct Duration : public SteadyClock::duration
 {
@@ -41,26 +40,17 @@ struct Duration : public SteadyClock::duration
         : SteadyClock::duration(d)
     {
     }
-
-    /** From seconds */
-    explicit Duration(double secs)
-        : Duration{rep(secs * period::den / period::num)}
-    {
-    }
-
-    /** To seconds */
-    double secs() const
-    {
-        return std::chrono::duration<double>(*this).count();
-    }
 };
 
-/**
- *   @class TimePoint
- *
- *   A std::chrono::time_point to go with SteadyClock and Duration.
- */
-using TimePoint = std::chrono::steady_clock::time_point;
+inline Duration from_secs(double secs)
+{
+    return Duration {Duration::rep(secs * Duration::period::den / Duration::period::num)};
+}
+
+inline double to_secs(Duration dur)
+{
+    return std::chrono::duration<double>(dur).count();
+}
 
 /**
  *  @brief NowType enum

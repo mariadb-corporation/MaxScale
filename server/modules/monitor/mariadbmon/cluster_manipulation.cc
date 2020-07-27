@@ -27,6 +27,7 @@ using std::unique_ptr;
 using maxbase::string_printf;
 using maxbase::StopWatch;
 using maxbase::Duration;
+using namespace std::chrono_literals;
 
 namespace
 {
@@ -401,8 +402,7 @@ bool MariaDBMonitor::manual_reset_replication(SERVER* master_server, json_t** er
                 {
                     SERVER* new_master_srv = new_master->server;
                     SlaveStatus::Settings new_conn("", new_master_srv);
-                    GeneralOpData general(error_out, mxb::Duration(0.0));   // Expect this to complete
-                                                                            // quickly.
+                    GeneralOpData general(error_out, 0s);   // Expect this to complete quickly.
                     size_t slave_conns_started = 0;
                     for (auto slave : slaves)
                     {
@@ -597,7 +597,7 @@ uint32_t MariaDBMonitor::do_rejoin(const ServerArray& joinable_servers, json_t**
             bool op_success = false;
             // Rejoin doesn't have its own time limit setting. Use switchover time limit for now since
             // the first phase of standalone rejoin is similar to switchover.
-            maxbase::Duration time_limit((double)m_settings.switchover_timeout);
+            maxbase::Duration time_limit(mxb::from_secs(m_settings.switchover_timeout));
             GeneralOpData general(output, time_limit);
 
             if (joinable->m_slave_status.empty())
@@ -821,7 +821,7 @@ bool MariaDBMonitor::switchover_perform(SwitchoverParams& op)
         m_state = State::WAIT_FOR_TARGET_CATCHUP;
         if (promotion_target->catchup_to_master(op.general, demotion_target->m_gtid_binlog_pos))
         {
-            MXS_INFO("Switchover: Catchup took %.1f seconds.", timer.lap().secs());
+            MXS_INFO("Switchover: Catchup took %.1f seconds.", mxb::to_secs(timer.lap()));
             // Step 3: On new master: remove slave connections, set read-only to OFF etc.
             m_state = State::PROMOTE_TARGET;
             if (promotion_target->promote(op.general, op.promotion, type, demotion_target))
@@ -863,7 +863,7 @@ bool MariaDBMonitor::switchover_perform(SwitchoverParams& op)
                     auto step6_duration = timer.lap();
                     MXS_INFO("Switchover: slave replication confirmation took %.1f seconds with "
                              "%.1f seconds to spare.",
-                             step6_duration.secs(), op.general.time_remaining.secs());
+                             mxb::to_secs(step6_duration), mxb::to_secs(op.general.time_remaining));
                 }
             }
         }
@@ -873,7 +873,7 @@ bool MariaDBMonitor::switchover_perform(SwitchoverParams& op)
             // Step 2 or 3 failed, try to undo step 1 by promoting the demotion target back to master.
             // Reset the time limit since the last part may have used it all.
             MXS_NOTICE("Attempting to undo changes to '%s'.", demotion_target->name());
-            const mxb::Duration demotion_undo_time_limit((double)m_settings.switchover_timeout);
+            const mxb::Duration demotion_undo_time_limit(mxb::from_secs(m_settings.switchover_timeout));
             GeneralOpData general_undo(op.general.error_out, demotion_undo_time_limit);
             if (demotion_target->promote(general_undo, op.promotion, OperationType::UNDO_DEMOTION, nullptr))
             {
@@ -933,7 +933,7 @@ bool MariaDBMonitor::failover_perform(FailoverParams& op)
             wait_cluster_stabilization(op.general, redirected_slaves, promotion_target);
             MXS_INFO("Failover: slave replication confirmation took %.1f seconds with "
                      "%.1f seconds to spare.",
-                     timer.lap().secs(), op.general.time_remaining.secs());
+                     mxb::to_secs(timer.lap()), mxb::to_secs(op.general.time_remaining));
         }
     }
     m_state = State::IDLE;
@@ -1023,16 +1023,15 @@ void MariaDBMonitor::wait_cluster_stabilization(GeneralOpData& op, const ServerA
         time_remaining -= timer.lap();
         if (!unconfirmed.empty())
         {
-            if (time_remaining.secs() > 0)
+            if (time_remaining.count() > 0)
             {
-                double standard_sleep = 0.5;    // In seconds.
+                maxbase::Duration standard_sleep = 500ms;
                 // If we have unconfirmed slaves and have time remaining, sleep a bit and try again.
                 /* TODO: This sleep is kinda pointless, because whether or not replication begins,
                  * all operations for failover/switchover are complete. The sleep is only required to
                  * get correct messages to the user. Think about removing it, or shortening the maximum
                  * time of this function. */
-                Duration sleep_time = (time_remaining.secs() > standard_sleep) ?
-                    Duration(standard_sleep) : time_remaining;
+                auto sleep_time = std::min(time_remaining, standard_sleep);
                 std::this_thread::sleep_for(sleep_time);
             }
             else
@@ -1437,7 +1436,7 @@ unique_ptr<MariaDBMonitor::FailoverParams> MariaDBMonitor::failover_prepare(Log 
         else
         {
             // The Duration ctor taking a double interprets the value as seconds.
-            auto time_limit = maxbase::Duration((double)m_settings.failover_timeout);
+            auto time_limit = std::chrono::seconds(m_settings.failover_timeout);
             bool promoting_to_master = (demotion_target == m_master);
             ServerOperation promotion(promotion_target, promoting_to_master,
                                       demotion_target->m_slave_status, demotion_target->m_enabled_events);
@@ -1510,7 +1509,7 @@ void MariaDBMonitor::handle_auto_failover()
                     MXB_NOTICE("Slave '%s' is still connected to '%s' and received a new gtid or heartbeat "
                                "event %.1f seconds ago. Delaying failover for at least %.1f seconds.",
                                connected_slave->name(), m_master->name(),
-                               event_age.secs(), delay_time.secs());
+                               mxb::to_secs(event_age), mxb::to_secs(delay_time));
                 }
             }
 
@@ -1613,7 +1612,7 @@ void MariaDBMonitor::check_cluster_operations_support()
 const MariaDBServer* MariaDBMonitor::slave_receiving_events(const MariaDBServer* demotion_target,
                                                             Duration* event_age_out, Duration* delay_out)
 {
-    Duration event_timeout(static_cast<double>(m_settings.master_failure_timeout));
+    auto event_timeout(std::chrono::seconds(m_settings.master_failure_timeout));
     auto current_time = maxbase::Clock::now();
     maxbase::TimePoint recent_event_time = current_time - event_timeout;
 
@@ -1742,7 +1741,7 @@ MariaDBMonitor::switchover_prepare(SERVER* promotion_server, SERVER* demotion_se
     unique_ptr<SwitchoverParams> rval;
     if (promotion_target && demotion_target && gtid_ok)
     {
-        maxbase::Duration time_limit((double)m_settings.switchover_timeout);
+        maxbase::Duration time_limit(std::chrono::seconds(m_settings.switchover_timeout));
         bool master_swap = (demotion_target == m_master);
         ServerOperation promotion(promotion_target, master_swap,
                                   demotion_target->m_slave_status, demotion_target->m_enabled_events);

@@ -55,7 +55,7 @@ void ResponseStat::query_finished()
     {
         std::sort(m_samples.begin(), m_samples.end());
         maxbase::Duration new_sample = m_samples[m_num_filter_samples / 2];
-        m_average.add(new_sample.secs());
+        m_average.add(mxb::to_secs(new_sample));
         m_sample_count = 0;
     }
 

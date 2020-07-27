@@ -173,16 +173,16 @@ void MariaDBUserManager::updater_thread_function()
          *  automatically if this time elapses.
          */
         mxs::Config& glob_config = mxs::Config::get();
-        auto max_refresh_interval = glob_config.users_refresh_interval.get().count();
-        auto min_refresh_interval = glob_config.users_refresh_time.get().count();
+        auto max_refresh_interval = glob_config.users_refresh_interval.get();
+        auto min_refresh_interval = glob_config.users_refresh_time.get();
 
         // Calculate the earliest allowed time for next update. If throttling is not on, next update can
         // happen immediately.
         TimePoint next_possible_update = last_update;
         if (throttling)
         {
-            next_possible_update += (min_refresh_interval > 0) ? Duration((double)min_refresh_interval) :
-                default_min_interval;
+            next_possible_update += (min_refresh_interval.count() > 0) ?
+                min_refresh_interval : default_min_interval;
         }
 
         // Calculate the time for the next scheduled update.
@@ -199,8 +199,8 @@ void MariaDBUserManager::updater_thread_function()
         }
         else
         {
-            next_scheduled_update += (max_refresh_interval > 0) ? Duration((double)max_refresh_interval) :
-                default_max_interval;
+            next_scheduled_update += (max_refresh_interval.count() > 0) ?
+                max_refresh_interval : default_max_interval;
         }
 
         MutexLock lock(m_notifier_lock);

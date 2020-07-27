@@ -369,7 +369,7 @@ static void log_server_connections(select_criteria_t criteria, const PRWBackends
 
         case ADAPTIVE_ROUTING:
             {
-                maxbase::Duration response_ave(b->target()->response_time_average());
+                maxbase::Duration response_ave(mxb::from_secs(b->target()->response_time_average()));
                 std::ostringstream os;
                 os << response_ave;
                 MXS_INFO("adaptive avg. select time: %s from \t%s %s",

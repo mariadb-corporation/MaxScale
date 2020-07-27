@@ -30,6 +30,7 @@ using maxsql::QueryResult;
 using Guard = std::lock_guard<std::mutex>;
 using maxscale::MonitorServer;
 using ConnectResult = maxscale::MonitorServer::ConnectResult;
+using namespace std::chrono_literals;
 
 MariaDBServer::MariaDBServer(SERVER* server, int config_index,
                              const MonitorServer::SharedSettings& base_settings,
@@ -175,7 +176,7 @@ bool MariaDBServer::execute_cmd_time_limit(const std::string& cmd, maxbase::Dura
     const string command = max_stmt_time + cmd;
     // If a query lasts less than 1s, sleep so that at most 1 query/s is sent.
     // This prevents busy-looping when faced with some network errors.
-    const Duration min_query_time(1.0);
+    const Duration min_query_time {1s};
 
     // Even if time is up, try at least once.
     bool cmd_success = false;
@@ -191,7 +192,7 @@ bool MariaDBServer::execute_cmd_time_limit(const std::string& cmd, maxbase::Dura
         // Check if there is time to retry.
         Duration time_remaining = time_limit - timer.split();
         bool non_fatal_connector_err = maxsql::mysql_is_net_error(errornum);
-        keep_trying = (time_remaining.secs() > 0)
+        keep_trying = (time_remaining.count() > 0)
             // Either a connector-c timeout or query was interrupted by max_statement_time.
             && (non_fatal_connector_err || (!max_stmt_time.empty() && errornum == ER_STATEMENT_TIMEOUT));
 
@@ -199,7 +200,8 @@ bool MariaDBServer::execute_cmd_time_limit(const std::string& cmd, maxbase::Dura
         {
             if (keep_trying)
             {
-                string retrying = string_printf("Retrying with %.1f seconds left.", time_remaining.secs());
+                string retrying = string_printf("Retrying with %.1f seconds left.",
+                                                mxb::to_secs(time_remaining));
                 if (non_fatal_connector_err)
                 {
                     MXS_WARNING("%s %s", error_msg.c_str(), retrying.c_str());
@@ -566,7 +568,7 @@ bool MariaDBServer::catchup_to_master(GeneralOpData& op, const GtidList& target)
     bool error = false;
     json_t** error_out = op.error_out;
 
-    Duration sleep_time(0.2);   // How long to sleep before next iteration. Incremented slowly.
+    Duration sleep_time(200ms);     // How long to sleep before next iteration. Incremented slowly.
     StopWatch timer;
 
     while (!time_is_up && !gtid_reached && !error)
@@ -583,12 +585,12 @@ bool MariaDBServer::catchup_to_master(GeneralOpData& op, const GtidList& target)
             {
                 // Query was successful but target gtid not yet reached. Check how much time left.
                 op.time_remaining -= timer.lap();
-                if (op.time_remaining.secs() > 0)
+                if (op.time_remaining.count() > 0)
                 {
                     // Sleep for a moment, then try again.
                     Duration this_sleep = MXS_MIN(sleep_time, op.time_remaining);
                     std::this_thread::sleep_for(this_sleep);
-                    sleep_time += Duration(0.1);    // Sleep a bit more next iteration.
+                    sleep_time += 100ms;    // Sleep a bit more next iteration.
                 }
                 else
                 {
@@ -1647,7 +1649,7 @@ bool MariaDBServer::demote(GeneralOpData& general, ServerOperation& demotion, Op
             // Even this is insufficient, because the server may still be executing the old
             // 'SET GLOBAL read_only=1' query.
             // TODO: add smarter undo, KILL QUERY etc.
-            set_read_only(ReadOnlySetting::DISABLE, Duration((double)0), NULL);
+            set_read_only(ReadOnlySetting::DISABLE, 0s, NULL);
         }
     }
     return success;
