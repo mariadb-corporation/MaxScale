@@ -27,8 +27,8 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import ModuleParameters from './common/ModuleParameters'
-import ResourceRelationships from './common/ResourceRelationships'
+import ModuleParameters from '../common/ModuleParameters'
+import ResourceRelationships from '../common/ResourceRelationships'
 
 export default {
     name: 'monitor-form-input',
