@@ -342,6 +342,8 @@ RWBackend* RWSplitSession::get_slave_backend(int max_rlag)
  */
 static void log_server_connections(select_criteria_t criteria, const PRWBackends& backends)
 {
+    using maxbase::operator<<;
+
     MXS_INFO("Target connection counts:");
 
     for (auto b : backends)

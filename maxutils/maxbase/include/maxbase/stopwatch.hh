@@ -25,22 +25,8 @@ namespace maxbase
  *  use Clock declared further down (specifically, use Clock::now()).
  */
 using SteadyClock = std::chrono::steady_clock;
+using Duration = SteadyClock::duration;
 using TimePoint = SteadyClock::time_point;
-
-/**
- *  @class Duration
- *
- *  Duration behaves exactly like SteadyClock::duration, and enables ADL to this namespace.
- */
-struct Duration : public SteadyClock::duration
-{
-    using SteadyClock::duration::duration;
-    Duration() = default;
-    Duration(SteadyClock::duration d)
-        : SteadyClock::duration(d)
-    {
-    }
-};
 
 inline Duration from_secs(double secs)
 {

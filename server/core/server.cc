@@ -792,7 +792,8 @@ json_t* Server::json_attributes() const
     json_t* statistics = stats().to_json();
     json_object_set_new(statistics, "persistent_connections", json_integer(m_pool_stats.n_persistent));
     maxbase::Duration response_ave(mxb::from_secs(response_time_average()));
-    json_object_set_new(statistics, "adaptive_avg_select_time", json_string(to_string(response_ave).c_str()));
+    json_object_set_new(statistics, "adaptive_avg_select_time",
+                        json_string(mxb::to_string(response_ave).c_str()));
 
     json_object_set_new(attr, "statistics", statistics);
     return attr;
