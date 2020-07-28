@@ -15,7 +15,7 @@
 SCRIPT="$(cd -P "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MAXSCALE_ROOT=${SCRIPT}/..
 
-DIRS="avro client connectors Documentation etc examples include maxctrl maxscale-system-test maxutils query_classifier script rabbitmq_consumer server"
+DIRS="avro client connectors Documentation etc examples include maxctrl system-test maxutils query_classifier script rabbitmq_consumer server"
 
 function check_dirs
 {

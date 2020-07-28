@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Installs all build dependecies for maxscale-system-test
+# Installs all build dependencies for system tests
 # Only Ubuntu Bionic/Xenial, CentOS 7, SLES 15 are supported
 
 rp=`realpath $0`

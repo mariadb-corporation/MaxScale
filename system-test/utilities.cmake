@@ -10,7 +10,7 @@ endfunction()
 # Helper function to add a configuration template to the global test definitions list.
 # Parameters are as in add_test_executable().
 function(add_template name template labels)
-  set(config_template_path "${CMAKE_SOURCE_DIR}/maxscale-system-test/cnf/maxscale.cnf.template.${template}")
+  set(config_template_path "${CMAKE_SOURCE_DIR}/system-test/cnf/maxscale.cnf.template.${template}")
   set(new_def "{\"${name}\", \"${config_template_path}\", \"${labels}\"}")
   set(TEST_DEFINITIONS "${TEST_DEFINITIONS}${new_def}," CACHE INTERNAL "")
 endfunction()
