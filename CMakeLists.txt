@@ -197,7 +197,7 @@ if(BUILD_TESTS)
 endif()
 
 if(BUILD_SYSTEM_TESTS)
-  add_subdirectory(maxscale-system-test)
+  add_subdirectory(system-test)
 endif()
 
 # Generate text versions of some documents
