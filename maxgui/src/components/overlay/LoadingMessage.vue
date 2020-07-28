@@ -6,7 +6,7 @@
 
 <template>
     <div class="welcome-txt text-center color text-text-subtle">
-        <div>{{ greeting }}</div>
+        <div>{{ text }}</div>
         <div class="font-weight-medium">
             {{ $t('mariaDbMaxScale') }}
         </div>
@@ -27,8 +27,9 @@
  * Public License.
  */
 export default {
+    name: 'loading-message',
     props: {
-        greeting: String,
+        text: String,
     },
 }
 </script>

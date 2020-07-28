@@ -2,7 +2,7 @@
     <v-overlay z-index="9999" :opacity="1" :absolute="true">
         <div class="overlay">
             <div class="overlay-content">
-                <WelcomeMessage :greeting="$t('welcomeTo')" />
+                <loading-message :text="$t('welcomeTo')" />
                 <div class="loading-icon">
                     <img src="@/assets/icon-globe.svg" alt="MariaDB" />
                 </div>
@@ -27,9 +27,9 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import WelcomeMessage from './WelcomeMessage'
+import LoadingMessage from './LoadingMessage'
 export default {
     name: 'load-overlay',
-    components: { WelcomeMessage },
+    components: { LoadingMessage },
 }
 </script>
