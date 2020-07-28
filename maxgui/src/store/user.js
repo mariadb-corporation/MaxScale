@@ -11,6 +11,7 @@
  * Public License.
  */
 import { OVERLAY_LOGOUT } from 'store/overlayTypes'
+import { cancelAllRequests } from 'plugins/axios'
 
 export default {
     namespaced: true,
@@ -45,13 +46,14 @@ export default {
         setAllUsers(state, arr) {
             state.allUsers = arr
         },
-        logout(state) {
+        clearUser(state) {
             state.user = null
         },
     },
     actions: {
         async logout({ commit, rootState }) {
-            commit('logout')
+            cancelAllRequests() // cancel all previous requests before logging out
+            commit('clearUser')
             commit('showOverlay', OVERLAY_LOGOUT, { root: true })
             const user = JSON.parse(localStorage.getItem('user'))
             if (user) localStorage.removeItem('user')
@@ -68,6 +70,7 @@ export default {
                     { root: true }
                 )
             }
+
             await this.Vue.prototype.$help.delay(1500).then(() => {
                 commit('hideOverlay', null, { root: true })
                 if (this.router.app.$route.name !== 'login') this.router.push('/login')

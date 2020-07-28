@@ -22,6 +22,7 @@ import session from './session'
 import listener from './listener'
 import { APP_CONFIG } from 'utils/constants'
 import router from 'router'
+import { refreshAxiosToken } from 'plugins/axios'
 
 const plugins = store => {
     store.Vue = Vue
@@ -75,6 +76,7 @@ export default new Vuex.Store({
     },
     actions: {
         async checkingForUpdate({ commit }) {
+            refreshAxiosToken()
             const logger = this.Vue.Logger('index-store')
             const res = await this.Vue.axios.get(`/`)
             logger.info('Checking for update')

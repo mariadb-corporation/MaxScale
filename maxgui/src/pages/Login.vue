@@ -126,7 +126,7 @@
  * Public License.
  */
 import { mapState, mapMutations } from 'vuex'
-
+import { refreshAxiosToken } from 'plugins/axios'
 export default {
     name: 'login',
     data() {
@@ -211,6 +211,7 @@ export default {
                     max-age param will be 8 hours if rememberMe is true, otherwise, along as user close the browser
                     it will be expired
                 */
+                refreshAxiosToken()
                 let url = '/auth?persist=yes'
                 await this.loginAxios.get(`${url}${self.rememberMe ? '&max-age=28800' : ''}`, {
                     auth: self.credential,

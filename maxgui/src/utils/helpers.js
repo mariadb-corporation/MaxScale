@@ -117,8 +117,11 @@ export function strReplaceAt(str, index, chr) {
  */
 export function getErrorsArr(error) {
     let errorsArr = [error]
-    !isUndefined(error.response.data.errors) &&
-        (errorsArr = error.response.data.errors.map(ele => `${ele.detail}`))
+
+    if (!isUndefined(error.response) && !isUndefined(error.response.data.errors)) {
+        errorsArr = error.response.data.errors.map(ele => `${ele.detail}`)
+    }
+
     return errorsArr
 }
 
