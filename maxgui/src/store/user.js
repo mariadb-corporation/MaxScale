@@ -51,32 +51,27 @@ export default {
     },
     actions: {
         async logout({ commit, rootState }) {
-            if (this.router.app.$route.path) {
-                commit('logout')
-                commit('showOverlay', OVERLAY_LOGOUT, { root: true })
-                const user = JSON.parse(localStorage.getItem('user'))
-                if (user) {
-                    localStorage.removeItem('user')
-                }
-                commit('setUser', {})
-                this.Vue.prototype.$help.deleteCookie('token_body')
-                // hide snackbar message if it is on
-                if (rootState.message.status) {
-                    commit(
-                        'showMessage',
-                        {
-                            text: rootState.message.text,
-                            type: rootState.message.type,
-                            status: false,
-                        },
-                        { root: true }
-                    )
-                }
-
-                await this.Vue.prototype.$help.delay(1500).then(() => {
-                    return commit('hideOverlay', null, { root: true }), this.router.push('/login')
-                })
+            commit('logout')
+            commit('showOverlay', OVERLAY_LOGOUT, { root: true })
+            const user = JSON.parse(localStorage.getItem('user'))
+            if (user) localStorage.removeItem('user')
+            this.Vue.prototype.$help.deleteCookie('token_body')
+            // hide snackbar message if it is on
+            if (rootState.message.status) {
+                commit(
+                    'showMessage',
+                    {
+                        text: rootState.message.text,
+                        type: rootState.message.type,
+                        status: false,
+                    },
+                    { root: true }
+                )
             }
+            await this.Vue.prototype.$help.delay(1500).then(() => {
+                commit('hideOverlay', null, { root: true })
+                if (this.router.app.$route.name !== 'login') this.router.push('/login')
+            })
         },
         // --------------------------------------------------- Network users -------------------------------------
         async fetchCurrentNetworkUser({ dispatch, commit, state }) {

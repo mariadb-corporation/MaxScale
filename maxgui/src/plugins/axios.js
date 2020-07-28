@@ -43,8 +43,8 @@ apiClient.interceptors.response.use(
     },
     async error => {
         if (error.response.status === 401) {
+            store.Vue.Logger('main').info(new ax.Cancel('Request canceled as it catches 401'))
             await store.dispatch('user/logout')
-            throw new ax.Cancel('Operation canceled as it catches 401')
         } else {
             store.commit('showMessage', {
                 text: getErrorsArr(error),
