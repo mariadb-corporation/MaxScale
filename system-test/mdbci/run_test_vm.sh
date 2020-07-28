@@ -90,13 +90,13 @@ scp -i $key $sshopt test_env $me@$ip:~/
 
 ssh -i $key $sshopt $me@$ip "sudo usermod --shell /bin/bash $me"
 ssh -i $key $sshopt $me@$ip "./MaxScale/BUILD/install_test_build_deps.sh"
-ssh -i $key $sshopt $me@$ip ". ./test_env; env; ./MaxScale/maxscale-system-test/mdbci/run_test.sh"
+ssh -i $key $sshopt $me@$ip ". ./test_env; env; ./MaxScale/system-test/mdbci/run_test.sh"
 
 
 . ${script_dir}/configure_log_dir.sh
 mkdir -p LOGS
 mkdir -p ${logs_publish_dir}
-scp -i $key $sshopt -r $me@$ip:./MaxScale/build/maxscale-system-test/LOGS/* LOGS/
+scp -i $key $sshopt -r $me@$ip:./MaxScale/build/system-test/LOGS/* LOGS/
 
 
 cp core.* ${logs_publish_dir}

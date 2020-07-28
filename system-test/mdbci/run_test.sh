@@ -64,7 +64,7 @@ cd ${script_dir}/../../
 
 mkdir build && cd build
 cmake .. -DBUILD_SYSTEM_TESTS=Y -DBUILDNAME=${mdbci_config_name} -DCMAKE_BUILD_TYPE=Debug
-cd maxscale-system-test
+cd system-test
 make
 
 echo ${test_set} | grep "NAME#"

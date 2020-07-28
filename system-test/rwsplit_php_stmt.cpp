@@ -69,7 +69,7 @@ int main(int argc, char* argv[])
     char str[4096 + 1024];
 
     sprintf(str,
-            "php %s/bug729.php %s %d %s %s",
+            "php %s/rwsplit_php_stmt.php %s %d %s %s",
             test_dir,
             Test->maxscales->IP[0],
             Test->maxscales->rwsplit_port[0],
