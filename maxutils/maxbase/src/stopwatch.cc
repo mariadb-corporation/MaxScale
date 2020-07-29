@@ -99,6 +99,27 @@ int64_t Timer::wait_alarm() const
     return ticks;
 }
 
+Duration Timer::until_alarm() const
+{
+    auto now = Clock::now();
+    auto total_ticks = (now - m_start) / m_dur;
+    int64_t ticks = total_ticks - m_last_alarm_ticks;
+
+    Duration ret;
+
+    if (ticks)
+    {
+        ret = Duration::zero();
+    }
+    else
+    {
+        ret = (total_ticks + 1) * m_dur - (now - m_start);
+    }
+
+    return ret;
+}
+
+
 IntervalTimer::IntervalTimer()
     : m_total(0)
 {
@@ -195,20 +216,12 @@ std::ostream& operator<<(std::ostream& os, Duration dur)
     return os;
 }
 
-// TODO: this will require some thought. to_string() for a system_clock is
-// obvious, but not so for a steady_clock. Maybe TimePoint belongs to a system clock
-// and sould be called something else here, and live in a time_measuring namespace.
+
 std::string to_string(TimePoint tp, const std::string& fmt)
 {
-    using namespace std::chrono;
-    std::time_t timet = system_clock::to_time_t(system_clock::now() + (tp - Clock::now()));
+    auto in_wall_time = wall_time::Clock::now() + (tp - Clock::now());
 
-    struct tm* ptm;
-    ptm = gmtime (&timet);
-    const int sz = 1024;
-    char buf[sz];
-    strftime(buf, sz, fmt.c_str(), ptm);
-    return buf;
+    return wall_time::to_string(in_wall_time, fmt);
 }
 
 std::ostream& operator<<(std::ostream& os, TimePoint tp)
@@ -241,5 +254,26 @@ void test_stopwatch_output(std::ostream& os)
     {
         os << Duration(dur[i]) << std::endl;
     }
+}
+}
+
+namespace wall_time
+{
+std::string to_string(TimePoint tp, const std::string& fmt)
+{
+    std::time_t timet = std::chrono::system_clock::to_time_t(tp);
+
+    struct tm tm;
+    localtime_r(&timet, &tm);
+    const int sz = 1024;
+    char buf[sz];
+    strftime(buf, sz, fmt.c_str(), &tm);
+    return buf;
+}
+
+std::ostream& operator<<(std::ostream& os, TimePoint tp)
+{
+    os << to_string(tp);
+    return os;
 }
 }

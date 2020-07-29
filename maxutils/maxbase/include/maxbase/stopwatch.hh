@@ -16,6 +16,7 @@
 #include <chrono>
 #include <iosfwd>
 #include <string>
+#include <sys/time.h>
 
 namespace maxbase
 {
@@ -36,6 +37,31 @@ inline Duration from_secs(double secs)
 inline double to_secs(Duration dur)
 {
     return std::chrono::duration<double>(dur).count();
+}
+
+/**
+ * @brief  timespec_to_duration
+ * @param  ts       - a timespec
+ * @return Duration - timespec has nanosecond precision. The return value is cast to whatever
+ *                    precision the Duration template parameter has.
+ */
+template<typename Duration>
+inline Duration timespec_to_duration(timespec ts)
+{
+    auto nanos {std::chrono::seconds {ts.tv_sec} + std::chrono::nanoseconds {ts.tv_nsec}};
+    return std::chrono::duration_cast<Duration>(nanos);
+}
+
+/**
+ * @brief  timespec_to_time_point
+ * @param  timespec ts -  A timespec suitable for the Clock template parameter.
+ *                        For the system clock, it should be a duration since the last unix epoch.
+ * @return Clock::time_point
+ */
+template<typename Clock>
+inline typename Clock::time_point timespec_to_time_point(timespec ts)
+{
+    return typename Clock::time_point {maxbase::timespec_to_duration<typename Clock::duration>(ts)};
 }
 
 /**
@@ -123,6 +149,13 @@ public:
      */
     int64_t wait_alarm() const;
 
+    /**
+     * @brief until_alarm
+     *
+     * @return Duration until next alarm, or Duration::zero() if the alarm is due.
+     */
+    Duration until_alarm() const;
+
     /** The duration of tick(s). Calling my_timer.tick_duration(my_timer.alarm()) can be handy when
      *  a duration, rather than ticks is needed.
      */
@@ -187,5 +220,19 @@ std::ostream& operator<<(std::ostream& os, Duration dur);
 std::string to_string(TimePoint tp, const std::string& fmt = "%F %T");
 
 /** Stream to std::ostream using to_string(tp) */
-std::ostream& operator<<(std::ostream&, TimePoint tp);
+std::ostream& operator<<(std::ostream& os, TimePoint tp);
+}
+
+namespace wall_time
+{
+
+using Clock = std::chrono::system_clock;
+using Duration = Clock::duration;
+using TimePoint = Clock::time_point;
+
+/** system_clock::timepoint to string, formatted using strftime formats */
+std::string to_string(TimePoint tp, const std::string& fmt = "%F %T");
+
+/** Stream to std::ostream using to_string(tp) */
+std::ostream& operator<<(std::ostream& os, TimePoint tp);
 }
