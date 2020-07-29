@@ -17,38 +17,38 @@ then
   sudo cp mariadb.list /etc/apt/sources.list.d/
   sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 0xF1656F24C74CD1D8
   export DEBIAN_FRONTEND=noninteractive
-  sudo apt-get update
-  apt_opt="sudo -E apt-get -q -o Dpkg::Options::=--force-confold \
+  apt_cmd="sudo -E apt-get -q -o Dpkg::Options::=--force-confold \
        -o Dpkg::Options::=--force-confdef \
        -y --force-yes"
-  ${apt_opt} install \
+  ${apt_cmd} update
+  ${apt_cmd} install \
        git wget build-essential \
        libssl-dev mariadb-client php perl \
        coreutils libjansson-dev zlib1g-dev \
        mariadb-test python python-pip cmake libpam0g-dev
-## separatelibgnutls installation process for Ubuntu Trusty
+  ## separate libgnutls installation process for Ubuntu Trusty
   cat /etc/*release | grep -E "Trusty|wheezy"
   if [ $? == 0 ]
   then
-     ${apt_opt} install libgnutls-dev libgcrypt11-dev
+     ${apt_cmd} install libgnutls-dev libgcrypt11-dev
   else
-     ${apt_opt} install libgnutls30 libgnutls-dev
+     ${apt_cmd} install libgnutls30 libgnutls-dev
      if [ $? != 0 ]
      then
-         ${apt_opt} install libgnutls28-dev
+         ${apt_cmd} install libgnutls28-dev
      fi
-     ${apt_opt} install libgcrypt20-dev
+     ${apt_cmd} install libgcrypt20-dev
      if [ $? != 0 ]
      then
-         ${apt_opt} install libgcrypt11-dev
+         ${apt_cmd} install libgcrypt11-dev
      fi
   fi
 
-  ${apt_opt} install openjdk-8-jdk
-  ${apt_opt} install php-mysql
+  ${apt_cmd} install openjdk-8-jdk
+  ${apt_cmd} install php-mysql
   if [ $? != 0 ]
   then
-      ${apt_opt} install openjdk-7-jdk
+      ${apt_cmd} install openjdk-7-jdk
   fi
   pip install --upgrade pip
   pip install JayDeBeApi
