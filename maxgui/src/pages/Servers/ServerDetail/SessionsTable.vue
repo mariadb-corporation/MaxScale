@@ -58,6 +58,7 @@ export default {
                 { text: 'Connected', value: 'connected' },
                 { text: 'IDLE (s)', value: 'idle' },
             ],
+            loop: true,
         }
     },
     computed: {
@@ -96,18 +97,17 @@ export default {
         },
     },
     async created() {
-        await this.fetchSessionsLoop()
+        while (this.loop) {
+            await Promise.all([this.fetchAllSessions(), this.$help.delay(10000)])
+        }
+    },
+    beforeDestroy() {
+        this.loop = false
     },
     methods: {
         ...mapActions({
             fetchAllSessions: 'session/fetchAllSessions',
         }),
-        async fetchSessionsLoop() {
-            await this.fetchAllSessions()
-            await setTimeout(() => {
-                this.fetchSessionsLoop()
-            }, 10000)
-        },
     },
 }
 </script>
