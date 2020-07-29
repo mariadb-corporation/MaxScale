@@ -63,16 +63,10 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapGetters } from 'vuex'
+import { mapGetters, mapActions } from 'vuex'
 
 export default {
     name: 'overview-header',
-
-    props: {
-        currentService: { type: Object, required: true },
-        fetchSessions: { type: Function, required: true },
-        fetchNewConnectionsInfo: { type: Function, required: true },
-    },
     data() {
         return {
             options: {
@@ -91,16 +85,31 @@ export default {
     },
     computed: {
         ...mapGetters({
+            currentService: 'service/currentService',
             connectionInfo: 'service/connectionInfo',
             totalConnectionsChartData: 'service/totalConnectionsChartData',
         }),
     },
-
+    async created() {
+        await this.fetchAll()
+    },
     methods: {
-        async updateChart(chart) {
-            let self = this
+        ...mapActions({
+            fetchServiceConnections: 'service/fetchServiceConnections',
+            fetchSessionsFilterByServiceId: 'session/fetchSessionsFilterByServiceId',
+        }),
+        async fetchAll() {
+            const serviceId = this.$route.params.id
             // fetching connections chart info should be at the same time with fetchSessionsFilterByServiceId
-            await Promise.all([self.fetchNewConnectionsInfo(), self.fetchSessions()])
+            await Promise.all([
+                this.fetchServiceConnections(serviceId),
+                this.fetchSessionsFilterByServiceId(serviceId),
+            ])
+        },
+        async updateChart(chart) {
+            const self = this
+
+            await this.fetchAll()
 
             chart.data.datasets.forEach(function(dataset) {
                 dataset.data.push({

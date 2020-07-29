@@ -16,16 +16,17 @@ export default {
     state: {
         allMonitors: [],
         currentMonitor: {},
+        currentMonitorDiagnostics: {},
     },
     mutations: {
-        /**
-         * @param {Object} payload set monitors array
-         */
         setAllMonitors(state, payload) {
             state.allMonitors = payload
         },
         setCurrentMonitor(state, payload) {
             state.currentMonitor = payload
+        },
+        setCurrentMonitorDiagnostics(state, payload) {
+            state.currentMonitorDiagnostics = payload
         },
     },
     actions: {
@@ -51,7 +52,19 @@ export default {
                 }
             }
         },
-
+        async fetchMonitorDiagnosticsById({ commit }, id) {
+            try {
+                let res = await this.Vue.axios.get(
+                    `/monitors/${id}?fields[monitors]=monitor_diagnostics`
+                )
+                if (res.data.data) commit('setCurrentMonitorDiagnostics', res.data.data)
+            } catch (e) {
+                if (process.env.NODE_ENV !== 'test') {
+                    const logger = this.Vue.Logger('store-monitor-fetchMonitorDiagnosticsById')
+                    logger.error(e)
+                }
+            }
+        },
         /**
          * @param {Object} payload payload object
          * @param {String} payload.id Name of the monitor
@@ -220,6 +233,7 @@ export default {
     getters: {
         allMonitors: state => state.allMonitors,
         currentMonitor: state => state.currentMonitor,
+        currentMonitorDiagnostics: state => state.currentMonitorDiagnostics,
         // -------------- below getters are available only when fetchAllMonitors has been dispatched
         allMonitorsMap: state => {
             let map = new Map()

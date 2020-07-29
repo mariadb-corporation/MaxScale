@@ -101,12 +101,11 @@
  * Public License.
  */
 
-import { mapActions } from 'vuex'
+import { mapActions, mapGetters } from 'vuex'
 
 export default {
     name: 'page-header',
     props: {
-        currentService: { type: Object, required: true },
         onEditSucceeded: { type: Function, required: true },
     },
     data() {
@@ -117,7 +116,11 @@ export default {
             smallInfo: 'serviceDelete',
         }
     },
-
+    computed: {
+        ...mapGetters({
+            currentService: 'service/currentService',
+        }),
+    },
     methods: {
         ...mapActions('service', ['destroyService', 'stopOrStartService']),
         async confirmSave() {

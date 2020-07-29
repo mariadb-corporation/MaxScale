@@ -1,13 +1,14 @@
 <template>
     <page-wrapper>
         <v-sheet v-if="!$help.lodash.isEmpty(currentService)" class="px-6">
-            <page-header :currentService="currentService" :onEditSucceeded="fetchService" />
+            <page-header :onEditSucceeded="fetchService" />
+            <!--
+                overview-header will fetch fetchServiceConnections and
+                fetchSessionsFilterByServiceId parallelly.
+                fetchSessionsFilterByServiceId will update sessions-table data
+            -->
+            <overview-header />
 
-            <overview-header
-                :currentService="currentService"
-                :fetchSessions="fetchSessions"
-                :fetchNewConnectionsInfo="fetchNewConnectionsInfo"
-            />
             <v-tabs v-model="currentActiveTab" class="tab-navigation-wrapper">
                 <v-tab v-for="tab in tabs" :key="tab.name">
                     {{ tab.name }}
@@ -15,25 +16,34 @@
 
                 <v-tabs-items v-model="currentActiveTab">
                     <v-tab-item class="pt-5">
-                        <ServerSessionTab
-                            :searchKeyWord="searchKeyWord"
-                            :currentService="currentService"
-                            :serverStateTableRow="serverStateTableRow"
-                            :dispatchRelationshipUpdate="dispatchRelationshipUpdate"
-                            :loading="overlay === OVERLAY_TRANSPARENT_LOADING"
-                            :sessionsByService="sessionsByService"
-                            :getServerState="getServerState"
-                        />
+                        <v-row>
+                            <v-col class="py-0 my-0" cols="4">
+                                <servers-filters-tables
+                                    :serverStateTableRow="serverStateTableRow"
+                                    :dispatchRelationshipUpdate="dispatchRelationshipUpdate"
+                                    :loading="overlay === OVERLAY_TRANSPARENT_LOADING"
+                                    :getServerState="getServerState"
+                                />
+                            </v-col>
+                            <v-col class="py-0 ma-0" cols="8">
+                                <sessions-table
+                                    :loading="overlay === OVERLAY_TRANSPARENT_LOADING"
+                                />
+                            </v-col>
+                        </v-row>
                     </v-tab-item>
                     <!-- Parameters & Diagnostics tab -->
                     <v-tab-item class="pt-5">
-                        <parameter-diagnostics-tab
-                            :currentService="currentService"
-                            :searchKeyWord="searchKeyWord"
-                            :updateServiceParameters="updateServiceParameters"
-                            :onEditSucceeded="fetchService"
-                            :loading="overlay === OVERLAY_TRANSPARENT_LOADING"
-                    /></v-tab-item>
+                        <v-row>
+                            <v-col class="py-0 my-0" cols="6">
+                                <parameters-table
+                                    :onEditSucceeded="fetchService"
+                                    :loading="overlay === OVERLAY_TRANSPARENT_LOADING"
+                                />
+                            </v-col>
+                            <diagnostics-table :loading="overlay === OVERLAY_TRANSPARENT_LOADING" />
+                        </v-row>
+                    </v-tab-item>
                 </v-tabs-items>
             </v-tabs>
         </v-sheet>
@@ -57,16 +67,20 @@ import { OVERLAY_TRANSPARENT_LOADING } from 'store/overlayTypes'
 import { mapGetters, mapActions } from 'vuex'
 import OverviewHeader from './OverviewHeader'
 import PageHeader from './PageHeader'
-import ServerSessionTab from './ServerSessionTab'
-import ParameterDiagnosticsTab from './ParameterDiagnosticsTab'
+import ServersFiltersTables from './ServersFiltersTables'
+import SessionsTable from './SessionsTable'
+import ParametersTable from './ParametersTable'
+import DiagnosticsTable from './DiagnosticsTable'
 
 export default {
     name: 'service-detail',
     components: {
         PageHeader,
         OverviewHeader,
-        ServerSessionTab,
-        ParameterDiagnosticsTab,
+        ServersFiltersTables,
+        SessionsTable,
+        ParametersTable,
+        DiagnosticsTable,
     },
     data() {
         return {
@@ -82,40 +96,30 @@ export default {
     computed: {
         ...mapGetters({
             overlay: 'overlay',
-            searchKeyWord: 'searchKeyWord',
             currentService: 'service/currentService',
-            connectionInfo: 'service/connectionInfo',
-            totalConnectionsChartData: 'service/totalConnectionsChartData',
-            sessionsByService: 'session/sessionsByService',
         }),
     },
 
     async created() {
-        let self = this
         // Initial fetch, wait for service id
-        await Promise.all([self.fetchAll(), self.fetchSessions()])
-        await self.genDataSetSchema()
+        await this.fetchService()
+        await this.serverTableRowProcessing()
+        await this.genDataSetSchema()
     },
     methods: {
         ...mapActions({
+            getResourceState: 'getResourceState',
             fetchServiceById: 'service/fetchServiceById',
             genDataSetSchema: 'service/genDataSetSchema',
             updateServiceRelationship: 'service/updateServiceRelationship',
-            updateServiceParameters: 'service/updateServiceParameters',
-            fetchServiceConnections: 'service/fetchServiceConnections',
-            fetchSessionsFilterByServiceId: 'session/fetchSessionsFilterByServiceId',
         }),
-        // call this when edit server table
-        async fetchAll() {
-            await this.fetchService()
-            await this.serverStateTableRowProcessing()
-        },
+
         // reuse functions for fetch loop or after finish editing
         async fetchService() {
             await this.fetchServiceById(this.$route.params.id)
         },
 
-        async serverStateTableRowProcessing() {
+        async serverTableRowProcessing() {
             if (!this.$help.lodash.isEmpty(this.currentService.relationships.servers)) {
                 let servers = this.currentService.relationships.servers.data
                 let serversIdArr = servers ? servers.map(item => `${item.id}`) : []
@@ -135,22 +139,20 @@ export default {
                 this.serverStateTableRow = []
             }
         },
-        async fetchNewConnectionsInfo() {
-            await this.fetchServiceConnections(this.$route.params.id)
-        },
-        async fetchSessions() {
-            await this.fetchSessionsFilterByServiceId(this.$route.params.id)
-        },
-        // fetch server state for all servers or one server
-        async getServerState(serverId) {
-            let res
-            if (serverId) {
-                res = await this.axios.get(`/servers/${serverId}?fields[servers]=state`)
-            } else {
-                res = await this.axios.get(`/servers?fields[servers]=state`)
-            }
 
-            return res.data.data
+        /**
+         * This function fetch all servers state, if serverId is not provided,
+         * otherwise it fetch server state of a server based on serverId
+         * @param {String} serverId name of the server
+         * @return {Array} Server state data
+         */
+        async getServerState(serverId) {
+            const data = this.getResourceState({
+                resourceId: serverId,
+                resourceType: 'servers',
+                caller: 'service-detail-page-getServerState',
+            })
+            return data
         },
         // actions to vuex
         async dispatchRelationshipUpdate(type, data) {
@@ -159,7 +161,7 @@ export default {
             switch (type) {
                 case 'filters':
                     // self.showOverlay(OVERLAY_TRANSPARENT_LOADING)
-                    await self.updateServiceRelationship({
+                    await this.updateServiceRelationship({
                         id: self.currentService.id,
                         type: 'filters',
                         filters: data,
@@ -171,12 +173,13 @@ export default {
                     // }, 300)
                     break
                 case 'servers':
-                    await self.updateServiceRelationship({
+                    await this.updateServiceRelationship({
                         id: self.currentService.id,
                         type: 'servers',
                         servers: data,
-                        callback: self.fetchAll,
+                        callback: self.fetchService,
                     })
+                    await this.serverTableRowProcessing()
                     break
             }
         },

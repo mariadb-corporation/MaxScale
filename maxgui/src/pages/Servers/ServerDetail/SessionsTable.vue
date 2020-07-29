@@ -1,33 +1,31 @@
 <template>
-    <v-col class="py-0 ma-0" cols="8">
-        <collapse
-            :toggleOnClick="() => (showSessions = !showSessions)"
-            :isContentVisible="showSessions"
-            :title="`${$tc('currentSessions', 2)}`"
-            :titleInfo="sessionsTableRow.length"
-        >
-            <template v-slot:content>
-                <data-table
-                    tableClass="data-table-full--max-width-columns"
-                    :search="searchKeyWord"
-                    :headers="sessionsTableHeader"
-                    :data="sessionsTableRow"
-                    :sortDesc="false"
-                    :noDataText="$t('noEntity', { entityName: $tc('sessions', 2) })"
-                    :loading="loading"
-                >
-                    <template v-slot:user="{ data: { item: { user } } }">
-                        <router-link :key="user" :to="`/users/${user}`" class="no-underline">
-                            <span> {{ user }} </span>
-                        </router-link>
-                    </template>
-                    <template v-slot:connected="{ data: { item: { connected } } }">
-                        <span> {{ $help.formatValue(connected) }} </span>
-                    </template>
-                </data-table>
-            </template>
-        </collapse>
-    </v-col>
+    <collapse
+        :toggleOnClick="() => (showSessions = !showSessions)"
+        :isContentVisible="showSessions"
+        :title="`${$tc('currentSessions', 2)}`"
+        :titleInfo="sessionsTableRow.length"
+    >
+        <template v-slot:content>
+            <data-table
+                tableClass="data-table-full--max-width-columns"
+                :search="searchKeyWord"
+                :headers="sessionsTableHeader"
+                :data="sessionsTableRow"
+                :sortDesc="false"
+                :noDataText="$t('noEntity', { entityName: $tc('sessions', 2) })"
+                :loading="loading"
+            >
+                <template v-slot:user="{ data: { item: { user } } }">
+                    <router-link :key="user" :to="`/users/${user}`" class="no-underline">
+                        <span> {{ user }} </span>
+                    </router-link>
+                </template>
+                <template v-slot:connected="{ data: { item: { connected } } }">
+                    <span> {{ $help.formatValue(connected) }} </span>
+                </template>
+            </data-table>
+        </template>
+    </collapse>
 </template>
 
 <script>
@@ -48,9 +46,7 @@ import { mapGetters, mapActions } from 'vuex'
 export default {
     name: 'session-table',
     props: {
-        searchKeyWord: { type: String, required: true },
         loading: { type: Boolean, required: true },
-        currentServer: { type: Object, required: true },
     },
     data() {
         return {
@@ -65,7 +61,11 @@ export default {
         }
     },
     computed: {
-        ...mapGetters({ allSessions: 'session/allSessions' }),
+        ...mapGetters({
+            allSessions: 'session/allSessions',
+            currentServer: 'server/currentServer',
+            searchKeyWord: 'searchKeyWord',
+        }),
         sessionsTableRow: function() {
             if (this.allSessions.length) {
                 let self = this

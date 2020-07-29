@@ -1,81 +1,79 @@
 <template>
-    <v-row>
-        <v-col class="py-0 my-0" cols="4">
-            <v-row class="pa-0 ma-0">
-                <!-- SERVER TABLE -->
-                <v-col cols="12" class="pa-0 ma-0">
-                    <collapse
-                        :toggleOnClick="() => (showServers = !showServers)"
-                        :isContentVisible="showServers"
-                        :title="`${$tc('servers', 2)}`"
-                        :titleInfo="serverStateTableRow.length"
-                        :onAddClick="() => onAdd('servers')"
-                        :addBtnText="`${$t('addEntity', { entityName: $tc('servers', 1) })}`"
+    <v-row class="pa-0 ma-0">
+        <!-- SERVER TABLE -->
+        <v-col cols="12" class="pa-0 ma-0">
+            <collapse
+                :toggleOnClick="() => (showServers = !showServers)"
+                :isContentVisible="showServers"
+                :title="`${$tc('servers', 2)}`"
+                :titleInfo="serverStateTableRow.length"
+                :onAddClick="() => onAdd('servers')"
+                :addBtnText="`${$t('addEntity', { entityName: $tc('servers', 1) })}`"
+            >
+                <template v-slot:content>
+                    <data-table
+                        :search="searchKeyWord"
+                        :headers="serversTableHeader"
+                        :data="serverStateTableRow"
+                        :sortDesc="false"
+                        :noDataText="$t('noEntity', { entityName: $tc('servers', 2) })"
+                        sortBy="id"
+                        :loading="loading"
+                        showActionsOnHover
                     >
-                        <template v-slot:content>
-                            <data-table
-                                :search="searchKeyWord"
-                                :headers="serversTableHeader"
-                                :data="serverStateTableRow"
-                                :sortDesc="false"
-                                :noDataText="$t('noEntity', { entityName: $tc('servers', 2) })"
-                                sortBy="id"
-                                :loading="loading"
-                                showActionsOnHover
+                        <template v-slot:id="{ data: { item: { id } } }">
+                            <router-link
+                                :key="id"
+                                :to="`/dashboard/servers/${id}`"
+                                class="no-underline"
                             >
-                                <template v-slot:id="{ data: { item: { id } } }">
-                                    <router-link
-                                        :key="id"
-                                        :to="`/dashboard/servers/${id}`"
-                                        class="no-underline"
-                                    >
-                                        <span> {{ id }} </span>
-                                    </router-link>
-                                </template>
-                                <template v-slot:state="{ data: { item: { state } } }">
-                                    <icon-sprite-sheet
-                                        size="13"
-                                        class="status-icon"
-                                        :frame="$help.serverStateIcon(state)"
-                                    >
-                                        status
-                                    </icon-sprite-sheet>
-                                </template>
-                                <template v-slot:actions="{ data: { item } }">
-                                    <v-btn icon @click="onDelete('servers', item)">
-                                        <v-icon size="20" color="error">
-                                            $vuetify.icons.unlink
-                                        </v-icon>
-                                    </v-btn>
-                                </template>
-                            </data-table>
+                                <span> {{ id }} </span>
+                            </router-link>
                         </template>
-                    </collapse>
-                </v-col>
-                <!-- Filter TABLE -->
-                <v-col cols="12" class="pa-0 mt-4">
-                    <collapse
-                        :toggleOnClick="() => (showFilter = !showFilter)"
-                        :isContentVisible="showFilter"
-                        :title="`${$tc('filters', 2)}`"
-                        :titleInfo="filtersLinked.length"
-                        :onAddClick="() => onAdd('filters')"
-                        :addBtnText="`${$t('addEntity', { entityName: $tc('filters', 1) })}`"
-                    >
-                        <template v-slot:content>
-                            <data-table
-                                :headers="filterTableHeader"
-                                :data="filtersLinked"
-                                :sortDesc="false"
-                                :noDataText="$t('noEntity', { entityName: $tc('filters', 2) })"
-                                draggable
-                                :loading="loading"
-                                showActionsOnHover
-                                :search="searchKeyWord"
-                                hasOrderNumber
-                                @on-drag-end="filterDragReorder"
+                        <template v-slot:state="{ data: { item: { state } } }">
+                            <icon-sprite-sheet
+                                size="13"
+                                class="status-icon"
+                                :frame="$help.serverStateIcon(state)"
                             >
-                                <!-- <template v-slot:id="{ data: { item: { id } } }">
+                                status
+                            </icon-sprite-sheet>
+                        </template>
+                        <template v-slot:actions="{ data: { item } }">
+                            <v-btn icon @click="onDelete('servers', item)">
+                                <v-icon size="20" color="error">
+                                    $vuetify.icons.unlink
+                                </v-icon>
+                            </v-btn>
+                        </template>
+                    </data-table>
+                </template>
+            </collapse>
+        </v-col>
+        <!-- Filter TABLE -->
+        <v-col cols="12" class="pa-0 mt-4">
+            <collapse
+                :toggleOnClick="() => (showFilter = !showFilter)"
+                :isContentVisible="showFilter"
+                :title="`${$tc('filters', 2)}`"
+                :titleInfo="filtersLinked.length"
+                :onAddClick="() => onAdd('filters')"
+                :addBtnText="`${$t('addEntity', { entityName: $tc('filters', 1) })}`"
+            >
+                <template v-slot:content>
+                    <data-table
+                        :headers="filterTableHeader"
+                        :data="filtersLinked"
+                        :sortDesc="false"
+                        :noDataText="$t('noEntity', { entityName: $tc('filters', 2) })"
+                        draggable
+                        :loading="loading"
+                        showActionsOnHover
+                        :search="searchKeyWord"
+                        hasOrderNumber
+                        @on-drag-end="filterDragReorder"
+                    >
+                        <!-- <template v-slot:id="{ data: { item: { id } } }">
                                     <router-link
                                         :key="id"
                                         :to="`/dashboard/filters/${id}`"
@@ -84,47 +82,40 @@
                                         <span> {{ id }} </span>
                                     </router-link>
                                 </template> -->
-                                <template v-slot:actions="{ data: { item } }">
-                                    <v-btn icon @click="onDelete('filters', item)">
-                                        <v-icon size="14" color="error">
-                                            $vuetify.icons.delete
-                                        </v-icon>
-                                    </v-btn>
-                                </template>
-                            </data-table>
+                        <template v-slot:actions="{ data: { item } }">
+                            <v-btn icon @click="onDelete('filters', item)">
+                                <v-icon size="14" color="error">
+                                    $vuetify.icons.delete
+                                </v-icon>
+                            </v-btn>
                         </template>
-                    </collapse>
-                </v-col>
-                <!-- Avaiable dialog for both SERVERS/FILTERS Tables -->
-                <confirm-dialog
-                    v-model="showDeleteDialog"
-                    :title="dialogTitle"
-                    :type="deleteDialogType"
-                    :item="Array.isArray(targetItem) ? {} : targetItem"
-                    :onSave="() => confirmDelete()"
-                    :onClose="() => (showDeleteDialog = false)"
-                    :onCancel="() => (showDeleteDialog = false)"
-                />
-
-                <select-dialog
-                    v-model="showSelectDialog"
-                    :title="dialogTitle"
-                    mode="add"
-                    multiple
-                    :entityName="targetSelectItemType"
-                    :onClose="() => (showSelectDialog = false)"
-                    :onCancel="() => (showSelectDialog = false)"
-                    :handleSave="confirmAdd"
-                    :itemsList="itemsList"
-                    @selected-items="targetItem = $event"
-                    @on-open="getAllEntities"
-                />
-            </v-row>
+                    </data-table>
+                </template>
+            </collapse>
         </v-col>
-        <sessions-table
-            :loading="loading"
-            :sessionsByService="sessionsByService"
-            :searchKeyWord="searchKeyWord"
+        <!-- Avaiable dialog for both SERVERS/FILTERS Tables -->
+        <confirm-dialog
+            v-model="showDeleteDialog"
+            :title="dialogTitle"
+            :type="deleteDialogType"
+            :item="Array.isArray(targetItem) ? {} : targetItem"
+            :onSave="() => confirmDelete()"
+            :onClose="() => (showDeleteDialog = false)"
+            :onCancel="() => (showDeleteDialog = false)"
+        />
+
+        <select-dialog
+            v-model="showSelectDialog"
+            :title="dialogTitle"
+            mode="add"
+            multiple
+            :entityName="targetSelectItemType"
+            :onClose="() => (showSelectDialog = false)"
+            :onCancel="() => (showSelectDialog = false)"
+            :handleSave="confirmAdd"
+            :itemsList="itemsList"
+            @selected-items="targetItem = $event"
+            @on-open="getAllEntities"
         />
     </v-row>
 </template>
@@ -144,20 +135,13 @@
  */
 
 import { mapMutations, mapGetters, mapActions } from 'vuex'
-import SessionsTable from './SessionsTable'
 
 export default {
-    name: 'server-session-tab',
-    components: {
-        SessionsTable,
-    },
+    name: 'servers-filters-tables',
     props: {
-        searchKeyWord: { type: String, required: true },
-        currentService: { type: Object, required: true },
         getServerState: { type: Function, required: true },
         loading: { type: Boolean, required: true },
         dispatchRelationshipUpdate: { type: Function, required: true },
-        sessionsByService: { type: Array, required: true },
         serverStateTableRow: { type: Array, required: true },
     },
     data() {
@@ -198,6 +182,8 @@ export default {
 
     computed: {
         ...mapGetters({
+            searchKeyWord: 'searchKeyWord',
+            currentService: 'service/currentService',
             allFilters: 'filter/allFilters',
         }),
         filtersLinked: function() {
@@ -218,6 +204,7 @@ export default {
         ...mapActions({
             fetchAllFilters: 'filter/fetchAllFilters',
         }),
+
         //--------------------------------------------------------- FILTERS ------------------------------------------
         async filterDragReorder({ oldIndex, newIndex }) {
             let self = this

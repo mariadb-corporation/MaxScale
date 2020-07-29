@@ -45,10 +45,6 @@ export default {
                 let res = await this.Vue.axios.get(`/services/${id}`)
                 if (res.data.data) {
                     commit('setCurrentService', res.data.data)
-                    commit('setConnectionInfo', {
-                        total_connections: res.data.data.attributes.total_connections,
-                        connections: res.data.data.attributes.connections,
-                    })
                 }
             } catch (e) {
                 if (process.env.NODE_ENV !== 'test') {

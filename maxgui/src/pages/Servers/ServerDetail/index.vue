@@ -1,11 +1,10 @@
 <template>
     <page-wrapper>
         <v-sheet v-if="!$help.lodash.isEmpty(currentServer)" class="px-6">
-            <page-header :currentServer="currentServer" :onEditSucceeded="fetchServer" />
+            <page-header :onEditSucceeded="fetchServer" />
             <overview-header
-                :currentServer="currentServer"
-                :updateServerRelationship="updateServerRelationship"
                 :dispatchRelationshipUpdate="dispatchRelationshipUpdate"
+                :getResourceState="getResourceState"
             />
             <v-tabs v-model="currentActiveTab" class="tab-navigation-wrapper">
                 <v-tab v-for="tab in tabs" :key="tab.name">
@@ -14,27 +13,45 @@
 
                 <v-tabs-items v-model="currentActiveTab">
                     <v-tab-item class="pt-5">
-                        <statistics-session-tab
-                            :searchKeyWord="searchKeyWord"
-                            :currentServer="currentServer"
-                            :serviceTableRow="serviceTableRow"
-                            :updateServerRelationship="updateServerRelationship"
-                            :dispatchRelationshipUpdate="dispatchRelationshipUpdate"
-                            :loading="overlay === OVERLAY_TRANSPARENT_LOADING"
-                            :getServiceState="getServiceState"
-                        />
+                        <v-row>
+                            <v-col class="py-0 my-0" cols="4">
+                                <v-row class="pa-0 ma-0">
+                                    <statistics-table
+                                        :loading="overlay === OVERLAY_TRANSPARENT_LOADING"
+                                    />
+                                    <services-table
+                                        :searchKeyWord="searchKeyWord"
+                                        :serviceTableRow="serviceTableRow"
+                                        :dispatchRelationshipUpdate="dispatchRelationshipUpdate"
+                                        :loading="overlay === OVERLAY_TRANSPARENT_LOADING"
+                                        :getServiceState="getServiceState"
+                                    />
+                                </v-row>
+                            </v-col>
+                            <v-col class="py-0 ma-0" cols="8">
+                                <sessions-table
+                                    :loading="overlay === OVERLAY_TRANSPARENT_LOADING"
+                                />
+                            </v-col>
+                        </v-row>
                     </v-tab-item>
                     <!-- Parameters & Diagnostics tab -->
                     <v-tab-item class="pt-5">
-                        <parameter-diagnostics-tab
-                            :currentServer="currentServer"
-                            :updateServerParameters="updateServerParameters"
-                            :onEditSucceeded="fetchServer"
-                            :loading="overlay === OVERLAY_TRANSPARENT_LOADING"
-                            :searchKeyWord="searchKeyWord"
-                            :fetchMonitorDiagnostics="fetchMonitorDiagnostics"
-                            :monitorDiagnosticsTableRow="monitorDiagnosticsTableRow"
-                    /></v-tab-item>
+                        <v-row>
+                            <v-col class="py-0 my-0" cols="6">
+                                <parameters-table
+                                    :onEditSucceeded="fetchServer"
+                                    :loading="overlay === OVERLAY_TRANSPARENT_LOADING"
+                                />
+                            </v-col>
+                            <v-col class="py-0 my-0" cols="6">
+                                <diagnostics-table
+                                    :loading="overlay === OVERLAY_TRANSPARENT_LOADING"
+                                    :fetchMonitorDiagnostics="fetchMonitorDiagnostics"
+                                />
+                            </v-col>
+                        </v-row>
+                    </v-tab-item>
                 </v-tabs-items>
             </v-tabs>
         </v-sheet>
@@ -55,18 +72,25 @@
  * Public License.
  */
 import { OVERLAY_TRANSPARENT_LOADING } from 'store/overlayTypes'
-import { mapGetters, mapActions } from 'vuex'
+import { mapGetters, mapActions, mapMutations } from 'vuex'
 import PageHeader from './PageHeader'
 import OverviewHeader from './OverviewHeader'
-import ParameterDiagnosticsTab from './ParameterDiagnosticsTab'
-import StatisticsSessionTab from './StatisticsSessionTab'
+import StatisticsTable from './StatisticsTable'
+import ServicesTable from './ServicesTable'
+import SessionsTable from './SessionsTable'
+import ParametersTable from './ParametersTable'
+import DiagnosticsTable from './DiagnosticsTable'
+
 export default {
     name: 'server-detail',
     components: {
         PageHeader,
         OverviewHeader,
-        StatisticsSessionTab,
-        ParameterDiagnosticsTab,
+        StatisticsTable,
+        ServicesTable,
+        SessionsTable,
+        ParametersTable,
+        DiagnosticsTable,
     },
 
     data() {
@@ -88,54 +112,38 @@ export default {
             overlay: 'overlay',
             searchKeyWord: 'searchKeyWord',
             currentServer: 'server/currentServer',
+            currentMonitorDiagnostics: 'monitor/currentMonitorDiagnostics',
         }),
     },
 
     async created() {
         // Initial fetch
-        await this.fetchAll()
+        await this.fetchServer()
+        await this.serviceTableRowProcessing()
     },
     methods: {
+        ...mapMutations({
+            setCurrentMonitorDiagnostics: 'monitor/setCurrentMonitorDiagnostics',
+        }),
         ...mapActions({
+            getResourceState: 'getResourceState',
             fetchServerById: 'server/fetchServerById',
             updateServerRelationship: 'server/updateServerRelationship',
-            updateServerParameters: 'server/updateServerParameters',
+            fetchMonitorDiagnosticsById: 'monitor/fetchMonitorDiagnosticsById',
         }),
-        // call this when edit service table
-        async fetchAll() {
-            await this.fetchServer()
-            await this.serviceTableRowProcessing()
+
+        async fetchMonitorDiagnostics() {
+            const { relationships: { monitors = {} } = {} } = this.currentServer
+            if (monitors.data) {
+                const monitorId = monitors.data[0].id
+                await this.fetchMonitorDiagnosticsById(monitorId)
+            } else {
+                this.setCurrentMonitorDiagnostics({})
+            }
         },
         // reuse functions for fetch loop or after finish editing
         async fetchServer() {
             await this.fetchServerById(this.$route.params.id)
-        },
-
-        async fetchMonitorDiagnostics() {
-            let self = this
-            if (!self.$help.lodash.isEmpty(self.currentServer.relationships.monitors)) {
-                const { relationships: { monitors = {} } = {} } = self.currentServer
-
-                let res = await this.axios.get(
-                    `/monitors/${monitors.data[0].id}?fields[monitors]=monitor_diagnostics`
-                )
-                const {
-                    attributes: {
-                        monitor_diagnostics: { server_info = [] },
-                    },
-                } = res.data.data
-
-                let monitorDiagnosticsObj = server_info.find(
-                    server => server.name === self.currentServer.id
-                )
-                let level = 0
-                const keepPrimitiveValue = false
-                this.monitorDiagnosticsTableRow = self.$help.objToArrOfObj(
-                    monitorDiagnosticsObj,
-                    keepPrimitiveValue,
-                    level
-                )
-            }
         },
 
         async serviceTableRowProcessing() {
@@ -159,37 +167,41 @@ export default {
             }
         },
 
-        // fetch service state for all services or one service
+        /**
+         * This function fetch all services state, if serviceId is provided,
+         * otherwise it fetch service state of a service
+         * @param {String} serviceId name of the service
+         * @return {Array} Service state data
+         */
         async getServiceState(serviceId) {
-            let res
-            if (serviceId) {
-                res = await this.axios.get(`/services/${serviceId}?fields[services]=state`)
-            } else {
-                res = await this.axios.get(`/services?fields[services]=state`)
-            }
-
-            return res.data.data
+            const data = this.getResourceState({
+                resourceId: serviceId,
+                resourceType: 'services',
+                caller: 'server-detail-page-getServiceState',
+            })
+            return data
         },
         // actions to vuex
         async dispatchRelationshipUpdate(type, data) {
             let self = this
             switch (type) {
                 case 'monitors':
-                    await self.updateServerRelationship({
+                    await this.updateServerRelationship({
                         id: self.currentServer.id,
                         type: 'monitors',
                         monitors: data,
                         callback: self.fetchServer,
                     })
-                    await self.fetchMonitorDiagnostics()
+                    await this.fetchMonitorDiagnostics()
                     break
                 case 'services':
-                    await self.updateServerRelationship({
+                    await this.updateServerRelationship({
                         id: self.currentServer.id,
                         type: 'services',
                         services: data,
-                        callback: self.fetchAll,
+                        callback: self.fetchServer,
                     })
+                    await this.serviceTableRowProcessing()
                     break
             }
         },

@@ -42,6 +42,7 @@ export default new Vuex.Store({
         overlay: false,
         isUpdateAvailable: false,
         prevRoute: null,
+        moduleParameters: [],
     },
     mutations: {
         showOverlay(state, type) {
@@ -73,6 +74,9 @@ export default new Vuex.Store({
         setPrevRoute(state, prevRoute) {
             state.prevRoute = prevRoute
         },
+        setModuleParameters(state, moduleParameters) {
+            state.moduleParameters = moduleParameters
+        },
     },
     actions: {
         async checkingForUpdate({ commit }) {
@@ -92,10 +96,58 @@ export default new Vuex.Store({
                 logger.info('New version is available')
             }
         },
+        /**
+         * This function fetch all resources state, if resourceId is not provided,
+         * otherwise it fetch resource state of a resource based on resourceId
+         * @param {String} resourceId id of the resource
+         * @param {String} resourceType type of resource. e.g. servers, services, monitors
+         * @param {String} caller name of the function calling this function, for debugging purpose
+         * @return {Array} Resource state data
+         */
+        async getResourceState(_, { resourceId, resourceType, caller }) {
+            try {
+                let data = []
+                let res
+                if (resourceId) {
+                    res = await this.Vue.axios.get(
+                        `/${resourceType}/${resourceId}?fields[${resourceType}]=state`
+                    )
+                } else
+                    res = await this.Vue.axios.get(`/${resourceType}?fields[${resourceType}]=state`)
+
+                if (res.data.data) data = res.data.data
+                return data
+            } catch (e) {
+                if (process.env.NODE_ENV !== 'test') {
+                    const logger = this.Vue.Logger(caller)
+                    logger.error(e)
+                }
+            }
+        },
+
+        async fetchModuleParameters({ commit }, moduleId) {
+            try {
+                let data = []
+                let res = await this.Vue.axios.get(
+                    `/maxscale/modules/${moduleId}?fields[module]=parameters`
+                )
+                if (res.data.data) {
+                    const { attributes: { parameters = [] } = {} } = res.data.data
+                    data = parameters
+                }
+                commit('setModuleParameters', data)
+            } catch (e) {
+                if (process.env.NODE_ENV !== 'test') {
+                    const logger = this.Vue.Logger(`fetchModuleParameters-for-${moduleId}`)
+                    logger.error(e)
+                }
+            }
+        },
     },
     getters: {
         searchKeyWord: state => state.searchKeyWord,
         overlay: state => state.overlay,
+        moduleParameters: state => state.moduleParameters,
     },
     modules: {
         filter,

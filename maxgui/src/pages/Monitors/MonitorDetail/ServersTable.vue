@@ -91,7 +91,7 @@ export default {
     props: {
         searchKeyWord: { type: String, required: true },
         currentMonitor: { type: Object, required: true },
-        getServers: { type: Function, required: true },
+        getServersState: { type: Function, required: true },
         loading: { type: Boolean, required: true },
         dispatchRelationshipUpdate: { type: Function, required: true },
         serverStateTableRow: { type: Array, required: true },
@@ -148,7 +148,7 @@ export default {
         // -------------- Add handle
         async getAllEntities() {
             let self = this
-            let data = await this.getServers()
+            let data = await this.getServersState()
 
             // only allow to add unmonitored servers
             let availableEntities = []
