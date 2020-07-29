@@ -18,10 +18,10 @@ then
   sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 0xF1656F24C74CD1D8
   export DEBIAN_FRONTEND=noninteractive
   sudo apt-get update
-  apt_opt="-E apt-get -q -o Dpkg::Options::=--force-confold \
+  apt_opt="sudo -E apt-get -q -o Dpkg::Options::=--force-confold \
        -o Dpkg::Options::=--force-confdef \
        -y --force-yes"
-  sudo ${apt_opt} install \
+  ${apt_opt} install \
        git wget build-essential \
        libssl-dev mariadb-client php perl \
        coreutils libjansson-dev zlib1g-dev \
@@ -30,25 +30,25 @@ then
   cat /etc/*release | grep -E "Trusty|wheezy"
   if [ $? == 0 ]
   then
-     sudo apt-get ${apt_opt} install libgnutls-dev libgcrypt11-dev
+     ${apt_opt} install libgnutls-dev libgcrypt11-dev
   else
-     sudo apt-get ${apt_opt} install libgnutls30 libgnutls-dev
+     ${apt_opt} install libgnutls30 libgnutls-dev
      if [ $? != 0 ]
      then
-         sudo apt-get ${apt_opt} install libgnutls28-dev
+         ${apt_opt} install libgnutls28-dev
      fi
-     sudo apt-get ${apt_opt} install libgcrypt20-dev
+     ${apt_opt} install libgcrypt20-dev
      if [ $? != 0 ]
      then
-         sudo apt-get ${apt_opt} install libgcrypt11-dev
+         ${apt_opt} install libgcrypt11-dev
      fi
   fi
 
-  sudo apt-get ${apt_opt} install openjdk-8-jdk
-  sudo apt-get ${apt_opt} install php-mysql
+  ${apt_opt} install openjdk-8-jdk
+  ${apt_opt} install php-mysql
   if [ $? != 0 ]
   then
-    sudo apt-get ${apt_opt} install openjdk-7-jdk
+      ${apt_opt} install openjdk-7-jdk
   fi
   pip install --upgrade pip
   pip install JayDeBeApi
