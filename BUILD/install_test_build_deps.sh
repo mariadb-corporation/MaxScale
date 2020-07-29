@@ -18,19 +18,37 @@ then
   sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 0xF1656F24C74CD1D8
   export DEBIAN_FRONTEND=noninteractive
   sudo apt-get update
-  sudo -E apt-get -q -o Dpkg::Options::=--force-confold \
+  apt_opt="-E apt-get -q -o Dpkg::Options::=--force-confold \
        -o Dpkg::Options::=--force-confdef \
-       -y --force-yes \
-       install \
+       -y --force-yes"
+  sudo ${apt_opt} install \
        git wget build-essential \
        libssl-dev mariadb-client php perl \
        coreutils libjansson-dev zlib1g-dev \
        mariadb-test python python-pip cmake libpam0g-dev
-  sudo apt-get install -y --force-yes openjdk-8-jdk
-  sudo apt-get install -y --force-yes php-mysql
+## separatelibgnutls installation process for Ubuntu Trusty
+  cat /etc/*release | grep -E "Trusty|wheezy"
+  if [ $? == 0 ]
+  then
+     sudo apt-get ${apt_opt} install libgnutls-dev libgcrypt11-dev
+  else
+     sudo apt-get ${apt_opt} install libgnutls30 libgnutls-dev
+     if [ $? != 0 ]
+     then
+         sudo apt-get ${apt_opt} install libgnutls28-dev
+     fi
+     sudo apt-get ${apt_opt} install libgcrypt20-dev
+     if [ $? != 0 ]
+     then
+         sudo apt-get ${apt_opt} install libgcrypt11-dev
+     fi
+  fi
+
+  sudo apt-get ${apt_opt} install openjdk-8-jdk
+  sudo apt-get ${apt_opt} install php-mysql
   if [ $? != 0 ]
   then
-    sudo apt-get install -y --force-yes openjdk-7-jdk
+    sudo apt-get ${apt_opt} install openjdk-7-jdk
   fi
   pip install --upgrade pip
   pip install JayDeBeApi
@@ -55,7 +73,8 @@ EOL
     sudo zypper -n install gcc gcc-c++ \
                  libopenssl-devel libgcrypt-devel MariaDB-devel MariaDB-test \
                  php perl coreutils libjansson-devel python python-pip \
-                 cmake pam-devel openssl-devel python-devel libjansson-devel
+                 cmake pam-devel openssl-devel python-devel libjansson-devel \
+                 gnutls-devel
     sudo zypper -n install java-1_8_0-openjdk
     sudo zypper -n install php-mysql
   else
@@ -74,7 +93,8 @@ EOL
                  libgcrypt-devel \
                  openssl-devel mariadb-devel mariadb-test \
                  php perl coreutils python python-pip \
-                 cmake pam-devel python-devel jansson-devel
+                 cmake pam-devel python-devel jansson-devel \
+                 gnutls-devel
     sudo yum install -y --nogpgcheck java-1.8.0-openjdk
     sudo yum install -y --nogpgcheck centos-release-scl
     sudo yum install -y --nogpgcheck devtoolset-7-gcc*
