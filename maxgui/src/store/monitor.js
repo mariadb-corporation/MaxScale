@@ -30,12 +30,26 @@ export default {
     },
     actions: {
         async fetchAllMonitors({ commit }) {
-            let res = await this.Vue.axios.get(`/monitors`)
-            commit('setAllMonitors', res.data.data)
+            try {
+                let res = await this.Vue.axios.get(`/monitors`)
+                if (res.data.data) commit('setAllMonitors', res.data.data)
+            } catch (e) {
+                if (process.env.NODE_ENV !== 'test') {
+                    const logger = this.Vue.Logger('store-monitor-fetchAllMonitors')
+                    logger.error(e)
+                }
+            }
         },
         async fetchMonitorById({ commit }, id) {
-            let res = await this.Vue.axios.get(`/monitors/${id}`)
-            commit('setCurrentMonitor', res.data.data)
+            try {
+                let res = await this.Vue.axios.get(`/monitors/${id}`)
+                if (res.data.data) commit('setCurrentMonitor', res.data.data)
+            } catch (e) {
+                if (process.env.NODE_ENV !== 'test') {
+                    const logger = this.Vue.Logger('store-monitor-fetchMonitorById')
+                    logger.error(e)
+                }
+            }
         },
 
         /**
@@ -48,30 +62,38 @@ export default {
          * @param {Function} payload.callback callback function after successfully updated
          */
         async createMonitor({ commit }, payload) {
-            const body = {
-                data: {
-                    id: payload.id,
-                    type: 'monitors',
-                    attributes: {
-                        module: payload.module,
-                        parameters: payload.parameters,
+            try {
+                const body = {
+                    data: {
+                        id: payload.id,
+                        type: 'monitors',
+                        attributes: {
+                            module: payload.module,
+                            parameters: payload.parameters,
+                        },
+                        relationships: payload.relationships,
                     },
-                    relationships: payload.relationships,
-                },
-            }
-            let res = await this.Vue.axios.post(`/monitors/`, body)
-            let message = [`Monitor ${payload.id} is created`]
-            // response ok
-            if (res.status === 204) {
-                commit(
-                    'showMessage',
-                    {
-                        text: message,
-                        type: 'success',
-                    },
-                    { root: true }
-                )
-                if (this.Vue.prototype.$help.isFunction(payload.callback)) await payload.callback()
+                }
+                let res = await this.Vue.axios.post(`/monitors/`, body)
+                let message = [`Monitor ${payload.id} is created`]
+                // response ok
+                if (res.status === 204) {
+                    commit(
+                        'showMessage',
+                        {
+                            text: message,
+                            type: 'success',
+                        },
+                        { root: true }
+                    )
+                    if (this.Vue.prototype.$help.isFunction(payload.callback))
+                        await payload.callback()
+                }
+            } catch (e) {
+                if (process.env.NODE_ENV !== 'test') {
+                    const logger = this.Vue.Logger('store-monitor-createMonitor')
+                    logger.error(e)
+                }
             }
         },
 
@@ -83,25 +105,33 @@ export default {
          * @param {Object} payload.callback callback function after successfully updated
          */
         async updateMonitorParameters({ commit }, payload) {
-            const body = {
-                data: {
-                    id: payload.id,
-                    type: 'monitors',
-                    attributes: { parameters: payload.parameters },
-                },
-            }
-            let res = await this.Vue.axios.patch(`/monitors/${payload.id}`, body)
-            // response ok
-            if (res.status === 204) {
-                commit(
-                    'showMessage',
-                    {
-                        text: [`Monitor ${payload.id} is updated`],
-                        type: 'success',
+            try {
+                const body = {
+                    data: {
+                        id: payload.id,
+                        type: 'monitors',
+                        attributes: { parameters: payload.parameters },
                     },
-                    { root: true }
-                )
-                if (this.Vue.prototype.$help.isFunction(payload.callback)) await payload.callback()
+                }
+                let res = await this.Vue.axios.patch(`/monitors/${payload.id}`, body)
+                // response ok
+                if (res.status === 204) {
+                    commit(
+                        'showMessage',
+                        {
+                            text: [`Monitor ${payload.id} is updated`],
+                            type: 'success',
+                        },
+                        { root: true }
+                    )
+                    if (this.Vue.prototype.$help.isFunction(payload.callback))
+                        await payload.callback()
+                }
+            } catch (e) {
+                if (process.env.NODE_ENV !== 'test') {
+                    const logger = this.Vue.Logger('store-monitor-updateMonitorParameters')
+                    logger.error(e)
+                }
             }
         },
         /**
@@ -109,36 +139,43 @@ export default {
          * @param {String} mode Mode to manipulate the monitor ( destroy, stop, start)
          */
         async monitorManipulate({ commit }, { id, mode, callback }) {
-            let res, message
-            switch (mode) {
-                case 'destroy':
-                    /*  Destroy a created monitor.
-                    The monitor must not have relationships to any servers in order to be destroyed. */
-                    res = await this.Vue.axios.delete(`/monitors/${id}?force=yes`)
-                    message = [`Monitor ${id} is destroyed`]
-                    break
-                case 'stop':
-                    //Stops a started monitor.
-                    res = await this.Vue.axios.put(`/monitors/${id}/stop`)
-                    message = [`Monitor ${id} is stopped`]
-                    break
-                case 'start':
-                    //Starts a stopped monitor.
-                    res = await this.Vue.axios.put(`/monitors/${id}/start`)
-                    message = [`Monitor ${id} is started`]
-                    break
-            }
-            // response ok
-            if (res.status === 204) {
-                commit(
-                    'showMessage',
-                    {
-                        text: message,
-                        type: 'success',
-                    },
-                    { root: true }
-                )
-                if (this.Vue.prototype.$help.isFunction(callback)) await callback()
+            try {
+                let res, message
+                switch (mode) {
+                    case 'destroy':
+                        /*  Destroy a created monitor.
+                        The monitor must not have relationships to any servers in order to be destroyed. */
+                        res = await this.Vue.axios.delete(`/monitors/${id}?force=yes`)
+                        message = [`Monitor ${id} is destroyed`]
+                        break
+                    case 'stop':
+                        //Stops a started monitor.
+                        res = await this.Vue.axios.put(`/monitors/${id}/stop`)
+                        message = [`Monitor ${id} is stopped`]
+                        break
+                    case 'start':
+                        //Starts a stopped monitor.
+                        res = await this.Vue.axios.put(`/monitors/${id}/start`)
+                        message = [`Monitor ${id} is started`]
+                        break
+                }
+                // response ok
+                if (res.status === 204) {
+                    commit(
+                        'showMessage',
+                        {
+                            text: message,
+                            type: 'success',
+                        },
+                        { root: true }
+                    )
+                    if (this.Vue.prototype.$help.isFunction(callback)) await callback()
+                }
+            } catch (e) {
+                if (process.env.NODE_ENV !== 'test') {
+                    const logger = this.Vue.Logger('store-monitor-monitorManipulate')
+                    logger.error(e)
+                }
             }
         },
 
@@ -150,25 +187,33 @@ export default {
          * @param {Function} payload.callback callback function after successfully updated
          */
         async updateMonitorRelationship({ commit }, payload) {
-            let res
-            let message
+            try {
+                let res
+                let message
 
-            res = await this.Vue.axios.patch(`/monitors/${payload.id}/relationships/servers`, {
-                data: payload.servers,
-            })
-            message = [`Servers relationships of ${payload.id} is updated`]
+                res = await this.Vue.axios.patch(`/monitors/${payload.id}/relationships/servers`, {
+                    data: payload.servers,
+                })
+                message = [`Servers relationships of ${payload.id} is updated`]
 
-            // response ok
-            if (res.status === 204) {
-                commit(
-                    'showMessage',
-                    {
-                        text: message,
-                        type: 'success',
-                    },
-                    { root: true }
-                )
-                if (this.Vue.prototype.$help.isFunction(payload.callback)) await payload.callback()
+                // response ok
+                if (res.status === 204) {
+                    commit(
+                        'showMessage',
+                        {
+                            text: message,
+                            type: 'success',
+                        },
+                        { root: true }
+                    )
+                    if (this.Vue.prototype.$help.isFunction(payload.callback))
+                        await payload.callback()
+                }
+            } catch (e) {
+                if (process.env.NODE_ENV !== 'test') {
+                    const logger = this.Vue.Logger('store-monitor-updateMonitorRelationship')
+                    logger.error(e)
+                }
             }
         },
     },

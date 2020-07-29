@@ -36,9 +36,15 @@ export default {
     },
     actions: {
         async fetchAllSessions({ commit }) {
-            let res = await this.Vue.axios.get(`/sessions`)
-
-            commit('setSessions', res.data.data)
+            try {
+                let res = await this.Vue.axios.get(`/sessions`)
+                if (res.data.data) commit('setSessions', res.data.data)
+            } catch (e) {
+                if (process.env.NODE_ENV !== 'test') {
+                    const logger = this.Vue.Logger('store-sessions-fetchAllSessions')
+                    logger.error(e)
+                }
+            }
         },
         // this function should be called after fetchAllSessions has been fetched
         genDataSetSchema({ commit, state }) {
