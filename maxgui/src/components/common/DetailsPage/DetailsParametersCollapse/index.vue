@@ -205,14 +205,14 @@ export default {
         showCellTooltip({ e, item }) {
             if (e.type === 'mouseenter') {
                 const { id, type, description, unit, default_value } = item
-                const obj = {
+                let obj = {
                     id,
                 }
-
-                !this.$help.isUndefined(type) && (obj.type = type)
-                !this.$help.isUndefined(description) && (obj.description = description)
-                !this.$help.isUndefined(unit) && (obj.unit = unit)
-                !this.$help.isUndefined(default_value) && (obj.default_value = default_value)
+                // assign
+                if (type !== undefined) obj.type = type
+                if (description !== undefined) obj.description = description
+                if (unit !== undefined) obj.unit = unit
+                if (default_value !== undefined) obj.default_value = default_value
 
                 this.parameterTooltip = {
                     item: obj,
@@ -261,21 +261,38 @@ export default {
                 } = moduleParam
 
                 // assign
-                type !== undefined && (resourceParam.type = type)
-                description !== undefined && (resourceParam.description = description)
-                unit !== undefined && (resourceParam.unit = unit)
-                default_value !== undefined && (resourceParam.default_value = default_value)
+                if (type !== undefined) resourceParam.type = type
+                if (description !== undefined) resourceParam.description = description
+                if (unit !== undefined) resourceParam.unit = unit
+                if (default_value !== undefined) resourceParam.default_value = default_value
                 resourceParam.mandatory = mandatory
 
                 const hasModifiable = 'modifiable' in moduleParam
-                if (hasModifiable && !moduleParam.modifiable) {
-                    resourceParam['disabled'] = true
-                } else resourceParam['disabled'] = false
 
-                if (resourceParam.type === 'duration' && unit) {
-                    resourceParam.value = `${resourceParam.value}${unit}`
-                } else if (resourceParam.type === 'enum' || resourceParam.type === 'enum_mask') {
-                    resourceParam['enum_values'] = enum_values
+                resourceParam['disabled'] = hasModifiable && !moduleParam.modifiable
+
+                switch (resourceParam.type) {
+                    case 'duration':
+                        if (unit) {
+                            let hasAppendedSuffix = false
+                            if (typeof resourceParam.value === 'string') {
+                                let suffixInfo = this.$help.getSuffixFromValue(resourceParam, [
+                                    'ms',
+                                    's',
+                                    'm',
+                                    'h',
+                                ])
+                                if (suffixInfo.suffix) hasAppendedSuffix = true
+                            }
+                            if (!hasAppendedSuffix) {
+                                resourceParam.value = `${resourceParam.value}${unit}`
+                            }
+                        }
+                        break
+                    case 'enum':
+                    case 'enum_mask':
+                        resourceParam['enum_values'] = enum_values
+                        break
                 }
             } else {
                 resourceParam['disabled'] = true
