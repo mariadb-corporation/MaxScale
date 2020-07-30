@@ -69,7 +69,7 @@ int main(int argc, char* argv[])
                                     true,
                                     "maxctrl create server server%d 3306 %s",
                                     i + 1,
-                                    test->repl->IP_private[i]);
+                                    test->repl->ip_private(i));
     }
 
     /** Add the servers to the monitor and service */
@@ -88,7 +88,7 @@ int main(int argc, char* argv[])
                                     true,
                                     "maxctrl create server server%d %s %d",
                                     i + 1,
-                                    test->repl->IP_private[i],
+                                    test->repl->ip_private(i),
                                     test->repl->port[i]);
     }
 

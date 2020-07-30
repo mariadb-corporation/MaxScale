@@ -239,6 +239,6 @@ change_master(TestConnections& test, int slave, int master, const string& conn_n
                          "master_user='repl', master_password='repl', master_delay=%d; "
                          "START SLAVE '%s';";
     test.try_query(test.repl->nodes[slave], query, conn_name.c_str(),
-                   test.repl->IP_private[master], test.repl->port[master],
+                   test.repl->ip_private(master), test.repl->port[master],
                    replication_delay, conn_name.c_str());
 }

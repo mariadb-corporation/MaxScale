@@ -14,7 +14,7 @@ int main(int argc, char** argv)
     execute_query(test.repl->nodes[3], "STOP SLAVE");
     execute_query(test.repl->nodes[3],
                   "CHANGE MASTER TO MASTER_HOST='%s', MASTER_PORT=%d",
-                  test.repl->IP_private[2],
+                  test.repl->ip_private(2),
                   test.repl->port[2]);
     execute_query(test.repl->nodes[3], "START SLAVE");
     sleep(5);

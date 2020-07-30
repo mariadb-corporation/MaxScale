@@ -119,7 +119,7 @@ void check_state_change(const MaxRest& maxrest)
     cout << endl;
 
     int node = 0;
-    string address = test.clustrix->IP_private[node];
+    string address = test.clustrix->ip_private(node);
 
     cout << "Blocking node: " << node << endl;
     test.clustrix->block_node(node);

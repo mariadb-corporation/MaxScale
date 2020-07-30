@@ -54,7 +54,7 @@ void collect_information(TestConnections& test)
 
             for (auto i = 0; i < pClustrix->N; ++i)
             {
-                if (pClustrix->IP_private[i] == server.address)
+                if (pClustrix->ip_private(i) == server.address)
                 {
                     cout << server.address << " IS NODE " << i << endl;
                     node_by_address[server.address] = i;
