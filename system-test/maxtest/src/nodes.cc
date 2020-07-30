@@ -439,3 +439,8 @@ Nodes::SshResult Nodes::ssh_output(const std::string& cmd, int node, bool sudo)
     rval.rc = (WIFEXITED(exit_code)) ? WEXITSTATUS(exit_code) : 256;
     return rval;
 }
+
+bool Nodes::using_ipv6() const
+{
+    return use_ipv6;
+}

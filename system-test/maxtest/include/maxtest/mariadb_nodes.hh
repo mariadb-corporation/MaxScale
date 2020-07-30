@@ -40,6 +40,10 @@ public:
 
     virtual ~Mariadb_nodes();
 
+    void set_use_ipv6(bool use_ipv6);
+
+    const char* ip(int i = 0) const;
+
     /**
      * @brief  MYSQL structs for every backend node
      */
@@ -540,6 +544,7 @@ public:
     std::string cnf_server_name;
 
 private:
+    bool m_use_ipv6 {false}; /**< Default to ipv6-addresses */
 
     bool check_master_node(MYSQL* conn);
     bool bad_slave_thread_status(MYSQL* conn, const char* field, int node);

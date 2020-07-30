@@ -24,6 +24,9 @@ public:
     bool setup() override;
 
     int read_env();
+    void set_use_ipv6(bool use_ipv6);
+
+    const char* ip(int i = 0) const;
 
     /**
      * @brief rwsplit_port RWSplit service port
@@ -351,6 +354,9 @@ public:
      * @brief valgring_log_num Counter for Maxscale restarts to avoid Valgrind log overwriting
      */
     int valgring_log_num;
+
+private:
+    bool m_use_ipv6 {false}; /**< Default to ipv6-addresses */
 };
 
 class TestConnections;

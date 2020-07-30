@@ -1633,3 +1633,14 @@ std::string Mariadb_nodes::cnf_servers_line()
     }
     return s;
 }
+
+const char* Mariadb_nodes::ip(int i) const
+{
+    return m_use_ipv6 ? IP6[i] : IP[i];
+}
+
+void Mariadb_nodes::set_use_ipv6(bool use_ipv6)
+{
+    m_use_ipv6 = use_ipv6;
+    this->use_ipv6 = use_ipv6;
+}

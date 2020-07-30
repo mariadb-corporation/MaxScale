@@ -86,24 +86,7 @@ int Maxscales::read_env()
 
 int Maxscales::connect_rwsplit(int m, const std::string& db)
 {
-    if (use_ipv6)
-    {
-        conn_rwsplit[m] = open_conn_db(rwsplit_port[m],
-                                       IP6[m],
-                                       db,
-                                       user_name,
-                                       password,
-                                       ssl);
-    }
-    else
-    {
-        conn_rwsplit[m] = open_conn_db(rwsplit_port[m],
-                                       IP[m],
-                                       db,
-                                       user_name,
-                                       password,
-                                       ssl);
-    }
+    conn_rwsplit[m] = open_conn_db(rwsplit_port[m], ip(m), db, user_name, password, ssl);
     routers[m][0] = conn_rwsplit[m];
 
     int rc = 0;
@@ -123,24 +106,7 @@ int Maxscales::connect_rwsplit(int m, const std::string& db)
 
 int Maxscales::connect_readconn_master(int m, const std::string& db)
 {
-    if (use_ipv6)
-    {
-        conn_master[m] = open_conn_db(readconn_master_port[m],
-                                      IP6[m],
-                                      db,
-                                      user_name,
-                                      password,
-                                      ssl);
-    }
-    else
-    {
-        conn_master[m] = open_conn_db(readconn_master_port[m],
-                                      IP[m],
-                                      db,
-                                      user_name,
-                                      password,
-                                      ssl);
-    }
+    conn_master[m] = open_conn_db(readconn_master_port[m], ip(m), db, user_name, password, ssl);
     routers[m][1] = conn_master[m];
 
     int rc = 0;
@@ -160,24 +126,7 @@ int Maxscales::connect_readconn_master(int m, const std::string& db)
 
 int Maxscales::connect_readconn_slave(int m, const std::string& db)
 {
-    if (use_ipv6)
-    {
-        conn_slave[m] = open_conn_db(readconn_slave_port[m],
-                                     IP6[m],
-                                     db,
-                                     user_name,
-                                     password,
-                                     ssl);
-    }
-    else
-    {
-        conn_slave[m] = open_conn_db(readconn_slave_port[m],
-                                     IP[m],
-                                     db,
-                                     user_name,
-                                     password,
-                                     ssl);
-    }
+    conn_slave[m] = open_conn_db(readconn_slave_port[m], ip(m), db, user_name, password, ssl);
     routers[m][2] = conn_slave[m];
 
     int rc = 0;
@@ -329,6 +278,17 @@ void Maxscales::wait_for_monitor(int intervals, int m)
     ssh_node_f(m, false,
                "for ((i=0;i<%d;i++)); do maxctrl api get maxscale/debug/monitor_wait; done",
                intervals);
+}
+
+const char* Maxscales::ip(int i) const
+{
+    return m_use_ipv6 ? IP[i] : IP6[i];
+}
+
+void Maxscales::set_use_ipv6(bool use_ipv6)
+{
+    m_use_ipv6 = use_ipv6;
+    this->use_ipv6 = use_ipv6;
 }
 
 void MaxScale::wait_monitor_ticks(int ticks)

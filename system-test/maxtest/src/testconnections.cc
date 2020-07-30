@@ -368,7 +368,7 @@ TestConnections::TestConnections(int argc, char* argv[])
     {
         repl = new Mariadb_nodes("node", test_dir, verbose, m_network_config);
         repl->setup();
-        repl->use_ipv6 = m_use_ipv6;
+        repl->set_use_ipv6(m_use_ipv6);
         repl->take_snapshot_command = m_take_snapshot_command.c_str();
         repl->revert_snapshot_command = m_revert_snapshot_command.c_str();
         repl_future = std::async(std::launch::async, &Mariadb_nodes::check_nodes, repl);
@@ -382,7 +382,7 @@ TestConnections::TestConnections(int argc, char* argv[])
     {
         galera = new Galera_nodes("galera", test_dir, verbose, m_network_config);
         galera->setup();
-        galera->use_ipv6 = false;
+        galera->set_use_ipv6(false);
         galera->take_snapshot_command = m_take_snapshot_command.c_str();
         galera->revert_snapshot_command = m_revert_snapshot_command.c_str();
         galera_future = std::async(std::launch::async, &Galera_nodes::check_nodes, galera);
@@ -396,7 +396,7 @@ TestConnections::TestConnections(int argc, char* argv[])
     {
         clustrix = new Clustrix_nodes("clustrix", test_dir, verbose, m_network_config);
         clustrix->setup();
-        clustrix->use_ipv6 = false;
+        clustrix->set_use_ipv6(false);
         clustrix->take_snapshot_command = m_take_snapshot_command.c_str();
         clustrix->revert_snapshot_command = m_revert_snapshot_command.c_str();
         clustrix->fix_replication();
@@ -447,7 +447,7 @@ TestConnections::TestConnections(int argc, char* argv[])
     }
 
 
-    maxscales->use_ipv6 = m_use_ipv6;
+    maxscales->set_use_ipv6(m_use_ipv6);
     maxscales->ssl = ssl;
 
     // Stop MaxScale to prevent it from interfering with the replication setup process
@@ -830,7 +830,7 @@ void TestConnections::process_template(int m, const string& cnf_template_path, c
         {
             for (i = 0; i < mdn[j]->N; i++)
             {
-                if (mdn[j]->use_ipv6)
+                if (mdn[j]->using_ipv6())
                 {
                     IPcnf = mdn[j]->IP6[i];
                 }
