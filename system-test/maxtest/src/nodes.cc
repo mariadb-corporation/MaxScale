@@ -290,12 +290,13 @@ int Nodes::read_basic_env()
 
             // reading private IPs
             sprintf(env_name, "%s_%03d_private_ip", prefix, i);
-            IP_private[i] = strdup(get_nc_item(env_name).c_str());
-            if ((IP_private[i] == NULL) || (strlen(IP_private[i]) == 0))
+            auto& priv_ip = m_ip_private[i];
+            priv_ip = get_nc_item(env_name);
+            if (priv_ip.empty())
             {
-                IP_private[i] = IP[i];
+                priv_ip = IP[i];
             }
-            setenv(env_name, IP_private[i], 1);
+            setenv(env_name, priv_ip.c_str(), 1);
 
             // reading IPv6
             sprintf(env_name, "%s_%03d_network6", prefix, i);
@@ -336,7 +337,7 @@ int Nodes::read_basic_env()
             hostname[i] = strdup(get_nc_item(env_name).c_str());
             if ((hostname[i] == NULL) || (strcmp(hostname[i], "") == 0))
             {
-                hostname[i] = IP_private[i];
+                hostname[i] = strdup(m_ip_private[i].c_str());
             }
             setenv(env_name, hostname[i], 1);
 
@@ -447,5 +448,5 @@ bool Nodes::using_ipv6() const
 
 const char* Nodes::ip_private(int i) const
 {
-    return IP_private[i];
+    return m_ip_private[i].c_str();
 }
