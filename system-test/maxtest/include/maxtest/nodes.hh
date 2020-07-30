@@ -24,6 +24,7 @@ public:
      * @return True, if the instance could be setup, false otherwise.
      */
     virtual bool setup() = 0;
+    const char* ip_private(int i = 0) const;
 
     char * IP[256];
     /**

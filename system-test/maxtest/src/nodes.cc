@@ -444,3 +444,8 @@ bool Nodes::using_ipv6() const
 {
     return use_ipv6;
 }
+
+const char* Nodes::ip_private(int i) const
+{
+    return IP_private[i];
+}

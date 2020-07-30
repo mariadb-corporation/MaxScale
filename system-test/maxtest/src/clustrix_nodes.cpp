@@ -219,12 +219,12 @@ int Clustrix_nodes::start_replication()
             execute_query_all_nodes(clustrix_license.c_str());
 
             std::string cluster_setup_sql = std::string("ALTER CLUSTER ADD '")
-                + std::string(IP_private[1])
+                + std::string(ip_private(1))
                 + std::string("'");
             for (int i = 2; i < N; i++)
             {
                 cluster_setup_sql += std::string(",'")
-                    + std::string(IP_private[i])
+                    + std::string(ip_private(i))
                     + std::string("'");
             }
             connect();
@@ -254,7 +254,7 @@ std::string Clustrix_nodes::cnf_servers()
                 + cnf_server_name
                 + std::to_string(i + 1)
                 + std::string("]\\ntype=server\\naddress=")
-                + std::string(IP_private[i])
+                + std::string(ip_private(i))
                 + std::string("\\nport=")
                 + std::to_string(port[i])
                 + std::string("\\nprotocol=MySQLBackend\\n");
