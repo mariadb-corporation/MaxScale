@@ -15,7 +15,6 @@ export async function mockupSelection(wrapper, item, selector = '') {
     } else {
         vSelects = wrapper.findAllComponents({ name: 'v-select' })
     }
-
     expect(vSelects.length).to.be.equal(1)
     await vSelects.at(0).vm.selectItem(item)
 }
@@ -70,4 +69,94 @@ export async function mockupCloseDialog(wrapper) {
  */
 export async function mockupRouteChanges(wrapper, path) {
     if (wrapper.vm.$route.path !== path) await wrapper.vm.$router.push(path)
+}
+
+//a minimized mockup allModules data fetch from maxscale
+export const allModules = [
+    {
+        attributes: {
+            module_type: 'servers',
+            parameters: [
+                {
+                    description: 'Server address',
+                    mandatory: false,
+                    modifiable: true,
+                    name: 'address',
+                    type: 'string',
+                },
+            ],
+        },
+        id: 'servers',
+    },
+    {
+        attributes: {
+            module_type: 'Filter',
+            parameters: [
+                {
+                    mandatory: true,
+                    name: 'inject',
+                    type: 'quoted string',
+                },
+            ],
+        },
+        id: 'comment',
+    },
+    {
+        attributes: {
+            module_type: 'Authenticator',
+            parameters: [],
+        },
+        id: 'MariaDBAuth',
+    },
+    {
+        attributes: {
+            module_type: 'Monitor',
+            parameters: [
+                {
+                    default_value: '/cmapi/0.4.0',
+                    mandatory: false,
+                    name: 'admin_base_path',
+                    type: 'string',
+                },
+            ],
+        },
+        id: 'csmon',
+    },
+    {
+        attributes: {
+            module_type: 'Router',
+            parameters: [
+                {
+                    default_value: 'false',
+                    mandatory: false,
+                    name: 'delayed_retry',
+                    type: 'bool',
+                },
+            ],
+        },
+        id: 'readwritesplit',
+    },
+    {
+        attributes: {
+            module_type: 'Protocol',
+            parameters: [
+                {
+                    mandatory: true,
+                    name: 'protocol',
+                    type: 'string',
+                },
+            ],
+            version: 'V1.1.0',
+        },
+        id: 'mariadbclient',
+    },
+]
+
+//a minimized mockup allModulesMap state from vuex store
+export const allModulesMap = {}
+for (let i = 0; i < allModules.length; ++i) {
+    const module = allModules[i]
+    const moduleType = allModules[i].attributes.module_type
+    if (allModulesMap[moduleType] == undefined) allModulesMap[moduleType] = []
+    allModulesMap[moduleType].push(module)
 }

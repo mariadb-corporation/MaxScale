@@ -54,8 +54,10 @@ export default {
             }
         },
         genDataSetSchema({ commit, state }) {
-            const { currentService } = state
-            if (currentService) {
+            const {
+                currentService: { attributes: { connections = null } = {} },
+            } = state
+            if (connections !== null) {
                 let lineColors = this.Vue.prototype.$help.dynamicColors(0)
                 let indexOfOpacity = lineColors.lastIndexOf(')') - 1
                 let dataset = [
@@ -72,7 +74,7 @@ export default {
                         borderWidth: 1,
                         lineTension: 0,
 
-                        data: [{ x: Date.now(), y: currentService.attributes.connections }],
+                        data: [{ x: Date.now(), y: connections }],
                     },
                 ]
 

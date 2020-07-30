@@ -129,31 +129,30 @@ export default {
 
         async updateChart() {
             let self = this
-            const { sessionsChart, connectionsChart, threadsChart } = self.$refs
+            const { sessionsChart, connectionsChart, threadsChart } = this.$refs
             if (sessionsChart && connectionsChart && threadsChart) {
                 //  LOOP polling
                 await Promise.all([
-                    self.fetchAllServers(),
-                    self.fetchAllSessions(),
-                    self.fetchAllServices(),
-                    self.fetchThreads(),
+                    this.fetchAllServers(),
+                    this.fetchAllSessions(),
+                    this.fetchAllServices(),
+                    this.fetchThreads(),
                 ])
                 const time = Date.now()
                 //-------------------- update connections chart
 
-                let gap = self.allServers.length - connectionsChart.chartData.datasets.length
-
-                self.allServers.forEach((server, i) => {
+                let gap = this.allServers.length - connectionsChart.chartData.datasets.length
+                this.allServers.forEach((server, i) => {
                     if (gap > 0 && i > connectionsChart.chartData.datasets.length - 1) {
                         // push new datasets
-                        let lineColors = self.$help.dynamicColors(i)
+                        let lineColors = this.$help.dynamicColors(i)
                         let indexOfOpacity = lineColors.lastIndexOf(')') - 1
                         let dataset = {
                             label: `Server ID - ${server.id}`,
                             id: `Server ID - ${server.id}`,
                             type: 'line',
                             // background of the line
-                            backgroundColor: self.$help.strReplaceAt(
+                            backgroundColor: this.$help.strReplaceAt(
                                 lineColors,
                                 indexOfOpacity,
                                 '0.2'
@@ -188,8 +187,8 @@ export default {
                 })
 
                 //-------------------- update threads chart
-                await self.threads.forEach((thread, i) => {
-                    if (self.$help.isUndefined(threadsChart.chartData.datasets[i])) {
+                await this.threads.forEach((thread, i) => {
+                    if (this.$help.isUndefined(threadsChart.chartData.datasets[i])) {
                         self.genThreadsDatasetsSchema()
                     } else {
                         threadsChart.chartData.datasets[i].data.push({

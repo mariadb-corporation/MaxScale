@@ -13,106 +13,14 @@
 import { expect } from 'chai'
 import mount from '@tests/unit/setup'
 import {
+    allModulesMap,
     mockupSelection,
     mockupOpenDialog,
     mockupCloseDialog,
     mockupRouteChanges,
 } from '@tests/unit/mockup'
 import Forms from '@CreateResource/Forms'
-import moxios from 'moxios'
-import Vuex from 'vuex'
-//a minimized mockup allModulesMap state from vuex store
-const allModulesMap = {
-    servers: [
-        {
-            attributes: {
-                module_type: 'servers',
-                parameters: [
-                    {
-                        description: 'Server address',
-                        mandatory: false,
-                        modifiable: true,
-                        name: 'address',
-                        type: 'string',
-                    },
-                ],
-            },
-            id: 'servers',
-        },
-    ],
-    Filter: [
-        {
-            attributes: {
-                module_type: 'Filter',
-                parameters: [
-                    {
-                        mandatory: true,
-                        name: 'inject',
-                        type: 'quoted string',
-                    },
-                ],
-            },
-            id: 'comment',
-        },
-    ],
-    Authenticator: [
-        {
-            attributes: {
-                module_type: 'Authenticator',
-                parameters: [],
-            },
-            id: 'MariaDBAuth',
-        },
-    ],
-    Monitor: [
-        {
-            attributes: {
-                module_type: 'Monitor',
-                parameters: [
-                    {
-                        default_value: '/cmapi/0.4.0',
-                        mandatory: false,
-                        name: 'admin_base_path',
-                        type: 'string',
-                    },
-                ],
-            },
-            id: 'csmon',
-        },
-    ],
-    Router: [
-        {
-            attributes: {
-                module_type: 'Router',
-                parameters: [
-                    {
-                        default_value: 'false',
-                        mandatory: false,
-                        name: 'delayed_retry',
-                        type: 'bool',
-                    },
-                ],
-            },
-            id: 'readwritesplit',
-        },
-    ],
-    Protocol: [
-        {
-            attributes: {
-                module_type: 'Protocol',
-                parameters: [
-                    {
-                        mandatory: true,
-                        name: 'protocol',
-                        type: 'string',
-                    },
-                ],
-                version: 'V1.1.0',
-            },
-            id: 'mariadbclient',
-        },
-    ],
-}
+import sinon from 'sinon'
 
 /**
  * This function tests whether text is transform correctly based on route changes.
@@ -165,59 +73,38 @@ async function testCloseModal(wrapper, buttonClass) {
 }
 
 describe('Forms.vue', () => {
-    let wrapper
-    let getters, actions, store
+    let wrapper, axiosStub, axiosPostStub
 
-    beforeEach(() => {
+    after(async () => {
+        await axiosStub.reset()
+        await axiosPostStub.reset()
+    })
+
+    beforeEach(async () => {
         localStorage.clear()
-        getters = {
-            'maxscale/allModulesMap': () => allModulesMap,
-            'service/allServices': () => [],
-            'service/allServicesInfo': () => ({}),
-            'server/allServers': () => [],
-            'server/allServersInfo': () => ({}),
-            'monitor/allMonitorsInfo': () => ({}),
-            'monitor/allMonitors': () => [],
-            'filter/allFiltersInfo': () => ({}),
-            'filter/allFilters': () => [],
-            'listener/allListenersInfo': () => ({}),
-        }
-        actions = {
-            'service/createService': () => null,
-            'monitor/createMonitor': () => null,
-            'filter/createFilter': () => null,
-            'listener/createListener': () => null,
-            'server/createServer': () => null,
-            'service/fetchAllServices': () => null,
-            'server/fetchAllServers': () => null,
-            'monitor/fetchAllMonitors': () => null,
-            'filter/fetchAllFilters': () => null,
-            'listener/fetchAllListeners': () => null,
-        }
-        store = new Vuex.Store({
-            getters,
-            actions,
-            mutations: {
-                showOverlay: () => null,
-                hideOverlay: () => null,
-            },
-        })
+
         wrapper = mount({
             shallow: false,
             component: Forms,
             props: {
                 value: false, // control visibility of the dialog
             },
-            store,
+            computed: {
+                allModulesMap: () => allModulesMap,
+            },
         })
-        moxios.install(wrapper.vm.axios)
+        axiosStub = sinon.stub(wrapper.vm.axios, 'get').resolves(
+            Promise.resolve({
+                data: {},
+            })
+        )
+        axiosPostStub = sinon.stub(wrapper.vm.axios, 'post').resolves(Promise.resolve({}))
     })
 
     afterEach(async function() {
-        moxios.uninstall(wrapper.vm.axios)
+        await axiosStub.restore()
+        await axiosPostStub.restore()
         await mockupCloseDialog(wrapper)
-        //push back to settings page
-        await mockupRouteChanges(wrapper, '/settings')
     })
 
     it(`Should show forms dialog when v-model value changes`, async () => {
@@ -316,18 +203,19 @@ describe('Forms.vue', () => {
             expect(errorMessageDiv).to.be.include('id is required')
         })
     })
+
     it(`Should call closeModal function props to close form dialog
       when "save" button is clicked`, async () => {
         testCloseModal(wrapper, 'save')
     })
 
     it(`Should call closeModal function props to close form dialog
-    when "close" button is clicked`, async () => {
+      when "close" button is clicked`, async () => {
         testCloseModal(wrapper, 'close')
     })
 
     it(`Should call closeModal function props to close form dialog
-    when "cancel" button is clicked`, async () => {
+      when "cancel" button is clicked`, async () => {
         testCloseModal(wrapper, 'cancel')
     })
 })
