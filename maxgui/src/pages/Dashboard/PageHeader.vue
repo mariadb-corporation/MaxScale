@@ -114,7 +114,7 @@ import { mapGetters } from 'vuex'
 import workerTimer from 'worker-loader!utils/workerTimer.js'
 
 export default {
-    name: 'page-title',
+    name: 'page-header',
 
     data() {
         return {

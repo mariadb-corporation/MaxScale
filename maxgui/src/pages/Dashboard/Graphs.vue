@@ -74,6 +74,7 @@
 import { mapGetters } from 'vuex'
 
 export default {
+    name: 'graphs',
     props: {
         fetchThreads: { type: Function, required: true },
         genThreadsDatasetsSchema: { type: Function, required: true },
