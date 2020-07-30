@@ -35,7 +35,6 @@ async function testingTextTransform(wrapper, path, selectedResource) {
     await mockupRouteChanges(wrapper, path)
     await mockupOpenDialog(wrapper)
     expect(wrapper.vm.$data.selectedResource).to.be.equal(selectedResource)
-    await mockupCloseDialog(wrapper)
 }
 
 /**
@@ -44,7 +43,6 @@ async function testingTextTransform(wrapper, path, selectedResource) {
  * @param {String} resourceType resource to be created
  */
 async function mockupResourceSelect(wrapper, resourceType) {
-    await mockupRouteChanges(wrapper, '/dashboard/sessions')
     await mockupOpenDialog(wrapper)
     await mockupSelection(wrapper, resourceType, '.resource-select')
 }
@@ -121,26 +119,35 @@ describe('Forms.vue', () => {
         await testingTextTransform(wrapper, '/dashboard/sessions', 'Service')
     })
 
-    it(`Should auto select form resource based on route changes`, async () => {
-        // mockup navigating to services tab on dashboard page
+    it(`Should auto select Service form when current page = /dashboard/services`, async () => {
         await testingTextTransform(wrapper, '/dashboard/services', 'Service')
-        // mockup navigating to servers tab on dashboard page
+    })
+    it(`Should auto select Server form when current page = /dashboard/servers`, async () => {
         await testingTextTransform(wrapper, '/dashboard/servers', 'Server')
-        // mockup navigating to a server details page
+    })
+    it(`Should auto select Server form when current page is a server details page`, async () => {
         await testingTextTransform(wrapper, '/dashboard/servers/test-server', 'Server')
-        // mockup navigating to a monitor details page
+    })
+    it(`Should auto select Monitor form when current page is a monitor details page`, async () => {
         await testingTextTransform(wrapper, '/dashboard/monitors/test-monitor', 'Monitor')
-        // mockup navigating to a service details page
+    })
+    it(`Should auto select Service form when current page is a service details page`, async () => {
         await testingTextTransform(wrapper, '/dashboard/services/test-service', 'Service')
     })
 
-    it(`Should assign accurate module type object to resourceModules state`, async () => {
+    it(`Should assign accurate Router module type object to resourceModules state`, async () => {
         await mockupResourceSelect(wrapper, 'Service')
         expect(wrapper.vm.$data.resourceModules).to.be.deep.equals(allModulesMap['Router'])
+    })
+    it(`Should assign accurate servers module type object to resourceModules state`, async () => {
         await mockupResourceSelect(wrapper, 'Server')
         expect(wrapper.vm.$data.resourceModules).to.be.deep.equals(allModulesMap['servers'])
+    })
+    it(`Should assign accurate Monitor module object to resourceModules state`, async () => {
         await mockupResourceSelect(wrapper, 'Monitor')
         expect(wrapper.vm.$data.resourceModules).to.be.deep.equals(allModulesMap['Monitor'])
+    })
+    it(`Should assign accurate Filter module object to resourceModules state`, async () => {
         await mockupResourceSelect(wrapper, 'Filter')
         expect(wrapper.vm.$data.resourceModules).to.be.deep.equals(allModulesMap['Filter'])
     })

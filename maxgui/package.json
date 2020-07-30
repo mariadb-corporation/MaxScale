@@ -7,8 +7,8 @@
     "scripts": {
         "serve": "vue-cli-service serve --mode development",
         "build": "vue-cli-service build",
-        "test:unit": "vue-cli-service test:unit -r tests/unit/bootstrap.js src/**/*.spec.js",
-        "test-dev": "vue-cli-service test:unit --watch -r tests/unit/bootstrap.js src/**/*.spec.js",
+        "test:unit": "vue-cli-service test:unit -t 5000 -r tests/unit/bootstrap.js src/**/*.spec.js",
+        "test-dev": "vue-cli-service test:unit --watch -t 5000 -r tests/unit/bootstrap.js src/**/*.spec.js",
         "test:e2e": "vue-cli-service test:e2e",
         "i18n:report": "vue-cli-service i18n:report --src './src/**/*.?(js|vue)' --locales './src/locales/**/*.json'",
         "lint": "vue-cli-service lint"
