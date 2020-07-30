@@ -15,8 +15,15 @@ import ax from 'axios'
 import store from 'store'
 import { getErrorsArr } from '@/utils/helpers'
 
-const CancelToken = ax.CancelToken
-const source = CancelToken.source()
+const cancelToken = ax.CancelToken
+
+export let cancelSource = cancelToken.source()
+export const refreshAxiosToken = () => {
+    cancelSource = cancelToken.source()
+}
+export const cancelAllRequests = () => {
+    cancelSource.cancel('Request canceled by user')
+}
 
 let apiClient = ax.create({
     baseURL: '/',
@@ -29,7 +36,7 @@ let apiClient = ax.create({
 
 apiClient.interceptors.request.use(
     function(config) {
-        config.cancelToken = source.token
+        config.cancelToken = cancelSource.token
         return config
     },
     function(error) {
@@ -42,20 +49,25 @@ apiClient.interceptors.response.use(
         return response
     },
     async error => {
-        if (error.response.status === 401) {
+        if (error.response && error.response.status && error.response.status === 401) {
             await store.dispatch('user/logout')
-            throw new ax.Cancel('Operation canceled as it catches 401')
-        } else {
+        } else if (error.response && error.response.status) {
             store.commit('showMessage', {
                 text: getErrorsArr(error),
                 type: 'error',
             })
-            // when request is dispatched in a modal, an overlay loading will be set -> turn it off before return error
+            /*
+                When request is dispatched in a modal, an overlay loading will be set,
+                Turn it off before returning error
+            */
             if (store.state.overlay !== false) {
-                setTimeout(() => {
+                await store.Vue.prototype.$help.delay(600).then(() => {
                     store.commit('hideOverlay')
-                }, 600)
+                })
             }
+            return Promise.reject(error)
+        } else {
+            // request is cancelled by user
             return Promise.reject(error)
         }
     }

@@ -11,19 +11,25 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import Chart from 'chart.js'
 import { Line } from 'vue-chartjs'
 import 'chartjs-plugin-streaming'
+
+Chart.defaults.global.defaultFontFamily = "'azo-sans-web', adrianna, serif"
+Chart.defaults.global.defaultFontColor = '#424F62'
+Chart.defaults.global.defaultFontSize = 10
+
 export default {
     extends: Line,
     props: {
         chartData: {
             type: Object,
+            required: true,
         },
         options: {
             type: Object,
         },
         isRealTime: { type: Boolean, default: true },
-
         yAxesTicks: {
             type: Object,
             default: () => {},
@@ -59,9 +65,7 @@ export default {
                         ticks: {
                             beginAtZero: true,
                             padding: 12,
-                            fontSize: 10,
-                            fontFamily: "'azo-sans-web', adrianna, serif",
-                            fontColor: '#424F62',
+
                             maxTicksLimit: 3,
                             ...this.yAxesTicks,
                         },
@@ -72,20 +76,12 @@ export default {
                 xAxes: [
                     {
                         display: true,
-                        ticks: {
-                            fontSize: 10,
-                            fontColor: '#424F62',
-                            fontFamily: "'azo-sans-web', adrianna, serif",
-                        },
                     },
                 ],
                 yAxes: [
                     {
                         display: true,
                         ticks: {
-                            fontSize: 10,
-                            fontFamily: "'azo-sans-web', adrianna, serif",
-                            fontColor: '#424F62',
                             padding: 0,
                         },
                     },
@@ -113,7 +109,7 @@ export default {
     watch: {
         /* This chartData watcher doesn't make the chart reactivity, but it helps to
         destroy the chart when it's unmounted from the page. Eg: moving from dashboard page (have 3 charts)
-        to service-detail page (1 chart), the chart will be destroyed and rerender to avoid 
+        to service-detail page (1 chart), the chart will be destroyed and rerender to avoid
         several problems within vue-chartjs while using chartjs-plugin-streaming
         */
         chartData: function() {
@@ -154,9 +150,6 @@ export default {
                 tooltips: {
                     mode: 'x-axis',
                     intersect: false,
-                    titleFontFamily: "'azo-sans-web', adrianna, serif",
-                    bodyFontFamily: "'azo-sans-web', adrianna, serif",
-
                     enabled: false,
                     custom: function(tooltipModel) {
                         // Tooltip Element
