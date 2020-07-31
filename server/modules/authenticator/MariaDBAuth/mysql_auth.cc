@@ -22,6 +22,13 @@
 using AuthRes = mariadb::ClientAuthenticator::AuthRes;
 using mariadb::UserEntry;
 
+namespace
+{
+// Support the empty plugin as well, as that means default.
+const std::unordered_set<std::string> plugins = {"mysql_native_password", "caching_sha2_password",
+                                                 "mysql_clear_password", ""};
+}
+
 /**
  * Initialize the authenticator instance
  *
@@ -62,9 +69,6 @@ std::string MariaDBAuthenticatorModule::name() const
 
 const std::unordered_set<std::string>& MariaDBAuthenticatorModule::supported_plugins() const
 {
-    // Support the empty plugin as well, as that means default.
-    static const std::unordered_set<std::string> plugins = {
-        "mysql_native_password", "caching_sha2_password", ""};
     return plugins;
 }
 
