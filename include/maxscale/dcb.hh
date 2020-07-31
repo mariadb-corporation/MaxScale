@@ -647,6 +647,7 @@ protected:
     GWBUF*   m_writeq = nullptr;                    /**< Write Data Queue */
     GWBUF*   m_readq = nullptr;                     /**< Read queue for incomplete reads */
     uint32_t m_triggered_event = 0;                 /**< Triggered event to be delivered to handler */
+    uint32_t m_triggered_event_old = 0;             /**< Triggered event before disabling events */
     uint32_t m_nClose = 0;                          /**< How many times dcb_close has been called. */
     bool     m_hanged_up = false;                   /**< Has thethis can be called only once */
     bool     m_is_fake_event = false;
