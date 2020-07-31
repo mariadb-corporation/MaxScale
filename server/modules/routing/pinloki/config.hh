@@ -57,6 +57,12 @@ public:
     std::chrono::seconds net_timeout() const;
     // Automatic master selection
     bool select_master() const;
+
+    // File purging
+    int32_t             num_files_to_keep() const;
+    wall_time::Duration expire_log_duration() const;
+    wall_time::Duration purge_startup_delay() const;
+    wall_time::Duration purge_poll_timeout() const;
 private:
     /** Where the binlog files are stored */
     std::string m_binlog_dir;
@@ -125,5 +131,10 @@ private:
 
     std::chrono::seconds m_net_timeout;
     bool                 m_select_master;
+
+    int64_t             m_num_files_to_keep;
+    wall_time::Duration m_expire_log_duration;
+    wall_time::Duration m_purge_startup_delay;
+    wall_time::Duration m_purge_poll_timeout;
 };
 }
