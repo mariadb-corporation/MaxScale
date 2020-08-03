@@ -120,10 +120,12 @@ export default {
         },
 
         async serverTableRowProcessing() {
-            if (!this.$help.lodash.isEmpty(this.currentService.relationships.servers)) {
-                let servers = this.currentService.relationships.servers.data
-                let serversIdArr = servers ? servers.map(item => `${item.id}`) : []
+            const {
+                relationships: { servers: { data: serversData = [] } = {} } = {},
+            } = this.currentService
 
+            if (serversData.length) {
+                let serversIdArr = serversData.map(item => `${item.id}`)
                 let arr = []
                 for (let i = 0; i < serversIdArr.length; ++i) {
                     let data = await this.getServerState(serversIdArr[i])

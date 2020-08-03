@@ -15,9 +15,14 @@ import { expect } from 'chai'
 import mount from '@tests/unit/setup'
 import GlobalSearch from '@/components/common/GlobalSearch'
 import { mockupRouteChanges } from '@tests/unit/mockup'
+import sinon from 'sinon'
 
 describe('GlobalSearch.vue', () => {
-    let wrapper
+    let wrapper, axiosStub
+
+    after(async () => {
+        await axiosStub.reset()
+    })
 
     beforeEach(() => {
         localStorage.clear()
@@ -25,11 +30,16 @@ describe('GlobalSearch.vue', () => {
             shallow: false,
             component: GlobalSearch,
         })
+        axiosStub = sinon.stub(wrapper.vm.axios, 'get').resolves(
+            Promise.resolve({
+                data: {},
+            })
+        )
     })
-    afterEach(async () => {
-        //push back to dashboard/servers
-        await mockupRouteChanges(wrapper, '/dashboard/servers/')
+    afterEach(async function() {
+        await axiosStub.restore()
     })
+
     it(`$data.search as well as $store.getters.searchKeyWord is
       updated correctly and cleared when route changes`, async () => {
         // searching for 'row_server_1'

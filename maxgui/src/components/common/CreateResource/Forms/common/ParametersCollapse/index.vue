@@ -150,14 +150,14 @@ export default {
         showCellTooltip({ e, item }) {
             if (e.type === 'mouseenter') {
                 const { id, type, description, unit, default_value } = item
-                const obj = {
+                let obj = {
                     id,
                 }
-
-                !this.$help.isUndefined(type) && (obj.type = type)
-                !this.$help.isUndefined(description) && (obj.description = description)
-                !this.$help.isUndefined(unit) && (obj.unit = unit)
-                !this.$help.isUndefined(default_value) && (obj.default_value = default_value)
+                // assign
+                if (type !== undefined) obj.type = type
+                if (description !== undefined) obj.description = description
+                if (unit !== undefined) obj.unit = unit
+                if (default_value !== undefined) obj.default_value = default_value
 
                 this.parameterTooltip = {
                     item: obj,

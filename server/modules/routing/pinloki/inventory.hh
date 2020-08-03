@@ -64,6 +64,12 @@ public:
     bool exists(const std::string& file_name) const;
 
     /**
+     * @brief The first file in the inventory
+     * @return First file name or empty string
+     */
+    std::string first() const;
+
+    /**
      * @brief The last file in the inventory
      * @return Last file name or empty string
      */

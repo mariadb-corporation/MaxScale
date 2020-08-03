@@ -20,11 +20,11 @@ import i18n from '@/plugins/i18n'
 import vuetify from '@/plugins/vuetify'
 import store from 'store'
 import Logger from 'utils/logging'
-import PortalVue from 'portal-vue'
 
 import Router from 'vue-router'
 import { routes } from '@/router/routes'
 import commonComponents from 'components/common'
+
 function doMount(isShallow, component, options) {
     if (isShallow) {
         /*
@@ -40,11 +40,12 @@ function doMount(isShallow, component, options) {
 }
 
 Vue.config.silent = true
+Vue.Logger = Logger
 
 export default options => {
     const localVue = createLocalVue()
+
     localVue.Logger = Logger
-    localVue.use(PortalVue)
     localVue.use(Router)
     Object.keys(commonComponents).forEach(name => {
         localVue.component(name, commonComponents[name])
@@ -60,7 +61,11 @@ export default options => {
         slots: options.slots,
         attachTo: '#app',
     }
-    options.store && (mountOptions.store = options.store)
+
+    if (options.computed) {
+        mountOptions.computed = options.computed
+    }
+
     return doMount(options.shallow, options.component, mountOptions)
 }
 export const router = new Router({ routes: routes })

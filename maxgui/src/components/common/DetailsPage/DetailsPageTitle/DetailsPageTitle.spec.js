@@ -15,9 +15,14 @@ import { expect } from 'chai'
 import mount from '@tests/unit/setup'
 import DetailsPageTitle from '@/components/common/DetailsPage/DetailsPageTitle'
 import { mockupRouteChanges } from '@tests/unit/mockup'
+import sinon from 'sinon'
 
 describe('DetailsPageTitle.vue', () => {
-    let wrapper
+    let wrapper, axiosStub
+
+    after(async () => {
+        await axiosStub.reset()
+    })
 
     beforeEach(async () => {
         localStorage.clear()
@@ -25,10 +30,14 @@ describe('DetailsPageTitle.vue', () => {
             shallow: false,
             component: DetailsPageTitle,
         })
+        axiosStub = sinon.stub(wrapper.vm.axios, 'get').resolves(
+            Promise.resolve({
+                data: {},
+            })
+        )
     })
     afterEach(async () => {
-        //push back to dashboard/servers
-        await mockupRouteChanges(wrapper, '/dashboard/servers')
+        await axiosStub.restore()
     })
 
     it(`Should render accurate page title`, async () => {

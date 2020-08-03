@@ -13,106 +13,14 @@
 import { expect } from 'chai'
 import mount from '@tests/unit/setup'
 import {
+    allModulesMap,
     mockupSelection,
     mockupOpenDialog,
     mockupCloseDialog,
     mockupRouteChanges,
 } from '@tests/unit/mockup'
 import Forms from '@CreateResource/Forms'
-import moxios from 'moxios'
-import Vuex from 'vuex'
-//a minimized mockup allModulesMap state from vuex store
-const allModulesMap = {
-    servers: [
-        {
-            attributes: {
-                module_type: 'servers',
-                parameters: [
-                    {
-                        description: 'Server address',
-                        mandatory: false,
-                        modifiable: true,
-                        name: 'address',
-                        type: 'string',
-                    },
-                ],
-            },
-            id: 'servers',
-        },
-    ],
-    Filter: [
-        {
-            attributes: {
-                module_type: 'Filter',
-                parameters: [
-                    {
-                        mandatory: true,
-                        name: 'inject',
-                        type: 'quoted string',
-                    },
-                ],
-            },
-            id: 'comment',
-        },
-    ],
-    Authenticator: [
-        {
-            attributes: {
-                module_type: 'Authenticator',
-                parameters: [],
-            },
-            id: 'MariaDBAuth',
-        },
-    ],
-    Monitor: [
-        {
-            attributes: {
-                module_type: 'Monitor',
-                parameters: [
-                    {
-                        default_value: '/cmapi/0.4.0',
-                        mandatory: false,
-                        name: 'admin_base_path',
-                        type: 'string',
-                    },
-                ],
-            },
-            id: 'csmon',
-        },
-    ],
-    Router: [
-        {
-            attributes: {
-                module_type: 'Router',
-                parameters: [
-                    {
-                        default_value: 'false',
-                        mandatory: false,
-                        name: 'delayed_retry',
-                        type: 'bool',
-                    },
-                ],
-            },
-            id: 'readwritesplit',
-        },
-    ],
-    Protocol: [
-        {
-            attributes: {
-                module_type: 'Protocol',
-                parameters: [
-                    {
-                        mandatory: true,
-                        name: 'protocol',
-                        type: 'string',
-                    },
-                ],
-                version: 'V1.1.0',
-            },
-            id: 'mariadbclient',
-        },
-    ],
-}
+import sinon from 'sinon'
 
 /**
  * This function tests whether text is transform correctly based on route changes.
@@ -127,7 +35,6 @@ async function testingTextTransform(wrapper, path, selectedResource) {
     await mockupRouteChanges(wrapper, path)
     await mockupOpenDialog(wrapper)
     expect(wrapper.vm.$data.selectedResource).to.be.equal(selectedResource)
-    await mockupCloseDialog(wrapper)
 }
 
 /**
@@ -136,7 +43,6 @@ async function testingTextTransform(wrapper, path, selectedResource) {
  * @param {String} resourceType resource to be created
  */
 async function mockupResourceSelect(wrapper, resourceType) {
-    await mockupRouteChanges(wrapper, '/dashboard/sessions')
     await mockupOpenDialog(wrapper)
     await mockupSelection(wrapper, resourceType, '.resource-select')
 }
@@ -165,59 +71,38 @@ async function testCloseModal(wrapper, buttonClass) {
 }
 
 describe('Forms.vue', () => {
-    let wrapper
-    let getters, actions, store
+    let wrapper, axiosStub, axiosPostStub
 
-    beforeEach(() => {
+    after(async () => {
+        await axiosStub.reset()
+        await axiosPostStub.reset()
+    })
+
+    beforeEach(async () => {
         localStorage.clear()
-        getters = {
-            'maxscale/allModulesMap': () => allModulesMap,
-            'service/allServices': () => [],
-            'service/allServicesInfo': () => ({}),
-            'server/allServers': () => [],
-            'server/allServersInfo': () => ({}),
-            'monitor/allMonitorsInfo': () => ({}),
-            'monitor/allMonitors': () => [],
-            'filter/allFiltersInfo': () => ({}),
-            'filter/allFilters': () => [],
-            'listener/allListenersInfo': () => ({}),
-        }
-        actions = {
-            'service/createService': () => null,
-            'monitor/createMonitor': () => null,
-            'filter/createFilter': () => null,
-            'listener/createListener': () => null,
-            'server/createServer': () => null,
-            'service/fetchAllServices': () => null,
-            'server/fetchAllServers': () => null,
-            'monitor/fetchAllMonitors': () => null,
-            'filter/fetchAllFilters': () => null,
-            'listener/fetchAllListeners': () => null,
-        }
-        store = new Vuex.Store({
-            getters,
-            actions,
-            mutations: {
-                showOverlay: () => null,
-                hideOverlay: () => null,
-            },
-        })
+
         wrapper = mount({
             shallow: false,
             component: Forms,
             props: {
                 value: false, // control visibility of the dialog
             },
-            store,
+            computed: {
+                allModulesMap: () => allModulesMap,
+            },
         })
-        moxios.install(wrapper.vm.axios)
+        axiosStub = sinon.stub(wrapper.vm.axios, 'get').resolves(
+            Promise.resolve({
+                data: {},
+            })
+        )
+        axiosPostStub = sinon.stub(wrapper.vm.axios, 'post').resolves(Promise.resolve({}))
     })
 
     afterEach(async function() {
-        moxios.uninstall(wrapper.vm.axios)
+        await axiosStub.restore()
+        await axiosPostStub.restore()
         await mockupCloseDialog(wrapper)
-        //push back to settings page
-        await mockupRouteChanges(wrapper, '/settings')
     })
 
     it(`Should show forms dialog when v-model value changes`, async () => {
@@ -234,26 +119,35 @@ describe('Forms.vue', () => {
         await testingTextTransform(wrapper, '/dashboard/sessions', 'Service')
     })
 
-    it(`Should auto select form resource based on route changes`, async () => {
-        // mockup navigating to services tab on dashboard page
+    it(`Should auto select Service form when current page = /dashboard/services`, async () => {
         await testingTextTransform(wrapper, '/dashboard/services', 'Service')
-        // mockup navigating to servers tab on dashboard page
+    })
+    it(`Should auto select Server form when current page = /dashboard/servers`, async () => {
         await testingTextTransform(wrapper, '/dashboard/servers', 'Server')
-        // mockup navigating to a server details page
+    })
+    it(`Should auto select Server form when current page is a server details page`, async () => {
         await testingTextTransform(wrapper, '/dashboard/servers/test-server', 'Server')
-        // mockup navigating to a monitor details page
+    })
+    it(`Should auto select Monitor form when current page is a monitor details page`, async () => {
         await testingTextTransform(wrapper, '/dashboard/monitors/test-monitor', 'Monitor')
-        // mockup navigating to a service details page
+    })
+    it(`Should auto select Service form when current page is a service details page`, async () => {
         await testingTextTransform(wrapper, '/dashboard/services/test-service', 'Service')
     })
 
-    it(`Should assign accurate module type object to resourceModules state`, async () => {
+    it(`Should assign accurate Router module type object to resourceModules state`, async () => {
         await mockupResourceSelect(wrapper, 'Service')
         expect(wrapper.vm.$data.resourceModules).to.be.deep.equals(allModulesMap['Router'])
+    })
+    it(`Should assign accurate servers module type object to resourceModules state`, async () => {
         await mockupResourceSelect(wrapper, 'Server')
         expect(wrapper.vm.$data.resourceModules).to.be.deep.equals(allModulesMap['servers'])
+    })
+    it(`Should assign accurate Monitor module object to resourceModules state`, async () => {
         await mockupResourceSelect(wrapper, 'Monitor')
         expect(wrapper.vm.$data.resourceModules).to.be.deep.equals(allModulesMap['Monitor'])
+    })
+    it(`Should assign accurate Filter module object to resourceModules state`, async () => {
         await mockupResourceSelect(wrapper, 'Filter')
         expect(wrapper.vm.$data.resourceModules).to.be.deep.equals(allModulesMap['Filter'])
     })
@@ -316,18 +210,19 @@ describe('Forms.vue', () => {
             expect(errorMessageDiv).to.be.include('id is required')
         })
     })
+
     it(`Should call closeModal function props to close form dialog
       when "save" button is clicked`, async () => {
         testCloseModal(wrapper, 'save')
     })
 
     it(`Should call closeModal function props to close form dialog
-    when "close" button is clicked`, async () => {
+      when "close" button is clicked`, async () => {
         testCloseModal(wrapper, 'close')
     })
 
     it(`Should call closeModal function props to close form dialog
-    when "cancel" button is clicked`, async () => {
+      when "cancel" button is clicked`, async () => {
         testCloseModal(wrapper, 'cancel')
     })
 })

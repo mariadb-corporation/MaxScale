@@ -1,8 +1,8 @@
+import Vue from 'vue'
 import chai, { expect } from 'chai'
 import mount from '@tests/unit/setup'
 import LoginForm from '@/pages/Login/LoginForm'
 import { mockupInputChange, mockupRouteChanges } from '@tests/unit/mockup'
-import moxios from 'moxios'
 import sinon from 'sinon'
 import sinonChai from 'sinon-chai'
 chai.should()
@@ -17,22 +17,36 @@ async function mockupCheckingTheBox(wrapper) {
     const input = vCheckBox.find('input')
     await input.trigger('click')
 }
-describe('LoginForm.vue', () => {
-    let wrapper
-    let stub
+
+describe('LoginForm.vue', async () => {
+    let wrapper, loginAxiosStub, axiosStub
+
+    after(async () => {
+        await loginAxiosStub.reset()
+        await axiosStub.reset()
+    })
+
     beforeEach(() => {
+        axiosStub = sinon.stub(Vue.axios, 'get').resolves(
+            Promise.resolve({
+                data: {},
+            })
+        )
         wrapper = mount({
             shallow: false,
             component: LoginForm,
         })
-        moxios.install(wrapper.vm.loginAxios)
-        stub = sinon.stub(wrapper.vm.loginAxios, 'get')
+        mockupRouteChanges(wrapper, '/login')
+        loginAxiosStub = sinon.stub(wrapper.vm.loginAxios, 'get').resolves(
+            Promise.resolve({
+                data: {},
+            })
+        )
     })
 
     afterEach(async () => {
-        moxios.uninstall(wrapper.vm.loginAxios)
-        stub.restore()
-        await mockupRouteChanges(wrapper, '/login')
+        loginAxiosStub.restore()
+        axiosStub.restore()
     })
 
     it('Should render username and password fields.', () => {
@@ -100,7 +114,7 @@ describe('LoginForm.vue', () => {
         await mockupInputChange(wrapper, 'mariadb', '#password')
         await wrapper.find('.login-btn').trigger('click') //submit
 
-        stub.should.have.been.calledWith('/auth?persist=yes', {
+        loginAxiosStub.should.have.been.calledWith('/auth?persist=yes', {
             auth: { username: 'admin', password: 'mariadb' },
         })
     })
@@ -111,7 +125,7 @@ describe('LoginForm.vue', () => {
         await mockupInputChange(wrapper, 'skysql', '#password')
         await wrapper.find('.login-btn').trigger('click') //submit
 
-        stub.should.have.been.calledWith('/auth?persist=yes&max-age=28800', {
+        loginAxiosStub.should.have.been.calledWith('/auth?persist=yes&max-age=28800', {
             auth: { username: 'maxskysql', password: 'skysql' },
         })
     })
@@ -120,7 +134,7 @@ describe('LoginForm.vue', () => {
         await mockupInputChange(wrapper, 'maxskysql', '#username')
         await mockupInputChange(wrapper, 'skysql', '#password')
         await wrapper.find('.login-btn').trigger('click') //submit
-        stub.should.have.been.calledWith('/auth?persist=yes', {
+        loginAxiosStub.should.have.been.calledWith('/auth?persist=yes', {
             auth: { username: 'maxskysql', password: 'skysql' },
         })
         await wrapper.vm.$nextTick(() =>

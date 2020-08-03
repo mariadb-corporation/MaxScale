@@ -95,6 +95,19 @@ bool Inventory::exists(const std::string& file_name) const
     return ofs.good();
 }
 
+std::string Inventory::first() const
+{
+    std::unique_lock<std::mutex> lock(m_mutex);
+    if (m_file_names.empty())
+    {
+        return "";
+    }
+    else
+    {
+        return m_file_names.front();
+    }
+}
+
 std::string Inventory::last() const
 {
     std::unique_lock<std::mutex> lock(m_mutex);

@@ -76,8 +76,8 @@ export default {
     async created() {
         await this.fetchMonitor()
         await this.serverTableRowProcessing()
-        const { module: moduleName } = this.currentMonitor.attributes
-        await this.fetchModuleParameters(moduleName)
+        const { attributes: { module: moduleName = null } = {} } = this.currentMonitor
+        if (moduleName) await this.fetchModuleParameters(moduleName)
         this.loadingModuleParams = true
         await this.processModuleParameters()
     },
@@ -104,10 +104,12 @@ export default {
         },
 
         async serverTableRowProcessing() {
-            if (!this.$help.lodash.isEmpty(this.currentMonitor.relationships.servers)) {
-                let servers = this.currentMonitor.relationships.servers.data
-                let serversIdArr = servers ? servers.map(item => `${item.id}`) : []
+            const {
+                relationships: { servers: { data: serversData = [] } = {} } = {},
+            } = this.currentMonitor
 
+            if (serversData.length) {
+                let serversIdArr = serversData.map(item => `${item.id}`)
                 let arr = []
                 for (let i = 0; i < serversIdArr.length; ++i) {
                     let data = await this.getServersState(serversIdArr[i])

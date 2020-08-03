@@ -25,11 +25,18 @@
 #include <dirent.h>
 #include <fcntl.h>
 
+using namespace std::chrono_literals;
+
+
+using maxbase::operator<<;
+using wall_time::operator<<;
+
 namespace pinloki
 {
 
 namespace
 {
+
 /**
  * @brief get_inode
  * @param file_name to check. Links are followed.
@@ -41,15 +48,15 @@ int get_inode(const std::string& file_name)
 
     if (fd < 0)
     {
-        return fd;
+        return -1;
     }
 
     struct stat file_stat;
-    int ret = fstat (fd, &file_stat);
+    int ret = fstat(fd, &file_stat);
     if (ret < 0)
     {
         close(fd);
-        return ret;
+        return -1;
     }
 
     close(fd);
@@ -73,7 +80,11 @@ std::vector<int> get_open_inodes()
         {
             if (ent->d_type == DT_LNK)
             {
-                vec.push_back(get_inode(proc_fd_dir + '/' + ent->d_name));
+                int inode = get_inode(proc_fd_dir + '/' + ent->d_name);
+                if (inode >= 0)
+                {
+                    vec.push_back(inode);
+                }
             }
         }
         closedir (dir);
@@ -85,6 +96,37 @@ std::vector<int> get_open_inodes()
     }
 
     return vec;
+}
+
+/** Last modification time of file_name, or wall_time::TimePoint::max() on error */
+wall_time::TimePoint file_mod_time(const std::string& file_name)
+{
+    auto ret = wall_time::TimePoint::max();
+    int fd = open(file_name.c_str(), O_RDONLY);
+    if (fd >= 0)
+    {
+        struct stat file_stat;
+        if (fstat(fd, &file_stat) >= 0)
+        {
+            ret = mxb::timespec_to_time_point<wall_time::Clock>(file_stat.st_mtim);
+        }
+        close(fd);
+    }
+
+    return ret;
+}
+
+/** Modification time of the oldest log file or wall_time::TimePoint::max() if there are no logs */
+wall_time::TimePoint oldest_logfile_time(Inventory* pInventory)
+{
+    auto ret = wall_time::TimePoint::max();
+    auto file_name = pInventory->first();
+    if (!file_name.empty())
+    {
+        ret = file_mod_time(file_name);
+    }
+
+    return ret;
 }
 }
 
@@ -136,7 +178,19 @@ Pinloki::Pinloki(SERVICE* pService, Config&& config)
     {
         start_slave();
     }
+
+    // Kick of the independent purging
+    if (m_config.expire_log_duration().count())
+    {
+        maxbase::Worker* worker = maxbase::Worker::get_current();
+        mxb_assert(worker);
+
+        using namespace std::chrono;
+        auto ms = duration_cast<milliseconds>(m_config.purge_startup_delay());
+        worker->delayed_call(ms, &Pinloki::purge_old_binlogs, this);
+    }
 }
+
 // static
 Pinloki* Pinloki::create(SERVICE* pService, mxs::ConfigParameters* pParams)
 {
@@ -544,6 +598,62 @@ PurgeResult purge_binlogs(Inventory* pInventory, const std::string& up_to)
     }
 
     return PurgeResult::Ok;
+}
+
+bool Pinloki::purge_old_binlogs(mxb::Worker::Call::action_t action)
+{
+    if (action == mxb::Worker::Call::CANCEL)
+    {
+        return false;
+    }
+
+    auto now = wall_time::Clock::now();
+    auto purge_before = now - config().expire_log_duration();
+    auto file_names = m_inventory.file_names();
+    auto files_to_keep = std::max(1, config().num_files_to_keep());     // at least one
+    int max_files_to_purge = file_names.size() - files_to_keep;
+
+    int purge_index = -1;
+    for (int i = 0; i < max_files_to_purge; ++i)
+    {
+        auto file_time = file_mod_time(file_names[i]);
+        if (file_time <= purge_before)
+        {
+            purge_index = i;
+        }
+        else
+        {
+            break;
+        }
+    }
+
+    if (purge_index >= 0)
+    {
+        ++purge_index;      // purge_binlogs() purges up-to, but not including the file argument
+        purge_binlogs(&m_inventory, file_names[purge_index]);
+    }
+
+    // Purge done, figure out when to do the next purge.
+
+    auto oldest_time = oldest_logfile_time(&m_inventory);
+    wall_time::TimePoint next_purge_time = oldest_time + config().expire_log_duration() + 1s;
+
+    if (oldest_time == wall_time::TimePoint::max()
+        || next_purge_time < now)
+    {
+        // No logs, or purge prevented due to num_files_to_keep.
+        next_purge_time = now + m_config.purge_poll_timeout();
+    }
+
+    maxbase::Worker* worker = maxbase::Worker::get_current();
+    mxb_assert(worker);
+
+    using namespace std::chrono;
+    auto wait_ms = duration_cast<milliseconds>(next_purge_time - now);
+
+    worker->delayed_call(wait_ms, &Pinloki::purge_old_binlogs, this);
+
+    return false;
 }
 }
 

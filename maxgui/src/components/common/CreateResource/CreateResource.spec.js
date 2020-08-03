@@ -10,26 +10,35 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-
-import { expect } from 'chai'
+import chai, { expect } from 'chai'
 import mount from '@tests/unit/setup'
 import CreateResource from '@CreateResource'
-import moxios from 'moxios'
+import sinonChai from 'sinon-chai'
+import sinon from 'sinon'
 
-describe('CreateResource.vue', () => {
-    let wrapper
-    beforeEach(() => {
-        localStorage.clear()
+chai.should()
+chai.use(sinonChai)
 
+describe('CreateResource.vue', async () => {
+    let wrapper, axiosStub
+
+    after(async () => {
+        await axiosStub.reset()
+    })
+
+    beforeEach(async () => {
         wrapper = mount({
             shallow: false,
             component: CreateResource,
         })
-        moxios.install(wrapper.vm.axios)
+
+        axiosStub = sinon.stub(wrapper.vm.axios, 'get').resolves(Promise.resolve({ data: {} }))
     })
 
-    afterEach(function() {
-        moxios.uninstall(wrapper.vm.axios)
+    afterEach(async function() {
+        await axiosStub.restore()
+        // hide dialog
+        await wrapper.setData({ createDialog: false })
     })
 
     it(`Should not open creation dialog form when component is rendered `, () => {
@@ -38,32 +47,9 @@ describe('CreateResource.vue', () => {
 
     it(`Should fetch all modules and open creation dialog form
       when '+ Create New' button is clicked `, async () => {
-        // mockup response
-        moxios.stubRequest('/maxscale/modules?load=all', {
-            statusText: 'OK',
-            status: 200,
-            response: {
-                data: [
-                    {
-                        attributes: {
-                            module_type: 'servers',
-                            parameters: [
-                                {
-                                    description: 'Server address',
-                                    mandatory: false,
-                                    modifiable: true,
-                                    name: 'address',
-                                    type: 'string',
-                                },
-                            ],
-                        },
-                        id: 'servers',
-                    },
-                ],
-            },
-        })
         await wrapper.find('button').trigger('click')
-        moxios.wait(() => {
+        await axiosStub.should.have.been.calledWith('/maxscale/modules?load=all')
+        await wrapper.vm.$nextTick(() => {
             expect(wrapper.vm.$data.createDialog).to.be.true
         })
     })

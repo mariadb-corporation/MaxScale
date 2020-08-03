@@ -39,6 +39,22 @@ cfg::ParamSeconds s_net_timeout(
 
 cfg::ParamBool s_select_master(
     &s_spec, "select_master", "Automatically select the master server", false);
+
+cfg::ParamCount s_num_files_to_keep(
+    &s_spec, "num_files_to_keep", "Minimum number of files the automatic log purge keeps", 2);
+
+cfg::ParamDuration<wall_time::Duration> s_expire_log_duration(
+    &s_spec, "expire_log_duration", "Duration after which unmodified log files are purged",
+    cfg::NO_INTERPRETATION, 0s);
+
+/* Undocumented config items (for test purposes) */
+cfg::ParamDuration<wall_time::Duration> s_purge_startup_delay(
+    &s_spec, "purge_startup_delay", "Purge waits this long after a MaxScale startup",
+    cfg::NO_INTERPRETATION, 2min);
+
+cfg::ParamDuration<wall_time::Duration> s_purge_poll_timeout(
+    &s_spec, "purge_poll_timeout", "Purge timeout/poll when num_files_to_keep files exist",
+    cfg::NO_INTERPRETATION, 2min);
 }
 
 namespace pinloki
@@ -105,6 +121,27 @@ bool Config::select_master() const
     return m_select_master;
 }
 
+int32_t Config::num_files_to_keep() const
+{
+    return m_num_files_to_keep;
+}
+
+wall_time::Duration Config::expire_log_duration() const
+{
+    return m_expire_log_duration;
+}
+
+wall_time::Duration Config::purge_startup_delay() const
+{
+    return m_purge_startup_delay;
+}
+
+
+wall_time::Duration Config::purge_poll_timeout() const
+{
+    return m_purge_poll_timeout;
+}
+
 std::string gen_uuid()
 {
     char uuid_str[36 + 1];
@@ -123,5 +160,9 @@ Config::Config(const std::string& name)
     add_native(&m_server_id, &s_server_id);
     add_native(&m_net_timeout, &s_net_timeout);
     add_native(&m_select_master, &s_select_master);
+    add_native(&m_expire_log_duration, &s_expire_log_duration);
+    add_native(&m_num_files_to_keep, &s_num_files_to_keep);
+    add_native(&m_purge_startup_delay, &s_purge_startup_delay);
+    add_native(&m_purge_poll_timeout, &s_purge_poll_timeout);
 }
 }

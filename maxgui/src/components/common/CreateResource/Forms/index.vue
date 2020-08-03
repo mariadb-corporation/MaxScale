@@ -289,7 +289,9 @@ export default {
         },
 
         getModuleType(type) {
-            return this.allModulesMap[type]
+            let allResourceModules = []
+            if (this.allModulesMap[type]) allResourceModules = this.allModulesMap[type]
+            return allResourceModules
         },
 
         handleSave() {

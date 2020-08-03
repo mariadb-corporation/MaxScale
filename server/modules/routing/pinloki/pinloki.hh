@@ -71,6 +71,8 @@ private:
 
     maxsql::Connection::ConnectionDetails generate_details();
 
+    bool purge_old_binlogs(maxbase::Worker::Call::action_t action);
+
     struct MasterConfig
     {
         bool        slave_running = false;
