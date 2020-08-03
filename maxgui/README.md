@@ -6,14 +6,26 @@
 
 When admin_secure_gui=true under the [maxscale] section of the MaxScale
 configuration file, jwt token will be sent over https only.
-Note: MaxScale also needs to be set up to use TLS/SSL. [Instructions](https://github.com/mariadb-corporation/MaxScale/blob/develop/Documentation/Getting-Started/Configuration-Guide.md#admin_ssl_key)
+Note: MaxScale also needs to be set up to use TLS/SSL.
+Check the [Configuration Guide](../Documentation/Getting-Started/Configuration-Guide.md#admin_ssl_key)
 
-By default, maxgui is configured to be host at localhost with https.
-Local ssl certificate and key can be found in `localSSLCert` directory,
-certificate was created using [mkcert](https://github.com/FiloSottile/mkcert) for the following name: localhost 127.0.0.1
+By default, when compiles and hot-reloads for development,
+maxgui is configured to be hosted without using https.
 
-If admin_secure_gui=false, jwt token will be sent with plain http,
-simply remove https attribute of `devServer` object in `vue.config.js`
+To use https for development or testing purpose,
+add these properties to `devServer` in `vue.config.js`:
+
+```
+https: {
+    key: fs.readFileSync('./dev-certs/dev-cert-key.pem'),
+    cert: fs.readFileSync('./dev-certs/dev-cert.pem'),
+},
+public: 'https://localhost:8000/',
+```
+
+Local ssl certificate and key can be found in `dev-certs` directory.
+The certificates were created using [mkcert](https://github.com/FiloSottile/mkcert) for the following domain:
+`localhost 127.0.0.1`
 
 #### Disable CORS when sending request to MaxScale REST API
 
@@ -24,12 +36,13 @@ Check `vue.config.js` file, `devServer` section for more configuration
 
 Add .env.local file that contains `buildPath=dataDir`
 
-`dataDir` indicates your maxscale's Data directory absolute path
+`dataDir` indicates your maxscale's Data directory absolute path.
+e.g. `/home/user/maxscale/share/maxscale/`
 
 After compiling and minifying for production, the GUI can be accessed via
-https://`admin_host`:`admin_port`
+http://`admin_host`:`admin_port`
 
-The default is: [https://127.0.0.1:8989](https://127.0.0.1:8989)
+The default is: [http://127.0.0.1:8989](http://127.0.0.1:8989)
 
 If maxscale is running, you need to shut it down and then start it again
 
