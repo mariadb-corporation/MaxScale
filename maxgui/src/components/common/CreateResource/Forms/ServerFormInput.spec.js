@@ -13,7 +13,14 @@
 
 import { expect } from 'chai'
 import mount from '@tests/unit/setup'
-import { mockupSelection, mockupInputChange } from '@tests/unit/mockup'
+import {
+    mockupSelection,
+    mockupInputChange,
+    mockupAllServices,
+    mockupServicesList,
+    mockupAllMonitors,
+    mockupMonitorsList,
+} from '@tests/unit/mockup'
 import ServerFormInput from '@CreateResource/Forms/ServerFormInput'
 
 const mockupResourceModules = [
@@ -46,66 +53,6 @@ const mockupResourceModules = [
             ],
         },
         id: 'servers',
-    },
-]
-
-const mockupAllServices = [
-    {
-        attributes: {},
-        id: 'service_0',
-        links: {},
-        relationships: {},
-        type: 'services',
-    },
-    {
-        attributes: {},
-        id: 'service_1',
-        links: {},
-        relationships: {},
-        type: 'services',
-    },
-]
-
-const mockupServicesList = [
-    {
-        id: 'service_0',
-
-        type: 'services',
-    },
-    {
-        id: 'service_1',
-
-        type: 'services',
-    },
-]
-
-const mockupAllMonitors = [
-    {
-        attributes: {},
-        id: 'monitor_0',
-        links: {},
-        relationships: {},
-        type: 'monitors',
-    },
-    {
-        attributes: {},
-        id: 'monitor_1',
-        links: {},
-        relationships: {},
-        type: 'monitors',
-    },
-]
-
-const mockupMonitorsList = [
-    {
-        id: 'monitor_0',
-
-        type: 'monitors',
-    },
-    {
-        id: 'monitor_1',
-
-        type: 'monitors',
     },
 ]
 

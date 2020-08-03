@@ -13,7 +13,12 @@
 
 import { expect } from 'chai'
 import mount from '@tests/unit/setup'
-import { mockupSelection, mockupInputChange } from '@tests/unit/mockup'
+import {
+    mockupSelection,
+    mockupInputChange,
+    mockupAllServices,
+    mockupServicesList,
+} from '@tests/unit/mockup'
 import ListenerFormInput from '@CreateResource/Forms/ListenerFormInput'
 
 const mockupResourceModules = [
@@ -35,35 +40,6 @@ const mockupResourceModules = [
     },
 ]
 
-const mockupAllServices = [
-    {
-        attributes: {},
-        id: 'RCR-Router',
-        links: {},
-        relationships: {},
-        type: 'services',
-    },
-    {
-        attributes: {},
-        id: 'RCR-Writer',
-        links: {},
-        relationships: {},
-        type: 'services',
-    },
-]
-
-const mockupServiceList = [
-    {
-        id: 'RCR-Router',
-
-        type: 'services',
-    },
-    {
-        id: 'RCR-Writer',
-
-        type: 'services',
-    },
-]
 describe('ListenerFormInput.vue', () => {
     let wrapper
     beforeEach(() => {
@@ -112,7 +88,7 @@ describe('ListenerFormInput.vue', () => {
     })
 
     it(`Should compute serviceList from allServices accurately`, async () => {
-        expect(wrapper.vm.serviceList).to.be.deep.equals(mockupServiceList)
+        expect(wrapper.vm.serviceList).to.be.deep.equals(mockupServicesList)
     })
 
     it(`Should return an object with parameters and relationships objects
@@ -135,7 +111,7 @@ describe('ListenerFormInput.vue', () => {
         const expectedValue = {
             parameters: { [listenParameter.name]: newValue },
             relationships: {
-                services: { data: [mockupServiceList[0]] },
+                services: { data: [mockupServicesList[0]] },
             },
         }
         expect(wrapper.vm.getValues()).to.be.deep.equals(expectedValue)

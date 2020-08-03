@@ -14,7 +14,7 @@
 import { expect } from 'chai'
 import mount from '@tests/unit/setup'
 import { mockupSelection, mockupInputChange } from '@tests/unit/mockup'
-import ModuleParameters from '@CreateResource/Forms/common/ModuleParameters'
+import ModuleParameters from '@CreateResource/common/ModuleParameters'
 
 const mockupModules = [
     {

@@ -13,7 +13,7 @@
 
 import { expect } from 'chai'
 import mount from '@tests/unit/setup'
-import ParametersCollapse from '@CreateResource/Forms/common/ParametersCollapse'
+import ParametersCollapse from '@CreateResource/common/ParametersCollapse'
 import { mockupSelection, mockupInputChange } from '@tests/unit/mockup'
 
 const addressParam = {

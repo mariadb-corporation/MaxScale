@@ -13,7 +13,7 @@
 
 import { expect } from 'chai'
 import mount from '@tests/unit/setup'
-import ResourceRelationships from '@CreateResource/Forms/common/ResourceRelationships'
+import ResourceRelationships from '@CreateResource/common/ResourceRelationships'
 import { mockupSelection } from '@tests/unit/mockup'
 
 const mockupResourceItems = [

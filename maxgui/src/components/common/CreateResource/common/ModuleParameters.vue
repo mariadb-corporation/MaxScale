@@ -53,7 +53,7 @@ PROPS:
   for handling special input field when editting server or listener.
 - isListener: accepts boolean , if true, address parameter won't be required
 */
-import ParametersCollapse from '../ParametersCollapse'
+import ParametersCollapse from './ParametersCollapse'
 
 export default {
     name: 'module-parameters',
