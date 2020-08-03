@@ -54,21 +54,4 @@ describe('Dashboard index', () => {
     it(`Should render graphs component`, async () => {
         expect(wrapper.findComponent({ name: 'graphs' }).exists()).to.be.true
     })
-
-    it(`Should pass necessary props to graphs component`, async () => {
-        const graphs = wrapper.findComponent({ name: 'graphs' })
-        const {
-            fetchThreads,
-            genThreadsDatasetsSchema,
-            fetchAllServers,
-            fetchAllSessions,
-            fetchAllServices,
-        } = graphs.vm.$props
-
-        expect(fetchThreads).to.be.equals(wrapper.vm.fetchThreads)
-        expect(genThreadsDatasetsSchema).to.be.equals(wrapper.vm.genThreadsDatasetsSchema)
-        expect(fetchAllServers).to.be.equals(wrapper.vm.fetchAllServers)
-        expect(fetchAllSessions).to.be.equals(wrapper.vm.fetchAllSessions)
-        expect(fetchAllServices).to.be.equals(wrapper.vm.fetchAllServices)
-    })
 })

@@ -163,14 +163,14 @@ for (let i = 0; i < allModules.length; ++i) {
 
 export const mockupAllServers = [
     {
-        attributes: {},
+        attributes: { statistics: { connections: 0 } },
         id: 'row_server_0',
         links: {},
         relationships: {},
         type: 'servers',
     },
     {
-        attributes: {},
+        attributes: { statistics: { connections: 10 } },
         id: 'row_server_1',
         links: {},
         relationships: {},

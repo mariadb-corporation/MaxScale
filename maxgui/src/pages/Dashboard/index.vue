@@ -2,13 +2,7 @@
     <page-wrapper>
         <v-sheet>
             <page-header />
-            <graphs
-                :fetchThreads="fetchThreads"
-                :genThreadsDatasetsSchema="genThreadsDatasetsSchema"
-                :fetchAllServers="fetchAllServers"
-                :fetchAllSessions="fetchAllSessions"
-                :fetchAllServices="fetchAllServices"
-            />
+            <graphs />
             <tab-nav />
         </v-sheet>
     </page-wrapper>
