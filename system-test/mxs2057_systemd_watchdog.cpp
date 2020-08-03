@@ -17,7 +17,7 @@
 namespace
 {
 // watchdog_interval 60 seconds, make sure it is the same in maxscale.service
-const maxbase::Duration watchdog_interval {60.0};
+const maxbase::Duration watchdog_interval = mxb::from_secs(60.0);
 
 // Return true if maxscale stays alive for the duration dur.
 bool staying_alive(TestConnections& test, const maxbase::Duration& dur)
@@ -42,17 +42,17 @@ void test_watchdog(TestConnections& test, int argc, char* argv[])
     test.log_includes(0, "The systemd watchdog is Enabled");
 
     // Wait for one watchdog interval, systemd should have been notified in that time.
-    bool maxscale_alive = staying_alive(test, watchdog_interval);
+    staying_alive(test, watchdog_interval);
 
     test.log_includes(0, "systemd watchdog keep-alive ping");
 
-    test.set_timeout(2 * watchdog_interval.secs());
+    test.set_timeout(2 * mxb::to_secs(watchdog_interval));
 
     // Make one thread in maxscale hang
     mysql_query(test.maxscales->conn_rwsplit[0], "select LUA_INFINITE_LOOP");
 
     // maxscale should get killed by systemd in less than duration(interval - epsilon).
-    maxscale_alive = staying_alive(test, maxbase::Duration(1.2 * watchdog_interval.secs()));
+    bool maxscale_alive = staying_alive(test, mxb::from_secs(1.2 * mxb::to_secs(watchdog_interval)));
 
     if (maxscale_alive)
     {

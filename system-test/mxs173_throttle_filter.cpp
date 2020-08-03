@@ -123,6 +123,7 @@ ReadSpeed read_rows(MYSQL* conn, int num_rows, int max_qps, bool expect_error)
 
 void gauge_raw_speed(TestConnections& test)
 {
+    using namespace mxb;
     const int raw_rows = NUM_ROWS / 5;
     std::cout << "\n****\nRead " << raw_rows
               << " rows via master readconnrouter, to gauge speed.\n";
@@ -140,6 +141,7 @@ void gauge_raw_speed(TestConnections& test)
 
 void verify_throttling_performace(TestConnections& test)
 {
+    using namespace mxb;
     int three_quarter = 3 * max_qps * throttling_duration / 4;
     std::cout << "\n****\nRead " << three_quarter
               << " rows which should take about " << 3 * throttling_duration / 4
@@ -165,6 +167,7 @@ void verify_throttling_performace(TestConnections& test)
 
 void verify_throttling_disconnect(TestConnections& test)
 {
+    using namespace mxb;
     int half_rows = max_qps * throttling_duration / 2;
     std::cout << "\n****\nRead " << 3 * half_rows
               << " rows which should cause a disconnect at a little\nbelow "
