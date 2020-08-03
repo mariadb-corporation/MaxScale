@@ -41,6 +41,7 @@ export default {
             this.fetchAllMonitors(),
             this.fetchAllSessions(),
             this.fetchAllServices(),
+            this.fetchAllListeners(),
         ])
 
         await Promise.all([
@@ -65,6 +66,8 @@ export default {
             genSessionChartDataSetSchema: 'session/genDataSetSchema',
 
             fetchAllServices: 'service/fetchAllServices',
+
+            fetchAllListeners: 'listener/fetchAllListeners',
         }),
     },
 }

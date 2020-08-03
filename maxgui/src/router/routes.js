@@ -14,11 +14,13 @@ import sideBarRoutes from './sideBarRoutes'
 import Login from 'pages/Login'
 
 const ServerDetail = () =>
-    import(/* webpackChunkName: "service-details-page" */ 'pages/ServerDetail')
+    import(/* webpackChunkName: "server-details-page" */ 'pages/ServerDetail')
 const ServiceDetail = () =>
     import(/* webpackChunkName: "service-details-page" */ 'pages/ServiceDetail')
 const MonitorDetail = () =>
-    import(/* webpackChunkName: "service-details-page" */ 'pages/MonitorDetail')
+    import(/* webpackChunkName: "monitor-details-page" */ 'pages/MonitorDetail')
+const ListenerDetail = () =>
+    import(/* webpackChunkName: "listener-details-page" */ 'pages/ListenerDetail')
 const NotFound404 = () => import(/* webpackChunkName: "not-found-page" */ 'pages/NotFound404')
 
 export const routes = [
@@ -74,6 +76,15 @@ export const routes = [
             layout: 'app-layout',
         },
         name: 'monitor',
+    },
+    {
+        path: '/dashboard/listeners/:id',
+        component: ListenerDetail,
+        meta: {
+            requiresAuth: true,
+            layout: 'app-layout',
+        },
+        name: 'listener',
     },
     {
         path: '/404',

@@ -2,22 +2,12 @@
     <data-table
         :search="searchKeyWord"
         :headers="tableHeaders"
-        :data="generateTableRows"
-        :sortDesc="false"
-        sortBy="id"
+        :data="tableRows"
+        :sortDesc="true"
+        sortBy="connected"
     >
-        <!-- <template v-slot:user="{ data: { item: { user } } }">
-            <router-link :key="user" :to="`/users/${user}`" class="no-underline">
-                <span> {{ user }} </span>
-            </router-link>
-        </template> -->
         <template v-slot:serviceIds="{ data: { item: { serviceIds } } }">
             <span v-if="typeof serviceIds === 'string'">{{ serviceIds }}</span>
-
-            <!--
-                https://github.com/mariadb-corporation/MaxScale/blob/develop/Documentation/REST-API/Resources-Session.md
-                Each session is created on a service, so even serviceIds is an array, it always has one element
-            -->
             <template v-else>
                 <template v-for="serviceId in serviceIds">
                     <router-link
@@ -69,37 +59,31 @@ export default {
         ...mapGetters({
             searchKeyWord: 'searchKeyWord',
             allSessions: 'session/allSessions',
-            allServices: 'service/allServices',
         }),
 
-        generateTableRows: function() {
-            if (this.allSessions && this.allServices) {
-                let itemsArr = []
+        tableRows: function() {
+            let rows = []
+            this.allSessions.forEach(session => {
+                const {
+                    id,
+                    attributes: { idle, connected, user, remote },
+                    relationships: { services: { data: associatedServices = [] } = {} },
+                } = session || {}
 
-                let allSessions = this.$help.lodash.cloneDeep(this.allSessions)
-                for (let n = allSessions.length - 1; n >= 0; --n) {
-                    const {
-                        id,
-                        attributes: { idle, connected, user, remote },
-                        relationships: { services: { data: allServices = [] } = {} },
-                    } = allSessions[n] || {}
+                const serviceIds = associatedServices.length
+                    ? associatedServices.map(item => `${item.id}`)
+                    : this.$t('noEntity', { entityName: 'services' })
 
-                    let serviceIds = allServices.length
-                        ? allServices.map(item => `${item.id}`)
-                        : this.$t('noEntity', { entityName: 'services' })
+                rows.push({
+                    id: id,
+                    user: `${user}@${remote}`,
+                    connected: connected,
+                    idle: idle,
+                    serviceIds: serviceIds,
+                })
+            })
 
-                    let row = {
-                        id: id,
-                        user: `${user}@${remote}`,
-                        connected: connected,
-                        idle: idle,
-                        serviceIds: serviceIds,
-                    }
-                    itemsArr.push(row)
-                }
-                return itemsArr
-            }
-            return []
+            return rows
         },
     },
 }

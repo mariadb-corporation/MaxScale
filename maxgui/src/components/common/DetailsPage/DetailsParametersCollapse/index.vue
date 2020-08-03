@@ -3,6 +3,7 @@
         :toggleOnClick="() => (showParameters = !showParameters)"
         :isContentVisible="showParameters"
         :title="`${$tc('parameters', 2)}`"
+        :editable="editable"
         :isEditing="editableCell"
         :onEdit="() => (editableCell = true)"
         :doneEditingCb="() => (showConfirmDialog = true)"
@@ -134,12 +135,13 @@ export default {
         resourceId: { type: String, required: true },
         parameters: { type: Object, required: true },
         moduleParameters: { type: Array, required: true },
-        updateResourceParameters: { type: Function, required: true },
-        onEditSucceeded: { type: Function, required: true },
+        updateResourceParameters: { type: Function, required: false },
+        onEditSucceeded: { type: Function, required: false },
         loading: { type: Boolean, required: true },
         // specical props to manipulate required or dependent input attribute
         usePortOrSocket: { type: Boolean, default: false },
         isTree: { type: Boolean, default: false },
+        editable: { type: Boolean, default: true },
     },
 
     data() {

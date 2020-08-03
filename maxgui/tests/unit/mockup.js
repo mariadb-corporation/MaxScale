@@ -280,3 +280,72 @@ export const mockupMonitorsList = [
         type: 'monitors',
     },
 ]
+
+export const mockupAllListeners = [
+    {
+        attributes: {
+            parameters: {
+                address: '::',
+
+                port: 3308,
+            },
+            state: 'Running',
+        },
+        id: 'RCR-Writer-Listener',
+        relationships: {
+            services: {
+                data: [
+                    {
+                        id: 'RCR-Writer',
+                        type: 'services',
+                    },
+                ],
+            },
+        },
+        type: 'listeners',
+    },
+    {
+        attributes: {
+            parameters: {
+                address: '::',
+
+                port: 3306,
+            },
+            state: 'Running',
+        },
+        id: 'RWS-Listener',
+        relationships: {
+            services: {
+                data: [
+                    {
+                        id: 'RWS-Router',
+                        type: 'services',
+                    },
+                ],
+            },
+        },
+        type: 'listeners',
+    },
+    {
+        attributes: {
+            parameters: {
+                address: '::',
+
+                port: 3307,
+            },
+            state: 'Running',
+        },
+        id: 'RCR-Router-Listener',
+        relationships: {
+            services: {
+                data: [
+                    {
+                        id: 'RCR-Router',
+                        type: 'services',
+                    },
+                ],
+            },
+        },
+        type: 'listeners',
+    },
+]

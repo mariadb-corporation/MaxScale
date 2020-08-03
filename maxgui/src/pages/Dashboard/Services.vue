@@ -2,7 +2,7 @@
     <data-table
         :search="searchKeyWord"
         :headers="tableHeaders"
-        :data="generateTableRows"
+        :data="tableRows"
         :sortDesc="false"
         sortBy="id"
     >
@@ -12,13 +12,18 @@
             </router-link>
         </template>
         <template v-slot:state="{ data: { item: { state } } }">
-            <icon-sprite-sheet size="13" class="status-icon" :frame="$help.serviceStateIcon(state)">
+            <icon-sprite-sheet
+                size="13"
+                class="status-icon mr-1"
+                :frame="$help.serviceStateIcon(state)"
+            >
                 status
             </icon-sprite-sheet>
+            <span>{{ state }} </span>
         </template>
 
         <template v-slot:header-append-serverIds>
-            <span class="ml-1 color text-field-text"> ({{ allLinkedServers }}) </span>
+            <span class="ml-1 color text-field-text"> ({{ serversLength }}) </span>
         </template>
         <template v-slot:serverIds="{ data: { item: { serverIds }, i } }">
             <span v-if="typeof serverIds === 'string'">{{ serverIds }} </span>
@@ -91,13 +96,13 @@ export default {
         return {
             tableHeaders: [
                 { text: 'Service', value: 'id' },
-                { text: 'Status', value: 'state', align: 'center' },
+                { text: 'State', value: 'state' },
                 { text: 'Router', value: 'router' },
                 { text: 'Current Sessions', value: 'connections' },
                 { text: 'Total Sessions', value: 'total_connections' },
                 { text: 'Servers', value: 'serverIds' },
             ],
-            allLinkedServers: 0,
+            serversLength: 0,
         }
     },
 
@@ -110,56 +115,42 @@ export default {
         /**
          * @return {Array} An array of objects
          */
-        generateTableRows: function() {
-            if (this.allServices) {
-                let itemsArr = []
-                const { allServices } = this
-                let totalUniqueServers = []
-                for (let n = allServices.length - 1; n >= 0; --n) {
-                    /**
-                     * @typedef {Object} row
-                     * @property {String} row.id - Service's name
-                     * @property {Array} row.state - Server's state
-                     * @property {String} row.router - Server's router
-                     * @property {Number} row.connections - Number of connections to the service
-                     * @property {Number} row.total_connections - Total number of connections to the service
-                     * @property {Array} row.serverIds - List of servers use this service
-                     */
-                    const {
-                        id,
-                        attributes: { state, router, connections, total_connections },
-                        relationships: { servers: { data: allServers = [] } = {} },
-                    } = allServices[n] || {}
+        tableRows: function() {
+            let rows = []
+            let allServerIds = []
+            this.allServices.forEach(services => {
+                const {
+                    id,
+                    attributes: { state, router, connections, total_connections },
+                    relationships: { servers: { data: associatedServers = [] } = {} },
+                } = services || {}
 
-                    let serverIds = allServers.length
-                        ? allServers.map(item => `${item.id}`)
-                        : this.$t('noEntity', { entityName: 'servers' })
+                const serverIds = associatedServers.length
+                    ? associatedServers.map(item => `${item.id}`)
+                    : this.$t('noEntity', { entityName: 'servers' })
 
-                    // get total number of unique servers
-                    if (typeof serverIds !== 'string')
-                        totalUniqueServers = [...totalUniqueServers, ...serverIds]
+                if (typeof serverIds !== 'string') allServerIds = [...allServerIds, ...serverIds]
 
-                    let uniqueServerSet = new Set(totalUniqueServers)
-                    this.setTotalNumOfLinkedServers([...uniqueServerSet].length)
+                const uniqueServerId = new Set(allServerIds) // get unique servers
+                this.setServersLength([...uniqueServerId].length)
 
-                    let row = {
-                        id: id,
-                        state: state,
-                        router: router,
-                        connections: connections,
-                        total_connections: total_connections,
-                        serverIds: serverIds,
-                    }
-                    itemsArr.push(row)
+                const row = {
+                    id: id,
+                    state: state,
+                    router: router,
+                    connections: connections,
+                    total_connections: total_connections,
+                    serverIds: serverIds,
                 }
-                return itemsArr
-            }
-            return []
+                rows.push(row)
+            })
+
+            return rows
         },
     },
     methods: {
-        setTotalNumOfLinkedServers(total) {
-            this.allLinkedServers = total
+        setServersLength(total) {
+            this.serversLength = total
         },
     },
 }

@@ -18,11 +18,12 @@
                     <v-tab-item class="pt-5">
                         <v-row>
                             <v-col class="py-0 my-0" cols="4">
-                                <servers-filters-tables
+                                <relationship-tables
                                     :serverStateTableRow="serverStateTableRow"
+                                    :listenerStateTableRow="listenerStateTableRow"
                                     :dispatchRelationshipUpdate="dispatchRelationshipUpdate"
                                     :loading="overlay === OVERLAY_TRANSPARENT_LOADING"
-                                    :getServerState="getServerState"
+                                    :getRelationshipState="getRelationshipState"
                                 />
                             </v-col>
                             <v-col class="py-0 ma-0" cols="8">
@@ -67,7 +68,7 @@ import { OVERLAY_TRANSPARENT_LOADING } from 'store/overlayTypes'
 import { mapGetters, mapActions } from 'vuex'
 import OverviewHeader from './OverviewHeader'
 import PageHeader from './PageHeader'
-import ServersFiltersTables from './ServersFiltersTables'
+import RelationshipTables from './RelationshipTables'
 import SessionsTable from './SessionsTable'
 import ParametersTable from './ParametersTable'
 import DiagnosticsTable from './DiagnosticsTable'
@@ -77,7 +78,7 @@ export default {
     components: {
         PageHeader,
         OverviewHeader,
-        ServersFiltersTables,
+        RelationshipTables,
         SessionsTable,
         ParametersTable,
         DiagnosticsTable,
@@ -91,6 +92,7 @@ export default {
                 { name: `${this.$tc('parameters', 2)} & ${this.$tc('diagnostics', 2)}` },
             ],
             serverStateTableRow: [],
+            listenerStateTableRow: [],
         }
     },
     computed: {
@@ -103,7 +105,8 @@ export default {
     async created() {
         // Initial fetch, wait for service id
         await this.fetchService()
-        await this.serverTableRowProcessing()
+        await this.processingRelationshipTable('servers')
+        await this.processingRelationshipTable('listeners')
         await this.genDataSetSchema()
     },
     methods: {
@@ -119,43 +122,55 @@ export default {
             await this.fetchServiceById(this.$route.params.id)
         },
 
-        async serverTableRowProcessing() {
+        /**
+         * This function get relationship data based on relationship type i.e. servers, listeners.
+         * It loops through id array to send sequential requests to get relationship state
+         * @param {String} relationshipType type of resource. e.g. servers, listeners
+         */
+        async processingRelationshipTable(relationshipType) {
             const {
-                relationships: { servers: { data: serversData = [] } = {} } = {},
+                relationships: {
+                    [`${relationshipType}`]: { data: relationshipData = [] } = {},
+                } = {},
             } = this.currentService
 
-            if (serversData.length) {
-                let serversIdArr = serversData.map(item => `${item.id}`)
-                let arr = []
-                for (let i = 0; i < serversIdArr.length; ++i) {
-                    let data = await this.getServerState(serversIdArr[i])
-                    const {
-                        id,
-                        type,
-                        attributes: { state },
-                    } = data
-                    arr.push({ id: id, state: state, type: type })
-                }
-                this.serverStateTableRow = arr
-            } else {
-                this.serverStateTableRow = []
+            let ids = relationshipData.length ? relationshipData.map(item => `${item.id}`) : []
+            let arr = []
+            ids.forEach(async id => {
+                let data = await this.getRelationshipState(relationshipType, id)
+                const {
+                    id: relationshipId,
+                    type,
+                    attributes: { state },
+                } = data
+                arr.push({ id: relationshipId, state: state, type: type })
+            })
+
+            switch (relationshipType) {
+                case 'servers':
+                    this.serverStateTableRow = arr
+                    break
+                case 'listeners':
+                    this.listenerStateTableRow = arr
             }
         },
 
         /**
-         * This function fetch all servers state, if serverId is not provided,
-         * otherwise it fetch server state of a server based on serverId
-         * @param {String} serverId name of the server
-         * @return {Array} Server state data
+         * This function fetch all resource state if id is not provided
+         * otherwise it fetch a resource state
+         * @param {String} type type of resource. e.g. servers, listeners
+         * @param {String} id name of the resource
+         * @return {Array} Resource state data
          */
-        async getServerState(serverId) {
+        async getRelationshipState(type, id) {
             const data = this.getResourceState({
-                resourceId: serverId,
-                resourceType: 'servers',
-                caller: 'service-detail-page-getServerState',
+                resourceId: id,
+                resourceType: type,
+                caller: 'service-detail-page-getRelationshipState',
             })
             return data
         },
+
         // actions to vuex
         async dispatchRelationshipUpdate(type, data) {
             let self = this
@@ -181,7 +196,7 @@ export default {
                         servers: data,
                         callback: self.fetchService,
                     })
-                    await this.serverTableRowProcessing()
+                    await this.processingRelationshipTable('servers')
                     break
             }
         },

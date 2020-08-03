@@ -93,6 +93,46 @@
                 </template>
             </collapse>
         </v-col>
+        <!-- Listener TABLE -->
+        <v-col cols="12" class="pa-0 mt-4">
+            <collapse
+                :toggleOnClick="() => (showListeners = !showListeners)"
+                :isContentVisible="showListeners"
+                :title="`${$tc('listeners', 2)}`"
+                :titleInfo="listenerStateTableRow.length"
+            >
+                <template v-slot:content>
+                    <data-table
+                        :search="searchKeyWord"
+                        :headers="listenersTableHeader"
+                        :data="listenerStateTableRow"
+                        :sortDesc="false"
+                        :noDataText="$t('noEntity', { entityName: $tc('listeners', 2) })"
+                        sortBy="id"
+                        :loading="loading"
+                    >
+                        <template v-slot:id="{ data: { item: { id } } }">
+                            <router-link
+                                :key="id"
+                                :to="`/dashboard/listeners/${id}`"
+                                class="no-underline"
+                            >
+                                <span> {{ id }} </span>
+                            </router-link>
+                        </template>
+                        <template v-slot:state="{ data: { item: { state } } }">
+                            <icon-sprite-sheet
+                                size="13"
+                                class="status-icon"
+                                :frame="$help.listenerStateIcon(state)"
+                            >
+                                status
+                            </icon-sprite-sheet>
+                        </template>
+                    </data-table>
+                </template>
+            </collapse>
+        </v-col>
         <!-- Avaiable dialog for both SERVERS/FILTERS Tables -->
         <confirm-dialog
             v-model="showDeleteDialog"
@@ -137,12 +177,13 @@
 import { mapMutations, mapGetters, mapActions } from 'vuex'
 
 export default {
-    name: 'servers-filters-tables',
+    name: 'relationship-tables',
     props: {
-        getServerState: { type: Function, required: true },
+        getRelationshipState: { type: Function, required: true },
         loading: { type: Boolean, required: true },
         dispatchRelationshipUpdate: { type: Function, required: true },
         serverStateTableRow: { type: Array, required: true },
+        listenerStateTableRow: { type: Array, required: true },
     },
     data() {
         return {
@@ -152,6 +193,12 @@ export default {
                 { text: 'Server', value: 'id' },
                 { text: 'Status', value: 'state', align: 'center' },
                 { text: '', value: 'action', sortable: false },
+            ],
+            // listeners
+            showListeners: true,
+            listenersTableHeader: [
+                { text: 'Listener', value: 'id' },
+                { text: 'Status', value: 'state', align: 'center' },
             ],
             // filters
             showFilter: true,
@@ -266,7 +313,7 @@ export default {
                 case 'servers':
                     {
                         const self = this
-                        const allServers = await self.getServerState()
+                        const allServers = await self.getRelationshipState('servers')
                         let availableEntities = self.$help.lodash.xorWith(
                             allServers,
                             self.serverStateTableRow,

@@ -82,6 +82,8 @@
     "current sessions": "current session | current sessions",
     "monitors": "monitor | monitors",
 
+    "listeners": "listener | listeners",
+
     "maxScaleParameters": "MaxScale Parameters",
     "usersAndPermissions": "Users & Permissions",
     "protocol": "protocol | protocols",

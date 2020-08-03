@@ -1,19 +1,19 @@
 <template>
     <data-table
         :headers="tableHeaders"
-        :data="dataProcessing"
+        :data="tableRows"
         :colsHasRowSpan="2"
         :search="searchKeyWord"
         sortBy="groupId"
     >
         <template v-slot:header-append-groupId>
-            <span class="ml-1 color text-field-text"> ({{ allLinkedMonitors }}) </span>
+            <span class="ml-1 color text-field-text"> ({{ monitorsLength }}) </span>
         </template>
         <template v-slot:header-append-id>
             <span class="ml-1 color text-field-text"> ({{ allServers.length }}) </span>
         </template>
         <template v-slot:header-append-serviceIds>
-            <span class="ml-1 color text-field-text"> ({{ allLinkedServices }}) </span>
+            <span class="ml-1 color text-field-text"> ({{ servicesLength }}) </span>
         </template>
 
         <template v-slot:groupId="{ data: { item: { groupId } } }">
@@ -137,8 +137,8 @@ export default {
                 { text: 'GTID', value: 'gtid' },
                 { text: 'Services', value: 'serviceIds' },
             ],
-            allLinkedServices: 0,
-            allLinkedMonitors: 0,
+            servicesLength: 0,
+            monitorsLength: 0,
         }
     },
     computed: {
@@ -148,77 +148,76 @@ export default {
             allMonitors: 'monitor/allMonitors',
             allServers: 'server/allServers',
         }),
-        dataProcessing: function() {
-            if (this.allServers.length && this.allMonitorsMap.size) {
-                let tableRows = []
-                let allServers = this.$help.lodash.cloneDeep(this.allServers)
-                let totalServices = []
-                let totalMonitors = []
-                for (let index = 0; index < allServers.length; ++index) {
+        tableRows: function() {
+            let rows = []
+            if (this.allMonitorsMap.size) {
+                let allServiceIds = []
+                let allMonitorIds = []
+
+                this.allServers.forEach(server => {
                     const {
                         id,
                         attributes: {
                             state: serverState,
-                            parameters,
-                            statistics,
+                            parameters: { address, port },
+                            statistics: { connections },
                             gtid_current_pos,
                         },
                         relationships: {
-                            services: { data: allServices = [] } = {},
-                            monitors: { data: linkedMonitors = [] } = {},
+                            services: { data: associatedServices = [] } = {},
+                            monitors: { data: associatedMonitors = [] } = {},
                         },
-                    } = allServers[index]
+                    } = server
 
-                    let serviceIds = allServices.length
-                        ? allServices.map(item => `${item.id}`)
+                    const serviceIds = associatedServices.length
+                        ? associatedServices.map(item => `${item.id}`)
                         : this.$t('noEntity', { entityName: 'services' })
-                    // get total number of unique services
-                    if (typeof serviceIds !== 'string')
-                        totalServices = [...totalServices, ...serviceIds]
 
-                    let uniqueSet = new Set(totalServices)
-                    this.setTotalNumOfLinkedServices([...uniqueSet].length)
+                    if (typeof serviceIds !== 'string')
+                        allServiceIds = [...allServiceIds, ...serviceIds]
+
+                    const uniqueServiceId = new Set(allServiceIds) // get unique service ids
+                    this.setServicesLength([...uniqueServiceId].length)
 
                     let row = {
                         id: id,
-                        serverAddress: parameters.address,
-                        serverPort: parameters.port,
-                        serverConnections: statistics.connections,
+                        serverAddress: address,
+                        serverPort: port,
+                        serverConnections: connections,
                         serverState: serverState,
                         serviceIds: serviceIds,
                         gtid: gtid_current_pos,
                     }
-                    if (linkedMonitors.length) {
-                        // The linkedMonitors is always an array with one element -> get monitor at index 0
-                        let monitorLinked = this.allMonitorsMap.get(linkedMonitors[0].id)
-                        if (!this.$help.lodash.isEmpty(monitorLinked)) {
-                            totalMonitors.push(monitorLinked)
-                            row.groupId = monitorLinked.id // aka monitorId
-                            row.monitorState = `${monitorLinked.attributes.state}`
+                    if (associatedMonitors.length) {
+                        // The associatedMonitors is always an array with one element -> get monitor at index 0
+                        const monitor = this.allMonitorsMap.get(associatedMonitors[0].id)
+
+                        if (!this.$help.lodash.isEmpty(monitor)) {
+                            allMonitorIds.push(monitor.id)
+                            row.groupId = monitor.id // aka monitorId
+                            row.monitorState = `${monitor.attributes.state}`
                         }
                     } else {
                         row.groupId = this.$t('not', { action: 'monitored' })
                         row.monitorState = ''
                     }
-                    tableRows.push(row)
-                }
-                // set total number of monitors
-                let uniqueMonitorSet = new Set(totalMonitors)
-                this.setTotalNumOfLinkedMonitors([...uniqueMonitorSet].length)
+                    rows.push(row)
+                })
 
-                return tableRows
+                const uniqueMonitorId = new Set(allMonitorIds) // get unique monitor ids
+                this.setMonitorsLength([...uniqueMonitorId].length)
             }
 
-            return []
+            return rows
         },
     },
 
     methods: {
-        setTotalNumOfLinkedServices(total) {
-            this.allLinkedServices = total
+        setServicesLength(total) {
+            this.servicesLength = total
         },
-        setTotalNumOfLinkedMonitors(total) {
-            this.allLinkedMonitors = total
+        setMonitorsLength(total) {
+            this.monitorsLength = total
         },
     },
 }

@@ -45,6 +45,7 @@ export default {
             allServers: 'server/allServers',
             allSessions: 'session/allSessions',
             allServices: 'service/allServices',
+            allListeners: 'listener/allListeners',
         }),
     },
     watch: {
@@ -64,6 +65,9 @@ export default {
                     break
                 case 'sessions':
                     total = this.allSessions.length
+                    break
+                case 'listeners':
+                    total = this.allListeners.length
             }
             return total
         },

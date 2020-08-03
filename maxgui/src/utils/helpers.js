@@ -61,7 +61,8 @@ export function range(start, end) {
 export function serviceStateIcon(serviceState) {
     if (serviceState) {
         if (serviceState.includes('Started')) return 1
-        if (serviceState.includes('Stopped') || serviceState.includes('Allocated')) return 0
+        if (serviceState.includes('Stopped')) return 2
+        if (serviceState.includes('Allocated') || serviceState.includes('Failed')) return 0
         else return ''
     } else return ''
 }
@@ -84,7 +85,13 @@ export function monitorStateIcon(monitorState) {
         else return ''
     } else return ''
 }
-
+export function listenerStateIcon(state) {
+    if (state) {
+        if (state === 'Running') return 1
+        else if (state === 'Stopped') return 2
+        else if (state === 'Failed') return 0
+    } else return ''
+}
 export function delay(t, v) {
     return new Promise(function(resolve) {
         setTimeout(resolve.bind(null, v), t)
@@ -427,6 +434,7 @@ Object.defineProperties(Vue.prototype, {
                 serviceStateIcon,
                 serverStateIcon,
                 monitorStateIcon,
+                listenerStateIcon,
 
                 delay,
                 dynamicColors,
@@ -447,12 +455,6 @@ Object.defineProperties(Vue.prototype, {
                 isNull,
                 isFunction,
                 isUndefined,
-                // lodash
-                // isEmpty,
-                // cloneDeep,
-                // isEqual,
-                // xorWith,
-                // uniqueId,
                 lodash,
             }
         },

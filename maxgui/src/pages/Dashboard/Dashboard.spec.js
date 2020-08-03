@@ -31,7 +31,7 @@ describe('Dashboard index', () => {
         await axiosStub.restore()
     })
 
-    it(`Should send 6 requests in parallel to get maxscale overview info,
+    it(`Should send 7 requests in parallel to get maxscale overview info,
       maxscale threads, all servers, monitors, sessions and services`, async () => {
         axiosStub.firstCall.should.have.been.calledWith(
             '/maxscale?fields[maxscale]=version,commit,started_at,activated_at,uptime'
@@ -40,7 +40,8 @@ describe('Dashboard index', () => {
         axiosStub.thirdCall.should.have.been.calledWith('/servers')
         axiosStub.getCall(3).should.have.been.calledWith('/monitors')
         axiosStub.getCall(4).should.have.been.calledWith('/sessions')
-        axiosStub.lastCall.should.have.been.calledWith('/services')
+        axiosStub.getCall(5).should.have.been.calledWith('/services')
+        axiosStub.lastCall.should.have.been.calledWith('/listeners')
     })
 
     it(`Should render page-wrapper component`, async () => {
