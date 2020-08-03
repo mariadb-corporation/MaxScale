@@ -93,14 +93,14 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import { mapGetters } from 'vuex'
 
 export default {
     name: 'overview-header',
 
     props: {
-        currentServer: { type: Object, required: true },
-        updateServerRelationship: { type: Function, required: true },
         dispatchRelationshipUpdate: { type: Function, required: true },
+        getResourceState: { type: Function, required: true },
     },
     data() {
         return {
@@ -115,7 +115,11 @@ export default {
             defaultItems: undefined,
         }
     },
+
     computed: {
+        ...mapGetters({
+            currentServer: 'server/currentServer',
+        }),
         serverStateClass: function() {
             switch (this.$help.serverStateIcon(this.currentServer.attributes.state)) {
                 case 0:
@@ -130,42 +134,38 @@ export default {
             let self = this
             let currentServer = self.$help.lodash.cloneDeep(self.currentServer)
             let overviewInfo = {}
-            if (!self.$help.lodash.isEmpty(currentServer)) {
-                // Set fallback undefined value if properties doesnt exist
-                const {
-                    attributes: {
-                        state,
-                        last_event = undefined,
-                        triggered_at = undefined,
 
-                        parameters: {
-                            address = undefined,
-                            socket = undefined,
-                            port = undefined,
-                        } = {},
-                    } = {},
-                    relationships: { monitors } = {},
-                } = currentServer
+            // Set fallback undefined value if properties doesnt exist
+            const {
+                attributes: {
+                    state,
+                    last_event = undefined,
+                    triggered_at = undefined,
 
-                overviewInfo = {
-                    address: address,
-                    socket: socket,
-                    port: port,
-                    state: state,
-                    last_event: last_event,
-                    triggered_at: triggered_at,
-                    monitor: monitors ? monitors.data[0].id : undefined,
-                }
+                    parameters: { address = undefined, socket = undefined, port = undefined } = {},
+                } = {},
+                relationships: { monitors } = {},
+            } = currentServer
 
-                if (socket) {
-                    delete overviewInfo.address
-                    delete overviewInfo.port
-                } else delete overviewInfo.socket
-
-                Object.keys(overviewInfo).forEach(
-                    key => (overviewInfo[key] = self.$help.handleValue(overviewInfo[key]))
-                )
+            overviewInfo = {
+                address: address,
+                socket: socket,
+                port: port,
+                state: state,
+                last_event: last_event,
+                triggered_at: triggered_at,
+                monitor: monitors ? monitors.data[0].id : undefined,
             }
+
+            if (socket) {
+                delete overviewInfo.address
+                delete overviewInfo.port
+            } else delete overviewInfo.socket
+
+            Object.keys(overviewInfo).forEach(
+                key => (overviewInfo[key] = self.$help.handleValue(overviewInfo[key]))
+            )
+
             return overviewInfo
         },
     },
@@ -190,23 +190,22 @@ export default {
             switch (this.targetSelectItemType) {
                 case 'monitors':
                     {
-                        const self = this
-                        let res = await self.axios.get(`/monitors?fields[monitors]=state`)
-                        let all = res.data.data.map(monitor => ({
+                        let data = await this.getResourceState({
+                            resourceType: 'monitors',
+                            caller: 'server-detail-page-overview-header-getAllEntities',
+                        })
+                        this.itemsList = data.map(monitor => ({
                             id: monitor.id,
                             type: monitor.type,
                         }))
 
-                        if (self.getTopOverviewInfo.monitor !== 'undefined') {
-                            self.defaultItems = {
-                                id: self.getTopOverviewInfo.monitor,
+                        const { monitor: currentMonitorId } = this.getTopOverviewInfo
+                        if (currentMonitorId !== 'undefined') {
+                            this.defaultItems = {
+                                id: currentMonitorId,
                                 type: 'monitors',
                             }
-                        } else {
-                            self.defaultItems = undefined
-                        }
-
-                        this.itemsList = all
+                        } else this.defaultItems = undefined
                     }
                     break
             }

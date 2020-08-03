@@ -342,6 +342,8 @@ RWBackend* RWSplitSession::get_slave_backend(int max_rlag)
  */
 static void log_server_connections(select_criteria_t criteria, const PRWBackends& backends)
 {
+    using maxbase::operator<<;
+
     MXS_INFO("Target connection counts:");
 
     for (auto b : backends)
@@ -369,7 +371,7 @@ static void log_server_connections(select_criteria_t criteria, const PRWBackends
 
         case ADAPTIVE_ROUTING:
             {
-                maxbase::Duration response_ave(b->target()->response_time_average());
+                maxbase::Duration response_ave(mxb::from_secs(b->target()->response_time_average()));
                 std::ostringstream os;
                 os << response_ave;
                 MXS_INFO("adaptive avg. select time: %s from \t%s %s",

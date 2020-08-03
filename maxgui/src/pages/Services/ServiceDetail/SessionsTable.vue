@@ -1,33 +1,31 @@
 <template>
-    <v-col class="py-0 ma-0" cols="8">
-        <collapse
-            :toggleOnClick="() => (showSessions = !showSessions)"
-            :isContentVisible="showSessions"
-            :title="`${$tc('currentSessions', 2)}`"
-            :titleInfo="sessionsTableRow.length"
-        >
-            <template v-slot:content>
-                <data-table
-                    :search="searchKeyWord"
-                    tableClass="data-table-full--max-width-columns"
-                    :headers="sessionsTableHeader"
-                    :data="sessionsTableRow"
-                    :sortDesc="false"
-                    :noDataText="$t('noEntity', { entityName: $tc('sessions', 2) })"
-                    :loading="loading"
-                >
-                    <!-- <template v-slot:user="{ data: { item: { user } } }">
+    <collapse
+        :toggleOnClick="() => (showSessions = !showSessions)"
+        :isContentVisible="showSessions"
+        :title="`${$tc('currentSessions', 2)}`"
+        :titleInfo="sessionsTableRow.length"
+    >
+        <template v-slot:content>
+            <data-table
+                :search="searchKeyWord"
+                tableClass="data-table-full--max-width-columns"
+                :headers="sessionsTableHeader"
+                :data="sessionsTableRow"
+                :sortDesc="false"
+                :noDataText="$t('noEntity', { entityName: $tc('sessions', 2) })"
+                :loading="loading"
+            >
+                <!-- <template v-slot:user="{ data: { item: { user } } }">
                         <router-link :key="user" :to="`/users/${user}`" class="no-underline">
                             <span> {{ user }} </span>
                         </router-link>
                     </template> -->
-                    <template v-slot:connected="{ data: { item: { connected } } }">
-                        <span> {{ $help.formatValue(connected) }} </span>
-                    </template>
-                </data-table>
-            </template>
-        </collapse>
-    </v-col>
+                <template v-slot:connected="{ data: { item: { connected } } }">
+                    <span> {{ $help.formatValue(connected) }} </span>
+                </template>
+            </data-table>
+        </template>
+    </collapse>
 </template>
 
 <script>
@@ -43,13 +41,12 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import { mapGetters } from 'vuex'
 
 export default {
     name: 'sessions-table',
     props: {
-        searchKeyWord: { type: String, required: true },
         loading: { type: Boolean, required: true },
-        sessionsByService: { type: Array, required: true },
     },
     data() {
         return {
@@ -65,6 +62,11 @@ export default {
     },
 
     computed: {
+        ...mapGetters({
+            searchKeyWord: 'searchKeyWord',
+            sessionsByService: 'session/sessionsByService',
+        }),
+
         sessionsTableRow: function() {
             if (this.sessionsByService.length) {
                 let itemsArr = []

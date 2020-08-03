@@ -40,15 +40,18 @@ export default {
         },
     },
     actions: {
-        async fetchServiceById({ commit, state }, id) {
-            let res = await this.Vue.axios.get(`/services/${id}`, {
-                auth: state.credentials,
-            })
-            commit('setCurrentService', res.data.data)
-            commit('setConnectionInfo', {
-                total_connections: res.data.data.attributes.total_connections,
-                connections: res.data.data.attributes.connections,
-            })
+        async fetchServiceById({ commit }, id) {
+            try {
+                let res = await this.Vue.axios.get(`/services/${id}`)
+                if (res.data.data) {
+                    commit('setCurrentService', res.data.data)
+                }
+            } catch (e) {
+                if (process.env.NODE_ENV !== 'test') {
+                    const logger = this.Vue.Logger('store-service-fetchServiceById')
+                    logger.error(e)
+                }
+            }
         },
         genDataSetSchema({ commit, state }) {
             const { currentService } = state
@@ -80,18 +83,34 @@ export default {
             }
         },
         async fetchAllServices({ commit }) {
-            let res = await this.Vue.axios.get(`/services`)
-            commit('setServices', res.data.data)
+            try {
+                let res = await this.Vue.axios.get(`/services`)
+                if (res.data.data) commit('setServices', res.data.data)
+            } catch (e) {
+                if (process.env.NODE_ENV !== 'test') {
+                    const logger = this.Vue.Logger('store-services-fetchAllServices')
+                    logger.error(e)
+                }
+            }
         },
         async fetchServiceConnections({ commit }, id) {
-            let res = await this.Vue.axios.get(
-                `/services/${id}?fields[services]=connections,total_connections`
-            )
-            let { attributes: { connections, total_connections } = {} } = res.data.data
-            commit('setConnectionInfo', {
-                total_connections: total_connections,
-                connections: connections,
-            })
+            try {
+                let res = await this.Vue.axios.get(
+                    `/services/${id}?fields[services]=connections,total_connections`
+                )
+                if (res.data.data) {
+                    let { attributes: { connections, total_connections } = {} } = res.data.data
+                    commit('setConnectionInfo', {
+                        total_connections: total_connections,
+                        connections: connections,
+                    })
+                }
+            } catch (e) {
+                if (process.env.NODE_ENV !== 'test') {
+                    const logger = this.Vue.Logger('store-service-fetchServiceConnections')
+                    logger.error(e)
+                }
+            }
         },
 
         //-----------------------------------------------Service Create/Update/Delete----------------------------------
@@ -106,30 +125,38 @@ export default {
          * @param {Function} payload.callback callback function after successfully updated
          */
         async createService({ commit }, payload) {
-            const body = {
-                data: {
-                    id: payload.id,
-                    type: 'services',
-                    attributes: {
-                        router: payload.router,
-                        parameters: payload.parameters,
+            try {
+                const body = {
+                    data: {
+                        id: payload.id,
+                        type: 'services',
+                        attributes: {
+                            router: payload.router,
+                            parameters: payload.parameters,
+                        },
+                        relationships: payload.relationships,
                     },
-                    relationships: payload.relationships,
-                },
-            }
-            let res = await this.Vue.axios.post(`/services/`, body)
+                }
+                let res = await this.Vue.axios.post(`/services/`, body)
 
-            // response ok
-            if (res.status === 204) {
-                commit(
-                    'showMessage',
-                    {
-                        text: [`Service ${payload.id} is created`],
-                        type: 'success',
-                    },
-                    { root: true }
-                )
-                if (this.Vue.prototype.$help.isFunction(payload.callback)) await payload.callback()
+                // response ok
+                if (res.status === 204) {
+                    commit(
+                        'showMessage',
+                        {
+                            text: [`Service ${payload.id} is created`],
+                            type: 'success',
+                        },
+                        { root: true }
+                    )
+                    if (this.Vue.prototype.$help.isFunction(payload.callback))
+                        await payload.callback()
+                }
+            } catch (e) {
+                if (process.env.NODE_ENV !== 'test') {
+                    const logger = this.Vue.Logger('store-service-createService')
+                    logger.error(e)
+                }
             }
         },
         //-----------------------------------------------Service parameter update---------------------------------
@@ -140,25 +167,33 @@ export default {
          * @param {Function} payload.callback callback function after successfully updated
          */
         async updateServiceParameters({ commit }, payload) {
-            const body = {
-                data: {
-                    id: payload.id,
-                    type: 'services',
-                    attributes: { parameters: payload.parameters },
-                },
-            }
-            let res = await this.Vue.axios.patch(`/services/${payload.id}`, body)
-            // response ok
-            if (res.status === 204) {
-                commit(
-                    'showMessage',
-                    {
-                        text: [`Parameters of ${payload.id} is updated`],
-                        type: 'success',
+            try {
+                const body = {
+                    data: {
+                        id: payload.id,
+                        type: 'services',
+                        attributes: { parameters: payload.parameters },
                     },
-                    { root: true }
-                )
-                if (this.Vue.prototype.$help.isFunction(payload.callback)) await payload.callback()
+                }
+                let res = await this.Vue.axios.patch(`/services/${payload.id}`, body)
+                // response ok
+                if (res.status === 204) {
+                    commit(
+                        'showMessage',
+                        {
+                            text: [`Parameters of ${payload.id} is updated`],
+                            type: 'success',
+                        },
+                        { root: true }
+                    )
+                    if (this.Vue.prototype.$help.isFunction(payload.callback))
+                        await payload.callback()
+                }
+            } catch (e) {
+                if (process.env.NODE_ENV !== 'test') {
+                    const logger = this.Vue.Logger('store-service-updateServiceParameters')
+                    logger.error(e)
+                }
             }
         },
         //-----------------------------------------------Service relationship update---------------------------------
@@ -171,50 +206,65 @@ export default {
          * @param {Function} payload.callback callback function after successfully updated
          */
         async updateServiceRelationship({ commit }, payload) {
-            let res
-            let message
+            try {
+                let res
+                let message
 
-            res = await this.Vue.axios.patch(
-                `/services/${payload.id}/relationships/${payload.type}`,
-                {
-                    data: payload.type === 'servers' ? payload.servers : payload.filters,
-                }
-            )
-            message = [
-                `${this.Vue.prototype.$help.capitalizeFirstLetter(payload.type)} relationships of ${
-                    payload.id
-                } is updated`,
-            ]
-
-            // response ok
-            if (res.status === 204) {
-                commit(
-                    'showMessage',
+                res = await this.Vue.axios.patch(
+                    `/services/${payload.id}/relationships/${payload.type}`,
                     {
-                        text: message,
-                        type: 'success',
-                    },
-                    { root: true }
+                        data: payload.type === 'servers' ? payload.servers : payload.filters,
+                    }
                 )
-                if (this.Vue.prototype.$help.isFunction(payload.callback)) await payload.callback()
+                message = [
+                    `${this.Vue.prototype.$help.capitalizeFirstLetter(
+                        payload.type
+                    )} relationships of ${payload.id} is updated`,
+                ]
+
+                // response ok
+                if (res.status === 204) {
+                    commit(
+                        'showMessage',
+                        {
+                            text: message,
+                            type: 'success',
+                        },
+                        { root: true }
+                    )
+                    if (this.Vue.prototype.$help.isFunction(payload.callback))
+                        await payload.callback()
+                }
+            } catch (e) {
+                if (process.env.NODE_ENV !== 'test') {
+                    const logger = this.Vue.Logger('store-service-updateServiceRelationship')
+                    logger.error(e)
+                }
             }
         },
         /**
          * @param {String} id id of the service
          */
         async destroyService({ dispatch, commit }, id) {
-            let res = await this.Vue.axios.delete(`/services/${id}?force=yes`)
-            // response ok
-            if (res.status === 204) {
-                await dispatch('fetchAllServices')
-                commit(
-                    'showMessage',
-                    {
-                        text: [`Service ${id} is deleted`],
-                        type: 'success',
-                    },
-                    { root: true }
-                )
+            try {
+                let res = await this.Vue.axios.delete(`/services/${id}?force=yes`)
+                // response ok
+                if (res.status === 204) {
+                    await dispatch('fetchAllServices')
+                    commit(
+                        'showMessage',
+                        {
+                            text: [`Service ${id} is deleted`],
+                            type: 'success',
+                        },
+                        { root: true }
+                    )
+                }
+            } catch (e) {
+                if (process.env.NODE_ENV !== 'test') {
+                    const logger = this.Vue.Logger('store-service-destroyService')
+                    logger.error(e)
+                }
             }
         },
         /**
@@ -222,27 +272,34 @@ export default {
          * @param {String} mode Mode to start or stop service
          */
         async stopOrStartService({ commit }, { id, mode, callback }) {
-            let res = await this.Vue.axios.put(`/services/${id}/${mode}`)
-            let message
-            switch (mode) {
-                case 'start':
-                    message = [`Service ${id} is started`]
-                    break
-                case 'stop':
-                    message = [`Service${id} is stopped`]
-                    break
-            }
-            // response ok
-            if (res.status === 204) {
-                commit(
-                    'showMessage',
-                    {
-                        text: message,
-                        type: 'success',
-                    },
-                    { root: true }
-                )
-                if (this.Vue.prototype.$help.isFunction(callback)) await callback()
+            try {
+                let res = await this.Vue.axios.put(`/services/${id}/${mode}`)
+                let message
+                switch (mode) {
+                    case 'start':
+                        message = [`Service ${id} is started`]
+                        break
+                    case 'stop':
+                        message = [`Service${id} is stopped`]
+                        break
+                }
+                // response ok
+                if (res.status === 204) {
+                    commit(
+                        'showMessage',
+                        {
+                            text: message,
+                            type: 'success',
+                        },
+                        { root: true }
+                    )
+                    if (this.Vue.prototype.$help.isFunction(callback)) await callback()
+                }
+            } catch (e) {
+                if (process.env.NODE_ENV !== 'test') {
+                    const logger = this.Vue.Logger('store-service-stopOrStartService')
+                    logger.error(e)
+                }
             }
         },
     },

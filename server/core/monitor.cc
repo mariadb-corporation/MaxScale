@@ -511,8 +511,7 @@ bool Monitor::configure(const mxs::ConfigParameters* params)
     // Disk check interval is given in ms, duration is constructed from seconds.
     auto dsc_interval = params->get_duration<milliseconds>(CN_DISK_SPACE_CHECK_INTERVAL).count();
     // 0 implies disabling -> save negative value to interval.
-    m_settings.disk_space_check_interval = (dsc_interval > 0) ?
-        mxb::Duration(static_cast<double>(dsc_interval) / 1000) : mxb::Duration(-1);
+    m_settings.disk_space_check_interval = (dsc_interval > 0) ? milliseconds(dsc_interval) : -1s;
 
     // First, remove all servers.
     remove_all_servers();
@@ -1895,7 +1894,7 @@ bool Monitor::check_disk_space_this_tick()
     bool should_update_disk_space = false;
     auto check_interval = m_settings.disk_space_check_interval;
 
-    if ((check_interval.secs() > 0) && m_disk_space_checked.split() > check_interval)
+    if ((check_interval.count() > 0) && m_disk_space_checked.split() > check_interval)
     {
         should_update_disk_space = true;
         // Whether or not disk space check succeeds, reset the timer. This way, disk space is always

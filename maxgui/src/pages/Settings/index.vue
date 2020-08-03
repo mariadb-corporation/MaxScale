@@ -11,11 +11,11 @@
                     <v-tab-item class="pt-5">
                         <v-col cols="7">
                             <details-parameters-collapse
-                                v-if="maxScaleParameters && moduleParameters.length"
+                                v-if="maxScaleParameters"
                                 :searchKeyWord="searchKeyWord"
                                 resourceId="maxscale"
                                 :parameters="maxScaleParameters"
-                                :moduleParameters="moduleParameters"
+                                :moduleParameters="processedModuleParameters"
                                 :updateResourceParameters="updateMaxScaleParameters"
                                 :onEditSucceeded="fetchMaxScaleParameters"
                                 :loading="
@@ -67,7 +67,7 @@ export default {
                 { name: this.$t('maxScaleParameters') },
                 // { name: this.$t('usersAndPermissions') },
             ],
-            moduleParameters: [],
+            processedModuleParameters: [],
             loadingModuleParams: true,
         }
     },
@@ -76,57 +76,64 @@ export default {
             overlay: 'overlay',
             searchKeyWord: 'searchKeyWord',
             maxScaleParameters: 'maxscale/maxScaleParameters',
+            moduleParameters: 'moduleParameters',
         }),
     },
     async created() {
-        await Promise.all([this.fetchMaxScaleParameters(), this.fetchModuleParameters()])
+        await Promise.all([this.fetchMaxScaleParameters(), this.fetchModuleParameters('maxscale')])
+        this.loadingModuleParams = true
+        await this.processModuleParameters()
     },
     methods: {
-        ...mapActions('maxscale', ['updateMaxScaleParameters', 'fetchMaxScaleParameters']),
+        ...mapActions({
+            fetchModuleParameters: 'fetchModuleParameters',
+            fetchMaxScaleParameters: 'maxscale/fetchMaxScaleParameters',
+            updateMaxScaleParameters: 'maxscale/updateMaxScaleParameters',
+        }),
+        async processModuleParameters() {
+            if (this.moduleParameters.length) {
+                const parameters = this.moduleParameters
+                // hard code type for child parameter of log_throttling
+                const log_throttingIndex = parameters.findIndex(
+                    param => param.name === 'log_throttling'
+                )
+                const log_throttling = parameters[log_throttingIndex]
 
-        async fetchModuleParameters() {
-            const self = this
-            let res = await self.axios.get(`/maxscale/modules/maxscale?fields[module]=parameters`)
-            const { attributes: { parameters = [] } = {} } = res.data.data
-            // hard code type for child parameter of log_throttling
-            const log_throttingIndex = parameters.findIndex(
-                param => param.name === 'log_throttling'
-            )
-            const log_throttling = parameters[log_throttingIndex]
+                const log_throttling_child_params = [
+                    {
+                        name: 'count',
+                        type: 'count',
+                        modifiable: true,
+                        default_value: log_throttling.default_value.count,
+                        description: 'Positive integer specifying the number of logged times',
+                    },
+                    {
+                        name: 'window',
+                        type: 'duration',
+                        modifiable: true,
+                        unit: 'ms',
+                        default_value: log_throttling.default_value.window,
+                        description: 'The duration that a particular error may be logged',
+                    },
+                    {
+                        name: 'suppress',
+                        type: 'duration',
+                        modifiable: true,
+                        unit: 'ms',
+                        default_value: log_throttling.default_value.suppress,
+                        description:
+                            'The suppressed duration before the logging of a particular error',
+                    },
+                ]
 
-            const log_throttling_child_params = [
-                {
-                    name: 'count',
-                    type: 'count',
-                    modifiable: true,
-                    default_value: log_throttling.default_value.count,
-                    description: 'Positive integer specifying the number of logged times',
-                },
-                {
-                    name: 'window',
-                    type: 'duration',
-                    modifiable: true,
-                    unit: 'ms',
-                    default_value: log_throttling.default_value.window,
-                    description: 'The duration that a particular error may be logged',
-                },
-                {
-                    name: 'suppress',
-                    type: 'duration',
-                    modifiable: true,
-                    unit: 'ms',
-                    default_value: log_throttling.default_value.suppress,
-                    description: 'The suppressed duration before the logging of a particular error',
-                },
-            ]
+                const left = parameters.slice(0, log_throttingIndex + 1)
+                const right = parameters.slice(log_throttingIndex + 1)
 
-            const left = parameters.slice(0, log_throttingIndex + 1)
-            const right = parameters.slice(log_throttingIndex + 1)
+                this.processedModuleParameters = [...left, ...log_throttling_child_params, ...right]
 
-            self.moduleParameters = [...left, ...log_throttling_child_params, ...right]
-
-            self.loadingModuleParams = true
-            await self.$help.delay(150).then(() => (self.loadingModuleParams = false))
+                const self = this
+                await this.$help.delay(150).then(() => (self.loadingModuleParams = false))
+            }
         },
     },
 }

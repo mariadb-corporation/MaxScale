@@ -25,6 +25,7 @@
 using std::string;
 using maxbase::string_printf;
 using LockType = MariaDBServer::LockType;
+using namespace std::chrono_literals;
 
 namespace
 {
@@ -558,7 +559,7 @@ void MariaDBMonitor::assign_server_roles()
                 }
             }
 
-            if (master_conds_ok && (master_conds & MasterConds::MCOND_COOP_M) && is_slave_maxscale()
+            if (master_conds_ok && (master_conds& MasterConds::MCOND_COOP_M) && is_slave_maxscale()
                 && !m_master->marked_as_master())
             {
                 // Master was not marked as such by primary monitor.
@@ -1187,7 +1188,7 @@ int MariaDBMonitor::get_free_locks()
 MariaDBMonitor::DNSResolver::StringSet MariaDBMonitor::DNSResolver::resolve_server(const string& host)
 {
     auto now = mxb::Clock::now();
-    const auto MAX_AGE = mxb::Duration((double)5 * 60);     // Refresh interval for cache entries.
+    const auto MAX_AGE = 5min;      // Refresh interval for cache entries.
     auto recent_time = now - MAX_AGE;
     DNSResolver::StringSet rval;
 

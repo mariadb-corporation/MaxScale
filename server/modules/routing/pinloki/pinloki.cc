@@ -16,14 +16,78 @@
 
 #include <maxscale/protocol/mariadb/resultset.hh>
 #include <maxscale/json.hh>
-#include <fstream>
+#include <maxscale/modutil.hh>
 
+#include <fstream>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <dirent.h>
+#include <fcntl.h>
 
 namespace pinloki
 {
+
+namespace
+{
+/**
+ * @brief get_inode
+ * @param file_name to check. Links are followed.
+ * @return the inode of the file, or a negative number if something went wrong
+ */
+int get_inode(const std::string& file_name)
+{
+    int fd = open(file_name.c_str(), O_RDONLY);
+
+    if (fd < 0)
+    {
+        return fd;
+    }
+
+    struct stat file_stat;
+    int ret = fstat (fd, &file_stat);
+    if (ret < 0)
+    {
+        close(fd);
+        return ret;
+    }
+
+    close(fd);
+    return file_stat.st_ino;
+}
+
+/**
+ * @brief get_open_inodes
+ * @return return a vector of inodes of the files the program currently has open
+ */
+std::vector<int> get_open_inodes()
+{
+    std::vector<int> vec;
+    const std::string proc_fd_dir = "/proc/self/fd";
+
+    DIR* dir;
+    struct dirent* ent;
+    if ((dir = opendir(proc_fd_dir.c_str())) != nullptr)
+    {
+        while ((ent = readdir (dir)) != nullptr)
+        {
+            if (ent->d_type == DT_LNK)
+            {
+                vec.push_back(get_inode(proc_fd_dir + '/' + ent->d_name));
+            }
+        }
+        closedir (dir);
+    }
+    else
+    {
+        MXB_SERROR("Could not open directory " << proc_fd_dir);
+        mxb_assert(!true);
+    }
+
+    return vec;
+}
+}
+
 
 std::pair<std::string, std::string> get_file_name_and_size(const std::string& filepath)
 {
@@ -448,6 +512,38 @@ bool Pinloki::MasterConfig::load(const Config& config)
     }
 
     return rval;
+}
+
+PurgeResult purge_binlogs(Inventory* pInventory, const std::string& up_to)
+{
+    auto files = pInventory->file_names();
+    auto up_to_ite = std::find(files.begin(), files.end(), pInventory->config().path(up_to));
+
+    if (up_to_ite == files.end())
+    {
+        return PurgeResult::UpToFileNotFound;
+    }
+    else
+    {
+        auto open_inodes = get_open_inodes();
+        std::sort(begin(open_inodes), end(open_inodes));
+
+        for (auto ite = files.begin(); ite != up_to_ite; ite++)
+        {
+            auto inode = get_inode(*ite);
+
+            if (std::binary_search(begin(open_inodes), end(open_inodes), inode))
+            {
+                MXB_SINFO("Binlog purge stopped at open file " << *ite);
+                return PurgeResult::PartialPurge;
+            }
+
+            pInventory->remove(*ite);
+            remove(ite->c_str());
+        }
+    }
+
+    return PurgeResult::Ok;
 }
 }
 

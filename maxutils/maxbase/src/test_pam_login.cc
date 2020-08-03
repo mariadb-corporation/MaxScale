@@ -19,12 +19,12 @@
 using std::string;
 using std::cin;
 using std::cout;
-using PamResult = mxb::PamResult::Result;
+using PamResult = mxb::pam::AuthResult::Result;
 
 int main()
 {
     mxb::Log log(MXB_LOG_TARGET_STDOUT);
-    string username, password, service;
+    string username, password, twofa_pw, service;
 
     cout << "Username:\n";
     std::getline(cin, username);
@@ -42,6 +42,8 @@ int main()
     {
         cout << "Password:\n";
         std::getline(cin, password);
+        cout << "Two-factor authenticator code (optional):\n";
+        std::getline(cin, twofa_pw);
         // Re-enable echo.
         tc_error = (tcsetattr(fd, TCSANOW, &orig_flags) != 0);
     }
@@ -56,7 +58,18 @@ int main()
     std::getline(cin, service);
 
     int rval = EXIT_FAILURE;
-    auto res = mxb::pam_authenticate(username, password, service);
+    mxb::pam::AuthResult res;
+    if (twofa_pw.empty())
+    {
+        res = mxb::pam::authenticate(username, password, service);
+    }
+    else
+    {
+        mxb::pam::UserData user = {username, ""};
+        mxb::pam::PwdData pwds = {password, twofa_pw};
+        res = mxb::pam::authenticate(mxb::pam::AuthMode::PW_2FA, user, pwds, service, {"", ""});
+    }
+
     if (res.type == PamResult::SUCCESS)
     {
         cout << "Authentication successful.\n";

@@ -26,8 +26,15 @@ export default {
     },
     actions: {
         async fetchAllListeners({ commit }) {
-            let res = await this.Vue.axios.get(`/listeners`)
-            commit('setAllListeners', res.data.data)
+            try {
+                let res = await this.Vue.axios.get(`/listeners`)
+                if (res.data.data) commit('setAllListeners', res.data.data)
+            } catch (e) {
+                if (process.env.NODE_ENV !== 'test') {
+                    const logger = this.Vue.Logger('store-listener-fetchAllListeners')
+                    logger.error(e)
+                }
+            }
         },
 
         /**
@@ -38,47 +45,62 @@ export default {
          * @param {Function} payload.callback callback function after successfully updated
          */
         async createListener({ commit }, payload) {
-            const body = {
-                data: {
-                    id: payload.id,
-                    type: 'listeners',
-                    attributes: {
-                        parameters: payload.parameters,
+            try {
+                const body = {
+                    data: {
+                        id: payload.id,
+                        type: 'listeners',
+                        attributes: {
+                            parameters: payload.parameters,
+                        },
+                        relationships: payload.relationships,
                     },
-                    relationships: payload.relationships,
-                },
-            }
+                }
 
-            let res = await this.Vue.axios.post(`/listeners`, body)
-            let message = [`Listener ${payload.id} is created`]
-            // response ok
-            if (res.status === 204) {
-                commit(
-                    'showMessage',
-                    {
-                        text: message,
-                        type: 'success',
-                    },
-                    { root: true }
-                )
-                if (this.Vue.prototype.$help.isFunction(payload.callback)) await payload.callback()
+                let res = await this.Vue.axios.post(`/listeners`, body)
+                let message = [`Listener ${payload.id} is created`]
+                // response ok
+                if (res.status === 204) {
+                    commit(
+                        'showMessage',
+                        {
+                            text: message,
+                            type: 'success',
+                        },
+                        { root: true }
+                    )
+                    if (this.Vue.prototype.$help.isFunction(payload.callback))
+                        await payload.callback()
+                }
+            } catch (e) {
+                if (process.env.NODE_ENV !== 'test') {
+                    const logger = this.Vue.Logger('store-listener-createListener')
+                    logger.error(e)
+                }
             }
         },
         /**
          * @param {String} object.id Name of the listener to be destroyed,
          */
         async destroyListener({ dispatch, commit }, id) {
-            let res = await this.Vue.axios.delete(`/listeners/${id}`)
-            if (res.status === 204) {
-                await dispatch('fetchAllListeners')
-                commit(
-                    'showMessage',
-                    {
-                        text: [`Listeners ${id} is destroyed`],
-                        type: 'success',
-                    },
-                    { root: true }
-                )
+            try {
+                let res = await this.Vue.axios.delete(`/listeners/${id}`)
+                if (res.status === 204) {
+                    await dispatch('fetchAllListeners')
+                    commit(
+                        'showMessage',
+                        {
+                            text: [`Listeners ${id} is destroyed`],
+                            type: 'success',
+                        },
+                        { root: true }
+                    )
+                }
+            } catch (e) {
+                if (process.env.NODE_ENV !== 'test') {
+                    const logger = this.Vue.Logger('store-listener-destroyListener')
+                    logger.error(e)
+                }
             }
         },
     },

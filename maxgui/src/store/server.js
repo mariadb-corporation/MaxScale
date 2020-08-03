@@ -36,16 +36,31 @@ export default {
     },
     actions: {
         async fetchAllServers({ commit }) {
-            let res = await this.Vue.axios.get(`/servers`)
-            // reverse array, latest will be last
-            let sorted = res.data.data.reverse()
-            commit('setServers', sorted)
+            try {
+                let res = await this.Vue.axios.get(`/servers`)
+                if (res.data.data) {
+                    // reverse array, latest will be last
+                    let sorted = res.data.data.reverse()
+                    commit('setServers', sorted)
+                }
+            } catch (e) {
+                if (process.env.NODE_ENV !== 'test') {
+                    const logger = this.Vue.Logger('store-server-fetchAllServers')
+                    logger.error(e)
+                }
+            }
         },
-        async fetchServerById({ commit, state }, id) {
-            let res = await this.Vue.axios.get(`/servers/${id}`, {
-                auth: state.credentials,
-            })
-            commit('setCurrentServer', res.data.data)
+
+        async fetchServerById({ commit }, id) {
+            try {
+                let res = await this.Vue.axios.get(`/servers/${id}`)
+                if (res.data.data) commit('setCurrentServer', res.data.data)
+            } catch (e) {
+                if (process.env.NODE_ENV !== 'test') {
+                    const logger = this.Vue.Logger('store-server-fetchServerById')
+                    logger.error(e)
+                }
+            }
         },
 
         //-----------------------------------------------Server Create/Update/Delete----------------------------------
@@ -60,29 +75,37 @@ export default {
          * @param {Function} payload.callback callback function after successfully updated
          */
         async createServer({ commit }, payload) {
-            const body = {
-                data: {
-                    id: payload.id,
-                    type: 'servers',
-                    attributes: {
-                        parameters: payload.parameters,
+            try {
+                const body = {
+                    data: {
+                        id: payload.id,
+                        type: 'servers',
+                        attributes: {
+                            parameters: payload.parameters,
+                        },
+                        relationships: payload.relationships,
                     },
-                    relationships: payload.relationships,
-                },
-            }
-            let res = await this.Vue.axios.post(`/servers/`, body)
-            let message = [`Server ${payload.id} is created`]
-            // response ok
-            if (res.status === 204) {
-                commit(
-                    'showMessage',
-                    {
-                        text: message,
-                        type: 'success',
-                    },
-                    { root: true }
-                )
-                if (this.Vue.prototype.$help.isFunction(payload.callback)) await payload.callback()
+                }
+                let res = await this.Vue.axios.post(`/servers/`, body)
+                let message = [`Server ${payload.id} is created`]
+                // response ok
+                if (res.status === 204) {
+                    commit(
+                        'showMessage',
+                        {
+                            text: message,
+                            type: 'success',
+                        },
+                        { root: true }
+                    )
+                    if (this.Vue.prototype.$help.isFunction(payload.callback))
+                        await payload.callback()
+                }
+            } catch (e) {
+                if (process.env.NODE_ENV !== 'test') {
+                    const logger = this.Vue.Logger('store-server-createServer')
+                    logger.error(e)
+                }
             }
         },
         //-----------------------------------------------Server parameter update---------------------------------
@@ -93,25 +116,33 @@ export default {
          * @param {Object} payload.callback callback function after successfully updated
          */
         async updateServerParameters({ commit }, payload) {
-            const body = {
-                data: {
-                    id: payload.id,
-                    type: 'servers',
-                    attributes: { parameters: payload.parameters },
-                },
-            }
-            let res = await this.Vue.axios.patch(`/servers/${payload.id}`, body)
-            // response ok
-            if (res.status === 204) {
-                commit(
-                    'showMessage',
-                    {
-                        text: [`Parameters of ${payload.id} is updated`],
-                        type: 'success',
+            try {
+                const body = {
+                    data: {
+                        id: payload.id,
+                        type: 'servers',
+                        attributes: { parameters: payload.parameters },
                     },
-                    { root: true }
-                )
-                if (this.Vue.prototype.$help.isFunction(payload.callback)) await payload.callback()
+                }
+                let res = await this.Vue.axios.patch(`/servers/${payload.id}`, body)
+                // response ok
+                if (res.status === 204) {
+                    commit(
+                        'showMessage',
+                        {
+                            text: [`Parameters of ${payload.id} is updated`],
+                            type: 'success',
+                        },
+                        { root: true }
+                    )
+                    if (this.Vue.prototype.$help.isFunction(payload.callback))
+                        await payload.callback()
+                }
+            } catch (e) {
+                if (process.env.NODE_ENV !== 'test') {
+                    const logger = this.Vue.Logger('store-server-updateServerParameters')
+                    logger.error(e)
+                }
             }
         },
         //-----------------------------------------------Server relationship update---------------------------------
@@ -124,52 +155,66 @@ export default {
          * @param {Function} payload.callback callback function after successfully updated
          */
         async updateServerRelationship({ commit }, payload) {
-            let res
-            let message
+            try {
+                let res
+                let message
 
-            res = await this.Vue.axios.patch(
-                `/servers/${payload.id}/relationships/${payload.type}`,
-                {
-                    data: payload.type === 'services' ? payload.services : payload.monitors,
-                }
-            )
-
-            message = [
-                `${this.Vue.prototype.$help.capitalizeFirstLetter(payload.type)} relationships of ${
-                    payload.id
-                } is updated`,
-            ]
-
-            // response ok
-            if (res.status === 204) {
-                commit(
-                    'showMessage',
+                res = await this.Vue.axios.patch(
+                    `/servers/${payload.id}/relationships/${payload.type}`,
                     {
-                        text: message,
-                        type: 'success',
-                    },
-                    { root: true }
+                        data: payload.type === 'services' ? payload.services : payload.monitors,
+                    }
                 )
-                if (this.Vue.prototype.$help.isFunction(payload.callback)) await payload.callback()
+
+                message = [
+                    `${this.Vue.prototype.$help.capitalizeFirstLetter(
+                        payload.type
+                    )} relationships of ${payload.id} is updated`,
+                ]
+
+                // response ok
+                if (res.status === 204) {
+                    commit(
+                        'showMessage',
+                        {
+                            text: message,
+                            type: 'success',
+                        },
+                        { root: true }
+                    )
+                    if (this.Vue.prototype.$help.isFunction(payload.callback))
+                        await payload.callback()
+                }
+            } catch (e) {
+                if (process.env.NODE_ENV !== 'test') {
+                    const logger = this.Vue.Logger('store-server-updateServerRelationship')
+                    logger.error(e)
+                }
             }
         },
 
         /**
          * @param {String} id id of the server
          */
-        async destroyServer({ dispatch, commit }, id) {
-            let res = await this.Vue.axios.delete(`/servers/${id}?force=yes`)
-            // response ok
-            if (res.status === 204) {
-                await dispatch('fetchAllServers')
-                commit(
-                    'showMessage',
-                    {
-                        text: [`Server ${id} is deleted`],
-                        type: 'success',
-                    },
-                    { root: true }
-                )
+        async destroyServer({ commit }, id) {
+            try {
+                let res = await this.Vue.axios.delete(`/servers/${id}?force=yes`)
+                // response ok
+                if (res.status === 204) {
+                    commit(
+                        'showMessage',
+                        {
+                            text: [`Server ${id} is deleted`],
+                            type: 'success',
+                        },
+                        { root: true }
+                    )
+                }
+            } catch (e) {
+                if (process.env.NODE_ENV !== 'test') {
+                    const logger = this.Vue.Logger('store-server-destroyServer')
+                    logger.error(e)
+                }
             }
         },
         /**
@@ -180,26 +225,34 @@ export default {
          * for maintenance mode
          */
         async setOrClearServerState({ commit }, { id, state, mode, callback, forceClosing }) {
-            let res, message
+            try {
+                let res, message
 
-            switch (mode) {
-                case 'set':
-                    {
-                        let url = `/servers/${id}/set?state=${state}`
-                        if (state === 'maintenance' && forceClosing) url = url.concat('&force=yes')
-                        res = await this.Vue.axios.put(url)
-                        message = [`Server ${id} is set to ${state}`]
-                    }
-                    break
-                case 'clear':
-                    res = await this.Vue.axios.put(`/servers/${id}/clear?state=${state}`)
-                    message = [`State ${state} of server ${id} is cleared`]
-                    break
-            }
-            // response ok
-            if (res.status === 204) {
-                commit('showMessage', { text: message, type: 'success' }, { root: true })
-                if (this.Vue.prototype.$help.isFunction(callback)) await callback()
+                switch (mode) {
+                    case 'set':
+                        {
+                            let url = `/servers/${id}/set?state=${state}`
+                            if (state === 'maintenance' && forceClosing)
+                                url = url.concat('&force=yes')
+                            res = await this.Vue.axios.put(url)
+                            message = [`Server ${id} is set to ${state}`]
+                        }
+                        break
+                    case 'clear':
+                        res = await this.Vue.axios.put(`/servers/${id}/clear?state=${state}`)
+                        message = [`State ${state} of server ${id} is cleared`]
+                        break
+                }
+                // response ok
+                if (res.status === 204) {
+                    commit('showMessage', { text: message, type: 'success' }, { root: true })
+                    if (this.Vue.prototype.$help.isFunction(callback)) await callback()
+                }
+            } catch (e) {
+                if (process.env.NODE_ENV !== 'test') {
+                    const logger = this.Vue.Logger('store-server-setOrClearServerState')
+                    logger.error(e)
+                }
             }
         },
 

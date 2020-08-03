@@ -10,7 +10,7 @@
                         :searchKeyWord="searchKeyWord"
                         :resourceId="currentMonitor.id"
                         :parameters="currentMonitor.attributes.parameters"
-                        :moduleParameters="moduleParameters"
+                        :moduleParameters="processedModuleParameters"
                         :updateResourceParameters="updateMonitorParameters"
                         :onEditSucceeded="fetchMonitor"
                         :loading="
@@ -21,7 +21,7 @@
                 <servers-table
                     :searchKeyWord="searchKeyWord"
                     :currentMonitor="currentMonitor"
-                    :getServers="getServers"
+                    :getServersState="getServersState"
                     :loading="overlay === OVERLAY_TRANSPARENT_LOADING"
                     :dispatchRelationshipUpdate="dispatchRelationshipUpdate"
                     :serverStateTableRow="serverStateTableRow"
@@ -54,14 +54,13 @@ export default {
     components: {
         PageHeader,
         OverviewHeader,
-
         ServersTable,
     },
     data() {
         return {
             OVERLAY_TRANSPARENT_LOADING: OVERLAY_TRANSPARENT_LOADING,
             serverStateTableRow: [],
-            moduleParameters: [],
+            processedModuleParameters: [],
             loadingModuleParams: true,
         }
     },
@@ -69,47 +68,49 @@ export default {
         ...mapGetters({
             overlay: 'overlay',
             searchKeyWord: 'searchKeyWord',
+            moduleParameters: 'moduleParameters',
             currentMonitor: 'monitor/currentMonitor',
         }),
     },
 
     async created() {
-        let self = this
-        await self.fetchAll()
-        let res = await self.axios.get(
-            `/maxscale/modules/${self.currentMonitor.attributes.module}?fields[module]=parameters`
-        )
-        const { attributes: { parameters = [] } = {} } = res.data.data
-        self.moduleParameters = parameters
-
-        self.loadingModuleParams = true
-        await self.$help.delay(150).then(() => (self.loadingModuleParams = false))
+        await this.fetchMonitor()
+        await this.serverTableRowProcessing()
+        const { module: moduleName } = this.currentMonitor.attributes
+        await this.fetchModuleParameters(moduleName)
+        this.loadingModuleParams = true
+        await this.processModuleParameters()
     },
 
     methods: {
-        ...mapActions('monitor', [
-            'fetchMonitorById',
-            'updateMonitorParameters',
-            'updateMonitorRelationship',
-        ]),
+        ...mapActions({
+            fetchModuleParameters: 'fetchModuleParameters',
+            getResourceState: 'getResourceState',
+            fetchMonitorById: 'monitor/fetchMonitorById',
+            updateMonitorParameters: 'monitor/updateMonitorParameters',
+            updateMonitorRelationship: 'monitor/updateMonitorRelationship',
+        }),
 
-        async fetchAll() {
-            await this.fetchMonitor()
-            await this.fetchServerStateLoop()
+        async processModuleParameters() {
+            if (this.moduleParameters.length) {
+                this.processedModuleParameters = this.moduleParameters
+                const self = this
+                await this.$help.delay(150).then(() => (self.loadingModuleParams = false))
+            }
         },
 
         async fetchMonitor() {
             await this.fetchMonitorById(this.$route.params.id)
         },
 
-        async fetchServerStateLoop() {
+        async serverTableRowProcessing() {
             if (!this.$help.lodash.isEmpty(this.currentMonitor.relationships.servers)) {
                 let servers = this.currentMonitor.relationships.servers.data
                 let serversIdArr = servers ? servers.map(item => `${item.id}`) : []
 
                 let arr = []
                 for (let i = 0; i < serversIdArr.length; ++i) {
-                    let data = await this.getServers(serversIdArr[i])
+                    let data = await this.getServersState(serversIdArr[i])
                     const {
                         id,
                         type,
@@ -123,28 +124,30 @@ export default {
             }
         },
 
-        // fetch server state for all servers or one server
-        async getServers(serverId) {
-            let res
-            if (serverId) {
-                res = await this.axios.get(`/servers/${serverId}?fields[servers]=state`)
-            } else {
-                /* this fetch all servers, if res.data.data have relationship,
-                 prevent user from adding server to the current monitor*/
-                res = await this.axios.get(`/servers?fields[servers]=state,monitors`)
-            }
-
-            return res.data.data
+        /**
+         * This function fetch all servers state, if serverId is provided,
+         * otherwise it fetch server state of a server
+         * @param {String} serverId name of the server
+         * @return {Array} Server state data
+         */
+        async getServersState(serverId) {
+            const data = await this.getResourceState({
+                resourceId: serverId,
+                resourceType: 'servers',
+                caller: 'monitor-details-getServersState',
+            })
+            return data
         },
 
         // actions to vuex
         async dispatchRelationshipUpdate(data) {
             let self = this
-            await self.updateMonitorRelationship({
+            await this.updateMonitorRelationship({
                 id: self.currentMonitor.id,
                 servers: data,
-                callback: self.fetchAll,
+                callback: self.fetchMonitor,
             })
+            await this.serverTableRowProcessing()
         },
     },
 }

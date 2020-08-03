@@ -18,8 +18,8 @@ void maxscale::SessionStats::update(maxbase::Duration sess_duration,
                                     maxbase::Duration active_duration,
                                     int64_t num_selects)
 {
-    m_ave_session_dur.add(sess_duration.secs());
-    m_ave_active_dur.add(active_duration.secs());
+    m_ave_session_dur.add(mxb::to_secs(sess_duration));
+    m_ave_active_dur.add(mxb::to_secs(active_duration));
     m_num_ave_session_selects.add(num_selects);
 }
 
@@ -41,7 +41,7 @@ maxscale::SessionStats::CurrentStats maxscale::SessionStats::current_stats() con
     double active_secs = m_ave_active_dur.average();
     double active = 100 * active_secs / sess_secs;
 
-    return {maxbase::Duration(sess_secs),
+    return {mxb::from_secs(sess_secs),
             active,
             static_cast<int64_t>(m_num_ave_session_selects.average()),
             m_total,

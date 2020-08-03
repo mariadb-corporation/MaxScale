@@ -43,32 +43,64 @@ export default {
     },
     actions: {
         async fetchMaxScaleParameters({ commit }) {
-            let res = await this.Vue.axios.get(`/maxscale?fields[maxscale]=parameters`)
-            commit('setMaxScaleParameters', res.data.data.attributes.parameters)
+            try {
+                let res = await this.Vue.axios.get(`/maxscale?fields[maxscale]=parameters`)
+                if (res.data.data.attributes.parameters)
+                    commit('setMaxScaleParameters', res.data.data.attributes.parameters)
+            } catch (e) {
+                if (process.env.NODE_ENV !== 'test') {
+                    const logger = this.Vue.Logger('store-maxscale-fetchMaxScaleParameters')
+                    logger.error(e)
+                }
+            }
         },
 
         async fetchMaxScaleOverviewInfo({ commit }) {
-            let res = await this.Vue.axios.get(
-                `/maxscale?fields[maxscale]=version,commit,started_at,activated_at,uptime`
-            )
-            commit('setMaxScaleOverviewInfo', res.data.data.attributes)
+            try {
+                let res = await this.Vue.axios.get(
+                    `/maxscale?fields[maxscale]=version,commit,started_at,activated_at,uptime`
+                )
+                if (res.data.data.attributes)
+                    commit('setMaxScaleOverviewInfo', res.data.data.attributes)
+            } catch (e) {
+                if (process.env.NODE_ENV !== 'test') {
+                    const logger = this.Vue.Logger('store-maxscale-fetchMaxScaleOverviewInfo')
+                    logger.error(e)
+                }
+            }
         },
         async fetchAllModules({ commit }) {
-            let res = await this.Vue.axios.get(`/maxscale/modules?load=all`)
-            const allModules = res.data.data
-            let hashArr = {} // O(n log n)
-            for (let i = 0; i < allModules.length; ++i) {
-                const module = allModules[i]
-                const moduleType = allModules[i].attributes.module_type
-                if (hashArr[moduleType] == undefined) hashArr[moduleType] = []
-                hashArr[moduleType].push(module)
+            try {
+                let res = await this.Vue.axios.get(`/maxscale/modules?load=all`)
+                if (res.data.data) {
+                    const allModules = res.data.data
+                    let hashArr = {} // O(n log n)
+                    for (let i = 0; i < allModules.length; ++i) {
+                        const module = allModules[i]
+                        const moduleType = allModules[i].attributes.module_type
+                        if (hashArr[moduleType] == undefined) hashArr[moduleType] = []
+                        hashArr[moduleType].push(module)
+                    }
+                    commit('setAllModulesMap', hashArr)
+                }
+            } catch (e) {
+                if (process.env.NODE_ENV !== 'test') {
+                    const logger = this.Vue.Logger('store-maxscale-fetchAllModules')
+                    logger.error(e)
+                }
             }
-            commit('setAllModulesMap', hashArr)
         },
         // ---------------------------- last two second threads--------------------------
         async fetchThreads({ commit }) {
-            let res = await this.Vue.axios.get(`/maxscale/threads?fields[threads]=stats`)
-            commit('setThreads', res.data.data)
+            try {
+                let res = await this.Vue.axios.get(`/maxscale/threads?fields[threads]=stats`)
+                if (res.data.data) commit('setThreads', res.data.data)
+            } catch (e) {
+                if (process.env.NODE_ENV !== 'test') {
+                    const logger = this.Vue.Logger('store-maxscale-fetchThreads')
+                    logger.error(e)
+                }
+            }
         },
 
         genDataSetSchema({ commit, state }) {
@@ -111,25 +143,33 @@ export default {
          * @param {Object} payload.callback callback function after successfully updated
          */
         async updateMaxScaleParameters({ commit }, payload) {
-            const body = {
-                data: {
-                    id: payload.id,
-                    type: 'maxscale',
-                    attributes: { parameters: payload.parameters },
-                },
-            }
-            let res = await this.Vue.axios.patch(`/maxscale`, body)
-            // response ok
-            if (res.status === 204) {
-                commit(
-                    'showMessage',
-                    {
-                        text: [`MaxScale parameters is updated`],
-                        type: 'success',
+            try {
+                const body = {
+                    data: {
+                        id: payload.id,
+                        type: 'maxscale',
+                        attributes: { parameters: payload.parameters },
                     },
-                    { root: true }
-                )
-                if (this.Vue.prototype.$help.isFunction(payload.callback)) await payload.callback()
+                }
+                let res = await this.Vue.axios.patch(`/maxscale`, body)
+                // response ok
+                if (res.status === 204) {
+                    commit(
+                        'showMessage',
+                        {
+                            text: [`MaxScale parameters is updated`],
+                            type: 'success',
+                        },
+                        { root: true }
+                    )
+                    if (this.Vue.prototype.$help.isFunction(payload.callback))
+                        await payload.callback()
+                }
+            } catch (e) {
+                if (process.env.NODE_ENV !== 'test') {
+                    const logger = this.Vue.Logger('store-maxscale-updateMaxScaleParameters')
+                    logger.error(e)
+                }
             }
         },
     },

@@ -1,77 +1,54 @@
 <template>
-    <v-row>
-        <v-col class="py-0 my-0" cols="4">
-            <v-row class="pa-0 ma-0">
-                <!-- STATISTICS TABLE -->
-                <v-col cols="12" class="pa-0 ma-0">
-                    <collapse
-                        :toggleOnClick="() => (showStatistics = !showStatistics)"
-                        :isContentVisible="showStatistics"
-                        :title="`${$tc('statistics', 2)}`"
-                    >
-                        <template v-slot:content>
-                            <data-table
-                                :search="searchKeyWord"
-                                :headers="variableValueTableHeaders"
-                                :data="statisticsTableRow"
-                                tdBorderLeft
-                            />
-                        </template>
-                    </collapse>
-                </v-col>
-                <!-- SERVICE TABLE -->
-                <v-col cols="12" class="pa-0 mt-4">
-                    <collapse
-                        :toggleOnClick="() => (showServices = !showServices)"
-                        :isContentVisible="showServices"
-                        :title="`${$tc('services', 2)}`"
-                        :titleInfo="serviceTableRow.length"
-                        :onAddClick="() => onAdd('services')"
-                        :addBtnText="`${$t('addEntity', { entityName: $tc('services', 1) })}`"
-                    >
-                        <template v-slot:content>
-                            <data-table
-                                :search="searchKeyWord"
-                                :headers="servicesTableHeader"
-                                :data="serviceTableRow"
-                                :sortDesc="false"
-                                :noDataText="$t('noEntity', { entityName: $tc('services', 2) })"
-                                sortBy="id"
-                                :loading="loading"
-                                showActionsOnHover
-                            >
-                                <template v-slot:id="{ data: { item: { id } } }">
-                                    <router-link
-                                        :key="id"
-                                        :to="`/dashboard/services/${id}`"
-                                        class="no-underline"
-                                    >
-                                        {{ id }}
-                                    </router-link>
-                                </template>
-                                <template v-slot:state="{ data: { item: { state } } }">
-                                    <icon-sprite-sheet
-                                        size="13"
-                                        class="status-icon"
-                                        :frame="$help.serviceStateIcon(state)"
-                                    >
-                                        status
-                                    </icon-sprite-sheet>
-                                </template>
-                                <template v-slot:actions="{ data: { item } }">
-                                    <v-btn icon @click="onDelete('services', item)">
-                                        <v-icon size="20" color="error">
-                                            $vuetify.icons.unlink
-                                        </v-icon>
-                                    </v-btn>
-                                </template>
-                            </data-table>
-                        </template>
-                    </collapse>
-                </v-col>
-            </v-row>
-        </v-col>
-        <!-- Avaiable dialog for both SERVERS/FILTERS Tables -->
+    <!-- SERVICE TABLE -->
+    <v-col cols="12" class="pa-0 mt-4">
+        <collapse
+            :toggleOnClick="() => (showServices = !showServices)"
+            :isContentVisible="showServices"
+            :title="`${$tc('services', 2)}`"
+            :titleInfo="serviceTableRow.length"
+            :onAddClick="() => onAdd('services')"
+            :addBtnText="`${$t('addEntity', { entityName: $tc('services', 1) })}`"
+        >
+            <template v-slot:content>
+                <data-table
+                    :search="searchKeyWord"
+                    :headers="servicesTableHeader"
+                    :data="serviceTableRow"
+                    :sortDesc="false"
+                    :noDataText="$t('noEntity', { entityName: $tc('services', 2) })"
+                    sortBy="id"
+                    :loading="loading"
+                    showActionsOnHover
+                >
+                    <template v-slot:id="{ data: { item: { id } } }">
+                        <router-link
+                            :key="id"
+                            :to="`/dashboard/services/${id}`"
+                            class="no-underline"
+                        >
+                            {{ id }}
+                        </router-link>
+                    </template>
+                    <template v-slot:state="{ data: { item: { state } } }">
+                        <icon-sprite-sheet
+                            size="13"
+                            class="status-icon"
+                            :frame="$help.serviceStateIcon(state)"
+                        >
+                            status
+                        </icon-sprite-sheet>
+                    </template>
+                    <template v-slot:actions="{ data: { item } }">
+                        <v-btn icon @click="onDelete('services', item)">
+                            <v-icon size="20" color="error">
+                                $vuetify.icons.unlink
+                            </v-icon>
+                        </v-btn>
+                    </template>
+                </data-table>
+            </template>
+        </collapse>
+        <!-- Avaiable dialog for Service Table -->
         <confirm-dialog
             v-model="showDeleteDialog"
             :title="dialogTitle"
@@ -94,13 +71,7 @@
             @selected-items="targetItem = $event"
             @on-open="getAllEntities"
         />
-
-        <sessions-table
-            :currentServer="currentServer"
-            :loading="loading"
-            :searchKeyWord="searchKeyWord"
-        />
-    </v-row>
+    </v-col>
 </template>
 
 <script>
@@ -117,30 +88,18 @@
  * Public License.
  */
 
-import SessionsTable from './SessionsTable'
-
 export default {
-    name: 'statistics-session-tab',
-    components: {
-        SessionsTable,
-    },
+    name: 'services-table',
+
     props: {
         searchKeyWord: { type: String, required: true },
-        currentServer: { type: Object, required: true },
         serviceTableRow: { type: Array, required: true },
-        updateServerRelationship: { type: Function, required: true },
         dispatchRelationshipUpdate: { type: Function, required: true },
         loading: { type: Boolean, required: true },
         getServiceState: { type: Function, required: true },
     },
     data() {
         return {
-            //statistics
-            variableValueTableHeaders: [
-                { text: 'Variable', value: 'id', width: '65%' },
-                { text: 'Value', value: 'value', width: '35%' },
-            ],
-            showStatistics: true,
             // services
             showServices: true,
             servicesTableHeader: [
@@ -161,20 +120,6 @@ export default {
         }
     },
 
-    computed: {
-        statisticsTableRow: function() {
-            let currentServer = this.$help.lodash.cloneDeep(this.currentServer)
-
-            if (!this.$help.lodash.isEmpty(currentServer)) {
-                // Set fallback null value if properties doesnt exist
-                const { attributes: { statistics = null } = {} } = currentServer
-                const keepPrimitiveValue = false
-                let level = 0
-                return this.$help.objToArrOfObj(statistics, keepPrimitiveValue, level)
-            }
-            return []
-        },
-    },
     methods: {
         //--------------------------------------------------------- COMMON ---------------------------------------------
         // -------------- Delete handle

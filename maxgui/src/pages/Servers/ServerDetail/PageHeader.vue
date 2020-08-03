@@ -138,12 +138,11 @@
  * Public License.
  */
 
-import { mapActions } from 'vuex'
+import { mapGetters, mapActions } from 'vuex'
 
 export default {
     name: 'page-header',
     props: {
-        currentServer: { type: Object, required: true },
         onEditSucceeded: { type: Function, required: true },
     },
     data() {
@@ -158,6 +157,9 @@ export default {
         }
     },
     computed: {
+        ...mapGetters({
+            currentServer: 'server/currentServer',
+        }),
         serverHealthy: function() {
             switch (this.$help.serverStateIcon(this.currentServer.attributes.state)) {
                 case 0:

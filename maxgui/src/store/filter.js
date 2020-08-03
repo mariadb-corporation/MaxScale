@@ -26,8 +26,15 @@ export default {
     },
     actions: {
         async fetchAllFilters({ commit }) {
-            let res = await this.Vue.axios.get(`/filters`)
-            commit('setAllFilters', res.data.data)
+            try {
+                let res = await this.Vue.axios.get(`/filters`)
+                if (res.data.data) commit('setAllFilters', res.data.data)
+            } catch (e) {
+                if (process.env.NODE_ENV !== 'test') {
+                    const logger = this.Vue.Logger('store-filter-fetchAllFilters')
+                    logger.error(e)
+                }
+            }
         },
 
         /**
@@ -38,46 +45,61 @@ export default {
          * @param {Function} payload.callback callback function after successfully updated
          */
         async createFilter({ commit }, payload) {
-            const body = {
-                data: {
-                    id: payload.id,
-                    type: 'filters',
-                    attributes: {
-                        module: payload.module,
-                        parameters: payload.parameters,
+            try {
+                const body = {
+                    data: {
+                        id: payload.id,
+                        type: 'filters',
+                        attributes: {
+                            module: payload.module,
+                            parameters: payload.parameters,
+                        },
                     },
-                },
-            }
-            let res = await this.Vue.axios.post(`/filters`, body)
-            let message = [`Filter ${payload.id} is created`]
-            // response ok
-            if (res.status === 204) {
-                commit(
-                    'showMessage',
-                    {
-                        text: message,
-                        type: 'success',
-                    },
-                    { root: true }
-                )
-                if (this.Vue.prototype.$help.isFunction(payload.callback)) await payload.callback()
+                }
+                let res = await this.Vue.axios.post(`/filters`, body)
+                let message = [`Filter ${payload.id} is created`]
+                // response ok
+                if (res.status === 204) {
+                    commit(
+                        'showMessage',
+                        {
+                            text: message,
+                            type: 'success',
+                        },
+                        { root: true }
+                    )
+                    if (this.Vue.prototype.$help.isFunction(payload.callback))
+                        await payload.callback()
+                }
+            } catch (e) {
+                if (process.env.NODE_ENV !== 'test') {
+                    const logger = this.Vue.Logger('store-filter-createFilter')
+                    logger.error(e)
+                }
             }
         },
         /**
          * @param {String} object.id Name of the filter to be destroyed
          */
         async destroyFilter({ dispatch, commit }, id) {
-            let res = await this.Vue.axios.delete(`/filters/${id}?force=yes`)
-            if (res.status === 204) {
-                await dispatch('fetchAllFilters')
-                commit(
-                    'showMessage',
-                    {
-                        text: [`Filter ${id} is destroyed`],
-                        type: 'success',
-                    },
-                    { root: true }
-                )
+            try {
+                let res = await this.Vue.axios.delete(`/filters/${id}?force=yes`)
+                if (res.status === 204) {
+                    await dispatch('fetchAllFilters')
+                    commit(
+                        'showMessage',
+                        {
+                            text: [`Filter ${id} is destroyed`],
+                            type: 'success',
+                        },
+                        { root: true }
+                    )
+                }
+            } catch (e) {
+                if (process.env.NODE_ENV !== 'test') {
+                    const logger = this.Vue.Logger('store-filter-destroyFilter')
+                    logger.error(e)
+                }
             }
         },
     },

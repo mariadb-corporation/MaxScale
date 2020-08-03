@@ -16,10 +16,7 @@
 #include <maxscale/modutil.hh>
 #include <maxscale//protocol/mariadb/resultset.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
-#include <sys/types.h>
-#include <dirent.h>
-#include <sys/stat.h>
-#include <fcntl.h>
+#include <maxbase/string.hh>
 
 using std::chrono::duration_cast;
 using std::chrono::seconds;
@@ -52,63 +49,6 @@ GWBUF* create_select_master_error()
     return modutil_create_mysql_err_msg(
         1, 0, 1198, "HY000",
         "Manual master configuration is not possible when `select_master=true` is used.");
-}
-
-/**
- * @brief get_inode
- * @param file_name to check. Links are followed.
- * @return the inode of the file, or a negative number if something went wrong
- */
-int get_inode(const std::string& file_name)
-{
-    int fd = open(file_name.c_str(), O_RDONLY);
-
-    if (fd < 0)
-    {
-        return fd;
-    }
-
-    struct stat file_stat;
-    int ret = fstat (fd, &file_stat);
-    if (ret < 0)
-    {
-        close(fd);
-        return ret;
-    }
-
-    close(fd);
-    return file_stat.st_ino;
-}
-
-/**
- * @brief get_open_inodes
- * @return return a vector of inodes of the files the program currently has open
- */
-std::vector<int> get_open_inodes()
-{
-    std::vector<int> vec;
-    const std::string proc_fd_dir = "/proc/self/fd";
-
-    DIR* dir;
-    struct dirent* ent;
-    if ((dir = opendir(proc_fd_dir.c_str())) != nullptr)
-    {
-        while ((ent = readdir (dir)) != nullptr)
-        {
-            if (ent->d_type == DT_LNK)
-            {
-                vec.push_back(get_inode(proc_fd_dir + '/' + ent->d_name));
-            }
-        }
-        closedir (dir);
-    }
-    else
-    {
-        MXB_SERROR("Could not open directory " << proc_fd_dir);
-        mxb_assert(!true);
-    }
-
-    return vec;
 }
 }
 
@@ -505,38 +445,24 @@ void PinlokiSession::master_gtid_wait(const std::string& gtid, int timeout)
 
 void PinlokiSession::purge_logs(const std::string& up_to)
 {
-    auto files = m_router->inventory()->file_names();
-    auto it = std::find(files.begin(), files.end(), m_router->config().path(up_to));
-
-    GWBUF* buf = nullptr;
-    if (it == files.end())
+    switch (purge_binlogs(m_router->inventory(), up_to))
     {
-        buf = modutil_create_mysql_err_msg(1, 0, 1373, "HY000",
-                                           "Target log not found in binlog index");
+    case PurgeResult::Ok:
+        send(modutil_create_ok());
+        break;
+
+    case PurgeResult::PartialPurge:
+        MXB_SINFO("Could not purge all requested binlogs");
+        send(modutil_create_ok());
+        break;
+
+    case PurgeResult::UpToFileNotFound:
+        auto buf = modutil_create_mysql_err_msg(1, 0, 1373, "HY000",
+                                                MAKE_STR("Target log "
+                                                         << up_to
+                                                         << " not found in binlog index").c_str());
+        send(buf);
     }
-    else
-    {
-        auto open_inodes = get_open_inodes();
-        std::sort(begin(open_inodes), end(open_inodes));
-
-        for (auto start = files.begin(); start != it; start++)
-        {
-            auto inode = get_inode(*start);
-
-            if (std::binary_search(begin(open_inodes), end(open_inodes), inode))
-            {
-                MXB_SINFO("Binlog purge stopped at open file " << *start);
-                break;
-            }
-
-            m_router->inventory()->remove(*start);
-            remove(start->c_str());
-        }
-
-        buf = modutil_create_ok();
-    }
-
-    send(buf);
 }
 
 void PinlokiSession::error(const std::string& err)
