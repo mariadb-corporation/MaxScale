@@ -120,8 +120,6 @@ export default {
     },
 
     methods: {
-        //--------------------------------------------------------- COMMON ---------------------------------------------
-
         // -------------- Delete handle
         onDelete(type, item) {
             this.targetItem = item

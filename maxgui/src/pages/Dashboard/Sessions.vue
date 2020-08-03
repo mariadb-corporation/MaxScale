@@ -102,13 +102,5 @@ export default {
             return []
         },
     },
-
-    methods: {
-        serviceStateIcon(monitorState) {
-            if (monitorState.includes('Started')) return 2
-            if (monitorState.includes('Stopped')) return 0
-            else return ''
-        },
-    },
 }
 </script>

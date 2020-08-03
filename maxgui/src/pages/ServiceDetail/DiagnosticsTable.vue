@@ -46,7 +46,7 @@ export default {
             // diagnostics table
             variableValueTableHeaders: [
                 { text: 'Variable', value: 'id', width: '65%' },
-                { text: 'Value', value: 'value', width: '35%', editableCol: true },
+                { text: 'Value', value: 'value', width: '35%' },
             ],
             showRouterDiagnostics: true,
         }

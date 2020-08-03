@@ -45,14 +45,13 @@ export default {
             showMonitorDiagnostics: true,
             variableValueTableHeaders: [
                 { text: 'Variable', value: 'id', width: '65%' },
-                { text: 'Value', value: 'value', width: '35%', editableCol: true },
+                { text: 'Value', value: 'value', width: '35%' },
             ],
         }
     },
     computed: {
         ...mapGetters({
             searchKeyWord: 'searchKeyWord',
-            currentServer: 'server/currentServer',
             currentMonitorDiagnostics: 'monitor/currentMonitorDiagnostics',
         }),
 
@@ -69,7 +68,7 @@ export default {
                 } = this.currentMonitorDiagnostics
                 const self = this
                 let monitorDiagnosticsObj = server_info.find(
-                    server => server.name === self.currentServer.id
+                    server => server.name === self.$route.params.id
                 )
                 let level = 0
                 const keepPrimitiveValue = false

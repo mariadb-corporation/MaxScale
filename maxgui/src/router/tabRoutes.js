@@ -10,9 +10,11 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-const Servers = () => import(/* webpackChunkName: "tab-routes-servers" */ 'pages/Servers')
-const Services = () => import(/* webpackChunkName: "tab-routes-services" */ 'pages/Services')
-const Sessions = () => import(/* webpackChunkName: "tab-routes-sessions" */ 'pages/Sessions')
+const Servers = () => import(/* webpackChunkName: "tab-routes-servers" */ 'pages/Dashboard/Servers')
+const Services = () =>
+    import(/* webpackChunkName: "tab-routes-services" */ 'pages/Dashboard/Services')
+const Sessions = () =>
+    import(/* webpackChunkName: "tab-routes-sessions" */ 'pages/Dashboard/Sessions')
 
 export default [
     // Tab Routes
