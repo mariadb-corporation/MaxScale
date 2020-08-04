@@ -336,14 +336,20 @@ int Nodes::read_basic_env()
             setenv(env_name, hostname[i], 1);
 
             sprintf(env_name, "%s_%03d_start_vm_command", prefix, i);
-            start_vm_command[i] = readenv(env_name, "curr_dir=`pwd`; cd %s/%s;vagrant resume %s_%03d ; cd $curr_dir",
-                                          getenv("MDBCI_VM_PATH"), getenv("name"), prefix, i);
-            setenv(env_name, start_vm_command[i], 1);
+            string start_vm_def = mxb::string_printf("curr_dir=`pwd`; "
+                                                     "cd %s/%s;vagrant resume %s_%03d ; "
+                                                     "cd $curr_dir",
+                                                     getenv("MDBCI_VM_PATH"), getenv("name"), prefix, i);
+            m_start_vm_command[i] = envvar_get_set(env_name, "%s", start_vm_def.c_str());
+            setenv(env_name, m_start_vm_command[i].c_str(), 1);
 
             sprintf(env_name, "%s_%03d_stop_vm_command", prefix, i);
-            stop_vm_command[i] = readenv(env_name, "curr_dir=`pwd`; cd %s/%s;vagrant suspend %s_%03d ; cd $curr_dir",
-                                         getenv("MDBCI_VM_PATH"), getenv("name"), prefix, i);
-            setenv(env_name, stop_vm_command[i], 1);
+            string stop_vm_def = mxb::string_printf("curr_dir=`pwd`; "
+                                                    "cd %s/%s;vagrant suspend %s_%03d ; "
+                                                    "cd $curr_dir",
+                                                    getenv("MDBCI_VM_PATH"), getenv("name"), prefix, i);
+            m_stop_vm_command[i] = envvar_get_set(env_name, "%s", stop_vm_def.c_str());
+            setenv(env_name, m_stop_vm_command[i].c_str(), 1);
         }
     }
 
@@ -399,12 +405,12 @@ int Nodes::get_N()
 
 int Nodes::start_vm(int node)
 {
-    return (system(start_vm_command[node]));
+    return (system(m_start_vm_command[node].c_str()));
 }
 
 int Nodes::stop_vm(int node)
 {
-    return (system(stop_vm_command[node]));
+    return (system(m_stop_vm_command[node].c_str()));
 }
 
 Nodes::SshResult Nodes::ssh_output(const std::string& cmd, int node, bool sudo)
