@@ -27,7 +27,10 @@ then
        libssl-dev mariadb-client php perl \
        coreutils libjansson-dev zlib1g-dev \
        libsqlite3-dev libcurl4-gnutls-dev \
-       mariadb-test python python-pip cmake libpam0g-dev
+       mariadb-test python python-pip cmake libpam0g-dev \
+       libatomic1 \
+       libsasl2-dev libxml2-dev
+
   ## separate libgnutls installation process for Ubuntu Trusty
   cat /etc/*release | grep -E "Trusty|wheezy"
   if [ $? == 0 ]
@@ -77,7 +80,9 @@ EOL
                  php perl coreutils libjansson-devel python python-pip \
                  cmake pam-devel openssl-devel python-devel libjansson-devel \
                  sqlite3 sqlite3-devel libcurl-devel \
-                 gnutls-devel
+                 gnutls-devel \
+                 libatomic1 \
+                 cyrus-sasl-devel libxml2-devel
     sudo zypper -n install java-1_8_0-openjdk
     sudo zypper -n install php-mysql
   else
@@ -98,7 +103,9 @@ EOL
                  php perl coreutils python python-pip \
                  cmake pam-devel python-devel jansson-devel \
                  sqlite sqlite-devel libcurl-devel \
-                 gnutls-devel
+                 gnutls-devel \
+                 libatomic \
+                 cyrus-sasl-devel libxml2-devel
     sudo yum install -y --nogpgcheck java-1.8.0-openjdk
     sudo yum install -y --nogpgcheck centos-release-scl
     sudo yum install -y --nogpgcheck devtoolset-7-gcc*
