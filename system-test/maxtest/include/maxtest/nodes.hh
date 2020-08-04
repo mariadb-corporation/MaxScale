@@ -24,6 +24,7 @@ public:
      * @return True, if the instance could be setup, false otherwise.
      */
     virtual bool setup() = 0;
+    const char* ip_private(int i = 0) const;
 
     char * IP[256];
     /**
@@ -35,12 +36,6 @@ public:
      * @brief  IP address strings for every backend node (IPv6)
      */
     char * IP6[256];
-
-    /**
-     * @brief use_ipv6 If true IPv6 addresses will be used to connect Maxscale and backed
-     * Also IPv6 addresses go to maxscale.cnf
-     */
-    bool use_ipv6 = false;
 
     /**
      * @brief  Path to ssh key for every backend node
@@ -109,6 +104,8 @@ public:
      * @return The current IP address
      */
     const char* ip(int i = 0) const;
+
+    bool using_ipv6() const;
 
     /**
      * Generate the command line to execute a given command on the node via ssh.
@@ -198,6 +195,8 @@ public:
     int stop_vm(int node);
 
 protected:
+    bool use_ipv6 {false}; /**< Default to ipv6-addresses */
+
     Nodes(const char* pref,
           const std::string& network_config,
           bool verbose);

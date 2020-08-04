@@ -124,8 +124,9 @@ MariaDBClientAuthenticator::exchange(GWBUF* buf, MYSQL_session* session, mxs::Bu
     {
     case State::INIT:
         // First, check that session is using correct plugin. The handshake response has already been
-        // parsed in protocol code.
-        if (client_data->plugin == DEFAULT_MYSQL_AUTH_PLUGIN)
+        // parsed in protocol code. Some old clients may send an empty plugin name. If so, assume
+        // that they are using "mysql_native_password". If this is not the case, authentication will fail.
+        if (client_data->plugin == DEFAULT_MYSQL_AUTH_PLUGIN || client_data->plugin.empty())
         {
             // Correct plugin, token should have been read by protocol code.
             m_state = State::CHECK_TOKEN;

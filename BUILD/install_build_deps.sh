@@ -65,10 +65,10 @@ then
   sudo apt-get update
 
   sudo dpkg-reconfigure libc6
-  sudo -E apt-get -q -o Dpkg::Options::=--force-confold \
+  apt_cmd="sudo -E apt-get -q -o Dpkg::Options::=--force-confold \
        -o Dpkg::Options::=--force-confdef \
-       -y --force-yes \
-       install dpkg-dev git wget \
+       -y --force-yes"
+  ${apt_cmd} install dpkg-dev git wget \
        build-essential libssl-dev ncurses-dev bison flex \
        perl libtool libpcre3-dev tcl tcl-dev uuid \
        uuid-dev libsqlite3-dev liblzma-dev libpam0g-dev pkg-config \
@@ -76,24 +76,24 @@ then
        libsasl2-dev libxml2-dev
 
   # One of these will work, older systems use libsystemd-daemon-dev
-  sudo apt-get install -y libsystemd-dev || \
-      sudo apt-get install -y libsystemd-daemon-dev
+  ${apt_cmd} install libsystemd-dev || \
+      ${apt_cmd} install libsystemd-daemon-dev
 
-  ## separatelibgnutls installation process for Ubuntu Trusty
+   ## separate libgnutls installation process for Ubuntu Trusty
   cat /etc/*release | grep -E "Trusty|wheezy"
   if [ $? == 0 ]
   then
-     sudo apt-get install -y --force-yes libgnutls-dev libgcrypt11-dev
+     ${apt_cmd} install libgnutls-dev libgcrypt11-dev
   else
-     sudo apt-get install -y --force-yes libgnutls30 libgnutls-dev
+     ${apt_cmd} install libgnutls30 libgnutls-dev
      if [ $? != 0 ]
      then
-         sudo apt-get install -y --force-yes libgnutls28-dev
+         ${apt_cmd} install libgnutls28-dev
      fi
-     sudo apt-get install -y --force-yes libgcrypt20-dev
+     ${apt_cmd} install libgcrypt20-dev
      if [ $? != 0 ]
      then
-         sudo apt-get install -y --force-yes libgcrypt11-dev
+         ${apt_cmd} install libgcrypt11-dev
      fi
   fi
 fi

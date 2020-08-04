@@ -57,15 +57,6 @@ vector<char> CacheKey::to_vector() const
     return rv;
 }
 
-bool CacheKey::eq(const CacheKey& that) const
-{
-    return
-        this->full_hash == that.full_hash
-        && this->data_hash == that.data_hash
-        && this->user == that.user
-        && this->host == that.host;
-}
-
 bool Storage::split_arguments(const std::string& argument_string,
                               map<std::string, std::string>* pArguments)
 {

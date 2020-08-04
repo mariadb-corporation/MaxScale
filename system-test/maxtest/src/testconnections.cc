@@ -368,7 +368,7 @@ TestConnections::TestConnections(int argc, char* argv[])
     {
         repl = new Mariadb_nodes("node", test_dir, verbose, m_network_config);
         repl->setup();
-        repl->use_ipv6 = m_use_ipv6;
+        repl->set_use_ipv6(m_use_ipv6);
         repl->take_snapshot_command = m_take_snapshot_command.c_str();
         repl->revert_snapshot_command = m_revert_snapshot_command.c_str();
         repl_future = std::async(std::launch::async, &Mariadb_nodes::check_nodes, repl);
@@ -382,7 +382,7 @@ TestConnections::TestConnections(int argc, char* argv[])
     {
         galera = new Galera_nodes("galera", test_dir, verbose, m_network_config);
         galera->setup();
-        galera->use_ipv6 = false;
+        galera->set_use_ipv6(false);
         galera->take_snapshot_command = m_take_snapshot_command.c_str();
         galera->revert_snapshot_command = m_revert_snapshot_command.c_str();
         galera_future = std::async(std::launch::async, &Galera_nodes::check_nodes, galera);
@@ -396,7 +396,7 @@ TestConnections::TestConnections(int argc, char* argv[])
     {
         clustrix = new Clustrix_nodes("clustrix", test_dir, verbose, m_network_config);
         clustrix->setup();
-        clustrix->use_ipv6 = false;
+        clustrix->set_use_ipv6(false);
         clustrix->take_snapshot_command = m_take_snapshot_command.c_str();
         clustrix->revert_snapshot_command = m_revert_snapshot_command.c_str();
         clustrix->fix_replication();
@@ -447,7 +447,7 @@ TestConnections::TestConnections(int argc, char* argv[])
     }
 
 
-    maxscales->use_ipv6 = m_use_ipv6;
+    maxscales->set_use_ipv6(m_use_ipv6);
     maxscales->ssl = ssl;
 
     // Stop MaxScale to prevent it from interfering with the replication setup process
@@ -817,7 +817,7 @@ void TestConnections::process_template(int m, const string& cnf_template_path, c
     system(str);
 
     Mariadb_nodes* mdn[3];
-    char* IPcnf;
+    const char* IPcnf;
     mdn[0] = repl;
     mdn[1] = galera;
     mdn[2] = clustrix;
@@ -830,13 +830,13 @@ void TestConnections::process_template(int m, const string& cnf_template_path, c
         {
             for (i = 0; i < mdn[j]->N; i++)
             {
-                if (mdn[j]->use_ipv6)
+                if (mdn[j]->using_ipv6())
                 {
                     IPcnf = mdn[j]->IP6[i];
                 }
                 else
                 {
-                    IPcnf = mdn[j]->IP_private[i];
+                    IPcnf = mdn[j]->ip_private(i);
                 }
                 sprintf(str, "sed -i \"s/###%s_server_IP_%0d###/%s/\" maxscale.cnf",
                         mdn[j]->prefix, i + 1, IPcnf);
@@ -1219,7 +1219,7 @@ int TestConnections::start_binlog(int m)
         try_query(repl->nodes[1], "SET @@global.gtid_slave_pos=''");
         sprintf(sys1,
                 "CHANGE MASTER TO MASTER_HOST='%s', MASTER_PORT=%d, MASTER_USER='repl', MASTER_PASSWORD='repl', MASTER_USE_GTID=Slave_pos",
-                repl->IP_private[0],
+                repl->ip_private(0),
                 repl->port[0]);
         try_query(repl->nodes[1], "%s", sys1);
         try_query(repl->nodes[1], "start slave");
@@ -1237,7 +1237,7 @@ int TestConnections::start_binlog(int m)
         // repl->no_set_pos = true;
         repl->no_set_pos = false;
         tprintf("Configure first backend slave node to be slave of real master\n");
-        repl->set_slave(repl->nodes[1], repl->IP_private[0], repl->port[0], log_file, log_pos);
+        repl->set_slave(repl->nodes[1], repl->ip_private(0), repl->port[0], log_file, log_pos);
     }
 
     if (!m_local_maxscale)
@@ -1264,7 +1264,7 @@ int TestConnections::start_binlog(int m)
         try_query(binlog, "SET @@global.gtid_slave_pos=''");
         sprintf(sys1,
                 "CHANGE MASTER TO MASTER_HOST='%s', MASTER_PORT=%d, MASTER_USER='repl', MASTER_PASSWORD='repl', MASTER_USE_GTID=Slave_pos",
-                repl->IP_private[0],
+                repl->ip_private(0),
                 repl->port[0]);
         try_query(binlog, "%s", sys1);
     }
@@ -1272,7 +1272,7 @@ int TestConnections::start_binlog(int m)
     {
         repl->no_set_pos = true;
         tprintf("configuring Maxscale binlog router\n");
-        repl->set_slave(binlog, repl->IP_private[0], repl->port[0], log_file, log_pos);
+        repl->set_slave(binlog, repl->ip_private(0), repl->port[0], log_file, log_pos);
     }
     // ssl between binlog router and Master
     if (backend_ssl)
@@ -1299,7 +1299,7 @@ int TestConnections::start_binlog(int m)
             try_query(repl->nodes[i], "SET @@global.gtid_slave_pos=''");
             sprintf(sys1,
                     "CHANGE MASTER TO MASTER_HOST='%s', MASTER_PORT=%d, MASTER_USER='repl', MASTER_PASSWORD='repl', MASTER_USE_GTID=Slave_pos",
-                    maxscales->IP_private[m],
+                    maxscales->ip_private(m),
                     maxscales->binlog_port[m]);
             try_query(repl->nodes[i], "%s", sys1);
             try_query(repl->nodes[i], "start slave");
@@ -1322,7 +1322,7 @@ int TestConnections::start_binlog(int m)
         for (i = 2; i < repl->N; i++)
         {
             try_query(repl->nodes[i], "stop slave");
-            repl->set_slave(repl->nodes[i], maxscales->IP_private[m], maxscales->binlog_port[m],
+            repl->set_slave(repl->nodes[i], maxscales->ip_private(m), maxscales->binlog_port[m],
                             log_file, log_pos);
         }
     }
@@ -1363,7 +1363,7 @@ bool TestConnections::replicate_from_master(int m)
     conn = open_conn_no_db(maxscales->binlog_port[m], maxscales->IP[m], repl->user_name, repl->password, ssl);
 
     if (find_field(repl->nodes[0], "show master status", "File", log_file)
-        || repl->set_slave(conn, repl->IP_private[0], repl->port[0], log_file, log_pos)
+        || repl->set_slave(conn, repl->ip_private(0), repl->port[0], log_file, log_pos)
         || execute_query(conn, "start slave"))
     {
         rval = false;
@@ -1384,7 +1384,7 @@ void TestConnections::revert_replicate_from_master()
 
     for (int i = 1; i < repl->N; i++)
     {
-        repl->set_slave(repl->nodes[i], repl->IP_private[0], repl->port[0], log_file, (char*)"4");
+        repl->set_slave(repl->nodes[i], repl->ip_private(0), repl->port[0], log_file, (char*)"4");
         execute_query(repl->nodes[i], "start slave");
     }
 }
@@ -1424,8 +1424,8 @@ int TestConnections::start_mm(int m)
     find_field(repl->nodes[1], (char*) "show master status", (char*) "File", log_file2);
     find_field(repl->nodes[1], (char*) "show master status", (char*) "Position", log_pos2);
 
-    repl->set_slave(repl->nodes[0], repl->IP_private[1], repl->port[1], log_file2, log_pos2);
-    repl->set_slave(repl->nodes[1], repl->IP_private[0], repl->port[0], log_file1, log_pos1);
+    repl->set_slave(repl->nodes[0], repl->ip_private(1), repl->port[1], log_file2, log_pos2);
+    repl->set_slave(repl->nodes[1], repl->ip_private(0), repl->port[0], log_file1, log_pos1);
 
     repl->close_connections();
 

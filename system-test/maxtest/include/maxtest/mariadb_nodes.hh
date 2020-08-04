@@ -40,6 +40,11 @@ public:
 
     virtual ~Mariadb_nodes();
 
+    void set_use_ipv6(bool use_ipv6);
+
+    const char* ip(int i = 0) const;
+    const char* ip_private(int i = 0) const;
+
     /**
      * @brief  MYSQL structs for every backend node
      */
@@ -335,7 +340,8 @@ public:
      * @param log_pos initial position
      * @return 0 if everything is ok
      */
-    int set_slave(MYSQL* conn, char master_host[], int master_port, char log_file[], char log_pos[]);
+    int set_slave(MYSQL* conn, const char* master_host, int master_port,
+                  const char* log_file, const char* log_pos);
 
     /**
      * @brief Creates 'repl' user on all nodes
@@ -540,6 +546,7 @@ public:
     std::string cnf_server_name;
 
 private:
+    bool m_use_ipv6 {false}; /**< Default to ipv6-addresses */
 
     bool check_master_node(MYSQL* conn);
     bool bad_slave_thread_status(MYSQL* conn, const char* field, int node);

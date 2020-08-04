@@ -257,7 +257,7 @@ int Mariadb_nodes::find_master()
         i = 0;
         while ((found == 0) && (i < N))
         {
-            if (strcmp(IP_private[i], master_IP) == 0)
+            if (strcmp(ip_private(i), master_IP) == 0)
             {
                 found = 1;
                 master_node = i;
@@ -295,7 +295,7 @@ void Mariadb_nodes::change_master(int NewMaster, int OldMaster)
         if (i != NewMaster && mysql_ping(nodes[i]) == 0)
         {
             char str[1024];
-            sprintf(str, setup_slave, IP_private[NewMaster], log_file, log_pos, port[NewMaster]);
+            sprintf(str, setup_slave, ip_private(NewMaster), log_file, log_pos, port[NewMaster]);
             execute_query(nodes[i], "%s", str);
         }
     }
@@ -440,7 +440,7 @@ int Mariadb_nodes::start_replication()
                           "MASTER_HOST='%s', MASTER_PORT=%d, "
                           "MASTER_USER='repl', MASTER_PASSWORD='repl', "
                           "%s",
-                          IP_private[0],
+                          ip_private(0),
                           port[0],
                           g_require_gtid ?
                           "MASTER_USE_GTID=slave_pos" :
@@ -465,7 +465,7 @@ int Galera_nodes::start_galera()
 
     for (int i = 0; i < N; i++)
     {
-        ss << (i == 0 ? "" : ",") << IP_private[i];
+        ss << (i == 0 ? "" : ",") << ip_private(i);
     }
 
     auto gcomm = ss.str();
@@ -485,7 +485,7 @@ int Galera_nodes::start_galera()
                    true,
                    "sed -i 's/###NODE-ADDRESS###/%s/' /etc/my.cnf.d/* /etc/mysql/my.cnf.d/*;"
                    "sed -i \"s|###GALERA-LIB-PATH###|$(ls /usr/lib*/galera*/*.so)|g\" /etc/my.cnf.d/* /etc/mysql/my.cnf.d/*",
-                   IP_private[i]);
+                   ip_private(i));
     }
 
     printf("Starting new Galera cluster\n");
@@ -968,11 +968,8 @@ int Galera_nodes::check_galera()
     return res;
 }
 
-int Mariadb_nodes::set_slave(MYSQL* conn,
-                             char   master_host[],
-                             int master_port,
-                             char log_file[],
-                             char log_pos[])
+int Mariadb_nodes::set_slave(MYSQL* conn, const char* master_host, int master_port,
+                             const char* log_file, const char* log_pos)
 {
     char str[1024];
 
@@ -1571,7 +1568,7 @@ int Mariadb_nodes::prepare_servers()
 
 void Mariadb_nodes::replicate_from(int slave, int master, const char* type)
 {
-    replicate_from(slave, IP_private[master], port[master], type);
+    replicate_from(slave, ip_private(master), port[master], type);
 }
 
 void Mariadb_nodes::replicate_from(int slave, const std::string& host, uint16_t port, const char* type)
@@ -1614,7 +1611,7 @@ std::string Mariadb_nodes::cnf_servers()
                 cnf_server_name +
                 std::to_string(i + 1) +
                 std::string("]\\ntype=server\\naddress=") +
-                std::string(IP_private[i]) +
+                std::string(ip_private(i)) +
                 std::string("\\nport=") +
                 std::to_string(port[i]) +
                 std::string("\\nprotocol=MySQLBackend\\n");
@@ -1632,4 +1629,20 @@ std::string Mariadb_nodes::cnf_servers_line()
                 std::to_string(i + 1);
     }
     return s;
+}
+
+const char* Mariadb_nodes::ip(int i) const
+{
+    return m_use_ipv6 ? IP6[i] : IP[i];
+}
+
+void Mariadb_nodes::set_use_ipv6(bool use_ipv6)
+{
+    m_use_ipv6 = use_ipv6;
+    this->use_ipv6 = use_ipv6;
+}
+
+const char* Mariadb_nodes::ip_private(int i) const
+{
+    return Nodes::ip_private(i);
 }

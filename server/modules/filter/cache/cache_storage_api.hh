@@ -94,7 +94,14 @@ public:
      *
      * @return True, if @c this is equal to @c that.
      */
-    bool eq(const CacheKey& that) const;
+    bool eq(const CacheKey& that) const
+    {
+        return
+            this->full_hash == that.full_hash
+            && this->data_hash == that.data_hash
+            && this->user == that.user
+            && this->host == that.host;
+    }
 
     /**
      * @return Human readable version of the key.
