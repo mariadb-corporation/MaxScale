@@ -832,7 +832,7 @@ void TestConnections::process_template(int m, const string& cnf_template_path, c
             {
                 if (mdn[j]->using_ipv6())
                 {
-                    IPcnf = mdn[j]->IP6[i];
+                    IPcnf = mdn[j]->ip6(i);
                 }
                 else
                 {

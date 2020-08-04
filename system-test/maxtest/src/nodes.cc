@@ -300,12 +300,13 @@ int Nodes::read_basic_env()
 
             // reading IPv6
             sprintf(env_name, "%s_%03d_network6", prefix, i);
-            IP6[i] = strdup(get_nc_item(env_name).c_str());
-            if (IP6[i] == NULL)
+            auto& ip6 = m_ip6[i];
+            ip6 = get_nc_item(env_name);
+            if (ip6.empty())
             {
-                IP6[i] = IP[i];
+                ip6 = IP[i];
             }
-            setenv(env_name, IP6[i], 1);
+            setenv(env_name, ip6.c_str(), 1);
 
             //reading sshkey
             sprintf(env_name, "%s_%03d_keyfile", prefix, i);
@@ -358,7 +359,7 @@ int Nodes::read_basic_env()
 
 const char* Nodes::ip(int i) const
 {
-    return use_ipv6 ?  IP6[i] : IP[i];
+    return use_ipv6 ? m_ip6[i].c_str() : IP[i];
 }
 
 std::string Nodes::get_nc_item(const char* item_name)
@@ -449,4 +450,9 @@ bool Nodes::using_ipv6() const
 const char* Nodes::ip_private(int i) const
 {
     return m_ip_private[i].c_str();
+}
+
+const char* Nodes::ip6(int i) const
+{
+    return m_ip6[i].c_str();
 }

@@ -24,14 +24,11 @@ public:
      * @return True, if the instance could be setup, false otherwise.
      */
     virtual bool setup() = 0;
+
     const char* ip_private(int i = 0) const;
+    const char* ip6(int i = 0) const;
 
     char * IP[256];
-
-    /**
-     * @brief  IP address strings for every backend node (IPv6)
-     */
-    char * IP6[256];
 
     /**
      * @brief  Path to ssh key for every backend node
@@ -203,6 +200,7 @@ private:
     static constexpr int max_nodes {30};
 
     std::string m_ip_private[max_nodes] {}; /**< Private IP addresses for every backend node (for AWS) */
+    std::string m_ip6[max_nodes] {};        /**< IPv6-addresses for every backend node */
 
     bool check_node_ssh(int node);
 
