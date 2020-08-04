@@ -30,7 +30,6 @@ const char CSMON_CONFIG_GET_DESC[]  = "Get Columnstore cluster [or server] confi
 const char CSMON_CONFIG_SET_DESC[]  = "Set Columnstore cluster [or server] config.";
 const char CSMON_MODE_SET_DESC[]    = "Set Columnstore cluster mode.";
 const char CSMON_REMOVE_NODE_DESC[] = "Remove a node from a Columnstore cluster.";
-const char CSMON_SCAN_DESC[]        = "Scan Columnstore cluster [or server].";
 const char CSMON_SHUTDOWN_DESC[]    = "Shutdown Columnstore cluster [or server].";
 const char CSMON_START_DESC[]       = "Start Columnstore cluster [or server].";
 const char CSMON_STATUS_DESC[]      = "Get Columnstore cluster [or server] status.";
@@ -70,13 +69,6 @@ const modulecmd_arg_type_t csmon_remove_node_argv[] =
     { MODULECMD_ARG_SERVER, "Server to remove from Columnstore cluster" },
     { MODULECMD_ARG_STRING, "Timeout." },
     { MODULECMD_ARG_BOOLEAN, "Whether force should be in effect or not" }
-};
-
-const modulecmd_arg_type_t csmon_scan_argv[] =
-{
-    { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC },
-    { MODULECMD_ARG_SERVER, "Server to scan" },
-    { MODULECMD_ARG_STRING, "Timeout." }
 };
 
 const modulecmd_arg_type_t csmon_shutdown_argv[] =
@@ -450,27 +442,6 @@ bool csmon_remove_node(const MODULECMD_ARG* pArgs, json_t** ppOutput)
     return rv;
 }
 
-bool csmon_scan(const MODULECMD_ARG* pArgs, json_t** ppOutput)
-{
-    CsMonitor* pMonitor;
-    CsMonitorServer* pServer;
-    const char* zTimeout;
-
-    bool rv = get_args(pArgs, ppOutput, &pMonitor, &pServer, &zTimeout);
-
-    if (rv)
-    {
-        std::chrono::seconds timeout(0);
-
-        if (get_timeout(zTimeout, &timeout, ppOutput))
-        {
-            CALL_IF_CS_15(pMonitor->command_scan(ppOutput, pServer, timeout));
-        }
-    }
-
-    return rv;
-}
-
 bool csmon_shutdown(const MODULECMD_ARG* pArgs, json_t** ppOutput)
 {
     CsMonitor* pMonitor;
@@ -653,11 +624,6 @@ void register_commands()
                                csmon_remove_node,
                                MXS_ARRAY_NELEMS(csmon_remove_node_argv), csmon_remove_node_argv,
                                CSMON_REMOVE_NODE_DESC);
-
-    modulecmd_register_command(MXS_MODULE_NAME, "scan", MODULECMD_TYPE_ACTIVE,
-                               csmon_scan,
-                               MXS_ARRAY_NELEMS(csmon_scan_argv), csmon_scan_argv,
-                               CSMON_SCAN_DESC);
 #endif
 
 #if defined(CSMON_EXPOSE_TRANSACTIONS)

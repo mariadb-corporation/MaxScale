@@ -46,9 +46,6 @@ void print_usage_and_exit()
          << "reset\n"
          << "    Convert multi-node config to single-node config.\n"
          << "\n"
-         << "scan\n"
-         << "    Scan DB roots\n"
-         << "\n"
          << "update_if xpath-expr new_value [if_value]\n"
          << "    Update value at path, optionally only if existing value matches specified value\n"
          << "\n"
@@ -124,45 +121,6 @@ bool reset(xmlDoc& csDoc, int argc, char* argv[])
     return true;
 }
 
-bool scan(xmlDoc& csDoc, int argc, char* argv[])
-{
-    if (argc < 2)
-    {
-        print_usage_and_exit();
-    }
-
-    const char* zAddress = argv[0];
-    int nRoots = atoi(argv[1]);
-
-    vector<int> dbroots;
-
-    for (auto i = 1; i <= nRoots; ++i)
-    {
-        dbroots.push_back(i);
-    }
-
-    json_t* pOutput = json_object();
-
-    switch (xml::update_dbroots(csDoc, zAddress, dbroots, pOutput))
-    {
-    case xml::DbRoots::NO_CHANGE:
-        cout << "success: No change in dbroots." << endl;
-        break;
-
-    case xml::DbRoots::UPDATED:
-        cout << "success: dbroots updated." << endl;
-        break;
-
-    case xml::DbRoots::ERROR:
-        cout << "error: Could not update dbroots." << endl;
-        break;
-    }
-
-    json_decref(pOutput);
-
-    return true;
-}
-
 bool update_if(xmlDoc& csDoc, int argc, char* argv[])
 {
     if (argc < 2)
@@ -215,7 +173,6 @@ map<string, bool (*)(xmlDoc&, int, char**)> commands =
     { "insert_e", &insert_e },
     { "remove", &remove },
     { "reset", &reset },
-    { "scan", &scan },
     { "update_if", &update_if },
     { "update_if_not", &update_if_not },
     { "upsert", &upsert }

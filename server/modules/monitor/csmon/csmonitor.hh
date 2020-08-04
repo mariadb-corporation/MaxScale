@@ -65,7 +65,6 @@ public:
     bool command_mode_set(json_t** ppOutput, const char* zEnum, const std::chrono::seconds& timeout);
     bool command_remove_node(json_t** ppOutput,
                              CsMonitorServer* pServer, const std::chrono::seconds& timeout, bool force);
-    bool command_scan(json_t** ppOutput, CsMonitorServer* pServer, const std::chrono::seconds& timeout);
     bool command_shutdown(json_t** ppOutput, const std::chrono::seconds& timeout);
     bool command_start(json_t** ppOutput, const std::chrono::seconds& timeout);
     bool command_status(json_t** ppOutput, CsMonitorServer* pServer);
@@ -92,9 +91,6 @@ private:
                      cs::ClusterMode mode, const std::chrono::seconds& timeout);
     void cs_remove_node(json_t** ppOutput, mxb::Semaphore* pSem,
                         CsMonitorServer* pServer, const std::chrono::seconds& timeout, bool force);
-    void cs_scan(json_t** ppOutput, mxb::Semaphore* pSem,
-                 CsMonitorServer* pServer,
-                 const std::chrono::seconds& timeout);
     void cs_shutdown(json_t** ppOutput, mxb::Semaphore* pSem, const std::chrono::seconds& timeout);
     void cs_start(json_t** ppOutput, mxb::Semaphore* pSem,  const std::chrono::seconds& timeout);
     void cs_status(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer* pServer);
