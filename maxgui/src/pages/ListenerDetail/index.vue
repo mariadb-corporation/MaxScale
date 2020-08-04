@@ -69,12 +69,16 @@ export default {
 
     async created() {
         await this.fetchListenerById(this.$route.params.id)
-        await this.serviceTableRowProcessing()
+        /*  wait until get currentListener to fetch service state
+            and module parameters
+        */
         const {
-            attributes: {
-                parameters: { protocol },
-            },
+            attributes: { parameters: { protocol = null } = {} } = {},
+            relationships: { services: { data: servicesData = [] } = {} } = {},
         } = this.currentListener
+
+        await this.serviceTableRowProcessing(servicesData)
+
         if (protocol) await this.fetchModuleParameters(protocol)
         this.loadingModuleParams = true
         await this.processModuleParameters()
@@ -95,42 +99,24 @@ export default {
             }
         },
 
-        async serviceTableRowProcessing() {
-            const {
-                relationships: { services: { data: servicesData = [] } = {} } = {},
-            } = this.currentListener
-
-            if (servicesData.length) {
-                let servicesIds = servicesData.map(item => `${item.id}`)
-                let arr = []
-                servicesIds.forEach(async servicesId => {
-                    let data = await this.getServicesState(servicesId)
-                    const {
-                        id,
-                        type,
-                        attributes: { state },
-                    } = data
-                    arr.push({ id: id, state: state, type: type })
-                })
-                this.serviceTableRow = arr
-            } else {
-                this.serviceTableRow = []
-            }
-        },
-
         /**
-         * This function fetch all services state, if serviceId is provided,
-         * otherwise it fetch service state of a service
-         * @param {String} serviceId name of the service
-         * @return {Array} Service state data
+         * This function loops through services data to get services state based on
+         * service id
+         * @param {Array} servicesData name of the service
          */
-        async getServicesState(serviceId) {
-            const data = await this.getResourceState({
-                resourceId: serviceId,
-                resourceType: 'services',
-                caller: 'listener-details-getServicesState',
+        async serviceTableRowProcessing(servicesData) {
+            let arr = []
+            servicesData.forEach(async service => {
+                const data = await this.getResourceState({
+                    resourceId: service.id,
+                    resourceType: 'services',
+                    caller: 'listener-details-serviceTableRowProcessing',
+                })
+                const { id, type, attributes: { state = null } = {} } = data
+                await arr.push({ id: id, state: state, type: type })
             })
-            return data
+
+            this.serviceTableRow = arr
         },
     },
 }

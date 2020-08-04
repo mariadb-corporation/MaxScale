@@ -286,7 +286,7 @@ export const mockupAllListeners = [
         attributes: {
             parameters: {
                 address: '::',
-
+                protocol: 'mariadbclient',
                 port: 3308,
             },
             state: 'Running',
@@ -308,7 +308,7 @@ export const mockupAllListeners = [
         attributes: {
             parameters: {
                 address: '::',
-
+                protocol: 'mariadbclient',
                 port: 3306,
             },
             state: 'Running',
@@ -330,7 +330,7 @@ export const mockupAllListeners = [
         attributes: {
             parameters: {
                 address: '::',
-
+                protocol: 'mariadbclient',
                 port: 3307,
             },
             state: 'Running',
