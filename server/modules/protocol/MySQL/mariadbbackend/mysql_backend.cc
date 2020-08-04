@@ -1903,14 +1903,16 @@ static void gw_send_proxy_protocol_header(DCB* backend_dcb)
     /* Fill in peer's socket address.  */
     if (getpeername(client_fd, (struct sockaddr*)&sa_peer, &sa_peer_len) == -1)
     {
-        MXS_ERROR("'%s' failed on file descriptor '%d'.", "getpeername()", client_fd);
+        int e = errno;
+        MXS_ERROR("'%s' failed on file descriptor '%d': %s", "getpeername()", client_fd, mxb_strerror(e));
         return;
     }
 
     /* Fill in this socket's local address. */
     if (getsockname(client_fd, (struct sockaddr*)&sa_local, &sa_local_len) == -1)
     {
-        MXS_ERROR("'%s' failed on file descriptor '%d'.", "getsockname()", client_fd);
+        int e = errno;
+        MXS_ERROR("'%s' failed on file descriptor '%d': %s", "getsockname()", client_fd, mxb_strerror(e));
         return;
     }
     mxb_assert(sa_peer.ss_family == sa_local.ss_family);
