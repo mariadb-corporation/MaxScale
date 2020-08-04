@@ -44,8 +44,8 @@ then
      fi
   fi
 
-  ${apt_cmd} install openjdk-8-jdk
   ${apt_cmd} install php-mysql
+  ${apt_cmd} install openjdk-8-jdk
   if [ $? != 0 ]
   then
       ${apt_cmd} install openjdk-7-jdk
