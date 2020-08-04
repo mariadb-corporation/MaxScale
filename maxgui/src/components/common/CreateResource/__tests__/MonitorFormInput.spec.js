@@ -19,7 +19,7 @@ import {
     mockupAllServers,
     mockupServersList,
 } from '@tests/unit/mockup'
-import MonitorFormInput from '@CreateResource/Forms/MonitorFormInput'
+import MonitorFormInput from '@CreateResource/MonitorFormInput'
 
 const mockupResourceModules = [
     {

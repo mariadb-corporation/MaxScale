@@ -21,7 +21,7 @@ import {
     mockupAllFilters,
     mockupFiltersList,
 } from '@tests/unit/mockup'
-import ServiceFormInput from '@CreateResource/Forms/ServiceFormInput'
+import ServiceFormInput from '@CreateResource/ServiceFormInput'
 
 const mockupResourceModules = [
     {

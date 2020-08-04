@@ -1,15 +1,10 @@
 <template>
     <div class="mb-2">
-        <module-parameters ref="moduleInputs" moduleName="router" :modules="resourceModules" />
+        <module-parameters ref="moduleInputs" moduleName="module" :modules="resourceModules" />
         <resource-relationships
             ref="serversRelationship"
             relationshipsType="servers"
             :items="serversList"
-        />
-        <resource-relationships
-            ref="filtersRelationship"
-            relationshipsType="filters"
-            :items="filtersList"
         />
     </div>
 </template>
@@ -27,12 +22,11 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-
-import ModuleParameters from '../common/ModuleParameters'
-import ResourceRelationships from '../common/ResourceRelationships'
+import ModuleParameters from './ModuleParameters'
+import ResourceRelationships from './ResourceRelationships'
 
 export default {
-    name: 'service-form-input',
+    name: 'monitor-form-input',
     components: {
         ModuleParameters,
         ResourceRelationships,
@@ -40,32 +34,27 @@ export default {
     props: {
         resourceModules: { type: Array, required: true },
         allServers: { type: Array, required: true },
-        allFilters: { type: Array, required: true },
     },
 
     computed: {
+        // get only server that are not monitored
         serversList: function() {
             let cloneArr = this.$help.lodash.cloneDeep(this.allServers)
+            let result = []
             for (let i = 0; i < cloneArr.length; ++i) {
                 let obj = cloneArr[i]
-                delete obj.attributes
-                delete obj.links
-                delete obj.relationships
-                delete obj.idNum
+                if (this.$help.isUndefined(obj.relationships.monitors)) {
+                    delete obj.attributes
+                    delete obj.links
+                    delete obj.relationships
+                    delete obj.idNum
+                    result.push(obj)
+                }
             }
-            return cloneArr
-        },
-        filtersList: function() {
-            let cloneArr = this.$help.lodash.cloneDeep(this.allFilters)
-            for (let i = 0; i < cloneArr.length; ++i) {
-                let obj = cloneArr[i]
-                delete obj.attributes
-                delete obj.links
-                delete obj.relationships
-            }
-            return cloneArr
+            return result
         },
     },
+
     methods: {
         getValues() {
             const { moduleId, parameters } = this.$refs.moduleInputs.getModuleInputValues()
@@ -74,7 +63,6 @@ export default {
                 parameters: parameters,
                 relationships: {
                     servers: { data: this.$refs.serversRelationship.getSelectedItems() },
-                    filters: { data: this.$refs.filtersRelationship.getSelectedItems() },
                 },
             }
         },

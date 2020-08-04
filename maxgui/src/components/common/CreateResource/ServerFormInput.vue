@@ -34,8 +34,8 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import ParametersCollapse from '../common/ParametersCollapse'
-import ResourceRelationships from '../common/ResourceRelationships'
+import ParametersCollapse from './ParametersCollapse'
+import ResourceRelationships from './ResourceRelationships'
 
 export default {
     name: 'server-form-input',

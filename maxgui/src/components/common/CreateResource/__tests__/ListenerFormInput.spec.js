@@ -19,7 +19,7 @@ import {
     mockupAllServices,
     mockupServicesList,
 } from '@tests/unit/mockup'
-import ListenerFormInput from '@CreateResource/Forms/ListenerFormInput'
+import ListenerFormInput from '@CreateResource/ListenerFormInput'
 
 const mockupResourceModules = [
     {

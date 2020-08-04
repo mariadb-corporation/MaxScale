@@ -14,7 +14,7 @@
 import { expect } from 'chai'
 import mount from '@tests/unit/setup'
 import { mockupSelection, mockupInputChange } from '@tests/unit/mockup'
-import FilterFormInput from '@CreateResource/Forms/FilterFormInput'
+import FilterFormInput from '@CreateResource/FilterFormInput'
 
 const mockupResourceModules = [
     {
