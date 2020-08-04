@@ -52,7 +52,7 @@ int main(int argc, char* argv[])
     Test->tprintf("Checking connections to Master: should be %d\n", TestConnNum);
     conn_num = get_conn_num(Test->repl->nodes[0],
                             Test->maxscales->ip(0),
-                            Test->maxscales->hostname[0],
+                            Test->maxscales->hostname(0),
                             (char*) "test");
     if (conn_num != TestConnNum)
     {
@@ -67,7 +67,7 @@ int main(int argc, char* argv[])
         conn_num =
             get_conn_num(Test->repl->nodes[i],
                          Test->maxscales->ip(0),
-                         Test->maxscales->hostname[0],
+                         Test->maxscales->hostname(0),
                          (char*) "test");
         TotalConn += conn_num;
         Test->tprintf("Connections to node %d (%s):\t%d\n", i, Test->repl->IP[i], conn_num);

@@ -297,6 +297,11 @@ void Maxscales::set_use_ipv6(bool use_ipv6)
     this->use_ipv6 = use_ipv6;
 }
 
+const char* Maxscales::hostname(int i) const
+{
+    return Nodes::hostname(i);
+}
+
 void MaxScale::wait_monitor_ticks(int ticks)
 {
     for (int i = 0; i < ticks; i++)

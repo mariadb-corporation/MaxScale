@@ -16,8 +16,8 @@ using std::string;
 Nodes::Nodes(const char* pref,
              const std::string& network_config,
              bool verbose)
-    : network_config(network_config)
-    , verbose(verbose)
+    : verbose(verbose)
+    , network_config(network_config)
 {
     strcpy(this->prefix, pref);
 }
@@ -328,12 +328,13 @@ int Nodes::read_basic_env()
             }
 
             sprintf(env_name, "%s_%03d_hostname", prefix, i);
-            hostname[i] = strdup(get_nc_item(env_name).c_str());
-            if ((hostname[i] == NULL) || (strcmp(hostname[i], "") == 0))
+            auto& hostname = m_hostname[i];
+            hostname = get_nc_item(env_name);
+            if (hostname.empty())
             {
-                hostname[i] = strdup(m_ip_private[i].c_str());
+                hostname = m_ip_private[i];
             }
-            setenv(env_name, hostname[i], 1);
+            setenv(env_name, hostname.c_str(), 1);
 
             sprintf(env_name, "%s_%03d_start_vm_command", prefix, i);
             string start_vm_def = mxb::string_printf("curr_dir=`pwd`; "
@@ -454,4 +455,9 @@ const char* Nodes::ip_private(int i) const
 const char* Nodes::ip6(int i) const
 {
     return m_ip6[i].c_str();
+}
+
+const char* Nodes::hostname(int i) const
+{
+    return m_hostname[i].c_str();
 }

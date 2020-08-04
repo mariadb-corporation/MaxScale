@@ -28,6 +28,8 @@ public:
 
     const char* ip(int i = 0) const;
 
+    const char* hostname(int i = 0) const;
+
     /**
      * @brief rwsplit_port RWSplit service port
      */

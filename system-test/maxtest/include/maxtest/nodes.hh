@@ -60,13 +60,6 @@ public:
      */
     char * access_homedir[256];
 
-    char * hostname[256];
-
-    /**
-     * @brief network_config Content of MDBCI network_config file
-     */
-    std::string network_config;
-
     /**
      * @brief Verbose command output
      */
@@ -78,6 +71,8 @@ public:
      * @return The current IP address
      */
     const char* ip(int i = 0) const;
+
+    const char* hostname(int i = 0) const;
 
     bool using_ipv6() const;
 
@@ -182,9 +177,12 @@ private:
 
     std::string m_ip_private[max_nodes] {}; /**< Private IP addresses for every backend node (for AWS) */
     std::string m_ip6[max_nodes] {};        /**< IPv6-addresses for every backend node */
+    std::string m_hostname[max_nodes] {};   /**< Hostnames for every backend node */
 
     std::string m_start_vm_command[max_nodes] {}; /**< Command to resume VM */
     std::string m_stop_vm_command[max_nodes] {};  /**< Command to suspend VM */
+
+    std::string network_config; /**< Contents of MDBCI network_config file */
 
     bool check_node_ssh(int node);
 
