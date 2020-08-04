@@ -48,6 +48,12 @@ int Maxscales::read_env()
 
     read_basic_env();
 
+    sprintf(env_name, "%s_user", prefix);
+    user_name = readenv(env_name, "skysql");
+
+    sprintf(env_name, "%s_password", prefix);
+    password = readenv(env_name, "skysql");
+
     if ((N > 0) && (N < 255))
     {
         for (int i = 0; i < N; i++)

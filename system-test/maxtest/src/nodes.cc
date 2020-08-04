@@ -271,13 +271,6 @@ int Nodes::copy_from_node_legacy(const char* src, const char* dest, int i)
 int Nodes::read_basic_env()
 {
     char env_name[64];
-
-    sprintf(env_name, "%s_user", prefix);
-    user_name = readenv(env_name, "skysql");
-
-    sprintf(env_name, "%s_password", prefix);
-    password = readenv(env_name, "skysql");
-
     N = get_N();
 
     if ((N > 0) && (N < 255))

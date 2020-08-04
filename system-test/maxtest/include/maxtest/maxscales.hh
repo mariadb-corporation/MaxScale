@@ -111,6 +111,15 @@ public:
     bool ssl;
 
     /**
+     * @brief   User name to access backend nodes
+     */
+    char* user_name;
+    /**
+     * @brief   Password to access backend nodes
+     */
+    char* password;
+
+    /**
      * @brief ConnectMaxscale   Opens connections to RWSplit, ReadConn master and ReadConn slave Maxscale
      * services
      * Opens connections to RWSplit, ReadConn master and ReadConn slave Maxscale services

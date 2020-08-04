@@ -73,15 +73,6 @@ public:
     char * start_vm_command[256];
 
     /**
-     * @brief   User name to access backend nodes
-     */
-    char * user_name;
-    /**
-     * @brief   Password to access backend nodes
-     */
-    char * password;
-
-    /**
      * @brief network_config Content of MDBCI network_config file
      */
     std::string network_config;
