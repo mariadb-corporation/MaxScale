@@ -18,21 +18,39 @@ then
   sudo cp mariadb.list /etc/apt/sources.list.d/
   sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 0xF1656F24C74CD1D8
   export DEBIAN_FRONTEND=noninteractive
-  sudo apt-get update
-  sudo -E apt-get -q -o Dpkg::Options::=--force-confold \
+  apt_cmd="sudo -E apt-get -q -o Dpkg::Options::=--force-confold \
        -o Dpkg::Options::=--force-confdef \
-       -y --force-yes \
-       install \
+       -y --force-yes"
+  ${apt_cmd} update
+  ${apt_cmd} install \
        git wget build-essential \
        libssl-dev mariadb-client php perl \
        coreutils libjansson-dev zlib1g-dev \
-       mariadb-test python python-pip cmake libpam0g-dev \
-       libsqlite3-dev libcurl4-gnutls-dev
-  sudo apt-get install -y --force-yes openjdk-8-jdk
-  sudo apt-get install -y --force-yes php-mysql
+       libsqlite3-dev libcurl4-gnutls-dev \
+       mariadb-test python python-pip cmake libpam0g-dev
+  ## separate libgnutls installation process for Ubuntu Trusty
+  cat /etc/*release | grep -E "Trusty|wheezy"
+  if [ $? == 0 ]
+  then
+     ${apt_cmd} install libgnutls-dev libgcrypt11-dev
+  else
+     ${apt_cmd} install libgnutls30 libgnutls-dev
+     if [ $? != 0 ]
+     then
+         ${apt_cmd} install libgnutls28-dev
+     fi
+     ${apt_cmd} install libgcrypt20-dev
+     if [ $? != 0 ]
+     then
+         ${apt_cmd} install libgcrypt11-dev
+     fi
+  fi
+
+  ${apt_cmd} install php-mysql
+  ${apt_cmd} install openjdk-8-jdk
   if [ $? != 0 ]
   then
-    sudo apt-get install -y --force-yes openjdk-7-jdk
+      ${apt_cmd} install openjdk-7-jdk
   fi
   pip install --upgrade pip
   pip install JayDeBeApi
@@ -58,7 +76,8 @@ EOL
                  libopenssl-devel libgcrypt-devel MariaDB-devel MariaDB-test \
                  php perl coreutils libjansson-devel python python-pip \
                  cmake pam-devel openssl-devel python-devel libjansson-devel \
-                 sqlite3 sqlite3-devel libcurl-devel
+                 sqlite3 sqlite3-devel libcurl-devel \
+                 gnutls-devel
     sudo zypper -n install java-1_8_0-openjdk
     sudo zypper -n install php-mysql
   else
@@ -78,7 +97,8 @@ EOL
                  openssl-devel mariadb-devel mariadb-test \
                  php perl coreutils python python-pip \
                  cmake pam-devel python-devel jansson-devel \
-                 sqlite sqlite-devel libcurl-devel
+                 sqlite sqlite-devel libcurl-devel \
+                 gnutls-devel
     sudo yum install -y --nogpgcheck java-1.8.0-openjdk
     sudo yum install -y --nogpgcheck centos-release-scl
     sudo yum install -y --nogpgcheck devtoolset-7-gcc*
