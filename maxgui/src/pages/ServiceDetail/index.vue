@@ -18,13 +18,39 @@
                     <v-tab-item class="pt-5">
                         <v-row>
                             <v-col class="py-0 my-0" cols="4">
-                                <relationship-tables
-                                    :serverStateTableRow="serverStateTableRow"
-                                    :listenerStateTableRow="listenerStateTableRow"
-                                    :dispatchRelationshipUpdate="dispatchRelationshipUpdate"
-                                    :loading="overlay === OVERLAY_TRANSPARENT_LOADING"
-                                    :getRelationshipState="getRelationshipState"
-                                />
+                                <v-row class="pa-0 ma-0">
+                                    <v-col cols="12" class="pa-0 ma-0">
+                                        <relationship-table
+                                            relationshipType="servers"
+                                            :tableRows="serverStateTableRow"
+                                            :dispatchRelationshipUpdate="dispatchRelationshipUpdate"
+                                            :loading="overlay === OVERLAY_TRANSPARENT_LOADING"
+                                            :getRelationshipData="
+                                                () => getRelationshipData('servers')
+                                            "
+                                        />
+                                    </v-col>
+                                    <v-col cols="12" class="pa-0 mt-4">
+                                        <relationship-table
+                                            relationshipType="filters"
+                                            :tableRows="filtersTableRow"
+                                            :dispatchRelationshipUpdate="dispatchRelationshipUpdate"
+                                            :loading="overlay === OVERLAY_TRANSPARENT_LOADING"
+                                            :getRelationshipData="
+                                                () => getRelationshipData('filters')
+                                            "
+                                        />
+                                    </v-col>
+
+                                    <v-col cols="12" class="pa-0 mt-4">
+                                        <relationship-table
+                                            relationshipType="listeners"
+                                            :loading="overlay === OVERLAY_TRANSPARENT_LOADING"
+                                            :tableRows="listenerStateTableRow"
+                                            readOnly
+                                        />
+                                    </v-col>
+                                </v-row>
                             </v-col>
                             <v-col class="py-0 ma-0" cols="8">
                                 <sessions-table
@@ -68,7 +94,6 @@ import { OVERLAY_TRANSPARENT_LOADING } from 'store/overlayTypes'
 import { mapGetters, mapActions } from 'vuex'
 import OverviewHeader from './OverviewHeader'
 import PageHeader from './PageHeader'
-import RelationshipTables from './RelationshipTables'
 import SessionsTable from './SessionsTable'
 import ParametersTable from './ParametersTable'
 import DiagnosticsTable from './DiagnosticsTable'
@@ -78,7 +103,6 @@ export default {
     components: {
         PageHeader,
         OverviewHeader,
-        RelationshipTables,
         SessionsTable,
         ParametersTable,
         DiagnosticsTable,
@@ -93,21 +117,26 @@ export default {
             ],
             serverStateTableRow: [],
             listenerStateTableRow: [],
+            filtersTableRow: [],
         }
     },
     computed: {
         ...mapGetters({
             overlay: 'overlay',
             currentService: 'service/currentService',
+            allFilters: 'filter/allFilters',
         }),
     },
 
     async created() {
         // Initial fetch, wait for service id
         await this.fetchService()
-        await this.processingRelationshipTable('servers')
-        await this.processingRelationshipTable('listeners')
         await this.genDataSetSchema()
+        await Promise.all([
+            this.processingRelationshipTable('servers'),
+            this.processingRelationshipTable('filters'),
+            this.processingRelationshipTable('listeners'),
+        ])
     },
     methods: {
         ...mapActions({
@@ -115,6 +144,7 @@ export default {
             fetchServiceById: 'service/fetchServiceById',
             genDataSetSchema: 'service/genDataSetSchema',
             updateServiceRelationship: 'service/updateServiceRelationship',
+            fetchAllFilters: 'filter/fetchAllFilters',
         }),
 
         // reuse functions for fetch loop or after finish editing
@@ -136,14 +166,16 @@ export default {
 
             let ids = relationshipData.length ? relationshipData.map(item => `${item.id}`) : []
             let arr = []
-            ids.forEach(async id => {
-                let data = await this.getRelationshipState(relationshipType, id)
-                const {
-                    id: relationshipId,
-                    type,
-                    attributes: { state },
-                } = data
-                arr.push({ id: relationshipId, state: state, type: type })
+            ids.forEach(async (id, i) => {
+                let data = await this.getRelationshipData(relationshipType, id)
+                const { id: relationshipId, type, attributes: { state = null } = {} } = data
+                let row = { id: relationshipId, type: type }
+                if (relationshipType === 'filters') {
+                    row.index = i
+                } else {
+                    row.state = state
+                }
+                arr.push(row)
             })
 
             switch (relationshipType) {
@@ -152,50 +184,44 @@ export default {
                     break
                 case 'listeners':
                     this.listenerStateTableRow = arr
+                    break
+                case 'filters':
+                    this.filtersTableRow = arr
             }
         },
 
         /**
          * This function fetch all resource state if id is not provided
-         * otherwise it fetch a resource state
-         * @param {String} type type of resource. e.g. servers, listeners
+         * otherwise it fetch a resource state.
+         * Even filter doesn't have state, the request still success
+         * @param {String} type type of resource. e.g. servers, listeners, filters
          * @param {String} id name of the resource
          * @return {Array} Resource state data
          */
-        async getRelationshipState(type, id) {
-            const data = this.getResourceState({
+        async getRelationshipData(type, id) {
+            const data = await this.getResourceState({
                 resourceId: id,
                 resourceType: type,
-                caller: 'service-detail-page-getRelationshipState',
+                caller: 'service-detail-page-getRelationshipData',
             })
+
             return data
         },
 
         // actions to vuex
-        async dispatchRelationshipUpdate(type, data) {
-            let self = this
-
+        async dispatchRelationshipUpdate(type, data, isFilterDrag) {
+            const self = this
+            await this.updateServiceRelationship({
+                id: self.currentService.id,
+                type: type,
+                [type]: data,
+                callback: self.fetchService,
+            })
             switch (type) {
                 case 'filters':
-                    // self.showOverlay(OVERLAY_TRANSPARENT_LOADING)
-                    await this.updateServiceRelationship({
-                        id: self.currentService.id,
-                        type: 'filters',
-                        filters: data,
-                        callback: self.fetchService,
-                    })
-                    // // wait time out for loading animation
-                    // await setTimeout(() => {
-                    //     self.hideOverlay()
-                    // }, 300)
+                    if (!isFilterDrag) await this.processingRelationshipTable('filters')
                     break
                 case 'servers':
-                    await this.updateServiceRelationship({
-                        id: self.currentService.id,
-                        type: 'servers',
-                        servers: data,
-                        callback: self.fetchService,
-                    })
                     await this.processingRelationshipTable('servers')
                     break
             }

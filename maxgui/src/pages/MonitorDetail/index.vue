@@ -18,14 +18,15 @@
                         "
                     />
                 </v-col>
-                <servers-table
-                    :searchKeyWord="searchKeyWord"
-                    :currentMonitor="currentMonitor"
-                    :getServersState="getServersState"
-                    :loading="overlay === OVERLAY_TRANSPARENT_LOADING"
-                    :dispatchRelationshipUpdate="dispatchRelationshipUpdate"
-                    :serverStateTableRow="serverStateTableRow"
-                />
+                <v-col cols="6">
+                    <relationship-table
+                        relationshipType="servers"
+                        :tableRows="serverStateTableRow"
+                        :dispatchRelationshipUpdate="dispatchRelationshipUpdate"
+                        :loading="overlay === OVERLAY_TRANSPARENT_LOADING"
+                        :getRelationshipData="getServersState"
+                    />
+                </v-col>
             </v-row>
         </v-sheet>
     </page-wrapper>
@@ -48,13 +49,11 @@ import { OVERLAY_TRANSPARENT_LOADING } from 'store/overlayTypes'
 import { mapGetters, mapActions } from 'vuex'
 import PageHeader from './PageHeader'
 import OverviewHeader from './OverviewHeader'
-import ServersTable from './ServersTable'
 
 export default {
     components: {
         PageHeader,
         OverviewHeader,
-        ServersTable,
     },
     data() {
         return {
@@ -132,21 +131,21 @@ export default {
          * @param {String} serverId name of the server
          * @return {Array} Server state data
          */
-        async getServersState(serverId) {
-            const data = await this.getResourceState({
-                resourceId: serverId,
+        async getServersState(id) {
+            let data = await this.getResourceState({
+                resourceId: id,
                 resourceType: 'servers',
-                caller: 'monitor-details-getServersState',
+                caller: 'monitor-detail-page-getServersState',
             })
             return data
         },
 
         // actions to vuex
-        async dispatchRelationshipUpdate(data) {
-            let self = this
+        async dispatchRelationshipUpdate(type, data) {
+            const self = this
             await this.updateMonitorRelationship({
                 id: self.currentMonitor.id,
-                servers: data,
+                [type]: data,
                 callback: self.fetchMonitor,
             })
             await this.serverTableRowProcessing()

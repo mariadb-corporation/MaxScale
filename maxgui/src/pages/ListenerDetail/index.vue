@@ -16,11 +16,14 @@
                         :editable="false"
                     />
                 </v-col>
-                <services-table
-                    :searchKeyWord="searchKeyWord"
-                    :loading="overlay === OVERLAY_TRANSPARENT_LOADING"
-                    :serviceTableRow="serviceTableRow"
-                />
+                <v-col cols="6">
+                    <relationship-table
+                        relationshipType="services"
+                        :loading="overlay === OVERLAY_TRANSPARENT_LOADING"
+                        :tableRows="serviceTableRow"
+                        readOnly
+                    />
+                </v-col>
             </v-row>
         </v-sheet>
     </page-wrapper>
@@ -42,13 +45,10 @@
 import { OVERLAY_TRANSPARENT_LOADING } from 'store/overlayTypes'
 import { mapGetters, mapActions } from 'vuex'
 import PageHeader from './PageHeader'
-import ServicesTable from './ServicesTable'
 
 export default {
     components: {
         PageHeader,
-
-        ServicesTable,
     },
     data() {
         return {
