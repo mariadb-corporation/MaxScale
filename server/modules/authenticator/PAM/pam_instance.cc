@@ -15,9 +15,7 @@
 
 #include <string>
 #include <maxscale/config_common.hh>
-#include <maxscale/jansson.hh>
 #include <maxscale/protocol/mariadb/module_names.hh>
-#include <maxscale/secrets.hh>
 #include "pam_client_session.hh"
 #include "pam_backend_session.hh"
 
@@ -26,6 +24,9 @@ using std::string;
 namespace
 {
 const string opt_cleartext_plugin = "pam_use_cleartext_plugin";
+const string opt_pam_mode = "pam_mode";
+const string pam_mode_pw = "password";
+const string pam_mode_pw_2fa = "password_2FA";
 }
 
 /**
@@ -36,13 +37,40 @@ const string opt_cleartext_plugin = "pam_use_cleartext_plugin";
  */
 PamAuthenticatorModule* PamAuthenticatorModule::create(mxs::ConfigParameters* options)
 {
+    bool error = false;
+
     bool cleartext_plugin = false;
     if (options->contains(opt_cleartext_plugin))
     {
         cleartext_plugin = options->get_bool(opt_cleartext_plugin);
         options->remove(opt_cleartext_plugin);
     }
-    return new(std::nothrow) PamAuthenticatorModule(cleartext_plugin);
+
+    auto pam_mode = AuthMode::PW;
+    if (options->contains(opt_pam_mode))
+    {
+        auto user_pam_mode = options->get_string(opt_pam_mode);
+        options->remove(opt_pam_mode);
+
+        if (user_pam_mode == pam_mode_pw_2fa)
+        {
+            pam_mode = AuthMode::PW_2FA;
+        }
+        else if (user_pam_mode != pam_mode_pw)
+        {
+            MXB_ERROR("Invalid value '%s' for authenticator option '%s'. Valid values are '%s' and '%s'.",
+                      user_pam_mode.c_str(), opt_pam_mode.c_str(),
+                      pam_mode_pw.c_str(), pam_mode_pw_2fa.c_str());
+            error = true;
+        }
+    }
+
+    PamAuthenticatorModule* rval = nullptr;
+    if (!error)
+    {
+        rval = new PamAuthenticatorModule(cleartext_plugin, pam_mode);
+    }
+    return rval;
 }
 
 uint64_t PamAuthenticatorModule::capabilities() const
@@ -57,13 +85,13 @@ std::string PamAuthenticatorModule::supported_protocol() const
 
 mariadb::SClientAuth PamAuthenticatorModule::create_client_authenticator()
 {
-    return mariadb::SClientAuth(new(std::nothrow) PamClientAuthenticator(m_cleartext_plugin));
+    return mariadb::SClientAuth(new(std::nothrow) PamClientAuthenticator(m_cleartext_plugin, m_mode));
 }
 
 mariadb::SBackendAuth
 PamAuthenticatorModule::create_backend_authenticator(mariadb::BackendAuthData& auth_data)
 {
-    return mariadb::SBackendAuth(new(std::nothrow) PamBackendAuthenticator(auth_data));
+    return mariadb::SBackendAuth(new(std::nothrow) PamBackendAuthenticator(auth_data, m_mode));
 }
 
 std::string PamAuthenticatorModule::name() const
@@ -77,8 +105,9 @@ const std::unordered_set<std::string>& PamAuthenticatorModule::supported_plugins
     return plugins;
 }
 
-PamAuthenticatorModule::PamAuthenticatorModule(bool cleartext_plugin)
+PamAuthenticatorModule::PamAuthenticatorModule(bool cleartext_plugin, AuthMode auth_mode)
     : m_cleartext_plugin(cleartext_plugin)
+    , m_mode(auth_mode)
 {
 }
 

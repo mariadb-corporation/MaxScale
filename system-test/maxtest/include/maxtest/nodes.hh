@@ -27,11 +27,7 @@ public:
     const char* ip_private(int i = 0) const;
 
     char * IP[256];
-    /**
-     * @brief  private IP address strings for every backend node (for AWS)
-     */
 
-    char * IP_private[256];
     /**
      * @brief  IP address strings for every backend node (IPv6)
      */
@@ -204,6 +200,10 @@ protected:
     void init_ssh_masters();
 
 private:
+    static constexpr int max_nodes {30};
+
+    std::string m_ip_private[max_nodes] {}; /**< Private IP addresses for every backend node (for AWS) */
+
     bool check_node_ssh(int node);
 
     // The returned handle must be closed with pclose

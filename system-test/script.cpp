@@ -94,9 +94,17 @@ int main(int argc, char* argv[])
     TestConnections* Test = new TestConnections(argc, argv);
     Test->set_timeout(100);
 
+    auto repl_ip0 = Test->repl->ip_private(0);
+    auto repl_ip1 = Test->repl->ip_private(1);
+    auto repl_ip2 = Test->repl->ip_private(2);
+    auto repl_ip3 = Test->repl->ip_private(3);
+
+    auto gal_ip0 = Test->galera->ip_private(0);
+    auto gal_ip1 = Test->galera->ip_private(1);
+    auto gal_ip2 = Test->galera->ip_private(2);
+    auto gal_ip3 = Test->galera->ip_private(3);
+
     Test->tprintf("Creating script on Maxscale machine");
-
-
     Test->maxscales->ssh_node_f(0,
                                 false,
                                 "%s rm -rf %s/script; mkdir %s/script; echo \"echo \\$* >> %s/script_output\" > %s/script/script.sh; \
@@ -113,88 +121,87 @@ int main(int argc, char* argv[])
 
     Test->maxscales->restart_maxscale(0);
 
-    FILE* f;
-    f = fopen("script_output_expected", "w");
+    FILE* f = fopen("script_output_expected", "w");
     fprintf(f,
             "--event=master_down --initiator=[%s]:%d --nodelist=[%s]:%d,[%s]:%d,[%s]:%d\n",
-            Test->repl->IP_private[0],
+            repl_ip0,
             Test->repl->port[0],
-            Test->repl->IP_private[1],
+            repl_ip1,
             Test->repl->port[1],
-            Test->repl->IP_private[2],
+            repl_ip2,
             Test->repl->port[2],
-            Test->repl->IP_private[3],
+            repl_ip3,
             Test->repl->port[3]);
     fprintf(f,
             "--event=master_up --initiator=[%s]:%d --nodelist=[%s]:%d,[%s]:%d,[%s]:%d,[%s]:%d\n",
-            Test->repl->IP_private[0],
+            repl_ip0,
             Test->repl->port[0],
-            Test->repl->IP_private[0],
+            repl_ip0,
             Test->repl->port[0],
-            Test->repl->IP_private[1],
+            repl_ip1,
             Test->repl->port[1],
-            Test->repl->IP_private[2],
+            repl_ip2,
             Test->repl->port[2],
-            Test->repl->IP_private[3],
+            repl_ip3,
             Test->repl->port[3]);
     fprintf(f,
             "--event=slave_up --initiator=[%s]:%d --nodelist=[%s]:%d,[%s]:%d,[%s]:%d,[%s]:%d\n",
-            Test->repl->IP_private[1],
+            repl_ip1,
             Test->repl->port[1],
-            Test->repl->IP_private[0],
+            repl_ip0,
             Test->repl->port[0],
-            Test->repl->IP_private[1],
+            repl_ip1,
             Test->repl->port[1],
-            Test->repl->IP_private[2],
+            repl_ip2,
             Test->repl->port[2],
-            Test->repl->IP_private[3],
+            repl_ip3,
             Test->repl->port[3]);
     fclose(f);
 
     f = fopen("script_output_expected_galera", "w");
     fprintf(f,
             "--event=synced_down --initiator=[%s]:%d --nodelist=[%s]:%d,[%s]:%d,[%s]:%d\n",
-            Test->galera->IP_private[0],
+            gal_ip0,
             Test->galera->port[0],
-            Test->galera->IP_private[1],
+            gal_ip1,
             Test->galera->port[1],
-            Test->galera->IP_private[2],
+            gal_ip2,
             Test->galera->port[2],
-            Test->galera->IP_private[3],
+            gal_ip3,
             Test->galera->port[3]);
     fprintf(f,
             "--event=synced_up --initiator=[%s]:%d --nodelist=[%s]:%d,[%s]:%d,[%s]:%d,[%s]:%d\n",
-            Test->galera->IP_private[0],
+            gal_ip0,
             Test->galera->port[0],
-            Test->galera->IP_private[0],
+            gal_ip0,
             Test->galera->port[0],
-            Test->galera->IP_private[1],
+            gal_ip1,
             Test->galera->port[1],
-            Test->galera->IP_private[2],
+            gal_ip2,
             Test->galera->port[2],
-            Test->galera->IP_private[3],
+            gal_ip3,
             Test->galera->port[3]);
     fprintf(f,
             "--event=synced_down --initiator=[%s]:%d --nodelist=[%s]:%d,[%s]:%d,[%s]:%d\n",
-            Test->galera->IP_private[1],
+            gal_ip1,
             Test->galera->port[1],
-            Test->galera->IP_private[0],
+            gal_ip0,
             Test->galera->port[0],
-            Test->galera->IP_private[2],
+            gal_ip2,
             Test->galera->port[2],
-            Test->galera->IP_private[3],
+            gal_ip3,
             Test->galera->port[3]);
     fprintf(f,
             "--event=synced_up --initiator=[%s]:%d --nodelist=[%s]:%d,[%s]:%d,[%s]:%d,[%s]:%d\n",
-            Test->galera->IP_private[1],
+            gal_ip1,
             Test->galera->port[1],
-            Test->galera->IP_private[0],
+            gal_ip0,
             Test->galera->port[0],
-            Test->galera->IP_private[1],
+            gal_ip1,
             Test->galera->port[1],
-            Test->galera->IP_private[2],
+            gal_ip2,
             Test->galera->port[2],
-            Test->galera->IP_private[3],
+            gal_ip3,
             Test->galera->port[3]);
     fclose(f);
 

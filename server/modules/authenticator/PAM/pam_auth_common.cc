@@ -21,3 +21,4 @@ const int DIALOG_SIZE = DIALOG.length() + 1;
 const std::string CLEAR_PW = "mysql_clear_password";
 const int CLEAR_PW_SIZE = CLEAR_PW.length() + 1;
 const std::string PASSWORD = "Password: ";
+const std::string TWO_FA = "Verification code: ";
