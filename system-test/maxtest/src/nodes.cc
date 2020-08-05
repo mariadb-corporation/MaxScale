@@ -76,7 +76,7 @@ string Nodes::generate_ssh_cmd(int node, const string& cmd, bool sudo)
                     "-o StrictHostKeyChecking=no "
                     "-o LogLevel=quiet ";
 
-        string p3 = mxb::string_printf("%s@%s ", access_user[node], IP[node]);
+        string p3 = mxb::string_printf("%s@%s ", m_access_user[node].c_str(), IP[node]);
         string p4 = sudo ? mxb::string_printf("'%s %s'", access_sudo[node], cmd.c_str()) :
             mxb::string_printf("'%s'", cmd.c_str());
         rval = p1 + p2 + p3 + p4;
@@ -102,7 +102,7 @@ FILE* Nodes::open_ssh_connection(int node)
            << "-o ControlMaster=auto "
            << "-o ControlPath=./maxscale-test-%r@%h:%p "
            << "-o ControlPersist=yes "
-           << access_user[node] << "@"
+           << m_access_user[node] << "@"
            << IP[node]
            << (verbose ? "" :  " > /dev/null");
     }
@@ -125,7 +125,7 @@ int Nodes::ssh_node(int node, const char* ssh, bool sudo)
         if (sudo)
         {
             fprintf(in, "sudo su -\n");
-            fprintf(in, "cd /home/%s\n", access_user[node]);
+            fprintf(in, "cd /home/%s\n", m_access_user[node].c_str());
         }
 
         fprintf(in, "%s\n", ssh);
@@ -205,7 +205,7 @@ int Nodes::copy_to_node(int i, const char* src, const char* dest)
                 "%s %s@%s:%s",
                 sshkey[i],
                 src,
-                access_user[i],
+                m_access_user[i].c_str(),
                 IP[i],
                 dest);
     }
@@ -250,7 +250,7 @@ int Nodes::copy_from_node(int i, const char* src, const char* dest)
                 "-o ControlPersist=yes "
                 "%s@%s:%s %s",
                 sshkey[i],
-                access_user[i],
+                m_access_user[i].c_str(),
                 IP[i],
                 src,
                 dest);
@@ -307,24 +307,25 @@ int Nodes::read_basic_env()
 
 
             sprintf(env_name, "%s_%03d_whoami", prefix, i);
-            access_user[i] = strdup(get_nc_item(env_name).c_str());
-            if (access_user[i] == NULL)
+            auto& access_user = m_access_user[i];
+            access_user = get_nc_item(env_name);
+            if (access_user.empty())
             {
-                access_user[i] = (char *) "vagrant";
+                access_user = "vagrant";
             }
-            setenv(env_name, access_user[i], 1);
+            setenv(env_name, access_user.c_str(), 1);
 
             sprintf(env_name, "%s_%03d_access_sudo", prefix, i);
             access_sudo[i] = readenv(env_name, " sudo ");
 
-            if (strcmp(access_user[i], "root") == 0)
+            if (access_user == "root")
             {
                 access_homedir[i] = (char *) "/root/";
             }
             else
             {
-                access_homedir[i] = (char *) malloc(strlen(access_user[i]) + 9);
-                sprintf(access_homedir[i], "/home/%s/", access_user[i]);
+                access_homedir[i] = (char *) malloc(access_user.length() + 9);
+                sprintf(access_homedir[i], "/home/%s/", access_user.c_str());
             }
 
             sprintf(env_name, "%s_%03d_hostname", prefix, i);
@@ -460,4 +461,9 @@ const char* Nodes::ip6(int i) const
 const char* Nodes::hostname(int i) const
 {
     return m_hostname[i].c_str();
+}
+
+const char* Nodes::access_user(int i) const
+{
+    return m_access_user[i].c_str();
 }

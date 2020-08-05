@@ -302,6 +302,11 @@ const char* Maxscales::hostname(int i) const
     return Nodes::hostname(i);
 }
 
+const char* Maxscales::access_user(int i) const
+{
+    return Nodes::access_user(i);
+}
+
 void MaxScale::wait_monitor_ticks(int ticks)
 {
     for (int i = 0; i < ticks; i++)

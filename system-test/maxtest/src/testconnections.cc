@@ -731,7 +731,7 @@ void TestConnections::print_env()
     printf("Maxscale User name\t%s\n", maxscales->user_name);
     printf("Maxscale Password\t%s\n", maxscales->password);
     printf("Maxscale SSH key\t%s\n", maxscales->sshkey[0]);
-    printf("Access user\t%s\n", maxscales->access_user[0]);
+    printf("Access user\t%s\n", maxscales->access_user(0));
     if (repl)
     {
         repl->print_env();
@@ -862,7 +862,7 @@ void TestConnections::process_template(int m, const string& cnf_template_path, c
         }
     }
 
-    sprintf(str, "sed -i \"s/###access_user###/%s/g\" maxscale.cnf", maxscales->access_user[m]);
+    sprintf(str, "sed -i \"s/###access_user###/%s/g\" maxscale.cnf", maxscales->access_user(m));
     system(str);
 
     sprintf(str, "sed -i \"s|###access_homedir###|%s|g\" maxscale.cnf", maxscales->access_homedir[m]);

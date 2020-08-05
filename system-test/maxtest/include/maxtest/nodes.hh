@@ -46,11 +46,6 @@ public:
     char prefix[16];
 
     /**
-     * @brief access_user Unix users name to access nodes via ssh
-     */
-    char * access_user[256];
-
-    /**
      * @brief access_sudo empty if sudo is not needed or "sudo " if sudo is needed.
      */
     char * access_sudo[256];
@@ -75,6 +70,8 @@ public:
     const char* hostname(int i = 0) const;
 
     bool using_ipv6() const;
+
+    const char* access_user(int i = 0) const;
 
     /**
      * Generate the command line to execute a given command on the node via ssh.
@@ -183,6 +180,8 @@ private:
     std::string m_stop_vm_command[max_nodes] {};  /**< Command to suspend VM */
 
     std::string network_config; /**< Contents of MDBCI network_config file */
+
+    std::string m_access_user[max_nodes] {}; /**< Unix users name to access nodes via ssh */
 
     bool check_node_ssh(int node);
 
