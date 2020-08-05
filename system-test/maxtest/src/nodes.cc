@@ -320,12 +320,11 @@ int Nodes::read_basic_env()
 
             if (access_user == "root")
             {
-                access_homedir[i] = (char *) "/root/";
+                m_access_homedir[i] = "/root/";
             }
             else
             {
-                access_homedir[i] = (char *) malloc(access_user.length() + 9);
-                sprintf(access_homedir[i], "/home/%s/", access_user.c_str());
+                m_access_homedir[i] = mxb::string_printf("/home/%s/", access_user.c_str());
             }
 
             sprintf(env_name, "%s_%03d_hostname", prefix, i);
@@ -466,4 +465,9 @@ const char* Nodes::hostname(int i) const
 const char* Nodes::access_user(int i) const
 {
     return m_access_user[i].c_str();
+}
+
+const char* Nodes::access_homedir(int i) const
+{
+    return m_access_homedir[i].c_str();
 }

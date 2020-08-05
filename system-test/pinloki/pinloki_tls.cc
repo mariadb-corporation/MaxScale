@@ -18,7 +18,7 @@ public:
 
         auto change_master = change_master_sql(test.repl->ip(0), test.repl->port[0]);
         change_master += ", MASTER_SSL=1, MASTER_SSL_CA='"s
-            + test.maxscales->access_homedir[0]
+            + test.maxscales->access_homedir(0)
             + "/certs/ca.pem'";
 
         test.expect(maxscale.query(change_master), "CHANGE MASTER failed: %s", maxscale.error());

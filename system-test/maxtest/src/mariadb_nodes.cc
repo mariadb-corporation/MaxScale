@@ -382,10 +382,10 @@ void Mariadb_nodes::create_users(int node)
     char dtr[PATH_MAX + 1024];
     // Create users for replication as well as the users that are used by the tests
     sprintf(str, "%s/create_user.sh", test_dir);
-    copy_to_node(node, str, access_homedir[node]);
+    copy_to_node(node, str, access_homedir(node));
     ssh_node_f(node, true,
                "export node_user=\"%s\"; export node_password=\"%s\"; %s/create_user.sh %s",
-               user_name, password, access_homedir[0], socket_cmd[0]);
+               user_name, password, access_homedir(0), socket_cmd[0]);
 }
 
 int Mariadb_nodes::create_users()
@@ -1266,10 +1266,10 @@ int Mariadb_nodes::configure_ssl(bool require)
         local_result += copy_to_node_legacy(str, (char*) "~/", i);
         sprintf(str, "%s/ssl.cnf", test_dir);
         local_result += copy_to_node_legacy(str, (char*) "~/", i);
-        sprintf(str, "cp %s/ssl.cnf /etc/my.cnf.d/", access_homedir[i]);
+        sprintf(str, "cp %s/ssl.cnf /etc/my.cnf.d/", access_homedir(i));
         local_result += ssh_node(i, str, true);
 
-        sprintf(str, "cp -r %s/ssl-cert /etc/", access_homedir[i]);
+        sprintf(str, "cp -r %s/ssl-cert /etc/", access_homedir(i));
         local_result += ssh_node(i, str, true);
         local_result += ssh_node(i, (char*) "chown mysql:mysql -R /etc/ssl-cert", true);
         start_node(i, (char*) "");
@@ -1650,4 +1650,9 @@ const char* Mariadb_nodes::ip_private(int i) const
 const char* Mariadb_nodes::ip6(int i) const
 {
     return Nodes::ip6(i);
+}
+
+const char* Mariadb_nodes::access_homedir(int i) const
+{
+    return Nodes::access_homedir(i);
 }

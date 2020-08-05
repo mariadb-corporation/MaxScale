@@ -441,8 +441,8 @@ TestConnections::TestConnections(int argc, char* argv[])
     if (initialize)
     {
         std::string src = std::string(test_dir) + "/mdbci/add_core_cnf.sh";
-        maxscales->copy_to_node(0, src.c_str(), maxscales->access_homedir[0]);
-        maxscales->ssh_node_f(0, true, "%s/add_core_cnf.sh %s", maxscales->access_homedir[0],
+        maxscales->copy_to_node(0, src.c_str(), maxscales->access_homedir(0));
+        maxscales->ssh_node_f(0, true, "%s/add_core_cnf.sh %s", maxscales->access_homedir(0),
                               verbose ? "verbose" : "");
     }
 
@@ -865,7 +865,7 @@ void TestConnections::process_template(int m, const string& cnf_template_path, c
     sprintf(str, "sed -i \"s/###access_user###/%s/g\" maxscale.cnf", maxscales->access_user(m));
     system(str);
 
-    sprintf(str, "sed -i \"s|###access_homedir###|%s|g\" maxscale.cnf", maxscales->access_homedir[m]);
+    sprintf(str, "sed -i \"s|###access_homedir###|%s|g\" maxscale.cnf", maxscales->access_homedir(m));
     system(str);
 
     if (repl && repl->v51)
@@ -891,24 +891,21 @@ void TestConnections::init_maxscales()
 
 void TestConnections::init_maxscale(int m)
 {
-    process_template(m, m_cnf_template_path, maxscales->access_homedir[m]);
-    if (maxscales->ssh_node_f(m, true, "test -d %s/certs", maxscales->access_homedir[m]))
+    auto homedir = maxscales->access_homedir(m);
+    process_template(m, m_cnf_template_path, homedir);
+    if (maxscales->ssh_node_f(m, true, "test -d %s/certs", homedir))
     {
         tprintf("SSL certificates not found, copying to maxscale");
-        maxscales->ssh_node_f(m,
-                              true,
-                              "rm -rf %s/certs;mkdir -m a+wrx %s/certs;",
-                              maxscales->access_homedir[m],
-                              maxscales->access_homedir[m]);
+        maxscales->ssh_node_f(m, true, "rm -rf %s/certs;mkdir -m a+wrx %s/certs;", homedir, homedir);
 
         char str[4096];
         char dtr[4096];
         sprintf(str, "%s/ssl-cert/*", test_dir);
-        sprintf(dtr, "%s/certs/", maxscales->access_homedir[m]);
+        sprintf(dtr, "%s/certs/", homedir);
         maxscales->copy_to_node_legacy(str, dtr, m);
         sprintf(str, "cp %s/ssl-cert/* .", test_dir);
         call_system(str);
-        maxscales->ssh_node_f(m, true, "chmod -R a+rx %s;", maxscales->access_homedir[m]);
+        maxscales->ssh_node_f(m, true, "chmod -R a+rx %s;", homedir);
     }
 
     maxscales->ssh_node_f(m,
@@ -1033,6 +1030,7 @@ void TestConnections::copy_one_maxscale_log(int i, double timestamp)
 
     if (strcmp(maxscales->IP[i], "127.0.0.1") != 0)
     {
+        auto homedir = maxscales->access_homedir(i);
         int rc = maxscales->ssh_node_f(i, true,
                                        "rm -rf %s/logs;"
                                        "mkdir %s/logs;"
@@ -1041,15 +1039,13 @@ void TestConnections::copy_one_maxscale_log(int i, double timestamp)
                                        "cp %s %s/logs/;"
                                        "chmod 777 -R %s/logs;"
                                        "test -e /tmp/core*  && exit 42;",
-                                       maxscales->access_homedir[i],
-                                       maxscales->access_homedir[i],
-                                       maxscales->maxscale_log_dir[i],
-                                       maxscales->access_homedir[i],
-                                       maxscales->access_homedir[i],
-                                       maxscales->maxscale_cnf[i],
-                                       maxscales->access_homedir[i],
-                                       maxscales->access_homedir[i]);
-        sprintf(sys, "%s/logs/*", maxscales->access_homedir[i]);
+                                       homedir,
+                                       homedir,
+                                       maxscales->maxscale_log_dir[i], homedir,
+                                       homedir,
+                                       maxscales->maxscale_cnf[i], homedir,
+                                       homedir);
+        sprintf(sys, "%s/logs/*", homedir);
         maxscales->copy_from_node(i, sys, log_dir_i);
         expect(rc != 42, "Test should not generate core files");
     }
@@ -1277,11 +1273,12 @@ int TestConnections::start_binlog(int m)
     // ssl between binlog router and Master
     if (backend_ssl)
     {
+        auto homedir = maxscales->access_homedir(m);
         sprintf(sys1,
-                "CHANGE MASTER TO master_ssl_cert='%s/certs/client-cert.pem', master_ssl_ca='%s/certs/ca.pem', master_ssl=1, master_ssl_key='%s/certs/client-key.pem'",
-                maxscales->access_homedir[m],
-                maxscales->access_homedir[m],
-                maxscales->access_homedir[m]);
+                "CHANGE MASTER TO master_ssl_cert='%s/certs/client-cert.pem', "
+                "master_ssl_ca='%s/certs/ca.pem', master_ssl=1, master_ssl_key='%s/certs/client-key.pem'",
+                homedir, homedir, homedir);
+
         tprintf("Configuring Master ssl: %s\n", sys1);
         try_query(binlog, "%s", sys1);
     }
