@@ -322,29 +322,25 @@ bool check_15_server_states(const char* zName,
                     }
                     ++nSingle_nodes;
                 }
-                else if (ip == pServer->address())
-                {
-                    pServer->set_node_mode(CsMonitorServer::MULTI_NODE);
-                }
                 else
                 {
-                    MXS_ERROR("MaxScale thinks the IP address of the server '%s' is %s, "
-                              "while the server itself thinks it is %s.",
-                              pServer->name(), pServer->address(), ip.c_str());
-                    rv = false;
+                    // If the IP is anything but 127.0.0.1, we assume it is a node
+                    // setup for a multi-node cluster.
+                    //
+                    // TODO: Check that every server is configured for use in
+                    // TODO: the _same_ cluster.
+                    pServer->set_node_mode(CsMonitorServer::MULTI_NODE);
                 }
             }
             else
             {
-                MXS_ERROR("Could not get DMRM_Controller IP of '%s'.", pServer->name());
-                rv = false;
+                MXS_WARNING("Could not get DMRM_Controller IP of '%s'.", pServer->name());
             }
         }
         else
         {
             MXS_ERROR("Could not fetch config from '%s': (%d) %s",
                       pServer->name(), config.response.code, config.response.body.c_str());
-            rv = false;
         }
 
         ++it;
@@ -354,7 +350,7 @@ bool check_15_server_states(const char* zName,
     if (nSingle_nodes >= 1 && servers.size() > 1)
     {
         MXS_WARNING("Out of %d servers in total, %d are configured as single-nodes. "
-                    "You are likely to see multiples servers marked as being master, "
+                    "You are likely to see multiple servers marked as being master, "
                     "which is not likely to work as intended.",
                     (int)servers.size(), nSingle_nodes);
     }
