@@ -29,19 +29,27 @@ describe('Dashboard index', () => {
 
     afterEach(async function() {
         await axiosStub.restore()
+        await wrapper.setData({
+            loop: false,
+        })
     })
 
-    it(`Should send 7 requests in parallel to get maxscale overview info,
-      maxscale threads, all servers, monitors, sessions and services`, async () => {
-        axiosStub.firstCall.should.have.been.calledWith(
+    it(`Should send requests in parallel to get maxscale overview info,
+      maxscale threads, all servers, monitors, sessions, services and listeners`, async () => {
+        await axiosStub.firstCall.should.have.been.calledWith(
             '/maxscale?fields[maxscale]=version,commit,started_at,activated_at,uptime'
         )
-        axiosStub.secondCall.should.have.been.calledWith('/maxscale/threads?fields[threads]=stats')
-        axiosStub.thirdCall.should.have.been.calledWith('/servers')
-        axiosStub.getCall(3).should.have.been.calledWith('/monitors')
-        axiosStub.getCall(4).should.have.been.calledWith('/sessions')
-        axiosStub.getCall(5).should.have.been.calledWith('/services')
-        axiosStub.lastCall.should.have.been.calledWith('/listeners')
+        await axiosStub.secondCall.should.have.been.calledWith(
+            '/maxscale/threads?fields[threads]=stats'
+        )
+        await axiosStub.thirdCall.should.have.been.calledWith('/servers')
+        await axiosStub.getCall(3).should.have.been.calledWith('/monitors')
+        await axiosStub.getCall(4).should.have.been.calledWith('/sessions')
+        await axiosStub.getCall(5).should.have.been.calledWith('/services')
+
+        await wrapper.vm.$nextTick(async () => {
+            await axiosStub.should.have.been.calledWith('/listeners')
+        })
     })
 
     it(`Should render page-wrapper component`, async () => {

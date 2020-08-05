@@ -33,15 +33,20 @@ export default {
         PageHeader,
         Graphs,
     },
+    data() {
+        return {
+            loop: true,
+        }
+    },
     async created() {
         await Promise.all([
             this.fetchMaxScaleOverviewInfo(),
+            // below fetches will be looped in graphs component
             this.fetchThreads(),
             this.fetchAllServers(),
             this.fetchAllMonitors(),
             this.fetchAllSessions(),
             this.fetchAllServices(),
-            this.fetchAllListeners(),
         ])
 
         await Promise.all([
@@ -49,8 +54,14 @@ export default {
             this.genServersConnectionsDataSetSchema(),
             this.genThreadsDatasetsSchema(),
         ])
-    },
 
+        while (this.loop) {
+            await Promise.all([this.fetchAllListeners(), this.$help.delay(10000)])
+        }
+    },
+    beforeDestroy() {
+        this.loop = false
+    },
     methods: {
         ...mapActions({
             fetchMaxScaleOverviewInfo: 'maxscale/fetchMaxScaleOverviewInfo',

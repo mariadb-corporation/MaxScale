@@ -75,8 +75,8 @@ describe('Graphs index', () => {
         await axiosStub.restore()
     })
 
-    it(`Should update graphs by first sending 4 requests in parallel to
-      get all servers, sessions, services and maxscale threads`, async () => {
+    it(`Should update graphs by first sending requests in parallel to
+      get all servers, monitors, sessions, services and maxscale threads`, async () => {
         // this prevent fetch loop in line-chart
         await wrapper.setData({
             chartOptionsWithOutCallBack: null,
@@ -85,9 +85,12 @@ describe('Graphs index', () => {
         //mockup update chart
         await wrapper.vm.updateChart()
 
-        axiosStub.getCall(0).should.have.been.calledWith('/servers')
-        axiosStub.getCall(1).should.have.been.calledWith('/sessions')
-        axiosStub.getCall(2).should.have.been.calledWith('/services')
-        axiosStub.lastCall.should.have.been.calledWith('/maxscale/threads?fields[threads]=stats')
+        await axiosStub.getCall(0).should.have.been.calledWith('/servers')
+        await axiosStub.getCall(1).should.have.been.calledWith('/monitors')
+        await axiosStub.getCall(2).should.have.been.calledWith('/sessions')
+        await axiosStub.getCall(3).should.have.been.calledWith('/services')
+        await axiosStub.lastCall.should.have.been.calledWith(
+            '/maxscale/threads?fields[threads]=stats'
+        )
     })
 })

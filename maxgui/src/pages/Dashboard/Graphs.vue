@@ -124,6 +124,7 @@ export default {
             fetchThreads: 'maxscale/fetchThreads',
             genThreadsDatasetsSchema: 'maxscale/genDataSetSchema',
             fetchAllServers: 'server/fetchAllServers',
+            fetchAllMonitors: 'monitor/fetchAllMonitors',
             fetchAllSessions: 'session/fetchAllSessions',
             fetchAllServices: 'service/fetchAllServices',
         }),
@@ -136,6 +137,7 @@ export default {
                 //  LOOP polling
                 await Promise.all([
                     this.fetchAllServers(),
+                    this.fetchAllMonitors(),
                     this.fetchAllSessions(),
                     this.fetchAllServices(),
                     this.fetchThreads(),
