@@ -21,7 +21,6 @@ const char ARG_MONITOR_DESC[] = "Monitor name";
 
 const char CSMON_ADD_NODE_DESC[]    = "Add a node to a Columnstore cluster.";
 const char CSMON_CONFIG_GET_DESC[]  = "Get Columnstore cluster [or server] config.";
-const char CSMON_CONFIG_SET_DESC[]  = "Set Columnstore cluster [or server] config.";
 const char CSMON_MODE_SET_DESC[]    = "Set Columnstore cluster mode.";
 const char CSMON_REMOVE_NODE_DESC[] = "Remove a node from a Columnstore cluster.";
 const char CSMON_SHUTDOWN_DESC[]    = "Shutdown Columnstore cluster [or server].";
@@ -40,14 +39,6 @@ const modulecmd_arg_type_t csmon_config_get_argv[] =
 {
     { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC },
     { MODULECMD_ARG_SERVER | MODULECMD_ARG_OPTIONAL, "Specific server to to obtain config from" }
-};
-
-const modulecmd_arg_type_t csmon_config_set_argv[] =
-{
-    { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC },
-    { MODULECMD_ARG_STRING, "Configuration as JSON object" },
-    { MODULECMD_ARG_STRING, "Timeout." },
-    { MODULECMD_ARG_SERVER | MODULECMD_ARG_OPTIONAL, "Specific server to configure" }
 };
 
 const modulecmd_arg_type_t csmon_mode_set_argv[]
@@ -349,28 +340,6 @@ bool csmon_config_get(const MODULECMD_ARG* pArgs, json_t** ppOutput)
     return rv;
 }
 
-bool csmon_config_set(const MODULECMD_ARG* pArgs, json_t** ppOutput)
-{
-    CsMonitor* pMonitor;
-    const char* zJson;
-    const char* zTimeout;
-    CsMonitorServer* pServer;
-
-    bool rv = get_args(pArgs, ppOutput, &pMonitor, &zJson, &zTimeout, &pServer);
-
-    if (rv)
-    {
-        std::chrono::seconds timeout(0);
-
-        if (get_timeout(zTimeout, &timeout, ppOutput))
-        {
-            CALL_IF_CS_15(pMonitor->command_config_set(ppOutput, zJson, timeout, pServer));
-        }
-    }
-
-    return rv;
-}
-
 bool csmon_mode_set(const MODULECMD_ARG* pArgs, json_t** ppOutput)
 {
     CsMonitor* pMonitor;
@@ -560,11 +529,6 @@ void register_commands()
                                csmon_config_get,
                                MXS_ARRAY_NELEMS(csmon_config_get_argv), csmon_config_get_argv,
                                CSMON_CONFIG_GET_DESC);
-
-    modulecmd_register_command(MXS_MODULE_NAME, "config-set", MODULECMD_TYPE_PASSIVE,
-                               csmon_config_set,
-                               MXS_ARRAY_NELEMS(csmon_config_set_argv), csmon_config_set_argv,
-                               CSMON_CONFIG_SET_DESC);
 
     modulecmd_register_command(MXS_MODULE_NAME, "mode-set", MODULECMD_TYPE_ACTIVE,
                                csmon_mode_set,

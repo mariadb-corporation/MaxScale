@@ -219,7 +219,6 @@ public:
     bool set_cluster_mode(cs::ClusterMode mode,
                           const std::chrono::seconds& timeout,
                           json_t* pOutput = nullptr);
-    bool set_config(const std::string& body, json_t** ppError = nullptr);
 
     static Result fetch_status(const std::vector<CsMonitorServer*>& servers,
                                CsContext& context);
@@ -278,14 +277,6 @@ public:
     static CsMonitorServer* get_master(const std::vector<CsMonitorServer*>& servers,
                                        CsContext& context,
                                        json_t* pOutput = nullptr);
-
-    static bool set_config(const std::vector<CsMonitorServer*>& servers,
-                           const std::string& body,
-                           CsContext& context,
-                           Results* pResults);
-    static Results set_config(const std::vector<CsMonitorServer*>& servers,
-                              const std::string& body,
-                              CsContext& context);
 
 private:
     bool set_status(const mxb::http::Response& response, json_t** ppError);

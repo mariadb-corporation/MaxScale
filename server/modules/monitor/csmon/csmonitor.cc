@@ -597,36 +597,6 @@ bool CsMonitor::command_config_get(json_t** ppOutput, CsMonitorServer* pServer)
     return command(ppOutput, sem, "config-get", cmd);
 }
 
-bool CsMonitor::command_config_set(json_t** ppOutput,
-                                   const char* zJson,
-                                   const std::chrono::seconds& timeout,
-                                   CsMonitorServer* pServer)
-{
-    bool rv = false;
-
-    auto len = strlen(zJson);
-    if (is_valid_json(ppOutput, zJson, len))
-    {
-        mxb::Semaphore sem;
-        string body(zJson, zJson + len);
-
-        auto cmd = [this, ppOutput, &sem, &body, timeout, pServer] () {
-            if (ready_to_run(ppOutput))
-            {
-                cs_config_set(ppOutput, &sem, std::move(body), timeout, pServer);
-            }
-            else
-            {
-                sem.post();
-            }
-        };
-
-        rv = command(ppOutput, sem, "config-put", cmd);
-    }
-
-    return rv;
-}
-
 bool CsMonitor::command_mode_set(json_t** ppOutput, const char* zMode, const std::chrono::seconds& timeout)
 {
     bool rv = false;
@@ -934,88 +904,6 @@ void CsMonitor::cs_config_get(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitor
     json_object_set(pOutput, csmon::keys::RESULT, pResult);
 
     json_decref(pResult);
-
-    *ppOutput = pOutput;
-
-    pSem->post();
-}
-
-void CsMonitor::cs_config_set(json_t** ppOutput,
-                              mxb::Semaphore* pSem,
-                              string&& body,
-                              const std::chrono::seconds& timeout,
-                              CsMonitorServer* pServer)
-{
-    json_t* pOutput = json_object();
-    bool success = false;
-    ostringstream message;
-    json_t* pServers = nullptr;
-
-    ServerVector sv;
-
-    if (pServer)
-    {
-        sv.push_back(pServer);
-    }
-    else
-    {
-        sv = servers();
-    }
-
-    Results results;
-    if (CsMonitorServer::begin(sv, timeout, m_context, &results))
-    {
-        if (CsMonitorServer::set_config(sv, body, m_context, &results))
-        {
-            if (CsMonitorServer::commit(sv, timeout, m_context, &results))
-            {
-                message << "Config set on all servers.";
-                results_to_json(sv, results, &pServers);
-                success = true;
-            }
-            else
-            {
-                LOG_APPEND_JSON_ERROR(&pOutput, "Could not commit changes, will attempt rollback.");
-                results_to_json(sv, results, &pServers);
-            }
-        }
-        else
-        {
-            LOG_APPEND_JSON_ERROR(&pOutput, "Could not set config on all nodes.");
-            results_to_json(sv, results, &pServers);
-        }
-    }
-    else
-    {
-        LOG_APPEND_JSON_ERROR(&pOutput, "Could not start a transaction on all nodes.");
-        results_to_json(sv, results, &pServers);
-    }
-
-    if (!success)
-    {
-        if (!CsMonitorServer::rollback(sv, m_context, &results))
-        {
-            LOG_APPEND_JSON_ERROR(&pOutput, "Could not rollback changes, cluster state unknown.");
-            if (pServers)
-            {
-                json_decref(pServers);
-            }
-            results_to_json(sv, results, &pServers);
-        }
-    }
-
-    if (success)
-    {
-        message << "Config applied to all servers.";
-    }
-    else
-    {
-        message << "Could not set config to all servers.";
-    }
-
-    json_object_set_new(pOutput, csmon::keys::SUCCESS, json_boolean(success));
-    json_object_set_new(pOutput, csmon::keys::MESSAGE, json_string(message.str().c_str()));
-    json_object_set_new(pOutput, csmon::keys::SERVERS, pServers);
 
     *ppOutput = pOutput;
 
