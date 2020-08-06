@@ -58,7 +58,7 @@ public:
     }
 
     // Only to be called by the module call command mechanism.
-    bool command_add_node(json_t** ppOutput, CsMonitorServer* pServer, const std::chrono::seconds& timeout);
+    bool command_add_node(json_t** ppOutput, const std::string& host, const std::chrono::seconds& timeout);
     bool command_config_get(json_t** ppOutput, CsMonitorServer* pServer);
     bool command_config_set(json_t** ppOutput,
                             const char* zJson, const std::chrono::seconds& timeout, CsMonitorServer* pServer);
@@ -83,7 +83,7 @@ private:
     bool command(json_t** ppOutput, mxb::Semaphore& sem, const char* zCmd, std::function<void()> cmd);
 
     void cs_add_node(json_t** ppOutput, mxb::Semaphore* pSem,
-                     CsMonitorServer* pServer, const std::chrono::seconds& timeout);
+                     const std::string& host, const std::chrono::seconds& timeout);
     void cs_config_get(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer* pServer);
     void cs_config_set(json_t** ppOutput, mxb::Semaphore* pSem,
                        std::string&& body, const std::chrono::seconds& timeout, CsMonitorServer* pServer);
@@ -102,14 +102,6 @@ private:
     void cs_rollback(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer* pServer);
 #endif
 
-    bool cs_add_first_multi_node(json_t* pOutput,
-                                 CsMonitorServer* pServer,
-                                 const std::chrono::seconds& timeout);
-    bool cs_add_additional_multi_node(json_t* pOutput,
-                                      CsMonitorServer* pServer,
-                                      const std::chrono::seconds& timeout);
-
-    std::string create_add_config(CsMonitorServer::Config& config, CsMonitorServer* pServer);
     std::string create_remove_config(CsMonitorServer::Config& config,
                                      CsMonitorServer* pServer,
                                      bool force,

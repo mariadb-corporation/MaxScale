@@ -146,6 +146,9 @@ const char* rest::to_string(rest::Action action)
 {
     switch (action)
     {
+    case ADD_NODE:
+        return "add-node";
+
     case BEGIN:
         return "begin";
 
@@ -1046,6 +1049,18 @@ string start_or_shutdown(const std::chrono::seconds& timeout)
 
     return body.str();
 }
+}
+
+string add_node(const std::string& node, const std::chrono::seconds& timeout)
+{
+    std::ostringstream body;
+    body << "{\"" << TIMEOUT << "\": "
+         << timeout.count()
+         << ", \"" << NODE << "\": \""
+         << node
+         << "\"}";
+
+    return body.str();
 }
 
 string begin(const std::chrono::seconds& timeout, int id)

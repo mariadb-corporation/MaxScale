@@ -560,15 +560,15 @@ void reject_command_pending(json_t** ppOutput, const char* zPending)
 }
 
 bool CsMonitor::command_add_node(json_t** ppOutput,
-                                 CsMonitorServer* pServer,
+                                 const string& host,
                                  const std::chrono::seconds& timeout)
 {
     mxb::Semaphore sem;
 
-    auto cmd = [this, &sem, pServer, timeout, ppOutput] () {
+    auto cmd = [this, &sem, host, timeout, ppOutput] () {
         if (ready_to_run(ppOutput))
         {
-            cs_add_node(ppOutput, &sem, pServer, timeout);
+            cs_add_node(ppOutput, &sem, host, timeout);
         }
         else
         {
@@ -863,7 +863,7 @@ bool is_node_part_of_cluster(const CsMonitorServer* pServer)
 
 void CsMonitor::cs_add_node(json_t** ppOutput,
                             mxb::Semaphore* pSem,
-                            CsMonitorServer* pServer,
+                            const string& host,
                             const std::chrono::seconds& timeout)
 {
     json_t* pOutput = json_object();
@@ -871,54 +871,27 @@ void CsMonitor::cs_add_node(json_t** ppOutput,
     ostringstream message;
     json_t* pServers = nullptr;
 
-    if (pServer->is_unknown_mode())
+    Result result = CsMonitorServer::add_node(servers(), host, timeout, m_context);
+    json_t* pResult = nullptr;
+
+    if (result.ok())
     {
-        auto config = pServer->fetch_config();
-        // TODO: Propagate any errors to caller.
-        success = config.ok() && pServer->set_node_mode(config, pOutput);
-
-        if (!success)
-        {
-            json_t* pError = mxs_json_error("Can't establish whether server '%s' has been configured "
-                                            "already. It cannot be added to the cluster.",
-                                            pServer->name());
-            mxs_json_error_push_front(pOutput, pError);
-        }
-    }
-
-    if (pServer->is_multi_node())
-    {
-        mxs_json_error_append(pOutput,
-                              "The server '%s' is already a node in a cluster.",
-                              pServer->name());
-    }
-    else if (pServer->is_single_node())
-    {
-        const auto& sv = servers();
-
-        auto it = std::find_if(sv.begin(), sv.end(), std::mem_fun(&CsMonitorServer::is_multi_node));
-
-        if (it == sv.end())
-        {
-            success = cs_add_first_multi_node(pOutput, pServer, timeout);
-        }
-        else
-        {
-            success = cs_add_additional_multi_node(pOutput, pServer, timeout);
-        }
-    }
-
-    if (success)
-    {
-        message << "Server '" << pServer->name() << "' added to cluster.";
+        message << "Node " << host << " successfully added to cluster.";
+        pResult = result.sJson.get();
+        json_incref(pResult);
+        success = true;
     }
     else
     {
-        message << "Adding server '" << pServer->name() << "' to cluster failed.";
+        message << "Could not add node " << host << " to the cluster.";
+        pResult = mxs_json_error("%s", result.response.body.c_str());
     }
 
     json_object_set_new(pOutput, csmon::keys::SUCCESS, json_boolean(success));
     json_object_set_new(pOutput, csmon::keys::MESSAGE, json_string(message.str().c_str()));
+    json_object_set(pOutput, csmon::keys::RESULT, pResult);
+
+    json_decref(pResult);
 
     *ppOutput = pOutput;
 
@@ -1499,217 +1472,6 @@ void CsMonitor::cs_rollback(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorSe
     pSem->post();
 }
 #endif
-
-bool CsMonitor::cs_add_first_multi_node(json_t* pOutput,
-                                        CsMonitorServer* pServer,
-                                        const std::chrono::seconds& timeout)
-{
-    bool success = false;
-
-    mxb_assert(pServer->is_single_node());
-
-    auto result = pServer->begin(timeout);
-
-    if (result.ok())
-    {
-        const char* zName = pServer->name();
-
-        CS_DEBUG("Started transaction on '%s'.", zName);
-        auto config = pServer->fetch_config();
-
-        if (config.ok())
-        {
-            CS_DEBUG("Fetched current config from '%s'.", zName);
-
-            if (cs::xml::convert_to_first_multi_node(*config.sXml,
-                                                     m_context.manager(),
-                                                     pServer->address(),
-                                                     pOutput))
-            {
-                auto body = cs::body::config(*config.sXml,
-                                             m_context.revision(),
-                                             m_context.manager(),
-                                             timeout);
-
-                if (pServer->set_config(body, &pOutput))
-                {
-                    MXS_NOTICE("Updated config on '%s'.", zName);
-
-                    result = pServer->commit(timeout);
-
-                    if (result.ok())
-                    {
-                        MXS_NOTICE("Committed changes on '%s'.", zName);
-                        success = true;
-                    }
-                    else
-                    {
-                        LOG_APPEND_JSON_ERROR(&pOutput, "Could not commit changes to '%s': %s",
-                                              pServer->name(),
-                                              result.response.body.c_str());
-                    }
-                }
-                else
-                {
-                    LOG_PREPEND_JSON_ERROR(&pOutput, "Could not set new config of '%s'.", zName);
-                }
-            }
-            else
-            {
-                LOG_PREPEND_JSON_ERROR(&pOutput, "Could not convert single node configuration to "
-                                       "first multi-node configuration.");
-            }
-        }
-        else
-        {
-            mxs_json_error_append(pOutput, "Could not fetch config of '%s'.", zName);
-            if (config.sJson.get())
-            {
-                mxs_json_error_push_back(pOutput, config.sJson.get());
-            }
-        }
-
-        if (success)
-        {
-            pServer->set_node_mode(CsMonitorServer::MULTI_NODE);
-        }
-        else
-        {
-            result = pServer->rollback();
-
-            if (!result.ok())
-            {
-                MXS_ERROR("Could not perform a rollback on '%s': %s", zName, result.response.body.c_str());
-            }
-        }
-    }
-    else
-    {
-        LOG_APPEND_JSON_ERROR(&pOutput, "Could not start a transaction on '%s': %s",
-                              pServer->name(), result.response.body.c_str());
-    }
-
-    return success;
-}
-
-bool CsMonitor::cs_add_additional_multi_node(json_t* pOutput,
-                                             CsMonitorServer* pServer,
-                                             const std::chrono::seconds& timeout)
-{
-    bool success = false;
-    json_t* pServers = nullptr;
-
-    const ServerVector& sv = servers();
-
-    Results results;
-    if (CsMonitorServer::begin(sv, timeout, m_context, &results))
-    {
-        auto status = pServer->fetch_status();
-
-        if (status.ok())
-        {
-            ServerVector existing_servers;
-            auto sb = sv.begin();
-            auto se = sv.end();
-
-            std::copy_if(sb, se, std::back_inserter(existing_servers), [pServer](auto* pS) {
-                    return pServer != pS;
-                });
-
-            CsMonitorServer::Configs configs;
-            if (CsMonitorServer::fetch_configs(existing_servers, m_context, &configs))
-            {
-                auto cb = configs.begin();
-                auto ce = configs.end();
-
-                auto it = std::max_element(cb, ce, [](const auto& l, const auto& r) {
-                        return l.timestamp < r.timestamp;
-                    });
-
-                CsMonitorServer* pSource = *(sb + (it - cb));
-
-                MXS_NOTICE("Using config of '%s' for configuring '%s'.",
-                           pSource->name(), pServer->name());
-
-                CsMonitorServer::Config& config = *it;
-
-                string body = create_add_config(config, pServer);
-
-                if (pServer->set_config(config.response.body, &pOutput))
-                {
-                    if (CsMonitorServer::set_config(sv, body, m_context, &results))
-                    {
-                        success = true;
-                    }
-                    else
-                    {
-                        LOG_APPEND_JSON_ERROR(&pOutput, "Could not update configs of existing nodes.");
-                        results_to_json(sv, results, &pServers);
-                    }
-                }
-                else
-                {
-                    LOG_PREPEND_JSON_ERROR(&pOutput, "Could not update config of new node.");
-                }
-            }
-            else
-            {
-                LOG_APPEND_JSON_ERROR(&pOutput, "Could not fetch configs from existing nodes.");
-                results_to_json(sv, configs, &pServers);
-            }
-        }
-        else
-        {
-            LOG_APPEND_JSON_ERROR(&pOutput, "Could not fetch status from node to be added.");
-            if (status.sJson.get())
-            {
-                mxs_json_error_push_back(pOutput, status.sJson.get());
-            }
-        }
-    }
-    else
-    {
-        LOG_APPEND_JSON_ERROR(&pOutput, "Could not start a transaction on all nodes.");
-        results_to_json(sv, results, &pServers);
-    }
-
-    if (success)
-    {
-        success = CsMonitorServer::commit(sv, timeout, m_context, &results);
-
-        if (!success)
-        {
-            LOG_APPEND_JSON_ERROR(&pOutput, "Could not commit changes, will attempt rollback.");
-            results_to_json(sv, results, &pServers);
-        }
-    }
-
-    if (!success)
-    {
-        if (!CsMonitorServer::rollback(sv, m_context, &results))
-        {
-            LOG_APPEND_JSON_ERROR(&pOutput, "Could not rollback changes, cluster state unknown.");
-            if (pServers)
-            {
-                json_decref(pServers);
-            }
-            results_to_json(sv, results, &pServers);
-        }
-    }
-
-    if (pServers)
-    {
-        json_object_set_new(pOutput, csmon::keys::SERVERS, pServers);
-    }
-
-    return success;
-}
-
-string CsMonitor::create_add_config(CsMonitorServer::Config& config, CsMonitorServer* pServer)
-{
-    // TODO: Add relevant information.
-    return config.response.body;
-}
 
 string CsMonitor::create_remove_config(CsMonitorServer::Config& config,
                                        CsMonitorServer* pServer,

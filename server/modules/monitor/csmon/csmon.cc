@@ -14,12 +14,6 @@
 #include "csmonitor.hh"
 #include <chrono>
 
-// How nodes are added and removed, and how dbroots are managed is
-// under development. The way it is implemented now, will change,
-// so for the time being no advanced cluster operation commands are
-// exposed.
-#undef CSMON_ADVANCED_CLUSTER_OPERATIONS
-
 namespace
 {
 
@@ -38,7 +32,7 @@ const char CSMON_STATUS_DESC[]      = "Get Columnstore cluster [or server] statu
 const modulecmd_arg_type_t csmon_add_node_argv[] =
 {
     { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC },
-    { MODULECMD_ARG_SERVER, "Server to add to Columnstore cluster" },
+    { MODULECMD_ARG_STRING, "Hostname/IP to add to Columnstore cluster" },
     { MODULECMD_ARG_STRING, "Timeout." }
 };
 
@@ -344,10 +338,10 @@ bool get_timeout(const char* zTimeout, std::chrono::seconds* pTimeout, json_t** 
 bool csmon_add_node(const MODULECMD_ARG* pArgs, json_t** ppOutput)
 {
     CsMonitor* pMonitor;
-    CsMonitorServer* pServer;
+    const char* zHost;
     const char* zTimeout;
 
-    bool rv = get_args(pArgs, ppOutput, &pMonitor, &pServer, &zTimeout);
+    bool rv = get_args(pArgs, ppOutput, &pMonitor, &zHost, &zTimeout);
 
     if (rv)
     {
@@ -355,7 +349,7 @@ bool csmon_add_node(const MODULECMD_ARG* pArgs, json_t** ppOutput)
 
         if (get_timeout(zTimeout, &timeout, ppOutput))
         {
-            CALL_IF_CS_15(pMonitor->command_add_node(ppOutput, pServer, timeout));
+            CALL_IF_CS_15(pMonitor->command_add_node(ppOutput, zHost, timeout));
         }
     }
 
@@ -614,7 +608,6 @@ void register_commands()
                                MXS_ARRAY_NELEMS(csmon_status_argv), csmon_status_argv,
                                CSMON_STATUS_DESC);
 
-#if defined(CSMON_ADVANCED_CLUSTER_OPERATIONS)
     modulecmd_register_command(MXS_MODULE_NAME, "add-node", MODULECMD_TYPE_ACTIVE,
                                csmon_add_node,
                                MXS_ARRAY_NELEMS(csmon_add_node_argv), csmon_add_node_argv,
@@ -624,7 +617,6 @@ void register_commands()
                                csmon_remove_node,
                                MXS_ARRAY_NELEMS(csmon_remove_node_argv), csmon_remove_node_argv,
                                CSMON_REMOVE_NODE_DESC);
-#endif
 
 #if defined(CSMON_EXPOSE_TRANSACTIONS)
     modulecmd_register_command(MXS_MODULE_NAME, "begin", MODULECMD_TYPE_PASSIVE,

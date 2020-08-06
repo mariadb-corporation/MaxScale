@@ -196,6 +196,7 @@ DbRoots::Status update_dbroots(xmlDoc& csXml,
 namespace rest
 {
 enum Action {
+    ADD_NODE,
     BEGIN,
     COMMIT,
     CONFIG,
@@ -241,12 +242,23 @@ const char ID[]           = "id";
 const char MANAGER[]      = "manager";
 const char MODE[]         = "mode";
 const char NAME[]         = "name";
+const char NODE[]         = "node";
 const char PID[]          = "pid";
 const char REVISION[]     = "revision";
 const char SERVICES[]     = "services";
 const char TIMEOUT[]      = "timeout";
 const char TIMESTAMP[]    = "timestamp";
 const char TXN[]          = "txn";
+
+/**
+ * @brief JSON body to be used with PUT /cluster/add_node
+ *
+ * @param node     The host or IP of the node.
+ * @param timeout  The timeout of the operation.
+ *
+ * @return REST-API body.
+ */
+std::string add_node(const std::string& node, const std::chrono::seconds& timeout);
 
 /**
  * @brief JSON body to be used with PUT /node/begin

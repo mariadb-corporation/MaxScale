@@ -235,6 +235,11 @@ public:
                               CsContext& context,
                               Configs* pConfigs);
 
+    static Result add_node(const std::vector<CsMonitorServer*>& servers,
+                           const std::string& host,
+                           const std::chrono::seconds& timeout,
+                           CsContext& context);
+
     static Results begin(const std::vector<CsMonitorServer*>& servers,
                          const std::chrono::seconds& timeout,
                          CsContext& context);

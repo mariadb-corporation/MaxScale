@@ -332,6 +332,27 @@ Status CsMonitorServer::fetch_status() const
     return Status(response);
 }
 
+Result CsMonitorServer::add_node(const std::vector<CsMonitorServer*>& servers,
+                                 const std::string& host,
+                                 const std::chrono::seconds& timeout,
+                                 CsContext& context)
+{
+    http::Response response;
+
+    if (!servers.empty())
+    {
+        string url = servers.front()->create_url(cs::rest::CLUSTER, cs::rest::ADD_NODE);
+        response = http::put(url, cs::body::add_node(host, timeout), context.http_config(timeout));
+    }
+    else
+    {
+        response.code = http::Response::ERROR;
+        response.body = "No servers specified.";
+    }
+
+    return Result(response);
+}
+
 Result CsMonitorServer::begin(const std::chrono::seconds& timeout, json_t* pOutput)
 {
     if (m_trx_state != TRX_INACTIVE)
