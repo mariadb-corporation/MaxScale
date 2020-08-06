@@ -166,15 +166,11 @@ export default {
 
             let ids = relationshipData.length ? relationshipData.map(item => `${item.id}`) : []
             let arr = []
-            ids.forEach(async (id, i) => {
+            ids.forEach(async id => {
                 let data = await this.getRelationshipData(relationshipType, id)
                 const { id: relationshipId, type, attributes: { state = null } = {} } = data
                 let row = { id: relationshipId, type: type }
-                if (relationshipType === 'filters') {
-                    row.index = i
-                } else {
-                    row.state = state
-                }
+                if (relationshipType !== 'filters') row.state = state
                 arr.push(row)
             })
 

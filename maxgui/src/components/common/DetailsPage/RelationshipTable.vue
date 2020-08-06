@@ -127,6 +127,9 @@ export default {
             return this.$store.Vue.Logger('relationship-table')
         },
         tableRowsData: function() {
+            // add index number for filters table only
+            if (this.relationshipType === 'filters')
+                this.tableRows.forEach((row, i) => (row.index = i))
             return this.tableRows
         },
     },
@@ -211,22 +214,22 @@ export default {
         },
 
         async confirmDelete() {
-            /* const self = this */
             switch (this.targetItem.type) {
                 case 'servers':
                 case 'services':
                 case 'filters':
                     {
-                        let ori = this.tableRowsData
+                        const rows = this.$help.lodash.cloneDeep(this.tableRowsData)
                         let relationship = []
-                        for (let i = 0; i < ori.length; ++i) {
-                            if (ori[i].id !== this.targetItem.id) {
-                                let cloneO = this.$help.lodash.cloneDeep(ori[i])
-                                delete cloneO.state
-                                relationship.push(cloneO)
+                        rows.forEach(row => {
+                            if (row.id !== this.targetItem.id) {
+                                delete row.state
+                                delete row.attributes
+                                delete row.index
+                                delete row.links
+                                relationship.push(row)
                             }
-                        }
-
+                        })
                         await this.dispatchRelationshipUpdate(this.relationshipType, relationship)
                     }
                     break
@@ -265,23 +268,21 @@ export default {
         async confirmAdd() {
             let self = this
 
-            switch (self.targetSelectItemType) {
+            switch (this.targetSelectItemType) {
                 case 'filters':
                 case 'servers':
                 case 'services':
                     {
-                        let ori = self.tableRowsData
-                        let merge = [...ori, ...self.targetItem]
-
+                        const rows = this.$help.lodash.cloneDeep(this.tableRowsData)
+                        const merge = [...rows, ...self.targetItem]
                         let relationship = []
-                        for (let i = 0; i < merge.length; ++i) {
-                            let cloneO = self.$help.lodash.cloneDeep(merge[i])
-                            delete cloneO.state
-                            delete cloneO.attributes
-                            delete cloneO.index
-                            delete cloneO.links
-                            relationship.push(cloneO)
-                        }
+                        merge.forEach(row => {
+                            delete row.state
+                            delete row.attributes
+                            delete row.index
+                            delete row.links
+                            relationship.push(row)
+                        })
                         await self.dispatchRelationshipUpdate(this.relationshipType, relationship)
                     }
                     break
