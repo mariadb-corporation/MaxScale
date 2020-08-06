@@ -102,16 +102,18 @@ int main(int argc, char* argv[])
     auto gal_ip3 = Test->galera->ip_private(3);
 
     auto homedir = Test->maxscales->access_homedir(0);
+    auto sudo = Test->maxscales->access_sudo(0);
 
     Test->tprintf("Creating script on Maxscale machine");
-    Test->maxscales->ssh_node_f(0,
-                                false,
-                                "%s rm -rf %s/script; mkdir %s/script; echo \"echo \\$* >> %s/script_output\" > %s/script/script.sh; \
-            chmod a+x %s/script/script.sh; chmod a+x %s; %s chown maxscale:maxscale %s/script -R",
-                                Test->maxscales->access_sudo[0],
-                                homedir, homedir, homedir, homedir, homedir, homedir,
-                                Test->maxscales->access_sudo[0],
-                                homedir);
+    Test->maxscales->ssh_node_f(0, false,
+                                "%s rm -rf %s/script; mkdir %s/script; "
+                                "echo \"echo \\$* >> %s/script_output\" > %s/script/script.sh; "
+                                "chmod a+x %s/script/script.sh; chmod a+x %s; "
+                                "%s chown maxscale:maxscale %s/script -R",
+                                sudo, homedir, homedir,
+                                homedir, homedir,
+                                homedir, homedir,
+                                sudo, homedir);
 
     Test->maxscales->restart_maxscale(0);
 
