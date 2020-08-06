@@ -1205,7 +1205,9 @@ void CsMonitor::cs_remove_node(json_t** ppOutput,
         if (success)
         {
             std::chrono::seconds shutdown_timeout(0);
-            if (!CsMonitorServer::shutdown({pRemove_server}, shutdown_timeout, m_context, &results))
+            auto result = CsMonitorServer::shutdown({pRemove_server}, shutdown_timeout, m_context);
+
+            if (result.ok())
             {
                 MXS_ERROR("Could not shutdown '%s'.", pRemove_server->name());
             }
@@ -1259,47 +1261,32 @@ void CsMonitor::cs_shutdown(json_t** ppOutput,
                             const std::chrono::seconds& timeout)
 {
     json_t* pOutput = json_object();
-    bool success = true;
+    bool success = false;
     ostringstream message;
-    json_t* pServers = nullptr;
 
     const ServerVector& sv = servers();
 
-    if (timeout != std::chrono::seconds(0))
-    {
-        // If there is a timeout, then the cluster must first be made read-only.
-        success = CsMonitorServer::set_cluster_mode(sv, cs::READONLY, timeout, m_context, pOutput);
+    Result result = CsMonitorServer::shutdown(sv, timeout, m_context);
+    json_t* pResult = nullptr;
 
-        if (!success)
-        {
-            message << "Could not make cluster readonly. Timed out shutdown is not possible.";
-        }
+    if (result.ok())
+    {
+        message << "Cluster shut down.";
+        pResult = result.sJson.get();
+        json_incref(pResult);
+        success = true;
     }
-
-    if (success)
+    else
     {
-        Results results = CsMonitorServer::shutdown(sv, timeout, m_context);
-
-        size_t n = results_to_json(sv, results, &pServers);
-
-        if (n == sv.size())
-        {
-            message << "Cluster shut down.";
-        }
-        else
-        {
-            message << n << " servers out of " << sv.size() << " shut down.";
-            success = false;
-        }
+        message << "Could not shut down cluster.";
+        pResult = mxs_json_error("%s", result.response.body.c_str());
     }
 
     json_object_set_new(pOutput, csmon::keys::SUCCESS, json_boolean(success));
     json_object_set_new(pOutput, csmon::keys::MESSAGE, json_string(message.str().c_str()));
+    json_object_set(pOutput, csmon::keys::RESULT, pResult);
 
-    if (pServers)
-    {
-        json_object_set_new(pOutput, csmon::keys::SERVERS, pServers);
-    }
+    json_decref(pResult);
 
     *ppOutput = pOutput;
 

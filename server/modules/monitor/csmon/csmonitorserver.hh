@@ -251,13 +251,9 @@ public:
     static bool rollback(const std::vector<CsMonitorServer*>& servers,
                          CsContext& context,
                          Results* pResults);
-    static Results shutdown(const std::vector<CsMonitorServer*>& servers,
-                            const std::chrono::seconds& timeout,
-                            CsContext& context);
-    static bool shutdown(const std::vector<CsMonitorServer*>& servers,
-                         const std::chrono::seconds& timeout,
-                         CsContext& context,
-                         Results* pResults);
+    static Result shutdown(const std::vector<CsMonitorServer*>& servers,
+                           const std::chrono::seconds& timeout,
+                           CsContext& context);
     static Result start(const std::vector<CsMonitorServer*>& servers,
                         const std::chrono::seconds& timeout,
                         CsContext& context);
