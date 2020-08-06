@@ -1031,6 +1031,21 @@ string begin_or_commit(const std::chrono::seconds& timeout, int id)
 
     return body.str();
 }
+
+string start_or_shutdown(const std::chrono::seconds& timeout)
+{
+    std::ostringstream body;
+    body << "{";
+
+    if (timeout.count() != 0)
+    {
+        body << "\"" << TIMEOUT << "\": " << timeout.count();
+    }
+
+    body << "}";
+
+    return body.str();
+}
 }
 
 string begin(const std::chrono::seconds& timeout, int id)
@@ -1098,12 +1113,12 @@ string rollback(int id)
 
 string shutdown(const std::chrono::seconds& timeout)
 {
-    std::ostringstream body;
-    body << "{"
-         << "\"" << TIMEOUT << "\": " << timeout.count()
-         << "}";
+    return start_or_shutdown(timeout);
+}
 
-    return body.str();
+string start(const std::chrono::seconds& timeout)
+{
+    return start_or_shutdown(timeout);
 }
 
 }

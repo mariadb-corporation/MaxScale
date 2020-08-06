@@ -309,11 +309,18 @@ std::string config_set_cluster_mode(ClusterMode mode,
 std::string rollback(int id);
 
 /**
- * @brief JSON body to be used with PUT /node/shutdown
+ * @brief JSON body to be used with PUT /cluster/shutdown
  *
  * @param timeout  The timeout.
  */
 std::string shutdown(const std::chrono::seconds& timeout);
+
+/**
+ * @brief JSON body to be used with PUT /cluster/start
+ *
+ * @param timeout  The timeout.
+ */
+std::string start(const std::chrono::seconds& timeout);
 
 }
 

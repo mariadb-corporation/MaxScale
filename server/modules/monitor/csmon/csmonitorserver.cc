@@ -776,43 +776,24 @@ bool CsMonitorServer::shutdown(const std::vector<CsMonitorServer*>& servers,
     return rv;
 }
 
-//static
-Results CsMonitorServer::start(const std::vector<CsMonitorServer*>& servers,
-                               CsContext& context)
+Result CsMonitorServer::start(const std::vector<CsMonitorServer*>& servers,
+                              const std::chrono::seconds& timeout,
+                              CsContext& context)
 {
-    Results rv;
-    start(servers, context, &rv);
-    return rv;
-}
+    http::Response response;
 
-//static
-bool CsMonitorServer::start(const std::vector<CsMonitorServer*>& servers,
-                            CsContext& context,
-                            Results* pResults)
-{
-    bool rv = true;
-
-    vector<string> urls = create_urls(servers, cs::rest::NODE, cs::rest::START);
-    vector<http::Response> responses = http::put(urls, "{}", context.http_config());
-
-    mxb_assert(urls.size() == responses.size());
-
-    Results results;
-    for (const auto& response : responses)
+    if (!servers.empty())
     {
-        Result result(response);
-
-        if (!result.ok())
-        {
-            rv = false;
-        }
-
-        results.emplace_back(std::move(result));
+        string url = servers.front()->create_url(cs::rest::CLUSTER, cs::rest::START);
+        response = http::put(url, cs::body::start(timeout), context.http_config(timeout));
+    }
+    else
+    {
+        response.code = http::Response::ERROR;
+        response.body = "No servers specified.";
     }
 
-    pResults->swap(results);
-
-    return rv;
+    return Result(response);
 }
 
 //static

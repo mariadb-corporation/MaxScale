@@ -1314,34 +1314,27 @@ void CsMonitor::cs_start(json_t** ppOutput, mxb::Semaphore* pSem, const std::chr
 
     const ServerVector& sv = servers();
 
-    Results results = CsMonitorServer::start(sv, m_context);
+    Result result = CsMonitorServer::start(sv, timeout, m_context);
+    json_t* pResult = nullptr;
 
-    json_t* pServers = nullptr;
-    size_t n = results_to_json(sv, results, &pServers);
-
-    if (n == sv.size())
+    if (result.ok())
     {
-        message << "Cluster started successfully, ";
-
-        if (CsMonitorServer::set_cluster_mode(sv, cs::READWRITE, timeout, m_context, pOutput))
-        {
-            success = true;
-            message << "and made readwrite.";
-        }
-        else
-        {
-            message << "but could not be made readwrite.";
-        }
+        message << "Cluster started successfully.";
+        pResult = result.sJson.get();
+        json_incref(pResult);
+        success = true;
     }
     else
     {
-        message << n << " servers out of " << sv.size() << " started successfully, "
-                << "cluster left in a readonly state.";
+        message << "Cluster did not start successfully.";
+        pResult = mxs_json_error("%s", result.response.body.c_str());
     }
 
     json_object_set_new(pOutput, csmon::keys::SUCCESS, json_boolean(success));
     json_object_set_new(pOutput, csmon::keys::MESSAGE, json_string(message.str().c_str()));
-    json_object_set_new(pOutput, csmon::keys::SERVERS, pServers);
+    json_object_set(pOutput, csmon::keys::RESULT, pResult);
+
+    json_decref(pResult);
 
     *ppOutput = pOutput;
 

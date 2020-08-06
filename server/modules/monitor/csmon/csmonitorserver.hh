@@ -258,11 +258,9 @@ public:
                          const std::chrono::seconds& timeout,
                          CsContext& context,
                          Results* pResults);
-    static Results start(const std::vector<CsMonitorServer*>& servers,
-                         CsContext& context);
-    static bool start(const std::vector<CsMonitorServer*>& servers,
-                      CsContext& context,
-                      Results* pResults);
+    static Result start(const std::vector<CsMonitorServer*>& servers,
+                        const std::chrono::seconds& timeout,
+                        CsContext& context);
     static bool set_cluster_mode(const std::vector<CsMonitorServer*>& servers,
                                  cs::ClusterMode mode,
                                  const std::chrono::seconds& timeout,
