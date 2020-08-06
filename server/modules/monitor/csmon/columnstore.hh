@@ -207,14 +207,25 @@ enum Action {
 
 const char* to_string(Action action);
 
-std::string create_url(const SERVER& server, int64_t port, const std::string& rest_base, Action action);
+enum Scope
+{
+    CLUSTER,
+    NODE
+};
+
+std::string create_url(const SERVER& server,
+                       int64_t port,
+                       const std::string& rest_base,
+                       Scope scope,
+                       Action action);
 
 inline std::string create_url(const mxs::MonitorServer& mserver,
                               int64_t port,
                               const std::string& rest_base,
+                              Scope scope,
                               Action action)
 {
-    return create_url(*mserver.server, port, rest_base, action);
+    return create_url(*mserver.server, port, rest_base, scope, action);
 }
 
 }

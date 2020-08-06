@@ -283,8 +283,11 @@ public:
 private:
     bool set_status(const mxb::http::Response& response, json_t** ppError);
 
-    std::string create_url(cs::rest::Action action, const std::string& tail = std::string()) const;
+    std::string create_url(cs::rest::Scope scope,
+                           cs::rest::Action action,
+                           const std::string& tail = std::string()) const;
     static std::vector<std::string> create_urls(const std::vector<CsMonitorServer*>& servers,
+                                                cs::rest::Scope scope,
                                                 cs::rest::Action action,
                                                 const std::string& tail = std::string());
 

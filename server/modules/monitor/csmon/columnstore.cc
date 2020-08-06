@@ -991,6 +991,7 @@ xml::DbRoots::Status xml::update_dbroots(xmlDoc& csXml,
 string rest::create_url(const SERVER& server,
                         int64_t port,
                         const string& rest_base,
+                        Scope scope,
                         rest::Action action)
 {
     string url("https://");
@@ -998,7 +999,16 @@ string rest::create_url(const SERVER& server,
     url += ":";
     url += std::to_string(port);
     url += rest_base;
-    url += "/node/";
+
+    if (scope == NODE)
+    {
+        url += "/node/";
+    }
+    else
+    {
+        mxb_assert(scope == CLUSTER);
+        url += "/cluster/";
+    }
 
     url += to_string(action);
 

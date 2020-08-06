@@ -285,7 +285,8 @@ CsMonitorServer::~CsMonitorServer()
 
 Config CsMonitorServer::fetch_config() const
 {
-    http::Response response = http::get(create_url(cs::rest::CONFIG), m_context.http_config());
+    http::Response response = http::get(create_url(cs::rest::NODE, cs::rest::CONFIG),
+                                        m_context.http_config());
 
     return Config(response);
 }
@@ -325,7 +326,8 @@ bool CsMonitorServer::set_node_mode(const Config& config, json_t* pOutput)
 
 Status CsMonitorServer::fetch_status() const
 {
-    http::Response response = http::get(create_url(cs::rest::STATUS), m_context.http_config());
+    http::Response response = http::get(create_url(cs::rest::NODE, cs::rest::STATUS),
+                                        m_context.http_config());
 
     return Status(response);
 }
@@ -338,7 +340,7 @@ Result CsMonitorServer::begin(const std::chrono::seconds& timeout, json_t* pOutp
         mxb_assert(!true);
     }
 
-    http::Response response = http::put(create_url(cs::rest::BEGIN),
+    http::Response response = http::put(create_url(cs::rest::NODE, cs::rest::BEGIN),
                                         cs::body::begin(timeout, m_context.next_trx_id()),
                                         m_context.http_config(timeout));
 
@@ -365,7 +367,7 @@ Result CsMonitorServer::commit(const std::chrono::seconds& timeout, json_t* pOut
         mxb_assert(!true);
     }
 
-    http::Response response = http::put(create_url(cs::rest::COMMIT),
+    http::Response response = http::put(create_url(cs::rest::NODE, cs::rest::COMMIT),
                                         cs::body::commit(timeout, m_context.current_trx_id()),
                                         m_context.http_config(timeout));
 
@@ -385,7 +387,7 @@ Result CsMonitorServer::commit(const std::chrono::seconds& timeout, json_t* pOut
 Result CsMonitorServer::rollback(json_t* pOutput)
 {
     // Always ok to send a rollback.
-    http::Response response = http::put(create_url(cs::rest::ROLLBACK),
+    http::Response response = http::put(create_url(cs::rest::NODE, cs::rest::ROLLBACK),
                                         cs::body::rollback(m_context.current_trx_id()),
                                         m_context.http_config());
 
@@ -408,7 +410,7 @@ bool CsMonitorServer::set_cluster_mode(cs::ClusterMode mode,
 {
     auto body = cs::body::config_set_cluster_mode(mode, m_context.revision(), m_context.manager(), timeout);
 
-    string url = create_url(cs::rest::CONFIG);
+    string url = create_url(cs::rest::NODE, cs::rest::CONFIG);
     http::Response response = http::put(url, body, m_context.http_config(timeout));
 
     if (!response.is_success())
@@ -426,7 +428,7 @@ bool CsMonitorServer::set_cluster_mode(cs::ClusterMode mode,
 
 bool CsMonitorServer::set_config(const std::string& body, json_t** ppError)
 {
-    string url = create_url(cs::rest::CONFIG);
+    string url = create_url(cs::rest::NODE, cs::rest::CONFIG);
     http::Response response = http::put(url, body, m_context.http_config());
 
     if (!response.is_success())
@@ -463,7 +465,7 @@ bool CsMonitorServer::fetch_statuses(const std::vector<CsMonitorServer*>& server
                                      CsContext& context,
                                      Statuses* pStatuses)
 {
-    vector<string> urls = create_urls(servers, cs::rest::STATUS);
+    vector<string> urls = create_urls(servers, cs::rest::NODE, cs::rest::STATUS);
     vector<http::Response> responses = http::get(urls, context.http_config());
 
     mxb_assert(servers.size() == responses.size());
@@ -502,7 +504,7 @@ bool CsMonitorServer::fetch_configs(const std::vector<CsMonitorServer*>& servers
                                     CsContext& context,
                                     Configs* pConfigs)
 {
-    vector<string> urls = create_urls(servers, cs::rest::CONFIG);
+    vector<string> urls = create_urls(servers, cs::rest::NODE, cs::rest::CONFIG);
     vector<http::Response> responses = http::get(urls, context.http_config());
 
     mxb_assert(servers.size() == responses.size());
@@ -544,7 +546,7 @@ bool CsMonitorServer::begin(const std::vector<CsMonitorServer*>& servers,
         mxb_assert(!true);
     }
 
-    vector<string> urls = create_urls(servers, cs::rest::BEGIN);
+    vector<string> urls = create_urls(servers, cs::rest::NODE, cs::rest::BEGIN);
     vector<http::Response> responses = http::put(urls,
                                                  cs::body::begin(timeout, context.next_trx_id()),
                                                  context.http_config(timeout));
@@ -615,7 +617,7 @@ bool CsMonitorServer::commit(const std::vector<CsMonitorServer*>& servers,
         mxb_assert(!true);
     }
 
-    vector<string> urls = create_urls(servers, cs::rest::COMMIT);
+    vector<string> urls = create_urls(servers, cs::rest::NODE, cs::rest::COMMIT);
     vector<http::Response> responses = http::put(urls,
                                                  cs::body::commit(timeout, context.current_trx_id()),
                                                  context.http_config(timeout));
@@ -682,7 +684,7 @@ bool CsMonitorServer::rollback(const std::vector<CsMonitorServer*>& servers,
         mxb_assert(!true);
     }
 
-    vector<string> urls = create_urls(servers, cs::rest::ROLLBACK);
+    vector<string> urls = create_urls(servers, cs::rest::NODE, cs::rest::ROLLBACK);
     vector<http::Response> responses = http::put(urls,
                                                  cs::body::rollback(context.current_trx_id()),
                                                  context.http_config());
@@ -750,7 +752,7 @@ bool CsMonitorServer::shutdown(const std::vector<CsMonitorServer*>& servers,
 {
     bool rv = true;
 
-    vector<string> urls = create_urls(servers, cs::rest::SHUTDOWN);
+    vector<string> urls = create_urls(servers, cs::rest::NODE, cs::rest::SHUTDOWN);
     vector<http::Response> responses = http::put(urls, cs::body::shutdown(timeout),
                                                  context.http_config(timeout));
 
@@ -790,7 +792,7 @@ bool CsMonitorServer::start(const std::vector<CsMonitorServer*>& servers,
 {
     bool rv = true;
 
-    vector<string> urls = create_urls(servers, cs::rest::START);
+    vector<string> urls = create_urls(servers, cs::rest::NODE, cs::rest::START);
     vector<http::Response> responses = http::put(urls, "{}", context.http_config());
 
     mxb_assert(urls.size() == responses.size());
@@ -919,7 +921,7 @@ bool CsMonitorServer::set_config(const std::vector<CsMonitorServer*>& servers,
 {
     bool rv = true;
 
-    vector<string> urls = create_urls(servers, cs::rest::CONFIG);
+    vector<string> urls = create_urls(servers, cs::rest::NODE, cs::rest::CONFIG);
     vector<http::Response> responses = http::put(urls, body, context.http_config());
 
     Results results;
@@ -950,11 +952,14 @@ Results CsMonitorServer::set_config(const std::vector<CsMonitorServer*>& servers
     return rv;
 }
 
-string CsMonitorServer::create_url(cs::rest::Action action, const std::string& tail) const
+string CsMonitorServer::create_url(cs::rest::Scope scope,
+                                   cs::rest::Action action,
+                                   const std::string& tail) const
 {
     string url = cs::rest::create_url(*this->server,
                                       m_context.config().admin_port,
                                       m_context.config().admin_base_path,
+                                      scope,
                                       action);
 
     if (!tail.empty())
@@ -968,6 +973,7 @@ string CsMonitorServer::create_url(cs::rest::Action action, const std::string& t
 
 //static
 vector<string> CsMonitorServer::create_urls(const std::vector<CsMonitorServer*>& servers,
+                                            cs::rest::Scope scope,
                                             cs::rest::Action action,
                                             const std::string& tail)
 {
@@ -978,6 +984,7 @@ vector<string> CsMonitorServer::create_urls(const std::vector<CsMonitorServer*>&
         string url = cs::rest::create_url(*pS,
                                           pS->m_context.config().admin_port,
                                           pS->m_context.config().admin_base_path,
+                                          scope,
                                           action);
 
         if (!tail.empty())
