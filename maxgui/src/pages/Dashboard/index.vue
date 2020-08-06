@@ -56,7 +56,11 @@ export default {
         ])
 
         while (this.loop) {
-            await Promise.all([this.fetchAllListeners(), this.$help.delay(10000)])
+            await Promise.all([
+                this.fetchAllListeners(),
+                this.fetchAllFilters(),
+                this.$help.delay(10000),
+            ])
         }
     },
     beforeDestroy() {
@@ -79,6 +83,8 @@ export default {
             fetchAllServices: 'service/fetchAllServices',
 
             fetchAllListeners: 'listener/fetchAllListeners',
+
+            fetchAllFilters: 'filter/fetchAllFilters',
         }),
     },
 }

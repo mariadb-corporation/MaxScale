@@ -20,10 +20,7 @@
                 :hasOrderNumber="relationshipType === 'filters'"
                 @on-drag-end="filterDragReorder"
             >
-                <template
-                    v-if="relationshipType !== 'filters'"
-                    v-slot:id="{ data: { item: { id } } }"
-                >
+                <template v-slot:id="{ data: { item: { id } } }">
                     <router-link
                         :key="id"
                         :to="`/dashboard/${relationshipType}/${id}`"

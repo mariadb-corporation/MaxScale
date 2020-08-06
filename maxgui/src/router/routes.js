@@ -21,6 +21,8 @@ const MonitorDetail = () =>
     import(/* webpackChunkName: "monitor-details-page" */ 'pages/MonitorDetail')
 const ListenerDetail = () =>
     import(/* webpackChunkName: "listener-details-page" */ 'pages/ListenerDetail')
+const FilterDetail = () =>
+    import(/* webpackChunkName: "filter-details-page" */ 'pages/FilterDetail')
 const NotFound404 = () => import(/* webpackChunkName: "not-found-page" */ 'pages/NotFound404')
 
 export const routes = [
@@ -85,6 +87,15 @@ export const routes = [
             layout: 'app-layout',
         },
         name: 'listener',
+    },
+    {
+        path: '/dashboard/filters/:id',
+        component: FilterDetail,
+        meta: {
+            requiresAuth: true,
+            layout: 'app-layout',
+        },
+        name: 'filter',
     },
     {
         path: '/404',

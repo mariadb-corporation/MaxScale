@@ -46,6 +46,7 @@ export default {
             allSessions: 'session/allSessions',
             allServices: 'service/allServices',
             allListeners: 'listener/allListeners',
+            allFilters: 'filter/allFilters',
         }),
     },
     watch: {
@@ -68,6 +69,10 @@ export default {
                     break
                 case 'listeners':
                     total = this.allListeners.length
+                    break
+                case 'filters':
+                    total = this.allFilters.length
+                    break
             }
             return total
         },

@@ -15,13 +15,14 @@ export default {
     namespaced: true,
     state: {
         allFilters: [],
+        currentFilter: {},
     },
     mutations: {
-        /**
-         * @param {Array} payload  // Array of filter resources
-         */
         setAllFilters(state, payload) {
             state.allFilters = payload
+        },
+        setCurrentFilter(state, payload) {
+            state.currentFilter = payload
         },
     },
     actions: {
@@ -32,6 +33,18 @@ export default {
             } catch (e) {
                 if (process.env.NODE_ENV !== 'test') {
                     const logger = this.Vue.Logger('store-filter-fetchAllFilters')
+                    logger.error(e)
+                }
+            }
+        },
+
+        async fetchFilterById({ commit }, id) {
+            try {
+                let res = await this.Vue.axios.get(`/filters/${id}`)
+                if (res.data.data) commit('setCurrentFilter', res.data.data)
+            } catch (e) {
+                if (process.env.NODE_ENV !== 'test') {
+                    const logger = this.Vue.Logger('store-filter-fetchFilterById')
                     logger.error(e)
                 }
             }
@@ -105,6 +118,7 @@ export default {
     },
     getters: {
         allFilters: state => state.allFilters,
+        currentFilter: state => state.currentFilter,
         // -------------- below getters are available only when fetchAllFilters has been dispatched
         allFiltersMap: state => {
             let map = new Map()
