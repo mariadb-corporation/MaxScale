@@ -452,6 +452,26 @@ bool CsMonitorServer::set_config(const std::string& body, json_t** ppError)
 }
 
 //static
+CsMonitorServer::Result CsMonitorServer::fetch_status(const std::vector<CsMonitorServer*>& servers,
+                                                      CsContext& context)
+{
+    http::Response response;
+
+    if (!servers.empty())
+    {
+        string url = servers.front()->create_url(cs::rest::CLUSTER, cs::rest::STATUS);
+        response = http::get(url, context.http_config());
+    }
+    else
+    {
+        response.code = http::Response::ERROR;
+        response.body = "No servers specified.";
+    }
+
+    return Result(response);
+}
+
+//static
 CsMonitorServer::Statuses CsMonitorServer::fetch_statuses(const std::vector<CsMonitorServer*>& servers,
                                                           CsContext& context)
 {

@@ -33,6 +33,7 @@ public:
     class Result
     {
     public:
+        Result() {}
         Result(const mxb::http::Response& response);
 
         Result(Result&& other) = default;
@@ -220,6 +221,8 @@ public:
                           json_t* pOutput = nullptr);
     bool set_config(const std::string& body, json_t** ppError = nullptr);
 
+    static Result fetch_status(const std::vector<CsMonitorServer*>& servers,
+                               CsContext& context);
     static Statuses fetch_statuses(const std::vector<CsMonitorServer*>& servers,
                                    CsContext& context);
     static bool fetch_statuses(const std::vector<CsMonitorServer*>& servers,

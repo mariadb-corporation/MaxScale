@@ -1334,36 +1334,35 @@ void CsMonitor::cs_status(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServ
     bool success = false;
     ostringstream message;
 
-    ServerVector sv;
+    Result result;
 
     if (pServer)
     {
-        sv.push_back(pServer);
+        result = pServer->fetch_status();
     }
     else
     {
-        sv = servers();
+        result = CsMonitorServer::fetch_status(servers(), m_context);
     }
 
-    Statuses statuses = CsMonitorServer::fetch_statuses(sv, m_context);
+    json_t* pResult = nullptr;
 
-    json_t* pServers = nullptr;
-    size_t n = results_to_json(sv, statuses, &pServers);
-
-    if (n == sv.size())
+    if (result.ok())
     {
-        message << "Fetched the status from all servers.";
+        message << "Status successfully fetched.";
+        pResult = result.sJson.get();
+        json_incref(pResult);
         success = true;
     }
     else
     {
-        message << "Successfully fetched status from " << n
-                << " servers out of " << sv.size() << ".";
+        message << "Could not fetch status.";
+        pResult = mxs_json_error("%s", result.response.body.c_str());
     }
 
     json_object_set_new(pOutput, csmon::keys::SUCCESS, json_boolean(success));
     json_object_set_new(pOutput, csmon::keys::MESSAGE, json_string(message.str().c_str()));
-    json_object_set_new(pOutput, csmon::keys::SERVERS, pServers);
+    json_object_set(pOutput, csmon::keys::RESULT, pResult);
 
     *ppOutput = pOutput;
 
