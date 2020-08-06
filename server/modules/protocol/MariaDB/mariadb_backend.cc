@@ -437,10 +437,6 @@ bool MariaDBBackendConnection::session_ok_to_route(DCB* dcb)
                     rval = true;
                 }
             }
-            else if (client_dcb->role() == DCB::Role::INTERNAL)
-            {
-                rval = true;
-            }
         }
     }
 

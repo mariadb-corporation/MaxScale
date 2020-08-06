@@ -1485,7 +1485,7 @@ bool DCB::enable_events()
 bool DCB::disable_events()
 {
     mxb_assert(m_state == State::POLLING);
-    mxb_assert(m_fd != FD_CLOSED || m_role == DCB::Role::INTERNAL);
+    mxb_assert(m_fd != FD_CLOSED);
 
     bool rv = true;
     RoutingWorker* worker = static_cast<RoutingWorker*>(this->owner);
@@ -2049,9 +2049,6 @@ const char* to_string(DCB::Role role)
 
     case DCB::Role::BACKEND:
         return "Backend DCB";
-
-    case DCB::Role::INTERNAL:
-        return "Internal DCB";
 
     default:
         mxb_assert(!true);

@@ -95,7 +95,6 @@ public:
     {
         CLIENT,         /*< Serves dedicated client */
         BACKEND,        /*< Serves back end connection */
-        INTERNAL        /*< Internal DCB not connected to the outside */
     };
 
     enum class State
