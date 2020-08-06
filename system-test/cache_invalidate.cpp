@@ -93,7 +93,7 @@ const int PORT_REDIS_CACHE = 4007;
 
 void install_and_start_redis(Maxscales& maxscales)
 {
-    setenv("maxscale_000_keyfile", maxscales.sshkey[0], 0);
+    setenv("maxscale_000_keyfile", maxscales.sshkey(0), 0);
     setenv("maxscale_000_whoami", maxscales.user_name, 0);
     setenv("maxscale_000_network", maxscales.IP[0], 0);
 

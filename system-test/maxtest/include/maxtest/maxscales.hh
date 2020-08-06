@@ -39,6 +39,7 @@ public:
     const char* access_user(int i = 0) const;
     const char* access_homedir(int i = 0) const;
     const char* access_sudo(int i = 0) const;
+    const char* sshkey(int i = 0) const;
 
     /**
      * @brief rwsplit_port RWSplit service port

@@ -318,6 +318,11 @@ const char* Maxscales::access_sudo(int i) const
     return Nodes::access_sudo(i);
 }
 
+const char* Maxscales::sshkey(int i) const
+{
+    return Nodes::sshkey(i);
+}
+
 namespace maxtest
 {
 

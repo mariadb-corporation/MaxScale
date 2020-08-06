@@ -67,7 +67,7 @@ string Nodes::generate_ssh_cmd(int node, const string& cmd, bool sudo)
     {
         // Run command through ssh. The ControlMaster-option enables use of existing pooled connections,
         // greatly speeding up the operation.
-        string p1 = mxb::string_printf("ssh -i %s ", sshkey[node]);
+        string p1 = mxb::string_printf("ssh -i %s ", m_sshkey[node].c_str());
         string p2 = "-o UserKnownHostsFile=/dev/null "
                     "-o CheckHostIP=no "
                     "-o ControlMaster=auto "
@@ -94,7 +94,7 @@ FILE* Nodes::open_ssh_connection(int node)
     }
     else
     {
-        ss << "ssh -i " << sshkey[node] << " "
+        ss << "ssh -i " << m_sshkey[node] << " "
            << "-o UserKnownHostsFile=/dev/null "
            << "-o StrictHostKeyChecking=no "
            << "-o LogLevel=quiet "
@@ -203,7 +203,7 @@ int Nodes::copy_to_node(int i, const char* src, const char* dest)
                 "-o StrictHostKeyChecking=no "
                 "-o LogLevel=quiet "
                 "%s %s@%s:%s",
-                sshkey[i],
+                m_sshkey[i].c_str(),
                 src,
                 m_access_user[i].c_str(),
                 IP[i],
@@ -249,7 +249,7 @@ int Nodes::copy_from_node(int i, const char* src, const char* dest)
                 "-o ControlPath=./maxscale-test-%%r@%%h:%%p "
                 "-o ControlPersist=yes "
                 "%s@%s:%s %s",
-                sshkey[i],
+                m_sshkey[i].c_str(),
                 m_access_user[i].c_str(),
                 IP[i],
                 src,
@@ -303,7 +303,7 @@ int Nodes::read_basic_env()
 
             //reading sshkey
             sprintf(env_name, "%s_%03d_keyfile", prefix, i);
-            sshkey[i] = strdup(get_nc_item(env_name).c_str());
+            m_sshkey[i] = get_nc_item(env_name);
 
 
             sprintf(env_name, "%s_%03d_whoami", prefix, i);
@@ -475,4 +475,9 @@ const char* Nodes::access_homedir(int i) const
 const char* Nodes::access_sudo(int i) const
 {
     return m_access_sudo[i].c_str();
+}
+
+const char* Nodes::sshkey(int i) const
+{
+    return m_sshkey[i].c_str();
 }
