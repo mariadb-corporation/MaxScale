@@ -116,6 +116,9 @@ export default {
             this.$data._chart.destroy()
             this.renderLineChart()
         },
+        options() {
+            this.renderLineChart()
+        },
     },
     beforeDestroy() {
         let tooltipEl = document.getElementById(this.uniqueTooltipId)

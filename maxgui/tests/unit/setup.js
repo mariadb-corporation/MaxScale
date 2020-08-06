@@ -38,13 +38,10 @@ function doMount(isShallow, component, options) {
         return mount(component, options)
     }
 }
-
 Vue.config.silent = true
-Vue.Logger = Logger
 
 export default options => {
     const localVue = createLocalVue()
-
     localVue.Logger = Logger
     localVue.use(Router)
     Object.keys(commonComponents).forEach(name => {

@@ -160,3 +160,192 @@ for (let i = 0; i < allModules.length; ++i) {
     if (allModulesMap[moduleType] == undefined) allModulesMap[moduleType] = []
     allModulesMap[moduleType].push(module)
 }
+
+export const mockupAllServers = [
+    {
+        attributes: { statistics: { connections: 0 } },
+        id: 'row_server_0',
+        links: {},
+        relationships: {},
+        type: 'servers',
+    },
+    {
+        attributes: { statistics: { connections: 10 } },
+        id: 'row_server_1',
+        links: {},
+        relationships: {},
+        type: 'servers',
+    },
+]
+
+export const mockupServersList = [
+    {
+        id: 'row_server_0',
+
+        type: 'servers',
+    },
+    {
+        id: 'row_server_1',
+
+        type: 'servers',
+    },
+]
+
+export const mockupAllFilters = [
+    {
+        attributes: {},
+        id: 'filter_0',
+        links: {},
+        relationships: {},
+        type: 'filters',
+    },
+    {
+        attributes: {},
+        id: 'filter_1',
+        links: {},
+        relationships: {},
+        type: 'filters',
+    },
+]
+
+export const mockupFiltersList = [
+    {
+        id: 'filter_0',
+
+        type: 'filters',
+    },
+    {
+        id: 'filter_1',
+
+        type: 'filters',
+    },
+]
+
+export const mockupAllServices = [
+    {
+        attributes: {},
+        id: 'service_0',
+        links: {},
+        relationships: {},
+        type: 'services',
+    },
+    {
+        attributes: {},
+        id: 'service_1',
+        links: {},
+        relationships: {},
+        type: 'services',
+    },
+]
+
+export const mockupServicesList = [
+    {
+        id: 'service_0',
+
+        type: 'services',
+    },
+    {
+        id: 'service_1',
+
+        type: 'services',
+    },
+]
+
+export const mockupAllMonitors = [
+    {
+        attributes: {},
+        id: 'monitor_0',
+        links: {},
+        relationships: {},
+        type: 'monitors',
+    },
+    {
+        attributes: {},
+        id: 'monitor_1',
+        links: {},
+        relationships: {},
+        type: 'monitors',
+    },
+]
+
+export const mockupMonitorsList = [
+    {
+        id: 'monitor_0',
+
+        type: 'monitors',
+    },
+    {
+        id: 'monitor_1',
+
+        type: 'monitors',
+    },
+]
+
+export const mockupAllListeners = [
+    {
+        attributes: {
+            parameters: {
+                address: '::',
+                protocol: 'mariadbclient',
+                port: 3308,
+            },
+            state: 'Running',
+        },
+        id: 'RCR-Writer-Listener',
+        relationships: {
+            services: {
+                data: [
+                    {
+                        id: 'RCR-Writer',
+                        type: 'services',
+                    },
+                ],
+            },
+        },
+        type: 'listeners',
+    },
+    {
+        attributes: {
+            parameters: {
+                address: '::',
+                protocol: 'mariadbclient',
+                port: 3306,
+            },
+            state: 'Running',
+        },
+        id: 'RWS-Listener',
+        relationships: {
+            services: {
+                data: [
+                    {
+                        id: 'RWS-Router',
+                        type: 'services',
+                    },
+                ],
+            },
+        },
+        type: 'listeners',
+    },
+    {
+        attributes: {
+            parameters: {
+                address: '::',
+                protocol: 'mariadbclient',
+                port: 3307,
+            },
+            state: 'Running',
+        },
+        id: 'RCR-Router-Listener',
+        relationships: {
+            services: {
+                data: [
+                    {
+                        id: 'RCR-Router',
+                        type: 'services',
+                    },
+                ],
+            },
+        },
+        type: 'listeners',
+    },
+]

@@ -71,17 +71,11 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapGetters } from 'vuex'
+import { mapGetters, mapActions } from 'vuex'
 
 export default {
     name: 'graphs',
-    props: {
-        fetchThreads: { type: Function, required: true },
-        genThreadsDatasetsSchema: { type: Function, required: true },
-        fetchAllServers: { type: Function, required: true },
-        fetchAllSessions: { type: Function, required: true },
-        fetchAllServices: { type: Function, required: true },
-    },
+
     data() {
         return {
             chartStyle: { height: '70px', position: 'relative' },
@@ -126,6 +120,14 @@ export default {
     },
 
     methods: {
+        ...mapActions({
+            fetchThreads: 'maxscale/fetchThreads',
+            genThreadsDatasetsSchema: 'maxscale/genDataSetSchema',
+            fetchAllServers: 'server/fetchAllServers',
+            fetchAllMonitors: 'monitor/fetchAllMonitors',
+            fetchAllSessions: 'session/fetchAllSessions',
+            fetchAllServices: 'service/fetchAllServices',
+        }),
         //----------------------- Graphs update
 
         async updateChart() {
@@ -135,6 +137,7 @@ export default {
                 //  LOOP polling
                 await Promise.all([
                     this.fetchAllServers(),
+                    this.fetchAllMonitors(),
                     this.fetchAllSessions(),
                     this.fetchAllServices(),
                     this.fetchThreads(),

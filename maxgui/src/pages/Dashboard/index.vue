@@ -2,13 +2,7 @@
     <page-wrapper>
         <v-sheet>
             <page-header />
-            <graphs
-                :fetchThreads="fetchThreads"
-                :genThreadsDatasetsSchema="genThreadsDatasetsSchema"
-                :fetchAllServers="fetchAllServers"
-                :fetchAllSessions="fetchAllSessions"
-                :fetchAllServices="fetchAllServices"
-            />
+            <graphs />
             <tab-nav />
         </v-sheet>
     </page-wrapper>
@@ -39,9 +33,15 @@ export default {
         PageHeader,
         Graphs,
     },
+    data() {
+        return {
+            loop: true,
+        }
+    },
     async created() {
         await Promise.all([
             this.fetchMaxScaleOverviewInfo(),
+            // below fetches will be looped in graphs component
             this.fetchThreads(),
             this.fetchAllServers(),
             this.fetchAllMonitors(),
@@ -54,8 +54,14 @@ export default {
             this.genServersConnectionsDataSetSchema(),
             this.genThreadsDatasetsSchema(),
         ])
-    },
 
+        while (this.loop) {
+            await Promise.all([this.fetchAllListeners(), this.$help.delay(10000)])
+        }
+    },
+    beforeDestroy() {
+        this.loop = false
+    },
     methods: {
         ...mapActions({
             fetchMaxScaleOverviewInfo: 'maxscale/fetchMaxScaleOverviewInfo',
@@ -71,6 +77,8 @@ export default {
             genSessionChartDataSetSchema: 'session/genDataSetSchema',
 
             fetchAllServices: 'service/fetchAllServices',
+
+            fetchAllListeners: 'listener/fetchAllListeners',
         }),
     },
 }

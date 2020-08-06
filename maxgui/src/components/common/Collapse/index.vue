@@ -2,7 +2,7 @@
     <div
         :class="wrapperClass"
         v-on="
-            $help.isFunction(onEdit)
+            $help.isFunction(onEdit) && editable
                 ? {
                       mouseenter: e => (showEditBtn = true),
                       mouseleave: e => (showEditBtn = false),
@@ -100,6 +100,7 @@ export default {
         onAddClick: Function,
         addBtnText: { type: String, default: '+ Add' },
         // edit button feat (peer required props)
+        editable: { type: Boolean, default: false },
         onEdit: Function, // if this props is added, adding mouseenter event to handle show edit btn
         isEditing: Boolean, // show done editing btn and keep edit btn visible
         doneEditingCb: Function, // call back function triggering when click done editing btn

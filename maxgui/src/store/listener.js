@@ -15,13 +15,14 @@ export default {
     namespaced: true,
     state: {
         allListeners: [],
+        currentListener: {},
     },
     mutations: {
-        /**
-         * @param {Array} payload  // Array of listeners resources
-         */
         setAllListeners(state, payload) {
             state.allListeners = payload
+        },
+        setCurrentListener(state, payload) {
+            state.currentListener = payload
         },
     },
     actions: {
@@ -36,7 +37,17 @@ export default {
                 }
             }
         },
-
+        async fetchListenerById({ commit }, id) {
+            try {
+                let res = await this.Vue.axios.get(`/listeners/${id}`)
+                if (res.data.data) commit('setCurrentListener', res.data.data)
+            } catch (e) {
+                if (process.env.NODE_ENV !== 'test') {
+                    const logger = this.Vue.Logger('store-listener-fetchListenerById')
+                    logger.error(e)
+                }
+            }
+        },
         /**
          * @param {Object} payload payload object for creating listener
          * @param {String} payload.id Name of the listener
@@ -106,6 +117,7 @@ export default {
     },
     getters: {
         allListeners: state => state.allListeners,
+        currentListener: state => state.currentListener,
         // -------------- below getters are available only when fetchAllListeners has been dispatched
         allListenersMap: state => {
             let map = new Map()

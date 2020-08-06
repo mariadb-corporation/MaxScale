@@ -12,7 +12,6 @@
  */
 
 const path = require('path')
-const fs = require('fs')
 const { gitDescribeSync } = require('git-describe')
 
 process.env.VUE_APP_VERSION = require('./package.json').version
@@ -40,16 +39,11 @@ module.exports = {
             config.merge({
                 devtool: 'source-map',
                 devServer: {
-                    https: {
-                        key: fs.readFileSync('./dev-certs/dev-cert-key.pem'),
-                        cert: fs.readFileSync('./dev-certs/dev-cert.pem'),
-                    },
                     progress: false,
                     port: 8000,
                     headers: {
                         'Access-Control-Allow-Origin': '*',
                     },
-                    public: 'https://localhost:8000/',
                     proxy: {
                         '^/': {
                             changeOrigin: true,
