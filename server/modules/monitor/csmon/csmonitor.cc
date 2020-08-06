@@ -819,18 +819,6 @@ bool CsMonitor::command(json_t** ppOutput, mxb::Semaphore& sem, const char* zCmd
     return rv;
 }
 
-namespace
-{
-
-bool is_node_part_of_cluster(const CsMonitorServer* pServer)
-{
-    // TODO: Only a node that exists in the MaxScale configuration but *not* in the
-    // TODO: Columnstore configuration can be added.
-    return false;
-}
-
-}
-
 void CsMonitor::cs_add_node(json_t** ppOutput,
                             mxb::Semaphore* pSem,
                             const string& host,

@@ -14,11 +14,6 @@ target_link_libraries(csmon maxscale-common ${LIBXML2_LIBRARIES})
 set_target_properties(csmon PROPERTIES VERSION "1.0.0" LINK_FLAGS -Wl,-z,defs)
 install_module(csmon core)
 
-if (BUILD_TOOLS)
-  add_executable(cstest cstest.cc)
-  target_link_libraries(cstest csmon maxscale-common ${LIBXML2_LIBRARIES})
-endif()
-
 if(BUILD_TESTS)
   add_subdirectory(test)
 endif()
