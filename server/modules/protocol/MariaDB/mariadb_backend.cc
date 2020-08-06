@@ -1587,7 +1587,7 @@ GWBUF* MariaDBBackendConnection::gw_generate_auth_response(bool with_ssl, bool s
     uint8_t client_capabilities[4] = {0, 0, 0, 0};
     const uint8_t* curr_passwd = NULL;
 
-    if (!client_data->auth_token_phase2.empty())
+    if (client_data->auth_token_phase2.size() == SHA_DIGEST_LENGTH)
     {
         curr_passwd = client_data->auth_token_phase2.data();
     }
