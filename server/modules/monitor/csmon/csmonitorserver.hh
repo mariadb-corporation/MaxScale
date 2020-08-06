@@ -229,6 +229,8 @@ public:
                                CsContext& context,
                                Statuses* pStatuses);
 
+    static Result fetch_config(const std::vector<CsMonitorServer*>& servers,
+                               CsContext& context);
     static Configs fetch_configs(const std::vector<CsMonitorServer*>& servers,
                                  CsContext& context);
     static bool fetch_configs(const std::vector<CsMonitorServer*>& servers,

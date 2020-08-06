@@ -553,6 +553,26 @@ bool CsMonitorServer::fetch_statuses(const std::vector<CsMonitorServer*>& server
 }
 
 //static
+Result CsMonitorServer::fetch_config(const std::vector<CsMonitorServer*>& servers,
+                                       CsContext& context)
+{
+    http::Response response;
+
+    if (!servers.empty())
+    {
+        string url = servers.front()->create_url(cs::rest::CLUSTER, cs::rest::CONFIG);
+        response = http::get(url, context.http_config());
+    }
+    else
+    {
+        response.code = http::Response::ERROR;
+        response.body = "No servers specified.";
+    }
+
+    return Result(response);
+}
+
+//static
 Configs CsMonitorServer::fetch_configs(const std::vector<CsMonitorServer*>& servers,
                                        CsContext& context)
 {

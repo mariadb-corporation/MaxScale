@@ -903,36 +903,37 @@ void CsMonitor::cs_config_get(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitor
     bool success = false;
     ostringstream message;
 
-    ServerVector sv;
+    Result result;
 
     if (pServer)
     {
-        sv.push_back(pServer);
+        result = pServer->fetch_config();
     }
     else
     {
-        sv = servers();
+        result = CsMonitorServer::fetch_config(servers(), m_context);
     }
 
-    CsMonitorServer::Configs configs = CsMonitorServer::fetch_configs(sv, m_context);
+    json_t* pResult = nullptr;
 
-    json_t* pServers = nullptr;
-    size_t n = results_to_json(sv, configs, &pServers);
-
-    if (n == sv.size())
+    if (result.ok())
     {
-        message << "Fetched the config from all servers.";
+        message << "Config successfully fetched.";
+        pResult = result.sJson.get();
+        json_incref(pResult);
         success = true;
     }
     else
     {
-        message << "Successfully fetched config from " << n
-                << " servers out of " << sv.size() << ".";
+        message << "Could not fetch status.";
+        pResult = mxs_json_error("%s", result.response.body.c_str());
     }
 
     json_object_set_new(pOutput, csmon::keys::SUCCESS, json_boolean(success));
     json_object_set_new(pOutput, csmon::keys::MESSAGE, json_string(message.str().c_str()));
-    json_object_set_new(pOutput, csmon::keys::SERVERS, pServers);
+    json_object_set(pOutput, csmon::keys::RESULT, pResult);
+
+    json_decref(pResult);
 
     *ppOutput = pOutput;
 
@@ -1192,6 +1193,8 @@ void CsMonitor::cs_status(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServ
     json_object_set_new(pOutput, csmon::keys::SUCCESS, json_boolean(success));
     json_object_set_new(pOutput, csmon::keys::MESSAGE, json_string(message.str().c_str()));
     json_object_set(pOutput, csmon::keys::RESULT, pResult);
+
+    json_decref(pResult);
 
     *ppOutput = pOutput;
 
