@@ -158,6 +158,9 @@ const char* rest::to_string(rest::Action action)
     case CONFIG:
         return "config";
 
+    case REMOVE_NODE:
+        return "remove-node";
+
     case ROLLBACK:
         return "rollback";
 
@@ -1049,9 +1052,8 @@ string start_or_shutdown(const std::chrono::seconds& timeout)
 
     return body.str();
 }
-}
 
-string add_node(const std::string& node, const std::chrono::seconds& timeout)
+string add_or_remove_node(const std::string& node, const std::chrono::seconds& timeout)
 {
     std::ostringstream body;
     body << "{\"" << TIMEOUT << "\": "
@@ -1061,6 +1063,13 @@ string add_node(const std::string& node, const std::chrono::seconds& timeout)
          << "\"}";
 
     return body.str();
+}
+
+}
+
+string add_node(const std::string& node, const std::chrono::seconds& timeout)
+{
+    return add_or_remove_node(node, timeout);
 }
 
 string begin(const std::chrono::seconds& timeout, int id)
@@ -1114,6 +1123,11 @@ std::string config_set_cluster_mode(ClusterMode mode,
          << "}";
 
     return body.str();
+}
+
+string remove_node(const std::string& node, const std::chrono::seconds& timeout)
+{
+    return add_or_remove_node(node, timeout);
 }
 
 string rollback(int id)

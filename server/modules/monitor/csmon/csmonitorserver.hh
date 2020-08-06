@@ -239,7 +239,6 @@ public:
                            const std::string& host,
                            const std::chrono::seconds& timeout,
                            CsContext& context);
-
     static Results begin(const std::vector<CsMonitorServer*>& servers,
                          const std::chrono::seconds& timeout,
                          CsContext& context);
@@ -254,6 +253,10 @@ public:
                        const std::chrono::seconds& timeout,
                        CsContext& context,
                        Results* pResults);
+    static Result remove_node(const std::vector<CsMonitorServer*>& servers,
+                              const std::string& host,
+                              const std::chrono::seconds& timeout,
+                              CsContext& context);
     static Results rollback(const std::vector<CsMonitorServer*>& servers,
                             CsContext& context);
     static bool rollback(const std::vector<CsMonitorServer*>& servers,

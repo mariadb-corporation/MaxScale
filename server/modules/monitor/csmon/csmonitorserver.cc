@@ -405,6 +405,27 @@ Result CsMonitorServer::commit(const std::chrono::seconds& timeout, json_t* pOut
     return result;
 }
 
+Result CsMonitorServer::remove_node(const std::vector<CsMonitorServer*>& servers,
+                                    const std::string& host,
+                                    const std::chrono::seconds& timeout,
+                                    CsContext& context)
+{
+    http::Response response;
+
+    if (!servers.empty())
+    {
+        string url = servers.front()->create_url(cs::rest::CLUSTER, cs::rest::REMOVE_NODE);
+        response = http::put(url, cs::body::remove_node(host, timeout), context.http_config(timeout));
+    }
+    else
+    {
+        response.code = http::Response::ERROR;
+        response.body = "No servers specified.";
+    }
+
+    return Result(response);
+}
+
 Result CsMonitorServer::rollback(json_t* pOutput)
 {
     // Always ok to send a rollback.

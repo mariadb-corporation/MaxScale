@@ -200,6 +200,7 @@ enum Action {
     BEGIN,
     COMMIT,
     CONFIG,
+    REMOVE_NODE,
     ROLLBACK,
     SHUTDOWN,
     START,
@@ -251,7 +252,7 @@ const char TIMESTAMP[]    = "timestamp";
 const char TXN[]          = "txn";
 
 /**
- * @brief JSON body to be used with PUT /cluster/add_node
+ * @brief JSON body to be used with PUT /cluster/add-node
  *
  * @param node     The host or IP of the node.
  * @param timeout  The timeout of the operation.
@@ -310,6 +311,15 @@ std::string config_set_cluster_mode(ClusterMode mode,
                                     const std::string& manager,
                                     const std::chrono::seconds& timeout);
 
+/**
+ * @brief JSON body to be used with PUT /cluster/remove-node
+ *
+ * @param node     The host or IP of the node.
+ * @param timeout  The timeout of the operation.
+ *
+ * @return REST-API body.
+ */
+std::string remove_node(const std::string& node, const std::chrono::seconds& timeout);
 
 /**
  * @brief JSON body to be used with PUT /node/rollback
