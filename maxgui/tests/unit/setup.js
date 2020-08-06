@@ -13,13 +13,13 @@
 import Vue from 'vue'
 import { mount, shallowMount, createLocalVue } from '@vue/test-utils'
 import 'utils/helpers'
+import '@/plugins/logger'
 import '@/plugins/vuex'
 import '@/plugins/axios'
 import 'plugins/moment'
 import i18n from '@/plugins/i18n'
 import vuetify from '@/plugins/vuetify'
 import store from 'store'
-import Logger from 'utils/logging'
 
 import Router from 'vue-router'
 import { routes } from '@/router/routes'
@@ -42,7 +42,7 @@ Vue.config.silent = true
 
 export default options => {
     const localVue = createLocalVue()
-    localVue.Logger = Logger
+
     localVue.use(Router)
     Object.keys(commonComponents).forEach(name => {
         localVue.component(name, commonComponents[name])

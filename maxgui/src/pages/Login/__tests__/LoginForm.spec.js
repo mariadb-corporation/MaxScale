@@ -27,7 +27,7 @@ describe('LoginForm.vue', async () => {
     })
 
     beforeEach(() => {
-        axiosStub = sinon.stub(Vue.axios, 'get').resolves(
+        axiosStub = sinon.stub(Vue.prototype.$axios, 'get').resolves(
             Promise.resolve({
                 data: {},
             })
@@ -37,7 +37,7 @@ describe('LoginForm.vue', async () => {
             component: LoginForm,
         })
         mockupRouteChanges(wrapper, '/login')
-        loginAxiosStub = sinon.stub(wrapper.vm.loginAxios, 'get').resolves(
+        loginAxiosStub = sinon.stub(wrapper.vm.$loginAxios, 'get').resolves(
             Promise.resolve({
                 data: {},
             })

@@ -44,12 +44,12 @@ export default {
     actions: {
         async fetchMaxScaleParameters({ commit }) {
             try {
-                let res = await this.Vue.axios.get(`/maxscale?fields[maxscale]=parameters`)
+                let res = await this.vue.$axios.get(`/maxscale?fields[maxscale]=parameters`)
                 if (res.data.data.attributes.parameters)
                     commit('setMaxScaleParameters', res.data.data.attributes.parameters)
             } catch (e) {
                 if (process.env.NODE_ENV !== 'test') {
-                    const logger = this.Vue.Logger('store-maxscale-fetchMaxScaleParameters')
+                    const logger = this.vue.$logger('store-maxscale-fetchMaxScaleParameters')
                     logger.error(e)
                 }
             }
@@ -57,21 +57,21 @@ export default {
 
         async fetchMaxScaleOverviewInfo({ commit }) {
             try {
-                let res = await this.Vue.axios.get(
+                let res = await this.vue.$axios.get(
                     `/maxscale?fields[maxscale]=version,commit,started_at,activated_at,uptime`
                 )
                 if (res.data.data.attributes)
                     commit('setMaxScaleOverviewInfo', res.data.data.attributes)
             } catch (e) {
                 if (process.env.NODE_ENV !== 'test') {
-                    const logger = this.Vue.Logger('store-maxscale-fetchMaxScaleOverviewInfo')
+                    const logger = this.vue.$logger('store-maxscale-fetchMaxScaleOverviewInfo')
                     logger.error(e)
                 }
             }
         },
         async fetchAllModules({ commit }) {
             try {
-                let res = await this.Vue.axios.get(`/maxscale/modules?load=all`)
+                let res = await this.vue.$axios.get(`/maxscale/modules?load=all`)
                 if (res.data.data) {
                     const allModules = res.data.data
                     let hashArr = {} // O(n log n)
@@ -85,7 +85,7 @@ export default {
                 }
             } catch (e) {
                 if (process.env.NODE_ENV !== 'test') {
-                    const logger = this.Vue.Logger('store-maxscale-fetchAllModules')
+                    const logger = this.vue.$logger('store-maxscale-fetchAllModules')
                     logger.error(e)
                 }
             }
@@ -93,11 +93,11 @@ export default {
         // ---------------------------- last two second threads--------------------------
         async fetchThreads({ commit }) {
             try {
-                let res = await this.Vue.axios.get(`/maxscale/threads?fields[threads]=stats`)
+                let res = await this.vue.$axios.get(`/maxscale/threads?fields[threads]=stats`)
                 if (res.data.data) commit('setThreads', res.data.data)
             } catch (e) {
                 if (process.env.NODE_ENV !== 'test') {
-                    const logger = this.Vue.Logger('store-maxscale-fetchThreads')
+                    const logger = this.vue.$logger('store-maxscale-fetchThreads')
                     logger.error(e)
                 }
             }
@@ -110,14 +110,14 @@ export default {
                 let lineColors = []
                 //threads.length
                 for (let i = 0; i < threads.length; ++i) {
-                    lineColors.push(this.Vue.prototype.$help.dynamicColors(i))
+                    lineColors.push(this.vue.$help.dynamicColors(i))
                     let indexOfOpacity = lineColors[i].lastIndexOf(')') - 1
                     let obj = {
                         label: `THREAD ID - ${threads[i].id}`,
                         id: `THREAD ID - ${threads[i].id}`,
                         type: 'line',
                         // background of the line
-                        backgroundColor: this.Vue.prototype.$help.strReplaceAt(
+                        backgroundColor: this.vue.$help.strReplaceAt(
                             lineColors[i],
                             indexOfOpacity,
                             '0.1'
@@ -151,7 +151,7 @@ export default {
                         attributes: { parameters: payload.parameters },
                     },
                 }
-                let res = await this.Vue.axios.patch(`/maxscale`, body)
+                let res = await this.vue.$axios.patch(`/maxscale`, body)
                 // response ok
                 if (res.status === 204) {
                     commit(
@@ -162,12 +162,11 @@ export default {
                         },
                         { root: true }
                     )
-                    if (this.Vue.prototype.$help.isFunction(payload.callback))
-                        await payload.callback()
+                    if (this.vue.$help.isFunction(payload.callback)) await payload.callback()
                 }
             } catch (e) {
                 if (process.env.NODE_ENV !== 'test') {
-                    const logger = this.Vue.Logger('store-maxscale-updateMaxScaleParameters')
+                    const logger = this.vue.$logger('store-maxscale-updateMaxScaleParameters')
                     logger.error(e)
                 }
             }

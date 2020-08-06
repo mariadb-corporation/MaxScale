@@ -37,11 +37,11 @@ export default {
     actions: {
         async fetchAllSessions({ commit }) {
             try {
-                let res = await this.Vue.axios.get(`/sessions`)
+                let res = await this.vue.$axios.get(`/sessions`)
                 if (res.data.data) commit('setSessions', res.data.data)
             } catch (e) {
                 if (process.env.NODE_ENV !== 'test') {
-                    const logger = this.Vue.Logger('store-sessions-fetchAllSessions')
+                    const logger = this.vue.$logger('store-sessions-fetchAllSessions')
                     logger.error(e)
                 }
             }
@@ -50,7 +50,7 @@ export default {
         genDataSetSchema({ commit, state }) {
             const { allSessions } = state
 
-            let lineColors = this.Vue.prototype.$help.dynamicColors(0)
+            let lineColors = this.vue.$help.dynamicColors(0)
 
             let indexOfOpacity = lineColors.lastIndexOf(')') - 1
             let dataset = [
@@ -58,11 +58,7 @@ export default {
                     label: `Total sessions`,
                     type: 'line',
                     // background of the line
-                    backgroundColor: this.Vue.prototype.$help.strReplaceAt(
-                        lineColors,
-                        indexOfOpacity,
-                        '0.1'
-                    ),
+                    backgroundColor: this.vue.$help.strReplaceAt(lineColors, indexOfOpacity, '0.1'),
                     borderColor: lineColors, //theme.palette.primary.main, // line color
                     borderWidth: 1,
                     lineTension: 0,
@@ -79,7 +75,7 @@ export default {
 
         //-------------------- sessions filter by relationships serviceId
         async fetchSessionsFilterByServiceId({ commit }, id) {
-            let res = await this.Vue.axios.get(
+            let res = await this.vue.$axios.get(
                 `/sessions?filter=/relationships/services/data/0/id="${id}"`
             )
             commit('setSessionsByService', res.data.data)

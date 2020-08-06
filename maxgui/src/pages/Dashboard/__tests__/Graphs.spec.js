@@ -17,7 +17,7 @@ describe('Graphs index', () => {
     })
 
     beforeEach(async () => {
-        axiosStub = sinon.stub(Vue.axios, 'get').resolves(
+        axiosStub = sinon.stub(Vue.prototype.$axios, 'get').resolves(
             Promise.resolve({
                 data: {},
             })

@@ -32,35 +32,35 @@ export default {
     actions: {
         async fetchAllMonitors({ commit }) {
             try {
-                let res = await this.Vue.axios.get(`/monitors`)
+                let res = await this.vue.$axios.get(`/monitors`)
                 if (res.data.data) commit('setAllMonitors', res.data.data)
             } catch (e) {
                 if (process.env.NODE_ENV !== 'test') {
-                    const logger = this.Vue.Logger('store-monitor-fetchAllMonitors')
+                    const logger = this.vue.$logger('store-monitor-fetchAllMonitors')
                     logger.error(e)
                 }
             }
         },
         async fetchMonitorById({ commit }, id) {
             try {
-                let res = await this.Vue.axios.get(`/monitors/${id}`)
+                let res = await this.vue.$axios.get(`/monitors/${id}`)
                 if (res.data.data) commit('setCurrentMonitor', res.data.data)
             } catch (e) {
                 if (process.env.NODE_ENV !== 'test') {
-                    const logger = this.Vue.Logger('store-monitor-fetchMonitorById')
+                    const logger = this.vue.$logger('store-monitor-fetchMonitorById')
                     logger.error(e)
                 }
             }
         },
         async fetchMonitorDiagnosticsById({ commit }, id) {
             try {
-                let res = await this.Vue.axios.get(
+                let res = await this.vue.$axios.get(
                     `/monitors/${id}?fields[monitors]=monitor_diagnostics`
                 )
                 if (res.data.data) commit('setCurrentMonitorDiagnostics', res.data.data)
             } catch (e) {
                 if (process.env.NODE_ENV !== 'test') {
-                    const logger = this.Vue.Logger('store-monitor-fetchMonitorDiagnosticsById')
+                    const logger = this.vue.$logger('store-monitor-fetchMonitorDiagnosticsById')
                     logger.error(e)
                 }
             }
@@ -87,7 +87,7 @@ export default {
                         relationships: payload.relationships,
                     },
                 }
-                let res = await this.Vue.axios.post(`/monitors/`, body)
+                let res = await this.vue.$axios.post(`/monitors/`, body)
                 let message = [`Monitor ${payload.id} is created`]
                 // response ok
                 if (res.status === 204) {
@@ -99,12 +99,11 @@ export default {
                         },
                         { root: true }
                     )
-                    if (this.Vue.prototype.$help.isFunction(payload.callback))
-                        await payload.callback()
+                    if (this.vue.$help.isFunction(payload.callback)) await payload.callback()
                 }
             } catch (e) {
                 if (process.env.NODE_ENV !== 'test') {
-                    const logger = this.Vue.Logger('store-monitor-createMonitor')
+                    const logger = this.vue.$logger('store-monitor-createMonitor')
                     logger.error(e)
                 }
             }
@@ -126,7 +125,7 @@ export default {
                         attributes: { parameters: payload.parameters },
                     },
                 }
-                let res = await this.Vue.axios.patch(`/monitors/${payload.id}`, body)
+                let res = await this.vue.$axios.patch(`/monitors/${payload.id}`, body)
                 // response ok
                 if (res.status === 204) {
                     commit(
@@ -137,12 +136,11 @@ export default {
                         },
                         { root: true }
                     )
-                    if (this.Vue.prototype.$help.isFunction(payload.callback))
-                        await payload.callback()
+                    if (this.vue.$help.isFunction(payload.callback)) await payload.callback()
                 }
             } catch (e) {
                 if (process.env.NODE_ENV !== 'test') {
-                    const logger = this.Vue.Logger('store-monitor-updateMonitorParameters')
+                    const logger = this.vue.$logger('store-monitor-updateMonitorParameters')
                     logger.error(e)
                 }
             }
@@ -158,17 +156,17 @@ export default {
                     case 'destroy':
                         /*  Destroy a created monitor.
                         The monitor must not have relationships to any servers in order to be destroyed. */
-                        res = await this.Vue.axios.delete(`/monitors/${id}?force=yes`)
+                        res = await this.vue.$axios.delete(`/monitors/${id}?force=yes`)
                         message = [`Monitor ${id} is destroyed`]
                         break
                     case 'stop':
                         //Stops a started monitor.
-                        res = await this.Vue.axios.put(`/monitors/${id}/stop`)
+                        res = await this.vue.$axios.put(`/monitors/${id}/stop`)
                         message = [`Monitor ${id} is stopped`]
                         break
                     case 'start':
                         //Starts a stopped monitor.
-                        res = await this.Vue.axios.put(`/monitors/${id}/start`)
+                        res = await this.vue.$axios.put(`/monitors/${id}/start`)
                         message = [`Monitor ${id} is started`]
                         break
                 }
@@ -182,11 +180,11 @@ export default {
                         },
                         { root: true }
                     )
-                    if (this.Vue.prototype.$help.isFunction(callback)) await callback()
+                    if (this.vue.$help.isFunction(callback)) await callback()
                 }
             } catch (e) {
                 if (process.env.NODE_ENV !== 'test') {
-                    const logger = this.Vue.Logger('store-monitor-monitorManipulate')
+                    const logger = this.vue.$logger('store-monitor-monitorManipulate')
                     logger.error(e)
                 }
             }
@@ -204,7 +202,7 @@ export default {
                 let res
                 let message
 
-                res = await this.Vue.axios.patch(`/monitors/${payload.id}/relationships/servers`, {
+                res = await this.vue.$axios.patch(`/monitors/${payload.id}/relationships/servers`, {
                     data: payload.servers,
                 })
                 message = [`Servers relationships of ${payload.id} is updated`]
@@ -219,12 +217,11 @@ export default {
                         },
                         { root: true }
                     )
-                    if (this.Vue.prototype.$help.isFunction(payload.callback))
-                        await payload.callback()
+                    if (this.vue.$help.isFunction(payload.callback)) await payload.callback()
                 }
             } catch (e) {
                 if (process.env.NODE_ENV !== 'test') {
-                    const logger = this.Vue.Logger('store-monitor-updateMonitorRelationship')
+                    const logger = this.vue.$logger('store-monitor-updateMonitorRelationship')
                     logger.error(e)
                 }
             }

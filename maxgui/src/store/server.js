@@ -37,7 +37,7 @@ export default {
     actions: {
         async fetchAllServers({ commit }) {
             try {
-                let res = await this.Vue.axios.get(`/servers`)
+                let res = await this.vue.$axios.get(`/servers`)
                 if (res.data.data) {
                     // reverse array, latest will be last
                     let sorted = res.data.data.reverse()
@@ -45,7 +45,7 @@ export default {
                 }
             } catch (e) {
                 if (process.env.NODE_ENV !== 'test') {
-                    const logger = this.Vue.Logger('store-server-fetchAllServers')
+                    const logger = this.vue.$logger('store-server-fetchAllServers')
                     logger.error(e)
                 }
             }
@@ -53,11 +53,11 @@ export default {
 
         async fetchServerById({ commit }, id) {
             try {
-                let res = await this.Vue.axios.get(`/servers/${id}`)
+                let res = await this.vue.$axios.get(`/servers/${id}`)
                 if (res.data.data) commit('setCurrentServer', res.data.data)
             } catch (e) {
                 if (process.env.NODE_ENV !== 'test') {
-                    const logger = this.Vue.Logger('store-server-fetchServerById')
+                    const logger = this.vue.$logger('store-server-fetchServerById')
                     logger.error(e)
                 }
             }
@@ -86,7 +86,7 @@ export default {
                         relationships: payload.relationships,
                     },
                 }
-                let res = await this.Vue.axios.post(`/servers/`, body)
+                let res = await this.vue.$axios.post(`/servers/`, body)
                 let message = [`Server ${payload.id} is created`]
                 // response ok
                 if (res.status === 204) {
@@ -98,12 +98,11 @@ export default {
                         },
                         { root: true }
                     )
-                    if (this.Vue.prototype.$help.isFunction(payload.callback))
-                        await payload.callback()
+                    if (this.vue.$help.isFunction(payload.callback)) await payload.callback()
                 }
             } catch (e) {
                 if (process.env.NODE_ENV !== 'test') {
-                    const logger = this.Vue.Logger('store-server-createServer')
+                    const logger = this.vue.$logger('store-server-createServer')
                     logger.error(e)
                 }
             }
@@ -124,7 +123,7 @@ export default {
                         attributes: { parameters: payload.parameters },
                     },
                 }
-                let res = await this.Vue.axios.patch(`/servers/${payload.id}`, body)
+                let res = await this.vue.$axios.patch(`/servers/${payload.id}`, body)
                 // response ok
                 if (res.status === 204) {
                     commit(
@@ -135,12 +134,11 @@ export default {
                         },
                         { root: true }
                     )
-                    if (this.Vue.prototype.$help.isFunction(payload.callback))
-                        await payload.callback()
+                    if (this.vue.$help.isFunction(payload.callback)) await payload.callback()
                 }
             } catch (e) {
                 if (process.env.NODE_ENV !== 'test') {
-                    const logger = this.Vue.Logger('store-server-updateServerParameters')
+                    const logger = this.vue.$logger('store-server-updateServerParameters')
                     logger.error(e)
                 }
             }
@@ -159,7 +157,7 @@ export default {
                 let res
                 let message
 
-                res = await this.Vue.axios.patch(
+                res = await this.vue.$axios.patch(
                     `/servers/${payload.id}/relationships/${payload.type}`,
                     {
                         data: payload.type === 'services' ? payload.services : payload.monitors,
@@ -167,9 +165,9 @@ export default {
                 )
 
                 message = [
-                    `${this.Vue.prototype.$help.capitalizeFirstLetter(
-                        payload.type
-                    )} relationships of ${payload.id} is updated`,
+                    `${this.vue.$help.capitalizeFirstLetter(payload.type)} relationships of ${
+                        payload.id
+                    } is updated`,
                 ]
 
                 // response ok
@@ -182,12 +180,11 @@ export default {
                         },
                         { root: true }
                     )
-                    if (this.Vue.prototype.$help.isFunction(payload.callback))
-                        await payload.callback()
+                    if (this.vue.$help.isFunction(payload.callback)) await payload.callback()
                 }
             } catch (e) {
                 if (process.env.NODE_ENV !== 'test') {
-                    const logger = this.Vue.Logger('store-server-updateServerRelationship')
+                    const logger = this.vue.$logger('store-server-updateServerRelationship')
                     logger.error(e)
                 }
             }
@@ -198,7 +195,7 @@ export default {
          */
         async destroyServer({ commit }, id) {
             try {
-                let res = await this.Vue.axios.delete(`/servers/${id}?force=yes`)
+                let res = await this.vue.$axios.delete(`/servers/${id}?force=yes`)
                 // response ok
                 if (res.status === 204) {
                     commit(
@@ -212,7 +209,7 @@ export default {
                 }
             } catch (e) {
                 if (process.env.NODE_ENV !== 'test') {
-                    const logger = this.Vue.Logger('store-server-destroyServer')
+                    const logger = this.vue.$logger('store-server-destroyServer')
                     logger.error(e)
                 }
             }
@@ -234,23 +231,23 @@ export default {
                             let url = `/servers/${id}/set?state=${state}`
                             if (state === 'maintenance' && forceClosing)
                                 url = url.concat('&force=yes')
-                            res = await this.Vue.axios.put(url)
+                            res = await this.vue.$axios.put(url)
                             message = [`Server ${id} is set to ${state}`]
                         }
                         break
                     case 'clear':
-                        res = await this.Vue.axios.put(`/servers/${id}/clear?state=${state}`)
+                        res = await this.vue.$axios.put(`/servers/${id}/clear?state=${state}`)
                         message = [`State ${state} of server ${id} is cleared`]
                         break
                 }
                 // response ok
                 if (res.status === 204) {
                     commit('showMessage', { text: message, type: 'success' }, { root: true })
-                    if (this.Vue.prototype.$help.isFunction(callback)) await callback()
+                    if (this.vue.$help.isFunction(callback)) await callback()
                 }
             } catch (e) {
                 if (process.env.NODE_ENV !== 'test') {
-                    const logger = this.Vue.Logger('store-server-setOrClearServerState')
+                    const logger = this.vue.$logger('store-server-setOrClearServerState')
                     logger.error(e)
                 }
             }
@@ -269,14 +266,14 @@ export default {
                         id,
                         attributes: { statistics },
                     } = allServers[i]
-                    lineColors.push(this.Vue.prototype.$help.dynamicColors(i))
+                    lineColors.push(this.vue.$help.dynamicColors(i))
                     let indexOfOpacity = lineColors[i].lastIndexOf(')') - 1
                     let obj = {
                         label: `Server ID - ${id}`,
                         id: `Server ID - ${id}`,
                         type: 'line',
                         // background of the line
-                        backgroundColor: this.Vue.prototype.$help.strReplaceAt(
+                        backgroundColor: this.vue.$help.strReplaceAt(
                             lineColors[i],
                             indexOfOpacity,
                             '0.2'

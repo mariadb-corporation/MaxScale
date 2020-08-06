@@ -57,7 +57,7 @@ export default {
             commit('showOverlay', OVERLAY_LOGOUT, { root: true })
             const user = JSON.parse(localStorage.getItem('user'))
             if (user) localStorage.removeItem('user')
-            this.Vue.prototype.$help.deleteCookie('token_body')
+            this.vue.$help.deleteCookie('token_body')
             // hide snackbar message if it is on
             if (rootState.message.status) {
                 commit(
@@ -71,7 +71,7 @@ export default {
                 )
             }
 
-            await this.Vue.prototype.$help.delay(1500).then(() => {
+            await this.vue.$help.delay(1500).then(() => {
                 commit('hideOverlay', null, { root: true })
                 if (this.router.app.$route.name !== 'login') this.router.push('/login')
             })
@@ -79,7 +79,7 @@ export default {
         // --------------------------------------------------- Network users -------------------------------------
         async fetchCurrentNetworkUser({ dispatch, commit, state }) {
             try {
-                let res = await this.Vue.axios.get(`/users/inet/${state.user.username}`)
+                let res = await this.vue.$axios.get(`/users/inet/${state.user.username}`)
                 // response ok
                 if (res.status === 200 && res.data.data) {
                     let data = res.data.data
@@ -92,21 +92,21 @@ export default {
                 }
             } catch (e) {
                 if (process.env.NODE_ENV !== 'test') {
-                    const logger = this.Vue.Logger('store-user-fetchCurrentNetworkUser')
+                    const logger = this.vue.$logger('store-user-fetchCurrentNetworkUser')
                     logger.error(e)
                 }
             }
         },
         async fetchAllNetworkUsers({ commit }) {
             try {
-                let res = await this.Vue.axios.get(`/users/inet`)
+                let res = await this.vue.$axios.get(`/users/inet`)
                 // response ok
                 if (res.status === 200 && res.data.data) {
                     commit('setAllNetworkUsers', res.data.data)
                 }
             } catch (e) {
                 if (process.env.NODE_ENV !== 'test') {
-                    const logger = this.Vue.Logger('store-user-fetchAllNetworkUsers')
+                    const logger = this.vue.$logger('store-user-fetchAllNetworkUsers')
                     logger.error(e)
                 }
             }
@@ -132,7 +132,7 @@ export default {
                                     attributes: { password: data.password, account: data.role },
                                 },
                             }
-                            res = await this.Vue.axios.post(`/users/inet`, payload)
+                            res = await this.vue.$axios.post(`/users/inet`, payload)
                             message = [`Network User ${data.id} is created`]
                         }
                         break
@@ -143,7 +143,7 @@ export default {
                                     attributes: { password: data.password },
                                 },
                             }
-                            res = await this.Vue.axios.patch(`/users/inet/${data.id}`, payload)
+                            res = await this.vue.$axios.patch(`/users/inet/${data.id}`, payload)
                             message = [`Network User ${data.id} is updated`]
                         }
                         break
@@ -162,7 +162,7 @@ export default {
                 }
             } catch (e) {
                 if (process.env.NODE_ENV !== 'test') {
-                    const logger = this.Vue.Logger('store-user-createOrUpdateNetworkUser')
+                    const logger = this.vue.$logger('store-user-createOrUpdateNetworkUser')
                     logger.error(e)
                 }
             }
@@ -172,7 +172,7 @@ export default {
          */
         async deleteNetworkUserById({ dispatch, commit }, id) {
             try {
-                let res = await this.Vue.axios.delete(`/users/inet/${id}`)
+                let res = await this.vue.$axios.delete(`/users/inet/${id}`)
                 // response ok
                 if (res.status === 204) {
                     await dispatch('fetchAllNetworkUsers')
@@ -187,7 +187,7 @@ export default {
                 }
             } catch (e) {
                 if (process.env.NODE_ENV !== 'test') {
-                    const logger = this.Vue.Logger('store-user-deleteNetworkUserById')
+                    const logger = this.vue.$logger('store-user-deleteNetworkUserById')
                     logger.error(e)
                 }
             }
@@ -195,21 +195,21 @@ export default {
         // --------------------------------------------------- Unix accounts -------------------------------------
         async fetchAllUNIXAccounts({ commit }) {
             try {
-                let res = await this.Vue.axios.get(`/users/unix`)
+                let res = await this.vue.$axios.get(`/users/unix`)
                 // response ok
                 if (res.status === 200 && res.data.data) {
                     commit('setAllUNIXAccounts', res.data.data)
                 }
             } catch (e) {
                 if (process.env.NODE_ENV !== 'test') {
-                    const logger = this.Vue.Logger('store-user-fetchAllUNIXAccounts')
+                    const logger = this.vue.$logger('store-user-fetchAllUNIXAccounts')
                     logger.error(e)
                 }
             }
         },
         async enableUNIXAccount({ commit, dispatch }, { id, role }) {
             try {
-                let res = await this.Vue.axios.get(`/users/unix`, {
+                let res = await this.vue.$axios.get(`/users/unix`, {
                     data: {
                         id: id,
                         type: 'unix',
@@ -232,7 +232,7 @@ export default {
                 }
             } catch (e) {
                 if (process.env.NODE_ENV !== 'test') {
-                    const logger = this.Vue.Logger('store-user-enableUNIXAccount')
+                    const logger = this.vue.$logger('store-user-enableUNIXAccount')
                     logger.error(e)
                 }
             }
@@ -242,7 +242,7 @@ export default {
          */
         async disableUNIXAccount({ dispatch, commit }, id) {
             try {
-                let res = await this.Vue.axios.delete(`/users/unix/${id}`)
+                let res = await this.vue.$axios.delete(`/users/unix/${id}`)
                 // response ok
                 if (res.status === 204) {
                     await dispatch('fetchAllUNIXAccounts')
@@ -257,7 +257,7 @@ export default {
                 }
             } catch (e) {
                 if (process.env.NODE_ENV !== 'test') {
-                    const logger = this.Vue.Logger('store-user-disableUNIXAccount')
+                    const logger = this.vue.$logger('store-user-disableUNIXAccount')
                     logger.error(e)
                 }
             }
@@ -265,14 +265,14 @@ export default {
         // --------------------------------------------------- All users -----------------------------------------
         async fetchAllUsers({ commit }) {
             try {
-                let res = await this.Vue.axios.get(`/users`)
+                let res = await this.vue.$axios.get(`/users`)
                 // response ok
                 if (res.status === 200 && res.data.data) {
                     commit('setAllUsers', res.data.data)
                 }
             } catch (e) {
                 if (process.env.NODE_ENV !== 'test') {
-                    const logger = this.Vue.Logger('store-user-fetchAllUsers')
+                    const logger = this.vue.$logger('store-user-fetchAllUsers')
                     logger.error(e)
                 }
             }

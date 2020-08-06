@@ -47,7 +47,7 @@ export default {
             return this.isUpdateAvailable
         },
         logger: function() {
-            return this.$store.Vue.Logger('main')
+            return this.$logger('main')
         },
     },
 

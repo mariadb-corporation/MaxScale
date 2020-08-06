@@ -28,22 +28,22 @@ export default {
     actions: {
         async fetchAllListeners({ commit }) {
             try {
-                let res = await this.Vue.axios.get(`/listeners`)
+                let res = await this.vue.$axios.get(`/listeners`)
                 if (res.data.data) commit('setAllListeners', res.data.data)
             } catch (e) {
                 if (process.env.NODE_ENV !== 'test') {
-                    const logger = this.Vue.Logger('store-listener-fetchAllListeners')
+                    const logger = this.vue.$logger('store-listener-fetchAllListeners')
                     logger.error(e)
                 }
             }
         },
         async fetchListenerById({ commit }, id) {
             try {
-                let res = await this.Vue.axios.get(`/listeners/${id}`)
+                let res = await this.vue.$axios.get(`/listeners/${id}`)
                 if (res.data.data) commit('setCurrentListener', res.data.data)
             } catch (e) {
                 if (process.env.NODE_ENV !== 'test') {
-                    const logger = this.Vue.Logger('store-listener-fetchListenerById')
+                    const logger = this.vue.$logger('store-listener-fetchListenerById')
                     logger.error(e)
                 }
             }
@@ -68,7 +68,7 @@ export default {
                     },
                 }
 
-                let res = await this.Vue.axios.post(`/listeners`, body)
+                let res = await this.vue.$axios.post(`/listeners`, body)
                 let message = [`Listener ${payload.id} is created`]
                 // response ok
                 if (res.status === 204) {
@@ -80,12 +80,11 @@ export default {
                         },
                         { root: true }
                     )
-                    if (this.Vue.prototype.$help.isFunction(payload.callback))
-                        await payload.callback()
+                    if (this.vue.$help.isFunction(payload.callback)) await payload.callback()
                 }
             } catch (e) {
                 if (process.env.NODE_ENV !== 'test') {
-                    const logger = this.Vue.Logger('store-listener-createListener')
+                    const logger = this.vue.$logger('store-listener-createListener')
                     logger.error(e)
                 }
             }
@@ -95,7 +94,7 @@ export default {
          */
         async destroyListener({ dispatch, commit }, id) {
             try {
-                let res = await this.Vue.axios.delete(`/listeners/${id}`)
+                let res = await this.vue.$axios.delete(`/listeners/${id}`)
                 if (res.status === 204) {
                     await dispatch('fetchAllListeners')
                     commit(
@@ -109,7 +108,7 @@ export default {
                 }
             } catch (e) {
                 if (process.env.NODE_ENV !== 'test') {
-                    const logger = this.Vue.Logger('store-listener-destroyListener')
+                    const logger = this.vue.$logger('store-listener-destroyListener')
                     logger.error(e)
                 }
             }

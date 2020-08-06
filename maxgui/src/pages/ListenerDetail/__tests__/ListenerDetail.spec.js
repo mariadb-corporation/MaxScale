@@ -12,7 +12,7 @@ describe('ListenerDetail index', () => {
     let wrapper, axiosStub
 
     before(async () => {
-        axiosStub = sinon.stub(Vue.axios, 'get').returns(
+        axiosStub = sinon.stub(Vue.prototype.$axios, 'get').returns(
             Promise.resolve({
                 data: {},
             })
@@ -28,7 +28,7 @@ describe('ListenerDetail index', () => {
 
     beforeEach(async () => {
         await axiosStub.restore()
-        axiosStub = sinon.stub(Vue.axios, 'get').returns(
+        axiosStub = sinon.stub(Vue.prototype.$axios, 'get').returns(
             Promise.resolve({
                 data: {},
             })

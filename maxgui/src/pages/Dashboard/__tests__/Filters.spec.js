@@ -42,7 +42,7 @@ describe('Filters', () => {
                 allFilters: () => mockupAllFilters,
             },
         })
-        axiosStub = sinon.stub(wrapper.vm.axios, 'get').resolves(
+        axiosStub = sinon.stub(wrapper.vm.$axios, 'get').resolves(
             Promise.resolve({
                 data: {},
             })

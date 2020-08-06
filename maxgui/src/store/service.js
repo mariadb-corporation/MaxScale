@@ -42,13 +42,13 @@ export default {
     actions: {
         async fetchServiceById({ commit }, id) {
             try {
-                let res = await this.Vue.axios.get(`/services/${id}`)
+                let res = await this.vue.$axios.get(`/services/${id}`)
                 if (res.data.data) {
                     commit('setCurrentService', res.data.data)
                 }
             } catch (e) {
                 if (process.env.NODE_ENV !== 'test') {
-                    const logger = this.Vue.Logger('store-service-fetchServiceById')
+                    const logger = this.vue.$logger('store-service-fetchServiceById')
                     logger.error(e)
                 }
             }
@@ -58,14 +58,14 @@ export default {
                 currentService: { attributes: { connections = null } = {} },
             } = state
             if (connections !== null) {
-                let lineColors = this.Vue.prototype.$help.dynamicColors(0)
+                let lineColors = this.vue.$help.dynamicColors(0)
                 let indexOfOpacity = lineColors.lastIndexOf(')') - 1
                 let dataset = [
                     {
                         label: `Current connections`,
                         type: 'line',
                         // background of the line
-                        backgroundColor: this.Vue.prototype.$help.strReplaceAt(
+                        backgroundColor: this.vue.$help.strReplaceAt(
                             lineColors,
                             indexOfOpacity,
                             '0.2'
@@ -86,18 +86,18 @@ export default {
         },
         async fetchAllServices({ commit }) {
             try {
-                let res = await this.Vue.axios.get(`/services`)
+                let res = await this.vue.$axios.get(`/services`)
                 if (res.data.data) commit('setServices', res.data.data)
             } catch (e) {
                 if (process.env.NODE_ENV !== 'test') {
-                    const logger = this.Vue.Logger('store-services-fetchAllServices')
+                    const logger = this.vue.$logger('store-services-fetchAllServices')
                     logger.error(e)
                 }
             }
         },
         async fetchServiceConnections({ commit }, id) {
             try {
-                let res = await this.Vue.axios.get(
+                let res = await this.vue.$axios.get(
                     `/services/${id}?fields[services]=connections,total_connections`
                 )
                 if (res.data.data) {
@@ -109,7 +109,7 @@ export default {
                 }
             } catch (e) {
                 if (process.env.NODE_ENV !== 'test') {
-                    const logger = this.Vue.Logger('store-service-fetchServiceConnections')
+                    const logger = this.vue.$logger('store-service-fetchServiceConnections')
                     logger.error(e)
                 }
             }
@@ -139,7 +139,7 @@ export default {
                         relationships: payload.relationships,
                     },
                 }
-                let res = await this.Vue.axios.post(`/services/`, body)
+                let res = await this.vue.$axios.post(`/services/`, body)
 
                 // response ok
                 if (res.status === 204) {
@@ -151,12 +151,11 @@ export default {
                         },
                         { root: true }
                     )
-                    if (this.Vue.prototype.$help.isFunction(payload.callback))
-                        await payload.callback()
+                    if (this.vue.$help.isFunction(payload.callback)) await payload.callback()
                 }
             } catch (e) {
                 if (process.env.NODE_ENV !== 'test') {
-                    const logger = this.Vue.Logger('store-service-createService')
+                    const logger = this.vue.$logger('store-service-createService')
                     logger.error(e)
                 }
             }
@@ -177,7 +176,7 @@ export default {
                         attributes: { parameters: payload.parameters },
                     },
                 }
-                let res = await this.Vue.axios.patch(`/services/${payload.id}`, body)
+                let res = await this.vue.$axios.patch(`/services/${payload.id}`, body)
                 // response ok
                 if (res.status === 204) {
                     commit(
@@ -188,12 +187,11 @@ export default {
                         },
                         { root: true }
                     )
-                    if (this.Vue.prototype.$help.isFunction(payload.callback))
-                        await payload.callback()
+                    if (this.vue.$help.isFunction(payload.callback)) await payload.callback()
                 }
             } catch (e) {
                 if (process.env.NODE_ENV !== 'test') {
-                    const logger = this.Vue.Logger('store-service-updateServiceParameters')
+                    const logger = this.vue.$logger('store-service-updateServiceParameters')
                     logger.error(e)
                 }
             }
@@ -212,16 +210,16 @@ export default {
                 let res
                 let message
 
-                res = await this.Vue.axios.patch(
+                res = await this.vue.$axios.patch(
                     `/services/${payload.id}/relationships/${payload.type}`,
                     {
                         data: payload.type === 'servers' ? payload.servers : payload.filters,
                     }
                 )
                 message = [
-                    `${this.Vue.prototype.$help.capitalizeFirstLetter(
-                        payload.type
-                    )} relationships of ${payload.id} is updated`,
+                    `${this.vue.$help.capitalizeFirstLetter(payload.type)} relationships of ${
+                        payload.id
+                    } is updated`,
                 ]
 
                 // response ok
@@ -234,12 +232,11 @@ export default {
                         },
                         { root: true }
                     )
-                    if (this.Vue.prototype.$help.isFunction(payload.callback))
-                        await payload.callback()
+                    if (this.vue.$help.isFunction(payload.callback)) await payload.callback()
                 }
             } catch (e) {
                 if (process.env.NODE_ENV !== 'test') {
-                    const logger = this.Vue.Logger('store-service-updateServiceRelationship')
+                    const logger = this.vue.$logger('store-service-updateServiceRelationship')
                     logger.error(e)
                 }
             }
@@ -249,7 +246,7 @@ export default {
          */
         async destroyService({ dispatch, commit }, id) {
             try {
-                let res = await this.Vue.axios.delete(`/services/${id}?force=yes`)
+                let res = await this.vue.$axios.delete(`/services/${id}?force=yes`)
                 // response ok
                 if (res.status === 204) {
                     await dispatch('fetchAllServices')
@@ -264,7 +261,7 @@ export default {
                 }
             } catch (e) {
                 if (process.env.NODE_ENV !== 'test') {
-                    const logger = this.Vue.Logger('store-service-destroyService')
+                    const logger = this.vue.$logger('store-service-destroyService')
                     logger.error(e)
                 }
             }
@@ -275,7 +272,7 @@ export default {
          */
         async stopOrStartService({ commit }, { id, mode, callback }) {
             try {
-                let res = await this.Vue.axios.put(`/services/${id}/${mode}`)
+                let res = await this.vue.$axios.put(`/services/${id}/${mode}`)
                 let message
                 switch (mode) {
                     case 'start':
@@ -295,11 +292,11 @@ export default {
                         },
                         { root: true }
                     )
-                    if (this.Vue.prototype.$help.isFunction(callback)) await callback()
+                    if (this.vue.$help.isFunction(callback)) await callback()
                 }
             } catch (e) {
                 if (process.env.NODE_ENV !== 'test') {
-                    const logger = this.Vue.Logger('store-service-stopOrStartService')
+                    const logger = this.vue.$logger('store-service-stopOrStartService')
                     logger.error(e)
                 }
             }

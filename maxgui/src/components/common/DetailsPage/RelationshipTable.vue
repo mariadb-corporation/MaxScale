@@ -124,7 +124,7 @@ export default {
             searchKeyWord: 'searchKeyWord',
         }),
         logger: function() {
-            return this.$store.Vue.Logger('relationship-table')
+            return this.$logger('relationship-table')
         },
         tableRowsData: function() {
             // add index number for filters table only
