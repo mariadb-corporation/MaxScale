@@ -4,9 +4,13 @@ import mount from '@tests/unit/setup'
 import Dashboard from '@/pages/Dashboard'
 import sinon from 'sinon'
 import sinonChai from 'sinon-chai'
+import { enableAutoDestroy } from '@vue/test-utils'
 
 chai.should()
 chai.use(sinonChai)
+
+// calls wrapper.destroy() after each test
+enableAutoDestroy(afterEach)
 
 describe('Dashboard index', () => {
     let wrapper, axiosStub
@@ -16,13 +20,13 @@ describe('Dashboard index', () => {
     })
 
     beforeEach(async () => {
-        axiosStub = sinon.stub(Vue.axios, 'get').resolves(
+        axiosStub = sinon.stub(Vue.prototype.$axios, 'get').resolves(
             Promise.resolve({
                 data: {},
             })
         )
         wrapper = mount({
-            shallow: false,
+            shallow: true,
             component: Dashboard,
         })
     })
@@ -35,7 +39,8 @@ describe('Dashboard index', () => {
     })
 
     it(`Should send requests in parallel to get maxscale overview info,
-      maxscale threads, all servers, monitors, sessions, services and listeners`, async () => {
+      maxscale threads, all servers, monitors, sessions, services,
+      listeners and filters`, async () => {
         await axiosStub.firstCall.should.have.been.calledWith(
             '/maxscale?fields[maxscale]=version,commit,started_at,activated_at,uptime'
         )
@@ -49,6 +54,7 @@ describe('Dashboard index', () => {
 
         await wrapper.vm.$nextTick(async () => {
             await axiosStub.should.have.been.calledWith('/listeners')
+            await axiosStub.should.have.been.calledWith('/filters')
         })
     })
 

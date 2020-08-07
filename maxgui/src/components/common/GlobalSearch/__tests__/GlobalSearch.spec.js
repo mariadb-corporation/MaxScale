@@ -30,7 +30,7 @@ describe('GlobalSearch.vue', () => {
             shallow: false,
             component: GlobalSearch,
         })
-        axiosStub = sinon.stub(wrapper.vm.axios, 'get').resolves(
+        axiosStub = sinon.stub(wrapper.vm.$axios, 'get').resolves(
             Promise.resolve({
                 data: {},
             })

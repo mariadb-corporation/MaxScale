@@ -11,6 +11,7 @@
  * Public License.
  */
 import Vue from 'vue'
+import 'plugins/logger'
 import 'utils/helpers'
 import 'plugins/vuex'
 import 'plugins/axios'
@@ -21,11 +22,9 @@ import vuetify from 'plugins/vuetify'
 import App from './App.vue'
 import router from 'router'
 import commonComponents from 'components/common'
-import Logger from 'utils/logging'
 import PortalVue from 'portal-vue'
 
 Vue.use(PortalVue)
-Vue.Logger = Logger
 
 Object.keys(commonComponents).forEach(name => {
     Vue.component(name, commonComponents[name])

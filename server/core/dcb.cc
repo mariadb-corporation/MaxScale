@@ -1473,16 +1473,19 @@ bool DCB::enable_events()
     if (worker->add_fd(m_fd, THIS_UNIT::poll_events, this))
     {
         m_state = State::POLLING;
+        // Add old manually triggered events from before event disabling. epoll seems to trigger on its own
+        // once enabled.
+        m_triggered_event |= m_triggered_event_old;
+        m_triggered_event_old = 0;
         rv = true;
     }
-
     return rv;
 }
 
 bool DCB::disable_events()
 {
     mxb_assert(m_state == State::POLLING);
-    mxb_assert(m_fd != FD_CLOSED || m_role == DCB::Role::INTERNAL);
+    mxb_assert(m_fd != FD_CLOSED);
 
     bool rv = true;
     RoutingWorker* worker = static_cast<RoutingWorker*>(this->owner);
@@ -1495,7 +1498,9 @@ bool DCB::disable_events()
     // State::NOPOLLING and the fd will be FD_CLOSED.
     if (m_fd != FD_CLOSED)
     {
-
+        // Remove any manually added read events, then remove fd from epoll.
+        m_triggered_event_old = m_triggered_event;
+        m_triggered_event = 0;
         if (!worker->remove_fd(m_fd))
         {
             rv = false;
@@ -2044,9 +2049,6 @@ const char* to_string(DCB::Role role)
 
     case DCB::Role::BACKEND:
         return "Backend DCB";
-
-    case DCB::Role::INTERNAL:
-        return "Internal DCB";
 
     default:
         mxb_assert(!true);

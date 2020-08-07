@@ -43,6 +43,7 @@
         "@vue/eslint-config-prettier": "^6.0.0",
         "@vue/test-utils": "1.0.3",
         "babel-eslint": "^10.1.0",
+        "canvas": "2.6.1",
         "chai": "^4.2.0",
         "chromedriver": "80.0.2",
         "deepmerge": "^4.2.2",

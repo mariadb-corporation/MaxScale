@@ -28,7 +28,7 @@ let router = new Router({
 })
 router.beforeEach(async (to, from, next) => {
     // Check if user is logged in
-    const { getCookie, delay } = Vue.prototype.$help
+    const { getCookie, delay } = store.vue.$help
     const token_body = getCookie('token_body')
     const user = JSON.parse(localStorage.getItem('user'))
     const isLoggedIn = user ? user.isLoggedIn : null

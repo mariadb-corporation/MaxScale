@@ -19,13 +19,15 @@
                                     <statistics-table
                                         :loading="overlay === OVERLAY_TRANSPARENT_LOADING"
                                     />
-                                    <services-table
-                                        :searchKeyWord="searchKeyWord"
-                                        :serviceTableRow="serviceTableRow"
-                                        :dispatchRelationshipUpdate="dispatchRelationshipUpdate"
-                                        :loading="overlay === OVERLAY_TRANSPARENT_LOADING"
-                                        :getServiceState="getServiceState"
-                                    />
+                                    <v-col cols="12" class="pa-0 mt-4">
+                                        <relationship-table
+                                            relationshipType="services"
+                                            :tableRows="serviceTableRow"
+                                            :dispatchRelationshipUpdate="dispatchRelationshipUpdate"
+                                            :loading="overlay === OVERLAY_TRANSPARENT_LOADING"
+                                            :getRelationshipData="getServiceState"
+                                        />
+                                    </v-col>
                                 </v-row>
                             </v-col>
                             <v-col class="py-0 ma-0" cols="8">
@@ -76,7 +78,6 @@ import { mapGetters, mapActions, mapMutations } from 'vuex'
 import PageHeader from './PageHeader'
 import OverviewHeader from './OverviewHeader'
 import StatisticsTable from './StatisticsTable'
-import ServicesTable from './ServicesTable'
 import SessionsTable from './SessionsTable'
 import ParametersTable from './ParametersTable'
 import DiagnosticsTable from './DiagnosticsTable'
@@ -87,7 +88,6 @@ export default {
         PageHeader,
         OverviewHeader,
         StatisticsTable,
-        ServicesTable,
         SessionsTable,
         ParametersTable,
         DiagnosticsTable,
@@ -175,7 +175,7 @@ export default {
          * @return {Array} Service state data
          */
         async getServiceState(serviceId) {
-            const data = this.getResourceState({
+            const data = await this.getResourceState({
                 resourceId: serviceId,
                 resourceType: 'services',
                 caller: 'server-detail-page-getServiceState',

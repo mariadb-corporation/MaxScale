@@ -13,7 +13,6 @@
 import Vue from 'vue'
 import ax from 'axios'
 import store from 'store'
-import { getErrorsArr } from '@/utils/helpers'
 
 const cancelToken = ax.CancelToken
 
@@ -53,7 +52,7 @@ apiClient.interceptors.response.use(
             await store.dispatch('user/logout')
         } else if (error.response && error.response.status) {
             store.commit('showMessage', {
-                text: getErrorsArr(error),
+                text: store.vue.$help.getErrorsArr(error),
                 type: 'error',
             })
             /*
@@ -61,7 +60,7 @@ apiClient.interceptors.response.use(
                 Turn it off before returning error
             */
             if (store.state.overlay !== false) {
-                await store.Vue.prototype.$help.delay(600).then(() => {
+                await store.vue.$help.delay(600).then(() => {
                     store.commit('hideOverlay')
                 })
             }
@@ -82,18 +81,15 @@ const loginAxios = ax.create({
     },
 })
 
-Vue.axios = apiClient
-Vue.loginAxios = loginAxios
-
 // immutable axios instances
 Object.defineProperties(Vue.prototype, {
-    axios: {
+    $axios: {
         get() {
             return apiClient
         },
     },
 
-    loginAxios: {
+    $loginAxios: {
         get() {
             return loginAxios
         },

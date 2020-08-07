@@ -15,23 +15,36 @@ export default {
     namespaced: true,
     state: {
         allFilters: [],
+        currentFilter: {},
     },
     mutations: {
-        /**
-         * @param {Array} payload  // Array of filter resources
-         */
         setAllFilters(state, payload) {
             state.allFilters = payload
+        },
+        setCurrentFilter(state, payload) {
+            state.currentFilter = payload
         },
     },
     actions: {
         async fetchAllFilters({ commit }) {
             try {
-                let res = await this.Vue.axios.get(`/filters`)
+                let res = await this.vue.$axios.get(`/filters`)
                 if (res.data.data) commit('setAllFilters', res.data.data)
             } catch (e) {
                 if (process.env.NODE_ENV !== 'test') {
-                    const logger = this.Vue.Logger('store-filter-fetchAllFilters')
+                    const logger = this.vue.$logger('store-filter-fetchAllFilters')
+                    logger.error(e)
+                }
+            }
+        },
+
+        async fetchFilterById({ commit }, id) {
+            try {
+                let res = await this.vue.$axios.get(`/filters/${id}`)
+                if (res.data.data) commit('setCurrentFilter', res.data.data)
+            } catch (e) {
+                if (process.env.NODE_ENV !== 'test') {
+                    const logger = this.vue.$logger('store-filter-fetchFilterById')
                     logger.error(e)
                 }
             }
@@ -56,7 +69,7 @@ export default {
                         },
                     },
                 }
-                let res = await this.Vue.axios.post(`/filters`, body)
+                let res = await this.vue.$axios.post(`/filters`, body)
                 let message = [`Filter ${payload.id} is created`]
                 // response ok
                 if (res.status === 204) {
@@ -68,12 +81,11 @@ export default {
                         },
                         { root: true }
                     )
-                    if (this.Vue.prototype.$help.isFunction(payload.callback))
-                        await payload.callback()
+                    if (this.vue.$help.isFunction(payload.callback)) await payload.callback()
                 }
             } catch (e) {
                 if (process.env.NODE_ENV !== 'test') {
-                    const logger = this.Vue.Logger('store-filter-createFilter')
+                    const logger = this.vue.$logger('store-filter-createFilter')
                     logger.error(e)
                 }
             }
@@ -83,7 +95,7 @@ export default {
          */
         async destroyFilter({ dispatch, commit }, id) {
             try {
-                let res = await this.Vue.axios.delete(`/filters/${id}?force=yes`)
+                let res = await this.vue.$axios.delete(`/filters/${id}?force=yes`)
                 if (res.status === 204) {
                     await dispatch('fetchAllFilters')
                     commit(
@@ -97,7 +109,7 @@ export default {
                 }
             } catch (e) {
                 if (process.env.NODE_ENV !== 'test') {
-                    const logger = this.Vue.Logger('store-filter-destroyFilter')
+                    const logger = this.vue.$logger('store-filter-destroyFilter')
                     logger.error(e)
                 }
             }
@@ -105,6 +117,7 @@ export default {
     },
     getters: {
         allFilters: state => state.allFilters,
+        currentFilter: state => state.currentFilter,
         // -------------- below getters are available only when fetchAllFilters has been dispatched
         allFiltersMap: state => {
             let map = new Map()

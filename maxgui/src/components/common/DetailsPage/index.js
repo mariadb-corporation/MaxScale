@@ -14,9 +14,10 @@
 import DetailsParametersCollapse from './DetailsParametersCollapse'
 import DetailsPageTitle from './DetailsPageTitle'
 import DetailsIconGroupWrapper from './DetailsIconGroupWrapper'
-
+import RelationshipTable from './RelationshipTable'
 export default {
     'details-parameters-collapse': DetailsParametersCollapse,
     'details-page-title': DetailsPageTitle,
     'details-icon-group-wrapper': DetailsIconGroupWrapper,
+    'relationship-table': RelationshipTable,
 }

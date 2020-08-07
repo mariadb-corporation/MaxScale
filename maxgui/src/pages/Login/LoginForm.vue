@@ -132,7 +132,7 @@ export default {
     },
     computed: {
         logger: function() {
-            return this.$store.Vue.Logger('Login')
+            return this.$logger('Login')
         },
     },
 
@@ -156,7 +156,7 @@ export default {
                 */
                 refreshAxiosToken()
                 let url = '/auth?persist=yes'
-                await this.loginAxios.get(`${url}${self.rememberMe ? '&max-age=28800' : ''}`, {
+                await this.$loginAxios.get(`${url}${self.rememberMe ? '&max-age=28800' : ''}`, {
                     auth: self.credential,
                 })
 

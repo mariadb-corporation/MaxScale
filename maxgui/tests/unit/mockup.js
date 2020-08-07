@@ -193,17 +193,43 @@ export const mockupServersList = [
 
 export const mockupAllFilters = [
     {
-        attributes: {},
+        attributes: {
+            module: 'qlafilter',
+        },
         id: 'filter_0',
         links: {},
-        relationships: {},
+        relationships: {
+            services: {
+                data: [
+                    {
+                        id: 'RCR-Router',
+                        type: 'services',
+                    },
+                    {
+                        id: 'RCR-Writer',
+                        type: 'services',
+                    },
+                ],
+            },
+        },
         type: 'filters',
     },
     {
-        attributes: {},
+        attributes: {
+            module: 'binlogfilter',
+        },
         id: 'filter_1',
         links: {},
-        relationships: {},
+        relationships: {
+            services: {
+                data: [
+                    {
+                        id: 'RCR-Writer',
+                        type: 'services',
+                    },
+                ],
+            },
+        },
         type: 'filters',
     },
 ]

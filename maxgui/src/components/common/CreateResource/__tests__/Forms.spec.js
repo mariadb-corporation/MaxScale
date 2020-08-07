@@ -91,12 +91,12 @@ describe('Forms.vue', () => {
                 allModulesMap: () => allModulesMap,
             },
         })
-        axiosStub = sinon.stub(wrapper.vm.axios, 'get').resolves(
+        axiosStub = sinon.stub(wrapper.vm.$axios, 'get').resolves(
             Promise.resolve({
                 data: {},
             })
         )
-        axiosPostStub = sinon.stub(wrapper.vm.axios, 'post').resolves(Promise.resolve({}))
+        axiosPostStub = sinon.stub(wrapper.vm.$axios, 'post').resolves(Promise.resolve({}))
     })
 
     afterEach(async function() {

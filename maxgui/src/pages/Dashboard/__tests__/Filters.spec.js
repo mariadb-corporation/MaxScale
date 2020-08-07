@@ -1,46 +1,33 @@
 import chai, { expect } from 'chai'
 import mount from '@tests/unit/setup'
-import Listeners from '@/pages/Dashboard/Listeners'
+import Filters from '@/pages/Dashboard/Filters'
 import sinon from 'sinon'
 import sinonChai from 'sinon-chai'
-import { mockupAllListeners } from '@tests/unit/mockup'
+import { mockupAllFilters } from '@tests/unit/mockup'
 
 chai.should()
 chai.use(sinonChai)
 
 const expectedTableHeaders = [
-    { text: 'Listener', value: 'id' },
-    { text: 'Port', value: 'port' },
-    { text: 'Host', value: 'address' },
-    { text: 'State', value: 'state' },
+    { text: 'Filter', value: 'id' },
     { text: 'Service', value: 'serviceIds' },
+    { text: 'Module', value: 'module' },
 ]
 
 const expectedTableRows = [
     {
-        id: 'RCR-Writer-Listener',
-        port: 3308,
-        address: '::',
-        state: 'Running',
+        id: 'filter_0',
+        serviceIds: ['RCR-Router', 'RCR-Writer'],
+        module: 'qlafilter',
+    },
+    {
+        id: 'filter_1',
         serviceIds: ['RCR-Writer'],
-    },
-    {
-        id: 'RWS-Listener',
-        port: 3306,
-        address: '::',
-        state: 'Running',
-        serviceIds: ['RWS-Router'],
-    },
-    {
-        id: 'RCR-Router-Listener',
-        port: 3307,
-        address: '::',
-        state: 'Running',
-        serviceIds: ['RCR-Router'],
+        module: 'binlogfilter',
     },
 ]
 
-describe('Listeners index', () => {
+describe('Filters', () => {
     let wrapper, axiosStub
 
     after(async () => {
@@ -50,9 +37,9 @@ describe('Listeners index', () => {
     beforeEach(async () => {
         wrapper = mount({
             shallow: false,
-            component: Listeners,
+            component: Filters,
             computed: {
-                allListeners: () => mockupAllListeners,
+                allFilters: () => mockupAllFilters,
             },
         })
         axiosStub = sinon.stub(wrapper.vm.$axios, 'get').resolves(
@@ -78,9 +65,9 @@ describe('Listeners index', () => {
 
     it(`Should navigate to service detail page when a service is clicked`, async () => {
         const dataTable = wrapper.findComponent({ name: 'data-table' })
-        const listenerId = mockupAllListeners[0].id
-        const cellIndex = expectedTableHeaders.length - 1
-        const serviceId = mockupAllListeners[0].relationships.services.data[0].id
+        const listenerId = mockupAllFilters[1].id
+        const cellIndex = expectedTableHeaders.findIndex(item => item.value === 'serviceIds')
+        const serviceId = mockupAllFilters[1].relationships.services.data[0].id
         let tableCell = dataTable.find(`.${listenerId}-cell-${cellIndex}`)
         let aTag = tableCell.find('a')
         await aTag.trigger('click')

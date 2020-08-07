@@ -17,6 +17,7 @@ const Sessions = () =>
     import(/* webpackChunkName: "tab-routes-sessions" */ 'pages/Dashboard/Sessions')
 const Listeners = () =>
     import(/* webpackChunkName: "tab-routes-listeners" */ 'pages/Dashboard/Listeners')
+const Filters = () => import(/* webpackChunkName: "tab-routes-filters" */ 'pages/Dashboard/Filters')
 
 export default [
     // Tab Routes
@@ -62,6 +63,17 @@ export default [
         },
         name: 'listeners',
         text: 'listeners',
+        isTabRoute: true,
+    },
+    {
+        path: '/dashboard/filters',
+        component: Filters,
+        meta: {
+            requiresAuth: true,
+            layout: 'app-layout',
+        },
+        name: 'filters',
+        text: 'filters',
         isTabRoute: true,
     },
 ]

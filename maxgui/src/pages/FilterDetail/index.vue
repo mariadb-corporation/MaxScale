@@ -1,14 +1,14 @@
 <template>
     <page-wrapper>
-        <v-sheet v-if="!$help.lodash.isEmpty(currentListener)" class="px-6">
-            <page-header :currentListener="currentListener" />
+        <v-sheet v-if="!$help.lodash.isEmpty(currentFilter)" class="px-6">
+            <page-header :currentFilter="currentFilter" />
             <v-row>
                 <!-- PARAMETERS TABLE -->
                 <v-col cols="6">
                     <details-parameters-collapse
                         :searchKeyWord="searchKeyWord"
-                        :resourceId="currentListener.id"
-                        :parameters="currentListener.attributes.parameters"
+                        :resourceId="currentFilter.id"
+                        :parameters="currentFilter.attributes.parameters"
                         :moduleParameters="processedModuleParameters"
                         :loading="
                             loadingModuleParams ? true : overlay === OVERLAY_TRANSPARENT_LOADING
@@ -63,23 +63,23 @@ export default {
             overlay: 'overlay',
             searchKeyWord: 'searchKeyWord',
             moduleParameters: 'moduleParameters',
-            currentListener: 'listener/currentListener',
+            currentFilter: 'filter/currentFilter',
         }),
     },
 
     async created() {
-        await this.fetchListenerById(this.$route.params.id)
-        /*  wait until get currentListener to fetch service state
+        await this.fetchFilterById(this.$route.params.id)
+        /*  wait until get currentFilter to fetch service state
             and module parameters
         */
         const {
-            attributes: { parameters: { protocol = null } = {} } = {},
+            attributes: { module: filterModule = null } = {},
             relationships: { services: { data: servicesData = [] } = {} } = {},
-        } = this.currentListener
+        } = this.currentFilter
 
         await this.serviceTableRowProcessing(servicesData)
 
-        if (protocol) await this.fetchModuleParameters(protocol)
+        if (filterModule) await this.fetchModuleParameters(filterModule)
         this.loadingModuleParams = true
         await this.processModuleParameters()
     },
@@ -88,7 +88,7 @@ export default {
         ...mapActions({
             fetchModuleParameters: 'fetchModuleParameters',
             getResourceState: 'getResourceState',
-            fetchListenerById: 'listener/fetchListenerById',
+            fetchFilterById: 'filter/fetchFilterById',
         }),
 
         async processModuleParameters() {
@@ -110,7 +110,7 @@ export default {
                 const data = await this.getResourceState({
                     resourceId: service.id,
                     resourceType: 'services',
-                    caller: 'listener-details-serviceTableRowProcessing',
+                    caller: 'filter-details-serviceTableRowProcessing',
                 })
                 const { id, type, attributes: { state = null } = {} } = data
                 await arr.push({ id: id, state: state, type: type })

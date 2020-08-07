@@ -1,14 +1,14 @@
 import Vue from 'vue'
-import chai /* , { expect } */ from 'chai'
+import chai from 'chai'
 import mount, { router } from '@tests/unit/setup'
-import ListenerDetail from '@/pages/ListenerDetail'
+import FilterDetail from '@/pages/FilterDetail'
 import sinon from 'sinon'
 import sinonChai from 'sinon-chai'
-import { mockupAllListeners } from '@tests/unit/mockup'
+import { mockupAllFilters } from '@tests/unit/mockup'
 chai.should()
 chai.use(sinonChai)
 
-describe('ListenerDetail index', () => {
+describe('FilterDetail index', () => {
     let wrapper, axiosStub
 
     before(async () => {
@@ -18,8 +18,8 @@ describe('ListenerDetail index', () => {
             })
         )
 
-        const listenerPath = `/dashboard/listeners/${mockupAllListeners[0].id}`
-        if (router.history.current.path !== listenerPath) await router.push(listenerPath)
+        const filterPath = `/dashboard/filters/${mockupAllFilters[0].id}`
+        if (router.history.current.path !== filterPath) await router.push(filterPath)
     })
 
     after(async () => {
@@ -35,9 +35,9 @@ describe('ListenerDetail index', () => {
         )
         wrapper = mount({
             shallow: false,
-            component: ListenerDetail,
+            component: FilterDetail,
             computed: {
-                currentListener: () => mockupAllListeners[0],
+                currentFilter: () => mockupAllFilters[0],
             },
         })
     })
@@ -50,27 +50,27 @@ describe('ListenerDetail index', () => {
         await wrapper.vm.$nextTick(async () => {
             let {
                 id,
-                attributes: {
-                    parameters: { protocol },
-                },
+                attributes: { module: filterModule },
                 relationships: {
                     services: { data: servicesData },
                 },
-            } = mockupAllListeners[0]
+            } = mockupAllFilters[0]
 
-            await axiosStub.should.have.been.calledWith(`/listeners/${id}`)
+            await axiosStub.should.have.been.calledWith(`/filters/${id}`)
 
+            let count = 1
             await servicesData.forEach(async service => {
                 await axiosStub.should.have.been.calledWith(
                     `/services/${service.id}?fields[services]=state`
                 )
+                ++count
             })
 
             await axiosStub.should.have.been.calledWith(
-                `/maxscale/modules/${protocol}?fields[module]=parameters`
+                `/maxscale/modules/${filterModule}?fields[module]=parameters`
             )
-
-            axiosStub.should.have.callCount(3)
+            ++count
+            axiosStub.should.have.callCount(count)
         })
     })
 })

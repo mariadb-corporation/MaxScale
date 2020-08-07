@@ -32,7 +32,7 @@ describe('CreateResource.vue', async () => {
             component: CreateResource,
         })
 
-        axiosStub = sinon.stub(wrapper.vm.axios, 'get').resolves(Promise.resolve({ data: {} }))
+        axiosStub = sinon.stub(wrapper.vm.$axios, 'get').resolves(Promise.resolve({ data: {} }))
     })
 
     afterEach(async function() {
