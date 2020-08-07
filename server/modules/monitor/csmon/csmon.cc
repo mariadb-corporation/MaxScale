@@ -53,7 +53,6 @@ const modulecmd_arg_type_t csmon_remove_node_argv[] =
     { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC },
     { MODULECMD_ARG_STRING, "Hostname/IP of node to remove from Columnstore cluster" },
     { MODULECMD_ARG_STRING, "Timeout." },
-    { MODULECMD_ARG_BOOLEAN, "Whether force should be in effect or not" }
 };
 
 const modulecmd_arg_type_t csmon_shutdown_argv[] =
@@ -366,9 +365,8 @@ bool csmon_remove_node(const MODULECMD_ARG* pArgs, json_t** ppOutput)
     CsMonitor* pMonitor;
     const char* zHost;
     const char* zTimeout;
-    bool force;
 
-    bool rv = get_args(pArgs, ppOutput, &pMonitor, &zHost, &zTimeout, &force);
+    bool rv = get_args(pArgs, ppOutput, &pMonitor, &zHost, &zTimeout);
 
     if (rv)
     {
@@ -376,7 +374,7 @@ bool csmon_remove_node(const MODULECMD_ARG* pArgs, json_t** ppOutput)
 
         if (get_timeout(zTimeout, &timeout, ppOutput))
         {
-            CALL_IF_CS_15(pMonitor->command_remove_node(ppOutput, zHost, timeout, force));
+            CALL_IF_CS_15(pMonitor->command_remove_node(ppOutput, zHost, timeout));
         }
     }
 

@@ -629,15 +629,14 @@ bool CsMonitor::command_mode_set(json_t** ppOutput, const char* zMode, const std
 
 bool CsMonitor::command_remove_node(json_t** ppOutput,
                                     const string& host,
-                                    const std::chrono::seconds& timeout,
-                                    bool force)
+                                    const std::chrono::seconds& timeout)
 {
     mxb::Semaphore sem;
 
-    auto cmd = [this, &sem, ppOutput, host, timeout, force] () {
+    auto cmd = [this, &sem, ppOutput, host, timeout] () {
         if (ready_to_run(ppOutput))
         {
-            cs_remove_node(ppOutput, &sem, host, timeout, force);
+            cs_remove_node(ppOutput, &sem, host, timeout);
         }
         else
         {
@@ -928,8 +927,7 @@ void CsMonitor::cs_mode_set(json_t** ppOutput, mxb::Semaphore* pSem, cs::Cluster
 
 void CsMonitor::cs_remove_node(json_t** ppOutput,
                                mxb::Semaphore* pSem, const string& host,
-                               const std::chrono::seconds& timeout,
-                               bool force)
+                               const std::chrono::seconds& timeout)
 {
     json_t* pOutput = json_object();
     bool success = false;
