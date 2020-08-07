@@ -12,6 +12,7 @@ add_library(maxtest SHARED
         json.cc
         log.cc
         mariadb_func.cc
+        mariadb_connector.cc
         mariadb_nodes.cc
         maxinfo_func.cc
         maxrest.cc

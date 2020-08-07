@@ -20,9 +20,12 @@
 
 #include <string>
 #include <maxtest/testconnections.hh>
+#include <maxtest/mariadb_connector.hh>
 
 using std::string;
 using std::vector;
+using mxt::ServersInfo;
+using mxt::ServerInfo;
 
 void
 check_rlag(TestConnections& test, const ServersInfo& servers_info, size_t ind, int min_rlag, int max_rlag);
@@ -40,6 +43,8 @@ int main(int argc, char* argv[])
 
     const char reset_query[] = "STOP SLAVE; RESET SLAVE ALL; RESET MASTER; SET GLOBAL read_only='OFF'";
     const char readonly_on_query[] = "SET GLOBAL read_only='ON'";
+    const string flush = "FLUSH TABLES;";
+    const string show = "SHOW DATABASES;";
 
     TestConnections::require_repl_version("10.2.3");    // Delayed replication needs this.
     TestConnections test(argc, argv);
@@ -57,8 +62,8 @@ int main(int argc, char* argv[])
     change_master(test, 3, 2, "", max_rlag);
 
     mxs.wait_monitor_ticks(2);
-    auto maxconn = test.maxscales->open_rwsplit_connection();
-    test.try_query(maxconn, "FLUSH TABLES;");
+    auto maxconn = mxs.open_rwsplit_connection();
+    maxconn->cmd(flush);
     mxs.wait_monitor_ticks(1);
 
     auto servers_info = mxs.get_servers();
@@ -68,8 +73,7 @@ int main(int argc, char* argv[])
     check_rlag(test, servers_info, 3, 1, max_rlag);
 
     // Need to send a read query so that rwsplit detects replication lag.
-    test.try_query(maxconn, "SHOW DATABASES;");
-    mysql_close(maxconn);
+    maxconn->query(show);
     test.log_includes(0, "is excluded from query routing.");
 
     test.tprintf("Test 2 - Set nodes 0 and 1 into read-only mode");
@@ -101,9 +105,7 @@ int main(int argc, char* argv[])
     sleep(2);
     mxs.wait_monitor_ticks(1);
 
-    maxconn = test.maxscales->open_rwsplit_connection();
-    test.try_query(maxconn, "FLUSH TABLES;");
-    mysql_close(maxconn);
+    maxconn->cmd(flush);
     mxs.wait_monitor_ticks(1);
 
     servers_info = mxs.get_servers();
@@ -170,10 +172,9 @@ int main(int argc, char* argv[])
     change_master(test, 2, 3);
 
     mxs.wait_monitor_ticks(1);
-    maxconn = test.maxscales->open_rwsplit_connection();
-    test.try_query(maxconn, "FLUSH TABLES;");
+    maxconn->cmd(flush);
     mxs.wait_monitor_ticks(2);
-    test.try_query(maxconn, "SHOW DATABASES;");
+    maxconn->query(show);
 
     servers_info = mxs.get_servers();
     auto phase7_8_status = {slave_status, mm_slave_status, mm_slave_status, mm_master_status};
@@ -194,8 +195,7 @@ int main(int argc, char* argv[])
     check_rlag(test, servers_info, 0, 0, 0);
 
     // Rwsplit should detects that replication lag is 0.
-    test.try_query(maxconn, "SHOW DATABASES;");
-    mysql_close(maxconn);
+    maxconn->query(show);
     test.log_includes(0, "is returned to query routing.");
 
     // Test over, reset topology.

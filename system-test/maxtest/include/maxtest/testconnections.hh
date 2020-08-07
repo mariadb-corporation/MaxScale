@@ -573,7 +573,7 @@ public:
      */
     int reinstall_maxscales();
 
-    MaxScale& maxscale();
+    mxt::MaxScale& maxscale();
     TestLogger& logger();
 
 private:
@@ -586,7 +586,7 @@ private:
 
     bool too_many_maxscales() const;
 
-    std::unique_ptr<MaxScale>   m_maxscale; /**< Main MaxScale instance */
+    std::unique_ptr<mxt::MaxScale>   m_maxscale; /**< Main MaxScale instance */
     std::unique_ptr<TestLogger> m_logger;   /**< Error log container */
 
     std::vector<std::function<void(void)>> m_on_destroy;

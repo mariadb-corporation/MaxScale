@@ -6,6 +6,7 @@
 #include <maxbase/string.hh>
 #include <maxtest/envv.hh>
 #include <maxtest/log.hh>
+#include <maxtest/mariadb_connector.hh>
 #include <maxtest/testconnections.hh>
 
 #define DEFAULT_MAXSCALE_CNF        "/etc/maxscale.cnf"
@@ -307,6 +308,9 @@ const char* Maxscales::access_user(int i) const
     return Nodes::access_user(i);
 }
 
+namespace maxtest
+{
+
 void MaxScale::wait_monitor_ticks(int ticks)
 {
     for (int i = 0; i < ticks; i++)
@@ -419,7 +423,7 @@ void ServersInfo::check_servers_status(std::vector<ServerInfo::bitfield> expecte
                 string found_str = info.status_to_string();
                 string expected_str = ServerInfo::status_to_string(expected);
                 m_log.add_failure("Wrong status for %s. Got '%s', expected '%s'.",
-                                   info.name.c_str(), found_str.c_str(), expected_str.c_str());
+                                  info.name.c_str(), found_str.c_str(), expected_str.c_str());
             }
         }
     }
@@ -442,7 +446,7 @@ void ServersInfo::check_master_groups(const std::vector<int>& expected_groups)
             if (expected != info.master_group)
             {
                 m_log.add_failure("Wrong master group for %s. Got '%li', expected '%i'.",
-                                   info.name.c_str(), info.master_group, expected);
+                                  info.name.c_str(), info.master_group, expected);
             }
         }
     }
@@ -454,12 +458,6 @@ void ServersInfo::check_master_groups(const std::vector<int>& expected_groups)
 
 ServersInfo::ServersInfo(TestLogger& log)
     : m_log(log)
-{
-}
-
-ServersInfo::ServersInfo(const ServersInfo& rhs)
-    : m_servers(rhs.m_servers)
-    , m_log(rhs.m_log)
 {
 }
 
@@ -499,6 +497,23 @@ void MaxScale::stop()
 {
     auto res = m_maxscales->stop_maxscale(m_node_ind);
     m_log.expect(res == 0, "MaxScale stop failed, error %i.", res);
+}
+
+std::unique_ptr<mxt::MariaDB> MaxScale::open_rwsplit_connection(const std::string& db)
+{
+    auto conn = std::make_unique<mxt::MariaDB>(m_log);
+    auto& sett = conn->connection_settings();
+    sett.user = m_maxscales->user_name;
+    sett.password = m_maxscales->password;
+    if (m_maxscales->ssl)
+    {
+        sett.ssl.key = mxb::string_printf("%s/ssl-cert/client-key.pem", test_dir);
+        sett.ssl.cert = mxb::string_printf("%s/ssl-cert/client-cert.pem", test_dir);
+        sett.ssl.ca = mxb::string_printf("%s/ssl-cert/ca.pem", test_dir);
+    }
+
+    conn->open(m_maxscales->ip(m_node_ind), m_maxscales->rwsplit_port[m_node_ind], db);
+    return conn;
 }
 
 void ServerInfo::status_from_string(const string& source)
@@ -558,4 +573,5 @@ std::string ServerInfo::status_to_string(bitfield status)
 std::string ServerInfo::status_to_string() const
 {
     return status_to_string(status);
+}
 }
