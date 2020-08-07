@@ -529,13 +529,13 @@ bool CsMonitorServer::fetch_statuses(const std::vector<CsMonitorServer*>& server
 
 //static
 Result CsMonitorServer::fetch_config(const std::vector<CsMonitorServer*>& servers,
-                                       CsContext& context)
+                                     CsContext& context)
 {
     http::Response response;
 
     if (!servers.empty())
     {
-        string url = servers.front()->create_url(cs::rest::CLUSTER, cs::rest::CONFIG);
+        string url = servers.front()->create_url(cs::rest::NODE, cs::rest::CONFIG);
         response = http::get(url, context.http_config());
     }
     else
