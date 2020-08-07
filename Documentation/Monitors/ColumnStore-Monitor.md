@@ -55,7 +55,7 @@ queries, it receives the _Master_ status.
 Allowed only when the value of version is `1.5`.
 
 This optional parameter specifies the port of the Columnstore administrative
-daemon. The default value is `8630`. Note that the daemons of all nodes must
+daemon. The default value is `8640`. Note that the daemons of all nodes must
 be listening on the same port.
 
 ### `admin_base_path`
@@ -63,7 +63,7 @@ be listening on the same port.
 Allowed only when the value of version is `1.5`.
 
 This optional parameter specifies the base path of the Columnstore
-administrative daemon. The default value is `/cmapi/0.3.0`.
+administrative daemon. The default value is `/cmapi/0.4.0`.
 
 ### `api_key`
 
