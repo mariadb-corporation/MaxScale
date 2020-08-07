@@ -203,9 +203,9 @@ Example
 ```
 call command csmon add-node CsMonitor mcs2 20s
 ```
-For a more complete example, please refer to [adding a node](#adding-a-node-1).
+For a more complete example, please refer to [adding a node](#adding-a-node).
 
-### Removing a Node
+### `remove-node`
 Remove the node located on the server at the hostname or IP _host_
 from the Columnstore cluster.
 ```
@@ -216,7 +216,7 @@ Example
 ```
 call command csmon remove-node CsMonitor mcs2 20s
 ```
-For a more complete example, please refer to [removing a node](#removing-a-node-1).
+For a more complete example, please refer to [removing a node](#removing-a-node).
 
 ## Example
 
