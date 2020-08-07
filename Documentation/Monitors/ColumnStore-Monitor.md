@@ -121,73 +121,102 @@ type=server
 type=server
 ...
 
-[CsNode3]
-type=server
-...
-
 [CsMonitor]
 type=monitor
 module=csmon
-servers=CsNode1,CsNode2,CsNode3
+servers=CsNode1,CsNode2
 ...
 
 ```
 
-### _Start_
+### `start`
+Starts the Columnstore cluster.
 ```
 call command csmon start <monitor-name> <timeout>
 ```
-Starts the Columnstore cluster.
 
 Example
 ```
 call command csmon start CsMonitor 20s
 ```
 
-### _Shutdown_
+### `shutdown`
+Shuts down the Columnstore cluster.
 ```
 call command csmon shutdown <monitor-name> <timeout>
 ```
-Shuts down the Columnstore cluster.
 
 Example
 ```
 call command csmon shutdown CsMonitor 20s
 ```
 
-### _Status_
+### `status`
+Get the status of the Columnstore cluster.
 ```
 call command csmon status <monitor-name> [<server>]
 ```
-Returns the status of all servers in the cluster or of
-a specific one.
+Returns the status of the cluster or the status of a specific server.
 
 Example
 ```
+call command csmon status CsMonitor
 call command csmon status CsMonitor CsNode1
 ```
 
-### _Set Mode_
+### `mode-set`
+Sets the mode of the cluster.
 ```
 call command csmon mode-set <monitor-name> (readonly|readwrite) <timeout>
 ```
-Sets the mode of the cluster.
 
 Example
 ```
 call command csmon mode-set CsMonitor readonly 20s
 ```
 
-### _Get Config_
+### `config-get`
+Returns the cluster configuration.
 ```
 call command csmon config-get <monitor-name> [<server-name>]
 ```
-Returns the configs of all servers in the cluster or of a specific one.
+If no server is specified, the configuration is fetched from
+the first server in the monitor configuration, otherwise from
+the specified server.
+
+Note that if everything is in order, the returned configuration
+should be identical regardless of the server it is fetched from.
 
 Example
 ```
 call command csmon config-get CsMonitor CsNode2
 ```
+
+### `add-node`
+Adds a new node located on the server at the hostname or IP _host_
+to the Columnstore cluster.
+```
+call command csmon add-node <monitor-name> <host> <timeout>
+```
+
+Example
+```
+call command csmon add-node CsMonitor mcs2 20s
+```
+For a more complete example, please refer to [adding a node](#adding-a-node-1).
+
+### Removing a Node
+Remove the node located on the server at the hostname or IP _host_
+from the Columnstore cluster.
+```
+call command csmon remove-node <monitor-name> <host> <timeout>
+```
+
+Example
+```
+call command csmon remove-node CsMonitor mcs2 20s
+```
+For a more complete example, please refer to [removing a node](#removing-a-node-1).
 
 ## Example
 
@@ -198,9 +227,170 @@ The following is an example of a `csmon` configuration.
 type=monitor
 module=csmon
 version=1.5
-servers=CsNode1,CsNode2,CsNode3
+servers=CsNode1,CsNode2
 user=myuser
 passwd=mypwd
 monitor_interval=5000
 api_key=somekey1234
+```
+
+## Adding a Node
+
+Adding a new node to a Columnstore cluster can be performed dynamically
+at runtime, but it must be done in two steps. First, the node is added
+to Columnstore and then, the corresponding server object (that possibly
+has to be created) in the MaxScale configuration is added to the
+Columnstore monitor.
+
+In the following, assume a two node Columnstore cluster and an initial
+MaxScale configuration like.
+```
+[CsNode1]
+type=server
+...
+
+[CsNode2]
+type=server
+...
+
+[CsMonitor]
+type=monitor
+module=csmon
+servers=CsNode1,CsNode2
+...
+```
+Invoking `maxctrl list servers` will now show:
+```
+┌─────────┬─────────────┬──────┬─────────────┬─────────────────┬──────┐
+│ Server  │ Address     │ Port │ Connections │ State           │ GTID │
+├─────────┼─────────────┼──────┼─────────────┼─────────────────┼──────┤
+│ CsNode1 │ 10.10.10.10 │ 3306 │ 0           │ Master, Running │      │
+├─────────┼─────────────┼──────┼─────────────┼─────────────────┼──────┤
+│ CsNode2 │ 10.10.10.11 │ 3306 │ 0           │ Slave, Running  │      │
+└─────────┴─────────────┴──────┴─────────────┴─────────────────┴──────┘
+```
+If we now want to add a new Columnstore node, located at `mcs3/10.10.10.12`
+to the cluster, the steps are as follows.
+
+First the node is added
+```
+maxctrl --timeout 30s call command csmon add-node CsMonitor mcs3 20s
+```
+After a while the following is output:
+```
+{
+    "links": {
+        "self": "http://localhost:8989/v1/maxscale/modules/csmon/add-node"
+    },
+    "meta": {
+        "message": "Node mcs3 successfully added to cluster.",
+        "result": {
+            "node_id": "mcs3",
+            "timestamp": "2020-08-07 10:03:49.474539"
+        },
+        "success": true
+    }
+}
+```
+At this point, the Columnstore cluster consists of three nodes. However,
+the Columnstore monitor is not yet aware of the new node.
+
+First we need to create the corresponding server object.
+```
+maxctrl create server CsNode3 10.10.10.12
+```
+Invoking `maxctrl list servers` will now show:
+```
+┌─────────┬─────────────┬──────┬─────────────┬─────────────────┬──────┐
+│ Server  │ Address     │ Port │ Connections │ State           │ GTID │
+├─────────┼─────────────┼──────┼─────────────┼─────────────────┼──────┤
+│ CsNode3 │ 10.10.10.12 │ 3306 │ 0           │ Down            │      │
+├─────────┼─────────────┼──────┼─────────────┼─────────────────┼──────┤
+│ CsNode1 │ 10.10.10.10 │ 3306 │ 0           │ Master, Running │      │
+├─────────┼─────────────┼──────┼─────────────┼─────────────────┼──────┤
+│ CsNode2 │ 10.10.10.11 │ 3306 │ 0           │ Slave, Running  │      │
+└─────────┴─────────────┴──────┴─────────────┴─────────────────┴──────┘
+```
+The server `CsNode3` has been created, but its state is `Down` since
+it is not yet being monitored.
+```
+┌───────────┬─────────┬──────────────────┐
+│ Monitor   │ State   │ Servers          │
+├───────────┼─────────┼──────────────────┤
+│ CsMonitor │ Running │ CsNode1, CsNode2 │
+└───────────┴─────────┴──────────────────┘
+```
+It must now be added to the monitor.
+```
+maxctrl link monitor CsMonitor CsNode3
+```
+Now the server is monitored and `maxctrl list monitors` shows:
+```
+┌───────────┬─────────┬───────────────────────────┐
+│ Monitor   │ State   │ Servers                   │
+├───────────┼─────────┼───────────────────────────┤
+│ CsMonitor │ Running │ CsNode1, CsNode2, CsNode3 │
+└───────────┴─────────┴───────────────────────────┘
+```
+The state of the new node is now also set correctly, as shown by
+`maxctrl list servers`.
+```
+┌─────────┬─────────────┬──────┬─────────────┬─────────────────┬──────┐
+│ Server  │ Address     │ Port │ Connections │ State           │ GTID │
+├─────────┼─────────────┼──────┼─────────────┼─────────────────┼──────┤
+│ CsNode3 │ 10.10.10.12 │ 3306 │ 0           │ Slave, Running  │      │
+├─────────┼─────────────┼──────┼─────────────┼─────────────────┼──────┤
+│ CsNode1 │ 10.10.10.10 │ 3306 │ 0           │ Master, Running │      │
+├─────────┼─────────────┼──────┼─────────────┼─────────────────┼──────┤
+│ CsNode2 │ 10.10.10.11 │ 3306 │ 0           │ Slave, Running  │      │
+└─────────┴─────────────┴──────┴─────────────┴─────────────────┴──────┘
+```
+Note that the MaxScale server object can be created at any point, but
+it must not be added to the monitor before the node has been added to
+the Columnstore cluster using `call command csmon add-node`.
+
+## Removing a Node
+
+Removing a node should be performed in the reverse order of how a
+node was added. First, the MaxScale server should be removed from the
+monitor. Then, the node should be removed from the Columnstore cluster.
+
+Suppose we want to remove the Columnstore node at `mcs2/10.10.10.12`
+and the current situation is as:
+```
+┌───────────┬─────────┬───────────────────────────┐
+│ Monitor   │ State   │ Servers                   │
+├───────────┼─────────┼───────────────────────────┤
+│ CsMonitor │ Running │ CsNode1, CsNode2, CsNode3 │
+└───────────┴─────────┴───────────────────────────┘
+```
+First, the server is removed from the monitor.
+```
+maxctrl unlink monitor CsMonitor CsNode3
+```
+Checking with `maxctrl list monitors` we see that the server has
+indeed been removed.
+```
+┌───────────┬─────────┬──────────────────┐
+│ Monitor   │ State   │ Servers          │
+├───────────┼─────────┼──────────────────┤
+│ CsMonitor │ Running │ CsNode1, CsNode2 │
+└───────────┴─────────┴──────────────────┘
+```
+Now the node can be removed from the cluster itself.
+```
+maxctrl --timeout 30s call command csmon remove-node CsMonitor mcs3 20s
+{
+    "links": {
+        "self": "http://localhost:8989/v1/maxscale/modules/csmon/remove-node"
+    },
+    "meta": {
+        "message": "Node mcs3 removed from the cluster.",
+        "result": {
+            "node_id": "mcs3",
+            "timestamp": "2020-08-07 11:41:36.573425"
+        },
+        "success": true
+    }
+}
 ```
