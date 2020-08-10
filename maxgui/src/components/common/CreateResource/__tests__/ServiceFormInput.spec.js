@@ -104,7 +104,7 @@ describe('ServiceFormInput.vue', () => {
         expect(wrapper.vm.serversList).to.be.deep.equals(mockupServersList)
     })
 
-    it(`Should compute monitorsList from allMonitors accurately`, async () => {
+    it(`Should compute filtersList from allFilters accurately`, async () => {
         expect(wrapper.vm.filtersList).to.be.deep.equals(mockupFiltersList)
     })
 

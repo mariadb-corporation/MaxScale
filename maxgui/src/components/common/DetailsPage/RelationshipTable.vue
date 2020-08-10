@@ -4,7 +4,7 @@
         :isContentVisible="showTable"
         :title="`${$tc(relationshipType, 2)}`"
         :titleInfo="tableRowsData.length"
-        :onAddClick="readOnly ? null : () => onAdd(relationshipType)"
+        :onAddClick="readOnly ? null : () => onAdd()"
         :addBtnText="readOnly ? '' : `${$t('addEntity', { entityName: $tc(relationshipType, 2) })}`"
     >
         <template v-slot:content>
@@ -35,7 +35,7 @@
                     </icon-sprite-sheet>
                 </template>
                 <template v-if="!readOnly" v-slot:actions="{ data: { item } }">
-                    <v-btn icon @click="onDelete(relationshipType, item)">
+                    <v-btn icon @click="onDelete(item)">
                         <v-icon size="20" color="error">
                             $vuetify.icons.unlink
                         </v-icon>
@@ -185,9 +185,14 @@ export default {
                 const moved = this.tableRowsData.splice(oldIndex, 1)[0]
                 this.tableRowsData.splice(newIndex, 0, moved)
                 const isFilterDrag = true
+
+                const clonedTableRowsData = this.$help.lodash.cloneDeep(this.tableRowsData)
+                clonedTableRowsData.forEach(item => {
+                    delete item.index
+                })
                 await this.$emit('on-relationship-update', {
                     type: this.relationshipType,
-                    data: this.tableRowsData,
+                    data: clonedTableRowsData,
                     isFilterDrag: isFilterDrag,
                 })
             }
@@ -204,17 +209,10 @@ export default {
             }
         },
         // -------------- Delete handle
-        onDelete(type, item) {
+        onDelete(item) {
             this.targetItem = item
-            switch (type) {
-                case 'filters':
-                case 'servers':
-                case 'services':
-                    this.deleteDialogType = 'unlink'
-                    this.dialogTitle = `${this.$t('unlink')} ${this.$tc(this.relationshipType, 1)}`
-                    break
-            }
-
+            this.deleteDialogType = 'unlink'
+            this.dialogTitle = `${this.$t('unlink')} ${this.$tc(this.relationshipType, 1)}`
             this.showDeleteDialog = true
         },
 
@@ -247,9 +245,9 @@ export default {
             this.itemsList = availableEntities
         },
 
-        onAdd(type) {
+        onAdd() {
             this.dialogTitle = `${this.$t(`addEntity`, {
-                entityName: this.$tc(type, 2),
+                entityName: this.$tc(this.relationshipType, 2),
             })}`
             this.showSelectDialog = true
         },
