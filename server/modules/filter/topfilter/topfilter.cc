@@ -431,10 +431,24 @@ static void closeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session)
  */
 static void freeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session)
 {
+    TOPN_INSTANCE* my_instance = (TOPN_INSTANCE*) instance;
     TOPN_SESSION* my_session = (TOPN_SESSION*) session;
 
+    MXS_FREE(my_session->current);
+
+    for (int i = 0; i < my_instance->topN; i++)
+    {
+        MXS_FREE(my_session->top[i]->sql);
+        MXS_FREE(my_session->top[i]);
+    }
+
+    MXS_FREE(my_session->top);
+
+    MXS_FREE(my_session->clientHost);
+    MXS_FREE(my_session->userName);
     MXS_FREE(my_session->filename);
-    MXS_FREE(session);
+
+    MXS_FREE(my_session);
     return;
 }
 
