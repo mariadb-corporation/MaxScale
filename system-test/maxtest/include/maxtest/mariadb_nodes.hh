@@ -43,6 +43,7 @@ public:
     void set_use_ipv6(bool use_ipv6);
 
     const char* ip(int i = 0) const;
+    const char* ip6(int i = 0) const;
     const char* ip_private(int i = 0) const;
 
     /**

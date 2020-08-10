@@ -48,6 +48,12 @@ int Maxscales::read_env()
 
     read_basic_env();
 
+    sprintf(env_name, "%s_user", prefix);
+    user_name = readenv(env_name, "skysql");
+
+    sprintf(env_name, "%s_password", prefix);
+    password = readenv(env_name, "skysql");
+
     if ((N > 0) && (N < 255))
     {
         for (int i = 0; i < N; i++)
@@ -282,13 +288,18 @@ void Maxscales::wait_for_monitor(int intervals, int m)
 
 const char* Maxscales::ip(int i) const
 {
-    return m_use_ipv6 ? IP[i] : IP6[i];
+    return m_use_ipv6 ? Nodes::ip6(i) : IP[i];
 }
 
 void Maxscales::set_use_ipv6(bool use_ipv6)
 {
     m_use_ipv6 = use_ipv6;
     this->use_ipv6 = use_ipv6;
+}
+
+const char* Maxscales::hostname(int i) const
+{
+    return Nodes::hostname(i);
 }
 
 void MaxScale::wait_monitor_ticks(int ticks)

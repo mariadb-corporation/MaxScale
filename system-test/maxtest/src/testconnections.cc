@@ -832,7 +832,7 @@ void TestConnections::process_template(int m, const string& cnf_template_path, c
             {
                 if (mdn[j]->using_ipv6())
                 {
-                    IPcnf = mdn[j]->IP6[i];
+                    IPcnf = mdn[j]->ip6(i);
                 }
                 else
                 {
@@ -1514,7 +1514,7 @@ int TestConnections::find_connected_slave(int m, int* global_result)
     repl->connect();
     for (int i = 0; i < repl->N; i++)
     {
-        conn_num = get_conn_num(repl->nodes[i], maxscales->ip(m), maxscales->hostname[m], (char*) "test");
+        conn_num = get_conn_num(repl->nodes[i], maxscales->ip(m), maxscales->hostname(m), (char*) "test");
         tprintf("connections to %d: %u\n", i, conn_num);
         if ((i == 0) && (conn_num != 1))
         {
@@ -1545,7 +1545,7 @@ int TestConnections::find_connected_slave1(int m)
     repl->connect();
     for (int i = 0; i < repl->N; i++)
     {
-        conn_num = get_conn_num(repl->nodes[i], maxscales->ip(m), maxscales->hostname[m], (char*) "test");
+        conn_num = get_conn_num(repl->nodes[i], maxscales->ip(m), maxscales->hostname(m), (char*) "test");
         tprintf("connections to %d: %u\n", i, conn_num);
         all_conn += conn_num;
         if ((i != 0) && (conn_num != 0))

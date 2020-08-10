@@ -64,7 +64,7 @@ struct ExpectedMsgs
 };
 
 /**
- * Check if the user & password can log into the given PAM service. This function will block until the
+ * Authenticate user into the given PAM service. This function will block until the
  * operation completes.
  *
  * @param user Username
@@ -76,23 +76,28 @@ AuthResult
 authenticate(const std::string& user, const std::string& password, const std::string& service);
 
 /**
- * Check if the user & password can log into the given PAM service. This function will block until the
+ * Authenticate user into the given PAM service. This function will block until the
  * operation completes.
  *
- * @param user Username
- * @param password Password
- * @param client_remote Client address, used for logging
+ * @param mode Password mode
+ * @param user Username & remote host
+ * @param pwds Passwords given by user
  * @param service Which PAM service is the user logging to
- * @param expected_msg The first expected message from the PAM authentication system.
- * Typically "Password: ". If set to empty, the message is not checked.
+ * @param exp_msgs Password queries expected from PAM api
  * @return A result struct with the result and an error message.
  */
 AuthResult
-authenticate(const std::string& user, const std::string& password, const std::string& client_remote,
-             const std::string& service, const std::string& expected_msg);
-
-AuthResult
 authenticate(AuthMode mode, const UserData& user, const PwdData& pwds, const std::string& service,
              const ExpectedMsgs& exp_msgs);
+
+/**
+ * Does pam prompt match the expected message? The prompt matches if the prompt begins with the expected
+ * message, compared case insensitively.
+ *
+ * @param prompt Prompt from PAM api or backend server
+ * @param expected_start Expected start of prompt
+ * @return True on match
+ */
+bool match_prompt(const char* prompt, const std::string& expected_start);
 }
 }

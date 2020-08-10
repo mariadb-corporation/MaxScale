@@ -24,14 +24,11 @@ public:
      * @return True, if the instance could be setup, false otherwise.
      */
     virtual bool setup() = 0;
+
     const char* ip_private(int i = 0) const;
+    const char* ip6(int i = 0) const;
 
     char * IP[256];
-
-    /**
-     * @brief  IP address strings for every backend node (IPv6)
-     */
-    char * IP6[256];
 
     /**
      * @brief  Path to ssh key for every backend node
@@ -63,32 +60,6 @@ public:
      */
     char * access_homedir[256];
 
-    char * hostname[256];
-
-    /**
-     * @brief stop_vm_command Command to suspend VM
-     */
-    char * stop_vm_command[256];
-    /**
-     *
-     * @brief start_vm_command Command to resume VM
-     */
-    char * start_vm_command[256];
-
-    /**
-     * @brief   User name to access backend nodes
-     */
-    char * user_name;
-    /**
-     * @brief   Password to access backend nodes
-     */
-    char * password;
-
-    /**
-     * @brief network_config Content of MDBCI network_config file
-     */
-    std::string network_config;
-
     /**
      * @brief Verbose command output
      */
@@ -100,6 +71,8 @@ public:
      * @return The current IP address
      */
     const char* ip(int i = 0) const;
+
+    const char* hostname(int i = 0) const;
 
     bool using_ipv6() const;
 
@@ -203,6 +176,13 @@ private:
     static constexpr int max_nodes {30};
 
     std::string m_ip_private[max_nodes] {}; /**< Private IP addresses for every backend node (for AWS) */
+    std::string m_ip6[max_nodes] {};        /**< IPv6-addresses for every backend node */
+    std::string m_hostname[max_nodes] {};   /**< Hostnames for every backend node */
+
+    std::string m_start_vm_command[max_nodes] {}; /**< Command to resume VM */
+    std::string m_stop_vm_command[max_nodes] {};  /**< Command to suspend VM */
+
+    std::string network_config; /**< Contents of MDBCI network_config file */
 
     bool check_node_ssh(int node);
 

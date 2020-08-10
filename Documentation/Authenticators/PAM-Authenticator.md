@@ -58,6 +58,25 @@ Server setting.
 authenticator_options=pam_use_cleartext_plugin=1
 ```
 
+### `pam_mode`
+
+This setting defines the authentication mode used. Two values are supported:
+- `password` (default) Normal password-based authentication
+- `password_2FA` Password + 2FA-code based authentication
+
+```
+authenticator_options=pam_mode=password_2FA
+```
+
+If set to "password_2FA", any users authenticating via PAM will be asked two
+passwords ("Password" and "Verification code") during login. MaxScale uses the
+normal password when either the local PAM api or a backend asks for "Password".
+MaxScale answers any other password prompt (e.g. "Verification code") with the
+second password. See
+[the limitations section](#implementation-details-and-limitations)
+for more details. Two-factor mode is incompatible with
+*pam_use_cleartext_plugin*.
+
 ## Anonymous user mapping
 
 The MaxScale PAM authenticator supports a limited version of
@@ -111,17 +130,17 @@ to allow the OS PAM modules to communicate with the client, possibly exchanging
 multiple messages. This works when a client logs in to a normal server, but not
 with MaxScale since it needs to autonomously log into multiple backends. For
 MaxScale to successfully log into the servers, the messages and answers need to
-be predefined. This requirement denies the use of more exotic schemes such as
-one-time passwords or two-factor authentication.
+be predefined. The passwords given to MaxScale need to work as is when MaxScale
+logs into the backends. This requirement prevents the use of one-time passwords.
 
-The MaxScale PAM authentication module only supports a simple password exchange.
-On the client side, the authentication begins with MaxScale sending an
+The MaxScale PAM authentication module supports two password modes. In normal
+mode, client authentication begins with MaxScale sending an
 AuthSwitchRequest packet. In addition to the command, the packet contains the
 client plugin name ("dialog" or "mysql_clear_password"), a message type byte (4)
 and the message "Password: ". In the next packet, the client should send the
-password, which MaxScale will forward to the PAM API running on the local
+password, which MaxScale will forward to the PAM api running on the local
 machine. If the password is correct, an OK packet is sent to the client. If the
-local PAM API asks for  additional credentials as is typical in two-factor
+local PAM api asks for  additional credentials as is typical in two-factor
 authentication schemes, authentication fails. Informational messages such as
 password expiration notifications are allowed. These are simply printed to the
 log.
@@ -131,6 +150,29 @@ the client. The servers should send an AuthSwitchRequest packet as defined
 above, MaxScale responds with the password received by the client authenticator
 and finally backend replies with OK. Informational messages from backends are
 only printed to the info-log.
+
+### Two-factor authentication support
+
+MaxScale supports a limited form of two-factor authentication with the
+`pam_mode=password_2FA`-option. Since MaxScale uses the 2FA-code given by the
+client to log in to the local PAM api as well as all the backends, the code must
+be reusable. This prevents the use of any kind of centrally checked one-use
+codes. Time-based codes work, assuming the backends are checking the codes
+independently of each other. Automatic reconnection features (e.g.
+readwritesplit-router) will not work, as the code has likely changed since
+original authentication.
+
+Optionally, the PAM configuration on the backend servers can be weakened such
+that the servers only asks for the normal password. This way, MaxScale will
+check the 2FA-code of the incoming client, while MaxScale logs into the backends
+using only the password.
+
+Due to technical reasons, MaxScale does not forward the password prompts from
+the PAM api to the client. MaxScale will always ask for "Password" and
+"Verification code", even if the PAM api asks for other items. This prevents the
+use of authentication schemes where a specific question must be answered (e.g.
+"Input code Nr. 5"). This is not a significant limitation, as such schemes would
+not work with backend servers anyway.
 
 ## Test tool
 

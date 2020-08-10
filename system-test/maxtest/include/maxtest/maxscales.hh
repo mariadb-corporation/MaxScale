@@ -28,6 +28,8 @@ public:
 
     const char* ip(int i = 0) const;
 
+    const char* hostname(int i = 0) const;
+
     /**
      * @brief rwsplit_port RWSplit service port
      */
@@ -109,6 +111,15 @@ public:
     char test_dir[4096];
 
     bool ssl;
+
+    /**
+     * @brief   User name to access backend nodes
+     */
+    char* user_name;
+    /**
+     * @brief   Password to access backend nodes
+     */
+    char* password;
 
     /**
      * @brief ConnectMaxscale   Opens connections to RWSplit, ReadConn master and ReadConn slave Maxscale

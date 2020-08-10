@@ -75,7 +75,7 @@ Buffer PamClientAuthenticator::create_auth_change_packet() const
      *
      * If using mysql_clear_password, no messages are added.
      */
-    size_t plen = dialog ? (1 + DIALOG_SIZE + 1 + PASSWORD.length()) : (1 + CLEAR_PW_SIZE);
+    size_t plen = dialog ? (1 + DIALOG_SIZE + 1 + PASSWORD_QUERY.length()) : (1 + CLEAR_PW_SIZE);
     size_t buflen = MYSQL_HEADER_LEN + plen;
     uint8_t bufdata[buflen];
     uint8_t* pData = bufdata;
@@ -88,7 +88,7 @@ Buffer PamClientAuthenticator::create_auth_change_packet() const
         memcpy(pData, DIALOG.c_str(), DIALOG_SIZE);     // Plugin name.
         pData += DIALOG_SIZE;
         *pData++ = DIALOG_ECHO_DISABLED;
-        memcpy(pData, PASSWORD.c_str(), PASSWORD.length());     // First message
+        memcpy(pData, PASSWORD_QUERY.c_str(), PASSWORD_QUERY.length());     // First message
     }
     else
     {
@@ -167,25 +167,20 @@ AuthRes PamClientAuthenticator::authenticate(const UserEntry* entry, MYSQL_sessi
      * messages to client. */
 
     // take username from the session object, not the user entry. The entry may be anonymous.
-    string username = session->user;
-    string password((char*)session->auth_token.data(), session->auth_token.size());
+    mxb::pam::UserData user = {session->user, session->remote};
+    mxb::pam::PwdData pwds;
+    pwds.password.assign((char*)session->auth_token.data(), session->auth_token.size());
+    mxb::pam::ExpectedMsgs expected_msgs = {EXP_PW_QUERY, ""};
+    if (m_mode == AuthMode::PW_2FA)
+    {
+        pwds.two_fa_code.assign((char*)session->auth_token_phase2.data(), session->auth_token_phase2.size());
+    }
 
     // The server PAM plugin uses "mysql" as the default service when authenticating
     // a user with no service.
     string pam_service = entry->auth_string.empty() ? "mysql" : entry->auth_string;
-    AuthResult res;
-    if (m_mode == AuthMode::PW)
-    {
-        res = mxb::pam::authenticate(username, password, session->remote, pam_service, PASSWORD);
-    }
-    else
-    {
-        mxb::pam::UserData user = {username, session->remote};
-        mxb::pam::PwdData pwds = {password};
-        pwds.two_fa_code.assign((char*)session->auth_token_phase2.data(), session->auth_token_phase2.size());
-        res = mxb::pam::authenticate(AuthMode::PW_2FA, user, pwds, pam_service, {"", ""});
-    }
 
+    AuthResult res = mxb::pam::authenticate(m_mode, user, pwds, pam_service, expected_msgs);
     if (res.type == AuthResult::Result::SUCCESS)
     {
         rval.status = AuthRes::Status::SUCCESS;
@@ -216,15 +211,15 @@ Buffer PamClientAuthenticator::create_2fa_prompt_packet() const
      * byte        - Message type
      * string[EOF] - Message
      */
-    size_t plen = 1 + TWO_FA.length();
+    size_t plen = 1 + TWO_FA_QUERY.length();
     size_t buflen = MYSQL_HEADER_LEN + plen;
     uint8_t bufdata[buflen];
     uint8_t* pData = bufdata;
     mariadb::set_byte3(pData, plen);
     pData += 3;
     *pData++ = m_sequence;
-    *pData++ = DIALOG_ECHO_DISABLED;                // Equivalent to server
-    memcpy(pData, TWO_FA.c_str(), TWO_FA.length()); // 2FA prompt
+    *pData++ = DIALOG_ECHO_DISABLED;    // Equivalent to server 2FA prompt
+    memcpy(pData, TWO_FA_QUERY.c_str(), TWO_FA_QUERY.length());
     Buffer buffer(bufdata, buflen);
     return buffer;
 }

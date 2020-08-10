@@ -165,6 +165,7 @@ int main(int argc, char* argv[])
     mysql_close(conn);
     Test->tprintf("Table t1 is created\n");
     const char* mxs_ip = Test->maxscales->ip_private(0);
+    const char* mxs_host = Test->maxscales->hostname(0);
 
     for (i = 0; i < conn_N; i++)
     {
@@ -182,11 +183,7 @@ int main(int argc, char* argv[])
     for (i = 0; i < Test->repl->N; i++)
     {
         Test->set_timeout(60);
-        num_conn =
-            get_conn_num(Test->repl->nodes[i],
-                         mxs_ip,
-                         Test->maxscales->hostname[0],
-                         (char*) "test");
+        num_conn = get_conn_num(Test->repl->nodes[i], mxs_ip, mxs_host, (char*) "test");
         Test->tprintf("Connections to node %d (%s): %d\n", i, Test->repl->ip_private(i), num_conn);
         if ((i == 0) && (num_conn > 2 * conn_N))
         {
@@ -204,11 +201,7 @@ int main(int argc, char* argv[])
     for (i = 0; i < Test->repl->N; i++)
     {
         Test->set_timeout(60);
-        num_conn =
-            get_conn_num(Test->repl->nodes[i],
-                         mxs_ip,
-                         Test->maxscales->hostname[0],
-                         (char*) "test");
+        num_conn = get_conn_num(Test->repl->nodes[i], mxs_ip, mxs_host, (char*) "test");
         printf("Connections to node %d (%s): %d\n", i, Test->repl->ip_private(i), num_conn);
         if ((i == 0) && (num_conn > 2 * conn_N))
         {
@@ -222,11 +215,7 @@ int main(int argc, char* argv[])
 
     for (i = 0; i < Test->repl->N; i++)
     {
-        num_conn =
-            get_conn_num(Test->repl->nodes[i],
-                         mxs_ip,
-                         Test->maxscales->hostname[0],
-                         (char*) "test");
+        num_conn = get_conn_num(Test->repl->nodes[i], mxs_ip, mxs_host, (char*) "test");
         printf("Connections to node %d (%s): %d\n", i, Test->repl->ip_private(i), num_conn);
         if ((i == 0) && (num_conn > 2 * conn_N))
         {
@@ -241,11 +230,7 @@ int main(int argc, char* argv[])
     for (i = 0; i < Test->repl->N; i++)
     {
         Test->set_timeout(60);
-        num_conn =
-            get_conn_num(Test->repl->nodes[i],
-                         mxs_ip,
-                         Test->maxscales->hostname[0],
-                         (char*) "test");
+        num_conn = get_conn_num(Test->repl->nodes[i], mxs_ip, mxs_host, (char*) "test");
         printf("Connections to node %d (%s): %d\n", i, Test->repl->ip_private(i), num_conn);
         if ((i == 0) && (num_conn != 0))
         {
@@ -262,11 +247,7 @@ int main(int argc, char* argv[])
     for (i = 0; i < Test->repl->N; i++)
     {
         Test->set_timeout(60);
-        num_conn =
-            get_conn_num(Test->repl->nodes[i],
-                         mxs_ip,
-                         Test->maxscales->hostname[0],
-                         (char*) "test");
+        num_conn = get_conn_num(Test->repl->nodes[i], mxs_ip, mxs_host, (char*) "test");
         Test->tprintf("Connections to node %d (%s): %d\n", i, Test->repl->ip_private(i), num_conn);
         if ((i == 0) && (num_conn != 0))
         {
@@ -287,11 +268,7 @@ int main(int argc, char* argv[])
     for (i = 0; i < Test->repl->N; i++)
     {
         Test->set_timeout(60);
-        num_conn =
-            get_conn_num(Test->repl->nodes[i],
-                         mxs_ip,
-                         Test->maxscales->hostname[0],
-                         (char*) "test");
+        num_conn = get_conn_num(Test->repl->nodes[i], mxs_ip, mxs_host, (char*) "test");
         Test->tprintf("Connections to node %d (%s): %d\n", i, Test->repl->ip_private(i), num_conn);
         if ((i == 0) && (num_conn != 0))
         {
@@ -310,11 +287,7 @@ int main(int argc, char* argv[])
     for (i = 0; i < Test->repl->N; i++)
     {
         Test->set_timeout(60);
-        num_conn =
-            get_conn_num(Test->repl->nodes[i],
-                         mxs_ip,
-                         Test->maxscales->hostname[0],
-                         (char*) "test");
+        num_conn = get_conn_num(Test->repl->nodes[i], mxs_ip, mxs_host, (char*) "test");
         Test->tprintf("Connections to node %d (%s): %d\n", i, Test->repl->ip_private(i), num_conn);
         if ((i == 0) && (num_conn != 0))
         {

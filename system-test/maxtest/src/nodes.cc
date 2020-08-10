@@ -16,8 +16,8 @@ using std::string;
 Nodes::Nodes(const char* pref,
              const std::string& network_config,
              bool verbose)
-    : network_config(network_config)
-    , verbose(verbose)
+    : verbose(verbose)
+    , network_config(network_config)
 {
     strcpy(this->prefix, pref);
 }
@@ -271,13 +271,6 @@ int Nodes::copy_from_node_legacy(const char* src, const char* dest, int i)
 int Nodes::read_basic_env()
 {
     char env_name[64];
-
-    sprintf(env_name, "%s_user", prefix);
-    user_name = readenv(env_name, "skysql");
-
-    sprintf(env_name, "%s_password", prefix);
-    password = readenv(env_name, "skysql");
-
     N = get_N();
 
     if ((N > 0) && (N < 255))
@@ -300,12 +293,13 @@ int Nodes::read_basic_env()
 
             // reading IPv6
             sprintf(env_name, "%s_%03d_network6", prefix, i);
-            IP6[i] = strdup(get_nc_item(env_name).c_str());
-            if (IP6[i] == NULL)
+            auto& ip6 = m_ip6[i];
+            ip6 = get_nc_item(env_name);
+            if (ip6.empty())
             {
-                IP6[i] = IP[i];
+                ip6 = IP[i];
             }
-            setenv(env_name, IP6[i], 1);
+            setenv(env_name, ip6.c_str(), 1);
 
             //reading sshkey
             sprintf(env_name, "%s_%03d_keyfile", prefix, i);
@@ -334,22 +328,29 @@ int Nodes::read_basic_env()
             }
 
             sprintf(env_name, "%s_%03d_hostname", prefix, i);
-            hostname[i] = strdup(get_nc_item(env_name).c_str());
-            if ((hostname[i] == NULL) || (strcmp(hostname[i], "") == 0))
+            auto& hostname = m_hostname[i];
+            hostname = get_nc_item(env_name);
+            if (hostname.empty())
             {
-                hostname[i] = strdup(m_ip_private[i].c_str());
+                hostname = m_ip_private[i];
             }
-            setenv(env_name, hostname[i], 1);
+            setenv(env_name, hostname.c_str(), 1);
 
             sprintf(env_name, "%s_%03d_start_vm_command", prefix, i);
-            start_vm_command[i] = readenv(env_name, "curr_dir=`pwd`; cd %s/%s;vagrant resume %s_%03d ; cd $curr_dir",
-                                          getenv("MDBCI_VM_PATH"), getenv("name"), prefix, i);
-            setenv(env_name, start_vm_command[i], 1);
+            string start_vm_def = mxb::string_printf("curr_dir=`pwd`; "
+                                                     "cd %s/%s;vagrant resume %s_%03d ; "
+                                                     "cd $curr_dir",
+                                                     getenv("MDBCI_VM_PATH"), getenv("name"), prefix, i);
+            m_start_vm_command[i] = envvar_get_set(env_name, "%s", start_vm_def.c_str());
+            setenv(env_name, m_start_vm_command[i].c_str(), 1);
 
             sprintf(env_name, "%s_%03d_stop_vm_command", prefix, i);
-            stop_vm_command[i] = readenv(env_name, "curr_dir=`pwd`; cd %s/%s;vagrant suspend %s_%03d ; cd $curr_dir",
-                                         getenv("MDBCI_VM_PATH"), getenv("name"), prefix, i);
-            setenv(env_name, stop_vm_command[i], 1);
+            string stop_vm_def = mxb::string_printf("curr_dir=`pwd`; "
+                                                    "cd %s/%s;vagrant suspend %s_%03d ; "
+                                                    "cd $curr_dir",
+                                                    getenv("MDBCI_VM_PATH"), getenv("name"), prefix, i);
+            m_stop_vm_command[i] = envvar_get_set(env_name, "%s", stop_vm_def.c_str());
+            setenv(env_name, m_stop_vm_command[i].c_str(), 1);
         }
     }
 
@@ -358,7 +359,7 @@ int Nodes::read_basic_env()
 
 const char* Nodes::ip(int i) const
 {
-    return use_ipv6 ?  IP6[i] : IP[i];
+    return use_ipv6 ? m_ip6[i].c_str() : IP[i];
 }
 
 std::string Nodes::get_nc_item(const char* item_name)
@@ -405,12 +406,12 @@ int Nodes::get_N()
 
 int Nodes::start_vm(int node)
 {
-    return (system(start_vm_command[node]));
+    return (system(m_start_vm_command[node].c_str()));
 }
 
 int Nodes::stop_vm(int node)
 {
-    return (system(stop_vm_command[node]));
+    return (system(m_stop_vm_command[node].c_str()));
 }
 
 Nodes::SshResult Nodes::ssh_output(const std::string& cmd, int node, bool sudo)
@@ -449,4 +450,14 @@ bool Nodes::using_ipv6() const
 const char* Nodes::ip_private(int i) const
 {
     return m_ip_private[i].c_str();
+}
+
+const char* Nodes::ip6(int i) const
+{
+    return m_ip6[i].c_str();
+}
+
+const char* Nodes::hostname(int i) const
+{
+    return m_hostname[i].c_str();
 }

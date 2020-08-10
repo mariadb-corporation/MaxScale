@@ -25,7 +25,7 @@ int main(int argc, char* argv[])
         conn_num =
             get_conn_num(Test->repl->nodes[i],
                          Test->maxscales->ip(0),
-                         Test->maxscales->hostname[0],
+                         Test->maxscales->hostname(0),
                          (char*) "test");
         Test->tprintf("connections: %u\n", conn_num);
         if ((i == 0) && (conn_num != 1))
