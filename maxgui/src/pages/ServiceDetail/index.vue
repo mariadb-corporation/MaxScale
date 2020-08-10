@@ -23,22 +23,18 @@
                                         <relationship-table
                                             relationshipType="servers"
                                             :tableRows="serverStateTableRow"
-                                            :dispatchRelationshipUpdate="dispatchRelationshipUpdate"
                                             :loading="overlay === OVERLAY_TRANSPARENT_LOADING"
-                                            :getRelationshipData="
-                                                () => getRelationshipData('servers')
-                                            "
+                                            :getRelationshipData="getRelationshipData"
+                                            @on-relationship-update="dispatchRelationshipUpdate"
                                         />
                                     </v-col>
                                     <v-col cols="12" class="pa-0 mt-4">
                                         <relationship-table
                                             relationshipType="filters"
                                             :tableRows="filtersTableRow"
-                                            :dispatchRelationshipUpdate="dispatchRelationshipUpdate"
                                             :loading="overlay === OVERLAY_TRANSPARENT_LOADING"
-                                            :getRelationshipData="
-                                                () => getRelationshipData('filters')
-                                            "
+                                            :getRelationshipData="getRelationshipData"
+                                            @on-relationship-update="dispatchRelationshipUpdate"
                                         />
                                     </v-col>
 
@@ -190,8 +186,8 @@ export default {
          * This function fetch all resource state if id is not provided
          * otherwise it fetch a resource state.
          * Even filter doesn't have state, the request still success
-         * @param {String} type type of resource. e.g. servers, listeners, filters
-         * @param {String} id name of the resource
+         * @param {String} type type of resource: servers, listeners, filters
+         * @param {String} id name of the resource (optional)
          * @return {Array} Resource state data
          */
         async getRelationshipData(type, id) {
@@ -205,13 +201,12 @@ export default {
         },
 
         // actions to vuex
-        async dispatchRelationshipUpdate(type, data, isFilterDrag) {
-            const self = this
+        async dispatchRelationshipUpdate({ type, data, isFilterDrag }) {
             await this.updateServiceRelationship({
-                id: self.currentService.id,
+                id: this.currentService.id,
                 type: type,
                 [type]: data,
-                callback: self.fetchService,
+                callback: this.fetchService,
             })
             switch (type) {
                 case 'filters':

@@ -3,8 +3,8 @@
         <v-sheet v-if="!$help.lodash.isEmpty(currentServer)" class="px-6">
             <page-header :onEditSucceeded="fetchServer" />
             <overview-header
-                :dispatchRelationshipUpdate="dispatchRelationshipUpdate"
-                :getResourceState="getResourceState"
+                :getRelationshipData="getRelationshipData"
+                @on-relationship-update="dispatchRelationshipUpdate"
             />
             <v-tabs v-model="currentActiveTab" class="tab-navigation-wrapper">
                 <v-tab v-for="tab in tabs" :key="tab.name">
@@ -23,9 +23,9 @@
                                         <relationship-table
                                             relationshipType="services"
                                             :tableRows="serviceTableRow"
-                                            :dispatchRelationshipUpdate="dispatchRelationshipUpdate"
                                             :loading="overlay === OVERLAY_TRANSPARENT_LOADING"
-                                            :getRelationshipData="getServiceState"
+                                            :getRelationshipData="getRelationshipData"
+                                            @on-relationship-update="dispatchRelationshipUpdate"
                                         />
                                     </v-col>
                                 </v-row>
@@ -154,7 +154,7 @@ export default {
                 let servicesIdArr = servicesData.map(item => `${item.id}`)
                 let arr = []
                 for (let i = 0; i < servicesIdArr.length; ++i) {
-                    let data = await this.getServiceState(servicesIdArr[i])
+                    let data = await this.getRelationshipData('services', servicesIdArr[i])
                     const {
                         id,
                         type,
@@ -169,39 +169,34 @@ export default {
         },
 
         /**
-         * This function fetch all services state, if serviceId is provided,
-         * otherwise it fetch service state of a service
-         * @param {String} serviceId name of the service
-         * @return {Array} Service state data
+         * This function fetch all resource state if id is not provided
+         * otherwise it fetch a resource state.
+         * Even filter doesn't have state, the request still success
+         * @param {String} type type of resource: services, monitors
+         * @param {String} id name of the resource (optional)
+         * @return {Array} Resource state data
          */
-        async getServiceState(serviceId) {
+        async getRelationshipData(type, id) {
             const data = await this.getResourceState({
-                resourceId: serviceId,
-                resourceType: 'services',
-                caller: 'server-detail-page-getServiceState',
+                resourceId: id,
+                resourceType: type,
+                caller: 'server-detail-page-getRelationshipData',
             })
             return data
         },
         // actions to vuex
-        async dispatchRelationshipUpdate(type, data) {
-            let self = this
+        async dispatchRelationshipUpdate({ type, data }) {
+            await this.updateServerRelationship({
+                id: this.currentServer.id,
+                type: type,
+                [type]: data,
+                callback: this.fetchServer,
+            })
             switch (type) {
                 case 'monitors':
-                    await this.updateServerRelationship({
-                        id: self.currentServer.id,
-                        type: 'monitors',
-                        monitors: data,
-                        callback: self.fetchServer,
-                    })
                     await this.fetchMonitorDiagnostics()
                     break
                 case 'services':
-                    await this.updateServerRelationship({
-                        id: self.currentServer.id,
-                        type: 'services',
-                        services: data,
-                        callback: self.fetchServer,
-                    })
                     await this.serviceTableRowProcessing()
                     break
             }

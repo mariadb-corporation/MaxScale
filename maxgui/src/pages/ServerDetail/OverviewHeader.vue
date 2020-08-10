@@ -93,14 +93,22 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+
+/*
+This component:
+Emits:
+- $emit('on-relationship-update', {
+            type: this.targetSelectItemType,
+            data: this.targetItem,
+        })
+
+*/
 import { mapGetters } from 'vuex'
 
 export default {
     name: 'overview-header',
-
     props: {
-        dispatchRelationshipUpdate: { type: Function, required: true },
-        getResourceState: { type: Function, required: true },
+        getRelationshipData: { type: Function, required: true },
     },
     data() {
         return {
@@ -131,8 +139,7 @@ export default {
             }
         },
         getTopOverviewInfo: function() {
-            let self = this
-            let currentServer = self.$help.lodash.cloneDeep(self.currentServer)
+            const currentServer = this.$help.lodash.cloneDeep(this.currentServer)
             let overviewInfo = {}
 
             // Set fallback undefined value if properties doesnt exist
@@ -141,7 +148,6 @@ export default {
                     state,
                     last_event = undefined,
                     triggered_at = undefined,
-
                     parameters: { address = undefined, socket = undefined, port = undefined } = {},
                 } = {},
                 relationships: { monitors } = {},
@@ -163,7 +169,7 @@ export default {
             } else delete overviewInfo.socket
 
             Object.keys(overviewInfo).forEach(
-                key => (overviewInfo[key] = self.$help.handleValue(overviewInfo[key]))
+                key => (overviewInfo[key] = this.$help.handleValue(overviewInfo[key]))
             )
 
             return overviewInfo
@@ -171,14 +177,13 @@ export default {
     },
     methods: {
         onEdit(type) {
-            let self = this
-            self.dialogTitle = `${self.$t(`changeEntity`, {
-                entityName: self.$tc(type, 1),
+            this.dialogTitle = `${this.$t(`changeEntity`, {
+                entityName: this.$tc(type, 1),
             })}`
 
             switch (type) {
                 case 'monitors':
-                    self.targetSelectItemType = type
+                    this.targetSelectItemType = type
                     break
             }
 
@@ -190,10 +195,7 @@ export default {
             switch (this.targetSelectItemType) {
                 case 'monitors':
                     {
-                        let data = await this.getResourceState({
-                            resourceType: 'monitors',
-                            caller: 'server-detail-page-overview-header-getAllEntities',
-                        })
+                        const data = await this.getRelationshipData(this.targetSelectItemType)
                         this.itemsList = data.map(monitor => ({
                             id: monitor.id,
                             type: monitor.type,
@@ -211,15 +213,13 @@ export default {
             }
         },
         async confirmChange() {
-            let self = this
-
-            switch (self.targetSelectItemType) {
+            switch (this.targetSelectItemType) {
                 case 'monitors':
                     {
-                        await self.dispatchRelationshipUpdate(
-                            self.targetSelectItemType,
-                            self.targetItem
-                        )
+                        await this.$emit('on-relationship-update', {
+                            type: this.targetSelectItemType,
+                            data: this.targetItem,
+                        })
                     }
                     break
             }
