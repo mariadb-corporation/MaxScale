@@ -4,8 +4,8 @@
         :isContentVisible="showTable"
         :title="`${$tc(relationshipType, 2)}`"
         :titleInfo="tableRowsData.length"
-        :onAddClick="readOnly ? null : () => onAdd()"
-        :addBtnText="readOnly ? '' : `${$t('addEntity', { entityName: $tc(relationshipType, 2) })}`"
+        :onAddClick="readOnly && !addable ? null : () => onAdd()"
+        :addBtnText="readOnly && !addable ? '' : addBtnText"
     >
         <template v-slot:content>
             <data-table
@@ -94,6 +94,8 @@ Emits:
             isFilterDrag: isFilterDrag,
         })
 isFilterDrag will be only added to event data object if relationshipType props === 'filters'
+- $emit('open-listener-form-dialog')
+This callback event is emitted only when relationshipType props === 'listeners'
 */
 import { mapGetters } from 'vuex'
 
@@ -104,6 +106,7 @@ export default {
         tableRows: { type: Array, required: true },
         loading: { type: Boolean, required: true },
         readOnly: { type: Boolean, default: false },
+        addable: { type: Boolean, default: true },
         /*
             below props are required only when readOnly is false.
         */
@@ -140,6 +143,13 @@ export default {
             if (this.relationshipType === 'filters')
                 this.tableRows.forEach((row, i) => (row.index = i))
             return this.tableRows
+        },
+        addBtnText: function() {
+            let pluralizationNum = 2
+            if (this.relationshipType === 'listeners') pluralizationNum = 1
+            return `${this.$t('addEntity', {
+                entityName: this.$tc(this.relationshipType, pluralizationNum),
+            })}`
         },
     },
     watch: {
@@ -249,7 +259,9 @@ export default {
             this.dialogTitle = `${this.$t(`addEntity`, {
                 entityName: this.$tc(this.relationshipType, 2),
             })}`
-            this.showSelectDialog = true
+
+            if (this.relationshipType !== 'listeners') this.showSelectDialog = true
+            else this.$emit('open-listener-form-dialog')
         },
 
         async confirmAdd() {

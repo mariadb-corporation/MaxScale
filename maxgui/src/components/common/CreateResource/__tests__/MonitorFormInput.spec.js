@@ -75,9 +75,10 @@ describe('MonitorFormInput.vue', () => {
     it(`Should pass the following props and have ref to resource-relationships`, () => {
         const resourceRelationships = wrapper.findComponent({ name: 'resource-relationships' })
         // props
-        const { relationshipsType, items } = resourceRelationships.vm.$props
+        const { relationshipsType, items, defaultItems } = resourceRelationships.vm.$props
         expect(relationshipsType).to.be.equals('servers')
         expect(items).to.be.deep.equals(wrapper.vm.serversList)
+        expect(defaultItems).to.be.deep.equals(wrapper.vm.$props.defaultItems)
         //ref
         expect(wrapper.vm.$refs.serversRelationship).to.be.not.null
     })

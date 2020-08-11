@@ -51,6 +51,7 @@
                     :resourceModules="resourceModules"
                     :allServers="allServers"
                     :allFilters="allFilters"
+                    :defaultItems="defaultRelationshipItems"
                 />
             </div>
             <div v-else-if="selectedResource === 'Monitor'" class="mb-0">
@@ -58,6 +59,7 @@
                     ref="monitorForm"
                     :resourceModules="resourceModules"
                     :allServers="allServers"
+                    :defaultItems="defaultRelationshipItems"
                 />
             </div>
             <div v-else-if="selectedResource === 'Filter'" class="mb-0">
@@ -69,6 +71,7 @@
                     :parentForm="$refs.baseDialog.$refs.form || {}"
                     :resourceModules="resourceModules"
                     :allServices="allServices"
+                    :defaultItems="defaultRelationshipItems"
                 />
             </div>
             <div v-else-if="selectedResource === 'Server'" class="mb-0">
@@ -78,6 +81,7 @@
                     :allMonitors="allMonitors"
                     :resourceModules="resourceModules"
                     :parentForm="$refs.baseDialog.$refs.form || {}"
+                    :defaultItems="defaultRelationshipItems"
                 />
             </div>
         </template>
@@ -143,23 +147,29 @@ export default {
                 'filter',
                 'filters',
             ],
+            defaultRelationshipItems: {},
         }
     },
 
     computed: {
         ...mapGetters({
+            form_type: 'form_type',
             allModulesMap: 'maxscale/allModulesMap',
             allServices: 'service/allServices',
+            allServicesMap: 'service/allServicesMap',
             allServicesInfo: 'service/allServicesInfo',
 
             allServers: 'server/allServers',
             allServersInfo: 'server/allServersInfo',
+            allServersMap: 'server/allServersMap',
 
             allMonitorsInfo: 'monitor/allMonitorsInfo',
             allMonitors: 'monitor/allMonitors',
+            allMonitorsMap: 'monitor/allMonitorsMap',
 
             allFiltersInfo: 'filter/allFiltersInfo',
             allFilters: 'filter/allFilters',
+            allFiltersMap: 'filter/allFiltersMap',
 
             allListenersInfo: 'listener/allListenersInfo',
         }),
@@ -176,8 +186,13 @@ export default {
         },
     },
     watch: {
-        value: function(val) {
-            val && this.setDefaultSelectedResource(this.$route.name)
+        value: async function(val) {
+            if (!val) return null
+            else if (!this.form_type) await this.setDefaultSelectedResource(this.$route.name)
+            else {
+                this.selectedResource = this.form_type
+                await this.handleResourceSelected(this.form_type)
+            }
         },
         resourceId: function(val) {
             // add hyphens when ever input have whitespace
@@ -200,6 +215,7 @@ export default {
         }),
 
         async handleResourceSelected(val) {
+            const isMultiple = true // if relationship data allows multiple objects
             switch (val) {
                 case 'Service':
                     {
@@ -208,6 +224,8 @@ export default {
                         this.validateInfo = this.allServicesInfo
                         await this.fetchAllServers()
                         await this.fetchAllFilters()
+                        this.setDefaultRelationship(this.allServersMap, 'server', isMultiple)
+                        this.setDefaultRelationship(this.allFiltersMap, 'filter', isMultiple)
                     }
                     break
                 case 'Server':
@@ -216,12 +234,17 @@ export default {
                     this.validateInfo = this.allServersInfo
                     await this.fetchAllServices()
                     await this.fetchAllMonitors()
+                    this.setDefaultRelationship(this.allServicesMap, 'service', isMultiple)
+                    this.setDefaultRelationship(this.allMonitorsMap, 'monitor')
                     break
                 case 'Monitor':
-                    this.resourceModules = this.getModuleType('Monitor')
-                    await this.fetchAllMonitors()
-                    this.validateInfo = this.allMonitorsInfo
-                    await this.fetchAllServers()
+                    {
+                        this.resourceModules = this.getModuleType('Monitor')
+                        await this.fetchAllMonitors()
+                        this.validateInfo = this.allMonitorsInfo
+                        await this.fetchAllServers()
+                        this.setDefaultRelationship(this.allServersMap, 'server', isMultiple)
+                    }
                     break
                 case 'Filter':
                     this.resourceModules = this.getModuleType('Filter')
@@ -232,46 +255,62 @@ export default {
                     {
                         let authenticators = this.getModuleType('Authenticator')
                         let authenticatorId = authenticators.map(item => `${item.id}`)
-
                         let protocols = this.getModuleType('Protocol')
-                        for (let i = 0; i < protocols.length; ++i) {
-                            let protocol = protocols[i]
-                            // add default_value for protocol param
-                            let protocolParamObj = protocol.attributes.parameters.find(
-                                o => o.name === 'protocol'
-                            )
-                            protocolParamObj.default_value = protocol.id
-                            protocolParamObj.disabled = true
-                            /*
-                             Transform authenticator parameter from string type to enum type,
-                            */
-                            let authenticatorParamObj = protocol.attributes.parameters.find(
-                                o => o.name === 'authenticator'
-                            )
-                            if (authenticatorParamObj) {
-                                authenticatorParamObj.type = 'enum'
-                                authenticatorParamObj.enum_values = authenticatorId
-                                // add default_value for authenticator
-                                authenticatorParamObj.default_value = ''
-                            }
+                        if (protocols.length) {
+                            protocols.forEach(protocol => {
+                                // add default_value for protocol param
+                                let protocolParamObj = protocol.attributes.parameters.find(
+                                    o => o.name === 'protocol'
+                                )
+                                protocolParamObj.default_value = protocol.id
+                                protocolParamObj.disabled = true
+                                /*
+                                    Transform authenticator parameter from string type to enum type,
+                                 */
+                                let authenticatorParamObj = protocol.attributes.parameters.find(
+                                    o => o.name === 'authenticator'
+                                )
+                                if (authenticatorParamObj) {
+                                    authenticatorParamObj.type = 'enum'
+                                    authenticatorParamObj.enum_values = authenticatorId
+                                    // add default_value for authenticator
+                                    authenticatorParamObj.default_value = ''
+                                }
+                            })
                         }
 
                         this.resourceModules = protocols
                         await this.fetchAllListeners()
                         this.validateInfo = this.allListenersInfo
                         await this.fetchAllServices()
+                        this.setDefaultRelationship(this.allServicesMap, 'service')
                     }
                     break
             }
         },
+        /**
+         * If current page is a detail page and have relationship object,
+         * set default relationship item
+         * @param {Map} allResourcesMap A Map object holds key-value in which key is the id of the resource
+         * @param {String} routeName route name of the details page: service, monitor, server, filter
+         * @param {Boolean} isMultiple if relationship data allows multiple objects, chosen items will be an array
+         *
+         */
+        setDefaultRelationship(allResourcesMap, routeName, isMultiple) {
+            if (this.$route.name === routeName) {
+                let currentResourceId = this.$route.params.id
+                const { id = null, type = null } = allResourcesMap.get(currentResourceId) || {}
+                if (id) this.defaultRelationshipItems = isMultiple ? [{ id, type }] : { id, type }
+            }
+        },
 
-        setDefaultSelectedResource(resource) {
+        async setDefaultSelectedResource(resource) {
             if (this.matchRoutes.includes(resource)) {
                 this.selectedResource = this.textTransform(resource)
-                this.handleResourceSelected(this.selectedResource)
+                await this.handleResourceSelected(this.selectedResource)
             } else {
                 this.selectedResource = 'Service'
-                this.handleResourceSelected('Service')
+                await this.handleResourceSelected('Service')
             }
         },
 

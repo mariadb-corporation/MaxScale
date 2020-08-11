@@ -61,7 +61,7 @@ async function mockupRelationshipTypeWatcher(wrapper, relationshipType) {
     await wrapper.vm.assignTableHeaders(relationshipType)
 }
 
-describe('RelationshipTable.vue readOnly mode', () => {
+describe('RelationshipTable.vue with readOnly mode and not addable', () => {
     let wrapper
     beforeEach(() => {
         wrapper = mount({
@@ -72,6 +72,7 @@ describe('RelationshipTable.vue readOnly mode', () => {
                 loading: false,
                 tableRows: serviceStateTableRows,
                 readOnly: true,
+                addable: false,
             },
         })
     })
@@ -85,7 +86,7 @@ describe('RelationshipTable.vue readOnly mode', () => {
     })
 
     it(`Should not render confirm-dialog and select-dialog components if
-      readOnly is true`, async () => {
+      readOnly is true and addable is false`, async () => {
         expect(wrapper.findComponent({ name: 'confirm-dialog' }).exists()).to.be.false
         expect(wrapper.findComponent({ name: 'select-dialog' }).exists()).to.be.false
     })
@@ -138,7 +139,7 @@ describe('RelationshipTable.vue readOnly mode', () => {
     })
 })
 
-describe('RelationshipTable.vue editable mode', () => {
+describe('RelationshipTable.vue with editable and addable mode', () => {
     let wrapper, loggerSpy
     beforeEach(() => {
         // this prevents console.error from being printed out

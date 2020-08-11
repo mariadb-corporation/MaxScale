@@ -43,6 +43,7 @@ export default new Vuex.Store({
         isUpdateAvailable: false,
         prevRoute: null,
         moduleParameters: [],
+        form_type: null,
     },
     mutations: {
         showOverlay(state, type) {
@@ -76,6 +77,9 @@ export default new Vuex.Store({
         },
         setModuleParameters(state, moduleParameters) {
             state.moduleParameters = moduleParameters
+        },
+        SET_FORM_TYPE(state, form_type) {
+            state.form_type = form_type
         },
     },
     actions: {
@@ -150,6 +154,7 @@ export default new Vuex.Store({
         searchKeyWord: state => state.searchKeyWord,
         overlay: state => state.overlay,
         moduleParameters: state => state.moduleParameters,
+        form_type: state => state.form_type,
     },
     modules: {
         filter,

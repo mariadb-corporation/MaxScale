@@ -44,6 +44,7 @@
                                             :loading="overlay === OVERLAY_TRANSPARENT_LOADING"
                                             :tableRows="listenerStateTableRow"
                                             readOnly
+                                            @open-listener-form-dialog="SET_FORM_TYPE('Listener')"
                                         />
                                     </v-col>
                                 </v-row>
@@ -87,7 +88,7 @@
  * Public License.
  */
 import { OVERLAY_TRANSPARENT_LOADING } from 'store/overlayTypes'
-import { mapGetters, mapActions } from 'vuex'
+import { mapGetters, mapActions, mapMutations } from 'vuex'
 import OverviewHeader from './OverviewHeader'
 import PageHeader from './PageHeader'
 import SessionsTable from './SessionsTable'
@@ -141,6 +142,9 @@ export default {
             genDataSetSchema: 'service/genDataSetSchema',
             updateServiceRelationship: 'service/updateServiceRelationship',
             fetchAllFilters: 'filter/fetchAllFilters',
+        }),
+        ...mapMutations({
+            SET_FORM_TYPE: 'SET_FORM_TYPE',
         }),
 
         // reuse functions for fetch loop or after finish editing

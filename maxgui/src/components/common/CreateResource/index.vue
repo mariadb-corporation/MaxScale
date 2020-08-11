@@ -12,7 +12,7 @@
         >
             + {{ $t('createNew') }}
         </v-btn>
-        <forms v-model="createDialog" :closeModal="() => (createDialog = false)" />
+        <forms v-model="createDialog" :closeModal="handleClose" />
     </div>
 </template>
 
@@ -29,7 +29,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapActions } from 'vuex'
+import { mapActions, mapGetters, mapMutations } from 'vuex'
 import Forms from './Forms'
 export default {
     name: 'create-resource',
@@ -42,14 +42,31 @@ export default {
             createDialog: false,
         }
     },
-
+    computed: {
+        ...mapGetters({
+            form_type: 'form_type',
+        }),
+    },
+    watch: {
+        form_type: async function(val) {
+            if (val) await this.create()
+            else this.handleClose()
+        },
+    },
     methods: {
         ...mapActions({
             fetchAllModules: 'maxscale/fetchAllModules',
         }),
+        ...mapMutations({
+            SET_FORM_TYPE: 'SET_FORM_TYPE',
+        }),
         async create() {
             await this.fetchAllModules()
             this.createDialog = true
+        },
+        handleClose() {
+            if (this.form_type) this.SET_FORM_TYPE(null)
+            else this.createDialog = false
         },
     },
 }

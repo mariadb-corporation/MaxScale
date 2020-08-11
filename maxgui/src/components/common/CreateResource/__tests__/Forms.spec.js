@@ -89,6 +89,7 @@ describe('Forms.vue', () => {
             },
             computed: {
                 allModulesMap: () => allModulesMap,
+                form_type: () => null,
             },
         })
         axiosStub = sinon.stub(wrapper.vm.$axios, 'get').resolves(
