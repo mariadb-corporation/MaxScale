@@ -44,7 +44,9 @@
                                             :loading="overlay === OVERLAY_TRANSPARENT_LOADING"
                                             :tableRows="listenerStateTableRow"
                                             readOnly
-                                            @open-listener-form-dialog="SET_FORM_TYPE('Listener')"
+                                            @open-listener-form-dialog="
+                                                SET_FORM_TYPE(FORM_LISTENER)
+                                            "
                                         />
                                     </v-col>
                                 </v-row>
@@ -88,6 +90,7 @@
  * Public License.
  */
 import { OVERLAY_TRANSPARENT_LOADING } from 'store/overlayTypes'
+import { FORM_LISTENER } from 'store/formTypes'
 import { mapGetters, mapActions, mapMutations } from 'vuex'
 import OverviewHeader from './OverviewHeader'
 import PageHeader from './PageHeader'
@@ -107,6 +110,7 @@ export default {
     data() {
         return {
             OVERLAY_TRANSPARENT_LOADING: OVERLAY_TRANSPARENT_LOADING,
+            FORM_LISTENER: FORM_LISTENER,
             currentActiveTab: null,
             tabs: [
                 { name: `${this.$tc('servers', 2)} & ${this.$tc('sessions', 2)}` },

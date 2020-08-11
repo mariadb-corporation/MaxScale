@@ -8,11 +8,11 @@
         :title="`${$t('createANew')}...`"
         isDynamicWidth
     >
-        <template v-if="selectedResource" v-slot:body>
+        <template v-if="selectedForm" v-slot:body>
             <v-select
                 id="resource-select"
-                v-model="selectedResource"
-                :items="resourcesList"
+                v-model="selectedForm"
+                :items="formTypes"
                 name="resourceName"
                 outlined
                 dense
@@ -25,12 +25,12 @@
                 hide-details
                 :rules="[v => !!v || $t('errors.requiredInput', { inputName: 'This field' })]"
                 required
-                @input="handleResourceSelected"
+                @input="handleFormSelection"
             />
             <v-divider class="divider" />
             <div class="mb-0">
                 <label class="label color text-small-text d-block">
-                    {{ $t('resourceLabelName', { resourceName: selectedResource }) }}
+                    {{ $t('resourceLabelName', { resourceName: selectedForm }) }}
                 </label>
                 <v-text-field
                     id="id"
@@ -41,11 +41,11 @@
                     class="resource-id std error--text__bottom"
                     dense
                     outlined
-                    :placeholder="$t('nameYour', { resourceName: selectedResource.toLowerCase() })"
+                    :placeholder="$t('nameYour', { resourceName: selectedForm.toLowerCase() })"
                 />
             </div>
 
-            <div v-if="selectedResource === 'Service'" class="mb-0">
+            <div v-if="selectedForm === 'Service'" class="mb-0">
                 <service-form-input
                     ref="serviceForm"
                     :resourceModules="resourceModules"
@@ -54,7 +54,7 @@
                     :defaultItems="defaultRelationshipItems"
                 />
             </div>
-            <div v-else-if="selectedResource === 'Monitor'" class="mb-0">
+            <div v-else-if="selectedForm === 'Monitor'" class="mb-0">
                 <monitor-form-input
                     ref="monitorForm"
                     :resourceModules="resourceModules"
@@ -62,10 +62,10 @@
                     :defaultItems="defaultRelationshipItems"
                 />
             </div>
-            <div v-else-if="selectedResource === 'Filter'" class="mb-0">
+            <div v-else-if="selectedForm === 'Filter'" class="mb-0">
                 <filter-form-input ref="filterForm" :resourceModules="resourceModules" />
             </div>
-            <div v-else-if="selectedResource === 'Listener'" class="mb-0">
+            <div v-else-if="selectedForm === 'Listener'" class="mb-0">
                 <listener-form-input
                     ref="listenerForm"
                     :parentForm="$refs.baseDialog.$refs.form || {}"
@@ -74,7 +74,7 @@
                     :defaultItems="defaultRelationshipItems"
                 />
             </div>
-            <div v-else-if="selectedResource === 'Server'" class="mb-0">
+            <div v-else-if="selectedForm === 'Server'" class="mb-0">
                 <server-form-input
                     ref="serverForm"
                     :allServices="allServices"
@@ -124,8 +124,8 @@ export default {
     data: function() {
         return {
             show: false,
-            selectedResource: '',
-            resourcesList: ['Service', 'Server', 'Monitor', 'Filter', 'Listener'],
+            selectedForm: '',
+            formTypes: ['Service', 'Server', 'Monitor', 'Filter', 'Listener'],
             // module for monitor, service, and filter, listener
             resourceModules: [],
             //COMMON
@@ -134,7 +134,7 @@ export default {
                 resourceId: [val => this.validateResourceId(val)],
             },
             validateInfo: {},
-            // this is used to auto assign default selectedResource
+            // this is used to auto assign default selectedForm
             matchRoutes: [
                 'monitor',
                 'monitors',
@@ -188,10 +188,11 @@ export default {
     watch: {
         value: async function(val) {
             if (!val) return null
-            else if (!this.form_type) await this.setDefaultSelectedResource(this.$route.name)
+            else if (!this.form_type) await this.setDefaultForm(this.$route.name)
             else {
-                this.selectedResource = this.form_type
-                await this.handleResourceSelected(this.form_type)
+                let formType = this.form_type.replace('FORM_', '') // remove FORM_ prefix
+                this.selectedForm = this.textTransform(formType)
+                await this.handleFormSelection(this.selectedForm)
             }
         },
         resourceId: function(val) {
@@ -214,7 +215,7 @@ export default {
             fetchAllListeners: 'listener/fetchAllListeners',
         }),
 
-        async handleResourceSelected(val) {
+        async handleFormSelection(val) {
             const isMultiple = true // if relationship data allows multiple objects
             switch (val) {
                 case 'Service':
@@ -304,27 +305,33 @@ export default {
             }
         },
 
-        async setDefaultSelectedResource(resource) {
-            if (this.matchRoutes.includes(resource)) {
-                this.selectedResource = this.textTransform(resource)
-                await this.handleResourceSelected(this.selectedResource)
+        /**
+         * This function set default form based on route name
+         * @param {String} routeName route name
+         */
+        async setDefaultForm(routeName) {
+            if (this.matchRoutes.includes(routeName)) {
+                this.selectedForm = this.textTransform(routeName)
+                await this.handleFormSelection(this.selectedForm)
             } else {
-                this.selectedResource = 'Service'
-                await this.handleResourceSelected('Service')
+                this.selectedForm = 'Service'
+                await this.handleFormSelection('Service')
             }
         },
 
         /**
-         * @param {String} str Plural string to be processed
+         * @param {String} str string to be processed
          * @return {String} return str that removed last char s and capitalized first char
          */
         textTransform(str) {
+            let lowerCaseStr = str.toLowerCase()
             const suffix = 's'
-            const arr = str.split('')
+            const arr = lowerCaseStr.split('')
             if (arr[arr.length - 1] === suffix) {
-                str = this.$help.strReplaceAt(str, arr.length - 1, '')
+                lowerCaseStr = this.$help.strReplaceAt(lowerCaseStr, arr.length - 1, '')
             }
-            return str.charAt(0).toUpperCase() + str.slice(1)
+            let firstCharCapitalized = lowerCaseStr.charAt(0).toUpperCase()
+            return firstCharCapitalized + lowerCaseStr.slice(1)
         },
 
         getModuleType(type) {
@@ -334,7 +341,7 @@ export default {
         },
 
         handleSave() {
-            switch (this.selectedResource) {
+            switch (this.selectedForm) {
                 case 'Service':
                     {
                         const {
@@ -410,15 +417,10 @@ export default {
         },
 
         validateResourceId(val) {
-            if (!val) {
-                return this.$t('errors.requiredInput', { inputName: 'id' })
-            } else if (
-                'idArr' in this.validateInfo &&
-                this.validateInfo.idArr.length &&
-                this.validateInfo.idArr.includes(val)
-            ) {
+            const { idArr = [] } = this.validateInfo || {}
+            if (!val) return this.$t('errors.requiredInput', { inputName: 'id' })
+            else if (idArr.includes(val))
                 return this.$t('errors.duplicatedValue', { inputValue: val })
-            }
             return true
         },
     },

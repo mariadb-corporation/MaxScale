@@ -29,12 +29,12 @@ import sinon from 'sinon'
  * i.e., services become Service
  * @param {Object} wrapper A Wrapper is an object that contains a mounted component and methods to test the component
  * @param {String} path Current route path
- * @param {String} selectedResource Selected resource to be created
+ * @param {String} selectedForm Selected resource to be created
  */
-async function testingTextTransform(wrapper, path, selectedResource) {
+async function testingTextTransform(wrapper, path, selectedForm) {
     await mockupRouteChanges(wrapper, path)
     await mockupOpenDialog(wrapper)
-    expect(wrapper.vm.$data.selectedResource).to.be.equal(selectedResource)
+    expect(wrapper.vm.$data.selectedForm).to.be.equal(selectedForm)
 }
 
 /**
