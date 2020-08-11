@@ -88,7 +88,7 @@ describe('Forms.vue', () => {
                 value: false, // control visibility of the dialog
             },
             computed: {
-                allModulesMap: () => allModulesMap,
+                all_modules_map: () => allModulesMap,
                 form_type: () => null,
             },
         })

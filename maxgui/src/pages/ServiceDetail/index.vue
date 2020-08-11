@@ -129,7 +129,6 @@ export default {
         }),
         ...mapGetters({
             currentService: 'service/currentService',
-            allFilters: 'filter/allFilters',
         }),
     },
 

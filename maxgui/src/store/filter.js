@@ -14,22 +14,22 @@
 export default {
     namespaced: true,
     state: {
-        allFilters: [],
-        currentFilter: {},
+        all_filters: [],
+        current_filter: {},
     },
     mutations: {
-        setAllFilters(state, payload) {
-            state.allFilters = payload
+        SET_ALL_FILTERS(state, payload) {
+            state.all_filters = payload
         },
-        setCurrentFilter(state, payload) {
-            state.currentFilter = payload
+        SET_CURRENT_FILTER(state, payload) {
+            state.current_filter = payload
         },
     },
     actions: {
         async fetchAllFilters({ commit }) {
             try {
                 let res = await this.vue.$axios.get(`/filters`)
-                if (res.data.data) commit('setAllFilters', res.data.data)
+                if (res.data.data) commit('SET_ALL_FILTERS', res.data.data)
             } catch (e) {
                 if (process.env.NODE_ENV !== 'test') {
                     const logger = this.vue.$logger('store-filter-fetchAllFilters')
@@ -41,7 +41,7 @@ export default {
         async fetchFilterById({ commit }, id) {
             try {
                 let res = await this.vue.$axios.get(`/filters/${id}`)
-                if (res.data.data) commit('setCurrentFilter', res.data.data)
+                if (res.data.data) commit('SET_CURRENT_FILTER', res.data.data)
             } catch (e) {
                 if (process.env.NODE_ENV !== 'test') {
                     const logger = this.vue.$logger('store-filter-fetchFilterById')
@@ -90,9 +90,7 @@ export default {
                 }
             }
         },
-        /**
-         * @param {String} object.id Name of the filter to be destroyed
-         */
+
         async destroyFilter({ dispatch, commit }, id) {
             try {
                 let res = await this.vue.$axios.delete(`/filters/${id}?force=yes`)
@@ -116,20 +114,18 @@ export default {
         },
     },
     getters: {
-        allFilters: state => state.allFilters,
-        currentFilter: state => state.currentFilter,
         // -------------- below getters are available only when fetchAllFilters has been dispatched
-        allFiltersMap: state => {
+        getAllFiltersMap: state => {
             let map = new Map()
-            state.allFilters.forEach(ele => {
+            state.all_filters.forEach(ele => {
                 map.set(ele.id, ele)
             })
             return map
         },
 
-        allFiltersInfo: state => {
+        getAllFiltersInfo: state => {
             let idArr = []
-            return state.allFilters.reduce((accumulator, _, index, array) => {
+            return state.all_filters.reduce((accumulator, _, index, array) => {
                 idArr.push(array[index].id)
                 return (accumulator = { idArr: idArr })
             }, [])

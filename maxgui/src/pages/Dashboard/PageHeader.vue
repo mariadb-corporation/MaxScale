@@ -110,7 +110,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapGetters } from 'vuex'
+import { mapState } from 'vuex'
 import workerTimer from 'worker-loader!utils/workerTimer.js'
 
 export default {
@@ -125,18 +125,15 @@ export default {
         }
     },
     computed: {
-        ...mapGetters({
-            maxScaleOverviewInfo: 'maxscale/maxScaleOverviewInfo',
+        ...mapState({
+            maxscale_overview_info: state => state.maxscale.maxscale_overview_info,
         }),
         pageTitle: function() {
-            let version =
-                this.maxScaleOverviewInfo.version !== undefined
-                    ? this.maxScaleOverviewInfo.version
-                    : ''
+            const { version = '' } = this.maxscale_overview_info
             return `MariaDB ${this.$t('productName')} ${version}`
         },
         getMaxScaleInfo: function() {
-            const { commit, started_at, activated_at } = this.maxScaleOverviewInfo
+            const { commit, started_at, activated_at } = this.maxscale_overview_info
             return {
                 commit,
                 started_at,
@@ -158,10 +155,9 @@ export default {
                 )
             }
         },
-        'maxScaleOverviewInfo.uptime': function(val) {
-            let self = this
-            self.uptime = val //548888888
-            self.workerInit()
+        'maxscale_overview_info.uptime': function(val) {
+            this.uptime = val
+            this.workerInit()
         },
     },
 
@@ -180,11 +176,10 @@ export default {
         },
 
         workerInit() {
-            let self = this
-            self.workerTimer = new workerTimer()
-            self.workerTimer.postMessage(self.workerList)
-            self.workerTimer.onmessage = () => {
-                self.updateUpTime()
+            this.workerTimer = new workerTimer()
+            this.workerTimer.postMessage(this.workerList)
+            this.workerTimer.onmessage = () => {
+                this.updateUpTime()
             }
         },
     },

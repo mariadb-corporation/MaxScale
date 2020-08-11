@@ -1,14 +1,14 @@
 <template>
     <page-wrapper>
-        <v-sheet v-if="!$help.lodash.isEmpty(currentListener)" class="px-6">
-            <page-header :currentListener="currentListener" />
+        <v-sheet v-if="!$help.lodash.isEmpty(current_listener)" class="px-6">
+            <page-header :currentListener="current_listener" />
             <v-row>
                 <!-- PARAMETERS TABLE -->
                 <v-col cols="6">
                     <details-parameters-collapse
                         :searchKeyword="search_keyword"
-                        :resourceId="currentListener.id"
-                        :parameters="currentListener.attributes.parameters"
+                        :resourceId="current_listener.id"
+                        :parameters="current_listener.attributes.parameters"
                         :moduleParameters="processedModuleParameters"
                         :loading="
                             loadingModuleParams
@@ -46,7 +46,7 @@
  * Public License.
  */
 import { OVERLAY_TRANSPARENT_LOADING } from 'store/overlayTypes'
-import { mapGetters, mapActions, mapState } from 'vuex'
+import { mapActions, mapState } from 'vuex'
 import PageHeader from './PageHeader'
 
 export default {
@@ -66,21 +66,19 @@ export default {
             overlay_type: 'overlay_type',
             search_keyword: 'search_keyword',
             module_parameters: 'module_parameters',
-        }),
-        ...mapGetters({
-            currentListener: 'listener/currentListener',
+            current_listener: state => state.listener.current_listener,
         }),
     },
 
     async created() {
         await this.fetchListenerById(this.$route.params.id)
-        /*  wait until get currentListener to fetch service state
+        /*  wait until get current_listener to fetch service state
             and module parameters
         */
         const {
             attributes: { parameters: { protocol = null } = {} } = {},
             relationships: { services: { data: servicesData = [] } = {} } = {},
-        } = this.currentListener
+        } = this.current_listener
 
         await this.serviceTableRowProcessing(servicesData)
 
@@ -99,8 +97,7 @@ export default {
         async processModuleParameters() {
             if (this.module_parameters.length) {
                 this.processedModuleParameters = this.module_parameters
-                const self = this
-                await this.$help.delay(150).then(() => (self.loadingModuleParams = false))
+                await this.$help.delay(150).then(() => (this.loadingModuleParams = false))
             }
         },
 

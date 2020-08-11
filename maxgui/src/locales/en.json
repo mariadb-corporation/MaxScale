@@ -119,8 +119,6 @@
     "info": {
         "createOrUpdateForm": "Empty value in non-required fields will be treated as null. *indicates required field.",
         "filterDeleteModal": "A filter can only be destroyed if no service uses it. This means that the data.relationships object for the filter must be empty.",
-
-        "monitorDelete": "The monitor must not have relationships to any servers in order to be destroyed.",
         "serverUnlink": "Make sure it is not used by any services or monitors.",
         "serverDrain": "Server is drained of connections",
         "serverClear": "",

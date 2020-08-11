@@ -39,7 +39,7 @@ describe('Filters', () => {
             shallow: false,
             component: Filters,
             computed: {
-                allFilters: () => mockupAllFilters,
+                all_filters: () => mockupAllFilters,
             },
         })
         axiosStub = sinon.stub(wrapper.vm.$axios, 'get').resolves(

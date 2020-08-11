@@ -31,7 +31,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapGetters, mapState } from 'vuex'
+import { mapState } from 'vuex'
 
 export default {
     name: 'diagnostics-table',
@@ -52,29 +52,23 @@ export default {
     computed: {
         ...mapState({
             search_keyword: 'search_keyword',
-        }),
-        ...mapGetters({
-            currentMonitorDiagnostics: 'monitor/currentMonitorDiagnostics',
+            monitor_diagnostics: state => state.monitor.monitor_diagnostics,
         }),
 
-        /**
-         * This function fetching monitor diagonostics based on monitor id
-         */
         monitorDiagnosticsTableRow: function() {
             let tableRow = []
-            if (!this.$help.lodash.isEmpty(this.currentMonitorDiagnostics)) {
+            if (!this.$help.lodash.isEmpty(this.monitor_diagnostics)) {
                 const {
                     attributes: {
                         monitor_diagnostics: { server_info = [] },
                     },
-                } = this.currentMonitorDiagnostics
-                const self = this
+                } = this.monitor_diagnostics
                 let monitorDiagnosticsObj = server_info.find(
-                    server => server.name === self.$route.params.id
+                    server => server.name === this.$route.params.id
                 )
-                let level = 0
+                const level = 0
                 const keepPrimitiveValue = false
-                tableRow = self.$help.objToArrOfObj(
+                tableRow = this.$help.objToArrOfObj(
                     monitorDiagnosticsObj,
                     keepPrimitiveValue,
                     level

@@ -37,7 +37,7 @@ describe('FilterDetail index', () => {
             shallow: false,
             component: FilterDetail,
             computed: {
-                currentFilter: () => mockupAllFilters[0],
+                current_filter: () => mockupAllFilters[0],
             },
         })
     })

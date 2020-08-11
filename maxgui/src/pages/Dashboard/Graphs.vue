@@ -44,10 +44,10 @@
                 <template v-slot:card-body>
                     <v-sheet width="100%">
                         <line-chart
-                            v-if="threadsChartData.datasets.length"
+                            v-if="threads_chart_data.datasets.length"
                             ref="threadsChart"
                             :styles="chartStyle"
-                            :chart-data="threadsChartData"
+                            :chart-data="threads_chart_data"
                             :options="mainChartOptions"
                             :yAxesTicks="{ max: 100, min: 0 }"
                         />
@@ -71,7 +71,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapGetters, mapActions } from 'vuex'
+import { mapGetters, mapActions, mapState } from 'vuex'
 
 export default {
     name: 'graphs',
@@ -108,10 +108,11 @@ export default {
         }
     },
     computed: {
+        ...mapState({
+            thread_stats: state => state.maxscale.thread_stats,
+            threads_chart_data: state => state.maxscale.threads_chart_data,
+        }),
         ...mapGetters({
-            maxScaleOverviewInfo: 'maxscale/maxScaleOverviewInfo',
-            threads: 'maxscale/threads',
-            threadsChartData: 'maxscale/threadsChartData',
             allSessions: 'session/allSessions',
             sessionsChartData: 'session/sessionsChartData',
             allServers: 'server/allServers',
@@ -121,7 +122,7 @@ export default {
 
     methods: {
         ...mapActions({
-            fetchThreads: 'maxscale/fetchThreads',
+            fetchThreadStats: 'maxscale/fetchThreadStats',
             genThreadsDatasetsSchema: 'maxscale/genDataSetSchema',
             fetchAllServers: 'server/fetchAllServers',
             fetchAllMonitors: 'monitor/fetchAllMonitors',
@@ -140,7 +141,7 @@ export default {
                     this.fetchAllMonitors(),
                     this.fetchAllSessions(),
                     this.fetchAllServices(),
-                    this.fetchThreads(),
+                    this.fetchThreadStats(),
                 ])
                 const time = Date.now()
                 //-------------------- update connections chart
@@ -191,13 +192,16 @@ export default {
                 })
 
                 //-------------------- update threads chart
-                await this.threads.forEach((thread, i) => {
+                await this.thread_stats.forEach((thread, i) => {
                     if (this.$help.isUndefined(threadsChart.chartData.datasets[i])) {
-                        self.genThreadsDatasetsSchema()
+                        this.genThreadsDatasetsSchema()
                     } else {
+                        const {
+                            attributes: { stats: { load: { last_second = null } = {} } = {} } = {},
+                        } = thread
                         threadsChart.chartData.datasets[i].data.push({
                             x: time,
-                            y: thread.attributes.stats.load.last_second,
+                            y: last_second,
                         })
                     }
                 })

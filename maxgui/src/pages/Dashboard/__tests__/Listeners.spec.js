@@ -52,7 +52,7 @@ describe('Listeners index', () => {
             shallow: false,
             component: Listeners,
             computed: {
-                allListeners: () => mockupAllListeners,
+                all_listeners: () => mockupAllListeners,
             },
         })
         axiosStub = sinon.stub(wrapper.vm.$axios, 'get').resolves(

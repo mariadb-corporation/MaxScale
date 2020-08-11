@@ -11,10 +11,10 @@
                     <v-tab-item class="pt-5">
                         <v-col cols="7">
                             <details-parameters-collapse
-                                v-if="maxScaleParameters"
+                                v-if="maxscale_parameters"
                                 :searchKeyword="search_keyword"
                                 resourceId="maxscale"
-                                :parameters="maxScaleParameters"
+                                :parameters="maxscale_parameters"
                                 :moduleParameters="processedModuleParameters"
                                 :updateResourceParameters="updateMaxScaleParameters"
                                 :onEditSucceeded="fetchMaxScaleParameters"
@@ -51,7 +51,7 @@
  * Public License.
  */
 import { OVERLAY_TRANSPARENT_LOADING } from 'store/overlayTypes'
-import { mapGetters, mapActions, mapState } from 'vuex'
+import { mapActions, mapState } from 'vuex'
 import PageHeader from './PageHeader'
 
 export default {
@@ -76,9 +76,7 @@ export default {
             overlay_type: 'overlay_type',
             search_keyword: 'search_keyword',
             module_parameters: 'module_parameters',
-        }),
-        ...mapGetters({
-            maxScaleParameters: 'maxscale/maxScaleParameters',
+            maxscale_parameters: state => state.maxscale.maxscale_parameters,
         }),
     },
     async created() {

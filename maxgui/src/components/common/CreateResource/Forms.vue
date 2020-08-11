@@ -50,7 +50,7 @@
                     ref="serviceForm"
                     :resourceModules="resourceModules"
                     :allServers="allServers"
-                    :allFilters="allFilters"
+                    :allFilters="all_filters"
                     :defaultItems="defaultRelationshipItems"
                 />
             </div>
@@ -78,7 +78,7 @@
                 <server-form-input
                     ref="serverForm"
                     :allServices="allServices"
-                    :allMonitors="allMonitors"
+                    :allMonitors="all_monitors"
                     :resourceModules="resourceModules"
                     :parentForm="$refs.baseDialog.$refs.form || {}"
                     :defaultItems="defaultRelationshipItems"
@@ -154,9 +154,11 @@ export default {
     computed: {
         ...mapState({
             form_type: 'form_type',
+            all_filters: state => state.filter.all_filters,
+            all_modules_map: state => state.maxscale.all_modules_map,
+            all_monitors: state => state.monitor.all_monitors,
         }),
         ...mapGetters({
-            allModulesMap: 'maxscale/allModulesMap',
             allServices: 'service/allServices',
             allServicesMap: 'service/allServicesMap',
             allServicesInfo: 'service/allServicesInfo',
@@ -165,15 +167,14 @@ export default {
             allServersInfo: 'server/allServersInfo',
             allServersMap: 'server/allServersMap',
 
-            allMonitorsInfo: 'monitor/allMonitorsInfo',
-            allMonitors: 'monitor/allMonitors',
-            allMonitorsMap: 'monitor/allMonitorsMap',
+            getAllMonitorsInfo: 'monitor/getAllMonitorsInfo',
+            getAllMonitorsMap: 'monitor/getAllMonitorsMap',
 
-            allFiltersInfo: 'filter/allFiltersInfo',
-            allFilters: 'filter/allFilters',
-            allFiltersMap: 'filter/allFiltersMap',
+            getAllFiltersInfo: 'filter/getAllFiltersInfo',
 
-            allListenersInfo: 'listener/allListenersInfo',
+            getAllFiltersMap: 'filter/getAllFiltersMap',
+
+            getAllListenersInfo: 'listener/getAllListenersInfo',
         }),
 
         computeShowDialog: {
@@ -228,7 +229,7 @@ export default {
                         await this.fetchAllServers()
                         await this.fetchAllFilters()
                         this.setDefaultRelationship(this.allServersMap, 'server', isMultiple)
-                        this.setDefaultRelationship(this.allFiltersMap, 'filter', isMultiple)
+                        this.setDefaultRelationship(this.getAllFiltersMap, 'filter', isMultiple)
                     }
                     break
                 case 'Server':
@@ -238,13 +239,13 @@ export default {
                     await this.fetchAllServices()
                     await this.fetchAllMonitors()
                     this.setDefaultRelationship(this.allServicesMap, 'service', isMultiple)
-                    this.setDefaultRelationship(this.allMonitorsMap, 'monitor')
+                    this.setDefaultRelationship(this.getAllMonitorsMap, 'monitor')
                     break
                 case 'Monitor':
                     {
                         this.resourceModules = this.getModuleType('Monitor')
                         await this.fetchAllMonitors()
-                        this.validateInfo = this.allMonitorsInfo
+                        this.validateInfo = this.getAllMonitorsInfo
                         await this.fetchAllServers()
                         this.setDefaultRelationship(this.allServersMap, 'server', isMultiple)
                     }
@@ -252,7 +253,7 @@ export default {
                 case 'Filter':
                     this.resourceModules = this.getModuleType('Filter')
                     await this.fetchAllFilters()
-                    this.validateInfo = this.allFiltersInfo
+                    this.validateInfo = this.getAllFiltersInfo
                     break
                 case 'Listener':
                     {
@@ -284,7 +285,7 @@ export default {
 
                         this.resourceModules = protocols
                         await this.fetchAllListeners()
-                        this.validateInfo = this.allListenersInfo
+                        this.validateInfo = this.getAllListenersInfo
                         await this.fetchAllServices()
                         this.setDefaultRelationship(this.allServicesMap, 'service')
                     }
@@ -338,7 +339,7 @@ export default {
 
         getModuleType(type) {
             let allResourceModules = []
-            if (this.allModulesMap[type]) allResourceModules = this.allModulesMap[type]
+            if (this.all_modules_map[type]) allResourceModules = this.all_modules_map[type]
             return allResourceModules
         },
 

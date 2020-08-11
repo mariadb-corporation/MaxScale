@@ -146,13 +146,12 @@ export default {
             search_keyword: 'search_keyword',
         }),
         ...mapGetters({
-            allMonitorsMap: 'monitor/allMonitorsMap',
-            allMonitors: 'monitor/allMonitors',
+            getAllMonitorsMap: 'monitor/getAllMonitorsMap',
             allServers: 'server/allServers',
         }),
         tableRows: function() {
             let rows = []
-            if (this.allMonitorsMap.size) {
+            if (this.allServers.length) {
                 let allServiceIds = []
                 let allMonitorIds = []
 
@@ -161,9 +160,9 @@ export default {
                         id,
                         attributes: {
                             state: serverState,
-                            parameters: { address, port },
-                            statistics: { connections },
-                            gtid_current_pos,
+                            parameters: { address: serverAddress, port: serverPort },
+                            statistics: { connections: serverConnections },
+                            gtid_current_pos: gtid,
                         },
                         relationships: {
                             services: { data: associatedServices = [] } = {},
@@ -182,22 +181,24 @@ export default {
                     this.setServicesLength([...uniqueServiceId].length)
 
                     let row = {
-                        id: id,
-                        serverAddress: address,
-                        serverPort: port,
-                        serverConnections: connections,
-                        serverState: serverState,
-                        serviceIds: serviceIds,
-                        gtid: gtid_current_pos,
+                        id,
+                        serverAddress,
+                        serverPort,
+                        serverConnections,
+                        serverState,
+                        serviceIds,
+                        gtid,
                     }
-                    if (associatedMonitors.length) {
+                    if (this.getAllMonitorsMap.size && associatedMonitors.length) {
                         // The associatedMonitors is always an array with one element -> get monitor at index 0
-                        const monitor = this.allMonitorsMap.get(associatedMonitors[0].id)
-
-                        if (!this.$help.lodash.isEmpty(monitor)) {
-                            allMonitorIds.push(monitor.id)
-                            row.groupId = monitor.id // aka monitorId
-                            row.monitorState = `${monitor.attributes.state}`
+                        const {
+                            id: monitorId = null,
+                            attributes: { state },
+                        } = this.getAllMonitorsMap.get(associatedMonitors[0].id) || {}
+                        if (monitorId) {
+                            allMonitorIds.push(monitorId)
+                            row.groupId = monitorId
+                            row.monitorState = state
                         }
                     } else {
                         row.groupId = this.$t('not', { action: 'monitored' })

@@ -53,7 +53,7 @@ describe('Graphs index', () => {
                         },
                     ],
                 }),
-                threadsChartData: () => ({
+                threads_chart_data: () => ({
                     datasets: [
                         {
                             label: 'LOAD',

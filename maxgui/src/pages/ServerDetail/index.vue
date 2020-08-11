@@ -114,7 +114,6 @@ export default {
         }),
         ...mapGetters({
             currentServer: 'server/currentServer',
-            currentMonitorDiagnostics: 'monitor/currentMonitorDiagnostics',
         }),
     },
 
@@ -125,7 +124,7 @@ export default {
     },
     methods: {
         ...mapMutations({
-            setCurrentMonitorDiagnostics: 'monitor/setCurrentMonitorDiagnostics',
+            SET_CURRENT_MONITOR: 'monitor/SET_CURRENT_MONITOR',
         }),
         ...mapActions({
             getResourceState: 'getResourceState',
@@ -140,7 +139,7 @@ export default {
                 const monitorId = monitors.data[0].id
                 await this.fetchMonitorDiagnosticsById(monitorId)
             } else {
-                this.setCurrentMonitorDiagnostics({})
+                this.SET_CURRENT_MONITOR({})
             }
         },
         // reuse functions for fetch loop or after finish editing

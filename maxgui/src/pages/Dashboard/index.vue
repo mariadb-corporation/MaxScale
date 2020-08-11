@@ -42,7 +42,7 @@ export default {
         await Promise.all([
             this.fetchMaxScaleOverviewInfo(),
             // below fetches will be looped in graphs component
-            this.fetchThreads(),
+            this.fetchThreadStats(),
             this.fetchAllServers(),
             this.fetchAllMonitors(),
             this.fetchAllSessions(),
@@ -69,7 +69,7 @@ export default {
     methods: {
         ...mapActions({
             fetchMaxScaleOverviewInfo: 'maxscale/fetchMaxScaleOverviewInfo',
-            fetchThreads: 'maxscale/fetchThreads',
+            fetchThreadStats: 'maxscale/fetchThreadStats',
             genThreadsDatasetsSchema: 'maxscale/genDataSetSchema',
 
             fetchAllServers: 'server/fetchAllServers',

@@ -32,37 +32,32 @@
 
 export default {
     name: 'overview-header',
-
     props: {
         currentMonitor: { type: Object, required: true },
     },
 
     computed: {
-        /**
-         * @return {Object} return overviewInfo object
-         */
         getTopOverviewInfo: function() {
-            let self = this
-            let currentMonitor = self.$help.lodash.cloneDeep(self.currentMonitor)
-            let overviewInfo = {}
-            if (!self.$help.lodash.isEmpty(currentMonitor)) {
-                // Set fallback undefined value if properties doesnt exist
-                const {
-                    attributes: {
-                        monitor_diagnostics: { master, master_gtid_domain_id, state, primary } = {},
+            /*
+            Set fallback undefined value as string if properties doesnt exist
+            This allows it to be render as text
+          */
+            const {
+                attributes: {
+                    monitor_diagnostics: {
+                        master = 'undefined',
+                        master_gtid_domain_id = 'undefined',
+                        state = 'undefined',
+                        primary = 'undefined',
                     } = {},
-                } = currentMonitor
+                } = {},
+            } = this.currentMonitor
 
-                overviewInfo = {
-                    master: master,
-                    master_gtid_domain_id: master_gtid_domain_id,
-                    state: state,
-                    primary: primary,
-                }
-
-                Object.keys(overviewInfo).forEach(
-                    key => (overviewInfo[key] = self.$help.handleValue(overviewInfo[key]))
-                )
+            const overviewInfo = {
+                master,
+                master_gtid_domain_id,
+                state,
+                primary,
             }
             return overviewInfo
         },

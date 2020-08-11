@@ -14,31 +14,29 @@
 export default {
     namespaced: true,
     state: {
-        maxScaleOverviewInfo: {},
-
-        allModulesMap: {},
-        threads: [],
-        threadsChartData: {
+        maxscale_overview_info: {},
+        all_modules_map: {},
+        thread_stats: [],
+        threads_chart_data: {
             datasets: [],
         },
-        maxScaleParameters: {},
+        maxscale_parameters: {},
     },
     mutations: {
-        setMaxScaleOverviewInfo(state, payload) {
-            state.maxScaleOverviewInfo = payload
+        SET_MAXSCALE_OVERVIEW_INFO(state, payload) {
+            state.maxscale_overview_info = payload
         },
-        setAllModulesMap(state, payload) {
-            state.allModulesMap = payload
+        SET_ALL_MODULES_MAP(state, payload) {
+            state.all_modules_map = payload
         },
-        // ---------------------------- last two second threads--------------------------
-        setThreads(state, payload) {
-            state.threads = payload
+        SET_THREAD_STATS(state, payload) {
+            state.thread_stats = payload
         },
-        setThreadsChartData(state, payload) {
-            state.threadsChartData = payload
+        SET_THREADS_CHART_DATA(state, payload) {
+            state.threads_chart_data = payload
         },
-        setMaxScaleParameters(state, payload) {
-            state.maxScaleParameters = payload
+        SET_MAXSCALE_PARAMETERS(state, payload) {
+            state.maxscale_parameters = payload
         },
     },
     actions: {
@@ -46,7 +44,7 @@ export default {
             try {
                 let res = await this.vue.$axios.get(`/maxscale?fields[maxscale]=parameters`)
                 if (res.data.data.attributes.parameters)
-                    commit('setMaxScaleParameters', res.data.data.attributes.parameters)
+                    commit('SET_MAXSCALE_PARAMETERS', res.data.data.attributes.parameters)
             } catch (e) {
                 if (process.env.NODE_ENV !== 'test') {
                     const logger = this.vue.$logger('store-maxscale-fetchMaxScaleParameters')
@@ -61,7 +59,7 @@ export default {
                     `/maxscale?fields[maxscale]=version,commit,started_at,activated_at,uptime`
                 )
                 if (res.data.data.attributes)
-                    commit('setMaxScaleOverviewInfo', res.data.data.attributes)
+                    commit('SET_MAXSCALE_OVERVIEW_INFO', res.data.data.attributes)
             } catch (e) {
                 if (process.env.NODE_ENV !== 'test') {
                     const logger = this.vue.$logger('store-maxscale-fetchMaxScaleOverviewInfo')
@@ -81,7 +79,7 @@ export default {
                         if (hashArr[moduleType] == undefined) hashArr[moduleType] = []
                         hashArr[moduleType].push(module)
                     }
-                    commit('setAllModulesMap', hashArr)
+                    commit('SET_ALL_MODULES_MAP', hashArr)
                 }
             } catch (e) {
                 if (process.env.NODE_ENV !== 'test') {
@@ -90,49 +88,51 @@ export default {
                 }
             }
         },
-        // ---------------------------- last two second threads--------------------------
-        async fetchThreads({ commit }) {
+
+        async fetchThreadStats({ commit }) {
             try {
                 let res = await this.vue.$axios.get(`/maxscale/threads?fields[threads]=stats`)
-                if (res.data.data) commit('setThreads', res.data.data)
+                if (res.data.data) commit('SET_THREAD_STATS', res.data.data)
             } catch (e) {
                 if (process.env.NODE_ENV !== 'test') {
-                    const logger = this.vue.$logger('store-maxscale-fetchThreads')
+                    const logger = this.vue.$logger('store-maxscale-fetchThreadStats')
                     logger.error(e)
                 }
             }
         },
 
         genDataSetSchema({ commit, state }) {
-            const { threads } = state
-            if (threads) {
+            const { thread_stats } = state
+            const { dynamicColors, strReplaceAt } = this.vue.$help
+
+            if (thread_stats.length) {
                 let arr = []
                 let lineColors = []
-                //threads.length
-                for (let i = 0; i < threads.length; ++i) {
-                    lineColors.push(this.vue.$help.dynamicColors(i))
-                    let indexOfOpacity = lineColors[i].lastIndexOf(')') - 1
-                    let obj = {
-                        label: `THREAD ID - ${threads[i].id}`,
-                        id: `THREAD ID - ${threads[i].id}`,
+                thread_stats.forEach((thread, i) => {
+                    lineColors.push(dynamicColors(i))
+                    const indexOfOpacity = lineColors[i].lastIndexOf(')') - 1
+                    const {
+                        attributes: { stats: { load: { last_second = null } = {} } = {} } = {},
+                    } = thread
+
+                    const obj = {
+                        label: `THREAD ID - ${thread.id}`,
+                        id: `THREAD ID - ${thread.id}`,
                         type: 'line',
                         // background of the line
-                        backgroundColor: this.vue.$help.strReplaceAt(
-                            lineColors[i],
-                            indexOfOpacity,
-                            '0.1'
-                        ),
+                        backgroundColor: strReplaceAt(lineColors[i], indexOfOpacity, '0.1'),
                         borderColor: lineColors[i], //theme.palette.primary.main, // line color
                         borderWidth: 1,
                         lineTension: 0,
-                        data: [{ x: Date.now(), y: threads[i].attributes.stats.load.last_second }],
+                        data: [{ x: Date.now(), y: last_second }],
                     }
                     arr.push(obj)
-                }
+                })
+
                 let threadsChartDataSchema = {
                     datasets: arr,
                 }
-                commit('setThreadsChartData', threadsChartDataSchema)
+                commit('SET_THREADS_CHART_DATA', threadsChartDataSchema)
             }
         },
         //-----------------------------------------------Maxscale parameter update---------------------------------
@@ -171,12 +171,5 @@ export default {
                 }
             }
         },
-    },
-    getters: {
-        maxScaleParameters: state => state.maxScaleParameters,
-        maxScaleOverviewInfo: state => state.maxScaleOverviewInfo,
-        allModulesMap: state => state.allModulesMap,
-        threadsChartData: state => state.threadsChartData,
-        threads: state => state.threads,
     },
 }
