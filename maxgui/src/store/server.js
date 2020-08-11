@@ -91,7 +91,7 @@ export default {
                 // response ok
                 if (res.status === 204) {
                     commit(
-                        'showMessage',
+                        'SET_SNACK_BAR_MESSAGE',
                         {
                             text: message,
                             type: 'success',
@@ -127,7 +127,7 @@ export default {
                 // response ok
                 if (res.status === 204) {
                     commit(
-                        'showMessage',
+                        'SET_SNACK_BAR_MESSAGE',
                         {
                             text: [`Parameters of ${payload.id} is updated`],
                             type: 'success',
@@ -173,7 +173,7 @@ export default {
                 // response ok
                 if (res.status === 204) {
                     commit(
-                        'showMessage',
+                        'SET_SNACK_BAR_MESSAGE',
                         {
                             text: message,
                             type: 'success',
@@ -199,7 +199,7 @@ export default {
                 // response ok
                 if (res.status === 204) {
                     commit(
-                        'showMessage',
+                        'SET_SNACK_BAR_MESSAGE',
                         {
                             text: [`Server ${id} is deleted`],
                             type: 'success',
@@ -242,7 +242,11 @@ export default {
                 }
                 // response ok
                 if (res.status === 204) {
-                    commit('showMessage', { text: message, type: 'success' }, { root: true })
+                    commit(
+                        'SET_SNACK_BAR_MESSAGE',
+                        { text: message, type: 'success' },
+                        { root: true }
+                    )
                     if (this.vue.$help.isFunction(callback)) await callback()
                 }
             } catch (e) {

@@ -17,13 +17,13 @@
                             <v-col class="py-0 my-0" cols="4">
                                 <v-row class="pa-0 ma-0">
                                     <statistics-table
-                                        :loading="overlay === OVERLAY_TRANSPARENT_LOADING"
+                                        :loading="overlay_type === OVERLAY_TRANSPARENT_LOADING"
                                     />
                                     <v-col cols="12" class="pa-0 mt-4">
                                         <relationship-table
                                             relationshipType="services"
                                             :tableRows="serviceTableRow"
-                                            :loading="overlay === OVERLAY_TRANSPARENT_LOADING"
+                                            :loading="overlay_type === OVERLAY_TRANSPARENT_LOADING"
                                             :getRelationshipData="getRelationshipData"
                                             @on-relationship-update="dispatchRelationshipUpdate"
                                         />
@@ -32,7 +32,7 @@
                             </v-col>
                             <v-col class="py-0 ma-0" cols="8">
                                 <sessions-table
-                                    :loading="overlay === OVERLAY_TRANSPARENT_LOADING"
+                                    :loading="overlay_type === OVERLAY_TRANSPARENT_LOADING"
                                 />
                             </v-col>
                         </v-row>
@@ -43,12 +43,12 @@
                             <v-col class="py-0 my-0" cols="6">
                                 <parameters-table
                                     :onEditSucceeded="fetchServer"
-                                    :loading="overlay === OVERLAY_TRANSPARENT_LOADING"
+                                    :loading="overlay_type === OVERLAY_TRANSPARENT_LOADING"
                                 />
                             </v-col>
                             <v-col class="py-0 my-0" cols="6">
                                 <diagnostics-table
-                                    :loading="overlay === OVERLAY_TRANSPARENT_LOADING"
+                                    :loading="overlay_type === OVERLAY_TRANSPARENT_LOADING"
                                     :fetchMonitorDiagnostics="fetchMonitorDiagnostics"
                                 />
                             </v-col>
@@ -74,7 +74,7 @@
  * Public License.
  */
 import { OVERLAY_TRANSPARENT_LOADING } from 'store/overlayTypes'
-import { mapGetters, mapActions, mapMutations } from 'vuex'
+import { mapGetters, mapActions, mapMutations, mapState } from 'vuex'
 import PageHeader from './PageHeader'
 import OverviewHeader from './OverviewHeader'
 import StatisticsTable from './StatisticsTable'
@@ -108,9 +108,11 @@ export default {
         }
     },
     computed: {
+        ...mapState({
+            search_keyword: 'search_keyword',
+            overlay_type: 'overlay_type',
+        }),
         ...mapGetters({
-            overlay: 'overlay',
-            searchKeyWord: 'searchKeyWord',
             currentServer: 'server/currentServer',
             currentMonitorDiagnostics: 'monitor/currentMonitorDiagnostics',
         }),

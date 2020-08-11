@@ -8,7 +8,7 @@
         <template v-slot:content>
             <data-table
                 tableClass="data-table-full--max-width-columns"
-                :search="searchKeyWord"
+                :search="search_keyword"
                 :headers="sessionsTableHeader"
                 :data="sessionsTableRow"
                 :sortDesc="false"
@@ -41,7 +41,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapGetters, mapActions } from 'vuex'
+import { mapGetters, mapActions, mapState } from 'vuex'
 
 export default {
     name: 'session-table',
@@ -62,10 +62,12 @@ export default {
         }
     },
     computed: {
+        ...mapState({
+            search_keyword: 'search_keyword',
+        }),
         ...mapGetters({
             allSessions: 'session/allSessions',
             currentServer: 'server/currentServer',
-            searchKeyWord: 'searchKeyWord',
         }),
         sessionsTableRow: function() {
             if (this.allSessions.length) {

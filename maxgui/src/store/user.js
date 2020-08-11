@@ -54,17 +54,17 @@ export default {
         async logout({ commit, rootState }) {
             cancelAllRequests() // cancel all previous requests before logging out
             commit('clearUser')
-            commit('showOverlay', OVERLAY_LOGOUT, { root: true })
+            commit('SET_OVERLAY_TYPE', OVERLAY_LOGOUT, { root: true })
             const user = JSON.parse(localStorage.getItem('user'))
             if (user) localStorage.removeItem('user')
             this.vue.$help.deleteCookie('token_body')
-            // hide snackbar message if it is on
-            if (rootState.message.status) {
+            // hide snackbar snackbar_message if it is on
+            if (rootState.snackbar_message.status) {
                 commit(
-                    'showMessage',
+                    'SET_SNACK_BAR_MESSAGE',
                     {
-                        text: rootState.message.text,
-                        type: rootState.message.type,
+                        text: rootState.snackbar_message.text,
+                        type: rootState.snackbar_message.type,
                         status: false,
                     },
                     { root: true }
@@ -72,7 +72,7 @@ export default {
             }
 
             await this.vue.$help.delay(1500).then(() => {
-                commit('hideOverlay', null, { root: true })
+                commit('SET_OVERLAY_TYPE', null, { root: true })
                 if (this.router.app.$route.name !== 'login') this.router.push('/login')
             })
         },
@@ -151,7 +151,7 @@ export default {
                 // response ok
                 if (res.status === 204) {
                     commit(
-                        'showMessage',
+                        'SET_SNACK_BAR_MESSAGE',
                         {
                             text: message,
                             type: 'success',
@@ -177,7 +177,7 @@ export default {
                 if (res.status === 204) {
                     await dispatch('fetchAllNetworkUsers')
                     commit(
-                        'showMessage',
+                        'SET_SNACK_BAR_MESSAGE',
                         {
                             text: [`Network user ${id} is deleted`],
                             type: 'success',
@@ -221,7 +221,7 @@ export default {
                 // response ok
                 if (res.status === 204) {
                     commit(
-                        'showMessage',
+                        'SET_SNACK_BAR_MESSAGE',
                         {
                             text: [`UNIX account ${id} is enabled`],
                             type: 'success',
@@ -247,7 +247,7 @@ export default {
                 if (res.status === 204) {
                     await dispatch('fetchAllUNIXAccounts')
                     commit(
-                        'showMessage',
+                        'SET_SNACK_BAR_MESSAGE',
                         {
                             text: [`UNIX account ${id} is disabled`],
                             type: 'success',

@@ -92,7 +92,7 @@ export default {
                 // response ok
                 if (res.status === 204) {
                     commit(
-                        'showMessage',
+                        'SET_SNACK_BAR_MESSAGE',
                         {
                             text: message,
                             type: 'success',
@@ -129,7 +129,7 @@ export default {
                 // response ok
                 if (res.status === 204) {
                     commit(
-                        'showMessage',
+                        'SET_SNACK_BAR_MESSAGE',
                         {
                             text: [`Monitor ${payload.id} is updated`],
                             type: 'success',
@@ -173,7 +173,7 @@ export default {
                 // response ok
                 if (res.status === 204) {
                     commit(
-                        'showMessage',
+                        'SET_SNACK_BAR_MESSAGE',
                         {
                             text: message,
                             type: 'success',
@@ -210,7 +210,7 @@ export default {
                 // response ok
                 if (res.status === 204) {
                     commit(
-                        'showMessage',
+                        'SET_SNACK_BAR_MESSAGE',
                         {
                             text: message,
                             type: 'success',

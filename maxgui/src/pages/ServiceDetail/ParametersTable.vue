@@ -1,7 +1,7 @@
 <template>
     <details-parameters-collapse
         v-if="currentService.attributes.parameters"
-        :searchKeyWord="searchKeyWord"
+        :searchKeyword="search_keyword"
         :resourceId="currentService.id"
         :parameters="currentService.attributes.parameters"
         :moduleParameters="processedModuleParameters"
@@ -24,7 +24,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapGetters, mapActions } from 'vuex'
+import { mapGetters, mapActions, mapState } from 'vuex'
 export default {
     name: 'parameters-table',
 
@@ -41,9 +41,11 @@ export default {
     },
 
     computed: {
+        ...mapState({
+            search_keyword: 'search_keyword',
+            module_parameters: 'module_parameters',
+        }),
         ...mapGetters({
-            searchKeyWord: 'searchKeyWord',
-            moduleParameters: 'moduleParameters',
             currentService: 'service/currentService',
         }),
     },
@@ -61,8 +63,8 @@ export default {
             updateServiceParameters: 'service/updateServiceParameters',
         }),
         async processModuleParameters() {
-            if (this.moduleParameters.length) {
-                this.processedModuleParameters = this.moduleParameters
+            if (this.module_parameters.length) {
+                this.processedModuleParameters = this.module_parameters
                 const self = this
                 await this.$help.delay(150).then(() => (self.loadingModuleParams = false))
             }

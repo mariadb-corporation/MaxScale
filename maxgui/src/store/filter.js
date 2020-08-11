@@ -74,7 +74,7 @@ export default {
                 // response ok
                 if (res.status === 204) {
                     commit(
-                        'showMessage',
+                        'SET_SNACK_BAR_MESSAGE',
                         {
                             text: message,
                             type: 'success',
@@ -99,7 +99,7 @@ export default {
                 if (res.status === 204) {
                     await dispatch('fetchAllFilters')
                     commit(
-                        'showMessage',
+                        'SET_SNACK_BAR_MESSAGE',
                         {
                             text: [`Filter ${id} is destroyed`],
                             type: 'success',

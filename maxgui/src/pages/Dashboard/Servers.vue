@@ -3,7 +3,7 @@
         :headers="tableHeaders"
         :data="tableRows"
         :colsHasRowSpan="2"
-        :search="searchKeyWord"
+        :search="search_keyword"
         sortBy="groupId"
     >
         <template v-slot:header-append-groupId>
@@ -121,7 +121,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapGetters } from 'vuex'
+import { mapGetters, mapState } from 'vuex'
 
 export default {
     data() {
@@ -142,8 +142,10 @@ export default {
         }
     },
     computed: {
+        ...mapState({
+            search_keyword: 'search_keyword',
+        }),
         ...mapGetters({
-            searchKeyWord: 'searchKeyWord',
             allMonitorsMap: 'monitor/allMonitorsMap',
             allMonitors: 'monitor/allMonitors',
             allServers: 'server/allServers',

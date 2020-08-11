@@ -32,51 +32,48 @@ const plugins = store => {
 export default new Vuex.Store({
     plugins: [plugins],
     state: {
-        config: APP_CONFIG,
-        message: {
+        app_config: APP_CONFIG,
+        snackbar_message: {
             status: false,
             text: '',
             type: 'info',
         },
-        searchKeyWord: '',
-        overlay: false,
-        isUpdateAvailable: false,
-        prevRoute: null,
-        moduleParameters: [],
+        search_keyword: '',
+        overlay_type: false,
+        update_availability: false,
+        prev_route: null,
+        module_parameters: [],
         form_type: null,
     },
     mutations: {
-        showOverlay(state, type) {
-            state.overlay = type
-        },
-        hideOverlay(state) {
-            state.overlay = false
+        SET_OVERLAY_TYPE(state, type) {
+            state.overlay_type = type
         },
         /**
-         * @param {Object} obj Object message
+         * @param {Object} obj Object snackbar_message
          * @param {Array} obj.text An array of string
          * @param {String} obj.type Type of response
          */
-        showMessage(state, obj) {
+        SET_SNACK_BAR_MESSAGE(state, obj) {
             const { text, type, status = true } = obj
-            state.message.status = status
-            state.message.text = text
-            state.message.type = type
+            state.snackbar_message.status = status
+            state.snackbar_message.text = text
+            state.snackbar_message.type = type
         },
         /**
          * @param {String} keyword global search keyword
          */
-        setSearchKeyWord(state, keyword) {
-            state.searchKeyWord = keyword
+        SET_SEARCH_KEYWORD(state, keyword) {
+            state.search_keyword = keyword
         },
-        setUpdateAvailable(state, val) {
-            state.isUpdateAvailable = val
+        SET_UPDATE_AVAILABILITY(state, val) {
+            state.update_availability = val
         },
-        setPrevRoute(state, prevRoute) {
-            state.prevRoute = prevRoute
+        SET_PREV_ROUTE(state, prev_route) {
+            state.prev_route = prev_route
         },
-        setModuleParameters(state, moduleParameters) {
-            state.moduleParameters = moduleParameters
+        SET_MODULE_PARAMETERS(state, module_parameters) {
+            state.module_parameters = module_parameters
         },
         SET_FORM_TYPE(state, form_type) {
             state.form_type = form_type
@@ -96,7 +93,7 @@ export default new Vuex.Store({
             logger.info('MaxGUI commit id:', currentAppCommitId)
             logger.info('MaxGUI new commit id:', newCommitId)
             if (currentAppCommitId !== newCommitId) {
-                commit('setUpdateAvailable', true)
+                commit('SET_UPDATE_AVAILABILITY', true)
                 logger.info('New version is available')
             }
         },
@@ -141,7 +138,7 @@ export default new Vuex.Store({
                     const { attributes: { parameters = [] } = {} } = res.data.data
                     data = parameters
                 }
-                commit('setModuleParameters', data)
+                commit('SET_MODULE_PARAMETERS', data)
             } catch (e) {
                 if (process.env.NODE_ENV !== 'test') {
                     const logger = this.vue.$logger(`fetchModuleParameters-for-${moduleId}`)
@@ -149,12 +146,6 @@ export default new Vuex.Store({
                 }
             }
         },
-    },
-    getters: {
-        searchKeyWord: state => state.searchKeyWord,
-        overlay: state => state.overlay,
-        moduleParameters: state => state.moduleParameters,
-        form_type: state => state.form_type,
     },
     modules: {
         filter,

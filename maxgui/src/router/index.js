@@ -32,20 +32,20 @@ router.beforeEach(async (to, from, next) => {
     const token_body = getCookie('token_body')
     const user = JSON.parse(localStorage.getItem('user'))
     const isLoggedIn = user ? user.isLoggedIn : null
-    store.commit('setPrevRoute', from)
+    store.commit('SET_PREV_ROUTE', from)
     if (to.matched.some(record => record.meta.requiresAuth)) {
         if (token_body && isLoggedIn) {
             if (from.path === '/login') {
-                store.commit('showOverlay', OVERLAY_LOADING)
-                await delay(1500).then(() => store.commit('hideOverlay'))
+                store.commit('SET_OVERLAY_TYPE', OVERLAY_LOADING)
+                await delay(1500).then(() => store.commit('SET_OVERLAY_TYPE', null))
                 next()
             } else {
                 next()
             }
         } else {
             if (from.path === '/') {
-                store.commit('showOverlay', OVERLAY_LOADING)
-                await delay(600).then(() => store.commit('hideOverlay'))
+                store.commit('SET_OVERLAY_TYPE', OVERLAY_LOADING)
+                await delay(600).then(() => store.commit('SET_OVERLAY_TYPE', null))
             }
             next({
                 path: '/login',

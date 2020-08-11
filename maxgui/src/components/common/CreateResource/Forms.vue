@@ -101,7 +101,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapActions, mapGetters } from 'vuex'
+import { mapActions, mapGetters, mapState } from 'vuex'
 import ServiceFormInput from './ServiceFormInput'
 import MonitorFormInput from './MonitorFormInput'
 import FilterFormInput from './FilterFormInput'
@@ -152,8 +152,10 @@ export default {
     },
 
     computed: {
-        ...mapGetters({
+        ...mapState({
             form_type: 'form_type',
+        }),
+        ...mapGetters({
             allModulesMap: 'maxscale/allModulesMap',
             allServices: 'service/allServices',
             allServicesMap: 'service/allServicesMap',

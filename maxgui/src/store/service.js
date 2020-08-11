@@ -144,7 +144,7 @@ export default {
                 // response ok
                 if (res.status === 204) {
                     commit(
-                        'showMessage',
+                        'SET_SNACK_BAR_MESSAGE',
                         {
                             text: [`Service ${payload.id} is created`],
                             type: 'success',
@@ -180,7 +180,7 @@ export default {
                 // response ok
                 if (res.status === 204) {
                     commit(
-                        'showMessage',
+                        'SET_SNACK_BAR_MESSAGE',
                         {
                             text: [`Parameters of ${payload.id} is updated`],
                             type: 'success',
@@ -225,7 +225,7 @@ export default {
                 // response ok
                 if (res.status === 204) {
                     commit(
-                        'showMessage',
+                        'SET_SNACK_BAR_MESSAGE',
                         {
                             text: message,
                             type: 'success',
@@ -251,7 +251,7 @@ export default {
                 if (res.status === 204) {
                     await dispatch('fetchAllServices')
                     commit(
-                        'showMessage',
+                        'SET_SNACK_BAR_MESSAGE',
                         {
                             text: [`Service ${id} is deleted`],
                             type: 'success',
@@ -285,7 +285,7 @@ export default {
                 // response ok
                 if (res.status === 204) {
                     commit(
-                        'showMessage',
+                        'SET_SNACK_BAR_MESSAGE',
                         {
                             text: message,
                             type: 'success',

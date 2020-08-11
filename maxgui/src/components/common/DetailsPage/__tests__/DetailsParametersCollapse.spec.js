@@ -198,7 +198,7 @@ describe('DetailsParametersCollapse.vue', () => {
             shallow: false,
             component: DetailsParametersCollapse,
             props: {
-                searchKeyWord: '',
+                searchKeyword: '',
                 resourceId: resourceId,
                 parameters: resourceParameters,
                 moduleParameters: moduleParameters,

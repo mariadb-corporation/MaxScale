@@ -119,7 +119,7 @@ export default {
     },
 
     methods: {
-        ...mapMutations(['showOverlay', 'hideOverlay']),
+        ...mapMutations(['SET_OVERLAY_TYPE']),
         cancel() {
             this.$refs.form.reset()
             this.$refs.form.resetValidation()
@@ -142,14 +142,14 @@ export default {
                 })
             } else {
                 if (self.onSave) {
-                    self.showOverlay(OVERLAY_TRANSPARENT_LOADING)
+                    self.SET_OVERLAY_TYPE(OVERLAY_TRANSPARENT_LOADING)
                     await self.onSave()
                     if (self.$refs.form) {
                         self.$refs.form.reset()
                         self.$refs.form.resetValidation()
                     }
                     // wait time out for loading animation
-                    await self.$help.delay(600).then(() => self.hideOverlay())
+                    await self.$help.delay(600).then(() => self.SET_OVERLAY_TYPE(null))
                 }
             }
         },

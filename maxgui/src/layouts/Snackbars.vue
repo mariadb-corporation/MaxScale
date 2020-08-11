@@ -1,7 +1,7 @@
 <template>
     <v-snackbar
-        v-model="message.status"
-        :color="message.type"
+        v-model="snackbar_message.status"
+        :color="snackbar_message.type"
         :bottom="true"
         :right="true"
         :timeout="timeout"
@@ -9,30 +9,40 @@
     >
         <div style="width:100%" class="d-inline-flex align-center justify-center">
             <v-icon
-                v-if="message.type === 'info'"
+                v-if="snackbar_message.type === 'info'"
                 class="mr-4 material-icons"
                 size="22"
                 color="white"
             >
                 $vuetify.icons.statusInfo
             </v-icon>
-            <v-icon v-else-if="message.type === 'error'" class="mr-4" size="22" color="white">
+            <v-icon
+                v-else-if="snackbar_message.type === 'error'"
+                class="mr-4"
+                size="22"
+                color="white"
+            >
                 $vuetify.icons.alertError
             </v-icon>
-            <v-icon v-else-if="message.type === 'warning'" class="mr-4" size="22" color="white">
+            <v-icon
+                v-else-if="snackbar_message.type === 'warning'"
+                class="mr-4"
+                size="22"
+                color="white"
+            >
                 $vuetify.icons.alertWarning
             </v-icon>
-            <v-icon v-else class="mr-4" size="22" :color="message.type">
+            <v-icon v-else class="mr-4" size="22" :color="snackbar_message.type">
                 $vuetify.icons.alertSuccess
             </v-icon>
 
             <div class="d-flex flex-column">
-                <span v-for="(item, i) in message.text" :key="i">
+                <span v-for="(item, i) in snackbar_message.text" :key="i">
                     {{ item }}
                 </span>
             </div>
             <v-spacer />
-            <v-btn dark class="ml-4 mr-0" icon @click="message.status = false">
+            <v-btn dark class="ml-4 mr-0" icon @click="snackbar_message.status = false">
                 <v-icon size="24">
                     close
                 </v-icon>
@@ -62,8 +72,8 @@ export default {
         }
     },
     computed: {
-        message() {
-            return this.$store.state.message
+        snackbar_message: function() {
+            return this.$store.state.snackbar_message
         },
     },
 }

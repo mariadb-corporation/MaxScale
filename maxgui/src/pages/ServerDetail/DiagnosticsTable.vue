@@ -6,7 +6,7 @@
     >
         <template v-slot:content>
             <data-table
-                :search="searchKeyWord"
+                :search="search_keyword"
                 :headers="variableValueTableHeaders"
                 :data="monitorDiagnosticsTableRow"
                 :loading="loading"
@@ -31,7 +31,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapGetters } from 'vuex'
+import { mapGetters, mapState } from 'vuex'
 
 export default {
     name: 'diagnostics-table',
@@ -50,8 +50,10 @@ export default {
         }
     },
     computed: {
+        ...mapState({
+            search_keyword: 'search_keyword',
+        }),
         ...mapGetters({
-            searchKeyWord: 'searchKeyWord',
             currentMonitorDiagnostics: 'monitor/currentMonitorDiagnostics',
         }),
 

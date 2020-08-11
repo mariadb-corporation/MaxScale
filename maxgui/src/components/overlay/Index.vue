@@ -1,6 +1,6 @@
 <template>
     <v-fade-transition>
-        <component :is="currentOverLay" :key="overlay" />
+        <component :is="currentOverLay" :key="overlay_type" />
     </v-fade-transition>
 </template>
 
@@ -27,14 +27,16 @@ import ErrorOverlay from './ErrorOverlay'
 import LoadingTransparentOverlay from './LoadingTransparentOverlay'
 import LoadingOverlay from './LoadingOverlay'
 import LogoutOverlay from './LogoutOverlay'
-import { mapGetters } from 'vuex'
+import { mapState } from 'vuex'
 
 export default {
     name: 'overlay',
     computed: {
-        ...mapGetters(['overlay']),
+        ...mapState({
+            overlay_type: 'overlay_type',
+        }),
         currentOverLay: function() {
-            switch (this.overlay) {
+            switch (this.overlay_type) {
                 case OVERLAY_TRANSPARENT_LOADING:
                     return LoadingTransparentOverlay
                 case OVERLAY_LOADING:
@@ -49,7 +51,7 @@ export default {
         },
     },
     watch: {
-        overlay: function(newVal) {
+        overlay_type: function(newVal) {
             let html = document.getElementsByTagName('html')[0]
 
             if (newVal) {

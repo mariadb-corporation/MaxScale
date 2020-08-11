@@ -29,7 +29,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapActions, mapGetters, mapMutations } from 'vuex'
+import { mapActions, mapMutations, mapState } from 'vuex'
 import Forms from './Forms'
 export default {
     name: 'create-resource',
@@ -43,7 +43,7 @@ export default {
         }
     },
     computed: {
-        ...mapGetters({
+        ...mapState({
             form_type: 'form_type',
         }),
     },

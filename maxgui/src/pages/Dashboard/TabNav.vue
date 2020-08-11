@@ -41,7 +41,6 @@ export default {
     },
     computed: {
         ...mapGetters({
-            searchKeyWord: 'searchKeyWord',
             allServers: 'server/allServers',
             allSessions: 'session/allSessions',
             allServices: 'service/allServices',

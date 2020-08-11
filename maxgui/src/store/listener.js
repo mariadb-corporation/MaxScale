@@ -73,7 +73,7 @@ export default {
                 // response ok
                 if (res.status === 204) {
                     commit(
-                        'showMessage',
+                        'SET_SNACK_BAR_MESSAGE',
                         {
                             text: message,
                             type: 'success',
@@ -98,7 +98,7 @@ export default {
                 if (res.status === 204) {
                     await dispatch('fetchAllListeners')
                     commit(
-                        'showMessage',
+                        'SET_SNACK_BAR_MESSAGE',
                         {
                             text: [`Listeners ${id} is destroyed`],
                             type: 'success',

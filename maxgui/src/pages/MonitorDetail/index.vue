@@ -7,14 +7,16 @@
                 <!-- PARAMETERS TABLE -->
                 <v-col cols="6">
                     <details-parameters-collapse
-                        :searchKeyWord="searchKeyWord"
+                        :searchKeyword="search_keyword"
                         :resourceId="currentMonitor.id"
                         :parameters="currentMonitor.attributes.parameters"
                         :moduleParameters="processedModuleParameters"
                         :updateResourceParameters="updateMonitorParameters"
                         :onEditSucceeded="fetchMonitor"
                         :loading="
-                            loadingModuleParams ? true : overlay === OVERLAY_TRANSPARENT_LOADING
+                            loadingModuleParams
+                                ? true
+                                : overlay_type === OVERLAY_TRANSPARENT_LOADING
                         "
                     />
                 </v-col>
@@ -22,7 +24,7 @@
                     <relationship-table
                         relationshipType="servers"
                         :tableRows="serverStateTableRow"
-                        :loading="overlay === OVERLAY_TRANSPARENT_LOADING"
+                        :loading="overlay_type === OVERLAY_TRANSPARENT_LOADING"
                         :getRelationshipData="getRelationshipData"
                         @on-relationship-update="dispatchRelationshipUpdate"
                     />
@@ -46,7 +48,7 @@
  * Public License.
  */
 import { OVERLAY_TRANSPARENT_LOADING } from 'store/overlayTypes'
-import { mapGetters, mapActions } from 'vuex'
+import { mapGetters, mapActions, mapState } from 'vuex'
 import PageHeader from './PageHeader'
 import OverviewHeader from './OverviewHeader'
 
@@ -64,10 +66,12 @@ export default {
         }
     },
     computed: {
+        ...mapState({
+            overlay_type: 'overlay_type',
+            search_keyword: 'search_keyword',
+            module_parameters: 'module_parameters',
+        }),
         ...mapGetters({
-            overlay: 'overlay',
-            searchKeyWord: 'searchKeyWord',
-            moduleParameters: 'moduleParameters',
             currentMonitor: 'monitor/currentMonitor',
         }),
     },
@@ -91,8 +95,8 @@ export default {
         }),
 
         async processModuleParameters() {
-            if (this.moduleParameters.length) {
-                this.processedModuleParameters = this.moduleParameters
+            if (this.module_parameters.length) {
+                this.processedModuleParameters = this.module_parameters
                 const self = this
                 await this.$help.delay(150).then(() => (self.loadingModuleParams = false))
             }

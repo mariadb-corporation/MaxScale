@@ -6,12 +6,14 @@
                 <!-- PARAMETERS TABLE -->
                 <v-col cols="6">
                     <details-parameters-collapse
-                        :searchKeyWord="searchKeyWord"
+                        :searchKeyword="search_keyword"
                         :resourceId="currentListener.id"
                         :parameters="currentListener.attributes.parameters"
                         :moduleParameters="processedModuleParameters"
                         :loading="
-                            loadingModuleParams ? true : overlay === OVERLAY_TRANSPARENT_LOADING
+                            loadingModuleParams
+                                ? true
+                                : overlay_type === OVERLAY_TRANSPARENT_LOADING
                         "
                         :editable="false"
                     />
@@ -19,7 +21,7 @@
                 <v-col cols="6">
                     <relationship-table
                         relationshipType="services"
-                        :loading="overlay === OVERLAY_TRANSPARENT_LOADING"
+                        :loading="overlay_type === OVERLAY_TRANSPARENT_LOADING"
                         :tableRows="serviceTableRow"
                         readOnly
                         :addable="false"
@@ -44,7 +46,7 @@
  * Public License.
  */
 import { OVERLAY_TRANSPARENT_LOADING } from 'store/overlayTypes'
-import { mapGetters, mapActions } from 'vuex'
+import { mapGetters, mapActions, mapState } from 'vuex'
 import PageHeader from './PageHeader'
 
 export default {
@@ -60,10 +62,12 @@ export default {
         }
     },
     computed: {
+        ...mapState({
+            overlay_type: 'overlay_type',
+            search_keyword: 'search_keyword',
+            module_parameters: 'module_parameters',
+        }),
         ...mapGetters({
-            overlay: 'overlay',
-            searchKeyWord: 'searchKeyWord',
-            moduleParameters: 'moduleParameters',
             currentListener: 'listener/currentListener',
         }),
     },
@@ -93,8 +97,8 @@ export default {
         }),
 
         async processModuleParameters() {
-            if (this.moduleParameters.length) {
-                this.processedModuleParameters = this.moduleParameters
+            if (this.module_parameters.length) {
+                this.processedModuleParameters = this.module_parameters
                 const self = this
                 await this.$help.delay(150).then(() => (self.loadingModuleParams = false))
             }
