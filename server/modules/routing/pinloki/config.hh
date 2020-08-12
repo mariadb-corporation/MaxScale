@@ -59,7 +59,7 @@ public:
     bool select_master() const;
 
     // File purging
-    int32_t             num_files_to_keep() const;
+    int32_t             expire_log_minimum_files() const;
     wall_time::Duration expire_log_duration() const;
     wall_time::Duration purge_startup_delay() const;
     wall_time::Duration purge_poll_timeout() const;
@@ -132,7 +132,7 @@ private:
     std::chrono::seconds m_net_timeout;
     bool                 m_select_master;
 
-    int64_t             m_num_files_to_keep;
+    int64_t             m_expire_log_minimum_files;
     wall_time::Duration m_expire_log_duration;
     wall_time::Duration m_purge_startup_delay;
     wall_time::Duration m_purge_poll_timeout;
