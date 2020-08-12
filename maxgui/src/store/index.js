@@ -80,6 +80,11 @@ export default new Vuex.Store({
         },
     },
     actions: {
+        /**
+         * User will be logged out if maxscale is restarted or maxgui is updated
+         * This action checks if an update is available.
+         * It should be dispatched on public route when routing occurs
+         */
         async checkingForUpdate({ commit }) {
             refreshAxiosToken()
             const logger = this.vue.$logger('index-store')

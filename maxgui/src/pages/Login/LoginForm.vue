@@ -178,6 +178,7 @@ export default {
                             : error.response.statusText
                 } else {
                     this.logger.error(error)
+                    this.errorMessage = error.toString()
                 }
             }
             this.isLoading = false
