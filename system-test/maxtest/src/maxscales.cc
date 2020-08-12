@@ -366,6 +366,14 @@ ServersInfo MaxScale::get_servers()
     const string field_mgroup = "master_group";
     const string field_rlag = "replication_lag";
     const string field_serverid = "server_id";
+    const string field_slave_conns = "slave_connections";
+
+    // Slave conn fields
+    const string field_scon_name = "connection_name";
+    const string field_scon_gtid = "gtid_io_pos";
+    const string field_scon_id = "master_server_id";
+    const string field_scon_io = "slave_io_running";
+    const string field_scon_sql = "slave_sql_running";
 
     auto try_get_int = [](const Json& json, const string& key, int64_t failval) {
             int64_t rval = failval;
@@ -393,6 +401,26 @@ ServersInfo MaxScale::get_servers()
                 info.rlag = try_get_int(attr, field_rlag, ServerInfo::RLAG_NONE);
                 info.server_id = try_get_int(attr, field_serverid, ServerInfo::SRV_ID_NONE);
                 info.status_from_string(state);
+
+                if (attr.contains(field_slave_conns))
+                {
+                    auto conns = attr.get_array_elems(field_slave_conns);
+                    info.slave_connections.reserve(conns.size());
+                    for (auto& conn : conns)
+                    {
+                        using IO_State = ServerInfo::SlaveConnection::IO_State;
+                        ServerInfo::SlaveConnection conn_info;
+                        conn_info.name = conn.get_string(field_scon_name);
+                        conn_info.gtid = conn.get_string(field_scon_gtid);
+                        conn_info.master_id = conn.get_int(field_scon_id);
+                        string io_running = conn.get_string(field_scon_io);
+                        conn_info.io_running = (io_running == "Yes") ? IO_State::YES :
+                            ((io_running == "Connecting") ? IO_State::CONNECTING : IO_State::NO);
+                        string sql_running = conn.get_string(field_scon_sql);
+                        conn_info.sql_running = (sql_running == "Yes");
+                        info.slave_connections.push_back(std::move(conn_info));
+                    }
+                }
                 rval.add(info);
             }
         }
@@ -413,6 +441,11 @@ void ServersInfo::add(const ServerInfo& info)
     m_servers.push_back(info);
 }
 
+void ServersInfo::add(ServerInfo&& info)
+{
+    m_servers.push_back(std::move(info));
+}
+
 const ServerInfo& ServersInfo::get(size_t i) const
 {
     return m_servers[i];
@@ -423,7 +456,7 @@ size_t ServersInfo::size() const
     return m_servers.size();
 }
 
-void ServersInfo::check_servers_status(std::vector<ServerInfo::bitfield> expected_status)
+void ServersInfo::check_servers_status(const std::vector<ServerInfo::bitfield>& expected_status)
 {
     // Checking only some of the servers is ok.
     auto n_expected = expected_status.size();
@@ -496,10 +529,10 @@ ServersInfo& ServersInfo::operator=(ServersInfo&& rhs) noexcept
     return *this;
 }
 
-void MaxScale::check_servers_status(std::vector<ServerInfo::bitfield> expected_status)
+void MaxScale::check_servers_status(const std::vector<ServerInfo::bitfield>& expected_status)
 {
     auto data = get_servers();
-    data.check_servers_status(std::move(expected_status));
+    data.check_servers_status(expected_status);
 }
 
 void MaxScale::start()
@@ -529,6 +562,14 @@ std::unique_ptr<mxt::MariaDB> MaxScale::open_rwsplit_connection(const std::strin
 
     conn->open(m_maxscales->ip(m_node_ind), m_maxscales->rwsplit_port[m_node_ind], db);
     return conn;
+}
+
+void MaxScale::alter_monitor(const string& mon_name, const string& setting, const string& value)
+{
+    string cmd = mxb::string_printf("alter monitor %s %s %s", mon_name.c_str(),
+                                    setting.c_str(), value.c_str());
+    auto res = m_maxscales->maxctrl(cmd);
+    m_log.expect(res.rc == 0 && res.output == "OK", "Alter monitor command '%s' failed.", cmd.c_str());
 }
 
 void ServerInfo::status_from_string(const string& source)
