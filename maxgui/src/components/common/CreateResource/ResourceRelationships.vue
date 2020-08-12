@@ -9,6 +9,7 @@
         <template v-slot:content>
             <select-dropdown
                 :entityName="relationshipsType"
+                :defaultItems="defaultItems"
                 :items="items"
                 :multiple="multiple"
                 :required="required"
@@ -45,6 +46,7 @@ export default {
         items: { type: Array, required: true },
         multiple: { type: Boolean, default: true },
         required: { type: Boolean, default: false },
+        defaultItems: { type: [Array, Object], required: true },
     },
 
     data: function() {

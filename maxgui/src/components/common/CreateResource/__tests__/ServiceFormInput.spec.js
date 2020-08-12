@@ -80,9 +80,10 @@ describe('ServiceFormInput.vue', () => {
             .findAllComponents({ name: 'resource-relationships' })
             .at(0)
         // props
-        const { relationshipsType, items } = resourceRelationships.vm.$props
+        const { relationshipsType, items, defaultItems } = resourceRelationships.vm.$props
         expect(relationshipsType).to.be.equals('servers')
         expect(items).to.be.deep.equals(wrapper.vm.serversList)
+        expect(defaultItems).to.be.deep.equals(wrapper.vm.$props.defaultItems)
         //ref
         expect(wrapper.vm.$refs.serversRelationship).to.be.not.null
     })
@@ -92,9 +93,9 @@ describe('ServiceFormInput.vue', () => {
             .findAllComponents({ name: 'resource-relationships' })
             .at(1)
         // props
-        const { relationshipsType, items } = resourceRelationships.vm.$props
-
+        const { relationshipsType, items, defaultItems } = resourceRelationships.vm.$props
         expect(relationshipsType).to.be.equals('filters')
+        expect(defaultItems).to.be.deep.equals(wrapper.vm.$props.defaultItems)
         expect(items).to.be.deep.equals(wrapper.vm.filtersList)
         //ref
         expect(wrapper.vm.$refs.filtersRelationship).to.be.not.null
@@ -104,7 +105,7 @@ describe('ServiceFormInput.vue', () => {
         expect(wrapper.vm.serversList).to.be.deep.equals(mockupServersList)
     })
 
-    it(`Should compute monitorsList from allMonitors accurately`, async () => {
+    it(`Should compute filtersList from allFilters accurately`, async () => {
         expect(wrapper.vm.filtersList).to.be.deep.equals(mockupFiltersList)
     })
 

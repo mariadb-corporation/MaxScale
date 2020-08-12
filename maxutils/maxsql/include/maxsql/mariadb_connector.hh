@@ -32,7 +32,7 @@ class MariaDB
 {
 public:
     MariaDB() = default;
-    ~MariaDB();
+    virtual ~MariaDB();
     MariaDB(const MariaDB& rhs) = delete;
     MariaDB& operator=(const MariaDB& rhs) = delete;
 
@@ -40,12 +40,13 @@ public:
     {
         std::string user;
         std::string password;
+        std::string local_address;
 
         mxb::SSLConfig ssl;
 
-        std::string local_address;
-        int         timeout {0};
-        bool        multiquery {false};
+        int  timeout {0};
+        bool multiquery {false};
+        bool auto_reconnect {false};
         // TODO: add more
     };
 
@@ -67,6 +68,11 @@ public:
      * @return True on success
      */
     bool open(const std::string& host, unsigned int port, const std::string& db = "");
+
+    /**
+     * Closes any existing connection.
+     */
+    void close();
 
     /**
      * Run a query which returns no data.
@@ -100,6 +106,13 @@ public:
      * @return Error string
      */
     const char* error() const;
+
+    /**
+     * Get latest error number.
+     *
+     * @return Error code
+     */
+    int64_t errornum() const;
 
     /**
      * Get reference to connection settings. The settings are used when opening a connection.

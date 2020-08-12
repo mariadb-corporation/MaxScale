@@ -94,8 +94,9 @@ describe('ServerFormInput.vue', () => {
             .findAllComponents({ name: 'resource-relationships' })
             .at(0)
         // props
-        const { relationshipsType, items } = resourceRelationships.vm.$props
+        const { relationshipsType, items, defaultItems } = resourceRelationships.vm.$props
         expect(relationshipsType).to.be.equals('services')
+        expect(defaultItems).to.be.deep.equals(wrapper.vm.$props.defaultItems)
         expect(items).to.be.deep.equals(wrapper.vm.servicesList)
         //ref
         expect(wrapper.vm.$refs.servicesRelationship).to.be.not.null
@@ -106,10 +107,11 @@ describe('ServerFormInput.vue', () => {
             .findAllComponents({ name: 'resource-relationships' })
             .at(1)
         // props
-        const { relationshipsType, items, multiple } = resourceRelationships.vm.$props
+        const { relationshipsType, items, multiple, defaultItems } = resourceRelationships.vm.$props
 
         expect(relationshipsType).to.be.equals('monitors')
         expect(items).to.be.deep.equals(wrapper.vm.monitorsList)
+        expect(defaultItems).to.be.deep.equals(wrapper.vm.$props.defaultItems)
         expect(multiple).to.be.false
         //ref
         expect(wrapper.vm.$refs.monitorsRelationship).to.be.not.null

@@ -4,8 +4,8 @@
         :isContentVisible="showTable"
         :title="`${$tc(relationshipType, 2)}`"
         :titleInfo="tableRowsData.length"
-        :onAddClick="readOnly ? null : () => onAdd(relationshipType)"
-        :addBtnText="readOnly ? '' : `${$t('addEntity', { entityName: $tc(relationshipType, 2) })}`"
+        :onAddClick="readOnly && !addable ? null : () => onAdd()"
+        :addBtnText="readOnly && !addable ? '' : addBtnText"
     >
         <template v-slot:content>
             <data-table
@@ -35,7 +35,7 @@
                     </icon-sprite-sheet>
                 </template>
                 <template v-if="!readOnly" v-slot:actions="{ data: { item } }">
-                    <v-btn icon @click="onDelete(relationshipType, item)">
+                    <v-btn icon @click="onDelete(item)">
                         <v-icon size="20" color="error">
                             $vuetify.icons.unlink
                         </v-icon>
@@ -59,7 +59,7 @@
                 :title="dialogTitle"
                 mode="add"
                 multiple
-                :entityName="targetSelectItemType"
+                :entityName="relationshipType"
                 :onClose="() => (showSelectDialog = false)"
                 :onCancel="() => (showSelectDialog = false)"
                 :handleSave="confirmAdd"
@@ -84,6 +84,19 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+
+/*
+This component:
+Emits:
+- $emit('on-relationship-update', {
+            type: this.relationshipType,
+            data: this.tableRowsData,
+            isFilterDrag: isFilterDrag,
+        })
+isFilterDrag will be only added to event data object if relationshipType props === 'filters'
+- $emit('open-listener-form-dialog')
+This callback event is emitted only when relationshipType props === 'listeners'
+*/
 import { mapGetters } from 'vuex'
 
 export default {
@@ -93,11 +106,11 @@ export default {
         tableRows: { type: Array, required: true },
         loading: { type: Boolean, required: true },
         readOnly: { type: Boolean, default: false },
+        addable: { type: Boolean, default: true },
         /*
             below props are required only when readOnly is false.
         */
         getRelationshipData: { type: Function },
-        dispatchRelationshipUpdate: { type: Function },
     },
     data() {
         return {
@@ -115,7 +128,6 @@ export default {
             deleteDialogType: 'delete',
             //select dialog
             showSelectDialog: false,
-            targetSelectItemType: this.relationshipType,
             itemsList: [],
         }
     },
@@ -132,19 +144,19 @@ export default {
                 this.tableRows.forEach((row, i) => (row.index = i))
             return this.tableRows
         },
+        addBtnText: function() {
+            let pluralizationNum = 2
+            if (this.relationshipType === 'listeners') pluralizationNum = 1
+            return `${this.$t('addEntity', {
+                entityName: this.$tc(this.relationshipType, pluralizationNum),
+            })}`
+        },
     },
     watch: {
         getRelationshipData: {
             handler(value) {
                 if (!this.readOnly && !this.$help.isFunction(value))
                     this.logger.error("property 'getRelationshipData' is required.")
-            },
-            immediate: true,
-        },
-        dispatchRelationshipUpdate: {
-            handler(value) {
-                if (!this.readOnly && !this.$help.isFunction(value))
-                    this.logger.error("property 'dispatchRelationshipUpdate' is required.")
             },
             immediate: true,
         },
@@ -179,12 +191,20 @@ export default {
 
         //--------------------------------------------------------- FILTERS ------------------------------------------
         async filterDragReorder({ oldIndex, newIndex }) {
-            let self = this
             if (oldIndex !== newIndex) {
                 const moved = this.tableRowsData.splice(oldIndex, 1)[0]
                 this.tableRowsData.splice(newIndex, 0, moved)
                 const isFilterDrag = true
-                await this.dispatchRelationshipUpdate('filters', self.tableRowsData, isFilterDrag)
+
+                const clonedTableRowsData = this.$help.lodash.cloneDeep(this.tableRowsData)
+                clonedTableRowsData.forEach(item => {
+                    delete item.index
+                })
+                await this.$emit('on-relationship-update', {
+                    type: this.relationshipType,
+                    data: clonedTableRowsData,
+                    isFilterDrag: isFilterDrag,
+                })
             }
         },
         //--------------------------------------------------------- COMMON ---------------------------------------------
@@ -199,94 +219,64 @@ export default {
             }
         },
         // -------------- Delete handle
-        onDelete(type, item) {
+        onDelete(item) {
             this.targetItem = item
-            switch (type) {
-                case 'filters':
-                case 'servers':
-                case 'services':
-                    this.deleteDialogType = 'unlink'
-                    this.dialogTitle = `${this.$t('unlink')} ${this.$tc(this.relationshipType, 1)}`
-                    break
-            }
-
+            this.deleteDialogType = 'unlink'
+            this.dialogTitle = `${this.$t('unlink')} ${this.$tc(this.relationshipType, 1)}`
             this.showDeleteDialog = true
         },
 
         async confirmDelete() {
-            switch (this.targetItem.type) {
-                case 'servers':
-                case 'services':
-                case 'filters':
-                    {
-                        const rows = this.$help.lodash.cloneDeep(this.tableRowsData)
-                        let relationship = []
-                        rows.forEach(row => {
-                            if (row.id !== this.targetItem.id) {
-                                delete row.state
-                                delete row.attributes
-                                delete row.index
-                                delete row.links
-                                relationship.push(row)
-                            }
-                        })
-                        await this.dispatchRelationshipUpdate(this.relationshipType, relationship)
-                    }
-                    break
-            }
+            const rows = this.$help.lodash.cloneDeep(this.tableRowsData)
+            let relationship = []
+            rows.forEach(item => {
+                if (item.id !== this.targetItem.id) {
+                    delete item.state
+                    delete item.attributes
+                    delete item.index
+                    delete item.links
+                    relationship.push(item)
+                }
+            })
+            await this.$emit('on-relationship-update', {
+                type: this.relationshipType,
+                data: relationship,
+            })
         },
 
         // -------------- Add handle
         async getAllEntities() {
-            switch (this.targetSelectItemType) {
-                case 'servers':
-                case 'services':
-                case 'filters':
-                    {
-                        const self = this
-                        const all = await this.getRelationshipData()
-                        let availableEntities = this.$help.lodash.xorWith(
-                            all,
-                            self.tableRowsData,
-                            (a, b) => a.id === b.id
-                        )
-                        this.itemsList = availableEntities
-                    }
-                    break
-            }
+            const all = await this.getRelationshipData(this.relationshipType)
+            const availableEntities = this.$help.lodash.xorWith(
+                all,
+                this.tableRowsData,
+                (a, b) => a.id === b.id
+            )
+            this.itemsList = availableEntities
         },
 
-        onAdd(type) {
-            let self = this
-            self.dialogTitle = `${self.$t(`addEntity`, {
-                entityName: self.$tc(type, 2),
+        onAdd() {
+            this.dialogTitle = `${this.$t(`addEntity`, {
+                entityName: this.$tc(this.relationshipType, 2),
             })}`
-            this.targetSelectItemType = this.relationshipType
-            this.showSelectDialog = true
+
+            if (this.relationshipType !== 'listeners') this.showSelectDialog = true
+            else this.$emit('open-listener-form-dialog')
         },
 
         async confirmAdd() {
-            let self = this
-
-            switch (this.targetSelectItemType) {
-                case 'filters':
-                case 'servers':
-                case 'services':
-                    {
-                        const rows = this.$help.lodash.cloneDeep(this.tableRowsData)
-                        const merge = [...rows, ...self.targetItem]
-                        let relationship = []
-                        merge.forEach(row => {
-                            delete row.state
-                            delete row.attributes
-                            delete row.index
-                            delete row.links
-                            relationship.push(row)
-                        })
-                        await self.dispatchRelationshipUpdate(this.relationshipType, relationship)
-                    }
-                    break
-            }
+            const rows = this.$help.lodash.cloneDeep(this.tableRowsData)
+            let relationship = [...rows, ...this.targetItem]
+            relationship.forEach(item => {
+                delete item.state
+                delete item.attributes
+                delete item.index
+                delete item.links
+            })
+            await this.$emit('on-relationship-update', {
+                type: this.relationshipType,
+                data: relationship,
+            })
         },
     },
 }

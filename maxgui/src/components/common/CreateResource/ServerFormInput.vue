@@ -10,6 +10,7 @@
             ref="servicesRelationship"
             relationshipsType="services"
             :items="servicesList"
+            :defaultItems="defaultItems"
         />
         <!-- A server can be only monitored with a monitor, so multiple select options is false-->
         <resource-relationships
@@ -17,6 +18,7 @@
             relationshipsType="monitors"
             :items="monitorsList"
             :multiple="false"
+            :defaultItems="defaultItems"
         />
     </div>
 </template>
@@ -48,6 +50,7 @@ export default {
         resourceModules: { type: Array, required: true },
         allServices: { type: Array, required: true },
         allMonitors: { type: Array, required: true },
+        defaultItems: { type: [Array, Object], required: true },
     },
 
     computed: {

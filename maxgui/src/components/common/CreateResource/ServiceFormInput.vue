@@ -5,11 +5,13 @@
             ref="serversRelationship"
             relationshipsType="servers"
             :items="serversList"
+            :defaultItems="defaultItems"
         />
         <resource-relationships
             ref="filtersRelationship"
             relationshipsType="filters"
             :items="filtersList"
+            :defaultItems="defaultItems"
         />
     </div>
 </template>
@@ -41,6 +43,7 @@ export default {
         resourceModules: { type: Array, required: true },
         allServers: { type: Array, required: true },
         allFilters: { type: Array, required: true },
+        defaultItems: { type: [Array, Object], required: true },
     },
 
     computed: {

@@ -375,3 +375,46 @@ export const mockupAllListeners = [
         type: 'listeners',
     },
 ]
+
+export const serviceStateTableRows = mockupServicesList.map(service => ({
+    ...service,
+    state: 'Started',
+}))
+
+export const allServicesState = [
+    {
+        attributes: {
+            state: 'Started',
+        },
+        id: 'service_0',
+        type: 'services',
+    },
+    {
+        attributes: {
+            state: 'Started',
+        },
+        id: 'service_1',
+        type: 'services',
+    },
+    {
+        attributes: {
+            state: 'Started',
+        },
+        id: 'RWS-Router',
+        type: 'services',
+    },
+    {
+        attributes: {
+            state: 'Started',
+        },
+        id: 'RCR-Router',
+        type: 'services',
+    },
+    {
+        attributes: {
+            state: 'Started',
+        },
+        id: 'RCR-Writer',
+        type: 'services',
+    },
+]

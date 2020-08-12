@@ -408,7 +408,7 @@ TestConnections::TestConnections(int argc, char* argv[])
 
     maxscales = new Maxscales("maxscale", test_dir, verbose, m_network_config);
     maxscales->setup();
-    m_maxscale = std::make_unique<MaxScale>(maxscales, *m_logger, 0);
+    m_maxscale = std::make_unique<mxt::MaxScale>(maxscales, *m_logger, 0);
 
     bool maxscale_ok = maxscales->check_nodes();
     bool repl_ok = no_repl || repl_future.get();
@@ -731,7 +731,7 @@ void TestConnections::print_env()
     printf("Maxscale User name\t%s\n", maxscales->user_name);
     printf("Maxscale Password\t%s\n", maxscales->password);
     printf("Maxscale SSH key\t%s\n", maxscales->sshkey[0]);
-    printf("Access user\t%s\n", maxscales->access_user[0]);
+    printf("Access user\t%s\n", maxscales->access_user(0));
     if (repl)
     {
         repl->print_env();
@@ -862,7 +862,7 @@ void TestConnections::process_template(int m, const string& cnf_template_path, c
         }
     }
 
-    sprintf(str, "sed -i \"s/###access_user###/%s/g\" maxscale.cnf", maxscales->access_user[m]);
+    sprintf(str, "sed -i \"s/###access_user###/%s/g\" maxscale.cnf", maxscales->access_user(m));
     system(str);
 
     sprintf(str, "sed -i \"s|###access_homedir###|%s|g\" maxscale.cnf", maxscales->access_homedir[m]);
@@ -2358,7 +2358,7 @@ void TestConnections::set_mdbci_labels()
     m_mdbci_labels_str = mdbci_labels_str;
 }
 
-MaxScale& TestConnections::maxscale()
+mxt::MaxScale& TestConnections::maxscale()
 {
     return *m_maxscale;
 }

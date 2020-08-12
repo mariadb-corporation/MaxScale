@@ -4,9 +4,15 @@
 #include <thread>
 #include <vector>
 
+#include <maxtest/ccdefs.hh>
 #include <maxtest/mariadb_func.hh>
 #include <maxtest/mariadb_nodes.hh>
 #include <maxtest/nodes.hh>
+
+namespace maxtest
+{
+class MariaDB;
+}
 
 class Maxscales : public Nodes
 {
@@ -23,12 +29,14 @@ public:
 
     bool setup() override;
 
-    int read_env();
+    int  read_env();
     void set_use_ipv6(bool use_ipv6);
 
     const char* ip(int i = 0) const;
 
     const char* hostname(int i = 0) const;
+
+    const char* access_user(int i = 0) const;
 
     /**
      * @brief rwsplit_port RWSplit service port
@@ -367,11 +375,14 @@ public:
     int valgring_log_num;
 
 private:
-    bool m_use_ipv6 {false}; /**< Default to ipv6-addresses */
+    bool m_use_ipv6 {false};    /**< Default to ipv6-addresses */
 };
 
 class TestConnections;
 class TestLogger;
+
+namespace maxtest
+{
 
 /**
  * Contains information about one server as seen by MaxScale.
@@ -390,8 +401,7 @@ struct ServerInfo
 
     static std::string status_to_string(bitfield status);
     std::string        status_to_string() const;
-
-    void status_from_string(const std::string& source);
+    void               status_from_string(const std::string& source);
 
     std::string name {"<unknown>"}; /**< Server name */
     bitfield    status {0};         /**< Status bitfield */
@@ -408,9 +418,8 @@ class ServersInfo
 public:
     ServersInfo(TestLogger& log);
 
-    ServersInfo(const ServersInfo& rhs);
+    ServersInfo(const ServersInfo& rhs) = default;
     ServersInfo& operator=(const ServersInfo& rhs);
-
     ServersInfo(ServersInfo&& rhs) noexcept;
     ServersInfo& operator=(ServersInfo&& rhs) noexcept;
 
@@ -466,10 +475,12 @@ public:
     void start();
     void stop();
 
+    std::unique_ptr<mxt::MariaDB> open_rwsplit_connection(const std::string& db = "test");
+
 private:
     Maxscales* const m_maxscales {nullptr};
     TestLogger&      m_log;
-    int              m_node_ind {-1};        /**< Node index of this MaxScale */
+    int              m_node_ind {-1};       /**< Node index of this MaxScale */
 
     std::string m_rest_user {"admin"};
     std::string m_rest_pw {"mariadb"};
@@ -478,3 +489,4 @@ private:
 
     Nodes::SshResult curl_rest_api(const std::string& path);
 };
+}

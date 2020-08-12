@@ -5,6 +5,7 @@
             ref="serversRelationship"
             relationshipsType="servers"
             :items="serversList"
+            :defaultItems="defaultItems"
         />
     </div>
 </template>
@@ -34,6 +35,7 @@ export default {
     props: {
         resourceModules: { type: Array, required: true },
         allServers: { type: Array, required: true },
+        defaultItems: { type: [Array, Object], required: true },
     },
 
     computed: {

@@ -22,6 +22,7 @@
                         :loading="overlay === OVERLAY_TRANSPARENT_LOADING"
                         :tableRows="serviceTableRow"
                         readOnly
+                        :addable="false"
                     />
                 </v-col>
             </v-row>

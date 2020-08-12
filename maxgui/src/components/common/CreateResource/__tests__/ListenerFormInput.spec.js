@@ -78,9 +78,16 @@ describe('ListenerFormInput.vue', () => {
     it(`Should pass the following props and have ref to resource-relationships`, () => {
         const resourceRelationships = wrapper.findComponent({ name: 'resource-relationships' })
         // props
-        const { relationshipsType, items, multiple, required } = resourceRelationships.vm.$props
+        const {
+            relationshipsType,
+            items,
+            multiple,
+            required,
+            defaultItems,
+        } = resourceRelationships.vm.$props
         expect(relationshipsType).to.be.equals('services')
         expect(items).to.be.deep.equals(wrapper.vm.serviceList)
+        expect(defaultItems).to.be.deep.equals(wrapper.vm.$props.defaultItems)
         expect(multiple).to.be.false
         expect(required).to.be.true
         //ref

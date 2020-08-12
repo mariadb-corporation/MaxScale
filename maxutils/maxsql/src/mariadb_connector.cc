@@ -40,13 +40,12 @@ namespace maxsql
 
 MariaDB::~MariaDB()
 {
-    mysql_close(m_conn);
+    close();
 }
 
 bool MariaDB::open(const std::string& host, unsigned int port, const std::string& db)
 {
-    mysql_close(m_conn);
-    m_conn = nullptr;
+    close();
 
     auto newconn = mysql_init(nullptr);
     if (!newconn)
@@ -80,7 +79,12 @@ bool MariaDB::open(const std::string& host, unsigned int port, const std::string
     }
     if (m_settings.multiquery)
     {
-        mysql_optionsv(newconn, MARIADB_OPT_MULTI_STATEMENTS, 1);
+        mysql_optionsv(newconn, MARIADB_OPT_MULTI_STATEMENTS, (void*)"");
+    }
+    if (m_settings.auto_reconnect)
+    {
+        my_bool reconnect = 1;
+        mysql_optionsv(newconn, MYSQL_OPT_RECONNECT, (void*)&reconnect);
     }
 
     bool connection_success = false;
@@ -122,9 +126,23 @@ bool MariaDB::open(const std::string& host, unsigned int port, const std::string
     return rval;
 }
 
+void MariaDB::close()
+{
+    if (m_conn)
+    {
+        mysql_close(m_conn);
+        m_conn = nullptr;
+    }
+}
+
 const char* MariaDB::error() const
 {
     return m_errormsg.c_str();
+}
+
+int64_t MariaDB::errornum() const
+{
+    return m_errornum;
 }
 
 bool MariaDB::cmd(const std::string& sql)

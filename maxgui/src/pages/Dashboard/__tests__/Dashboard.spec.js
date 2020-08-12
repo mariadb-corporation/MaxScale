@@ -4,13 +4,9 @@ import mount from '@tests/unit/setup'
 import Dashboard from '@/pages/Dashboard'
 import sinon from 'sinon'
 import sinonChai from 'sinon-chai'
-import { enableAutoDestroy } from '@vue/test-utils'
 
 chai.should()
 chai.use(sinonChai)
-
-// calls wrapper.destroy() after each test
-enableAutoDestroy(afterEach)
 
 describe('Dashboard index', () => {
     let wrapper, axiosStub
@@ -36,6 +32,7 @@ describe('Dashboard index', () => {
         await wrapper.setData({
             loop: false,
         })
+        await wrapper.destroy()
     })
 
     it(`Should send requests in parallel to get maxscale overview info,

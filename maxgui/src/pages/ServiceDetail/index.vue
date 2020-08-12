@@ -23,22 +23,18 @@
                                         <relationship-table
                                             relationshipType="servers"
                                             :tableRows="serverStateTableRow"
-                                            :dispatchRelationshipUpdate="dispatchRelationshipUpdate"
                                             :loading="overlay === OVERLAY_TRANSPARENT_LOADING"
-                                            :getRelationshipData="
-                                                () => getRelationshipData('servers')
-                                            "
+                                            :getRelationshipData="getRelationshipData"
+                                            @on-relationship-update="dispatchRelationshipUpdate"
                                         />
                                     </v-col>
                                     <v-col cols="12" class="pa-0 mt-4">
                                         <relationship-table
                                             relationshipType="filters"
                                             :tableRows="filtersTableRow"
-                                            :dispatchRelationshipUpdate="dispatchRelationshipUpdate"
                                             :loading="overlay === OVERLAY_TRANSPARENT_LOADING"
-                                            :getRelationshipData="
-                                                () => getRelationshipData('filters')
-                                            "
+                                            :getRelationshipData="getRelationshipData"
+                                            @on-relationship-update="dispatchRelationshipUpdate"
                                         />
                                     </v-col>
 
@@ -48,6 +44,9 @@
                                             :loading="overlay === OVERLAY_TRANSPARENT_LOADING"
                                             :tableRows="listenerStateTableRow"
                                             readOnly
+                                            @open-listener-form-dialog="
+                                                SET_FORM_TYPE(FORM_LISTENER)
+                                            "
                                         />
                                     </v-col>
                                 </v-row>
@@ -91,7 +90,8 @@
  * Public License.
  */
 import { OVERLAY_TRANSPARENT_LOADING } from 'store/overlayTypes'
-import { mapGetters, mapActions } from 'vuex'
+import { FORM_LISTENER } from 'store/formTypes'
+import { mapGetters, mapActions, mapMutations } from 'vuex'
 import OverviewHeader from './OverviewHeader'
 import PageHeader from './PageHeader'
 import SessionsTable from './SessionsTable'
@@ -110,6 +110,7 @@ export default {
     data() {
         return {
             OVERLAY_TRANSPARENT_LOADING: OVERLAY_TRANSPARENT_LOADING,
+            FORM_LISTENER: FORM_LISTENER,
             currentActiveTab: null,
             tabs: [
                 { name: `${this.$tc('servers', 2)} & ${this.$tc('sessions', 2)}` },
@@ -145,6 +146,9 @@ export default {
             genDataSetSchema: 'service/genDataSetSchema',
             updateServiceRelationship: 'service/updateServiceRelationship',
             fetchAllFilters: 'filter/fetchAllFilters',
+        }),
+        ...mapMutations({
+            SET_FORM_TYPE: 'SET_FORM_TYPE',
         }),
 
         // reuse functions for fetch loop or after finish editing
@@ -190,8 +194,8 @@ export default {
          * This function fetch all resource state if id is not provided
          * otherwise it fetch a resource state.
          * Even filter doesn't have state, the request still success
-         * @param {String} type type of resource. e.g. servers, listeners, filters
-         * @param {String} id name of the resource
+         * @param {String} type type of resource: servers, listeners, filters
+         * @param {String} id name of the resource (optional)
          * @return {Array} Resource state data
          */
         async getRelationshipData(type, id) {
@@ -205,13 +209,12 @@ export default {
         },
 
         // actions to vuex
-        async dispatchRelationshipUpdate(type, data, isFilterDrag) {
-            const self = this
+        async dispatchRelationshipUpdate({ type, data, isFilterDrag }) {
             await this.updateServiceRelationship({
-                id: self.currentService.id,
+                id: this.currentService.id,
                 type: type,
                 [type]: data,
-                callback: self.fetchService,
+                callback: this.fetchService,
             })
             switch (type) {
                 case 'filters':
