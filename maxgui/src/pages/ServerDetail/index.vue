@@ -1,7 +1,7 @@
 <template>
     <page-wrapper>
-        <v-sheet v-if="!$help.lodash.isEmpty(currentServer)" class="px-6">
-            <page-header :onEditSucceeded="fetchServer" />
+        <v-sheet v-if="!$help.lodash.isEmpty(current_server)" class="px-6">
+            <page-header :onEditSucceeded="dispatchFetchServer" />
             <overview-header
                 :getRelationshipData="getRelationshipData"
                 @on-relationship-update="dispatchRelationshipUpdate"
@@ -42,7 +42,7 @@
                         <v-row>
                             <v-col class="py-0 my-0" cols="6">
                                 <parameters-table
-                                    :onEditSucceeded="fetchServer"
+                                    :onEditSucceeded="dispatchFetchServer"
                                     :loading="overlay_type === OVERLAY_TRANSPARENT_LOADING"
                                 />
                             </v-col>
@@ -74,7 +74,7 @@
  * Public License.
  */
 import { OVERLAY_TRANSPARENT_LOADING } from 'store/overlayTypes'
-import { mapGetters, mapActions, mapMutations, mapState } from 'vuex'
+import { mapActions, mapMutations, mapState } from 'vuex'
 import PageHeader from './PageHeader'
 import OverviewHeader from './OverviewHeader'
 import StatisticsTable from './StatisticsTable'
@@ -111,15 +111,13 @@ export default {
         ...mapState({
             search_keyword: 'search_keyword',
             overlay_type: 'overlay_type',
-        }),
-        ...mapGetters({
-            currentServer: 'server/currentServer',
+            current_server: state => state.server.current_server,
         }),
     },
 
     async created() {
         // Initial fetch
-        await this.fetchServer()
+        await this.dispatchFetchServer()
         await this.serviceTableRowProcessing()
     },
     methods: {
@@ -134,7 +132,7 @@ export default {
         }),
 
         async fetchMonitorDiagnostics() {
-            const { relationships: { monitors = {} } = {} } = this.currentServer
+            const { relationships: { monitors = {} } = {} } = this.current_server
             if (monitors.data) {
                 const monitorId = monitors.data[0].id
                 await this.fetchMonitorDiagnosticsById(monitorId)
@@ -143,14 +141,14 @@ export default {
             }
         },
         // reuse functions for fetch loop or after finish editing
-        async fetchServer() {
+        async dispatchFetchServer() {
             await this.fetchServerById(this.$route.params.id)
         },
 
         async serviceTableRowProcessing() {
             const {
                 relationships: { services: { data: servicesData = [] } = {} } = {},
-            } = this.currentServer
+            } = this.current_server
             if (servicesData.length) {
                 let servicesIdArr = servicesData.map(item => `${item.id}`)
                 let arr = []
@@ -188,10 +186,10 @@ export default {
         // actions to vuex
         async dispatchRelationshipUpdate({ type, data }) {
             await this.updateServerRelationship({
-                id: this.currentServer.id,
+                id: this.current_server.id,
                 type: type,
                 [type]: data,
-                callback: this.fetchServer,
+                callback: this.dispatchFetchServer,
             })
             switch (type) {
                 case 'monitors':

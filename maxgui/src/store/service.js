@@ -14,29 +14,25 @@
 export default {
     namespaced: true,
     state: {
-        allServices: [],
-        // listenersByServiceIdMap: new Map(),
-        currentService: {},
-        totalConnectionsChartData: {
+        all_services: [],
+        current_service: {},
+        service_connections_chart_data: {
             datasets: [],
         },
-        connectionInfo: {},
+        service_connection_info: {},
     },
     mutations: {
-        /**
-         * @param {Array} payload payload Array
-         */
-        setServices(state, payload) {
-            state.allServices = payload
+        SET_ALL_SERVICES(state, payload) {
+            state.all_services = payload
         },
-        setCurrentService(state, payload) {
-            state.currentService = payload
+        SET_CURRENT_SERVICE(state, payload) {
+            state.current_service = payload
         },
-        setTotalConnectionsChartData(state, payload) {
-            state.totalConnectionsChartData = payload
+        SET_SERVICE_CONNECTIONS_CHART_DATA(state, payload) {
+            state.service_connections_chart_data = payload
         },
-        setConnectionInfo(state, payload) {
-            state.connectionInfo = payload
+        SET_SERVICE_CONNECTIONS_INFO(state, payload) {
+            state.service_connection_info = payload
         },
     },
     actions: {
@@ -44,7 +40,7 @@ export default {
             try {
                 let res = await this.vue.$axios.get(`/services/${id}`)
                 if (res.data.data) {
-                    commit('setCurrentService', res.data.data)
+                    commit('SET_CURRENT_SERVICE', res.data.data)
                 }
             } catch (e) {
                 if (process.env.NODE_ENV !== 'test') {
@@ -53,41 +49,41 @@ export default {
                 }
             }
         },
+
         genDataSetSchema({ commit, state }) {
             const {
-                currentService: { attributes: { connections = null } = {} },
+                current_service: { attributes: { connections = null } = {} },
             } = state
             if (connections !== null) {
-                let lineColors = this.vue.$help.dynamicColors(0)
-                let indexOfOpacity = lineColors.lastIndexOf(')') - 1
-                let dataset = [
+                const { dynamicColors, strReplaceAt } = this.vue.$help
+                const lineColor = dynamicColors(0)
+                const indexOfOpacity = lineColor.lastIndexOf(')') - 1
+                const backgroundColor = strReplaceAt(lineColor, indexOfOpacity, '0.1')
+
+                const dataset = [
                     {
                         label: `Current connections`,
                         type: 'line',
                         // background of the line
-                        backgroundColor: this.vue.$help.strReplaceAt(
-                            lineColors,
-                            indexOfOpacity,
-                            '0.2'
-                        ),
-                        borderColor: lineColors,
+                        backgroundColor: backgroundColor,
+                        borderColor: lineColor,
                         borderWidth: 1,
                         lineTension: 0,
-
                         data: [{ x: Date.now(), y: connections }],
                     },
                 ]
 
-                let totalConnectionsChartDataSchema = {
+                const chartData = {
                     datasets: dataset,
                 }
-                commit('setTotalConnectionsChartData', totalConnectionsChartDataSchema)
+                commit('SET_SERVICE_CONNECTIONS_CHART_DATA', chartData)
             }
         },
+
         async fetchAllServices({ commit }) {
             try {
                 let res = await this.vue.$axios.get(`/services`)
-                if (res.data.data) commit('setServices', res.data.data)
+                if (res.data.data) commit('SET_ALL_SERVICES', res.data.data)
             } catch (e) {
                 if (process.env.NODE_ENV !== 'test') {
                     const logger = this.vue.$logger('store-services-fetchAllServices')
@@ -95,6 +91,7 @@ export default {
                 }
             }
         },
+
         async fetchServiceConnections({ commit }, id) {
             try {
                 let res = await this.vue.$axios.get(
@@ -102,7 +99,7 @@ export default {
                 )
                 if (res.data.data) {
                     let { attributes: { connections, total_connections } = {} } = res.data.data
-                    commit('setConnectionInfo', {
+                    commit('SET_SERVICE_CONNECTIONS_INFO', {
                         total_connections: total_connections,
                         connections: connections,
                     })
@@ -196,6 +193,7 @@ export default {
                 }
             }
         },
+
         //-----------------------------------------------Service relationship update---------------------------------
         /**
          * @param {Object} payload payload object
@@ -241,9 +239,7 @@ export default {
                 }
             }
         },
-        /**
-         * @param {String} id id of the service
-         */
+
         async destroyService({ dispatch, commit }, id) {
             try {
                 let res = await this.vue.$axios.delete(`/services/${id}?force=yes`)
@@ -266,9 +262,12 @@ export default {
                 }
             }
         },
+
         /**
-         * @param {String} id id of the service
-         * @param {String} mode Mode to start or stop service
+         * @param {Object} param - An object.
+         * @param {String} param.id id of the service
+         * @param {String} param.mode Mode to start or stop service
+         * @param {Function} param.callback callback function after successfully updated
          */
         async stopOrStartService({ commit }, { id, mode, callback }) {
             try {
@@ -303,23 +302,18 @@ export default {
         },
     },
     getters: {
-        allServices: state => state.allServices,
-        currentService: state => state.currentService,
-
-        totalConnectionsChartData: state => state.totalConnectionsChartData,
-        connectionInfo: state => state.connectionInfo,
         // -------------- below getters are available only when fetchAllServices has been dispatched
-        allServicesMap: state => {
+        getAllServicesMap: state => {
             let map = new Map()
-            state.allServices.forEach(ele => {
+            state.all_services.forEach(ele => {
                 map.set(ele.id, ele)
             })
             return map
         },
 
-        allServicesInfo: state => {
+        getAllServicesInfo: state => {
             let idArr = []
-            return state.allServices.reduce((accumulator, _, index, array) => {
+            return state.all_services.reduce((accumulator, _, index, array) => {
                 idArr.push(array[index].id)
                 return (accumulator = { idArr: idArr })
             }, [])

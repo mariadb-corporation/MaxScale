@@ -101,7 +101,7 @@ describe('ServiceFormInput.vue', () => {
         expect(wrapper.vm.$refs.filtersRelationship).to.be.not.null
     })
 
-    it(`Should compute servicesList from allServices accurately`, async () => {
+    it(`Should compute serversList from allServers accurately`, async () => {
         expect(wrapper.vm.serversList).to.be.deep.equals(mockupServersList)
     })
 

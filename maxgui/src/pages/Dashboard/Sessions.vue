@@ -39,7 +39,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapGetters, mapState } from 'vuex'
+import { mapState } from 'vuex'
 
 export default {
     name: 'sessions',
@@ -58,14 +58,12 @@ export default {
     computed: {
         ...mapState({
             search_keyword: 'search_keyword',
-        }),
-        ...mapGetters({
-            allSessions: 'session/allSessions',
+            all_sessions: state => state.session.all_sessions,
         }),
 
         tableRows: function() {
             let rows = []
-            this.allSessions.forEach(session => {
+            this.all_sessions.forEach(session => {
                 const {
                     id,
                     attributes: { idle, connected, user, remote },

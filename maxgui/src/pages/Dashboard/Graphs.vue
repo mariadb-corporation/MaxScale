@@ -8,10 +8,10 @@
                 <template v-slot:card-body>
                     <v-sheet width="100%">
                         <line-chart
-                            v-if="sessionsChartData.datasets.length"
+                            v-if="sessions_chart_data.datasets.length"
                             ref="sessionsChart"
                             :styles="chartStyle"
-                            :chart-data="sessionsChartData"
+                            :chart-data="sessions_chart_data"
                             :options="chartOptionsWithOutCallBack"
                         />
                     </v-sheet>
@@ -23,13 +23,13 @@
                 <template v-slot:title>
                     {{ $tc('connections', 2) }}
                 </template>
-                <template v-if="allServers.length" v-slot:card-body>
+                <template v-if="all_servers.length" v-slot:card-body>
                     <v-sheet width="100%">
                         <line-chart
-                            v-if="serversConnectionsChartData.datasets.length"
+                            v-if="server_connections_chart_data.datasets.length"
                             ref="connectionsChart"
                             :styles="chartStyle"
-                            :chart-data="serversConnectionsChartData"
+                            :chart-data="server_connections_chart_data"
                             :options="chartOptionsWithOutCallBack"
                         />
                     </v-sheet>
@@ -71,7 +71,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapGetters, mapActions, mapState } from 'vuex'
+import { mapActions, mapState } from 'vuex'
 
 export default {
     name: 'graphs',
@@ -108,15 +108,17 @@ export default {
         }
     },
     computed: {
-        ...mapState({
-            thread_stats: state => state.maxscale.thread_stats,
-            threads_chart_data: state => state.maxscale.threads_chart_data,
+        ...mapState('maxscale', {
+            thread_stats: state => state.thread_stats,
+            threads_chart_data: state => state.threads_chart_data,
         }),
-        ...mapGetters({
-            allSessions: 'session/allSessions',
-            sessionsChartData: 'session/sessionsChartData',
-            allServers: 'server/allServers',
-            serversConnectionsChartData: 'server/serversConnectionsChartData',
+        ...mapState('server', {
+            server_connections_chart_data: state => state.server_connections_chart_data,
+            all_servers: state => state.all_servers,
+        }),
+        ...mapState('session', {
+            all_sessions: state => state.all_sessions,
+            sessions_chart_data: state => state.sessions_chart_data,
         }),
     },
 
@@ -132,7 +134,7 @@ export default {
         //----------------------- Graphs update
 
         async updateChart() {
-            let self = this
+            const self = this
             const { sessionsChart, connectionsChart, threadsChart } = this.$refs
             if (sessionsChart && connectionsChart && threadsChart) {
                 //  LOOP polling
@@ -146,8 +148,8 @@ export default {
                 const time = Date.now()
                 //-------------------- update connections chart
 
-                let gap = this.allServers.length - connectionsChart.chartData.datasets.length
-                this.allServers.forEach((server, i) => {
+                let gap = this.all_servers.length - connectionsChart.chartData.datasets.length
+                this.all_servers.forEach((server, i) => {
                     if (gap > 0 && i > connectionsChart.chartData.datasets.length - 1) {
                         // push new datasets
                         let lineColors = this.$help.dynamicColors(i)
@@ -187,7 +189,7 @@ export default {
                 sessionsChart.chartData.datasets.forEach(function(dataset) {
                     dataset.data.push({
                         x: time,
-                        y: self.allSessions.length,
+                        y: self.all_sessions.length,
                     })
                 })
 

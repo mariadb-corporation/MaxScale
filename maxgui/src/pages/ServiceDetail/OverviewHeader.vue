@@ -10,7 +10,7 @@
                         ROUTER
                     </span>
                     <span class="text-no-wrap body-2">
-                        {{ currentService.attributes.router }}
+                        {{ current_service.attributes.router }}
                     </span>
                 </template>
             </outlined-overview-card>
@@ -20,7 +20,7 @@
                         STARTED AT
                     </span>
                     <span class="text-no-wrap body-2">
-                        {{ $help.formatValue(currentService.attributes.started) }}
+                        {{ $help.formatValue(current_service.attributes.started) }}
                     </span>
                 </template>
             </outlined-overview-card>
@@ -30,17 +30,17 @@
                 <template v-slot:title>
                     {{ $tc('currentConnections', 2) }}
                     <span class="text-lowercase font-weight-medium">
-                        ({{ connectionInfo.connections }}/{{
-                            connectionInfo.total_connections
+                        ({{ service_connection_info.connections }}/{{
+                            service_connection_info.total_connections
                         }})</span
                     >
                 </template>
                 <template v-slot:card-body>
                     <v-sheet width="100%">
                         <line-chart
-                            v-if="totalConnectionsChartData.datasets.length"
+                            v-if="service_connections_chart_data.datasets.length"
                             :styles="{ height: '70px' }"
-                            :chart-data="totalConnectionsChartData"
+                            :chart-data="service_connections_chart_data"
                             :options="options"
                         />
                     </v-sheet>
@@ -63,7 +63,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapGetters, mapActions } from 'vuex'
+import { mapActions, mapState } from 'vuex'
 
 export default {
     name: 'overview-header',
@@ -84,37 +84,35 @@ export default {
         }
     },
     computed: {
-        ...mapGetters({
-            currentService: 'service/currentService',
-            connectionInfo: 'service/connectionInfo',
-            totalConnectionsChartData: 'service/totalConnectionsChartData',
+        ...mapState({
+            current_service: state => state.service.current_service,
+            service_connections_chart_data: state => state.service.service_connections_chart_data,
+            service_connection_info: state => state.service.service_connection_info,
         }),
     },
     async created() {
-        await this.fetchAll()
+        await this.dispatchFetchAll()
     },
     methods: {
         ...mapActions({
             fetchServiceConnections: 'service/fetchServiceConnections',
-            fetchSessionsFilterByServiceId: 'session/fetchSessionsFilterByServiceId',
+            fetchSessionsFilterByService: 'session/fetchSessionsFilterByService',
         }),
-        async fetchAll() {
+        async dispatchFetchAll() {
             const serviceId = this.$route.params.id
-            // fetching connections chart info should be at the same time with fetchSessionsFilterByServiceId
+            // fetching connections chart info should be at the same time with fetchSessionsFilterByService
             await Promise.all([
                 this.fetchServiceConnections(serviceId),
-                this.fetchSessionsFilterByServiceId(serviceId),
+                this.fetchSessionsFilterByService(serviceId),
             ])
         },
         async updateChart(chart) {
+            await this.dispatchFetchAll()
             const self = this
-
-            await this.fetchAll()
-
             chart.data.datasets.forEach(function(dataset) {
                 dataset.data.push({
                     x: Date.now(),
-                    y: self.connectionInfo.connections,
+                    y: self.service_connection_info.connections,
                 })
             })
             chart.update({

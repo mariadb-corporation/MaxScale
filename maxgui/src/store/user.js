@@ -16,11 +16,11 @@ import { cancelAllRequests } from 'plugins/axios'
 export default {
     namespaced: true,
     state: {
-        user: JSON.parse(localStorage.getItem('user')),
-        currentNetworkUser: null,
-        allNetworkUsers: [],
-        allUNIXAccounts: [],
-        allUsers: [],
+        logged_in_user: JSON.parse(localStorage.getItem('user')),
+        current_network_user: null,
+        all_network_users: [],
+        all_unix_accounts: [],
+        all_users: [],
     },
     mutations: {
         /**
@@ -28,32 +28,32 @@ export default {
          * @param {Boolean} userObj.rememberMe rememberMe
          * @param {String} userObj.name username
          */
-        setUser(state, userObj) {
-            state.user = userObj
+        SET_LOGGED_IN_USER(state, userObj) {
+            state.logged_in_user = userObj
         },
         // ------------------- Network users
-        setCurrentNetworkUser(state, obj) {
-            state.currentNetworkUser = obj
+        SET_CURRENT_NETWORK_USER(state, obj) {
+            state.current_network_user = obj
         },
-        setAllNetworkUsers(state, arr) {
-            state.allNetworkUsers = arr
+        SET_ALL_NETWORK_USERS(state, arr) {
+            state.all_network_users = arr
         },
         // ------------------- Unix accounts
-        setAllUNIXAccounts(state, arr) {
-            state.allUNIXAccounts = arr
+        SET_ALL_UNIX_ACCOUNTS(state, arr) {
+            state.all_unix_accounts = arr
         },
         // ------------------- All users
-        setAllUsers(state, arr) {
-            state.allUsers = arr
+        SET_ALL_USERS(state, arr) {
+            state.all_users = arr
         },
-        clearUser(state) {
-            state.user = null
+        CLEAR_USER(state) {
+            state.logged_in_user = null
         },
     },
     actions: {
         async logout({ commit, rootState }) {
             cancelAllRequests() // cancel all previous requests before logging out
-            commit('clearUser')
+            commit('CLEAR_USER')
             commit('SET_OVERLAY_TYPE', OVERLAY_LOGOUT, { root: true })
             const user = JSON.parse(localStorage.getItem('user'))
             if (user) localStorage.removeItem('user')
@@ -79,11 +79,11 @@ export default {
         // --------------------------------------------------- Network users -------------------------------------
         async fetchCurrentNetworkUser({ dispatch, commit, state }) {
             try {
-                let res = await this.vue.$axios.get(`/users/inet/${state.user.username}`)
+                let res = await this.vue.$axios.get(`/users/inet/${state.logged_in_user.username}`)
                 // response ok
                 if (res.status === 200 && res.data.data) {
                     let data = res.data.data
-                    commit('setCurrentNetworkUser', data)
+                    commit('SET_CURRENT_NETWORK_USER', data)
                     if (data.attributes.account === 'admin') {
                         await dispatch('fetchAllNetworkUsers')
                         await dispatch('fetchAllUNIXAccounts')
@@ -102,7 +102,7 @@ export default {
                 let res = await this.vue.$axios.get(`/users/inet`)
                 // response ok
                 if (res.status === 200 && res.data.data) {
-                    commit('setAllNetworkUsers', res.data.data)
+                    commit('SET_ALL_NETWORK_USERS', res.data.data)
                 }
             } catch (e) {
                 if (process.env.NODE_ENV !== 'test') {
@@ -198,7 +198,7 @@ export default {
                 let res = await this.vue.$axios.get(`/users/unix`)
                 // response ok
                 if (res.status === 200 && res.data.data) {
-                    commit('setAllUNIXAccounts', res.data.data)
+                    commit('SET_ALL_UNIX_ACCOUNTS', res.data.data)
                 }
             } catch (e) {
                 if (process.env.NODE_ENV !== 'test') {
@@ -268,7 +268,7 @@ export default {
                 let res = await this.vue.$axios.get(`/users`)
                 // response ok
                 if (res.status === 200 && res.data.data) {
-                    commit('setAllUsers', res.data.data)
+                    commit('SET_ALL_USERS', res.data.data)
                 }
             } catch (e) {
                 if (process.env.NODE_ENV !== 'test') {
@@ -277,12 +277,5 @@ export default {
                 }
             }
         },
-    },
-    getters: {
-        user: state => state.user,
-        currentNetworkUser: state => state.currentNetworkUser,
-        allUsers: state => state.allUsers,
-
-        allUNIXAccounts: state => state.allUNIXAccounts,
     },
 }

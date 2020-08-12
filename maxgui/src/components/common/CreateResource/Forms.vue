@@ -49,7 +49,7 @@
                 <service-form-input
                     ref="serviceForm"
                     :resourceModules="resourceModules"
-                    :allServers="allServers"
+                    :allServers="all_servers"
                     :allFilters="all_filters"
                     :defaultItems="defaultRelationshipItems"
                 />
@@ -58,7 +58,7 @@
                 <monitor-form-input
                     ref="monitorForm"
                     :resourceModules="resourceModules"
-                    :allServers="allServers"
+                    :allServers="all_servers"
                     :defaultItems="defaultRelationshipItems"
                 />
             </div>
@@ -70,14 +70,14 @@
                     ref="listenerForm"
                     :parentForm="$refs.baseDialog.$refs.form || {}"
                     :resourceModules="resourceModules"
-                    :allServices="allServices"
+                    :allServices="all_services"
                     :defaultItems="defaultRelationshipItems"
                 />
             </div>
             <div v-else-if="selectedForm === 'Server'" class="mb-0">
                 <server-form-input
                     ref="serverForm"
-                    :allServices="allServices"
+                    :allServices="all_services"
                     :allMonitors="all_monitors"
                     :resourceModules="resourceModules"
                     :parentForm="$refs.baseDialog.$refs.form || {}"
@@ -157,15 +157,15 @@ export default {
             all_filters: state => state.filter.all_filters,
             all_modules_map: state => state.maxscale.all_modules_map,
             all_monitors: state => state.monitor.all_monitors,
+            all_servers: state => state.server.all_servers,
+            all_services: state => state.service.all_services,
         }),
         ...mapGetters({
-            allServices: 'service/allServices',
-            allServicesMap: 'service/allServicesMap',
-            allServicesInfo: 'service/allServicesInfo',
+            getAllServicesMap: 'service/getAllServicesMap',
+            getAllServicesInfo: 'service/getAllServicesInfo',
 
-            allServers: 'server/allServers',
-            allServersInfo: 'server/allServersInfo',
-            allServersMap: 'server/allServersMap',
+            getAllServersInfo: 'server/getAllServersInfo',
+            getAllServersMap: 'server/getAllServersMap',
 
             getAllMonitorsInfo: 'monitor/getAllMonitorsInfo',
             getAllMonitorsMap: 'monitor/getAllMonitorsMap',
@@ -225,20 +225,20 @@ export default {
                     {
                         this.resourceModules = this.getModuleType('Router')
                         await this.fetchAllServices()
-                        this.validateInfo = this.allServicesInfo
+                        this.validateInfo = this.getAllServicesInfo
                         await this.fetchAllServers()
                         await this.fetchAllFilters()
-                        this.setDefaultRelationship(this.allServersMap, 'server', isMultiple)
+                        this.setDefaultRelationship(this.getAllServersMap, 'server', isMultiple)
                         this.setDefaultRelationship(this.getAllFiltersMap, 'filter', isMultiple)
                     }
                     break
                 case 'Server':
                     this.resourceModules = this.getModuleType('servers')
                     await this.fetchAllServers()
-                    this.validateInfo = this.allServersInfo
+                    this.validateInfo = this.getAllServersInfo
                     await this.fetchAllServices()
                     await this.fetchAllMonitors()
-                    this.setDefaultRelationship(this.allServicesMap, 'service', isMultiple)
+                    this.setDefaultRelationship(this.getAllServicesMap, 'service', isMultiple)
                     this.setDefaultRelationship(this.getAllMonitorsMap, 'monitor')
                     break
                 case 'Monitor':
@@ -247,7 +247,7 @@ export default {
                         await this.fetchAllMonitors()
                         this.validateInfo = this.getAllMonitorsInfo
                         await this.fetchAllServers()
-                        this.setDefaultRelationship(this.allServersMap, 'server', isMultiple)
+                        this.setDefaultRelationship(this.getAllServersMap, 'server', isMultiple)
                     }
                     break
                 case 'Filter':
@@ -287,7 +287,7 @@ export default {
                         await this.fetchAllListeners()
                         this.validateInfo = this.getAllListenersInfo
                         await this.fetchAllServices()
-                        this.setDefaultRelationship(this.allServicesMap, 'service')
+                        this.setDefaultRelationship(this.getAllServicesMap, 'service')
                     }
                     break
             }

@@ -93,7 +93,7 @@ describe('ModuleParameters.vue', () => {
 
     it(`Should return parameters from selectedModule`, async () => {
         await mockupSelection(wrapper, mockupModules[1])
-        const moduleParameters = wrapper.vm.getModuleParameters
+        const moduleParameters = wrapper.vm.moduleParameters
         expect(moduleParameters).to.be.deep.equals(mockupModules[1].attributes.parameters)
     })
 
@@ -109,7 +109,7 @@ describe('ModuleParameters.vue', () => {
             isListener,
         } = parametersCollapse.vm.$props
         // props
-        expect(parameters).to.be.deep.equals(wrapper.vm.getModuleParameters)
+        expect(parameters).to.be.deep.equals(wrapper.vm.moduleParameters)
         expect(usePortOrSocket).to.be.deep.equals(wrapper.vm.$props.usePortOrSocket)
         expect(isTree).to.be.deep.equals(wrapper.vm.$props.isTree)
         expect(parentForm).to.be.deep.equals(wrapper.vm.$props.parentForm)

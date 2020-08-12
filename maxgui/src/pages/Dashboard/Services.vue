@@ -87,7 +87,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapGetters, mapState } from 'vuex'
+import { mapState } from 'vuex'
 
 export default {
     name: 'services',
@@ -109,9 +109,7 @@ export default {
     computed: {
         ...mapState({
             search_keyword: 'search_keyword',
-        }),
-        ...mapGetters({
-            allServices: 'service/allServices',
+            all_services: state => state.service.all_services,
         }),
 
         /**
@@ -120,7 +118,7 @@ export default {
         tableRows: function() {
             let rows = []
             let allServerIds = []
-            this.allServices.forEach(services => {
+            this.all_services.forEach(services => {
                 const {
                     id,
                     attributes: { state, router, connections, total_connections },

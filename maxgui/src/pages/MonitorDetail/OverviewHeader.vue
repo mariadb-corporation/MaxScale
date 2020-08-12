@@ -44,12 +44,7 @@ export default {
           */
             const {
                 attributes: {
-                    monitor_diagnostics: {
-                        master = 'undefined',
-                        master_gtid_domain_id = 'undefined',
-                        state = 'undefined',
-                        primary = 'undefined',
-                    } = {},
+                    monitor_diagnostics: { master, master_gtid_domain_id, state, primary } = {},
                 } = {},
             } = this.currentMonitor
 
@@ -59,6 +54,9 @@ export default {
                 state,
                 primary,
             }
+            Object.keys(overviewInfo).forEach(
+                key => (overviewInfo[key] = this.$help.handleValue(overviewInfo[key]))
+            )
             return overviewInfo
         },
     },

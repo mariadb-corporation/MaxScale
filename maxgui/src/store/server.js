@@ -14,9 +14,9 @@
 export default {
     namespaced: true,
     state: {
-        allServers: [],
-        currentServer: {},
-        serversConnectionsChartData: {
+        all_servers: [],
+        current_server: {},
+        server_connections_chart_data: {
             datasets: [],
         },
     },
@@ -24,14 +24,14 @@ export default {
         /**
          * @param {Array} payload // List of server resources
          */
-        setServers(state, payload) {
-            state.allServers = payload
+        SET_ALL_SERVERS(state, payload) {
+            state.all_servers = payload
         },
-        setCurrentServer(state, payload) {
-            state.currentServer = payload
+        SET_CURRENT_SERVER(state, payload) {
+            state.current_server = payload
         },
-        setServersConnectionsChartData(state, payload) {
-            state.serversConnectionsChartData = payload
+        SET_SERVER_CONNECTION_CHART_DATA(state, payload) {
+            state.server_connections_chart_data = payload
         },
     },
     actions: {
@@ -41,7 +41,7 @@ export default {
                 if (res.data.data) {
                     // reverse array, latest will be last
                     let sorted = res.data.data.reverse()
-                    commit('setServers', sorted)
+                    commit('SET_ALL_SERVERS', sorted)
                 }
             } catch (e) {
                 if (process.env.NODE_ENV !== 'test') {
@@ -54,7 +54,7 @@ export default {
         async fetchServerById({ commit }, id) {
             try {
                 let res = await this.vue.$axios.get(`/servers/${id}`)
-                if (res.data.data) commit('setCurrentServer', res.data.data)
+                if (res.data.data) commit('SET_CURRENT_SERVER', res.data.data)
             } catch (e) {
                 if (process.env.NODE_ENV !== 'test') {
                     const logger = this.vue.$logger('store-server-fetchServerById')
@@ -107,12 +107,13 @@ export default {
                 }
             }
         },
+
         //-----------------------------------------------Server parameter update---------------------------------
         /**
          * @param {Object} payload payload object
          * @param {String} payload.id Name of the server
          * @param {Object} payload.parameters Parameters for the server
-         * @param {Object} payload.callback callback function after successfully updated
+         * @param {Function} payload.callback callback function after successfully updated
          */
         async updateServerParameters({ commit }, payload) {
             try {
@@ -143,6 +144,7 @@ export default {
                 }
             }
         },
+
         //-----------------------------------------------Server relationship update---------------------------------
         /**
          * @param {Object} payload payload object
@@ -190,9 +192,6 @@ export default {
             }
         },
 
-        /**
-         * @param {String} id id of the server
-         */
         async destroyServer({ commit }, id) {
             try {
                 let res = await this.vue.$axios.delete(`/servers/${id}?force=yes`)
@@ -214,11 +213,14 @@ export default {
                 }
             }
         },
+
         /**
-         * @param {String} id id of the server
-         * @param {String} state state of the server maintenance or drain)
-         * @param {String} mode mode set or clear
-         * @param {Boolean} forceClosing force all connections to the server to be closed immediately. Only works
+         * @param {Object} param - An object.
+         * @param {String} param.id id of the server
+         * @param {String} param.state state of the server maintenance or drain)
+         * @param {String} param.mode mode set or clear
+         * @param {Function} param.callback callback function after successfully updated
+         * @param {Boolean} param.forceClosing force all connections to the server to be closed immediately. Only works
          * for maintenance mode
          */
         async setOrClearServerState({ commit }, { id, state, mode, callback, forceClosing }) {
@@ -258,61 +260,58 @@ export default {
         },
 
         /**
-         *Generate data schema for total connections of each server
+         *  Generate data schema for total connections of each server
          */
         genDataSetSchema({ commit, state }) {
-            const { allServers } = state
-            if (allServers.length) {
+            const { all_servers } = state
+            const { dynamicColors, strReplaceAt } = this.vue.$help
+
+            if (all_servers.length) {
                 let arr = []
-                let lineColors = []
-                for (let i = 0; i < allServers.length; ++i) {
+                all_servers.forEach((server, i) => {
                     const {
                         id,
-                        attributes: { statistics },
-                    } = allServers[i]
-                    lineColors.push(this.vue.$help.dynamicColors(i))
-                    let indexOfOpacity = lineColors[i].lastIndexOf(')') - 1
-                    let obj = {
+                        attributes: { statistics: { connections = null } = {} } = {},
+                    } = server
+
+                    const lineColor = dynamicColors(i)
+                    const indexOfOpacity = lineColor.lastIndexOf(')') - 1
+                    const backgroundColor = strReplaceAt(lineColor, indexOfOpacity, '0.1')
+                    const obj = {
                         label: `Server ID - ${id}`,
                         id: `Server ID - ${id}`,
                         type: 'line',
                         // background of the line
-                        backgroundColor: this.vue.$help.strReplaceAt(
-                            lineColors[i],
-                            indexOfOpacity,
-                            '0.2'
-                        ),
-                        borderColor: lineColors[i], //theme.palette.primary.main, // line color
+                        backgroundColor: backgroundColor,
+                        borderColor: lineColor,
                         borderWidth: 1,
                         lineTension: 0,
-                        data: [{ x: Date.now(), y: statistics.connections }],
+                        data: [{ x: Date.now(), y: connections }],
                     }
                     arr.push(obj)
-                }
+                })
+
                 let serversConnectionsChartDataSchema = {
                     datasets: arr,
                 }
-                commit('setServersConnectionsChartData', serversConnectionsChartDataSchema)
+                commit('SET_SERVER_CONNECTION_CHART_DATA', serversConnectionsChartDataSchema)
             }
         },
     },
     getters: {
-        allServers: state => state.allServers,
-        currentServer: state => state.currentServer,
-        serversConnectionsChartData: state => state.serversConnectionsChartData,
         // -------------- below getters are available only when fetchAllServers has been dispatched
-        allServersMap: state => {
+        getAllServersMap: state => {
             let map = new Map()
-            state.allServers.forEach(ele => {
+            state.all_servers.forEach(ele => {
                 map.set(ele.id, ele)
             })
             return map
         },
 
-        allServersInfo: state => {
+        getAllServersInfo: state => {
             let idArr = []
             let portNumArr = []
-            return state.allServers.reduce((accumulator, _, index, array) => {
+            return state.all_servers.reduce((accumulator, _, index, array) => {
                 idArr.push(array[index].id)
                 portNumArr.push(array[index].attributes.parameters.port)
 

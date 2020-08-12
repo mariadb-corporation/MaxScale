@@ -77,7 +77,7 @@ describe('ServerFormInput.vue', () => {
         const parametersCollapse = wrapper.findComponent({ name: 'parameters-collapse' })
         const { parameters, usePortOrSocket, parentForm } = parametersCollapse.vm.$props
         // props
-        expect(parameters).to.be.equals(wrapper.vm.getServerParameters)
+        expect(parameters).to.be.equals(wrapper.vm.serverParameters)
         expect(usePortOrSocket).to.be.true
         expect(parentForm).to.be.deep.equals(wrapper.vm.$props.parentForm)
         //ref

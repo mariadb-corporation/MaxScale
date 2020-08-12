@@ -31,7 +31,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapGetters, mapState } from 'vuex'
+import { mapState } from 'vuex'
 
 export default {
     name: 'statistics-table',
@@ -53,15 +53,13 @@ export default {
     computed: {
         ...mapState({
             search_keyword: 'search_keyword',
+            current_server: state => state.server.current_server,
         }),
-        ...mapGetters({
-            currentServer: 'server/currentServer',
-        }),
-        statisticsTableRow: function() {
-            let currentServer = this.$help.lodash.cloneDeep(this.currentServer)
 
+        statisticsTableRow: function() {
+            const currentServerClone = this.$help.lodash.cloneDeep(this.current_server)
             // Set fallback null value if properties doesnt exist
-            const { attributes: { statistics = null } = {} } = currentServer
+            const { attributes: { statistics = null } = {} } = currentServerClone
             const keepPrimitiveValue = false
             let level = 0
             return this.$help.objToArrOfObj(statistics, keepPrimitiveValue, level)

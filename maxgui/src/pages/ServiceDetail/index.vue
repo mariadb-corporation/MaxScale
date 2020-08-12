@@ -1,11 +1,11 @@
 <template>
     <page-wrapper>
-        <v-sheet v-if="!$help.lodash.isEmpty(currentService)" class="px-6">
+        <v-sheet v-if="!$help.lodash.isEmpty(current_service)" class="px-6">
             <page-header :onEditSucceeded="fetchService" />
             <!--
                 overview-header will fetch fetchServiceConnections and
-                fetchSessionsFilterByServiceId parallelly.
-                fetchSessionsFilterByServiceId will update sessions-table data
+                fetchSessionsFilterByService parallelly.
+                fetchSessionsFilterByService will update sessions-table data
             -->
             <overview-header />
 
@@ -93,7 +93,7 @@
  */
 import { OVERLAY_TRANSPARENT_LOADING } from 'store/overlayTypes'
 import { FORM_LISTENER } from 'store/formTypes'
-import { mapGetters, mapActions, mapMutations, mapState } from 'vuex'
+import { mapActions, mapMutations, mapState } from 'vuex'
 import OverviewHeader from './OverviewHeader'
 import PageHeader from './PageHeader'
 import SessionsTable from './SessionsTable'
@@ -126,9 +126,7 @@ export default {
     computed: {
         ...mapState({
             overlay_type: 'overlay_type',
-        }),
-        ...mapGetters({
-            currentService: 'service/currentService',
+            current_service: state => state.service.current_service,
         }),
     },
 
@@ -169,7 +167,7 @@ export default {
                 relationships: {
                     [`${relationshipType}`]: { data: relationshipData = [] } = {},
                 } = {},
-            } = this.currentService
+            } = this.current_service
 
             let ids = relationshipData.length ? relationshipData.map(item => `${item.id}`) : []
             let arr = []
@@ -214,7 +212,7 @@ export default {
         // actions to vuex
         async dispatchRelationshipUpdate({ type, data, isFilterDrag }) {
             await this.updateServiceRelationship({
-                id: this.currentService.id,
+                id: this.current_service.id,
                 type: type,
                 [type]: data,
                 callback: this.fetchService,

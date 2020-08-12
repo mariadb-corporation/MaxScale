@@ -27,7 +27,7 @@ describe('Graphs index', () => {
             component: Graphs,
 
             computed: {
-                sessionsChartData: () => ({
+                sessions_chart_data: () => ({
                     datasets: [
                         {
                             label: 'Total sessions',
@@ -40,7 +40,7 @@ describe('Graphs index', () => {
                         },
                     ],
                 }),
-                serversConnectionsChartData: () => ({
+                server_connections_chart_data: () => ({
                     datasets: [
                         {
                             label: 'CONNECTIONS',
@@ -66,7 +66,7 @@ describe('Graphs index', () => {
                         },
                     ],
                 }),
-                allServers: () => mockupAllServers,
+                all_servers: () => mockupAllServers,
             },
         })
     })

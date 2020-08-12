@@ -41,7 +41,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapGetters, mapActions, mapState } from 'vuex'
+import { mapActions, mapState } from 'vuex'
 
 export default {
     name: 'session-table',
@@ -64,38 +64,32 @@ export default {
     computed: {
         ...mapState({
             search_keyword: 'search_keyword',
+            current_server: state => state.server.current_server,
+            all_sessions: state => state.session.all_sessions,
         }),
-        ...mapGetters({
-            allSessions: 'session/allSessions',
-            currentServer: 'server/currentServer',
-        }),
+
         sessionsTableRow: function() {
-            if (this.allSessions.length) {
-                let self = this
-                let itemsArr = []
-                for (let i = 0; i < self.allSessions.length; ++i) {
-                    const {
-                        id,
-                        attributes: { idle, connected, user, remote, connections },
-                    } = self.allSessions[i]
+            let tableRows = []
+            this.all_sessions.forEach(session => {
+                const {
+                    id,
+                    attributes: { idle, connected, user, remote, connections },
+                } = session
 
-                    let connectionOfThisServer = connections.find(
-                        connection => connection.server === self.currentServer.id
-                    )
+                let connectionOfThisServer = connections.find(
+                    connection => connection.server === this.current_server.id
+                )
 
-                    if (connectionOfThisServer) {
-                        let row = {
-                            id: id,
-                            user: `${user}@${remote}`,
-                            connected: connected,
-                            idle: idle,
-                        }
-                        itemsArr.push(row)
-                    }
+                if (connectionOfThisServer) {
+                    tableRows.push({
+                        id: id,
+                        user: `${user}@${remote}`,
+                        connected: connected,
+                        idle: idle,
+                    })
                 }
-                return itemsArr
-            }
-            return []
+            })
+            return tableRows
         },
     },
     async created() {

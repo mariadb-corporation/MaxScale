@@ -21,7 +21,7 @@
         <parameters-collapse
             v-if="selectedModule"
             ref="parametersTable"
-            :parameters="getModuleParameters"
+            :parameters="moduleParameters"
             :usePortOrSocket="usePortOrSocket"
             :isTree="isTree"
             :parentForm="parentForm"
@@ -76,12 +76,11 @@ export default {
         }
     },
     computed: {
-        getModuleParameters: function() {
-            const self = this
-            if (self.selectedModule) {
+        moduleParameters: function() {
+            if (this.selectedModule) {
                 const {
                     attributes: { parameters = [] },
-                } = self.$help.lodash.cloneDeep(self.selectedModule)
+                } = this.$help.lodash.cloneDeep(this.selectedModule)
                 return parameters
             }
             return []

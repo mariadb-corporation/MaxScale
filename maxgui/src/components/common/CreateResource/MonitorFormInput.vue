@@ -41,30 +41,24 @@ export default {
     computed: {
         // get only server that are not monitored
         serversList: function() {
-            let cloneArr = this.$help.lodash.cloneDeep(this.allServers)
-            let result = []
-            for (let i = 0; i < cloneArr.length; ++i) {
-                let obj = cloneArr[i]
-                if (this.$help.isUndefined(obj.relationships.monitors)) {
-                    delete obj.attributes
-                    delete obj.links
-                    delete obj.relationships
-                    delete obj.idNum
-                    result.push(obj)
-                }
-            }
-            return result
+            let serverItems = []
+            this.allServers.forEach(({ id, type, relationships: { monitors = null } = {} }) => {
+                if (!monitors) serverItems.push({ id, type })
+            })
+            return serverItems
         },
     },
 
     methods: {
         getValues() {
-            const { moduleId, parameters } = this.$refs.moduleInputs.getModuleInputValues()
+            const { moduleInputs, serversRelationship } = this.$refs
+            const { moduleId, parameters } = moduleInputs.getModuleInputValues()
+            const data = serversRelationship.getSelectedItems()
             return {
-                moduleId: moduleId,
-                parameters: parameters,
+                moduleId,
+                parameters,
                 relationships: {
-                    servers: { data: this.$refs.serversRelationship.getSelectedItems() },
+                    servers: { data },
                 },
             }
         },

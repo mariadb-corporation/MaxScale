@@ -24,7 +24,7 @@
                         $vuetify.icons.user
                     </v-icon>
                     <span class="user-name tk-adrianna text-capitalize font-weight-regular">
-                        {{ user ? user.name : '' }}
+                        {{ logged_in_user ? logged_in_user.name : '' }}
                     </span>
 
                     <v-icon
@@ -60,7 +60,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapActions, mapGetters } from 'vuex'
+import { mapActions, mapState } from 'vuex'
 export default {
     name: 'app-header',
 
@@ -71,7 +71,9 @@ export default {
         }
     },
     computed: {
-        ...mapGetters('user', ['user']),
+        ...mapState('user', {
+            logged_in_user: state => state.logged_in_user,
+        }),
     },
     methods: {
         ...mapActions('user', ['logout']),

@@ -41,7 +41,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapGetters, mapState } from 'vuex'
+import { mapState } from 'vuex'
 
 export default {
     name: 'sessions-table',
@@ -64,32 +64,18 @@ export default {
     computed: {
         ...mapState({
             search_keyword: 'search_keyword',
-        }),
-        ...mapGetters({
-            sessionsByService: 'session/sessionsByService',
+            sessions_by_service: state => state.session.sessions_by_service,
         }),
 
         sessionsTableRow: function() {
-            if (this.sessionsByService.length) {
-                let itemsArr = []
-                let allSessions = this.$help.lodash.cloneDeep(this.sessionsByService)
-                for (let n = allSessions.length - 1; n >= 0; --n) {
-                    const {
-                        id,
-                        attributes: { idle, connected, user, remote },
-                    } = allSessions[n] || {}
-
-                    let row = {
-                        id: id,
-                        user: `${user}@${remote}`,
-                        connected: connected,
-                        idle: idle,
-                    }
-                    itemsArr.push(row)
-                }
-                return itemsArr
-            }
-            return []
+            return this.sessions_by_service.map(
+                ({ id, attributes: { idle, connected, user, remote } }) => ({
+                    id,
+                    user: `${user}@${remote}`,
+                    connected,
+                    idle,
+                })
+            )
         },
     },
 }

@@ -1,9 +1,9 @@
 <template>
     <details-parameters-collapse
-        v-if="currentService.attributes.parameters"
+        v-if="processedModuleParameters.length"
         :searchKeyword="search_keyword"
-        :resourceId="currentService.id"
-        :parameters="currentService.attributes.parameters"
+        :resourceId="current_service.id"
+        :parameters="current_service.attributes.parameters"
         :moduleParameters="processedModuleParameters"
         :updateResourceParameters="updateServiceParameters"
         :onEditSucceeded="onEditSucceeded"
@@ -24,7 +24,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapGetters, mapActions, mapState } from 'vuex'
+import { mapActions, mapState } from 'vuex'
 export default {
     name: 'parameters-table',
 
@@ -44,14 +44,12 @@ export default {
         ...mapState({
             search_keyword: 'search_keyword',
             module_parameters: 'module_parameters',
-        }),
-        ...mapGetters({
-            currentService: 'service/currentService',
+            current_service: state => state.service.current_service,
         }),
     },
 
     async created() {
-        const { router: routerId } = this.currentService.attributes
+        const { router: routerId } = this.current_service.attributes
         await this.fetchModuleParameters(routerId)
         this.loadingModuleParams = true
         await this.processModuleParameters()

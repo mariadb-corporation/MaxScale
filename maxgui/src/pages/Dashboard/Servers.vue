@@ -10,7 +10,7 @@
             <span class="ml-1 color text-field-text"> ({{ monitorsLength }}) </span>
         </template>
         <template v-slot:header-append-id>
-            <span class="ml-1 color text-field-text"> ({{ allServers.length }}) </span>
+            <span class="ml-1 color text-field-text"> ({{ all_servers.length }}) </span>
         </template>
         <template v-slot:header-append-serviceIds>
             <span class="ml-1 color text-field-text"> ({{ servicesLength }}) </span>
@@ -144,18 +144,18 @@ export default {
     computed: {
         ...mapState({
             search_keyword: 'search_keyword',
+            all_servers: state => state.server.all_servers,
         }),
         ...mapGetters({
             getAllMonitorsMap: 'monitor/getAllMonitorsMap',
-            allServers: 'server/allServers',
         }),
         tableRows: function() {
             let rows = []
-            if (this.allServers.length) {
+            if (this.all_servers.length) {
                 let allServiceIds = []
                 let allMonitorIds = []
 
-                this.allServers.forEach(server => {
+                this.all_servers.forEach(server => {
                     const {
                         id,
                         attributes: {
