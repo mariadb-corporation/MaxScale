@@ -50,9 +50,9 @@ export default {
         ])
 
         await Promise.all([
-            this.genSessionChartDataSetSchema(),
-            this.genServersConnectionsDataSetSchema(),
-            this.genThreadsDatasetsSchema(),
+            this.genSessionDataSets(),
+            this.genServersConnectionsDataSets(),
+            this.genThreadsDataSets(),
         ])
 
         while (this.loop) {
@@ -70,15 +70,15 @@ export default {
         ...mapActions({
             fetchMaxScaleOverviewInfo: 'maxscale/fetchMaxScaleOverviewInfo',
             fetchThreadStats: 'maxscale/fetchThreadStats',
-            genThreadsDatasetsSchema: 'maxscale/genDataSetSchema',
+            genThreadsDataSets: 'maxscale/genDataSets',
 
             fetchAllServers: 'server/fetchAllServers',
-            genServersConnectionsDataSetSchema: 'server/genDataSetSchema',
+            genServersConnectionsDataSets: 'server/genDataSets',
 
             fetchAllMonitors: 'monitor/fetchAllMonitors',
 
             fetchAllSessions: 'session/fetchAllSessions',
-            genSessionChartDataSetSchema: 'session/genDataSetSchema',
+            genSessionDataSets: 'session/genDataSets',
 
             fetchAllServices: 'service/fetchAllServices',
 

@@ -99,34 +99,21 @@ export default {
             }
         },
 
-        genDataSetSchema({ commit, state }) {
+        genDataSets({ commit, state }) {
             const { thread_stats } = state
-            const { dynamicColors, strReplaceAt } = this.vue.$help
-
+            const { genLineDataSet } = this.vue.$help
             if (thread_stats.length) {
-                let datasets = []
-                let lineColors = []
+                let dataSets = []
                 thread_stats.forEach((thread, i) => {
-                    lineColors.push(dynamicColors(i))
-                    const indexOfOpacity = lineColors[i].lastIndexOf(')') - 1
                     const {
                         attributes: { stats: { load: { last_second = null } = {} } = {} } = {},
                     } = thread
-                    const obj = {
-                        label: `THREAD ID - ${thread.id}`,
-                        id: `THREAD ID - ${thread.id}`,
-                        type: 'line',
-                        // background of the line
-                        backgroundColor: strReplaceAt(lineColors[i], indexOfOpacity, '0.1'),
-                        borderColor: lineColors[i], //theme.palette.primary.main, // line color
-                        borderWidth: 1,
-                        lineTension: 0,
-                        data: [{ x: Date.now(), y: last_second }],
+                    if (last_second !== null) {
+                        const dataset = genLineDataSet(`THREAD ID - ${thread.id}`, last_second, i)
+                        dataSets.push(dataset)
                     }
-                    datasets.push(obj)
                 })
-
-                commit('SET_THREADS_DATASETS', datasets)
+                commit('SET_THREADS_DATASETS', dataSets)
             }
         },
         //-----------------------------------------------Maxscale parameter update---------------------------------

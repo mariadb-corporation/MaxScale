@@ -48,30 +48,14 @@ export default {
             }
         },
 
-        genDataSetSchema({ commit, state }) {
+        genDataSets({ commit, state }) {
             const {
                 current_service: { attributes: { connections = null } = {} },
             } = state
             if (connections !== null) {
-                const { dynamicColors, strReplaceAt } = this.vue.$help
-                const lineColor = dynamicColors(0)
-                const indexOfOpacity = lineColor.lastIndexOf(')') - 1
-                const backgroundColor = strReplaceAt(lineColor, indexOfOpacity, '0.1')
-
-                const datasets = [
-                    {
-                        label: `Current connections`,
-                        type: 'line',
-                        // background of the line
-                        backgroundColor: backgroundColor,
-                        borderColor: lineColor,
-                        borderWidth: 1,
-                        lineTension: 0,
-                        data: [{ x: Date.now(), y: connections }],
-                    },
-                ]
-
-                commit('SET_SERVICE_CONNECTIONS_DATASETS', datasets)
+                const { genLineDataSet } = this.vue.$help
+                const dataset = genLineDataSet('Current connections', connections, 0)
+                commit('SET_SERVICE_CONNECTIONS_DATASETS', [dataset])
             }
         },
 

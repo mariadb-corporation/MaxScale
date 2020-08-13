@@ -129,7 +129,6 @@ export default {
     methods: {
         ...mapActions({
             fetchThreadStats: 'maxscale/fetchThreadStats',
-            genThreadsDatasetsSchema: 'maxscale/genDataSetSchema',
             fetchAllServers: 'server/fetchAllServers',
             fetchAllMonitors: 'monitor/fetchAllMonitors',
             fetchAllSessions: 'session/fetchAllSessions',
@@ -139,6 +138,7 @@ export default {
 
         async updateChart() {
             const self = this
+            const { genLineDataSet } = this.$help
             const { sessionsChart, connectionsChart, threadsChart } = this.$refs
             if (sessionsChart && connectionsChart && threadsChart) {
                 //  LOOP polling
@@ -151,45 +151,30 @@ export default {
                 ])
                 const time = Date.now()
                 //-------------------- update connections chart
-
-                let gap = this.all_servers.length - connectionsChart.chartData.datasets.length
+                const connectionsChartDataSets = connectionsChart.chartData.datasets
                 this.all_servers.forEach((server, i) => {
-                    if (gap > 0 && i > connectionsChart.chartData.datasets.length - 1) {
-                        // push new datasets
-                        let lineColors = this.$help.dynamicColors(i)
-                        let indexOfOpacity = lineColors.lastIndexOf(')') - 1
-                        let dataset = {
-                            label: `Server ID - ${server.id}`,
-                            id: `Server ID - ${server.id}`,
-                            type: 'line',
-                            // background of the line
-                            backgroundColor: this.$help.strReplaceAt(
-                                lineColors,
-                                indexOfOpacity,
-                                '0.2'
-                            ),
-                            borderColor: lineColors, //theme.palette.primary.main, // line color
-                            borderWidth: 1,
-                            lineTension: 0,
-                            data: [
-                                {
-                                    x: time,
-                                    y: server.attributes.statistics.connections,
-                                },
-                            ],
-                        }
-
-                        connectionsChart.chartData.datasets.push(dataset)
-                    } else {
-                        connectionsChart.chartData.datasets[i].data.push({
+                    const {
+                        attributes: {
+                            statistics: { connections: serverConnections },
+                        },
+                    } = server
+                    if (connectionsChartDataSets[i]) {
+                        connectionsChartDataSets[i].data.push({
                             x: time,
-                            y: server.attributes.statistics.connections,
+                            y: serverConnections,
                         })
+                    } else {
+                        const newDataSet = genLineDataSet(
+                            `Server ID - ${server.id}`,
+                            serverConnections,
+                            i,
+                            time
+                        )
+                        connectionsChartDataSets.push(newDataSet)
                     }
                 })
 
                 // ------------------------- update sessions chart
-
                 sessionsChart.chartData.datasets.forEach(function(dataset) {
                     dataset.data.push({
                         x: time,
@@ -198,17 +183,25 @@ export default {
                 })
 
                 //-------------------- update threads chart
+                const threadChartDataSets = threadsChart.chartData.datasets
                 await this.thread_stats.forEach((thread, i) => {
-                    if (this.$help.isUndefined(threadsChart.chartData.datasets[i])) {
-                        this.genThreadsDatasetsSchema()
-                    } else {
-                        const {
-                            attributes: { stats: { load: { last_second = null } = {} } = {} } = {},
-                        } = thread
-                        threadsChart.chartData.datasets[i].data.push({
+                    const {
+                        attributes: { stats: { load: { last_second = null } = {} } = {} } = {},
+                    } = thread
+
+                    if (threadsChart.chartData.datasets[i]) {
+                        threadChartDataSets[i].data.push({
                             x: time,
                             y: last_second,
                         })
+                    } else {
+                        const newDataSet = genLineDataSet(
+                            `THREAD ID - ${thread.id}`,
+                            last_second,
+                            i,
+                            time
+                        )
+                        threadChartDataSets.push(newDataSet)
                     }
                 })
 

@@ -42,27 +42,11 @@ export default {
             }
         },
 
-        genDataSetSchema({ commit, state }) {
+        genDataSets({ commit, state }) {
             const { all_sessions } = state
-            const { dynamicColors, strReplaceAt } = this.vue.$help
-            const lineColor = dynamicColors(0)
-            const indexOfOpacity = lineColor.lastIndexOf(')') - 1
-            const backgroundColor = strReplaceAt(lineColor, indexOfOpacity, '0.1')
-
-            const datasets = [
-                {
-                    label: `Total sessions`,
-                    type: 'line',
-                    // background of the line
-                    backgroundColor: backgroundColor,
-                    borderColor: lineColor,
-                    borderWidth: 1,
-                    lineTension: 0,
-
-                    data: [{ x: Date.now(), y: all_sessions.length }],
-                },
-            ]
-            commit('SET_SESSIONS_DATASETS', datasets)
+            const { genLineDataSet } = this.vue.$help
+            const dataset = genLineDataSet('Total sessions', all_sessions.length, 0)
+            commit('SET_SESSIONS_DATASETS', [dataset])
         },
 
         //-------------------- sessions filter by relationships serviceId

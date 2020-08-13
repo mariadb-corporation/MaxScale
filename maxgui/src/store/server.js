@@ -260,36 +260,24 @@ export default {
         /**
          *  Generate data schema for total connections of each server
          */
-        genDataSetSchema({ commit, state }) {
+        genDataSets({ commit, state }) {
             const { all_servers } = state
-            const { dynamicColors, strReplaceAt } = this.vue.$help
+            const { genLineDataSet } = this.vue.$help
 
             if (all_servers.length) {
-                let datasets = []
+                let dataSets = []
                 all_servers.forEach((server, i) => {
                     const {
                         id,
                         attributes: { statistics: { connections = null } = {} } = {},
                     } = server
-
-                    const lineColor = dynamicColors(i)
-                    const indexOfOpacity = lineColor.lastIndexOf(')') - 1
-                    const backgroundColor = strReplaceAt(lineColor, indexOfOpacity, '0.1')
-                    const obj = {
-                        label: `Server ID - ${id}`,
-                        id: `Server ID - ${id}`,
-                        type: 'line',
-                        // background of the line
-                        backgroundColor: backgroundColor,
-                        borderColor: lineColor,
-                        borderWidth: 1,
-                        lineTension: 0,
-                        data: [{ x: Date.now(), y: connections }],
+                    if (connections !== null) {
+                        const dataset = genLineDataSet(`Server ID - ${id}`, connections, i)
+                        dataSets.push(dataset)
                     }
-                    datasets.push(obj)
                 })
 
-                commit('SET_SERVER_CONNECTIONS_DATASETS', datasets)
+                commit('SET_SERVER_CONNECTIONS_DATASETS', dataSets)
             }
         },
     },

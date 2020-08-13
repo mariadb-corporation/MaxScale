@@ -133,7 +133,7 @@ export default {
     async created() {
         // Initial fetch, wait for service id
         await this.fetchService()
-        await this.genDataSetSchema()
+        await this.genServiceConnectionsDataSets()
         await Promise.all([
             this.processingRelationshipTable('servers'),
             this.processingRelationshipTable('filters'),
@@ -144,7 +144,7 @@ export default {
         ...mapActions({
             getResourceState: 'getResourceState',
             fetchServiceById: 'service/fetchServiceById',
-            genDataSetSchema: 'service/genDataSetSchema',
+            genServiceConnectionsDataSets: 'service/genDataSets',
             updateServiceRelationship: 'service/updateServiceRelationship',
             fetchAllFilters: 'filter/fetchAllFilters',
         }),
