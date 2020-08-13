@@ -76,7 +76,7 @@ describe('Dashboard Services tab', () => {
         const dataTable = wrapper.findComponent({ name: 'data-table' })
         const serviceId = mockupAllServices[0].id
         const cellIndex = 0
-        let tableCell = dataTable.find(`.${serviceId}-cell-${cellIndex}`)
+        let tableCell = dataTable.find(`.cell-${cellIndex}-${serviceId}`)
         let aTag = tableCell.find('a')
         await aTag.trigger('click')
         expect(wrapper.vm.$route.path).to.be.equals(`/dashboard/services/${serviceId}`)
@@ -87,7 +87,7 @@ describe('Dashboard Services tab', () => {
         const serviceId = mockupAllServices[0].id
         const cellIndex = expectedTableHeaders.length - 1
         const serverId = mockupAllServices[0].relationships.servers.data[0].id
-        let tableCell = dataTable.find(`.${serviceId}-cell-${cellIndex}`)
+        let tableCell = dataTable.find(`.cell-${cellIndex}-${serviceId}`)
         let aTag = tableCell.find('a')
         await aTag.trigger('click')
         expect(wrapper.vm.$route.path).to.be.equals(`/dashboard/servers/${serverId}`)

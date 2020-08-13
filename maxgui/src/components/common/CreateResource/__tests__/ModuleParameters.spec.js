@@ -131,7 +131,7 @@ describe('ModuleParameters.vue', () => {
         await mockupSelection(wrapper, mockupModules[1])
         const testParam = mockupModules[1].attributes.parameters[1]
 
-        const moduleParamTd = wrapper.find(`.${testParam.name}-cell-${1}`)
+        const moduleParamTd = wrapper.find(`.cell-${1}-${testParam.name}`)
         const newValue = 'new value'
         await mockupInputChange(moduleParamTd, 'new value')
 

@@ -211,10 +211,10 @@ describe('ParametersCollapse.vue', () => {
     it(`Should return changed parameters as an object`, async () => {
         //mockup changed of parameters
         const newRankValue = 'secondary'
-        const rankParamTd = wrapper.find(`.rank-cell-${1}`)
+        const rankParamTd = wrapper.find(`.cell-${1}-rank`)
         await mockupSelection(rankParamTd, newRankValue) // change of rank parameter
 
-        const portParamTd = wrapper.find(`.port-cell-${1}`)
+        const portParamTd = wrapper.find(`.cell-${1}-port`)
         const newPortValue = 4001
         await mockupInputChange(portParamTd, newPortValue)
 

@@ -81,7 +81,7 @@ describe('Dashboard Listeners tab', () => {
         const listenerId = mockupAllListeners[0].id
         const cellIndex = expectedTableHeaders.length - 1
         const serviceId = mockupAllListeners[0].relationships.services.data[0].id
-        let tableCell = dataTable.find(`.${listenerId}-cell-${cellIndex}`)
+        let tableCell = dataTable.find(`.cell-${cellIndex}-${listenerId}`)
         let aTag = tableCell.find('a')
         await aTag.trigger('click')
         expect(wrapper.vm.$route.path).to.be.equals(`/dashboard/services/${serviceId}`)

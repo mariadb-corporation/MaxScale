@@ -117,7 +117,7 @@ describe('ServiceFormInput.vue', () => {
 
         // get a service parameter to mockup value changes
         const serviceParameter = mockupResourceModules[0].attributes.parameters[1]
-        const parameterCell = wrapper.find(`.${serviceParameter.name}-cell-${1}`)
+        const parameterCell = wrapper.find(`.cell-${1}-${serviceParameter.name}`)
         const newValue = 'new value'
         await mockupInputChange(parameterCell, newValue)
 

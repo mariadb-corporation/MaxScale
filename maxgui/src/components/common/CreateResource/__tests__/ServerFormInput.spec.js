@@ -129,7 +129,7 @@ describe('ServerFormInput.vue', () => {
       when getValues method get called`, async () => {
         // get a server parameter to mockup value changes
         const serverParameter = mockupResourceModules[0].attributes.parameters[1]
-        const parameterCell = wrapper.find(`.${serverParameter.name}-cell-${1}`)
+        const parameterCell = wrapper.find(`.cell-${1}-${serverParameter.name}`)
         const newValue = 'new value'
         await mockupInputChange(parameterCell, newValue)
 
