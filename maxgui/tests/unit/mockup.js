@@ -437,3 +437,27 @@ export const allServicesState = [
         type: 'services',
     },
 ]
+
+export const mockupAllSessions = [
+    {
+        attributes: {
+            connected: 'Thu Aug 13 14:06:17 2020',
+            idle: 55.5,
+            remote: '::ffff:127.0.0.1',
+            user: 'maxskysql',
+        },
+        id: '1000002',
+
+        relationships: {
+            services: {
+                data: [
+                    {
+                        id: 'RCR-Router',
+                        type: 'services',
+                    },
+                ],
+            },
+        },
+        type: 'sessions',
+    },
+]
