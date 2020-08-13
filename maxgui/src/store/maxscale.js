@@ -17,9 +17,7 @@ export default {
         maxscale_overview_info: {},
         all_modules_map: {},
         thread_stats: [],
-        threads_chart_data: {
-            datasets: [],
-        },
+        threads_datasets: [],
         maxscale_parameters: {},
     },
     mutations: {
@@ -32,8 +30,8 @@ export default {
         SET_THREAD_STATS(state, payload) {
             state.thread_stats = payload
         },
-        SET_THREADS_CHART_DATA(state, payload) {
-            state.threads_chart_data = payload
+        SET_THREADS_DATASETS(state, payload) {
+            state.threads_datasets = payload
         },
         SET_MAXSCALE_PARAMETERS(state, payload) {
             state.maxscale_parameters = payload
@@ -106,7 +104,7 @@ export default {
             const { dynamicColors, strReplaceAt } = this.vue.$help
 
             if (thread_stats.length) {
-                let arr = []
+                let datasets = []
                 let lineColors = []
                 thread_stats.forEach((thread, i) => {
                     lineColors.push(dynamicColors(i))
@@ -114,7 +112,6 @@ export default {
                     const {
                         attributes: { stats: { load: { last_second = null } = {} } = {} } = {},
                     } = thread
-
                     const obj = {
                         label: `THREAD ID - ${thread.id}`,
                         id: `THREAD ID - ${thread.id}`,
@@ -126,13 +123,10 @@ export default {
                         lineTension: 0,
                         data: [{ x: Date.now(), y: last_second }],
                     }
-                    arr.push(obj)
+                    datasets.push(obj)
                 })
 
-                let threadsChartDataSchema = {
-                    datasets: arr,
-                }
-                commit('SET_THREADS_CHART_DATA', threadsChartDataSchema)
+                commit('SET_THREADS_DATASETS', datasets)
             }
         },
         //-----------------------------------------------Maxscale parameter update---------------------------------

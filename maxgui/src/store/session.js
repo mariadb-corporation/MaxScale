@@ -15,17 +15,15 @@ export default {
     namespaced: true,
     state: {
         all_sessions: [],
-        sessions_chart_data: {
-            datasets: [],
-        },
+        sessions_datasets: [],
         sessions_by_service: [],
     },
     mutations: {
         SET_ALL_SESSIONS(state, payload) {
             state.all_sessions = payload
         },
-        SET_SESSIONS_CHART_DATA(state, payload) {
-            state.sessions_chart_data = payload
+        SET_SESSIONS_DATASETS(state, payload) {
+            state.sessions_datasets = payload
         },
         SET_SESSIONS_BY_SERVICE(state, payload) {
             state.sessions_by_service = payload
@@ -51,7 +49,7 @@ export default {
             const indexOfOpacity = lineColor.lastIndexOf(')') - 1
             const backgroundColor = strReplaceAt(lineColor, indexOfOpacity, '0.1')
 
-            const dataset = [
+            const datasets = [
                 {
                     label: `Total sessions`,
                     type: 'line',
@@ -64,11 +62,7 @@ export default {
                     data: [{ x: Date.now(), y: all_sessions.length }],
                 },
             ]
-
-            const chartData = {
-                datasets: dataset,
-            }
-            commit('SET_SESSIONS_CHART_DATA', chartData)
+            commit('SET_SESSIONS_DATASETS', datasets)
         },
 
         //-------------------- sessions filter by relationships serviceId

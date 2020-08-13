@@ -200,7 +200,7 @@ export default {
 
                             bodyLines.forEach(function(body, i) {
                                 let colors = tooltipModel.labelColors[i]
-                                let style = 'background:' + colors.backgroundColor
+                                let style = 'background:' + colors.borderColor
                                 style += '; border-color:' + colors.borderColor
                                 style += '; border-width: 2px;margin-right:4px'
                                 let span =

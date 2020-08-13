@@ -38,9 +38,10 @@
                 <template v-slot:card-body>
                     <v-sheet width="100%">
                         <line-chart
-                            v-if="service_connections_chart_data.datasets.length"
+                            v-if="service_connections_datasets.length"
+                            ref="serviceConnectionsChart"
                             :styles="{ height: '70px' }"
-                            :chart-data="service_connections_chart_data"
+                            :chart-data="{ datasets: service_connections_datasets }"
                             :options="options"
                         />
                     </v-sheet>
@@ -86,7 +87,7 @@ export default {
     computed: {
         ...mapState({
             current_service: state => state.service.current_service,
-            service_connections_chart_data: state => state.service.service_connections_chart_data,
+            service_connections_datasets: state => state.service.service_connections_datasets,
             service_connection_info: state => state.service.service_connection_info,
         }),
     },
@@ -106,18 +107,23 @@ export default {
                 this.fetchSessionsFilterByService(serviceId),
             ])
         },
-        async updateChart(chart) {
-            await this.dispatchFetchAll()
+        async updateChart() {
             const self = this
-            chart.data.datasets.forEach(function(dataset) {
-                dataset.data.push({
-                    x: Date.now(),
-                    y: self.service_connection_info.connections,
+            const { serviceConnectionsChart } = this.$refs
+            if (serviceConnectionsChart) {
+                await this.dispatchFetchAll()
+
+                serviceConnectionsChart.chartData.datasets.forEach(function(dataset) {
+                    dataset.data.push({
+                        x: Date.now(),
+                        y: self.service_connection_info.connections,
+                    })
                 })
-            })
-            chart.update({
-                preservation: true,
-            })
+
+                serviceConnectionsChart.$data._chart.update({
+                    preservation: true,
+                })
+            }
         },
     },
 }

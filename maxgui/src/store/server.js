@@ -16,9 +16,7 @@ export default {
     state: {
         all_servers: [],
         current_server: {},
-        server_connections_chart_data: {
-            datasets: [],
-        },
+        server_connections_datasets: [],
     },
     mutations: {
         /**
@@ -30,8 +28,8 @@ export default {
         SET_CURRENT_SERVER(state, payload) {
             state.current_server = payload
         },
-        SET_SERVER_CONNECTION_CHART_DATA(state, payload) {
-            state.server_connections_chart_data = payload
+        SET_SERVER_CONNECTIONS_DATASETS(state, payload) {
+            state.server_connections_datasets = payload
         },
     },
     actions: {
@@ -267,7 +265,7 @@ export default {
             const { dynamicColors, strReplaceAt } = this.vue.$help
 
             if (all_servers.length) {
-                let arr = []
+                let datasets = []
                 all_servers.forEach((server, i) => {
                     const {
                         id,
@@ -288,13 +286,10 @@ export default {
                         lineTension: 0,
                         data: [{ x: Date.now(), y: connections }],
                     }
-                    arr.push(obj)
+                    datasets.push(obj)
                 })
 
-                let serversConnectionsChartDataSchema = {
-                    datasets: arr,
-                }
-                commit('SET_SERVER_CONNECTION_CHART_DATA', serversConnectionsChartDataSchema)
+                commit('SET_SERVER_CONNECTIONS_DATASETS', datasets)
             }
         },
     },

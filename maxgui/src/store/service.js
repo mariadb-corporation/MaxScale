@@ -16,9 +16,7 @@ export default {
     state: {
         all_services: [],
         current_service: {},
-        service_connections_chart_data: {
-            datasets: [],
-        },
+        service_connections_datasets: [],
         service_connection_info: {},
     },
     mutations: {
@@ -28,8 +26,8 @@ export default {
         SET_CURRENT_SERVICE(state, payload) {
             state.current_service = payload
         },
-        SET_SERVICE_CONNECTIONS_CHART_DATA(state, payload) {
-            state.service_connections_chart_data = payload
+        SET_SERVICE_CONNECTIONS_DATASETS(state, payload) {
+            state.service_connections_datasets = payload
         },
         SET_SERVICE_CONNECTIONS_INFO(state, payload) {
             state.service_connection_info = payload
@@ -60,7 +58,7 @@ export default {
                 const indexOfOpacity = lineColor.lastIndexOf(')') - 1
                 const backgroundColor = strReplaceAt(lineColor, indexOfOpacity, '0.1')
 
-                const dataset = [
+                const datasets = [
                     {
                         label: `Current connections`,
                         type: 'line',
@@ -73,10 +71,7 @@ export default {
                     },
                 ]
 
-                const chartData = {
-                    datasets: dataset,
-                }
-                commit('SET_SERVICE_CONNECTIONS_CHART_DATA', chartData)
+                commit('SET_SERVICE_CONNECTIONS_DATASETS', datasets)
             }
         },
 

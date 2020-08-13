@@ -8,10 +8,10 @@
                 <template v-slot:card-body>
                     <v-sheet width="100%">
                         <line-chart
-                            v-if="sessions_chart_data.datasets.length"
+                            v-if="sessions_datasets.length"
                             ref="sessionsChart"
                             :styles="chartStyle"
-                            :chart-data="sessions_chart_data"
+                            :chart-data="{ datasets: sessions_datasets }"
                             :options="chartOptionsWithOutCallBack"
                         />
                     </v-sheet>
@@ -26,10 +26,12 @@
                 <template v-if="all_servers.length" v-slot:card-body>
                     <v-sheet width="100%">
                         <line-chart
-                            v-if="server_connections_chart_data.datasets.length"
+                            v-if="server_connections_datasets.length"
                             ref="connectionsChart"
                             :styles="chartStyle"
-                            :chart-data="server_connections_chart_data"
+                            :chart-data="{
+                                datasets: server_connections_datasets,
+                            }"
                             :options="chartOptionsWithOutCallBack"
                         />
                     </v-sheet>
@@ -44,10 +46,12 @@
                 <template v-slot:card-body>
                     <v-sheet width="100%">
                         <line-chart
-                            v-if="threads_chart_data.datasets.length"
+                            v-if="threads_datasets.length"
                             ref="threadsChart"
                             :styles="chartStyle"
-                            :chart-data="threads_chart_data"
+                            :chart-data="{
+                                datasets: threads_datasets,
+                            }"
                             :options="mainChartOptions"
                             :yAxesTicks="{ max: 100, min: 0 }"
                         />
@@ -110,15 +114,15 @@ export default {
     computed: {
         ...mapState('maxscale', {
             thread_stats: state => state.thread_stats,
-            threads_chart_data: state => state.threads_chart_data,
+            threads_datasets: state => state.threads_datasets,
         }),
         ...mapState('server', {
-            server_connections_chart_data: state => state.server_connections_chart_data,
+            server_connections_datasets: state => state.server_connections_datasets,
             all_servers: state => state.all_servers,
         }),
         ...mapState('session', {
             all_sessions: state => state.all_sessions,
-            sessions_chart_data: state => state.sessions_chart_data,
+            sessions_datasets: state => state.sessions_datasets,
         }),
     },
 
