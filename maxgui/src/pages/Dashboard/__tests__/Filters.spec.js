@@ -27,7 +27,7 @@ const expectedTableRows = [
     },
 ]
 
-describe('Filters', () => {
+describe('Dashboard Filters tab', () => {
     let wrapper, axiosStub
 
     after(async () => {

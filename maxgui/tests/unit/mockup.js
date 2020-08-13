@@ -249,14 +249,33 @@ export const mockupFiltersList = [
 
 export const mockupAllServices = [
     {
-        attributes: {},
+        attributes: {
+            state: 'Started',
+            router: 'readconnroute',
+            connections: 0,
+            total_connections: 1000001,
+        },
         id: 'service_0',
         links: {},
-        relationships: {},
+        relationships: {
+            servers: {
+                data: [
+                    {
+                        id: 'row_server_0',
+                        type: 'servers',
+                    },
+                ],
+            },
+        },
         type: 'services',
     },
     {
-        attributes: {},
+        attributes: {
+            state: 'Started',
+            router: 'readwritesplit',
+            connections: 0,
+            total_connections: 0,
+        },
         id: 'service_1',
         links: {},
         relationships: {},

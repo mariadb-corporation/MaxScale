@@ -40,7 +40,7 @@ const expectedTableRows = [
     },
 ]
 
-describe('Listeners index', () => {
+describe('Dashboard Listeners tab', () => {
     let wrapper, axiosStub
 
     after(async () => {
