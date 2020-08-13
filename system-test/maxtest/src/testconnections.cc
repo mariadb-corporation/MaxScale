@@ -626,7 +626,7 @@ void TestConnections::read_mdbci_info()
     }
     if (verbose)
     {
-        tprintf(m_network_config.c_str());
+        tprintf("%s", m_network_config.c_str());
     }
 }
 

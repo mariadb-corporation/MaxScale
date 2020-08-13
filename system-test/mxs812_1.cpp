@@ -31,7 +31,7 @@ void run_test(TestConnections& test, size_t size, int chunks)
                     mysql_stmt_error(stmt));
 
     std::string data(size, '.');
-    test.tprintf("Sending %d x %d bytes of data", size, chunks);
+    test.tprintf("Sending %zu x %d bytes of data", size, chunks);
 
     for (int i = 0; i < chunks; i++)
     {

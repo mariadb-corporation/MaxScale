@@ -102,7 +102,7 @@ void load(long int* new_inserts,
         Test->tprintf("COM_INSERT and COM_SELECT after executing test\n");
         get_global_status_allnodes(&new_selects[0], &new_inserts[0], nodes, 0);
         print_delta(&new_selects[0], &new_inserts[0], &selects[0], &inserts[0], nodes->N);
-        Test->tprintf("First group of threads did %d queries, second - %d \n", data.i1, data.i2);
+        Test->tprintf("First group of threads did %ld queries, second - %ld \n", data.i1, data.i2);
     }
     nodes->close_connections();
     *i1 = data.i1;

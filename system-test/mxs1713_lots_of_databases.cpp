@@ -27,7 +27,7 @@ int main(int argc, char** argv)
     }
     test.tprintf("Done!");
 
-    test.tprintf("Opening a connection with each database as the default database...", db_list.size());
+    test.tprintf("Opening a connection with each database as the default database...");
     std::set<std::string> errors;
 
     for (auto db : db_list)

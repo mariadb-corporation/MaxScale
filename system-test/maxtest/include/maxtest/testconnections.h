@@ -349,7 +349,7 @@ public:
     /**
      * @brief printf with automatic timestamps
      */
-    void tprintf(const char* format, ...);
+    void tprintf(const char* format, ...) mxb_attribute((format(printf, 2, 3)));
 
     /**
      * @brief Creats t1 table, insert data into it and checks if data can be correctly read from all Maxscale
