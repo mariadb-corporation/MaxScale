@@ -55,7 +55,7 @@ int test_longblob(TestConnections* Test,
 
 
 
-        Test->tprintf("Sending data in %d bytes chunks, total size is %d\n",
+        Test->tprintf("Sending data in %lu bytes chunks, total size is %lu\n",
                       size * sizeof(unsigned long),
                       (size * sizeof(unsigned long)) * chunks);
         for (i = 0; i < chunks; i++)

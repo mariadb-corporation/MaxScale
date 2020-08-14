@@ -229,7 +229,7 @@ hard_ttl=60s
 The default value is `0s`, which means no limit.
 
 The duration can be specified as explained
-[here](Getting-Started/Configuration-Guide.md#durations).
+[here](../Getting-Started/Configuration-Guide.md#durations).
 If no explicit unit has been specified, the value is interpreted as seconds
 in MaxScale 2.4. In subsequent versions a value without a unit may be rejected.
 
@@ -251,7 +251,7 @@ The default value is `0`, which means no limit. If the value of `soft_ttl` is
 larger than `hard_ttl` it will be adjusted down to the same value.
 
 The duration can be specifed as explained
-[here](Getting-Started/Configuration-Guide.md#durations).
+[here](../Getting-Started/Configuration-Guide.md#durations).
 If no explicit unit has been specified, the value is interpreted as seconds
 in MaxScale 2.4. In subsequent versions a value without a unit may be rejected.
 

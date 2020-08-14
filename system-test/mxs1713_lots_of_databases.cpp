@@ -28,7 +28,7 @@ int main(int argc, char** argv)
     test.repl->sync_slaves();
     test.tprintf("Done!");
 
-    test.tprintf("Opening a connection with each database as the default database...", db_list.size());
+    test.tprintf("Opening a connection with each database as the default database...");
     std::set<std::string> errors;
     int i = 0;
 

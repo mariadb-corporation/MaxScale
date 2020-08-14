@@ -122,7 +122,7 @@ int main(int argc, char *argv[])
         {
             data[j][i].sql = (char*) malloc((i +1) * 32 * 14 + 32);
             create_insert_string(data[j][i].sql, (i + 1) * 32, i);
-            Test->tprintf("sqL %d: %d\n", i, strlen(data[j][i].sql));
+            Test->tprintf("sqL %d: %zu\n", i, strlen(data[j][i].sql));
             data[j][i].exit_flag = false;
             data[j][i].id = i;
             pthread_create(&thread_id[j][i], NULL, thread[j], &data[j][i]);
