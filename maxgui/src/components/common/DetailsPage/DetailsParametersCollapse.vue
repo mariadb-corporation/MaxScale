@@ -362,7 +362,7 @@ export default {
             let self = this
             await self.updateResourceParameters({
                 id: self.resourceId,
-                parameters: self.$help.arrOfObjToObj(self.changedParametersArr),
+                parameters: self.$help.arrToObject({ arr: self.changedParametersArr }),
                 callback: self.onEditSucceeded,
             })
             self.cancelEdit()

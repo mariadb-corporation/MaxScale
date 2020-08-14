@@ -190,7 +190,7 @@ export default {
             Function to be called by parent component
         */
         getParameterObj() {
-            return this.$help.arrOfObjToObj(this.changedParametersArr)
+            return this.$help.arrToObject({ arr: this.changedParametersArr })
         },
     },
 }
