@@ -120,7 +120,7 @@ int main(int argc, char** argv)
 
     auto end = std::chrono::steady_clock::now();
 
-    test.tprintf("A total of %d connections were created over %d seconds",
+    test.tprintf("A total of %d connections were created over %ld seconds",
                  conns.load(),
                  std::chrono::duration_cast<std::chrono::seconds>(end - start).count());
 

@@ -357,7 +357,7 @@ public:
     /**
      * @brief printf with automatic timestamps
      */
-    void tprintf(const char* format, ...);
+    void tprintf(const char* format, ...) mxb_attribute((format(printf, 2, 3)));
 
     /**
      * @brief injects a message into maxscale.log

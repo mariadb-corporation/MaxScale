@@ -118,7 +118,7 @@ int main(int argc, char* argv[])
                       Test->maxscales->password,
                       NULL);
 
-    Test->tprintf("Dropping user", Test->maxscales->user_name);
+    Test->tprintf("Dropping user");
     Test->try_query(Test->maxscales->conn_rwsplit[0], (char*) "DROP USER user@'%%';");
 
     Test->maxscales->verbose = true;
