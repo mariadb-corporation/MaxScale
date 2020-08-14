@@ -63,7 +63,7 @@ describe('FilterFormInput.vue', () => {
         await mockupSelection(wrapper, mockupResourceModules[0])
         // get a filter parameter to mockup value changes
         const filterParameter = mockupResourceModules[0].attributes.parameters[0]
-        const parameterCell = wrapper.find(`.${filterParameter.name}-cell-${1}`)
+        const parameterCell = wrapper.find(`.cell-${1}-${filterParameter.name}`)
         const newValue = 'new value'
         await mockupInputChange(parameterCell, newValue)
 

@@ -37,7 +37,7 @@ describe('ListenerDetail index', () => {
             shallow: false,
             component: ListenerDetail,
             computed: {
-                currentListener: () => mockupAllListeners[0],
+                current_listener: () => mockupAllListeners[0],
             },
         })
     })

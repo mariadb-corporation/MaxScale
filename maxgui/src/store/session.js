@@ -14,31 +14,26 @@
 export default {
     namespaced: true,
     state: {
-        allSessions: [],
-        sessionsChartData: {
-            datasets: [],
-        },
-        sessionsByService: [],
+        all_sessions: [],
+        sessions_datasets: [],
+        sessions_by_service: [],
     },
     mutations: {
-        /**
-         * @param {Array} payload  // Array of allSessions resources
-         */
-        setSessions(state, payload) {
-            state.allSessions = payload
+        SET_ALL_SESSIONS(state, payload) {
+            state.all_sessions = payload
         },
-        setSessionsChartData(state, payload) {
-            state.sessionsChartData = payload
+        SET_SESSIONS_DATASETS(state, payload) {
+            state.sessions_datasets = payload
         },
-        setSessionsByService(state, payload) {
-            state.sessionsByService = payload
+        SET_SESSIONS_BY_SERVICE(state, payload) {
+            state.sessions_by_service = payload
         },
     },
     actions: {
         async fetchAllSessions({ commit }) {
             try {
                 let res = await this.vue.$axios.get(`/sessions`)
-                if (res.data.data) commit('setSessions', res.data.data)
+                if (res.data.data) commit('SET_ALL_SESSIONS', res.data.data)
             } catch (e) {
                 if (process.env.NODE_ENV !== 'test') {
                     const logger = this.vue.$logger('store-sessions-fetchAllSessions')
@@ -46,44 +41,20 @@ export default {
                 }
             }
         },
-        // this function should be called after fetchAllSessions has been fetched
-        genDataSetSchema({ commit, state }) {
-            const { allSessions } = state
 
-            let lineColors = this.vue.$help.dynamicColors(0)
-
-            let indexOfOpacity = lineColors.lastIndexOf(')') - 1
-            let dataset = [
-                {
-                    label: `Total sessions`,
-                    type: 'line',
-                    // background of the line
-                    backgroundColor: this.vue.$help.strReplaceAt(lineColors, indexOfOpacity, '0.1'),
-                    borderColor: lineColors, //theme.palette.primary.main, // line color
-                    borderWidth: 1,
-                    lineTension: 0,
-
-                    data: [{ x: Date.now(), y: allSessions.length }],
-                },
-            ]
-
-            let sessionsChartDataSchema = {
-                datasets: dataset,
-            }
-            commit('setSessionsChartData', sessionsChartDataSchema)
+        genDataSets({ commit, state }) {
+            const { all_sessions } = state
+            const { genLineDataSet } = this.vue.$help
+            const dataset = genLineDataSet('Total sessions', all_sessions.length, 0)
+            commit('SET_SESSIONS_DATASETS', [dataset])
         },
 
         //-------------------- sessions filter by relationships serviceId
-        async fetchSessionsFilterByServiceId({ commit }, id) {
+        async fetchSessionsFilterByService({ commit }, id) {
             let res = await this.vue.$axios.get(
                 `/sessions?filter=/relationships/services/data/0/id="${id}"`
             )
-            commit('setSessionsByService', res.data.data)
+            commit('SET_SESSIONS_BY_SERVICE', res.data.data)
         },
-    },
-    getters: {
-        allSessions: state => state.allSessions,
-        sessionsChartData: state => state.sessionsChartData,
-        sessionsByService: state => state.sessionsByService,
     },
 }

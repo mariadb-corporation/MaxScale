@@ -48,26 +48,29 @@ apiClient.interceptors.response.use(
         return response
     },
     async error => {
-        if (error.response && error.response.status && error.response.status === 401) {
-            await store.dispatch('user/logout')
-        } else if (error.response && error.response.status) {
-            store.commit('showMessage', {
-                text: store.vue.$help.getErrorsArr(error),
-                type: 'error',
-            })
-            /*
-                When request is dispatched in a modal, an overlay loading will be set,
-                Turn it off before returning error
-            */
-            if (store.state.overlay !== false) {
-                await store.vue.$help.delay(600).then(() => {
-                    store.commit('hideOverlay')
+        const { response: { status = null } = {} } = error || {}
+        switch (status) {
+            case 401:
+                await store.dispatch('user/logout')
+                break
+            case null:
+                // request is cancelled by user, so no response is received
+                return Promise.reject(error)
+            default:
+                store.commit('SET_SNACK_BAR_MESSAGE', {
+                    text: store.vue.$help.getErrorsArr(error),
+                    type: 'error',
                 })
-            }
-            return Promise.reject(error)
-        } else {
-            // request is cancelled by user
-            return Promise.reject(error)
+                /*
+                    When request is dispatched in a modal, an overlay_type loading will be set,
+                    Turn it off before returning error
+                */
+                if (store.state.overlay_type !== null)
+                    await store.vue.$help
+                        .delay(600)
+                        .then(() => store.commit('SET_OVERLAY_TYPE', null))
+
+                return Promise.reject(error)
         }
     }
 )

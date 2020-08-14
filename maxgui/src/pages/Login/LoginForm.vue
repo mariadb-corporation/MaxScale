@@ -137,7 +137,7 @@ export default {
     },
 
     methods: {
-        ...mapMutations({ setUser: 'user/setUser' }),
+        ...mapMutations({ SET_LOGGED_IN_USER: 'user/SET_LOGGED_IN_USER' }),
 
         onInput() {
             if (this.showEmptyMessage) {
@@ -148,7 +148,6 @@ export default {
 
         async handleSubmit() {
             this.isLoading = true
-            let self = this
             try {
                 /*  use login axios instance, instead of showing global interceptor, show error in catch
                     max-age param will be 8 hours if rememberMe is true, otherwise, along as user close the browser
@@ -156,20 +155,20 @@ export default {
                 */
                 refreshAxiosToken()
                 let url = '/auth?persist=yes'
-                await this.$loginAxios.get(`${url}${self.rememberMe ? '&max-age=28800' : ''}`, {
-                    auth: self.credential,
+                await this.$loginAxios.get(`${url}${this.rememberMe ? '&max-age=28800' : ''}`, {
+                    auth: this.credential,
                 })
 
                 // for now, using username as name
                 let userObj = {
-                    name: self.credential.username,
-                    rememberMe: self.rememberMe,
-                    isLoggedIn: self.$help.getCookie('token_body') ? true : false,
+                    name: this.credential.username,
+                    rememberMe: this.rememberMe,
+                    isLoggedIn: this.$help.getCookie('token_body') ? true : false,
                 }
-                await self.setUser(userObj)
+                await this.SET_LOGGED_IN_USER(userObj)
                 localStorage.setItem('user', JSON.stringify(userObj))
 
-                await self.$router.push(self.$route.query.redirect || '/dashboard/servers')
+                await this.$router.push(this.$route.query.redirect || '/dashboard/servers')
             } catch (error) {
                 this.showEmptyMessage = true
                 if (error.response) {
@@ -179,6 +178,7 @@ export default {
                             : error.response.statusText
                 } else {
                     this.logger.error(error)
+                    this.errorMessage = error.toString()
                 }
             }
             this.isLoading = false

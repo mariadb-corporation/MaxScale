@@ -1,11 +1,11 @@
 <template>
     <page-wrapper>
-        <v-sheet v-if="!$help.lodash.isEmpty(currentService)" class="px-6">
+        <v-sheet v-if="!$help.lodash.isEmpty(current_service)" class="px-6">
             <page-header :onEditSucceeded="fetchService" />
             <!--
                 overview-header will fetch fetchServiceConnections and
-                fetchSessionsFilterByServiceId parallelly.
-                fetchSessionsFilterByServiceId will update sessions-table data
+                fetchSessionsFilterByService parallelly.
+                fetchSessionsFilterByService will update sessions-table data
             -->
             <overview-header />
 
@@ -23,7 +23,7 @@
                                         <relationship-table
                                             relationshipType="servers"
                                             :tableRows="serverStateTableRow"
-                                            :loading="overlay === OVERLAY_TRANSPARENT_LOADING"
+                                            :loading="overlay_type === OVERLAY_TRANSPARENT_LOADING"
                                             :getRelationshipData="getRelationshipData"
                                             @on-relationship-update="dispatchRelationshipUpdate"
                                         />
@@ -32,7 +32,7 @@
                                         <relationship-table
                                             relationshipType="filters"
                                             :tableRows="filtersTableRow"
-                                            :loading="overlay === OVERLAY_TRANSPARENT_LOADING"
+                                            :loading="overlay_type === OVERLAY_TRANSPARENT_LOADING"
                                             :getRelationshipData="getRelationshipData"
                                             @on-relationship-update="dispatchRelationshipUpdate"
                                         />
@@ -41,7 +41,7 @@
                                     <v-col cols="12" class="pa-0 mt-4">
                                         <relationship-table
                                             relationshipType="listeners"
-                                            :loading="overlay === OVERLAY_TRANSPARENT_LOADING"
+                                            :loading="overlay_type === OVERLAY_TRANSPARENT_LOADING"
                                             :tableRows="listenerStateTableRow"
                                             readOnly
                                             @open-listener-form-dialog="
@@ -53,7 +53,7 @@
                             </v-col>
                             <v-col class="py-0 ma-0" cols="8">
                                 <sessions-table
-                                    :loading="overlay === OVERLAY_TRANSPARENT_LOADING"
+                                    :loading="overlay_type === OVERLAY_TRANSPARENT_LOADING"
                                 />
                             </v-col>
                         </v-row>
@@ -64,10 +64,12 @@
                             <v-col class="py-0 my-0" cols="6">
                                 <parameters-table
                                     :onEditSucceeded="fetchService"
-                                    :loading="overlay === OVERLAY_TRANSPARENT_LOADING"
+                                    :loading="overlay_type === OVERLAY_TRANSPARENT_LOADING"
                                 />
                             </v-col>
-                            <diagnostics-table :loading="overlay === OVERLAY_TRANSPARENT_LOADING" />
+                            <diagnostics-table
+                                :loading="overlay_type === OVERLAY_TRANSPARENT_LOADING"
+                            />
                         </v-row>
                     </v-tab-item>
                 </v-tabs-items>
@@ -91,7 +93,7 @@
  */
 import { OVERLAY_TRANSPARENT_LOADING } from 'store/overlayTypes'
 import { FORM_LISTENER } from 'store/formTypes'
-import { mapGetters, mapActions, mapMutations } from 'vuex'
+import { mapActions, mapMutations, mapState } from 'vuex'
 import OverviewHeader from './OverviewHeader'
 import PageHeader from './PageHeader'
 import SessionsTable from './SessionsTable'
@@ -122,17 +124,16 @@ export default {
         }
     },
     computed: {
-        ...mapGetters({
-            overlay: 'overlay',
-            currentService: 'service/currentService',
-            allFilters: 'filter/allFilters',
+        ...mapState({
+            overlay_type: 'overlay_type',
+            current_service: state => state.service.current_service,
         }),
     },
 
     async created() {
         // Initial fetch, wait for service id
         await this.fetchService()
-        await this.genDataSetSchema()
+        await this.genServiceConnectionsDataSets()
         await Promise.all([
             this.processingRelationshipTable('servers'),
             this.processingRelationshipTable('filters'),
@@ -143,7 +144,7 @@ export default {
         ...mapActions({
             getResourceState: 'getResourceState',
             fetchServiceById: 'service/fetchServiceById',
-            genDataSetSchema: 'service/genDataSetSchema',
+            genServiceConnectionsDataSets: 'service/genDataSets',
             updateServiceRelationship: 'service/updateServiceRelationship',
             fetchAllFilters: 'filter/fetchAllFilters',
         }),
@@ -166,7 +167,7 @@ export default {
                 relationships: {
                     [`${relationshipType}`]: { data: relationshipData = [] } = {},
                 } = {},
-            } = this.currentService
+            } = this.current_service
 
             let ids = relationshipData.length ? relationshipData.map(item => `${item.id}`) : []
             let arr = []
@@ -211,7 +212,7 @@ export default {
         // actions to vuex
         async dispatchRelationshipUpdate({ type, data, isFilterDrag }) {
             await this.updateServiceRelationship({
-                id: this.currentService.id,
+                id: this.current_service.id,
                 type: type,
                 [type]: data,
                 callback: this.fetchService,

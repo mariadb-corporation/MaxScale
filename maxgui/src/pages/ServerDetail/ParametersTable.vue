@@ -1,8 +1,8 @@
 <template>
     <details-parameters-collapse
-        :searchKeyWord="searchKeyWord"
-        :resourceId="currentServer.id"
-        :parameters="currentServer.attributes.parameters"
+        :searchKeyword="search_keyword"
+        :resourceId="current_server.id"
+        :parameters="current_server.attributes.parameters"
         :moduleParameters="processedModuleParameters"
         usePortOrSocket
         :updateResourceParameters="updateServerParameters"
@@ -24,7 +24,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapGetters, mapActions } from 'vuex'
+import { mapActions, mapState } from 'vuex'
 export default {
     name: 'parameters-table',
 
@@ -42,10 +42,10 @@ export default {
     },
 
     computed: {
-        ...mapGetters({
-            searchKeyWord: 'searchKeyWord',
-            moduleParameters: 'moduleParameters',
-            currentServer: 'server/currentServer',
+        ...mapState({
+            search_keyword: 'search_keyword',
+            module_parameters: 'module_parameters',
+            current_server: state => state.server.current_server,
         }),
     },
 
@@ -60,10 +60,9 @@ export default {
             updateServerParameters: 'server/updateServerParameters',
         }),
         async processModuleParameters() {
-            if (this.moduleParameters.length) {
-                this.processedModuleParameters = this.moduleParameters
-                const self = this
-                await this.$help.delay(150).then(() => (self.loadingModuleParams = false))
+            if (this.module_parameters.length) {
+                this.processedModuleParameters = this.module_parameters
+                await this.$help.delay(150).then(() => (this.loadingModuleParams = false))
             }
         },
     },

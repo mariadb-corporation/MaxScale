@@ -14,26 +14,26 @@
 export default {
     namespaced: true,
     state: {
-        allMonitors: [],
-        currentMonitor: {},
-        currentMonitorDiagnostics: {},
+        all_monitors: [],
+        current_monitor: {},
+        monitor_diagnostics: {},
     },
     mutations: {
-        setAllMonitors(state, payload) {
-            state.allMonitors = payload
+        SET_ALL_MONITORS(state, payload) {
+            state.all_monitors = payload
         },
-        setCurrentMonitor(state, payload) {
-            state.currentMonitor = payload
+        SET_CURRENT_MONITOR(state, payload) {
+            state.current_monitor = payload
         },
-        setCurrentMonitorDiagnostics(state, payload) {
-            state.currentMonitorDiagnostics = payload
+        SET_MONITOR_DIAGNOSTICS(state, payload) {
+            state.monitor_diagnostics = payload
         },
     },
     actions: {
         async fetchAllMonitors({ commit }) {
             try {
                 let res = await this.vue.$axios.get(`/monitors`)
-                if (res.data.data) commit('setAllMonitors', res.data.data)
+                if (res.data.data) commit('SET_ALL_MONITORS', res.data.data)
             } catch (e) {
                 if (process.env.NODE_ENV !== 'test') {
                     const logger = this.vue.$logger('store-monitor-fetchAllMonitors')
@@ -44,7 +44,7 @@ export default {
         async fetchMonitorById({ commit }, id) {
             try {
                 let res = await this.vue.$axios.get(`/monitors/${id}`)
-                if (res.data.data) commit('setCurrentMonitor', res.data.data)
+                if (res.data.data) commit('SET_CURRENT_MONITOR', res.data.data)
             } catch (e) {
                 if (process.env.NODE_ENV !== 'test') {
                     const logger = this.vue.$logger('store-monitor-fetchMonitorById')
@@ -57,7 +57,7 @@ export default {
                 let res = await this.vue.$axios.get(
                     `/monitors/${id}?fields[monitors]=monitor_diagnostics`
                 )
-                if (res.data.data) commit('setCurrentMonitorDiagnostics', res.data.data)
+                if (res.data.data) commit('SET_MONITOR_DIAGNOSTICS', res.data.data)
             } catch (e) {
                 if (process.env.NODE_ENV !== 'test') {
                     const logger = this.vue.$logger('store-monitor-fetchMonitorDiagnosticsById')
@@ -92,7 +92,7 @@ export default {
                 // response ok
                 if (res.status === 204) {
                     commit(
-                        'showMessage',
+                        'SET_SNACK_BAR_MESSAGE',
                         {
                             text: message,
                             type: 'success',
@@ -114,7 +114,7 @@ export default {
          * @param {Object} payload payload object
          * @param {String} payload.id Name of the monitor
          * @param {Object} payload.parameters Parameters for the monitor
-         * @param {Object} payload.callback callback function after successfully updated
+         * @param {Function} payload.callback callback function after successfully updated
          */
         async updateMonitorParameters({ commit }, payload) {
             try {
@@ -129,7 +129,7 @@ export default {
                 // response ok
                 if (res.status === 204) {
                     commit(
-                        'showMessage',
+                        'SET_SNACK_BAR_MESSAGE',
                         {
                             text: [`Monitor ${payload.id} is updated`],
                             type: 'success',
@@ -148,8 +148,9 @@ export default {
         /**
          * @param {String} id id of the monitor to be manipulated
          * @param {String} mode Mode to manipulate the monitor ( destroy, stop, start)
+         * @param {Function} callback callback function after successfully updated
          */
-        async monitorManipulate({ commit }, { id, mode, callback }) {
+        async manipulateMonitor({ commit }, { id, mode, callback }) {
             try {
                 let res, message
                 switch (mode) {
@@ -173,7 +174,7 @@ export default {
                 // response ok
                 if (res.status === 204) {
                     commit(
-                        'showMessage',
+                        'SET_SNACK_BAR_MESSAGE',
                         {
                             text: message,
                             type: 'success',
@@ -184,7 +185,7 @@ export default {
                 }
             } catch (e) {
                 if (process.env.NODE_ENV !== 'test') {
-                    const logger = this.vue.$logger('store-monitor-monitorManipulate')
+                    const logger = this.vue.$logger('store-monitor-manipulateMonitor')
                     logger.error(e)
                 }
             }
@@ -210,7 +211,7 @@ export default {
                 // response ok
                 if (res.status === 204) {
                     commit(
-                        'showMessage',
+                        'SET_SNACK_BAR_MESSAGE',
                         {
                             text: message,
                             type: 'success',
@@ -228,21 +229,18 @@ export default {
         },
     },
     getters: {
-        allMonitors: state => state.allMonitors,
-        currentMonitor: state => state.currentMonitor,
-        currentMonitorDiagnostics: state => state.currentMonitorDiagnostics,
         // -------------- below getters are available only when fetchAllMonitors has been dispatched
-        allMonitorsMap: state => {
+        getAllMonitorsMap: state => {
             let map = new Map()
-            state.allMonitors.forEach(ele => {
+            state.all_monitors.forEach(ele => {
                 map.set(ele.id, ele)
             })
             return map
         },
 
-        allMonitorsInfo: state => {
+        getAllMonitorsInfo: state => {
             let idArr = []
-            return state.allMonitors.reduce((accumulator, _, index, array) => {
+            return state.all_monitors.reduce((accumulator, _, index, array) => {
                 idArr.push(array[index].id)
                 return (accumulator = { idArr: idArr })
             }, [])

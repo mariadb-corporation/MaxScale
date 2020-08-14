@@ -87,8 +87,8 @@
                 v-model="showConfirmDialog"
                 :title="dialogTitle"
                 :type="dialogType"
-                :smallInfo="smallInfo ? $t(`info.${smallInfo}`) : ''"
-                :item="currentServer"
+                :smallInfo="smallInfo"
+                :item="current_server"
                 :onSave="confirmSave"
                 :onClose="() => (showConfirmDialog = false)"
                 :onCancel="() => (showConfirmDialog = false)"
@@ -103,22 +103,15 @@
                     />
                 </template>
             </confirm-dialog>
-            <icon-sprite-sheet
-                size="13"
-                class="status-icon mr-1"
-                :frame="$help.serverStateIcon(currentServer.attributes.state)"
-            >
+            <icon-sprite-sheet size="13" class="status-icon mr-1" :frame="stateIconFrame">
                 status
             </icon-sprite-sheet>
             <span class="color text-navigation body-2">
                 {{ serverHealthy }}
             </span>
-            <span
-                v-if="!$help.lodash.isEmpty(currentServer.attributes.version_string)"
-                class="color text-field-text body-2"
-            >
+            <span v-if="version_string" class="color text-field-text body-2">
                 |
-                <span>{{ $t('version') }} {{ currentServer.attributes.version_string }}</span>
+                <span>{{ $t('version') }} {{ version_string }}</span>
             </span>
         </template>
     </details-page-title>
@@ -138,7 +131,7 @@
  * Public License.
  */
 
-import { mapGetters, mapActions } from 'vuex'
+import { mapState, mapActions } from 'vuex'
 
 export default {
     name: 'page-header',
@@ -150,18 +143,27 @@ export default {
             showConfirmDialog: false,
             dialogTitle: '',
             dialogType: 'unlink',
-            smallInfo: 'serviceDelete',
+            smallInfo: '',
             mode: 'set', //set or clear
             state: '',
             forceClosing: false,
         }
     },
     computed: {
-        ...mapGetters({
-            currentServer: 'server/currentServer',
+        ...mapState({
+            current_server: state => state.server.current_server,
         }),
+        version_string: function() {
+            return this.current_server.attributes.version_string
+        },
+        /**
+         * @returns {Number} returns a number: 0,1,2
+         */
+        stateIconFrame: function() {
+            return this.$help.serverStateIcon(this.current_server.attributes.state)
+        },
         serverHealthy: function() {
-            switch (this.$help.serverStateIcon(this.currentServer.attributes.state)) {
+            switch (this.stateIconFrame) {
                 case 0:
                     return 'Unhealthy'
                 case 1:
@@ -171,7 +173,7 @@ export default {
             }
         },
         serverState: function() {
-            let currentState = this.currentServer.attributes.state.toLowerCase()
+            let currentState = this.current_server.attributes.state.toLowerCase()
             if (currentState.indexOf(',') > 0) {
                 currentState = currentState.slice(0, currentState.indexOf(','))
             }
@@ -187,7 +189,7 @@ export default {
                         this.mode = 'delete'
                         this.dialogType = 'delete'
                         this.dialogTitle = `${this.$t('delete')} ${this.$tc('servers', 1)}`
-                        this.smallInfo = 'serverUnlink'
+                        this.smallInfo = ''
                     }
                     break
                 case 'drain':
@@ -196,18 +198,17 @@ export default {
                         this.dialogType = 'drain'
                         this.state = 'drain'
                         this.dialogTitle = `${this.$t('drain')} ${this.$tc('servers', 1)}`
-                        this.smallInfo = 'serverDrain'
+                        this.smallInfo = this.$t(`info.serverDrain`)
                     }
                     break
                 case 'clear':
                     {
                         this.mode = 'clear'
                         let currentState = this.serverState
-
                         this.state = currentState === 'drained' ? 'drain' : currentState
                         this.dialogType = 'clear'
                         this.dialogTitle = `${this.$t('clear')} ${this.$tc('servers', 1)}`
-                        this.smallInfo = 'serverClear'
+                        this.smallInfo = ''
                     }
                     break
                 case 'maintenance':
@@ -216,7 +217,7 @@ export default {
                         this.state = 'maintenance'
                         this.dialogType = 'maintain'
                         this.dialogTitle = `${this.$t('maintain')} ${this.$tc('servers', 1)}`
-                        this.smallInfo = 'serverMaintenance'
+                        this.smallInfo = this.$t(`info.serverMaintenance`)
                     }
                     break
             }
@@ -227,7 +228,7 @@ export default {
         async confirmSave() {
             switch (this.mode) {
                 case 'delete':
-                    await this.destroyServer(this.currentServer.id)
+                    await this.destroyServer(this.current_server.id)
                     this.showConfirmDialog = false
                     this.$router.go(-1)
                     break
@@ -238,18 +239,17 @@ export default {
             }
         },
         async performAsyncLoadingAction() {
-            const self = this
-            self.showConfirmDialog = false
+            this.showConfirmDialog = false
             let payload = {
-                id: self.currentServer.id,
-                state: self.state,
-                mode: self.mode,
-                callback: self.onEditSucceeded,
+                id: this.current_server.id,
+                state: this.state,
+                mode: this.mode,
+                callback: this.onEditSucceeded,
             }
             if (this.forceClosing) {
                 payload.forceClosing = true
             }
-            await self.setOrClearServerState(payload)
+            await this.setOrClearServerState(payload)
         },
     },
 }

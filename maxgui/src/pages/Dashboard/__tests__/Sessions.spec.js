@@ -1,46 +1,33 @@
+/* eslint-disable no-unused-vars */
 import chai, { expect } from 'chai'
 import mount from '@tests/unit/setup'
-import Listeners from '@/pages/Dashboard/Listeners'
+import Sessions from '@/pages/Dashboard/Sessions'
 import sinon from 'sinon'
 import sinonChai from 'sinon-chai'
-import { mockupAllListeners } from '@tests/unit/mockup'
+import { mockupAllSessions } from '@tests/unit/mockup'
 
 chai.should()
 chai.use(sinonChai)
 
 const expectedTableHeaders = [
-    { text: 'Listener', value: 'id' },
-    { text: 'Port', value: 'port' },
-    { text: 'Host', value: 'address' },
-    { text: 'State', value: 'state' },
+    { text: 'ID', value: 'id' },
+    { text: 'Client', value: 'user' },
+    { text: 'Connected', value: 'connected' },
+    { text: 'IDLE (s)', value: 'idle' },
     { text: 'Service', value: 'serviceIds' },
 ]
 
 const expectedTableRows = [
     {
-        id: 'RCR-Writer-Listener',
-        port: 3308,
-        address: '::',
-        state: 'Running',
-        serviceIds: ['RCR-Writer'],
-    },
-    {
-        id: 'RWS-Listener',
-        port: 3306,
-        address: '::',
-        state: 'Running',
-        serviceIds: ['RWS-Router'],
-    },
-    {
-        id: 'RCR-Router-Listener',
-        port: 3307,
-        address: '::',
-        state: 'Running',
+        id: '1000002',
+        user: 'maxskysql@::ffff:127.0.0.1',
+        connected: 'Thu Aug 13 14:06:17 2020',
+        idle: 55.5,
         serviceIds: ['RCR-Router'],
     },
 ]
 
-describe('Dashboard Listeners tab', () => {
+describe('Dashboard Sessions tab', () => {
     let wrapper, axiosStub
 
     after(async () => {
@@ -50,9 +37,9 @@ describe('Dashboard Listeners tab', () => {
     beforeEach(async () => {
         wrapper = mount({
             shallow: false,
-            component: Listeners,
+            component: Sessions,
             computed: {
-                all_listeners: () => mockupAllListeners,
+                all_sessions: () => mockupAllSessions,
             },
         })
         axiosStub = sinon.stub(wrapper.vm.$axios, 'get').resolves(
@@ -78,10 +65,10 @@ describe('Dashboard Listeners tab', () => {
 
     it(`Should navigate to service detail page when a service is clicked`, async () => {
         const dataTable = wrapper.findComponent({ name: 'data-table' })
-        const listenerId = mockupAllListeners[0].id
+        const sessionId = mockupAllSessions[0].id
         const cellIndex = expectedTableHeaders.length - 1
-        const serviceId = mockupAllListeners[0].relationships.services.data[0].id
-        let tableCell = dataTable.find(`.cell-${cellIndex}-${listenerId}`)
+        const serviceId = mockupAllSessions[0].relationships.services.data[0].id
+        let tableCell = dataTable.find(`.cell-${cellIndex}-${sessionId}`)
         let aTag = tableCell.find('a')
         await aTag.trigger('click')
         expect(wrapper.vm.$route.path).to.be.equals(`/dashboard/services/${serviceId}`)

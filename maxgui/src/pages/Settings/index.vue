@@ -11,17 +11,17 @@
                     <v-tab-item class="pt-5">
                         <v-col cols="7">
                             <details-parameters-collapse
-                                v-if="maxScaleParameters"
-                                :searchKeyWord="searchKeyWord"
+                                v-if="maxscale_parameters"
+                                :searchKeyword="search_keyword"
                                 resourceId="maxscale"
-                                :parameters="maxScaleParameters"
+                                :parameters="maxscale_parameters"
                                 :moduleParameters="processedModuleParameters"
                                 :updateResourceParameters="updateMaxScaleParameters"
                                 :onEditSucceeded="fetchMaxScaleParameters"
                                 :loading="
                                     loadingModuleParams
                                         ? true
-                                        : overlay === OVERLAY_TRANSPARENT_LOADING
+                                        : overlay_type === OVERLAY_TRANSPARENT_LOADING
                                 "
                                 isTree
                             />
@@ -51,7 +51,7 @@
  * Public License.
  */
 import { OVERLAY_TRANSPARENT_LOADING } from 'store/overlayTypes'
-import { mapGetters, mapActions } from 'vuex'
+import { mapActions, mapState } from 'vuex'
 import PageHeader from './PageHeader'
 
 export default {
@@ -72,11 +72,11 @@ export default {
         }
     },
     computed: {
-        ...mapGetters({
-            overlay: 'overlay',
-            searchKeyWord: 'searchKeyWord',
-            maxScaleParameters: 'maxscale/maxScaleParameters',
-            moduleParameters: 'moduleParameters',
+        ...mapState({
+            overlay_type: 'overlay_type',
+            search_keyword: 'search_keyword',
+            module_parameters: 'module_parameters',
+            maxscale_parameters: state => state.maxscale.maxscale_parameters,
         }),
     },
     async created() {
@@ -91,8 +91,8 @@ export default {
             updateMaxScaleParameters: 'maxscale/updateMaxScaleParameters',
         }),
         async processModuleParameters() {
-            if (this.moduleParameters.length) {
-                const parameters = this.moduleParameters
+            if (this.module_parameters.length) {
+                const parameters = this.module_parameters
                 // hard code type for child parameter of log_throttling
                 const log_throttingIndex = parameters.findIndex(
                     param => param.name === 'log_throttling'

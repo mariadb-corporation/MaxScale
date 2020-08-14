@@ -3,14 +3,14 @@
         :headers="tableHeaders"
         :data="tableRows"
         :colsHasRowSpan="2"
-        :search="searchKeyWord"
+        :search="search_keyword"
         sortBy="groupId"
     >
         <template v-slot:header-append-groupId>
             <span class="ml-1 color text-field-text"> ({{ monitorsLength }}) </span>
         </template>
         <template v-slot:header-append-id>
-            <span class="ml-1 color text-field-text"> ({{ allServers.length }}) </span>
+            <span class="ml-1 color text-field-text"> ({{ all_servers.length }}) </span>
         </template>
         <template v-slot:header-append-serviceIds>
             <span class="ml-1 color text-field-text"> ({{ servicesLength }}) </span>
@@ -121,7 +121,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapGetters } from 'vuex'
+import { mapGetters, mapState } from 'vuex'
 
 export default {
     data() {
@@ -142,26 +142,27 @@ export default {
         }
     },
     computed: {
+        ...mapState({
+            search_keyword: 'search_keyword',
+            all_servers: state => state.server.all_servers,
+        }),
         ...mapGetters({
-            searchKeyWord: 'searchKeyWord',
-            allMonitorsMap: 'monitor/allMonitorsMap',
-            allMonitors: 'monitor/allMonitors',
-            allServers: 'server/allServers',
+            getAllMonitorsMap: 'monitor/getAllMonitorsMap',
         }),
         tableRows: function() {
             let rows = []
-            if (this.allMonitorsMap.size) {
+            if (this.all_servers.length) {
                 let allServiceIds = []
                 let allMonitorIds = []
 
-                this.allServers.forEach(server => {
+                this.all_servers.forEach(server => {
                     const {
                         id,
                         attributes: {
                             state: serverState,
-                            parameters: { address, port },
-                            statistics: { connections },
-                            gtid_current_pos,
+                            parameters: { address: serverAddress, port: serverPort },
+                            statistics: { connections: serverConnections },
+                            gtid_current_pos: gtid,
                         },
                         relationships: {
                             services: { data: associatedServices = [] } = {},
@@ -180,22 +181,24 @@ export default {
                     this.setServicesLength([...uniqueServiceId].length)
 
                     let row = {
-                        id: id,
-                        serverAddress: address,
-                        serverPort: port,
-                        serverConnections: connections,
-                        serverState: serverState,
-                        serviceIds: serviceIds,
-                        gtid: gtid_current_pos,
+                        id,
+                        serverAddress,
+                        serverPort,
+                        serverConnections,
+                        serverState,
+                        serviceIds,
+                        gtid,
                     }
-                    if (associatedMonitors.length) {
+                    if (this.getAllMonitorsMap.size && associatedMonitors.length) {
                         // The associatedMonitors is always an array with one element -> get monitor at index 0
-                        const monitor = this.allMonitorsMap.get(associatedMonitors[0].id)
-
-                        if (!this.$help.lodash.isEmpty(monitor)) {
-                            allMonitorIds.push(monitor.id)
-                            row.groupId = monitor.id // aka monitorId
-                            row.monitorState = `${monitor.attributes.state}`
+                        const {
+                            id: monitorId = null,
+                            attributes: { state },
+                        } = this.getAllMonitorsMap.get(associatedMonitors[0].id) || {}
+                        if (monitorId) {
+                            allMonitorIds.push(monitorId)
+                            row.groupId = monitorId
+                            row.monitorState = state
                         }
                     } else {
                         row.groupId = this.$t('not', { action: 'monitored' })

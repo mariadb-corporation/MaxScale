@@ -1,6 +1,6 @@
 <template>
     <data-table
-        :search="searchKeyWord"
+        :search="search_keyword"
         :headers="tableHeaders"
         :data="tableRows"
         :sortDesc="false"
@@ -53,7 +53,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapGetters } from 'vuex'
+import { mapState } from 'vuex'
 
 export default {
     name: 'listeners',
@@ -72,9 +72,9 @@ export default {
     },
 
     computed: {
-        ...mapGetters({
-            searchKeyWord: 'searchKeyWord',
-            allListeners: 'listener/allListeners',
+        ...mapState({
+            search_keyword: 'search_keyword',
+            all_listeners: state => state.listener.all_listeners,
         }),
 
         /**
@@ -83,7 +83,7 @@ export default {
         tableRows: function() {
             let rows = []
             let allServiceIds = []
-            this.allListeners.forEach(listener => {
+            this.all_listeners.forEach(listener => {
                 const {
                     id,
                     attributes: {

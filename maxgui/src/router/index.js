@@ -27,38 +27,44 @@ let router = new Router({
     routes: routes,
 })
 router.beforeEach(async (to, from, next) => {
-    // Check if user is logged in
-    const { getCookie, delay } = store.vue.$help
-    const token_body = getCookie('token_body')
-    const user = JSON.parse(localStorage.getItem('user'))
-    const isLoggedIn = user ? user.isLoggedIn : null
-    store.commit('setPrevRoute', from)
-    if (to.matched.some(record => record.meta.requiresAuth)) {
-        if (token_body && isLoggedIn) {
-            if (from.path === '/login') {
-                store.commit('showOverlay', OVERLAY_LOADING)
-                await delay(1500).then(() => store.commit('hideOverlay'))
-                next()
-            } else {
-                next()
-            }
-        } else {
-            if (from.path === '/') {
-                store.commit('showOverlay', OVERLAY_LOADING)
-                await delay(600).then(() => store.commit('hideOverlay'))
-            }
-            next({
-                path: '/login',
-                query: { redirect: to.path },
-            })
-        }
-    } else {
-        /* user will be logged out if maxscale is restarted or maxgui is updated as jwt token will be expired
-           This action checking for available maxgui update
-        */
-        store.dispatch('checkingForUpdate')
-        // Public route
-        next()
-    }
+    store.commit('SET_PREV_ROUTE', from)
+    const isGuardedRoutes = to.matched.some(record => record.meta.requiresAuth)
+    if (isGuardedRoutes) await resolvingGuardedRoutes(to, from, next)
+    else await Promise.all([store.dispatch('checkingForUpdate'), next()])
 })
 export default router
+
+/**
+ * @param {Number} duration - duration time for showing overlay loading
+ */
+async function showLoadingOverlay(duration) {
+    store.commit('SET_OVERLAY_TYPE', OVERLAY_LOADING)
+    await store.vue.$help.delay(duration).then(() => store.commit('SET_OVERLAY_TYPE', null))
+}
+/**
+ *
+ *
+ * @param {Object} to - the target Route Object being navigated to.
+ * @param {Object} from - the current route being navigated away from.
+ * @param {Function} next - Function must be called to resolve the hook
+ */
+async function resolvingGuardedRoutes(to, from, next) {
+    // Check if user is logged in
+    const { getCookie } = store.vue.$help
+    const user = JSON.parse(localStorage.getItem('user'))
+    const isAuthenticated = getCookie('token_body') && user.isLoggedIn
+
+    if (isAuthenticated) {
+        // show overlay loading screen after successfully authenticating
+        if (from.name === 'login') {
+            await showLoadingOverlay(1500)
+        }
+        next()
+    } else {
+        await showLoadingOverlay(600)
+        next({
+            path: '/login',
+            query: { redirect: to.path },
+        })
+    }
+}

@@ -14,22 +14,22 @@
 export default {
     namespaced: true,
     state: {
-        allListeners: [],
-        currentListener: {},
+        all_listeners: [],
+        current_listener: {},
     },
     mutations: {
-        setAllListeners(state, payload) {
-            state.allListeners = payload
+        SET_ALL_LISTENERS(state, payload) {
+            state.all_listeners = payload
         },
-        setCurrentListener(state, payload) {
-            state.currentListener = payload
+        SET_CURRENT_LISTENER(state, payload) {
+            state.current_listener = payload
         },
     },
     actions: {
         async fetchAllListeners({ commit }) {
             try {
                 let res = await this.vue.$axios.get(`/listeners`)
-                if (res.data.data) commit('setAllListeners', res.data.data)
+                if (res.data.data) commit('SET_ALL_LISTENERS', res.data.data)
             } catch (e) {
                 if (process.env.NODE_ENV !== 'test') {
                     const logger = this.vue.$logger('store-listener-fetchAllListeners')
@@ -37,10 +37,11 @@ export default {
                 }
             }
         },
+
         async fetchListenerById({ commit }, id) {
             try {
                 let res = await this.vue.$axios.get(`/listeners/${id}`)
-                if (res.data.data) commit('setCurrentListener', res.data.data)
+                if (res.data.data) commit('SET_CURRENT_LISTENER', res.data.data)
             } catch (e) {
                 if (process.env.NODE_ENV !== 'test') {
                     const logger = this.vue.$logger('store-listener-fetchListenerById')
@@ -73,7 +74,7 @@ export default {
                 // response ok
                 if (res.status === 204) {
                     commit(
-                        'showMessage',
+                        'SET_SNACK_BAR_MESSAGE',
                         {
                             text: message,
                             type: 'success',
@@ -89,16 +90,14 @@ export default {
                 }
             }
         },
-        /**
-         * @param {String} object.id Name of the listener to be destroyed,
-         */
+
         async destroyListener({ dispatch, commit }, id) {
             try {
                 let res = await this.vue.$axios.delete(`/listeners/${id}`)
                 if (res.status === 204) {
                     await dispatch('fetchAllListeners')
                     commit(
-                        'showMessage',
+                        'SET_SNACK_BAR_MESSAGE',
                         {
                             text: [`Listeners ${id} is destroyed`],
                             type: 'success',
@@ -115,20 +114,18 @@ export default {
         },
     },
     getters: {
-        allListeners: state => state.allListeners,
-        currentListener: state => state.currentListener,
         // -------------- below getters are available only when fetchAllListeners has been dispatched
-        allListenersMap: state => {
+        getAllListenersMap: state => {
             let map = new Map()
-            state.allListeners.forEach(ele => {
+            state.all_listeners.forEach(ele => {
                 map.set(ele.id, ele)
             })
             return map
         },
 
-        allListenersInfo: state => {
+        getAllListenersInfo: state => {
             let idArr = []
-            return state.allListeners.reduce((accumulator, _, index, array) => {
+            return state.all_listeners.reduce((accumulator, _, index, array) => {
                 idArr.push(array[index].id)
                 return (accumulator = { idArr: idArr })
             }, [])

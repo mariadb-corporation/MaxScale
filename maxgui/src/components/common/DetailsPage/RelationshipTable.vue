@@ -9,7 +9,7 @@
     >
         <template v-slot:content>
             <data-table
-                :search="searchKeyWord"
+                :search="search_keyword"
                 :headers="tableHeader"
                 :data="tableRowsData"
                 :noDataText="$t('noEntity', { entityName: $tc(relationshipType, 2) })"
@@ -97,7 +97,7 @@ isFilterDrag will be only added to event data object if relationshipType props =
 - $emit('open-listener-form-dialog')
 This callback event is emitted only when relationshipType props === 'listeners'
 */
-import { mapGetters } from 'vuex'
+import { mapState } from 'vuex'
 
 export default {
     name: 'relationship-table',
@@ -132,9 +132,10 @@ export default {
         }
     },
     computed: {
-        ...mapGetters({
-            searchKeyWord: 'searchKeyWord',
+        ...mapState({
+            search_keyword: 'search_keyword',
         }),
+
         logger: function() {
             return this.$logger('relationship-table')
         },

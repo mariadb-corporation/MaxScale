@@ -2,7 +2,7 @@
     <div class="mb-2">
         <parameters-collapse
             ref="parametersTable"
-            :parameters="getServerParameters"
+            :parameters="serverParameters"
             usePortOrSocket
             :parentForm="parentForm"
         />
@@ -54,59 +54,34 @@ export default {
     },
 
     computed: {
-        getServerParameters: function() {
-            const self = this
-            if (self.resourceModules.length) {
+        serverParameters: function() {
+            if (this.resourceModules.length) {
                 const {
                     attributes: { parameters = [] },
-                } = self.$help.lodash.cloneDeep(self.resourceModules[0]) // always 0
-
+                } = this.$help.lodash.cloneDeep(this.resourceModules[0]) // always 0
                 return parameters.filter(item => item.name !== 'type')
             }
             return []
         },
         servicesList: function() {
-            let cloneArr = this.$help.lodash.cloneDeep(this.allServices)
-            for (let i = 0; i < cloneArr.length; ++i) {
-                let obj = cloneArr[i]
-                delete obj.attributes
-                delete obj.links
-                delete obj.relationships
-                delete obj.idNum
-            }
-            return cloneArr
+            return this.allServices.map(({ id, type }) => ({ id, type }))
         },
 
         monitorsList: function() {
-            let cloneArr = this.$help.lodash.cloneDeep(this.allMonitors)
-            for (let i = 0; i < cloneArr.length; ++i) {
-                let obj = cloneArr[i]
-                delete obj.attributes
-                delete obj.links
-                delete obj.relationships
-                delete obj.idNum
-            }
-            return cloneArr
+            return this.allMonitors.map(({ id, type }) => ({ id, type }))
         },
     },
 
     methods: {
         getValues() {
-            const obj = {
-                parameters: this.$refs.parametersTable.getParameterObj(),
-                relationships: {},
+            const { parametersTable, monitorsRelationship, servicesRelationship } = this.$refs
+            return {
+                parameters: parametersTable.getParameterObj(),
+                relationships: {
+                    monitors: { data: monitorsRelationship.getSelectedItems() },
+                    services: { data: servicesRelationship.getSelectedItems() },
+                },
             }
-            const monitors = this.$refs.monitorsRelationship.getSelectedItems()
-            const services = this.$refs.servicesRelationship.getSelectedItems()
-
-            if (!this.$help.lodash.isEmpty(monitors)) {
-                obj.relationships.monitors = { data: monitors }
-            }
-            if (!this.$help.lodash.isEmpty(services)) {
-                obj.relationships.services = { data: services }
-            }
-
-            return obj
         },
     },
 }

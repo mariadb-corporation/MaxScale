@@ -1,7 +1,7 @@
 <template>
     <page-wrapper>
-        <v-sheet v-if="!$help.lodash.isEmpty(currentServer)" class="px-6">
-            <page-header :onEditSucceeded="fetchServer" />
+        <v-sheet v-if="!$help.lodash.isEmpty(current_server)" class="px-6">
+            <page-header :onEditSucceeded="dispatchFetchServer" />
             <overview-header
                 :getRelationshipData="getRelationshipData"
                 @on-relationship-update="dispatchRelationshipUpdate"
@@ -17,13 +17,13 @@
                             <v-col class="py-0 my-0" cols="4">
                                 <v-row class="pa-0 ma-0">
                                     <statistics-table
-                                        :loading="overlay === OVERLAY_TRANSPARENT_LOADING"
+                                        :loading="overlay_type === OVERLAY_TRANSPARENT_LOADING"
                                     />
                                     <v-col cols="12" class="pa-0 mt-4">
                                         <relationship-table
                                             relationshipType="services"
                                             :tableRows="serviceTableRow"
-                                            :loading="overlay === OVERLAY_TRANSPARENT_LOADING"
+                                            :loading="overlay_type === OVERLAY_TRANSPARENT_LOADING"
                                             :getRelationshipData="getRelationshipData"
                                             @on-relationship-update="dispatchRelationshipUpdate"
                                         />
@@ -32,7 +32,7 @@
                             </v-col>
                             <v-col class="py-0 ma-0" cols="8">
                                 <sessions-table
-                                    :loading="overlay === OVERLAY_TRANSPARENT_LOADING"
+                                    :loading="overlay_type === OVERLAY_TRANSPARENT_LOADING"
                                 />
                             </v-col>
                         </v-row>
@@ -42,13 +42,13 @@
                         <v-row>
                             <v-col class="py-0 my-0" cols="6">
                                 <parameters-table
-                                    :onEditSucceeded="fetchServer"
-                                    :loading="overlay === OVERLAY_TRANSPARENT_LOADING"
+                                    :onEditSucceeded="dispatchFetchServer"
+                                    :loading="overlay_type === OVERLAY_TRANSPARENT_LOADING"
                                 />
                             </v-col>
                             <v-col class="py-0 my-0" cols="6">
                                 <diagnostics-table
-                                    :loading="overlay === OVERLAY_TRANSPARENT_LOADING"
+                                    :loading="overlay_type === OVERLAY_TRANSPARENT_LOADING"
                                     :fetchMonitorDiagnostics="fetchMonitorDiagnostics"
                                 />
                             </v-col>
@@ -74,7 +74,7 @@
  * Public License.
  */
 import { OVERLAY_TRANSPARENT_LOADING } from 'store/overlayTypes'
-import { mapGetters, mapActions, mapMutations } from 'vuex'
+import { mapActions, mapMutations, mapState } from 'vuex'
 import PageHeader from './PageHeader'
 import OverviewHeader from './OverviewHeader'
 import StatisticsTable from './StatisticsTable'
@@ -108,22 +108,21 @@ export default {
         }
     },
     computed: {
-        ...mapGetters({
-            overlay: 'overlay',
-            searchKeyWord: 'searchKeyWord',
-            currentServer: 'server/currentServer',
-            currentMonitorDiagnostics: 'monitor/currentMonitorDiagnostics',
+        ...mapState({
+            search_keyword: 'search_keyword',
+            overlay_type: 'overlay_type',
+            current_server: state => state.server.current_server,
         }),
     },
 
     async created() {
         // Initial fetch
-        await this.fetchServer()
+        await this.dispatchFetchServer()
         await this.serviceTableRowProcessing()
     },
     methods: {
         ...mapMutations({
-            setCurrentMonitorDiagnostics: 'monitor/setCurrentMonitorDiagnostics',
+            SET_CURRENT_MONITOR: 'monitor/SET_CURRENT_MONITOR',
         }),
         ...mapActions({
             getResourceState: 'getResourceState',
@@ -133,23 +132,23 @@ export default {
         }),
 
         async fetchMonitorDiagnostics() {
-            const { relationships: { monitors = {} } = {} } = this.currentServer
+            const { relationships: { monitors = {} } = {} } = this.current_server
             if (monitors.data) {
                 const monitorId = monitors.data[0].id
                 await this.fetchMonitorDiagnosticsById(monitorId)
             } else {
-                this.setCurrentMonitorDiagnostics({})
+                this.SET_CURRENT_MONITOR({})
             }
         },
         // reuse functions for fetch loop or after finish editing
-        async fetchServer() {
+        async dispatchFetchServer() {
             await this.fetchServerById(this.$route.params.id)
         },
 
         async serviceTableRowProcessing() {
             const {
                 relationships: { services: { data: servicesData = [] } = {} } = {},
-            } = this.currentServer
+            } = this.current_server
             if (servicesData.length) {
                 let servicesIdArr = servicesData.map(item => `${item.id}`)
                 let arr = []
@@ -187,10 +186,10 @@ export default {
         // actions to vuex
         async dispatchRelationshipUpdate({ type, data }) {
             await this.updateServerRelationship({
-                id: this.currentServer.id,
+                id: this.current_server.id,
                 type: type,
                 [type]: data,
-                callback: this.fetchServer,
+                callback: this.dispatchFetchServer,
             })
             switch (type) {
                 case 'monitors':

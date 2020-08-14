@@ -102,3 +102,38 @@ Using default configuration
 ## Other Customize configuration
 
 See [Configuration Reference](https://cli.vuejs.org/config/).
+
+## Vuex conventions
+
+### State
+
+Avoiding naming state with one word. This makes things hard
+to differentiate between component state and vuex state.
+Names of state should be written in underscore-case notation.
+e.g. search_keyword instead of searchKeyword
+
+### Mutations
+
+Mutations should be written as constants. e.g. SET_OVERLAY_TYPE
+Prefix of mutations can be as follows:
+
+-   SET\_
+-   ADD\_
+-   REMOVE\_
+
+### Actions
+
+Actions should be written with prefix starts with a verb. e.g. fetch,
+create, destroy,...
+For actions that involves id, after action verb, use 'ById' to
+describe the use of id.For examples:
+
+-   fetchServerById, this action gets a server data
+    by id.
+-   fetchAllServers, this actions gets all servers data
+
+### Getters
+
+Use getters only when data needs to be manipulated, processed before
+returning. Getter should be written with prefix starts with 'get'.
+e.g. getServersMap

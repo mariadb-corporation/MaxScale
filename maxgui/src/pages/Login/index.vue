@@ -5,7 +5,7 @@
                 <div class="logo">
                     <img src="@/assets/logo.svg" alt="MariaDB Logo" />
                     <span class="product-name font-weight-medium ml-2 white--text">
-                        {{ config.productName }}
+                        {{ app_config.productName }}
                     </span>
                 </div>
                 <login-form />
@@ -45,7 +45,7 @@ export default {
         }
     },
     computed: {
-        ...mapState(['config']),
+        ...mapState(['app_config']),
     },
     methods: {
         onResize() {

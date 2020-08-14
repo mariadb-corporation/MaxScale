@@ -249,14 +249,33 @@ export const mockupFiltersList = [
 
 export const mockupAllServices = [
     {
-        attributes: {},
+        attributes: {
+            state: 'Started',
+            router: 'readconnroute',
+            connections: 0,
+            total_connections: 1000001,
+        },
         id: 'service_0',
         links: {},
-        relationships: {},
+        relationships: {
+            servers: {
+                data: [
+                    {
+                        id: 'row_server_0',
+                        type: 'servers',
+                    },
+                ],
+            },
+        },
         type: 'services',
     },
     {
-        attributes: {},
+        attributes: {
+            state: 'Started',
+            router: 'readwritesplit',
+            connections: 0,
+            total_connections: 0,
+        },
         id: 'service_1',
         links: {},
         relationships: {},
@@ -416,5 +435,29 @@ export const allServicesState = [
         },
         id: 'RCR-Writer',
         type: 'services',
+    },
+]
+
+export const mockupAllSessions = [
+    {
+        attributes: {
+            connected: 'Thu Aug 13 14:06:17 2020',
+            idle: 55.5,
+            remote: '::ffff:127.0.0.1',
+            user: 'maxskysql',
+        },
+        id: '1000002',
+
+        relationships: {
+            services: {
+                data: [
+                    {
+                        id: 'RCR-Router',
+                        type: 'services',
+                    },
+                ],
+            },
+        },
+        type: 'sessions',
     },
 ]

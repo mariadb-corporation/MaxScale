@@ -44,11 +44,11 @@ import { mapState } from 'vuex'
 export default {
     name: 'details-page-title',
     computed: {
-        ...mapState(['prevRoute']),
+        ...mapState(['prev_route']),
     },
     methods: {
         goBack() {
-            this.prevRoute.name === 'login' || this.prevRoute.name === null
+            this.prev_route.name === 'login' || this.prev_route.name === null
                 ? this.$router.push('/dashboard/servers')
                 : this.$router.go(-1)
         },

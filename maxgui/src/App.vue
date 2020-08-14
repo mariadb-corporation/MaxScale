@@ -42,9 +42,9 @@ export default {
     },
 
     computed: {
-        ...mapState(['isUpdateAvailable']),
+        ...mapState(['update_availability']),
         updateExists: function() {
-            return this.isUpdateAvailable
+            return this.update_availability
         },
         logger: function() {
             return this.$logger('main')
@@ -59,14 +59,14 @@ export default {
     },
 
     async created() {
-        this.logger.info(this.$store.state.config.asciiLogo)
+        this.logger.info(this.$store.state.app_config.asciiLogo)
         this.logger.info(`Loaded Version: ${process.env.VUE_APP_VERSION}`)
     },
 
     methods: {
-        ...mapMutations(['setUpdateAvailable']),
+        ...mapMutations(['SET_UPDATE_AVAILABILITY']),
         confirmUpdate() {
-            this.setUpdateAvailable(false)
+            this.SET_UPDATE_AVAILABILITY(false)
             window.location.reload()
             this.logger.info('App is updated')
         },

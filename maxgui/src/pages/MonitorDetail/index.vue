@@ -1,20 +1,22 @@
 <template>
     <page-wrapper>
-        <v-sheet v-if="!$help.lodash.isEmpty(currentMonitor)" class="px-6">
-            <page-header :currentMonitor="currentMonitor" :onEditSucceeded="fetchMonitor" />
-            <overview-header :currentMonitor="currentMonitor" />
+        <v-sheet v-if="!$help.lodash.isEmpty(current_monitor)" class="px-6">
+            <page-header :currentMonitor="current_monitor" :onEditSucceeded="fetchMonitor" />
+            <overview-header :currentMonitor="current_monitor" />
             <v-row>
                 <!-- PARAMETERS TABLE -->
                 <v-col cols="6">
                     <details-parameters-collapse
-                        :searchKeyWord="searchKeyWord"
-                        :resourceId="currentMonitor.id"
-                        :parameters="currentMonitor.attributes.parameters"
+                        :searchKeyword="search_keyword"
+                        :resourceId="current_monitor.id"
+                        :parameters="current_monitor.attributes.parameters"
                         :moduleParameters="processedModuleParameters"
                         :updateResourceParameters="updateMonitorParameters"
                         :onEditSucceeded="fetchMonitor"
                         :loading="
-                            loadingModuleParams ? true : overlay === OVERLAY_TRANSPARENT_LOADING
+                            loadingModuleParams
+                                ? true
+                                : overlay_type === OVERLAY_TRANSPARENT_LOADING
                         "
                     />
                 </v-col>
@@ -22,7 +24,7 @@
                     <relationship-table
                         relationshipType="servers"
                         :tableRows="serverStateTableRow"
-                        :loading="overlay === OVERLAY_TRANSPARENT_LOADING"
+                        :loading="overlay_type === OVERLAY_TRANSPARENT_LOADING"
                         :getRelationshipData="getRelationshipData"
                         @on-relationship-update="dispatchRelationshipUpdate"
                     />
@@ -46,7 +48,7 @@
  * Public License.
  */
 import { OVERLAY_TRANSPARENT_LOADING } from 'store/overlayTypes'
-import { mapGetters, mapActions } from 'vuex'
+import { mapActions, mapState } from 'vuex'
 import PageHeader from './PageHeader'
 import OverviewHeader from './OverviewHeader'
 
@@ -64,18 +66,18 @@ export default {
         }
     },
     computed: {
-        ...mapGetters({
-            overlay: 'overlay',
-            searchKeyWord: 'searchKeyWord',
-            moduleParameters: 'moduleParameters',
-            currentMonitor: 'monitor/currentMonitor',
+        ...mapState({
+            overlay_type: 'overlay_type',
+            search_keyword: 'search_keyword',
+            module_parameters: 'module_parameters',
+            current_monitor: state => state.monitor.current_monitor,
         }),
     },
 
     async created() {
         await this.fetchMonitor()
         await this.serverTableRowProcessing()
-        const { attributes: { module: moduleName = null } = {} } = this.currentMonitor
+        const { attributes: { module: moduleName = null } = {} } = this.current_monitor
         if (moduleName) await this.fetchModuleParameters(moduleName)
         this.loadingModuleParams = true
         await this.processModuleParameters()
@@ -91,10 +93,9 @@ export default {
         }),
 
         async processModuleParameters() {
-            if (this.moduleParameters.length) {
-                this.processedModuleParameters = this.moduleParameters
-                const self = this
-                await this.$help.delay(150).then(() => (self.loadingModuleParams = false))
+            if (this.module_parameters.length) {
+                this.processedModuleParameters = this.module_parameters
+                await this.$help.delay(150).then(() => (this.loadingModuleParams = false))
             }
         },
 
@@ -105,7 +106,7 @@ export default {
         async serverTableRowProcessing() {
             const {
                 relationships: { servers: { data: serversData = [] } = {} } = {},
-            } = this.currentMonitor
+            } = this.current_monitor
 
             if (serversData.length) {
                 let serversIdArr = serversData.map(item => `${item.id}`)
@@ -144,7 +145,7 @@ export default {
         // actions to vuex
         async dispatchRelationshipUpdate({ type, data }) {
             await this.updateMonitorRelationship({
-                id: this.currentMonitor.id,
+                id: this.current_monitor.id,
                 [type]: data,
                 callback: this.fetchMonitor,
             })

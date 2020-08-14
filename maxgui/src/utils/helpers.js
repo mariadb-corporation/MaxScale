@@ -423,6 +423,34 @@ export function getSuffixFromValue(param, suffixes) {
     }
     return { suffix: suffix, indexOfSuffix: indexOfSuffix }
 }
+/**
+ *
+ *
+ * @export
+ * @param {String} label - label for dataset
+ * @param {Number} value - value for dataset
+ * @param {Number} colorIndex - index of color from color palette of dynamicColors helper
+ * @param {Number} [timestamp] - if provided, otherwise using Date.now()
+ * @returns {Object} returns dataset object
+ */
+export function genLineDataSet(label, value, colorIndex, timestamp) {
+    const lineColor = dynamicColors(colorIndex)
+    const indexOfOpacity = lineColor.lastIndexOf(')') - 1
+    const backgroundColor = strReplaceAt(lineColor, indexOfOpacity, '0.1')
+    let time = Date.now()
+    if (timestamp) time = timestamp
+    return {
+        label: label,
+        id: label,
+        type: 'line',
+        // background of the line
+        backgroundColor: backgroundColor,
+        borderColor: lineColor,
+        borderWidth: 1,
+        lineTension: 0,
+        data: [{ x: time, y: value }],
+    }
+}
 
 Object.defineProperties(Vue.prototype, {
     $help: {
@@ -451,7 +479,7 @@ Object.defineProperties(Vue.prototype, {
                 byteConverter,
                 toBaseMiliOrReverse,
                 toBitsOrBytes,
-
+                genLineDataSet,
                 isNull,
                 isFunction,
                 isUndefined,

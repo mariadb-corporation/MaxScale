@@ -27,46 +27,41 @@ describe('Graphs index', () => {
             component: Graphs,
 
             computed: {
-                sessionsChartData: () => ({
-                    datasets: [
-                        {
-                            label: 'Total sessions',
-                            type: 'line',
-                            backgroundColor: 'rgba(171,199,74,0.1)',
-                            borderColor: 'rgba(171,199,74,1)',
-                            borderWidth: 1,
-                            lineTension: 0,
-                            data: [{ x: 1596440973122, y: 30 }],
-                        },
-                    ],
-                }),
-                serversConnectionsChartData: () => ({
-                    datasets: [
-                        {
-                            label: 'CONNECTIONS',
-                            type: 'line',
-                            backgroundColor: 'rgba(171,199,74,0.1)',
-                            borderColor: 'rgba(171,199,74,1)',
-                            borderWidth: 1,
-                            lineTension: 0,
-                            data: [{ x: 1596440973122, y: 10 }],
-                        },
-                    ],
-                }),
-                threadsChartData: () => ({
-                    datasets: [
-                        {
-                            label: 'LOAD',
-                            type: 'line',
-                            backgroundColor: 'rgba(171,199,74,0.1)',
-                            borderColor: 'rgba(171,199,74,1)',
-                            borderWidth: 1,
-                            lineTension: 0,
-                            data: [{ x: 1596440973122, y: 20 }],
-                        },
-                    ],
-                }),
-                allServers: () => mockupAllServers,
+                sessions_datasets: () => [
+                    {
+                        label: 'Total sessions',
+                        type: 'line',
+                        backgroundColor: 'rgba(171,199,74,0.1)',
+                        borderColor: 'rgba(171,199,74,1)',
+                        borderWidth: 1,
+                        lineTension: 0,
+                        data: [{ x: 1596440973122, y: 30 }],
+                    },
+                ],
+                server_connections_datasets: () => [
+                    {
+                        label: 'CONNECTIONS',
+                        type: 'line',
+                        backgroundColor: 'rgba(171,199,74,0.1)',
+                        borderColor: 'rgba(171,199,74,1)',
+                        borderWidth: 1,
+                        lineTension: 0,
+                        data: [{ x: 1596440973122, y: 10 }],
+                    },
+                ],
+                threads_datasets: () => [
+                    {
+                        label: 'LOAD',
+                        type: 'line',
+                        backgroundColor: 'rgba(171,199,74,0.1)',
+                        borderColor: 'rgba(171,199,74,1)',
+                        borderWidth: 1,
+                        lineTension: 0,
+                        data: [{ x: 1596440973122, y: 20 }],
+                    },
+                ],
+
+                all_servers: () => mockupAllServers,
             },
         })
     })

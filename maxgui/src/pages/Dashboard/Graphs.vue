@@ -8,10 +8,10 @@
                 <template v-slot:card-body>
                     <v-sheet width="100%">
                         <line-chart
-                            v-if="sessionsChartData.datasets.length"
+                            v-if="sessions_datasets.length"
                             ref="sessionsChart"
                             :styles="chartStyle"
-                            :chart-data="sessionsChartData"
+                            :chart-data="{ datasets: sessions_datasets }"
                             :options="chartOptionsWithOutCallBack"
                         />
                     </v-sheet>
@@ -23,13 +23,15 @@
                 <template v-slot:title>
                     {{ $tc('connections', 2) }}
                 </template>
-                <template v-if="allServers.length" v-slot:card-body>
+                <template v-if="all_servers.length" v-slot:card-body>
                     <v-sheet width="100%">
                         <line-chart
-                            v-if="serversConnectionsChartData.datasets.length"
+                            v-if="server_connections_datasets.length"
                             ref="connectionsChart"
                             :styles="chartStyle"
-                            :chart-data="serversConnectionsChartData"
+                            :chart-data="{
+                                datasets: server_connections_datasets,
+                            }"
                             :options="chartOptionsWithOutCallBack"
                         />
                     </v-sheet>
@@ -44,10 +46,12 @@
                 <template v-slot:card-body>
                     <v-sheet width="100%">
                         <line-chart
-                            v-if="threadsChartData.datasets.length"
+                            v-if="threads_datasets.length"
                             ref="threadsChart"
                             :styles="chartStyle"
-                            :chart-data="threadsChartData"
+                            :chart-data="{
+                                datasets: threads_datasets,
+                            }"
                             :options="mainChartOptions"
                             :yAxesTicks="{ max: 100, min: 0 }"
                         />
@@ -71,7 +75,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapGetters, mapActions } from 'vuex'
+import { mapActions, mapState } from 'vuex'
 
 export default {
     name: 'graphs',
@@ -108,21 +112,23 @@ export default {
         }
     },
     computed: {
-        ...mapGetters({
-            maxScaleOverviewInfo: 'maxscale/maxScaleOverviewInfo',
-            threads: 'maxscale/threads',
-            threadsChartData: 'maxscale/threadsChartData',
-            allSessions: 'session/allSessions',
-            sessionsChartData: 'session/sessionsChartData',
-            allServers: 'server/allServers',
-            serversConnectionsChartData: 'server/serversConnectionsChartData',
+        ...mapState('maxscale', {
+            thread_stats: state => state.thread_stats,
+            threads_datasets: state => state.threads_datasets,
+        }),
+        ...mapState('server', {
+            server_connections_datasets: state => state.server_connections_datasets,
+            all_servers: state => state.all_servers,
+        }),
+        ...mapState('session', {
+            all_sessions: state => state.all_sessions,
+            sessions_datasets: state => state.sessions_datasets,
         }),
     },
 
     methods: {
         ...mapActions({
-            fetchThreads: 'maxscale/fetchThreads',
-            genThreadsDatasetsSchema: 'maxscale/genDataSetSchema',
+            fetchThreadStats: 'maxscale/fetchThreadStats',
             fetchAllServers: 'server/fetchAllServers',
             fetchAllMonitors: 'monitor/fetchAllMonitors',
             fetchAllSessions: 'session/fetchAllSessions',
@@ -131,7 +137,8 @@ export default {
         //----------------------- Graphs update
 
         async updateChart() {
-            let self = this
+            const self = this
+            const { genLineDataSet } = this.$help
             const { sessionsChart, connectionsChart, threadsChart } = this.$refs
             if (sessionsChart && connectionsChart && threadsChart) {
                 //  LOOP polling
@@ -140,65 +147,61 @@ export default {
                     this.fetchAllMonitors(),
                     this.fetchAllSessions(),
                     this.fetchAllServices(),
-                    this.fetchThreads(),
+                    this.fetchThreadStats(),
                 ])
                 const time = Date.now()
                 //-------------------- update connections chart
-
-                let gap = this.allServers.length - connectionsChart.chartData.datasets.length
-                this.allServers.forEach((server, i) => {
-                    if (gap > 0 && i > connectionsChart.chartData.datasets.length - 1) {
-                        // push new datasets
-                        let lineColors = this.$help.dynamicColors(i)
-                        let indexOfOpacity = lineColors.lastIndexOf(')') - 1
-                        let dataset = {
-                            label: `Server ID - ${server.id}`,
-                            id: `Server ID - ${server.id}`,
-                            type: 'line',
-                            // background of the line
-                            backgroundColor: this.$help.strReplaceAt(
-                                lineColors,
-                                indexOfOpacity,
-                                '0.2'
-                            ),
-                            borderColor: lineColors, //theme.palette.primary.main, // line color
-                            borderWidth: 1,
-                            lineTension: 0,
-                            data: [
-                                {
-                                    x: time,
-                                    y: server.attributes.statistics.connections,
-                                },
-                            ],
-                        }
-
-                        connectionsChart.chartData.datasets.push(dataset)
-                    } else {
-                        connectionsChart.chartData.datasets[i].data.push({
+                const connectionsChartDataSets = connectionsChart.chartData.datasets
+                this.all_servers.forEach((server, i) => {
+                    const {
+                        attributes: {
+                            statistics: { connections: serverConnections },
+                        },
+                    } = server
+                    if (connectionsChartDataSets[i]) {
+                        connectionsChartDataSets[i].data.push({
                             x: time,
-                            y: server.attributes.statistics.connections,
+                            y: serverConnections,
                         })
+                    } else {
+                        const newDataSet = genLineDataSet(
+                            `Server ID - ${server.id}`,
+                            serverConnections,
+                            i,
+                            time
+                        )
+                        connectionsChartDataSets.push(newDataSet)
                     }
                 })
 
                 // ------------------------- update sessions chart
-
                 sessionsChart.chartData.datasets.forEach(function(dataset) {
                     dataset.data.push({
                         x: time,
-                        y: self.allSessions.length,
+                        y: self.all_sessions.length,
                     })
                 })
 
                 //-------------------- update threads chart
-                await this.threads.forEach((thread, i) => {
-                    if (this.$help.isUndefined(threadsChart.chartData.datasets[i])) {
-                        self.genThreadsDatasetsSchema()
-                    } else {
-                        threadsChart.chartData.datasets[i].data.push({
+                const threadChartDataSets = threadsChart.chartData.datasets
+                await this.thread_stats.forEach((thread, i) => {
+                    const {
+                        attributes: { stats: { load: { last_second = null } = {} } = {} } = {},
+                    } = thread
+
+                    if (threadsChart.chartData.datasets[i]) {
+                        threadChartDataSets[i].data.push({
                             x: time,
-                            y: thread.attributes.stats.load.last_second,
+                            y: last_second,
                         })
+                    } else {
+                        const newDataSet = genLineDataSet(
+                            `THREAD ID - ${thread.id}`,
+                            last_second,
+                            i,
+                            time
+                        )
+                        threadChartDataSets.push(newDataSet)
                     }
                 })
 

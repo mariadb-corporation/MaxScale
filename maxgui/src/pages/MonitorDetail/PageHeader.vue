@@ -11,9 +11,9 @@
                         <template v-slot:activator="{ on }">
                             <v-btn
                                 text
-                                :disabled="currentMonitor.attributes.state === 'Stopped'"
+                                :disabled="getState === 'Stopped'"
                                 v-on="on"
-                                @click="handleStop"
+                                @click="actionHandle('stop')"
                             >
                                 <v-icon size="22" color="primary">
                                     $vuetify.icons.stopped
@@ -30,9 +30,9 @@
                         <template v-slot:activator="{ on }">
                             <v-btn
                                 text
-                                :disabled="currentMonitor.attributes.state === 'Running'"
+                                :disabled="getState === 'Running'"
                                 v-on="on"
-                                @click="handleStart"
+                                @click="actionHandle('start')"
                             >
                                 <v-icon size="22" color="primary">
                                     $vuetify.icons.running
@@ -51,7 +51,7 @@
                         content-class="shadow-drop color text-navigation py-1 px-4"
                     >
                         <template v-slot:activator="{ on }">
-                            <v-btn text v-on="on" @click="handleDelete">
+                            <v-btn text v-on="on" @click="actionHandle('destroy')">
                                 <v-icon size="18" color="error">
                                     $vuetify.icons.delete
                                 </v-icon>
@@ -67,7 +67,6 @@
                 v-model="showConfirmDialog"
                 :title="dialogTitle"
                 :type="dialogType"
-                :smallInfo="smallInfo ? $t(`info.${smallInfo}`) : ''"
                 :item="currentMonitor"
                 :onSave="confirmSave"
                 :onClose="() => (showConfirmDialog = false)"
@@ -76,12 +75,12 @@
             <icon-sprite-sheet
                 size="13"
                 class="status-icon mr-1"
-                :frame="$help.monitorStateIcon(currentMonitor.attributes.state)"
+                :frame="$help.monitorStateIcon(getState)"
             >
                 status
             </icon-sprite-sheet>
             <span class="color text-navigation body-2">
-                {{ currentMonitor.attributes.state }}
+                {{ getState }}
             </span>
         </template>
     </details-page-title>
@@ -114,53 +113,44 @@ export default {
             showConfirmDialog: false,
             dialogTitle: '',
             dialogType: 'destroy',
-            smallInfo: 'monitorDelete',
         }
     },
-
+    computed: {
+        getState: function() {
+            const { attributes: { state = 'null' } = {} } = this.currentMonitor
+            return state
+        },
+    },
     methods: {
-        ...mapActions('monitor', ['monitorManipulate']),
+        ...mapActions('monitor', ['manipulateMonitor']),
         async confirmSave() {
             await this.performAsyncLoadingAction(this.dialogType)
         },
 
-        async performAsyncLoadingAction(type) {
-            let self = this
-            switch (type) {
+        async performAsyncLoadingAction(mode) {
+            const { id } = this.currentMonitor
+            switch (mode) {
                 case 'destroy':
-                    await self.monitorManipulate({
-                        id: self.currentMonitor.id,
-                        mode: type,
+                    await this.manipulateMonitor({
+                        id,
+                        mode,
                     })
-                    self.showConfirmDialog = false
-                    self.$router.go(-1)
+                    this.showConfirmDialog = false
+                    this.$router.go(-1)
                     break
                 default:
-                    await self.monitorManipulate({
-                        id: self.currentMonitor.id,
-                        mode: type,
-                        callback: self.onEditSucceeded,
+                    await this.manipulateMonitor({
+                        id,
+                        mode,
+                        callback: this.onEditSucceeded,
                     })
-                    self.showConfirmDialog = false
+                    this.showConfirmDialog = false
             }
         },
 
-        handleDelete() {
-            this.dialogType = 'destroy'
-            this.dialogTitle = `${this.$t('destroy')} ${this.$tc('monitors', 1)}`
-            this.smallInfo = 'monitorDelete'
-            this.showConfirmDialog = true
-        },
-        handleStop() {
-            this.dialogType = 'stop'
-            this.dialogTitle = `${this.$t('stop')} ${this.$tc('monitors', 1)}`
-            this.smallInfo = ''
-            this.showConfirmDialog = true
-        },
-        handleStart() {
-            this.dialogType = 'start'
-            this.dialogTitle = `${this.$t('start')} ${this.$tc('monitors', 1)}`
-            this.smallInfo = ''
+        actionHandle(type) {
+            this.dialogType = type
+            this.dialogTitle = `${this.$t(type)} ${this.$tc('monitors', 1)}`
             this.showConfirmDialog = true
         },
     },

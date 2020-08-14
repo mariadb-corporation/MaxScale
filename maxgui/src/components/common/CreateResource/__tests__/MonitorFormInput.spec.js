@@ -95,7 +95,7 @@ describe('MonitorFormInput.vue', () => {
 
         // get a monitor parameter to mockup value changes
         const monitorParameter = mockupResourceModules[0].attributes.parameters[1]
-        const parameterCell = wrapper.find(`.${monitorParameter.name}-cell-${1}`)
+        const parameterCell = wrapper.find(`.cell-${1}-${monitorParameter.name}`)
         const newValue = 'new value'
         await mockupInputChange(parameterCell, newValue)
 

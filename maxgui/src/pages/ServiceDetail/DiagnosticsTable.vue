@@ -7,7 +7,7 @@
         >
             <template v-slot:content>
                 <data-table
-                    :search="searchKeyWord"
+                    :search="search_keyword"
                     :headers="variableValueTableHeaders"
                     :data="routerDiagnosticsTableRow"
                     :loading="loading"
@@ -33,7 +33,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapGetters } from 'vuex'
+import { mapState } from 'vuex'
 export default {
     name: 'diagnostics-table',
 
@@ -53,17 +53,16 @@ export default {
     },
 
     computed: {
-        ...mapGetters({
-            searchKeyWord: 'searchKeyWord',
-            currentService: 'service/currentService',
+        ...mapState({
+            search_keyword: 'search_keyword',
+            current_service: state => state.service.current_service,
         }),
+
         routerDiagnosticsTableRow: function() {
-            let currentService = this.currentService
-            const { attributes: { router_diagnostics = {} } = {} } = currentService
+            const { attributes: { router_diagnostics = {} } = {} } = this.current_service
             const keepPrimitiveValue = true
             let level = 0
-            let tableRow = []
-            tableRow = this.$help.objToArrOfObj(router_diagnostics, keepPrimitiveValue, level)
+            let tableRow = this.$help.objToArrOfObj(router_diagnostics, keepPrimitiveValue, level)
             return tableRow
         },
     },

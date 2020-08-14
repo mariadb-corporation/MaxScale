@@ -40,17 +40,17 @@ describe('GlobalSearch.vue', () => {
         await axiosStub.restore()
     })
 
-    it(`$data.search as well as $store.getters.searchKeyWord is
+    it(`$data.search as well as $store.state.search_keyword is
       updated correctly and cleared when route changes`, async () => {
         // searching for 'row_server_1'
         await wrapper.setData({ search: 'row_server_1' })
-        expect(wrapper.vm.$store.getters.searchKeyWord).to.be.equal('row_server_1')
+        expect(wrapper.vm.$store.state.search_keyword).to.be.equal('row_server_1')
 
         // go to settings page
         await mockupRouteChanges(wrapper, '/settings')
 
         expect(wrapper.find('.search-restyle').classes()).to.include('route-settings')
         expect(wrapper.vm.$data.search).to.be.empty
-        expect(wrapper.vm.$store.getters.searchKeyWord).to.be.empty
+        expect(wrapper.vm.$store.state.search_keyword).to.be.empty
     })
 })

@@ -22,11 +22,14 @@
                         v-if="value !== 'undefined'"
                         :key="index"
                         :to="`/dashboard/monitors/${value}`"
-                        class="detail-overview__card__value body-2 no-underline"
+                        :class="[valueClass, 'no-underline']"
                     >
                         <span>{{ value }} </span>
                     </router-link>
-                    <div v-if="showEditBtn" style="position:absolute;right:10px;bottom:10px">
+                    <span v-else :class="valueClass">
+                        {{ value }}
+                    </span>
+                    <div v-if="showEditBtn" class="monitor-edit-btn">
                         <v-btn icon @click="() => onEdit('monitors')">
                             <v-icon size="18" color="primary">
                                 $vuetify.icons.edit
@@ -34,10 +37,8 @@
                         </v-btn>
                     </div>
                 </template>
-                <span
-                    v-else-if="name === 'state'"
-                    class="detail-overview__card__value text-no-wrap body-2"
-                >
+
+                <span v-else-if="name === 'state'" :class="valueClass">
                     <template v-if="value.indexOf(',') > 0">
                         <span class="color font-weight-bold" :class="[serverStateClass]">
                             {{ value.slice(0, value.indexOf(',')) }}
@@ -51,8 +52,8 @@
                         {{ value }}
                     </span>
                 </span>
-                <span v-else class="detail-overview__card__value text-no-wrap body-2">
-                    <template v-if="value !== 'undefined'">
+                <span v-else :class="valueClass">
+                    <template>
                         {{
                             name === 'triggered_at' && value !== 'undefined'
                                 ? $help.formatValue(value, 'DATE_RFC2822')
@@ -103,7 +104,7 @@ Emits:
         })
 
 */
-import { mapGetters } from 'vuex'
+import { mapState } from 'vuex'
 
 export default {
     name: 'overview-header',
@@ -120,16 +121,18 @@ export default {
             showSelectDialog: false,
             targetSelectItemType: 'monitors',
             itemsList: [],
-            defaultItems: undefined,
+            defaultItems: {},
+            valueClass: 'detail-overview__card__value text-no-wrap body-2',
         }
     },
 
     computed: {
-        ...mapGetters({
-            currentServer: 'server/currentServer',
+        ...mapState({
+            current_server: state => state.server.current_server,
         }),
+
         serverStateClass: function() {
-            switch (this.$help.serverStateIcon(this.currentServer.attributes.state)) {
+            switch (this.$help.serverStateIcon(this.getTopOverviewInfo.state)) {
                 case 0:
                     return 'text-error'
                 case 1:
@@ -139,28 +142,25 @@ export default {
             }
         },
         getTopOverviewInfo: function() {
-            const currentServer = this.$help.lodash.cloneDeep(this.currentServer)
             let overviewInfo = {}
-
-            // Set fallback undefined value if properties doesnt exist
             const {
                 attributes: {
                     state,
-                    last_event = undefined,
-                    triggered_at = undefined,
-                    parameters: { address = undefined, socket = undefined, port = undefined } = {},
+                    last_event,
+                    triggered_at,
+                    parameters: { address, socket, port } = {},
                 } = {},
                 relationships: { monitors } = {},
-            } = currentServer
+            } = this.current_server
 
             overviewInfo = {
-                address: address,
-                socket: socket,
-                port: port,
-                state: state,
-                last_event: last_event,
-                triggered_at: triggered_at,
-                monitor: monitors ? monitors.data[0].id : undefined,
+                address,
+                socket,
+                port,
+                state,
+                last_event,
+                triggered_at,
+                monitor: monitors ? monitors.data[0].id : 'undefined',
             }
 
             if (socket) {
@@ -171,7 +171,6 @@ export default {
             Object.keys(overviewInfo).forEach(
                 key => (overviewInfo[key] = this.$help.handleValue(overviewInfo[key]))
             )
-
             return overviewInfo
         },
     },
@@ -201,13 +200,13 @@ export default {
                             type: monitor.type,
                         }))
 
-                        const { monitor: currentMonitorId } = this.getTopOverviewInfo
-                        if (currentMonitorId !== 'undefined') {
+                        const { monitor: id } = this.getTopOverviewInfo
+                        if (id !== 'undefined') {
                             this.defaultItems = {
-                                id: currentMonitorId,
+                                id,
                                 type: 'monitors',
                             }
-                        } else this.defaultItems = undefined
+                        } else this.defaultItems = {}
                     }
                     break
             }
@@ -227,3 +226,10 @@ export default {
     },
 }
 </script>
+<style lang="scss" scoped>
+.monitor-edit-btn {
+    position: absolute;
+    right: 10px;
+    bottom: 10px;
+}
+</style>

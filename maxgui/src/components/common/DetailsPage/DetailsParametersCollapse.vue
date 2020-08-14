@@ -16,7 +16,7 @@
                     tdBorderLeft
                     showAll
                     :editableCell="editableCell"
-                    :search="searchKeyWord"
+                    :search="searchKeyword"
                     :loading="loading"
                     :keepPrimitiveValue="keepPrimitiveValue"
                     :isTree="isTree"
@@ -131,7 +131,7 @@ export default {
     name: 'details-parameters-collapse',
 
     props: {
-        searchKeyWord: { type: String, required: true },
+        searchKeyword: { type: String, required: true },
         resourceId: { type: String, required: true },
         parameters: { type: Object, required: true },
         moduleParameters: { type: Array, required: true },

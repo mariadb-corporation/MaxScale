@@ -154,14 +154,14 @@ function testParameterInfoAssigned(wrapper, moduleParamType, moduleParamKeys) {
 async function mockupParametersChange(wrapper, isDual) {
     const intercept = async () => {
         // mockup selecting item on an enum parameter
-        const enumParamTd = wrapper.find(`.enum_param-cell-${1}`)
+        const enumParamTd = wrapper.find(`.cell-${1}-enum_param`)
         await mockupSelection(enumParamTd, 'secondary')
 
         expect(wrapper.vm.$data.changedParametersArr.length).to.be.equal(1)
         expect(wrapper.vm.$data.changedParametersArr[0].value).to.be.equal('secondary')
         if (isDual) {
             // mockup selecting item on an boolean parameter
-            const boolParamCell = wrapper.find(`.bool_param-cell-${1}`)
+            const boolParamCell = wrapper.find(`.cell-${1}-bool_param`)
             await mockupSelection(boolParamCell, true)
 
             expect(wrapper.vm.$data.changedParametersArr.length).to.be.equal(2)
@@ -198,7 +198,7 @@ describe('DetailsParametersCollapse.vue', () => {
             shallow: false,
             component: DetailsParametersCollapse,
             props: {
-                searchKeyWord: '',
+                searchKeyword: '',
                 resourceId: resourceId,
                 parameters: resourceParameters,
                 moduleParameters: moduleParameters,

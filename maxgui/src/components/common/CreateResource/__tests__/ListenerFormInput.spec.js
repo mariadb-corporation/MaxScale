@@ -106,7 +106,7 @@ describe('ListenerFormInput.vue', () => {
 
         // get a listener parameter to mockup value changes
         const listenParameter = mockupResourceModules[0].attributes.parameters[1]
-        const parameterCell = wrapper.find(`.${listenParameter.name}-cell-${1}`)
+        const parameterCell = wrapper.find(`.cell-${1}-${listenParameter.name}`)
         const newValue = 'new value'
         await mockupInputChange(parameterCell, newValue)
 

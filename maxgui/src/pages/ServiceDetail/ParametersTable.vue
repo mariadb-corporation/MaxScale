@@ -1,9 +1,9 @@
 <template>
     <details-parameters-collapse
-        v-if="currentService.attributes.parameters"
-        :searchKeyWord="searchKeyWord"
-        :resourceId="currentService.id"
-        :parameters="currentService.attributes.parameters"
+        v-if="processedModuleParameters.length"
+        :searchKeyword="search_keyword"
+        :resourceId="current_service.id"
+        :parameters="current_service.attributes.parameters"
         :moduleParameters="processedModuleParameters"
         :updateResourceParameters="updateServiceParameters"
         :onEditSucceeded="onEditSucceeded"
@@ -24,7 +24,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapGetters, mapActions } from 'vuex'
+import { mapActions, mapState } from 'vuex'
 export default {
     name: 'parameters-table',
 
@@ -41,15 +41,15 @@ export default {
     },
 
     computed: {
-        ...mapGetters({
-            searchKeyWord: 'searchKeyWord',
-            moduleParameters: 'moduleParameters',
-            currentService: 'service/currentService',
+        ...mapState({
+            search_keyword: 'search_keyword',
+            module_parameters: 'module_parameters',
+            current_service: state => state.service.current_service,
         }),
     },
 
     async created() {
-        const { router: routerId } = this.currentService.attributes
+        const { router: routerId } = this.current_service.attributes
         await this.fetchModuleParameters(routerId)
         this.loadingModuleParams = true
         await this.processModuleParameters()
@@ -61,8 +61,8 @@ export default {
             updateServiceParameters: 'service/updateServiceParameters',
         }),
         async processModuleParameters() {
-            if (this.moduleParameters.length) {
-                this.processedModuleParameters = this.moduleParameters
+            if (this.module_parameters.length) {
+                this.processedModuleParameters = this.module_parameters
                 const self = this
                 await this.$help.delay(150).then(() => (self.loadingModuleParams = false))
             }

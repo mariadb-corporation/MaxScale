@@ -42,18 +42,18 @@ export default {
     },
     watch: {
         search: function(newVal) {
-            this.setSearchKeyWord(newVal)
+            this.SET_SEARCH_KEYWORD(newVal)
         },
 
         $route: function() {
             // Clear local search and global search state when route changes
             this.search = ''
-            this.setSearchKeyWord('')
+            this.SET_SEARCH_KEYWORD('')
         },
     },
 
     methods: {
-        ...mapMutations(['setSearchKeyWord']),
+        ...mapMutations(['SET_SEARCH_KEYWORD']),
     },
 }
 </script>

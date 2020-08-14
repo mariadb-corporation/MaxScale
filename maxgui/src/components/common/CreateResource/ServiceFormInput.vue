@@ -48,36 +48,22 @@ export default {
 
     computed: {
         serversList: function() {
-            let cloneArr = this.$help.lodash.cloneDeep(this.allServers)
-            for (let i = 0; i < cloneArr.length; ++i) {
-                let obj = cloneArr[i]
-                delete obj.attributes
-                delete obj.links
-                delete obj.relationships
-                delete obj.idNum
-            }
-            return cloneArr
+            return this.allServers.map(({ id, type }) => ({ id, type }))
         },
         filtersList: function() {
-            let cloneArr = this.$help.lodash.cloneDeep(this.allFilters)
-            for (let i = 0; i < cloneArr.length; ++i) {
-                let obj = cloneArr[i]
-                delete obj.attributes
-                delete obj.links
-                delete obj.relationships
-            }
-            return cloneArr
+            return this.allFilters.map(({ id, type }) => ({ id, type }))
         },
     },
     methods: {
         getValues() {
-            const { moduleId, parameters } = this.$refs.moduleInputs.getModuleInputValues()
+            const { moduleInputs, serversRelationship, filtersRelationship } = this.$refs
+            const { moduleId, parameters } = moduleInputs.getModuleInputValues()
             return {
-                moduleId: moduleId,
-                parameters: parameters,
+                moduleId,
+                parameters,
                 relationships: {
-                    servers: { data: this.$refs.serversRelationship.getSelectedItems() },
-                    filters: { data: this.$refs.filtersRelationship.getSelectedItems() },
+                    servers: { data: serversRelationship.getSelectedItems() },
+                    filters: { data: filtersRelationship.getSelectedItems() },
                 },
             }
         },
