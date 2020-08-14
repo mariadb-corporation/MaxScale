@@ -177,12 +177,20 @@ export default {
     },
     computed: {
         parametersTableRow: function() {
-            const parameters = this.$help.lodash.cloneDeep(this.parameters)
+            const {
+                lodash: { cloneDeep },
+                objToArrOfNodes,
+            } = this.$help
 
-            let level = 0
-            let tableRow = this.$help.objToArrOfObj(parameters, this.keepPrimitiveValue, level)
+            const parameters = cloneDeep(this.parameters)
+            let tableRow = objToArrOfNodes({
+                obj: parameters,
+                keepPrimitiveValue: this.keepPrimitiveValue,
+                level: 0,
+            })
 
-            let moduleParameters = this.$help.lodash.cloneDeep(this.moduleParameters)
+            let moduleParameters = cloneDeep(this.moduleParameters)
+
             this.processingTableRow(tableRow, moduleParameters)
 
             return tableRow

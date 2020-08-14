@@ -60,9 +60,11 @@ export default {
 
         routerDiagnosticsTableRow: function() {
             const { attributes: { router_diagnostics = {} } = {} } = this.current_service
-            const keepPrimitiveValue = true
-            let level = 0
-            let tableRow = this.$help.objToArrOfObj(router_diagnostics, keepPrimitiveValue, level)
+            let tableRow = this.$help.objToArrOfNodes({
+                obj: router_diagnostics,
+                keepPrimitiveValue: true,
+                level: 0,
+            })
             return tableRow
         },
     },

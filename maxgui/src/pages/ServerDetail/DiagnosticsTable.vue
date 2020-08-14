@@ -66,13 +66,12 @@ export default {
                 let monitorDiagnosticsObj = server_info.find(
                     server => server.name === this.$route.params.id
                 )
-                const level = 0
-                const keepPrimitiveValue = false
-                tableRow = this.$help.objToArrOfObj(
-                    monitorDiagnosticsObj,
-                    keepPrimitiveValue,
-                    level
-                )
+
+                tableRow = this.$help.objToArrOfNodes({
+                    obj: monitorDiagnosticsObj,
+                    keepPrimitiveValue: false,
+                    level: 0,
+                })
                 return tableRow
             }
             return tableRow

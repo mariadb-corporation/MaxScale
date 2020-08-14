@@ -60,9 +60,11 @@ export default {
             const currentServerClone = this.$help.lodash.cloneDeep(this.current_server)
             // Set fallback null value if properties doesnt exist
             const { attributes: { statistics = null } = {} } = currentServerClone
-            const keepPrimitiveValue = false
-            let level = 0
-            return this.$help.objToArrOfObj(statistics, keepPrimitiveValue, level)
+            return this.$help.objToArrOfNodes({
+                obj: statistics,
+                keepPrimitiveValue: false,
+                level: 0,
+            })
         },
     },
 }

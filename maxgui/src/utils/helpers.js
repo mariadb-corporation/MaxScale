@@ -38,6 +38,13 @@ export function isFunction(v) {
     return typeof v === 'function'
 }
 
+export function isNotEmptyObj(v) {
+    return !isNull(v) && !Array.isArray(v) && typeof v === 'object' && !isEmpty(v)
+}
+export function isNotEmptyArray(v) {
+    return !isNull(v) && Array.isArray(v) && v.length > 0
+}
+
 export function getCookie(name) {
     let value = '; ' + document.cookie
     let parts = value.split('; ' + name + '=')
@@ -179,30 +186,32 @@ export function formatValue(value, formatType) {
 }
 
 /**
- * Convert an object to array of objects with tree data properties
- * @param {Object} obj Object to be converted to array
- * @param {Boolean} keepPrimitiveValue keepPrimitiveValue to whether call handleValue function or not
- * @param {Number} level depth level for nested object
- * @param {Object} parentNodeInfo parent node info contains id and original value, it's null in the first level (0)
- * @param {Number} parentNodeId nodeId of parentNode
- * @param {String} keyName keyName
- * @param {String} keyValue keyValue
- * @return {Array} an array of objects
+ * Convert an object to array of nodes object with tree data properties.
+ * If key value is an object, it will be flatten. If key value is an array,
+ * it will be converted to object then flatten
+ * @param {Object} payload Payload object argument
+ * @param {Object} payload.obj Root Object to be handle
+ * @param {Boolean} payload.keepPrimitiveValue keepPrimitiveValue to whether call handleValue function or not
+ * @param {Number} payload.level depth level for nested object
+ * @param {Object} payload.parentNodeInfo This contains id and original value, it's null in the first level (0)
+ * @param {Number} payload.parentNodeId nodeId of parentNode
+ * @param {String} payload.keyName keyName
+ * @param {String} payload.keyValue keyValue
+ * @return {Array} an array of nodes object
  */
-let nodeId = 0
-export function objToArrOfObj(
+let nodeId = 0 // must be a number, so that hierarchySort can be done
+export function objToArrOfNodes({
     obj,
     keepPrimitiveValue,
     level,
     parentNodeInfo = null,
     parentNodeId = 0,
     keyName = 'id',
-    keyValue = 'value'
-) {
-    const isValidObj = obj !== null && typeof obj === 'object' && !isEmpty(obj)
-    if (isValidObj) {
-        let result = []
-        let targetObj = cloneDeep(obj)
+    keyValue = 'value',
+}) {
+    if (isNotEmptyObj(obj)) {
+        let nodes = []
+        const targetObj = cloneDeep(obj)
 
         Object.keys(targetObj).map(key => {
             let value = keepPrimitiveValue ? targetObj[key] : handleValue(targetObj[key])
@@ -217,37 +226,36 @@ export function objToArrOfObj(
                 originalValue: value,
             }
 
-            const isValidArray = value !== null && Array.isArray(value) && value.length > 0
-            const isValidObj = value !== null && typeof value === 'object' && !Array.isArray(value)
-            const hasChild = isValidArray || isValidObj
+            const hasChild = isNotEmptyArray(value) || isNotEmptyObj(value)
 
             if (hasChild) {
                 node[keyValue] = ''
                 //  only object has child value will have expanded property
                 node.expanded = false
-                if (isValidObj) {
-                    node.children = objToArrOfObj(
-                        value,
-                        keepPrimitiveValue,
-                        level + 1,
-                        { [keyName]: key, originalValue: value },
-                        node.nodeId
-                    )
-                } else {
-                    node.children = objToArrOfObj(
-                        { ...value },
-                        keepPrimitiveValue,
-                        level + 1,
-                        { [keyName]: key, originalValue: value },
-                        node.nodeId
-                    )
-                }
             }
 
+            if (isNotEmptyObj(value))
+                node.children = objToArrOfNodes({
+                    obj: value,
+                    keepPrimitiveValue,
+                    level: level + 1,
+                    parentNodeInfo: { [keyName]: key, originalValue: value },
+                    parentNodeId: node.nodeId,
+                })
+            if (isNotEmptyArray(value))
+                //convert value type array to object then do a recursive call
+                node.children = objToArrOfNodes({
+                    obj: { ...value },
+                    keepPrimitiveValue,
+                    level: level + 1,
+                    parentNodeInfo: { [keyName]: key, originalValue: value },
+                    parentNodeId: node.nodeId,
+                })
+
             node.leaf = !hasChild
-            result.push(node)
+            nodes.push(node)
         })
-        return result
+        return nodes
     }
     return []
 }
@@ -289,7 +297,7 @@ export function arrOfObjToObj(a, keyName = 'id', keyValue = 'value') {
                 }
                 /* the value needs to be handled, convert from 'null' or '' to
                 the actual null object */
-                // leaf is undefined when the array wasn't created by objToArrOfObj
+                // leaf is undefined when the array wasn't created by objToArrOfNodes
                 else if (node.leaf || node.leaf === undefined) {
                     resultObj[node[keyName]] = node[keyValue]
                 } else {
@@ -470,7 +478,7 @@ Object.defineProperties(Vue.prototype, {
                 getErrorsArr,
                 groupBy,
                 formatValue,
-                objToArrOfObj,
+                objToArrOfNodes,
                 arrOfObjToObj,
                 handleValue,
                 capitalizeFirstLetter,
