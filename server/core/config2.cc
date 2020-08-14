@@ -1191,6 +1191,18 @@ bool ParamServer::from_json(const json_t* pJson, value_type* pValue,
     return rv;
 }
 
+void ParamServer::populate(MXS_MODULE_PARAM& param) const
+{
+    param.type = m_legacy_type;
+    param.name = MXS_STRDUP_A(name().c_str());
+    param.default_value = nullptr;
+
+    if (is_mandatory())
+    {
+        param.options |= MXS_MODULE_OPT_REQUIRED;
+    }
+}
+
 /**
  * ParamTarget
  */

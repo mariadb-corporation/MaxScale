@@ -338,13 +338,13 @@ protected:
           Kind kind,
           mxs_module_param_type legacy_type);
 
-private:
-    Specification&        m_specification;
-    std::string           m_name;
-    std::string           m_description;
-    Modifiable            m_modifiable;
-    Kind                  m_kind;
-    mxs_module_param_type m_legacy_type;
+protected:
+    Specification&              m_specification;
+    const std::string           m_name;
+    const std::string           m_description;
+    const Modifiable            m_modifiable;
+    const Kind                  m_kind;
+    const mxs_module_param_type m_legacy_type;
 };
 
 /**
@@ -1161,6 +1161,8 @@ public:
     json_t* to_json(value_type value) const;
     bool    from_json(const json_t* pJson, value_type* pValue,
                       std::string* pMessage = nullptr) const;
+
+    void populate(MXS_MODULE_PARAM& param) const override;
 };
 
 /**
