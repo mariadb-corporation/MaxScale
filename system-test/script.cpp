@@ -39,12 +39,13 @@
 void test_script_monitor(TestConnections* Test, Mariadb_nodes* nodes, char* expected_filename)
 {
     Test->set_timeout(200);
+    auto homedir = Test->maxscales->access_homedir(0);
     Test->maxscales->ssh_node_f(0,
                                 true,
                                 "cd %s; truncate -s 0 script_output; \
                                 chown maxscale:maxscale script_output; \
                                 chmod a+rw script_output",
-                                Test->maxscales->access_homedir[0]);
+                                homedir);
     sleep(10);
 
     Test->tprintf("Block master node");
@@ -73,13 +74,9 @@ void test_script_monitor(TestConnections* Test, Mariadb_nodes* nodes, char* expe
 
     Test->tprintf("Comparing results");
 
-    if (Test->maxscales->ssh_node_f(0,
-                                    false,
-                                    "diff %s/script_output %s",
-                                    Test->maxscales->access_homedir[0],
-                                    expected_filename) != 0)
+    if (Test->maxscales->ssh_node_f(0, false, "diff %s/script_output %s", homedir, expected_filename) != 0)
     {
-        Test->maxscales->ssh_node_f(0, true, "cat %s/script_output", Test->maxscales->access_homedir[0]);
+        Test->maxscales->ssh_node_f(0, true, "cat %s/script_output", homedir);
         Test->add_result(1, "Wrong script output!");
     }
     else
@@ -104,20 +101,17 @@ int main(int argc, char* argv[])
     auto gal_ip2 = Test->galera->ip_private(2);
     auto gal_ip3 = Test->galera->ip_private(3);
 
+    auto homedir = Test->maxscales->access_homedir(0);
+
     Test->tprintf("Creating script on Maxscale machine");
     Test->maxscales->ssh_node_f(0,
                                 false,
                                 "%s rm -rf %s/script; mkdir %s/script; echo \"echo \\$* >> %s/script_output\" > %s/script/script.sh; \
             chmod a+x %s/script/script.sh; chmod a+x %s; %s chown maxscale:maxscale %s/script -R",
                                 Test->maxscales->access_sudo[0],
-                                Test->maxscales->access_homedir[0],
-                                Test->maxscales->access_homedir[0],
-                                Test->maxscales->access_homedir[0],
-                                Test->maxscales->access_homedir[0],
-                                Test->maxscales->access_homedir[0],
-                                Test->maxscales->access_homedir[0],
+                                homedir, homedir, homedir, homedir, homedir, homedir,
                                 Test->maxscales->access_sudo[0],
-                                Test->maxscales->access_homedir[0]);
+                                homedir);
 
     Test->maxscales->restart_maxscale(0);
 
@@ -212,18 +206,18 @@ int main(int argc, char* argv[])
             Test->maxscales->sshkey[0],
             Test->maxscales->access_user(0),
             Test->maxscales->IP[0],
-            Test->maxscales->access_homedir[0]);
+            homedir);
     Test->add_result(system(str), "Error copying script to VM");
 
-    sprintf(str, "%s/script_output_expected", Test->maxscales->access_homedir[0]);
+    sprintf(str, "%s/script_output_expected", homedir);
     test_script_monitor(Test, Test->repl, str);
-    sprintf(str, "%s/script_output_expected_galera", Test->maxscales->access_homedir[0]);
+    sprintf(str, "%s/script_output_expected_galera", homedir);
     test_script_monitor(Test, Test->galera, str);
 
     Test->set_timeout(200);
 
     Test->tprintf("Making script non-executable");
-    Test->maxscales->ssh_node_f(0, true, "chmod a-x %s/script/script.sh", Test->maxscales->access_homedir[0]);
+    Test->maxscales->ssh_node_f(0, true, "chmod a-x %s/script/script.sh", homedir);
 
     sleep(3);
 

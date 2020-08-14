@@ -81,7 +81,8 @@ void Config::destroy_server(int num)
 void Config::create_server(int num)
 {
     test_->set_timeout(120);
-    char ssl_line[200 + 3 * strlen(test_->maxscales->access_homedir[0])] = "";
+    auto homedir = test_->maxscales->access_homedir(0);
+    char ssl_line[200 + 3 * strlen(homedir)] = "";
     if (test_->backend_ssl)
     {
         sprintf(ssl_line,
@@ -90,9 +91,7 @@ void Config::create_server(int num)
                 " --tls-ca-cert=/%s/certs/ca.pem "
                 " --tls-version=MAX "
                 " --tls-cert-verify-depth=9",
-                test_->maxscales->access_homedir[0],
-                test_->maxscales->access_homedir[0],
-                test_->maxscales->access_homedir[0]);
+                homedir, homedir, homedir);
     }
     test_->maxscales->ssh_node_f(0,
                                  true,
@@ -187,6 +186,7 @@ void Config::create_ssl_listener(Config::Service service)
 {
     int i = static_cast<int>(service);
 
+    auto homedir = test_->maxscales->access_homedir(0);
     test_->set_timeout(120);
     test_->maxscales->ssh_node_f(0,
                                  true,
@@ -194,12 +194,8 @@ void Config::create_ssl_listener(Config::Service service)
                                  "--tls-key=%s/certs/server-key.pem "
                                  "--tls-cert=%s/certs/server-cert.pem "
                                  "--tls-ca-cert=%s/certs/ca.pem ",
-                                 services[i].service,
-                                 services[i].listener,
-                                 services[i].port,
-                                 test_->maxscales->access_homedir[0],
-                                 test_->maxscales->access_homedir[0],
-                                 test_->maxscales->access_homedir[0]);
+                                 services[i].service, services[i].listener, services[i].port,
+                                 homedir, homedir, homedir);
     test_->stop_timeout();
 }
 

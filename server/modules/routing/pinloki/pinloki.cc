@@ -610,7 +610,7 @@ bool Pinloki::purge_old_binlogs(mxb::Worker::Call::action_t action)
     auto now = wall_time::Clock::now();
     auto purge_before = now - config().expire_log_duration();
     auto file_names = m_inventory.file_names();
-    auto files_to_keep = std::max(1, config().num_files_to_keep());     // at least one
+    auto files_to_keep = std::max(1, config().expire_log_minimum_files());     // at least one
     int max_files_to_purge = file_names.size() - files_to_keep;
 
     int purge_index = -1;
@@ -641,7 +641,7 @@ bool Pinloki::purge_old_binlogs(mxb::Worker::Call::action_t action)
     if (oldest_time == wall_time::TimePoint::max()
         || next_purge_time < now)
     {
-        // No logs, or purge prevented due to num_files_to_keep.
+        // No logs, or purge prevented due to expire_log_minimum_files.
         next_purge_time = now + m_config.purge_poll_timeout();
     }
 

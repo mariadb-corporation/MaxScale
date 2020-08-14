@@ -67,6 +67,7 @@ namespace keys
 {
 const char SUCCESS[] = "success";
 const char MESSAGE[] = "message";
+const char RESULT[]  = "result";
 const char SERVERS[] = "servers";
 }
 }

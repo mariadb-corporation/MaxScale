@@ -33,6 +33,7 @@ public:
     class Result
     {
     public:
+        Result() {}
         Result(const mxb::http::Response& response);
 
         Result(Result&& other) = default;
@@ -218,20 +219,27 @@ public:
     bool set_cluster_mode(cs::ClusterMode mode,
                           const std::chrono::seconds& timeout,
                           json_t* pOutput = nullptr);
-    bool set_config(const std::string& body, json_t** ppError = nullptr);
 
+    static Result fetch_status(const std::vector<CsMonitorServer*>& servers,
+                               CsContext& context);
     static Statuses fetch_statuses(const std::vector<CsMonitorServer*>& servers,
                                    CsContext& context);
     static bool fetch_statuses(const std::vector<CsMonitorServer*>& servers,
                                CsContext& context,
                                Statuses* pStatuses);
 
+    static Result fetch_config(const std::vector<CsMonitorServer*>& servers,
+                               CsContext& context);
     static Configs fetch_configs(const std::vector<CsMonitorServer*>& servers,
                                  CsContext& context);
     static bool fetch_configs(const std::vector<CsMonitorServer*>& servers,
                               CsContext& context,
                               Configs* pConfigs);
 
+    static Result add_node(const std::vector<CsMonitorServer*>& servers,
+                           const std::string& host,
+                           const std::chrono::seconds& timeout,
+                           CsContext& context);
     static Results begin(const std::vector<CsMonitorServer*>& servers,
                          const std::chrono::seconds& timeout,
                          CsContext& context);
@@ -246,23 +254,21 @@ public:
                        const std::chrono::seconds& timeout,
                        CsContext& context,
                        Results* pResults);
+    static Result remove_node(const std::vector<CsMonitorServer*>& servers,
+                              const std::string& host,
+                              const std::chrono::seconds& timeout,
+                              CsContext& context);
     static Results rollback(const std::vector<CsMonitorServer*>& servers,
                             CsContext& context);
     static bool rollback(const std::vector<CsMonitorServer*>& servers,
                          CsContext& context,
                          Results* pResults);
-    static Results shutdown(const std::vector<CsMonitorServer*>& servers,
-                            const std::chrono::seconds& timeout,
-                            CsContext& context);
-    static bool shutdown(const std::vector<CsMonitorServer*>& servers,
-                         const std::chrono::seconds& timeout,
-                         CsContext& context,
-                         Results* pResults);
-    static Results start(const std::vector<CsMonitorServer*>& servers,
-                         CsContext& context);
-    static bool start(const std::vector<CsMonitorServer*>& servers,
-                      CsContext& context,
-                      Results* pResults);
+    static Result shutdown(const std::vector<CsMonitorServer*>& servers,
+                           const std::chrono::seconds& timeout,
+                           CsContext& context);
+    static Result start(const std::vector<CsMonitorServer*>& servers,
+                        const std::chrono::seconds& timeout,
+                        CsContext& context);
     static bool set_cluster_mode(const std::vector<CsMonitorServer*>& servers,
                                  cs::ClusterMode mode,
                                  const std::chrono::seconds& timeout,
@@ -272,19 +278,14 @@ public:
                                        CsContext& context,
                                        json_t* pOutput = nullptr);
 
-    static bool set_config(const std::vector<CsMonitorServer*>& servers,
-                           const std::string& body,
-                           CsContext& context,
-                           Results* pResults);
-    static Results set_config(const std::vector<CsMonitorServer*>& servers,
-                              const std::string& body,
-                              CsContext& context);
-
 private:
     bool set_status(const mxb::http::Response& response, json_t** ppError);
 
-    std::string create_url(cs::rest::Action action, const std::string& tail = std::string()) const;
+    std::string create_url(cs::rest::Scope scope,
+                           cs::rest::Action action,
+                           const std::string& tail = std::string()) const;
     static std::vector<std::string> create_urls(const std::vector<CsMonitorServer*>& servers,
+                                                cs::rest::Scope scope,
                                                 cs::rest::Action action,
                                                 const std::string& tail = std::string());
 

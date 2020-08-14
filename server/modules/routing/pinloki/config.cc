@@ -40,8 +40,8 @@ cfg::ParamSeconds s_net_timeout(
 cfg::ParamBool s_select_master(
     &s_spec, "select_master", "Automatically select the master server", false);
 
-cfg::ParamCount s_num_files_to_keep(
-    &s_spec, "num_files_to_keep", "Minimum number of files the automatic log purge keeps", 2);
+cfg::ParamCount s_expire_log_minimum_files(
+    &s_spec, "expire_log_minimum_files", "Minimum number of files the automatic log purge keeps", 2);
 
 cfg::ParamDuration<wall_time::Duration> s_expire_log_duration(
     &s_spec, "expire_log_duration", "Duration after which unmodified log files are purged",
@@ -53,7 +53,7 @@ cfg::ParamDuration<wall_time::Duration> s_purge_startup_delay(
     cfg::NO_INTERPRETATION, 2min);
 
 cfg::ParamDuration<wall_time::Duration> s_purge_poll_timeout(
-    &s_spec, "purge_poll_timeout", "Purge timeout/poll when num_files_to_keep files exist",
+    &s_spec, "purge_poll_timeout", "Purge timeout/poll when expire_log_minimum_files files exist",
     cfg::NO_INTERPRETATION, 2min);
 }
 
@@ -121,9 +121,9 @@ bool Config::select_master() const
     return m_select_master;
 }
 
-int32_t Config::num_files_to_keep() const
+int32_t Config::expire_log_minimum_files() const
 {
-    return m_num_files_to_keep;
+    return m_expire_log_minimum_files;
 }
 
 wall_time::Duration Config::expire_log_duration() const
@@ -161,7 +161,7 @@ Config::Config(const std::string& name)
     add_native(&m_net_timeout, &s_net_timeout);
     add_native(&m_select_master, &s_select_master);
     add_native(&m_expire_log_duration, &s_expire_log_duration);
-    add_native(&m_num_files_to_keep, &s_num_files_to_keep);
+    add_native(&m_expire_log_minimum_files, &s_expire_log_minimum_files);
     add_native(&m_purge_startup_delay, &s_purge_startup_delay);
     add_native(&m_purge_poll_timeout, &s_purge_poll_timeout);
 }

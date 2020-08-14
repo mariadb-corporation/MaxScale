@@ -51,11 +51,6 @@ public:
     char * access_sudo[256];
 
     /**
-     * @brief access_homedir home directory of access_user
-     */
-    char * access_homedir[256];
-
-    /**
      * @brief Verbose command output
      */
     bool verbose;
@@ -72,6 +67,7 @@ public:
     bool using_ipv6() const;
 
     const char* access_user(int i = 0) const;
+    const char* access_homedir(int i = 0) const;
 
     /**
      * Generate the command line to execute a given command on the node via ssh.
@@ -181,7 +177,8 @@ private:
 
     std::string network_config; /**< Contents of MDBCI network_config file */
 
-    std::string m_access_user[max_nodes] {}; /**< Unix users name to access nodes via ssh */
+    std::string m_access_user[max_nodes] {};    /**< Unix user name to access nodes via ssh */
+    std::string m_access_homedir[max_nodes] {}; /**< home directory of access_user */
 
     bool check_node_ssh(int node);
 

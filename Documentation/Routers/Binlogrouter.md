@@ -103,6 +103,16 @@ supports. The following commands are supported:
    * Purges binary logs up to but not including the given file. The file name
      must be one of the names shown in `SHOW BINARY LOGS`. The version of this
      command which accepts a timestamp is not currently supported.
+     Automatic purging is supported using the configuration
+     parameter [`expire_log_duration`](#expire_log_duration).
+
+     The files are purged in the order they were created. If a file to be purged
+     is detected to be in use, the purge stops. This means that the purge will
+     stop at the oldest file that a slave is still reading.
+
+     NOTE: You should still take precaution not to purge files that a potential
+     slave will need in the future. MaxScale can only detect that a file is
+     in active use when a slave is connected, and requesting events from it.
 
  * `SHOW MASTER STATUS`
 
@@ -208,6 +218,25 @@ GTID. If no GTID has been replicated, the router will start replication from the
 start. Manual configuration of the GTID can be done by first configuring the
 replication manually with `CHANGE MASTER TO`.
 
+### `expire_log_duration`
+
+Duration after which a binary log file can be automatically removed. The default is 0,
+or no automatic removal. This is similar to the [Server system variable
+expire_log_days](https://mariadb.com/kb/en/replication-and-binary-log-system-variables/#expire_logs_days).
+
+The duration is measured from the last modification of the log file. Files are
+purged in the order they were created. The automatic purge works in a similar
+manner to `PURGE BINARY LOGS TO <filename>` in that it will stop the purge if
+an eligible file is in active use, i.e. being read by a slave.
+
+The duration can be specified as explained
+[here](../Getting-Started/Configuration-Guide.md#durations).
+
+### `expire_log_minimum_files`
+
+The minimum number of log files the automatic purge keeps. At least one file
+is always kept. The default setting is 2.
+
 ## Example
 
 The following is a minimal configuration for the binlogrouter. With it, the
@@ -231,6 +260,8 @@ monitor_interval=10s
 type=service
 router=binlogrouter
 servers=master1
+expire_log_duration=5h
+expire_log_minimum_files=3
 user=maxuser
 password=maxpwd
 
@@ -247,11 +278,6 @@ port=3306
   new binlog file where it writes new events. This can happen when
   replication is started due to a `START SLAVE` command or when the
   network connection to the master is lost and a reconnection takes place.
-
-* The PURGE BINARY LOGS command must not be executed when there are slaves
-  actively replicating from the binlogrouter. Before executing this command,
-  make sure all slaves have stopped replicating from the files about to be
-  purged.
 
 * Old-style replication with binlog name and file offset is not supported
   and the replication must be started by setting up the GTID to replicate

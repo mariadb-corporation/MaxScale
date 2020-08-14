@@ -14,12 +14,6 @@
 #include "csmonitor.hh"
 #include <chrono>
 
-// How nodes are added and removed, and how dbroots are managed is
-// under development. The way it is implemented now, will change,
-// so for the time being no advanced cluster operation commands are
-// exposed.
-#undef CSMON_ADVANCED_CLUSTER_OPERATIONS
-
 namespace
 {
 
@@ -27,10 +21,8 @@ const char ARG_MONITOR_DESC[] = "Monitor name";
 
 const char CSMON_ADD_NODE_DESC[]    = "Add a node to a Columnstore cluster.";
 const char CSMON_CONFIG_GET_DESC[]  = "Get Columnstore cluster [or server] config.";
-const char CSMON_CONFIG_SET_DESC[]  = "Set Columnstore cluster [or server] config.";
 const char CSMON_MODE_SET_DESC[]    = "Set Columnstore cluster mode.";
 const char CSMON_REMOVE_NODE_DESC[] = "Remove a node from a Columnstore cluster.";
-const char CSMON_SCAN_DESC[]        = "Scan Columnstore cluster [or server].";
 const char CSMON_SHUTDOWN_DESC[]    = "Shutdown Columnstore cluster [or server].";
 const char CSMON_START_DESC[]       = "Start Columnstore cluster [or server].";
 const char CSMON_STATUS_DESC[]      = "Get Columnstore cluster [or server] status.";
@@ -39,7 +31,7 @@ const char CSMON_STATUS_DESC[]      = "Get Columnstore cluster [or server] statu
 const modulecmd_arg_type_t csmon_add_node_argv[] =
 {
     { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC },
-    { MODULECMD_ARG_SERVER, "Server to add to Columnstore cluster" },
+    { MODULECMD_ARG_STRING, "Hostname/IP of node to add to Columnstore cluster" },
     { MODULECMD_ARG_STRING, "Timeout." }
 };
 
@@ -47,14 +39,6 @@ const modulecmd_arg_type_t csmon_config_get_argv[] =
 {
     { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC },
     { MODULECMD_ARG_SERVER | MODULECMD_ARG_OPTIONAL, "Specific server to to obtain config from" }
-};
-
-const modulecmd_arg_type_t csmon_config_set_argv[] =
-{
-    { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC },
-    { MODULECMD_ARG_STRING, "Configuration as JSON object" },
-    { MODULECMD_ARG_STRING, "Timeout." },
-    { MODULECMD_ARG_SERVER | MODULECMD_ARG_OPTIONAL, "Specific server to configure" }
 };
 
 const modulecmd_arg_type_t csmon_mode_set_argv[]
@@ -67,16 +51,8 @@ const modulecmd_arg_type_t csmon_mode_set_argv[]
 const modulecmd_arg_type_t csmon_remove_node_argv[] =
 {
     { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC },
-    { MODULECMD_ARG_SERVER, "Server to remove from Columnstore cluster" },
+    { MODULECMD_ARG_STRING, "Hostname/IP of node to remove from Columnstore cluster" },
     { MODULECMD_ARG_STRING, "Timeout." },
-    { MODULECMD_ARG_BOOLEAN, "Whether force should be in effect or not" }
-};
-
-const modulecmd_arg_type_t csmon_scan_argv[] =
-{
-    { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC },
-    { MODULECMD_ARG_SERVER, "Server to scan" },
-    { MODULECMD_ARG_STRING, "Timeout." }
 };
 
 const modulecmd_arg_type_t csmon_shutdown_argv[] =
@@ -207,47 +183,25 @@ bool get_args(const MODULECMD_ARG* pArgs,
 bool get_args(const MODULECMD_ARG* pArgs,
               json_t** ppOutput,
               CsMonitor** ppMonitor,
-              CsMonitorServer** ppServer,
-              const char** pzText,
-              bool* pBool = nullptr)
+              const char** pzText1,
+              const char** pzText2,
+              bool* pBool)
 {
     bool rv = true;
 
     mxb_assert(MODULECMD_GET_TYPE(&pArgs->argv[0].type) == MODULECMD_ARG_MONITOR);
-    mxb_assert(pArgs->argc <= 1 || MODULECMD_GET_TYPE(&pArgs->argv[1].type) == MODULECMD_ARG_SERVER);
+    mxb_assert(pArgs->argc <= 1 || MODULECMD_GET_TYPE(&pArgs->argv[1].type) == MODULECMD_ARG_STRING);
     mxb_assert(pArgs->argc <= 2 || MODULECMD_GET_TYPE(&pArgs->argv[2].type) == MODULECMD_ARG_STRING);
     mxb_assert(pArgs->argc <= 3 || MODULECMD_GET_TYPE(&pArgs->argv[3].type) == MODULECMD_ARG_BOOLEAN);
 
     CsMonitor* pMonitor = static_cast<CsMonitor*>(pArgs->argv[0].value.monitor);
-    CsMonitorServer* pServer = nullptr;
-    const char* zText = nullptr;
-    bool boolean = false;
-
-    if (pArgs->argc >= 2)
-    {
-        pServer = pMonitor->get_monitored_server(pArgs->argv[1].value.server);
-
-        if (!pServer)
-        {
-            LOG_APPEND_JSON_ERROR(ppOutput, "The provided server '%s' is not monitored by this monitor.",
-                                  pArgs->argv[1].value.server->name());
-            rv = false;
-        }
-
-        if (pArgs->argc >= 3)
-        {
-            zText = pArgs->argv[2].value.string;
-
-            if (pArgs->argc >= 4)
-            {
-                boolean = pArgs->argv[3].value.boolean;
-            }
-        }
-    }
+    const char* zText1 = pArgs->argc >= 2 ? pArgs->argv[1].value.string : nullptr;
+    const char* zText2 = pArgs->argc >= 3 ? pArgs->argv[2].value.string : nullptr;
+    bool boolean = pArgs->argc >= 4 ? pArgs->argv[3].value.boolean : false;
 
     *ppMonitor = pMonitor;
-    *ppServer = pServer;
-    *pzText = zText;
+    *pzText1 = zText1;
+    *pzText2 = zText2;
 
     if (pBool)
     {
@@ -352,10 +306,10 @@ bool get_timeout(const char* zTimeout, std::chrono::seconds* pTimeout, json_t** 
 bool csmon_add_node(const MODULECMD_ARG* pArgs, json_t** ppOutput)
 {
     CsMonitor* pMonitor;
-    CsMonitorServer* pServer;
+    const char* zHost;
     const char* zTimeout;
 
-    bool rv = get_args(pArgs, ppOutput, &pMonitor, &pServer, &zTimeout);
+    bool rv = get_args(pArgs, ppOutput, &pMonitor, &zHost, &zTimeout);
 
     if (rv)
     {
@@ -363,7 +317,7 @@ bool csmon_add_node(const MODULECMD_ARG* pArgs, json_t** ppOutput)
 
         if (get_timeout(zTimeout, &timeout, ppOutput))
         {
-            CALL_IF_CS_15(pMonitor->command_add_node(ppOutput, pServer, timeout));
+            CALL_IF_CS_15(pMonitor->command_add_node(ppOutput, zHost, timeout));
         }
     }
 
@@ -380,28 +334,6 @@ bool csmon_config_get(const MODULECMD_ARG* pArgs, json_t** ppOutput)
     if (rv)
     {
         CALL_IF_CS_15(pMonitor->command_config_get(ppOutput, pServer));
-    }
-
-    return rv;
-}
-
-bool csmon_config_set(const MODULECMD_ARG* pArgs, json_t** ppOutput)
-{
-    CsMonitor* pMonitor;
-    const char* zJson;
-    const char* zTimeout;
-    CsMonitorServer* pServer;
-
-    bool rv = get_args(pArgs, ppOutput, &pMonitor, &zJson, &zTimeout, &pServer);
-
-    if (rv)
-    {
-        std::chrono::seconds timeout(0);
-
-        if (get_timeout(zTimeout, &timeout, ppOutput))
-        {
-            CALL_IF_CS_15(pMonitor->command_config_set(ppOutput, zJson, timeout, pServer));
-        }
     }
 
     return rv;
@@ -431,11 +363,10 @@ bool csmon_mode_set(const MODULECMD_ARG* pArgs, json_t** ppOutput)
 bool csmon_remove_node(const MODULECMD_ARG* pArgs, json_t** ppOutput)
 {
     CsMonitor* pMonitor;
-    CsMonitorServer* pServer;
+    const char* zHost;
     const char* zTimeout;
-    bool force;
 
-    bool rv = get_args(pArgs, ppOutput, &pMonitor, &pServer, &zTimeout, &force);
+    bool rv = get_args(pArgs, ppOutput, &pMonitor, &zHost, &zTimeout);
 
     if (rv)
     {
@@ -443,28 +374,7 @@ bool csmon_remove_node(const MODULECMD_ARG* pArgs, json_t** ppOutput)
 
         if (get_timeout(zTimeout, &timeout, ppOutput))
         {
-            CALL_IF_CS_15(pMonitor->command_remove_node(ppOutput, pServer, timeout, force));
-        }
-    }
-
-    return rv;
-}
-
-bool csmon_scan(const MODULECMD_ARG* pArgs, json_t** ppOutput)
-{
-    CsMonitor* pMonitor;
-    CsMonitorServer* pServer;
-    const char* zTimeout;
-
-    bool rv = get_args(pArgs, ppOutput, &pMonitor, &pServer, &zTimeout);
-
-    if (rv)
-    {
-        std::chrono::seconds timeout(0);
-
-        if (get_timeout(zTimeout, &timeout, ppOutput))
-        {
-            CALL_IF_CS_15(pMonitor->command_scan(ppOutput, pServer, timeout));
+            CALL_IF_CS_15(pMonitor->command_remove_node(ppOutput, zHost, timeout));
         }
     }
 
@@ -618,11 +528,6 @@ void register_commands()
                                MXS_ARRAY_NELEMS(csmon_config_get_argv), csmon_config_get_argv,
                                CSMON_CONFIG_GET_DESC);
 
-    modulecmd_register_command(MXS_MODULE_NAME, "config-set", MODULECMD_TYPE_PASSIVE,
-                               csmon_config_set,
-                               MXS_ARRAY_NELEMS(csmon_config_set_argv), csmon_config_set_argv,
-                               CSMON_CONFIG_SET_DESC);
-
     modulecmd_register_command(MXS_MODULE_NAME, "mode-set", MODULECMD_TYPE_ACTIVE,
                                csmon_mode_set,
                                MXS_ARRAY_NELEMS(csmon_mode_set_argv), csmon_mode_set_argv,
@@ -643,7 +548,6 @@ void register_commands()
                                MXS_ARRAY_NELEMS(csmon_status_argv), csmon_status_argv,
                                CSMON_STATUS_DESC);
 
-#if defined(CSMON_ADVANCED_CLUSTER_OPERATIONS)
     modulecmd_register_command(MXS_MODULE_NAME, "add-node", MODULECMD_TYPE_ACTIVE,
                                csmon_add_node,
                                MXS_ARRAY_NELEMS(csmon_add_node_argv), csmon_add_node_argv,
@@ -653,12 +557,6 @@ void register_commands()
                                csmon_remove_node,
                                MXS_ARRAY_NELEMS(csmon_remove_node_argv), csmon_remove_node_argv,
                                CSMON_REMOVE_NODE_DESC);
-
-    modulecmd_register_command(MXS_MODULE_NAME, "scan", MODULECMD_TYPE_ACTIVE,
-                               csmon_scan,
-                               MXS_ARRAY_NELEMS(csmon_scan_argv), csmon_scan_argv,
-                               CSMON_SCAN_DESC);
-#endif
 
 #if defined(CSMON_EXPOSE_TRANSACTIONS)
     modulecmd_register_command(MXS_MODULE_NAME, "begin", MODULECMD_TYPE_PASSIVE,

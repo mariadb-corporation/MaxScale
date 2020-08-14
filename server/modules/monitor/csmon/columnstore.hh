@@ -63,142 +63,20 @@ bool services_from_array(json_t* pArray, ServiceVector* pServices);
 
 namespace xml
 {
-
-const char CLUSTERMANAGER[]        = "ClusterManager";
-const char CONFIGREVISION[]        = "ConfigRevision";
-const char COUNT[]                 = "Count";
 const char DBRM_CONTROLLER[]       = "DBRM_Controller";
-const char DBRM_WORKER1[]          = "DBRM_Worker1";
-const char DBROOTCOUNT[]           = "DBRootCount";
-const char DBROOT[]                = "DBRoot";
 const char DDLPROC[]               = "DDLProc";
 const char DMLPROC[]               = "DMLProc";
-const char EXEMGR1[]               = "ExeMgr1";
 const char IPADDR[]                = "IPAddr";
-const char MODULEDBROOTCOUNT[]     = "ModuleDBRootCount";
-const char MODULEDBROOTID[]        = "ModuleDBRootID";
-const char MODULEIPADDR[]          = "ModuleIPAddr";
-const char NEXTDBROOTID[]          = "NextDBRootId";
-const char NEXTNODEID[]            = "NextNodeId";
-const char NUMWORKERS[]            = "NumWorkers";
-const char PM1_PROCESSMONITOR[]    = "pm1_ProcessMonitor";
-const char PM1_SERVERMONITOR[]     = "pm1_ServerMonitor";
-const char PM1_WRITEENGINESERVER[] = "pm1_WriteEngineServer";
-const char PMS[]                   = "PMS";
-const char PRIMITIVESERVERS[]      = "PrimitiveServers";
-const char PROCMGR[]               = "ProcMgr";
-const char PROCMGR_ALARM[]         = "ProcMgr_Alarm";
-const char PROCSTATUSCONTROL[]     = "ProcStatusControl";
-const char SYSTEMCONFIG[]          = "SystemConfig";
-const char SYSTEMMODULECONFIG[]    = "SystemModuleConfig";
-
-// In the config as various identifiers there is a trailing "X-Y-Z", where
-// X is the node id, Y a sequence number and Z a number identifying the role
-// of the entity identified by the identifier. The number "3" identifies a
-// PM module, the only kind of node we are interested in.
-const char ROLE_PM[] = "3";
-
-/**
- * @brief Return the root node.
- *
- * @param csXml  The Columnstore configuration
- *
- * @return The root node.
- */
-xmlNode& get_root(xmlDoc& csXml);
-
-/**
- * Find node id from Columnstore XML configuration.
- *
- * @param csXml    The XML document.
- * @param address  The IP address of the node.
- * @param pNid     On successful return, will contain the node id.
- *
- * @return True, if the node id was found, false otherwise.
- */
-bool find_node_id(xmlDoc& csXml, const std::string& address, std::string* pNid);
-
-/**
- * @brief Convert single-node XML configuration to first multi-node configuration.
- *
- * This call will replace all occurences of "127.0.0.1" in the XML configuration
- * with the provided IP-address of the node and add a ClusterManager entry.
- *
- * @param csXml     Single-node configuration.
- * @param manager   The manager doing the modification.
- * @param address   The current public IP address of the node.
- * @param pOutput   Json object for errors.
- *
- * @return True, if the document could be converted, false otherwise. A return value
- *         of false indicates that the document is broken.
- */
-bool convert_to_first_multi_node(xmlDoc& csXml,
-                                 const std::string& manager,
-                                 const std::string& address,
-                                 json_t* pOutput);
-
-/**
- * @brief Convert multi-node XML configuration to single-node configuration.
- *
- * This call will replace all occurences of the public IP address of the node with
- * "127.0.0.1" and remove the a ClusterManager entry.
- *
- * @param csXml  Multi-node configuration.
- */
-void convert_to_single_node(xmlDoc& csXml);
-
-/**
- * @bried Add additional node to cluster.
- *
- * @param clusterDoc  The current cluster XML configuration document.
- * @param nodeDoc     Configuration of node to be added.
- * @param address     Public address of new node.
- * @param pOutput     Json object for errors.
- *
- * @return True, if @c clusterDoc could be modified, false otherwise. A return value
- *         of false indicates that the documents are broken.
- */
-bool add_multi_node(xmlDoc& clusterDoc,
-                    xmlDoc& nodeDoc,
-                    const std::string& address,
-                    json_t* pOutput);
-
-namespace DbRoots
-{
-
-enum Status
-{
-    ERROR,
-    NO_CHANGE,
-    UPDATED
-};
-
-}
-
-/**
- * @brief Update configuration dbroots.
- *
- * @param csXml    The Columnstore configuration.
- * @param address  The address of the server in question.
- * @param dbroots  The db roots of the server in question.
- * @param pOutput  Object where errors can be stored.
- *
- * @return What was done. If DbRoots::UPDATED, then @c csXml
- *         has been updated to reflect the reality.
- */
-DbRoots::Status update_dbroots(xmlDoc& csXml,
-                               const std::string& address,
-                               const std::vector<int>& dbroots,
-                               json_t* pOutput);
-
 }
 
 namespace rest
 {
 enum Action {
+    ADD_NODE,
     BEGIN,
     COMMIT,
     CONFIG,
+    REMOVE_NODE,
     ROLLBACK,
     SHUTDOWN,
     START,
@@ -207,14 +85,25 @@ enum Action {
 
 const char* to_string(Action action);
 
-std::string create_url(const SERVER& server, int64_t port, const std::string& rest_base, Action action);
+enum Scope
+{
+    CLUSTER,
+    NODE
+};
+
+std::string create_url(const SERVER& server,
+                       int64_t port,
+                       const std::string& rest_base,
+                       Scope scope,
+                       Action action);
 
 inline std::string create_url(const mxs::MonitorServer& mserver,
                               int64_t port,
                               const std::string& rest_base,
+                              Scope scope,
                               Action action)
 {
-    return create_url(*mserver.server, port, rest_base, action);
+    return create_url(*mserver.server, port, rest_base, scope, action);
 }
 
 }
@@ -230,12 +119,23 @@ const char ID[]           = "id";
 const char MANAGER[]      = "manager";
 const char MODE[]         = "mode";
 const char NAME[]         = "name";
+const char NODE[]         = "node";
 const char PID[]          = "pid";
 const char REVISION[]     = "revision";
 const char SERVICES[]     = "services";
 const char TIMEOUT[]      = "timeout";
 const char TIMESTAMP[]    = "timestamp";
 const char TXN[]          = "txn";
+
+/**
+ * @brief JSON body to be used with PUT /cluster/add-node
+ *
+ * @param node     The host or IP of the node.
+ * @param timeout  The timeout of the operation.
+ *
+ * @return REST-API body.
+ */
+std::string add_node(const std::string& node, const std::chrono::seconds& timeout);
 
 /**
  * @brief JSON body to be used with PUT /node/begin
@@ -287,6 +187,15 @@ std::string config_set_cluster_mode(ClusterMode mode,
                                     const std::string& manager,
                                     const std::chrono::seconds& timeout);
 
+/**
+ * @brief JSON body to be used with PUT /cluster/remove-node
+ *
+ * @param node     The host or IP of the node.
+ * @param timeout  The timeout of the operation.
+ *
+ * @return REST-API body.
+ */
+std::string remove_node(const std::string& node, const std::chrono::seconds& timeout);
 
 /**
  * @brief JSON body to be used with PUT /node/rollback
@@ -298,11 +207,18 @@ std::string config_set_cluster_mode(ClusterMode mode,
 std::string rollback(int id);
 
 /**
- * @brief JSON body to be used with PUT /node/shutdown
+ * @brief JSON body to be used with PUT /cluster/shutdown
  *
  * @param timeout  The timeout.
  */
 std::string shutdown(const std::chrono::seconds& timeout);
+
+/**
+ * @brief JSON body to be used with PUT /cluster/start
+ *
+ * @param timeout  The timeout.
+ */
+std::string start(const std::chrono::seconds& timeout);
 
 }
 
