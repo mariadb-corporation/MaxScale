@@ -160,7 +160,7 @@ export default {
                         id,
                         attributes: {
                             state: serverState,
-                            parameters: { address: serverAddress, port: serverPort },
+                            parameters: { address: serverAddress, port: serverPort, socket },
                             statistics: { connections: serverConnections },
                             gtid_current_pos: gtid,
                         },
@@ -189,6 +189,9 @@ export default {
                         serviceIds,
                         gtid,
                     }
+
+                    if (serverAddress === null && serverPort === null) row.serverAddress = socket
+
                     if (this.getAllMonitorsMap.size && associatedMonitors.length) {
                         // The associatedMonitors is always an array with one element -> get monitor at index 0
                         const {

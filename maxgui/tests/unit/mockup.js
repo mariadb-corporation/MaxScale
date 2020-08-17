@@ -70,6 +70,40 @@ export async function mockupCloseDialog(wrapper) {
 export async function mockupRouteChanges(wrapper, path) {
     if (wrapper.vm.$route.path !== path) await wrapper.vm.$router.push(path)
 }
+/**
+ * This function finds and returns anchor link (<a> tag) in data-table.
+ *
+ * @param {Object} payload
+ * @param {Object} payload.wrapper a mounted component and methods to test the component
+ * @param {String} payload.rowId id of the row
+ * @param {Number} payload.cellIndex index of cell that contains a tag
+ * @returns {Object} mounted anchor tag element
+ */
+export function findAnchorLinkInTable({ wrapper, rowId, cellIndex }) {
+    const dataTable = wrapper.findComponent({ name: 'data-table' })
+    const tableCell = dataTable.find(`.cell-${cellIndex}-${rowId}`)
+    const aTag = tableCell.find('a')
+    return aTag
+}
+/**
+ * This function returns unique resource names from table row at
+ * a column
+ * @param {Array} expectedTableRows
+ * @param {String} colName column name
+ * @returns {Array} unique resource names
+ */
+export function getUniqueResourceNames(expectedTableRows, colName) {
+    let allNames = []
+    expectedTableRows.forEach(row => {
+        if (Array.isArray(row[colName])) {
+            let name = row[colName].map(name => `${name}`)
+            allNames.push(name)
+        }
+    })
+    // create unique set then convert back to array with unique items
+    const uniqueNames = [...new Set(allNames)]
+    return uniqueNames
+}
 
 //a minimized mockup allModules data fetch from maxscale
 export const allModules = [
@@ -298,14 +332,14 @@ export const mockupServicesList = [
 
 export const mockupAllMonitors = [
     {
-        attributes: {},
+        attributes: { state: 'Running' },
         id: 'monitor_0',
         links: {},
         relationships: {},
         type: 'monitors',
     },
     {
-        attributes: {},
+        attributes: { state: 'Stopped' },
         id: 'monitor_1',
         links: {},
         relationships: {},
@@ -325,6 +359,11 @@ export const mockupMonitorsList = [
         type: 'monitors',
     },
 ]
+
+export const mockupGetAllMonitorsMap = new Map()
+mockupAllMonitors.forEach(ele => {
+    mockupGetAllMonitorsMap.set(ele.id, ele)
+})
 
 export const mockupAllListeners = [
     {

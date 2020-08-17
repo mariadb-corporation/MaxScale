@@ -1,10 +1,21 @@
-/* eslint-disable no-unused-vars */
+/*
+ * Copyright (c) 2020 MariaDB Corporation Ab
+ *
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
+ *
+ * Change Date: 2024-07-16
+ *
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
+ */
 import chai, { expect } from 'chai'
 import mount from '@tests/unit/setup'
 import Sessions from '@/pages/Dashboard/Sessions'
 import sinon from 'sinon'
 import sinonChai from 'sinon-chai'
-import { mockupAllSessions } from '@tests/unit/mockup'
+import { mockupAllSessions, findAnchorLinkInTable } from '@tests/unit/mockup'
 
 chai.should()
 chai.use(sinonChai)
@@ -64,12 +75,13 @@ describe('Dashboard Sessions tab', () => {
     })
 
     it(`Should navigate to service detail page when a service is clicked`, async () => {
-        const dataTable = wrapper.findComponent({ name: 'data-table' })
         const sessionId = mockupAllSessions[0].id
-        const cellIndex = expectedTableHeaders.length - 1
         const serviceId = mockupAllSessions[0].relationships.services.data[0].id
-        let tableCell = dataTable.find(`.cell-${cellIndex}-${sessionId}`)
-        let aTag = tableCell.find('a')
+        const aTag = findAnchorLinkInTable({
+            wrapper: wrapper,
+            rowId: sessionId,
+            cellIndex: expectedTableHeaders.findIndex(item => item.value === 'serviceIds'),
+        })
         await aTag.trigger('click')
         expect(wrapper.vm.$route.path).to.be.equals(`/dashboard/services/${serviceId}`)
     })

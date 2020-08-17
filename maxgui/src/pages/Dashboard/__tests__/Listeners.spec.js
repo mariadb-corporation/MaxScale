@@ -1,9 +1,25 @@
+/*
+ * Copyright (c) 2020 MariaDB Corporation Ab
+ *
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
+ *
+ * Change Date: 2024-07-16
+ *
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
+ */
 import chai, { expect } from 'chai'
 import mount from '@tests/unit/setup'
 import Listeners from '@/pages/Dashboard/Listeners'
 import sinon from 'sinon'
 import sinonChai from 'sinon-chai'
-import { mockupAllListeners } from '@tests/unit/mockup'
+import {
+    mockupAllListeners,
+    findAnchorLinkInTable,
+    getUniqueResourceNames,
+} from '@tests/unit/mockup'
 
 chai.should()
 chai.use(sinonChai)
@@ -77,13 +93,30 @@ describe('Dashboard Listeners tab', () => {
     })
 
     it(`Should navigate to service detail page when a service is clicked`, async () => {
-        const dataTable = wrapper.findComponent({ name: 'data-table' })
         const listenerId = mockupAllListeners[0].id
-        const cellIndex = expectedTableHeaders.length - 1
         const serviceId = mockupAllListeners[0].relationships.services.data[0].id
-        let tableCell = dataTable.find(`.cell-${cellIndex}-${listenerId}`)
-        let aTag = tableCell.find('a')
+        const aTag = findAnchorLinkInTable({
+            wrapper: wrapper,
+            rowId: listenerId,
+            cellIndex: expectedTableHeaders.findIndex(item => item.value === 'serviceIds'),
+        })
         await aTag.trigger('click')
         expect(wrapper.vm.$route.path).to.be.equals(`/dashboard/services/${serviceId}`)
+    })
+
+    it(`Should navigate to listener detail page when a listener is clicked`, async () => {
+        const listenerId = mockupAllListeners[0].id
+        const aTag = findAnchorLinkInTable({
+            wrapper: wrapper,
+            rowId: listenerId,
+            cellIndex: expectedTableHeaders.findIndex(item => item.value === 'id'),
+        })
+        await aTag.trigger('click')
+        expect(wrapper.vm.$route.path).to.be.equals(`/dashboard/listeners/${listenerId}`)
+    })
+
+    it(`Should get total number of unique service names accurately`, async () => {
+        const uniqueServiceNames = getUniqueResourceNames(expectedTableRows, 'serviceIds')
+        expect(wrapper.vm.$data.servicesLength).to.be.equals(uniqueServiceNames.length)
     })
 })

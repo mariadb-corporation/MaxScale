@@ -1,9 +1,21 @@
+/*
+ * Copyright (c) 2020 MariaDB Corporation Ab
+ *
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
+ *
+ * Change Date: 2024-07-16
+ *
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
+ */
 import chai, { expect } from 'chai'
 import mount from '@tests/unit/setup'
 import Filters from '@/pages/Dashboard/Filters'
 import sinon from 'sinon'
 import sinonChai from 'sinon-chai'
-import { mockupAllFilters } from '@tests/unit/mockup'
+import { mockupAllFilters, findAnchorLinkInTable, getUniqueResourceNames } from '@tests/unit/mockup'
 
 chai.should()
 chai.use(sinonChai)
@@ -64,13 +76,30 @@ describe('Dashboard Filters tab', () => {
     })
 
     it(`Should navigate to service detail page when a service is clicked`, async () => {
-        const dataTable = wrapper.findComponent({ name: 'data-table' })
-        const listenerId = mockupAllFilters[1].id
-        const cellIndex = expectedTableHeaders.findIndex(item => item.value === 'serviceIds')
+        const filterId = mockupAllFilters[1].id
         const serviceId = mockupAllFilters[1].relationships.services.data[0].id
-        let tableCell = dataTable.find(`.cell-${cellIndex}-${listenerId}`)
-        let aTag = tableCell.find('a')
+        const aTag = findAnchorLinkInTable({
+            wrapper: wrapper,
+            rowId: filterId,
+            cellIndex: expectedTableHeaders.findIndex(item => item.value === 'serviceIds'),
+        })
         await aTag.trigger('click')
         expect(wrapper.vm.$route.path).to.be.equals(`/dashboard/services/${serviceId}`)
+    })
+
+    it(`Should navigate to filter detail page when a filter is clicked`, async () => {
+        const filterId = mockupAllFilters[0].id
+        const aTag = findAnchorLinkInTable({
+            wrapper: wrapper,
+            rowId: filterId,
+            cellIndex: expectedTableHeaders.findIndex(item => item.value === 'id'),
+        })
+        await aTag.trigger('click')
+        expect(wrapper.vm.$route.path).to.be.equals(`/dashboard/filters/${filterId}`)
+    })
+
+    it(`Should get total number of unique service names accurately`, async () => {
+        const uniqueServiceNames = getUniqueResourceNames(expectedTableRows, 'serviceIds')
+        expect(wrapper.vm.$data.servicesLength).to.be.equals(uniqueServiceNames.length)
     })
 })
