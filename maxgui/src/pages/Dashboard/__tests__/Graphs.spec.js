@@ -16,7 +16,7 @@ import mount from '@tests/unit/setup'
 import Graphs from '@/pages/Dashboard/Graphs'
 import sinon from 'sinon'
 import sinonChai from 'sinon-chai'
-import { mockupAllServers } from '@tests/unit/mockup'
+import { mockup_all_servers } from '@tests/unit/mockup'
 
 chai.should()
 chai.use(sinonChai)
@@ -73,7 +73,7 @@ describe('Graphs index', () => {
                     },
                 ],
 
-                all_servers: () => mockupAllServers,
+                all_servers: () => mockup_all_servers,
             },
         })
     })

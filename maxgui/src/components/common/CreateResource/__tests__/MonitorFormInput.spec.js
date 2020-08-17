@@ -16,7 +16,7 @@ import mount from '@tests/unit/setup'
 import {
     mockupSelection,
     mockupInputChange,
-    mockupAllServers,
+    mockup_all_servers,
     mockupServersList,
 } from '@tests/unit/mockup'
 import MonitorFormInput from '@CreateResource/MonitorFormInput'
@@ -57,7 +57,7 @@ describe('MonitorFormInput.vue', () => {
             component: MonitorFormInput,
             props: {
                 resourceModules: mockupResourceModules,
-                allServers: mockupAllServers,
+                allServers: mockup_all_servers,
             },
         })
     })

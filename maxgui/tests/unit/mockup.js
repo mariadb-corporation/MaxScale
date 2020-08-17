@@ -195,7 +195,7 @@ for (let i = 0; i < allModules.length; ++i) {
     allModulesMap[moduleType].push(module)
 }
 
-export const mockupAllServers = [
+export const mockup_all_servers = [
     {
         attributes: { statistics: { connections: 0 } },
         id: 'row_server_0',
@@ -225,7 +225,7 @@ export const mockupServersList = [
     },
 ]
 
-export const mockupAllFilters = [
+export const mockup_all_filters = [
     {
         attributes: {
             module: 'qlafilter',
@@ -281,7 +281,7 @@ export const mockupFiltersList = [
     },
 ]
 
-export const mockupAllServices = [
+export const mockup_all_services = [
     {
         attributes: {
             state: 'Started',
@@ -365,7 +365,7 @@ mockupAllMonitors.forEach(ele => {
     mockupGetAllMonitorsMap.set(ele.id, ele)
 })
 
-export const mockupAllListeners = [
+export const mockup_all_listeners = [
     {
         attributes: {
             parameters: {
@@ -477,7 +477,7 @@ export const allServicesState = [
     },
 ]
 
-export const mockupAllSessions = [
+export const mockup_all_sessions = [
     {
         attributes: {
             connected: 'Thu Aug 13 14:06:17 2020',

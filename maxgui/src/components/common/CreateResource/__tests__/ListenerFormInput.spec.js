@@ -16,7 +16,7 @@ import mount from '@tests/unit/setup'
 import {
     mockupSelection,
     mockupInputChange,
-    mockupAllServices,
+    mockup_all_services,
     mockupServicesList,
 } from '@tests/unit/mockup'
 import ListenerFormInput from '@CreateResource/ListenerFormInput'
@@ -50,7 +50,7 @@ describe('ListenerFormInput.vue', () => {
             component: ListenerFormInput,
             props: {
                 resourceModules: mockupResourceModules,
-                allServices: mockupAllServices,
+                allServices: mockup_all_services,
                 parentForm: { validate: () => null },
             },
         })

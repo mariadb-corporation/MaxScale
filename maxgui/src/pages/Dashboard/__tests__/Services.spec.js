@@ -16,7 +16,7 @@ import Services from '@/pages/Dashboard/Services'
 import sinon from 'sinon'
 import sinonChai from 'sinon-chai'
 import {
-    mockupAllServices,
+    mockup_all_services,
     findAnchorLinkInTable,
     getUniqueResourceNames,
 } from '@tests/unit/mockup'
@@ -64,7 +64,7 @@ describe('Dashboard Services tab', () => {
             shallow: false,
             component: Services,
             computed: {
-                all_services: () => mockupAllServices,
+                all_services: () => mockup_all_services,
             },
         })
         axiosStub = sinon.stub(wrapper.vm.$axios, 'get').resolves(
@@ -89,7 +89,7 @@ describe('Dashboard Services tab', () => {
     })
 
     it(`Should navigate to service detail page when a service is clicked`, async () => {
-        const serviceId = mockupAllServices[0].id
+        const serviceId = mockup_all_services[0].id
         const aTag = findAnchorLinkInTable({
             wrapper: wrapper,
             rowId: serviceId,
@@ -100,8 +100,8 @@ describe('Dashboard Services tab', () => {
     })
 
     it(`Should navigate to server detail page when a server is clicked`, async () => {
-        const serviceId = mockupAllServices[0].id
-        const serverId = mockupAllServices[0].relationships.servers.data[0].id
+        const serviceId = mockup_all_services[0].id
+        const serverId = mockup_all_services[0].relationships.servers.data[0].id
         const aTag = findAnchorLinkInTable({
             wrapper: wrapper,
             rowId: serviceId,

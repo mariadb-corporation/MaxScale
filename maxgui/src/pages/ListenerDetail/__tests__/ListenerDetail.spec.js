@@ -4,7 +4,7 @@ import mount, { router } from '@tests/unit/setup'
 import ListenerDetail from '@/pages/ListenerDetail'
 import sinon from 'sinon'
 import sinonChai from 'sinon-chai'
-import { mockupAllListeners } from '@tests/unit/mockup'
+import { mockup_all_listeners } from '@tests/unit/mockup'
 chai.should()
 chai.use(sinonChai)
 
@@ -18,7 +18,7 @@ describe('ListenerDetail index', () => {
             })
         )
 
-        const listenerPath = `/dashboard/listeners/${mockupAllListeners[0].id}`
+        const listenerPath = `/dashboard/listeners/${mockup_all_listeners[0].id}`
         if (router.history.current.path !== listenerPath) await router.push(listenerPath)
     })
 
@@ -37,7 +37,7 @@ describe('ListenerDetail index', () => {
             shallow: false,
             component: ListenerDetail,
             computed: {
-                current_listener: () => mockupAllListeners[0],
+                current_listener: () => mockup_all_listeners[0],
             },
         })
     })
@@ -56,7 +56,7 @@ describe('ListenerDetail index', () => {
                 relationships: {
                     services: { data: servicesData },
                 },
-            } = mockupAllListeners[0]
+            } = mockup_all_listeners[0]
 
             await axiosStub.should.have.been.calledWith(`/listeners/${id}`)
 

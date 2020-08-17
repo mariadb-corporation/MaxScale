@@ -16,9 +16,9 @@ import mount from '@tests/unit/setup'
 import {
     mockupSelection,
     mockupInputChange,
-    mockupAllServers,
+    mockup_all_servers,
     mockupServersList,
-    mockupAllFilters,
+    mockup_all_filters,
     mockupFiltersList,
 } from '@tests/unit/mockup'
 import ServiceFormInput from '@CreateResource/ServiceFormInput'
@@ -54,8 +54,8 @@ describe('ServiceFormInput.vue', () => {
             component: ServiceFormInput,
             props: {
                 resourceModules: mockupResourceModules,
-                allServers: mockupAllServers,
-                allFilters: mockupAllFilters,
+                allServers: mockup_all_servers,
+                allFilters: mockup_all_filters,
             },
         })
     })

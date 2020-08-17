@@ -16,7 +16,7 @@ import mount from '@tests/unit/setup'
 import {
     mockupSelection,
     mockupInputChange,
-    mockupAllServices,
+    mockup_all_services,
     mockupServicesList,
     mockupAllMonitors,
     mockupMonitorsList,
@@ -66,7 +66,7 @@ describe('ServerFormInput.vue', () => {
             component: ServerFormInput,
             props: {
                 resourceModules: mockupResourceModules,
-                allServices: mockupAllServices,
+                allServices: mockup_all_services,
                 allMonitors: mockupAllMonitors,
                 parentForm: { validate: () => null },
             },
