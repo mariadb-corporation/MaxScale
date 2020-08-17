@@ -2762,6 +2762,10 @@ bool runtime_create_listener_from_json(Service* service, json_t* json)
             get_string_or_null(json, MXS_JSON_PTR_PARAM_SSL_CERT_VERIFY_DEPTH);
         const char* ssl_verify_peer_certificate = get_string_or_null(json,
                                                                      MXS_JSON_PTR_PARAM_SSL_VERIFY_PEER_CERT);
+        if (!address)
+        {
+            address = get_string_or_null(json, MXS_JSON_PTR_PARAM_SOCKET);
+        }
 
         rval = runtime_create_listener(service,
                                        id,
