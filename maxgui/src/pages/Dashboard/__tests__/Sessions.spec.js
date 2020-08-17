@@ -15,7 +15,11 @@ import mount from '@tests/unit/setup'
 import Sessions from '@/pages/Dashboard/Sessions'
 import sinon from 'sinon'
 import sinonChai from 'sinon-chai'
-import { mockupAllSessions, findAnchorLinkInTable } from '@tests/unit/mockup'
+import {
+    mockupAllSessions,
+    findAnchorLinkInTable,
+    getUniqueResourceNames,
+} from '@tests/unit/mockup'
 
 chai.should()
 chai.use(sinonChai)
@@ -84,5 +88,10 @@ describe('Dashboard Sessions tab', () => {
         })
         await aTag.trigger('click')
         expect(wrapper.vm.$route.path).to.be.equals(`/dashboard/services/${serviceId}`)
+    })
+
+    it(`Should get total number of unique service names accurately`, async () => {
+        const uniqueServiceNames = getUniqueResourceNames(expectedTableRows, 'serviceIds')
+        expect(wrapper.vm.$data.servicesLength).to.be.equals(uniqueServiceNames.length)
     })
 })

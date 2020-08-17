@@ -131,9 +131,6 @@ export default {
 
                 if (typeof serverIds !== 'string') allServerIds = [...allServerIds, ...serverIds]
 
-                const uniqueServerId = new Set(allServerIds) // get unique servers
-                this.setServersLength([...uniqueServerId].length)
-
                 const row = {
                     id: id,
                     state: state,
@@ -144,7 +141,8 @@ export default {
                 }
                 rows.push(row)
             })
-
+            const uniqueServerId = new Set(allServerIds) // get unique servers
+            this.setServersLength([...uniqueServerId].length)
             return rows
         },
     },

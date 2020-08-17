@@ -177,9 +177,6 @@ export default {
                     if (typeof serviceIds !== 'string')
                         allServiceIds = [...allServiceIds, ...serviceIds]
 
-                    const uniqueServiceId = new Set(allServiceIds) // get unique service ids
-                    this.setServicesLength([...uniqueServiceId].length)
-
                     let row = {
                         id,
                         serverAddress,
@@ -210,6 +207,8 @@ export default {
                     rows.push(row)
                 })
 
+                const uniqueServiceId = new Set(allServiceIds) // get unique service ids
+                this.setServicesLength([...uniqueServiceId].length)
                 const uniqueMonitorId = new Set(allMonitorIds) // get unique monitor ids
                 this.setMonitorsLength([...uniqueMonitorId].length)
             }

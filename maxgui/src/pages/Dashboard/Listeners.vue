@@ -101,9 +101,6 @@ export default {
                 if (typeof serviceIds !== 'string')
                     allServiceIds = [...allServiceIds, ...serviceIds]
 
-                const uniqueServiceId = new Set(allServiceIds) // get unique service ids
-                this.setServicesLength([...uniqueServiceId].length)
-
                 rows.push({
                     id: id,
                     port: port,
@@ -112,7 +109,8 @@ export default {
                     serviceIds: serviceIds,
                 })
             })
-
+            const uniqueServiceId = new Set(allServiceIds) // get unique service ids
+            this.setServicesLength([...uniqueServiceId].length)
             return rows
         },
     },
