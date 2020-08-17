@@ -49,8 +49,8 @@ const expectedTableRows = [
     },
     {
         id: 'RCR-Router-Listener',
-        port: 3307,
-        address: '::',
+        port: null,
+        address: '/tmp/maxscale.sock',
         state: 'Running',
         serviceIds: ['RCR-Router'],
     },

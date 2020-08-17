@@ -415,7 +415,8 @@ export const mockup_all_listeners = [
             parameters: {
                 address: '::',
                 protocol: 'mariadbclient',
-                port: 3307,
+                port: null,
+                socket: '/tmp/maxscale.sock',
             },
             state: 'Running',
         },
