@@ -1056,8 +1056,8 @@ bool runtime_create_listener(Service* service,
     std::string reason;
 
     SListener old_listener = use_socket ?
-        listener_find_by_address(params.get_string(CN_ADDRESS), params.get_integer(CN_PORT)) :
-        listener_find_by_socket(params.get_string(CN_SOCKET));
+        listener_find_by_socket(params.get_string(CN_SOCKET)) :
+        listener_find_by_address(params.get_string(CN_ADDRESS), params.get_integer(CN_PORT));
 
     if (!ok)
     {
