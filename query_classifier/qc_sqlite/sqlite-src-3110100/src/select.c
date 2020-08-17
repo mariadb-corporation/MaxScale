@@ -122,7 +122,9 @@ Select *sqlite3SelectNew(
   pNew = sqlite3DbMallocRawNN(db, sizeof(*pNew) );
   if( pNew==0 ){
     assert( db->mallocFailed );
+#ifndef MAXSCALE
     pNew = &standin;
+#endif
   }
   if( pEList==0 ){
 #ifndef MAXSCALE
