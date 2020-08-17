@@ -15,6 +15,7 @@
 
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <maxbase/format.hh>
 #include <maxbase/host.hh>
 #include <maxsql/mariadb_connector.hh>
 #include <maxscale/server.hh>
@@ -23,7 +24,7 @@
 #include <maxscale/config.hh>
 #include <maxscale/cn_strings.hh>
 #include <maxscale/secrets.hh>
-#include <maxbase/format.hh>
+#include <maxscale/paths.hh>
 #include "sqlite_strlike.hh"
 
 using std::string;
@@ -272,6 +273,9 @@ bool MariaDBUserManager::update_users()
 
     sett.password = mxs::decrypt_password(sett.password);
     sett.multiquery = true;
+    sett.clear_sql_mode = true;
+    sett.charset = "latin1";
+    sett.plugin_dir = mxs::connector_plugindir();
 
     mxs::Config& glob_config = mxs::Config::get();
     sett.timeout = glob_config.auth_conn_timeout.get().count();
@@ -303,6 +307,7 @@ bool MariaDBUserManager::update_users()
     bool got_data = false;
     std::vector<string> source_servernames;
     UserDatabase temp_userdata;
+    const char users_query_failed[] = "Failed to query server '%s' for user account info. %s";
 
     for (auto srv : backends)
     {
@@ -352,8 +357,7 @@ bool MariaDBUserManager::update_users()
                 break;
 
             case LoadResult::QUERY_FAILED:
-                MXB_ERROR("Failed to query server '%s' for user account info. %s",
-                          srv->name(), con.error());
+                MXB_ERROR(users_query_failed, srv->name(), con.error());
                 break;
 
             case LoadResult::INVALID_DATA:
@@ -368,7 +372,7 @@ bool MariaDBUserManager::update_users()
         }
         else
         {
-            MXB_ERROR("Could not connect to '%s'. %s", srv->name(), con.error());
+            MXB_ERROR(users_query_failed, srv->name(), con.error());
         }
     }
 
