@@ -383,15 +383,17 @@ private:
         mxs::config::Enum<int64_t> m_rank;
 
         // TLS configuration parameters
-        mxs::config::ConcreteType<ParamSSL>  m_ssl;
-        mxs::config::Path                    m_ssl_cert;
-        mxs::config::Path                    m_ssl_key;
-        mxs::config::Path                    m_ssl_ca;
-        mxs::config::Enum<ssl_method_type_t> m_ssl_version;
-        mxs::config::Count                   m_ssl_cert_verify_depth;
-        mxs::config::Bool                    m_ssl_verify_peer_certificate;
-        mxs::config::Bool                    m_ssl_verify_peer_host;
-        mxs::config::String                  m_ssl_cipher;
+        mxs::config::ConcreteType<ParamSSL> m_ssl;
+        mxs::config::Path                   m_ssl_cert;
+        mxs::config::Path                   m_ssl_key;
+        mxs::config::Path                   m_ssl_ca;
+
+        mxs::config::Enum<mxb::ssl_version::Version> m_ssl_version;
+
+        mxs::config::Count  m_ssl_cert_verify_depth;
+        mxs::config::Bool   m_ssl_verify_peer_certificate;
+        mxs::config::Bool   m_ssl_verify_peer_host;
+        mxs::config::String m_ssl_cipher;
 
     protected:
         bool post_configure() override;

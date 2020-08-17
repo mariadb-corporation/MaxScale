@@ -35,21 +35,6 @@ namespace maxscale
 class ConfigParameters;
 }
 
-enum ssl_method_type_t
-{
-    SERVICE_TLS10,
-    SERVICE_TLS11,
-    SERVICE_TLS12,
-    SERVICE_TLS13,
-    SERVICE_SSL_MAX,
-    SERVICE_TLS_MAX,
-    SERVICE_SSL_TLS_MAX,
-    SERVICE_SSL_UNKNOWN
-};
-
-const char*       ssl_method_type_to_string(ssl_method_type_t method_type);
-ssl_method_type_t string_to_ssl_method_type(const char* str);
-
 /**
  * Return codes for SSL authentication checks
  */
@@ -59,9 +44,6 @@ ssl_method_type_t string_to_ssl_method_type(const char* str);
 
 extern const MXS_ENUM_VALUE ssl_version_values[];
 const MXS_ENUM_VALUE* ssl_setting_values();
-
-// The concrete implementation of the SSLProvider class (hides the dependency on routingworker.hh)
-class SSLProviderImp;
 
 namespace maxscale
 {
@@ -75,12 +57,9 @@ struct SSLConfig : public mxb::SSLConfig
     // Convert to human readable string representation
     std::string to_string() const;
 
-    std::string       crl;                          /** SSL certificate revocation list*/
-    ssl_method_type_t version = SERVICE_SSL_TLS_MAX;/**< Which TLS version to use */
-    int               verify_depth = 9;             /**< SSL certificate verification depth */
-    bool              verify_peer = false;          /**< Enable peer certificate verification */
-    bool              verify_host = false;          /**< Enable peer host verification */
-    std::string       cipher;                       /**< Selected TLS cipher */
+    std::string crl;                /** SSL certificate revocation list*/
+    int         verify_depth = 9;   /**< SSL certificate verification depth */
+    std::string cipher;             /**< Selected TLS cipher */
 };
 
 /**

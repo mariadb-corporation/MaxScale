@@ -52,15 +52,15 @@ MYSQL* mxs_mysql_real_connect(MYSQL* con, SERVER* server, const char* user, cons
 
         switch (ssl->version)
         {
-        case SERVICE_TLS11:
+        case mxb::ssl_version::TLS11:
             mysql_optionsv(con, MARIADB_OPT_TLS_VERSION, "TLSv1.1,TLSv1.2,TLSv1.3");
             break;
 
-        case SERVICE_TLS12:
+        case mxb::ssl_version::TLS12:
             mysql_optionsv(con, MARIADB_OPT_TLS_VERSION, "TLSv1.2,TLSv1.3");
             break;
 
-        case SERVICE_TLS13:
+        case mxb::ssl_version::TLS13:
             mysql_optionsv(con, MARIADB_OPT_TLS_VERSION, "TLSv1.3");
             break;
 

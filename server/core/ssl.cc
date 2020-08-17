@@ -18,11 +18,11 @@
 
 const MXS_ENUM_VALUE ssl_version_values[] =
 {
-    {"MAX",    SERVICE_SSL_TLS_MAX},
-    {"TLSv10", SERVICE_TLS10      },
-    {"TLSv11", SERVICE_TLS11      },
-    {"TLSv12", SERVICE_TLS12      },
-    {"TLSv13", SERVICE_TLS13      },
+    {"MAX",    mxb::ssl_version::SSL_TLS_MAX},
+    {"TLSv10", mxb::ssl_version::TLS10      },
+    {"TLSv11", mxb::ssl_version::TLS11      },
+    {"TLSv12", mxb::ssl_version::TLS12      },
+    {"TLSv13", mxb::ssl_version::TLS13      },
     {NULL}
 };
 
@@ -113,63 +113,6 @@ static const char* get_ssl_errors()
 }
 }
 
-/**
- * Returns an enum ssl_method_type value as string.
- *
- * @param method A method type.
- * @return The method type expressed as a string.
- */
-const char* ssl_method_type_to_string(ssl_method_type_t method_type)
-{
-    switch (method_type)
-    {
-    case SERVICE_TLS10:
-        return "TLSv10";
-
-    case SERVICE_TLS11:
-        return "TLSv11";
-
-    case SERVICE_TLS12:
-        return "TLSv12";
-
-    case SERVICE_TLS13:
-        return "TLSv13";
-
-    case SERVICE_SSL_MAX:
-    case SERVICE_TLS_MAX:
-    case SERVICE_SSL_TLS_MAX:
-        return "MAX";
-
-    default:
-        return "Unknown";
-    }
-}
-
-ssl_method_type_t string_to_ssl_method_type(const char* str)
-{
-    if (strcasecmp("MAX", str) == 0)
-    {
-        return SERVICE_SSL_TLS_MAX;
-    }
-    else if (strcasecmp("TLSV10", str) == 0)
-    {
-        return SERVICE_TLS10;
-    }
-    else if (strcasecmp("TLSV11", str) == 0)
-    {
-        return SERVICE_TLS11;
-    }
-    else if (strcasecmp("TLSV12", str) == 0)
-    {
-        return SERVICE_TLS12;
-    }
-    else if (strcasecmp("TLSV13", str) == 0)
-    {
-        return SERVICE_TLS13;
-    }
-    return SERVICE_SSL_UNKNOWN;
-}
-
 namespace maxscale
 {
 
@@ -183,7 +126,7 @@ SSLConfig::SSLConfig(const mxs::ConfigParameters& params)
     }
     if (params.contains(CN_SSL_VERSION))
     {
-        version = (ssl_method_type_t)params.get_enum(CN_SSL_VERSION, ssl_version_values);
+        version = (mxb::ssl_version::Version)params.get_enum(CN_SSL_VERSION, ssl_version_values);
     }
     if (params.contains(CN_SSL_CERT_VERIFY_DEPTH))
     {
@@ -221,7 +164,7 @@ bool SSLContext::init()
 {
     switch (m_cfg.version)
     {
-    case SERVICE_TLS10:
+    case mxb::ssl_version::TLS10:
 #ifndef OPENSSL_1_1
         m_method = (SSL_METHOD*)TLSv1_method();
 #else
@@ -231,7 +174,7 @@ bool SSLContext::init()
         break;
 
 
-    case SERVICE_TLS11:
+    case mxb::ssl_version::TLS11:
 #if defined (OPENSSL_1_0) || defined (OPENSSL_1_1)
         m_method = (SSL_METHOD*)TLSv1_1_method();
 #else
@@ -240,7 +183,7 @@ bool SSLContext::init()
 #endif
         break;
 
-    case SERVICE_TLS12:
+    case mxb::ssl_version::TLS12:
 #if defined (OPENSSL_1_0) || defined (OPENSSL_1_1)
         m_method = (SSL_METHOD*)TLSv1_2_method();
 #else
@@ -249,7 +192,7 @@ bool SSLContext::init()
 #endif
         break;
 
-    case SERVICE_TLS13:
+    case mxb::ssl_version::TLS13:
 #ifdef OPENSSL_1_1
         m_method = (SSL_METHOD*)TLS_method();
 #else
@@ -259,15 +202,9 @@ bool SSLContext::init()
         break;
 
     /** Rest of these use the maximum available SSL/TLS methods */
-    case SERVICE_SSL_MAX:
-        m_method = (SSL_METHOD*)SSLv23_method();
-        break;
-
-    case SERVICE_TLS_MAX:
-        m_method = (SSL_METHOD*)SSLv23_method();
-        break;
-
-    case SERVICE_SSL_TLS_MAX:
+    case mxb::ssl_version::SSL_MAX:
+    case mxb::ssl_version::TLS_MAX:
+    case mxb::ssl_version::SSL_TLS_MAX:
         m_method = (SSL_METHOD*)SSLv23_method();
         break;
 
@@ -292,7 +229,7 @@ bool SSLContext::init()
     /** Disable SSLv3 */
     SSL_CTX_set_options(m_ctx, SSL_OP_NO_SSLv3);
 
-    if (m_cfg.version == SERVICE_TLS13)
+    if (m_cfg.version == mxb::ssl_version::TLS13)
     {
         // There is no TLSv1_3_method function as the TLSv1_X_method functions are deprecated in favor of
         // disabling them via options.
@@ -467,7 +404,7 @@ std::string SSLConfig::to_string() const
     std::ostringstream ss;
 
     ss << "\tSSL initialized:                     yes\n"
-       << "\tSSL method type:                     " << ssl_method_type_to_string(version) << "\n"
+       << "\tSSL method type:                     " << mxb::ssl_version::to_string(version) << "\n"
        << "\tSSL certificate verification depth:  " << verify_depth << "\n"
        << "\tSSL peer verification :              " << (verify_peer ? "true" : "false") << "\n"
        << "\tSSL peer host verification :         " << (verify_host ? "true" : "false") << "\n"

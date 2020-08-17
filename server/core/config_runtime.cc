@@ -1030,7 +1030,8 @@ bool validate_ssl_json(json_t* params, object_type type)
         json_t* ssl_version = mxs_json_pointer(params, CN_SSL_VERSION);
         const char* ssl_version_str = ssl_version ? json_string_value(ssl_version) : NULL;
 
-        if (ssl_version_str && string_to_ssl_method_type(ssl_version_str) == SERVICE_SSL_UNKNOWN)
+        if (ssl_version_str
+            && mxb::ssl_version::from_string(ssl_version_str) == mxb::ssl_version::SSL_UNKNOWN)
         {
             MXS_ERROR("Invalid value for '%s': %s", CN_SSL_VERSION, ssl_version_str);
             rval = false;
