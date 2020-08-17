@@ -81,9 +81,33 @@ bool MariaDB::open(const std::string& host, unsigned int port, const std::string
         const char* ssl_ca = ssl.ca.empty() ? nullptr : ssl.ca.c_str();
         mysql_ssl_set(newconn, ssl_key, ssl_cert, ssl_ca, nullptr, nullptr);
 
-        if (!m_settings.ssl_version.empty())
+        const char* ssl_version_str = nullptr;
+        switch (ssl.version)
         {
-            mysql_optionsv(newconn, MARIADB_OPT_TLS_VERSION, m_settings.ssl_version.c_str());
+        case mxb::ssl_version::TLS11:
+            ssl_version_str = "TLSv1.1,TLSv1.2,TLSv1.3";
+            break;
+
+        case mxb::ssl_version::TLS12:
+            ssl_version_str = "TLSv1.2,TLSv1.3";
+            break;
+
+        case mxb::ssl_version::TLS13:
+            ssl_version_str = "TLSv1.3";
+            break;
+
+        default:
+            break;
+        }
+        if (ssl_version_str)
+        {
+            mysql_optionsv(newconn, MARIADB_OPT_TLS_VERSION, ssl_version_str);
+        }
+
+        if (ssl.verify_peer && ssl.verify_host)
+        {
+            my_bool verify = 1;
+            mysql_optionsv(newconn, MYSQL_OPT_SSL_VERIFY_SERVER_CERT, &verify);
         }
         ssl_enabled = true;
     }
