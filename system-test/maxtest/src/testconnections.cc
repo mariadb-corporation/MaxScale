@@ -1119,9 +1119,9 @@ int TestConnections::prepare_binlog(int m)
         add_result(maxscales->ssh_node_f(m,
                                          false,
                                          "%s mkdir -p %s; %s chown maxscale:maxscale -R %s",
-                                         maxscales->access_sudo[m],
+                                         maxscales->access_sudo(m),
                                          maxscales->maxscale_binlog_dir[m],
-                                         maxscales->access_sudo[m],
+                                         maxscales->access_sudo(m),
                                          maxscales->maxscale_binlog_dir[m]),
                    "directory ownership change failed");
     }

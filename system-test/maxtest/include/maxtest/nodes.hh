@@ -46,11 +46,6 @@ public:
     char prefix[16];
 
     /**
-     * @brief access_sudo empty if sudo is not needed or "sudo " if sudo is needed.
-     */
-    char * access_sudo[256];
-
-    /**
      * @brief Verbose command output
      */
     bool verbose;
@@ -68,6 +63,7 @@ public:
 
     const char* access_user(int i = 0) const;
     const char* access_homedir(int i = 0) const;
+    const char* access_sudo(int i = 0) const;
 
     /**
      * Generate the command line to execute a given command on the node via ssh.
@@ -179,6 +175,7 @@ private:
 
     std::string m_access_user[max_nodes] {};    /**< Unix user name to access nodes via ssh */
     std::string m_access_homedir[max_nodes] {}; /**< home directory of access_user */
+    std::string m_access_sudo[max_nodes] {};    /**< empty or "sudo " */
 
     bool check_node_ssh(int node);
 

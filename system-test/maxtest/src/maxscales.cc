@@ -313,6 +313,11 @@ const char* Maxscales::access_homedir(int i) const
     return Nodes::access_homedir(i);
 }
 
+const char* Maxscales::access_sudo(int i) const
+{
+    return Nodes::access_sudo(i);
+}
+
 namespace maxtest
 {
 

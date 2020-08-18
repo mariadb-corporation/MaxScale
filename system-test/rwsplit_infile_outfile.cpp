@@ -96,10 +96,8 @@ int main(int argc, char* argv[])
     Test->repl->sync_slaves();
     Test->set_timeout(200);
 
-    sprintf(str,
-            "%s rm -f /tmp/t*.csv; %s chmod 777 /tmp",
-            Test->repl->access_sudo[0],
-            Test->repl->access_sudo[0]);
+    auto sudo = Test->repl->access_sudo(0);
+    sprintf(str, "%s rm -f /tmp/t*.csv; %s chmod 777 /tmp", sudo, sudo);
     Test->tprintf("%s\n", str);
     for (int k = 0; k < Test->repl->N; k++)
     {

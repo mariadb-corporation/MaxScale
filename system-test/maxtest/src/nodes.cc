@@ -61,7 +61,7 @@ string Nodes::generate_ssh_cmd(int node, const string& cmd, bool sudo)
     if (strcmp(IP[node], "127.0.0.1") == 0)
     {
         // If node is the local machine, run command as is.
-        rval = sudo ? ((string)(access_sudo[node]) + " " + cmd) : cmd;
+        rval = sudo ? (m_access_sudo[node] + " " + cmd) : cmd;
     }
     else
     {
@@ -77,7 +77,7 @@ string Nodes::generate_ssh_cmd(int node, const string& cmd, bool sudo)
                     "-o LogLevel=quiet ";
 
         string p3 = mxb::string_printf("%s@%s ", m_access_user[node].c_str(), IP[node]);
-        string p4 = sudo ? mxb::string_printf("'%s %s'", access_sudo[node], cmd.c_str()) :
+        string p4 = sudo ? mxb::string_printf("'%s %s'", m_access_sudo[node].c_str(), cmd.c_str()) :
             mxb::string_printf("'%s'", cmd.c_str());
         rval = p1 + p2 + p3 + p4;
     }
@@ -316,7 +316,7 @@ int Nodes::read_basic_env()
             setenv(env_name, access_user.c_str(), 1);
 
             sprintf(env_name, "%s_%03d_access_sudo", prefix, i);
-            access_sudo[i] = readenv(env_name, " sudo ");
+            m_access_sudo[i] = envvar_get_set(env_name, " sudo ");
 
             if (access_user == "root")
             {
@@ -470,4 +470,9 @@ const char* Nodes::access_user(int i) const
 const char* Nodes::access_homedir(int i) const
 {
     return m_access_homedir[i].c_str();
+}
+
+const char* Nodes::access_sudo(int i) const
+{
+    return m_access_sudo[i].c_str();
 }
