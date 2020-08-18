@@ -13,7 +13,7 @@
 import { expect } from 'chai'
 import mount from '@tests/unit/setup'
 import ParameterInputContainer from '@/components/common/Parameters/ParameterInputContainer'
-import { mockupSelection, mockupInputChange } from '@tests/unit/mockup'
+import { itemSelectMock, inputChangeMock } from '@tests/unit/utils'
 
 let stringParam = {
     type: 'string',
@@ -76,7 +76,7 @@ describe('ParameterInputContainer.vue', () => {
             expect(newItem.value).to.be.equal('new value')
         })
         // mocking input changes
-        await mockupInputChange(wrapper, 'new value')
+        await inputChangeMock(wrapper, 'new value')
         expect(count).to.be.equal(1)
     })
 
@@ -121,7 +121,7 @@ describe('ParameterInputContainer.vue', () => {
         })
 
         // mockup selecting item on an enum mask parameter
-        await mockupSelection(wrapper, 'running_slave') // adding running_slave to value
+        await itemSelectMock(wrapper, 'running_slave') // adding running_slave to value
 
         expect(changedParametersArr.length).to.be.equal(1)
         expect(changedParametersArr[0].value).to.be.equal('primary_monitor_master,running_slave')
@@ -144,7 +144,7 @@ describe('ParameterInputContainer.vue', () => {
         })
 
         // mockup selecting item on an enum mask parameter
-        await mockupSelection(wrapper, 'primary_monitor_master')
+        await itemSelectMock(wrapper, 'primary_monitor_master')
 
         expect(changedParametersArr.length).to.be.equal(1)
         expect(changedParametersArr[0].value).to.be.equal('')

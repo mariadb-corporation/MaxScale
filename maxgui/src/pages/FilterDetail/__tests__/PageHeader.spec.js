@@ -16,7 +16,7 @@ import mount from '@tests/unit/setup'
 import PageHeader from '@/pages/FilterDetail/PageHeader'
 import sinon from 'sinon'
 import sinonChai from 'sinon-chai'
-import { mockup_all_filters, triggerBtnClick, openConfirmDialog } from '@tests/unit/mockup'
+import { dummy_all_filters, triggerBtnClick, openConfirmDialog } from '@tests/unit/utils'
 
 chai.should()
 chai.use(sinonChai)
@@ -29,7 +29,7 @@ describe('FilterDetail - PageHeader', () => {
             shallow: false,
             component: PageHeader,
             props: {
-                currentFilter: mockup_all_filters[0],
+                currentFilter: dummy_all_filters[0],
             },
         })
         axiosStub = sinon.stub(wrapper.vm.$axios, 'delete').returns(Promise.resolve())
@@ -62,8 +62,6 @@ describe('FilterDetail - PageHeader', () => {
         const confirmDialog = wrapper.findComponent({ name: 'confirm-dialog' })
         await triggerBtnClick(confirmDialog, '.save')
 
-        await axiosStub.should.have.been.calledWith(
-            `/filters/${mockup_all_filters[0].id}?force=yes`
-        )
+        await axiosStub.should.have.been.calledWith(`/filters/${dummy_all_filters[0].id}?force=yes`)
     })
 })

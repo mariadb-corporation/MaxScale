@@ -15,7 +15,7 @@ import mount from '@tests/unit/setup'
 import PageHeader from '@/pages/ListenerDetail/PageHeader'
 import sinon from 'sinon'
 import sinonChai from 'sinon-chai'
-import { mockup_all_listeners, triggerBtnClick, openConfirmDialog } from '@tests/unit/mockup'
+import { dummy_all_listeners, triggerBtnClick, openConfirmDialog } from '@tests/unit/utils'
 
 chai.should()
 chai.use(sinonChai)
@@ -28,7 +28,7 @@ describe('ListenerDetail - PageHeader', () => {
             shallow: false,
             component: PageHeader,
             props: {
-                currentListener: mockup_all_listeners[0],
+                currentListener: dummy_all_listeners[0],
             },
         })
         axiosStub = sinon.stub(wrapper.vm.$axios, 'delete').returns(Promise.resolve())
@@ -41,7 +41,7 @@ describe('ListenerDetail - PageHeader', () => {
     it(`Should render listener state accurately`, async () => {
         const span = wrapper.find('.resource-state')
         expect(span.exists()).to.be.true
-        expect(span.text()).to.be.equals(mockup_all_listeners[0].attributes.state)
+        expect(span.text()).to.be.equals(dummy_all_listeners[0].attributes.state)
     })
 
     it(`Should pass necessary props to confirm-dialog`, async () => {
@@ -68,6 +68,6 @@ describe('ListenerDetail - PageHeader', () => {
         const confirmDialog = wrapper.findComponent({ name: 'confirm-dialog' })
         await triggerBtnClick(confirmDialog, '.save')
 
-        await axiosStub.should.have.been.calledWith(`/listeners/${mockup_all_listeners[0].id}`)
+        await axiosStub.should.have.been.calledWith(`/listeners/${dummy_all_listeners[0].id}`)
     })
 })

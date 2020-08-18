@@ -16,7 +16,7 @@ import mount, { router } from '@tests/unit/setup'
 import FilterDetail from '@/pages/FilterDetail'
 import sinon from 'sinon'
 import sinonChai from 'sinon-chai'
-import { mockup_all_filters } from '@tests/unit/mockup'
+import { dummy_all_filters } from '@tests/unit/utils'
 chai.should()
 chai.use(sinonChai)
 
@@ -30,7 +30,7 @@ describe('FilterDetail index', () => {
             })
         )
 
-        const filterPath = `/dashboard/filters/${mockup_all_filters[0].id}`
+        const filterPath = `/dashboard/filters/${dummy_all_filters[0].id}`
         if (router.history.current.path !== filterPath) await router.push(filterPath)
     })
 
@@ -49,7 +49,7 @@ describe('FilterDetail index', () => {
             shallow: false,
             component: FilterDetail,
             computed: {
-                current_filter: () => mockup_all_filters[0],
+                current_filter: () => dummy_all_filters[0],
             },
         })
     })
@@ -66,7 +66,7 @@ describe('FilterDetail index', () => {
                 relationships: {
                     services: { data: servicesData },
                 },
-            } = mockup_all_filters[0]
+            } = dummy_all_filters[0]
 
             await axiosStub.should.have.been.calledWith(`/filters/${id}`)
 

@@ -18,10 +18,10 @@ import Settings from '@/pages/Settings'
 import sinon from 'sinon'
 import sinonChai from 'sinon-chai'
 import {
-    mockup_maxscale_parameters,
-    mockup_maxscale_module_parameters,
-    processedMaxScaleModuleParameters,
-} from '@tests/unit/mockup'
+    dummy_maxscale_parameters,
+    dummy_maxscale_module_parameters,
+    dummyProcessedMaxScaleModuleParams,
+} from '@tests/unit/utils'
 
 chai.should()
 chai.use(sinonChai)
@@ -41,8 +41,8 @@ describe('Settings index', () => {
             computed: {
                 search_keyword: () => '',
                 overlay_type: () => null,
-                module_parameters: () => mockup_maxscale_module_parameters,
-                maxscale_parameters: () => mockup_maxscale_parameters,
+                module_parameters: () => dummy_maxscale_module_parameters,
+                maxscale_parameters: () => dummy_maxscale_parameters,
             },
         })
     })
@@ -61,7 +61,7 @@ describe('Settings index', () => {
 
     it(`Should process module parameters as expected`, async () => {
         expect(wrapper.vm.$data.processedModuleParameters).to.be.deep.equals(
-            processedMaxScaleModuleParameters
+            dummyProcessedMaxScaleModuleParams
         )
     })
 

@@ -18,23 +18,23 @@ import TabNav from '@/pages/Dashboard/TabNav'
 import tabRoutes from 'router/tabRoutes'
 
 import {
-    mockup_all_sessions,
-    mockup_all_filters,
-    mockup_all_listeners,
-    mockup_all_servers,
-    mockup_all_services,
-    mockupRouteChanges,
-} from '@tests/unit/mockup'
+    dummy_all_sessions,
+    dummy_all_filters,
+    dummy_all_listeners,
+    dummy_all_servers,
+    dummy_all_services,
+    routeChangesMock,
+} from '@tests/unit/utils'
 
 chai.should()
 chai.use(sinonChai)
 
 const mockupComputed = {
-    all_sessions: () => mockup_all_sessions,
-    all_filters: () => mockup_all_filters,
-    all_listeners: () => mockup_all_listeners,
-    all_servers: () => mockup_all_servers,
-    all_services: () => mockup_all_services,
+    all_sessions: () => dummy_all_sessions,
+    all_filters: () => dummy_all_filters,
+    all_listeners: () => dummy_all_listeners,
+    all_servers: () => dummy_all_servers,
+    all_services: () => dummy_all_services,
 }
 /**
  *
@@ -95,7 +95,7 @@ describe('Dashboard TabNav', () => {
     })
 
     it(`Should change tab if route changes`, async () => {
-        await mockupRouteChanges(wrapper, '/dashboard/sessions')
+        await routeChangesMock(wrapper, '/dashboard/sessions')
         expect(wrapper.vm.$data.activeTab).to.be.equals('/dashboard/sessions')
     })
 

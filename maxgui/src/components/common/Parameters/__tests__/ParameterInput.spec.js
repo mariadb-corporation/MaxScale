@@ -13,7 +13,7 @@
 import { expect } from 'chai'
 import mount from '@tests/unit/setup'
 import ParameterInput from '@/components/common/Parameters/ParameterInput'
-import { mockupSelection } from '@tests/unit/mockup'
+import { itemSelectMock } from '@tests/unit/utils'
 
 let paramHasChild = {
     default_value: false,
@@ -265,8 +265,8 @@ describe('ParameterInput.vue', () => {
         })
 
         // mockup onchange event when selecting item
-        await mockupSelection(wrapper, true) // changing from value false to true
-        await mockupSelection(wrapper, false) // changing back to original value
+        await itemSelectMock(wrapper, true) // changing from value false to true
+        await itemSelectMock(wrapper, false) // changing back to original value
 
         expect(count).to.be.equal(2)
     })
@@ -300,9 +300,9 @@ describe('ParameterInput.vue', () => {
         })
 
         // mockup onchange event when selecting item
-        await mockupSelection(wrapper, 'running_slave') // adding running_slave to value
-        await mockupSelection(wrapper, 'running_slave') // removing running_slave from value
-        await mockupSelection(wrapper, 'primary_monitor_master') // making value empty
+        await itemSelectMock(wrapper, 'running_slave') // adding running_slave to value
+        await itemSelectMock(wrapper, 'running_slave') // removing running_slave from value
+        await itemSelectMock(wrapper, 'primary_monitor_master') // making value empty
 
         expect(count).to.be.equal(3)
     })
@@ -332,8 +332,8 @@ describe('ParameterInput.vue', () => {
         })
 
         // mockup onchange event when selecting item
-        await mockupSelection(wrapper, 'majority_of_running') // changing to majority_of_running
-        await mockupSelection(wrapper, 'none') // changing back to original value
+        await itemSelectMock(wrapper, 'majority_of_running') // changing to majority_of_running
+        await itemSelectMock(wrapper, 'none') // changing back to original value
 
         expect(count).to.be.equal(2)
     })

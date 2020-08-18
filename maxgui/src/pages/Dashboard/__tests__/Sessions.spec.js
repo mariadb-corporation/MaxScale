@@ -16,10 +16,10 @@ import Sessions from '@/pages/Dashboard/Sessions'
 import sinon from 'sinon'
 import sinonChai from 'sinon-chai'
 import {
-    mockup_all_sessions,
+    dummy_all_sessions,
     findAnchorLinkInTable,
     getUniqueResourceNames,
-} from '@tests/unit/mockup'
+} from '@tests/unit/utils'
 
 chai.should()
 chai.use(sinonChai)
@@ -54,7 +54,7 @@ describe('Dashboard Sessions tab', () => {
             shallow: false,
             component: Sessions,
             computed: {
-                all_sessions: () => mockup_all_sessions,
+                all_sessions: () => dummy_all_sessions,
             },
         })
         axiosStub = sinon.stub(wrapper.vm.$axios, 'get').resolves(
@@ -79,8 +79,8 @@ describe('Dashboard Sessions tab', () => {
     })
 
     it(`Should navigate to service detail page when a service is clicked`, async () => {
-        const sessionId = mockup_all_sessions[0].id
-        const serviceId = mockup_all_sessions[0].relationships.services.data[0].id
+        const sessionId = dummy_all_sessions[0].id
+        const serviceId = dummy_all_sessions[0].relationships.services.data[0].id
         const aTag = findAnchorLinkInTable({
             wrapper: wrapper,
             rowId: sessionId,

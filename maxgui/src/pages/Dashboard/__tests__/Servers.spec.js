@@ -17,10 +17,10 @@ import Servers from '@/pages/Dashboard/Servers'
 import sinon from 'sinon'
 import sinonChai from 'sinon-chai'
 import {
-    mockupGetAllMonitorsMap,
+    getAllMonitorsMapStub,
     findAnchorLinkInTable,
     getUniqueResourceNames,
-} from '@tests/unit/mockup'
+} from '@tests/unit/utils'
 
 chai.should()
 chai.use(sinonChai)
@@ -131,7 +131,7 @@ describe('Dashboard Servers tab', () => {
             component: Servers,
             computed: {
                 all_servers: () => all_servers_mockup,
-                getAllMonitorsMap: () => mockupGetAllMonitorsMap,
+                getAllMonitorsMap: () => getAllMonitorsMapStub,
             },
         })
         axiosStub = sinon.stub(wrapper.vm.$axios, 'get').resolves(

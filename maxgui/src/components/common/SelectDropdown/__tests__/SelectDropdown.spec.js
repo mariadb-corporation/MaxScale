@@ -13,7 +13,7 @@
 import { expect } from 'chai'
 import mount from '@tests/unit/setup'
 import SelectDropdown from '@/components/common/SelectDropdown'
-import { mockupSelection } from '@tests/unit/mockup'
+import { itemSelectMock } from '@tests/unit/utils'
 
 let multipleChoiceItems = [
     {
@@ -140,7 +140,7 @@ describe('SelectDropdown.vue', () => {
 
         // mockup onchange event when selecting items
         multipleChoiceItems.forEach(async item => {
-            await mockupSelection(wrapper, item)
+            await itemSelectMock(wrapper, item)
         })
 
         expect(chosenItems).to.be.an('array')
@@ -161,7 +161,7 @@ describe('SelectDropdown.vue', () => {
             chosenItems = values
         })
         // mockup onchange event when selecting an item
-        await mockupSelection(wrapper, singleChoiceItems[0])
+        await itemSelectMock(wrapper, singleChoiceItems[0])
 
         expect(chosenItems).to.be.an('array')
         expect(chosenItems.length).to.be.equal(1)
@@ -191,12 +191,12 @@ describe('SelectDropdown.vue', () => {
         // mockup onchange event when selecting item
 
         // Change to new item, is-equal should return false
-        await mockupSelection(wrapper, singleChoiceItems[0])
+        await itemSelectMock(wrapper, singleChoiceItems[0])
         /*
             Select original item is-equal should return true
             as current selected item is equal with defaultItems
         */
-        await mockupSelection(wrapper, singleChoiceItems[1])
+        await itemSelectMock(wrapper, singleChoiceItems[1])
     })
     it(`Should emit is-equal event and return accurate value
        when multiple props is true`, async () => {
@@ -220,11 +220,11 @@ describe('SelectDropdown.vue', () => {
         // mockup onchange event when selecting item
 
         // add new item, is-equal should return false
-        await mockupSelection(wrapper, multipleChoiceItems[1])
+        await itemSelectMock(wrapper, multipleChoiceItems[1])
         /*
             unselect selected item, is-equal should return true
             as current selected items are equal with defaultItems
         */
-        await mockupSelection(wrapper, multipleChoiceItems[1])
+        await itemSelectMock(wrapper, multipleChoiceItems[1])
     })
 })

@@ -14,11 +14,11 @@ import chai, { expect } from 'chai'
 import mount from '@tests/unit/setup'
 import RelationshipTable from '@/components/common/DetailsPage/RelationshipTable'
 import {
-    serviceStateTableRows,
-    allServicesState,
-    mockupFiltersList,
-    mockupSelection,
-} from '@tests/unit/mockup'
+    dummyServiceStateTableRows,
+    dummyAllServicesState,
+    dummyFiltersList,
+    itemSelectMock,
+} from '@tests/unit/utils'
 import sinon from 'sinon'
 import sinonChai from 'sinon-chai'
 
@@ -70,7 +70,7 @@ describe('RelationshipTable.vue with readOnly mode and not addable', () => {
             props: {
                 relationshipType: 'services',
                 loading: false,
-                tableRows: serviceStateTableRows,
+                tableRows: dummyServiceStateTableRows,
                 readOnly: true,
                 addable: false,
             },
@@ -93,11 +93,11 @@ describe('RelationshipTable.vue with readOnly mode and not addable', () => {
 
     it(`Should render router-link components and assign accurate target location`, async () => {
         const { wrappers: routerLinks } = wrapper.findAllComponents({ name: 'router-link' })
-        expect(routerLinks.length).to.be.equals(serviceStateTableRows.length)
+        expect(routerLinks.length).to.be.equals(dummyServiceStateTableRows.length)
         routerLinks.forEach((routerLink, i) => {
             const aTag = routerLink.find('a')
             expect(aTag.attributes().href).to.be.equals(
-                `#/dashboard/services/${serviceStateTableRows[i].id}`
+                `#/dashboard/services/${dummyServiceStateTableRows[i].id}`
             )
         })
     })
@@ -112,7 +112,7 @@ describe('RelationshipTable.vue with readOnly mode and not addable', () => {
         await mockupRelationshipTypeWatcher(wrapper, 'filters')
         const tableRowsData = wrapper.vm.tableRowsData
         expect(tableRowsData).to.be.an('array')
-        expect(tableRowsData.length).to.be.equals(serviceStateTableRows.length)
+        expect(tableRowsData.length).to.be.equals(dummyServiceStateTableRows.length)
         await tableRowsData.forEach((row, i) => {
             expect(row).to.have.property('index')
             expect(row.index).to.be.equals(i)
@@ -151,9 +151,9 @@ describe('RelationshipTable.vue with editable and addable mode', () => {
             props: {
                 relationshipType: 'services',
                 loading: false,
-                tableRows: serviceStateTableRows,
+                tableRows: dummyServiceStateTableRows,
                 readOnly: false,
-                getRelationshipData: () => allServicesState,
+                getRelationshipData: () => dummyAllServicesState,
             },
         })
     })
@@ -172,7 +172,7 @@ describe('RelationshipTable.vue with editable and addable mode', () => {
             props: {
                 relationshipType: 'services',
                 loading: false,
-                tableRows: serviceStateTableRows,
+                tableRows: dummyServiceStateTableRows,
                 readOnly: false,
             },
         })
@@ -180,12 +180,12 @@ describe('RelationshipTable.vue with editable and addable mode', () => {
     })
 
     it(`Should open confirm-dialog when delete button is clicked`, async () => {
-        await mockupOpenConfirmDeletingDialog(wrapper, serviceStateTableRows[0].id)
+        await mockupOpenConfirmDeletingDialog(wrapper, dummyServiceStateTableRows[0].id)
         expect(wrapper.vm.$data.showDeleteDialog).to.be.true
     })
 
     it(`Should display accurate delete dialog title`, async () => {
-        await mockupOpenConfirmDeletingDialog(wrapper, serviceStateTableRows[0].id)
+        await mockupOpenConfirmDeletingDialog(wrapper, dummyServiceStateTableRows[0].id)
         const title = wrapper.find('.v-card__title>h3')
         expect(title.text()).to.be.equals(
             `${wrapper.vm.$t('unlink')} ${wrapper.vm.$tc('services', 1)}`
@@ -193,7 +193,7 @@ describe('RelationshipTable.vue with editable and addable mode', () => {
     })
 
     it(`Should emit on-relationship-update event after confirm deleting`, async () => {
-        const idToBeDeleted = serviceStateTableRows[0].id
+        const idToBeDeleted = dummyServiceStateTableRows[0].id
         let count = 0
         wrapper.vm.$on('on-relationship-update', ({ type, data }) => {
             expect(data)
@@ -233,7 +233,7 @@ describe('RelationshipTable.vue with editable and addable mode', () => {
       of all resources and display only resources are not in the table`, async () => {
         await mockupOpenSelectDialog(wrapper)
         wrapper.vm.itemsList.forEach(item => {
-            serviceStateTableRows.forEach(row => {
+            dummyServiceStateTableRows.forEach(row => {
                 expect(item.id !== row.id).to.be.true
             })
         })
@@ -256,7 +256,7 @@ describe('RelationshipTable.vue with editable and addable mode', () => {
         })
 
         const selectDialog = wrapper.findComponent({ name: 'select-dialog' })
-        await mockupSelection(selectDialog, itemToBeAdded)
+        await itemSelectMock(selectDialog, itemToBeAdded)
         const saveBtn = selectDialog.find('.save')
         await saveBtn.trigger('click')
 
@@ -265,7 +265,7 @@ describe('RelationshipTable.vue with editable and addable mode', () => {
 
     it(`Should emit on-relationship-update event when changing filters order`, async () => {
         await wrapper.setProps({
-            tableRows: mockupFiltersList,
+            tableRows: dummyFiltersList,
             relationshipType: 'filters',
         })
         await mockupRelationshipTypeWatcher(wrapper, 'filters')
@@ -275,7 +275,7 @@ describe('RelationshipTable.vue with editable and addable mode', () => {
         let count = 0
         wrapper.vm.$on('on-relationship-update', ({ type, data, isFilterDrag }) => {
             expect(isFilterDrag).to.be.true
-            expect(data.length).to.be.equals(mockupFiltersList.length)
+            expect(data.length).to.be.equals(dummyFiltersList.length)
             data.forEach((item, i) => {
                 expect(item).to.be.an('object')
                 expect(item).to.be.have.all.keys('id', 'type')

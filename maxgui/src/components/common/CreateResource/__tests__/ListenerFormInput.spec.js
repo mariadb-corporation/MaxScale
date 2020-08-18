@@ -14,11 +14,11 @@
 import { expect } from 'chai'
 import mount from '@tests/unit/setup'
 import {
-    mockupSelection,
-    mockupInputChange,
-    mockup_all_services,
-    mockupServicesList,
-} from '@tests/unit/mockup'
+    itemSelectMock,
+    inputChangeMock,
+    dummy_all_services,
+    dummyServicesList,
+} from '@tests/unit/utils'
 import ListenerFormInput from '@CreateResource/ListenerFormInput'
 
 const mockupResourceModules = [
@@ -50,7 +50,7 @@ describe('ListenerFormInput.vue', () => {
             component: ListenerFormInput,
             props: {
                 resourceModules: mockupResourceModules,
-                allServices: mockup_all_services,
+                allServices: dummy_all_services,
                 parentForm: { validate: () => null },
             },
         })
@@ -95,30 +95,30 @@ describe('ListenerFormInput.vue', () => {
     })
 
     it(`Should compute serviceList from allServices accurately`, async () => {
-        expect(wrapper.vm.serviceList).to.be.deep.equals(mockupServicesList)
+        expect(wrapper.vm.serviceList).to.be.deep.equals(dummyServicesList)
     })
 
     it(`Should return an object with parameters and relationships objects
       when getValues method get called`, async () => {
         // mockup select a listener module
         const moduleParameters = wrapper.findComponent({ name: 'module-parameters' })
-        await mockupSelection(moduleParameters, mockupResourceModules[0])
+        await itemSelectMock(moduleParameters, mockupResourceModules[0])
 
         // get a listener parameter to mockup value changes
         const listenParameter = mockupResourceModules[0].attributes.parameters[1]
         const parameterCell = wrapper.find(`.cell-${1}-${listenParameter.name}`)
         const newValue = 'new value'
-        await mockupInputChange(parameterCell, newValue)
+        await inputChangeMock(parameterCell, newValue)
 
         // mockup listener relationships change
         const resourceRelationships = wrapper.findComponent({ name: 'resource-relationships' })
         const serviceList = wrapper.vm.serviceList // get serviceList from computed property
-        await mockupSelection(resourceRelationships, serviceList[0])
+        await itemSelectMock(resourceRelationships, serviceList[0])
 
         const expectedValue = {
             parameters: { [listenParameter.name]: newValue },
             relationships: {
-                services: { data: [mockupServicesList[0]] },
+                services: { data: [dummyServicesList[0]] },
             },
         }
         expect(wrapper.vm.getValues()).to.be.deep.equals(expectedValue)

@@ -16,10 +16,10 @@ import Listeners from '@/pages/Dashboard/Listeners'
 import sinon from 'sinon'
 import sinonChai from 'sinon-chai'
 import {
-    mockup_all_listeners,
+    dummy_all_listeners,
     findAnchorLinkInTable,
     getUniqueResourceNames,
-} from '@tests/unit/mockup'
+} from '@tests/unit/utils'
 
 chai.should()
 chai.use(sinonChai)
@@ -68,7 +68,7 @@ describe('Dashboard Listeners tab', () => {
             shallow: false,
             component: Listeners,
             computed: {
-                all_listeners: () => mockup_all_listeners,
+                all_listeners: () => dummy_all_listeners,
             },
         })
         axiosStub = sinon.stub(wrapper.vm.$axios, 'get').resolves(
@@ -93,8 +93,8 @@ describe('Dashboard Listeners tab', () => {
     })
 
     it(`Should navigate to service detail page when a service is clicked`, async () => {
-        const listenerId = mockup_all_listeners[0].id
-        const serviceId = mockup_all_listeners[0].relationships.services.data[0].id
+        const listenerId = dummy_all_listeners[0].id
+        const serviceId = dummy_all_listeners[0].relationships.services.data[0].id
         const aTag = findAnchorLinkInTable({
             wrapper: wrapper,
             rowId: listenerId,
@@ -105,7 +105,7 @@ describe('Dashboard Listeners tab', () => {
     })
 
     it(`Should navigate to listener detail page when a listener is clicked`, async () => {
-        const listenerId = mockup_all_listeners[0].id
+        const listenerId = dummy_all_listeners[0].id
         const aTag = findAnchorLinkInTable({
             wrapper: wrapper,
             rowId: listenerId,

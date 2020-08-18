@@ -15,11 +15,7 @@ import mount from '@tests/unit/setup'
 import Filters from '@/pages/Dashboard/Filters'
 import sinon from 'sinon'
 import sinonChai from 'sinon-chai'
-import {
-    mockup_all_filters,
-    findAnchorLinkInTable,
-    getUniqueResourceNames,
-} from '@tests/unit/mockup'
+import { dummy_all_filters, findAnchorLinkInTable, getUniqueResourceNames } from '@tests/unit/utils'
 
 chai.should()
 chai.use(sinonChai)
@@ -55,7 +51,7 @@ describe('Dashboard Filters tab', () => {
             shallow: false,
             component: Filters,
             computed: {
-                all_filters: () => mockup_all_filters,
+                all_filters: () => dummy_all_filters,
             },
         })
         axiosStub = sinon.stub(wrapper.vm.$axios, 'get').resolves(
@@ -80,8 +76,8 @@ describe('Dashboard Filters tab', () => {
     })
 
     it(`Should navigate to service detail page when a service is clicked`, async () => {
-        const filterId = mockup_all_filters[1].id
-        const serviceId = mockup_all_filters[1].relationships.services.data[0].id
+        const filterId = dummy_all_filters[1].id
+        const serviceId = dummy_all_filters[1].relationships.services.data[0].id
         const aTag = findAnchorLinkInTable({
             wrapper: wrapper,
             rowId: filterId,
@@ -92,7 +88,7 @@ describe('Dashboard Filters tab', () => {
     })
 
     it(`Should navigate to filter detail page when a filter is clicked`, async () => {
-        const filterId = mockup_all_filters[0].id
+        const filterId = dummy_all_filters[0].id
         const aTag = findAnchorLinkInTable({
             wrapper: wrapper,
             rowId: filterId,

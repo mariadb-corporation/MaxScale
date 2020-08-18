@@ -14,7 +14,7 @@
 import { expect } from 'chai'
 import mount from '@tests/unit/setup'
 import ParametersCollapse from '@CreateResource/ParametersCollapse'
-import { mockupSelection, mockupInputChange } from '@tests/unit/mockup'
+import { itemSelectMock, inputChangeMock } from '@tests/unit/utils'
 
 const addressParam = {
     description: 'Server address',
@@ -212,11 +212,11 @@ describe('ParametersCollapse.vue', () => {
         //mockup changed of parameters
         const newRankValue = 'secondary'
         const rankParamTd = wrapper.find(`.cell-${1}-rank`)
-        await mockupSelection(rankParamTd, newRankValue) // change of rank parameter
+        await itemSelectMock(rankParamTd, newRankValue) // change of rank parameter
 
         const portParamTd = wrapper.find(`.cell-${1}-port`)
         const newPortValue = 4001
-        await mockupInputChange(portParamTd, newPortValue)
+        await inputChangeMock(portParamTd, newPortValue)
 
         expect(wrapper.vm.getParameterObj()).to.be.deep.equals({
             rank: newRankValue,

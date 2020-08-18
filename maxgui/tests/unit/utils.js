@@ -8,7 +8,7 @@ import { expect } from 'chai'
  * @param {String} selector Using class only. e.g. '.class'
  * @param {*} item item to be selected
  */
-export async function mockupSelection(wrapper, item, selector = '') {
+export async function itemSelectMock(wrapper, item, selector = '') {
     let vSelects
     if (selector) {
         vSelects = wrapper.findAll(selector)
@@ -27,7 +27,7 @@ export async function mockupSelection(wrapper, item, selector = '') {
  * @param {String} selector valid DOM selector syntax. e.g. '.class' or '#id'
  * @param {String} newValue new string value for input field
  */
-export async function mockupInputChange(wrapper, newValue, selector = '') {
+export async function inputChangeMock(wrapper, newValue, selector = '') {
     let inputs
     if (selector) {
         inputs = wrapper.findAll(selector)
@@ -44,7 +44,7 @@ export async function mockupInputChange(wrapper, newValue, selector = '') {
  * This function mockups the action of opening a dialog
  * @param {Object} wrapper A Wrapper is an object that contains a mounted component and methods to test the component
  */
-export async function mockupOpenDialog(wrapper) {
+export async function showDialogMock(wrapper) {
     await wrapper.setProps({
         value: true,
     })
@@ -55,7 +55,7 @@ export async function mockupOpenDialog(wrapper) {
  * This function mockups the action of closing a dialog
  * @param {Object} wrapper A Wrapper is an object that contains a mounted component and methods to test the component
  */
-export async function mockupCloseDialog(wrapper) {
+export async function hideDialogMock(wrapper) {
     await wrapper.setProps({
         value: false,
     })
@@ -67,7 +67,7 @@ export async function mockupCloseDialog(wrapper) {
  * @param {Object} wrapper A Wrapper is an object that contains a mounted component and methods to test the component
  * @param {String} path path to navigate to
  */
-export async function mockupRouteChanges(wrapper, path) {
+export async function routeChangesMock(wrapper, path) {
     if (wrapper.vm.$route.path !== path) await wrapper.vm.$router.push(path)
 }
 
@@ -130,8 +130,8 @@ export async function openConfirmDialog(wrapper, cssSelector) {
     await triggerBtnClick(detailsIconGroupWrapper, cssSelector)
 }
 
-//a minimized mockup allModules data fetch from maxscale
-export const allModules = [
+//fake all_modules data fetch from maxscale
+const dummy_all_modules = [
     {
         attributes: {
             module_type: 'servers',
@@ -211,16 +211,16 @@ export const allModules = [
     },
 ]
 
-//a minimized mockup allModulesMap state from vuex store
-export const allModulesMap = {}
-for (let i = 0; i < allModules.length; ++i) {
-    const module = allModules[i]
-    const moduleType = allModules[i].attributes.module_type
-    if (allModulesMap[moduleType] == undefined) allModulesMap[moduleType] = []
-    allModulesMap[moduleType].push(module)
-}
+export const all_modules_map_stub = {}
 
-export const mockup_all_servers = [
+dummy_all_modules.forEach(fake_module => {
+    const module = fake_module
+    const moduleType = fake_module.attributes.module_type
+    if (all_modules_map_stub[moduleType] == undefined) all_modules_map_stub[moduleType] = []
+    all_modules_map_stub[moduleType].push(module)
+})
+
+export const dummy_all_servers = [
     {
         attributes: { statistics: { connections: 0 } },
         id: 'row_server_0',
@@ -237,7 +237,7 @@ export const mockup_all_servers = [
     },
 ]
 
-export const mockupServersList = [
+export const dummyServersList = [
     {
         id: 'row_server_0',
 
@@ -250,7 +250,7 @@ export const mockupServersList = [
     },
 ]
 
-export const mockup_all_filters = [
+export const dummy_all_filters = [
     {
         attributes: {
             module: 'qlafilter',
@@ -293,7 +293,7 @@ export const mockup_all_filters = [
     },
 ]
 
-export const mockupFiltersList = [
+export const dummyFiltersList = [
     {
         id: 'filter_0',
 
@@ -306,7 +306,7 @@ export const mockupFiltersList = [
     },
 ]
 
-export const mockup_all_services = [
+export const dummy_all_services = [
     {
         attributes: {
             state: 'Started',
@@ -342,7 +342,7 @@ export const mockup_all_services = [
     },
 ]
 
-export const mockupServicesList = [
+export const dummyServicesList = [
     {
         id: 'service_0',
 
@@ -355,7 +355,7 @@ export const mockupServicesList = [
     },
 ]
 
-export const mockupAllMonitors = [
+export const dummy_all_monitors = [
     {
         attributes: { state: 'Running' },
         id: 'monitor_0',
@@ -372,7 +372,7 @@ export const mockupAllMonitors = [
     },
 ]
 
-export const mockupMonitorsList = [
+export const dummyMonitorsList = [
     {
         id: 'monitor_0',
 
@@ -385,12 +385,12 @@ export const mockupMonitorsList = [
     },
 ]
 
-export const mockupGetAllMonitorsMap = new Map()
-mockupAllMonitors.forEach(ele => {
-    mockupGetAllMonitorsMap.set(ele.id, ele)
+export const getAllMonitorsMapStub = new Map()
+dummy_all_monitors.forEach(ele => {
+    getAllMonitorsMapStub.set(ele.id, ele)
 })
 
-export const mockup_all_listeners = [
+export const dummy_all_listeners = [
     {
         attributes: {
             parameters: {
@@ -460,12 +460,12 @@ export const mockup_all_listeners = [
     },
 ]
 
-export const serviceStateTableRows = mockupServicesList.map(service => ({
+export const dummyServiceStateTableRows = dummyServicesList.map(service => ({
     ...service,
     state: 'Started',
 }))
 
-export const allServicesState = [
+export const dummyAllServicesState = [
     {
         attributes: {
             state: 'Started',
@@ -503,7 +503,7 @@ export const allServicesState = [
     },
 ]
 
-export const mockup_all_sessions = [
+export const dummy_all_sessions = [
     {
         attributes: {
             connected: 'Thu Aug 13 14:06:17 2020',
@@ -527,7 +527,7 @@ export const mockup_all_sessions = [
     },
 ]
 
-export const mockup_maxscale_module_parameters = [
+export const dummy_maxscale_module_parameters = [
     {
         default_value: true,
         description: 'Admin interface authentication.',
@@ -558,7 +558,7 @@ export const mockup_maxscale_module_parameters = [
         type: 'bool',
     },
 ]
-export const mockup_maxscale_parameters = {
+export const dummy_maxscale_parameters = {
     admin_auth: true,
     log_throttling: {
         count: 0,
@@ -567,7 +567,7 @@ export const mockup_maxscale_parameters = {
     },
     log_warn_super_user: false,
 }
-export const processedMaxScaleModuleParameters = [
+export const dummyProcessedMaxScaleModuleParams = [
     {
         default_value: true,
         description: 'Admin interface authentication.',
