@@ -212,7 +212,34 @@ PinlokiSession* Pinloki::newSession(MXS_SESSION* pSession, const Endpoints& endp
 
 json_t* Pinloki::diagnostics() const
 {
-    return nullptr;
+    json_t* rval = json_object();
+    std::lock_guard<std::mutex> guard(m_lock);
+
+    json_object_set_new(rval, "gtid_io_pos", json_string(gtid_io_pos().to_string().c_str()));
+    json_object_set_new(rval, "current_binlog", json_string(m_inventory.last().c_str()));
+
+    json_t* cnf = json_object();
+    json_object_set_new(cnf, "host", json_string(m_master_config.host.c_str()));
+    json_object_set_new(cnf, "port", json_integer(m_master_config.port));
+    json_object_set_new(cnf, "user", json_string(m_master_config.user.c_str()));
+    json_object_set_new(cnf, "ssl", json_boolean(m_master_config.ssl));
+
+    if (m_master_config.ssl)
+    {
+        json_object_set_new(cnf, "ssl_ca", json_string(m_master_config.ssl_ca.c_str()));
+        json_object_set_new(cnf, "ssl_capath", json_string(m_master_config.ssl_capath.c_str()));
+        json_object_set_new(cnf, "ssl_cert", json_string(m_master_config.ssl_cert.c_str()));
+        json_object_set_new(cnf, "ssl_cipher", json_string(m_master_config.ssl_cipher.c_str()));
+        json_object_set_new(cnf, "ssl_crl", json_string(m_master_config.ssl_crl.c_str()));
+        json_object_set_new(cnf, "ssl_crlpath", json_string(m_master_config.ssl_crlpath.c_str()));
+        json_object_set_new(cnf, "ssl_key", json_string(m_master_config.ssl_key.c_str()));
+        json_object_set_new(cnf, "ssl_verify_server_cert",
+                            json_boolean(m_master_config.ssl_verify_server_cert));
+    }
+
+    json_object_set_new(rval, "master_config", cnf);
+
+    return rval;
 }
 
 uint64_t Pinloki::getCapabilities()
