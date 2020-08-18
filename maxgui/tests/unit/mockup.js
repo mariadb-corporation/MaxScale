@@ -70,6 +70,7 @@ export async function mockupCloseDialog(wrapper) {
 export async function mockupRouteChanges(wrapper, path) {
     if (wrapper.vm.$route.path !== path) await wrapper.vm.$router.push(path)
 }
+
 /**
  * This function finds and returns anchor link (<a> tag) in data-table.
  *
@@ -85,6 +86,7 @@ export function findAnchorLinkInTable({ wrapper, rowId, cellIndex }) {
     const aTag = tableCell.find('a')
     return aTag
 }
+
 /**
  * This function returns unique resource names from table row at
  * a column
@@ -103,6 +105,29 @@ export function getUniqueResourceNames(expectedTableRows, colName) {
     // create unique set then convert back to array with unique items
     const uniqueNames = [...new Set(allNames)]
     return uniqueNames
+}
+
+/**
+ * This function triggers click event of a button
+ * @param {Object} wrapper mounted component
+ * @param {String} cssSelector css selector of the button to be clicked
+ */
+export async function triggerBtnClick(wrapper, cssSelector) {
+    const btn = wrapper.find(`${cssSelector}`)
+    await btn.trigger('click')
+}
+
+/**
+ * This function opening confirm-dialog in page-header component
+ * @param {Object} wrapper mounted component
+ * @param {String} cssSelector css selector of the button to be clicked
+ */
+export async function openConfirmDialog(wrapper, cssSelector) {
+    await triggerBtnClick(wrapper, '.gear-btn')
+    const detailsIconGroupWrapper = wrapper.findComponent({
+        name: 'details-icon-group-wrapper',
+    })
+    await triggerBtnClick(detailsIconGroupWrapper, cssSelector)
 }
 
 //a minimized mockup allModules data fetch from maxscale

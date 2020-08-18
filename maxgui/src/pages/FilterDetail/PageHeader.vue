@@ -9,7 +9,7 @@
                         content-class="shadow-drop color text-navigation py-1 px-4"
                     >
                         <template v-slot:activator="{ on }">
-                            <v-btn text v-on="on" @click="handleDelete">
+                            <v-btn class="delete-btn" text v-on="on" @click="handleDelete">
                                 <v-icon size="18" color="error">
                                     $vuetify.icons.delete
                                 </v-icon>
@@ -27,8 +27,8 @@
                 :type="dialogType"
                 :item="currentFilter"
                 :onSave="confirmSave"
-                :onClose="() => (showConfirmDialog = false)"
-                :onCancel="() => (showConfirmDialog = false)"
+                :onClose="handleClose"
+                :onCancel="handleClose"
             />
         </template>
     </details-page-title>
@@ -70,12 +70,11 @@ export default {
         },
 
         async performAsyncLoadingAction(type) {
-            let self = this
             switch (type) {
                 case 'destroy':
-                    await self.destroyFilter(self.currentFilter.id)
-                    self.showConfirmDialog = false
-                    self.$router.go(-1)
+                    await this.destroyFilter(this.currentFilter.id)
+                    this.showConfirmDialog = false
+                    this.$router.go(-1)
                     break
                 default:
                     null
@@ -86,6 +85,10 @@ export default {
             this.dialogType = 'destroy'
             this.dialogTitle = `${this.$t('destroy')} ${this.$tc('filters', 1)}`
             this.showConfirmDialog = true
+        },
+
+        handleClose() {
+            this.showConfirmDialog = false
         },
     },
 }
