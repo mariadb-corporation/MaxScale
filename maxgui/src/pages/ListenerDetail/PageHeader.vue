@@ -9,7 +9,7 @@
                         content-class="shadow-drop color text-navigation py-1 px-4"
                     >
                         <template v-slot:activator="{ on }">
-                            <v-btn text v-on="on" @click="handleDelete">
+                            <v-btn class="delete-btn" text v-on="on" @click="handleDelete">
                                 <v-icon size="18" color="error">
                                     $vuetify.icons.delete
                                 </v-icon>
@@ -27,8 +27,8 @@
                 :type="dialogType"
                 :item="currentListener"
                 :onSave="confirmSave"
-                :onClose="() => (showConfirmDialog = false)"
-                :onCancel="() => (showConfirmDialog = false)"
+                :onClose="handleClose"
+                :onCancel="handleClose"
             />
             <icon-sprite-sheet
                 size="13"
@@ -37,7 +37,7 @@
             >
                 status
             </icon-sprite-sheet>
-            <span class="color text-navigation body-2">
+            <span class="resource-state color text-navigation body-2">
                 {{ currentListener.attributes.state }}
             </span>
         </template>
@@ -80,12 +80,11 @@ export default {
         },
 
         async performAsyncLoadingAction(type) {
-            let self = this
             switch (type) {
                 case 'destroy':
-                    await self.destroyListener(self.currentListener.id)
-                    self.showConfirmDialog = false
-                    self.$router.go(-1)
+                    await this.destroyListener(this.currentListener.id)
+                    this.showConfirmDialog = false
+                    this.$router.go(-1)
                     break
                 default:
                     null
@@ -96,6 +95,10 @@ export default {
             this.dialogType = 'destroy'
             this.dialogTitle = `${this.$t('destroy')} ${this.$tc('listeners', 1)}`
             this.showConfirmDialog = true
+        },
+
+        handleClose() {
+            this.showConfirmDialog = false
         },
     },
 }
