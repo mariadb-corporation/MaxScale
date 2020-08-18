@@ -29,24 +29,26 @@ const char* const CONTINUOUS_DURATION_CFG = "continuous_duration";
 
 extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
+    auto description = "Prevents high frequency querying from monopolizing the system";
+
     static MXS_MODULE info =
     {
         MXS_MODULE_API_FILTER,
         MXS_MODULE_IN_DEVELOPMENT,
         MXS_FILTER_VERSION,
-        "Prevents high frequency querying from monopolizing the system",
+        description,
         "V1.0.0",
         RCAP_TYPE_STMT_INPUT,
         &throttle::ThrottleFilter::s_object,
-        NULL,                                                           /* Process init. */
-        NULL,                                                           /* Process finish. */
-        NULL,                                                           /* Thread init. */
-        NULL,                                                           /* Thread finish. */
+        NULL,                               /* Process init. */
+        NULL,                               /* Process finish. */
+        NULL,                               /* Thread init. */
+        NULL,                               /* Thread finish. */
         {
-            {MAX_QPS_CFG,                                               MXS_MODULE_PARAM_INT      },
-            {SAMPLING_DURATION_CFG,                                     MXS_MODULE_PARAM_DURATION, "250ms"},
-            {THROTTLE_DURATION_CFG,                                     MXS_MODULE_PARAM_DURATION },
-            {CONTINUOUS_DURATION_CFG,                                   MXS_MODULE_PARAM_DURATION, "2000ms"},
+            {MAX_QPS_CFG,                   MXS_MODULE_PARAM_INT,       nullptr, MXS_MODULE_OPT_REQUIRED},
+            {SAMPLING_DURATION_CFG,         MXS_MODULE_PARAM_DURATION,  "250ms"},
+            {THROTTLE_DURATION_CFG,         MXS_MODULE_PARAM_DURATION,  nullptr, MXS_MODULE_OPT_REQUIRED},
+            {CONTINUOUS_DURATION_CFG,       MXS_MODULE_PARAM_DURATION,  "2000ms"},
             {MXS_END_MODULE_PARAMS}
         }
     };
