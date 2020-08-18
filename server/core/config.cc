@@ -879,6 +879,7 @@ static bool config_load_single_file(const char* file,
  */
 static CONFIG_CONTEXT* current_ccontext;
 static DUPLICATE_CONTEXT* current_dcontext;
+static std::unordered_set<std::string> hidden_dirs;
 
 /**
  * The nftw callback.
@@ -924,12 +925,25 @@ int config_cb(const char* fpath, const struct stat* sb, int typeflag, struct FTW
         }
     }
 
+    if (typeflag == FTW_D)
+    {
+        // Hidden directory or a directory inside a hidden directory
+        if (fpath[ftwbuf->base] == '.' || hidden_dirs.count(std::string(fpath, fpath + ftwbuf->base - 1)))
+        {
+            hidden_dirs.insert(fpath);
+        }
+    }
+
     if (typeflag == FTW_F)      // We are only interested in files,
     {
         const char* filename = fpath + ftwbuf->base;
         const char* dot = strrchr(filename, '.');
 
-        if (dot && *filename != '.')    // that have a suffix and are not hidden,
+        if (hidden_dirs.count(std::string(fpath, fpath + ftwbuf->base - 1)))
+        {
+            MXS_INFO("Ignoring file inside hidden directory: %s", fpath);
+        }
+        else if (dot && *filename != '.')   // that have a suffix and are not hidden,
         {
             const char* suffix = dot + 1;
 
@@ -976,6 +990,7 @@ static bool config_load_dir(const char* dir, DUPLICATE_CONTEXT* dcontext, CONFIG
     int rv = nftw(dir, config_cb, nopenfd, FTW_PHYS);
     current_ccontext = NULL;
     current_dcontext = NULL;
+    hidden_dirs.clear();
 
     return rv == 0;
 }
