@@ -641,6 +641,11 @@ bool mxb_log_rotate()
         unused = freopen(this_unit.sLogger->filename(), "a", stderr);
     }
 
+    if (rval)
+    {
+        MXB_NOTICE("Log rotation complete");
+    }
+
     return rval;
 }
 
