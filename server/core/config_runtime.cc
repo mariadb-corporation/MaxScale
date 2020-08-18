@@ -1287,7 +1287,7 @@ bool service_to_service_relations(const std::string& target, json_t* old_json, j
 
 bool service_to_filter_relations(Service* service, json_t* old_json, json_t* new_json)
 {
-    if (mxs_json_pointer(new_json, MXS_JSON_PTR_RELATIONSHIPS) == NULL)
+    if (mxs_json_pointer(new_json, MXS_JSON_PTR_RELATIONSHIPS_FILTERS) == NULL)
     {
         // No relationships defined, nothing to change
         return true;
@@ -1296,7 +1296,6 @@ bool service_to_filter_relations(Service* service, json_t* old_json, json_t* new
     bool rval = false;
     StringVector old_relations;
     StringVector new_relations;
-    const char* filter_relation = MXS_JSON_PTR_RELATIONSHIPS_FILTERS;
 
     if (extract_ordered_relations(old_json, old_relations, to_filter_rel)
         && extract_ordered_relations(new_json, new_relations, to_filter_rel))
@@ -2137,8 +2136,6 @@ bool runtime_alter_monitor_relationships_from_json(Monitor* monitor, const char*
 bool runtime_alter_service_relationships_from_json(Service* service, const char* type, json_t* json)
 {
     bool rval = false;
-    auto new_json = service_to_json(service, "");
-    mxb_assert(new_json);
 
     if (is_valid_relationship_body(json))
     {
@@ -2155,7 +2152,6 @@ bool runtime_alter_service_relationships_from_json(Service* service, const char*
         }
     }
 
-    json_decref(new_json);
     return rval;
 }
 
