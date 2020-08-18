@@ -62,12 +62,6 @@ describe("Library invocation", function () {
     return ctrl.execute("list --help".split(" "), opts).should.be.fulfilled;
   });
 
-  it("reject on connection failure", function () {
-    stopMaxScale().then(function () {
-      return ctrl.execute("list servers".split(" ")).should.be.rejected;
-    });
-  });
-
   it("reverse DNS lookup", async function () {
     await ctrl.execute("show sessions --rdns".split(" ")).should.be.fulfilled;
     await ctrl.execute("show session 1 --rdns".split(" ")).should.be.fulfilled;
@@ -75,4 +69,12 @@ describe("Library invocation", function () {
 
   after(closeConnection);
   after(stopMaxScale);
+});
+
+describe("Error handling", function () {
+  var ctrl = require("../lib/core.js");
+
+  it("reject on connection failure", function () {
+      return ctrl.execute("list servers".split(" ")).should.be.rejected;
+  });
 });
