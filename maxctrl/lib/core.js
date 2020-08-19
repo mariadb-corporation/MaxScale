@@ -61,26 +61,26 @@ program
     default: "10000",
     type: "string",
   })
-  .coerce("t", opt => {
-    var pos=opt.search(/[^\d]/)
-    var duration=parseInt(pos == -1 ? opt : opt.substring(0, pos))
+  .coerce("t", (opt) => {
+    var pos = opt.search(/[^\d]/);
+    var duration = parseInt(pos == -1 ? opt : opt.substring(0, pos));
     if (isNaN(duration)) {
-      throw Error('\'' + opt + '\' is not a valid duration.')
+      throw Error("'" + opt + "' is not a valid duration.");
     }
     if (pos != -1) {
-      var suffix=opt.substr(pos);
+      var suffix = opt.substr(pos);
       switch (suffix) {
-      case 'h':
-        duration *= 24;
-      case 'm':
-        duration *= 60;
-      case 's':
-        duration *= 1000;
-      case 'ms':
-        break;
+        case "h":
+          duration *= 24;
+        case "m":
+          duration *= 60;
+        case "s":
+          duration *= 1000;
+        case "ms":
+          break;
 
-      default:
-        throw Error('\'' + suffix + '\' in \'' + opt + '\' is not a valid duration suffix.')
+        default:
+          throw Error("'" + suffix + "' in '" + opt + "' is not a valid duration suffix.");
       }
     }
     return duration;
@@ -106,10 +106,12 @@ program
   .option("tls-key", {
     describe: "Path to TLS private key",
     type: "string",
+    implies: "tls-cert",
   })
   .option("tls-cert", {
     describe: "Path to TLS public certificate",
     type: "string",
+    implies: "tls-key",
   })
   .option("tls-passphrase", {
     describe: "Password for the TLS private key",
