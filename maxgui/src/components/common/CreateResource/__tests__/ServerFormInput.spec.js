@@ -96,7 +96,7 @@ describe('ServerFormInput.vue', () => {
         // props
         const { relationshipsType, items, defaultItems } = resourceRelationships.vm.$props
         expect(relationshipsType).to.be.equals('services')
-        expect(defaultItems).to.be.deep.equals(wrapper.vm.$props.defaultItems)
+        expect(defaultItems).to.be.deep.equals(wrapper.vm.$data.defaultServiceItems)
         expect(items).to.be.deep.equals(wrapper.vm.servicesList)
         //ref
         expect(wrapper.vm.$refs.servicesRelationship).to.be.not.null
@@ -111,7 +111,7 @@ describe('ServerFormInput.vue', () => {
 
         expect(relationshipsType).to.be.equals('monitors')
         expect(items).to.be.deep.equals(wrapper.vm.monitorsList)
-        expect(defaultItems).to.be.deep.equals(wrapper.vm.$props.defaultItems)
+        expect(defaultItems).to.be.deep.equals(wrapper.vm.$data.defaultMonitorItems)
         expect(multiple).to.be.false
         //ref
         expect(wrapper.vm.$refs.monitorsRelationship).to.be.not.null

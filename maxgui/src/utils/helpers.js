@@ -503,7 +503,8 @@ Object.defineProperties(Vue.prototype, {
                 serverStateIcon,
                 monitorStateIcon,
                 listenerStateIcon,
-
+                isNotEmptyObj,
+                isNotEmptyArray,
                 delay,
                 dynamicColors,
                 strReplaceAt,

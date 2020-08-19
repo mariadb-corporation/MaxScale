@@ -46,7 +46,7 @@ export default {
         resourceModules: { type: Array, required: true },
         allServices: { type: Array, required: true },
         parentForm: { type: Object, required: true },
-        defaultItems: { type: [Array, Object], required: true },
+        defaultItems: { type: [Array, Object], default: () => [] },
     },
 
     computed: {

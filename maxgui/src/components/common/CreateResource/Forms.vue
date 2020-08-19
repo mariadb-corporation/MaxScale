@@ -147,7 +147,7 @@ export default {
                 'filter',
                 'filters',
             ],
-            defaultRelationshipItems: {},
+            defaultRelationshipItems: null,
         }
     },
 

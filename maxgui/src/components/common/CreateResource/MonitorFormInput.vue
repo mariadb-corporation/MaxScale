@@ -35,7 +35,7 @@ export default {
     props: {
         resourceModules: { type: Array, required: true },
         allServers: { type: Array, required: true },
-        defaultItems: { type: [Array, Object], required: true },
+        defaultItems: { type: [Array, Object], default: () => [] },
     },
 
     computed: {
