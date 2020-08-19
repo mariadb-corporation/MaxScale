@@ -204,6 +204,8 @@ public:
         json_object_set_new(m_obj, "event_number", json_integer(gtid.event_num));
         json_object_set_new(m_obj, "timestamp", json_integer(hdr.timestamp));
         json_object_set_new(m_obj, "event_type", json_string(type));
+        json_object_set_new(m_obj, "table_schema", json_string(create.database.c_str()));
+        json_object_set_new(m_obj, "table_name", json_string(create.table.c_str()));
     }
 
     bool commit(const Table& create, const gtid_pos_t& gtid)

@@ -48,6 +48,7 @@ public:
     ~GaleraMonitor();
     static GaleraMonitor* create(const std::string& name, const std::string& module);
     json_t*               diagnostics() const;
+    json_t*               diagnostics(mxs::MonitorServer* server) const override;
 
 protected:
     bool configure(const mxs::ConfigParameters* param);

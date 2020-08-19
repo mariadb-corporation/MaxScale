@@ -109,6 +109,26 @@ json_t* GaleraMonitor::diagnostics() const
     return rval;
 }
 
+json_t* GaleraMonitor::diagnostics(MonitorServer* server) const
+{
+    json_t* obj = json_object();
+
+    std::lock_guard<std::mutex> guard(m_lock);
+    auto it = m_prev_info.find(server);
+
+    if (it != m_prev_info.end())
+    {
+        json_object_set_new(obj, "name", json_string(it->first->server->name()));
+        json_object_set_new(obj, "gtid_current_pos", json_string(it->second.gtid_current_pos.c_str()));
+        json_object_set_new(obj, "gtid_binlog_pos", json_string(it->second.gtid_binlog_pos.c_str()));
+        json_object_set_new(obj, "read_only", json_boolean(it->second.read_only));
+        json_object_set_new(obj, "server_id", json_integer(it->second.server_id));
+        json_object_set_new(obj, "master_id", json_integer(it->second.master_id));
+    }
+
+    return obj;
+}
+
 bool GaleraMonitor::configure(const mxs::ConfigParameters* params)
 {
     if (!MonitorWorkerSimple::configure(params))

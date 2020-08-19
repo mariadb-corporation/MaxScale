@@ -93,9 +93,14 @@ format (example created by `INSERT INTO test.t1 VALUES (1)`):
   "event_number": 1,
   "timestamp": 1580485945,
   "event_type": "insert",
-  "id": 1
+  "id": 1,
+  "table_name": "t2",
+  "table_schema": "test"
 }
 ```
+
+The `table_name` and `table_schema` fields were added in MaxScale 2.5.3. These
+contain the table name and schema the event targets.
 
 The router stores table metadata in the MaxScale data directory. The
 default value is `/var/lib/maxscale/<service name>`. If data for a table
