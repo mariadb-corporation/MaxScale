@@ -1400,16 +1400,19 @@ public:
     void update_names_from_srclist(QcAliases* pAliases,
                                    const SrcList* pSrc)
     {
-        for (int i = 0; i < pSrc->nSrc; ++i)
+        if (pSrc) // TODO: Figure out in what contexts pSrc can be NULL.
         {
-            if (pSrc->a[i].zName)
+            for (int i = 0; i < pSrc->nSrc; ++i)
             {
-                update_names(pSrc->a[i].zDatabase, pSrc->a[i].zName, pSrc->a[i].zAlias, pAliases);
-            }
+                if (pSrc->a[i].zName)
+                {
+                    update_names(pSrc->a[i].zDatabase, pSrc->a[i].zName, pSrc->a[i].zAlias, pAliases);
+                }
 
-            if (pSrc->a[i].pSelect && pSrc->a[i].pSelect->pSrc)
-            {
-                update_names_from_srclist(pAliases, pSrc->a[i].pSelect->pSrc);
+                if (pSrc->a[i].pSelect && pSrc->a[i].pSelect->pSrc)
+                {
+                    update_names_from_srclist(pAliases, pSrc->a[i].pSelect->pSrc);
+                }
             }
         }
     }
