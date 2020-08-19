@@ -14,13 +14,13 @@
 import { expect } from 'chai'
 import mount from '@tests/unit/setup'
 import {
-    mockupSelection,
-    mockupInputChange,
-    mockupAllServers,
-    mockupServersList,
-    mockupAllFilters,
-    mockupFiltersList,
-} from '@tests/unit/mockup'
+    itemSelectMock,
+    inputChangeMock,
+    dummy_all_servers,
+    dummyServersList,
+    dummy_all_filters,
+    dummyFiltersList,
+} from '@tests/unit/utils'
 import ServiceFormInput from '@CreateResource/ServiceFormInput'
 
 const mockupResourceModules = [
@@ -54,8 +54,8 @@ describe('ServiceFormInput.vue', () => {
             component: ServiceFormInput,
             props: {
                 resourceModules: mockupResourceModules,
-                allServers: mockupAllServers,
-                allFilters: mockupAllFilters,
+                allServers: dummy_all_servers,
+                allFilters: dummy_all_filters,
             },
         })
     })
@@ -102,38 +102,38 @@ describe('ServiceFormInput.vue', () => {
     })
 
     it(`Should compute serversList from allServers accurately`, async () => {
-        expect(wrapper.vm.serversList).to.be.deep.equals(mockupServersList)
+        expect(wrapper.vm.serversList).to.be.deep.equals(dummyServersList)
     })
 
     it(`Should compute filtersList from allFilters accurately`, async () => {
-        expect(wrapper.vm.filtersList).to.be.deep.equals(mockupFiltersList)
+        expect(wrapper.vm.filtersList).to.be.deep.equals(dummyFiltersList)
     })
 
     it(`Should return an object with parameters and relationships objects
       when getValues method get called`, async () => {
         // mockup select a router module
         const moduleParameters = wrapper.findComponent({ name: 'module-parameters' })
-        await mockupSelection(moduleParameters, mockupResourceModules[0])
+        await itemSelectMock(moduleParameters, mockupResourceModules[0])
 
         // get a service parameter to mockup value changes
         const serviceParameter = mockupResourceModules[0].attributes.parameters[1]
         const parameterCell = wrapper.find(`.cell-${1}-${serviceParameter.name}`)
         const newValue = 'new value'
-        await mockupInputChange(parameterCell, newValue)
+        await inputChangeMock(parameterCell, newValue)
 
         // mockup service relationships changes
         const resourceRelationships = wrapper.findAllComponents({ name: 'resource-relationships' })
         const serversList = wrapper.vm.serversList // get serversList from computed property
         const filtersList = wrapper.vm.filtersList // get filtersList from computed property
-        await mockupSelection(resourceRelationships.at(0), serversList[0])
-        await mockupSelection(resourceRelationships.at(1), filtersList[0])
+        await itemSelectMock(resourceRelationships.at(0), serversList[0])
+        await itemSelectMock(resourceRelationships.at(1), filtersList[0])
 
         const expectedValue = {
             moduleId: mockupResourceModules[0].id,
             parameters: { [serviceParameter.name]: newValue },
             relationships: {
-                servers: { data: [mockupServersList[0]] },
-                filters: { data: [mockupFiltersList[0]] },
+                servers: { data: [dummyServersList[0]] },
+                filters: { data: [dummyFiltersList[0]] },
             },
         }
         expect(wrapper.vm.getValues()).to.be.deep.equals(expectedValue)

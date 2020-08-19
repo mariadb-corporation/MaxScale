@@ -14,7 +14,7 @@
 import { expect } from 'chai'
 import mount from '@tests/unit/setup'
 import BaseDialog from '@/components/common/BaseDialog'
-import { mockupOpenDialog } from '@tests/unit/mockup'
+import { showDialogMock } from '@tests/unit/utils'
 
 describe('BaseDialog.vue', () => {
     let wrapper
@@ -35,14 +35,14 @@ describe('BaseDialog.vue', () => {
 
     it('Should close when cancel button is pressed', async () => {
         // make dialog open
-        await mockupOpenDialog(wrapper)
+        await showDialogMock(wrapper)
         await wrapper.find('.cancel').trigger('click')
         expect(wrapper.vm.computeShowDialog).to.be.false
     })
 
     it('Should close when close button is pressed', async () => {
         // make dialog open
-        await mockupOpenDialog(wrapper)
+        await showDialogMock(wrapper)
 
         await wrapper.find('.close').trigger('click')
         expect(wrapper.vm.computeShowDialog).to.be.false
@@ -50,7 +50,7 @@ describe('BaseDialog.vue', () => {
 
     it('dialog closes when save button is pressed', async () => {
         // make dialog open
-        await mockupOpenDialog(wrapper)
+        await showDialogMock(wrapper)
 
         await wrapper.find('.save').trigger('click')
         expect(wrapper.vm.computeShowDialog).to.be.false

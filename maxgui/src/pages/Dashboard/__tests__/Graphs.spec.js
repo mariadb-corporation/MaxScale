@@ -1,10 +1,22 @@
+/*
+ * Copyright (c) 2020 MariaDB Corporation Ab
+ *
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
+ *
+ * Change Date: 2024-07-16
+ *
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
+ */
 import Vue from 'vue'
 import chai from 'chai'
 import mount from '@tests/unit/setup'
 import Graphs from '@/pages/Dashboard/Graphs'
 import sinon from 'sinon'
 import sinonChai from 'sinon-chai'
-import { mockupAllServers } from '@tests/unit/mockup'
+import { dummy_all_servers } from '@tests/unit/utils'
 
 chai.should()
 chai.use(sinonChai)
@@ -61,7 +73,7 @@ describe('Graphs index', () => {
                     },
                 ],
 
-                all_servers: () => mockupAllServers,
+                all_servers: () => dummy_all_servers,
             },
         })
     })

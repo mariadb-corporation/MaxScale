@@ -2,7 +2,7 @@ import Vue from 'vue'
 import chai, { expect } from 'chai'
 import mount from '@tests/unit/setup'
 import LoginForm from '@/pages/Login/LoginForm'
-import { mockupInputChange, mockupRouteChanges } from '@tests/unit/mockup'
+import { inputChangeMock, routeChangesMock } from '@tests/unit/utils'
 import sinon from 'sinon'
 import sinonChai from 'sinon-chai'
 chai.should()
@@ -36,7 +36,7 @@ describe('LoginForm.vue', async () => {
             shallow: false,
             component: LoginForm,
         })
-        mockupRouteChanges(wrapper, '/login')
+        routeChangesMock(wrapper, '/login')
         loginAxiosStub = sinon.stub(wrapper.vm.$loginAxios, 'get').resolves(
             Promise.resolve({
                 data: {},
@@ -68,8 +68,8 @@ describe('LoginForm.vue', async () => {
     })
 
     it('Should not disable login button if form is valid', async () => {
-        await mockupInputChange(wrapper, 'admin', '#username')
-        await mockupInputChange(wrapper, 'mariadb', '#password')
+        await inputChangeMock(wrapper, 'admin', '#username')
+        await inputChangeMock(wrapper, 'mariadb', '#password')
 
         const addButton = wrapper.find('.login-btn')
         expect(addButton.attributes().disabled).to.be.not.equals('disabled')
@@ -77,15 +77,15 @@ describe('LoginForm.vue', async () => {
 
     it('Should call handleSubmit if "Sign in" button is clicked', async () => {
         const spy = sinon.spy(wrapper.vm, 'handleSubmit')
-        await mockupInputChange(wrapper, 'admin', '#username')
-        await mockupInputChange(wrapper, 'mariadb', '#password')
+        await inputChangeMock(wrapper, 'admin', '#username')
+        await inputChangeMock(wrapper, 'mariadb', '#password')
 
         await wrapper.find('.login-btn').trigger('click')
         spy.should.have.been.calledOnce
     })
 
     it(`Should allows to toggle masked password`, async () => {
-        await mockupInputChange(wrapper, 'mariadb', '#password')
+        await inputChangeMock(wrapper, 'mariadb', '#password')
 
         expect(wrapper.vm.$data.isPwdVisible).to.be.equal(false)
         const passwordInput = wrapper.find('#password')
@@ -110,8 +110,8 @@ describe('LoginForm.vue', async () => {
     })
 
     it('Should send auth request when remember me is not chosen', async () => {
-        await mockupInputChange(wrapper, 'admin', '#username')
-        await mockupInputChange(wrapper, 'mariadb', '#password')
+        await inputChangeMock(wrapper, 'admin', '#username')
+        await inputChangeMock(wrapper, 'mariadb', '#password')
         await wrapper.find('.login-btn').trigger('click') //submit
 
         loginAxiosStub.should.have.been.calledWith('/auth?persist=yes', {
@@ -121,8 +121,8 @@ describe('LoginForm.vue', async () => {
 
     it('Should send auth request when remember me is chosen', async () => {
         await mockupCheckingTheBox(wrapper) // checked
-        await mockupInputChange(wrapper, 'maxskysql', '#username')
-        await mockupInputChange(wrapper, 'skysql', '#password')
+        await inputChangeMock(wrapper, 'maxskysql', '#username')
+        await inputChangeMock(wrapper, 'skysql', '#password')
         await wrapper.find('.login-btn').trigger('click') //submit
 
         loginAxiosStub.should.have.been.calledWith('/auth?persist=yes&max-age=28800', {
@@ -131,8 +131,8 @@ describe('LoginForm.vue', async () => {
     })
 
     it('Should navigate to dashboard page once authenticating process is succeed', async () => {
-        await mockupInputChange(wrapper, 'maxskysql', '#username')
-        await mockupInputChange(wrapper, 'skysql', '#password')
+        await inputChangeMock(wrapper, 'maxskysql', '#username')
+        await inputChangeMock(wrapper, 'skysql', '#password')
         await wrapper.find('.login-btn').trigger('click') //submit
         loginAxiosStub.should.have.been.calledWith('/auth?persist=yes', {
             auth: { username: 'maxskysql', password: 'skysql' },

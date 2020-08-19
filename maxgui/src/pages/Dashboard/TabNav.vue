@@ -8,6 +8,7 @@
         </v-tab>
         <v-tabs-items v-model="activeTab">
             <v-tab-item v-for="route in tabRoutes" :id="route.path" :key="route.name" class="pt-2">
+                <!-- Only render view if tab is active -->
                 <router-view v-if="activeTab === route.path" />
             </v-tab-item>
         </v-tabs-items>
@@ -48,32 +49,10 @@ export default {
             all_sessions: state => state.session.all_sessions,
         }),
     },
-    watch: {
-        $route: function(to) {
-            this.activeTab = to
-        },
-    },
+
     methods: {
         getTotal(name) {
-            let total = null
-            switch (name) {
-                case 'servers':
-                    total = this.all_servers.length
-                    break
-                case 'services':
-                    total = this.all_services.length
-                    break
-                case 'sessions':
-                    total = this.all_sessions.length
-                    break
-                case 'listeners':
-                    total = this.all_listeners.length
-                    break
-                case 'filters':
-                    total = this.all_filters.length
-                    break
-            }
-            return total
+            return this[`all_${name}`].length
         },
     },
 }

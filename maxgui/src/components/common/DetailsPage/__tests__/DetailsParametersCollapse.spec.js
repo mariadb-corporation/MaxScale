@@ -14,7 +14,7 @@
 import { expect } from 'chai'
 import mount from '@tests/unit/setup'
 import DetailsParametersCollapse from '@/components/common/DetailsPage/DetailsParametersCollapse'
-import { mockupSelection } from '@tests/unit/mockup'
+import { itemSelectMock } from '@tests/unit/utils'
 
 let resourceId = 'row_server_1'
 // should not have duplicated type here as this facilitates testing env
@@ -155,14 +155,14 @@ async function mockupParametersChange(wrapper, isDual) {
     const intercept = async () => {
         // mockup selecting item on an enum parameter
         const enumParamTd = wrapper.find(`.cell-${1}-enum_param`)
-        await mockupSelection(enumParamTd, 'secondary')
+        await itemSelectMock(enumParamTd, 'secondary')
 
         expect(wrapper.vm.$data.changedParametersArr.length).to.be.equal(1)
         expect(wrapper.vm.$data.changedParametersArr[0].value).to.be.equal('secondary')
         if (isDual) {
             // mockup selecting item on an boolean parameter
             const boolParamCell = wrapper.find(`.cell-${1}-bool_param`)
-            await mockupSelection(boolParamCell, true)
+            await itemSelectMock(boolParamCell, true)
 
             expect(wrapper.vm.$data.changedParametersArr.length).to.be.equal(2)
             expect(wrapper.vm.$data.changedParametersArr[1].value).to.be.equal(true)

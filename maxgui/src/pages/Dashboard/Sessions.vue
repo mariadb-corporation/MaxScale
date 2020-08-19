@@ -6,6 +6,9 @@
         :sortDesc="true"
         sortBy="connected"
     >
+        <template v-slot:header-append-serviceIds>
+            <span class="ml-1 color text-field-text"> ({{ servicesLength }}) </span>
+        </template>
         <template v-slot:serviceIds="{ data: { item: { serviceIds } } }">
             <span v-if="typeof serviceIds === 'string'">{{ serviceIds }}</span>
             <template v-else>
@@ -53,6 +56,7 @@ export default {
                 { text: 'IDLE (s)', value: 'idle' },
                 { text: 'Service', value: 'serviceIds' },
             ],
+            servicesLength: 0,
         }
     },
     computed: {
@@ -63,6 +67,7 @@ export default {
 
         tableRows: function() {
             let rows = []
+            let allServiceNames = []
             this.all_sessions.forEach(session => {
                 const {
                     id,
@@ -74,6 +79,9 @@ export default {
                     ? associatedServices.map(item => `${item.id}`)
                     : this.$t('noEntity', { entityName: 'services' })
 
+                if (typeof serviceIds !== 'string')
+                    allServiceNames = [...allServiceNames, ...serviceIds]
+
                 rows.push({
                     id: id,
                     user: `${user}@${remote}`,
@@ -82,8 +90,15 @@ export default {
                     serviceIds: serviceIds,
                 })
             })
+            const uniqueServiceId = new Set(allServiceNames) // get unique service names
+            this.setServicesLength([...uniqueServiceId].length)
 
             return rows
+        },
+    },
+    methods: {
+        setServicesLength(total) {
+            this.servicesLength = total
         },
     },
 }

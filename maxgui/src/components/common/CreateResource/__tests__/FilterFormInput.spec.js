@@ -13,7 +13,7 @@
 
 import { expect } from 'chai'
 import mount from '@tests/unit/setup'
-import { mockupSelection, mockupInputChange } from '@tests/unit/mockup'
+import { itemSelectMock, inputChangeMock } from '@tests/unit/utils'
 import FilterFormInput from '@CreateResource/FilterFormInput'
 
 const mockupResourceModules = [
@@ -60,12 +60,12 @@ describe('FilterFormInput.vue', () => {
     it(`Should return an object with moduleId and parameters
       when getValues method get called`, async () => {
         // mockup select a filter module
-        await mockupSelection(wrapper, mockupResourceModules[0])
+        await itemSelectMock(wrapper, mockupResourceModules[0])
         // get a filter parameter to mockup value changes
         const filterParameter = mockupResourceModules[0].attributes.parameters[0]
         const parameterCell = wrapper.find(`.cell-${1}-${filterParameter.name}`)
         const newValue = 'new value'
-        await mockupInputChange(parameterCell, newValue)
+        await inputChangeMock(parameterCell, newValue)
 
         expect(wrapper.vm.getValues()).to.be.deep.equals({
             moduleId: mockupResourceModules[0].id,

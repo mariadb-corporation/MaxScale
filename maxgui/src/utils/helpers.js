@@ -38,6 +38,13 @@ export function isFunction(v) {
     return typeof v === 'function'
 }
 
+export function isNotEmptyObj(v) {
+    return !isNull(v) && !Array.isArray(v) && typeof v === 'object' && !isEmpty(v)
+}
+export function isNotEmptyArray(v) {
+    return !isNull(v) && Array.isArray(v) && v.length > 0
+}
+
 export function getCookie(name) {
     let value = '; ' + document.cookie
     let parts = value.split('; ' + name + '=')
@@ -178,31 +185,34 @@ export function formatValue(value, formatType) {
     return Vue.moment(date).format(format)
 }
 
+let nodeId = 0 // must be a number, so that hierarchySort can be done
 /**
- * Convert an object to array of objects with tree data properties
- * @param {Object} obj Object to be converted to array
- * @param {Boolean} keepPrimitiveValue keepPrimitiveValue to whether call handleValue function or not
- * @param {Number} level depth level for nested object
- * @param {Object} parentNodeInfo parent node info contains id and original value, it's null in the first level (0)
- * @param {Number} parentNodeId nodeId of parentNode
- * @param {String} keyName keyName
- * @param {String} keyValue keyValue
- * @return {Array} an array of objects
+ * Flatten a tree into nodes list
+ * Convert an object to array of nodes object with tree data properties.
+ * If key value is an object, it will be flatten. If key value is an array,
+ * it will be converted to object then flatten.
+ * @param {Object} payload - Payload object
+ * @param {Object} payload.obj - Root Object to be handle
+ * @param {Boolean} payload.keepPrimitiveValue - keepPrimitiveValue to whether call handleValue function or not
+ * @param {Number} payload.level - depth level for nested object
+ * @param {Object} payload.parentNodeInfo - This contains id and original value, it's null in the first level (0)
+ * @param {Number} payload.parentNodeId - nodeId of parentNode
+ * @param {String} payload.keyName - keyName
+ * @param {String} payload.keyValue - keyValue
+ * @return {Array} an array of nodes object
  */
-let nodeId = 0
-export function objToArrOfObj(
+export function objToArrOfNodes({
     obj,
     keepPrimitiveValue,
     level,
     parentNodeInfo = null,
     parentNodeId = 0,
     keyName = 'id',
-    keyValue = 'value'
-) {
-    const isValidObj = obj !== null && typeof obj === 'object' && !isEmpty(obj)
-    if (isValidObj) {
-        let result = []
-        let targetObj = cloneDeep(obj)
+    keyValue = 'value',
+}) {
+    if (isNotEmptyObj(obj)) {
+        let nodes = []
+        const targetObj = cloneDeep(obj)
 
         Object.keys(targetObj).map(key => {
             let value = keepPrimitiveValue ? targetObj[key] : handleValue(targetObj[key])
@@ -217,90 +227,120 @@ export function objToArrOfObj(
                 originalValue: value,
             }
 
-            const isValidArray = value !== null && Array.isArray(value) && value.length > 0
-            const isValidObj = value !== null && typeof value === 'object' && !Array.isArray(value)
-            const hasChild = isValidArray || isValidObj
+            const hasChild = isNotEmptyArray(value) || isNotEmptyObj(value)
 
             if (hasChild) {
                 node[keyValue] = ''
                 //  only object has child value will have expanded property
                 node.expanded = false
-                if (isValidObj) {
-                    node.children = objToArrOfObj(
-                        value,
-                        keepPrimitiveValue,
-                        level + 1,
-                        { [keyName]: key, originalValue: value },
-                        node.nodeId
-                    )
-                } else {
-                    node.children = objToArrOfObj(
-                        { ...value },
-                        keepPrimitiveValue,
-                        level + 1,
-                        { [keyName]: key, originalValue: value },
-                        node.nodeId
-                    )
-                }
             }
 
+            if (isNotEmptyObj(value))
+                node.children = objToArrOfNodes({
+                    obj: value,
+                    keepPrimitiveValue,
+                    level: level + 1,
+                    parentNodeInfo: { [keyName]: key, originalValue: value },
+                    parentNodeId: node.nodeId,
+                })
+            if (isNotEmptyArray(value))
+                //convert value type array to object then do a recursive call
+                node.children = objToArrOfNodes({
+                    obj: { ...value },
+                    keepPrimitiveValue,
+                    level: level + 1,
+                    parentNodeInfo: { [keyName]: key, originalValue: value },
+                    parentNodeId: node.nodeId,
+                })
+
             node.leaf = !hasChild
-            result.push(node)
+            nodes.push(node)
         })
-        return result
+        return nodes
     }
     return []
 }
 
 /**
- * Convert an array of objects to an object has property name as the value of keyName, key value as
- * the value of keyValue
- * @param {Array} a Array of object to be converted to object
- * @param {String} keyName keyName of the object in the array
- * @param {String} keyValue keyValue of the object in the array
+ * Convert an array of nodes object to an object has property name as the value of keyName,
+ * key value as the value of keyValue.
+ * @param {Object} payload - Payload object
+ * @param {Array} payload.arr - Array of objects
+ * @param {String} payload.keyName - keyName of the object in the array
+ * @param {String} payload.keyValue - keyValue of the object in the array
  * @return {Object} return an object
  */
-export function arrOfObjToObj(a, keyName = 'id', keyValue = 'value') {
-    if (Array.isArray(a)) {
-        let targetArr = cloneDeep(a)
+export function arrToObject({ arr, keyName = 'id', keyValue = 'value' }) {
+    if (isNotEmptyArray(arr)) {
+        let targetArr = cloneDeep(arr)
         let resultObj = {}
-        let objValue = {} // if value of keyValue is an object
-        let ObjKeyName = null
-        for (let i = 0; i < targetArr.length; ++i) {
-            let node = targetArr[i]
-            if (!isEmpty(node)) {
-                if ('parentNodeInfo' in node && node.parentNodeInfo !== null) {
-                    const originalObjValue = node.parentNodeInfo.originalValue
-                    const originalObjId = node.parentNodeInfo.id
-                    const objValueKeys = cloneDeep(Object.keys(objValue)).sort()
-                    const originalObjValueKeys = cloneDeep(Object.keys(originalObjValue)).sort()
+        /*
+            if value of keyValue is an object,
+            there is linked nodes, this linkedNodesHash
+            holds key value and linkedNodeKeyName
+            of linked nodes
+        */
+        let linkedNodeKeyName = null
+        let linkedNodesHash = {}
+        targetArr.forEach(node => {
+            const { parentNodeInfo = null } = node
 
-                    if (
-                        !isEqual(objValueKeys, originalObjValueKeys) &&
-                        ObjKeyName !== originalObjId
-                    ) {
-                        objValue = originalObjValue
-                        ObjKeyName = originalObjId
-                    }
+            /*
+                objToArrOfNodes reverse, get parentNodeInfo then check if
+                current node is a linked node. Then assign key value of
+                current node to linkedNodesHash object, finally assign
+                to resultObj with parentId as key name and linkedNodesHash as
+                key value
+            */
+            if (parentNodeInfo) {
+                const { originalValue, id: parentId } = parentNodeInfo
+                if (linkedNodesHash[parentId] == undefined) linkedNodesHash[parentId] = {}
 
-                    objValue[node[keyName]] = node[keyValue] //set new value to key
-
-                    resultObj[node.parentNodeInfo.id] = objValue
+                if (isLinkedNode({ parentNodeInfo, linkedNodesHash, linkedNodeKeyName })) {
+                    linkedNodesHash[parentId] = originalValue
+                    linkedNodeKeyName = parentId
                 }
-                /* the value needs to be handled, convert from 'null' or '' to
-                the actual null object */
-                // leaf is undefined when the array wasn't created by objToArrOfObj
-                else if (node.leaf || node.leaf === undefined) {
-                    resultObj[node[keyName]] = node[keyValue]
-                } else {
-                    let objValue = arrOfObjToObj(node.children)
-                    resultObj[node[keyName]] = objValue
+
+                linkedNodesHash[parentId] = {
+                    ...linkedNodesHash[parentId], //includes unmodified key/value pair as well
+                    [node[keyName]]: node[keyValue], //set new value to key
                 }
-            }
-        }
+
+                resultObj[parentId] = linkedNodesHash[parentId]
+            } else if (node.leaf || node.leaf === undefined)
+                /*
+                    leaf is undefined when the array wasn't created by objToArrOfNodes.
+                    e.g. in parameters-collapse component.
+                */
+                resultObj[node[keyName]] = node[keyValue]
+        })
+
         return resultObj
     }
     return {}
+}
+/**
+ * This function compares original key names of parent's original value with
+ * key names of linkedNodes object. LinkedNodes object is getting from linkedNodesHash
+ * with key name as parentId
+ * @private
+ * @param {Object} payload - Payload object
+ * @param {Object} payload.parentNodeInfo - node info contains id of the parent and original value before flattening
+ * @param {Object} payload.parentNodeInfo.originalValue - original value before flattening
+ * @param {String} payload.parentNodeInfo.parentId - parent id of this node
+ * @param {Object} payload.linkedNodesHash - linked nodes hash accumulated
+ * @param {String} payload.linkedNodeKeyName - linked node key name
+ * @returns {Boolean} return true if current node is a linked node
+ */
+export function isLinkedNode({ parentNodeInfo, linkedNodesHash, linkedNodeKeyName }) {
+    const { originalValue, id: parentId } = parentNodeInfo
+    const linkedNodes = linkedNodesHash[parentId]
+    if (isEmpty(linkedNodes)) return true
+    else {
+        const linkedNodesKeys = Object.keys(linkedNodes).sort()
+        const parentObjKeys = Object.keys(originalValue).sort()
+        return !isEqual(linkedNodesKeys, parentObjKeys) && linkedNodeKeyName === parentId
+    }
 }
 
 /**
@@ -470,8 +510,8 @@ Object.defineProperties(Vue.prototype, {
                 getErrorsArr,
                 groupBy,
                 formatValue,
-                objToArrOfObj,
-                arrOfObjToObj,
+                objToArrOfNodes,
+                arrToObject,
                 handleValue,
                 capitalizeFirstLetter,
                 isArrayEqual,

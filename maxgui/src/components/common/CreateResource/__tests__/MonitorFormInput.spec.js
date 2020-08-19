@@ -14,11 +14,11 @@
 import { expect } from 'chai'
 import mount from '@tests/unit/setup'
 import {
-    mockupSelection,
-    mockupInputChange,
-    mockupAllServers,
-    mockupServersList,
-} from '@tests/unit/mockup'
+    itemSelectMock,
+    inputChangeMock,
+    dummy_all_servers,
+    dummyServersList,
+} from '@tests/unit/utils'
 import MonitorFormInput from '@CreateResource/MonitorFormInput'
 
 const mockupResourceModules = [
@@ -57,7 +57,7 @@ describe('MonitorFormInput.vue', () => {
             component: MonitorFormInput,
             props: {
                 resourceModules: mockupResourceModules,
-                allServers: mockupAllServers,
+                allServers: dummy_all_servers,
             },
         })
     })
@@ -84,31 +84,31 @@ describe('MonitorFormInput.vue', () => {
     })
 
     it(`Should compute serversList from allServers accurately`, async () => {
-        expect(wrapper.vm.serversList).to.be.deep.equals(mockupServersList)
+        expect(wrapper.vm.serversList).to.be.deep.equals(dummyServersList)
     })
 
     it(`Should return an object with parameters and relationships objects
       when getValues method get called`, async () => {
         // mockup select a monitor module
         const moduleParameters = wrapper.findComponent({ name: 'module-parameters' })
-        await mockupSelection(moduleParameters, mockupResourceModules[0])
+        await itemSelectMock(moduleParameters, mockupResourceModules[0])
 
         // get a monitor parameter to mockup value changes
         const monitorParameter = mockupResourceModules[0].attributes.parameters[1]
         const parameterCell = wrapper.find(`.cell-${1}-${monitorParameter.name}`)
         const newValue = 'new value'
-        await mockupInputChange(parameterCell, newValue)
+        await inputChangeMock(parameterCell, newValue)
 
         // mockup monitor relationships change
         const resourceRelationships = wrapper.findComponent({ name: 'resource-relationships' })
         const serversList = wrapper.vm.serversList // get serversList from computed property
-        await mockupSelection(resourceRelationships, serversList[0])
+        await itemSelectMock(resourceRelationships, serversList[0])
 
         const expectedValue = {
             moduleId: mockupResourceModules[0].id,
             parameters: { [monitorParameter.name]: newValue },
             relationships: {
-                servers: { data: [mockupServersList[0]] },
+                servers: { data: [dummyServersList[0]] },
             },
         }
         expect(wrapper.vm.getValues()).to.be.deep.equals(expectedValue)

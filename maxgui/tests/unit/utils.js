@@ -8,7 +8,7 @@ import { expect } from 'chai'
  * @param {String} selector Using class only. e.g. '.class'
  * @param {*} item item to be selected
  */
-export async function mockupSelection(wrapper, item, selector = '') {
+export async function itemSelectMock(wrapper, item, selector = '') {
     let vSelects
     if (selector) {
         vSelects = wrapper.findAll(selector)
@@ -27,7 +27,7 @@ export async function mockupSelection(wrapper, item, selector = '') {
  * @param {String} selector valid DOM selector syntax. e.g. '.class' or '#id'
  * @param {String} newValue new string value for input field
  */
-export async function mockupInputChange(wrapper, newValue, selector = '') {
+export async function inputChangeMock(wrapper, newValue, selector = '') {
     let inputs
     if (selector) {
         inputs = wrapper.findAll(selector)
@@ -44,7 +44,7 @@ export async function mockupInputChange(wrapper, newValue, selector = '') {
  * This function mockups the action of opening a dialog
  * @param {Object} wrapper A Wrapper is an object that contains a mounted component and methods to test the component
  */
-export async function mockupOpenDialog(wrapper) {
+export async function showDialogMock(wrapper) {
     await wrapper.setProps({
         value: true,
     })
@@ -55,7 +55,7 @@ export async function mockupOpenDialog(wrapper) {
  * This function mockups the action of closing a dialog
  * @param {Object} wrapper A Wrapper is an object that contains a mounted component and methods to test the component
  */
-export async function mockupCloseDialog(wrapper) {
+export async function hideDialogMock(wrapper) {
     await wrapper.setProps({
         value: false,
     })
@@ -67,12 +67,71 @@ export async function mockupCloseDialog(wrapper) {
  * @param {Object} wrapper A Wrapper is an object that contains a mounted component and methods to test the component
  * @param {String} path path to navigate to
  */
-export async function mockupRouteChanges(wrapper, path) {
+export async function routeChangesMock(wrapper, path) {
     if (wrapper.vm.$route.path !== path) await wrapper.vm.$router.push(path)
 }
 
-//a minimized mockup allModules data fetch from maxscale
-export const allModules = [
+/**
+ * This function finds and returns anchor link (<a> tag) in data-table.
+ *
+ * @param {Object} payload
+ * @param {Object} payload.wrapper a mounted component and methods to test the component
+ * @param {String} payload.rowId id of the row
+ * @param {Number} payload.cellIndex index of cell that contains a tag
+ * @returns {Object} mounted anchor tag element
+ */
+export function findAnchorLinkInTable({ wrapper, rowId, cellIndex }) {
+    const dataTable = wrapper.findComponent({ name: 'data-table' })
+    const tableCell = dataTable.find(`.cell-${cellIndex}-${rowId}`)
+    const aTag = tableCell.find('a')
+    return aTag
+}
+
+/**
+ * This function returns unique resource names from table row at
+ * a column
+ * @param {Array} expectedTableRows
+ * @param {String} colName column name
+ * @returns {Array} unique resource names
+ */
+export function getUniqueResourceNames(expectedTableRows, colName) {
+    let allNames = []
+    expectedTableRows.forEach(row => {
+        if (Array.isArray(row[colName])) {
+            let name = row[colName].map(name => `${name}`)
+            allNames.push(name)
+        }
+    })
+    // create unique set then convert back to array with unique items
+    const uniqueNames = [...new Set(allNames)]
+    return uniqueNames
+}
+
+/**
+ * This function triggers click event of a button
+ * @param {Object} wrapper mounted component
+ * @param {String} cssSelector css selector of the button to be clicked
+ */
+export async function triggerBtnClick(wrapper, cssSelector) {
+    const btn = wrapper.find(`${cssSelector}`)
+    await btn.trigger('click')
+}
+
+/**
+ * This function opening confirm-dialog in page-header component
+ * @param {Object} wrapper mounted component
+ * @param {String} cssSelector css selector of the button to be clicked
+ */
+export async function openConfirmDialog(wrapper, cssSelector) {
+    await triggerBtnClick(wrapper, '.gear-btn')
+    const detailsIconGroupWrapper = wrapper.findComponent({
+        name: 'details-icon-group-wrapper',
+    })
+    await triggerBtnClick(detailsIconGroupWrapper, cssSelector)
+}
+
+//fake all_modules data fetch from maxscale
+const dummy_all_modules = [
     {
         attributes: {
             module_type: 'servers',
@@ -152,16 +211,16 @@ export const allModules = [
     },
 ]
 
-//a minimized mockup allModulesMap state from vuex store
-export const allModulesMap = {}
-for (let i = 0; i < allModules.length; ++i) {
-    const module = allModules[i]
-    const moduleType = allModules[i].attributes.module_type
-    if (allModulesMap[moduleType] == undefined) allModulesMap[moduleType] = []
-    allModulesMap[moduleType].push(module)
-}
+export const all_modules_map_stub = {}
 
-export const mockupAllServers = [
+dummy_all_modules.forEach(fake_module => {
+    const module = fake_module
+    const moduleType = fake_module.attributes.module_type
+    if (all_modules_map_stub[moduleType] == undefined) all_modules_map_stub[moduleType] = []
+    all_modules_map_stub[moduleType].push(module)
+})
+
+export const dummy_all_servers = [
     {
         attributes: { statistics: { connections: 0 } },
         id: 'row_server_0',
@@ -178,7 +237,7 @@ export const mockupAllServers = [
     },
 ]
 
-export const mockupServersList = [
+export const dummyServersList = [
     {
         id: 'row_server_0',
 
@@ -191,7 +250,7 @@ export const mockupServersList = [
     },
 ]
 
-export const mockupAllFilters = [
+export const dummy_all_filters = [
     {
         attributes: {
             module: 'qlafilter',
@@ -234,7 +293,7 @@ export const mockupAllFilters = [
     },
 ]
 
-export const mockupFiltersList = [
+export const dummyFiltersList = [
     {
         id: 'filter_0',
 
@@ -247,7 +306,7 @@ export const mockupFiltersList = [
     },
 ]
 
-export const mockupAllServices = [
+export const dummy_all_services = [
     {
         attributes: {
             state: 'Started',
@@ -283,7 +342,7 @@ export const mockupAllServices = [
     },
 ]
 
-export const mockupServicesList = [
+export const dummyServicesList = [
     {
         id: 'service_0',
 
@@ -296,16 +355,16 @@ export const mockupServicesList = [
     },
 ]
 
-export const mockupAllMonitors = [
+export const dummy_all_monitors = [
     {
-        attributes: {},
+        attributes: { state: 'Running' },
         id: 'monitor_0',
         links: {},
         relationships: {},
         type: 'monitors',
     },
     {
-        attributes: {},
+        attributes: { state: 'Stopped' },
         id: 'monitor_1',
         links: {},
         relationships: {},
@@ -313,7 +372,7 @@ export const mockupAllMonitors = [
     },
 ]
 
-export const mockupMonitorsList = [
+export const dummyMonitorsList = [
     {
         id: 'monitor_0',
 
@@ -326,7 +385,12 @@ export const mockupMonitorsList = [
     },
 ]
 
-export const mockupAllListeners = [
+export const getAllMonitorsMapStub = new Map()
+dummy_all_monitors.forEach(ele => {
+    getAllMonitorsMapStub.set(ele.id, ele)
+})
+
+export const dummy_all_listeners = [
     {
         attributes: {
             parameters: {
@@ -376,7 +440,8 @@ export const mockupAllListeners = [
             parameters: {
                 address: '::',
                 protocol: 'mariadbclient',
-                port: 3307,
+                port: null,
+                socket: '/tmp/maxscale.sock',
             },
             state: 'Running',
         },
@@ -395,12 +460,12 @@ export const mockupAllListeners = [
     },
 ]
 
-export const serviceStateTableRows = mockupServicesList.map(service => ({
+export const dummyServiceStateTableRows = dummyServicesList.map(service => ({
     ...service,
     state: 'Started',
 }))
 
-export const allServicesState = [
+export const dummyAllServicesState = [
     {
         attributes: {
             state: 'Started',
@@ -438,7 +503,7 @@ export const allServicesState = [
     },
 ]
 
-export const mockupAllSessions = [
+export const dummy_all_sessions = [
     {
         attributes: {
             connected: 'Thu Aug 13 14:06:17 2020',
@@ -459,5 +524,100 @@ export const mockupAllSessions = [
             },
         },
         type: 'sessions',
+    },
+]
+
+export const dummy_maxscale_module_parameters = [
+    {
+        default_value: true,
+        description: 'Admin interface authentication.',
+        mandatory: false,
+        modifiable: false,
+        name: 'admin_auth',
+        type: 'bool',
+    },
+    {
+        default_value: {
+            count: 0,
+            suppress: 0,
+            window: 0,
+        },
+        description: `Limit the amount of identical log messages than can
+        be logged during a certain time period.`,
+        mandatory: false,
+        modifiable: true,
+        name: 'log_throttling',
+        type: 'throttling',
+    },
+    {
+        default_value: false,
+        description: 'Log a warning when a user with super privilege logs in.',
+        mandatory: false,
+        modifiable: false,
+        name: 'log_warn_super_user',
+        type: 'bool',
+    },
+]
+export const dummy_maxscale_parameters = {
+    admin_auth: true,
+    log_throttling: {
+        count: 0,
+        suppress: 0,
+        window: 0,
+    },
+    log_warn_super_user: false,
+}
+export const dummyProcessedMaxScaleModuleParams = [
+    {
+        default_value: true,
+        description: 'Admin interface authentication.',
+        mandatory: false,
+        modifiable: false,
+        name: 'admin_auth',
+        type: 'bool',
+    },
+    {
+        default_value: {
+            count: 0,
+            suppress: 0,
+            window: 0,
+        },
+        description: `Limit the amount of identical log messages than can
+        be logged during a certain time period.`,
+        mandatory: false,
+        modifiable: true,
+        name: 'log_throttling',
+        type: 'throttling',
+    },
+    {
+        name: 'count',
+        type: 'count',
+        modifiable: true,
+        default_value: 0,
+        description: 'Positive integer specifying the number of logged times',
+    },
+    {
+        name: 'suppress',
+        type: 'duration',
+        modifiable: true,
+        unit: 'ms',
+        default_value: 0,
+        description: 'The suppressed duration before the logging of a particular error',
+    },
+    {
+        name: 'window',
+        type: 'duration',
+        modifiable: true,
+        unit: 'ms',
+        default_value: 0,
+        description: 'The duration that a particular error may be logged',
+    },
+    {
+        default_value: false,
+        description: 'Log a warning when a user with super privilege logs in.',
+        mandatory: false,
+        modifiable: false,
+        name: 'log_warn_super_user',
+        type: 'bool',
     },
 ]

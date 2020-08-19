@@ -76,8 +76,7 @@ function mockupTreeData(wrapper) {
         },
     }
 
-    let level = 0
-    return wrapper.vm.$help.objToArrOfObj(objParameter, keepPrimitiveValue, level)
+    return wrapper.vm.$help.objToArrOfNodes({ obj: objParameter, keepPrimitiveValue, level: 0 })
 }
 describe('DataTable.vue', () => {
     let wrapper

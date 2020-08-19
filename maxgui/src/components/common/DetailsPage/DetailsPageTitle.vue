@@ -16,7 +16,7 @@
                     </h4>
                     <v-menu transition="slide-y-transition" offset-y content-class="setting-menu">
                         <template v-slot:activator="{ on }">
-                            <v-btn class="ml-2 " icon v-on="on">
+                            <v-btn class="ml-2 gear-btn" icon v-on="on">
                                 <v-icon size="18" color="primary">
                                     $vuetify.icons.settings
                                 </v-icon>

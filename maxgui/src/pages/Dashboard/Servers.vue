@@ -160,7 +160,7 @@ export default {
                         id,
                         attributes: {
                             state: serverState,
-                            parameters: { address: serverAddress, port: serverPort },
+                            parameters: { address: serverAddress, port: serverPort, socket },
                             statistics: { connections: serverConnections },
                             gtid_current_pos: gtid,
                         },
@@ -177,9 +177,6 @@ export default {
                     if (typeof serviceIds !== 'string')
                         allServiceIds = [...allServiceIds, ...serviceIds]
 
-                    const uniqueServiceId = new Set(allServiceIds) // get unique service ids
-                    this.setServicesLength([...uniqueServiceId].length)
-
                     let row = {
                         id,
                         serverAddress,
@@ -189,6 +186,9 @@ export default {
                         serviceIds,
                         gtid,
                     }
+
+                    if (serverAddress === null && serverPort === null) row.serverAddress = socket
+
                     if (this.getAllMonitorsMap.size && associatedMonitors.length) {
                         // The associatedMonitors is always an array with one element -> get monitor at index 0
                         const {
@@ -207,6 +207,8 @@ export default {
                     rows.push(row)
                 })
 
+                const uniqueServiceId = new Set(allServiceIds) // get unique service ids
+                this.setServicesLength([...uniqueServiceId].length)
                 const uniqueMonitorId = new Set(allMonitorIds) // get unique monitor ids
                 this.setMonitorsLength([...uniqueMonitorId].length)
             }

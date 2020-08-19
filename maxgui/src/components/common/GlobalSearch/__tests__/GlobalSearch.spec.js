@@ -14,7 +14,7 @@
 import { expect } from 'chai'
 import mount from '@tests/unit/setup'
 import GlobalSearch from '@/components/common/GlobalSearch'
-import { mockupRouteChanges } from '@tests/unit/mockup'
+import { routeChangesMock } from '@tests/unit/utils'
 import sinon from 'sinon'
 
 describe('GlobalSearch.vue', () => {
@@ -47,7 +47,7 @@ describe('GlobalSearch.vue', () => {
         expect(wrapper.vm.$store.state.search_keyword).to.be.equal('row_server_1')
 
         // go to settings page
-        await mockupRouteChanges(wrapper, '/settings')
+        await routeChangesMock(wrapper, '/settings')
 
         expect(wrapper.find('.search-restyle').classes()).to.include('route-settings')
         expect(wrapper.vm.$data.search).to.be.empty

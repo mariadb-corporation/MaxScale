@@ -13,12 +13,12 @@
 import { expect } from 'chai'
 import mount from '@tests/unit/setup'
 import {
-    allModulesMap,
-    mockupSelection,
-    mockupOpenDialog,
-    mockupCloseDialog,
-    mockupRouteChanges,
-} from '@tests/unit/mockup'
+    all_modules_map_stub,
+    itemSelectMock,
+    showDialogMock,
+    hideDialogMock,
+    routeChangesMock,
+} from '@tests/unit/utils'
 import Forms from '@CreateResource/Forms'
 import sinon from 'sinon'
 
@@ -32,8 +32,8 @@ import sinon from 'sinon'
  * @param {String} selectedForm Selected resource to be created
  */
 async function testingTextTransform(wrapper, path, selectedForm) {
-    await mockupRouteChanges(wrapper, path)
-    await mockupOpenDialog(wrapper)
+    await routeChangesMock(wrapper, path)
+    await showDialogMock(wrapper)
     expect(wrapper.vm.$data.selectedForm).to.be.equal(selectedForm)
 }
 
@@ -43,8 +43,8 @@ async function testingTextTransform(wrapper, path, selectedForm) {
  * @param {String} resourceType resource to be created
  */
 async function mockupResourceSelect(wrapper, resourceType) {
-    await mockupOpenDialog(wrapper)
-    await mockupSelection(wrapper, resourceType, '.resource-select')
+    await showDialogMock(wrapper)
+    await itemSelectMock(wrapper, resourceType, '.resource-select')
 }
 
 /**
@@ -88,7 +88,7 @@ describe('Forms.vue', () => {
                 value: false, // control visibility of the dialog
             },
             computed: {
-                all_modules_map: () => allModulesMap,
+                all_modules_map: () => all_modules_map_stub,
                 form_type: () => null,
             },
         })
@@ -103,13 +103,13 @@ describe('Forms.vue', () => {
     afterEach(async function() {
         await axiosStub.restore()
         await axiosPostStub.restore()
-        await mockupCloseDialog(wrapper)
+        await hideDialogMock(wrapper)
     })
 
     it(`Should show forms dialog when v-model value changes`, async () => {
         // go to page where '+ Create New' button is visible
-        await mockupRouteChanges(wrapper, '/dashboard/services')
-        await mockupOpenDialog(wrapper)
+        await routeChangesMock(wrapper, '/dashboard/services')
+        await showDialogMock(wrapper)
         expect(wrapper.vm.computeShowDialog).to.be.true
     })
 
@@ -138,25 +138,25 @@ describe('Forms.vue', () => {
 
     it(`Should assign accurate Router module type object to resourceModules state`, async () => {
         await mockupResourceSelect(wrapper, 'Service')
-        expect(wrapper.vm.$data.resourceModules).to.be.deep.equals(allModulesMap['Router'])
+        expect(wrapper.vm.$data.resourceModules).to.be.deep.equals(all_modules_map_stub['Router'])
     })
     it(`Should assign accurate servers module type object to resourceModules state`, async () => {
         await mockupResourceSelect(wrapper, 'Server')
-        expect(wrapper.vm.$data.resourceModules).to.be.deep.equals(allModulesMap['servers'])
+        expect(wrapper.vm.$data.resourceModules).to.be.deep.equals(all_modules_map_stub['servers'])
     })
     it(`Should assign accurate Monitor module object to resourceModules state`, async () => {
         await mockupResourceSelect(wrapper, 'Monitor')
-        expect(wrapper.vm.$data.resourceModules).to.be.deep.equals(allModulesMap['Monitor'])
+        expect(wrapper.vm.$data.resourceModules).to.be.deep.equals(all_modules_map_stub['Monitor'])
     })
     it(`Should assign accurate Filter module object to resourceModules state`, async () => {
         await mockupResourceSelect(wrapper, 'Filter')
-        expect(wrapper.vm.$data.resourceModules).to.be.deep.equals(allModulesMap['Filter'])
+        expect(wrapper.vm.$data.resourceModules).to.be.deep.equals(all_modules_map_stub['Filter'])
     })
 
     it(`Should transform authenticator parameter from string type to enum type when
       creating a listener`, async () => {
         await mockupResourceSelect(wrapper, 'Listener')
-        let authenticators = allModulesMap['Authenticator']
+        let authenticators = all_modules_map_stub['Authenticator']
         let authenticatorId = authenticators.map(item => `${item.id}`)
         wrapper.vm.$data.resourceModules.forEach(protocol => {
             let authenticatorParamObj = protocol.attributes.parameters.find(

@@ -119,16 +119,14 @@ export default {
                 if (typeof serviceIds !== 'string')
                     allServiceIds = [...allServiceIds, ...serviceIds]
 
-                const uniqueServiceId = new Set(allServiceIds) // get unique service ids
-                this.setServicesLength([...uniqueServiceId].length)
-
                 rows.push({
                     id: id,
                     serviceIds: serviceIds,
                     module: filterModule,
                 })
             })
-
+            const uniqueServiceId = new Set(allServiceIds) // get unique service ids
+            this.setServicesLength([...uniqueServiceId].length)
             return rows
         },
     },

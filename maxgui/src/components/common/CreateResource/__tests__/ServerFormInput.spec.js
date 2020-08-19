@@ -14,13 +14,13 @@
 import { expect } from 'chai'
 import mount from '@tests/unit/setup'
 import {
-    mockupSelection,
-    mockupInputChange,
-    mockupAllServices,
-    mockupServicesList,
-    mockupAllMonitors,
-    mockupMonitorsList,
-} from '@tests/unit/mockup'
+    itemSelectMock,
+    inputChangeMock,
+    dummy_all_services,
+    dummyServicesList,
+    dummy_all_monitors,
+    dummyMonitorsList,
+} from '@tests/unit/utils'
 import ServerFormInput from '@CreateResource/ServerFormInput'
 
 const mockupResourceModules = [
@@ -66,8 +66,8 @@ describe('ServerFormInput.vue', () => {
             component: ServerFormInput,
             props: {
                 resourceModules: mockupResourceModules,
-                allServices: mockupAllServices,
-                allMonitors: mockupAllMonitors,
+                allServices: dummy_all_services,
+                allMonitors: dummy_all_monitors,
                 parentForm: { validate: () => null },
             },
         })
@@ -118,11 +118,11 @@ describe('ServerFormInput.vue', () => {
     })
 
     it(`Should compute servicesList from allServices accurately`, async () => {
-        expect(wrapper.vm.servicesList).to.be.deep.equals(mockupServicesList)
+        expect(wrapper.vm.servicesList).to.be.deep.equals(dummyServicesList)
     })
 
     it(`Should compute monitorsList from allMonitors accurately`, async () => {
-        expect(wrapper.vm.monitorsList).to.be.deep.equals(mockupMonitorsList)
+        expect(wrapper.vm.monitorsList).to.be.deep.equals(dummyMonitorsList)
     })
 
     it(`Should return an object with parameters and relationships objects
@@ -131,20 +131,20 @@ describe('ServerFormInput.vue', () => {
         const serverParameter = mockupResourceModules[0].attributes.parameters[1]
         const parameterCell = wrapper.find(`.cell-${1}-${serverParameter.name}`)
         const newValue = 'new value'
-        await mockupInputChange(parameterCell, newValue)
+        await inputChangeMock(parameterCell, newValue)
 
         // mockup server relationships changes
         const resourceRelationships = wrapper.findAllComponents({ name: 'resource-relationships' })
         const servicesList = wrapper.vm.servicesList // get servicesList from computed property
         const monitorsList = wrapper.vm.monitorsList // get monitorsList from computed property
-        await mockupSelection(resourceRelationships.at(0), servicesList[0])
-        await mockupSelection(resourceRelationships.at(1), monitorsList[0])
+        await itemSelectMock(resourceRelationships.at(0), servicesList[0])
+        await itemSelectMock(resourceRelationships.at(1), monitorsList[0])
 
         const expectedValue = {
             parameters: { [serverParameter.name]: newValue },
             relationships: {
-                services: { data: [mockupServicesList[0]] },
-                monitors: { data: [mockupMonitorsList[0]] },
+                services: { data: [dummyServicesList[0]] },
+                monitors: { data: [dummyMonitorsList[0]] },
             },
         }
         expect(wrapper.vm.getValues()).to.be.deep.equals(expectedValue)

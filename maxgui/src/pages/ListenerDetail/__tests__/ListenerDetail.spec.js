@@ -1,10 +1,22 @@
+/*
+ * Copyright (c) 2020 MariaDB Corporation Ab
+ *
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
+ *
+ * Change Date: 2024-07-16
+ *
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
+ */
 import Vue from 'vue'
-import chai /* , { expect } */ from 'chai'
+import chai from 'chai'
 import mount, { router } from '@tests/unit/setup'
 import ListenerDetail from '@/pages/ListenerDetail'
 import sinon from 'sinon'
 import sinonChai from 'sinon-chai'
-import { mockupAllListeners } from '@tests/unit/mockup'
+import { dummy_all_listeners } from '@tests/unit/utils'
 chai.should()
 chai.use(sinonChai)
 
@@ -18,7 +30,7 @@ describe('ListenerDetail index', () => {
             })
         )
 
-        const listenerPath = `/dashboard/listeners/${mockupAllListeners[0].id}`
+        const listenerPath = `/dashboard/listeners/${dummy_all_listeners[0].id}`
         if (router.history.current.path !== listenerPath) await router.push(listenerPath)
     })
 
@@ -37,7 +49,7 @@ describe('ListenerDetail index', () => {
             shallow: false,
             component: ListenerDetail,
             computed: {
-                current_listener: () => mockupAllListeners[0],
+                current_listener: () => dummy_all_listeners[0],
             },
         })
     })
@@ -56,7 +68,7 @@ describe('ListenerDetail index', () => {
                 relationships: {
                     services: { data: servicesData },
                 },
-            } = mockupAllListeners[0]
+            } = dummy_all_listeners[0]
 
             await axiosStub.should.have.been.calledWith(`/listeners/${id}`)
 

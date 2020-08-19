@@ -13,7 +13,7 @@
 
 import { expect } from 'chai'
 import mount from '@tests/unit/setup'
-import { mockupSelection, mockupInputChange } from '@tests/unit/mockup'
+import { itemSelectMock, inputChangeMock } from '@tests/unit/utils'
 import ModuleParameters from '@CreateResource/ModuleParameters'
 
 const mockupModules = [
@@ -79,26 +79,26 @@ describe('ModuleParameters.vue', () => {
     })
 
     it(`Should render error message if selectedModule is empty`, async () => {
-        await mockupSelection(wrapper, '')
+        await itemSelectMock(wrapper, '')
         let errorMessage = wrapper.find('.v-messages__message').text()
         expect(errorMessage).to.be.equals('router is required')
     })
 
     it(`Should assign object to selectedModule when a module is selected`, async () => {
-        await mockupSelection(wrapper, mockupModules[0])
+        await itemSelectMock(wrapper, mockupModules[0])
         expect(wrapper.vm.$data.selectedModule)
             .to.be.an('object')
             .and.to.be.equals(mockupModules[0])
     })
 
     it(`Should return parameters from selectedModule`, async () => {
-        await mockupSelection(wrapper, mockupModules[1])
+        await itemSelectMock(wrapper, mockupModules[1])
         const moduleParameters = wrapper.vm.moduleParameters
         expect(moduleParameters).to.be.deep.equals(mockupModules[1].attributes.parameters)
     })
 
     it(`Should pass the following value as props and ref to parameters-collapse`, async () => {
-        await mockupSelection(wrapper, mockupModules[0])
+        await itemSelectMock(wrapper, mockupModules[0])
 
         const parametersCollapse = wrapper.findComponent({ name: 'parameters-collapse' })
         const {
@@ -120,7 +120,7 @@ describe('ModuleParameters.vue', () => {
 
     it(`Should return module inputs object including valid moduleId and
       empty parameters object`, async () => {
-        await mockupSelection(wrapper, mockupModules[1])
+        await itemSelectMock(wrapper, mockupModules[1])
         expect(wrapper.vm.getModuleInputValues()).to.be.deep.equals({
             moduleId: mockupModules[1].id,
             parameters: {},
@@ -128,12 +128,12 @@ describe('ModuleParameters.vue', () => {
     })
 
     it(`Should return module inputs object including valid moduleId and parameters`, async () => {
-        await mockupSelection(wrapper, mockupModules[1])
+        await itemSelectMock(wrapper, mockupModules[1])
         const testParam = mockupModules[1].attributes.parameters[1]
 
         const moduleParamTd = wrapper.find(`.cell-${1}-${testParam.name}`)
         const newValue = 'new value'
-        await mockupInputChange(moduleParamTd, 'new value')
+        await inputChangeMock(moduleParamTd, 'new value')
 
         expect(wrapper.vm.getModuleInputValues()).to.be.deep.equals({
             moduleId: mockupModules[1].id,

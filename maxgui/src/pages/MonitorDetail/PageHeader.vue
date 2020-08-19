@@ -82,6 +82,10 @@
             <span class="color text-navigation body-2">
                 {{ getState }}
             </span>
+            <span class="color text-field-text body-2">
+                |
+                <span>{{ getModule }}</span>
+            </span>
         </template>
     </details-page-title>
 </template>
@@ -119,6 +123,10 @@ export default {
         getState: function() {
             const { attributes: { state = 'null' } = {} } = this.currentMonitor
             return state
+        },
+        getModule: function() {
+            const { attributes: { module: monitorModule = null } = {} } = this.currentMonitor
+            return monitorModule
         },
     },
     methods: {

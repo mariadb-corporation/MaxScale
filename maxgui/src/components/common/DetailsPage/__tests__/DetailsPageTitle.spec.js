@@ -14,7 +14,7 @@
 import { expect } from 'chai'
 import mount from '@tests/unit/setup'
 import DetailsPageTitle from '@/components/common/DetailsPage/DetailsPageTitle'
-import { mockupRouteChanges } from '@tests/unit/mockup'
+import { routeChangesMock } from '@tests/unit/utils'
 import sinon from 'sinon'
 
 describe('DetailsPageTitle.vue', () => {
@@ -46,7 +46,7 @@ describe('DetailsPageTitle.vue', () => {
             component: DetailsPageTitle,
         })
         // go to a test page
-        await mockupRouteChanges(wrapper, '/dashboard/servers/row_server_1')
+        await routeChangesMock(wrapper, '/dashboard/servers/row_server_1')
         let pageTitleEle = wrapper.find('.page-title')
         expect(pageTitleEle.exists()).to.be.equal(true)
         expect(pageTitleEle.html()).to.be.include('row_server_1')

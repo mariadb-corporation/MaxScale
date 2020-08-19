@@ -18,11 +18,7 @@
                                 :moduleParameters="processedModuleParameters"
                                 :updateResourceParameters="updateMaxScaleParameters"
                                 :onEditSucceeded="fetchMaxScaleParameters"
-                                :loading="
-                                    loadingModuleParams
-                                        ? true
-                                        : overlay_type === OVERLAY_TRANSPARENT_LOADING
-                                "
+                                :loading="isLoading"
                                 isTree
                             />
                         </v-col>
@@ -78,6 +74,11 @@ export default {
             module_parameters: 'module_parameters',
             maxscale_parameters: state => state.maxscale.maxscale_parameters,
         }),
+        isLoading: function() {
+            return this.loadingModuleParams
+                ? true
+                : this.overlay_type === OVERLAY_TRANSPARENT_LOADING
+        },
     },
     async created() {
         await Promise.all([this.fetchMaxScaleParameters(), this.fetchModuleParameters('maxscale')])
@@ -108,14 +109,6 @@ export default {
                         description: 'Positive integer specifying the number of logged times',
                     },
                     {
-                        name: 'window',
-                        type: 'duration',
-                        modifiable: true,
-                        unit: 'ms',
-                        default_value: log_throttling.default_value.window,
-                        description: 'The duration that a particular error may be logged',
-                    },
-                    {
                         name: 'suppress',
                         type: 'duration',
                         modifiable: true,
@@ -124,6 +117,14 @@ export default {
                         description:
                             'The suppressed duration before the logging of a particular error',
                     },
+                    {
+                        name: 'window',
+                        type: 'duration',
+                        modifiable: true,
+                        unit: 'ms',
+                        default_value: log_throttling.default_value.window,
+                        description: 'The duration that a particular error may be logged',
+                    },
                 ]
 
                 const left = parameters.slice(0, log_throttingIndex + 1)
@@ -131,8 +132,7 @@ export default {
 
                 this.processedModuleParameters = [...left, ...log_throttling_child_params, ...right]
 
-                const self = this
-                await this.$help.delay(150).then(() => (self.loadingModuleParams = false))
+                await this.$help.delay(150).then(() => (this.loadingModuleParams = false))
             }
         },
     },

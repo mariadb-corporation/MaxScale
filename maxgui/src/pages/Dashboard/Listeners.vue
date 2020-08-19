@@ -88,10 +88,10 @@ export default {
                     id,
                     attributes: {
                         state,
-                        parameters: { port, address },
+                        parameters: { port, address, socket },
                     },
                     relationships: { services: { data: associatedServices = [] } = {} },
-                } = listener || {}
+                } = listener
 
                 // always has one service
                 const serviceIds = associatedServices.length
@@ -101,18 +101,20 @@ export default {
                 if (typeof serviceIds !== 'string')
                     allServiceIds = [...allServiceIds, ...serviceIds]
 
-                const uniqueServiceId = new Set(allServiceIds) // get unique service ids
-                this.setServicesLength([...uniqueServiceId].length)
-
-                rows.push({
+                let row = {
                     id: id,
                     port: port,
                     address: address,
                     state: state,
                     serviceIds: serviceIds,
-                })
-            })
+                }
 
+                if (port === null) row.address = socket
+
+                rows.push(row)
+            })
+            const uniqueServiceId = new Set(allServiceIds) // get unique service ids
+            this.setServicesLength([...uniqueServiceId].length)
             return rows
         },
     },
