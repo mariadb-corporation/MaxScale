@@ -221,7 +221,7 @@ dummy_all_modules.forEach(fake_module => {
 
 export const dummy_all_servers = [
     {
-        attributes: { statistics: { connections: 0 } },
+        attributes: { state: 'Master, Running', statistics: { connections: 0 } },
         id: 'row_server_0',
         links: {},
         relationships: {
@@ -245,7 +245,7 @@ export const dummy_all_servers = [
         type: 'servers',
     },
     {
-        attributes: { statistics: { connections: 10 } },
+        attributes: { state: 'Slave, Running', statistics: { connections: 10 } },
         id: 'row_server_1',
         links: {},
         relationships: {},

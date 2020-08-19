@@ -78,21 +78,17 @@ export default {
         },
     },
     watch: {
-        all_servers: {
-            handler(all_servers) {
-                let availableEntities = []
-                all_servers.forEach(server => {
-                    if (this.$help.lodash.isEmpty(server.relationships.monitors))
-                        availableEntities.push({
-                            id: server.id,
-                            type: server.type,
-                            state: server.attributes.state,
-                        })
-                })
-
-                this.unmonitoredServers = availableEntities
-            },
-            deep: true,
+        all_servers: function() {
+            let availableEntities = []
+            this.all_servers.forEach(server => {
+                if (this.$help.lodash.isEmpty(server.relationships.monitors))
+                    availableEntities.push({
+                        id: server.id,
+                        state: server.attributes.state,
+                        type: server.type,
+                    })
+            })
+            this.unmonitoredServers = availableEntities
         },
     },
 
