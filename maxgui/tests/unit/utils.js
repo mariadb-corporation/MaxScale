@@ -94,12 +94,12 @@ export function findAnchorLinkInTable({ wrapper, rowId, cellIndex }) {
  * @param {String} colName column name
  * @returns {Array} unique resource names
  */
-export function getUniqueResourceNames(expectedTableRows, colName) {
+export function getUniqueResourceNamesStub(expectedTableRows, colName) {
     let allNames = []
     expectedTableRows.forEach(row => {
         if (Array.isArray(row[colName])) {
-            let name = row[colName].map(name => `${name}`)
-            allNames.push(name)
+            let names = row[colName].map(name => `${name}`)
+            allNames = [...allNames, ...names]
         }
     })
     // create unique set then convert back to array with unique items
@@ -130,7 +130,6 @@ export async function openConfirmDialog(wrapper, cssSelector) {
     await triggerBtnClick(detailsIconGroupWrapper, cssSelector)
 }
 
-//fake all_modules data fetch from maxscale
 const dummy_all_modules = [
     {
         attributes: {
@@ -225,7 +224,24 @@ export const dummy_all_servers = [
         attributes: { statistics: { connections: 0 } },
         id: 'row_server_0',
         links: {},
-        relationships: {},
+        relationships: {
+            monitors: {
+                data: [
+                    {
+                        id: 'monitor_0',
+                        type: 'monitors',
+                    },
+                ],
+            },
+            services: {
+                data: [
+                    {
+                        id: 'service_0',
+                        type: 'services',
+                    },
+                ],
+            },
+        },
         type: 'servers',
     },
     {
@@ -237,18 +253,14 @@ export const dummy_all_servers = [
     },
 ]
 
-export const dummyServersList = [
-    {
-        id: 'row_server_0',
+export const getUnMonitoredServersStub = () => {
+    let unMonitoredServers = []
 
-        type: 'servers',
-    },
-    {
-        id: 'row_server_1',
-
-        type: 'servers',
-    },
-]
+    dummy_all_servers.forEach(({ id, type, relationships: { monitors = null } = {} }) => {
+        if (!monitors) unMonitoredServers.push({ id, type })
+    })
+    return unMonitoredServers
+}
 
 export const dummy_all_filters = [
     {
@@ -293,18 +305,7 @@ export const dummy_all_filters = [
     },
 ]
 
-export const dummyFiltersList = [
-    {
-        id: 'filter_0',
-
-        type: 'filters',
-    },
-    {
-        id: 'filter_1',
-
-        type: 'filters',
-    },
-]
+export const getFilterListStub = dummy_all_filters.map(({ id, type }) => ({ id, type }))
 
 export const dummy_all_services = [
     {
@@ -325,6 +326,18 @@ export const dummy_all_services = [
                     },
                 ],
             },
+            listeners: {
+                data: [
+                    {
+                        id: 'RCR-Router-Listener',
+                        type: 'listeners',
+                    },
+                    {
+                        id: 'RCR-Router-Listener-1',
+                        type: 'listeners',
+                    },
+                ],
+            },
         },
         type: 'services',
     },
@@ -337,23 +350,21 @@ export const dummy_all_services = [
         },
         id: 'service_1',
         links: {},
-        relationships: {},
+        relationships: {
+            listeners: {
+                data: [
+                    {
+                        id: 'RRCR-Router-Listener-2',
+                        type: 'listeners',
+                    },
+                ],
+            },
+        },
         type: 'services',
     },
 ]
 
-export const dummyServicesList = [
-    {
-        id: 'service_0',
-
-        type: 'services',
-    },
-    {
-        id: 'service_1',
-
-        type: 'services',
-    },
-]
+export const getServiceListStub = dummy_all_services.map(({ id, type }) => ({ id, type }))
 
 export const dummy_all_monitors = [
     {
@@ -376,10 +387,6 @@ export const dummy_all_monitors = [
                         id: 'row_server_0',
                         type: 'servers',
                     },
-                    {
-                        id: 'row_server_1',
-                        type: 'servers',
-                    },
                 ],
             },
         },
@@ -394,18 +401,7 @@ export const dummy_all_monitors = [
     },
 ]
 
-export const dummyMonitorsList = [
-    {
-        id: 'monitor_0',
-
-        type: 'monitors',
-    },
-    {
-        id: 'monitor_1',
-
-        type: 'monitors',
-    },
-]
+export const getMonitorListStub = dummy_all_monitors.map(({ id, type }) => ({ id, type }))
 
 export const getAllMonitorsMapStub = new Map()
 dummy_all_monitors.forEach(ele => {
@@ -422,12 +418,12 @@ export const dummy_all_listeners = [
             },
             state: 'Running',
         },
-        id: 'RCR-Writer-Listener',
+        id: 'RCR-Router-Listener',
         relationships: {
             services: {
                 data: [
                     {
-                        id: 'RCR-Writer',
+                        id: 'service_0',
                         type: 'services',
                     },
                 ],
@@ -444,12 +440,12 @@ export const dummy_all_listeners = [
             },
             state: 'Running',
         },
-        id: 'RWS-Listener',
+        id: 'RCR-Router-Listener-1',
         relationships: {
             services: {
                 data: [
                     {
-                        id: 'RWS-Router',
+                        id: 'service_0',
                         type: 'services',
                     },
                 ],
@@ -467,12 +463,12 @@ export const dummy_all_listeners = [
             },
             state: 'Running',
         },
-        id: 'RCR-Router-Listener',
+        id: 'RCR-Router-Listener-2',
         relationships: {
             services: {
                 data: [
                     {
-                        id: 'RCR-Router',
+                        id: 'service_1',
                         type: 'services',
                     },
                 ],
@@ -482,48 +478,10 @@ export const dummy_all_listeners = [
     },
 ]
 
-export const dummyServiceStateTableRows = dummyServicesList.map(service => ({
+export const serviceStateTableRowsStub = getServiceListStub.map(service => ({
     ...service,
     state: 'Started',
 }))
-
-export const dummyAllServicesState = [
-    {
-        attributes: {
-            state: 'Started',
-        },
-        id: 'service_0',
-        type: 'services',
-    },
-    {
-        attributes: {
-            state: 'Started',
-        },
-        id: 'service_1',
-        type: 'services',
-    },
-    {
-        attributes: {
-            state: 'Started',
-        },
-        id: 'RWS-Router',
-        type: 'services',
-    },
-    {
-        attributes: {
-            state: 'Started',
-        },
-        id: 'RCR-Router',
-        type: 'services',
-    },
-    {
-        attributes: {
-            state: 'Started',
-        },
-        id: 'RCR-Writer',
-        type: 'services',
-    },
-]
 
 export const dummy_all_sessions = [
     {
@@ -589,57 +547,3 @@ export const dummy_maxscale_parameters = {
     },
     log_warn_super_user: false,
 }
-export const dummyProcessedMaxScaleModuleParams = [
-    {
-        default_value: true,
-        description: 'Admin interface authentication.',
-        mandatory: false,
-        modifiable: false,
-        name: 'admin_auth',
-        type: 'bool',
-    },
-    {
-        default_value: {
-            count: 0,
-            suppress: 0,
-            window: 0,
-        },
-        description: `Limit the amount of identical log messages than can
-        be logged during a certain time period.`,
-        mandatory: false,
-        modifiable: true,
-        name: 'log_throttling',
-        type: 'throttling',
-    },
-    {
-        name: 'count',
-        type: 'count',
-        modifiable: true,
-        default_value: 0,
-        description: 'Positive integer specifying the number of logged times',
-    },
-    {
-        name: 'suppress',
-        type: 'duration',
-        modifiable: true,
-        unit: 'ms',
-        default_value: 0,
-        description: 'The suppressed duration before the logging of a particular error',
-    },
-    {
-        name: 'window',
-        type: 'duration',
-        modifiable: true,
-        unit: 'ms',
-        default_value: 0,
-        description: 'The duration that a particular error may be logged',
-    },
-    {
-        default_value: false,
-        description: 'Log a warning when a user with super privilege logs in.',
-        mandatory: false,
-        modifiable: false,
-        name: 'log_warn_super_user',
-        type: 'bool',
-    },
-]

@@ -17,14 +17,65 @@ import mount from '@tests/unit/setup'
 import Settings from '@/pages/Settings'
 import sinon from 'sinon'
 import sinonChai from 'sinon-chai'
-import {
-    dummy_maxscale_parameters,
-    dummy_maxscale_module_parameters,
-    dummyProcessedMaxScaleModuleParams,
-} from '@tests/unit/utils'
+import { dummy_maxscale_parameters, dummy_maxscale_module_parameters } from '@tests/unit/utils'
 
 chai.should()
 chai.use(sinonChai)
+
+const processedModuleParamsStub = [
+    {
+        default_value: true,
+        description: 'Admin interface authentication.',
+        mandatory: false,
+        modifiable: false,
+        name: 'admin_auth',
+        type: 'bool',
+    },
+    {
+        default_value: {
+            count: 0,
+            suppress: 0,
+            window: 0,
+        },
+        description: `Limit the amount of identical log messages than can
+        be logged during a certain time period.`,
+        mandatory: false,
+        modifiable: true,
+        name: 'log_throttling',
+        type: 'throttling',
+    },
+    {
+        name: 'count',
+        type: 'count',
+        modifiable: true,
+        default_value: 0,
+        description: 'Positive integer specifying the number of logged times',
+    },
+    {
+        name: 'suppress',
+        type: 'duration',
+        modifiable: true,
+        unit: 'ms',
+        default_value: 0,
+        description: 'The suppressed duration before the logging of a particular error',
+    },
+    {
+        name: 'window',
+        type: 'duration',
+        modifiable: true,
+        unit: 'ms',
+        default_value: 0,
+        description: 'The duration that a particular error may be logged',
+    },
+    {
+        default_value: false,
+        description: 'Log a warning when a user with super privilege logs in.',
+        mandatory: false,
+        modifiable: false,
+        name: 'log_warn_super_user',
+        type: 'bool',
+    },
+]
 
 describe('Settings index', () => {
     let wrapper, axiosStub
@@ -61,7 +112,7 @@ describe('Settings index', () => {
 
     it(`Should process module parameters as expected`, async () => {
         expect(wrapper.vm.$data.processedModuleParameters).to.be.deep.equals(
-            dummyProcessedMaxScaleModuleParams
+            processedModuleParamsStub
         )
     })
 

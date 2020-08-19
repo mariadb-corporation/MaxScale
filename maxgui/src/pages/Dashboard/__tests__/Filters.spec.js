@@ -15,7 +15,11 @@ import mount from '@tests/unit/setup'
 import Filters from '@/pages/Dashboard/Filters'
 import sinon from 'sinon'
 import sinonChai from 'sinon-chai'
-import { dummy_all_filters, findAnchorLinkInTable, getUniqueResourceNames } from '@tests/unit/utils'
+import {
+    dummy_all_filters,
+    findAnchorLinkInTable,
+    getUniqueResourceNamesStub,
+} from '@tests/unit/utils'
 
 chai.should()
 chai.use(sinonChai)
@@ -99,7 +103,7 @@ describe('Dashboard Filters tab', () => {
     })
 
     it(`Should get total number of unique service names accurately`, async () => {
-        const uniqueServiceNames = getUniqueResourceNames(expectedTableRows, 'serviceIds')
+        const uniqueServiceNames = getUniqueResourceNamesStub(expectedTableRows, 'serviceIds')
         expect(wrapper.vm.$data.servicesLength).to.be.equals(uniqueServiceNames.length)
     })
 })

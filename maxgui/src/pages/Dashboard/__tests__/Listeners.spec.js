@@ -18,7 +18,7 @@ import sinonChai from 'sinon-chai'
 import {
     dummy_all_listeners,
     findAnchorLinkInTable,
-    getUniqueResourceNames,
+    getUniqueResourceNamesStub,
 } from '@tests/unit/utils'
 
 chai.should()
@@ -34,25 +34,25 @@ const expectedTableHeaders = [
 
 const expectedTableRows = [
     {
-        id: 'RCR-Writer-Listener',
+        id: 'RCR-Router-Listener',
         port: 3308,
         address: '::',
         state: 'Running',
-        serviceIds: ['RCR-Writer'],
+        serviceIds: ['service_0'],
     },
     {
-        id: 'RWS-Listener',
+        id: 'RCR-Router-Listener-1',
         port: 3306,
         address: '::',
         state: 'Running',
-        serviceIds: ['RWS-Router'],
+        serviceIds: ['service_0'],
     },
     {
-        id: 'RCR-Router-Listener',
+        id: 'RCR-Router-Listener-2',
         port: null,
         address: '/tmp/maxscale.sock',
         state: 'Running',
-        serviceIds: ['RCR-Router'],
+        serviceIds: ['service_1'],
     },
 ]
 
@@ -116,7 +116,7 @@ describe('Dashboard Listeners tab', () => {
     })
 
     it(`Should get total number of unique service names accurately`, async () => {
-        const uniqueServiceNames = getUniqueResourceNames(expectedTableRows, 'serviceIds')
+        const uniqueServiceNames = getUniqueResourceNamesStub(expectedTableRows, 'serviceIds')
         expect(wrapper.vm.$data.servicesLength).to.be.equals(uniqueServiceNames.length)
     })
 })

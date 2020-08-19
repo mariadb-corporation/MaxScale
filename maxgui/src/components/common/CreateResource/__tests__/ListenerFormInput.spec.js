@@ -17,7 +17,7 @@ import {
     itemSelectMock,
     inputChangeMock,
     dummy_all_services,
-    dummyServicesList,
+    getServiceListStub,
 } from '@tests/unit/utils'
 import ListenerFormInput from '@CreateResource/ListenerFormInput'
 
@@ -95,7 +95,7 @@ describe('ListenerFormInput.vue', () => {
     })
 
     it(`Should compute serviceList from allServices accurately`, async () => {
-        expect(wrapper.vm.serviceList).to.be.deep.equals(dummyServicesList)
+        expect(wrapper.vm.serviceList).to.be.deep.equals(getServiceListStub)
     })
 
     it(`Should return an object with parameters and relationships objects
@@ -118,7 +118,7 @@ describe('ListenerFormInput.vue', () => {
         const expectedValue = {
             parameters: { [listenParameter.name]: newValue },
             relationships: {
-                services: { data: [dummyServicesList[0]] },
+                services: { data: [getServiceListStub[0]] },
             },
         }
         expect(wrapper.vm.getValues()).to.be.deep.equals(expectedValue)

@@ -13,12 +13,7 @@
 import chai, { expect } from 'chai'
 import mount from '@tests/unit/setup'
 import RelationshipTable from '@/components/common/DetailsPage/RelationshipTable'
-import {
-    dummyServiceStateTableRows,
-    dummyAllServicesState,
-    dummyFiltersList,
-    itemSelectMock,
-} from '@tests/unit/utils'
+import { serviceStateTableRowsStub, getFilterListStub, itemSelectMock } from '@tests/unit/utils'
 import sinon from 'sinon'
 import sinonChai from 'sinon-chai'
 
@@ -61,6 +56,44 @@ async function mockupRelationshipTypeWatcher(wrapper, relationshipType) {
     await wrapper.vm.assignTableHeaders(relationshipType)
 }
 
+const dummyAllServicesState = [
+    {
+        attributes: {
+            state: 'Started',
+        },
+        id: 'service_0',
+        type: 'services',
+    },
+    {
+        attributes: {
+            state: 'Started',
+        },
+        id: 'service_1',
+        type: 'services',
+    },
+    {
+        attributes: {
+            state: 'Started',
+        },
+        id: 'RWS-Router',
+        type: 'services',
+    },
+    {
+        attributes: {
+            state: 'Started',
+        },
+        id: 'RCR-Router',
+        type: 'services',
+    },
+    {
+        attributes: {
+            state: 'Started',
+        },
+        id: 'RCR-Writer',
+        type: 'services',
+    },
+]
+
 describe('RelationshipTable.vue with readOnly mode and not addable', () => {
     let wrapper
     beforeEach(() => {
@@ -70,7 +103,7 @@ describe('RelationshipTable.vue with readOnly mode and not addable', () => {
             props: {
                 relationshipType: 'services',
                 loading: false,
-                tableRows: dummyServiceStateTableRows,
+                tableRows: serviceStateTableRowsStub,
                 readOnly: true,
                 addable: false,
             },
@@ -93,11 +126,11 @@ describe('RelationshipTable.vue with readOnly mode and not addable', () => {
 
     it(`Should render router-link components and assign accurate target location`, async () => {
         const { wrappers: routerLinks } = wrapper.findAllComponents({ name: 'router-link' })
-        expect(routerLinks.length).to.be.equals(dummyServiceStateTableRows.length)
+        expect(routerLinks.length).to.be.equals(serviceStateTableRowsStub.length)
         routerLinks.forEach((routerLink, i) => {
             const aTag = routerLink.find('a')
             expect(aTag.attributes().href).to.be.equals(
-                `#/dashboard/services/${dummyServiceStateTableRows[i].id}`
+                `#/dashboard/services/${serviceStateTableRowsStub[i].id}`
             )
         })
     })
@@ -112,7 +145,7 @@ describe('RelationshipTable.vue with readOnly mode and not addable', () => {
         await mockupRelationshipTypeWatcher(wrapper, 'filters')
         const tableRowsData = wrapper.vm.tableRowsData
         expect(tableRowsData).to.be.an('array')
-        expect(tableRowsData.length).to.be.equals(dummyServiceStateTableRows.length)
+        expect(tableRowsData.length).to.be.equals(serviceStateTableRowsStub.length)
         await tableRowsData.forEach((row, i) => {
             expect(row).to.have.property('index')
             expect(row.index).to.be.equals(i)
@@ -153,7 +186,7 @@ describe('RelationshipTable.vue with editable and addable mode', () => {
             props: {
                 relationshipType: 'services',
                 loading: false,
-                tableRows: dummyServiceStateTableRows,
+                tableRows: serviceStateTableRowsStub,
                 readOnly: false,
                 getRelationshipData: getRelationshipDataStub,
             },
@@ -175,7 +208,7 @@ describe('RelationshipTable.vue with editable and addable mode', () => {
             props: {
                 relationshipType: 'services',
                 loading: false,
-                tableRows: dummyServiceStateTableRows,
+                tableRows: serviceStateTableRowsStub,
                 readOnly: false,
             },
         })
@@ -183,12 +216,12 @@ describe('RelationshipTable.vue with editable and addable mode', () => {
     })
 
     it(`Should open confirm-dialog when delete button is clicked`, async () => {
-        await mockupOpenConfirmDeletingDialog(wrapper, dummyServiceStateTableRows[0].id)
+        await mockupOpenConfirmDeletingDialog(wrapper, serviceStateTableRowsStub[0].id)
         expect(wrapper.vm.$data.showDeleteDialog).to.be.true
     })
 
     it(`Should display accurate delete dialog title`, async () => {
-        await mockupOpenConfirmDeletingDialog(wrapper, dummyServiceStateTableRows[0].id)
+        await mockupOpenConfirmDeletingDialog(wrapper, serviceStateTableRowsStub[0].id)
         const title = wrapper.find('.v-card__title>h3')
         expect(title.text()).to.be.equals(
             `${wrapper.vm.$t('unlink')} ${wrapper.vm.$tc('services', 1)}`
@@ -196,7 +229,7 @@ describe('RelationshipTable.vue with editable and addable mode', () => {
     })
 
     it(`Should emit on-relationship-update event after confirm deleting`, async () => {
-        const idToBeDeleted = dummyServiceStateTableRows[0].id
+        const idToBeDeleted = serviceStateTableRowsStub[0].id
         let count = 0
         wrapper.vm.$on('on-relationship-update', ({ type, data }) => {
             expect(data)
@@ -239,7 +272,7 @@ describe('RelationshipTable.vue with editable and addable mode', () => {
             async () => await getRelationshipDataSpy.should.have.been.calledOnce
         )
         wrapper.vm.itemsList.forEach(item => {
-            dummyServiceStateTableRows.forEach(row => {
+            serviceStateTableRowsStub.forEach(row => {
                 expect(item.id !== row.id).to.be.true
             })
         })
@@ -284,7 +317,7 @@ describe('RelationshipTable.vue with editable and addable mode', () => {
 
     it(`Should emit on-relationship-update event when changing filters order`, async () => {
         await wrapper.setProps({
-            tableRows: dummyFiltersList,
+            tableRows: getFilterListStub,
             relationshipType: 'filters',
         })
         await mockupRelationshipTypeWatcher(wrapper, 'filters')
@@ -294,7 +327,7 @@ describe('RelationshipTable.vue with editable and addable mode', () => {
         let count = 0
         wrapper.vm.$on('on-relationship-update', ({ type, data, isFilterDrag }) => {
             expect(isFilterDrag).to.be.true
-            expect(data.length).to.be.equals(dummyFiltersList.length)
+            expect(data.length).to.be.equals(getFilterListStub.length)
             data.forEach((item, i) => {
                 expect(item).to.be.an('object')
                 expect(item).to.be.have.all.keys('id', 'type')

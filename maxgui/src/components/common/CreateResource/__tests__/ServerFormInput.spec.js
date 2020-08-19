@@ -17,9 +17,9 @@ import {
     itemSelectMock,
     inputChangeMock,
     dummy_all_services,
-    dummyServicesList,
+    getServiceListStub,
     dummy_all_monitors,
-    dummyMonitorsList,
+    getMonitorListStub,
 } from '@tests/unit/utils'
 import ServerFormInput from '@CreateResource/ServerFormInput'
 
@@ -118,11 +118,11 @@ describe('ServerFormInput.vue', () => {
     })
 
     it(`Should compute servicesList from allServices accurately`, async () => {
-        expect(wrapper.vm.servicesList).to.be.deep.equals(dummyServicesList)
+        expect(wrapper.vm.servicesList).to.be.deep.equals(getServiceListStub)
     })
 
     it(`Should compute monitorsList from allMonitors accurately`, async () => {
-        expect(wrapper.vm.monitorsList).to.be.deep.equals(dummyMonitorsList)
+        expect(wrapper.vm.monitorsList).to.be.deep.equals(getMonitorListStub)
     })
 
     it(`Should return an object with parameters and relationships objects
@@ -143,8 +143,8 @@ describe('ServerFormInput.vue', () => {
         const expectedValue = {
             parameters: { [serverParameter.name]: newValue },
             relationships: {
-                services: { data: [dummyServicesList[0]] },
-                monitors: { data: [dummyMonitorsList[0]] },
+                services: { data: [getServiceListStub[0]] },
+                monitors: { data: [getMonitorListStub[0]] },
             },
         }
         expect(wrapper.vm.getValues()).to.be.deep.equals(expectedValue)
