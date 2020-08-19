@@ -357,14 +357,27 @@ export const dummyServicesList = [
 
 export const dummy_all_monitors = [
     {
-        attributes: { state: 'Running' },
+        attributes: { state: 'Running', module: 'csmon' },
         id: 'monitor_0',
         links: {},
-        relationships: {},
+        relationships: {
+            servers: {
+                data: [
+                    {
+                        id: 'row_server_0',
+                        type: 'servers',
+                    },
+                    {
+                        id: 'row_server_1',
+                        type: 'servers',
+                    },
+                ],
+            },
+        },
         type: 'monitors',
     },
     {
-        attributes: { state: 'Stopped' },
+        attributes: { state: 'Stopped', module: 'grmon' },
         id: 'monitor_1',
         links: {},
         relationships: {},

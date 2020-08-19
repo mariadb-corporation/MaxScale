@@ -13,11 +13,7 @@
                         :moduleParameters="processedModuleParameters"
                         :updateResourceParameters="updateMonitorParameters"
                         :onEditSucceeded="fetchMonitor"
-                        :loading="
-                            loadingModuleParams
-                                ? true
-                                : overlay_type === OVERLAY_TRANSPARENT_LOADING
-                        "
+                        :loading="isLoading"
                     />
                 </v-col>
                 <v-col cols="6">
@@ -72,15 +68,20 @@ export default {
             module_parameters: 'module_parameters',
             current_monitor: state => state.monitor.current_monitor,
         }),
+        isLoading: function() {
+            return this.loadingModuleParams
+                ? true
+                : this.overlay_type === OVERLAY_TRANSPARENT_LOADING
+        },
     },
 
     async created() {
         await this.fetchMonitor()
-        await this.serverTableRowProcessing()
         const { attributes: { module: moduleName = null } = {} } = this.current_monitor
         if (moduleName) await this.fetchModuleParameters(moduleName)
         this.loadingModuleParams = true
         await this.processModuleParameters()
+        await this.serverTableRowProcessing()
     },
 
     methods: {
@@ -108,22 +109,13 @@ export default {
                 relationships: { servers: { data: serversData = [] } = {} } = {},
             } = this.current_monitor
 
-            if (serversData.length) {
-                let serversIdArr = serversData.map(item => `${item.id}`)
-                let arr = []
-                for (let i = 0; i < serversIdArr.length; ++i) {
-                    let data = await this.getRelationshipData('servers', serversIdArr[i])
-                    const {
-                        id,
-                        type,
-                        attributes: { state },
-                    } = data
-                    arr.push({ id: id, state: state, type: type })
-                }
-                this.serverStateTableRow = arr
-            } else {
-                this.serverStateTableRow = []
-            }
+            let arr = []
+            serversData.forEach(async server => {
+                const data = await this.getRelationshipData('servers', server.id)
+                const { id, type, attributes: { state = null } = {} } = data
+                arr.push({ id: id, state: state, type: type })
+            })
+            this.serverStateTableRow = arr
         },
 
         /**
