@@ -139,8 +139,10 @@ describe('RelationshipTable.vue with readOnly mode and not addable', () => {
     })
 })
 
+const getRelationshipDataStub = () => dummyAllServicesState
+
 describe('RelationshipTable.vue with editable and addable mode', () => {
-    let wrapper, loggerSpy
+    let wrapper, loggerSpy, getRelationshipDataSpy
     beforeEach(() => {
         // this prevents console.error from being printed out
         console.error = () => {}
@@ -153,9 +155,10 @@ describe('RelationshipTable.vue with editable and addable mode', () => {
                 loading: false,
                 tableRows: dummyServiceStateTableRows,
                 readOnly: false,
-                getRelationshipData: () => dummyAllServicesState,
+                getRelationshipData: getRelationshipDataStub,
             },
         })
+        getRelationshipDataSpy = sinon.spy(getRelationshipDataStub)
     })
 
     afterEach(async function() {
@@ -232,11 +235,27 @@ describe('RelationshipTable.vue with editable and addable mode', () => {
     it(`Should call getRelationshipData function props to get relationship state
       of all resources and display only resources are not in the table`, async () => {
         await mockupOpenSelectDialog(wrapper)
+        await wrapper.vm.$nextTick(
+            async () => await getRelationshipDataSpy.should.have.been.calledOnce
+        )
         wrapper.vm.itemsList.forEach(item => {
             dummyServiceStateTableRows.forEach(row => {
                 expect(item.id !== row.id).to.be.true
             })
         })
+    })
+
+    it(`Should call getRelationshipData function props and use selectItems props
+      to show available items to be selected`, async () => {
+        const selectItems = [{ id: 'test-service', state: 'Started', type: 'services' }]
+        await wrapper.setProps({
+            selectItems: selectItems,
+        })
+        await mockupOpenSelectDialog(wrapper)
+        await wrapper.vm.$nextTick(
+            async () => await getRelationshipDataSpy.should.have.been.calledOnce
+        )
+        expect(wrapper.vm.itemsList).to.be.deep.equals(selectItems)
     })
 
     it(`Should emit on-relationship-update event after confirm adding`, async () => {

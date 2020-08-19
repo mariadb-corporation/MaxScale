@@ -107,9 +107,8 @@ export default {
         loading: { type: Boolean, required: true },
         readOnly: { type: Boolean, default: false },
         addable: { type: Boolean, default: true },
-        /*
-            below props are required only when readOnly is false.
-        */
+        selectItems: { type: Array },
+        //below props are required only when readOnly is false.
         getRelationshipData: { type: Function },
     },
     data() {
@@ -247,13 +246,19 @@ export default {
 
         // -------------- Add handle
         async getAllEntities() {
-            const all = await this.getRelationshipData(this.relationshipType)
-            const availableEntities = this.$help.lodash.xorWith(
-                all,
-                this.tableRowsData,
-                (a, b) => a.id === b.id
-            )
-            this.itemsList = availableEntities
+            if (this.selectItems) {
+                await this.getRelationshipData(this.relationshipType)
+                this.itemsList = this.selectItems
+            } else {
+                const all = await this.getRelationshipData(this.relationshipType)
+                const availableEntities = this.$help.lodash.xorWith(
+                    all,
+                    this.tableRowsData,
+                    (a, b) => a.id === b.id
+                )
+
+                this.itemsList = availableEntities
+            }
         },
 
         onAdd() {
