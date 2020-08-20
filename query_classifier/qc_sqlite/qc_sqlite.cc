@@ -5446,6 +5446,20 @@ QC_STMT_RESULT qc_sqlite_get_result_from_info(const QC_STMT_INFO* pInfo)
     return static_cast<const QcSqliteInfo*>(pInfo)->get_result();
 }
 
+int32_t qc_sqlite_get_current_stmt(const char** ppStmt, size_t* pLen)
+{
+    int32_t rv = QC_RESULT_ERROR;
+
+    if (this_thread.pInfo && this_thread.pInfo->m_pQuery && (this_thread.pInfo->m_nQuery != 0))
+    {
+        *ppStmt = this_thread.pInfo->m_pQuery;
+        *pLen = this_thread.pInfo->m_nQuery;
+        rv = QC_RESULT_OK;
+    }
+
+    return rv;
+}
+
 /**
  * EXPORTS
  */
@@ -5484,6 +5498,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         qc_sqlite_get_options,
         qc_sqlite_set_options,
         qc_sqlite_get_result_from_info,
+        qc_sqlite_get_current_stmt
     };
 
     static MXS_MODULE info =
