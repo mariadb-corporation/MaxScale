@@ -124,7 +124,7 @@ private:
 
     bool   change_user(GWBUF* queue);
     bool   send_change_user_to_backend();
-    void   send_proxy_protocol_header();
+    bool   send_proxy_protocol_header();
     int    handle_persistent_connection(GWBUF* queue);
     GWBUF* create_change_user_packet();
     void   do_handle_error(DCB* dcb, const std::string& errmsg,
