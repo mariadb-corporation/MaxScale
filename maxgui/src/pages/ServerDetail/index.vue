@@ -109,19 +109,26 @@ export default {
     },
     computed: {
         ...mapState({
+            should_refresh_resource: 'should_refresh_resource',
             search_keyword: 'search_keyword',
             overlay_type: 'overlay_type',
             current_server: state => state.server.current_server,
         }),
     },
-
+    watch: {
+        should_refresh_resource: async function(val) {
+            if (val) {
+                this.SET_REFRESH_RESOURCE(false)
+                await this.initialFetch()
+            }
+        },
+    },
     async created() {
-        // Initial fetch
-        await this.dispatchFetchServer()
-        await this.serviceTableRowProcessing()
+        await this.initialFetch()
     },
     methods: {
         ...mapMutations({
+            SET_REFRESH_RESOURCE: 'SET_REFRESH_RESOURCE',
             SET_CURRENT_MONITOR: 'monitor/SET_CURRENT_MONITOR',
         }),
         ...mapActions({
@@ -130,7 +137,11 @@ export default {
             updateServerRelationship: 'server/updateServerRelationship',
             fetchMonitorDiagnosticsById: 'monitor/fetchMonitorDiagnosticsById',
         }),
-
+        async initialFetch() {
+            // Initial fetch
+            await this.dispatchFetchServer()
+            await this.serviceTableRowProcessing()
+        },
         async fetchMonitorDiagnostics() {
             const { relationships: { monitors = {} } = {} } = this.current_server
             if (monitors.data) {

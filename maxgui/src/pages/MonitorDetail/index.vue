@@ -45,7 +45,7 @@
  * Public License.
  */
 import { OVERLAY_TRANSPARENT_LOADING } from 'store/overlayTypes'
-import { mapActions, mapState } from 'vuex'
+import { mapActions, mapState, mapMutations } from 'vuex'
 import PageHeader from './PageHeader'
 import OverviewHeader from './OverviewHeader'
 
@@ -65,6 +65,7 @@ export default {
     },
     computed: {
         ...mapState({
+            should_refresh_resource: 'should_refresh_resource',
             overlay_type: 'overlay_type',
             search_keyword: 'search_keyword',
             module_parameters: 'module_parameters',
@@ -90,18 +91,22 @@ export default {
             })
             this.unmonitoredServers = availableEntities
         },
+        should_refresh_resource: async function(val) {
+            if (val) {
+                this.SET_REFRESH_RESOURCE(false)
+                await this.initialFetch()
+            }
+        },
     },
 
     async created() {
-        await this.fetchMonitor()
-        const { attributes: { module: moduleName = null } = {} } = this.current_monitor
-        if (moduleName) await this.fetchModuleParameters(moduleName)
-        this.loadingModuleParams = true
-        await this.processModuleParameters()
-        await this.serverTableRowProcessing()
+        await this.initialFetch()
     },
 
     methods: {
+        ...mapMutations({
+            SET_REFRESH_RESOURCE: 'SET_REFRESH_RESOURCE',
+        }),
         ...mapActions({
             fetchModuleParameters: 'fetchModuleParameters',
             getResourceState: 'getResourceState',
@@ -110,6 +115,15 @@ export default {
             updateMonitorRelationship: 'monitor/updateMonitorRelationship',
             fetchAllServers: 'server/fetchAllServers',
         }),
+
+        async initialFetch() {
+            await this.fetchMonitor()
+            const { attributes: { module: moduleName = null } = {} } = this.current_monitor
+            if (moduleName) await this.fetchModuleParameters(moduleName)
+            this.loadingModuleParams = true
+            await this.processModuleParameters()
+            await this.serverTableRowProcessing()
+        },
 
         async processModuleParameters() {
             if (this.module_parameters.length) {

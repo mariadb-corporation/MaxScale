@@ -44,6 +44,7 @@ export default new Vuex.Store({
         prev_route: null,
         module_parameters: [],
         form_type: null,
+        should_refresh_resource: false,
     },
     mutations: {
         SET_OVERLAY_TYPE(state, type) {
@@ -77,6 +78,9 @@ export default new Vuex.Store({
         },
         SET_FORM_TYPE(state, form_type) {
             state.form_type = form_type
+        },
+        SET_REFRESH_RESOURCE(state, boolean) {
+            state.should_refresh_resource = boolean
         },
     },
     actions: {

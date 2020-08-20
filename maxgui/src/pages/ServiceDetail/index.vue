@@ -125,20 +125,21 @@ export default {
     },
     computed: {
         ...mapState({
+            should_refresh_resource: 'should_refresh_resource',
             overlay_type: 'overlay_type',
             current_service: state => state.service.current_service,
         }),
     },
-
+    watch: {
+        should_refresh_resource: async function(val) {
+            if (val) {
+                this.SET_REFRESH_RESOURCE(false)
+                await this.initialFetch()
+            }
+        },
+    },
     async created() {
-        // Initial fetch, wait for service id
-        await this.fetchService()
-        await this.genServiceConnectionsDataSets()
-        await Promise.all([
-            this.processingRelationshipTable('servers'),
-            this.processingRelationshipTable('filters'),
-            this.processingRelationshipTable('listeners'),
-        ])
+        await this.initialFetch()
     },
     methods: {
         ...mapActions({
@@ -150,8 +151,19 @@ export default {
         }),
         ...mapMutations({
             SET_FORM_TYPE: 'SET_FORM_TYPE',
+            SET_REFRESH_RESOURCE: 'SET_REFRESH_RESOURCE',
         }),
 
+        async initialFetch() {
+            // Initial fetch, wait for service id
+            await this.fetchService()
+            await this.genServiceConnectionsDataSets()
+            await Promise.all([
+                this.processingRelationshipTable('servers'),
+                this.processingRelationshipTable('filters'),
+                this.processingRelationshipTable('listeners'),
+            ])
+        },
         // reuse functions for fetch loop or after finish editing
         async fetchService() {
             await this.fetchServiceById(this.$route.params.id)
