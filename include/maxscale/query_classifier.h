@@ -469,6 +469,19 @@ typedef struct query_classifier
      * @return QC_RESULT_OK if @c options is valid, otherwise QC_RESULT_ERROR.
      */
     int32_t (* qc_set_options)(uint32_t options);
+
+    /**
+     * Return statement currently being classified.
+     *
+     * @param ppStmp  Pointer to pointer that on return will point to the
+     *                statement being classified.
+     * @param pLen    Pointer to value that on return will contain the length
+     *                of the returned string.
+     *
+     * @return QC_RESULT_OK if a statement was returned (i.e. a statement is being
+     *         classified), QC_RESULT_ERROR otherwise.
+     */
+    int32_t (* qc_get_current_stmt)(const char** ppStmt, size_t* pLen);
 } QUERY_CLASSIFIER;
 
 /**
@@ -995,5 +1008,22 @@ uint32_t qc_get_options();
  * @return true if the options were valid, false otherwise.
  */
 bool qc_set_options(uint32_t options);
+
+/**
+ * Return statement currently being classified.
+ *
+ * @param ppStmp  Pointer to pointer that on return will point to the
+ *                statement being classified.
+ * @param pLen    Pointer to value that on return will contain the length
+ *                of the returned string.
+ *
+ * @return True, if a statement was returned (i.e. a statement is being
+ *         classified), false otherwise.
+ *
+ * @note A string /may/ be returned /only/ when this function is called from
+ *       a signal handler that is called due to the classifier causing
+ *       a crash.
+ */
+bool qc_get_current_stmt(const char** ppStmt, size_t* pLen);
 
 MXS_END_DECLS

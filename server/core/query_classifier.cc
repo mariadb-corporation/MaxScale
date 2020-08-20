@@ -1313,6 +1313,14 @@ bool qc_set_options(uint32_t options)
     return rv == QC_RESULT_OK;
 }
 
+bool qc_get_current_stmt(const char** ppStmt, size_t* pLen)
+{
+    QC_TRACE();
+    mxb_assert(this_unit.classifier);
+
+    return this_unit.classifier->qc_get_current_stmt(ppStmt, pLen) == QC_RESULT_OK;
+}
+
 void qc_get_cache_properties(QC_CACHE_PROPERTIES* properties)
 {
     properties->max_size = this_unit.cache_max_size();
