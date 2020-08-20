@@ -434,6 +434,17 @@ static void sigfatal_handler(int i)
               cnf->sysname,
               cnf->release_string);
 
+    const char* pStmt;
+    size_t nStmt;
+
+    if (!qc_get_current_stmt(&pStmt, &nStmt))
+    {
+        pStmt = "none/unknown";
+        nStmt = strlen(pStmt);
+    }
+
+    MXS_ALERT("Statement currently being classified: %.*s", (int)nStmt, pStmt);
+
     if (DCB* dcb = dcb_get_current())
     {
         if (dcb->session)
