@@ -119,14 +119,19 @@ export async function triggerBtnClick(wrapper, cssSelector) {
 
 /**
  * This function opening confirm-dialog in page-header component
- * @param {Object} wrapper mounted component
+ * It chooses index 0 by default of details-icon-group-wrapper
+ * when finding cssSelector.
+ * @param {Object} payload
+ * @param {Object} payload.wrapper mounted component
  * @param {String} cssSelector css selector of the button to be clicked
+ * @param {Number} index index of details-icon-group-wrapper
  */
-export async function openConfirmDialog(wrapper, cssSelector) {
+export async function openConfirmDialog({ wrapper, cssSelector, index = 0 }) {
     await triggerBtnClick(wrapper, '.gear-btn')
-    const detailsIconGroupWrapper = wrapper.findComponent({
+    const detailsIconGroupWrappers = wrapper.findAllComponents({
         name: 'details-icon-group-wrapper',
     })
+    const detailsIconGroupWrapper = detailsIconGroupWrappers.at(index)
     await triggerBtnClick(detailsIconGroupWrapper, cssSelector)
 }
 

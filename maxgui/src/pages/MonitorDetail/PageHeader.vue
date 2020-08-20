@@ -10,6 +10,7 @@
                     >
                         <template v-slot:activator="{ on }">
                             <v-btn
+                                class="stop-btn"
                                 text
                                 :disabled="getState === 'Stopped'"
                                 v-on="on"
@@ -29,6 +30,7 @@
                     >
                         <template v-slot:activator="{ on }">
                             <v-btn
+                                class="start-btn"
                                 text
                                 :disabled="getState === 'Running'"
                                 v-on="on"
@@ -51,7 +53,12 @@
                         content-class="shadow-drop color text-navigation py-1 px-4"
                     >
                         <template v-slot:activator="{ on }">
-                            <v-btn text v-on="on" @click="actionHandle('destroy')">
+                            <v-btn
+                                class="delete-btn"
+                                text
+                                v-on="on"
+                                @click="actionHandle('destroy')"
+                            >
                                 <v-icon size="18" color="error">
                                     $vuetify.icons.delete
                                 </v-icon>
@@ -69,8 +76,8 @@
                 :type="dialogType"
                 :item="currentMonitor"
                 :onSave="confirmSave"
-                :onClose="() => (showConfirmDialog = false)"
-                :onCancel="() => (showConfirmDialog = false)"
+                :onClose="handleClose"
+                :onCancel="handleClose"
             />
             <icon-sprite-sheet
                 size="13"
@@ -79,12 +86,12 @@
             >
                 status
             </icon-sprite-sheet>
-            <span class="color text-navigation body-2">
+            <span class="resource-state color text-navigation body-2">
                 {{ getState }}
             </span>
             <span class="color text-field-text body-2">
                 |
-                <span>{{ getModule }}</span>
+                <span class="resource-module">{{ getModule }}</span>
             </span>
         </template>
     </details-page-title>
@@ -133,6 +140,10 @@ export default {
         ...mapActions('monitor', ['manipulateMonitor']),
         async confirmSave() {
             await this.performAsyncLoadingAction(this.dialogType)
+        },
+
+        handleClose() {
+            this.showConfirmDialog = false
         },
 
         async performAsyncLoadingAction(mode) {
