@@ -118,8 +118,8 @@ export default {
         ServerFormInput,
     },
     props: {
-        value: Boolean,
-        closeModal: Function,
+        value: { type: Boolean, required: true },
+        closeModal: { type: Function, required: true },
     },
     data: function() {
         return {
@@ -360,7 +360,7 @@ export default {
                             relationships: relationships,
                             callback: this.fetchAllServices,
                         }
-                        this.createService(payload)
+                        await this.createService(payload)
                     }
                     break
                 case 'Monitor':
