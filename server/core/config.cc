@@ -3956,10 +3956,7 @@ bool config_param_is_valid(const MXS_MODULE_PARAM* params,
 
             case MXS_MODULE_PARAM_STRING:
             case MXS_MODULE_PARAM_PASSWORD:
-                if (*value)
-                {
-                    valid = true;
-                }
+                valid = true;
                 break;
 
             case MXS_MODULE_PARAM_QUOTEDSTRING:
@@ -4840,10 +4837,6 @@ bool validate_param(const MXS_MODULE_PARAM* basic, const MXS_MODULE_PARAM* modul
     if (!param_is_known(basic, module, key.c_str()))
     {
         error_msg = mxb::string_printf("Unknown parameter: %s", key.c_str());
-    }
-    else if (!value[0])
-    {
-        error_msg = mxb::string_printf("Empty value for parameter: %s", key.c_str());
     }
     else if (!param_is_valid(basic, module, key.c_str(), value.c_str()))
     {
