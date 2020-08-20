@@ -730,7 +730,7 @@ void TestConnections::print_env()
     printf("Maxscale IP\t%s\n", maxscales->IP[0]);
     printf("Maxscale User name\t%s\n", maxscales->user_name);
     printf("Maxscale Password\t%s\n", maxscales->password);
-    printf("Maxscale SSH key\t%s\n", maxscales->sshkey[0]);
+    printf("Maxscale SSH key\t%s\n", maxscales->sshkey(0));
     printf("Access user\t%s\n", maxscales->access_user(0));
     if (repl)
     {

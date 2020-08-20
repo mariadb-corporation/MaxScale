@@ -40,13 +40,19 @@ public:
     {
         std::string user;
         std::string password;
+
         std::string local_address;
+        std::string plugin_dir;
 
         mxb::SSLConfig ssl;
+        std::string    ssl_version;
 
         int  timeout {0};
         bool multiquery {false};
         bool auto_reconnect {false};
+
+        bool        clear_sql_mode {false};
+        std::string charset;
         // TODO: add more
     };
 

@@ -50,27 +50,42 @@ bool MariaDB::open(const std::string& host, unsigned int port, const std::string
     auto newconn = mysql_init(nullptr);
     if (!newconn)
     {
-        m_errormsg = "Failed to allocate memory for MYSQL-handle.";
         m_errornum = INTERNAL_ERROR;
+        m_errormsg = "Failed to allocate memory for MYSQL-handle.";
         return false;
     }
 
-    bool rval = false;
+    // Set various connection options. Checking the return value of mysql_optionsv is pointless, as it
+    // rarely checks the inputs. The errors are likely reported when connecting.
+    if (m_settings.timeout > 0)
+    {
+        // Use the same timeout for all three settings.
+        auto timeout = m_settings.timeout;
+        mysql_optionsv(newconn, MYSQL_OPT_CONNECT_TIMEOUT, &timeout);
+        mysql_optionsv(newconn, MYSQL_OPT_READ_TIMEOUT, &timeout);
+        mysql_optionsv(newconn, MYSQL_OPT_WRITE_TIMEOUT, &timeout);
+    }
+
+    if (!m_settings.plugin_dir.empty())
+    {
+        mysql_optionsv(newconn, MYSQL_PLUGIN_DIR, m_settings.plugin_dir.c_str());
+    }
+
+    bool ssl_enabled = false;
     if (!m_settings.ssl.empty())
     {
         // If an option is empty, a null-pointer should be given to mysql_ssl_set.
-        const char* ssl_key = m_settings.ssl.key.empty() ? nullptr : m_settings.ssl.key.c_str();
-        const char* ssl_cert = m_settings.ssl.cert.empty() ? nullptr : m_settings.ssl.cert.c_str();
-        const char* ssl_ca = m_settings.ssl.ca.empty() ? nullptr : m_settings.ssl.ca.c_str();
+        auto& ssl = m_settings.ssl;
+        const char* ssl_key = ssl.key.empty() ? nullptr : ssl.key.c_str();
+        const char* ssl_cert = ssl.cert.empty() ? nullptr : ssl.cert.c_str();
+        const char* ssl_ca = ssl.ca.empty() ? nullptr : ssl.ca.c_str();
         mysql_ssl_set(newconn, ssl_key, ssl_cert, ssl_ca, nullptr, nullptr);
-    }
 
-    if (m_settings.timeout > 0)
-    {
-        // Use the same timeout for all three settings for now.
-        mysql_optionsv(newconn, MYSQL_OPT_CONNECT_TIMEOUT, &m_settings.timeout);
-        mysql_optionsv(newconn, MYSQL_OPT_READ_TIMEOUT, &m_settings.timeout);
-        mysql_optionsv(newconn, MYSQL_OPT_WRITE_TIMEOUT, &m_settings.timeout);
+        if (!m_settings.ssl_version.empty())
+        {
+            mysql_optionsv(newconn, MARIADB_OPT_TLS_VERSION, m_settings.ssl_version.c_str());
+        }
+        ssl_enabled = true;
     }
 
     if (!m_settings.local_address.empty())
@@ -84,19 +99,28 @@ bool MariaDB::open(const std::string& host, unsigned int port, const std::string
     if (m_settings.auto_reconnect)
     {
         my_bool reconnect = 1;
-        mysql_optionsv(newconn, MYSQL_OPT_RECONNECT, (void*)&reconnect);
+        mysql_optionsv(newconn, MYSQL_OPT_RECONNECT, &reconnect);
+    }
+    if (m_settings.clear_sql_mode)
+    {
+        const char clear_query[] = "SET SQL_MODE='';";
+        mysql_optionsv(newconn, MYSQL_INIT_COMMAND, clear_query);
+    }
+    if (!m_settings.charset.empty())
+    {
+        mysql_optionsv(newconn, MYSQL_SET_CHARSET_NAME, m_settings.charset.c_str());
     }
 
-    bool connection_success = false;
-    const char* userz = m_settings.user.c_str();
-    const char* passwdz = m_settings.password.c_str();
-    const char* hostz = host.empty() ? nullptr : host.c_str();
-    const char* dbz = db.c_str();
+    const char* userc = m_settings.user.c_str();
+    const char* passwdc = m_settings.password.c_str();
+    const char* dbc = db.c_str();
 
-    if (hostz == nullptr || hostz[0] != '/')
+    bool connection_success = false;
+    if (host.empty() || host[0] != '/')
     {
+        const char* hostc = host.empty() ? nullptr : host.c_str();
         // Assume the host is a normal address. Empty host is treated as "localhost".
-        if (mysql_real_connect(newconn, hostz, userz, passwdz, dbz, port, nullptr, 0) != nullptr)
+        if (mysql_real_connect(newconn, hostc, userc, passwdc, dbc, port, nullptr, 0) != nullptr)
         {
             connection_success = true;
         }
@@ -104,22 +128,37 @@ bool MariaDB::open(const std::string& host, unsigned int port, const std::string
     else
     {
         // The host looks like an unix socket.
-        if (mysql_real_connect(newconn, nullptr, userz, passwdz, dbz, 0, hostz, 0) != nullptr)
+        if (mysql_real_connect(newconn, nullptr, userc, passwdc, dbc, 0, host.c_str(), 0) != nullptr)
         {
             connection_success = true;
         }
     }
 
-    if (connection_success && mysql_query(newconn, "SET SQL_MODE=''") == 0)
+    bool rval = false;
+    if (connection_success)
     {
-        clear_errors();
-        m_conn = newconn;
-        rval = true;
+        // If ssl was enabled, check that it's in use.
+        bool ssl_ok = !ssl_enabled || (mysql_get_ssl_cipher(newconn) != nullptr);
+        if (ssl_ok)
+        {
+            clear_errors();
+            m_conn = newconn;
+            rval = true;
+        }
+        else
+        {
+            m_errornum = USER_ERROR;
+            m_errormsg = mxb::string_printf("Encrypted connection to [%s]:%i could not be created, "
+                                            "ensure that TLS is enabled on the target server.",
+                                            host.c_str(), port);
+            mysql_close(newconn);
+        }
     }
     else
     {
-        m_errormsg = (string)"Connector-C error: " + mysql_error(newconn);
         m_errornum = mysql_errno(newconn);
+        m_errormsg = mxb::string_printf("Connection to [%s]:%i failed. Error %li: %s",
+                                        host.c_str(), port, m_errornum, mysql_error(newconn));
         mysql_close(newconn);
     }
 

@@ -156,7 +156,7 @@ std::vector<Json> Json::get_array_elems(const string& key) const
             json_t* elem;
             json_array_foreach(obj, index, elem)
             {
-                rval.push_back(Json(elem));
+                rval.emplace_back(elem);
             }
         }
         else

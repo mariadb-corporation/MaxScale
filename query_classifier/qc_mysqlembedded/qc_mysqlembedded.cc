@@ -3758,6 +3758,12 @@ int32_t qc_mysql_set_options(uint32_t options)
     return rv;
 }
 
+int32_t qc_mysql_get_current_stmt(const char** ppStmt, size_t* pLen)
+{
+    return QC_RESULT_ERROR;
+}
+
+
 /**
  * EXPORTS
  */
@@ -3796,6 +3802,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         qc_mysql_get_options,
         qc_mysql_set_options,
         nullptr,        // qc_get_result_from_info not supported
+        qc_mysql_get_current_stmt
     };
 
     static MXS_MODULE info =

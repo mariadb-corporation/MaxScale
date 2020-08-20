@@ -39,6 +39,7 @@ public:
     const char* access_user(int i = 0) const;
     const char* access_homedir(int i = 0) const;
     const char* access_sudo(int i = 0) const;
+    const char* sshkey(int i = 0) const;
 
     /**
      * @brief rwsplit_port RWSplit service port
@@ -392,6 +393,7 @@ namespace maxtest
 struct ServerInfo
 {
     using bitfield = uint32_t;
+    static constexpr bitfield DOWN = 0;
     static constexpr bitfield RUNNING = (1 << 0);
     static constexpr bitfield MASTER = (1 << 1);
     static constexpr bitfield SLAVE = (1 << 2);
@@ -410,6 +412,24 @@ struct ServerInfo
     int64_t     server_id {SRV_ID_NONE};
     int64_t     master_group {GROUP_NONE};
     int64_t     rlag {RLAG_NONE};
+
+    struct SlaveConnection
+    {
+        std::string name;
+        std::string gtid;
+        int64_t     master_id {SRV_ID_NONE};
+
+        enum class IO_State
+        {
+            NO,
+            CONNECTING,
+            YES
+        };
+        IO_State io_running {IO_State::NO};
+        bool     sql_running {false};
+    };
+
+    std::vector<SlaveConnection> slave_connections;
 };
 
 /**
@@ -425,7 +445,9 @@ public:
     ServersInfo(ServersInfo&& rhs) noexcept;
     ServersInfo& operator=(ServersInfo&& rhs) noexcept;
 
-    void              add(const ServerInfo& info);
+    void add(const ServerInfo& info);
+    void add(ServerInfo&& info);
+
     const ServerInfo& get(size_t i) const;
     size_t            size() const;
 
@@ -435,7 +457,7 @@ public:
      * @param expected_status Expected server statuses. Each status should be a bitfield of values defined
      * in the ServerInfo-class.
      */
-    void check_servers_status(std::vector<ServerInfo::bitfield> expected_status);
+    void check_servers_status(const std::vector<ServerInfo::bitfield>& expected_status);
 
     void check_master_groups(const std::vector<int>& expected_groups);
 
@@ -472,7 +494,9 @@ public:
      * @param expected_status Expected server statuses. Each status should be a bitfield of values defined
      * in the ServerInfo-class.
      */
-    void check_servers_status(std::vector<ServerInfo::bitfield> expected_status);
+    void check_servers_status(const std::vector<ServerInfo::bitfield>& expected_status);
+
+    void alter_monitor(const std::string& mon_name, const std::string& setting, const std::string& value);
 
     void start();
     void stop();
