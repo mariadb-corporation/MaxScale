@@ -484,6 +484,19 @@ struct QUERY_CLASSIFIER
      * @return The result of the provided info.
      */
     QC_STMT_RESULT (* qc_get_result_from_info)(const QC_STMT_INFO* info);
+
+    /**
+     * Return statement currently being classified.
+     *
+     * @param ppStmp  Pointer to pointer that on return will point to the
+     *                statement being classified.
+     * @param pLen    Pointer to value that on return will contain the length
+     *                of the returned string.
+     *
+     * @return QC_RESULT_OK if a statement was returned (i.e. a statement is being
+     *         classified), QC_RESULT_ERROR otherwise.
+     */
+    int32_t (* qc_get_current_stmt)(const char** ppStmt, size_t* pLen);
 };
 
 /**
@@ -1032,3 +1045,20 @@ struct QC_CACHE_ENTRY
  *       be added the hits of that key if it already is in the map.
  */
 void qc_get_cache_state(std::map<std::string, QC_CACHE_ENTRY>& state);
+
+/**
+ * Return statement currently being classified.
+ *
+ * @param ppStmp  Pointer to pointer that on return will point to the
+ *                statement being classified.
+ * @param pLen    Pointer to value that on return will contain the length
+ *                of the returned string.
+ *
+ * @return True, if a statement was returned (i.e. a statement is being
+ *         classified), false otherwise.
+ *
+ * @note A string /may/ be returned /only/ when this function is called from
+ *       a signal handler that is called due to the classifier causing
+ *       a crash.
+ */
+bool qc_get_current_stmt(const char** ppStmt, size_t* pLen);
