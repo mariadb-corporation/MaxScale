@@ -597,6 +597,15 @@ void RWSplitSession::clientReply(GWBUF* writebuf, DCB* backend_dcb)
              * logic cannot handle this situation. Routing the reply straight to
              * the client should be the safest thing to do at this point. */
             log_unexpected_response(backend, writebuf, m_current_query.get());
+
+            if (!m_sescmd_list.empty())
+            {
+                auto cmd = m_sescmd_list.back()->get_command();
+                auto query = m_sescmd_list.back()->to_string();
+                MXS_ERROR("Latest session command: (%s) %s",
+                          STRPACKETTYPE(cmd), query.empty() ? "<no query>" : query.c_str());
+            }
+
             MXS_SESSION_ROUTE_REPLY(backend_dcb->session, writebuf);
         }
         return;
