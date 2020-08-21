@@ -3,6 +3,7 @@
         <v-sheet v-if="!$help.lodash.isEmpty(current_server)" class="px-6">
             <page-header :currentServer="current_server" :onEditSucceeded="dispatchFetchServer" />
             <overview-header
+                :currentServer="current_server"
                 :getRelationshipData="getRelationshipData"
                 @on-relationship-update="dispatchRelationshipUpdate"
             />

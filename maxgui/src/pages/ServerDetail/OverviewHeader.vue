@@ -29,13 +29,16 @@
                     <span v-else :class="valueClass">
                         {{ value }}
                     </span>
-                    <div v-if="showEditBtn" class="monitor-edit-btn">
-                        <v-btn icon @click="() => onEdit('monitors')">
-                            <v-icon size="18" color="primary">
-                                $vuetify.icons.edit
-                            </v-icon>
-                        </v-btn>
-                    </div>
+                    <v-btn
+                        v-if="showEditBtn"
+                        class="monitor-edit-btn"
+                        icon
+                        @click="() => onEdit('monitors')"
+                    >
+                        <v-icon size="18" color="primary">
+                            $vuetify.icons.edit
+                        </v-icon>
+                    </v-btn>
                 </template>
 
                 <span v-else-if="name === 'state'" :class="valueClass">
@@ -65,13 +68,12 @@
         </outlined-overview-card>
 
         <select-dialog
-            v-if="!$help.lodash.isEmpty(getTopOverviewInfo)"
             v-model="showSelectDialog"
             :title="dialogTitle"
             mode="change"
             :entityName="targetSelectItemType"
-            :onClose="() => (showSelectDialog = false)"
-            :onCancel="() => (showSelectDialog = false)"
+            :onClose="handleClose"
+            :onCancel="handleClose"
             :handleSave="confirmChange"
             :itemsList="itemsList"
             :defaultItems="defaultItems"
@@ -104,17 +106,15 @@ Emits:
         })
 
 */
-import { mapState } from 'vuex'
-
 export default {
     name: 'overview-header',
     props: {
         getRelationshipData: { type: Function, required: true },
+        currentServer: { type: Object, required: true },
     },
     data() {
         return {
             showEditBtn: false,
-
             dialogTitle: '',
             targetItem: null,
             //select dialog
@@ -127,10 +127,6 @@ export default {
     },
 
     computed: {
-        ...mapState({
-            current_server: state => state.server.current_server,
-        }),
-
         serverStateClass: function() {
             switch (this.$help.serverStateIcon(this.getTopOverviewInfo.state)) {
                 case 0:
@@ -142,7 +138,6 @@ export default {
             }
         },
         getTopOverviewInfo: function() {
-            let overviewInfo = {}
             const {
                 attributes: {
                     state,
@@ -151,9 +146,9 @@ export default {
                     parameters: { address, socket, port } = {},
                 } = {},
                 relationships: { monitors } = {},
-            } = this.current_server
+            } = this.currentServer
 
-            overviewInfo = {
+            let overviewInfo = {
                 address,
                 socket,
                 port,
@@ -175,6 +170,9 @@ export default {
         },
     },
     methods: {
+        handleClose() {
+            this.showSelectDialog = false
+        },
         onEdit(type) {
             this.dialogTitle = `${this.$t(`changeEntity`, {
                 entityName: this.$tc(type, 1),

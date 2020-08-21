@@ -279,6 +279,8 @@ dummy_all_modules.forEach(fake_module => {
 export const dummy_all_servers = [
     {
         attributes: {
+            last_event: 'master_up',
+            triggered_at: 'Fri, 21 Aug 2020 06:04:40 GMT',
             version_string: '10.4.12-MariaDB-1:10.4.12+maria~bionic-log',
             state: 'Master, Running',
             statistics: { connections: 0 },
