@@ -1,7 +1,7 @@
 <template>
     <page-wrapper>
         <v-sheet v-if="!$help.lodash.isEmpty(current_server)" class="px-6">
-            <page-header :onEditSucceeded="dispatchFetchServer" />
+            <page-header :currentServer="current_server" :onEditSucceeded="dispatchFetchServer" />
             <overview-header
                 :getRelationshipData="getRelationshipData"
                 @on-relationship-update="dispatchRelationshipUpdate"

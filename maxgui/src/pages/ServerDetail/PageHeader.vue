@@ -11,9 +11,9 @@
                         <template v-slot:activator="{ on }">
                             <v-btn
                                 text
-                                :disabled="serverState === 'maintenance'"
+                                :disabled="stateMode === 'maintenance'"
                                 v-on="on"
-                                @click="handleClick('maintenance')"
+                                @click="handleClick('maintain')"
                             >
                                 <v-icon size="22" color="primary">
                                     $vuetify.icons.paused
@@ -30,9 +30,7 @@
                         <template v-slot:activator="{ on }">
                             <v-btn
                                 text
-                                :disabled="
-                                    serverState !== 'maintenance' && serverState !== 'drained'
-                                "
+                                :disabled="stateMode !== 'maintenance' && stateMode !== 'drained'"
                                 v-on="on"
                                 @click="handleClick('clear')"
                             >
@@ -53,7 +51,12 @@
                         content-class="shadow-drop color text-navigation py-1 px-4"
                     >
                         <template v-slot:activator="{ on }">
-                            <v-btn text v-on="on" @click="handleClick('drain')">
+                            <v-btn
+                                :disabled="stateMode === 'maintenance' || stateMode === 'drained'"
+                                text
+                                v-on="on"
+                                @click="handleClick('drain')"
+                            >
                                 <v-icon size="22" color="primary">
                                     $vuetify.icons.drain
                                 </v-icon>
@@ -88,12 +91,15 @@
                 :title="dialogTitle"
                 :type="dialogType"
                 :smallInfo="smallInfo"
-                :item="current_server"
+                :item="currentServer"
                 :onSave="confirmSave"
                 :onClose="() => (showConfirmDialog = false)"
                 :onCancel="() => (showConfirmDialog = false)"
             >
-                <template v-if="state === 'maintenance' && mode === 'set'" v-slot:body-append>
+                <template
+                    v-if="currentStateMode === 'maintenance' && type === 'set'"
+                    v-slot:body-append
+                >
                     <v-checkbox
                         v-model="forceClosing"
                         class="small mt-2 mb-4"
@@ -131,12 +137,13 @@
  * Public License.
  */
 
-import { mapState, mapActions } from 'vuex'
+import { mapActions } from 'vuex'
 
 export default {
     name: 'page-header',
     props: {
         onEditSucceeded: { type: Function, required: true },
+        currentServer: { type: Object, required: true },
     },
     data() {
         return {
@@ -144,23 +151,20 @@ export default {
             dialogTitle: '',
             dialogType: 'unlink',
             smallInfo: '',
-            mode: 'set', //set or clear
-            state: '',
+            type: 'set', //set or clear
+            currentStateMode: '',
             forceClosing: false,
         }
     },
     computed: {
-        ...mapState({
-            current_server: state => state.server.current_server,
-        }),
         version_string: function() {
-            return this.current_server.attributes.version_string
+            return this.currentServer.attributes.version_string
         },
         /**
          * @returns {Number} returns a number: 0,1,2
          */
         stateIconFrame: function() {
-            return this.$help.serverStateIcon(this.current_server.attributes.state)
+            return this.$help.serverStateIcon(this.currentServer.attributes.state)
         },
         serverHealthy: function() {
             switch (this.stateIconFrame) {
@@ -172,8 +176,8 @@ export default {
                     return 'Warning'
             }
         },
-        serverState: function() {
-            let currentState = this.current_server.attributes.state.toLowerCase()
+        stateMode: function() {
+            let currentState = this.currentServer.attributes.state.toLowerCase()
             if (currentState.indexOf(',') > 0) {
                 currentState = currentState.slice(0, currentState.indexOf(','))
             }
@@ -182,41 +186,35 @@ export default {
     },
     methods: {
         ...mapActions('server', ['destroyServer', 'setOrClearServerState']),
-        handleClick(mode) {
-            switch (mode) {
+        handleClick(type) {
+            this.dialogType = type
+            this.dialogTitle = `${this.$t(type)} ${this.$tc('servers', 1)}`
+            switch (type) {
                 case 'delete':
                     {
-                        this.mode = 'delete'
-                        this.dialogType = 'delete'
-                        this.dialogTitle = `${this.$t('delete')} ${this.$tc('servers', 1)}`
+                        this.type = 'delete'
                         this.smallInfo = ''
                     }
                     break
                 case 'drain':
                     {
-                        this.mode = 'set'
-                        this.dialogType = 'drain'
-                        this.state = 'drain'
-                        this.dialogTitle = `${this.$t('drain')} ${this.$tc('servers', 1)}`
+                        this.type = 'set'
+                        this.currentStateMode = 'drain'
                         this.smallInfo = this.$t(`info.serverDrain`)
                     }
                     break
                 case 'clear':
                     {
-                        this.mode = 'clear'
-                        let currentState = this.serverState
-                        this.state = currentState === 'drained' ? 'drain' : currentState
-                        this.dialogType = 'clear'
-                        this.dialogTitle = `${this.$t('clear')} ${this.$tc('servers', 1)}`
+                        this.type = 'clear'
+                        this.currentStateMode =
+                            this.stateMode === 'drained' ? 'drain' : this.stateMode
                         this.smallInfo = ''
                     }
                     break
-                case 'maintenance':
+                case 'maintain':
                     {
-                        this.mode = 'set'
-                        this.state = 'maintenance'
-                        this.dialogType = 'maintain'
-                        this.dialogTitle = `${this.$t('maintain')} ${this.$tc('servers', 1)}`
+                        this.type = 'set'
+                        this.currentStateMode = 'maintenance'
                         this.smallInfo = this.$t(`info.serverMaintenance`)
                     }
                     break
@@ -226,9 +224,9 @@ export default {
         },
 
         async confirmSave() {
-            switch (this.mode) {
+            switch (this.type) {
                 case 'delete':
-                    await this.destroyServer(this.current_server.id)
+                    await this.destroyServer(this.currentServer.id)
                     this.showConfirmDialog = false
                     this.$router.go(-1)
                     break
@@ -241,9 +239,9 @@ export default {
         async performAsyncLoadingAction() {
             this.showConfirmDialog = false
             let payload = {
-                id: this.current_server.id,
-                state: this.state,
-                mode: this.mode,
+                id: this.currentServer.id,
+                stateMode: this.currentStateMode,
+                type: this.type,
                 callback: this.onEditSucceeded,
             }
             if (this.forceClosing) {

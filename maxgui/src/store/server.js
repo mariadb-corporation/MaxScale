@@ -215,29 +215,29 @@ export default {
         /**
          * @param {Object} param - An object.
          * @param {String} param.id id of the server
-         * @param {String} param.state state of the server maintenance or drain)
-         * @param {String} param.mode mode set or clear
+         * @param {String} param.stateMode state mode of the server: maintenance or drain
+         * @param {String} param.type type set or clear
          * @param {Function} param.callback callback function after successfully updated
          * @param {Boolean} param.forceClosing force all connections to the server to be closed immediately. Only works
          * for maintenance mode
          */
-        async setOrClearServerState({ commit }, { id, state, mode, callback, forceClosing }) {
+        async setOrClearServerState({ commit }, { id, stateMode, type, callback, forceClosing }) {
             try {
                 let res, message
 
-                switch (mode) {
+                switch (type) {
                     case 'set':
                         {
-                            let url = `/servers/${id}/set?state=${state}`
-                            if (state === 'maintenance' && forceClosing)
+                            let url = `/servers/${id}/set?state=${stateMode}`
+                            if (stateMode === 'maintenance' && forceClosing)
                                 url = url.concat('&force=yes')
                             res = await this.vue.$axios.put(url)
-                            message = [`Server ${id} is set to ${state}`]
+                            message = [`Server ${id} is set to ${stateMode}`]
                         }
                         break
                     case 'clear':
-                        res = await this.vue.$axios.put(`/servers/${id}/clear?state=${state}`)
-                        message = [`State ${state} of server ${id} is cleared`]
+                        res = await this.vue.$axios.put(`/servers/${id}/clear?state=${stateMode}`)
+                        message = [`State ${stateMode} of server ${id} is cleared`]
                         break
                 }
                 // response ok
