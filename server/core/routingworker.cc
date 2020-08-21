@@ -99,8 +99,9 @@ thread_local struct this_thread
 bool can_close_dcb(mxs::BackendConnection* b)
 {
     mxb_assert(b->dcb()->role() == DCB::Role::BACKEND);
+    const int SHOW_SHUTDOWN_TIMEOUT = 2;
     auto idle = MXS_CLOCK_TO_SEC(mxs_clock() - b->dcb()->last_read());
-    return idle > 5 || b->can_close();
+    return idle > SHOW_SHUTDOWN_TIMEOUT || b->can_close();
 }
 }
 

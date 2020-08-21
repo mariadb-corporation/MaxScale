@@ -182,7 +182,6 @@ private:
     bool        m_large_query = false;
     bool        m_changing_user {false};
     mxs::Reply  m_reply;
-    bool        m_send_com_quit = true;
 
     mxs::Component* m_upstream {nullptr};       /**< Upstream component, typically a router */
     MXS_SESSION*    m_session {nullptr};        /**< Generic session */

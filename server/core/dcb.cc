@@ -555,7 +555,7 @@ int DCB::log_errors_SSL(int ret)
     unsigned long ssl_errno;
 
     ssl_errno = ERR_get_error();
-    if (0 == ssl_errno)
+    if (0 == ssl_errno || m_silence_errors)
     {
         return 0;
     }
@@ -932,7 +932,7 @@ int DCB::socket_write(GWBUF* writeq, bool* stop_writing)
     if (written < 0)
     {
         *stop_writing = true;
-        if (saved_errno != EAGAIN && saved_errno != EWOULDBLOCK && saved_errno != EPIPE)
+        if (saved_errno != EAGAIN && saved_errno != EWOULDBLOCK && saved_errno != EPIPE && !m_silence_errors)
         {
             MXS_ERROR("Write to %s %s in state %s failed: %d, %s",
                       mxs::to_string(m_role),

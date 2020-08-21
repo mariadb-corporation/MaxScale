@@ -580,6 +580,11 @@ public:
         }
     }
 
+    void silence_errors()
+    {
+        m_silence_errors = true;
+    }
+
 protected:
     DCB(int fd,
         const std::string& remote,
@@ -650,6 +655,7 @@ protected:
     uint32_t m_nClose = 0;                          /**< How many times dcb_close has been called. */
     bool     m_hanged_up = false;                   /**< Has thethis can be called only once */
     bool     m_is_fake_event = false;
+    bool     m_silence_errors = false;
 private:
     friend class Manager;
 
