@@ -15,7 +15,12 @@ import mount from '@tests/unit/setup'
 import PageHeader from '@/pages/MonitorDetail/PageHeader'
 import sinon from 'sinon'
 import sinonChai from 'sinon-chai'
-import { dummy_all_monitors, triggerBtnClick, openConfirmDialog } from '@tests/unit/utils'
+import {
+    dummy_all_monitors,
+    triggerBtnClick,
+    openConfirmDialog,
+    assertSendingRequest,
+} from '@tests/unit/utils'
 
 chai.should()
 chai.use(sinonChai)
@@ -29,6 +34,8 @@ const computedFactory = (computed = {}) =>
         },
         computed,
     })
+
+const ALL_BTN_CLASS_PREFIXES = ['stop', 'start', 'delete']
 
 describe('MonitorDetail - PageHeader', () => {
     let wrapper, axiosDeleteStub, axiosPutStub
@@ -78,92 +85,75 @@ describe('MonitorDetail - PageHeader', () => {
         expect(onCancel).to.be.equals(wrapper.vm.handleClose)
     })
 
-    it(`Should open confirm-dialog when delete button is clicked`, async () => {
-        await openConfirmDialog({
-            wrapper,
-            cssSelector: '.delete-btn',
-        })
-        expect(wrapper.vm.showConfirmDialog).to.be.true
-    })
-
-    it(`Should disable stop button if current monitor state === Stopped`, async () => {
-        wrapper = computedFactory({
-            getState: () => 'Stopped',
-        })
-        await triggerBtnClick(wrapper, '.gear-btn')
-        const stopBtn = wrapper.find('.stop-btn')
-        expect(stopBtn.attributes().disabled).to.be.equals('disabled')
-    })
-
-    it(`Should disable start button if current monitor state === Running`, async () => {
-        wrapper = computedFactory({
-            getState: () => 'Running',
-        })
-        await triggerBtnClick(wrapper, '.gear-btn')
-        const startBtn = wrapper.find('.start-btn')
-        expect(startBtn.attributes().disabled).to.be.equals('disabled')
-    })
-
-    it(`Should open confirm-dialog when stop button is clicked`, async () => {
-        await openConfirmDialog({
-            wrapper,
-            cssSelector: '.stop-btn',
-        })
-        expect(wrapper.vm.showConfirmDialog).to.be.true
-    })
-
-    it(`Should open confirm-dialog when start button is clicked`, async () => {
-        wrapper = computedFactory({
-            getState: () => 'Stopped',
-        })
-        await openConfirmDialog({
-            wrapper,
-            cssSelector: '.start-btn',
-        })
-
-        expect(wrapper.vm.showConfirmDialog).to.be.true
-    })
-
-    it(`Should send DELETE request after confirming delete`, async () => {
-        await openConfirmDialog({
-            wrapper,
-            cssSelector: '.delete-btn',
-        })
-        const confirmDialog = wrapper.findComponent({
-            name: 'confirm-dialog',
-        })
-        await triggerBtnClick(confirmDialog, '.save')
-
-        await axiosDeleteStub.should.have.been.calledWith(
-            `/monitors/${dummy_all_monitors[0].id}?force=yes`
+    describe('confirm-dialog opening test assertions', () => {
+        const dummyState = ['Running', 'Stopped', 'Running']
+        ALL_BTN_CLASS_PREFIXES.forEach((prefix, i) =>
+            it(`Should open confirm-dialog when ${prefix} button is clicked`, async () => {
+                // getState stub
+                wrapper = computedFactory({
+                    getState: () => dummyState[i],
+                })
+                await openConfirmDialog({
+                    wrapper,
+                    cssSelector: `.${prefix}-btn`,
+                })
+                expect(wrapper.vm.showConfirmDialog).to.be.true
+            })
         )
     })
 
-    it(`Should send PUT request after confirming stopping a monitor`, async () => {
-        await openConfirmDialog({
-            wrapper,
-            cssSelector: '.stop-btn',
+    describe('button disable test assertions', async () => {
+        const dummyState = ['Stopped', 'Running']
+        const btnClassPrefixes = ['stop', 'start']
+        btnClassPrefixes.forEach((prefix, i) => {
+            let des = `Should disable ${prefix} btn when state is: ${dummyState[i]}`
+            it(des, async () => {
+                // getState stub
+                wrapper = computedFactory({
+                    getState: () => dummyState[i],
+                })
+                await triggerBtnClick(wrapper, '.gear-btn')
+                const btn = wrapper.find(`.${prefix}-btn`)
+                expect(btn.attributes().disabled).to.be.equals('disabled')
+            })
         })
-        const confirmDialog = wrapper.findComponent({
-            name: 'confirm-dialog',
-        })
-        await triggerBtnClick(confirmDialog, '.save')
-        await axiosPutStub.should.have.been.calledWith(`/monitors/${dummy_all_monitors[0].id}/stop`)
     })
 
-    it(`Should send PUT request after confirming starting a monitor`, async () => {
-        wrapper = computedFactory({
-            getState: () => 'Stopped',
-        })
+    describe('Monitor state update and monitor deletion test assertions', async () => {
+        // dummy states that btn can be clicked
+        const dummyState = ['Running', 'Stopped', 'Running']
+        ALL_BTN_CLASS_PREFIXES.forEach((prefix, i) => {
+            // getState stub
+            const wrapper = computedFactory({
+                getState: () => dummyState[i],
+            })
+            const cssSelector = `.${prefix}-btn`
+            const id = dummy_all_monitors[0].id
+            let httpMethod = 'PUT'
 
-        await openConfirmDialog({
-            wrapper,
-            cssSelector: '.start-btn',
+            if (prefix === 'delete') httpMethod = 'DELETE'
+            const des = `Should send ${httpMethod} request after confirming ${prefix} a monitor`
+            it(des, async () => {
+                switch (prefix) {
+                    case 'stop':
+                    case 'start':
+                        await assertSendingRequest({
+                            wrapper,
+                            cssSelector,
+                            axiosStub: axiosPutStub,
+                            axiosStubCalledWith: `/monitors/${id}/${prefix}`,
+                        })
+                        break
+                    case 'delete':
+                        await assertSendingRequest({
+                            wrapper,
+                            cssSelector,
+                            axiosStub: axiosDeleteStub,
+                            axiosStubCalledWith: `/monitors/${id}?force=yes`,
+                        })
+                        break
+                }
+            })
         })
-        const confirmDialog = wrapper.findComponent({ name: 'confirm-dialog' })
-        await triggerBtnClick(confirmDialog, '.save')
-        await axiosPutStub.should.have.been.calledWith(
-            `/monitors/${dummy_all_monitors[0].id}/start`
-        )
     })
 })
