@@ -53,12 +53,12 @@ describe('FilterDetail - PageHeader', () => {
     })
 
     it(`Should open confirm-dialog when delete button is clicked`, async () => {
-        await openConfirmDialog(wrapper, '.delete-btn')
+        await openConfirmDialog({ wrapper, cssSelector: '.delete-btn' })
         expect(wrapper.vm.showConfirmDialog).to.be.true
     })
 
     it(`Should send delete request after confirming delete`, async () => {
-        await openConfirmDialog(wrapper, '.delete-btn')
+        await openConfirmDialog({ wrapper, cssSelector: '.delete-btn' })
         const confirmDialog = wrapper.findComponent({ name: 'confirm-dialog' })
         await triggerBtnClick(confirmDialog, '.save')
 

@@ -19,7 +19,7 @@ import sinonChai from 'sinon-chai'
 import {
     getAllMonitorsMapStub,
     findAnchorLinkInTable,
-    getUniqueResourceNames,
+    getUniqueResourceNamesStub,
 } from '@tests/unit/utils'
 
 chai.should()
@@ -191,7 +191,7 @@ describe('Dashboard Servers tab', () => {
     })
 
     it(`Should get total number of unique service names accurately`, async () => {
-        const uniqueServiceNames = getUniqueResourceNames(expectedTableRows, 'serviceIds')
+        const uniqueServiceNames = getUniqueResourceNamesStub(expectedTableRows, 'serviceIds')
         expect(wrapper.vm.$data.servicesLength).to.be.equals(uniqueServiceNames.length)
     })
 })

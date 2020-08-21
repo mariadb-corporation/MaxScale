@@ -177,11 +177,9 @@ void MariaDBBackendConnection::finish_connection()
 {
     mxb_assert(m_dcb->handler());
 
-    if (m_send_com_quit && m_state == State::ROUTING)
-    {
-        /** Send COM_QUIT to the backend being closed */
-        m_dcb->writeq_append(mysql_create_com_quit(nullptr, 0));
-    }
+    // Always send a COM_QUIT to the backend being closed. This causes the connection to be closed faster.
+    m_dcb->silence_errors();
+    m_dcb->writeq_append(mysql_create_com_quit(nullptr, 0));
 }
 
 bool MariaDBBackendConnection::reuse_connection(BackendDCB* dcb, mxs::Component* upstream)
@@ -960,11 +958,6 @@ int32_t MariaDBBackendConnection::write(GWBUF* queue)
             }
             else
             {
-                if (cmd == MXS_COM_QUIT)
-                {
-                    m_send_com_quit = false;
-                }
-
                 if (gwbuf_is_ignorable(queue))
                 {
                     /** The response to this command should be ignored */

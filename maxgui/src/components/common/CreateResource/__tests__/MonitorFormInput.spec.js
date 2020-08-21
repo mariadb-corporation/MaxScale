@@ -17,11 +17,11 @@ import {
     itemSelectMock,
     inputChangeMock,
     dummy_all_servers,
-    dummyServersList,
+    getUnMonitoredServersStub,
 } from '@tests/unit/utils'
 import MonitorFormInput from '@CreateResource/MonitorFormInput'
 
-const mockupResourceModules = [
+const dummyResourceModules = [
     {
         attributes: {
             module_type: 'Monitor',
@@ -56,14 +56,16 @@ describe('MonitorFormInput.vue', () => {
             shallow: false,
             component: MonitorFormInput,
             props: {
-                resourceModules: mockupResourceModules,
+                resourceModules: dummyResourceModules,
                 allServers: dummy_all_servers,
             },
         })
     })
 
     it(`Should pass the following props and have ref to module-parameters`, () => {
-        const moduleParameters = wrapper.findComponent({ name: 'module-parameters' })
+        const moduleParameters = wrapper.findComponent({
+            name: 'module-parameters',
+        })
         const { moduleName, modules } = moduleParameters.vm.$props
         // props
         expect(moduleName).to.be.equals('module')
@@ -73,7 +75,9 @@ describe('MonitorFormInput.vue', () => {
     })
 
     it(`Should pass the following props and have ref to resource-relationships`, () => {
-        const resourceRelationships = wrapper.findComponent({ name: 'resource-relationships' })
+        const resourceRelationships = wrapper.findComponent({
+            name: 'resource-relationships',
+        })
         // props
         const { relationshipsType, items, defaultItems } = resourceRelationships.vm.$props
         expect(relationshipsType).to.be.equals('servers')
@@ -83,18 +87,18 @@ describe('MonitorFormInput.vue', () => {
         expect(wrapper.vm.$refs.serversRelationship).to.be.not.null
     })
 
-    it(`Should compute serversList from allServers accurately`, async () => {
-        expect(wrapper.vm.serversList).to.be.deep.equals(dummyServersList)
+    it(`Should get only server that are not monitored`, async () => {
+        expect(wrapper.vm.serversList).to.be.deep.equals(getUnMonitoredServersStub())
     })
 
     it(`Should return an object with parameters and relationships objects
       when getValues method get called`, async () => {
         // mockup select a monitor module
         const moduleParameters = wrapper.findComponent({ name: 'module-parameters' })
-        await itemSelectMock(moduleParameters, mockupResourceModules[0])
+        await itemSelectMock(moduleParameters, dummyResourceModules[0])
 
         // get a monitor parameter to mockup value changes
-        const monitorParameter = mockupResourceModules[0].attributes.parameters[1]
+        const monitorParameter = dummyResourceModules[0].attributes.parameters[1]
         const parameterCell = wrapper.find(`.cell-${1}-${monitorParameter.name}`)
         const newValue = 'new value'
         await inputChangeMock(parameterCell, newValue)
@@ -105,10 +109,10 @@ describe('MonitorFormInput.vue', () => {
         await itemSelectMock(resourceRelationships, serversList[0])
 
         const expectedValue = {
-            moduleId: mockupResourceModules[0].id,
+            moduleId: dummyResourceModules[0].id,
             parameters: { [monitorParameter.name]: newValue },
             relationships: {
-                servers: { data: [dummyServersList[0]] },
+                servers: { data: [getUnMonitoredServersStub()[0]] },
             },
         }
         expect(wrapper.vm.getValues()).to.be.deep.equals(expectedValue)

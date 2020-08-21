@@ -174,15 +174,15 @@ static cfg::ParamPath s_ssl_cert(&s_spec, CN_SSL_CERT, "TLS public certificate",
 static cfg::ParamPath s_ssl_key(&s_spec, CN_SSL_KEY, "TLS private key", cfg::ParamPath::R, "");
 static cfg::ParamPath s_ssl_ca(&s_spec, CN_SSL_CA_CERT, "TLS certificate authority", cfg::ParamPath::R, "");
 
-static cfg::ParamEnum<ssl_method_type_t> s_ssl_version(
+static cfg::ParamEnum<mxb::ssl_version::Version> s_ssl_version(
     &s_spec, CN_SSL_VERSION, "Minimum TLS protocol version",
     {
-        {SERVICE_SSL_TLS_MAX, "MAX"},
-        {SERVICE_TLS10, "TLSv10"},
-        {SERVICE_TLS11, "TLSv11"},
-        {SERVICE_TLS12, "TLSv12"},
-        {SERVICE_TLS13, "TLSv13"}
-    }, SERVICE_SSL_TLS_MAX);
+        {mxb::ssl_version::SSL_TLS_MAX, "MAX"},
+        {mxb::ssl_version::TLS10, "TLSv10"},
+        {mxb::ssl_version::TLS11, "TLSv11"},
+        {mxb::ssl_version::TLS12, "TLSv12"},
+        {mxb::ssl_version::TLS13, "TLSv13"}
+    }, mxb::ssl_version::SSL_TLS_MAX);
 
 static cfg::ParamString s_ssl_cipher(&s_spec, CN_SSL_CIPHER, "TLS cipher list", "", NO_QUOTES);
 

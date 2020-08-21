@@ -55,7 +55,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-/* 
+/*
 This component emits two events:
 @get-selected-items always return Array regardless multiple props is true or false
 @is-equal: value = boolean
@@ -67,7 +67,7 @@ export default {
         items: { type: Array, required: true },
         multiple: { type: Boolean, default: false },
         required: { type: Boolean, default: false },
-        defaultItems: { type: [Array, Object] },
+        defaultItems: { type: [Array, Object], default: () => [] },
         showPlaceHolder: { type: Boolean, default: true },
     },
     data() {
@@ -92,6 +92,7 @@ export default {
     watch: {
         defaultItems: function(val) {
             this.selectedItems = val
+            this.onChange(val)
         },
     },
 
@@ -103,7 +104,7 @@ export default {
             if (val && !this.multiple) value = [val]
             // val is undefined when items are cleared by clearable props in v-select
             else if (val === undefined) value = []
-            return this.$emit('get-selected-items', value)
+            this.$emit('get-selected-items', value)
         },
         handleRequiredField(val) {
             if ((val === undefined || val.length === 0) && this.required) {

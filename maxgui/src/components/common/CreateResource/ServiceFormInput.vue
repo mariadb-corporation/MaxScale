@@ -5,13 +5,13 @@
             ref="serversRelationship"
             relationshipsType="servers"
             :items="serversList"
-            :defaultItems="defaultItems"
+            :defaultItems="defaultServerItems"
         />
         <resource-relationships
             ref="filtersRelationship"
             relationshipsType="filters"
             :items="filtersList"
-            :defaultItems="defaultItems"
+            :defaultItems="defaultFilterItems"
         />
     </div>
 </template>
@@ -43,15 +43,30 @@ export default {
         resourceModules: { type: Array, required: true },
         allServers: { type: Array, required: true },
         allFilters: { type: Array, required: true },
-        defaultItems: { type: [Array, Object], required: true },
+        defaultItems: { type: [Array, Object], default: () => [] },
     },
-
+    data() {
+        return {
+            defaultServerItems: [],
+            defaultFilterItems: [],
+        }
+    },
     computed: {
         serversList: function() {
             return this.allServers.map(({ id, type }) => ({ id, type }))
         },
         filtersList: function() {
             return this.allFilters.map(({ id, type }) => ({ id, type }))
+        },
+        isServerDefaultItems: function() {
+            const isValidArr = this.$help.isNotEmptyArray(this.defaultItems)
+            return isValidArr && this.defaultItems[0].type === 'servers'
+        },
+    },
+    watch: {
+        defaultItems: function() {
+            if (this.isServerDefaultItems) this.defaultServerItems = this.defaultItems
+            else this.defaultFilterItems = this.defaultItems
         },
     },
     methods: {

@@ -54,29 +54,17 @@ async function mockupResourceSelect(wrapper, resourceType) {
  */
 async function testCloseModal(wrapper, buttonClass) {
     await mockupResourceSelect(wrapper, 'Server')
-    let count = 0
-    await wrapper.setProps({
-        closeModal: async () => {
-            count++
-            await wrapper.setProps({ value: false })
-        },
-    })
     await wrapper.setData({
         resourceId: 'test-server',
     })
-    await wrapper.vm.$nextTick()
-    await wrapper.find(`.${buttonClass}`).trigger('click')
+    const btn = wrapper.find(`.${buttonClass}`)
+    await btn.trigger('click')
+    await wrapper.setProps({ value: false })
     expect(wrapper.vm.computeShowDialog).to.be.false
-    expect(count).to.be.equals(1)
 }
 
 describe('Forms.vue', () => {
     let wrapper, axiosStub, axiosPostStub
-
-    after(async () => {
-        await axiosStub.reset()
-        await axiosPostStub.reset()
-    })
 
     beforeEach(async () => {
         localStorage.clear()
@@ -86,6 +74,7 @@ describe('Forms.vue', () => {
             component: Forms,
             props: {
                 value: false, // control visibility of the dialog
+                closeModal: () => null,
             },
             computed: {
                 all_modules_map: () => all_modules_map_stub,
@@ -214,16 +203,16 @@ describe('Forms.vue', () => {
 
     it(`Should call closeModal function props to close form dialog
       when "save" button is clicked`, async () => {
-        testCloseModal(wrapper, 'save')
+        await testCloseModal(wrapper, 'save')
     })
 
     it(`Should call closeModal function props to close form dialog
       when "close" button is clicked`, async () => {
-        testCloseModal(wrapper, 'close')
+        await testCloseModal(wrapper, 'close')
     })
 
     it(`Should call closeModal function props to close form dialog
       when "cancel" button is clicked`, async () => {
-        testCloseModal(wrapper, 'cancel')
+        await testCloseModal(wrapper, 'cancel')
     })
 })

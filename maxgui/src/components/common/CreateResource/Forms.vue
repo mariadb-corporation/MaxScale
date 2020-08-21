@@ -101,7 +101,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapActions, mapGetters, mapState } from 'vuex'
+import { mapActions, mapGetters, mapState, mapMutations } from 'vuex'
 import ServiceFormInput from './ServiceFormInput'
 import MonitorFormInput from './MonitorFormInput'
 import FilterFormInput from './FilterFormInput'
@@ -118,8 +118,8 @@ export default {
         ServerFormInput,
     },
     props: {
-        value: Boolean,
-        closeModal: Function,
+        value: { type: Boolean, required: true },
+        closeModal: { type: Function, required: true },
     },
     data: function() {
         return {
@@ -147,7 +147,7 @@ export default {
                 'filter',
                 'filters',
             ],
-            defaultRelationshipItems: {},
+            defaultRelationshipItems: null,
         }
     },
 
@@ -205,6 +205,7 @@ export default {
     },
 
     methods: {
+        ...mapMutations(['SET_REFRESH_RESOURCE']),
         ...mapActions({
             createService: 'service/createService',
             createMonitor: 'monitor/createMonitor',
@@ -343,7 +344,7 @@ export default {
             return allResourceModules
         },
 
-        handleSave() {
+        async handleSave() {
             switch (this.selectedForm) {
                 case 'Service':
                     {
@@ -359,7 +360,7 @@ export default {
                             relationships: relationships,
                             callback: this.fetchAllServices,
                         }
-                        this.createService(payload)
+                        await this.createService(payload)
                     }
                     break
                 case 'Monitor':
@@ -376,7 +377,7 @@ export default {
                             relationships: relationships,
                             callback: this.fetchAllMonitors,
                         }
-                        this.createMonitor(payload)
+                        await this.createMonitor(payload)
                     }
                     break
                 case 'Filter':
@@ -388,7 +389,7 @@ export default {
                             parameters: parameters,
                             callback: this.fetchAllFilters,
                         }
-                        this.createFilter(payload)
+                        await this.createFilter(payload)
                     }
                     break
                 case 'Listener':
@@ -400,7 +401,7 @@ export default {
                             relationships: relationships,
                             callback: this.fetchAllListeners,
                         }
-                        this.createListener(payload)
+                        await this.createListener(payload)
                     }
                     break
                 case 'Server':
@@ -412,11 +413,16 @@ export default {
                             relationships: relationships,
                             callback: this.fetchAllServers,
                         }
-                        this.createServer(payload)
+                        await this.createServer(payload)
                     }
                     break
             }
             this.closeModal()
+            this.shouldReload()
+        },
+
+        shouldReload() {
+            if (this.defaultRelationshipItems) this.SET_REFRESH_RESOURCE(true)
         },
 
         validateResourceId(val) {

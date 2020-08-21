@@ -46,7 +46,7 @@ export default {
         items: { type: Array, required: true },
         multiple: { type: Boolean, default: true },
         required: { type: Boolean, default: false },
-        defaultItems: { type: [Array, Object], required: true },
+        defaultItems: { type: [Array, Object], default: () => [] },
     },
 
     data: function() {

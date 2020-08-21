@@ -13,11 +13,7 @@
                         :moduleParameters="processedModuleParameters"
                         :updateResourceParameters="updateMonitorParameters"
                         :onEditSucceeded="fetchMonitor"
-                        :loading="
-                            loadingModuleParams
-                                ? true
-                                : overlay_type === OVERLAY_TRANSPARENT_LOADING
-                        "
+                        :loading="isLoading"
                     />
                 </v-col>
                 <v-col cols="6">
@@ -25,7 +21,8 @@
                         relationshipType="servers"
                         :tableRows="serverStateTableRow"
                         :loading="overlay_type === OVERLAY_TRANSPARENT_LOADING"
-                        :getRelationshipData="getRelationshipData"
+                        :getRelationshipData="fetchAllServers"
+                        :selectItems="unmonitoredServers"
                         @on-relationship-update="dispatchRelationshipUpdate"
                     />
                 </v-col>
@@ -48,7 +45,7 @@
  * Public License.
  */
 import { OVERLAY_TRANSPARENT_LOADING } from 'store/overlayTypes'
-import { mapActions, mapState } from 'vuex'
+import { mapActions, mapState, mapMutations } from 'vuex'
 import PageHeader from './PageHeader'
 import OverviewHeader from './OverviewHeader'
 
@@ -63,34 +60,70 @@ export default {
             serverStateTableRow: [],
             processedModuleParameters: [],
             loadingModuleParams: true,
+            unmonitoredServers: [],
         }
     },
     computed: {
         ...mapState({
+            should_refresh_resource: 'should_refresh_resource',
             overlay_type: 'overlay_type',
             search_keyword: 'search_keyword',
             module_parameters: 'module_parameters',
             current_monitor: state => state.monitor.current_monitor,
+            all_servers: state => state.server.all_servers,
         }),
+        isLoading: function() {
+            return this.loadingModuleParams
+                ? true
+                : this.overlay_type === OVERLAY_TRANSPARENT_LOADING
+        },
+    },
+    watch: {
+        all_servers: function() {
+            let availableEntities = []
+            this.all_servers.forEach(server => {
+                if (this.$help.lodash.isEmpty(server.relationships.monitors))
+                    availableEntities.push({
+                        id: server.id,
+                        state: server.attributes.state,
+                        type: server.type,
+                    })
+            })
+            this.unmonitoredServers = availableEntities
+        },
+        should_refresh_resource: async function(val) {
+            if (val) {
+                this.SET_REFRESH_RESOURCE(false)
+                await this.initialFetch()
+            }
+        },
     },
 
     async created() {
-        await this.fetchMonitor()
-        await this.serverTableRowProcessing()
-        const { attributes: { module: moduleName = null } = {} } = this.current_monitor
-        if (moduleName) await this.fetchModuleParameters(moduleName)
-        this.loadingModuleParams = true
-        await this.processModuleParameters()
+        await this.initialFetch()
     },
 
     methods: {
+        ...mapMutations({
+            SET_REFRESH_RESOURCE: 'SET_REFRESH_RESOURCE',
+        }),
         ...mapActions({
             fetchModuleParameters: 'fetchModuleParameters',
             getResourceState: 'getResourceState',
             fetchMonitorById: 'monitor/fetchMonitorById',
             updateMonitorParameters: 'monitor/updateMonitorParameters',
             updateMonitorRelationship: 'monitor/updateMonitorRelationship',
+            fetchAllServers: 'server/fetchAllServers',
         }),
+
+        async initialFetch() {
+            await this.fetchMonitor()
+            const { attributes: { module: moduleName = null } = {} } = this.current_monitor
+            if (moduleName) await this.fetchModuleParameters(moduleName)
+            this.loadingModuleParams = true
+            await this.processModuleParameters()
+            await this.serverTableRowProcessing()
+        },
 
         async processModuleParameters() {
             if (this.module_parameters.length) {
@@ -108,38 +141,18 @@ export default {
                 relationships: { servers: { data: serversData = [] } = {} } = {},
             } = this.current_monitor
 
-            if (serversData.length) {
-                let serversIdArr = serversData.map(item => `${item.id}`)
-                let arr = []
-                for (let i = 0; i < serversIdArr.length; ++i) {
-                    let data = await this.getRelationshipData('servers', serversIdArr[i])
-                    const {
-                        id,
-                        type,
-                        attributes: { state },
-                    } = data
-                    arr.push({ id: id, state: state, type: type })
-                }
-                this.serverStateTableRow = arr
-            } else {
-                this.serverStateTableRow = []
-            }
-        },
+            let arr = []
+            serversData.forEach(async server => {
+                const data = await this.getResourceState({
+                    resourceId: server.id,
+                    resourceType: 'servers',
+                    caller: 'monitor-detail-page-getRelationshipData',
+                })
 
-        /**
-         * This function fetch all resource state if id is not provided
-         * otherwise it fetch a resource state.
-         * @param {String} type type of resource: servers
-         * @param {String} id name of the resource (optional)
-         * @return {Array} Resource state data
-         */
-        async getRelationshipData(type, id) {
-            let data = await this.getResourceState({
-                resourceId: id,
-                resourceType: type,
-                caller: 'monitor-detail-page-getRelationshipData',
+                const { id, type, attributes: { state = null } = {} } = data
+                arr.push({ id: id, state: state, type: type })
             })
-            return data
+            this.serverStateTableRow = arr
         },
 
         // actions to vuex

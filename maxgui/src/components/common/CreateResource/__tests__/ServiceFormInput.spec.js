@@ -17,9 +17,8 @@ import {
     itemSelectMock,
     inputChangeMock,
     dummy_all_servers,
-    dummyServersList,
     dummy_all_filters,
-    dummyFiltersList,
+    getFilterListStub,
 } from '@tests/unit/utils'
 import ServiceFormInput from '@CreateResource/ServiceFormInput'
 
@@ -43,6 +42,8 @@ const mockupResourceModules = [
         id: 'readwritesplit',
     },
 ]
+
+const getServersListStub = () => dummy_all_servers.map(({ id, type }) => ({ id, type }))
 
 describe('ServiceFormInput.vue', () => {
     let wrapper
@@ -83,7 +84,7 @@ describe('ServiceFormInput.vue', () => {
         const { relationshipsType, items, defaultItems } = resourceRelationships.vm.$props
         expect(relationshipsType).to.be.equals('servers')
         expect(items).to.be.deep.equals(wrapper.vm.serversList)
-        expect(defaultItems).to.be.deep.equals(wrapper.vm.$props.defaultItems)
+        expect(defaultItems).to.be.deep.equals(wrapper.vm.$data.defaultServerItems)
         //ref
         expect(wrapper.vm.$refs.serversRelationship).to.be.not.null
     })
@@ -95,18 +96,18 @@ describe('ServiceFormInput.vue', () => {
         // props
         const { relationshipsType, items, defaultItems } = resourceRelationships.vm.$props
         expect(relationshipsType).to.be.equals('filters')
-        expect(defaultItems).to.be.deep.equals(wrapper.vm.$props.defaultItems)
+        expect(defaultItems).to.be.deep.equals(wrapper.vm.$data.defaultFilterItems)
         expect(items).to.be.deep.equals(wrapper.vm.filtersList)
         //ref
         expect(wrapper.vm.$refs.filtersRelationship).to.be.not.null
     })
 
     it(`Should compute serversList from allServers accurately`, async () => {
-        expect(wrapper.vm.serversList).to.be.deep.equals(dummyServersList)
+        expect(wrapper.vm.serversList).to.be.deep.equals(getServersListStub())
     })
 
     it(`Should compute filtersList from allFilters accurately`, async () => {
-        expect(wrapper.vm.filtersList).to.be.deep.equals(dummyFiltersList)
+        expect(wrapper.vm.filtersList).to.be.deep.equals(getFilterListStub)
     })
 
     it(`Should return an object with parameters and relationships objects
@@ -132,8 +133,8 @@ describe('ServiceFormInput.vue', () => {
             moduleId: mockupResourceModules[0].id,
             parameters: { [serviceParameter.name]: newValue },
             relationships: {
-                servers: { data: [dummyServersList[0]] },
-                filters: { data: [dummyFiltersList[0]] },
+                servers: { data: [getServersListStub()[0]] },
+                filters: { data: [getFilterListStub[0]] },
             },
         }
         expect(wrapper.vm.getValues()).to.be.deep.equals(expectedValue)

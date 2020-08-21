@@ -1,18 +1,21 @@
 <template>
     <v-sheet class="d-flex mb-2">
-        <template v-for="(value, name) in getTopOverviewInfo">
-            <outlined-overview-card :key="name" wrapperClass="mt-0" cardClass="px-10">
-                <template v-slot:card-body>
-                    <span class="caption text-uppercase font-weight-bold color text-deep-ocean">
-                        {{ name.replace('_', ' ') }}
-                    </span>
+        <outlined-overview-card
+            v-for="(value, name) in getTopOverviewInfo"
+            :key="name"
+            wrapperClass="mt-0"
+            cardClass="px-10"
+        >
+            <template v-slot:card-body>
+                <span class="caption text-uppercase font-weight-bold color text-deep-ocean">
+                    {{ name.replace('_', ' ') }}
+                </span>
 
-                    <span class="text-no-wrap body-2">
-                        {{ value }}
-                    </span>
-                </template>
-            </outlined-overview-card>
-        </template>
+                <span class="text-no-wrap body-2">
+                    {{ value }}
+                </span>
+            </template>
+        </outlined-overview-card>
     </v-sheet>
 </template>
 
