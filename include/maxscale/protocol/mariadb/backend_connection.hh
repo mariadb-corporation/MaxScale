@@ -68,6 +68,7 @@ private:
 
     enum class HandShakeState
     {
+        SEND_PROHY_HDR, /**< Send proxy protocol header */
         EXPECT_HS,      /**< Expecting initial server handshake */
         START_SSL,      /**< Send SSLRequest and start SSL */
         SSL_NEG,        /**< Negotiating SSL */
@@ -83,10 +84,10 @@ private:
         ERROR,      // The SM encountered an error. The connection should be closed.
     };
 
-    State          m_state {State::HANDSHAKING};            /**< Connection state */
-    HandShakeState m_hs_state {HandShakeState::EXPECT_HS};  /**< Handshake state */
-    SERVER&        m_server;                                /**< Connected backend server */
+    State          m_state {State::HANDSHAKING};                /**< Connection state */
+    HandShakeState m_hs_state {HandShakeState::SEND_PROHY_HDR}; /**< Handshake state */
 
+    SERVER&                  m_server;          /**< Connected backend server */
     mariadb::SBackendAuth    m_authenticator;   /**< Authentication plugin */
     mariadb::BackendAuthData m_auth_data;       /**< Data shared with auth plugin */
 
