@@ -79,7 +79,7 @@ int test_validity()
 
     /** String parameter */
     TEST(config_param_is_valid(params, "p4", "should be OK", &ctx));
-    TEST(!config_param_is_valid(params, "p4", "", &ctx));   // Empty string is not OK
+    TEST(config_param_is_valid(params, "p4", "", &ctx));    // Empty strings are also OK
 
     /** Enum parameter */
     TEST(config_param_is_valid(params, "p5", "a", &ctx));
