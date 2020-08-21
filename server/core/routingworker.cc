@@ -165,9 +165,10 @@ void modules_thread_finish()
 
 bool can_close_dcb(DCB* dcb)
 {
+    const int SHOW_SHUTDOWN_TIMEOUT = 2;
     auto idle = MXS_CLOCK_TO_SEC(mxs_clock() - dcb->last_read);
 
-    return idle > 5                     // Timed out
+    return idle > SHOW_SHUTDOWN_TIMEOUT // Timed out
            || !dcb->func.can_close      // Not implemented
            || dcb->func.can_close(dcb); // Protocol says it's OK to close
 }
