@@ -82,7 +82,6 @@ describe('MonitorDetail - PageHeader', () => {
         await openConfirmDialog({
             wrapper,
             cssSelector: '.delete-btn',
-            index: 1,
         })
         expect(wrapper.vm.showConfirmDialog).to.be.true
     })
@@ -109,7 +108,6 @@ describe('MonitorDetail - PageHeader', () => {
         await openConfirmDialog({
             wrapper,
             cssSelector: '.stop-btn',
-            index: 0,
         })
         expect(wrapper.vm.showConfirmDialog).to.be.true
     })
@@ -121,7 +119,6 @@ describe('MonitorDetail - PageHeader', () => {
         await openConfirmDialog({
             wrapper,
             cssSelector: '.start-btn',
-            index: 0,
         })
 
         expect(wrapper.vm.showConfirmDialog).to.be.true
@@ -131,7 +128,6 @@ describe('MonitorDetail - PageHeader', () => {
         await openConfirmDialog({
             wrapper,
             cssSelector: '.delete-btn',
-            index: 1,
         })
         const confirmDialog = wrapper.findComponent({
             name: 'confirm-dialog',
@@ -147,7 +143,6 @@ describe('MonitorDetail - PageHeader', () => {
         await openConfirmDialog({
             wrapper,
             cssSelector: '.stop-btn',
-            index: 0,
         })
         const confirmDialog = wrapper.findComponent({
             name: 'confirm-dialog',
@@ -164,7 +159,6 @@ describe('MonitorDetail - PageHeader', () => {
         await openConfirmDialog({
             wrapper,
             cssSelector: '.start-btn',
-            index: 0,
         })
         const confirmDialog = wrapper.findComponent({ name: 'confirm-dialog' })
         await triggerBtnClick(confirmDialog, '.save')
