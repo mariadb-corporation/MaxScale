@@ -135,6 +135,41 @@ export async function openConfirmDialog({ wrapper, cssSelector, index = 0 }) {
     await triggerBtnClick(detailsIconGroupWrapper, cssSelector)
 }
 
+/**
+ * This function tests if PATCH request is sent with accurate
+ * endpoint and payload data. Notice: mounted component must have
+ * dispatchRelationshipUpdate method
+ * @param {Object} payload.wrapper mounted component
+ * @param {Object} payload.currentResource target resource to be updated
+ * @param {Object} payload.axiosPatchStub axios stub to be tested
+ * @param {String} payload.relationshipType type of relationship being updated
+ */
+export async function testRelationshipUpdate({
+    wrapper,
+    currentResource,
+    axiosPatchStub,
+    relationshipType,
+}) {
+    const {
+        id: currentResourceId,
+        type: currentResourceType,
+        relationships: {
+            [relationshipType]: { data: currentData },
+        },
+    } = currentResource
+
+    const dataStub = [...currentData, { id: 'test', relationshipType }]
+
+    await wrapper.vm.dispatchRelationshipUpdate({ type: relationshipType, data: dataStub })
+
+    await axiosPatchStub.should.have.been.calledWith(
+        `/${currentResourceType}/${currentResourceId}/relationships/${relationshipType}`,
+        {
+            data: dataStub,
+        }
+    )
+}
+
 const dummy_all_modules = [
     {
         attributes: {

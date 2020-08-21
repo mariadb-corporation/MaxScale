@@ -160,22 +160,13 @@ export default {
             const {
                 relationships: { services: { data: servicesData = [] } = {} } = {},
             } = this.current_server
-            if (servicesData.length) {
-                let servicesIdArr = servicesData.map(item => `${item.id}`)
-                let arr = []
-                for (let i = 0; i < servicesIdArr.length; ++i) {
-                    let data = await this.getRelationshipData('services', servicesIdArr[i])
-                    const {
-                        id,
-                        type,
-                        attributes: { state },
-                    } = data
-                    arr.push({ id: id, state: state, type: type })
-                }
-                this.serviceTableRow = arr
-            } else {
-                this.serviceTableRow = []
-            }
+            let arr = []
+            servicesData.forEach(async service => {
+                const data = await this.getRelationshipData('services', service.id)
+                const { id, type, attributes: { state = null } = {} } = data
+                arr.push({ id, state, type })
+            })
+            this.serviceTableRow = arr
         },
 
         /**
@@ -198,7 +189,7 @@ export default {
         async dispatchRelationshipUpdate({ type, data }) {
             await this.updateServerRelationship({
                 id: this.current_server.id,
-                type: type,
+                type,
                 [type]: data,
                 callback: this.dispatchFetchServer,
             })
