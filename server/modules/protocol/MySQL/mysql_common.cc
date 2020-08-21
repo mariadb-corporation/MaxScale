@@ -64,7 +64,6 @@ MySQLProtocol* mysql_protocol_init(DCB* dcb, int fd)
     p->num_eof_packets = 0;
     p->large_query = false;
     p->track_state = false;
-    p->send_com_quit = true;
     /*< Assign fd with protocol */
     p->fd = fd;
     p->owner_dcb = dcb;

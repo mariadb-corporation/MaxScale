@@ -206,6 +206,11 @@ struct DCB : public MXB_POLL_DATA
     bool           high_water_reached = false;  /** High water mark reached, to determine whether we need to
                                                  * release
                                                  * throttle */
+
+    // Enable this to prevent write errors from being logged. Helps reduce false errors when writes to
+    // potentially closed DCBs are done.
+    bool silence_write_errors = false;
+
     struct
     {
         DCB* next = nullptr;        /**< Next DCB in owning thread's list */

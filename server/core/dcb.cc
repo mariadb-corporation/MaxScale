@@ -822,7 +822,7 @@ static int dcb_log_errors_SSL(DCB* dcb, int ret)
     unsigned long ssl_errno;
 
     ssl_errno = ERR_get_error();
-    if (0 == ssl_errno)
+    if (0 == ssl_errno || dcb->silence_write_errors)
     {
         return 0;
     }
@@ -1806,7 +1806,8 @@ static int gw_write(DCB* dcb, GWBUF* writeq, bool* stop_writing)
     if (written < 0)
     {
         *stop_writing = true;
-        if (saved_errno != EAGAIN && saved_errno != EWOULDBLOCK && saved_errno != EPIPE)
+        if (saved_errno != EAGAIN && saved_errno != EWOULDBLOCK && saved_errno != EPIPE
+            && !dcb->silence_write_errors)
         {
             MXS_ERROR("Write to %s %s in state %s failed: %d, %s",
                       dcb->type(),

@@ -1291,12 +1291,6 @@ static int gw_MySQLWrite_backend(DCB* dcb, GWBUF* queue)
             }
             else
             {
-
-                if (cmd == MXS_COM_QUIT)
-                {
-                    backend_protocol->send_com_quit = false;
-                }
-
                 if (GWBUF_IS_IGNORABLE(queue))
                 {
                     /** The response to this command should be ignored */
@@ -1409,11 +1403,9 @@ static int gw_backend_close(DCB* dcb)
     mxb_assert(dcb->session || dcb->persistentstart);
     MySQLProtocol* proto = (MySQLProtocol*)dcb->protocol;
 
-    if (proto->send_com_quit && proto->protocol_auth_state == MXS_AUTH_STATE_COMPLETE)
-    {
-        // Send a COM_QUIT to the backend being closed, we haven't routed one to it yet.
-        dcb_write(dcb, mysql_create_com_quit(NULL, 0));
-    }
+    // Always send a COM_QUIT to the backend being closed. This causes the connection to be closed faster.
+    dcb->silence_write_errors = true;
+    dcb_write(dcb, mysql_create_com_quit(NULL, 0));
 
     /** Free protocol data */
     mysql_protocol_done(dcb);

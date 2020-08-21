@@ -340,7 +340,6 @@ typedef struct
     bool                   collect_result;              /*< Collect the next result set as one buffer */
     bool                   changing_user;
     bool                   track_state;     /*< Track session state */
-    bool                   send_com_quit;
     uint32_t               num_eof_packets; /*< Encountered eof packet number, used for check
                                              * packet type */
     bool large_query;                       /*< Whether to ignore the command byte of the next
