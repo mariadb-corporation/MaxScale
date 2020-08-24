@@ -70,7 +70,7 @@ then
        -y --force-yes"
   ${apt_cmd} install dpkg-dev git wget \
        build-essential libssl-dev ncurses-dev bison flex \
-       perl libtool libpcre3-dev tcl tcl-dev uuid \
+       perl libtool tcl tcl-dev uuid \
        uuid-dev libsqlite3-dev liblzma-dev libpam0g-dev pkg-config \
        libedit-dev
 
@@ -113,7 +113,7 @@ then
          gcc gcc-c++ ncurses-devel bison glibc-devel \
          libgcc perl make libtool openssl-devel libaio libaio-devel libedit-devel \
          libedit-devel systemtap-sdt-devel rpm-sign wget \
-         gnupg pcre-devel flex rpmdevtools git wget tcl tcl-devel openssl libuuid-devel xz-devel \
+         gnupg flex rpmdevtools git wget tcl tcl-devel openssl libuuid-devel xz-devel \
          sqlite sqlite-devel pkgconfig lua lua-devel rpm-build createrepo yum-utils \
          gnutls-devel libgcrypt-devel pam-devel
 
@@ -150,7 +150,7 @@ then
     sudo zypper -n remove gettext-runtime-mini
     sudo zypper -n install gcc gcc-c++ ncurses-devel bison glibc-devel libgcc_s1 perl \
          make libtool libopenssl-devel libaio libaio-devel flex \
-         pcre-devel git wget tcl tcl-devel libuuid-devel \
+         git wget tcl tcl-devel libuuid-devel \
          xz-devel sqlite3 sqlite3-devel pkg-config lua lua-devel \
          gnutls-devel libgcrypt-devel pam-devel systemd-devel
     sudo zypper -n install rpm-build
@@ -162,25 +162,44 @@ then
     fi
 fi
 
+# Methods allow to compare software versions according to semantic versioning
+verlte() {
+    [  "$1" = "`echo -e "$1\n$2" | sort -V | head -n1`" ]
+}
+
+verlt() {
+    [ "$1" = "$2" ] && return 1 || verlte $1 $2
+}
+
 # cmake
-wget -q http://max-tst-01.mariadb.com/ci-repository/cmake-3.7.1-Linux-x86_64.tar.gz --no-check-certificate
-if [ $? != 0 ] ; then
-    echo "CMake can not be downloaded from Maxscale build server, trying from cmake.org"
-    wget -q https://cmake.org/files/v3.7/cmake-3.7.1-Linux-x86_64.tar.gz --no-check-certificate
+cmake_vrs_cmd="cmake --version"
+cmake_version_ok=0
+cmake_version_required="3.16.0"
+if command -v ${cmake_vrs_cmd} &> /dev/null ; then
+  cmake_version=`${cmake_vrs_cmd} | grep "cmake version" | awk '{ print $3 }'`
+  if verlt $cmake_version $cmake_version_required ; then
+    echo "Found CMake ${cmake_version}, which is too old."
+  else
+    cmake_version_ok=1
+    echo "Found CMake ${cmake_version}, which is recent enough."
+  fi
+else
+  echo "CMake not found"
 fi
-sudo tar xzf cmake-3.7.1-Linux-x86_64.tar.gz -C /usr/ --strip-components=1
 
-cmake_version=`cmake --version | grep "cmake version" | awk '{ print $3 }'`
-if [ "`echo -e "3.7.1\n$cmake_version"|sort -V|head -n 1`" != "3.7.1" ] ; then
-    echo "cmake does not work! Trying to build from source"
-    wget -q https://cmake.org/files/v3.7/cmake-3.7.1.tar.gz --no-check-certificate
-    tar xzf cmake-3.7.1.tar.gz
-    cd cmake-3.7.1
-
-    ./bootstrap
-    gmake
-    sudo make install
-    cd ..
+cmake_filename="cmake-3.16.8-Linux-x86_64.tar.gz"
+if [ $cmake_version_ok -eq 0 ] ; then
+  wget -q http://max-tst-01.mariadb.com/ci-repository/${cmake_filename} --no-check-certificate
+  if [ $? != 0 ] ; then
+    echo "CMake could not be downloaded from Maxscale build server, trying from cmake.org"
+    wget -q https://cmake.org/files/v3.16/${cmake_filename} --no-check-certificate
+  fi
+  sudo tar xzf ${cmake_filename} -C /usr/ --strip-components=1
+  cmake_version=`${cmake_vrs_cmd} | grep "cmake version" | awk '{ print $3 }'`
+  if verlt $cmake_version $cmake_version_required ; then
+    echo "CMake installation failed"
+    exit 1
+  fi
 fi
 
 # RabbitMQ C client
@@ -202,15 +221,6 @@ sudo make install
 cd ../../
 
 # TCL
-# Methods allow to compare software versions according to semantic versioning
-verlte() {
-    [  "$1" = "`echo -e "$1\n$2" | sort -V | head -n1`" ]
-}
-
-verlt() {
-    [ "$1" = "$2" ] && return 1 || verlte $1 $2
-}
-
 system_tcl_version=$(tclsh <<< 'puts [info patchlevel]')
 if verlt "$system_tcl_version" "8.6.5"
 then
