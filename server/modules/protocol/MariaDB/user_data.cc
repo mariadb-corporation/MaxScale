@@ -89,7 +89,6 @@ void MariaDBUserManager::start()
 {
     mxb_assert(!m_updater_thread.joinable());
     m_keep_running.store(true, release);
-    update_user_accounts();
     m_updater_thread = std::thread([this] {
                                        updater_thread_function();
                                    });
@@ -110,6 +109,7 @@ void MariaDBUserManager::update_user_accounts()
         Guard guard(m_notifier_lock);
         m_update_users_requested.store(true, release);
     }
+    m_warn_no_servers.store(true, relaxed);
     m_notifier.notify_one();
 }
 
@@ -226,7 +226,7 @@ void MariaDBUserManager::updater_thread_function()
             {
                 m_consecutive_failed_loads = 0;
                 m_successful_loads++;
-                m_warn_no_servers = true;
+                m_warn_no_servers.store(true, relaxed);
             }
             else
             {
@@ -292,7 +292,7 @@ bool MariaDBUserManager::update_users()
         };
     auto erase_iter = std::remove_if(backends.begin(), backends.end(), is_unusable);
     backends.erase(erase_iter, backends.end());
-    if (backends.empty() && m_warn_no_servers)
+    if (backends.empty() && m_warn_no_servers.load(relaxed))
     {
         MXB_ERROR("No valid servers from which to query MariaDB user accounts found.");
     }
