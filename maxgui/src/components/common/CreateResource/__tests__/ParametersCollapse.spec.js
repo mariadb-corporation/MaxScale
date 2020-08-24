@@ -169,15 +169,6 @@ describe('ParametersCollapse.vue', () => {
         expect(wrapper.vm.parametersTableRow[0]).have.property('value', durationParam.default_value)
     })
 
-    // this test won't be necessary once MXS-3090 is fixed
-    it(`Should convert string value of a bool module parameter to js boolean value`, async () => {
-        await wrapper.setProps({
-            parameters: [boolParam],
-        })
-        expect(wrapper.vm.parametersTableRow[0].value).to.be.a('boolean')
-        expect(`${wrapper.vm.parametersTableRow[0].value}`).to.be.equal(boolParam.default_value)
-    })
-
     it(`Should assign port and socket value to component reactivity data if the resource
       being created is a server or a listener`, async () => {
         await wrapper.setProps({
