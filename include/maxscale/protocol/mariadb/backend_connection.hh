@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2024-07-16
+ * Change Date: 2024-08-24
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -68,6 +68,7 @@ private:
 
     enum class HandShakeState
     {
+        SEND_PROHY_HDR, /**< Send proxy protocol header */
         EXPECT_HS,      /**< Expecting initial server handshake */
         START_SSL,      /**< Send SSLRequest and start SSL */
         SSL_NEG,        /**< Negotiating SSL */
@@ -83,10 +84,10 @@ private:
         ERROR,      // The SM encountered an error. The connection should be closed.
     };
 
-    State          m_state {State::HANDSHAKING};            /**< Connection state */
-    HandShakeState m_hs_state {HandShakeState::EXPECT_HS};  /**< Handshake state */
-    SERVER&        m_server;                                /**< Connected backend server */
+    State          m_state {State::HANDSHAKING};                /**< Connection state */
+    HandShakeState m_hs_state {HandShakeState::SEND_PROHY_HDR}; /**< Handshake state */
 
+    SERVER&                  m_server;          /**< Connected backend server */
     mariadb::SBackendAuth    m_authenticator;   /**< Authentication plugin */
     mariadb::BackendAuthData m_auth_data;       /**< Data shared with auth plugin */
 
