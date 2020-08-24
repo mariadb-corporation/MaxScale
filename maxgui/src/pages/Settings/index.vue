@@ -12,13 +12,11 @@
                         <v-col cols="7">
                             <details-parameters-collapse
                                 v-if="maxscale_parameters"
-                                :searchKeyword="search_keyword"
                                 resourceId="maxscale"
                                 :parameters="maxscale_parameters"
-                                :moduleParameters="processedModuleParameters"
+                                :overridingModuleParams="overridingModuleParams"
                                 :updateResourceParameters="updateMaxScaleParameters"
                                 :onEditSucceeded="fetchMaxScaleParameters"
-                                :loading="isLoading"
                                 isTree
                             />
                         </v-col>
@@ -46,7 +44,6 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { OVERLAY_TRANSPARENT_LOADING } from 'store/overlayTypes'
 import { mapActions, mapState } from 'vuex'
 import PageHeader from './PageHeader'
 
@@ -57,33 +54,23 @@ export default {
     },
     data() {
         return {
-            OVERLAY_TRANSPARENT_LOADING: OVERLAY_TRANSPARENT_LOADING,
             currentActiveTab: null,
             tabs: [
                 { name: this.$t('maxScaleParameters') },
                 // { name: this.$t('usersAndPermissions') },
             ],
-            processedModuleParameters: [],
-            loadingModuleParams: true,
+            overridingModuleParams: [],
         }
     },
     computed: {
         ...mapState({
-            overlay_type: 'overlay_type',
-            search_keyword: 'search_keyword',
             module_parameters: 'module_parameters',
             maxscale_parameters: state => state.maxscale.maxscale_parameters,
         }),
-        isLoading: function() {
-            return this.loadingModuleParams
-                ? true
-                : this.overlay_type === OVERLAY_TRANSPARENT_LOADING
-        },
     },
     async created() {
         await Promise.all([this.fetchMaxScaleParameters(), this.fetchModuleParameters('maxscale')])
-        this.loadingModuleParams = true
-        await this.processModuleParameters()
+        this.processingModuleParams()
     },
     methods: {
         ...mapActions({
@@ -91,49 +78,44 @@ export default {
             fetchMaxScaleParameters: 'maxscale/fetchMaxScaleParameters',
             updateMaxScaleParameters: 'maxscale/updateMaxScaleParameters',
         }),
-        async processModuleParameters() {
-            if (this.module_parameters.length) {
-                const parameters = this.module_parameters
-                // hard code type for child parameter of log_throttling
-                const log_throttingIndex = parameters.findIndex(
-                    param => param.name === 'log_throttling'
-                )
-                const log_throttling = parameters[log_throttingIndex]
+        processingModuleParams() {
+            const parameters = this.$help.lodash.cloneDeep(this.module_parameters)
+            // hard code type for child parameter of log_throttling
+            const log_throttingIndex = parameters.findIndex(
+                param => param.name === 'log_throttling'
+            )
+            const log_throttling = parameters[log_throttingIndex]
 
-                const log_throttling_child_params = [
-                    {
-                        name: 'count',
-                        type: 'count',
-                        modifiable: true,
-                        default_value: log_throttling.default_value.count,
-                        description: 'Positive integer specifying the number of logged times',
-                    },
-                    {
-                        name: 'suppress',
-                        type: 'duration',
-                        modifiable: true,
-                        unit: 'ms',
-                        default_value: log_throttling.default_value.suppress,
-                        description:
-                            'The suppressed duration before the logging of a particular error',
-                    },
-                    {
-                        name: 'window',
-                        type: 'duration',
-                        modifiable: true,
-                        unit: 'ms',
-                        default_value: log_throttling.default_value.window,
-                        description: 'The duration that a particular error may be logged',
-                    },
-                ]
+            const log_throttling_child_params = [
+                {
+                    name: 'count',
+                    type: 'count',
+                    modifiable: true,
+                    default_value: log_throttling.default_value.count,
+                    description: 'Positive integer specifying the number of logged times',
+                },
+                {
+                    name: 'suppress',
+                    type: 'duration',
+                    modifiable: true,
+                    unit: 'ms',
+                    default_value: log_throttling.default_value.suppress,
+                    description: 'The suppressed duration before the logging of a particular error',
+                },
+                {
+                    name: 'window',
+                    type: 'duration',
+                    modifiable: true,
+                    unit: 'ms',
+                    default_value: log_throttling.default_value.window,
+                    description: 'The duration that a particular error may be logged',
+                },
+            ]
 
-                const left = parameters.slice(0, log_throttingIndex + 1)
-                const right = parameters.slice(log_throttingIndex + 1)
+            const left = parameters.slice(0, log_throttingIndex + 1)
+            const right = parameters.slice(log_throttingIndex + 1)
 
-                this.processedModuleParameters = [...left, ...log_throttling_child_params, ...right]
-
-                await this.$help.delay(150).then(() => (this.loadingModuleParams = false))
-            }
+            this.overridingModuleParams = [...left, ...log_throttling_child_params, ...right]
         },
     },
 }

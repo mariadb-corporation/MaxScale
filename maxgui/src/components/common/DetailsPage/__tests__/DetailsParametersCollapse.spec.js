@@ -16,9 +16,8 @@ import mount from '@tests/unit/setup'
 import DetailsParametersCollapse from '@/components/common/DetailsPage/DetailsParametersCollapse'
 import { itemSelectMock } from '@tests/unit/utils'
 
-let resourceId = 'row_server_1'
 // should not have duplicated type here as this facilitates testing env
-const moduleParameters = [
+const dummy_module_params = [
     {
         default_value: 0,
         description: 'duration_param description',
@@ -131,8 +130,8 @@ function compareParam(resourceParam, moduleParam, moduleParamKey) {
  * @param {Object} moduleParam module parameter
  * @param {String} compareKey old unit suffix before updating
  */
-function testParameterInfoAssigned(wrapper, moduleParamType, moduleParamKeys) {
-    const moduleParam = moduleParameters.find(param => param.type === moduleParamType)
+function testParameterInfoAssigned({ wrapper, moduleParamType, moduleParamKeys }) {
+    const moduleParam = dummy_module_params.find(param => param.type === moduleParamType)
     let tableRow = wrapper.vm.parametersTableRow
     const resourceParam = tableRow.find(row => row.id === moduleParam.name)
     // compare key values
@@ -189,27 +188,36 @@ async function mockupOpenConfirmationDialog(wrapper, intercept, cb) {
     typeof cb === 'function' && (await cb())
 }
 
+const defaultProps = {
+    resourceId: 'row_server_1',
+    parameters: resourceParameters,
+    updateResourceParameters: async () => null, // send ajax
+    onEditSucceeded: async () => null, // send ajax to get resource data after update
+    // specical props to manipulate required or dependent input attribute
+    usePortOrSocket: true, // set true for server resource
+    isTree: false, // true if a parameter has value as an object or array,
+}
+
+const defaultComputed = {
+    isLoading: () => false,
+    overlay_type: () => null,
+    module_parameters: () => dummy_module_params,
+    search_keyword: () => '',
+}
+
+const computedFactory = (computed = {}) =>
+    mount({
+        shallow: false,
+        component: DetailsParametersCollapse,
+        props: defaultProps,
+        computed,
+    })
+
 describe('DetailsParametersCollapse.vue', () => {
     let wrapper
 
     beforeEach(async () => {
-        localStorage.clear()
-        wrapper = mount({
-            shallow: false,
-            component: DetailsParametersCollapse,
-            props: {
-                searchKeyword: '',
-                resourceId: resourceId,
-                parameters: resourceParameters,
-                moduleParameters: moduleParameters,
-                updateResourceParameters: async () => null, // send ajax
-                onEditSucceeded: async () => null, // send ajax to get resource data after update
-                loading: false,
-                // specical props to manipulate required or dependent input attribute
-                usePortOrSocket: true, // set true for server resource
-                isTree: false, // true if a parameter has value as an object or array,
-            },
-        })
+        wrapper = computedFactory(defaultComputed)
     })
 
     afterEach(async () => {
@@ -225,77 +233,43 @@ describe('DetailsParametersCollapse.vue', () => {
         expect(tableRow.length).to.be.equal(paramSize)
     })
 
-    it(`Should assign accurately duration module parameter info`, async () => {
-        testParameterInfoAssigned(wrapper, 'duration', [
-            'name',
-            'default_value',
-            'description',
-            'mandatory',
-            'unit',
-        ])
-    })
-
-    it(`Should assign accurately count module parameter info`, async () => {
-        testParameterInfoAssigned(wrapper, 'count', [
-            'name',
-            'default_value',
-            'description',
-            'mandatory',
-        ])
-    })
-
-    it(`Should assign accurately int module parameter info`, async () => {
-        testParameterInfoAssigned(wrapper, 'int', [
-            'name',
-            'description',
-            'mandatory',
-            'default_value',
-        ])
-    })
-
-    it(`Should assign accurately size module parameter info`, async () => {
-        testParameterInfoAssigned(wrapper, 'size', [
-            'name',
-            'description',
-            'mandatory',
-            'default_value',
-        ])
-    })
-
-    it(`Should assign accurately bool module parameter info`, async () => {
-        testParameterInfoAssigned(wrapper, 'bool', [
-            'name',
-            'description',
-            'mandatory',
-            'default_value',
-        ])
-    })
-
-    it(`Should assign accurately enum module parameter info`, async () => {
-        testParameterInfoAssigned(wrapper, 'enum', [
-            'name',
-            'description',
-            'mandatory',
-            'enum_values',
-        ])
-    })
-
-    it(`Should assign accurately string module parameter info`, async () => {
-        testParameterInfoAssigned(wrapper, 'string', ['name', 'description', 'mandatory'])
-    })
-
-    it(`Should assign accurately unmodifiable module parameter info`, async () => {
-        testParameterInfoAssigned(wrapper, 'path', ['name', 'description', 'modifiable'])
-    })
-
-    it(`Should assign port and socket value to component's state`, async () => {
-        await wrapper.setProps({
-            usePortOrSocket: true, // indicate a server is being created or updated
+    describe('Test assign module_parameter type info', async () => {
+        const dummyAllTypes = dummy_module_params.map(param => param.type)
+        const dummyAllParamKeys = [
+            ['name', 'default_value', 'description', 'mandatory', 'unit'],
+            ['name', 'default_value', 'description', 'mandatory'],
+            ['name', 'default_value', 'description', 'mandatory'],
+            ['name', 'default_value', 'description', 'mandatory'],
+            ['name', 'description', 'mandatory', 'enum_values'],
+            ['name', 'description', 'modifiable'],
+            ['name', 'default_value', 'description', 'mandatory'],
+            ['name', 'description', 'mandatory'],
+        ]
+        dummyAllTypes.forEach((type, i) => {
+            let des = `Should assign accurately ${type} module parameter info`
+            switch (type) {
+                case 'path':
+                    des = 'Should assign accurately unmodifiable module parameter info'
+            }
+            it(des, async () => {
+                wrapper = computedFactory(defaultComputed)
+                testParameterInfoAssigned({
+                    wrapper,
+                    moduleParamType: type,
+                    moduleParamKeys: dummyAllParamKeys[i],
+                })
+            })
         })
 
-        const { portValue, socketValue } = wrapper.vm.$data
-        expect(portValue).to.be.equals(resourceParameters.port)
-        expect(socketValue).to.be.equals(resourceParameters.socket)
+        it(`Should assign port and socket value to component's state`, async () => {
+            wrapper = computedFactory(defaultComputed)
+            await wrapper.setProps({
+                usePortOrSocket: true, // indicate a server is being created or updated
+            })
+            const { portValue, socketValue } = wrapper.vm.$data
+            expect(portValue).to.be.equals(resourceParameters.port)
+            expect(socketValue).to.be.equals(resourceParameters.socket)
+        })
     })
 
     it(`Should have the following classes 'color border-left-table-border'`, async () => {
@@ -383,8 +357,7 @@ describe('DetailsParametersCollapse.vue', () => {
         expect(wrapper.vm.shouldDisableSaveBtn).to.be.false
     })
 
-    it(`Should show confirmation text correctly in a form a singular text
-      in confirmation dialog`, async () => {
+    it(`Should show confirmation text correctly as singular text`, async () => {
         await mockupParametersChange(wrapper)
         // singular text
         expect(wrapper.find('.confirmation-text').html()).to.be.includes(
@@ -392,8 +365,7 @@ describe('DetailsParametersCollapse.vue', () => {
         )
     })
 
-    it(`Should show confirmation text correctly in a form a plural text
-      in confirmation dialog`, async () => {
+    it(`Should show confirmation text correctly as plural text`, async () => {
         const twoParamChanges = true
         await mockupParametersChange(wrapper, twoParamChanges)
         // plural text

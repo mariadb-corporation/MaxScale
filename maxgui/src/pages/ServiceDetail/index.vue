@@ -62,10 +62,7 @@
                     <v-tab-item class="pt-5">
                         <v-row>
                             <v-col class="py-0 my-0" cols="6">
-                                <parameters-table
-                                    :onEditSucceeded="fetchService"
-                                    :loading="overlay_type === OVERLAY_TRANSPARENT_LOADING"
-                                />
+                                <parameters-table :onEditSucceeded="fetchService" />
                             </v-col>
                             <v-col class="py-0 my-0" cols="6">
                                 <details-readonly-table

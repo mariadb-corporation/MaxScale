@@ -1,13 +1,10 @@
 <template>
     <details-parameters-collapse
-        :searchKeyword="search_keyword"
         :resourceId="current_server.id"
         :parameters="current_server.attributes.parameters"
-        :moduleParameters="processedModuleParameters"
         usePortOrSocket
         :updateResourceParameters="updateServerParameters"
         :onEditSucceeded="onEditSucceeded"
-        :loading="loadingModuleParams ? true : loading"
     />
 </template>
 
@@ -30,41 +27,22 @@ export default {
 
     props: {
         onEditSucceeded: { type: Function, required: true },
-        loading: { type: Boolean, required: true },
-    },
-
-    data() {
-        return {
-            // parameters
-            processedModuleParameters: [],
-            loadingModuleParams: true,
-        }
     },
 
     computed: {
         ...mapState({
-            search_keyword: 'search_keyword',
-            module_parameters: 'module_parameters',
             current_server: state => state.server.current_server,
         }),
     },
 
     async created() {
         await this.fetchModuleParameters('servers')
-        this.loadingModuleParams = true
-        await this.processModuleParameters()
     },
     methods: {
         ...mapActions({
             fetchModuleParameters: 'fetchModuleParameters',
             updateServerParameters: 'server/updateServerParameters',
         }),
-        async processModuleParameters() {
-            if (this.module_parameters.length) {
-                this.processedModuleParameters = this.module_parameters
-                await this.$help.delay(150).then(() => (this.loadingModuleParams = false))
-            }
-        },
     },
 }
 </script>

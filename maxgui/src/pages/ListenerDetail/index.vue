@@ -6,15 +6,8 @@
                 <!-- PARAMETERS TABLE -->
                 <v-col cols="6">
                     <details-parameters-collapse
-                        :searchKeyword="search_keyword"
                         :resourceId="current_listener.id"
                         :parameters="current_listener.attributes.parameters"
-                        :moduleParameters="processedModuleParameters"
-                        :loading="
-                            loadingModuleParams
-                                ? true
-                                : overlay_type === OVERLAY_TRANSPARENT_LOADING
-                        "
                         :editable="false"
                     />
                 </v-col>
@@ -57,15 +50,11 @@ export default {
         return {
             OVERLAY_TRANSPARENT_LOADING: OVERLAY_TRANSPARENT_LOADING,
             serviceTableRow: [],
-            processedModuleParameters: [],
-            loadingModuleParams: true,
         }
     },
     computed: {
         ...mapState({
             overlay_type: 'overlay_type',
-            search_keyword: 'search_keyword',
-            module_parameters: 'module_parameters',
             current_listener: state => state.listener.current_listener,
         }),
     },
@@ -81,10 +70,7 @@ export default {
         } = this.current_listener
 
         await this.serviceTableRowProcessing(servicesData)
-
         if (protocol) await this.fetchModuleParameters(protocol)
-        this.loadingModuleParams = true
-        await this.processModuleParameters()
     },
 
     methods: {
@@ -93,13 +79,6 @@ export default {
             getResourceState: 'getResourceState',
             fetchListenerById: 'listener/fetchListenerById',
         }),
-
-        async processModuleParameters() {
-            if (this.module_parameters.length) {
-                this.processedModuleParameters = this.module_parameters
-                await this.$help.delay(150).then(() => (this.loadingModuleParams = false))
-            }
-        },
 
         /**
          * This function loops through services data to get services state based on
