@@ -73,7 +73,19 @@ public:
      * @param db Database to connect to
      * @return True on success
      */
-    bool open(const std::string& host, unsigned int port, const std::string& db = "");
+    bool open(const std::string& host, int port, const std::string& db = "");
+
+    /**
+     * Open, with extra port. If extra port is greater than 0 and connection with normal port failed due
+     * to too many connections, then connecting using the extra port is attempted.
+     *
+     * @param host Server host/ip
+     * @param port Server port
+     * @param extra_port Extra port
+     * @param db Database to connect to
+     * @return True on success
+     */
+    bool open_extra(const std::string& host, int port, int extra_port, const std::string& db = "");
 
     /**
      * Closes any existing connection.
