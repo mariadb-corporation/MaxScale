@@ -17,9 +17,13 @@
                         <v-row>
                             <v-col class="py-0 my-0" cols="4">
                                 <v-row class="pa-0 ma-0">
-                                    <statistics-table
-                                        :loading="overlay_type === OVERLAY_TRANSPARENT_LOADING"
-                                    />
+                                    <v-col cols="12" class="pa-0 ma-0">
+                                        <details-readonly-table
+                                            :loading="overlay_type === OVERLAY_TRANSPARENT_LOADING"
+                                            :title="`${$tc('statistics', 2)}`"
+                                            :objData="statisticsObj"
+                                        />
+                                    </v-col>
                                     <v-col cols="12" class="pa-0 mt-4">
                                         <relationship-table
                                             relationshipType="services"
@@ -48,9 +52,11 @@
                                 />
                             </v-col>
                             <v-col class="py-0 my-0" cols="6">
-                                <diagnostics-table
+                                <details-readonly-table
                                     :loading="overlay_type === OVERLAY_TRANSPARENT_LOADING"
-                                    :fetchMonitorDiagnostics="fetchMonitorDiagnostics"
+                                    :title="`${$t('monitorDiagnostics')}`"
+                                    :objData="monitorDiagnostics"
+                                    isTree
                                 />
                             </v-col>
                         </v-row>
@@ -78,34 +84,27 @@ import { OVERLAY_TRANSPARENT_LOADING } from 'store/overlayTypes'
 import { mapActions, mapMutations, mapState } from 'vuex'
 import PageHeader from './PageHeader'
 import OverviewHeader from './OverviewHeader'
-import StatisticsTable from './StatisticsTable'
 import SessionsTable from './SessionsTable'
 import ParametersTable from './ParametersTable'
-import DiagnosticsTable from './DiagnosticsTable'
 
 export default {
     name: 'server-detail',
     components: {
         PageHeader,
         OverviewHeader,
-        StatisticsTable,
         SessionsTable,
         ParametersTable,
-        DiagnosticsTable,
     },
 
     data() {
         return {
             OVERLAY_TRANSPARENT_LOADING: OVERLAY_TRANSPARENT_LOADING,
             currentActiveTab: null,
-
             tabs: [
                 { name: `${this.$tc('statistics', 2)} & ${this.$tc('sessions', 2)}` },
                 { name: `${this.$tc('parameters', 2)} & ${this.$tc('diagnostics', 2)}` },
             ],
             serviceTableRow: [],
-            //MONITOR data for parameter-diagnostics-tab
-            monitorDiagnosticsTableRow: [],
         }
     },
     computed: {
@@ -114,7 +113,19 @@ export default {
             search_keyword: 'search_keyword',
             overlay_type: 'overlay_type',
             current_server: state => state.server.current_server,
+            monitor_diagnostics: state => state.monitor.monitor_diagnostics,
         }),
+
+        monitorDiagnostics: function() {
+            const {
+                attributes: { monitor_diagnostics: { server_info = [] } = {} } = {},
+            } = this.monitor_diagnostics
+            return server_info.find(server => server.name === this.$route.params.id) || {}
+        },
+        statisticsObj: function() {
+            const { attributes: { statistics = {} } = {} } = this.current_server
+            return statistics
+        },
     },
     watch: {
         should_refresh_resource: async function(val) {
@@ -123,6 +134,10 @@ export default {
                 await this.initialFetch()
             }
         },
+        currentActiveTab: async function(val) {
+            // when active tab is Parameters & Diagnostics
+            if (val === 1) await this.fetchMonitorDiagnostics()
+        },
     },
     async created() {
         await this.initialFetch()
@@ -130,7 +145,7 @@ export default {
     methods: {
         ...mapMutations({
             SET_REFRESH_RESOURCE: 'SET_REFRESH_RESOURCE',
-            SET_CURRENT_MONITOR: 'monitor/SET_CURRENT_MONITOR',
+            SET_MONITOR_DIAGNOSTICS: 'monitor/SET_MONITOR_DIAGNOSTICS',
         }),
         ...mapActions({
             getResourceState: 'getResourceState',
@@ -149,7 +164,7 @@ export default {
                 const monitorId = monitors.data[0].id
                 await this.fetchMonitorDiagnosticsById(monitorId)
             } else {
-                this.SET_CURRENT_MONITOR({})
+                this.SET_MONITOR_DIAGNOSTICS({})
             }
         },
         // reuse functions for fetch loop or after finish editing

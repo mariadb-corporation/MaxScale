@@ -67,9 +67,14 @@
                                     :loading="overlay_type === OVERLAY_TRANSPARENT_LOADING"
                                 />
                             </v-col>
-                            <diagnostics-table
-                                :loading="overlay_type === OVERLAY_TRANSPARENT_LOADING"
-                            />
+                            <v-col class="py-0 my-0" cols="6">
+                                <details-readonly-table
+                                    :loading="overlay_type === OVERLAY_TRANSPARENT_LOADING"
+                                    :title="`${$t('routerDiagnostics')}`"
+                                    :objData="routerDiagnostics"
+                                    isTree
+                                />
+                            </v-col>
                         </v-row>
                     </v-tab-item>
                 </v-tabs-items>
@@ -98,7 +103,6 @@ import OverviewHeader from './OverviewHeader'
 import PageHeader from './PageHeader'
 import SessionsTable from './SessionsTable'
 import ParametersTable from './ParametersTable'
-import DiagnosticsTable from './DiagnosticsTable'
 
 export default {
     name: 'service-detail',
@@ -107,7 +111,6 @@ export default {
         OverviewHeader,
         SessionsTable,
         ParametersTable,
-        DiagnosticsTable,
     },
     data() {
         return {
@@ -129,6 +132,11 @@ export default {
             overlay_type: 'overlay_type',
             current_service: state => state.service.current_service,
         }),
+
+        routerDiagnostics: function() {
+            const { attributes: { router_diagnostics = {} } = {} } = this.current_service
+            return router_diagnostics
+        },
     },
     watch: {
         should_refresh_resource: async function(val) {
