@@ -19,8 +19,11 @@
 
 #include <cstdio>
 #include <getopt.h>
+#include <termios.h>
+#include <unistd.h>
 #include <maxbase/log.hh>
 #include <maxscale/paths.hh>
+#include <iostream>
 
 #include "internal/secrets.hh"
 
@@ -28,27 +31,68 @@ using std::string;
 
 struct option options[] =
 {
-    {"help",    no_argument, nullptr, 'h'},
-    {"decrypt", no_argument, nullptr, 'd'},
-    {nullptr,   0,           nullptr, 0  }
+    {"help",        no_argument, nullptr, 'h'},
+    {"decrypt",     no_argument, nullptr, 'd'},
+    {"interactive", no_argument, nullptr, 'i'},
+    {nullptr,       0,           nullptr, 0  }
 };
 
 void print_usage(const char* executable, const char* directory)
 {
     const char msg[] =
-        R"(Usage: %s [-h|--help] [path] password
+        R"(Usage: %s [-h|--help] [-i] [-d] [path] password
 
 Encrypt a MaxScale plaintext password using the encryption key in the key file
 '%s'. The key file may be generated using the 'maxkeys'-utility.
 
-  -h, --help    Display this help.
-  -d, --decrypt Decrypt an encrypted password instead
+  -h, --help         Display this help.
+  -d, --decrypt      Decrypt an encrypted password instead
+  -i, --interactive  Read password from stdin. If '-i' has been provided, a single
+                     argument is assumed to be the path, two arguments is treated as
+                     an error.
 
   path      The key file directory (default: '%s')
   password  The password to encrypt or decrypt
 )";
     printf(msg, executable, SECRETS_FILENAME, directory);
 }
+
+string read_password()
+{
+    struct termios tty;
+    tcgetattr(STDIN_FILENO, &tty);
+
+    bool echo = (tty.c_lflag & ECHO);
+    if (echo)
+    {
+        tty.c_lflag &= ~ECHO;
+        tcsetattr(STDIN_FILENO, TCSANOW, &tty);
+    }
+
+    bool prompt = isatty(STDIN_FILENO);
+
+    if (prompt)
+    {
+        std::cout << "Enter password: " << std::flush;
+    }
+
+    string s;
+    std::getline(std::cin, s);
+
+    if (prompt)
+    {
+        std::cout << std::endl;
+    }
+
+    if (echo)
+    {
+        tty.c_lflag |= ECHO;
+        tcsetattr(STDIN_FILENO, TCSANOW, &tty);
+    }
+
+    return s;
+}
+
 
 int main(int argc, char** argv)
 {
@@ -62,9 +106,10 @@ int main(int argc, char** argv)
     };
 
     auto mode = Mode::ENCRYPT;
+    bool interactive = false;
 
     int c;
-    while ((c = getopt_long(argc, argv, "hd", options, NULL)) != -1)
+    while ((c = getopt_long(argc, argv, "hdi", options, NULL)) != -1)
     {
         switch (c)
         {
@@ -74,6 +119,10 @@ int main(int argc, char** argv)
 
         case 'd':
             mode = Mode::DECRYPT;
+            break;
+
+        case 'i':
+            interactive = true;
             break;
 
         default:
@@ -90,12 +139,35 @@ int main(int argc, char** argv)
     case 2:
         // Two args provided.
         path = argv[optind];
-        input = argv[optind + 1];
+        if (!interactive)
+        {
+            input = argv[optind + 1];
+        }
+        else
+        {
+            print_usage(argv[0], default_directory);
+            return EXIT_FAILURE;
+        }
         break;
 
     case 1:
         // One arg provided.
-        input = argv[optind];
+        if (!interactive)
+        {
+            input = argv[optind];
+        }
+        else
+        {
+            path = argv[optind];
+        }
+        break;
+
+    case 0:
+        if (!interactive)
+        {
+            print_usage(argv[0], default_directory);
+            return EXIT_FAILURE;
+        }
         break;
 
     default:
@@ -104,6 +176,12 @@ int main(int argc, char** argv)
     }
 
     int rval = EXIT_FAILURE;
+
+    if (interactive)
+    {
+        input = read_password();
+    }
+
     string filepath = path;
     filepath.append("/").append(SECRETS_FILENAME);
 
