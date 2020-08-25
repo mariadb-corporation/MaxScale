@@ -17,7 +17,6 @@
                     <relationship-table
                         relationshipType="servers"
                         :tableRows="serverStateTableRow"
-                        :loading="overlay_type === OVERLAY_TRANSPARENT_LOADING"
                         :getRelationshipData="fetchAllServers"
                         :selectItems="unmonitoredServers"
                         @on-relationship-update="dispatchRelationshipUpdate"
@@ -41,7 +40,6 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { OVERLAY_TRANSPARENT_LOADING } from 'store/overlayTypes'
 import { mapActions, mapState, mapMutations } from 'vuex'
 import PageHeader from './PageHeader'
 import OverviewHeader from './OverviewHeader'
@@ -53,7 +51,6 @@ export default {
     },
     data() {
         return {
-            OVERLAY_TRANSPARENT_LOADING: OVERLAY_TRANSPARENT_LOADING,
             serverStateTableRow: [],
             unmonitoredServers: [],
         }
@@ -61,7 +58,6 @@ export default {
     computed: {
         ...mapState({
             should_refresh_resource: 'should_refresh_resource',
-            overlay_type: 'overlay_type',
             current_monitor: state => state.monitor.current_monitor,
             all_servers: state => state.server.all_servers,
         }),

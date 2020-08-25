@@ -23,7 +23,6 @@
                                         <relationship-table
                                             relationshipType="servers"
                                             :tableRows="serverStateTableRow"
-                                            :loading="overlay_type === OVERLAY_TRANSPARENT_LOADING"
                                             :getRelationshipData="getRelationshipData"
                                             @on-relationship-update="dispatchRelationshipUpdate"
                                         />
@@ -32,7 +31,6 @@
                                         <relationship-table
                                             relationshipType="filters"
                                             :tableRows="filtersTableRow"
-                                            :loading="overlay_type === OVERLAY_TRANSPARENT_LOADING"
                                             :getRelationshipData="getRelationshipData"
                                             @on-relationship-update="dispatchRelationshipUpdate"
                                         />
@@ -41,7 +39,6 @@
                                     <v-col cols="12" class="pa-0 mt-4">
                                         <relationship-table
                                             relationshipType="listeners"
-                                            :loading="overlay_type === OVERLAY_TRANSPARENT_LOADING"
                                             :tableRows="listenerStateTableRow"
                                             readOnly
                                             @open-listener-form-dialog="
@@ -66,7 +63,6 @@
                             </v-col>
                             <v-col class="py-0 my-0" cols="6">
                                 <details-readonly-table
-                                    :loading="overlay_type === OVERLAY_TRANSPARENT_LOADING"
                                     :title="`${$t('routerDiagnostics')}`"
                                     :objData="routerDiagnostics"
                                     isTree

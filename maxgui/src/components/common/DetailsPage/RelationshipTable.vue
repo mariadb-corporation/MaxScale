@@ -14,7 +14,7 @@
                 :data="tableRowsData"
                 :noDataText="$t('noEntity', { entityName: $tc(relationshipType, 2) })"
                 :sortBy="relationshipType === 'filters' ? '' : 'id'"
-                :loading="loading"
+                :loading="isLoading"
                 :showActionsOnHover="!readOnly"
                 :draggable="relationshipType === 'filters'"
                 :hasOrderNumber="relationshipType === 'filters'"
@@ -97,6 +97,7 @@ isFilterDrag will be only added to event data object if relationshipType props =
 - $emit('open-listener-form-dialog')
 This callback event is emitted only when relationshipType props === 'listeners'
 */
+import { OVERLAY_TRANSPARENT_LOADING } from 'store/overlayTypes'
 import { mapState } from 'vuex'
 
 export default {
@@ -104,7 +105,6 @@ export default {
     props: {
         relationshipType: { type: String, required: true }, // servers, services, filters
         tableRows: { type: Array, required: true },
-        loading: { type: Boolean, required: true },
         readOnly: { type: Boolean, default: false },
         addable: { type: Boolean, default: true },
         selectItems: { type: Array },
@@ -128,13 +128,17 @@ export default {
             //select dialog
             showSelectDialog: false,
             itemsList: [],
+            isMounting: true,
         }
     },
     computed: {
         ...mapState({
+            overlay_type: 'overlay_type',
             search_keyword: 'search_keyword',
         }),
-
+        isLoading: function() {
+            return this.isMounting ? true : this.overlay_type === OVERLAY_TRANSPARENT_LOADING
+        },
         logger: function() {
             return this.$logger('relationship-table')
         },
@@ -161,8 +165,9 @@ export default {
             immediate: true,
         },
     },
-    mounted() {
+    async mounted() {
         this.assignTableHeaders(this.relationshipType)
+        await this.$help.delay(400).then(() => (this.isMounting = false))
     },
     methods: {
         assignTableHeaders(relationshipType) {

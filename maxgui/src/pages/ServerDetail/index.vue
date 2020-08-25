@@ -19,7 +19,6 @@
                                 <v-row class="pa-0 ma-0">
                                     <v-col cols="12" class="pa-0 ma-0">
                                         <details-readonly-table
-                                            :loading="overlay_type === OVERLAY_TRANSPARENT_LOADING"
                                             :title="`${$tc('statistics', 2)}`"
                                             :objData="statisticsObj"
                                         />
@@ -28,7 +27,6 @@
                                         <relationship-table
                                             relationshipType="services"
                                             :tableRows="serviceTableRow"
-                                            :loading="overlay_type === OVERLAY_TRANSPARENT_LOADING"
                                             :getRelationshipData="getRelationshipData"
                                             @on-relationship-update="dispatchRelationshipUpdate"
                                         />
@@ -50,7 +48,6 @@
                             </v-col>
                             <v-col class="py-0 my-0" cols="6">
                                 <details-readonly-table
-                                    :loading="overlay_type === OVERLAY_TRANSPARENT_LOADING"
                                     :title="`${$t('monitorDiagnostics')}`"
                                     :objData="monitorDiagnostics"
                                     isTree

@@ -9,7 +9,7 @@
                 :search="search_keyword"
                 :headers="tableHeaders"
                 :data="tableRows"
-                :loading="loading"
+                :loading="isLoading"
                 tdBorderLeft
                 showAll
                 :isTree="isTree"
@@ -35,11 +35,12 @@
  * This component converts objData to array according to data-table data
  * array format.
  */
+import { OVERLAY_TRANSPARENT_LOADING } from 'store/overlayTypes'
 import { mapState } from 'vuex'
+
 export default {
     name: 'details-readonly-table',
     props: {
-        loading: { type: Boolean, required: true },
         title: { type: String, required: true },
         objData: { type: Object, required: true },
         isTree: { type: Boolean, default: false },
@@ -53,12 +54,17 @@ export default {
                 { text: 'Value', value: 'value', width: '35%' },
             ],
             tableRows: [],
+            isMounting: true,
         }
     },
     computed: {
         ...mapState({
+            overlay_type: 'overlay_type',
             search_keyword: 'search_keyword',
         }),
+        isLoading: function() {
+            return this.isMounting ? true : this.overlay_type === OVERLAY_TRANSPARENT_LOADING
+        },
     },
     watch: {
         objData: {
@@ -70,8 +76,9 @@ export default {
             deep: true,
         },
     },
-    mounted() {
+    async mounted() {
         this.processTableRows(this.objData)
+        await this.$help.delay(400).then(() => (this.isMounting = false))
     },
     methods: {
         processTableRows(obj) {

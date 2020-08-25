@@ -102,10 +102,12 @@ describe('RelationshipTable.vue with readOnly mode and not addable', () => {
             component: RelationshipTable,
             props: {
                 relationshipType: 'services',
-                loading: false,
                 tableRows: serviceStateTableRowsStub,
                 readOnly: true,
                 addable: false,
+            },
+            computed: {
+                isLoading: () => false,
             },
         })
     })
@@ -185,10 +187,12 @@ describe('RelationshipTable.vue with editable and addable mode', () => {
             component: RelationshipTable,
             props: {
                 relationshipType: 'services',
-                loading: false,
                 tableRows: serviceStateTableRowsStub,
                 readOnly: false,
                 getRelationshipData: getRelationshipDataStub,
+            },
+            computed: {
+                isLoading: () => false,
             },
         })
         getRelationshipDataSpy = sinon.spy(getRelationshipDataStub)

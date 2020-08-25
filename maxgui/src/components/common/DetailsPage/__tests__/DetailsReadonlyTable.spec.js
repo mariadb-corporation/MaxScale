@@ -96,14 +96,15 @@ describe('DetailsReadonlyTable.vue', () => {
 
         const {
             search_keyword,
+            isLoading,
             $data: { tableHeaders, tableRows },
-            $props: { loading: loadingProps, isTree: isTreeProps },
+            $props: { isTree: isTreeProps },
         } = wrapper.vm
 
         expect(search).to.be.equals(search_keyword)
         expect(headers).to.be.deep.equals(tableHeaders)
         expect(data).to.be.deep.equals(tableRows)
-        expect(loading).to.be.equals(loadingProps)
+        expect(loading).to.be.equals(isLoading)
         expect(tdBorderLeft).to.be.true
         expect(showAll).to.be.true
         expect(isTree).to.be.equals(isTreeProps)

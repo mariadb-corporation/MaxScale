@@ -14,7 +14,6 @@
                 <v-col cols="6">
                     <relationship-table
                         relationshipType="services"
-                        :loading="overlay_type === OVERLAY_TRANSPARENT_LOADING"
                         :tableRows="serviceTableRow"
                         readOnly
                         :addable="false"
@@ -38,7 +37,6 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { OVERLAY_TRANSPARENT_LOADING } from 'store/overlayTypes'
 import { mapActions, mapState } from 'vuex'
 import PageHeader from './PageHeader'
 
@@ -48,13 +46,11 @@ export default {
     },
     data() {
         return {
-            OVERLAY_TRANSPARENT_LOADING: OVERLAY_TRANSPARENT_LOADING,
             serviceTableRow: [],
         }
     },
     computed: {
         ...mapState({
-            overlay_type: 'overlay_type',
             current_filter: state => state.filter.current_filter,
         }),
     },
