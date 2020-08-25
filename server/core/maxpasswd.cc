@@ -67,7 +67,7 @@ Encrypt a MaxScale plaintext password using the encryption key in the key file
 
 bool read_password(string* pPassword)
 {
-    bool rv;
+    bool rv = false;
     string password;
 
     if (isatty(STDIN_FILENO))
