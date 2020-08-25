@@ -18,5 +18,5 @@ cd $PWD/maxgui
 
 export buildPath=$PWD
 export VUE_APP_GIT_COMMIT=$(cd $src && git rev-list --max-count=1 HEAD)
-npm install
+npm install --production
 npm run build
