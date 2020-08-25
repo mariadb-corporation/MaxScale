@@ -869,7 +869,7 @@ This limitation can be circumvented by defining multiple copies of a server in
 the configuration file.
 
 Cooperative monitoring uses
-[server locks](#https://mariadb.com/kb/en/get_lock/)
+[server locks](https://mariadb.com/kb/en/get_lock/)
 for coordinating between monitors. When cooperating, the monitor regularly
 checks the status of a lock named *maxscale_mariadbmonitor* on every server and
 acquires it if free. If the monitor acquires a majority of locks, it is the
