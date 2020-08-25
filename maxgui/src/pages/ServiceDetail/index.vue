@@ -69,7 +69,7 @@
                             <v-col class="py-0 my-0" cols="6">
                                 <details-readonly-table
                                     :title="`${$t('routerDiagnostics')}`"
-                                    :objData="routerDiagnostics"
+                                    :tableData="routerDiagnostics"
                                     isTree
                                 />
                             </v-col>

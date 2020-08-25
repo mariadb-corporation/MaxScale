@@ -20,7 +20,7 @@
                                     <v-col cols="12" class="pa-0 ma-0">
                                         <details-readonly-table
                                             :title="`${$tc('statistics', 2)}`"
-                                            :objData="statisticsObj"
+                                            :tableData="statisticsObj"
                                         />
                                     </v-col>
                                     <v-col cols="12" class="pa-0 mt-4">
@@ -55,7 +55,7 @@
                             <v-col class="py-0 my-0" cols="6">
                                 <details-readonly-table
                                     :title="`${$t('monitorDiagnostics')}`"
-                                    :objData="monitorDiagnostics"
+                                    :tableData="monitorDiagnostics"
                                     isTree
                                 />
                             </v-col>
