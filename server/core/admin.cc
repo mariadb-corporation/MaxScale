@@ -798,10 +798,6 @@ bool Client::auth_with_token(const std::string& token)
     }
     catch (const std::exception& e)
     {
-        if (mxs::Config::get().admin_log_auth_failures.get())
-        {
-            MXS_ERROR("Failed to validate token: %s", e.what());
-        }
     }
 
     return rval;
