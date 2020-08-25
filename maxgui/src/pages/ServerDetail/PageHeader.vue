@@ -10,6 +10,7 @@
                     >
                         <template v-slot:activator="{ on }">
                             <v-btn
+                                class="maintain-btn"
                                 text
                                 :disabled="stateMode === 'maintenance'"
                                 v-on="on"
@@ -29,6 +30,7 @@
                     >
                         <template v-slot:activator="{ on }">
                             <v-btn
+                                class="clear-btn"
                                 text
                                 :disabled="stateMode !== 'maintenance' && stateMode !== 'drained'"
                                 v-on="on"
@@ -52,6 +54,7 @@
                     >
                         <template v-slot:activator="{ on }">
                             <v-btn
+                                class="drain-btn"
                                 :disabled="stateMode === 'maintenance' || stateMode === 'drained'"
                                 text
                                 v-on="on"
@@ -74,7 +77,7 @@
                         content-class="shadow-drop color text-navigation py-1 px-4"
                     >
                         <template v-slot:activator="{ on }">
-                            <v-btn text v-on="on" @click="handleClick('delete')">
+                            <v-btn class="delete-btn" text v-on="on" @click="handleClick('delete')">
                                 <v-icon size="18" color="error">
                                     $vuetify.icons.delete
                                 </v-icon>
@@ -93,8 +96,8 @@
                 :smallInfo="smallInfo"
                 :item="currentServer"
                 :onSave="confirmSave"
-                :onClose="() => (showConfirmDialog = false)"
-                :onCancel="() => (showConfirmDialog = false)"
+                :onClose="handleClose"
+                :onCancel="handleClose"
             >
                 <template
                     v-if="currentStateMode === 'maintenance' && type === 'set'"
@@ -112,12 +115,12 @@
             <icon-sprite-sheet size="13" class="status-icon mr-1" :frame="stateIconFrame">
                 status
             </icon-sprite-sheet>
-            <span class="color text-navigation body-2">
+            <span class="color text-navigation body-2 server-healthy">
                 {{ serverHealthy }}
             </span>
             <span v-if="version_string" class="color text-field-text body-2">
                 |
-                <span>{{ $t('version') }} {{ version_string }}</span>
+                <span class="version-string">{{ $t('version') }} {{ version_string }}</span>
             </span>
         </template>
     </details-page-title>
@@ -160,24 +163,27 @@ export default {
         version_string: function() {
             return this.currentServer.attributes.version_string
         },
+        serverState: function() {
+            return this.currentServer.attributes.state
+        },
         /**
          * @returns {Number} returns a number: 0,1,2
          */
         stateIconFrame: function() {
-            return this.$help.serverStateIcon(this.currentServer.attributes.state)
+            return this.$help.serverStateIcon(this.serverState)
         },
         serverHealthy: function() {
             switch (this.stateIconFrame) {
                 case 0:
-                    return 'Unhealthy'
+                    return this.$t('unHealthy')
                 case 1:
-                    return 'Healthy'
+                    return this.$t('healthy')
                 default:
-                    return 'Warning'
+                    return this.$t('warning')
             }
         },
         stateMode: function() {
-            let currentState = this.currentServer.attributes.state.toLowerCase()
+            let currentState = this.serverState.toLowerCase()
             if (currentState.indexOf(',') > 0) {
                 currentState = currentState.slice(0, currentState.indexOf(','))
             }
@@ -186,6 +192,11 @@ export default {
     },
     methods: {
         ...mapActions('server', ['destroyServer', 'setOrClearServerState']),
+
+        handleClose() {
+            this.showConfirmDialog = false
+        },
+
         handleClick(type) {
             this.dialogType = type
             this.dialogTitle = `${this.$t(type)} ${this.$tc('servers', 1)}`

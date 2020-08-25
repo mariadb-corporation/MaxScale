@@ -119,20 +119,37 @@ export async function triggerBtnClick(wrapper, cssSelector) {
 
 /**
  * This function opening confirm-dialog in page-header component
- * It chooses index 0 by default of details-icon-group-wrapper
- * when finding cssSelector.
- * @param {Object} payload
  * @param {Object} payload.wrapper mounted component
- * @param {String} cssSelector css selector of the button to be clicked
- * @param {Number} index index of details-icon-group-wrapper
+ * @param {String} payload.cssSelector css selector of the button to be clicked
  */
-export async function openConfirmDialog({ wrapper, cssSelector, index = 0 }) {
+export async function openConfirmDialog({ wrapper, cssSelector }) {
     await triggerBtnClick(wrapper, '.gear-btn')
-    const detailsIconGroupWrappers = wrapper.findAllComponents({
-        name: 'details-icon-group-wrapper',
+    await triggerBtnClick(wrapper, cssSelector)
+}
+
+/**
+ * This function asserts if request is sent with accurate endpoint and payload when
+ * clicking save btn of confirm-dialog in page-header component
+ * @param {Object} payload.wrapper - mounted component
+ * @param {String} payload.cssSelector - css selector of the button to be clicked
+ * @param {Object} payload.axiosStub - axiosStub
+ * @param {String} payload.axiosStubCalledWith - argument for calledWith method
+ */
+export async function assertSendingRequest({
+    wrapper,
+    cssSelector,
+    axiosStub,
+    axiosStubCalledWith,
+}) {
+    await openConfirmDialog({
+        wrapper,
+        cssSelector,
     })
-    const detailsIconGroupWrapper = detailsIconGroupWrappers.at(index)
-    await triggerBtnClick(detailsIconGroupWrapper, cssSelector)
+    const confirmDialog = wrapper.findComponent({
+        name: 'confirm-dialog',
+    })
+    await triggerBtnClick(confirmDialog, '.save')
+    await axiosStub.should.have.been.calledWith(axiosStubCalledWith)
 }
 
 /**
@@ -261,7 +278,13 @@ dummy_all_modules.forEach(fake_module => {
 
 export const dummy_all_servers = [
     {
-        attributes: { state: 'Master, Running', statistics: { connections: 0 } },
+        attributes: {
+            last_event: 'master_up',
+            triggered_at: 'Fri, 21 Aug 2020 06:04:40 GMT',
+            version_string: '10.4.12-MariaDB-1:10.4.12+maria~bionic-log',
+            state: 'Master, Running',
+            statistics: { connections: 0 },
+        },
         id: 'row_server_0',
         links: {},
         relationships: {

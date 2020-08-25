@@ -11,7 +11,7 @@
  * Public License.
  */
 import Vue from 'vue'
-import chai /* , { expect }  */ from 'chai'
+import chai from 'chai'
 import mount, { router } from '@tests/unit/setup'
 import ServerDetail from '@/pages/ServerDetail'
 import sinon from 'sinon'
@@ -69,6 +69,17 @@ describe('ServerDetail index', () => {
 
             axiosGetStub.should.have.callCount(count)
         })
+    })
+
+    it(`Should send GET request to get monitor diagnostics if current active tab is
+      Parameters & Diagnostics tab`, async () => {
+        await wrapper.setData({
+            currentActiveTab: 1,
+        })
+        const monitorId = dummy_all_servers[0].relationships.monitors.data[0].id
+        await axiosGetStub.should.have.been.calledWith(
+            `/monitors/${monitorId}?fields[monitors]=monitor_diagnostics`
+        )
     })
 
     it(`Should send PATCH request with accurate payload to

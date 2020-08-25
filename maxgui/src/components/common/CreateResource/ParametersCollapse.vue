@@ -112,32 +112,23 @@ export default {
     },
     computed: {
         parametersTableRow: function() {
-            const self = this
-            let parameters = self.parameters
+            const parameters = this.parameters
             let arr = []
-            for (let i = 0; i < parameters.length; ++i) {
-                let paramObj = self.$help.lodash.cloneDeep(parameters[i])
-                let defaultValue
-                switch (paramObj.type) {
-                    case 'bool':
-                        // This won't be necessary once MXS-3090 is fixed
-                        defaultValue = paramObj.default_value === 'true'
-                        break
-                    default:
-                        /* this ensure 0 default_value could be assigned,
-                        undefined default_value property will fallback to null to make the input visibled
-                        */
-                        defaultValue = this.$help.isUndefined(paramObj.default_value)
-                            ? null
-                            : paramObj.default_value
-                }
+            parameters.forEach(param => {
+                let paramObj = this.$help.lodash.cloneDeep(param)
+                /* this ensure 0 default_value could be assigned,
+                   undefined default_value property will fallback to null to make the input visibled
+                 */
+                const defaultValue = this.$help.isUndefined(paramObj.default_value)
+                    ? null
+                    : paramObj.default_value
 
                 paramObj['value'] = defaultValue
                 paramObj['id'] = paramObj.name
                 delete paramObj.name
                 arr.push(paramObj)
                 this.assignPortSocketDependencyValues(paramObj)
-            }
+            })
             return arr
         },
     },
@@ -173,8 +164,8 @@ export default {
          * @param {Object} parameter object
          */
         assignPortSocketDependencyValues(parameter) {
-            const { id, value } = parameter
             if (this.usePortOrSocket) {
+                const { id, value } = parameter
                 switch (id) {
                     case 'port':
                         this.portValue = value

@@ -21,6 +21,7 @@ import {
     all_modules_map_stub,
     dummy_all_servers,
     getUnMonitoredServersStub,
+    testRelationshipUpdate,
 } from '@tests/unit/utils'
 chai.should()
 chai.use(sinonChai)
@@ -107,23 +108,15 @@ describe('MonitorDetail index', () => {
     it(`Should send PATCH request with accurate payload to
       update server relationship`, async () => {
         const serverTableRowProcessingSpy = sinon.spy(wrapper.vm, 'serverTableRowProcessing')
-        const type = 'servers'
-        const {
-            id,
-            relationships: {
-                servers: { data: currentData },
-            },
-        } = dummy_all_monitors[0]
-
-        const dataStub = [...currentData, { id: 'test-server', type }]
-
-        await wrapper.vm.dispatchRelationshipUpdate({ type, data: dataStub })
-
-        await axiosPatchStub.should.have.been.calledWith(`/monitors/${id}/relationships/${type}`, {
-            data: dataStub,
+        const relationshipType = 'servers'
+        await testRelationshipUpdate({
+            wrapper,
+            currentResource: dummy_all_monitors[0],
+            axiosPatchStub,
+            relationshipType,
         })
         // callbacks after update monitor, re-fetching monitor
-        await axiosGetStub.should.have.been.calledWith(`/monitors/${id}`)
+        await axiosGetStub.should.have.been.calledWith(`/monitors/${dummy_all_monitors[0].id}`)
         await serverTableRowProcessingSpy.should.have.been.calledOnce
     })
 })

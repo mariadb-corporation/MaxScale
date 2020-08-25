@@ -70,8 +70,12 @@
     "noEntityAvailable": "No {entityName} available",
     "noEntity": "No {entityName}",
     "newUpdateAvailable": "New update available!",
+
     "servers": "server | servers",
     "currentServerState": "current server state",
+    "unHealthy": "Unhealthy",
+    "healthy": "Healthy",
+    "warning": "Warning",
 
     "services": "service | services",
     "router": "router | routers",
