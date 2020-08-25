@@ -5,7 +5,7 @@
             <v-row>
                 <!-- PARAMETERS TABLE -->
                 <v-col cols="6">
-                    <details-parameters-collapse
+                    <details-parameters-table
                         :resourceId="current_listener.id"
                         :parameters="current_listener.attributes.parameters"
                         :editable="false"

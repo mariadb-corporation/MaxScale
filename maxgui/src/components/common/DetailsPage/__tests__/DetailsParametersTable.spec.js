@@ -13,7 +13,7 @@
 
 import { expect } from 'chai'
 import mount from '@tests/unit/setup'
-import DetailsParametersCollapse from '@/components/common/DetailsPage/DetailsParametersCollapse'
+import DetailsParametersTable from '@/components/common/DetailsPage/DetailsParametersTable'
 import { itemSelectMock } from '@tests/unit/utils'
 
 // should not have duplicated type here as this facilitates testing env
@@ -208,12 +208,12 @@ const defaultComputed = {
 const computedFactory = (computed = {}) =>
     mount({
         shallow: false,
-        component: DetailsParametersCollapse,
+        component: DetailsParametersTable,
         props: defaultProps,
         computed,
     })
 
-describe('DetailsParametersCollapse.vue', () => {
+describe('DetailsParametersTable.vue', () => {
     let wrapper
 
     beforeEach(async () => {

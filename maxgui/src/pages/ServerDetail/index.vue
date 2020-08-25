@@ -44,7 +44,7 @@
                     <v-tab-item class="pt-5">
                         <v-row>
                             <v-col class="py-0 my-0" cols="6">
-                                <details-parameters-collapse
+                                <details-parameters-table
                                     :resourceId="current_server.id"
                                     :parameters="current_server.attributes.parameters"
                                     usePortOrSocket

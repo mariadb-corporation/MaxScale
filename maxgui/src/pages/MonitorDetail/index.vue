@@ -6,7 +6,7 @@
             <v-row>
                 <!-- PARAMETERS TABLE -->
                 <v-col cols="6">
-                    <details-parameters-collapse
+                    <details-parameters-table
                         :resourceId="current_monitor.id"
                         :parameters="current_monitor.attributes.parameters"
                         :updateResourceParameters="updateMonitorParameters"

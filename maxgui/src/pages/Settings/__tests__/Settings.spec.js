@@ -114,12 +114,12 @@ describe('Settings index', () => {
         expect(wrapper.vm.$data.overridingModuleParams).to.be.deep.equals(processedModuleParamsStub)
     })
 
-    it(`Should pass necessary props to details-parameters-collapse`, async () => {
-        const detailsParametersCollapse = wrapper.findComponent({
-            name: 'details-parameters-collapse',
+    it(`Should pass necessary props to details-parameters-table`, async () => {
+        const detailsParametersTable = wrapper.findComponent({
+            name: 'details-parameters-table',
         })
-        expect(detailsParametersCollapse.exists()).to.be.true
-        // detailsParametersCollapse props
+        expect(detailsParametersTable.exists()).to.be.true
+        // detailsParametersTable props
         const {
             resourceId,
             parameters,
@@ -128,7 +128,7 @@ describe('Settings index', () => {
             onEditSucceeded,
             loading,
             isTree,
-        } = detailsParametersCollapse.vm.$props
+        } = detailsParametersTable.vm.$props
         // wrapper vm
         const {
             maxscale_parameters,

@@ -5,7 +5,7 @@
             <v-row>
                 <!-- PARAMETERS TABLE -->
                 <v-col cols="6">
-                    <details-parameters-collapse
+                    <details-parameters-table
                         :resourceId="current_filter.id"
                         :parameters="current_filter.attributes.parameters"
                         :editable="false"

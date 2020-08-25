@@ -11,14 +11,14 @@
  * Public License.
  */
 
-import DetailsParametersCollapse from './DetailsParametersCollapse'
+import DetailsParametersTable from './DetailsParametersTable'
 import DetailsPageTitle from './DetailsPageTitle'
 import DetailsIconGroupWrapper from './DetailsIconGroupWrapper'
 import RelationshipTable from './RelationshipTable'
 import DetailsReadonlyTable from './DetailsReadonlyTable'
 
 export default {
-    'details-parameters-collapse': DetailsParametersCollapse,
+    'details-parameters-table': DetailsParametersTable,
     'details-page-title': DetailsPageTitle,
     'details-icon-group-wrapper': DetailsIconGroupWrapper,
     'relationship-table': RelationshipTable,

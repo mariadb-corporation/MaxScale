@@ -131,7 +131,7 @@ PROPS:
 import { mapState } from 'vuex'
 import { OVERLAY_TRANSPARENT_LOADING } from 'store/overlayTypes'
 export default {
-    name: 'details-parameters-collapse',
+    name: 'details-parameters-table',
     props: {
         resourceId: { type: String, required: true },
         parameters: { type: Object, required: true },

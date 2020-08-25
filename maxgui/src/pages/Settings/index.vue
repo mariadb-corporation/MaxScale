@@ -10,7 +10,7 @@
                 <v-tabs-items v-model="currentActiveTab">
                     <v-tab-item class="pt-5">
                         <v-col cols="7">
-                            <details-parameters-collapse
+                            <details-parameters-table
                                 v-if="maxscale_parameters"
                                 resourceId="maxscale"
                                 :parameters="maxscale_parameters"
