@@ -48,7 +48,8 @@ describe('ServerDetail index', () => {
         await axiosPatchStub.restore()
     })
 
-    it(`Should send request to get current server, relationships services state
+    it(`Should send request to get current server, relationships
+      services state then server statistics and all sessions
       if current active tab is 'Statistics & Sessions'`, async () => {
         await wrapper.vm.$nextTick(async () => {
             let {
@@ -68,6 +69,12 @@ describe('ServerDetail index', () => {
                 ++count
             })
 
+            await axiosGetStub.should.have.been.calledWith(
+                `/servers/${id}?fields[servers]=statistics`
+            )
+            ++count
+            await axiosGetStub.should.have.been.calledWith(`/sessions`)
+            ++count
             axiosGetStub.should.have.callCount(count)
         })
     })

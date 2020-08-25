@@ -16,6 +16,7 @@ export default {
     state: {
         all_servers: [],
         current_server: {},
+        current_server_stats: {},
         server_connections_datasets: [],
     },
     mutations: {
@@ -27,6 +28,9 @@ export default {
         },
         SET_CURRENT_SERVER(state, payload) {
             state.current_server = payload
+        },
+        SET_CURRENT_SERVER_STATS(state, payload) {
+            state.current_server_stats = payload
         },
         SET_SERVER_CONNECTIONS_DATASETS(state, payload) {
             state.server_connections_datasets = payload
@@ -56,6 +60,20 @@ export default {
             } catch (e) {
                 if (process.env.NODE_ENV !== 'test') {
                     const logger = this.vue.$logger('store-server-fetchServerById')
+                    logger.error(e)
+                }
+            }
+        },
+
+        async fetchServerStatsById({ commit }, id) {
+            try {
+                const {
+                    data: { data: { attributes: { statistics = null } = {} } = {} } = {},
+                } = await this.vue.$axios.get(`/servers/${id}?fields[servers]=statistics`)
+                if (statistics) commit('SET_CURRENT_SERVER_STATS', statistics)
+            } catch (e) {
+                if (process.env.NODE_ENV !== 'test') {
+                    const logger = this.vue.$logger('store-server-fetchServerStatsById')
                     logger.error(e)
                 }
             }

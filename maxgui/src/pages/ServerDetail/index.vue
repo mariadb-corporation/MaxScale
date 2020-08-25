@@ -20,7 +20,7 @@
                                     <v-col cols="12" class="pa-0 ma-0">
                                         <details-readonly-table
                                             :title="`${$tc('statistics', 2)}`"
-                                            :tableData="statisticsObj"
+                                            :tableData="current_server_stats"
                                         />
                                     </v-col>
                                     <v-col cols="12" class="pa-0 mt-4">
@@ -34,8 +34,14 @@
                                 </v-row>
                             </v-col>
                             <v-col class="py-0 ma-0" cols="8">
-                                <sessions-table
-                                    :loading="overlay_type === OVERLAY_TRANSPARENT_LOADING"
+                                <details-readonly-table
+                                    tableClass="data-table-full--max-width-columns"
+                                    :tdBorderLeft="false"
+                                    :title="`${$tc('currentSessions', 2)}`"
+                                    :titleInfo="sessionsTableRow.length"
+                                    :noDataText="$t('noEntity', { entityName: $tc('sessions', 2) })"
+                                    :tableData="sessionsTableRow"
+                                    :customTableHeaders="sessionsTableHeader"
                                 />
                             </v-col>
                         </v-row>
@@ -80,38 +86,42 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { OVERLAY_TRANSPARENT_LOADING } from 'store/overlayTypes'
 import { mapActions, mapMutations, mapState } from 'vuex'
 import PageHeader from './PageHeader'
 import OverviewHeader from './OverviewHeader'
-import SessionsTable from './SessionsTable'
 
 export default {
     name: 'server-detail',
     components: {
         PageHeader,
         OverviewHeader,
-        SessionsTable,
     },
 
     data() {
         return {
-            OVERLAY_TRANSPARENT_LOADING: OVERLAY_TRANSPARENT_LOADING,
             currentActiveTab: null,
             tabs: [
                 { name: `${this.$tc('statistics', 2)} & ${this.$tc('sessions', 2)}` },
                 { name: `${this.$tc('parameters', 2)} & ${this.$tc('diagnostics', 2)}` },
             ],
             serviceTableRow: [],
+            sessionsTableHeader: [
+                { text: 'ID', value: 'id' },
+                { text: 'Client', value: 'user' },
+                { text: 'Connected', value: 'connected' },
+                { text: 'IDLE (s)', value: 'idle' },
+            ],
+            isLoopFetch: true,
         }
     },
     computed: {
         ...mapState({
             should_refresh_resource: 'should_refresh_resource',
             search_keyword: 'search_keyword',
-            overlay_type: 'overlay_type',
             current_server: state => state.server.current_server,
+            current_server_stats: state => state.server.current_server_stats,
             monitor_diagnostics: state => state.monitor.monitor_diagnostics,
+            all_sessions: state => state.session.all_sessions,
         }),
 
         monitorDiagnostics: function() {
@@ -120,9 +130,28 @@ export default {
             } = this.monitor_diagnostics
             return server_info.find(server => server.name === this.$route.params.id) || {}
         },
-        statisticsObj: function() {
-            const { attributes: { statistics = {} } = {} } = this.current_server
-            return statistics
+        sessionsTableRow: function() {
+            let tableRows = []
+            this.all_sessions.forEach(session => {
+                const {
+                    id,
+                    attributes: { idle, connected, user, remote, connections },
+                } = session
+
+                let connectionOfThisServer = connections.find(
+                    connection => connection.server === this.current_server.id
+                )
+
+                if (connectionOfThisServer) {
+                    tableRows.push({
+                        id: id,
+                        user: `${user}@${remote}`,
+                        connected: this.$help.formatValue(connected),
+                        idle: idle,
+                    })
+                }
+            })
+            return tableRows
         },
     },
     watch: {
@@ -132,17 +161,34 @@ export default {
                 await this.initialFetch()
             }
         },
-        currentActiveTab: async function(val) {
-            // when active tab is Parameters & Diagnostics
-            if (val === 1)
-                await Promise.all([
-                    this.fetchModuleParameters('servers'),
-                    this.fetchMonitorDiagnostics(),
-                ])
+        currentActiveTab: async function(val, oldVal) {
+            switch (val) {
+                case 0:
+                    // ignore when component is first created
+                    if (oldVal !== null) {
+                        await this.initialFetch()
+                        this.isLoopFetch = true
+                    }
+                    break
+                // when active tab is Parameters & Diagnostics
+                case 1:
+                    await Promise.all([
+                        this.fetchModuleParameters('servers'),
+                        this.fetchMonitorDiagnostics(),
+                    ])
+                    this.isLoopFetch = false
+                    break
+            }
+        },
+        isLoopFetch: async function(val) {
+            if (val) await this.loopFetch()
         },
     },
     async created() {
         await this.initialFetch()
+    },
+    beforeDestroy() {
+        this.isLoopFetch = false
     },
     methods: {
         ...mapMutations({
@@ -153,14 +199,26 @@ export default {
             getResourceState: 'getResourceState',
             fetchModuleParameters: 'fetchModuleParameters',
             fetchServerById: 'server/fetchServerById',
+            fetchServerStatsById: 'server/fetchServerStatsById',
             updateServerRelationship: 'server/updateServerRelationship',
             updateServerParameters: 'server/updateServerParameters',
             fetchMonitorDiagnosticsById: 'monitor/fetchMonitorDiagnosticsById',
+            fetchAllSessions: 'session/fetchAllSessions',
         }),
+        async loopFetch() {
+            while (this.isLoopFetch) {
+                await Promise.all([
+                    this.fetchAllSessions(),
+                    this.fetchServerStatsById(this.$route.params.id),
+                    this.$help.delay(10000),
+                ])
+            }
+        },
         async initialFetch() {
-            // Initial fetch
             await this.dispatchFetchServer()
             await this.serviceTableRowProcessing()
+            // loopFetch should go last
+            await this.loopFetch()
         },
         async fetchMonitorDiagnostics() {
             const { relationships: { monitors = {} } = {} } = this.current_server
