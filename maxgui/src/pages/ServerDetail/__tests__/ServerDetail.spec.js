@@ -48,7 +48,8 @@ describe('ServerDetail index', () => {
         await axiosPatchStub.restore()
     })
 
-    it(`Should send request to get current server, relationships services state`, async () => {
+    it(`Should send request to get current server, relationships services state
+      if current active tab is 'Statistics & Sessions'`, async () => {
         await wrapper.vm.$nextTick(async () => {
             let {
                 id,
@@ -71,14 +72,17 @@ describe('ServerDetail index', () => {
         })
     })
 
-    it(`Should send GET request to get monitor diagnostics if current active tab is
-      Parameters & Diagnostics tab`, async () => {
+    it(`Should send GET requests to get server module parameters and
+       monitor diagnostics if current active tab is 'Parameters & Diagnostics tab'`, async () => {
         await wrapper.setData({
             currentActiveTab: 1,
         })
         const monitorId = dummy_all_servers[0].relationships.monitors.data[0].id
         await axiosGetStub.should.have.been.calledWith(
             `/monitors/${monitorId}?fields[monitors]=monitor_diagnostics`
+        )
+        await axiosGetStub.should.have.been.calledWith(
+            `/maxscale/modules/servers?fields[module]=parameters`
         )
     })
 

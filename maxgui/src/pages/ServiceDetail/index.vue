@@ -59,7 +59,12 @@
                     <v-tab-item class="pt-5">
                         <v-row>
                             <v-col class="py-0 my-0" cols="6">
-                                <parameters-table :onEditSucceeded="fetchService" />
+                                <details-parameters-collapse
+                                    :resourceId="current_service.id"
+                                    :parameters="current_service.attributes.parameters"
+                                    :updateResourceParameters="updateServiceParameters"
+                                    :onEditSucceeded="fetchService"
+                                />
                             </v-col>
                             <v-col class="py-0 my-0" cols="6">
                                 <details-readonly-table
@@ -95,7 +100,6 @@ import { mapActions, mapMutations, mapState } from 'vuex'
 import OverviewHeader from './OverviewHeader'
 import PageHeader from './PageHeader'
 import SessionsTable from './SessionsTable'
-import ParametersTable from './ParametersTable'
 
 export default {
     name: 'service-detail',
@@ -103,7 +107,6 @@ export default {
         PageHeader,
         OverviewHeader,
         SessionsTable,
-        ParametersTable,
     },
     data() {
         return {
@@ -130,6 +133,9 @@ export default {
             const { attributes: { router_diagnostics = {} } = {} } = this.current_service
             return router_diagnostics
         },
+        routerModule: function() {
+            return this.current_service.attributes.router
+        },
     },
     watch: {
         should_refresh_resource: async function(val) {
@@ -138,6 +144,10 @@ export default {
                 await this.initialFetch()
             }
         },
+        currentActiveTab: async function(val) {
+            // when active tab is Parameters & Diagnostics
+            if (val === 1) await this.fetchModuleParameters(this.routerModule)
+        },
     },
     async created() {
         await this.initialFetch()
@@ -145,9 +155,11 @@ export default {
     methods: {
         ...mapActions({
             getResourceState: 'getResourceState',
+            fetchModuleParameters: 'fetchModuleParameters',
             fetchServiceById: 'service/fetchServiceById',
             genServiceConnectionsDataSets: 'service/genDataSets',
             updateServiceRelationship: 'service/updateServiceRelationship',
+            updateServiceParameters: 'service/updateServiceParameters',
             fetchAllFilters: 'filter/fetchAllFilters',
         }),
         ...mapMutations({

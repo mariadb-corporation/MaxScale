@@ -44,7 +44,13 @@
                     <v-tab-item class="pt-5">
                         <v-row>
                             <v-col class="py-0 my-0" cols="6">
-                                <parameters-table :onEditSucceeded="dispatchFetchServer" />
+                                <details-parameters-collapse
+                                    :resourceId="current_server.id"
+                                    :parameters="current_server.attributes.parameters"
+                                    usePortOrSocket
+                                    :updateResourceParameters="updateServerParameters"
+                                    :onEditSucceeded="dispatchFetchServer"
+                                />
                             </v-col>
                             <v-col class="py-0 my-0" cols="6">
                                 <details-readonly-table
@@ -79,7 +85,6 @@ import { mapActions, mapMutations, mapState } from 'vuex'
 import PageHeader from './PageHeader'
 import OverviewHeader from './OverviewHeader'
 import SessionsTable from './SessionsTable'
-import ParametersTable from './ParametersTable'
 
 export default {
     name: 'server-detail',
@@ -87,7 +92,6 @@ export default {
         PageHeader,
         OverviewHeader,
         SessionsTable,
-        ParametersTable,
     },
 
     data() {
@@ -130,7 +134,11 @@ export default {
         },
         currentActiveTab: async function(val) {
             // when active tab is Parameters & Diagnostics
-            if (val === 1) await this.fetchMonitorDiagnostics()
+            if (val === 1)
+                await Promise.all([
+                    this.fetchModuleParameters('servers'),
+                    this.fetchMonitorDiagnostics(),
+                ])
         },
     },
     async created() {
@@ -143,8 +151,10 @@ export default {
         }),
         ...mapActions({
             getResourceState: 'getResourceState',
+            fetchModuleParameters: 'fetchModuleParameters',
             fetchServerById: 'server/fetchServerById',
             updateServerRelationship: 'server/updateServerRelationship',
+            updateServerParameters: 'server/updateServerParameters',
             fetchMonitorDiagnosticsById: 'monitor/fetchMonitorDiagnosticsById',
         }),
         async initialFetch() {
