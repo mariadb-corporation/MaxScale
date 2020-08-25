@@ -155,6 +155,11 @@ RWBackend* backend_cmp_current_load(PRWBackends& sBackends)
  */
 RWBackend* backend_cmp_response_time(PRWBackends& pBackends)
 {
+    if (pBackends.empty())
+    {
+        return nullptr;
+    }
+
     const size_t SZ = pBackends.size();
     double estimated_time[SZ];
 
@@ -170,6 +175,7 @@ RWBackend* backend_cmp_response_time(PRWBackends& pBackends)
     auto it = std::min_element(estimated_time, estimated_time + SZ);
     size_t index = it - estimated_time;
 
+    mxb_assert(index < pBackends.size());
     return pBackends[index];
 }
 
