@@ -27,6 +27,10 @@
 
 #include "internal/secrets.hh"
 
+using std::cin;
+using std::cout;
+using std::endl;
+using std::flush;
 using std::string;
 
 struct option options[] =
@@ -40,62 +44,89 @@ struct option options[] =
 void print_usage(const char* executable, const char* directory)
 {
     const char msg[] =
-        R"(Usage: %s [-h|--help] [-i] [-d] [path] password
+        R"(Usage: %s [-h|--help] [-i|--interactive] [-d|--decrypt] [path] password
 
 Encrypt a MaxScale plaintext password using the encryption key in the key file
 '%s'. The key file may be generated using the 'maxkeys'-utility.
 
   -h, --help         Display this help.
-  -d, --decrypt      Decrypt an encrypted password instead
-  -i, --interactive  Read password from stdin. If '-i' has been provided, a single
-                     argument is assumed to be the path, two arguments is treated as
-                     an error.
+  -d, --decrypt      Decrypt an encrypted password instead.
+  -i, --interactive  - If maxpasswd is reading from a pipe, it will read a line and
+                       use that as the password.
+                     - If maxpasswd is connected to a terminal console, it will prompt
+                       for the password.
+                     If '-i' is specified, a single argument is assumed to be the path
+                     and two arguments is treated like an error.
 
   path      The key file directory (default: '%s')
   password  The password to encrypt or decrypt
 )";
+
     printf(msg, executable, SECRETS_FILENAME, directory);
 }
 
-string read_password()
+bool read_password(string* pPassword)
 {
-    struct termios tty;
-    tcgetattr(STDIN_FILENO, &tty);
+    bool rv = false;
+    string password;
 
-    bool echo = (tty.c_lflag & ECHO);
-    if (echo)
+    if (isatty(STDIN_FILENO))
     {
-        tty.c_lflag &= ~ECHO;
-        tcsetattr(STDIN_FILENO, TCSANOW, &tty);
+        struct termios tty;
+        tcgetattr(STDIN_FILENO, &tty);
+
+        bool echo = (tty.c_lflag & ECHO);
+        if (echo)
+        {
+            tty.c_lflag &= ~ECHO;
+            tcsetattr(STDIN_FILENO, TCSANOW, &tty);
+        }
+
+        cout << "Enter password : " << flush;
+        string s1;
+        std::getline(std::cin, s1);
+        cout << endl;
+
+        cout << "Repeat password: " << flush;
+        string s2;
+        std::getline(std::cin, s2);
+        cout << endl;
+
+        if (echo)
+        {
+            tty.c_lflag |= ECHO;
+            tcsetattr(STDIN_FILENO, TCSANOW, &tty);
+        }
+
+        if (s1 == s2)
+        {
+            password = s1;
+            rv = true;
+        }
+        else
+        {
+            cout << "Passwords are not identical." << endl;
+        }
+    }
+    else
+    {
+        std::getline(std::cin, password);
+        rv = true;
     }
 
-    bool prompt = isatty(STDIN_FILENO);
-
-    if (prompt)
+    if (rv)
     {
-        std::cout << "Enter password: " << std::flush;
+        *pPassword = password;
     }
 
-    string s;
-    std::getline(std::cin, s);
-
-    if (prompt)
-    {
-        std::cout << std::endl;
-    }
-
-    if (echo)
-    {
-        tty.c_lflag |= ECHO;
-        tcsetattr(STDIN_FILENO, TCSANOW, &tty);
-    }
-
-    return s;
+    return rv;
 }
 
 
 int main(int argc, char** argv)
 {
+    std::ios::sync_with_stdio();
+
     mxb::Log log(MXB_LOG_TARGET_STDOUT);
     const char* default_directory = mxs::datadir();
 
@@ -175,12 +206,15 @@ int main(int argc, char** argv)
         return EXIT_FAILURE;
     }
 
-    int rval = EXIT_FAILURE;
-
     if (interactive)
     {
-        input = read_password();
+        if (!read_password(&input))
+        {
+            return EXIT_FAILURE;
+        }
     }
+
+    int rval = EXIT_FAILURE;
 
     string filepath = path;
     filepath.append("/").append(SECRETS_FILENAME);

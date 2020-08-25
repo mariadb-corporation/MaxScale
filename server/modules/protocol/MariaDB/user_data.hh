@@ -267,7 +267,7 @@ private:
 
     /** Warn if no valid servers to query from. Starts false, as in the beginning monitors may not have
      *  ran yet. */
-    bool m_warn_no_servers {false};
+    std::atomic_bool m_warn_no_servers {false};
 
     /** Check if service user has "show databases" privilege. If found, not done again. */
     bool m_check_showdb_priv {true};
