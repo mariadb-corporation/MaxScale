@@ -224,7 +224,7 @@ void test_binlog(TestConnections* Test)
 
     Test->tprintf("Connecting to MaxScale binlog router");
     binlog = open_conn(Test->maxscales->binlog_port[0],
-                       Test->maxscales->IP[0],
+                       Test->maxscales->ip4(0),
                        Test->repl->user_name,
                        Test->repl->password,
                        Test->ssl);

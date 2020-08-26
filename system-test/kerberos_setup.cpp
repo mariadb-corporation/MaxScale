@@ -27,8 +27,8 @@ int main(int argc, char* argv[])
         fprintf(f, "%s node_%03d.maxscale.test\n", Test->repl->IP[i], i);
         fprintf(f, "%s node_%03d\n", Test->repl->IP[i], i);
     }
-    fprintf(f, "%s maxscale.maxscale.test\n", Test->maxscales->IP[0]);
-    fprintf(f, "%s maxscale\n", Test->maxscales->IP[0]);
+    fprintf(f, "%s maxscale.maxscale.test\n", Test->maxscales->ip4(0));
+    fprintf(f, "%s maxscale\n", Test->maxscales->ip4(0));
     fclose(f);
 
     Test->tprintf(

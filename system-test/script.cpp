@@ -207,7 +207,7 @@ int main(int argc, char* argv[])
             "scp -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no  -o LogLevel=quiet script_output_expected* %s@%s:%s/",
             Test->maxscales->sshkey(0),
             Test->maxscales->access_user(0),
-            Test->maxscales->IP[0],
+            Test->maxscales->ip4(0),
             homedir);
     Test->add_result(system(str), "Error copying script to VM");
 

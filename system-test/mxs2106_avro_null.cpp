@@ -33,7 +33,7 @@ int main(int argc, char** argv)
     sleep(10);
     test.set_timeout(120);
 
-    CDC::Connection conn(test.maxscales->IP[0], 4001, "skysql", "skysql");
+    CDC::Connection conn(test.maxscales->ip4(0), 4001, "skysql", "skysql");
 
     test.expect(conn.connect("test.test1"), "Failed to connect");
 

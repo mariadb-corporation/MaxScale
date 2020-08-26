@@ -493,3 +493,8 @@ const std::string& Nodes::prefix() const
 {
     return m_prefix;
 }
+
+const char* Nodes::ip4(int i) const
+{
+    return IP[i];
+}

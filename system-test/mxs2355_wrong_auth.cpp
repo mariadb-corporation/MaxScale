@@ -19,7 +19,7 @@
 int main(int argc, char** argv)
 {
     TestConnections test(argc, argv);
-    const char* host = test.maxscales->IP[0];
+    const char* host = test.maxscales->ip4(0);
     int port = test.maxscales->ports[0][0];
     const char* user = test.maxscales->user_name;
     const char* pass = test.maxscales->password;

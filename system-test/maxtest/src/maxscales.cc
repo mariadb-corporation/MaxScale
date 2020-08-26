@@ -329,6 +329,11 @@ const std::string& Maxscales::prefix() const
     return Nodes::prefix();
 }
 
+const char* Maxscales::ip4(int i) const
+{
+    return Nodes::ip4(i);
+}
+
 namespace maxtest
 {
 

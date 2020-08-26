@@ -29,7 +29,7 @@ int create_tcp_socket()
     return sock;
 }
 
-char* get_ip(char* host)
+char* get_ip(const char* host)
 {
     struct hostent* hent;
     int iplen = 16;     // XXX.XXX.XXX.XXX
@@ -48,7 +48,7 @@ char* get_ip(char* host)
     return ip;
 }
 
-char* build_get_query(char* host, const char* page)
+char* build_get_query(const char* host, const char* page)
 {
     char* query;
     const char* getpage = page;
@@ -74,7 +74,7 @@ char* get_maxinfo(const char* page, TestConnections* Test)
     char buf[BUFSIZ + 1];
 
     sock = create_tcp_socket();
-    ip = get_ip(Test->maxscales->IP[0]);
+    ip = get_ip(Test->maxscales->ip4(0));
     if (ip == NULL)
     {
         Test->add_result(1, "Can't get IP\n");
@@ -100,7 +100,7 @@ char* get_maxinfo(const char* page, TestConnections* Test)
         Test->add_result(1, "Could not connect\n");
         return NULL;
     }
-    get = build_get_query(Test->maxscales->IP[0], page);
+    get = build_get_query(Test->maxscales->ip4(0), page);
     // Test->tprintf("Query is:\n<<START>>\n%s<<END>>\n", get);
 
     // Send the query to the server

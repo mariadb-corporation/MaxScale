@@ -25,8 +25,9 @@ public:
      */
     virtual bool setup() = 0;
 
-    const char* ip_private(int i = 0) const;
+    const char* ip4(int i = 0) const;
     const char* ip6(int i = 0) const;
+    const char* ip_private(int i = 0) const;
 
     char * IP[256];
 

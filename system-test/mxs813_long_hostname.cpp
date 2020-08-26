@@ -23,7 +23,7 @@ int main(int argc, char* argv[])
     Test->start_binlog(0);
 
     MYSQL* binlog = open_conn_no_db(Test->maxscales->binlog_port[0],
-                                    Test->maxscales->IP[0],
+                                    Test->maxscales->ip4(0),
                                     Test->repl->user_name,
                                     Test->repl->password,
                                     Test->ssl);

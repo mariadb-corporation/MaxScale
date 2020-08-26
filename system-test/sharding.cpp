@@ -103,6 +103,7 @@ int main(int argc, char* argv[])
     test.repl->close_connections();
     test.stop_timeout();
     sleep(6); // The router is configured to refresh the shard map if older than 5 seconds.
+    auto mxs_ip = test.maxscales->ip4(0);
 
     // Generate a table for each user on the common db. The tables should be on different backends since
     // each user only has access to one node.
@@ -114,7 +115,7 @@ int main(int argc, char* argv[])
         auto table = shard_tables[i];
 
         test.tprintf(opening_fmt, user, pass, common_db);
-        auto conn = open_conn_db(test.maxscales->rwsplit_port[0], test.maxscales->IP[0],
+        auto conn = open_conn_db(test.maxscales->rwsplit_port[0], mxs_ip,
                                    common_db, user, pass, test.ssl);
         if (test.try_query(conn, "CREATE TABLE %s (x1 int, fl int);", table) == 0)
         {
@@ -131,7 +132,7 @@ int main(int argc, char* argv[])
         auto pass = user_pws[i];
         auto table = shard_tables[i];
         test.tprintf(opening_fmt, user, pass, common_db);
-        auto conn = open_conn_db(test.maxscales->rwsplit_port[0], test.maxscales->IP[0],
+        auto conn = open_conn_db(test.maxscales->rwsplit_port[0], mxs_ip,
                                  common_db, user, pass, test.ssl);
 
         const char* query = "SHOW TABLES;";
@@ -159,7 +160,7 @@ int main(int argc, char* argv[])
     {
         auto user = user_names[i];
         auto pass = user_pws[i];
-        conn = open_conn_db(test.maxscales->rwsplit_port[0], test.maxscales->IP[0],
+        conn = open_conn_db(test.maxscales->rwsplit_port[0], mxs_ip,
                             "", user, pass, test.ssl);
         test.expect(conn, "Connection failed for user '%s'.", user);
         mysql_close(conn);

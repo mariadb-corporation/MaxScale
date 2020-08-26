@@ -8,7 +8,8 @@ int main(int argc, char** argv)
 {
     TestConnections test(argc, argv);
 
-    MYSQL* mysql = open_conn(test.maxscales->rwsplit_port[0], test.maxscales->IP[0], "testuser", "", false);
+    auto mxs_ip = test.maxscales->ip4(0);
+    MYSQL* mysql = open_conn(test.maxscales->rwsplit_port[0], mxs_ip, "testuser", "", false);
     test.add_result(mysql_errno(mysql) == 0, "Connecting to MaxScale should fail");
     test.add_result(strstr(mysql_error(mysql), "using password: NO") == NULL,
                     "Missing (using password: NO) error message, got this instead: %s",
@@ -16,7 +17,7 @@ int main(int argc, char** argv)
     test.tprintf("MySQL error: %s", mysql_error(mysql));
     mysql_close(mysql);
 
-    mysql = open_conn(test.maxscales->rwsplit_port[0], test.maxscales->IP[0], "testuser", "testpassword", false);
+    mysql = open_conn(test.maxscales->rwsplit_port[0], mxs_ip, "testuser", "testpassword", false);
     test.add_result(mysql_errno(mysql) == 0, "Connecting to MaxScale should fail");
     test.add_result(strstr(mysql_error(mysql), "using password: YES") == NULL,
                     "Missing (using password: YES) error message, got this instead: %s",

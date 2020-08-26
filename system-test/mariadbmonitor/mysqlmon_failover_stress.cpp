@@ -524,7 +524,7 @@ void run(TestConnections& test)
 
     if (test.ok())
     {
-        const char* zHost = test.maxscales->IP[0];
+        const char* zHost = test.maxscales->ip4(0);
         int port = test.maxscales->rwsplit_port[0];
         const char* zUser = test.maxscales->user_name;
         const char* zPassword = test.maxscales->password;
