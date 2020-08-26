@@ -52,8 +52,14 @@
                                 </v-row>
                             </v-col>
                             <v-col class="py-0 ma-0" cols="8">
-                                <sessions-table
-                                    :loading="overlay_type === OVERLAY_TRANSPARENT_LOADING"
+                                <details-readonly-table
+                                    tableClass="data-table-full--max-width-columns"
+                                    :tdBorderLeft="false"
+                                    :title="`${$tc('currentSessions', 2)}`"
+                                    :titleInfo="sessionsTableRow.length"
+                                    :noDataText="$t('noEntity', { entityName: $tc('sessions', 2) })"
+                                    :tableData="sessionsTableRow"
+                                    :customTableHeaders="sessionsTableHeader"
                                 />
                             </v-col>
                         </v-row>
@@ -97,23 +103,19 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { OVERLAY_TRANSPARENT_LOADING } from 'store/overlayTypes'
 import { FORM_LISTENER } from 'store/formTypes'
 import { mapActions, mapMutations, mapState } from 'vuex'
 import OverviewHeader from './OverviewHeader'
 import PageHeader from './PageHeader'
-import SessionsTable from './SessionsTable'
 
 export default {
     name: 'service-detail',
     components: {
         PageHeader,
         OverviewHeader,
-        SessionsTable,
     },
     data() {
         return {
-            OVERLAY_TRANSPARENT_LOADING: OVERLAY_TRANSPARENT_LOADING,
             FORM_LISTENER: FORM_LISTENER,
             currentActiveTab: null,
             tabs: [
@@ -123,15 +125,21 @@ export default {
             serverStateTableRow: [],
             listenerStateTableRow: [],
             filtersTableRow: [],
+            sessionsTableHeader: [
+                { text: 'ID', value: 'id' },
+                { text: 'Client', value: 'user' },
+                { text: 'Connected', value: 'connected' },
+                { text: 'IDLE (s)', value: 'idle' },
+            ],
         }
     },
     computed: {
         ...mapState({
             should_refresh_resource: 'should_refresh_resource',
-            overlay_type: 'overlay_type',
             current_service: state => state.service.current_service,
             service_connections_datasets: state => state.service.service_connections_datasets,
             service_connection_info: state => state.service.service_connection_info,
+            sessions_by_service: state => state.session.sessions_by_service,
         }),
 
         routerDiagnostics: function() {
@@ -140,6 +148,16 @@ export default {
         },
         routerModule: function() {
             return this.current_service.attributes.router
+        },
+        sessionsTableRow: function() {
+            return this.sessions_by_service.map(
+                ({ id, attributes: { idle, connected, user, remote } }) => ({
+                    id,
+                    user: `${user}@${remote}`,
+                    connected: this.$help.formatValue(connected),
+                    idle,
+                })
+            )
         },
     },
     watch: {
