@@ -13,13 +13,11 @@
 
 using std::string;
 
-Nodes::Nodes(const char* pref,
-             const std::string& network_config,
-             bool verbose)
+Nodes::Nodes(const char* prefix, const std::string& network_config, bool verbose)
     : verbose(verbose)
+    , m_prefix(prefix)
     , network_config(network_config)
 {
-    strcpy(this->prefix, pref);
 }
 
 Nodes::~Nodes()
@@ -273,16 +271,18 @@ int Nodes::read_basic_env()
     char env_name[64];
     N = get_N();
 
+    auto prefixc = m_prefix.c_str();
+
     if ((N > 0) && (N < 255))
     {
         for (int i = 0; i < N; i++)
         {
             // reading IPs
-            sprintf(env_name, "%s_%03d_network", prefix, i);
+            sprintf(env_name, "%s_%03d_network", prefixc, i);
             IP[i] = strdup(get_nc_item(env_name).c_str());
 
             // reading private IPs
-            sprintf(env_name, "%s_%03d_private_ip", prefix, i);
+            sprintf(env_name, "%s_%03d_private_ip", prefixc, i);
             auto& priv_ip = m_ip_private[i];
             priv_ip = get_nc_item(env_name);
             if (priv_ip.empty())
@@ -292,7 +292,7 @@ int Nodes::read_basic_env()
             setenv(env_name, priv_ip.c_str(), 1);
 
             // reading IPv6
-            sprintf(env_name, "%s_%03d_network6", prefix, i);
+            sprintf(env_name, "%s_%03d_network6", prefixc, i);
             auto& ip6 = m_ip6[i];
             ip6 = get_nc_item(env_name);
             if (ip6.empty())
@@ -302,11 +302,11 @@ int Nodes::read_basic_env()
             setenv(env_name, ip6.c_str(), 1);
 
             //reading sshkey
-            sprintf(env_name, "%s_%03d_keyfile", prefix, i);
+            sprintf(env_name, "%s_%03d_keyfile", prefixc, i);
             m_sshkey[i] = get_nc_item(env_name);
 
 
-            sprintf(env_name, "%s_%03d_whoami", prefix, i);
+            sprintf(env_name, "%s_%03d_whoami", prefixc, i);
             auto& access_user = m_access_user[i];
             access_user = get_nc_item(env_name);
             if (access_user.empty())
@@ -315,7 +315,7 @@ int Nodes::read_basic_env()
             }
             setenv(env_name, access_user.c_str(), 1);
 
-            sprintf(env_name, "%s_%03d_access_sudo", prefix, i);
+            sprintf(env_name, "%s_%03d_access_sudo", prefixc, i);
             m_access_sudo[i] = envvar_get_set(env_name, " sudo ");
 
             if (access_user == "root")
@@ -327,7 +327,7 @@ int Nodes::read_basic_env()
                 m_access_homedir[i] = mxb::string_printf("/home/%s/", access_user.c_str());
             }
 
-            sprintf(env_name, "%s_%03d_hostname", prefix, i);
+            sprintf(env_name, "%s_%03d_hostname", prefixc, i);
             auto& hostname = m_hostname[i];
             hostname = get_nc_item(env_name);
             if (hostname.empty())
@@ -336,19 +336,19 @@ int Nodes::read_basic_env()
             }
             setenv(env_name, hostname.c_str(), 1);
 
-            sprintf(env_name, "%s_%03d_start_vm_command", prefix, i);
+            sprintf(env_name, "%s_%03d_start_vm_command", prefixc, i);
             string start_vm_def = mxb::string_printf("curr_dir=`pwd`; "
                                                      "cd %s/%s;vagrant resume %s_%03d ; "
                                                      "cd $curr_dir",
-                                                     getenv("MDBCI_VM_PATH"), getenv("name"), prefix, i);
+                                                     getenv("MDBCI_VM_PATH"), getenv("name"), prefixc, i);
             m_start_vm_command[i] = envvar_get_set(env_name, "%s", start_vm_def.c_str());
             setenv(env_name, m_start_vm_command[i].c_str(), 1);
 
-            sprintf(env_name, "%s_%03d_stop_vm_command", prefix, i);
+            sprintf(env_name, "%s_%03d_stop_vm_command", prefixc, i);
             string stop_vm_def = mxb::string_printf("curr_dir=`pwd`; "
                                                     "cd %s/%s;vagrant suspend %s_%03d ; "
                                                     "cd $curr_dir",
-                                                    getenv("MDBCI_VM_PATH"), getenv("name"), prefix, i);
+                                                    getenv("MDBCI_VM_PATH"), getenv("name"), prefixc, i);
             m_stop_vm_command[i] = envvar_get_set(env_name, "%s", stop_vm_def.c_str());
             setenv(env_name, m_stop_vm_command[i].c_str(), 1);
         }
@@ -391,17 +391,24 @@ std::string Nodes::get_nc_item(const char* item_name)
 
 int Nodes::get_N()
 {
-    int N = 0;
-    char item[strlen(prefix) + 13];
-    do
+    int n_nodes = 0;
+    while (true)
     {
-        sprintf(item, "%s_%03d_network", prefix, N);
-        N++;
+        string item = mxb::string_printf("%s_%03d_network", m_prefix.c_str(), n_nodes);
+        if (network_config.find(item) != string::npos)
+        {
+            n_nodes++;
+        }
+        else
+        {
+            break;
+        }
     }
-    while (network_config.find(item) != std::string::npos);
-    sprintf(item, "%s_N", prefix);
-    setenv(item, std::to_string(N).c_str(), 1);
-    return N - 1 ;
+
+    // Is this required?
+    string env_name = m_prefix + "_N";
+    setenv(env_name.c_str(), std::to_string(n_nodes).c_str(), 1);
+    return n_nodes;
 }
 
 int Nodes::start_vm(int node)
@@ -480,4 +487,9 @@ const char* Nodes::access_sudo(int i) const
 const char* Nodes::sshkey(int i) const
 {
     return m_sshkey[i].c_str();
+}
+
+const std::string& Nodes::prefix() const
+{
+    return m_prefix;
 }

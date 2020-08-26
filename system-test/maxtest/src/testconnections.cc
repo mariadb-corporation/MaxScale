@@ -839,11 +839,11 @@ void TestConnections::process_template(int m, const string& cnf_template_path, c
                     IPcnf = mdn[j]->ip_private(i);
                 }
                 sprintf(str, "sed -i \"s/###%s_server_IP_%0d###/%s/\" maxscale.cnf",
-                        mdn[j]->prefix, i + 1, IPcnf);
+                        mdn[j]->prefix().c_str(), i + 1, IPcnf);
                 system(str);
 
                 sprintf(str, "sed -i \"s/###%s_server_port_%0d###/%d/\" maxscale.cnf",
-                        mdn[j]->prefix, i + 1, mdn[j]->port[i]);
+                        mdn[j]->prefix().c_str(), i + 1, mdn[j]->port[i]);
                 system(str);
             }
 
@@ -2278,7 +2278,6 @@ std::string dump_status(const StringSet& current, const StringSet& expected)
 
 int TestConnections::reinstall_maxscales()
 {
-    char sys[m_target.length() + m_mdbci_config_name.length() + strlen(maxscales->prefix) + 70];
     for (int i = 0; i < maxscales->N; i++)
     {
         printf("Installing Maxscale on node %d\n", i);
@@ -2286,9 +2285,9 @@ int TestConnections::reinstall_maxscales()
         maxscales->ssh_node(i, "yum remove maxscale -y", true);
         maxscales->ssh_node(i, "yum clean all", true);
 
-        sprintf(sys, "mdbci install_product --product maxscale_ci --product-version %s %s/%s_%03d",
-                m_target.c_str(), m_mdbci_config_name.c_str(), maxscales->prefix, i);
-        if (system(sys))
+        string cmd = mxb::string_printf("mdbci install_product --product maxscale_ci --product-version %s %s/%s_%03d",
+                                        m_target.c_str(), m_mdbci_config_name.c_str(), maxscales->prefix().c_str(), i);
+        if (system(cmd.c_str()))
         {
             return 1;
         }

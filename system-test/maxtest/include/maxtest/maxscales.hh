@@ -41,6 +41,8 @@ public:
     const char* access_sudo(int i = 0) const;
     const char* sshkey(int i = 0) const;
 
+    const std::string& prefix() const;
+
     /**
      * @brief rwsplit_port RWSplit service port
      */

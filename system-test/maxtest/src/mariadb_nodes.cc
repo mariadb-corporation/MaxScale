@@ -63,19 +63,23 @@ Mariadb_nodes::Mariadb_nodes(const char* pref,
     : Nodes(pref, network_config, verbose)
     , no_set_pos(false)
     , v51(false)
-    , cnf_server_name(std::string(this->prefix) + std::string("_server"))
 {
     memset(this->nodes, 0, sizeof(this->nodes));
     memset(this->blocked, 0, sizeof(this->blocked));
     strcpy(this->test_dir, test_cwd);
 
-    if (strcmp(this->prefix, "node") == 0)
+    auto& prefix_str = prefix();
+    if (prefix_str == "node")
     {
-        cnf_server_name = std::string("server");
+        cnf_server_name = "server";
     }
-    if (strcmp(this->prefix, "galera") == 0)
+    else if (prefix_str == "galera")
     {
-        cnf_server_name = std::string("gserver");
+        cnf_server_name = "gserver";
+    }
+    else
+    {
+        cnf_server_name = prefix_str + "_server";
     }
 }
 
@@ -173,13 +177,14 @@ void Mariadb_nodes::read_env()
 
     read_basic_env();
 
-    sprintf(env_name, "%s_user", prefix);
+    auto prefixc = prefix().c_str();
+    sprintf(env_name, "%s_user", prefixc);
     user_name = readenv(env_name, "skysql");
 
-    sprintf(env_name, "%s_password", prefix);
+    sprintf(env_name, "%s_password", prefixc);
     password = readenv(env_name, "skysql");
 
-    sprintf(env_name, "%s_ssl", prefix);
+    sprintf(env_name, "%s_ssl", prefixc);
     ssl = readenv_bool(env_name, false);
 
     if ((N > 0) && (N < 255))
@@ -187,11 +192,11 @@ void Mariadb_nodes::read_env()
         for (int i = 0; i < N; i++)
         {
             // reading ports
-            sprintf(env_name, "%s_%03d_port", prefix, i);
+            sprintf(env_name, "%s_%03d_port", prefixc, i);
             port[i] = readenv_int(env_name, 3306);
 
             //reading sockets
-            sprintf(env_name, "%s_%03d_socket", prefix, i);
+            sprintf(env_name, "%s_%03d_socket", prefixc, i);
             socket[i] = readenv(env_name, " ");
             if (strcmp(socket[i], " "))
             {
@@ -202,19 +207,19 @@ void Mariadb_nodes::read_env()
             {
                 socket_cmd[i] = (char *) " ";
             }
-            sprintf(env_name, "%s_%03d_socket_cmd", prefix, i);
+            sprintf(env_name, "%s_%03d_socket_cmd", prefixc, i);
             setenv(env_name, socket_cmd[i], 1);
 
             // reading start_db_command
-            sprintf(env_name, "%s_%03d_start_db_command", prefix, i);
+            sprintf(env_name, "%s_%03d_start_db_command", prefixc, i);
             start_db_command[i] = readenv(env_name, (char *) "systemctl start mariadb || service mysql start");
 
             // reading stop_db_command
-            sprintf(env_name, "%s_%03d_stop_db_command", prefix, i);
+            sprintf(env_name, "%s_%03d_stop_db_command", prefixc, i);
             stop_db_command[i] = readenv(env_name, (char *) "systemctl stop mariadb || service mysql stop");
 
             // reading cleanup_db_command
-            sprintf(env_name, "%s_%03d_cleanup_db_command", prefix, i);
+            sprintf(env_name, "%s_%03d_cleanup_db_command", prefixc, i);
             cleanup_db_command[i] = readenv(env_name, (char *) "rm -rf /var/lib/mysql/*; killall -9 mysqld");
         }
     }
@@ -222,13 +227,14 @@ void Mariadb_nodes::read_env()
 
 void Mariadb_nodes::print_env()
 {
+    auto prefixc = prefix().c_str();
     for (int i = 0; i < N; i++)
     {
-        printf("%s node %d \t%s\tPort=%d\n", prefix, i, IP[i], port[i]);
-        printf("%s Access user %s\n", prefix, access_user(i));
+        printf("%s node %d \t%s\tPort=%d\n", prefixc, i, IP[i], port[i]);
+        printf("%s Access user %s\n", prefixc, access_user(i));
     }
-    printf("%s User name %s\n", prefix, user_name);
-    printf("%s Password %s\n", prefix, password);
+    printf("%s User name %s\n", prefixc, user_name);
+    printf("%s Password %s\n", prefixc, password);
 }
 
 int Mariadb_nodes::find_master()
@@ -863,7 +869,7 @@ int Mariadb_nodes::check_replication()
 
     if (verbose)
     {
-        printf("Replication check for %s gave code %d\n", prefix, res);
+        printf("Replication check for %s gave code %d\n", prefix().c_str(), res);
     }
 
     return res;
@@ -876,7 +882,7 @@ bool Mariadb_nodes::fix_replication()
 
     if (check_replication())
     {
-        cout << prefix << ": Replication is broken, fixing..." << endl;
+        cout << prefix() << ": Replication is broken, fixing..." << endl;
         rval = false;
 
         if (unblock_all_nodes() == 0)
@@ -917,7 +923,7 @@ bool Mariadb_nodes::revert_nodes_snapshot()
     bool rval = true;
     for (int i = 0; i < N; i++)
     {
-        sprintf(str, "%s clean --node-name %s_%03d", revert_snapshot_command, prefix, i);
+        sprintf(str, "%s clean --node-name %s_%03d", revert_snapshot_command, prefix().c_str(), i);
         if (system(str))
         {
             rval = false;
@@ -1183,7 +1189,8 @@ int Mariadb_nodes::get_version(int i)
 
     if (verbose)
     {
-        printf("Node %s%d: %s\t %s \t %s\n", prefix, i, version[i], version_number[i], version_major[i]);
+        printf("Node %s%d: %s\t %s \t %s\n",
+               prefix().c_str(), i, version[i], version_number[i], version_major[i]);
     }
     return local_result;
 }
@@ -1655,4 +1662,9 @@ const char* Mariadb_nodes::ip6(int i) const
 const char* Mariadb_nodes::access_homedir(int i) const
 {
     return Nodes::access_homedir(i);
+}
+
+const string& Mariadb_nodes::prefix() const
+{
+    return Nodes::prefix();
 }
