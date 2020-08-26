@@ -10,7 +10,7 @@
                         ROUTER
                     </span>
                     <span class="text-no-wrap body-2">
-                        {{ current_service.attributes.router }}
+                        {{ currentService.attributes.router }}
                     </span>
                 </template>
             </outlined-overview-card>
@@ -20,7 +20,7 @@
                         STARTED AT
                     </span>
                     <span class="text-no-wrap body-2">
-                        {{ $help.formatValue(current_service.attributes.started) }}
+                        {{ $help.formatValue(currentService.attributes.started) }}
                     </span>
                 </template>
             </outlined-overview-card>
@@ -30,18 +30,18 @@
                 <template v-slot:title>
                     {{ $tc('currentConnections', 2) }}
                     <span class="text-lowercase font-weight-medium">
-                        ({{ service_connection_info.connections }}/{{
-                            service_connection_info.total_connections
+                        ({{ serviceConnectionInfo.connections }}/{{
+                            serviceConnectionInfo.total_connections
                         }})</span
                     >
                 </template>
                 <template v-slot:card-body>
                     <v-sheet width="100%">
                         <line-chart
-                            v-if="service_connections_datasets.length"
+                            v-if="serviceConnectionsDatasets.length"
                             ref="serviceConnectionsChart"
                             :styles="{ height: '70px' }"
-                            :chart-data="{ datasets: service_connections_datasets }"
+                            :chart-data="{ datasets: serviceConnectionsDatasets }"
                             :options="options"
                         />
                     </v-sheet>
@@ -64,10 +64,14 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapActions, mapState } from 'vuex'
 
 export default {
     name: 'overview-header',
+    props: {
+        currentService: { type: Object, required: true },
+        serviceConnectionsDatasets: { type: Array, required: true },
+        serviceConnectionInfo: { type: Object, required: true },
+    },
     data() {
         return {
             options: {
@@ -84,39 +88,23 @@ export default {
             },
         }
     },
-    computed: {
-        ...mapState({
-            current_service: state => state.service.current_service,
-            service_connections_datasets: state => state.service.service_connections_datasets,
-            service_connection_info: state => state.service.service_connection_info,
-        }),
-    },
-    async created() {
-        await this.dispatchFetchAll()
-    },
+
     methods: {
-        ...mapActions({
-            fetchServiceConnections: 'service/fetchServiceConnections',
-            fetchSessionsFilterByService: 'session/fetchSessionsFilterByService',
-        }),
-        async dispatchFetchAll() {
-            const serviceId = this.$route.params.id
-            // fetching connections chart info should be at the same time with fetchSessionsFilterByService
-            await Promise.all([
-                this.fetchServiceConnections(serviceId),
-                this.fetchSessionsFilterByService(serviceId),
-            ])
+        asyncEmit(eventName) {
+            return new Promise(resolve => {
+                this.$emit(eventName)
+                this.$nextTick(resolve)
+            })
         },
         async updateChart() {
-            const self = this
             const { serviceConnectionsChart } = this.$refs
             if (serviceConnectionsChart) {
-                await this.dispatchFetchAll()
-
+                await this.asyncEmit('update-chart')
+                const { connections } = this.serviceConnectionInfo
                 serviceConnectionsChart.chartData.datasets.forEach(function(dataset) {
                     dataset.data.push({
                         x: Date.now(),
-                        y: self.service_connection_info.connections,
+                        y: connections,
                     })
                 })
 

@@ -22,7 +22,7 @@ maxtest::MariaDB::MariaDB(TestLogger& log)
     connection_settings().auto_reconnect = true;
 }
 
-bool maxtest::MariaDB::open(const std::string& host, unsigned int port, const std::string& db)
+bool maxtest::MariaDB::open(const std::string& host, int port, const std::string& db)
 {
     auto ret = mxq::MariaDB::open(host, port, db);
     m_log.expect(ret, "Connection to [%s]:%u failed. %s", host.c_str(), port, error());

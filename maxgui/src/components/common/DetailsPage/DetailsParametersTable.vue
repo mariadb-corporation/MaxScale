@@ -16,8 +16,8 @@
                     tdBorderLeft
                     showAll
                     :editableCell="editableCell"
-                    :search="searchKeyword"
-                    :loading="loading"
+                    :search="search_keyword"
+                    :loading="isLoading"
                     :keepPrimitiveValue="keepPrimitiveValue"
                     :isTree="isTree"
                     @cell-hover="showCellTooltip"
@@ -124,20 +124,20 @@ This component allows to read parameters and edit parameters. It means to be use
 PROPS:
 - usePortOrSocket: accepts boolean , if true, get portValue, and socketValue,
   passing them to parameter-input for handling special input field when editting server or listener.
-  If editing listener, address parameter won't be required
+  If editing listener, address parameter won't be required.
+- overridingModuleParams props allows to override parameters in module_parameters. This props is only used
+  in case module_prameters doesn't include type info for nested object. e.g. log_throttling parameter
  */
-
+import { mapState } from 'vuex'
+import { OVERLAY_TRANSPARENT_LOADING } from 'store/overlayTypes'
 export default {
-    name: 'details-parameters-collapse',
-
+    name: 'details-parameters-table',
     props: {
-        searchKeyword: { type: String, required: true },
         resourceId: { type: String, required: true },
         parameters: { type: Object, required: true },
-        moduleParameters: { type: Array, required: true },
+        overridingModuleParams: { type: Array },
         updateResourceParameters: { type: Function, required: false },
         onEditSucceeded: { type: Function, required: false },
-        loading: { type: Boolean, required: true },
         // specical props to manipulate required or dependent input attribute
         usePortOrSocket: { type: Boolean, default: false },
         isTree: { type: Boolean, default: false },
@@ -173,32 +173,51 @@ export default {
             },
             // this is needed when using custom activator in v-tooltip.
             componentId: this.$help.lodash.uniqueId('component_tooltip_'),
+            isMounting: true,
         }
     },
     computed: {
-        parametersTableRow: function() {
+        ...mapState({
+            overlay_type: 'overlay_type',
+            module_parameters: 'module_parameters',
+            search_keyword: 'search_keyword',
+        }),
+        isLoading: function() {
+            return this.isMounting ? true : this.overlay_type === OVERLAY_TRANSPARENT_LOADING
+        },
+        parametersArr: function() {
             const {
                 lodash: { cloneDeep },
                 objToArrOfNodes,
             } = this.$help
 
             const parameters = cloneDeep(this.parameters)
-            let tableRow = objToArrOfNodes({
+            const parametersArr = objToArrOfNodes({
                 obj: parameters,
                 keepPrimitiveValue: this.keepPrimitiveValue,
                 level: 0,
             })
 
-            let moduleParameters = cloneDeep(this.moduleParameters)
-
-            this.processingTableRow(tableRow, moduleParameters)
-
-            return tableRow
+            return parametersArr
+        },
+        parametersTableRow: function() {
+            const {
+                lodash: { cloneDeep },
+            } = this.$help
+            // parametersArr will be mutated by processingTableRow method
+            let parametersArr = cloneDeep(this.parametersArr)
+            if (this.moduleParams.length) this.processingTableRow(parametersArr)
+            return parametersArr
         },
 
         shouldDisableSaveBtn: function() {
             if (this.changedParametersArr.length > 0 && this.isValid) return false
             else return true
+        },
+        moduleParams: function() {
+            return this.overridingModuleParams
+                ? this.overridingModuleParams
+                : this.module_parameters
         },
     },
     watch: {
@@ -206,7 +225,9 @@ export default {
             if (val && this.editableCell) this.$refs.form.validate()
         },
     },
-
+    async mounted() {
+        await this.$help.delay(400).then(() => (this.isMounting = false))
+    },
     methods: {
         /**
          * This function assign item info to parameterTooltip which will be read
@@ -234,31 +255,27 @@ export default {
         },
 
         /**
-         * Return mutated tableRow Array
-         * @param {Array} tableRow  mutated processing Table row
-         * @param {Array} moduleParameters Module parameters object {id:'', value:'', type:'', unit:'',...}
+         * This function mutates tableRows Array
+         * @param {Array} tableRows table rows
          */
-        processingTableRow(tableRow, moduleParameters) {
-            for (let o = 0; o < tableRow.length; ++o) {
-                const resourceParam = tableRow[o]
-                if (resourceParam.leaf === false) {
-                    for (let i = 0; i < resourceParam.children.length; ++i) {
-                        const childParam = resourceParam.children[i]
-                        this.assignParamsTypeInfo(childParam, moduleParameters)
-                    }
-                }
-                this.assignParamsTypeInfo(resourceParam, moduleParameters)
-            }
+        processingTableRow(tableRows) {
+            // mutated each row
+            tableRows.forEach(row => {
+                if (row.leaf === false)
+                    row.children.forEach(childParam => this.assignParamsTypeInfo(childParam))
+                this.assignParamsTypeInfo(row)
+            })
         },
 
         /**
-         * Return mutated resourceParam Object
+         * This function mutates resource param object if it finds a corresponding param
+         * in moduleParams array.
          * @param {Object} resourceParam table object {id:'', value:''}
-         * @param {Array} moduleParameters Module parameters object {id:'', value:'', type:'', unit:'',...}
          */
-        assignParamsTypeInfo(resourceParam, moduleParameters) {
-            const { id: resourceParamId } = resourceParam
-            const moduleParam = moduleParameters.find(param => param.name === resourceParamId)
+        assignParamsTypeInfo(resourceParam) {
+            const { id: paramId } = resourceParam
+
+            const moduleParam = this.moduleParams.find(param => param.name === paramId)
 
             if (moduleParam) {
                 const {
@@ -304,19 +321,17 @@ export default {
                         resourceParam['enum_values'] = enum_values
                         break
                 }
-            } else {
-                resourceParam['disabled'] = true
-            }
+            } else resourceParam['disabled'] = true
 
             this.assignPortSocketDependencyValues(resourceParam)
         },
 
         /**
          * This function helps to assign value to component's data: portValue, socketValue
-         * @param {Object} parameter object
+         * @param {Object} resourceParam object
          */
-        assignPortSocketDependencyValues(parameter) {
-            const { id, value } = parameter
+        assignPortSocketDependencyValues(resourceParam) {
+            const { id, value } = resourceParam
             if (this.usePortOrSocket) {
                 switch (id) {
                     case 'port':
@@ -352,20 +367,16 @@ export default {
             this.closeConfirmDialog()
             this.changedParametersArr = []
             // this helps to assign accurate parameter info and trigger assignPortSocketDependencyValues
-            this.processingTableRow(
-                this.parametersTableRow,
-                this.$help.lodash.cloneDeep(this.moduleParameters)
-            )
+            this.processingTableRow(this.parametersTableRow)
         },
 
         async acceptEdit() {
-            let self = this
-            await self.updateResourceParameters({
-                id: self.resourceId,
-                parameters: self.$help.arrToObject({ arr: self.changedParametersArr }),
-                callback: self.onEditSucceeded,
+            await this.updateResourceParameters({
+                id: this.resourceId,
+                parameters: this.$help.arrToObject({ arr: this.changedParametersArr }),
+                callback: this.onEditSucceeded,
             })
-            self.cancelEdit()
+            this.cancelEdit()
         },
     },
 }

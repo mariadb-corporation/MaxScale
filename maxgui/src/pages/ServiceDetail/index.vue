@@ -3,11 +3,14 @@
         <v-sheet v-if="!$help.lodash.isEmpty(current_service)" class="px-6">
             <page-header :onEditSucceeded="fetchService" />
             <!--
-                overview-header will fetch fetchServiceConnections and
-                fetchSessionsFilterByService parallelly.
-                fetchSessionsFilterByService will update sessions-table data
+                @update-chart is emitted every 10s
             -->
-            <overview-header />
+            <overview-header
+                :currentService="current_service"
+                :serviceConnectionsDatasets="service_connections_datasets"
+                :serviceConnectionInfo="service_connection_info"
+                @update-chart="fetchConnectionsAndSession"
+            />
 
             <v-tabs v-model="currentActiveTab" class="tab-navigation-wrapper">
                 <v-tab v-for="tab in tabs" :key="tab.name">
@@ -23,7 +26,6 @@
                                         <relationship-table
                                             relationshipType="servers"
                                             :tableRows="serverStateTableRow"
-                                            :loading="overlay_type === OVERLAY_TRANSPARENT_LOADING"
                                             :getRelationshipData="getRelationshipData"
                                             @on-relationship-update="dispatchRelationshipUpdate"
                                         />
@@ -32,7 +34,6 @@
                                         <relationship-table
                                             relationshipType="filters"
                                             :tableRows="filtersTableRow"
-                                            :loading="overlay_type === OVERLAY_TRANSPARENT_LOADING"
                                             :getRelationshipData="getRelationshipData"
                                             @on-relationship-update="dispatchRelationshipUpdate"
                                         />
@@ -41,7 +42,6 @@
                                     <v-col cols="12" class="pa-0 mt-4">
                                         <relationship-table
                                             relationshipType="listeners"
-                                            :loading="overlay_type === OVERLAY_TRANSPARENT_LOADING"
                                             :tableRows="listenerStateTableRow"
                                             readOnly
                                             @open-listener-form-dialog="
@@ -52,8 +52,14 @@
                                 </v-row>
                             </v-col>
                             <v-col class="py-0 ma-0" cols="8">
-                                <sessions-table
-                                    :loading="overlay_type === OVERLAY_TRANSPARENT_LOADING"
+                                <details-readonly-table
+                                    tableClass="data-table-full--max-width-columns"
+                                    :tdBorderLeft="false"
+                                    :title="`${$tc('currentSessions', 2)}`"
+                                    :titleInfo="sessionsTableRow.length"
+                                    :noDataText="$t('noEntity', { entityName: $tc('sessions', 2) })"
+                                    :tableData="sessionsTableRow"
+                                    :customTableHeaders="sessionsTableHeader"
                                 />
                             </v-col>
                         </v-row>
@@ -62,16 +68,17 @@
                     <v-tab-item class="pt-5">
                         <v-row>
                             <v-col class="py-0 my-0" cols="6">
-                                <parameters-table
+                                <details-parameters-table
+                                    :resourceId="current_service.id"
+                                    :parameters="current_service.attributes.parameters"
+                                    :updateResourceParameters="updateServiceParameters"
                                     :onEditSucceeded="fetchService"
-                                    :loading="overlay_type === OVERLAY_TRANSPARENT_LOADING"
                                 />
                             </v-col>
                             <v-col class="py-0 my-0" cols="6">
                                 <details-readonly-table
-                                    :loading="overlay_type === OVERLAY_TRANSPARENT_LOADING"
                                     :title="`${$t('routerDiagnostics')}`"
-                                    :objData="routerDiagnostics"
+                                    :tableData="routerDiagnostics"
                                     isTree
                                 />
                             </v-col>
@@ -96,25 +103,19 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { OVERLAY_TRANSPARENT_LOADING } from 'store/overlayTypes'
 import { FORM_LISTENER } from 'store/formTypes'
 import { mapActions, mapMutations, mapState } from 'vuex'
 import OverviewHeader from './OverviewHeader'
 import PageHeader from './PageHeader'
-import SessionsTable from './SessionsTable'
-import ParametersTable from './ParametersTable'
 
 export default {
     name: 'service-detail',
     components: {
         PageHeader,
         OverviewHeader,
-        SessionsTable,
-        ParametersTable,
     },
     data() {
         return {
-            OVERLAY_TRANSPARENT_LOADING: OVERLAY_TRANSPARENT_LOADING,
             FORM_LISTENER: FORM_LISTENER,
             currentActiveTab: null,
             tabs: [
@@ -124,18 +125,39 @@ export default {
             serverStateTableRow: [],
             listenerStateTableRow: [],
             filtersTableRow: [],
+            sessionsTableHeader: [
+                { text: 'ID', value: 'id' },
+                { text: 'Client', value: 'user' },
+                { text: 'Connected', value: 'connected' },
+                { text: 'IDLE (s)', value: 'idle' },
+            ],
         }
     },
     computed: {
         ...mapState({
             should_refresh_resource: 'should_refresh_resource',
-            overlay_type: 'overlay_type',
             current_service: state => state.service.current_service,
+            service_connections_datasets: state => state.service.service_connections_datasets,
+            service_connection_info: state => state.service.service_connection_info,
+            sessions_by_service: state => state.session.sessions_by_service,
         }),
 
         routerDiagnostics: function() {
             const { attributes: { router_diagnostics = {} } = {} } = this.current_service
             return router_diagnostics
+        },
+        routerModule: function() {
+            return this.current_service.attributes.router
+        },
+        sessionsTableRow: function() {
+            return this.sessions_by_service.map(
+                ({ id, attributes: { idle, connected, user, remote } }) => ({
+                    id,
+                    user: `${user}@${remote}`,
+                    connected: this.$help.formatValue(connected),
+                    idle,
+                })
+            )
         },
     },
     watch: {
@@ -145,6 +167,10 @@ export default {
                 await this.initialFetch()
             }
         },
+        currentActiveTab: async function(val) {
+            // when active tab is Parameters & Diagnostics
+            if (val === 1) await this.fetchModuleParameters(this.routerModule)
+        },
     },
     async created() {
         await this.initialFetch()
@@ -152,9 +178,13 @@ export default {
     methods: {
         ...mapActions({
             getResourceState: 'getResourceState',
+            fetchModuleParameters: 'fetchModuleParameters',
             fetchServiceById: 'service/fetchServiceById',
+            fetchServiceConnections: 'service/fetchServiceConnections',
             genServiceConnectionsDataSets: 'service/genDataSets',
             updateServiceRelationship: 'service/updateServiceRelationship',
+            updateServiceParameters: 'service/updateServiceParameters',
+            fetchSessionsFilterByService: 'session/fetchSessionsFilterByService',
             fetchAllFilters: 'filter/fetchAllFilters',
         }),
         ...mapMutations({
@@ -166,6 +196,7 @@ export default {
             // Initial fetch, wait for service id
             await this.fetchService()
             await this.genServiceConnectionsDataSets()
+            await this.fetchConnectionsAndSession()
             await Promise.all([
                 this.processingRelationshipTable('servers'),
                 this.processingRelationshipTable('filters'),
@@ -175,6 +206,15 @@ export default {
         // reuse functions for fetch loop or after finish editing
         async fetchService() {
             await this.fetchServiceById(this.$route.params.id)
+        },
+
+        async fetchConnectionsAndSession() {
+            const serviceId = this.$route.params.id
+            // fetching connections chart info should be at the same time with fetchSessionsFilterByService
+            await Promise.all([
+                this.fetchServiceConnections(serviceId),
+                this.fetchSessionsFilterByService(serviceId),
+            ])
         },
 
         /**

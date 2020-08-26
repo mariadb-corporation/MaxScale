@@ -315,7 +315,7 @@ bool MariaDBUserManager::update_users()
         const mxb::SSLConfig* srv_ssl_config = srv->ssl().config();
         sett.ssl = (srv_ssl_config && !srv_ssl_config->empty()) ? *srv_ssl_config : mxb::SSLConfig();
 
-        if (con.open(srv->address(), srv->port()))
+        if (con.open_extra(srv->address(), srv->port(), srv->extra_port()))
         {
             auto load_result = LoadResult::QUERY_FAILED;
 

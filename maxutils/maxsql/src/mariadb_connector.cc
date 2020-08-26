@@ -15,6 +15,7 @@
 
 #include <memory>
 #include <mysql.h>
+#include <mysqld_error.h>
 #include <maxbase/assert.h>
 #include <maxbase/format.hh>
 #include <maxbase/string.hh>
@@ -43,8 +44,9 @@ MariaDB::~MariaDB()
     close();
 }
 
-bool MariaDB::open(const std::string& host, unsigned int port, const std::string& db)
+bool MariaDB::open(const std::string& host, int port, const std::string& db)
 {
+    mxb_assert(port >= 0); // MaxScale config loader should not accept negative values. 0 is ok.
     close();
 
     auto newconn = mysql_init(nullptr);
@@ -398,6 +400,16 @@ MariaDB::VersionInfo MariaDB::version_info() const
         version = mysql_get_server_version(m_conn);
     }
     return VersionInfo {version, info ? info : ""};
+}
+
+bool MariaDB::open_extra(const string& host, int port, int extra_port, const string& db)
+{
+    bool success = open(host, port, db);
+    if (!success && m_errornum == ER_CON_COUNT_ERROR && extra_port > 0 )
+    {
+        success = open(host, extra_port, db);
+    }
+    return success;
 }
 
 MariaDBQueryResult::MariaDBQueryResult(MYSQL_RES* resultset)

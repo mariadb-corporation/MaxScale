@@ -111,19 +111,16 @@ describe('Settings index', () => {
     })
 
     it(`Should process module parameters as expected`, async () => {
-        expect(wrapper.vm.$data.processedModuleParameters).to.be.deep.equals(
-            processedModuleParamsStub
-        )
+        expect(wrapper.vm.$data.overridingModuleParams).to.be.deep.equals(processedModuleParamsStub)
     })
 
-    it(`Should pass necessary props to details-parameters-collapse`, async () => {
-        const detailsParametersCollapse = wrapper.findComponent({
-            name: 'details-parameters-collapse',
+    it(`Should pass necessary props to details-parameters-table`, async () => {
+        const detailsParametersTable = wrapper.findComponent({
+            name: 'details-parameters-table',
         })
-        expect(detailsParametersCollapse.exists()).to.be.true
-        // detailsParametersCollapse props
+        expect(detailsParametersTable.exists()).to.be.true
+        // detailsParametersTable props
         const {
-            searchKeyword,
             resourceId,
             parameters,
             moduleParameters,
@@ -131,10 +128,9 @@ describe('Settings index', () => {
             onEditSucceeded,
             loading,
             isTree,
-        } = detailsParametersCollapse.vm.$props
+        } = detailsParametersTable.vm.$props
         // wrapper vm
         const {
-            search_keyword,
             maxscale_parameters,
             updateMaxScaleParameters,
             fetchMaxScaleParameters,
@@ -142,7 +138,6 @@ describe('Settings index', () => {
             $data: { processedModuleParameters },
         } = wrapper.vm
 
-        expect(searchKeyword).to.be.equals(search_keyword)
         expect(resourceId).to.be.equals('maxscale')
         expect(parameters).to.be.deep.equals(maxscale_parameters)
         expect(moduleParameters).to.be.deep.equals(processedModuleParameters)

@@ -20,12 +20,12 @@ import sinonChai from 'sinon-chai'
 chai.should()
 chai.use(sinonChai)
 
-const expectTableHeaders = [
+const expectDefaultHeaders = [
     { text: 'Variable', value: 'id', width: '65%' },
     { text: 'Value', value: 'value', width: '35%' },
 ]
 
-const dummy_data = {
+const dummy_data_obj = {
     active_operations: 0,
     adaptive_avg_select_time: '0ns',
     connections: 0,
@@ -34,6 +34,20 @@ const dummy_data = {
     routed_packets: 0,
     total_connections: 0,
 }
+const customHeaders = [
+    { text: 'ID', value: 'id' },
+    { text: 'Client', value: 'user' },
+    { text: 'Connected', value: 'connected' },
+    { text: 'IDLE (s)', value: 'idle' },
+]
+const dummy_processed_data_arr = [
+    {
+        id: '3063265',
+        user: 'maxskysql@::ffff:127.0.0.1',
+        connected: 'Tue Aug 25 16:09:23 2020',
+        idle: 6.5,
+    },
+]
 
 describe('DetailsReadonlyTable.vue', () => {
     let wrapper, processTableRowsSpy
@@ -46,7 +60,7 @@ describe('DetailsReadonlyTable.vue', () => {
             props: {
                 loading: false,
                 title: 'STATISTICS',
-                objData: dummy_data,
+                tableData: dummy_data_obj,
             },
             computed: {
                 search_keyword: () => '',
@@ -58,14 +72,14 @@ describe('DetailsReadonlyTable.vue', () => {
         processTableRowsSpy.should.have.been.calledOnce
     })
 
-    it(`Should call processTableRows when objData props changes`, async () => {
+    it(`Should call processTableRows when tableData props changes`, async () => {
         // spy on processTableRows after mounting occurs
         const processTableRowsSpy = sinon.spy(wrapper.vm, 'processTableRows')
         // mockup props changes
-        const objData = wrapper.vm.$help.lodash.cloneDeep(wrapper.vm.$props.objData)
-        objData.connections = 100
+        const tableData = wrapper.vm.$help.lodash.cloneDeep(wrapper.vm.$props.tableData)
+        tableData.connections = 100
         await wrapper.setProps({
-            objData: objData,
+            tableData: tableData,
         })
         processTableRowsSpy.should.have.been.calledOnce
     })
@@ -76,7 +90,21 @@ describe('DetailsReadonlyTable.vue', () => {
 
     it(`Should render table headers having 'Variable' and 'Value' columns with
       with as 65%, 35%, respectively`, async () => {
-        expect(wrapper.vm.$data.tableHeaders).to.be.deep.equals(expectTableHeaders)
+        expect(wrapper.vm.tableHeaders).to.be.deep.equals(expectDefaultHeaders)
+    })
+
+    it(`Should use custom table headers`, async () => {
+        await wrapper.setProps({
+            customTableHeaders: customHeaders,
+        })
+        expect(wrapper.vm.tableHeaders).to.be.deep.equals(customHeaders)
+    })
+
+    it(`Should use processed table data`, async () => {
+        await wrapper.setProps({
+            tableData: dummy_processed_data_arr,
+        })
+        expect(wrapper.vm.$data.tableRows).to.be.deep.equals(dummy_processed_data_arr)
     })
 
     it(`Should pass necessary props to data-table`, async () => {
@@ -96,14 +124,16 @@ describe('DetailsReadonlyTable.vue', () => {
 
         const {
             search_keyword,
-            $data: { tableHeaders, tableRows },
-            $props: { loading: loadingProps, isTree: isTreeProps },
+            tableHeaders,
+            isLoading,
+            $data: { tableRows },
+            $props: { isTree: isTreeProps },
         } = wrapper.vm
 
         expect(search).to.be.equals(search_keyword)
         expect(headers).to.be.deep.equals(tableHeaders)
         expect(data).to.be.deep.equals(tableRows)
-        expect(loading).to.be.equals(loadingProps)
+        expect(loading).to.be.equals(isLoading)
         expect(tdBorderLeft).to.be.true
         expect(showAll).to.be.true
         expect(isTree).to.be.equals(isTreeProps)

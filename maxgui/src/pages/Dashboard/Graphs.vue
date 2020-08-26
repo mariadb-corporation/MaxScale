@@ -134,11 +134,106 @@ export default {
             fetchAllSessions: 'session/fetchAllSessions',
             fetchAllServices: 'service/fetchAllServices',
         }),
-        //----------------------- Graphs update
+
+        updateServerConnectionsDatasets(connectionsChart, timestamp) {
+            const {
+                genLineDataSet,
+                lodash: { xorWith, isEqual, cloneDeep },
+            } = this.$help
+
+            const connectionsChartDataSets = connectionsChart.chartData.datasets
+
+            const currentServerIds = connectionsChartDataSets.map(dataset => dataset.resourceId)
+
+            let currentServers = [] // current servers in datasets
+            // get new data for current servers
+            currentServerIds.forEach(id => {
+                let server = this.all_servers.find(server => server.id === id)
+                if (server) currentServers.push(server)
+            })
+            // update existing datasets
+            currentServers.forEach((server, i) => {
+                const {
+                    attributes: {
+                        statistics: { connections: serverConnections },
+                    },
+                } = server
+                connectionsChartDataSets[i].data.push({
+                    x: timestamp,
+                    y: serverConnections,
+                })
+            })
+
+            let newServers = []
+            newServers = xorWith(this.all_servers, currentServers, isEqual)
+            // push new datasets
+            if (newServers.length) {
+                newServers.forEach((server, i) => {
+                    const {
+                        attributes: {
+                            statistics: { connections: serverConnections },
+                        },
+                    } = server
+
+                    /*
+                        Copy previous data of a dataset, this ensures new
+                        datasets can be added while streaming datasets.
+                        The value of each item should be 0 because
+                        at previous timestamp, new servers aren't created yet.
+                    */
+                    let dataOfADataSet = cloneDeep(connectionsChartDataSets[0].data)
+                    dataOfADataSet.forEach(item => (item.y = 0))
+
+                    const newDataSet = genLineDataSet({
+                        label: `Server ID - ${server.id}`,
+                        value: serverConnections,
+                        colorIndex: i,
+                        timestamp,
+                        id: server.id,
+                        data: [...dataOfADataSet, { x: timestamp, y: serverConnections }],
+                    })
+
+                    connectionsChartDataSets.push(newDataSet)
+                })
+            }
+        },
+
+        updateSessionsDatasets(sessionsChart, timestamp) {
+            const self = this
+            sessionsChart.chartData.datasets.forEach(function(dataset) {
+                dataset.data.push({
+                    x: timestamp,
+                    y: self.all_sessions.length,
+                })
+            })
+        },
+
+        updateThreadsDatasets(threadsChart, timestamp) {
+            const { genLineDataSet } = this.$help
+            const threadChartDataSets = threadsChart.chartData.datasets
+            this.thread_stats.forEach((thread, i) => {
+                const {
+                    attributes: { stats: { load: { last_second = null } = {} } = {} } = {},
+                } = thread
+
+                if (threadsChart.chartData.datasets[i]) {
+                    threadChartDataSets[i].data.push({
+                        x: timestamp,
+                        y: last_second,
+                    })
+                } else {
+                    const newDataSet = genLineDataSet({
+                        label: `THREAD ID - ${thread.id}`,
+                        value: last_second,
+                        colorIndex: i,
+                        timestamp,
+                    })
+                    threadChartDataSets.push(newDataSet)
+                }
+            })
+        },
 
         async updateChart() {
-            const self = this
-            const { genLineDataSet } = this.$help
             const { sessionsChart, connectionsChart, threadsChart } = this.$refs
             if (sessionsChart && connectionsChart && threadsChart) {
                 //  LOOP polling
@@ -149,72 +244,23 @@ export default {
                     this.fetchAllServices(),
                     this.fetchThreadStats(),
                 ])
-                const time = Date.now()
-                //-------------------- update connections chart
-                const connectionsChartDataSets = connectionsChart.chartData.datasets
-                this.all_servers.forEach((server, i) => {
-                    const {
-                        attributes: {
-                            statistics: { connections: serverConnections },
-                        },
-                    } = server
-                    if (connectionsChartDataSets[i]) {
-                        connectionsChartDataSets[i].data.push({
-                            x: time,
-                            y: serverConnections,
-                        })
-                    } else {
-                        const newDataSet = genLineDataSet(
-                            `Server ID - ${server.id}`,
-                            serverConnections,
-                            i,
-                            time
-                        )
-                        connectionsChartDataSets.push(newDataSet)
-                    }
-                })
+                const timestamp = Date.now()
 
-                // ------------------------- update sessions chart
-                sessionsChart.chartData.datasets.forEach(function(dataset) {
-                    dataset.data.push({
-                        x: time,
-                        y: self.all_sessions.length,
-                    })
-                })
+                this.updateServerConnectionsDatasets(connectionsChart, timestamp)
+                this.updateSessionsDatasets(sessionsChart, timestamp)
+                this.updateThreadsDatasets(threadsChart, timestamp)
 
-                //-------------------- update threads chart
-                const threadChartDataSets = threadsChart.chartData.datasets
-                await this.thread_stats.forEach((thread, i) => {
-                    const {
-                        attributes: { stats: { load: { last_second = null } = {} } = {} } = {},
-                    } = thread
-
-                    if (threadsChart.chartData.datasets[i]) {
-                        threadChartDataSets[i].data.push({
-                            x: time,
-                            y: last_second,
-                        })
-                    } else {
-                        const newDataSet = genLineDataSet(
-                            `THREAD ID - ${thread.id}`,
-                            last_second,
-                            i,
-                            time
-                        )
-                        threadChartDataSets.push(newDataSet)
-                    }
-                })
-
-                sessionsChart.$data._chart.update({
-                    preservation: true,
-                })
-                threadsChart.$data._chart.update({
-                    preservation: true,
-                })
-
-                connectionsChart.$data._chart.update({
-                    preservation: true,
-                })
+                await Promise.all([
+                    sessionsChart.$data._chart.update({
+                        preservation: true,
+                    }),
+                    threadsChart.$data._chart.update({
+                        preservation: true,
+                    }),
+                    connectionsChart.$data._chart.update({
+                        preservation: true,
+                    }),
+                ])
             }
         },
     },

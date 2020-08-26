@@ -15,13 +15,13 @@ import ax from 'axios'
 import store from 'store'
 
 const cancelToken = ax.CancelToken
-
+const CANCEL_MESSAGE = 'Request canceled by user'
 export let cancelSource = cancelToken.source()
 export const refreshAxiosToken = () => {
     cancelSource = cancelToken.source()
 }
 export const cancelAllRequests = () => {
-    cancelSource.cancel('Request canceled by user')
+    cancelSource.cancel(CANCEL_MESSAGE)
 }
 
 let apiClient = ax.create({
@@ -48,17 +48,24 @@ apiClient.interceptors.response.use(
         return response
     },
     async error => {
+        const { getErrorsArr, delay } = store.vue.$help
         const { response: { status = null } = {} } = error || {}
         switch (status) {
             case 401:
                 await store.dispatch('user/logout')
                 break
             case null:
-                // request is cancelled by user, so no response is received
-                return Promise.reject(error)
+                if (error.toString() === `Cancel: ${CANCEL_MESSAGE}`)
+                    // request is cancelled by user, so no response is received
+                    return Promise.reject(error)
+                else
+                    return store.commit('SET_SNACK_BAR_MESSAGE', {
+                        text: ['Lost connection to MaxScale, please check if MaxScale is running'],
+                        type: 'error',
+                    })
             default:
                 store.commit('SET_SNACK_BAR_MESSAGE', {
-                    text: store.vue.$help.getErrorsArr(error),
+                    text: getErrorsArr(error),
                     type: 'error',
                 })
                 /*
@@ -66,9 +73,7 @@ apiClient.interceptors.response.use(
                     Turn it off before returning error
                 */
                 if (store.state.overlay_type !== null)
-                    await store.vue.$help
-                        .delay(600)
-                        .then(() => store.commit('SET_OVERLAY_TYPE', null))
+                    await delay(600).then(() => store.commit('SET_OVERLAY_TYPE', null))
 
                 return Promise.reject(error)
         }

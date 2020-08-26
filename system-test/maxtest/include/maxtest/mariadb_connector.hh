@@ -27,7 +27,7 @@ class MariaDB : public mxq::MariaDB
 public:
     explicit MariaDB(TestLogger& log);
 
-    bool open(const std::string& host, unsigned int port, const std::string& db = "");
+    bool open(const std::string& host, int port, const std::string& db = "");
 
     bool                              cmd(const std::string& sql);
     std::unique_ptr<mxq::QueryResult> query(const std::string& query);

@@ -961,38 +961,57 @@ RWBackend* RWSplitSession::handle_master_is_target()
 
 void RWSplitSession::process_stmt_execute(mxs::Buffer* buf, uint32_t id, RWBackend* target)
 {
-    GWBUF* buffer = buf->release();
-    mxb_assert(gwbuf_is_contiguous(buffer));
-    mxb_assert(mxs_mysql_get_command(buffer) == MXS_COM_STMT_EXECUTE);
-
+    mxb_assert(buf->is_contiguous());
+    mxb_assert(mxs_mysql_get_command(buf->get()) == MXS_COM_STMT_EXECUTE);
     auto params = m_qc.get_param_count(id);
-    size_t types_offset = MYSQL_HEADER_LEN + 1 + 4 + 1 + 4 + ((params + 7) / 8);
-    uint8_t* ptr = GWBUF_DATA(buffer) + types_offset;
-    auto& info = m_exec_map[id];
 
-    if (*ptr)
+    if (params > 0)
     {
-        ++ptr;
-        // Store the metadata, two bytes per parameter, for later use
-        info.metadata.assign(ptr, ptr + (params * 2));
+        size_t types_offset = MYSQL_HEADER_LEN + 1 + 4 + 1 + 4 + ((params + 7) / 8);
+        uint8_t* ptr = buf->data() + types_offset;
+
+        if (*ptr)
+        {
+            ++ptr;
+            // Store the metadata, two bytes per parameter, for later use
+            m_exec_map[id].metadata.assign(ptr, ptr + (params * 2));
+        }
+        else
+        {
+            auto it = m_exec_map.find(id);
+
+            if (it == m_exec_map.end())
+            {
+                MXS_WARNING("Malformed COM_STMT_EXECUTE (ID %u): could not find previous "
+                            "execution with metadata and current execution doesn't contain it", id);
+                mxb_assert(!true);
+            }
+            else if (it->second.metadata_sent.count(target) == 0)
+            {
+                const auto& info = it->second;
+                mxb_assert(!info.metadata.empty());
+                mxs::Buffer newbuf(buf->length() + info.metadata.size());
+                auto data = newbuf.data();
+
+                memcpy(data, buf->data(), types_offset);
+                data += types_offset;
+
+                // Set to 1, we are sending the types
+                mxb_assert(*ptr == 0);
+                *data++ = 1;
+
+                // Splice the metadata into COM_STMT_EXECUTE
+                memcpy(data, info.metadata.data(), info.metadata.size());
+                data += info.metadata.size();
+
+                // Copy remaining data that is being sent and update the packet length
+                mxb_assert(buf->length() > types_offset + 1);
+                memcpy(data, buf->data() + types_offset + 1, buf->length() - types_offset - 1);
+                gw_mysql_set_byte3(newbuf.data(), newbuf.length() - MYSQL_HEADER_LEN);
+                buf->reset(newbuf.release());
+            }
+        }
     }
-    else if (info.metadata_sent.count(target) == 0)
-    {
-        uint64_t newlen = gwbuf_length(buffer) + info.metadata.size() - MYSQL_HEADER_LEN;
-
-        // Set to 1, we are sending the types
-        mxb_assert(*ptr == 0);
-        *ptr = 1;
-
-        // Splice the metadata into COM_STMT_EXECUTE
-        GWBUF* tmp = gwbuf_split(&buffer, types_offset + 1);
-        GWBUF* param_types = gwbuf_alloc_and_load(info.metadata.size(), info.metadata.data());
-        tmp = gwbuf_append(tmp, param_types);
-        buffer = buffer ? gwbuf_append(tmp, buffer) : tmp;
-        gw_mysql_set_byte3(GWBUF_DATA(buffer), gwbuf_length(buffer) - MYSQL_HEADER_LEN);
-    }
-
-    buf->reset(buffer);
 }
 
 /**
