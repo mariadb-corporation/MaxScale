@@ -48,7 +48,7 @@
         </template>
 
         <template v-slot:serverState="{ data: { item: { serverState } } }">
-            <div class="d-flex align-center">
+            <div v-if="serverState" class="d-flex align-center">
                 <icon-sprite-sheet
                     size="13"
                     class="mr-1 status-icon"
@@ -154,7 +154,7 @@ export default {
             if (this.all_servers.length) {
                 let allServiceIds = []
                 let allMonitorIds = []
-
+                let allMonitorsMapClone = this.$help.lodash.cloneDeep(this.getAllMonitorsMap)
                 this.all_servers.forEach(server => {
                     const {
                         id,
@@ -165,13 +165,13 @@ export default {
                             gtid_current_pos: gtid,
                         },
                         relationships: {
-                            services: { data: associatedServices = [] } = {},
-                            monitors: { data: associatedMonitors = [] } = {},
+                            services: { data: servicesData = [] } = {},
+                            monitors: { data: monitorsData = [] } = {},
                         },
                     } = server
 
-                    const serviceIds = associatedServices.length
-                        ? associatedServices.map(item => `${item.id}`)
+                    const serviceIds = servicesData.length
+                        ? servicesData.map(item => `${item.id}`)
                         : this.$t('noEntity', { entityName: 'services' })
 
                     if (typeof serviceIds !== 'string')
@@ -186,25 +186,44 @@ export default {
                         serviceIds,
                         gtid,
                     }
-
+                    // show socket in address column if server is using socket
                     if (serverAddress === null && serverPort === null) row.serverAddress = socket
 
-                    if (this.getAllMonitorsMap.size && associatedMonitors.length) {
-                        // The associatedMonitors is always an array with one element -> get monitor at index 0
+                    if (this.getAllMonitorsMap.size && monitorsData.length) {
+                        // The monitorsData is always an array with one element -> get monitor at index 0
                         const {
                             id: monitorId = null,
-                            attributes: { state },
-                        } = this.getAllMonitorsMap.get(associatedMonitors[0].id) || {}
+                            attributes: { state: monitorState },
+                        } = this.getAllMonitorsMap.get(monitorsData[0].id) || {}
+
                         if (monitorId) {
                             allMonitorIds.push(monitorId)
                             row.groupId = monitorId
-                            row.monitorState = state
+                            row.monitorState = monitorState
+                            // delete monitor that already grouped from allMonitorsMapClone
+                            allMonitorsMapClone.delete(monitorId)
                         }
                     } else {
                         row.groupId = this.$t('not', { action: 'monitored' })
                         row.monitorState = ''
                     }
                     rows.push(row)
+                })
+
+                // push monitors that don't monitor any servers to rows
+                allMonitorsMapClone.forEach(monitor => {
+                    allMonitorIds.push(monitor.id)
+                    rows.push({
+                        id: '',
+                        serverAddress: '',
+                        serverPort: '',
+                        serverConnections: '',
+                        serverState: '',
+                        serviceIds: '',
+                        gtid: '',
+                        groupId: monitor.id,
+                        monitorState: monitor.attributes.state,
+                    })
                 })
 
                 const uniqueServiceId = new Set(allServiceIds) // get unique service ids

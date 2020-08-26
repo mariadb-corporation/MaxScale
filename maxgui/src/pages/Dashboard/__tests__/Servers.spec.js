@@ -116,6 +116,17 @@ const expectedTableRows = [
         groupId: 'monitor_0',
         monitorState: 'Running',
     },
+    {
+        groupId: 'monitor_1',
+        gtid: '',
+        id: '',
+        monitorState: 'Stopped',
+        serverAddress: '',
+        serverPort: '',
+        serverConnections: '',
+        serverState: '',
+        serviceIds: '',
+    },
 ]
 
 describe('Dashboard Servers tab', () => {
