@@ -54,7 +54,11 @@ export default {
             } = state
             if (connections !== null) {
                 const { genLineDataSet } = this.vue.$help
-                const dataset = genLineDataSet('Current connections', connections, 0)
+                const dataset = genLineDataSet({
+                    label: 'Current connections',
+                    value: connections,
+                    colorIndex: 0,
+                })
                 commit('SET_SERVICE_CONNECTIONS_DATASETS', [dataset])
             }
         },

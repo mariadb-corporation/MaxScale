@@ -41,8 +41,7 @@ export default {
             try {
                 let res = await this.vue.$axios.get(`/servers`)
                 if (res.data.data) {
-                    // reverse array, latest will be last
-                    let sorted = res.data.data.reverse()
+                    let sorted = res.data.data
                     commit('SET_ALL_SERVERS', sorted)
                 }
             } catch (e) {
@@ -290,7 +289,12 @@ export default {
                         attributes: { statistics: { connections = null } = {} } = {},
                     } = server
                     if (connections !== null) {
-                        const dataset = genLineDataSet(`Server ID - ${id}`, connections, i)
+                        const dataset = genLineDataSet({
+                            label: `Server ID - ${id}`,
+                            value: connections,
+                            colorIndex: i,
+                            id,
+                        })
                         dataSets.push(dataset)
                     }
                 })

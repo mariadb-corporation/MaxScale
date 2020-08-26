@@ -45,7 +45,11 @@ export default {
         genDataSets({ commit, state }) {
             const { all_sessions } = state
             const { genLineDataSet } = this.vue.$help
-            const dataset = genLineDataSet('Total sessions', all_sessions.length, 0)
+            const dataset = genLineDataSet({
+                label: 'Total sessions',
+                value: all_sessions.length,
+                colorIndex: 0,
+            })
             commit('SET_SESSIONS_DATASETS', [dataset])
         },
 

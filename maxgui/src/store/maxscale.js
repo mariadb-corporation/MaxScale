@@ -109,7 +109,11 @@ export default {
                         attributes: { stats: { load: { last_second = null } = {} } = {} } = {},
                     } = thread
                     if (last_second !== null) {
-                        const dataset = genLineDataSet(`THREAD ID - ${thread.id}`, last_second, i)
+                        const dataset = genLineDataSet({
+                            label: `THREAD ID - ${thread.id}`,
+                            value: last_second,
+                            colorIndex: i,
+                        })
                         dataSets.push(dataset)
                     }
                 })
