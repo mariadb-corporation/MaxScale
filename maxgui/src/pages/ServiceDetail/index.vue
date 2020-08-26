@@ -3,11 +3,14 @@
         <v-sheet v-if="!$help.lodash.isEmpty(current_service)" class="px-6">
             <page-header :onEditSucceeded="fetchService" />
             <!--
-                overview-header will fetch fetchServiceConnections and
-                fetchSessionsFilterByService parallelly.
-                fetchSessionsFilterByService will update sessions-table data
+                @update-chart is emitted every 10s
             -->
-            <overview-header />
+            <overview-header
+                :currentService="current_service"
+                :serviceConnectionsDatasets="service_connections_datasets"
+                :serviceConnectionInfo="service_connection_info"
+                @update-chart="fetchConnectionsAndSession"
+            />
 
             <v-tabs v-model="currentActiveTab" class="tab-navigation-wrapper">
                 <v-tab v-for="tab in tabs" :key="tab.name">
@@ -127,6 +130,8 @@ export default {
             should_refresh_resource: 'should_refresh_resource',
             overlay_type: 'overlay_type',
             current_service: state => state.service.current_service,
+            service_connections_datasets: state => state.service.service_connections_datasets,
+            service_connection_info: state => state.service.service_connection_info,
         }),
 
         routerDiagnostics: function() {
@@ -157,9 +162,11 @@ export default {
             getResourceState: 'getResourceState',
             fetchModuleParameters: 'fetchModuleParameters',
             fetchServiceById: 'service/fetchServiceById',
+            fetchServiceConnections: 'service/fetchServiceConnections',
             genServiceConnectionsDataSets: 'service/genDataSets',
             updateServiceRelationship: 'service/updateServiceRelationship',
             updateServiceParameters: 'service/updateServiceParameters',
+            fetchSessionsFilterByService: 'session/fetchSessionsFilterByService',
             fetchAllFilters: 'filter/fetchAllFilters',
         }),
         ...mapMutations({
@@ -171,6 +178,7 @@ export default {
             // Initial fetch, wait for service id
             await this.fetchService()
             await this.genServiceConnectionsDataSets()
+            await this.fetchConnectionsAndSession()
             await Promise.all([
                 this.processingRelationshipTable('servers'),
                 this.processingRelationshipTable('filters'),
@@ -180,6 +188,15 @@ export default {
         // reuse functions for fetch loop or after finish editing
         async fetchService() {
             await this.fetchServiceById(this.$route.params.id)
+        },
+
+        async fetchConnectionsAndSession() {
+            const serviceId = this.$route.params.id
+            // fetching connections chart info should be at the same time with fetchSessionsFilterByService
+            await Promise.all([
+                this.fetchServiceConnections(serviceId),
+                this.fetchSessionsFilterByService(serviceId),
+            ])
         },
 
         /**
