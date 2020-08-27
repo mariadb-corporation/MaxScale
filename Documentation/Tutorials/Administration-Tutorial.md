@@ -49,44 +49,29 @@ MAXSCALE_OPTIONS="--logdir=/home/maxscale/logs --piddir=/tmp --syslog=no"
 
 Note that this is only supported on legacy SysV systems.
 
-## Stopping MariaDB MaxScale via MaxAdmin
-
-In order to shutdown MariaDB MaxScale using the maxadmin command you may either
-connect with maxadmin in interactive mode or pass the "shutdown maxscale"
-command you wish to execute as an argument to maxadmin.
-
-```
-sudo maxadmin shutdown maxscale
-```
-
 ## Checking The Status Of The MariaDB MaxScale Services
 
-It is possible to use the maxadmin command to obtain statistics about the
-services that are running within MaxScale. The maxadmin command "list services"
+It is possible to use the maxctrl command to obtain statistics about the
+services that are running within MaxScale. The maxctrl command `list services`
 will give very basic information regarding services. This command may be either
-run in interactive mode or passed on the maxadmin command line.
+run in interactive mode or passed on the maxctrl command line.
 
 ```
-	$ maxadmin
-	MaxScale> list services
+$ maxctrl list services
+┌────────────────────────┬────────────────┬─────────────┬───────────────────┬────────────────────────────────────┐
+│ Service                │ Router         │ Connections │ Total Connections │ Servers                            │
+├────────────────────────┼────────────────┼─────────────┼───────────────────┼────────────────────────────────────┤
+│ CLI                    │ cli            │ 1           │ 1                 │                                    │
+├────────────────────────┼────────────────┼─────────────┼───────────────────┼────────────────────────────────────┤
+│ RW-Split-Router        │ readwritesplit │ 1           │ 1                 │ server1, server2, server3, server4 │
+├────────────────────────┼────────────────┼─────────────┼───────────────────┼────────────────────────────────────┤
+│ RW-Split-Hint-Router   │ readwritesplit │ 1           │ 1                 │ server1, server2, server3, server4 │
+├────────────────────────┼────────────────┼─────────────┼───────────────────┼────────────────────────────────────┤
+│ SchemaRouter-Router    │ schemarouter   │ 1           │ 1                 │ server1, server2, server3, server4 │
+├────────────────────────┼────────────────┼─────────────┼───────────────────┼────────────────────────────────────┤
+│ Read-Connection-Router │ readconnroute  │ 1           │ 1                 │ server1                            │
+└────────────────────────┴────────────────┴─────────────┴───────────────────┴────────────────────────────────────┘
 
-	Services.
-
-	--------------------------+----------------------+--------+---------------
-
-	Service Name              | Router Module        | #Users | Total Sessions
-
-	--------------------------+----------------------+--------+---------------
-
-	RWSplitter                | readwritesplit       |      2 |     4
-
-	Cassandra                 | readconncouter       |      1 |     1
-
-	CLI                       | cli                  |      2 |     2
-
-	--------------------------+----------------------+--------+---------------
-
-	MaxScale>
 ```
 
 Network listeners count as a user of the service, therefore there will always be
@@ -109,7 +94,7 @@ a client session, then a connection from the pool will be used if possible.
 
 The connection will only be taken from the pool if it has been there for no more
 than `persistmaxtime` seconds. The connection will also be discarded if it has
-been disconnectedby the back end server. Connections will be selected so that
+been disconnected by the back end server. Connections will be selected so that
 they match the user name and protocol for the new request.
 
 Starting with MaxScale 2.1, when a MySQL protocol connection is taken from the
@@ -135,34 +120,25 @@ values in each server section.
 ## What Clients Are Connected To MariaDB MaxScale
 
 To determine what client are currently connected to MariaDB MaxScale, you can
-use the "list clients" command within maxadmin. This will give you IP address
-and the ID’s of the DCB and session for that connection. As with any maxadmin
+use the `list sessions` command within maxctrl. This will give you IP address
+and the ID of the session for that connection. As with any maxctrl
 command this can be passed on the command line or typed interactively in
-maxadmin.
+maxctrl.
 
 ```
-	$ maxadmin list clients
-
-	Client Connections
-
-	-----------------+------------------+----------------------+------------
-
-	 Client          | DCB              | Service              | Session
-
-	-----------------+------------------+----------------------+------------
-
-	 127.0.0.1       |   0x7fe694013410 | CLI                  | 0x7fe69401ac10
-
-	-----------------+------------------+----------------------+------------
-
-	$
+$ maxctrl list sessions
+┌────┬─────────┬──────────────────┬──────────────────────────┬──────┬─────────────────┐
+│ Id │ User    │ Host             │ Connected                │ Idle │ Service         │
+├────┼─────────┼──────────────────┼──────────────────────────┼──────┼─────────────────┤
+│ 6  │ maxuser │ ::ffff:127.0.0.1 │ Thu Aug 27 10:39:16 2020 │ 4    │ RW-Split-Router │
+└────┴─────────┴──────────────────┴──────────────────────────┴──────┴─────────────────┘
 ```
 
 ## Rotating the Log File
 
 MariaDB MaxScale logs messages of different priority into a single log file.
 With the exception if error messages that are always logged, whether messages of
-a particular priority should be logged or not can be enabled via the maxadmin
+a particular priority should be logged or not can be enabled via the maxctrl
 interface or in the configuration file. By default, MaxScale keeps on writing to
 the same log file. To prevent the file from growing indefinitely, the
 administrator must take action.
@@ -170,11 +146,11 @@ administrator must take action.
 The name of the log file is maxscale.log. When the log is rotated, MaxScale
 closes the current log file and opens a new one using the same name.
 
-Log file rotation is achieved by use of the "flush log" or “flush logs” command
-in maxadmin.
+Log file rotation is achieved by use of the `rotate logs` command
+in maxctrl.
 
 ```
-maxadmin flush logs
+maxctrl rotate logs
 ```
 
 As there currently is only the maxscale log, that is the only one that will be
@@ -195,20 +171,11 @@ sharedscripts
 postrotate
 \# run if maxscale is running
 if test -n "`ps acx|grep maxscale`"; then
-/usr/bin/maxadmin flush logs
+/usr/bin/maxctrl rotate logs
 fi
 endscript
 }
 ```
-
-**Note**:
-
-If 'root' user is no longer available for maxadmin connection and for example
-'user1' is one of the allowed users, the maxadmin command should be run as:
-
-`su - user1 -c '/usr/bin/maxadmin flush logs'`
-
-If listening socket is not the default one, /tmp/maxadmin.sock, use -S option.
 
 MariaDB MaxScale will also rotate all of its log files if it receives the USR1
 signal. Using this the logrotate configuration script can be rewritten as
@@ -226,12 +193,12 @@ endscript
 }
 ```
 
-In older versions MaxScale renamed the log file, behaviour which is not fully
+In older versions MaxScale renamed the log file, behavior which is not fully
 compliant with the assumptions of logrotate and may lead to issues, depending on
-the used logrotate configuration file. From version 2.1 onwards, MaxScale will
+the used logrotate configuration file. From version 2.1 onward, MaxScale will
 not itself rename the log file, but when the log is rotated, MaxScale will
 simply close and reopen (and truncate) the same log file. That will make the
-behaviour fully compliant with logrotate.
+behavior fully compliant with logrotate.
 
 ## Taking A Database Server Out Of Use
 
@@ -239,13 +206,13 @@ MariaDB MaxScale supports the concept of maintenance mode for servers within a
 cluster, this allows for planned, temporary removal of a database from the
 cluster within the need to change the MariaDB MaxScale configuration.
 
-To achieve the removal of a database server you can use the set server command
-in the maxadmin utility to set the maintenance mode flag for the server. This
-may be done interactively within maxadmin or by passing the command on the
+To achieve the removal of a database server you can use the `set server` command
+in maxctrl to set the maintenance mode flag for the server. This
+may be done interactively within maxctrl or by passing the command on the
 command line.
 
 ```
-sudo maxadmin set server dbserver3 maintenance
+maxctrl set server dbserver3 maintenance
 ```
 
 This will cause MariaDB MaxScale to stop routing any new requests to the server,
@@ -256,7 +223,7 @@ To bring the server back into service use the "clear server" command to clear
 the maintenance mode bit for that server.
 
 ```
-sudo maxadmin clear server dbserver3 maintenance
+sudo maxctrl clear server dbserver3 maintenance
 ```
 
 If multiple MariaDB MaxScale instances are configured to use the node
