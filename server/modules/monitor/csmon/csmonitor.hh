@@ -14,6 +14,7 @@
 
 #include "csmon.hh"
 #include <chrono>
+#include <sqlite3.h>
 #include <maxbase/http.hh>
 #include <maxbase/semaphore.hh>
 #include <maxscale/modulecmd.hh>
@@ -105,9 +106,10 @@ private:
     CsMonitorServer* create_server(SERVER* server, const mxs::MonitorServer::SharedSettings& shared) override;
 
 private:
-    CsMonitor(const std::string& name, const std::string& module);
+    CsMonitor(const std::string& name, const std::string& module, sqlite3* pDb);
 
     bool configure(const mxs::ConfigParameters* pParams) override;
 
     CsContext m_context;
+    sqlite3*  m_pDb {nullptr};
 };

@@ -21,6 +21,7 @@
 
 #include <maxscale/modinfo.hh>
 #include <maxscale/mysql_utils.hh>
+#include <maxscale/paths.hh>
 #include "columnstore.hh"
 
 using std::ostringstream;
@@ -257,21 +258,136 @@ size_t results_to_json(const vector<CsMonitorServer*>& servers,
 
 }
 
+namespace
+{
 
-CsMonitor::CsMonitor(const std::string& name, const std::string& module)
+// Change this, if the schema is changed.
+const int SCHEMA_VERSION = 1;
+
+static const char SQL_BN_CREATE[] =
+    "CREATE TABLE IF NOT EXISTS bootstrap_nodes "
+    "(ip CARCHAR(255), mysql_port INT)";
+
+static const char SQL_BN_INSERT_FORMAT[] =
+    "INSERT INTO bootstrap_nodes (ip, mysql_port) "
+    "VALUES %s";
+
+static const char SQL_BN_DELETE[] =
+    "DELETE FROM bootstrap_nodes";
+
+static const char SQL_BN_SELECT[] =
+    "SELECT ip, mysql_port FROM bootstrap_nodes";
+
+
+bool create_schema(sqlite3* pDb)
+{
+    char* pError = nullptr;
+    int rv = sqlite3_exec(pDb, SQL_BN_CREATE, nullptr, nullptr, &pError);
+
+    if (rv != SQLITE_OK)
+    {
+        MXS_ERROR("Could not initialize sqlite3 database: %s", pError ? pError : "Unknown error");
+    }
+
+    return rv == SQLITE_OK;
+}
+
+sqlite3* open_or_create_db(const std::string& path)
+{
+    sqlite3* pDb = nullptr;
+    int flags = SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX | SQLITE_OPEN_CREATE;
+    int rv = sqlite3_open_v2(path.c_str(), &pDb, flags, nullptr);
+
+    if (rv == SQLITE_OK)
+    {
+        if (create_schema(pDb))
+        {
+            MXS_NOTICE("sqlite3 database %s open/created and initialized.", path.c_str());
+        }
+        else
+        {
+            MXS_ERROR("Could not create schema in sqlite3 database %s.", path.c_str());
+
+            if (unlink(path.c_str()) != 0)
+            {
+                MXS_ERROR("Failed to delete database %s that could not be properly "
+                          "initialized. It should be deleted manually.", path.c_str());
+                sqlite3_close_v2(pDb);
+                pDb = nullptr;
+            }
+        }
+    }
+    else
+    {
+        if (pDb)
+        {
+            // Memory allocation failure is explained by the caller. Don't close the handle, as the
+            // caller will still use it even if open failed!!
+            MXS_ERROR("Opening/creating the sqlite3 database %s failed: %s",
+                      path.c_str(), sqlite3_errmsg(pDb));
+        }
+        MXS_ERROR("Could not open sqlite3 database for storing information "
+                  "about dynamically detected Clustrix nodes. The Clustrix "
+                  "monitor will remain dependent upon statically defined "
+                  "bootstrap nodes.");
+    }
+
+    return pDb;
+}
+
+}
+
+CsMonitor::CsMonitor(const std::string& name, const std::string& module, sqlite3* pDb)
     : MonitorWorkerSimple(name, module)
     , m_context(name)
+    , m_pDb(pDb)
 {
 }
 
 CsMonitor::~CsMonitor()
 {
+    sqlite3_close_v2(m_pDb);
 }
 
 // static
 CsMonitor* CsMonitor::create(const std::string& name, const std::string& module)
 {
-    return new CsMonitor(name, module);
+    string path = mxs::datadir();
+
+    path += "/";
+    path += name;
+
+    if (!mxs_mkdir_all(path.c_str(), 0744))
+    {
+        MXS_ERROR("Could not create the directory %s, MaxScale will not be "
+                  "able to create database for persisting connection "
+                  "information of dynamically detected Columnstore nodes.",
+                  path.c_str());
+    }
+
+    path += "/columnstore_nodes-v";
+    path += std::to_string(SCHEMA_VERSION);
+    path += ".db";
+
+    sqlite3* pDb = open_or_create_db(path);
+
+    CsMonitor* pThis = nullptr;
+
+    if (pDb)
+    {
+        // Even if the creation/opening of the sqlite3 database fails, we will still
+        // get a valid database handle.
+        pThis = new CsMonitor(name, module, pDb);
+    }
+    else
+    {
+        // The handle will be null, *only* if the opening fails due to a memory
+        // allocation error.
+        MXS_ALERT("sqlite3 memory allocation failed, the Columnstore monitor "
+                  "cannot continue.");
+    }
+
+    return pThis;
 }
 
 namespace
