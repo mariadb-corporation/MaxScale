@@ -10,6 +10,7 @@
                     >
                         <template v-slot:activator="{ on }">
                             <v-btn
+                                class="stop-btn"
                                 text
                                 :disabled="serviceState === 'Stopped'"
                                 v-on="on"
@@ -29,6 +30,7 @@
                     >
                         <template v-slot:activator="{ on }">
                             <v-btn
+                                class="start-btn"
                                 text
                                 :disabled="serviceState === 'Started'"
                                 v-on="on"
@@ -51,7 +53,12 @@
                         content-class="shadow-drop color text-navigation py-1 px-4"
                     >
                         <template v-slot:activator="{ on }">
-                            <v-btn text v-on="on" @click="actionHandle('destroy')">
+                            <v-btn
+                                class="delete-btn"
+                                text
+                                v-on="on"
+                                @click="actionHandle('destroy')"
+                            >
                                 <v-icon size="18" color="error">
                                     $vuetify.icons.delete
                                 </v-icon>
@@ -67,10 +74,10 @@
                 v-model="showConfirmDialog"
                 :title="dialogTitle"
                 :type="dialogType"
-                :item="current_service"
+                :item="currentService"
                 :onSave="confirmSave"
-                :onClose="() => (showConfirmDialog = false)"
-                :onCancel="() => (showConfirmDialog = false)"
+                :onClose="handleClose"
+                :onCancel="handleClose"
             />
             <icon-sprite-sheet
                 size="13"
@@ -79,7 +86,7 @@
             >
                 status
             </icon-sprite-sheet>
-            <span class="color text-navigation body-2">
+            <span class="service-state color text-navigation body-2">
                 {{ serviceState }}
             </span>
         </template>
@@ -100,12 +107,13 @@
  * Public License.
  */
 
-import { mapActions, mapState } from 'vuex'
+import { mapActions } from 'vuex'
 
 export default {
     name: 'page-header',
     props: {
         onEditSucceeded: { type: Function, required: true },
+        currentService: { type: Object, required: true },
     },
     data() {
         return {
@@ -115,21 +123,28 @@ export default {
         }
     },
     computed: {
-        ...mapState({
-            current_service: state => state.service.current_service,
-        }),
         serviceState: function() {
-            return this.current_service.attributes.state
+            return this.currentService.attributes.state
         },
     },
     methods: {
         ...mapActions('service', ['destroyService', 'stopOrStartService']),
+        handleClose() {
+            this.showConfirmDialog = false
+        },
+
+        actionHandle(type) {
+            this.dialogType = type
+            this.dialogTitle = `${this.$t(type)} ${this.$tc('services', 1)}`
+            this.showConfirmDialog = true
+        },
+
         async confirmSave() {
             await this.performAsyncLoadingAction(this.dialogType)
         },
 
         async performAsyncLoadingAction(mode) {
-            const { id } = this.current_service
+            const { id } = this.currentService
             switch (mode) {
                 case 'destroy':
                     await this.destroyService(id)
@@ -144,12 +159,6 @@ export default {
                     })
                     this.showConfirmDialog = false
             }
-        },
-
-        actionHandle(type) {
-            this.dialogType = type
-            this.dialogTitle = `${this.$t(type)} ${this.$tc('services', 1)}`
-            this.showConfirmDialog = true
         },
     },
 }
