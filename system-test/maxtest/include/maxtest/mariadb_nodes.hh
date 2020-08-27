@@ -43,6 +43,7 @@ public:
     void set_use_ipv6(bool use_ipv6);
 
     const char* ip(int i = 0) const;
+    const char* ip4(int i = 0) const;
     const char* ip6(int i = 0) const;
     const char* ip_private(int i = 0) const;
     const char* access_homedir(int i = 0) const;
@@ -167,7 +168,7 @@ public:
      */
     Connection get_connection(int i, const std::string& db = "test")
     {
-        return Connection(IP[i], port[i], user_name, password, db, ssl);
+        return Connection(ip4(i), port[i], user_name, password, db, ssl);
     }
 
     /**

@@ -29,8 +29,6 @@ public:
     const char* ip6(int i = 0) const;
     const char* ip_private(int i = 0) const;
 
-    char * IP[256];
-
     /**
      * @brief Number of backend nodes
      */
@@ -159,8 +157,10 @@ private:
     static constexpr int max_nodes {30};
 
     std::string m_prefix;                   /**< Name of backend setup (e.g. 'repl' or 'galera') */
-    std::string m_ip_private[max_nodes] {}; /**< Private IP addresses for every backend node (for AWS) */
+
+    std::string m_ip4[max_nodes] {};        /**< IPv4-addresses for every backend node */
     std::string m_ip6[max_nodes] {};        /**< IPv6-addresses for every backend node */
+    std::string m_ip_private[max_nodes] {}; /**< Private IP-addresses for every backend node (for AWS) */
     std::string m_hostname[max_nodes] {};   /**< Hostnames for every backend node */
 
     std::string m_start_vm_command[max_nodes] {}; /**< Command to resume VM */
@@ -173,7 +173,6 @@ private:
     std::string m_access_sudo[max_nodes] {};    /**< empty or "sudo " */
 
     std::string m_sshkey[max_nodes] {}; /**< Path to ssh key for every backend node */
-
 
     bool check_node_ssh(int node);
 

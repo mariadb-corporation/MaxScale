@@ -128,7 +128,7 @@ void* kill_vm_thread(void* ptr)
         old_slave = 1;
     }
 
-    printf("Killing VM %s\n", Test->repl->IP[old_slave]);
+    printf("Killing VM %s\n", Test->repl->ip4(old_slave));
     fflush(stdout);
     Test->repl->block_node(old_slave);
     return NULL;

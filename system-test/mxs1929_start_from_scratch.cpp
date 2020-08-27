@@ -48,10 +48,10 @@ int main(int argc, char** argv)
     std::vector<std::string> commands
     {
         // Start by creating the servers
-        create + "server server1 " + test.repl->IP[0] + " 3306",
-        create + "server server2 " + test.repl->IP[1] + " 3306",
-        create + "server server3 " + test.repl->IP[2] + " 3306",
-        create + "server server4 " + test.repl->IP[3] + " 3306",
+        create + "server server1 " + test.repl->ip4(0) + " 3306",
+        create + "server server2 " + test.repl->ip4(1) + " 3306",
+        create + "server server3 " + test.repl->ip4(2) + " 3306",
+        create + "server server4 " + test.repl->ip4(3) + " 3306",
         // A monitor for the servers
         create
         +

@@ -187,7 +187,7 @@ public:
      */
     MYSQL* open_rwsplit_connection(int m = 0, const std::string& db = "test")
     {
-        return open_conn(rwsplit_port[m], IP[m], user_name, password, ssl);
+        return open_conn(rwsplit_port[m], ip4(m), user_name, password, ssl);
     }
 
     /**
@@ -195,7 +195,7 @@ public:
      */
     Connection rwsplit(int m = 0, const std::string& db = "test")
     {
-        return Connection(IP[m], rwsplit_port[m], user_name, password, db, ssl);
+        return Connection(ip4(m), rwsplit_port[m], user_name, password, db, ssl);
     }
 
     /**
@@ -203,7 +203,7 @@ public:
      */
     Connection get_connection(int port, int m = 0, const std::string& db = "test")
     {
-        return Connection(IP[m], port, user_name, password, db, ssl);
+        return Connection(ip4(m), port, user_name, password, db, ssl);
     }
 
     /**
@@ -213,11 +213,7 @@ public:
      */
     MYSQL* open_readconn_master_connection(int m = 0)
     {
-        return open_conn(readconn_master_port[m],
-                         IP[m],
-                         user_name,
-                         password,
-                         ssl);
+        return open_conn(readconn_master_port[m], ip4(m), user_name, password, ssl);
     }
 
     /**
@@ -225,7 +221,7 @@ public:
      */
     Connection readconn_master(int m = 0, const std::string& db = "test")
     {
-        return Connection(IP[m], readconn_master_port[m], user_name, password, db, ssl);
+        return Connection(ip4(m), readconn_master_port[m], user_name, password, db, ssl);
     }
 
     /**
@@ -235,11 +231,7 @@ public:
      */
     MYSQL* open_readconn_slave_connection(int m = 0)
     {
-        return open_conn(readconn_slave_port[m],
-                         IP[m],
-                         user_name,
-                         password,
-                         ssl);
+        return open_conn(readconn_slave_port[m], ip4(m), user_name, password, ssl);
     }
 
     /**
@@ -247,7 +239,7 @@ public:
      */
     Connection readconn_slave(int m = 0, const std::string& db = "test")
     {
-        return Connection(IP[m], readconn_slave_port[m], user_name, password, db, ssl);
+        return Connection(ip4(m), readconn_slave_port[m], user_name, password, db, ssl);
     }
 
     /**

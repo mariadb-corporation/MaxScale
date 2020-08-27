@@ -48,7 +48,7 @@ int main(int argc, char* argv[])
 
     for (int i = 0; i < 4; i++)
     {
-        test->maxctrl("create server server" + std::to_string(i + 1) + " " + std::string(test->repl->IP[i]));
+        test->maxctrl("create server server" + std::to_string(i + 1) + " " + test->repl->ip4(i));
     }
 
     /**  Add the servers again */

@@ -24,8 +24,8 @@ int main(int argc, char* argv[])
     f = fopen("hosts", "wt");
     for (i = 0; i < Test->repl->N; i++)
     {
-        fprintf(f, "%s node_%03d.maxscale.test\n", Test->repl->IP[i], i);
-        fprintf(f, "%s node_%03d\n", Test->repl->IP[i], i);
+        fprintf(f, "%s node_%03d.maxscale.test\n", Test->repl->ip4(i), i);
+        fprintf(f, "%s node_%03d\n", Test->repl->ip4(i), i);
     }
     fprintf(f, "%s maxscale.maxscale.test\n", Test->maxscales->ip4(0));
     fprintf(f, "%s maxscale\n", Test->maxscales->ip4(0));
