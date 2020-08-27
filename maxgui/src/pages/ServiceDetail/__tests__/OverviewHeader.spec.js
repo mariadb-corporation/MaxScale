@@ -1,0 +1,144 @@
+/*
+ * Copyright (c) 2020 MariaDB Corporation Ab
+ *
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
+ *
+ * Change Date: 2024-07-16
+ *
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
+ */
+
+import chai, { expect } from 'chai'
+import mount from '@tests/unit/setup'
+import OverviewHeader from '@/pages/ServiceDetail/OverviewHeader'
+import { dummy_all_services } from '@tests/unit/utils'
+import sinon from 'sinon'
+import sinonChai from 'sinon-chai'
+chai.should()
+chai.use(sinonChai)
+
+const dummy_service_connection_info = { total_connections: 1000001, connections: 0 }
+const dummy_service_connection_datasets = [
+    {
+        label: 'Current connections',
+        id: 'Current connections',
+        type: 'line',
+        backgroundColor: 'rgba(171,199,74,0.1)',
+        borderColor: 'rgba(171,199,74,1)',
+        borderWidth: 1,
+        lineTension: 0,
+        data: [
+            {
+                x: 1598516574793,
+                y: 0,
+            },
+        ],
+    },
+]
+
+const defaultProps = {
+    currentService: dummy_all_services[0],
+    serviceConnectionsDatasets: dummy_service_connection_datasets,
+    serviceConnectionInfo: dummy_service_connection_info,
+}
+
+const propsMountFactory = props =>
+    mount({
+        shallow: false,
+        component: OverviewHeader,
+        props: props,
+    })
+
+describe('ServiceDetail - OverviewHeader', () => {
+    let wrapper, clock, updateChartSpy
+    beforeEach(async () => {
+        clock = sinon.useFakeTimers()
+        updateChartSpy = sinon.spy(OverviewHeader.methods, 'updateChart')
+        wrapper = mount({
+            shallow: false,
+            component: OverviewHeader,
+            props: defaultProps,
+        })
+    })
+    afterEach(async function() {
+        await clock.restore()
+        await updateChartSpy.restore()
+    })
+    it(`Should emit update-chart event`, async () => {
+        let count = 0
+        wrapper.vm.$on('update-chart', () => {
+            count++
+        })
+        //mockup update chart
+        await wrapper.vm.updateChart()
+        expect(count).to.be.equals(1)
+    })
+
+    it(`Should call updateChart after 10s`, async () => {
+        await clock.tick(1000)
+        expect(updateChartSpy).to.not.have.been.called
+        await clock.tick(9000)
+        expect(updateChartSpy).to.have.been.calledOnce
+    })
+
+    describe('outlined-overview-card render assertions', () => {
+        let outlineOverviewCards
+        const {
+            attributes: { router, started },
+        } = dummy_all_services[0]
+
+        wrapper = propsMountFactory(defaultProps)
+        const { wrappers } = wrapper.findAllComponents({
+            name: 'outlined-overview-card',
+        })
+        outlineOverviewCards = wrappers
+        it(`Should render 3 outlined-overview-card components`, async () => {
+            expect(outlineOverviewCards.length).to.be.equals(3)
+        })
+
+        outlineOverviewCards.forEach((card, i) => {
+            let desAppend = 'outlined-overview-card component'
+            switch (i) {
+                case 0:
+                    it(`Should show 'Overview' title in the first ${desAppend}`, async () => {
+                        const title = card.find('.detail-overview__title')
+                        expect(title.text()).to.be.equals('Overview')
+                    })
+                    it(`Should show router in the first ${desAppend}`, async () => {
+                        const cardTitle = card.find('.caption')
+                        const cardBody = card.find('.router')
+                        expect(cardTitle.text()).to.be.equals('ROUTER')
+                        expect(cardBody.text()).to.be.equals(router)
+                    })
+                    break
+                case 1:
+                    it(`Should show started time in the second ${desAppend}`, async () => {
+                        const { formatValue } = wrapper.vm.$help
+                        const cardTitle = card.find('.caption')
+                        const cardBody = card.find('.started')
+                        expect(cardTitle.text()).to.be.equals('STARTED AT')
+                        expect(cardBody.text()).to.be.equals(formatValue(started))
+                    })
+                    break
+                case 2:
+                    it(`Should not show tile in the last ${desAppend}`, async () => {
+                        expect(card.vm.$props.tile).to.be.false
+                    })
+                    it(`Should current connections as title in the last ${desAppend}`, async () => {
+                        const title = card.find('.detail-overview__title')
+                        const { connections, total_connections } = dummy_service_connection_info
+                        expect(title.text()).to.be.equals(
+                            `Current Connections  (${connections}/${total_connections})`
+                        )
+                    })
+                    it(`Should show connections chart in the last ${desAppend}`, async () => {
+                        const lineChart = card.findComponent({ name: 'line-chart' })
+                        expect(lineChart.exists()).to.be.true
+                    })
+            }
+        })
+    })
+})
