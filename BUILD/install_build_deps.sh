@@ -173,9 +173,9 @@ then
     fi
 
     # Install a newer compiler
-    sudo zypper -n install gcc8 gcc8-c++
-    echo "export CC=/usr/bin/gcc-8" >> ~/.bashrc
-    echo "export CXX=/usr/bin/g++-8" >> ~/.bashrc
+    sudo zypper -n install gcc9 gcc9-c++
+    echo "export CC=/usr/bin/gcc-9" >> ~/.bashrc
+    echo "export CXX=/usr/bin/g++-9" >> ~/.bashrc
 fi
 
 # cmake
