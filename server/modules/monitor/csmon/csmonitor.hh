@@ -110,6 +110,10 @@ private:
 
     bool configure(const mxs::ConfigParameters* pParams) override;
 
+    void check_bootstrap_servers();
+    bool remove_persisted_information();
+    void persist_bootstrap_servers();
+
     CsContext m_context;
     sqlite3*  m_pDb {nullptr};
 };

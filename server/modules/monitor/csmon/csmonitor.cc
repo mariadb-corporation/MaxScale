@@ -14,9 +14,10 @@
 #include "csmonitor.hh"
 
 #include <regex>
-#include <vector>
-#include <string>
+#include <set>
 #include <sstream>
+#include <string>
+#include <vector>
 #include <mysql.h>
 
 #include <maxscale/modinfo.hh>
@@ -24,10 +25,7 @@
 #include <maxscale/paths.hh>
 #include "columnstore.hh"
 
-using std::ostringstream;
-using std::string;
-using std::unique_ptr;
-using std::vector;
+using namespace std;
 using maxscale::MonitorServer;
 namespace http = mxb::http;
 
@@ -278,6 +276,23 @@ static const char SQL_BN_DELETE[] =
 static const char SQL_BN_SELECT[] =
     "SELECT ip, mysql_port FROM bootstrap_nodes";
 
+using HostPortPair = std::pair<std::string, int>;
+using HostPortPairs = std::vector<HostPortPair>;
+
+// sqlite3 callback.
+int select_cb(void* pData, int nColumns, char** ppColumn, char** ppNames)
+{
+    std::vector<HostPortPair>* pNodes = static_cast<std::vector<HostPortPair>*>(pData);
+
+    mxb_assert(nColumns == 2);
+
+    std::string host(ppColumn[0]);
+    int port = atoi(ppColumn[1]);
+
+    pNodes->emplace_back(host, port);
+
+    return 0;
+}
 
 bool create_schema(sqlite3* pDb)
 {
@@ -600,14 +615,19 @@ int CsMonitor::get_15_server_status(CsMonitorServer* pServer)
 
 bool CsMonitor::configure(const mxs::ConfigParameters* pParams)
 {
-    bool rv = m_context.configure(*pParams);
-
-    if (rv)
+    if (!m_context.configure(*pParams))
     {
-        rv = MonitorWorkerSimple::configure(pParams);
+        return false;
     }
 
-    return rv;
+    if (!MonitorWorkerSimple::configure(pParams))
+    {
+        return false;
+    }
+
+    check_bootstrap_servers();
+
+    return true;
 }
 
 namespace
@@ -1285,4 +1305,109 @@ CsMonitorServer* CsMonitor::create_server(SERVER* pServer,
                                           const mxs::MonitorServer::SharedSettings& shared)
 {
     return new CsMonitorServer(pServer, shared, &m_context);
+}
+
+void CsMonitor::check_bootstrap_servers()
+{
+    HostPortPairs nodes;
+    char* pError = nullptr;
+    int rv = sqlite3_exec(m_pDb, SQL_BN_SELECT, select_cb, &nodes, &pError);
+
+    if (rv == SQLITE_OK)
+    {
+        set<string> prev_bootstrap_servers;
+
+        for (const auto& node : nodes)
+        {
+            string s = node.first + ":" + std::to_string(node.second);
+            prev_bootstrap_servers.insert(s);
+        }
+
+        set<string> current_bootstrap_servers;
+
+        for (const auto* pMs : servers())
+        {
+            SERVER* pServer = pMs->server;
+
+            string s = string(pServer->address()) + ":" + std::to_string(pServer->port());
+            current_bootstrap_servers.insert(s);
+        }
+
+        if (prev_bootstrap_servers == current_bootstrap_servers)
+        {
+            MXS_NOTICE("Current bootstrap servers are the same as the ones used on "
+                       "previous run, using persisted connection information.");
+        }
+        else
+        {
+            if (!prev_bootstrap_servers.empty())
+            {
+                MXS_NOTICE("Current bootstrap servers (%s) are different than the ones "
+                           "used on the previous run (%s), NOT using persistent connection "
+                           "information.",
+                           mxb::join(current_bootstrap_servers, ", ").c_str(),
+                           mxb::join(prev_bootstrap_servers, ", ").c_str());
+            }
+
+            if (remove_persisted_information())
+            {
+                persist_bootstrap_servers();
+            }
+        }
+    }
+    else
+    {
+        MXS_WARNING("Could not lookup earlier bootstrap servers: %s", pError ? pError : "Unknown error");
+    }
+}
+
+bool CsMonitor::remove_persisted_information()
+{
+    char* pError = nullptr;
+
+    int rv = sqlite3_exec(m_pDb, SQL_BN_DELETE, nullptr, nullptr, &pError);
+    if (rv != SQLITE_OK)
+    {
+        MXS_ERROR("Could not delete persisted bootstrap nodes: %s", pError ? pError : "Unknown error");
+    }
+
+    return rv == SQLITE_OK;
+}
+
+void CsMonitor::persist_bootstrap_servers()
+{
+    string values;
+
+    for (const auto* pMs : servers())
+    {
+        if (!values.empty())
+        {
+            values += ", ";
+        }
+
+        SERVER* pServer = pMs->server;
+        string value;
+        value += string("'") + pServer->address() + string("'");
+        value += ", ";
+        value += std::to_string(pServer->port());
+
+        values += "(";
+        values += value;
+        values += ")";
+    }
+
+    if (!values.empty())
+    {
+        char insert[sizeof(SQL_BN_INSERT_FORMAT) + values.length()];
+        sprintf(insert, SQL_BN_INSERT_FORMAT, values.c_str());
+
+        char* pError = nullptr;
+        int rv = sqlite3_exec(m_pDb, insert, nullptr, nullptr, &pError);
+
+        if (rv != SQLITE_OK)
+        {
+            MXS_ERROR("Could not persist information about current bootstrap nodes: %s",
+                      pError ? pError : "Unknown error");
+        }
+    }
 }
