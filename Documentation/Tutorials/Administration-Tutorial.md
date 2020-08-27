@@ -52,30 +52,26 @@ Note that this is only supported on legacy SysV systems.
 ## Checking The Status Of The MariaDB MaxScale Services
 
 It is possible to use the maxctrl command to obtain statistics about the
-services that are running within MaxScale. The maxctrl command "list services"
+services that are running within MaxScale. The maxctrl command `list services`
 will give very basic information regarding services. This command may be either
 run in interactive mode or passed on the maxctrl command line.
 
 ```
-	$ maxctrl list services
+$ maxctrl list services
+┌────────────────────────┬────────────────┬─────────────┬───────────────────┬────────────────────────────────────┐
+│ Service                │ Router         │ Connections │ Total Connections │ Servers                            │
+├────────────────────────┼────────────────┼─────────────┼───────────────────┼────────────────────────────────────┤
+│ CLI                    │ cli            │ 1           │ 1                 │                                    │
+├────────────────────────┼────────────────┼─────────────┼───────────────────┼────────────────────────────────────┤
+│ RW-Split-Router        │ readwritesplit │ 1           │ 1                 │ server1, server2, server3, server4 │
+├────────────────────────┼────────────────┼─────────────┼───────────────────┼────────────────────────────────────┤
+│ RW-Split-Hint-Router   │ readwritesplit │ 1           │ 1                 │ server1, server2, server3, server4 │
+├────────────────────────┼────────────────┼─────────────┼───────────────────┼────────────────────────────────────┤
+│ SchemaRouter-Router    │ schemarouter   │ 1           │ 1                 │ server1, server2, server3, server4 │
+├────────────────────────┼────────────────┼─────────────┼───────────────────┼────────────────────────────────────┤
+│ Read-Connection-Router │ readconnroute  │ 1           │ 1                 │ server1                            │
+└────────────────────────┴────────────────┴─────────────┴───────────────────┴────────────────────────────────────┘
 
-	Services.
-
-	--------------------------+----------------------+--------+---------------
-
-	Service Name              | Router Module        | #Users | Total Sessions
-
-	--------------------------+----------------------+--------+---------------
-
-	RWSplitter                | readwritesplit       |      2 |     4
-
-	Cassandra                 | readconncouter       |      1 |     1
-
-	CLI                       | cli                  |      2 |     2
-
-	--------------------------+----------------------+--------+---------------
-
-	MaxScale>
 ```
 
 Network listeners count as a user of the service, therefore there will always be
@@ -98,7 +94,7 @@ a client session, then a connection from the pool will be used if possible.
 
 The connection will only be taken from the pool if it has been there for no more
 than `persistmaxtime` seconds. The connection will also be discarded if it has
-been disconnectedby the back end server. Connections will be selected so that
+been disconnected by the back end server. Connections will be selected so that
 they match the user name and protocol for the new request.
 
 Starting with MaxScale 2.1, when a MySQL protocol connection is taken from the
@@ -121,6 +117,23 @@ the desired configuration. In exceptional cases this feature could be a problem.
 It is possible to have pools for as many servers as you wish, with configuration
 values in each server section.
 
+## What Clients Are Connected To MariaDB MaxScale
+
+To determine what client are currently connected to MariaDB MaxScale, you can
+use the `list sessions` command within maxctrl. This will give you IP address
+and the ID of the session for that connection. As with any maxctrl
+command this can be passed on the command line or typed interactively in
+maxctrl.
+
+```
+$ maxctrl list sessions
+┌────┬─────────┬──────────────────┬──────────────────────────┬──────┬─────────────────┐
+│ Id │ User    │ Host             │ Connected                │ Idle │ Service         │
+├────┼─────────┼──────────────────┼──────────────────────────┼──────┼─────────────────┤
+│ 6  │ maxuser │ ::ffff:127.0.0.1 │ Thu Aug 27 10:39:16 2020 │ 4    │ RW-Split-Router │
+└────┴─────────┴──────────────────┴──────────────────────────┴──────┴─────────────────┘
+```
+
 ## Rotating the Log File
 
 MariaDB MaxScale logs messages of different priority into a single log file.
@@ -133,7 +146,7 @@ administrator must take action.
 The name of the log file is maxscale.log. When the log is rotated, MaxScale
 closes the current log file and opens a new one using the same name.
 
-Log file rotation is achieved by use of the "rotate logs" command
+Log file rotation is achieved by use of the `rotate logs` command
 in maxctrl.
 
 ```
@@ -180,11 +193,11 @@ endscript
 }
 ```
 
-In older versions MaxScale renamed the log file, behaviour which is not fully
+In older versions MaxScale renamed the log file, behavior which is not fully
 compliant with the assumptions of logrotate and may lead to issues, depending on
-the used logrotate configuration file. From version 2.1 onwards, MaxScale will
+the used logrotate configuration file. From version 2.1 onward, MaxScale will
 not itself rename the log file, but when the log is rotated, MaxScale will
-simply close and reopen the same log file. That will make the behaviour fully
+simply close and reopen the same log file. That will make the behavior fully
 compliant with logrotate.
 
 ## Taking A Database Server Out Of Use
@@ -193,8 +206,8 @@ MariaDB MaxScale supports the concept of maintenance mode for servers within a
 cluster, this allows for planned, temporary removal of a database from the
 cluster within the need to change the MariaDB MaxScale configuration.
 
-To achieve the removal of a database server you can use the set server command
-in the maxctrl utility to set the maintenance mode flag for the server. This
+To achieve the removal of a database server you can use the `set server` command
+in maxctrl to set the maintenance mode flag for the server. This
 may be done interactively within maxctrl or by passing the command on the
 command line.
 
