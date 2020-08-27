@@ -27,8 +27,7 @@ should be queried more often. The smallest possible value is 100 milliseconds.
 If querying the servers takes longer than `monitor_interval`, the effective
 update rate is reduced.
 
-The default value of `monitor_interval` was updated from 10000 milliseconds to
-2000 milliseconds in MaxScale 2.2.0.
+The default value of `monitor_interval` is 2000 milliseconds.
 
 ```
 monitor_interval=2500ms
@@ -51,7 +50,7 @@ even if the duration is longer than a second. The minimum value is 1 second and
 the default value for this is 3 seconds.
 
 ```
-backend_connect_timeout=6s
+backend_connect_timeout=3s
 ```
 
 ### `backend_write_timeout`
@@ -66,7 +65,7 @@ even if the duration is longer than a second. The minimum value is 1 second and
 the default value for this is 3 seconds.
 
 ```
-backend_write_timeout=4s
+backend_write_timeout=3s
 ```
 
 ### `backend_read_timeout`
@@ -81,7 +80,7 @@ even if the duration is longer than a second. The minimum value is 1 second and
 the default value for this is 3 seconds.
 
 ```
-backend_read_timeout=2s
+backend_read_timeout=3s
 ```
 
 ### `backend_connect_attempts`
@@ -92,7 +91,7 @@ monitoring loop. The default is 1. Every attempt may take up to
 successful, the backend is considered to be unreachable and down.
 
 ```
-backend_connect_attempts=3
+backend_connect_attempts=1
 ```
 
 ### `disk_space_threshold`
