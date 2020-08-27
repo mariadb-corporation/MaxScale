@@ -146,6 +146,11 @@ const monitor_fields = [
         description: 'Monitor name'
     },
     {
+        name: 'Module',
+        path: 'attributes.module',
+        description: 'Monitor module'
+    },
+    {
         name: 'State',
         path: 'attributes.state',
         description: 'Monitor state'
