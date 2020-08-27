@@ -33,12 +33,12 @@ const expectedTableHeaders = [
 const expectedTableRows = [
     {
         id: 'filter_0',
-        serviceIds: ['RCR-Router', 'RCR-Writer'],
+        serviceIds: ['service_0', 'service_1'],
         module: 'qlafilter',
     },
     {
         id: 'filter_1',
-        serviceIds: ['RCR-Writer'],
+        serviceIds: ['service_1'],
         module: 'binlogfilter',
     },
 ]

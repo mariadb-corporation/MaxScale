@@ -24,25 +24,27 @@
                                 <v-row class="pa-0 ma-0">
                                     <v-col cols="12" class="pa-0 ma-0">
                                         <relationship-table
+                                            ref="servers-relationship-table"
                                             relationshipType="servers"
-                                            :tableRows="serverStateTableRow"
+                                            :tableRows="serversTableRows"
                                             :getRelationshipData="getRelationshipData"
                                             @on-relationship-update="dispatchRelationshipUpdate"
                                         />
                                     </v-col>
                                     <v-col cols="12" class="pa-0 mt-4">
                                         <relationship-table
+                                            ref="filters-relationship-table"
                                             relationshipType="filters"
-                                            :tableRows="filtersTableRow"
+                                            :tableRows="filtersTableRows"
                                             :getRelationshipData="getRelationshipData"
                                             @on-relationship-update="dispatchRelationshipUpdate"
                                         />
                                     </v-col>
-
                                     <v-col cols="12" class="pa-0 mt-4">
                                         <relationship-table
+                                            ref="listeners-relationship-table"
                                             relationshipType="listeners"
-                                            :tableRows="listenerStateTableRow"
+                                            :tableRows="listenersTableRows"
                                             readOnly
                                             @open-listener-form-dialog="
                                                 SET_FORM_TYPE(FORM_LISTENER)
@@ -53,12 +55,13 @@
                             </v-col>
                             <v-col class="py-0 ma-0" cols="8">
                                 <details-readonly-table
+                                    ref="sessions-table"
                                     tableClass="data-table-full--max-width-columns"
                                     :tdBorderLeft="false"
                                     :title="`${$tc('currentSessions', 2)}`"
-                                    :titleInfo="sessionsTableRow.length"
+                                    :titleInfo="sessionsTableRows.length"
                                     :noDataText="$t('noEntity', { entityName: $tc('sessions', 2) })"
-                                    :tableData="sessionsTableRow"
+                                    :tableData="sessionsTableRows"
                                     :customTableHeaders="sessionsTableHeader"
                                 />
                             </v-col>
@@ -77,6 +80,7 @@
                             </v-col>
                             <v-col class="py-0 my-0" cols="6">
                                 <details-readonly-table
+                                    ref="diagnostics-table"
                                     :title="`${$t('routerDiagnostics')}`"
                                     :tableData="routerDiagnostics"
                                     isTree
@@ -122,9 +126,9 @@ export default {
                 { name: `${this.$tc('servers', 2)} & ${this.$tc('sessions', 2)}` },
                 { name: `${this.$tc('parameters', 2)} & ${this.$tc('diagnostics', 2)}` },
             ],
-            serverStateTableRow: [],
-            listenerStateTableRow: [],
-            filtersTableRow: [],
+            serversTableRows: [],
+            listenersTableRows: [],
+            filtersTableRows: [],
             sessionsTableHeader: [
                 { text: 'ID', value: 'id' },
                 { text: 'Client', value: 'user' },
@@ -149,7 +153,7 @@ export default {
         routerModule: function() {
             return this.current_service.attributes.router
         },
-        sessionsTableRow: function() {
+        sessionsTableRows: function() {
             return this.sessions_by_service.map(
                 ({ id, attributes: { idle, connected, user, remote } }) => ({
                     id,
@@ -239,16 +243,7 @@ export default {
                 arr.push(row)
             })
 
-            switch (relationshipType) {
-                case 'servers':
-                    this.serverStateTableRow = arr
-                    break
-                case 'listeners':
-                    this.listenerStateTableRow = arr
-                    break
-                case 'filters':
-                    this.filtersTableRow = arr
-            }
+            this[`${relationshipType}TableRows`] = arr
         },
 
         /**

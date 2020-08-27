@@ -53,12 +53,18 @@ export default {
             commit('SET_SESSIONS_DATASETS', [dataset])
         },
 
-        //-------------------- sessions filter by relationships serviceId
         async fetchSessionsFilterByService({ commit }, id) {
-            let res = await this.vue.$axios.get(
-                `/sessions?filter=/relationships/services/data/0/id="${id}"`
-            )
-            commit('SET_SESSIONS_BY_SERVICE', res.data.data)
+            try {
+                let res = await this.vue.$axios.get(
+                    `/sessions?filter=/relationships/services/data/0/id="${id}"`
+                )
+                if (res.data.data) commit('SET_SESSIONS_BY_SERVICE', res.data.data)
+            } catch (e) {
+                if (process.env.NODE_ENV !== 'test') {
+                    const logger = this.vue.$logger('store-sessions-fetchSessionsFilterByService')
+                    logger.error(e)
+                }
+            }
         },
     },
 }

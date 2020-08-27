@@ -14,30 +14,15 @@
 import chai, { expect } from 'chai'
 import mount from '@tests/unit/setup'
 import OverviewHeader from '@/pages/ServiceDetail/OverviewHeader'
-import { dummy_all_services } from '@tests/unit/utils'
+import {
+    dummy_all_services,
+    dummy_service_connection_datasets,
+    dummy_service_connection_info,
+} from '@tests/unit/utils'
 import sinon from 'sinon'
 import sinonChai from 'sinon-chai'
 chai.should()
 chai.use(sinonChai)
-
-const dummy_service_connection_info = { total_connections: 1000001, connections: 0 }
-const dummy_service_connection_datasets = [
-    {
-        label: 'Current connections',
-        id: 'Current connections',
-        type: 'line',
-        backgroundColor: 'rgba(171,199,74,0.1)',
-        borderColor: 'rgba(171,199,74,1)',
-        borderWidth: 1,
-        lineTension: 0,
-        data: [
-            {
-                x: 1598516574793,
-                y: 0,
-            },
-        ],
-    },
-]
 
 const defaultProps = {
     currentService: dummy_all_services[0],
