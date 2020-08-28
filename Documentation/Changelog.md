@@ -2,6 +2,8 @@
 
 ## MariaDB MaxScale 2.6
 
+* The Columnstore monitor no longer supports Columnstore versions prior to 1.5.
+
 For more details, please refer to:
 * [MariaDB MaxScale 2.6.0 Release Notes](Release-Notes/MaxScale-2.6.0-Release-Notes.md)
 

@@ -41,22 +41,12 @@ using Statuses = CsMonitorServer::Statuses;
 namespace
 {
 
-constexpr const char* ZALIVE_QUERY_10 = "SELECT mcsSystemReady() = 1 && mcsSystemReadOnly() <> 2";
-constexpr const char* ZALIVE_QUERY_12 = ZALIVE_QUERY_10;
 constexpr const char* ZALIVE_QUERY_15 = "SELECT 1";
-
-constexpr const char* ZROLE_QUERY_12 = "SELECT mcsSystemPrimary()";
 
 constexpr const char* get_alive_query(cs::Version version)
 {
     switch (version)
     {
-    case cs::CS_10:
-        return ZALIVE_QUERY_10;
-
-    case cs::CS_12:
-        return ZALIVE_QUERY_12;
-
     case cs::CS_15:
         return ZALIVE_QUERY_15;
 
@@ -439,43 +429,12 @@ void CsMonitor::update_server_status(MonitorServer* pS)
     {
         if (do_query(pServer, get_alive_query(m_context.config().version)) == "1")
         {
-            if (m_context.config().version == cs::CS_15)
-            {
-                status_mask = get_15_server_status(pServer);
-            }
-            else
-            {
-                status_mask |= SERVER_RUNNING;
-
-                switch (m_context.config().version)
-                {
-                case cs::CS_10:
-                    status_mask |= get_10_server_status(pServer);
-                    break;
-
-                case cs::CS_12:
-                    status_mask |= get_12_server_status(pServer);
-                    break;
-
-                case cs::CS_15:
-                default:
-                    mxb_assert(!true);
-                }
-            }
+            mxb_assert(m_context.config().version == cs::CS_15);
+            status_mask = get_15_server_status(pServer);
         }
     }
 
     pServer->set_pending_status(status_mask);
-}
-
-int CsMonitor::get_10_server_status(CsMonitorServer* pServer)
-{
-    return pServer->server == m_context.config().pPrimary ? SERVER_MASTER : SERVER_SLAVE;
-}
-
-int CsMonitor::get_12_server_status(CsMonitorServer* pServer)
-{
-    return do_query(pServer, ZROLE_QUERY_12) == "1" ? SERVER_MASTER : SERVER_SLAVE;
 }
 
 int CsMonitor::get_15_server_status(CsMonitorServer* pServer)

@@ -1,9 +1,7 @@
 # ColumnStore Monitor
 
 The ColumnStore monitor, `csmon`, is a monitor module for MariaDB ColumnStore
-servers. It supports multiple UM nodes and can detect the correct server for
-DML/DDL statements which will be labeled as the master. Other UM nodes will be
-used for reads.
+servers. The monitor supports Columnstore version 1.5.
 
 ## Required Grants
 
@@ -18,18 +16,6 @@ CREATE USER 'maxuser'@'%' IDENTIFIED BY 'maxpwd';
 GRANT ALL ON infinidb_vtable.* TO 'maxuser'@'%';
 ```
 
-## Master Selection
-
-The Columnstore Monitor in MaxScale 2.5 supports Columnstore 1.0, 1.2 and 1.5,
-and the master selection is done differently for each version.
-
-* If the version is 1.0, the master server must be specified using the `primary`
-parameter.
-* If the version is 1.2, the master server is selected automatically using
-the Columnstore function `mcsSystemPrimary()`.
-* If the version is 1.5, the master server is selected automatically by
-querying the Columnstore daemon running on each node.
-
 ## Configuration
 
 Read the [Monitor Common](Monitor-Common.md) document for a list of supported
@@ -37,22 +23,10 @@ common monitor parameters.
 
 ### `version`
 
-With this mandatory parameter the used Columnstore version is specified.
-The allowed values are `1.0`, `1.2` and `1.5`.
-
-### `primary`
-
-Required and only allowed when the value of `version` is `1.0`.
-
-The `primary` parameter controls which server is chosen as the master
-server.
-
-If the server pointed to by this parameter is available and is ready to process
-queries, it receives the _Master_ status.
+With this _deprecated_ optional parameter the used Columnstore version is
+specified. The only allowed value is `1.5`.
 
 ### `admin_port`
-
-Allowed only when the value of version is `1.5`.
 
 This optional parameter specifies the port of the Columnstore administrative
 daemon. The default value is `8640`. Note that the daemons of all nodes must
@@ -60,14 +34,10 @@ be listening on the same port.
 
 ### `admin_base_path`
 
-Allowed only when the value of version is `1.5`.
-
 This optional parameter specifies the base path of the Columnstore
 administrative daemon. The default value is `/cmapi/0.4.0`.
 
 ### `api_key`
-
-Allowed only when the value of version is `1.5`.
 
 This optional parameter specifies the API key to be used in the
 communication with the Columnstore administrative daemon. If no
@@ -81,8 +51,6 @@ thereafter require it, so changing the key requires the
 resetting of the key on the Columnstore nodes as well.
 
 ### `local_address`
-
-Allowed only when the value of version is `1.5`.
 
 With this parameter it is specified what IP MaxScale should
 tell the Columnstore nodes it resides at. Either it or

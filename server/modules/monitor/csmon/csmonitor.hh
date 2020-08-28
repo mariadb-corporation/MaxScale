@@ -100,8 +100,6 @@ private:
 
     bool has_sufficient_permissions();
     void update_server_status(mxs::MonitorServer* pServer);
-    int get_10_server_status(CsMonitorServer* pServer);
-    int get_12_server_status(CsMonitorServer* pServer);
     int get_15_server_status(CsMonitorServer* pServer);
 
     CsMonitorServer* create_server(SERVER* server, const mxs::MonitorServer::SharedSettings& shared) override;

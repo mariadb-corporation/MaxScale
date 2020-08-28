@@ -138,14 +138,6 @@ public:
         {
             m_minor_version = cs::CS_15;
         }
-        else if (vn >= 10200)
-        {
-            m_minor_version = cs::CS_12;
-        }
-        else if (vn > 10000)
-        {
-            m_minor_version = cs::CS_10;
-        }
         else
         {
             m_minor_version = cs::CS_UNKNOWN;

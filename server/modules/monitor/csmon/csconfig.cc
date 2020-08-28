@@ -49,7 +49,6 @@ const config::ParamCount::value_type   DEFAULT_ADMIN_PORT      = 8640;
 const config::ParamString::value_type  DEFAULT_ADMIN_BASE_PATH = "/cmapi/0.4.0";
 const config::ParamString::value_type  DEFAULT_API_KEY         = "";
 const config::ParamString::value_type  DEFAULT_LOCAL_ADDRESS   = "";
-const config::ParamServer::value_type  DEFAULT_PRIMARY         = nullptr;
 
 config::Specification specification(MXS_MODULE_NAME, config::Specification::MONITOR);
 
@@ -58,16 +57,9 @@ config::ParamEnum<cs::Version> version(
     "version",
     "The version of the Columnstore cluster that is monitored. Default is '1.5'.",
     {
-        { cs::CS_10, cs::ZCS_10 },
-        { cs::CS_12, cs::ZCS_12 },
         { cs::CS_15, cs::ZCS_15 }
-    });
-
-config::ParamServer primary(
-    &specification,
-    "primary",
-    "For pre-1.2 Columnstore servers, specifies which server is chosen as the master.",
-    config::Param::OPTIONAL);
+    },
+    cs::CS_15);
 
 config::ParamCount admin_port(
     &specification,
@@ -79,8 +71,8 @@ config::ParamString admin_base_path(
     &specification,
     "admin_base_path",
     "The base path to be used when accessing the Columnstore administrative daemon. "
-    "If, for instance, a daemon URL is https://localhost:8640/cmapi/0.3.0/node/start "
-    "then the admin_base_path is \"/cmapi/0.3.0\".",
+    "If, for instance, a daemon URL is https://localhost:8640/cmapi/0.4.0/node/start "
+    "then the admin_base_path is \"/cmapi/0.4.0\".",
     DEFAULT_ADMIN_BASE_PATH);
 
 config::ParamString api_key(
@@ -102,7 +94,6 @@ CsConfig::CsConfig(const string& name)
     : mxs::config::Configuration(name, &csmon::specification)
 {
     add_native(&this->version, &csmon::version);
-    add_native(&this->pPrimary, &csmon::primary);
     add_native(&this->admin_port, &csmon::admin_port);
     add_native(&this->admin_base_path, &csmon::admin_base_path);
     add_native(&this->api_key, &csmon::api_key);
@@ -158,11 +149,6 @@ bool CsConfig::post_configure()
     }
 
     if (!check_mandatory())
-    {
-        rv = false;
-    }
-
-    if (!check_invalid())
     {
         rv = false;
     }
@@ -267,17 +253,6 @@ bool CsConfig::check_mandatory()
 
     switch (this->version)
     {
-    case cs::CS_10:
-        if (this->pPrimary == csmon::DEFAULT_PRIMARY)
-        {
-            complain_mandatory(this->version, csmon::primary.name());
-            rv = false;
-        }
-        break;
-
-    case cs::CS_12:
-        break;
-
     case cs::CS_15:
         if (this->api_key == csmon::DEFAULT_API_KEY)
         {
@@ -304,65 +279,6 @@ bool CsConfig::check_mandatory()
 
     case cs::CS_UNKNOWN:
         mxb_assert(!true);
-    }
-
-    return rv;
-}
-
-bool CsConfig::check_invalid()
-{
-    bool rv = true;
-
-    switch (this->version)
-    {
-    case cs::CS_12:
-        if (this->pPrimary != csmon::DEFAULT_PRIMARY)
-        {
-            complain_invalid(this->version, csmon::primary.name());
-            rv = false;
-        }
-        // Flow through intended.
-    case cs::CS_10:
-        // If any of the 1.5 parameters are different from their default, we assume
-        // they have been set.
-        // TODO: Modify config2 so that you can ask whether a value has been explicitly set.
-
-        if (this->admin_port != csmon::DEFAULT_ADMIN_PORT)
-        {
-            complain_invalid(this->version, csmon::admin_port.name());
-            rv = false;
-        }
-
-        if (this->admin_base_path != csmon::DEFAULT_ADMIN_BASE_PATH)
-        {
-            complain_invalid(this->version, csmon::admin_base_path.name());
-            rv = false;
-        }
-
-        if (this->api_key != csmon::DEFAULT_API_KEY)
-        {
-            complain_invalid(this->version, csmon::api_key.name());
-            rv = false;
-        }
-
-        if (this->local_address != csmon::DEFAULT_LOCAL_ADDRESS)
-        {
-            complain_invalid(this->version, csmon::local_address.name());
-            rv = false;
-        }
-        break;
-
-    case cs::CS_15:
-        if (this->pPrimary != csmon::DEFAULT_PRIMARY)
-        {
-            complain_invalid(this->version, csmon::primary.name());
-            rv = false;
-        }
-        break;
-
-    case cs::CS_UNKNOWN:
-        mxb_assert(!true);
-        rv = false;
     }
 
     return rv;

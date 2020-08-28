@@ -19,15 +19,11 @@
 namespace cs
 {
 
-const char ZCS_10[] = "1.0";
-const char ZCS_12[] = "1.2";
 const char ZCS_15[] = "1.5";
 
 enum Version
 {
     CS_UNKNOWN,
-    CS_10,
-    CS_12,
     CS_15
 };
 

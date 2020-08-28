@@ -52,12 +52,6 @@ const char* to_string(Version version)
 {
     switch (version)
     {
-    case CS_10:
-        return ZCS_10;
-
-    case CS_12:
-        return ZCS_12;
-
     case CS_15:
         return ZCS_15;
 
