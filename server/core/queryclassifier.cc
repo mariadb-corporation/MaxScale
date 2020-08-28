@@ -1108,6 +1108,21 @@ QueryClassifier::RouteInfo QueryClassifier::update_route_info(
 
         process_routing_hints(pBuffer->hint, &route_target);
 
+        if (route_target == TARGET_SLAVE)
+        {
+            const QC_FUNCTION_INFO* infos = nullptr;
+            size_t n_infos = 0;
+            qc_get_function_info(pBuffer, &infos, &n_infos);
+
+            for (size_t i = 0; i < n_infos; ++i)
+            {
+                if (strcasecmp(infos[i].name, "FOUND_ROWS") == 0)
+                {
+                    route_target = TARGET_LAST_USED;
+                }
+            }
+        }
+
         if (session_trx_is_ending(m_pSession)
             || qc_query_is_type(type_mask, QUERY_TYPE_BEGIN_TRX))
         {

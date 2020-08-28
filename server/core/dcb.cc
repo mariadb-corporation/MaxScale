@@ -3256,7 +3256,16 @@ json_t* dcb_to_json(DCB* dcb)
     char buf[25];
     snprintf(buf, sizeof(buf), "%p", dcb);
     json_object_set_new(obj, "id", json_string(buf));
-    json_object_set_new(obj, "server", json_string(dcb->server->name()));
+
+    if (dcb->server)
+    {
+        json_object_set_new(obj, "server", json_string(dcb->server->name()));
+    }
+
+    if (dcb->ssl)
+    {
+        json_object_set_new(obj, "cipher", json_string(SSL_get_cipher_name(dcb->ssl)));
+    }
 
     if (dcb->func.diagnostics_json)
     {
