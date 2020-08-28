@@ -54,7 +54,7 @@ export mdbci_config_name=`echo ${mdbci_config_name} | sed "s/?//g"`
 export provider=`mdbci show provider $box --silent 2> /dev/null`
 export backend_box=${backend_box:-"centos_7_"$provider}
 
-mdbci destroy ${mdbci_config_name}
+mdbci destroy --force ${mdbci_config_name}
 
 . ${script_dir}/configure_log_dir.sh
 
@@ -88,6 +88,6 @@ ${script_dir}/copy_logs.sh
 cd $dir
 
 if [ "${do_not_destroy_vm}" != "yes" ] ; then
-	mdbci destroy ${mdbci_config_name}
+	mdbci destroy --force ${mdbci_config_name}
 	echo "clean up done!"
 fi

@@ -37,7 +37,7 @@ export name=`echo $name | sed "s|/|-|g"`
 
 # destroying existing box
 if [ -d "$MDBCI_VM_PATH/${name}" ]; then
-	${mdbci_dir}/mdbci destroy $name
+	${mdbci_dir}/mdbci destroy --force $name
 fi
 
   eval "cat <<EOF
@@ -95,7 +95,7 @@ echo "Removing locks and destroying VM"
 
 if [[ "$do_not_destroy_vm" != "yes" && "$try_already_running" != "yes" ]] ; then
   echo "Destroying VM"
-  ${mdbci_dir}/mdbci destroy $name
+  ${mdbci_dir}/mdbci destroy --force $name
 fi
 cd $dir
 

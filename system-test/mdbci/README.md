@@ -144,7 +144,7 @@ vagrant resume
 #### Destroying VMs
 
 ```bash
-${mdbci_dir}/mdbci destroy ${mdbci_config_name}
+${mdbci_dir}/mdbci destroy --force ${mdbci_config_name}
 ```
 
 #### Start all backend VMs

@@ -22,7 +22,7 @@ mkdir -p $HOME/${mdbci_config_name}_vms
 export provider=`mdbci show provider $box --silent 2> /dev/null`
 export backend_box=${backend_box:-"centos_7_"$provider}
 
-mdbci destroy test_vm
+mdbci destroy --force test_vm
 
 cp ${script_dir}/test_vm.json $HOME/${mdbci_config_name}_vms/
 test_vm_box="ubuntu_bionic_"$provider
@@ -103,8 +103,8 @@ cp core.* ${logs_publish_dir}
 ${script_dir}/copy_logs.sh
 
 if [ "${do_not_destroy_vm}" != "yes" ] ; then
-	mdbci destroy ${mdbci_config_name}
-        mdbci destroy test_vm
+	mdbci destroy --force ${mdbci_config_name}
+        mdbci destroy --force test_vm
         rm -rf $HOME/${mdbci_config_name}_vms
 	echo "clean up done!"
 fi

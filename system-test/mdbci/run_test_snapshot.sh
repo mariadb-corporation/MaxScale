@@ -46,7 +46,7 @@ echo $JOB_NAME-$BUILD_NUMBER >> ${snapshot_lock_file}
 mdbci snapshot revert --path-to-nodes ${mdbci_config_name} --snapshot-name ${snapshot_name}
 
 if [ $? != 0 ]; then
-	mdbci destroy ${mdbci_config_name}
+	mdbci destroy --force ${mdbci_config_name}
 	${MDBCI_VM_PATH}/scripts/clean_vms.sh ${mdbci_config_name}
 
 	new_config=true	
