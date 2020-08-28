@@ -278,17 +278,26 @@ int DCB::read(GWBUF** head, int maxbytes)
     {
         int n = read_SSL(head);
 
-        if (n < 0 && nreadtotal != 0)
+        if (n < 0)
         {
-            // TODO: There was something in m_readq, but the SSL
-            // TODO: operation failed. We will now return -1 but whatever data was
-            // TODO: in m_readq is now in head.
-            // TODO: Don't know if this can happen in practice.
-            MXS_ERROR("SSL reading failed when existing data already had been "
-                      "appended to returned buffer.");
+            if (nreadtotal != 0)
+            {
+                // TODO: There was something in m_readq, but the SSL
+                // TODO: operation failed. We will now return -1 but whatever data was
+                // TODO: in m_readq is now in head.
+                // TODO: Don't know if this can happen in practice.
+                MXS_ERROR("SSL reading failed when existing data already had been "
+                          "appended to returned buffer.");
+            }
+
+            nreadtotal = -1;
+        }
+        else
+        {
+            nreadtotal += n;
         }
 
-        return n;
+        return nreadtotal;
     }
 
     while (0 == maxbytes || nreadtotal < maxbytes)
