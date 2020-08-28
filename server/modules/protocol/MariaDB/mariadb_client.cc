@@ -2387,6 +2387,11 @@ bool MariaDBClientConnection::in_routing_state() const
     return m_state == State::READY;
 }
 
+json_t* MariaDBClientConnection::diagnostics() const
+{
+    return json_pack("{ss}", "cipher", m_dcb->ssl_cipher().c_str());
+}
+
 bool MariaDBClientConnection::large_query_continues(const mxs::Buffer& buffer) const
 {
     return MYSQL_GET_PACKET_LEN(buffer.get()) == MAX_PACKET_SIZE;

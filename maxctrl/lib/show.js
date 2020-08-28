@@ -244,6 +244,11 @@ const session_fields = [
     description: "How long the session has been idle, in seconds",
   },
   {
+    name: 'Client TLS Cipher',
+    path: 'attributes.client.cipher',
+    description: 'Client TLS cipher'
+  },
+  {
     name: "Connections",
     path: "attributes.connections[].server",
     description: "Ordered list of backend connections",

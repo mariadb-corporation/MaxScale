@@ -451,6 +451,7 @@ json_t* session_json_data(const Session* session, const char* host, bool rdns)
     }
 
     json_object_set_new(attr, "connections", connection_arr);
+    json_object_set_new(attr, "client", session->client_connection()->diagnostics());
 
     json_t* queries = session->queries_as_json();
     json_object_set_new(attr, "queries", queries);
