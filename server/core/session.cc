@@ -876,6 +876,7 @@ json_t* session_json_data(const Session* session, const char* host)
     }
 
     json_object_set_new(attr, "connections", dcb_arr);
+    json_object_set_new(attr, "client", dcb_to_json(session->client_dcb));
 
     json_t* queries = session->queries_as_json();
     json_object_set_new(attr, "queries", queries);
