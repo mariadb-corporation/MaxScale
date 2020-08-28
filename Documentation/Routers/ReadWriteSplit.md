@@ -853,6 +853,19 @@ long-running sessions might cause MariaDB MaxScale to consume a growing amount
 of memory unless the sessions are closed. This can be solved by adjusting the
 value of `max_sescmd_history`.
 
+### Routing to previous target
+
+In the following cases, a query is routed to the same server where the previous
+query was executed. If no previous target is found, the query is routed to the
+current master.
+
+* If a query uses the `FOUND_ROWS()` function, it will be routed to the server
+  where the last query was executed. This is done with the assumption that a
+  query with `SQL_CALC_FOUND_ROWS` was previously executed.
+
+* COM_STMT_FETCH_ROWS will always be routed to the same server where the
+  COM_STMT_EXECUTE was routed.
+
 ## Limitations
 
 Read queries are routed to the master server in the following situations:

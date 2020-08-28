@@ -55,6 +55,8 @@ public:
     void mxs_mysql_execute_kill(uint64_t target_id, kill_type_t type);
     bool in_routing_state() const;
 
+    json_t* diagnostics() const;
+
 private:
     /** Return type of process_special_commands() */
     enum class SpecialCmdRes

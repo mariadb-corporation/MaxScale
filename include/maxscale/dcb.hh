@@ -231,6 +231,16 @@ public:
     }
 
     /**
+     * Get current TLS cipher
+     *
+     * @return Current TLS cipher or empty string if SSL is not in use
+     */
+    std::string ssl_cipher() const
+    {
+        return m_encryption.handle ? SSL_get_cipher_name(m_encryption.handle) : "";
+    }
+
+    /**
      * @return The current SSL state.
      */
     SSLState ssl_state() const

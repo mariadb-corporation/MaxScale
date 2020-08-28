@@ -1399,7 +1399,8 @@ int64_t MariaDBBackendConnection::seconds_idle() const
 
 json_t* MariaDBBackendConnection::diagnostics() const
 {
-    return json_pack("{siss}", "connection_id", m_thread_id, "server", m_server.name());
+    return json_pack("{sissss}", "connection_id", m_thread_id, "server", m_server.name(),
+                     "cipher", m_dcb->ssl_cipher().c_str());
 }
 
 /**
