@@ -70,14 +70,13 @@ export default {
                 let res = await this.vue.$axios.get(`/maxscale/modules?load=all`)
                 if (res.data.data) {
                     const allModules = res.data.data
-                    let hashArr = {} // O(n log n)
-                    for (let i = 0; i < allModules.length; ++i) {
-                        const module = allModules[i]
-                        const moduleType = allModules[i].attributes.module_type
-                        if (hashArr[moduleType] == undefined) hashArr[moduleType] = []
-                        hashArr[moduleType].push(module)
-                    }
-                    commit('SET_ALL_MODULES_MAP', hashArr)
+
+                    let hashMap = this.vue.$help.hashMapByPath({
+                        arr: allModules,
+                        path: 'attributes.module_type',
+                    })
+
+                    commit('SET_ALL_MODULES_MAP', hashMap)
                 }
             } catch (e) {
                 if (process.env.NODE_ENV !== 'test') {

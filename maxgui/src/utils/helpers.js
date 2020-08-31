@@ -17,6 +17,7 @@ export const cloneDeep = require('lodash/cloneDeep')
 export const isEqual = require('lodash/isEqual')
 export const xorWith = require('lodash/xorWith')
 export const uniqueId = require('lodash/uniqueId')
+export const get = require('lodash/get')
 
 export const lodash = {
     isEmpty: isEmpty,
@@ -24,6 +25,7 @@ export const lodash = {
     isEqual: isEqual,
     xorWith: xorWith,
     uniqueId: uniqueId,
+    objectGet: get,
 }
 
 export function isNull(v) {
@@ -140,24 +142,22 @@ export function getErrorsArr(error) {
 }
 
 /**
- * @param {Array} OurArray Array of objects to be grouped by specified property name of object
- * @param {String} property Property to be grouped by
- * @return {Array} Return an object group by specified property name
+ * This function takes array of objects and object path to create a hash map
+ * using provided argument path. Key value will be always an array of objects.
+ * Meaning that if there are duplicated key values at provided argument path, the value will be
+ * pushed to the array. This makes this function different compare to built in Map object
+ * @param {Array} payload.arr - Array of objects to be hashed by provided keyName
+ * @param {String} payload.path path of object to be hashed by. e.g. 'attributes.module_type' or 'parentNodeId'
+ * @return {Object} hashMap
  */
-export function groupBy(array, property) {
-    return array.reduce(function(accumulator, object) {
-        // get the value of our object based on provided property to use for group the array as the array key
-        const key = object[property]
-        /*  if the current value is similar to the key don't accumulate the transformed array and leave it empty */
-        if (!accumulator[key]) {
-            accumulator[key] = []
-        }
-        // add the value to the array
-        accumulator[key].push(object)
-        // return the transformed array
-        return accumulator
-        // Also we also set the initial value of reduce() to an empty object
-    }, {})
+export function hashMapByPath({ arr, path }) {
+    let hashMap = {}
+    arr.forEach(obj => {
+        const keyValue = lodash.objectGet(obj, path)
+        if (hashMap[keyValue] === undefined) hashMap[keyValue] = []
+        hashMap[keyValue].push(obj)
+    })
+    return hashMap
 }
 
 /**
@@ -514,7 +514,7 @@ Object.defineProperties(Vue.prototype, {
                 dynamicColors,
                 strReplaceAt,
                 getErrorsArr,
-                groupBy,
+                hashMapByPath,
                 formatValue,
                 objToArrOfNodes,
                 arrToObject,
