@@ -33,8 +33,7 @@ process.
 
 To enable the direct replication mode, add either the `servers` or the `cluster`
 parameter to the avrorouter service. The avrorouter will then use one of the
-servers as the replication source. In this mode the `source` parameter is
-ignored as there is no need for a source service.
+servers as the replication source.
 
 Here is a minimal avrorouter direct replication configuration:
 
@@ -92,42 +91,11 @@ replication mode. The default value is 1234.
 
 #### `source`
 
-**Note:** This parameter has been removed in MaxScale 2.5.0. As the
-          binlogrouter has been removed, this feature could no longer
-          work.
-
-The source for the binary logs. This is an optional parameter and is ignored if
-the router is configured in direct replication mode.
-
-**Note:** If the `source` parameter is defined the values for `binlogdir` and
-  `filestem` are only read from the source service. This means that the
-  parameters defined for the avrorouter are ignored and the ones in the
-  binlogrouter are used.
-
-The value of this parameter should be the name of a Binlog Server service.
-The _filestem_ and _binlogdir_ parameters of this service will be read from
-the router_options and they will be used as the source for the binary logs. This
-removes the need to manually enter the right _binlogdir_ and _filestem_ options
-for the avrorouter.
-
-Here is an example of two services. The first service (`replication-router`) is
-responsible for downloading the binary logs from the master and the second service
-(`avro-router`) will convert the binary logs into Avro format files and store them
-in `/var/lib/mysql`.
-
-```
-[replication-router]
-type=service
-router=binlogrouter
-router_options=server-id=4000,binlogdir=/var/lib/mysql,filestem=binlog
-user=maxuser
-password=maxpwd
-
-[avro-router]
-type=service
-router=avrorouter
-source=replication-router
-```
+**Note:** This parameter has been removed in MaxScale 2.5.0 due to changes in
+          the binlogrouter. The direct replication mode is the recommended mode
+          of operation. Using the binlogrouter is less efficient and more
+          cumbersome to both configure and manage than the direct replication
+          mode.
 
 #### `codec`
 
@@ -150,9 +118,8 @@ The location of the binary log files. This is the first mandatory parameter
 and it defines where the module will read binlog files from. Read access to
 this directory is required.
 
-If used in conjunction with the Binlog Server, the value of this option should
-be the same for both the Binlog Server and the avrorouter if the `source` parameter
-is not used.
+If used in conjunction with the binlogrouter, the value of this option should be
+the same for both the binlogrouter and the avrorouter.
 
 #### `avrodir`
 
