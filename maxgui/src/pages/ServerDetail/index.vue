@@ -19,6 +19,7 @@
                                 <v-row class="pa-0 ma-0">
                                     <v-col cols="12" class="pa-0 ma-0">
                                         <details-readonly-table
+                                            ref="statistics-table"
                                             :title="`${$tc('statistics', 2)}`"
                                             :tableData="current_server_stats"
                                         />
@@ -35,6 +36,7 @@
                             </v-col>
                             <v-col class="py-0 ma-0" cols="8">
                                 <details-readonly-table
+                                    ref="sessions-table"
                                     tableClass="data-table-full--max-width-columns"
                                     :tdBorderLeft="false"
                                     :title="`${$tc('currentSessions', 2)}`"
@@ -60,6 +62,7 @@
                             </v-col>
                             <v-col class="py-0 my-0" cols="6">
                                 <details-readonly-table
+                                    ref="diagnostics-table"
                                     :title="`${$t('monitorDiagnostics')}`"
                                     :tableData="monitorDiagnostics"
                                     isTree

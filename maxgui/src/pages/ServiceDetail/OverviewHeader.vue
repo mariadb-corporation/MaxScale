@@ -9,7 +9,7 @@
                     <span class="caption text-uppercase font-weight-bold color text-deep-ocean">
                         ROUTER
                     </span>
-                    <span class="text-no-wrap body-2">
+                    <span class="router text-no-wrap body-2">
                         {{ currentService.attributes.router }}
                     </span>
                 </template>
@@ -19,7 +19,7 @@
                     <span class="caption text-uppercase font-weight-bold color text-deep-ocean">
                         STARTED AT
                     </span>
-                    <span class="text-no-wrap body-2">
+                    <span class="started text-no-wrap body-2">
                         {{ $help.formatValue(currentService.attributes.started) }}
                     </span>
                 </template>
@@ -41,7 +41,7 @@
                             v-if="serviceConnectionsDatasets.length"
                             ref="serviceConnectionsChart"
                             :styles="{ height: '70px' }"
-                            :chart-data="{ datasets: serviceConnectionsDatasets }"
+                            :chartData="{ datasets: serviceConnectionsDatasets }"
                             :options="options"
                         />
                     </v-sheet>

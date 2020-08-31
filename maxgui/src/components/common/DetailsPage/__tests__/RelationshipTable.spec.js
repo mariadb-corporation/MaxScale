@@ -179,8 +179,6 @@ const getRelationshipDataStub = () => dummyAllServicesState
 describe('RelationshipTable.vue with editable and addable mode', () => {
     let wrapper, loggerSpy, getRelationshipDataSpy
     beforeEach(() => {
-        // this prevents console.error from being printed out
-        console.error = () => {}
         loggerSpy = sinon.spy(RelationshipTable.computed, 'logger')
         wrapper = mount({
             shallow: false,

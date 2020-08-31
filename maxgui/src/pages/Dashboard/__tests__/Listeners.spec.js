@@ -45,7 +45,7 @@ const expectedTableRows = [
         port: 3306,
         address: '::',
         state: 'Running',
-        serviceIds: ['service_0'],
+        serviceIds: ['service_1'],
     },
     {
         id: 'RCR-Router-Listener-2',

@@ -336,11 +336,11 @@ export const dummy_all_filters = [
             services: {
                 data: [
                     {
-                        id: 'RCR-Router',
+                        id: 'service_0',
                         type: 'services',
                     },
                     {
-                        id: 'RCR-Writer',
+                        id: 'service_1',
                         type: 'services',
                     },
                 ],
@@ -358,7 +358,7 @@ export const dummy_all_filters = [
             services: {
                 data: [
                     {
-                        id: 'RCR-Writer',
+                        id: 'service_1',
                         type: 'services',
                     },
                 ],
@@ -377,6 +377,16 @@ export const dummy_all_services = [
             router: 'readconnroute',
             connections: 0,
             total_connections: 1000001,
+            router_diagnostics: {
+                queries: 0,
+                replayed_transactions: 0,
+                ro_transactions: 0,
+                route_all: 0,
+                route_master: 0,
+                route_slave: 0,
+                rw_transactions: 0,
+                server_query_statistics: [],
+            },
         },
         id: 'service_0',
         links: {},
@@ -395,9 +405,13 @@ export const dummy_all_services = [
                         id: 'RCR-Router-Listener',
                         type: 'listeners',
                     },
+                ],
+            },
+            filters: {
+                data: [
                     {
-                        id: 'RCR-Router-Listener-1',
-                        type: 'listeners',
+                        id: 'filter_0',
+                        type: 'filters',
                     },
                 ],
             },
@@ -417,6 +431,10 @@ export const dummy_all_services = [
             listeners: {
                 data: [
                     {
+                        id: 'RCR-Router-Listener-1',
+                        type: 'listeners',
+                    },
+                    {
                         id: 'RRCR-Router-Listener-2',
                         type: 'listeners',
                     },
@@ -428,6 +446,25 @@ export const dummy_all_services = [
 ]
 
 export const getServiceListStub = dummy_all_services.map(({ id, type }) => ({ id, type }))
+
+export const dummy_service_connection_info = { total_connections: 1000001, connections: 0 }
+export const dummy_service_connection_datasets = [
+    {
+        label: 'Current connections',
+        id: 'Current connections',
+        type: 'line',
+        backgroundColor: 'rgba(171,199,74,0.1)',
+        borderColor: 'rgba(171,199,74,1)',
+        borderWidth: 1,
+        lineTension: 0,
+        data: [
+            {
+                x: 1598516574793,
+                y: 0,
+            },
+        ],
+    },
+]
 
 export const dummy_all_monitors = [
     {
@@ -508,7 +545,7 @@ export const dummy_all_listeners = [
             services: {
                 data: [
                     {
-                        id: 'service_0',
+                        id: 'service_1',
                         type: 'services',
                     },
                 ],
