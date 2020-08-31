@@ -130,10 +130,8 @@ export default new Vuex.Store({
                 if (res.data.data) data = res.data.data
                 return data
             } catch (e) {
-                if (process.env.NODE_ENV !== 'test') {
-                    const logger = this.vue.$logger(caller)
-                    logger.error(e)
-                }
+                const logger = this.vue.$logger(caller)
+                logger.error(e)
             }
         },
 
@@ -149,10 +147,8 @@ export default new Vuex.Store({
                 }
                 commit('SET_MODULE_PARAMETERS', data)
             } catch (e) {
-                if (process.env.NODE_ENV !== 'test') {
-                    const logger = this.vue.$logger(`fetchModuleParameters-for-${moduleId}`)
-                    logger.error(e)
-                }
+                const logger = this.vue.$logger(`fetchModuleParameters-for-${moduleId}`)
+                logger.error(e)
             }
         },
     },

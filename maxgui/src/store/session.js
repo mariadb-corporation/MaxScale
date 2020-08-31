@@ -35,10 +35,8 @@ export default {
                 let res = await this.vue.$axios.get(`/sessions`)
                 if (res.data.data) commit('SET_ALL_SESSIONS', res.data.data)
             } catch (e) {
-                if (process.env.NODE_ENV !== 'test') {
-                    const logger = this.vue.$logger('store-sessions-fetchAllSessions')
-                    logger.error(e)
-                }
+                const logger = this.vue.$logger('store-sessions-fetchAllSessions')
+                logger.error(e)
             }
         },
 
@@ -60,10 +58,8 @@ export default {
                 )
                 if (res.data.data) commit('SET_SESSIONS_BY_SERVICE', res.data.data)
             } catch (e) {
-                if (process.env.NODE_ENV !== 'test') {
-                    const logger = this.vue.$logger('store-sessions-fetchSessionsFilterByService')
-                    logger.error(e)
-                }
+                const logger = this.vue.$logger('store-sessions-fetchSessionsFilterByService')
+                logger.error(e)
             }
         },
     },

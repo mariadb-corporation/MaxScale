@@ -41,10 +41,8 @@ export default {
                     commit('SET_CURRENT_SERVICE', res.data.data)
                 }
             } catch (e) {
-                if (process.env.NODE_ENV !== 'test') {
-                    const logger = this.vue.$logger('store-service-fetchServiceById')
-                    logger.error(e)
-                }
+                const logger = this.vue.$logger('store-service-fetchServiceById')
+                logger.error(e)
             }
         },
 
@@ -68,10 +66,8 @@ export default {
                 let res = await this.vue.$axios.get(`/services`)
                 if (res.data.data) commit('SET_ALL_SERVICES', res.data.data)
             } catch (e) {
-                if (process.env.NODE_ENV !== 'test') {
-                    const logger = this.vue.$logger('store-services-fetchAllServices')
-                    logger.error(e)
-                }
+                const logger = this.vue.$logger('store-services-fetchAllServices')
+                logger.error(e)
             }
         },
 
@@ -88,10 +84,8 @@ export default {
                     })
                 }
             } catch (e) {
-                if (process.env.NODE_ENV !== 'test') {
-                    const logger = this.vue.$logger('store-service-fetchServiceConnections')
-                    logger.error(e)
-                }
+                const logger = this.vue.$logger('store-service-fetchServiceConnections')
+                logger.error(e)
             }
         },
 
@@ -134,10 +128,8 @@ export default {
                     if (this.vue.$help.isFunction(payload.callback)) await payload.callback()
                 }
             } catch (e) {
-                if (process.env.NODE_ENV !== 'test') {
-                    const logger = this.vue.$logger('store-service-createService')
-                    logger.error(e)
-                }
+                const logger = this.vue.$logger('store-service-createService')
+                logger.error(e)
             }
         },
         //-----------------------------------------------Service parameter update---------------------------------
@@ -170,10 +162,8 @@ export default {
                     if (this.vue.$help.isFunction(payload.callback)) await payload.callback()
                 }
             } catch (e) {
-                if (process.env.NODE_ENV !== 'test') {
-                    const logger = this.vue.$logger('store-service-updateServiceParameters')
-                    logger.error(e)
-                }
+                const logger = this.vue.$logger('store-service-updateServiceParameters')
+                logger.error(e)
             }
         },
 
@@ -216,10 +206,8 @@ export default {
                     if (this.vue.$help.isFunction(payload.callback)) await payload.callback()
                 }
             } catch (e) {
-                if (process.env.NODE_ENV !== 'test') {
-                    const logger = this.vue.$logger('store-service-updateServiceRelationship')
-                    logger.error(e)
-                }
+                const logger = this.vue.$logger('store-service-updateServiceRelationship')
+                logger.error(e)
             }
         },
 
@@ -239,10 +227,8 @@ export default {
                     )
                 }
             } catch (e) {
-                if (process.env.NODE_ENV !== 'test') {
-                    const logger = this.vue.$logger('store-service-destroyService')
-                    logger.error(e)
-                }
+                const logger = this.vue.$logger('store-service-destroyService')
+                logger.error(e)
             }
         },
 
@@ -277,10 +263,8 @@ export default {
                     if (this.vue.$help.isFunction(callback)) await callback()
                 }
             } catch (e) {
-                if (process.env.NODE_ENV !== 'test') {
-                    const logger = this.vue.$logger('store-service-stopOrStartService')
-                    logger.error(e)
-                }
+                const logger = this.vue.$logger('store-service-stopOrStartService')
+                logger.error(e)
             }
         },
     },

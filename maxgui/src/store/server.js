@@ -45,10 +45,8 @@ export default {
                     commit('SET_ALL_SERVERS', sorted)
                 }
             } catch (e) {
-                if (process.env.NODE_ENV !== 'test') {
-                    const logger = this.vue.$logger('store-server-fetchAllServers')
-                    logger.error(e)
-                }
+                const logger = this.vue.$logger('store-server-fetchAllServers')
+                logger.error(e)
             }
         },
 
@@ -57,10 +55,8 @@ export default {
                 let res = await this.vue.$axios.get(`/servers/${id}`)
                 if (res.data.data) commit('SET_CURRENT_SERVER', res.data.data)
             } catch (e) {
-                if (process.env.NODE_ENV !== 'test') {
-                    const logger = this.vue.$logger('store-server-fetchServerById')
-                    logger.error(e)
-                }
+                const logger = this.vue.$logger('store-server-fetchServerById')
+                logger.error(e)
             }
         },
 
@@ -71,10 +67,8 @@ export default {
                 } = await this.vue.$axios.get(`/servers/${id}?fields[servers]=statistics`)
                 if (statistics) commit('SET_CURRENT_SERVER_STATS', statistics)
             } catch (e) {
-                if (process.env.NODE_ENV !== 'test') {
-                    const logger = this.vue.$logger('store-server-fetchServerStatsById')
-                    logger.error(e)
-                }
+                const logger = this.vue.$logger('store-server-fetchServerStatsById')
+                logger.error(e)
             }
         },
 
@@ -116,10 +110,8 @@ export default {
                     if (this.vue.$help.isFunction(payload.callback)) await payload.callback()
                 }
             } catch (e) {
-                if (process.env.NODE_ENV !== 'test') {
-                    const logger = this.vue.$logger('store-server-createServer')
-                    logger.error(e)
-                }
+                const logger = this.vue.$logger('store-server-createServer')
+                logger.error(e)
             }
         },
 
@@ -153,10 +145,8 @@ export default {
                     if (this.vue.$help.isFunction(payload.callback)) await payload.callback()
                 }
             } catch (e) {
-                if (process.env.NODE_ENV !== 'test') {
-                    const logger = this.vue.$logger('store-server-updateServerParameters')
-                    logger.error(e)
-                }
+                const logger = this.vue.$logger('store-server-updateServerParameters')
+                logger.error(e)
             }
         },
 
@@ -200,10 +190,8 @@ export default {
                     if (this.vue.$help.isFunction(payload.callback)) await payload.callback()
                 }
             } catch (e) {
-                if (process.env.NODE_ENV !== 'test') {
-                    const logger = this.vue.$logger('store-server-updateServerRelationship')
-                    logger.error(e)
-                }
+                const logger = this.vue.$logger('store-server-updateServerRelationship')
+                logger.error(e)
             }
         },
 
@@ -222,10 +210,8 @@ export default {
                     )
                 }
             } catch (e) {
-                if (process.env.NODE_ENV !== 'test') {
-                    const logger = this.vue.$logger('store-server-destroyServer')
-                    logger.error(e)
-                }
+                const logger = this.vue.$logger('store-server-destroyServer')
+                logger.error(e)
             }
         },
 
@@ -267,10 +253,8 @@ export default {
                     if (this.vue.$help.isFunction(callback)) await callback()
                 }
             } catch (e) {
-                if (process.env.NODE_ENV !== 'test') {
-                    const logger = this.vue.$logger('store-server-setOrClearServerState')
-                    logger.error(e)
-                }
+                const logger = this.vue.$logger('store-server-setOrClearServerState')
+                logger.error(e)
             }
         },
 
