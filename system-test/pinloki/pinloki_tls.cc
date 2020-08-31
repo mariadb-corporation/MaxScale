@@ -10,6 +10,8 @@ public:
 
     void setup() override
     {
+        master.ssl(true);
+        slave.ssl(true);
         test.expect(maxscale.connect(), "Pinloki connection should work: %s", maxscale.error());
         test.expect(master.connect(), "Master connection should work: %s", master.error());
         test.expect(slave.connect(), "Slave connection should work: %s", slave.error());
