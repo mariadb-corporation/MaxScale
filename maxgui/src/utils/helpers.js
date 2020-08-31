@@ -99,6 +99,7 @@ export function listenerStateIcon(state) {
         if (state === 'Running') return 1
         else if (state === 'Stopped') return 2
         else if (state === 'Failed') return 0
+        else return ''
     } else return ''
 }
 export function delay(t, v) {
@@ -122,13 +123,20 @@ export function dynamicColors(dataIndex) {
     return palette[dataIndex % palette.length]
 }
 
-export function strReplaceAt(str, index, chr) {
+/**
+ * This function replaces a char in payload.str at payload.index with payload.newChar
+ * @param {String} payload.str - string to be processed
+ * @param {Number} payload.index - index of char that will be replaced
+ * @param {String} payload.newChar - new char
+ * @returns new string
+ */
+export function strReplaceAt({ str, index, newChar }) {
     if (index > str.length - 1) return str
-    return str.substr(0, index) + chr + str.substr(index + 1)
+    return str.substr(0, index) + newChar + str.substr(index + 1)
 }
 
 /**
- * @param {Object} error Error object that returns from try catch
+ * @param {Object|String} error - Error object or string that returns from try catch
  * @return {Array} An array of error string
  */
 export function getErrorsArr(error) {
@@ -478,7 +486,7 @@ export function getSuffixFromValue(param, suffixes) {
 export function genLineDataSet({ label, value, colorIndex, timestamp, id, data }) {
     const lineColor = dynamicColors(colorIndex)
     const indexOfOpacity = lineColor.lastIndexOf(')') - 1
-    const backgroundColor = strReplaceAt(lineColor, indexOfOpacity, '0.1')
+    const backgroundColor = strReplaceAt({ str: lineColor, index: indexOfOpacity, newChar: '0.1' })
     let time = Date.now()
     if (timestamp) time = timestamp
     let dataset = {
