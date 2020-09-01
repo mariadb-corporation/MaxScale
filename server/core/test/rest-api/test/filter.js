@@ -38,6 +38,7 @@ describe("Filter", function() {
         filter.data.attributes.parameters.separator = "|"
         return request.patch(base_url + "/filters/" + filter.data.id, { json: filter})
             .should.be.rejected
+        // TODO: Change this once the qlafilter supports it
     });
 
     it("destroy filter", function() {

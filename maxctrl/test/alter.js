@@ -123,6 +123,37 @@ describe("Alter Commands", function () {
     return doCommand("alter service not-a-service user maxuser").should.be.rejected;
   });
 
+  it("alters filter", function () {
+    return verifyCommand("alter filter QLA match match1", "filters/QLA").then(function (res) {
+      res.data.attributes.parameters.match.should.equal("match1");
+    }).should.be.rejected; // TODO: Change this once qlafilter supports it
+  });
+
+  it("alters filter with multiple parameters", function () {
+    return verifyCommand("alter filter QLA match match2 exclude exclude2", "filters/QLA").then(function (
+      res
+    ) {
+      res.data.attributes.parameters.match.should.equal("match2");
+      res.data.attributes.parameters.exclude.should.equal("exclude2");
+    }).should.be.rejected; // TODO: Change this once qlafilter supports it
+  });
+
+  it("will not alter non-existent filter parameter", function () {
+    return doCommand("alter filter QLA turbocharge yes-please").should.be.rejected;
+  });
+
+  it("will not alter filter with missing value for parameter", function () {
+    return doCommand("alter filter QLA match match3 exclude").should.be.rejected;
+  });
+
+  it("will not alter non-existent filter", function () {
+    return doCommand("alter filter not-a-filter match match4").should.be.rejected;
+  });
+
+  it("will not alter a non-filter module", function () {
+    return doCommand("alter filter Read-Connection-Router router_options master").should.be.rejected;
+  });
+
   it("alters logging", function () {
     return verifyCommand("alter logging maxlog false", "maxscale/logs")
       .then(function () {

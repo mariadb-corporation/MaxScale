@@ -197,6 +197,25 @@ exports.builder = function (yargs) {
       }
     )
     .command(
+      "filter <filter> <key> <value> [params...]",
+      "Alter filter parameters",
+      function (yargs) {
+        return yargs
+          .epilog(
+            "To display the filter parameters, execute `show filter <filter>`. " +
+              "Some filters support runtime configuration changes to all parameters. " +
+              "Refer to the filter documentation for details on whether it supports " +
+              "runtime configuration changes and which parameters can be altered."
+          )
+          .usage("Usage: alter service <service> <key> <value> ...");
+      },
+      function (argv) {
+        maxctrl(argv, function (host) {
+          return updateParams(host, "filters/" + argv.filter, argv.key, argv.value, argv.params);
+        });
+      }
+    )
+    .command(
       "logging <key> <value> [params...]",
       "Alter logging parameters",
       function (yargs) {
