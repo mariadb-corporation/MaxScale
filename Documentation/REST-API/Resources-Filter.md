@@ -135,6 +135,37 @@ Filter is created:
 
 `Status: 204 No Content`
 
+### Update a filter
+
+```
+PATCH /v1/filters/:name
+```
+
+Filter parameters can be updated at runtime if the module supports it. Refer to
+the individual module documentation for more details on whether it supports
+runtime configuration and which parameters can be updated.
+
+The following example modifies a filter by changing the `match` parameter to
+`.*users.*`.
+
+```javascript
+{
+    "data": {
+        "attributes": {
+            "parameters": {
+                "match": ".*users.*"
+            }
+        }
+    }
+}
+```
+
+#### Response
+
+Filter is modified:
+
+`Status: 204 No Content`
+
 ### Destroy a filter
 
 ```
