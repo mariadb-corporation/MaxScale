@@ -317,11 +317,26 @@ In our example we are linking the `server1` server to the `RW-Split-Router`
 service. As was seen with the previous example, the easiest way to do this is to
 store the result, edit it and then send it back with a HTTP PATCH.
 
-If we want to remove a server from _all_ services, we can set the
-`relationships` field to `{}`. The REST API interprets this as an instruction
-to remove the server from all services and monitors. This is useful if you want
-to delete the server which can only be done if it has no relationships to other
-objects.
+If we want to remove a server from _all_ services and monitors, we can set the
+`data` member of the `services` and `monitors` relationships to an empty array:
+
+```
+{
+    "data": {
+        "relationships": {
+            "services": {
+                "data": []
+            },
+            "monitors": {
+                "data": []
+            }
+        }
+    }
+}
+```
+
+This is useful if you want to delete the server which can only be done if it has
+no relationships to other objects.
 
 ## Deleting Objects
 
@@ -332,6 +347,9 @@ following command.
 ```
 curl -X DELETE 127.0.0.1:8989/v1/servers/server1
 ```
+
+In order to delete an object, it must not have any relationships to other
+objects.
 
 ## Further Reading
 
