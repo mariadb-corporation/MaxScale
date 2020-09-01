@@ -42,7 +42,6 @@ enum
 };
 
 /** Object type specific parameter lists */
-extern const MXS_MODULE_PARAM config_filter_params[];
 extern const char* config_pre_parse_global_params[];
 
 /**

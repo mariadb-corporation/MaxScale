@@ -215,6 +215,13 @@ const char* filter_def_get_module_name(const MXS_FILTER_DEF* filter_def);
 MXS_FILTER* filter_def_get_instance(const MXS_FILTER_DEF* filter_def);
 
 /**
+ * Get common filter parameters
+ *
+ * @return An array of filter parameters that are common to all filters
+ */
+const MXS_MODULE_PARAM* common_filter_params();
+
+/**
  * Specifies capabilities specific for filters. Common capabilities
  * are defined by @c routing_capability_t.
  *

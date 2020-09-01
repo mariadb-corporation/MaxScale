@@ -1011,22 +1011,6 @@ std::string closest_matching_parameter(const std::string& str,
                                        const MXS_MODULE_PARAM* base,
                                        const MXS_MODULE_PARAM* mod);
 
-const MXS_MODULE_PARAM config_filter_params[] =
-{
-    {
-        CN_TYPE, MXS_MODULE_PARAM_STRING,
-        CN_FILTER,
-        MXS_MODULE_OPT_REQUIRED
-    },
-    {
-        CN_MODULE,
-        MXS_MODULE_PARAM_STRING,
-        NULL,
-        MXS_MODULE_OPT_REQUIRED
-    },
-    {NULL}
-};
-
 /*
  * This is currently only used in config_load_global() to verify that
  * all global configuration item names are valid.
@@ -1877,7 +1861,7 @@ std::pair<const MXS_MODULE_PARAM*, const MXS_MODULE*> get_module_details(const C
     else if (type == CN_FILTER)
     {
         auto name = obj->m_parameters.get_string(CN_MODULE);
-        return {config_filter_params, get_module(name.c_str(), MODULE_FILTER)};
+        return {common_filter_params(), get_module(name.c_str(), MODULE_FILTER)};
     }
 
     mxb_assert(!true);

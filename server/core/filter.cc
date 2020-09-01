@@ -53,6 +53,27 @@ static struct
     std::vector<SFilterDef> filters;
 } this_unit;
 
+static const MXS_MODULE_PARAM config_filter_params[] =
+{
+    {
+        CN_TYPE, MXS_MODULE_PARAM_STRING,
+        CN_FILTER,
+        MXS_MODULE_OPT_REQUIRED
+    },
+    {
+        CN_MODULE,
+        MXS_MODULE_PARAM_STRING,
+        NULL,
+        MXS_MODULE_OPT_REQUIRED
+    },
+    {NULL}
+};
+
+const MXS_MODULE_PARAM* common_filter_params()
+{
+    return config_filter_params;
+}
+
 /**
  * Allocate a new filter
  *
@@ -217,7 +238,7 @@ json_t* filter_parameters_to_json(const SFilterDef& filter)
     const MXS_MODULE* mod = get_module(filter->module.c_str(), MODULE_FILTER);
     config_add_module_params_json(&filter->parameters,
                                   {CN_TYPE, CN_MODULE},
-                                  config_filter_params,
+                                  common_filter_params(),
                                   mod->parameters,
                                   rval);
 
@@ -346,6 +367,6 @@ std::ostream& filter_persist(const SFilterDef& filter, std::ostream& os)
     mxb_assert(mod);
 
     os << generate_config_string(filter->name, filter->parameters,
-                                 config_filter_params, mod->parameters);
+                                 common_filter_params(), mod->parameters);
     return os;
 }

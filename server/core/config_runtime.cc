@@ -128,7 +128,7 @@ const MXS_MODULE_PARAM* get_type_parameters(const char* type)
     }
     else if (strcmp(type, CN_FILTER) == 0)
     {
-        return config_filter_params;
+        return common_filter_params();
     }
 
     MXS_NOTICE("Module type with no default parameters used: %s", type);
