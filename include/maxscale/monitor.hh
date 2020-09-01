@@ -851,6 +851,17 @@ protected:
 
     MonitorServer* m_master {nullptr};      /**< Master server */
 
+protected:
+    /**
+     * A derived class overriding this function should first call this base version.
+     */
+    void pre_loop();
+
+    /**
+     * A derived class overriding this function should last call this base version.
+     */
+    void post_loop();
+
 private:
     /**
      * @brief Monitor the servers
@@ -876,9 +887,6 @@ private:
      * - Store monitor journal
      */
     void tick() final;
-
-    void pre_loop() final;
-    void post_loop() final;
 };
 
 /**

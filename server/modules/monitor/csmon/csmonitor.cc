@@ -23,6 +23,7 @@
 #include <maxscale/modinfo.hh>
 #include <maxscale/mysql_utils.hh>
 #include <maxscale/paths.hh>
+#include "../../../core/internal/service.hh"
 #include "columnstore.hh"
 
 using namespace std;
@@ -254,6 +255,14 @@ size_t results_to_json(const vector<CsMonitorServer*>& servers,
     return n;
 }
 
+void run_in_mainworker(const function<void(void)>& func)
+{
+    auto* pMw = mxs::MainWorker::get();
+    mxb_assert(pMw);
+
+    pMw->execute(func, mxb::Worker::EXECUTE_AUTO);
+}
+
 }
 
 namespace
@@ -342,7 +351,7 @@ sqlite3* open_or_create_db(const std::string& path)
                       path.c_str(), sqlite3_errmsg(pDb));
         }
         MXS_ERROR("Could not open sqlite3 database for storing information "
-                  "about dynamically detected Clustrix nodes. The Clustrix "
+                  "about dynamically detected Columnstore nodes. The Columnstore "
                   "monitor will remain dependent upon statically defined "
                   "bootstrap nodes.");
     }
@@ -1307,6 +1316,40 @@ CsMonitorServer* CsMonitor::create_server(SERVER* pServer,
     return new CsMonitorServer(pServer, shared, &m_context);
 }
 
+void CsMonitor::populate_services()
+{
+    mxb_assert(!is_running());
+
+    // The servers that the Columnstor monitor has been configured with are
+    // only used for bootstrapping and services will not be populated
+    // with them.
+}
+
+void CsMonitor::server_added(SERVER* pServer)
+{
+    // The servers explicitly added to the Columnstore monitor are only used
+    // as bootstrap servers, so they are not added to any services.
+}
+
+void CsMonitor::server_removed(SERVER* pServer)
+{
+    // @see server_added(), no action is needed.
+}
+
+void CsMonitor::pre_loop()
+{
+    MonitorWorkerSimple::pre_loop();
+
+    if (m_context.config().dynamic_node_detection)
+    {
+        mxb_assert(!true); // TODO: Implement this.
+    }
+    else
+    {
+        populate_from_bootstrap_servers();
+    }
+}
+
 void CsMonitor::check_bootstrap_servers()
 {
     HostPortPairs nodes;
@@ -1409,5 +1452,23 @@ void CsMonitor::persist_bootstrap_servers()
             MXS_ERROR("Could not persist information about current bootstrap nodes: %s",
                       pError ? pError : "Unknown error");
         }
+    }
+}
+
+void CsMonitor::populate_from_bootstrap_servers()
+{
+    for (auto* pMs : servers())
+    {
+        SERVER* pServer = pMs->server;
+
+        string id = pServer->address();
+
+        CsNode node(id, pServer);
+
+        m_nodes_by_id.insert(make_pair(id, node));
+
+        run_in_mainworker([this, pServer]() {
+                service_add_server(this, pServer);
+            });
     }
 }

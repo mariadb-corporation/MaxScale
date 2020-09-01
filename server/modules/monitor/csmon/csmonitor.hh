@@ -14,13 +14,15 @@
 
 #include "csmon.hh"
 #include <chrono>
+#include <map>
 #include <sqlite3.h>
 #include <maxbase/http.hh>
 #include <maxbase/semaphore.hh>
 #include <maxscale/modulecmd.hh>
+#include "columnstore.hh"
 #include "cscontext.hh"
 #include "csmonitorserver.hh"
-#include "columnstore.hh"
+#include "csnode.hh"
 
 class CsMonitor : public maxscale::MonitorWorkerSimple
 {
@@ -105,15 +107,26 @@ private:
 
     CsMonitorServer* create_server(SERVER* server, const mxs::MonitorServer::SharedSettings& shared) override;
 
+protected:
+    void populate_services() override;
+
+    void server_added(SERVER* pServer) override;
+    void server_removed(SERVER* pServer) override;
+
 private:
     CsMonitor(const std::string& name, const std::string& module, sqlite3* pDb);
 
     bool configure(const mxs::ConfigParameters* pParams) override;
 
+    void pre_loop() override;
+
     void check_bootstrap_servers();
     bool remove_persisted_information();
     void persist_bootstrap_servers();
 
-    CsContext m_context;
-    sqlite3*  m_pDb {nullptr};
+    void populate_from_bootstrap_servers();
+
+    CsContext                     m_context;
+    std::map<std::string, CsNode> m_nodes_by_id;
+    sqlite3*                      m_pDb {nullptr};
 };
