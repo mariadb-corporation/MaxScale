@@ -164,7 +164,7 @@ export default {
             } else delete overviewInfo.socket
 
             Object.keys(overviewInfo).forEach(
-                key => (overviewInfo[key] = this.$help.handleValue(overviewInfo[key]))
+                key => (overviewInfo[key] = this.$help.convertType(overviewInfo[key]))
             )
             return overviewInfo
         },

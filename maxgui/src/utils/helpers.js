@@ -195,7 +195,7 @@ let nodeId = 0 // must be a number, so that hierarchySort can be done
  * If key value is an object, it will be flatten. If key value is an array,
  * it will be converted to object then flatten.
  * @param {Object} payload.obj - Root Object to be handled
- * @param {Boolean} payload.keepPrimitiveValue - keepPrimitiveValue to whether call handleValue function or not
+ * @param {Boolean} payload.keepPrimitiveValue - keepPrimitiveValue to whether call convertType function or not
  * @param {Number} payload.level - depth level for nested object
  * @param {Object} payload.parentNodeInfo - This contains id and original value, it's null in the first level (0)
  * @param {Number} payload.parentNodeId - nodeId of parentNode
@@ -216,7 +216,7 @@ export function flattenTree({
     if (isNotEmptyObj(obj)) {
         const targetObj = cloneDeep(obj)
         Object.keys(targetObj).map(key => {
-            let value = keepPrimitiveValue ? targetObj[key] : handleValue(targetObj[key])
+            let value = keepPrimitiveValue ? targetObj[key] : convertType(targetObj[key])
 
             let node = {
                 nodeId: ++nodeId,
@@ -343,28 +343,19 @@ export function isLinkedNode({ parentNodeInfo, linkedNodesHash, linkedNodeKeyNam
 }
 
 /**
- * Handle displaying undefined and null as 'undefined' and 'null' string respectively
- * @param {Any} value Any types that needs to be handled
- * @return {Any} return valid value for rendering, null becomes 'null', otherwise return 'undefined'
+ * This function converts type null and undefined to type string
+ * with value as 'undefined' and 'null' respectively
+ * @param {Any} value - Any types that needs to be handled
+ * @return {Any} value
  */
-export function handleValue(value) {
+export function convertType(value) {
     const typeOfValue = typeof value
-    let newVal
-
-    if (
-        Array.isArray(value) ||
-        typeOfValue === 'object' ||
-        typeOfValue === 'string' ||
-        typeOfValue === 'number' ||
-        typeOfValue === 'boolean'
-    ) {
-        newVal = value
-    } else {
-        newVal = 'undefined'
+    let newVal = value
+    if (typeOfValue === 'undefined') {
+        newVal = typeOfValue
     }
     // handle typeof null object and empty string
     if (value === null) newVal = 'null'
-
     return newVal
 }
 
@@ -372,69 +363,62 @@ export function capitalizeFirstLetter(string) {
     return string.charAt(0).toUpperCase() + string.slice(1)
 }
 
-export function isArrayEqual(x, y) {
-    return isEmpty(xorWith(x, y, isEqual))
-}
-
 /**
- * @param {Object} bytes byte be processed
- * @return {String} returns converted value
+ * This function converts to bits or bytes from provided
+ * suffix argument when reverse argument is false, otherwise
+ * it reverses the conversion from either bits or bytes to provided suffix argument
+ * @param {String} payload.suffix - size suffix: Ki, Mi, Gi, Ti or k, M, G, T
+ * @param {Number} payload.val - value to be converted
+ * @param {Boolean} payload.isIEC - if it is true, it use 1024 for multiples of bytes (B), otherwise 1000 of bits
+ * @param {Boolean} payload.reverse - should reverse convert or not
+ * @returns {Number} new size value
  */
-export function byteConverter(bytes) {
-    let val
-    const base = 1024
-    const i = Math.floor(Math.log(bytes) / Math.log(base))
-
-    if (i === 0) return { value: bytes, suffix: '' }
-
-    val = bytes / Math.pow(base, i)
-    let result = { value: Math.floor(val), suffix: ['', 'Ki', 'Mi', 'Gi', 'Ti'][i] }
-    return result
-}
-
-export function toBitsOrBytes(suffix, val, reverse = false) {
+export function convertSize({ suffix, val, isIEC = false, reverse = false }) {
     let result = val
     let base
+    let multiple = isIEC ? 1024 : 1000
     switch (suffix) {
         case 'Ki':
         case 'k':
-            base = Math.pow(1024, 1)
+            base = Math.pow(multiple, 1)
             break
         case 'Mi':
         case 'M':
-            base = Math.pow(1024, 2)
+            base = Math.pow(multiple, 2)
             break
         case 'Gi':
         case 'G':
-            base = Math.pow(1024, 3)
+            base = Math.pow(multiple, 3)
             break
         case 'Ti':
         case 'T':
-            base = Math.pow(1024, 4)
+            base = Math.pow(multiple, 4)
             break
         default:
-            base = Math.pow(1024, 0)
+            base = Math.pow(multiple, 0)
     }
     return reverse ? Math.floor(result / base) : result * base
 }
 
 /**
- * @param {String} suffix duration suffix: s,m,h,ms
- * @param {Object} val mode be processed. Default is null
- * @param {Boolean} reverse
- * @return {Number} returns converted value
+ * This function converts to milliseconds from provided suffix argument by default.
+ * If toMilliseconds is false, it converts milliseconds value to provided suffix argument
+ * @param {String} payload.suffix duration suffix: ms,s,m,h
+ * @param {Number} payload.val value to be converted. Notice: should be ms value if toMilliseconds is false
+ * @param {Boolean} payload.toMilliseconds whether to convert to milliseconds
+ * @return {Number} returns converted duration value
  */
-export function toBaseMiliOrReverse(suffix, val, reverse) {
+export function convertDuration({ suffix, val, toMilliseconds = true }) {
     let result
     switch (suffix) {
         case 's':
-            result = reverse ? val / 1000 : val * 1000
+            result = toMilliseconds ? val * 1000 : val / 1000
             break
         case 'm':
-            result = reverse ? val / (60 * 1000) : val * 60 * 1000
+            result = toMilliseconds ? val * 60 * 1000 : val / (60 * 1000)
             break
         case 'h':
-            result = reverse ? val / (60 * 60 * 1000) : val * 60 * 60 * 1000
+            result = toMilliseconds ? val * 60 * 60 * 1000 : val / (60 * 60 * 1000)
             break
         case 'ms':
         default:
@@ -444,9 +428,9 @@ export function toBaseMiliOrReverse(suffix, val, reverse) {
 }
 
 /**
- * @param {Object} param parameter object must contain string value property
- * @param {Array} suffixes an array of suffixes name eg: ['ms', 's', 'm', 'h']
- * @return {Object} returns object info {suffix:suffix, indexOfSuffix: indexOfSuffix}
+ * @param {Object} param - parameter object must contain string value property
+ * @param {Array} suffixes - an array of suffixes name .e.g. ['ms', 's', 'm', 'h']
+ * @return {Object} object info {suffix:suffix, indexOfSuffix: indexOfSuffix}
  * suffix as suffix name, indexOfSuffix as the begin index of that suffix in param.value
  */
 export function getSuffixFromValue(param, suffixes) {
@@ -462,17 +446,16 @@ export function getSuffixFromValue(param, suffixes) {
     }
     return { suffix: suffix, indexOfSuffix: indexOfSuffix }
 }
+
 /**
- *
- *
- * @export
+ * This function creates dataset object for line-chart
  * @param {String} payload.label - label for dataset
  * @param {Number} payload.value - value for dataset
  * @param {Number} payload.colorIndex - index of color from color palette of dynamicColors helper
  * @param {Number} [payload.timestamp] - if provided, otherwise using Date.now() (optional)
  * @param {String|Number} [payload.id] - unique id (optional)
  * @param {Array} [payload.data] - data for dataset (optional)
- * @returns {Object} returns dataset object
+ * @returns {Object} dataset object
  */
 export function genLineDataSet({ label, value, colorIndex, timestamp, id, data }) {
     const lineColor = dynamicColors(colorIndex)
@@ -481,7 +464,6 @@ export function genLineDataSet({ label, value, colorIndex, timestamp, id, data }
     let time = Date.now()
     if (timestamp) time = timestamp
     let dataset = {
-        resourceId: id,
         label: label,
         id: label,
         type: 'line',
@@ -492,6 +474,7 @@ export function genLineDataSet({ label, value, colorIndex, timestamp, id, data }
         lineTension: 0,
         data: [{ x: time, y: value }],
     }
+    if (id) dataset.resourceId = id
     if (data) dataset.data = data
     return dataset
 }
@@ -517,13 +500,11 @@ Object.defineProperties(Vue.prototype, {
                 dateFormat,
                 flattenTree,
                 listToTree,
-                handleValue,
+                convertType,
                 capitalizeFirstLetter,
-                isArrayEqual,
                 getSuffixFromValue,
-                byteConverter,
-                toBaseMiliOrReverse,
-                toBitsOrBytes,
+                convertDuration,
+                convertSize,
                 genLineDataSet,
                 isNull,
                 isFunction,

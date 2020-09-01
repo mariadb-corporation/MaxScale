@@ -227,13 +227,12 @@ export default {
     computed: {
         // first processing data from data props to whether keepPrimitiveValue or not
         processingData: function() {
-            const self = this
-            let result = self.data
-            if (!self.keepPrimitiveValue) {
-                result = self.$help.lodash.cloneDeep(self.data)
+            let result = this.data
+            if (!this.keepPrimitiveValue) {
+                result = this.$help.lodash.cloneDeep(this.data)
                 for (let i = 0; i < result.length; ++i) {
                     let obj = result[i]
-                    Object.keys(obj).forEach(key => (obj[key] = self.$help.handleValue(obj[key])))
+                    Object.keys(obj).forEach(key => (obj[key] = this.$help.convertType(obj[key])))
                 }
             }
 

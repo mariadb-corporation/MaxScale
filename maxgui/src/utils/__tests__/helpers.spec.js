@@ -298,4 +298,165 @@ describe('helpers unit tests', () => {
             expect(tree).to.be.deep.equals(expectReturn)
         })
     })
+
+    describe('convertType assertions', () => {
+        for (const [key, value] of Object.entries(dummyValues)) {
+            let expectResult = value
+            let des = `Should return ${expectResult} when value is ${key}`
+            switch (value) {
+                case undefined:
+                    expectResult = 'undefined'
+                    des = des.replace(`return ${expectResult}`, `return ${expectResult} as string`)
+                    break
+                case null:
+                    expectResult = 'null'
+                    des = des.replace(`return ${expectResult}`, `return ${expectResult} as string`)
+                    break
+                default:
+                    des = des.replace(`return ${expectResult}`, `not change value type`)
+            }
+            it(des, () => {
+                expect(helper.convertType(value)).to.be.equals(expectResult)
+            })
+        }
+    })
+
+    it('capitalizeFirstLetter should return new string with first letter capitalized', () => {
+        const str = 'server'
+        expect(helper.capitalizeFirstLetter(str)).to.be.equals('Server')
+    })
+
+    describe('IEC convertSize assertions', () => {
+        const bytes = 1099511628000
+        const IECSuffixes = [undefined, 'Ki', 'Mi', 'Gi', 'Ti']
+        const expectReturnsIEC = [bytes, 1073741824, 1048576, 1024, 1]
+        IECSuffixes.forEach((suffix, i) => {
+            let des = `Should convert and return accurate value if suffix is ${suffix}`
+            let reverse = false
+            switch (suffix) {
+                case undefined:
+                    des = `Should return same value if suffix is undefined`
+                    break
+                default:
+                    reverse = true
+            }
+            it(des, () => {
+                expect(
+                    helper.convertSize({ suffix, val: bytes, isIEC: true, reverse })
+                ).to.be.equals(expectReturnsIEC[i])
+            })
+        })
+    })
+
+    describe('SI convertSize assertions', () => {
+        const bits = 1000000000000
+        const SISuffixes = [undefined, 'k', 'M', 'G', 'T']
+        const expectReturnsSI = [bits, 1000000000, 1000000, 1000, 1]
+        SISuffixes.forEach((suffix, i) => {
+            let des = `Should convert and return accurate value if suffix is ${suffix}`
+            let reverse = false
+            switch (suffix) {
+                case undefined:
+                    des = `Should return same value if suffix is undefined`
+                    break
+                default:
+                    reverse = true
+            }
+            it(des, () => {
+                expect(
+                    helper.convertSize({ suffix, val: bits, isIEC: false, reverse })
+                ).to.be.equals(expectReturnsSI[i])
+            })
+        })
+    })
+
+    const durationSuffixes = ['ms', 's', 'm', 'h']
+
+    describe('convertDuration assertions when base value is ms', () => {
+        const ms = 3600000
+        const expectReturns = [3600000, 3600, 60, 1]
+        durationSuffixes.forEach((suffix, i) => {
+            let des = `Should convert ${ms}ms to ${expectReturns[i]}${suffix} `
+            it(des, () => {
+                expect(
+                    helper.convertDuration({ suffix, val: ms, toMilliseconds: false })
+                ).to.be.equals(expectReturns[i])
+            })
+        })
+    })
+
+    describe('convertDuration assertions with toMilliseconds mode enables', () => {
+        const values = [3600000, 3600, 60, 1]
+        const expectReturns = 3600000
+        durationSuffixes.forEach((suffix, i) => {
+            let des = `Should convert ${values[i]}${suffix} to ${expectReturns}ms`
+            it(des, () => {
+                expect(
+                    helper.convertDuration({
+                        suffix,
+                        val: values[i],
+                        toMilliseconds: true,
+                    })
+                ).to.be.equals(expectReturns)
+            })
+        })
+    })
+
+    it('getSuffixFromValue should return object with suffix and indexOfSuffix keys', () => {
+        const paramObj = { value: '1000ms' }
+        let suffixes = ['ms', 's', 'm', 'h']
+        const result = helper.getSuffixFromValue(paramObj, suffixes)
+        expect(result).to.have.all.keys('suffix', 'indexOfSuffix')
+        expect(result.suffix).to.be.equals('ms')
+        expect(result.indexOfSuffix).to.be.equals(4)
+    })
+
+    describe('genLineDataSet assertions', () => {
+        const label = 'line 0'
+        const value = 150
+        const colorIndex = 0
+        it('Should return dataset object with accurate keys', () => {
+            const result = helper.genLineDataSet({ label, value, colorIndex })
+            expect(result).to.have.all.keys(
+                'label',
+                'id',
+                'type',
+                'backgroundColor',
+                'borderColor',
+                'borderWidth',
+                'lineTension',
+                'data'
+            )
+        })
+        it(`Should get timestamp form Date.now() if timestamp
+        argument is not provided`, () => {
+            const result = helper.genLineDataSet({ label, value, colorIndex })
+            expect(result.data.length).to.be.equals(1)
+            expect(result.data[0].x).to.be.a('number')
+        })
+        it(`Should use provided timestamp argument`, () => {
+            const timestamp = Date.now()
+            const result = helper.genLineDataSet({ label, value, colorIndex, timestamp })
+            expect(result.data.length).to.be.equals(1)
+            expect(result.data[0].x).to.be.equals(timestamp)
+        })
+        it(`Should have resourceId key if id argument is provided`, () => {
+            const id = 'server_0'
+            const result = helper.genLineDataSet({ label, value, colorIndex, id })
+            expect(result).to.have.property('resourceId', id)
+        })
+        it(`Should create data array for key data if
+        data argument is not provided`, () => {
+            const result = helper.genLineDataSet({ label, value, colorIndex })
+            expect(result.data[0]).to.have.all.keys('x', 'y')
+        })
+        it(`Should use data argument for key data`, () => {
+            const data = [
+                { x: 1598972034170, y: value - 10 },
+                { x: 1600000000000, y: value },
+            ]
+            const result = helper.genLineDataSet({ label, value, colorIndex, data })
+            expect(result.data).to.be.deep.equals(data)
+        })
+    })
 })

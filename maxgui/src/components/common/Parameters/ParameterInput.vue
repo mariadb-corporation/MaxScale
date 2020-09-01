@@ -358,27 +358,44 @@ export default {
                     const nextIsSuffixIEC = IEC.includes(to)
                     // first convert from oldSuffix to bytes or bits
                     let value
-                    const reverse = true
                     const IECToSI = prevIsSuffixIEC && !nextIsSuffixIEC
                     const SITOIEC = !prevIsSuffixIEC && nextIsSuffixIEC
                     // from IEC to SI or from SI to IEC
                     if (IECToSI || SITOIEC) {
-                        // convert val to bytes or bits
-                        currentVal = this.$help.toBitsOrBytes(from, currentVal)
+                        // to bytes or bits
+                        currentVal = this.$help.convertSize({
+                            suffix: from,
+                            isIEC: prevIsSuffixIEC,
+                            val: currentVal,
+                        })
                         // convert currentVal bytes to bits or bits to bytes
                         currentVal = IECToSI ? currentVal * 8 : currentVal / 8
                         // reverse from bytes or bits to target suffix
-                        value = this.$help.toBitsOrBytes(to, currentVal, reverse)
+                        value = this.$help.convertSize({
+                            suffix: to,
+                            isIEC: nextIsSuffixIEC,
+                            val: currentVal,
+                            reverse: true,
+                        })
                     }
                     // from IEC to IEC or from SI to SI
                     else if (
                         (prevIsSuffixIEC && nextIsSuffixIEC) ||
                         (!prevIsSuffixIEC && !nextIsSuffixIEC)
                     ) {
-                        // convert val to bytes or bits
-                        currentVal = this.$help.toBitsOrBytes(from, val)
+                        // to bytes or bits
+                        currentVal = this.$help.convertSize({
+                            suffix: from,
+                            isIEC: prevIsSuffixIEC,
+                            val: val,
+                        })
                         // reverse from bytes or bits to target suffix
-                        value = this.$help.toBitsOrBytes(to, currentVal, reverse)
+                        value = this.$help.convertSize({
+                            suffix: to,
+                            isIEC: nextIsSuffixIEC,
+                            val: currentVal,
+                            reverse: true,
+                        })
                     }
                     return value
                 }
@@ -386,17 +403,20 @@ export default {
         },
 
         durationSuffixSwapper(newSuffix, oldSuffix, val) {
+            const { convertDuration } = this.$help
+            // convert to miliseconds from oldSuffix
+            const ms = convertDuration({ suffix: oldSuffix, val })
             switch (newSuffix) {
                 case 'ms':
-                    return this.$help.toBaseMiliOrReverse(oldSuffix, val)
+                    return ms
                 case 's':
                 case 'm':
                 case 'h': {
-                    const reverseBase = true
-                    // first convert to miliseconds from oldSuffix
-                    const baseMiliSec = this.$help.toBaseMiliOrReverse(oldSuffix, val)
-                    // then reverse from baseMiliSec to newSuffix
-                    return this.$help.toBaseMiliOrReverse(newSuffix, baseMiliSec, reverseBase)
+                    return convertDuration({
+                        suffix: newSuffix,
+                        val: ms,
+                        toMilliseconds: false,
+                    })
                 }
             }
         },

@@ -338,8 +338,7 @@ export default {
                     newChar: '',
                 })
             }
-            let firstCharCapitalized = lowerCaseStr.charAt(0).toUpperCase()
-            return firstCharCapitalized + lowerCaseStr.slice(1)
+            return this.$help.capitalizeFirstLetter(lowerCaseStr)
         },
 
         getModuleType(type) {
