@@ -68,7 +68,7 @@ typedef struct mxs_filter_object
      *
      * @return New filter instance on NULL on error
      */
-    MXS_FILTER*(*createInstance)(const char* name, mxs::ConfigParameters* params);
+    MXS_FILTER* (*createInstance)(const char* name, mxs::ConfigParameters* params);
 
     /**
      * Called to create a new user session within the filter
@@ -88,8 +88,8 @@ typedef struct mxs_filter_object
      *
      * @return New filter session or NULL on error
      */
-    MXS_FILTER_SESSION*(*newSession)(MXS_FILTER * instance, MXS_SESSION* session, SERVICE* service,
-                                     mxs::Downstream* down, mxs::Upstream* up);
+    MXS_FILTER_SESSION* (*newSession)(MXS_FILTER * instance, MXS_SESSION* session, SERVICE* service,
+                                      mxs::Downstream* down, mxs::Upstream* up);
 
     /**
      * @brief Called when a session is closed
@@ -169,6 +169,27 @@ typedef struct mxs_filter_object
      * @param instance Filter instance
      */
     void (* destroyInstance)(MXS_FILTER* instance);
+
+    /**
+     * @brief Configure filter instance at runtime
+     *
+     * This function is guaranteed to be called by only one thread at a time.
+     * The filter must declare the RCAP_TYPE_RUNTIME_CONFIG in its capabilities
+     * in order for this function to be called.
+     *
+     * Modifications to the filter should be made in an atomic manner so that
+     * existing sessions do not read a partial configuration. One way to do this
+     * is to use shared pointers for storing configurations.
+     *
+     * @param instance Filter instance
+     * @param params   Updated parameters for the filter. The parameters are
+     *                 validated before this function is called.
+     *
+     * @return True if reconfiguration was successful, false if reconfiguration
+     *         failed. If reconfiguration failed, the state of the filter
+     *         instance should not be modified.
+     */
+    bool (* configureInstance)(MXS_FILTER* instance, mxs::ConfigParameters* params);
 } MXS_FILTER_OBJECT;
 
 /**
@@ -424,6 +445,13 @@ template<class FilterType, class FilterSessionType>
 class Filter : public MXS_FILTER
 {
 public:
+
+    // The default configure entry point, does nothing and always fails
+    bool configure(mxs::ConfigParameters* param)
+    {
+        return false;
+    }
+
     static MXS_FILTER* apiCreateInstance(const char* zName, mxs::ConfigParameters* ppParams)
     {
         FilterType* pFilter = NULL;
@@ -529,6 +557,17 @@ public:
         MXS_EXCEPTION_GUARD(delete pFilter);
     }
 
+    static bool apiConfigureInstance(MXS_FILTER* pInstance, mxs::ConfigParameters* pParams)
+    {
+        bool rv = false;
+
+        FilterType* pFilter = static_cast<FilterType*>(pInstance);
+
+        MXS_EXCEPTION_GUARD(rv = pFilter->configure(pParams));
+
+        return rv;
+    }
+
     static MXS_FILTER_OBJECT s_object;
 };
 
@@ -544,5 +583,6 @@ MXS_FILTER_OBJECT Filter<FilterType, FilterSessionType>::s_object =
     &FilterType::apiDiagnostics,
     &FilterType::apiGetCapabilities,
     &FilterType::apiDestroyInstance,
+    &FilterType::apiConfigureInstance,
 };
 }

@@ -204,6 +204,16 @@ bool runtime_alter_monitor_relationships_from_json(mxs::Monitor* monitor, const 
 bool runtime_alter_service_from_json(Service* service, json_t* new_json);
 
 /**
+ * @brief Alter a filter using JSON
+ *
+ * @param filter   Filter to alter
+ * @param new_json JSON definition of the updated filter
+ *
+ * @return True if the filter was successfully modified to represent @c new_json
+ */
+bool runtime_alter_filter_from_json(const SFilterDef& filter, json_t* new_json);
+
+/**
  * @brief Alter service relationships
  *
  * @param service Service to alter

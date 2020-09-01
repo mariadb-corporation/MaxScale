@@ -2238,6 +2238,49 @@ bool runtime_alter_service_from_json(Service* service, json_t* new_json)
     return rval;
 }
 
+bool can_modify_filter_params(const SFilterDef& filter)
+{
+    bool rval = true;
+
+    if (!filter->obj()->configureInstance || (filter->capabilities() & RCAP_TYPE_RUNTIME_CONFIG) == 0)
+    {
+        MXS_ERROR("Filter '%s' does not support reconfiguration.", filter->module());
+        rval = false;
+    }
+
+    return rval;
+}
+
+bool runtime_alter_filter_from_json(const SFilterDef& filter, json_t* new_json)
+{
+    bool rval = false;
+
+    if (validate_filter_json(new_json) && can_modify_filter_params(filter))
+    {
+        auto params = filter->parameters();
+        params.set_multiple(extract_parameters(new_json));
+        const MXS_MODULE* mod = get_module(filter->module(), MODULE_FILTER);
+
+        if (validate_param(common_filter_params(), mod->parameters, &params))
+        {
+            if (filter->obj()->configureInstance(filter->instance(), &params))
+            {
+                filter->set_parameters(std::move(params));
+                std::ostringstream ss;
+                filter->persist(ss);
+                rval = runtime_save_config(filter->name(), ss.str());
+            }
+            else
+            {
+                MXS_ERROR("Reconfiguration of filter '%s' failed. See log file for more details.",
+                          filter->name());
+            }
+        }
+    }
+
+    return rval;
+}
+
 bool runtime_alter_logs_from_json(json_t* json)
 {
     bool rval = false;
