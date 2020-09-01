@@ -101,11 +101,11 @@ describe('ServiceDetail - OverviewHeader', () => {
                     break
                 case 1:
                     it(`Should show started time in the second ${desAppend}`, async () => {
-                        const { formatValue } = wrapper.vm.$help
+                        const { dateFormat } = wrapper.vm.$help
                         const cardTitle = card.find('.caption')
                         const cardBody = card.find('.started')
                         expect(cardTitle.text()).to.be.equals('STARTED AT')
-                        expect(cardBody.text()).to.be.equals(formatValue(started))
+                        expect(cardBody.text()).to.be.equals(dateFormat({ value: started }))
                     })
                     break
                 case 2:

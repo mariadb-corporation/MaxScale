@@ -149,7 +149,7 @@ export default {
                     tableRows.push({
                         id: id,
                         user: `${user}@${remote}`,
-                        connected: this.$help.formatValue(connected),
+                        connected: this.$help.dateFormat({ value: connected }),
                         idle: idle,
                     })
                 }

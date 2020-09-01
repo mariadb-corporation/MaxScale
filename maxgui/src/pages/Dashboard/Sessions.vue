@@ -24,7 +24,7 @@
             </template>
         </template>
         <template v-slot:connected="{ data: { item: { connected } } }">
-            <span> {{ $help.formatValue(connected) }} </span>
+            <span> {{ $help.dateFormat({ value: connected }) }} </span>
         </template>
     </data-table>
 </template>

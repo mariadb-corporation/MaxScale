@@ -155,7 +155,7 @@ export function getErrorsArr(error) {
  * Meaning that if there are duplicated key values at provided argument path, the value will be
  * pushed to the array. This makes this function different compare to built in Map object
  * @param {Array} payload.arr - Array of objects to be hashed by provided keyName
- * @param {String} payload.path path of object to be hashed by. e.g. 'attributes.module_type' or 'parentNodeId'
+ * @param {String} payload.path - path of object to be hashed by. e.g. 'attributes.module_type' or 'parentNodeId'
  * @return {Object} hashMap
  */
 export function hashMapByPath({ arr, path }) {
@@ -170,26 +170,21 @@ export function hashMapByPath({ arr, path }) {
 
 /**
  * Handle format date value
- * @param {String} value String date to be formatted
- * @param {String} formatType format type
- * @return {String} new String with HH:mm:ss MM/DD/YYYY format
+ * @param {String} payload.value - String date to be formatted
+ * @param {String} payload.formatType - format type (default is HH:mm:ss MM.DD.YYYY)
+ * @return {String} new date format
  */
-export function formatValue(value, formatType) {
+export function dateFormat({ value, formatType = 'HH:mm:ss MM.DD.YYYY' }) {
     let date = new Date(value)
     const DATE_RFC2822 = 'ddd, DD MMM YYYY HH:mm:ss'
-    const default_format = 'HH:mm:ss MM.DD.YYYY'
     let format
     switch (formatType) {
         case 'DATE_RFC2822':
             format = DATE_RFC2822
             break
-        case 'MM.DD.YYYY HH:mm:ss':
-            format = formatType
-            break
         default:
-            format = default_format
+            format = formatType
     }
-
     return Vue.moment(date).format(format)
 }
 
@@ -199,8 +194,7 @@ let nodeId = 0 // must be a number, so that hierarchySort can be done
  * Convert an object to array of nodes object with tree data properties.
  * If key value is an object, it will be flatten. If key value is an array,
  * it will be converted to object then flatten.
- * @param {Object} payload - Payload object
- * @param {Object} payload.obj - Root Object to be handle
+ * @param {Object} payload.obj - Root Object to be handled
  * @param {Boolean} payload.keepPrimitiveValue - keepPrimitiveValue to whether call handleValue function or not
  * @param {Number} payload.level - depth level for nested object
  * @param {Object} payload.parentNodeInfo - This contains id and original value, it's null in the first level (0)
@@ -209,7 +203,7 @@ let nodeId = 0 // must be a number, so that hierarchySort can be done
  * @param {String} payload.keyValue - keyValue
  * @return {Array} an array of nodes object
  */
-export function objToArrOfNodes({
+export function flattenTree({
     obj,
     keepPrimitiveValue,
     level,
@@ -218,18 +212,17 @@ export function objToArrOfNodes({
     keyName = 'id',
     keyValue = 'value',
 }) {
+    let nodes = []
     if (isNotEmptyObj(obj)) {
-        let nodes = []
         const targetObj = cloneDeep(obj)
-
         Object.keys(targetObj).map(key => {
             let value = keepPrimitiveValue ? targetObj[key] : handleValue(targetObj[key])
 
             let node = {
                 nodeId: ++nodeId,
-                parentNodeId: parentNodeId,
-                level: level,
-                parentNodeInfo: parentNodeInfo,
+                parentNodeId,
+                level,
+                parentNodeInfo,
                 [keyName]: key,
                 [keyValue]: value,
                 originalValue: value,
@@ -244,7 +237,7 @@ export function objToArrOfNodes({
             }
 
             if (isNotEmptyObj(value))
-                node.children = objToArrOfNodes({
+                node.children = flattenTree({
                     obj: value,
                     keepPrimitiveValue,
                     level: level + 1,
@@ -253,7 +246,7 @@ export function objToArrOfNodes({
                 })
             if (isNotEmptyArray(value))
                 //convert value type array to object then do a recursive call
-                node.children = objToArrOfNodes({
+                node.children = flattenTree({
                     obj: { ...value },
                     keepPrimitiveValue,
                     level: level + 1,
@@ -264,24 +257,23 @@ export function objToArrOfNodes({
             node.leaf = !hasChild
             nodes.push(node)
         })
-        return nodes
     }
-    return []
+    return nodes
 }
 
 /**
- * Convert an array of nodes object to an object has property name as the value of keyName,
- * key value as the value of keyValue.
- * @param {Object} payload - Payload object
+ * Convert an array of nodes object to an object has property name
+ * as the value of keyName (id), key value as the value of keyValue (value).
  * @param {Array} payload.arr - Array of objects
  * @param {String} payload.keyName - keyName of the object in the array
  * @param {String} payload.keyValue - keyValue of the object in the array
  * @return {Object} return an object
  */
-export function arrToObject({ arr, keyName = 'id', keyValue = 'value' }) {
+export function listToTree({ arr, keyName = 'id', keyValue = 'value' }) {
+    let resultObj = {}
     if (isNotEmptyArray(arr)) {
         let targetArr = cloneDeep(arr)
-        let resultObj = {}
+
         /*
             if value of keyValue is an object,
             there is linked nodes, this linkedNodesHash
@@ -294,7 +286,7 @@ export function arrToObject({ arr, keyName = 'id', keyValue = 'value' }) {
             const { parentNodeInfo = null } = node
 
             /*
-                objToArrOfNodes reverse, get parentNodeInfo then check if
+                flattenTree reverse, get parentNodeInfo then check if
                 current node is a linked node. Then assign key value of
                 current node to linkedNodesHash object, finally assign
                 to resultObj with parentId as key name and linkedNodesHash as
@@ -317,16 +309,15 @@ export function arrToObject({ arr, keyName = 'id', keyValue = 'value' }) {
                 resultObj[parentId] = linkedNodesHash[parentId]
             } else if (node.leaf || node.leaf === undefined)
                 /*
-                    leaf is undefined when the array wasn't created by objToArrOfNodes.
+                    leaf is undefined when the array wasn't created by flattenTree.
                     e.g. in parameters-collapse component.
                 */
                 resultObj[node[keyName]] = node[keyValue]
         })
-
-        return resultObj
     }
-    return {}
+    return resultObj
 }
+
 /**
  * This function compares original key names of parent's original value with
  * key names of linkedNodes object. LinkedNodes object is getting from linkedNodesHash
@@ -523,9 +514,9 @@ Object.defineProperties(Vue.prototype, {
                 strReplaceAt,
                 getErrorsArr,
                 hashMapByPath,
-                formatValue,
-                objToArrOfNodes,
-                arrToObject,
+                dateFormat,
+                flattenTree,
+                listToTree,
                 handleValue,
                 capitalizeFirstLetter,
                 isArrayEqual,

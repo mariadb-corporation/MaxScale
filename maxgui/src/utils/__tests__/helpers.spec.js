@@ -200,4 +200,102 @@ describe('helpers unit tests', () => {
             expectReturn
         )
     })
+
+    describe('dateFormat assertions', () => {
+        const dummyValue = 'Tue, 01 Sep 2020 05:55:56 GMT'
+        const dummyFormatTypes = ['DATE_RFC2822', 'MM.DD.YYYY HH:mm:ss', undefined]
+        const expectedReturn = [
+            'Tue, 01 Sep 2020 08:55:56',
+            '09.01.2020 08:55:56',
+            '08:55:56 09.01.2020',
+        ]
+        dummyFormatTypes.forEach((type, i) => {
+            let des = `Should return date string with format ${type}`
+            if (type === undefined)
+                des = des.replace(`format ${type}`, 'default format HH:mm:ss MM.DD.YYYY')
+            it(des, () => {
+                expect(helper.dateFormat({ value: dummyValue, formatType: type })).to.be.equals(
+                    expectedReturn[i]
+                )
+            })
+        })
+    })
+    describe('flattenTree and listToTree assertions', () => {
+        const dummyTree = {
+            root_node: {
+                node_child: 'node_child value',
+                node_child_1: 'node_child_1 value',
+            },
+        }
+        it(`Should flatten the tree accurately when flattenTree is called`, () => {
+            const nodesList = helper.flattenTree({
+                obj: dummyTree,
+                keepPrimitiveValue: true,
+                level: 0,
+            })
+
+            const expectReturn = [
+                {
+                    nodeId: 1,
+                    parentNodeId: 0,
+                    level: 0,
+                    parentNodeInfo: null,
+                    id: 'root_node',
+                    value: '',
+                    originalValue: dummyTree.root_node,
+                    expanded: false,
+                    children: [
+                        {
+                            nodeId: 2,
+                            parentNodeId: 1,
+                            level: 1,
+                            parentNodeInfo: { id: 'root_node', originalValue: dummyTree.root_node },
+                            id: 'node_child',
+                            value: 'node_child value',
+                            originalValue: 'node_child value',
+                            leaf: true,
+                        },
+                        {
+                            nodeId: 3,
+                            parentNodeId: 1,
+                            level: 1,
+                            parentNodeInfo: { id: 'root_node', originalValue: dummyTree.root_node },
+                            id: 'node_child_1',
+                            value: 'node_child_1 value',
+                            originalValue: 'node_child_1 value',
+                            leaf: true,
+                        },
+                    ],
+                    leaf: false,
+                },
+            ]
+
+            expect(nodesList).to.be.deep.equals(expectReturn)
+        })
+
+        it(`Should convert a list to tree object when listToTree is called`, () => {
+            const nodes = [
+                {
+                    nodeId: 2,
+                    parentNodeId: 1,
+                    level: 1,
+                    parentNodeInfo: { id: 'root_node', originalValue: dummyTree.root_node },
+                    id: 'node_child',
+                    value: 'new node_child value',
+                    originalValue: 'node_child value',
+                    leaf: true,
+                },
+            ]
+            const expectReturn = {
+                root_node: {
+                    node_child: 'new node_child value',
+                    node_child_1: 'node_child_1 value',
+                },
+            }
+            const tree = helper.listToTree({
+                arr: nodes,
+            })
+            expect(tree).to.be.deep.equals(expectReturn)
+        })
+    })
 })
