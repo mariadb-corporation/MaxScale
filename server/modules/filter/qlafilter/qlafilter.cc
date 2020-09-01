@@ -55,6 +55,8 @@ using std::string;
 namespace
 {
 
+uint64_t CAPABILITIES = RCAP_TYPE_CONTIGUOUS_INPUT;
+
 const char HEADER_ERROR[] = "Failed to print header to file %s. Error %i: '%s'.";
 
 const char PARAM_MATCH[] = "match";
@@ -871,7 +873,7 @@ void freeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session)
 
 uint64_t getCapabilities(MXS_FILTER* instance)
 {
-    return RCAP_TYPE_NONE;
+    return CAPABILITIES;
 }
 
 int routeQuery(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GWBUF* queue)
@@ -958,7 +960,6 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
     };
 
     static const char description[] = "A simple query logging filter";
-    uint64_t capabilities = RCAP_TYPE_CONTIGUOUS_INPUT;
     static MXS_MODULE info =
     {
         MXS_MODULE_API_FILTER,
@@ -966,7 +967,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         MXS_FILTER_VERSION,
         description,
         "V1.1.1",
-        capabilities,
+        CAPABILITIES,
         &MyObject,
         NULL,                   /* Process init. */
         NULL,                   /* Process finish. */
