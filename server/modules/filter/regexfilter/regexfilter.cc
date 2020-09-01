@@ -528,5 +528,5 @@ void log_nomatch(RegexInstance* inst, char* re, char* old)
  */
 static uint64_t getCapabilities(MXS_FILTER* instance)
 {
-    return RCAP_TYPE_NONE;
+    return RCAP_TYPE_CONTIGUOUS_INPUT;
 }
