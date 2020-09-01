@@ -107,7 +107,7 @@ SFilterDef filter_alloc(const char* name, const char* module, mxs::ConfigParamet
         return NULL;
     }
 
-    SFilterDef filter(new(std::nothrow) FilterDef(name, module, object, instance, params));
+    SFilterDef filter(new(std::nothrow) FilterDef(name, module, object, instance, *params));
 
     if (filter)
     {
@@ -126,23 +126,25 @@ FilterDef::FilterDef(std::string name,
                      std::string module,
                      MXS_FILTER_OBJECT* object,
                      MXS_FILTER* instance,
-                     mxs::ConfigParameters* params)
-    : name(name)
-    , module(module)
-    , parameters(*params)
-    , filter(instance)
-    , obj(object)
+                     mxs::ConfigParameters params)
+    : m_name(std::move(name))
+    , m_module(std::move(module))
+    , m_parameters(std::move(params))
+    , m_filter(instance)
+    , m_obj(object)
+    , m_capabilities(m_obj->getCapabilities(m_filter))
 {
+    mxb_assert(get_module(m_module.c_str(), MODULE_FILTER)->module_capabilities == m_capabilities);
 }
 
 FilterDef::~FilterDef()
 {
-    if (obj->destroyInstance && filter)
+    if (m_obj->destroyInstance && m_filter)
     {
-        obj->destroyInstance(filter);
+        m_obj->destroyInstance(m_filter);
     }
 
-    MXS_INFO("Destroying '%s'", name.c_str());
+    MXS_INFO("Destroying '%s'", name());
 }
 
 /**
@@ -160,13 +162,13 @@ void filter_free(const SFilterDef& filter)
     this_unit.filters.erase(it);
 }
 
-SFilterDef filter_find(const char* name)
+SFilterDef filter_find(const std::string& name)
 {
     Guard guard(this_unit.lock);
 
     for (const auto& filter : this_unit.filters)
     {
-        if (filter->name == name)
+        if (filter->name() == name)
         {
             return filter;
         }
@@ -194,49 +196,20 @@ void filter_destroy_instances()
     this_unit.filters.clear();
 }
 
-const char* filter_def_get_name(const MXS_FILTER_DEF* filter_def)
-{
-    const FilterDef* filter = static_cast<const FilterDef*>(filter_def);
-    mxb_assert(filter);
-    return filter->name.c_str();
-}
-
-const char* filter_def_get_module_name(const MXS_FILTER_DEF* filter_def)
-{
-    const FilterDef* filter = static_cast<const FilterDef*>(filter_def);
-    mxb_assert(filter);
-    return filter->module.c_str();
-}
-
 MXS_FILTER* filter_def_get_instance(const MXS_FILTER_DEF* filter_def)
 {
     const FilterDef* filter = static_cast<const FilterDef*>(filter_def);
     mxb_assert(filter);
-    return filter->filter;
+    return filter->instance();
 }
 
-/**
- * Check a parameter to see if it is a standard filter parameter
- *
- * @param name  Parameter name to check
- */
-int filter_standard_parameter(const char* name)
+json_t* FilterDef::parameters_to_json() const
 {
-    if (strcmp(name, "type") == 0 || strcmp(name, "module") == 0)
-    {
-        return 1;
-    }
-    return 0;
-}
-
-json_t* filter_parameters_to_json(const SFilterDef& filter)
-{
-    mxb_assert(filter);
     json_t* rval = json_object();
 
     /** Add custom module parameters */
-    const MXS_MODULE* mod = get_module(filter->module.c_str(), MODULE_FILTER);
-    config_add_module_params_json(&filter->parameters,
+    const MXS_MODULE* mod = get_module(module(), MODULE_FILTER);
+    config_add_module_params_json(parameters(),
                                   {CN_TYPE, CN_MODULE},
                                   common_filter_params(),
                                   mod->parameters,
@@ -245,25 +218,24 @@ json_t* filter_parameters_to_json(const SFilterDef& filter)
     return rval;
 }
 
-json_t* filter_json_data(const SFilterDef& filter, const char* host)
+json_t* FilterDef::json_data(const char* host) const
 {
     const char CN_FILTER_DIAGNOSTICS[] = "filter_diagnostics";
-    mxb_assert(filter);
     json_t* rval = json_object();
 
-    json_object_set_new(rval, CN_ID, json_string(filter->name.c_str()));
+    json_object_set_new(rval, CN_ID, json_string(name()));
     json_object_set_new(rval, CN_TYPE, json_string(CN_FILTERS));
 
     json_t* attr = json_object();
 
-    json_object_set_new(attr, CN_MODULE, json_string(filter->module.c_str()));
-    json_object_set_new(attr, CN_PARAMETERS, filter_parameters_to_json(filter));
+    json_object_set_new(attr, CN_MODULE, json_string(module()));
+    json_object_set_new(attr, CN_PARAMETERS, parameters_to_json());
 
-    if (filter->obj && filter->filter && filter->obj->diagnostics)
+    mxb_assert(m_obj && m_filter);
+
+    if (obj()->diagnostics)
     {
-        json_t* diag = filter->obj->diagnostics(filter->filter, NULL);
-
-        if (diag)
+        if (json_t* diag = obj()->diagnostics(instance(), NULL))
         {
             json_object_set_new(attr, CN_FILTER_DIAGNOSTICS, diag);
         }
@@ -272,29 +244,28 @@ json_t* filter_json_data(const SFilterDef& filter, const char* host)
     /** Store relationships to other objects */
     json_t* rel = json_object();
 
-    std::string self = MXS_JSON_API_FILTERS + filter->name + "/relationships/services";
+    std::string self = MXS_JSON_API_FILTERS + m_name + "/relationships/services";
 
-    if (auto services = service_relations_to_filter(filter, host, self))
+    if (auto services = service_relations_to_filter(this, host, self))
     {
         json_object_set_new(rel, CN_SERVICES, services);
     }
 
     json_object_set_new(rval, CN_RELATIONSHIPS, rel);
     json_object_set_new(rval, CN_ATTRIBUTES, attr);
-    json_object_set_new(rval, CN_LINKS, mxs_json_self_link(host, CN_FILTERS, filter->name.c_str()));
+    json_object_set_new(rval, CN_LINKS, mxs_json_self_link(host, CN_FILTERS, name()));
 
     return rval;
 }
 
-json_t* filter_to_json(const SFilterDef& filter, const char* host)
+json_t* FilterDef::to_json(const char* host) const
 {
-    mxb_assert(filter);
-    string self = MXS_JSON_API_FILTERS;
-    self += filter->name;
-    return mxs_json_resource(host, self.c_str(), filter_json_data(filter, host));
+    string self = MXS_JSON_API_FILTERS + m_name;
+    return mxs_json_resource(host, self.c_str(), json_data(host));
 }
 
-json_t* filter_list_to_json(const char* host)
+// static
+json_t* FilterDef::filter_list_to_json(const char* host)
 {
     json_t* rval = json_array();
 
@@ -302,9 +273,7 @@ json_t* filter_list_to_json(const char* host)
 
     for (const auto& f : this_unit.filters)
     {
-        json_t* json = filter_json_data(f, host);
-
-        if (json)
+        if (json_t* json = f->json_data(host))
         {
             json_array_append_new(rval, json);
         }
@@ -360,13 +329,12 @@ json_t* FilterSession::diagnostics() const
 }
 }
 
-std::ostream& filter_persist(const SFilterDef& filter, std::ostream& os)
+std::ostream& FilterDef::persist(std::ostream& os) const
 {
-    mxb_assert(filter);
-    const MXS_MODULE* mod = get_module(filter->module.c_str(), NULL);
+    const MXS_MODULE* mod = get_module(module(), NULL);
     mxb_assert(mod);
 
-    os << generate_config_string(filter->name, filter->parameters,
+    os << generate_config_string(name(), parameters(),
                                  common_filter_params(), mod->parameters);
     return os;
 }

@@ -344,7 +344,7 @@ private:
 
         SessionFilter(const SFilterDef& f)
             : filter(f)
-            , instance(filter->filter)
+            , instance(filter->instance())
             , session(nullptr)
         {
         }
@@ -564,8 +564,7 @@ json_t* service_relations_to_server(const SERVER* server, const std::string& hos
  *
  * @return Array of service links
  */
-json_t* service_relations_to_filter(const SFilterDef& filter, const std::string& host,
-                                    const std::string& self);
+json_t* service_relations_to_filter(const FilterDef* filter, const std::string& host, const std::string& self);
 
 /**
  * @brief Get links to services that relate to a monitor

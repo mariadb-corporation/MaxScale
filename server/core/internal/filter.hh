@@ -26,31 +26,75 @@
  * This is basically the link between a plugin to load and the
  * options to pass to that plugin.
  */
-// TODO: Make this a class
-struct FilterDef : public MXS_FILTER_DEF
+class FilterDef : public MXS_FILTER_DEF
 {
+public:
     FilterDef(std::string name,
               std::string module,
               MXS_FILTER_OBJECT* object,
               MXS_FILTER* instance,
-              mxs::ConfigParameters* params);
+              mxs::ConfigParameters params);
     ~FilterDef();
 
-    std::string           name;         /**< The Filter name */
-    std::string           module;       /**< The module to load */
-    mxs::ConfigParameters parameters;   /**< The filter parameters */
-    MXS_FILTER*           filter;       /**< The runtime filter */
-    MXS_FILTER_OBJECT*    obj;          /**< The "MODULE_OBJECT" for the filter */
+    const char* name() const
+    {
+        return m_name.c_str();
+    }
+
+    const char* module() const
+    {
+        return m_module.c_str();
+    }
+
+    MXS_FILTER_OBJECT* obj() const
+    {
+        return m_obj;
+    }
+
+    MXS_FILTER* instance() const
+    {
+        return m_filter;
+    }
+
+    uint64_t capabilities() const
+    {
+        return m_capabilities;
+    }
+
+    const mxs::ConfigParameters& parameters() const
+    {
+        return m_parameters;
+    }
+
+    void set_parameters(mxs::ConfigParameters params)
+    {
+        m_parameters = std::move(params);
+    }
+
+    std::ostream& persist(std::ostream& os) const;
+
+    json_t*        to_json(const char* host) const;
+    static json_t* filter_list_to_json(const char* host);
+
+private:
+    std::string           m_name;           /**< The Filter name */
+    std::string           m_module;         /**< The module to load */
+    mxs::ConfigParameters m_parameters;     /**< The filter parameters */
+    MXS_FILTER*           m_filter;         /**< The runtime filter */
+    MXS_FILTER_OBJECT*    m_obj;            /**< The "MODULE_OBJECT" for the filter */
+    uint64_t              m_capabilities;
+
+    json_t* json_data(const char* host) const;
+    json_t* parameters_to_json() const;
 };
 
 typedef std::shared_ptr<FilterDef> SFilterDef;
 
 SFilterDef filter_alloc(const char* name, const char* module, mxs::ConfigParameters* params);
 void       filter_free(const SFilterDef& filter);
-int        filter_standard_parameter(const char* name);
 
 // Find the internal filter representation
-SFilterDef filter_find(const char* name);
+SFilterDef filter_find(const std::string& name);
 
 /**
  * Check if filter can be destroyed
@@ -74,34 +118,3 @@ void filter_destroy(const SFilterDef& filter);
  * Destroy all filters
  */
 void filter_destroy_instances();
-
-/**
- * @brief Persist filter configuration into a stream
- *
- * This converts the static configuration of the filter into an INI format file.
- *
- * @param filter Filter to persist
- * @param os     Stream where filter is serialized
- *
- * @return The output stream
- */
-std::ostream& filter_persist(const SFilterDef& filter, std::ostream& os);
-
-/**
- * @brief Convert a filter to JSON
- *
- * @param filter Filter to convert
- * @param host Hostname of this server
- *
- * @return Filter converted to JSON format
- */
-json_t* filter_to_json(const SFilterDef& filter, const char* host);
-
-/**
- * @brief Convert all filters into JSON
- *
- * @param host Hostname of this server
- *
- * @return A JSON array containing all filters
- */
-json_t* filter_list_to_json(const char* host);

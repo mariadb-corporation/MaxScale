@@ -548,15 +548,7 @@ bool Service::set_filters(const std::vector<std::string>& filters)
         if (auto def = filter_find(f.c_str()))
         {
             flist.push_back(def);
-
-            const MXS_MODULE* module = get_module(def->module.c_str(), MODULE_FILTER);
-            mxb_assert(module);
-            my_capabilities |= module->module_capabilities;
-
-            if (def->obj->getCapabilities)
-            {
-                my_capabilities |= def->obj->getCapabilities(def->filter);
-            }
+            my_capabilities |= def->capabilities();
         }
         else
         {
@@ -588,7 +580,7 @@ void Service::remove_filter(SFilterDef filter)
     {
         if (f != filter)
         {
-            new_filters.push_back(f->name);
+            new_filters.push_back(f->name());
         }
     }
 
@@ -757,7 +749,7 @@ std::ostream& Service::persist(std::ostream& os) const
     {
         for (const auto& f : data.filters)
         {
-            names.push_back(f->name.c_str());
+            names.push_back(f->name());
         }
 
         os << CN_FILTERS << "=" << mxb::join(names, "|") << '\n';
@@ -859,7 +851,7 @@ json_t* service_parameters_to_json(const SERVICE* service)
     json_t* rval = json_object();
 
     const MXS_MODULE* mod = get_module(service->router_name(), MODULE_ROUTER);
-    config_add_module_params_json(&service->params(),
+    config_add_module_params_json(service->params(),
                                   {CN_TYPE, CN_ROUTER, CN_SERVERS, CN_FILTERS},
                                   common_service_params(),
                                   mod->parameters,
@@ -944,7 +936,7 @@ json_t* Service::json_relationships(const char* host) const
 
         for (const auto& f : data.filters)
         {
-            mxs_json_add_relation(filters, f->name.c_str(), CN_FILTERS);
+            mxs_json_add_relation(filters, f->name(), CN_FILTERS);
         }
 
         json_object_set_new(rel, CN_FILTERS, filters);
@@ -1057,8 +1049,7 @@ json_t* service_list_to_json(const char* host)
     return mxs_json_resource(host, MXS_JSON_API_SERVICES, arr);
 }
 
-json_t* service_relations_to_filter(const SFilterDef& filter, const std::string& host,
-                                    const std::string& self)
+json_t* service_relations_to_filter(const FilterDef* filter, const std::string& host, const std::string& self)
 {
     json_t* rel = nullptr;
     LockGuard guard(this_unit.lock);
@@ -1067,7 +1058,7 @@ json_t* service_relations_to_filter(const SFilterDef& filter, const std::string&
     {
         for (const auto& f : service->get_filters())
         {
-            if (f == filter)
+            if (f.get() == filter)
             {
                 if (!rel)
                 {
@@ -1309,17 +1300,17 @@ bool ServiceEndpoint::connect()
     for (auto it = m_filters.begin(); it != m_filters.end(); ++it)
     {
         auto& f = *it;
-        f.session = f.filter->obj->newSession(f.instance, m_session, m_service, &f.down, &f.up);
+        f.session = f.filter->obj()->newSession(f.instance, m_session, m_service, &f.down, &f.up);
 
         if (!f.session)
         {
-            MXS_ERROR("Failed to create filter session for '%s'", f.filter->name.c_str());
+            MXS_ERROR("Failed to create filter session for '%s'", f.filter->name());
 
             for (auto d = m_filters.begin(); d != it; ++d)
             {
                 mxb_assert(d->session);
-                d->filter->obj->closeSession(d->instance, d->session);
-                d->filter->obj->freeSession(d->instance, d->session);
+                d->filter->obj()->closeSession(d->instance, d->session);
+                d->filter->obj()->freeSession(d->instance, d->session);
             }
 
             m_filters.clear();
@@ -1335,7 +1326,7 @@ bool ServiceEndpoint::connect()
         it->down = chain_head;
         chain_head.instance = it->instance;
         chain_head.session = it->session;
-        chain_head.routeQuery = it->filter->obj->routeQuery;
+        chain_head.routeQuery = it->filter->obj()->routeQuery;
     }
 
     m_head = chain_head;
@@ -1348,7 +1339,7 @@ bool ServiceEndpoint::connect()
         it->up = chain_tail;
         chain_tail.instance = it->instance;
         chain_tail.session = it->session;
-        chain_tail.clientReply = it->filter->obj->clientReply;
+        chain_tail.clientReply = it->filter->obj()->clientReply;
     }
 
     m_tail = chain_tail;
@@ -1369,14 +1360,14 @@ void ServiceEndpoint::close()
 
     for (auto& a : m_filters)
     {
-        a.filter->obj->closeSession(a.instance, a.session);
+        a.filter->obj()->closeSession(a.instance, a.session);
     }
 
     m_service->router->freeSession(m_service->router_instance, m_router_session);
 
     for (auto& a : m_filters)
     {
-        a.filter->obj->freeSession(a.instance, a.session);
+        a.filter->obj()->freeSession(a.instance, a.session);
     }
 
     // Propagate the close to the downstream endpoints

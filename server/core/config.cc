@@ -3360,7 +3360,7 @@ json_t* param_value_to_json(const MXS_MODULE_PARAM* param_info, const string& na
     return rval;
 }
 
-void config_add_module_params_json(const mxs::ConfigParameters* parameters,
+void config_add_module_params_json(const mxs::ConfigParameters& parameters,
                                    const std::unordered_set<std::string>& ignored_params,
                                    const MXS_MODULE_PARAM* basic_params,
                                    const MXS_MODULE_PARAM* module_params,
@@ -3375,9 +3375,9 @@ void config_add_module_params_json(const mxs::ConfigParameters* parameters,
                 const string param_name = param_info[i].name;
                 if (ignored_params.count(param_name) == 0 && !json_object_get(output, param_name.c_str()))
                 {
-                    if (parameters->contains(param_name))
+                    if (parameters.contains(param_name))
                     {
-                        const string value = parameters->get_string(param_name);
+                        const string value = parameters.get_string(param_name);
                         json_object_set_new(output, param_name.c_str(),
                                             param_value_to_json(&param_info[i], param_name, value));
                     }

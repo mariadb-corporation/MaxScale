@@ -84,7 +84,7 @@ HttpResponse get_relationship(const HttpRequest& request, ObjectType type, const
         break;
 
     case ObjectType::FILTER:
-        json = filter_to_json(filter_find(name.c_str()), request.host());
+        json = filter_find(name)->to_json(request.host());
         break;
 
     case ObjectType::LISTENER:
@@ -654,14 +654,14 @@ HttpResponse cb_get_listener(const HttpRequest& request)
 
 HttpResponse cb_all_filters(const HttpRequest& request)
 {
-    return HttpResponse(MHD_HTTP_OK, filter_list_to_json(request.host()));
+    return HttpResponse(MHD_HTTP_OK, FilterDef::filter_list_to_json(request.host()));
 }
 
 HttpResponse cb_get_filter(const HttpRequest& request)
 {
     auto filter = filter_find(request.uri_part(1).c_str());
     mxb_assert(filter);
-    return HttpResponse(MHD_HTTP_OK, filter_to_json(filter, request.host()));
+    return HttpResponse(MHD_HTTP_OK, filter->to_json(request.host()));
 }
 
 HttpResponse cb_all_monitors(const HttpRequest& request)

@@ -722,8 +722,7 @@ json_t* Monitor::parameters_to_json() const
 {
     json_t* rval = json_object();
     const MXS_MODULE* mod = get_module(m_module.c_str(), MODULE_MONITOR);
-    auto my_config = parameters();
-    config_add_module_params_json(&my_config,
+    config_add_module_params_json(parameters(),
                                   {CN_TYPE, CN_MODULE, CN_SERVERS},
                                   common_monitor_params(),
                                   mod->parameters,

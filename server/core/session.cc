@@ -392,7 +392,7 @@ json_t* session_json_data(const Session* session, const char* host, bool rdns)
 
         for (const auto& f : filter_list)
         {
-            mxs_json_add_relation(filters, f.filter->name.c_str(), CN_FILTERS);
+            mxs_json_add_relation(filters, f.filter->name(), CN_FILTERS);
         }
         json_object_set_new(rel, CN_FILTERS, filters);
     }

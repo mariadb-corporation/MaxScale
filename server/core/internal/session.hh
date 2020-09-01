@@ -47,7 +47,7 @@ public:
 
     SessionFilter(const SFilterDef& f)
         : filter(f)
-        , instance(filter->filter)
+        , instance(filter->instance())
         , session(nullptr)
     {
     }

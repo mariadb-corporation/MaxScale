@@ -125,7 +125,7 @@ void config_remove_param(CONFIG_CONTEXT* obj, const char* name);
  * @param ignored_params Set of parameters which should not be added to the output
  * @param output Output JSON object where the parameters are added
  */
-void config_add_module_params_json(const mxs::ConfigParameters* parameters,
+void config_add_module_params_json(const mxs::ConfigParameters& parameters,
                                    const std::unordered_set<std::string>& ignored_params,
                                    const MXS_MODULE_PARAM* basic_params,
                                    const MXS_MODULE_PARAM* module_params,

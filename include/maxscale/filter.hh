@@ -189,25 +189,6 @@ typedef struct mxs_filter_def
 } MXS_FILTER_DEF;
 
 /**
- * Get the name of a filter definition. This corresponds to
- * to a filter section in the configuration file.
- *
- * @param filter_def  A filter definition.
- *
- * @return The filter name.
- */
-const char* filter_def_get_name(const MXS_FILTER_DEF* filter_def);
-
-/**
- * Get module name of a filter definition.
- *
- * @param filter_def  A filter definition.
- *
- * @return The module name.
- */
-const char* filter_def_get_module_name(const MXS_FILTER_DEF* filter_def);
-
-/**
  * Get the filter instance of a particular filter definition.
  *
  * @return A filter instance.

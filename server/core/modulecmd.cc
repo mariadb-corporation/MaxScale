@@ -351,7 +351,7 @@ static bool process_argument(const MODULECMD* cmd,
             if (auto f = filter_find((char*)value))
             {
                 arg->value.filter = f.get();
-                const char* orig_name = filter_def_get_module_name(arg->value.filter);
+                const char* orig_name = f->module();
                 const char* eff_name = mxs_module_get_effective_name(orig_name);
                 if (MODULECMD_ALLOW_NAME_MISMATCH(type) || strcasecmp(cmd->domain, eff_name) == 0)
                 {

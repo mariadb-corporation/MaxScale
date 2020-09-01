@@ -661,9 +661,9 @@ bool runtime_create_filter(const char* name, const char* module, mxs::ConfigPara
         if (filter)
         {
             std::ostringstream ss;
-            filter_persist(filter, ss);
+            filter->persist(ss);
 
-            if (runtime_save_config(filter->name.c_str(), ss.str()))
+            if (runtime_save_config(filter->name(), ss.str()))
             {
                 MXS_NOTICE("Created filter '%s'", name);
                 rval = true;
@@ -1759,7 +1759,7 @@ bool runtime_destroy_filter(const SFilterDef& filter, bool force)
 
     if (service_filter_in_use(filter).empty())
     {
-        if (runtime_remove_config(filter->name.c_str()))
+        if (runtime_remove_config(filter->name()))
         {
             filter_destroy(filter);
             rval = true;
@@ -1767,7 +1767,8 @@ bool runtime_destroy_filter(const SFilterDef& filter, bool force)
     }
     else
     {
-        MXS_ERROR("Filter '%s' cannot be destroyed: Remove it from all services first", filter->name.c_str());
+        MXS_ERROR("Filter '%s' cannot be destroyed: Remove it from all services first",
+                  filter->name());
     }
 
     return rval;

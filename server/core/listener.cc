@@ -464,7 +464,7 @@ json_t* Listener::to_json(const char* host) const
     json_t* param = json_object();
 
     const MXS_MODULE* mod = get_module(m_protocol.c_str(), MODULE_PROTOCOL);
-    config_add_module_params_json(&m_params,
+    config_add_module_params_json(m_params,
                                   {CN_TYPE, CN_SERVICE},
                                   common_listener_params(),
                                   mod->parameters,
