@@ -122,6 +122,11 @@ public:
         return this->server->address();
     }
 
+    int port() const
+    {
+        return this->server->port();
+    }
+
     cs::Version minor_version() const
     {
         return m_minor_version;

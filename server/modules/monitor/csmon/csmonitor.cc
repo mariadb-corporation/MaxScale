@@ -273,7 +273,7 @@ const int SCHEMA_VERSION = 1;
 
 static const char SQL_BN_CREATE[] =
     "CREATE TABLE IF NOT EXISTS bootstrap_nodes "
-    "(ip CARCHAR(255), mysql_port INT)";
+    "(ip TEXT, mysql_port INT)";
 
 static const char SQL_BN_INSERT_FORMAT[] =
     "INSERT INTO bootstrap_nodes (ip, mysql_port) "
@@ -284,6 +284,25 @@ static const char SQL_BN_DELETE[] =
 
 static const char SQL_BN_SELECT[] =
     "SELECT ip, mysql_port FROM bootstrap_nodes";
+
+
+static const char SQL_DN_CREATE[] =
+    "CREATE TABLE IF NOT EXISTS dynamic_nodes "
+    "(ip TEXT PRIMARY KEY, mysql_port INT)";
+
+static const char SQL_DN_UPSERT_FORMAT[] =
+    "INSERT OR REPLACE INTO dynamic_nodes (id, mysql_port) "
+    "VALUES ('%s')";
+
+static const char SQL_DN_DELETE_FORMAT[] =
+    "DELETE FROM dynamic_nodes WHERE ip = '%s'";
+
+static const char SQL_DN_DELETE[] =
+    "DELETE FROM dynamic_nodes";
+
+static const char SQL_DN_SELECT[] =
+    "SELECT ip FROM dynamic_nodes";
+
 
 using HostPortPair = std::pair<std::string, int>;
 using HostPortPairs = std::vector<HostPortPair>;
@@ -307,6 +326,12 @@ bool create_schema(sqlite3* pDb)
 {
     char* pError = nullptr;
     int rv = sqlite3_exec(pDb, SQL_BN_CREATE, nullptr, nullptr, &pError);
+
+    if (rv == SQLITE_OK)
+    {
+        rv = sqlite3_exec(pDb, SQL_DN_CREATE, nullptr, nullptr, &pError);
+    }
+
 
     if (rv != SQLITE_OK)
     {
@@ -1352,6 +1377,30 @@ void CsMonitor::pre_loop()
 
 void CsMonitor::check_cluster()
 {
+    HostPortPairs nodes;
+    char* pError = nullptr;
+
+    if (sqlite3_exec(m_pDb, SQL_DN_SELECT, select_cb, &nodes, &pError) != SQLITE_OK)
+    {
+        MXS_WARNING("Could not lookup earlier nodes: %s", pError ? pError : "Unknown error");
+        nodes.clear();
+    }
+
+    if (nodes.empty())
+    {
+        MXS_NOTICE("Checking cluster using bootstrap nodes.");
+
+        for (auto* pMs : servers())
+        {
+            nodes.push_back(HostPortPair(pMs->address(), pMs->port()));
+        }
+    }
+
+    check_cluster(nodes);
+}
+
+void CsMonitor::check_cluster(const HostPortPairs& nodes)
+{
     mxb_assert(!true);
 }
 
@@ -1376,9 +1425,7 @@ bool CsMonitor::check_bootstrap_servers()
 
         for (const auto* pMs : servers())
         {
-            SERVER* pServer = pMs->server;
-
-            string s = string(pServer->address()) + ":" + std::to_string(pServer->port());
+            string s = string(pMs->address()) + ":" + std::to_string(pMs->port());
             current_bootstrap_servers.insert(s);
         }
 

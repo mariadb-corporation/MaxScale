@@ -120,7 +120,11 @@ private:
 
     void pre_loop() override;
 
+    using HostPortPair = std::pair<std::string, int>;
+    using HostPortPairs = std::vector<HostPortPair>;
+
     void check_cluster();
+    void check_cluster(const HostPortPairs&);
 
     bool check_bootstrap_servers();
     bool remove_persisted_information();
