@@ -200,6 +200,7 @@ Pinloki* Pinloki::create(SERVICE* pService, mxs::ConfigParameters* pParams)
     if (config.configure(*pParams))
     {
         rval = new Pinloki(pService, std::move(config));
+        pService->set_custom_version_suffix("-BinlogRouter");
     }
 
     return rval;

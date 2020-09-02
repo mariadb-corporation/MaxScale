@@ -1691,6 +1691,11 @@ std::string SERVICE::version_string() const
                 smallest_found = version;
             }
         }
+
+        if (!m_custom_version_suffix.empty() && !rval.empty())
+        {
+            rval.append(m_custom_version_suffix);
+        }
     }
 
     return rval;
@@ -1724,6 +1729,17 @@ uint8_t SERVICE::charset() const
     }
 
     return rval;
+}
+
+const std::string& SERVICE::custom_version_suffix()
+{
+    return m_custom_version_suffix;
+}
+
+void SERVICE::set_custom_version_suffix(const string& custom_version_suffix)
+{
+    mxb_assert(m_custom_version_suffix.empty());    // Should only be set once.
+    m_custom_version_suffix = custom_version_suffix;
 }
 
 void Service::wakeup_sessions_waiting_userdata()
