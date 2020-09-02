@@ -514,8 +514,6 @@ void MariaDBMonitor::tick()
     }
 
     log_master_changes();
-
-    flush_server_status();
     process_state_changes();
     hangup_failed_servers();
     store_server_journal(m_master ? m_master->m_server_base : nullptr);
