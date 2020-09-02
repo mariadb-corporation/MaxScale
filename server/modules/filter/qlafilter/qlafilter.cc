@@ -142,9 +142,9 @@ QlaInstance::~QlaInstance()
     }
 }
 
-QlaFilterSession::QlaFilterSession(QlaInstance& instance, MXS_SESSION* session)
-    : m_instance(instance)
-    , m_pMxs_session(session)
+QlaFilterSession::QlaFilterSession(QlaInstance& instance, MXS_SESSION* session, SERVICE* service)
+    : mxs::FilterSession(session, service)
+    , m_instance(instance)
     , m_user(session_get_user(session))
     , m_remote(session_get_remote(session))
     , m_service(session->service->name())
@@ -170,7 +170,7 @@ void QlaFilterSession::close()
     m_event_data.clear();
 }
 
-QlaInstance* QlaInstance::create(const std::string name, mxs::ConfigParameters* params)
+QlaInstance* QlaInstance::create(const char* name, mxs::ConfigParameters* params)
 {
     QlaInstance* my_instance = NULL;
 
@@ -214,20 +214,14 @@ QlaInstance* QlaInstance::create(const std::string name, mxs::ConfigParameters* 
     return my_instance;
 }
 
-QlaFilterSession* QlaInstance::newSession(MXS_SESSION* session, mxs::Downstream* down, mxs::Upstream* up)
+QlaFilterSession* QlaInstance::newSession(MXS_SESSION* session, SERVICE* service)
 {
-    auto my_session = new(std::nothrow) QlaFilterSession(*this, session);
-    if (my_session)
+    auto my_session = new(std::nothrow) QlaFilterSession(*this, session, service);
+    if (my_session && !my_session->prepare())
     {
-        my_session->down = down;
-        my_session->up = up;
-
-        if (!my_session->prepare())
-        {
-            my_session->close();
-            delete my_session;
-            my_session = nullptr;
-        }
+        my_session->close();
+        delete my_session;
+        my_session = nullptr;
     }
     return my_session;
 }
@@ -333,6 +327,18 @@ json_t* QlaInstance::diagnostics() const
     json_object_set_new(rval, PARAM_SEPARATOR, json_string(m_settings.separator.c_str()));
     json_object_set_new(rval, PARAM_NEWLINE, json_string(m_settings.query_newline.c_str()));
 
+    return rval;
+}
+
+uint64_t QlaInstance::getCapabilities() const
+{
+    return CAPABILITIES;
+}
+
+json_t* QlaFilterSession::diagnostics() const
+{
+    json_t* rval = json_object();
+    json_object_set_new(rval, "session_filename", json_string(m_filename.c_str()));
     return rval;
 }
 
@@ -445,7 +451,7 @@ int QlaFilterSession::routeQuery(GWBUF* queue)
         }
     }
     /* Pass the query downstream */
-    return down->routeQuery(down->instance, down->session, queue);
+    return mxs::FilterSession::routeQuery(queue);
 }
 
 int QlaFilterSession::clientReply(GWBUF* queue, const mxs::ReplyRoute& down, const mxs::Reply& reply)
@@ -473,7 +479,7 @@ int QlaFilterSession::clientReply(GWBUF* queue, const mxs::ReplyRoute& down, con
         write_log_entries(elems);
         event.clear();
     }
-    return up->clientReply(up->instance, up->session, queue, down, reply);
+    return mxs::FilterSession::clientReply(queue, down, reply);
 }
 
 FILE* QlaInstance::open_session_log_file(const string& filename) const
@@ -642,7 +648,7 @@ string QlaFilterSession::generate_log_entry(uint64_t data_flags, const LogEventE
     }
     if (data_flags & QlaInstance::LOG_DATA_DEFAULT_DB)
     {
-        std::string db = m_pMxs_session->database().empty() ? "(none)" : m_pMxs_session->database();
+        std::string db = m_pSession->database().empty() ? "(none)" : m_pSession->database();
 
         output << curr_sep << db;
         curr_sep = real_sep;
@@ -839,72 +845,6 @@ bool check_replace_file(const string& filename, FILE** ppFile)
     return newfile;
 }
 
-MXS_FILTER* createInstance(const char* name, mxs::ConfigParameters* params)
-{
-    return QlaInstance::create(name, params);
-}
-
-void destroyInstance(MXS_FILTER* filter)
-{
-    delete static_cast<QlaInstance*>(filter);
-}
-
-MXS_FILTER_SESSION* newSession(MXS_FILTER* instance,
-                               MXS_SESSION* session,
-                               SERVICE* service,
-                               mxs::Downstream* down,
-                               mxs::Upstream* up)
-{
-    auto my_instance = static_cast<QlaInstance*>(instance);
-    return my_instance->newSession(session, down, up);
-}
-
-void closeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session)
-{
-    auto my_session = static_cast<QlaFilterSession*>(session);
-    my_session->close();
-}
-
-void freeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session)
-{
-    QlaFilterSession* my_session = (QlaFilterSession*) session;
-    delete my_session;
-}
-
-uint64_t getCapabilities(MXS_FILTER* instance)
-{
-    return CAPABILITIES;
-}
-
-int routeQuery(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GWBUF* queue)
-{
-    QlaFilterSession* my_session = (QlaFilterSession*) session;
-    return my_session->routeQuery(queue);
-}
-
-int clientReply(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GWBUF* queue,
-                const mxs::ReplyRoute& down, const mxs::Reply& reply)
-{
-    QlaFilterSession* my_session = (QlaFilterSession*) session;
-    return my_session->clientReply(queue, down, reply);
-}
-
-json_t* diagnostics(const MXS_FILTER* instance, const MXS_FILTER_SESSION* fsession)
-{
-    auto my_session = static_cast<const QlaFilterSession*>(fsession);
-    if (my_session)
-    {
-        json_t* rval = json_object();
-        json_object_set_new(rval, "session_filename", json_string(my_session->m_filename.c_str()));
-        return rval;
-    }
-    else
-    {
-        auto my_instance = static_cast<const QlaInstance*>(instance);
-        return my_instance->diagnostics();
-    }
-}
-
 bool cb_log(const MODULECMD_ARG* argv, json_t** output)
 {
     mxb_assert(argv->argc > 0);
@@ -946,19 +886,6 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
                                cb_log, 3, args,
                                "Show unified log file as a JSON array");
 
-    static MXS_FILTER_OBJECT MyObject =
-    {
-        createInstance,
-        newSession,
-        closeSession,
-        freeSession,
-        routeQuery,
-        clientReply,
-        diagnostics,
-        getCapabilities,
-        destroyInstance,
-    };
-
     static const char description[] = "A simple query logging filter";
     static MXS_MODULE info =
     {
@@ -968,7 +895,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         description,
         "V1.1.1",
         CAPABILITIES,
-        &MyObject,
+        &QlaInstance::s_object,
         NULL,                   /* Process init. */
         NULL,                   /* Process finish. */
         NULL,                   /* Thread init. */

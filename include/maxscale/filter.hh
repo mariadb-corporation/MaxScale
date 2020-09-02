@@ -426,6 +426,9 @@ protected:
  *
  *      // Get filter capabilities
  *      uint64_t getCapabilities();
+ *
+ *      // Reconfigure filter at runtime (see configureInstance)
+ *      bool configure(mxs::ConfigParameters* param);
  * };
  * @endcode
  *

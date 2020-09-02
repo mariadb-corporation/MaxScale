@@ -32,7 +32,7 @@ struct LogEventElems;
  * To this base a session number is attached such that each session will
  * have a unique name.
  */
-class QlaInstance : public MXS_FILTER
+class QlaInstance : public mxs::Filter<QlaInstance, QlaFilterSession>
 {
 public:
     QlaInstance(const QlaInstance&) = delete;
@@ -61,7 +61,7 @@ public:
      * @param session   The generic session
      * @return          Router session on null on error
      */
-    QlaFilterSession* newSession(MXS_SESSION* session, mxs::Downstream* down, mxs::Upstream* up);
+    QlaFilterSession* newSession(MXS_SESSION* session, SERVICE* service);
 
     /**
      * Create an instance of the filter for a particular service within MaxScale.
@@ -70,7 +70,7 @@ public:
      * @param params    The array of name/value pair parameters for the filter
      * @return          The new filter instance, or NULL on error
      */
-    static QlaInstance* create(const std::string name, mxs::ConfigParameters* params);
+    static QlaInstance* create(const char* name, mxs::ConfigParameters* params);
 
     /**
      * Read contents of unified log file and save to json object.
@@ -83,6 +83,14 @@ public:
     bool read_to_json(int start, int end, json_t** output) const;
 
     json_t* diagnostics() const;
+
+    bool configure(mxs::ConfigParameters* param)
+    {
+        // TODO: Implement this
+        return true;
+    }
+
+    uint64_t getCapabilities() const;
 
     std::string generate_log_header(uint64_t data_flags) const;
 
@@ -135,12 +143,12 @@ private:
 };
 
 /* The session structure for this QLA filter. */
-class QlaFilterSession : public MXS_FILTER_SESSION
+class QlaFilterSession : public mxs::FilterSession
 {
 public:
     QlaFilterSession(const QlaFilterSession&) = delete;
     QlaFilterSession& operator=(const QlaFilterSession&) = delete;
-    QlaFilterSession(QlaInstance& instance, MXS_SESSION* session);
+    QlaFilterSession(QlaInstance& instance, MXS_SESSION* session, SERVICE* service);
     ~QlaFilterSession();
 
     /**
@@ -171,19 +179,16 @@ public:
      */
     void close();
 
-    mxs::Upstream*   up;
-    mxs::Downstream* down;
-
-    std::string m_filename;     /* The session-specific log file name */
+    json_t* diagnostics() const;
 
 private:
     QlaInstance& m_instance;
-    MXS_SESSION* m_pMxs_session;        /* The corresponding mxs session */
 
-    const std::string m_user;           /* Client username */
-    const std::string m_remote;         /* Client address */
-    const std::string m_service;        /* The service name this filter is attached to. */
-    const uint64_t    m_ses_id {0};     /* The session this filter session serves. */
+    std::string       m_filename;   /* The session-specific log file name */
+    const std::string m_user;       /* Client username */
+    const std::string m_remote;     /* Client address */
+    const std::string m_service;    /* The service name this filter is attached to. */
+    const uint64_t    m_ses_id {0}; /* The session this filter session serves. */
 
     bool              m_active {false};     /* Is session active? */
     pcre2_match_data* m_mdata {nullptr};    /* Regex match data */
