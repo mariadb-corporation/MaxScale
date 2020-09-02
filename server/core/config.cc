@@ -2724,7 +2724,8 @@ static bool param_is_deprecated(const MXS_MODULE_PARAM* params, const char* name
     {
         if (strcmp(params[i].name, name) == 0)
         {
-            if (params[i].options & MXS_MODULE_OPT_DEPRECATED)
+            if (params[i].options & MXS_MODULE_OPT_DEPRECATED
+                || params[i].type == MXS_MODULE_PARAM_DEPRECATED)
             {
                 MXS_WARNING("Parameter '%s' for module '%s' is deprecated and "
                             "will be ignored.",
@@ -2811,6 +2812,9 @@ const char* param_type_to_str(const MXS_MODULE_PARAM* params, const char* name)
 
             case MXS_MODULE_PARAM_DURATION:
                 return "a duration";
+
+            case MXS_MODULE_PARAM_DEPRECATED:
+                return "a deprecated parameter";
             }
 
             mxb_assert_message(!true,
@@ -4062,6 +4066,10 @@ bool config_param_is_valid(const MXS_MODULE_PARAM* params,
                 valid = check_path_parameter(&params[i], value);
                 break;
 
+            case MXS_MODULE_PARAM_DEPRECATED:
+                valid = true;
+                break;
+
             default:
                 MXS_ERROR("Unexpected module parameter type: %d", params[i].type);
                 mxb_assert(false);
@@ -4661,7 +4669,8 @@ std::string generate_config_string(const std::string& instance_name, const mxs::
             {
                 auto param_info = param_set + i;
                 // Do not print deprecated parameters.
-                if ((param_info->options & MXS_MODULE_OPT_DEPRECATED) == 0)
+                if ((param_info->options & MXS_MODULE_OPT_DEPRECATED) == 0
+                    && param_info->type != MXS_MODULE_PARAM_DEPRECATED)
                 {
                     string param_name = param_info->name;
                     if (parameters.contains(param_name))

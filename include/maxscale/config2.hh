@@ -274,6 +274,11 @@ public:
     bool is_optional() const;
 
     /**
+     * @return True if the parameter is deprecated
+     */
+    bool is_deprecated() const;
+
+    /**
      * Synonym for @c is_optional.
      *
      * @return True, if the parameter has a default value.
@@ -345,6 +350,39 @@ protected:
     const Modifiable            m_modifiable;
     const Kind                  m_kind;
     const mxs_module_param_type m_legacy_type;
+};
+
+/**
+ * Deprecated parameter. Causes a warning to be logged if it is used.
+ */
+class ParamDeprecated : public Param
+{
+public:
+    ParamDeprecated(Specification* pSpecification, const char* zName)
+        : Param(pSpecification, zName, "This parameter is deprecated",
+                AT_STARTUP, OPTIONAL, MXS_MODULE_PARAM_DEPRECATED)
+    {
+    }
+
+    std::string type() const
+    {
+        return "deprecated";
+    }
+
+    std::string default_to_string() const override
+    {
+        return "deprecated";
+    }
+
+    bool validate(const std::string& value_as_string, std::string* pMessage) const
+    {
+        return true;
+    }
+
+    bool validate(json_t* value_as_json, std::string* pMessage) const
+    {
+        return true;
+    }
 };
 
 /**

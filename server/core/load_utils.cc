@@ -680,7 +680,12 @@ static json_t* module_json_data(const LOADED_MODULE* mod, const char* host)
 
     for (int i = 0; mod->info->parameters[i].name; i++)
     {
-        json_array_append_new(params, module_param_to_json(mod->info->parameters[i]));
+        const auto& p = mod->info->parameters[i];
+
+        if (p.type != MXS_MODULE_PARAM_DEPRECATED && (p.options & MXS_MODULE_OPT_DEPRECATED) == 0)
+        {
+            json_array_append_new(params, module_param_to_json(p));
+        }
     }
 
     const MXS_MODULE_PARAM* extra = nullptr;

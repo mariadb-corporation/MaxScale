@@ -296,7 +296,10 @@ json_t* Specification::to_json() const
     {
         const Param* pParam = kv.second;
 
-        json_array_append_new(pSpecification, pParam->to_json());
+        if (!pParam->is_deprecated())
+        {
+            json_array_append_new(pSpecification, pParam->to_json());
+        }
     }
 
     return pSpecification;
@@ -369,6 +372,11 @@ bool Param::is_mandatory() const
 bool Param::is_optional() const
 {
     return m_kind == OPTIONAL;
+}
+
+bool Param::is_deprecated() const
+{
+    return m_legacy_type == MXS_MODULE_PARAM_DEPRECATED;
 }
 
 bool Param::has_default_value() const
