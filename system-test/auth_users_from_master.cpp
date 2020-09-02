@@ -107,7 +107,7 @@ int main(int argc, char* argv[])
                   (char*) "CREATE USER 'test_user'@'%%' IDENTIFIED BY 'pass'");
 
     MYSQL* conn = open_conn_no_db(Test->maxscales->rwsplit_port[0],
-                                  Test->maxscales->IP[0],
+                                  Test->maxscales->ip4(0),
                                   (char*) "test_user",
                                   (char*) "pass",
                                   Test->ssl);

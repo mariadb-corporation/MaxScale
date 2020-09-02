@@ -67,7 +67,7 @@ int main(int argc, char* argv[])
     Test->maxscales->connect_maxscale(0);
 
     conn_found_rows = open_conn_db_flags(Test->maxscales->rwsplit_port[0],
-                                         Test->maxscales->IP[0],
+                                         Test->maxscales->ip4(0),
                                          (char*) "test",
                                          Test->maxscales->user_name,
                                          Test->maxscales->password,

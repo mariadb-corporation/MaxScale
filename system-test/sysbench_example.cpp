@@ -19,9 +19,10 @@ int main(int argc, char* argv[])
 
     Test->maxscales->ssh_node(0, "maxscale --version-full", false);
     fflush(stdout);
-    Test->tprintf("Connecting to RWSplit %s\n", Test->maxscales->IP[0]);
+    auto mxs_ip = Test->maxscales->ip4(0);
+    Test->tprintf("Connecting to RWSplit %s\n", mxs_ip);
 
-    sprintf(&sys1[0], SYSBENCH_PREPARE_SHORT, Test->maxscales->IP[0]);
+    sprintf(&sys1[0], SYSBENCH_PREPARE_SHORT, mxs_ip);
 
     Test->tprintf("Preparing sysbench tables\n%s\n", sys1);
     Test->set_timeout(10000);
@@ -29,8 +30,7 @@ int main(int argc, char* argv[])
 
     Test->stop_timeout();
 
-    sprintf(&sys1[0], SYSBENCH_COMMAND_SHORT, Test->maxscales->IP[0],
-            Test->maxscales->rwsplit_port[0]);
+    sprintf(&sys1[0], SYSBENCH_COMMAND_SHORT, mxs_ip, Test->maxscales->rwsplit_port[0]);
     Test->set_log_copy_interval(300);
     Test->tprintf("Executing sysbench \n%s\n", sys1);
     if (system(sys1) != 0)

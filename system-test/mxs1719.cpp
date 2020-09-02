@@ -40,7 +40,7 @@ void run(TestConnections& test)
     int port = test.maxscales->rwsplit_port[0];
 
     if (mysql_real_connect(pMysql,
-                           test.maxscales->IP[0],
+                           test.maxscales->ip4(0),
                            zUser,
                            zPassword,
                            "test",

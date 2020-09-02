@@ -116,9 +116,10 @@ void* query_thread1(void* ptr)
     MYSQL* conn3;
     int conn_err = 0;
     thread_data* data = (thread_data*) ptr;
-    conn1 = open_conn_db_timeout(data->Test->maxscales->rwsplit_port[0],
-                                 data->Test->maxscales->IP[0],
-                                 (char*) "test",
+    auto mxs_ip = data->Test->maxscales->ip4(0);
+
+    conn1 = open_conn_db_timeout(data->Test->maxscales->rwsplit_port[0], mxs_ip,
+                                 "test",
                                  data->Test->maxscales->user_name,
                                  data->Test->maxscales->password,
                                  20,
@@ -131,9 +132,8 @@ void* query_thread1(void* ptr)
     if (data->rwsplit_only == 0)
     {
         // conn2 = data->Test->maxscales->open_readconn_master_connection(0);
-        conn2 = open_conn_db_timeout(data->Test->maxscales->readconn_master_port[0],
-                                     data->Test->maxscales->IP[0],
-                                     (char*) "test",
+        conn2 = open_conn_db_timeout(data->Test->maxscales->readconn_master_port[0], mxs_ip,
+                                     "test",
                                      data->Test->maxscales->user_name,
                                      data->Test->maxscales->password,
                                      20,
@@ -143,9 +143,8 @@ void* query_thread1(void* ptr)
             conn_err++;
         }
         // conn3 = data->Test->maxscales->open_readconn_slave_connection(0);
-        conn3 = open_conn_db_timeout(data->Test->maxscales->readconn_slave_port[0],
-                                     data->Test->maxscales->IP[0],
-                                     (char*) "test",
+        conn3 = open_conn_db_timeout(data->Test->maxscales->readconn_slave_port[0], mxs_ip,
+                                     "test",
                                      data->Test->maxscales->user_name,
                                      data->Test->maxscales->password,
                                      20,
@@ -186,10 +185,11 @@ void* query_thread2(void* ptr)
     MYSQL* conn2;
     MYSQL* conn3;
     thread_data* data = (thread_data*) ptr;
+    auto mxs_ip = data->Test->maxscales->ip4(0);
+
     // conn1 = data->Test->maxscales->open_rwsplit_connection(0);
-    conn1 = open_conn_db_timeout(data->Test->maxscales->rwsplit_port[0],
-                                 data->Test->maxscales->IP[0],
-                                 (char*) "test",
+    conn1 = open_conn_db_timeout(data->Test->maxscales->rwsplit_port[0], mxs_ip,
+                                 "test",
                                  data->Test->maxscales->user_name,
                                  data->Test->maxscales->password,
                                  20,
@@ -199,17 +199,15 @@ void* query_thread2(void* ptr)
         // conn2 = data->Test->maxscales->open_readconn_master_connection(0);
         // conn3 = data->Test->maxscales->open_readconn_slave_connection(0);
 
-        conn2 = open_conn_db_timeout(data->Test->maxscales->readconn_master_port[0],
-                                     data->Test->maxscales->IP[0],
-                                     (char*) "test",
+        conn2 = open_conn_db_timeout(data->Test->maxscales->readconn_master_port[0], mxs_ip,
+                                     "test",
                                      data->Test->maxscales->user_name,
                                      data->Test->maxscales->password,
                                      20,
                                      data->Test->ssl);
         // if (mysql_errno(conn2) != 0) { conn_err++; }
-        conn3 = open_conn_db_timeout(data->Test->maxscales->readconn_slave_port[0],
-                                     data->Test->maxscales->IP[0],
-                                     (char*) "test",
+        conn3 = open_conn_db_timeout(data->Test->maxscales->readconn_slave_port[0], mxs_ip,
+                                     "test",
                                      data->Test->maxscales->user_name,
                                      data->Test->maxscales->password,
                                      20,

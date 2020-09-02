@@ -64,6 +64,8 @@ int main(int argc, char** argv)
     const string delete_pam_message_cmd = "rm -f " + pam_message_file;
 
     test.repl->connect();
+    auto mxs_ip = test.maxscales->ip4(0);
+
     // Prepare the backends for PAM authentication. Enable the plugin and create a user. Also,
     // make /etc/shadow readable for all so that the server process can access it.
     for (int i = 0; i < test.repl->N; i++)
@@ -302,8 +304,7 @@ int main(int argc, char** argv)
         // authenticator_options=match_host=false.
         string user = "maxhost_user";
         auto userz = user.c_str();
-        string host = test.maxscales->IP[0];
-        auto hostz = host.c_str();
+        auto hostz = mxs_ip;
         string pass = "maxhost_pass";
         MYSQL* conn = test.repl->nodes[0];
         test.try_query(conn, create_fmt, userz, hostz, pass.c_str());
@@ -349,8 +350,8 @@ int main(int argc, char** argv)
         test.try_query(conn, create_db_fmt, test_db2);
         test.try_query(conn, grant_sel_fmt, test_db2, userz, host);
 
-        auto test_normal_login_short = [&test, &user, pass](int port, const string& db) {
-                auto host = test.maxscales->IP[0];
+        auto test_normal_login_short = [&test, &user, pass, mxs_ip](int port, const string& db) {
+                auto host = mxs_ip;
                 MYSQL* maxconn = nullptr;
                 maxconn = open_conn_db(port, host, db, user, pass);
                 auto err = mysql_error(maxconn);
@@ -514,7 +515,7 @@ int main(int argc, char** argv)
 bool test_pam_login(TestConnections& test, int port, const string& user, const string& pass,
                     const string& database)
 {
-    const char* host = test.maxscales->IP[0];
+    const char* host = test.maxscales->ip4(0);
     const char* db = nullptr;
     if (!database.empty())
     {
@@ -561,7 +562,7 @@ bool test_normal_login(TestConnections& test, int port, const string& user, cons
                        const string& db)
 {
     bool rval = false;
-    auto host = test.maxscales->IP[0];
+    auto host = test.maxscales->ip4(0);
     MYSQL* maxconn = nullptr;
     if (db.empty())
     {

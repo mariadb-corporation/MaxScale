@@ -18,7 +18,7 @@ int main(int argc, char* argv[])
     Test->set_timeout(20);
     Test->repl->connect();
 
-    get_my_ip(Test->maxscales->IP[0], my_ip);
+    get_my_ip(Test->maxscales->ip4(0), my_ip);
     Test->tprintf("Test machine IP (got via network request) %s\n", my_ip);
 
     Test->add_result(Test->get_client_ip(0, my_ip_db), "Unable to get IP using connection to DB\n");
@@ -45,7 +45,7 @@ int main(int argc, char* argv[])
     Test->tprintf("Trying to open connection using user1\n");
 
     MYSQL* conn = open_conn(Test->maxscales->rwsplit_port[0],
-                            Test->maxscales->IP[0],
+                            Test->maxscales->ip4(0),
                             (char*) "user1",
                             (char*) "pass1",
                             Test->ssl);

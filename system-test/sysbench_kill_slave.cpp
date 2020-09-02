@@ -30,15 +30,16 @@ int main(int argc, char* argv[])
     port[1] = Test->maxscales->readconn_master_port[0];
     // port[2] = Test->maxscales->readconn_slave_port[0];
 
-    Test->tprintf("Connecting to RWSplit %s\n", Test->maxscales->IP[0]);
+    auto mxs_ip = Test->maxscales->ip4(0);
+    Test->tprintf("Connecting to RWSplit %s\n", mxs_ip);
 
     if (Test->smoke)
     {
-        sprintf(&sys1[0], SYSBENCH_PREPARE1, Test->maxscales->IP[0]);
+        sprintf(&sys1[0], SYSBENCH_PREPARE1, mxs_ip);
     }
     else
     {
-        sprintf(&sys1[0], SYSBENCH_PREPARE, Test->maxscales->IP[0]);
+        sprintf(&sys1[0], SYSBENCH_PREPARE, mxs_ip);
     }
 
     Test->tprintf("Preparing sysbench tables\n%s\n", sys1);
@@ -53,11 +54,11 @@ int main(int argc, char* argv[])
 
         if (Test->smoke)
         {
-            sprintf(&sys1[0], SYSBENCH_COMMAND1, Test->maxscales->IP[0], port[k]);
+            sprintf(&sys1[0], SYSBENCH_COMMAND1, mxs_ip, port[k]);
         }
         else
         {
-            sprintf(&sys1[0], SYSBENCH_COMMAND, Test->maxscales->IP[0], port[k]);
+            sprintf(&sys1[0], SYSBENCH_COMMAND, mxs_ip, port[k]);
         }
         Test->tprintf("Executing sysbench tables\n%s\n", sys1);
         if (system(sys1) != 0)

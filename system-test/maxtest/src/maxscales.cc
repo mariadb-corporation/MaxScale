@@ -49,23 +49,24 @@ int Maxscales::read_env()
 
     read_basic_env();
 
-    sprintf(env_name, "%s_user", prefix);
+    auto prefixc = prefix().c_str();
+    sprintf(env_name, "%s_user", prefixc);
     user_name = readenv(env_name, "skysql");
 
-    sprintf(env_name, "%s_password", prefix);
+    sprintf(env_name, "%s_password", prefixc);
     password = readenv(env_name, "skysql");
 
     if ((N > 0) && (N < 255))
     {
         for (int i = 0; i < N; i++)
         {
-            sprintf(env_name, "%s_%03d_cnf", prefix, i);
+            sprintf(env_name, "%s_%03d_cnf", prefixc, i);
             maxscale_cnf[i] = readenv(env_name, DEFAULT_MAXSCALE_CNF);
 
-            sprintf(env_name, "%s_%03d_log_dir", prefix, i);
+            sprintf(env_name, "%s_%03d_log_dir", prefixc, i);
             maxscale_log_dir[i] = readenv(env_name, DEFAULT_MAXSCALE_LOG_DIR);
 
-            sprintf(env_name, "%s_%03d_binlog_dir", prefix, i);
+            sprintf(env_name, "%s_%03d_binlog_dir", prefixc, i);
             maxscale_binlog_dir[i] = readenv(env_name, DEFAULT_MAXSCALE_BINLOG_DIR);
 
             rwsplit_port[i] = 4006;
@@ -321,6 +322,16 @@ const char* Maxscales::access_sudo(int i) const
 const char* Maxscales::sshkey(int i) const
 {
     return Nodes::sshkey(i);
+}
+
+const std::string& Maxscales::prefix() const
+{
+    return Nodes::prefix();
+}
+
+const char* Maxscales::ip4(int i) const
+{
+    return Nodes::ip4(i);
 }
 
 namespace maxtest

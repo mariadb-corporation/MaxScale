@@ -433,7 +433,7 @@ int main(int argc, char* argv[])
     // For debugging the test and functionality, allow the BLR host and port to be
     // specified/ using environment variables.
     zValue = getenv("MXS1980_BLR_HOST");
-    const char* zMaxscale_host = (zValue ? zValue : test.maxscales->IP[0]);
+    const char* zMaxscale_host = (zValue ? zValue : test.maxscales->ip4(0));
     cout << "MaxScale host: " << zMaxscale_host << endl;
 
     zValue = getenv("MXS1980_BLR_PORT");

@@ -32,6 +32,7 @@ public:
     int  read_env();
     void set_use_ipv6(bool use_ipv6);
 
+    const char* ip4(int i = 0) const;
     const char* ip(int i = 0) const;
 
     const char* hostname(int i = 0) const;
@@ -40,6 +41,8 @@ public:
     const char* access_homedir(int i = 0) const;
     const char* access_sudo(int i = 0) const;
     const char* sshkey(int i = 0) const;
+
+    const std::string& prefix() const;
 
     /**
      * @brief rwsplit_port RWSplit service port

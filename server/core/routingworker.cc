@@ -588,6 +588,10 @@ BackendDCB* RoutingWorker::get_backend_dcb_from_pool(SERVER* pS,
         mxb_assert(m_dcbs.find(pDcb) == m_dcbs.end());
         m_dcbs.insert(pDcb);
     }
+    else
+    {
+        mxb::atomic::add(&pServer->pool_stats().n_new_conn, 1, mxb::atomic::RELAXED);
+    }
 
     return pDcb;
 }

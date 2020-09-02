@@ -47,6 +47,8 @@ public:
     const char* ip_private(int i = 0) const;
     const char* access_homedir(int i = 0) const;
 
+    const std::string& prefix() const;
+
     /**
      * @brief  MYSQL structs for every backend node
      */

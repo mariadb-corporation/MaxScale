@@ -23,7 +23,7 @@ const int threads_type_num = 4;
 int threads_num[threads_type_num];
 const int max_threads_num = 32;
 int port;
-char * IP;
+const char* IP;
 
 typedef struct
 {
@@ -60,7 +60,7 @@ int main(int argc, char *argv[])
 
 
     port = Test->maxscales->rwsplit_port[0];
-    IP = Test->maxscales->IP[0];
+    IP = Test->maxscales->ip4(0);
 
     //port = 3306;
     //IP = Test->repl->IP[0];

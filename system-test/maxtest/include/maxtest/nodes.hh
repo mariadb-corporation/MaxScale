@@ -25,8 +25,9 @@ public:
      */
     virtual bool setup() = 0;
 
-    const char* ip_private(int i = 0) const;
+    const char* ip4(int i = 0) const;
     const char* ip6(int i = 0) const;
+    const char* ip_private(int i = 0) const;
 
     char * IP[256];
 
@@ -34,11 +35,6 @@ public:
      * @brief Number of backend nodes
      */
     int N;
-
-    /**
-     * @brief     name of backend setup (like 'repl' or 'galera')
-     */
-    char prefix[16];
 
     /**
      * @brief Verbose command output
@@ -60,6 +56,8 @@ public:
     const char* access_homedir(int i = 0) const;
     const char* access_sudo(int i = 0) const;
     const char* sshkey(int i = 0) const;
+
+    const std::string& prefix() const;
 
     /**
      * Generate the command line to execute a given command on the node via ssh.
@@ -129,7 +127,7 @@ public:
     std::string get_nc_item(const char* item_name);
 
     /**
-     * @brief get_N Calculate the number of nodes discribed in the _netoek_config file
+     * Calculate the number of nodes described in the network config file
      * @return Number of nodes
      */
     int get_N();
@@ -151,7 +149,7 @@ public:
 protected:
     bool use_ipv6 {false}; /**< Default to ipv6-addresses */
 
-    Nodes(const char* pref,
+    Nodes(const char* prefix,
           const std::string& network_config,
           bool verbose);
 
@@ -160,6 +158,7 @@ protected:
 private:
     static constexpr int max_nodes {30};
 
+    std::string m_prefix;                   /**< Name of backend setup (e.g. 'repl' or 'galera') */
     std::string m_ip_private[max_nodes] {}; /**< Private IP addresses for every backend node (for AWS) */
     std::string m_ip6[max_nodes] {};        /**< IPv6-addresses for every backend node */
     std::string m_hostname[max_nodes] {};   /**< Hostnames for every backend node */
@@ -174,6 +173,7 @@ private:
     std::string m_access_sudo[max_nodes] {};    /**< empty or "sudo " */
 
     std::string m_sshkey[max_nodes] {}; /**< Path to ssh key for every backend node */
+
 
     bool check_node_ssh(int node);
 

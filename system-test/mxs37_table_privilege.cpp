@@ -53,7 +53,7 @@ int main(int argc, char* argv[])
     for (int i = 0; i < 5; i++)
     {
         MYSQL* conn = open_conn_db(Test->maxscales->rwsplit_port[0],
-                                   Test->maxscales->IP[0],
+                                   Test->maxscales->ip4(0),
                                    (char*) "test",
                                    (char*) "table_privilege",
                                    (char*) "pass",

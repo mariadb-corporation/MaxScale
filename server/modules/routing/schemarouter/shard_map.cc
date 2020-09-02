@@ -210,6 +210,7 @@ void ShardManager::update_shard(Shard& shard, const std::string& user)
 
     if (iter == m_maps.end() || shard.newer_than(iter->second))
     {
+        MXS_INFO("Updated shard map for user '%s'", user.c_str());
         m_maps[user] = shard;
     }
 }

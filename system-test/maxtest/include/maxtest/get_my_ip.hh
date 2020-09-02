@@ -7,4 +7,4 @@
  * @param my_ip Pointer to result (own IP string)
  * @return 0 in case of success
  */
-int get_my_ip(char * remote_ip, char *my_ip );
+int get_my_ip(const char* remote_ip, char *my_ip );
