@@ -154,6 +154,12 @@ std::vector<std::pair<std::string, std::string>> tests =
     {
         "SELECT MASTER_GTID_WAIT('0-1-1')", "MASTER_GTID_WAIT 0-1-1 0"
     },
+    {
+        "SHOW SLAVE STATUS", "SHOW SLAVE STATUS"
+    },
+    {
+        "SHOW MASTER STATUS", "SHOW MASTER STATUS"
+    },
 };
 
 int main(int argc, char** argv)
