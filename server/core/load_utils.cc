@@ -793,7 +793,14 @@ json_t* module_list_to_json(const char* host)
 
     for (LOADED_MODULE* ptr = registered; ptr; ptr = ptr->next)
     {
-        json_array_append_new(arr, module_json_data(ptr, host));
+        if (ptr->info->specification)
+        {
+            json_array_append_new(arr, spec_module_json_data(host, *ptr->info->specification));
+        }
+        else
+        {
+            json_array_append_new(arr, module_json_data(ptr, host));
+        }
     }
 
     return mxs_json_resource(host, MXS_JSON_API_MODULES, arr);

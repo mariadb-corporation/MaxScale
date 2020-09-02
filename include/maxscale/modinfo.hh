@@ -20,6 +20,14 @@
 #include <stdint.h>
 #include <maxbase/assert.h>
 
+namespace maxscale
+{
+namespace config
+{
+class Specification;
+}
+}
+
 /**
  * The status of the module. This gives some idea of the module
  * maturity.
@@ -181,6 +189,8 @@ struct MXS_MODULE
     void (* thread_finish)();
 
     MXS_MODULE_PARAM parameters[MXS_MODULE_PARAM_MAX + 1];      /**< Declared parameters */
+
+    mxs::config::Specification* specification;      /**< Configuration specification */
 };
 
 /**

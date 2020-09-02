@@ -1934,6 +1934,23 @@ std::unordered_set<CONFIG_CONTEXT*> get_dependencies(const std::vector<CONFIG_CO
         }
     }
 
+    if (module->specification)
+    {
+        for (const auto& p : *module->specification)
+        {
+            if (obj->m_parameters.contains(p.second->name()))
+            {
+                auto t = p.second->type();
+
+                if (t == "service" || t == "server" || t == "target")
+                {
+                    std::string v = obj->m_parameters.get_string(p.second->name());
+                    rval.insert(name_to_object(objects, obj, v));
+                }
+            }
+        }
+    }
+
     if (type == CN_SERVICE && obj->m_parameters.contains(CN_FILTERS))
     {
         for (std::string name : mxs::strtok(obj->m_parameters.get_string(CN_FILTERS), "|"))
@@ -2883,6 +2900,16 @@ static bool check_config_objects(CONFIG_CONTEXT* context)
 
         mxb_assert(param_set);
         std::vector<std::string> to_be_removed;
+
+        if (mod->specification)
+        {
+            if (!mod->specification->validate(obj->m_parameters))
+            {
+                rval = false;
+            }
+
+            continue;
+        }
 
         for (auto iter = obj->m_parameters.begin(); iter != obj->m_parameters.end(); ++iter)
         {

@@ -905,7 +905,15 @@ HttpResponse cb_module(const HttpRequest& request)
     else
     {
         const MXS_MODULE* module = get_module(request.last_uri_part().c_str(), NULL);
-        json = module_to_json(module, request.host());
+
+        if (module->specification)
+        {
+            json = spec_module_to_json(request.host(), *module->specification);
+        }
+        else
+        {
+            json = module_to_json(module, request.host());
+        }
     }
 
     return HttpResponse(MHD_HTTP_OK, json);

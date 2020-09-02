@@ -1215,6 +1215,11 @@ std::pair<bool, mxs::ConfigParameters> extract_and_validate_params(json_t* json,
 
         params.set_multiple(extract_parameters(json));
         ok = validate_param(get_type_parameters(module_param_name), mod->parameters, &params);
+
+        if (ok && mod->specification)
+        {
+            ok = mod->specification->validate(params);
+        }
     }
     else
     {
@@ -2167,6 +2172,14 @@ bool can_modify_service_params(Service* service, const mxs::ConfigParameters& pa
     for (int i = 0; mod->parameters[i].name; i++)
     {
         routerparams.insert(mod->parameters[i].name);
+    }
+
+    if (mod->specification)
+    {
+        for (const auto& p : *mod->specification)
+        {
+            routerparams.insert(p.second->name());
+        }
     }
 
     // Get new or updated parameters by comparing all given parameters to the ones in the service. This
