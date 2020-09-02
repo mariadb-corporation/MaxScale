@@ -141,9 +141,11 @@
  */
 
 import { mapActions } from 'vuex'
+import goBack from 'mixins/goBack'
 
 export default {
     name: 'page-header',
+    mixins: [goBack],
     props: {
         onEditSucceeded: { type: Function, required: true },
         currentServer: { type: Object, required: true },
@@ -239,7 +241,7 @@ export default {
                 case 'delete':
                     await this.destroyServer(this.currentServer.id)
                     this.showConfirmDialog = false
-                    this.$router.go(-1)
+                    this.goBack()
                     break
                 case 'set':
                 case 'clear':

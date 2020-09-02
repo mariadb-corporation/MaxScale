@@ -112,9 +112,11 @@
  */
 
 import { mapActions } from 'vuex'
+import goBack from 'mixins/goBack'
 
 export default {
     name: 'page-header',
+    mixins: [goBack],
     props: {
         currentMonitor: { type: Object, required: true },
         onEditSucceeded: { type: Function, required: true },
@@ -155,7 +157,7 @@ export default {
                         mode,
                     })
                     this.showConfirmDialog = false
-                    this.$router.go(-1)
+                    this.goBack()
                     break
                 default:
                     await this.manipulateMonitor({
