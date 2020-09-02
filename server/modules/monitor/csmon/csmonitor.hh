@@ -120,9 +120,11 @@ private:
 
     void pre_loop() override;
 
-    void check_bootstrap_servers();
+    void check_cluster();
+
+    bool check_bootstrap_servers();
     bool remove_persisted_information();
-    void persist_bootstrap_servers();
+    bool persist_bootstrap_servers();
 
     void populate_from_bootstrap_servers();
 

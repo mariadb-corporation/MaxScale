@@ -624,19 +624,19 @@ int CsMonitor::get_15_server_status(CsMonitorServer* pServer)
 
 bool CsMonitor::configure(const mxs::ConfigParameters* pParams)
 {
-    if (!m_context.configure(*pParams))
+    bool rv = m_context.configure(*pParams);
+
+    if (rv)
     {
-        return false;
+        rv = MonitorWorkerSimple::configure(pParams);
+
+        if (rv && m_context.config().dynamic_node_detection)
+        {
+            rv = check_bootstrap_servers();
+        }
     }
 
-    if (!MonitorWorkerSimple::configure(pParams))
-    {
-        return false;
-    }
-
-    check_bootstrap_servers();
-
-    return true;
+    return rv;
 }
 
 namespace
@@ -1342,7 +1342,7 @@ void CsMonitor::pre_loop()
 
     if (m_context.config().dynamic_node_detection)
     {
-        mxb_assert(!true); // TODO: Implement this.
+        check_cluster();
     }
     else
     {
@@ -1350,13 +1350,19 @@ void CsMonitor::pre_loop()
     }
 }
 
-void CsMonitor::check_bootstrap_servers()
+void CsMonitor::check_cluster()
 {
+    mxb_assert(!true);
+}
+
+bool CsMonitor::check_bootstrap_servers()
+{
+    bool rv = false;
+
     HostPortPairs nodes;
     char* pError = nullptr;
-    int rv = sqlite3_exec(m_pDb, SQL_BN_SELECT, select_cb, &nodes, &pError);
 
-    if (rv == SQLITE_OK)
+    if (sqlite3_exec(m_pDb, SQL_BN_SELECT, select_cb, &nodes, &pError) == SQLITE_OK)
     {
         set<string> prev_bootstrap_servers;
 
@@ -1392,9 +1398,11 @@ void CsMonitor::check_bootstrap_servers()
                            mxb::join(prev_bootstrap_servers, ", ").c_str());
             }
 
-            if (remove_persisted_information())
+            rv = remove_persisted_information();
+
+            if (rv)
             {
-                persist_bootstrap_servers();
+                rv = persist_bootstrap_servers();
             }
         }
     }
@@ -1402,6 +1410,8 @@ void CsMonitor::check_bootstrap_servers()
     {
         MXS_WARNING("Could not lookup earlier bootstrap servers: %s", pError ? pError : "Unknown error");
     }
+
+    return rv;
 }
 
 bool CsMonitor::remove_persisted_information()
@@ -1417,8 +1427,10 @@ bool CsMonitor::remove_persisted_information()
     return rv == SQLITE_OK;
 }
 
-void CsMonitor::persist_bootstrap_servers()
+bool CsMonitor::persist_bootstrap_servers()
 {
+    bool rv = true;
+
     string values;
 
     for (const auto* pMs : servers())
@@ -1445,14 +1457,15 @@ void CsMonitor::persist_bootstrap_servers()
         sprintf(insert, SQL_BN_INSERT_FORMAT, values.c_str());
 
         char* pError = nullptr;
-        int rv = sqlite3_exec(m_pDb, insert, nullptr, nullptr, &pError);
-
-        if (rv != SQLITE_OK)
+        if (sqlite3_exec(m_pDb, insert, nullptr, nullptr, &pError) != SQLITE_OK)
         {
             MXS_ERROR("Could not persist information about current bootstrap nodes: %s",
                       pError ? pError : "Unknown error");
+            rv = false;
         }
     }
+
+    return rv;
 }
 
 void CsMonitor::populate_from_bootstrap_servers()
