@@ -642,13 +642,13 @@ size_t Configuration::size() const
 
 json_t* Configuration::to_json() const
 {
-    json_t* pConfiguration = json_array();
+    json_t* pConfiguration = json_object();
 
     for (const auto& kv : m_values)
     {
         const Type* pValue = kv.second;
 
-        json_array_append_new(pConfiguration, pValue->to_json());
+        json_object_set_new(pConfiguration, kv.first.c_str(), pValue->to_json());
     }
 
     return pConfiguration;
