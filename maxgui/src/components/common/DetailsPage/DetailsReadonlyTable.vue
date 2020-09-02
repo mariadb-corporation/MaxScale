@@ -107,7 +107,7 @@ export default {
             if (Array.isArray(data)) {
                 this.tableRows = data
             } else {
-                this.tableRows = this.$help.objToArrOfNodes({
+                this.tableRows = this.$help.flattenTree({
                     obj: data,
                     keepPrimitiveValue: true,
                     level: 0,

@@ -81,10 +81,7 @@ export default {
     computed: {
         // compare default value with new values
         isEqual: function() {
-            let isEqual = false
-            if (this.multiple)
-                isEqual = this.$help.isArrayEqual(this.selectedItems, this.defaultItems)
-            else isEqual = this.$help.lodash.isEqual(this.selectedItems, this.defaultItems)
+            let isEqual = this.$help.lodash.isEqual(this.selectedItems, this.defaultItems)
             return isEqual
         },
     },

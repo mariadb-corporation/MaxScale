@@ -20,7 +20,7 @@
                         STARTED AT
                     </span>
                     <span class="started text-no-wrap body-2">
-                        {{ $help.formatValue(currentService.attributes.started) }}
+                        {{ $help.dateFormat({ value: currentService.attributes.started }) }}
                     </span>
                 </template>
             </outlined-overview-card>

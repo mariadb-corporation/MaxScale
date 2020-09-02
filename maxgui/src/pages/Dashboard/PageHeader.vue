@@ -78,7 +78,7 @@
                                 style="width:65%;"
                                 class="d-inline-block "
                             >
-                                {{ $help.formatValue(value, 'MM.DD.YYYY HH:mm:ss') }}
+                                {{ $help.dateFormat({ value, formatType: 'MM.DD.YYYY HH:mm:ss' }) }}
                             </div>
                             <div v-else style="width:65%;" class="d-inline-block ">
                                 {{ value }}

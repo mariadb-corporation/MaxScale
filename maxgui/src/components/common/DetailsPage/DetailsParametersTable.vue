@@ -188,11 +188,11 @@ export default {
         parametersArr: function() {
             const {
                 lodash: { cloneDeep },
-                objToArrOfNodes,
+                flattenTree,
             } = this.$help
 
             const parameters = cloneDeep(this.parameters)
-            const parametersArr = objToArrOfNodes({
+            const parametersArr = flattenTree({
                 obj: parameters,
                 keepPrimitiveValue: this.keepPrimitiveValue,
                 level: 0,
@@ -373,7 +373,7 @@ export default {
         async acceptEdit() {
             await this.updateResourceParameters({
                 id: this.resourceId,
-                parameters: this.$help.arrToObject({ arr: this.changedParametersArr }),
+                parameters: this.$help.listToTree({ arr: this.changedParametersArr }),
                 callback: this.onEditSucceeded,
             })
             this.cancelEdit()

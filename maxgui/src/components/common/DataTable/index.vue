@@ -227,13 +227,12 @@ export default {
     computed: {
         // first processing data from data props to whether keepPrimitiveValue or not
         processingData: function() {
-            const self = this
-            let result = self.data
-            if (!self.keepPrimitiveValue) {
-                result = self.$help.lodash.cloneDeep(self.data)
+            let result = this.data
+            if (!this.keepPrimitiveValue) {
+                result = this.$help.lodash.cloneDeep(this.data)
                 for (let i = 0; i < result.length; ++i) {
                     let obj = result[i]
-                    Object.keys(obj).forEach(key => (obj[key] = self.$help.handleValue(obj[key])))
+                    Object.keys(obj).forEach(key => (obj[key] = this.$help.convertType(obj[key])))
                 }
             }
 
@@ -293,21 +292,20 @@ export default {
         // Currently support sorting one column at a time
         customSort(items, sortBy, isDesc) {
             let result = items
-            const self = this
 
-            // if isTree, create a hash array for hierarchySort
-            if (sortBy.length && this.isTree) {
-                let hashArr = {} // O(n log n)
-
-                for (let i = 0; i < items.length; ++i) {
-                    if (hashArr[items[i].parentNodeId] == undefined)
-                        hashArr[items[i].parentNodeId] = []
-                    hashArr[items[i].parentNodeId].push(items[i])
-                }
-
-                result = this.hierarchySort(hashArr, 0, sortBy, isDesc, [])
-            } else if (sortBy.length && !this.isTree) {
-                result = items.sort((a, b) => self.sortOrder(a, b, isDesc, sortBy))
+            // if isTree, create a hash map for hierarchySort
+            if (sortBy.length) {
+                if (this.isTree) {
+                    let hashMap = this.$help.hashMapByPath({ arr: items, path: 'parentNodeId' })
+                    const firstKey = Object.keys(hashMap)[0]
+                    result = this.hierarchySort({
+                        hashMap,
+                        key: firstKey,
+                        sortBy,
+                        isDesc,
+                        result: [],
+                    })
+                } else result = items.sort((a, b) => this.sortOrder(a, b, isDesc, sortBy))
             }
 
             // if rowspan feature is enabled, processing sorted arr
@@ -319,15 +317,14 @@ export default {
             return result
         },
 
-        hierarchySort(hashArr, key, sortBy, isDesc, result) {
-            if (hashArr[key] === undefined) return result
-            const self = this
-            let arr = hashArr[key].sort((a, b) => self.sortOrder(a, b, isDesc, sortBy))
-            for (let i = 0; i < arr.length; ++i) {
-                result.push(arr[i])
-                const key = arr[i].nodeId || arr[i].id
-                self.hierarchySort(hashArr, key, sortBy, isDesc, result)
-            }
+        hierarchySort({ hashMap, key, sortBy, isDesc, result }) {
+            if (hashMap[key] === undefined) return result
+            let arr = hashMap[key].sort((a, b) => this.sortOrder(a, b, isDesc, sortBy))
+            arr.forEach(obj => {
+                result.push(obj)
+                const key = obj.nodeId || obj.id
+                this.hierarchySort({ hashMap, key, sortBy, isDesc, result })
+            })
             return result
         },
 
@@ -377,7 +374,7 @@ export default {
         handleDisplayRowspan(target) {
             let uniqueSet = new Set(target.map(item => item.groupId))
             let itemsId = [...uniqueSet]
-            let groupedId = this.$help.groupBy(target, 'groupId')
+            let groupedId = this.$help.hashMapByPath({ arr: target, path: 'groupId' })
             let result = []
             for (let i = 0; i < itemsId.length; ++i) {
                 let group = groupedId[`${itemsId[i]}`]
@@ -478,7 +475,7 @@ export default {
         },
 
         /**
-         * @param {Array} treeNodes treeNodes array processed by objToArrOfNodes helper method
+         * @param {Array} treeNodes treeNodes array processed by flattenTree helper method
          */
         expandAllNodes(treeNodes) {
             const isExpand = true

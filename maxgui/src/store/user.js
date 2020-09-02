@@ -91,10 +91,8 @@ export default {
                     }
                 }
             } catch (e) {
-                if (process.env.NODE_ENV !== 'test') {
-                    const logger = this.vue.$logger('store-user-fetchCurrentNetworkUser')
-                    logger.error(e)
-                }
+                const logger = this.vue.$logger('store-user-fetchCurrentNetworkUser')
+                logger.error(e)
             }
         },
         async fetchAllNetworkUsers({ commit }) {
@@ -105,10 +103,8 @@ export default {
                     commit('SET_ALL_NETWORK_USERS', res.data.data)
                 }
             } catch (e) {
-                if (process.env.NODE_ENV !== 'test') {
-                    const logger = this.vue.$logger('store-user-fetchAllNetworkUsers')
-                    logger.error(e)
-                }
+                const logger = this.vue.$logger('store-user-fetchAllNetworkUsers')
+                logger.error(e)
             }
         },
         /**Only admin accounts can perform POST, PUT, DELETE and PATCH requests
@@ -161,10 +157,8 @@ export default {
                     await dispatch('fetchAllNetworkUsers')
                 }
             } catch (e) {
-                if (process.env.NODE_ENV !== 'test') {
-                    const logger = this.vue.$logger('store-user-createOrUpdateNetworkUser')
-                    logger.error(e)
-                }
+                const logger = this.vue.$logger('store-user-createOrUpdateNetworkUser')
+                logger.error(e)
             }
         },
         /**
@@ -186,10 +180,8 @@ export default {
                     )
                 }
             } catch (e) {
-                if (process.env.NODE_ENV !== 'test') {
-                    const logger = this.vue.$logger('store-user-deleteNetworkUserById')
-                    logger.error(e)
-                }
+                const logger = this.vue.$logger('store-user-deleteNetworkUserById')
+                logger.error(e)
             }
         },
         // --------------------------------------------------- Unix accounts -------------------------------------
@@ -201,10 +193,8 @@ export default {
                     commit('SET_ALL_UNIX_ACCOUNTS', res.data.data)
                 }
             } catch (e) {
-                if (process.env.NODE_ENV !== 'test') {
-                    const logger = this.vue.$logger('store-user-fetchAllUNIXAccounts')
-                    logger.error(e)
-                }
+                const logger = this.vue.$logger('store-user-fetchAllUNIXAccounts')
+                logger.error(e)
             }
         },
         async enableUNIXAccount({ commit, dispatch }, { id, role }) {
@@ -231,10 +221,8 @@ export default {
                     await dispatch('fetchAllUNIXAccounts')
                 }
             } catch (e) {
-                if (process.env.NODE_ENV !== 'test') {
-                    const logger = this.vue.$logger('store-user-enableUNIXAccount')
-                    logger.error(e)
-                }
+                const logger = this.vue.$logger('store-user-enableUNIXAccount')
+                logger.error(e)
             }
         },
         /**
@@ -256,10 +244,8 @@ export default {
                     )
                 }
             } catch (e) {
-                if (process.env.NODE_ENV !== 'test') {
-                    const logger = this.vue.$logger('store-user-disableUNIXAccount')
-                    logger.error(e)
-                }
+                const logger = this.vue.$logger('store-user-disableUNIXAccount')
+                logger.error(e)
             }
         },
         // --------------------------------------------------- All users -----------------------------------------
@@ -271,10 +257,8 @@ export default {
                     commit('SET_ALL_USERS', res.data.data)
                 }
             } catch (e) {
-                if (process.env.NODE_ENV !== 'test') {
-                    const logger = this.vue.$logger('store-user-fetchAllUsers')
-                    logger.error(e)
-                }
+                const logger = this.vue.$logger('store-user-fetchAllUsers')
+                logger.error(e)
             }
         },
     },

@@ -31,10 +31,8 @@ export default {
                 let res = await this.vue.$axios.get(`/filters`)
                 if (res.data.data) commit('SET_ALL_FILTERS', res.data.data)
             } catch (e) {
-                if (process.env.NODE_ENV !== 'test') {
-                    const logger = this.vue.$logger('store-filter-fetchAllFilters')
-                    logger.error(e)
-                }
+                const logger = this.vue.$logger('store-filter-fetchAllFilters')
+                logger.error(e)
             }
         },
 
@@ -43,10 +41,8 @@ export default {
                 let res = await this.vue.$axios.get(`/filters/${id}`)
                 if (res.data.data) commit('SET_CURRENT_FILTER', res.data.data)
             } catch (e) {
-                if (process.env.NODE_ENV !== 'test') {
-                    const logger = this.vue.$logger('store-filter-fetchFilterById')
-                    logger.error(e)
-                }
+                const logger = this.vue.$logger('store-filter-fetchFilterById')
+                logger.error(e)
             }
         },
 
@@ -84,10 +80,8 @@ export default {
                     if (this.vue.$help.isFunction(payload.callback)) await payload.callback()
                 }
             } catch (e) {
-                if (process.env.NODE_ENV !== 'test') {
-                    const logger = this.vue.$logger('store-filter-createFilter')
-                    logger.error(e)
-                }
+                const logger = this.vue.$logger('store-filter-createFilter')
+                logger.error(e)
             }
         },
 
@@ -106,10 +100,8 @@ export default {
                     )
                 }
             } catch (e) {
-                if (process.env.NODE_ENV !== 'test') {
-                    const logger = this.vue.$logger('store-filter-destroyFilter')
-                    logger.error(e)
-                }
+                const logger = this.vue.$logger('store-filter-destroyFilter')
+                logger.error(e)
             }
         },
     },

@@ -330,12 +330,15 @@ export default {
         textTransform(str) {
             let lowerCaseStr = str.toLowerCase()
             const suffix = 's'
-            const arr = lowerCaseStr.split('')
-            if (arr[arr.length - 1] === suffix) {
-                lowerCaseStr = this.$help.strReplaceAt(lowerCaseStr, arr.length - 1, '')
+            const chars = lowerCaseStr.split('')
+            if (chars[chars.length - 1] === suffix) {
+                lowerCaseStr = this.$help.strReplaceAt({
+                    str: lowerCaseStr,
+                    index: chars.length - 1,
+                    newChar: '',
+                })
             }
-            let firstCharCapitalized = lowerCaseStr.charAt(0).toUpperCase()
-            return firstCharCapitalized + lowerCaseStr.slice(1)
+            return this.$help.capitalizeFirstLetter(lowerCaseStr)
         },
 
         getModuleType(type) {

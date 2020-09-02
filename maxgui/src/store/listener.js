@@ -31,10 +31,8 @@ export default {
                 let res = await this.vue.$axios.get(`/listeners`)
                 if (res.data.data) commit('SET_ALL_LISTENERS', res.data.data)
             } catch (e) {
-                if (process.env.NODE_ENV !== 'test') {
-                    const logger = this.vue.$logger('store-listener-fetchAllListeners')
-                    logger.error(e)
-                }
+                const logger = this.vue.$logger('store-listener-fetchAllListeners')
+                logger.error(e)
             }
         },
 
@@ -43,10 +41,8 @@ export default {
                 let res = await this.vue.$axios.get(`/listeners/${id}`)
                 if (res.data.data) commit('SET_CURRENT_LISTENER', res.data.data)
             } catch (e) {
-                if (process.env.NODE_ENV !== 'test') {
-                    const logger = this.vue.$logger('store-listener-fetchListenerById')
-                    logger.error(e)
-                }
+                const logger = this.vue.$logger('store-listener-fetchListenerById')
+                logger.error(e)
             }
         },
         /**
@@ -84,10 +80,8 @@ export default {
                     if (this.vue.$help.isFunction(payload.callback)) await payload.callback()
                 }
             } catch (e) {
-                if (process.env.NODE_ENV !== 'test') {
-                    const logger = this.vue.$logger('store-listener-createListener')
-                    logger.error(e)
-                }
+                const logger = this.vue.$logger('store-listener-createListener')
+                logger.error(e)
             }
         },
 
@@ -106,10 +100,8 @@ export default {
                     )
                 }
             } catch (e) {
-                if (process.env.NODE_ENV !== 'test') {
-                    const logger = this.vue.$logger('store-listener-destroyListener')
-                    logger.error(e)
-                }
+                const logger = this.vue.$logger('store-listener-destroyListener')
+                logger.error(e)
             }
         },
     },

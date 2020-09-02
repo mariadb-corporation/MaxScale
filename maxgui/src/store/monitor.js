@@ -35,10 +35,8 @@ export default {
                 let res = await this.vue.$axios.get(`/monitors`)
                 if (res.data.data) commit('SET_ALL_MONITORS', res.data.data)
             } catch (e) {
-                if (process.env.NODE_ENV !== 'test') {
-                    const logger = this.vue.$logger('store-monitor-fetchAllMonitors')
-                    logger.error(e)
-                }
+                const logger = this.vue.$logger('store-monitor-fetchAllMonitors')
+                logger.error(e)
             }
         },
         async fetchMonitorById({ commit }, id) {
@@ -46,10 +44,8 @@ export default {
                 let res = await this.vue.$axios.get(`/monitors/${id}`)
                 if (res.data.data) commit('SET_CURRENT_MONITOR', res.data.data)
             } catch (e) {
-                if (process.env.NODE_ENV !== 'test') {
-                    const logger = this.vue.$logger('store-monitor-fetchMonitorById')
-                    logger.error(e)
-                }
+                const logger = this.vue.$logger('store-monitor-fetchMonitorById')
+                logger.error(e)
             }
         },
         async fetchMonitorDiagnosticsById({ commit }, id) {
@@ -59,10 +55,8 @@ export default {
                 )
                 if (res.data.data) commit('SET_MONITOR_DIAGNOSTICS', res.data.data)
             } catch (e) {
-                if (process.env.NODE_ENV !== 'test') {
-                    const logger = this.vue.$logger('store-monitor-fetchMonitorDiagnosticsById')
-                    logger.error(e)
-                }
+                const logger = this.vue.$logger('store-monitor-fetchMonitorDiagnosticsById')
+                logger.error(e)
             }
         },
         /**
@@ -102,10 +96,8 @@ export default {
                     if (this.vue.$help.isFunction(payload.callback)) await payload.callback()
                 }
             } catch (e) {
-                if (process.env.NODE_ENV !== 'test') {
-                    const logger = this.vue.$logger('store-monitor-createMonitor')
-                    logger.error(e)
-                }
+                const logger = this.vue.$logger('store-monitor-createMonitor')
+                logger.error(e)
             }
         },
 
@@ -139,10 +131,8 @@ export default {
                     if (this.vue.$help.isFunction(payload.callback)) await payload.callback()
                 }
             } catch (e) {
-                if (process.env.NODE_ENV !== 'test') {
-                    const logger = this.vue.$logger('store-monitor-updateMonitorParameters')
-                    logger.error(e)
-                }
+                const logger = this.vue.$logger('store-monitor-updateMonitorParameters')
+                logger.error(e)
             }
         },
         /**
@@ -184,10 +174,8 @@ export default {
                     if (this.vue.$help.isFunction(callback)) await callback()
                 }
             } catch (e) {
-                if (process.env.NODE_ENV !== 'test') {
-                    const logger = this.vue.$logger('store-monitor-manipulateMonitor')
-                    logger.error(e)
-                }
+                const logger = this.vue.$logger('store-monitor-manipulateMonitor')
+                logger.error(e)
             }
         },
 
@@ -221,10 +209,8 @@ export default {
                     if (this.vue.$help.isFunction(payload.callback)) await payload.callback()
                 }
             } catch (e) {
-                if (process.env.NODE_ENV !== 'test') {
-                    const logger = this.vue.$logger('store-monitor-updateMonitorRelationship')
-                    logger.error(e)
-                }
+                const logger = this.vue.$logger('store-monitor-updateMonitorRelationship')
+                logger.error(e)
             }
         },
     },

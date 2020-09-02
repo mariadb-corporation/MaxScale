@@ -59,7 +59,7 @@
                     <template>
                         {{
                             name === 'triggered_at' && value !== 'undefined'
-                                ? $help.formatValue(value, 'DATE_RFC2822')
+                                ? $help.dateFormat({ value, formatType: 'DATE_RFC2822' })
                                 : value
                         }}
                     </template>
@@ -164,7 +164,7 @@ export default {
             } else delete overviewInfo.socket
 
             Object.keys(overviewInfo).forEach(
-                key => (overviewInfo[key] = this.$help.handleValue(overviewInfo[key]))
+                key => (overviewInfo[key] = this.$help.convertType(overviewInfo[key]))
             )
             return overviewInfo
         },
