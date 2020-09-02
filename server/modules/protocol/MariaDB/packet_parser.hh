@@ -66,7 +66,7 @@ struct ChangeUserParseResult
     std::string username;
     std::string db;
     std::string plugin;
-    uint16_t charset {0};
+    uint16_t    charset {0};
 
     AuthParseResult token_res;
     AttrParseResult attr_res;
