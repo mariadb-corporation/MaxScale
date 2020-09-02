@@ -10,13 +10,12 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-
+import Vue from 'vue'
 import { expect } from 'chai'
 import mount from '@tests/unit/setup'
 import DataTable from '@/components/common/DataTable'
 
-const keepPrimitiveValue = true
-let rowspanTableHeaders = [
+let dummy_rowspan_headers = [
     { text: `Monitor`, value: 'groupId' },
     { text: 'State', value: 'monitorState' },
     { text: 'Servers', value: 'id' },
@@ -27,7 +26,8 @@ let rowspanTableHeaders = [
     { text: 'GTID', value: 'gtid' },
     { text: 'Services', value: 'serviceIds' },
 ]
-let rowspanTableData = [
+
+let dummy_rowspan_data = [
     {
         id: 'row_server_2',
         serverAddress: '127.0.0.1',
@@ -62,63 +62,70 @@ let rowspanTableData = [
         monitorState: 'Running', //rowspan 1
     },
 ]
+
 /**
  * This function mockup processing tree data
- * @param {Object} wrapper A Wrapper is an object that contains a mounted component and methods to test the component
  * @return {Array} Tree data array that is used to display in data-table
  */
-function mockupTreeData(wrapper) {
-    /* Tree props data*/
-    const objParameter = {
+function mockupTreeData() {
+    const DUMMY_OBJ_PARAMS = {
         root_node: {
             node_child: { grand_child: { great_grand_child: 'great_grand_child' } },
             node_child_1: 'node_child_1 value',
         },
     }
-
-    return wrapper.vm.$help.objToTree({ obj: objParameter, keepPrimitiveValue, level: 0 })
+    return Vue.prototype.$help.objToTree({
+        obj: DUMMY_OBJ_PARAMS,
+        keepPrimitiveValue: true,
+        level: 0,
+    })
 }
+
+const defaultProps = {
+    /*
+        object in headers may have these properties:
+        sortable(true || false), editableCol (true || false), align ("center || left || right"),
+        cellTruncated (true || false), width (String), padding (String)
+
+        - editableCol, align is mainly used for styling purpose which is applied in table-cell.
+        - sortable is used for disable sorting on table, by default it's always true.
+        - cellTruncated is a condition to emit 'get-truncated-info' event in table-cell
+    */
+    headers: [
+        { text: 'Variable', value: 'id' },
+        { text: 'Value', value: 'value' },
+    ],
+    data: [
+        {
+            id: 'Item 0',
+            value: null,
+        },
+        {
+            id: 'Item 1',
+            value: undefined,
+        },
+        {
+            id: 'Item 2',
+            value: 'value of item 2',
+        },
+    ],
+}
+
+const mountPropsFactory = props =>
+    mount({
+        shallow: false,
+        component: DataTable,
+        props: props ? props : defaultProps,
+    })
+
 describe('DataTable.vue', () => {
     let wrapper
     beforeEach(() => {
-        localStorage.clear()
-        wrapper = mount({
-            shallow: false,
-            component: DataTable,
-            props: {
-                /*
-                    object in headers may have these properties:
-                    sortable(true || false), editableCol (true || false), align ("center || left || right"),
-                    cellTruncated (true || false), width (String), padding (String)
-
-                    - editableCol, align is mainly used for styling purpose which is applied in table-cell.
-                    - sortable is used for disable sorting on table, by default it's always true.
-                    - cellTruncated is a condition to emit 'get-truncated-info' event in table-cell
-                */
-                headers: [
-                    { text: 'Variable', value: 'id' },
-                    { text: 'Value', value: 'value' },
-                ],
-                data: [
-                    {
-                        id: 'Item 0',
-                        value: null,
-                    },
-                    {
-                        id: 'Item 1',
-                        value: undefined,
-                    },
-                    {
-                        id: 'Item 2',
-                        value: 'value of item 2',
-                    },
-                ],
-            },
-        })
+        wrapper = mountPropsFactory()
     })
 
     it(`Should process data as expected when keepPrimitiveValue
-        props is true or false`, async () => {
+      props is true or false`, async () => {
         /*
             by default keepPrimitiveValue is set to false which means
             null, undefined become a string i.e. 'null', 'undefined' respectively.
@@ -135,102 +142,27 @@ describe('DataTable.vue', () => {
 
         // this keep original value
         await wrapper.setProps({
-            keepPrimitiveValue: keepPrimitiveValue,
+            keepPrimitiveValue: true,
         })
         expect(wrapper.vm.$props.keepPrimitiveValue).to.equal(true)
         let oriData = wrapper.vm.processingData
         expect(oriData[0].value).to.be.a('null')
         expect(oriData[1].value).to.be.an('undefined')
     })
+})
 
-    it(`Tree data table:
-      - It processes data as expected when isTree props is true.`, async () => {
-        // check default value isTree, should be false
-        expect(wrapper.vm.$props.isTree).to.equal(false)
-        await wrapper.setProps({
-            isTree: true,
-            data: mockupTreeData(wrapper),
-        })
-        expect(wrapper.vm.$props.isTree).to.equal(true)
-    })
-    it(`Tree data table:
-      - Should not expand all nodes in first render`, async () => {
-        await wrapper.setProps({
-            isTree: true,
-            data: mockupTreeData(wrapper),
-        })
-        expect(wrapper.vm.$data.hasValidChild).to.equal(true)
-        expect(wrapper.vm.tableRows.length).to.equal(1)
-        expect(wrapper.vm.tableRows[0].expanded).to.equal(false) // root_node is collapsed
-        expect(wrapper.vm.tableRows[0].id).to.equal('root_node') //  only root_node
-    })
-    it(`Tree data table:
-      - Should expand all nodes when editableCell is true`, async () => {
-        await wrapper.setProps({
-            isTree: true,
-            data: mockupTreeData(wrapper),
-        })
-
-        /* ---------------  expand all nodes------------------------ */
-        await wrapper.setProps({
-            editableCell: true, // expand all nodes ( expandAllNodes function will be called)
-        })
-        expect(wrapper.vm.tableRows.length).to.equal(5)
-        // tableRows should now includes all tree levels i.e. 0, 1, 2 and 3
-        let allNodeIds = [
-            'root_node',
-            'node_child',
-            'grand_child',
-            'great_grand_child',
-            'node_child_1',
-        ]
-        for (let i = 0; i < wrapper.vm.tableRows.length; ++i) {
-            expect(wrapper.vm.tableRows[i].id).to.equal(allNodeIds[i])
-        }
-    })
-    it(`Tree data table:
-      - The collapse and expansion of node works as expected`, async () => {
-        await wrapper.setProps({
-            isTree: true,
-            data: mockupTreeData(wrapper),
-        })
-        /* ---------------  expand root_node ------------------------ */
-        wrapper.vm.toggleNode(wrapper.vm.tableRows[0]) //expand
-        expect(wrapper.vm.tableRows[0].expanded).to.equal(true) // root_node is expanded
-        expect(wrapper.vm.tableRows.length).to.equal(3)
-        // tableRows should now includes tree levels i.e. 0 and 1
-        let nodeIds_level_1 = ['root_node', 'node_child', 'node_child_1']
-        for (let i = 0; i < wrapper.vm.tableRows.length; ++i) {
-            expect(wrapper.vm.tableRows[i].id).to.equal(nodeIds_level_1[i])
-        }
-
-        /* ---------------  expand node_child ------------------------ */
-
-        wrapper.vm.toggleNode(wrapper.vm.tableRows[1]) //expand node_child
-        expect(wrapper.vm.tableRows[1].expanded).to.equal(true) // node_child is expanded
-        // tableRows should now includes tree levels i.e. 0, 1 and 2
-        let nodeIds_level_2 = ['root_node', 'node_child', 'grand_child', 'node_child_1']
-        for (let i = 0; i < wrapper.vm.tableRows.length; ++i) {
-            expect(wrapper.vm.tableRows[i].id).to.equal(nodeIds_level_2[i])
-        }
-
-        /* ---------------  Collapse root_node and its child ------------------------ */
-
-        wrapper.vm.toggleNode(wrapper.vm.tableRows[0]) // collapse
-        expect(wrapper.vm.tableRows[0].expanded).to.equal(false) // root_node is collapsed
-        expect(wrapper.vm.tableRows.length).to.equal(1)
-        expect(wrapper.vm.tableRows[0].id).to.equal('root_node') // only root_node
-    })
-
-    it(`Rowspan data table:
-      - Should set background color of cells have same groupId to #fafcfc if
-        a cell or a rowspan cell (rowspanCell) is hovered`, async () => {
-        await wrapper.setProps({
+describe('DataTable.vue - Rowspan feature', () => {
+    let wrapper
+    beforeEach(() => {
+        wrapper = mountPropsFactory({
             colsHasRowSpan: 2,
-            headers: rowspanTableHeaders,
-            data: rowspanTableData,
+            headers: dummy_rowspan_headers,
+            data: dummy_rowspan_data,
         })
+    })
 
+    it(`Should change background color of cells have same groupId if
+      a cell or a rowspan cell (rowspanCell) is hovered`, async () => {
         // get all table-cell components with ref = MonitorRowspanCell
         const rowspanCells = wrapper.findAllComponents({ ref: 'MonitorRowspanCell' })
         expect(rowspanCells.length).to.equal(4)
@@ -251,14 +183,7 @@ describe('DataTable.vue', () => {
         }
     })
 
-    it(`Rowspan data table:
-      - Should emit cell-hover event and return accurate data when hovering a cell`, async () => {
-        await wrapper.setProps({
-            colsHasRowSpan: 2,
-            headers: rowspanTableHeaders,
-            data: rowspanTableData,
-        })
-
+    it(`Should emit cell-hover event and return accurate data when hovering a cell`, async () => {
         // add cb for cell-hover event
         let eventFired = 0
         wrapper.vm.$on('cell-hover', ({ item }) => {
@@ -280,5 +205,77 @@ describe('DataTable.vue', () => {
             cell-hover event is emitted correctly
         */
         expect(eventFired).to.equal(1)
+    })
+})
+
+describe('DataTable.vue - Tree data feature', () => {
+    let wrapper
+    beforeEach(() => {
+        wrapper = mountPropsFactory({
+            isTree: true,
+            headers: [
+                { text: 'Variable', value: 'id' },
+                { text: 'Value', value: 'value' },
+            ],
+            data: mockupTreeData(),
+        })
+    })
+
+    it(`It processes data as expected when isTree props is true.`, async () => {
+        expect(wrapper.vm.$props.isTree).to.equal(true)
+        expect(wrapper.vm.$data.hasValidChild).to.equal(true)
+    })
+    it(`Should expand all nodes by default`, async () => {
+        await wrapper.vm.$nextTick(() => {
+            expect(wrapper.vm.tableRows.length).to.equal(5)
+            wrapper.vm.tableRows.forEach(row => {
+                if (row.children) expect(row.expanded).to.equal(true)
+            })
+        })
+    })
+    describe('The collapse and expansion of node works as expected', () => {
+        before(() => {
+            wrapper = mountPropsFactory({
+                isTree: true,
+                headers: [
+                    { text: 'Variable', value: 'id' },
+                    { text: 'Value', value: 'value' },
+                ],
+                data: mockupTreeData(),
+            })
+        })
+
+        it(`Should collapse root_node and its child when root_node is toggle`, async () => {
+            await wrapper.vm.toggleNode(wrapper.vm.tableRows[0])
+            await wrapper.vm.$nextTick(() => {
+                expect(wrapper.vm.tableRows[0].expanded).to.equal(false) // root_node is collapsed
+                expect(wrapper.vm.tableRows.length).to.equal(1)
+                expect(wrapper.vm.tableRows[0].id).to.equal('root_node') // only root_node
+            })
+        })
+        it(`Should expand root_node`, async () => {
+            await wrapper.vm.toggleNode(wrapper.vm.tableRows[0])
+            await wrapper.vm.$nextTick(() => {
+                expect(wrapper.vm.tableRows[0].expanded).to.equal(true) // root_node is expanded
+                expect(wrapper.vm.tableRows.length).to.equal(3)
+                // tableRows should now includes tree levels i.e. 0 and 1
+                let activeNodes = ['root_node', 'node_child', 'node_child_1']
+                wrapper.vm.tableRows.forEach((row, i) => {
+                    expect(row.id).to.equal(activeNodes[i])
+                })
+            })
+        })
+        it(`Should expand child of root_node`, async () => {
+            await wrapper.vm.toggleNode(wrapper.vm.tableRows[1]) //expand node_child
+            await wrapper.vm.$nextTick(() => {
+                expect(wrapper.vm.tableRows[1].expanded).to.equal(true) // node_child is expanded
+                expect(wrapper.vm.tableRows.length).to.equal(4)
+                // tableRows should now includes tree levels i.e. 0, 1 and 2
+                let activeNodes = ['root_node', 'node_child', 'grand_child', 'node_child_1']
+                wrapper.vm.tableRows.forEach((row, i) => {
+                    expect(row.id).to.equal(activeNodes[i])
+                })
+            })
+        })
     })
 })

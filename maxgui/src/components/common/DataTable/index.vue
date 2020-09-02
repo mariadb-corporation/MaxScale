@@ -256,11 +256,8 @@ export default {
             },
             deep: true,
         },
-
-        editableCell: function(val) {
-            if (val && this.isTree && this.hasValidChild) {
-                this.expandAllNodes(this.tableRows)
-            }
+        hasValidChild: function(val) {
+            if (val) this.expandAllNodes(this.tableRows)
         },
     },
 
