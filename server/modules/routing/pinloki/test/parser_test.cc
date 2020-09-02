@@ -89,6 +89,9 @@ std::vector<std::pair<std::string, std::string>> tests =
         "SELECT 1", "SELECT 1"
     },
     {
+        "SELECT 1;", "SELECT 1"     // MXS-3148
+    },
+    {
         "SELECT 1.5", "SELECT 1.5"
     },
     {
