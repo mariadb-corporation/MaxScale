@@ -14,9 +14,7 @@
 #include <map>
 #include "csxml.hh"
 
-using std::map;
-using std::string;
-using std::vector;
+using namespace std;
 
 namespace http = mxb::http;
 
@@ -174,6 +172,13 @@ Result::Result(const http::Response& response)
     }
 }
 
+Result::Result(const http::Response& response,
+               std::unique_ptr<json_t> sJson)
+    : response(response)
+    , sJson(std::move(sJson))
+{
+}
+
 Config::Config(const http::Response& response)
     : Result(response)
 {
@@ -245,6 +250,18 @@ bool Config::get_value(const char* zElement_name,
 
 Status::Status(const http::Response& response)
     : Result(response)
+{
+    construct();
+}
+
+Status::Status(const http::Response& response,
+               std::unique_ptr<json_t> sJson)
+    : Result(response, std::move(sJson))
+{
+    construct();
+}
+
+void Status::construct()
 {
     if (response.is_success() && sJson)
     {
@@ -642,4 +659,43 @@ string start(const std::chrono::seconds& timeout)
 }
 
 }
+
+Result fetch_cluster_status(const std::string& host,
+                            int64_t admin_port,
+                            const std::string& admin_base_path,
+                            const mxb::http::Config& http_config,
+                            std::map<std::string, Status>* pStatuses)
+{
+    string url = rest::create_url(host, admin_port, admin_base_path,
+                                  cs::rest::CLUSTER,
+                                  cs::rest::STATUS);
+    auto response = http::get(url, http_config);
+    Result result { response };
+
+    if (result.ok())
+    {
+        if (result.sJson)
+        {
+            map<string,Status> statuses;
+            const char* zKey;
+            json_t* pValue;
+            json_object_foreach(result.sJson.get(), zKey, pValue)
+            {
+                // There are values like 'timestamp' as well. If it is an
+                // object, we assume it is a status.
+                if (json_typeof(pValue) == JSON_OBJECT)
+                {
+                    unique_ptr<json_t> sJson(json_incref(pValue));
+
+                    statuses.insert(make_pair(zKey, Status(response, std::move(sJson))));
+                }
+            }
+
+            pStatuses->swap(statuses);
+        }
+    }
+
+    return result;
+}
+
 }

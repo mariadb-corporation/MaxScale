@@ -233,6 +233,7 @@ class Result
 public:
     Result() {}
     Result(const mxb::http::Response& response);
+    Result(const mxb::http::Response& response, std::unique_ptr<json_t> sJson);
 
     Result(Result&& other) = default;
     Result& operator=(Result&& rhs) = default;
@@ -250,6 +251,7 @@ class Status : public Result
 {
 public:
     Status(const mxb::http::Response& response);
+    Status(const mxb::http::Response& response, std::unique_ptr<json_t> sJson);
 
     Status(Status&& other) = default;
     Status& operator=(Status&& rhs) = default;
@@ -261,6 +263,8 @@ public:
     std::chrono::seconds uptime;
 
 private:
+    void construct();
+
     static int64_t s_uptime;
 };
 
@@ -303,5 +307,24 @@ private:
                    std::string* pIp,
                    json_t* pOutput) const;
 };
+
+/**
+ * Fetch cluster status from a specific node.
+ *
+ * @param host              The hostname (or IP) of the node.
+ * @param admin_port        The admin daemon port.
+ * @param admin_base_path   The base part of the REST URL.
+ * @param http_config       The http config to use.
+ * @param pRv               On successful return the statuses of all nodes as seen
+ *                          from @c host.
+ *
+ * @return The result of the operation. If the result is ok, then @c pRv
+ *         will contain the statuses.
+ */
+Result fetch_cluster_status(const std::string& host,
+                            int64_t admin_port,
+                            const std::string& admin_base_path,
+                            const mxb::http::Config& http_config,
+                            std::map<std::string, Status>* pRv);
 
 }
