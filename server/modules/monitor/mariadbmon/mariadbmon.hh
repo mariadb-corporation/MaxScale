@@ -207,13 +207,25 @@ private:
     struct ManualCommand
     {
     public:
-        std::mutex                mutex;        /* Mutex used by the condition variables */
-        std::condition_variable   has_command;  /* Notified when a command is waiting execution */
-        std::condition_variable   has_result;   /* Notified when the command has ran */
-        std::function<void(void)> method;       /* The method to run when executing the command */
+        using CmdMethod = std::function<bool (void)>;
+        enum class ExecState
+        {
+            NONE,
+            SCHEDULED,
+            RUNNING,
+        };
 
-        bool command_waiting_exec = false;  /* Guard variable for has_command */
-        bool result_waiting = false;        /* Guard variable for has_result */
+        std::mutex lock;    /* Reads and writes should happen while this lock is held. */
+
+        std::atomic<ExecState> exec_state {ExecState::NONE};/* Manual command exec state */
+        std::string            cmd_name;                    /* Name of current command */
+        CmdMethod              method;                      /* Command implementation */
+
+        std::condition_variable cmd_complete_notifier;  /* Notified when the command has ran */
+        bool                    cmd_complete {false};   /* Guard variable for notifier */
+
+        bool    cmd_success {false};    /* Return value of command */
+        json_t* cmd_errors {nullptr};   /* Error storage */
     };
 
     class DNSResolver
@@ -346,7 +358,10 @@ private:
     void reset_server_info();
 
     void reset_node_index_info();
-    bool execute_manual_command(std::function<void ()> command, json_t** error_out);
+    bool execute_manual_command(ManualCommand::CmdMethod command, const std::string& cmd_name,
+                                json_t** error_out);
+    bool schedule_manual_command(ManualCommand::CmdMethod command, const std::string& cmd_name,
+                                 json_t** error_out);
     bool immediate_tick_required() const override;
     bool server_locks_in_use() const;
     void execute_task_all_servers(const ServerFunction& task);
