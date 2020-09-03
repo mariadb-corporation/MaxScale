@@ -158,6 +158,22 @@ public:
     }
 
     /**
+     * @return Const iterator to first parameter.
+     */
+    const_iterator begin() const
+    {
+        return m_params.begin();
+    }
+
+    /**
+     * @return Const iterator to one past last parameter.
+     */
+    const_iterator end() const
+    {
+        return m_params.end();
+    }
+
+    /**
      * @return Specification as a json array.
      */
     json_t* to_json() const;
@@ -1482,6 +1498,22 @@ public:
      * @return The number of values in the configuration.
      */
     size_t size() const;
+
+    /**
+     * @return Const iterator to first parameter.
+     */
+    const_iterator begin() const
+    {
+        return m_values.cbegin();
+    }
+
+    /**
+     * @return Const iterator to one past last parameter.
+     */
+    const_iterator end() const
+    {
+        return m_values.cend();
+    }
 
     /**
      * @return Const iterator to first parameter.
