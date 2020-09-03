@@ -114,6 +114,7 @@ describe('ServiceDetail index', () => {
     after(async () => {
         await axiosGetStub.restore()
         await axiosPatchStub.restore()
+        await wrapper.destroy()
     })
 
     it(`Should send request to get current service, then requests to get service

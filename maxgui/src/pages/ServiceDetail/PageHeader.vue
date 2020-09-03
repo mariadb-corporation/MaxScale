@@ -108,9 +108,11 @@
  */
 
 import { mapActions } from 'vuex'
+import goBack from 'mixins/goBack'
 
 export default {
     name: 'page-header',
+    mixins: [goBack],
     props: {
         onEditSucceeded: { type: Function, required: true },
         currentService: { type: Object, required: true },
@@ -149,7 +151,7 @@ export default {
                 case 'destroy':
                     await this.destroyService(id)
                     this.showConfirmDialog = false
-                    this.$router.go(-1)
+                    this.goBack()
                     break
                 default:
                     await this.stopOrStartService({

@@ -54,19 +54,14 @@ export default {
             current_listener: state => state.listener.current_listener,
         }),
     },
-
+    watch: {
+        // re-fetch when the route changes
+        $route: async function() {
+            await this.initialFetch()
+        },
+    },
     async created() {
-        await this.fetchListenerById(this.$route.params.id)
-        /*  wait until get current_listener to fetch service state
-            and module parameters
-        */
-        const {
-            attributes: { parameters: { protocol = null } = {} } = {},
-            relationships: { services: { data: servicesData = [] } = {} } = {},
-        } = this.current_listener
-
-        await this.serviceTableRowProcessing(servicesData)
-        if (protocol) await this.fetchModuleParameters(protocol)
+        await this.initialFetch()
     },
 
     methods: {
@@ -75,7 +70,17 @@ export default {
             getResourceState: 'getResourceState',
             fetchListenerById: 'listener/fetchListenerById',
         }),
+        async initialFetch() {
+            await this.fetchListenerById(this.$route.params.id)
+            // wait until get current_listener to fetch service state and module parameters
+            const {
+                attributes: { parameters: { protocol = null } = {} } = {},
+                relationships: { services: { data: servicesData = [] } = {} } = {},
+            } = this.current_listener
 
+            await this.serviceTableRowProcessing(servicesData)
+            if (protocol) await this.fetchModuleParameters(protocol)
+        },
         /**
          * This function loops through services data to get services state based on
          * service id

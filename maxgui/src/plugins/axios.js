@@ -54,6 +54,9 @@ apiClient.interceptors.response.use(
             case 401:
                 await store.dispatch('user/logout')
                 break
+            case 404:
+                await store.router.push('/404')
+                break
             case null:
                 if (error.toString() === `Cancel: ${CANCEL_MESSAGE}`)
                     // request is cancelled by user, so no response is received

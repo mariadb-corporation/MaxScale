@@ -59,9 +59,11 @@
  */
 
 import { mapActions } from 'vuex'
+import goBack from 'mixins/goBack'
 
 export default {
     name: 'page-header',
+    mixins: [goBack],
     props: {
         currentListener: { type: Object, required: true },
     },
@@ -84,7 +86,7 @@ export default {
                 case 'destroy':
                     await this.destroyListener(this.currentListener.id)
                     this.showConfirmDialog = false
-                    this.$router.go(-1)
+                    this.goBack()
                     break
                 default:
                     null

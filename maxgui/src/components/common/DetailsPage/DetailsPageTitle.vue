@@ -41,17 +41,12 @@
 </template>
 <script>
 import { mapState } from 'vuex'
+import goBack from 'mixins/goBack'
 export default {
     name: 'details-page-title',
+    mixins: [goBack],
     computed: {
         ...mapState(['prev_route']),
-    },
-    methods: {
-        goBack() {
-            this.prev_route.name === 'login' || this.prev_route.name === null
-                ? this.$router.push('/dashboard/servers')
-                : this.$router.go(-1)
-        },
     },
 }
 </script>
