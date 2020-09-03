@@ -855,12 +855,12 @@ protected:
     /**
      * A derived class overriding this function should first call this base version.
      */
-    void pre_loop();
+    void pre_loop() override;
 
     /**
      * A derived class overriding this function should last call this base version.
      */
-    void post_loop();
+    void post_loop() override;
 
 private:
     /**
