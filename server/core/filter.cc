@@ -215,6 +215,16 @@ json_t* FilterDef::parameters_to_json() const
                                   mod->parameters,
                                   rval);
 
+    if (m_obj->getConfiguration)
+    {
+        if (auto cfg = m_obj->getConfiguration(m_filter))
+        {
+            auto json = cfg->to_json();
+            json_object_update(rval, json);
+            json_decref(json);
+        }
+    }
+
     return rval;
 }
 
@@ -331,10 +341,21 @@ json_t* FilterSession::diagnostics() const
 
 std::ostream& FilterDef::persist(std::ostream& os) const
 {
-    const MXS_MODULE* mod = get_module(module(), NULL);
-    mxb_assert(mod);
+    if (auto config = configuration())
+    {
+        config->persist(os);
+        os << "type=filter\n";
+        os << "module=" << module() << "\n";
+    }
+    else
+    {
+        const MXS_MODULE* mod = get_module(module(), NULL);
+        mxb_assert(mod);
 
-    os << generate_config_string(name(), parameters(),
-                                 common_filter_params(), mod->parameters);
+        os << generate_config_string(name(), parameters(),
+                                     common_filter_params(),
+                                     mod->parameters);
+    }
+
     return os;
 }

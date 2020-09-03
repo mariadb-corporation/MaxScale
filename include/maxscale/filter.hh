@@ -171,25 +171,17 @@ typedef struct mxs_filter_object
     void (* destroyInstance)(MXS_FILTER* instance);
 
     /**
-     * @brief Configure filter instance at runtime
+     * Get the configuration of a filter instance
      *
-     * This function is guaranteed to be called by only one thread at a time.
-     * The filter must declare the RCAP_TYPE_RUNTIME_CONFIG in its capabilities
-     * in order for this function to be called.
+     * The configure method of the returned configuration will be called after the initial creation of the
+     * filter as well as any time a parameter is modified at runtime.
      *
-     * Modifications to the filter should be made in an atomic manner so that
-     * existing sessions do not read a partial configuration. One way to do this
-     * is to use shared pointers for storing configurations.
+     * @param instance The filter instance
      *
-     * @param instance Filter instance
-     * @param params   Updated parameters for the filter. The parameters are
-     *                 validated before this function is called.
-     *
-     * @return True if reconfiguration was successful, false if reconfiguration
-     *         failed. If reconfiguration failed, the state of the filter
-     *         instance should not be modified.
+     * @return The configuration for the filter instance or nullptr if the filter does not use the new
+     *         configuration mechanism
      */
-    bool (* configureInstance)(MXS_FILTER* instance, mxs::ConfigParameters* params);
+    mxs::config::Configuration* (*getConfiguration)(MXS_FILTER * instance);
 } MXS_FILTER_OBJECT;
 
 /**
@@ -455,6 +447,12 @@ public:
         return false;
     }
 
+    // The default getConfiguration entry point, does nothing and always fails
+    mxs::config::Configuration* getConfiguration()
+    {
+        return nullptr;
+    }
+
     static MXS_FILTER* apiCreateInstance(const char* zName, mxs::ConfigParameters* ppParams)
     {
         FilterType* pFilter = NULL;
@@ -571,6 +569,17 @@ public:
         return rv;
     }
 
+    static mxs::config::Configuration* apiGetConfiguration(MXS_FILTER* pInstance)
+    {
+        mxs::config::Configuration* rv = nullptr;
+
+        FilterType* pFilter = static_cast<FilterType*>(pInstance);
+
+        MXS_EXCEPTION_GUARD(rv = pFilter->getConfiguration());
+
+        return rv;
+    }
+
     static MXS_FILTER_OBJECT s_object;
 };
 
@@ -586,6 +595,6 @@ MXS_FILTER_OBJECT Filter<FilterType, FilterSessionType>::s_object =
     &FilterType::apiDiagnostics,
     &FilterType::apiGetCapabilities,
     &FilterType::apiDestroyInstance,
-    &FilterType::apiConfigureInstance,
+    &FilterType::apiGetConfiguration,
 };
 }

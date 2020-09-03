@@ -3640,7 +3640,17 @@ int create_new_filter(CONFIG_CONTEXT* obj)
     {
         config_add_defaults(&obj->m_parameters, mod->parameters);
 
-        if (!filter_alloc(obj->name(), module, &obj->m_parameters))
+        if (auto filter = filter_alloc(obj->name(), module, &obj->m_parameters))
+        {
+            if (auto config = filter->configuration())
+            {
+                if (!config->configure(obj->m_parameters))
+                {
+                    error_count++;
+                }
+            }
+        }
+        else
         {
             MXS_ERROR("Failed to create filter '%s'. Memory allocation failed.",
                       obj->name());

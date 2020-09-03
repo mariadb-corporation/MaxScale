@@ -229,6 +229,24 @@ void remove_json_nulls_from_object(json_t* json)
     }
 }
 
+/**
+ * Combine `dest` and `src` into one object
+ *
+ * Removes JSON nulls and updates `dest` with the contents of `src` (both objects are modified).
+ *
+ * @param dest JSON object where the result is stored
+ * @param src  JSON object from which the values are taken
+ *
+ * @return The value of `dest`. Note that reference counts aren't incremented.
+ */
+json_t* merge_json_objects(json_t* dest, json_t* src)
+{
+    remove_json_nulls_from_object(dest);
+    remove_json_nulls_from_object(src);
+    json_object_update(dest, src);
+    return dest;
+}
+
 bool link_service_to_monitor(Service* service, mxs::Monitor* monitor)
 {
     bool ok = service->change_cluster(monitor);
@@ -2251,43 +2269,36 @@ bool runtime_alter_service_from_json(Service* service, json_t* new_json)
     return rval;
 }
 
-bool can_modify_filter_params(const SFilterDef& filter)
-{
-    bool rval = true;
-
-    if (!filter->obj()->configureInstance || (filter->capabilities() & RCAP_TYPE_RUNTIME_CONFIG) == 0)
-    {
-        MXS_ERROR("Filter '%s' does not support reconfiguration.", filter->module());
-        rval = false;
-    }
-
-    return rval;
-}
-
 bool runtime_alter_filter_from_json(const SFilterDef& filter, json_t* new_json)
 {
     bool rval = false;
 
-    if (validate_filter_json(new_json) && can_modify_filter_params(filter))
+    if (validate_filter_json(new_json))
     {
-        auto params = filter->parameters();
-        params.set_multiple(extract_parameters(new_json));
-        const MXS_MODULE* mod = get_module(filter->module(), MODULE_FILTER);
-
-        if (validate_param(common_filter_params(), mod->parameters, &params))
+        if (auto config = filter->configuration())
         {
-            if (filter->obj()->configureInstance(filter->instance(), &params))
+            if (json_t* new_params = mxs_json_pointer(new_json, MXS_JSON_PTR_PARAMETERS))
             {
-                filter->set_parameters(std::move(params));
-                std::ostringstream ss;
-                filter->persist(ss);
-                rval = runtime_save_config(filter->name(), ss.str());
+                // The new parameters are merged with the old parameters to get a complete filter definition.
+                json_t* params = merge_json_objects(config->to_json(), new_params);
+
+                if (config->specification().validate(params) && config->configure(params))
+                {
+                    std::ostringstream ss;
+                    filter->persist(ss);
+                    rval = runtime_save_config(filter->name(), ss.str());
+                }
+
+                json_decref(params);
             }
             else
             {
-                MXS_ERROR("Reconfiguration of filter '%s' failed. See log file for more details.",
-                          filter->name());
+                MXS_ERROR("No parameters defined");
             }
+        }
+        else
+        {
+            MXS_ERROR("Filter '%s' does not support reconfiguration.", filter->module());
         }
     }
 

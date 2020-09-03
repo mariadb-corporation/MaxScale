@@ -71,6 +71,12 @@ public:
         m_parameters = std::move(params);
     }
 
+    mxs::config::Configuration* configuration() const
+    {
+        mxb_assert(instance());
+        return obj()->getConfiguration ? obj()->getConfiguration(instance()) : nullptr;
+    }
+
     std::ostream& persist(std::ostream& os) const;
 
     json_t*        to_json(const char* host) const;
