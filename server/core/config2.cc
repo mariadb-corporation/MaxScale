@@ -486,7 +486,7 @@ bool Configuration::configure(const mxs::ConfigParameters& params,
                               mxs::ConfigParameters* pUnrecognized)
 {
     mxb_assert(m_pSpecification->validate(params));
-    mxb_assert(m_pSpecification->size() == size());
+    mxb_assert(m_pSpecification->size() >= size());
 
     bool configured = true;
 
@@ -533,7 +533,7 @@ bool Configuration::configure(const mxs::ConfigParameters& params,
 bool Configuration::configure(json_t* json, std::set<std::string>* pUnrecognized)
 {
     mxb_assert(m_pSpecification->validate(json));
-    mxb_assert(m_pSpecification->size() == size());
+    mxb_assert(m_pSpecification->size() >= size());
 
     bool configured = true;
     const char* key;
