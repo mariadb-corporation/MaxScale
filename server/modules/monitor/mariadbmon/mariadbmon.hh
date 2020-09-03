@@ -103,6 +103,16 @@ public:
     bool run_manual_switchover(SERVER* new_master, SERVER* current_master, json_t** error_out);
 
     /**
+     * Perform user-activated switchover. Does not wait for results, which should be fetched separately.
+     *
+     * @param new_master      The specified new master. If NULL, monitor will autoselect.
+     * @param current_master  The specified current master. If NULL, monitor will autoselect.
+     * @param error_out       Json error output
+     * @return True if switchover was scheduled
+     */
+    bool schedule_async_switchover(SERVER* new_master, SERVER* current_master, json_t** error_out);
+
+    /**
      * Perform user-activated failover.
      *
      * @param error_out Json error output
@@ -135,6 +145,15 @@ public:
      * @return True if locks are in use, even if none were released
      */
     bool run_release_locks(json_t** error_out);
+
+    /**
+     * Fetch results of last asynchronous command. If an async command is still running, outputs
+     * "<command> in still pending/running".
+     *
+     * @param output Output
+     * @return True if results of a manual command were available.
+     */
+    bool fetch_async_results(json_t** output);
 
 protected:
     bool can_be_disabled(const mxs::MonitorServer& server, std::string* errmsg_out) const override;

@@ -892,6 +892,14 @@ bool MariaDBMonitor::run_manual_switchover(SERVER* new_master, SERVER* current_m
     return execute_manual_command(func, switchover_cmd, error_out);
 }
 
+bool MariaDBMonitor::schedule_async_switchover(SERVER* new_master, SERVER* current_master, json_t** error_out)
+{
+    auto func = [this, new_master, current_master]() {
+            return manual_switchover(new_master, current_master, &m_manual_cmd.cmd_errors);
+        };
+    return schedule_manual_command(func, switchover_cmd, error_out);
+}
+
 bool MariaDBMonitor::run_manual_failover(json_t** error_out)
 {
     auto func = [this]() {
@@ -922,6 +930,72 @@ bool MariaDBMonitor::run_release_locks(json_t** error_out)
             return manual_release_locks(&m_manual_cmd.cmd_errors);
         };
     return execute_manual_command(func, release_locks_cmd, error_out);
+}
+
+bool MariaDBMonitor::fetch_async_results(json_t** output)
+{
+    using ExecState = ManualCommand::ExecState;
+    auto seen_state = ExecState::NONE;
+    string current_cmd_name;
+    bool command_complete = false;
+    bool command_success = false;
+    json_t* errors = nullptr;
+
+    std::unique_lock<std::mutex> lock(m_manual_cmd.lock);
+    // Move the result fields to local variables under the lock.
+    seen_state = m_manual_cmd.exec_state.load(mo_acquire);
+    command_complete = m_manual_cmd.cmd_complete;
+    command_success = m_manual_cmd.cmd_success;
+    current_cmd_name = m_manual_cmd.cmd_name;
+    if (seen_state == ExecState::NONE)
+    {
+        if (command_complete)
+        {
+            if (m_manual_cmd.cmd_errors)
+            {
+                errors = m_manual_cmd.cmd_errors;
+                m_manual_cmd.cmd_errors = nullptr;
+            }
+            m_manual_cmd.cmd_complete = false;
+        }
+    }
+    lock.unlock();
+
+    bool rval = false;
+    // The string contents here must match with GUI code.
+    if (seen_state == ExecState::NONE)
+    {
+        if (command_complete)
+        {
+            if (command_success)
+            {
+                *output = json_sprintf("%s completed successfully.", current_cmd_name.c_str());
+            }
+            else if (errors)
+            {
+                *output = errors;
+            }
+            else
+            {
+                // Command failed, but printed no results.
+                *output = json_sprintf("%s failed.", current_cmd_name.c_str());
+            }
+            rval = true;
+        }
+        else
+        {
+            // Command has not been ran, or results have been already fetched or overwritten by another cmd.
+            *output = mxs_json_error_append(*output, "No manual command is scheduled or results "
+                                                     "have already been fetched.");
+        }
+    }
+    else
+    {
+        auto seen_state_str = (seen_state == ExecState::SCHEDULED) ? "pending" : "running";
+        PRINT_MXS_JSON_ERROR(output, "No manual command results are available. %s is still %s.",
+                             current_cmd_name.c_str(), seen_state_str);
+    }
+    return rval;
 }
 
 bool MariaDBMonitor::cluster_operations_disabled_short() const
@@ -1067,6 +1141,38 @@ bool handle_manual_switchover(const MODULECMD_ARG* args, json_t** error_out)
 }
 
 /**
+ * Command handler for 'async-switchover'
+ *
+ * @param args    The provided arguments.
+ * @param output  Pointer where to place output object.
+ *
+ * @return True, if the command was executed, false otherwise.
+ */
+bool handle_async_switchover(const MODULECMD_ARG* args, json_t** error_out)
+{
+    mxb_assert((args->argc >= 1) && (args->argc <= 3));
+    mxb_assert(MODULECMD_GET_TYPE(&args->argv[0].type) == MODULECMD_ARG_MONITOR);
+    mxb_assert((args->argc < 2) || (MODULECMD_GET_TYPE(&args->argv[1].type) == MODULECMD_ARG_SERVER));
+    mxb_assert((args->argc < 3) || (MODULECMD_GET_TYPE(&args->argv[2].type) == MODULECMD_ARG_SERVER));
+
+    bool rval = false;
+    if (mxs::Config::get().passive.get())
+    {
+        const char* const MSG = "Switchover requested but not performed, as MaxScale is in passive mode.";
+        PRINT_MXS_JSON_ERROR(error_out, MSG);
+    }
+    else
+    {
+        Monitor* mon = args->argv[0].value.monitor;
+        auto handle = static_cast<MariaDBMonitor*>(mon);
+        SERVER* promotion_server = (args->argc >= 2) ? args->argv[1].value.server : NULL;
+        SERVER* demotion_server = (args->argc == 3) ? args->argv[2].value.server : NULL;
+        rval = handle->schedule_async_switchover(promotion_server, demotion_server, error_out);
+    }
+    return rval;
+}
+
+/**
  * Command handler for 'failover'
  *
  * @param args Arguments given by user
@@ -1151,6 +1257,15 @@ bool handle_release_locks(const MODULECMD_ARG* args, json_t** output)
     return mariamon->run_release_locks(output);
 }
 
+bool handle_fetch_async_results(const MODULECMD_ARG* args, json_t** output)
+{
+    mxb_assert(args->argc == 1);
+    mxb_assert(MODULECMD_GET_TYPE(&args->argv[0].type) == MODULECMD_ARG_MONITOR);
+    Monitor* mon = args->argv[0].value.monitor;
+    auto mariamon = static_cast<MariaDBMonitor*>(mon);
+    return mariamon->fetch_async_results(output);
+}
+
 string monitored_servers_to_string(const ServerArray& servers)
 {
     string rval;
@@ -1186,6 +1301,10 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
     modulecmd_register_command(MXS_MODULE_NAME, "switchover", MODULECMD_TYPE_ACTIVE,
                                handle_manual_switchover, MXS_ARRAY_NELEMS(switchover_argv), switchover_argv,
                                "Perform master switchover");
+
+    modulecmd_register_command(MXS_MODULE_NAME, "async-switchover", MODULECMD_TYPE_ACTIVE,
+                               handle_async_switchover, MXS_ARRAY_NELEMS(switchover_argv), switchover_argv,
+                               "Schedule master switchover without waiting for completion");
 
     static modulecmd_arg_type_t failover_argv[] =
     {
@@ -1227,6 +1346,16 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
                                handle_release_locks,
                                MXS_ARRAY_NELEMS(release_locks_argv), release_locks_argv,
                                "Release any held server locks for 1 minute.");
+
+    static modulecmd_arg_type_t fetch_async_results_argv[] =
+    {
+        {MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC},
+    };
+
+    modulecmd_register_command(MXS_MODULE_NAME, "fetch-async-results", MODULECMD_TYPE_ACTIVE,
+                               handle_fetch_async_results,
+                               MXS_ARRAY_NELEMS(fetch_async_results_argv), fetch_async_results_argv,
+                               "Fetch results from the last scheduled command.");
 
     static MXS_MODULE info =
     {
