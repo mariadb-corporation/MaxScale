@@ -268,7 +268,7 @@ const auto show_binlogs_def = x3::lit("BINARY") > x3::lit("LOGS") > x3::attr(Sho
 const auto show_variables_def = x3::lit("VARIABLES") > x3::lit("LIKE") > q_str;
 const auto show_options_def = (show_master | show_slave | show_binlogs | show_variables);
 const auto show_def = x3::lit("SHOW") > show_options;
-const auto end_of_input_def = x3::eoi;
+const auto end_of_input_def = x3::eoi | x3::lit(";");
 
 // The complete grammar, case insensitive
 const auto grammar_def = x3::no_case[

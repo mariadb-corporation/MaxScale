@@ -89,6 +89,9 @@ std::vector<std::pair<std::string, std::string>> tests =
         "SELECT 1", "SELECT 1"
     },
     {
+        "SELECT 1;", "SELECT 1"     // MXS-3148
+    },
+    {
         "SELECT 1.5", "SELECT 1.5"
     },
     {
@@ -150,6 +153,12 @@ std::vector<std::pair<std::string, std::string>> tests =
     },
     {
         "SELECT MASTER_GTID_WAIT('0-1-1')", "MASTER_GTID_WAIT 0-1-1 0"
+    },
+    {
+        "SHOW SLAVE STATUS", "SHOW SLAVE STATUS"
+    },
+    {
+        "SHOW MASTER STATUS", "SHOW MASTER STATUS"
     },
 };
 

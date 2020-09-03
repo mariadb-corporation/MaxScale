@@ -217,6 +217,12 @@ void PinlokiSession::select(const std::vector<std::string>& fields)
         "@@global.version"
     };
 
+    static const std::set<std::string> server_id_vars =
+    {
+        "@@server_id",
+        "@@global.server_id"
+    };
+
     auto values = fields;
 
     for (auto& a : values)
@@ -234,6 +240,10 @@ void PinlokiSession::select(const std::vector<std::string>& fields)
         {
             a = "pinloki";      // Helps detect when something is replicating from pinloki.
         }
+        else if (val == "@@read_only")
+        {
+            a = "1";    // Always in read-only mode
+        }
         else if (val == "@@global.gtid_domain_id")
         {
             // Note: The slave that requests this doesn't use it for anything. It's only used
@@ -245,6 +255,10 @@ void PinlokiSession::select(const std::vector<std::string>& fields)
             // TODO: Store the master's response to this (Connector-C doesn't
             //       seem to work without replication checksums).
             a = "CRC32";
+        }
+        else if (server_id_vars.count(val))
+        {
+            a = std::to_string(m_router->config().server_id());
         }
         else if (gtid_pos_sel_var.count(val))
         {
