@@ -33,6 +33,13 @@ MariaRplEvent::MariaRplEvent(st_mariadb_rpl_event* pEvent, st_mariadb_rpl* handl
     // m_pEvent->checksum = *((uint32_t*)(m_pRpl_handle->buffer + m_pRpl_handle->buffer_size - 4));
 }
 
+MariaRplEvent::MariaRplEvent(MariaRplEvent&& rhs)
+    : m_pEvent(rhs.m_pEvent)
+    , m_pRpl_handle(rhs.m_pRpl_handle)
+{
+    rhs.m_pEvent = nullptr;
+}
+
 const st_mariadb_rpl_event& MariaRplEvent::event() const
 {
     return *m_pEvent;
@@ -52,7 +59,10 @@ size_t MariaRplEvent::raw_data_size() const
 
 maxsql::MariaRplEvent::~MariaRplEvent()
 {
-    mariadb_free_rpl_event(m_pEvent);
+    if (m_pEvent)
+    {
+        mariadb_free_rpl_event(m_pEvent);
+    }
 }
 
 std::ostream& operator<<(std::ostream& os, const MariaRplEvent& rpl_msg)

@@ -43,6 +43,7 @@ class MariaRplEvent
 {
 public:
     MariaRplEvent(st_mariadb_rpl_event* pEvent, st_mariadb_rpl* handle);
+    MariaRplEvent(MariaRplEvent&& rhs);
 
     const st_mariadb_rpl_event& event() const;
     const char*                 raw_data() const;
