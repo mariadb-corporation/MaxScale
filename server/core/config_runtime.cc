@@ -1678,6 +1678,35 @@ Server* get_server_by_address(json_t* params)
 
     return ServerManager::find_by_address(addr, port);
 }
+
+bool can_modify_params(mxs::config::Configuration* cnf, json_t* json)
+{
+    bool rval = true;
+    const char* key;
+    json_t* value;
+
+    json_object_foreach(json, key, value)
+    {
+        if (auto pValue = cnf->find_value(key))
+        {
+            if (!pValue->parameter().is_modifiable_at_runtime())
+            {
+                json_t* old_value = pValue->to_json();
+
+                if (!json_equal(old_value, value))
+                {
+                    MXS_ERROR("%s: Parameter '%s' cannot be modified at runtime",
+                              cnf->specification().module().c_str(), key);
+                    rval = false;
+                }
+
+                json_decref(old_value);
+            }
+        }
+    }
+
+    return rval;
+}
 }
 
 void config_runtime_add_error(const std::string& error)
@@ -2282,7 +2311,9 @@ bool runtime_alter_filter_from_json(const SFilterDef& filter, json_t* new_json)
                 // The new parameters are merged with the old parameters to get a complete filter definition.
                 json_t* params = merge_json_objects(config->to_json(), new_params);
 
-                if (config->specification().validate(params) && config->configure(params))
+                if (config->specification().validate(params)
+                    && can_modify_params(config, params)
+                    && config->configure(params))
                 {
                     std::ostringstream ss;
                     filter->persist(ss);
