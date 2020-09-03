@@ -58,14 +58,4 @@ private:
     st_mariadb_rpl_event* m_pEvent;
     st_mariadb_rpl*       m_pRpl_handle;
 };
-
-enum class Verbosity {Name, Some, All};
-
-std::string   dump_rpl_msg(const MariaRplEvent& rpl_msg, Verbosity v);
-std::ostream& operator<<(std::ostream& os, const MariaRplEvent& rpl_msg);       // Verbosity::All
 }
-
-std::string to_string(mariadb_rpl_event ev);
-
-// TODO: Move this inside MariaRplEvent or RplEvent (maybe combine them?)
-std::string get_rotate_name(const char* ptr, size_t len);

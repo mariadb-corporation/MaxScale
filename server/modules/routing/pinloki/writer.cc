@@ -91,9 +91,8 @@ void Writer::run()
                 const auto& rpl_event = rpl_msg.event();
                 if (rpl_msg.event().event_type != HEARTBEAT_LOG_EVENT)
                 {
-                    MXB_SDEBUG(rpl_msg);
+                    MXB_SDEBUG("INCOMING " << rpl_msg);
                 }
-
 
                 file.add_event(rpl_msg);
 
