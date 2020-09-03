@@ -30,81 +30,9 @@ public:
                     CsContext* pCs_context);
     virtual ~CsMonitorServer();
 
-    class Result
-    {
-    public:
-        Result() {}
-        Result(const mxb::http::Response& response);
-
-        Result(Result&& other) = default;
-        Result& operator=(Result&& rhs) = default;
-
-        bool ok() const
-        {
-            return response.is_success() && sJson;
-        }
-
-        mxb::http::Response     response;
-        std::unique_ptr<json_t> sJson;
-    };
-
-    class Status : public Result
-    {
-    public:
-        Status(const mxb::http::Response& response);
-
-        Status(Status&& other) = default;
-        Status& operator=(Status&& rhs) = default;
-
-        cs::ClusterMode      cluster_mode = cs::READONLY;
-        cs::DbrmMode         dbrm_mode = cs::SLAVE;
-        cs::DbRootIdVector   dbroots;
-        cs::ServiceVector    services;
-        std::chrono::seconds uptime;
-
-    private:
-        static int64_t s_uptime;
-    };
-
-    class Config : public Result
-    {
-    public:
-        Config(const mxb::http::Response& response);
-
-        Config(Config&& other) = default;
-        Config& operator=(Config&& rhs) = default;
-
-        bool ok() const
-        {
-            return Result::ok() && sXml;
-        }
-
-        bool get_dbrm_controller_ip(std::string* pIp, json_t* pOutput = nullptr) const
-        {
-            return get_value(cs::xml::DBRM_CONTROLLER, cs::xml::IPADDR, pIp, pOutput);
-        }
-
-        bool get_ddlproc_ip(std::string* pIp, json_t* pOutput = nullptr) const
-        {
-            return get_value(cs::xml::DDLPROC, cs::xml::IPADDR, pIp, pOutput);
-        }
-
-        bool get_dmlproc_ip(std::string* pIp, json_t* pOutput = nullptr) const
-        {
-            return get_value(cs::xml::DMLPROC, cs::xml::IPADDR, pIp, pOutput);
-        }
-
-        using time_point = std::chrono::system_clock::time_point;
-
-        time_point              timestamp;
-        std::unique_ptr<xmlDoc> sXml;
-
-    private:
-        bool get_value(const char* zElement_name,
-                       const char* zValue_name,
-                       std::string* pIp,
-                       json_t* pOutput) const;
-    };
+    using Result = cs::Result;
+    using Status = cs::Status;
+    using Config = cs::Config;
 
     using Response  = mxb::http::Response;
     using Responses = mxb::http::Responses;
