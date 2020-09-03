@@ -81,6 +81,10 @@ export default {
                 await this.initialFetch()
             }
         },
+        // re-fetch when the route changes
+        $route: async function() {
+            await this.initialFetch()
+        },
     },
 
     async created() {

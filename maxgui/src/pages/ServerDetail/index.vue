@@ -170,21 +170,21 @@ export default {
                     // ignore when component is first created
                     if (oldVal !== null) {
                         await this.initialFetch()
-                        this.isLoopFetch = true
                     }
                     break
                 // when active tab is Parameters & Diagnostics
                 case 1:
-                    await Promise.all([
-                        this.fetchModuleParameters('servers'),
-                        this.fetchMonitorDiagnostics(),
-                    ])
-                    this.isLoopFetch = false
+                    await this.fetchModuleParameters('servers')
                     break
             }
         },
         isLoopFetch: async function(val) {
             if (val) await this.loopFetch()
+        },
+        // re-fetch when the route changes
+        $route: async function() {
+            await this.initialFetch()
+            if (this.currentActiveTab === 1) await this.fetchModuleParameters('servers')
         },
     },
     async created() {
@@ -210,9 +210,14 @@ export default {
         }),
         async loopFetch() {
             while (this.isLoopFetch) {
+                /*
+                    Sessions, Stats and Monitor diagnostics should be
+                    fetched together as their data point changes over time
+                */
                 await Promise.all([
                     this.fetchAllSessions(),
                     this.fetchServerStatsById(this.$route.params.id),
+                    this.fetchMonitorDiagnostics(),
                     this.$help.delay(10000),
                 ])
             }

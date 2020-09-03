@@ -54,19 +54,14 @@ export default {
             current_filter: state => state.filter.current_filter,
         }),
     },
-
+    watch: {
+        // re-fetch when the route changes
+        $route: async function() {
+            await this.initialFetch()
+        },
+    },
     async created() {
-        await this.fetchFilterById(this.$route.params.id)
-        /*  wait until get current_filter to fetch service state
-            and module parameters
-        */
-        const {
-            attributes: { module: filterModule = null } = {},
-            relationships: { services: { data: servicesData = [] } = {} } = {},
-        } = this.current_filter
-
-        await this.serviceTableRowProcessing(servicesData)
-        if (filterModule) await this.fetchModuleParameters(filterModule)
+        await this.initialFetch()
     },
 
     methods: {
@@ -76,6 +71,17 @@ export default {
             fetchFilterById: 'filter/fetchFilterById',
         }),
 
+        async initialFetch() {
+            await this.fetchFilterById(this.$route.params.id)
+            // wait until get current_filter to fetch service state  and module parameters
+            const {
+                attributes: { module: filterModule = null } = {},
+                relationships: { services: { data: servicesData = [] } = {} } = {},
+            } = this.current_filter
+
+            await this.serviceTableRowProcessing(servicesData)
+            if (filterModule) await this.fetchModuleParameters(filterModule)
+        },
         /**
          * This function loops through services data to get services state based on
          * service id

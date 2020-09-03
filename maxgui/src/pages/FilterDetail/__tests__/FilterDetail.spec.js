@@ -36,6 +36,7 @@ describe('FilterDetail index', () => {
 
     after(async () => {
         await axiosStub.reset()
+        await wrapper.destroy()
     })
 
     beforeEach(async () => {

@@ -166,6 +166,7 @@ describe('ServerDetail index', () => {
     after(async () => {
         await axiosGetStub.restore()
         await axiosPatchStub.restore()
+        await wrapper.destroy()
     })
 
     it(`Should send request to get current server, relationships

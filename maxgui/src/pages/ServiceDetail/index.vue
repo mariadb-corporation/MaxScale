@@ -175,6 +175,11 @@ export default {
             // when active tab is Parameters & Diagnostics
             if (val === 1) await this.fetchModuleParameters(this.routerModule)
         },
+        // re-fetch when the route changes
+        $route: async function() {
+            await this.initialFetch()
+            if (this.currentActiveTab === 1) await this.fetchModuleParameters(this.routerModule)
+        },
     },
     async created() {
         await this.initialFetch()
@@ -197,7 +202,6 @@ export default {
         }),
 
         async initialFetch() {
-            // Initial fetch, wait for service id
             await this.fetchService()
             await this.genServiceConnectionsDataSets()
             await this.fetchConnectionsAndSession()
