@@ -19,10 +19,7 @@
 #include "cscontext.hh"
 
 namespace http = mxb::http;
-using std::string;
-using std::ostringstream;
-using std::unique_ptr;
-using std::vector;
+using namespace std;
 
 using Config = CsMonitorServer::Config;
 using Result = CsMonitorServer::Result;
@@ -85,12 +82,22 @@ bool CsMonitorServer::set_node_mode(const Config& config, json_t* pOutput)
     return rv;
 }
 
-Status CsMonitorServer::fetch_status() const
+Status CsMonitorServer::fetch_node_status() const
 {
     http::Response response = http::get(create_url(cs::rest::NODE, cs::rest::STATUS),
                                         m_context.http_config());
 
     return Status(response);
+}
+
+Result CsMonitorServer::fetch_cluster_status(map<string,Status>* pStatuses) const
+{
+    const auto& config = m_context.config();
+
+    return cs::fetch_cluster_status(this->server->address(),
+                                    config.admin_port, config.admin_base_path,
+                                    m_context.http_config(),
+                                    pStatuses);
 }
 
 Result CsMonitorServer::add_node(const std::vector<CsMonitorServer*>& servers,

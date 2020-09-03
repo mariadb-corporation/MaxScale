@@ -606,7 +606,7 @@ int CsMonitor::get_15_server_status(CsMonitorServer* pServer)
 {
     int status_mask = 0;
 
-    auto status = pServer->fetch_status();
+    auto status = pServer->fetch_node_status();
 
     if (status.ok())
     {
@@ -1171,7 +1171,7 @@ void CsMonitor::cs_status(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServ
 
     if (pServer)
     {
-        result = pServer->fetch_status();
+        result = pServer->fetch_node_status();
     }
     else
     {

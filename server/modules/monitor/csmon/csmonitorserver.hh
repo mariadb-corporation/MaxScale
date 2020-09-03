@@ -85,7 +85,8 @@ public:
     }
 
     Config fetch_config() const;
-    Status fetch_status() const;
+    Status fetch_node_status() const;
+    Result fetch_cluster_status(std::map<std::string, Status>* pRv) const;
 
     enum NodeMode
     {
