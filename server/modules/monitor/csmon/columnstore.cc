@@ -249,14 +249,14 @@ bool services_from_array(json_t* pArray, ServiceVector* pServices)
     return rv;
 }
 
-string rest::create_url(const SERVER& server,
+string rest::create_url(const string& host,
                         int64_t port,
                         const string& rest_base,
                         Scope scope,
                         rest::Action action)
 {
     string url("https://");
-    url += server.address();
+    url += host;
     url += ":";
     url += std::to_string(port);
     url += rest_base;

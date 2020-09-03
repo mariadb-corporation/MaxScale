@@ -87,11 +87,20 @@ enum Scope
     NODE
 };
 
-std::string create_url(const SERVER& server,
+std::string create_url(const std::string& host,
                        int64_t port,
                        const std::string& rest_base,
                        Scope scope,
                        Action action);
+
+inline std::string create_url(const SERVER& server,
+                       int64_t port,
+                       const std::string& rest_base,
+                       Scope scope,
+                       Action action)
+{
+    return create_url(server.address(), port, rest_base, scope, action);
+}
 
 inline std::string create_url(const mxs::MonitorServer& mserver,
                               int64_t port,
