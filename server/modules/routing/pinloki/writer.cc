@@ -87,25 +87,23 @@ void Writer::run()
 
             while (m_running)
             {
-                auto rpl_msg = conn.get_rpl_msg();
-                const auto& rpl_event = rpl_msg.event();
-                if (rpl_msg.event().event_type != HEARTBEAT_LOG_EVENT)
+                auto rpl_event = maxsql::RplEvent(conn.get_rpl_msg());
+                if (rpl_event.event_type() != HEARTBEAT_LOG_EVENT)
                 {
-                    MXB_SDEBUG("INCOMING " << rpl_msg);
+                    MXB_SDEBUG("INCOMING " << rpl_event);
                 }
 
-                file.add_event(rpl_msg);
+                file.add_event(rpl_event);
 
-                switch (rpl_event.event_type)
+                switch (rpl_event.event_type())
                 {
                 case GTID_EVENT:
                     {
+                        maxsql::GtidEvent gtid_event = rpl_event.gtid_event();
                         file.begin_txn();
-                        auto& egtid = rpl_event.event.gtid;
-                        auto gtid = maxsql::Gtid(egtid.domain_id, rpl_event.server_id, egtid.sequence_nr);
-                        update_gtid_list(gtid);
+                        update_gtid_list(gtid_event.gtid);
 
-                        if (egtid.flags & mxq::F_STANDALONE)
+                        if (gtid_event.flags & mxq::F_STANDALONE)
                         {
                             m_commit_on_query = true;
                         }
@@ -118,8 +116,7 @@ void Writer::run()
                         save_gtid_list(file);
                         m_commit_on_query = false;
                     }
-                    else if (strncasecmp("COMMIT", rpl_event.event.query.statement.str,
-                                         rpl_event.event.query.statement.length) == 0)
+                    else if (rpl_event.is_commit())
                     {
                         save_gtid_list(file);
                     }

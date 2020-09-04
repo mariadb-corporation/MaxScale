@@ -38,7 +38,7 @@ public:
     FileWriter(Inventory* inv, const Writer& writer);
 
     void begin_txn();
-    void add_event(const maxsql::MariaRplEvent& maria_event);
+    void add_event(maxsql::RplEvent& rpl_event);
     void commit_txn();
 private:
     struct WritePosition
@@ -48,7 +48,7 @@ private:
         int           write_pos;
     };
 
-    void rotate_event(const maxsql::MariaRplEvent& rpl_event);
+    void rotate_event(const maxsql::Rotate& rotate);
     void write_to_file(WritePosition& fn, const maxsql::RplEvent& rpl_event);
     void write_stop(const std::string& file_name);
     void write_rotate(WritePosition& fn, const std::string& to_file_name);

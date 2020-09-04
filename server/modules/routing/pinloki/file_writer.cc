@@ -75,10 +75,10 @@ void FileWriter::commit_txn()
     m_tx_buffer.str("");
 }
 
-void FileWriter::add_event(const maxsql::MariaRplEvent& maria_event)
+void FileWriter::add_event(maxsql::RplEvent& rpl_event)     // FIXME, move into here
 {
-    bool is_artificial = maria_event.event().flags & LOG_EVENT_ARTIFICIAL_F;
-    auto etype = maria_event.event().event_type;
+    bool is_artificial = rpl_event.flags() & LOG_EVENT_ARTIFICIAL_F;
+    auto etype = rpl_event.event_type();
     if (etype == HEARTBEAT_LOG_EVENT)
     {
         // Heartbeat event, don't process it
@@ -87,13 +87,11 @@ void FileWriter::add_event(const maxsql::MariaRplEvent& maria_event)
     {
         if (etype == ROTATE_EVENT)
         {
-            rotate_event(maria_event);
+            rotate_event(rpl_event.rotate());
         }
     }
     else
     {
-        maxsql::RplEvent rpl_event(maria_event);    // If warranted, make less raw data copies.
-
         rpl_event.set_next_pos(m_current_pos.write_pos + rpl_event.buffer().size()
                                + m_tx_buffer.str().size());
 
@@ -112,10 +110,9 @@ void FileWriter::add_event(const maxsql::MariaRplEvent& maria_event)
     }
 }
 
-void FileWriter::rotate_event(const maxsql::MariaRplEvent& rpl_event)
+void FileWriter::rotate_event(const maxsql::Rotate& rotate)
 {
-    auto& rotate = rpl_event.event().event.rotate;
-    auto master_file_name = get_rotate_name(rpl_event.raw_data(), rpl_event.raw_data_size());
+    auto master_file_name = rotate.file_name;
     auto last_file_name = m_inventory.last();
 
     auto new_file_name = next_file_name(master_file_name, last_file_name);

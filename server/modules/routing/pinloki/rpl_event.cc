@@ -125,8 +125,14 @@ Rotate RplEvent::rotate() const
     return rot;
 }
 
+bool RplEvent::is_commit() const
+{
+    return strcasecmp(query_event_sql().c_str(), "COMMIT") != 0;
+}
+
 std::string RplEvent::query_event_sql() const
 {
+    // FIXME move into is_commit(), only needed there
     std::string sql;
 
     if (event_type() == QUERY_EVENT)

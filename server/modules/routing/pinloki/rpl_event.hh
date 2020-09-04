@@ -60,7 +60,7 @@ public:
     RplEvent(const RplEvent&) = default;
     RplEvent(RplEvent&&) = default;
     RplEvent& operator=(RplEvent&&) = default;
-    RplEvent(const MariaRplEvent& maria_event);
+    explicit RplEvent(const MariaRplEvent& maria_event);
 
     /**
      * @brief RplEvent
@@ -84,7 +84,7 @@ public:
     GtidEvent     gtid_event() const;
     GtidListEvent gtid_list() const;
 
-    std::string query_event_sql() const;
+    bool is_commit() const;
 
     auto event_type() const
     {
@@ -143,8 +143,9 @@ private:
     // Might not matter much, but could drop most members
     // since they are basically for debug output. Read
     // m_raw when asked instead.
-    void init();
-    void recalculate_crc();
+    void        init();
+    void        recalculate_crc();
+    std::string query_event_sql() const;
     mariadb_rpl_event m_event_type;
     unsigned int      m_timestamp;
     unsigned int      m_server_id;
