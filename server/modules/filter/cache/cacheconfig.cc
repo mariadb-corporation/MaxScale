@@ -15,15 +15,13 @@
 #include "cacheconfig.hh"
 #include "cache.hh"
 
-#define CACHE_ZDEFAULT_STORAGE "\"storage_inmemory\""
-
 config::Specification CacheConfig::s_specification(MXS_MODULE_NAME, config::Specification::FILTER);
 
 config::ParamString CacheConfig::s_storage(
     &s_specification,
     "storage",
     "The name of the module that provides the storage implementation for the cache.",
-    CACHE_ZDEFAULT_STORAGE
+    "storage_inmemory"
     );
 
 config::ParamString CacheConfig::s_storage_options(
@@ -31,7 +29,7 @@ config::ParamString CacheConfig::s_storage_options(
     "storage_options",
     "A comma separated list of arguments to be provided to the storage module "
     "specified with 'storage'.",
-    "\"\""
+    ""
     );
 
 config::ParamDuration<std::chrono::milliseconds> CacheConfig::s_hard_ttl(

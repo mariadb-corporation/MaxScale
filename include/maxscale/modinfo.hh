@@ -190,7 +190,7 @@ struct MXS_MODULE
 
     MXS_MODULE_PARAM parameters[MXS_MODULE_PARAM_MAX + 1];      /**< Declared parameters */
 
-    mxs::config::Specification* specification;      /**< Configuration specification */
+    const mxs::config::Specification* specification;      /**< Configuration specification */
 };
 
 /**

@@ -112,7 +112,7 @@ CsConfig::CsConfig(const string& name)
 //static
 void CsConfig::populate(MXS_MODULE& info)
 {
-    csmon::specification.populate(info);
+    info.specification = &csmon::specification;
 }
 
 namespace

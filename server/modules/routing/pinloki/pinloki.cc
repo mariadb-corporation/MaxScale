@@ -696,13 +696,13 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         "V1.0.0",
         RCAP_TYPE_CONTIGUOUS_INPUT,
         &pinloki::Pinloki::s_object,
-        NULL,
-        NULL,
-        NULL,
-        NULL
+        nullptr,
+        nullptr,
+        nullptr,
+        nullptr,
+        {{nullptr}},
+        pinloki::Config::spec()
     };
-
-    pinloki::Config::spec().populate(info);
 
     return &info;
 }

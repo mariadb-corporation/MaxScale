@@ -99,5 +99,5 @@ DbfwConfig::DbfwConfig(const std::string& name)
 // static
 void DbfwConfig::populate(MXS_MODULE& module)
 {
-    dbfwfilter::specification.populate(module);
+    module.specification = &dbfwfilter::specification;
 }

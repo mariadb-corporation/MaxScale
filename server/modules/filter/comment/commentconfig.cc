@@ -39,5 +39,5 @@ CommentConfig::CommentConfig(const char* zName)
 //static
 void CommentConfig::populate(MXS_MODULE& info)
 {
-    comment::specification.populate(info);
+    info.specification = &comment::specification;
 }

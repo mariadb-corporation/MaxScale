@@ -62,19 +62,13 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         VERSION_STRING,
         MXS_NO_MODULE_CAPABILITIES,
         &NullFilter::s_object,
-        NULL,   /* Process init. */
-        NULL,   /* Process finish. */
-        NULL,   /* Thread init. */
-        NULL,   /* Thread finish. */
+        nullptr,   /* Process init. */
+        nullptr,   /* Process finish. */
+        nullptr,   /* Thread init. */
+        nullptr,   /* Thread finish. */
+        {{nullptr}},
+        &nullfilter::specification
     };
-
-    static bool populated = false;
-
-    if (!populated)
-    {
-        nullfilter::specification.populate(info);
-        populated = true;
-    }
 
     return &info;
 }

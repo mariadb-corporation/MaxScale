@@ -73,9 +73,9 @@ public:
     bool                 clear_cache_on_parse_errors;
     cache_users_t        users;
 
-    static const config::Specification& specification()
+    static const config::Specification* specification()
     {
-        return s_specification;
+        return &s_specification;
     }
 
 private:

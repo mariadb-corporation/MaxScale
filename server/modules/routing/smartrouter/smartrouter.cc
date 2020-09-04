@@ -80,7 +80,7 @@ SmartRouter::Config::Config(const std::string& name, SmartRouter* router)
 
 void SmartRouter::Config::populate(MXS_MODULE& module)
 {
-    smartrouter::specification.populate(module);
+    module.specification = &smartrouter::specification;
 }
 
 bool SmartRouter::configure(mxs::ConfigParameters* pParams)

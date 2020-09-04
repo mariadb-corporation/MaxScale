@@ -122,19 +122,13 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         VERSION_STRING,
         CAPABILITIES,
         &CacheFilter::s_object,
-        cache_process_init, /* Process init. */
-        NULL,               /* Process finish. */
-        NULL,               /* Thread init. */
-        NULL,               /* Thread finish. */
+        cache_process_init,     /* Process init. */
+        nullptr,                /* Process finish. */
+        nullptr,                /* Thread init. */
+        nullptr,                /* Thread finish. */
+        {{nullptr}},
+        CacheConfig::specification()
     };
-
-    static bool populated = false;
-
-    if (!populated)
-    {
-        CacheConfig::specification().populate(info);
-        populated = true;
-    }
 
     return &info;
 }

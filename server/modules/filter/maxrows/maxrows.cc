@@ -164,19 +164,13 @@ MXS_MODULE* MXS_CREATE_MODULE()
         "V1.0.0",
         MaxRows::CAPABILITIES,
         &MaxRows::s_object,
-        NULL,       /* Process init. */
-        NULL,       /* Process finish. */
-        NULL,       /* Thread init. */
-        NULL,       /* Thread finish. */
+        nullptr,       /* Process init. */
+        nullptr,       /* Process finish. */
+        nullptr,       /* Thread init. */
+        nullptr,       /* Thread finish. */
+        {{nullptr}},
+        &maxrows::specification
     };
-
-    static bool populated = false;
-
-    if (!populated)
-    {
-        maxrows::specification.populate(info);
-        populated = true;
-    }
 
     return &info;
 }

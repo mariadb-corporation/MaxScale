@@ -34,7 +34,7 @@ class Config : public mxs::config::Configuration
 public:
     Config(const std::string& name);
 
-    static mxs::config::Specification& spec();
+    static const mxs::config::Specification* spec();
 
     /** Make a full path. This prefixes "name" with m_binlog_dir/,
      *  unless the first character is a forward slash.

@@ -447,12 +447,13 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         "V1.1.0",
         CAPABILITIES,
         &RWSplit::s_object,
-        NULL,
-        NULL,
-        NULL,
-        NULL
+        nullptr,
+        nullptr,
+        nullptr,
+        nullptr,
+        {{nullptr}},
+        &s_spec
     };
 
-    s_spec.populate(info);
     return &info;
 }

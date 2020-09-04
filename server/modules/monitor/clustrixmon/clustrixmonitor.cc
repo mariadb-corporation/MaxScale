@@ -213,7 +213,7 @@ ClustrixMonitor::Config::Config(const std::string& name)
 // static
 void ClustrixMonitor::Config::populate(MXS_MODULE& module)
 {
-    clustrixmon::specification.populate(module);
+    module.specification = &clustrixmon::specification;
 }
 
 ClustrixMonitor::ClustrixMonitor(const string& name, const string& module, sqlite3* pDb)

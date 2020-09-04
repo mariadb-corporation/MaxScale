@@ -61,9 +61,9 @@ namespace pinloki
 {
 
 // static
-mxs::config::Specification& Config::spec()
+const mxs::config::Specification* Config::spec()
 {
-    return s_spec;
+    return &s_spec;
 }
 
 std::string Config::path(const std::string& name) const

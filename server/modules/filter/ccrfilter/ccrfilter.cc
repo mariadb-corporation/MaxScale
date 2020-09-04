@@ -441,19 +441,13 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         "V1.1.0",
         RCAP_TYPE_CONTIGUOUS_INPUT,
         &CCRFilter::s_object,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
+        nullptr,
+        nullptr,
+        nullptr,
+        nullptr,
+        {{nullptr}},
+        &ccr::specification
     };
-
-    static bool populated = false;
-
-    if (!populated)
-    {
-        ccr::specification.populate(info);
-        populated = true;
-    }
 
     return &info;
 }

@@ -111,5 +111,5 @@ MaskingFilterConfig::MaskingFilterConfig(const char* zName)
 //static
 void MaskingFilterConfig::populate(MXS_MODULE& info)
 {
-    masking::specification.populate(info);
+    info.specification = &masking::specification;
 }
