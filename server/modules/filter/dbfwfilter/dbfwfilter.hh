@@ -286,6 +286,11 @@ public:
         return RCAP_TYPE_NONE;
     }
 
+    mxs::config::Configuration* getConfiguration()
+    {
+        return &m_config;
+    }
+
 private:
     DbfwConfig         m_config;
     int                m_log_match = 0; /*< Log matching and/or non-matching queries */

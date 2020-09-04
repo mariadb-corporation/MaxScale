@@ -39,6 +39,11 @@ public:
 
     bool reload();
 
+    mxs::config::Configuration* getConfiguration()
+    {
+        return &m_config;
+    }
+
     const Config& config() const
     {
         return m_config;

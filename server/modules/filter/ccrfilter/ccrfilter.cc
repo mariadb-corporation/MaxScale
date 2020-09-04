@@ -68,7 +68,7 @@ config::ParamSeconds time(
     "time",
     "The time window during which queries are routed to the master.",
     mxs::config::INTERPRET_AS_SECONDS,
-    std::chrono::seconds { 60 });
+    std::chrono::seconds {60});
 
 config::ParamBool global(
     &specification,
@@ -97,13 +97,12 @@ config::ParamEnumMask<regex_options> options(
     "matching case insensitive (on by default), 'case' makes the matching case sensitive "
     "and 'extended' causes whitespace to be ignored. They have been deprecated and you "
     "should instead use pattern settings in the regular expressions themselves.",
-    {
-        { CCR_REGEX_CASE_INSENSITIVE, "ignorecase" },
-        { CCR_REGEX_CASE_SENSITIVE,   "case" },
-        { CCR_REGEX_EXTENDED,         "extended" }
-    },
+        {
+            {CCR_REGEX_CASE_INSENSITIVE, "ignorecase"},
+            {CCR_REGEX_CASE_SENSITIVE, "case"},
+            {CCR_REGEX_EXTENDED, "extended"}
+        },
     CCR_REGEX_CASE_INSENSITIVE);
-
 }
 }
 
@@ -156,7 +155,7 @@ public:
     int64_t                 count;
     bool                    global;
     uint32_t                options;
-    uint32_t                ovector_size { 0 };
+    uint32_t                ovector_size {0};
 };
 
 class CCRFilter;
@@ -211,7 +210,7 @@ public:
 
         if (config.configure(*params))
         {
-            new_instance = new (std::nothrow) CCRFilter(std::move(config));
+            new_instance = new(std::nothrow) CCRFilter(std::move(config));
         }
 
         return new_instance;
@@ -244,6 +243,11 @@ public:
     uint64_t getCapabilities()
     {
         return RCAP_TYPE_NONE;
+    }
+
+    mxs::config::Configuration* getConfiguration()
+    {
+        return &m_config;
     }
 
 private:
@@ -287,7 +291,7 @@ CCRSession* CCRSession::create(MXS_SESSION* session, SERVICE* service, CCRFilter
 
     if (ovec_size == 0 || md)
     {
-        new_session = new (std::nothrow) CCRSession(session, service, instance, md);
+        new_session = new(std::nothrow) CCRSession(session, service, instance, md);
 
         if (!new_session)
         {

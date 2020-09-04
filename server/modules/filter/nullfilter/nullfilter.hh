@@ -40,6 +40,11 @@ public:
 
     uint64_t getCapabilities();
 
+    mxs::config::Configuration* getConfiguration()
+    {
+        return &m_config;
+    }
+
 private:
     NullFilter(Config&& config);
 

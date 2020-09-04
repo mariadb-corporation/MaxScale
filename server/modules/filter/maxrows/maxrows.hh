@@ -101,6 +101,11 @@ public:
         return CAPABILITIES;
     }
 
+    mxs::config::Configuration* getConfiguration()
+    {
+        return &m_config;
+    }
+
     // Return reference to filter config
     const Config& config() const
     {

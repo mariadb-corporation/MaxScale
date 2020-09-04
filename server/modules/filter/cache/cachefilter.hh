@@ -48,6 +48,11 @@ public:
 
     uint64_t getCapabilities();
 
+    mxs::config::Configuration* getConfiguration()
+    {
+        return m_sConfig.get();
+    }
+
 private:
     CacheFilter(std::unique_ptr<CacheConfig> sConfig, std::unique_ptr<Cache> sCache);
 

@@ -44,6 +44,11 @@ public:
         return m_config;
     }
 
+    mxs::config::Configuration* getConfiguration()
+    {
+        return &m_config;
+    }
+
 private:
     // Used in the create function
     CommentFilter(CommentConfig&& config);
