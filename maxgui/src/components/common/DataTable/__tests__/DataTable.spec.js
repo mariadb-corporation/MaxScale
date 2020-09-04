@@ -76,7 +76,7 @@ function mockupTreeData(wrapper) {
         },
     }
 
-    return wrapper.vm.$help.flattenTree({ obj: objParameter, keepPrimitiveValue, level: 0 })
+    return wrapper.vm.$help.objToTree({ obj: objParameter, keepPrimitiveValue, level: 0 })
 }
 describe('DataTable.vue', () => {
     let wrapper

@@ -108,7 +108,6 @@ describe('TableCell.vue', () => {
                 nodeId: 1,
                 parentNodeId: 0,
                 level: 0,
-                parentNodeInfo: null,
                 leaf: false,
                 children: [
                     {

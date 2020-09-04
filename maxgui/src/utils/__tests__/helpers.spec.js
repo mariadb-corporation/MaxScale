@@ -220,82 +220,162 @@ describe('helpers unit tests', () => {
             })
         })
     })
-    describe('flattenTree and listToTree assertions', () => {
-        const dummyTree = {
-            root_node: {
-                node_child: 'node_child value',
-                node_child_1: 'node_child_1 value',
-            },
-        }
-        it(`Should flatten the tree accurately when flattenTree is called`, () => {
-            const nodesList = helper.flattenTree({
-                obj: dummyTree,
-                keepPrimitiveValue: true,
-                level: 0,
-            })
 
-            const expectReturn = [
+    const dummyTree = {
+        root_node: {
+            node_child: { grand_child: 'grand_child value' },
+            node_child_1: 'node_child_1 value',
+        },
+        root_node_1: 'root_node_1 value',
+    }
+    const treeArrStub = [
+        {
+            nodeId: 1,
+            parentNodeId: 0,
+            level: 0,
+            id: 'root_node',
+            value: '',
+            originalValue: dummyTree.root_node,
+            expanded: false,
+            children: [
                 {
-                    nodeId: 1,
-                    parentNodeId: 0,
-                    level: 0,
-                    parentNodeInfo: null,
-                    id: 'root_node',
+                    nodeId: 2,
+                    parentNodeId: 1,
+                    level: 1,
+                    id: 'node_child',
                     value: '',
-                    originalValue: dummyTree.root_node,
+                    originalValue: dummyTree.root_node.node_child,
                     expanded: false,
                     children: [
                         {
-                            nodeId: 2,
-                            parentNodeId: 1,
-                            level: 1,
-                            parentNodeInfo: { id: 'root_node', originalValue: dummyTree.root_node },
-                            id: 'node_child',
-                            value: 'node_child value',
-                            originalValue: 'node_child value',
-                            leaf: true,
-                        },
-                        {
                             nodeId: 3,
-                            parentNodeId: 1,
-                            level: 1,
-                            parentNodeInfo: { id: 'root_node', originalValue: dummyTree.root_node },
-                            id: 'node_child_1',
-                            value: 'node_child_1 value',
-                            originalValue: 'node_child_1 value',
+                            parentNodeId: 2,
+                            level: 2,
+                            id: 'grand_child',
+                            value: 'grand_child value',
+                            originalValue: 'grand_child value',
                             leaf: true,
                         },
                     ],
                     leaf: false,
                 },
-            ]
-
-            expect(nodesList).to.be.deep.equals(expectReturn)
-        })
-
-        it(`Should convert a list to tree object when listToTree is called`, () => {
-            const nodes = [
                 {
-                    nodeId: 2,
+                    nodeId: 4,
                     parentNodeId: 1,
                     level: 1,
-                    parentNodeInfo: { id: 'root_node', originalValue: dummyTree.root_node },
-                    id: 'node_child',
-                    value: 'new node_child value',
-                    originalValue: 'node_child value',
+                    id: 'node_child_1',
+                    value: 'node_child_1 value',
+                    originalValue: 'node_child_1 value',
+                    leaf: true,
+                },
+            ],
+            leaf: false,
+        },
+        {
+            nodeId: 5,
+            parentNodeId: 0,
+            level: 0,
+            id: 'root_node_1',
+            value: 'root_node_1 value',
+            originalValue: 'root_node_1 value',
+            leaf: true,
+        },
+    ]
+
+    it(`Should return flattened tree when flattenTree is called`, () => {
+        const flattened = helper.flattenTree(treeArrStub)
+        const lastNodeId = treeArrStub[treeArrStub.length - 1].nodeId
+        expect(flattened.length).to.be.equals(lastNodeId)
+        flattened.forEach(node => {
+            if (node.children) expect(node.expanded).to.be.true
+        })
+    })
+
+    it(`Should return ancestor nodeId of a node when findAncestor is called`, () => {
+        const expectAncestorNodeId = treeArrStub[0].nodeId
+        const nodeStub = treeArrStub[0].children[0].children[0]
+        let treeMapMock = new Map()
+        const flattened = helper.flattenTree(treeArrStub)
+        flattened.forEach(node => treeMapMock.set(node.nodeId, node))
+        const ancestorId = helper.findAncestor({ node: nodeStub, treeMap: treeMapMock })
+        expect(ancestorId).to.be.equals(expectAncestorNodeId)
+    })
+
+    it(`Should update node at depth level when updateNode is called`, () => {
+        let objToBeUpdated = {
+            root_node: {
+                node_child: {
+                    grand_child: 'grand_child value',
+                    grand_child_1: 'grand_child_1 value',
+                },
+                node_child_1: 'node_child_1 value',
+            },
+        }
+        const expectResult = {
+            root_node: {
+                node_child: {
+                    grand_child: 'grand_child value',
+                    grand_child_1: 'new grand_child_1 value',
+                },
+                node_child_1: 'node_child_1 value',
+            },
+        }
+        helper.updateNode({
+            obj: objToBeUpdated,
+            node: {
+                id: 'grand_child_1',
+                value: 'new grand_child_1 value',
+            },
+        })
+        expect(objToBeUpdated).to.be.deep.equals(expectResult)
+    })
+
+    describe('objToTree and treeToObj assertions', () => {
+        it(`Should convert object to tree array accurately when objToTree is called`, () => {
+            const treeArr = helper.objToTree({
+                obj: dummyTree,
+                keepPrimitiveValue: true,
+                level: 0,
+            })
+
+            expect(treeArr).to.be.deep.equals(treeArrStub)
+        })
+
+        it(`Should convert changed nodes to an object when treeToObj is called`, () => {
+            const changedNodes = [
+                {
+                    nodeId: 4,
+                    parentNodeId: 1,
+                    level: 1,
+                    id: 'node_child_1',
+                    value: 'new node_child_1 value',
+                    originalValue: 'node_child_1 value',
+                    leaf: true,
+                },
+                {
+                    nodeId: 3,
+                    parentNodeId: 2,
+                    level: 2,
+                    id: 'grand_child',
+                    value: 'new grand_child value',
+                    originalValue: 'grand_child value',
                     leaf: true,
                 },
             ]
+
             const expectReturn = {
                 root_node: {
-                    node_child: 'new node_child value',
-                    node_child_1: 'node_child_1 value',
+                    node_child: { grand_child: 'new grand_child value' },
+                    node_child_1: 'new node_child_1 value',
                 },
             }
-            const tree = helper.listToTree({
-                arr: nodes,
+
+            const resultObj = helper.treeToObj({
+                changedNodes,
+                tree: treeArrStub,
             })
-            expect(tree).to.be.deep.equals(expectReturn)
+
+            expect(resultObj).to.be.deep.equals(expectReturn)
         })
     })
 

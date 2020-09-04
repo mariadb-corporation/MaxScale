@@ -475,7 +475,7 @@ export default {
         },
 
         /**
-         * @param {Array} treeNodes treeNodes array processed by flattenTree helper method
+         * @param {Array} treeNodes treeNodes array processed by objToTree helper method
          */
         expandAllNodes(treeNodes) {
             const isExpand = true

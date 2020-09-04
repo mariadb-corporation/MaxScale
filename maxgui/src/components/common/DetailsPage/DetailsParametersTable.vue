@@ -37,10 +37,10 @@
                             :item="item"
                             :parentForm="$refs.form"
                             :usePortOrSocket="usePortOrSocket"
-                            :changedParametersArr="changedParametersArr"
+                            :changedParametersArr="changedParams"
                             :portValue="portValue"
                             :socketValue="socketValue"
-                            @get-changed-params="changedParametersArr = $event"
+                            @get-changed-params="changedParams = $event"
                             @handle-change="assignPortSocketDependencyValues"
                         />
                     </template>
@@ -64,35 +64,22 @@
                 <template v-slot:body>
                     <span class="d-block confirmation-text mb-4">
                         {{
-                            $tc(
-                                'changeTheFollowingParameter',
-                                changedParametersArr.length > 1 ? 2 : 1,
-                                {
-                                    quantity: changedParametersArr.length,
-                                }
-                            )
+                            $tc('changeTheFollowingParameter', changedParams.length > 1 ? 2 : 1, {
+                                quantity: changedParams.length,
+                            })
                         }}
                     </span>
 
                     <div
-                        v-for="(item, i) in changedParametersArr"
+                        v-for="(item, i) in changedParams"
                         :key="i"
                         class="d-block changed-parameter"
-                        :class="[
-                            item.parentNodeInfo !== null && changedParamsInfo(i, item) && 'mt-2',
-                        ]"
+                        :class="{ 'mt-2': item.parentNodeId }"
                     >
-                        <div v-if="item.parentNodeInfo !== null">
-                            <div class="font-weight-bold">
-                                {{ changedParamsInfo(i, item) }}
-                            </div>
-                            <p class="d-block mb-1">
-                                {{ item.id }}
-                                <span v-if="item.type !== 'password string'">
-                                    : {{ item.value }}
-                                </span>
-                            </p>
-                        </div>
+                        <p v-if="item.parentNodeId" class="d-block mt-2 ">
+                            <span class="font-weight-bold"> {{ keyifyChangedParams(item) }}</span>
+                            <span v-if="item.type !== 'password string'"> : {{ item.value }} </span>
+                        </p>
                         <p v-else class="d-block mt-2 ">
                             <span class="font-weight-bold">{{ item.id }}</span>
                             <span v-if="item.type !== 'password string'"> : {{ item.value }} </span>
@@ -162,7 +149,7 @@ export default {
             ],
             loadingEditableParams: false,
             editableCell: false,
-            changedParametersArr: [],
+            changedParams: [],
             showConfirmDialog: false,
 
             portValue: null,
@@ -185,33 +172,31 @@ export default {
         isLoading: function() {
             return this.isMounting ? true : this.overlay_type === OVERLAY_TRANSPARENT_LOADING
         },
-        parametersArr: function() {
+        treeParams: function() {
             const {
                 lodash: { cloneDeep },
-                flattenTree,
+                objToTree,
             } = this.$help
-
             const parameters = cloneDeep(this.parameters)
-            const parametersArr = flattenTree({
+            return objToTree({
                 obj: parameters,
                 keepPrimitiveValue: this.keepPrimitiveValue,
                 level: 0,
             })
-
-            return parametersArr
         },
+
         parametersTableRow: function() {
             const {
                 lodash: { cloneDeep },
             } = this.$help
-            // parametersArr will be mutated by processingTableRow method
-            let parametersArr = cloneDeep(this.parametersArr)
-            if (this.moduleParams.length) this.processingTableRow(parametersArr)
-            return parametersArr
+            // treeParamsClone will be mutated by processingTableRow method
+            let treeParamsClone = cloneDeep(this.treeParams)
+            if (this.moduleParams.length) this.processingTableRow(treeParamsClone)
+            return treeParamsClone
         },
 
         shouldDisableSaveBtn: function() {
-            if (this.changedParametersArr.length > 0 && this.isValid) return false
+            if (this.changedParams.length > 0 && this.isValid) return false
             else return true
         },
         moduleParams: function() {
@@ -344,17 +329,42 @@ export default {
             }
         },
 
-        // ------------------------- Parameters editing Confirm methods
-        changedParamsInfo(i, item) {
-            const arr = this.changedParametersArr
-            const { parentNodeInfo: { id = null } = null } = item
-            if (i > 0) {
-                const prevNodeParent = arr[i - 1].parentNodeInfo || null
-                const prevNodeParentId = prevNodeParent && prevNodeParent.id
-                if (prevNodeParentId !== id) return id
-            } else if (i === 0) {
-                return id
-            } else return ''
+        /**
+         * If a node changes its value, its ancestor needs to be included as well
+         * this gets it ancestor obj then calls keyify to
+         * get key name. e.g. rootProp.childProp.grandChildProp
+         * @param {Object} node - parameter node
+         * @return {String} the key name of its ancestor. e.g. rootProp.childProp.grandChildProp
+         */
+        keyifyChangedParams(node) {
+            const changedObj = this.$help.treeToObj({
+                changedNodes: [node],
+                tree: this.treeParams,
+            })
+            const allKeys = this.keyify(changedObj)
+            let result = ''
+            for (const key of allKeys) {
+                if (key.includes(node.id)) {
+                    result = key
+                    break
+                }
+            }
+            return result
+        },
+
+        /**
+         *
+         * @param {Object} obj - nested object
+         * @param {String} prefix - prefix to add to each properties
+         * @returns {String} e.g. rootProp.childProp.grandChildProp
+         */
+        keyify(obj, prefix = '') {
+            return Object.keys(obj).reduce((res, el) => {
+                if (typeof obj[el] === 'object' && obj[el] !== null) {
+                    return [...res, ...this.keyify(obj[el], prefix + el + '.')]
+                }
+                return [...res, prefix + el]
+            }, [])
         },
 
         closeConfirmDialog() {
@@ -365,15 +375,19 @@ export default {
         cancelEdit() {
             this.editableCell = false
             this.closeConfirmDialog()
-            this.changedParametersArr = []
+            this.changedParams = []
             // this helps to assign accurate parameter info and trigger assignPortSocketDependencyValues
             this.processingTableRow(this.parametersTableRow)
         },
 
         async acceptEdit() {
+            const parameters = this.$help.treeToObj({
+                changedNodes: this.changedParams,
+                tree: this.treeParams,
+            })
             await this.updateResourceParameters({
                 id: this.resourceId,
-                parameters: this.$help.listToTree({ arr: this.changedParametersArr }),
+                parameters,
                 callback: this.onEditSucceeded,
             })
             this.cancelEdit()
