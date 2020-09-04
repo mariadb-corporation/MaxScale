@@ -39,6 +39,7 @@
 
 #include <maxbase/alloc.h>
 #include <maxbase/atomic.h>
+#include <maxscale/config2.hh>
 #include <maxbase/format.hh>
 #include <maxscale/modinfo.hh>
 #include <maxscale/modutil.hh>
@@ -49,9 +50,6 @@
 
 using std::string;
 
-/* Default values for logged data */
-#define LOG_DATA_DEFAULT "date,user,query"
-
 namespace
 {
 
@@ -59,46 +57,79 @@ uint64_t CAPABILITIES = RCAP_TYPE_CONTIGUOUS_INPUT;
 
 const char HEADER_ERROR[] = "Failed to print header to file %s. Error %i: '%s'.";
 
-const char PARAM_MATCH[] = "match";
-const char PARAM_EXCLUDE[] = "exclude";
-const char PARAM_USER[] = "user";
-const char PARAM_SOURCE[] = "source";
-const char PARAM_FILEBASE[] = "filebase";
-const char PARAM_OPTIONS[] = "options";
-const char PARAM_LOG_TYPE[] = "log_type";
-const char PARAM_LOG_DATA[] = "log_data";
-const char PARAM_FLUSH[] = "flush";
-const char PARAM_APPEND[] = "append";
-const char PARAM_NEWLINE[] = "newline_replacement";
-const char PARAM_SEPARATOR[] = "separator";
+namespace cfg = mxs::config;
 
-const MXS_ENUM_VALUE option_values[] =
-{
-    {"ignorecase", PCRE2_CASELESS},
-    {"case",       0             },
-    {"extended",   PCRE2_EXTENDED},
-    {NULL}
-};
+cfg::Specification s_spec(MXS_MODULE_NAME, cfg::Specification::FILTER);
 
-const MXS_ENUM_VALUE log_type_values[] =
-{
-    {"session", QlaInstance::LOG_FILE_SESSION},
-    {"unified", QlaInstance::LOG_FILE_UNIFIED},
-    {"stdout",  QlaInstance::LOG_FILE_STDOUT },
-    {NULL}
-};
+cfg::ParamRegex s_match(
+    &s_spec, "match", "Only log queries matching this pattern", "",
+    cfg::Param::AT_STARTUP);
 
-const MXS_ENUM_VALUE log_data_values[] =
-{
-    {"service",    QlaInstance::LOG_DATA_SERVICE   },
-    {"session",    QlaInstance::LOG_DATA_SESSION   },
-    {"date",       QlaInstance::LOG_DATA_DATE      },
-    {"user",       QlaInstance::LOG_DATA_USER      },
-    {"query",      QlaInstance::LOG_DATA_QUERY     },
-    {"reply_time", QlaInstance::LOG_DATA_REPLY_TIME},
-    {"default_db", QlaInstance::LOG_DATA_DEFAULT_DB},
-    {NULL}
-};
+cfg::ParamRegex s_exclude(
+    &s_spec, "exclude", "Exclude queries matching this pattern from the log", "",
+    cfg::Param::AT_STARTUP);
+
+cfg::ParamString s_user(
+    &s_spec, "user", "Log queries only from this user", "",
+    cfg::Param::AT_STARTUP);
+
+cfg::ParamString s_source(
+    &s_spec, "source", "Log queries only from this network address", "",
+    cfg::Param::AT_STARTUP);
+
+cfg::ParamString s_filebase(
+    &s_spec, "filebase", "The basename of the output file",
+    cfg::Param::AT_STARTUP);
+
+cfg::ParamEnumMask<uint32_t> s_options(
+    &s_spec, "options", "Regular expression options",
+    {
+        {0, "case"},
+        {PCRE2_CASELESS, "ignorecase"},
+        {PCRE2_EXTENDED, "extended"},
+    },
+    0,
+    cfg::Param::AT_STARTUP);
+
+cfg::ParamEnum<int64_t> s_log_type(
+    &s_spec, "log_type", "The type of log file to use",
+    {
+        {QlaInstance::LOG_FILE_SESSION, "session"},
+        {QlaInstance::LOG_FILE_UNIFIED, "unified"},
+        {QlaInstance::LOG_FILE_STDOUT, "stdout"},
+    },
+    QlaInstance::LOG_FILE_SESSION,
+    cfg::Param::AT_STARTUP);
+
+cfg::ParamEnumMask<int64_t> s_log_data(
+    &s_spec, "log_data", "Type of data to log in the log files",
+    {
+        {QlaInstance::LOG_DATA_SERVICE, "service"},
+        {QlaInstance::LOG_DATA_SESSION, "session"},
+        {QlaInstance::LOG_DATA_DATE, "date"},
+        {QlaInstance::LOG_DATA_USER, "user"},
+        {QlaInstance::LOG_DATA_QUERY, "query"},
+        {QlaInstance::LOG_DATA_REPLY_TIME, "reply_time"},
+        {QlaInstance::LOG_DATA_DEFAULT_DB, "default_db"},
+    },
+    QlaInstance::LOG_DATA_DATE | QlaInstance::LOG_DATA_USER | QlaInstance::LOG_DATA_QUERY,
+    cfg::Param::AT_STARTUP);
+
+cfg::ParamString s_newline_replacement(
+    &s_spec, "newline_replacement", "Value used to replace newlines", " ",
+    cfg::Param::AT_STARTUP);
+
+cfg::ParamString s_separator(
+    &s_spec, "separator", "Defines the separator between elements of a log entry", ",",
+    cfg::Param::AT_STARTUP);
+
+cfg::ParamBool s_flush(
+    &s_spec, "flush", "Flush log files after every write", false,
+    cfg::Param::AT_STARTUP);
+
+cfg::ParamBool s_append(
+    &s_spec, "append", "Append new entries to log files instead of overwriting them", false,
+    cfg::Param::AT_STARTUP);
 
 void print_string_replace_newlines(const char* sql_string, size_t sql_str_len,
                                    const char* rep_newline, std::stringstream* output);
@@ -106,36 +137,43 @@ void print_string_replace_newlines(const char* sql_string, size_t sql_str_len,
 bool check_replace_file(const string& filename, FILE** ppFile);
 }
 
-QlaInstance::QlaInstance(const string& name, mxs::ConfigParameters* params)
-    : m_settings(params)
+QlaInstance::QlaInstance(const string& name)
+    : m_settings(name)
     , m_name(name)
-    , m_session_data_flags(m_settings.log_file_data_flags & ~LOG_DATA_SESSION)
     , m_rotation_count(mxs_get_log_rotation_count())
 {
 }
 
-QlaInstance::Settings::Settings(mxs::ConfigParameters* params)
-    : log_file_data_flags(params->get_enum(PARAM_LOG_DATA, log_data_values))
-    , filebase(params->get_string(PARAM_FILEBASE))
-    , flush_writes(params->get_bool(PARAM_FLUSH))
-    , append(params->get_bool(PARAM_APPEND))
-    , query_newline(params->get_string(PARAM_NEWLINE))
-    , separator(params->get_string(PARAM_SEPARATOR))
-    , user_name(params->get_string(PARAM_USER))
-    , source(params->get_string(PARAM_SOURCE))
-    , match(params->get_string(PARAM_MATCH))
-    , exclude(params->get_string(PARAM_EXCLUDE))
+QlaInstance::Settings::Settings(const std::string& name)
+    : mxs::config::Configuration(name, &s_spec)
 {
-    auto log_file_types = params->get_enum(PARAM_LOG_TYPE, log_type_values);
+    add_native(&filebase, &s_filebase);
+    add_native(&flush_writes, &s_flush);
+    add_native(&append, &s_append);
+    add_native(&query_newline, &s_newline_replacement);
+    add_native(&separator, &s_separator);
+    add_native(&user_name, &s_user);
+    add_native(&source, &s_source);
+    add_native(&match, &s_match);
+    add_native(&exclude, &s_exclude);
+    add_native(&options, &s_options);
+    add_native(&log_file_data_flags, &s_log_data);
+    add_native(&log_file_types, &s_log_type);
+}
+
+bool QlaInstance::Settings::post_configure()
+{
     write_session_log = (log_file_types & LOG_FILE_SESSION);
     write_unified_log = (log_file_types & LOG_FILE_UNIFIED);
     write_stdout_log = (log_file_types & LOG_FILE_STDOUT);
+    session_data_flags = log_file_data_flags & ~LOG_DATA_SESSION;
+    exclude.set_options(options);
+    match.set_options(options);
+    return true;
 }
 
 QlaInstance::~QlaInstance()
 {
-    pcre2_code_free(m_re_match);
-    pcre2_code_free(m_re_exclude);
     if (m_unified_fp != NULL)
     {
         fclose(m_unified_fp);
@@ -172,42 +210,33 @@ void QlaFilterSession::close()
 
 QlaInstance* QlaInstance::create(const char* name, mxs::ConfigParameters* params)
 {
-    QlaInstance* my_instance = NULL;
+    QlaInstance* my_instance = new(std::nothrow) QlaInstance(name);
 
-    uint32_t ovec_size = 0;
-    int cflags = params->get_enum(PARAM_OPTIONS, option_values);
-    bool compile_error = false;
-    auto code_arr = params->get_compiled_regexes({PARAM_MATCH, PARAM_EXCLUDE}, cflags,
-                                                 &ovec_size, &compile_error);
-    auto re_match = std::move(code_arr[0]);
-    auto re_exclude = std::move(code_arr[1]);
-    if (!compile_error)
+    // The instance is allocated before opening the file since open_log_file() takes the instance as a
+    // parameter. Will be fixed (or at least cleaned) with a later refactoring of functions/methods.
+
+    if (my_instance)
     {
-        // The instance is allocated before opening the file since open_log_file() takes the instance as a
-        // parameter. Will be fixed (or at least cleaned) with a later refactoring of functions/methods.
-        my_instance = new(std::nothrow) QlaInstance(name, params);
-        if (my_instance)
-        {
-            my_instance->m_re_match = re_match.release();
-            my_instance->m_re_exclude = re_exclude.release();
-            my_instance->m_ovec_size = ovec_size;
-            // Try to open the unified log file
-            if (my_instance->m_settings.write_unified_log)
-            {
-                my_instance->m_unified_filename = my_instance->m_settings.filebase + ".unified";
-                // Open the file. It is only closed at program exit.
-                if (!my_instance->open_unified_logfile())
-                {
-                    delete my_instance;
-                    my_instance = NULL;
-                }
-            }
+        // TODO: Move this code into post_configure so that it gets done properly
+        my_instance->m_settings.configure(*params);
 
-            if (my_instance->m_settings.write_stdout_log)
+        // Try to open the unified log file
+        if (my_instance->m_settings.write_unified_log)
+        {
+            my_instance->m_unified_filename = my_instance->m_settings.filebase + ".unified";
+            // Open the file. It is only closed at program exit.
+            if (!my_instance->open_unified_logfile())
             {
-                string entry = my_instance->generate_log_header(my_instance->m_settings.log_file_data_flags);
-                my_instance->write_stdout_log_entry(entry);
+                delete my_instance;
+                return nullptr;
             }
+        }
+
+        if (my_instance && my_instance->m_settings.write_stdout_log)
+        {
+            my_instance->write_stdout_log_entry(
+                my_instance->generate_log_header(my_instance->m_settings.log_file_data_flags)
+                );
         }
     }
 
@@ -237,7 +266,8 @@ bool QlaFilterSession::prepare()
 
     if (m_active)
     {
-        auto ovec_size = m_instance.m_ovec_size;
+        auto ovec_size = std::max(m_instance.m_settings.match.ovec_size,
+                                  m_instance.m_settings.exclude.ovec_size);
         if (ovec_size > 0)
         {
             m_mdata = pcre2_match_data_create(ovec_size, NULL);
@@ -304,30 +334,7 @@ bool QlaInstance::read_to_json(int start, int end, json_t** output) const
 
 json_t* QlaInstance::diagnostics() const
 {
-    json_t* rval = json_object();
-    if (!m_settings.source.empty())
-    {
-        json_object_set_new(rval, PARAM_SOURCE, json_string(m_settings.source.c_str()));
-    }
-
-    if (!m_settings.user_name.empty())
-    {
-        json_object_set_new(rval, PARAM_USER, json_string(m_settings.user_name.c_str()));
-    }
-
-    if (!m_settings.match.empty())
-    {
-        json_object_set_new(rval, PARAM_MATCH, json_string(m_settings.match.c_str()));
-    }
-
-    if (!m_settings.exclude.empty())
-    {
-        json_object_set_new(rval, PARAM_EXCLUDE, json_string(m_settings.exclude.c_str()));
-    }
-    json_object_set_new(rval, PARAM_SEPARATOR, json_string(m_settings.separator.c_str()));
-    json_object_set_new(rval, PARAM_NEWLINE, json_string(m_settings.query_newline.c_str()));
-
-    return rval;
+    return json_null();
 }
 
 uint64_t QlaInstance::getCapabilities() const
@@ -362,7 +369,7 @@ void QlaInstance::check_reopen_file(const string& filename, uint64_t data_flags,
 
 void QlaInstance::check_reopen_session_file(const std::string& filename, FILE** ppFile) const
 {
-    check_reopen_file(filename, m_session_data_flags, ppFile);
+    check_reopen_file(filename, m_settings.session_data_flags, ppFile);
 }
 
 /**
@@ -383,14 +390,15 @@ void QlaFilterSession::write_log_entries(const LogEventElems& elems)
 
         if (m_logfile)
         {
-            string entry = generate_log_entry(m_instance.m_session_data_flags, elems);
+            string entry = generate_log_entry(m_instance.m_settings.session_data_flags, elems);
             write_session_log_entry(entry);
         }
     }
 
     if (m_instance.m_settings.write_unified_log || m_instance.m_settings.write_stdout_log)
     {
-        string unified_log_entry = generate_log_entry(m_instance.m_settings.log_file_data_flags, elems);
+        string unified_log_entry =
+            generate_log_entry(m_instance.m_settings.log_file_data_flags, elems);
 
         if (m_instance.m_settings.write_unified_log)
         {
@@ -409,11 +417,12 @@ int QlaFilterSession::routeQuery(GWBUF* queue)
     char* query = NULL;
     int query_len = 0;
 
+    pcre2_code* re_match = m_instance.m_settings.match.sCode.get();
+    pcre2_code* re_exclude = m_instance.m_settings.exclude.sCode.get();
+
     if (m_active
         && modutil_extract_SQL(queue, &query, &query_len)
-        && mxs_pcre2_check_match_exclude(m_instance.m_re_match, m_instance.m_re_exclude, m_mdata,
-                                         query, query_len,
-                                         MXS_MODULE_NAME))
+        && mxs_pcre2_check_match_exclude(re_match, re_exclude, m_mdata, query, query_len, MXS_MODULE_NAME))
     {
         const uint32_t data_flags = m_instance.m_settings.log_file_data_flags;
         LogEventData& event = m_event_data;
@@ -484,7 +493,7 @@ int QlaFilterSession::clientReply(GWBUF* queue, const mxs::ReplyRoute& down, con
 
 FILE* QlaInstance::open_session_log_file(const string& filename) const
 {
-    return open_log_file(m_session_data_flags, filename);
+    return open_log_file(m_settings.session_data_flags, filename);
 }
 
 bool QlaInstance::open_unified_logfile()
@@ -896,52 +905,12 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         "V1.1.1",
         CAPABILITIES,
         &QlaInstance::s_object,
-        NULL,                   /* Process init. */
-        NULL,                   /* Process finish. */
-        NULL,                   /* Thread init. */
-        NULL,                   /* Thread finish. */
-        {
-            {
-                PARAM_MATCH,    MXS_MODULE_PARAM_REGEX
-            },
-            {
-                PARAM_EXCLUDE,  MXS_MODULE_PARAM_REGEX
-            },
-            {
-                PARAM_USER,     MXS_MODULE_PARAM_STRING
-            },
-            {
-                PARAM_SOURCE,   MXS_MODULE_PARAM_STRING
-            },
-            {
-                PARAM_FILEBASE, MXS_MODULE_PARAM_STRING,        NULL,             MXS_MODULE_OPT_REQUIRED
-            },
-            {
-                PARAM_OPTIONS,  MXS_MODULE_PARAM_ENUM,          "ignorecase",     MXS_MODULE_OPT_NONE,
-                option_values
-            },
-            {
-                PARAM_LOG_TYPE, MXS_MODULE_PARAM_ENUM,          "session",        MXS_MODULE_OPT_NONE,
-                log_type_values
-            },
-            {
-                PARAM_LOG_DATA, MXS_MODULE_PARAM_ENUM,          LOG_DATA_DEFAULT, MXS_MODULE_OPT_NONE,
-                log_data_values
-            },
-            {
-                PARAM_NEWLINE,  MXS_MODULE_PARAM_QUOTEDSTRING,  "\" \"",          MXS_MODULE_OPT_NONE
-            },
-            {
-                PARAM_SEPARATOR,MXS_MODULE_PARAM_QUOTEDSTRING,  ",",              MXS_MODULE_OPT_NONE
-            },
-            {
-                PARAM_FLUSH,    MXS_MODULE_PARAM_BOOL,          "false"
-            },
-            {
-                PARAM_APPEND,   MXS_MODULE_PARAM_BOOL,          "false"
-            },
-            {MXS_END_MODULE_PARAMS}
-        }
+        nullptr,
+        nullptr,
+        nullptr,
+        nullptr,
+        {{nullptr}},    /* Legacy parameters */
+        &s_spec
     };
 
     return &info;

@@ -30,7 +30,7 @@
 namespace
 {
 
-mxs::ConfigParameters empty;
+mxs::ConfigParameters params;
 }
 /**
  * test1    Filter creation, finding and deletion
@@ -40,7 +40,7 @@ static int test1()
 {
     SFilterDef f1, f2;
 
-    if ((f1 = filter_alloc("test1", "qlafilter", &empty)) == NULL)
+    if ((f1 = filter_alloc("test1", "qlafilter", &params)) == NULL)
     {
         fprintf(stderr, "filter_alloc: test 1 failed.\n");
         return 1;
@@ -72,7 +72,7 @@ static int test2()
 {
     SFilterDef f1;
 
-    if ((f1 = filter_alloc("test1", "qlafilter", &empty)) == NULL)
+    if ((f1 = filter_alloc("test1", "qlafilter", &params)) == NULL)
     {
         fprintf(stderr, "filter_alloc: test 1 failed.\n");
         return 1;
@@ -96,7 +96,7 @@ static int test3()
     for (i = 0; i < n_filters; i++)
     {
         sprintf(name, "filter%d", i);
-        if ((f1 = filter_alloc(name, "qlafilter", &empty)) == NULL)
+        if ((f1 = filter_alloc(name, "qlafilter", &params)) == NULL)
         {
             fprintf(stderr,
                     "filter_alloc: test 3 failed with %s.\n",
@@ -138,6 +138,8 @@ int main(int argc, char** argv)
     int result = 0;
     mxs::set_libdir("../../modules/filter/qlafilter/");
     mxs_log_init(NULL, NULL, MXS_LOG_TARGET_STDOUT);
+
+    params.set("filebase", "/tmp/qlafilter");
 
     result += test1();
     result += test2();

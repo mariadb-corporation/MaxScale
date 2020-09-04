@@ -38,7 +38,7 @@ public:
     QlaInstance(const QlaInstance&) = delete;
     QlaInstance& operator=(const QlaInstance&) = delete;
 
-    QlaInstance(const std::string& name, mxs::ConfigParameters* params);
+    QlaInstance(const std::string& name);
     ~QlaInstance();
 
     /* Log file save mode flags. */
@@ -90,6 +90,11 @@ public:
         return true;
     }
 
+    mxs::config::Configuration* getConfiguration()
+    {
+        return &m_settings;
+    }
+
     uint64_t getCapabilities() const;
 
     std::string generate_log_header(uint64_t data_flags) const;
@@ -100,15 +105,17 @@ public:
     bool  write_to_logfile(FILE* fp, const std::string& contents) const;
     void  write_stdout_log_entry(const std::string& contents) const;
 
-    class Settings
+    class Settings : public mxs::config::Configuration
     {
     public:
-        Settings(mxs::ConfigParameters* params);
+        Settings(const std::string& name);
 
         bool        write_unified_log {false};
         bool        write_session_log {false};
         bool        write_stdout_log {false};
         uint32_t    log_file_data_flags {0};    /* What data is saved to the files */
+        int64_t     log_file_types {0};
+        uint64_t    session_data_flags {0};     /* What data is printed to session files */
         std::string filebase;                   /* The filename base */
         bool        flush_writes {false};       /* Flush log file after every write? */
         bool        append {false};             /* Open files in append-mode? */
@@ -116,19 +123,17 @@ public:
         std::string separator;                  /*  Character(s) used to separate elements */
         std::string user_name;                  /* The user name to filter on */
         std::string source;                     /* The source of the client connection to filter on */
-        std::string match;                      /* Optional text to match against */
-        std::string exclude;                    /* Optional text to match against for exclusion */
+
+        mxs::config::RegexValue match;  /* Optional text to match against */
+        mxs::config::RegexValue exclude;/* Optional text to match against for exclusion */
+        uint32_t                options;/* Regular expression options */
+
+        bool post_configure() final;
     };
 
     Settings m_settings;
 
     const std::string m_name;   /* Filter definition name */
-
-    pcre2_code* m_re_match {nullptr};   /* Compiled regex text */
-    pcre2_code* m_re_exclude {nullptr}; /* Compiled regex nomatch text */
-    uint32_t    m_ovec_size {0};        /* PCRE2 match data ovector size */
-
-    uint64_t m_session_data_flags {0};      /* What data is printed to session files */
 
 private:
     bool  open_unified_logfile();
