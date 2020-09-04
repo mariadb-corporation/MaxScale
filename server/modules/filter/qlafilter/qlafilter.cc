@@ -193,19 +193,16 @@ QlaFilterSession::QlaFilterSession(QlaInstance& instance, MXS_SESSION* session, 
 
 QlaFilterSession::~QlaFilterSession()
 {
-    pcre2_match_data_free(m_mdata);
-    // File should be closed and event data freed by now
-    mxb_assert(m_logfile == NULL && m_event_data.has_message == false);
-}
-
-void QlaFilterSession::close()
-{
     if (m_logfile)
     {
         fclose(m_logfile);
         m_logfile = nullptr;
     }
     m_event_data.clear();
+
+    pcre2_match_data_free(m_mdata);
+    // File should be closed and event data freed by now
+    mxb_assert(m_logfile == NULL && m_event_data.has_message == false);
 }
 
 QlaInstance* QlaInstance::create(const char* name, mxs::ConfigParameters* params)
@@ -248,7 +245,6 @@ QlaFilterSession* QlaInstance::newSession(MXS_SESSION* session, SERVICE* service
     auto my_session = new(std::nothrow) QlaFilterSession(*this, session, service);
     if (my_session && !my_session->prepare())
     {
-        my_session->close();
         delete my_session;
         my_session = nullptr;
     }

@@ -60,10 +60,6 @@ TeeSession::~TeeSession()
     delete m_client;
 }
 
-void TeeSession::close()
-{
-}
-
 int TeeSession::routeQuery(GWBUF* queue)
 {
     if (m_client && query_matches(queue))

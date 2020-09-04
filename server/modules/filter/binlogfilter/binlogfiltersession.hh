@@ -61,9 +61,6 @@ public:
     static BinlogFilterSession* create(MXS_SESSION* pSession, SERVICE* pService,
                                        const BinlogFilter* pFilter);
 
-    // Called when a client session has been closed
-    void close();
-
     // Handle a query from the client
     int routeQuery(GWBUF* pPacket);
 

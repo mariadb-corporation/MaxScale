@@ -32,7 +32,6 @@ public:
     ~TeeSession();
     static TeeSession* create(Tee* my_instance, MXS_SESSION* session, SERVICE* service);
 
-    void    close();
     int     routeQuery(GWBUF* pPacket);
     json_t* diagnostics() const;
 

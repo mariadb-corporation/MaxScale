@@ -49,7 +49,7 @@ public:
     InsertStreamSession& operator=(const InsertStreamSession&) = delete;
 
     InsertStreamSession(MXS_SESSION* pSession, SERVICE* pService, InsertStream* filter);
-    void close();
+
     int  routeQuery(GWBUF* pPacket);
     int  clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply);
 

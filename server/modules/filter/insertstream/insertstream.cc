@@ -235,10 +235,6 @@ InsertStreamSession::InsertStreamSession(MXS_SESSION* pSession, SERVICE* pServic
 {
 }
 
-void InsertStreamSession::close()
-{
-}
-
 int32_t InsertStreamSession::routeQuery(GWBUF* queue)
 {
     std::string target;

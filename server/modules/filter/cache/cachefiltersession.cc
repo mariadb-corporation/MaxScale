@@ -357,10 +357,6 @@ CacheFilterSession* CacheFilterSession::create(std::unique_ptr<SessionCache> sCa
     return pCacheFilterSession;
 }
 
-void CacheFilterSession::close()
-{
-}
-
 int CacheFilterSession::routeQuery(GWBUF* pPacket)
 {
     uint8_t* pData = static_cast<uint8_t*>(GWBUF_DATA(pPacket));

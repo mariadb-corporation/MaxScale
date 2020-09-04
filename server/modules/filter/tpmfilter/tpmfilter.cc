@@ -86,7 +86,6 @@ static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance,
                                       SERVICE* service,
                                       mxs::Downstream* down,
                                       mxs::Upstream* up);
-static void closeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session);
 static void freeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session);
 static int  routeQuery(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, GWBUF* queue);
 static int  clientReply(MXS_FILTER* instance,
@@ -169,7 +168,6 @@ MXS_MODULE* MXS_CREATE_MODULE()
     {
         createInstance,
         newSession,
-        closeSession,
         freeSession,
         routeQuery,
         clientReply,
@@ -384,24 +382,6 @@ static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance,
 }
 
 /**
- * Close a session with the filter, this is the mechanism
- * by which a filter may cleanup data structure etc.
- *
- * @param instance  The filter instance data
- * @param session   The session being closed
- */
-static void closeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session)
-{
-    TPM_SESSION* my_session = (TPM_SESSION*)session;
-    TPM_INSTANCE* my_instance = (TPM_INSTANCE*)instance;
-    if (my_instance->fp != NULL)
-    {
-        // flush FP when a session is closed.
-        fflush(my_instance->fp);
-    }
-}
-
-/**
  * Free the memory associated with the session
  *
  * @param instance  The filter instance
@@ -410,6 +390,13 @@ static void closeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session)
 static void freeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session)
 {
     TPM_SESSION* my_session = (TPM_SESSION*)session;
+    TPM_INSTANCE* my_instance = (TPM_INSTANCE*)instance;
+
+    if (my_instance->fp != NULL)
+    {
+        // flush FP when a session is closed.
+        fflush(my_instance->fp);
+    }
 
     MXS_FREE(my_session->clientHost);
     MXS_FREE(my_session->userName);

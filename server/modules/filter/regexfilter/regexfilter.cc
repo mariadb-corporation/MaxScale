@@ -43,7 +43,6 @@ static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance,
                                       SERVICE* service,
                                       mxs::Downstream* down,
                                       mxs::Upstream* up);
-static void closeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session);
 static void freeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session);
 static void setDownstream(MXS_FILTER* instance,
                           MXS_FILTER_SESSION* fsession,
@@ -116,7 +115,6 @@ MXS_MODULE* MXS_CREATE_MODULE()
     {
         createInstance,
         newSession,
-        closeSession,
         freeSession,
         routeQuery,
         clientReply,
@@ -310,17 +308,6 @@ static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance,
     }
 
     return (MXS_FILTER_SESSION*)my_session;
-}
-
-/**
- * Close a session with the filter, this is the mechanism
- * by which a filter may cleanup data structure etc.
- *
- * @param instance  The filter instance data
- * @param session   The session being closed
- */
-static void closeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session)
-{
 }
 
 /**

@@ -92,16 +92,6 @@ typedef struct mxs_filter_object
                                       mxs::Downstream* down, mxs::Upstream* up);
 
     /**
-     * @brief Called when a session is closed
-     *
-     * The filter should close all objects but not free any memory.
-     *
-     * @param instance Filter instance
-     * @param fsession Filter session
-     */
-    void (* closeSession)(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession);
-
-    /**
      * @brief Called when a session is freed
      *
      * The session should free all allocated memory in this function.
@@ -319,11 +309,6 @@ public:
     ~FilterSession();
 
     /**
-     * Called when a client session has been closed.
-     */
-    void close();
-
-    /**
      * Called for setting the component following this filter session.
      *
      * @param down The component following this filter.
@@ -482,13 +467,6 @@ public:
         return pFilterSession;
     }
 
-    static void apiCloseSession(MXS_FILTER*, MXS_FILTER_SESSION* pData)
-    {
-        FilterSessionType* pFilterSession = static_cast<FilterSessionType*>(pData);
-
-        MXS_EXCEPTION_GUARD(pFilterSession->close());
-    }
-
     static void apiFreeSession(MXS_FILTER*, MXS_FILTER_SESSION* pData)
     {
         FilterSessionType* pFilterSession = static_cast<FilterSessionType*>(pData);
@@ -588,7 +566,6 @@ MXS_FILTER_OBJECT Filter<FilterType, FilterSessionType>::s_object =
 {
     &FilterType::apiCreateInstance,
     &FilterType::apiNewSession,
-    &FilterType::apiCloseSession,
     &FilterType::apiFreeSession,
     &FilterType::apiRouteQuery,
     &FilterType::apiClientReply,

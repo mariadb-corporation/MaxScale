@@ -64,11 +64,6 @@ public:
                                       SERVICE* pService);
 
     /**
-     * The session has been closed.
-     */
-    void close();
-
-    /**
      * A request on its way to a backend is delivered to this function.
      *
      * @param pPacket  Buffer containing an MySQL protocol packet.

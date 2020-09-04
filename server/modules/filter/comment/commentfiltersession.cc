@@ -42,10 +42,6 @@ CommentFilterSession* CommentFilterSession::create(MXS_SESSION* pSession,
     return new CommentFilterSession(pSession, pService, pFilter);
 }
 
-void CommentFilterSession::close()
-{
-}
-
 int CommentFilterSession::routeQuery(GWBUF* pPacket)
 {
     if (modutil_is_SQL(pPacket))

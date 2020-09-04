@@ -27,9 +27,6 @@ class CommentFilterSession : public maxscale::FilterSession
 public:
     ~CommentFilterSession();
 
-    // Called when a client session has been closed
-    void close();
-
     // Create a new filter session
     static CommentFilterSession* create(MXS_SESSION* pSession,
                                         SERVICE* pService,

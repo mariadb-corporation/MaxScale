@@ -272,13 +272,6 @@ int BinlogFilterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down
 }
 
 /**
- * Close filter session
- */
-void BinlogFilterSession::close()
-{
-}
-
-/**
  * Check whether events in a transaction can be skipped.
  * The triggering event is TABLE_MAP_EVENT.
  *

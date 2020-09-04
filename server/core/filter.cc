@@ -309,10 +309,6 @@ FilterSession::~FilterSession()
 {
 }
 
-void FilterSession::close()
-{
-}
-
 void FilterSession::setDownstream(const Downstream& down)
 {
     m_down = down;

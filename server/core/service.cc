@@ -1309,7 +1309,6 @@ bool ServiceEndpoint::connect()
             for (auto d = m_filters.begin(); d != it; ++d)
             {
                 mxb_assert(d->session);
-                d->filter->obj()->closeSession(d->instance, d->session);
                 d->filter->obj()->freeSession(d->instance, d->session);
             }
 
@@ -1356,11 +1355,6 @@ void ServiceEndpoint::close()
 {
     mxb::LogScope scope(m_service->name());
     mxb_assert(m_open);
-
-    for (auto& a : m_filters)
-    {
-        a.filter->obj()->closeSession(a.instance, a.session);
-    }
 
     m_service->router->freeSession(m_service->router_instance, m_router_session);
 

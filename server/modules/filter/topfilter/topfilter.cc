@@ -56,7 +56,6 @@ static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance,
                                       SERVICE* service,
                                       mxs::Downstream* down,
                                       mxs::Upstream* up);
-static void closeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session);
 static void freeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session);
 static int  routeQuery(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, GWBUF* queue);
 static int  clientReply(MXS_FILTER* instance,
@@ -148,7 +147,6 @@ MXS_MODULE* MXS_CREATE_MODULE()
     {
         createInstance,
         newSession,
-        closeSession,
         freeSession,
         routeQuery,
         clientReply,
@@ -351,14 +349,12 @@ static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance,
 }
 
 /**
- * Close a session with the filter, this is the mechanism
- * by which a filter may cleanup data structure etc.
- * In the case of the TOPN filter we simple close the file descriptor.
+ * Free the memory associated with the session
  *
- * @param instance  The filter instance data
- * @param session   The session being closed
+ * @param instance  The filter instance
+ * @param session   The filter session
  */
-static void closeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session)
+static void freeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session)
 {
     TOPN_INSTANCE* my_instance = (TOPN_INSTANCE*) instance;
     TOPN_SESSION* my_session = (TOPN_SESSION*) session;
@@ -426,18 +422,6 @@ static void closeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session)
                 (int) diff.tv_usec / 1000);
         fclose(fp);
     }
-}
-
-/**
- * Free the memory associated with the session
- *
- * @param instance  The filter instance
- * @param session   The filter session
- */
-static void freeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session)
-{
-    TOPN_INSTANCE* my_instance = (TOPN_INSTANCE*) instance;
-    TOPN_SESSION* my_session = (TOPN_SESSION*) session;
 
     MXS_FREE(my_session->current);
 

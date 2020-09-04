@@ -179,11 +179,6 @@ public:
      */
     int clientReply(GWBUF* buffer, const mxs::ReplyRoute& down, const mxs::Reply& reply);
 
-    /**
-     * Close a session with the filter. Close the file descriptor and reset event info.
-     */
-    void close();
-
     json_t* diagnostics() const;
 
 private:

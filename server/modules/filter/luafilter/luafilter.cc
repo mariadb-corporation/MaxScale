@@ -161,7 +161,6 @@ class LuaFilterSession : public maxscale::FilterSession
 public:
     LuaFilterSession(MXS_SESSION* session, SERVICE* service, LuaFilter* filter);
     ~LuaFilterSession();
-    void close();
     bool prepare_session(const std::string& session_script);
 
     int routeQuery(GWBUF* queue);
@@ -335,7 +334,7 @@ bool LuaFilterSession::prepare_session(const std::string& session_script)
     return !error;
 }
 
-void LuaFilterSession::close()
+LuaFilterSession::~LuaFilterSession()
 {
     if (m_lua_state)
     {
@@ -347,6 +346,8 @@ void LuaFilterSession::close()
                         lua_tostring(m_lua_state, -1));
             lua_pop(m_lua_state, -1);
         }
+
+        lua_close(m_lua_state);
     }
 
     auto global_lua_state = m_filter->global_lua_state();
@@ -362,14 +363,6 @@ void LuaFilterSession::close()
                         lua_tostring(global_lua_state, -1));
             lua_pop(global_lua_state, -1);
         }
-    }
-}
-
-LuaFilterSession::~LuaFilterSession()
-{
-    if (m_lua_state)
-    {
-        lua_close(m_lua_state);
     }
 }
 
