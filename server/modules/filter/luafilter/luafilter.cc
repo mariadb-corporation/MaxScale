@@ -40,14 +40,10 @@
 
 #include <maxscale/ccdefs.hh>
 
-extern "C"
-{
-
 #include <lauxlib.h>
 #include <lua.h>
 #include <lualib.h>
 #include <string.h>
-}
 
 #include <mutex>
 #include <maxbase/alloc.h>
@@ -202,26 +198,26 @@ static int lua_get_canonical(lua_State* state)
 /**
  * The Lua filter instance.
  */
-typedef struct
+struct LUA_INSTANCE
 {
-    lua_State* global_lua_state;
-    char*      global_script;
-    char*      session_script;
-    std::mutex lock;
-} LUA_INSTANCE;
+    lua_State*  global_lua_state {nullptr};
+    std::string global_script;
+    std::string session_script;
+    std::mutex  lock;
+};
 
 /**
  * The session structure for Lua filter.
  */
-typedef struct
+struct LUA_SESSION
 {
-    MXS_SESSION*     session;
-    lua_State*       lua_state;
-    GWBUF*           current_query;
-    SERVICE*         service;
-    mxs::Downstream* down;
-    mxs::Upstream*   up;
-} LUA_SESSION;
+    MXS_SESSION*     session {nullptr};
+    lua_State*       lua_state {nullptr};
+    GWBUF*           current_query {nullptr};
+    SERVICE*         service {nullptr};
+    mxs::Downstream* down {nullptr};
+    mxs::Upstream*   up {nullptr};
+};
 
 void expose_functions(lua_State* state, GWBUF** active_buffer)
 {
@@ -254,32 +250,23 @@ void expose_functions(lua_State* state, GWBUF** active_buffer)
  */
 static MXS_FILTER* createInstance(const char* name, mxs::ConfigParameters* params)
 {
-    LUA_INSTANCE* my_instance = new(std::nothrow) LUA_INSTANCE;
+    auto my_instance = new LUA_INSTANCE();
+    my_instance->global_script = params->get_string("global_script");
+    my_instance->session_script = params->get_string("session_script");
 
-    if (my_instance == NULL)
-    {
-        return NULL;
-    }
-
-    my_instance->global_script = params->get_c_str_copy("global_script");
-    my_instance->session_script = params->get_c_str_copy("session_script");
-    my_instance->global_lua_state = nullptr;
-
-    if (my_instance->global_script)
+    if (!my_instance->global_script.empty())
     {
         if ((my_instance->global_lua_state = luaL_newstate()))
         {
             luaL_openlibs(my_instance->global_lua_state);
 
-            if (luaL_dofile(my_instance->global_lua_state, my_instance->global_script))
+            if (luaL_dofile(my_instance->global_lua_state, my_instance->global_script.c_str()))
             {
                 MXS_ERROR("Failed to execute global script at '%s':%s.",
-                          my_instance->global_script,
+                          my_instance->global_script.c_str(),
                           lua_tostring(my_instance->global_lua_state, -1));
-                MXS_FREE(my_instance->global_script);
-                MXS_FREE(my_instance->session_script);
-                MXS_FREE(my_instance);
-                my_instance = NULL;
+                delete my_instance;
+                my_instance = nullptr;
             }
             else if (my_instance->global_lua_state)
             {
@@ -329,32 +316,26 @@ static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance,
                                       mxs::Downstream* downstream,
                                       mxs::Upstream* upstream)
 {
-    LUA_SESSION* my_session;
-    LUA_INSTANCE* my_instance = (LUA_INSTANCE*) instance;
-
-    if ((my_session = (LUA_SESSION*) MXS_CALLOC(1, sizeof(LUA_SESSION))) == NULL)
-    {
-        return NULL;
-    }
-
+    auto my_instance = (LUA_INSTANCE*) instance;
+    auto my_session = new LUA_SESSION();
     my_session->service = service;
     my_session->down = downstream;
     my_session->up = upstream;
     my_session->session = session;
 
-    if (my_instance->session_script)
+    if (!my_instance->session_script.empty())
     {
         my_session->lua_state = luaL_newstate();
         luaL_openlibs(my_session->lua_state);
 
-        if (luaL_dofile(my_session->lua_state, my_instance->session_script))
+        if (luaL_dofile(my_session->lua_state, my_instance->session_script.c_str()))
         {
             MXS_ERROR("Failed to execute session script at '%s': %s.",
-                      my_instance->session_script,
+                      my_instance->session_script.c_str(),
                       lua_tostring(my_session->lua_state, -1));
             lua_close(my_session->lua_state);
-            MXS_FREE(my_session);
-            my_session = NULL;
+            delete my_session;
+            my_session = nullptr;
         }
         else
         {
@@ -453,7 +434,7 @@ static void freeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session)
         lua_close(my_session->lua_state);
     }
 
-    MXS_FREE(my_session);
+    delete my_session;
 }
 
 /**
@@ -655,13 +636,13 @@ static json_t* diagnostics(const MXS_FILTER* instance, const MXS_FILTER_SESSION*
                 lua_pop(my_instance->global_lua_state, -1);
             }
         }
-        if (my_instance->global_script)
+        if (!my_instance->global_script.empty())
         {
-            json_object_set_new(rval, "global_script", json_string(my_instance->global_script));
+            json_object_set_new(rval, "global_script", json_string(my_instance->global_script.c_str()));
         }
-        if (my_instance->session_script)
+        if (!my_instance->session_script.empty())
         {
-            json_object_set_new(rval, "session_script", json_string(my_instance->session_script));
+            json_object_set_new(rval, "session_script", json_string(my_instance->session_script.c_str()));
         }
     }
 
