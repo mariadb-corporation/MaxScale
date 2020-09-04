@@ -181,7 +181,11 @@ export default {
             Function to be called by parent component
         */
         getParameterObj() {
-            return this.$help.listToTree({ arr: this.changedParametersArr })
+            let resultObj = {}
+            this.changedParametersArr.forEach(obj => {
+                resultObj[obj.id] = obj.value
+            })
+            return resultObj
         },
     },
 }

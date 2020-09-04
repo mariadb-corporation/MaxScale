@@ -156,15 +156,15 @@ async function mockupParametersChange(wrapper, isDual) {
         const enumParamTd = wrapper.find(`.cell-${1}-enum_param`)
         await itemSelectMock(enumParamTd, 'secondary')
 
-        expect(wrapper.vm.$data.changedParametersArr.length).to.be.equal(1)
-        expect(wrapper.vm.$data.changedParametersArr[0].value).to.be.equal('secondary')
+        expect(wrapper.vm.$data.changedParams.length).to.be.equal(1)
+        expect(wrapper.vm.$data.changedParams[0].value).to.be.equal('secondary')
         if (isDual) {
             // mockup selecting item on an boolean parameter
             const boolParamCell = wrapper.find(`.cell-${1}-bool_param`)
             await itemSelectMock(boolParamCell, true)
 
-            expect(wrapper.vm.$data.changedParametersArr.length).to.be.equal(2)
-            expect(wrapper.vm.$data.changedParametersArr[1].value).to.be.equal(true)
+            expect(wrapper.vm.$data.changedParams.length).to.be.equal(2)
+            expect(wrapper.vm.$data.changedParams[1].value).to.be.equal(true)
         }
     }
     const cb = () => expect(wrapper.vm.shouldDisableSaveBtn).to.be.false
@@ -391,7 +391,7 @@ describe('DetailsParametersTable.vue', () => {
         expect(wrapper.vm.$data.showConfirmDialog).to.be.false
         expect(wrapper.vm.$data.editableCell).to.be.false
         // should clear component state
-        expect(wrapper.vm.$data.changedParametersArr).to.be.deep.equals([])
+        expect(wrapper.vm.$data.changedParams).to.be.deep.equals([])
     })
 
     it(`Should close confirmation dialog when click "That's Right" button`, async () => {
@@ -401,6 +401,6 @@ describe('DetailsParametersTable.vue', () => {
         // should clear component state and close dialog
         expect(wrapper.vm.$data.showConfirmDialog).to.be.false
         expect(wrapper.vm.$data.editableCell).to.be.false
-        expect(wrapper.vm.$data.changedParametersArr).to.be.deep.equals([])
+        expect(wrapper.vm.$data.changedParams).to.be.deep.equals([])
     })
 })

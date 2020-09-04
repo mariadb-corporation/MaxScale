@@ -190,156 +190,153 @@ export function dateFormat({ value, formatType = 'HH:mm:ss MM.DD.YYYY' }) {
 
 let nodeId = 0 // must be a number, so that hierarchySort can be done
 /**
- * Flatten a tree into nodes list
- * Convert an object to array of nodes object with tree data properties.
- * If key value is an object, it will be flatten. If key value is an array,
- * it will be converted to object then flatten.
- * @param {Object} payload.obj - Root Object to be handled
+ * Convert an object to tree array.
+ * Root id (parentNodeId) is always started at 0
+ * @param {Object} payload.obj - Root object to be handled
  * @param {Boolean} payload.keepPrimitiveValue - keepPrimitiveValue to whether call convertType function or not
  * @param {Number} payload.level - depth level for nested object
- * @param {Object} payload.parentNodeInfo - This contains id and original value, it's null in the first level (0)
  * @param {Number} payload.parentNodeId - nodeId of parentNode
- * @param {String} payload.keyName - keyName
- * @param {String} payload.keyValue - keyValue
  * @return {Array} an array of nodes object
  */
-export function flattenTree({
-    obj,
-    keepPrimitiveValue,
-    level,
-    parentNodeInfo = null,
-    parentNodeId = 0,
-    keyName = 'id',
-    keyValue = 'value',
-}) {
-    let nodes = []
+export function objToTree({ obj, keepPrimitiveValue, level, parentNodeId = 0 }) {
+    let tree = []
     if (isNotEmptyObj(obj)) {
         const targetObj = cloneDeep(obj)
-        Object.keys(targetObj).map(key => {
-            let value = keepPrimitiveValue ? targetObj[key] : convertType(targetObj[key])
+        Object.keys(targetObj).forEach(key => {
+            const value = keepPrimitiveValue ? targetObj[key] : convertType(targetObj[key])
 
             let node = {
                 nodeId: ++nodeId,
                 parentNodeId,
                 level,
-                parentNodeInfo,
-                [keyName]: key,
-                [keyValue]: value,
+                id: key,
+                value: value,
                 originalValue: value,
             }
 
             const hasChild = isNotEmptyArray(value) || isNotEmptyObj(value)
-
+            node.leaf = !hasChild
             if (hasChild) {
-                node[keyValue] = ''
+                node.value = ''
                 //  only object has child value will have expanded property
                 node.expanded = false
             }
 
             if (isNotEmptyObj(value))
-                node.children = flattenTree({
+                node.children = objToTree({
                     obj: value,
                     keepPrimitiveValue,
                     level: level + 1,
-                    parentNodeInfo: { [keyName]: key, originalValue: value },
                     parentNodeId: node.nodeId,
                 })
             if (isNotEmptyArray(value))
                 //convert value type array to object then do a recursive call
-                node.children = flattenTree({
+                node.children = objToTree({
                     obj: { ...value },
                     keepPrimitiveValue,
                     level: level + 1,
-                    parentNodeInfo: { [keyName]: key, originalValue: value },
                     parentNodeId: node.nodeId,
                 })
 
-            node.leaf = !hasChild
-            nodes.push(node)
+            tree.push(node)
         })
     }
-    return nodes
+    return tree
 }
 
 /**
- * Convert an array of nodes object to an object has property name
- * as the value of keyName (id), key value as the value of keyValue (value).
- * @param {Array} payload.arr - Array of objects
- * @param {String} payload.keyName - keyName of the object in the array
- * @param {String} payload.keyValue - keyValue of the object in the array
- * @return {Object} return an object
+ * This function flattens tree array
+ * @param {Array} tree - tree array to be flatten
+ * @returns {Array} flattened array
  */
-export function listToTree({ arr, keyName = 'id', keyValue = 'value' }) {
+export function flattenTree(tree) {
+    let flattened = []
+    let target = cloneDeep(tree)
+    //Traversal
+    target.forEach(o => {
+        if (o.children && o.children.length > 0) {
+            o.expanded = true
+            flattened.push(o)
+            flattened = [...flattened, ...flattenTree(o.children)]
+        } else flattened.push(o)
+    })
+    return flattened
+}
+
+/**
+ * This function finds the ancestor node id of provided argument node
+ * @param {Number} payload.node - node to be used for finding its ancestor
+ * @param {Map} payload.treeMap - map for find specific node using nodeId
+ * @returns {Number} ancestor node id
+ */
+export function findAncestor({ node, treeMap }) {
+    const { nodeId } = node
+    let ancestors = []
+    let parentId = treeMap.get(nodeId) && treeMap.get(nodeId).parentNodeId
+    while (parentId) {
+        ancestors.push(parentId)
+        parentId = treeMap.get(parentId) && treeMap.get(parentId).parentNodeId
+    }
+    // since nodeId is an incremental number, the ancestor nodeId should be the smallest number
+    if (ancestors.length) return Math.min(...ancestors)
+    // root parentNodeId is always 0
+    else return 0
+}
+
+/**
+ * This function takes tree for creating a tree map to
+ * lookup for changed nodes and finally return an object
+ * with key pairs as changed nodes id and value. This object
+ * respects depth level of nested objects.
+ * e.g. If a changed nodes are [ { id: 'count', value: 10, ... } ]
+ * The result object would be { log_throttling { window: 0, suppress: 0, count: 10 }}
+ * @param {Array} payload.arr - Array of objects
+ * @param {Array} payload.tree - tree
+ * @return {Object} object
+ */
+export function treeToObj({ changedNodes, tree }) {
     let resultObj = {}
-    if (isNotEmptyArray(arr)) {
-        let targetArr = cloneDeep(arr)
+    if (isNotEmptyArray(changedNodes)) {
+        let ancestorsHash = {}
+        const target = cloneDeep(changedNodes)
+        let treeMap = new Map()
+        const flattened = flattenTree(tree)
+        flattened.forEach(node => treeMap.set(node.nodeId, node))
 
-        /*
-            if value of keyValue is an object,
-            there is linked nodes, this linkedNodesHash
-            holds key value and linkedNodeKeyName
-            of linked nodes
-        */
-        let linkedNodeKeyName = null
-        let linkedNodesHash = {}
-        targetArr.forEach(node => {
-            const { parentNodeInfo = null } = node
-
-            /*
-                flattenTree reverse, get parentNodeInfo then check if
-                current node is a linked node. Then assign key value of
-                current node to linkedNodesHash object, finally assign
-                to resultObj with parentId as key name and linkedNodesHash as
-                key value
-            */
-            if (parentNodeInfo) {
-                const { originalValue, id: parentId } = parentNodeInfo
-                if (linkedNodesHash[parentId] == undefined) linkedNodesHash[parentId] = {}
-
-                if (isLinkedNode({ parentNodeInfo, linkedNodesHash, linkedNodeKeyName })) {
-                    linkedNodesHash[parentId] = originalValue
-                    linkedNodeKeyName = parentId
+        target.forEach(node => {
+            const { parentNodeId } = node
+            // if a node changes its value, its ancestor needs to be included in the resultObj
+            if (parentNodeId) {
+                const ancestorId = findAncestor({ node, treeMap })
+                const ancestorNode = treeMap.get(ancestorId)
+                if (ancestorNode) {
+                    const { originalValue, id: ancestorId } = ancestorNode
+                    ancestorsHash[ancestorId] = originalValue
+                    updateNode({ obj: ancestorsHash[ancestorId], node: node })
+                    resultObj[ancestorId] = ancestorsHash[ancestorId]
                 }
-
-                linkedNodesHash[parentId] = {
-                    ...linkedNodesHash[parentId], //includes unmodified key/value pair as well
-                    [node[keyName]]: node[keyValue], //set new value to key
-                }
-
-                resultObj[parentId] = linkedNodesHash[parentId]
-            } else if (node.leaf || node.leaf === undefined)
-                /*
-                    leaf is undefined when the array wasn't created by flattenTree.
-                    e.g. in parameters-collapse component.
-                */
-                resultObj[node[keyName]] = node[keyValue]
+            } else if (node.leaf) resultObj[node.id] = node.value
         })
     }
     return resultObj
 }
 
 /**
- * This function compares original key names of parent's original value with
- * key names of linkedNodes object. LinkedNodes object is getting from linkedNodesHash
- * with key name as parentId
- * @private
- * @param {Object} payload - Payload object
- * @param {Object} payload.parentNodeInfo - node info contains id of the parent and original value before flattening
- * @param {Object} payload.parentNodeInfo.originalValue - original value before flattening
- * @param {String} payload.parentNodeInfo.parentId - parent id of this node
- * @param {Object} payload.linkedNodesHash - linked nodes hash accumulated
- * @param {String} payload.linkedNodeKeyName - linked node key name
- * @returns {Boolean} return true if current node is a linked node
+ *
+ * This function mutates nested property of obj (ancestor object)
+ * using id and value of node obj. The id of node obj
+ * is the key of ancestor object at unknown level while the value is
+ * the new value for that key.
+ * @param {Object} payload.obj - ancestor object
+ * @param {Object} payload.node - node that contains id and value.
  */
-export function isLinkedNode({ parentNodeInfo, linkedNodesHash, linkedNodeKeyName }) {
-    const { originalValue, id: parentId } = parentNodeInfo
-    const linkedNodes = linkedNodesHash[parentId]
-    if (isEmpty(linkedNodes)) return true
-    else {
-        const linkedNodesKeys = Object.keys(linkedNodes).sort()
-        const parentObjKeys = Object.keys(originalValue).sort()
-        return !isEqual(linkedNodesKeys, parentObjKeys) && linkedNodeKeyName === parentId
-    }
+export function updateNode({ obj, node }) {
+    const { id: key, value } = node
+    if (obj[key] !== undefined) obj[key] = value
+    else
+        for (const prop in obj) {
+            if (obj[prop] && typeof obj[prop] === 'object') updateNode({ obj: obj[prop], node })
+        }
 }
 
 /**
@@ -498,8 +495,11 @@ Object.defineProperties(Vue.prototype, {
                 getErrorsArr,
                 hashMapByPath,
                 dateFormat,
+                objToTree,
                 flattenTree,
-                listToTree,
+                findAncestor,
+                updateNode,
+                treeToObj,
                 convertType,
                 capitalizeFirstLetter,
                 getSuffixFromValue,
