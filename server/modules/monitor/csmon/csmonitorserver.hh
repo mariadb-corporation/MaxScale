@@ -19,15 +19,23 @@
 
 class CsContext;
 
-class CsMonitorServer : public maxscale::MonitorServer
+class CsMonitorServer final : public maxscale::MonitorServer
 {
 public:
+    class Persister
+    {
+    public:
+        virtual void persist(const CsMonitorServer& node) = 0;
+        virtual void unpersist(const CsMonitorServer& node) = 0;
+    };
+
     CsMonitorServer(const CsMonitorServer&) = delete;
     CsMonitorServer& operator=(const CsMonitorServer&) = delete;
 
     CsMonitorServer(SERVER* pServer,
                     const SharedSettings& shared,
-                    CsContext* pCs_context);
+                    CsContext* pCs_context,
+                    Persister* pPersister = nullptr);
     virtual ~CsMonitorServer();
 
     using Result = cs::Result;
@@ -218,6 +226,7 @@ private:
 private:
     NodeMode    m_node_mode = UNKNOWN_MODE;
     CsContext&  m_context;
+    Persister*  m_pPersister;
     TrxState    m_trx_state = TRX_INACTIVE;
     cs::Version m_minor_version = cs::CS_UNKNOWN;
     int         m_version_number = -1;

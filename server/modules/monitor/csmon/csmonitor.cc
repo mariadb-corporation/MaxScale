@@ -23,6 +23,7 @@
 #include <maxscale/modinfo.hh>
 #include <maxscale/mysql_utils.hh>
 #include <maxscale/paths.hh>
+#include "../../../core/internal/config_runtime.hh"
 #include "../../../core/internal/service.hh"
 #include "columnstore.hh"
 
@@ -291,8 +292,8 @@ static const char SQL_DN_CREATE[] =
     "(ip TEXT PRIMARY KEY, mysql_port INT)";
 
 static const char SQL_DN_UPSERT_FORMAT[] =
-    "INSERT OR REPLACE INTO dynamic_nodes (id, mysql_port) "
-    "VALUES ('%s')";
+    "INSERT OR REPLACE INTO dynamic_nodes (ip, mysql_port) "
+    "VALUES ('%s', %d)";
 
 static const char SQL_DN_DELETE_FORMAT[] =
     "DELETE FROM dynamic_nodes WHERE ip = '%s'";
@@ -301,7 +302,7 @@ static const char SQL_DN_DELETE[] =
     "DELETE FROM dynamic_nodes";
 
 static const char SQL_DN_SELECT[] =
-    "SELECT ip FROM dynamic_nodes";
+    "SELECT ip, mysql_port FROM dynamic_nodes";
 
 
 using HostPortPair = std::pair<std::string, int>;
@@ -890,6 +891,56 @@ bool CsMonitor::command_rollback(json_t** ppOutput, CsMonitorServer* pServer)
 }
 #endif
 
+void CsMonitor::persist(const CsMonitorServer& node)
+{
+    if (!m_pDb)
+    {
+        return;
+    }
+
+    string id = node.address();
+
+    char sql_upsert[sizeof(SQL_DN_UPSERT_FORMAT) + id.length() + 10];
+
+    sprintf(sql_upsert, SQL_DN_UPSERT_FORMAT, id.c_str(), 3306);
+
+    char* pError = nullptr;
+    if (sqlite3_exec(m_pDb, sql_upsert, nullptr, nullptr, &pError) == SQLITE_OK)
+    {
+        MXS_NOTICE("Updated Columnstore node in bookkeeping: '%s'", id.c_str());
+    }
+    else
+    {
+        MXS_ERROR("Could not update Columnstore node ('%s') in bookkeeping: %s",
+                  id.c_str(), pError ? pError : "Unknown error");
+    }
+
+}
+
+void CsMonitor::unpersist(const CsMonitorServer& node)
+{
+    if (!m_pDb)
+    {
+        return;
+    }
+
+    string id = node.address();
+
+    char sql_delete[sizeof(SQL_DN_UPSERT_FORMAT) + id.length()];
+
+    sprintf(sql_delete, SQL_DN_DELETE_FORMAT, id.c_str());
+
+    char* pError = nullptr;
+    if (sqlite3_exec(m_pDb, sql_delete, nullptr, nullptr, &pError) == SQLITE_OK)
+    {
+        MXS_INFO("Deleted Columnstore node %s from bookkeeping.", id.c_str());
+    }
+    else
+    {
+        MXS_ERROR("Could not delete Columnstore node %s from bookkeeping: %s",
+                  id.c_str(), pError ? pError : "Unknown error");
+    }
+}
 
 bool CsMonitor::ready_to_run(json_t** ppOutput) const
 {
@@ -1401,7 +1452,102 @@ void CsMonitor::check_cluster()
 
 void CsMonitor::check_cluster(const HostPortPairs& nodes)
 {
-    mxb_assert(!true);
+    bool identical = true;
+
+    vector<string> hosts;
+    vector<set<string>> cluster_infos;
+
+    for (const auto& kv1 : nodes)
+    {
+        const auto& current_host = kv1.first;
+        const auto& config = m_context.config();
+
+        map<string,Status> statuses;
+        auto result = cs::fetch_cluster_status(current_host,
+                                               config.admin_port, config.admin_base_path,
+                                               m_context.http_config(),
+                                               &statuses);
+
+        if (result.ok())
+        {
+            hosts.push_back(current_host);
+
+            set<string> cluster_info;
+            for (const auto& kv2 : statuses)
+            {
+                cluster_info.insert(kv2.first);
+            }
+
+            if (!cluster_infos.empty())
+            {
+                const auto& first_info = *cluster_infos.begin();
+                const auto& first_host = *hosts.begin();
+
+                if (cluster_info != first_info)
+                {
+                    auto current_hosts = mxb::join(cluster_info);
+                    auto first_hosts = mxb::join(first_info);
+
+                    MXS_WARNING("Node %s thinks the cluster consists of %s, while %s thinks "
+                                "it consists of %s.",
+                                current_host.c_str(), current_hosts.c_str(),
+                                first_host.c_str(), first_hosts.c_str());
+                    identical = false;
+                }
+            }
+
+            cluster_infos.push_back(cluster_info);
+        }
+        else
+        {
+            MXS_ERROR("Could not fetch cluster status information from %s.", current_host.c_str());
+        }
+    }
+
+    if (identical)
+    {
+        if (!cluster_infos.empty())
+        {
+            MXS_NOTICE("All nodes agree on the cluster configuration.");
+
+            const auto& cluster_info = *cluster_infos.begin();
+
+            for (const auto& host : cluster_info)
+            {
+                string server_name = string("@@") + m_name + ":node-" + host;
+                mxb_assert(!SERVER::find_by_unique_name(server_name));
+
+                if (runtime_create_volatile_server(server_name, host, 3306))
+                {
+                    SERVER* pServer = SERVER::find_by_unique_name(server_name);
+                    mxb_assert(pServer);
+
+                    CsMonitorServer* pMs = new CsMonitorServer(pServer, this->settings().shared, &m_context, this);
+
+                    m_nodes_by_id.insert(make_pair(host, pMs));
+
+                    // New server, so it needs to be added to all services that
+                    // use this monitor for defining its cluster of servers.
+                    run_in_mainworker([this, pServer]() {
+                            service_add_server(this, pServer);
+                        });
+                }
+                else
+                {
+                    MXS_ERROR("%s: Could not create server %s at %s:%d.",
+                              name(), server_name.c_str(), host.c_str(), mysql_port);
+                }
+            }
+        }
+    }
+    else
+    {
+        MXS_NOTICE("Nodes have different opinion regarding what nodes the cluster contains. "
+                   "Figuring out whose opinion should count.");
+        mxb_assert(!true);
+
+        // TODO: Figure out cluster configuration.
+    }
 }
 
 bool CsMonitor::check_bootstrap_servers()
@@ -1433,6 +1579,7 @@ bool CsMonitor::check_bootstrap_servers()
         {
             MXS_NOTICE("Current bootstrap servers are the same as the ones used on "
                        "previous run, using persisted connection information.");
+            rv = true;
         }
         else
         {
@@ -1520,12 +1667,6 @@ void CsMonitor::populate_from_bootstrap_servers()
     for (auto* pMs : servers())
     {
         SERVER* pServer = pMs->server;
-
-        string id = pServer->address();
-
-        CsNode node(id, pServer);
-
-        m_nodes_by_id.insert(make_pair(id, node));
 
         run_in_mainworker([this, pServer]() {
                 service_add_server(this, pServer);
