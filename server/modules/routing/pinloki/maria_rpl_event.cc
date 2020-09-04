@@ -38,6 +38,17 @@ MariaRplEvent::MariaRplEvent(MariaRplEvent&& rhs)
     , m_pRpl_handle(rhs.m_pRpl_handle)
 {
     rhs.m_pEvent = nullptr;
+    rhs.m_pRpl_handle = nullptr;
+}
+
+MariaRplEvent& MariaRplEvent::operator=(MariaRplEvent&& rhs)
+{
+    m_pEvent = rhs.m_pEvent;
+    m_pRpl_handle = rhs.m_pRpl_handle;
+    rhs.m_pEvent = nullptr;
+    rhs.m_pRpl_handle = nullptr;
+
+    return *this;
 }
 
 const st_mariadb_rpl_event& MariaRplEvent::event() const
