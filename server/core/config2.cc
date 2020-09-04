@@ -255,19 +255,6 @@ bool Specification::validate(json_t* pJson, std::set<std::string>* pUnrecognized
     return valid;
 }
 
-void Specification::populate(MXS_MODULE& module) const
-{
-    MXS_MODULE_PARAM* pModule_param = &module.parameters[0];
-
-    for (const auto& entry : m_params)
-    {
-        const Param* pParam = entry.second;
-
-        pParam->populate(*pModule_param);
-        ++pModule_param;
-    }
-}
-
 size_t Specification::size() const
 {
     return m_params.size();
@@ -387,29 +374,6 @@ bool Param::has_default_value() const
 Param::Modifiable Param::modifiable() const
 {
     return m_modifiable;
-}
-
-void Param::populate(MXS_MODULE_PARAM& param) const
-{
-    param.type = m_legacy_type;
-    param.name = MXS_STRDUP_A(name().c_str());
-
-    if (has_default_value())
-    {
-        string s = default_to_string().c_str();
-
-        if ((s.length() >= 2) && (s.at(0) == '"') && (s.at(s.length() - 1) == '"'))
-        {
-            s = s.substr(1, s.length() - 2);
-        }
-
-        param.default_value = MXS_STRDUP_A(s.c_str());
-    }
-
-    if (is_mandatory())
-    {
-        param.options |= MXS_MODULE_OPT_REQUIRED;
-    }
 }
 
 json_t* Param::to_json() const
@@ -1013,13 +977,6 @@ bool ParamPath::is_valid(const value_type& value) const
     return check_path_parameter(&param, value.c_str());
 }
 
-void ParamPath::populate(MXS_MODULE_PARAM& param) const
-{
-    Param::populate(param);
-
-    param.options |= m_options;
-}
-
 /**
  * ParamRegex
  */
@@ -1197,18 +1154,6 @@ bool ParamServer::from_json(const json_t* pJson, value_type* pValue,
     }
 
     return rv;
-}
-
-void ParamServer::populate(MXS_MODULE_PARAM& param) const
-{
-    param.type = m_legacy_type;
-    param.name = MXS_STRDUP_A(name().c_str());
-    param.default_value = nullptr;
-
-    if (is_mandatory())
-    {
-        param.options |= MXS_MODULE_OPT_REQUIRED;
-    }
 }
 
 /**

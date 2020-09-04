@@ -128,15 +128,6 @@ public:
     std::ostream& document(std::ostream& out) const;
 
     /**
-     * Populate legacy parameter definition.
-     *
-     * @note Only for a transitionary period.
-     *
-     * @param module  The module description to be populated with parameters.
-     */
-    void populate(MXS_MODULE& module) const;
-
-    /**
      * @return The number of parameters in the specification.
      */
     size_t size() const;
@@ -338,13 +329,6 @@ public:
      * @return True, if @c value_as_json can be converted into a value of this type.
      */
     virtual bool validate(json_t* value_as_json, std::string* pMessage) const = 0;
-
-    /**
-     * Populate a legacy parameter specification with data.
-     *
-     * @param param  The legacy parameter specification to be populated.
-     */
-    virtual void populate(MXS_MODULE_PARAM& param) const;
 
     /**
      * @return Parameter as json object.
@@ -890,8 +874,6 @@ public:
 
     json_t* to_json() const override;
 
-    void populate(MXS_MODULE_PARAM& param) const;
-
 private:
     ParamEnum(Specification* pSpecification,
               const char* zName,
@@ -951,8 +933,6 @@ public:
                       std::string* pMessage = nullptr) const;
 
     json_t* to_json() const override;
-
-    void populate(MXS_MODULE_PARAM& param) const;
 
 private:
     ParamEnumMask(Specification* pSpecification,
@@ -1062,8 +1042,6 @@ public:
                       std::string* pMessage = nullptr) const;
 
     bool is_valid(const value_type& value) const;
-
-    void populate(MXS_MODULE_PARAM& param) const;
 
 private:
     ParamPath(Specification* pSpecification,
@@ -1215,8 +1193,6 @@ public:
     json_t* to_json(value_type value) const;
     bool    from_json(const json_t* pJson, value_type* pValue,
                       std::string* pMessage = nullptr) const;
-
-    void populate(MXS_MODULE_PARAM& param) const override;
 };
 
 /**
@@ -2344,15 +2320,6 @@ bool ParamEnum<T>::from_json(const json_t* pJson, value_type* pValue,
 }
 
 template<class T>
-void ParamEnum<T>::populate(MXS_MODULE_PARAM& param) const
-{
-    Param::populate(param);
-
-    param.accepted_values = &m_enum_values[0];
-    param.options |= MXS_MODULE_OPT_ENUM_UNIQUE;
-}
-
-template<class T>
 ParamEnumMask<T>::ParamEnumMask(Specification* pSpecification,
                                 const char* zName,
                                 const char* zDescription,
@@ -2508,15 +2475,6 @@ bool ParamEnumMask<T>::from_json(const json_t* pJson, value_type* pValue,
 
     return rv;
 }
-
-template<class T>
-void ParamEnumMask<T>::populate(MXS_MODULE_PARAM& param) const
-{
-    Param::populate(param);
-
-    param.accepted_values = &m_enum_values[0];
-}
-
 
 template<class ParamType>
 void Configuration::add_native(typename ParamType::value_type* pValue,
