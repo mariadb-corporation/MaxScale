@@ -27,7 +27,7 @@ int main(int argc, char* argv[])
     for (i = 0; i < Test->repl->N; i++)
     {
         backend_conn = open_conn(Test->repl->port[i],
-                                 Test->repl->IP[i],
+                                 Test->repl->ip4(i),
                                  Test->repl->user_name,
                                  Test->repl->password,
                                  Test->repl->ssl);
@@ -70,7 +70,7 @@ int main(int argc, char* argv[])
                          Test->maxscales->hostname(0),
                          (char*) "test");
         TotalConn += conn_num;
-        Test->tprintf("Connections to node %d (%s):\t%d\n", i, Test->repl->IP[i], conn_num);
+        Test->tprintf("Connections to node %d (%s):\t%d\n", i, Test->repl->ip4(i), conn_num);
         if ((conn_num > ConnCell) || (conn_num < ConnFloor))
         {
             Test->add_result(1, "wrong number of connections to node %d\n", i);

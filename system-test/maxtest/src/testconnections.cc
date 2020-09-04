@@ -727,7 +727,7 @@ void TestConnections::read_env()
 
 void TestConnections::print_env()
 {
-    printf("Maxscale IP\t%s\n", maxscales->IP[0]);
+    printf("Maxscale IP\t%s\n", maxscales->ip4(0));
     printf("Maxscale User name\t%s\n", maxscales->user_name);
     printf("Maxscale Password\t%s\n", maxscales->password);
     printf("Maxscale SSH key\t%s\n", maxscales->sshkey(0));
@@ -967,7 +967,7 @@ int TestConnections::copy_mariadb_logs(Mariadb_nodes* nrepl,
         for (int i = 0; i < nrepl->N; i++)
         {
             // Do not copy MariaDB logs in case of local backend
-            if (strcmp(nrepl->IP[i], "127.0.0.1") != 0)
+            if (strcmp(nrepl->ip4(i), "127.0.0.1") != 0)
             {
                 char str[4096];
                 sprintf(str, "LOGS/%s/%s%d_mariadb_log", m_test_name.c_str(), prefix, i);
@@ -1028,7 +1028,7 @@ void TestConnections::copy_one_maxscale_log(int i, double timestamp)
     sprintf(sys, "mkdir -p %s", log_dir_i);
     call_system(sys);
 
-    if (strcmp(maxscales->IP[i], "127.0.0.1") != 0)
+    if (strcmp(maxscales->ip4(i), "127.0.0.1") != 0)
     {
         auto homedir = maxscales->access_homedir(i);
         int rc = maxscales->ssh_node_f(i, true,
@@ -1166,7 +1166,7 @@ int TestConnections::start_binlog(int m)
     if (!m_local_maxscale)
     {
         binlog =
-            open_conn_no_db(maxscales->binlog_port[m], maxscales->IP[m], repl->user_name, repl->password,
+            open_conn_no_db(maxscales->binlog_port[m], maxscales->ip4(m), repl->user_name, repl->password,
                             ssl);
         execute_query(binlog, "stop slave");
         execute_query(binlog, "reset slave all");
@@ -1248,7 +1248,7 @@ int TestConnections::start_binlog(int m)
 
     tprintf("Connecting to MaxScale binlog router (with any DB)\n");
     binlog =
-        open_conn_no_db(maxscales->binlog_port[m], maxscales->IP[m], repl->user_name, repl->password, ssl);
+        open_conn_no_db(maxscales->binlog_port[m], maxscales->ip4(m), repl->user_name, repl->password, ssl);
 
     add_result(mysql_errno(binlog), "Error connection to binlog router %s\n", mysql_error(binlog));
 
@@ -1337,7 +1337,7 @@ bool TestConnections::replicate_from_master(int m)
 
     /** Stop the binlogrouter */
     MYSQL* conn = open_conn_no_db(maxscales->binlog_port[m],
-                                  maxscales->IP[m],
+                                  maxscales->ip4(m),
                                   repl->user_name,
                                   repl->password,
                                   ssl);
@@ -1357,7 +1357,7 @@ bool TestConnections::replicate_from_master(int m)
     repl->connect();
     execute_query(repl->nodes[0], "RESET MASTER");
 
-    conn = open_conn_no_db(maxscales->binlog_port[m], maxscales->IP[m], repl->user_name, repl->password, ssl);
+    conn = open_conn_no_db(maxscales->binlog_port[m], maxscales->ip4(m), repl->user_name, repl->password, ssl);
 
     if (find_field(repl->nodes[0], "show master status", "File", log_file)
         || repl->set_slave(conn, repl->ip_private(0), repl->port[0], log_file, log_pos)
@@ -1529,7 +1529,7 @@ int TestConnections::find_connected_slave(int m, int* global_result)
         tprintf("total number of connections is not 2, it is %d\n", all_conn);
         *global_result = 1;
     }
-    tprintf("Now connected slave node is %d (%s)\n", current_slave, repl->IP[current_slave]);
+    tprintf("Now connected slave node is %d (%s)\n", current_slave, repl->ip4(current_slave));
     repl->close_connections();
     return current_slave;
 }
@@ -1550,7 +1550,7 @@ int TestConnections::find_connected_slave1(int m)
             current_slave = i;
         }
     }
-    tprintf("Now connected slave node is %d (%s)\n", current_slave, repl->IP[current_slave]);
+    tprintf("Now connected slave node is %d (%s)\n", current_slave, repl->ip4(current_slave));
     repl->close_connections();
     return current_slave;
 }
@@ -1733,7 +1733,7 @@ int TestConnections::create_connections(int m,
             }
 
             galera_conn[i] =
-                open_conn(4016, maxscales->IP[m], maxscales->user_name, maxscales->password, ssl);
+                open_conn(4016, maxscales->ip4(m), maxscales->user_name, maxscales->password, ssl);
             if (mysql_errno(galera_conn[i]) != 0)
             {
                 local_result++;

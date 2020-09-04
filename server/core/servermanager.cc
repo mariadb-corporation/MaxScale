@@ -59,7 +59,9 @@ public:
         {
             auto other = ServerManager::find_by_address(server->address(), server->port());
 
-            if (!other || m_allow_duplicates)
+            // The strncmp is for volatile servers. They may host/port-wise clash with
+            // servers used only as bootstrap servers. But that's ok.
+            if (!other || m_allow_duplicates || strncmp(server->name(), "@@", 2) == 0)
             {
                 Guard guard(m_all_servers_lock);
                 // This keeps the order of the servers the same as in 2.2

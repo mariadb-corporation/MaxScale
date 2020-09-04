@@ -56,7 +56,7 @@ bool Nodes::check_nodes()
 string Nodes::generate_ssh_cmd(int node, const string& cmd, bool sudo)
 {
     string rval;
-    if (strcmp(IP[node], "127.0.0.1") == 0)
+    if (m_ip4[node] == "127.0.0.1")
     {
         // If node is the local machine, run command as is.
         rval = sudo ? (m_access_sudo[node] + " " + cmd) : cmd;
@@ -74,7 +74,7 @@ string Nodes::generate_ssh_cmd(int node, const string& cmd, bool sudo)
                     "-o StrictHostKeyChecking=no "
                     "-o LogLevel=quiet ";
 
-        string p3 = mxb::string_printf("%s@%s ", m_access_user[node].c_str(), IP[node]);
+        string p3 = mxb::string_printf("%s@%s ", m_access_user[node].c_str(), m_ip4[node].c_str());
         string p4 = sudo ? mxb::string_printf("'%s %s'", m_access_sudo[node].c_str(), cmd.c_str()) :
             mxb::string_printf("'%s'", cmd.c_str());
         rval = p1 + p2 + p3 + p4;
@@ -86,7 +86,7 @@ FILE* Nodes::open_ssh_connection(int node)
 {
     std::ostringstream ss;
 
-    if (strcmp(IP[node], "127.0.0.1") == 0)
+    if (m_ip4[node] == "127.0.0.1")
     {
         ss << "bash";
     }
@@ -101,7 +101,7 @@ FILE* Nodes::open_ssh_connection(int node)
            << "-o ControlPath=./maxscale-test-%r@%h:%p "
            << "-o ControlPersist=yes "
            << m_access_user[node] << "@"
-           << IP[node]
+           << m_ip4[node]
            << (verbose ? "" :  " > /dev/null");
     }
 
@@ -182,7 +182,7 @@ int Nodes::copy_to_node(int i, const char* src, const char* dest)
     }
     char sys[strlen(src) + strlen(dest) + 1024];
 
-    if (strcmp(IP[i], "127.0.0.1") == 0)
+    if (m_ip4[i] == "127.0.0.1")
     {
         sprintf(sys,
                 "cp %s %s",
@@ -204,7 +204,7 @@ int Nodes::copy_to_node(int i, const char* src, const char* dest)
                 m_sshkey[i].c_str(),
                 src,
                 m_access_user[i].c_str(),
-                IP[i],
+                m_ip4[i].c_str(),
                 dest);
     }
     if (verbose)
@@ -229,7 +229,7 @@ int Nodes::copy_from_node(int i, const char* src, const char* dest)
         return 1;
     }
     char sys[strlen(src) + strlen(dest) + 1024];
-    if (strcmp(IP[i], "127.0.0.1") == 0)
+    if (m_ip4[i] == "127.0.0.1")
     {
         sprintf(sys,
                 "cp %s %s",
@@ -249,7 +249,7 @@ int Nodes::copy_from_node(int i, const char* src, const char* dest)
                 "%s@%s:%s %s",
                 m_sshkey[i].c_str(),
                 m_access_user[i].c_str(),
-                IP[i],
+                m_ip4[i].c_str(),
                 src,
                 dest);
     }
@@ -279,7 +279,7 @@ int Nodes::read_basic_env()
         {
             // reading IPs
             sprintf(env_name, "%s_%03d_network", prefixc, i);
-            IP[i] = strdup(get_nc_item(env_name).c_str());
+            m_ip4[i] = get_nc_item(env_name);
 
             // reading private IPs
             sprintf(env_name, "%s_%03d_private_ip", prefixc, i);
@@ -287,7 +287,7 @@ int Nodes::read_basic_env()
             priv_ip = get_nc_item(env_name);
             if (priv_ip.empty())
             {
-                priv_ip = IP[i];
+                priv_ip = m_ip4[i];
             }
             setenv(env_name, priv_ip.c_str(), 1);
 
@@ -297,7 +297,7 @@ int Nodes::read_basic_env()
             ip6 = get_nc_item(env_name);
             if (ip6.empty())
             {
-                ip6 = IP[i];
+                ip6 = m_ip4[i];
             }
             setenv(env_name, ip6.c_str(), 1);
 
@@ -359,7 +359,7 @@ int Nodes::read_basic_env()
 
 const char* Nodes::ip(int i) const
 {
-    return use_ipv6 ? m_ip6[i].c_str() : IP[i];
+    return use_ipv6 ? m_ip6[i].c_str() : m_ip4[i].c_str();
 }
 
 std::string Nodes::get_nc_item(const char* item_name)
@@ -496,5 +496,5 @@ const std::string& Nodes::prefix() const
 
 const char* Nodes::ip4(int i) const
 {
-    return IP[i];
+    return m_ip4[i].c_str();
 }

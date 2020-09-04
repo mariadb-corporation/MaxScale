@@ -113,7 +113,7 @@ int Mariadb_nodes::connect(int i, const std::string& db)
         {
             mysql_close(nodes[i]);
         }
-        nodes[i] = open_conn_db_timeout(port[i], IP[i], db.c_str(), user_name, password, 50, ssl);
+        nodes[i] = open_conn_db_timeout(port[i], ip4(i), db.c_str(), user_name, password, 50, ssl);
     }
 
     if ((nodes[i] == NULL) || (mysql_errno(nodes[i]) != 0))
@@ -230,7 +230,7 @@ void Mariadb_nodes::print_env()
     auto prefixc = prefix().c_str();
     for (int i = 0; i < N; i++)
     {
-        printf("%s node %d \t%s\tPort=%d\n", prefixc, i, IP[i], port[i]);
+        printf("%s node %d \t%s\tPort=%d\n", prefixc, i, ip4(i), port[i]);
         printf("%s Access user %s\n", prefixc, access_user(i));
     }
     printf("%s User name %s\n", prefixc, user_name);
@@ -547,7 +547,7 @@ void Mariadb_nodes::block_node_from_node(int src, int dest)
 {
     std::ostringstream ss;
 
-    ss << "iptables -I OUTPUT 1 -p tcp -d " << IP[dest] << " --dport 3306 -j DROP;";
+    ss << "iptables -I OUTPUT 1 -p tcp -d " << ip4(dest) << " --dport 3306 -j DROP;";
 
     ssh_node_f(src, true, "%s", ss.str().c_str());
 }
@@ -556,7 +556,7 @@ void Mariadb_nodes::unblock_node_from_node(int src, int dest)
 {
     std::ostringstream ss;
 
-    ss << "iptables -D OUTPUT -p tcp -d " << IP[dest] << " --dport 3306 -j DROP;";
+    ss << "iptables -D OUTPUT -p tcp -d " << ip4(dest) << " --dport 3306 -j DROP;";
 
     ssh_node_f(src, true, "%s", ss.str().c_str());
 }
@@ -1015,7 +1015,7 @@ int Mariadb_nodes::get_server_id(int index)
     }
     else
     {
-        printf("find_field failed for %s:%d\n", this->IP[index], this->port[index]);
+        printf("find_field failed for %s:%d\n", ip4(index), this->port[index]);
     }
 
     return id;
@@ -1244,7 +1244,7 @@ int Mariadb_nodes::truncate_mariadb_logs()
 
     for (int node = 0; node < N; node++)
     {
-        if (strcmp(IP[node], "127.0.0.1") != 0)
+        if (strcmp(ip4(node), "127.0.0.1") != 0)
         {
             auto f = std::async(std::launch::async, &Nodes::ssh_node_f, this, node, true,
                                 "truncate -s 0 /var/lib/mysql/*.err;"
@@ -1640,7 +1640,7 @@ std::string Mariadb_nodes::cnf_servers_line()
 
 const char* Mariadb_nodes::ip(int i) const
 {
-    return m_use_ipv6 ? Nodes::ip6(i) : IP[i];
+    return m_use_ipv6 ? Nodes::ip6(i) : Nodes::ip4(i);
 }
 
 void Mariadb_nodes::set_use_ipv6(bool use_ipv6)
@@ -1667,4 +1667,9 @@ const char* Mariadb_nodes::access_homedir(int i) const
 const string& Mariadb_nodes::prefix() const
 {
     return Nodes::prefix();
+}
+
+const char* Mariadb_nodes::ip4(int i) const
+{
+    return Nodes::ip4(i);
 }

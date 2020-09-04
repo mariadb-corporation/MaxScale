@@ -141,7 +141,7 @@ void test_binlog(TestConnections* Test)
 
     for (i = 0; i < Test->repl->N; i++)
     {
-        Test->tprintf("Checking data from node %d (%s)", i, Test->repl->IP[i]);
+        Test->tprintf("Checking data from node %d (%s)", i, Test->repl->ip4(i));
         Test->set_timeout(100);
         Test->add_result(select_from_t1(Test->repl->nodes[i], 4), "Selecting from t1 failed");
         Test->stop_timeout();
@@ -249,7 +249,7 @@ void test_binlog(TestConnections* Test)
     for (i = 0; i < Test->repl->N; i++)
     {
         Test->set_timeout(50);
-        Test->tprintf("Checking data from node %d (%s)", i, Test->repl->IP[i]);
+        Test->tprintf("Checking data from node %d (%s)", i, Test->repl->ip4(i));
         Test->add_result(select_from_t1(Test->repl->nodes[i], 4), "SELECT from t1 failed");
     }
 

@@ -44,7 +44,7 @@ int check_conf(TestConnections& test, int blocked_node)
     {
         if (i != blocked_node)
         {
-            test.tprintf("Checking data from node %d (%s)\n", i, test.repl->IP[i]);
+            test.tprintf("Checking data from node %d (%s)\n", i, test.repl->ip4(i));
             test.set_timeout(100);
             global_result += select_from_t1(test.repl->nodes[i], 1);
         }

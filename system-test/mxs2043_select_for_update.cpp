@@ -117,7 +117,7 @@ void run_test(TestConnections& test)
 
     Maxscales& maxscales = *test.maxscales;
 
-    MYSQL* pMysql = open_conn(maxscales.rwsplit_port[0], maxscales.IP[0],
+    MYSQL* pMysql = open_conn(maxscales.rwsplit_port[0], maxscales.ip4(0),
                               ZUSER, ZPASSWORD);
     test.expect(pMysql, "Could not open connections for %s.", ZUSER);
 

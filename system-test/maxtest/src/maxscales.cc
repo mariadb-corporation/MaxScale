@@ -290,7 +290,7 @@ void Maxscales::wait_for_monitor(int intervals, int m)
 
 const char* Maxscales::ip(int i) const
 {
-    return m_use_ipv6 ? Nodes::ip6(i) : IP[i];
+    return m_use_ipv6 ? Nodes::ip6(i) : Nodes::ip4(i);
 }
 
 void Maxscales::set_use_ipv6(bool use_ipv6)

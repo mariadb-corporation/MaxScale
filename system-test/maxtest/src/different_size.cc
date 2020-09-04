@@ -31,10 +31,8 @@ MYSQL* connect_to_serv(TestConnections* Test, bool binlog)
     MYSQL* conn;
     if (binlog)
     {
-        conn = open_conn(Test->repl->port[0],
-                         Test->repl->IP[0],
-                         Test->repl->user_name,
-                         Test->repl->password,
+        conn = open_conn(Test->repl->port[0], Test->repl->ip4(0),
+                         Test->repl->user_name, Test->repl->password,
                          Test->ssl);
     }
     else

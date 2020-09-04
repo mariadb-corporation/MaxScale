@@ -74,7 +74,8 @@ string get_version_string(SERVICE* service)
     string service_vrs = service->version_string();
     if (service_vrs.empty())
     {
-        return default_version;
+        auto& custom_suffix = service->custom_version_suffix();
+        return custom_suffix.empty() ? default_version : default_version + custom_suffix;
     }
 
     // Older applications don't understand versions other than 5 and cause strange problems.

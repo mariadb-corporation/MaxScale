@@ -205,6 +205,22 @@ public:
      */
     std::string version_string() const;
 
+    /**
+     * Get custom version suffix. Used by client protocol when generating server handshake.
+     *
+     * @return Version suffix
+     */
+    const std::string& custom_version_suffix();
+
+    /**
+     * Set custom version suffix. This is meant to be used by a router which wants to add custom text to
+     * any version string sent to clients. Should be only called during service/router creation,
+     * as there is no concurrency protection.
+     *
+     * @param custom_version_suffix The version suffix to set
+     */
+    void set_custom_version_suffix(const std::string& custom_version_suffix);
+
     uint8_t charset() const;
 
 protected:
@@ -221,6 +237,7 @@ protected:
 private:
     const std::string m_name;
     const std::string m_router_name;
+    std::string       m_custom_version_suffix;
 };
 
 typedef enum count_spec_t

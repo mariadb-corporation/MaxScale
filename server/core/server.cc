@@ -825,17 +825,18 @@ void Server::VersionInfo::set(uint64_t version, const std::string& version_str)
 
     Type new_type = Type::UNKNOWN;
     auto version_strz = version_str.c_str();
-    if (strcasestr(version_strz, "mariadb"))
-    {
-        new_type = Type::MARIADB;
-    }
-    else if (strcasestr(version_strz, "clustrix"))
+    if (strcasestr(version_strz, "clustrix"))
     {
         new_type = Type::CLUSTRIX;
     }
-    else if (strcasestr(version_strz, "binlog_router"))     // TODO: not yet finalized
+    else if (strcasestr(version_strz, "binlogrouter"))
     {
         new_type = Type::BLR;
+    }
+    else if (strcasestr(version_strz, "mariadb"))
+    {
+        // Needs to be after Clustrix and BLR as their version strings may include "mariadb".
+        new_type = Type::MARIADB;
     }
     else if (!version_str.empty())
     {
