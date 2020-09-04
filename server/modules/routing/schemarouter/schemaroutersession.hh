@@ -79,10 +79,7 @@ public:
 
     SchemaRouterSession(MXS_SESSION* session, SchemaRouter* router, SRBackendList backends);
 
-    /**
-     * Called when a client session has been closed.
-     */
-    void close();
+    ~SchemaRouterSession();
 
     /**
      * Called when a packet being is routed to the backend. The router should

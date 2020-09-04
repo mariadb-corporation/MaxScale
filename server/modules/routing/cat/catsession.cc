@@ -32,10 +32,6 @@ CatSession::~CatSession()
 {
 }
 
-void CatSession::close()
-{
-}
-
 bool CatSession::next_backend()
 {
     // Skip unused backends

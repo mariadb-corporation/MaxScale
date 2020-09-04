@@ -112,17 +112,6 @@ static void freeSession(MXS_ROUTER* router_instance, MXS_ROUTER_SESSION* router_
 }
 
 /**
- * Close a session with the router, this is the mechanism
- * by which a router may cleanup data structure etc.
- *
- * @param instance          The router instance data
- * @param router_session    The session being closed
- */
-static void closeSession(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_session)
-{
-}
-
-/**
  * We have data from the client, this is likely to be packets related to
  * the registration of the slave to receive binlog records. Unlike most
  * MaxScale routers there is no forwarding to the backend database, merely
@@ -452,7 +441,6 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
     {
         createInstance,
         newSession,
-        closeSession,
         freeSession,
         routeQuery,
         diagnostics,

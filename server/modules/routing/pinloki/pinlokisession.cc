@@ -60,7 +60,7 @@ PinlokiSession::PinlokiSession(MXS_SESSION* pSession, Pinloki* router)
 {
 }
 
-void PinlokiSession::close()
+PinlokiSession::~PinlokiSession()
 {
     if (m_mgw_dcid)
     {

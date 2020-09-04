@@ -32,9 +32,8 @@ public:
     PinlokiSession& operator=(const PinlokiSession&) = delete;
 
     PinlokiSession(MXS_SESSION* pSession, Pinloki* router);
-    virtual ~PinlokiSession() = default;
+    virtual ~PinlokiSession();
 
-    void    close();
     int32_t routeQuery(GWBUF* pPacket);
     void    clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply);
     bool    handleError(mxs::ErrorType type, GWBUF* pMessage,

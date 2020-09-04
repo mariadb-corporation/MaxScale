@@ -39,8 +39,6 @@ public:
 
     ~HintRouterSession();
 
-    void close();
-
     int32_t routeQuery(GWBUF* pPacket);
 
     void clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply);

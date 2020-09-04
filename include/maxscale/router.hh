@@ -65,7 +65,7 @@ typedef struct mxs_router_object
      *
      * @return New router instance on NULL on error
      */
-    MXS_ROUTER*(*createInstance)(SERVICE * service, mxs::ConfigParameters* params);
+    MXS_ROUTER* (*createInstance)(SERVICE * service, mxs::ConfigParameters* params);
 
     /**
      * Called to create a new user session within the router
@@ -81,18 +81,8 @@ typedef struct mxs_router_object
      *
      * @return New router session or NULL on error
      */
-    MXS_ROUTER_SESSION*(*newSession)(MXS_ROUTER * instance, MXS_SESSION* session, mxs::Upstream* up,
-                                     const Endpoints& endpoints);
-
-    /**
-     * @brief Called when a session is closed
-     *
-     * The router should close all objects (including backend DCBs) but not free any memory.
-     *
-     * @param instance       Router instance
-     * @param router_session Router session
-     */
-    void (* closeSession)(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_session);
+    MXS_ROUTER_SESSION* (*newSession)(MXS_ROUTER * instance, MXS_SESSION* session, mxs::Upstream* up,
+                                      const Endpoints& endpoints);
 
     /**
      * @brief Called when a session is freed
@@ -127,7 +117,7 @@ typedef struct mxs_router_object
      *
      * @see jansson.h
      */
-    json_t*  (*diagnostics)(const MXS_ROUTER * instance);
+    json_t* (*diagnostics)(const MXS_ROUTER * instance);
 
     /**
      * @brief Called for each reply packet
@@ -276,14 +266,9 @@ class RouterSession : public MXS_ROUTER_SESSION
 public:
     /**
      * The RouterSession instance will be deleted when a client session
-     * has terminated. Will be called only after @c close() has been called.
+     * has terminated.
      */
-    ~RouterSession();
-
-    /**
-     * Called when a client session has been closed.
-     */
-    void close();
+    ~RouterSession() = default;
 
     /**
      * Called when a packet being is routed to the backend. The router should
@@ -411,13 +396,6 @@ public:
         return pRouter_session;
     }
 
-    static void closeSession(MXS_ROUTER*, MXS_ROUTER_SESSION* pData)
-    {
-        RouterSessionType* pRouter_session = static_cast<RouterSessionType*>(pData);
-
-        MXS_EXCEPTION_GUARD(pRouter_session->close());
-    }
-
     static void freeSession(MXS_ROUTER*, MXS_ROUTER_SESSION* pData)
     {
         RouterSessionType* pRouter_session = static_cast<RouterSessionType*>(pData);
@@ -511,7 +489,6 @@ MXS_ROUTER_OBJECT Router<RouterType, RouterSessionType>::s_object =
 {
     &Router<RouterType, RouterSessionType>::createInstance,
     &Router<RouterType, RouterSessionType>::newSession,
-    &Router<RouterType, RouterSessionType>::closeSession,
     &Router<RouterType, RouterSessionType>::freeSession,
     &Router<RouterType, RouterSessionType>::routeQuery,
     &Router<RouterType, RouterSessionType>::diagnostics,

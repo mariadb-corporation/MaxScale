@@ -71,12 +71,7 @@ HintRouterSession::HintRouterSession(MXS_SESSION* pSession,
 HintRouterSession::~HintRouterSession()
 {
     HR_ENTRY();
-}
 
-
-void HintRouterSession::close()
-{
-    HR_ENTRY();
     m_master = nullptr;
     m_slaves.clear();
     m_backends.clear();

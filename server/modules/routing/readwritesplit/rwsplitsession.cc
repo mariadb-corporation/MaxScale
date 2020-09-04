@@ -79,7 +79,7 @@ RWSplitSession* RWSplitSession::create(RWSplit* router, MXS_SESSION* session, co
     return rses;
 }
 
-void RWSplitSession::close()
+RWSplitSession::~RWSplitSession()
 {
     m_current_query.reset();
 

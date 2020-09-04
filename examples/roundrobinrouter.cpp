@@ -105,7 +105,6 @@ public:
     // The API functions must be public
     RRRouterSession(RRRouter*, const Endpoints&, mxs::Endpoint*, MXS_SESSION*);
     ~RRRouterSession();
-    void    close();
     int32_t routeQuery(GWBUF* buffer);
     void    clientReply(GWBUF* buffer, const mxs::ReplyRoute& down, const mxs::Reply& reply);
     bool    handleError(mxs::ErrorType type, GWBUF* message, mxs::Endpoint* down, const mxs::Reply& reply);
@@ -417,20 +416,6 @@ RRRouterSession::RRRouterSession(RRRouter* router, const Endpoints& backends,
 
 RRRouterSession::~RRRouterSession()
 {
-    /* Shouldn't happen. */
-    mxb_assert(m_closed);
-}
-
-/**
- * @brief Close an existing router session for this router instance (API).
- *
- * Close a client session attached to the router instance. This function should
- * close connections and release other resources allocated in "newSession" or
- * otherwise held by the router session. This function should NOT free the
- * session object itself.
- */
-void RRRouterSession::close()
-{
     if (!m_closed)
     {
         /**
@@ -449,6 +434,8 @@ void RRRouterSession::close()
 
         RR_DEBUG("Session with %d connections closed.", closed_conns);
     }
+    /* Shouldn't happen. */
+    mxb_assert(m_closed);
 }
 
 void RRRouterSession::decide_target(GWBUF* querybuf, mxs::Endpoint*& target, bool& route_to_all)

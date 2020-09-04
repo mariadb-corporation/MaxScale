@@ -34,10 +34,6 @@ MirrorSession::MirrorSession(MXS_SESSION* session, Mirror* router, SMyBackends b
 
 MirrorSession::~MirrorSession()
 {
-}
-
-void MirrorSession::close()
-{
     for (auto& a : m_backends)
     {
         if (a->in_use())

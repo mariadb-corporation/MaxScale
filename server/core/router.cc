@@ -25,14 +25,6 @@ RouterSession::RouterSession(MXS_SESSION* pSession)
 {
 }
 
-RouterSession::~RouterSession()
-{
-}
-
-void RouterSession::close()
-{
-}
-
 int32_t RouterSession::routeQuery(GWBUF* pPacket)
 {
     return 0;

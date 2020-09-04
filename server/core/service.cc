@@ -1356,7 +1356,6 @@ void ServiceEndpoint::close()
 {
     mxb::LogScope scope(m_service->name());
     mxb_assert(m_open);
-    m_service->router->closeSession(m_service->router_instance, m_router_session);
 
     for (auto& a : m_filters)
     {

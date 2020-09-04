@@ -90,6 +90,8 @@ public:
         UPDATING_PACKETS
     };
 
+    ~RWSplitSession();
+
     /**
      * Create a new router session
      *
@@ -99,11 +101,6 @@ public:
      * @return New router session
      */
     static RWSplitSession* create(RWSplit* router, MXS_SESSION* session, const Endpoints& endpoints);
-
-    /**
-     * Called when a client session has been closed.
-     */
-    void close();
 
     /**
      * Called when a packet being is routed to the backend. The router should

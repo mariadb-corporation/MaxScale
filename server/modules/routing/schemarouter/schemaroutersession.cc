@@ -76,7 +76,7 @@ SchemaRouterSession::SchemaRouterSession(MXS_SESSION* session,
     mxb::atomic::add(&m_router->m_stats.sessions, 1);
 }
 
-void SchemaRouterSession::close()
+SchemaRouterSession::~SchemaRouterSession()
 {
     mxb_assert(!m_closed);
 
