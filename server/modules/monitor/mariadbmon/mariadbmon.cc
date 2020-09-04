@@ -599,7 +599,6 @@ void MariaDBMonitor::tick()
         check_acquire_masterlock();
     }
 
-    flush_server_status();
     process_state_changes();
     hangup_failed_servers();
     store_server_journal(m_master);
