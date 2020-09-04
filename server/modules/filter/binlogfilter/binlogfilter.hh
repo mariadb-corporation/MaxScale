@@ -22,35 +22,18 @@ static constexpr const char REWRITE_SRC[] = "rewrite_src";
 static constexpr const char REWRITE_DEST[] = "rewrite_dest";
 
 // Binlog Filter configuration
-struct BinlogConfig
+struct BinlogConfig : public mxs::config::Configuration
 {
-    BinlogConfig(const mxs::ConfigParameters* pParams)
-        : match(pParams->get_compiled_regex("match", 0, nullptr).release())
-        , md_match(match ? pcre2_match_data_create_from_pattern(match, nullptr) : nullptr)
-        , exclude(pParams->get_compiled_regex("exclude", 0, nullptr).release())
-        , md_exclude(exclude ? pcre2_match_data_create_from_pattern(exclude, nullptr) : nullptr)
-        , rewrite_src(pParams->get_compiled_regex(REWRITE_SRC, 0, nullptr).release())
-        , rewrite_src_pattern(pParams->get_string(REWRITE_SRC))
-        , rewrite_dest(pParams->get_string(REWRITE_DEST))
-    {
-    }
+    BinlogConfig(const char* name);
+    ~BinlogConfig();
+    bool post_configure() final;
 
-    ~BinlogConfig()
-    {
-        pcre2_code_free(match);
-        pcre2_match_data_free(md_match);
-        pcre2_code_free(exclude);
-        pcre2_match_data_free(md_exclude);
-        pcre2_code_free(rewrite_src);
-    }
-
-    pcre2_code*       match;
-    pcre2_match_data* md_match;
-    pcre2_code*       exclude;
-    pcre2_match_data* md_exclude;
-    pcre2_code*       rewrite_src;
-    std::string       rewrite_src_pattern;
-    std::string       rewrite_dest;
+    mxs::config::RegexValue match;
+    pcre2_match_data*       md_match = nullptr;
+    mxs::config::RegexValue exclude;
+    pcre2_match_data*       md_exclude = nullptr;
+    mxs::config::RegexValue rewrite_src;
+    std::string             rewrite_dest;
 };
 
 class BinlogFilter : public maxscale::Filter<BinlogFilter, BinlogFilterSession>
@@ -63,8 +46,7 @@ public:
     ~BinlogFilter();
 
     // Creates a new filter instance
-    static BinlogFilter* create(const char* zName,
-                                mxs::ConfigParameters* ppParams);
+    static BinlogFilter* create(const char* zName, mxs::ConfigParameters* ppParams);
 
     // Creates a new session for this filter
     BinlogFilterSession* newSession(MXS_SESSION* pSession, SERVICE* pService);
@@ -75,6 +57,11 @@ public:
     // Get filter capabilities
     uint64_t getCapabilities();
 
+    mxs::config::Configuration* getConfiguration()
+    {
+        return &m_config;
+    }
+
     // Return reference to filter config
     const BinlogConfig& getConfig() const
     {
@@ -83,7 +70,7 @@ public:
 
 private:
     // Constructor: used in the create function
-    BinlogFilter(const mxs::ConfigParameters* pParams);
+    BinlogFilter(const char* name);
 
 private:
     BinlogConfig m_config;

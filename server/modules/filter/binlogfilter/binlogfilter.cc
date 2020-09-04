@@ -16,6 +16,60 @@
 
 #include "binlogfilter.hh"
 
+namespace
+{
+namespace cfg = mxs::config;
+
+class BinlogfilterSpecification : public cfg::Specification
+{
+    using cfg::Specification::Specification;
+
+    bool post_validate(const mxs::ConfigParameters& params) const override
+    {
+        bool rv = params.get_string(REWRITE_SRC).empty() == params.get_string(REWRITE_DEST).empty();
+
+        if (!rv)
+        {
+            MXS_ERROR("Both '%s' and '%s' must be defined", REWRITE_SRC, REWRITE_DEST);
+        }
+
+        return rv;
+    }
+
+    bool post_validate(json_t* json) const override
+    {
+        auto rewrite_src = json_object_get(json, REWRITE_SRC);
+        auto rewrite_dest = json_object_get(json, REWRITE_DEST);
+        bool rv = json_is_string(rewrite_src) == json_is_string(rewrite_src);
+
+        if (!rv)
+        {
+            MXS_ERROR("Both '%s' and '%s' must be defined", REWRITE_SRC, REWRITE_DEST);
+        }
+
+        return rv;
+    }
+};
+
+BinlogfilterSpecification s_spec(MXS_MODULE_NAME, cfg::Specification::FILTER);
+
+cfg::ParamRegex s_match(
+    &s_spec, "match", "Only process events from tables matching this pattern", "",
+    cfg::Param::AT_STARTUP);
+
+cfg::ParamRegex s_exclude(
+    &s_spec, "exclude", "Exclude events from tables matching this pattern", "",
+    cfg::Param::AT_STARTUP);
+
+cfg::ParamRegex s_rewrite_src(
+    &s_spec, REWRITE_SRC, "Pattern used for query replacement", "",
+    cfg::Param::AT_STARTUP);
+
+cfg::ParamString s_rewrite_dest(
+    &s_spec, REWRITE_DEST, "Replacement value for query replacement regex", "",
+    cfg::Param::AT_STARTUP);
+}
+
 // This declares a module in MaxScale
 extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
@@ -29,25 +83,52 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         "V1.0.0",
         RCAP_TYPE_STMT_OUTPUT,
         &BinlogFilter::s_object,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        {
-            {"match",             MXS_MODULE_PARAM_REGEX  },
-            {"exclude",           MXS_MODULE_PARAM_REGEX  },
-            {REWRITE_SRC,         MXS_MODULE_PARAM_REGEX  },
-            {REWRITE_DEST,        MXS_MODULE_PARAM_STRING },
-            {MXS_END_MODULE_PARAMS}
-        }
+        nullptr,
+        nullptr,
+        nullptr,
+        nullptr,
+        {{nullptr}},
+        &s_spec
     };
 
     return &info;
 }
 
+BinlogConfig::BinlogConfig(const char* name)
+    : mxs::config::Configuration(name, &s_spec)
+{
+    add_native(&match, &s_match);
+    add_native(&exclude, &s_exclude);
+    add_native(&rewrite_src, &s_rewrite_src);
+    add_native(&rewrite_dest, &s_rewrite_dest);
+}
+
+BinlogConfig::~BinlogConfig()
+{
+    pcre2_match_data_free(md_match);
+    pcre2_match_data_free(md_exclude);
+}
+
+bool BinlogConfig::post_configure()
+{
+    if (match.sCode)
+    {
+        pcre2_match_data_free(md_match);
+        md_match = pcre2_match_data_create_from_pattern(match.sCode.get(), nullptr);
+    }
+
+    if (exclude.sCode)
+    {
+        pcre2_match_data_free(md_exclude);
+        md_exclude = pcre2_match_data_create_from_pattern(exclude.sCode.get(), nullptr);
+    }
+
+    return true;
+}
+
 // BinlogFilter constructor
-BinlogFilter::BinlogFilter(const mxs::ConfigParameters* pParams)
-    : m_config(pParams)
+BinlogFilter::BinlogFilter(const char* name)
+    : m_config(name)
 {
 }
 
@@ -60,20 +141,7 @@ BinlogFilter::~BinlogFilter()
 BinlogFilter* BinlogFilter::create(const char* zName,
                                    mxs::ConfigParameters* pParams)
 {
-    BinlogFilter* rval = nullptr;
-    auto src = pParams->get_string(REWRITE_SRC);
-    auto dest = pParams->get_string(REWRITE_DEST);
-
-    if (src.empty() != dest.empty())
-    {
-        MXS_ERROR("Both '%s' and '%s' must be defined", REWRITE_SRC, REWRITE_DEST);
-    }
-    else
-    {
-        rval = new BinlogFilter(pParams);
-    }
-
-    return rval;
+    return new BinlogFilter(zName);
 }
 
 // BinlogFilterSession create routine
