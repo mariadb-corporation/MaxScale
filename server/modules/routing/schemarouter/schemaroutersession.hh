@@ -96,7 +96,7 @@ public:
      * @param pPacket  A client packet.
      * @param pBackend The backend the packet is coming from.
      */
-    void clientReply(GWBUF* pPacket, const mxs::ReplyRoute& pBackend, const mxs::Reply& reply);
+    int32_t clientReply(GWBUF* pPacket, const mxs::ReplyRoute& pBackend, const mxs::Reply& reply);
 
     bool handleError(mxs::ErrorType type, GWBUF* pMessage, mxs::Endpoint* pProblem, const mxs::Reply& pReply);
 

@@ -141,9 +141,10 @@ int32_t PinlokiSession::routeQuery(GWBUF* pPacket)
     return rval;
 }
 
-void PinlokiSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply)
+int32_t PinlokiSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
     mxb_assert_message(!true, "This should not happen");
+    return 0;
 }
 
 bool PinlokiSession::handleError(mxs::ErrorType type, GWBUF* pMessage,

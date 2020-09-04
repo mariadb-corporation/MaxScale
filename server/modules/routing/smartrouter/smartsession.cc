@@ -147,7 +147,7 @@ int SmartRouterSession::routeQuery(GWBUF* pBuf)
     return ret;
 }
 
-void SmartRouterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply)
+int32_t SmartRouterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
     using maxbase::operator<<;
 
@@ -188,7 +188,7 @@ void SmartRouterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down
                                                             << " Error code=" << err_code
                                                             << ' ' << mxs::extract_error(pPacket));
             m_pSession->kill();
-            return;
+            return 1;
         }
     }
 
@@ -198,7 +198,7 @@ void SmartRouterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down
                                                  << " to state " << cluster.tracker.state()
                                                  << ". Disconnect.");
         m_pSession->kill();
-        return;
+        return 1;
     }
 
     bool will_reply = false;
@@ -259,11 +259,15 @@ void SmartRouterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down
         gwbuf_free(pPacket);
     }
 
+    int32_t rc = 1;
+
     if (will_reply)
     {
         MXS_SDEBUG("Forward response to client");
-        RouterSession::clientReply(pPacket, down, reply);
+        rc = RouterSession::clientReply(pPacket, down, reply);
     }
+
+    return rc;
 }
 
 bool SmartRouterSession::expecting_request_packets() const

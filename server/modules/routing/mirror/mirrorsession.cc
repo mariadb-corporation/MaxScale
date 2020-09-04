@@ -113,7 +113,7 @@ void MirrorSession::finalize_reply()
     route_queued_queries();
 }
 
-void MirrorSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply)
+int32_t MirrorSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
     auto backend = static_cast<MyBackend*>(down.back()->get_userdata());
     backend->process_result(pPacket, reply);
@@ -144,17 +144,21 @@ void MirrorSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, con
         }
     }
 
+    int rc = 1;
+
     if (pPacket)
     {
         if (backend == m_main)
         {
-            RouterSession::clientReply(pPacket, down, reply);
+            rc = RouterSession::clientReply(pPacket, down, reply);
         }
         else
         {
             gwbuf_free(pPacket);
         }
     }
+
+    return rc;
 }
 
 bool MirrorSession::handleError(mxs::ErrorType type,

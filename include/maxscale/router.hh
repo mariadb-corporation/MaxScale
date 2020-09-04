@@ -128,12 +128,15 @@ typedef struct mxs_router_object
      * @param router_session Router session
      * @param queue          Response from the server
      * @param backend_dcb    The downstream endpoint which responded to the query
+     *
+     * @return If successful, the function returns 1. If an error occurs
+     * and the session should be closed, the function returns 0.
      */
-    void (* clientReply)(MXS_ROUTER* instance,
-                         MXS_ROUTER_SESSION* router_session,
-                         GWBUF* queue,
-                         const mxs::ReplyRoute& down,
-                         const mxs::Reply& reply);
+    int32_t (* clientReply)(MXS_ROUTER* instance,
+                            MXS_FILTER_SESSION* router_session,
+                            GWBUF* queue,
+                            const mxs::ReplyRoute& down,
+                            const mxs::Reply& reply);
 
     /**
      * @brief Called when a backend DCB has failed
@@ -286,7 +289,7 @@ public:
      * @param down    The route the reply took
      * @param reply   The reply object
      */
-    void clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply);
+    int32_t clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply);
 
     /**
      * Handle backend connection network errors
@@ -424,12 +427,14 @@ public:
         return rval;
     }
 
-    static void clientReply(MXS_ROUTER*, MXS_ROUTER_SESSION* pData, GWBUF* pPacket,
-                            const mxs::ReplyRoute& pDown, const mxs::Reply& reply)
+    static int32_t clientReply(MXS_ROUTER*, MXS_FILTER_SESSION* pData, GWBUF* pPacket,
+                               const mxs::ReplyRoute& pDown, const mxs::Reply& reply)
     {
         RouterSessionType* pRouter_session = static_cast<RouterSessionType*>(pData);
 
         MXS_EXCEPTION_GUARD(pRouter_session->clientReply(pPacket, pDown, reply));
+
+        return 0;
     }
 
     static bool handleError(MXS_ROUTER* pInstance,

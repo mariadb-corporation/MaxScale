@@ -174,14 +174,15 @@ static json_t* diagnostics(const MXS_ROUTER* router)
  * @param       master_dcb      The DCB for the connection to the master
  * @param       queue           The GWBUF with reply data
  */
-static void clientReply(MXS_ROUTER* instance,
-                        MXS_ROUTER_SESSION* router_session,
+static int32_t clientReply(MXS_ROUTER* instance,
+                        MXS_FILTER_SESSION* router_session,
                         GWBUF* queue,
                         const mxs::ReplyRoute& backend_dcb,
                         const mxs::Reply& reply)
 {
     /** We should never end up here */
     mxb_assert(false);
+    return 0;
 }
 
 /**

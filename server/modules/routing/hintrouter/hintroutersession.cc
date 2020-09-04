@@ -124,9 +124,11 @@ int32_t HintRouterSession::routeQuery(GWBUF* pPacket)
 }
 
 
-void HintRouterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply)
+int32_t HintRouterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
     HR_ENTRY();
+
+    int32_t rc = 0;
 
     mxs::Target* pTarget = down.back()->target();
 
@@ -134,7 +136,7 @@ void HintRouterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down,
     {
         HR_DEBUG("Returning packet from %s.", pTarget->name());
 
-        RouterSession::clientReply(pPacket, down, reply);
+        rc = RouterSession::clientReply(pPacket, down, reply);
     }
     else
     {
@@ -143,6 +145,8 @@ void HintRouterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down,
         --m_surplus_replies;
         gwbuf_free(pPacket);
     }
+
+    return rc;
 }
 
 bool HintRouterSession::handleError(mxs::ErrorType type,

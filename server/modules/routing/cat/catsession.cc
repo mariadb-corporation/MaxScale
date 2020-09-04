@@ -62,7 +62,7 @@ int32_t CatSession::routeQuery(GWBUF* pPacket)
     return rval;
 }
 
-void CatSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply)
+int32_t CatSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
     auto& backend = *m_current;
     mxb_assert(backend->backend() == down.back());
@@ -95,17 +95,21 @@ void CatSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const 
         send = true;
     }
 
+    int32_t rc = 1;
+
     if (send)
     {
         // Increment the packet sequence number and send it to the client
         mxb_assert(modutil_count_packets(pPacket) > 0);
         GWBUF_DATA(pPacket)[3] = m_packet_num++;
-        RouterSession::clientReply(pPacket, down, reply);
+        rc = RouterSession::clientReply(pPacket, down, reply);
     }
     else
     {
         gwbuf_free(pPacket);
     }
+
+    return rc;
 }
 
 bool CatSession::handleError(mxs::ErrorType type,

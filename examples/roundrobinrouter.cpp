@@ -106,7 +106,7 @@ public:
     RRRouterSession(RRRouter*, const Endpoints&, mxs::Endpoint*, MXS_SESSION*);
     ~RRRouterSession();
     int32_t routeQuery(GWBUF* buffer);
-    void    clientReply(GWBUF* buffer, const mxs::ReplyRoute& down, const mxs::Reply& reply);
+    int32_t clientReply(GWBUF* buffer, const mxs::ReplyRoute& down, const mxs::Reply& reply);
     bool    handleError(mxs::ErrorType type, GWBUF* message, mxs::Endpoint* down, const mxs::Reply& reply);
 
 private:
@@ -369,7 +369,7 @@ int RRRouterSession::routeQuery(GWBUF* querybuf)
  * @param   queue       The GWBUF with reply data
  * @param   backend_dcb The backend DCB (data source)
  */
-void RRRouterSession::clientReply(GWBUF* buf, const mxs::ReplyRoute& down, const mxs::Reply& reply)
+int32_t RRRouterSession::clientReply(GWBUF* buf, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
     if (m_replies_to_ignore > 0)
     {
@@ -379,16 +379,18 @@ void RRRouterSession::clientReply(GWBUF* buf, const mxs::ReplyRoute& down, const
          */
         m_replies_to_ignore--;
         gwbuf_free(buf);
-        return;
+        return 1;
     }
 
-    RouterSession::clientReply(buf, down, reply);
+    int32_t rc = RouterSession::clientReply(buf, down, reply);
 
     m_router->m_routing_c++;
     if (m_router->m_print_on_routing)
     {
         MXS_NOTICE("Replied to client.\n");
     }
+
+    return rc;
 }
 
 bool RRRouterSession::handleError(mxs::ErrorType type,

@@ -532,14 +532,14 @@ void SchemaRouterSession::handle_default_db_response()
     }
 }
 
-void SchemaRouterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply)
+int32_t SchemaRouterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
     SRBackend* bref = static_cast<SRBackend*>(down.back()->get_userdata());
 
     if (m_closed)       // The bref should always be valid
     {
         gwbuf_free(pPacket);
-        return;
+        return 0;
     }
 
     if (reply.is_complete())
@@ -582,10 +582,14 @@ void SchemaRouterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& dow
         }
     }
 
+    int32_t rc = 1;
+
     if (pPacket)
     {
-        RouterSession::clientReply(pPacket, down, reply);
+        rc = RouterSession::clientReply(pPacket, down, reply);
     }
+
+    return rc;
 }
 
 bool SchemaRouterSession::handleError(mxs::ErrorType type,

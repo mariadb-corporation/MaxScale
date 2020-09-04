@@ -540,13 +540,13 @@ void RWSplitSession::finish_transaction(mxs::RWBackend* backend)
     m_trx_sescmd.clear();
 }
 
-void RWSplitSession::clientReply(GWBUF* writebuf, const mxs::ReplyRoute& down, const mxs::Reply& reply)
+int32_t RWSplitSession::clientReply(GWBUF* writebuf, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
     RWBackend* backend = static_cast<RWBackend*>(down.back()->get_userdata());
 
     if ((writebuf = handle_causal_read_reply(writebuf, reply, backend)) == NULL)
     {
-        return;     // Nothing to route, return
+        return 1;     // Nothing to route, return
     }
 
     const auto& error = reply.error();
@@ -571,7 +571,7 @@ void RWSplitSession::clientReply(GWBUF* writebuf, const mxs::ReplyRoute& down, c
         if (!(writebuf = erase_last_packet(writebuf)))
         {
             // Nothing to route to the client
-            return;
+            return 1;
         }
     }
 
@@ -580,7 +580,7 @@ void RWSplitSession::clientReply(GWBUF* writebuf, const mxs::ReplyRoute& down, c
     {
         // We can ignore this error and treat it as if the connection to the server was broken.
         gwbuf_free(writebuf);
-        return;
+        return 1;
     }
 
     // Track transaction contents and handle ROLLBACK with aggressive transaction load balancing
@@ -609,7 +609,7 @@ void RWSplitSession::clientReply(GWBUF* writebuf, const mxs::ReplyRoute& down, c
         {
             // The query timed out on the slave, retry it on the master
             gwbuf_free(writebuf);
-            return;
+            return 1;
         }
 
         if (m_otrx_state == OTRX_ROLLBACK)
@@ -619,7 +619,7 @@ void RWSplitSession::clientReply(GWBUF* writebuf, const mxs::ReplyRoute& down, c
             start_trx_replay();
             gwbuf_free(writebuf);
             session_reset_server_bookkeeping(m_pSession);
-            return;
+            return 1;
         }
     }
     else
@@ -663,7 +663,7 @@ void RWSplitSession::clientReply(GWBUF* writebuf, const mxs::ReplyRoute& down, c
         {
             // Client already has this response, discard it
             gwbuf_free(writebuf);
-            return;
+            return 1;
         }
     }
     else if (m_config.transaction_replay && trx_is_ending())
@@ -694,11 +694,13 @@ void RWSplitSession::clientReply(GWBUF* writebuf, const mxs::ReplyRoute& down, c
         }
     }
 
+    int32_t rc = 1;
+
     if (writebuf)
     {
         mxb_assert_message(backend->in_use(), "Backend should be in use when routing reply");
         /** Write reply to client DCB */
-        RouterSession::clientReply(writebuf, down, reply);
+        rc = RouterSession::clientReply(writebuf, down, reply);
     }
 
     if (m_expected_responses == 0)
@@ -709,6 +711,8 @@ void RWSplitSession::clientReply(GWBUF* writebuf, const mxs::ReplyRoute& down, c
          */
         close_stale_connections();
     }
+
+    return rc;
 }
 
 bool RWSplitSession::start_trx_replay()

@@ -442,10 +442,11 @@ int RCRSession::routeQuery(GWBUF* queue)
     return m_backend->routeQuery(queue);
 }
 
-void RCRSession::clientReply(GWBUF* pPacket, const maxscale::ReplyRoute& down, const maxscale::Reply& pReply)
+int32_t RCRSession::clientReply(GWBUF* pPacket, const maxscale::ReplyRoute& down, const maxscale::Reply& pReply)
 {
-    RouterSession::clientReply(pPacket, down, pReply);
+    auto rc = RouterSession::clientReply(pPacket, down, pReply);
     m_query_timer.end_interval();
+    return rc;
 }
 
 maxscale::SessionStats& RCR::session_stats(maxscale::Target* pTarget)
