@@ -917,12 +917,7 @@ void SchemaRouterSession::route_queued_query()
     MXS_FREE(querystr);
 #endif
 
-    mxs::Downstream down;
-    down.instance = reinterpret_cast<mxs_filter*>(m_router);
-    down.routeQuery = reinterpret_cast<DOWNSTREAMFUNC>(SchemaRouter::routeQuery);
-    down.session = reinterpret_cast<mxs_filter_session*>(this);
-
-    session_delay_routing(m_pSession, down, tmp, 0);
+    session_delay_routing(m_pSession, this, tmp, 0);
 }
 
 /**

@@ -1160,7 +1160,7 @@ CacheFilterSession::routing_action_t CacheFilterSession::route_SELECT(cache_acti
                         mxs::ReplyRoute down;
                         mxs::Reply reply;
 
-                        sThis->m_up.clientReply(pResponse, down, reply);
+                        sThis->m_up->clientReply(pResponse, down, reply);
                     }
                 }
                 else
@@ -1616,5 +1616,5 @@ int CacheFilterSession::continue_routing(GWBUF* pPacket)
         }
     }
 
-    return m_down.routeQuery(pPacket);
+    return FilterSession::routeQuery(pPacket);
 }

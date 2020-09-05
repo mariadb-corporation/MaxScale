@@ -20,6 +20,7 @@
 #include <maxbase/jansson.h>
 #include <maxscale/dcb.hh>
 #include <maxscale/buffer.hh>
+#include <maxscale/routing.hh>
 #include <maxscale/utils.hh>
 #include "query_classifier.hh"
 
@@ -63,36 +64,7 @@ struct mxs_filter_session;
 
 namespace maxscale
 {
-
 class RoutingWorker;
-
-// These are more convenient types
-typedef int32_t (* DOWNSTREAMFUNC)(struct mxs_filter* instance,
-                                   struct mxs_filter_session* session,
-                                   GWBUF* response);
-typedef int32_t (* UPSTREAMFUNC)(struct mxs_filter* instance,
-                                 struct mxs_filter_session* session,
-                                 GWBUF* response,
-                                 const mxs::ReplyRoute& down,
-                                 const mxs::Reply& reply);
-
-struct Downstream
-{
-    mxs_filter*         instance {nullptr};
-    mxs_filter_session* session {nullptr};
-    DOWNSTREAMFUNC      routeQuery {nullptr};
-};
-
-/**
- * The upstream element in the filter chain. This may refer to
- * another filter or to the protocol implementation.
- */
-struct Upstream
-{
-    mxs_filter*         instance {nullptr};
-    mxs_filter_session* session {nullptr};
-    UPSTREAMFUNC        clientReply {nullptr};
-};
 }
 
 /* Specific reasons why a session was closed */
@@ -376,10 +348,10 @@ public:
     }
 
 protected:
-    State                    m_state;    /**< Current descriptor state */
-    uint64_t                 m_id;       /**< Unique session identifier */
+    State                    m_state;   /**< Current descriptor state */
+    uint64_t                 m_id;      /**< Unique session identifier */
     maxscale::RoutingWorker* m_worker;
-    std::string              m_user;     /**< The session user. */
+    std::string              m_user;    /**< The session user. */
     std::string              m_host;
     std::string              m_database;
     std::string              m_pending_database;
@@ -396,9 +368,9 @@ public:
     bool              qualifies_for_pooling;    /*< Whether this session qualifies for the connection pool */
     struct
     {
-        mxs::Upstream up;           /*< Upward component to receive buffer. */
-        GWBUF*        buffer;       /*< Buffer to deliver to up. */
-        SERVICE*      service;      /*< Service where the response originated */
+        MXS_FILTER_SESSION* up;     /*< Upward component to receive buffer. */
+        GWBUF*              buffer; /*< Buffer to deliver to up. */
+        SERVICE*            service;/*< Service where the response originated */
     }               response;       /*< Shortcircuited response */
     session_close_t close_reason;   /*< Reason why the session was closed */
 
@@ -425,7 +397,7 @@ private:
  * @param up       The filter that should receive the response.
  * @param buffer   The response.
  */
-void session_set_response(MXS_SESSION* session, SERVICE* service, const mxs::Upstream* up, GWBUF* buffer);
+void session_set_response(MXS_SESSION* session, SERVICE* service, MXS_FILTER_SESSION* up, GWBUF* buffer);
 
 /**
  * Function to be used by protocol module for routing incoming data
@@ -448,7 +420,7 @@ bool mxs_route_query(MXS_SESSION* session, GWBUF* buffer);
  *
  * @return True, if the routing should continue, false otherwise.
  */
-bool mxs_route_reply(mxs::Upstream* up, GWBUF* buffer, DCB* dcb);
+bool mxs_route_reply(MXS_FILTER_SESSION* up, GWBUF* buffer, DCB* dcb);
 
 /**
  * Start the session
@@ -727,7 +699,7 @@ const char* session_get_dump_statements_str();
  *
  * @return True if queuing of the query was successful
  */
-bool session_delay_routing(MXS_SESSION* session, mxs::Downstream down, GWBUF* buffer, int seconds);
+bool session_delay_routing(MXS_SESSION* session, MXS_FILTER_SESSION* down, GWBUF* buffer, int seconds);
 
 /**
  * Get the reason why a session was closed

@@ -309,24 +309,24 @@ FilterSession::~FilterSession()
 {
 }
 
-void FilterSession::setDownstream(const Downstream& down)
+void FilterSession::setDownstream(mxs_filter_session* down)
 {
     m_down = down;
 }
 
-void FilterSession::setUpstream(const Upstream& up)
+void FilterSession::setUpstream(mxs_filter_session* up)
 {
     m_up = up;
 }
 
 int FilterSession::routeQuery(GWBUF* pPacket)
 {
-    return m_down.routeQuery(pPacket);
+    return m_down->routeQuery(pPacket);
 }
 
 int FilterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
-    return m_up.clientReply(pPacket, down, reply);
+    return m_up->clientReply(pPacket, down, reply);
 }
 
 json_t* FilterSession::diagnostics() const

@@ -58,8 +58,8 @@ FilterModule::Instance::~Instance()
 
 auto_ptr<FilterModule::Session> FilterModule::Instance::newSession(MXS_SESSION* pSession,
                                                                    SERVICE* pService,
-                                                                   mxs::Downstream* down,
-                                                                   mxs::Upstream* up)
+                                                                   MXS_FILTER_SESSION* down,
+                                                                   MXS_FILTER_SESSION* up)
 {
     auto_ptr<Session> sFilter_session;
 

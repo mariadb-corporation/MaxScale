@@ -37,18 +37,6 @@ typedef struct mxs_filter
 } MXS_FILTER;
 
 /**
- * MXS_FILTER_SESSION is an opaque type representing the session related
- * data of a particular filter instance.
- *
- * MaxScale itself does not do anything with it, except for receiving it
- * from the @c newSession function of a filter module and subsequently
- * passing it back to the API functions of the filter.
- */
-typedef struct mxs_filter_session
-{
-} MXS_FILTER_SESSION;
-
-/**
  * The "module object" structure for a filter module. All entry points
  * marked with `(optional)` are optional entry points which can be set to NULL
  * if no implementation is required.
@@ -89,7 +77,7 @@ typedef struct mxs_filter_object
      * @return New filter session or NULL on error
      */
     MXS_FILTER_SESSION* (*newSession)(MXS_FILTER * instance, MXS_SESSION* session, SERVICE* service,
-                                      mxs::Downstream* down, mxs::Upstream* up);
+                                      MXS_FILTER_SESSION* down, MXS_FILTER_SESSION* up);
 
     /**
      * @brief Called when a session is freed
@@ -237,90 +225,24 @@ class FilterSession : public MXS_FILTER_SESSION
 {
 public:
     /**
-     * @class Downstream
-     *
-     * An instance of this class represents a component following a filter.
-     */
-    class Downstream
-    {
-    public:
-        Downstream()
-        {
-        }
-
-        Downstream(const mxs::Downstream* down)
-            : m_data(down)
-        {
-        }
-
-        /**
-         * Function for sending a packet from the client to the next component
-         * in the routing chain towards the backend.
-         *
-         * @param pPacket  A packet to be delivered towards the backend.
-         *
-         * @return Whatever the following component returns.
-         */
-        int routeQuery(GWBUF* pPacket)
-        {
-            return m_data->routeQuery(m_data->instance, m_data->session, pPacket);
-        }
-
-        const mxs::Downstream* m_data {nullptr};
-    };
-
-    class Upstream
-    {
-    public:
-        /**
-         * @class Upstream
-         *
-         * An instance of this class represents a component preceeding a filter.
-         */
-        Upstream()
-        {
-        }
-
-        Upstream(const mxs::Upstream* up)
-            : m_data(up)
-        {
-        }
-
-        /**
-         * Function for sending a packet from the backend to the next component
-         * in the routing chain towards the client.
-         *
-         * @param pPacket  A packet to be delivered towards the backend.
-         *
-         * @return Whatever the following component returns.
-         */
-        int clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply)
-        {
-            return m_data->clientReply(m_data->instance, m_data->session, pPacket, down, reply);
-        }
-
-        const mxs::Upstream* m_data {nullptr};
-    };
-
-    /**
      * The FilterSession instance will be deleted when a client session
      * has terminated. Will be called only after @c close() has been called.
      */
-    ~FilterSession();
+    virtual ~FilterSession();
 
     /**
      * Called for setting the component following this filter session.
      *
      * @param down The component following this filter.
      */
-    void setDownstream(const Downstream& down);
+    void setDownstream(mxs_filter_session* down);
 
     /**
      * Called for setting the component preceeding this filter session.
      *
      * @param up The component preceeding this filter.
      */
-    void setUpstream(const Upstream& up);
+    void setUpstream(mxs_filter_session* up);
 
     /**
      * Called when a packet being is routed to the backend. The filter should
@@ -362,14 +284,14 @@ protected:
      */
     void set_response(GWBUF* pResponse) const
     {
-        session_set_response(m_pSession, m_pService, m_up.m_data, pResponse);
+        session_set_response(m_pSession, m_pService, m_up, pResponse);
     }
 
 protected:
-    MXS_SESSION* m_pSession;    /*< The MXS_SESSION this filter session is associated with. */
-    SERVICE*     m_pService;    /*< The service for which this session was created. */
-    Downstream   m_down;        /*< The downstream component. */
-    Upstream     m_up;          /*< The upstream component. */
+    MXS_SESSION*        m_pSession; /*< The MXS_SESSION this filter session is associated with. */
+    SERVICE*            m_pService; /*< The service for which this session was created. */
+    mxs_filter_session* m_down;     /*< The downstream component. */
+    mxs_filter_session* m_up;       /*< The upstream component. */
 };
 
 
@@ -448,21 +370,12 @@ public:
     }
 
     static MXS_FILTER_SESSION* apiNewSession(MXS_FILTER* pInstance, MXS_SESSION* pSession, SERVICE* pService,
-                                             mxs::Downstream* pDown, mxs::Upstream* pUp)
+                                             MXS_FILTER_SESSION* pDown, MXS_FILTER_SESSION* pUp)
     {
         FilterType* pFilter = static_cast<FilterType*>(pInstance);
         FilterSessionType* pFilterSession = NULL;
 
         MXS_EXCEPTION_GUARD(pFilterSession = pFilter->newSession(pSession, pService));
-
-        if (pFilterSession)
-        {
-            typename FilterSessionType::Downstream down(pDown);
-            typename FilterSessionType::Upstream up(pUp);
-
-            MXS_EXCEPTION_GUARD(pFilterSession->setDownstream(down));
-            MXS_EXCEPTION_GUARD(pFilterSession->setUpstream(up));
-        }
 
         return pFilterSession;
     }

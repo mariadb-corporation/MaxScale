@@ -86,8 +86,8 @@ void destroyInstance(MXS_ROUTER* router)
  * @param session   The session itself
  * @return Session specific data for this session
  */
-static MXS_ROUTER_SESSION* newSession(MXS_ROUTER* instance, MXS_SESSION* session,
-                                      mxs::Upstream* up, const Endpoints& endpoints)
+static MXS_FILTER_SESSION* newSession(MXS_ROUTER* instance, MXS_SESSION* session,
+                                      MXS_FILTER_SESSION* up, const Endpoints& endpoints)
 {
     Avro* inst = reinterpret_cast<Avro*>(instance);
     return AvroSession::create(inst, session);
@@ -105,7 +105,7 @@ static MXS_ROUTER_SESSION* newSession(MXS_ROUTER* instance, MXS_SESSION* session
  * @param router_cli_ses    The particular session to free
  *
  */
-static void freeSession(MXS_ROUTER* router_instance, MXS_ROUTER_SESSION* router_client_ses)
+static void freeSession(MXS_ROUTER* router_instance, MXS_FILTER_SESSION* router_client_ses)
 {
     AvroSession* client = (AvroSession*) router_client_ses;
     delete client;
@@ -123,7 +123,7 @@ static void freeSession(MXS_ROUTER* router_instance, MXS_ROUTER_SESSION* router_
  * @param queue         The queue of data buffers to route
  * @return 1 on success, 0 on error
  */
-static int routeQuery(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_session, GWBUF* queue)
+static int routeQuery(MXS_ROUTER* instance, MXS_FILTER_SESSION* router_session, GWBUF* queue)
 {
     AvroSession* client = (AvroSession*) router_session;
 
@@ -175,10 +175,10 @@ static json_t* diagnostics(const MXS_ROUTER* router)
  * @param       queue           The GWBUF with reply data
  */
 static int32_t clientReply(MXS_ROUTER* instance,
-                        MXS_FILTER_SESSION* router_session,
-                        GWBUF* queue,
-                        const mxs::ReplyRoute& backend_dcb,
-                        const mxs::Reply& reply)
+                           MXS_FILTER_SESSION* router_session,
+                           GWBUF* queue,
+                           const mxs::ReplyRoute& backend_dcb,
+                           const mxs::Reply& reply)
 {
     /** We should never end up here */
     mxb_assert(false);
@@ -198,7 +198,7 @@ static int32_t clientReply(MXS_ROUTER* instance,
  *
  */
 static bool errorReply(MXS_ROUTER* instance,
-                       MXS_ROUTER_SESSION* router_session,
+                       MXS_FILTER_SESSION* router_session,
                        mxs::ErrorType type,
                        GWBUF* message,
                        mxs::Endpoint* backend_dcb,

@@ -17,6 +17,18 @@
  */
 
 #include <maxscale/ccdefs.hh>
+#include <maxscale/target.hh>
+
+/**
+ * MXS_FILTER_SESSION is the base type representing the session related
+ * data of a particular routing module instance.
+ */
+typedef struct mxs_filter_session
+{
+    virtual int32_t routeQuery(GWBUF* pPacket) = 0;
+
+    virtual int32_t clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply) = 0;
+} MXS_FILTER_SESSION;
 
 /**
  * Routing capability type. Indicates what kind of input a router or

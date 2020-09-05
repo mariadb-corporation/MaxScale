@@ -55,8 +55,8 @@ public:
     SFilterDef          filter;
     MXS_FILTER*         instance;
     MXS_FILTER_SESSION* session;
-    mxs::Upstream       up;
-    mxs::Downstream     down;
+    MXS_FILTER_SESSION* up;
+    MXS_FILTER_SESSION* down;
 };
 
 class Session : public MXS_SESSION, public mxs::Component

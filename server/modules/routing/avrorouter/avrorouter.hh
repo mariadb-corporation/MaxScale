@@ -114,14 +114,14 @@ private:
     Avro(SERVICE* service, mxs::ConfigParameters* params);
 };
 
-class AvroSession : public MXS_ROUTER_SESSION
+class AvroSession : public MXS_FILTER_SESSION
 {
     AvroSession(const AvroSession&) = delete;
     AvroSession& operator=(const AvroSession&) = delete;
 public:
 
     static AvroSession* create(Avro* router, MXS_SESSION* session);
-    ~AvroSession();
+    virtual ~AvroSession();
 
     /**
      * Process a client request
@@ -130,7 +130,13 @@ public:
      *
      * @return 1 on success, 0 on error
      */
-    int routeQuery(GWBUF* buffer);
+    int32_t routeQuery(GWBUF* buffer);
+
+    int32_t clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply)
+    {
+        mxb_assert(!true);
+        return 0;
+    }
 
     void queue_client_callback();
 

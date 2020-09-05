@@ -41,12 +41,12 @@ static void                destroyInstance(MXS_FILTER* instance);
 static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance,
                                       MXS_SESSION* session,
                                       SERVICE* service,
-                                      mxs::Downstream* down,
-                                      mxs::Upstream* up);
+                                      MXS_FILTER_SESSION* down,
+                                      MXS_FILTER_SESSION* up);
 static void freeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session);
 static void setDownstream(MXS_FILTER* instance,
                           MXS_FILTER_SESSION* fsession,
-                          mxs::Downstream* downstream);
+                          MXS_FILTER_SESSION* downstream);
 static int routeQuery(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, GWBUF* queue);
 static int clientReply(MXS_FILTER* instance,
                        MXS_FILTER_SESSION* session,
@@ -80,12 +80,12 @@ struct RegexInstance
  */
 struct RegexSession
 {
-    mxs::Downstream*  down; /* The downstream filter */
-    mxs::Upstream*    up;   /* The upstream filter */
-    pthread_mutex_t   lock;
-    int               no_change;    /* No. of unchanged requests */
-    int               replacements; /* No. of changed requests */
-    pcre2_match_data* match_data;   /*< Matching data used by the compiled regex */
+    MXS_FILTER_SESSION* down;   /* The downstream filter */
+    MXS_FILTER_SESSION* up;     /* The upstream filter */
+    pthread_mutex_t     lock;
+    int                 no_change;      /* No. of unchanged requests */
+    int                 replacements;   /* No. of changed requests */
+    pcre2_match_data*   match_data;     /*< Matching data used by the compiled regex */
 };
 
 void log_match(RegexInstance* inst, char* re, char* old, char* newsql);
@@ -287,8 +287,8 @@ bool matching_connection(RegexInstance* my_instance, MXS_SESSION* session)
 static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance,
                                       MXS_SESSION* session,
                                       SERVICE* service,
-                                      mxs::Downstream* down,
-                                      mxs::Upstream* up)
+                                      MXS_FILTER_SESSION* down,
+                                      MXS_FILTER_SESSION* up)
 {
     RegexInstance* my_instance = (RegexInstance*) instance;
     RegexSession* my_session = static_cast<RegexSession*>(MXS_CALLOC(1, sizeof(RegexSession)));
@@ -368,17 +368,14 @@ static int routeQuery(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GWBUF* 
             MXS_FREE(sql);
         }
     }
-    return my_session->down->routeQuery(my_session->down->instance,
-                                        my_session->down->session,
-                                        queue);
+    return my_session->down->routeQuery(queue);
 }
 
 static int clientReply(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GWBUF* buffer,
                        const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
     RegexSession* my_session = (RegexSession*) session;
-    return my_session->up->clientReply(my_session->up->instance, my_session->up->session,
-                                       buffer, down, reply);
+    return my_session->up->clientReply(buffer, down, reply);
 }
 
 /**

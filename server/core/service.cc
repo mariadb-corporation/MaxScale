@@ -1224,6 +1224,7 @@ ServiceEndpoint::ServiceEndpoint(MXS_SESSION* session, Service* service, mxs::Co
     : m_up(up)
     , m_session(session)
     , m_service(service)
+    , m_upstream(this)
 {
     service->incref();
 }
@@ -1275,7 +1276,7 @@ bool ServiceEndpoint::connect()
                    std::mem_fn(&std::unique_ptr<mxs::Endpoint>::get));
 
     m_router_session = m_service->router->newSession(m_service->router_instance, m_session,
-                                                     &m_tail, endpoints);
+                                                     m_tail, endpoints);
 
     if (!m_router_session)
     {
@@ -1284,13 +1285,8 @@ bool ServiceEndpoint::connect()
         return false;
     }
 
-    m_head.instance = (MXS_FILTER*)m_service->router_instance;
-    m_head.session = (MXS_FILTER_SESSION*)m_router_session;
-    m_head.routeQuery = (DOWNSTREAMFUNC)m_service->router->routeQuery;
-
-    m_tail.instance = (MXS_FILTER*)this;
-    m_tail.session = (MXS_FILTER_SESSION*)this;
-    m_tail.clientReply = ServiceEndpoint::upstream_function;
+    m_head = m_router_session;
+    m_tail = &m_upstream;
 
     for (const auto& a : m_service->get_filters())
     {
@@ -1300,7 +1296,7 @@ bool ServiceEndpoint::connect()
     for (auto it = m_filters.begin(); it != m_filters.end(); ++it)
     {
         auto& f = *it;
-        f.session = f.filter->obj()->newSession(f.instance, m_session, m_service, &f.down, &f.up);
+        f.session = f.filter->obj()->newSession(f.instance, m_session, m_service, f.down, f.up);
 
         if (!f.session)
         {
@@ -1318,30 +1314,29 @@ bool ServiceEndpoint::connect()
     }
 
     // The head of the chain currently points at the router
-    mxs::Downstream chain_head = m_head;
+    mxs_filter_session* chain_head = m_head;
 
     for (auto it = m_filters.rbegin(); it != m_filters.rend(); it++)
     {
+        static_cast<mxs::FilterSession*>(it->session)->setDownstream(chain_head);
         it->down = chain_head;
-        chain_head.instance = it->instance;
-        chain_head.session = it->session;
-        chain_head.routeQuery = it->filter->obj()->routeQuery;
+        chain_head = it->session;
     }
 
     m_head = chain_head;
 
     // The tail is the upstream component of the service (the client DCB)
-    mxs::Upstream chain_tail = m_tail;
+    mxs_filter_session* chain_tail = m_tail;
 
     for (auto it = m_filters.begin(); it != m_filters.end(); it++)
     {
+        static_cast<mxs::FilterSession*>(it->session)->setUpstream(chain_tail);
         it->up = chain_tail;
-        chain_tail.instance = it->instance;
-        chain_tail.session = it->session;
-        chain_tail.clientReply = it->filter->obj()->clientReply;
+        chain_tail = it->session;
     }
 
     m_tail = chain_tail;
+    static_cast<mxs::RouterSession*>(m_router_session)->setUpstream(m_tail);
 
     // The endpoint is now "connected"
     m_open = true;
@@ -1386,7 +1381,7 @@ int32_t ServiceEndpoint::routeQuery(GWBUF* buffer)
 {
     mxb::LogScope scope(m_service->name());
     mxb_assert(m_open);
-    return m_head.routeQuery(m_head.instance, m_head.session, buffer);
+    return m_head->routeQuery(buffer);
 }
 
 int32_t ServiceEndpoint::clientReply(GWBUF* buffer, mxs::ReplyRoute& down, const mxs::Reply& reply)

@@ -219,35 +219,22 @@ const char* session_get_remote(const MXS_SESSION* session)
 
 void Session::deliver_response()
 {
-    MXS_FILTER* filter_instance = response.up.instance;
+    mxb_assert(response.buffer);
 
-    if (filter_instance)
-    {
-        MXS_FILTER_SESSION* filter_session = response.up.session;
-        GWBUF* buffer = response.buffer;
+    // The reply will always be complete
+    mxs::ReplyRoute route;
+    mxs::Reply reply;
+    response.up->clientReply(response.buffer, route, reply);
 
-        mxb_assert(filter_session);
-        mxb_assert(buffer);
+    response.up = NULL;
+    response.buffer = NULL;
 
-        // The reply will always be complete
-        mxs::ReplyRoute route;
-        mxs::Reply reply;
-        response.up.clientReply(filter_instance, filter_session, buffer, route, reply);
+    // If some filter short-circuits the routing, then there will
+    // be no response from a server and we need to ensure that
+    // subsequent book-keeping targets the right statement.
+    book_last_as_complete();
 
-        response.up.instance = NULL;
-        response.up.session = NULL;
-        response.up.clientReply = NULL;
-        response.buffer = NULL;
-
-        // If some filter short-circuits the routing, then there will
-        // be no response from a server and we need to ensure that
-        // subsequent book-keeping targets the right statement.
-        book_last_as_complete();
-    }
-
-    mxb_assert(!response.up.instance);
-    mxb_assert(!response.up.session);
-    mxb_assert(!response.up.clientReply);
+    mxb_assert(!response.up);
     mxb_assert(!response.buffer);
 }
 
@@ -261,11 +248,11 @@ bool mxs_route_query(MXS_SESSION* ses, GWBUF* buffer)
     return rv;
 }
 
-bool mxs_route_reply(mxs::Upstream* up, GWBUF* buffer, DCB* dcb)
+bool mxs_route_reply(MXS_FILTER_SESSION* up, GWBUF* buffer, DCB* dcb)
 {
     mxs::ReplyRoute route;
     mxs::Reply reply;
-    return up->clientReply(up->instance, up->session, buffer, route, reply);
+    return up->clientReply(buffer, route, reply);
 }
 
 /**
@@ -557,17 +544,15 @@ bool session_remove_variable(MXS_SESSION* session,
     return pSession->remove_variable(name, context);
 }
 
-void session_set_response(MXS_SESSION* session, SERVICE* service, const mxs::Upstream* up, GWBUF* buffer)
+void session_set_response(MXS_SESSION* session, SERVICE* service, MXS_FILTER_SESSION* up, GWBUF* buffer)
 {
     // Valid arguments.
     mxb_assert(session && up && buffer);
 
     // Valid state. Only one filter may terminate the execution and exactly once.
-    mxb_assert(!session->response.up.instance
-               && !session->response.up.session
-               && !session->response.buffer);
+    mxb_assert(!session->response.up && !session->response.buffer);
 
-    session->response.up = *up;
+    session->response.up = up;
     session->response.buffer = buffer;
     session->response.service = service;
 }
@@ -660,7 +645,7 @@ class DelayedRoutingTask
     DelayedRoutingTask& operator=(const DelayedRoutingTask&) = delete;
 
 public:
-    DelayedRoutingTask(MXS_SESSION* session, mxs::Downstream down, GWBUF* buffer)
+    DelayedRoutingTask(MXS_SESSION* session, MXS_FILTER_SESSION* down, GWBUF* buffer)
         : m_session(session_get_ref(session))
         , m_down(down)
         , m_buffer(buffer)
@@ -690,7 +675,7 @@ public:
                 GWBUF* buffer = m_buffer;
                 m_buffer = NULL;
 
-                if (m_down.routeQuery(m_down.instance, m_down.session, buffer) == 0)
+                if (m_down->routeQuery(buffer) == 0)
                 {
                     // Routing failed, send a hangup to the client.
                     m_session->client_connection()->dcb()->trigger_hangup_event();
@@ -718,9 +703,9 @@ public:
     }
 
 private:
-    MXS_SESSION*    m_session;
-    mxs::Downstream m_down;
-    GWBUF*          m_buffer;
+    MXS_SESSION*        m_session;
+    MXS_FILTER_SESSION* m_down;
+    GWBUF*              m_buffer;
 };
 
 static bool delayed_routing_cb(Worker::Call::action_t action, DelayedRoutingTask* task)
@@ -740,7 +725,7 @@ static bool delayed_routing_cb(Worker::Call::action_t action, DelayedRoutingTask
     return false;
 }
 
-bool session_delay_routing(MXS_SESSION* session, mxs::Downstream down, GWBUF* buffer, int seconds)
+bool session_delay_routing(MXS_SESSION* session, MXS_FILTER_SESSION* down, GWBUF* buffer, int seconds)
 {
     bool success = false;
 

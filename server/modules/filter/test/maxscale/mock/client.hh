@@ -115,19 +115,21 @@ public:
     void reset();
 
     /**
-     * Get the mxs::Upstream for this object
+     * Get the MXS_FILTER_SESSION for this object
      */
-    mxs::Upstream* as_upstream()
+    MXS_FILTER_SESSION* as_upstream()
     {
-        m_upstream.instance = &m_instance;
-        m_upstream.session = this;
-        m_upstream.clientReply = &Client::clientReply;
-        return &m_upstream;
+        return this;
     }
 
-private:
+    int32_t routeQuery(GWBUF* pPacket)
+    {
+        return 0;
+    }
+
     int32_t clientReply(GWBUF* pResponse, const mxs::ReplyRoute& down, const mxs::Reply& reply);
 
+private:
     static int32_t clientReply(MXS_FILTER* pInstance,
                                MXS_FILTER_SESSION* pSession,
                                GWBUF* pResponse,
@@ -138,12 +140,12 @@ private:
     int32_t write(GWBUF* pBuffer);
 
 private:
-    MXS_FILTER    m_instance;
-    std::string   m_user;
-    std::string   m_host;
-    Handler*      m_pHandler;
-    size_t        m_n_responses;
-    mxs::Upstream m_upstream;
+    MXS_FILTER          m_instance;
+    std::string         m_user;
+    std::string         m_host;
+    Handler*            m_pHandler;
+    size_t              m_n_responses;
+    MXS_FILTER_SESSION* m_upstream;
 };
 }
 }

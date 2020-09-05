@@ -33,7 +33,7 @@ class Backend;
  * An instance of RouterSession is a router to which a filter forwards
  * data.
  */
-class RouterSession : private MXS_ROUTER_SESSION
+class RouterSession : private MXS_FILTER_SESSION
 {
     RouterSession(const RouterSession&);
     RouterSession& operator=(const RouterSession&);
@@ -55,12 +55,19 @@ public:
      * @param pFilter_session  The filter to set this router as downstream
      *                         filter of.
      */
-    mxs::Downstream* as_downstream()
+    MXS_FILTER_SESSION* as_downstream()
     {
-        m_downstream.instance = reinterpret_cast<MXS_FILTER*>(&m_instance);
-        m_downstream.session = reinterpret_cast<MXS_FILTER_SESSION*>(this);
-        m_downstream.routeQuery = &RouterSession::routeQuery;
-        return &m_downstream;
+        return this;
+    }
+
+    int32_t routeQuery(GWBUF* pPacket)
+    {
+        return 0;
+    }
+
+    int32_t clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply)
+    {
+        return 0;
     }
 
     /**
@@ -115,7 +122,7 @@ private:
     MXS_ROUTER             m_instance;
     Backend*               m_pBackend;
     FilterModule::Session* m_pUpstream_filter_session;
-    mxs::Downstream        m_downstream;
+    MXS_FILTER_SESSION*        m_downstream;
 
     maxscale::mock::Session* m_pSession;
 };

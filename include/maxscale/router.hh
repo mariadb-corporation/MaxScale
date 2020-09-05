@@ -35,18 +35,6 @@ typedef struct mxs_router
 } MXS_ROUTER;
 
 /**
- * MXS_ROUTER_SESSION is an opaque type representing the session related
- * data of a particular router instance.
- *
- * MaxScale itself does not do anything with it, except for receiving it
- * from the @c newSession function of a router module and subsequently
- * passing it back to the API functions of the router.
- */
-typedef struct mxs_router_session
-{
-} MXS_ROUTER_SESSION;
-
-/**
  * The "module object" structure for a query router module. All entry points
  * marked with `(optional)` are optional entry points which can be set to NULL
  * if no implementation is required.
@@ -81,7 +69,7 @@ typedef struct mxs_router_object
      *
      * @return New router session or NULL on error
      */
-    MXS_ROUTER_SESSION* (*newSession)(MXS_ROUTER * instance, MXS_SESSION* session, mxs::Upstream* up,
+    MXS_FILTER_SESSION* (*newSession)(MXS_ROUTER * instance, MXS_SESSION* session, MXS_FILTER_SESSION* up,
                                       const Endpoints& endpoints);
 
     /**
@@ -92,7 +80,7 @@ typedef struct mxs_router_object
      * @param instance       Router instance
      * @param router_session Router session
      */
-    void (* freeSession)(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_session);
+    void (* freeSession)(MXS_ROUTER* instance, MXS_FILTER_SESSION* router_session);
 
     /**
      * @brief Called on each query that requires routing
@@ -106,7 +94,7 @@ typedef struct mxs_router_object
      * @return If successful, the function returns 1. If an error occurs
      * and the session should be closed, the function returns 0.
      */
-    int32_t (* routeQuery)(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_session, GWBUF* queue);
+    int32_t (* routeQuery)(MXS_ROUTER* instance, MXS_FILTER_SESSION* router_session, GWBUF* queue);
 
     /**
      * @brief Called for diagnostic output
@@ -155,7 +143,7 @@ typedef struct mxs_router_object
      * @return True for success or false for error
      */
     bool (* handleError)(MXS_ROUTER* instance,
-                         MXS_ROUTER_SESSION* router_session,
+                         MXS_FILTER_SESSION* router_session,
                          mxs::ErrorType type,
                          GWBUF* errmsgbuf,
                          mxs::Endpoint* down,
@@ -264,14 +252,14 @@ namespace maxscale
  * are virtual. That is by design, as the class will be used in a context where
  * the concrete class is known. That is, there is no need for the virtual mechanism.
  */
-class RouterSession : public MXS_ROUTER_SESSION
+class RouterSession : public MXS_FILTER_SESSION
 {
 public:
     /**
      * The RouterSession instance will be deleted when a client session
      * has terminated.
      */
-    ~RouterSession() = default;
+    virtual ~RouterSession() = default;
 
     /**
      * Called when a packet being is routed to the backend. The router should
@@ -279,7 +267,7 @@ public:
      *
      * @param pPacket A client packet.
      */
-    int32_t routeQuery(GWBUF* pPacket);
+    int32_t routeQuery(GWBUF* pPacket) override;
 
     /**
      * Called when a packet is routed to the client. The router should
@@ -289,7 +277,7 @@ public:
      * @param down    The route the reply took
      * @param reply   The reply object
      */
-    int32_t clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply);
+    int32_t clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply) override;
 
     /**
      * Handle backend connection network errors
@@ -303,7 +291,7 @@ public:
     bool handleError(mxs::ErrorType type, GWBUF* pMessage, mxs::Endpoint* pProblem, const mxs::Reply& reply);
 
     // Sets the upstream component (don't override this in the inherited class)
-    void setUpstream(mxs::Upstream* up)
+    void setUpstream(MXS_FILTER_SESSION* up)
     {
         m_pUp = up;
     }
@@ -312,8 +300,8 @@ protected:
     RouterSession(MXS_SESSION* pSession);
 
 protected:
-    MXS_SESSION*   m_pSession;  /*< The MXS_SESSION this router session is associated with. */
-    mxs::Upstream* m_pUp;
+    MXS_SESSION*        m_pSession; /*< The MXS_SESSION this router session is associated with. */
+    MXS_FILTER_SESSION* m_pUp;
 };
 
 
@@ -383,30 +371,25 @@ public:
         return pRouter;
     }
 
-    static MXS_ROUTER_SESSION* newSession(MXS_ROUTER* pInstance, MXS_SESSION* pSession,
-                                          mxs::Upstream* up, const Endpoints& endpoints)
+    static MXS_FILTER_SESSION* newSession(MXS_ROUTER* pInstance, MXS_SESSION* pSession,
+                                          MXS_FILTER_SESSION* up, const Endpoints& endpoints)
     {
         RouterType* pRouter = static_cast<RouterType*>(pInstance);
         RouterSessionType* pRouter_session = nullptr;
 
         MXS_EXCEPTION_GUARD(pRouter_session = pRouter->newSession(pSession, endpoints));
 
-        if (pRouter_session)
-        {
-            pRouter_session->setUpstream(up);
-        }
-
         return pRouter_session;
     }
 
-    static void freeSession(MXS_ROUTER*, MXS_ROUTER_SESSION* pData)
+    static void freeSession(MXS_ROUTER*, MXS_FILTER_SESSION* pData)
     {
         RouterSessionType* pRouter_session = static_cast<RouterSessionType*>(pData);
 
         MXS_EXCEPTION_GUARD(delete pRouter_session);
     }
 
-    static int32_t routeQuery(MXS_ROUTER*, MXS_ROUTER_SESSION* pData, GWBUF* pPacket)
+    static int32_t routeQuery(MXS_ROUTER*, MXS_FILTER_SESSION* pData, GWBUF* pPacket)
     {
         RouterSessionType* pRouter_session = static_cast<RouterSessionType*>(pData);
 
@@ -438,7 +421,7 @@ public:
     }
 
     static bool handleError(MXS_ROUTER* pInstance,
-                            MXS_ROUTER_SESSION* pData,
+                            MXS_FILTER_SESSION* pData,
                             mxs::ErrorType type,
                             GWBUF* pMessage,
                             mxs::Endpoint* pProblem,

@@ -47,7 +47,7 @@ public:
          * @return A new filter session or NULL if the creation failed.
          */
         std::auto_ptr<Session> newSession(MXS_SESSION* pSession, SERVICE* pService,
-                                          mxs::Downstream* pDown, mxs::Upstream* pUp);
+                                          MXS_FILTER_SESSION* pDown, MXS_FILTER_SESSION* pUp);
 
     private:
         friend class FilterModule;
@@ -130,8 +130,8 @@ private:
     MXS_FILTER_SESSION* newSession(MXS_FILTER* pInstance,
                                    MXS_SESSION* pSession,
                                    SERVICE* pService,
-                                   mxs::Downstream* pDown,
-                                   mxs::Upstream* pUp)
+                                   MXS_FILTER_SESSION* pDown,
+                                   MXS_FILTER_SESSION* pUp)
     {
         return m_pApi->newSession(pInstance, pSession, pService, pDown, pUp);
     }

@@ -380,7 +380,7 @@ int CCRSession::routeQuery(GWBUF* queue)
         }
     }
 
-    return m_down.routeQuery(queue);
+    return FilterSession::routeQuery(queue);
 }
 
 /**

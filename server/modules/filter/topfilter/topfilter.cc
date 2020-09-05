@@ -54,8 +54,8 @@ static MXS_FILTER*         createInstance(const char* name, mxs::ConfigParameter
 static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance,
                                       MXS_SESSION* session,
                                       SERVICE* service,
-                                      mxs::Downstream* down,
-                                      mxs::Upstream* up);
+                                      MXS_FILTER_SESSION* down,
+                                      MXS_FILTER_SESSION* up);
 static void freeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session);
 static int  routeQuery(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, GWBUF* queue);
 static int  clientReply(MXS_FILTER* instance,
@@ -106,20 +106,20 @@ typedef struct topnq
  */
 typedef struct
 {
-    mxs::Downstream* down;
-    mxs::Upstream*   up;
-    int              active;
-    char*            clientHost;
-    char*            userName;
-    char*            filename;
-    int              fd;
-    struct timeval   start;
-    char*            current;
-    TOPNQ**          top;
-    int              n_statements;
-    struct timeval   total;
-    struct timeval   connect;
-    struct timeval   disconnect;
+    MXS_FILTER_SESSION* down;
+    MXS_FILTER_SESSION* up;
+    int                 active;
+    char*               clientHost;
+    char*               userName;
+    char*               filename;
+    int                 fd;
+    struct timeval      start;
+    char*               current;
+    TOPNQ**             top;
+    int                 n_statements;
+    struct timeval      total;
+    struct timeval      connect;
+    struct timeval      disconnect;
 } TOPN_SESSION;
 
 static const MXS_ENUM_VALUE option_values[] =
@@ -276,8 +276,8 @@ static MXS_FILTER* createInstance(const char* name, mxs::ConfigParameters* param
 static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance,
                                       MXS_SESSION* session,
                                       SERVICE* service,
-                                      mxs::Downstream* down,
-                                      mxs::Upstream* up)
+                                      MXS_FILTER_SESSION* down,
+                                      MXS_FILTER_SESSION* up)
 {
     TOPN_INSTANCE* my_instance = (TOPN_INSTANCE*) instance;
     TOPN_SESSION* my_session;
@@ -481,9 +481,7 @@ static int routeQuery(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GWBUF* 
         }
     }
     /* Pass the query downstream */
-    return my_session->down->routeQuery(my_session->down->instance,
-                                        my_session->down->session,
-                                        queue);
+    return my_session->down->routeQuery(queue);
 }
 
 static int cmp_topn(const void* va, const void* vb)
@@ -554,11 +552,7 @@ static int clientReply(MXS_FILTER* instance,
     }
 
     /* Pass the result upstream */
-    return my_session->up->clientReply(my_session->up->instance,
-                                       my_session->up->session,
-                                       buffer,
-                                       down,
-                                       reply);
+    return my_session->up->clientReply(buffer, down, reply);
 }
 
 /**

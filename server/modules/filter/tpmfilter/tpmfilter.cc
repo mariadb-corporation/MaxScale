@@ -84,8 +84,8 @@ static MXS_FILTER*         createInstance(const char* name, mxs::ConfigParameter
 static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance,
                                       MXS_SESSION* session,
                                       SERVICE* service,
-                                      mxs::Downstream* down,
-                                      mxs::Upstream* up);
+                                      MXS_FILTER_SESSION* down,
+                                      MXS_FILTER_SESSION* up);
 static void freeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session);
 static int  routeQuery(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, GWBUF* queue);
 static int  clientReply(MXS_FILTER* instance,
@@ -130,24 +130,24 @@ struct TPM_INSTANCE
  */
 typedef struct
 {
-    mxs::Downstream* down;
-    mxs::Upstream*   up;
-    int              active;
-    char*            clientHost;
-    char*            userName;
-    char*            sql;
-    char*            latency;
-    struct timeval   start;
-    char*            current;
-    int              n_statements;
-    struct timeval   total;
-    struct timeval   current_start;
-    struct timeval   last_statement_start;
-    bool             query_end;
-    char*            buf;
-    int              sql_index;
-    int              latency_index;
-    size_t           max_sql_size;
+    MXS_FILTER_SESSION* down;
+    MXS_FILTER_SESSION* up;
+    int                 active;
+    char*               clientHost;
+    char*               userName;
+    char*               sql;
+    char*               latency;
+    struct timeval      start;
+    char*               current;
+    int                 n_statements;
+    struct timeval      total;
+    struct timeval      current_start;
+    struct timeval      last_statement_start;
+    bool                query_end;
+    char*               buf;
+    int                 sql_index;
+    int                 latency_index;
+    size_t              max_sql_size;
 } TPM_SESSION;
 
 extern "C"
@@ -324,8 +324,8 @@ static MXS_FILTER* createInstance(const char* name, mxs::ConfigParameters* param
 static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance,
                                       MXS_SESSION* session,
                                       SERVICE* service,
-                                      mxs::Downstream* down,
-                                      mxs::Upstream* up)
+                                      MXS_FILTER_SESSION* down,
+                                      MXS_FILTER_SESSION* up)
 {
     TPM_INSTANCE* my_instance = (TPM_INSTANCE*)instance;
     TPM_SESSION* my_session;
@@ -512,9 +512,7 @@ retblock:
 
     MXS_FREE(ptr);
     /* Pass the query downstream */
-    return my_session->down->routeQuery(my_session->down->instance,
-                                        my_session->down->session,
-                                        queue);
+    return my_session->down->routeQuery(queue);
 }
 
 static int clientReply(MXS_FILTER* instance,
@@ -590,9 +588,7 @@ static int clientReply(MXS_FILTER* instance,
     }
 
     /* Pass the result upstream */
-    return my_session->up->clientReply(my_session->up->instance,
-                                       my_session->up->session,
-                                       buffer, down, reply);
+    return my_session->up->clientReply(buffer, down, reply);
 }
 
 /**

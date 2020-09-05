@@ -479,7 +479,7 @@ int LuaFilterSession::routeQuery(GWBUF* queue)
     {
         gwbuf_free(queue);
         GWBUF* err = modutil_create_mysql_err_msg(1, 0, 1045, "28000", "Access denied.");
-        session_set_response(m_session, m_service, m_up.m_data, err);
+        FilterSession::set_response(err);
         rc = 1;
     }
     else

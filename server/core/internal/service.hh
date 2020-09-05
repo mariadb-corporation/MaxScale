@@ -352,8 +352,31 @@ private:
         SFilterDef          filter;
         MXS_FILTER*         instance;
         MXS_FILTER_SESSION* session;
-        mxs::Upstream       up;
-        mxs::Downstream     down;
+        mxs_filter_session* up;
+        mxs_filter_session* down;
+    };
+
+    class ServiceUpstream : public MXS_FILTER_SESSION
+    {
+    public:
+        ServiceUpstream(ServiceEndpoint* endpoint)
+            : m_endpoint(endpoint)
+        {
+        }
+
+        int32_t routeQuery(GWBUF* pPacket)
+        {
+            mxb_assert_message(false, "Should never be called");
+            return 0;
+        }
+
+        int32_t clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply)
+        {
+            return m_endpoint->send_upstream(pPacket, down, reply);
+        }
+
+    private:
+        ServiceEndpoint* m_endpoint;
     };
 
     friend class Service;
@@ -367,10 +390,12 @@ private:
     mxs::Component*     m_up;       // The upstream where replies are routed to
     MXS_SESSION*        m_session;  // The owning session
     Service*            m_service;  // The service where the connection points to
-    MXS_ROUTER_SESSION* m_router_session {nullptr};
+    MXS_FILTER_SESSION* m_router_session {nullptr};
 
-    mxs::Downstream m_head;
-    mxs::Upstream   m_tail;
+    ServiceUpstream m_upstream;
+
+    mxs_filter_session* m_head;
+    mxs_filter_session* m_tail;
 
     std::vector<SessionFilter> m_filters;
 
@@ -564,7 +589,8 @@ json_t* service_relations_to_server(const SERVER* server, const std::string& hos
  *
  * @return Array of service links
  */
-json_t* service_relations_to_filter(const FilterDef* filter, const std::string& host, const std::string& self);
+json_t* service_relations_to_filter(const FilterDef* filter, const std::string& host,
+                                    const std::string& self);
 
 /**
  * @brief Get links to services that relate to a monitor
