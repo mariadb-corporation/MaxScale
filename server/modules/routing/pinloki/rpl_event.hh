@@ -51,16 +51,21 @@ class RplEvent
 {
 public:
     RplEvent() = default;   // => is_empty() == true
-    RplEvent(const RplEvent&) = default;
-    RplEvent(RplEvent&&) = default;
-    RplEvent& operator=(RplEvent&&) = default;
-    explicit RplEvent(const MariaRplEvent& maria_event);
 
     /**
-     * @brief RplEvent
+     * @brief RplEvent from a MariaRplEvent
+     * @param MariaRplEvent
+     */
+    RplEvent(MariaRplEvent&& maria_event);
+
+    /**
+     * @brief RplEvent from a raw buffer
      * @param raw - the full buffer: header and data
      */
     explicit RplEvent(std::vector<char>&& raw);
+
+    RplEvent(RplEvent&& rhs);
+    RplEvent& operator=(RplEvent&& rhs);
 
     bool     is_empty() const;
     explicit operator bool() const;
@@ -92,6 +97,8 @@ private:
     void        recalculate_crc();
     std::string query_event_sql() const;
 
+    // Underlying is either MariaRplEvent or raw data (or neither)
+    MariaRplEvent     m_maria_rpl;
     std::vector<char> m_raw;
 
     mariadb_rpl_event m_event_type;
@@ -119,11 +126,6 @@ std::vector<char> create_binlog_checkpoint(const std::string& file_name, uint32_
 enum class Verbosity {Name, Some, All};
 std::string   dump_rpl_msg(const RplEvent& rpl_event, Verbosity v);
 std::ostream& operator<<(std::ostream& os, const RplEvent& rpl_msg);        // Verbosity::All
-
-inline bool RplEvent::is_empty() const
-{
-    return m_raw.empty();
-}
 
 inline RplEvent::operator bool() const
 {

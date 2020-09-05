@@ -52,33 +52,86 @@ std::string get_rotate_name(const char* ptr, size_t len)
 
 namespace maxsql
 {
-constexpr int HEADER_LEN = 19;
 
 int RplEvent::get_event_length(const std::vector<char>& header)
 {
     return *((uint32_t*) (header.data() + 4 + 1 + 4));
 }
 
-RplEvent::RplEvent(const MariaRplEvent& maria_event)
-    : m_raw(maria_event.raw_data(), maria_event.raw_data() + maria_event.raw_data_size())
+RplEvent::RplEvent(MariaRplEvent&& maria_event)
+    : m_maria_rpl(std::move(maria_event))
 {
-    init();
+    if (!m_maria_rpl.is_empty())
+    {
+        init();
+    }
 }
 
-RplEvent::RplEvent(std::vector<char>&& raw_)
-    : m_raw(std::move(raw_))
+RplEvent::RplEvent(std::vector<char>&& raw)
+    : m_raw(std::move(raw))
 {
-    if (m_raw.empty())
+    if (!m_raw.empty())
     {
-        return;
+        init();
+    }
+}
+
+RplEvent::RplEvent(RplEvent&& rhs)
+    : m_maria_rpl(std::move(rhs.m_maria_rpl))
+    , m_raw(std::move(rhs.m_raw))
+{
+    if (!is_empty())
+    {
+        init();
+    }
+}
+
+RplEvent& RplEvent::operator=(RplEvent&& rhs)
+{
+    m_maria_rpl = std::move(rhs.m_maria_rpl);
+    m_raw = std::move(rhs.m_raw);
+
+    if (!is_empty())
+    {
+        init();
     }
 
-    init();
+    return *this;
 }
+
+const char* RplEvent::pBuffer() const
+{
+    if (!m_maria_rpl.is_empty())
+    {
+        return m_maria_rpl.raw_data();
+    }
+    else
+    {
+        return m_raw.data();
+    }
+}
+
+size_t RplEvent::buffer_size() const
+{
+    if (!m_maria_rpl.is_empty())
+    {
+        return m_maria_rpl.raw_data_size();
+    }
+    else
+    {
+        return m_raw.size();
+    }
+}
+
+bool maxsql::RplEvent::is_empty() const
+{
+    return m_maria_rpl.is_empty() && m_raw.empty();
+}
+
 
 void RplEvent::init()
 {
-    auto buf = reinterpret_cast<uint8_t*>(&m_raw[0]);
+    auto buf = reinterpret_cast<const uint8_t*>(pBuffer());
 
     m_timestamp = mariadb::get_byte4(buf);
     buf += 4;
@@ -93,7 +146,7 @@ void RplEvent::init()
     m_flags = mariadb::get_byte2(buf);
     buf += 2;
 
-    auto pCrc = reinterpret_cast<const uint8_t*>(m_raw.data() + m_raw.size() - 4);
+    auto pCrc = reinterpret_cast<const uint8_t*>(pEnd() - 4);
     m_checksum = mariadb::get_byte4(pCrc);
 }
 
@@ -101,26 +154,25 @@ void RplEvent::set_next_pos(uint32_t next_pos)
 {
     m_next_event_pos = next_pos;
 
-    auto buf = reinterpret_cast<uint8_t*>(&m_raw[4 + 1 + 4 + 4]);
-    mariadb::set_byte4(buf, m_next_event_pos);
+    auto buf = reinterpret_cast<const uint8_t*>(pBuffer() + 4 + 1 + 4 + 4);
+    mariadb::set_byte4(const_cast<uint8_t*>(buf), m_next_event_pos);
 
     recalculate_crc();
 }
 
 void RplEvent::recalculate_crc()
 {
-    m_checksum = crc32(0, (uint8_t*)m_raw.data(), m_raw.size() - 4);
-    auto pCrc = reinterpret_cast<uint8_t*>(m_raw.data() + m_raw.size() - 4);
-    mariadb::set_byte4(pCrc, m_checksum);
+    auto crc_pos = (uint8_t*) pEnd() - 4;
+    m_checksum = crc32(0, (uint8_t*) pBuffer(), buffer_size() - 4);
+    mariadb::set_byte4(crc_pos, m_checksum);
 }
-
 
 Rotate RplEvent::rotate() const
 {
     Rotate rot;
     rot.is_fake = m_timestamp == 0;
     rot.is_artifical = m_flags & LOG_EVENT_ARTIFICIAL_F;
-    rot.file_name = get_rotate_name(m_raw.data(), m_raw.size());
+    rot.file_name = get_rotate_name(pBuffer(), buffer_size());
 
     return rot;
 }
@@ -132,28 +184,17 @@ bool RplEvent::is_commit() const
 
 const char* RplEvent::pHeader() const
 {
-    return &m_raw[0];
+    return pBuffer();
 }
 
 const char* RplEvent::pBody() const
 {
-    return &m_raw[RPL_HEADER_LEN];
+    return pHeader() + RPL_HEADER_LEN;
 }
 
 const char* RplEvent::pEnd() const
 {
-    auto ret = &m_raw.back();
-    return ++ret;
-}
-
-const char* RplEvent::pBuffer() const
-{
-    return m_raw.data();
-}
-
-size_t RplEvent::buffer_size() const
-{
-    return m_raw.size();
+    return pBuffer() + buffer_size();
 }
 
 std::string RplEvent::query_event_sql() const
@@ -166,13 +207,13 @@ std::string RplEvent::query_event_sql() const
         constexpr int DBNM_OFF = 8;                 // Database name offset
         constexpr int VBLK_OFF = 4 + 4 + 1 + 2;     // Varblock offset
         constexpr int PHDR_OFF = 4 + 4 + 1 + 2 + 2; // Post-header offset
-        constexpr int BINLOG_HEADER_LEN = 19;
+        constexpr int BINLOG_RPL_HEADER_LEN = 19;
 
-        const uint8_t* ptr = (const uint8_t*)this->m_raw.data();
+        const uint8_t* ptr = (const uint8_t*) pBuffer();
         int dblen = ptr[DBNM_OFF];
         int vblklen = mariadb::get_byte2(ptr + VBLK_OFF);
 
-        int len = event_length() - BINLOG_HEADER_LEN - (PHDR_OFF + vblklen + 1 + dblen);
+        int len = event_length() - BINLOG_RPL_HEADER_LEN - (PHDR_OFF + vblklen + 1 + dblen);
         sql.assign((const char*) ptr + PHDR_OFF + vblklen + 1 + dblen, len);
     }
 
@@ -291,10 +332,10 @@ std::string dump_rpl_msg(const RplEvent& rpl_event, Verbosity v)
 // TODO, turn this into an iterator. Use in file_reader as well.
 maxsql::RplEvent read_event(std::istream& file, long* file_pos)
 {
-    std::vector<char> raw(HEADER_LEN);
+    std::vector<char> raw(RPL_HEADER_LEN);
 
     file.seekg(*file_pos);
-    file.read(raw.data(), HEADER_LEN);
+    file.read(raw.data(), RPL_HEADER_LEN);
 
     if (file.eof())
     {
@@ -309,7 +350,7 @@ maxsql::RplEvent read_event(std::istream& file, long* file_pos)
     auto event_length = maxsql::RplEvent::get_event_length(raw);
 
     raw.resize(event_length);
-    file.read(raw.data() + HEADER_LEN, event_length - HEADER_LEN);
+    file.read(raw.data() + RPL_HEADER_LEN, event_length - RPL_HEADER_LEN);
 
     if (file.eof())
     {
@@ -340,7 +381,7 @@ std::vector<char> create_rotate_event(const std::string& file_name,
                                       uint32_t pos,
                                       Kind kind)
 {
-    std::vector<char> data(HEADER_LEN + file_name.size() + 12);
+    std::vector<char> data(RPL_HEADER_LEN + file_name.size() + 12);
     uint8_t* ptr = (uint8_t*)&data[0];
 
     // Timestamp, hm.
@@ -383,7 +424,7 @@ std::vector<char> create_rotate_event(const std::string& file_name,
 std::vector<char> create_binlog_checkpoint(const std::string& file_name, uint32_t server_id,
                                            uint32_t next_pos)
 {
-    std::vector<char> data(HEADER_LEN + 4 + file_name.size() + 4);
+    std::vector<char> data(RPL_HEADER_LEN + 4 + file_name.size() + 4);
     uint8_t* ptr = (uint8_t*)&data[0];
 
     // Timestamp, hm.
