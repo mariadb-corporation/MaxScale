@@ -17,12 +17,6 @@
 
 namespace maxsql
 {
-/** The following are essentially the same as events in mariadb_rpl.h. Simple
- *  as they are, there is not much code, and they are more suitable for pinloki.
- *  The other way to do this, would be to modify mariadb_rpl to provide the same
- *  (from a raw buffer). Just a matter of splitting up mariadb_rpl_fetch()
- *  into two functions.
- */
 struct Rotate
 {
     bool        is_fake;
@@ -68,91 +62,43 @@ public:
      */
     explicit RplEvent(std::vector<char>&& raw);
 
-    static int get_event_length(const std::vector<char>& header);
-
-    auto is_empty() const
-    {
-        return m_raw.empty();
-    }
-
-    explicit operator bool() const
-    {
-        return !is_empty();
-    }
+    bool is_empty() const;
+    explicit operator bool() const;
 
     Rotate        rotate() const;
     GtidEvent     gtid_event() const;
     GtidListEvent gtid_list() const;
+    bool          is_commit() const;
 
-    bool is_commit() const;
+    mariadb_rpl_event event_type() const;
+    unsigned int      timestamp() const;
+    unsigned int      server_id() const;
+    unsigned int      event_length() const;
+    uint32_t          next_event_pos() const;
+    unsigned short    flags() const;
+    unsigned int      checksum() const;
 
-    auto event_type() const
-    {
-        return m_event_type;
-    }
-    auto timestamp() const
-    {
-        return m_timestamp;
-    }
-    auto server_id() const
-    {
-        return m_server_id;
-    }
-    auto event_length() const
-    {
-        return m_event_length;
-    }
-    auto next_event_pos() const
-    {
-        return m_next_event_pos;
-    }
-    auto flags() const
-    {
-        return m_flags;
-    }
-    auto checksum() const
-    {
-        return m_checksum;
-    }
+    const std::vector<char>& buffer() const;
+    const char*              pHeader() const;
+    const char*              pBody() const;
+    const char*              pEnd() const;
 
-    auto pHeader() const
-    {
-        return &m_raw[0];
-    }
-
-    auto pBody() const
-    {
-        return &m_raw[RPL_HEADER_LEN];
-    }
-
-    auto pEnd() const
-    {
-        auto ret = &m_raw.back();
-        return ++ret;
-    }
-
-    const std::vector<char>& buffer() const
-    {
-        return m_raw;
-    }
-
-    void set_next_pos(uint32_t next_pos);
+    void       set_next_pos(uint32_t next_pos);
+    static int get_event_length(const std::vector<char>& header);
 
 private:
-    // An instance is created for every incoming event.
-    // Might not matter much, but could drop most members
-    // since they are basically for debug output. Read
-    // m_raw when asked instead.
     void        init();
     void        recalculate_crc();
     std::string query_event_sql() const;
+
+    std::vector<char> m_raw;
+
     mariadb_rpl_event m_event_type;
     unsigned int      m_timestamp;
     unsigned int      m_server_id;
     unsigned int      m_event_length;
     uint32_t          m_next_event_pos;
     unsigned short    m_flags;
-    std::vector<char> m_raw;
     unsigned int      m_checksum;
 };
 
@@ -172,6 +118,72 @@ std::vector<char> create_binlog_checkpoint(const std::string& file_name, uint32_
 enum class Verbosity {Name, Some, All};
 std::string   dump_rpl_msg(const RplEvent& rpl_event, Verbosity v);
 std::ostream& operator<<(std::ostream& os, const RplEvent& rpl_msg);        // Verbosity::All
+
+inline bool RplEvent::is_empty() const
+{
+    return m_raw.empty();
+}
+
+inline RplEvent::operator bool() const
+{
+    return !is_empty();
+}
+
+inline mariadb_rpl_event RplEvent::event_type() const
+{
+    return m_event_type;
+}
+
+inline unsigned int RplEvent::timestamp() const
+{
+    return m_timestamp;
+}
+
+inline unsigned int RplEvent::server_id() const
+{
+    return m_server_id;
+}
+
+inline unsigned int RplEvent::event_length() const
+{
+    return m_event_length;
+}
+
+inline uint32_t RplEvent::next_event_pos() const
+{
+    return m_next_event_pos;
+}
+
+inline unsigned short RplEvent::flags() const
+{
+    return m_flags;
+}
+
+inline unsigned int RplEvent::checksum() const
+{
+    return m_checksum;
+}
+
+inline const std::vector<char>& RplEvent::buffer() const
+{
+    return m_raw;
+}
+
+inline const char* RplEvent::pHeader() const
+{
+    return &m_raw[0];
+}
+
+inline const char* RplEvent::pBody() const
+{
+    return &m_raw[RPL_HEADER_LEN];
+}
+
+inline const char* RplEvent::pEnd() const
+{
+    auto ret = &m_raw.back();
+    return ++ret;
+}
 }
 
 std::string to_string(mariadb_rpl_event ev);
