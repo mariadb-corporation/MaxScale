@@ -130,6 +130,32 @@ bool RplEvent::is_commit() const
     return strcasecmp(query_event_sql().c_str(), "COMMIT") != 0;
 }
 
+const char* RplEvent::pHeader() const
+{
+    return &m_raw[0];
+}
+
+const char* RplEvent::pBody() const
+{
+    return &m_raw[RPL_HEADER_LEN];
+}
+
+const char* RplEvent::pEnd() const
+{
+    auto ret = &m_raw.back();
+    return ++ret;
+}
+
+const char* RplEvent::pBuffer() const
+{
+    return m_raw.data();
+}
+
+size_t RplEvent::buffer_size() const
+{
+    return m_raw.size();
+}
+
 std::string RplEvent::query_event_sql() const
 {
     // FIXME move into is_commit(), only needed there

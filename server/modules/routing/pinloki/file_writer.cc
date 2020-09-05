@@ -92,12 +92,12 @@ void FileWriter::add_event(maxsql::RplEvent& rpl_event)     // FIXME, move into 
     }
     else
     {
-        rpl_event.set_next_pos(m_current_pos.write_pos + rpl_event.buffer().size()
+        rpl_event.set_next_pos(m_current_pos.write_pos + rpl_event.buffer_size()
                                + m_tx_buffer.str().size());
 
         if (m_in_transaction)
         {
-            m_tx_buffer.write(rpl_event.buffer().data(), rpl_event.buffer().size());
+            m_tx_buffer.write(rpl_event.pBuffer(), rpl_event.buffer_size());
         }
         else if (etype == GTID_LIST_EVENT)
         {
@@ -153,7 +153,7 @@ void FileWriter::rotate_event(const maxsql::Rotate& rotate)
 void FileWriter::write_to_file(WritePosition& fn, const maxsql::RplEvent& rpl_event)
 {
     fn.file.seekp(fn.write_pos);
-    fn.file.write(rpl_event.buffer().data(), rpl_event.buffer().size());
+    fn.file.write(rpl_event.pBuffer(), rpl_event.buffer_size());
     fn.file.flush();
 
     fn.write_pos = rpl_event.next_event_pos();

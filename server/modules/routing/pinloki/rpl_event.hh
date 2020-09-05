@@ -62,7 +62,7 @@ public:
      */
     explicit RplEvent(std::vector<char>&& raw);
 
-    bool is_empty() const;
+    bool     is_empty() const;
     explicit operator bool() const;
 
     Rotate        rotate() const;
@@ -78,10 +78,11 @@ public:
     unsigned short    flags() const;
     unsigned int      checksum() const;
 
-    const std::vector<char>& buffer() const;
-    const char*              pHeader() const;
-    const char*              pBody() const;
-    const char*              pEnd() const;
+    const char* pBuffer() const;
+    size_t      buffer_size() const;
+    const char* pHeader() const;
+    const char* pBody() const;
+    const char* pEnd() const;
 
     void       set_next_pos(uint32_t next_pos);
     static int get_event_length(const std::vector<char>& header);
@@ -162,27 +163,6 @@ inline unsigned short RplEvent::flags() const
 inline unsigned int RplEvent::checksum() const
 {
     return m_checksum;
-}
-
-inline const std::vector<char>& RplEvent::buffer() const
-{
-    return m_raw;
-}
-
-inline const char* RplEvent::pHeader() const
-{
-    return &m_raw[0];
-}
-
-inline const char* RplEvent::pBody() const
-{
-    return &m_raw[RPL_HEADER_LEN];
-}
-
-inline const char* RplEvent::pEnd() const
-{
-    auto ret = &m_raw.back();
-    return ++ret;
 }
 }
 
