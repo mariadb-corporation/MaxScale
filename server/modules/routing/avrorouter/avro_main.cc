@@ -86,8 +86,7 @@ void destroyInstance(MXS_ROUTER* router)
  * @param session   The session itself
  * @return Session specific data for this session
  */
-static MXS_FILTER_SESSION* newSession(MXS_ROUTER* instance, MXS_SESSION* session,
-                                      MXS_FILTER_SESSION* up, const Endpoints& endpoints)
+static mxs::RouterSession* newSession(MXS_ROUTER* instance, MXS_SESSION* session, const Endpoints& endpoints)
 {
     Avro* inst = reinterpret_cast<Avro*>(instance);
     return AvroSession::create(inst, session);
@@ -400,7 +399,6 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
     {
         createInstance,
         newSession,
-        freeSession,
         diagnostics,
         errorReply,
         getCapabilities,

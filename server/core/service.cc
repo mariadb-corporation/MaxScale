@@ -1275,8 +1275,7 @@ bool ServiceEndpoint::connect()
     std::transform(m_down.begin(), m_down.end(), std::back_inserter(endpoints),
                    std::mem_fn(&std::unique_ptr<mxs::Endpoint>::get));
 
-    m_router_session = m_service->router->newSession(m_service->router_instance, m_session,
-                                                     m_tail, endpoints);
+    m_router_session = m_service->router->newSession(m_service->router_instance, m_session, endpoints);
 
     if (!m_router_session)
     {
@@ -1337,7 +1336,7 @@ bool ServiceEndpoint::connect()
     }
 
     m_tail = chain_tail;
-    static_cast<mxs::RouterSession*>(m_router_session)->setUpstream(m_tail);
+    m_router_session->setUpstream(m_tail);
 
     // The endpoint is now "connected"
     m_open = true;
@@ -1352,7 +1351,8 @@ void ServiceEndpoint::close()
     mxb::LogScope scope(m_service->name());
     mxb_assert(m_open);
 
-    m_service->router->freeSession(m_service->router_instance, m_router_session);
+    delete m_router_session;
+    m_router_session = nullptr;
 
     for (auto& a : m_filters)
     {

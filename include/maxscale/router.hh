@@ -34,6 +34,71 @@ typedef struct mxs_router
 {
 } MXS_ROUTER;
 
+namespace maxscale
+{
+/**
+ * @class RouterSession router.hh <maxscale/router.hh>
+ *
+ * RouterSession is a base class for router sessions. A concrete router session
+ * class should be derived from this class and override all relevant functions.
+ *
+ * Note that even though this class is intended to be derived from, no functions
+ * are virtual. That is by design, as the class will be used in a context where
+ * the concrete class is known. That is, there is no need for the virtual mechanism.
+ */
+class RouterSession : public MXS_FILTER_SESSION
+{
+public:
+    /**
+     * The RouterSession instance will be deleted when a client session
+     * has terminated.
+     */
+    virtual ~RouterSession() = default;
+
+    /**
+     * Called when a packet being is routed to the backend. The router should
+     * forward the packet to the appropriate server(s).
+     *
+     * @param pPacket A client packet.
+     */
+    int32_t routeQuery(GWBUF* pPacket) override;
+
+    /**
+     * Called when a packet is routed to the client. The router should
+     * forward the packet to the client using `RouterSession::clientReply`.
+     *
+     * @param pPacket A buffer containing the reply from the backend
+     * @param down    The route the reply took
+     * @param reply   The reply object
+     */
+    int32_t clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply) override;
+
+    /**
+     * Handle backend connection network errors
+     *
+     * @param pMessage  The error message.
+     * @param pProblem  The DCB on which the error occurred.
+     * @param reply     The reply object for this endpoint
+     *
+     * @return True if the session can continue, false if the session should be closed
+     */
+    bool handleError(mxs::ErrorType type, GWBUF* pMessage, mxs::Endpoint* pProblem, const mxs::Reply& reply);
+
+    // Sets the upstream component (don't override this in the inherited class)
+    void setUpstream(MXS_FILTER_SESSION* up)
+    {
+        m_pUp = up;
+    }
+
+protected:
+    RouterSession(MXS_SESSION* pSession);
+
+protected:
+    MXS_SESSION*        m_pSession; /*< The MXS_SESSION this router session is associated with. */
+    MXS_FILTER_SESSION* m_pUp;
+};
+}
+
 /**
  * The "module object" structure for a query router module. All entry points
  * marked with `(optional)` are optional entry points which can be set to NULL
@@ -69,18 +134,8 @@ typedef struct mxs_router_object
      *
      * @return New router session or NULL on error
      */
-    MXS_FILTER_SESSION* (*newSession)(MXS_ROUTER * instance, MXS_SESSION* session, MXS_FILTER_SESSION* up,
+    mxs::RouterSession* (*newSession)(MXS_ROUTER * instance, MXS_SESSION* session,
                                       const Endpoints& endpoints);
-
-    /**
-     * @brief Called when a session is freed
-     *
-     * The session should free all allocated memory in this function.
-     *
-     * @param instance       Router instance
-     * @param router_session Router session
-     */
-    void (* freeSession)(MXS_ROUTER* instance, MXS_FILTER_SESSION* router_session);
 
     /**
      * @brief Called for diagnostic output
@@ -210,69 +265,6 @@ namespace maxscale
 {
 
 /**
- * @class RouterSession router.hh <maxscale/router.hh>
- *
- * RouterSession is a base class for router sessions. A concrete router session
- * class should be derived from this class and override all relevant functions.
- *
- * Note that even though this class is intended to be derived from, no functions
- * are virtual. That is by design, as the class will be used in a context where
- * the concrete class is known. That is, there is no need for the virtual mechanism.
- */
-class RouterSession : public MXS_FILTER_SESSION
-{
-public:
-    /**
-     * The RouterSession instance will be deleted when a client session
-     * has terminated.
-     */
-    virtual ~RouterSession() = default;
-
-    /**
-     * Called when a packet being is routed to the backend. The router should
-     * forward the packet to the appropriate server(s).
-     *
-     * @param pPacket A client packet.
-     */
-    int32_t routeQuery(GWBUF* pPacket) override;
-
-    /**
-     * Called when a packet is routed to the client. The router should
-     * forward the packet to the client using `RouterSession::clientReply`.
-     *
-     * @param pPacket A buffer containing the reply from the backend
-     * @param down    The route the reply took
-     * @param reply   The reply object
-     */
-    int32_t clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply) override;
-
-    /**
-     * Handle backend connection network errors
-     *
-     * @param pMessage  The error message.
-     * @param pProblem  The DCB on which the error occurred.
-     * @param reply     The reply object for this endpoint
-     *
-     * @return True if the session can continue, false if the session should be closed
-     */
-    bool handleError(mxs::ErrorType type, GWBUF* pMessage, mxs::Endpoint* pProblem, const mxs::Reply& reply);
-
-    // Sets the upstream component (don't override this in the inherited class)
-    void setUpstream(MXS_FILTER_SESSION* up)
-    {
-        m_pUp = up;
-    }
-
-protected:
-    RouterSession(MXS_SESSION* pSession);
-
-protected:
-    MXS_SESSION*        m_pSession; /*< The MXS_SESSION this router session is associated with. */
-    MXS_FILTER_SESSION* m_pUp;
-};
-
-
-/**
  * @class Router router.hh <maxscale/router.hh>
  *
  * An instantiation of the Router template is used for creating a router.
@@ -338,8 +330,7 @@ public:
         return pRouter;
     }
 
-    static MXS_FILTER_SESSION* newSession(MXS_ROUTER* pInstance, MXS_SESSION* pSession,
-                                          MXS_FILTER_SESSION* up, const Endpoints& endpoints)
+    static RouterSession* newSession(MXS_ROUTER* pInstance, MXS_SESSION* pSession, const Endpoints& endpoints)
     {
         RouterType* pRouter = static_cast<RouterType*>(pInstance);
         RouterSessionType* pRouter_session = nullptr;
@@ -347,13 +338,6 @@ public:
         MXS_EXCEPTION_GUARD(pRouter_session = pRouter->newSession(pSession, endpoints));
 
         return pRouter_session;
-    }
-
-    static void freeSession(MXS_ROUTER*, MXS_FILTER_SESSION* pData)
-    {
-        RouterSessionType* pRouter_session = static_cast<RouterSessionType*>(pData);
-
-        MXS_EXCEPTION_GUARD(delete pRouter_session);
     }
 
     static json_t* diagnostics(const MXS_ROUTER* pInstance)
@@ -424,7 +408,6 @@ MXS_ROUTER_OBJECT Router<RouterType, RouterSessionType>::s_object =
 {
     &Router<RouterType, RouterSessionType>::createInstance,
     &Router<RouterType, RouterSessionType>::newSession,
-    &Router<RouterType, RouterSessionType>::freeSession,
     &Router<RouterType, RouterSessionType>::diagnostics,
     &Router<RouterType, RouterSessionType>::handleError,
     &Router<RouterType, RouterSessionType>::getCapabilities,

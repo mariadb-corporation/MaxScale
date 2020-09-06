@@ -390,7 +390,7 @@ private:
     mxs::Component*     m_up;       // The upstream where replies are routed to
     MXS_SESSION*        m_session;  // The owning session
     Service*            m_service;  // The service where the connection points to
-    MXS_FILTER_SESSION* m_router_session {nullptr};
+    mxs::RouterSession* m_router_session {nullptr};
 
     ServiceUpstream m_upstream;
 
