@@ -81,11 +81,7 @@ static const int default_sql_size = 4 * 1024;
 struct TPM_INSTANCE;
 
 static MXS_FILTER*         createInstance(const char* name, mxs::ConfigParameters*);
-static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance,
-                                      MXS_SESSION* session,
-                                      SERVICE* service,
-                                      MXS_FILTER_SESSION* down,
-                                      MXS_FILTER_SESSION* up);
+static mxs::FilterSession* newSession(MXS_FILTER* instance, MXS_SESSION* session, SERVICE* service);
 static void freeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session);
 static int  routeQuery(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, GWBUF* queue);
 static int  clientReply(MXS_FILTER* instance,
@@ -168,7 +164,6 @@ MXS_MODULE* MXS_CREATE_MODULE()
     {
         createInstance,
         newSession,
-        freeSession,
         routeQuery,
         clientReply,
         diagnostics,
@@ -321,11 +316,7 @@ static MXS_FILTER* createInstance(const char* name, mxs::ConfigParameters* param
  * @param session   The session itself
  * @return Session specific data for this session
  */
-static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance,
-                                      MXS_SESSION* session,
-                                      SERVICE* service,
-                                      MXS_FILTER_SESSION* down,
-                                      MXS_FILTER_SESSION* up)
+static mxs::FilterSession* newSession(MXS_FILTER* instance, MXS_SESSION* session, SERVICE* service)
 {
     TPM_INSTANCE* my_instance = (TPM_INSTANCE*)instance;
     TPM_SESSION* my_session;
@@ -346,8 +337,6 @@ static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance,
         my_session->total.tv_sec = 0;
         my_session->total.tv_usec = 0;
         my_session->current = NULL;
-        my_session->down = down;
-        my_session->up = up;
 
         if ((remote = session_get_remote(session)) != NULL)
         {
@@ -378,7 +367,7 @@ static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance,
         }
     }
 
-    return (MXS_FILTER_SESSION*)my_session;
+    return (mxs::FilterSession*)my_session;
 }
 
 /**

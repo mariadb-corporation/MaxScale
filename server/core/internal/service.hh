@@ -351,7 +351,7 @@ private:
 
         SFilterDef          filter;
         MXS_FILTER*         instance;
-        MXS_FILTER_SESSION* session;
+        mxs::FilterSession* session;
         mxs_filter_session* up;
         mxs_filter_session* down;
     };

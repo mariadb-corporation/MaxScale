@@ -63,11 +63,7 @@ auto_ptr<FilterModule::Session> FilterModule::Instance::newSession(MXS_SESSION* 
 {
     auto_ptr<Session> sFilter_session;
 
-    MXS_FILTER_SESSION* pFilter_session = m_module.newSession(m_pInstance,
-                                                              pSession,
-                                                              pService,
-                                                              down,
-                                                              up);
+    auto pFilter_session = m_module.newSession(m_pInstance, pSession, pService);
 
     if (pFilter_session)
     {
@@ -89,6 +85,6 @@ FilterModule::Session::Session(Instance* pInstance, MXS_FILTER_SESSION* pFilter_
 
 FilterModule::Session::~Session()
 {
-    m_instance.freeSession(m_pFilter_session);
+    delete static_cast<mxs::FilterSession*>(m_pFilter_session);
 }
 }

@@ -138,7 +138,7 @@ public:
     static LuaFilter* create(const char* name, mxs::ConfigParameters* params);
     bool              configure(mxs::ConfigParameters* params);
 
-    LuaFilterSession* newSession(MXS_SESSION* session, SERVICE* service);
+    mxs::FilterSession* newSession(MXS_SESSION* session, SERVICE* service);
     ~LuaFilter();
 
     json_t*    diagnostics() const;
@@ -269,7 +269,7 @@ uint64_t LuaFilter::getCapabilities() const
     return RCAP_TYPE_NONE;
 }
 
-LuaFilterSession* LuaFilter::newSession(MXS_SESSION* session, SERVICE* service)
+mxs::FilterSession* LuaFilter::newSession(MXS_SESSION* session, SERVICE* service)
 {
     auto new_session = new LuaFilterSession(session, service, this);
     if (!new_session->prepare_session(m_session_script))

@@ -57,11 +57,6 @@ public:
     private:
         friend class Session;
 
-        void freeSession(MXS_FILTER_SESSION* pFilter_session)
-        {
-            m_module.freeSession(m_pInstance, pFilter_session);
-        }
-
         int routeQuery(MXS_FILTER_SESSION* pFilter_session, GWBUF* pStatement)
         {
             return m_module.routeQuery(m_pInstance, pFilter_session, pStatement);
@@ -127,18 +122,9 @@ private:
         m_pApi->destroyInstance(pInstance);
     }
 
-    MXS_FILTER_SESSION* newSession(MXS_FILTER* pInstance,
-                                   MXS_SESSION* pSession,
-                                   SERVICE* pService,
-                                   MXS_FILTER_SESSION* pDown,
-                                   MXS_FILTER_SESSION* pUp)
+    mxs::FilterSession* newSession(MXS_FILTER* pInstance, MXS_SESSION* pSession, SERVICE* pService)
     {
-        return m_pApi->newSession(pInstance, pSession, pService, pDown, pUp);
-    }
-
-    void freeSession(MXS_FILTER* pInstance, MXS_FILTER_SESSION* pFilter_session)
-    {
-        m_pApi->freeSession(pInstance, pFilter_session);
+        return m_pApi->newSession(pInstance, pSession, pService);
     }
 
     int routeQuery(MXS_FILTER* pInstance, MXS_FILTER_SESSION* pFilter_session, GWBUF* pStatement)

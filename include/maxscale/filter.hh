@@ -36,6 +36,92 @@ typedef struct mxs_filter
 {
 } MXS_FILTER;
 
+namespace maxscale
+{
+/**
+ * @class FilterSession filter.hh <maxscale/filter.hh>
+ *
+ * FilterSession is a base class for filter sessions. A concrete filter session
+ * class should be derived from this class and override all relevant functions.
+ *
+ * Note that even though this class is intended to be derived from, no functions
+ * are virtual. That is by design, as the class will be used in a context where
+ * the concrete class is known. That is, there is no need for the virtual mechanism.
+ */
+class FilterSession : public MXS_FILTER_SESSION
+{
+public:
+    /**
+     * The FilterSession instance will be deleted when a client session
+     * has terminated. Will be called only after @c close() has been called.
+     */
+    virtual ~FilterSession();
+
+    /**
+     * Called for setting the component following this filter session.
+     *
+     * @param down The component following this filter.
+     */
+    void setDownstream(mxs_filter_session* down);
+
+    /**
+     * Called for setting the component preceeding this filter session.
+     *
+     * @param up The component preceeding this filter.
+     */
+    void setUpstream(mxs_filter_session* up);
+
+    /**
+     * Called when a packet being is routed to the backend. The filter should
+     * forward the packet to the downstream component.
+     *
+     * @param pPacket A client packet.
+     *
+     * @return 1 for success, 0 for error
+     */
+    int routeQuery(GWBUF* pPacket);
+
+    /**
+     * Called when a packet is routed to the client. The filter should
+     * forward the packet to the upstream component.
+     *
+     * @param pPacket A client packet.
+     * @param down    The downstream components where the response came from
+     * @param reply   The reply information (@see target.hh)
+     *
+     * @return 1 for success, 0 for error
+     */
+    int clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply);
+
+    /**
+     * Called for obtaining diagnostics about the filter session.
+     */
+    json_t* diagnostics() const;
+
+protected:
+    FilterSession(MXS_SESSION* pSession, SERVICE* service);
+
+    /**
+     * To be called by a filter that short-circuits the request processing.
+     * If this function is called (in routeQuery), the filter must return
+     * without passing the request further.
+     *
+     * @param pResponse  The response to be sent to the client.
+     * @param pTarget    The source of the response
+     */
+    void set_response(GWBUF* pResponse) const
+    {
+        session_set_response(m_pSession, m_pService, m_up, pResponse);
+    }
+
+protected:
+    MXS_SESSION*        m_pSession; /*< The MXS_SESSION this filter session is associated with. */
+    SERVICE*            m_pService; /*< The service for which this session was created. */
+    mxs_filter_session* m_down;     /*< The downstream component. */
+    mxs_filter_session* m_up;       /*< The upstream component. */
+};
+}
+
 /**
  * The "module object" structure for a filter module. All entry points
  * marked with `(optional)` are optional entry points which can be set to NULL
@@ -76,18 +162,7 @@ typedef struct mxs_filter_object
      *
      * @return New filter session or NULL on error
      */
-    MXS_FILTER_SESSION* (*newSession)(MXS_FILTER * instance, MXS_SESSION* session, SERVICE* service,
-                                      MXS_FILTER_SESSION* down, MXS_FILTER_SESSION* up);
-
-    /**
-     * @brief Called when a session is freed
-     *
-     * The session should free all allocated memory in this function.
-     *
-     * @param instance Filter instance
-     * @param fsession Filter session
-     */
-    void (* freeSession)(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession);
+    mxs::FilterSession* (* newSession)(MXS_FILTER * instance, MXS_SESSION* session, SERVICE* service);
 
     /**
      * @brief Called on each query that requires routing
@@ -210,91 +285,6 @@ typedef enum filter_capability
 
 namespace maxscale
 {
-
-/**
- * @class FilterSession filter.hh <maxscale/filter.hh>
- *
- * FilterSession is a base class for filter sessions. A concrete filter session
- * class should be derived from this class and override all relevant functions.
- *
- * Note that even though this class is intended to be derived from, no functions
- * are virtual. That is by design, as the class will be used in a context where
- * the concrete class is known. That is, there is no need for the virtual mechanism.
- */
-class FilterSession : public MXS_FILTER_SESSION
-{
-public:
-    /**
-     * The FilterSession instance will be deleted when a client session
-     * has terminated. Will be called only after @c close() has been called.
-     */
-    virtual ~FilterSession();
-
-    /**
-     * Called for setting the component following this filter session.
-     *
-     * @param down The component following this filter.
-     */
-    void setDownstream(mxs_filter_session* down);
-
-    /**
-     * Called for setting the component preceeding this filter session.
-     *
-     * @param up The component preceeding this filter.
-     */
-    void setUpstream(mxs_filter_session* up);
-
-    /**
-     * Called when a packet being is routed to the backend. The filter should
-     * forward the packet to the downstream component.
-     *
-     * @param pPacket A client packet.
-     *
-     * @return 1 for success, 0 for error
-     */
-    int routeQuery(GWBUF* pPacket);
-
-    /**
-     * Called when a packet is routed to the client. The filter should
-     * forward the packet to the upstream component.
-     *
-     * @param pPacket A client packet.
-     * @param down    The downstream components where the response came from
-     * @param reply   The reply information (@see target.hh)
-     *
-     * @return 1 for success, 0 for error
-     */
-    int clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply);
-
-    /**
-     * Called for obtaining diagnostics about the filter session.
-     */
-    json_t* diagnostics() const;
-
-protected:
-    FilterSession(MXS_SESSION* pSession, SERVICE* service);
-
-    /**
-     * To be called by a filter that short-circuits the request processing.
-     * If this function is called (in routeQuery), the filter must return
-     * without passing the request further.
-     *
-     * @param pResponse  The response to be sent to the client.
-     * @param pTarget    The source of the response
-     */
-    void set_response(GWBUF* pResponse) const
-    {
-        session_set_response(m_pSession, m_pService, m_up, pResponse);
-    }
-
-protected:
-    MXS_SESSION*        m_pSession; /*< The MXS_SESSION this filter session is associated with. */
-    SERVICE*            m_pService; /*< The service for which this session was created. */
-    mxs_filter_session* m_down;     /*< The downstream component. */
-    mxs_filter_session* m_up;       /*< The upstream component. */
-};
-
-
 /**
  * @class Filter filter.hh <maxscale/filter.hh>
  *
@@ -369,8 +359,7 @@ public:
         return pFilter;
     }
 
-    static MXS_FILTER_SESSION* apiNewSession(MXS_FILTER* pInstance, MXS_SESSION* pSession, SERVICE* pService,
-                                             MXS_FILTER_SESSION* pDown, MXS_FILTER_SESSION* pUp)
+    static FilterSession* apiNewSession(MXS_FILTER* pInstance, MXS_SESSION* pSession, SERVICE* pService)
     {
         FilterType* pFilter = static_cast<FilterType*>(pInstance);
         FilterSessionType* pFilterSession = NULL;
@@ -378,13 +367,6 @@ public:
         MXS_EXCEPTION_GUARD(pFilterSession = pFilter->newSession(pSession, pService));
 
         return pFilterSession;
-    }
-
-    static void apiFreeSession(MXS_FILTER*, MXS_FILTER_SESSION* pData)
-    {
-        FilterSessionType* pFilterSession = static_cast<FilterSessionType*>(pData);
-
-        MXS_EXCEPTION_GUARD(delete pFilterSession);
     }
 
     static int apiRouteQuery(MXS_FILTER* pInstance, MXS_FILTER_SESSION* pData, GWBUF* pPacket)
@@ -479,7 +461,6 @@ MXS_FILTER_OBJECT Filter<FilterType, FilterSessionType>::s_object =
 {
     &FilterType::apiCreateInstance,
     &FilterType::apiNewSession,
-    &FilterType::apiFreeSession,
     &FilterType::apiRouteQuery,
     &FilterType::apiClientReply,
     &FilterType::apiDiagnostics,

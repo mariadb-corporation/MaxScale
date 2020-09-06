@@ -38,15 +38,11 @@
 
 static MXS_FILTER*         createInstance(const char* name, mxs::ConfigParameters* params);
 static void                destroyInstance(MXS_FILTER* instance);
-static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance,
-                                      MXS_SESSION* session,
-                                      SERVICE* service,
-                                      MXS_FILTER_SESSION* down,
-                                      MXS_FILTER_SESSION* up);
-static void freeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session);
-static void setDownstream(MXS_FILTER* instance,
-                          MXS_FILTER_SESSION* fsession,
-                          MXS_FILTER_SESSION* downstream);
+static mxs::FilterSession* newSession(MXS_FILTER* instance, MXS_SESSION* session, SERVICE* service);
+static void                freeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session);
+static void                setDownstream(MXS_FILTER* instance,
+                                         MXS_FILTER_SESSION* fsession,
+                                         MXS_FILTER_SESSION* downstream);
 static int routeQuery(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, GWBUF* queue);
 static int clientReply(MXS_FILTER* instance,
                        MXS_FILTER_SESSION* session,
@@ -115,7 +111,6 @@ MXS_MODULE* MXS_CREATE_MODULE()
     {
         createInstance,
         newSession,
-        freeSession,
         routeQuery,
         clientReply,
         diagnostics,
@@ -284,11 +279,7 @@ bool matching_connection(RegexInstance* my_instance, MXS_SESSION* session)
  * @param session   The session itself
  * @return Session specific data for this session
  */
-static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance,
-                                      MXS_SESSION* session,
-                                      SERVICE* service,
-                                      MXS_FILTER_SESSION* down,
-                                      MXS_FILTER_SESSION* up)
+static mxs::FilterSession* newSession(MXS_FILTER* instance, MXS_SESSION* session, SERVICE* service)
 {
     RegexInstance* my_instance = (RegexInstance*) instance;
     RegexSession* my_session = static_cast<RegexSession*>(MXS_CALLOC(1, sizeof(RegexSession)));
@@ -298,8 +289,6 @@ static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance,
         my_session->no_change = 0;
         my_session->replacements = 0;
         my_session->match_data = nullptr;
-        my_session->down = down;
-        my_session->up = up;
 
         if (matching_connection(my_instance, session))
         {
@@ -307,7 +296,7 @@ static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance,
         }
     }
 
-    return (MXS_FILTER_SESSION*)my_session;
+    return (mxs::FilterSession*)my_session;
 }
 
 /**

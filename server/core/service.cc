@@ -1296,7 +1296,7 @@ bool ServiceEndpoint::connect()
     for (auto it = m_filters.begin(); it != m_filters.end(); ++it)
     {
         auto& f = *it;
-        f.session = f.filter->obj()->newSession(f.instance, m_session, m_service, f.down, f.up);
+        f.session = f.filter->obj()->newSession(f.instance, m_session, m_service);
 
         if (!f.session)
         {
@@ -1305,7 +1305,8 @@ bool ServiceEndpoint::connect()
             for (auto d = m_filters.begin(); d != it; ++d)
             {
                 mxb_assert(d->session);
-                d->filter->obj()->freeSession(d->instance, d->session);
+                delete d->session;
+                d->session = nullptr;
             }
 
             m_filters.clear();
@@ -1318,7 +1319,7 @@ bool ServiceEndpoint::connect()
 
     for (auto it = m_filters.rbegin(); it != m_filters.rend(); it++)
     {
-        static_cast<mxs::FilterSession*>(it->session)->setDownstream(chain_head);
+        it->session->setDownstream(chain_head);
         it->down = chain_head;
         chain_head = it->session;
     }
@@ -1330,7 +1331,7 @@ bool ServiceEndpoint::connect()
 
     for (auto it = m_filters.begin(); it != m_filters.end(); it++)
     {
-        static_cast<mxs::FilterSession*>(it->session)->setUpstream(chain_tail);
+        it->session->setUpstream(chain_tail);
         it->up = chain_tail;
         chain_tail = it->session;
     }
@@ -1355,7 +1356,8 @@ void ServiceEndpoint::close()
 
     for (auto& a : m_filters)
     {
-        a.filter->obj()->freeSession(a.instance, a.session);
+        delete a.session;
+        a.session = nullptr;
     }
 
     // Propagate the close to the downstream endpoints
