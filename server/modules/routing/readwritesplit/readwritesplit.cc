@@ -337,7 +337,7 @@ std::pair<bool, RWSConfig> RWSConfig::create(const mxs::ConfigParameters& params
     {
         cnf = RWSConfig(params);
 
-        if (handle_max_slaves(cnf, params.get_string("max_slave_connections").c_str()))
+        if (handle_max_slaves(cnf, s_max_slave_connections.get(params).c_str()))
         {
             if (cnf.master_reconnection && cnf.disable_sescmd_history)
             {
