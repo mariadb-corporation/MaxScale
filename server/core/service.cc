@@ -1390,10 +1390,7 @@ int32_t ServiceEndpoint::clientReply(GWBUF* buffer, mxs::ReplyRoute& down, const
 {
     mxb::LogScope scope(m_service->name());
     mxb_assert(m_open);
-    m_service->router->clientReply(m_service->router_instance, m_router_session, buffer, down, reply);
-
-    // TODO: Add a proper return value to router's clientReply
-    return 1;
+    return m_router_session->clientReply(buffer, down, reply);
 }
 
 bool ServiceEndpoint::handleError(mxs::ErrorType type, GWBUF* error,

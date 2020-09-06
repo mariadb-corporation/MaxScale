@@ -129,7 +129,7 @@ private:
 
     int routeQuery(MXS_FILTER* pInstance, MXS_FILTER_SESSION* pFilter_session, GWBUF* pStatement)
     {
-        return m_pApi->routeQuery(pInstance, pFilter_session, pStatement);
+        return pFilter_session->routeQuery(pStatement);
     }
 
     int clientReply(MXS_FILTER* pInstance,
@@ -138,7 +138,7 @@ private:
                     const mxs::Reply& reply)
     {
         mxs::ReplyRoute route;
-        return m_pApi->clientReply(pInstance, pFilter_session, pStatement, route, reply);
+        return pFilter_session->clientReply(pStatement, route, reply);
     }
 
 private:

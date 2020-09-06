@@ -143,8 +143,6 @@ MXS_MODULE* MXS_CREATE_MODULE()
     {
         createInstance,
         newSession,
-        routeQuery,
-        clientReply,
         diagnostics,
         getCapabilities,
         NULL,       // No destroyInstance

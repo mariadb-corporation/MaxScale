@@ -83,20 +83,6 @@ typedef struct mxs_router_object
     void (* freeSession)(MXS_ROUTER* instance, MXS_FILTER_SESSION* router_session);
 
     /**
-     * @brief Called on each query that requires routing
-     *
-     * TODO: Document how routeQuery should be used
-     *
-     * @param instance       Router instance
-     * @param router_session Router session
-     * @param queue          Request from the client
-     *
-     * @return If successful, the function returns 1. If an error occurs
-     * and the session should be closed, the function returns 0.
-     */
-    int32_t (* routeQuery)(MXS_ROUTER* instance, MXS_FILTER_SESSION* router_session, GWBUF* queue);
-
-    /**
      * @brief Called for diagnostic output
      *
      * @param instance Router instance
@@ -106,25 +92,6 @@ typedef struct mxs_router_object
      * @see jansson.h
      */
     json_t* (*diagnostics)(const MXS_ROUTER * instance);
-
-    /**
-     * @brief Called for each reply packet
-     *
-     * TODO: Document how clientReply should be used
-     *
-     * @param instance       Router instance
-     * @param router_session Router session
-     * @param queue          Response from the server
-     * @param backend_dcb    The downstream endpoint which responded to the query
-     *
-     * @return If successful, the function returns 1. If an error occurs
-     * and the session should be closed, the function returns 0.
-     */
-    int32_t (* clientReply)(MXS_ROUTER* instance,
-                            MXS_FILTER_SESSION* router_session,
-                            GWBUF* queue,
-                            const mxs::ReplyRoute& down,
-                            const mxs::Reply& reply);
 
     /**
      * @brief Called when a backend DCB has failed
@@ -389,16 +356,6 @@ public:
         MXS_EXCEPTION_GUARD(delete pRouter_session);
     }
 
-    static int32_t routeQuery(MXS_ROUTER*, MXS_FILTER_SESSION* pData, GWBUF* pPacket)
-    {
-        RouterSessionType* pRouter_session = static_cast<RouterSessionType*>(pData);
-
-        int32_t rv = 0;
-        MXS_EXCEPTION_GUARD(rv = pRouter_session->routeQuery(pPacket));
-
-        return rv;
-    }
-
     static json_t* diagnostics(const MXS_ROUTER* pInstance)
     {
         const RouterType* pRouter = static_cast<const RouterType*>(pInstance);
@@ -408,16 +365,6 @@ public:
         MXS_EXCEPTION_GUARD(rval = pRouter->diagnostics());
 
         return rval;
-    }
-
-    static int32_t clientReply(MXS_ROUTER*, MXS_FILTER_SESSION* pData, GWBUF* pPacket,
-                               const mxs::ReplyRoute& pDown, const mxs::Reply& reply)
-    {
-        RouterSessionType* pRouter_session = static_cast<RouterSessionType*>(pData);
-
-        MXS_EXCEPTION_GUARD(pRouter_session->clientReply(pPacket, pDown, reply));
-
-        return 0;
     }
 
     static bool handleError(MXS_ROUTER* pInstance,
@@ -478,9 +425,7 @@ MXS_ROUTER_OBJECT Router<RouterType, RouterSessionType>::s_object =
     &Router<RouterType, RouterSessionType>::createInstance,
     &Router<RouterType, RouterSessionType>::newSession,
     &Router<RouterType, RouterSessionType>::freeSession,
-    &Router<RouterType, RouterSessionType>::routeQuery,
     &Router<RouterType, RouterSessionType>::diagnostics,
-    &Router<RouterType, RouterSessionType>::clientReply,
     &Router<RouterType, RouterSessionType>::handleError,
     &Router<RouterType, RouterSessionType>::getCapabilities,
     &Router<RouterType, RouterSessionType>::destroyInstance,

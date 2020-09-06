@@ -165,37 +165,6 @@ typedef struct mxs_filter_object
     mxs::FilterSession* (* newSession)(MXS_FILTER * instance, MXS_SESSION* session, SERVICE* service);
 
     /**
-     * @brief Called on each query that requires routing
-     *
-     * TODO: Document how routeQuery should be used
-     *
-     * @param instance Filter instance
-     * @param fsession Filter session
-     * @param queue    Request from the client
-     *
-     * @return If successful, the function returns 1. If an error occurs
-     * and the session should be closed, the function returns 0.
-     */
-    int32_t (* routeQuery)(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, GWBUF* queue);
-
-    /**
-     * @brief Called for each reply packet
-     *
-     * TODO: Document how clientReply should be used
-     *
-     * @param instance    Filter instance
-     * @param fsession    Filter session
-     * @param queue       Response from the server
-     * @param down        The downstream components where the response came from
-     * @param reply       The reply information (@see target.hh)
-     *
-     * @return If successful, the function returns 1. If an error occurs and the session should be closed, the
-     *         function returns 0.
-     */
-    int32_t (* clientReply)(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, GWBUF* queue,
-                            const mxs::ReplyRoute& down, const mxs::Reply& reply);
-
-    /**
      * @brief Called for diagnostic output
      *
      * @param instance Filter instance
@@ -369,30 +338,6 @@ public:
         return pFilterSession;
     }
 
-    static int apiRouteQuery(MXS_FILTER* pInstance, MXS_FILTER_SESSION* pData, GWBUF* pPacket)
-    {
-        FilterSessionType* pFilterSession = static_cast<FilterSessionType*>(pData);
-
-        int rv = 0;
-        MXS_EXCEPTION_GUARD(rv = pFilterSession->routeQuery(pPacket));
-
-        return rv;
-    }
-
-    static int apiClientReply(MXS_FILTER* pInstance,
-                              MXS_FILTER_SESSION* pData,
-                              GWBUF* pPacket,
-                              const mxs::ReplyRoute& down,
-                              const mxs::Reply& reply)
-    {
-        FilterSessionType* pFilterSession = static_cast<FilterSessionType*>(pData);
-
-        int rv = 0;
-        MXS_EXCEPTION_GUARD(rv = pFilterSession->clientReply(pPacket, down, reply));
-
-        return rv;
-    }
-
     static json_t* apiDiagnostics(const MXS_FILTER* pInstance, const MXS_FILTER_SESSION* pData)
     {
         json_t* rval = NULL;
@@ -461,8 +406,6 @@ MXS_FILTER_OBJECT Filter<FilterType, FilterSessionType>::s_object =
 {
     &FilterType::apiCreateInstance,
     &FilterType::apiNewSession,
-    &FilterType::apiRouteQuery,
-    &FilterType::apiClientReply,
     &FilterType::apiDiagnostics,
     &FilterType::apiGetCapabilities,
     &FilterType::apiDestroyInstance,

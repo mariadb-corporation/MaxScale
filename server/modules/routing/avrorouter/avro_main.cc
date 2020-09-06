@@ -112,25 +112,6 @@ static void freeSession(MXS_ROUTER* router_instance, MXS_FILTER_SESSION* router_
 }
 
 /**
- * We have data from the client, this is likely to be packets related to
- * the registration of the slave to receive binlog records. Unlike most
- * MaxScale routers there is no forwarding to the backend database, merely
- * the return of either predefined server responses that have been cached
- * or binlog records.
- *
- * @param instance      The router instance
- * @param router_session    The router session returned from the newSession call
- * @param queue         The queue of data buffers to route
- * @return 1 on success, 0 on error
- */
-static int routeQuery(MXS_ROUTER* instance, MXS_FILTER_SESSION* router_session, GWBUF* queue)
-{
-    AvroSession* client = (AvroSession*) router_session;
-
-    return client->routeQuery(queue);
-}
-
-/**
  * Display router diagnostics
  *
  * @param instance  Instance of the router
@@ -160,29 +141,6 @@ static json_t* diagnostics(const MXS_ROUTER* router)
     }
 
     return rval;
-}
-
-/**
- * Client Reply routine - in this case this is a message from the
- * master server, It should be sent to the state machine that manages
- * master packets as it may be binlog records or part of the registration
- * handshake that takes part during connection establishment.
- *
- *
- * @param       instance        The router instance
- * @param       router_session  The router session
- * @param       master_dcb      The DCB for the connection to the master
- * @param       queue           The GWBUF with reply data
- */
-static int32_t clientReply(MXS_ROUTER* instance,
-                           MXS_FILTER_SESSION* router_session,
-                           GWBUF* queue,
-                           const mxs::ReplyRoute& backend_dcb,
-                           const mxs::Reply& reply)
-{
-    /** We should never end up here */
-    mxb_assert(false);
-    return 0;
 }
 
 /**
@@ -443,9 +401,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         createInstance,
         newSession,
         freeSession,
-        routeQuery,
         diagnostics,
-        clientReply,
         errorReply,
         getCapabilities,
         destroyInstance
@@ -483,16 +439,22 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
                 | MXS_MODULE_OPT_PATH_X_OK
                 | MXS_MODULE_OPT_PATH_CREAT
             },
-            {"filestem",              MXS_MODULE_PARAM_STRING, BINLOG_NAME_ROOT},
-            {"group_rows",            MXS_MODULE_PARAM_COUNT, "1000"},
-            {"group_trx",             MXS_MODULE_PARAM_COUNT, "1"},
-            {"start_index",           MXS_MODULE_PARAM_COUNT, "1"},
-            {"block_size",            MXS_MODULE_PARAM_SIZE, "0"},
-            {"codec",                 MXS_MODULE_PARAM_ENUM, "null", MXS_MODULE_OPT_ENUM_UNIQUE, codec_values},
-            {"match",                 MXS_MODULE_PARAM_REGEX  },
-            {"exclude",               MXS_MODULE_PARAM_REGEX  },
-            {"server_id",             MXS_MODULE_PARAM_COUNT, "1234"},
-            {"gtid_start_pos",        MXS_MODULE_PARAM_STRING },
+            {"filestem",                   MXS_MODULE_PARAM_STRING, BINLOG_NAME_ROOT},
+            {"group_rows",                 MXS_MODULE_PARAM_COUNT,  "1000"          },
+            {"group_trx",                  MXS_MODULE_PARAM_COUNT,  "1"             },
+            {"start_index",                MXS_MODULE_PARAM_COUNT,  "1"             },
+            {"block_size",                 MXS_MODULE_PARAM_SIZE,   "0"             },
+            {
+                "codec",
+                MXS_MODULE_PARAM_ENUM,
+                "null",
+                MXS_MODULE_OPT_ENUM_UNIQUE,
+                codec_values
+            },
+            {"match",                      MXS_MODULE_PARAM_REGEX},
+            {"exclude",                    MXS_MODULE_PARAM_REGEX},
+            {"server_id",                  MXS_MODULE_PARAM_COUNT,  "1234"          },
+            {"gtid_start_pos",             MXS_MODULE_PARAM_STRING},
             {MXS_END_MODULE_PARAMS}
         }
     };

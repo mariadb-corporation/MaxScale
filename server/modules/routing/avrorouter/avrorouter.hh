@@ -114,7 +114,7 @@ private:
     Avro(SERVICE* service, mxs::ConfigParameters* params);
 };
 
-class AvroSession : public MXS_FILTER_SESSION
+class AvroSession : public mxs::RouterSession
 {
     AvroSession(const AvroSession&) = delete;
     AvroSession& operator=(const AvroSession&) = delete;

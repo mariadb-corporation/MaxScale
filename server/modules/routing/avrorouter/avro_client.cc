@@ -770,7 +770,8 @@ AvroSession* AvroSession::create(Avro* inst, MXS_SESSION* session)
 }
 
 AvroSession::AvroSession(Avro* instance, MXS_SESSION* session)
-    : m_session(session)
+    : mxs::RouterSession(session)
+    , m_session(session)
     , m_client(static_cast<CDCClientConnection*>(m_session->client_connection()))
     , m_state(AVRO_CLIENT_UNREGISTERED)
     , m_format(AVRO_FORMAT_UNDEFINED)
