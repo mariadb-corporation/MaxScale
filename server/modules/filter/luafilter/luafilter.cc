@@ -208,13 +208,16 @@ public:
     LUA_SESSION* newSession(MXS_SESSION* session, SERVICE* service,
                             mxs::Downstream* downstream, mxs::Upstream* upstream);
 
-    json_t*  diagnostics() const;
-    uint64_t getCapabilities() const;
+    json_t*    diagnostics() const;
+    uint64_t   getCapabilities() const;
+    lua_State* global_lua_state();
 
-    lua_State*         global_lua_state {nullptr};
-    std::string        global_script;
-    std::string        session_script;
-    mutable std::mutex lock;
+    mutable std::mutex m_lock;
+
+private:
+    lua_State*  m_global_lua_state {nullptr};
+    std::string m_global_script;
+    std::string m_session_script;
 };
 
 /**
@@ -226,10 +229,13 @@ public:
     LUA_SESSION(MXS_SESSION* session, SERVICE* service, LUA_INSTANCE* filter);
     ~LUA_SESSION();
     void close();
+    bool prepare_session(const std::string& session_script, mxs::Downstream* downstream,
+                         mxs::Upstream* upstream);
 
     int routeQuery(GWBUF* queue);
     int clientReply(GWBUF* queue, const mxs::ReplyRoute& down, const mxs::Reply& reply);
 
+private:
     LUA_INSTANCE*    m_filter {nullptr};
     MXS_SESSION*     m_session {nullptr};
     SERVICE*         m_service {nullptr};
@@ -289,34 +295,34 @@ static MXS_FILTER* createInstance(const char* name, mxs::ConfigParameters* param
 bool LUA_INSTANCE::configure(mxs::ConfigParameters* params)
 {
     bool error = false;
-    global_script = params->get_string("global_script");
-    session_script = params->get_string("session_script");
+    m_global_script = params->get_string("global_script");
+    m_session_script = params->get_string("session_script");
 
-    if (!global_script.empty())
+    if (!m_global_script.empty())
     {
-        if ((global_lua_state = luaL_newstate()))
+        if ((m_global_lua_state = luaL_newstate()))
         {
-            luaL_openlibs(global_lua_state);
+            luaL_openlibs(m_global_lua_state);
 
-            if (luaL_dofile(global_lua_state, global_script.c_str()))
+            if (luaL_dofile(m_global_lua_state, m_global_script.c_str()))
             {
                 MXS_ERROR("Failed to execute global script at '%s':%s.",
-                          global_script.c_str(), lua_tostring(global_lua_state, -1));
+                          m_global_script.c_str(), lua_tostring(m_global_lua_state, -1));
                 error = true;
             }
-            else if (global_lua_state)
+            else if (m_global_lua_state)
             {
-                lua_getglobal(global_lua_state, "createInstance");
+                lua_getglobal(m_global_lua_state, "createInstance");
 
-                if (lua_pcall(global_lua_state, 0, 0, 0))
+                if (lua_pcall(m_global_lua_state, 0, 0, 0))
                 {
                     MXS_WARNING("Failed to get global variable 'createInstance':  %s. The createInstance "
                                 "entry point will not be called for the global script.",
-                                lua_tostring(global_lua_state, -1));
-                    lua_pop(global_lua_state, -1);      // Pop the error off the stack
+                                lua_tostring(m_global_lua_state, -1));
+                    lua_pop(m_global_lua_state, -1);        // Pop the error off the stack
                 }
 
-                expose_functions(global_lua_state, &current_global_query);
+                expose_functions(m_global_lua_state, &current_global_query);
             }
         }
         else
@@ -362,60 +368,71 @@ static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance,
 LUA_SESSION* LUA_INSTANCE::newSession(MXS_SESSION* session, SERVICE* service, mxs::Downstream* downstream,
                                       mxs::Upstream* upstream)
 {
-    auto my_session = new LUA_SESSION(session, service, this);
-    my_session->m_down = downstream;
-    my_session->m_up = upstream;
-
-    if (!session_script.empty())
+    auto new_session = new LUA_SESSION(session, service, this);
+    if (!new_session->prepare_session(m_session_script, downstream, upstream))
     {
-        my_session->m_lua_state = luaL_newstate();
-        luaL_openlibs(my_session->m_lua_state);
-
-        if (luaL_dofile(my_session->m_lua_state, session_script.c_str()))
-        {
-            MXS_ERROR("Failed to execute session script at '%s': %s.",
-                      session_script.c_str(),
-                      lua_tostring(my_session->m_lua_state, -1));
-            lua_close(my_session->m_lua_state);
-            delete my_session;
-            my_session = nullptr;
-        }
-        else
-        {
-            expose_functions(my_session->m_lua_state, &my_session->m_current_query);
-
-            /** Call the newSession entry point */
-            lua_getglobal(my_session->m_lua_state, "newSession");
-            lua_pushstring(my_session->m_lua_state, session->user().c_str());
-            lua_pushstring(my_session->m_lua_state, session->client_remote().c_str());
-
-            if (lua_pcall(my_session->m_lua_state, 2, 0, 0))
-            {
-                MXS_WARNING("Failed to get global variable 'newSession': '%s'."
-                            " The newSession entry point will not be called.",
-                            lua_tostring(my_session->m_lua_state, -1));
-                lua_pop(my_session->m_lua_state, -1);       // Pop the error off the stack
-            }
-        }
+        delete new_session;
+        new_session = nullptr;
     }
 
-    if (my_session && global_lua_state)
+    if (new_session && m_global_lua_state)
     {
-        std::lock_guard<std::mutex> guard(lock);
+        std::lock_guard<std::mutex> guard(m_lock);
 
-        lua_getglobal(global_lua_state, "newSession");
-        lua_pushstring(global_lua_state, session->user().c_str());
-        lua_pushstring(global_lua_state, session->client_remote().c_str());
+        lua_getglobal(m_global_lua_state, "newSession");
+        lua_pushstring(m_global_lua_state, session->user().c_str());
+        lua_pushstring(m_global_lua_state, session->client_remote().c_str());
 
-        if (lua_pcall(global_lua_state, 2, 0, 0))
+        if (lua_pcall(m_global_lua_state, 2, 0, 0))
         {
             MXS_WARNING("Failed to get global variable 'newSession': '%s'."
                         " The newSession entry point will not be called for the global script.",
-                        lua_tostring(global_lua_state, -1));
-            lua_pop(global_lua_state, -1);      // Pop the error off the stack
+                        lua_tostring(m_global_lua_state, -1));
+            lua_pop(m_global_lua_state, -1);        // Pop the error off the stack
         }
     }
-    return my_session;
+    return new_session;
+}
+
+bool LUA_SESSION::prepare_session(const std::string& session_script, mxs::Downstream* downstream,
+                                  mxs::Upstream* upstream)
+{
+    bool error = false;
+    m_down = downstream;
+    m_up = upstream;
+
+    if (!session_script.empty())
+    {
+        m_lua_state = luaL_newstate();
+        luaL_openlibs(m_lua_state);
+
+        if (luaL_dofile(m_lua_state, session_script.c_str()))
+        {
+            MXS_ERROR("Failed to execute session script at '%s': %s.",
+                      session_script.c_str(),
+                      lua_tostring(m_lua_state, -1));
+            lua_close(m_lua_state);
+            error = true;
+        }
+        else
+        {
+            expose_functions(m_lua_state, &m_current_query);
+
+            /** Call the newSession entry point */
+            lua_getglobal(m_lua_state, "newSession");
+            lua_pushstring(m_lua_state, m_session->user().c_str());
+            lua_pushstring(m_lua_state, m_session->client_remote().c_str());
+
+            if (lua_pcall(m_lua_state, 2, 0, 0))
+            {
+                MXS_WARNING("Failed to get global variable 'newSession': '%s'. The newSession entry "
+                            "point will not be called.",
+                            lua_tostring(m_lua_state, -1));
+                lua_pop(m_lua_state, -1);       // Pop the error off the stack
+            }
+        }
+    }
+    return !error;
 }
 
 /**
@@ -446,17 +463,18 @@ void LUA_SESSION::close()
         }
     }
 
-    if (m_filter->global_lua_state)
+    auto global_lua_state = m_filter->global_lua_state();
+    if (global_lua_state)
     {
-        std::lock_guard<std::mutex> guard(m_filter->lock);
+        std::lock_guard<std::mutex> guard(m_filter->m_lock);
 
-        lua_getglobal(m_filter->global_lua_state, "closeSession");
-        if (lua_pcall(m_filter->global_lua_state, 0, 0, 0))
+        lua_getglobal(global_lua_state, "closeSession");
+        if (lua_pcall(global_lua_state, 0, 0, 0))
         {
             MXS_WARNING("Failed to get global variable 'closeSession': '%s'. The closeSession entry point "
                         "will not be called for the global script.",
-                        lua_tostring(m_filter->global_lua_state, -1));
-            lua_pop(m_filter->global_lua_state, -1);
+                        lua_tostring(global_lua_state, -1));
+            lua_pop(global_lua_state, -1);
         }
     }
 }
@@ -503,7 +521,6 @@ static int32_t clientReply(MXS_FILTER* instance,
 int LUA_SESSION::clientReply(GWBUF* queue, const maxscale::ReplyRoute& down, const mxs::Reply& reply)
 {
     LUA_SESSION* my_session = this;
-    LUA_INSTANCE* my_instance = m_filter;
 
     if (my_session->m_lua_state)
     {
@@ -511,23 +528,22 @@ int LUA_SESSION::clientReply(GWBUF* queue, const maxscale::ReplyRoute& down, con
 
         if (lua_pcall(my_session->m_lua_state, 0, 0, 0))
         {
-            MXS_ERROR("Session scope call to 'clientReply' failed: '%s'.",
-                      lua_tostring(my_session->m_lua_state, -1));
+            MXS_ERROR("Session scope call to 'clientReply' failed: '%s'.", lua_tostring(m_lua_state, -1));
             lua_pop(my_session->m_lua_state, -1);
         }
     }
 
-    if (my_instance->global_lua_state)
+    auto global_lua_state = m_filter->global_lua_state();
+    if (global_lua_state)
     {
-        std::lock_guard<std::mutex> guard(my_instance->lock);
+        std::lock_guard<std::mutex> guard(m_filter->m_lock);
 
-        lua_getglobal(my_instance->global_lua_state, "clientReply");
+        lua_getglobal(global_lua_state, "clientReply");
 
-        if (lua_pcall(my_instance->global_lua_state, 0, 0, 0))
+        if (lua_pcall(global_lua_state, 0, 0, 0))
         {
-            MXS_ERROR("Global scope call to 'clientReply' failed: '%s'.",
-                      lua_tostring(my_session->m_lua_state, -1));
-            lua_pop(my_instance->global_lua_state, -1);
+            MXS_ERROR("Global scope call to 'clientReply' failed: '%s'.", lua_tostring(m_lua_state, -1));
+            lua_pop(global_lua_state, -1);
         }
     }
 
@@ -561,8 +577,6 @@ static int32_t routeQuery(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GWB
 int LUA_SESSION::routeQuery(GWBUF* queue)
 {
     auto my_session = this;
-    auto my_instance = m_filter;
-
     char* fullquery = NULL;
     bool route = true;
     GWBUF* forward = queue;
@@ -602,31 +616,32 @@ int LUA_SESSION::routeQuery(GWBUF* queue)
             my_session->m_current_query = NULL;
         }
 
-        if (my_instance->global_lua_state)
+        auto global_lua_state = m_filter->global_lua_state();
+        if (global_lua_state)
         {
-            std::lock_guard<std::mutex> guard(my_instance->lock);
+            std::lock_guard<std::mutex> guard(m_filter->m_lock);
             current_global_query = queue;
 
-            lua_getglobal(my_instance->global_lua_state, "routeQuery");
+            lua_getglobal(global_lua_state, "routeQuery");
 
-            lua_pushlstring(my_instance->global_lua_state, fullquery, strlen(fullquery));
+            lua_pushlstring(global_lua_state, fullquery, strlen(fullquery));
 
-            if (lua_pcall(my_instance->global_lua_state, 1, 1, 0))
+            if (lua_pcall(global_lua_state, 1, 1, 0))
             {
                 MXS_ERROR("Global scope call to 'routeQuery' failed: '%s'.",
-                          lua_tostring(my_instance->global_lua_state, -1));
-                lua_pop(my_instance->global_lua_state, -1);
+                          lua_tostring(global_lua_state, -1));
+                lua_pop(global_lua_state, -1);
             }
-            else if (lua_gettop(my_instance->global_lua_state))
+            else if (lua_gettop(global_lua_state))
             {
-                if (lua_isstring(my_instance->global_lua_state, -1))
+                if (lua_isstring(global_lua_state, -1))
                 {
                     gwbuf_free(forward);
-                    forward = modutil_create_query(lua_tostring(my_instance->global_lua_state, -1));
+                    forward = modutil_create_query(lua_tostring(global_lua_state, -1));
                 }
-                else if (lua_isboolean(my_instance->global_lua_state, -1))
+                else if (lua_isboolean(global_lua_state, -1))
                 {
-                    route = lua_toboolean(my_instance->global_lua_state, -1);
+                    route = lua_toboolean(global_lua_state, -1);
                 }
             }
 
@@ -640,15 +655,12 @@ int LUA_SESSION::routeQuery(GWBUF* queue)
     {
         gwbuf_free(queue);
         GWBUF* err = modutil_create_mysql_err_msg(1, 0, 1045, "28000", "Access denied.");
-        session_set_response(my_session->m_session, my_session->m_service,
-                             my_session->m_up, err);
+        session_set_response(m_session, m_service, m_up, err);
         rc = 1;
     }
     else
     {
-        rc = my_session->m_down->routeQuery(my_session->m_down->instance,
-                                            my_session->m_down->session,
-                                            forward);
+        rc = m_down->routeQuery(m_down->instance, m_down->session, forward);
     }
 
     return rc;
@@ -672,34 +684,39 @@ static json_t* diagnostics(const MXS_FILTER* instance, const MXS_FILTER_SESSION*
 json_t* LUA_INSTANCE::diagnostics() const
 {
     json_t* rval = json_object();
-    if (global_lua_state)
+    if (m_global_lua_state)
     {
-        std::lock_guard<std::mutex> guard(lock);
+        std::lock_guard<std::mutex> guard(m_lock);
 
-        lua_getglobal(global_lua_state, "diagnostic");
+        lua_getglobal(m_global_lua_state, "diagnostic");
 
-        if (lua_pcall(global_lua_state, 0, 1, 0) == 0)
+        if (lua_pcall(m_global_lua_state, 0, 1, 0) == 0)
         {
-            lua_gettop(global_lua_state);
-            if (lua_isstring(global_lua_state, -1))
+            lua_gettop(m_global_lua_state);
+            if (lua_isstring(m_global_lua_state, -1))
             {
-                json_object_set_new(rval, "script_output", json_string(lua_tostring(global_lua_state, -1)));
+                json_object_set_new(rval, "script_output", json_string(lua_tostring(m_global_lua_state, -1)));
             }
         }
         else
         {
-            lua_pop(global_lua_state, -1);
+            lua_pop(m_global_lua_state, -1);
         }
     }
-    if (!global_script.empty())
+    if (!m_global_script.empty())
     {
-        json_object_set_new(rval, "global_script", json_string(global_script.c_str()));
+        json_object_set_new(rval, "global_script", json_string(m_global_script.c_str()));
     }
-    if (!session_script.empty())
+    if (!m_session_script.empty())
     {
-        json_object_set_new(rval, "session_script", json_string(session_script.c_str()));
+        json_object_set_new(rval, "session_script", json_string(m_session_script.c_str()));
     }
     return rval;
+}
+
+lua_State* LUA_INSTANCE::global_lua_state()
+{
+    return m_global_lua_state;
 }
 
 /**
