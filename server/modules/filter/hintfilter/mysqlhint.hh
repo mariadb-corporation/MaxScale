@@ -33,10 +33,11 @@ class HintSession;
 class HintInstance : public mxs::Filter<HintInstance, HintSession>
 {
 public:
-    static HintInstance* create(const char* zName, mxs::ConfigParameters* ppParams);
-    HintSession*         newSession(MXS_SESSION* pSession, SERVICE* pService);
-    json_t*              diagnostics() const;
-    uint64_t             getCapabilities();
+    static HintInstance*        create(const char* zName, mxs::ConfigParameters* ppParams);
+    mxs::FilterSession*         newSession(MXS_SESSION* pSession, SERVICE* pService);
+    json_t*                     diagnostics() const;
+    uint64_t                    getCapabilities() const;
+    mxs::config::Configuration* getConfiguration();
 };
 
 enum TOKEN_VALUE

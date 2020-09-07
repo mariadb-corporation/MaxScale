@@ -37,7 +37,7 @@ public:
     json_t* diagnostics() const;
 
     // Get filter capabilities
-    uint64_t getCapabilities();
+    uint64_t getCapabilities() const;
 
     const CommentConfig& config() const
     {

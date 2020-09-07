@@ -46,7 +46,7 @@ public:
 
     json_t* diagnostics() const;
 
-    uint64_t getCapabilities();
+    uint64_t getCapabilities() const;
 
     mxs::config::Configuration* getConfiguration()
     {

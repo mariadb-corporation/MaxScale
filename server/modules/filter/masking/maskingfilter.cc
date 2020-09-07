@@ -167,7 +167,7 @@ json_t* MaskingFilter::diagnostics() const
 }
 
 // static
-uint64_t MaskingFilter::getCapabilities()
+uint64_t MaskingFilter::getCapabilities() const
 {
     return RCAP_TYPE_NONE;
 }

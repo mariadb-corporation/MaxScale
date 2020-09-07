@@ -141,7 +141,7 @@ json_t* NullFilter::diagnostics() const
     return NULL;
 }
 
-uint64_t NullFilter::getCapabilities()
+uint64_t NullFilter::getCapabilities() const
 {
     return m_config.capabilities;
 }

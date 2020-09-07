@@ -131,7 +131,7 @@ int RegexHintFSession::routeQuery(GWBUF* queue)
  * @param session   The client session to attach to
  * @return a new filter session
  */
-RegexHintFSession* RegexHintFilter::newSession(MXS_SESSION* session, SERVICE* service)
+mxs::FilterSession* RegexHintFilter::newSession(MXS_SESSION* session, SERVICE* service)
 {
     bool session_active = true;
     bool ip_found = false;
@@ -204,9 +204,14 @@ const RegexToServers* RegexHintFilter::find_servers(char* sql, int sql_len, pcre
  *
  * @return The capabilities of the filter.
  */
-uint64_t RegexHintFilter::getCapabilities()
+uint64_t RegexHintFilter::getCapabilities() const
 {
     return RCAP_TYPE_CONTIGUOUS_INPUT;
+}
+
+mxs::config::Configuration* RegexHintFilter::getConfiguration()
+{
+    return nullptr;
 }
 
 /**

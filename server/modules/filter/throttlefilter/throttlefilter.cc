@@ -126,9 +126,14 @@ json_t* ThrottleFilter::diagnostics() const
     return NULL;
 }
 
-uint64_t ThrottleFilter::getCapabilities()
+uint64_t ThrottleFilter::getCapabilities() const
 {
     return RCAP_TYPE_NONE;
+}
+
+mxs::config::Configuration* ThrottleFilter::getConfiguration()
+{
+    return nullptr;
 }
 
 const ThrottleConfig& ThrottleFilter::config() const

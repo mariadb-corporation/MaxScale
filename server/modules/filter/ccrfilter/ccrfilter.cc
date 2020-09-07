@@ -240,7 +240,7 @@ public:
         return rval;
     }
 
-    uint64_t getCapabilities()
+    uint64_t getCapabilities() const
     {
         return RCAP_TYPE_NONE;
     }

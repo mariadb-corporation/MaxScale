@@ -141,8 +141,14 @@ public:
     mxs::FilterSession* newSession(MXS_SESSION* session, SERVICE* service);
     ~LuaFilter();
 
-    json_t*    diagnostics() const;
-    uint64_t   getCapabilities() const;
+    json_t*  diagnostics() const;
+    uint64_t getCapabilities() const;
+
+    mxs::config::Configuration* getConfiguration()
+    {
+        return nullptr;
+    }
+
     lua_State* global_lua_state();
 
     mutable std::mutex m_lock;

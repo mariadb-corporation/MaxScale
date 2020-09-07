@@ -36,9 +36,14 @@ public:
     TeeSession* newSession(MXS_SESSION* session, SERVICE* service);
     json_t*     diagnostics() const;
 
-    uint64_t getCapabilities()
+    uint64_t getCapabilities() const
     {
         return RCAP_TYPE_CONTIGUOUS_INPUT;
+    }
+
+    mxs::config::Configuration* getConfiguration()
+    {
+        return nullptr;
     }
 
     bool user_matches(const char* user) const

@@ -212,7 +212,7 @@ InsertStream* InsertStream::create(const char* name, mxs::ConfigParameters* para
     return new InsertStream;
 }
 
-InsertStreamSession* InsertStream::newSession(MXS_SESSION* pSession, SERVICE* pService)
+mxs::FilterSession* InsertStream::newSession(MXS_SESSION* pSession, SERVICE* pService)
 {
     return new InsertStreamSession(pSession, pService, this);
 }
@@ -224,9 +224,13 @@ json_t* InsertStream::diagnostics() const
     return rval;
 }
 
-uint64_t InsertStream::getCapabilities()
+uint64_t InsertStream::getCapabilities() const
 {
     return CAPS;
+}
+mxs::config::Configuration* InsertStream::getConfiguration()
+{
+    return nullptr;
 }
 
 InsertStreamSession::InsertStreamSession(MXS_SESSION* pSession, SERVICE* pService, InsertStream* filter)

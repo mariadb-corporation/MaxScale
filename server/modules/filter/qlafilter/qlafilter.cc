@@ -240,7 +240,7 @@ QlaInstance* QlaInstance::create(const char* name, mxs::ConfigParameters* params
     return my_instance;
 }
 
-QlaFilterSession* QlaInstance::newSession(MXS_SESSION* session, SERVICE* service)
+mxs::FilterSession* QlaInstance::newSession(MXS_SESSION* session, SERVICE* service)
 {
     auto my_session = new(std::nothrow) QlaFilterSession(*this, session, service);
     if (my_session && !my_session->prepare())

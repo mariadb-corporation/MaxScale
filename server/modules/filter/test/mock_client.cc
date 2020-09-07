@@ -104,19 +104,6 @@ int32_t Client::write(GWBUF* pResponse)
     return rv;
 }
 
-// static
-int32_t Client::clientReply(MXS_FILTER* pInstance,
-                            MXS_FILTER_SESSION* pSession,
-                            GWBUF* pResponse,
-                            const mxs::ReplyRoute& down,
-                            const mxs::Reply& reply)
-{
-    Client* pClient = reinterpret_cast<Client*>(pSession);
-    mxb_assert(pInstance == &pClient->m_instance);
-
-    return pClient->clientReply(pResponse, down, reply);
-}
-
 //
 // Client::Handler
 //

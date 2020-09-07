@@ -33,10 +33,11 @@ public:
     InsertStream(const InsertStream&) = delete;
     InsertStream& operator=(const InsertStream&) = delete;
 
-    static InsertStream* create(const char* zName, mxs::ConfigParameters* ppParams);
-    InsertStreamSession* newSession(MXS_SESSION* pSession, SERVICE* pService);
-    json_t*              diagnostics() const;
-    uint64_t             getCapabilities();
+    static InsertStream*        create(const char* zName, mxs::ConfigParameters* ppParams);
+    mxs::FilterSession*         newSession(MXS_SESSION* pSession, SERVICE* pService);
+    json_t*                     diagnostics() const;
+    uint64_t                    getCapabilities() const;
+    mxs::config::Configuration* getConfiguration();
 
 private:
     InsertStream();
@@ -50,8 +51,8 @@ public:
 
     InsertStreamSession(MXS_SESSION* pSession, SERVICE* pService, InsertStream* filter);
 
-    int  routeQuery(GWBUF* pPacket);
-    int  clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply);
+    int routeQuery(GWBUF* pPacket);
+    int clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply);
 
 private:
     InsertStream* m_filter;

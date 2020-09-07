@@ -66,7 +66,14 @@ public:
      *
      * @return Capabilities as a bitfield
      */
-    uint64_t getCapabilities();
+    uint64_t getCapabilities() const;
+
+    /**
+     * Get filter configuration. Used by the MaxScale core to configure the instance.
+     *
+     * @return The configuration for this filter instance
+     */
+    mxs::config::Configuration* getConfiguration();
 
     // Specific to ExampleFilter. Called by a session when it sees a query.
     void query_seen();

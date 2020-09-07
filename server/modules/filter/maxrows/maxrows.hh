@@ -96,7 +96,7 @@ public:
     }
 
     // Get filter capabilities
-    uint64_t getCapabilities()
+    uint64_t getCapabilities() const
     {
         return CAPABILITIES;
     }

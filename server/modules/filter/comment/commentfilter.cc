@@ -87,7 +87,7 @@ json_t* CommentFilter::diagnostics() const
 }
 
 // static
-uint64_t CommentFilter::getCapabilities()
+uint64_t CommentFilter::getCapabilities() const
 {
     return RCAP_TYPE_NONE;
 }

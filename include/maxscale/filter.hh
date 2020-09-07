@@ -25,16 +25,64 @@
 #include <maxscale/routing.hh>
 #include <maxscale/session.hh>
 
-/**
- * MXS_FILTER is an opaque type representing a particular filter instance.
- *
- * MaxScale itself does not do anything with it, except for receiving it
- * from the @c createInstance function of a filter module and subsequently
- * passing it back to the API functions of the filter.
- */
-typedef struct mxs_filter
+namespace maxscale
 {
-} MXS_FILTER;
+class FilterSession;
+}
+
+/**
+ * MXS_FILTER is the abstract class that filters implement.
+ */
+struct MXS_FILTER
+{
+    virtual ~MXS_FILTER() = default;
+
+    /**
+     * Called to create a new user session within the filter
+     *
+     * This function is called when a new filter session is created for a client.
+     *
+     * @param session  Client MXS_SESSION object
+     * @param service  The service in which this filter session is created
+     *
+     * @return New filter session or NULL on error
+     */
+    virtual mxs::FilterSession* newSession(MXS_SESSION* session, SERVICE* service) = 0;
+
+    /**
+     * @brief Called for diagnostic output
+     *
+     * @param instance Filter instance
+     * @param fsession Filter session, NULL if general information about the filter is queried
+     *
+     * @return JSON formatted information about the filter
+     *
+     * @see jansson.h
+     */
+    virtual json_t* diagnostics() const = 0;
+
+    /**
+     * @brief Called to obtain the capabilities of the filter
+     *
+     * @return Zero or more bitwise-or'd values from the mxs_routing_capability_t enum
+     *
+     * @see routing.hh
+     */
+    virtual uint64_t getCapabilities() const = 0;
+
+    /**
+     * Get the configuration of a filter instance
+     *
+     * The configure method of the returned configuration will be called after the initial creation of the
+     * filter as well as any time a parameter is modified at runtime.
+     *
+     * @return The configuration for the filter instance or nullptr if the filter does not use the new
+     *         configuration mechanism
+     */
+    virtual mxs::config::Configuration* getConfiguration() = 0;
+};
+
+struct MXS_FILTER_OBJECT;
 
 namespace maxscale
 {
@@ -120,140 +168,7 @@ protected:
     mxs_filter_session* m_down;     /*< The downstream component. */
     mxs_filter_session* m_up;       /*< The upstream component. */
 };
-}
 
-/**
- * The "module object" structure for a filter module. All entry points
- * marked with `(optional)` are optional entry points which can be set to NULL
- * if no implementation is required.
- */
-typedef struct mxs_filter_object
-{
-
-    /**
-     * @brief Create a new instance of the filter
-     *
-     * This function is called when a new filter instance is created. The return
-     * value of this function will be passed as the first parameter to the
-     * other API functions.
-     *
-     * @param name    Name of the filter instance
-     * @param params  Filter parameters
-     *
-     * @return New filter instance on NULL on error
-     */
-    MXS_FILTER* (*createInstance)(const char* name, mxs::ConfigParameters* params);
-
-    /**
-     * Called to create a new user session within the filter
-     *
-     * This function is called when a new filter session is created for a client.
-     * The return value of this function will be passed as the second parameter
-     * to the @c routeQuery, @c clientReply, @c closeSession, @c freeSession,
-     * @c setDownstream and @c setUpstream functions.
-     *
-     * @param instance Filter instance
-     * @param session  Client MXS_SESSION object
-     * @param service  The service in which this filter session is created
-     * @param down     Downstream component of the filter chain, route queries here
-     * @param up       Upstream component of the filter chain, send replies here
-     *
-     * @note Don't copy the upstream or downstream components, use the provided pointers instead.
-     *
-     * @return New filter session or NULL on error
-     */
-    mxs::FilterSession* (* newSession)(MXS_FILTER * instance, MXS_SESSION* session, SERVICE* service);
-
-    /**
-     * @brief Called for diagnostic output
-     *
-     * @param instance Filter instance
-     * @param fsession Filter session, NULL if general information about the filter is queried
-     *
-     * @return JSON formatted information about the filter
-     *
-     * @see jansson.h
-     */
-    json_t* (*diagnostics)(const MXS_FILTER * instance, const MXS_FILTER_SESSION* fsession);
-
-    /**
-     * @brief Called to obtain the capabilities of the filter
-     *
-     * @return Zero or more bitwise-or'd values from the mxs_routing_capability_t enum
-     *
-     * @see routing.hh
-     */
-    uint64_t (* getCapabilities)(MXS_FILTER* instance);
-
-    /**
-     * @brief Called for destroying a filter instance
-     *
-     * @param instance Filter instance
-     */
-    void (* destroyInstance)(MXS_FILTER* instance);
-
-    /**
-     * Get the configuration of a filter instance
-     *
-     * The configure method of the returned configuration will be called after the initial creation of the
-     * filter as well as any time a parameter is modified at runtime.
-     *
-     * @param instance The filter instance
-     *
-     * @return The configuration for the filter instance or nullptr if the filter does not use the new
-     *         configuration mechanism
-     */
-    mxs::config::Configuration* (*getConfiguration)(MXS_FILTER * instance);
-} MXS_FILTER_OBJECT;
-
-/**
- * The filter API version. If the MXS_FILTER_OBJECT structure or the filter API
- * is changed these values must be updated in line with the rules in the
- * file modinfo.h.
- */
-#define MXS_FILTER_VERSION {4, 0, 0}
-
-/**
- * MXS_FILTER_DEF represents a filter definition from the configuration file.
- * Its exact definition is private to MaxScale.
- */
-struct mxs_filter_def;
-
-typedef struct mxs_filter_def
-{
-} MXS_FILTER_DEF;
-
-/**
- * Get the filter instance of a particular filter definition.
- *
- * @return A filter instance.
- */
-MXS_FILTER* filter_def_get_instance(const MXS_FILTER_DEF* filter_def);
-
-/**
- * Get common filter parameters
- *
- * @return An array of filter parameters that are common to all filters
- */
-const MXS_MODULE_PARAM* common_filter_params();
-
-/**
- * Specifies capabilities specific for filters. Common capabilities
- * are defined by @c routing_capability_t.
- *
- * @see enum routing_capability
- *
- * @note The values of the capabilities here *must* be between 0x80000000
- *       and 0x01000000, that is, bits 24 to 31.
- */
-
-typedef enum filter_capability
-{
-    FCAP_TYPE_NONE = 0x0    // TODO: remove once filter capabilities are defined
-} filter_capability_t;
-
-namespace maxscale
-{
 /**
  * @class Filter filter.hh <maxscale/filter.hh>
  *
@@ -307,18 +222,6 @@ class Filter : public MXS_FILTER
 {
 public:
 
-    // The default configure entry point, does nothing and always fails
-    bool configure(mxs::ConfigParameters* param)
-    {
-        return false;
-    }
-
-    // The default getConfiguration entry point, does nothing and always fails
-    mxs::config::Configuration* getConfiguration()
-    {
-        return nullptr;
-    }
-
     static MXS_FILTER* apiCreateInstance(const char* zName, mxs::ConfigParameters* ppParams)
     {
         FilterType* pFilter = NULL;
@@ -328,76 +231,6 @@ public:
         return pFilter;
     }
 
-    static FilterSession* apiNewSession(MXS_FILTER* pInstance, MXS_SESSION* pSession, SERVICE* pService)
-    {
-        FilterType* pFilter = static_cast<FilterType*>(pInstance);
-        FilterSessionType* pFilterSession = NULL;
-
-        MXS_EXCEPTION_GUARD(pFilterSession = pFilter->newSession(pSession, pService));
-
-        return pFilterSession;
-    }
-
-    static json_t* apiDiagnostics(const MXS_FILTER* pInstance, const MXS_FILTER_SESSION* pData)
-    {
-        json_t* rval = NULL;
-
-        if (pData)
-        {
-            const FilterSessionType* pFilterSession = static_cast<const FilterSessionType*>(pData);
-
-            MXS_EXCEPTION_GUARD(rval = pFilterSession->diagnostics());
-        }
-        else
-        {
-            const FilterType* pFilter = static_cast<const FilterType*>(pInstance);
-
-            MXS_EXCEPTION_GUARD(rval = pFilter->diagnostics());
-        }
-
-        return rval;
-    }
-
-    static uint64_t apiGetCapabilities(MXS_FILTER* pInstance)
-    {
-        uint64_t rv = 0;
-
-        FilterType* pFilter = static_cast<FilterType*>(pInstance);
-
-        MXS_EXCEPTION_GUARD(rv = pFilter->getCapabilities());
-
-        return rv;
-    }
-
-    static void apiDestroyInstance(MXS_FILTER* pInstance)
-    {
-        FilterType* pFilter = static_cast<FilterType*>(pInstance);
-
-        MXS_EXCEPTION_GUARD(delete pFilter);
-    }
-
-    static bool apiConfigureInstance(MXS_FILTER* pInstance, mxs::ConfigParameters* pParams)
-    {
-        bool rv = false;
-
-        FilterType* pFilter = static_cast<FilterType*>(pInstance);
-
-        MXS_EXCEPTION_GUARD(rv = pFilter->configure(pParams));
-
-        return rv;
-    }
-
-    static mxs::config::Configuration* apiGetConfiguration(MXS_FILTER* pInstance)
-    {
-        mxs::config::Configuration* rv = nullptr;
-
-        FilterType* pFilter = static_cast<FilterType*>(pInstance);
-
-        MXS_EXCEPTION_GUARD(rv = pFilter->getConfiguration());
-
-        return rv;
-    }
-
     static MXS_FILTER_OBJECT s_object;
 };
 
@@ -405,10 +238,72 @@ template<class FilterType, class FilterSessionType>
 MXS_FILTER_OBJECT Filter<FilterType, FilterSessionType>::s_object =
 {
     &FilterType::apiCreateInstance,
-    &FilterType::apiNewSession,
-    &FilterType::apiDiagnostics,
-    &FilterType::apiGetCapabilities,
-    &FilterType::apiDestroyInstance,
-    &FilterType::apiGetConfiguration,
 };
 }
+
+/**
+ * The filter API version. If the MXS_FILTER_OBJECT structure or the filter API
+ * is changed these values must be updated in line with the rules in the
+ * file modinfo.h.
+ */
+// TODO: Update this from 4.0.0 to 5.0.0 for 2.6
+#define MXS_FILTER_VERSION {4, 0, 0}
+
+/**
+ * The "module object" structure for a filter module.
+ */
+struct MXS_FILTER_OBJECT
+{
+    /**
+     * @brief Create a new instance of the filter
+     *
+     * This function is called when a new filter instance is created. The return
+     * value of this function will be passed as the first parameter to the
+     * other API functions.
+     *
+     * @param name    Name of the filter instance
+     * @param params  Filter parameters
+     *
+     * @return New filter instance on NULL on error
+     */
+    MXS_FILTER* (* createInstance)(const char* name, mxs::ConfigParameters* params);
+};
+
+/**
+ * MXS_FILTER_DEF represents a filter definition from the configuration file.
+ * Its exact definition is private to MaxScale.
+ */
+struct mxs_filter_def;
+
+typedef struct mxs_filter_def
+{
+} MXS_FILTER_DEF;
+
+/**
+ * Get the filter instance of a particular filter definition.
+ *
+ * @return A filter instance.
+ */
+MXS_FILTER* filter_def_get_instance(const MXS_FILTER_DEF* filter_def);
+
+/**
+ * Get common filter parameters
+ *
+ * @return An array of filter parameters that are common to all filters
+ */
+const MXS_MODULE_PARAM* common_filter_params();
+
+/**
+ * Specifies capabilities specific for filters. Common capabilities
+ * are defined by @c routing_capability_t.
+ *
+ * @see enum routing_capability
+ *
+ * @note The values of the capabilities here *must* be between 0x80000000
+ *       and 0x01000000, that is, bits 24 to 31.
+ */
+
+typedef enum filter_capability
+{
+    FCAP_TYPE_NONE = 0x0    // TODO: remove once filter capabilities are defined
+} filter_capability_t;

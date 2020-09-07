@@ -32,7 +32,7 @@ HintInstance* HintInstance::create(const char* zName, mxs::ConfigParameters* ppP
     return new(std::nothrow) HintInstance;
 }
 
-HintSession* HintInstance::newSession(MXS_SESSION* pSession, SERVICE* pService)
+mxs::FilterSession* HintInstance::newSession(MXS_SESSION* pSession, SERVICE* pService)
 {
     return new(std::nothrow) HintSession(pSession, pService);
 }
@@ -42,9 +42,14 @@ json_t* HintInstance::diagnostics() const
     return nullptr;
 }
 
-uint64_t HintInstance::getCapabilities()
+uint64_t HintInstance::getCapabilities() const
 {
     return RCAP_TYPE_CONTIGUOUS_INPUT;
+}
+
+mxs::config::Configuration* HintInstance::getConfiguration()
+{
+    return nullptr;
 }
 
 HintSession::HintSession(MXS_SESSION* session, SERVICE* service)

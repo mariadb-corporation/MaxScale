@@ -141,11 +141,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
 {
     static MXS_FILTER_OBJECT MyObject =
     {
-        createInstance,
-        newSession,
-        diagnostics,
-        getCapabilities,
-        NULL,       // No destroyInstance
+        createInstance
     };
 
     static MXS_MODULE info =

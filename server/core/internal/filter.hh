@@ -74,7 +74,7 @@ public:
     mxs::config::Configuration* configuration() const
     {
         mxb_assert(instance());
-        return obj()->getConfiguration ? obj()->getConfiguration(instance()) : nullptr;
+        return instance()->getConfiguration();
     }
 
     std::ostream& persist(std::ostream& os) const;

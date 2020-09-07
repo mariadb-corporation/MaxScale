@@ -110,7 +110,7 @@ SFilterDef filter_alloc(const char* name, const char* module, mxs::ConfigParamet
     }
     else
     {
-        object->destroyInstance(instance);
+        delete instance;
     }
 
     return filter;
@@ -126,19 +126,15 @@ FilterDef::FilterDef(std::string name,
     , m_parameters(std::move(params))
     , m_filter(instance)
     , m_obj(object)
-    , m_capabilities(m_obj->getCapabilities(m_filter))
+    , m_capabilities(m_filter->getCapabilities())
 {
     mxb_assert(get_module(m_module.c_str(), MODULE_FILTER)->module_capabilities == m_capabilities);
 }
 
 FilterDef::~FilterDef()
 {
-    if (m_obj->destroyInstance && m_filter)
-    {
-        m_obj->destroyInstance(m_filter);
-    }
-
     MXS_INFO("Destroying '%s'", name());
+    delete m_filter;
 }
 
 /**
@@ -209,14 +205,11 @@ json_t* FilterDef::parameters_to_json() const
                                   mod->parameters,
                                   rval);
 
-    if (m_obj->getConfiguration)
+    if (auto cfg = m_filter->getConfiguration())
     {
-        if (auto cfg = m_obj->getConfiguration(m_filter))
-        {
-            auto json = cfg->to_json();
-            json_object_update(rval, json);
-            json_decref(json);
-        }
+        auto json = cfg->to_json();
+        json_object_update(rval, json);
+        json_decref(json);
     }
 
     return rval;
@@ -237,12 +230,9 @@ json_t* FilterDef::json_data(const char* host) const
 
     mxb_assert(m_obj && m_filter);
 
-    if (obj()->diagnostics)
+    if (json_t* diag = instance()->diagnostics())
     {
-        if (json_t* diag = obj()->diagnostics(instance(), NULL))
-        {
-            json_object_set_new(attr, CN_FILTER_DIAGNOSTICS, diag);
-        }
+        json_object_set_new(attr, CN_FILTER_DIAGNOSTICS, diag);
     }
 
     /** Store relationships to other objects */

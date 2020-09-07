@@ -92,7 +92,7 @@ json_t* ExampleFilter::diagnostics() const
 }
 
 // static
-uint64_t ExampleFilter::getCapabilities()
+uint64_t ExampleFilter::getCapabilities() const
 {
     // Tells the protocol that the filter expects complete queries from client, that is, a query cannot be
     // sent in parts.
@@ -101,6 +101,11 @@ uint64_t ExampleFilter::getCapabilities()
     // Try the following to also expect replies to be complete. This can cause problems if the server sends
     // a really big (e.g. 1 GB) resultset.
     // return RCAP_TYPE_STMT_INPUT | RCAP_TYPE_RESULTSET_OUTPUT;
+}
+
+mxs::config::Configuration* ExampleFilter::getConfiguration()
+{
+    return nullptr;
 }
 
 void ExampleFilter::query_seen()

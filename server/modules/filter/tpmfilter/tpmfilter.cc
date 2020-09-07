@@ -162,11 +162,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
     static const char description[] = "Transaction Performance Monitoring filter";
     static MXS_FILTER_OBJECT MyObject =
     {
-        createInstance,
-        newSession,
-        diagnostics,
-        getCapabilities,
-        destroyInstance
+        createInstance
     };
 
     static MXS_MODULE info =

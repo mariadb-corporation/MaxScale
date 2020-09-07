@@ -109,11 +109,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
 {
     static MXS_FILTER_OBJECT MyObject =
     {
-        createInstance,
-        newSession,
-        diagnostics,
-        getCapabilities,
-        destroyInstance,
+        createInstance
     };
 
     static const char description[] = "A query rewrite filter that uses regular "

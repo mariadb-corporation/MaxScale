@@ -232,7 +232,7 @@ json_t* CacheFilter::diagnostics() const
     return m_sCache->show_json();
 }
 
-uint64_t CacheFilter::getCapabilities()
+uint64_t CacheFilter::getCapabilities() const
 {
     return CAPABILITIES;
 }

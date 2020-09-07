@@ -157,7 +157,7 @@ json_t* BinlogFilter::diagnostics() const
 }
 
 // static
-uint64_t BinlogFilter::getCapabilities()
+uint64_t BinlogFilter::getCapabilities() const
 {
     return RCAP_TYPE_STMT_OUTPUT;
 }

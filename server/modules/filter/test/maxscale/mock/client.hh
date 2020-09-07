@@ -140,7 +140,6 @@ private:
     int32_t write(GWBUF* pBuffer);
 
 private:
-    MXS_FILTER          m_instance;
     std::string         m_user;
     std::string         m_host;
     Handler*            m_pHandler;

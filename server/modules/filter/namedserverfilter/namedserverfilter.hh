@@ -47,11 +47,13 @@ public:
     RegexHintFilter() = default;
     ~RegexHintFilter();
 
-    static RegexHintFilter* create(const char* zName, mxs::ConfigParameters* ppParams);
-    RegexHintFSession*      newSession(MXS_SESSION* session, SERVICE* service);
-    json_t*                 diagnostics() const;
-    uint64_t                getCapabilities();
-    const RegexToServers*   find_servers(char* sql, int sql_len, pcre2_match_data* mdata);
+    static RegexHintFilter*     create(const char* zName, mxs::ConfigParameters* ppParams);
+    mxs::FilterSession*         newSession(MXS_SESSION* session, SERVICE* service);
+    json_t*                     diagnostics() const;
+    uint64_t                    getCapabilities() const;
+    mxs::config::Configuration* getConfiguration();
+
+    const RegexToServers* find_servers(char* sql, int sql_len, pcre2_match_data* mdata);
 
     static void form_regex_server_mapping(mxs::ConfigParameters* params,
                                           int pcre_ops,

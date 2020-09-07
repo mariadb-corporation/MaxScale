@@ -119,12 +119,12 @@ private:
 
     void destroyInstance(MXS_FILTER* pInstance)
     {
-        m_pApi->destroyInstance(pInstance);
+        delete pInstance;
     }
 
     mxs::FilterSession* newSession(MXS_FILTER* pInstance, MXS_SESSION* pSession, SERVICE* pService)
     {
-        return m_pApi->newSession(pInstance, pSession, pService);
+        return pInstance->newSession(pSession, pService);
     }
 
     int routeQuery(MXS_FILTER* pInstance, MXS_FILTER_SESSION* pFilter_session, GWBUF* pStatement)
