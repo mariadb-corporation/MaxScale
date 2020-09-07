@@ -27,24 +27,38 @@
 #define MXS_MODULE_NAME "topfilter"
 
 #include <maxscale/ccdefs.hh>
-#include <stdio.h>
-#include <fcntl.h>
-#include <maxscale/filter.hh>
-#include <maxscale/modinfo.hh>
-#include <maxscale/modutil.hh>
-#include <string.h>
-#include <time.h>
+
+#include <vector>
 #include <sys/time.h>
-#include <regex.h>
-#include <maxbase/atomic.h>
-#include <maxbase/alloc.h>
+#include <cstdio>
+
+#include <maxbase/regex.hh>
+#include <maxscale/filter.hh>
+#include <maxscale/modutil.hh>
 
 class TOPN_INSTANCE;
 
 struct TOPNQ
 {
-    struct timeval duration;
-    char*          sql;
+    TOPNQ(const timeval& d, const std::string& s)
+        : duration(d)
+        , sql(s)
+    {
+    }
+
+    timeval     duration;
+    std::string sql;
+};
+
+// Used for sorting queries that took longer before faster ones
+struct ReverseCompare
+{
+    bool operator()(const TOPNQ& lhs, const TOPNQ& rhs)
+    {
+        return lhs.duration.tv_sec == rhs.duration.tv_sec ?
+               rhs.duration.tv_usec < lhs.duration.tv_usec :
+               rhs.duration.tv_sec < lhs.duration.tv_sec;
+    }
 };
 
 class TOPN_SESSION : public mxs::FilterSession
@@ -57,27 +71,46 @@ public:
     json_t* diagnostics() const;
 
 private:
-    TOPN_INSTANCE* m_instance;
-    int            active;
-    char*          clientHost;
-    char*          userName;
-    char*          filename;
-    int            fd;
-    struct timeval start;
-    char*          current;
-    TOPNQ**        top;
-    int            n_statements;
-    struct timeval total;
-    struct timeval connect;
-    struct timeval disconnect;
+    TOPN_INSTANCE*     m_instance;
+    bool               m_active = true;
+    std::string        m_filename;
+    std::string        m_current;
+    int                m_n_statements = 0;
+    timeval            m_start;
+    timeval            m_total;
+    timeval            m_connect;
+    std::vector<TOPNQ> m_top;
 };
 
 static const MXS_ENUM_VALUE option_values[] =
 {
-    {"ignorecase", REG_ICASE   },
-    {"case",       0           },
-    {"extended",   REG_EXTENDED},
+    {"ignorecase", PCRE2_CASELESS},
+    {"case",       0             },
+    {"extended",   PCRE2_EXTENDED},
     {NULL}
+};
+
+struct Config
+{
+    Config(const mxs::ConfigParameters& params)
+        : topN(params.get_integer("count"))
+        , filebase(params.get_string("filebase"))
+        , source(params.get_string("source"))
+        , user(params.get_string("user"))
+        , options(params.get_enum("options", option_values))
+        , match(params.get_string("match"), options)
+        , exclude(params.get_string("exclude"), options)
+    {
+    }
+
+    int         sessions = 0;   /* Session count */
+    int         topN;           /* Number of queries to store */
+    std::string filebase;       /* Base of fielname to log into */
+    std::string source;         /* The source of the client connection */
+    std::string user;           /* A user name to filter on */
+    int         options;        /* Regex options */
+    mxb::Regex  match;          /* Optional text to match against */
+    mxb::Regex  exclude;        /* Optional text to match against for exclusion */
 };
 
 class TOPN_INSTANCE : public mxs::Filter<TOPN_INSTANCE, TOPN_SESSION>
@@ -108,70 +141,163 @@ public:
         return nullptr;
     }
 
-    int     sessions;   /* Session count */
-    int     topN;       /* Number of queries to store */
-    char*   filebase;   /* Base of fielname to log into */
-    char*   source;     /* The source of the client connection */
-    char*   user;       /* A user name to filter on */
-    char*   match;      /* Optional text to match against */
-    regex_t re;         /* Compiled regex text */
-    char*   exclude;    /* Optional text to match against for exclusion */
-    regex_t exre;       /* Compiled regex nomatch text */
+    const Config& config() const
+    {
+        return m_config;
+    }
 
 private:
     TOPN_INSTANCE(const std::string& name, mxs::ConfigParameters* params)
+        : m_config(*params)
     {
-        sessions = 0;
-        topN = params->get_integer("count");
-        match = params->get_c_str_copy("match");
-        exclude = params->get_c_str_copy("exclude");
-        source = params->get_c_str_copy("source");
-        user = params->get_c_str_copy("user");
-        filebase = params->get_c_str_copy("filebase");
+    }
 
-        int cflags = params->get_enum("options", option_values);
-        bool error = false;
+    Config m_config;
+};
 
-        if (match && regcomp(&re, match, cflags))
-        {
-            MXS_ERROR("Invalid regular expression '%s'"
-                      " for the 'match' parameter.",
-                      match);
-            regfree(&re);
-            MXS_FREE(match);
-            match = NULL;
-            error = true;
-        }
-        if (exclude
-            && regcomp(&exre, exclude, cflags))
-        {
-            MXS_ERROR("Invalid regular expression '%s'"
-                      " for the 'nomatch' parameter.\n",
-                      exclude);
-            regfree(&exre);
-            MXS_FREE(exclude);
-            exclude = NULL;
-            error = true;
-        }
+TOPN_SESSION::TOPN_SESSION(TOPN_INSTANCE* instance, MXS_SESSION* session, SERVICE* service)
+    : mxs::FilterSession(session, service)
+    , m_instance(instance)
+{
+    const auto& config = m_instance->config();
 
-        if (error)
+    m_filename = config.filebase + "." + std::to_string(session->id());
+    m_total.tv_sec = 0;
+    m_total.tv_usec = 0;
+    gettimeofday(&m_connect, NULL);
+
+    if (!config.source.empty() && session->client_remote() != config.source)
+    {
+        m_active = false;
+    }
+
+    if (!config.user.empty() && session->user() != config.user)
+    {
+        m_active = false;
+    }
+}
+
+TOPN_SESSION::~TOPN_SESSION()
+{
+    timeval diff;
+    timeval disconnect;
+    gettimeofday(&disconnect, NULL);
+    timersub(&disconnect, &m_connect, &diff);
+
+    if (FILE* fp = fopen(m_filename.c_str(), "w"))
+    {
+        int statements = std::max(m_n_statements, 1);
+
+        fprintf(fp, "Top %d longest running queries in session.\n", m_instance->config().topN);
+        fprintf(fp, "==========================================\n\n");
+        fprintf(fp, "Time (sec) | Query\n");
+        fprintf(fp, "-----------+-----------------------------------------------------------------\n");
+
+        for (const auto& t : m_top)
         {
-            if (exclude)
+            if (!t.sql.empty())
             {
-                regfree(&exre);
-                MXS_FREE(exclude);
+                fprintf(fp, "%10.3f |  %s\n",
+                        (double) ((t.duration.tv_sec * 1000) + (t.duration.tv_usec / 1000)) / 1000,
+                        t.sql.c_str());
             }
-            if (match)
+        }
+
+        fprintf(fp, "-----------+-----------------------------------------------------------------\n");
+        struct tm tm;
+        localtime_r(&m_connect.tv_sec, &tm);
+        char buffer[32];    // asctime_r documentation requires 26
+        asctime_r(&tm, buffer);
+        fprintf(fp, "\n\nSession started %s", buffer);
+
+        fprintf(fp, "Connection from %s\n", m_pSession->client_remote().c_str());
+        fprintf(fp, "Username        %s\n", m_pSession->user().c_str());
+        fprintf(fp, "\nTotal of %d statements executed.\n", statements);
+        fprintf(fp, "Total statement execution time   %5d.%d seconds\n",
+                (int) m_total.tv_sec, (int) m_total.tv_usec / 1000);
+        fprintf(fp, "Average statement execution time %9.3f seconds\n",
+                (double) ((m_total.tv_sec * 1000) + (m_total.tv_usec / 1000)) / (1000 * statements));
+        fprintf(fp, "Total connection time            %5d.%d seconds\n",
+                (int) diff.tv_sec, (int) diff.tv_usec / 1000);
+        fclose(fp);
+    }
+}
+
+int32_t TOPN_SESSION::routeQuery(GWBUF* queue)
+{
+    if (m_active)
+    {
+        const auto& config = m_instance->config();
+        auto sql = mxs::extract_sql(queue);
+
+        if (!sql.empty())
+        {
+            if ((config.match.empty() || config.match.match(sql))
+                && (config.exclude.empty() || !config.exclude.match(sql)))
             {
-                regfree(&re);
-                MXS_FREE(match);
+                m_n_statements++;
+                gettimeofday(&m_start, NULL);
+                m_current = sql;
             }
-            MXS_FREE(filebase);
-            MXS_FREE(source);
-            MXS_FREE(user);
         }
     }
-};
+
+    return mxs::FilterSession::routeQuery(queue);
+}
+
+int32_t TOPN_SESSION::clientReply(GWBUF* buffer, const mxs::ReplyRoute& down, const mxs::Reply& reply)
+{
+    struct timeval tv, diff;
+
+    if (!m_current.empty())
+    {
+        gettimeofday(&tv, NULL);
+        timersub(&tv, &m_start, &diff);
+        timeradd(&m_total, &diff, &m_total);
+        m_top.emplace_back(diff, m_current);
+        m_current.clear();
+
+        std::sort(m_top.begin(), m_top.end(), ReverseCompare {});
+
+        if (m_top.size() > (size_t)m_instance->config().topN)
+        {
+            m_top.pop_back();
+        }
+    }
+
+    /* Pass the result upstream */
+    return mxs::FilterSession::clientReply(buffer, down, reply);
+}
+
+json_t* TOPN_SESSION::diagnostics() const
+{
+    json_t* rval = json_object();
+
+    json_object_set_new(rval, "session_filename", json_string(m_filename.c_str()));
+
+    json_t* arr = json_array();
+    int i = 0;
+
+    for (const auto& t : m_top)
+    {
+        if (!t.sql.empty())
+        {
+            double exec_time = ((t.duration.tv_sec * 1000.0) + (t.duration.tv_usec / 1000.0)) / 1000.0;
+
+            json_t* obj = json_object();
+
+            json_object_set_new(obj, "rank", json_integer(++i));
+            json_object_set_new(obj, "time", json_real(exec_time));
+            json_object_set_new(obj, "sql", json_string(t.sql.c_str()));
+
+            json_array_append_new(arr, obj);
+        }
+    }
+
+    json_object_set_new(rval, "top_queries", arr);
+
+    return rval;
+}
 
 extern "C"
 {
@@ -203,8 +329,8 @@ MXS_MODULE* MXS_CREATE_MODULE()
         {
             {"count",                 MXS_MODULE_PARAM_COUNT,   "10"                   },
             {"filebase",              MXS_MODULE_PARAM_STRING,  NULL, MXS_MODULE_OPT_REQUIRED},
-            {"match",                 MXS_MODULE_PARAM_STRING},
-            {"exclude",               MXS_MODULE_PARAM_STRING},
+            {"match",                 MXS_MODULE_PARAM_REGEX},
+            {"exclude",               MXS_MODULE_PARAM_REGEX},
             {"source",                MXS_MODULE_PARAM_STRING},
             {"user",                  MXS_MODULE_PARAM_STRING},
             {
@@ -220,261 +346,4 @@ MXS_MODULE* MXS_CREATE_MODULE()
 
     return &info;
 }
-}
-
-TOPN_SESSION::TOPN_SESSION(TOPN_INSTANCE* instance, MXS_SESSION* session, SERVICE* service)
-    : mxs::FilterSession(session, service)
-    , m_instance(instance)
-{
-    const char* remote;
-    const char* user;
-
-    filename = (char*) MXS_MALLOC(strlen(m_instance->filebase) + 20);
-    sprintf(filename, "%s.%lu", m_instance->filebase, session->id());
-
-    top = (TOPNQ**) MXS_CALLOC(m_instance->topN + 1, sizeof(TOPNQ*));
-    MXS_ABORT_IF_NULL(top);
-    for (int i = 0; i < m_instance->topN; i++)
-    {
-        top[i] = (TOPNQ*) MXS_CALLOC(1, sizeof(TOPNQ));
-        MXS_ABORT_IF_NULL(top[i]);
-        top[i]->sql = NULL;
-    }
-    n_statements = 0;
-    total.tv_sec = 0;
-    total.tv_usec = 0;
-    current = NULL;
-
-    if ((remote = session_get_remote(session)) != NULL)
-    {
-        clientHost = MXS_STRDUP_A(remote);
-    }
-    else
-    {
-        clientHost = NULL;
-    }
-    if ((user = session_get_user(session)) != NULL)
-    {
-        userName = MXS_STRDUP_A(user);
-    }
-    else
-    {
-        userName = NULL;
-    }
-    active = 1;
-    if (m_instance->source && clientHost && strcmp(clientHost, m_instance->source))
-    {
-        active = 0;
-    }
-    if (m_instance->user && userName && strcmp(userName, m_instance->user))
-    {
-        active = 0;
-    }
-
-    sprintf(filename,
-            "%s.%d",
-            m_instance->filebase,
-            m_instance->sessions);
-    gettimeofday(&connect, NULL);
-}
-
-TOPN_SESSION::~TOPN_SESSION()
-{
-    struct timeval diff;
-    int i;
-    FILE* fp;
-    int statements;
-
-    gettimeofday(&disconnect, NULL);
-    timersub((&disconnect), &(connect), &diff);
-    if ((fp = fopen(filename, "w")) != NULL)
-    {
-        statements = n_statements != 0 ? n_statements : 1;
-
-        fprintf(fp,
-                "Top %d longest running queries in session.\n",
-                m_instance->topN);
-        fprintf(fp, "==========================================\n\n");
-        fprintf(fp, "Time (sec) | Query\n");
-        fprintf(fp, "-----------+-----------------------------------------------------------------\n");
-        for (i = 0; i < m_instance->topN; i++)
-        {
-            if (top[i]->sql)
-            {
-                fprintf(fp,
-                        "%10.3f |  %s\n",
-                        (double) ((top[i]->duration.tv_sec * 1000)
-                                  + (top[i]->duration.tv_usec / 1000)) / 1000,
-                        top[i]->sql);
-            }
-        }
-        fprintf(fp, "-----------+-----------------------------------------------------------------\n");
-        struct tm tm;
-        localtime_r(&connect.tv_sec, &tm);
-        char buffer[32];    // asctime_r documentation requires 26
-        asctime_r(&tm, buffer);
-        fprintf(fp, "\n\nSession started %s", buffer);
-        if (clientHost)
-        {
-            fprintf(fp,
-                    "Connection from %s\n",
-                    clientHost);
-        }
-        if (userName)
-        {
-            fprintf(fp,
-                    "Username        %s\n",
-                    userName);
-        }
-        fprintf(fp,
-                "\nTotal of %d statements executed.\n",
-                statements);
-        fprintf(fp,
-                "Total statement execution time   %5d.%d seconds\n",
-                (int) total.tv_sec,
-                (int) total.tv_usec / 1000);
-        fprintf(fp,
-                "Average statement execution time %9.3f seconds\n",
-                (double) ((total.tv_sec * 1000)
-                          + (total.tv_usec / 1000))
-                / (1000 * statements));
-        fprintf(fp,
-                "Total connection time            %5d.%d seconds\n",
-                (int) diff.tv_sec,
-                (int) diff.tv_usec / 1000);
-        fclose(fp);
-    }
-
-    MXS_FREE(current);
-
-    for (int i = 0; i < m_instance->topN; i++)
-    {
-        MXS_FREE(top[i]->sql);
-        MXS_FREE(top[i]);
-    }
-
-    MXS_FREE(top);
-    MXS_FREE(clientHost);
-    MXS_FREE(userName);
-    MXS_FREE(filename);
-}
-
-int32_t TOPN_SESSION::routeQuery(GWBUF* queue)
-{
-    char* ptr;
-
-    if (active)
-    {
-        if ((ptr = modutil_get_SQL(queue)) != NULL)
-        {
-            if ((m_instance->match == NULL || regexec(&m_instance->re, ptr, 0, NULL, 0) == 0)
-                && (m_instance->exclude == NULL || regexec(&m_instance->exre, ptr, 0, NULL, 0) != 0))
-            {
-                n_statements++;
-                if (current)
-                {
-                    MXS_FREE(current);
-                }
-                gettimeofday(&start, NULL);
-                current = ptr;
-            }
-            else
-            {
-                MXS_FREE(ptr);
-            }
-        }
-    }
-    /* Pass the query downstream */
-    return mxs::FilterSession::routeQuery(queue);
-}
-
-static int cmp_topn(const void* va, const void* vb)
-{
-    TOPNQ** a = (TOPNQ**) va;
-    TOPNQ** b = (TOPNQ**) vb;
-
-    if ((*b)->duration.tv_sec == (*a)->duration.tv_sec)
-    {
-        return (*b)->duration.tv_usec - (*a)->duration.tv_usec;
-    }
-    return (*b)->duration.tv_sec - (*a)->duration.tv_sec;
-}
-
-int32_t TOPN_SESSION::clientReply(GWBUF* buffer, const mxs::ReplyRoute& down, const mxs::Reply& reply)
-{
-    struct timeval tv, diff;
-    int i, inserted;
-
-    if (current)
-    {
-        gettimeofday(&tv, NULL);
-        timersub(&tv, &start, &diff);
-
-        timeradd(&total, &diff, &total);
-
-        inserted = 0;
-        for (i = 0; i < m_instance->topN; i++)
-        {
-            if (top[i]->sql == NULL)
-            {
-                top[i]->sql = current;
-                top[i]->duration = diff;
-                inserted = 1;
-                break;
-            }
-        }
-
-        if (inserted == 0 && ((diff.tv_sec > top[m_instance->topN - 1]->duration.tv_sec)
-                              || (diff.tv_sec == top[m_instance->topN - 1]->duration.tv_sec
-                                  && diff.tv_usec > top[m_instance->topN - 1]->duration.tv_usec)))
-        {
-            MXS_FREE(top[m_instance->topN - 1]->sql);
-            top[m_instance->topN - 1]->sql = current;
-            top[m_instance->topN - 1]->duration = diff;
-            inserted = 1;
-        }
-
-        if (inserted)
-        {
-            qsort(top, m_instance->topN, sizeof(TOPNQ*), cmp_topn);
-        }
-        else
-        {
-            MXS_FREE(current);
-        }
-        current = NULL;
-    }
-
-    /* Pass the result upstream */
-    return mxs::FilterSession::clientReply(buffer, down, reply);
-}
-
-json_t* TOPN_SESSION::diagnostics() const
-{
-    json_t* rval = json_object();
-
-    json_object_set_new(rval, "session_filename", json_string(filename));
-
-    json_t* arr = json_array();
-
-    for (int i = 0; i < m_instance->topN; i++)
-    {
-        if (top[i]->sql)
-        {
-            double exec_time = ((top[i]->duration.tv_sec * 1000.0)
-                                + (top[i]->duration.tv_usec / 1000.0)) / 1000.0;
-
-            json_t* obj = json_object();
-
-            json_object_set_new(obj, "rank", json_integer(i + 1));
-            json_object_set_new(obj, "time", json_real(exec_time));
-            json_object_set_new(obj, "sql", json_string(top[i]->sql));
-
-            json_array_append_new(arr, obj);
-        }
-    }
-
-    json_object_set_new(rval, "top_queries", arr);
-
-    return rval;
 }
