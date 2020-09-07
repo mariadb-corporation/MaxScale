@@ -83,7 +83,7 @@ bool avro_save_conversion_state(Avro* router)
     FILE* config_file;
     char filename[PATH_MAX + 1];
 
-    snprintf(filename, sizeof(filename), "%s/" AVRO_PROGRESS_FILE ".tmp", router->avrodir.c_str());
+    snprintf(filename, sizeof(filename), "%s/" AVRO_PROGRESS_FILE ".tmp", router->config().avrodir.c_str());
 
     /* open file for writing */
     config_file = fopen(filename, "wb");
@@ -111,7 +111,7 @@ bool avro_save_conversion_state(Avro* router)
 
     /* rename tmp file to right filename */
     char newname[PATH_MAX + 1];
-    snprintf(newname, sizeof(newname), "%s/" AVRO_PROGRESS_FILE, router->avrodir.c_str());
+    snprintf(newname, sizeof(newname), "%s/" AVRO_PROGRESS_FILE, router->config().avrodir.c_str());
     int rc = rename(filename, newname);
 
     if (rc == -1)
@@ -188,7 +188,7 @@ bool avro_load_conversion_state(Avro* router)
     char filename[PATH_MAX + 1];
     bool rval = false;
 
-    snprintf(filename, sizeof(filename), "%s/" AVRO_PROGRESS_FILE, router->avrodir.c_str());
+    snprintf(filename, sizeof(filename), "%s/" AVRO_PROGRESS_FILE, router->config().avrodir.c_str());
 
     /** No stored state, this is the first time the router is started */
     if (access(filename, F_OK) == -1)
@@ -315,13 +315,13 @@ static avro_binlog_end_t rotate_to_next_file_if_exists(Avro* router, uint64_t po
 {
     avro_binlog_end_t rval = AVRO_LAST_FILE;
 
-    if (binlog_next_file_exists(router->binlogdir.c_str(), router->binlog_name.c_str()))
+    if (binlog_next_file_exists(router->config().binlogdir.c_str(), router->binlog_name.c_str()))
     {
         char next_binlog[BINLOG_FNAMELEN + 1];
         if (snprintf(next_binlog,
                      sizeof(next_binlog),
                      BINLOG_NAMEFMT,
-                     router->filestem.c_str(),
+                     router->config().filestem.c_str(),
                      get_next_binlog(router->binlog_name.c_str())) >= (int)sizeof(next_binlog))
         {
             MXS_ERROR("Next binlog name did not fit into the allocated buffer "
@@ -657,8 +657,8 @@ avro_binlog_end_t avro_read_all_events(Avro* router)
 
         gwbuf_free(result);
 
-        if (router->row_count >= router->row_target
-            || router->trx_count >= router->trx_target)
+        if (router->row_count >= router->config().row_target
+            || router->trx_count >= router->config().trx_target)
         {
             do_checkpoint(router);
         }

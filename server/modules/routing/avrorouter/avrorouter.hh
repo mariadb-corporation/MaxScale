@@ -84,6 +84,25 @@ static const MXS_ENUM_VALUE codec_values[] =
     {NULL}
 };
 
+class AvroConfig : public mxs::config::Configuration
+{
+public:
+    AvroConfig(const std::string& name);
+
+    std::string             filestem;
+    std::string             binlogdir;
+    std::string             avrodir;
+    std::string             gtid;
+    int64_t                 trx_target;
+    int64_t                 row_target;
+    int64_t                 server_id;
+    int64_t                 start_index;
+    int64_t                 block_size;
+    mxs::config::RegexValue match;
+    mxs::config::RegexValue exclude;
+    mxs_avro_codec_type     codec;
+};
+
 class AvroSession;
 
 class Avro : public mxs::Router<Avro, AvroSession>
@@ -108,25 +127,26 @@ public:
         return false;
     }
 
+    const AvroConfig& config() const
+    {
+        return m_config;
+    }
+
     SERVICE*    service;    /*< Pointer to the service using this router */
-    std::string filestem;   /*< Root of binlog filename */
-    std::string binlogdir;  /*< The directory where the binlog files are stored */
-    std::string avrodir;    /*< The directory with the AVRO files */
     std::string binlog_name;/*< Name of the current binlog file */
     uint64_t    current_pos;/*< Current binlog position */
     int         binlog_fd;  /*< File descriptor of the binlog file being read */
-    uint64_t    trx_count;  /*< Transactions processed */
-    uint64_t    trx_target; /*< Number of transactions that trigger a flush */
-    uint64_t    row_count;  /*< Row events processed */
-    uint64_t    row_target; /*< Number of row events that trigger a flush */
+    int64_t     trx_count;  /*< Transactions processed */
+    int64_t     row_count;  /*< Row events processed */
     uint32_t    task_handle;/**< Delayed task handle */
 
     std::unique_ptr<Rpl> handler;
 
 private:
     std::unique_ptr<cdc::Replicator> m_replicator;
+    AvroConfig                       m_config;
 
-    Avro(SERVICE* service, mxs::ConfigParameters* params);
+    Avro(SERVICE* service, mxs::ConfigParameters* params, AvroConfig&& config);
 };
 
 class AvroSession : public mxs::RouterSession

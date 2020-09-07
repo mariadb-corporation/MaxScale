@@ -50,44 +50,46 @@ using namespace maxscale;
 // static
 Avro* Avro::create(SERVICE* service, mxs::ConfigParameters* params)
 {
-    auto router = new Avro(service, params);
+    Avro* router = nullptr;
+    AvroConfig config(service->name());
+    mxb_assert(config.specification().validate(*params));
 
-    if (router && !params->contains(CN_SERVERS) && !params->contains(CN_CLUSTER))
+    if (config.configure(*params))
     {
-        conversion_task_ctl(router, true);
+        router = new Avro(service, params, std::move(config));
+
+        if (router && !params->contains(CN_SERVERS) && !params->contains(CN_CLUSTER))
+        {
+            conversion_task_ctl(router, true);
+        }
     }
 
     return router;
 }
 
-Avro::Avro(SERVICE* service, mxs::ConfigParameters* params)
+Avro::Avro(SERVICE* service, mxs::ConfigParameters* params, AvroConfig&& config)
     : mxs::Router<Avro, AvroSession>(service)
     , service(service)
-    , filestem(params->get_string("filestem"))
-    , binlogdir(params->get_string("binlogdir"))
-    , avrodir(params->get_string("avrodir"))
     , current_pos(4)
     , binlog_fd(-1)
     , trx_count(0)
-    , trx_target(params->get_integer("group_trx"))
     , row_count(0)
-    , row_target(params->get_integer("group_rows"))
     , task_handle(0)
+    , m_config(std::move(config))
 {
-    uint64_t block_size = service->params().get_size("block_size");
-    mxs_avro_codec_type codec = static_cast<mxs_avro_codec_type>(
-        service->params().get_enum("codec", codec_values));
+    uint64_t block_size = m_config.block_size;
+    mxs_avro_codec_type codec = m_config.codec;
 
     if (params->contains(CN_SERVERS) || params->contains(CN_CLUSTER))
     {
         MXS_NOTICE("Replicating directly from a master server");
         cdc::Config cnf;
         cnf.service = service;
-        cnf.statedir = avrodir;
-        cnf.server_id = params->get_integer("server_id");
-        cnf.gtid = params->get_string("gtid_start_pos");
-        cnf.match = params->get_compiled_regex("match", 0, NULL).release();
-        cnf.exclude = params->get_compiled_regex("exclude", 0, NULL).release();
+        cnf.statedir = m_config.avrodir;
+        cnf.server_id = m_config.server_id;
+        cnf.gtid = m_config.gtid;
+        cnf.match = m_config.match.sCode.get();
+        cnf.exclude = m_config.exclude.sCode.get();
 
         auto worker = mxs::RoutingWorker::get(mxs::RoutingWorker::MAIN);
         worker->execute(
@@ -102,27 +104,27 @@ Avro::Avro(SERVICE* service, mxs::ConfigParameters* params)
     {
         handler.reset(
             new Rpl(service,
-                    SRowEventHandler(new AvroConverter(service, avrodir, block_size, codec)),
-                    params->get_compiled_regex("match", 0, NULL).release(),
-                    params->get_compiled_regex("exclude", 0, NULL).release()));
+                    SRowEventHandler(new AvroConverter(service, m_config.avrodir, block_size, codec)),
+                    m_config.match.sCode.get(),
+                    m_config.exclude.sCode.get()));
 
         char filename[BINLOG_FNAMELEN + 1];
         snprintf(filename,
                  sizeof(filename),
                  BINLOG_NAMEFMT,
-                 filestem.c_str(),
-                 static_cast<int>(params->get_integer("start_index")));
+                 m_config.filestem.c_str(),
+                 static_cast<int>(m_config.start_index));
         binlog_name = filename;
 
-        MXS_NOTICE("Reading MySQL binlog files from %s", binlogdir.c_str());
+        MXS_NOTICE("Reading MySQL binlog files from %s", m_config.binlogdir.c_str());
         MXS_NOTICE("First binlog is: %s", binlog_name.c_str());
 
         // TODO: Do these in Avro::create
         avro_load_conversion_state(this);
-        handler->load_metadata(avrodir);
+        handler->load_metadata(m_config.avrodir);
     }
 
-    MXS_NOTICE("Avro files stored at: %s", avrodir.c_str());
+    MXS_NOTICE("Avro files stored at: %s", m_config.avrodir.c_str());
 }
 
 mxs::RouterSession* Avro::newSession(MXS_SESSION* session, const Endpoints& endpoints)
@@ -137,11 +139,11 @@ json_t* Avro::diagnostics() const
     json_t* rval = json_object();
 
     char pathbuf[PATH_MAX + 1];
-    snprintf(pathbuf, sizeof(pathbuf), "%s/%s", router_inst->avrodir.c_str(), AVRO_PROGRESS_FILE);
+    snprintf(pathbuf, sizeof(pathbuf), "%s/%s", router_inst->config().avrodir.c_str(), AVRO_PROGRESS_FILE);
 
     json_object_set_new(rval, "infofile", json_string(pathbuf));
-    json_object_set_new(rval, "avrodir", json_string(router_inst->avrodir.c_str()));
-    json_object_set_new(rval, "binlogdir", json_string(router_inst->binlogdir.c_str()));
+    json_object_set_new(rval, "avrodir", json_string(router_inst->config().avrodir.c_str()));
+    json_object_set_new(rval, "binlogdir", json_string(router_inst->config().binlogdir.c_str()));
     json_object_set_new(rval, "binlog_name", json_string(router_inst->binlog_name.c_str()));
     json_object_set_new(rval, "binlog_pos", json_integer(router_inst->current_pos));
 

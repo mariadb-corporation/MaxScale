@@ -38,10 +38,79 @@
 #include <maxscale/service.hh>
 #include <maxscale/utils.h>
 #include <maxscale/routingworker.hh>
+#include <maxscale/config2.hh>
 
 #include "avro_converter.hh"
 
 using namespace maxbase;
+namespace cfg = mxs::config;
+using Opt = cfg::ParamPath::Options;
+constexpr uint32_t opts = Opt::C | Opt::X | Opt::R | Opt::W;
+
+static cfg::Specification s_spec(MXS_MODULE_NAME, cfg::Specification::Kind::ROUTER);
+
+static cfg::ParamPath s_binlogdir(
+    &s_spec, "binlogdir", "Path to directory containing binlog files", opts);
+
+static cfg::ParamPath s_avrodir(
+    &s_spec, "avrodir", "Path to directory where avro files are stored", opts);
+
+static cfg::ParamString s_filestem(
+    &s_spec, "filestem", "Root part of the binlog file name", "mysql-bin");
+
+static cfg::ParamCount s_group_rows(
+    &s_spec, "group_rows",
+    "Controls the number of row events that are grouped into a single Avro data block",
+    1000);
+
+static cfg::ParamCount s_group_trx(
+    &s_spec, "group_trx",
+    "Controls the number of transactions that are grouped into a single Avro data block",
+    1);
+
+static cfg::ParamCount s_start_index(
+    &s_spec, "start_index", "The starting index number of the binlog file", 1);
+
+static cfg::ParamSize s_block_size(
+    &s_spec, "block_size", "The Avro data block size in bytes", 0);
+
+static cfg::ParamEnum<mxs_avro_codec_type> s_codec(
+    &s_spec, "codec", "Avro compression codec",
+{
+    {MXS_AVRO_CODEC_NULL, "null", },
+    {MXS_AVRO_CODEC_DEFLATE, "deflate"},
+},
+    MXS_AVRO_CODEC_NULL);
+
+static cfg::ParamRegex s_match(
+    &s_spec, "match", "Process events whose table matches this regex", "");
+
+static cfg::ParamRegex s_exclude(
+    &s_spec, "exclude", "Exclude events whose table matches this regex", "");
+
+static cfg::ParamCount s_server_id(
+    &s_spec, "server_id", "Server ID for direct replication mode", 1234);
+
+static cfg::ParamString s_gtid_start_pos(
+    &s_spec, "gtid_start_pos", "GTID position to start replicating from", "");
+
+
+AvroConfig::AvroConfig(const std::string& name)
+    : mxs::config::Configuration(name, &s_spec)
+{
+    add_native(&filestem, &s_filestem);
+    add_native(&binlogdir, &s_binlogdir);
+    add_native(&avrodir, &s_avrodir);
+    add_native(&gtid, &s_gtid_start_pos);
+    add_native(&trx_target, &s_group_trx);
+    add_native(&row_target, &s_group_rows);
+    add_native(&server_id, &s_server_id);
+    add_native(&start_index, &s_start_index);
+    add_native(&block_size, &s_block_size);
+    add_native(&match, &s_match);
+    add_native(&exclude, &s_exclude);
+    add_native(&codec, &s_codec);
+}
 
 bool converter_func(Worker::Call::action_t action, Avro* router)
 {
@@ -56,7 +125,7 @@ bool converter_func(Worker::Call::action_t action, Avro* router)
     uint64_t start_pos = router->current_pos;
     std::string binlog_name = router->binlog_name;
 
-    if (avro_open_binlog(router->binlogdir.c_str(), router->binlog_name.c_str(), &router->binlog_fd))
+    if (avro_open_binlog(router->config().binlogdir.c_str(), router->binlog_name.c_str(), &router->binlog_fd))
     {
         binlog_end = avro_read_all_events(router);
 
@@ -218,9 +287,9 @@ static bool avro_handle_purge(const MODULECMD_ARG* args, json_t** output)
     conversion_task_ctl(inst, false);
 
     // Then delete the files
-    return do_unlink("%s/%s", inst->avrodir.c_str(), AVRO_PROGRESS_FILE)    // State file
-           && do_unlink_with_pattern("/%s/*.avro", inst->avrodir.c_str())   // .avro files
-           && do_unlink_with_pattern("/%s/*.avsc", inst->avrodir.c_str());  // .avsc files
+    return do_unlink("%s/%s", inst->config().avrodir.c_str(), AVRO_PROGRESS_FILE)   // State file
+           && do_unlink_with_pattern("/%s/*.avro", inst->config().avrodir.c_str())  // .avro files
+           && do_unlink_with_pattern("/%s/*.avsc", inst->config().avrodir.c_str()); // .avsc files
 }
 
 /**
@@ -277,43 +346,8 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         NULL,
         NULL,
         NULL,
-        {
-            {
-                "binlogdir",
-                MXS_MODULE_PARAM_PATH,
-                NULL,
-                MXS_MODULE_OPT_PATH_R_OK
-                | MXS_MODULE_OPT_PATH_W_OK
-                | MXS_MODULE_OPT_PATH_X_OK
-                | MXS_MODULE_OPT_PATH_CREAT
-            },
-            {
-                "avrodir",
-                MXS_MODULE_PARAM_PATH,
-                MXS_DEFAULT_DATADIR,
-                MXS_MODULE_OPT_PATH_R_OK
-                | MXS_MODULE_OPT_PATH_W_OK
-                | MXS_MODULE_OPT_PATH_X_OK
-                | MXS_MODULE_OPT_PATH_CREAT
-            },
-            {"filestem",                   MXS_MODULE_PARAM_STRING, BINLOG_NAME_ROOT},
-            {"group_rows",                 MXS_MODULE_PARAM_COUNT,  "1000"          },
-            {"group_trx",                  MXS_MODULE_PARAM_COUNT,  "1"             },
-            {"start_index",                MXS_MODULE_PARAM_COUNT,  "1"             },
-            {"block_size",                 MXS_MODULE_PARAM_SIZE,   "0"             },
-            {
-                "codec",
-                MXS_MODULE_PARAM_ENUM,
-                "null",
-                MXS_MODULE_OPT_ENUM_UNIQUE,
-                codec_values
-            },
-            {"match",                      MXS_MODULE_PARAM_REGEX},
-            {"exclude",                    MXS_MODULE_PARAM_REGEX},
-            {"server_id",                  MXS_MODULE_PARAM_COUNT,  "1234"          },
-            {"gtid_start_pos",             MXS_MODULE_PARAM_STRING},
-            {MXS_END_MODULE_PARAMS}
-        }
+        {{nullptr}},
+        &s_spec
     };
 
     return &info;

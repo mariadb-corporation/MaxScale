@@ -340,7 +340,7 @@ void AvroSession::process_command(GWBUF* queue)
             {
                 m_client->write("ERR NO-FILE Filename not specified.");
             }
-            else if (!file_in_dir(m_router->avrodir.c_str(), m_avro_binfile.c_str()))
+            else if (!file_in_dir(m_router->config().avrodir.c_str(), m_avro_binfile.c_str()))
             {
                 auto msg = mxb::string_printf("ERR NO-FILE File '%s' not found.", m_avro_binfile.c_str());
                 m_client->write(msg.c_str());
@@ -537,7 +537,7 @@ bool AvroSession::stream_data()
     if (!m_avro_binfile.empty())
     {
         bool ok = true;
-        std::string filename = m_router->avrodir + '/' + m_avro_binfile;
+        std::string filename = m_router->config().avrodir + '/' + m_avro_binfile;
 
         if (!m_file_handle && !(m_file_handle = maxavro_file_open(filename.c_str())))
         {
@@ -708,11 +708,11 @@ void AvroSession::client_callback()
         switch (m_format)
         {
         case AVRO_FORMAT_JSON:
-            schema = read_avro_json_schema(m_avro_binfile, m_router->avrodir);
+            schema = read_avro_json_schema(m_avro_binfile, m_router->config().avrodir);
             break;
 
         case AVRO_FORMAT_AVRO:
-            schema = read_avro_binary_schema(m_avro_binfile, m_router->avrodir);
+            schema = read_avro_binary_schema(m_avro_binfile, m_router->config().avrodir);
             break;
 
         default:
@@ -729,7 +729,7 @@ void AvroSession::client_callback()
     /** Stream the data to the client */
     bool read_more = stream_data();
     mxb_assert(!m_avro_binfile.empty() && strstr(m_avro_binfile.c_str(), ".avro"));
-    std::string filename = get_next_filename(m_avro_binfile, m_router->avrodir);
+    std::string filename = get_next_filename(m_avro_binfile, m_router->config().avrodir);
 
     bool next_file;
     /** If the next file is available, send it to the client */
