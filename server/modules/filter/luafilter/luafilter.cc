@@ -227,19 +227,22 @@ public:
     ~LUA_SESSION();
     void close();
 
-    MXS_SESSION*     session {nullptr};
-    lua_State*       lua_state {nullptr};
-    GWBUF*           current_query {nullptr};
-    SERVICE*         service {nullptr};
-    mxs::Downstream* down {nullptr};
-    mxs::Upstream*   up {nullptr};
+    int routeQuery(GWBUF* queue);
+    int clientReply(GWBUF* queue, const mxs::ReplyRoute& down, const mxs::Reply& reply);
+
     LUA_INSTANCE*    m_filter {nullptr};
+    MXS_SESSION*     m_session {nullptr};
+    SERVICE*         m_service {nullptr};
+    lua_State*       m_lua_state {nullptr};
+    GWBUF*           m_current_query {nullptr};
+    mxs::Downstream* m_down {nullptr};
+    mxs::Upstream*   m_up {nullptr};
 };
 
 LUA_SESSION::LUA_SESSION(MXS_SESSION* session, SERVICE* service, LUA_INSTANCE* filter)
-    : session(session)
-    , service(service)
-    , m_filter(filter)
+    : m_filter(filter)
+    , m_session(session)
+    , m_service(service)
 {
 }
 
@@ -360,38 +363,38 @@ LUA_SESSION* LUA_INSTANCE::newSession(MXS_SESSION* session, SERVICE* service, mx
                                       mxs::Upstream* upstream)
 {
     auto my_session = new LUA_SESSION(session, service, this);
-    my_session->down = downstream;
-    my_session->up = upstream;
+    my_session->m_down = downstream;
+    my_session->m_up = upstream;
 
     if (!session_script.empty())
     {
-        my_session->lua_state = luaL_newstate();
-        luaL_openlibs(my_session->lua_state);
+        my_session->m_lua_state = luaL_newstate();
+        luaL_openlibs(my_session->m_lua_state);
 
-        if (luaL_dofile(my_session->lua_state, session_script.c_str()))
+        if (luaL_dofile(my_session->m_lua_state, session_script.c_str()))
         {
             MXS_ERROR("Failed to execute session script at '%s': %s.",
                       session_script.c_str(),
-                      lua_tostring(my_session->lua_state, -1));
-            lua_close(my_session->lua_state);
+                      lua_tostring(my_session->m_lua_state, -1));
+            lua_close(my_session->m_lua_state);
             delete my_session;
             my_session = nullptr;
         }
         else
         {
-            expose_functions(my_session->lua_state, &my_session->current_query);
+            expose_functions(my_session->m_lua_state, &my_session->m_current_query);
 
             /** Call the newSession entry point */
-            lua_getglobal(my_session->lua_state, "newSession");
-            lua_pushstring(my_session->lua_state, session->user().c_str());
-            lua_pushstring(my_session->lua_state, session->client_remote().c_str());
+            lua_getglobal(my_session->m_lua_state, "newSession");
+            lua_pushstring(my_session->m_lua_state, session->user().c_str());
+            lua_pushstring(my_session->m_lua_state, session->client_remote().c_str());
 
-            if (lua_pcall(my_session->lua_state, 2, 0, 0))
+            if (lua_pcall(my_session->m_lua_state, 2, 0, 0))
             {
                 MXS_WARNING("Failed to get global variable 'newSession': '%s'."
                             " The newSession entry point will not be called.",
-                            lua_tostring(my_session->lua_state, -1));
-                lua_pop(my_session->lua_state, -1);     // Pop the error off the stack
+                            lua_tostring(my_session->m_lua_state, -1));
+                lua_pop(my_session->m_lua_state, -1);       // Pop the error off the stack
             }
         }
     }
@@ -431,15 +434,15 @@ static void closeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session)
 
 void LUA_SESSION::close()
 {
-    if (lua_state)
+    if (m_lua_state)
     {
-        lua_getglobal(lua_state, "closeSession");
-        if (lua_pcall(lua_state, 0, 0, 0))
+        lua_getglobal(m_lua_state, "closeSession");
+        if (lua_pcall(m_lua_state, 0, 0, 0))
         {
             MXS_WARNING("Failed to get global variable 'closeSession': '%s'. The closeSession entry point "
                         "will not be called.",
-                        lua_tostring(lua_state, -1));
-            lua_pop(lua_state, -1);
+                        lua_tostring(m_lua_state, -1));
+            lua_pop(m_lua_state, -1);
         }
     }
 
@@ -472,9 +475,9 @@ static void freeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session)
 
 LUA_SESSION::~LUA_SESSION()
 {
-    if (lua_state)
+    if (m_lua_state)
     {
-        lua_close(lua_state);
+        lua_close(m_lua_state);
     }
 }
 
@@ -493,18 +496,24 @@ static int32_t clientReply(MXS_FILTER* instance,
                            const mxs::ReplyRoute& down,
                            const mxs::Reply& reply)
 {
-    LUA_SESSION* my_session = (LUA_SESSION*) session;
-    LUA_INSTANCE* my_instance = (LUA_INSTANCE*) instance;
+    auto my_session = (LUA_SESSION*) session;
+    return my_session->clientReply(queue, down, reply);
+}
 
-    if (my_session->lua_state)
+int LUA_SESSION::clientReply(GWBUF* queue, const maxscale::ReplyRoute& down, const mxs::Reply& reply)
+{
+    LUA_SESSION* my_session = this;
+    LUA_INSTANCE* my_instance = m_filter;
+
+    if (my_session->m_lua_state)
     {
-        lua_getglobal(my_session->lua_state, "clientReply");
+        lua_getglobal(my_session->m_lua_state, "clientReply");
 
-        if (lua_pcall(my_session->lua_state, 0, 0, 0))
+        if (lua_pcall(my_session->m_lua_state, 0, 0, 0))
         {
             MXS_ERROR("Session scope call to 'clientReply' failed: '%s'.",
-                      lua_tostring(my_session->lua_state, -1));
-            lua_pop(my_session->lua_state, -1);
+                      lua_tostring(my_session->m_lua_state, -1));
+            lua_pop(my_session->m_lua_state, -1);
         }
     }
 
@@ -517,14 +526,12 @@ static int32_t clientReply(MXS_FILTER* instance,
         if (lua_pcall(my_instance->global_lua_state, 0, 0, 0))
         {
             MXS_ERROR("Global scope call to 'clientReply' failed: '%s'.",
-                      lua_tostring(my_session->lua_state, -1));
+                      lua_tostring(my_session->m_lua_state, -1));
             lua_pop(my_instance->global_lua_state, -1);
         }
     }
 
-    return my_session->up->clientReply(my_session->up->instance,
-                                       my_session->up->session,
-                                       queue, down, reply);
+    return m_up->clientReply(m_up->instance, m_up->session, queue, down, reply);
 }
 
 /**
@@ -547,8 +554,15 @@ static int32_t clientReply(MXS_FILTER* instance,
  */
 static int32_t routeQuery(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GWBUF* queue)
 {
-    LUA_SESSION* my_session = (LUA_SESSION*) session;
-    LUA_INSTANCE* my_instance = (LUA_INSTANCE*) instance;
+    auto my_session = (LUA_SESSION*) session;
+    return my_session->routeQuery(queue);
+}
+
+int LUA_SESSION::routeQuery(GWBUF* queue)
+{
+    auto my_session = this;
+    auto my_instance = m_filter;
+
     char* fullquery = NULL;
     bool route = true;
     GWBUF* forward = queue;
@@ -558,34 +572,34 @@ static int32_t routeQuery(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GWB
     {
         fullquery = modutil_get_SQL(queue);
 
-        if (fullquery && my_session->lua_state)
+        if (fullquery && my_session->m_lua_state)
         {
             /** Store the current query being processed */
-            my_session->current_query = queue;
+            my_session->m_current_query = queue;
 
-            lua_getglobal(my_session->lua_state, "routeQuery");
+            lua_getglobal(my_session->m_lua_state, "routeQuery");
 
-            lua_pushlstring(my_session->lua_state, fullquery, strlen(fullquery));
+            lua_pushlstring(my_session->m_lua_state, fullquery, strlen(fullquery));
 
-            if (lua_pcall(my_session->lua_state, 1, 1, 0))
+            if (lua_pcall(my_session->m_lua_state, 1, 1, 0))
             {
                 MXS_ERROR("Session scope call to 'routeQuery' failed: '%s'.",
-                          lua_tostring(my_session->lua_state, -1));
-                lua_pop(my_session->lua_state, -1);
+                          lua_tostring(my_session->m_lua_state, -1));
+                lua_pop(my_session->m_lua_state, -1);
             }
-            else if (lua_gettop(my_session->lua_state))
+            else if (lua_gettop(my_session->m_lua_state))
             {
-                if (lua_isstring(my_session->lua_state, -1))
+                if (lua_isstring(my_session->m_lua_state, -1))
                 {
                     gwbuf_free(forward);
-                    forward = modutil_create_query(lua_tostring(my_session->lua_state, -1));
+                    forward = modutil_create_query(lua_tostring(my_session->m_lua_state, -1));
                 }
-                else if (lua_isboolean(my_session->lua_state, -1))
+                else if (lua_isboolean(my_session->m_lua_state, -1))
                 {
-                    route = lua_toboolean(my_session->lua_state, -1);
+                    route = lua_toboolean(my_session->m_lua_state, -1);
                 }
             }
-            my_session->current_query = NULL;
+            my_session->m_current_query = NULL;
         }
 
         if (my_instance->global_lua_state)
@@ -626,15 +640,15 @@ static int32_t routeQuery(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GWB
     {
         gwbuf_free(queue);
         GWBUF* err = modutil_create_mysql_err_msg(1, 0, 1045, "28000", "Access denied.");
-        session_set_response(my_session->session, my_session->service,
-                             my_session->up, err);
+        session_set_response(my_session->m_session, my_session->m_service,
+                             my_session->m_up, err);
         rc = 1;
     }
     else
     {
-        rc = my_session->down->routeQuery(my_session->down->instance,
-                                          my_session->down->session,
-                                          forward);
+        rc = my_session->m_down->routeQuery(my_session->m_down->instance,
+                                            my_session->m_down->session,
+                                            forward);
     }
 
     return rc;
