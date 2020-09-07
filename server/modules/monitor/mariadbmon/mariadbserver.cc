@@ -1558,7 +1558,8 @@ bool MariaDBServer::demote(GeneralOpData& general, ServerOperation& demotion, Op
             // Step 2a: Remove [Master] from this server. This prevents compatible routers (RWS)
             // from routing writes to this server. Writes in flight will go through, at least until
             // read_only is set.
-            clear_status(SERVER_MASTER);
+            this->server->clear_status(SERVER_MASTER);
+
             // Step 2b: If other users with SUPER privileges are on, kick them out now since
             // read_only doesn't stop them from doing writes. This does not stop them from immediately
             // logging back in but it's better than nothing. This also stops super-user writes going

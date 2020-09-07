@@ -103,6 +103,16 @@ public:
     bool run_manual_switchover(SERVER* new_master, SERVER* current_master, json_t** error_out);
 
     /**
+     * Perform user-activated switchover. Does not wait for results, which should be fetched separately.
+     *
+     * @param new_master      The specified new master. If NULL, monitor will autoselect.
+     * @param current_master  The specified current master. If NULL, monitor will autoselect.
+     * @param error_out       Json error output
+     * @return True if switchover was scheduled
+     */
+    bool schedule_async_switchover(SERVER* new_master, SERVER* current_master, json_t** error_out);
+
+    /**
      * Perform user-activated failover.
      *
      * @param error_out Json error output
@@ -135,6 +145,15 @@ public:
      * @return True if locks are in use, even if none were released
      */
     bool run_release_locks(json_t** error_out);
+
+    /**
+     * Fetch results of last asynchronous command. If an async command is still running, outputs
+     * "<command> in still pending/running".
+     *
+     * @param output Output
+     * @return True if results of a manual command were available.
+     */
+    bool fetch_async_results(json_t** output);
 
 protected:
     bool can_be_disabled(const mxs::MonitorServer& server, std::string* errmsg_out) const override;
@@ -207,13 +226,25 @@ private:
     struct ManualCommand
     {
     public:
-        std::mutex                mutex;        /* Mutex used by the condition variables */
-        std::condition_variable   has_command;  /* Notified when a command is waiting execution */
-        std::condition_variable   has_result;   /* Notified when the command has ran */
-        std::function<void(void)> method;       /* The method to run when executing the command */
+        using CmdMethod = std::function<bool (void)>;
+        enum class ExecState
+        {
+            NONE,
+            SCHEDULED,
+            RUNNING,
+        };
 
-        bool command_waiting_exec = false;  /* Guard variable for has_command */
-        bool result_waiting = false;        /* Guard variable for has_result */
+        std::mutex lock;    /* Reads and writes should happen while this lock is held. */
+
+        std::atomic<ExecState> exec_state {ExecState::NONE};/* Manual command exec state */
+        std::string            cmd_name;                    /* Name of current command */
+        CmdMethod              method;                      /* Command implementation */
+
+        std::condition_variable cmd_complete_notifier;  /* Notified when the command has ran */
+        bool                    cmd_complete {false};   /* Guard variable for notifier */
+
+        bool    cmd_success {false};    /* Return value of command */
+        json_t* cmd_errors {nullptr};   /* Error storage */
     };
 
     class DNSResolver
@@ -346,7 +377,10 @@ private:
     void reset_server_info();
 
     void reset_node_index_info();
-    bool execute_manual_command(std::function<void ()> command, json_t** error_out);
+    bool execute_manual_command(ManualCommand::CmdMethod command, const std::string& cmd_name,
+                                json_t** error_out);
+    bool schedule_manual_command(ManualCommand::CmdMethod command, const std::string& cmd_name,
+                                 json_t** error_out);
     bool immediate_tick_required() const override;
     bool server_locks_in_use() const;
     void execute_task_all_servers(const ServerFunction& task);
