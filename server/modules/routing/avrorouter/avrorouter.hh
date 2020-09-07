@@ -84,14 +84,15 @@ static const MXS_ENUM_VALUE codec_values[] =
     {NULL}
 };
 
+class AvroSession;
 
-class Avro : public MXS_ROUTER
+class Avro : public mxs::Router<Avro, AvroSession>
 {
     Avro(const Avro&) = delete;
     Avro& operator=(const Avro&) = delete;
 
 public:
-    static Avro* create(SERVICE* service);
+    static Avro* create(SERVICE* service, mxs::ConfigParameters* params);
 
     mxs::RouterSession* newSession(MXS_SESSION* session, const Endpoints& endpoints);
 
@@ -198,3 +199,4 @@ bool              avro_open_binlog(const char* binlogdir, const char* file, int*
 avro_binlog_end_t avro_read_all_events(Avro* router);
 bool              avro_save_conversion_state(Avro* router);
 bool              avro_load_conversion_state(Avro* router);
+bool              conversion_task_ctl(Avro* inst, bool start);

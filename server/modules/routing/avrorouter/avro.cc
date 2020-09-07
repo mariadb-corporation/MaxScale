@@ -48,14 +48,21 @@
 using namespace maxscale;
 
 // static
-Avro* Avro::create(SERVICE* service)
+Avro* Avro::create(SERVICE* service, mxs::ConfigParameters* params)
 {
-    auto params = service->params();
-    return new(std::nothrow) Avro(service, &params);
+    auto router = new Avro(service, params);
+
+    if (router && !params->contains(CN_SERVERS) && !params->contains(CN_CLUSTER))
+    {
+        conversion_task_ctl(router, true);
+    }
+
+    return router;
 }
 
 Avro::Avro(SERVICE* service, mxs::ConfigParameters* params)
-    : service(service)
+    : mxs::Router<Avro, AvroSession>(service)
+    , service(service)
     , filestem(params->get_string("filestem"))
     , binlogdir(params->get_string("binlogdir"))
     , avrodir(params->get_string("avrodir"))
@@ -116,4 +123,36 @@ Avro::Avro(SERVICE* service, mxs::ConfigParameters* params)
     }
 
     MXS_NOTICE("Avro files stored at: %s", avrodir.c_str());
+}
+
+mxs::RouterSession* Avro::newSession(MXS_SESSION* session, const Endpoints& endpoints)
+{
+    return AvroSession::create(this, session);
+}
+
+json_t* Avro::diagnostics() const
+{
+    const Avro* router_inst = this;
+
+    json_t* rval = json_object();
+
+    char pathbuf[PATH_MAX + 1];
+    snprintf(pathbuf, sizeof(pathbuf), "%s/%s", router_inst->avrodir.c_str(), AVRO_PROGRESS_FILE);
+
+    json_object_set_new(rval, "infofile", json_string(pathbuf));
+    json_object_set_new(rval, "avrodir", json_string(router_inst->avrodir.c_str()));
+    json_object_set_new(rval, "binlogdir", json_string(router_inst->binlogdir.c_str()));
+    json_object_set_new(rval, "binlog_name", json_string(router_inst->binlog_name.c_str()));
+    json_object_set_new(rval, "binlog_pos", json_integer(router_inst->current_pos));
+
+    if (router_inst->handler)
+    {
+        gtid_pos_t gtid = router_inst->handler->get_gtid();
+        snprintf(pathbuf, sizeof(pathbuf), "%lu-%lu-%lu", gtid.domain, gtid.server_id, gtid.seq);
+        json_object_set_new(rval, "gtid", json_string(pathbuf));
+        json_object_set_new(rval, "gtid_timestamp", json_integer(gtid.timestamp));
+        json_object_set_new(rval, "gtid_event_number", json_integer(gtid.event_num));
+    }
+
+    return rval;
 }

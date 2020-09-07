@@ -43,84 +43,6 @@
 
 using namespace maxbase;
 
-static bool conversion_task_ctl(Avro* inst, bool start);
-
-/**
- * Create an instance of the router for a particular service
- * within MaxScale.
- *
- * The process of creating the instance causes the router to register
- * with the master server and begin replication of the binlogs from
- * the master server to MaxScale.
- *
- * @param service   The service this router is being create for
- * @param options   An array of options for this query router
- *
- * @return The instance data for this new instance
- */
-MXS_ROUTER* createInstance(SERVICE* service, mxs::ConfigParameters* params)
-{
-    Avro* router = Avro::create(service);
-
-    if (router && !params->contains(CN_SERVERS) && !params->contains(CN_CLUSTER))
-    {
-        conversion_task_ctl(router, true);
-    }
-
-    return router;
-}
-
-/**
- * Associate a new session with this instance of the router.
- *
- * In the case of the avrorouter a new session equates to a new slave
- * connecting to MaxScale and requesting binlog records. We need to go
- * through the slave registration process for this new slave.
- *
- * @param instance  The router instance data
- * @param session   The session itself
- * @return Session specific data for this session
- */
-mxs::RouterSession* Avro::newSession(MXS_SESSION* session, const Endpoints& endpoints)
-{
-    return AvroSession::create(this, session);
-}
-
-/**
- * Display router diagnostics
- *
- * @param instance  Instance of the router
- */
-json_t* Avro::diagnostics() const
-{
-    const Avro* router_inst = this;
-
-    json_t* rval = json_object();
-
-    char pathbuf[PATH_MAX + 1];
-    snprintf(pathbuf, sizeof(pathbuf), "%s/%s", router_inst->avrodir.c_str(), AVRO_PROGRESS_FILE);
-
-    json_object_set_new(rval, "infofile", json_string(pathbuf));
-    json_object_set_new(rval, "avrodir", json_string(router_inst->avrodir.c_str()));
-    json_object_set_new(rval, "binlogdir", json_string(router_inst->binlogdir.c_str()));
-    json_object_set_new(rval, "binlog_name", json_string(router_inst->binlog_name.c_str()));
-    json_object_set_new(rval, "binlog_pos", json_integer(router_inst->current_pos));
-
-    if (router_inst->handler)
-    {
-        gtid_pos_t gtid = router_inst->handler->get_gtid();
-        snprintf(pathbuf, sizeof(pathbuf), "%lu-%lu-%lu", gtid.domain, gtid.server_id, gtid.seq);
-        json_object_set_new(rval, "gtid", json_string(pathbuf));
-        json_object_set_new(rval, "gtid_timestamp", json_integer(gtid.timestamp));
-        json_object_set_new(rval, "gtid_event_number", json_integer(gtid.event_num));
-    }
-
-    return rval;
-}
-
-/**
- * Conversion task: MySQL binlogs to AVRO files
- */
 bool converter_func(Worker::Call::action_t action, Avro* router)
 {
     if (action == Worker::Call::CANCEL)
@@ -196,7 +118,7 @@ private:
     bool  m_start;
 };
 
-static bool conversion_task_ctl(Avro* inst, bool start)
+bool conversion_task_ctl(Avro* inst, bool start)
 {
     bool rval = false;
 
@@ -342,11 +264,6 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
                                "Purge created Avro files and reset conversion state. "
                                "NOTE: MaxScale must be restarted after this call.");
 
-    static MXS_ROUTER_OBJECT MyObject =
-    {
-        createInstance
-    };
-
     static MXS_MODULE info =
     {
         MXS_MODULE_API_ROUTER,
@@ -355,7 +272,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         "Avrorouter",
         "V1.0.0",
         0,
-        &MyObject,
+        &Avro::s_object,
         NULL,
         NULL,
         NULL,

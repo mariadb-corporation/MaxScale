@@ -766,7 +766,7 @@ void AvroSession::notify_all_clients(SERVICE* service)
 // static
 AvroSession* AvroSession::create(Avro* inst, MXS_SESSION* session)
 {
-    return new(std::nothrow) AvroSession(inst, session);
+    return new AvroSession(inst, session);
 }
 
 AvroSession::AvroSession(Avro* instance, MXS_SESSION* session)
