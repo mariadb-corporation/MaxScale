@@ -25,7 +25,7 @@
 #include "csnode.hh"
 
 class CsMonitor : public maxscale::MonitorWorkerSimple,
-                  private CsMonitorServer::Persister
+                  private CsDynamicServer::Persister
 {
 public:
     using Base = mxs::MonitorWorkerSimple;
@@ -79,9 +79,9 @@ public:
 
 
 private:
-    // CsMonitorServer::Persister
-    void persist(const CsMonitorServer& node) override final;
-    void unpersist(const CsMonitorServer& node) override final;
+    // CsDynamicServer::Persister
+    void persist(const CsDynamicServer& node) override final;
+    void unpersist(const CsDynamicServer& node) override final;
 
 private:
     bool ready_to_run(json_t** ppOutput) const;
@@ -139,6 +139,6 @@ private:
     void populate_from_bootstrap_servers();
 
     CsContext                                               m_context;
-    std::map<std::string, std::unique_ptr<CsMonitorServer>> m_nodes_by_id;
+    std::map<std::string, std::unique_ptr<CsDynamicServer>> m_nodes_by_id;
     sqlite3*                                                m_pDb {nullptr};
 };

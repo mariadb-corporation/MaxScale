@@ -31,16 +31,10 @@ using Statuses = CsMonitorServer::Statuses;
 
 CsMonitorServer::CsMonitorServer(SERVER* pServer,
                                  const SharedSettings& shared,
-                                 CsContext* pCs_context,
-                                 Persister* pPersister)
+                                 CsContext* pCs_context)
     : mxs::MonitorServer(pServer, shared)
     , m_context(*pCs_context)
-    , m_pPersister(pPersister)
 {
-    if (m_pPersister)
-    {
-        m_pPersister->persist(*this);
-    }
 }
 
 CsMonitorServer::~CsMonitorServer()

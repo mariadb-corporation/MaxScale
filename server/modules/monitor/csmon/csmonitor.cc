@@ -891,7 +891,7 @@ bool CsMonitor::command_rollback(json_t** ppOutput, CsMonitorServer* pServer)
 }
 #endif
 
-void CsMonitor::persist(const CsMonitorServer& node)
+void CsMonitor::persist(const CsDynamicServer& node)
 {
     if (!m_pDb)
     {
@@ -917,7 +917,7 @@ void CsMonitor::persist(const CsMonitorServer& node)
 
 }
 
-void CsMonitor::unpersist(const CsMonitorServer& node)
+void CsMonitor::unpersist(const CsDynamicServer& node)
 {
     if (!m_pDb)
     {
@@ -1389,7 +1389,7 @@ void CsMonitor::cs_rollback(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorSe
 CsMonitorServer* CsMonitor::create_server(SERVER* pServer,
                                           const mxs::MonitorServer::SharedSettings& shared)
 {
-    return new CsMonitorServer(pServer, shared, &m_context);
+    return new CsBootstrapServer(pServer, shared, &m_context);
 }
 
 void CsMonitor::populate_services()
@@ -1522,7 +1522,7 @@ void CsMonitor::check_cluster(const HostPortPairs& nodes)
                     SERVER* pServer = SERVER::find_by_unique_name(server_name);
                     mxb_assert(pServer);
 
-                    CsMonitorServer* pMs = new CsMonitorServer(pServer, this->settings().shared, &m_context, this);
+                    CsDynamicServer* pMs = new CsDynamicServer(this, pServer, this->settings().shared, &m_context);
 
                     m_nodes_by_id.insert(make_pair(host, pMs));
 

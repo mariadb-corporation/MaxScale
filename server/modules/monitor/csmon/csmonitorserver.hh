@@ -19,23 +19,12 @@
 
 class CsContext;
 
-class CsMonitorServer final : public maxscale::MonitorServer
+class CsMonitorServer : public maxscale::MonitorServer
 {
 public:
-    class Persister
-    {
-    public:
-        virtual void persist(const CsMonitorServer& node) = 0;
-        virtual void unpersist(const CsMonitorServer& node) = 0;
-    };
-
     CsMonitorServer(const CsMonitorServer&) = delete;
     CsMonitorServer& operator=(const CsMonitorServer&) = delete;
 
-    CsMonitorServer(SERVER* pServer,
-                    const SharedSettings& shared,
-                    CsContext* pCs_context,
-                    Persister* pPersister = nullptr);
     virtual ~CsMonitorServer();
 
     using Result = cs::Result;
@@ -212,6 +201,11 @@ public:
                                        CsContext& context,
                                        json_t* pOutput = nullptr);
 
+protected:
+    CsMonitorServer(SERVER* pServer,
+                    const SharedSettings& shared,
+                    CsContext* pCs_context);
+
 private:
     bool set_status(const mxb::http::Response& response, json_t** ppError);
 
@@ -226,8 +220,48 @@ private:
 private:
     NodeMode    m_node_mode = UNKNOWN_MODE;
     CsContext&  m_context;
-    Persister*  m_pPersister;
     TrxState    m_trx_state = TRX_INACTIVE;
     cs::Version m_minor_version = cs::CS_UNKNOWN;
     int         m_version_number = -1;
+};
+
+class CsBootstrapServer final : public CsMonitorServer
+{
+public:
+    CsBootstrapServer(const CsBootstrapServer&) = delete;
+    CsBootstrapServer& operator = (const CsBootstrapServer&) = delete;
+
+    CsBootstrapServer(SERVER* pServer,
+                      const SharedSettings& shared,
+                      CsContext* pCs_context)
+        : CsMonitorServer(pServer, shared, pCs_context)
+    {
+    };
+};
+
+class CsDynamicServer final : public CsMonitorServer
+{
+public:
+    class Persister
+    {
+    public:
+        virtual void persist(const CsDynamicServer& node) = 0;
+        virtual void unpersist(const CsDynamicServer& node) = 0;
+    };
+
+    CsDynamicServer(const CsDynamicServer&) = delete;
+    CsDynamicServer& operator = (const CsDynamicServer&) = delete;
+
+    CsDynamicServer(Persister* pPersister,
+                    SERVER* pServer,
+                    const SharedSettings& shared,
+                    CsContext* pCs_context)
+        : CsMonitorServer(pServer, shared, pCs_context)
+        , m_persister(*pPersister)
+    {
+        m_persister.persist(*this);
+    };
+
+private:
+    Persister& m_persister;
 };
