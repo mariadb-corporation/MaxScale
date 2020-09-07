@@ -163,7 +163,7 @@ bool connect_backend_servers(SRBackendList& backends, MXS_SESSION* session)
     return succp;
 }
 
-SchemaRouterSession* SchemaRouter::newSession(MXS_SESSION* pSession, const Endpoints& endpoints)
+mxs::RouterSession* SchemaRouter::newSession(MXS_SESSION* pSession, const Endpoints& endpoints)
 {
     SRBackendList backends;
 
@@ -216,7 +216,7 @@ json_t* SchemaRouter::diagnostics() const
 static const uint64_t CAPABILITIES = RCAP_TYPE_CONTIGUOUS_INPUT | RCAP_TYPE_PACKET_OUTPUT
     | RCAP_TYPE_RUNTIME_CONFIG | RCAP_TYPE_REQUEST_TRACKING;
 
-uint64_t SchemaRouter::getCapabilities()
+uint64_t SchemaRouter::getCapabilities() const
 {
     return schemarouter::CAPABILITIES;
 }

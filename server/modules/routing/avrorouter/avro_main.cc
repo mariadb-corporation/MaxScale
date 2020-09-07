@@ -70,11 +70,6 @@ MXS_ROUTER* createInstance(SERVICE* service, mxs::ConfigParameters* params)
     return router;
 }
 
-void destroyInstance(MXS_ROUTER* router)
-{
-    delete static_cast<Avro*>(router);
-}
-
 /**
  * Associate a new session with this instance of the router.
  *
@@ -86,28 +81,9 @@ void destroyInstance(MXS_ROUTER* router)
  * @param session   The session itself
  * @return Session specific data for this session
  */
-static mxs::RouterSession* newSession(MXS_ROUTER* instance, MXS_SESSION* session, const Endpoints& endpoints)
+mxs::RouterSession* Avro::newSession(MXS_SESSION* session, const Endpoints& endpoints)
 {
-    Avro* inst = reinterpret_cast<Avro*>(instance);
-    return AvroSession::create(inst, session);
-}
-
-/**
- * The session is no longer required. Shutdown all operation and free memory
- * associated with this session. In this case a single session is associated
- * to a slave of MaxScale. Therefore this is called when that slave is no
- * longer active and should remove of reference to that slave, free memory
- * and prevent any further forwarding of binlog records to that slave.
- *
- * Parameters:
- * @param router_instance   The instance of the router
- * @param router_cli_ses    The particular session to free
- *
- */
-static void freeSession(MXS_ROUTER* router_instance, MXS_FILTER_SESSION* router_client_ses)
-{
-    AvroSession* client = (AvroSession*) router_client_ses;
-    delete client;
+    return AvroSession::create(this, session);
 }
 
 /**
@@ -115,9 +91,9 @@ static void freeSession(MXS_ROUTER* router_instance, MXS_FILTER_SESSION* router_
  *
  * @param instance  Instance of the router
  */
-static json_t* diagnostics(const MXS_ROUTER* router)
+json_t* Avro::diagnostics() const
 {
-    Avro* router_inst = (Avro*)router;
+    const Avro* router_inst = this;
 
     json_t* rval = json_object();
 
@@ -140,35 +116,6 @@ static json_t* diagnostics(const MXS_ROUTER* router)
     }
 
     return rval;
-}
-
-/**
- * Error Reply routine
- *
- * The routine will reply to client errors and/or closing the session
- * or try to open a new backend connection.
- *
- * @param       instance        The router instance
- * @param       router_session  The router session
- * @param       message         The error message to reply
- * @param       backend_dcb     The backend DCB
- *
- */
-static bool errorReply(MXS_ROUTER* instance,
-                       MXS_FILTER_SESSION* router_session,
-                       mxs::ErrorType type,
-                       GWBUF* message,
-                       mxs::Endpoint* backend_dcb,
-                       const mxs::Reply& reply)
-{
-    /** We should never end up here */
-    mxb_assert(false);
-    return false;
-}
-
-static uint64_t getCapabilities(MXS_ROUTER* instance)
-{
-    return RCAP_TYPE_NONE;
 }
 
 /**
@@ -397,12 +344,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 
     static MXS_ROUTER_OBJECT MyObject =
     {
-        createInstance,
-        newSession,
-        diagnostics,
-        errorReply,
-        getCapabilities,
-        destroyInstance
+        createInstance
     };
 
     static MXS_MODULE info =

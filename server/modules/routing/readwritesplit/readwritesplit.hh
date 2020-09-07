@@ -374,7 +374,7 @@ public:
      *
      * @return New router session or NULL on error
      */
-    RWSplitSession* newSession(MXS_SESSION* pSession, const Endpoints& endpoints);
+    mxs::RouterSession* newSession(MXS_SESSION* pSession, const Endpoints& endpoints);
 
     /**
      * @brief JSON diagnostics routine
@@ -386,7 +386,7 @@ public:
     /**
      * @brief Get router capabilities
      */
-    uint64_t getCapabilities();
+    uint64_t getCapabilities() const;
 
     bool configure(mxs::ConfigParameters* params);
 

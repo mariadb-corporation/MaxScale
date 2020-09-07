@@ -206,7 +206,7 @@ Pinloki* Pinloki::create(SERVICE* pService, mxs::ConfigParameters* pParams)
     return rval;
 }
 
-PinlokiSession* Pinloki::newSession(MXS_SESSION* pSession, const Endpoints& endpoints)
+mxs::RouterSession* Pinloki::newSession(MXS_SESSION* pSession, const Endpoints& endpoints)
 {
     return new PinlokiSession(pSession, this);
 }
@@ -243,7 +243,7 @@ json_t* Pinloki::diagnostics() const
     return rval;
 }
 
-uint64_t Pinloki::getCapabilities()
+uint64_t Pinloki::getCapabilities() const
 {
     return RCAP_TYPE_CONTIGUOUS_INPUT;
 }
@@ -638,7 +638,7 @@ bool Pinloki::purge_old_binlogs(mxb::Worker::Call::action_t action)
     auto now = wall_time::Clock::now();
     auto purge_before = now - config().expire_log_duration();
     auto file_names = m_inventory.file_names();
-    auto files_to_keep = std::max(1, config().expire_log_minimum_files());     // at least one
+    auto files_to_keep = std::max(1, config().expire_log_minimum_files());      // at least one
     int max_files_to_purge = file_names.size() - files_to_keep;
 
     int purge_index = -1;

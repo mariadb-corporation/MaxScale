@@ -78,12 +78,12 @@ public:
 
     static KafkaCDC* create(SERVICE* pService, mxs::ConfigParameters* params);
 
-    KafkaCDCSession* newSession(MXS_SESSION* pSession, const Endpoints& endpoints)
+    mxs::RouterSession* newSession(MXS_SESSION* pSession, const Endpoints& endpoints)
     {
         return nullptr;
     }
 
-    uint64_t getCapabilities()
+    uint64_t getCapabilities() const
     {
         return CAPS;
     }

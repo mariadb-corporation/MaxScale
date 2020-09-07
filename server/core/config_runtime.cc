@@ -2240,8 +2240,7 @@ bool can_modify_service_params(Service* service, const mxs::ConfigParameters& pa
     {
         if (routerparams.count(a.first))
         {
-            if (!service->router->configureInstance
-                || (service->capabilities() & RCAP_TYPE_RUNTIME_CONFIG) == 0)
+            if ((service->capabilities() & RCAP_TYPE_RUNTIME_CONFIG) == 0)
             {
                 MXS_ERROR("Router '%s' does not support reconfiguration.", service->router_name());
                 rval = false;
@@ -2276,9 +2275,9 @@ bool runtime_alter_service_from_json(Service* service, json_t* new_json)
             rval = true;
             service->update_basic_parameters(params);
 
-            if (service->router->configureInstance && service->capabilities() & RCAP_TYPE_RUNTIME_CONFIG)
+            if (service->capabilities() & RCAP_TYPE_RUNTIME_CONFIG)
             {
-                if (!service->router->configureInstance(service->router_instance, &params))
+                if (!service->router_instance->configure(&params))
                 {
                     rval = false;
                     MXS_ERROR("Reconfiguration of service '%s' failed. See log file for more details.",

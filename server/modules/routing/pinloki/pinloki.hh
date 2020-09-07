@@ -48,11 +48,11 @@ public:
     Pinloki& operator=(const Pinloki&) = delete;
 
     ~Pinloki() = default;
-    static Pinloki* create(SERVICE* pService, mxs::ConfigParameters* pParams);
-    PinlokiSession* newSession(MXS_SESSION* pSession, const Endpoints& endpoints);
-    json_t*         diagnostics() const;
-    uint64_t        getCapabilities();
-    bool            configure(mxs::ConfigParameters* pParams);
+    static Pinloki*     create(SERVICE* pService, mxs::ConfigParameters* pParams);
+    mxs::RouterSession* newSession(MXS_SESSION* pSession, const Endpoints& endpoints);
+    json_t*             diagnostics() const;
+    uint64_t            getCapabilities() const;
+    bool                configure(mxs::ConfigParameters* pParams);
 
     const Config& config() const;
     Inventory*    inventory();

@@ -128,7 +128,7 @@ SmartRouter::~SmartRouter()
     m_updater_future.get();
 }
 
-SmartRouterSession* SmartRouter::newSession(MXS_SESSION* pSession, const Endpoints& endpoints)
+mxs::RouterSession* SmartRouter::newSession(MXS_SESSION* pSession, const Endpoints& endpoints)
 {
     return SmartRouterSession::create(this, pSession, endpoints);
 }
@@ -154,7 +154,7 @@ json_t* SmartRouter::diagnostics() const
     return pJson;
 }
 
-uint64_t SmartRouter::getCapabilities()
+uint64_t SmartRouter::getCapabilities() const
 {
     return RCAP_TYPE_TRANSACTION_TRACKING | RCAP_TYPE_CONTIGUOUS_INPUT | RCAP_TYPE_CONTIGUOUS_OUTPUT;
 }

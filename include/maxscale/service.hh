@@ -29,10 +29,9 @@
 #include <maxscale/server.hh>
 #include <maxscale/target.hh>
 #include <maxscale/workerlocal.hh>
+#include <maxscale/router.hh>
 
 class SERVER;
-struct mxs_router;
-struct mxs_router_object;
 struct users;
 
 #define MAX_SERVICE_USER_LEN     1024
@@ -108,8 +107,8 @@ public:
     };
 
     State              state {State::ALLOC};        /**< The service state */
-    mxs_router_object* router {nullptr};            /**< The router we are using */
-    mxs_router*        router_instance {nullptr};   /**< The router instance for this service */
+    MXS_ROUTER_OBJECT* router {nullptr};            /**< The router we are using */
+    MXS_ROUTER*        router_instance {nullptr};   /**< The router instance for this service */
     time_t             started {0};                 /**< The time when the service was started */
 
     const char* name() const override

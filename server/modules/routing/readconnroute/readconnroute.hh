@@ -90,7 +90,7 @@ public:
      *
      * @return Router session or nullptr on error
      */
-    RCRSession* newSession(MXS_SESSION* pSession, const Endpoints& endpoints);
+    mxs::RouterSession* newSession(MXS_SESSION* pSession, const Endpoints& endpoints);
 
     /**
      * Get router diagnostics in JSON
@@ -104,7 +104,7 @@ public:
      *
      * @return The router capability bits
      */
-    uint64_t getCapabilities();
+    uint64_t getCapabilities() const;
 
     /**
      * Reconfigure the router instance

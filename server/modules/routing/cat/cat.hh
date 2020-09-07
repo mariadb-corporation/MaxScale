@@ -25,10 +25,15 @@ class Cat : public mxs::Router<Cat, CatSession>
     Cat& operator=(const Cat&) = delete;
 public:
     ~Cat();
-    static Cat* create(SERVICE* pService, mxs::ConfigParameters* params);
-    CatSession* newSession(MXS_SESSION* pSession, const Endpoints& endpoints);
-    json_t*     diagnostics() const;
-    uint64_t    getCapabilities();
+    static Cat*         create(SERVICE* pService, mxs::ConfigParameters* params);
+    mxs::RouterSession* newSession(MXS_SESSION* pSession, const Endpoints& endpoints);
+    json_t*             diagnostics() const;
+    uint64_t            getCapabilities() const;
+
+    bool configure(mxs::ConfigParameters* params)
+    {
+        return false;
+    }
 
 private:
     friend class CatSession;

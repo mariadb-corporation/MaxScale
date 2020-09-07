@@ -93,6 +93,20 @@ class Avro : public MXS_ROUTER
 public:
     static Avro* create(SERVICE* service);
 
+    mxs::RouterSession* newSession(MXS_SESSION* session, const Endpoints& endpoints);
+
+    json_t* diagnostics() const;
+
+    uint64_t getCapabilities() const
+    {
+        return RCAP_TYPE_NONE;
+    }
+
+    bool configure(mxs::ConfigParameters* params)
+    {
+        return false;
+    }
+
     SERVICE*    service;    /*< Pointer to the service using this router */
     std::string filestem;   /*< Root of binlog filename */
     std::string binlogdir;  /*< The directory where the binlog files are stored */
@@ -136,6 +150,13 @@ public:
     {
         mxb_assert(!true);
         return 0;
+    }
+
+    bool handleError(mxs::ErrorType, GWBUF*, mxs::Endpoint*, const mxs::Reply&)
+    {
+        /** We should never end up here */
+        mxb_assert(false);
+        return false;
     }
 
     void queue_client_callback();

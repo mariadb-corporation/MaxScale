@@ -30,7 +30,7 @@ Cat* Cat::create(SERVICE* pService, mxs::ConfigParameters* params)
     return new Cat(pService);
 }
 
-CatSession* Cat::newSession(MXS_SESSION* pSession, const Endpoints& endpoints)
+mxs::RouterSession* Cat::newSession(MXS_SESSION* pSession, const Endpoints& endpoints)
 {
     auto backends = RWBackend::from_endpoints(endpoints);
     bool connected = false;
@@ -53,7 +53,7 @@ json_t* Cat::diagnostics() const
 
 const uint64_t caps = RCAP_TYPE_PACKET_OUTPUT | RCAP_TYPE_CONTIGUOUS_OUTPUT | RCAP_TYPE_STMT_INPUT;
 
-uint64_t Cat::getCapabilities()
+uint64_t Cat::getCapabilities() const
 {
     return caps;
 }

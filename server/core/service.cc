@@ -129,10 +129,7 @@ Service* Service::create(const char* name, const char* router, mxs::ConfigParame
         return NULL;
     }
 
-    if (router_api->getCapabilities)
-    {
-        service->m_capabilities |= router_api->getCapabilities(service->router_instance);
-    }
+    service->m_capabilities |= service->router_instance->getCapabilities();
 
     LockGuard guard(this_unit.lock);
     this_unit.services.push_back(service);
@@ -253,9 +250,9 @@ Service::~Service()
 {
     mxb_assert((m_refcount == 0 && !active()) || maxscale_teardown_in_progress() || state == State::FAILED);
 
-    if (router && router_instance && router->destroyInstance)
+    if (router && router_instance)
     {
-        router->destroyInstance(router_instance);
+        delete router_instance;
     }
 
     auto manager = user_account_manager();
@@ -891,11 +888,9 @@ json_t* service_attributes(const char* host, const SERVICE* service)
     json_object_set_new(attr, CN_ROUTER, json_string(service->router_name()));
     json_object_set_new(attr, CN_STATE, json_string(service_state_to_string(service->state)));
 
-    if (service->router && service->router_instance && service->router->diagnostics)
+    if (service->router && service->router_instance)
     {
-        json_t* diag = service->router->diagnostics(service->router_instance);
-
-        if (diag)
+        if (json_t* diag = service->router_instance->diagnostics())
         {
             json_object_set_new(attr, CN_ROUTER_DIAGNOSTICS, diag);
         }
@@ -1275,7 +1270,7 @@ bool ServiceEndpoint::connect()
     std::transform(m_down.begin(), m_down.end(), std::back_inserter(endpoints),
                    std::mem_fn(&std::unique_ptr<mxs::Endpoint>::get));
 
-    m_router_session = m_service->router->newSession(m_service->router_instance, m_session, endpoints);
+    m_router_session = m_service->router_instance->newSession(m_session, endpoints);
 
     if (!m_router_session)
     {
@@ -1398,8 +1393,7 @@ bool ServiceEndpoint::handleError(mxs::ErrorType type, GWBUF* error,
 {
     mxb::LogScope scope(m_service->name());
     mxb_assert(m_open);
-    bool ok = m_service->router->handleError(m_service->router_instance, m_router_session,
-                                             type, error, down, reply);
+    bool ok = m_router_session->handleError(type, error, down, reply);
 
     if (!ok)
     {

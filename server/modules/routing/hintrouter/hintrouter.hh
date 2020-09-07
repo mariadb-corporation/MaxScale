@@ -15,6 +15,7 @@
 #include "hintrouterdefs.hh"
 
 #include <maxscale/router.hh>
+#include <maxscale/service.hh>
 #include "hintroutersession.hh"
 
 class HintRouter : public maxscale::Router<HintRouter, HintRouterSession>
@@ -27,6 +28,12 @@ public:
     {
         return RCAP_TYPE_NONE;
     }
+
+    bool configure(mxs::ConfigParameters* params)
+    {
+        return false;
+    }
+
     HINT_TYPE get_default_action() const
     {
         return m_default_action;

@@ -198,7 +198,7 @@ RCRSession::~RCRSession()
                            m_session_queries);
 }
 
-RCRSession* RCR::newSession(MXS_SESSION* session, const Endpoints& endpoints)
+mxs::RouterSession* RCR::newSession(MXS_SESSION* session, const Endpoints& endpoints)
 {
     uint64_t mask = atomic_load_uint64(&m_bitmask_and_bitvalue);
     uint32_t bitmask = mask;
@@ -505,7 +505,7 @@ json_t* RCR::diagnostics() const
     return rval;
 }
 
-uint64_t RCR::getCapabilities()
+uint64_t RCR::getCapabilities() const
 {
     return RCAP_TYPE_RUNTIME_CONFIG;
 }

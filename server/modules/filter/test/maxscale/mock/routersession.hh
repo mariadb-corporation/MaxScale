@@ -119,10 +119,10 @@ private:
     static int32_t routeQuery(MXS_FILTER* pInstance, MXS_FILTER_SESSION* pRouter_session, GWBUF* pStatement);
 
 private:
-    MXS_ROUTER             m_instance;
+    MXS_ROUTER*            m_instance = nullptr;
     Backend*               m_pBackend;
     FilterModule::Session* m_pUpstream_filter_session;
-    MXS_FILTER_SESSION*        m_downstream;
+    MXS_FILTER_SESSION*    m_downstream;
 
     maxscale::mock::Session* m_pSession;
 };

@@ -15,6 +15,7 @@
 #include <maxscale/ccdefs.hh>
 
 #include <maxscale/router.hh>
+#include <maxscale/service.hh>
 
 #include "rpl_event.hh"
 #include "parser.hh"

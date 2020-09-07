@@ -24,7 +24,6 @@ RouterSession::RouterSession(Backend* pBackend, maxscale::mock::Session* session
     : m_pBackend(pBackend)
     , m_pSession(session)
 {
-    memset(&m_instance, 0, sizeof(m_instance));
 }
 
 RouterSession::~RouterSession()
@@ -58,7 +57,7 @@ void RouterSession::discard_all_responses()
 
 int32_t RouterSession::routeQuery(MXS_ROUTER* pInstance, GWBUF* pStatement)
 {
-    mxb_assert(pInstance == &m_instance);
+    mxb_assert(pInstance == m_instance);
 
     m_pBackend->handle_statement(this, pStatement);
     return 1;

@@ -133,13 +133,18 @@ public:
     static constexpr const uint64_t CAPABILITIES {RCAP_TYPE_CONTIGUOUS_INPUT | RCAP_TYPE_RESULTSET_OUTPUT};
 
     ~RRRouter();
-    static RRRouter* create(SERVICE* pService, mxs::ConfigParameters* params);
-    RRRouterSession* newSession(MXS_SESSION* session, const Endpoints& endpoints);
-    json_t*          diagnostics() const;
+    static RRRouter*    create(SERVICE* pService, mxs::ConfigParameters* params);
+    mxs::RouterSession* newSession(MXS_SESSION* session, const Endpoints& endpoints);
+    json_t*             diagnostics() const;
 
-    uint64_t getCapabilities()
+    uint64_t getCapabilities() const
     {
         return CAPABILITIES;
+    }
+
+    bool configure(mxs::ConfigParameters* params)
+    {
+        return false;
     }
 
 private:
@@ -208,7 +213,7 @@ RRRouter::~RRRouter()
  *
  * @return          Client specific data for this router
  */
-RRRouterSession* RRRouter::newSession(MXS_SESSION* session, const Endpoints& endpoints)
+mxs::RouterSession* RRRouter::newSession(MXS_SESSION* session, const Endpoints& endpoints)
 {
     mxs::Endpoint* write_backend = nullptr;
     RRRouterSession* rses = NULL;

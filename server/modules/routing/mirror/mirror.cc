@@ -27,7 +27,7 @@ Mirror* Mirror::create(SERVICE* pService, mxs::ConfigParameters* params)
     return rval.release();
 }
 
-MirrorSession* Mirror::newSession(MXS_SESSION* pSession, const Endpoints& endpoints)
+mxs::RouterSession* Mirror::newSession(MXS_SESSION* pSession, const Endpoints& endpoints)
 {
     const auto& children = m_pService->get_children();
 
@@ -58,7 +58,7 @@ json_t* Mirror::diagnostics() const
 
 const uint64_t caps = RCAP_TYPE_REQUEST_TRACKING | RCAP_TYPE_RUNTIME_CONFIG;
 
-uint64_t Mirror::getCapabilities()
+uint64_t Mirror::getCapabilities() const
 {
     return caps;
 }

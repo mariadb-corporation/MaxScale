@@ -29,11 +29,11 @@ public:
     Mirror& operator=(const Mirror&) = delete;
 
     ~Mirror() = default;
-    static Mirror* create(SERVICE* pService, mxs::ConfigParameters* params);
-    MirrorSession* newSession(MXS_SESSION* pSession, const Endpoints& endpoints);
-    json_t*        diagnostics() const;
-    uint64_t       getCapabilities();
-    bool           configure(mxs::ConfigParameters* params);
+    static Mirror*      create(SERVICE* pService, mxs::ConfigParameters* params);
+    mxs::RouterSession* newSession(MXS_SESSION* pSession, const Endpoints& endpoints);
+    json_t*             diagnostics() const;
+    uint64_t            getCapabilities() const;
+    bool                configure(mxs::ConfigParameters* params);
 
     void ship(json_t* obj);
 

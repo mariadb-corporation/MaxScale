@@ -364,7 +364,7 @@ RWSplit* RWSplit::create(SERVICE* service, mxs::ConfigParameters* params)
     return cnf.first ? new RWSplit(service, cnf.second) : nullptr;
 }
 
-RWSplitSession* RWSplit::newSession(MXS_SESSION* session, const Endpoints& endpoints)
+mxs::RouterSession* RWSplit::newSession(MXS_SESSION* session, const Endpoints& endpoints)
 {
     return RWSplitSession::create(this, session, endpoints);
 }
@@ -414,7 +414,7 @@ json_t* RWSplit::diagnostics() const
 constexpr uint64_t CAPABILITIES = RCAP_TYPE_REQUEST_TRACKING | RCAP_TYPE_TRANSACTION_TRACKING
     | RCAP_TYPE_SESSION_STATE_TRACKING | RCAP_TYPE_RUNTIME_CONFIG;
 
-uint64_t RWSplit::getCapabilities()
+uint64_t RWSplit::getCapabilities() const
 {
     return CAPABILITIES;
 }

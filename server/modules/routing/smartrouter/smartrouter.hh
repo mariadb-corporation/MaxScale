@@ -24,6 +24,7 @@
 #include <maxscale/ccdefs.hh>
 #include <maxscale/config2.hh>
 #include <maxscale/router.hh>
+#include <maxscale/service.hh>
 
 #include <future>
 
@@ -66,10 +67,10 @@ public:
 
     static SmartRouter* create(SERVICE* pService, mxs::ConfigParameters* pParams);
 
-    SmartRouterSession* newSession(MXS_SESSION* pSession, const Endpoints& endpoints);
+    mxs::RouterSession* newSession(MXS_SESSION* pSession, const Endpoints& endpoints);
 
     json_t*  diagnostics() const;
-    uint64_t getCapabilities();
+    uint64_t getCapabilities() const;
     bool     configure(mxs::ConfigParameters* pParams);
 
     SERVICE* service() const;
