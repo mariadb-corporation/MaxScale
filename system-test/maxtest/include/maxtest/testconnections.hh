@@ -621,6 +621,7 @@ private:
 
     bool m_enable_timeouts {true};      /**< Whether timeouts are enabled or not */
     bool m_local_maxscale {false};      /**< MaxScale runs locally, specified using -l. */
+    bool m_init_maxscale {true};
 
     /**< If true, every test is trying to revert snapshot before running the test. Unused for now. */
     bool m_use_snapshots {false};
@@ -629,8 +630,8 @@ private:
     bool m_no_backend_log_copy {false};
     bool m_no_maxscale_log_copy {false};    /**< Do not download MaxScale logs. */
 
-    bool no_repl {false};   /**< Do not check, restart and use Master/Slave setup */
-    bool no_galera {false}; /**< Do not check, restart and use Galera setup; all Galera tests will fail */
+    bool m_use_repl {true};     /**< Check, restart and use Master/Slave setup */
+    bool m_use_galera {true};   /**< Check, restart and use Galera setup */
 
     /** If true tests do not revert VMs after the test even if test failed (use it for debugging) */
     bool no_vm_revert {true};
@@ -652,6 +653,8 @@ private:
 
     std::string flatten_stringset(const StringSet& set);
     StringSet   parse_to_stringset(const std::string& source);
+
+    bool read_cmdline_options(int argc, char* argv[]);
 };
 
 /**
