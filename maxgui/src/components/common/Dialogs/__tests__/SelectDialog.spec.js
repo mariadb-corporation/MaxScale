@@ -15,31 +15,34 @@ import mount from '@tests/unit/setup'
 import SelectDialog from '@/components/common/Dialogs/SelectDialog'
 import { itemSelectMock } from '@tests/unit/utils'
 
+const initialProps = {
+    value: false, // control visibility of the dialog
+    mode: 'change', // Either change or add
+    title: 'Change monitor',
+    entityName: 'monitors', // always plural
+    handleSave: () => null,
+    onCancel: () => null,
+    onClose: () => null,
+    itemsList: [
+        { id: 'Monitor', type: 'monitors' },
+        { id: 'Monitor-test', type: 'monitors' },
+    ],
+    //optional props
+    multiple: false,
+    defaultItems: undefined,
+}
+
 describe('SelectDialog.vue', () => {
     let wrapper
 
-    let initialProps = {
-        value: false, // control visibility of the dialog
-        mode: 'change', // Either change or add
-        title: 'Change monitor',
-        entityName: 'monitors', // always plural
-        handleSave: () => wrapper.setProps({ value: false }),
-        onCancel: () => wrapper.setProps({ value: false }),
-        onClose: () => wrapper.setProps({ value: false }),
-        itemsList: [
-            { id: 'Monitor', type: 'monitors' },
-            { id: 'Monitor-test', type: 'monitors' },
-        ],
-        //optional props
-        multiple: false,
-        defaultItems: undefined,
-    }
     beforeEach(() => {
-        localStorage.clear()
         wrapper = mount({
             shallow: false,
             component: SelectDialog,
             props: initialProps,
+            computed: {
+                computeShowDialog: () => true,
+            },
         })
     })
 
@@ -95,5 +98,32 @@ describe('SelectDialog.vue', () => {
         await wrapper.vm.onSave()
         // reactivity data should be cleared
         expect(wrapper.vm.$data.selectedItems.length).to.be.equal(0)
+    })
+
+    it(`Should pass the following props to select-dropdown`, () => {
+        const selectDropdown = wrapper.findComponent({ name: 'select-dropdown' })
+        const {
+            entityName,
+            items,
+            defaultItems,
+            multiple,
+            clearable,
+            showPlaceHolder,
+        } = selectDropdown.vm.$props
+
+        const {
+            entityName: wrapperEntityName,
+            itemsList,
+            defaultItems: wrapperDefaultItems,
+            multiple: wrapperMultiple,
+            clearable: wrapperClearable,
+        } = wrapper.vm.$props
+
+        expect(entityName).to.be.equals(wrapperEntityName)
+        expect(items).to.be.deep.equals(itemsList)
+        expect(defaultItems).to.be.deep.equals(wrapperDefaultItems)
+        expect(multiple).to.be.equals(wrapperMultiple)
+        expect(clearable).to.be.equals(wrapperClearable)
+        expect(showPlaceHolder).to.be.false
     })
 })

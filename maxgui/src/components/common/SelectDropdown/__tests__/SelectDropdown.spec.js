@@ -39,7 +39,6 @@ describe('SelectDropdown.vue', () => {
     let wrapper
 
     beforeEach(() => {
-        localStorage.clear()
         wrapper = mount({
             shallow: false,
             component: SelectDropdown,
@@ -87,6 +86,15 @@ describe('SelectDropdown.vue', () => {
             required: true,
         })
         expect(wrapper.find('.error--text__bottom').exists()).to.be.true
+    })
+
+    it(`Should render clear button when clearable props is true`, async () => {
+        await wrapper.setProps({
+            clearable: true,
+            items: singleChoiceItems,
+            defaultItems: singleChoiceItems[0],
+        })
+        expect(wrapper.find('.v-input__icon--clear').exists()).to.be.true
     })
 
     it(`Should render pre-selected item accurately when defaultItems props

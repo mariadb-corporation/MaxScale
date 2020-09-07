@@ -18,6 +18,7 @@
             relationshipsType="monitors"
             :items="monitorsList"
             :multiple="false"
+            clearable
             :defaultItems="defaultMonitorItems"
         />
     </div>

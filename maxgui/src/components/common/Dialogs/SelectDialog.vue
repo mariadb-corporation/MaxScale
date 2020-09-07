@@ -20,6 +20,7 @@
                 :items="itemsList"
                 :defaultItems="defaultItems"
                 :multiple="multiple"
+                :clearable="clearable"
                 :showPlaceHolder="false"
                 @is-equal="isSaveDisabled = $event"
                 @get-selected-items="handleGetSelectedItems"
@@ -53,12 +54,13 @@ export default {
         mode: { type: String, required: true }, // change or add
         title: { type: String, required: true },
         entityName: { type: String, required: true },
+        clearable: { type: Boolean, default: false },
         handleSave: { type: Function, required: true },
         onClose: { type: Function, required: true },
         onCancel: { type: Function, required: true },
         multiple: { type: Boolean, default: false },
         itemsList: { type: Array, required: true },
-        defaultItems: { type: [Array, Object] },
+        defaultItems: { type: [Array, Object], default: () => [] },
     },
     data() {
         return {

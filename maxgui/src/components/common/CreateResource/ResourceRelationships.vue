@@ -12,6 +12,7 @@
                 :defaultItems="defaultItems"
                 :items="items"
                 :multiple="multiple"
+                :clearable="clearable"
                 :required="required"
                 @get-selected-items="selectedItems = $event"
             />
@@ -45,6 +46,7 @@ export default {
         relationshipsType: { type: String, required: true },
         items: { type: Array, required: true },
         multiple: { type: Boolean, default: true },
+        clearable: { type: Boolean, default: false },
         required: { type: Boolean, default: false },
         defaultItems: { type: [Array, Object], default: () => [] },
     },

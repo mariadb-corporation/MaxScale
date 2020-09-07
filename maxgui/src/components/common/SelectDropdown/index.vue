@@ -6,7 +6,7 @@
         return-object
         :multiple="multiple"
         :name="entityName"
-        :clearable="!multiple"
+        :clearable="clearable"
         outlined
         dense
         class="std mariadb-select-input"
@@ -66,6 +66,7 @@ export default {
         entityName: { type: String, required: true },
         items: { type: Array, required: true },
         multiple: { type: Boolean, default: false },
+        clearable: { type: Boolean, default: false },
         required: { type: Boolean, default: false },
         defaultItems: { type: [Array, Object], default: () => [] },
         showPlaceHolder: { type: Boolean, default: true },
