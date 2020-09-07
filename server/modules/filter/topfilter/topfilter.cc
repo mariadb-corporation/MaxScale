@@ -12,9 +12,6 @@
  */
 
 /**
- * @file topfilter.c - Top N Longest Running Queries
- * @verbatim
- *
  * TOPN Filter - Query Log All. A primitive query logging filter, simply
  * used to verify the filter mechanism for downstream filters. All queries
  * that are passed through the filter will be written to file.
@@ -25,11 +22,6 @@
  * A single option may be passed to the filter, this is the name of the
  * file to which the queries are logged. A serial number is appended to this
  * name in order that each session logs to a different file.
- *
- * Date         Who             Description
- * 18/06/2014   Mark Riddoch    Addition of source and user filters
- *
- * @endverbatim
  */
 
 #define MXS_MODULE_NAME "topfilter"
@@ -47,31 +39,75 @@
 #include <maxbase/atomic.h>
 #include <maxbase/alloc.h>
 
-/*
- * The filter entry points
- */
-static MXS_FILTER*         createInstance(const char* name, mxs::ConfigParameters*);
-static mxs::FilterSession* newSession(MXS_FILTER* instance, MXS_SESSION* session, SERVICE* service);
-static void                freeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session);
-static int                 routeQuery(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, GWBUF* queue);
-static int                 clientReply(MXS_FILTER* instance,
-                                       MXS_FILTER_SESSION* fsession,
-                                       GWBUF* buffer,
-                                       const mxs::ReplyRoute& down,
-                                       const mxs::Reply& reply);
-static json_t*  diagnostics(const MXS_FILTER* instance, const MXS_FILTER_SESSION* fsession);
-static uint64_t getCapabilities(MXS_FILTER* instance);
+class TOPN_INSTANCE;
 
-/**
- * A instance structure, the assumption is that the option passed
- * to the filter is simply a base for the filename to which the queries
- * are logged.
- *
- * To this base a session number is attached such that each session will
- * have a unique name.
- */
-typedef struct
+struct TOPNQ
 {
+    struct timeval duration;
+    char*          sql;
+};
+
+class TOPN_SESSION : public mxs::FilterSession
+{
+public:
+    TOPN_SESSION(TOPN_INSTANCE* instance, MXS_SESSION* session, SERVICE* service);
+    ~TOPN_SESSION();
+    int32_t routeQuery(GWBUF* buffer);
+    int32_t clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply);
+    json_t* diagnostics() const;
+
+private:
+    TOPN_INSTANCE* m_instance;
+    int            active;
+    char*          clientHost;
+    char*          userName;
+    char*          filename;
+    int            fd;
+    struct timeval start;
+    char*          current;
+    TOPNQ**        top;
+    int            n_statements;
+    struct timeval total;
+    struct timeval connect;
+    struct timeval disconnect;
+};
+
+static const MXS_ENUM_VALUE option_values[] =
+{
+    {"ignorecase", REG_ICASE   },
+    {"case",       0           },
+    {"extended",   REG_EXTENDED},
+    {NULL}
+};
+
+class TOPN_INSTANCE : public mxs::Filter<TOPN_INSTANCE, TOPN_SESSION>
+{
+public:
+    static TOPN_INSTANCE* create(const std::string& name, mxs::ConfigParameters* params)
+    {
+        return new TOPN_INSTANCE(name, params);
+    }
+
+    mxs::FilterSession* newSession(MXS_SESSION* session, SERVICE* service)
+    {
+        return new TOPN_SESSION(this, session, service);
+    }
+
+    json_t* diagnostics() const
+    {
+        return nullptr;
+    }
+
+    uint64_t getCapabilities() const
+    {
+        return RCAP_TYPE_CONTIGUOUS_INPUT;
+    }
+
+    mxs::config::Configuration* getConfiguration()
+    {
+        return nullptr;
+    }
+
     int     sessions;   /* Session count */
     int     topN;       /* Number of queries to store */
     char*   filebase;   /* Base of fielname to log into */
@@ -81,49 +117,60 @@ typedef struct
     regex_t re;         /* Compiled regex text */
     char*   exclude;    /* Optional text to match against for exclusion */
     regex_t exre;       /* Compiled regex nomatch text */
-} TOPN_INSTANCE;
 
-/**
- * Structure to hold the Top N queries
- */
-typedef struct topnq
-{
-    struct timeval duration;
-    char*          sql;
-} TOPNQ;
+private:
+    TOPN_INSTANCE(const std::string& name, mxs::ConfigParameters* params)
+    {
+        sessions = 0;
+        topN = params->get_integer("count");
+        match = params->get_c_str_copy("match");
+        exclude = params->get_c_str_copy("exclude");
+        source = params->get_c_str_copy("source");
+        user = params->get_c_str_copy("user");
+        filebase = params->get_c_str_copy("filebase");
 
-/**
- * The session structure for this TOPN filter.
- * This stores the downstream filter information, such that the
- * filter is able to pass the query on to the next filter (or router)
- * in the chain.
- *
- * It also holds the file descriptor to which queries are written.
- */
-typedef struct
-{
-    MXS_FILTER_SESSION* down;
-    MXS_FILTER_SESSION* up;
-    int                 active;
-    char*               clientHost;
-    char*               userName;
-    char*               filename;
-    int                 fd;
-    struct timeval      start;
-    char*               current;
-    TOPNQ**             top;
-    int                 n_statements;
-    struct timeval      total;
-    struct timeval      connect;
-    struct timeval      disconnect;
-} TOPN_SESSION;
+        int cflags = params->get_enum("options", option_values);
+        bool error = false;
 
-static const MXS_ENUM_VALUE option_values[] =
-{
-    {"ignorecase", REG_ICASE   },
-    {"case",       0           },
-    {"extended",   REG_EXTENDED},
-    {NULL}
+        if (match && regcomp(&re, match, cflags))
+        {
+            MXS_ERROR("Invalid regular expression '%s'"
+                      " for the 'match' parameter.",
+                      match);
+            regfree(&re);
+            MXS_FREE(match);
+            match = NULL;
+            error = true;
+        }
+        if (exclude
+            && regcomp(&exre, exclude, cflags))
+        {
+            MXS_ERROR("Invalid regular expression '%s'"
+                      " for the 'nomatch' parameter.\n",
+                      exclude);
+            regfree(&exre);
+            MXS_FREE(exclude);
+            exclude = NULL;
+            error = true;
+        }
+
+        if (error)
+        {
+            if (exclude)
+            {
+                regfree(&exre);
+                MXS_FREE(exclude);
+            }
+            if (match)
+            {
+                regfree(&re);
+                MXS_FREE(match);
+            }
+            MXS_FREE(filebase);
+            MXS_FREE(source);
+            MXS_FREE(user);
+        }
+    }
 };
 
 extern "C"
@@ -139,11 +186,6 @@ extern "C"
  */
 MXS_MODULE* MXS_CREATE_MODULE()
 {
-    static MXS_FILTER_OBJECT MyObject =
-    {
-        createInstance
-    };
-
     static MXS_MODULE info =
     {
         MXS_MODULE_API_FILTER,
@@ -153,7 +195,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         "logging filter",
         "V1.0.1",
         RCAP_TYPE_CONTIGUOUS_INPUT,
-        &MyObject,
+        &TOPN_INSTANCE::s_object,
         NULL,
         NULL,
         NULL,
@@ -180,224 +222,121 @@ MXS_MODULE* MXS_CREATE_MODULE()
 }
 }
 
-/**
- * Create an instance of the filter for a particular service
- * within MaxScale.
- *
- * @param name      The name of the instance (as defined in the config file).
- * @param options   The options for this filter
- * @param params    The array of name/value pair parameters for the filter
- *
- * @return The instance data for this new instance
- */
-static MXS_FILTER* createInstance(const char* name, mxs::ConfigParameters* params)
+TOPN_SESSION::TOPN_SESSION(TOPN_INSTANCE* instance, MXS_SESSION* session, SERVICE* service)
+    : mxs::FilterSession(session, service)
+    , m_instance(instance)
 {
-    TOPN_INSTANCE* my_instance = (TOPN_INSTANCE*)MXS_MALLOC(sizeof(TOPN_INSTANCE));
+    const char* remote;
+    const char* user;
 
-    if (my_instance)
+    filename = (char*) MXS_MALLOC(strlen(m_instance->filebase) + 20);
+    sprintf(filename, "%s.%lu", m_instance->filebase, session->id());
+
+    top = (TOPNQ**) MXS_CALLOC(m_instance->topN + 1, sizeof(TOPNQ*));
+    MXS_ABORT_IF_NULL(top);
+    for (int i = 0; i < m_instance->topN; i++)
     {
-        my_instance->sessions = 0;
-        my_instance->topN = params->get_integer("count");
-        my_instance->match = params->get_c_str_copy("match");
-        my_instance->exclude = params->get_c_str_copy("exclude");
-        my_instance->source = params->get_c_str_copy("source");
-        my_instance->user = params->get_c_str_copy("user");
-        my_instance->filebase = params->get_c_str_copy("filebase");
+        top[i] = (TOPNQ*) MXS_CALLOC(1, sizeof(TOPNQ));
+        MXS_ABORT_IF_NULL(top[i]);
+        top[i]->sql = NULL;
+    }
+    n_statements = 0;
+    total.tv_sec = 0;
+    total.tv_usec = 0;
+    current = NULL;
 
-        int cflags = params->get_enum("options", option_values);
-        bool error = false;
-
-        if (my_instance->match
-            && regcomp(&my_instance->re, my_instance->match, cflags))
-        {
-            MXS_ERROR("Invalid regular expression '%s'"
-                      " for the 'match' parameter.",
-                      my_instance->match);
-            regfree(&my_instance->re);
-            MXS_FREE(my_instance->match);
-            my_instance->match = NULL;
-            error = true;
-        }
-        if (my_instance->exclude
-            && regcomp(&my_instance->exre, my_instance->exclude, cflags))
-        {
-            MXS_ERROR("Invalid regular expression '%s'"
-                      " for the 'nomatch' parameter.\n",
-                      my_instance->exclude);
-            regfree(&my_instance->exre);
-            MXS_FREE(my_instance->exclude);
-            my_instance->exclude = NULL;
-            error = true;
-        }
-
-        if (error)
-        {
-            if (my_instance->exclude)
-            {
-                regfree(&my_instance->exre);
-                MXS_FREE(my_instance->exclude);
-            }
-            if (my_instance->match)
-            {
-                regfree(&my_instance->re);
-                MXS_FREE(my_instance->match);
-            }
-            MXS_FREE(my_instance->filebase);
-            MXS_FREE(my_instance->source);
-            MXS_FREE(my_instance->user);
-            MXS_FREE(my_instance);
-            my_instance = NULL;
-        }
+    if ((remote = session_get_remote(session)) != NULL)
+    {
+        clientHost = MXS_STRDUP_A(remote);
+    }
+    else
+    {
+        clientHost = NULL;
+    }
+    if ((user = session_get_user(session)) != NULL)
+    {
+        userName = MXS_STRDUP_A(user);
+    }
+    else
+    {
+        userName = NULL;
+    }
+    active = 1;
+    if (m_instance->source && clientHost && strcmp(clientHost, m_instance->source))
+    {
+        active = 0;
+    }
+    if (m_instance->user && userName && strcmp(userName, m_instance->user))
+    {
+        active = 0;
     }
 
-    return (MXS_FILTER*) my_instance;
+    sprintf(filename,
+            "%s.%d",
+            m_instance->filebase,
+            m_instance->sessions);
+    gettimeofday(&connect, NULL);
 }
 
-/**
- * Associate a new session with this instance of the filter.
- *
- * Create the file to log to and open it.
- *
- * @param instance  The filter instance data
- * @param session   The session itself
- * @return Session specific data for this session
- */
-static mxs::FilterSession* newSession(MXS_FILTER* instance, MXS_SESSION* session, SERVICE* service)
+TOPN_SESSION::~TOPN_SESSION()
 {
-    TOPN_INSTANCE* my_instance = (TOPN_INSTANCE*) instance;
-    TOPN_SESSION* my_session;
-    int i;
-    const char* remote, * user;
-
-    if ((my_session = static_cast<TOPN_SESSION*>(MXS_CALLOC(1, sizeof(TOPN_SESSION)))) != NULL)
-    {
-        if ((my_session->filename =
-                 (char*) MXS_MALLOC(strlen(my_instance->filebase) + 20))
-            == NULL)
-        {
-            MXS_FREE(my_session);
-            return NULL;
-        }
-        sprintf(my_session->filename, "%s.%lu", my_instance->filebase, session->id());
-
-        my_session->top = (TOPNQ**) MXS_CALLOC(my_instance->topN + 1, sizeof(TOPNQ*));
-        MXS_ABORT_IF_NULL(my_session->top);
-        for (i = 0; i < my_instance->topN; i++)
-        {
-            my_session->top[i] = (TOPNQ*) MXS_CALLOC(1, sizeof(TOPNQ));
-            MXS_ABORT_IF_NULL(my_session->top[i]);
-            my_session->top[i]->sql = NULL;
-        }
-        my_session->n_statements = 0;
-        my_session->total.tv_sec = 0;
-        my_session->total.tv_usec = 0;
-        my_session->current = NULL;
-
-        if ((remote = session_get_remote(session)) != NULL)
-        {
-            my_session->clientHost = MXS_STRDUP_A(remote);
-        }
-        else
-        {
-            my_session->clientHost = NULL;
-        }
-        if ((user = session_get_user(session)) != NULL)
-        {
-            my_session->userName = MXS_STRDUP_A(user);
-        }
-        else
-        {
-            my_session->userName = NULL;
-        }
-        my_session->active = 1;
-        if (my_instance->source && my_session->clientHost && strcmp(my_session->clientHost,
-                                                                    my_instance->source))
-        {
-            my_session->active = 0;
-        }
-        if (my_instance->user && my_session->userName && strcmp(my_session->userName,
-                                                                my_instance->user))
-        {
-            my_session->active = 0;
-        }
-
-        sprintf(my_session->filename,
-                "%s.%d",
-                my_instance->filebase,
-                my_instance->sessions);
-        gettimeofday(&my_session->connect, NULL);
-    }
-
-    return (mxs::FilterSession*)my_session;
-}
-
-/**
- * Free the memory associated with the session
- *
- * @param instance  The filter instance
- * @param session   The filter session
- */
-static void freeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session)
-{
-    TOPN_INSTANCE* my_instance = (TOPN_INSTANCE*) instance;
-    TOPN_SESSION* my_session = (TOPN_SESSION*) session;
     struct timeval diff;
     int i;
     FILE* fp;
     int statements;
 
-    gettimeofday(&my_session->disconnect, NULL);
-    timersub((&my_session->disconnect), &(my_session->connect), &diff);
-    if ((fp = fopen(my_session->filename, "w")) != NULL)
+    gettimeofday(&disconnect, NULL);
+    timersub((&disconnect), &(connect), &diff);
+    if ((fp = fopen(filename, "w")) != NULL)
     {
-        statements = my_session->n_statements != 0 ? my_session->n_statements : 1;
+        statements = n_statements != 0 ? n_statements : 1;
 
         fprintf(fp,
                 "Top %d longest running queries in session.\n",
-                my_instance->topN);
+                m_instance->topN);
         fprintf(fp, "==========================================\n\n");
         fprintf(fp, "Time (sec) | Query\n");
         fprintf(fp, "-----------+-----------------------------------------------------------------\n");
-        for (i = 0; i < my_instance->topN; i++)
+        for (i = 0; i < m_instance->topN; i++)
         {
-            if (my_session->top[i]->sql)
+            if (top[i]->sql)
             {
                 fprintf(fp,
                         "%10.3f |  %s\n",
-                        (double) ((my_session->top[i]->duration.tv_sec * 1000)
-                                  + (my_session->top[i]->duration.tv_usec / 1000)) / 1000,
-                        my_session->top[i]->sql);
+                        (double) ((top[i]->duration.tv_sec * 1000)
+                                  + (top[i]->duration.tv_usec / 1000)) / 1000,
+                        top[i]->sql);
             }
         }
         fprintf(fp, "-----------+-----------------------------------------------------------------\n");
         struct tm tm;
-        localtime_r(&my_session->connect.tv_sec, &tm);
+        localtime_r(&connect.tv_sec, &tm);
         char buffer[32];    // asctime_r documentation requires 26
         asctime_r(&tm, buffer);
         fprintf(fp, "\n\nSession started %s", buffer);
-        if (my_session->clientHost)
+        if (clientHost)
         {
             fprintf(fp,
                     "Connection from %s\n",
-                    my_session->clientHost);
+                    clientHost);
         }
-        if (my_session->userName)
+        if (userName)
         {
             fprintf(fp,
                     "Username        %s\n",
-                    my_session->userName);
+                    userName);
         }
         fprintf(fp,
                 "\nTotal of %d statements executed.\n",
                 statements);
         fprintf(fp,
                 "Total statement execution time   %5d.%d seconds\n",
-                (int) my_session->total.tv_sec,
-                (int) my_session->total.tv_usec / 1000);
+                (int) total.tv_sec,
+                (int) total.tv_usec / 1000);
         fprintf(fp,
                 "Average statement execution time %9.3f seconds\n",
-                (double) ((my_session->total.tv_sec * 1000)
-                          + (my_session->total.tv_usec / 1000))
+                (double) ((total.tv_sec * 1000)
+                          + (total.tv_usec / 1000))
                 / (1000 * statements));
         fprintf(fp,
                 "Total connection time            %5d.%d seconds\n",
@@ -406,56 +345,38 @@ static void freeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session)
         fclose(fp);
     }
 
-    MXS_FREE(my_session->current);
+    MXS_FREE(current);
 
-    for (int i = 0; i < my_instance->topN; i++)
+    for (int i = 0; i < m_instance->topN; i++)
     {
-        MXS_FREE(my_session->top[i]->sql);
-        MXS_FREE(my_session->top[i]);
+        MXS_FREE(top[i]->sql);
+        MXS_FREE(top[i]);
     }
 
-    MXS_FREE(my_session->top);
-
-    MXS_FREE(my_session->clientHost);
-    MXS_FREE(my_session->userName);
-    MXS_FREE(my_session->filename);
-
-    MXS_FREE(my_session);
-    return;
+    MXS_FREE(top);
+    MXS_FREE(clientHost);
+    MXS_FREE(userName);
+    MXS_FREE(filename);
 }
 
-/**
- * The routeQuery entry point. This is passed the query buffer
- * to which the filter should be applied. Once applied the
- * query should normally be passed to the downstream component
- * (filter or router) in the filter chain.
- *
- * @param instance  The filter instance data
- * @param session   The filter session
- * @param queue     The query data
- */
-static int routeQuery(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GWBUF* queue)
+int32_t TOPN_SESSION::routeQuery(GWBUF* queue)
 {
-    TOPN_INSTANCE* my_instance = (TOPN_INSTANCE*) instance;
-    TOPN_SESSION* my_session = (TOPN_SESSION*) session;
     char* ptr;
 
-    if (my_session->active)
+    if (active)
     {
         if ((ptr = modutil_get_SQL(queue)) != NULL)
         {
-            if ((my_instance->match == NULL
-                 || regexec(&my_instance->re, ptr, 0, NULL, 0) == 0)
-                && (my_instance->exclude == NULL
-                    || regexec(&my_instance->exre, ptr, 0, NULL, 0) != 0))
+            if ((m_instance->match == NULL || regexec(&m_instance->re, ptr, 0, NULL, 0) == 0)
+                && (m_instance->exclude == NULL || regexec(&m_instance->exre, ptr, 0, NULL, 0) != 0))
             {
-                my_session->n_statements++;
-                if (my_session->current)
+                n_statements++;
+                if (current)
                 {
-                    MXS_FREE(my_session->current);
+                    MXS_FREE(current);
                 }
-                gettimeofday(&my_session->start, NULL);
-                my_session->current = ptr;
+                gettimeofday(&start, NULL);
+                current = ptr;
             }
             else
             {
@@ -464,7 +385,7 @@ static int routeQuery(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GWBUF* 
         }
     }
     /* Pass the query downstream */
-    return my_session->down->routeQuery(queue);
+    return mxs::FilterSession::routeQuery(queue);
 }
 
 static int cmp_topn(const void* va, const void* vb)
@@ -479,138 +400,81 @@ static int cmp_topn(const void* va, const void* vb)
     return (*b)->duration.tv_sec - (*a)->duration.tv_sec;
 }
 
-static int clientReply(MXS_FILTER* instance,
-                       MXS_FILTER_SESSION* session,
-                       GWBUF* buffer,
-                       const mxs::ReplyRoute& down,
-                       const mxs::Reply& reply)
+int32_t TOPN_SESSION::clientReply(GWBUF* buffer, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
-    TOPN_INSTANCE* my_instance = (TOPN_INSTANCE*) instance;
-    TOPN_SESSION* my_session = (TOPN_SESSION*) session;
     struct timeval tv, diff;
     int i, inserted;
 
-    if (my_session->current)
+    if (current)
     {
         gettimeofday(&tv, NULL);
-        timersub(&tv, &(my_session->start), &diff);
+        timersub(&tv, &start, &diff);
 
-        timeradd(&(my_session->total), &diff, &(my_session->total));
+        timeradd(&total, &diff, &total);
 
         inserted = 0;
-        for (i = 0; i < my_instance->topN; i++)
+        for (i = 0; i < m_instance->topN; i++)
         {
-            if (my_session->top[i]->sql == NULL)
+            if (top[i]->sql == NULL)
             {
-                my_session->top[i]->sql = my_session->current;
-                my_session->top[i]->duration = diff;
+                top[i]->sql = current;
+                top[i]->duration = diff;
                 inserted = 1;
                 break;
             }
         }
 
-        if (inserted == 0 && ((diff.tv_sec > my_session->top[my_instance->topN - 1]->duration.tv_sec)
-                              || (diff.tv_sec == my_session->top[my_instance->topN - 1]->duration.tv_sec
-                                  && diff.tv_usec
-                                  > my_session->top[my_instance->topN - 1]->duration.tv_usec)))
+        if (inserted == 0 && ((diff.tv_sec > top[m_instance->topN - 1]->duration.tv_sec)
+                              || (diff.tv_sec == top[m_instance->topN - 1]->duration.tv_sec
+                                  && diff.tv_usec > top[m_instance->topN - 1]->duration.tv_usec)))
         {
-            MXS_FREE(my_session->top[my_instance->topN - 1]->sql);
-            my_session->top[my_instance->topN - 1]->sql = my_session->current;
-            my_session->top[my_instance->topN - 1]->duration = diff;
+            MXS_FREE(top[m_instance->topN - 1]->sql);
+            top[m_instance->topN - 1]->sql = current;
+            top[m_instance->topN - 1]->duration = diff;
             inserted = 1;
         }
 
         if (inserted)
         {
-            qsort(my_session->top,
-                  my_instance->topN,
-                  sizeof(TOPNQ*),
-                  cmp_topn);
+            qsort(top, m_instance->topN, sizeof(TOPNQ*), cmp_topn);
         }
         else
         {
-            MXS_FREE(my_session->current);
+            MXS_FREE(current);
         }
-        my_session->current = NULL;
+        current = NULL;
     }
 
     /* Pass the result upstream */
-    return my_session->up->clientReply(buffer, down, reply);
+    return mxs::FilterSession::clientReply(buffer, down, reply);
 }
 
-/**
- * Diagnostics routine
- *
- * If fsession is NULL then print diagnostics on the filter
- * instance as a whole, otherwise print diagnostics for the
- * particular session.
- *
- * @param   instance    The filter instance
- * @param   fsession    Filter session, may be NULL
- */
-static json_t* diagnostics(const MXS_FILTER* instance, const MXS_FILTER_SESSION* fsession)
+json_t* TOPN_SESSION::diagnostics() const
 {
-    TOPN_INSTANCE* my_instance = (TOPN_INSTANCE*)instance;
-    TOPN_SESSION* my_session = (TOPN_SESSION*)fsession;
-
     json_t* rval = json_object();
 
-    json_object_set_new(rval, "report_size", json_integer(my_instance->topN));
+    json_object_set_new(rval, "session_filename", json_string(filename));
 
-    if (my_instance->source)
+    json_t* arr = json_array();
+
+    for (int i = 0; i < m_instance->topN; i++)
     {
-        json_object_set_new(rval, "source", json_string(my_instance->source));
-    }
-    if (my_instance->user)
-    {
-        json_object_set_new(rval, "user", json_string(my_instance->user));
-    }
-
-    if (my_instance->match)
-    {
-        json_object_set_new(rval, "match", json_string(my_instance->match));
-    }
-
-    if (my_instance->exclude)
-    {
-        json_object_set_new(rval, "exclude", json_string(my_instance->exclude));
-    }
-
-    if (my_session)
-    {
-        json_object_set_new(rval, "session_filename", json_string(my_session->filename));
-
-        json_t* arr = json_array();
-
-        for (int i = 0; i < my_instance->topN; i++)
+        if (top[i]->sql)
         {
-            if (my_session->top[i]->sql)
-            {
-                double exec_time = ((my_session->top[i]->duration.tv_sec * 1000.0)
-                                    + (my_session->top[i]->duration.tv_usec / 1000.0)) / 1000.0;
+            double exec_time = ((top[i]->duration.tv_sec * 1000.0)
+                                + (top[i]->duration.tv_usec / 1000.0)) / 1000.0;
 
-                json_t* obj = json_object();
+            json_t* obj = json_object();
 
-                json_object_set_new(obj, "rank", json_integer(i + 1));
-                json_object_set_new(obj, "time", json_real(exec_time));
-                json_object_set_new(obj, "sql", json_string(my_session->top[i]->sql));
+            json_object_set_new(obj, "rank", json_integer(i + 1));
+            json_object_set_new(obj, "time", json_real(exec_time));
+            json_object_set_new(obj, "sql", json_string(top[i]->sql));
 
-                json_array_append_new(arr, obj);
-            }
+            json_array_append_new(arr, obj);
         }
-
-        json_object_set_new(rval, "top_queries", arr);
     }
+
+    json_object_set_new(rval, "top_queries", arr);
 
     return rval;
-}
-
-/**
- * Capability routine.
- *
- * @return The capabilities of the filter.
- */
-static uint64_t getCapabilities(MXS_FILTER* instance)
-{
-    return RCAP_TYPE_NONE;
 }
