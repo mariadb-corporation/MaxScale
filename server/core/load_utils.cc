@@ -765,7 +765,7 @@ json_t* spec_module_json_data(const char* host, const mxs::config::Specification
 
     json_t* obj = json_object();
     json_object_set_new(obj, CN_ID, json_string(spec.module().c_str()));
-    json_object_set_new(obj, CN_TYPE, json_string(CN_MODULE));
+    json_object_set_new(obj, CN_TYPE, json_string(CN_MODULES));
     json_object_set_new(obj, CN_ATTRIBUTES, attr);
     json_object_set_new(obj, CN_LINKS, mxs_json_self_link(host, CN_MODULES, spec.module().c_str()));
 
