@@ -52,81 +52,11 @@
 #include <maxscale/query_classifier.hh>
 #include <maxscale/session.hh>
 
-/*
- * The filter entry points
- */
-static MXS_FILTER*         createInstance(const char* name, mxs::ConfigParameters*);
-static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance,
-                                      MXS_SESSION* session,
-                                      SERVICE* service,
-                                      mxs::Downstream* downstream,
-                                      mxs::Upstream* upstream);
-static void    closeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session);
-static void    freeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session);
-static int32_t routeQuery(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, GWBUF* queue);
-static int32_t clientReply(MXS_FILTER* instance,
-                           MXS_FILTER_SESSION* fsession,
-                           GWBUF* queue,
-                           const mxs::ReplyRoute& down,
-                           const mxs::Reply& reply);
-static json_t*  diagnostics(const MXS_FILTER* instance, const MXS_FILTER_SESSION* fsession);
-static uint64_t getCapabilities(MXS_FILTER* instance);
-
-extern "C"
-{
-
-/**
- * The module entry point routine. It is this routine that
- * must populate the structure that is referred to as the
- * "module object", this is a structure with the set of
- * external entry points for this module.
- *
- * @return The module object
- */
-MXS_MODULE* MXS_CREATE_MODULE()
-{
-    static MXS_FILTER_OBJECT MyObject =
-    {
-        createInstance,
-        newSession,
-        closeSession,
-        freeSession,
-        routeQuery,
-        clientReply,
-        diagnostics,
-        getCapabilities,
-        NULL,       // No destroyInstance
-    };
-
-    static MXS_MODULE info =
-    {
-        MXS_MODULE_API_FILTER,
-        MXS_MODULE_EXPERIMENTAL,
-        MXS_FILTER_VERSION,
-        "Lua Filter",
-        "V1.0.0",
-        RCAP_TYPE_CONTIGUOUS_INPUT,
-        &MyObject,
-        NULL,                       /* Process init. */
-        NULL,                       /* Process finish. */
-        NULL,                       /* Thread init. */
-        NULL,                       /* Thread finish. */
-        {
-            {"global_script",      MXS_MODULE_PARAM_PATH,  NULL, MXS_MODULE_OPT_PATH_R_OK},
-            {"session_script",     MXS_MODULE_PARAM_PATH,  NULL, MXS_MODULE_OPT_PATH_R_OK},
-            {MXS_END_MODULE_PARAMS}
-        }
-    };
-
-    return &info;
-}
-}
-
 static int id_pool = 0;
 static GWBUF* current_global_query = NULL;
 
-class LUA_SESSION;
-class LUA_INSTANCE;
+class LuaFilterSession;
+class LuaFilter;
 
 /**
  * Push an unique integer to the Lua state's stack
@@ -200,13 +130,14 @@ static int lua_get_canonical(lua_State* state)
 /**
  * The Lua filter instance.
  */
-class LUA_INSTANCE
+class LuaFilter : public maxscale::Filter<LuaFilter, LuaFilterSession>
 {
 public:
-    bool configure(mxs::ConfigParameters* params);
+    static LuaFilter* create(const char* name, mxs::ConfigParameters* params);
+    bool              configure(mxs::ConfigParameters* params);
 
-    LUA_SESSION* newSession(MXS_SESSION* session, SERVICE* service,
-                            mxs::Downstream* downstream, mxs::Upstream* upstream);
+    LuaFilterSession* newSession(MXS_SESSION* session, SERVICE* service);
+    ~LuaFilter();
 
     json_t*    diagnostics() const;
     uint64_t   getCapabilities() const;
@@ -223,30 +154,28 @@ private:
 /**
  * The session structure for Lua filter.
  */
-class LUA_SESSION
+class LuaFilterSession : public maxscale::FilterSession
 {
 public:
-    LUA_SESSION(MXS_SESSION* session, SERVICE* service, LUA_INSTANCE* filter);
-    ~LUA_SESSION();
+    LuaFilterSession(MXS_SESSION* session, SERVICE* service, LuaFilter* filter);
+    ~LuaFilterSession();
     void close();
-    bool prepare_session(const std::string& session_script, mxs::Downstream* downstream,
-                         mxs::Upstream* upstream);
+    bool prepare_session(const std::string& session_script);
 
     int routeQuery(GWBUF* queue);
     int clientReply(GWBUF* queue, const mxs::ReplyRoute& down, const mxs::Reply& reply);
 
 private:
-    LUA_INSTANCE*    m_filter {nullptr};
-    MXS_SESSION*     m_session {nullptr};
-    SERVICE*         m_service {nullptr};
-    lua_State*       m_lua_state {nullptr};
-    GWBUF*           m_current_query {nullptr};
-    mxs::Downstream* m_down {nullptr};
-    mxs::Upstream*   m_up {nullptr};
+    LuaFilter*   m_filter {nullptr};
+    MXS_SESSION* m_session {nullptr};
+    SERVICE*     m_service {nullptr};
+    lua_State*   m_lua_state {nullptr};
+    GWBUF*       m_current_query {nullptr};
 };
 
-LUA_SESSION::LUA_SESSION(MXS_SESSION* session, SERVICE* service, LUA_INSTANCE* filter)
-    : m_filter(filter)
+LuaFilterSession::LuaFilterSession(MXS_SESSION* session, SERVICE* service, LuaFilter* filter)
+    : FilterSession(session, service)
+    , m_filter(filter)
     , m_session(session)
     , m_service(service)
 {
@@ -281,18 +210,18 @@ void expose_functions(lua_State* state, GWBUF** active_buffer)
  * @param params  Filter parameters
  * @return The instance data for this new instance
  */
-static MXS_FILTER* createInstance(const char* name, mxs::ConfigParameters* params)
+LuaFilter* LuaFilter::create(const char* name, mxs::ConfigParameters* params)
 {
-    auto my_instance = new LUA_INSTANCE();
+    auto my_instance = new LuaFilter();
     if (!my_instance->configure(params))
     {
         delete my_instance;
         my_instance = nullptr;
     }
-    return (MXS_FILTER*) my_instance;
+    return my_instance;
 }
 
-bool LUA_INSTANCE::configure(mxs::ConfigParameters* params)
+bool LuaFilter::configure(mxs::ConfigParameters* params)
 {
     bool error = false;
     m_global_script = params->get_string("global_script");
@@ -334,42 +263,15 @@ bool LUA_INSTANCE::configure(mxs::ConfigParameters* params)
     return !error;
 }
 
-uint64_t LUA_INSTANCE::getCapabilities() const
+uint64_t LuaFilter::getCapabilities() const
 {
     return RCAP_TYPE_NONE;
 }
 
-/**
- * Create a new session
- *
- * This function is called for each new client session and it is used to initialize
- * data used for the duration of the session.
- *
- * This function first loads the session script and executes in on a global level.
- * After this, the newSession function in the Lua scripts is called.
- *
- * There is a single C function exported as a global variable for the session
- * script named id_gen. The id_gen function returns an integer that is unique for
- * this service only. This function is only accessible to the session level scripts.
- * @param instance The filter instance data
- * @param session The session itself
- * @return Session specific data for this session
- */
-static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance,
-                                      MXS_SESSION* session,
-                                      SERVICE* service,
-                                      mxs::Downstream* downstream,
-                                      mxs::Upstream* upstream)
+LuaFilterSession* LuaFilter::newSession(MXS_SESSION* session, SERVICE* service)
 {
-    auto my_instance = (LUA_INSTANCE*)instance;
-    return (MXS_FILTER_SESSION*)my_instance->newSession(session, service, downstream, upstream);
-}
-
-LUA_SESSION* LUA_INSTANCE::newSession(MXS_SESSION* session, SERVICE* service, mxs::Downstream* downstream,
-                                      mxs::Upstream* upstream)
-{
-    auto new_session = new LUA_SESSION(session, service, this);
-    if (!new_session->prepare_session(m_session_script, downstream, upstream))
+    auto new_session = new LuaFilterSession(session, service, this);
+    if (!new_session->prepare_session(m_session_script))
     {
         delete new_session;
         new_session = nullptr;
@@ -394,13 +296,9 @@ LUA_SESSION* LUA_INSTANCE::newSession(MXS_SESSION* session, SERVICE* service, mx
     return new_session;
 }
 
-bool LUA_SESSION::prepare_session(const std::string& session_script, mxs::Downstream* downstream,
-                                  mxs::Upstream* upstream)
+bool LuaFilterSession::prepare_session(const std::string& session_script)
 {
     bool error = false;
-    m_down = downstream;
-    m_up = upstream;
-
     if (!session_script.empty())
     {
         m_lua_state = luaL_newstate();
@@ -435,21 +333,7 @@ bool LUA_SESSION::prepare_session(const std::string& session_script, mxs::Downst
     return !error;
 }
 
-/**
- * Close a session with the filter, this is the mechanism
- * by which a filter may cleanup data structure etc.
- *
- * The closeSession function in the Lua scripts will be called.
- * @param instance The filter instance data
- * @param session The session being closed
- */
-static void closeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session)
-{
-    auto my_session = (LUA_SESSION*)session;
-    my_session->close();
-}
-
-void LUA_SESSION::close()
+void LuaFilterSession::close()
 {
     if (m_lua_state)
     {
@@ -479,19 +363,7 @@ void LUA_SESSION::close()
     }
 }
 
-/**
- * Free the memory associated with the session
- *
- * @param instance The filter instance
- * @param session The filter session
- */
-static void freeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session)
-{
-    auto my_session = (LUA_SESSION*) session;
-    delete my_session;
-}
-
-LUA_SESSION::~LUA_SESSION()
+LuaFilterSession::~LuaFilterSession()
 {
     if (m_lua_state)
     {
@@ -499,28 +371,9 @@ LUA_SESSION::~LUA_SESSION()
     }
 }
 
-/**
- * The client reply entry point.
- *
- * This function calls the clientReply function of the Lua scripts.
- * @param instance Filter instance
- * @param session Filter session
- * @param queue Server response
- * @return 1 on success
- */
-static int32_t clientReply(MXS_FILTER* instance,
-                           MXS_FILTER_SESSION* session,
-                           GWBUF* queue,
-                           const mxs::ReplyRoute& down,
-                           const mxs::Reply& reply)
+int LuaFilterSession::clientReply(GWBUF* queue, const maxscale::ReplyRoute& down, const mxs::Reply& reply)
 {
-    auto my_session = (LUA_SESSION*) session;
-    return my_session->clientReply(queue, down, reply);
-}
-
-int LUA_SESSION::clientReply(GWBUF* queue, const maxscale::ReplyRoute& down, const mxs::Reply& reply)
-{
-    LUA_SESSION* my_session = this;
+    LuaFilterSession* my_session = this;
 
     if (my_session->m_lua_state)
     {
@@ -547,34 +400,10 @@ int LUA_SESSION::clientReply(GWBUF* queue, const maxscale::ReplyRoute& down, con
         }
     }
 
-    return m_up->clientReply(m_up->instance, m_up->session, queue, down, reply);
+    return FilterSession::clientReply(queue, down, reply);
 }
 
-/**
- * The routeQuery entry point. This is passed the query buffer
- * to which the filter should be applied. Once processed the
- * query is passed to the downstream component
- * (filter or router) in the filter chain.
- *
- * The Luafilter calls the routeQuery functions of both the session and the global script.
- * The query is passed as a string parameter to the routeQuery Lua function and
- * the return values of the session specific function, if any were returned,
- * are interpreted. If the first value is bool, it is interpreted as a decision
- * whether to route the query or to send an error packet to the client.
- * If it is a string, the current query is replaced with the return value and
- * the query will be routed. If nil is returned, the query is routed normally.
- *
- * @param instance The filter instance data
- * @param session The filter session
- * @param queue  The query data
- */
-static int32_t routeQuery(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GWBUF* queue)
-{
-    auto my_session = (LUA_SESSION*) session;
-    return my_session->routeQuery(queue);
-}
-
-int LUA_SESSION::routeQuery(GWBUF* queue)
+int LuaFilterSession::routeQuery(GWBUF* queue)
 {
     auto my_session = this;
     char* fullquery = NULL;
@@ -655,33 +484,18 @@ int LUA_SESSION::routeQuery(GWBUF* queue)
     {
         gwbuf_free(queue);
         GWBUF* err = modutil_create_mysql_err_msg(1, 0, 1045, "28000", "Access denied.");
-        session_set_response(m_session, m_service, m_up, err);
+        session_set_response(m_session, m_service, m_up.m_data, err);
         rc = 1;
     }
     else
     {
-        rc = m_down->routeQuery(m_down->instance, m_down->session, forward);
+        rc = FilterSession::routeQuery(forward);
     }
 
     return rc;
 }
 
-/**
- * Diagnostics routine.
- *
- * This will call the matching diagnostics entry point in the Lua script. If the
- * Lua function returns a string, it will be printed to the client DCB.
- *
- * @param instance The filter instance
- * @param fsession Filter session, may be NULL
- */
-static json_t* diagnostics(const MXS_FILTER* instance, const MXS_FILTER_SESSION* fsession)
-{
-    auto my_instance = (LUA_INSTANCE*)instance;
-    return my_instance->diagnostics();
-}
-
-json_t* LUA_INSTANCE::diagnostics() const
+json_t* LuaFilter::diagnostics() const
 {
     json_t* rval = json_object();
     if (m_global_lua_state)
@@ -714,18 +528,52 @@ json_t* LUA_INSTANCE::diagnostics() const
     return rval;
 }
 
-lua_State* LUA_INSTANCE::global_lua_state()
+lua_State* LuaFilter::global_lua_state()
 {
     return m_global_lua_state;
 }
 
-/**
- * Capability routine.
- *
- * @return The capabilities of the filter.
- */
-static uint64_t getCapabilities(MXS_FILTER* instance)
+LuaFilter::~LuaFilter()
 {
-    auto my_instance = (LUA_INSTANCE*)instance;
-    return my_instance->getCapabilities();
+    if (m_global_lua_state)
+    {
+        lua_close(m_global_lua_state);
+    }
+}
+
+extern "C"
+{
+
+/**
+ * The module entry point routine. It is this routine that
+ * must populate the structure that is referred to as the
+ * "module object", this is a structure with the set of
+ * external entry points for this module.
+ *
+ * @return The module object
+ */
+MXS_MODULE* MXS_CREATE_MODULE()
+{
+    static MXS_MODULE info =
+    {
+        MXS_MODULE_API_FILTER,
+        MXS_MODULE_EXPERIMENTAL,
+        MXS_FILTER_VERSION,
+        "Lua Filter",
+        "V1.0.0",
+        RCAP_TYPE_CONTIGUOUS_INPUT,
+        &LuaFilter::s_object,
+        NULL,                       /* Process init. */
+        NULL,                       /* Process finish. */
+        NULL,                       /* Thread init. */
+        NULL,                       /* Thread finish. */
+        {
+            {"global_script",      MXS_MODULE_PARAM_PATH,  NULL, MXS_MODULE_OPT_PATH_R_OK},
+            {"session_script",     MXS_MODULE_PARAM_PATH,  NULL, MXS_MODULE_OPT_PATH_R_OK},
+            {MXS_END_MODULE_PARAMS}
+        }
+    };
+
+    return &info;
+}
 }
