@@ -264,6 +264,64 @@ void run_in_mainworker(const function<void(void)>& func)
     pMw->execute(func, mxb::Worker::EXECUTE_AUTO);
 }
 
+int get_status_mask(const cs::Status& status, size_t nServers)
+{
+    int mask = 0;
+
+    if (status.ok())
+    {
+        // If services are empty, it is an indication that Columnstore actually
+        // is not running _even_ if we were able to connect to the MariaDB server.
+        if (!status.services.empty())
+        {
+            mask |= SERVER_RUNNING;
+
+            // Seems to be running.
+            if (status.dbrm_mode == cs::MASTER)
+            {
+                // The node that claims to be master gets
+                // - the master bit if the cluster is readwrite,
+                // - the slave bit if it is the only server (i.e. probably a single node installation),
+                // - otherwise only the running bit (the master node in a readonly multi-node cluster).
+                if (status.cluster_mode == cs::READWRITE)
+                {
+                    mask |= SERVER_MASTER;
+                }
+                else if (nServers)
+                {
+                    mask |= SERVER_SLAVE;
+                }
+            }
+            else
+            {
+                mask |= SERVER_SLAVE;
+            }
+        }
+    }
+
+    return mask;
+}
+
+int fetch_status_mask(const CsMonitorServer& server, size_t nServers)
+{
+    int mask = 0;
+
+    auto status = server.fetch_node_status();
+
+    if (status.ok())
+    {
+        mask = get_status_mask(status, nServers);
+    }
+    else
+    {
+        MXS_ERROR("Could not fetch status using REST-API from '%s': (%d) %s",
+                  server.name(), status.response.code, status.response.body.c_str());
+    }
+
+    return mask;
+}
+
+
 }
 
 namespace
@@ -596,56 +654,16 @@ void CsMonitor::update_server_status(MonitorServer* pS)
         if (do_query(pServer, get_alive_query(m_context.config().version)) == "1")
         {
             mxb_assert(m_context.config().version == cs::CS_15);
-            status_mask = get_15_server_status(pServer);
+            status_mask = fetch_status_mask(*pServer);
         }
     }
 
     pServer->set_pending_status(status_mask);
 }
 
-int CsMonitor::get_15_server_status(CsMonitorServer* pServer)
+int CsMonitor::fetch_status_mask(const CsMonitorServer &server)
 {
-    int status_mask = 0;
-
-    auto status = pServer->fetch_node_status();
-
-    if (status.ok())
-    {
-        // If services are empty, it is an indication that Columnstore actually
-        // is not running _even_ if we were able to connect to the MariaDB server.
-        if (!status.services.empty())
-        {
-            status_mask |= SERVER_RUNNING;
-
-            // Seems to be running.
-            if (status.dbrm_mode == cs::MASTER)
-            {
-                // The node that claims to be master gets
-                // - the master bit if the cluster is readwrite,
-                // - the slave bit if it is the only server (i.e. probably a single node installation),
-                // - otherwise only the running bit (the master node in a readonly multi-node cluster).
-                if (status.cluster_mode == cs::READWRITE)
-                {
-                    status_mask |= SERVER_MASTER;
-                }
-                else if (servers().size() == 1)
-                {
-                    status_mask |= SERVER_SLAVE;
-                }
-            }
-            else
-            {
-                status_mask |= SERVER_SLAVE;
-            }
-        }
-    }
-    else
-    {
-        MXS_ERROR("Could not fetch status using REST-API from '%s': (%d) %s",
-                  pServer->name(), status.response.code, status.response.body.c_str());
-    }
-
-    return status_mask;
+    return ::fetch_status_mask(server, servers().size());
 }
 
 bool CsMonitor::configure(const mxs::ConfigParameters* pParams)
