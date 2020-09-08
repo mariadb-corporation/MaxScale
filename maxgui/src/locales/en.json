@@ -31,8 +31,10 @@
     "rememberMe": "Remember me",
     "signIn": "Sign In",
     "initializing": "initializing",
+    "switchover": "Switchover",
     "add": "Add",
     "change": "Change",
+    "swap": "Swap",
     "close": "Close",
     "cancel": "Cancel",
     "update": "Update",
@@ -117,7 +119,8 @@
     },
     "info": {
         "serverDrain": "Server is drained of connections",
-        "serverMaintenance": "By default setting a server into maintenance mode will cause connections to be closed only after the next request is sent. Check the box below to force all connections to the server to be closed immediately"
+        "serverMaintenance": "By default setting a server into maintenance mode will cause connections to be closed only after the next request is sent. Check the box below to force all connections to the server to be closed immediately",
+        "switchover": "Swap the running master with a designated slave"
     },
 
     "$vuetify": {

@@ -126,4 +126,20 @@ describe('SelectDialog.vue', () => {
         expect(clearable).to.be.equals(wrapperClearable)
         expect(showPlaceHolder).to.be.false
     })
+
+    it(`Should render accurate content when body-append slot is used`, async () => {
+        wrapper = mount({
+            shallow: false,
+            component: SelectDialog,
+            props: initialProps,
+            computed: {
+                computeShowDialog: () => true,
+            },
+            slots: {
+                'body-append': '<small class="body-append">body append</small>',
+            },
+        })
+
+        expect(wrapper.find('.body-append').text()).to.be.equal('body append')
+    })
 })
