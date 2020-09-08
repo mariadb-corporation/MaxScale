@@ -213,6 +213,41 @@ export default {
                 logger.error(e)
             }
         },
+
+        /**
+         * @param {String} payload.monitorModule Monitor module
+         * @param {String} payload.monitorId Monitor id
+         * @param {String} payload.master Name of the new master server
+         * @param {Function} payload.callback callback function after successfully updated
+         */
+        async switchOver(_, { monitorModule, monitorId, masterId, callback }) {
+            try {
+                let res
+                res = await this.vue.$axios.post(
+                    `/maxscale/modules/${monitorModule}/async-switchover?${monitorId}&${masterId}`
+                )
+                // response ok
+                if (res.status === 204) if (this.vue.$help.isFunction(callback)) await callback()
+            } catch (e) {
+                const logger = this.vue.$logger('store-monitor-switchOver')
+                logger.error(e)
+            }
+        },
+
+        /**
+         * @param {String} payload.monitorModule Monitor module
+         * @param {String} payload.monitorId Monitor id
+         * @return {Object} response object
+         */
+        async fetchAsyncResults(_, { monitorModule, monitorId }) {
+            try {
+                return await this.vue.$axios.post(
+                    `/maxscale/modules/${monitorModule}/fetch-async-results?${monitorId}`
+                )
+            } catch (e) {
+                this.vue.$logger('store-monitor-fetchAsyncResults').error(e)
+            }
+        },
     },
     getters: {
         // -------------- below getters are available only when fetchAllMonitors has been dispatched

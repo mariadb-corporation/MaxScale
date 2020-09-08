@@ -25,6 +25,7 @@
                 @is-equal="isSaveDisabled = $event"
                 @get-selected-items="handleGetSelectedItems"
             />
+            <slot name="body-append"></slot>
         </template>
     </base-dialog>
 </template>
