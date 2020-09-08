@@ -29,36 +29,47 @@
 #include <maxscale/ccdefs.hh>
 
 #include <vector>
-#include <sys/time.h>
-#include <cstdio>
+#include <fstream>
+#include <iomanip>
 
 #include <maxbase/regex.hh>
+#include <maxbase/stopwatch.hh>
 #include <maxscale/filter.hh>
 #include <maxscale/modutil.hh>
 
 class TOPN_INSTANCE;
 
-struct TOPNQ
+class TOPNQ
 {
-    TOPNQ(const timeval& d, const std::string& s)
-        : duration(d)
-        , sql(s)
+public:
+    TOPNQ(const mxb::Duration& d, const std::string& s)
+        : m_d(d)
+        , m_sql(s)
     {
     }
 
-    timeval     duration;
-    std::string sql;
-};
-
-// Used for sorting queries that took longer before faster ones
-struct ReverseCompare
-{
-    bool operator()(const TOPNQ& lhs, const TOPNQ& rhs)
+    double seconds() const
     {
-        return lhs.duration.tv_sec == rhs.duration.tv_sec ?
-               rhs.duration.tv_usec < lhs.duration.tv_usec :
-               rhs.duration.tv_sec < lhs.duration.tv_sec;
+        return mxb::to_secs(m_d);
     }
+
+    const std::string& sql() const
+    {
+        return m_sql;
+    }
+
+    // Used for sorting queries that took longer before faster ones
+    struct Sort
+    {
+        bool operator()(const TOPNQ& lhs, const TOPNQ& rhs)
+        {
+            return rhs.m_d < lhs.m_d;
+        }
+    };
+
+private:
+    mxb::Duration m_d;
+    std::string   m_sql;
 };
 
 class TOPN_SESSION : public mxs::FilterSession
@@ -71,15 +82,15 @@ public:
     json_t* diagnostics() const;
 
 private:
-    TOPN_INSTANCE*     m_instance;
-    bool               m_active = true;
-    std::string        m_filename;
-    std::string        m_current;
-    int                m_n_statements = 0;
-    timeval            m_start;
-    timeval            m_total;
-    timeval            m_connect;
-    std::vector<TOPNQ> m_top;
+    TOPN_INSTANCE*       m_instance;
+    bool                 m_active = true;
+    std::string          m_filename;
+    std::string          m_current;
+    int                  m_n_statements = 0;
+    wall_time::TimePoint m_connect;
+    mxb::Duration        m_stmt_time;
+    mxb::StopWatch       m_watch;
+    std::vector<TOPNQ>   m_top;
 };
 
 static const MXS_ENUM_VALUE option_values[] =
@@ -158,20 +169,13 @@ private:
 TOPN_SESSION::TOPN_SESSION(TOPN_INSTANCE* instance, MXS_SESSION* session, SERVICE* service)
     : mxs::FilterSession(session, service)
     , m_instance(instance)
+    , m_filename(m_instance->config().filebase + "." + std::to_string(session->id()))
+    , m_connect(wall_time::Clock::now())
 {
     const auto& config = m_instance->config();
 
-    m_filename = config.filebase + "." + std::to_string(session->id());
-    m_total.tv_sec = 0;
-    m_total.tv_usec = 0;
-    gettimeofday(&m_connect, NULL);
-
-    if (!config.source.empty() && session->client_remote() != config.source)
-    {
-        m_active = false;
-    }
-
-    if (!config.user.empty() && session->user() != config.user)
+    if ((!config.source.empty() && session->client_remote() != config.source)
+        || (!config.user.empty() && session->user() != config.user))
     {
         m_active = false;
     }
@@ -179,47 +183,37 @@ TOPN_SESSION::TOPN_SESSION(TOPN_INSTANCE* instance, MXS_SESSION* session, SERVIC
 
 TOPN_SESSION::~TOPN_SESSION()
 {
-    timeval diff;
-    timeval disconnect;
-    gettimeofday(&disconnect, NULL);
-    timersub(&disconnect, &m_connect, &diff);
+    std::ofstream file(m_filename);
 
-    if (FILE* fp = fopen(m_filename.c_str(), "w"))
+    if (file)
     {
         int statements = std::max(m_n_statements, 1);
+        auto total = mxb::to_secs(m_watch.split());
+        double stmt = mxb::to_secs(m_stmt_time);
+        double avg = stmt / statements;
 
-        fprintf(fp, "Top %d longest running queries in session.\n", m_instance->config().topN);
-        fprintf(fp, "==========================================\n\n");
-        fprintf(fp, "Time (sec) | Query\n");
-        fprintf(fp, "-----------+-----------------------------------------------------------------\n");
+        file << std::fixed << std::setprecision(3);
+        file << "Top " << m_instance->config().topN << " longest running queries in session.\n"
+             << "==========================================\n\n"
+             << "Time (sec) | Query\n"
+             << "-----------+-----------------------------------------------------------------\n";
 
         for (const auto& t : m_top)
         {
-            if (!t.sql.empty())
+            if (!t.sql().empty())
             {
-                fprintf(fp, "%10.3f |  %s\n",
-                        (double) ((t.duration.tv_sec * 1000) + (t.duration.tv_usec / 1000)) / 1000,
-                        t.sql.c_str());
+                file << std::setw(10) << t.seconds() << " |  " << t.sql() << "\n";
             }
         }
 
-        fprintf(fp, "-----------+-----------------------------------------------------------------\n");
-        struct tm tm;
-        localtime_r(&m_connect.tv_sec, &tm);
-        char buffer[32];    // asctime_r documentation requires 26
-        asctime_r(&tm, buffer);
-        fprintf(fp, "\n\nSession started %s", buffer);
-
-        fprintf(fp, "Connection from %s\n", m_pSession->client_remote().c_str());
-        fprintf(fp, "Username        %s\n", m_pSession->user().c_str());
-        fprintf(fp, "\nTotal of %d statements executed.\n", statements);
-        fprintf(fp, "Total statement execution time   %5d.%d seconds\n",
-                (int) m_total.tv_sec, (int) m_total.tv_usec / 1000);
-        fprintf(fp, "Average statement execution time %9.3f seconds\n",
-                (double) ((m_total.tv_sec * 1000) + (m_total.tv_usec / 1000)) / (1000 * statements));
-        fprintf(fp, "Total connection time            %5d.%d seconds\n",
-                (int) diff.tv_sec, (int) diff.tv_usec / 1000);
-        fclose(fp);
+        file << "-----------+-----------------------------------------------------------------\n"
+             << "\n\nSession started " << wall_time::to_string(m_connect, "%a %b %e %T %Y") << "\n"
+             << "Connection from " << m_pSession->client_remote() << "\n"
+             << "Username        " << m_pSession->user() << "\n"
+             << "\nTotal of " << statements << " statements executed.\n"
+             << "Total statement execution time   " << stmt << " seconds\n"
+             << "Average statement execution time " << avg << " seconds\n"
+             << "Total connection time            " << total << " seconds\n";
     }
 }
 
@@ -236,7 +230,7 @@ int32_t TOPN_SESSION::routeQuery(GWBUF* queue)
                 && (config.exclude.empty() || !config.exclude.match(sql)))
             {
                 m_n_statements++;
-                gettimeofday(&m_start, NULL);
+                m_watch.lap();
                 m_current = sql;
             }
         }
@@ -247,17 +241,14 @@ int32_t TOPN_SESSION::routeQuery(GWBUF* queue)
 
 int32_t TOPN_SESSION::clientReply(GWBUF* buffer, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
-    struct timeval tv, diff;
-
     if (!m_current.empty())
     {
-        gettimeofday(&tv, NULL);
-        timersub(&tv, &m_start, &diff);
-        timeradd(&m_total, &diff, &m_total);
-        m_top.emplace_back(diff, m_current);
+        auto lap = m_watch.lap();
+        m_stmt_time += lap;
+        m_top.emplace_back(lap, m_current);
         m_current.clear();
 
-        std::sort(m_top.begin(), m_top.end(), ReverseCompare {});
+        std::sort(m_top.begin(), m_top.end(), TOPNQ::Sort {});
 
         if (m_top.size() > (size_t)m_instance->config().topN)
         {
@@ -280,15 +271,13 @@ json_t* TOPN_SESSION::diagnostics() const
 
     for (const auto& t : m_top)
     {
-        if (!t.sql.empty())
+        if (!t.sql().empty())
         {
-            double exec_time = ((t.duration.tv_sec * 1000.0) + (t.duration.tv_usec / 1000.0)) / 1000.0;
-
             json_t* obj = json_object();
 
             json_object_set_new(obj, "rank", json_integer(++i));
-            json_object_set_new(obj, "time", json_real(exec_time));
-            json_object_set_new(obj, "sql", json_string(t.sql.c_str()));
+            json_object_set_new(obj, "time", json_real(t.seconds()));
+            json_object_set_new(obj, "sql", json_string(t.sql().c_str()));
 
             json_array_append_new(arr, obj);
         }
