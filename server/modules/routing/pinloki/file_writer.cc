@@ -87,11 +87,19 @@ void FileWriter::add_event(maxsql::RplEvent& rpl_event)     // FIXME, move into 
     {
         if (etype == ROTATE_EVENT)
         {
-            rotate_event(rpl_event.rotate());
+            m_rotate = rpl_event.rotate();
         }
     }
     else
     {
+        if (etype == FORMAT_DESCRIPTION_EVENT)
+        {
+            mxb_assert(m_in_transaction == false);
+            mxb_assert(m_rotate.file_name.empty() == false);
+            perform_rotate(m_rotate);
+            m_rotate.file_name.clear();
+        }
+
         rpl_event.set_next_pos(m_current_pos.write_pos + rpl_event.buffer_size()
                                + m_tx_buffer.str().size());
 
@@ -110,7 +118,7 @@ void FileWriter::add_event(maxsql::RplEvent& rpl_event)     // FIXME, move into 
     }
 }
 
-void FileWriter::rotate_event(const maxsql::Rotate& rotate)
+void FileWriter::perform_rotate(const maxsql::Rotate& rotate)
 {
     auto master_file_name = rotate.file_name;
     auto last_file_name = m_inventory.last();

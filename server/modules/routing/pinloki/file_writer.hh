@@ -48,15 +48,16 @@ private:
         int           write_pos;
     };
 
-    void rotate_event(const maxsql::Rotate& rotate);
+    void perform_rotate(const maxsql::Rotate& rotate);
     void write_to_file(WritePosition& fn, const maxsql::RplEvent& rpl_event);
     void write_stop(const std::string& file_name);
     void write_rotate(WritePosition& fn, const std::string& to_file_name);
     void write_gtid_list(WritePosition& fn);
 
-    Inventory&    m_inventory;
-    const Writer& m_writer;
-    WritePosition m_current_pos;
+    Inventory&     m_inventory;
+    const Writer&  m_writer;
+    WritePosition  m_current_pos;
+    maxsql::Rotate m_rotate;
 
     bool               m_in_transaction = false;
     std::ostringstream m_tx_buffer;
