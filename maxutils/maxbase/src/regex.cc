@@ -59,62 +59,44 @@ thread_local struct
 
 namespace maxbase
 {
-Regex::Regex(const std::string& pattern, int options)
+Regex::Regex(const std::string& pattern, uint32_t options)
     : m_pattern(pattern)
+    , m_options(options)
 {
     if (!m_pattern.empty())
     {
         int err;
         size_t erroff;
-        m_code = pcre2_compile((PCRE2_SPTR) pattern.c_str(), pattern.length(), options, &err, &erroff, NULL);
+        auto code = pcre2_compile((PCRE2_SPTR) pattern.c_str(), pattern.length(),
+                                  options, &err, &erroff, NULL);
 
-        if (!m_code)
+        if (!code)
         {
             PCRE2_UCHAR errorbuf[120];
             pcre2_get_error_message(err, errorbuf, sizeof(errorbuf));
             m_error = (const char*)errorbuf;
         }
-        else if (pcre2_jit_compile(m_code, PCRE2_JIT_COMPLETE) < 0)
+        else
         {
-            MXB_ERROR("PCRE2 JIT compilation of pattern '%s' failed.", pattern.c_str());
+            if (pcre2_jit_compile(code, PCRE2_JIT_COMPLETE) < 0)
+            {
+                MXB_ERROR("PCRE2 JIT compilation of pattern '%s' failed.", pattern.c_str());
+            }
+
+            m_code.reset(code, [](auto p) {
+                             pcre2_code_free(p);
+                         });
         }
     }
 }
 
-Regex::Regex(const Regex& rhs)
-    : Regex(rhs.pattern())
+Regex::Regex(const std::string& pattern, pcre2_code* code, uint32_t options)
+    : m_pattern(pattern)
+    , m_options(options)
+    , m_code(code, [](auto p) {
+                 pcre2_code_free(p);
+             })
 {
-}
-
-Regex::Regex(Regex&& rhs)
-    : m_pattern(std::move(rhs.m_pattern))
-    , m_error(rhs.m_error)
-    , m_code(rhs.m_code)
-{
-    rhs.m_code = nullptr;
-}
-
-Regex& Regex::operator=(const Regex& rhs)
-{
-    Regex tmp(rhs.pattern());
-    std::swap(m_code, tmp.m_code);
-    std::swap(m_pattern, tmp.m_pattern);
-    std::swap(m_error, tmp.m_error);
-    return *this;
-}
-
-Regex& Regex::operator=(Regex&& rhs)
-{
-    m_code = rhs.m_code;
-    rhs.m_code = nullptr;
-    m_pattern = std::move(rhs.m_pattern);
-    m_error = rhs.m_error;
-    return *this;
-}
-
-Regex::~Regex()
-{
-    pcre2_code_free(m_code);
 }
 
 bool Regex::empty() const
@@ -129,7 +111,7 @@ Regex::operator bool() const
 
 bool Regex::valid() const
 {
-    return m_code;
+    return m_code.get();
 }
 
 const std::string& Regex::pattern() const
@@ -146,7 +128,8 @@ bool Regex::match(const std::string& str) const
 {
     int rc;
 
-    while ((rc = pcre2_match(m_code, (PCRE2_SPTR)str.c_str(), str.length(), 0, 0, this_thread.md, NULL)) == 0)
+    while ((rc = pcre2_match(m_code.get(), (PCRE2_SPTR)str.c_str(), str.length(), 0,
+                             m_options, this_thread.md, NULL)) == 0)
     {
         this_thread.md.enlarge();
     }
@@ -154,7 +137,7 @@ bool Regex::match(const std::string& str) const
     return rc > 0;
 }
 
-std::string Regex::replace(const std::string& str, const char* replacement) const
+std::string Regex::replace(const std::string& str, const std::string& replacement) const
 {
     std::string output;
     output.resize(str.length());
@@ -163,9 +146,9 @@ std::string Regex::replace(const std::string& str, const char* replacement) cons
     while (true)
     {
         int rc = pcre2_substitute(
-            m_code, (PCRE2_SPTR) str.c_str(), str.length(),
-            0, PCRE2_SUBSTITUTE_GLOBAL, this_thread.md, NULL,
-            (PCRE2_SPTR) replacement, PCRE2_ZERO_TERMINATED,
+            m_code.get(), (PCRE2_SPTR) str.c_str(), str.length(),
+            0, m_options | PCRE2_SUBSTITUTE_GLOBAL, this_thread.md, NULL,
+            (PCRE2_SPTR) replacement.c_str(), PCRE2_ZERO_TERMINATED,
             (PCRE2_UCHAR*) &output[0], &size);
 
         if (rc == PCRE2_ERROR_NOMEMORY)

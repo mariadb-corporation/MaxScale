@@ -987,7 +987,7 @@ std::string ParamRegex::type() const
 
 std::string ParamRegex::to_string(const value_type& type) const
 {
-    return type.text;
+    return type.pattern();
 }
 
 namespace
@@ -1053,7 +1053,7 @@ bool ParamRegex::from_string(const std::string& value_as_string,
 
 json_t* ParamRegex::to_json(const value_type& value) const
 {
-    return value.sCode.get() ? json_string(value.text.c_str()) : json_null();
+    return !value.empty() ? json_string(value.pattern().c_str()) : json_null();
 }
 
 bool ParamRegex::from_json(const json_t* pJson,

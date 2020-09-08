@@ -1065,7 +1065,7 @@ private:
  * ParamRegex
  */
 
-class RegexValue
+class RegexValue : public mxb::Regex
 {
 public:
     RegexValue() = default;
@@ -1076,19 +1076,17 @@ public:
                std::unique_ptr<pcre2_code> sCode,
                uint32_t ovec_size,
                uint32_t options)
-        : text(text)
-        , sCode(std::move(sCode))   // Gets default_delete<pcre2_code> from the unique_ptr.
+        : mxb::Regex(text, sCode.release(), options)
         , ovec_size(ovec_size)
-        , options(options)
     {
     }
 
     bool operator==(const RegexValue& rhs) const
     {
-        return this->text == rhs.text
+        return this->pattern() == rhs.pattern()
                && this->ovec_size == rhs.ovec_size
-               && this->options == rhs.options
-               && (!this->sCode == !rhs.sCode);     // Both NULL, or both valid.
+               && this->options() == rhs.options()
+               && (!this->valid() == !rhs.valid());     // Both have the same validity.
     }
 
     bool operator!=(const RegexValue& rhs) const
@@ -1096,15 +1094,7 @@ public:
         return !(*this == rhs);
     }
 
-    void set_options(uint32_t options)
-    {
-        this->options = options;
-    }
-
-    std::string                 text;
-    std::shared_ptr<pcre2_code> sCode;
-    uint32_t                    ovec_size {0};
-    uint32_t                    options {0};
+    uint32_t ovec_size {0};
 };
 
 class ParamRegex : public ConcreteParam<ParamRegex, RegexValue>
@@ -2489,6 +2479,6 @@ void Configuration::add_native(typename ParamType::value_type* pValue,
 
 inline std::ostream& operator<<(std::ostream& out, const mxs::config::RegexValue& value)
 {
-    out << value.text;
+    out << value.pattern();
     return out;
 }

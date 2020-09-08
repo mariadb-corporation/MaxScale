@@ -22,6 +22,7 @@
 
 #include <pcre2.h>
 
+#include <memory>
 #include <string>
 
 namespace maxbase
@@ -41,14 +42,21 @@ public:
      * @param pattern The pattern to use.
      * @param options PCRE2 options to use.
      */
-    Regex(const std::string& pattern = "", int options = 0);
+    Regex(const std::string& pattern = "", uint32_t options = 0);
 
-    Regex(const Regex& rhs);
-    Regex(Regex&& rhs);
-    ~Regex();
+    /**
+     * Constructs a regular expression from existing code
+     *
+     * @param pattern The pattern where the code was compiled from.
+     * @param code    The compiled PCRE2 code.
+     * @param options PCRE2 options.
+     */
+    Regex(const std::string& pattern, pcre2_code* code, uint32_t options = 0);
 
-    Regex& operator=(const Regex& rhs);
-    Regex& operator=(Regex&& rhs);
+    Regex(const Regex& rhs) = default;
+    Regex(Regex&& rhs) = default;
+    Regex& operator=(const Regex& rhs) = default;
+    Regex& operator=(Regex&& rhs) = default;
 
     /**
      * @return True if the pattern is empty i.e. the string `""`
@@ -94,12 +102,45 @@ public:
      *
      * @return True if the string matches the pattern
      */
-    std::string replace(const std::string& str, const char* replacement) const;
+    std::string replace(const std::string& str, const std::string& replacement) const;
+
+    /**
+     * Set PCRE2 options
+     *
+     * @param options The options to set
+     */
+    void set_options(uint32_t options)
+    {
+        m_options = options;
+    }
+
+    /**
+     * Get PCRE2 options
+     *
+     * @return Current PCRE2 options
+     */
+    uint32_t options() const
+    {
+        return m_options;
+    }
+
+    /**
+     * Get compiled pattern
+     *
+     * The ownership of the pointer is not transferred and must not be freed.
+     *
+     * @return The compiled pattern if one has been successfully compiled, otherwise nullptr
+     */
+    pcre2_code* code() const
+    {
+        return m_code.get();
+    }
 
 private:
-    std::string m_pattern;
-    std::string m_error;
-    pcre2_code* m_code = nullptr;
+    std::string                 m_pattern;
+    std::string                 m_error;
+    uint32_t                    m_options = 0;
+    std::shared_ptr<pcre2_code> m_code;
 };
 
 /**
