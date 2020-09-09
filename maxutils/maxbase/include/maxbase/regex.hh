@@ -79,7 +79,7 @@ public:
     const std::string& pattern() const;
 
     /**
-     * @return The error returned by PCRE2 for invalid patterns
+     * @return The latest error returned by PCRE2
      */
     const std::string& error() const;
 
@@ -143,7 +143,7 @@ public:
 
 private:
     std::string                 m_pattern;
-    std::string                 m_error;
+    mutable std::string         m_error;
     uint32_t                    m_options = 0;
     std::shared_ptr<pcre2_code> m_code;
 };

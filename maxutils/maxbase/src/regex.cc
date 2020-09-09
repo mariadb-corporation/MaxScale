@@ -158,6 +158,13 @@ std::string Regex::replace(const char* str, size_t len, const char* replacement)
         }
         else
         {
+            if (rc < 0)
+            {
+                PCRE2_UCHAR errorbuf[120] = "";
+                pcre2_get_error_message(rc, errorbuf, sizeof(errorbuf));
+                m_error = (const char*)errorbuf;
+            }
+
             break;
         }
     }
