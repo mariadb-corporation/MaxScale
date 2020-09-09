@@ -40,7 +40,7 @@ as if the _isolation level_ would be `READ COMMITTED`, irrespective of what
 the isolation level of the backends actually is.
 
 The default behaviour can be altered using the configuration parameter
-[cache_inside_transactions](#cache_inside_transactions).
+[cache_in_transactions](#cache_in_transactions).
 
 By default it is assumed that all `SELECT` statements are cacheable, which
 means that also statements like `SELECT LOCALTIME` are cached. Please check
@@ -282,7 +282,7 @@ the following circumstances:
 Note that parsing all `SELECT` statements carries a _significant_ performance
 cost. Please read [performance](#performance) for more details.
 
-#### `cache_inside_transactions`
+#### `cache_in_transactions`
 
 An enumeration option specifying how the cache should behave when there
 are active transactions:
@@ -301,7 +301,7 @@ are active transactions:
      explicitly read-only, the cache will be used and populated _until_ the
      first non-SELECT statement.
 ```
-cache_inside_transactions=never
+cache_in_transactions=never
 ```
 Default is `all_transactions`.
 
