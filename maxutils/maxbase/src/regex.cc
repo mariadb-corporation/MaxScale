@@ -124,12 +124,12 @@ const std::string& Regex::error() const
     return m_error;
 }
 
-bool Regex::match(const std::string& str) const
+bool Regex::match(const char* str, size_t len) const
 {
     int rc;
+    mxb_assert(m_code.get());
 
-    while ((rc = pcre2_match(m_code.get(), (PCRE2_SPTR)str.c_str(), str.length(), 0,
-                             m_options, this_thread.md, NULL)) == 0)
+    while ((rc = pcre2_match(m_code.get(), (PCRE2_SPTR)str, len, 0, m_options, this_thread.md, NULL)) == 0)
     {
         this_thread.md.enlarge();
     }
@@ -137,18 +137,18 @@ bool Regex::match(const std::string& str) const
     return rc > 0;
 }
 
-std::string Regex::replace(const std::string& str, const std::string& replacement) const
+std::string Regex::replace(const char* str, size_t len, const char* replacement) const
 {
     std::string output;
-    output.resize(str.length());
+    output.resize(len);
     size_t size = output.size();
 
     while (true)
     {
         int rc = pcre2_substitute(
-            m_code.get(), (PCRE2_SPTR) str.c_str(), str.length(),
+            m_code.get(), (PCRE2_SPTR) str, len,
             0, m_options | PCRE2_SUBSTITUTE_GLOBAL, this_thread.md, NULL,
-            (PCRE2_SPTR) replacement.c_str(), PCRE2_ZERO_TERMINATED,
+            (PCRE2_SPTR) replacement, PCRE2_ZERO_TERMINATED,
             (PCRE2_UCHAR*) &output[0], &size);
 
         if (rc == PCRE2_ERROR_NOMEMORY)

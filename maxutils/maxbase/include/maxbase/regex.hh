@@ -86,23 +86,28 @@ public:
     /**
      * Check if `str` matches this pattern
      *
-     * @param str  String to match
-     * @param data The match data to use. If null, uses built-in match data that is not lock-free.
-     *
      * @return True if the string matches the pattern
      */
-    bool match(const std::string& str) const;
+    bool match(const char* str, size_t len) const;
+    bool match(const std::string& str) const
+    {
+        return match(str.c_str(), str.size());
+    }
 
     /**
      * Replace matches in `str` with given replacement this pattern
      *
      * @param str         String to match
+     * @param len         Length of the string
      * @param replacement String to replace matches with
-     * @param data        The match data to use. If null, uses built-in match data that is not lock-free.
      *
      * @return True if the string matches the pattern
      */
-    std::string replace(const std::string& str, const std::string& replacement) const;
+    std::string replace(const char* str, size_t len, const char* replacement) const;
+    std::string replace(const std::string& str, const char* replacement) const
+    {
+        return replace(str.c_str(), str.size(), replacement);
+    }
 
     /**
      * Set PCRE2 options
