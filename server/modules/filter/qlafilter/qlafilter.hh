@@ -105,6 +105,8 @@ public:
     bool  write_to_logfile(FILE* fp, const std::string& contents) const;
     void  write_stdout_log_entry(const std::string& contents) const;
 
+    bool match_exclude(const char* sql, int len);
+
     class Settings : public mxs::config::Configuration
     {
     public:
@@ -190,8 +192,7 @@ private:
     const std::string m_service;    /* The service name this filter is attached to. */
     const uint64_t    m_ses_id {0}; /* The session this filter session serves. */
 
-    bool              m_active {false};     /* Is session active? */
-    pcre2_match_data* m_mdata {nullptr};    /* Regex match data */
+    bool m_active {false};      /* Is session active? */
 
     FILE* m_logfile {nullptr};          /* The session-specific log file */
     int   m_rotation_count {0};         /* Log rotation counter */

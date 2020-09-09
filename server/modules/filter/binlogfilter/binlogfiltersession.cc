@@ -140,7 +140,7 @@ int BinlogFilterSession::routeQuery(GWBUF* pPacket)
         m_state = BINLOG_MODE;
         MXS_INFO("Slave server %u is waiting for binlog events.", m_serverid);
 
-        if (!m_is_gtid && m_filter.getConfig().rewrite_src.sCode)
+        if (!m_is_gtid && m_filter.getConfig().rewrite_src)
         {
             gwbuf_free(pPacket);
             std::ostringstream ss;
@@ -406,21 +406,7 @@ static std::string inline extract_table_info(const uint8_t* ptr)
 
 static bool should_skip(const BinlogConfig& config, const std::string& str)
 {
-    bool skip = true;
-
-    if (!config.match.sCode
-        || pcre2_match(config.match.sCode.get(), (PCRE2_SPTR)str.c_str(), PCRE2_ZERO_TERMINATED,
-                       0, 0, config.md_match, NULL) >= 0)
-    {
-        if (!config.exclude.sCode
-            || pcre2_match(config.exclude.sCode.get(), (PCRE2_SPTR)str.c_str(), PCRE2_ZERO_TERMINATED, 0, 0,
-                           config.md_exclude, NULL) == PCRE2_ERROR_NOMATCH)
-        {
-            skip = false;
-        }
-    }
-
-    return skip;
+    return (config.match && !config.match.match(str)) || (config.exclude && config.exclude.match(str));
 }
 
 static bool should_skip_query(const BinlogConfig& config, const std::string& sql, const std::string& db = "")
@@ -847,17 +833,17 @@ void BinlogFilterSession::checkStatement(GWBUF** buffer, const REP_HEADER& hdr, 
     m_skip = should_skip_query(config, sql, db);
     MXS_INFO("[%s] (%s) %s", m_skip ? "SKIP" : "    ", db.c_str(), sql.c_str());
 
-    if (!m_skip && config.rewrite_src.sCode)
+    if (!m_skip && config.rewrite_src)
     {
-        std::string err;
-        auto new_db = mxb::pcre2_substitute(config.rewrite_src.sCode.get(), db, config.rewrite_dest, &err);
-        auto new_sql = mxb::pcre2_substitute(config.rewrite_src.sCode.get(), sql, config.rewrite_dest, &err);
+        auto new_db = config.rewrite_src.replace(db, config.rewrite_dest.c_str());
+        auto new_sql = config.rewrite_src.replace(sql, config.rewrite_dest.c_str());
 
         if ((new_db.empty() && !db.empty()) || (new_sql.empty() && !sql.empty()))
         {
             MXS_ERROR("PCRE2 error on pattern '%s' with replacement '%s': %s",
-                      config.rewrite_src.text.c_str(),
-                      config.rewrite_dest.c_str(), err.c_str());
+                      config.rewrite_src.pattern().c_str(),
+                      config.rewrite_dest.c_str(),
+                      config.rewrite_src.error().c_str());
         }
         else if (db != new_db || sql != new_sql)
         {

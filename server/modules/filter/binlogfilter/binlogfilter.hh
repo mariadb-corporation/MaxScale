@@ -25,13 +25,9 @@ static constexpr const char REWRITE_DEST[] = "rewrite_dest";
 struct BinlogConfig : public mxs::config::Configuration
 {
     BinlogConfig(const char* name);
-    ~BinlogConfig();
-    bool post_configure() final;
 
     mxs::config::RegexValue match;
-    pcre2_match_data*       md_match = nullptr;
     mxs::config::RegexValue exclude;
-    pcre2_match_data*       md_exclude = nullptr;
     mxs::config::RegexValue rewrite_src;
     std::string             rewrite_dest;
 };

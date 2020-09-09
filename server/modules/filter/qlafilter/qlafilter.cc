@@ -200,7 +200,6 @@ QlaFilterSession::~QlaFilterSession()
     }
     m_event_data.clear();
 
-    pcre2_match_data_free(m_mdata);
     // File should be closed and event data freed by now
     mxb_assert(m_logfile == NULL && m_event_data.has_message == false);
 }
@@ -260,29 +259,14 @@ bool QlaFilterSession::prepare()
 
     bool error = false;
 
-    if (m_active)
+    if (m_active & settings.write_session_log)
     {
-        auto ovec_size = std::max(m_instance.m_settings.match.ovec_size,
-                                  m_instance.m_settings.exclude.ovec_size);
-        if (ovec_size > 0)
-        {
-            m_mdata = pcre2_match_data_create(ovec_size, NULL);
-            if (!m_mdata)
-            {
-                MXS_ERROR("pcre2_match_data_create returned NULL.");
-                error = true;
-            }
-        }
-
         // Only open the session file if the corresponding mode setting is used.
-        if (!error && settings.write_session_log)
+        m_filename = mxb::string_printf("%s.%" PRIu64, settings.filebase.c_str(), m_ses_id);
+        m_logfile = m_instance.open_session_log_file(m_filename);
+        if (!m_logfile)
         {
-            m_filename = mxb::string_printf("%s.%" PRIu64, settings.filebase.c_str(), m_ses_id);
-            m_logfile = m_instance.open_session_log_file(m_filename);
-            if (!m_logfile)
-            {
-                error = true;
-            }
+            error = true;
         }
     }
     return !error;
@@ -368,6 +352,12 @@ void QlaInstance::check_reopen_session_file(const std::string& filename, FILE** 
     check_reopen_file(filename, m_settings.session_data_flags, ppFile);
 }
 
+bool QlaInstance::match_exclude(const char* sql, int len)
+{
+    return (!m_settings.match || m_settings.match.match(sql, (size_t)len))
+           && (!m_settings.exclude || !m_settings.exclude.match(sql, (size_t)len));
+}
+
 /**
  * Write QLA log entry/entries to disk
  *
@@ -413,12 +403,8 @@ int QlaFilterSession::routeQuery(GWBUF* queue)
     char* query = NULL;
     int query_len = 0;
 
-    pcre2_code* re_match = m_instance.m_settings.match.sCode.get();
-    pcre2_code* re_exclude = m_instance.m_settings.exclude.sCode.get();
-
-    if (m_active
-        && modutil_extract_SQL(queue, &query, &query_len)
-        && mxs_pcre2_check_match_exclude(re_match, re_exclude, m_mdata, query, query_len, MXS_MODULE_NAME))
+    if (m_active && modutil_extract_SQL(queue, &query, &query_len)
+        && m_instance.match_exclude(query, query_len))
     {
         const uint32_t data_flags = m_instance.m_settings.log_file_data_flags;
         LogEventData& event = m_event_data;

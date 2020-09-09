@@ -88,8 +88,8 @@ Avro::Avro(SERVICE* service, mxs::ConfigParameters* params, AvroConfig&& config)
         cnf.statedir = m_config.avrodir;
         cnf.server_id = m_config.server_id;
         cnf.gtid = m_config.gtid;
-        cnf.match = m_config.match.sCode.get();
-        cnf.exclude = m_config.exclude.sCode.get();
+        cnf.match = m_config.match.code();
+        cnf.exclude = m_config.exclude.code();
 
         auto worker = mxs::RoutingWorker::get(mxs::RoutingWorker::MAIN);
         worker->execute(
@@ -105,8 +105,7 @@ Avro::Avro(SERVICE* service, mxs::ConfigParameters* params, AvroConfig&& config)
         handler.reset(
             new Rpl(service,
                     SRowEventHandler(new AvroConverter(service, m_config.avrodir, block_size, codec)),
-                    m_config.match.sCode.get(),
-                    m_config.exclude.sCode.get()));
+                    m_config.match.code(), m_config.exclude.code()));
 
         char filename[BINLOG_FNAMELEN + 1];
         snprintf(filename,

@@ -103,29 +103,6 @@ BinlogConfig::BinlogConfig(const char* name)
     add_native(&rewrite_dest, &s_rewrite_dest);
 }
 
-BinlogConfig::~BinlogConfig()
-{
-    pcre2_match_data_free(md_match);
-    pcre2_match_data_free(md_exclude);
-}
-
-bool BinlogConfig::post_configure()
-{
-    if (match.sCode)
-    {
-        pcre2_match_data_free(md_match);
-        md_match = pcre2_match_data_create_from_pattern(match.sCode.get(), nullptr);
-    }
-
-    if (exclude.sCode)
-    {
-        pcre2_match_data_free(md_exclude);
-        md_exclude = pcre2_match_data_create_from_pattern(exclude.sCode.get(), nullptr);
-    }
-
-    return true;
-}
-
 // BinlogFilter constructor
 BinlogFilter::BinlogFilter(const char* name)
     : m_config(name)

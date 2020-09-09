@@ -166,21 +166,13 @@ public:
     CCRSession(const CCRSession&) = delete;
     CCRSession& operator=(const CCRSession&) = delete;
 
-    ~CCRSession()
-    {
-        pcre2_match_data_free(m_md);
-    }
-
     static CCRSession* create(MXS_SESSION* session, SERVICE* service, CCRFilter* instance);
     int                routeQuery(GWBUF* queue);
 
 private:
-    CCRFilter&        m_instance;
-    int               m_hints_left = 0;             /* Number of hints left to add to queries */
-    time_t            m_last_modification = 0;      /* Time of the last data modifying operation */
-    pcre2_match_data* m_md;                         /* PCRE2 match data */
-    pcre2_code*       m_re;                         /* Compiled regex text of match */
-    pcre2_code*       m_nore;                       /* Compiled regex text of ignore */
+    CCRFilter& m_instance;
+    int        m_hints_left = 0;                    /* Number of hints left to add to queries */
+    time_t     m_last_modification = 0;             /* Time of the last data modifying operation */
 
     enum CcrHintValue
     {
@@ -189,10 +181,7 @@ private:
         CCR_HINT_IGNORE
     };
 
-    CCRSession(MXS_SESSION* session,
-               SERVICE* service,
-               CCRFilter* instance,
-               pcre2_match_data* md);
+    CCRSession(MXS_SESSION* session, SERVICE* service, CCRFilter* instance);
 
     static CcrHintValue search_ccr_hint(GWBUF* buffer);
 };
@@ -268,38 +257,15 @@ private:
     LagStats            m_stats;
 };
 
-CCRSession::CCRSession(MXS_SESSION* session, SERVICE* service, CCRFilter* instance, pcre2_match_data* md)
+CCRSession::CCRSession(MXS_SESSION* session, SERVICE* service, CCRFilter* instance)
     : maxscale::FilterSession(session, service)
     , m_instance(*instance)
-    , m_md(md)
-    , m_re(instance->config().match.sCode.get())
-    , m_nore(instance->config().ignore.sCode.get())
 {
 }
 
 CCRSession* CCRSession::create(MXS_SESSION* session, SERVICE* service, CCRFilter* instance)
 {
-    CCRSession* new_session = nullptr;
-
-    pcre2_match_data* md = nullptr;
-
-    auto ovec_size = instance->config().ovector_size;
-    if (ovec_size != 0)
-    {
-        md = pcre2_match_data_create(ovec_size, NULL);
-    }
-
-    if (ovec_size == 0 || md)
-    {
-        new_session = new(std::nothrow) CCRSession(session, service, instance, md);
-
-        if (!new_session)
-        {
-            pcre2_match_data_free(md);
-        }
-    }
-
-    return new_session;
+    return new CCRSession(session, service, instance);
 }
 
 int CCRSession::routeQuery(GWBUF* queue)
@@ -331,8 +297,11 @@ int CCRSession::routeQuery(GWBUF* queue)
                 }
                 if (!decided)
                 {
-                    trigger_ccr = mxs_pcre2_check_match_exclude(m_re, m_nore, m_md,
-                                                                sql, length, MXS_MODULE_NAME);
+                    const auto& match = m_instance.config().match;
+                    const auto& ignore = m_instance.config().ignore;
+
+                    trigger_ccr = (!match || match.match(sql, (size_t)length))
+                        && (!ignore || !ignore.match(sql, (size_t)length));
                 }
                 if (trigger_ccr)
                 {
