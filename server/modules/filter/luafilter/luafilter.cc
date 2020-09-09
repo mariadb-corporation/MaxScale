@@ -40,11 +40,13 @@
 
 #include <maxscale/ccdefs.hh>
 
+extern "C" {
 #include <lauxlib.h>
 #include <lua.h>
 #include <lualib.h>
-#include <string.h>
+}
 
+#include <string.h>
 #include <mutex>
 #include <maxbase/alloc.h>
 #include <maxscale/filter.hh>
