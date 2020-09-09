@@ -106,7 +106,7 @@ bool Regex::empty() const
 
 Regex::operator bool() const
 {
-    return empty() || valid();
+    return valid();
 }
 
 bool Regex::valid() const
