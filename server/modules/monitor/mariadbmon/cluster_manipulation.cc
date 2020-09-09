@@ -50,28 +50,28 @@ const char SWITCHOVER_FAIL[] = "Switchover %s -> %s failed.";
 /**
  * Run a manual switchover, promoting a new master server and demoting the existing master.
  *
- * @param promotion_server The server which should be promoted. If null, monitor will autoselect.
- * @param demotion_server The server which should be demoted. Can be null for autoselect, in which case
+ * @param new_master The server which should be promoted. If null, monitor will autoselect.
+ * @param current_master The server which should be demoted. Can be null for autoselect, in which case
  * monitor will select the cluster master server. Otherwise must be a valid master server or a relay.
- * @param error_out Error output
- * @return True, if switchover was performed successfully
+ * @return Result structure
  */
-bool MariaDBMonitor::manual_switchover(SERVER* promotion_server, SERVER* demotion_server, json_t** error_out)
+MariaDBMonitor::ManualCommand::Result
+MariaDBMonitor::manual_switchover(SERVER* new_master, SERVER* current_master)
 {
-    /* The server parameters may be null, in which case the monitor will autoselect.
-     *
-     * Manual commands (as well as automatic ones) are ran at the end of a normal monitor loop,
-     * so server states can be assumed to be up-to-date.
-     */
+    // Manual commands should only run in the main monitor thread.
+    mxb_assert(mxb::Worker::get_current()->id() == this->id());
+    mxb_assert(m_manual_cmd.exec_state == ManualCommand::ExecState::RUNNING);
 
+    ManualCommand::Result rval;
+    auto error_out = &rval.errors;
     if (!lock_status_is_ok())
     {
         print_no_locks_error(error_out);
-        return false;
+        return rval;
     }
 
     bool switchover_done = false;
-    auto op = switchover_prepare(promotion_server, demotion_server, Log::ON, error_out);
+    auto op = switchover_prepare(new_master, current_master, Log::ON, error_out);
     if (op)
     {
         switchover_done = switchover_perform(*op);
@@ -91,15 +91,22 @@ bool MariaDBMonitor::manual_switchover(SERVER* promotion_server, SERVER* demotio
     {
         PRINT_MXS_JSON_ERROR(error_out, "Switchover cancelled.");
     }
-    return switchover_done;
+    rval.success = switchover_done;
+    return rval;
 }
 
-bool MariaDBMonitor::manual_failover(json_t** output)
+MariaDBMonitor::ManualCommand::Result MariaDBMonitor::manual_failover()
 {
+    // Manual commands should only run in the main monitor thread.
+    mxb_assert(mxb::Worker::get_current()->id() == this->id());
+    mxb_assert(m_manual_cmd.exec_state == ManualCommand::ExecState::RUNNING);
+
+    ManualCommand::Result rval;
+    auto output = &rval.errors;
     if (!lock_status_is_ok())
     {
         print_no_locks_error(output);
-        return false;
+        return rval;
     }
 
     bool failover_done = false;
@@ -121,18 +128,25 @@ bool MariaDBMonitor::manual_failover(json_t** output)
     {
         PRINT_MXS_JSON_ERROR(output, "Failover cancelled.");
     }
-    return failover_done;
+    rval.success = failover_done;
+    return rval;
 }
 
-bool MariaDBMonitor::manual_rejoin(SERVER* rejoin_cand_srv, json_t** output)
+MariaDBMonitor::ManualCommand::Result MariaDBMonitor::manual_rejoin(SERVER* rejoin_cand_srv)
 {
+    // Manual commands should only run in the main monitor thread.
+    mxb_assert(mxb::Worker::get_current()->id() == this->id());
+    mxb_assert(m_manual_cmd.exec_state == ManualCommand::ExecState::RUNNING);
+
+    ManualCommand::Result rval;
+    auto output = &rval.errors;
     if (!lock_status_is_ok())
     {
         print_no_locks_error(output);
-        return false;
+        return rval;
     }
 
-    bool rval = false;
+    bool rejoin_done = false;
     if (cluster_can_be_joined())
     {
         MariaDBServer* rejoin_cand = get_server(rejoin_cand_srv);
@@ -176,7 +190,7 @@ bool MariaDBMonitor::manual_rejoin(SERVER* rejoin_cand_srv, json_t** output)
                         ServerArray joinable_server = {rejoin_cand};
                         if (do_rejoin(joinable_server, output) == 1)
                         {
-                            rval = true;
+                            rejoin_done = true;
                             MXS_NOTICE("Rejoin performed.");
                         }
                         else
@@ -205,7 +219,7 @@ bool MariaDBMonitor::manual_rejoin(SERVER* rejoin_cand_srv, json_t** output)
                                    "Either it has no master or its gtid domain is unknown.";
         PRINT_MXS_JSON_ERROR(output, BAD_CLUSTER, name());
     }
-
+    rval.success = rejoin_done;
     return rval;
 }
 
@@ -213,16 +227,20 @@ bool MariaDBMonitor::manual_rejoin(SERVER* rejoin_cand_srv, json_t** output)
  * Reset replication of the cluster. Removes all slave connections and deletes binlogs. Then resets the
  * gtid sequence of the cluster to 0 and directs all servers to replicate from the given master.
  *
- * @param master_server Server to use as master
- * @param error_out Error output
- * @return True if operation was successful
+ * @param master_server Server to promote to master. If null, autoselect.
+ * @return Result structure
  */
-bool MariaDBMonitor::manual_reset_replication(SERVER* master_server, json_t** error_out)
+MariaDBMonitor::ManualCommand::Result MariaDBMonitor::manual_reset_replication(SERVER* master_server)
 {
-    // This command is a hail-mary type, so no need to be that careful. Users are only supposed to run this
+    // This command is a last-resort type, so no need to be that careful. Users are only supposed to run this
     // when replication is broken and they know the cluster is in sync.
 
-    // If a master has been given, use that as the master. Otherwise autoselect.
+    // Manual commands should only run in the main monitor thread.
+    mxb_assert(mxb::Worker::get_current()->id() == this->id());
+    mxb_assert(m_manual_cmd.exec_state == ManualCommand::ExecState::RUNNING);
+
+    ManualCommand::Result rval;
+    auto error_out = &rval.errors;
     MariaDBServer* new_master = NULL;
     if (master_server)
     {
@@ -263,7 +281,7 @@ bool MariaDBMonitor::manual_reset_replication(SERVER* master_server, json_t** er
     // Also record the previous master, needed for scheduled events.
     MariaDBServer* old_master = (m_master && m_master->is_master()) ? m_master : nullptr;
 
-    bool rval = false;
+    bool success = false;
     if (new_master)
     {
         bool error = false;
@@ -439,9 +457,10 @@ bool MariaDBMonitor::manual_reset_replication(SERVER* master_server, json_t** er
             PRINT_MXS_JSON_ERROR(error_out, "Replication reset failed or succeeded only partially. "
                                             "Server cluster may be in an invalid state for replication.");
         }
-        rval = !error;
+        success = !error;
     }
     m_state = State::IDLE;
+    rval.success = success;
     return rval;
 }
 
