@@ -45,6 +45,7 @@ enum DbrmMode
 {
     MASTER,
     SLAVE,
+    OFFLINE,
 };
 
 const char* to_string(DbrmMode dbrm_mode);

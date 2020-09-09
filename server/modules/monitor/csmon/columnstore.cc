@@ -363,6 +363,9 @@ const char* to_string(DbrmMode dbrm_mode)
     case SLAVE:
         return "slave";
 
+    case OFFLINE:
+        return "offline";
+
     default:
         mxb_assert(!true);
         return "unknown";
@@ -380,6 +383,10 @@ bool from_string(const char* zDbrm_mode, DbrmMode* pDbrm_mode)
     else if (strcmp(zDbrm_mode, "slave") == 0)
     {
         *pDbrm_mode = SLAVE;
+    }
+    else if (strcmp(zDbrm_mode, "offline") == 0)
+    {
+        *pDbrm_mode = OFFLINE;
     }
     else
     {

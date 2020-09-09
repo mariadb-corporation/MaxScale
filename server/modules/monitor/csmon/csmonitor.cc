@@ -274,27 +274,30 @@ int get_status_mask(const cs::Status& status, size_t nServers)
         // is not running _even_ if we were able to connect to the MariaDB server.
         if (!status.services.empty())
         {
-            mask |= SERVER_RUNNING;
-
-            // Seems to be running.
-            if (status.dbrm_mode == cs::MASTER)
+            switch (status.dbrm_mode)
             {
+            case cs::OFFLINE:
+                break;
+
+            case cs::MASTER:
+                mask |= SERVER_RUNNING;
+
                 // The node that claims to be master gets
                 // - the master bit if the cluster is readwrite,
-                // - the slave bit if it is the only server (i.e. probably a single node installation),
+                // - the slave bit if it is the _only_ server (i.e. probably a single node installation),
                 // - otherwise only the running bit (the master node in a readonly multi-node cluster).
                 if (status.cluster_mode == cs::READWRITE)
                 {
                     mask |= SERVER_MASTER;
                 }
-                else if (nServers)
+                else if (nServers == 1)
                 {
                     mask |= SERVER_SLAVE;
                 }
-            }
-            else
-            {
-                mask |= SERVER_SLAVE;
+                break;
+
+            case cs::SLAVE:
+                mask |= (SERVER_RUNNING | SERVER_SLAVE);
             }
         }
     }
