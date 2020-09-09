@@ -22,7 +22,6 @@
 #include "columnstore.hh"
 #include "cscontext.hh"
 #include "csmonitorserver.hh"
-#include "csnode.hh"
 
 class CsMonitor : public maxscale::MonitorWorkerSimple,
                   private CsDynamicServer::Persister
