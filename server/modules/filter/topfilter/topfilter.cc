@@ -34,6 +34,7 @@
 
 #include <maxbase/regex.hh>
 #include <maxbase/stopwatch.hh>
+#include <maxscale/config2.hh>
 #include <maxscale/filter.hh>
 #include <maxscale/modutil.hh>
 
@@ -93,35 +94,48 @@ private:
     std::vector<TOPNQ>   m_top;
 };
 
-static const MXS_ENUM_VALUE option_values[] =
+namespace
 {
-    {"ignorecase", PCRE2_CASELESS},
-    {"case",       0             },
-    {"extended",   PCRE2_EXTENDED},
-    {NULL}
-};
 
-struct Config
-{
-    Config(const mxs::ConfigParameters& params)
-        : topN(params.get_integer("count"))
-        , filebase(params.get_string("filebase"))
-        , source(params.get_string("source"))
-        , user(params.get_string("user"))
-        , options(params.get_enum("options", option_values))
-        , match(params.get_string("match"), options)
-        , exclude(params.get_string("exclude"), options)
+namespace cfg = mxs::config;
+
+cfg::Specification s_spec(MXS_MODULE_NAME, cfg::Specification::FILTER);
+
+cfg::ParamCount s_count(&s_spec, "count", "How many SQL statements to store", 10);
+cfg::ParamString s_filebase(&s_spec, "filebase", "The basename of the output file created for each session");
+cfg::ParamRegex s_match(&s_spec, "match", "Only include queries matching this pattern", "");
+cfg::ParamRegex s_exclude(&s_spec, "exclude", "Exclude queries matching this pattern", "");
+cfg::ParamString s_source(&s_spec, "source", "Only include queries done from this address", "");
+cfg::ParamString s_user(&s_spec, "user", "Only include queries done by this user", "");
+cfg::ParamEnum<uint32_t> s_options(&s_spec, "options", "Regular expression options",
     {
+        {PCRE2_CASELESS, "ignorecase"},
+        {0, "case"},
+        {PCRE2_EXTENDED, "extended"},
+    }, 0);
+}
+
+struct Config : public mxs::config::Configuration
+{
+    Config(const std::string& name)
+        : mxs::config::Configuration(name, &s_spec)
+    {
+        add_native(&topN, &s_count);
+        add_native(&filebase, &s_filebase);
+        add_native(&source, &s_source);
+        add_native(&user, &s_user);
+        add_native(&options, &s_options);
+        add_native(&match, &s_match);
+        add_native(&exclude, &s_exclude);
     }
 
-    int         sessions = 0;   /* Session count */
-    int         topN;           /* Number of queries to store */
-    std::string filebase;       /* Base of fielname to log into */
-    std::string source;         /* The source of the client connection */
-    std::string user;           /* A user name to filter on */
-    int         options;        /* Regex options */
-    mxb::Regex  match;          /* Optional text to match against */
-    mxb::Regex  exclude;        /* Optional text to match against for exclusion */
+    int64_t                 topN;       /* Number of queries to store */
+    std::string             filebase;   /* Base of fielname to log into */
+    std::string             source;     /* The source of the client connection */
+    std::string             user;       /* A user name to filter on */
+    uint32_t                options;    /* Regex options */
+    mxs::config::RegexValue match;      /* Optional text to match against */
+    mxs::config::RegexValue exclude;    /* Optional text to match against for exclusion */
 };
 
 class TOPN_INSTANCE : public mxs::Filter<TOPN_INSTANCE, TOPN_SESSION>
@@ -129,7 +143,7 @@ class TOPN_INSTANCE : public mxs::Filter<TOPN_INSTANCE, TOPN_SESSION>
 public:
     static TOPN_INSTANCE* create(const std::string& name, mxs::ConfigParameters* params)
     {
-        return new TOPN_INSTANCE(name, params);
+        return new TOPN_INSTANCE(name);
     }
 
     mxs::FilterSession* newSession(MXS_SESSION* session, SERVICE* service)
@@ -149,7 +163,7 @@ public:
 
     mxs::config::Configuration* getConfiguration()
     {
-        return nullptr;
+        return &m_config;
     }
 
     const Config& config() const
@@ -158,8 +172,8 @@ public:
     }
 
 private:
-    TOPN_INSTANCE(const std::string& name, mxs::ConfigParameters* params)
-        : m_config(*params)
+    TOPN_INSTANCE(const std::string& name)
+        : m_config(name)
     {
     }
 
@@ -224,15 +238,13 @@ int32_t TOPN_SESSION::routeQuery(GWBUF* queue)
         const auto& config = m_instance->config();
         auto sql = mxs::extract_sql(queue);
 
-        if (!sql.empty())
+        if (!sql.empty()
+            && (!config.match || config.match.match(sql))
+            && (!config.exclude || !config.exclude.match(sql)))
         {
-            if ((config.match.empty() || config.match.match(sql))
-                && (config.exclude.empty() || !config.exclude.match(sql)))
-            {
-                m_n_statements++;
-                m_watch.lap();
-                m_current = sql;
-            }
+            m_n_statements++;
+            m_watch.lap();
+            m_current = sql;
         }
     }
 
@@ -315,22 +327,8 @@ MXS_MODULE* MXS_CREATE_MODULE()
         NULL,
         NULL,
         NULL,
-        {
-            {"count",                 MXS_MODULE_PARAM_COUNT,   "10"                   },
-            {"filebase",              MXS_MODULE_PARAM_STRING,  NULL, MXS_MODULE_OPT_REQUIRED},
-            {"match",                 MXS_MODULE_PARAM_REGEX},
-            {"exclude",               MXS_MODULE_PARAM_REGEX},
-            {"source",                MXS_MODULE_PARAM_STRING},
-            {"user",                  MXS_MODULE_PARAM_STRING},
-            {
-                "options",
-                MXS_MODULE_PARAM_ENUM,
-                "ignorecase",
-                MXS_MODULE_OPT_NONE,
-                option_values
-            },
-            {MXS_END_MODULE_PARAMS}
-        }
+        {{nullptr}},
+        &s_spec
     };
 
     return &info;
