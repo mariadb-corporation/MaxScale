@@ -75,31 +75,24 @@ static const int default_sql_size = 4 * 1024;
 #define DEFAULT_FILE_NAME       "tpm.log"
 #define DEFAULT_NAMED_PIPE      "/tmp/tpmfilter"
 
-/*
- * The filter entry points
- */
-struct TPM_INSTANCE;
+class TPM_SESSION;
 
-static MXS_FILTER*         createInstance(const char* name, mxs::ConfigParameters*);
-static mxs::FilterSession* newSession(MXS_FILTER* instance, MXS_SESSION* session, SERVICE* service);
-static void freeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session);
-static int  routeQuery(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, GWBUF* queue);
-static int  clientReply(MXS_FILTER* instance,
-                        MXS_FILTER_SESSION* fsession,
-                        GWBUF* queue,
-                        const mxs::ReplyRoute& down,
-                        const mxs::Reply& reply);
-static json_t*  diagnostics(const MXS_FILTER* instance, const MXS_FILTER_SESSION* fsession);
-static uint64_t getCapabilities(MXS_FILTER* instance);
-static void     destroyInstance(MXS_FILTER* instance);
-
-static void checkNamedPipe(TPM_INSTANCE* args);
-
-/**
- * A instance structure, every instance will write to a same file.
- */
-struct TPM_INSTANCE
+class TPM_INSTANCE : public mxs::Filter<TPM_INSTANCE, TPM_SESSION>
 {
+public:
+    ~TPM_INSTANCE();
+    static TPM_INSTANCE* create(const char* name, mxs::ConfigParameters* params);
+    mxs::FilterSession*  newSession(MXS_SESSION* session, SERVICE* service);
+    json_t*              diagnostics() const;
+    uint64_t             getCapabilities() const;
+
+    mxs::config::Configuration* getConfiguration()
+    {
+        return nullptr;
+    }
+
+    void checkNamedPipe();
+
     int   sessions;         /* Session count */
     char* source;           /* The source of the client connection */
     char* user;             /* The user name to filter on */
@@ -114,56 +107,50 @@ struct TPM_INSTANCE
     FILE*       fp;
     std::thread thread;
     bool        shutdown;
+
+private:
+    TPM_INSTANCE(const char* name, mxs::ConfigParameters* params)
+    {
+    }
 };
 
-/**
- * The session structure for this TPM filter.
- * This stores the downstream filter information, such that the
- * filter is able to pass the query on to the next filter (or router)
- * in the chain.
- *
- * It also holds the file descriptor to which queries are written.
- */
-typedef struct
+class TPM_SESSION : public mxs::FilterSession
 {
-    MXS_FILTER_SESSION* down;
-    MXS_FILTER_SESSION* up;
-    int                 active;
-    char*               clientHost;
-    char*               userName;
-    char*               sql;
-    char*               latency;
-    struct timeval      start;
-    char*               current;
-    int                 n_statements;
-    struct timeval      total;
-    struct timeval      current_start;
-    struct timeval      last_statement_start;
-    bool                query_end;
-    char*               buf;
-    int                 sql_index;
-    int                 latency_index;
-    size_t              max_sql_size;
-} TPM_SESSION;
+public:
+    TPM_SESSION(MXS_SESSION* session, SERVICE* service, TPM_INSTANCE* instance)
+        : mxs::FilterSession(session, service)
+        , m_instance(instance)
+    {
+    }
 
-extern "C"
-{
+    ~TPM_SESSION();
+    int32_t routeQuery(GWBUF* pPacket);
+    int32_t clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply);
 
-/**
- * The module entry point routine. It is this routine that
- * must populate the structure that is referred to as the
- * "module object", this is a structure with the set of
- * external entry points for this module.
- *
- * @return The module object
- */
-MXS_MODULE* MXS_CREATE_MODULE()
+    int            active;
+    char*          clientHost;
+    char*          userName;
+    char*          sql;
+    char*          latency;
+    struct timeval start;
+    char*          current;
+    int            n_statements;
+    struct timeval total;
+    struct timeval current_start;
+    struct timeval last_statement_start;
+    bool           query_end;
+    char*          buf;
+    int            sql_index;
+    int            latency_index;
+    size_t         max_sql_size;
+
+private:
+    TPM_INSTANCE* m_instance;
+};
+
+extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
     static const char description[] = "Transaction Performance Monitoring filter";
-    static MXS_FILTER_OBJECT MyObject =
-    {
-        createInstance
-    };
 
     static MXS_MODULE info =
     {
@@ -173,7 +160,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         description,
         "V1.0.1",
         RCAP_TYPE_CONTIGUOUS_INPUT,
-        &MyObject,
+        &TPM_INSTANCE::s_object,
         NULL,
         NULL,
         NULL,
@@ -191,20 +178,11 @@ MXS_MODULE* MXS_CREATE_MODULE()
 
     return &info;
 }
-}
 
-/**
- * Create an instance of the filter for a particular service
- * within MaxScale.
- *
- * @param options   The options for this filter
- * @param params    The array of name/value pair parameters for the filter
- *
- * @return The instance data for this new instance
- */
-static MXS_FILTER* createInstance(const char* name, mxs::ConfigParameters* params)
+// static
+TPM_INSTANCE* TPM_INSTANCE::create(const char* name, mxs::ConfigParameters* params)
 {
-    TPM_INSTANCE* my_instance = static_cast<TPM_INSTANCE*>(MXS_CALLOC(1, sizeof(TPM_INSTANCE)));
+    TPM_INSTANCE* my_instance = new TPM_INSTANCE(name, params);
 
     if (my_instance)
     {
@@ -273,7 +251,7 @@ static MXS_FILTER* createInstance(const char* name, mxs::ConfigParameters* param
         {
             try
             {
-                my_instance->thread = std::thread(checkNamedPipe, my_instance);
+                my_instance->thread = std::thread(&TPM_INSTANCE::checkNamedPipe, my_instance);
             }
             catch (const std::exception& x)
             {
@@ -294,30 +272,22 @@ static MXS_FILTER* createInstance(const char* name, mxs::ConfigParameters* param
             {
                 fclose(my_instance->fp);
             }
-            MXS_FREE(my_instance);
+            delete my_instance;
+            my_instance = nullptr;
         }
     }
 
-    return (MXS_FILTER*)my_instance;
+    return my_instance;
 }
 
-/**
- * Associate a new session with this instance of the filter.
- *
- * Every session uses the same log file.
- *
- * @param instance  The filter instance data
- * @param session   The session itself
- * @return Session specific data for this session
- */
-static mxs::FilterSession* newSession(MXS_FILTER* instance, MXS_SESSION* session, SERVICE* service)
+mxs::FilterSession* TPM_INSTANCE::newSession(MXS_SESSION* session, SERVICE* service)
 {
-    TPM_INSTANCE* my_instance = (TPM_INSTANCE*)instance;
+    TPM_INSTANCE* my_instance = this;
     TPM_SESSION* my_session;
     int i;
     const char* remote, * user;
 
-    if ((my_session = static_cast<TPM_SESSION*>(MXS_CALLOC(1, sizeof(TPM_SESSION)))) != NULL)
+    if ((my_session = new TPM_SESSION(session, service, this)))
     {
         atomic_add(&my_instance->sessions, 1);
 
@@ -364,16 +334,10 @@ static mxs::FilterSession* newSession(MXS_FILTER* instance, MXS_SESSION* session
     return (mxs::FilterSession*)my_session;
 }
 
-/**
- * Free the memory associated with the session
- *
- * @param instance  The filter instance
- * @param session   The filter session
- */
-static void freeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session)
+TPM_SESSION::~TPM_SESSION()
 {
-    TPM_SESSION* my_session = (TPM_SESSION*)session;
-    TPM_INSTANCE* my_instance = (TPM_INSTANCE*)instance;
+    TPM_SESSION* my_session = this;
+    TPM_INSTANCE* my_instance = m_instance;
 
     if (my_instance->fp != NULL)
     {
@@ -385,24 +349,12 @@ static void freeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session)
     MXS_FREE(my_session->userName);
     MXS_FREE(my_session->sql);
     MXS_FREE(my_session->latency);
-    MXS_FREE(session);
-    return;
 }
 
-/**
- * The routeQuery entry point. This is passed the query buffer
- * to which the filter should be applied. Once applied the
- * query should normally be passed to the downstream component
- * (filter or router) in the filter chain.
- *
- * @param instance  The filter instance data
- * @param session   The filter session
- * @param queue     The query data
- */
-static int routeQuery(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GWBUF* queue)
+int32_t TPM_SESSION::routeQuery(GWBUF* queue)
 {
-    TPM_INSTANCE* my_instance = (TPM_INSTANCE*)instance;
-    TPM_SESSION* my_session = (TPM_SESSION*)session;
+    TPM_INSTANCE* my_instance = m_instance;
+    TPM_SESSION* my_session = this;
     char* ptr = NULL;
     size_t i;
 
@@ -495,17 +447,13 @@ retblock:
 
     MXS_FREE(ptr);
     /* Pass the query downstream */
-    return my_session->down->routeQuery(queue);
+    return mxs::FilterSession::routeQuery(queue);
 }
 
-static int clientReply(MXS_FILTER* instance,
-                       MXS_FILTER_SESSION* session,
-                       GWBUF* buffer,
-                       const mxs::ReplyRoute& down,
-                       const mxs::Reply& reply)
+int32_t TPM_SESSION::clientReply(GWBUF* buffer, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
-    TPM_INSTANCE* my_instance = (TPM_INSTANCE*)instance;
-    TPM_SESSION* my_session = (TPM_SESSION*)session;
+    TPM_INSTANCE* my_instance = m_instance;
+    TPM_SESSION* my_session = this;
     struct      timeval tv, diff;
     int i, inserted;
 
@@ -571,22 +519,12 @@ static int clientReply(MXS_FILTER* instance,
     }
 
     /* Pass the result upstream */
-    return my_session->up->clientReply(buffer, down, reply);
+    return mxs::FilterSession::clientReply(buffer, down, reply);
 }
 
-/**
- * Diagnostics routine
- *
- * If fsession is NULL then print diagnostics on the filter
- * instance as a whole, otherwise print diagnostics for the
- * particular session.
- *
- * @param   instance    The filter instance
- * @param   fsession    Filter session, may be NULL
- */
-static json_t* diagnostics(const MXS_FILTER* instance, const MXS_FILTER_SESSION* fsession)
+json_t* TPM_INSTANCE::diagnostics() const
 {
-    TPM_INSTANCE* my_instance = (TPM_INSTANCE*)instance;
+    const TPM_INSTANCE* my_instance = this;
 
     json_t* rval = json_object();
 
@@ -618,19 +556,14 @@ static json_t* diagnostics(const MXS_FILTER* instance, const MXS_FILTER_SESSION*
     return rval;
 }
 
-/**
- * Capability routine.
- *
- * @return The capabilities of the filter.
- */
-static uint64_t getCapabilities(MXS_FILTER* instance)
+uint64_t TPM_INSTANCE::getCapabilities() const
 {
-    return RCAP_TYPE_NONE;
+    return RCAP_TYPE_CONTIGUOUS_INPUT;
 }
 
-static void destroyInstance(MXS_FILTER* instance)
+TPM_INSTANCE::~TPM_INSTANCE()
 {
-    TPM_INSTANCE* my_instance = (TPM_INSTANCE*)instance;
+    TPM_INSTANCE* my_instance = this;
 
     my_instance->shutdown = true;
 
@@ -640,8 +573,9 @@ static void destroyInstance(MXS_FILTER* instance)
     }
 }
 
-static void checkNamedPipe(TPM_INSTANCE* inst)
+void TPM_INSTANCE::checkNamedPipe()
 {
+    TPM_INSTANCE* inst = this;
     int ret = 0;
     char buffer[2];
     char buf[4096];
