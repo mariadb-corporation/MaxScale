@@ -75,7 +75,64 @@ static const int default_sql_size = 4 * 1024;
 #define DEFAULT_FILE_NAME       "tpm.log"
 #define DEFAULT_NAMED_PIPE      "/tmp/tpmfilter"
 
+class TPM_INSTANCE;
 class TPM_SESSION;
+
+namespace
+{
+
+namespace cfg = mxs::config;
+
+cfg::Specification s_spec(MXS_MODULE_NAME, cfg::Specification::FILTER);
+
+cfg::ParamString s_filename(
+    &s_spec, "filename", "The name of the output file", "tpm.log");
+
+cfg::ParamString s_source(
+    &s_spec, "source", "Only include queries done from this address", "");
+
+cfg::ParamString s_user(
+    &s_spec, "user", "Only include queries done by this user", "");
+
+cfg::ParamString s_delimiter(
+    &s_spec, "delimiter", "Delimiter used to separate the fields", ":::");
+
+cfg::ParamString s_named_pipe(
+    &s_spec, "named_pipe", "Only include queries done by this user", "/tmp/tpmfilter");
+
+cfg::ParamString s_query_delimiter(
+    &s_spec, "query_delimiter",
+    "Delimiter used to distinguish different SQL statements in a transaction",
+    "@@@");
+}
+
+class Config : public mxs::config::Configuration
+{
+public:
+    Config(const std::string& name, TPM_INSTANCE* instance)
+        : mxs::config::Configuration(name, &s_spec)
+        , m_instance(instance)
+    {
+        add_native(&filename, &s_filename);
+        add_native(&source, &s_source);
+        add_native(&user, &s_user);
+        add_native(&delimiter, &s_delimiter);
+        add_native(&query_delimiter, &s_query_delimiter);
+        add_native(&named_pipe, &s_named_pipe);
+    }
+
+    std::string filename;
+    std::string source;
+    std::string user;
+    std::string delimiter;
+    std::string query_delimiter;
+    std::string named_pipe;
+
+    bool post_configure() override;
+
+private:
+    TPM_INSTANCE* m_instance;
+};
 
 class TPM_INSTANCE : public mxs::Filter<TPM_INSTANCE, TPM_SESSION>
 {
@@ -88,30 +145,40 @@ public:
 
     mxs::config::Configuration* getConfiguration()
     {
-        return nullptr;
+        return &m_config;
+    }
+
+    const Config& config() const
+    {
+        return m_config;
+    }
+
+    FILE* fp()
+    {
+        return m_fp;
+    }
+
+    bool enabled() const
+    {
+        return m_enabled;
     }
 
     void checkNamedPipe();
+    bool post_configure();
 
-    int   sessions;         /* Session count */
-    char* source;           /* The source of the client connection */
-    char* user;             /* The user name to filter on */
-    char* filename;         /* filename */
-    char* delimiter;        /* delimiter for columns in a log */
-    char* query_delimiter;  /* delimiter for query statements in a transaction */
-    char* named_pipe;
-    int   named_pipe_fd;
-    bool  log_enabled;
-
-    int         query_delimiter_size;   /* the length of the query delimiter */
-    FILE*       fp;
-    std::thread thread;
-    bool        shutdown;
 
 private:
     TPM_INSTANCE(const char* name, mxs::ConfigParameters* params)
+        : m_config(name, this)
     {
     }
+
+
+    bool        m_enabled = false;
+    FILE*       m_fp = nullptr;
+    bool        m_shutdown = false;
+    std::thread m_thread;
+    Config      m_config;
 };
 
 class TPM_SESSION : public mxs::FilterSession
@@ -120,6 +187,7 @@ public:
     TPM_SESSION(MXS_SESSION* session, SERVICE* service, TPM_INSTANCE* instance)
         : mxs::FilterSession(session, service)
         , m_instance(instance)
+        , m_config(instance->config())
     {
     }
 
@@ -128,8 +196,6 @@ public:
     int32_t clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply);
 
     int            active;
-    char*          clientHost;
-    char*          userName;
     char*          sql;
     char*          latency;
     struct timeval start;
@@ -146,6 +212,7 @@ public:
 
 private:
     TPM_INSTANCE* m_instance;
+    const Config& m_config;
 };
 
 extern "C" MXS_MODULE* MXS_CREATE_MODULE()
@@ -165,119 +232,54 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         NULL,
         NULL,
         NULL,
-        {
-            {"named_pipe",         MXS_MODULE_PARAM_STRING,  DEFAULT_NAMED_PIPE     },
-            {"filename",           MXS_MODULE_PARAM_STRING,  DEFAULT_FILE_NAME      },
-            {"delimiter",          MXS_MODULE_PARAM_STRING,  DEFAULT_LOG_DELIMITER  },
-            {"query_delimiter",    MXS_MODULE_PARAM_STRING,  DEFAULT_QUERY_DELIMITER},
-            {"source",             MXS_MODULE_PARAM_STRING},
-            {"user",               MXS_MODULE_PARAM_STRING},
-            {MXS_END_MODULE_PARAMS}
-        }
+        {{nullptr}},
+        &s_spec
     };
 
     return &info;
 }
 
-// static
-TPM_INSTANCE* TPM_INSTANCE::create(const char* name, mxs::ConfigParameters* params)
+bool Config::post_configure()
 {
-    TPM_INSTANCE* my_instance = new TPM_INSTANCE(name, params);
-
-    if (my_instance)
+    // check if the file exists first.
+    if (access(named_pipe.c_str(), F_OK) == 0)
     {
-        my_instance->sessions = 0;
-        my_instance->log_enabled = false;
-        my_instance->filename = params->get_c_str_copy("filename");
-        my_instance->delimiter = params->get_c_str_copy("delimiter");
-        my_instance->query_delimiter = params->get_c_str_copy("query_delimiter");
-        my_instance->query_delimiter_size = strlen(my_instance->query_delimiter);
-        my_instance->named_pipe = params->get_c_str_copy("named_pipe");
-        my_instance->source = params->get_c_str_copy("source");
-        my_instance->user = params->get_c_str_copy("user");
+        // if exists, check if it is a named pipe.
+        struct stat st;
+        int ret = stat(named_pipe.c_str(), &st);
 
-        bool error = false;
-
-        // check if the file exists first.
-        if (access(my_instance->named_pipe, F_OK) == 0)
+        // check whether the file is named pipe.
+        if (ret == -1 && errno != ENOENT)
         {
-            // if exists, check if it is a named pipe.
-            struct stat st;
-            int ret = stat(my_instance->named_pipe, &st);
-
-            // check whether the file is named pipe.
-            if (ret == -1 && errno != ENOENT)
-            {
-                MXS_ERROR("stat() failed on named pipe: %s", strerror(errno));
-                error = true;
-            }
-            else if (ret == 0 && S_ISFIFO(st.st_mode))
-            {
-                // if it is a named pipe, we delete it and recreate it.
-                unlink(my_instance->named_pipe);
-            }
-            else
-            {
-                MXS_ERROR("The file '%s' already exists and it is not "
-                          "a named pipe.",
-                          my_instance->named_pipe);
-                error = true;
-            }
+            MXS_ERROR("stat() failed on named pipe: %s", strerror(errno));
+            return false;
         }
-
-        // now create the named pipe.
-        if (mkfifo(my_instance->named_pipe, 0660) == -1)
+        else if (ret == 0 && S_ISFIFO(st.st_mode))
         {
-            MXS_ERROR("mkfifo() failed on named pipe: %s", strerror(errno));
-            error = true;
+            // if it is a named pipe, we delete it and recreate it.
+            unlink(named_pipe.c_str());
         }
-
-
-        my_instance->fp = fopen(my_instance->filename, "w");
-
-        if (my_instance->fp == NULL)
+        else
         {
-            MXS_ERROR("Opening output file '%s' for tpmfilter failed due to %d, %s",
-                      my_instance->filename,
-                      errno,
-                      strerror(errno));
-            error = true;
-        }
-
-        /*
-         * Launch a thread that checks the named pipe.
-         */
-        if (!error)
-        {
-            try
-            {
-                my_instance->thread = std::thread(&TPM_INSTANCE::checkNamedPipe, my_instance);
-            }
-            catch (const std::exception& x)
-            {
-                MXS_ERROR("Couldn't create a thread to check the named pipe: %s", x.what());
-                error = true;
-            }
-        }
-
-        if (error)
-        {
-            MXS_FREE(my_instance->delimiter);
-            MXS_FREE(my_instance->filename);
-            MXS_FREE(my_instance->named_pipe);
-            MXS_FREE(my_instance->query_delimiter);
-            MXS_FREE(my_instance->source);
-            MXS_FREE(my_instance->user);
-            if (my_instance->fp)
-            {
-                fclose(my_instance->fp);
-            }
-            delete my_instance;
-            my_instance = nullptr;
+            MXS_ERROR("The file '%s' already exists and it is not a named pipe.", named_pipe.c_str());
+            return false;
         }
     }
 
-    return my_instance;
+    // now create the named pipe.
+    if (mkfifo(named_pipe.c_str(), 0660) == -1)
+    {
+        MXS_ERROR("mkfifo() failed on named pipe: %s", strerror(errno));
+        return false;
+    }
+
+    return m_instance->post_configure();
+}
+
+// static
+TPM_INSTANCE* TPM_INSTANCE::create(const char* name, mxs::ConfigParameters* params)
+{
+    return new TPM_INSTANCE(name, params);
 }
 
 mxs::FilterSession* TPM_INSTANCE::newSession(MXS_SESSION* session, SERVICE* service)
@@ -289,8 +291,6 @@ mxs::FilterSession* TPM_INSTANCE::newSession(MXS_SESSION* session, SERVICE* serv
 
     if ((my_session = new TPM_SESSION(session, service, this)))
     {
-        atomic_add(&my_instance->sessions, 1);
-
         my_session->latency = (char*)MXS_CALLOC(latency_buf_size, sizeof(char));
         my_session->max_sql_size = default_sql_size;    // default max query size of 4k.
         my_session->sql = (char*)MXS_CALLOC(my_session->max_sql_size, sizeof(char));
@@ -301,33 +301,12 @@ mxs::FilterSession* TPM_INSTANCE::newSession(MXS_SESSION* session, SERVICE* serv
         my_session->total.tv_sec = 0;
         my_session->total.tv_usec = 0;
         my_session->current = NULL;
+        my_session->active = true;
 
-        if ((remote = session_get_remote(session)) != NULL)
+        if ((!m_config.source.empty() && session->client_remote() != m_config.source)
+            || (!m_config.user.empty() && session->user() != m_config.user))
         {
-            my_session->clientHost = MXS_STRDUP_A(remote);
-        }
-        else
-        {
-            my_session->clientHost = NULL;
-        }
-        if ((user = session_get_user(session)) != NULL)
-        {
-            my_session->userName = MXS_STRDUP_A(user);
-        }
-        else
-        {
-            my_session->userName = NULL;
-        }
-        my_session->active = 1;
-        if (my_instance->source && my_session->clientHost && strcmp(my_session->clientHost,
-                                                                    my_instance->source))
-        {
-            my_session->active = 0;
-        }
-        if (my_instance->user && my_session->userName && strcmp(my_session->userName,
-                                                                my_instance->user))
-        {
-            my_session->active = 0;
+            my_session->active = false;
         }
     }
 
@@ -339,14 +318,12 @@ TPM_SESSION::~TPM_SESSION()
     TPM_SESSION* my_session = this;
     TPM_INSTANCE* my_instance = m_instance;
 
-    if (my_instance->fp != NULL)
+    if (my_instance->fp())
     {
         // flush FP when a session is closed.
-        fflush(my_instance->fp);
+        fflush(my_instance->fp());
     }
 
-    MXS_FREE(my_session->clientHost);
-    MXS_FREE(my_session->userName);
     MXS_FREE(my_session->sql);
     MXS_FREE(my_session->latency);
 }
@@ -387,14 +364,15 @@ int32_t TPM_SESSION::routeQuery(GWBUF* queue)
                 {
                     /* check and expand buffer size first. */
                     size_t new_sql_size = my_session->max_sql_size;
-                    size_t len = my_session->sql_index + strlen(ptr) + my_instance->query_delimiter_size + 1;
+                    size_t len = my_session->sql_index + strlen(ptr) + m_config.query_delimiter.size() + 1;
 
                     /* if the total length of query statements exceeds the maximum limit, print an error and
                      * return */
                     if (len > sql_size_limit)
                     {
-                        MXS_ERROR("The size of query statements exceeds the maximum buffer limit of 64MB.");
-                        goto retblock;
+                        MXS_WARNING("The size of query statements exceeds the maximum buffer limit of 64MB, "
+                                    "the query will be truncated.");
+                        len = sql_size_limit;
                     }
 
                     /* double buffer size until the buffer fits the query */
@@ -405,11 +383,6 @@ int32_t TPM_SESSION::routeQuery(GWBUF* queue)
                     if (new_sql_size > my_session->max_sql_size)
                     {
                         char* new_sql = (char*)MXS_CALLOC(new_sql_size, sizeof(char));
-                        if (new_sql == NULL)
-                        {
-                            MXS_ERROR("Memory allocation failure.");
-                            goto retblock;
-                        }
                         memcpy(new_sql, my_session->sql, my_session->sql_index);
                         MXS_FREE(my_session->sql);
                         my_session->sql = new_sql;
@@ -428,22 +401,20 @@ int32_t TPM_SESSION::routeQuery(GWBUF* queue)
                     {
                         /* append a query delimiter */
                         memcpy(my_session->sql + my_session->sql_index,
-                               my_instance->query_delimiter,
-                               my_instance->query_delimiter_size);
+                               m_config.query_delimiter.c_str(),
+                               m_config.query_delimiter.size());
                         /* append the next query statement */
-                        memcpy(my_session->sql + my_session->sql_index + my_instance->query_delimiter_size,
+                        memcpy(my_session->sql + my_session->sql_index + m_config.query_delimiter.size(),
                                ptr,
                                strlen(ptr));
                         /* set new pointer for the buffer */
-                        my_session->sql_index += (my_instance->query_delimiter_size + strlen(ptr));
+                        my_session->sql_index += (m_config.query_delimiter.size() + strlen(ptr));
                     }
                     gettimeofday(&my_session->last_statement_start, NULL);
                 }
             }
         }
     }
-
-retblock:
 
     MXS_FREE(ptr);
     /* Pass the query downstream */
@@ -471,8 +442,7 @@ int32_t TPM_SESSION::clientReply(GWBUF* buffer, const mxs::ReplyRoute& down, con
         if (!my_session->query_end)
         {
             written = sprintf(my_session->latency + my_session->latency_index,
-                              "%s",
-                              my_instance->query_delimiter);
+                              "%s", m_config.query_delimiter.c_str());
             my_session->latency_index += written;
         }
         if (my_session->latency_index > latency_buf_size)
@@ -495,22 +465,22 @@ int32_t TPM_SESSION::clientReply(GWBUF* buffer, const mxs::ReplyRoute& down, con
         *(my_session->sql + my_session->sql_index) = '\0';
 
         /* print to log. */
-        if (my_instance->log_enabled)
+        if (my_instance->enabled())
         {
             /* this prints "timestamp | server_name | user_name | latency of entire transaction | latencies of
              * individual statements | sql_statements" */
-            fprintf(my_instance->fp,
+            fprintf(my_instance->fp(),
                     "%ld%s%s%s%s%s%ld%s%s%s%s\n",
                     timestamp,
-                    my_instance->delimiter,
+                    m_config.delimiter.c_str(),
                     down.front()->target()->name(),
-                    my_instance->delimiter,
-                    my_session->userName,
-                    my_instance->delimiter,
+                    m_config.delimiter.c_str(),
+                    m_pSession->user().c_str(),
+                    m_config.delimiter.c_str(),
                     millis,
-                    my_instance->delimiter,
+                    m_config.delimiter.c_str(),
                     my_session->latency,
-                    my_instance->delimiter,
+                    m_config.delimiter.c_str(),
                     my_session->sql);
         }
 
@@ -524,36 +494,7 @@ int32_t TPM_SESSION::clientReply(GWBUF* buffer, const mxs::ReplyRoute& down, con
 
 json_t* TPM_INSTANCE::diagnostics() const
 {
-    const TPM_INSTANCE* my_instance = this;
-
-    json_t* rval = json_object();
-
-    if (my_instance->source)
-    {
-        json_object_set_new(rval, "source", json_string(my_instance->source));
-    }
-
-    if (my_instance->user)
-    {
-        json_object_set_new(rval, "user", json_string(my_instance->user));
-    }
-
-    if (my_instance->filename)
-    {
-        json_object_set_new(rval, "filename", json_string(my_instance->filename));
-    }
-
-    if (my_instance->delimiter)
-    {
-        json_object_set_new(rval, "delimiter", json_string(my_instance->delimiter));
-    }
-
-    if (my_instance->query_delimiter)
-    {
-        json_object_set_new(rval, "query_delimiter", json_string(my_instance->query_delimiter));
-    }
-
-    return rval;
+    return nullptr;
 }
 
 uint64_t TPM_INSTANCE::getCapabilities() const
@@ -563,56 +504,74 @@ uint64_t TPM_INSTANCE::getCapabilities() const
 
 TPM_INSTANCE::~TPM_INSTANCE()
 {
-    TPM_INSTANCE* my_instance = this;
+    mxb_assert(m_thread.joinable());
+    m_shutdown = true;
+    m_thread.join();
 
-    my_instance->shutdown = true;
-
-    if (my_instance->thread.joinable())
+    if (m_fp)
     {
-        my_instance->thread.join();
+        fclose(m_fp);
     }
+}
+
+bool TPM_INSTANCE::post_configure()
+{
+    m_fp = fopen(m_config.filename.c_str(), "w");
+
+    if (!m_fp)
+    {
+        MXS_ERROR("Opening output file '%s' for tpmfilter failed due to %d, %s",
+                  m_config.filename.c_str(), errno, strerror(errno));
+        return false;
+    }
+
+    m_thread = std::thread(&TPM_INSTANCE::checkNamedPipe, this);
+    return true;
 }
 
 void TPM_INSTANCE::checkNamedPipe()
 {
-    TPM_INSTANCE* inst = this;
     int ret = 0;
     char buffer[2];
     char buf[4096];
-    char* named_pipe = inst->named_pipe;
+    int pipe_fd;
 
     // open named pipe and this will block until middleware opens it.
-    while (!inst->shutdown && ((inst->named_pipe_fd = open(named_pipe, O_RDONLY)) > 0))
+    while (!m_shutdown && ((pipe_fd = open(m_config.named_pipe.c_str(), O_RDONLY)) > 0))
     {
         // 1 for start logging, 0 for stopping.
-        while (!inst->shutdown && ((ret = read(inst->named_pipe_fd, buffer, 1)) > 0))
+        while (!m_shutdown && ((ret = read(pipe_fd, buffer, 1)) > 0))
         {
             if (buffer[0] == '1')
             {
                 // reopens the log file.
-                inst->fp = fopen(inst->filename, "w");
-                if (inst->fp == NULL)
+                if (m_fp)
+                {
+                    fclose(m_fp);
+                }
+
+                if (!(m_fp = fopen(m_config.filename.c_str(), "w")))
                 {
                     MXS_ERROR("Failed to open a log file for tpmfilter.");
-                    MXS_FREE(inst);
                     return;
                 }
-                inst->log_enabled = true;
+
+                m_enabled = true;
             }
             else if (buffer[0] == '0')
             {
-                inst->log_enabled = false;
+                m_enabled = false;
             }
         }
         if (ret == 0)
         {
-            close(inst->named_pipe_fd);
+            close(pipe_fd);
         }
     }
 
-    if (!inst->shutdown && (inst->named_pipe_fd == -1))
+    if (!m_shutdown && (pipe_fd == -1))
     {
-        MXS_ERROR("Failed to open the named pipe '%s': %s", named_pipe, strerror(errno));
+        MXS_ERROR("Failed to open the named pipe '%s': %s", m_config.named_pipe.c_str(), strerror(errno));
         return;
     }
 
