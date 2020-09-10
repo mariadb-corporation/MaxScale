@@ -44,37 +44,17 @@
 
 #include <maxscale/ccdefs.hh>
 
-#include <ctype.h>
-#include <stdio.h>
 #include <fcntl.h>
-#include <string.h>
-#include <time.h>
-#include <sys/time.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <regex.h>
-#include <thread>
 
-#include <maxbase/alloc.h>
+#include <thread>
+#include <fstream>
+
 #include <maxbase/stopwatch.hh>
 #include <maxscale/filter.hh>
-#include <maxscale/modinfo.hh>
 #include <maxscale/modutil.hh>
-#include <maxscale/server.hh>
-#include <maxbase/atomic.h>
 #include <maxscale/query_classifier.hh>
-#include <maxscale/protocol/mariadb/mysql.hh>
-
-/* The maximum size for query statements in a transaction (64MB) */
-static size_t sql_size_limit = 64 * 1024 * 1024;
-/* The size of the buffer for recording latency of individual statements */
-static int latency_buf_size = 64 * 1024;
-static const int default_sql_size = 4 * 1024;
-
-#define DEFAULT_QUERY_DELIMITER "@@@"
-#define DEFAULT_LOG_DELIMITER   ":::"
-#define DEFAULT_FILE_NAME       "tpm.log"
-#define DEFAULT_NAMED_PIPE      "/tmp/tpmfilter"
 
 class TpmFilter;
 class TpmSession;
@@ -154,17 +134,9 @@ public:
         return m_config;
     }
 
-    void print(const std::string& str)
+    std::ofstream& file()
     {
-        fprintf(m_fp, "%s\n", str.c_str());
-    }
-
-    void flush()
-    {
-        if (m_fp)
-        {
-            fflush(m_fp);
-        }
+        return m_file;
     }
 
     bool enabled() const
@@ -183,11 +155,11 @@ private:
     }
 
 
-    bool        m_enabled = false;
-    FILE*       m_fp = nullptr;
-    bool        m_shutdown = false;
-    std::thread m_thread;
-    Config      m_config;
+    bool          m_enabled = false;
+    std::ofstream m_file;
+    bool          m_shutdown = false;
+    std::thread   m_thread;
+    Config        m_config;
 };
 
 class TpmSession : public mxs::FilterSession
@@ -295,7 +267,7 @@ TpmSession::TpmSession(MXS_SESSION* session, SERVICE* service, TpmFilter* instan
 
 TpmSession::~TpmSession()
 {
-    m_instance->flush();
+    m_instance->file().flush();
 }
 
 int32_t TpmSession::routeQuery(GWBUF* queue)
@@ -354,18 +326,16 @@ int32_t TpmSession::clientReply(GWBUF* buffer, const mxs::ReplyRoute& down, cons
             if (m_instance->enabled())
             {
                 const auto& delim = m_config.delimiter;
-                std::ostringstream ss;
 
                 /* this prints "timestamp | server_name | user_name | latency of entire transaction |
                  * latencies of individual statements | sql_statements" */
-                ss << time(nullptr) << delim
-                   << down.front()->target()->name() << delim
-                   << m_pSession->user() << delim
-                   << mxb::to_secs(m_trx_watch.lap()) * 1000 << delim
-                   << mxb::join(m_latency, m_config.query_delimiter) << delim
-                   << mxb::join(m_sql, m_config.query_delimiter);
-
-                m_instance->print(ss.str());
+                m_instance->file()
+                    << time(nullptr) << delim
+                    << down.front()->target()->name() << delim
+                    << m_pSession->user() << delim
+                    << mxb::to_secs(m_trx_watch.lap()) * 1000 << delim
+                    << mxb::join(m_latency, m_config.query_delimiter) << delim
+                    << mxb::join(m_sql, m_config.query_delimiter);
             }
 
             m_sql.clear();
@@ -392,18 +362,13 @@ TpmFilter::~TpmFilter()
     mxb_assert(m_thread.joinable());
     m_shutdown = true;
     m_thread.join();
-
-    if (m_fp)
-    {
-        fclose(m_fp);
-    }
 }
 
 bool TpmFilter::post_configure()
 {
-    m_fp = fopen(m_config.filename.c_str(), "w");
+    m_file.open(m_config.filename);
 
-    if (!m_fp)
+    if (!m_file)
     {
         MXS_ERROR("Opening output file '%s' for tpmfilter failed due to %d, %s",
                   m_config.filename.c_str(), errno, strerror(errno));
@@ -429,13 +394,9 @@ void TpmFilter::check_named_pipe()
         {
             if (buffer[0] == '1')
             {
-                // reopens the log file.
-                if (m_fp)
-                {
-                    fclose(m_fp);
-                }
+                m_file.open(m_config.filename);
 
-                if (!(m_fp = fopen(m_config.filename.c_str(), "w")))
+                if (!m_file)
                 {
                     MXS_ERROR("Failed to open a log file for tpmfilter.");
                     return;
