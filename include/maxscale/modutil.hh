@@ -143,7 +143,7 @@ inline bool modutil_MySQL_Query(GWBUF* buf, char** sql, int* length, int* residu
     return 1;
 }
 extern char*  modutil_get_SQL(GWBUF*);
-extern GWBUF* modutil_replace_SQL(GWBUF*, char*);
+extern GWBUF* modutil_replace_SQL(GWBUF*, const char*);
 extern char*  modutil_get_query(GWBUF* buf);
 GWBUF*        modutil_get_next_MySQL_packet(GWBUF** p_readbuf);
 GWBUF*        modutil_get_complete_packets(GWBUF** p_readbuf);

@@ -55,7 +55,7 @@ static const char* sub_escape = "\\.";
  * @param sql   The SQL text to replace in the packet
  * @return A newly formed GWBUF containing the MySQL packet.
  */
-GWBUF* modutil_replace_SQL(GWBUF* orig, char* sql)
+GWBUF* modutil_replace_SQL(GWBUF* orig, const char* sql)
 {
     unsigned char* ptr;
     int length, newlength;

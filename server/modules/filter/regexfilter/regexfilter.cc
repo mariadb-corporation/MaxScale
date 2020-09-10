@@ -11,19 +11,6 @@
  * Public License.
  */
 
-#define MXS_MODULE_NAME "regexfilter"
-
-#include <maxscale/ccdefs.hh>
-#include <string.h>
-#include <stdio.h>
-#include <maxbase/alloc.h>
-#include <maxbase/atomic.h>
-#include <maxscale/config.hh>
-#include <maxscale/filter.hh>
-#include <maxscale/modinfo.hh>
-#include <maxscale/modutil.hh>
-#include <maxscale/pcre2.hh>
-
 /**
  * @file regexfilter.c - a very simple regular expression rewrite filter.
  *
@@ -36,20 +23,75 @@
  *      user=<username to limit filter>
  */
 
-static char* regex_replace(const char* sql,
-                           pcre2_code* re,
-                           pcre2_match_data* study,
-                           const char* replace);
+#define MXS_MODULE_NAME "regexfilter"
 
-struct RegexSession;
+#include <maxscale/ccdefs.hh>
 
-/**
- * Instance structure
- */
-struct RegexInstance : public mxs::Filter<RegexInstance, RegexSession>
+#include <maxscale/config2.hh>
+#include <maxscale/filter.hh>
+#include <maxscale/modutil.hh>
+
+namespace
 {
+namespace cfg = mxs::config;
+
+cfg::Specification s_spec(MXS_MODULE_NAME, cfg::Specification::FILTER);
+
+cfg::ParamRegex s_match(&s_spec, "match", "PCRE2 pattern used for matching");
+cfg::ParamString s_replace(&s_spec, "replace", "PCRE2 replacement text for the match pattern");
+cfg::ParamString s_source(&s_spec, "source", "Only match queries done from this address", "");
+cfg::ParamString s_user(&s_spec, "user", "Only match queries done by this user", "");
+cfg::ParamString s_log_file(&s_spec, "log_file", "Log matching information to this file", "");
+
+cfg::ParamBool s_log_trace(
+    &s_spec, "log_trace", "Log matching information to the MaxScale log on the info level", false);
+
+cfg::ParamEnum<uint32_t> s_options(&s_spec, "options", "Regular expression options",
+    {
+        {PCRE2_CASELESS, "ignorecase"},
+        {0, "case"},
+        {PCRE2_EXTENDED, "extended"},
+    }, PCRE2_CASELESS);
+}
+
+class RegexSession;
+class RegexInstance;
+
+struct Config : mxs::config::Configuration
+{
+    Config(const char* name, RegexInstance* instance)
+        : mxs::config::Configuration(name, &s_spec)
+        , m_instance(instance)
+    {
+        add_native(&match, &s_match);
+        add_native(&replace, &s_replace);
+        add_native(&log_trace, &s_log_trace);
+        add_native(&source, &s_source);
+        add_native(&user, &s_user);
+        add_native(&log_file, &s_log_file);
+        add_native(&options, &s_options);
+    }
+
+    mxs::config::RegexValue match;
+    std::string             replace;
+    uint32_t                options;
+    bool                    log_trace;
+    std::string             source;
+    std::string             user;
+    std::string             log_file;
+
+protected:
+    bool post_configure();
+
+private:
+    RegexInstance* m_instance;
+};
+
+class RegexInstance : public mxs::Filter<RegexInstance, RegexSession>
+{
+public:
+
     RegexInstance(const char* name);
-    ~RegexInstance();
 
     static RegexInstance* create(const char* name, mxs::ConfigParameters* params);
     mxs::FilterSession*   newSession(MXS_SESSION* session, SERVICE* service) override;
@@ -66,47 +108,42 @@ struct RegexInstance : public mxs::Filter<RegexInstance, RegexSession>
 
     mxs::config::Configuration* getConfiguration() override
     {
-        return nullptr;
+        return &m_config;
     }
 
-    bool matching_connection(MXS_SESSION* session);
-    void log_match(char* old, char* newsql);
-    void log_nomatch(char* old);
+    const Config& config()const
+    {
+        return m_config;
+    }
 
-    char*       source;             /*< Source address to restrict matches */
-    char*       user;               /*< User name to restrict matches */
-    char*       match;              /*< Regular expression to match */
-    char*       replace;            /*< Replacement text */
-    pcre2_code* re;                 /*< Compiled regex text */
-    FILE*       logfile = nullptr;  /*< Log file */
-    bool        log_trace;          /*< Whether messages should be printed to tracelog */
+    bool open(const std::string& filename);
+    bool matching_connection(MXS_SESSION* session);
+    void log_match(const std::string& old, const std::string& newsql);
+    void log_nomatch(const std::string& old);
+
+private:
+    Config m_config;
+    FILE*  m_file = nullptr;    /*< Log file */
 };
 
 /**
  * The session structure for this regex filter
  */
-struct RegexSession : public mxs::FilterSession
+class RegexSession : public mxs::FilterSession
 {
+public:
     RegexSession(MXS_SESSION* session, SERVICE* service, RegexInstance* instance)
         : mxs::FilterSession(session, service)
         , m_instance(instance)
+        , m_active(m_instance->matching_connection(session))
     {
-        if (m_instance->matching_connection(session))
-        {
-            match_data = pcre2_match_data_create_from_pattern(m_instance->re, nullptr);
-        }
-    }
-
-    ~RegexSession()
-    {
-        pcre2_match_data_free(match_data);
     }
 
     json_t* diagnostics() const
     {
         json_t* rval = json_object();
-        json_object_set_new(rval, "altered", json_integer(no_change));
-        json_object_set_new(rval, "unaltered", json_integer(replacements));
+        json_object_set_new(rval, "altered", json_integer(m_no_change));
+        json_object_set_new(rval, "unaltered", json_integer(m_replacements));
         return rval;
     }
 
@@ -117,33 +154,114 @@ struct RegexSession : public mxs::FilterSession
 
     int32_t routeQuery(GWBUF* buffer);
 
-    int               no_change = 0;            /* No. of unchanged requests */
-    int               replacements = 0;         /* No. of changed requests */
-    pcre2_match_data* match_data = nullptr;     /*< Matching data used by the compiled regex */
-
 private:
     RegexInstance* m_instance;
+    int            m_no_change = 0;     /* No. of unchanged requests */
+    int            m_replacements = 0;  /* No. of changed requests */
+    bool           m_active;
 };
 
-static const MXS_ENUM_VALUE option_values[] =
+bool Config::post_configure()
 {
-    {"ignorecase", PCRE2_CASELESS},
-    {"case",       0             },
-    {NULL}
-};
+    if (!log_file.empty() && !m_instance->open(log_file))
+    {
+        MXS_ERROR("Failed to open file '%s'.", log_file.c_str());
+        return false;
+    }
 
-extern "C"
+    match.set_options(options);
+    return true;
+}
+
+// static
+RegexInstance* RegexInstance::create(const char* name, mxs::ConfigParameters* params)
 {
+    return new RegexInstance(name);
+}
 
-/**
- * The module entry point routine. It is this routine that
- * must populate the structure that is referred to as the
- * "module object", this is a structure with the set of
- * external entry points for this module.
- *
- * @return The module object
- */
-MXS_MODULE* MXS_CREATE_MODULE()
+RegexInstance::RegexInstance(const char* name)
+    : m_config(name, this)
+{
+}
+
+mxs::FilterSession* RegexInstance::newSession(MXS_SESSION* session, SERVICE* service)
+{
+    return new RegexSession(session, service, this);
+}
+
+bool RegexInstance::matching_connection(MXS_SESSION* session)
+{
+    return (m_config.source.empty() || session->client_remote() == m_config.source)
+           && (m_config.user.empty() || session->user() == m_config.user);
+}
+
+int32_t RegexSession::routeQuery(GWBUF* queue)
+{
+    if (m_active)
+    {
+        auto sql = mxs::extract_sql(queue);
+
+        if (!sql.empty())
+        {
+            if (m_instance->config().match.match(sql))
+            {
+                auto newsql = m_instance->config().match.replace(sql, m_instance->config().replace.c_str());
+                queue = modutil_replace_SQL(queue, newsql.c_str());
+                queue = gwbuf_make_contiguous(queue);
+                m_instance->log_match(sql, newsql);
+                m_replacements++;
+            }
+            else
+            {
+                m_instance->log_nomatch(sql);
+                m_no_change++;
+            }
+        }
+    }
+
+    return mxs::FilterSession::routeQuery(queue);
+}
+
+bool RegexInstance::open(const std::string& filename)
+{
+    if ((m_file = fopen(filename.c_str(), "a")))
+    {
+        fprintf(m_file, "\nOpened regex filter log\n");
+        fflush(m_file);
+    }
+
+    return m_file;
+}
+
+void RegexInstance::log_match(const std::string& old, const std::string& newsql)
+{
+    if (m_file)
+    {
+        fprintf(m_file, "Matched %s: [%s] -> [%s]\n", m_config.match.pattern().c_str(),
+                old.c_str(), newsql.c_str());
+        fflush(m_file);
+    }
+    if (m_config.log_trace)
+    {
+        MXS_INFO("Match %s: [%s] -> [%s]", m_config.match.pattern().c_str(),
+                 old.c_str(), newsql.c_str());
+    }
+}
+
+void RegexInstance::log_nomatch(const std::string& old)
+{
+    if (m_file)
+    {
+        fprintf(m_file, "No match %s: [%s]\n", m_config.match.pattern().c_str(), old.c_str());
+        fflush(m_file);
+    }
+    if (m_config.log_trace)
+    {
+        MXS_INFO("No match %s: [%s]", m_config.match.pattern().c_str(), old.c_str());
+    }
+}
+
+extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
     static const char description[] = "A query rewrite filter that uses regular "
                                       "expressions to rewrite queries";
@@ -160,221 +278,9 @@ MXS_MODULE* MXS_CREATE_MODULE()
         NULL,
         NULL,
         NULL,
-        {
-            {
-                "match",
-                MXS_MODULE_PARAM_STRING,
-                NULL,
-                MXS_MODULE_OPT_REQUIRED
-            },
-            {
-                "replace",
-                MXS_MODULE_PARAM_STRING,
-                NULL,
-                MXS_MODULE_OPT_REQUIRED
-            },
-            {
-                "options",
-                MXS_MODULE_PARAM_ENUM,
-                "ignorecase",
-                MXS_MODULE_OPT_NONE,
-                option_values
-            },
-            {
-                "log_trace",
-                MXS_MODULE_PARAM_BOOL,
-                "false"
-            },
-            {"source",                  MXS_MODULE_PARAM_STRING },
-            {"user",                    MXS_MODULE_PARAM_STRING },
-            {"log_file",                MXS_MODULE_PARAM_STRING },
-            {MXS_END_MODULE_PARAMS}
-        }
+        {{nullptr}},
+        &s_spec
     };
 
     return &info;
-}
-}
-
-// static
-RegexInstance* RegexInstance::create(const char* name, mxs::ConfigParameters* params)
-{
-    RegexInstance* my_instance = new RegexInstance(name);
-
-    my_instance->match = params->get_c_str_copy("match");
-    my_instance->replace = params->get_c_str_copy("replace");
-    my_instance->source = params->get_c_str_copy("source");
-    my_instance->user = params->get_c_str_copy("user");
-    my_instance->log_trace = params->get_bool("log_trace");
-
-    std::string logfile = params->get_string("log_file");
-
-    if (!logfile.empty())
-    {
-        if ((my_instance->logfile = fopen(logfile.c_str(), "a")) == NULL)
-        {
-            MXS_ERROR("Failed to open file '%s'.", logfile.c_str());
-            delete my_instance;
-            return nullptr;
-        }
-
-        fprintf(my_instance->logfile, "\nOpened regex filter log\n");
-        fflush(my_instance->logfile);
-    }
-
-    int cflags = params->get_enum("options", option_values);
-
-    if (!(my_instance->re = params->get_compiled_regex("match", cflags, nullptr).release()))
-    {
-        delete my_instance;
-        return nullptr;
-    }
-
-    return my_instance;
-}
-
-RegexInstance::RegexInstance(const char* name)
-{
-}
-
-RegexInstance::~RegexInstance()
-{
-    MXS_FREE(match);
-    MXS_FREE(replace);
-    MXS_FREE(source);
-    MXS_FREE(user);
-    pcre2_code_free(re);
-
-    if (logfile)
-    {
-        fclose(logfile);
-    }
-}
-
-mxs::FilterSession* RegexInstance::newSession(MXS_SESSION* session, SERVICE* service)
-{
-    return new RegexSession(session, service, this);
-}
-
-bool RegexInstance::matching_connection(MXS_SESSION* session)
-{
-    bool rval = true;
-
-    if (source && strcmp(session_get_remote(session), source) != 0)
-    {
-        rval = false;
-    }
-    else if (user && strcmp(session_get_user(session), user) != 0)
-    {
-        rval = false;
-    }
-
-    return rval;
-}
-
-int32_t RegexSession::routeQuery(GWBUF* queue)
-{
-    char* sql;
-    char* newsql;
-
-    if (match_data && modutil_is_SQL(queue))
-    {
-        if ((sql = modutil_get_SQL(queue)) != NULL)
-        {
-            newsql = regex_replace(sql,
-                                   m_instance->re,
-                                   match_data,
-                                   m_instance->replace);
-            if (newsql)
-            {
-                queue = modutil_replace_SQL(queue, newsql);
-                queue = gwbuf_make_contiguous(queue);
-                m_instance->log_match(sql, newsql);
-                MXS_FREE(newsql);
-                replacements++;
-            }
-            else
-            {
-                m_instance->log_nomatch(sql);
-                no_change++;
-            }
-            MXS_FREE(sql);
-        }
-    }
-
-    return mxs::FilterSession::routeQuery(queue);
-}
-
-/**
- * Perform a regular expression match and substitution on the SQL
- *
- * @param   sql The original SQL text
- * @param   re  The compiled regular expression
- * @param   match_data The PCRE2 matching data buffer
- * @param   replace The replacement text
- * @return  The replaced text or NULL if no replacement was done.
- */
-static char* regex_replace(const char* sql, pcre2_code* re, pcre2_match_data* match_data, const char* replace)
-{
-    char* result = NULL;
-    size_t result_size;
-
-    /** This should never fail with rc == 0 because we used pcre2_match_data_create_from_pattern() */
-    if (pcre2_match(re, (PCRE2_SPTR) sql, PCRE2_ZERO_TERMINATED, 0, 0, match_data, NULL) > 0)
-    {
-        result_size = strlen(sql) + strlen(replace);
-        result = static_cast<char*>(MXS_MALLOC(result_size));
-
-        size_t result_size_tmp = result_size;
-        while (result
-               && pcre2_substitute(re,
-                                   (PCRE2_SPTR) sql,
-                                   PCRE2_ZERO_TERMINATED,
-                                   0,
-                                   PCRE2_SUBSTITUTE_GLOBAL,
-                                   match_data,
-                                   NULL,
-                                   (PCRE2_SPTR) replace,
-                                   PCRE2_ZERO_TERMINATED,
-                                   (PCRE2_UCHAR*) result,
-                                   (PCRE2_SIZE*) &result_size_tmp) == PCRE2_ERROR_NOMEMORY)
-        {
-            result_size_tmp = 1.5 * result_size;
-            char* tmp;
-            if ((tmp = static_cast<char*>(MXS_REALLOC(result, result_size_tmp))) == NULL)
-            {
-                MXS_FREE(result);
-                result = NULL;
-            }
-            result = tmp;
-            result_size = result_size_tmp;
-        }
-    }
-    return result;
-}
-
-void RegexInstance::log_match(char* old, char* newsql)
-{
-    if (logfile)
-    {
-        fprintf(logfile, "Matched %s: [%s] -> [%s]\n", match, old, newsql);
-        fflush(logfile);
-    }
-    if (log_trace)
-    {
-        MXS_INFO("Match %s: [%s] -> [%s]", match, old, newsql);
-    }
-}
-
-void RegexInstance::log_nomatch(char* old)
-{
-    if (logfile)
-    {
-        fprintf(logfile, "No match %s: [%s]\n", match, old);
-        fflush(logfile);
-    }
-    if (log_trace)
-    {
-        MXS_INFO("No match %s: [%s]", match, old);
-    }
 }
