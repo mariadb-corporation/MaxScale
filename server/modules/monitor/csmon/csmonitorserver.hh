@@ -76,9 +76,18 @@ public:
         m_version_number = vn;
     }
 
-    void set_status(uint64_t bit)
+    void clear_status(uint64_t mask)
     {
-        this->server->set_status(bit);
+        this->server->clear_status(mask);
+    }
+
+    void set_status(uint64_t mask)
+    {
+        if (mask != this->server->status())
+        {
+            this->server->clear_status(~mask);
+            this->server->set_status(mask);
+        }
     }
 
     Config fetch_config() const;
@@ -261,6 +270,12 @@ public:
     {
         m_persister.persist(*this);
     };
+
+    void set_excluded()
+    {
+        clear_status(SERVER_MASTER | SERVER_SLAVE | SERVER_RUNNING);
+        m_persister.unpersist(*this);
+    }
 
 private:
     Persister& m_persister;
