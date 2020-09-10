@@ -58,8 +58,8 @@ FilterModule::Instance::~Instance()
 
 auto_ptr<FilterModule::Session> FilterModule::Instance::newSession(MXS_SESSION* pSession,
                                                                    SERVICE* pService,
-                                                                   MXS_FILTER_SESSION* down,
-                                                                   MXS_FILTER_SESSION* up)
+                                                                   mxs::Routable* down,
+                                                                   mxs::Routable* up)
 {
     auto_ptr<Session> sFilter_session;
 
@@ -77,7 +77,7 @@ auto_ptr<FilterModule::Session> FilterModule::Instance::newSession(MXS_SESSION* 
 // FilterModule::Session
 //
 
-FilterModule::Session::Session(Instance* pInstance, MXS_FILTER_SESSION* pFilter_session)
+FilterModule::Session::Session(Instance* pInstance, mxs::Routable* pFilter_session)
     : m_instance(*pInstance)
     , m_pFilter_session(pFilter_session)
 {

@@ -1236,7 +1236,7 @@ ServiceEndpoint::~ServiceEndpoint()
 
 // static
 int32_t ServiceEndpoint::upstream_function(MXS_FILTER* instance,
-                                           MXS_FILTER_SESSION* session,
+                                           mxs::Routable* session,
                                            GWBUF* buffer,
                                            const mxs::ReplyRoute& down,
                                            const mxs::Reply& reply)
@@ -1309,7 +1309,7 @@ bool ServiceEndpoint::connect()
     }
 
     // The head of the chain currently points at the router
-    mxs_filter_session* chain_head = m_head;
+    mxs::Routable* chain_head = m_head;
 
     for (auto it = m_filters.rbegin(); it != m_filters.rend(); it++)
     {
@@ -1321,7 +1321,7 @@ bool ServiceEndpoint::connect()
     m_head = chain_head;
 
     // The tail is the upstream component of the service (the client DCB)
-    mxs_filter_session* chain_tail = m_tail;
+    mxs::Routable* chain_tail = m_tail;
 
     for (auto it = m_filters.begin(); it != m_filters.end(); it++)
     {

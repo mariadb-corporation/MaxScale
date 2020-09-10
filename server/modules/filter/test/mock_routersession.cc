@@ -70,7 +70,7 @@ int32_t RouterSession::clientReply(GWBUF* pResponse, const mxs::Reply& reply)
 
 // static
 int32_t RouterSession::routeQuery(MXS_FILTER* pInstance,
-                                  MXS_FILTER_SESSION* pRouter_session,
+                                  mxs::Routable* pRouter_session,
                                   GWBUF* pStatement)
 {
     RouterSession* pThis = reinterpret_cast<RouterSession*>(pRouter_session);

@@ -36,7 +36,7 @@ namespace maxscale
  * are virtual. That is by design, as the class will be used in a context where
  * the concrete class is known. That is, there is no need for the virtual mechanism.
  */
-class RouterSession : public MXS_FILTER_SESSION
+class RouterSession : public mxs::Routable
 {
 public:
     /**
@@ -78,7 +78,7 @@ public:
                              const mxs::Reply& reply) = 0;
 
     // Sets the upstream component (don't override this in the inherited class)
-    void setUpstream(MXS_FILTER_SESSION* up)
+    void setUpstream(mxs::Routable* up)
     {
         m_pUp = up;
     }
@@ -87,8 +87,8 @@ protected:
     RouterSession(MXS_SESSION* pSession);
 
 protected:
-    MXS_SESSION*        m_pSession; /*< The MXS_SESSION this router session is associated with. */
-    MXS_FILTER_SESSION* m_pUp;
+    MXS_SESSION*   m_pSession;      /*< The MXS_SESSION this router session is associated with. */
+    mxs::Routable* m_pUp;
 };
 }
 

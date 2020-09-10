@@ -29,7 +29,7 @@ namespace mock
  * An instance of Client represents a client. It can be used as the
  * upstream filter of another filter.
  */
-class Client : public MXS_FILTER_SESSION
+class Client : public mxs::Routable
              , public Dcb::Handler
 {
     Client(const Client&);
@@ -115,9 +115,9 @@ public:
     void reset();
 
     /**
-     * Get the MXS_FILTER_SESSION for this object
+     * Get the mxs::Routable for this object
      */
-    MXS_FILTER_SESSION* as_upstream()
+    mxs::Routable* as_upstream()
     {
         return this;
     }
@@ -131,7 +131,7 @@ public:
 
 private:
     static int32_t clientReply(MXS_FILTER* pInstance,
-                               MXS_FILTER_SESSION* pSession,
+                               mxs::Routable* pSession,
                                GWBUF* pResponse,
                                const mxs::ReplyRoute& down,
                                const mxs::Reply& reply);
@@ -140,11 +140,11 @@ private:
     int32_t write(GWBUF* pBuffer);
 
 private:
-    std::string         m_user;
-    std::string         m_host;
-    Handler*            m_pHandler;
-    size_t              m_n_responses;
-    MXS_FILTER_SESSION* m_upstream;
+    std::string    m_user;
+    std::string    m_host;
+    Handler*       m_pHandler;
+    size_t         m_n_responses;
+    mxs::Routable* m_upstream;
 };
 }
 }

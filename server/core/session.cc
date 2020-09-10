@@ -248,7 +248,7 @@ bool mxs_route_query(MXS_SESSION* ses, GWBUF* buffer)
     return rv;
 }
 
-bool mxs_route_reply(MXS_FILTER_SESSION* up, GWBUF* buffer, DCB* dcb)
+bool mxs_route_reply(mxs::Routable* up, GWBUF* buffer, DCB* dcb)
 {
     mxs::ReplyRoute route;
     mxs::Reply reply;
@@ -544,7 +544,7 @@ bool session_remove_variable(MXS_SESSION* session,
     return pSession->remove_variable(name, context);
 }
 
-void session_set_response(MXS_SESSION* session, SERVICE* service, MXS_FILTER_SESSION* up, GWBUF* buffer)
+void session_set_response(MXS_SESSION* session, SERVICE* service, mxs::Routable* up, GWBUF* buffer)
 {
     // Valid arguments.
     mxb_assert(session && up && buffer);
@@ -645,7 +645,7 @@ class DelayedRoutingTask
     DelayedRoutingTask& operator=(const DelayedRoutingTask&) = delete;
 
 public:
-    DelayedRoutingTask(MXS_SESSION* session, MXS_FILTER_SESSION* down, GWBUF* buffer)
+    DelayedRoutingTask(MXS_SESSION* session, mxs::Routable* down, GWBUF* buffer)
         : m_session(session_get_ref(session))
         , m_down(down)
         , m_buffer(buffer)
@@ -703,9 +703,9 @@ public:
     }
 
 private:
-    MXS_SESSION*        m_session;
-    MXS_FILTER_SESSION* m_down;
-    GWBUF*              m_buffer;
+    MXS_SESSION*   m_session;
+    mxs::Routable* m_down;
+    GWBUF*         m_buffer;
 };
 
 static bool delayed_routing_cb(Worker::Call::action_t action, DelayedRoutingTask* task)
@@ -725,7 +725,7 @@ static bool delayed_routing_cb(Worker::Call::action_t action, DelayedRoutingTask
     return false;
 }
 
-bool session_delay_routing(MXS_SESSION* session, MXS_FILTER_SESSION* down, GWBUF* buffer, int seconds)
+bool session_delay_routing(MXS_SESSION* session, mxs::Routable* down, GWBUF* buffer, int seconds)
 {
     bool success = false;
 

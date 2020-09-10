@@ -26,11 +26,10 @@
 
 class DCB;
 class SERVICE;
-struct mxs_filter;
-struct mxs_filter_session;
 class SERVER;
 namespace maxscale
 {
+struct Routable;
 class ListenerSessionData;
 }
 
@@ -59,11 +58,9 @@ typedef struct
  * The downstream element in the filter chain. This may refer to
  * another filter or to a router.
  */
-struct mxs_filter;
-struct mxs_filter_session;
-
 namespace maxscale
 {
+struct Routable;
 class RoutingWorker;
 }
 
@@ -368,9 +365,9 @@ public:
     bool              qualifies_for_pooling;    /*< Whether this session qualifies for the connection pool */
     struct
     {
-        MXS_FILTER_SESSION* up;     /*< Upward component to receive buffer. */
-        GWBUF*              buffer; /*< Buffer to deliver to up. */
-        SERVICE*            service;/*< Service where the response originated */
+        mxs::Routable* up;          /*< Upward component to receive buffer. */
+        GWBUF*         buffer;      /*< Buffer to deliver to up. */
+        SERVICE*       service;     /*< Service where the response originated */
     }               response;       /*< Shortcircuited response */
     session_close_t close_reason;   /*< Reason why the session was closed */
 
@@ -397,7 +394,7 @@ private:
  * @param up       The filter that should receive the response.
  * @param buffer   The response.
  */
-void session_set_response(MXS_SESSION* session, SERVICE* service, MXS_FILTER_SESSION* up, GWBUF* buffer);
+void session_set_response(MXS_SESSION* session, SERVICE* service, mxs::Routable* up, GWBUF* buffer);
 
 /**
  * Function to be used by protocol module for routing incoming data
@@ -420,7 +417,7 @@ bool mxs_route_query(MXS_SESSION* session, GWBUF* buffer);
  *
  * @return True, if the routing should continue, false otherwise.
  */
-bool mxs_route_reply(MXS_FILTER_SESSION* up, GWBUF* buffer, DCB* dcb);
+bool mxs_route_reply(mxs::Routable* up, GWBUF* buffer, DCB* dcb);
 
 /**
  * Start the session
@@ -699,7 +696,7 @@ const char* session_get_dump_statements_str();
  *
  * @return True if queuing of the query was successful
  */
-bool session_delay_routing(MXS_SESSION* session, MXS_FILTER_SESSION* down, GWBUF* buffer, int seconds);
+bool session_delay_routing(MXS_SESSION* session, mxs::Routable* down, GWBUF* buffer, int seconds);
 
 /**
  * Get the reason why a session was closed

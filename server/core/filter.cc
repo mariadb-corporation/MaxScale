@@ -293,12 +293,12 @@ FilterSession::~FilterSession()
 {
 }
 
-void FilterSession::setDownstream(mxs_filter_session* down)
+void FilterSession::setDownstream(mxs::Routable* down)
 {
     m_down = down;
 }
 
-void FilterSession::setUpstream(mxs_filter_session* up)
+void FilterSession::setUpstream(mxs::Routable* up)
 {
     m_up = up;
 }

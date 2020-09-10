@@ -52,11 +52,11 @@ public:
     {
     }
 
-    SFilterDef          filter;
-    MXS_FILTER*         instance;
-    MXS_FILTER_SESSION* session;
-    MXS_FILTER_SESSION* up;
-    MXS_FILTER_SESSION* down;
+    SFilterDef     filter;
+    MXS_FILTER*    instance;
+    mxs::Routable* session;
+    mxs::Routable* up;
+    mxs::Routable* down;
 };
 
 class Session : public MXS_SESSION, public mxs::Component

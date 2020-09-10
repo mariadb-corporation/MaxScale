@@ -352,11 +352,11 @@ private:
         SFilterDef          filter;
         MXS_FILTER*         instance;
         mxs::FilterSession* session;
-        mxs_filter_session* up;
-        mxs_filter_session* down;
+        mxs::Routable*      up;
+        mxs::Routable*      down;
     };
 
-    class ServiceUpstream : public MXS_FILTER_SESSION
+    class ServiceUpstream : public mxs::Routable
     {
     public:
         ServiceUpstream(ServiceEndpoint* endpoint)
@@ -381,7 +381,7 @@ private:
 
     friend class Service;
 
-    static int32_t upstream_function(MXS_FILTER*, MXS_FILTER_SESSION*, GWBUF*,
+    static int32_t upstream_function(MXS_FILTER*, mxs::Routable*, GWBUF*,
                                      const mxs::ReplyRoute&, const mxs::Reply&);
     int32_t send_upstream(GWBUF* buffer, const mxs::ReplyRoute& down, const mxs::Reply&);
     void    set_endpoints(std::vector<std::unique_ptr<mxs::Endpoint>> down);
@@ -394,8 +394,8 @@ private:
 
     ServiceUpstream m_upstream;
 
-    mxs_filter_session* m_head;
-    mxs_filter_session* m_tail;
+    mxs::Routable* m_head;
+    mxs::Routable* m_tail;
 
     std::vector<SessionFilter> m_filters;
 

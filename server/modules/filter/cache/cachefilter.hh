@@ -27,7 +27,7 @@ class CacheFilter : public maxscale::Filter<CacheFilter, CacheFilterSession>
 public:
     ~CacheFilter();
 
-    static void apiFreeSession(MXS_FILTER*, MXS_FILTER_SESSION* pData);
+    static void apiFreeSession(MXS_FILTER*, mxs::Routable* pData);
 
     static CacheFilter* create(const char* zName, mxs::ConfigParameters* ppParams);
 

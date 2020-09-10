@@ -96,7 +96,7 @@ namespace maxscale
  * are virtual. That is by design, as the class will be used in a context where
  * the concrete class is known. That is, there is no need for the virtual mechanism.
  */
-class FilterSession : public MXS_FILTER_SESSION
+class FilterSession : public mxs::Routable
 {
 public:
     /**
@@ -110,14 +110,14 @@ public:
      *
      * @param down The component following this filter.
      */
-    void setDownstream(mxs_filter_session* down);
+    void setDownstream(mxs::Routable* down);
 
     /**
      * Called for setting the component preceeding this filter session.
      *
      * @param up The component preceeding this filter.
      */
-    void setUpstream(mxs_filter_session* up);
+    void setUpstream(mxs::Routable* up);
 
     /**
      * Called when a packet being is routed to the backend. The filter should
@@ -163,10 +163,10 @@ protected:
     }
 
 protected:
-    MXS_SESSION*        m_pSession; /*< The MXS_SESSION this filter session is associated with. */
-    SERVICE*            m_pService; /*< The service for which this session was created. */
-    mxs_filter_session* m_down;     /*< The downstream component. */
-    mxs_filter_session* m_up;       /*< The upstream component. */
+    MXS_SESSION*   m_pSession;  /*< The MXS_SESSION this filter session is associated with. */
+    SERVICE*       m_pService;  /*< The service for which this session was created. */
+    mxs::Routable* m_down;      /*< The downstream component. */
+    mxs::Routable* m_up;        /*< The upstream component. */
 };
 
 /**

@@ -203,7 +203,7 @@ CacheFilter* CacheFilter::create(const char* zName, mxs::ConfigParameters* pPara
 }
 
 // static
-void CacheFilter::apiFreeSession(MXS_FILTER*, MXS_FILTER_SESSION* pData)
+void CacheFilter::apiFreeSession(MXS_FILTER*, mxs::Routable* pData)
 {
     CacheFilterSession* pFilter_session = static_cast<CacheFilterSession*>(pData);
 

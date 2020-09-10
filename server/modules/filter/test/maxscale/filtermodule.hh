@@ -47,7 +47,7 @@ public:
          * @return A new filter session or NULL if the creation failed.
          */
         std::auto_ptr<Session> newSession(MXS_SESSION* pSession, SERVICE* pService,
-                                          MXS_FILTER_SESSION* pDown, MXS_FILTER_SESSION* pUp);
+                                          mxs::Routable* pDown, mxs::Routable* pUp);
 
     private:
         friend class FilterModule;
@@ -57,12 +57,12 @@ public:
     private:
         friend class Session;
 
-        int routeQuery(MXS_FILTER_SESSION* pFilter_session, GWBUF* pStatement)
+        int routeQuery(mxs::Routable* pFilter_session, GWBUF* pStatement)
         {
             return m_module.routeQuery(m_pInstance, pFilter_session, pStatement);
         }
 
-        int clientReply(MXS_FILTER_SESSION* pFilter_session, GWBUF* pStatement, const mxs::Reply& reply)
+        int clientReply(mxs::Routable* pFilter_session, GWBUF* pStatement, const mxs::Reply& reply)
         {
             return m_module.clientReply(m_pInstance, pFilter_session, pStatement, reply);
         }
@@ -96,11 +96,11 @@ public:
     private:
         friend class Instance;
 
-        Session(Instance* pInstance, MXS_FILTER_SESSION* pFilter_session);
+        Session(Instance* pInstance, mxs::Routable* pFilter_session);
 
     private:
-        Instance&           m_instance;
-        MXS_FILTER_SESSION* m_pFilter_session;
+        Instance&      m_instance;
+        mxs::Routable* m_pFilter_session;
     };
 
     /**
@@ -127,13 +127,13 @@ private:
         return pInstance->newSession(pSession, pService);
     }
 
-    int routeQuery(MXS_FILTER* pInstance, MXS_FILTER_SESSION* pFilter_session, GWBUF* pStatement)
+    int routeQuery(MXS_FILTER* pInstance, mxs::Routable* pFilter_session, GWBUF* pStatement)
     {
         return pFilter_session->routeQuery(pStatement);
     }
 
     int clientReply(MXS_FILTER* pInstance,
-                    MXS_FILTER_SESSION* pFilter_session,
+                    mxs::Routable* pFilter_session,
                     GWBUF* pStatement,
                     const mxs::Reply& reply)
     {
