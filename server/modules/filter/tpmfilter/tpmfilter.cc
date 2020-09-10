@@ -76,8 +76,8 @@ static const int default_sql_size = 4 * 1024;
 #define DEFAULT_FILE_NAME       "tpm.log"
 #define DEFAULT_NAMED_PIPE      "/tmp/tpmfilter"
 
-class TPM_INSTANCE;
-class TPM_SESSION;
+class TpmFilter;
+class TpmSession;
 
 namespace
 {
@@ -110,7 +110,7 @@ cfg::ParamString s_query_delimiter(
 class Config : public mxs::config::Configuration
 {
 public:
-    Config(const std::string& name, TPM_INSTANCE* instance)
+    Config(const std::string& name, TpmFilter* instance)
         : mxs::config::Configuration(name, &s_spec)
         , m_instance(instance)
     {
@@ -132,17 +132,17 @@ public:
     bool post_configure() override;
 
 private:
-    TPM_INSTANCE* m_instance;
+    TpmFilter* m_instance;
 };
 
-class TPM_INSTANCE : public mxs::Filter<TPM_INSTANCE, TPM_SESSION>
+class TpmFilter : public mxs::Filter<TpmFilter, TpmSession>
 {
 public:
-    ~TPM_INSTANCE();
-    static TPM_INSTANCE* create(const char* name, mxs::ConfigParameters* params);
-    mxs::FilterSession*  newSession(MXS_SESSION* session, SERVICE* service);
-    json_t*              diagnostics() const;
-    uint64_t             getCapabilities() const;
+    ~TpmFilter();
+    static TpmFilter*   create(const char* name, mxs::ConfigParameters* params);
+    mxs::FilterSession* newSession(MXS_SESSION* session, SERVICE* service);
+    json_t*             diagnostics() const;
+    uint64_t            getCapabilities() const;
 
     mxs::config::Configuration* getConfiguration()
     {
@@ -172,12 +172,12 @@ public:
         return m_enabled;
     }
 
-    void checkNamedPipe();
+    void check_named_pipe();
     bool post_configure();
 
 
 private:
-    TPM_INSTANCE(const char* name, mxs::ConfigParameters* params)
+    TpmFilter(const char* name, mxs::ConfigParameters* params)
         : m_config(name, this)
     {
     }
@@ -190,11 +190,11 @@ private:
     Config      m_config;
 };
 
-class TPM_SESSION : public mxs::FilterSession
+class TpmSession : public mxs::FilterSession
 {
 public:
-    TPM_SESSION(MXS_SESSION* session, SERVICE* service, TPM_INSTANCE* instance);
-    ~TPM_SESSION();
+    TpmSession(MXS_SESSION* session, SERVICE* service, TpmFilter* instance);
+    ~TpmSession();
     int32_t routeQuery(GWBUF* pPacket);
     int32_t clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply);
 
@@ -205,7 +205,7 @@ private:
     bool                     m_query_end = false;
     std::vector<std::string> m_sql;
     std::vector<std::string> m_latency;
-    TPM_INSTANCE*            m_instance;
+    TpmFilter*               m_instance;
     const Config&            m_config;
 };
 
@@ -221,7 +221,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         description,
         "V1.0.1",
         RCAP_TYPE_CONTIGUOUS_INPUT,
-        &TPM_INSTANCE::s_object,
+        &TpmFilter::s_object,
         NULL,
         NULL,
         NULL,
@@ -271,17 +271,17 @@ bool Config::post_configure()
 }
 
 // static
-TPM_INSTANCE* TPM_INSTANCE::create(const char* name, mxs::ConfigParameters* params)
+TpmFilter* TpmFilter::create(const char* name, mxs::ConfigParameters* params)
 {
-    return new TPM_INSTANCE(name, params);
+    return new TpmFilter(name, params);
 }
 
-mxs::FilterSession* TPM_INSTANCE::newSession(MXS_SESSION* session, SERVICE* service)
+mxs::FilterSession* TpmFilter::newSession(MXS_SESSION* session, SERVICE* service)
 {
-    return new TPM_SESSION(session, service, this);
+    return new TpmSession(session, service, this);
 }
 
-TPM_SESSION::TPM_SESSION(MXS_SESSION* session, SERVICE* service, TPM_INSTANCE* instance)
+TpmSession::TpmSession(MXS_SESSION* session, SERVICE* service, TpmFilter* instance)
     : mxs::FilterSession(session, service)
     , m_instance(instance)
     , m_config(instance->config())
@@ -293,12 +293,12 @@ TPM_SESSION::TPM_SESSION(MXS_SESSION* session, SERVICE* service, TPM_INSTANCE* i
     }
 }
 
-TPM_SESSION::~TPM_SESSION()
+TpmSession::~TpmSession()
 {
     m_instance->flush();
 }
 
-int32_t TPM_SESSION::routeQuery(GWBUF* queue)
+int32_t TpmSession::routeQuery(GWBUF* queue)
 {
     if (m_active && mxs_mysql_get_command(queue) == MXS_COM_QUERY)
     {
@@ -340,7 +340,7 @@ int32_t TPM_SESSION::routeQuery(GWBUF* queue)
     return mxs::FilterSession::routeQuery(queue);
 }
 
-int32_t TPM_SESSION::clientReply(GWBUF* buffer, const mxs::ReplyRoute& down, const mxs::Reply& reply)
+int32_t TpmSession::clientReply(GWBUF* buffer, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
     /* records latency of the SQL statement. */
     if (!m_sql.empty())
@@ -377,17 +377,17 @@ int32_t TPM_SESSION::clientReply(GWBUF* buffer, const mxs::ReplyRoute& down, con
     return mxs::FilterSession::clientReply(buffer, down, reply);
 }
 
-json_t* TPM_INSTANCE::diagnostics() const
+json_t* TpmFilter::diagnostics() const
 {
     return nullptr;
 }
 
-uint64_t TPM_INSTANCE::getCapabilities() const
+uint64_t TpmFilter::getCapabilities() const
 {
     return RCAP_TYPE_CONTIGUOUS_INPUT;
 }
 
-TPM_INSTANCE::~TPM_INSTANCE()
+TpmFilter::~TpmFilter()
 {
     mxb_assert(m_thread.joinable());
     m_shutdown = true;
@@ -399,7 +399,7 @@ TPM_INSTANCE::~TPM_INSTANCE()
     }
 }
 
-bool TPM_INSTANCE::post_configure()
+bool TpmFilter::post_configure()
 {
     m_fp = fopen(m_config.filename.c_str(), "w");
 
@@ -410,11 +410,11 @@ bool TPM_INSTANCE::post_configure()
         return false;
     }
 
-    m_thread = std::thread(&TPM_INSTANCE::checkNamedPipe, this);
+    m_thread = std::thread(&TpmFilter::check_named_pipe, this);
     return true;
 }
 
-void TPM_INSTANCE::checkNamedPipe()
+void TpmFilter::check_named_pipe()
 {
     int ret = 0;
     char buffer[2];
