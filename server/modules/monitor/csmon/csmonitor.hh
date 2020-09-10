@@ -124,12 +124,18 @@ private:
     bool configure(const mxs::ConfigParameters* pParams) override;
 
     void pre_loop() override;
+    void pre_tick() override;
 
-    using HostPortPair = std::pair<std::string, int>;
+    using HostPortPair  = std::pair<std::string, int>;
     using HostPortPairs = std::vector<HostPortPair>;
+    using Hosts         = std::set<std::string>;
+    using HostsByHost   = std::map<std::string, Hosts>;
+    using StatusByHost  = std::map<std::string, cs::Status>;
 
     void check_cluster();
     void check_cluster(const HostPortPairs&);
+    void check_cluster(const Hosts& hosts,
+                       const StatusByHost& status_by_host);
 
     bool check_bootstrap_servers();
     bool remove_persisted_information();

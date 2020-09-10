@@ -1447,6 +1447,14 @@ void CsMonitor::pre_loop()
     }
 }
 
+void CsMonitor::pre_tick()
+{
+    if (m_context.config().dynamic_node_detection)
+    {
+        check_cluster();
+    }
+}
+
 void CsMonitor::check_cluster()
 {
     HostPortPairs nodes;
@@ -1471,69 +1479,51 @@ void CsMonitor::check_cluster()
     check_cluster(nodes);
 }
 
-void CsMonitor::check_cluster(const HostPortPairs& nodes)
+namespace
 {
-    bool identical = true;
 
-    vector<string> hosts;
-    vector<set<string>> cluster_infos;
+void set_status(CsDynamicServer& mserver, int status_mask)
+{
+    auto result = mserver.ping_or_connect();
 
-    for (const auto& kv1 : nodes)
+    switch (result)
     {
-        const auto& current_host = kv1.first;
-        const auto& config = m_context.config();
+    case mxs::MonitorServer::ConnectResult::OLDCONN_OK:
+    case mxs::MonitorServer::ConnectResult::NEWCONN_OK:
+        mserver.set_status(status_mask);
+        break;
 
-        map<string,Status> statuses;
-        auto result = cs::fetch_cluster_status(current_host,
-                                               config.admin_port, config.admin_base_path,
-                                               m_context.http_config(),
-                                               &statuses);
+    case mxs::MonitorServer::ConnectResult::REFUSED:
+    case mxs::MonitorServer::ConnectResult::TIMEOUT:
+        mserver.clear_status(SERVER_MASTER | SERVER_SLAVE | SERVER_RUNNING);
+        break;
 
-        if (result.ok())
-        {
-            hosts.push_back(current_host);
+    case mxs::MonitorServer::ConnectResult::ACCESS_DENIED:
+        mserver.set_status(SERVER_AUTH_ERROR);
+    }
+}
 
-            set<string> cluster_info;
-            for (const auto& kv2 : statuses)
-            {
-                cluster_info.insert(kv2.first);
-            }
+}
 
-            if (!cluster_infos.empty())
-            {
-                const auto& first_info = *cluster_infos.begin();
-                const auto& first_host = *hosts.begin();
-
-                if (cluster_info != first_info)
-                {
-                    auto current_hosts = mxb::join(cluster_info);
-                    auto first_hosts = mxb::join(first_info);
-
-                    MXS_WARNING("Node %s thinks the cluster consists of %s, while %s thinks "
-                                "it consists of %s.",
-                                current_host.c_str(), current_hosts.c_str(),
-                                first_host.c_str(), first_hosts.c_str());
-                    identical = false;
-                }
-            }
-
-            cluster_infos.push_back(cluster_info);
-        }
-        else
-        {
-            MXS_ERROR("Could not fetch cluster status information from %s.", current_host.c_str());
-        }
+void CsMonitor::check_cluster(const Hosts& hosts, const StatusByHost& status_by_host)
+{
+    set<string> current_hosts;
+    for (const auto& kv : m_nodes_by_id)
+    {
+        current_hosts.insert(kv.first);
     }
 
-    if (identical)
+    if (!hosts.empty())
     {
-        if (!cluster_infos.empty())
+        for (const auto& host : hosts)
         {
-            MXS_NOTICE("All nodes agree on the cluster configuration.");
+            auto jt = status_by_host.find(host);
+            mxb_assert(jt != status_by_host.end());
+            int status_mask = ::get_status_mask(jt->second, hosts.size());
 
-            const auto& cluster_info = *cluster_infos.begin();
+            auto it = m_nodes_by_id.find(host);
 
-            for (const auto& host : cluster_info)
+            if (it == m_nodes_by_id.end())
             {
                 string server_name = string("@@") + m_name + ":node-" + host;
                 mxb_assert(!SERVER::find_by_unique_name(server_name));
@@ -1543,7 +1533,10 @@ void CsMonitor::check_cluster(const HostPortPairs& nodes)
                     SERVER* pServer = SERVER::find_by_unique_name(server_name);
                     mxb_assert(pServer);
 
-                    CsDynamicServer* pMs = new CsDynamicServer(this, pServer, this->settings().shared, &m_context);
+                    CsDynamicServer* pMs = new CsDynamicServer(this, pServer,
+                                                               this->settings().shared, &m_context);
+
+                    set_status(*pMs, status_mask);
 
                     m_nodes_by_id.insert(make_pair(host, pMs));
 
@@ -1559,7 +1552,86 @@ void CsMonitor::check_cluster(const HostPortPairs& nodes)
                               name(), server_name.c_str(), host.c_str(), mysql_port);
                 }
             }
+            else
+            {
+                MXS_NOTICE("Node %s detected alredy.", host.c_str());
+                current_hosts.erase(host);
+
+                auto& sMs = it->second;
+                set_status(*sMs.get(), status_mask);
+            }
         }
+    }
+
+    if (!current_hosts.empty())
+    {
+        MXS_NOTICE("Node(s) %s no longer in cluster.", mxb::join(current_hosts).c_str());
+
+        for (const auto& host : current_hosts)
+        {
+            auto it = m_nodes_by_id.find(host);
+            mxb_assert(it != m_nodes_by_id.end());
+
+            auto sMs = std::move(it->second);
+            m_nodes_by_id.erase(it);
+
+            sMs->set_excluded();
+        }
+    }
+}
+
+void CsMonitor::check_cluster(const HostPortPairs& nodes)
+{
+    bool identical = true;
+
+    map<string,Status> status_by_host;
+    map<string, set<string>> hosts_by_host;
+
+    for (const auto& kv1 : nodes)
+    {
+        const auto& host = kv1.first;
+
+        const auto& config = m_context.config();
+        auto result = cs::fetch_cluster_status(host,
+                                               config.admin_port, config.admin_base_path,
+                                               m_context.http_config(),
+                                               &status_by_host);
+
+        if (result.ok())
+        {
+            set<string> hosts;
+
+            for (const auto& kv2 : status_by_host)
+            {
+                hosts.insert(kv2.first);
+            }
+
+            if (!hosts.empty() && !hosts_by_host.empty())
+            {
+                auto it = hosts_by_host.begin();
+
+                if (hosts != it->second)
+                {
+                    MXS_WARNING("Node %s thinks the cluster consists of %s, while %s thinks "
+                                "it consists of %s.",
+                                host.c_str(), mxb::join(hosts).c_str(),
+                                it->first.c_str(), mxb::join(it->second).c_str());
+                    identical = false;
+                }
+            }
+
+            hosts_by_host.insert(make_pair(host, hosts));
+        }
+        else
+        {
+            MXS_ERROR("Could not fetch cluster status information from %s.", host.c_str());
+        }
+    }
+
+    if (identical)
+    {
+        check_cluster(!hosts_by_host.empty() ? hosts_by_host.begin()->second : Hosts(),
+                      status_by_host);
     }
     else
     {
