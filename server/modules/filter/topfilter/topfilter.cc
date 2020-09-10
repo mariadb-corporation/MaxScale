@@ -38,12 +38,12 @@
 #include <maxscale/filter.hh>
 #include <maxscale/modutil.hh>
 
-class TOPN_INSTANCE;
+class TopFilter;
 
-class TOPNQ
+class Query
 {
 public:
-    TOPNQ(const mxb::Duration& d, const std::string& s)
+    Query(const mxb::Duration& d, const std::string& s)
         : m_d(d)
         , m_sql(s)
     {
@@ -62,7 +62,7 @@ public:
     // Used for sorting queries that took longer before faster ones
     struct Sort
     {
-        bool operator()(const TOPNQ& lhs, const TOPNQ& rhs)
+        bool operator()(const Query& lhs, const Query& rhs)
         {
             return rhs.m_d < lhs.m_d;
         }
@@ -73,17 +73,17 @@ private:
     std::string   m_sql;
 };
 
-class TOPN_SESSION : public mxs::FilterSession
+class TopSession : public mxs::FilterSession
 {
 public:
-    TOPN_SESSION(TOPN_INSTANCE* instance, MXS_SESSION* session, SERVICE* service);
-    ~TOPN_SESSION();
+    TopSession(TopFilter* instance, MXS_SESSION* session, SERVICE* service);
+    ~TopSession();
     int32_t routeQuery(GWBUF* buffer);
     int32_t clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply);
     json_t* diagnostics() const;
 
 private:
-    TOPN_INSTANCE*       m_instance;
+    TopFilter*           m_instance;
     bool                 m_active = true;
     std::string          m_filename;
     std::string          m_current;
@@ -91,7 +91,7 @@ private:
     wall_time::TimePoint m_connect;
     mxb::Duration        m_stmt_time;
     mxb::StopWatch       m_watch;
-    std::vector<TOPNQ>   m_top;
+    std::vector<Query>   m_top;
 };
 
 namespace
@@ -120,7 +120,7 @@ struct Config : public mxs::config::Configuration
     Config(const std::string& name)
         : mxs::config::Configuration(name, &s_spec)
     {
-        add_native(&topN, &s_count);
+        add_native(&count, &s_count);
         add_native(&filebase, &s_filebase);
         add_native(&source, &s_source);
         add_native(&user, &s_user);
@@ -129,7 +129,7 @@ struct Config : public mxs::config::Configuration
         add_native(&exclude, &s_exclude);
     }
 
-    int64_t                 topN;       /* Number of queries to store */
+    int64_t                 count;      /* Number of queries to store */
     std::string             filebase;   /* Base of fielname to log into */
     std::string             source;     /* The source of the client connection */
     std::string             user;       /* A user name to filter on */
@@ -138,17 +138,17 @@ struct Config : public mxs::config::Configuration
     mxs::config::RegexValue exclude;    /* Optional text to match against for exclusion */
 };
 
-class TOPN_INSTANCE : public mxs::Filter<TOPN_INSTANCE, TOPN_SESSION>
+class TopFilter : public mxs::Filter<TopFilter, TopSession>
 {
 public:
-    static TOPN_INSTANCE* create(const std::string& name, mxs::ConfigParameters* params)
+    static TopFilter* create(const std::string& name, mxs::ConfigParameters* params)
     {
-        return new TOPN_INSTANCE(name);
+        return new TopFilter(name);
     }
 
     mxs::FilterSession* newSession(MXS_SESSION* session, SERVICE* service)
     {
-        return new TOPN_SESSION(this, session, service);
+        return new TopSession(this, session, service);
     }
 
     json_t* diagnostics() const
@@ -172,7 +172,7 @@ public:
     }
 
 private:
-    TOPN_INSTANCE(const std::string& name)
+    TopFilter(const std::string& name)
         : m_config(name)
     {
     }
@@ -180,7 +180,7 @@ private:
     Config m_config;
 };
 
-TOPN_SESSION::TOPN_SESSION(TOPN_INSTANCE* instance, MXS_SESSION* session, SERVICE* service)
+TopSession::TopSession(TopFilter* instance, MXS_SESSION* session, SERVICE* service)
     : mxs::FilterSession(session, service)
     , m_instance(instance)
     , m_filename(m_instance->config().filebase + "." + std::to_string(session->id()))
@@ -195,7 +195,7 @@ TOPN_SESSION::TOPN_SESSION(TOPN_INSTANCE* instance, MXS_SESSION* session, SERVIC
     }
 }
 
-TOPN_SESSION::~TOPN_SESSION()
+TopSession::~TopSession()
 {
     std::ofstream file(m_filename);
 
@@ -207,7 +207,7 @@ TOPN_SESSION::~TOPN_SESSION()
         double avg = stmt / statements;
 
         file << std::fixed << std::setprecision(3);
-        file << "Top " << m_instance->config().topN << " longest running queries in session.\n"
+        file << "Top " << m_instance->config().count << " longest running queries in session.\n"
              << "==========================================\n\n"
              << "Time (sec) | Query\n"
              << "-----------+-----------------------------------------------------------------\n";
@@ -231,7 +231,7 @@ TOPN_SESSION::~TOPN_SESSION()
     }
 }
 
-int32_t TOPN_SESSION::routeQuery(GWBUF* queue)
+int32_t TopSession::routeQuery(GWBUF* queue)
 {
     if (m_active)
     {
@@ -251,7 +251,7 @@ int32_t TOPN_SESSION::routeQuery(GWBUF* queue)
     return mxs::FilterSession::routeQuery(queue);
 }
 
-int32_t TOPN_SESSION::clientReply(GWBUF* buffer, const mxs::ReplyRoute& down, const mxs::Reply& reply)
+int32_t TopSession::clientReply(GWBUF* buffer, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
     if (!m_current.empty())
     {
@@ -260,9 +260,9 @@ int32_t TOPN_SESSION::clientReply(GWBUF* buffer, const mxs::ReplyRoute& down, co
         m_top.emplace_back(lap, m_current);
         m_current.clear();
 
-        std::sort(m_top.begin(), m_top.end(), TOPNQ::Sort {});
+        std::sort(m_top.begin(), m_top.end(), Query::Sort {});
 
-        if (m_top.size() > (size_t)m_instance->config().topN)
+        if (m_top.size() > (size_t)m_instance->config().count)
         {
             m_top.pop_back();
         }
@@ -272,7 +272,7 @@ int32_t TOPN_SESSION::clientReply(GWBUF* buffer, const mxs::ReplyRoute& down, co
     return mxs::FilterSession::clientReply(buffer, down, reply);
 }
 
-json_t* TOPN_SESSION::diagnostics() const
+json_t* TopSession::diagnostics() const
 {
     json_t* rval = json_object();
 
@@ -322,7 +322,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         "logging filter",
         "V1.0.1",
         RCAP_TYPE_CONTIGUOUS_INPUT,
-        &TOPN_INSTANCE::s_object,
+        &TopFilter::s_object,
         NULL,
         NULL,
         NULL,
