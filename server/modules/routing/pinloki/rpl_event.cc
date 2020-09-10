@@ -243,7 +243,7 @@ GtidEvent RplEvent::gtid_event() const
         commit_id = *((uint64_t*) dptr);
     }
 
-    return GtidEvent({domain_id, 0, sequence_nr}, flags, commit_id);
+    return GtidEvent({domain_id, m_server_id, sequence_nr}, flags, commit_id);
 }
 
 std::ostream& operator<<(std::ostream& os, const GtidEvent& ev)
