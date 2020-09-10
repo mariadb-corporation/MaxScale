@@ -197,8 +197,8 @@ Config::Config(const http::Response& response)
 
             if (!b1 || !b2)
             {
-                MXS_ERROR("Could not convert '%s' and/or '%s' to actual values.",
-                          zXml, zTimestamp);
+                MXS_ERROR("Could not convert '%s' and/or '%s' to actual values: %s",
+                          zXml, zTimestamp, response.body.c_str());
                 mxb_assert(!true);
             }
         }
@@ -283,8 +283,8 @@ void Status::construct()
             if (!b1 || !b2 || !b3 || !b4)
             {
                 MXS_ERROR("Could not convert values '%s' and/or '%s', and/or arrays '%s' and/or '%s' "
-                          "to actual values.",
-                          zCluster_mode, zDbrm_mode, cs::body::DBROOTS, cs::body::SERVICES);
+                          "to actual values: %s",
+                          zCluster_mode, zDbrm_mode, cs::body::DBROOTS, cs::body::SERVICES, response.body.c_str());
                 mxb_assert(!true);
             }
         }
