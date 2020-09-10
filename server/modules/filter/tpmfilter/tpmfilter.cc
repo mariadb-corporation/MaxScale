@@ -324,7 +324,7 @@ int32_t TPM_SESSION::routeQuery(GWBUF* queue)
             }
 
             /* for normal sql statements */
-            if (!m_query_end)
+            if (!m_query_end && m_pSession->is_trx_active())
             {
                 if (sql.empty())
                 {
