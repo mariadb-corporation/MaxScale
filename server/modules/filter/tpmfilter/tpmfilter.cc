@@ -56,6 +56,7 @@
 #include <thread>
 
 #include <maxbase/alloc.h>
+#include <maxbase/stopwatch.hh>
 #include <maxscale/filter.hh>
 #include <maxscale/modinfo.hh>
 #include <maxscale/modutil.hh>
@@ -153,9 +154,17 @@ public:
         return m_config;
     }
 
-    FILE* fp()
+    void print(const std::string& str)
     {
-        return m_fp;
+        fprintf(m_fp, "%s\n", str.c_str());
+    }
+
+    void flush()
+    {
+        if (m_fp)
+        {
+            fflush(m_fp);
+        }
     }
 
     bool enabled() const
@@ -184,35 +193,20 @@ private:
 class TPM_SESSION : public mxs::FilterSession
 {
 public:
-    TPM_SESSION(MXS_SESSION* session, SERVICE* service, TPM_INSTANCE* instance)
-        : mxs::FilterSession(session, service)
-        , m_instance(instance)
-        , m_config(instance->config())
-    {
-    }
-
+    TPM_SESSION(MXS_SESSION* session, SERVICE* service, TPM_INSTANCE* instance);
     ~TPM_SESSION();
     int32_t routeQuery(GWBUF* pPacket);
     int32_t clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply);
 
-    int            active;
-    char*          sql;
-    char*          latency;
-    struct timeval start;
-    char*          current;
-    int            n_statements;
-    struct timeval total;
-    struct timeval current_start;
-    struct timeval last_statement_start;
-    bool           query_end;
-    char*          buf;
-    int            sql_index;
-    int            latency_index;
-    size_t         max_sql_size;
-
 private:
-    TPM_INSTANCE* m_instance;
-    const Config& m_config;
+    bool                     m_active = true;
+    mxb::StopWatch           m_watch;
+    mxb::StopWatch           m_trx_watch;
+    bool                     m_query_end = false;
+    std::vector<std::string> m_sql;
+    std::vector<std::string> m_latency;
+    TPM_INSTANCE*            m_instance;
+    const Config&            m_config;
 };
 
 extern "C" MXS_MODULE* MXS_CREATE_MODULE()
@@ -284,208 +278,99 @@ TPM_INSTANCE* TPM_INSTANCE::create(const char* name, mxs::ConfigParameters* para
 
 mxs::FilterSession* TPM_INSTANCE::newSession(MXS_SESSION* session, SERVICE* service)
 {
-    TPM_INSTANCE* my_instance = this;
-    TPM_SESSION* my_session;
-    int i;
-    const char* remote, * user;
+    return new TPM_SESSION(session, service, this);
+}
 
-    if ((my_session = new TPM_SESSION(session, service, this)))
+TPM_SESSION::TPM_SESSION(MXS_SESSION* session, SERVICE* service, TPM_INSTANCE* instance)
+    : mxs::FilterSession(session, service)
+    , m_instance(instance)
+    , m_config(instance->config())
+{
+    if ((!m_config.source.empty() && session->client_remote() != m_config.source)
+        || (!m_config.user.empty() && session->user() != m_config.user))
     {
-        my_session->latency = (char*)MXS_CALLOC(latency_buf_size, sizeof(char));
-        my_session->max_sql_size = default_sql_size;    // default max query size of 4k.
-        my_session->sql = (char*)MXS_CALLOC(my_session->max_sql_size, sizeof(char));
-        memset(my_session->sql, 0x00, my_session->max_sql_size);
-        my_session->sql_index = 0;
-        my_session->latency_index = 0;
-        my_session->n_statements = 0;
-        my_session->total.tv_sec = 0;
-        my_session->total.tv_usec = 0;
-        my_session->current = NULL;
-        my_session->active = true;
-
-        if ((!m_config.source.empty() && session->client_remote() != m_config.source)
-            || (!m_config.user.empty() && session->user() != m_config.user))
-        {
-            my_session->active = false;
-        }
+        m_active = false;
     }
-
-    return (mxs::FilterSession*)my_session;
 }
 
 TPM_SESSION::~TPM_SESSION()
 {
-    TPM_SESSION* my_session = this;
-    TPM_INSTANCE* my_instance = m_instance;
-
-    if (my_instance->fp())
-    {
-        // flush FP when a session is closed.
-        fflush(my_instance->fp());
-    }
-
-    MXS_FREE(my_session->sql);
-    MXS_FREE(my_session->latency);
+    m_instance->flush();
 }
 
 int32_t TPM_SESSION::routeQuery(GWBUF* queue)
 {
-    TPM_INSTANCE* my_instance = m_instance;
-    TPM_SESSION* my_session = this;
-    char* ptr = NULL;
-    size_t i;
-
-    if (my_session->active)
+    if (m_active && mxs_mysql_get_command(queue) == MXS_COM_QUERY)
     {
-        if ((ptr = modutil_get_SQL(queue)) != NULL)
+        auto sql = mxs::extract_sql(queue);
+
+        if (!sql.empty())
         {
-            uint8_t* data = (uint8_t*) GWBUF_DATA(queue);
-            uint8_t command = MYSQL_GET_COMMAND(data);
+            auto mask = qc_get_type_mask(queue);
 
-            if (command == MXS_COM_QUERY)
+            if (mask & QUERY_TYPE_COMMIT)
             {
-                uint32_t query_type = qc_get_type_mask(queue);
-                int query_len = strlen(ptr);
-                my_session->query_end = false;
+                m_query_end = true;
+            }
+            else if (mask & QUERY_TYPE_ROLLBACK)
+            {
+                m_query_end = true;
+                m_sql.clear();
+                m_latency.clear();
+            }
+            else
+            {
+                m_query_end = false;
+            }
 
-                /* check for commit and rollback */
-                if (query_type & QUERY_TYPE_COMMIT)
+            /* for normal sql statements */
+            if (!m_query_end)
+            {
+                if (sql.empty())
                 {
-                    my_session->query_end = true;
-                }
-                else if (query_type & QUERY_TYPE_ROLLBACK)
-                {
-                    my_session->query_end = true;
-                    my_session->sql_index = 0;
+                    m_trx_watch.lap();
                 }
 
-                /* for normal sql statements */
-                if (!my_session->query_end)
-                {
-                    /* check and expand buffer size first. */
-                    size_t new_sql_size = my_session->max_sql_size;
-                    size_t len = my_session->sql_index + strlen(ptr) + m_config.query_delimiter.size() + 1;
-
-                    /* if the total length of query statements exceeds the maximum limit, print an error and
-                     * return */
-                    if (len > sql_size_limit)
-                    {
-                        MXS_WARNING("The size of query statements exceeds the maximum buffer limit of 64MB, "
-                                    "the query will be truncated.");
-                        len = sql_size_limit;
-                    }
-
-                    /* double buffer size until the buffer fits the query */
-                    while (len > new_sql_size)
-                    {
-                        new_sql_size *= 2;
-                    }
-                    if (new_sql_size > my_session->max_sql_size)
-                    {
-                        char* new_sql = (char*)MXS_CALLOC(new_sql_size, sizeof(char));
-                        memcpy(new_sql, my_session->sql, my_session->sql_index);
-                        MXS_FREE(my_session->sql);
-                        my_session->sql = new_sql;
-                        my_session->max_sql_size = new_sql_size;
-                    }
-
-                    /* first statement */
-                    if (my_session->sql_index == 0)
-                    {
-                        memcpy(my_session->sql, ptr, strlen(ptr));
-                        my_session->sql_index += strlen(ptr);
-                        gettimeofday(&my_session->current_start, NULL);
-                    }
-                    /* otherwise, append the statement with semicolon as a statement delimiter */
-                    else
-                    {
-                        /* append a query delimiter */
-                        memcpy(my_session->sql + my_session->sql_index,
-                               m_config.query_delimiter.c_str(),
-                               m_config.query_delimiter.size());
-                        /* append the next query statement */
-                        memcpy(my_session->sql + my_session->sql_index + m_config.query_delimiter.size(),
-                               ptr,
-                               strlen(ptr));
-                        /* set new pointer for the buffer */
-                        my_session->sql_index += (m_config.query_delimiter.size() + strlen(ptr));
-                    }
-                    gettimeofday(&my_session->last_statement_start, NULL);
-                }
+                m_sql.push_back(std::move(sql));
+                m_watch.lap();
             }
         }
     }
 
-    MXS_FREE(ptr);
-    /* Pass the query downstream */
     return mxs::FilterSession::routeQuery(queue);
 }
 
 int32_t TPM_SESSION::clientReply(GWBUF* buffer, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
-    TPM_INSTANCE* my_instance = m_instance;
-    TPM_SESSION* my_session = this;
-    struct      timeval tv, diff;
-    int i, inserted;
-
     /* records latency of the SQL statement. */
-    if (my_session->sql_index > 0)
+    if (!m_sql.empty())
     {
-        gettimeofday(&tv, NULL);
-        timersub(&tv, &(my_session->last_statement_start), &diff);
+        m_latency.push_back(std::to_string(mxb::to_secs(m_watch.lap())));
 
-        /* get latency */
-        double millis = (diff.tv_sec * 1000 + diff.tv_usec / 1000.0);
-
-        int written = sprintf(my_session->latency + my_session->latency_index, "%.3f", millis);
-        my_session->latency_index += written;
-        if (!my_session->query_end)
+        /* found 'commit' and sql statements exist. */
+        if (m_query_end)
         {
-            written = sprintf(my_session->latency + my_session->latency_index,
-                              "%s", m_config.query_delimiter.c_str());
-            my_session->latency_index += written;
+            /* print to log. */
+            if (m_instance->enabled())
+            {
+                const auto& delim = m_config.delimiter;
+                std::ostringstream ss;
+
+                /* this prints "timestamp | server_name | user_name | latency of entire transaction |
+                 * latencies of individual statements | sql_statements" */
+                ss << time(nullptr) << delim
+                   << down.front()->target()->name() << delim
+                   << m_pSession->user() << delim
+                   << mxb::to_secs(m_trx_watch.lap()) * 1000 << delim
+                   << mxb::join(m_latency, m_config.query_delimiter) << delim
+                   << mxb::join(m_sql, m_config.query_delimiter);
+
+                m_instance->print(ss.str());
+            }
+
+            m_sql.clear();
+            m_latency.clear();
         }
-        if (my_session->latency_index > latency_buf_size)
-        {
-            MXS_ERROR("Latency buffer overflow.");
-        }
-    }
-
-    /* found 'commit' and sql statements exist. */
-    if (my_session->query_end && my_session->sql_index > 0)
-    {
-        gettimeofday(&tv, NULL);
-        timersub(&tv, &(my_session->current_start), &diff);
-
-        /* get latency */
-        uint64_t millis = (diff.tv_sec * (uint64_t)1000 + diff.tv_usec / 1000);
-        /* get timestamp */
-        uint64_t timestamp = (tv.tv_sec + (tv.tv_usec / (1000 * 1000)));
-
-        *(my_session->sql + my_session->sql_index) = '\0';
-
-        /* print to log. */
-        if (my_instance->enabled())
-        {
-            /* this prints "timestamp | server_name | user_name | latency of entire transaction | latencies of
-             * individual statements | sql_statements" */
-            fprintf(my_instance->fp(),
-                    "%ld%s%s%s%s%s%ld%s%s%s%s\n",
-                    timestamp,
-                    m_config.delimiter.c_str(),
-                    down.front()->target()->name(),
-                    m_config.delimiter.c_str(),
-                    m_pSession->user().c_str(),
-                    m_config.delimiter.c_str(),
-                    millis,
-                    m_config.delimiter.c_str(),
-                    my_session->latency,
-                    m_config.delimiter.c_str(),
-                    my_session->sql);
-        }
-
-        my_session->sql_index = 0;
-        my_session->latency_index = 0;
     }
 
     /* Pass the result upstream */
