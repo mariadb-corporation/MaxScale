@@ -278,7 +278,8 @@ MariaDBBackendSession::exchange(const mxs::Buffer& input, mxs::Buffer* output)
     case State::EXPECT_AUTHSWITCH:
         {
             auto parse_res = mariadb::parse_auth_switch_request(input);
-            if (parse_res.success && parse_res.plugin_data.size() == MYSQL_SCRAMBLE_LEN)
+            // The server scramble should be null-terminated, don't copy the null.
+            if (parse_res.success && parse_res.plugin_data.size() >= MYSQL_SCRAMBLE_LEN)
             {
                 // Expecting the server to only ask for native password plugin.
                 if (parse_res.plugin_name == DEFAULT_MYSQL_AUTH_PLUGIN)
@@ -327,7 +328,7 @@ mxs::Buffer MariaDBBackendSession::generate_auth_response(int seqno)
     auto& sha_pw = m_shared_data.client_data->auth_token_phase2;
     const uint8_t* curr_passwd = sha_pw.empty() ? null_client_sha1 : sha_pw.data();
     mxs_mysql_calculate_hash(m_shared_data.scramble, curr_passwd, data + MYSQL_HEADER_LEN);
-    return mxs::Buffer();
+    return buffer;
 }
 
 MariaDBBackendSession::MariaDBBackendSession(mariadb::BackendAuthData& shared_data)

@@ -25,20 +25,26 @@ void pop_front(packet_parser::ByteVec& data, int len)
     data.erase(begin, begin + len);
 }
 
-auto read_stringz_if_cap(packet_parser::ByteVec& data, uint32_t client_caps, uint32_t req_caps)
+struct StringParseRes
 {
-    std::pair<bool, string> rval(true, "");     // success & result
+    bool        success {false};
+    std::string result_str;
+};
+StringParseRes read_stringz_if_cap(packet_parser::ByteVec& data, uint32_t client_caps, uint32_t req_caps)
+{
+    StringParseRes rval;
     if ((client_caps & req_caps) == req_caps)
     {
         if (!data.empty())
         {
-            rval.second = (const char*)data.data();
-            pop_front(data, rval.second.size() + 1);    // Should be null-terminated.
+            rval.result_str = (const char*)data.data();
+            pop_front(data, rval.result_str.size() + 1);    // Should be null-terminated.
+            rval.success = true;
         }
-        else
-        {
-            rval.first = false;
-        }
+    }
+    else
+    {
+        rval.success = true;
     }
     return rval;
 }
@@ -102,16 +108,24 @@ ClientResponseResult parse_client_response(ByteVec& data, uint32_t client_caps)
         // The following fields are optional.
         auto db_res = read_stringz_if_cap(data, client_caps, GW_MYSQL_CAPABILITIES_CONNECT_WITH_DB);
         auto plugin_res = read_stringz_if_cap(data, client_caps, GW_MYSQL_CAPABILITIES_PLUGIN_AUTH);
-        if (db_res.first && plugin_res.first)
+
+        /* Older connectors may send an invalid HandShakeResponse when connecting without a database name.
+         * Specifically, the buggy connectors do not set CONNECT_WITH_DB, yet add an empty database name to
+         * the packet. As there seems to be many such connectors in use, try to handle it here by
+         * allowing the parsing to partially fail.
+         *
+         * The failed packets will have an empty auth plugin name. This is not an issue, as mysqlauth
+         * will interpret it as standard authentication and other authenticators will send an
+         * AuthSwitchRequest. The real issue is connection attributes, as their data segment will now
+         * contain garbled data. The easiest solution is to act like the server: if there is something
+         * wrong with the packet, discard the attributes. */
+        if (db_res.success && plugin_res.success)
         {
-            rval.db = std::move(db_res.second);
-            rval.plugin = std::move(plugin_res.second);
+            rval.db = std::move(db_res.result_str);
+            rval.plugin = std::move(plugin_res.result_str);
+            rval.success = true;
 
             rval.attr_res = parse_attributes(data, client_caps);
-            if (rval.attr_res.success)
-            {
-                rval.success = true;
-            }
         }
     }
     return rval;
@@ -231,9 +245,9 @@ ChangeUserParseResult parse_change_user_packet(ByteVec& data, uint32_t client_ca
     if (rval.token_res.success)
     {
         auto db_res = read_stringz_if_cap(data, client_caps, GW_MYSQL_CAPABILITIES_CONNECT_WITH_DB);
-        if (db_res.first)
+        if (db_res.success)
         {
-            rval.db = std::move(db_res.second);
+            rval.db = std::move(db_res.result_str);
             // charset, 2 bytes
             if (data.size() >= 2)
             {
@@ -241,9 +255,9 @@ ChangeUserParseResult parse_change_user_packet(ByteVec& data, uint32_t client_ca
                 pop_front(data, 2);
                 // new auth plugin
                 auto plugin_res = read_stringz_if_cap(data, client_caps, GW_MYSQL_CAPABILITIES_PLUGIN_AUTH);
-                if (plugin_res.first)
+                if (plugin_res.success)
                 {
-                    rval.plugin = std::move(plugin_res.second);
+                    rval.plugin = std::move(plugin_res.result_str);
                     // finally, connection attributes
                     rval.attr_res = parse_attributes(data, client_caps);
                     if (rval.attr_res.success)
@@ -287,7 +301,6 @@ mariadb::AuthSwitchReqContents parse_auth_switch_request(ByteVec& data)
                     // the end. Reserving some extra space here avoids reallocations during the processing.
                     rval.plugin_data.reserve(end - ptr + MYSQL_HEADER_LEN);
                     rval.plugin_data.assign(ptr, end);
-
                 }
                 rval.success = true;
             }

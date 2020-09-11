@@ -91,7 +91,7 @@ long search_gtid_in_file(std::ifstream& file, long file_pos, const maxsql::Gtid&
                         rpl = maxsql::read_event(file, &file_pos);
                     }
                     while (rpl.event_type() != XID_EVENT
-                           && strcasecmp(rpl.query_event_sql().c_str(), "COMMIT") != 0);
+                           && rpl.is_commit());
 
                     found_pos = rpl.next_event_pos();
                 }

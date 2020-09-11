@@ -42,8 +42,15 @@ constexpr int RPL_CRC_LEN = 4;
 class MariaRplEvent
 {
 public:
+    MariaRplEvent() = default;      // => is_empty() == true
     MariaRplEvent(st_mariadb_rpl_event* pEvent, st_mariadb_rpl* handle);
+    MariaRplEvent(MariaRplEvent&& rhs);
+    MariaRplEvent& operator=(MariaRplEvent&& rhs);
 
+    bool is_empty() const
+    {
+        return m_pRpl_handle == nullptr;
+    }
     const st_mariadb_rpl_event& event() const;
     const char*                 raw_data() const;
     size_t                      raw_data_size() const;
@@ -54,17 +61,7 @@ public:
 
     ~MariaRplEvent();
 private:
-    st_mariadb_rpl_event* m_pEvent;
-    st_mariadb_rpl*       m_pRpl_handle;
+    st_mariadb_rpl_event* m_pEvent = nullptr;
+    st_mariadb_rpl*       m_pRpl_handle = nullptr;
 };
-
-enum class Verbosity {Name, Some, All};
-
-std::string   dump_rpl_msg(const MariaRplEvent& rpl_msg, Verbosity v);
-std::ostream& operator<<(std::ostream& os, const MariaRplEvent& rpl_msg);       // Verbosity::All
 }
-
-std::string to_string(mariadb_rpl_event ev);
-
-// TODO: Move this inside MariaRplEvent or RplEvent (maybe combine them?)
-std::string get_rotate_name(const char* ptr, size_t len);

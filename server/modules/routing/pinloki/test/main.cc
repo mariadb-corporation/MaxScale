@@ -96,6 +96,8 @@ try
 {
     mxb::MaxBase mxb(MXB_LOG_TARGET_STDOUT);
 
+    mxs_log_set_priority_enabled(LOG_DEBUG, true);
+
     if (test_it(argc, argv))
     {
         return EXIT_SUCCESS;

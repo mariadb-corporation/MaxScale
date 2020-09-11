@@ -24,35 +24,114 @@
 using namespace std::literals::chrono_literals;
 using namespace std::literals::string_literals;
 
+namespace
+{
+std::string get_rotate_name(const char* ptr, size_t len)
+{
+    // 19 byte header and 8 bytes of constant data
+    // see: https://mariadb.com/kb/en/rotate_event/
+    const size_t NAME_OFFSET = 19 + 8;
+    auto given = std::string(ptr + NAME_OFFSET, len - NAME_OFFSET);
+
+    // This is a very uncomfortable hack around the lack of checksum information we have at this point.
+    // Deducing whether checksums are enabled by calculating it and comparing it to the stored checksum works
+    // in most cases but we can't be sure whether there are edge cases where the valid checksum of the start
+    // of the event results in a checksum that matches the last four bytes of it.
+    uint32_t orig_checksum = *(const uint32_t*)(ptr + len - 4);
+    uint32_t checksum = crc32(0, (const uint8_t*)ptr, len - 4);
+
+    if (orig_checksum == checksum)
+    {
+        given = given.substr(0, given.length() - 4);
+    }
+
+    return given;
+}
+}
+
+
 namespace maxsql
 {
-constexpr int HEADER_LEN = 19;
 
 int RplEvent::get_event_length(const std::vector<char>& header)
 {
     return *((uint32_t*) (header.data() + 4 + 1 + 4));
 }
 
-RplEvent::RplEvent(const MariaRplEvent& maria_event)
-    : m_raw(maria_event.raw_data(), maria_event.raw_data() + maria_event.raw_data_size())
+RplEvent::RplEvent(MariaRplEvent&& maria_event)
+    : m_maria_rpl(std::move(maria_event))
 {
-    init();
+    if (!m_maria_rpl.is_empty())
+    {
+        init();
+    }
 }
 
-RplEvent::RplEvent(std::vector<char>&& raw_)
-    : m_raw(std::move(raw_))
+RplEvent::RplEvent(std::vector<char>&& raw)
+    : m_raw(std::move(raw))
 {
-    if (m_raw.empty())
+    if (!m_raw.empty())
     {
-        return;
+        init();
+    }
+}
+
+RplEvent::RplEvent(RplEvent&& rhs)
+    : m_maria_rpl(std::move(rhs.m_maria_rpl))
+    , m_raw(std::move(rhs.m_raw))
+{
+    if (!is_empty())
+    {
+        init();
+    }
+}
+
+RplEvent& RplEvent::operator=(RplEvent&& rhs)
+{
+    m_maria_rpl = std::move(rhs.m_maria_rpl);
+    m_raw = std::move(rhs.m_raw);
+
+    if (!is_empty())
+    {
+        init();
     }
 
-    init();
+    return *this;
 }
+
+const char* RplEvent::pBuffer() const
+{
+    if (!m_maria_rpl.is_empty())
+    {
+        return m_maria_rpl.raw_data();
+    }
+    else
+    {
+        return m_raw.data();
+    }
+}
+
+size_t RplEvent::buffer_size() const
+{
+    if (!m_maria_rpl.is_empty())
+    {
+        return m_maria_rpl.raw_data_size();
+    }
+    else
+    {
+        return m_raw.size();
+    }
+}
+
+bool maxsql::RplEvent::is_empty() const
+{
+    return m_maria_rpl.is_empty() && m_raw.empty();
+}
+
 
 void RplEvent::init()
 {
-    auto buf = reinterpret_cast<uint8_t*>(&m_raw[0]);
+    auto buf = reinterpret_cast<const uint8_t*>(pBuffer());
 
     m_timestamp = mariadb::get_byte4(buf);
     buf += 4;
@@ -67,7 +146,7 @@ void RplEvent::init()
     m_flags = mariadb::get_byte2(buf);
     buf += 2;
 
-    auto pCrc = reinterpret_cast<const uint8_t*>(m_raw.data() + m_raw.size() - 4);
+    auto pCrc = reinterpret_cast<const uint8_t*>(pEnd() - 4);
     m_checksum = mariadb::get_byte4(pCrc);
 }
 
@@ -75,32 +154,52 @@ void RplEvent::set_next_pos(uint32_t next_pos)
 {
     m_next_event_pos = next_pos;
 
-    auto buf = reinterpret_cast<uint8_t*>(&m_raw[4 + 1 + 4 + 4]);
-    mariadb::set_byte4(buf, m_next_event_pos);
+    auto buf = reinterpret_cast<const uint8_t*>(pBuffer() + 4 + 1 + 4 + 4);
+    mariadb::set_byte4(const_cast<uint8_t*>(buf), m_next_event_pos);
 
     recalculate_crc();
 }
 
 void RplEvent::recalculate_crc()
 {
-    m_checksum = crc32(0, (uint8_t*)m_raw.data(), m_raw.size() - 4);
-    auto pCrc = reinterpret_cast<uint8_t*>(m_raw.data() + m_raw.size() - 4);
-    mariadb::set_byte4(pCrc, m_checksum);
+    auto crc_pos = (uint8_t*) pEnd() - 4;
+    m_checksum = crc32(0, (uint8_t*) pBuffer(), buffer_size() - 4);
+    mariadb::set_byte4(crc_pos, m_checksum);
 }
-
 
 Rotate RplEvent::rotate() const
 {
     Rotate rot;
     rot.is_fake = m_timestamp == 0;
     rot.is_artifical = m_flags & LOG_EVENT_ARTIFICIAL_F;
-    rot.file_name = get_rotate_name(m_raw.data(), m_raw.size());
+    rot.file_name = get_rotate_name(pBuffer(), buffer_size());
 
     return rot;
 }
 
+bool RplEvent::is_commit() const
+{
+    return strcasecmp(query_event_sql().c_str(), "COMMIT") != 0;
+}
+
+const char* RplEvent::pHeader() const
+{
+    return pBuffer();
+}
+
+const char* RplEvent::pBody() const
+{
+    return pHeader() + RPL_HEADER_LEN;
+}
+
+const char* RplEvent::pEnd() const
+{
+    return pBuffer() + buffer_size();
+}
+
 std::string RplEvent::query_event_sql() const
 {
+    // FIXME move into is_commit(), only needed there
     std::string sql;
 
     if (event_type() == QUERY_EVENT)
@@ -108,13 +207,13 @@ std::string RplEvent::query_event_sql() const
         constexpr int DBNM_OFF = 8;                 // Database name offset
         constexpr int VBLK_OFF = 4 + 4 + 1 + 2;     // Varblock offset
         constexpr int PHDR_OFF = 4 + 4 + 1 + 2 + 2; // Post-header offset
-        constexpr int BINLOG_HEADER_LEN = 19;
+        constexpr int BINLOG_RPL_HEADER_LEN = 19;
 
-        const uint8_t* ptr = (const uint8_t*)this->m_raw.data();
+        const uint8_t* ptr = (const uint8_t*) pBuffer();
         int dblen = ptr[DBNM_OFF];
         int vblklen = mariadb::get_byte2(ptr + VBLK_OFF);
 
-        int len = event_length() - BINLOG_HEADER_LEN - (PHDR_OFF + vblklen + 1 + dblen);
+        int len = event_length() - BINLOG_RPL_HEADER_LEN - (PHDR_OFF + vblklen + 1 + dblen);
         sql.assign((const char*) ptr + PHDR_OFF + vblklen + 1 + dblen, len);
     }
 
@@ -233,10 +332,10 @@ std::string dump_rpl_msg(const RplEvent& rpl_event, Verbosity v)
 // TODO, turn this into an iterator. Use in file_reader as well.
 maxsql::RplEvent read_event(std::istream& file, long* file_pos)
 {
-    std::vector<char> raw(HEADER_LEN);
+    std::vector<char> raw(RPL_HEADER_LEN);
 
     file.seekg(*file_pos);
-    file.read(raw.data(), HEADER_LEN);
+    file.read(raw.data(), RPL_HEADER_LEN);
 
     if (file.eof())
     {
@@ -251,7 +350,7 @@ maxsql::RplEvent read_event(std::istream& file, long* file_pos)
     auto event_length = maxsql::RplEvent::get_event_length(raw);
 
     raw.resize(event_length);
-    file.read(raw.data() + HEADER_LEN, event_length - HEADER_LEN);
+    file.read(raw.data() + RPL_HEADER_LEN, event_length - RPL_HEADER_LEN);
 
     if (file.eof())
     {
@@ -282,7 +381,7 @@ std::vector<char> create_rotate_event(const std::string& file_name,
                                       uint32_t pos,
                                       Kind kind)
 {
-    std::vector<char> data(HEADER_LEN + file_name.size() + 12);
+    std::vector<char> data(RPL_HEADER_LEN + file_name.size() + 12);
     uint8_t* ptr = (uint8_t*)&data[0];
 
     // Timestamp, hm.
@@ -325,7 +424,7 @@ std::vector<char> create_rotate_event(const std::string& file_name,
 std::vector<char> create_binlog_checkpoint(const std::string& file_name, uint32_t server_id,
                                            uint32_t next_pos)
 {
-    std::vector<char> data(HEADER_LEN + 4 + file_name.size() + 4);
+    std::vector<char> data(RPL_HEADER_LEN + 4 + file_name.size() + 4);
     uint8_t* ptr = (uint8_t*)&data[0];
 
     // Timestamp, hm.
@@ -366,4 +465,165 @@ std::vector<char> create_binlog_checkpoint(const std::string& file_name, uint32_
 
     return data;
 }
+}
+
+std::string to_string(mariadb_rpl_event ev)
+{
+    switch (ev)
+    {
+    case START_EVENT_V3:
+        return "START_EVENT_V3";
+
+    case QUERY_EVENT:
+        return "QUERY_EVENT";
+
+    case STOP_EVENT:
+        return "STOP_EVENT";
+
+    case ROTATE_EVENT:
+        return "ROTATE_EVENT";
+
+    case INTVAR_EVENT:
+        return "INTVAR_EVENT";
+
+    case LOAD_EVENT:
+        return "LOAD_EVENT";
+
+    case SLAVE_EVENT:
+        return "SLAVE_EVENT";
+
+    case CREATE_FILE_EVENT:
+        return "CREATE_FILE_EVENT";
+
+    case APPEND_BLOCK_EVENT:
+        return "APPEND_BLOCK_EVENT";
+
+    case EXEC_LOAD_EVENT:
+        return "EXEC_LOAD_EVENT";
+
+    case DELETE_FILE_EVENT:
+        return "DELETE_FILE_EVENT";
+
+    case NEW_LOAD_EVENT:
+        return "NEW_LOAD_EVENT";
+
+    case RAND_EVENT:
+        return "RAND_EVENT";
+
+    case USER_VAR_EVENT:
+        return "USER_VAR_EVENT";
+
+    case FORMAT_DESCRIPTION_EVENT:
+        return "FORMAT_DESCRIPTION_EVENT";
+
+    case XID_EVENT:
+        return "XID_EVENT";
+
+    case BEGIN_LOAD_QUERY_EVENT:
+        return "BEGIN_LOAD_QUERY_EVENT";
+
+    case EXECUTE_LOAD_QUERY_EVENT:
+        return "EXECUTE_LOAD_QUERY_EVENT";
+
+    case TABLE_MAP_EVENT:
+        return "TABLE_MAP_EVENT";
+
+    case PRE_GA_WRITE_ROWS_EVENT:
+        return "PRE_GA_WRITE_ROWS_EVENT";
+
+    case PRE_GA_UPDATE_ROWS_EVENT:
+        return "PRE_GA_UPDATE_ROWS_EVENT";
+
+    case PRE_GA_DELETE_ROWS_EVENT:
+        return "PRE_GA_DELETE_ROWS_EVENT";
+
+    case WRITE_ROWS_EVENT_V1:
+        return "WRITE_ROWS_EVENT_V1";
+
+    case UPDATE_ROWS_EVENT_V1:
+        return "UPDATE_ROWS_EVENT_V1";
+
+    case DELETE_ROWS_EVENT_V1:
+        return "DELETE_ROWS_EVENT_V1";
+
+    case INCIDENT_EVENT:
+        return "INCIDENT_EVENT";
+
+    case HEARTBEAT_LOG_EVENT:
+        return "HEARTBEAT_LOG_EVENT";
+
+    case IGNORABLE_LOG_EVENT:
+        return "IGNORABLE_LOG_EVENT";
+
+    case ROWS_QUERY_LOG_EVENT:
+        return "ROWS_QUERY_LOG_EVENT";
+
+    case WRITE_ROWS_EVENT:
+        return "WRITE_ROWS_EVENT";
+
+    case UPDATE_ROWS_EVENT:
+        return "UPDATE_ROWS_EVENT";
+
+    case DELETE_ROWS_EVENT:
+        return "DELETE_ROWS_EVENT";
+
+    case GTID_LOG_EVENT:
+        return "GTID_LOG_EVENT";
+
+    case ANONYMOUS_GTID_LOG_EVENT:
+        return "ANONYMOUS_GTID_LOG_EVENT";
+
+    case PREVIOUS_GTIDS_LOG_EVENT:
+        return "PREVIOUS_GTIDS_LOG_EVENT";
+
+    case TRANSACTION_CONTEXT_EVENT:
+        return "TRANSACTION_CONTEXT_EVENT";
+
+    case VIEW_CHANGE_EVENT:
+        return "VIEW_CHANGE_EVENT";
+
+    case XA_PREPARE_LOG_EVENT:
+        return "XA_PREPARE_LOG_EVENT";
+
+    case ANNOTATE_ROWS_EVENT:
+        return "ANNOTATE_ROWS_EVENT";
+
+    case BINLOG_CHECKPOINT_EVENT:
+        return "BINLOG_CHECKPOINT_EVENT";
+
+    case GTID_EVENT:
+        return "GTID_EVENT";
+
+    case GTID_LIST_EVENT:
+        return "GTID_LIST_EVENT";
+
+    case START_ENCRYPTION_EVENT:
+        return "START_ENCRYPTION_EVENT";
+
+    case QUERY_COMPRESSED_EVENT:
+        return "QUERY_COMPRESSED_EVENT";
+
+    case WRITE_ROWS_COMPRESSED_EVENT_V1:
+        return "WRITE_ROWS_COMPRESSED_EVENT_V1";
+
+    case UPDATE_ROWS_COMPRESSED_EVENT_V1:
+        return "UPDATE_ROWS_COMPRESSED_EVENT_V1";
+
+    case DELETE_ROWS_COMPRESSED_EVENT_V1:
+        return "DELETE_ROWS_COMPRESSED_EVENT_V1";
+
+    case WRITE_ROWS_COMPRESSED_EVENT:
+        return "WRITE_ROWS_COMPRESSED_EVENT";
+
+    case UPDATE_ROWS_COMPRESSED_EVENT:
+        return "UPDATE_ROWS_COMPRESSED_EVENT";
+
+    case DELETE_ROWS_COMPRESSED_EVENT:
+        return "DELETE_ROWS_COMPRESSED_EVENT";
+
+    default:
+        return "UNKNOWN_EVENT";
+    }
+
+    abort();
 }

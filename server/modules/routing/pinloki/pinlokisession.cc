@@ -165,7 +165,7 @@ bool PinlokiSession::send_event(const maxsql::RplEvent& event)
     if (can_write)
     {
         std::vector<uint8_t> data = {0};    // The OK command byte
-        data.insert(data.end(), event.buffer().begin(), event.buffer().end());
+        data.insert(data.end(), event.pBuffer(), event.pBuffer() + event.buffer_size());
         size_t size = data.size();
         const uint8_t* ptr = data.data();
 

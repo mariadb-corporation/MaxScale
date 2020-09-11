@@ -55,7 +55,6 @@ namespace
 {
 using AuthRes = mariadb::ClientAuthenticator::AuthRes;
 using ExcRes = mariadb::ClientAuthenticator::ExchRes;
-using SUserEntry = std::unique_ptr<mariadb::UserEntry>;
 using UserEntryType = mariadb::UserEntryType;
 using std::move;
 using std::string;
@@ -1830,18 +1829,31 @@ bool MariaDBClientConnection::parse_handshake_response_packet(GWBUF* buffer)
 
         if (parse_res.success)
         {
-            // If the buffer is valid, just one 0 should remain.
-            if (data.size() == 1)
+            // If the buffer is valid, just one 0 should remain. Some (old) connectors may send malformed
+            // packets with extra data. Such packets work, but some data may not be parsed properly.
+            auto data_size = data.size();
+            if (data_size >= 1)
             {
                 // Success, save data to session.
-                m_session_data->client_info = client_info;
                 m_session_data->user = parse_res.username;
                 m_session->set_user(parse_res.username);
                 m_session_data->auth_token = move(parse_res.token_res.auth_token);
                 m_session_data->db = parse_res.db;
                 m_session->set_database(parse_res.db);
                 m_session_data->plugin = move(parse_res.plugin);
-                m_session_data->connect_attrs = move(parse_res.attr_res.attr_data);
+
+                // Discard the attributes if there is any indication of failed parsing, as the contents
+                // may be garbled.
+                if (parse_res.success && data_size == 1)
+                {
+                    m_session_data->connect_attrs = move(parse_res.attr_res.attr_data);
+                }
+                else
+                {
+                    client_info.m_client_capabilities &= ~GW_MYSQL_CAPABILITIES_CONNECT_ATTRS;
+                }
+                m_session_data->client_info = client_info;
+
                 rval = true;
             }
         }
