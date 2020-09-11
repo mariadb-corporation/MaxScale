@@ -106,11 +106,12 @@ public:
     void  write_stdout_log_entry(const std::string& contents) const;
 
     bool match_exclude(const char* sql, int len);
+    bool post_configure();
 
     class Settings : public mxs::config::Configuration
     {
     public:
-        Settings(const std::string& name);
+        Settings(const std::string& name, QlaInstance* instance);
 
         bool        write_unified_log {false};
         bool        write_session_log {false};
@@ -130,7 +131,11 @@ public:
         mxs::config::RegexValue exclude;/* Optional text to match against for exclusion */
         uint32_t                options;/* Regular expression options */
 
+    protected:
         bool post_configure() final;
+
+    private:
+        QlaInstance* m_instance;
     };
 
     Settings m_settings;

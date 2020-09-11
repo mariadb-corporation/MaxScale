@@ -138,14 +138,15 @@ bool check_replace_file(const string& filename, FILE** ppFile);
 }
 
 QlaInstance::QlaInstance(const string& name)
-    : m_settings(name)
+    : m_settings(name, this)
     , m_name(name)
     , m_rotation_count(mxs_get_log_rotation_count())
 {
 }
 
-QlaInstance::Settings::Settings(const std::string& name)
+QlaInstance::Settings::Settings(const std::string& name, QlaInstance* instance)
     : mxs::config::Configuration(name, &s_spec)
+    , m_instance(instance)
 {
     add_native(&filebase, &s_filebase);
     add_native(&flush_writes, &s_flush);
@@ -169,7 +170,7 @@ bool QlaInstance::Settings::post_configure()
     session_data_flags = log_file_data_flags & ~LOG_DATA_SESSION;
     exclude.set_options(options);
     match.set_options(options);
-    return true;
+    return m_instance->post_configure();
 }
 
 QlaInstance::~QlaInstance()
@@ -204,39 +205,30 @@ QlaFilterSession::~QlaFilterSession()
     mxb_assert(m_logfile == NULL && m_event_data.has_message == false);
 }
 
-QlaInstance* QlaInstance::create(const char* name, mxs::ConfigParameters* params)
+bool QlaInstance::post_configure()
 {
-    QlaInstance* my_instance = new(std::nothrow) QlaInstance(name);
-
-    // The instance is allocated before opening the file since open_log_file() takes the instance as a
-    // parameter. Will be fixed (or at least cleaned) with a later refactoring of functions/methods.
-
-    if (my_instance)
+    // Try to open the unified log file
+    if (m_settings.write_unified_log)
     {
-        // TODO: Move this code into post_configure so that it gets done properly
-        my_instance->m_settings.configure(*params);
-
-        // Try to open the unified log file
-        if (my_instance->m_settings.write_unified_log)
+        m_unified_filename = m_settings.filebase + ".unified";
+        // Open the file. It is only closed at program exit.
+        if (!open_unified_logfile())
         {
-            my_instance->m_unified_filename = my_instance->m_settings.filebase + ".unified";
-            // Open the file. It is only closed at program exit.
-            if (!my_instance->open_unified_logfile())
-            {
-                delete my_instance;
-                return nullptr;
-            }
-        }
-
-        if (my_instance && my_instance->m_settings.write_stdout_log)
-        {
-            my_instance->write_stdout_log_entry(
-                my_instance->generate_log_header(my_instance->m_settings.log_file_data_flags)
-                );
+            return false;
         }
     }
 
-    return my_instance;
+    if (m_settings.write_stdout_log)
+    {
+        write_stdout_log_entry(generate_log_header(m_settings.log_file_data_flags));
+    }
+
+    return true;
+}
+
+QlaInstance* QlaInstance::create(const char* name, mxs::ConfigParameters* params)
+{
+    return new QlaInstance(name);
 }
 
 mxs::FilterSession* QlaInstance::newSession(MXS_SESSION* session, SERVICE* service)
