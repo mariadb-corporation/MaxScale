@@ -364,7 +364,15 @@ maxsql::RplEvent read_event(std::istream& file, long* file_pos)
 
     maxsql::RplEvent rpl(std::move(raw));
 
-    *file_pos = rpl.next_event_pos();
+    if (*file_pos == rpl.next_event_pos())
+    {
+        file.seekg(0, std::ios_base::end);
+        *file_pos = file.tellg();
+    }
+    else
+    {
+        *file_pos = rpl.next_event_pos();
+    }
 
     return rpl;
 }
