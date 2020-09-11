@@ -134,9 +134,16 @@ public:
         return m_config;
     }
 
-    std::ofstream& file()
+    void flush()
     {
-        return m_file;
+        std::lock_guard<std::mutex> guard(m_lock);
+        m_file.flush();
+    }
+
+    void write(const std::string& str)
+    {
+        std::lock_guard<std::mutex> guard(m_lock);
+        m_file << str;
     }
 
     bool enabled() const
@@ -154,7 +161,7 @@ private:
     {
     }
 
-
+    std::mutex    m_lock;
     bool          m_enabled = false;
     std::ofstream m_file;
     bool          m_shutdown = false;
@@ -267,7 +274,7 @@ TpmSession::TpmSession(MXS_SESSION* session, SERVICE* service, TpmFilter* instan
 
 TpmSession::~TpmSession()
 {
-    m_instance->file().flush();
+    m_instance->flush();
 }
 
 int32_t TpmSession::routeQuery(GWBUF* queue)
@@ -329,13 +336,14 @@ int32_t TpmSession::clientReply(GWBUF* buffer, const mxs::ReplyRoute& down, cons
 
                 /* this prints "timestamp | server_name | user_name | latency of entire transaction |
                  * latencies of individual statements | sql_statements" */
-                m_instance->file()
-                    << time(nullptr) << delim
-                    << down.front()->target()->name() << delim
-                    << m_pSession->user() << delim
-                    << mxb::to_secs(m_trx_watch.lap()) * 1000 << delim
-                    << mxb::join(m_latency, m_config.query_delimiter) << delim
-                    << mxb::join(m_sql, m_config.query_delimiter);
+                std::ostringstream ss;
+                ss << time(nullptr) << delim
+                   << down.front()->target()->name() << delim
+                   << m_pSession->user() << delim
+                   << mxb::to_secs(m_trx_watch.lap()) * 1000 << delim
+                   << mxb::join(m_latency, m_config.query_delimiter) << delim
+                   << mxb::join(m_sql, m_config.query_delimiter);
+                m_instance->write(ss.str());
             }
 
             m_sql.clear();
@@ -366,6 +374,7 @@ TpmFilter::~TpmFilter()
 
 bool TpmFilter::post_configure()
 {
+    std::lock_guard<std::mutex> guard(m_lock);
     m_file.open(m_config.filename);
 
     if (!m_file)
@@ -394,6 +403,7 @@ void TpmFilter::check_named_pipe()
         {
             if (buffer[0] == '1')
             {
+                std::lock_guard<std::mutex> guard(m_lock);
                 m_file.open(m_config.filename);
 
                 if (!m_file)
