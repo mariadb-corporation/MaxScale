@@ -148,26 +148,23 @@ GWBUF* RWSplitSession::add_prefix_wait_gtid(uint64_t version, GWBUF* origin)
      **/
 
     GWBUF* rval = origin;
-
-    // If the version is not known, assume MariaDB backend
-    const char* wait_func = (version > 50700 && version < 100000) ?
-        MYSQL_WAIT_GTID_FUNC : MARIADB_WAIT_GTID_FUNC;
-
-    auto gtid_wait_timeout = std::to_string(m_config.causal_reads_timeout.count());
+    std::ostringstream ss;
+    const char* wait_func = version > 50700 && version < 100000 ?
+        "WAIT_FOR_EXECUTED_GTID_SET" : "MASTER_GTID_WAIT";
     std::string gtid_position = m_config.causal_reads == CausalReads::GLOBAL ?
         m_router->last_gtid() : m_gtid_pos.to_string();
 
-    /* Create a new buffer to store prefix sql */
-    size_t prefix_len = strlen(gtid_wait_stmt) + gtid_position.length()
-        + gtid_wait_timeout.length() + strlen(wait_func);
+    ss << "SET @maxscale_secret_variable=(SELECT CASE WHEN "
+       << wait_func
+       << "('" << gtid_position << "', " << m_config.causal_reads_timeout.count() << ") = 0 "
+       << "THEN 1 ELSE (SELECT 1 FROM INFORMATION_SCHEMA.ENGINES) END);";
+
+    auto sql = ss.str();
 
     // Only do the replacement if it fits into one packet
-    if (gwbuf_length(origin) + prefix_len < GW_MYSQL_MAX_PACKET_LEN + MYSQL_HEADER_LEN)
+    if (gwbuf_length(origin) + sql.size() < GW_MYSQL_MAX_PACKET_LEN + MYSQL_HEADER_LEN)
     {
-        char prefix_sql[prefix_len];
-        snprintf(prefix_sql, prefix_len, gtid_wait_stmt, wait_func, gtid_position.c_str(),
-                 gtid_wait_timeout.c_str());
-        GWBUF* prefix_buff = modutil_create_query(prefix_sql);
+        GWBUF* prefix_buff = modutil_create_query(sql.c_str());
 
         // Copy the original query in case it fails on the slave
         m_current_query.copy_from(origin);
@@ -182,7 +179,7 @@ GWBUF* RWSplitSession::add_prefix_wait_gtid(uint64_t version, GWBUF* origin)
         rval = gwbuf_append(prefix_buff, origin);
 
         /* Modify totol length: Prefix sql len + origin sql len + command len */
-        size_t new_payload_len = strlen(prefix_sql) + origin_sql_len + 1;
+        size_t new_payload_len = sql.size() + origin_sql_len + 1;
         gw_mysql_set_byte3(GWBUF_DATA(rval), new_payload_len);
     }
 

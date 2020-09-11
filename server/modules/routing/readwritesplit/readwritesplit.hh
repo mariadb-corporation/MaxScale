@@ -220,24 +220,6 @@ static cfg::ParamBool s_lazy_connect(
     &s_spec, "lazy_connect", "Create connections only when needed",
     false, cfg::Param::AT_RUNTIME);
 
-#define BREF_IS_NOT_USED(s)       ((s)->bref_state & ~BREF_IN_USE)
-#define BREF_IS_IN_USE(s)         ((s)->bref_state & BREF_IN_USE)
-#define BREF_IS_WAITING_RESULT(s) ((s)->bref_num_result_wait > 0)
-#define BREF_IS_QUERY_ACTIVE(s)   ((s)->bref_state & BREF_QUERY_ACTIVE)
-#define BREF_IS_CLOSED(s)         ((s)->bref_state & BREF_CLOSED)
-#define BREF_HAS_FAILED(s)        ((s)->bref_state & BREF_FATAL_FAILURE)
-
-/** default values for rwsplit configuration parameters */
-#define CONFIG_MAX_SLAVE_CONN   1
-#define CONFIG_MAX_SLAVE_RLAG   -1  /**< not used */
-#define CONFIG_SQL_VARIABLES_IN TYPE_ALL
-
-#define MARIADB_WAIT_GTID_FUNC "MASTER_GTID_WAIT"
-#define MYSQL_WAIT_GTID_FUNC   "WAIT_FOR_EXECUTED_GTID_SET"
-static const char gtid_wait_stmt[] =
-    "SET @maxscale_secret_variable=(SELECT CASE WHEN %s('%s', %s) = 0 "
-    "THEN 1 ELSE (SELECT 1 FROM INFORMATION_SCHEMA.ENGINES) END);";
-
 /** Function that returns a "score" for a server to enable comparison.
  *  Smaller numbers are better.
  */
