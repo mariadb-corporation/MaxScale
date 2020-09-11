@@ -1647,8 +1647,6 @@ public:
         , m_pValue(pValue)
         , m_on_set(on_set)
     {
-        // Native values are not modifiable at runtime.
-        mxb_assert(!pParam->is_modifiable_at_runtime());
     }
 
     // Native is move-only
