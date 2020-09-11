@@ -269,14 +269,14 @@ private:
          * @see handle_trx_replay
          */
         return m_config.delayed_retry
-               && m_retry_duration < m_config.delayed_retry_timeout
+               && m_retry_duration < m_config.delayed_retry_timeout.count()
                && !trx_is_open();
     }
 
     // Whether a transaction replay can remain active
     inline bool can_continue_trx_replay() const
     {
-        return m_is_replay_active && m_retry_duration < m_config.delayed_retry_timeout;
+        return m_is_replay_active && m_retry_duration < m_config.delayed_retry_timeout.count();
     }
 
     inline bool can_recover_servers() const
@@ -380,16 +380,17 @@ private:
         return gw_mysql_get_byte4(ptr);
     }
 
-    mxs::SRWBackends m_backends;                /**< Mem. management, not for use outside RWSplitSession */
-    mxs::PRWBackends m_raw_backends;            /**< Backend pointers for use in interfaces . */
-    mxs::RWBackend*  m_current_master;          /**< Current master server */
-    mxs::RWBackend*  m_target_node;             /**< The currently locked target node */
-    mxs::RWBackend*  m_prev_target;             /**< The previous target where a query was sent */
-    RWSConfig        m_config;                  /**< Configuration for this session */
-    MXS_SESSION*     m_session;                 /**< The client session */
-    uint64_t         m_sescmd_count;            /**< Number of executed session commands (starts from 1) */
-    int              m_expected_responses;      /**< Number of expected responses to the current query */
-    bool             m_locked_to_master {false};/**< Whether session is permanently locked to the master */
+    mxs::SRWBackends  m_backends;               /**< Mem. management, not for use outside RWSplitSession */
+    mxs::PRWBackends  m_raw_backends;           /**< Backend pointers for use in interfaces . */
+    mxs::RWBackend*   m_current_master;         /**< Current master server */
+    mxs::RWBackend*   m_target_node;            /**< The currently locked target node */
+    mxs::RWBackend*   m_prev_target;            /**< The previous target where a query was sent */
+    RWSConfig::Values m_config;                 /**< Configuration for this session */
+    MXS_SESSION*      m_session;                /**< The client session */
+
+    uint64_t m_sescmd_count;            /**< Number of executed session commands (starts from 1) */
+    int      m_expected_responses;      /**< Number of expected responses to the current query */
+    bool     m_locked_to_master {false};/**< Whether session is permanently locked to the master */
 
     maxbase::TimePoint m_last_keepalive_check;      /**< When the last ping was done */
 
@@ -410,7 +411,7 @@ private:
     wait_gtid_state      m_wait_gtid;           /**< State of MASTER_GTID_WAIT reply */
     uint32_t             m_next_seq;            /**< Next packet's sequence number */
     mxs::QueryClassifier m_qc;                  /**< The query classifier. */
-    uint64_t             m_retry_duration;      /**< Total time spent retrying queries */
+    int64_t              m_retry_duration;      /**< Total time spent retrying queries */
     mxs::Buffer          m_current_query;       /**< Current query being executed */
     Trx                  m_trx;                 /**< Current transaction */
     bool                 m_is_replay_active;    /**< Whether we are actively replaying a

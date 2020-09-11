@@ -45,13 +45,6 @@ RWSplitSession::RWSplitSession(RWSplit* instance, MXS_SESSION* session, mxs::SRW
     , m_can_replay_trx(true)
     , m_server_stats(instance->local_server_stats())
 {
-    if (m_config.rw_max_slave_conn_percent)
-    {
-        int n_conn = 0;
-        double pct = (double)m_config.rw_max_slave_conn_percent / 100.0;
-        n_conn = MXS_MAX(floor((double)m_backends.size() * pct), 1);
-        m_config.max_slave_connections = n_conn;
-    }
 }
 
 RWSplitSession* RWSplitSession::create(RWSplit* router, MXS_SESSION* session, const Endpoints& endpoints)
@@ -74,6 +67,10 @@ RWSplitSession* RWSplitSession::create(RWSplit* router, MXS_SESSION* session, co
                 rses = nullptr;
             }
         }
+    }
+    else
+    {
+        MXS_ERROR("Unable to start session: not enough backend servers are available.");
     }
 
     return rses;
@@ -330,7 +327,8 @@ void RWSplitSession::manage_transactions(RWBackend* backend, GWBUF* writebuf, co
              * is intentional.
              */
 
-            size_t size {m_trx.size() + m_current_query.length()};
+            int64_t size = m_trx.size() + m_current_query.length();
+
             // A transaction is open and it is eligible for replaying
             if (size < m_config.trx_max_size)
             {
@@ -546,7 +544,7 @@ int32_t RWSplitSession::clientReply(GWBUF* writebuf, const mxs::ReplyRoute& down
 
     if ((writebuf = handle_causal_read_reply(writebuf, reply, backend)) == NULL)
     {
-        return 1;     // Nothing to route, return
+        return 1;       // Nothing to route, return
     }
 
     const auto& error = reply.error();

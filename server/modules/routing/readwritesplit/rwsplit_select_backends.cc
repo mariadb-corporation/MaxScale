@@ -296,7 +296,7 @@ RWBackend* RWSplitSession::get_slave_backend(int max_rlag)
     int best_priority {INT_MAX};
     auto current_rank = get_current_rank();
     // Slaves can be taken into use if we need more slave connections
-    bool need_slaves = counts.second < m_router->max_slave_count();
+    bool need_slaves = counts.second < m_config.max_slave_connections;
 
     // Create a list of backends valid for read operations
     for (auto& backend : m_raw_backends)
@@ -468,7 +468,7 @@ bool RWSplitSession::open_connections()
     }
 
     int n_slaves = get_slave_counts(m_raw_backends, master).second;
-    int max_nslaves = std::min(m_router->max_slave_count(), m_router->config().slave_connections);
+    int max_nslaves = std::min(m_config.max_slave_connections, m_config.slave_connections);
     mxb_assert(n_slaves <= max_nslaves || max_nslaves == 0);
     auto current_rank = get_current_rank();
     PRWBackends candidates;

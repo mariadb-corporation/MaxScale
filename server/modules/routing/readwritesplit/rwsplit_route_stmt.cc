@@ -483,7 +483,7 @@ bool RWSplitSession::route_session_write(GWBUF* querybuf, uint8_t command, uint3
         }
     }
 
-    if (m_config.max_sescmd_history > 0 && m_sescmd_list.size() >= m_config.max_sescmd_history
+    if (m_config.max_sescmd_history > 0 && m_sescmd_list.size() >= (size_t)m_config.max_sescmd_history
         && !m_config.prune_sescmd_history)
     {
         static bool warn_history_exceeded = true;
@@ -507,7 +507,7 @@ bool RWSplitSession::route_session_write(GWBUF* querybuf, uint8_t command, uint3
     }
 
     if (m_config.prune_sescmd_history && !m_sescmd_list.empty()
-        && m_sescmd_list.size() >= m_config.max_sescmd_history)
+        && m_sescmd_list.size() >= (size_t)m_config.max_sescmd_history)
     {
         // Close to the history limit, remove the oldest command
         discard_responses(std::min(m_sescmd_list.front()->get_position(), lowest_pos));
@@ -636,9 +636,9 @@ int RWSplitSession::get_max_replication_lag()
     int conf_max_rlag = mxs::Target::RLAG_UNDEFINED;
 
     /** if there is no configured value, then longest possible int is used */
-    if (m_config.max_slave_replication_lag > 0)
+    if (m_config.max_slave_replication_lag.count() > 0)
     {
-        conf_max_rlag = m_config.max_slave_replication_lag;
+        conf_max_rlag = m_config.max_slave_replication_lag.count();
     }
 
     return conf_max_rlag;
@@ -792,7 +792,7 @@ void RWSplitSession::log_master_routing_failure(bool found,
 {
     char errmsg[1024 * 2 + 100];        // Extra space for error message
 
-    if (m_config.delayed_retry && m_retry_duration >= m_config.delayed_retry_timeout)
+    if (m_config.delayed_retry && m_retry_duration >= m_config.delayed_retry_timeout.count())
     {
         sprintf(errmsg, "'delayed_retry_timeout' exceeded before a master could be found");
     }
@@ -936,7 +936,7 @@ RWBackend* RWSplitSession::handle_master_is_target()
         m_server_stats[target->target()].inc_write();
         rval = target;
     }
-    else if (!m_config.delayed_retry || m_retry_duration >= m_config.delayed_retry_timeout)
+    else if (!m_config.delayed_retry || m_retry_duration >= m_config.delayed_retry_timeout.count())
     {
         // Cannot retry the query, log a message that routing has failed
         log_master_routing_failure(target, m_current_master, target);

@@ -50,33 +50,6 @@ using namespace maxscale;
 /** Maximum number of slaves */
 #define MAX_SLAVE_COUNT "255"
 
-// TODO: Remove support for percentage values in 2.6
-static bool handle_max_slaves(RWSConfig& config, const char* str)
-{
-    bool rval = true;
-    char* endptr;
-    int val = strtol(str, &endptr, 10);
-
-    if (*endptr == '%' && *(endptr + 1) == '\0')
-    {
-        config.rw_max_slave_conn_percent = val;
-        config.max_slave_connections = 0;
-        MXS_WARNING("Use of percentages in 'max_slave_connections' is deprecated");
-    }
-    else if (*endptr == '\0')
-    {
-        config.max_slave_connections = val;
-        config.rw_max_slave_conn_percent = 0;
-    }
-    else
-    {
-        MXS_ERROR("Invalid value for 'max_slave_connections': %s", str);
-        rval = false;
-    }
-
-    return rval;
-}
-
 bool RWSplit::check_causal_reads(SERVER* server) const
 {
     auto var = server->get_variable("session_track_system_variables");
@@ -111,10 +84,10 @@ void RWSplit::set_warnings(json_t* json) const
     }
 }
 
-RWSplit::RWSplit(SERVICE* service, const RWSConfig& config)
+RWSplit::RWSplit(SERVICE* service)
     : mxs::Router<RWSplit, RWSplitSession>(service)
     , m_service(service)
-    , m_config(config)
+    , m_config(service->name())
 {
 }
 
@@ -127,9 +100,9 @@ SERVICE* RWSplit::service() const
     return m_service;
 }
 
-const RWSConfig& RWSplit::config() const
+const RWSConfig::Values& RWSplit::config() const
 {
-    return m_config;
+    return m_config.values();
 }
 
 Stats& RWSplit::stats()
@@ -177,68 +150,6 @@ void RWSplit::set_last_gtid(const std::string& str)
     m_last_gtid = gtid::from_string(str);
 }
 
-int RWSplit::max_slave_count() const
-{
-    int router_nservers = m_service->get_children().size();
-    int conf_max_nslaves = m_config->max_slave_connections > 0 ?
-        m_config->max_slave_connections :
-        (router_nservers * m_config->rw_max_slave_conn_percent) / 100;
-    return MXS_MAX(1, MXS_MIN(router_nservers, conf_max_nslaves));
-}
-
-bool RWSplit::have_enough_servers() const
-{
-    bool succp = true;
-    const int min_nsrv = 1;
-    const int router_nsrv = m_service->get_children().size();
-
-    int n_serv = MXS_MAX(m_config->max_slave_connections,
-                         (router_nsrv * m_config->rw_max_slave_conn_percent) / 100);
-
-    /** With too few servers session is not created */
-    if (router_nsrv < min_nsrv || n_serv < min_nsrv)
-    {
-        if (router_nsrv < min_nsrv)
-        {
-            MXS_ERROR("Unable to start %s service. There are "
-                      "too few backend servers available. Found %d "
-                      "when %d is required.",
-                      m_service->name(),
-                      router_nsrv,
-                      min_nsrv);
-        }
-        else
-        {
-            int pct = m_config->rw_max_slave_conn_percent / 100;
-            int nservers = router_nsrv * pct;
-
-            if (m_config->max_slave_connections < min_nsrv)
-            {
-                MXS_ERROR("Unable to start %s service. There are "
-                          "too few backend servers configured in "
-                          "MaxScale.cnf. Found %d when %d is required.",
-                          m_service->name(),
-                          m_config->max_slave_connections,
-                          min_nsrv);
-            }
-            if (nservers < min_nsrv)
-            {
-                double dbgpct = ((double)min_nsrv / (double)router_nsrv) * 100.0;
-                MXS_ERROR("Unable to start %s service. There are "
-                          "too few backend servers configured in "
-                          "MaxScale.cnf. Found %d%% when at least %.0f%% "
-                          "would be required.",
-                          m_service->name(),
-                          m_config->rw_max_slave_conn_percent,
-                          dbgpct);
-            }
-        }
-        succp = false;
-    }
-
-    return succp;
-}
-
 // static
 RWSplit::gtid RWSplit::gtid::from_string(const std::string& str)
 {
@@ -266,92 +177,86 @@ bool RWSplit::gtid::empty() const
     return domain == 0 && server_id == 0 && sequence == 0;
 }
 
-RWSConfig::RWSConfig(const mxs::ConfigParameters& params)
-    : slave_selection_criteria(s_slave_selection_criteria.get(params))
-    , backend_select_fct(get_backend_select_function(s_slave_selection_criteria.get(params)))
-    , use_sql_variables_in(s_use_sql_variables_in.get(params))
-    , master_failure_mode(s_master_failure_mode.get(params))
-    , max_sescmd_history(s_max_sescmd_history.get(params))
-    , prune_sescmd_history(s_prune_sescmd_history.get(params))
-    , disable_sescmd_history(s_disable_sescmd_history.get(params))
-    , master_accept_reads(s_master_accept_reads.get(params))
-    , strict_multi_stmt(s_strict_multi_stmt.get(params))
-    , strict_sp_calls(s_strict_sp_calls.get(params))
-    , retry_failed_reads(s_retry_failed_reads.get(params))
-    , max_slave_replication_lag(s_max_slave_replication_lag.get(params).count())
-    , rw_max_slave_conn_percent(0)
-    , max_slave_connections(0)
-    , slave_connections(s_slave_connections.get(params))
-    , causal_reads(s_causal_reads.get(params))
-    , causal_reads_timeout(std::to_string(s_causal_reads_timeout.get(params).count()))
-    , master_reconnection(s_master_reconnection.get(params))
-    , delayed_retry(s_delayed_retry.get(params))
-    , delayed_retry_timeout(s_delayed_retry_timeout.get(params).count())
-    , transaction_replay(s_transaction_replay.get(params))
-    , trx_max_size(s_transaction_replay_max_size.get(params))
-    , trx_max_attempts(s_transaction_replay_attempts.get(params))
-    , trx_retry_on_deadlock(s_transaction_replay_retry_on_deadlock.get(params))
-    , optimistic_trx(s_optimistic_trx.get(params))
-    , lazy_connect(s_lazy_connect.get(params))
+RWSConfig::RWSConfig(const char* name)
+    : mxs::config::Configuration(name, &s_spec)
 {
-    if (causal_reads != CausalReads::NONE)
+    add_native(&m_v.slave_selection_criteria, &s_slave_selection_criteria);
+    add_native(&m_v.use_sql_variables_in, &s_use_sql_variables_in);
+    add_native(&m_v.master_failure_mode, &s_master_failure_mode);
+    add_native(&m_v.max_sescmd_history, &s_max_sescmd_history);
+    add_native(&m_v.prune_sescmd_history, &s_prune_sescmd_history);
+    add_native(&m_v.disable_sescmd_history, &s_disable_sescmd_history);
+    add_native(&m_v.master_accept_reads, &s_master_accept_reads);
+    add_native(&m_v.strict_multi_stmt, &s_strict_multi_stmt);
+    add_native(&m_v.strict_sp_calls, &s_strict_sp_calls);
+    add_native(&m_v.retry_failed_reads, &s_retry_failed_reads);
+    add_native(&m_v.max_slave_replication_lag, &s_max_slave_replication_lag);
+    add_native(&m_v.max_slave_connections, &s_max_slave_connections);
+    add_native(&m_v.slave_connections, &s_slave_connections);
+    add_native(&m_v.causal_reads, &s_causal_reads);
+    add_native(&m_v.causal_reads_timeout, &s_causal_reads_timeout);
+    add_native(&m_v.master_reconnection, &s_master_reconnection);
+    add_native(&m_v.delayed_retry, &s_delayed_retry);
+    add_native(&m_v.delayed_retry_timeout, &s_delayed_retry_timeout);
+    add_native(&m_v.transaction_replay, &s_transaction_replay);
+    add_native(&m_v.trx_max_size, &s_transaction_replay_max_size);
+    add_native(&m_v.trx_max_attempts, &s_transaction_replay_attempts);
+    add_native(&m_v.trx_retry_on_deadlock, &s_transaction_replay_retry_on_deadlock);
+    add_native(&m_v.optimistic_trx, &s_optimistic_trx);
+    add_native(&m_v.lazy_connect, &s_lazy_connect);
+}
+
+bool RWSConfig::post_configure()
+{
+    m_v.backend_select_fct = get_backend_select_function(m_v.slave_selection_criteria);
+
+    if (m_v.causal_reads != CausalReads::NONE)
     {
-        retry_failed_reads = true;
+        m_v.retry_failed_reads = true;
     }
 
     /** These options cancel each other out */
-    if (disable_sescmd_history && max_sescmd_history > 0)
+    if (m_v.disable_sescmd_history && m_v.max_sescmd_history > 0)
     {
-        max_sescmd_history = 0;
+        m_v.max_sescmd_history = 0;
     }
 
-    if (optimistic_trx)
+    if (m_v.optimistic_trx)
     {
         // Optimistic transaction routing requires transaction replay
-        transaction_replay = true;
+        m_v.transaction_replay = true;
     }
 
-    if (transaction_replay || lazy_connect)
+    if (m_v.transaction_replay || m_v.lazy_connect)
     {
         /**
          * Replaying transactions requires that we are able to do delayed query
          * retries. Both transaction replay and lazy connection creation require
          * fail-on-write failure mode and reconnections to masters.
          */
-        if (transaction_replay)
+        if (m_v.transaction_replay)
         {
-            delayed_retry = true;
+            m_v.delayed_retry = true;
         }
-        master_reconnection = true;
-        master_failure_mode = RW_FAIL_ON_WRITE;
+        m_v.master_reconnection = true;
+        m_v.master_failure_mode = RW_FAIL_ON_WRITE;
     }
-}
 
-// static
-std::pair<bool, RWSConfig> RWSConfig::create(const mxs::ConfigParameters& params)
-{
-    RWSConfig cnf;
-    bool rval = false;
+    bool rval = true;
 
-    if (s_spec.validate(params))
+    if (m_v.master_reconnection && m_v.disable_sescmd_history)
     {
-        cnf = RWSConfig(params);
-
-        if (handle_max_slaves(cnf, s_max_slave_connections.get(params).c_str()))
-        {
-            if (cnf.master_reconnection && cnf.disable_sescmd_history)
-            {
-                MXS_ERROR("Both 'master_reconnection' and 'disable_sescmd_history' are enabled: "
-                          "Master reconnection cannot be done without session command history.");
-            }
-            else
-            {
-                rval = true;
-            }
-        }
+        MXS_ERROR("Both 'master_reconnection' and 'disable_sescmd_history' are enabled: "
+                  "Master reconnection cannot be done without session command history.");
+        rval = false;
+    }
+    else
+    {
+        // Configuration is OK, assign it to the shared value
+        m_values.assign(m_v);
     }
 
-    return {rval, cnf};
+    return rval;
 }
 
 /**
@@ -360,8 +265,7 @@ std::pair<bool, RWSConfig> RWSConfig::create(const mxs::ConfigParameters& params
 
 RWSplit* RWSplit::create(SERVICE* service, mxs::ConfigParameters* params)
 {
-    auto cnf = RWSConfig::create(*params);
-    return cnf.first ? new RWSplit(service, cnf.second) : nullptr;
+    return new RWSplit(service);
 }
 
 mxs::RouterSession* RWSplit::newSession(MXS_SESSION* session, const Endpoints& endpoints)
@@ -403,7 +307,7 @@ json_t* RWSplit::diagnostics() const
 
     json_object_set_new(rval, "server_query_statistics", arr);
 
-    if (m_config->causal_reads != CausalReads::NONE)
+    if (config().causal_reads != CausalReads::NONE)
     {
         set_warnings(rval);
     }
@@ -421,14 +325,7 @@ uint64_t RWSplit::getCapabilities() const
 
 bool RWSplit::configure(mxs::ConfigParameters* params)
 {
-    auto cnf = RWSConfig::create(*params);
-
-    if (cnf.first)
-    {
-        m_config.assign(cnf.second);
-    }
-
-    return cnf.first;
+    return false;
 }
 
 /**

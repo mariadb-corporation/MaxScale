@@ -153,19 +153,20 @@ GWBUF* RWSplitSession::add_prefix_wait_gtid(uint64_t version, GWBUF* origin)
     const char* wait_func = (version > 50700 && version < 100000) ?
         MYSQL_WAIT_GTID_FUNC : MARIADB_WAIT_GTID_FUNC;
 
-    const char* gtid_wait_timeout = m_config.causal_reads_timeout.c_str();
+    auto gtid_wait_timeout = std::to_string(m_config.causal_reads_timeout.count());
     std::string gtid_position = m_config.causal_reads == CausalReads::GLOBAL ?
         m_router->last_gtid() : m_gtid_pos.to_string();
 
     /* Create a new buffer to store prefix sql */
     size_t prefix_len = strlen(gtid_wait_stmt) + gtid_position.length()
-        + strlen(gtid_wait_timeout) + strlen(wait_func);
+        + gtid_wait_timeout.length() + strlen(wait_func);
 
     // Only do the replacement if it fits into one packet
     if (gwbuf_length(origin) + prefix_len < GW_MYSQL_MAX_PACKET_LEN + MYSQL_HEADER_LEN)
     {
         char prefix_sql[prefix_len];
-        snprintf(prefix_sql, prefix_len, gtid_wait_stmt, wait_func, gtid_position.c_str(), gtid_wait_timeout);
+        snprintf(prefix_sql, prefix_len, gtid_wait_stmt, wait_func, gtid_position.c_str(),
+                 gtid_wait_timeout.c_str());
         GWBUF* prefix_buff = modutil_create_query(prefix_sql);
 
         // Copy the original query in case it fails on the slave

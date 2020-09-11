@@ -144,9 +144,9 @@ static cfg::ParamSeconds s_max_slave_replication_lag(
     cfg::INTERPRET_AS_SECONDS, std::chrono::seconds(0),
     cfg::Param::AT_RUNTIME);
 
-static cfg::ParamString s_max_slave_connections(
+static cfg::ParamCount s_max_slave_connections(
     &s_spec, "max_slave_connections", "Maximum number of slave connections",
-    std::to_string(SLAVE_MAX), cfg::ParamString::Quotes::IGNORED, cfg::Param::AT_RUNTIME);
+    SLAVE_MAX, cfg::Param::AT_RUNTIME);
 
 static cfg::ParamCount s_slave_connections(
     &s_spec, "slave_connections", "Starting number of slave connections",
@@ -244,46 +244,55 @@ static const char gtid_wait_stmt[] =
 using BackendSelectFunction = mxs::RWBackend * (*)(mxs::PRWBackends& sBackends);
 using std::chrono::seconds;
 
-struct RWSConfig
+struct RWSConfig : public mxs::config::Configuration
 {
-    RWSConfig() = default;
+    RWSConfig(const char* name);
 
-    static std::pair<bool, RWSConfig> create(const mxs::ConfigParameters& params);
+    struct Values
+    {
+        using seconds = std::chrono::seconds;
 
-    select_criteria_t     slave_selection_criteria;     /**< The slave selection criteria */
-    BackendSelectFunction backend_select_fct;
+        select_criteria_t     slave_selection_criteria; /**< The slave selection criteria */
+        BackendSelectFunction backend_select_fct;
 
-    mxs_target_t use_sql_variables_in;  /**< Whether to send user variables to
-                                         * master or all nodes */
-    failure_mode master_failure_mode;   /**< Master server failure handling mode */
-    uint64_t     max_sescmd_history;    /**< Maximum amount of session commands to store */
-    bool         prune_sescmd_history;  /**< Prune session command history */
-    bool         disable_sescmd_history;/**< Disable session command history */
-    bool         master_accept_reads;   /**< Use master for reads */
-    bool         strict_multi_stmt;     /**< Force non-multistatement queries to be routed to
-                                         * the master after a multistatement query. */
-    bool strict_sp_calls;               /**< Lock session to master after an SP call */
-    bool retry_failed_reads;            /**< Retry failed reads on other servers */
-    int  max_slave_replication_lag;     /**< Maximum replication lag */
-    int  rw_max_slave_conn_percent;     /**< Maximum percentage of slaves to use for each connection*/
-    int  max_slave_connections;         /**< Maximum number of slaves for each connection*/
-    int  slave_connections;             /**< Minimum number of slaves for each connection*/
+        mxs_target_t use_sql_variables_in;      /**< Whether to send user variables to master or all nodes */
+        failure_mode master_failure_mode;       /**< Master server failure handling mode */
+        seconds      max_slave_replication_lag; /**< Maximum replication lag */
+        int64_t      max_sescmd_history;        /**< Maximum amount of session commands to store */
+        bool         prune_sescmd_history;      /**< Prune session command history */
+        bool         disable_sescmd_history;    /**< Disable session command history */
+        bool         master_accept_reads;       /**< Use master for reads */
+        bool         strict_multi_stmt;         /**< Force non-multistatement queries to be routed to the
+                                                 * master after a multistatement query. */
+        bool        strict_sp_calls;            /**< Lock session to master after an SP call */
+        bool        retry_failed_reads;         /**< Retry failed reads on other servers */
+        int64_t     max_slave_connections = 0;  /**< Maximum number of slaves for each connection*/
+        int64_t     slave_connections;          /**< Minimum number of slaves for each connection*/
+        bool        master_reconnection;        /**< Allow changes in master server */
+        bool        optimistic_trx;             /**< Enable optimistic transactions */
+        bool        lazy_connect;               /**< Create connections only when needed */
+        CausalReads causal_reads;
+        seconds     causal_reads_timeout;   /**< Timeout, second parameter of function master_wait_gtid */
+        bool        delayed_retry;          /**< Delay routing if no target found */
+        seconds     delayed_retry_timeout;  /**< How long to delay until an error is returned */
 
-    CausalReads causal_reads;
-    std::string causal_reads_timeout;   /**< Timeout, second parameter of function master_wait_gtid */
+        bool    transaction_replay;     /**< Replay failed transactions */
+        int64_t trx_max_size;           /**< Max transaction size for replaying */
+        int64_t trx_max_attempts;       /**< Maximum number of transaction replay attempts */
+        bool    trx_retry_on_deadlock;  /**< Replay the transaction if it ends up in a deadlock */
+    };
 
-    bool     master_reconnection;       /**< Allow changes in master server */
-    bool     delayed_retry;             /**< Delay routing if no target found */
-    uint64_t delayed_retry_timeout;     /**< How long to delay until an error is returned */
-    bool     transaction_replay;        /**< Replay failed transactions */
-    size_t   trx_max_size;              /**< Max transaction size for replaying */
-    int64_t  trx_max_attempts;          /**< Maximum number of transaction replay attempts */
-    bool     trx_retry_on_deadlock;     /**< Replay the transaction if it ends up in a deadlock */
-    bool     optimistic_trx;            /**< Enable optimistic transactions */
-    bool     lazy_connect;              /**< Create connections only when needed */
+    const Values& values() const
+    {
+        return *m_values;
+    }
 
 private:
-    RWSConfig(const mxs::ConfigParameters& params);
+    Values                    m_v;  // Master copy of the values
+    mxs::WorkerGlobal<Values> m_values;
+
+    bool post_configure() override;
+
     static BackendSelectFunction get_backend_select_function(select_criteria_t sc);
 };
 
@@ -327,20 +336,22 @@ public:
         bool        empty() const;
     };
 
-    RWSplit(SERVICE* service, const RWSConfig& config);
+    RWSplit(SERVICE* service);
     ~RWSplit();
 
-    SERVICE*            service() const;
-    const RWSConfig&    config() const;
-    Stats&              stats();
-    const Stats&        stats() const;
-    TargetSessionStats& local_server_stats();
-    TargetSessionStats  all_server_stats() const;
-    std::string         last_gtid() const;
-    void                set_last_gtid(const std::string& gtid);
+    SERVICE*                 service() const;
+    const RWSConfig::Values& config() const;
+    Stats&                   stats();
+    const Stats&             stats() const;
+    TargetSessionStats&      local_server_stats();
+    TargetSessionStats       all_server_stats() const;
+    std::string              last_gtid() const;
+    void                     set_last_gtid(const std::string& gtid);
 
-    int  max_slave_count() const;
-    bool have_enough_servers() const;
+    bool have_enough_servers() const
+    {
+        return !m_service->get_children().empty();
+    }
 
     // API functions
 
@@ -393,7 +404,7 @@ public:
 
     mxs::config::Configuration* getConfiguration()
     {
-        return nullptr;
+        return &m_config;
     }
 
 private:
@@ -401,7 +412,7 @@ private:
     void set_warnings(json_t* json) const;
 
     SERVICE*                              m_service;    /**< Service where the router belongs*/
-    mxs::WorkerGlobal<RWSConfig>          m_config;
+    RWSConfig                             m_config;
     Stats                                 m_stats;
     mxs::WorkerGlobal<TargetSessionStats> m_server_stats;
     gtid                                  m_last_gtid {0, 0, 0};
