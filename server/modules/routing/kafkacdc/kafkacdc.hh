@@ -91,6 +91,11 @@ public:
     json_t* diagnostics() const;
     bool    configure(mxs::ConfigParameters* param);
 
+    mxs::config::Configuration* getConfiguration()
+    {
+        return nullptr;
+    }
+
 private:
     KafkaCDC(SERVICE* pService, Config&& config, std::unique_ptr<cdc::Replicator>&& rpl);
 

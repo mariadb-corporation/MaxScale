@@ -2275,7 +2275,17 @@ bool runtime_alter_service_from_json(Service* service, json_t* new_json)
             rval = true;
             service->update_basic_parameters(params);
 
-            if (service->capabilities() & RCAP_TYPE_RUNTIME_CONFIG)
+            if (auto cnf = service->router_instance->getConfiguration())
+            {
+                if (json_t* new_params = mxs_json_pointer(new_json, MXS_JSON_PTR_PARAMETERS))
+                {
+                    // Merge the new parameters with the old ones to create a complete definition.
+                    json_t* combined_params = merge_json_objects(cnf->to_json(), new_params);
+                    rval = cnf->configure(combined_params);
+                    json_decref(combined_params);
+                }
+            }
+            else if (service->capabilities() & RCAP_TYPE_RUNTIME_CONFIG)
             {
                 if (!service->router_instance->configure(&params))
                 {

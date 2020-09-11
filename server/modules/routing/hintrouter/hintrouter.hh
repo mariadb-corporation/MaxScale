@@ -34,6 +34,11 @@ public:
         return false;
     }
 
+    mxs::config::Configuration* getConfiguration()
+    {
+        return nullptr;
+    }
+
     HINT_TYPE get_default_action() const
     {
         return m_default_action;

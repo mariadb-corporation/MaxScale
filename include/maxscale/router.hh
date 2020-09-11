@@ -16,6 +16,7 @@
 #include <stdint.h>
 #include <maxbase/jansson.h>
 #include <maxscale/buffer.hh>
+#include <maxscale/config2.hh>
 #include <maxscale/routing.hh>
 #include <maxscale/session.hh>
 #include <maxscale/target.hh>
@@ -155,6 +156,17 @@ struct MXS_ROUTER
      *         instance should not be modified.
      */
     virtual bool configure(mxs::ConfigParameters* param) = 0;
+
+    /**
+     * Get the configuration of a router instance
+     *
+     * The configure method of the returned configuration will be called after the initial creation of the
+     * router as well as any time a parameter is modified at runtime.
+     *
+     * @return The configuration for the router instance or nullptr if the router does not use the new
+     *         configuration mechanism
+     */
+    virtual mxs::config::Configuration* getConfiguration() = 0;
 };
 
 /**

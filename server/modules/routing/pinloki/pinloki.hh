@@ -54,6 +54,11 @@ public:
     uint64_t            getCapabilities() const;
     bool                configure(mxs::ConfigParameters* pParams);
 
+    mxs::config::Configuration* getConfiguration()
+    {
+        return &m_config;
+    }
+
     const Config& config() const;
     Inventory*    inventory();
 

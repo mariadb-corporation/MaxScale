@@ -131,6 +131,16 @@ Service* Service::create(const char* name, const char* router, mxs::ConfigParame
 
     service->m_capabilities |= service->router_instance->getCapabilities();
 
+    if (auto config = service->router_instance->getConfiguration())
+    {
+        if (!config->configure(*params))
+        {
+            MXS_ERROR("%s: Failed to configure router instance.", service->name());
+            delete service;
+            return nullptr;
+        }
+    }
+
     LockGuard guard(this_unit.lock);
     this_unit.services.push_back(service);
 

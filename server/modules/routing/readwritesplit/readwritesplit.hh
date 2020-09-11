@@ -390,6 +390,12 @@ public:
 
     bool configure(mxs::ConfigParameters* params);
 
+
+    mxs::config::Configuration* getConfiguration()
+    {
+        return nullptr;
+    }
+
 private:
     bool check_causal_reads(SERVER* server) const;
     void set_warnings(json_t* json) const;

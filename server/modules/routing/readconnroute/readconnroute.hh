@@ -115,6 +115,11 @@ public:
      */
     bool configure(mxs::ConfigParameters* params);
 
+    mxs::config::Configuration* getConfiguration()
+    {
+        return nullptr;
+    }
+
     /**
      * @brief session_stats
      *

@@ -42,6 +42,11 @@ public:
         return m_main;
     }
 
+    mxs::config::Configuration* getConfiguration()
+    {
+        return nullptr;
+    }
+
 private:
     Mirror(SERVICE* pService)
         : Router<Mirror, MirrorSession>(pService)

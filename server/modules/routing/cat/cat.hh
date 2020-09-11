@@ -35,6 +35,11 @@ public:
         return false;
     }
 
+    mxs::config::Configuration* getConfiguration()
+    {
+        return nullptr;
+    }
+
 private:
     friend class CatSession;
 
