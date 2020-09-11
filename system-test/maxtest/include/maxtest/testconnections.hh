@@ -637,11 +637,15 @@ private:
      * and re-installed on all Maxscale nodes. Used for 'run_test_snapshot'.
      */
     bool m_reinstall_maxscale {false};
+    bool m_mdbci_called {false};     /**< Was mdbci called when setting up test system? */
 
     std::string flatten_stringset(const StringSet& set);
     StringSet   parse_to_stringset(const std::string& source);
 
     bool read_cmdline_options(int argc, char* argv[]);
+    bool check_create_vms();
+    bool initialize_nodes();
+    bool check_backend_versions();
 };
 
 /**
