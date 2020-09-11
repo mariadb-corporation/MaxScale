@@ -233,7 +233,7 @@ const RegexToServers* RegexHintFilter::find_servers(char* sql, int sql_len, pcre
  */
 uint64_t RegexHintFilter::getCapabilities()
 {
-    return RCAP_TYPE_NONE;
+    return RCAP_TYPE_CONTIGUOUS_INPUT;
 }
 
 /**
