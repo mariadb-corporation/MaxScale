@@ -23,8 +23,14 @@ namespace pinloki
 Inventory::Inventory(const Config& config)
     : m_config(config)
 {
+    read_file();
+}
+
+void Inventory::read_file() const
+{
     std::ifstream ifs(m_config.inventory_file_path());
 
+    m_file_names.clear();
     while (ifs.good())
     {
         std::string name;
@@ -38,14 +44,12 @@ Inventory::Inventory(const Config& config)
 
 void Inventory::push(const std::string& file_name)
 {
-    std::unique_lock<std::mutex> lock(m_mutex);
     m_file_names.push_back(m_config.path(file_name));
     persist();
 }
 
 void Inventory::pop(const std::string& file_name)
 {
-    std::unique_lock<std::mutex> lock(m_mutex);
     std::string full_name = m_config.path(file_name);
     m_file_names.erase(std::remove(m_file_names.begin(), m_file_names.end(), full_name), m_file_names.end());
     persist();
@@ -66,7 +70,9 @@ void Inventory::persist()
 
 std::vector<std::string> Inventory::file_names() const
 {
-    std::unique_lock<std::mutex> lock(m_mutex);
+    // file reading can be improved, but the file is small
+    // and this function called seldomly
+    read_file();
     return m_file_names;
 }
 

@@ -65,7 +65,7 @@ FileReader::FileReader(const maxsql::Gtid& gtid, const Inventory* inv)
 
     if (gtid.is_valid())
     {
-        auto gtid_pos = find_gtid_position(gtid, inv);
+        auto gtid_pos = find_gtid_position(gtid, m_inventory);
 
         if (gtid_pos.file_name.empty())
         {

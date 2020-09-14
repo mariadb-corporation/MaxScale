@@ -25,7 +25,9 @@ namespace pinloki
 {
 
 /**
- * @brief Inventory - list of binlogs from the binlog index file. Thread safe.
+ * @brief Inventory - list of binlogs from the binlog index file. Not thread safe,
+ *                    use a copy for each thread. Works with readers in separate
+ *                    processes.
  */
 class Inventory
 {
@@ -56,14 +58,16 @@ public:
     }
 
 private:
+    // Read or re-read the file
+    void read_file() const;
+
     // Saves the file list on disk
     void persist();
 
     // The configuration used to create this inventory
     const Config& m_config;
 
-    std::vector<std::string> m_file_names;
-    mutable std::mutex       m_mutex;
+    mutable std::vector<std::string> m_file_names;
 };
 
 // Return the string after str in a vector of unique strings, or empty if not found

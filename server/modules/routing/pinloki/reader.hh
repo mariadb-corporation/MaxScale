@@ -27,7 +27,7 @@ using Callback = std::function<bool (const maxsql::RplEvent&)>;
 class Reader
 {
 public:
-    Reader(Callback cb, const Inventory* inv, mxb::Worker* worker, const maxsql::Gtid& gtid,
+    Reader(Callback cb, Inventory inv, mxb::Worker* worker, const maxsql::Gtid& gtid,
            const std::chrono::seconds& heartbeat_interval);
     ~Reader();
 
@@ -46,6 +46,7 @@ private:
     };
 
     Callback      m_cb;
+    Inventory     m_inventory;
     PollData      m_reader_poll_data;
     FileReader    m_file_reader;
     mxb::Worker*  m_worker;

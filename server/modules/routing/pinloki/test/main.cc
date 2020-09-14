@@ -46,7 +46,7 @@ bool test_it(int argc, char* argv[])
     return false;
 
     auto gtid = maxsql::Gtid::from_string("0-0-9");
-    pinloki::GtidPosition pos = pinloki::find_gtid_position(gtid, &inventory());
+    pinloki::GtidPosition pos = pinloki::find_gtid_position(gtid, inventory());
 
     std::cout << "pos.file_name = " << pos.file_name << "\n";
     std::cout << "pos.pos = " << pos.file_pos << "\n";
@@ -85,7 +85,7 @@ void prog_main(const maxsql::GtidList& gtid_list, const std::string& host,
         pinloki::Reader reader([](const auto& event) {
                                    std::cout << event << std::endl;
                                    return true;
-                               }, &inventory(), &worker, gtid, 30s);
+                               }, inventory(), &worker, gtid, 30s);
         worker.start();
         worker.join();
     }
