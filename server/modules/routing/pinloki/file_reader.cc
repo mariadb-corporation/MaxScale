@@ -83,9 +83,10 @@ FileReader::FileReader(const maxsql::Gtid& gtid, const Inventory* inv)
     }
     else
     {
-        open(m_inventory.file_names().front());
+        auto first = first_string(m_inventory.file_names());
+        open(first);
         // Preamble just means send the initial rotate and then the whole file
-        m_generate_rotate_to = m_inventory.file_names().front();
+        m_generate_rotate_to = first;
         m_read_pos.next_pos = PINLOKI_MAGIC.size();
     }
 }

@@ -70,11 +70,11 @@ std::vector<std::string> Inventory::file_names() const
     return m_file_names;
 }
 
-std::string next_string(const std::vector<std::string>& names, const std::string& file_name)
+std::string next_string(const std::vector<std::string>& strs, const std::string& str)
 {
     // search in reverse since the file is likely at the end of the vector
-    auto rite = std::find(rbegin(names), rend(names), file_name);
-    if (rite != rend(names) && rite != rbegin(names))
+    auto rite = std::find(rbegin(strs), rend(strs), str);
+    if (rite != rend(strs) && rite != rbegin(strs))
     {
         return *--rite;
     }
@@ -82,5 +82,25 @@ std::string next_string(const std::vector<std::string>& names, const std::string
     {
         return "";
     }
+}
+
+std::string first_string(const std::vector<std::string>& strs)
+{
+    if (strs.empty())
+    {
+        return "";
+    }
+
+    return strs.front();
+}
+
+std::string last_string(const std::vector<std::string>& strs)
+{
+    if (strs.empty())
+    {
+        return "";
+    }
+
+    return strs.back();
 }
 }

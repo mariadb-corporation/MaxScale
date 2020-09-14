@@ -120,9 +120,10 @@ wall_time::TimePoint file_mod_time(const std::string& file_name)
 wall_time::TimePoint oldest_logfile_time(Inventory* pInventory)
 {
     auto ret = wall_time::TimePoint::max();
-    if (!pInventory->file_names().empty())
+    const auto& file_names = pInventory->file_names();
+    if (!file_names.empty())
     {
-        ret = file_mod_time(pInventory->file_names().front());
+        ret = file_mod_time(first_string(file_names));
     }
 
     return ret;
@@ -215,7 +216,7 @@ json_t* Pinloki::diagnostics() const
     json_t* rval = json_object();
     std::lock_guard<std::mutex> guard(m_lock);
 
-    auto current_binlog = m_inventory.file_names().empty() ? "" : m_inventory.file_names().back();
+    auto current_binlog = last_string(m_inventory.file_names());
 
     json_object_set_new(rval, "gtid_io_pos", json_string(gtid_io_pos().to_string().c_str()));
     json_object_set_new(rval, "current_binlog", json_string(current_binlog.c_str()));
@@ -442,7 +443,7 @@ GWBUF* Pinloki::show_slave_status() const
     std::lock_guard<std::mutex> guard(m_lock);
 
     const auto& files = m_inventory.file_names();
-    auto file_and_pos = get_file_name_and_size(files.empty() ? "" : files.back());
+    auto file_and_pos = get_file_name_and_size(last_string(files));
 
     auto rset = ResultSet::create({});
     rset->add_row({});
@@ -638,7 +639,7 @@ bool Pinloki::purge_old_binlogs(mxb::Worker::Call::action_t action)
 
     auto now = wall_time::Clock::now();
     auto purge_before = now - config().expire_log_duration();
-    auto file_names = m_inventory.file_names();
+    const auto& file_names = m_inventory.file_names();
     auto files_to_keep = std::max(1, config().expire_log_minimum_files());      // at least one
     int max_files_to_purge = file_names.size() - files_to_keep;
 

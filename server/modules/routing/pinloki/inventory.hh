@@ -66,12 +66,10 @@ private:
     mutable std::mutex       m_mutex;
 };
 
-/**
- * @brief next      find the next string in a vector of unique strings
- * @param names     vector of unique strings
- * @param file_name
- * @return the next string, or an empty string if file_name was
- *         not found or was the last string
- */
-std::string next_string(const std::vector<std::string>& names, const std::string& file_name);
+// Return the string after str in a vector of unique strings, or empty if not found
+std::string next_string(const std::vector<std::string>& strs, const std::string& str);
+// Return the first string in vector or an empty string if the vector is empty
+std::string first_string(const std::vector<std::string>& strs);
+// Return the last string in vector or an empty string if the vector is empty
+std::string last_string(const std::vector<std::string>& strs);
 }

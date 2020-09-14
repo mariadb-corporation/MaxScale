@@ -141,12 +141,14 @@ bool FileWriter::open_for_appending(const maxsql::Rotate& rotate, const maxsql::
 
     m_newborn = false;
 
-    if (m_inventory.file_names().empty())
+    const auto& file_names = m_inventory.file_names();
+
+    if (file_names.empty())
     {
         return false;
     }
 
-    auto last_file_name = m_inventory.file_names().back();
+    auto last_file_name = last_string(file_names);
 
     std::ifstream log_file(last_file_name);
     if (!log_file)
@@ -174,7 +176,7 @@ bool FileWriter::open_for_appending(const maxsql::Rotate& rotate, const maxsql::
 void FileWriter::perform_rotate(const maxsql::Rotate& rotate)
 {
     auto master_file_name = rotate.file_name;
-    auto last_file_name = m_inventory.file_names().back();
+    auto last_file_name = last_string(m_inventory.file_names());
 
     auto new_file_name = next_file_name(master_file_name, last_file_name);
     auto file_name = m_inventory.config().path(new_file_name);
