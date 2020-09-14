@@ -1294,7 +1294,10 @@ static constexpr seconds variable_update_interval = 10min;
 
 bool MonitorServer::should_fetch_server_variables()
 {
-    return steady_clock::now() - m_last_variable_update > variable_update_interval;
+    bool rval = false;
+    // Only fetch variables from real servers.
+    return is_database()
+           && (steady_clock::now() - m_last_variable_update) > variable_update_interval;
 }
 
 void MonitorServer::fetch_server_variables()
@@ -2373,6 +2376,11 @@ void MonitorServer::add_status_request(StatusRequest request)
     {
         MXS_WARNING(WRN_REQUEST_OVERWRITTEN);
     }
+}
+
+bool MonitorServer::is_database() const
+{
+    return server->info().is_database();
 }
 }
 

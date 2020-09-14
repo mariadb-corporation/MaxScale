@@ -73,6 +73,7 @@ std::string Target::status_to_string(uint64_t flags, int n_connections)
     const std::string auth_err = "Auth Error";
     const std::string running = "Running";
     const std::string down = "Down";
+    const std::string blr = "Binlog Relay";
 
     // Maintenance/Draining is usually set by user so is printed first.
     // Draining in the presence of Maintenance has no effect, so we only
@@ -100,9 +101,10 @@ std::string Target::status_to_string(uint64_t flags, int n_connections)
     }
     else
     {
-        // Relays are typically slaves as well. The binlog server may be an exception.
+        // Relays are typically slaves as well.
         concatenate_if(status_is_relay(flags), relay);
         concatenate_if(status_is_slave(flags), slave);
+        concatenate_if(status_is_blr(flags), blr);
     }
 
     // The following Galera and Cluster bits may be combined with master/slave.

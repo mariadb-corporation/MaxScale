@@ -121,6 +121,13 @@ int32_t PinlokiSession::routeQuery(GWBUF* pPacket)
     case COM_QUIT:
         rval = 1;
         break;
+
+    case MXS_COM_PING:
+        response = modutil_create_ok();
+        break;
+
+    default:
+        MXS_ERROR("Unrecognized command %i", cmd);
     }
 
     if (response)

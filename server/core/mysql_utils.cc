@@ -69,9 +69,14 @@ MYSQL* mxs_mysql_real_connect(MYSQL* con, SERVER* server, const char* user, cons
         }
     }
 
+    bool server_is_db = server->info().is_database();
+
     char yes = 1;
     mysql_optionsv(con, MYSQL_OPT_RECONNECT, &yes);
-    mysql_optionsv(con, MYSQL_INIT_COMMAND, "SET SQL_MODE=''");
+    if (server_is_db)
+    {
+        mysql_optionsv(con, MYSQL_INIT_COMMAND, "SET SQL_MODE=''");
+    }
 
     const auto& local_address = mxs::Config::get().local_address;
 
@@ -104,16 +109,20 @@ MYSQL* mxs_mysql_real_connect(MYSQL* con, SERVER* server, const char* user, cons
         }
     }
 
-    if (mysql && mysql_query(mysql, "SET NAMES latin1") != 0)
+    if (server_is_db && mysql && mysql_query(mysql, "SET NAMES latin1") != 0)
     {
         MXS_ERROR("Failed to set latin1 character set: %s", mysql_error(mysql));
         mysql = NULL;
     }
 
+
     if (mysql)
     {
-        /** Copy the server charset */
-        mxs_update_server_charset(mysql, server);
+        if (server_is_db)
+        {
+            /** Copy the server charset */
+            mxs_update_server_charset(mysql, server);
+        }
 
         if (ssl && mysql_get_ssl_cipher(con) == NULL)
         {

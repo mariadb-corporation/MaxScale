@@ -509,7 +509,8 @@ void MariaDBMonitor::assign_server_roles()
 {
     // Remove any existing [Master], [Slave] etc flags from 'pending_status', they are still available in
     // 'mon_prev_status'.
-    const uint64_t remove_bits = SERVER_MASTER | SERVER_SLAVE | SERVER_RELAY | SERVER_SLAVE_OF_EXT_MASTER;
+    const uint64_t remove_bits = SERVER_MASTER | SERVER_SLAVE | SERVER_RELAY | SERVER_SLAVE_OF_EXT_MASTER
+        | SERVER_BLR;
     for (auto server : servers())
     {
         server->clear_status(remove_bits);
@@ -559,14 +560,15 @@ void MariaDBMonitor::assign_server_roles()
                 }
             }
 
-            if (master_conds_ok && (master_conds& MasterConds::MCOND_COOP_M) && is_slave_maxscale()
+            if (master_conds_ok && (master_conds & MasterConds::MCOND_COOP_M) && is_slave_maxscale()
                 && !m_master->marked_as_master())
             {
                 // Master was not marked as such by primary monitor.
                 master_conds_ok = false;
             }
 
-            if (master_conds_ok && !m_master->is_read_only())
+            // Master may never have read-only. Also, binlogrouter cannot get master-status.
+            if (master_conds_ok && !m_master->is_read_only() && m_master->is_database())
             {
                 m_master->set_status(SERVER_MASTER);
             }
@@ -631,7 +633,8 @@ void MariaDBMonitor::assign_slave_and_relay_master()
     }
 
     // Second, check if the start node itself should be labeled [Slave]. This is the case if the master
-    // fulfills general slave requirements but is not labeled [Master].
+    // fulfills general slave requirements but is not labeled [Master]. Binlogrouter may get [Slave] for now,
+    // is removed later.
     if (m_master->is_running() && !m_master->is_master())
     {
         m_master->set_status(SERVER_SLAVE);
@@ -730,11 +733,12 @@ void MariaDBMonitor::assign_slave_and_relay_master()
         {
             parent->set_status(SERVER_RELAY);
         }
-        // If the node is a binlog relay, remove any slave bits that may have been set.
-        // Relay master bit can stay.
-        if (parent->server_type() == ServerType::BLR)
+
+        // If the node is a binlogrouter and has slave-status, remove slave and relay, and add blr-status.
+        if (parent->server_type() == ServerType::BLR && parent->has_status(SERVER_SLAVE))
         {
-            parent->clear_status(SERVER_SLAVE);
+            parent->clear_status(SERVER_SLAVE | SERVER_RELAY);
+            parent->set_status(SERVER_BLR);
         }
     }
 }

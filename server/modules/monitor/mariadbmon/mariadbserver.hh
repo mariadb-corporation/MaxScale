@@ -100,7 +100,9 @@ public:
     public:
         bool basic_support {false};         // Is the server version supported by the monitor at all?
         bool gtid {false};                  // Supports MariaDB gtid? Required for failover etc.
+        bool slave_status_all {false};      // Supports "show all slaves status"?
         bool max_statement_time {false};    // Supports max_statement_time?
+        bool events {false};                // Supports event handling?
     };
 
     // This class groups some miscellaneous replication related settings together.

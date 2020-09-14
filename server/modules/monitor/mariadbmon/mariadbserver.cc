@@ -234,9 +234,8 @@ bool MariaDBServer::do_show_slave_status(string* errmsg_out)
     unsigned int columns = 0;
     string query;
     bool all_slaves_status = false;
-    if (m_capabilities.gtid)
+    if (m_capabilities.slave_status_all)
     {
-        // Versions with gtid also support the extended slave status query.
         columns = 42;
         all_slaves_status = true;
         query = "SHOW ALL SLAVES STATUS;";
@@ -813,7 +812,7 @@ void MariaDBServer::monitor_server()
     {
         query_ok = update_gtids(&errmsg);
     }
-    if (query_ok && m_settings.handle_event_scheduler)
+    if (query_ok && m_settings.handle_event_scheduler && m_capabilities.events)
     {
         query_ok = update_enabled_events();
     }
@@ -877,7 +876,10 @@ void MariaDBServer::update_server_version()
                 // 10.0.2 or 10.1.X or greater than 10
                 if (((minor == 0 && patch >= 2) || minor >= 1) || major > 10)
                 {
+                    // Versions with gtid also support the extended slave status query.
                     m_capabilities.gtid = true;
+                    m_capabilities.slave_status_all = true;
+                    m_capabilities.events = true;
                 }
                 // 10.1.2 (10.1.1 has limited support, not enough) or 10.2.X or greater than 10
                 if (((minor == 1 && patch >= 2) || minor >= 2) || major > 10)
@@ -889,6 +891,7 @@ void MariaDBServer::update_server_version()
     }
     else if (type == ServerType::BLR)
     {
+        // BLR supports gtid but not "show all slaves status".
         m_capabilities.basic_support = true;
         m_capabilities.gtid = true;
     }

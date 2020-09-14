@@ -42,17 +42,12 @@
 #include <maxscale/json_api.hh>
 #include <maxscale/clock.h>
 #include <maxscale/http.hh>
-#include <maxscale/maxscale.h>
-#include <maxscale/monitor.hh>
 #include <maxscale/routingworker.hh>
 
-#include "internal/poll.hh"
 #include "internal/config.hh"
-#include "internal/modules.hh"
 
 using maxbase::Worker;
 using maxscale::RoutingWorker;
-using maxscale::Monitor;
 
 using std::string;
 using Guard = std::lock_guard<std::mutex>;
@@ -689,13 +684,15 @@ uint64_t Server::status_from_string(const char* str)
 {
     static std::vector<std::pair<const char*, uint64_t>> status_bits =
     {
-        {"running",     SERVER_RUNNING },
-        {"master",      SERVER_MASTER  },
-        {"slave",       SERVER_SLAVE   },
-        {"synced",      SERVER_JOINED  },
-        {"maintenance", SERVER_MAINT   },
-        {"maint",       SERVER_MAINT   },
-        {"drain",       SERVER_DRAINING}
+        {"running",      SERVER_RUNNING },
+        {"master",       SERVER_MASTER  },
+        {"slave",        SERVER_SLAVE   },
+        {"synced",       SERVER_JOINED  },
+        {"maintenance",  SERVER_MAINT   },
+        {"maint",        SERVER_MAINT   },
+        {"drain",        SERVER_DRAINING},
+        {"blr",          SERVER_BLR     },
+        {"binlogrouter", SERVER_BLR     }
     };
 
     for (const auto& a : status_bits)
@@ -869,6 +866,12 @@ Server::VersionInfo::Type Server::VersionInfo::type() const
 const char* Server::VersionInfo::version_string() const
 {
     return m_version_str;
+}
+
+bool SERVER::VersionInfo::is_database() const
+{
+    auto t = m_type;
+    return t == Type::MARIADB || t == Type::CLUSTRIX || t == Type::MYSQL;
 }
 
 const SERVER::VersionInfo& Server::info() const

@@ -47,7 +47,6 @@ public:
     class VersionInfo
     {
     public:
-
         enum class Type
         {
             UNKNOWN,    /**< Not connected yet */
@@ -72,6 +71,14 @@ public:
          * @param version_string Version string from server
          */
         void set(uint64_t version_num, const std::string& version_string);
+
+        /**
+         * Return true if the server is a real database and can process queries. Returns false if server
+         * type is unknown or if the server is a binlogrouter.
+         *
+         * @return True if server is a real database
+         */
+        bool is_database() const;
 
         Type           type() const;
         const Version& version_num() const;
