@@ -141,12 +141,12 @@ bool FileWriter::open_for_appending(const maxsql::Rotate& rotate, const maxsql::
 
     m_newborn = false;
 
-    auto last_file_name = m_inventory.last();
-
-    if (last_file_name.empty())
+    if (m_inventory.file_names().empty())
     {
         return false;
     }
+
+    auto last_file_name = m_inventory.file_names().back();
 
     std::ifstream log_file(last_file_name);
     if (!log_file)
@@ -174,7 +174,7 @@ bool FileWriter::open_for_appending(const maxsql::Rotate& rotate, const maxsql::
 void FileWriter::perform_rotate(const maxsql::Rotate& rotate)
 {
     auto master_file_name = rotate.file_name;
-    auto last_file_name = m_inventory.last();
+    auto last_file_name = m_inventory.file_names().back();
 
     auto new_file_name = next_file_name(master_file_name, last_file_name);
     auto file_name = m_inventory.config().path(new_file_name);
@@ -187,7 +187,7 @@ void FileWriter::perform_rotate(const maxsql::Rotate& rotate)
     m_current_pos.write_pos = PINLOKI_MAGIC.size();
     m_current_pos.file.flush();
 
-    m_inventory.add(m_current_pos.name);
+    m_inventory.push(m_current_pos.name);
 
     if (previous_pos.file.is_open())
     {

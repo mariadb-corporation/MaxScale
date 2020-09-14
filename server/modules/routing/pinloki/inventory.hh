@@ -25,62 +25,30 @@ namespace pinloki
 {
 
 /**
- * @brief Simple MonoState to keep track of binlog Files. This maintains the same
- *        index file (default name binlog.index) as the server.
+ * @brief Inventory - list of binlogs from the binlog index file. Thread safe.
  */
 class Inventory
 {
 public:
     Inventory(const Config& config);
 
-    // Adds a file to the inventory
-    void add(const std::string& file_name);
+    /**
+     * @brief push a file name to the end of the list
+     * @param file_name
+     */
+    void push(const std::string& file_name);
 
-    // Removes a file from the inventory (the file itself is not removed)
-    void remove(const std::string& file_name);
+    /**
+     * @brief pop the first file
+     * @param file_name must match the name of the first file
+     */
+    void pop(const std::string& file_name);
 
+    /**
+     * @brief file_names
+     * @return the file names
+     */
     std::vector<std::string> file_names() const;
-
-    int count() const;
-
-
-    // Return an fstream positioned at the
-    // indicated gtid event. If the gtid is not found,
-    // <returned_file>.isgood() == false (and tellg()==0).
-    std::fstream find_gtid(const maxsql::Gtid& gtid) const;
-
-    /**
-     * @brief is_listed
-     * @param file_name
-     * @return true if file is listed in inventory
-     */
-    bool is_listed(const std::string& file_name) const;
-
-    /**
-     * @brief exists -
-     * @param file_name
-     * @return true if is_listed(), file exists and is readable.
-     */
-    bool exists(const std::string& file_name) const;
-
-    /**
-     * @brief The first file in the inventory
-     * @return First file name or empty string
-     */
-    std::string first() const;
-
-    /**
-     * @brief The last file in the inventory
-     * @return Last file name or empty string
-     */
-    std::string last() const;
-
-    /**
-     * @brief next - next file in inventory
-     * @param file_name
-     * @return the next file in the inventory or an empty string
-     */
-    std::string next(const std::string& file_name) const;
 
     const Config& config() const
     {
@@ -97,4 +65,13 @@ private:
     std::vector<std::string> m_file_names;
     mutable std::mutex       m_mutex;
 };
+
+/**
+ * @brief next      find the next string in a vector of unique strings
+ * @param names     vector of unique strings
+ * @param file_name
+ * @return the next string, or an empty string if file_name was
+ *         not found or was the last string
+ */
+std::string next_string(const std::vector<std::string>& names, const std::string& file_name);
 }

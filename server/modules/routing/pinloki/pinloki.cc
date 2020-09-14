@@ -120,10 +120,9 @@ wall_time::TimePoint file_mod_time(const std::string& file_name)
 wall_time::TimePoint oldest_logfile_time(Inventory* pInventory)
 {
     auto ret = wall_time::TimePoint::max();
-    auto file_name = pInventory->first();
-    if (!file_name.empty())
+    if (!pInventory->file_names().empty())
     {
-        ret = file_mod_time(file_name);
+        ret = file_mod_time(pInventory->file_names().front());
     }
 
     return ret;
@@ -216,8 +215,10 @@ json_t* Pinloki::diagnostics() const
     json_t* rval = json_object();
     std::lock_guard<std::mutex> guard(m_lock);
 
+    auto current_binlog = m_inventory.file_names().empty() ? "" : m_inventory.file_names().back();
+
     json_object_set_new(rval, "gtid_io_pos", json_string(gtid_io_pos().to_string().c_str()));
-    json_object_set_new(rval, "current_binlog", json_string(m_inventory.last().c_str()));
+    json_object_set_new(rval, "current_binlog", json_string(current_binlog.c_str()));
 
     json_t* cnf = json_object();
     json_object_set_new(cnf, "host", json_string(m_master_config.host.c_str()));
@@ -620,7 +621,7 @@ PurgeResult purge_binlogs(Inventory* pInventory, const std::string& up_to)
                 return PurgeResult::PartialPurge;
             }
 
-            pInventory->remove(*ite);
+            pInventory->pop(*ite);
             remove(ite->c_str());
         }
     }
@@ -638,7 +639,7 @@ bool Pinloki::purge_old_binlogs(mxb::Worker::Call::action_t action)
     auto now = wall_time::Clock::now();
     auto purge_before = now - config().expire_log_duration();
     auto file_names = m_inventory.file_names();
-    auto files_to_keep = std::max(1, config().expire_log_minimum_files());     // at least one
+    auto files_to_keep = std::max(1, config().expire_log_minimum_files());      // at least one
     int max_files_to_purge = file_names.size() - files_to_keep;
 
     int purge_index = -1;

@@ -36,14 +36,14 @@ Inventory::Inventory(const Config& config)
     }
 }
 
-void Inventory::add(const std::string& file_name)
+void Inventory::push(const std::string& file_name)
 {
     std::unique_lock<std::mutex> lock(m_mutex);
     m_file_names.push_back(m_config.path(file_name));
     persist();
 }
 
-void Inventory::remove(const std::string& file_name)
+void Inventory::pop(const std::string& file_name)
 {
     std::unique_lock<std::mutex> lock(m_mutex);
     std::string full_name = m_config.path(file_name);
@@ -70,65 +70,11 @@ std::vector<std::string> Inventory::file_names() const
     return m_file_names;
 }
 
-int Inventory::count() const
+std::string next_string(const std::vector<std::string>& names, const std::string& file_name)
 {
-    return m_file_names.size();
-}
-
-bool Inventory::is_listed(const std::string& file_name) const
-{
-    std::string full_name = m_config.path(file_name);
-    std::unique_lock<std::mutex> lock(m_mutex);
-    return std::find(begin(m_file_names), end(m_file_names), full_name) != end(m_file_names);
-}
-
-bool Inventory::exists(const std::string& file_name) const
-{
-    std::string full_name = m_config.path(file_name);
-    std::unique_lock<std::mutex> lock(m_mutex);
-    if (!is_listed(full_name))
-    {
-        return false;
-    }
-
-    std::ifstream ofs(full_name);
-    return ofs.good();
-}
-
-std::string Inventory::first() const
-{
-    std::unique_lock<std::mutex> lock(m_mutex);
-    if (m_file_names.empty())
-    {
-        return "";
-    }
-    else
-    {
-        return m_file_names.front();
-    }
-}
-
-std::string Inventory::last() const
-{
-    std::unique_lock<std::mutex> lock(m_mutex);
-    if (m_file_names.empty())
-    {
-        return "";
-    }
-    else
-    {
-        return m_file_names.back();
-    }
-}
-
-std::string Inventory::next(const std::string& file_name) const
-{
-    auto s = config().path(file_name);
-    std::unique_lock<std::mutex> lock(m_mutex);
-
     // search in reverse since the file is likely at the end of the vector
-    auto rite = std::find(rbegin(m_file_names), rend(m_file_names), s);
-    if (rite != rend(m_file_names) && (rite != rbegin(m_file_names)))
+    auto rite = std::find(rbegin(names), rend(names), file_name);
+    if (rite != rend(names) && rite != rbegin(names))
     {
         return *--rite;
     }

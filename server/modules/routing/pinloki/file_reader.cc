@@ -224,7 +224,7 @@ maxsql::RplEvent FileReader::fetch_event()
     }
     else if (rpl.event_type() == STOP_EVENT)
     {
-        m_generate_rotate_to = m_inventory.next(m_read_pos.name);
+        m_generate_rotate_to = next_string(m_inventory.file_names(), m_read_pos.name);
         if (!m_generate_rotate_to.empty())
         {
             MXB_SINFO("STOP_EVENT in file " << m_read_pos.name
