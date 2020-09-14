@@ -72,6 +72,7 @@
             :title="dialogTitle"
             mode="change"
             :entityName="targetSelectItemType"
+            clearable
             :onClose="handleClose"
             :onCancel="handleClose"
             :handleSave="confirmChange"

@@ -87,30 +87,91 @@ void FileWriter::add_event(maxsql::RplEvent& rpl_event)     // FIXME, move into 
     {
         if (etype == ROTATE_EVENT)
         {
-            rotate_event(rpl_event.rotate());
+            m_rotate = rpl_event.rotate();
         }
     }
     else
     {
-        rpl_event.set_next_pos(m_current_pos.write_pos + rpl_event.buffer_size()
-                               + m_tx_buffer.str().size());
+        if (etype == FORMAT_DESCRIPTION_EVENT)
+        {
+            mxb_assert(m_in_transaction == false);
+            mxb_assert(m_rotate.file_name.empty() == false);
 
-        if (m_in_transaction)
-        {
-            m_tx_buffer.write(rpl_event.pBuffer(), rpl_event.buffer_size());
+            if (!open_for_appending(m_rotate, rpl_event))
+            {
+                perform_rotate(m_rotate);
+            }
+
+            m_rotate.file_name.clear();
         }
-        else if (etype == GTID_LIST_EVENT)
+
+        m_ignore_preamble = m_ignore_preamble
+            && (rpl_event.event_type() == GTID_LIST_EVENT
+                || rpl_event.event_type() == FORMAT_DESCRIPTION_EVENT
+                || rpl_event.event_type() == BINLOG_CHECKPOINT_EVENT);
+
+
+        if (!m_ignore_preamble)
         {
-            write_gtid_list(m_current_pos);
-        }
-        else if (etype != STOP_EVENT && etype != ROTATE_EVENT && etype != BINLOG_CHECKPOINT_EVENT)
-        {
-            write_to_file(m_current_pos, rpl_event);
+            rpl_event.set_next_pos(m_current_pos.write_pos + rpl_event.buffer_size()
+                                   + m_tx_buffer.str().size());
+
+            if (m_in_transaction)
+            {
+                m_tx_buffer.write(rpl_event.pBuffer(), rpl_event.buffer_size());
+            }
+            else if (etype == GTID_LIST_EVENT)
+            {
+                write_gtid_list(m_current_pos);
+            }
+            else if (etype != STOP_EVENT && etype != ROTATE_EVENT && etype != BINLOG_CHECKPOINT_EVENT)
+            {
+                write_to_file(m_current_pos, rpl_event);
+            }
         }
     }
 }
 
-void FileWriter::rotate_event(const maxsql::Rotate& rotate)
+bool FileWriter::open_for_appending(const maxsql::Rotate& rotate, const maxsql::RplEvent& fmt_event)
+{
+    if (!m_newborn)
+    {
+        return false;
+    }
+
+    m_newborn = false;
+
+    auto last_file_name = m_inventory.last();
+
+    if (last_file_name.empty())
+    {
+        return false;
+    }
+
+    std::ifstream log_file(last_file_name);
+    if (!log_file)
+    {
+        return false;
+    }
+
+    // Read the first event which is always a format event
+    long file_pos = pinloki::PINLOKI_MAGIC.size();
+    maxsql::RplEvent event = maxsql::read_event(log_file, &file_pos);
+
+    if (event == fmt_event)
+    {
+        m_ignore_preamble = true;
+        m_current_pos.name = last_file_name;
+        m_current_pos.file.open(m_current_pos.name, std::ios_base::in | std::ios_base::out
+                                | std::ios_base::binary);
+        m_current_pos.file.seekp(0, std::ios_base::end);
+        m_current_pos.write_pos = m_current_pos.file.tellp();
+    }
+
+    return m_ignore_preamble;
+}
+
+void FileWriter::perform_rotate(const maxsql::Rotate& rotate)
 {
     auto master_file_name = rotate.file_name;
     auto last_file_name = m_inventory.last();
@@ -178,8 +239,6 @@ void FileWriter::write_stop(const std::string& file_name)
     constexpr int HEADER_LEN = 19;
     const size_t EVENT_LEN = HEADER_LEN + 4;        // header plus crc
 
-    // TODO this probably always works, but the position should be read from
-    // the next_pos of the last event in the file.
     file.seekp(0, std::ios_base::end);
     const size_t end_pos = file.tellp();
 

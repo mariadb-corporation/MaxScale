@@ -399,7 +399,13 @@ module.exports = function () {
               "`"
           );
         } else if (err.error) {
-          return error(JSON.stringify(err.error, null, 4));
+          if (err.error.code == "ECONNREFUSED") {
+            return error("Could not connect to MaxScale");
+          } else if (err.error.code == "ESOCKETTIMEDOUT") {
+            return error("Connection to MaxScale timed out");
+          } else {
+            return error(JSON.stringify(err.error, null, 4));
+          }
         } else {
           return error("Undefined error: " + JSON.stringify(err, null, 4));
         }

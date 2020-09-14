@@ -84,4 +84,32 @@ describe('ResourceRelationships.vue', () => {
         expect(wrapper.vm.getSelectedItems()).to.be.an('array')
         expect(wrapper.vm.getSelectedItems()).to.be.deep.equals(mockupResourceItems)
     })
+
+    it(`Should pass the following props to select-dropdown`, () => {
+        const selectDropdown = wrapper.findComponent({ name: 'select-dropdown' })
+        const {
+            entityName,
+            items,
+            defaultItems,
+            multiple,
+            clearable,
+            required,
+        } = selectDropdown.vm.$props
+
+        const {
+            relationshipsType,
+            items: wrapperItems,
+            defaultItems: wrapperDefaultItems,
+            multiple: wrapperMultiple,
+            clearable: wrapperClearable,
+            required: wrapperRequired,
+        } = wrapper.vm.$props
+
+        expect(entityName).to.be.equals(relationshipsType)
+        expect(items).to.be.deep.equals(wrapperItems)
+        expect(defaultItems).to.be.deep.equals(wrapperDefaultItems)
+        expect(multiple).to.be.equals(wrapperMultiple)
+        expect(clearable).to.be.equals(wrapperClearable)
+        expect(required).to.be.equals(wrapperRequired)
+    })
 })

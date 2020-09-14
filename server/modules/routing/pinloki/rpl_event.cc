@@ -243,7 +243,7 @@ GtidEvent RplEvent::gtid_event() const
         commit_id = *((uint64_t*) dptr);
     }
 
-    return GtidEvent({domain_id, 0, sequence_nr}, flags, commit_id);
+    return GtidEvent({domain_id, m_server_id, sequence_nr}, flags, commit_id);
 }
 
 std::ostream& operator<<(std::ostream& os, const GtidEvent& ev)
@@ -364,7 +364,15 @@ maxsql::RplEvent read_event(std::istream& file, long* file_pos)
 
     maxsql::RplEvent rpl(std::move(raw));
 
-    *file_pos = rpl.next_event_pos();
+    if (*file_pos == rpl.next_event_pos())
+    {
+        file.seekg(0, std::ios_base::end);
+        *file_pos = file.tellg();
+    }
+    else
+    {
+        *file_pos = rpl.next_event_pos();
+    }
 
     return rpl;
 }

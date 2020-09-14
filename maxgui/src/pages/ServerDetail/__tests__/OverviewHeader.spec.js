@@ -142,6 +142,7 @@ describe('ServerDetail - OverviewHeader', () => {
             onCancel,
             itemsList,
             defaultItems,
+            clearable,
         } = selectDialog.vm.$props
         const {
             dialogTitle,
@@ -154,6 +155,7 @@ describe('ServerDetail - OverviewHeader', () => {
         expect(title).to.be.equals(dialogTitle)
         expect(mode).to.be.equals('change')
         expect(entityName).to.be.equals(targetSelectItemType)
+        expect(clearable).to.be.true
         expect(onClose).to.be.equals(wrapper.vm.handleClose)
         expect(onCancel).to.be.equals(wrapper.vm.handleClose)
         expect(handleSave).to.be.equals(wrapper.vm.confirmChange)

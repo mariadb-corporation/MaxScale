@@ -107,9 +107,16 @@ describe('ServerFormInput.vue', () => {
             .findAllComponents({ name: 'resource-relationships' })
             .at(1)
         // props
-        const { relationshipsType, items, multiple, defaultItems } = resourceRelationships.vm.$props
+        const {
+            relationshipsType,
+            items,
+            multiple,
+            defaultItems,
+            clearable,
+        } = resourceRelationships.vm.$props
 
         expect(relationshipsType).to.be.equals('monitors')
+        expect(clearable).to.be.true
         expect(items).to.be.deep.equals(wrapper.vm.monitorsList)
         expect(defaultItems).to.be.deep.equals(wrapper.vm.$data.defaultMonitorItems)
         expect(multiple).to.be.false
