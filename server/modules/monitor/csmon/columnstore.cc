@@ -53,6 +53,36 @@ const char* get_child_value(xmlNode* pNode, const char* zName)
 }
 
 bool get_value(xmlNode* pNode,
+               const char* zValue_name,
+               string* pValue,
+               json_t* pOutput)
+{
+    bool rv = false;
+
+    const char* zValue = get_child_value(pNode, zValue_name);
+
+    if (zValue)
+    {
+        *pValue = zValue;
+        rv = true;
+    }
+    else
+    {
+        static const char FORMAT[] =
+            "The Columnstore config does not contain the element '%s', or it lacks a value.";
+
+        MXS_ERROR(FORMAT, zValue_name);
+
+        if (pOutput)
+        {
+            mxs_json_error_append(pOutput, FORMAT, zValue_name);
+        }
+    }
+
+    return rv;
+}
+
+bool get_value(xmlNode* pNode,
                const char* zElement_name,
                const char* zValue_name,
                string* pValue,
@@ -209,6 +239,47 @@ Config::Config(const http::Response& response)
             mxb_assert(!true);
         }
     }
+}
+
+bool Config::get_value(const char* zValue_name,
+                       int* pRevision,
+                       json_t* pOutput) const
+{
+    bool rv = false;
+
+    if (ok())
+    {
+        xmlNode* pNode = xmlDocGetRootElement(this->sXml.get());
+
+        if (pNode)
+        {
+            string value;
+            rv = ::get_value(pNode, zValue_name, &value, pOutput);
+
+            if (rv)
+            {
+                *pRevision = atoi(value.c_str());
+            }
+        }
+        else
+        {
+            const char FORMAT[] = "'%s' queried, but Columnstore XML config is empty.";
+
+            if (pOutput)
+            {
+                mxs_json_error_append(pOutput, FORMAT, zValue_name);
+            }
+
+            MXS_ERROR(FORMAT, zValue_name);
+        }
+    }
+    else
+    {
+        assert(!true);
+        MXS_ERROR("'%s' queried of config that is not valid.", zValue_name);
+    }
+
+    return rv;
 }
 
 bool Config::get_value(const char* zElement_name,

@@ -61,6 +61,7 @@ bool services_from_array(json_t* pArray, ServiceVector* pServices);
 
 namespace xml
 {
+const char CONFIGREVISION[]        = "ConfigRevision";
 const char DBRM_CONTROLLER[]       = "DBRM_Controller";
 const char DDLPROC[]               = "DDLProc";
 const char DMLPROC[]               = "DMLProc";
@@ -282,6 +283,19 @@ public:
         return Result::ok() && sXml;
     }
 
+    bool get_revision(int* pRevision, json_t* pOutput = nullptr) const
+    {
+        return get_value(cs::xml::CONFIGREVISION, pRevision, pOutput);
+    }
+
+    int revision() const
+    {
+        int r = -1;
+        MXB_AT_DEBUG(bool rv=) get_revision(&r);
+        mxb_assert(rv);
+        return r;
+    }
+
     bool get_dbrm_controller_ip(std::string* pIp, json_t* pOutput = nullptr) const
     {
         return get_value(cs::xml::DBRM_CONTROLLER, cs::xml::IPADDR, pIp, pOutput);
@@ -303,9 +317,13 @@ public:
     std::unique_ptr<xmlDoc> sXml;
 
 private:
+    bool get_value(const char* zValue_name,
+                   int* pValue,
+                   json_t* pOutput) const;
+
     bool get_value(const char* zElement_name,
                    const char* zValue_name,
-                   std::string* pIp,
+                   std::string* pValue,
                    json_t* pOutput) const;
 };
 
