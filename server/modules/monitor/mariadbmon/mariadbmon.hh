@@ -226,12 +226,20 @@ private:
     struct ManualCommand
     {
     public:
-        using CmdMethod = std::function<bool (void)>;
+        struct Result
+        {
+            void deep_copy_from(const Result& rhs);
+
+            bool    success {false};
+            json_t* errors {nullptr};
+        };
+        using CmdMethod = std::function<Result (void)>;
         enum class ExecState
         {
             NONE,
             SCHEDULED,
             RUNNING,
+            DONE
         };
 
         std::mutex lock;    /* Reads and writes should happen while this lock is held. */
@@ -240,11 +248,9 @@ private:
         std::string            cmd_name;                    /* Name of current command */
         CmdMethod              method;                      /* Command implementation */
 
-        std::condition_variable cmd_complete_notifier;  /* Notified when the command has ran */
-        bool                    cmd_complete {false};   /* Guard variable for notifier */
+        std::condition_variable cmd_complete_notifier;      /* Notified when the command has ran */
 
-        bool    cmd_success {false};    /* Return value of command */
-        json_t* cmd_errors {nullptr};   /* Error storage */
+        Result cmd_result;      /* Result storage. Should only be read/written under the lock. */
     };
 
     class DNSResolver
@@ -372,6 +378,7 @@ private:
 
     // Base methods
     MariaDBMonitor(const std::string& name, const std::string& module);
+    ~MariaDBMonitor() override;
     bool configure(const mxs::ConfigParameters* params) override;
     bool set_replication_credentials(const mxs::ConfigParameters* params);
     void reset_server_info();
@@ -423,14 +430,14 @@ private:
     bool is_candidate_valid(MariaDBServer* cand, RequireRunning req_running, std::string* why_not = nullptr);
 
     // Cluster operation launchers
-    bool manual_switchover(SERVER* new_master, SERVER* current_master, json_t** error_out);
-    bool manual_failover(json_t** output);
-    bool manual_rejoin(SERVER* rejoin_cand_srv, json_t** output);
-    bool manual_reset_replication(SERVER* master_server, json_t** error_out);
-    bool manual_release_locks(json_t** error_out);
-    void handle_low_disk_space_master();
-    void handle_auto_failover();
-    void handle_auto_rejoin();
+    ManualCommand::Result manual_switchover(SERVER* new_master, SERVER* current_master);
+    ManualCommand::Result manual_failover();
+    ManualCommand::Result manual_rejoin(SERVER* rejoin_cand_srv);
+    ManualCommand::Result manual_reset_replication(SERVER* master_server);
+    ManualCommand::Result manual_release_locks();
+    void                  handle_low_disk_space_master();
+    void                  handle_auto_failover();
+    void                  handle_auto_rejoin();
 
     const MariaDBServer* slave_receiving_events(const MariaDBServer* demotion_target,
                                                 maxbase::Duration* event_age_out,

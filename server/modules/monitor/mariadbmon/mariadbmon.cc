@@ -645,12 +645,13 @@ void MariaDBMonitor::process_state_changes()
         // Run the command outside the lock. Enables checking result state while command is running.
         if (scheduled)
         {
-            bool cmd_success = command_method();
+            auto cmd_result = command_method();
             // Manual command ran, signal the sender to continue.
             lock.lock();
-            m_manual_cmd.exec_state.store(ExecState::NONE, mo_release);
-            m_manual_cmd.cmd_complete = true;
-            m_manual_cmd.cmd_success = cmd_success;
+            m_manual_cmd.exec_state.store(ExecState::DONE, mo_release);
+            // Remove any previous saved errors and replace with new ones.
+            json_decref(m_manual_cmd.cmd_result.errors);
+            m_manual_cmd.cmd_result = cmd_result;
             lock.unlock();
             m_manual_cmd.cmd_complete_notifier.notify_one();
         }
@@ -764,8 +765,8 @@ bool MariaDBMonitor::check_sql_files()
  * @param command Function object containing the method the monitor should execute.
  * @param cmd_name Command name, for logging
  * @param error_out Json error output
- * @return True if command execution was attempted. False if monitor was in an invalid state
- * to run the command.
+ * @return True if command execution succeeded. False if monitor was in an invalid state
+ * to run the command or command failed.
  */
 bool MariaDBMonitor::execute_manual_command(ManualCommand::CmdMethod command, const string& cmd_name,
                                             json_t** error_out)
@@ -776,19 +777,18 @@ bool MariaDBMonitor::execute_manual_command(ManualCommand::CmdMethod command, co
         // Wait for the result.
         std::unique_lock<std::mutex> lock(m_manual_cmd.lock);
         auto cmd_complete = [this] {
-                return m_manual_cmd.cmd_complete;
+                return m_manual_cmd.exec_state == ManualCommand::ExecState::DONE;
             };
         m_manual_cmd.cmd_complete_notifier.wait(lock, cmd_complete);
-        m_manual_cmd.cmd_complete = false;
 
-        // Append any stored errors to output. There should not be any existing errors in the error
-        // output.
+        // Copy results similar to fetch-results.
+        ManualCommand::Result res;
+        res.deep_copy_from(m_manual_cmd.cmd_result);
+
+        // There should not be any existing errors in the error output.
         mxb_assert(*error_out == nullptr);
-        *error_out = m_manual_cmd.cmd_errors;
-        m_manual_cmd.cmd_errors = nullptr;
-
-        rval = m_manual_cmd.cmd_success;
-        m_manual_cmd.cmd_success = false;
+        rval = res.success;
+        *error_out = res.errors;
     }
     return rval;
 }
@@ -819,17 +819,12 @@ bool MariaDBMonitor::schedule_manual_command(ManualCommand::CmdMethod command, c
         // The lock is not essential, but does remove dependency on variable write order.
         std::unique_lock<std::mutex> lock(m_manual_cmd.lock);
         seen_state = m_manual_cmd.exec_state.load(mo_acquire);
-        if (seen_state == ExecState::NONE)
+        if (seen_state == ExecState::NONE || seen_state == ExecState::DONE)
         {
             // Write the command. No need to signal monitor thread, as it checks for commands every loop.
             m_manual_cmd.method = std::move(command);
             m_manual_cmd.cmd_name = cmd_name;
-            m_manual_cmd.cmd_complete = false;
             m_manual_cmd.exec_state.store(ExecState::SCHEDULED, mo_release);
-
-            // Clear any previous results.
-            json_decref(m_manual_cmd.cmd_errors);
-            m_manual_cmd.cmd_errors = nullptr;
             cmd_sent = true;
         }
         else
@@ -841,7 +836,7 @@ bool MariaDBMonitor::schedule_manual_command(ManualCommand::CmdMethod command, c
         if (!cmd_sent)
         {
             auto seen_state_str = (seen_state == ExecState::SCHEDULED) ? "pending" : "running";
-            PRINT_MXS_JSON_ERROR(error_out, "Cannot run manual '%s' because previous '%s' is %s.",
+            PRINT_MXS_JSON_ERROR(error_out, "Cannot run manual %s, previous %s is still %s.",
                                  cmd_name.c_str(), current_cmd_name.c_str(), seen_state_str);
         }
     }
@@ -887,7 +882,7 @@ bool MariaDBMonitor::try_acquire_locks_this_tick()
 bool MariaDBMonitor::run_manual_switchover(SERVER* new_master, SERVER* current_master, json_t** error_out)
 {
     auto func = [this, new_master, current_master]() {
-            return manual_switchover(new_master, current_master, &m_manual_cmd.cmd_errors);
+            return manual_switchover(new_master, current_master);
         };
     return execute_manual_command(func, switchover_cmd, error_out);
 }
@@ -895,7 +890,7 @@ bool MariaDBMonitor::run_manual_switchover(SERVER* new_master, SERVER* current_m
 bool MariaDBMonitor::schedule_async_switchover(SERVER* new_master, SERVER* current_master, json_t** error_out)
 {
     auto func = [this, new_master, current_master]() {
-            return manual_switchover(new_master, current_master, &m_manual_cmd.cmd_errors);
+            return manual_switchover(new_master, current_master);
         };
     return schedule_manual_command(func, switchover_cmd, error_out);
 }
@@ -903,7 +898,7 @@ bool MariaDBMonitor::schedule_async_switchover(SERVER* new_master, SERVER* curre
 bool MariaDBMonitor::run_manual_failover(json_t** error_out)
 {
     auto func = [this]() {
-            return manual_failover(&m_manual_cmd.cmd_errors);
+            return manual_failover();
         };
     return execute_manual_command(func, failover_cmd, error_out);
 }
@@ -911,7 +906,7 @@ bool MariaDBMonitor::run_manual_failover(json_t** error_out)
 bool MariaDBMonitor::run_manual_rejoin(SERVER* rejoin_server, json_t** error_out)
 {
     auto func = [this, rejoin_server]() {
-            return manual_rejoin(rejoin_server, &m_manual_cmd.cmd_errors);
+            return manual_rejoin(rejoin_server);
         };
     return execute_manual_command(func, rejoin_cmd, error_out);
 }
@@ -919,7 +914,7 @@ bool MariaDBMonitor::run_manual_rejoin(SERVER* rejoin_server, json_t** error_out
 bool MariaDBMonitor::run_manual_reset_replication(SERVER* master_server, json_t** error_out)
 {
     auto func = [this, master_server]() {
-            return manual_reset_replication(master_server, &m_manual_cmd.cmd_errors);
+            return manual_reset_replication(master_server);
         };
     return execute_manual_command(func, reset_repl_cmd, error_out);
 }
@@ -927,7 +922,7 @@ bool MariaDBMonitor::run_manual_reset_replication(SERVER* master_server, json_t*
 bool MariaDBMonitor::run_release_locks(json_t** error_out)
 {
     auto func = [this]() {
-            return manual_release_locks(&m_manual_cmd.cmd_errors);
+            return manual_release_locks();
         };
     return execute_manual_command(func, release_locks_cmd, error_out);
 }
@@ -935,67 +930,59 @@ bool MariaDBMonitor::run_release_locks(json_t** error_out)
 bool MariaDBMonitor::fetch_async_results(json_t** output)
 {
     using ExecState = ManualCommand::ExecState;
-    auto seen_state = ExecState::NONE;
+    auto current_state = ExecState::NONE;
     string current_cmd_name;
-    bool command_complete = false;
-    bool command_success = false;
-    json_t* errors = nullptr;
+    ManualCommand::Result cmd_result;
 
     std::unique_lock<std::mutex> lock(m_manual_cmd.lock);
-    // Move the result fields to local variables under the lock.
-    seen_state = m_manual_cmd.exec_state.load(mo_acquire);
-    command_complete = m_manual_cmd.cmd_complete;
-    command_success = m_manual_cmd.cmd_success;
-    current_cmd_name = m_manual_cmd.cmd_name;
-    if (seen_state == ExecState::NONE)
+    // Copy the manual command related fields to local variables under the lock.
+    current_state = m_manual_cmd.exec_state.load(mo_acquire);
+    if (current_state != ExecState::NONE)
     {
-        if (command_complete)
+        current_cmd_name = m_manual_cmd.cmd_name;
+        if (current_state == ExecState::DONE)
         {
-            if (m_manual_cmd.cmd_errors)
-            {
-                errors = m_manual_cmd.cmd_errors;
-                m_manual_cmd.cmd_errors = nullptr;
-            }
-            m_manual_cmd.cmd_complete = false;
+            // Deep copy the json, as another manual command may start writing to the container
+            // right after mutex is released.
+            cmd_result.deep_copy_from(m_manual_cmd.cmd_result);
         }
     }
     lock.unlock();
 
-    bool rval = false;
     // The string contents here must match with GUI code.
-    if (seen_state == ExecState::NONE)
+    const char cmd_running_fmt[] = "No manual command results are available, %s is still %s.";
+    switch (current_state)
     {
-        if (command_complete)
+    case ExecState::NONE:
+        // Command has not been ran.
+        *output = mxs_json_error_append(*output, "No manual command results are available.");
+        break;
+
+    case ExecState::SCHEDULED:
+        PRINT_MXS_JSON_ERROR(output, cmd_running_fmt, current_cmd_name.c_str(), "pending");
+        break;
+
+    case ExecState::RUNNING:
+        PRINT_MXS_JSON_ERROR(output, cmd_running_fmt, current_cmd_name.c_str(), "running");
+        break;
+
+    case ExecState::DONE:
+        if (cmd_result.success)
         {
-            if (command_success)
-            {
-                *output = json_sprintf("%s completed successfully.", current_cmd_name.c_str());
-            }
-            else if (errors)
-            {
-                *output = errors;
-            }
-            else
-            {
-                // Command failed, but printed no results.
-                *output = json_sprintf("%s failed.", current_cmd_name.c_str());
-            }
-            rval = true;
+            *output = json_sprintf("%s completed successfully.", current_cmd_name.c_str());
+        }
+        else if (cmd_result.errors)
+        {
+            *output = cmd_result.errors;
         }
         else
         {
-            // Command has not been ran, or results have been already fetched or overwritten by another cmd.
-            *output = mxs_json_error_append(*output, "No manual command is scheduled or results "
-                                                     "have already been fetched.");
+            // Command failed, but printed no results.
+            *output = json_sprintf("%s failed.", current_cmd_name.c_str());
         }
+        break;
     }
-    else
-    {
-        auto seen_state_str = (seen_state == ExecState::SCHEDULED) ? "pending" : "running";
-        PRINT_MXS_JSON_ERROR(output, "No manual command results are available. %s is still %s.",
-                             current_cmd_name.c_str(), seen_state_str);
-    }
-    return rval;
+    return true;
 }
 
 bool MariaDBMonitor::cluster_operations_disabled_short() const
@@ -1068,9 +1055,16 @@ void MariaDBMonitor::execute_task_on_servers(const ServerFunction& task, const S
     task_complete.wait_n(servers.size());
 }
 
-bool MariaDBMonitor::manual_release_locks(json_t** error_out)
+MariaDBMonitor::ManualCommand::Result MariaDBMonitor::manual_release_locks()
 {
-    bool rval = false;
+    // Manual commands should only run in the main monitor thread.
+    mxb_assert(mxb::Worker::get_current()->id() == this->id());
+    mxb_assert(m_manual_cmd.exec_state == ManualCommand::ExecState::RUNNING);
+
+    ManualCommand::Result rval;
+    auto error_out = &rval.errors;
+
+    bool success = false;
     if (server_locks_in_use())
     {
         std::atomic_int released_locks {0};
@@ -1089,7 +1083,7 @@ bool MariaDBMonitor::manual_release_locks(json_t** error_out)
         if (released > 0)
         {
             MXS_NOTICE("Released %i lock(s). %s", released, LOCK_DELAY_MSG);
-            rval = true;
+            success = true;
         }
         else
         {
@@ -1100,12 +1094,26 @@ bool MariaDBMonitor::manual_release_locks(json_t** error_out)
     {
         PRINT_MXS_JSON_ERROR(error_out, "Server locks are not in use, cannot release them.");
     }
+    rval.success = success;
     return rval;
 }
 
 bool MariaDBMonitor::ClusterLocksInfo::time_to_update() const
 {
     return last_locking_attempt.split() > next_lock_attempt_delay;
+}
+
+MariaDBMonitor::~MariaDBMonitor()
+{
+    json_decref(m_manual_cmd.cmd_result.errors);
+}
+
+void MariaDBMonitor::ManualCommand::Result::deep_copy_from(const MariaDBMonitor::ManualCommand::Result& rhs)
+{
+    // If command succeeded, errors should be empty.
+    mxb_assert(!(rhs.success && rhs.errors));
+    success = rhs.success;
+    errors = json_deep_copy(rhs.errors);
 }
 
 /**
@@ -1263,7 +1271,8 @@ bool handle_fetch_async_results(const MODULECMD_ARG* args, json_t** output)
     mxb_assert(MODULECMD_GET_TYPE(&args->argv[0].type) == MODULECMD_ARG_MONITOR);
     Monitor* mon = args->argv[0].value.monitor;
     auto mariamon = static_cast<MariaDBMonitor*>(mon);
-    return mariamon->fetch_async_results(output);
+    mariamon->fetch_async_results(output);
+    return true;    // result fetch always works, even if there is nothing to return
 }
 
 string monitored_servers_to_string(const ServerArray& servers)
