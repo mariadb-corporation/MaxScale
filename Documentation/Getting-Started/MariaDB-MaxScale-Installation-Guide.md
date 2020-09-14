@@ -4,7 +4,7 @@
 
 Download the MaxScale package from the MariaDB Downloads page:
 
-* [https://mariadb.com/downloads/mariadb-tx/maxscale](https://mariadb.com/downloads/mariadb-tx/maxscale)
+* [https://mariadb.com/downloads/#mariadb_platform-mariadb_maxscale](https://mariadb.com/downloads/#mariadb_platform-mariadb_maxscale)
 
 Select your operating system and download either the RPM or the DEB package.
 
