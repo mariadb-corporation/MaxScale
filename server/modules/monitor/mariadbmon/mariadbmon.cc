@@ -845,7 +845,8 @@ bool MariaDBMonitor::schedule_manual_command(ManualCommand::CmdMethod command, c
 
 bool MariaDBMonitor::immediate_tick_required() const
 {
-    return m_manual_cmd.exec_state.load(mo_relaxed) == ManualCommand::ExecState::SCHEDULED;
+    return (m_manual_cmd.exec_state.load(mo_relaxed) == ManualCommand::ExecState::SCHEDULED)
+           || m_cluster_modified;
 }
 
 bool MariaDBMonitor::server_locks_in_use() const
