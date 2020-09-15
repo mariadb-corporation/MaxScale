@@ -906,14 +906,7 @@ HttpResponse cb_module(const HttpRequest& request)
     {
         const MXS_MODULE* module = get_module(request.last_uri_part().c_str(), NULL);
 
-        if (module->specification)
-        {
-            json = spec_module_to_json(request.host(), *module->specification);
-        }
-        else
-        {
-            json = module_to_json(module, request.host());
-        }
+        json = module_to_json(module, request.host());
     }
 
     return HttpResponse(MHD_HTTP_OK, json);

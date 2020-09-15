@@ -666,24 +666,11 @@ static json_t* module_param_to_json(const MXS_MODULE_PARAM& param)
     return p;
 }
 
-static json_t* module_json_data(const LOADED_MODULE* mod, const char* host)
+namespace
 {
-    json_t* obj = json_object();
 
-    json_object_set_new(obj, CN_ID, json_string(mod->module));
-    json_object_set_new(obj, CN_TYPE, json_string(CN_MODULES));
-
-    json_t* attr = json_object();
-    json_object_set_new(attr, "module_type", json_string(mod->type));
-    json_object_set_new(attr, "version", json_string(mod->info->version));
-    json_object_set_new(attr, CN_DESCRIPTION, json_string(mod->info->description));
-    json_object_set_new(attr, "api", json_string(mxs_module_api_to_string(mod->info->modapi)));
-    json_object_set_new(attr, "maturity", json_string(mxs_module_status_to_string(mod->info->status)));
-
-    json_t* commands = json_array();
-    cb_param p = {commands, mod->module, host};
-    modulecmd_foreach(mod->module, NULL, modulecmd_cb, &p);
-
+json_t* legacy_params_to_json(const LOADED_MODULE* mod)
+{
     json_t* params = json_array();
 
     for (int i = 0; mod->info->parameters[i].name; i++)
@@ -731,6 +718,40 @@ static json_t* module_json_data(const LOADED_MODULE* mod, const char* host)
                 json_array_append_new(params, module_param_to_json(extra[i]));
             }
         }
+    }
+
+    return params;
+}
+
+}
+
+static json_t* module_json_data(const LOADED_MODULE* mod, const char* host)
+{
+    json_t* obj = json_object();
+
+    json_object_set_new(obj, CN_ID, json_string(mod->module));
+    json_object_set_new(obj, CN_TYPE, json_string(CN_MODULES));
+
+    json_t* attr = json_object();
+    json_object_set_new(attr, "module_type", json_string(mod->type));
+    json_object_set_new(attr, "version", json_string(mod->info->version));
+    json_object_set_new(attr, CN_DESCRIPTION, json_string(mod->info->description));
+    json_object_set_new(attr, "api", json_string(mxs_module_api_to_string(mod->info->modapi)));
+    json_object_set_new(attr, "maturity", json_string(mxs_module_status_to_string(mod->info->status)));
+
+    json_t* commands = json_array();
+    cb_param p = {commands, mod->module, host};
+    modulecmd_foreach(mod->module, NULL, modulecmd_cb, &p);
+
+    json_t* params = nullptr;
+
+    if (mod->info->specification)
+    {
+        params = mod->info->specification->to_json();
+    }
+    else
+    {
+        params = legacy_params_to_json(mod);
     }
 
     json_object_set_new(attr, "commands", commands);
