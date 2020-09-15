@@ -607,6 +607,22 @@ string rest::create_url(const string& host,
     return url;
 }
 
+vector<string> rest::create_urls(const std::vector<std::string>& hosts,
+                                 int64_t port,
+                                 const std::string& rest_base,
+                                 Scope scope,
+                                 Action action)
+{
+    vector<string> urls;
+
+    for (const auto& host : hosts)
+    {
+        urls.push_back(create_url(host, port, rest_base, scope, action));
+    }
+
+    return urls;
+}
+
 namespace body
 {
 
@@ -774,6 +790,38 @@ Result fetch_cluster_status(const std::string& host,
     }
 
     return result;
+}
+
+bool fetch_configs(const std::vector<std::string>& hosts,
+                   int64_t admin_port,
+                   const std::string& admin_base_path,
+                   const mxb::http::Config& http_config,
+                   std::vector<Config>* pConfigs)
+{
+    auto urls = create_urls(hosts, admin_port, admin_base_path, rest::NODE, rest::CONFIG);
+    vector<http::Response> responses = http::get(urls, http_config);
+
+    mxb_assert(hosts.size() == responses.size());
+
+    bool rv = true;
+
+    vector<Config> configs;
+    for (auto& response : responses)
+    {
+        Config config(response);
+
+        if (!config.ok())
+        {
+            rv = false;
+        }
+
+        configs.emplace_back(std::move(config));
+    }
+
+    pConfigs->swap(configs);
+
+    return rv;
+
 }
 
 }

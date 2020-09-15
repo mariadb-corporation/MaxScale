@@ -114,6 +114,12 @@ inline std::string create_url(const mxs::MonitorServer& mserver,
     return create_url(*mserver.server, port, rest_base, scope, action);
 }
 
+std::vector<std::string> create_urls(const std::vector<std::string>& hosts,
+                                     int64_t port,
+                                     const std::string& rest_base,
+                                     Scope scope,
+                                     Action action);
+
 }
 
 namespace body
@@ -345,5 +351,22 @@ Result fetch_cluster_status(const std::string& host,
                             const std::string& admin_base_path,
                             const mxb::http::Config& http_config,
                             std::map<std::string, Status>* pRv);
+
+/**
+ * Fetch cluster config from several hosts
+ *
+ * @param hosts             The hostnames (or IPs) of the nodes.
+ * @param admin_port        The admin daemon port.
+ * @param admin_base_path   The base part of the REST URL.
+ * @param http_config       The http config to use.
+ * @param pConfigs          The configs of each host.
+ *
+ * @return True, if all configs could be fetched, false otherwise.
+ */
+bool fetch_configs(const std::vector<std::string>& hosts,
+                   int64_t admin_port,
+                   const std::string& admin_base_path,
+                   const mxb::http::Config& http_config,
+                   std::vector<Config>* pConfigs);
 
 }
