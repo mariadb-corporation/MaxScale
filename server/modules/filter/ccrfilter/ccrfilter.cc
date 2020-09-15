@@ -193,16 +193,7 @@ public:
 
     static CCRFilter* create(const char* name, mxs::ConfigParameters* params)
     {
-        CCRFilter* new_instance = nullptr;
-
-        CCRConfig config(name);
-
-        if (config.configure(*params))
-        {
-            new_instance = new(std::nothrow) CCRFilter(std::move(config));
-        }
-
-        return new_instance;
+        return new CCRFilter(name);
     }
 
     ~CCRFilter()
@@ -240,8 +231,8 @@ public:
     }
 
 private:
-    CCRFilter(CCRConfig&& config)
-        : m_config(std::move(config))
+    CCRFilter(const char* name)
+        : m_config(name)
     {
     }
 
