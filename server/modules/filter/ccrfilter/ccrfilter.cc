@@ -231,7 +231,7 @@ public:
 
     uint64_t getCapabilities() const
     {
-        return RCAP_TYPE_NONE;
+        return RCAP_TYPE_CONTIGUOUS_INPUT;
     }
 
     mxs::config::Configuration* getConfiguration()
