@@ -158,6 +158,9 @@ public:
     int64_t             promoted_at;                /**< Time when this Maxscale instance was
                                                     * promoted from a passive to an active */
 
+    using config::Configuration::configure;
+
+    // Overload that does some extra checks when starting up
     bool configure(const mxs::ConfigParameters& params,
                    mxs::ConfigParameters* pUnrecognized = nullptr) override;
 

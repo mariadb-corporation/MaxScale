@@ -2548,63 +2548,17 @@ bool runtime_alter_maxscale_from_json(json_t* json)
 
     if (validate_object_json(json))
     {
-        rval = true;
         json_t* params = mxs_json_pointer(json, MXS_JSON_PTR_PARAMETERS);
-        const char* key;
-        json_t* new_val;
+        json_t* new_params = merge_json_objects(mxs::Config::get().to_json(), params);
 
-        json_object_foreach(params, key, new_val)
-        {
-            if (ignored_core_parameters(key))
-            {
-                /** We can't change these at runtime */
-                MXS_INFO("Ignoring runtime change to '%s': Cannot be altered at runtime", key);
-            }
-            else
-            {
-                mxs::Config& cnf = mxs::Config::get();
-
-                if (auto item = cnf.find_value(key))
-                {
-                    std::unique_ptr<json_t> old_val(item->to_json());
-
-                    if (!json_equal(old_val.get(), new_val))
-                    {
-                        if (item->parameter().is_modifiable_at_runtime())
-                        {
-                            std::string message;
-
-                            if (item->set_from_json(new_val, &message))
-                            {
-                                MXS_NOTICE("Value of %s changed to %s", key, item->to_string().c_str());
-                            }
-                            else
-                            {
-                                MXS_ERROR("Invalid value for '%s': %s", key, mxs::json_dump(new_val).c_str());
-                                rval = false;
-                            }
-                        }
-                        else
-                        {
-                            MXS_ERROR("Global parameter '%s' cannot be modified at runtime", key);
-                            rval = false;
-                        }
-                    }
-                }
-                else
-                {
-                    MXS_ERROR("Unknown global parameter: %s", key);
-                    rval = false;
-                }
-            }
-        }
-
-        if (rval)
+        if (mxs::Config::get().configure(new_params))
         {
             std::ostringstream ss;
             mxs::Config::get().persist(ss);
             rval = runtime_save_config("maxscale", ss.str());
         }
+
+        json_decref(new_params);
     }
 
     return rval;
