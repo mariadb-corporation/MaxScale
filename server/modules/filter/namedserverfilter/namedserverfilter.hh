@@ -44,12 +44,9 @@ public:
     volatile unsigned int m_total_diverted {0};
     volatile unsigned int m_total_undiverted {0};
 
-    RegexHintFilter(const std::string& user,
-                    const SourceHostVector& source,
-                    const StringVector& hostnames,
-                    const MappingVector& map,
-                    int ovector_size);
+    RegexHintFilter() = default;
     ~RegexHintFilter();
+
     static RegexHintFilter* create(const char* zName, mxs::ConfigParameters* ppParams);
     RegexHintFSession*      newSession(MXS_SESSION* session, SERVICE* service);
     json_t*                 diagnostics() const;
@@ -67,19 +64,20 @@ public:
                                       MappingVector* mapping,
                                       uint32_t* max_capcount);
     static bool validate_ipv4_address(const char*);
-    static bool add_source_address(const char*, SourceHostVector&);
-    static void set_source_addresses(const std::string& input_host_names, SourceHostVector&, StringVector&);
     int         ovector_size() const;
 
 private:
-    const std::string m_user;           /* User name to restrict matches with */
-    SourceHostVector  m_sources;        /* Source addresses to restrict matches */
-    StringVector      m_hostnames;      /* Source hostnames to restrict matches */
-    MappingVector     m_mapping;        /* Regular expression to serverlist mapping */
-    const int         m_ovector_size;   /* Given to pcre2_match_data_create() */
+    std::string      m_user;            /* User name to restrict matches with */
+    SourceHostVector m_sources;         /* Source addresses to restrict matches */
+    StringVector     m_hostnames;       /* Source hostnames to restrict matches */
+    MappingVector    m_mapping;         /* Regular expression to serverlist mapping */
+    int              m_ovector_size {1};/* Given to pcre2_match_data_create() */
 
     bool check_source_host(const char* remote, const struct sockaddr_storage* ip);
-    bool check_source_hostnames(const char* remote, const struct sockaddr_storage* ip);
+    bool check_source_hostnames(const struct sockaddr_storage* ip);
+    bool configure(mxs::ConfigParameters* params);
+    void set_source_addresses(const std::string& input_host_names);
+    bool add_source_address(const std::string& input_host);
 };
 
 /**

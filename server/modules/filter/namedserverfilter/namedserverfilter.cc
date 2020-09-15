@@ -44,6 +44,8 @@
 #include <maxscale/server.hh>
 #include <maxscale/utils.h>
 
+using std::string;
+
 static void generate_param_names(int pairs);
 
 /* These arrays contain the allowed indexed config parameter names. match01,
@@ -62,19 +64,6 @@ static const MXS_ENUM_VALUE option_values[] =
 static const char MATCH_STR[] = "match";
 static const char SERVER_STR[] = "server";
 static const char TARGET_STR[] = "target";
-
-RegexHintFilter::RegexHintFilter(const std::string& user,
-                                 const SourceHostVector& addresses,
-                                 const StringVector& hostnames,
-                                 const MappingVector& mapping,
-                                 int ovector_size)
-    : m_user(user)
-    , m_sources(addresses)
-    , m_hostnames(hostnames)
-    , m_mapping(mapping)
-    , m_ovector_size(ovector_size)
-{
-}
 
 RegexHintFilter::~RegexHintFilter()
 {
@@ -115,16 +104,13 @@ int RegexHintFSession::routeQuery(GWBUF* queue)
     {
         if (modutil_extract_SQL(queue, &sql, &sql_len))
         {
-            const RegexToServers* reg_serv =
-                m_fil_inst.find_servers(sql, sql_len, m_match_data);
-
+            const RegexToServers* reg_serv = m_fil_inst.find_servers(sql, sql_len, m_match_data);
             if (reg_serv)
             {
                 /* Add the servers in the list to the buffer routing hints */
                 for (const auto& target : reg_serv->m_targets)
                 {
-                    queue->hint =
-                        hint_create_route(queue->hint, reg_serv->m_htype, target.c_str());
+                    queue->hint = hint_create_route(queue->hint, reg_serv->m_htype, target.c_str());
                 }
                 m_n_diverted++;
                 m_fil_inst.m_total_diverted++;
@@ -161,7 +147,7 @@ RegexHintFSession* RegexHintFilter::newSession(MXS_SESSION* session, SERVICE* se
     /* Don't check hostnames if ip is already found */
     if (!m_hostnames.empty() && !ip_found)
     {
-        session_active = check_source_hostnames(remote.c_str(), &remote_addr);
+        session_active = check_source_hostnames(&remote_addr);
     }
 
     /* Check client user against 'user' option */
@@ -234,82 +220,13 @@ uint64_t RegexHintFilter::getCapabilities()
  */
 RegexHintFilter* RegexHintFilter::create(const char* name, mxs::ConfigParameters* params)
 {
-    bool error = false;
-    SourceHostVector source_addresses;
-    StringVector source_hostnames;
-
-    std::string source = params->get_string("source");
-
-    if (!source.empty())
+    auto instance = new RegexHintFilter();
+    if (!instance->configure(params))
     {
-        set_source_addresses(source, source_addresses, source_hostnames);
+        delete instance;
+        instance = nullptr;
     }
-
-    int pcre_ops = params->get_enum("options", option_values);
-
-    std::string match_val_legacy = params->get_string(MATCH_STR);
-    std::string server_val_legacy = params->get_string(SERVER_STR);
-    const bool legacy_mode = (match_val_legacy.length() || server_val_legacy.length());
-
-    if (legacy_mode && (!match_val_legacy.length() || !server_val_legacy.length()))
-    {
-        MXS_ERROR("Only one of '%s' and '%s' is set. If using legacy mode, set both."
-                  "If using indexed parameters, set neither and use '%s01' and '%s01' etc.",
-                  MATCH_STR,
-                  SERVER_STR,
-                  MATCH_STR,
-                  TARGET_STR);
-        error = true;
-    }
-
-    MappingVector mapping;
-    uint32_t max_capcount;
-    /* Try to form the mapping with indexed parameter names */
-    form_regex_server_mapping(params, pcre_ops, &mapping, &max_capcount);
-
-    if (!legacy_mode && !mapping.size())
-    {
-        MXS_ERROR("Could not parse any indexed '%s'-'%s' pairs.", MATCH_STR, TARGET_STR);
-        error = true;
-    }
-    else if (legacy_mode && mapping.size())
-    {
-        MXS_ERROR("Found both legacy parameters and indexed parameters. Use only "
-                  "one type of parameters.");
-        error = true;
-    }
-    else if (legacy_mode && !mapping.size())
-    {
-        MXS_WARNING("Use of legacy parameters 'match' and 'server' is deprecated.");
-        /* Using legacy mode and no indexed parameters found. Add the legacy parameters
-         * to the mapping. */
-        if (!regex_compile_and_add(pcre_ops,
-                                   true,
-                                   match_val_legacy,
-                                   server_val_legacy,
-                                   &mapping,
-                                   &max_capcount))
-        {
-            error = true;
-        }
-    }
-
-    if (error)
-    {
-        return NULL;
-    }
-    else
-    {
-        RegexHintFilter* instance = NULL;
-        std::string user = params->get_string("user");
-        MXS_EXCEPTION_GUARD(instance =
-                                new RegexHintFilter(user,
-                                                    source_addresses,
-                                                    source_hostnames,
-                                                    mapping,
-                                                    max_capcount + 1));
-        return instance;
-    }
+    return instance;
 }
 
 /**
@@ -670,7 +587,7 @@ bool RegexHintFilter::check_source_host(const char* remote, const struct sockadd
     return rval;
 }
 
-bool RegexHintFilter::check_source_hostnames(const char* remote, const struct sockaddr_storage* ip)
+bool RegexHintFilter::check_source_hostnames(const struct sockaddr_storage* ip)
 {
     struct sockaddr_storage addr;
     memcpy(&addr, ip, sizeof(addr));
@@ -688,9 +605,7 @@ bool RegexHintFilter::check_source_hostnames(const char* remote, const struct so
     {
         if (strcmp(hbuf, host.c_str()) == 0)
         {
-            MXS_INFO("Client hostname %s matches host source %s",
-                     hbuf,
-                     host.c_str());
+            MXS_INFO("Client hostname %s matches host source %s", hbuf, host.c_str());
             return true;
         }
     }
@@ -714,9 +629,7 @@ bool RegexHintFilter::validate_ipv4_address(const char* host)
      * Start with dot not allowed
      * Host len can't be greater than INET_ADDRSTRLEN
      */
-    if (*host == '%'
-        || *host == '.'
-        || strlen(host) > INET_ADDRSTRLEN)
+    if (*host == '%' || *host == '.' || strlen(host) > INET_ADDRSTRLEN)
     {
         return false;
     }
@@ -757,14 +670,14 @@ bool RegexHintFilter::validate_ipv4_address(const char* host)
  * @param input_host    The config source parameter
  * @return              The filled struct with netmask, or null on error
  */
-bool RegexHintFilter::add_source_address(const char* input_host, SourceHostVector& source_hosts)
+bool RegexHintFilter::add_source_address(const std::string& input_host)
 {
     std::string address(input_host);
     struct sockaddr_in6 ipv6 = {};
     int netmask = 128;
     std::string format_host = address;
     /* If no wildcards, leave netmask to 128 and return */
-    if (strchr(input_host, '%') && validate_ipv4_address(input_host))
+    if (strchr(input_host.c_str(), '%') && validate_ipv4_address(input_host.c_str()))
     {
         size_t pos = 0;
         while ((pos = format_host.find('%', pos)) != std::string::npos)
@@ -791,26 +704,23 @@ bool RegexHintFilter::add_source_address(const char* input_host, SourceHostVecto
     {
         return false;
     }
-    source_hosts.emplace_back(address, ipv6, netmask);
+    m_sources.emplace_back(address, ipv6, netmask);
     return true;
 }
 
-void RegexHintFilter::set_source_addresses(const std::string& input_host_names,
-                                           SourceHostVector& source_hosts,
-                                           StringVector& hostnames)
+void RegexHintFilter::set_source_addresses(const std::string& host_names)
 {
-    std::string host_names(input_host_names);
-
-    for (auto host : mxs::strtok(host_names, ","))
+    for (const auto& host : mxs::strtok(host_names, ","))
     {
-        char* trimmed_host = mxb::trim((char*)host.c_str());
+        std::string trimmed_host = host;
+        mxb::trim(trimmed_host);
 
-        if (!add_source_address(trimmed_host, source_hosts))
+        if (!add_source_address(trimmed_host))
         {
             MXS_INFO("The given 'source' parameter '%s' is not a valid IP address. "
                      "adding it as hostname.",
-                     trimmed_host);
-            hostnames.emplace_back(trimmed_host);
+                     trimmed_host.c_str());
+            m_hostnames.emplace_back(trimmed_host);
         }
     }
 }
@@ -818,6 +728,65 @@ void RegexHintFilter::set_source_addresses(const std::string& input_host_names,
 int RegexHintFilter::ovector_size() const
 {
     return m_ovector_size;
+}
+
+bool RegexHintFilter::configure(mxs::ConfigParameters* params)
+{
+    m_user = params->get_string("user");
+
+    std::string source = params->get_string("source");
+    if (!source.empty())
+    {
+        set_source_addresses(source);
+    }
+
+    bool error = false;
+
+    int pcre_ops = params->get_enum("options", option_values);
+
+    std::string match_val_legacy = params->get_string(MATCH_STR);
+    std::string server_val_legacy = params->get_string(SERVER_STR);
+    const bool legacy_mode = (match_val_legacy.length() || server_val_legacy.length());
+
+    if (legacy_mode && (!match_val_legacy.length() || !server_val_legacy.length()))
+    {
+        MXS_ERROR("Only one of '%s' and '%s' is set. If using legacy mode, set both."
+                  "If using indexed parameters, set neither and use '%s01' and '%s01' etc.",
+                  MATCH_STR, SERVER_STR, MATCH_STR, TARGET_STR);
+        error = true;
+    }
+
+    MappingVector mapping;
+    uint32_t max_capcount;
+    /* Try to form the mapping with indexed parameter names */
+    form_regex_server_mapping(params, pcre_ops, &mapping, &max_capcount);
+
+    if (!legacy_mode && mapping.empty())
+    {
+        MXS_ERROR("Could not parse any indexed '%s'-'%s' pairs.", MATCH_STR, TARGET_STR);
+        error = true;
+    }
+    else if (legacy_mode && !mapping.empty())
+    {
+        MXS_ERROR("Found both legacy parameters and indexed parameters. Use only "
+                  "one type of parameters.");
+        error = true;
+    }
+    else if (legacy_mode && mapping.empty())
+    {
+        MXS_WARNING("Use of legacy parameters 'match' and 'server' is deprecated.");
+        /* Using legacy mode and no indexed parameters found. Add the legacy parameters
+         * to the mapping. */
+        if (!regex_compile_and_add(pcre_ops, true, match_val_legacy, server_val_legacy,
+                                   &mapping, &max_capcount))
+        {
+            error = true;
+        }
+    }
+
+    m_mapping = std::move(mapping);
+    m_ovector_size = max_capcount + 1;
+    return !error;
 }
 
 /**
