@@ -38,20 +38,11 @@ using SourceHostVector = std::vector<SourceHost>;
  */
 class RegexHintFilter : public maxscale::Filter<RegexHintFilter, RegexHintFSession>
 {
-private:
-    const std::string m_user;           /* User name to restrict matches with */
-    SourceHostVector  m_sources;        /* Source addresses to restrict matches */
-    StringVector      m_hostnames;      /* Source hostnames to restrict matches */
-    MappingVector     m_mapping;        /* Regular expression to serverlist mapping */
-    const int         m_ovector_size;   /* Given to pcre2_match_data_create() */
-
-    bool check_source_host(const char* remote, const struct sockaddr_storage* ip);
-    bool check_source_hostnames(const char* remote, const struct sockaddr_storage* ip);
 public:
     /* Total statements diverted statistics. Unreliable due to lockless yet
      * shared access. */
-    volatile unsigned int m_total_diverted;
-    volatile unsigned int m_total_undiverted;
+    volatile unsigned int m_total_diverted {0};
+    volatile unsigned int m_total_undiverted {0};
 
     RegexHintFilter(const std::string& user,
                     const SourceHostVector& source,
@@ -78,6 +69,17 @@ public:
     static bool validate_ipv4_address(const char*);
     static bool add_source_address(const char*, SourceHostVector&);
     static void set_source_addresses(const std::string& input_host_names, SourceHostVector&, StringVector&);
+    int         ovector_size() const;
+
+private:
+    const std::string m_user;           /* User name to restrict matches with */
+    SourceHostVector  m_sources;        /* Source addresses to restrict matches */
+    StringVector      m_hostnames;      /* Source hostnames to restrict matches */
+    MappingVector     m_mapping;        /* Regular expression to serverlist mapping */
+    const int         m_ovector_size;   /* Given to pcre2_match_data_create() */
+
+    bool check_source_host(const char* remote, const struct sockaddr_storage* ip);
+    bool check_source_hostnames(const char* remote, const struct sockaddr_storage* ip);
 };
 
 /**
@@ -85,23 +87,20 @@ public:
  */
 class RegexHintFSession : public maxscale::FilterSession
 {
-private:
-    MXS_SESSION*      m_session;        /* The main client session */
-    RegexHintFilter&  m_fil_inst;       /* Filter instance */
-    int               m_n_diverted;     /* No. of statements diverted */
-    int               m_n_undiverted;   /* No. of statements not diverted */
-    int               m_active;         /* Is filter active? */
-    pcre2_match_data* m_match_data;     /* compiled regex */
 public:
-    RegexHintFSession(MXS_SESSION* session,
-                      SERVICE* service,
-                      RegexHintFilter& filter,
-                      bool active,
-                      pcre2_match_data* md);
+    RegexHintFSession(MXS_SESSION* session, SERVICE* service, RegexHintFilter& filter, bool active);
     ~RegexHintFSession();
 
     json_t* diagnostics() const;
     int     routeQuery(GWBUF* buffer);
+
+private:
+    RegexHintFilter&  m_fil_inst;
+    pcre2_match_data* m_match_data {nullptr};
+
+    int m_n_diverted {0};       /* No. of statements diverted */
+    int m_n_undiverted {0};     /* No. of statements not diverted */
+    int m_active;               /* Is filter active? */
 };
 
 /* Storage class which maps a regex to a set of servers. Note that this struct

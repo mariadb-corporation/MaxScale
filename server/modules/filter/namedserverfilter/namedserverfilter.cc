@@ -73,8 +73,6 @@ RegexHintFilter::RegexHintFilter(const std::string& user,
     , m_hostnames(hostnames)
     , m_mapping(mapping)
     , m_ovector_size(ovector_size)
-    , m_total_diverted(0)
-    , m_total_undiverted(0)
 {
 }
 
@@ -86,18 +84,13 @@ RegexHintFilter::~RegexHintFilter()
     }
 }
 
-RegexHintFSession::RegexHintFSession(MXS_SESSION* session,
-                                     SERVICE* service,
-                                     RegexHintFilter& fil_inst,
-                                     bool active,
-                                     pcre2_match_data* md)
+RegexHintFSession::RegexHintFSession(MXS_SESSION* session, SERVICE* service, RegexHintFilter& filter,
+                                     bool active)
     : maxscale::FilterSession::FilterSession(session, service)
-    , m_fil_inst(fil_inst)
-    , m_n_diverted(0)
-    , m_n_undiverted(0)
+    , m_fil_inst(filter)
     , m_active(active)
-    , m_match_data(md)
 {
+    m_match_data = pcre2_match_data_create(m_fil_inst.ovector_size(), NULL);
 }
 
 RegexHintFSession::~RegexHintFSession()
@@ -154,35 +147,29 @@ int RegexHintFSession::routeQuery(GWBUF* queue)
  */
 RegexHintFSession* RegexHintFilter::newSession(MXS_SESSION* session, SERVICE* service)
 {
-    const char* remote = NULL;
-    const char* user = NULL;
-
-    pcre2_match_data* md = pcre2_match_data_create(m_ovector_size, NULL);
     bool session_active = true;
     bool ip_found = false;
 
     /* Check client IP against 'source' host option */
-    if ((remote = session_get_remote(session)) != NULL)
+    auto& remote = session->client_remote();
+    auto& remote_addr = session->client_connection()->dcb()->ip();
+    if (!m_sources.empty())
     {
-        if (m_sources.size() > 0)
-        {
-            ip_found = check_source_host(remote, &session->client_connection()->dcb()->ip());
-            session_active = ip_found;
-        }
-        /* Don't check hostnames if ip is already found */
-        if (m_hostnames.size() > 0 && ip_found == false)
-        {
-            session_active = check_source_hostnames(remote, &session->client_connection()->dcb()->ip());
-        }
+        ip_found = check_source_host(remote.c_str(), &remote_addr);
+        session_active = ip_found;
     }
+    /* Don't check hostnames if ip is already found */
+    if (!m_hostnames.empty() && !ip_found)
+    {
+        session_active = check_source_hostnames(remote.c_str(), &remote_addr);
+    }
+
     /* Check client user against 'user' option */
-    if (m_user.length() > 0
-        && ((user = session_get_user(session)) != NULL)
-        && (user != m_user))
+    if (!m_user.empty() && (m_user != session->user()))
     {
         session_active = false;
     }
-    return new RegexHintFSession(session, service, *this, session_active, md);
+    return new RegexHintFSession(session, service, *this, session_active);
 }
 
 /**
@@ -826,6 +813,11 @@ void RegexHintFilter::set_source_addresses(const std::string& input_host_names,
             hostnames.emplace_back(trimmed_host);
         }
     }
+}
+
+int RegexHintFilter::ovector_size() const
+{
+    return m_ovector_size;
 }
 
 /**
