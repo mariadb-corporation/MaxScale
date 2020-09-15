@@ -50,7 +50,7 @@ constexpr uint32_t opts = Opt::C | Opt::X | Opt::R | Opt::W;
 static cfg::Specification s_spec(MXS_MODULE_NAME, cfg::Specification::Kind::ROUTER);
 
 static cfg::ParamPath s_binlogdir(
-    &s_spec, "binlogdir", "Path to directory containing binlog files", opts);
+    &s_spec, "binlogdir", "Path to directory containing binlog files", opts, mxs::datadir());
 
 static cfg::ParamPath s_avrodir(
     &s_spec, "avrodir", "Path to directory where avro files are stored", opts);
