@@ -19,7 +19,6 @@ $colors: (
     'info': $info,
     'accent': $accent,
     'accent-dark': $accent-dark,
-    'table-header': $table-header,
     'table-border': $table-border,
     'text': $text,
     'small-text': $small-text,
@@ -35,12 +34,22 @@ $colors: (
     'code-color': $code-color,
     'electric-ele': $electric-ele,
     'field-text': $field-text,
+    'hovered-row': $table-row-hover,
+    'black': $black,
 );
 
 .color {
     @each $name, $value in $colors {
-        &.bg-#{$name} {
+        &.bg-color-#{$name} {
             background-color: $value !important;
+        }
+        &.bg-#{$name} {
+            background: $value !important;
+        }
+        &.bg-#{$name}__hovering {
+            &:hover {
+                background: $value !important;
+            }
         }
         &.text-#{$name} {
             color: $value !important;

@@ -3,7 +3,12 @@
         <portal to="page-header">
             <div class="d-flex align-center">
                 <v-btn class="ml-n4" icon @click="goBack">
-                    <v-icon class="mr-1" style="transform:rotate(90deg)" size="28" color="#013646">
+                    <v-icon
+                        class="mr-1"
+                        style="transform:rotate(90deg)"
+                        size="28"
+                        color="deep-ocean"
+                    >
                         $vuetify.icons.arrowDown
                     </v-icon>
                 </v-btn>
@@ -23,7 +28,7 @@
                             </v-btn>
                         </template>
 
-                        <div class="color bg-background d-inline-flex icon-wrapper-list">
+                        <div class="color bg-color-background d-inline-flex icon-wrapper-list">
                             <slot name="setting-menu"></slot>
                         </div>
                     </v-menu>

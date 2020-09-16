@@ -1,8 +1,8 @@
 <template>
     <v-navigation-drawer
         :mini-variant.sync="isMini"
-        color="#424F62"
-        class="main-nav"
+        color="navigation"
+        class="main-nav color bg-navigation"
         width="200"
         mini-variant-width="50"
         fixed
@@ -86,7 +86,6 @@ export default {
 <style lang="scss" scoped>
 .main-nav {
     z-index: 7;
-    background: $navigation;
     padding-top: 23px;
     .v-navigation-drawer__border {
         background-color: transparent !important;

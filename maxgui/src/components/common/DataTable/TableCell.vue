@@ -33,7 +33,7 @@
                 <v-icon
                     :class="[item.expanded === true ? 'arrow-up' : 'arrow-down']"
                     size="24"
-                    color="#013646"
+                    color="deep-ocean"
                 >
                     $expand
                 </v-icon>
@@ -41,13 +41,14 @@
 
             <!-- no content for the corresponding header, usually this is an error -->
             <span v-if="$help.isUndefined(item[header.value])"></span>
-            <span
+            <div
                 v-else
                 :id="`truncatedText_atRow${rowIndex}_atCell${cellIndex}_${componentId}`"
                 ref="truncatedTextAtRow"
+                class="d-inline"
             >
                 <slot :name="header.value" :data="{ item, header, cellIndex, rowIndex }" />
-            </span>
+            </div>
 
             <!-- Actions slot -->
             <div v-if="renderActionsSlot(rowIndex, cellIndex)" class="action-slot-wrapper">
@@ -115,10 +116,11 @@ export default {
     methods: {
         tdClasses(header, item, cellIndex) {
             return [
+                'color border-bottom-table-border text-navigation',
                 // for showing index number columns from item
                 this.hasOrderNumber &&
                     cellIndex === 0 &&
-                    'overline px-2 color border-right-table-border text-field-text',
+                    'overline px-2 border-right-table-border text-field-text',
                 // for rowspan feature
                 item.hidden && cellIndex < this.colsHasRowSpan && 'hide',
                 this.colsHasRowSpan &&
@@ -135,7 +137,7 @@ export default {
                 header.value,
                 header.align && `text-${header.align}`,
                 this.tdBorderLeft || cellIndex === this.colsHasRowSpan
-                    ? 'color border-left-table-border'
+                    ? 'border-left-table-border'
                     : '',
                 item.level > 0 || header.cellTruncated ? 'text-truncate cell-truncate' : '',
                 this.draggable && 'relative',

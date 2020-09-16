@@ -3,7 +3,7 @@
         <portal to="page-header">
             <h4
                 style="margin-bottom: 0px; line-height: normal;"
-                class="color text-navigation text-navigation display-1 text-capitalize"
+                class="color text-navigation display-1 text-capitalize"
             >
                 {{ pageTitle }}
             </h4>

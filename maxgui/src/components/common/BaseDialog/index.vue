@@ -1,7 +1,7 @@
 <template>
     <v-dialog
         v-model="computeShowDialog"
-        overlay-color="#424F62"
+        overlay-color="navigation"
         overlay-opacity="0.6"
         width="unset"
         content-class="base-dialog"
@@ -18,7 +18,7 @@
                     {{ title }}
                 </h3>
                 <v-btn v-if="!isForceAccept" class="close" icon @click="close">
-                    <v-icon size="20" color="#424F62"> $vuetify.icons.close</v-icon>
+                    <v-icon size="20" color="navigation"> $vuetify.icons.close</v-icon>
                 </v-btn>
             </v-card-title>
             <v-card-text class="v-card-text_padding">

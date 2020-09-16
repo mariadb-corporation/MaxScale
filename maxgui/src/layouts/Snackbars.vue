@@ -12,7 +12,7 @@
                 v-if="snackbar_message.type === 'info'"
                 class="mr-4 material-icons"
                 size="22"
-                color="white"
+                color="background"
             >
                 $vuetify.icons.statusInfo
             </v-icon>
@@ -20,7 +20,7 @@
                 v-else-if="snackbar_message.type === 'error'"
                 class="mr-4"
                 size="22"
-                color="white"
+                color="background"
             >
                 $vuetify.icons.alertError
             </v-icon>
@@ -28,7 +28,7 @@
                 v-else-if="snackbar_message.type === 'warning'"
                 class="mr-4"
                 size="22"
-                color="white"
+                color="background"
             >
                 $vuetify.icons.alertWarning
             </v-icon>

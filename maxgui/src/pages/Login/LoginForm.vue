@@ -2,7 +2,7 @@
     <v-card class="v-card-custom" style="max-width: 463px; z-index: 2;border-radius: 10px;">
         <v-card-text style="padding:60px 80px 0px" align-center>
             <div class="">
-                <h1 align="left" class="pb-4" style="color: #003545;">
+                <h1 align="left" class="pb-4 color text-deep-ocean">
                     {{ $t('welcome') }}
                 </h1>
                 <v-form

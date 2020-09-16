@@ -5,9 +5,10 @@
             outlined
             height="36"
             rounded
-            class="color text-accent-dark text-capitalize px-8 font-weight-medium"
+            class="text-capitalize px-8 font-weight-medium"
             depressed
             small
+            color="accent-dark"
             @click.native="create"
         >
             + {{ $t('createNew') }}

@@ -485,7 +485,7 @@ export default {
 }
 </script>
 
-<style lang="scss" scoped>
+<style lang="scss">
 .draggable-row:hover {
     background: transparent !important;
 }
@@ -499,5 +499,101 @@ export default {
 .sortable-ghost {
     background: #f2fcff !important;
     opacity: 0.6;
+}
+.data-table-full {
+    table {
+        thead {
+            tr {
+                box-shadow: -7px 5px 7px -7px rgba(0, 0, 0, 0.1) !important;
+                th {
+                    text-transform: uppercase;
+                    font-size: 11px;
+                    white-space: nowrap;
+                    &.active * {
+                        color: $black !important;
+                    }
+                    &:first-child {
+                        border-radius: 5px 0 0 0;
+                    }
+                    &:last-child {
+                        border-radius: 0 5px 0 0;
+                    }
+
+                    &:not(:last-child) {
+                        width: 1px;
+                    }
+                }
+                &:not(.v-data-table__progress) {
+                    th {
+                        padding: 0 25px;
+                    }
+                }
+            }
+        }
+
+        tbody {
+            tr:active:not(.v-data-table__expanded__content):not(.v-data-table__empty-wrapper):not(.v-data-table__editable-cell-mode) {
+                background: #f2fcff !important;
+            }
+            tr {
+                pointer-events: none !important;
+                td {
+                    padding: 0px 24px;
+                    pointer-events: all !important;
+                    height: 45px;
+                    white-space: nowrap;
+                    &:last-child:not(.hide) {
+                        border-right: thin solid $table-border;
+                    }
+                    &:first-child:not(.hide) {
+                        border-left: thin solid $table-border;
+                    }
+                }
+
+                &:hover {
+                    td.actions button {
+                        opacity: 1;
+                    }
+                }
+
+                &.last-row {
+                    td {
+                        border-bottom: thin solid $table-border;
+                        &:last-child {
+                            border-radius: 0 0 5px 0;
+                        }
+                        &:first-child {
+                            border-radius: 0 0 0 5px;
+                        }
+                    }
+                }
+            }
+            .v-data-table__empty-wrapper {
+                td {
+                    border-bottom: thin solid $table-border;
+                    border-radius: 0 0 5px 5px;
+                }
+            }
+            .v-data-table__editable-cell {
+                padding: 2px 10px;
+            }
+        }
+    }
+    .v-data-footer {
+        border-top: thin solid rgba(0, 0, 0, 0) !important;
+    }
+}
+.data-table-full--max-width-columns {
+    table {
+        thead {
+            tr {
+                th {
+                    &:not(:last-child) {
+                        width: unset;
+                    }
+                }
+            }
+        }
+    }
 }
 </style>

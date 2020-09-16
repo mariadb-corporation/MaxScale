@@ -1,5 +1,13 @@
 <template>
-    <v-app-bar height="50px" class="header pl-12 pr-2" fixed clipped-left app flat color="#003545">
+    <v-app-bar
+        height="50px"
+        class="header pl-12 pr-2"
+        fixed
+        clipped-left
+        app
+        flat
+        color="deep-ocean"
+    >
         <v-toolbar-title class="headline">
             <router-link to="/dashboard/servers">
                 <img src="@/assets/logo.svg" alt="MariaDB Logo" />
@@ -38,7 +46,7 @@
                 </v-btn>
             </template>
 
-            <v-list dark class="color bg-navigation">
+            <v-list dark class="color bg-color-navigation">
                 <v-list-item @click="handleLogout">
                     <v-list-item-title>{{ $t('logout') }}</v-list-item-title>
                 </v-list-item>

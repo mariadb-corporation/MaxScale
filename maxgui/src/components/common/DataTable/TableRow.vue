@@ -51,8 +51,6 @@ export default {
     },
 
     methods: {
-        //---------------------------------Internal styles and class bindings-------------------------------------------
-
         trClasses(rowIndex) {
             return {
                 // for styling and common class
@@ -61,33 +59,29 @@ export default {
                 'v-data-table__editable-cell-mode': this.editableCell,
                 // for row draggble feature
                 'draggable-row': this.draggable,
+                'color bg-hovered-row__hovering': true,
             }
         },
-        //---------------------------------For displaying actions btn/icon on table row---------------------------------
         onRowHover(e, index) {
             const { type } = e
-            let self = this
             switch (type) {
                 case 'mouseenter':
                     {
-                        self.indexOfHoveredRow = index
+                        this.indexOfHoveredRow = index
                         // positioning the drag handle to the center of the table row
-                        if (self.draggable) {
-                            let tableRowWidth = self.$refs.tableRow.clientWidth
-
+                        if (this.draggable) {
+                            let tableRowWidth = this.$refs.tableRow.clientWidth
                             let dragHandle = document.getElementsByClassName('drag-handle')
-
                             let center = `calc(100% - ${tableRowWidth / 2}px)`
-                            if (dragHandle.length && dragHandle[0].style.left !== center) {
-                                for (let i = 0; i < dragHandle.length; ++i) {
-                                    dragHandle[i].style.left = center
+                            if (dragHandle.length && dragHandle[0].style.left !== center)
+                                for (const item of dragHandle) {
+                                    item.style.left = center
                                 }
-                            }
                         }
                     }
                     break
                 case 'mouseleave':
-                    self.indexOfHoveredRow = null
+                    this.indexOfHoveredRow = null
                     break
             }
         },

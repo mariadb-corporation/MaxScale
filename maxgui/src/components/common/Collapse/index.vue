@@ -16,7 +16,7 @@
                     <v-icon
                         :class="[!isContentVisible ? 'arrow-down' : 'arrow-up']"
                         size="32"
-                        color="#013646"
+                        color="deep-ocean"
                     >
                         $expand
                     </v-icon>
