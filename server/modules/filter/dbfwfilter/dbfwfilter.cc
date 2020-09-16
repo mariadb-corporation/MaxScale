@@ -1211,6 +1211,9 @@ Dbfw::~Dbfw()
 
 Dbfw* Dbfw::create(const char* zName, mxs::ConfigParameters* pParams)
 {
+    MXS_NOTICE("The Database Firewall filter has been deprecated and will be removed "
+               "in MariaDB MaxScale 2.7.");
+
     Dbfw* rval = NULL;
     DbfwConfig config(zName);
 

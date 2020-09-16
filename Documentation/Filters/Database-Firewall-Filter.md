@@ -1,5 +1,7 @@
 # Database Firewall filter
 
+This filter is deprecated in MariaDB MaxScale 2.6 and will be removed in 2.7.
+
 Table of Contents
 =================
 

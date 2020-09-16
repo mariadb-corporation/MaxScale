@@ -14,6 +14,10 @@ report at [Jira](https://jira.mariadb.org).
 
 ## Deprecated Features
 
+### Database Firewall filter
+
+The filter is deprecated in 2.6 and will be removed in 2.7.
+
 ## New Features
 
 ## Bug fixes
