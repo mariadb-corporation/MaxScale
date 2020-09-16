@@ -65,14 +65,6 @@ static const char MATCH_STR[] = "match";
 static const char SERVER_STR[] = "server";
 static const char TARGET_STR[] = "target";
 
-RegexHintFilter::~RegexHintFilter()
-{
-    for (const auto& regex : m_mapping)
-    {
-        pcre2_code_free(regex.m_regex);
-    }
-}
-
 RegexHintFSession::RegexHintFSession(MXS_SESSION* session, SERVICE* service, RegexHintFilter& filter,
                                      bool active)
     : maxscale::FilterSession::FilterSession(session, service)
@@ -104,7 +96,7 @@ int RegexHintFSession::routeQuery(GWBUF* queue)
     {
         if (modutil_extract_SQL(queue, &sql, &sql_len))
         {
-            const RegexToServers* reg_serv = m_fil_inst.find_servers(sql, sql_len, m_match_data);
+            const RegexToServers* reg_serv = find_servers(sql, sql_len);
             if (reg_serv)
             {
                 /* Add the servers in the list to the buffer routing hints */
@@ -163,22 +155,15 @@ mxs::FilterSession* RegexHintFilter::newSession(MXS_SESSION* session, SERVICE* s
  *
  * @param sql   SQL-query string, not null-terminated
  * @paran sql_len   length of SQL-query
- * @param match_data    result container, from filter session
- * @return a set of servers from the main mapping container
+ * @return A set of servers from the main mapping container
  */
-const RegexToServers* RegexHintFilter::find_servers(char* sql, int sql_len, pcre2_match_data* match_data)
+const RegexToServers* RegexHintFSession::find_servers(char* sql, int sql_len)
 {
     /* Go through the regex array and find a match. */
-    for (auto& regex_map : m_mapping)
+    for (auto& regex_map : m_fil_inst.mapping())
     {
         pcre2_code* regex = regex_map.m_regex;
-        int result = pcre2_match(regex,
-                                 (PCRE2_SPTR)sql,
-                                 sql_len,
-                                 0,
-                                 0,
-                                 match_data,
-                                 NULL);
+        int result = pcre2_match(regex, (PCRE2_SPTR)sql, sql_len, 0, 0, m_match_data, nullptr);
         if (result >= 0)
         {
             /* Have a match. No need to check if the regex matches the complete
@@ -188,10 +173,10 @@ const RegexToServers* RegexHintFilter::find_servers(char* sql, int sql_len, pcre
         else if (result != PCRE2_ERROR_NOMATCH)
         {
             /* Error during matching */
-            if (!regex_map.m_error_printed)
+            if (!regex_map.m_error_printed.load(std::memory_order_relaxed))
             {
                 MXS_PCRE2_PRINT_ERROR(result);
-                regex_map.m_error_printed = true;
+                regex_map.m_error_printed.store(true, std::memory_order_relaxed);
             }
             return NULL;
         }
@@ -380,12 +365,23 @@ int RegexToServers::add_servers(const std::string& server_names, bool legacy_mod
     return error ? 0 : names_arr.size();
 }
 
-bool RegexHintFilter::regex_compile_and_add(int pcre_ops,
-                                            bool legacy_mode,
-                                            const std::string& match,
-                                            const std::string& servers,
-                                            MappingVector* mapping,
-                                            uint32_t* max_capcount)
+RegexToServers::RegexToServers(RegexToServers&& rhs) noexcept
+    : m_match(std::move(rhs.m_match))
+    , m_regex(rhs.m_regex)
+    , m_targets(std::move(rhs.m_targets))
+    , m_htype(rhs.m_htype)
+{
+    rhs.m_regex = nullptr;
+    m_error_printed = rhs.m_error_printed.load();
+}
+
+RegexToServers::~RegexToServers()
+{
+    pcre2_code_free(m_regex);
+}
+
+bool RegexHintFilter::regex_compile_and_add(int pcre_ops, bool legacy_mode, const std::string& match,
+                                            const std::string& servers)
 {
     bool success = true;
     int errorcode = -1;
@@ -416,7 +412,7 @@ bool RegexHintFilter::regex_compile_and_add(int pcre_ops,
             MXS_ERROR("Could not parse servers from string '%s'.", servers.c_str());
             success = false;
         }
-        mapping->push_back(regex_ser);
+        m_mapping.push_back(std::move(regex_ser));
 
         /* Check what is the required match_data size for this pattern. The
          * largest value is used to form the match data.
@@ -431,9 +427,10 @@ bool RegexHintFilter::regex_compile_and_add(int pcre_ops,
         }
         else
         {
-            if (capcount > *max_capcount)
+            int required_ovec_size = capcount + 1;
+            if (required_ovec_size > m_ovector_size)
             {
-                *max_capcount = capcount;
+                m_ovector_size = required_ovec_size;
             }
         }
     }
@@ -453,61 +450,64 @@ bool RegexHintFilter::regex_compile_and_add(int pcre_ops,
  *
  * @param params config parameters
  * @param pcre_ops options for pcre2_compile
- * @param mapping An array of regex->serverlist mappings for filling in. Is cleared on error.
- * @param max_capcount_out The maximum detected pcre2 capture count is written here.
  */
-void RegexHintFilter::form_regex_server_mapping(mxs::ConfigParameters* params,
-                                                int pcre_ops,
-                                                MappingVector* mapping,
-                                                uint32_t* max_capcount_out)
+void RegexHintFilter::form_regex_server_mapping(mxs::ConfigParameters* params, int pcre_ops)
 {
     mxb_assert(param_names_match_indexed.size() == param_names_target_indexed.size());
     bool error = false;
-    uint32_t max_capcount = 0;
-    *max_capcount_out = 0;
+
     /* The config parameters can be in any order and may be skipping numbers.
-     * Must just search for every possibility. Quite inefficient, but this is
-     * only done once. */
-    for (unsigned int i = 0; i < param_names_match_indexed.size(); i++)
+     * Must just search for every possibility. */
+    struct MatchAndTarget
     {
-        std::string param_name_match = param_names_match_indexed[i];
-        std::string param_name_target = param_names_target_indexed[i];
-        std::string match = params->get_string(param_name_match);
-        std::string target = params->get_string(param_name_target);
+        string match;
+        string target;
+    };
+    std::vector<MatchAndTarget> found_pairs;
 
-        /* Check that both the regex and server config parameters are found */
-        if (match.length() < 1 || target.length() < 1)
+    const char missing_setting[] = "'%s' does not have a matching '%s'.";
+    for (size_t i = 0; i < param_names_match_indexed.size(); i++)
+    {
+        string& param_name_match = param_names_match_indexed[i];
+        string& param_name_target = param_names_target_indexed[i];
+        string match = params->get_string(param_name_match);
+        string target = params->get_string(param_name_target);
+
+        /* Check that both the matchXY and targetXY settings are found. */
+        bool match_exists = !match.empty();
+        bool target_exists = !target.empty();
+
+        if (match_exists && target_exists)
         {
-            if (match.length() > 0)
-            {
-                MXS_ERROR("No server defined for regex setting '%s'.", param_name_match.c_str());
-                error = true;
-            }
-            else if (target.length() > 0)
-            {
-                MXS_ERROR("No regex defined for server setting '%s'.", param_name_target.c_str());
-                error = true;
-            }
-            continue;
+            found_pairs.emplace_back(MatchAndTarget {match, target});
         }
-
-        if (!regex_compile_and_add(pcre_ops, false, match, target, mapping, &max_capcount))
+        else if (match_exists)
         {
+            MXB_ERROR(missing_setting, param_name_match.c_str(), param_name_target.c_str());
             error = true;
+        }
+        else if (target_exists)
+        {
+            MXB_ERROR(missing_setting, param_name_target.c_str(), param_name_match.c_str());
+            error = true;
+        }
+    }
+
+    m_mapping.clear();
+    if (!error)
+    {
+        for (const auto& elem : found_pairs)
+        {
+            if (!regex_compile_and_add(pcre_ops, false, elem.match, elem.target))
+            {
+                error = true;
+            }
         }
     }
 
     if (error)
     {
-        for (unsigned int i = 0; i < mapping->size(); i++)
-        {
-            pcre2_code_free(mapping->at(i).m_regex);
-        }
-        mapping->clear();
-    }
-    else
-    {
-        *max_capcount_out = max_capcount;
+        m_mapping.clear();
     }
 }
 
@@ -745,7 +745,6 @@ bool RegexHintFilter::configure(mxs::ConfigParameters* params)
         set_source_addresses(source);
     }
 
-    bool error = false;
 
     int pcre_ops = params->get_enum("options", option_values);
 
@@ -753,6 +752,7 @@ bool RegexHintFilter::configure(mxs::ConfigParameters* params)
     std::string server_val_legacy = params->get_string(SERVER_STR);
     const bool legacy_mode = (match_val_legacy.length() || server_val_legacy.length());
 
+    bool error = false;
     if (legacy_mode && (!match_val_legacy.length() || !server_val_legacy.length()))
     {
         MXS_ERROR("Only one of '%s' and '%s' is set. If using legacy mode, set both."
@@ -761,37 +761,35 @@ bool RegexHintFilter::configure(mxs::ConfigParameters* params)
         error = true;
     }
 
-    MappingVector mapping;
-    uint32_t max_capcount;
-    /* Try to form the mapping with indexed parameter names */
-    form_regex_server_mapping(params, pcre_ops, &mapping, &max_capcount);
+    /* Try to form the mapping with indexed parameter names. */
+    form_regex_server_mapping(params, pcre_ops);
 
-    if (!legacy_mode && mapping.empty())
+    if (!legacy_mode && m_mapping.empty())
     {
         MXS_ERROR("Could not parse any indexed '%s'-'%s' pairs.", MATCH_STR, TARGET_STR);
         error = true;
     }
-    else if (legacy_mode && !mapping.empty())
+    else if (legacy_mode && !m_mapping.empty())
     {
-        MXS_ERROR("Found both legacy parameters and indexed parameters. Use only "
-                  "one type of parameters.");
+        MXS_ERROR("Found both legacy parameters and indexed parameters. Use only one type of parameters.");
         error = true;
     }
-    else if (legacy_mode && mapping.empty())
+    else if (legacy_mode && m_mapping.empty())
     {
         MXS_WARNING("Use of legacy parameters 'match' and 'server' is deprecated.");
         /* Using legacy mode and no indexed parameters found. Add the legacy parameters
          * to the mapping. */
-        if (!regex_compile_and_add(pcre_ops, true, match_val_legacy, server_val_legacy,
-                                   &mapping, &max_capcount))
+        if (!regex_compile_and_add(pcre_ops, true, match_val_legacy, server_val_legacy))
         {
             error = true;
         }
     }
-
-    m_mapping = std::move(mapping);
-    m_ovector_size = max_capcount + 1;
     return !error;
+}
+
+MappingVector& RegexHintFilter::mapping()
+{
+    return m_mapping;
 }
 
 /**

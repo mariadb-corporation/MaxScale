@@ -45,7 +45,6 @@ public:
     volatile unsigned int m_total_undiverted {0};
 
     RegexHintFilter() = default;
-    ~RegexHintFilter();
 
     static RegexHintFilter*     create(const char* zName, mxs::ConfigParameters* ppParams);
     mxs::FilterSession*         newSession(MXS_SESSION* session, SERVICE* service);
@@ -53,18 +52,8 @@ public:
     uint64_t                    getCapabilities() const;
     mxs::config::Configuration* getConfiguration();
 
-    const RegexToServers* find_servers(char* sql, int sql_len, pcre2_match_data* mdata);
+    MappingVector&          mapping();
 
-    static void form_regex_server_mapping(mxs::ConfigParameters* params,
-                                          int pcre_ops,
-                                          MappingVector* mapping,
-                                          uint32_t* max_capcount_out);
-    static bool regex_compile_and_add(int pcre_ops,
-                                      bool legacy_mode,
-                                      const std::string& match,
-                                      const std::string& servers,
-                                      MappingVector* mapping,
-                                      uint32_t* max_capcount);
     static bool validate_ipv4_address(const char*);
     int         ovector_size() const;
 
@@ -80,6 +69,9 @@ private:
     bool configure(mxs::ConfigParameters* params);
     void set_source_addresses(const std::string& input_host_names);
     bool add_source_address(const std::string& input_host);
+    void form_regex_server_mapping(mxs::ConfigParameters* params, int pcre_ops);
+    bool regex_compile_and_add(int pcre_ops, bool legacy_mode, const std::string& match,
+                               const std::string& servers);
 };
 
 /**
@@ -101,25 +93,32 @@ private:
     int m_n_diverted {0};       /* No. of statements diverted */
     int m_n_undiverted {0};     /* No. of statements not diverted */
     int m_active;               /* Is filter active? */
+
+    const RegexToServers* find_servers(char* sql, int sql_len);
 };
 
 /* Storage class which maps a regex to a set of servers. Note that this struct
  * does not manage the regex memory. That is done by the filter instance. */
 struct RegexToServers
 {
-    std::string   m_match;          /* Regex in text form */
-    pcre2_code*   m_regex;          /* Compiled regex */
-    StringVector  m_targets;        /* List of target servers. */
-    HINT_TYPE     m_htype;          /* For special hint types */
-    volatile bool m_error_printed;  /* Has an error message about
-                                     * matching this regex been printed yet? */
+    RegexToServers(const RegexToServers&) = delete;
+    RegexToServers& operator=(const RegexToServers&) = delete;
+
+    std::string  m_match;                               /* Regex in text form */
+    pcre2_code*  m_regex {nullptr};                     /* Compiled regex */
+    StringVector m_targets;                             /* List of target servers. */
+    HINT_TYPE    m_htype {HINT_ROUTE_TO_NAMED_SERVER};  /* Hint type */
+
+    /* Has an error message about matching this regex been printed yet? */
+    std::atomic_bool m_error_printed {false};
+
     RegexToServers(const std::string& match, pcre2_code* regex)
         : m_match(match)
         , m_regex(regex)
-        , m_htype(HINT_ROUTE_TO_NAMED_SERVER)
-        , m_error_printed(false)
     {
     }
+    RegexToServers(RegexToServers&& rhs) noexcept;
+    ~RegexToServers();
 
     int add_servers(const std::string& server_names, bool legacy_mode);
 };
