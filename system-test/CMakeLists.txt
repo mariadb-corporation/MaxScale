@@ -198,9 +198,6 @@ add_test_executable(router_conn_num.cpp router_conn_num replication LABELS readw
 # Regression: Crash if no slave available
 add_test_executable(router_slaves_blocked.cpp router_slaves_blocked replication LABELS readwritesplit REPL_BACKEND)
 
-# Regression case for the bug "crash if max_slave_connections=10% and 4 or less backends are configured"
-add_test_executable(rwsplit_not_enough_servers.cpp rwsplit_not_enough_servers rwsplit_not_enough_servers LABELS readwritesplit REPL_BACKEND)
-
 # Regression case for the bug ""Different error messages from MariaDB and Maxscale"
 add_test_executable(error_messages.cpp error_messages replication LABELS MySQLAuth REPL_BACKEND)
 
