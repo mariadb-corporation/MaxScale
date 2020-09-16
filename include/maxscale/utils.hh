@@ -577,6 +577,12 @@ std::string checksum(uint8_t* ptr, size_t len)
     return cksum.hex();
 }
 
+template<class T>
+std::string checksum(const std::string& str)
+{
+    return checksum<T>((uint8_t*)str.c_str(), str.size());
+}
+
 /**
  * Read bytes into a 64-bit unsigned integer.
  *
