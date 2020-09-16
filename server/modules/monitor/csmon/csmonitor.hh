@@ -82,6 +82,8 @@ private:
     void persist(const CsDynamicServer& node) override final;
     void unpersist(const CsDynamicServer& node) override final;
 
+    void remove_dynamic_host(const std::string& host);
+
 private:
     bool ready_to_run(json_t** ppOutput) const;
     static bool is_valid_json(json_t** ppOutput, const char* zJson, size_t len);
@@ -136,12 +138,15 @@ private:
     void check_cluster(const HostPortPairs&);
     void check_cluster(const Hosts& hosts,
                        const StatusByHost& status_by_host);
+    void check_fuzzy_cluster(const HostsByHost& hosts_by_host);
 
     bool check_bootstrap_servers();
     bool remove_persisted_information();
     bool persist_bootstrap_servers();
 
     void populate_from_bootstrap_servers();
+
+    bool fetch_configs(const std::vector<std::string>& hosts, std::vector<cs::Config>* pConfigs);
 
     CsContext                                               m_context;
     std::map<std::string, std::unique_ptr<CsDynamicServer>> m_nodes_by_id;

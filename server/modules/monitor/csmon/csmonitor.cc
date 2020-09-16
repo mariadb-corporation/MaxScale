@@ -940,26 +940,29 @@ void CsMonitor::persist(const CsDynamicServer& node)
 
 void CsMonitor::unpersist(const CsDynamicServer& node)
 {
+    remove_dynamic_host(node.address());
+}
+
+void CsMonitor::remove_dynamic_host(const std::string& host)
+{
     if (!m_pDb)
     {
         return;
     }
 
-    string id = node.address();
+    char sql_delete[sizeof(SQL_DN_DELETE_FORMAT) + host.length()];
 
-    char sql_delete[sizeof(SQL_DN_UPSERT_FORMAT) + id.length()];
-
-    sprintf(sql_delete, SQL_DN_DELETE_FORMAT, id.c_str());
+    sprintf(sql_delete, SQL_DN_DELETE_FORMAT, host.c_str());
 
     char* pError = nullptr;
     if (sqlite3_exec(m_pDb, sql_delete, nullptr, nullptr, &pError) == SQLITE_OK)
     {
-        MXS_INFO("Deleted Columnstore node %s from bookkeeping.", id.c_str());
+        MXS_INFO("Deleted Columnstore node %s from bookkeeping.", host.c_str());
     }
     else
     {
         MXS_ERROR("Could not delete Columnstore node %s from bookkeeping: %s",
-                  id.c_str(), pError ? pError : "Unknown error");
+                  host.c_str(), pError ? pError : "Unknown error");
     }
 }
 
@@ -1451,7 +1454,21 @@ void CsMonitor::pre_tick()
 {
     if (m_context.config().dynamic_node_detection)
     {
-        check_cluster();
+        if (m_nodes_by_id.empty())
+        {
+            check_cluster();
+        }
+        else
+        {
+            HostPortPairs nodes;
+            for (const auto& kv : m_nodes_by_id)
+            {
+                auto* pMs = kv.second.get();
+                nodes.push_back(HostPortPair(pMs->address(), pMs->port()));
+            }
+
+            check_cluster(nodes);
+        }
     }
 }
 
@@ -1526,35 +1543,42 @@ void CsMonitor::check_cluster(const Hosts& hosts, const StatusByHost& status_by_
             if (it == m_nodes_by_id.end())
             {
                 string server_name = string("@@") + m_name + ":node-" + host;
-                mxb_assert(!SERVER::find_by_unique_name(server_name));
 
-                if (runtime_create_volatile_server(server_name, host, 3306))
+                SERVER* pServer = SERVER::find_by_unique_name(server_name);
+
+                if (!pServer)
                 {
-                    SERVER* pServer = SERVER::find_by_unique_name(server_name);
-                    mxb_assert(pServer);
+                    if (runtime_create_volatile_server(server_name, host, 3306))
+                    {
+                        pServer = SERVER::find_by_unique_name(server_name);
 
+                        // New server, so it needs to be added to all services that
+                        // use this monitor for defining its cluster of servers.
+                        run_in_mainworker([this, pServer]() {
+                                service_add_server(this, pServer);
+                            });
+                    }
+                    else
+                    {
+                        MXS_ERROR("%s: Could not create server %s at %s:%d.",
+                                  name(), server_name.c_str(), host.c_str(), mysql_port);
+                    }
+                }
+
+                mxb_assert(pServer);
+
+                if (pServer)
+                {
                     CsDynamicServer* pMs = new CsDynamicServer(this, pServer,
                                                                this->settings().shared, &m_context);
 
                     set_status(*pMs, status_mask);
 
                     m_nodes_by_id.insert(make_pair(host, pMs));
-
-                    // New server, so it needs to be added to all services that
-                    // use this monitor for defining its cluster of servers.
-                    run_in_mainworker([this, pServer]() {
-                            service_add_server(this, pServer);
-                        });
-                }
-                else
-                {
-                    MXS_ERROR("%s: Could not create server %s at %s:%d.",
-                              name(), server_name.c_str(), host.c_str(), mysql_port);
                 }
             }
             else
             {
-                MXS_NOTICE("Node %s detected alredy.", host.c_str());
                 current_hosts.erase(host);
 
                 auto& sMs = it->second;
@@ -1586,6 +1610,7 @@ void CsMonitor::check_cluster(const HostPortPairs& nodes)
 
     map<string,Status> status_by_host;
     map<string, set<string>> hosts_by_host;
+    vector<string> hosts_to_remove;
 
     for (const auto& kv1 : nodes)
     {
@@ -1606,30 +1631,63 @@ void CsMonitor::check_cluster(const HostPortPairs& nodes)
                 hosts.insert(kv2.first);
             }
 
-            if (!hosts.empty() && !hosts_by_host.empty())
+            if (hosts.count(host) != 0)
             {
-                auto it = hosts_by_host.begin();
-
-                if (hosts != it->second)
+                if (!hosts.empty() && !hosts_by_host.empty())
                 {
-                    MXS_WARNING("Node %s thinks the cluster consists of %s, while %s thinks "
-                                "it consists of %s.",
-                                host.c_str(), mxb::join(hosts).c_str(),
-                                it->first.c_str(), mxb::join(it->second).c_str());
-                    identical = false;
-                }
-            }
+                    auto it = hosts_by_host.begin();
 
-            hosts_by_host.insert(make_pair(host, hosts));
+                    if (hosts != it->second)
+                    {
+                        MXS_WARNING("Node %s thinks the cluster consists of %s, while %s thinks "
+                                    "it consists of %s.",
+                                    host.c_str(), mxb::join(hosts).c_str(),
+                                    it->first.c_str(), mxb::join(it->second).c_str());
+                        identical = false;
+                    }
+                }
+
+                hosts_by_host.insert(make_pair(host, hosts));
+            }
+            else
+            {
+                MXS_WARNING("Host %s thinks the cluster consists of %s, that is, "
+                            "it is not included in it. Taking its word for it.",
+                            host.c_str(), mxb::join(hosts).c_str());
+                hosts_to_remove.push_back(host);
+            }
         }
         else
         {
             MXS_ERROR("Could not fetch cluster status information from %s.", host.c_str());
+            hosts_to_remove.push_back(host);
+        }
+    }
+
+    if (!hosts_to_remove.empty())
+    {
+        for (const auto& host : hosts_to_remove)
+        {
+            auto it = m_nodes_by_id.find(host);
+
+            if (it != m_nodes_by_id.end())
+            {
+                auto& sServer = it->second;
+                sServer->set_excluded();
+
+                m_nodes_by_id.erase(it);
+            }
+            else
+            {
+                remove_dynamic_host(host);
+            }
         }
     }
 
     if (identical)
     {
+        // status_by_host was fetched from some host, but that's ok as we know everyone
+        // had an identical view of the cluster.
         check_cluster(!hosts_by_host.empty() ? hosts_by_host.begin()->second : Hosts(),
                       status_by_host);
     }
@@ -1637,9 +1695,77 @@ void CsMonitor::check_cluster(const HostPortPairs& nodes)
     {
         MXS_NOTICE("Nodes have different opinion regarding what nodes the cluster contains. "
                    "Figuring out whose opinion should count.");
-        mxb_assert(!true);
 
-        // TODO: Figure out cluster configuration.
+        check_fuzzy_cluster(hosts_by_host);
+    }
+}
+
+void CsMonitor::check_fuzzy_cluster(const HostsByHost& hosts_by_host)
+{
+    vector<string> hosts;
+    for (const auto& kv : hosts_by_host)
+    {
+        hosts.push_back(kv.first);
+    }
+
+    vector<cs::Config> configs;
+    if (fetch_configs(hosts, &configs))
+    {
+        set<int> revisions;
+        int max_revision = -1;
+
+        size_t i = 0;
+        auto it = hosts.begin();
+        auto jt = configs.begin();
+
+        while (it != hosts.end())
+        {
+            const auto& config = *jt;
+
+            int revision = config.revision();
+            revisions.insert(revision);
+
+            if (revision > max_revision)
+            {
+                i = it - hosts.begin();
+                max_revision = revision;
+            }
+
+            ++it;
+            ++jt;
+        }
+
+        if (revisions.size() == 1)
+        {
+            MXS_ERROR("All nodes claim to be of revision %d, yet their view of the cluster "
+                      "is different.", max_revision);
+        }
+        else
+        {
+            string host = hosts[i];
+            MXB_NOTICE("Using %s as defining node.", host.c_str());
+
+            map<string,Status> status_by_host;
+            const auto& config = m_context.config();
+            auto result = cs::fetch_cluster_status(host,
+                                                   config.admin_port, config.admin_base_path,
+                                                   m_context.http_config(),
+                                                   &status_by_host);
+
+            if (result.ok())
+            {
+                check_cluster(hosts_by_host.at(host), status_by_host);
+            }
+            else
+            {
+                MXS_ERROR("Could not fetch cluster status from %s.", host.c_str());
+            }
+        }
+    }
+    else
+    {
+        MXS_ERROR("Could not fetch configs from all hosts, cannot figure out "
+                  "whose config to use.");
     }
 }
 
@@ -1765,4 +1891,15 @@ void CsMonitor::populate_from_bootstrap_servers()
                 service_add_server(this, pServer);
             });
     }
+}
+
+bool CsMonitor::fetch_configs(const std::vector<std::string>& hosts, std::vector<Config>* pConfigs)
+{
+    const auto& config = m_context.config();
+
+    return cs::fetch_configs(hosts,
+                             config.admin_port,
+                             config.admin_base_path,
+                             m_context.http_config(),
+                             pConfigs);
 }
