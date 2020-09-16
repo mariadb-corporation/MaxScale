@@ -2550,8 +2550,22 @@ bool runtime_alter_maxscale_from_json(json_t* json)
     {
         json_t* params = mxs_json_pointer(json, MXS_JSON_PTR_PARAMETERS);
         json_t* new_params = merge_json_objects(mxs::Config::get().to_json(), params);
+        auto& cfg = mxs::Config::get();
 
-        if (mxs::Config::get().configure(new_params))
+        // TODO: Don't strip out these parameters and define them in the core specification instead.
+        const char* key;
+        json_t* value;
+        void* ptr;
+
+        json_object_foreach_safe(new_params, ptr, key, value)
+        {
+            if (ignored_core_parameters(key))
+            {
+                json_object_del(new_params, key);
+            }
+        }
+
+        if (cfg.specification().validate(new_params) && cfg.configure(new_params))
         {
             std::ostringstream ss;
             mxs::Config::get().persist(ss);
