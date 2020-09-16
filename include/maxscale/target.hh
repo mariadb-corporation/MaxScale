@@ -52,6 +52,7 @@ extern const char* DEFAULT_RANK;
 // Bits used by MariaDB Monitor (mostly)
 #define SERVER_SLAVE_OF_EXT_MASTER (1 << 10)    /**<< Server is slave of a non-monitored master */
 #define SERVER_RELAY               (1 << 11)    /**<< Server is a relay */
+#define SERVER_BLR                 (1 << 12)    /**<< Server is a replicating binlog router */
 // Bits used by other monitors
 #define SERVER_JOINED            (1 << 20)      /**<< The server is joined in a Galera cluster */
 #define SERVER_MASTER_STICKINESS (1 << 21)      /**<< Server Master stickiness */
@@ -99,6 +100,11 @@ inline bool status_is_slave(uint64_t status)
 inline bool status_is_relay(uint64_t status)
 {
     return (status & (SERVER_RUNNING | SERVER_RELAY | SERVER_MAINT)) == (SERVER_RUNNING | SERVER_RELAY);
+}
+
+inline bool status_is_blr(uint64_t status)
+{
+    return (status & (SERVER_RUNNING | SERVER_BLR | SERVER_MAINT)) == (SERVER_RUNNING | SERVER_BLR);
 }
 
 inline bool status_is_joined(uint64_t status)

@@ -167,7 +167,7 @@ public:
     // When a monitor detects that a server is down, these bits should be cleared.
     static constexpr uint64_t SERVER_DOWN_CLEAR_BITS {SERVER_RUNNING | SERVER_AUTH_ERROR | SERVER_MASTER
                                                       | SERVER_SLAVE | SERVER_SLAVE_OF_EXT_MASTER
-                                                      | SERVER_RELAY | SERVER_JOINED};
+                                                      | SERVER_RELAY | SERVER_JOINED | SERVER_BLR};
 
     /**
      * Ping or connect to a database. If connection does not exist or ping fails, a new connection
@@ -277,6 +277,8 @@ public:
 
     void add_status_request(StatusRequest request);
     void apply_status_requests();
+
+    bool is_database() const;
 
     SERVER* server = nullptr;       /**< The server being monitored */
     MYSQL*  con = nullptr;          /**< The MySQL connection */

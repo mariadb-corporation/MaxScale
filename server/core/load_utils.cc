@@ -385,8 +385,13 @@ void* load_module(const char* module, const char* type)
                         mod_info->thread_init();
                     }, mxs::RoutingWorker::EXECUTE_AUTO);
 
-                mxb_assert(mxs::MainWorker::is_main_worker());
-                mod_info->thread_init();
+                if (mxs::MainWorker::created())
+                {
+                    mxs::MainWorker::get()->call(
+                        [mod_info]() {
+                            mod_info->thread_init();
+                        }, mxb::Worker::EXECUTE_AUTO);
+                }
             }
         }
     }

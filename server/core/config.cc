@@ -187,14 +187,14 @@ config::ParamBool Config::s_log_notice(
     &Config::s_specification,
     CN_LOG_NOTICE,
     "Specifies whether notice messages should be logged.",
-    false,
+    true,
     config::Param::Modifiable::AT_RUNTIME);
 
 config::ParamBool Config::s_log_warning(
     &Config::s_specification,
     CN_LOG_WARNING,
     "Specifies whether warning messages should be logged.",
-    false,
+    true,
     config::Param::Modifiable::AT_RUNTIME);
 
 Config::ParamLogThrottling Config::s_log_throttling(
