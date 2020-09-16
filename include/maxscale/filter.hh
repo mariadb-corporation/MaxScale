@@ -163,10 +163,10 @@ protected:
     }
 
 protected:
-    MXS_SESSION*   m_pSession;  /*< The MXS_SESSION this filter session is associated with. */
-    SERVICE*       m_pService;  /*< The service for which this session was created. */
-    mxs::Routable* m_down;      /*< The downstream component. */
-    mxs::Routable* m_up;        /*< The upstream component. */
+    MXS_SESSION*   m_pSession;      /*< The MXS_SESSION this filter session is associated with. */
+    SERVICE*       m_pService;      /*< The service for which this session was created. */
+    mxs::Routable* m_down = nullptr;/*< The downstream component. */
+    mxs::Routable* m_up = nullptr;  /*< The upstream component. */
 };
 
 /**
