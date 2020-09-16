@@ -18,6 +18,7 @@
 #include <sqlite3.h>
 #include <maxbase/http.hh>
 #include <maxbase/semaphore.hh>
+#include <maxbase/stopwatch.hh>
 #include <maxscale/modulecmd.hh>
 #include "columnstore.hh"
 #include "cscontext.hh"
@@ -148,7 +149,10 @@ private:
 
     bool fetch_configs(const std::vector<std::string>& hosts, std::vector<cs::Config>* pConfigs);
 
+    bool should_probe_cluster() const;
+
     CsContext                                               m_context;
     std::map<std::string, std::unique_ptr<CsDynamicServer>> m_nodes_by_id;
     sqlite3*                                                m_pDb {nullptr};
+    mxb::TimePoint                                          m_last_probe;
 };

@@ -1903,3 +1903,19 @@ bool CsMonitor::fetch_configs(const std::vector<std::string>& hosts, std::vector
                              m_context.http_config(),
                              pConfigs);
 }
+
+bool CsMonitor::should_probe_cluster() const
+{
+    bool rv = false;
+
+    const auto& config = m_context.config();
+
+    if (config.dynamic_node_detection
+        && config.cluster_monitor_interval.count() != 0
+        && mxb::SteadyClock::now() - m_last_probe >= config.cluster_monitor_interval)
+    {
+        rv = true;
+    }
+
+    return rv;
+}
