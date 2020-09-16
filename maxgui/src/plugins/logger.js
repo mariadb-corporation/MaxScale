@@ -10,6 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+/* eslint-disable no-console */
 import Vue from 'vue'
 import { isNull, isUndefined } from 'utils/helpers'
 const stackParser = require('stacktrace-parser')

@@ -160,126 +160,11 @@ TestConnections::TestConnections(int argc, char* argv[])
     m_logger = std::make_unique<TestLogger>(&global_result);
     read_env();
 
-    bool maxscale_init = true;
-
-    static struct option long_options[] =
+    if (!read_cmdline_options(argc, argv))
     {
-
-        {"help",               no_argument,       0, 'h'},
-        {"verbose",            no_argument,       0, 'v'},
-        {"silent",             no_argument,       0, 'n'},
-        {"quiet",              no_argument,       0, 'q'},
-        {"no-maxscale-start",  no_argument,       0, 's'},
-        {"no-maxscale-init",   no_argument,       0, 'i'},
-        {"no-nodes-check",     no_argument,       0, 'r'},
-        {"restart-galera",     no_argument,       0, 'g'},
-        {"no-timeouts",        no_argument,       0, 'z'},
-        {"no-galera",          no_argument,       0, 'y'},
-        {"local-maxscale",     optional_argument, 0, 'l'},
-        {"reinstall-maxscale", no_argument,       0, 'm'},
-        {0,                    0,                 0, 0  }
-    };
-
-    int c;
-    int option_index = 0;
-
-    while ((c = getopt_long(argc, argv, "hvnqsirgzyl::", long_options, &option_index)) != -1)
-    {
-        switch (c)
-        {
-        case 'v':
-            verbose = true;
-            break;
-
-        case 'n':
-            verbose = false;
-            break;
-
-        case 'q':
-            if (!freopen("/dev/null", "w", stdout))
-            {
-                printf("warning: Could not redirect stdout to /dev/null.\n");
-            }
-            break;
-
-        case 'h':
-            {
-                printf("Options:\n");
-
-                struct option* o = long_options;
-
-                while (o->name)
-                {
-                    printf("-%c, --%s\n", o->val, o->name);
-                    ++o;
-                }
-                exit(0);
-            }
-            break;
-
-        case 's':
-            printf("Maxscale won't be started\n");
-            maxscale::start = false;
-            maxscale::manual_debug = true;
-            break;
-
-        case 'i':
-            printf("Maxscale won't be started and Maxscale.cnf won't be uploaded\n");
-            maxscale_init = false;
-            break;
-
-        case 'r':
-            printf("Nodes are not checked before test and are not restarted\n");
-            maxscale::check_nodes = false;
-            break;
-
-        case 'g':
-            printf("Restarting Galera setup\n");
-            maxscale::restart_galera = true;
-            break;
-
-        case 'z':
-            m_enable_timeouts = false;
-            break;
-
-        case 'y':
-            printf("Do not use Galera setup\n");
-            no_galera = true;
-            break;
-
-        case 'l':
-            {
-                printf("MaxScale assumed to be running locally; "
-                       "not started and logs not downloaded.");
-
-                maxscale::start = false;
-                maxscale::manual_debug = true;
-                maxscale_init = false;
-                m_no_maxscale_log_copy = true;
-                m_local_maxscale = true;
-
-                std::regex regex1("maxscale_000_network=[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+");
-                std::string replace1("maxscale_000_network=127.0.0.1");
-                m_network_config = regex_replace(m_network_config, regex1, replace1);
-
-                std::regex regex2("maxscale_000_private_ip=[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+");
-                std::string replace2("maxscale_000_private_ip=127.0.0.1");
-                m_network_config = regex_replace(m_network_config, regex2, replace2);
-            }
-            break;
-
-        case 'm':
-            printf("Maxscale will be reinstalled");
-            m_reinstall_maxscale = true;
-            break;
-
-        default:
-            printf("UNKNOWN OPTION: %c\n", c);
-            break;
-        }
+        exit(0);
     }
 
-    m_test_name = (optind < argc) ? argv[optind] : basename(argv[0]);
     set_template_and_labels();
     tprintf("Test: '%s', config template: '%s', labels: '%s'",
             m_test_name.c_str(), m_cnf_template_path.c_str(), m_test_labels_str.c_str());
@@ -323,7 +208,7 @@ TestConnections::TestConnections(int argc, char* argv[])
 
     if (m_required_mdbci_labels.count(label_repl_be) == 0)
     {
-        no_repl = true;
+        m_use_repl = false;
         if (verbose)
         {
             tprintf("No need to use Master/Slave");
@@ -332,7 +217,7 @@ TestConnections::TestConnections(int argc, char* argv[])
 
     if (m_required_mdbci_labels.count(label_galera_be) == 0)
     {
-        no_galera = true;
+        m_use_galera = false;
         if (verbose)
         {
             tprintf("No need to use Galera");
@@ -364,7 +249,7 @@ TestConnections::TestConnections(int argc, char* argv[])
     std::future<bool> repl_future;
     std::future<bool> galera_future;
 
-    if (!no_repl)
+    if (m_use_repl)
     {
         repl = new Mariadb_nodes("node", test_dir, verbose, m_network_config);
         repl->setup();
@@ -378,7 +263,7 @@ TestConnections::TestConnections(int argc, char* argv[])
         repl = NULL;
     }
 
-    if (!no_galera)
+    if (m_use_galera)
     {
         galera = new Galera_nodes("galera", test_dir, verbose, m_network_config);
         galera->setup();
@@ -411,8 +296,8 @@ TestConnections::TestConnections(int argc, char* argv[])
     m_maxscale = std::make_unique<mxt::MaxScale>(maxscales, *m_logger, 0);
 
     bool maxscale_ok = maxscales->check_nodes();
-    bool repl_ok = no_repl || repl_future.get();
-    bool galera_ok = no_galera || galera_future.get();
+    bool repl_ok = !m_use_repl || repl_future.get();
+    bool galera_ok = !m_use_galera || galera_future.get();
     bool node_error = !maxscale_ok || !repl_ok || !galera_ok;
     bool initialize = false;
 
@@ -504,7 +389,7 @@ TestConnections::TestConnections(int argc, char* argv[])
         }
     }
 
-    if (maxscale_init)
+    if (m_init_maxscale)
     {
         init_maxscales();
     }
@@ -2362,6 +2247,127 @@ mxt::MaxScale& TestConnections::maxscale()
 TestLogger& TestConnections::logger()
 {
     return *m_logger;
+}
+
+bool TestConnections::read_cmdline_options(int argc, char* argv[])
+{
+    static struct option long_options[] =
+    {
+        {"help",               no_argument,       0, 'h'},
+        {"verbose",            no_argument,       0, 'v'},
+        {"silent",             no_argument,       0, 'n'},
+        {"quiet",              no_argument,       0, 'q'},
+        {"no-maxscale-start",  no_argument,       0, 's'},
+        {"no-maxscale-init",   no_argument,       0, 'i'},
+        {"no-nodes-check",     no_argument,       0, 'r'},
+        {"restart-galera",     no_argument,       0, 'g'},
+        {"no-timeouts",        no_argument,       0, 'z'},
+        {"no-galera",          no_argument,       0, 'y'},
+        {"local-maxscale",     optional_argument, 0, 'l'},
+        {"reinstall-maxscale", no_argument,       0, 'm'},
+        {0,                    0,                 0, 0  }
+    };
+
+    int c;
+    int option_index = 0;
+
+    while ((c = getopt_long(argc, argv, "hvnqsirgzyl::", long_options, &option_index)) != -1)
+    {
+        switch (c)
+        {
+        case 'v':
+            verbose = true;
+            break;
+
+        case 'n':
+            verbose = false;
+            break;
+
+        case 'q':
+            if (!freopen("/dev/null", "w", stdout))
+            {
+                printf("warning: Could not redirect stdout to /dev/null.\n");
+            }
+            break;
+
+        case 'h':
+            {
+                printf("Options:\n");
+
+                struct option* o = long_options;
+
+                while (o->name)
+                {
+                    printf("-%c, --%s\n", o->val, o->name);
+                    ++o;
+                }
+                return false;
+            }
+            break;
+
+        case 's':
+            printf("Maxscale won't be started\n");
+            maxscale::start = false;
+            maxscale::manual_debug = true;
+            break;
+
+        case 'i':
+            printf("Maxscale won't be started and Maxscale.cnf won't be uploaded\n");
+            m_init_maxscale = false;
+            break;
+
+        case 'r':
+            printf("Nodes are not checked before test and are not restarted\n");
+            maxscale::check_nodes = false;
+            break;
+
+        case 'g':
+            printf("Restarting Galera setup\n");
+            maxscale::restart_galera = true;
+            break;
+
+        case 'z':
+            m_enable_timeouts = false;
+            break;
+
+        case 'y':
+            printf("Do not use Galera setup\n");
+            m_use_galera = false;
+            break;
+
+        case 'l':
+            {
+                printf("MaxScale assumed to be running locally; not started and logs not downloaded.");
+
+                maxscale::start = false;
+                maxscale::manual_debug = true;
+                m_init_maxscale = false;
+                m_no_maxscale_log_copy = true;
+                m_local_maxscale = true;
+
+                std::regex regex1("maxscale_000_network=[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+");
+                std::string replace1("maxscale_000_network=127.0.0.1");
+                m_network_config = regex_replace(m_network_config, regex1, replace1);
+
+                std::regex regex2("maxscale_000_private_ip=[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+");
+                std::string replace2("maxscale_000_private_ip=127.0.0.1");
+                m_network_config = regex_replace(m_network_config, regex2, replace2);
+            }
+            break;
+
+        case 'm':
+            printf("Maxscale will be reinstalled");
+            m_reinstall_maxscale = true;
+            break;
+
+        default:
+            printf("UNKNOWN OPTION: %c\n", c);
+            break;
+        }
+    }
+
+    m_test_name = (optind < argc) ? argv[optind] : basename(argv[0]);
+    return true;
 }
 
 std::string cutoff_string(const string& source, char cutoff)
