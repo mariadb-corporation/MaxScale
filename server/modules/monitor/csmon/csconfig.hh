@@ -23,12 +23,13 @@ public:
 
     static void populate(MXS_MODULE& info);
 
-    cs::Version version;                // Optional for 1.5
-    int64_t     admin_port;             // Optional for 1.5
-    std::string admin_base_path;        // Optional for 1.5
-    std::string api_key;                // Optional for 1.5
-    std::string local_address;          // Mandatory (unless global exists) for 1.5
-    bool        dynamic_node_detection; // Optional for 1.5, invalid for 1.0 and 1.2.
+    cs::Version               version;                  // Optional for 1.5
+    int64_t                   admin_port;               // Optional for 1.5
+    std::string               admin_base_path;          // Optional for 1.5
+    std::string               api_key;                  // Optional for 1.5
+    std::string               local_address;            // Mandatory (unless global exists) for 1.5
+    bool                      dynamic_node_detection;   // Optional for 1.5
+    std::chrono::milliseconds cluster_monitor_interval; // Optional for 1.5
 
 private:
     bool post_configure();

@@ -45,12 +45,15 @@ const char ZAPI_KEY_FILE_NAME[] = "api_key.txt";
 
 using seconds = chrono::seconds;
 
-const config::ParamCount::value_type   DEFAULT_ADMIN_PORT             = 8640;
-const config::ParamString::value_type  DEFAULT_ADMIN_BASE_PATH        = "/cmapi/0.4.0";
-const config::ParamString::value_type  DEFAULT_API_KEY                = "";
-const config::ParamString::value_type  DEFAULT_LOCAL_ADDRESS          = "";
-const config::ParamServer::value_type  DEFAULT_PRIMARY                = nullptr;
-const config::ParamBool::value_type    DEFAULT_DYNAMIC_NODE_DETECTION = false;
+using ClusterMonitorInterval = config::ParamDuration<std::chrono::milliseconds>;
+
+const config::ParamCount::value_type     DEFAULT_ADMIN_PORT               = 8640;
+const config::ParamString::value_type    DEFAULT_ADMIN_BASE_PATH          = "/cmapi/0.4.0";
+const config::ParamString::value_type    DEFAULT_API_KEY                  = "";
+const config::ParamString::value_type    DEFAULT_LOCAL_ADDRESS            = "";
+const config::ParamServer::value_type    DEFAULT_PRIMARY                  = nullptr;
+const config::ParamBool::value_type      DEFAULT_DYNAMIC_NODE_DETECTION   = false;
+const ClusterMonitorInterval::value_type DEFAULT_CLUSTER_MONITOR_INTERVAL = std::chrono::milliseconds(0);
 
 config::Specification specification(MXS_MODULE_NAME, config::Specification::MONITOR);
 
@@ -95,8 +98,15 @@ config::ParamBool dynamic_node_detection(
     "dynamic_node_detection",
     "Should cluster configuration be figured out at runtime.",
     DEFAULT_DYNAMIC_NODE_DETECTION);
-}
 
+config::ParamDuration<std::chrono::milliseconds> cluster_monitor_interval(
+    &specification,
+    "cluster_monitor_interval",
+    "With what interval the cluster configuration should be probed.",
+    mxs::config::INTERPRET_AS_MILLISECONDS,
+    DEFAULT_CLUSTER_MONITOR_INTERVAL);
+
+}
 
 CsConfig::CsConfig(const string& name)
     : mxs::config::Configuration(name, &csmon::specification)
@@ -107,6 +117,7 @@ CsConfig::CsConfig(const string& name)
     add_native(&this->api_key, &csmon::api_key);
     add_native(&this->local_address, &csmon::local_address);
     add_native(&this->dynamic_node_detection, &csmon::dynamic_node_detection);
+    add_native(&this->cluster_monitor_interval, &csmon::cluster_monitor_interval);
 }
 
 //static
