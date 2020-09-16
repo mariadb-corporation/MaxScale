@@ -190,6 +190,7 @@ class Dbfw : public mxs::Filter<Dbfw, DbfwSession>
     Dbfw& operator=(const Dbfw&);
 
 public:
+    Dbfw(const char* zName);
     ~Dbfw();
 
     /**
@@ -297,7 +298,6 @@ private:
     mutable std::mutex m_lock;          /*< Instance spinlock */
     int                m_version;       /*< Latest rule file version, incremented on reload */
 
-    Dbfw(DbfwConfig&& config);
     bool do_reload_rules(std::string filename);
 };
 

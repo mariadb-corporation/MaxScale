@@ -1190,8 +1190,8 @@ namespace
 int global_version = 1;
 }
 
-Dbfw::Dbfw(DbfwConfig&& config)
-    : m_config(std::move(config))
+Dbfw::Dbfw(const char* zName)
+    : m_config(zName)
     , m_version(atomic_add(&global_version, 1))
 {
     if (m_config.log_match)
@@ -1214,42 +1214,37 @@ Dbfw* Dbfw::create(const char* zName, mxs::ConfigParameters* pParams)
     MXS_NOTICE("The Database Firewall filter has been deprecated and will be removed "
                "in MariaDB MaxScale 2.7.");
 
-    Dbfw* rval = NULL;
-    DbfwConfig config(zName);
+    RuleList rules;
+    UserMap users;
+    auto rval = std::make_unique<Dbfw>(zName);
 
-    if (config.configure(*pParams))
+    // TODO: Move this into DbfwConfig::post_configure so that it's done when runtime changes are done
+    if (rval->getConfiguration()->configure(*pParams)
+        && process_rule_file(rval->m_config.rules, &rules, &users))
     {
-        RuleList rules;
-        UserMap users;
-        std::string file = config.rules;
-
-        if (process_rule_file(file, &rules, &users))
+        if (rval->treat_string_as_field() || rval->treat_string_arg_as_field())
         {
-            rval = new(std::nothrow) Dbfw(std::move(config));
+            QC_CACHE_PROPERTIES cache_properties;
+            qc_get_cache_properties(&cache_properties);
 
-            if (rval)
+            if (cache_properties.max_size != 0)
             {
-                if (rval->treat_string_as_field() || rval->treat_string_arg_as_field())
-                {
-                    QC_CACHE_PROPERTIES cache_properties;
-                    qc_get_cache_properties(&cache_properties);
+                MXS_NOTICE("The parameter 'treat_string_arg_as_field' or(and) "
+                           "'treat_string_as_field' is enabled for %s, "
+                           "disabling the query classifier cache.",
+                           zName);
 
-                    if (cache_properties.max_size != 0)
-                    {
-                        MXS_NOTICE("The parameter 'treat_string_arg_as_field' or(and) "
-                                   "'treat_string_as_field' is enabled for %s, "
-                                   "disabling the query classifier cache.",
-                                   zName);
-
-                        cache_properties.max_size = 0;
-                        qc_set_cache_properties(&cache_properties);
-                    }
-                }
+                cache_properties.max_size = 0;
+                qc_set_cache_properties(&cache_properties);
             }
         }
     }
+    else
+    {
+        rval.reset();
+    }
 
-    return rval;
+    return rval.release();
 }
 
 DbfwSession* Dbfw::newSession(MXS_SESSION* session, SERVICE* service)
