@@ -1076,7 +1076,7 @@ QueryClassifier::RouteInfo QueryClassifier::update_route_info(
 
         process_routing_hints(pBuffer->hint, &route_target);
 
-        if (route_target == TARGET_SLAVE)
+        if (route_target == TARGET_SLAVE && command == MXS_COM_QUERY)
         {
             const QC_FUNCTION_INFO* infos = nullptr;
             size_t n_infos = 0;

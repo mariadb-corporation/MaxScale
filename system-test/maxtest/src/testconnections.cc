@@ -146,7 +146,6 @@ void TestConnections::restart_galera(bool value)
 bool TestConnections::verbose = false;
 
 TestConnections::TestConnections(int argc, char* argv[])
-    : no_clustrix(false)
 {
     std::ios::sync_with_stdio(true);
     signal_set(SIGSEGV, sigfatal_handler);
@@ -162,6 +161,11 @@ TestConnections::TestConnections(int argc, char* argv[])
 
     if (!read_cmdline_options(argc, argv))
     {
+        exit(0);
+    }
+    if (maxscale::require_columnstore)
+    {
+        cout << "ColumnStore testing is not yet implemented, skipping test" << endl;
         exit(0);
     }
 
@@ -206,50 +210,28 @@ TestConnections::TestConnections(int argc, char* argv[])
         }
     }
 
-    if (m_required_mdbci_labels.count(label_repl_be) == 0)
+    bool use_repl = false;
+    if (m_required_mdbci_labels.count(label_repl_be) > 0)
     {
-        m_use_repl = false;
-        if (verbose)
-        {
-            tprintf("No need to use Master/Slave");
-        }
+        use_repl = true;
     }
 
-    if (m_required_mdbci_labels.count(label_galera_be) == 0)
+    bool use_galera = false;
+    if (m_required_mdbci_labels.count(label_galera_be) > 0)
     {
-        m_use_galera = false;
-        if (verbose)
-        {
-            tprintf("No need to use Galera");
-        }
+        use_galera = true;
     }
 
-    if (m_required_mdbci_labels.count(label_clx_be) == 0)
+    bool use_clustrix = false;
+    if (m_required_mdbci_labels.count(label_clx_be) > 0)
     {
-        no_clustrix = true;
-        if (verbose)
-        {
-            tprintf("No need to use Clustrix");
-        }
-    }
-
-    m_get_logs_command = (string)test_dir + "/get_logs.sh";
-    m_ssl_options = mxb::string_printf(
-        "--ssl-cert=%s/ssl-cert/client-cert.pem "
-        "--ssl-key=%s/ssl-cert/client-key.pem",
-        test_dir, test_dir);
-    setenv("ssl_options", m_ssl_options.c_str(), 1);
-
-    if (maxscale::require_columnstore)
-    {
-        cout << "ColumnStore testing is not yet implemented, skipping test" << endl;
-        exit(0);
+        use_clustrix = true;
     }
 
     std::future<bool> repl_future;
     std::future<bool> galera_future;
 
-    if (m_use_repl)
+    if (use_repl)
     {
         repl = new Mariadb_nodes("node", test_dir, verbose, m_network_config);
         repl->setup();
@@ -263,7 +245,7 @@ TestConnections::TestConnections(int argc, char* argv[])
         repl = NULL;
     }
 
-    if (m_use_galera)
+    if (use_galera)
     {
         galera = new Galera_nodes("galera", test_dir, verbose, m_network_config);
         galera->setup();
@@ -277,7 +259,7 @@ TestConnections::TestConnections(int argc, char* argv[])
         galera = NULL;
     }
 
-    if (!no_clustrix)
+    if (use_clustrix)
     {
         clustrix = new Clustrix_nodes("clustrix", test_dir, verbose, m_network_config);
         clustrix->setup();
@@ -296,12 +278,12 @@ TestConnections::TestConnections(int argc, char* argv[])
     m_maxscale = std::make_unique<mxt::MaxScale>(maxscales, *m_logger, 0);
 
     bool maxscale_ok = maxscales->check_nodes();
-    bool repl_ok = !m_use_repl || repl_future.get();
-    bool galera_ok = !m_use_galera || galera_future.get();
+    bool repl_ok = !use_repl || repl_future.get();
+    bool galera_ok = !use_galera || galera_future.get();
     bool node_error = !maxscale_ok || !repl_ok || !galera_ok;
     bool initialize = false;
 
-    if (node_error || too_many_maxscales())
+    if (node_error || too_few_maxscales())
     {
         initialize = true;
         tprintf("Recreating VMs: %s", node_error ? "node check failed" : "too many maxscales");
@@ -2180,7 +2162,7 @@ int TestConnections::reinstall_maxscales()
     return 0;
 }
 
-bool TestConnections::too_many_maxscales() const
+bool TestConnections::too_few_maxscales() const
 {
     return maxscales->N < 2 && m_required_mdbci_labels.count(label_2nd_mxs) > 0;
 }
@@ -2262,7 +2244,6 @@ bool TestConnections::read_cmdline_options(int argc, char* argv[])
         {"no-nodes-check",     no_argument,       0, 'r'},
         {"restart-galera",     no_argument,       0, 'g'},
         {"no-timeouts",        no_argument,       0, 'z'},
-        {"no-galera",          no_argument,       0, 'y'},
         {"local-maxscale",     optional_argument, 0, 'l'},
         {"reinstall-maxscale", no_argument,       0, 'm'},
         {0,                    0,                 0, 0  }
@@ -2271,7 +2252,7 @@ bool TestConnections::read_cmdline_options(int argc, char* argv[])
     int c;
     int option_index = 0;
 
-    while ((c = getopt_long(argc, argv, "hvnqsirgzyl::", long_options, &option_index)) != -1)
+    while ((c = getopt_long(argc, argv, "hvnqsirgzlm::", long_options, &option_index)) != -1)
     {
         switch (c)
         {
@@ -2328,11 +2309,6 @@ bool TestConnections::read_cmdline_options(int argc, char* argv[])
 
         case 'z':
             m_enable_timeouts = false;
-            break;
-
-        case 'y':
-            printf("Do not use Galera setup\n");
-            m_use_galera = false;
             break;
 
         case 'l':

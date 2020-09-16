@@ -149,11 +149,6 @@ public:
     bool binlog_slave_gtid {false};
 
     /**
-     * @brief no_clustrix Do not check, restart and use Clustrix setup
-     */
-    bool no_clustrix;
-
-    /**
      * @brief timeout seconds until test termination
      */
     long int timeout;
@@ -584,7 +579,7 @@ private:
     void set_mdbci_labels();
     bool log_matches(int m, const char* pattern);
 
-    bool too_many_maxscales() const;
+    bool too_few_maxscales() const;
 
     std::unique_ptr<mxt::MaxScale>   m_maxscale; /**< Main MaxScale instance */
     std::unique_ptr<TestLogger> m_logger;   /**< Error log container */
@@ -609,11 +604,6 @@ private:
     std::string m_network_config;       /**< Content of MDBCI network_config file */
     std::string m_vm_path;              /**< Path to the VM Vagrant directory */
 
-    /**
-     * Command to copy log files from node virtual machines (should handle one parameter: IP address of
-     * virtual machine to kill) */
-    std::string m_get_logs_command;
-
     std::string m_take_snapshot_command;    /**< Command line to create a snapshot of all VMs */
     std::string m_revert_snapshot_command;  /**< Command line to revert a snapshot of all VMs */
 
@@ -629,9 +619,6 @@ private:
     /* If true, logs from backends are not copied (needed if case of Aurora RDS backend or similar) */
     bool m_no_backend_log_copy {false};
     bool m_no_maxscale_log_copy {false};    /**< Do not download MaxScale logs. */
-
-    bool m_use_repl {true};     /**< Check, restart and use Master/Slave setup */
-    bool m_use_galera {true};   /**< Check, restart and use Galera setup */
 
     /** If true tests do not revert VMs after the test even if test failed (use it for debugging) */
     bool no_vm_revert {true};
