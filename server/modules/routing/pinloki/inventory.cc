@@ -42,17 +42,27 @@ void Inventory::read_file() const
     }
 }
 
-void Inventory::push(const std::string& file_name)
+void Inventory::push_back(const std::string& file_name)
 {
     m_file_names.push_back(m_config.path(file_name));
     persist();
 }
 
-void Inventory::pop(const std::string& file_name)
+void Inventory::pop_front(const std::string& file_name)
 {
-    std::string full_name = m_config.path(file_name);
-    m_file_names.erase(std::remove(m_file_names.begin(), m_file_names.end(), full_name), m_file_names.end());
-    persist();
+    if (file_name != m_file_names.front())
+    {
+        // This can happen if two users issue purge commands at the same time,
+        // in addition there is the timeout based purging as well.
+        // Not a problem so just an info message. Both (or all) purges will
+        // finish succesfully.
+        MXS_SINFO("pop_front " << file_name << "does not match front " << file_name);
+    }
+    else
+    {
+        m_file_names.erase(m_file_names.begin());
+        persist();
+    }
 }
 
 void Inventory::persist()

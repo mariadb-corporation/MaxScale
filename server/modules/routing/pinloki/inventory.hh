@@ -38,13 +38,13 @@ public:
      * @brief push a file name to the end of the list
      * @param file_name
      */
-    void push(const std::string& file_name);
+    void push_back(const std::string& file_name);
 
     /**
      * @brief pop the first file
      * @param file_name must match the name of the first file
      */
-    void pop(const std::string& file_name);
+    void pop_front(const std::string& file_name);
 
     /**
      * @brief file_names

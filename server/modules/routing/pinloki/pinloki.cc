@@ -622,7 +622,7 @@ PurgeResult purge_binlogs(Inventory* pInventory, const std::string& up_to)
                 return PurgeResult::PartialPurge;
             }
 
-            pInventory->pop(*ite);
+            pInventory->pop_front(*ite);
             remove(ite->c_str());
         }
     }
