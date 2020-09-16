@@ -27,8 +27,6 @@
 #include <maxscale/paths.hh>
 #include <maxscale/config.hh>
 
-// This is pretty ugly but it's required to test internal functions
-#include "../server.cc"
 #include "../internal/config.hh"
 #include "../internal/server.hh"
 #include "../internal/servermanager.hh"
