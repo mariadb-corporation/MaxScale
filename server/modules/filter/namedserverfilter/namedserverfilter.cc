@@ -289,67 +289,67 @@ json_t* RegexHintFilter::diagnostics() const
 }
 
 /**
- * Parse the server list and add the contained servers to the struct's internal
- * list. Server names are verified to be valid servers.
+ * Parse the target list and add the elements to the internal list. Server names are verified.
  *
- * @param server_names The list of servers as read from the config file
+ * @param target Routing target as read from the config file
  * @param legacy_mode Using legacy mode for backwards compatibility?
- * @return How many were found
+ * @return True on success
  */
-int RegexToServers::add_servers(const std::string& server_names, bool legacy_mode)
+bool RegexToServers::add_targets(const std::string& target, bool legacy_mode)
 {
     if (legacy_mode)
     {
         /* Should have just one server name, already known to be valid */
-        m_targets.push_back(server_names);
-        return 1;
+        m_targets.push_back(target);
+        return true;
     }
 
     /* Have to parse the server list here instead of in config loader, since the list
      * may contain special placeholder strings. */
     bool error = false;
-    auto names_arr = config_break_list_string(server_names.c_str());
-    if (names_arr.size() > 1)
+    auto targets_array = config_break_list_string(target);
+    if (targets_array.size() > 1)
     {
         /* The string contains a server list. Check that all names are valid. */
-        auto servers = SERVER::server_find_by_unique_names(names_arr);
+        auto servers = SERVER::server_find_by_unique_names(targets_array);
         for (size_t i = 0; i < servers.size(); i++)
         {
             if (servers[i] == nullptr)
             {
                 error = true;
-                MXS_ERROR("'%s' is not a valid server name.", names_arr[i].c_str());
+                MXS_ERROR("'%s' is not a valid server name.", targets_array[i].c_str());
             }
         }
 
         if (!error)
         {
-            for (auto elem : names_arr)
+            for (const auto& elem : targets_array)
             {
                 m_targets.push_back(elem);
             }
         }
     }
-    else if (names_arr.size() == 1)
+    else if (targets_array.size() == 1)
     {
         /* The string is either a server name or a special reserved id */
-        if (SERVER::find_by_unique_name(names_arr[0]))
+        auto& only_elem = targets_array[0];
+        if (SERVER::find_by_unique_name(only_elem))
         {
-            m_targets.push_back(names_arr[0]);
+            m_targets.push_back(only_elem);
         }
-        else if (names_arr[0] == "->master")
+        else if (only_elem == "->master")
         {
-            m_targets.push_back(names_arr[0]);
+            m_targets.push_back(only_elem);
             m_htype = HINT_ROUTE_TO_MASTER;
         }
-        else if (names_arr[0] == "->slave")
+        else if (only_elem == "->slave")
         {
-            m_targets.push_back(names_arr[0]);
+            m_targets.push_back(only_elem);
             m_htype = HINT_ROUTE_TO_SLAVE;
         }
-        else if (names_arr[0] == "->all")
+        else if (only_elem == "->all")
         {
-            m_targets.push_back(names_arr[0]);
+            m_targets.push_back(only_elem);
             m_htype = HINT_ROUTE_TO_ALL;
         }
         else
@@ -359,10 +359,11 @@ int RegexToServers::add_servers(const std::string& server_names, bool legacy_mod
     }
     else
     {
+        // targets-list had no elements
         error = true;
     }
 
-    return error ? 0 : names_arr.size();
+    return !error;
 }
 
 RegexToServers::RegexToServers(RegexToServers&& rhs) noexcept
@@ -381,64 +382,57 @@ RegexToServers::~RegexToServers()
 }
 
 bool RegexHintFilter::regex_compile_and_add(int pcre_ops, bool legacy_mode, const std::string& match,
-                                            const std::string& servers)
+                                            const std::string& target)
 {
     bool success = true;
     int errorcode = -1;
     PCRE2_SIZE error_offset = -1;
-    pcre2_code* regex =
-        pcre2_compile((PCRE2_SPTR) match.c_str(),
-                      match.length(),
-                      pcre_ops,
-                      &errorcode,
-                      &error_offset,
-                      NULL);
+    pcre2_code* regex = pcre2_compile((PCRE2_SPTR) match.c_str(), match.length(), pcre_ops,
+                                      &errorcode, &error_offset, nullptr);
 
     if (regex)
     {
         // Try to compile even further for faster matching
         if (pcre2_jit_compile(regex, PCRE2_JIT_COMPLETE) < 0)
         {
-            MXS_NOTICE("PCRE2 JIT compilation of pattern '%s' failed, "
-                       "falling back to normal compilation.",
+            MXS_NOTICE("PCRE2 JIT compilation of pattern '%s' failed, falling back to normal compilation.",
                        match.c_str());
         }
 
-        RegexToServers regex_ser(match, regex);
-
-        if (regex_ser.add_servers(servers, legacy_mode) == 0)
+        RegexToServers mapping_elem(match, regex);
+        if (mapping_elem.add_targets(target, legacy_mode))
         {
-            // The servers string didn't seem to contain any servers
-            MXS_ERROR("Could not parse servers from string '%s'.", servers.c_str());
-            success = false;
-        }
-        m_mapping.push_back(std::move(regex_ser));
+            m_mapping.push_back(std::move(mapping_elem));
 
-        /* Check what is the required match_data size for this pattern. The
-         * largest value is used to form the match data.
-         */
-        uint32_t capcount = 0;
-        int ret_info = pcre2_pattern_info(regex, PCRE2_INFO_CAPTURECOUNT, &capcount);
-
-        if (ret_info != 0)
-        {
-            MXS_PCRE2_PRINT_ERROR(ret_info);
-            success = false;
+            /* Check what is the required match_data size for this pattern. The
+             * largest value is used to form the match data. */
+            uint32_t capcount = 0;
+            int ret_info = pcre2_pattern_info(regex, PCRE2_INFO_CAPTURECOUNT, &capcount);
+            if (ret_info != 0)
+            {
+                MXS_PCRE2_PRINT_ERROR(ret_info);
+                success = false;
+            }
+            else
+            {
+                int required_ovec_size = capcount + 1;
+                if (required_ovec_size > m_ovector_size)
+                {
+                    m_ovector_size = required_ovec_size;
+                }
+            }
         }
         else
         {
-            int required_ovec_size = capcount + 1;
-            if (required_ovec_size > m_ovector_size)
-            {
-                m_ovector_size = required_ovec_size;
-            }
+            // The targets string didn't seem to contain a valid routing target.
+            MXS_ERROR("Could not parse a routing target from '%s'.", target.c_str());
+            success = false;
         }
     }
     else
     {
         MXS_ERROR("Invalid PCRE2 regular expression '%s' (position '%zu').",
-                  match.c_str(),
-                  error_offset);
+                  match.c_str(), error_offset);
         MXS_PCRE2_PRINT_ERROR(errorcode);
         success = false;
     }
@@ -722,8 +716,7 @@ void RegexHintFilter::set_source_addresses(const std::string& host_names)
 
         if (!add_source_address(trimmed_host))
         {
-            MXS_INFO("The given 'source' parameter '%s' is not a valid IP address. "
-                     "adding it as hostname.",
+            MXS_INFO("The given 'source' parameter '%s' is not a valid IP address. Adding it as hostname.",
                      trimmed_host.c_str());
             m_hostnames.emplace_back(trimmed_host);
         }

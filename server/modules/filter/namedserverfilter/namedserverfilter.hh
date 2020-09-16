@@ -52,10 +52,9 @@ public:
     uint64_t                    getCapabilities() const;
     mxs::config::Configuration* getConfiguration();
 
-    MappingVector&          mapping();
 
-    static bool validate_ipv4_address(const char*);
-    int         ovector_size() const;
+    MappingVector& mapping();
+    int            ovector_size() const;
 
 private:
     std::string      m_user;            /* User name to restrict matches with */
@@ -71,7 +70,8 @@ private:
     bool add_source_address(const std::string& input_host);
     void form_regex_server_mapping(mxs::ConfigParameters* params, int pcre_ops);
     bool regex_compile_and_add(int pcre_ops, bool legacy_mode, const std::string& match,
-                               const std::string& servers);
+                               const std::string& target);
+    static bool validate_ipv4_address(const char*);
 };
 
 /**
@@ -106,7 +106,7 @@ struct RegexToServers
 
     std::string  m_match;                               /* Regex in text form */
     pcre2_code*  m_regex {nullptr};                     /* Compiled regex */
-    StringVector m_targets;                             /* List of target servers. */
+    StringVector m_targets;                             /* List of target servers or a special tag. */
     HINT_TYPE    m_htype {HINT_ROUTE_TO_NAMED_SERVER};  /* Hint type */
 
     /* Has an error message about matching this regex been printed yet? */
@@ -120,7 +120,7 @@ struct RegexToServers
     RegexToServers(RegexToServers&& rhs) noexcept;
     ~RegexToServers();
 
-    int add_servers(const std::string& server_names, bool legacy_mode);
+    bool add_targets(const std::string& target, bool legacy_mode);
 };
 
 /* Container for address-specific filtering */
