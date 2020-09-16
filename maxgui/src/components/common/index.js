@@ -13,7 +13,6 @@
 
 import PageWrapper from './PageWrapper'
 import SelectDropdown from './SelectDropdown'
-import BaseDialog from './BaseDialog'
 import DataTable from './DataTable'
 import Dialogs from './Dialogs'
 import IconSpriteSheet from './IconSpriteSheet'
@@ -31,7 +30,6 @@ export default {
     'page-wrapper': PageWrapper,
     'global-search': GlobalSearch,
     'create-resource': CreateResource,
-    'base-dialog': BaseDialog,
     ...Dialogs,
     'select-dropdown': SelectDropdown,
     'data-table': DataTable,

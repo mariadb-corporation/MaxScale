@@ -13,7 +13,7 @@
 
 import { expect } from 'chai'
 import mount from '@tests/unit/setup'
-import BaseDialog from '@/components/common/BaseDialog'
+import BaseDialog from '@/components/common/Dialogs/BaseDialog'
 import { showDialogMock } from '@tests/unit/utils'
 
 describe('BaseDialog.vue', () => {

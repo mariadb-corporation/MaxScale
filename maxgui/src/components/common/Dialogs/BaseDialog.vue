@@ -7,6 +7,8 @@
         content-class="base-dialog"
         persistent
         :scrollable="scrollable"
+        eager
+        @keydown.enter="keydownHandler"
     >
         <v-card
             class="v-card-custom"
@@ -123,17 +125,17 @@ export default {
         cancel() {
             this.$refs.form.reset()
             this.$refs.form.resetValidation()
-            this.onCancel && this.onCancel()
+            this.onCancel()
         },
         close() {
-            this.onClose && this.onClose()
+            this.onClose()
         },
-
+        async keydownHandler() {
+            if (this.isFormValid && !this.isSaveDisabled) await this.save()
+        },
         async save() {
-            let self = this
-            await !self.$refs.form.validate()
-
-            if (!self.isFormValid) {
+            await this.$refs.form.validate()
+            if (!this.isFormValid) {
                 let invalidEles = document.getElementsByClassName('v-messages__message')
                 return invalidEles[0].scrollIntoView({
                     behavior: 'smooth',
@@ -141,16 +143,14 @@ export default {
                     inline: 'start',
                 })
             } else {
-                if (self.onSave) {
-                    self.SET_OVERLAY_TYPE(OVERLAY_TRANSPARENT_LOADING)
-                    await self.onSave()
-                    if (self.$refs.form) {
-                        self.$refs.form.reset()
-                        self.$refs.form.resetValidation()
-                    }
-                    // wait time out for loading animation
-                    await self.$help.delay(600).then(() => self.SET_OVERLAY_TYPE(null))
+                this.SET_OVERLAY_TYPE(OVERLAY_TRANSPARENT_LOADING)
+                await this.onSave()
+                if (this.$refs.form) {
+                    this.$refs.form.reset()
+                    this.$refs.form.resetValidation()
                 }
+                // wait time out for loading animation
+                await this.$help.delay(600).then(() => this.SET_OVERLAY_TYPE(null))
             }
         },
     },
