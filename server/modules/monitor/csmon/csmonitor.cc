@@ -1542,7 +1542,7 @@ void CsMonitor::check_cluster(const Hosts& hosts, const StatusByHost& status_by_
 
             if (it == m_nodes_by_id.end())
             {
-                string server_name = string("@@") + m_name + ":node-" + host;
+                string server_name = string("@@") + m_name + ":" + host;
 
                 SERVER* pServer = SERVER::find_by_unique_name(server_name);
 
