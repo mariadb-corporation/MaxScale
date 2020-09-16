@@ -54,7 +54,7 @@ namespace pinloki
 
 constexpr int HEADER_LEN = 19;
 
-FileReader::FileReader(const maxsql::Gtid& gtid, const Inventory* inv)
+FileReader::FileReader(const maxsql::Gtid& gtid, const InventoryReader* inv)
     : m_inotify_fd{inotify_init1(IN_NONBLOCK)}
     , m_inventory(*inv)
 {

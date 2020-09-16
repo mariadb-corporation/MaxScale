@@ -32,10 +32,10 @@ Reader::PollData::PollData(Reader* reader, mxb::Worker* worker)
 {
 }
 
-Reader::Reader(Callback cb, Inventory inv, mxb::Worker* worker, const maxsql::Gtid& gtid,
+Reader::Reader(Callback cb, const Config& conf, mxb::Worker* worker, const maxsql::Gtid& gtid,
                const std::chrono::seconds& heartbeat_interval)
     : m_cb(cb)
-    , m_inventory(std::move(inv))
+    , m_inventory(conf)
     , m_reader_poll_data(this, worker)
     , m_file_reader(gtid, &m_inventory)
     , m_worker(worker)

@@ -117,7 +117,7 @@ wall_time::TimePoint file_mod_time(const std::string& file_name)
 }
 
 /** Modification time of the oldest log file or wall_time::TimePoint::max() if there are no logs */
-wall_time::TimePoint oldest_logfile_time(Inventory* pInventory)
+wall_time::TimePoint oldest_logfile_time(InventoryWriter* pInventory)
 {
     auto ret = wall_time::TimePoint::max();
     const auto& file_names = pInventory->file_names();
@@ -260,7 +260,7 @@ const Config& Pinloki::config() const
     return m_config;
 }
 
-Inventory* Pinloki::inventory()
+InventoryWriter* Pinloki::inventory()
 {
     return &m_inventory;
 }
@@ -598,7 +598,7 @@ bool Pinloki::MasterConfig::load(const Config& config)
     return rval;
 }
 
-PurgeResult purge_binlogs(Inventory* pInventory, const std::string& up_to)
+PurgeResult purge_binlogs(InventoryWriter* pInventory, const std::string& up_to)
 {
     auto files = pInventory->file_names();
     auto up_to_ite = std::find(files.begin(), files.end(), pInventory->config().path(up_to));

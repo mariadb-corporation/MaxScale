@@ -20,36 +20,45 @@
 namespace pinloki
 {
 
-Inventory::Inventory(const Config& config)
-    : m_config(config)
+namespace
 {
-    read_file();
-}
-
-void Inventory::read_file() const
+std::vector<std::string> read_inventory_file(const Config& config)
 {
-    std::ifstream ifs(m_config.inventory_file_path());
+    std::ifstream ifs(config.inventory_file_path());
+    std::vector<std::string> file_names;
 
-    m_file_names.clear();
     while (ifs.good())
     {
         std::string name;
         ifs >> name;
         if (ifs.good())
         {
-            m_file_names.push_back(name);
+            file_names.push_back(name);
         }
     }
+
+    return file_names;
+}
 }
 
-void Inventory::push_back(const std::string& file_name)
+InventoryWriter::InventoryWriter(const Config& config)
+    : m_config(config)
+    , m_file_names(read_inventory_file(config))
 {
+}
+
+void InventoryWriter::push_back(const std::string& file_name)
+{
+    std::unique_lock<std::mutex> lock(m_mutex);
+
     m_file_names.push_back(m_config.path(file_name));
     persist();
 }
 
-void Inventory::pop_front(const std::string& file_name)
+void InventoryWriter::pop_front(const std::string& file_name)
 {
+    std::unique_lock<std::mutex> lock(m_mutex);
+
     if (file_name != m_file_names.front())
     {
         // This can happen if two users issue purge commands at the same time,
@@ -65,7 +74,7 @@ void Inventory::pop_front(const std::string& file_name)
     }
 }
 
-void Inventory::persist()
+void InventoryWriter::persist()
 {
     std::string tmp = m_config.inventory_file_path() + ".tmp";
     std::ofstream ofs(tmp, std::ios_base::trunc);
@@ -78,11 +87,9 @@ void Inventory::persist()
     rename(tmp.c_str(), m_config.inventory_file_path().c_str());
 }
 
-std::vector<std::string> Inventory::file_names() const
+std::vector<std::string> InventoryWriter::file_names() const
 {
-    // file reading can be improved, but the file is small
-    // and this function called seldomly
-    read_file();
+    std::unique_lock<std::mutex> lock(m_mutex);
     return m_file_names;
 }
 
@@ -118,5 +125,17 @@ std::string last_string(const std::vector<std::string>& strs)
     }
 
     return strs.back();
+}
+
+InventoryReader::InventoryReader(const Config& config)
+    : m_config(config)
+{
+}
+
+const std::vector<std::string>& InventoryReader::file_names() const
+{
+    // file reading can be improved, but the file is small
+    // and this function called seldomly
+    return m_file_names = read_inventory_file(m_config);
 }
 }

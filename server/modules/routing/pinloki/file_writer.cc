@@ -48,7 +48,7 @@ std::string next_file_name(const std::string& master, const std::string& prev)
 
 namespace pinloki
 {
-FileWriter::FileWriter(Inventory* inv, const Writer& writer)
+FileWriter::FileWriter(InventoryWriter* inv, const Writer& writer)
     : m_inventory(*inv)
     , m_writer(writer)
 {

@@ -35,7 +35,7 @@ public:
     // Used to generate the connection details used for replication
     using Generator = std::function<maxsql::Connection::ConnectionDetails()>;
 
-    Writer(Generator generator, mxb::Worker* worker, Inventory* inv);
+    Writer(Generator generator, mxb::Worker* worker, InventoryWriter* inv);
     ~Writer();
     void run();
 
@@ -44,7 +44,7 @@ public:
 private:
     Generator         m_generator;
     mxb::Worker*      m_worker;
-    Inventory&        m_inventory;
+    InventoryWriter&        m_inventory;
     bool              m_is_bootstrap = false;
     bool              m_commit_on_query = false;
     maxsql::GtidList  m_current_gtid_list;

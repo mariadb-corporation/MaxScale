@@ -54,8 +54,8 @@ public:
     uint64_t        getCapabilities();
     bool            configure(mxs::ConfigParameters* pParams);
 
-    const Config& config() const;
-    Inventory*    inventory();
+    const Config&    config() const;
+    InventoryWriter* inventory();
 
     void          change_master(const parser::ChangeMasterValues& values);
     bool          is_slave_running() const;
@@ -97,7 +97,7 @@ private:
     };
 
     Config                  m_config;
-    Inventory               m_inventory;
+    InventoryWriter         m_inventory;
     std::unique_ptr<Writer> m_writer;
     MasterConfig            m_master_config;
     mutable std::mutex      m_lock;
@@ -113,5 +113,5 @@ std::pair<std::string, std::string> get_file_name_and_size(const std::string& fi
  */
 enum class PurgeResult {Ok, UpToFileNotFound, PartialPurge};
 
-PurgeResult purge_binlogs(Inventory* pInventory, const std::string& up_to);
+PurgeResult purge_binlogs(InventoryWriter* pInventory, const std::string& up_to);
 }

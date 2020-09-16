@@ -34,9 +34,9 @@ pinloki::Config& config()
     return cfg;
 }
 
-pinloki::Inventory& inventory()
+pinloki::InventoryWriter& write_inventory()
 {
-    static pinloki::Inventory inv(config());
+    static pinloki::InventoryWriter inv(config());
     return inv;
 }
 
@@ -45,8 +45,10 @@ bool test_it(int argc, char* argv[])
 {
     return false;
 
+    pinloki::InventoryReader inv(config());
+
     auto gtid = maxsql::Gtid::from_string("0-0-9");
-    pinloki::GtidPosition pos = pinloki::find_gtid_position(gtid, inventory());
+    pinloki::GtidPosition pos = pinloki::find_gtid_position(gtid, inv);
 
     std::cout << "pos.file_name = " << pos.file_name << "\n";
     std::cout << "pos.pos = " << pos.file_pos << "\n";
@@ -76,7 +78,7 @@ void prog_main(const maxsql::GtidList& gtid_list, const std::string& host,
     {
         pinloki::Writer writer([&]() {
                                    return details;
-                               }, &worker, &inventory());
+                               }, &worker, &write_inventory());
         worker.start();
         worker.join();
     }
@@ -85,7 +87,7 @@ void prog_main(const maxsql::GtidList& gtid_list, const std::string& host,
         pinloki::Reader reader([](const auto& event) {
                                    std::cout << event << std::endl;
                                    return true;
-                               }, inventory(), &worker, gtid, 30s);
+                               }, config(), &worker, gtid, 30s);
         worker.start();
         worker.join();
     }
