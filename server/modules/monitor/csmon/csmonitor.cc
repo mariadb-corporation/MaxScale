@@ -1476,7 +1476,7 @@ void CsMonitor::pre_loop()
 
     if (m_context.config().dynamic_node_detection)
     {
-        check_cluster();
+        probe_cluster();
     }
     else
     {
@@ -1490,7 +1490,7 @@ void CsMonitor::pre_tick()
     {
         if (m_nodes_by_id.empty())
         {
-            check_cluster();
+            probe_cluster();
         }
         else
         {
@@ -1503,7 +1503,7 @@ void CsMonitor::pre_tick()
                     nodes.push_back(HostPortPair(pMs->address(), pMs->port()));
                 }
 
-                check_cluster(nodes);
+                probe_cluster(nodes);
             }
 
             update_status_of_dynamic_servers();
@@ -1511,7 +1511,7 @@ void CsMonitor::pre_tick()
     }
 }
 
-void CsMonitor::check_cluster()
+void CsMonitor::probe_cluster()
 {
     HostPortPairs nodes;
     char* pError = nullptr;
@@ -1532,7 +1532,7 @@ void CsMonitor::check_cluster()
         }
     }
 
-    check_cluster(nodes);
+    probe_cluster(nodes);
 }
 
 namespace
@@ -1561,7 +1561,7 @@ void set_status(CsDynamicServer& mserver, int status_mask)
 
 }
 
-void CsMonitor::check_cluster(const Hosts& hosts)
+void CsMonitor::adjust_dynamic_servers(const Hosts& hosts)
 {
     set<string> current_hosts;
     for (const auto& kv : m_nodes_by_id)
@@ -1634,7 +1634,7 @@ void CsMonitor::check_cluster(const Hosts& hosts)
     }
 }
 
-void CsMonitor::check_cluster(const HostPortPairs& nodes)
+void CsMonitor::probe_cluster(const HostPortPairs& nodes)
 {
     bool identical = true;
 
@@ -1716,18 +1716,18 @@ void CsMonitor::check_cluster(const HostPortPairs& nodes)
 
     if (identical)
     {
-        check_cluster(!hosts_by_host.empty() ? hosts_by_host.begin()->second : Hosts());
+        adjust_dynamic_servers(!hosts_by_host.empty() ? hosts_by_host.begin()->second : Hosts());
     }
     else
     {
         MXS_NOTICE("Nodes have different opinion regarding what nodes the cluster contains. "
                    "Figuring out whose opinion should count.");
 
-        check_fuzzy_cluster(hosts_by_host);
+        probe_fuzzy_cluster(hosts_by_host);
     }
 }
 
-void CsMonitor::check_fuzzy_cluster(const HostsByHost& hosts_by_host)
+void CsMonitor::probe_fuzzy_cluster(const HostsByHost& hosts_by_host)
 {
     vector<string> hosts;
     for (const auto& kv : hosts_by_host)
@@ -1772,7 +1772,7 @@ void CsMonitor::check_fuzzy_cluster(const HostsByHost& hosts_by_host)
             string host = hosts[i];
             MXB_NOTICE("Using %s as defining node.", host.c_str());
 
-            check_cluster(hosts_by_host.at(host));
+            adjust_dynamic_servers(hosts_by_host.at(host));
         }
     }
     else

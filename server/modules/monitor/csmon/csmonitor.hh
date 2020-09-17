@@ -136,10 +136,10 @@ private:
     using HostsByHost   = std::map<std::string, Hosts>;
     using StatusByHost  = std::map<std::string, cs::Status>;
 
-    void check_cluster();
-    void check_cluster(const HostPortPairs&);
-    void check_cluster(const Hosts& hosts);
-    void check_fuzzy_cluster(const HostsByHost& hosts_by_host);
+    void probe_cluster();
+    void probe_cluster(const HostPortPairs&);
+    void probe_fuzzy_cluster(const HostsByHost& hosts_by_host);
+    void adjust_dynamic_servers(const Hosts& hosts);
 
     bool check_bootstrap_servers();
     bool remove_persisted_information();
