@@ -202,16 +202,6 @@ CacheFilter* CacheFilter::create(const char* zName, mxs::ConfigParameters* pPara
     return pFilter;
 }
 
-// static
-void CacheFilter::apiFreeSession(MXS_FILTER*, mxs::Routable* pData)
-{
-    CacheFilterSession* pFilter_session = static_cast<CacheFilterSession*>(pData);
-
-    std::shared_ptr<CacheFilterSession> sFilter_session = pFilter_session->release();
-
-    // When sFilter_session now goes out of scope, pFilter_session will be deleted.
-}
-
 CacheFilterSession* CacheFilter::newSession(MXS_SESSION* pSession, SERVICE* pService)
 {
     CacheFilterSession* pFilter_session = nullptr;

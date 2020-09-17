@@ -39,15 +39,6 @@ public:
     ~CacheFilterSession();
 
     /**
-     * Releases the ownership of the CacheFilterSession to the caller.
-     * When the returned shared pointer goes out of scope, the instance
-     * will be deleted.
-     *
-     * @return A shared pointer controlling the life-time of the instance.
-     */
-    std::shared_ptr<CacheFilterSession> release();
-
-    /**
      * Creates a CacheFilterSession instance.
      *
      * @param pCache     Pointer to the cache instance to which this session cache
@@ -90,7 +81,7 @@ private:
 
     void store_and_prepare_response(const mxs::ReplyRoute& down, const mxs::Reply& reply);
     void prepare_response();
-    int flush_response(const mxs::ReplyRoute& down, const mxs::Reply& reply);
+    int  flush_response(const mxs::ReplyRoute& down, const mxs::Reply& reply);
 
     void reset_response_state();
 
@@ -163,11 +154,15 @@ private:
 
     using SSessionCache = std::shared_ptr<SessionCache>;
 
-    bool put_value_handler(cache_result_t result, const mxs::ReplyRoute& down, const mxs::Reply& reply);
-    void del_value_handler(cache_result_t result);
+    bool put_value_handler(cache_result_t result,
+                           const mxs::ReplyRoute& down,
+                           const mxs::Reply& reply);
+    void             del_value_handler(cache_result_t result);
     routing_action_t get_value_handler(GWBUF* pPacket, cache_result_t result, GWBUF* pResponse);
-    void invalidate_handler(cache_result_t result);
-    int client_reply_post_process(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply);
+    void             invalidate_handler(cache_result_t result);
+    int              client_reply_post_process(GWBUF* pPacket,
+                                               const mxs::ReplyRoute& down,
+                                               const mxs::Reply& reply);
     void clear_cache();
 
     int continue_routing(GWBUF* pPacket);

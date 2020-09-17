@@ -242,7 +242,8 @@ CacheFilterSession::CacheFilterSession(MXS_SESSION* pSession,
                                        std::unique_ptr<SessionCache> sCache,
                                        char* zDefaultDb)
     : maxscale::FilterSession(pSession, pService)
-    , m_sThis(this)
+    , m_sThis(SCacheFilterSession(this, [](auto ptr) {
+                                  }))
     , m_state(CACHE_EXPECTING_NOTHING)
     , m_sCache(std::move(sCache))
     , m_next_response(nullptr)
@@ -313,18 +314,6 @@ CacheFilterSession::~CacheFilterSession()
 {
     MXS_FREE(m_zUseDb);
     MXS_FREE(m_zDefaultDb);
-}
-
-std::shared_ptr<CacheFilterSession> CacheFilterSession::release()
-{
-    mxb_assert(m_sThis.get());      // This function can be called once.
-
-    std::shared_ptr<CacheFilterSession> sThis {m_sThis};
-
-    m_sThis.reset();    // No, effect as sThis has a reference.
-
-    // When sThis in the caller goes out of scope, this will be deleted.
-    return sThis;
 }
 
 // static
