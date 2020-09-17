@@ -2264,11 +2264,16 @@ bool runtime_alter_service_from_json(Service* service, json_t* new_json)
 
     if (validate_service_json(new_json))
     {
+        json_t* new_params = mxs_json_pointer(new_json, MXS_JSON_PTR_PARAMETERS);
         auto params = service->params();
         params.set_multiple(extract_parameters(new_json));
         const MXS_MODULE* mod = get_module(service->router_name(), MODULE_ROUTER);
 
-        if (validate_param(common_service_params(), mod->parameters, &params)
+        bool params_valid = mod->specification && new_params ?
+            mod->specification->validate(new_params) :
+            validate_param(common_service_params(), mod->parameters, &params);
+
+        if (params_valid
             && can_modify_service_params(service, params)
             && update_service_relationships(service, new_json))
         {
@@ -2277,7 +2282,7 @@ bool runtime_alter_service_from_json(Service* service, json_t* new_json)
 
             if (auto cnf = service->router_instance->getConfiguration())
             {
-                if (json_t* new_params = mxs_json_pointer(new_json, MXS_JSON_PTR_PARAMETERS))
+                if (new_params)
                 {
                     // Merge the new parameters with the old ones to create a complete definition.
                     json_t* combined_params = merge_json_objects(cnf->to_json(), new_params);
