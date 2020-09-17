@@ -105,8 +105,19 @@ SFilterDef filter_alloc(const char* name, const char* module, mxs::ConfigParamet
 
     if (filter)
     {
-        Guard guard(this_unit.lock);
-        this_unit.filters.push_back(filter);
+        if (auto config = filter->configuration())
+        {
+            if (!config->configure(*params))
+            {
+                filter.reset();
+            }
+        }
+
+        if (filter)
+        {
+            Guard guard(this_unit.lock);
+            this_unit.filters.push_back(filter);
+        }
     }
     else
     {
