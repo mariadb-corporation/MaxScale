@@ -93,7 +93,7 @@ export default {
         /**
          * @param {Object} payload payload object
          * @param {String} payload.id Name of the service
-         * @param {String} payload.router The router module to use
+         * @param {String} payload.module The router module to use
          * @param {Object} payload.parameters Parameters for the service
          * @param {Object} payload.relationships The relationships of the service to other resources
          * @param {Object} payload.relationships.servers servers object
@@ -107,7 +107,7 @@ export default {
                         id: payload.id,
                         type: 'services',
                         attributes: {
-                            router: payload.router,
+                            router: payload.module,
                             parameters: payload.parameters,
                         },
                         relationships: payload.relationships,
