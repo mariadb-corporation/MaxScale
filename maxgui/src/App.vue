@@ -4,8 +4,6 @@
         <component :is="$route.meta.layout"> </component>
         <base-dialog
             v-model="updateExists"
-            :onClose="() => null"
-            :onCancel="() => null"
             :onSave="confirmUpdate"
             :title="`${$t('newUpdateAvailable')}`"
             saveText="update"

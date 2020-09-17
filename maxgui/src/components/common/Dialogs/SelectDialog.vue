@@ -1,14 +1,14 @@
 <template>
     <base-dialog
-        v-model="computeShowDialog"
-        :onCancel="onCancel"
-        :onSave="onSave"
-        :onClose="onClose"
+        v-model="isDialogOpen"
+        :onCancel="onCancelHandler"
+        :onSave="onSaveHandler"
+        :onClose="onCloseHandler"
         :title="title"
         :saveText="mode"
         :isSaveDisabled="isSaveDisabled"
     >
-        <template v-slot:body>
+        <template v-slot:form-body>
             <p class="select-label">
                 {{ $tc('specify', multiple ? 2 : 1) }}
 
@@ -51,57 +51,54 @@ This component emits two events
 export default {
     name: 'select-dialog',
     props: {
-        value: { type: Boolean, required: true },
         mode: { type: String, required: true }, // change or add
         title: { type: String, required: true },
         entityName: { type: String, required: true },
         clearable: { type: Boolean, default: false },
-        handleSave: { type: Function, required: true },
-        onClose: { type: Function, required: true },
-        onCancel: { type: Function, required: true },
+        onSave: { type: Function, required: true },
+        onClose: { type: Function },
+        onCancel: { type: Function },
         multiple: { type: Boolean, default: false },
         itemsList: { type: Array, required: true },
         defaultItems: { type: [Array, Object], default: () => [] },
     },
     data() {
         return {
-            show: false,
+            isDialogOpen: false,
             selectedItems: [],
             isSaveDisabled: true,
         }
     },
-    computed: {
-        computeShowDialog: {
-            // get value from props
-            get() {
-                return this.value
-            },
-            // set the value to show property in data
-            set(value) {
-                this.show = value
-            },
-        },
-    },
     watch: {
-        value: function(val) {
-            if (val) {
-                this.$emit('on-open')
-            } else {
-                this.selectedItems.length && (this.selectedItems = [])
-                !this.isSaveDisabled && (this.isSaveDisabled = true)
-            }
+        isDialogOpen: function(val) {
+            if (val) this.$emit('on-open')
+            else this.selectedItems = []
         },
     },
 
     methods: {
+        closeDialog() {
+            this.isDialogOpen = false
+        },
+        open() {
+            this.isDialogOpen = true
+        },
+        onCancelHandler() {
+            this.onCancel && this.onCancel()
+            this.closeDialog()
+        },
+        onCloseHandler() {
+            this.onClose && this.onClose()
+            this.closeDialog()
+        },
+
+        async onSaveHandler() {
+            await this.onSave()
+            this.closeDialog()
+        },
         handleGetSelectedItems(items) {
             this.selectedItems = items
             this.$emit('selected-items', items)
-        },
-        async onSave() {
-            await this.handleSave()
-            this.selectedItems = []
-            this.onCancel()
         },
     },
 }

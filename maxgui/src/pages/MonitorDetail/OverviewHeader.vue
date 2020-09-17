@@ -51,13 +51,11 @@
         </outlined-overview-card>
 
         <select-dialog
-            v-model="showSelectDialog"
+            ref="selectDialog"
             :title="dialogTitle"
             mode="swap"
             :entityName="targetSelectItemType"
-            :onClose="handleClose"
-            :onCancel="handleClose"
-            :handleSave="confirmChange"
+            :onSave="confirmChange"
             :itemsList="itemsList"
             :defaultItems="defaultItems"
             @selected-items="targetItem = $event"
@@ -96,7 +94,6 @@ export default {
             dialogTitle: '',
             targetItem: [],
             //select dialog
-            showSelectDialog: false,
             targetSelectItemType: 'servers',
             itemsList: [],
             defaultItems: {},
@@ -135,9 +132,6 @@ export default {
         },
     },
     methods: {
-        handleClose() {
-            this.showSelectDialog = false
-        },
         // get available entities and set default item when select-dialog is opened
         async getAllEntities() {
             switch (this.targetSelectItemType) {
@@ -162,7 +156,7 @@ export default {
                     this.targetSelectItemType = 'servers'
                     break
             }
-            this.showSelectDialog = true
+            this.$refs.selectDialog.open()
         },
 
         async confirmChange() {

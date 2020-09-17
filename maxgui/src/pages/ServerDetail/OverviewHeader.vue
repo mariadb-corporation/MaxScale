@@ -68,14 +68,12 @@
         </outlined-overview-card>
 
         <select-dialog
-            v-model="showSelectDialog"
+            ref="selectDialog"
             :title="dialogTitle"
             mode="change"
             :entityName="targetSelectItemType"
             clearable
-            :onClose="handleClose"
-            :onCancel="handleClose"
-            :handleSave="confirmChange"
+            :onSave="confirmChange"
             :itemsList="itemsList"
             :defaultItems="defaultItems"
             @selected-items="targetItem = $event"
@@ -119,7 +117,6 @@ export default {
             dialogTitle: '',
             targetItem: null,
             //select dialog
-            showSelectDialog: false,
             targetSelectItemType: 'monitors',
             itemsList: [],
             defaultItems: {},
@@ -171,9 +168,6 @@ export default {
         },
     },
     methods: {
-        handleClose() {
-            this.showSelectDialog = false
-        },
         onEdit(type) {
             this.dialogTitle = `${this.$t(`changeEntity`, {
                 entityName: this.$tc(type, 1),
@@ -184,8 +178,7 @@ export default {
                     this.targetSelectItemType = type
                     break
             }
-
-            this.showSelectDialog = true
+            this.$refs.selectDialog.open()
         },
         // -------------------------------------------- Changes handle
         // get available entities and set default item when select-dialog is opened

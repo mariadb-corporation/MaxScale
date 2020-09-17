@@ -71,13 +71,11 @@
         </template>
         <template v-slot:append>
             <confirm-dialog
-                v-model="showConfirmDialog"
+                ref="monitorConfirmDialog"
                 :title="dialogTitle"
                 :type="dialogType"
                 :item="currentMonitor"
                 :onSave="confirmSave"
-                :onClose="handleClose"
-                :onCancel="handleClose"
             />
             <icon-sprite-sheet
                 size="13"
@@ -123,7 +121,6 @@ export default {
     },
     data() {
         return {
-            showConfirmDialog: false,
             dialogTitle: '',
             dialogType: 'destroy',
         }
@@ -144,10 +141,6 @@ export default {
             await this.performAsyncLoadingAction(this.dialogType)
         },
 
-        handleClose() {
-            this.showConfirmDialog = false
-        },
-
         async performAsyncLoadingAction(mode) {
             const { id } = this.currentMonitor
             switch (mode) {
@@ -156,7 +149,7 @@ export default {
                         id,
                         mode,
                     })
-                    this.showConfirmDialog = false
+
                     this.goBack()
                     break
                 default:
@@ -165,14 +158,13 @@ export default {
                         mode,
                         callback: this.onEditSucceeded,
                     })
-                    this.showConfirmDialog = false
             }
         },
 
         actionHandle(type) {
             this.dialogType = type
             this.dialogTitle = `${this.$t(type)} ${this.$tc('monitors', 1)}`
-            this.showConfirmDialog = true
+            this.$refs.monitorConfirmDialog.open()
         },
     },
 }

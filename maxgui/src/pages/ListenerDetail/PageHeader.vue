@@ -22,13 +22,11 @@
         </template>
         <template v-slot:append>
             <confirm-dialog
-                v-model="showConfirmDialog"
+                ref="listenerConfirmDialog"
                 :title="dialogTitle"
                 :type="dialogType"
                 :item="currentListener"
                 :onSave="confirmSave"
-                :onClose="handleClose"
-                :onCancel="handleClose"
             />
             <icon-sprite-sheet
                 size="13"
@@ -69,7 +67,6 @@ export default {
     },
     data() {
         return {
-            showConfirmDialog: false,
             dialogTitle: '',
             dialogType: 'destroy',
         }
@@ -85,7 +82,6 @@ export default {
             switch (type) {
                 case 'destroy':
                     await this.destroyListener(this.currentListener.id)
-                    this.showConfirmDialog = false
                     this.goBack()
                     break
                 default:
@@ -96,11 +92,7 @@ export default {
         handleDelete() {
             this.dialogType = 'destroy'
             this.dialogTitle = `${this.$t('destroy')} ${this.$tc('listeners', 1)}`
-            this.showConfirmDialog = true
-        },
-
-        handleClose() {
-            this.showConfirmDialog = false
+            this.$refs.listenerConfirmDialog.open()
         },
     },
 }

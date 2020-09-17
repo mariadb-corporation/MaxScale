@@ -55,13 +55,12 @@
             <base-dialog
                 v-model="showConfirmDialog"
                 :onCancel="cancelEdit"
-                :onClose="closeConfirmDialog"
                 :onSave="acceptEdit"
                 :title="`${$t('implementChanges')}`"
                 saveText="thatsRight"
                 :isSaveDisabled="shouldDisableSaveBtn"
             >
-                <template v-slot:body>
+                <template v-slot:form-body>
                     <span class="d-block confirmation-text mb-4">
                         {{
                             $tc('changeTheFollowingParameter', changedParams.length > 1 ? 2 : 1, {
@@ -367,14 +366,9 @@ export default {
             }, [])
         },
 
-        closeConfirmDialog() {
-            this.showConfirmDialog = false
-        },
-
         // this simply put everything back to original state
         cancelEdit() {
             this.editableCell = false
-            this.closeConfirmDialog()
             this.changedParams = []
             // this helps to assign accurate parameter info and trigger assignPortSocketDependencyValues
             this.processingTableRow(this.parametersTableRow)

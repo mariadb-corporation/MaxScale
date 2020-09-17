@@ -90,14 +90,12 @@
         </template>
         <template v-slot:append>
             <confirm-dialog
-                v-model="showConfirmDialog"
+                ref="serverConfirmDialog"
                 :title="dialogTitle"
                 :type="dialogType"
                 :smallInfo="smallInfo"
                 :item="currentServer"
                 :onSave="confirmSave"
-                :onClose="handleClose"
-                :onCancel="handleClose"
             >
                 <template
                     v-if="currentStateMode === 'maintenance' && type === 'set'"
@@ -152,7 +150,6 @@ export default {
     },
     data() {
         return {
-            showConfirmDialog: false,
             dialogTitle: '',
             dialogType: 'unlink',
             smallInfo: '',
@@ -195,10 +192,6 @@ export default {
     methods: {
         ...mapActions('server', ['destroyServer', 'setOrClearServerState']),
 
-        handleClose() {
-            this.showConfirmDialog = false
-        },
-
         handleClick(type) {
             this.dialogType = type
             this.dialogTitle = `${this.$t(type)} ${this.$tc('servers', 1)}`
@@ -232,15 +225,13 @@ export default {
                     }
                     break
             }
-
-            this.showConfirmDialog = true
+            this.$refs.serverConfirmDialog.open()
         },
 
         async confirmSave() {
             switch (this.type) {
                 case 'delete':
                     await this.destroyServer(this.currentServer.id)
-                    this.showConfirmDialog = false
                     this.goBack()
                     break
                 case 'set':
@@ -250,7 +241,6 @@ export default {
             }
         },
         async performAsyncLoadingAction() {
-            this.showConfirmDialog = false
             let payload = {
                 id: this.currentServer.id,
                 stateMode: this.currentStateMode,

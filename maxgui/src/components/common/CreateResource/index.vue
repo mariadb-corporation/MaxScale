@@ -13,7 +13,7 @@
         >
             + {{ $t('createNew') }}
         </v-btn>
-        <forms v-model="createDialog" :closeModal="handleClose" />
+        <forms ref="formDialog" :onClose="onClose" />
     </div>
 </template>
 
@@ -38,11 +38,6 @@ export default {
         Forms,
     },
 
-    data() {
-        return {
-            createDialog: false,
-        }
-    },
     computed: {
         ...mapState({
             form_type: 'form_type',
@@ -63,11 +58,10 @@ export default {
         }),
         async create() {
             await this.fetchAllModules()
-            this.createDialog = true
+            this.$refs.formDialog.open()
         },
-        handleClose() {
+        onClose() {
             if (this.form_type) this.SET_FORM_TYPE(null)
-            else this.createDialog = false
         },
     },
 }

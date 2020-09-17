@@ -22,13 +22,11 @@
         </template>
         <template v-slot:append>
             <confirm-dialog
-                v-model="showConfirmDialog"
+                ref="filterConfirmDialog"
                 :title="dialogTitle"
                 :type="dialogType"
                 :item="currentFilter"
                 :onSave="confirmSave"
-                :onClose="handleClose"
-                :onCancel="handleClose"
             />
         </template>
     </details-page-title>
@@ -59,7 +57,6 @@ export default {
     },
     data() {
         return {
-            showConfirmDialog: false,
             dialogTitle: '',
             dialogType: 'destroy',
         }
@@ -75,7 +72,6 @@ export default {
             switch (type) {
                 case 'destroy':
                     await this.destroyFilter(this.currentFilter.id)
-                    this.showConfirmDialog = false
                     this.goBack()
                     break
                 default:
@@ -86,11 +82,7 @@ export default {
         handleDelete() {
             this.dialogType = 'destroy'
             this.dialogTitle = `${this.$t('destroy')} ${this.$tc('filters', 1)}`
-            this.showConfirmDialog = true
-        },
-
-        handleClose() {
-            this.showConfirmDialog = false
+            this.$refs.filterConfirmDialog.open()
         },
     },
 }

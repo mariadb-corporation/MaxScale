@@ -45,24 +45,20 @@
             <!-- Avaiable dialogs for editable table -->
             <confirm-dialog
                 v-if="!readOnly"
-                v-model="showDeleteDialog"
+                ref="relationshipConfirmDialog"
                 :title="dialogTitle"
                 :type="deleteDialogType"
                 :item="Array.isArray(targetItem) ? {} : targetItem"
-                :onSave="() => confirmDelete()"
-                :onClose="() => (showDeleteDialog = false)"
-                :onCancel="() => (showDeleteDialog = false)"
+                :onSave="confirmDelete"
             />
             <select-dialog
                 v-if="!readOnly"
-                v-model="showSelectDialog"
+                ref="relationshipSelectDialog"
                 :title="dialogTitle"
                 mode="add"
                 multiple
                 :entityName="relationshipType"
-                :onClose="() => (showSelectDialog = false)"
-                :onCancel="() => (showSelectDialog = false)"
-                :handleSave="confirmAdd"
+                :onSave="confirmAdd"
                 :itemsList="itemsList"
                 @selected-items="targetItem = $event"
                 @on-open="getAllEntities"
@@ -123,10 +119,8 @@ export default {
             dialogTitle: '',
             targetItem: null,
             //delete dialog
-            showDeleteDialog: false,
             deleteDialogType: 'delete',
             //select dialog
-            showSelectDialog: false,
             itemsList: [],
             isMounting: true,
         }
@@ -228,7 +222,7 @@ export default {
             this.targetItem = item
             this.deleteDialogType = 'unlink'
             this.dialogTitle = `${this.$t('unlink')} ${this.$tc(this.relationshipType, 1)}`
-            this.showDeleteDialog = true
+            this.$refs.relationshipConfirmDialog.open()
         },
 
         async confirmDelete() {
@@ -271,7 +265,7 @@ export default {
                 entityName: this.$tc(this.relationshipType, 2),
             })}`
 
-            if (this.relationshipType !== 'listeners') this.showSelectDialog = true
+            if (this.relationshipType !== 'listeners') this.$refs.relationshipSelectDialog.open()
             else this.$emit('open-listener-form-dialog')
         },
 

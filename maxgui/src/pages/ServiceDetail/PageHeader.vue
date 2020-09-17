@@ -71,13 +71,11 @@
         </template>
         <template v-slot:append>
             <confirm-dialog
-                v-model="showConfirmDialog"
+                ref="serviceConfirmDialog"
                 :title="dialogTitle"
                 :type="dialogType"
                 :item="currentService"
                 :onSave="confirmSave"
-                :onClose="handleClose"
-                :onCancel="handleClose"
             />
             <icon-sprite-sheet
                 size="13"
@@ -119,7 +117,6 @@ export default {
     },
     data() {
         return {
-            showConfirmDialog: false,
             dialogTitle: '',
             dialogType: 'destroy',
         }
@@ -131,14 +128,12 @@ export default {
     },
     methods: {
         ...mapActions('service', ['destroyService', 'stopOrStartService']),
-        handleClose() {
-            this.showConfirmDialog = false
-        },
 
         actionHandle(type) {
             this.dialogType = type
             this.dialogTitle = `${this.$t(type)} ${this.$tc('services', 1)}`
-            this.showConfirmDialog = true
+
+            this.$refs.serviceConfirmDialog.open()
         },
 
         async confirmSave() {
@@ -150,7 +145,6 @@ export default {
             switch (mode) {
                 case 'destroy':
                     await this.destroyService(id)
-                    this.showConfirmDialog = false
                     this.goBack()
                     break
                 default:
@@ -159,7 +153,6 @@ export default {
                         mode,
                         callback: this.onEditSucceeded,
                     })
-                    this.showConfirmDialog = false
             }
         },
     },

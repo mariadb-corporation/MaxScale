@@ -1,6 +1,6 @@
 <template>
     <v-dialog
-        v-model="computeShowDialog"
+        v-model="value"
         overlay-color="navigation"
         overlay-opacity="0.6"
         width="unset"
@@ -9,6 +9,7 @@
         :scrollable="scrollable"
         eager
         @keydown.enter="keydownHandler"
+        @input="$emit('input', $event)"
     >
         <v-card
             class="v-card-custom"
@@ -24,8 +25,9 @@
                 </v-btn>
             </v-card-title>
             <v-card-text class="v-card-text_padding">
+                <slot name="body"></slot>
                 <v-form ref="form" v-model="isFormValid" lazy-validation class="mt-4">
-                    <slot name="body"></slot>
+                    <slot name="form-body"></slot>
                 </v-form>
             </v-card-text>
             <v-card-actions class="v-card-actions_padding color border-top-reflection">
@@ -81,19 +83,14 @@ import { OVERLAY_TRANSPARENT_LOADING } from 'store/overlayTypes'
 export default {
     name: 'base-dialog',
     props: {
+        value: { type: Boolean, required: true },
         minBodyWidth: { type: String, default: '466px' },
         isDynamicWidth: { type: Boolean, default: false },
         scrollable: { type: Boolean, default: true },
         title: { type: String, required: true },
-        // passed when using v-model
-        value: { type: Boolean, required: true },
-        /* These functions are requires since the computeShowDialog depends on the value props.
-        The open/close of the dialog completely controlled by the parent component.
-        */
-        onClose: { type: Function, required: true },
-        onCancel: { type: Function, required: true },
+        onClose: { type: Function },
+        onCancel: { type: Function },
         onSave: { type: Function, required: true },
-
         cancelText: { type: String, default: 'cancel' },
         saveText: { type: String, default: 'save' },
         // manually control btn disabled
@@ -103,32 +100,24 @@ export default {
     },
     data() {
         return {
-            isOpen: false,
             isFormValid: true,
         }
-    },
-    computed: {
-        computeShowDialog: {
-            // get value from props
-            get() {
-                return this.value
-            },
-            // set the value to isOpen property in data
-            set(value) {
-                this.isOpen = value
-            },
-        },
     },
 
     methods: {
         ...mapMutations(['SET_OVERLAY_TYPE']),
+        closeDialog() {
+            this.$emit('input', false)
+        },
         cancel() {
             this.$refs.form.reset()
             this.$refs.form.resetValidation()
-            this.onCancel()
+            this.onCancel && this.onCancel()
+            this.closeDialog()
         },
         close() {
-            this.onClose()
+            this.onClose && this.onClose()
+            this.closeDialog()
         },
         async keydownHandler() {
             if (this.isFormValid && !this.isSaveDisabled) await this.save()
@@ -145,6 +134,7 @@ export default {
             } else {
                 this.SET_OVERLAY_TYPE(OVERLAY_TRANSPARENT_LOADING)
                 await this.onSave()
+                this.closeDialog()
                 if (this.$refs.form) {
                     this.$refs.form.reset()
                     this.$refs.form.resetValidation()

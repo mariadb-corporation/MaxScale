@@ -1,14 +1,14 @@
 <template>
     <base-dialog
         ref="baseDialog"
-        v-model="computeShowDialog"
-        :onCancel="closeModal"
-        :onClose="closeModal"
-        :onSave="handleSave"
+        v-model="isDialogOpen"
+        :onCancel="onCancelHandler"
+        :onClose="onCloseHandler"
+        :onSave="onSave"
         :title="`${$t('createANew')}...`"
         isDynamicWidth
     >
-        <template v-if="selectedForm" v-slot:body>
+        <template v-slot:body>
             <v-select
                 id="resource-select"
                 v-model="selectedForm"
@@ -16,7 +16,7 @@
                 name="resourceName"
                 outlined
                 dense
-                class="resource-select std mariadb-select-input error--text__bottom"
+                class="mt-4 resource-select std mariadb-select-input error--text__bottom"
                 :menu-props="{
                     contentClass: 'mariadb-select-v-menu',
                     bottom: true,
@@ -27,6 +27,8 @@
                 required
                 @input="handleFormSelection"
             />
+        </template>
+        <template v-if="selectedForm" v-slot:form-body>
             <v-divider class="divider" />
             <div class="mb-0">
                 <label class="label color text-small-text d-block">
@@ -118,12 +120,12 @@ export default {
         ServerFormInput,
     },
     props: {
-        value: { type: Boolean, required: true },
-        closeModal: { type: Function, required: true },
+        onClose: { type: Function },
+        onCancel: { type: Function },
     },
     data: function() {
         return {
-            show: false,
+            isDialogOpen: false,
             selectedForm: '',
             formTypes: ['Service', 'Server', 'Monitor', 'Filter', 'Listener'],
             // module for monitor, service, and filter, listener
@@ -176,20 +178,9 @@ export default {
 
             getAllListenersInfo: 'listener/getAllListenersInfo',
         }),
-
-        computeShowDialog: {
-            // get value from props
-            get() {
-                return this.value
-            },
-            // set the value to show property in data
-            set(value) {
-                this.show = value
-            },
-        },
     },
     watch: {
-        value: async function(val) {
+        isDialogOpen: async function(val) {
             if (!val) return null
             else if (!this.form_type) await this.setDefaultForm(this.$route.name)
             else {
@@ -218,6 +209,20 @@ export default {
             fetchAllFilters: 'filter/fetchAllFilters',
             fetchAllListeners: 'listener/fetchAllListeners',
         }),
+        closeDialog() {
+            this.isDialogOpen = false
+        },
+        open() {
+            this.isDialogOpen = true
+        },
+        onCancelHandler() {
+            this.onCancel && this.onCancel()
+            this.closeDialog()
+        },
+        onCloseHandler() {
+            this.onClose && this.onClose()
+            this.closeDialog()
+        },
 
         async handleFormSelection(val) {
             const isMultiple = true // if relationship data allows multiple objects
@@ -347,7 +352,7 @@ export default {
             return allResourceModules
         },
 
-        async handleSave() {
+        async onSave() {
             switch (this.selectedForm) {
                 case 'Service':
                     {
@@ -420,11 +425,11 @@ export default {
                     }
                     break
             }
-            this.closeModal()
-            this.shouldReload()
+            this.closeDialog()
+            this.reloadHandler()
         },
 
-        shouldReload() {
+        reloadHandler() {
             if (this.defaultRelationshipItems) this.SET_REFRESH_RESOURCE(true)
         },
 

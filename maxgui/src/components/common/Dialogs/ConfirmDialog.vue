@@ -1,13 +1,13 @@
 <template>
     <base-dialog
-        v-model="computeShowDialog"
-        :onCancel="onCancel"
-        :onSave="handleSave"
-        :onClose="onClose"
+        v-model="isDialogOpen"
+        :onCancel="onCancelHandler"
+        :onSave="onSave"
+        :onClose="onCloseHandler"
         :title="title"
         :saveText="type"
     >
-        <template v-slot:body>
+        <template v-slot:form-body>
             <p v-if="!$help.isNull(item)">
                 <span class="confirmations-text">
                     {{ $t(`confirmations.${type}`, { targetId: item.id }) }}
@@ -37,36 +37,33 @@
 export default {
     name: 'confirm-dialog',
     props: {
-        value: { type: Boolean, required: true },
         type: { type: String, required: true }, //delete, unlink, destroy, stop, start
         title: { type: String, required: true },
         onSave: { type: Function, required: true },
-        onClose: { type: Function, required: true },
-        onCancel: { type: Function, required: true },
+        onClose: { type: Function },
+        onCancel: { type: Function },
         item: { type: Object, default: null },
         smallInfo: { type: String, default: '' },
     },
     data() {
         return {
-            show: false,
+            isDialogOpen: false,
         }
     },
-    computed: {
-        computeShowDialog: {
-            // get value from props
-            get() {
-                return this.value
-            },
-            // set the value to show property in data
-            set(value) {
-                this.show = value
-            },
-        },
-    },
     methods: {
-        async handleSave() {
-            await this.onSave()
-            this.onCancel()
+        closeDialog() {
+            this.isDialogOpen = false
+        },
+        open() {
+            this.isDialogOpen = true
+        },
+        onCancelHandler() {
+            this.onCancel && this.onCancel()
+            this.closeDialog()
+        },
+        onCloseHandler() {
+            this.onClose && this.onClose()
+            this.closeDialog()
         },
     },
 }
