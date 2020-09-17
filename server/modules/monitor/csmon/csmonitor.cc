@@ -324,7 +324,6 @@ int fetch_status_mask(const CsMonitorServer& server, size_t nServers)
     return mask;
 }
 
-
 }
 
 namespace
@@ -743,6 +742,18 @@ void reject_command_pending(json_t** ppOutput, const char* zPending)
                           "be started until that has finished. Cancel or wait.", zPending);
 }
 
+}
+
+CsMonitorServer* CsMonitor::get_monitored_server(SERVER* pServer)
+{
+    CsMonitorServer* pMs = get_dynamic_server(pServer);
+
+    if (!pMs)
+    {
+        pMs = static_cast<CsMonitorServer*>(Base::get_monitored_server(pServer));
+    }
+
+    return pMs;
 }
 
 bool CsMonitor::command_add_node(json_t** ppOutput,
@@ -1588,7 +1599,7 @@ void CsMonitor::adjust_dynamic_servers(const Hosts& hosts)
 
             if (it == m_nodes_by_id.end())
             {
-                string server_name = string("@@") + m_name + ":" + host;
+                string server_name = create_dynamic_name(host);
 
                 SERVER* pServer = SERVER::find_by_unique_name(server_name);
 
@@ -1964,4 +1975,42 @@ bool CsMonitor::should_probe_cluster() const
     }
 
     return rv;
+}
+
+string CsMonitor::create_dynamic_name(const string& host) const
+{
+    return string("@@") + m_name + ":" + host;
+}
+
+CsDynamicServer* CsMonitor::get_dynamic_server(const SERVER* pServer) const
+{
+    CsDynamicServer* pDs = nullptr;
+
+    if (m_context.config().dynamic_node_detection)
+    {
+        if (strncmp(pServer->name(), "@@", 2) == 0)
+        {
+            string s = pServer->name() + 2;
+            auto i = s.find(':');
+
+            if (i != string::npos)
+            {
+                auto name = s.substr(0, i);
+
+                if (name == m_name)
+                {
+                    string host = s.substr(i + 1);
+
+                    auto it = m_nodes_by_id.find(host);
+
+                    if (it != m_nodes_by_id.end())
+                    {
+                        pDs = it->second.get();
+                    }
+                }
+            }
+        }
+    }
+
+    return pDs;
 }

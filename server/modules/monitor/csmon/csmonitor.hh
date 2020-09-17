@@ -51,10 +51,8 @@ public:
         return reinterpret_cast<const ServerVector&>(sl);
     }
 
-    CsMonitorServer* get_monitored_server(SERVER* search_server)
-    {
-        return static_cast<CsMonitorServer*>(Base::get_monitored_server(search_server));
-    }
+    CsMonitorServer* get_monitored_server(SERVER* search_server);
+    CsDynamicServer* get_dynamic_server(const SERVER* pServer) const;
 
     const ServerVector& servers() const
     {
@@ -150,6 +148,8 @@ private:
     bool fetch_configs(const std::vector<std::string>& hosts, std::vector<cs::Config>* pConfigs);
 
     bool should_probe_cluster() const;
+
+    std::string create_dynamic_name(const std::string& host) const;
 
     CsContext                                               m_context;
     std::map<std::string, std::unique_ptr<CsDynamicServer>> m_nodes_by_id;
