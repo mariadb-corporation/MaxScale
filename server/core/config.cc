@@ -2903,11 +2903,9 @@ static bool check_config_objects(CONFIG_CONTEXT* context)
 
         if (mod->specification)
         {
-            if (!mod->specification->validate(obj->m_parameters))
-            {
-                rval = false;
-            }
-
+            // Modules with specifications will be validated after the construction order has
+            // been resolved. This makes sure that the parameter validation for types that
+            // expect objects (servers, services) will work.
             continue;
         }
 
@@ -3465,6 +3463,11 @@ int create_new_service(CONFIG_CONTEXT* obj)
     const MXS_MODULE* module = get_module(router.c_str(), MODULE_ROUTER);
     mxb_assert(module);
 
+    if (module->specification && !module->specification->validate(obj->m_parameters))
+    {
+        return 1;
+    }
+
     if (user.empty() || auth.empty())
     {
         MXS_ERROR("Service '%s' is missing %s%s%s.",
@@ -3612,6 +3615,11 @@ int create_new_listener(CONFIG_CONTEXT* obj)
 
     if (const MXS_MODULE* mod = get_module(protocol.c_str(), MODULE_PROTOCOL))
     {
+        if (mod->specification && !mod->specification->validate(obj->m_parameters))
+        {
+            return 1;
+        }
+
         config_add_defaults(&obj->m_parameters, common_listener_params());
         config_add_defaults(&obj->m_parameters, mod->parameters);
     }
@@ -3638,6 +3646,11 @@ int create_new_filter(CONFIG_CONTEXT* obj)
 
     if (const MXS_MODULE* mod = get_module(module, MODULE_FILTER))
     {
+        if (mod->specification && !mod->specification->validate(obj->m_parameters))
+        {
+            return 1;
+        }
+
         config_add_defaults(&obj->m_parameters, mod->parameters);
 
         if (!filter_alloc(obj->name(), module, &obj->m_parameters))

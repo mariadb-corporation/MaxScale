@@ -99,6 +99,11 @@ Monitor* MonitorManager::create_monitor(const string& name, const string& module
     const MXS_MODULE* module = get_module(module_name.c_str(), MODULE_MONITOR);
     if (module)
     {
+        if (module->specification && !module->specification->validate(*params))
+        {
+            return nullptr;
+        }
+
         MXS_MONITOR_API* api = (MXS_MONITOR_API*)module->module_object;
         new_monitor = api->createInstance(name, module_name);
         if (new_monitor)
