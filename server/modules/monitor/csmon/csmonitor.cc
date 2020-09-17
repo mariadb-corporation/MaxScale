@@ -709,17 +709,12 @@ bool CsMonitor::configure(const mxs::ConfigParameters* pParams)
     {
         rv = MonitorWorkerSimple::configure(pParams);
 
-        if (rv)
+        if (rv && m_context.config().dynamic_node_detection)
         {
-            if (m_context.config().dynamic_node_detection)
-            {
-                m_probe_cluster = true;
-                m_last_probe = mxb::SteadyClock::now() - m_context.config().cluster_monitor_interval;
-            }
-            else
-            {
-                rv = check_bootstrap_servers();
-            }
+            // Only if dynamic node detection is enabled do we need to check the
+            // bootstrap servers. If disabled we are going to use them directly
+            // as the servers to be monitored.
+            rv = check_bootstrap_servers();
         }
     }
 
@@ -1488,6 +1483,10 @@ void CsMonitor::pre_loop()
 
     if (m_context.config().dynamic_node_detection)
     {
+        m_obsolete_bootstraps.clear();
+        m_probe_cluster = true;
+        m_last_probe = mxb::SteadyClock::now() - m_context.config().cluster_monitor_interval;
+
         probe_cluster();
     }
     else
@@ -1642,6 +1641,22 @@ void CsMonitor::adjust_dynamic_servers(const Hosts& hosts)
             m_nodes_by_id.erase(it);
 
             sMs->set_excluded();
+        }
+    }
+
+    for (const auto* pMs : servers())
+    {
+        const char* zAddress = pMs->address();
+
+        if (m_nodes_by_id.find(zAddress) == m_nodes_by_id.end())
+        {
+            if (m_obsolete_bootstraps.find(zAddress) == m_obsolete_bootstraps.end())
+            {
+                MXS_WARNING("Bootstrap server '%s' of monitor '%s' is no longer part of the cluster, "
+                            "it should be removed. This warning will be logged once per monitor start.",
+                            pMs->name(), name());
+                m_obsolete_bootstraps.insert(zAddress);
+            }
         }
     }
 }

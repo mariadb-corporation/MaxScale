@@ -156,4 +156,5 @@ private:
     sqlite3*                                                m_pDb {nullptr};
     mxb::TimePoint                                          m_last_probe;
     bool                                                    m_probe_cluster { true };
+    std::set<std::string>                                   m_obsolete_bootstraps;
 };
