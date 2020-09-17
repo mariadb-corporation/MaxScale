@@ -112,6 +112,7 @@ private:
     bool has_sufficient_permissions();
     void update_server_status(mxs::MonitorServer* pServer);
     int fetch_status_mask(const CsMonitorServer& server);
+    void update_status_of_dynamic_servers();
 
     CsMonitorServer* create_server(SERVER* server, const mxs::MonitorServer::SharedSettings& shared) override;
 

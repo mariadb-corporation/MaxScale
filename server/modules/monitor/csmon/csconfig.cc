@@ -53,7 +53,7 @@ const config::ParamString::value_type    DEFAULT_API_KEY                  = "";
 const config::ParamString::value_type    DEFAULT_LOCAL_ADDRESS            = "";
 const config::ParamServer::value_type    DEFAULT_PRIMARY                  = nullptr;
 const config::ParamBool::value_type      DEFAULT_DYNAMIC_NODE_DETECTION   = false;
-const ClusterMonitorInterval::value_type DEFAULT_CLUSTER_MONITOR_INTERVAL = std::chrono::milliseconds(0);
+const ClusterMonitorInterval::value_type DEFAULT_CLUSTER_MONITOR_INTERVAL = std::chrono::milliseconds(10000);
 
 config::Specification specification(MXS_MODULE_NAME, config::Specification::MONITOR);
 

@@ -669,6 +669,40 @@ int CsMonitor::fetch_status_mask(const CsMonitorServer &server)
     return ::fetch_status_mask(server, servers().size());
 }
 
+void CsMonitor::update_status_of_dynamic_servers()
+{
+    m_last_probe = mxb::SteadyClock::now();
+
+    vector<CsMonitorServer*> servers;
+    std::transform(m_nodes_by_id.begin(), m_nodes_by_id.end(), std::back_inserter(servers),
+                   [](const auto& kv) {
+                       return kv.second.get();
+                   });
+
+    Statuses statuses;
+    CsMonitorServer::fetch_statuses(servers, m_context, &statuses);
+
+    auto it = m_nodes_by_id.begin();
+    for (const auto& status : statuses)
+    {
+        auto* pServer = it->second.get();
+
+        if (!status.ok())
+        {
+            const auto& name = it->first;
+
+            MXS_WARNING("Could not fetch status from %s: %s", name.c_str(), status.response.body.c_str());
+            pServer->clear_status(SERVER_MASTER | SERVER_SLAVE | SERVER_RUNNING);
+        }
+        else
+        {
+            pServer->set_status(get_status_mask(status, m_nodes_by_id.size()));
+        }
+
+        ++it;
+    }
+}
+
 bool CsMonitor::configure(const mxs::ConfigParameters* pParams)
 {
     bool rv = m_context.configure(*pParams);
@@ -1460,14 +1494,19 @@ void CsMonitor::pre_tick()
         }
         else
         {
-            HostPortPairs nodes;
-            for (const auto& kv : m_nodes_by_id)
+            if (should_probe_cluster())
             {
-                auto* pMs = kv.second.get();
-                nodes.push_back(HostPortPair(pMs->address(), pMs->port()));
+                HostPortPairs nodes;
+                for (const auto& kv : m_nodes_by_id)
+                {
+                    auto* pMs = kv.second.get();
+                    nodes.push_back(HostPortPair(pMs->address(), pMs->port()));
+                }
+
+                check_cluster(nodes);
             }
 
-            check_cluster(nodes);
+            update_status_of_dynamic_servers();
         }
     }
 }
@@ -1911,7 +1950,6 @@ bool CsMonitor::should_probe_cluster() const
     const auto& config = m_context.config();
 
     if (config.dynamic_node_detection
-        && config.cluster_monitor_interval.count() != 0
         && mxb::SteadyClock::now() - m_last_probe >= config.cluster_monitor_interval)
     {
         rv = true;
