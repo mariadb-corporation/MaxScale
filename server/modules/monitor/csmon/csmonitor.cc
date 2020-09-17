@@ -671,8 +671,6 @@ int CsMonitor::fetch_status_mask(const CsMonitorServer &server)
 
 void CsMonitor::update_status_of_dynamic_servers()
 {
-    m_last_probe = mxb::SteadyClock::now();
-
     vector<CsMonitorServer*> servers;
     std::transform(m_nodes_by_id.begin(), m_nodes_by_id.end(), std::back_inserter(servers),
                    [](const auto& kv) {
@@ -711,9 +709,17 @@ bool CsMonitor::configure(const mxs::ConfigParameters* pParams)
     {
         rv = MonitorWorkerSimple::configure(pParams);
 
-        if (rv && m_context.config().dynamic_node_detection)
+        if (rv)
         {
-            rv = check_bootstrap_servers();
+            if (m_context.config().dynamic_node_detection)
+            {
+                m_probe_cluster = true;
+                m_last_probe = mxb::SteadyClock::now() - m_context.config().cluster_monitor_interval;
+            }
+            else
+            {
+                rv = check_bootstrap_servers();
+            }
         }
     }
 
@@ -1090,6 +1096,9 @@ void CsMonitor::cs_add_node(json_t** ppOutput,
     *ppOutput = pOutput;
 
     pSem->post();
+
+    // Better safe than sorry, unconditionally probe after attempted cluster change.
+    m_probe_cluster = true;
 }
 
 void CsMonitor::cs_config_get(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer* pServer)
@@ -1196,6 +1205,9 @@ void CsMonitor::cs_remove_node(json_t** ppOutput,
     *ppOutput = pOutput;
 
     pSem->post();
+
+    // Better safe than sorry, unconditionally probe after attempted cluster change.
+    m_probe_cluster = true;
 }
 
 void CsMonitor::cs_shutdown(json_t** ppOutput,
@@ -1636,6 +1648,9 @@ void CsMonitor::adjust_dynamic_servers(const Hosts& hosts)
 
 void CsMonitor::probe_cluster(const HostPortPairs& nodes)
 {
+    m_probe_cluster = false;
+    m_last_probe = mxb::SteadyClock::now();
+
     bool identical = true;
 
     map<string, set<string>> hosts_by_host;
@@ -1923,10 +1938,14 @@ bool CsMonitor::should_probe_cluster() const
 
     const auto& config = m_context.config();
 
-    if (config.dynamic_node_detection
-        && mxb::SteadyClock::now() - m_last_probe >= config.cluster_monitor_interval)
+    if (config.dynamic_node_detection)
     {
-        rv = true;
+        auto now = mxb::SteadyClock::now();
+
+        if (m_probe_cluster || (now - m_last_probe >= config.cluster_monitor_interval))
+        {
+            rv = true;
+        }
     }
 
     return rv;

@@ -155,4 +155,5 @@ private:
     std::map<std::string, std::unique_ptr<CsDynamicServer>> m_nodes_by_id;
     sqlite3*                                                m_pDb {nullptr};
     mxb::TimePoint                                          m_last_probe;
+    bool                                                    m_probe_cluster { true };
 };
