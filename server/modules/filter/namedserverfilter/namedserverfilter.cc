@@ -43,27 +43,129 @@
 #include <maxscale/modutil.hh>
 #include <maxscale/server.hh>
 #include <maxscale/utils.h>
+#include <maxscale/config2.hh>
 
 using std::string;
 
-static void generate_param_names(int pairs);
-
-/* These arrays contain the allowed indexed config parameter names. match01,
- * target01, match02, target02 ... */
-static StringVector param_names_match_indexed;
-static StringVector param_names_target_indexed;
-
-static const MXS_ENUM_VALUE option_values[] =
+namespace
 {
-    {"ignorecase", PCRE2_CASELESS},
-    {"case",       0             },
-    {"extended",   PCRE2_EXTENDED},                                     // Ignore white space and # comments
-    {NULL}
-};
 
-static const char MATCH_STR[] = "match";
-static const char SERVER_STR[] = "server";
-static const char TARGET_STR[] = "target";
+namespace cfg = mxs::config;
+using ParamString = mxs::config::ParamString;
+auto su = cfg::Param::AT_STARTUP;
+cfg::Specification s_spec(MXS_MODULE_NAME, cfg::Specification::FILTER);
+
+ParamString s_user(&s_spec, "user", "Only divert queries from this user", "", su);
+ParamString s_source(&s_spec, "source", "Only divert queries from these addresses", "", su);
+
+const std::vector<std::pair<uint32_t, const char*>> options_values = {
+    {PCRE2_CASELESS, "ignorecase"},
+    {0,              "case"      },
+    {PCRE2_EXTENDED, "extended"  }};
+cfg::ParamEnumMask<uint32_t> s_options(&s_spec, "options", "Regular expression options",
+                                       options_values, PCRE2_CASELESS, su);
+// Legacy parameters
+const char regex_desc[] = "Regular expression to match";
+ParamString s_match(&s_spec, "match", regex_desc, "", su);
+ParamString s_server(&s_spec, "server", "Server to divert matching queries", "", su);
+
+// Indexed parameters
+const char target_desc[] = "Target to divert matching queries";
+ParamString s_match01(&s_spec, "match01", regex_desc, "", su);
+ParamString s_target01(&s_spec, "target01", target_desc, "", su);
+
+ParamString s_match02(&s_spec, "match02", regex_desc, "", su);
+ParamString s_target02(&s_spec, "target02", target_desc, "", su);
+
+ParamString s_match03(&s_spec, "match03", regex_desc, "", su);
+ParamString s_target03(&s_spec, "target03", target_desc, "", su);
+
+ParamString s_match04(&s_spec, "match04", regex_desc, "", su);
+ParamString s_target04(&s_spec, "target04", target_desc, "", su);
+
+ParamString s_match05(&s_spec, "match05", regex_desc, "", su);
+ParamString s_target05(&s_spec, "target05", target_desc, "", su);
+
+ParamString s_match06(&s_spec, "match06", regex_desc, "", su);
+ParamString s_target06(&s_spec, "target06", target_desc, "", su);
+
+ParamString s_match07(&s_spec, "match07", regex_desc, "", su);
+ParamString s_target07(&s_spec, "target07", target_desc, "", su);
+
+ParamString s_match08(&s_spec, "match08", regex_desc, "", su);
+ParamString s_target08(&s_spec, "target08", target_desc, "", su);
+
+ParamString s_match09(&s_spec, "match09", regex_desc, "", su);
+ParamString s_target09(&s_spec, "target09", target_desc, "", su);
+
+ParamString s_match10(&s_spec, "match10", regex_desc, "", su);
+ParamString s_target10(&s_spec, "target10", target_desc, "", su);
+
+ParamString s_match11(&s_spec, "match11", regex_desc, "", su);
+ParamString s_target11(&s_spec, "target11", target_desc, "", su);
+
+ParamString s_match12(&s_spec, "match12", regex_desc, "", su);
+ParamString s_target12(&s_spec, "target12", target_desc, "", su);
+
+ParamString s_match13(&s_spec, "match13", regex_desc, "", su);
+ParamString s_target13(&s_spec, "target13", target_desc, "", su);
+
+ParamString s_match14(&s_spec, "match14", regex_desc, "", su);
+ParamString s_target14(&s_spec, "target14", target_desc, "", su);
+
+ParamString s_match15(&s_spec, "match15", regex_desc, "", su);
+ParamString s_target15(&s_spec, "target15", target_desc, "", su);
+
+ParamString s_match16(&s_spec, "match16", regex_desc, "", su);
+ParamString s_target16(&s_spec, "target16", target_desc, "", su);
+
+ParamString s_match17(&s_spec, "match17", regex_desc, "", su);
+ParamString s_target17(&s_spec, "target17", target_desc, "", su);
+
+ParamString s_match18(&s_spec, "match18", regex_desc, "", su);
+ParamString s_target18(&s_spec, "target18", target_desc, "", su);
+
+ParamString s_match19(&s_spec, "match19", regex_desc, "", su);
+ParamString s_target19(&s_spec, "target19", target_desc, "", su);
+
+ParamString s_match20(&s_spec, "match20", regex_desc, "", su);
+ParamString s_target20(&s_spec, "target20", target_desc, "", su);
+
+ParamString s_match21(&s_spec, "match21", regex_desc, "", su);
+ParamString s_target21(&s_spec, "target21", target_desc, "", su);
+
+ParamString s_match22(&s_spec, "match22", regex_desc, "", su);
+ParamString s_target22(&s_spec, "target22", target_desc, "", su);
+
+ParamString s_match23(&s_spec, "match23", regex_desc, "", su);
+ParamString s_target23(&s_spec, "target23", target_desc, "", su);
+
+ParamString s_match24(&s_spec, "match24", regex_desc, "", su);
+ParamString s_target24(&s_spec, "target24", target_desc, "", su);
+
+ParamString s_match25(&s_spec, "match25", regex_desc, "", su);
+ParamString s_target25(&s_spec, "target25", target_desc, "", su);
+
+struct MatchAndTarget
+{
+    ParamString* match {nullptr};
+    ParamString* target {nullptr};
+};
+std::vector<MatchAndTarget> s_match_target_specs = {
+    {&s_match01, &s_target01}, {&s_match02, &s_target02},
+    {&s_match03, &s_target03}, {&s_match04, &s_target04},
+    {&s_match05, &s_target05}, {&s_match06, &s_target06},
+    {&s_match07, &s_target07}, {&s_match08, &s_target08},
+    {&s_match09, &s_target09}, {&s_match10, &s_target10},
+    {&s_match11, &s_target11}, {&s_match12, &s_target12},
+    {&s_match13, &s_target13}, {&s_match14, &s_target14},
+    {&s_match15, &s_target15}, {&s_match16, &s_target16},
+    {&s_match17, &s_target17}, {&s_match18, &s_target18},
+    {&s_match19, &s_target19}, {&s_match20, &s_target20},
+    {&s_match21, &s_target21}, {&s_match22, &s_target22},
+    {&s_match23, &s_target23}, {&s_match24, &s_target24},
+    {&s_match25, &s_target25}};
+}
 
 RegexHintFSession::RegexHintFSession(MXS_SESSION* session, SERVICE* service, RegexHintFilter& filter,
                                      bool active)
@@ -127,7 +229,7 @@ mxs::FilterSession* RegexHintFilter::newSession(MXS_SESSION* session, SERVICE* s
 {
     bool session_active = true;
     bool ip_found = false;
-
+    auto& sett = m_settings;
     /* Check client IP against 'source' host option */
     auto& remote = session->client_remote();
     auto& remote_addr = session->client_connection()->dcb()->ip();
@@ -143,7 +245,7 @@ mxs::FilterSession* RegexHintFilter::newSession(MXS_SESSION* session, SERVICE* s
     }
 
     /* Check client user against 'user' option */
-    if (!m_user.empty() && (m_user != session->user()))
+    if (!sett.m_user.empty() && (sett.m_user != session->user()))
     {
         session_active = false;
     }
@@ -210,7 +312,7 @@ mxs::config::Configuration* RegexHintFilter::getConfiguration()
  */
 RegexHintFilter* RegexHintFilter::create(const char* name, mxs::ConfigParameters* params)
 {
-    auto instance = new RegexHintFilter();
+    auto instance = new RegexHintFilter(name);
     if (!instance->configure(params))
     {
         delete instance;
@@ -280,9 +382,9 @@ json_t* RegexHintFilter::diagnostics() const
         json_object_set_new(rval, "sources", arr);
     }
 
-    if (m_user.length())
+    if (!m_settings.m_user.empty())
     {
-        json_object_set_new(rval, "user", json_string(m_user.c_str()));
+        json_object_set_new(rval, "user", json_string(m_settings.m_user.c_str()));
     }
 
     return rval;
@@ -441,39 +543,32 @@ bool RegexHintFilter::regex_compile_and_add(int pcre_ops, bool legacy_mode, cons
 
 /**
  * Read all indexed regexes from the supplied configuration, compile them and form the mapping
- *
- * @param params config parameters
- * @param pcre_ops options for pcre2_compile
  */
-void RegexHintFilter::form_regex_server_mapping(mxs::ConfigParameters* params, int pcre_ops)
+void RegexHintFilter::form_regex_server_mapping(int pcre_ops)
 {
-    mxb_assert(param_names_match_indexed.size() == param_names_target_indexed.size());
+    auto& regex_values = m_settings.m_match_targets;
     bool error = false;
 
-    /* The config parameters can be in any order and may be skipping numbers.
-     * Must just search for every possibility. */
-    struct MatchAndTarget
-    {
-        string match;
-        string target;
-    };
-    std::vector<MatchAndTarget> found_pairs;
+    /* The config parameters can be in any order and may be skipping numbers. Go through all params and
+     * save found ones to array. */
+    std::vector<Settings::MatchAndTarget> found_pairs;
 
     const char missing_setting[] = "'%s' does not have a matching '%s'.";
-    for (size_t i = 0; i < param_names_match_indexed.size(); i++)
+    for (size_t i = 0; i < RegexHintFilter::Settings::n_regex_max; i++)
     {
-        string& param_name_match = param_names_match_indexed[i];
-        string& param_name_target = param_names_target_indexed[i];
-        string match = params->get_string(param_name_match);
-        string target = params->get_string(param_name_target);
+        auto& param_definition = s_match_target_specs[i];
+        auto& param_name_match = param_definition.match->name();
+        auto& param_name_target = param_definition.target->name();
+
+        auto& param_val = regex_values[i];
 
         /* Check that both the matchXY and targetXY settings are found. */
-        bool match_exists = !match.empty();
-        bool target_exists = !target.empty();
+        bool match_exists = !param_val.match.empty();
+        bool target_exists = !param_val.target.empty();
 
         if (match_exists && target_exists)
         {
-            found_pairs.emplace_back(MatchAndTarget {match, target});
+            found_pairs.push_back(param_val);
         }
         else if (match_exists)
         {
@@ -730,23 +825,26 @@ int RegexHintFilter::ovector_size() const
 
 bool RegexHintFilter::configure(mxs::ConfigParameters* params)
 {
-    m_user = params->get_string("user");
+    const char MATCH_STR[] = "match";
+    const char SERVER_STR[] = "server";
+    const char TARGET_STR[] = "target";
 
-    std::string source = params->get_string("source");
-    if (!source.empty())
+    auto& sett = m_settings;
+    if (!sett.configure(*params))
     {
-        set_source_addresses(source);
+        return false;
     }
 
+    if (!sett.m_source.empty())
+    {
+        set_source_addresses(sett.m_source);
+    }
 
-    int pcre_ops = params->get_enum("options", option_values);
+    int pcre_ops = sett.m_regex_options;
 
-    std::string match_val_legacy = params->get_string(MATCH_STR);
-    std::string server_val_legacy = params->get_string(SERVER_STR);
-    const bool legacy_mode = (match_val_legacy.length() || server_val_legacy.length());
-
+    const bool legacy_mode = (!sett.m_match.empty() || !sett.m_server.empty());
     bool error = false;
-    if (legacy_mode && (!match_val_legacy.length() || !server_val_legacy.length()))
+    if (legacy_mode && (sett.m_match.empty() || sett.m_server.empty()))
     {
         MXS_ERROR("Only one of '%s' and '%s' is set. If using legacy mode, set both."
                   "If using indexed parameters, set neither and use '%s01' and '%s01' etc.",
@@ -755,7 +853,7 @@ bool RegexHintFilter::configure(mxs::ConfigParameters* params)
     }
 
     /* Try to form the mapping with indexed parameter names. */
-    form_regex_server_mapping(params, pcre_ops);
+    form_regex_server_mapping(pcre_ops);
 
     if (!legacy_mode && m_mapping.empty())
     {
@@ -772,7 +870,7 @@ bool RegexHintFilter::configure(mxs::ConfigParameters* params)
         MXS_WARNING("Use of legacy parameters 'match' and 'server' is deprecated.");
         /* Using legacy mode and no indexed parameters found. Add the legacy parameters
          * to the mapping. */
-        if (!regex_compile_and_add(pcre_ops, true, match_val_legacy, server_val_legacy))
+        if (!regex_compile_and_add(pcre_ops, true, sett.m_match, sett.m_server))
         {
             error = true;
         }
@@ -783,6 +881,11 @@ bool RegexHintFilter::configure(mxs::ConfigParameters* params)
 MappingVector& RegexHintFilter::mapping()
 {
     return m_mapping;
+}
+
+RegexHintFilter::RegexHintFilter(const std::string& name)
+    : m_settings(name)
+{
 }
 
 /**
@@ -811,93 +914,29 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         NULL,                                                                   /* Thread init. */
         NULL,                                                                   /* Thread finish. */
         {
-            {"source",
-             MXS_MODULE_PARAM_STRING},
-            {"user",
-             MXS_MODULE_PARAM_STRING},
-            {MATCH_STR,
-             MXS_MODULE_PARAM_STRING},
-            {SERVER_STR,
-             MXS_MODULE_PARAM_SERVER},
-            {
-                "options",
-                MXS_MODULE_PARAM_ENUM,
-                "ignorecase",
-                MXS_MODULE_OPT_NONE,
-                option_values
-            },
-            {MXS_END_MODULE_PARAMS}
-        }
+        },
+        &s_spec
     };
-
-    /* This module takes parameters of the form match, match01, match02, ... matchN
-     * and server, server01, server02, ... serverN. The total number of module
-     * parameters is limited, so let's limit the number of matches and servers.
-     * First, loop over the already defined parameters... */
-    int params_counter = 0;
-
-    while (info.parameters[params_counter].name != MXS_END_MODULE_PARAMS)
-    {
-        params_counter++;
-    }
-
-    /* Calculate how many pairs can be added. 100 is max (to keep the postfix
-     * number within two decimals). */
-    const int max_pairs = 100;
-    int match_server_pairs = ((MXS_MODULE_PARAM_MAX - params_counter) / 2);
-
-    if (match_server_pairs > max_pairs)
-    {
-        match_server_pairs = max_pairs;
-    }
-    mxb_assert(match_server_pairs >= 25);   // If this limit is modified, update documentation.
-    /* Create parameter pair names */
-    generate_param_names(match_server_pairs);
-
-    /* Now make the actual parameters for the module struct */
-    MXS_MODULE_PARAM new_param_match = {NULL, MXS_MODULE_PARAM_STRING, NULL};
-    /* Cannot use SERVERLIST in the target, since it may contain MASTER, SLAVE. */
-    MXS_MODULE_PARAM new_param_target = {NULL, MXS_MODULE_PARAM_STRING, NULL};
-
-    for (unsigned int i = 0; i < param_names_match_indexed.size(); ++i)
-    {
-        new_param_match.name = param_names_match_indexed.at(i).c_str();
-        info.parameters[params_counter] = new_param_match;
-        params_counter++;
-        new_param_target.name = param_names_target_indexed.at(i).c_str();
-        info.parameters[params_counter] = new_param_target;
-        params_counter++;
-    }
-    info.parameters[params_counter].name = MXS_END_MODULE_PARAMS;
 
     return &info;
 }
 
-/*
- * Generate N pairs of parameter names of form matchXX and targetXX and add them
- * to the global arrays.
- *
- * @param pairs The number of parameter pairs to generate
- */
-static void generate_param_names(int pairs)
+RegexHintFilter::Settings::Settings(const string& name)
+    : mxs::config::Configuration(name, &s_spec)
 {
-    const int namelen_match = sizeof(MATCH_STR) + 2;
-    const int namelen_server = sizeof(TARGET_STR) + 2;
+    add_native(&m_user, &s_user);
+    add_native(&m_source, &s_source);
+    add_native(&m_regex_options, &s_options);
 
-    char name_match[namelen_match];
-    char name_server[namelen_server];
+    add_native(&m_match, &s_match);
+    add_native(&m_server, &s_server);
 
-    const char FORMAT[] = "%s%02d";
-
-    for (int counter = 1; counter <= pairs; ++counter)
+    mxb_assert(s_match_target_specs.size() == n_regex_max);
+    for (int i = 0; i < n_regex_max; i++)
     {
-        MXB_AT_DEBUG(int rval = ) snprintf(name_match, namelen_match, FORMAT, MATCH_STR, counter);
-        mxb_assert(rval == namelen_match - 1);
-        MXB_AT_DEBUG(rval = ) snprintf(name_server, namelen_server, FORMAT, TARGET_STR, counter);
-        mxb_assert(rval == namelen_server - 1);
-
-        // Have both names, add them to the global vectors
-        param_names_match_indexed.push_back(name_match);
-        param_names_target_indexed.push_back(name_server);
+        auto& value_store = m_match_targets[i];
+        auto& spec = s_match_target_specs[i];
+        add_native(&value_store.match, spec.match);
+        add_native(&value_store.target, spec.target);
     }
 }

@@ -123,15 +123,13 @@ user=john
 
 ## Additional remarks
 
-The maximum number of accepted *match* - *target* pairs may be higher and can
-change if other features are added to the filter. A minimum of 25 is guaranteed
-for now.
+The maximum number of accepted *match* - *target* pairs is 25.
 
-In the configuration, the indexed match and target settings may be in any order
+In the configuration file, the indexed match and target settings may be in any order
 and may skip numbers. During SQL-query matching, however, the regexes are tested
 in ascending order: match01, match02, match03 and so on. As soon as a match is
 found for a given query, the routing hints are written and the packet is
-forwarded to the next filter or router. Any possibly remaining match regexes are
+forwarded to the next filter or router. Any remaining match regexes are
 ignored. This means the *match* - *target* pairs should be indexed in priority
 order, or, if priority is not a factor, in order of decreasing match
 probability.

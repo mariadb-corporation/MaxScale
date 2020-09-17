@@ -44,7 +44,7 @@ public:
     volatile unsigned int m_total_diverted {0};
     volatile unsigned int m_total_undiverted {0};
 
-    RegexHintFilter() = default;
+    RegexHintFilter(const std::string& name);
 
     static RegexHintFilter*     create(const char* zName, mxs::ConfigParameters* ppParams);
     mxs::FilterSession*         newSession(MXS_SESSION* session, SERVICE* service);
@@ -57,18 +57,44 @@ public:
     int            ovector_size() const;
 
 private:
-    std::string      m_user;            /* User name to restrict matches with */
+
+    class Settings : public mxs::config::Configuration
+    {
+    public:
+        explicit Settings(const std::string& name);
+
+        static constexpr int n_regex_max {25};
+
+        std::string m_user;
+        std::string m_source;
+        uint32_t    m_regex_options {0};
+
+        // Legacy params
+        std::string m_match;
+        std::string m_server;
+
+        // Indexed params
+        struct MatchAndTarget
+        {
+            std::string match;
+            std::string target;
+        };
+        MatchAndTarget m_match_targets[n_regex_max];
+    };
+
     SourceHostVector m_sources;         /* Source addresses to restrict matches */
     StringVector     m_hostnames;       /* Source hostnames to restrict matches */
     MappingVector    m_mapping;         /* Regular expression to serverlist mapping */
     int              m_ovector_size {1};/* Given to pcre2_match_data_create() */
+
+    Settings m_settings;
 
     bool check_source_host(const char* remote, const struct sockaddr_storage* ip);
     bool check_source_hostnames(const struct sockaddr_storage* ip);
     bool configure(mxs::ConfigParameters* params);
     void set_source_addresses(const std::string& input_host_names);
     bool add_source_address(const std::string& input_host);
-    void form_regex_server_mapping(mxs::ConfigParameters* params, int pcre_ops);
+    void form_regex_server_mapping(int pcre_ops);
     bool regex_compile_and_add(int pcre_ops, bool legacy_mode, const std::string& match,
                                const std::string& target);
     static bool validate_ipv4_address(const char*);
