@@ -60,22 +60,14 @@ public:
         return this;
     }
 
-    int32_t routeQuery(GWBUF* pPacket)
-    {
-        return 0;
-    }
-
-    int32_t clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply)
-    {
-        return 0;
-    }
+    int32_t routeQuery(GWBUF* pStatement);
 
     /**
      * Called by the backend to deliver a response.
      *
      * @return Whatever the upstream filter returns.
      */
-    int32_t clientReply(GWBUF* pResponse, const mxs::Reply& reply);
+    int32_t clientReply(GWBUF* pResponse, const mxs::ReplyRoute& down, const mxs::Reply& reply);
 
     /**
      * Causes the router to make its associated backend deliver a response
@@ -114,16 +106,9 @@ public:
     void set_upstream(FilterModule::Session* pFilter_session);
 
 private:
-    int32_t routeQuery(MXS_ROUTER* pInstance, GWBUF* pStatement);
-
-    static int32_t routeQuery(MXS_FILTER* pInstance, mxs::Routable* pRouter_session, GWBUF* pStatement);
-
-private:
-    MXS_ROUTER*            m_instance = nullptr;
-    Backend*               m_pBackend;
-    FilterModule::Session* m_pUpstream_filter_session;
-    mxs::Routable*         m_downstream;
-
+    MXS_ROUTER*              m_instance = nullptr;
+    Backend*                 m_pBackend;
+    FilterModule::Session*   m_pUpstream_filter_session;
     maxscale::mock::Session* m_pSession;
 };
 }

@@ -70,7 +70,8 @@ bool BufferBackend::respond(RouterSession* pSession, const mxs::Reply& reply)
 
     if (pResponse)
     {
-        pSession->clientReply(pResponse, reply);
+        mxs::ReplyRoute down;
+        pSession->clientReply(pResponse, down, reply);
     }
 
     return !empty;

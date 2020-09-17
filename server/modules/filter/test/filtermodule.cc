@@ -67,6 +67,8 @@ auto_ptr<FilterModule::Session> FilterModule::Instance::newSession(MXS_SESSION* 
 
     if (pFilter_session)
     {
+        pFilter_session->setDownstream(down);
+        pFilter_session->setUpstream(up);
         sFilter_session.reset(new Session(this, pFilter_session));
     }
 
