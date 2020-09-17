@@ -138,8 +138,7 @@ private:
 
     void check_cluster();
     void check_cluster(const HostPortPairs&);
-    void check_cluster(const Hosts& hosts,
-                       const StatusByHost& status_by_host);
+    void check_cluster(const Hosts& hosts);
     void check_fuzzy_cluster(const HostsByHost& hosts_by_host);
 
     bool check_bootstrap_servers();

@@ -1561,7 +1561,7 @@ void set_status(CsDynamicServer& mserver, int status_mask)
 
 }
 
-void CsMonitor::check_cluster(const Hosts& hosts, const StatusByHost& status_by_host)
+void CsMonitor::check_cluster(const Hosts& hosts)
 {
     set<string> current_hosts;
     for (const auto& kv : m_nodes_by_id)
@@ -1573,10 +1573,6 @@ void CsMonitor::check_cluster(const Hosts& hosts, const StatusByHost& status_by_
     {
         for (const auto& host : hosts)
         {
-            auto jt = status_by_host.find(host);
-            mxb_assert(jt != status_by_host.end());
-            int status_mask = ::get_status_mask(jt->second, hosts.size());
-
             auto it = m_nodes_by_id.find(host);
 
             if (it == m_nodes_by_id.end())
@@ -1611,17 +1607,12 @@ void CsMonitor::check_cluster(const Hosts& hosts, const StatusByHost& status_by_
                     CsDynamicServer* pMs = new CsDynamicServer(this, pServer,
                                                                this->settings().shared, &m_context);
 
-                    set_status(*pMs, status_mask);
-
                     m_nodes_by_id.insert(make_pair(host, pMs));
                 }
             }
             else
             {
                 current_hosts.erase(host);
-
-                auto& sMs = it->second;
-                set_status(*sMs.get(), status_mask);
             }
         }
     }
@@ -1647,7 +1638,6 @@ void CsMonitor::check_cluster(const HostPortPairs& nodes)
 {
     bool identical = true;
 
-    map<string,Status> status_by_host;
     map<string, set<string>> hosts_by_host;
     vector<string> hosts_to_remove;
 
@@ -1655,6 +1645,7 @@ void CsMonitor::check_cluster(const HostPortPairs& nodes)
     {
         const auto& host = kv1.first;
 
+        map<string,Status> status_by_host;
         const auto& config = m_context.config();
         auto result = cs::fetch_cluster_status(host,
                                                config.admin_port, config.admin_base_path,
@@ -1725,10 +1716,7 @@ void CsMonitor::check_cluster(const HostPortPairs& nodes)
 
     if (identical)
     {
-        // status_by_host was fetched from some host, but that's ok as we know everyone
-        // had an identical view of the cluster.
-        check_cluster(!hosts_by_host.empty() ? hosts_by_host.begin()->second : Hosts(),
-                      status_by_host);
+        check_cluster(!hosts_by_host.empty() ? hosts_by_host.begin()->second : Hosts());
     }
     else
     {
@@ -1784,21 +1772,7 @@ void CsMonitor::check_fuzzy_cluster(const HostsByHost& hosts_by_host)
             string host = hosts[i];
             MXB_NOTICE("Using %s as defining node.", host.c_str());
 
-            map<string,Status> status_by_host;
-            const auto& config = m_context.config();
-            auto result = cs::fetch_cluster_status(host,
-                                                   config.admin_port, config.admin_base_path,
-                                                   m_context.http_config(),
-                                                   &status_by_host);
-
-            if (result.ok())
-            {
-                check_cluster(hosts_by_host.at(host), status_by_host);
-            }
-            else
-            {
-                MXS_ERROR("Could not fetch cluster status from %s.", host.c_str());
-            }
+            check_cluster(hosts_by_host.at(host));
         }
     }
     else
