@@ -169,7 +169,7 @@ json_t* MaskingFilter::diagnostics() const
 // static
 uint64_t MaskingFilter::getCapabilities() const
 {
-    return RCAP_TYPE_NONE;
+    return RCAP_TYPE_CONTIGUOUS_INPUT | RCAP_TYPE_CONTIGUOUS_OUTPUT;
 }
 
 std::shared_ptr<MaskingRules> MaskingFilter::rules() const
