@@ -746,7 +746,15 @@ std::ostream& Service::persist(std::ostream& os) const
     params_to_print.remove(CN_TARGETS);
     params_to_print.remove(CN_CLUSTER);
 
-    os << generate_config_string(name(), params_to_print, common_service_params(), mod->parameters);
+    if (auto cnf = router_instance->getConfiguration())
+    {
+        cnf->persist(os);
+        os << serialize_params(params_to_print, common_service_params());
+    }
+    else
+    {
+        os << generate_config_string(name(), params_to_print, common_service_params(), mod->parameters);
+    }
 
     const auto& data = *m_data;
 

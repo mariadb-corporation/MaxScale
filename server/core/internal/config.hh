@@ -167,6 +167,16 @@ std::string generate_config_string(const std::string& instance_name, const mxs::
                                    const MXS_MODULE_PARAM* module_param_defs);
 
 /**
+ * Serializes parameters into key-value pairs
+ *
+ * @param parameter Parameters to serialize
+ * @param defs      Parameter definitions
+ *
+ * @return The parameters as key-value pairs delimited by newlines
+ */
+std::string serialize_params(const mxs::ConfigParameters& parameters, const MXS_MODULE_PARAM* defs);
+
+/**
  * Check whether a parameter can be modified at runtime
  *
  * @param name Name of the parameter

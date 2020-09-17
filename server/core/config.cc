@@ -4702,24 +4702,34 @@ std::string generate_config_string(const std::string& instance_name, const mxs::
     {
         if (param_set)
         {
-            for (int i = 0; param_set[i].name; i++)
+            output += serialize_params(parameters, param_set);
+        }
+    }
+
+    return output;
+}
+
+std::string serialize_params(const mxs::ConfigParameters& parameters, const MXS_MODULE_PARAM* def)
+{
+    std::string output;
+
+    for (int i = 0; def[i].name; i++)
+    {
+        auto param_info = def + i;
+        // Do not print deprecated parameters.
+        if ((param_info->options & MXS_MODULE_OPT_DEPRECATED) == 0
+            && param_info->type != MXS_MODULE_PARAM_DEPRECATED)
+        {
+            string param_name = param_info->name;
+            if (parameters.contains(param_name))
             {
-                auto param_info = param_set + i;
-                // Do not print deprecated parameters.
-                if ((param_info->options & MXS_MODULE_OPT_DEPRECATED) == 0
-                    && param_info->type != MXS_MODULE_PARAM_DEPRECATED)
-                {
-                    string param_name = param_info->name;
-                    if (parameters.contains(param_name))
-                    {
-                        // Parameter value in the container can be an empty string and still be printed.
-                        string param_value = parameters.get_string(param_name);
-                        output += param_name + "=" + param_value + "\n";
-                    }
-                }
+                // Parameter value in the container can be an empty string and still be printed.
+                string param_value = parameters.get_string(param_name);
+                output += param_name + "=" + param_value + "\n";
             }
         }
     }
+
     return output;
 }
 
