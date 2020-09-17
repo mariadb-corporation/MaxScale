@@ -35,6 +35,11 @@
  */
 namespace maxscale
 {
+/**
+ * Address used for initializing pointers to invalid values. Points to kernel space on
+ * 64-bit systems so it's guaranteed to be an invalid userspace address.
+ */
+constexpr intptr_t BAD_ADDR = 0xDEADBEEFDEADBEEF;
 }
 
 /**
