@@ -33,6 +33,8 @@ public:
 
 private:
     static uint32_t epoll_update(struct MXB_POLL_DATA* data, MXB_WORKER* worker, uint32_t events);
+    void            start_reading();
+    bool            poll_start_reading(mxb::Worker::Call::action_t action);
     void            notify_concrete_reader(uint32_t events);
     void            handle_messages();
 
@@ -45,13 +47,18 @@ private:
         Reader* reader;
     };
 
+    std::unique_ptr<FileReader> m_sFile_reader;
+
     Callback        m_cb;
     InventoryReader m_inventory;
     PollData        m_reader_poll_data;
-    FileReader      m_file_reader;
     mxb::Worker*    m_worker;
     uint32_t        m_dcid = 0;
     mxq::RplEvent   m_event;    // Stores the latest event that hasn't been processed
+
+    // Related to delayed start
+    maxsql::Gtid m_start_gtid;
+    uint32_t     m_startup_poll_dcid = 0;
 
     // Heartbeat related variables
     uint32_t                              m_heartbeat_dcid = 0;
