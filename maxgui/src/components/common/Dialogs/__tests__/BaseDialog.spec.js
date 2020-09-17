@@ -14,20 +14,26 @@
 import { expect } from 'chai'
 import mount from '@tests/unit/setup'
 import BaseDialog from '@/components/common/Dialogs/BaseDialog'
-import { showDialogMock } from '@tests/unit/utils'
+
+/**
+ * This function mockups the action of opening a dialog
+ * @param {Object} wrapper A Wrapper is an object that contains a mounted component and methods to test the component
+ */
+export async function showDialogMock(wrapper) {
+    await wrapper.setProps({
+        value: true,
+    })
+}
 
 describe('BaseDialog.vue', () => {
     let wrapper
     beforeEach(() => {
-        localStorage.clear()
         wrapper = mount({
             shallow: false,
             component: BaseDialog,
             props: {
                 value: true,
                 title: 'dialog title',
-                onCancel: () => wrapper.setProps({ value: false }),
-                onClose: () => wrapper.setProps({ value: false }),
                 onSave: () => wrapper.setProps({ value: false }),
             },
         })
@@ -36,23 +42,38 @@ describe('BaseDialog.vue', () => {
     it('Should close when cancel button is pressed', async () => {
         // make dialog open
         await showDialogMock(wrapper)
+        let count = 0
+        wrapper.vm.$on('input', isOpen => {
+            expect(isOpen).to.be.false
+            ++count
+        })
         await wrapper.find('.cancel').trigger('click')
-        expect(wrapper.vm.computeShowDialog).to.be.false
+        expect(count).to.be.equals(1)
     })
 
     it('Should close when close button is pressed', async () => {
         // make dialog open
         await showDialogMock(wrapper)
-
+        let count = 0
+        wrapper.vm.$on('input', isOpen => {
+            expect(isOpen).to.be.false
+            ++count
+        })
         await wrapper.find('.close').trigger('click')
-        expect(wrapper.vm.computeShowDialog).to.be.false
+        expect(count).to.be.equals(1)
     })
 
     it('dialog closes when save button is pressed', async () => {
         // make dialog open
         await showDialogMock(wrapper)
-
+        let count = 0
+        wrapper.vm.$on('input', isOpen => {
+            expect(isOpen).to.be.false
+            ++count
+        })
         await wrapper.find('.save').trigger('click')
-        expect(wrapper.vm.computeShowDialog).to.be.false
+        // onSave is an async cb fb, so input event will be called in the nextTick
+        await wrapper.vm.$nextTick()
+        expect(count).to.be.equals(1)
     })
 })

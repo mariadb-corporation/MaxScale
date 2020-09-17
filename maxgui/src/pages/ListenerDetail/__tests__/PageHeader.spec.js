@@ -60,7 +60,8 @@ describe('ListenerDetail - PageHeader', () => {
 
     it(`Should open confirm-dialog when delete button is clicked`, async () => {
         await openConfirmDialog({ wrapper, cssSelector: '.delete-btn' })
-        expect(wrapper.vm.showConfirmDialog).to.be.true
+        const confirmDialog = wrapper.findComponent({ name: 'confirm-dialog' })
+        expect(confirmDialog.vm.$data.isDialogOpen).to.be.true
     })
 
     it(`Should send delete request after confirming delete`, async () => {

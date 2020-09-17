@@ -114,7 +114,10 @@ describe('ServiceDetail - PageHeader', () => {
                     wrapper,
                     cssSelector: `.${prefix}-btn`,
                 })
-                expect(wrapper.vm.showConfirmDialog).to.be.true
+                const confirmDialog = wrapper.findComponent({
+                    name: 'confirm-dialog',
+                })
+                expect(confirmDialog.vm.$data.isDialogOpen).to.be.true
             })
         )
     })

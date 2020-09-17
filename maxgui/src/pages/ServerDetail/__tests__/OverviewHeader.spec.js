@@ -133,13 +133,10 @@ describe('ServerDetail - OverviewHeader', () => {
         })
         expect(selectDialog.exists()).to.be.true
         const {
-            value,
             title,
             mode,
             entityName,
-            handleSave,
-            onClose,
-            onCancel,
+            onSave,
             itemsList,
             defaultItems,
             clearable,
@@ -149,20 +146,15 @@ describe('ServerDetail - OverviewHeader', () => {
             targetSelectItemType,
             itemsList: itemsListData,
             defaultItems: defaultItemsData,
-            showSelectDialog,
         } = wrapper.vm.$data
 
         expect(title).to.be.equals(dialogTitle)
         expect(mode).to.be.equals('change')
         expect(entityName).to.be.equals(targetSelectItemType)
         expect(clearable).to.be.true
-        expect(onClose).to.be.equals(wrapper.vm.handleClose)
-        expect(onCancel).to.be.equals(wrapper.vm.handleClose)
-        expect(handleSave).to.be.equals(wrapper.vm.confirmChange)
+        expect(onSave).to.be.equals(wrapper.vm.confirmChange)
         expect(itemsList).to.be.deep.equals(itemsListData)
         expect(defaultItems).to.be.deep.equals(defaultItemsData)
-        expect(value).to.be.false
-        expect(value).to.be.equals(showSelectDialog)
     })
 
     it(`Should open 'Change monitor' dialog with accurate title and label`, async () => {
@@ -170,8 +162,7 @@ describe('ServerDetail - OverviewHeader', () => {
         const selectDialog = wrapper.findComponent({
             name: 'select-dialog',
         })
-        expect(selectDialog.vm.$props.value).to.be.true
-        expect(selectDialog.vm.$props.value).to.be.equals(wrapper.vm.$data.showSelectDialog)
+        expect(selectDialog.vm.$data.isDialogOpen).to.be.true
         const title = selectDialog.find('h3')
         expect(title.text()).to.be.equals('Change monitor')
         const label = selectDialog.find('.select-label')

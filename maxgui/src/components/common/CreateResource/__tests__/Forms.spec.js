@@ -12,13 +12,7 @@
  */
 import { expect } from 'chai'
 import mount from '@tests/unit/setup'
-import {
-    all_modules_map_stub,
-    itemSelectMock,
-    showDialogMock,
-    hideDialogMock,
-    routeChangesMock,
-} from '@tests/unit/utils'
+import { all_modules_map_stub, itemSelectMock, routeChangesMock } from '@tests/unit/utils'
 import Forms from '@CreateResource/Forms'
 import sinon from 'sinon'
 
@@ -33,7 +27,7 @@ import sinon from 'sinon'
  */
 async function testingTextTransform(wrapper, path, selectedForm) {
     await routeChangesMock(wrapper, path)
-    await showDialogMock(wrapper)
+    await wrapper.setData({ isDialogOpen: true })
     expect(wrapper.vm.$data.selectedForm).to.be.equal(selectedForm)
 }
 
@@ -43,7 +37,7 @@ async function testingTextTransform(wrapper, path, selectedForm) {
  * @param {String} resourceType resource to be created
  */
 async function mockupResourceSelect(wrapper, resourceType) {
-    await showDialogMock(wrapper)
+    await wrapper.setData({ isDialogOpen: true })
     await itemSelectMock(wrapper, resourceType, '.resource-select')
 }
 
@@ -59,8 +53,9 @@ async function testCloseModal(wrapper, buttonClass) {
     })
     const btn = wrapper.find(`.${buttonClass}`)
     await btn.trigger('click')
-    await wrapper.setProps({ value: false })
-    expect(wrapper.vm.computeShowDialog).to.be.false
+    await wrapper.setData({ isDialogOpen: false })
+    const baseDialog = wrapper.findComponent({ name: 'base-dialog' })
+    expect(baseDialog.vm.$props.value).to.be.false
 }
 
 describe('Forms.vue', () => {
@@ -72,10 +67,6 @@ describe('Forms.vue', () => {
         wrapper = mount({
             shallow: false,
             component: Forms,
-            props: {
-                value: false, // control visibility of the dialog
-                closeModal: () => null,
-            },
             computed: {
                 all_modules_map: () => all_modules_map_stub,
                 form_type: () => null,
@@ -92,14 +83,15 @@ describe('Forms.vue', () => {
     afterEach(async function() {
         await axiosStub.restore()
         await axiosPostStub.restore()
-        await hideDialogMock(wrapper)
+        await wrapper.setData({ isDialogOpen: false })
     })
 
-    it(`Should show forms dialog when v-model value changes`, async () => {
+    it(`Should show base-dialog when isDialogOpen changes`, async () => {
         // go to page where '+ Create New' button is visible
         await routeChangesMock(wrapper, '/dashboard/services')
-        await showDialogMock(wrapper)
-        expect(wrapper.vm.computeShowDialog).to.be.true
+        await wrapper.setData({ isDialogOpen: true })
+        const baseDialog = wrapper.findComponent({ name: 'base-dialog' })
+        expect(baseDialog.vm.$props.value).to.be.true
     })
 
     it(`Should auto select form Service if current route name

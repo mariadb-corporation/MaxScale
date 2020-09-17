@@ -41,17 +41,6 @@ export async function inputChangeMock(wrapper, newValue, selector = '') {
 }
 
 /**
- * This function mockups the action of opening a dialog
- * @param {Object} wrapper A Wrapper is an object that contains a mounted component and methods to test the component
- */
-export async function showDialogMock(wrapper) {
-    await wrapper.setProps({
-        value: true,
-    })
-    expect(wrapper.vm.computeShowDialog).to.be.true
-}
-
-/**
  * This function mockups the action of closing a dialog
  * @param {Object} wrapper A Wrapper is an object that contains a mounted component and methods to test the component
  */

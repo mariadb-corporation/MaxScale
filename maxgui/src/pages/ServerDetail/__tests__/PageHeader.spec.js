@@ -113,7 +113,7 @@ describe('ServerDetail - PageHeader', () => {
             name: 'confirm-dialog',
         })
         expect(confirmDialog.exists()).to.be.true
-        const { title, type, smallInfo, item, onSave, onClose, onCancel } = confirmDialog.vm.$props
+        const { title, type, smallInfo, item, onSave } = confirmDialog.vm.$props
         const { dialogTitle, dialogType, smallInfo: dialogSmallInfo } = wrapper.vm.$data
 
         expect(title).to.be.equals(dialogTitle)
@@ -121,8 +121,6 @@ describe('ServerDetail - PageHeader', () => {
         expect(smallInfo).to.be.equals(dialogSmallInfo)
         expect(item).to.be.deep.equals(wrapper.vm.$props.currentServer)
         expect(onSave).to.be.equals(wrapper.vm.confirmSave)
-        expect(onClose).to.be.equals(wrapper.vm.handleClose)
-        expect(onCancel).to.be.equals(wrapper.vm.handleClose)
     })
 
     describe('Server healthy status tests', () => {
@@ -165,7 +163,8 @@ describe('ServerDetail - PageHeader', () => {
                     wrapper,
                     cssSelector: `.${prefix}-btn`,
                 })
-                expect(wrapper.vm.showConfirmDialog).to.be.true
+                const confirmDialog = wrapper.findComponent({ name: 'confirm-dialog' })
+                expect(confirmDialog.vm.$data.isDialogOpen).to.be.true
             })
         )
     })

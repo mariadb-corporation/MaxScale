@@ -74,24 +74,16 @@ describe('OverviewHeader index', () => {
     })
 
     it(`Should open select-dialog when switchover-edit-btn is clicked`, async () => {
-        expect(wrapper.vm.$data.showSelectDialog).to.be.false
+        const selectDialog = wrapper.findComponent({ name: 'select-dialog' })
+        expect(selectDialog.vm.$data.isDialogOpen).to.be.false
         await mockOpenSwitchOverDialog(wrapper)
-        expect(wrapper.vm.$data.showSelectDialog).to.be.true
+        expect(selectDialog.vm.$data.isDialogOpen).to.be.true
     })
 
     it(`Should pass necessary props to select-dialog`, async () => {
         const selectDialog = wrapper.findComponent({ name: 'select-dialog' })
 
-        const {
-            title,
-            mode,
-            entityName,
-            onClose,
-            onCancel,
-            handleSave,
-            itemsList,
-            defaultItems,
-        } = selectDialog.vm.$props
+        const { title, mode, entityName, onSave, itemsList, defaultItems } = selectDialog.vm.$props
         const {
             $data: {
                 dialogTitle,
@@ -99,15 +91,12 @@ describe('OverviewHeader index', () => {
                 itemsList: itemsListData,
                 defaultItems: defaultItemsData,
             },
-            handleClose,
             confirmChange,
         } = wrapper.vm
         expect(title).to.be.equals(dialogTitle)
         expect(mode).to.be.equals('swap')
         expect(entityName).to.be.equals(targetSelectItemType)
-        expect(onClose).to.be.equals(handleClose)
-        expect(onCancel).to.be.equals(handleClose)
-        expect(handleSave).to.be.equals(confirmChange)
+        expect(onSave).to.be.equals(confirmChange)
         expect(itemsList).to.be.deep.equals(itemsListData)
         expect(defaultItems).to.be.deep.equals(defaultItemsData)
     })

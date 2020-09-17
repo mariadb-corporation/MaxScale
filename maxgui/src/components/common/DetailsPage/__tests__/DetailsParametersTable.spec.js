@@ -394,13 +394,15 @@ describe('DetailsParametersTable.vue', () => {
         expect(wrapper.vm.$data.changedParams).to.be.deep.equals([])
     })
 
-    it(`Should close confirmation dialog when click "That's Right" button`, async () => {
+    it(`Should close base-dialog when click "That's Right" button`, async () => {
         await mockupParametersChange(wrapper)
         // click "That's Right" button
         await wrapper.find('.save').trigger('click')
         // should clear component state and close dialog
-        expect(wrapper.vm.$data.showConfirmDialog).to.be.false
         expect(wrapper.vm.$data.editableCell).to.be.false
         expect(wrapper.vm.$data.changedParams).to.be.deep.equals([])
+        // wait for nextTick as onSave is an async function cb
+        await wrapper.vm.$nextTick()
+        expect(wrapper.vm.$data.showConfirmDialog).to.be.false
     })
 })

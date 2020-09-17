@@ -20,9 +20,7 @@ const initialProps = {
     mode: 'change', // Either change or add
     title: 'Change monitor',
     entityName: 'monitors', // always plural
-    handleSave: () => null,
-    onCancel: () => null,
-    onClose: () => null,
+    onSave: () => null,
     itemsList: [
         { id: 'Monitor', type: 'monitors' },
         { id: 'Monitor-test', type: 'monitors' },
@@ -78,7 +76,7 @@ describe('SelectDialog.vue', () => {
             count++
         })
         // open dialog
-        await wrapper.setProps({ value: true })
+        await wrapper.vm.open()
         expect(count).to.be.equal(1)
     })
 
@@ -88,14 +86,14 @@ describe('SelectDialog.vue', () => {
             chosenItems = items
         })
         // open dialog
-        await wrapper.setProps({ value: true })
+        await wrapper.vm.open()
         // mockup onchange event when selecting item
         await itemSelectMock(wrapper, { id: 'Monitor-test', type: 'monitors' })
 
         expect(chosenItems).to.be.an('array')
         expect(chosenItems[0].id).to.be.equal('Monitor-test')
         // save selected item
-        await wrapper.vm.onSave()
+        await wrapper.vm.onSaveHandler()
         // reactivity data should be cleared
         expect(wrapper.vm.$data.selectedItems.length).to.be.equal(0)
     })

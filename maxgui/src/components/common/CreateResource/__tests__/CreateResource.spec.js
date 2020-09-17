@@ -42,7 +42,10 @@ describe('CreateResource.vue', async () => {
     })
 
     it(`Should not open creation dialog form when component is rendered `, () => {
-        expect(wrapper.vm.$data.createDialog).to.be.false
+        const formDialog = wrapper.findComponent({
+            name: 'forms',
+        })
+        expect(formDialog.vm.$data.isDialogOpen).to.be.false
     })
 
     it(`Should fetch all modules and open creation dialog form
