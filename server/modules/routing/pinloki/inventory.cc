@@ -39,6 +39,17 @@ std::vector<std::string> read_inventory_file(const Config& config)
 
     return file_names;
 }
+
+std::string read_rpl_state(const Config& config)
+{
+    std::string ret;
+    if (auto ifs = std::ifstream(config.gtid_file_path()))
+    {
+        ifs >> ret;
+    }
+
+    return ret;
+}
 }
 
 InventoryWriter::InventoryWriter(const Config& config)
@@ -93,6 +104,11 @@ std::vector<std::string> InventoryWriter::file_names() const
     return m_file_names;
 }
 
+std::string InventoryWriter::rpl_state() const
+{
+    return read_rpl_state(m_config);
+}
+
 std::string next_string(const std::vector<std::string>& strs, const std::string& str)
 {
     // search in reverse since the file is likely at the end of the vector
@@ -137,5 +153,10 @@ const std::vector<std::string>& InventoryReader::file_names() const
     // file reading can be improved, but the file is small
     // and this function called seldomly
     return m_file_names = read_inventory_file(m_config);
+}
+
+std::string InventoryReader::rpl_state() const
+{
+    return read_rpl_state(m_config);
 }
 }

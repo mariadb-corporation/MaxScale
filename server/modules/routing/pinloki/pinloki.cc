@@ -160,11 +160,10 @@ Pinloki::Pinloki(SERVICE* pService, Config&& config)
     , m_config(std::move(config))
     , m_inventory(m_config)
 {
-    if (auto ifs = std::ifstream(m_config.gtid_file_path()))
+    auto rpl_state = m_inventory.rpl_state();
+    if (!rpl_state.empty())
     {
-        std::string gtid_list_str;
-        ifs >> gtid_list_str;
-        m_config.set_boot_strap_gtid_list(gtid_list_str);
+        m_config.set_boot_strap_gtid_list(rpl_state);
     }
 
     if (m_master_config.load(m_config))

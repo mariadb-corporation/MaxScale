@@ -52,6 +52,8 @@ public:
      */
     std::vector<std::string> file_names() const;
 
+    std::string rpl_state() const;
+
     const Config& config() const
     {
         return m_config;
@@ -80,6 +82,7 @@ class InventoryReader
 public:
     InventoryReader(const Config& config);
     const std::vector<std::string>& file_names() const;
+    std::string                     rpl_state() const;
 
     const Config& config() const
     {

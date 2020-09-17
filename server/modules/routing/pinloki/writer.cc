@@ -150,7 +150,7 @@ void Writer::save_gtid_list(FileWriter& file_writer)
 
         std::ofstream ofs(m_inventory.config().gtid_file_path());
         ofs << m_current_gtid_list;
-        // m_current_gtid_list.clear(); TODO change of logic after gitid => gtid list change
+        ofs.flush();
     }
 }
 }
