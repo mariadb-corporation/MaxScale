@@ -75,7 +75,7 @@ export default {
         return {
             selectedItems: [],
             rules: {
-                requiredField: [val => this.handleRequiredField(val)],
+                requiredField: [val => this.validateRequired(val)],
             },
         }
     },
@@ -83,7 +83,7 @@ export default {
         // compare default value with new values
         hasChanged: function() {
             let isEqual = this.$help.lodash.isEqual(this.selectedItems, this.defaultItems)
-            return isEqual
+            return !isEqual
         },
     },
 
@@ -104,7 +104,7 @@ export default {
             else if (val === undefined) value = []
             this.$emit('get-selected-items', value)
         },
-        handleRequiredField(val) {
+        validateRequired(val) {
             if ((val === undefined || val.length === 0) && this.required) {
                 return `${this.$tc(this.entityName, this.multiple ? 2 : 1)} is required`
             }

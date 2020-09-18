@@ -53,7 +53,7 @@
                         class="save font-weight-medium px-7 text-capitalize"
                         rounded
                         depressed
-                        :disabled="isSaveDisabled || !isFormValid"
+                        :disabled="!hasChanged || !isFormValid"
                         @click="save"
                     >
                         {{ $t(saveText) }}
@@ -94,7 +94,7 @@ export default {
         cancelText: { type: String, default: 'cancel' },
         saveText: { type: String, default: 'save' },
         // manually control btn disabled
-        isSaveDisabled: { type: Boolean, default: false },
+        hasChanged: { type: Boolean, default: true },
         // if isForceAccept===true, cancel and close btn won't be rendered
         isForceAccept: { type: Boolean, default: false },
     },
@@ -112,15 +112,15 @@ export default {
         cancel() {
             this.$refs.form.reset()
             this.$refs.form.resetValidation()
-            this.onCancel && this.onCancel()
+            if (this.onCancel) this.onCancel()
             this.closeDialog()
         },
         close() {
-            this.onClose && this.onClose()
+            if (this.onClose) this.onClose()
             this.closeDialog()
         },
         async keydownHandler() {
-            if (this.isFormValid && !this.isSaveDisabled) await this.save()
+            if (this.isFormValid && this.hasChanged) await this.save()
         },
         async save() {
             await this.$refs.form.validate()

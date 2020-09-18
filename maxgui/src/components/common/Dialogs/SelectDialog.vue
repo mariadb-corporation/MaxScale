@@ -6,7 +6,7 @@
         :onClose="onCloseHandler"
         :title="title"
         :saveText="mode"
-        :isSaveDisabled="isSaveDisabled"
+        :hasChanged="hasChanged"
     >
         <template v-slot:form-body>
             <p class="select-label">
@@ -22,7 +22,7 @@
                 :multiple="multiple"
                 :clearable="clearable"
                 :showPlaceHolder="false"
-                @has-changed="isSaveDisabled = $event"
+                @has-changed="hasChanged = $event"
                 @get-selected-items="handleGetSelectedItems"
             />
             <slot name="body-append"></slot>
@@ -66,7 +66,7 @@ export default {
         return {
             isDialogOpen: false,
             selectedItems: [],
-            isSaveDisabled: true,
+            hasChanged: false,
         }
     },
     watch: {
@@ -84,11 +84,11 @@ export default {
             this.isDialogOpen = true
         },
         onCancelHandler() {
-            this.onCancel && this.onCancel()
+            if (this.onCancel) this.onCancel()
             this.closeDialog()
         },
         onCloseHandler() {
-            this.onClose && this.onClose()
+            if (this.onClose) this.onClose()
             this.closeDialog()
         },
 

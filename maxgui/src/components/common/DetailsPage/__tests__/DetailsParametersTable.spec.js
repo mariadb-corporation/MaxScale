@@ -167,7 +167,7 @@ async function mockupParametersChange(wrapper, isDual) {
             expect(wrapper.vm.$data.changedParams[1].value).to.be.equal(true)
         }
     }
-    const cb = () => expect(wrapper.vm.shouldDisableSaveBtn).to.be.false
+    const cb = () => expect(wrapper.vm.hasChanged).to.be.true
 
     await mockupOpenConfirmationDialog(wrapper, intercept, cb)
 }
@@ -348,13 +348,13 @@ describe('DetailsParametersTable.vue', () => {
     it(`Should disable 'That's Right' button when there is no changes`, async () => {
         await wrapper.setData({ editableCell: true })
         await wrapper.find('.done-editing-btn').trigger('click')
-        expect(wrapper.vm.shouldDisableSaveBtn).to.be.true
+        expect(wrapper.vm.hasChanged).to.be.false
     })
 
     it(`Should not disable 'That's Right' button when there is changes`, async () => {
         await mockupParametersChange(wrapper)
         await wrapper.find('.done-editing-btn').trigger('click')
-        expect(wrapper.vm.shouldDisableSaveBtn).to.be.false
+        expect(wrapper.vm.hasChanged).to.be.true
     })
 
     it(`Should show confirmation text correctly as singular text`, async () => {

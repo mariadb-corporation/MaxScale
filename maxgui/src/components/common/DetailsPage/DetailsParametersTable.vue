@@ -58,7 +58,7 @@
                 :onSave="acceptEdit"
                 :title="`${$t('implementChanges')}`"
                 saveText="thatsRight"
-                :isSaveDisabled="shouldDisableSaveBtn"
+                :hasChanged="hasChanged"
             >
                 <template v-slot:form-body>
                     <span class="d-block confirmation-text mb-4">
@@ -194,9 +194,9 @@ export default {
             return treeParamsClone
         },
 
-        shouldDisableSaveBtn: function() {
-            if (this.changedParams.length > 0 && this.isValid) return false
-            else return true
+        hasChanged: function() {
+            if (this.changedParams.length > 0 && this.isValid) return true
+            else return false
         },
         moduleParams: function() {
             return this.overridingModuleParams
@@ -316,16 +316,8 @@ export default {
          */
         assignPortSocketDependencyValues(resourceParam) {
             const { id, value } = resourceParam
-            if (this.usePortOrSocket) {
-                switch (id) {
-                    case 'port':
-                        this.portValue = value
-                        break
-                    case 'socket':
-                        this.socketValue = value
-                        break
-                }
-            }
+            if (this.usePortOrSocket)
+                if (id === 'port' || id === 'socket') this[`${id}Value`] = value
         },
 
         /**
