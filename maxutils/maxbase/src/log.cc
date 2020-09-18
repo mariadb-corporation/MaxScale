@@ -17,6 +17,12 @@
 #include <sys/time.h>
 #include <syslog.h>
 
+#ifdef HAVE_SYSTEMD
+// Prevents line numbers from being automatically added to the calls
+#define SD_JOURNAL_SUPPRESS_LOCATION 1
+#include <systemd/sd-journal.h>
+#endif
+
 #include <cinttypes>
 #include <cmath>
 #include <cstring>
@@ -891,8 +897,17 @@ int mxb_log_message(int priority,
 
                 if (this_unit.do_syslog && LOG_PRI(priority) != LOG_DEBUG)
                 {
+#ifdef HAVE_SYSTEMD
+                    sd_journal_send("MESSAGE=%s", message_text,
+                                    "PRIORITY=%d", priority,
+                                    "MXS_CONTEXT=%s", context_len ? context : "",
+                                    "MXS_MODULE=%s", modname_len ? modname : "",
+                                    "MXS_SCOPE=%s", scope_len ? scope : "",
+                                    nullptr);
+#else
                     // Debug messages are never logged into syslog
                     syslog(priority, "%s", context_text);
+#endif
                 }
 
                 std::string msg = this_unit.do_highprecision ? get_timestamp_hp() : get_timestamp();
