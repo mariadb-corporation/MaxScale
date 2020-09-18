@@ -58,6 +58,119 @@ tell the Columnstore nodes it resides at. Either it or
 configuration file must be specified. If both have been
 specified, then the one specified for the monitor overrides.
 
+### `dynamic_node_detection`
+
+This optional boolean parameter specifies whether the monitor should
+autonomously figure out the Columnstore cluster configuration or whether
+it should solely rely upon the monitor configuration in the configuration
+file. Please see [Dynamic Node Detection](#dynamic-node-detection) for a
+thorough discussion on the meaning of the parameter. The default value
+is `false`.
+
+### `cluster_monitor_interval`
+
+This optional parameter, meaningful only if `dynamic_node_detection` is
+`true` specifies how often the monitor should probe the Columnstore
+cluster and adapt to any changes that have occured in the number of
+nodes of the cluster. The default value is `10s`, that is, the
+cluster configuration is probed every 10 seconds.
+
+Note that as the probing is performed at the regular monitor round,
+the value should be some multiple of `monitor_interval`.
+
+## Dynamic Node Detection
+
+**NOTE** If dynamic node detection is used, the network setup must
+be such that the hostname/IP-address of a Columnstore node is the
+same when viewed both from MaxScale and from another node.
+
+By default, the Columnstore monitor behaves like the regular MariaDB
+monitor. That is, it only monitors the servers it has been configured
+with.
+
+If `dynamic_node_detection` has been enabled, the behaviour of the monitor
+changes significantly. Instead of being explicitly told which servers it
+should monitor, the monitor is only told how to get into contact with the
+cluster whereafter it autonomously figures out the cluster configuration
+and creates dynamic server entries accordingly.
+
+When dynamic node detection is enabled, the servers the monitor has been
+configured with are _only_ used for "bootstrapping" the monitor, because
+at the initial startup the monitor does not otherwise know how to get
+into contact with the cluster.
+
+In the following is shown a configuration using dynamic node detection.
+```
+[CsBootstrap1]
+type=server
+address=mcs1
+port=3306
+protocol=mariadbbackend
+
+[CsBootstrap2]
+type=server
+address=mcs2
+port=3306
+protocol=mariadbbackend
+
+[CsMonitor]
+type=monitor
+module=csmon
+servers=CsBootstrap1, CsBootstrap2
+dynamic_node_detection=true
+...
+```
+As can be seen, the server entries look just like any other server entries,
+but to make them stand out and to indicate what they are used for, they have
+the word _bootstrap_ in their name.
+
+In principle, it is sufficient with a single entry, but to cater for the
+case that a node happens to be down, it is adviseable to have more than one.
+Once the monitor has been able to connect to a node, it will fetch the
+configuration and store information about the nodes locally. On subsequent
+startups, the monitor will use the bootstrap information only if it cannot
+connect using the persisted information. Also, if there has been any change
+in the bootstrap servers, the persisted information is not used.
+
+Based on the information obtained from the cluster itself, the monitor
+will create _dynamic_ server instances that are named as `@@` followed by
+the monitorname, followed by a `:`, followed by the hostname.
+
+If the cluster in fact consists of three nodes, then the output of
+`maxctrl list servers` may look like
+
+```
+┌──────────────────┬─────────┬──────┬─────────────┬─────────────────┬──────┐
+│ Server           │ Address │ Port │ Connections │ State           │ GTID │
+├──────────────────┼─────────┼──────┼─────────────┼─────────────────┼──────┤
+│ @@CSMonitor:mcs2 │ mcs2    │ 3306 │ 0           │ Slave, Running  │      │
+├──────────────────┼─────────┼──────┼─────────────┼─────────────────┼──────┤
+│ @@CSMonitor:mcs3 │ mcs3    │ 3306 │ 0           │ Master, Running │      │
+├──────────────────┼─────────┼──────┼─────────────┼─────────────────┼──────┤
+│ @@CSMonitor:mcs1 │ mcs1    │ 3306 │ 0           │ Slave, Running  │      │
+├──────────────────┼─────────┼──────┼─────────────┼─────────────────┼──────┤
+│ CsBootstrap1     │ mcs1    │ 3306 │ 0           │ Slave, Running  │      │
+├──────────────────┼─────────┼──────┼─────────────┼─────────────────┼──────┤
+│ CsBootstrap2     │ mcs2    │ 3306 │ 0           │ Slave, Running  │      │
+└──────────────────┴─────────┴──────┴─────────────┴─────────────────┴──────┘
+```
+
+Note that there will be dynamic server entries _also_ for the nodes for
+which there is a bootstrap entry.
+
+When the service is defined, it is imperative that it does not explicitly
+refer to either the bootstrap or the dynamic entries. Instead, it should
+refer to the monitor using the `cluster` parameter.
+```
+[RWS]
+type=service
+router=readwritesplit
+cluster=CsMonitor
+...
+```
+With this configuration the _RWS_ service will automatically adapt to any
+changes made to the Columnstore cluster.
+
 ## Commands
 
 The Columnstore monitor provides module commands using which the Columnstore
@@ -204,6 +317,10 @@ api_key=somekey1234
 
 ## Adding a Node
 
+Note that in the following `dynamic_node_detection` is not used, but
+the monitor is configured in the traditional way. The impact of
+`dynamic_node_detection` is described [here](#impact-of-dynamic_node_detection).
+
 Adding a new node to a Columnstore cluster can be performed dynamically
 at runtime, but it must be done in two steps. First, the node is added
 to Columnstore and then, the corresponding server object (that possibly
@@ -317,7 +434,20 @@ Note that the MaxScale server object can be created at any point, but
 it must not be added to the monitor before the node has been added to
 the Columnstore cluster using `call command csmon add-node`.
 
+### Impact of `dynamic_node_detection`
+
+If `dynamic_node_detection` is enabled, there is no need to create any
+explicit server entries. All that needs to be done, is to add the node
+and the monitor will adapt automatically. Note that it does not matter
+whether the node is added indirectly via maxscale or directly using the
+REST-API of Columnstore. The only difference is that in the former case,
+MaxScale may detect the new situation slightly faster.
+
 ## Removing a Node
+
+Note that in the following `dynamic_node_detection` is not used, but
+the monitor is configured in the traditional way. The impact of
+`dynamic_node_detection` is desribed [here](#impact-of-dynamic-node-detection-1).
 
 Removing a node should be performed in the reverse order of how a
 node was added. First, the MaxScale server should be removed from the
@@ -362,3 +492,11 @@ maxctrl --timeout 30s call command csmon remove-node CsMonitor mcs3 20s
     }
 }
 ```
+### Impact of `dynamic_node_detection`
+
+If `dynamic_node_detection` is enabled, there is in general no need
+to explicitly remove a static server entry (as there never was one in
+the first place). The only exception is if the removed node happened
+to be a bootstrap server. In that case, the server entry should be
+removed from the monitor's list of servers (used as bootstrap nodes).
+If that is not done, then the monitor will log a warning at each startup.
