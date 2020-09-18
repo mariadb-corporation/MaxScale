@@ -41,8 +41,7 @@ namespace schemarouter
  */
 
 SchemaRouter::SchemaRouter(SERVICE* service, SConfig config)
-    : mxs::Router<SchemaRouter, SchemaRouterSession>(service)
-    , m_config(config)
+    : m_config(config)
     , m_service(service)
 {
 }
@@ -241,7 +240,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         desc,
         "V1.0.0",
         schemarouter::CAPABILITIES,
-        &schemarouter::SchemaRouter::s_object,
+        &mxs::RouterApi<schemarouter::SchemaRouter>::s_api,
         NULL,
         NULL,
         NULL,

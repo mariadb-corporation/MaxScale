@@ -22,15 +22,30 @@
 namespace maxscale
 {
 /**
- * mxs::Routable is the base type representing the session related
- * data of a particular routing module instance.
+ * mxs::Routable is the base type representing the session related data of a particular routing module
+ * instance. Implemented by filter and router sessions.
  */
-struct Routable
+class Routable
 {
+public:
     virtual ~Routable() = default;
 
+    /**
+     * Called when a packet is traveling downstream, towards a backend.
+     *
+     * @param pPacket Packet to route
+     * @return 1 for success, 0 for error
+     */
     virtual int32_t routeQuery(GWBUF* pPacket) = 0;
 
+    /**
+     * Called when a packet is traveling upstream, towards the client.
+     *
+     * @param pPacket Packet to route
+     * @param down Response source
+     * @param reply Reply information
+     * @return 1 for success, 0 for error
+     */
     virtual int32_t clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply) = 0;
 };
 }

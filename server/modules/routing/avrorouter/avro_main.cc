@@ -341,7 +341,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         "Avrorouter",
         "V1.0.0",
         0,
-        &Avro::s_object,
+        &mxs::RouterApi<Avro>::s_api,
         NULL,
         NULL,
         NULL,

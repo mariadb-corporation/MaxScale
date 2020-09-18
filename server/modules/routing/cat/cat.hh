@@ -19,7 +19,7 @@ class CatSession;
 /**
  * The per instance data for the router.
  */
-class Cat : public mxs::Router<Cat, CatSession>
+class Cat : public MXS_ROUTER
 {
     Cat(const Cat&) = delete;
     Cat& operator=(const Cat&) = delete;
@@ -44,5 +44,5 @@ private:
     friend class CatSession;
 
     /** Internal functions */
-    Cat(SERVICE* pService);
+    Cat() = default;
 };

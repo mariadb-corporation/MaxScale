@@ -60,7 +60,7 @@ void RWSplit::set_warnings(json_t* json) const
 {
     std::vector<std::string> warnings;
 
-    for (const auto& s : m_pService->reachable_servers())
+    for (const auto& s : m_service->reachable_servers())
     {
         if (!check_causal_reads(s))
         {
@@ -85,8 +85,7 @@ void RWSplit::set_warnings(json_t* json) const
 }
 
 RWSplit::RWSplit(SERVICE* service)
-    : mxs::Router<RWSplit, RWSplitSession>(service)
-    , m_service(service)
+    : m_service(service)
     , m_config(service->name())
 {
 }
@@ -343,7 +342,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         "A Read/Write splitting router for enhancement read scalability",
         "V1.1.0",
         CAPABILITIES,
-        &RWSplit::s_object,
+        &mxs::RouterApi<RWSplit>::s_api,
         nullptr,
         nullptr,
         nullptr,

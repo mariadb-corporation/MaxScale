@@ -57,7 +57,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         "A connection based router to load balance based on connections",
         "V2.0.0",
         RCAP_TYPE_RUNTIME_CONFIG,
-        &RCR::s_object,
+        &mxs::RouterApi<RCR>::s_api,
         nullptr,    /* Process init. */
         nullptr,    /* Process finish. */
         nullptr,    /* Thread init. */
@@ -159,16 +159,10 @@ bool RCR::configure(mxs::ConfigParameters* params)
     return ok;
 }
 
-
-RCR::RCR(SERVICE* service)
-    : mxs::Router<RCR, RCRSession>(service)
-{
-}
-
 // static
 RCR* RCR::create(SERVICE* service, mxs::ConfigParameters* params)
 {
-    RCR* inst = new(std::nothrow) RCR(service);
+    RCR* inst = new(std::nothrow) RCR();
 
     if (inst && !inst->configure(params))
     {

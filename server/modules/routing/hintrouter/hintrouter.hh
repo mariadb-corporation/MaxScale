@@ -18,7 +18,7 @@
 #include <maxscale/service.hh>
 #include "hintroutersession.hh"
 
-class HintRouter : public maxscale::Router<HintRouter, HintRouterSession>
+class HintRouter : public MXS_ROUTER
 {
 public:
     static HintRouter* create(SERVICE* pService, mxs::ConfigParameters* params);

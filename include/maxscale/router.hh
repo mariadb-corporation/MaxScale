@@ -46,13 +46,6 @@ public:
      */
     virtual ~RouterSession() = default;
 
-    /**
-     * Called when a packet being is routed to the backend. The router should
-     * forward the packet to the appropriate server(s).
-     *
-     * @param pPacket A client packet.
-     */
-    int32_t routeQuery(GWBUF* pPacket) override;
 
     /**
      * Called when a packet is routed to the client. The router should
@@ -94,10 +87,11 @@ protected:
 }
 
 /**
- * MXS_ROUTER is an opaque type representing a particular router instance.
+ * Base class of all routers.
  */
-struct MXS_ROUTER
+class MXS_ROUTER
 {
+public:
     virtual ~MXS_ROUTER() = default;
 
     /**
@@ -322,5 +316,29 @@ template<class RouterType, class RouterSessionType>
 MXS_ROUTER_OBJECT Router<RouterType, RouterSessionType>::s_object =
 {
     &Router<RouterType, RouterSessionType>::createInstance
+};
+
+template<class RouterInstance>
+class RouterApi
+{
+public:
+    RouterApi() = delete;
+    RouterApi(const RouterApi&) = delete;
+    RouterApi& operator=(const RouterApi&) = delete;
+
+    static MXS_ROUTER* createInstance(SERVICE* pService, mxs::ConfigParameters* params)
+    {
+        RouterInstance* pInstance = NULL;
+        MXS_EXCEPTION_GUARD(pInstance = RouterInstance::create(pService, params));
+        return pInstance;
+    }
+
+    static MXS_ROUTER_OBJECT s_api;
+};
+
+template<class RouterInstance>
+MXS_ROUTER_OBJECT RouterApi<RouterInstance>::s_api =
+{
+    &RouterApi<RouterInstance>::createInstance,
 };
 }

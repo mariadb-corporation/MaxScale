@@ -70,7 +70,7 @@ private:
 /**
  * The per instance data for the router.
  */
-class RCR : public mxs::Router<RCR, RCRSession>
+class RCR : public MXS_ROUTER
 {
 public:
     /**
@@ -135,7 +135,7 @@ public:
     maxscale::TargetSessionStats combined_target_stats() const;
 
 private:
-    RCR(SERVICE* service);
+    RCR() = default;
 
     uint64_t m_bitmask_and_bitvalue = 0;    /**< Lower 32-bits for bitmask and upper for bitvalue */
 

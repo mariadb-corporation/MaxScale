@@ -25,11 +25,6 @@ RouterSession::RouterSession(MXS_SESSION* pSession)
 {
 }
 
-int32_t RouterSession::routeQuery(GWBUF* pPacket)
-{
-    return 0;
-}
-
 int32_t RouterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
     return m_pUp->clientReply(pPacket, down, reply);

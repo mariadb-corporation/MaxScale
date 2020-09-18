@@ -68,8 +68,7 @@ Avro* Avro::create(SERVICE* service, mxs::ConfigParameters* params)
 }
 
 Avro::Avro(SERVICE* service, mxs::ConfigParameters* params, AvroConfig&& config)
-    : mxs::Router<Avro, AvroSession>(service)
-    , service(service)
+    : service(service)
     , current_pos(4)
     , binlog_fd(-1)
     , trx_count(0)

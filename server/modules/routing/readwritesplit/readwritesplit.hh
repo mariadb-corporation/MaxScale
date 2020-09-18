@@ -301,7 +301,7 @@ class RWSplitSession;
 /**
  * The per instance data for the router.
  */
-class RWSplit : public mxs::Router<RWSplit, RWSplitSession>
+class RWSplit : public MXS_ROUTER
 {
     RWSplit(const RWSplit&);
     RWSplit& operator=(const RWSplit&);

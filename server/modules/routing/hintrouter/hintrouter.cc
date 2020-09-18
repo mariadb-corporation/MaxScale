@@ -31,12 +31,8 @@ static const char DEFAULT_ACTION[] = "default_action";
 static const char DEFAULT_SERVER[] = "default_server";
 static const char MAX_SLAVES[] = "max_slaves";
 
-HintRouter::HintRouter(SERVICE* pService,
-                       HINT_TYPE default_action,
-                       string& default_server,
-                       int max_slaves)
-    : maxscale::Router<HintRouter, HintRouterSession>(pService)
-    , m_routed_to_master(0)
+HintRouter::HintRouter(SERVICE* pService, HINT_TYPE default_action, string& default_server, int max_slaves)
+    : m_routed_to_master(0)
     , m_routed_to_slave(0)
     , m_routed_to_named(0)
     , m_routed_to_all(0)
@@ -175,7 +171,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         "A hint router",                                    /* Description */
         "V1.0.0",                                           /* Module version */
         RCAP_TYPE_STMT_INPUT | RCAP_TYPE_RESULTSET_OUTPUT,
-        &HintRouter::s_object,
+        &mxs::RouterApi<HintRouter>::s_api,
         NULL,                                               /* Process init, can be null */
         NULL,                                               /* Process finish, can be null */
         NULL,                                               /* Thread init */

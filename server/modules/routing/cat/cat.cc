@@ -16,18 +16,13 @@
 
 using namespace maxscale;
 
-Cat::Cat(SERVICE* pService)
-    : Router<Cat, CatSession>(pService)
-{
-}
-
 Cat::~Cat()
 {
 }
 
 Cat* Cat::create(SERVICE* pService, mxs::ConfigParameters* params)
 {
-    return new Cat(pService);
+    return new Cat();
 }
 
 mxs::RouterSession* Cat::newSession(MXS_SESSION* pSession, const Endpoints& endpoints)
@@ -76,7 +71,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         "Resultset concatenation router",
         "V1.0.0",
         caps,
-        &Cat::s_object,
+        &mxs::RouterApi<Cat>::s_api,
         NULL,   /* Process init. */
         NULL,   /* Process finish. */
         NULL,   /* Thread init. */
