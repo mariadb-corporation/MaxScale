@@ -1523,8 +1523,14 @@ protected:
      * @param pParam  Pointer to paramter describing value.
      * @param onSet   Optional functor to be called when value is set (at startup).
      */
-    template<class ParamType>
-    void add_native(typename ParamType::value_type* pValue,
+    template<class ParamType, class ConcreteConfiguration>
+    void add_native(typename ParamType::value_type ConcreteConfiguration::* pValue,
+                    ParamType* pParam,
+                    std::function<void(typename ParamType::value_type)> on_set = nullptr);
+
+    template<class ParamType, class ConcreteConfiguration, class Container>
+    void add_native(Container ConcreteConfiguration::* pContainer,
+                    typename ParamType::value_type Container::* pValue,
                     ParamType* pParam,
                     std::function<void(typename ParamType::value_type)> on_set = nullptr);
 
@@ -1630,7 +1636,7 @@ protected:
 /**
  * Wrapper for native configuration value, not to be instantiated explicitly.
  */
-template<class ParamType>
+template<class ParamType, class ConfigurationType>
 class Native : public Type
 {
 public:
@@ -1639,9 +1645,9 @@ public:
     Native(const Type& rhs) = delete;
     Native& operator=(const Native&) = delete;
 
-    Native(Configuration* pConfiguration,
+    Native(ConfigurationType* pConfiguration,
            ParamType* pParam,
-           value_type* pValue,
+           typename ParamType::value_type ConfigurationType::*pValue,
            std::function<void(value_type)> on_set = nullptr)
         : Type(pConfiguration, pParam)
         , m_pValue(pValue)
@@ -1651,9 +1657,12 @@ public:
 
     // Native is move-only
     Native(Native&& rhs)
-        : m_pValue(rhs.m_pValue)
+        : Type(rhs)
+        , m_pValue(rhs.m_pValue)
+        , m_on_set(rhs.m_on_set)
     {
         rhs.m_pValue = nullptr;
+        rhs.m_on_set = nullptr;
     }
 
     Native& operator=(Native&& rhs)
@@ -1662,7 +1671,10 @@ public:
         {
             Type::operator=(rhs);
             m_pValue = rhs.m_pValue;
+            m_on_set = rhs.m_on_set;
+
             rhs.m_pValue = nullptr;
+            rhs.m_on_set = nullptr;
         }
 
         return *this;
@@ -1677,12 +1689,16 @@ public:
 
     std::string to_string() const override
     {
-        return parameter().to_string(*m_pValue);
+        ConfigurationType* pConfiguration = static_cast<ConfigurationType*>(m_pConfiguration);
+
+        return parameter().to_string(pConfiguration->*m_pValue);
     }
 
     json_t* to_json() const override final
     {
-        return parameter().to_json(*m_pValue);
+        ConfigurationType* pConfiguration = static_cast<ConfigurationType*>(m_pConfiguration);
+
+        return parameter().to_json(pConfiguration->*m_pValue);
     }
 
     bool set_from_string(const std::string& value_as_string,
@@ -1715,7 +1731,7 @@ public:
 
     value_type get() const
     {
-        return *m_pValue;
+        return static_cast<ConfigurationType*>(m_pConfiguration)->*m_pValue;
     }
 
     bool set(const value_type& value)
@@ -1724,7 +1740,7 @@ public:
 
         if (rv)
         {
-            *m_pValue = value;
+            static_cast<ConfigurationType*>(m_pConfiguration)->*m_pValue = value;
 
             if (m_on_set)
             {
@@ -1736,8 +1752,138 @@ public:
     }
 
 protected:
-    value_type*                     m_pValue;
-    std::function<void(value_type)> m_on_set;
+    typename ParamType::value_type ConfigurationType::* m_pValue;
+    std::function<void(value_type)>                     m_on_set;
+};
+
+/**
+ * Wrapper for contained native configuration value, not to be instantiated explicitly.
+ */
+template<class ParamType, class ConfigurationType, class Container>
+class ContainedNative : public Type
+{
+public:
+    using value_type = typename ParamType::value_type;
+
+    ContainedNative(const Type& rhs) = delete;
+    ContainedNative& operator=(const ContainedNative&) = delete;
+
+    ContainedNative(ConfigurationType* pConfiguration,
+                    ParamType* pParam,
+                    Container ConfigurationType::* pContainer,
+                    typename ParamType::value_type Container::*pValue,
+                    std::function<void(value_type)> on_set = nullptr)
+        : Type(pConfiguration, pParam)
+        , m_pContainer(pContainer)
+        , m_pValue(pValue)
+        , m_on_set(on_set)
+    {
+    }
+
+    // Native is move-only
+    ContainedNative(ContainedNative&& rhs)
+        : Type(rhs)
+        , m_pContainer(rhs.m_pContainer)
+        , m_pValue(rhs.m_pValue)
+        , m_on_set(rhs.m_on_set)
+    {
+        rhs.m_pContainer = nullptr;
+        rhs.m_pValue = nullptr;
+        rhs.m_on_set = nullptr;
+    }
+
+    ContainedNative& operator=(ContainedNative&& rhs)
+    {
+        if (this != &rhs)
+        {
+            Type::operator=(rhs);
+            m_pContainer = rhs.m_pContainer;
+            m_pValue = rhs.m_pValue;
+            m_on_set = rhs.m_on_set;
+
+            rhs.m_pContainer = nullptr;
+            rhs.m_pValue = nullptr;
+            rhs.m_on_set = nullptr;
+        }
+
+        return *this;
+    }
+
+    ~ContainedNative() = default;
+
+    const ParamType& parameter() const override final
+    {
+        return static_cast<const ParamType&>(*m_pParam);
+    }
+
+    std::string to_string() const override
+    {
+        ConfigurationType* pConfiguration = static_cast<ConfigurationType*>(m_pConfiguration);
+
+        return parameter().to_string((pConfiguration->*m_pContainer).*m_pValue);
+    }
+
+    json_t* to_json() const override final
+    {
+        ConfigurationType* pConfiguration = static_cast<ConfigurationType*>(m_pConfiguration);
+
+        return parameter().to_json((pConfiguration->*m_pContainer).*m_pValue);
+    }
+
+    bool set_from_string(const std::string& value_as_string,
+                         std::string* pMessage = nullptr) override final
+    {
+        value_type value;
+        bool rv = parameter().from_string(value_as_string, &value, pMessage);
+
+        if (rv)
+        {
+            rv = set(value);
+        }
+
+        return rv;
+    }
+
+    bool set_from_json(const json_t* pJson,
+                       std::string* pMessage = nullptr) override final
+    {
+        value_type value;
+        bool rv = parameter().from_json(pJson, &value, pMessage);
+
+        if (rv)
+        {
+            rv = set(value);
+        }
+
+        return rv;
+    }
+
+    value_type get() const
+    {
+        return (static_cast<ConfigurationType*>(m_pConfiguration)->*m_pContainer).*m_pValue;
+    }
+
+    bool set(const value_type& value)
+    {
+        bool rv = parameter().is_valid(value);
+
+        if (rv)
+        {
+            (static_cast<ConfigurationType*>(m_pConfiguration)->*m_pContainer).*m_pValue = value;
+
+            if (m_on_set)
+            {
+                m_on_set(value);
+            }
+        }
+
+        return rv;
+    }
+
+protected:
+    Container ConfigurationType::*              m_pContainer;
+    typename ParamType::value_type Container::* m_pValue;
+    std::function<void(value_type)>             m_on_set;
 };
 
 /**
@@ -2464,14 +2610,37 @@ bool ParamEnumMask<T>::from_json(const json_t* pJson, value_type* pValue,
     return rv;
 }
 
-template<class ParamType>
-void Configuration::add_native(typename ParamType::value_type* pValue,
+template<class ParamType, class ConcreteConfiguration>
+void Configuration::add_native(typename ParamType::value_type ConcreteConfiguration::* pValue,
                                ParamType* pParam,
                                std::function<void(typename ParamType::value_type)> on_set)
 {
-    *pValue = pParam->default_value();
-    m_natives.push_back(std::unique_ptr<Type>(new Native<ParamType>(this, pParam, pValue, on_set)));
+    ConcreteConfiguration* pThis = static_cast<ConcreteConfiguration*>(this);
+    pThis->*pValue = pParam->default_value();
+    m_natives.push_back(std::unique_ptr<Type>(new Native<ParamType,ConcreteConfiguration>(pThis,
+                                                                                          pParam,
+                                                                                          pValue,
+                                                                                          on_set)));
 }
+
+template<class ParamType, class ConcreteConfiguration, class Container>
+void
+Configuration::add_native(Container ConcreteConfiguration::* pContainer,
+                          typename ParamType::value_type Container::* pValue,
+                          ParamType* pParam,
+                          std::function<void(typename ParamType::value_type)> on_set)
+{
+    ConcreteConfiguration* pThis = static_cast<ConcreteConfiguration*>(this);
+    (pThis->*pContainer).*pValue = pParam->default_value();
+
+    auto* pType = new ContainedNative<ParamType,ConcreteConfiguration,Container>(pThis,
+                                                                                 pParam,
+                                                                                 pContainer,
+                                                                                 pValue,
+                                                                                 on_set);
+    m_natives.push_back(std::unique_ptr<Type>(pType));
+}
+
 }
 }
 

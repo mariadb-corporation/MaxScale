@@ -603,25 +603,25 @@ Config::Config()
     substitute_variables(false),
     promoted_at(0)
 {
-    add_native(&n_threads, &s_n_threads);
-    add_native(&qc_name, &s_qc_name);
-    add_native(&qc_args, &s_qc_args);
-    add_native(&qc_sql_mode, &s_qc_sql_mode);
-    add_native(&admin_host, &s_admin_host);
-    add_native(&admin_port, &s_admin_port);
-    add_native(&admin_auth, &s_admin_auth);
-    add_native(&admin_enabled, &s_admin_enabled);
-    add_native(&admin_pam_rw_service, &s_admin_pam_rw_service);
-    add_native(&admin_pam_ro_service, &s_admin_pam_ro_service);
-    add_native(&admin_ssl_key, &s_admin_ssl_key);
-    add_native(&admin_ssl_cert, &s_admin_ssl_cert);
-    add_native(&admin_ssl_ca_cert, &s_admin_ssl_ca_cert);
-    add_native(&local_address, &s_local_address);
-    add_native(&load_persisted_configs, &s_load_persisted_configs);
-    add_native(&log_warn_super_user, &s_log_warn_super_user);
-    add_native(&gui, &s_gui);
-    add_native(&secure_gui, &s_secure_gui);
-    add_native(&debug, &s_debug);
+    add_native(&Config::n_threads, &s_n_threads);
+    add_native(&Config::qc_name, &s_qc_name);
+    add_native(&Config::qc_args, &s_qc_args);
+    add_native(&Config::qc_sql_mode, &s_qc_sql_mode);
+    add_native(&Config::admin_host, &s_admin_host);
+    add_native(&Config::admin_port, &s_admin_port);
+    add_native(&Config::admin_auth, &s_admin_auth);
+    add_native(&Config::admin_enabled, &s_admin_enabled);
+    add_native(&Config::admin_pam_rw_service, &s_admin_pam_rw_service);
+    add_native(&Config::admin_pam_ro_service, &s_admin_pam_ro_service);
+    add_native(&Config::admin_ssl_key, &s_admin_ssl_key);
+    add_native(&Config::admin_ssl_cert, &s_admin_ssl_cert);
+    add_native(&Config::admin_ssl_ca_cert, &s_admin_ssl_ca_cert);
+    add_native(&Config::local_address, &s_local_address);
+    add_native(&Config::load_persisted_configs, &s_load_persisted_configs);
+    add_native(&Config::log_warn_super_user, &s_log_warn_super_user);
+    add_native(&Config::gui, &s_gui);
+    add_native(&Config::secure_gui, &s_secure_gui);
+    add_native(&Config::debug, &s_debug);
 
     this->qc_cache_properties.max_size = get_total_memory() * 0.15;
 

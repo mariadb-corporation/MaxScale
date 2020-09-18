@@ -148,18 +148,18 @@ QlaInstance::Settings::Settings(const std::string& name, QlaInstance* instance)
     : mxs::config::Configuration(name, &s_spec)
     , m_instance(instance)
 {
-    add_native(&filebase, &s_filebase);
-    add_native(&flush_writes, &s_flush);
-    add_native(&append, &s_append);
-    add_native(&query_newline, &s_newline_replacement);
-    add_native(&separator, &s_separator);
-    add_native(&user_name, &s_user);
-    add_native(&source, &s_source);
-    add_native(&match, &s_match);
-    add_native(&exclude, &s_exclude);
-    add_native(&options, &s_options);
-    add_native(&log_file_data_flags, &s_log_data);
-    add_native(&log_file_types, &s_log_type);
+    add_native(&Settings::filebase, &s_filebase);
+    add_native(&Settings::flush_writes, &s_flush);
+    add_native(&Settings::append, &s_append);
+    add_native(&Settings::query_newline, &s_newline_replacement);
+    add_native(&Settings::separator, &s_separator);
+    add_native(&Settings::user_name, &s_user);
+    add_native(&Settings::source, &s_source);
+    add_native(&Settings::match, &s_match);
+    add_native(&Settings::exclude, &s_exclude);
+    add_native(&Settings::options, &s_options);
+    add_native(&Settings::log_file_data_flags, &s_log_data);
+    add_native(&Settings::log_file_types, &s_log_type);
 }
 
 bool QlaInstance::Settings::post_configure()

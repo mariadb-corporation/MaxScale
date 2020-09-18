@@ -120,13 +120,13 @@ struct Config : public mxs::config::Configuration
     Config(const std::string& name)
         : mxs::config::Configuration(name, &s_spec)
     {
-        add_native(&count, &s_count);
-        add_native(&filebase, &s_filebase);
-        add_native(&source, &s_source);
-        add_native(&user, &s_user);
-        add_native(&options, &s_options);
-        add_native(&match, &s_match);
-        add_native(&exclude, &s_exclude);
+        add_native(&Config::count, &s_count);
+        add_native(&Config::filebase, &s_filebase);
+        add_native(&Config::source, &s_source);
+        add_native(&Config::user, &s_user);
+        add_native(&Config::options, &s_options);
+        add_native(&Config::match, &s_match);
+        add_native(&Config::exclude, &s_exclude);
     }
 
     int64_t                 count;      /* Number of queries to store */

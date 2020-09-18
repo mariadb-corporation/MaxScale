@@ -177,23 +177,23 @@ config::ParamEnum<cache_users_t> CacheConfig::s_users(
 CacheConfig::CacheConfig(const std::string& name)
     : config::Configuration(name, &s_specification)
 {
-    add_native(&storage, &s_storage);
-    add_native(&storage_options, &s_storage_options);
-    add_native(&hard_ttl, &s_hard_ttl);
-    add_native(&soft_ttl, &s_soft_ttl);
-    add_native(&max_resultset_rows, &s_max_resultset_rows);
-    add_native(&max_resultset_size, &s_max_resultset_size);
-    add_native(&max_count, &s_max_count);
-    add_native(&max_size, &s_max_size);
-    add_native(&rules, &s_rules);
-    add_native(&debug, &s_debug);
-    add_native(&thread_model, &s_thread_model);
-    add_native(&selects, &s_selects);
-    add_native(&cache_in_trxs, &s_cache_in_trxs);
-    add_native(&enabled, &s_enabled);
-    add_native(&invalidate, &s_invalidate);
-    add_native(&clear_cache_on_parse_errors, &s_clear_cache_on_parse_errors);
-    add_native(&users, &s_users);
+    add_native(&CacheConfig::storage, &s_storage);
+    add_native(&CacheConfig::storage_options, &s_storage_options);
+    add_native(&CacheConfig::hard_ttl, &s_hard_ttl);
+    add_native(&CacheConfig::soft_ttl, &s_soft_ttl);
+    add_native(&CacheConfig::max_resultset_rows, &s_max_resultset_rows);
+    add_native(&CacheConfig::max_resultset_size, &s_max_resultset_size);
+    add_native(&CacheConfig::max_count, &s_max_count);
+    add_native(&CacheConfig::max_size, &s_max_size);
+    add_native(&CacheConfig::rules, &s_rules);
+    add_native(&CacheConfig::debug, &s_debug);
+    add_native(&CacheConfig::thread_model, &s_thread_model);
+    add_native(&CacheConfig::selects, &s_selects);
+    add_native(&CacheConfig::cache_in_trxs, &s_cache_in_trxs);
+    add_native(&CacheConfig::enabled, &s_enabled);
+    add_native(&CacheConfig::invalidate, &s_invalidate);
+    add_native(&CacheConfig::clear_cache_on_parse_errors, &s_clear_cache_on_parse_errors);
+    add_native(&CacheConfig::users, &s_users);
 }
 
 CacheConfig::~CacheConfig()

@@ -87,13 +87,13 @@ config::ParamEnum<fw_actions> action(
 DbfwConfig::DbfwConfig(const std::string& name)
     : config::Configuration(name, &dbfwfilter::specification)
 {
-    add_native(&rules, &dbfwfilter::rules);
-    add_native(&log_match, &dbfwfilter::log_match);
-    add_native(&log_no_match, &dbfwfilter::log_no_match);
-    add_native(&treat_string_as_field, &dbfwfilter::treat_string_as_field);
-    add_native(&treat_string_arg_as_field, &dbfwfilter::treat_string_arg_as_field);
-    add_native(&action, &dbfwfilter::action);
-    add_native(&strict, &dbfwfilter::strict);
+    add_native(&DbfwConfig::rules, &dbfwfilter::rules);
+    add_native(&DbfwConfig::log_match, &dbfwfilter::log_match);
+    add_native(&DbfwConfig::log_no_match, &dbfwfilter::log_no_match);
+    add_native(&DbfwConfig::treat_string_as_field, &dbfwfilter::treat_string_as_field);
+    add_native(&DbfwConfig::treat_string_arg_as_field, &dbfwfilter::treat_string_arg_as_field);
+    add_native(&DbfwConfig::action, &dbfwfilter::action);
+    add_native(&DbfwConfig::strict, &dbfwfilter::strict);
 }
 
 // static

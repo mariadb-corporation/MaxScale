@@ -98,18 +98,18 @@ static cfg::ParamString s_gtid_start_pos(
 AvroConfig::AvroConfig(const std::string& name)
     : mxs::config::Configuration(name, &s_spec)
 {
-    add_native(&filestem, &s_filestem);
-    add_native(&binlogdir, &s_binlogdir);
-    add_native(&avrodir, &s_avrodir);
-    add_native(&gtid, &s_gtid_start_pos);
-    add_native(&trx_target, &s_group_trx);
-    add_native(&row_target, &s_group_rows);
-    add_native(&server_id, &s_server_id);
-    add_native(&start_index, &s_start_index);
-    add_native(&block_size, &s_block_size);
-    add_native(&match, &s_match);
-    add_native(&exclude, &s_exclude);
-    add_native(&codec, &s_codec);
+    add_native(&AvroConfig::filestem, &s_filestem);
+    add_native(&AvroConfig::binlogdir, &s_binlogdir);
+    add_native(&AvroConfig::avrodir, &s_avrodir);
+    add_native(&AvroConfig::gtid, &s_gtid_start_pos);
+    add_native(&AvroConfig::trx_target, &s_group_trx);
+    add_native(&AvroConfig::row_target, &s_group_rows);
+    add_native(&AvroConfig::server_id, &s_server_id);
+    add_native(&AvroConfig::start_index, &s_start_index);
+    add_native(&AvroConfig::block_size, &s_block_size);
+    add_native(&AvroConfig::match, &s_match);
+    add_native(&AvroConfig::exclude, &s_exclude);
+    add_native(&AvroConfig::codec, &s_codec);
 }
 
 bool converter_func(Worker::Call::action_t action, Avro* router)

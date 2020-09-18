@@ -94,12 +94,12 @@ public:
         : mxs::config::Configuration(name, &s_spec)
         , m_instance(instance)
     {
-        add_native(&filename, &s_filename);
-        add_native(&source, &s_source);
-        add_native(&user, &s_user);
-        add_native(&delimiter, &s_delimiter);
-        add_native(&query_delimiter, &s_query_delimiter);
-        add_native(&named_pipe, &s_named_pipe);
+        add_native(&Config::filename, &s_filename);
+        add_native(&Config::source, &s_source);
+        add_native(&Config::user, &s_user);
+        add_native(&Config::delimiter, &s_delimiter);
+        add_native(&Config::query_delimiter, &s_query_delimiter);
+        add_native(&Config::named_pipe, &s_named_pipe);
     }
 
     std::string filename;

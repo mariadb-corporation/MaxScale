@@ -97,15 +97,15 @@ config::ParamBool treat_string_arg_as_field(
 MaskingFilterConfig::MaskingFilterConfig(const char* zName)
     : mxs::config::Configuration(zName, &masking::specification)
 {
-    add_native(&m_large_payload, &masking::large_payload);
-    add_native(&m_rules, &masking::rules);
-    add_native(&m_warn_type_mismatch, &masking::warn_type_mismatch);
-    add_native(&m_prevent_function_usage, &masking::prevent_function_usage);
-    add_native(&m_check_user_variables, &masking::check_user_variables);
-    add_native(&m_check_unions, &masking::check_unions);
-    add_native(&m_check_subqueries, &masking::check_subqueries);
-    add_native(&m_require_fully_parsed, &masking::require_fully_parsed);
-    add_native(&m_treat_string_arg_as_field, &masking::treat_string_arg_as_field);
+    add_native(&MaskingFilterConfig::m_large_payload, &masking::large_payload);
+    add_native(&MaskingFilterConfig::m_rules, &masking::rules);
+    add_native(&MaskingFilterConfig::m_warn_type_mismatch, &masking::warn_type_mismatch);
+    add_native(&MaskingFilterConfig::m_prevent_function_usage, &masking::prevent_function_usage);
+    add_native(&MaskingFilterConfig::m_check_user_variables, &masking::check_user_variables);
+    add_native(&MaskingFilterConfig::m_check_unions, &masking::check_unions);
+    add_native(&MaskingFilterConfig::m_check_subqueries, &masking::check_subqueries);
+    add_native(&MaskingFilterConfig::m_require_fully_parsed, &masking::require_fully_parsed);
+    add_native(&MaskingFilterConfig::m_treat_string_arg_as_field, &masking::treat_string_arg_as_field);
 }
 
 //static

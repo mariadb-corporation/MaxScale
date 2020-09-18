@@ -80,7 +80,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 NullFilter::NullFilter::Config::Config(const std::string& name)
     : config::Configuration(name, &nullfilter::specification)
 {
-    add_native(&capabilities, &nullfilter::capabilities);
+    add_native(&Config::capabilities, &nullfilter::capabilities);
 }
 
 NullFilter::NullFilter(Config&& config)

@@ -115,12 +115,12 @@ public:
     CCRConfig(const std::string& name)
         : mxs::config::Configuration(name, &ccr::specification)
     {
-        add_native(&match, &ccr::match);
-        add_native(&ignore, &ccr::ignore);
-        add_native(&time, &ccr::time);
-        add_native(&count, &ccr::count);
-        add_native(&global, &ccr::global);
-        add_native(&options, &ccr::options);
+        add_native(&CCRConfig::match, &ccr::match);
+        add_native(&CCRConfig::ignore, &ccr::ignore);
+        add_native(&CCRConfig::time, &ccr::time);
+        add_native(&CCRConfig::count, &ccr::count);
+        add_native(&CCRConfig::global, &ccr::global);
+        add_native(&CCRConfig::options, &ccr::options);
     }
 
     CCRConfig(CCRConfig&& rhs) = default;

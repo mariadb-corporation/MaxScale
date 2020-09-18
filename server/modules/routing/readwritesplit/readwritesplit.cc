@@ -180,30 +180,30 @@ bool RWSplit::gtid::empty() const
 RWSConfig::RWSConfig(const char* name)
     : mxs::config::Configuration(name, &s_spec)
 {
-    add_native(&m_v.slave_selection_criteria, &s_slave_selection_criteria);
-    add_native(&m_v.use_sql_variables_in, &s_use_sql_variables_in);
-    add_native(&m_v.master_failure_mode, &s_master_failure_mode);
-    add_native(&m_v.max_sescmd_history, &s_max_sescmd_history);
-    add_native(&m_v.prune_sescmd_history, &s_prune_sescmd_history);
-    add_native(&m_v.disable_sescmd_history, &s_disable_sescmd_history);
-    add_native(&m_v.master_accept_reads, &s_master_accept_reads);
-    add_native(&m_v.strict_multi_stmt, &s_strict_multi_stmt);
-    add_native(&m_v.strict_sp_calls, &s_strict_sp_calls);
-    add_native(&m_v.retry_failed_reads, &s_retry_failed_reads);
-    add_native(&m_v.max_slave_replication_lag, &s_max_slave_replication_lag);
-    add_native(&m_v.max_slave_connections, &s_max_slave_connections);
-    add_native(&m_v.slave_connections, &s_slave_connections);
-    add_native(&m_v.causal_reads, &s_causal_reads);
-    add_native(&m_v.causal_reads_timeout, &s_causal_reads_timeout);
-    add_native(&m_v.master_reconnection, &s_master_reconnection);
-    add_native(&m_v.delayed_retry, &s_delayed_retry);
-    add_native(&m_v.delayed_retry_timeout, &s_delayed_retry_timeout);
-    add_native(&m_v.transaction_replay, &s_transaction_replay);
-    add_native(&m_v.trx_max_size, &s_transaction_replay_max_size);
-    add_native(&m_v.trx_max_attempts, &s_transaction_replay_attempts);
-    add_native(&m_v.trx_retry_on_deadlock, &s_transaction_replay_retry_on_deadlock);
-    add_native(&m_v.optimistic_trx, &s_optimistic_trx);
-    add_native(&m_v.lazy_connect, &s_lazy_connect);
+    add_native(&RWSConfig::m_v, &Values::slave_selection_criteria, &s_slave_selection_criteria);
+    add_native(&RWSConfig::m_v, &Values::use_sql_variables_in, &s_use_sql_variables_in);
+    add_native(&RWSConfig::m_v, &Values::master_failure_mode, &s_master_failure_mode);
+    add_native(&RWSConfig::m_v, &Values::max_sescmd_history, &s_max_sescmd_history);
+    add_native(&RWSConfig::m_v, &Values::prune_sescmd_history, &s_prune_sescmd_history);
+    add_native(&RWSConfig::m_v, &Values::disable_sescmd_history, &s_disable_sescmd_history);
+    add_native(&RWSConfig::m_v, &Values::master_accept_reads, &s_master_accept_reads);
+    add_native(&RWSConfig::m_v, &Values::strict_multi_stmt, &s_strict_multi_stmt);
+    add_native(&RWSConfig::m_v, &Values::strict_sp_calls, &s_strict_sp_calls);
+    add_native(&RWSConfig::m_v, &Values::retry_failed_reads, &s_retry_failed_reads);
+    add_native(&RWSConfig::m_v, &Values::max_slave_replication_lag, &s_max_slave_replication_lag);
+    add_native(&RWSConfig::m_v, &Values::max_slave_connections, &s_max_slave_connections);
+    add_native(&RWSConfig::m_v, &Values::slave_connections, &s_slave_connections);
+    add_native(&RWSConfig::m_v, &Values::causal_reads, &s_causal_reads);
+    add_native(&RWSConfig::m_v, &Values::causal_reads_timeout, &s_causal_reads_timeout);
+    add_native(&RWSConfig::m_v, &Values::master_reconnection, &s_master_reconnection);
+    add_native(&RWSConfig::m_v, &Values::delayed_retry, &s_delayed_retry);
+    add_native(&RWSConfig::m_v, &Values::delayed_retry_timeout, &s_delayed_retry_timeout);
+    add_native(&RWSConfig::m_v, &Values::transaction_replay, &s_transaction_replay);
+    add_native(&RWSConfig::m_v, &Values::trx_max_size, &s_transaction_replay_max_size);
+    add_native(&RWSConfig::m_v, &Values::trx_max_attempts, &s_transaction_replay_attempts);
+    add_native(&RWSConfig::m_v, &Values::trx_retry_on_deadlock, &s_transaction_replay_retry_on_deadlock);
+    add_native(&RWSConfig::m_v, &Values::optimistic_trx, &s_optimistic_trx);
+    add_native(&RWSConfig::m_v, &Values::lazy_connect, &s_lazy_connect);
 }
 
 bool RWSConfig::post_configure()

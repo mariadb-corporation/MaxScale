@@ -156,13 +156,13 @@ std::string gen_uuid()
 Config::Config(const std::string& name)
     : cfg::Configuration(name, &s_spec)
 {
-    add_native(&m_binlog_dir, &s_datadir);
-    add_native(&m_server_id, &s_server_id);
-    add_native(&m_net_timeout, &s_net_timeout);
-    add_native(&m_select_master, &s_select_master);
-    add_native(&m_expire_log_duration, &s_expire_log_duration);
-    add_native(&m_expire_log_minimum_files, &s_expire_log_minimum_files);
-    add_native(&m_purge_startup_delay, &s_purge_startup_delay);
-    add_native(&m_purge_poll_timeout, &s_purge_poll_timeout);
+    add_native(&Config::m_binlog_dir, &s_datadir);
+    add_native(&Config::m_server_id, &s_server_id);
+    add_native(&Config::m_net_timeout, &s_net_timeout);
+    add_native(&Config::m_select_master, &s_select_master);
+    add_native(&Config::m_expire_log_duration, &s_expire_log_duration);
+    add_native(&Config::m_expire_log_minimum_files, &s_expire_log_minimum_files);
+    add_native(&Config::m_purge_startup_delay, &s_purge_startup_delay);
+    add_native(&Config::m_purge_poll_timeout, &s_purge_poll_timeout);
 }
 }

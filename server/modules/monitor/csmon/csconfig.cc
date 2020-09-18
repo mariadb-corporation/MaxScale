@@ -111,13 +111,13 @@ config::ParamDuration<std::chrono::milliseconds> cluster_monitor_interval(
 CsConfig::CsConfig(const string& name)
     : mxs::config::Configuration(name, &csmon::specification)
 {
-    add_native(&this->version, &csmon::version);
-    add_native(&this->admin_port, &csmon::admin_port);
-    add_native(&this->admin_base_path, &csmon::admin_base_path);
-    add_native(&this->api_key, &csmon::api_key);
-    add_native(&this->local_address, &csmon::local_address);
-    add_native(&this->dynamic_node_detection, &csmon::dynamic_node_detection);
-    add_native(&this->cluster_monitor_interval, &csmon::cluster_monitor_interval);
+    add_native(&CsConfig::version, &csmon::version);
+    add_native(&CsConfig::admin_port, &csmon::admin_port);
+    add_native(&CsConfig::admin_base_path, &csmon::admin_base_path);
+    add_native(&CsConfig::api_key, &csmon::api_key);
+    add_native(&CsConfig::local_address, &csmon::local_address);
+    add_native(&CsConfig::dynamic_node_detection, &csmon::dynamic_node_detection);
+    add_native(&CsConfig::cluster_monitor_interval, &csmon::cluster_monitor_interval);
 }
 
 //static

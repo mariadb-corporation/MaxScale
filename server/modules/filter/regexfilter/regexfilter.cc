@@ -63,13 +63,13 @@ struct Config : mxs::config::Configuration
         : mxs::config::Configuration(name, &s_spec)
         , m_instance(instance)
     {
-        add_native(&match, &s_match);
-        add_native(&replace, &s_replace);
-        add_native(&log_trace, &s_log_trace);
-        add_native(&source, &s_source);
-        add_native(&user, &s_user);
-        add_native(&log_file, &s_log_file);
-        add_native(&options, &s_options);
+        add_native(&Config::match, &s_match);
+        add_native(&Config::replace, &s_replace);
+        add_native(&Config::log_trace, &s_log_trace);
+        add_native(&Config::source, &s_source);
+        add_native(&Config::user, &s_user);
+        add_native(&Config::log_file, &s_log_file);
+        add_native(&Config::options, &s_options);
     }
 
     mxs::config::RegexValue match;

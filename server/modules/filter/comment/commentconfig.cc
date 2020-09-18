@@ -33,7 +33,7 @@ config::ParamString inject(
 CommentConfig::CommentConfig(const char* zName)
     : mxs::config::Configuration(zName, &comment::specification)
 {
-    add_native(&inject, &comment::inject);
+    add_native(&CommentConfig::inject, &comment::inject);
 }
 
 //static

@@ -64,10 +64,10 @@ config::ParamEnum<MaxRowsConfig::Mode> max_resultset_return(
 MaxRowsConfig::MaxRowsConfig(const char* zName)
     : mxs::config::Configuration(zName, &maxrows::specification)
 {
-    add_native(&this->max_rows, &maxrows::max_resultset_rows);
-    add_native(&this->max_size, &maxrows::max_resultset_size);
-    add_native(&this->debug, &maxrows::debug);
-    add_native(&this->mode, &maxrows::max_resultset_return);
+    add_native(&MaxRowsConfig::max_rows, &maxrows::max_resultset_rows);
+    add_native(&MaxRowsConfig::max_size, &maxrows::max_resultset_size);
+    add_native(&MaxRowsConfig::debug, &maxrows::debug);
+    add_native(&MaxRowsConfig::mode, &maxrows::max_resultset_return);
 }
 
 int MaxRowsSession::routeQuery(GWBUF* packet)

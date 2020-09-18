@@ -97,10 +97,10 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 BinlogConfig::BinlogConfig(const char* name)
     : mxs::config::Configuration(name, &s_spec)
 {
-    add_native(&match, &s_match);
-    add_native(&exclude, &s_exclude);
-    add_native(&rewrite_src, &s_rewrite_src);
-    add_native(&rewrite_dest, &s_rewrite_dest);
+    add_native(&BinlogConfig::match, &s_match);
+    add_native(&BinlogConfig::exclude, &s_exclude);
+    add_native(&BinlogConfig::rewrite_src, &s_rewrite_src);
+    add_native(&BinlogConfig::rewrite_dest, &s_rewrite_dest);
 }
 
 // BinlogFilter constructor
