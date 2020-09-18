@@ -22,7 +22,7 @@
                 :multiple="multiple"
                 :clearable="clearable"
                 :showPlaceHolder="false"
-                @is-equal="isSaveDisabled = $event"
+                @has-changed="isSaveDisabled = $event"
                 @get-selected-items="handleGetSelectedItems"
             />
             <slot name="body-append"></slot>

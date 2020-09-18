@@ -58,7 +58,7 @@
 /*
 This component emits two events:
 @get-selected-items always return Array regardless multiple props is true or false
-@is-equal: value = boolean
+@has-changed: value = boolean
 */
 export default {
     name: 'select-dropdown',
@@ -81,7 +81,7 @@ export default {
     },
     computed: {
         // compare default value with new values
-        isEqual: function() {
+        hasChanged: function() {
             let isEqual = this.$help.lodash.isEqual(this.selectedItems, this.defaultItems)
             return isEqual
         },
@@ -97,7 +97,7 @@ export default {
     methods: {
         //always return array
         onChange(val) {
-            this.$emit('is-equal', this.isEqual)
+            this.$emit('has-changed', this.hasChanged)
             let value = val
             if (val && !this.multiple) value = [val]
             // val is undefined when items are cleared by clearable props in v-select

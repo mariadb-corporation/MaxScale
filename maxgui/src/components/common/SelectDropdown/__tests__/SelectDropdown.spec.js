@@ -178,9 +178,9 @@ describe('SelectDropdown.vue', () => {
         })
     })
 
-    it(`Should emit is-equal event and return accurate value
+    it(`Should emit has-changed event and return accurate value
       when multiple props is false`, async () => {
-        /* ---------------  Test is-equal event when multiple select is enabled------------------------ */
+        /* ---------------  Test has-changed event when multiple select is enabled------------------------ */
         await wrapper.setProps({
             entityName: 'monitors',
             multiple: false,
@@ -191,24 +191,24 @@ describe('SelectDropdown.vue', () => {
         /*It returns false if new selected items are not equal to defaultItems
           (aka pre selected items), else return true
         */
-        wrapper.vm.$on('is-equal', bool => {
+        wrapper.vm.$on('has-changed', bool => {
             counter++
             if (counter === 1) expect(bool).to.equal(false)
             if (counter === 2) expect(bool).to.equal(true)
         })
         // mockup onchange event when selecting item
 
-        // Change to new item, is-equal should return false
+        // Change to new item, has-changed should return false
         await itemSelectMock(wrapper, singleChoiceItems[0])
         /*
-            Select original item is-equal should return true
+            Select original item has-changed should return true
             as current selected item is equal with defaultItems
         */
         await itemSelectMock(wrapper, singleChoiceItems[1])
     })
-    it(`Should emit is-equal event and return accurate value
+    it(`Should emit has-changed event and return accurate value
        when multiple props is true`, async () => {
-        /* ---------------  Test is-equal event when multiple select is enabled------------------------ */
+        /* ---------------  Test has-changed event when multiple select is enabled------------------------ */
         await wrapper.setProps({
             entityName: 'services',
             multiple: true,
@@ -220,17 +220,17 @@ describe('SelectDropdown.vue', () => {
         /*It returns false if new selected items are not equal to defaultItems
           (aka pre selected items), else return true
         */
-        wrapper.vm.$on('is-equal', bool => {
+        wrapper.vm.$on('has-changed', bool => {
             counter++
             if (counter === 1) expect(bool).to.equal(false)
             if (counter === 2) expect(bool).to.equal(true)
         })
         // mockup onchange event when selecting item
 
-        // add new item, is-equal should return false
+        // add new item, has-changed should return false
         await itemSelectMock(wrapper, multipleChoiceItems[1])
         /*
-            unselect selected item, is-equal should return true
+            unselect selected item, has-changed should return true
             as current selected items are equal with defaultItems
         */
         await itemSelectMock(wrapper, multipleChoiceItems[1])
