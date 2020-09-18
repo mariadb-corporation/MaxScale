@@ -40,6 +40,7 @@
 #include <sys/utsname.h>
 #include <netinet/tcp.h>
 #include <openssl/sha.h>
+#include <openssl/evp.h>
 #include <thread>
 #include <curl/curl.h>
 #include <crypt.h>
@@ -832,5 +833,35 @@ static const bool kernel_supports_so_reuseport = get_kernel_version() >= 30900;
 bool have_so_reuseport()
 {
     return kernel_supports_so_reuseport;
+}
+
+std::vector<uint8_t> from_base64(const std::string& input)
+{
+    std::vector<uint8_t> rval;
+    rval.resize((input.size() / 4) * 3 + 3);
+    int n = EVP_DecodeBlock(&rval[0], (uint8_t*)input.data(), input.size());
+
+    // OpenSSL always pads the data with zero bits. This is not something we want when we're
+    // converting Base64 encoded data.
+    if (input[input.size() - 2] == '=')
+    {
+        n -= 2;
+    }
+    else if (input.back() == '=')
+    {
+        n -= 1;
+    }
+
+    rval.resize(n);
+    return rval;
+}
+
+std::string to_base64(const uint8_t* ptr, size_t len)
+{
+    std::string rval;
+    rval.resize((len / 3) * 4 + 4);
+    int n = EVP_EncodeBlock((uint8_t*)&rval[0], ptr, len);
+    rval.resize(n);
+    return rval;
 }
 }

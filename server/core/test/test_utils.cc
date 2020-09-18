@@ -14,8 +14,11 @@
 #include <maxbase/assert.h>
 #include <maxscale/utils.h>
 #include <maxscale/utils.hh>
+#include <maxbase/random.hh>
 #include <string.h>
 #include <iostream>
+
+#include "test_utils.hh"
 
 using std::cout;
 using std::endl;
@@ -72,14 +75,58 @@ int test_checksums()
 
     return 0;
 }
+
+int test_base64()
+{
+    mxb::StdTwisterRandom rnd{123};
+    std::vector<uint8_t> data;
+
+    std::string hello_world = "Hello world";
+    std::string encoded_hello = "SGVsbG8gd29ybGQ=";
+    auto decode_result = mxs::from_base64(encoded_hello);
+    std::string hello_result((char*)decode_result.data(), decode_result.size());
+
+    if (hello_result != hello_world)
+    {
+        std::cout << "Expected '" << hello_world << "', got '" << hello_result << "'\n";
+        return 1;
+    }
+
+    auto encode_result = mxs::to_base64((uint8_t*)hello_world.c_str(), hello_world.size());
+
+    if (encode_result != encoded_hello)
+    {
+        std::cout << "Expected '" << encoded_hello << "', got '" << encode_result << "'\n";
+        return 1;
+    }
+
+    for (int i = 1; i < 1000; i++)
+    {
+        data.push_back(rnd.rand32());
+        auto encoded = mxs::to_base64(data);
+        auto decoded = mxs::from_base64(encoded);
+
+        if (decoded != data)
+        {
+            std::cout << "Original data: " << mxs::to_hex(data.begin(), data.end()) << std::endl;
+            std::cout << "Decoded data:  " << mxs::to_hex(decoded.begin(), decoded.end()) << std::endl;
+            std::cout << "Base64 data:   " << encoded << std::endl;
+            return 1;
+        }
+    }
+
+    return 0;
+}
 }
 
 int main(int argc, char* argv[])
 {
     int rv = 0;
 
+    init_test_env();
     rv += test_checksums<mxs::SHA1Checksum>();
     rv += test_checksums<mxs::CRC32Checksum>();
+    rv += test_base64();
 
     return rv;
 }
