@@ -330,6 +330,10 @@ location where the log files are stored.
 
 ## Update logging parameters
 
+**Note:** The modification of logging parameters via this endpoint has
+  deprecated in MaxScale 2.6.0. The parameters should be modified with the
+  `/v1/maxscale` endpoint instead.
+
 ```
 PATCH /v1/maxscale/logs
 ```

@@ -236,15 +236,6 @@ bool runtime_alter_service_relationships_from_json(Service* service, const char*
 bool runtime_create_listener_from_json(json_t* json, Service* service = nullptr);
 
 /**
- * @brief Alter logging options using JSON
- *
- * @param json JSON definition of the updated logging options
- *
- * @return True if the modifications were successful
- */
-bool runtime_alter_logs_from_json(json_t* json);
-
-/**
  * @brief Get current runtime error in JSON format
  *
  * @return The latest runtime error in JSON format or NULL if no error has occurred

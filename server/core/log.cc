@@ -116,25 +116,7 @@ json_t* get_log_priorities()
 
 json_t* mxs_logs_to_json(const char* host)
 {
-    json_t* param = json_object();
-    json_object_set_new(param, "highprecision", json_boolean(mxb_log_is_highprecision_enabled()));
-    json_object_set_new(param, "maxlog", json_boolean(mxb_log_is_maxlog_enabled()));
-    json_object_set_new(param, "syslog", json_boolean(mxb_log_is_syslog_enabled()));
-
-    MXB_LOG_THROTTLING t;
-    mxb_log_get_throttling(&t);
-    json_t* throttling = json_object();
-    json_object_set_new(throttling, "count", json_integer(t.count));
-    json_object_set_new(throttling, "suppress_ms", json_integer(t.suppress_ms));
-    json_object_set_new(throttling, "window_ms", json_integer(t.window_ms));
-    json_object_set_new(param, "throttling", throttling);
-    json_object_set_new(param, "log_warning", json_boolean(mxb_log_is_priority_enabled(LOG_WARNING)));
-    json_object_set_new(param, "log_notice", json_boolean(mxb_log_is_priority_enabled(LOG_NOTICE)));
-    json_object_set_new(param, "log_info", json_boolean(mxb_log_is_priority_enabled(LOG_INFO)));
-    json_object_set_new(param, "log_debug", json_boolean(mxb_log_is_priority_enabled(LOG_DEBUG)));
-
     json_t* attr = json_object();
-    json_object_set_new(attr, CN_PARAMETERS, param);
     json_object_set_new(attr, "log_file", json_string(mxb_log_get_filename()));
     json_object_set_new(attr, "log_priorities", get_log_priorities());
 

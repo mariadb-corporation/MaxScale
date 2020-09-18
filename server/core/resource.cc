@@ -511,18 +511,6 @@ HttpResponse cb_alter_service_monitor_relationship(const HttpRequest& request)
     return cb_alter_service_relationship(request, CN_MONITORS);
 }
 
-HttpResponse cb_alter_logs(const HttpRequest& request)
-{
-    mxb_assert(request.get_json());
-
-    if (runtime_alter_logs_from_json(request.get_json()))
-    {
-        return HttpResponse(MHD_HTTP_NO_CONTENT);
-    }
-
-    return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
-}
-
 HttpResponse cb_alter_qc(const HttpRequest& request)
 {
     mxb_assert(request.get_json());
@@ -1238,7 +1226,7 @@ public:
         m_patch.emplace_back(cb_alter_monitor, "monitors", ":monitor");
         m_patch.emplace_back(cb_alter_service, "services", ":service");
         m_patch.emplace_back(cb_alter_filter, "filters", ":filter");
-        m_patch.emplace_back(cb_alter_logs, "maxscale", "logs");
+        m_patch.emplace_back(cb_alter_maxscale, "maxscale", "logs");    // Deprecated
         m_patch.emplace_back(cb_alter_maxscale, "maxscale");
         m_patch.emplace_back(cb_alter_qc, "maxscale", "query_classifier");
         m_patch.emplace_back(cb_alter_user, "users", "inet", ":inetuser");
