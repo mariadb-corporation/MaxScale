@@ -180,107 +180,12 @@ TestConnections::TestConnections(int argc, char* argv[])
         tprintf("Test has BACKEND_SSL label");
     }
 
-    StringSet missing_mdbci_labels;
-    std::set_difference(m_required_mdbci_labels.begin(), m_required_mdbci_labels.end(),
-                        m_configured_mdbci_labels.begin(), m_configured_mdbci_labels.end(),
-                        std::inserter(missing_mdbci_labels, missing_mdbci_labels.begin()));
-
-    bool mdbci_call_needed = false;
-    if (missing_mdbci_labels.empty())
+    if (!check_create_vms())
     {
-        if (verbose)
-        {
-            tprintf("Machines with all required labels '%s' are running, MDBCI UP call is not needed",
-                    m_mdbci_labels_str.c_str());
-        }
-    }
-    else
-    {
-        string missing_labels_str = flatten_stringset(missing_mdbci_labels);
-        tprintf("Machines with labels '%s' are not running, MDBCI UP call is needed",
-                missing_labels_str.c_str());
-        mdbci_call_needed = true;
+        exit(MDBCI_FAIL);
     }
 
-    if (mdbci_call_needed)
-    {
-        if (call_mdbci(""))
-        {
-            exit(MDBCI_FAIL);
-        }
-    }
-
-    bool use_repl = false;
-    if (m_required_mdbci_labels.count(label_repl_be) > 0)
-    {
-        use_repl = true;
-    }
-
-    bool use_galera = false;
-    if (m_required_mdbci_labels.count(label_galera_be) > 0)
-    {
-        use_galera = true;
-    }
-
-    bool use_clustrix = false;
-    if (m_required_mdbci_labels.count(label_clx_be) > 0)
-    {
-        use_clustrix = true;
-    }
-
-    std::future<bool> repl_future;
-    std::future<bool> galera_future;
-
-    if (use_repl)
-    {
-        repl = new Mariadb_nodes("node", test_dir, verbose, m_network_config);
-        repl->setup();
-        repl->set_use_ipv6(m_use_ipv6);
-        repl->take_snapshot_command = m_take_snapshot_command.c_str();
-        repl->revert_snapshot_command = m_revert_snapshot_command.c_str();
-        repl_future = std::async(std::launch::async, &Mariadb_nodes::check_nodes, repl);
-    }
-    else
-    {
-        repl = NULL;
-    }
-
-    if (use_galera)
-    {
-        galera = new Galera_nodes("galera", test_dir, verbose, m_network_config);
-        galera->setup();
-        galera->set_use_ipv6(false);
-        galera->take_snapshot_command = m_take_snapshot_command.c_str();
-        galera->revert_snapshot_command = m_revert_snapshot_command.c_str();
-        galera_future = std::async(std::launch::async, &Galera_nodes::check_nodes, galera);
-    }
-    else
-    {
-        galera = NULL;
-    }
-
-    if (use_clustrix)
-    {
-        clustrix = new Clustrix_nodes("clustrix", test_dir, verbose, m_network_config);
-        clustrix->setup();
-        clustrix->set_use_ipv6(false);
-        clustrix->take_snapshot_command = m_take_snapshot_command.c_str();
-        clustrix->revert_snapshot_command = m_revert_snapshot_command.c_str();
-        clustrix->fix_replication();
-    }
-    else
-    {
-        clustrix = NULL;
-    }
-
-    maxscales = new Maxscales("maxscale", test_dir, verbose, m_network_config);
-    maxscales->setup();
-    m_maxscale = std::make_unique<mxt::MaxScale>(maxscales, *m_logger, 0);
-
-    bool maxscale_ok = maxscales->check_nodes();
-    bool repl_ok = !use_repl || repl_future.get();
-    bool galera_ok = !use_galera || galera_future.get();
-    bool node_error = !maxscale_ok || !repl_ok || !galera_ok;
+    bool node_error = !initialize_nodes();
     bool initialize = false;
 
     if (node_error || too_few_maxscales())
@@ -341,34 +246,10 @@ TestConnections::TestConnections(int argc, char* argv[])
         }
     }
 
-    if (repl && maxscale::required_repl_version.length())
+    if (!check_backend_versions())
     {
-        int ver_repl_required = get_int_version(maxscale::required_repl_version);
-        std::string ver_repl = repl->get_lowest_version();
-        int int_ver_repl = get_int_version(ver_repl);
-
-        if (int_ver_repl < ver_repl_required)
-        {
-            tprintf("Test requires a higher version of backend servers, skipping test.");
-            tprintf("Required version: %s", maxscale::required_repl_version.c_str());
-            tprintf("Master-slave version: %s", ver_repl.c_str());
-            exit(0);
-        }
-    }
-
-    if (galera && maxscale::required_galera_version.length())
-    {
-        int ver_galera_required = get_int_version(maxscale::required_galera_version);
-        std::string ver_galera = galera->get_lowest_version();
-        int int_ver_galera = get_int_version(ver_galera);
-
-        if (int_ver_galera < ver_galera_required)
-        {
-            tprintf("Test requires a higher version of backend servers, skipping test.");
-            tprintf("Required version: %s", maxscale::required_galera_version.c_str());
-            tprintf("Galera version: %s", ver_galera.c_str());
-            exit(0);
-        }
+        tprintf("Skipping test.");
+        exit(0);
     }
 
     if (m_init_maxscale)
@@ -387,7 +268,7 @@ TestConnections::TestConnections(int argc, char* argv[])
         }
     }
 
-    if (mdbci_call_needed)
+    if (m_mdbci_called)
     {
         auto res = maxscales->ssh_output("maxscale --version-full", 0, false);
         if (res.rc != 0)
@@ -2344,6 +2225,143 @@ bool TestConnections::read_cmdline_options(int argc, char* argv[])
 
     m_test_name = (optind < argc) ? argv[optind] : basename(argv[0]);
     return true;
+}
+
+bool TestConnections::initialize_nodes()
+{
+    bool use_repl = false;
+    if (m_required_mdbci_labels.count(label_repl_be) > 0)
+    {
+        use_repl = true;
+    }
+
+    bool use_galera = false;
+    if (m_required_mdbci_labels.count(label_galera_be) > 0)
+    {
+        use_galera = true;
+    }
+
+    bool use_clustrix = false;
+    if (m_required_mdbci_labels.count(label_clx_be) > 0)
+    {
+        use_clustrix = true;
+    }
+
+    std::future<bool> repl_future;
+    std::future<bool> galera_future;
+
+    if (use_repl)
+    {
+        repl = new Mariadb_nodes("node", test_dir, verbose, m_network_config);
+        repl->setup();
+        repl->set_use_ipv6(m_use_ipv6);
+        repl->take_snapshot_command = m_take_snapshot_command.c_str();
+        repl->revert_snapshot_command = m_revert_snapshot_command.c_str();
+        repl_future = std::async(std::launch::async, &Mariadb_nodes::check_nodes, repl);
+    }
+    else
+    {
+        repl = NULL;
+    }
+
+    if (use_galera)
+    {
+        galera = new Galera_nodes("galera", test_dir, verbose, m_network_config);
+        galera->setup();
+        galera->set_use_ipv6(false);
+        galera->take_snapshot_command = m_take_snapshot_command.c_str();
+        galera->revert_snapshot_command = m_revert_snapshot_command.c_str();
+        galera_future = std::async(std::launch::async, &Galera_nodes::check_nodes, galera);
+    }
+    else
+    {
+        galera = NULL;
+    }
+
+    if (use_clustrix)
+    {
+        clustrix = new Clustrix_nodes("clustrix", test_dir, verbose, m_network_config);
+        clustrix->setup();
+        clustrix->set_use_ipv6(false);
+        clustrix->take_snapshot_command = m_take_snapshot_command.c_str();
+        clustrix->revert_snapshot_command = m_revert_snapshot_command.c_str();
+        clustrix->fix_replication();
+    }
+    else
+    {
+        clustrix = NULL;
+    }
+
+    maxscales = new Maxscales("maxscale", test_dir, verbose, m_network_config);
+    maxscales->setup();
+    m_maxscale = std::make_unique<mxt::MaxScale>(maxscales, *m_logger, 0);
+
+    bool maxscale_ok = maxscales->check_nodes();
+    bool repl_ok = !use_repl || repl_future.get();
+    bool galera_ok = !use_galera || galera_future.get();
+    return maxscale_ok && repl_ok && galera_ok;
+}
+
+bool TestConnections::check_backend_versions()
+{
+    auto tester = [this](Mariadb_nodes* cluster, const string& required_vrs_str) {
+        bool rval = true;
+        if (cluster && !required_vrs_str.empty())
+        {
+            string found_vrs_str = cluster->get_lowest_version();
+            int found_vrs = get_int_version(found_vrs_str);
+            int required_vrs = get_int_version(required_vrs_str);
+
+            if (found_vrs < required_vrs)
+            {
+                tprintf("Test cluster '%s' version '%s' is too low, test '%s' requires at least '%s'.",
+                        cluster->prefix().c_str(), found_vrs_str.c_str(),
+                        m_test_name.c_str(), required_vrs_str.c_str());
+                rval = false;
+            }
+        }
+        return rval;
+    };
+
+    auto repl_ok = tester(repl, maxscale::required_repl_version);
+    auto galera_ok = tester(galera, maxscale::required_galera_version);
+    return repl_ok && galera_ok;
+}
+
+bool TestConnections::check_create_vms()
+{
+    bool rval = true;
+    StringSet missing_mdbci_labels;
+    std::set_difference(m_required_mdbci_labels.begin(), m_required_mdbci_labels.end(),
+                        m_configured_mdbci_labels.begin(), m_configured_mdbci_labels.end(),
+                        std::inserter(missing_mdbci_labels, missing_mdbci_labels.begin()));
+
+    bool mdbci_call_needed = false;
+    if (missing_mdbci_labels.empty())
+    {
+        if (verbose)
+        {
+            tprintf("Machines with all required labels '%s' are running, MDBCI UP call is not needed",
+                    m_mdbci_labels_str.c_str());
+        }
+    }
+    else
+    {
+        string missing_labels_str = flatten_stringset(missing_mdbci_labels);
+        tprintf("Machines with labels '%s' are not running, MDBCI UP call is needed",
+                missing_labels_str.c_str());
+        mdbci_call_needed = true;
+    }
+
+    if (mdbci_call_needed)
+    {
+        if (call_mdbci(""))
+        {
+            rval = false;
+        }
+        m_mdbci_called = true;
+    }
+    return rval;
 }
 
 std::string cutoff_string(const string& source, char cutoff)

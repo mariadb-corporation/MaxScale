@@ -27,7 +27,7 @@ using Callback = std::function<bool (const maxsql::RplEvent&)>;
 class Reader
 {
 public:
-    Reader(Callback cb, const Inventory* inv, mxb::Worker* worker, const maxsql::Gtid& gtid,
+    Reader(Callback cb, const Config& conf, mxb::Worker* worker, const maxsql::Gtid& gtid,
            const std::chrono::seconds& heartbeat_interval);
     ~Reader();
 
@@ -45,12 +45,13 @@ private:
         Reader* reader;
     };
 
-    Callback      m_cb;
-    PollData      m_reader_poll_data;
-    FileReader    m_file_reader;
-    mxb::Worker*  m_worker;
-    uint32_t      m_dcid = 0;
-    mxq::RplEvent m_event;      // Stores the latest event that hasn't been processed
+    Callback        m_cb;
+    InventoryReader m_inventory;
+    PollData        m_reader_poll_data;
+    FileReader      m_file_reader;
+    mxb::Worker*    m_worker;
+    uint32_t        m_dcid = 0;
+    mxq::RplEvent   m_event;    // Stores the latest event that hasn't been processed
 
     // Heartbeat related variables
     uint32_t                              m_heartbeat_dcid = 0;

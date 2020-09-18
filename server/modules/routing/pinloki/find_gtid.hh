@@ -26,5 +26,5 @@ struct GtidPosition
 };
 
 // Default constructed GtidPosition if not found.
-GtidPosition find_gtid_position(const maxsql::Gtid& gtid, const Inventory* inv);
+GtidPosition find_gtid_position(const maxsql::Gtid& gtid, const InventoryReader& inv);
 }

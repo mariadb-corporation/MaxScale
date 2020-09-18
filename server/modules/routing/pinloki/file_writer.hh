@@ -35,7 +35,7 @@ class Writer;
 class FileWriter
 {
 public:
-    FileWriter(Inventory* inv, const Writer& writer);
+    FileWriter(InventoryWriter* inv, const Writer& writer);
 
     void begin_txn();
     void add_event(maxsql::RplEvent& rpl_event);
@@ -56,12 +56,12 @@ private:
     void write_rotate(WritePosition& fn, const std::string& to_file_name);
     void write_gtid_list(WritePosition& fn);
 
-    bool           m_newborn = true;
-    bool           m_ignore_preamble = false;
-    Inventory&     m_inventory;
-    const Writer&  m_writer;
-    WritePosition  m_current_pos;
-    maxsql::Rotate m_rotate;
+    bool             m_newborn = true;
+    bool             m_ignore_preamble = false;
+    InventoryWriter& m_inventory;
+    const Writer&    m_writer;
+    WritePosition    m_current_pos;
+    maxsql::Rotate   m_rotate;
 
     bool               m_in_transaction = false;
     std::ostringstream m_tx_buffer;

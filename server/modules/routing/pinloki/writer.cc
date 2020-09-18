@@ -35,7 +35,7 @@ using namespace std::literals::string_literals;
 namespace pinloki
 {
 
-Writer::Writer(Generator generator, mxb::Worker* worker, Inventory* inv)
+Writer::Writer(Generator generator, mxb::Worker* worker, InventoryWriter* inv)
     : m_generator(generator)
     , m_worker(worker)
     , m_inventory(*inv)

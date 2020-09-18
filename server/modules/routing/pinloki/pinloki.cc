@@ -117,13 +117,13 @@ wall_time::TimePoint file_mod_time(const std::string& file_name)
 }
 
 /** Modification time of the oldest log file or wall_time::TimePoint::max() if there are no logs */
-wall_time::TimePoint oldest_logfile_time(Inventory* pInventory)
+wall_time::TimePoint oldest_logfile_time(InventoryWriter* pInventory)
 {
     auto ret = wall_time::TimePoint::max();
-    auto file_name = pInventory->first();
-    if (!file_name.empty())
+    const auto& file_names = pInventory->file_names();
+    if (!file_names.empty())
     {
-        ret = file_mod_time(file_name);
+        ret = file_mod_time(first_string(file_names));
     }
 
     return ret;
@@ -216,8 +216,10 @@ json_t* Pinloki::diagnostics() const
     json_t* rval = json_object();
     std::lock_guard<std::mutex> guard(m_lock);
 
+    auto current_binlog = last_string(m_inventory.file_names());
+
     json_object_set_new(rval, "gtid_io_pos", json_string(gtid_io_pos().to_string().c_str()));
-    json_object_set_new(rval, "current_binlog", json_string(m_inventory.last().c_str()));
+    json_object_set_new(rval, "current_binlog", json_string(current_binlog.c_str()));
 
     json_t* cnf = json_object();
     json_object_set_new(cnf, "host", json_string(m_master_config.host.c_str()));
@@ -258,7 +260,7 @@ const Config& Pinloki::config() const
     return m_config;
 }
 
-Inventory* Pinloki::inventory()
+InventoryWriter* Pinloki::inventory()
 {
     return &m_inventory;
 }
@@ -441,7 +443,7 @@ GWBUF* Pinloki::show_slave_status() const
     std::lock_guard<std::mutex> guard(m_lock);
 
     const auto& files = m_inventory.file_names();
-    auto file_and_pos = get_file_name_and_size(files.empty() ? "" : files.back());
+    auto file_and_pos = get_file_name_and_size(last_string(files));
 
     auto rset = ResultSet::create({});
     rset->add_row({});
@@ -596,7 +598,7 @@ bool Pinloki::MasterConfig::load(const Config& config)
     return rval;
 }
 
-PurgeResult purge_binlogs(Inventory* pInventory, const std::string& up_to)
+PurgeResult purge_binlogs(InventoryWriter* pInventory, const std::string& up_to)
 {
     auto files = pInventory->file_names();
     auto up_to_ite = std::find(files.begin(), files.end(), pInventory->config().path(up_to));
@@ -620,7 +622,7 @@ PurgeResult purge_binlogs(Inventory* pInventory, const std::string& up_to)
                 return PurgeResult::PartialPurge;
             }
 
-            pInventory->remove(*ite);
+            pInventory->pop_front(*ite);
             remove(ite->c_str());
         }
     }
@@ -637,7 +639,8 @@ bool Pinloki::purge_old_binlogs(mxb::Worker::Call::action_t action)
 
     auto now = wall_time::Clock::now();
     auto purge_before = now - config().expire_log_duration();
-    auto file_names = m_inventory.file_names();
+    const auto& file_names = m_inventory.file_names();
+
     auto files_to_keep = std::max(1, config().expire_log_minimum_files());      // at least one
     int max_files_to_purge = file_names.size() - files_to_keep;
 

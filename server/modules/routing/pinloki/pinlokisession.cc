@@ -93,7 +93,7 @@ int32_t PinlokiSession::routeQuery(GWBUF* pPacket)
                 };
 
             m_reader = std::make_unique<Reader>(
-                cb, m_router->inventory(),
+                cb, m_router->inventory()->config(),
                 mxs::RoutingWorker::get_current(),
                 m_gtid, std::chrono::seconds(m_heartbeat_period));
             rval = 1;

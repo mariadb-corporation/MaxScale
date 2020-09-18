@@ -54,7 +54,7 @@ namespace pinloki
 
 constexpr int HEADER_LEN = 19;
 
-FileReader::FileReader(const maxsql::Gtid& gtid, const Inventory* inv)
+FileReader::FileReader(const maxsql::Gtid& gtid, const InventoryReader* inv)
     : m_inotify_fd{inotify_init1(IN_NONBLOCK)}
     , m_inventory(*inv)
 {
@@ -65,7 +65,7 @@ FileReader::FileReader(const maxsql::Gtid& gtid, const Inventory* inv)
 
     if (gtid.is_valid())
     {
-        auto gtid_pos = find_gtid_position(gtid, inv);
+        auto gtid_pos = find_gtid_position(gtid, m_inventory);
 
         if (gtid_pos.file_name.empty())
         {
@@ -83,9 +83,10 @@ FileReader::FileReader(const maxsql::Gtid& gtid, const Inventory* inv)
     }
     else
     {
-        open(m_inventory.file_names().front());
+        auto first = first_string(m_inventory.file_names());
+        open(first);
         // Preamble just means send the initial rotate and then the whole file
-        m_generate_rotate_to = m_inventory.file_names().front();
+        m_generate_rotate_to = first;
         m_read_pos.next_pos = PINLOKI_MAGIC.size();
     }
 }
@@ -224,7 +225,7 @@ maxsql::RplEvent FileReader::fetch_event()
     }
     else if (rpl.event_type() == STOP_EVENT)
     {
-        m_generate_rotate_to = m_inventory.next(m_read_pos.name);
+        m_generate_rotate_to = next_string(m_inventory.file_names(), m_read_pos.name);
         if (!m_generate_rotate_to.empty())
         {
             MXB_SINFO("STOP_EVENT in file " << m_read_pos.name

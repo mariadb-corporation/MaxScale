@@ -37,7 +37,7 @@ namespace pinloki
 class FileReader    // : public Storage
 {
 public:
-    FileReader(const maxsql::Gtid& gtid, const Inventory* inv);
+    FileReader(const maxsql::Gtid& gtid, const InventoryReader* inv);
     ~FileReader();
 
     maxsql::RplEvent fetch_event();
@@ -69,13 +69,13 @@ private:
     void              set_inotify_fd();
     std::vector<char> fetch_raw();
 
-    int              m_inotify_fd;
-    int              m_inotify_descriptor = -1;
-    ReadPosition     m_read_pos;
-    uint32_t         m_server_id;
-    const Inventory& m_inventory;
-    std::string      m_generate_rotate_to;
-    bool             m_generating_preamble = true;
-    int              m_initial_gtid_file_pos = 0;
+    int                    m_inotify_fd;
+    int                    m_inotify_descriptor = -1;
+    ReadPosition           m_read_pos;
+    uint32_t               m_server_id;
+    const InventoryReader& m_inventory;
+    std::string            m_generate_rotate_to;
+    bool                   m_generating_preamble = true;
+    int                    m_initial_gtid_file_pos = 0;
 };
 }

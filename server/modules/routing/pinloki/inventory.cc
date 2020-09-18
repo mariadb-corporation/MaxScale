@@ -20,10 +20,12 @@
 namespace pinloki
 {
 
-Inventory::Inventory(const Config& config)
-    : m_config(config)
+namespace
 {
-    std::ifstream ifs(m_config.inventory_file_path());
+std::vector<std::string> read_inventory_file(const Config& config)
+{
+    std::ifstream ifs(config.inventory_file_path());
+    std::vector<std::string> file_names;
 
     while (ifs.good())
     {
@@ -31,27 +33,48 @@ Inventory::Inventory(const Config& config)
         ifs >> name;
         if (ifs.good())
         {
-            m_file_names.push_back(name);
+            file_names.push_back(name);
         }
     }
+
+    return file_names;
+}
 }
 
-void Inventory::add(const std::string& file_name)
+InventoryWriter::InventoryWriter(const Config& config)
+    : m_config(config)
+    , m_file_names(read_inventory_file(config))
+{
+}
+
+void InventoryWriter::push_back(const std::string& file_name)
 {
     std::unique_lock<std::mutex> lock(m_mutex);
+
     m_file_names.push_back(m_config.path(file_name));
     persist();
 }
 
-void Inventory::remove(const std::string& file_name)
+void InventoryWriter::pop_front(const std::string& file_name)
 {
     std::unique_lock<std::mutex> lock(m_mutex);
-    std::string full_name = m_config.path(file_name);
-    m_file_names.erase(std::remove(m_file_names.begin(), m_file_names.end(), full_name), m_file_names.end());
-    persist();
+
+    if (file_name != m_file_names.front())
+    {
+        // This can happen if two users issue purge commands at the same time,
+        // in addition there is the timeout based purging as well.
+        // Not a problem so just an info message. Both (or all) purges will
+        // finish succesfully.
+        MXS_SINFO("pop_front " << file_name << "does not match front " << file_name);
+    }
+    else
+    {
+        m_file_names.erase(m_file_names.begin());
+        persist();
+    }
 }
 
-void Inventory::persist()
+void InventoryWriter::persist()
 {
     std::string tmp = m_config.inventory_file_path() + ".tmp";
     std::ofstream ofs(tmp, std::ios_base::trunc);
@@ -64,71 +87,17 @@ void Inventory::persist()
     rename(tmp.c_str(), m_config.inventory_file_path().c_str());
 }
 
-std::vector<std::string> Inventory::file_names() const
+std::vector<std::string> InventoryWriter::file_names() const
 {
     std::unique_lock<std::mutex> lock(m_mutex);
     return m_file_names;
 }
 
-int Inventory::count() const
+std::string next_string(const std::vector<std::string>& strs, const std::string& str)
 {
-    return m_file_names.size();
-}
-
-bool Inventory::is_listed(const std::string& file_name) const
-{
-    std::string full_name = m_config.path(file_name);
-    std::unique_lock<std::mutex> lock(m_mutex);
-    return std::find(begin(m_file_names), end(m_file_names), full_name) != end(m_file_names);
-}
-
-bool Inventory::exists(const std::string& file_name) const
-{
-    std::string full_name = m_config.path(file_name);
-    std::unique_lock<std::mutex> lock(m_mutex);
-    if (!is_listed(full_name))
-    {
-        return false;
-    }
-
-    std::ifstream ofs(full_name);
-    return ofs.good();
-}
-
-std::string Inventory::first() const
-{
-    std::unique_lock<std::mutex> lock(m_mutex);
-    if (m_file_names.empty())
-    {
-        return "";
-    }
-    else
-    {
-        return m_file_names.front();
-    }
-}
-
-std::string Inventory::last() const
-{
-    std::unique_lock<std::mutex> lock(m_mutex);
-    if (m_file_names.empty())
-    {
-        return "";
-    }
-    else
-    {
-        return m_file_names.back();
-    }
-}
-
-std::string Inventory::next(const std::string& file_name) const
-{
-    auto s = config().path(file_name);
-    std::unique_lock<std::mutex> lock(m_mutex);
-
     // search in reverse since the file is likely at the end of the vector
-    auto rite = std::find(rbegin(m_file_names), rend(m_file_names), s);
-    if (rite != rend(m_file_names) && (rite != rbegin(m_file_names)))
+    auto rite = std::find(rbegin(strs), rend(strs), str);
+    if (rite != rend(strs) && rite != rbegin(strs))
     {
         return *--rite;
     }
@@ -136,5 +105,37 @@ std::string Inventory::next(const std::string& file_name) const
     {
         return "";
     }
+}
+
+std::string first_string(const std::vector<std::string>& strs)
+{
+    if (strs.empty())
+    {
+        return "";
+    }
+
+    return strs.front();
+}
+
+std::string last_string(const std::vector<std::string>& strs)
+{
+    if (strs.empty())
+    {
+        return "";
+    }
+
+    return strs.back();
+}
+
+InventoryReader::InventoryReader(const Config& config)
+    : m_config(config)
+{
+}
+
+const std::vector<std::string>& InventoryReader::file_names() const
+{
+    // file reading can be improved, but the file is small
+    // and this function called seldomly
+    return m_file_names = read_inventory_file(m_config);
 }
 }
