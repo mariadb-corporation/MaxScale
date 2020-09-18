@@ -16,6 +16,7 @@
             </p>
 
             <select-dropdown
+                ref="selectDropdown"
                 :entityName="entityName"
                 :items="itemsList"
                 :defaultItems="defaultItems"
@@ -71,8 +72,11 @@ export default {
     },
     watch: {
         isDialogOpen: function(val) {
-            if (val) this.$emit('on-open')
-            else this.selectedItems = []
+            if (val) {
+                this.$emit('on-open')
+                // set default hasChanged data
+                this.hasChanged = this.$refs.selectDropdown.hasChanged
+            } else this.selectedItems = []
         },
     },
 
