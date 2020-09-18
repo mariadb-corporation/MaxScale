@@ -1194,15 +1194,6 @@ Dbfw::Dbfw(const char* zName)
     : m_config(zName)
     , m_version(atomic_add(&global_version, 1))
 {
-    if (m_config.log_match)
-    {
-        m_log_match |= FW_LOG_MATCH;
-    }
-
-    if (m_config.log_no_match)
-    {
-        m_log_match |= FW_LOG_NO_MATCH;
-    }
 }
 
 Dbfw::~Dbfw()
@@ -1255,11 +1246,6 @@ DbfwSession* Dbfw::newSession(MXS_SESSION* session, SERVICE* service)
 fw_actions Dbfw::get_action() const
 {
     return m_config.action;
-}
-
-int Dbfw::get_log_bitmask() const
-{
-    return m_log_match;
 }
 
 std::string Dbfw::get_rule_file() const
@@ -1551,9 +1537,11 @@ int DbfwSession::routeQuery(GWBUF* buffer)
                     break;
                 }
 
-                if (m_instance->get_log_bitmask() != FW_LOG_NONE)
+                const auto& cnf = m_instance->config();
+
+                if (cnf.log_match || cnf.log_no_match)
                 {
-                    if (match && m_instance->get_log_bitmask() & FW_LOG_MATCH)
+                    if (match && cnf.log_match)
                     {
                         MXS_NOTICE("[%s] Rule '%s' for '%s' matched by %s@%s: %s",
                                    m_session->service->name(),
@@ -1563,7 +1551,7 @@ int DbfwSession::routeQuery(GWBUF* buffer)
                                    remote().c_str(),
                                    get_sql(buffer).c_str());
                     }
-                    else if (!match && m_instance->get_log_bitmask() & FW_LOG_NO_MATCH)
+                    else if (!match && cnf.log_no_match)
                     {
                         MXS_NOTICE("[%s] Query for '%s' by %s@%s was not matched: %s",
                                    m_session->service->name(),

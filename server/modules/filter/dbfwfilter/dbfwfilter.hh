@@ -107,13 +107,6 @@ static inline fw_op_t qc_op_to_fw_op(qc_query_op_t op)
     }
 }
 
-/**
- * Logging options for matched queries
- */
-#define FW_LOG_NONE     0x00
-#define FW_LOG_MATCH    0x01
-#define FW_LOG_NO_MATCH 0x02
-
 /** Maximum length of the match/nomatch messages */
 #define FW_MAX_SQL_LEN 400
 
@@ -249,13 +242,6 @@ public:
     }
 
     /**
-     * Get logging option bitmask
-     *
-     * @return the logging option bitmask
-     */
-    int get_log_bitmask() const;
-
-    /**
      * Get the current rule file
      *
      * @return The current rule file
@@ -290,6 +276,11 @@ public:
     mxs::config::Configuration* getConfiguration()
     {
         return &m_config;
+    }
+
+    const DbfwConfig& config() const
+    {
+        return m_config;
     }
 
 private:
