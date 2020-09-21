@@ -629,8 +629,7 @@ void Pinloki::set_gtid(const mxq::GtidList& gtid)
 
 mxq::GtidList Pinloki::gtid_io_pos() const
 {
-    return m_writer ? m_writer->get_gtid_io_pos() :
-           mxq::GtidList::from_string(m_config.boot_strap_gtid_list());
+    return m_writer ? m_writer->get_gtid_io_pos() : m_config.boot_strap_gtid_list();
 }
 
 void Pinloki::MasterConfig::save(const Config& config) const
