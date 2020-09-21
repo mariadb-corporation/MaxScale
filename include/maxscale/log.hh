@@ -66,6 +66,17 @@ bool mxs_log_rotate();
  */
 int mxs_get_log_rotation_count();
 
+/**
+ * Get MaxScale logs as JSON
+ *
+ * @param host   The hostname of this MaxScale, sent by the client.
+ * @param cursor The cursor where to read log entries for. An empty string means no cursor is open.
+ * @param rows   How many rows of logs to read.
+ *
+ * @return The logs as a JSON API resource.
+ */
+json_t* mxs_logs_to_json(const char* host, const std::string& cursor, int rows);
+
 #define mxs_log_finish  mxb_log_finish
 #define mxs_log_message mxb_log_message
 
@@ -78,8 +89,6 @@ int mxs_get_log_rotation_count();
 #define mxs_log_set_priority_enabled      mxb_log_set_priority_enabled
 #define mxs_log_set_syslog_enabled        mxb_log_set_syslog_enabled
 #define mxs_log_set_throttling            mxb_log_set_throttling
-
-json_t* mxs_logs_to_json(const char* host);
 
 #define MXS_LOG_MESSAGE MXB_LOG_MESSAGE
 

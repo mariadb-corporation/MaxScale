@@ -773,7 +773,24 @@ HttpResponse cb_alter_maxscale(const HttpRequest& request)
 
 HttpResponse cb_logs(const HttpRequest& request)
 {
-    return HttpResponse(MHD_HTTP_OK, mxs_logs_to_json(request.host()));
+    int rows = 50;
+    auto size = request.get_option("page[size]");
+    auto cursor = request.get_option("page[cursor]");
+
+    if (!size.empty())
+    {
+        char* end;
+        rows = strtol(size.c_str(), &end, 10);
+
+        if (rows <= 0 || *end != '\0')
+        {
+            MXS_ERROR("Invalid value for 'page[size]': %s", size.c_str());
+            return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
+        }
+    }
+
+
+    return HttpResponse(MHD_HTTP_OK, mxs_logs_to_json(request.host(), cursor, rows));
 }
 
 HttpResponse cb_flush(const HttpRequest& request)

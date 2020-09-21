@@ -19,6 +19,10 @@
 #include <atomic>
 #include <cinttypes>
 
+#ifdef HAVE_SYSTEMD
+#include <systemd/sd-journal.h>
+#endif
+
 #include <maxbase/log.hh>
 #include <maxbase/logger.hh>
 
@@ -76,6 +80,104 @@ bool mxs_log_init(const char* ident, const char* logdir, mxs_log_target_t target
 namespace
 {
 
+struct Cursors
+{
+    std::string current;
+    std::string prev;
+};
+
+std::pair<json_t*, Cursors> get_syslog_data(const std::string& cursor, int rows)
+{
+    json_t* arr = json_array();
+    Cursors cursors;
+
+#ifdef HAVE_SYSTEMD
+
+    sd_journal* j;
+    int rc = sd_journal_open(&j, SD_JOURNAL_LOCAL_ONLY);
+
+    auto get_cursor = [j]() {
+            char* c;
+            sd_journal_get_cursor(j, &c);
+            std::string cur = c;
+            MXS_FREE(c);
+            return cur;
+        };
+
+    if (rc < 0)
+    {
+        MXS_ERROR("Failed to open system journal: %s", mxs_strerror(-rc));
+    }
+    else
+    {
+        sd_journal_add_match(j, "_COMM=maxscale", 0);
+
+        if (cursor.empty())
+        {
+            sd_journal_seek_tail(j);
+        }
+        else
+        {
+            sd_journal_seek_cursor(j, cursor.c_str());
+        }
+
+        for (int i = 0; i < rows && sd_journal_previous(j) > 0; i++)
+        {
+            auto id = get_cursor();
+
+            if (cursors.current.empty())
+            {
+                cursors.current = id;
+            }
+
+            json_t* obj = json_object();
+            json_object_set_new(obj, "id", json_string(id.c_str()));
+
+            const void* data;
+            size_t length;
+
+            while (sd_journal_enumerate_data(j, &data, &length) > 0)
+            {
+                std::string s((const char*)data, length);
+                auto pos = s.find_first_of('=');
+                auto key = s.substr(0, pos);
+
+                if (key.front() == '_' || strncmp(key.c_str(), "SYSLOG", 6) == 0)
+                {
+                    // Ignore auto-generated entries
+                    continue;
+                }
+
+                auto value = s.substr(pos + 1);
+
+                if (!value.empty())
+                {
+                    if (key == "PRIORITY")
+                    {
+                        // Convert the numeric priority value to the string value
+                        value = mxb_log_level_to_string(atoi(value.c_str()));
+                    }
+
+                    std::transform(key.begin(), key.end(), key.begin(), ::tolower);
+                    json_object_set_new(obj, key.c_str(), json_string(value.c_str()));
+                }
+            }
+
+            json_array_append_new(arr, obj);
+        }
+
+        if (sd_journal_previous(j) > 0)
+        {
+            cursors.prev = get_cursor();
+        }
+    }
+
+    sd_journal_close(j);
+#endif
+
+    return {arr, cursors};
+}
+
 json_t* get_log_priorities()
 {
     json_t* arr = json_array();
@@ -114,10 +216,10 @@ json_t* get_log_priorities()
 }
 }
 
-json_t* mxs_logs_to_json(const char* host)
+json_t* mxs_logs_to_json(const char* host, const std::string& cursor, int rows)
 {
     std::unordered_set<std::string> log_params = {
-        "maxlog",     "syslog",    "log_info",   "log_warning",
+        "maxlog",     "syslog",    "log_info",       "log_warning",
         "log_notice", "log_debug", "log_throttling", "ms_timestamp"
     };
 
@@ -140,12 +242,45 @@ json_t* mxs_logs_to_json(const char* host)
     json_object_set_new(attr, "log_file", json_string(mxb_log_get_filename()));
     json_object_set_new(attr, "log_priorities", get_log_priorities());
 
+    const auto& cnf = mxs::Config::get();
+
+    Cursors cursors;
+    json_t* log = nullptr;
+
+    if (cnf.syslog.get())
+    {
+        std::tie(log, cursors) = get_syslog_data(cursor, rows);
+    }
+
+    json_object_set_new(attr, "log", log);
+
     json_t* data = json_object();
     json_object_set_new(data, CN_ATTRIBUTES, attr);
     json_object_set_new(data, CN_ID, json_string("logs"));
     json_object_set_new(data, CN_TYPE, json_string("logs"));
 
-    return mxs_json_resource(host, MXS_JSON_API_LOGS, data);
+    json_t* rval = mxs_json_resource(host, MXS_JSON_API_LOGS, data);
+
+    // Create pagination links
+    json_t* links = json_object_get(rval, CN_LINKS);
+    std::string base = json_string_value(json_object_get(links, "self"));
+
+    if (!cursors.prev.empty())
+    {
+        auto prev = base + "?page[cursor]=" + cursors.prev + "&page[size]=" + std::to_string(rows);
+        json_object_set_new(links, "prev", json_string(prev.c_str()));
+    }
+
+    if (!cursors.current.empty())
+    {
+        auto self = base + "?page[cursor]=" + cursors.current + "&page[size]=" + std::to_string(rows);
+        json_object_set_new(links, "self", json_string(self.c_str()));
+    }
+
+    auto last = base + "?page[size]=" + std::to_string(rows);
+    json_object_set_new(links, "last", json_string(last.c_str()));
+
+    return rval;
 }
 
 bool mxs_log_rotate()

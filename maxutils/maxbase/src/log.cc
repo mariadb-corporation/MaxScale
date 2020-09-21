@@ -695,6 +695,11 @@ static const char* level_to_string(int level)
     }
 }
 
+const char* mxb_log_level_to_string(int level)
+{
+    return level_to_string(level);
+}
+
 bool mxb_log_set_priority_enabled(int level, bool enable)
 {
     bool rv = false;
@@ -895,14 +900,17 @@ int mxb_log_message(int priority,
                     sprintf(suppression_text, SUPPRESSION, suppress_ms);
                 }
 
+                std::string timestamp = this_unit.do_highprecision ? get_timestamp_hp() : get_timestamp();
+
                 if (this_unit.do_syslog && LOG_PRI(priority) != LOG_DEBUG)
                 {
 #ifdef HAVE_SYSTEMD
                     sd_journal_send("MESSAGE=%s", message_text,
                                     "PRIORITY=%d", priority,
-                                    "MXS_CONTEXT=%s", context_len ? context : "",
-                                    "MXS_MODULE=%s", modname_len ? modname : "",
-                                    "MXS_SCOPE=%s", scope_len ? scope : "",
+                                    "SESSION=%s", context_len ? context : "",
+                                    "MODULE=%s", modname_len ? modname : "",
+                                    "OBJECT=%s", scope_len ? scope : "",
+                                    "TIMESTAMP=%s", timestamp.c_str(),
                                     nullptr);
 #else
                     // Debug messages are never logged into syslog
@@ -910,7 +918,7 @@ int mxb_log_message(int priority,
 #endif
                 }
 
-                std::string msg = this_unit.do_highprecision ? get_timestamp_hp() : get_timestamp();
+                std::string msg = timestamp;
                 msg += buffer;
 
                 // Remove any user-generated newlines.
