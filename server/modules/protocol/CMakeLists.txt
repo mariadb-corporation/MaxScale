@@ -4,3 +4,4 @@ if(BUILD_CDC)
 endif()
 
 add_subdirectory(MariaDB)
+add_subdirectory(MongoDB)
