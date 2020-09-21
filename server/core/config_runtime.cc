@@ -2278,7 +2278,7 @@ bool runtime_alter_service_from_json(Service* service, json_t* new_json)
             {
                 service->update_basic_parameters(params);
 
-                if (auto cnf = service->router_instance->getConfiguration())
+                if (auto cnf = service->router()->getConfiguration())
                 {
                     // Merge the new parameters with the old ones to create a complete definition.
                     json_t* combined_params = merge_json_objects(cnf->to_json(), new_params);
@@ -2287,7 +2287,7 @@ bool runtime_alter_service_from_json(Service* service, json_t* new_json)
                 }
                 else if (service->capabilities() & RCAP_TYPE_RUNTIME_CONFIG)
                 {
-                    if (!service->router_instance->configure(&params))
+                    if (!service->router()->configure(&params))
                     {
                         rval = false;
                         MXS_ERROR("Reconfiguration of service '%s' failed. See log file for more details.",

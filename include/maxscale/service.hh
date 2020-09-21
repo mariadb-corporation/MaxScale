@@ -106,10 +106,8 @@ public:
         int64_t rank;   /*< The ranking of this service */
     };
 
-    State              state {State::ALLOC};        /**< The service state */
-    MXS_ROUTER_API*    router {nullptr};            /**< The router we are using */
-    MXS_ROUTER*        router_instance {nullptr};   /**< The router instance for this service */
-    time_t             started {0};                 /**< The time when the service was started */
+    State  state {State::ALLOC};        /**< The service state */
+    time_t started {0};                 /**< The time when the service was started */
 
     const char* name() const override
     {
@@ -222,6 +220,8 @@ public:
 
     uint8_t charset() const;
 
+    MXS_ROUTER* router() const;
+
 protected:
     SERVICE(const std::string& name,
             const std::string& router_name)
@@ -231,8 +231,9 @@ protected:
     {
     }
 
-    uint64_t m_capabilities {0};    /**< The capabilities of the service,
-                                     * @see enum routing_capability */
+    uint64_t    m_capabilities {0}; /**< The capabilities of the service, @see enum routing_capability */
+    MXS_ROUTER* m_router {nullptr}; /**< The router instance for this service */
+
 private:
     const std::string m_name;
     const std::string m_router_name;

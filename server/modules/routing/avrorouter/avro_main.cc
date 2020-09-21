@@ -211,13 +211,13 @@ bool avro_handle_convert(const MODULECMD_ARG* args, json_t** output)
     bool rval = false;
 
     if (strcmp(args->argv[1].value.string, "start") == 0
-        && conversion_task_ctl((Avro*)args->argv[0].value.service->router_instance, true))
+        && conversion_task_ctl((Avro*)args->argv[0].value.service->router(), true))
     {
         MXS_NOTICE("Started conversion for service '%s'.", args->argv[0].value.service->name());
         rval = true;
     }
     else if (strcmp(args->argv[1].value.string, "stop") == 0
-             && conversion_task_ctl((Avro*)args->argv[0].value.service->router_instance, false))
+             && conversion_task_ctl((Avro*)args->argv[0].value.service->router(), false))
     {
         MXS_NOTICE("Stopped conversion for service '%s'.", args->argv[0].value.service->name());
         rval = true;
@@ -281,7 +281,7 @@ static bool do_unlink_with_pattern(const char* format, ...)
 
 static bool avro_handle_purge(const MODULECMD_ARG* args, json_t** output)
 {
-    Avro* inst = (Avro*)args->argv[0].value.service->router_instance;
+    Avro* inst = (Avro*)args->argv[0].value.service->router();
 
     // First stop the conversion service
     conversion_task_ctl(inst, false);

@@ -96,12 +96,11 @@ const char CN_STRIP_DB_ESC[] = "strip_db_esc";
 
 Service* Service::create(const char* name, const char* router, mxs::ConfigParameters* params)
 {
-    MXS_ROUTER_API* router_api = (MXS_ROUTER_API*)load_module(router, MODULE_ROUTER);
-
-    if (router_api == NULL)
+    auto router_api = (MXS_ROUTER_API*)load_module(router, MODULE_ROUTER);
+    if (!router_api)
     {
         MXS_ERROR("Unable to load router module '%s'", router);
-        return NULL;
+        return nullptr;
     }
 
     // TODO: Think of a cleaner way to do this, e.g. reference.
@@ -111,40 +110,39 @@ Service* Service::create(const char* name, const char* router, mxs::ConfigParame
         params = &empty;
     }
 
-    Service* service = new(std::nothrow) Service(name, router, params);
-
-    if (service == nullptr)
+    std::unique_ptr<Service> service;
+    service.reset(new(std::nothrow) Service(name, router, params));
+    if (!service)
     {
         MXS_OOM();
-        return NULL;
+        return nullptr;
     }
 
-    service->router_instance = router_api->createInstance(service, params);
-
-    if (service->router_instance == NULL)
+    auto router_inst = router_api->createInstance(service.get(), params);
+    if (!router_inst)
     {
         MXS_ERROR("%s: Failed to create router instance. Service not started.", service->name());
         service->state = State::FAILED;
-        delete service;
-        return NULL;
+        return nullptr;
     }
+    service->m_router = router_inst;
 
-    service->m_capabilities |= service->router_instance->getCapabilities();
+    service->m_capabilities |= service->m_router->getCapabilities();
 
-    if (auto config = service->router_instance->getConfiguration())
+    if (auto config = service->m_router->getConfiguration())
     {
         if (!config->configure(*params))
         {
             MXS_ERROR("%s: Failed to configure router instance.", service->name());
-            delete service;
             return nullptr;
         }
     }
 
+    auto service_ptr = service.release();
     LockGuard guard(this_unit.lock);
-    this_unit.services.push_back(service);
+    this_unit.services.push_back(service_ptr);
 
-    return service;
+    return service_ptr;
 }
 
 static std::string get_version_string(mxs::ConfigParameters* params)
@@ -243,10 +241,6 @@ Service::Service(const std::string& name,
     , m_params(*params)
 {
     const MXS_MODULE* module = get_module(router_name.c_str(), MODULE_ROUTER);
-    mxb_assert(module);
-    mxb_assert(load_module(router_name.c_str(), MODULE_ROUTER) == module->module_object);
-
-    router = (MXS_ROUTER_API*)module->module_object;
     m_capabilities = module->module_capabilities;
 
     if (m_config->connection_keepalive)
@@ -260,9 +254,9 @@ Service::~Service()
 {
     mxb_assert((m_refcount == 0 && !active()) || maxscale_teardown_in_progress() || state == State::FAILED);
 
-    if (router && router_instance)
+    if (m_router)
     {
-        delete router_instance;
+        delete m_router;
     }
 
     auto manager = user_account_manager();
@@ -746,7 +740,7 @@ std::ostream& Service::persist(std::ostream& os) const
     params_to_print.remove(CN_TARGETS);
     params_to_print.remove(CN_CLUSTER);
 
-    if (auto cnf = router_instance->getConfiguration())
+    if (auto cnf = m_router->getConfiguration())
     {
         cnf->persist(os);
         os << serialize_params(params_to_print, common_service_params());
@@ -906,9 +900,9 @@ json_t* service_attributes(const char* host, const SERVICE* service)
     json_object_set_new(attr, CN_ROUTER, json_string(service->router_name()));
     json_object_set_new(attr, CN_STATE, json_string(service_state_to_string(service->state)));
 
-    if (service->router && service->router_instance)
+    if (service->router())
     {
-        if (json_t* diag = service->router_instance->diagnostics())
+        if (json_t* diag = service->router()->diagnostics())
         {
             json_object_set_new(attr, CN_ROUTER_DIAGNOSTICS, diag);
         }
@@ -1288,7 +1282,7 @@ bool ServiceEndpoint::connect()
     std::transform(m_down.begin(), m_down.end(), std::back_inserter(endpoints),
                    std::mem_fn(&std::unique_ptr<mxs::Endpoint>::get));
 
-    m_router_session = m_service->router_instance->newSession(m_session, endpoints);
+    m_router_session = m_service->router()->newSession(m_session, endpoints);
 
     if (!m_router_session)
     {
@@ -1730,6 +1724,11 @@ void SERVICE::set_custom_version_suffix(const string& custom_version_suffix)
 {
     mxb_assert(m_custom_version_suffix.empty());    // Should only be set once.
     m_custom_version_suffix = custom_version_suffix;
+}
+
+MXS_ROUTER* SERVICE::router() const
+{
+    return m_router;
 }
 
 void Service::wakeup_sessions_waiting_userdata()
