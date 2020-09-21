@@ -75,6 +75,27 @@ void Writer::update_gtid_list(const mxq::Gtid& gtid)
     m_current_gtid_list.replace(gtid);
 }
 
+void Writer::start_replication(mxq::Connection& conn)
+{
+    std::vector<maxsql::Gtid> gtids;
+    if (m_inventory.rpl_state().empty() && m_current_gtid_list.is_valid())
+    {
+        // If the m_current_gtid_list is set, meaning a user has set it with
+        // set @@global.gtid_slave_pos='0-1000-1234', then the actual start
+        // state must be one before that gtid.
+        for (auto& g : m_current_gtid_list.gtids())
+        {
+            gtids.push_back(g.previous());
+        }
+    }
+    else
+    {
+        gtids = m_current_gtid_list.gtids();
+    }
+
+    conn.start_replication(m_inventory.config().server_id(), std::move(gtids));
+}
+
 void Writer::run()
 {
     while (m_running)
@@ -83,7 +104,7 @@ void Writer::run()
         {
             FileWriter file(&m_inventory, *this);
             mxq::Connection conn(get_connection_details());
-            conn.start_replication(m_inventory.config().server_id(), m_current_gtid_list);
+            start_replication(conn);
 
             while (m_running)
             {
@@ -134,10 +155,21 @@ void Writer::run()
         catch (const std::exception& x)
         {
             MXS_ERROR("Error received during replication: %s", x.what());
-            std::unique_lock<std::mutex> guard(m_lock);
-            m_cond.wait_for(guard, std::chrono::seconds(10), [this]() {
-                                return !m_running;
-                            });
+
+            auto new_gtid_list = m_inventory.config().boot_strap_gtid_list();
+
+            if (new_gtid_list.to_string() == m_current_gtid_list.to_string())
+            {
+                std::unique_lock<std::mutex> guard(m_lock);
+                m_cond.wait_for(guard, std::chrono::seconds(10), [this]() {
+                                    return !m_running;
+                                });
+            }
+            else
+            {
+                m_current_gtid_list = new_gtid_list;
+                std::cerr << "m_current_gtid_list = " << m_current_gtid_list << '\n';
+            }
         }
     }
 }

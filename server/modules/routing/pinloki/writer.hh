@@ -44,7 +44,7 @@ public:
 private:
     Generator         m_generator;
     mxb::Worker*      m_worker;
-    InventoryWriter&        m_inventory;
+    InventoryWriter&  m_inventory;
     bool              m_is_bootstrap = false;
     bool              m_commit_on_query = false;
     maxsql::GtidList  m_current_gtid_list;
@@ -56,6 +56,7 @@ private:
 
     void save_gtid_list(FileWriter& writer);
     void update_gtid_list(const mxq::Gtid& gtid);
+    void start_replication(maxsql::Connection& conn);
 
     mxq::Connection::ConnectionDetails get_connection_details();
 };

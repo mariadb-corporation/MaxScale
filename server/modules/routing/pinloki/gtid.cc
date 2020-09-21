@@ -69,6 +69,18 @@ Gtid Gtid::from_string(const std::string& gtid_str)
     }
 }
 
+Gtid Gtid::previous() const
+{
+    if (m_is_valid && m_sequence_nr > 1)
+    {
+        return Gtid(m_domain_id, m_server_id, m_sequence_nr - 1);
+    }
+    else
+    {
+        return Gtid();
+    }
+}
+
 std::ostream& operator<<(std::ostream& os, const Gtid& gtid)
 {
     os << gtid.to_string();
