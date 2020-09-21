@@ -38,7 +38,24 @@ enum class ChangeMasterType
     MASTER_SSL_KEY,
     MASTER_SSL_CIPHER,
     MASTER_SSL_VERIFY_SERVER_CERT,
+    // These are errors in Pinloki::change_master()
+    MASTER_LOG_FILE,
+    MASTER_LOG_POS,
+    RELAY_LOG_FILE,
+    RELAY_LOG_POS,
+    // This one is ignored, logs a warning
+    MASTER_HEARTBEAT_PERIOD,
+    // These are also errors, but with a "not supported yet" msg.
+    MASTER_BIND,
+    MASTER_CONNECT_RETRY,
+    MASTER_DELAY,
+    IGNORE_SERVER_IDS,
+    DO_DOMAIN_IDS,
+    IGNORE_DOMAIN_IDS,
+    END
 };
+
+std::string to_string(ChangeMasterType type);
 
 namespace parser
 {

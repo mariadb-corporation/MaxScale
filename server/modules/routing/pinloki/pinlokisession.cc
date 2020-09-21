@@ -50,6 +50,13 @@ GWBUF* create_select_master_error()
         1, 0, 1198, "HY000",
         "Manual master configuration is not possible when `select_master=true` is used.");
 }
+
+GWBUF* create_change_master_error(const std::string& err)
+{
+    return modutil_create_mysql_err_msg(
+        1, 0, 1198, "HY000",
+        err.c_str());
+}
 }
 
 namespace pinloki
@@ -308,8 +315,15 @@ void PinlokiSession::change_master_to(const parser::ChangeMasterValues& values)
     }
     else
     {
-        m_router->change_master(values);
-        buf = modutil_create_ok();
+        auto err_str = m_router->change_master(values);
+        if (err_str.empty())
+        {
+            buf = modutil_create_ok();
+        }
+        else
+        {
+            buf = create_change_master_error(err_str);
+        }
     }
 
     send(buf);
@@ -319,7 +333,9 @@ void PinlokiSession::start_slave()
 {
     GWBUF* buf = nullptr;
 
-    if (m_router->start_slave())
+    std::string err_str = m_router->start_slave();
+
+    if (err_str.empty())
     {
         buf = modutil_create_ok();
     }
@@ -328,9 +344,8 @@ void PinlokiSession::start_slave()
         // Slave not configured
         buf = modutil_create_mysql_err_msg(
             1, 0, 1200, "HY000",
-            "Misconfigured slave: MASTER_HOST was not set; Fix in config file or with CHANGE MASTER TO");
+            err_str.c_str());
     }
-
 
     send(buf);
 }

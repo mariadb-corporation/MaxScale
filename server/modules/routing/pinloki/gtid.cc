@@ -44,6 +44,11 @@ std::string Gtid::to_string() const
 
 Gtid Gtid::from_string(const std::string& gtid_str)
 {
+    if (gtid_str.empty())
+    {
+        return Gtid();
+    }
+
     namespace x3 = boost::spirit::x3;
 
     const auto gtid_parser = x3::uint32 >> '-' >> x3::uint32 >> '-' >> x3::uint64;
