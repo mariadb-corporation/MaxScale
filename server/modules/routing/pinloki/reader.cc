@@ -85,8 +85,11 @@ bool Reader::poll_start_reading(mxb::Worker::Call::action_t action)
         }
         else
         {
-            MXB_SINFO("ReplSYNC: Reader waiting for primary to sync. "
-                      << "primary: " << gtid_list << ", replica: " << m_start_gtid);
+            if (m_timer.alarm())
+            {
+                MXB_SINFO("ReplSYNC: Reader waiting for primary to sync. "
+                          << "primary: " << gtid_list << ", replica: " << m_start_gtid);
+            }
         }
     }
 

@@ -154,21 +154,23 @@ void Writer::run()
         }
         catch (const std::exception& x)
         {
-            MXS_ERROR("Error received during replication: %s", x.what());
+            if (m_timer.alarm())
+            {
+                MXS_ERROR("Error received during replication: %s", x.what());
+            }
 
             auto new_gtid_list = m_inventory.config().boot_strap_gtid_list();
 
             if (new_gtid_list.to_string() == m_current_gtid_list.to_string())
             {
                 std::unique_lock<std::mutex> guard(m_lock);
-                m_cond.wait_for(guard, std::chrono::seconds(10), [this]() {
+                m_cond.wait_for(guard, std::chrono::seconds(1), [this]() {
                                     return !m_running;
                                 });
             }
             else
             {
                 m_current_gtid_list = new_gtid_list;
-                std::cerr << "m_current_gtid_list = " << m_current_gtid_list << '\n';
             }
         }
     }

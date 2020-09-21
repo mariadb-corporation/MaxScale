@@ -15,6 +15,7 @@
 
 #include <maxbase/exception.hh>
 #include <maxbase/worker.hh>
+#include <maxbase/stopwatch.hh>
 #include "dbconnection.hh"
 #include "gtid.hh"
 #include "config.hh"
@@ -24,6 +25,8 @@
 #include <memory>
 #include <thread>
 #include <condition_variable>
+
+using namespace std::chrono_literals;
 
 namespace pinloki
 {
@@ -50,6 +53,7 @@ private:
     maxsql::GtidList  m_current_gtid_list;
     std::atomic<bool> m_running {true};
     std::thread       m_thread;
+    maxbase::Timer    m_timer {10s};
 
     mutable std::mutex              m_lock;
     mutable std::condition_variable m_cond;

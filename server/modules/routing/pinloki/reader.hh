@@ -15,9 +15,12 @@
 
 #include <maxbase/exception.hh>
 #include <maxbase/worker.hh>
+#include <maxbase/stopwatch.hh>
 
 #include "file_reader.hh"
 #include "rpl_event.hh"
+
+using namespace std::chrono_literals;
 
 namespace pinloki
 {
@@ -55,6 +58,7 @@ private:
     mxb::Worker*    m_worker;
     uint32_t        m_dcid = 0;
     mxq::RplEvent   m_event;    // Stores the latest event that hasn't been processed
+    maxbase::Timer  m_timer {10s};
 
     // Related to delayed start
     maxsql::Gtid m_start_gtid;
