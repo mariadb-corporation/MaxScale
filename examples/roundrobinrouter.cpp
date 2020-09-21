@@ -103,7 +103,7 @@ class RRRouterSession : public mxs::RouterSession
 public:
 
     // The API functions must be public
-    RRRouterSession(RRRouter*, const Endpoints&, mxs::Endpoint*, MXS_SESSION*);
+    RRRouterSession(RRRouter*, const mxs::Endpoints&, mxs::Endpoint*, MXS_SESSION*);
     ~RRRouterSession();
     int32_t routeQuery(GWBUF* buffer);
     int32_t clientReply(GWBUF* buffer, const mxs::ReplyRoute& down, const mxs::Reply& reply);
@@ -116,7 +116,7 @@ private:
     unsigned int m_replies_to_ignore;   /* Counts how many replies should be ignored. */
     RRRouter*    m_router;
 
-    Endpoints      m_backends;
+    mxs::Endpoints m_backends;
     mxs::Endpoint* m_write_backend;
     MXS_SESSION*   m_session;
 
@@ -134,7 +134,7 @@ public:
 
     ~RRRouter();
     static RRRouter*    create(SERVICE* pService, mxs::ConfigParameters* params);
-    mxs::RouterSession* newSession(MXS_SESSION* session, const Endpoints& endpoints);
+    mxs::RouterSession* newSession(MXS_SESSION* session, const mxs::Endpoints& endpoints);
     json_t*             diagnostics() const;
 
     uint64_t getCapabilities() const
@@ -217,7 +217,7 @@ RRRouter::~RRRouter()
  *
  * @return          Client specific data for this router
  */
-mxs::RouterSession* RRRouter::newSession(MXS_SESSION* session, const Endpoints& endpoints)
+mxs::RouterSession* RRRouter::newSession(MXS_SESSION* session, const mxs::Endpoints& endpoints)
 {
     mxs::Endpoint* write_backend = nullptr;
     RRRouterSession* rses = NULL;
@@ -411,7 +411,7 @@ bool RRRouterSession::handleError(mxs::ErrorType type,
     return std::any_of(m_backends.begin(), m_backends.end(), std::mem_fn(&mxs::Endpoint::is_open));
 }
 
-RRRouterSession::RRRouterSession(RRRouter* router, const Endpoints& backends,
+RRRouterSession::RRRouterSession(RRRouter* router, const mxs::Endpoints& backends,
                                  mxs::Endpoint* write_backend, MXS_SESSION* session)
     : RouterSession(session)
     , m_closed(false)

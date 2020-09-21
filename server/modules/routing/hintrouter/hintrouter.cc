@@ -61,7 +61,7 @@ HintRouter* HintRouter::create(SERVICE* pService, mxs::ConfigParameters* params)
     return new HintRouter(pService, default_action, default_server, max_slaves);
 }
 
-HintRouterSession* HintRouter::newSession(MXS_SESSION* pSession, const Endpoints& endpoints)
+HintRouterSession* HintRouter::newSession(MXS_SESSION* pSession, const mxs::Endpoints& endpoints)
 {
     typedef HintRouterSession::BackendArray::size_type array_index;
     HR_ENTRY();

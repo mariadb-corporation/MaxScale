@@ -78,7 +78,7 @@ public:
 
     static KafkaCDC* create(SERVICE* pService, mxs::ConfigParameters* params);
 
-    mxs::RouterSession* newSession(MXS_SESSION* pSession, const Endpoints& endpoints)
+    mxs::RouterSession* newSession(MXS_SESSION* pSession, const mxs::Endpoints& endpoints)
     {
         return nullptr;
     }

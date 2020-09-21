@@ -27,7 +27,7 @@ Mirror* Mirror::create(SERVICE* pService, mxs::ConfigParameters* params)
     return rval.release();
 }
 
-mxs::RouterSession* Mirror::newSession(MXS_SESSION* pSession, const Endpoints& endpoints)
+mxs::RouterSession* Mirror::newSession(MXS_SESSION* pSession, const mxs::Endpoints& endpoints)
 {
     const auto& children = m_service->get_children();
 

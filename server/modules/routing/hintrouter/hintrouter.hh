@@ -22,7 +22,7 @@ class HintRouter : public MXS_ROUTER
 {
 public:
     static HintRouter* create(SERVICE* pService, mxs::ConfigParameters* params);
-    HintRouterSession* newSession(MXS_SESSION* pSession, const Endpoints& endpoints);
+    HintRouterSession* newSession(MXS_SESSION* pSession, const mxs::Endpoints& endpoints);
     json_t*            diagnostics() const;
     uint64_t getCapabilities() const
     {

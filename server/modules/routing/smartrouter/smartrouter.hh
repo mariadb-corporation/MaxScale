@@ -67,7 +67,7 @@ public:
 
     static SmartRouter* create(SERVICE* pService, mxs::ConfigParameters* pParams);
 
-    mxs::RouterSession* newSession(MXS_SESSION* pSession, const Endpoints& endpoints);
+    mxs::RouterSession* newSession(MXS_SESSION* pSession, const mxs::Endpoints& endpoints);
 
     json_t*  diagnostics() const;
     uint64_t getCapabilities() const;

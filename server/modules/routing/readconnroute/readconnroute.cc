@@ -79,7 +79,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
  *
  * @return The Master server
  */
-static mxs::Endpoint* get_root_master(const Endpoints& endpoints)
+static mxs::Endpoint* get_root_master(const mxs::Endpoints& endpoints)
 {
     auto best_rank = std::numeric_limits<int64_t>::max();
     mxs::Endpoint* master_host = nullptr;
@@ -174,7 +174,7 @@ RCR* RCR::create(SERVICE* service, mxs::ConfigParameters* params)
 }
 
 RCRSession::RCRSession(RCR* inst, MXS_SESSION* session, mxs::Endpoint* backend,
-                       const Endpoints& endpoints, uint32_t bitmask, uint32_t bitvalue)
+                       const mxs::Endpoints& endpoints, uint32_t bitmask, uint32_t bitvalue)
     : mxs::RouterSession(session)
     , m_instance(inst)
     , m_bitmask(bitmask)
@@ -192,7 +192,7 @@ RCRSession::~RCRSession()
                            m_session_queries);
 }
 
-mxs::RouterSession* RCR::newSession(MXS_SESSION* session, const Endpoints& endpoints)
+mxs::RouterSession* RCR::newSession(MXS_SESSION* session, const mxs::Endpoints& endpoints)
 {
     uint64_t mask = atomic_load_uint64(&m_bitmask_and_bitvalue);
     uint32_t bitmask = mask;

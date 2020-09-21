@@ -107,7 +107,7 @@ public:
     };
 
     State              state {State::ALLOC};        /**< The service state */
-    MXS_ROUTER_OBJECT* router {nullptr};            /**< The router we are using */
+    MXS_ROUTER_API*    router {nullptr};            /**< The router we are using */
     MXS_ROUTER*        router_instance {nullptr};   /**< The router instance for this service */
     time_t             started {0};                 /**< The time when the service was started */
 

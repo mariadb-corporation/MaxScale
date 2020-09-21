@@ -96,7 +96,7 @@ const char CN_STRIP_DB_ESC[] = "strip_db_esc";
 
 Service* Service::create(const char* name, const char* router, mxs::ConfigParameters* params)
 {
-    MXS_ROUTER_OBJECT* router_api = (MXS_ROUTER_OBJECT*)load_module(router, MODULE_ROUTER);
+    MXS_ROUTER_API* router_api = (MXS_ROUTER_API*)load_module(router, MODULE_ROUTER);
 
     if (router_api == NULL)
     {
@@ -246,7 +246,7 @@ Service::Service(const std::string& name,
     mxb_assert(module);
     mxb_assert(load_module(router_name.c_str(), MODULE_ROUTER) == module->module_object);
 
-    router = (MXS_ROUTER_OBJECT*)module->module_object;
+    router = (MXS_ROUTER_API*)module->module_object;
     m_capabilities = module->module_capabilities;
 
     if (m_config->connection_keepalive)

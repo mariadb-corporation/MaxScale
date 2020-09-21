@@ -132,6 +132,7 @@ class Endpoint;
 
 // The route along which the reply arrived
 using ReplyRoute = std::vector<Endpoint*>;
+using Endpoints = std::vector<mxs::Endpoint*>;
 
 // The type of error that handleError is dealing with
 enum class ErrorType

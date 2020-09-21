@@ -32,7 +32,7 @@ class RCRSession : public mxs::RouterSession
 {
 public:
     RCRSession(RCR* inst, MXS_SESSION* session, mxs::Endpoint* backend,
-               const Endpoints& endpoints, uint32_t bitmask, uint32_t bitvalue);
+               const mxs::Endpoints& endpoints, uint32_t bitmask, uint32_t bitvalue);
     ~RCRSession();
 
     /**
@@ -57,7 +57,7 @@ private:
     uint32_t       m_bitmask;   /**< Bitmask to apply to server->status */
     uint32_t       m_bitvalue;  /**< Session specific required value of server->status */
     mxs::Endpoint* m_backend;
-    Endpoints      m_endpoints;
+    mxs::Endpoints m_endpoints;
 
     maxscale::SessionStats& m_session_stats;
     maxbase::StopWatch      m_session_timer;
@@ -90,7 +90,7 @@ public:
      *
      * @return Router session or nullptr on error
      */
-    mxs::RouterSession* newSession(MXS_SESSION* pSession, const Endpoints& endpoints);
+    mxs::RouterSession* newSession(MXS_SESSION* pSession, const mxs::Endpoints& endpoints);
 
     /**
      * Get router diagnostics in JSON

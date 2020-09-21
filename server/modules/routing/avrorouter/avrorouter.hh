@@ -113,7 +113,7 @@ class Avro : public MXS_ROUTER
 public:
     static Avro* create(SERVICE* service, mxs::ConfigParameters* params);
 
-    mxs::RouterSession* newSession(MXS_SESSION* session, const Endpoints& endpoints);
+    mxs::RouterSession* newSession(MXS_SESSION* session, const mxs::Endpoints& endpoints);
 
     json_t* diagnostics() const;
 

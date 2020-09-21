@@ -14,19 +14,21 @@
 
 #include <maxscale/ccdefs.hh>
 #include <stdint.h>
-#include <maxbase/jansson.h>
-#include <maxscale/buffer.hh>
-#include <maxscale/config2.hh>
+#include <vector>
 #include <maxscale/routing.hh>
-#include <maxscale/session.hh>
 #include <maxscale/target.hh>
 
-using Endpoints = std::vector<mxs::Endpoint*>;
-
 class SERVICE;
+class MXS_SESSION;
+struct json_t;
 
 namespace maxscale
 {
+class ConfigParameters;
+namespace config
+{
+class Configuration;
+}
 /**
  * @class RouterSession router.hh <maxscale/router.hh>
  *
@@ -66,10 +68,8 @@ public:
      *
      * @return True if the session can continue, false if the session should be closed
      */
-    virtual bool handleError(mxs::ErrorType type,
-                             GWBUF* pMessage,
-                             mxs::Endpoint* pProblem,
-                             const mxs::Reply& reply) = 0;
+    virtual bool
+    handleError(mxs::ErrorType type, GWBUF* pMessage, mxs::Endpoint* pProblem, const mxs::Reply& reply) = 0;
 
     // Sets the upstream component (don't override this in the inherited class)
     void setUpstream(mxs::Routable* up)
@@ -95,29 +95,20 @@ public:
     virtual ~MXS_ROUTER() = default;
 
     /**
-     * Called to create a new user session within the router
+     * This function is called after a client has been authenticated and query routing should begin.
+     * A router module needs to implement its own RouterSession-class, which in turn implements the
+     * query routing and client reply handling logic.
      *
-     * This function is called when a new router session is created for a client.
-     * The return value of this function will be passed as the second parameter
-     * to the @c routeQuery, @c clientReply, @c closeSession, @c freeSession,
-     * and @c handleError functions.
-     *
-     * @param instance Router instance
-     * @param session  Client MXS_SESSION object
-     * @param up       The upstream component where responses are routed to
-     *
+     * @param session Base session object
+     * @param endpoints Routing targets of the service
      * @return New router session or NULL on error
      */
-    virtual mxs::RouterSession* newSession(MXS_SESSION* pSession, const Endpoints& endpoints) = 0;
+    virtual mxs::RouterSession* newSession(MXS_SESSION* session, const mxs::Endpoints& endpoints) = 0;
 
     /**
      * @brief Called for diagnostic output
      *
-     * @param instance Router instance
-     *
      * @return Diagnostic information in JSON format
-     *
-     * @see jansson.h
      */
     virtual json_t* diagnostics() const = 0;
 
@@ -141,7 +132,6 @@ public:
      * existing sessions do not read a partial configuration. One way to do this
      * is to use shared pointers for storing configurations.
      *
-     * @param instance Router instance
      * @param params   Updated parameters for the service. The parameters are
      *                 validated before this function is called.
      *
@@ -164,26 +154,22 @@ public:
 };
 
 /**
- * The "module object" structure for a query router module. All entry points
- * marked with `(optional)` are optional entry points which can be set to NULL
- * if no implementation is required.
+ * Router C API.
  */
-typedef struct mxs_router_object
+struct MXS_ROUTER_API
 {
     /**
      * @brief Create a new instance of the router
      *
-     * This function is called when a new router instance is created. The return
-     * value of this function will be passed as the first parameter to the
-     * other API functions.
+     * This function is called when a new router instance is created.
      *
      * @param service The service where the instance is created
      * @param params  Parameters for the router
      *
      * @return New router instance on NULL on error
      */
-    MXS_ROUTER* (*createInstance)(SERVICE * service, mxs::ConfigParameters* params);
-} MXS_ROUTER_OBJECT;
+    MXS_ROUTER* (*createInstance)(SERVICE* service, mxs::ConfigParameters* params);
+};
 
 /**
  * The router module API version. Any change that changes the router API
@@ -202,41 +188,17 @@ typedef struct mxs_router_object
  * @note The values of the capabilities here *must* be between 0x00010000
  *       and 0x00800000, that is, bits 16 to 23.
  */
-typedef enum router_capability
+enum mxs_router_capability_t
 {
-    RCAP_TYPE_NO_USERS_INIT  = 0x00010000,  /**< Prevent the loading of authenticator
-                                             *  users when the service is started */
     RCAP_TYPE_RUNTIME_CONFIG = 0x00020000,  /**< Router supports runtime cofiguration */
-} mxs_router_capability_t;
+} ;
 
-typedef enum
+enum mxs_target_t
 {
     TYPE_UNDEFINED = 0,
     TYPE_MASTER,
     TYPE_ALL
-} mxs_target_t;
-
-/**
- * @brief Convert mxs_target_t to a string
- *
- * @param target Target to convert
- *
- * @return Target type as string
- */
-static inline const char* mxs_target_to_str(mxs_target_t target)
-{
-    switch (target)
-    {
-    case TYPE_MASTER:
-        return "master";
-
-    case TYPE_ALL:
-        return "all";
-
-    default:
-        return "UNDEFINED";
-    }
-}
+};
 
 namespace maxscale
 {
@@ -256,11 +218,11 @@ public:
         return inst;
     }
 
-    static MXS_ROUTER_OBJECT s_api;
+    static MXS_ROUTER_API s_api;
 };
 
 template<class RouterInstance>
-MXS_ROUTER_OBJECT RouterApi<RouterInstance>::s_api =
+MXS_ROUTER_API RouterApi<RouterInstance>::s_api =
 {
     &RouterApi<RouterInstance>::createInstance,
 };

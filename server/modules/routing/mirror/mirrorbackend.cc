@@ -13,7 +13,7 @@
 
 #include "mirrorbackend.hh"
 
-SMyBackends MyBackend::from_endpoints(const Endpoints& endpoints)
+SMyBackends MyBackend::from_endpoints(const mxs::Endpoints& endpoints)
 {
     SMyBackends backends;
     backends.reserve(endpoints.size());

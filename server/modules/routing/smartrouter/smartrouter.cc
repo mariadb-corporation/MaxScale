@@ -128,7 +128,7 @@ SmartRouter::~SmartRouter()
     m_updater_future.get();
 }
 
-mxs::RouterSession* SmartRouter::newSession(MXS_SESSION* pSession, const Endpoints& endpoints)
+mxs::RouterSession* SmartRouter::newSession(MXS_SESSION* pSession, const mxs::Endpoints& endpoints)
 {
     return SmartRouterSession::create(this, pSession, endpoints);
 }

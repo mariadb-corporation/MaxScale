@@ -31,7 +31,7 @@ class MyBackend : public mxs::Backend
 public:
     using mxs::Backend::Backend;
 
-    static SMyBackends from_endpoints(const Endpoints& endpoints);
+    static SMyBackends from_endpoints(const mxs::Endpoints& endpoints);
 
     bool write(GWBUF* buffer, response_type type = EXPECT_RESPONSE) override;
 

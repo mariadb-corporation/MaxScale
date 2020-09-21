@@ -30,7 +30,7 @@ public:
 
     ~Mirror() = default;
     static Mirror*      create(SERVICE* pService, mxs::ConfigParameters* params);
-    mxs::RouterSession* newSession(MXS_SESSION* pSession, const Endpoints& endpoints);
+    mxs::RouterSession* newSession(MXS_SESSION* pSession, const mxs::Endpoints& endpoints);
     json_t*             diagnostics() const;
     uint64_t            getCapabilities() const;
     bool                configure(mxs::ConfigParameters* params);
