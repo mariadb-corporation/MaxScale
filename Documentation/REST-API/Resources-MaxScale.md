@@ -289,6 +289,15 @@ GET /v1/maxscale/logs
 Get information about the current state of logging, enabled log files and the
 location where the log files are stored.
 
+**Note:** The parameters in this endpoint are a subset of the parameters in the
+  `/v1/maxscale` endpoint. Because of this, the parameters in this endpoint are
+  deprecated as of MaxScale 2.6.0.
+
+**Note:** In MaxScale 2.5 the `log_throttling` and `ms_timestamp` parameters
+  were incorrectly named as `throttling` and `highprecision`. In MaxScale 2.6,
+  the parameter names are now correct which means the parameters declared here
+  aren't fully backwards compatible.
+
 #### Response
 
 `Status: 200 OK`
@@ -301,10 +310,10 @@ location where the log files are stored.
     "data": {
         "attributes": {
             "parameters": {
-                "highprecision": false,
+                "ms_timestamp": false,
                 "maxlog": true,
                 "syslog": true,
-                "throttling": {
+                "log_throttling": {
                     "count": 10,
                     "suppress_ms": 10000,
                     "window_ms": 1000
@@ -333,6 +342,10 @@ location where the log files are stored.
 **Note:** The modification of logging parameters via this endpoint has
   deprecated in MaxScale 2.6.0. The parameters should be modified with the
   `/v1/maxscale` endpoint instead.
+
+  Any PATCH requests done to this endpoint will be redirected to the
+  `/v1/maxscale` endpoint. Due to the mispelling of the `ms_timestamp` and
+  `log_throttling` parameters, this is not fully backwards compatible.
 
 ```
 PATCH /v1/maxscale/logs

@@ -116,7 +116,27 @@ json_t* get_log_priorities()
 
 json_t* mxs_logs_to_json(const char* host)
 {
+    std::unordered_set<std::string> log_params = {
+        "maxlog",     "syslog",    "log_info",   "log_warning",
+        "log_notice", "log_debug", "log_throttling", "ms_timestamp"
+    };
+
+    json_t* params = mxs::Config::get().to_json();
+    void* ptr;
+    const char* key;
+    json_t* value;
+
+    // Remove other parameters to appear more backwards compatible
+    json_object_foreach_safe(params, ptr, key, value)
+    {
+        if (log_params.count(key) == 0)
+        {
+            json_object_del(params, key);
+        }
+    }
+
     json_t* attr = json_object();
+    json_object_set_new(attr, CN_PARAMETERS, params);
     json_object_set_new(attr, "log_file", json_string(mxb_log_get_filename()));
     json_object_set_new(attr, "log_priorities", get_log_priorities());
 
