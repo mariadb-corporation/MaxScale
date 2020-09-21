@@ -684,7 +684,7 @@ static const char* level_to_string(int level)
         return "notice";
 
     case LOG_INFO:
-        return "informational";
+        return "info";
 
     case LOG_DEBUG:
         return "debug";
