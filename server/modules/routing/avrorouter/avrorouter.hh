@@ -105,7 +105,7 @@ public:
 
 class AvroSession;
 
-class Avro : public MXS_ROUTER
+class Avro : public mxs::Router
 {
     Avro(const Avro&) = delete;
     Avro& operator=(const Avro&) = delete;

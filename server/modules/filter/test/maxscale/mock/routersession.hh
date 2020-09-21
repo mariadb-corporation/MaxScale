@@ -106,7 +106,7 @@ public:
     void set_upstream(FilterModule::Session* pFilter_session);
 
 private:
-    MXS_ROUTER*              m_instance = nullptr;
+    Router*                  m_instance = nullptr;
     Backend*                 m_pBackend;
     FilterModule::Session*   m_pUpstream_filter_session;
     maxscale::mock::Session* m_pSession;

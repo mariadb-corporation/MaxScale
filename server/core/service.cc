@@ -1726,7 +1726,7 @@ void SERVICE::set_custom_version_suffix(const string& custom_version_suffix)
     m_custom_version_suffix = custom_version_suffix;
 }
 
-MXS_ROUTER* SERVICE::router() const
+Router* SERVICE::router() const
 {
     return m_router;
 }

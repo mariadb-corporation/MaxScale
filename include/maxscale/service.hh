@@ -220,7 +220,7 @@ public:
 
     uint8_t charset() const;
 
-    MXS_ROUTER* router() const;
+    mxs::Router* router() const;
 
 protected:
     SERVICE(const std::string& name,
@@ -231,8 +231,8 @@ protected:
     {
     }
 
-    uint64_t    m_capabilities {0}; /**< The capabilities of the service, @see enum routing_capability */
-    MXS_ROUTER* m_router {nullptr}; /**< The router instance for this service */
+    uint64_t     m_capabilities {0}; /**< The capabilities of the service, @see enum routing_capability */
+    mxs::Router* m_router {nullptr}; /**< The router instance for this service */
 
 private:
     const std::string m_name;

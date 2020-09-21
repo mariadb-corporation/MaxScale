@@ -70,7 +70,7 @@ private:
 /**
  * The per instance data for the router.
  */
-class RCR : public MXS_ROUTER
+class RCR : public mxs::Router
 {
 public:
     /**

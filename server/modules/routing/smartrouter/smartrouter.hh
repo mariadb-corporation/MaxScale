@@ -34,7 +34,7 @@ class SmartRouterSession;
 
 /** class Smartrouter. Manages the performance info reads and updates.
  */
-class SmartRouter : public MXS_ROUTER
+class SmartRouter : public mxs::Router
 {
 public:
     ~SmartRouter();

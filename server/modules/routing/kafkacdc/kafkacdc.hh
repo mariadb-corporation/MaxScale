@@ -47,7 +47,7 @@ class KafkaCDCSession : public mxs::RouterSession
 {
 };
 
-class KafkaCDC : public MXS_ROUTER
+class KafkaCDC : public mxs::Router
 {
 public:
     KafkaCDC(const KafkaCDC&) = delete;

@@ -41,7 +41,7 @@ struct FileLocation
 
 class PinlokiSession;
 
-class Pinloki : public MXS_ROUTER
+class Pinloki : public mxs::Router
 {
 public:
     Pinloki(const Pinloki&) = delete;

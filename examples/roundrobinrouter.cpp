@@ -124,7 +124,7 @@ private:
 };
 
 /* Each service using this router will have a router object instance. */
-class RRRouter : public MXS_ROUTER
+class RRRouter : public mxs::Router
 {
 public:
 

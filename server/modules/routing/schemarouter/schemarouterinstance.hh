@@ -31,7 +31,7 @@ class SchemaRouterSession;
 /**
  * The per instance data for the router.
  */
-class SchemaRouter : public MXS_ROUTER
+class SchemaRouter : public Router
 {
 public:
     ~SchemaRouter();

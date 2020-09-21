@@ -22,7 +22,7 @@
 
 class MirrorSession;
 
-class Mirror : public MXS_ROUTER
+class Mirror : public mxs::Router
 {
 public:
     Mirror(const Mirror&) = delete;

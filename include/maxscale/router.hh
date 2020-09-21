@@ -84,15 +84,14 @@ protected:
     MXS_SESSION*   m_pSession;      /*< The MXS_SESSION this router session is associated with. */
     mxs::Routable* m_pUp;
 };
-}
 
 /**
  * Base class of all routers.
  */
-class MXS_ROUTER
+class Router
 {
 public:
-    virtual ~MXS_ROUTER() = default;
+    virtual ~Router() = default;
 
     /**
      * This function is called after a client has been authenticated and query routing should begin.
@@ -168,8 +167,10 @@ struct MXS_ROUTER_API
      *
      * @return New router instance on NULL on error
      */
-    MXS_ROUTER* (*createInstance)(SERVICE* service, mxs::ConfigParameters* params);
+    Router* (* createInstance)(SERVICE* service, mxs::ConfigParameters* params);
 };
+
+}
 
 /**
  * The router module API version. Any change that changes the router API
@@ -211,9 +212,9 @@ public:
     RouterApi(const RouterApi&) = delete;
     RouterApi& operator=(const RouterApi&) = delete;
 
-    static MXS_ROUTER* createInstance(SERVICE* pService, mxs::ConfigParameters* params)
+    static Router* createInstance(SERVICE* pService, mxs::ConfigParameters* params)
     {
-        MXS_ROUTER* inst = nullptr;
+        Router* inst = nullptr;
         MXS_EXCEPTION_GUARD(inst = RouterClass::create(pService, params));
         return inst;
     }
