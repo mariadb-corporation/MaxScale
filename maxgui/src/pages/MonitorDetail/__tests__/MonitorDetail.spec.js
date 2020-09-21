@@ -150,7 +150,6 @@ describe('MonitorDetail index', () => {
         afterEach(async () => {
             await axiosPostStub.restore()
             await switchoverSpy.restore()
-
             await wrapper.destroy()
         })
 
@@ -165,8 +164,8 @@ describe('MonitorDetail index', () => {
         })
     })
 
-    describe('Module command fetch-async-results assertions', () => {
-        let fetchAsyncResultsStub, fetchAsyncResultsSpy
+    describe('Module command fetch-cmd-results assertions', () => {
+        let fetchAsyncResultsSpy
         beforeEach(async () => {
             fetchAsyncResultsSpy = sinon.spy(MonitorDetail.methods, 'fetchAsyncResults')
             wrapper = computedFactory()
@@ -174,20 +173,15 @@ describe('MonitorDetail index', () => {
 
         afterEach(async () => {
             await fetchAsyncResultsSpy.restore()
-            await fetchAsyncResultsStub.restore()
+            await wrapper.destroy()
         })
 
-        it(`Should call fetch-async-results after calling async-switchover `, async () => {
-            fetchAsyncResultsStub = sinon
-                .stub(wrapper.vm.$axios, 'post')
-                .returns(Promise.resolve({}))
-
+        it(`Should call fetch-cmd-results after calling async-switchover `, async () => {
             // mock calling switchOverCb
             await wrapper.vm.switchOverCb()
-
             fetchAsyncResultsSpy.should.have.been.calledOnce
-            await fetchAsyncResultsStub.firstCall.should.have.been.calledWith(
-                `/maxscale/modules/${monitorModule}/fetch-async-results?${monitorId}`
+            await axiosGetStub.should.have.been.calledWith(
+                `/maxscale/modules/${monitorModule}/fetch-cmd-results?${monitorId}`
             )
         })
     })

@@ -241,8 +241,8 @@ export default {
          */
         async fetchAsyncResults(_, { monitorModule, monitorId }) {
             try {
-                return await this.vue.$axios.post(
-                    `/maxscale/modules/${monitorModule}/fetch-async-results?${monitorId}`
+                return await this.vue.$axios.get(
+                    `/maxscale/modules/${monitorModule}/fetch-cmd-results?${monitorId}`
                 )
             } catch (e) {
                 this.vue.$logger('store-monitor-fetchAsyncResults').error(e)
