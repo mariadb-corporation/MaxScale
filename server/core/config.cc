@@ -115,6 +115,8 @@ constexpr char CN_WRITEQ_HIGH_WATER[] = "writeq_high_water";
 constexpr char CN_WRITEQ_LOW_WATER[] = "writeq_low_water";
 constexpr char CN_SERVER[] = "server";
 constexpr char CN_THREAD_STACK_SIZE[] = "thread_stack_size";
+
+static uint64_t DEFAULT_QC_CACHE_SIZE = get_total_memory() * 0.15;
 }
 
 namespace maxscale
@@ -296,7 +298,7 @@ config::ParamSize Config::s_qc_cache_max_size(
     &Config::s_specification,
     CN_QUERY_CLASSIFIER_CACHE_SIZE,
     "Maximum amount of memory used by query classifier cache.",
-    0,
+    DEFAULT_QC_CACHE_SIZE,
     config::Param::Modifiable::AT_RUNTIME);
 
 config::ParamBool Config::s_admin_log_auth_failures(
@@ -623,14 +625,6 @@ Config::Config()
     add_native(&Config::secure_gui, &s_secure_gui);
     add_native(&Config::debug, &s_debug);
 
-    this->qc_cache_properties.max_size = get_total_memory() * 0.15;
-
-    if (this->qc_cache_properties.max_size == 0)
-    {
-        // Set to -1 so that we know the auto-sizing failed.
-        this->qc_cache_properties.max_size = -1;
-    }
-
     /* get release string */
     if (!get_release_string(this->release_string))
     {
@@ -712,9 +706,8 @@ bool Config::configure(const mxs::ConfigParameters& params, mxs::ConfigParameter
 
         if (configured)
         {
-            if (this->qc_cache_properties.max_size == -1)
+            if (DEFAULT_QC_CACHE_SIZE == 0)
             {
-                this->qc_cache_properties.max_size = 0;
                 MXS_WARNING("Failed to automatically detect available system memory: disabling the query "
                             "classifier cache. To enable it, add '%s' to the configuration file.",
                             CN_QUERY_CLASSIFIER_CACHE_SIZE);
