@@ -24,6 +24,7 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
 namespace maxbase
 {
@@ -92,6 +93,30 @@ public:
     bool match(const std::string& str) const
     {
         return match(str.c_str(), str.size());
+    }
+
+    /**
+     * Match the pattern against `str` and collect capture groups
+     *
+     * If the subject matches the pattern, any capture groups that did not capture a value are set to an
+     * empty string. The groups are numbered in the order they are declared with group 0 always being the
+     * whole matched string.
+     *
+     * For example, the following pattern has three capture groups and it will always return a vector of
+     * size 4 for any matching pattern:
+     *
+     *   hello ((world)|(universe))
+     *
+     * When matched against the string `hello universe`, the following is returned:
+     *
+     *   {"hello universe", "universe", "", "universe"}
+     *
+     * @return The matched parts of the string or an empty vector of no matches were captured.
+     */
+    std::vector<std::string> substr(const char* str, size_t len) const;
+    std::vector<std::string> substr(const std::string& str) const
+    {
+        return substr(str.c_str(), str.size());
     }
 
     /**

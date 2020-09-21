@@ -137,6 +137,64 @@ bool Regex::match(const char* str, size_t len) const
     return rc > 0;
 }
 
+std::vector<std::string> Regex::substr(const char* str, size_t len) const
+{
+    int rc;
+    mxb_assert(m_code.get());
+
+    while ((rc = pcre2_match(m_code.get(), (PCRE2_SPTR)str, len, 0, m_options, this_thread.md, NULL)) == 0)
+    {
+        this_thread.md.enlarge();
+    }
+
+    std::vector<std::string> substrings;
+
+    if (rc > 0)
+    {
+        uint32_t num = 0;
+        pcre2_pattern_info(m_code.get(), PCRE2_INFO_CAPTURECOUNT, &num);
+
+        substrings.resize(std::max(rc, (int)num + 1));
+
+        for (int i = 0; i < rc; i++)
+        {
+            auto& str = substrings[i];
+            size_t sz = 0;
+            int rc = pcre2_substring_length_bynumber(this_thread.md, i, &sz);
+
+            if (rc == 0)
+            {
+                // The copying seems to set the terminating null byte so we need one extra byte of space.
+                ++sz;
+                str.resize(sz);
+
+                if (pcre2_substring_copy_bynumber(this_thread.md, i, (uint8_t*)&str[0], &sz) == 0)
+                {
+                    // Remove the extra byte we added.
+                    str.resize(sz);
+                }
+                else
+                {
+                    mxb_assert(!true);
+                    return {};
+                }
+            }
+            else if (rc == PCRE2_ERROR_UNSET)
+            {
+                // A capture that was defined but not captured
+                str.clear();
+            }
+            else
+            {
+                mxb_assert(!true);
+                return {};
+            }
+        }
+    }
+
+    return substrings;
+}
+
 std::string Regex::replace(const char* str, size_t len, const char* replacement) const
 {
     std::string output;

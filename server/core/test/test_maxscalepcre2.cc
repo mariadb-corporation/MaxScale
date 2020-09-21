@@ -26,7 +26,7 @@
 #include <maxscale/pcre2.hh>
 #include <maxbase/regex.hh>
 
-#define test_assert(a, b) if (!(a)) {fprintf(stderr, b); return 1;}
+#define test_assert(a, b) if (!(a)) {fprintf(stderr, #a ": " b "\n"); return 1;}
 
 /**
  * Test PCRE2 regular expression simple matching function test
@@ -153,6 +153,59 @@ static int test3()
     return 0;
 }
 
+int test_substr()
+{
+    mxb::Regex re1("hello( world)?");
+    auto res1 = re1.substr("hello world");
+
+    test_assert(res1.size() == 2, "Pattern should match");
+    test_assert(res1[0] == "hello world", "The pattern should match the whole string");
+    test_assert(res1[1] == " world", "The first capture should be ' world'");
+
+    auto res2 = re1.substr("hello");
+    test_assert(res2.size() == 2, "Pattern should match");
+    test_assert(res2[0] == "hello", "The pattern should match the whole string");
+    test_assert(res2[1].empty(), "The capture should not match");
+
+    test_assert(re1.substr("this should not match").empty(), "Pattern should not match");
+
+    mxb::Regex re3("(abc)|(def)");
+    auto res3 = re3.substr("def");
+    test_assert(res3.size() == 3, "Pattern should match");
+    test_assert(res3[0] == "def", "The pattern should match the whole string");
+    test_assert(res3[1].empty(), "The first capture should not match");
+    test_assert(res3[2] == "def", "The second capture should match");
+
+    auto res4 = re3.substr("abcdef");
+    test_assert(res4.size() == 3, "Pattern should match");
+    test_assert(res4[0] == "abc", "The pattern should match only the 'abc' part");
+    test_assert(res4[1] == "abc", "The first capture should be 'abc'");
+    test_assert(res4[2].empty(), "The second capture should be empty");
+
+    auto res5 = re3.substr("abc");
+    test_assert(res5.size() == 3, "Pattern should match");
+    test_assert(res5[0] == "abc", "The pattern should match only the 'abc' part");
+    test_assert(res5[1] == "abc", "The first capture should be 'abc'");
+    test_assert(res5[2].empty(), "The first capture should be 'abc'");
+
+    mxb::Regex re4("hello ((world)|(universe))");
+    auto res6 = re4.substr("hello universe");
+    test_assert(res6.size() == 4, "Pattern should match");
+    test_assert(res6[0] == "hello universe", "The first capture should be the whole string");
+    test_assert(res6[1] == "universe", "The first capture should be 'universe'");
+    test_assert(res6[2].empty(), "The second capture should be empty");
+    test_assert(res6[3] == "universe", "The third capture should be 'universe'");
+
+    auto res7 = re4.substr("hello world");
+    test_assert(res7.size() == 4, "Pattern should match");
+    test_assert(res7[0] == "hello world", "The first capture should be the whole string");
+    test_assert(res7[1] == "world", "The first capture should be 'world'");
+    test_assert(res7[2] == "world", "The second capture should be 'world'");
+    test_assert(res7[3].empty(), "The third capture should be empty");
+
+    return 0;
+}
+
 int main(int argc, char** argv)
 {
     int result = 0;
@@ -160,6 +213,7 @@ int main(int argc, char** argv)
     result += test1();
     result += test2();
     result += test3();
+    result += test_substr();
 
     return result;
 }
