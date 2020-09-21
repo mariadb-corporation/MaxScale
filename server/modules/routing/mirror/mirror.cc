@@ -29,7 +29,7 @@ Mirror* Mirror::create(SERVICE* pService, mxs::ConfigParameters* params)
 
 mxs::RouterSession* Mirror::newSession(MXS_SESSION* pSession, const Endpoints& endpoints)
 {
-    const auto& children = m_pService->get_children();
+    const auto& children = m_service->get_children();
 
     if (std::find(children.begin(), children.end(), m_main) == children.end())
     {
@@ -67,7 +67,7 @@ bool Mirror::configure(mxs::ConfigParameters* params)
 {
     bool rval = false;
     auto main_tgt = params->get_target("main");
-    const auto& children = m_pService->get_children();
+    const auto& children = m_service->get_children();
 
     std::lock_guard<mxb::shared_mutex> guard(m_rw_lock);
 
@@ -103,7 +103,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         desc,
         "V1.0.0",
         caps,
-        &Mirror::s_object,
+        &mxs::RouterApi<Mirror>::s_api,
         NULL,
         NULL,
         NULL,

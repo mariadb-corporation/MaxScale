@@ -22,7 +22,7 @@
 
 class MirrorSession;
 
-class Mirror : public mxs::Router<Mirror, MirrorSession>
+class Mirror : public MXS_ROUTER
 {
 public:
     Mirror(const Mirror&) = delete;
@@ -49,11 +49,12 @@ public:
 
 private:
     Mirror(SERVICE* pService)
-        : Router<Mirror, MirrorSession>(pService)
+        : m_service(pService)
     {
     }
 
     mxs::Target*              m_main;
     std::unique_ptr<Exporter> m_exporter;
     mxb::shared_mutex         m_rw_lock;
+    SERVICE*                  m_service;
 };

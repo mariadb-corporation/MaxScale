@@ -124,7 +124,7 @@ private:
 };
 
 /* Each service using this router will have a router object instance. */
-class RRRouter : public mxs::Router<RRRouter, RRRouterSession>
+class RRRouter : public MXS_ROUTER
 {
 public:
 
@@ -175,8 +175,7 @@ private:
  * Constructs a new router instance, called by the static `create` method.
  */
 RRRouter::RRRouter(SERVICE* service)
-    : mxs::Router<RRRouter, RRRouterSession>(service)
-    , m_service(service)
+    : m_service(service)
     , m_routing_s(0)
     , m_routing_f(0)
     , m_routing_c(0)
@@ -647,7 +646,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         "A simple round robin router",  /* Description */
         "V1.1.0",                       /* Module version */
         RRRouter::CAPABILITIES,
-        &RRRouter::s_object,
+        &mxs::RouterApi<RRRouter>::s_api,
         process_init,                   /* Process init, can be null */
         process_finish,                 /* Process finish, can be null */
         NULL,                           /* Thread init */

@@ -47,7 +47,7 @@ class KafkaCDCSession : public mxs::RouterSession
 {
 };
 
-class KafkaCDC : public mxs::Router<KafkaCDC, KafkaCDCSession>
+class KafkaCDC : public MXS_ROUTER
 {
 public:
     KafkaCDC(const KafkaCDC&) = delete;
@@ -103,4 +103,5 @@ private:
 
     Config                           m_config;
     std::unique_ptr<cdc::Replicator> m_replicator;
+    SERVICE*                         m_service;
 };

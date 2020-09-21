@@ -34,7 +34,7 @@ class SmartRouterSession;
 
 /** class Smartrouter. Manages the performance info reads and updates.
  */
-class SmartRouter : public mxs::Router<SmartRouter, SmartRouterSession>
+class SmartRouter : public MXS_ROUTER
 {
 public:
     ~SmartRouter();
@@ -96,7 +96,8 @@ public:
 private:
     SmartRouter(SERVICE* service);
 
-    Config m_config;
+    SERVICE* m_service;
+    Config   m_config;
 
     PerformanceInfoUpdater m_updater;
     std::future<void>      m_updater_future;

@@ -241,84 +241,7 @@ static inline const char* mxs_target_to_str(mxs_target_t target)
 namespace maxscale
 {
 
-/**
- * @class Router router.hh <maxscale/router.hh>
- *
- * An instantiation of the Router template is used for creating a router.
- * Router is an example of the "Curiously recurring template pattern"
- * https://en.wikipedia.org/wiki/Curiously_recurring_template_pattern
- * that is used for compile time polymorfism.
- *
- * The typical way for using the template is as follows:
- *
- * @code
- * class MyRouterSession : public maxscale::RouterSession
- * {
- *     // Override the relevant functions.
- * };
- *
- * class MyRouter : public maxscale::Router<MyRouter, MyRouterSession>
- * {
- * public:
- *      static MyRouter* create(SERVICE* pService, mxs::ConfigParameters* params);
- *
- *      MyRouterSession* newSession(MXS_SESSION* pSession);
- *
- *      uint64_t getCapabilities();
- * };
- * @endcode
- *
- * The concrete router class must implement the methods @c create, @c newSession,
- * @c diagnostics and @c getCapabilities, with the prototypes as shown above.
- *
- * The plugin function @c GetModuleObject is then implemented as follows:
- *
- * @code
- * extern "C" MXS_MODULE* MXS_CREATE_MODULE()
- * {
- *     static MXS_MODULE module_object =
- *     {
- *         ...
- *         &MyRouter::s_object,
- *         ...
- *     };
- *
- *     return &module_object;
- * }
- * @endcode
- */
-template<class RouterType, class RouterSessionType>
-class Router : public MXS_ROUTER
-{
-public:
-
-    static MXS_ROUTER* createInstance(SERVICE* pService, mxs::ConfigParameters* params)
-    {
-        RouterType* pRouter = NULL;
-
-        MXS_EXCEPTION_GUARD(pRouter = RouterType::create(pService, params));
-
-        return pRouter;
-    }
-
-    static MXS_ROUTER_OBJECT s_object;
-
-protected:
-    Router(SERVICE* pService)
-        : m_pService(pService)
-    {
-    }
-
-    SERVICE* m_pService;
-};
-
-template<class RouterType, class RouterSessionType>
-MXS_ROUTER_OBJECT Router<RouterType, RouterSessionType>::s_object =
-{
-    &Router<RouterType, RouterSessionType>::createInstance
-};
-
-template<class RouterInstance>
+template<class RouterClass>
 class RouterApi
 {
 public:
@@ -328,9 +251,9 @@ public:
 
     static MXS_ROUTER* createInstance(SERVICE* pService, mxs::ConfigParameters* params)
     {
-        RouterInstance* pInstance = NULL;
-        MXS_EXCEPTION_GUARD(pInstance = RouterInstance::create(pService, params));
-        return pInstance;
+        MXS_ROUTER* inst = nullptr;
+        MXS_EXCEPTION_GUARD(inst = RouterClass::create(pService, params));
+        return inst;
     }
 
     static MXS_ROUTER_OBJECT s_api;

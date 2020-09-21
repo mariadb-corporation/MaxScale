@@ -41,7 +41,7 @@ struct FileLocation
 
 class PinlokiSession;
 
-class Pinloki : public mxs::Router<Pinloki, PinlokiSession>
+class Pinloki : public MXS_ROUTER
 {
 public:
     Pinloki(const Pinloki&) = delete;
@@ -102,6 +102,7 @@ private:
     };
 
     Config                  m_config;
+    SERVICE*                m_service;
     InventoryWriter         m_inventory;
     std::unique_ptr<Writer> m_writer;
     MasterConfig            m_master_config;

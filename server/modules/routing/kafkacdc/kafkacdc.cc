@@ -385,9 +385,9 @@ std::unique_ptr<cdc::Replicator> KafkaCDC::create_replicator(const Config& confi
 }
 
 KafkaCDC::KafkaCDC(SERVICE* pService, Config&& config, std::unique_ptr<cdc::Replicator>&& rpl)
-    : Router<KafkaCDC, KafkaCDCSession>(pService)
-    , m_config(std::move(config))
+    : m_config(std::move(config))
     , m_replicator(std::move(rpl))
+    , m_service(pService)
 {
 }
 
@@ -407,7 +407,7 @@ bool KafkaCDC::configure(mxs::ConfigParameters* params)
         // before the new one starts.
         m_replicator.reset();
         m_config = Config(*params);
-        m_replicator = create_replicator(m_config, m_pService);
+        m_replicator = create_replicator(m_config, m_service);
         rval = true;
     }
 
@@ -424,7 +424,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         "Replicate data changes from MariaDB to Kafka",
         "V1.0.0",
         KafkaCDC::CAPS,
-        &KafkaCDC::s_object,
+        &mxs::RouterApi<KafkaCDC>::s_api,
         nullptr,
         nullptr,
         nullptr,

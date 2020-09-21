@@ -156,8 +156,8 @@ std::pair<std::string, std::string> get_file_name_and_size(const std::string& fi
 }
 
 Pinloki::Pinloki(SERVICE* pService, Config&& config)
-    : Router<Pinloki, PinlokiSession>(pService)
-    , m_config(std::move(config))
+    : m_config(std::move(config))
+    , m_service(pService)
     , m_inventory(m_config)
 {
     auto rpl_state = m_inventory.rpl_state();
@@ -348,13 +348,13 @@ maxsql::Connection::ConnectionDetails Pinloki::generate_details()
 
     if (m_config.select_master())
     {
-        for (auto srv : m_pService->reachable_servers())
+        for (auto srv : m_service->reachable_servers())
         {
             if (srv->is_master())
             {
                 details.host = mxb::Host(srv->address(), srv->port());
-                details.user = m_pService->config()->user;
-                details.password = m_pService->config()->password;
+                details.user = m_service->config()->user;
+                details.password = m_service->config()->password;
 
                 if (auto ssl = srv->ssl().config())
                 {
@@ -697,7 +697,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         "Pinloki",
         "V1.0.0",
         RCAP_TYPE_CONTIGUOUS_INPUT,
-        &pinloki::Pinloki::s_object,
+        &mxs::RouterApi<pinloki::Pinloki>::s_api,
         nullptr,
         nullptr,
         nullptr,
