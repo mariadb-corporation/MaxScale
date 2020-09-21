@@ -9,6 +9,12 @@ For more information about MaxScale 2.5, refer to the
 Before starting the upgrade, any existing configuration files should be
 backed up.
 
+## Authentication
+
+The credentials used by services now require additional grants. For a full list
+of required grants, refer to the
+[protocol documentation](../Authenticators/Authentication-Modules.md#required-grants).
+
 ## MariaDB-Monitor
 
 The settings `detect_stale_master`, `detect_standalone_master` and
