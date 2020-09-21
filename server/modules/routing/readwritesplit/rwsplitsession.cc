@@ -669,6 +669,15 @@ int32_t RWSplitSession::clientReply(GWBUF* writebuf, const mxs::ReplyRoute& down
         finish_transaction(backend);
     }
 
+    int32_t rc = 1;
+
+    if (writebuf)
+    {
+        mxb_assert_message(backend->in_use(), "Backend should be in use when routing reply");
+        /** Write reply to client DCB */
+        rc = RouterSession::clientReply(writebuf, down, reply);
+    }
+
     if (reply.is_complete())
     {
         if (backend->in_use() && backend->has_session_commands())
@@ -690,15 +699,6 @@ int32_t RWSplitSession::clientReply(GWBUF* writebuf, const mxs::ReplyRoute& down
              */
             route_stored_query();
         }
-    }
-
-    int32_t rc = 1;
-
-    if (writebuf)
-    {
-        mxb_assert_message(backend->in_use(), "Backend should be in use when routing reply");
-        /** Write reply to client DCB */
-        rc = RouterSession::clientReply(writebuf, down, reply);
     }
 
     if (m_expected_responses == 0)
