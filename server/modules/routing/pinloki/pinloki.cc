@@ -353,19 +353,26 @@ maxsql::Connection::ConnectionDetails Pinloki::generate_details()
             if (srv->is_master())
             {
                 details.host = mxb::Host(srv->address(), srv->port());
-                details.user = m_pService->config()->user;
-                details.password = m_pService->config()->password;
+                m_master_config.host = srv->address();
+                m_master_config.port = srv->port();
+                details.user = m_master_config.user = m_pService->config()->user;
+                details.password = m_master_config.password = m_pService->config()->password;
 
                 if (auto ssl = srv->ssl().config())
                 {
-                    details.ssl = true;
-                    details.ssl_ca = ssl->ca;
-                    details.ssl_cert = ssl->cert;
-                    details.ssl_crl = ssl->crl;
-                    details.ssl_key = ssl->key;
-                    details.ssl_cipher = ssl->cipher;
-                    details.ssl_verify_server_cert = ssl->verify_peer;
+                    details.ssl = m_master_config.ssl = true;
+                    details.ssl_ca = m_master_config.ssl_ca = ssl->ca;
+                    details.ssl_cert = m_master_config.ssl_cert = ssl->cert;
+                    details.ssl_crl = m_master_config.ssl_crl = ssl->crl;
+                    details.ssl_key = m_master_config.ssl_key = ssl->key;
+                    details.ssl_cipher = m_master_config.ssl_cipher = ssl->cipher;
+                    details.ssl_verify_server_cert =
+                        m_master_config.ssl_verify_server_cert = ssl->verify_peer;
                 }
+
+                m_master_config.use_gtid = true;
+                m_master_config.save(m_config);
+
                 break;
             }
         }

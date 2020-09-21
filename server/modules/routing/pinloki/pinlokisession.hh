@@ -18,7 +18,6 @@
 
 #include "rpl_event.hh"
 #include "parser.hh"
-#include "master_config.hh"
 #include "pinloki.hh"
 #include "reader.hh"
 
