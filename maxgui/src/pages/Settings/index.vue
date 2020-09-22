@@ -3,12 +3,12 @@
         <v-sheet class="mt-2">
             <page-header />
             <v-tabs v-model="currentActiveTab" class="tab-navigation-wrapper">
-                <v-tab v-for="tab in tabs" :key="tab.name">
-                    {{ tab.name }}
+                <v-tab v-for="tab in tabs" :key="tab" :href="'#' + tab">
+                    {{ tab }}
                 </v-tab>
 
                 <v-tabs-items v-model="currentActiveTab">
-                    <v-tab-item class="pt-5">
+                    <v-tab-item class="pt-5" :value="tabs[0]">
                         <v-col cols="7">
                             <details-parameters-table
                                 v-if="maxscale_parameters"
@@ -55,10 +55,7 @@ export default {
     data() {
         return {
             currentActiveTab: null,
-            tabs: [
-                { name: this.$t('maxScaleParameters') },
-                // { name: this.$t('usersAndPermissions') },
-            ],
+            tabs: [this.$t('maxScaleParameters')],
             overridingModuleParams: [],
         }
     },
@@ -68,10 +65,20 @@ export default {
             maxscale_parameters: state => state.maxscale.maxscale_parameters,
         }),
     },
-    async created() {
-        await Promise.all([this.fetchMaxScaleParameters(), this.fetchModuleParameters('maxscale')])
-        this.processingModuleParams()
+    watch: {
+        currentActiveTab: async function(val) {
+            switch (val) {
+                case this.$t('maxScaleParameters'):
+                    await Promise.all([
+                        this.fetchMaxScaleParameters(),
+                        this.fetchModuleParameters('maxscale'),
+                    ])
+                    this.processingModuleParams()
+                    break
+            }
+        },
     },
+
     methods: {
         ...mapActions({
             fetchModuleParameters: 'fetchModuleParameters',
