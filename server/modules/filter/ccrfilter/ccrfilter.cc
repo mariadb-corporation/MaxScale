@@ -186,7 +186,7 @@ private:
     static CcrHintValue search_ccr_hint(GWBUF* buffer);
 };
 
-class CCRFilter : public mxs::Filter<CCRFilter, CCRSession>
+class CCRFilter : public MXS_FILTER
 {
 public:
     friend class CCRSession;    // Session needs to access & modify data in filter object
@@ -404,7 +404,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         DESCRIPTION,
         "V1.1.0",
         RCAP_TYPE_CONTIGUOUS_INPUT,
-        &CCRFilter::s_object,
+        &mxs::FilterApi<CCRFilter>::s_api,
         nullptr,
         nullptr,
         nullptr,

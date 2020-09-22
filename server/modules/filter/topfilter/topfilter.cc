@@ -37,6 +37,7 @@
 #include <maxscale/config2.hh>
 #include <maxscale/filter.hh>
 #include <maxscale/modutil.hh>
+#include <maxscale/session.hh>
 
 class TopFilter;
 
@@ -138,7 +139,7 @@ struct Config : public mxs::config::Configuration
     mxs::config::RegexValue exclude;    /* Optional text to match against for exclusion */
 };
 
-class TopFilter : public mxs::Filter<TopFilter, TopSession>
+class TopFilter : public MXS_FILTER
 {
 public:
     static TopFilter* create(const std::string& name, mxs::ConfigParameters* params)
@@ -322,7 +323,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         "logging filter",
         "V1.0.1",
         RCAP_TYPE_CONTIGUOUS_INPUT,
-        &TopFilter::s_object,
+        &mxs::FilterApi<TopFilter>::s_api,
         NULL,
         NULL,
         NULL,

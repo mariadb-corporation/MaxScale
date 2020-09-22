@@ -22,7 +22,7 @@
 class MaskingRules;
 
 
-class MaskingFilter : public maxscale::Filter<MaskingFilter, MaskingFilterSession>
+class MaskingFilter : public MXS_FILTER
 {
 public:
     typedef std::shared_ptr<MaskingRules> SMaskingRules;

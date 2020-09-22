@@ -52,9 +52,11 @@
 #include <fstream>
 
 #include <maxbase/stopwatch.hh>
+#include <maxscale/config2.hh>
 #include <maxscale/filter.hh>
 #include <maxscale/modutil.hh>
 #include <maxscale/query_classifier.hh>
+#include <maxscale/session.hh>
 
 class TpmFilter;
 class TpmSession;
@@ -115,7 +117,7 @@ private:
     TpmFilter* m_instance;
 };
 
-class TpmFilter : public mxs::Filter<TpmFilter, TpmSession>
+class TpmFilter : public MXS_FILTER
 {
 public:
     ~TpmFilter();
@@ -200,7 +202,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         description,
         "V1.0.1",
         RCAP_TYPE_CONTIGUOUS_INPUT,
-        &TpmFilter::s_object,
+        &mxs::FilterApi<TpmFilter>::s_api,
         NULL,
         NULL,
         NULL,

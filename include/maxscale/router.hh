@@ -169,7 +169,6 @@ struct MXS_ROUTER_API
      */
     Router* (* createInstance)(SERVICE* service, mxs::ConfigParameters* params);
 };
-
 }
 
 /**
@@ -191,8 +190,8 @@ struct MXS_ROUTER_API
  */
 enum mxs_router_capability_t
 {
-    RCAP_TYPE_RUNTIME_CONFIG = 0x00020000,  /**< Router supports runtime cofiguration */
-} ;
+    RCAP_TYPE_RUNTIME_CONFIG = 0x00020000,      /**< Router supports runtime cofiguration */
+};
 
 enum mxs_target_t
 {
@@ -222,9 +221,9 @@ public:
     static MXS_ROUTER_API s_api;
 };
 
-template<class RouterInstance>
-MXS_ROUTER_API RouterApi<RouterInstance>::s_api =
+template<class RouterClass>
+MXS_ROUTER_API RouterApi<RouterClass>::s_api =
 {
-    &RouterApi<RouterInstance>::createInstance,
+    &RouterApi<RouterClass>::createInstance,
 };
 }

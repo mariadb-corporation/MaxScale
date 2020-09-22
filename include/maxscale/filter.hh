@@ -18,16 +18,20 @@
 
 #include <maxscale/ccdefs.hh>
 #include <stdint.h>
-#include <maxbase/jansson.h>
-#include <maxscale/buffer.hh>
-#include <maxscale/config.hh>
-#include <maxscale/dcb.hh>
 #include <maxscale/routing.hh>
-#include <maxscale/session.hh>
 
+struct json_t;
+class GWBUF;
+class MXS_SESSION;
+class SERVICE;
 namespace maxscale
 {
+class ConfigParameters;
 class FilterSession;
+namespace config
+{
+class Configuration;
+}
 }
 
 /**
@@ -81,8 +85,6 @@ struct MXS_FILTER
      */
     virtual mxs::config::Configuration* getConfiguration() = 0;
 };
-
-struct MXS_FILTER_OBJECT;
 
 namespace maxscale
 {
@@ -157,88 +159,14 @@ protected:
      * @param pResponse  The response to be sent to the client.
      * @param pTarget    The source of the response
      */
-    void set_response(GWBUF* pResponse) const
-    {
-        session_set_response(m_pSession, m_pService, m_up, pResponse);
-    }
+    void set_response(GWBUF* pResponse) const;
 
 protected:
-    MXS_SESSION* m_pSession;            /*< The MXS_SESSION this filter session is associated with. */
-    SERVICE*     m_pService;            /*< The service for which this session was created. */
+    MXS_SESSION* m_pSession;/*< The MXS_SESSION this filter session is associated with. */
+    SERVICE*     m_pService;/*< The service for which this session was created. */
 
-    mxs::Routable* m_down = (mxs::Routable*)BAD_ADDR;       /*< The downstream component. */
-    mxs::Routable* m_up = (mxs::Routable*)BAD_ADDR;         /*< The upstream component. */
-};
-
-/**
- * @class Filter filter.hh <maxscale/filter.hh>
- *
- * An instantiation of the Filter template is used for creating a filter.
- * Filter is an example of the "Curiously recurring template pattern"
- * https://en.wikipedia.org/wiki/Curiously_recurring_template_pattern
- * that is used for compile time polymorphism.
- *
- * The typical way for using the template is as follows:
- *
- * @code
- * class MyFilterSession : public maxscale::FilterSession
- * {
- *     // Override the relevant functions.
- * };
- *
- * class MyFilter : public maxscale::Filter<MyFilter, MyFilterSession>
- * {
- * public:
- *      // This creates a new filter instance
- *      static MyFilter* create(const char* zName, mxs::ConfigParameters* ppParams);
- *
- *      // This creates a new session for a filter instance
- *      MyFilterSession* newSession(MXS_SESSION* pSession, SERVICE* pService);
- *
- *      // Diagnostic function that returns a JSON object
- *      json_t* diagnostics() const;
- *
- *      // Get filter capabilities
- *      uint64_t getCapabilities();
- *
- *      // Reconfigure filter at runtime (see configureInstance)
- *      bool configure(mxs::ConfigParameters* param);
- * };
- * @endcode
- *
- * The concrete filter class must implement the methods @c create, @c newSession,
- * @c diagnostics and @c getCapabilities, with the prototypes as shown above.
- *
- * The plugin function @c GetModuleObject is then implemented as follows:
- *
- * @code
- * extern "C" MODULE* MXS_CREATE_MODULE()
- * {
- *     return &MyFilter::s_object;
- * };
- * @endcode
- */
-template<class FilterType, class FilterSessionType>
-class Filter : public MXS_FILTER
-{
-public:
-
-    static MXS_FILTER* apiCreateInstance(const char* zName, mxs::ConfigParameters* ppParams)
-    {
-        FilterType* pFilter = NULL;
-
-        MXS_EXCEPTION_GUARD(pFilter = FilterType::create(zName, ppParams));
-
-        return pFilter;
-    }
-
-    static MXS_FILTER_OBJECT s_object;
-};
-
-template<class FilterType, class FilterSessionType>
-MXS_FILTER_OBJECT Filter<FilterType, FilterSessionType>::s_object =
-{
-    &FilterType::apiCreateInstance,
+    mxs::Routable* m_down = (mxs::Routable*)BAD_ADDR;   /*< The downstream component. */
+    mxs::Routable* m_up = (mxs::Routable*)BAD_ADDR;     /*< The upstream component. */
 };
 }
 
@@ -270,15 +198,40 @@ struct MXS_FILTER_OBJECT
     MXS_FILTER* (* createInstance)(const char* name, mxs::ConfigParameters* params);
 };
 
+namespace maxscale
+{
+template<class FilterClass>
+class FilterApi
+{
+public:
+    FilterApi() = delete;
+    FilterApi(const FilterApi&) = delete;
+    FilterApi& operator=(const FilterApi&) = delete;
+
+    static MXS_FILTER* createInstance(const char* name, mxs::ConfigParameters* params)
+    {
+        MXS_FILTER* inst = nullptr;
+        MXS_EXCEPTION_GUARD(inst = FilterClass::create(name, params));
+        return inst;
+    }
+
+    static MXS_FILTER_OBJECT s_api;
+};
+
+template<class FilterClass>
+MXS_FILTER_OBJECT FilterApi<FilterClass>::s_api =
+{
+    &FilterApi<FilterClass>::createInstance,
+};
+}
+
 /**
  * MXS_FILTER_DEF represents a filter definition from the configuration file.
  * Its exact definition is private to MaxScale.
  */
-struct mxs_filter_def;
-
-typedef struct mxs_filter_def
+class MXS_FILTER_DEF
 {
-} MXS_FILTER_DEF;
+};
 
 /**
  * Get the filter instance of a particular filter definition.
@@ -293,18 +246,3 @@ MXS_FILTER* filter_def_get_instance(const MXS_FILTER_DEF* filter_def);
  * @return An array of filter parameters that are common to all filters
  */
 const MXS_MODULE_PARAM* common_filter_params();
-
-/**
- * Specifies capabilities specific for filters. Common capabilities
- * are defined by @c routing_capability_t.
- *
- * @see enum routing_capability
- *
- * @note The values of the capabilities here *must* be between 0x80000000
- *       and 0x01000000, that is, bits 24 to 31.
- */
-
-typedef enum filter_capability
-{
-    FCAP_TYPE_NONE = 0x0    // TODO: remove once filter capabilities are defined
-} filter_capability_t;

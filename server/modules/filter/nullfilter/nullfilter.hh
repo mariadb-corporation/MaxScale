@@ -13,10 +13,11 @@
 #pragma once
 
 #include <maxscale/ccdefs.hh>
+#include <maxscale/config2.hh>
 #include <maxscale/filter.hh>
 #include "nullfiltersession.hh"
 
-class NullFilter : public maxscale::Filter<NullFilter, NullFilterSession>
+class NullFilter : public MXS_FILTER
 {
 public:
     NullFilter(const NullFilter&) = delete;

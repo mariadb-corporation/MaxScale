@@ -20,6 +20,7 @@
 
 #include <maxscale/filter.hh>
 #include <maxscale/buffer.hh>
+#include <maxscale/config2.hh>
 #include <maxscale/pcre2.hh>
 #include <maxscale/hint.h>
 
@@ -36,7 +37,7 @@ using SourceHostVector = std::vector<SourceHost>;
 /**
  * Filter instance definition
  */
-class RegexHintFilter : public maxscale::Filter<RegexHintFilter, RegexHintFSession>
+class RegexHintFilter : public MXS_FILTER
 {
 public:
     /* Total statements diverted statistics. Unreliable due to lockless yet

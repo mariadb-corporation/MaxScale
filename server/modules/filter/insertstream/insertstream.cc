@@ -24,6 +24,7 @@
 #include <maxscale/poll.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/query_classifier.hh>
+#include <maxscale/session.hh>
 
 #include "insertstream.hh"
 
@@ -388,7 +389,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         "Data streaming filter",
         "1.0.0",
         CAPS,
-        &InsertStream::s_object,
+        &mxs::FilterApi<InsertStream>::s_api,
         NULL,
         NULL,
         NULL,

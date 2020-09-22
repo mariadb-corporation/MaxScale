@@ -328,6 +328,11 @@ json_t* FilterSession::diagnostics() const
 {
     return NULL;
 }
+
+void FilterSession::set_response(GWBUF* pResponse) const
+{
+    session_set_response(m_pSession, m_pService, m_up, pResponse);
+}
 }
 
 std::ostream& FilterDef::persist(std::ostream& os) const

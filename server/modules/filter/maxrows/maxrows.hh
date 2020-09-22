@@ -15,6 +15,7 @@
 #define MXS_MODULE_NAME "maxrows"
 
 #include <maxscale/ccdefs.hh>
+#include <maxscale/config2.hh>
 #include <maxscale/filter.hh>
 
 
@@ -70,7 +71,7 @@ private:
     bool        m_collect {true};
 };
 
-class MaxRows : public maxscale::Filter<MaxRows, MaxRowsSession>
+class MaxRows : public MXS_FILTER
 {
 public:
     MaxRows(const MaxRows&) = delete;

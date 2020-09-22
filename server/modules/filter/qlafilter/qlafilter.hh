@@ -32,7 +32,7 @@ struct LogEventElems;
  * To this base a session number is attached such that each session will
  * have a unique name.
  */
-class QlaInstance : public mxs::Filter<QlaInstance, QlaFilterSession>
+class QlaInstance : public MXS_FILTER
 {
 public:
     QlaInstance(const QlaInstance&) = delete;

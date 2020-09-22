@@ -878,7 +878,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         description,
         "V1.1.1",
         CAPABILITIES,
-        &QlaInstance::s_object,
+        &mxs::FilterApi<QlaInstance>::s_api,
         nullptr,
         nullptr,
         nullptr,

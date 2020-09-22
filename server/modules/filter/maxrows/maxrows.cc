@@ -163,7 +163,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         "A filter that limits resultsets.",
         "V1.0.0",
         MaxRows::CAPABILITIES,
-        &MaxRows::s_object,
+        &mxs::FilterApi<MaxRows>::s_api,
         nullptr,       /* Process init. */
         nullptr,       /* Process finish. */
         nullptr,       /* Thread init. */

@@ -51,6 +51,7 @@
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxbase/alloc.h>
 #include <maxscale/poll.hh>
+#include <maxscale/session.hh>
 #include <maxscale/modutil.hh>
 #include <maxbase/regex.hh>
 #include <mysqld_error.h>

@@ -42,6 +42,7 @@
 #include <maxscale/modinfo.hh>
 #include <maxscale/modutil.hh>
 #include <maxscale/server.hh>
+#include <maxscale/session.hh>
 #include <maxscale/utils.h>
 #include <maxscale/config2.hh>
 
@@ -898,8 +899,6 @@ RegexHintFilter::RegexHintFilter(const std::string& name)
  */
 extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
-    static MXS_FILTER_OBJECT MyObject = RegexHintFilter::s_object;
-
     static MXS_MODULE info =
     {
         MXS_MODULE_API_FILTER,
@@ -908,7 +907,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         "A routing hint filter that uses regular expressions to direct queries",
         "V1.1.0",
         RCAP_TYPE_CONTIGUOUS_INPUT,
-        &MyObject,
+        &mxs::FilterApi<RegexHintFilter>::s_api,
         NULL,                                                                   /* Process init. */
         NULL,                                                                   /* Process finish. */
         NULL,                                                                   /* Thread init. */

@@ -567,7 +567,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         "Firewall Filter",
         "V1.2.0",
         RCAP_TYPE_STMT_INPUT,
-        &Dbfw::s_object,
+        &mxs::FilterApi<Dbfw>::s_api,
         NULL,           /* Process init. */
         NULL,           /* Process finish. */
         dbfw_thr_init,  /* Thread init. */

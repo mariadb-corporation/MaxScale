@@ -27,7 +27,7 @@ enum ds_state
 
 class InsertStreamSession;
 
-class InsertStream : public maxscale::Filter<InsertStream, InsertStreamSession>
+class InsertStream : public MXS_FILTER
 {
 public:
     InsertStream(const InsertStream&) = delete;

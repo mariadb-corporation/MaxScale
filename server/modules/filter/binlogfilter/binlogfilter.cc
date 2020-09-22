@@ -82,7 +82,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         desc,
         "V1.0.0",
         RCAP_TYPE_STMT_OUTPUT,
-        &BinlogFilter::s_object,
+        &mxs::FilterApi<BinlogFilter>::s_api,
         nullptr,
         nullptr,
         nullptr,

@@ -14,6 +14,7 @@
 
 #include <string>
 #include <maxscale/ccdefs.hh>
+#include <maxscale/config2.hh>
 #include <maxscale/filter.hh>
 #include <maxscale/pcre2.hh>
 #include "binlogfiltersession.hh"
@@ -32,7 +33,7 @@ struct BinlogConfig : public mxs::config::Configuration
     std::string             rewrite_dest;
 };
 
-class BinlogFilter : public maxscale::Filter<BinlogFilter, BinlogFilterSession>
+class BinlogFilter : public MXS_FILTER
 {
     // Prevent copy-constructor and assignment operator usage
     BinlogFilter(const BinlogFilter&);

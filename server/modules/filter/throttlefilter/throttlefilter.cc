@@ -7,6 +7,7 @@
 #define MXS_MODULE_NAME "throttlefilter"
 
 #include <maxscale/ccdefs.hh>
+#include <maxscale/config2.hh>
 #include <maxscale/utils.h>
 #include <maxscale/json_api.hh>
 #include <maxscale/jansson.hh>
@@ -39,7 +40,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         description,
         "V1.0.0",
         RCAP_TYPE_STMT_INPUT,
-        &throttle::ThrottleFilter::s_object,
+        &mxs::FilterApi<throttle::ThrottleFilter>::s_api,
         NULL,                               /* Process init. */
         NULL,                               /* Process finish. */
         NULL,                               /* Thread init. */

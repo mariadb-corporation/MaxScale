@@ -177,7 +177,7 @@ private:
 /**
  * The Firewall filter instance.
  */
-class Dbfw : public mxs::Filter<Dbfw, DbfwSession>
+class Dbfw : public MXS_FILTER
 {
     Dbfw(const Dbfw&);
     Dbfw& operator=(const Dbfw&);

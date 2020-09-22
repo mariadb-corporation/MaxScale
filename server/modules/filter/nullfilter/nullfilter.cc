@@ -61,7 +61,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         "A null filter that does nothing.",
         VERSION_STRING,
         MXS_NO_MODULE_CAPABILITIES,
-        &NullFilter::s_object,
+        &mxs::FilterApi<NullFilter>::s_api,
         nullptr,   /* Process init. */
         nullptr,   /* Process finish. */
         nullptr,   /* Thread init. */

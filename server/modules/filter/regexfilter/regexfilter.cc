@@ -30,6 +30,7 @@
 #include <maxscale/config2.hh>
 #include <maxscale/filter.hh>
 #include <maxscale/modutil.hh>
+#include <maxscale/session.hh>
 
 namespace
 {
@@ -87,7 +88,7 @@ private:
     RegexInstance* m_instance;
 };
 
-class RegexInstance : public mxs::Filter<RegexInstance, RegexSession>
+class RegexInstance : public MXS_FILTER
 {
 public:
 
@@ -273,7 +274,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         description,
         "V1.1.0",
         RCAP_TYPE_CONTIGUOUS_INPUT,
-        &RegexInstance::s_object,
+        &mxs::FilterApi<RegexInstance>::s_api,
         NULL,
         NULL,
         NULL,

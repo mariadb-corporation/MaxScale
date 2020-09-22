@@ -121,7 +121,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         "A caching filter that is capable of caching and returning cached data.",
         VERSION_STRING,
         CAPABILITIES,
-        &CacheFilter::s_object,
+        &mxs::FilterApi<CacheFilter>::s_api,
         cache_process_init,     /* Process init. */
         nullptr,                /* Process finish. */
         nullptr,                /* Thread init. */

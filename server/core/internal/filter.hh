@@ -20,6 +20,7 @@
 
 #include <memory>
 #include <mutex>
+#include <maxscale/config_common.hh>
 
 /**
  * The definition of a filter from the configuration file.

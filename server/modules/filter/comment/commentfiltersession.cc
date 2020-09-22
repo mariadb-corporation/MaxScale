@@ -17,6 +17,7 @@
 #include "commentfiltersession.hh"
 #include "commentfilter.hh"
 #include <maxscale/modutil.hh>
+#include <maxscale/session.hh>
 #include <string>
 #include <regex>
 

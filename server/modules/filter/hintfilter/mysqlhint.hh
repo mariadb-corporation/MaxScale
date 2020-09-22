@@ -30,7 +30,7 @@ struct default_delete<HINT>
 
 class HintSession;
 
-class HintInstance : public mxs::Filter<HintInstance, HintSession>
+class HintInstance : public MXS_FILTER
 {
 public:
     static HintInstance*        create(const char* zName, mxs::ConfigParameters* ppParams);

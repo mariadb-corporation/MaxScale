@@ -85,7 +85,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         "A masking filter that is capable of masking/obfuscating returned column values.",
         "V1.0.0",
         RCAP_TYPE_CONTIGUOUS_INPUT | RCAP_TYPE_CONTIGUOUS_OUTPUT,
-        &MaskingFilter::s_object,
+        &mxs::FilterApi<MaskingFilter>::s_api,
         NULL,   /* Process init. */
         NULL,   /* Process finish. */
         NULL,   /* Thread init. */

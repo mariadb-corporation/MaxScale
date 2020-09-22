@@ -18,7 +18,7 @@
 #include <string>
 #include "commentconfig.hh"
 
-class CommentFilter : public maxscale::Filter<CommentFilter, CommentFilterSession>
+class CommentFilter : public MXS_FILTER
 {
 public:
     // Prevent copy-constructor and assignment operator usage

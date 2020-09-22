@@ -98,7 +98,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         "A hint parsing filter",
         "V1.0.0",
         RCAP_TYPE_CONTIGUOUS_INPUT,
-        &HintInstance::s_object,
+        &mxs::FilterApi<HintInstance>::s_api,
         NULL,       /* Process init. */
         NULL,       /* Process finish. */
         NULL,       /* Thread init. */

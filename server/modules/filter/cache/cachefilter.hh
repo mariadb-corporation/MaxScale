@@ -22,7 +22,7 @@
 #include "cacheconfig.hh"
 
 
-class CacheFilter : public maxscale::Filter<CacheFilter, CacheFilterSession>
+class CacheFilter : public MXS_FILTER
 {
 public:
     ~CacheFilter();

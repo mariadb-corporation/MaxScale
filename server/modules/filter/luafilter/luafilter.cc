@@ -49,6 +49,7 @@ extern "C" {
 #include <string.h>
 #include <mutex>
 #include <maxbase/alloc.h>
+#include <maxscale/config_common.hh>
 #include <maxscale/filter.hh>
 #include <maxscale/modutil.hh>
 #include <maxscale/query_classifier.hh>
@@ -132,7 +133,7 @@ static int lua_get_canonical(lua_State* state)
 /**
  * The Lua filter instance.
  */
-class LuaFilter : public maxscale::Filter<LuaFilter, LuaFilterSession>
+class LuaFilter : public MXS_FILTER
 {
 public:
     static LuaFilter* create(const char* name, mxs::ConfigParameters* params);
@@ -563,7 +564,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         "Lua Filter",
         "V1.0.0",
         RCAP_TYPE_CONTIGUOUS_INPUT,
-        &LuaFilter::s_object,
+        &mxs::FilterApi<LuaFilter>::s_api,
         NULL,                       /* Process init. */
         NULL,                       /* Process finish. */
         NULL,                       /* Thread init. */
