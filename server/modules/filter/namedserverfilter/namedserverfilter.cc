@@ -924,19 +924,20 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 RegexHintFilter::Settings::Settings(const string& name)
     : mxs::config::Configuration(name, &s_spec)
 {
-    add_native(&m_user, &s_user);
-    add_native(&m_source, &s_source);
-    add_native(&m_regex_options, &s_options);
+    add_native(&Settings::m_user, &s_user);
+    add_native(&Settings::m_source, &s_source);
+    add_native(&Settings::m_regex_options, &s_options);
 
-    add_native(&m_match, &s_match);
-    add_native(&m_server, &s_server);
+    add_native(&Settings::m_match, &s_match);
+    add_native(&Settings::m_server, &s_server);
 
     mxb_assert(s_match_target_specs.size() == n_regex_max);
     for (int i = 0; i < n_regex_max; i++)
     {
         auto& value_store = m_match_targets[i];
         auto& spec = s_match_target_specs[i];
-        add_native(&value_store.match, spec.match);
-        add_native(&value_store.target, spec.target);
+
+        add_native(&Settings::m_match_targets, i, &MatchAndTarget::match, spec.match);
+        add_native(&Settings::m_match_targets, i, &MatchAndTarget::target, spec.target);
     }
 }
