@@ -12,6 +12,9 @@
  */
 
 #include "protocolmodule.hh"
+#include "clientconnection.hh"
+
+using namespace std;
 
 namespace mxsmongo
 {
@@ -19,54 +22,63 @@ namespace mxsmongo
 //static
 ProtocolModule* ProtocolModule::create()
 {
+    TRACE();
     return new ProtocolModule;
 }
 
-std::unique_ptr<mxs::ClientConnection>
+unique_ptr<mxs::ClientConnection>
 ProtocolModule::create_client_protocol(MXS_SESSION* pSession, mxs::Component* pComponent)
 {
+    TRACE();
+    return unique_ptr<mxs::ClientConnection>(new ClientConnection(pSession, pComponent));
+}
+
+unique_ptr<mxs::BackendConnection>
+ProtocolModule::create_backend_protocol(MXS_SESSION* pSession,
+                                        SERVER* pServer,
+                                        mxs::Component* pComponent)
+{
+    TRACE();
     mxb_assert(!true);
     return nullptr;
 }
 
-std::unique_ptr<mxs::BackendConnection>
-ProtocolModule::create_backend_protocol(MXS_SESSION* pSession, SERVER* pServer, mxs::Component* pComponent)
+string ProtocolModule::auth_default() const
 {
-    mxb_assert(!true);
-    return nullptr;
-}
-
-std::string ProtocolModule::auth_default() const
-{
+    TRACE();
     mxb_assert(!true);
     return "";
 }
 
-GWBUF* ProtocolModule::reject(const std::string& host)
+GWBUF* ProtocolModule::reject(const string& host)
 {
+    TRACE();
     mxb_assert(!true);
     return nullptr;
 }
 
 uint64_t ProtocolModule::capabilities() const
 {
-    mxb_assert(!true);
+    TRACE();
     return 0;
 }
 
-std::string ProtocolModule::name() const
+string ProtocolModule::name() const
 {
+    TRACE();
     return MXS_MODULE_NAME;
 }
 
-std::unique_ptr<mxs::UserAccountManager> ProtocolModule::create_user_data_manager()
+unique_ptr<mxs::UserAccountManager> ProtocolModule::create_user_data_manager()
 {
+    TRACE();
     mxb_assert(!true);
     return nullptr;
 }
 
 ProtocolModule::AuthenticatorList ProtocolModule::create_authenticators(const mxs::ConfigParameters& params)
 {
+    TRACE();
     mxb_assert(!true);
     return {};
 }

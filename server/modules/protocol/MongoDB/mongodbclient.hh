@@ -15,7 +15,11 @@
 #define MXS_MODULE_NAME "mongodbclient"
 
 #include <maxscale/ccdefs.hh>
+#include <maxscale/log.hh>
 
 namespace mxsmongo
 {
 }
+
+#define TRACE() \
+    MXS_NOTICE("%s", __func__)

@@ -1,5 +1,6 @@
 
 add_library(mongodbclient SHARED
+  clientconnection.cc
   mongodbclient.cc
   protocolmodule.cc
   )
