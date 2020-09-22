@@ -507,13 +507,20 @@ bool Configuration::configure(json_t* json, std::set<std::string>* pUnrecognized
     {
         if (auto pValue = find_value(key))
         {
-            string message;
+            json_t* old_val = pValue->to_json();
 
-            if (!pValue->set_from_json(value, &message))
+            if (!json_equal(old_val, value))
             {
-                MXS_ERROR("%s: %s", m_pSpecification->module().c_str(), message.c_str());
-                configured = false;
+                string message;
+
+                if (!pValue->set_from_json(value, &message))
+                {
+                    MXS_ERROR("%s: %s", m_pSpecification->module().c_str(), message.c_str());
+                    configured = false;
+                }
             }
+
+            json_decref(old_val);
         }
         else if (!is_core_param(m_pSpecification->kind(), key))
         {
