@@ -14,6 +14,9 @@
 
 $colors: (
     'error': $error,
+    'alert': $error,
+    'notice': $code-color,
+    'debug': $accent,
     'warning': $warning,
     'success': $success,
     'info': $info,
