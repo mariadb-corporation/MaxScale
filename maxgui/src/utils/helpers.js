@@ -18,7 +18,7 @@ export const isEqual = require('lodash/isEqual')
 export const xorWith = require('lodash/xorWith')
 export const uniqueId = require('lodash/uniqueId')
 export const get = require('lodash/get')
-
+export const unionBy = require('lodash/unionBy')
 export const lodash = {
     isEmpty: isEmpty,
     cloneDeep: cloneDeep,
@@ -26,6 +26,7 @@ export const lodash = {
     xorWith: xorWith,
     uniqueId: uniqueId,
     objectGet: get,
+    unionBy: unionBy,
 }
 
 export function isNull(v) {

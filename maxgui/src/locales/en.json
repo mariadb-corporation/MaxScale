@@ -91,7 +91,7 @@
     "listeners": "listener | listeners",
 
     "maxScaleParameters": "MaxScale Parameters",
-    "usersAndPermissions": "Users & Permissions",
+    "maxscaleLogs": "MaxScale Logs",
     "protocol": "protocol | protocols",
     "module": "module | modules",
     "forceClosing": "Force closing",
