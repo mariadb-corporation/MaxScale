@@ -23,7 +23,7 @@ namespace maxscale
 /**
  * An instance of FilterModule represents a filter module.
  */
-class FilterModule : public SpecificModule<FilterModule, MXS_FILTER_OBJECT>
+class FilterModule : public SpecificModule<FilterModule, FILTER_API>
 {
     FilterModule(const FilterModule&);
     FilterModule& operator=(const FilterModule&);
@@ -52,7 +52,7 @@ public:
     private:
         friend class FilterModule;
 
-        Instance(FilterModule* pModule, MXS_FILTER* pInstance);
+        Instance(FilterModule* pModule, mxs::Filter* pInstance);
 
     private:
         friend class Session;
@@ -69,7 +69,7 @@ public:
 
     private:
         FilterModule& m_module;
-        MXS_FILTER*   m_pInstance;
+        mxs::Filter*  m_pInstance;
     };
 
     class Session
@@ -117,22 +117,22 @@ public:
 private:
     friend class Instance;
 
-    void destroyInstance(MXS_FILTER* pInstance)
+    void destroyInstance(mxs::Filter* pInstance)
     {
         delete pInstance;
     }
 
-    mxs::FilterSession* newSession(MXS_FILTER* pInstance, MXS_SESSION* pSession, SERVICE* pService)
+    mxs::FilterSession* newSession(mxs::Filter* pInstance, MXS_SESSION* pSession, SERVICE* pService)
     {
         return pInstance->newSession(pSession, pService);
     }
 
-    int routeQuery(MXS_FILTER* pInstance, mxs::Routable* pFilter_session, GWBUF* pStatement)
+    int routeQuery(mxs::Filter* pInstance, mxs::Routable* pFilter_session, GWBUF* pStatement)
     {
         return pFilter_session->routeQuery(pStatement);
     }
 
-    int clientReply(MXS_FILTER* pInstance,
+    int clientReply(mxs::Filter* pInstance,
                     mxs::Routable* pFilter_session,
                     GWBUF* pStatement,
                     const mxs::Reply& reply)
@@ -143,10 +143,10 @@ private:
 
 private:
     // Not accepted by CentOS6: friend Base;
-    friend class SpecificModule<FilterModule, MXS_FILTER_OBJECT>;
+    friend class SpecificModule<FilterModule, FILTER_API>;
 
     FilterModule(const MXS_MODULE* pModule)
-        : SpecificModule<FilterModule, MXS_FILTER_OBJECT>(pModule)
+        : SpecificModule<FilterModule, FILTER_API>(pModule)
     {
     }
 };

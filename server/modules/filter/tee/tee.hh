@@ -26,7 +26,7 @@
  * The instance structure for the TEE filter - this holds the configuration
  * information for the filter.
  */
-class Tee : public MXS_FILTER
+class Tee : public mxs::Filter
 {
     Tee(const Tee&);
     const Tee& operator=(const Tee&);

@@ -37,7 +37,7 @@ using SourceHostVector = std::vector<SourceHost>;
 /**
  * Filter instance definition
  */
-class RegexHintFilter : public MXS_FILTER
+class RegexHintFilter : public mxs::Filter
 {
 public:
     /* Total statements diverted statistics. Unreliable due to lockless yet

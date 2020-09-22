@@ -31,7 +31,7 @@ auto_ptr<FilterModule::Instance> FilterModule::createInstance(const char* zName,
 {
     auto_ptr<Instance> sInstance;
 
-    MXS_FILTER* pFilter = m_pApi->createInstance(zName, pParameters);
+    mxs::Filter* pFilter = m_pApi->createInstance(zName, pParameters);
 
     if (pFilter)
     {
@@ -45,7 +45,7 @@ auto_ptr<FilterModule::Instance> FilterModule::createInstance(const char* zName,
 // FilterModule::Instance
 //
 
-FilterModule::Instance::Instance(FilterModule* pModule, MXS_FILTER* pInstance)
+FilterModule::Instance::Instance(FilterModule* pModule, mxs::Filter* pInstance)
     : m_module(*pModule)
     , m_pInstance(pInstance)
 {

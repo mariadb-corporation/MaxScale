@@ -1247,7 +1247,7 @@ ServiceEndpoint::~ServiceEndpoint()
 }
 
 // static
-int32_t ServiceEndpoint::upstream_function(MXS_FILTER* instance,
+int32_t ServiceEndpoint::upstream_function(Filter* instance,
                                            mxs::Routable* session,
                                            GWBUF* buffer,
                                            const mxs::ReplyRoute& down,

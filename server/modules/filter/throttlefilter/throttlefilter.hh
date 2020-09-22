@@ -46,7 +46,7 @@ struct ThrottleConfig
     // allowable speed is.
 };
 
-class ThrottleFilter : public MXS_FILTER
+class ThrottleFilter : public mxs::Filter
 {
 public:
     static ThrottleFilter* create(const char* zName, mxs::ConfigParameters* pParams);

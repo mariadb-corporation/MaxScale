@@ -22,7 +22,7 @@
 class MaskingRules;
 
 
-class MaskingFilter : public MXS_FILTER
+class MaskingFilter : public mxs::Filter
 {
 public:
     typedef std::shared_ptr<MaskingRules> SMaskingRules;

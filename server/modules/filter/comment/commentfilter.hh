@@ -18,7 +18,7 @@
 #include <string>
 #include "commentconfig.hh"
 
-class CommentFilter : public MXS_FILTER
+class CommentFilter : public mxs::Filter
 {
 public:
     // Prevent copy-constructor and assignment operator usage

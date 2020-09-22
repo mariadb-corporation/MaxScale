@@ -117,7 +117,7 @@ private:
     TpmFilter* m_instance;
 };
 
-class TpmFilter : public MXS_FILTER
+class TpmFilter : public mxs::Filter
 {
 public:
     ~TpmFilter();

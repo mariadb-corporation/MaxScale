@@ -139,7 +139,7 @@ struct Config : public mxs::config::Configuration
     mxs::config::RegexValue exclude;    /* Optional text to match against for exclusion */
 };
 
-class TopFilter : public MXS_FILTER
+class TopFilter : public mxs::Filter
 {
 public:
     static TopFilter* create(const std::string& name, mxs::ConfigParameters* params)

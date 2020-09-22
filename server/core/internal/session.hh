@@ -53,7 +53,7 @@ public:
     }
 
     SFilterDef     filter;
-    MXS_FILTER*    instance;
+    mxs::Filter*   instance;
     mxs::Routable* session;
     mxs::Routable* up;
     mxs::Routable* down;

@@ -88,7 +88,7 @@ private:
     RegexInstance* m_instance;
 };
 
-class RegexInstance : public MXS_FILTER
+class RegexInstance : public mxs::Filter
 {
 public:
 

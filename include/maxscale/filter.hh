@@ -34,12 +34,15 @@ class Configuration;
 }
 }
 
-/**
- * MXS_FILTER is the abstract class that filters implement.
- */
-struct MXS_FILTER
+namespace maxscale
 {
-    virtual ~MXS_FILTER() = default;
+
+/**
+ * Filter is the base class of all filters.
+ */
+struct Filter
+{
+    virtual ~Filter() = default;
 
     /**
      * Called to create a new user session within the filter
@@ -86,8 +89,6 @@ struct MXS_FILTER
     virtual mxs::config::Configuration* getConfiguration() = 0;
 };
 
-namespace maxscale
-{
 /**
  * @class FilterSession filter.hh <maxscale/filter.hh>
  *
@@ -168,20 +169,11 @@ protected:
     mxs::Routable* m_down = (mxs::Routable*)BAD_ADDR;   /*< The downstream component. */
     mxs::Routable* m_up = (mxs::Routable*)BAD_ADDR;     /*< The upstream component. */
 };
-}
 
 /**
- * The filter API version. If the MXS_FILTER_OBJECT structure or the filter API
- * is changed these values must be updated in line with the rules in the
- * file modinfo.h.
+ * Filter module call api.
  */
-// TODO: Update this from 4.0.0 to 5.0.0 for 2.6
-#define MXS_FILTER_VERSION {4, 0, 0}
-
-/**
- * The "module object" structure for a filter module.
- */
-struct MXS_FILTER_OBJECT
+struct FILTER_API
 {
     /**
      * @brief Create a new instance of the filter
@@ -195,8 +187,19 @@ struct MXS_FILTER_OBJECT
      *
      * @return New filter instance on NULL on error
      */
-    MXS_FILTER* (* createInstance)(const char* name, mxs::ConfigParameters* params);
+    Filter* (* createInstance)(const char* name, mxs::ConfigParameters* params);
 };
+}
+
+/**
+ * The filter API version. If the MXS_FILTER_OBJECT structure or the filter API
+ * is changed these values must be updated in line with the rules in the
+ * file modinfo.h.
+ */
+// TODO: Update this from 4.0.0 to 5.0.0 for 2.6
+#define MXS_FILTER_VERSION {4, 0, 0}
+
+
 
 namespace maxscale
 {
@@ -208,18 +211,18 @@ public:
     FilterApi(const FilterApi&) = delete;
     FilterApi& operator=(const FilterApi&) = delete;
 
-    static MXS_FILTER* createInstance(const char* name, mxs::ConfigParameters* params)
+    static Filter* createInstance(const char* name, mxs::ConfigParameters* params)
     {
-        MXS_FILTER* inst = nullptr;
+        Filter* inst = nullptr;
         MXS_EXCEPTION_GUARD(inst = FilterClass::create(name, params));
         return inst;
     }
 
-    static MXS_FILTER_OBJECT s_api;
+    static FILTER_API s_api;
 };
 
 template<class FilterClass>
-MXS_FILTER_OBJECT FilterApi<FilterClass>::s_api =
+FILTER_API FilterApi<FilterClass>::s_api =
 {
     &FilterApi<FilterClass>::createInstance,
 };
@@ -238,7 +241,7 @@ class MXS_FILTER_DEF
  *
  * @return A filter instance.
  */
-MXS_FILTER* filter_def_get_instance(const MXS_FILTER_DEF* filter_def);
+mxs::Filter* filter_def_get_instance(const MXS_FILTER_DEF* filter_def);
 
 /**
  * Get common filter parameters

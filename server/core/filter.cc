@@ -85,7 +85,7 @@ const MXS_MODULE_PARAM* common_filter_params()
  */
 SFilterDef filter_alloc(const char* name, const char* module, mxs::ConfigParameters* params)
 {
-    MXS_FILTER_OBJECT* object = (MXS_FILTER_OBJECT*)load_module(module, MODULE_FILTER);
+    FILTER_API* object = (FILTER_API*)load_module(module, MODULE_FILTER);
 
     if (object == NULL)
     {
@@ -93,7 +93,7 @@ SFilterDef filter_alloc(const char* name, const char* module, mxs::ConfigParamet
         return NULL;
     }
 
-    MXS_FILTER* instance = object->createInstance(name, params);
+    Filter* instance = object->createInstance(name, params);
 
     if (instance == NULL)
     {
@@ -129,8 +129,8 @@ SFilterDef filter_alloc(const char* name, const char* module, mxs::ConfigParamet
 
 FilterDef::FilterDef(std::string name,
                      std::string module,
-                     MXS_FILTER_OBJECT* object,
-                     MXS_FILTER* instance,
+                     FILTER_API* object,
+                     Filter* instance,
                      mxs::ConfigParameters params)
     : m_name(std::move(name))
     , m_module(std::move(module))
@@ -197,7 +197,7 @@ void filter_destroy_instances()
     this_unit.filters.clear();
 }
 
-MXS_FILTER* filter_def_get_instance(const MXS_FILTER_DEF* filter_def)
+Filter* filter_def_get_instance(const MXS_FILTER_DEF* filter_def)
 {
     const FilterDef* filter = static_cast<const FilterDef*>(filter_def);
     mxb_assert(filter);

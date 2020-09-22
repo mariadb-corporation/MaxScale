@@ -23,7 +23,7 @@
  * concurrently. This should be considered if the object contains fields that are unsafe to
  * access/modify concurrently.
  */
-class ExampleFilter : public MXS_FILTER
+class ExampleFilter : public mxs::Filter
 {
     // Prevent copy-constructor and assignment operator usage
     ExampleFilter(const ExampleFilter&);

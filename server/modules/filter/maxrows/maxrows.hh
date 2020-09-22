@@ -71,7 +71,7 @@ private:
     bool        m_collect {true};
 };
 
-class MaxRows : public MXS_FILTER
+class MaxRows : public mxs::Filter
 {
 public:
     MaxRows(const MaxRows&) = delete;

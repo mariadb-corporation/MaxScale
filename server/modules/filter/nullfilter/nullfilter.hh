@@ -17,7 +17,7 @@
 #include <maxscale/filter.hh>
 #include "nullfiltersession.hh"
 
-class NullFilter : public MXS_FILTER
+class NullFilter : public mxs::Filter
 {
 public:
     NullFilter(const NullFilter&) = delete;

@@ -33,7 +33,7 @@ struct BinlogConfig : public mxs::config::Configuration
     std::string             rewrite_dest;
 };
 
-class BinlogFilter : public MXS_FILTER
+class BinlogFilter : public mxs::Filter
 {
     // Prevent copy-constructor and assignment operator usage
     BinlogFilter(const BinlogFilter&);

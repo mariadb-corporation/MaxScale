@@ -22,7 +22,7 @@
 #include "cacheconfig.hh"
 
 
-class CacheFilter : public MXS_FILTER
+class CacheFilter : public mxs::Filter
 {
 public:
     ~CacheFilter();

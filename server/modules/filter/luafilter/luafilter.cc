@@ -133,7 +133,7 @@ static int lua_get_canonical(lua_State* state)
 /**
  * The Lua filter instance.
  */
-class LuaFilter : public MXS_FILTER
+class LuaFilter : public mxs::Filter
 {
 public:
     static LuaFilter* create(const char* name, mxs::ConfigParameters* params);

@@ -186,7 +186,7 @@ private:
     static CcrHintValue search_ccr_hint(GWBUF* buffer);
 };
 
-class CCRFilter : public MXS_FILTER
+class CCRFilter : public mxs::Filter
 {
 public:
     friend class CCRSession;    // Session needs to access & modify data in filter object

@@ -27,7 +27,7 @@ enum ds_state
 
 class InsertStreamSession;
 
-class InsertStream : public MXS_FILTER
+class InsertStream : public mxs::Filter
 {
 public:
     InsertStream(const InsertStream&) = delete;

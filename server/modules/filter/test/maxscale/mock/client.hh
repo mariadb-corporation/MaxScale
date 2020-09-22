@@ -130,7 +130,7 @@ public:
     int32_t clientReply(GWBUF* pResponse, const mxs::ReplyRoute& down, const mxs::Reply& reply);
 
 private:
-    static int32_t clientReply(MXS_FILTER* pInstance,
+    static int32_t clientReply(mxs::Filter* pInstance,
                                mxs::Routable* pSession,
                                GWBUF* pResponse,
                                const mxs::ReplyRoute& down,
