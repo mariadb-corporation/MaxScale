@@ -18,6 +18,7 @@
 
 #include <atomic>
 #include <cinttypes>
+#include <fstream>
 
 #ifdef HAVE_SYSTEMD
 #include <systemd/sd-journal.h>
@@ -31,6 +32,7 @@
 #include <maxscale/jansson.hh>
 #include <maxscale/json_api.hh>
 #include <maxscale/session.hh>
+#include <maxbase/string.hh>
 
 namespace
 {
@@ -248,6 +250,125 @@ std::pair<json_t*, Cursors> get_syslog_data(const std::string& cursor, int rows)
     return {arr, cursors};
 }
 
+json_t* line_to_json(std::string line, int id)
+{
+    // The timestamp is always the same size followed by three empty spaces. If high precision logging
+    // is enabled, the timestamp string is four characters longer.
+    mxb::Regex date("^([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}([.][0-9]{3})?)");
+    mxb_assert(date.valid());
+    auto captures = date.substr(line);
+
+    if (captures.empty())
+    {
+        // Not a valid log message, ignore it
+        return nullptr;
+    }
+
+    const auto& timestamp = captures[0];
+    line.erase(0, timestamp.size());
+    mxb::ltrim(line);
+
+    auto prio_end = line.find_first_of(':');
+
+    if (prio_end == std::string::npos)
+    {
+        return nullptr;
+    }
+
+    std::string priority = line.substr(0, prio_end);
+    mxb::trim(priority);
+    line.erase(0, prio_end + 1);
+    mxb::ltrim(line);
+
+    auto get_value = [&line](char lp, char rp) {
+            std::string rval;
+
+            if (line.front() == lp)
+            {
+                line.erase(0, 1);
+                rval = line.substr(0, line.find_first_of(rp, 1));
+                line.erase(0, rval.size() + 1);
+                mxb::ltrim(line);
+            }
+
+            return rval;
+        };
+
+    std::string session = get_value('(', ')');
+    std::string module = get_value('[', ']');
+    std::string object = get_value('(', ')');
+
+    if (!session.empty() && object.empty() && !std::all_of(session.begin(), session.end(), ::isdigit))
+    {
+        // Sessions are always just numbers. This can cause false positives if an object name consists of only
+        // numbers. Hopefully people don't do that or use the systemd journal if they do.
+        object.swap(session);
+    }
+
+    mxb::trim(line);
+
+    json_t* obj = json_object();
+    json_object_set_new(obj, "id", json_string(std::to_string(id).c_str()));
+    json_object_set_new(obj, "message", json_string(line.c_str()));
+    json_object_set_new(obj, "timestamp", json_string(timestamp.c_str()));
+    json_object_set_new(obj, "priority", json_string(priority.c_str()));
+
+    if (!session.empty())
+    {
+        json_object_set_new(obj, "session", json_string(session.c_str()));
+    }
+
+    if (!module.empty())
+    {
+        json_object_set_new(obj, "module", json_string(module.c_str()));
+    }
+
+    if (!object.empty())
+    {
+        json_object_set_new(obj, "object", json_string(object.c_str()));
+    }
+
+    return obj;
+}
+
+std::pair<json_t*, Cursors> get_maxlog_data(const std::string& cursor, int rows)
+{
+    Cursors cursors;
+    json_t* arr = json_array();
+    std::ifstream file(mxb_log_get_filename());
+
+    if (file.good())
+    {
+        int end = std::count(std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>(), '\n');
+        file.seekg(std::ios_base::beg);
+        int n = cursor.empty() ? std::max(end - 50, 0) : atoi(cursor.c_str());
+
+        for (int i = 0; i < n; i++)
+        {
+            file.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+        }
+
+        int num_lines = 0;
+
+        for (std::string line; std::getline(file, line) && num_lines < rows; ++num_lines)
+        {
+            if (json_t* obj = line_to_json(line, n + num_lines))
+            {
+                json_array_insert_new(arr, 0, obj);
+            }
+        }
+
+        if (n > 0)
+        {
+            cursors.prev = std::to_string(std::max(n - 50, 0));
+        }
+
+        cursors.current = std::to_string(n);
+    }
+
+    return {arr, cursors};
+}
+
 json_t* get_log_priorities()
 {
     json_t* arr = json_array();
@@ -320,6 +441,10 @@ json_t* mxs_logs_to_json(const char* host, const std::string& cursor, int rows)
     if (cnf.syslog.get())
     {
         std::tie(log, cursors) = get_syslog_data(cursor, rows);
+    }
+    else if (cnf.maxlog.get())
+    {
+        std::tie(log, cursors) = get_maxlog_data(cursor, rows);
     }
 
     json_object_set_new(attr, "log", log);
