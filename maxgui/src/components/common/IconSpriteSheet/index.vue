@@ -1,5 +1,10 @@
 <template>
-    <v-icon :class="iconClass" :size="size" :color="color">
+    <v-icon
+        :class="iconClass"
+        :size="icon === emptyIcon ? 18 : size"
+        :style="icon === emptyIcon ? { margin: '0 -2px' } : ''"
+        :color="color"
+    >
         {{ icon }}
     </v-icon>
 </template>
@@ -41,6 +46,24 @@ export default {
                         '$vuetify.icons.statusInfo',
                     ],
                     colorClasses: ['text-error', 'text-success', 'text-warning', 'text-info'],
+                },
+                logPriorities: {
+                    frames: {
+                        alert: '$vuetify.icons.alertWarning',
+                        error: '$vuetify.icons.statusError',
+                        warning: '$vuetify.icons.statusInfo',
+                        notice: '$vuetify.icons.reports',
+                        info: '$vuetify.icons.statusInfo',
+                        debug: 'bug_report',
+                    },
+                    colorClasses: {
+                        alert: 'text-error',
+                        error: 'text-error',
+                        warning: 'text-warning',
+                        notice: 'text-info',
+                        info: 'text-info',
+                        debug: 'text-accent',
+                    },
                 },
             },
         }
