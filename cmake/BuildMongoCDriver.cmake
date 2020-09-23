@@ -9,6 +9,8 @@
 # BSON_LIBRARIES     - The libraries for the bson library.
 #
 # MONGO_INCLUDE_DIR  - The mongo include directory.
+# MONGO_SRC_DIR      - The mongo source directory.
+# MONGO_BUILD_DIR    - The mongo build directory where generated files end up.
 # MONGO_LIBRARIES    - The libraries for the mongo library.
 #
 
@@ -37,8 +39,10 @@ ExternalProject_Add(mongo-c-driver
   LOG_BUILD 1
   LOG_INSTALL 1)
 
-set(BSON_INCLUDE_DIR ${MONGO_C_DRIVER_INSTALL}/include/libbson-1.0 CACHE INTERNAL "")
-set(BSON_LIBRARIES   ${MONGO_C_DRIVER_INSTALL}/lib/libbson-static-1.0.a)
+set(BSON_INCLUDE_DIR  ${MONGO_C_DRIVER_INSTALL}/include/libbson-1.0 CACHE INTERNAL "")
+set(BSON_LIBRARIES    ${MONGO_C_DRIVER_INSTALL}/lib/libbson-static-1.0.a)
 
 set(MONGO_INCLUDE_DIR ${MONGO_C_DRIVER_INSTALL}/include/libmongoc-1.0 CACHE INTERNAL "")
+set(MONGO_SRC_DIR     ${MONGO_C_DRIVER_SOURCE}/src/libmongoc/src/mongoc CACHE INTERNAL "")
+set(MONGO_BUILD_DIR   ${MONGO_C_DRIVER_BINARY}/src/libmongoc/src/mongoc CACHE INTERNAL "")
 set(MONGO_LIBRARIES   ${MONGO_C_DRIVER_INSTALL}/lib/libmongoc-static-1.0.a)
