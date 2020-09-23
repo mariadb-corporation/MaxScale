@@ -187,8 +187,6 @@ static bool   change_cwd();
 static void   log_exit_status();
 static int    daemonize();
 static bool   sniff_configuration(const char* filepath);
-static bool   modules_process_init();
-static void   modules_process_finish();
 static void   disable_module_unloading(const char* arg);
 static void   enable_module_unloading(const char* arg);
 static void   enable_statement_logging(const char* arg);
@@ -2967,72 +2965,6 @@ static bool sniff_configuration(const char* filepath)
     }
 
     return rv == 0;
-}
-
-/**
- * Calls init on all loaded modules.
- *
- * @return True, if all modules were successfully initialized.
- */
-static bool modules_process_init()
-{
-    bool initialized = false;
-
-    MXS_MODULE_ITERATOR i = mxs_module_iterator_get(NULL);
-    MXS_MODULE* module = NULL;
-
-    while ((module = mxs_module_iterator_get_next(&i)) != NULL)
-    {
-        if (module->process_init)
-        {
-            int rc = (module->process_init)();
-
-            if (rc != 0)
-            {
-                break;
-            }
-        }
-    }
-
-    if (module)
-    {
-        // If module is non-NULL it means that the initialization failed for
-        // that module. We now need to call finish on all modules that were
-        // successfully initialized.
-        MXS_MODULE* failed_module = module;
-        i = mxs_module_iterator_get(NULL);
-
-        while ((module = mxs_module_iterator_get_next(&i)) != failed_module)
-        {
-            if (module->process_finish)
-            {
-                (module->process_finish)();
-            }
-        }
-    }
-    else
-    {
-        initialized = true;
-    }
-
-    return initialized;
-}
-
-/**
- * Calls process_finish on all loaded modules.
- */
-static void modules_process_finish()
-{
-    MXS_MODULE_ITERATOR i = mxs_module_iterator_get(NULL);
-    MXS_MODULE* module = NULL;
-
-    while ((module = mxs_module_iterator_get_next(&i)) != NULL)
-    {
-        if (module->process_finish)
-        {
-            (module->process_finish)();
-        }
-    }
 }
 
 static void enable_module_unloading(const char* arg)

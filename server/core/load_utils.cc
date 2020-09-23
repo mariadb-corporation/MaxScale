@@ -859,48 +859,6 @@ const MXS_MODULE* get_module(const char* name, const char* type)
     return mod ? mod->info : NULL;
 }
 
-MXS_MODULE_ITERATOR mxs_module_iterator_get(const char* type)
-{
-    LOADED_MODULE* module = registered;
-
-    while (module && type && (module->type == type))
-    {
-        module = module->next;
-    }
-
-    MXS_MODULE_ITERATOR iterator;
-    iterator.type = type;
-    iterator.position = module;
-
-    return iterator;
-}
-
-bool mxs_module_iterator_has_next(const MXS_MODULE_ITERATOR* iterator)
-{
-    return iterator->position != NULL;
-}
-
-MXS_MODULE* mxs_module_iterator_get_next(MXS_MODULE_ITERATOR* iterator)
-{
-    MXS_MODULE* module = NULL;
-    LOADED_MODULE* loaded_module = (LOADED_MODULE*)iterator->position;
-
-    if (loaded_module)
-    {
-        module = loaded_module->info;
-
-        do
-        {
-            loaded_module = loaded_module->next;
-        }
-        while (loaded_module && iterator->type && (loaded_module->type == iterator->type));
-
-        iterator->position = loaded_module;
-    }
-
-    return module;
-}
-
 const char* mxs_module_get_effective_name(const char* name)
 {
     const char* effective_name = NULL;
@@ -934,39 +892,57 @@ const char* mxs_module_get_effective_name(const char* name)
     return effective_name;
 }
 
-bool modules_thread_init()
+namespace
 {
-    bool initialized = false;
-
-    MXS_MODULE_ITERATOR i = mxs_module_iterator_get(NULL);
-    MXS_MODULE* module = NULL;
-
-    while ((module = mxs_module_iterator_get_next(&i)) != NULL)
+enum class InitType
+{
+    PROCESS,
+    THREAD
+};
+bool call_init_funcs(InitType init_type)
+{
+    LOADED_MODULE* failed_init_module = nullptr;
+    auto current_module = registered;
+    while (current_module)
     {
-        if (module->thread_init)
+        int rc = 0;
+        auto init_func = (init_type == InitType::PROCESS) ? current_module->info->process_init :
+            current_module->info->thread_init;
+        if (init_func)
         {
-            int rc = (module->thread_init)();
-
-            if (rc != 0)
-            {
-                break;
-            }
+            rc = init_func();
+        }
+        if (rc == 0)
+        {
+            current_module = current_module->next;
+        }
+        else
+        {
+            failed_init_module = current_module;
+            break;
         }
     }
 
-    if (module)
+    bool initialized = false;
+    if (failed_init_module)
     {
-        // If module is non-NULL it means that the initialization failed for
-        // that module. We now need to call finish on all modules that were
-        // successfully initialized.
-        MXS_MODULE* failed_module = module;
-        i = mxs_module_iterator_get(NULL);
-
-        while ((module = mxs_module_iterator_get_next(&i)) != failed_module)
+        // Init failed for a module. Call finish on so-far initialized modules.
+        current_module = registered;
+        while (current_module)
         {
-            if (module->thread_finish)
+            auto finish_func = (init_type == InitType::PROCESS) ? current_module->info->process_finish :
+                current_module->info->thread_finish;
+            if (finish_func)
             {
-                (module->thread_finish)();
+                finish_func();
+            }
+            if (current_module == failed_init_module)
+            {
+                break;
+            }
+            else
+            {
+                current_module = current_module->next;
             }
         }
     }
@@ -978,16 +954,39 @@ bool modules_thread_init()
     return initialized;
 }
 
+void call_finish_funcs(InitType init_type)
+{
+    auto current_module = registered;
+    while (current_module)
+    {
+        auto finish_func = (init_type == InitType::PROCESS) ? current_module->info->process_finish :
+            current_module->info->thread_finish;
+        if (finish_func)
+        {
+            finish_func();
+        }
+        current_module = current_module->next;
+    }
+}
+}
+
+
+bool modules_thread_init()
+{
+    return call_init_funcs(InitType::THREAD);
+}
+
 void modules_thread_finish()
 {
-    MXS_MODULE_ITERATOR i = mxs_module_iterator_get(NULL);
-    MXS_MODULE* module = NULL;
+    call_finish_funcs(InitType::THREAD);
+}
 
-    while ((module = mxs_module_iterator_get_next(&i)) != NULL)
-    {
-        if (module->thread_finish)
-        {
-            (module->thread_finish)();
-        }
-    }
+bool modules_process_init()
+{
+    return call_init_funcs(InitType::PROCESS);
+}
+
+void modules_process_finish()
+{
+    call_finish_funcs(InitType::PROCESS);
 }

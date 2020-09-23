@@ -26,6 +26,18 @@
 #define MODULE_QUERY_CLASSIFIER "QueryClassifier"   /**< A query classifier module type */
 
 /**
+ * Calls init on all loaded modules.
+ *
+ * @return True, if all modules were successfully initialized.
+ */
+bool modules_process_init();
+
+/**
+ * Calls process_finish on all loaded modules.
+ */
+void modules_process_finish();
+
+/**
  * Calls thread_init on all loaded modules.
  *
  * @return True, if all modules were successfully initialized.
@@ -93,46 +105,6 @@ void printModules();
  * Diagnostic routine to display all the loaded modules
  */
 void dprintAllModules(DCB*);
-
-typedef struct mxs_module_iterator
-{
-    const char* type;
-    void*       position;
-} MXS_MODULE_ITERATOR;
-
-/**
- * @brief Returns an iterator to modules.
- *
- * @attention It is unspecified whether a module loaded after the iterator
- *            was created, will be returned by the iterator. The behaviour
- *            is undefined if a module is unloaded while an iteration is
- *            being performed.
- *
- * @param type  The type of modules that should be returned. If NULL,
- *              then all modules are returned.
- *
- * @return An iterator.
- */
-MXS_MODULE_ITERATOR mxs_module_iterator_get(const char* type);
-
-/**
- * @brief Indicates whether the iterator has a module to return.
- *
- * @param iterator  An iterator
- *
- * @return True if a subsequent call to @c mxs_module_iterator_get
- *         will return a module.
- */
-bool mxs_module_iterator_has_next(const MXS_MODULE_ITERATOR* iterator);
-
-/**
- * @brief Returns the next module and advances the iterator.
- *
- * @param iterator  An iterator.
- *
- * @return A module if there was a module to return, NULL otherwise.
- */
-MXS_MODULE* mxs_module_iterator_get_next(MXS_MODULE_ITERATOR* iterator);
 
 /**
  * @brief Convert module to JSON
