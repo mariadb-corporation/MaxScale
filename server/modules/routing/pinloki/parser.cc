@@ -35,6 +35,56 @@ using CMT = pinloki::ChangeMasterType;
 namespace
 {
 
+constexpr std::array<const char*, int(CMT::END)> master_type_strs
+{
+    "MASTER_HOST",
+    "MASTER_PORT",
+    "MASTER_USER",
+    "MASTER_PASSWORD",
+    "MASTER_USE_GTID",
+    "MASTER_SSL",
+    "MASTER_SSL_CA",
+    "MASTER_SSL_CAPATH",
+    "MASTER_SSL_CERT",
+    "MASTER_SSL_CRL",
+    "MASTER_SSL_CRLPATH",
+    "MASTER_SSL_KEY",
+    "MASTER_SSL_CIPHER",
+    "MASTER_SSL_VERIFY_SERVER_CERT",
+    "MASTER_LOG_FILE",
+    "MASTER_LOG_POS",
+    "RELAY_LOG_FILE",
+    "RELAY_LOG_POS",
+    "MASTER_HEARTBEAT_PERIOD",
+    "MASTER_BIND",
+    "MASTER_CONNECT_RETRY",
+    "MASTER_DELAY",
+    "IGNORE_SERVER_IDS",
+    "DO_DOMAIN_IDS",
+    "IGNORE_DOMAIN_IDS"
+};
+
+static_assert(master_type_strs.size() == size_t(CMT::END));
+}
+
+namespace pinloki
+{
+
+std::string to_string(CMT type)
+{
+    size_t index = size_t(type);
+    if (index >= master_type_strs.size())
+    {
+        return "UNKNOWN";
+    }
+
+    return master_type_strs[index];
+}
+}
+
+namespace
+{
+
 enum class Slave
 {
     START,
@@ -65,20 +115,31 @@ struct ChangeMasterSymbols : x3::symbols<CMT>
 {
     ChangeMasterSymbols()
     {
-        add("MASTER_HOST", CMT::MASTER_HOST);
-        add("MASTER_PORT", CMT::MASTER_PORT);
-        add("MASTER_USER", CMT::MASTER_USER);
-        add("MASTER_PASSWORD", CMT::MASTER_PASSWORD);
-        add("MASTER_USE_GTID", CMT::MASTER_USE_GTID);
-        add("MASTER_SSL", CMT::MASTER_SSL);
-        add("MASTER_SSL_CA", CMT::MASTER_SSL_CA);
-        add("MASTER_SSL_CAPATH", CMT::MASTER_SSL_CAPATH);
-        add("MASTER_SSL_CERT", CMT::MASTER_SSL_CERT);
-        add("MASTER_SSL_CRL", CMT::MASTER_SSL_CRL);
-        add("MASTER_SSL_CRLPATH", CMT::MASTER_SSL_CRLPATH);
-        add("MASTER_SSL_KEY", CMT::MASTER_SSL_KEY);
-        add("MASTER_SSL_CIPHER", CMT::MASTER_SSL_CIPHER);
-        add("MASTER_SSL_VERIFY_SERVER_CERT", CMT::MASTER_SSL_VERIFY_SERVER_CERT);
+        add(to_string(CMT::MASTER_HOST), CMT::MASTER_HOST);
+        add(to_string(CMT::MASTER_PORT), CMT::MASTER_PORT);
+        add(to_string(CMT::MASTER_USER), CMT::MASTER_USER);
+        add(to_string(CMT::MASTER_PASSWORD), CMT::MASTER_PASSWORD);
+        add(to_string(CMT::MASTER_USE_GTID), CMT::MASTER_USE_GTID);
+        add(to_string(CMT::MASTER_SSL), CMT::MASTER_SSL);
+        add(to_string(CMT::MASTER_SSL_CA), CMT::MASTER_SSL_CA);
+        add(to_string(CMT::MASTER_SSL_CAPATH), CMT::MASTER_SSL_CAPATH);
+        add(to_string(CMT::MASTER_SSL_CERT), CMT::MASTER_SSL_CERT);
+        add(to_string(CMT::MASTER_SSL_CRL), CMT::MASTER_SSL_CRL);
+        add(to_string(CMT::MASTER_SSL_CRLPATH), CMT::MASTER_SSL_CRLPATH);
+        add(to_string(CMT::MASTER_SSL_KEY), CMT::MASTER_SSL_KEY);
+        add(to_string(CMT::MASTER_SSL_CIPHER), CMT::MASTER_SSL_CIPHER);
+        add(to_string(CMT::MASTER_SSL_VERIFY_SERVER_CERT), CMT::MASTER_SSL_VERIFY_SERVER_CERT);
+        add(to_string(CMT::MASTER_LOG_FILE), CMT::MASTER_LOG_FILE);
+        add(to_string(CMT::MASTER_LOG_POS), CMT::MASTER_LOG_POS);
+        add(to_string(CMT::MASTER_BIND), CMT::MASTER_BIND);
+        add(to_string(CMT::MASTER_CONNECT_RETRY), CMT::MASTER_CONNECT_RETRY);
+        add(to_string(CMT::MASTER_HEARTBEAT_PERIOD), CMT::MASTER_HEARTBEAT_PERIOD);
+        add(to_string(CMT::RELAY_LOG_FILE), CMT::RELAY_LOG_FILE);
+        add(to_string(CMT::RELAY_LOG_POS), CMT::RELAY_LOG_POS);
+        add(to_string(CMT::MASTER_DELAY), CMT::MASTER_DELAY);
+        add(to_string(CMT::IGNORE_SERVER_IDS), CMT::IGNORE_SERVER_IDS);
+        add(to_string(CMT::DO_DOMAIN_IDS), CMT::DO_DOMAIN_IDS);
+        add(to_string(CMT::IGNORE_DOMAIN_IDS), CMT::IGNORE_DOMAIN_IDS);
     }
 } change_master_sym;
 

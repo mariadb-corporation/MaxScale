@@ -96,14 +96,14 @@ std::string Config::inventory_file_path() const
     return path(m_binlog_inventory_file);
 }
 
-std::string Config::boot_strap_gtid_list() const
+maxsql::GtidList Config::boot_strap_gtid_list() const
 {
     return m_boot_strap_gtid_list;
 }
 
 void Config::set_boot_strap_gtid_list(const std::string& gtid)
 {
-    m_boot_strap_gtid_list = gtid;
+    m_boot_strap_gtid_list = maxsql::GtidList::from_string(gtid);
 }
 
 uint32_t Config::server_id() const

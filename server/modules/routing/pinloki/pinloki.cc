@@ -264,11 +264,12 @@ InventoryWriter* Pinloki::inventory()
     return &m_inventory;
 }
 
-void Pinloki::change_master(const parser::ChangeMasterValues& values)
+std::string Pinloki::change_master(const parser::ChangeMasterValues& values)
 {
     std::lock_guard<std::mutex> guard(m_lock);
 
     using CMT = pinloki::ChangeMasterType;
+    std::vector<std::string> errors;
 
     for (const auto& a : values)
     {
@@ -280,6 +281,10 @@ void Pinloki::change_master(const parser::ChangeMasterValues& values)
 
         case CMT::MASTER_PORT:
             m_master_config.port = atoi(a.second.c_str());
+            if (m_master_config.port == 0)
+            {
+                errors.push_back(MAKE_STR("Invalid port number " << a.second));
+            }
             break;
 
         case CMT::MASTER_USER:
@@ -292,6 +297,10 @@ void Pinloki::change_master(const parser::ChangeMasterValues& values)
 
         case CMT::MASTER_USE_GTID:
             m_master_config.use_gtid = strcasecmp(a.second.c_str(), "slave_pos") == 0;
+            if (!m_master_config.use_gtid)
+            {
+                errors.push_back("MASTER_USE_GTID must specify slave_pos");
+            }
             break;
 
         case CMT::MASTER_SSL:
@@ -329,10 +338,112 @@ void Pinloki::change_master(const parser::ChangeMasterValues& values)
         case CMT::MASTER_SSL_VERIFY_SERVER_CERT:
             m_master_config.ssl_verify_server_cert = a.second.front() != '0';
             break;
+
+        case CMT::MASTER_LOG_FILE:
+        case CMT::MASTER_LOG_POS:
+        case CMT::RELAY_LOG_FILE:
+        case CMT::RELAY_LOG_POS:
+            errors.push_back("Binlogrouter does not support file/position based replication."
+                             " Use MASTER_USE_GTID=slave_pos.");
+            break;
+
+        case CMT::MASTER_HEARTBEAT_PERIOD:
+            MXB_SWARNING("Option " << to_string(a.first) << " ignored");
+            break;
+
+        default:
+            errors.push_back("Binlogrouter does not yet support the option " + to_string(a.first));
+            break;
         }
     }
 
-    m_master_config.save(m_config);
+    std::string err_str = mxb::join(errors, "\n");
+
+    if (err_str.empty())
+    {
+        m_master_config.save(m_config);
+    }
+
+    return err_str;
+}
+
+std::string Pinloki::verify_master_settings()
+{
+    if (m_config.select_master())
+    {
+        return "";
+    }
+
+    using CMT = pinloki::ChangeMasterType;
+    std::set<CMT> mandatory {CMT::MASTER_HOST, CMT::MASTER_PORT, CMT::MASTER_USER,
+                             CMT::MASTER_PASSWORD, CMT::MASTER_USE_GTID};
+    auto mandatory_notset {mandatory};
+    std::vector<std::string> errors;
+
+    for (const auto& m : mandatory)
+    {
+        bool erase = false;
+
+        switch (m)
+        {
+        case CMT::MASTER_HOST:
+            if (!m_master_config.host.empty())
+            {
+                erase = true;
+            }
+            break;
+
+        case CMT::MASTER_PORT:
+            if (m_master_config.port != 0)
+            {
+                erase = true;
+            }
+            break;
+
+        case CMT::MASTER_USER:
+            if (!m_master_config.user.empty())
+            {
+                erase = true;
+            }
+            break;
+
+        case CMT::MASTER_PASSWORD:
+            if (!m_master_config.password.empty())
+            {
+                erase = true;
+            }
+            break;
+
+        case CMT::MASTER_USE_GTID:
+            if (m_master_config.use_gtid)
+            {
+                erase = true;
+            }
+            break;
+
+        default:
+            break;
+        }
+
+        if (erase)
+        {
+            mandatory_notset.erase(m);
+        }
+    }
+
+    for (auto& v : mandatory_notset)
+    {
+        errors.push_back(MAKE_STR("Mandatory value " << to_string(v) << " not provided"));
+    }
+
+    std::string err_str = mxb::join(errors, "\n");
+
+    if (!err_str.empty())
+    {
+        MXS_SERROR(err_str);
+    }
+
+    return err_str;
 }
 
 bool Pinloki::is_slave_running() const
@@ -353,19 +464,26 @@ maxsql::Connection::ConnectionDetails Pinloki::generate_details()
             if (srv->is_master())
             {
                 details.host = mxb::Host(srv->address(), srv->port());
-                details.user = m_service->config()->user;
-                details.password = m_service->config()->password;
+                m_master_config.host = srv->address();
+                m_master_config.port = srv->port();
+                details.user = m_master_config.user = m_service->config()->user;
+                details.password = m_master_config.password = m_service->config()->password;
 
                 if (auto ssl = srv->ssl().config())
                 {
-                    details.ssl = true;
-                    details.ssl_ca = ssl->ca;
-                    details.ssl_cert = ssl->cert;
-                    details.ssl_crl = ssl->crl;
-                    details.ssl_key = ssl->key;
-                    details.ssl_cipher = ssl->cipher;
-                    details.ssl_verify_server_cert = ssl->verify_peer;
+                    details.ssl = m_master_config.ssl = true;
+                    details.ssl_ca = m_master_config.ssl_ca = ssl->ca;
+                    details.ssl_cert = m_master_config.ssl_cert = ssl->cert;
+                    details.ssl_crl = m_master_config.ssl_crl = ssl->crl;
+                    details.ssl_key = m_master_config.ssl_key = ssl->key;
+                    details.ssl_cipher = m_master_config.ssl_cipher = ssl->cipher;
+                    details.ssl_verify_server_cert =
+                        m_master_config.ssl_verify_server_cert = ssl->verify_peer;
                 }
+
+                m_master_config.use_gtid = true;
+                m_master_config.save(m_config);
+
                 break;
             }
         }
@@ -393,26 +511,25 @@ maxsql::Connection::ConnectionDetails Pinloki::generate_details()
     return details;
 }
 
-bool Pinloki::start_slave()
+std::string Pinloki::start_slave()
 {
-    bool rval = false;
     std::lock_guard<std::mutex> guard(m_lock);
     const auto& cfg = m_master_config;
 
-    if ((!cfg.host.empty() && cfg.port && !cfg.user.empty() && !cfg.password.empty())
-        || m_config.select_master())
+    std::string err_str = verify_master_settings();
+
+    if (err_str.empty())
     {
         MXS_INFO("Starting slave");
 
         Writer::Generator generator = std::bind(&Pinloki::generate_details, this);
         m_writer = std::make_unique<Writer>(generator, mxs::MainWorker::get(), inventory());
-        rval = true;
 
         m_master_config.slave_running = true;
         m_master_config.save(m_config);
     }
 
-    return rval;
+    return err_str;
 }
 
 void Pinloki::stop_slave()
@@ -512,8 +629,7 @@ void Pinloki::set_gtid(const mxq::GtidList& gtid)
 
 mxq::GtidList Pinloki::gtid_io_pos() const
 {
-    return m_writer ? m_writer->get_gtid_io_pos() :
-           mxq::GtidList::from_string(m_config.boot_strap_gtid_list());
+    return m_writer ? m_writer->get_gtid_io_pos() : m_config.boot_strap_gtid_list();
 }
 
 void Pinloki::MasterConfig::save(const Config& config) const

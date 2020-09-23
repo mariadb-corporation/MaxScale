@@ -73,7 +73,7 @@ bool Reader::poll_start_reading(mxb::Worker::Call::action_t action)
 {
     // This version waits for ever.
     // Is there reason to timeout and send an error message?
-    bool contnue = true;
+    bool continue_poll = true;
     if (action == mxb::Worker::Call::EXECUTE)
     {
         auto gtid_list = maxsql::GtidList::from_string(m_inventory.rpl_state());
@@ -81,16 +81,24 @@ bool Reader::poll_start_reading(mxb::Worker::Call::action_t action)
         {
             MXB_SINFO("ReplSYNC: Primary synchronized, start file_reader");
             start_reading();
-            contnue = false;
+            continue_poll = false;
         }
         else
         {
-            MXB_SINFO("ReplSYNC: Reader waiting for primary to sync. "
-                      << "primary: " << gtid_list << ", replica: " << m_start_gtid);
+            if (m_timer.alarm())
+            {
+                MXB_SINFO("ReplSYNC: Reader waiting for primary to sync. "
+                          << "primary: " << gtid_list << ", replica: " << m_start_gtid);
+            }
         }
     }
 
-    return contnue;
+    if (!continue_poll)
+    {
+        m_startup_poll_dcid = 0;
+    }
+
+    return continue_poll;
 }
 
 Reader::~Reader()

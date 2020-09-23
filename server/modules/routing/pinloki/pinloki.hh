@@ -62,9 +62,9 @@ public:
     const Config&    config() const;
     InventoryWriter* inventory();
 
-    void          change_master(const parser::ChangeMasterValues& values);
+    std::string   change_master(const parser::ChangeMasterValues& values);
     bool          is_slave_running() const;
-    bool          start_slave();
+    std::string   start_slave();
     void          stop_slave();
     void          reset_slave();
     GWBUF*        show_slave_status() const;
@@ -76,7 +76,8 @@ private:
 
     maxsql::Connection::ConnectionDetails generate_details();
 
-    bool purge_old_binlogs(maxbase::Worker::Call::action_t action);
+    bool        purge_old_binlogs(maxbase::Worker::Call::action_t action);
+    std::string verify_master_settings();
 
     struct MasterConfig
     {
