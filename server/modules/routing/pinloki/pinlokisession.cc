@@ -381,9 +381,9 @@ void PinlokiSession::reset_slave()
     send(buf);
 }
 
-void PinlokiSession::show_slave_status()
+void PinlokiSession::show_slave_status(bool all)
 {
-    send(m_router->show_slave_status());
+    send(m_router->show_slave_status(all));
 }
 
 void PinlokiSession::show_master_status()

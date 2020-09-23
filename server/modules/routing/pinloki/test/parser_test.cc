@@ -38,9 +38,16 @@ struct DebugHandler : public pinloki::parser::Handler
         result << "RESET SLAVE";
     }
 
-    void show_slave_status() override
+    void show_slave_status(bool all) override
     {
-        result << "SHOW SLAVE STATUS";
+        if (all)
+        {
+            result << "SHOW SLAVE STATUS";
+        }
+        else
+        {
+            result << "SHOW ALL SLAVES STATUS";
+        }
     }
 
     void show_master_status() override
