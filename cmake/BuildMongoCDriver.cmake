@@ -8,6 +8,9 @@
 # BSON_INCLUDE_DIR   - The bson include directory.
 # BSON_LIBRARIES     - The libraries for the bson library.
 #
+# MONGO_INCLUDE_DIR  - The mongo include directory.
+# MONGO_LIBRARIES    - The libraries for the mongo library.
+#
 
 set(MONGO_C_DRIVER_VERSION "1.17.0")
 
@@ -24,7 +27,7 @@ set(MONGO_C_DRIVER_INSTALL "${MONGO_C_DRIVER}/install")
 ExternalProject_Add(mongo-c-driver
   URL ${MONGO_C_DRIVER_URL}
   SOURCE_DIR ${MONGO_C_DRIVER_SOURCE}
-  CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${MONGO_C_DRIVER_INSTALL} -DENABLE_AUTOMATIC_INIT_AND_CLEANUP=OFF -DENABLE_MONGOC=OFF
+  CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${MONGO_C_DRIVER_INSTALL} -DENABLE_AUTOMATIC_INIT_AND_CLEANUP=OFF
   BINARY_DIR ${MONGO_C_DRIVER_BINARY}
   BUILD_COMMAND make
   INSTALL_COMMAND make install
@@ -36,3 +39,6 @@ ExternalProject_Add(mongo-c-driver
 
 set(BSON_INCLUDE_DIR ${MONGO_C_DRIVER_INSTALL}/include/libbson-1.0 CACHE INTERNAL "")
 set(BSON_LIBRARIES   ${MONGO_C_DRIVER_INSTALL}/lib/libbson-static-1.0.a)
+
+set(MONGO_INCLUDE_DIR ${MONGO_C_DRIVER_INSTALL}/include/libmongoc-1.0 CACHE INTERNAL "")
+set(MONGO_LIBRARIES   ${MONGO_C_DRIVER_INSTALL}/lib/libmongoc-static-1.0.a)
