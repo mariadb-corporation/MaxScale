@@ -29,7 +29,8 @@ were removed as they were either redundant or not useful.
 The major differences between the new and old binlog router are:
 
  * The list of servers where the database users for authentication are loaded
-   must be explicitly configured with the `servers` or `targets` parameter.
+   must be explicitly configured with the `cluster`, `servers` or
+   `targets` parameter.
 
  * The old binlog router had both `server_id` and `master_id`, the new only
    `server_id`.
@@ -79,6 +80,9 @@ supports. The following commands are supported:
      * `MASTER_SSL_CIPHER`
      * `MASTER_SSL_VERIFY_SERVER_CERT`
 
+     **NOTE:** `MASTER_LOG_FILE` and `MASTER_LOG_POS` are not supported
+     as binlogrouter only supports GTID based replication.
+
  * `STOP SLAVE`
 
    * Stops replication, same as MariaDB.
@@ -110,7 +114,7 @@ supports. The following commands are supported:
      is detected to be in use, the purge stops. This means that the purge will
      stop at the oldest file that a slave is still reading.
 
-     NOTE: You should still take precaution not to purge files that a potential
+     **NOTE:**: You should still take precaution not to purge files that a potential
      slave will need in the future. MaxScale can only detect that a file is
      in active use when a slave is connected, and requesting events from it.
 
@@ -180,7 +184,7 @@ supports. The following commands are supported:
 
 ## Configuration Parameters
 
-The binlogrouter is configured similar to how normal routers are configured in
+The binlogrouter is configured similarly to how normal routers are configured in
 MaxScale. It requires at least one listener where clients can connect to and one
 server from which the database user information can be retrieved. An example
 configuration can be found in the [example](#example) section of this document.
@@ -188,7 +192,9 @@ configuration can be found in the [example](#example) section of this document.
 ### `datadir`
 
 Directory where binary log files are stored. By default the files are stored in
-`/var/lib/maxscale/binlogs`.
+`/var/lib/maxscale/binlogs`. **NOTE:** If you are upgrading from a version prior
+to 2.5, make sure this directory is different from what it was before, or
+move the old data.
 
 ### `server_id`
 
@@ -207,11 +213,17 @@ seconds.
 Automatically select the master server to replicate from. The default value is
 false.
 
-When this feature is enabled, the master from which binlogrouter will replicate
-from will be selected from the list of servers listed in `servers`. These
-servers should be monitored by a monitor. Only servers with the `Master` status
-are used. If multiple master servers are available, the first available master
-server will be used.
+When this feature is enabled, the master which binlogrouter will replicate
+from will be selected from the servers defined by a monitor `cluster=TheMonitor`.
+Alternatively servers can be listed in `servers`. The servers should be monitored
+by a monitor. Only servers with the `Master` status are used. If multiple master
+servers are available, the first available master server will be used.
+
+If the monitor parameter `auto_failover` is set, replication will seamlessly
+switch to a new master (determined by the monitor).
+
+**NOTE:** Do not use `auto_rejoin`. This restriction will be lifted in
+a future version.
 
 The GTID the replication will start from will be based on the latest replicated
 GTID. If no GTID has been replicated, the router will start replication from the
@@ -236,6 +248,110 @@ The duration can be specified as explained
 
 The minimum number of log files the automatic purge keeps. At least one file
 is always kept. The default setting is 2.
+
+## New installation
+
+ 1. Configure and start MaxScale
+
+ 1. If you have not configured `select_master=true` (automatic
+    master selection), issue a `CHANGE MASTER TO` command to binlogrouter.
+    ```
+    mysql -u USER -pPASSWORD -h maxscale-IP -P binlog-PORT
+
+    CHANGE MASTER TO master_host="master-IP", master_port=master-PORT,
+    master_user=USER, master_password="PASSWORD",
+    master_use_gtid=slave_pos;
+    START SLAVE;
+    ```
+ 1. Redirect each slave to replicate from Binlogrouter
+    ```
+    mysql -u USER -pPASSWORD -h slave-IP -P slave-PORT
+
+    STOP SLAVE;
+    CHANGE MASTER TO master_host="maxscale-IP", master_port=binlog-PORT,
+    master_user="USER", master_password="PASSWORD",
+    master_use_gtid=slave_pos;
+    START SLAVE;
+    SHOW SLAVE STATUS \G
+    ```
+
+## Upgrading to version 2.5
+
+Binlogrouter does not read any of the data that a version prior to 2.5
+has saved. By default binlogrouter will request the replication stream
+from the blank state (from the start of time), which is basically meant
+for new systems. If a system is live, the entire replication data probably
+does not exist, and if it does, it is not necessary for binlogrouter to read
+and store all the data.
+
+### Before you start
+
+ * Note that binlogrouter only supports GTID based replication.
+ * Make sure that the configured data directory for the new binlogrouter
+   is different from the old one, or move old data away.
+   See [datadir](#datadir).
+ * If the master contains binlogs from the blank state, and there
+   is a large amount of data, consider purging old binlogs.
+   See [Using and Maintaining the Binary Log](https://mariadb.com/kb/en/using-and-maintaining-the-binary-log/).
+
+### Deployment
+
+The method described here inflicts the least downtime. Assuming you have
+configured version 2.5, and it is ready to go:
+
+ 1. Redirect each slave that replicates from Binlogrouter to replicate from the
+    master.
+    ```
+    mysql -u USER -pPASSWORD -h slave-IP -P slave-PORT
+
+    STOP SLAVE;
+    CHANGE MASTER TO master_host="master-IP", master_port=master-PORT,
+    master_user="USER", master_password="PASSWORD",
+    master_use_gtid=slave_pos;
+    START SLAVE;
+    SHOW SLAVE STATUS \G
+    ```
+ 1. Stop the old version of MaxScale, and start the new one.
+    Verify routing functionality.
+
+ 1. If you have not configured `select_master=true` (automatic
+    master selection), issue a `CHANGE MASTER TO` command.
+    ```
+    mysql -u USER -pPASSWORD -h maxscale-IP -P binlog-PORT
+
+    CHANGE MASTER TO master_host="master-IP", master_port=master-PORT,
+    master_user=USER,master_password="PASSWORD",
+    master_use_gtid=slave_pos;
+    START SLAVE;
+    ```
+ 1. You should now see a periodic error message "Error ... Could not find
+    GTID state" in the MaxScale log. This is because Binlogrouter requests
+    replication from the blank state, which no longer exist. Binlogrouter must
+    be told from which gtid to start.
+
+ 1. Run `maxctrl list servers`. Make sure all your servers are accounted for.
+    Pick the lowest gtid on display and issue this command
+    to Binlogrouter:
+    ```
+    SET @@global.gtid_slave_pos = "lowest-GTID";
+    ```
+
+ 1. Redirect each slave to replicate from Binlogrouter
+   ```
+   mysql -u USER -pPASSWORD -h slave-IP -P slave-PORT
+
+   STOP SLAVE;
+   CHANGE MASTER TO master_host="maxscale-IP", master_port=binlog-PORT,
+   master_user="USER", master_password="PASSWORD",
+   master_use_gtid=slave_pos;
+   START SLAVE;
+   SHOW SLAVE STATUS \G
+   ```
+
+If slave-downtime is acceptable, you can skip the first and last steps.
+But in this case you should run `maxctrl list servers` as the first step,
+verify that all your servers are accounted for, and make a note of the
+lowest GTID _**before**_ stopping the old version of MaxScale.
 
 ## Example
 
@@ -273,11 +389,6 @@ port=3306
 ```
 
 ## Limitations
-
-* Whenever the binlogrouter connects to a master server, it will open a
-  new binlog file where it writes new events. This can happen when
-  replication is started due to a `START SLAVE` command or when the
-  network connection to the master is lost and a reconnection takes place.
 
 * Old-style replication with binlog name and file offset is not supported
   and the replication must be started by setting up the GTID to replicate
