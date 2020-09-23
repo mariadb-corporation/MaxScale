@@ -173,7 +173,7 @@ describe("Alter Commands", function () {
   });
 
   it("will not alter logging with bad parameter", function () {
-    doCommand("alter logging some-parameter maybe").should.be.rejectted;
+    doCommand("alter logging some-parameter maybe").should.be.rejected;
   });
 
   it("will not alter logging with missing value for parameter", function () {
