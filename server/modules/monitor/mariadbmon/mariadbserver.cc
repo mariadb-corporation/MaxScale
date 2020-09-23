@@ -32,6 +32,11 @@ using maxscale::MonitorServer;
 using ConnectResult = maxscale::MonitorServer::ConnectResult;
 using namespace std::chrono_literals;
 
+namespace
+{
+const char not_a_db[] = "it is not a valid database.";
+}
+
 MariaDBServer::MariaDBServer(SERVER* server, int config_index,
                              const MonitorServer::SharedSettings& base_settings,
                              const MariaDBServer::SharedSettings& settings)
@@ -231,18 +236,15 @@ bool MariaDBServer::execute_cmd_time_limit(const std::string& cmd, maxbase::Dura
 
 bool MariaDBServer::do_show_slave_status(string* errmsg_out)
 {
-    unsigned int columns = 0;
     string query;
     bool all_slaves_status = false;
     if (m_capabilities.slave_status_all)
     {
-        columns = 42;
         all_slaves_status = true;
         query = "SHOW ALL SLAVES STATUS;";
     }
     else if (m_capabilities.basic_support)
     {
-        columns = 40;
         query = "SHOW SLAVE STATUS;";
     }
     else
@@ -252,17 +254,8 @@ bool MariaDBServer::do_show_slave_status(string* errmsg_out)
     }
 
     auto result = execute_query(query, errmsg_out);
-    if (result.get() == NULL)
+    if (!result)
     {
-        return false;
-    }
-    else if (result->get_col_count() < columns)
-    {
-        MXS_ERROR("'%s' returned less than the expected amount of columns. Expected %u columns, "
-                  "got %" PRId64 ".",
-                  query.c_str(),
-                  columns,
-                  result->get_col_count());
         return false;
     }
 
@@ -891,9 +884,9 @@ void MariaDBServer::update_server_version()
     }
     else if (type == ServerType::BLR)
     {
-        // BLR supports gtid but not "show all slaves status".
         m_capabilities.basic_support = true;
         m_capabilities.gtid = true;
+        m_capabilities.slave_status_all = true;
     }
 
     if (m_capabilities.basic_support)
@@ -1032,6 +1025,10 @@ bool MariaDBServer::can_be_demoted_switchover(string* reason_out)
     {
         reason = "it is not running or it is in maintenance.";
     }
+    else if (!is_database())
+    {
+        reason = not_a_db;
+    }
     else if (!update_replication_settings(&query_error))
     {
         reason = string_printf("it could not be queried: %s", query_error.c_str());
@@ -1106,6 +1103,10 @@ bool MariaDBServer::can_be_promoted(OperationType op, const MariaDBServer* demot
     else if (!is_usable())
     {
         reason = "it is down or in maintenance.";
+    }
+    else if (!is_database())
+    {
+        reason = not_a_db;
     }
     else if (op == OperationType::SWITCHOVER && is_low_on_disk_space())
     {
