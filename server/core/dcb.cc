@@ -570,9 +570,9 @@ int DCB::log_errors_SSL(int ret)
     }
     if (ret || ssl_errno)
     {
-        MXS_ERROR("SSL operation failed, dcb %p in state "
+        MXS_ERROR("SSL operation failed, %s in state "
                   "%s fd %d return code %d. More details may follow.",
-                  this,
+                  mxs::to_string(m_role),
                   mxs::to_string(m_state),
                   m_fd,
                   ret);
