@@ -12,9 +12,7 @@
  */
 
 #include <iostream>
-#include <iterator>
 #include <string>
-#include <sstream>
 #include <maxtest/testconnections.hh>
 
 using std::cerr;
@@ -27,24 +25,6 @@ using std::stringstream;
 namespace
 {
 
-void sleep(int s)
-{
-    cout << "Sleeping " << s << " times 1 second" << flush;
-    do
-    {
-        ::sleep(1);
-        cout << "." << flush;
-        --s;
-    }
-    while (s > 0);
-
-    cout << endl;
-}
-}
-
-namespace
-{
-
 void create_table(TestConnections& test)
 {
     MYSQL* pConn = test.maxscales->conn_rwsplit[0];
@@ -53,9 +33,9 @@ void create_table(TestConnections& test)
     test.try_query(pConn, "CREATE TABLE test.t1(id INT)");
 }
 
-static int i_start = 0;
-static int n_rows = 20;
-static int i_end = 0;
+int i_start = 0;
+int n_rows = 20;
+int i_end = 0;
 
 void insert_data(TestConnections& test)
 {
@@ -77,59 +57,18 @@ void insert_data(TestConnections& test)
     i_start = i_end;
 }
 
-void expect(TestConnections& test, const char* zServer, const StringSet& expected)
-{
-    StringSet found = test.get_server_status(zServer);
-
-    std::ostream_iterator<string> oi(cout, ", ");
-
-    cout << zServer
-         << ", expected states: ";
-    std::copy(expected.begin(), expected.end(), oi);
-    cout << endl;
-
-    cout << zServer
-         << ", found states   : ";
-    std::copy(found.begin(), found.end(), oi);
-    cout << endl;
-
-    if (found != expected)
-    {
-        test.expect(false, "Found states are not the same as the expected ones.");
-        ++test.global_result;
-    }
-
-    cout << endl;
-}
-
-void expect(TestConnections& test, const char* zServer, const char* zState)
-{
-    StringSet s;
-    s.insert(zState);
-
-    expect(test, zServer, s);
-}
-
-void expect(TestConnections& test, const char* zServer, const char* zState1, const char* zState2)
-{
-    StringSet s;
-    s.insert(zState1);
-    s.insert(zState2);
-
-    expect(test, zServer, s);
-}
-
 void run(TestConnections& test)
 {
-    test.maxscales->wait_for_monitor();
+    auto& mxs = test.maxscale();
+    mxs.wait_monitor_ticks();
 
     int N = test.repl->N;
     cout << "Nodes: " << N << endl;
 
-    expect(test, "server1", "Master", "Running");
-    expect(test, "server2", "Slave", "Running");
-    expect(test, "server3", "Slave", "Running");
-    expect(test, "server4", "Slave", "Running");
+    auto master = mxt::ServerInfo::MASTER | mxt::ServerInfo::RUNNING;
+    auto slave = mxt::ServerInfo::SLAVE | mxt::ServerInfo::RUNNING;
+    auto normal_status = {master, slave, slave, slave};
+    mxs.check_servers_status(normal_status);
 
     cout << "\nConnecting to MaxScale." << endl;
     test.maxscales->connect_maxscale(0);
@@ -144,29 +83,29 @@ void run(TestConnections& test)
     test.repl->sync_slaves();
 
     cout << "\nTrying to do manual switchover to server2" << endl;
-    const char* zCommand;
-    zCommand = "call command mysqlmon switchover MySQL-Monitor server2 server1";
-    test.maxctrl(zCommand);
+    test.maxctrl("call command mysqlmon switchover MySQL-Monitor server2 server1");
 
-    test.maxscales->wait_for_monitor();
+    mxs.wait_monitor_ticks();
+    mxs.check_servers_status({slave, master, slave, slave});
 
-    expect(test, "server1", "Slave", "Running");
-    expect(test, "server2", "Master", "Running");
-    expect(test, "server3", "Slave", "Running");
-    expect(test, "server4", "Slave", "Running");
-
-    cout << "\nResetting situation." << endl;
-
-    cout << "\nTrying to do manual switchover to server1" << endl;
-    zCommand = "call command mysqlmon switchover MySQL-Monitor server1 server2";
-    test.maxctrl(zCommand);
-
-    test.maxscales->wait_for_monitor();
-
-    expect(test, "server1", "Master", "Running");
-    expect(test, "server2", "Slave", "Running");
-    expect(test, "server3", "Slave", "Running");
-    expect(test, "server4", "Slave", "Running");
+    if (test.ok())
+    {
+        cout << "\nSwitchover success. Resetting situation using async-switchover\n";
+        test.maxctrl("call command mariadbmon async-switchover MySQL-Monitor server1");
+        // Wait a bit so switch completes, then fetch results.
+        mxs.wait_monitor_ticks(2);
+        auto res = test.maxctrl("call command mariadbmon fetch-cmd-results MySQL-Monitor");
+        const char cmdname[] = "fetch-cmd-results";
+        test.expect(res.rc == 0, "%s failed: %s", cmdname, res.output.c_str());
+        if (test.ok())
+        {
+            // The output is a json string. Check that it includes "switchover completed successfully".
+            auto found = (res.output.find("switchover completed successfully") != string::npos);
+            test.expect(found, "Result json did not contain expected message. Result: %s",
+                        res.output.c_str());
+        }
+        mxs.check_servers_status(normal_status);
+    }
 }
 }
 
