@@ -58,17 +58,20 @@ const char CN_MODULE_COMMAND[] = "module_command";
 
 struct LOADED_MODULE
 {
-    MXS_MODULE* info {nullptr}; /**< The module information */
+    MXS_MODULE* info {nullptr};     /**< The module information */
 
     string name;    /**< The name of the module */
     string type;    /**< The module type */
     string version; /**< Module version */
 
-    void* handle {nullptr};  /**< The handle returned by dlopen */
-    void* modobj {nullptr};  /**< The module entry points */
-
-    LOADED_MODULE* next {nullptr}; /**< Next module in the linked list */
+    void* handle {nullptr};     /**< The handle returned by dlopen */
+    void* modobj {nullptr};     /**< The module entry points */
 };
+
+/**
+ * Module name to module mapping. Stored alphabetically, names in lowercase. Only accessed from the main
+ * thread. */
+std::map<string, LOADED_MODULE*> loaded_modules;
 
 struct NAME_MAPPING
 {
@@ -89,14 +92,12 @@ static NAME_MAPPING name_mappings[] =
 
 static const size_t N_NAME_MAPPINGS = sizeof(name_mappings) / sizeof(name_mappings[0]);
 
-static LOADED_MODULE* registered = NULL;
-
-static LOADED_MODULE* find_module(const char* module);
-static LOADED_MODULE* register_module(const char* module,
+static LOADED_MODULE* find_module(const char* name);
+static LOADED_MODULE* register_module(const char* name,
                                       const char* type,
                                       void* dlhandle,
                                       MXS_MODULE* mod_info);
-static void unregister_module(const char* module);
+static void unregister_module(const char* name);
 
 static const char* module_type_to_str(MXS_MODULE_API type)
 {
@@ -418,110 +419,72 @@ void unload_module(const char* module)
 }
 
 /**
- * Find a module that has been previously loaded and return the handle for that
- * library
+ * Find a module that has been previously loaded.
  *
- * @param module        The name of the module
+ * @param name        The name of the module, in lowercase
  * @return              The module handle or NULL if it was not found
  */
-static LOADED_MODULE* find_module(const char* module)
+static LOADED_MODULE* find_module(const char* name)
 {
-    LOADED_MODULE* mod = registered;
-
-    if (module)
+    LOADED_MODULE* rval = nullptr;
+    auto iter = loaded_modules.find(name);
+    if (iter != loaded_modules.end())
     {
-        while (mod)
-        {
-            if (strcasecmp(mod->name.c_str(), module) == 0)
-            {
-                return mod;
-            }
-            else
-            {
-                mod = mod->next;
-            }
-        }
+        rval = iter->second;
     }
-    return NULL;
+    return rval;
 }
 
 /**
  * Register a newly loaded module. The registration allows for single copies
  * to be loaded and cached entry point information to be return.
  *
- * @param module        The name of the module loaded
+ * @param name        The name of the module loaded
  * @param type          The type of the module loaded
  * @param dlhandle      The handle returned by dlopen
- * @param version       The version string returned by the module
- * @param modobj        The module object
  * @param mod_info      The module information
- * @return The new registered module or NULL on memory allocation failure
+ * @return The new registered module
  */
-static LOADED_MODULE* register_module(const char* module,
-                                      const char* type,
-                                      void* dlhandle,
-                                      MXS_MODULE* mod_info)
+static LOADED_MODULE* register_module(const char* name, const char* type,
+                                      void* dlhandle, MXS_MODULE* mod_info)
 {
+    mxb_assert(loaded_modules.count(name) == 0);
     auto mod = new LOADED_MODULE;
-    mod->name = module;
+    mod->name = name;
     mod->type = type;
     mod->handle = dlhandle;
     mod->version = mod_info->version;
     mod->modobj = mod_info->module_object;
-    mod->next = registered;
     mod->info = mod_info;
-    registered = mod;
+
+    loaded_modules[name] = mod;
     return mod;
 }
 
 /**
  * Unregister a module
  *
- * @param module        The name of the module to remove
+ * @param name        The name of the module to remove
  */
-static void unregister_module(const char* module)
+static void unregister_module(const char* name)
 {
-    LOADED_MODULE* mod = find_module(module);
-    LOADED_MODULE* ptr;
-
-    if (!mod)
+    auto iter = loaded_modules.find(name);
+    if (iter != loaded_modules.end())
     {
-        return;         // Module not found
+        LOADED_MODULE* mod = iter->second;
+        loaded_modules.erase(iter);
+        // The module is no longer in the container and all related memory can be freed.
+        dlclose(mod->handle);
+        delete mod;
     }
-    if (registered == mod)
-    {
-        registered = mod->next;
-    }
-    else
-    {
-        ptr = registered;
-        while (ptr && ptr->next != mod)
-        {
-            ptr = ptr->next;
-        }
-
-        /*<
-         * Remove the module to be be freed from the list.
-         */
-        if (ptr && (ptr->next == mod))
-        {
-            ptr->next = ptr->next->next;
-        }
-    }
-
-    /*<
-     * The module is now not in the linked list and all
-     * memory related to it can be freed
-     */
-    dlclose(mod->handle);
-    delete mod;
 }
 
 void unload_all_modules()
 {
-    while (registered)
+    while (!loaded_modules.empty())
     {
-        unregister_module(registered->name.c_str());
+        auto first = loaded_modules.begin();
+        unregister_module(first->first.c_str());
     }
 }
 
@@ -753,8 +716,9 @@ json_t* module_to_json(const MXS_MODULE* module, const char* host)
 {
     json_t* data = NULL;
 
-    for (LOADED_MODULE* ptr = registered; ptr; ptr = ptr->next)
+    for (auto& elem : loaded_modules)
     {
+        auto ptr = elem.second;
         if (ptr->info == module)
         {
             data = module_json_data(ptr, host);
@@ -807,8 +771,9 @@ json_t* module_list_to_json(const char* host)
     json_array_append_new(arr, spec_module_json_data(host, mxs::Config::get().specification()));
     json_array_append_new(arr, spec_module_json_data(host, Server::specification()));
 
-    for (LOADED_MODULE* ptr = registered; ptr; ptr = ptr->next)
+    for (auto& elem : loaded_modules)
     {
+        auto ptr = elem.second;
         if (ptr->info->specification)
         {
             json_array_append_new(arr, spec_module_json_data(host, *ptr->info->specification));
@@ -818,7 +783,6 @@ json_t* module_list_to_json(const char* host)
             json_array_append_new(arr, module_json_data(ptr, host));
         }
     }
-
     return mxs_json_resource(host, MXS_JSON_API_MODULES, arr);
 }
 
@@ -902,23 +866,18 @@ enum class InitType
 bool call_init_funcs(InitType init_type)
 {
     LOADED_MODULE* failed_init_module = nullptr;
-    auto current_module = registered;
-    while (current_module)
+    for (auto& elem : loaded_modules)
     {
+        auto mod_info = elem.second->info;
         int rc = 0;
-        auto init_func = (init_type == InitType::PROCESS) ? current_module->info->process_init :
-            current_module->info->thread_init;
+        auto init_func = (init_type == InitType::PROCESS) ? mod_info->process_init : mod_info->thread_init;
         if (init_func)
         {
             rc = init_func();
         }
-        if (rc == 0)
+        if (rc != 0)
         {
-            current_module = current_module->next;
-        }
-        else
-        {
-            failed_init_module = current_module;
+            failed_init_module = elem.second;
             break;
         }
     }
@@ -927,22 +886,18 @@ bool call_init_funcs(InitType init_type)
     if (failed_init_module)
     {
         // Init failed for a module. Call finish on so-far initialized modules.
-        current_module = registered;
-        while (current_module)
+        for (auto& elem : loaded_modules)
         {
-            auto finish_func = (init_type == InitType::PROCESS) ? current_module->info->process_finish :
-                current_module->info->thread_finish;
+            auto mod_info = elem.second->info;
+            auto finish_func = (init_type == InitType::PROCESS) ? mod_info->process_finish :
+                mod_info->thread_finish;
             if (finish_func)
             {
                 finish_func();
             }
-            if (current_module == failed_init_module)
+            if (elem.second == failed_init_module)
             {
                 break;
-            }
-            else
-            {
-                current_module = current_module->next;
             }
         }
     }
@@ -956,16 +911,15 @@ bool call_init_funcs(InitType init_type)
 
 void call_finish_funcs(InitType init_type)
 {
-    auto current_module = registered;
-    while (current_module)
+    for (auto& elem : loaded_modules)
     {
-        auto finish_func = (init_type == InitType::PROCESS) ? current_module->info->process_finish :
-            current_module->info->thread_finish;
+        auto mod_info = elem.second->info;
+        auto finish_func = (init_type == InitType::PROCESS) ? mod_info->process_finish :
+            mod_info->thread_finish;
         if (finish_func)
         {
             finish_func();
         }
-        current_module = current_module->next;
     }
 }
 }
