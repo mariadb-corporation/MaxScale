@@ -46,6 +46,8 @@
 #include "internal/service.hh"
 #include "internal/listener.hh"
 
+using std::string;
+
 namespace
 {
 const char CN_ARG_MAX[] = "arg_max";
@@ -54,17 +56,19 @@ const char CN_METHOD[] = "method";
 const char CN_MODULES[] = "modules";
 const char CN_MODULE_COMMAND[] = "module_command";
 
-
-typedef struct loaded_module
+struct LOADED_MODULE
 {
-    char*                  module;  /**< The name of the module */
-    char*                  type;    /**< The module type */
-    char*                  version; /**< Module version */
-    void*                  handle;  /**< The handle returned by dlopen */
-    void*                  modobj;  /**< The module "object" this is the set of entry points */
-    MXS_MODULE*            info;    /**< The module information */
-    struct  loaded_module* next;    /**< Next module in the linked list */
-} LOADED_MODULE;
+    MXS_MODULE* info {nullptr}; /**< The module information */
+
+    string name;    /**< The name of the module */
+    string type;    /**< The module type */
+    string version; /**< Module version */
+
+    void* handle {nullptr};  /**< The handle returned by dlopen */
+    void* modobj {nullptr};  /**< The module entry points */
+
+    LOADED_MODULE* next {nullptr}; /**< Next module in the linked list */
+};
 
 struct NAME_MAPPING
 {
@@ -428,7 +432,7 @@ static LOADED_MODULE* find_module(const char* module)
     {
         while (mod)
         {
-            if (strcasecmp(mod->module, module) == 0)
+            if (strcasecmp(mod->name.c_str(), module) == 0)
             {
                 return mod;
             }
@@ -458,25 +462,11 @@ static LOADED_MODULE* register_module(const char* module,
                                       void* dlhandle,
                                       MXS_MODULE* mod_info)
 {
-    module = MXS_STRDUP(module);
-    type = MXS_STRDUP(type);
-    char* version = MXS_STRDUP(mod_info->version);
-
-    LOADED_MODULE* mod = (LOADED_MODULE*)MXS_MALLOC(sizeof(LOADED_MODULE));
-
-    if (!module || !type || !version || !mod)
-    {
-        MXS_FREE((void*)module);
-        MXS_FREE((void*)type);
-        MXS_FREE(version);
-        MXS_FREE(mod);
-        return NULL;
-    }
-
-    mod->module = (char*)module;
-    mod->type = (char*)type;
+    auto mod = new LOADED_MODULE;
+    mod->name = module;
+    mod->type = type;
     mod->handle = dlhandle;
-    mod->version = version;
+    mod->version = mod_info->version;
     mod->modobj = mod_info->module_object;
     mod->next = registered;
     mod->info = mod_info;
@@ -524,17 +514,14 @@ static void unregister_module(const char* module)
      * memory related to it can be freed
      */
     dlclose(mod->handle);
-    MXS_FREE(mod->module);
-    MXS_FREE(mod->type);
-    MXS_FREE(mod->version);
-    MXS_FREE(mod);
+    delete mod;
 }
 
 void unload_all_modules()
 {
     while (registered)
     {
-        unregister_module(registered->module);
+        unregister_module(registered->name.c_str());
     }
 }
 
@@ -722,26 +709,26 @@ json_t* legacy_params_to_json(const LOADED_MODULE* mod)
 
     return params;
 }
-
 }
 
 static json_t* module_json_data(const LOADED_MODULE* mod, const char* host)
 {
     json_t* obj = json_object();
 
-    json_object_set_new(obj, CN_ID, json_string(mod->module));
+    auto module_namec = mod->name.c_str();
+    json_object_set_new(obj, CN_ID, json_string(module_namec));
     json_object_set_new(obj, CN_TYPE, json_string(CN_MODULES));
 
     json_t* attr = json_object();
-    json_object_set_new(attr, "module_type", json_string(mod->type));
+    json_object_set_new(attr, "module_type", json_string(mod->type.c_str()));
     json_object_set_new(attr, "version", json_string(mod->info->version));
     json_object_set_new(attr, CN_DESCRIPTION, json_string(mod->info->description));
     json_object_set_new(attr, "api", json_string(mxs_module_api_to_string(mod->info->modapi)));
     json_object_set_new(attr, "maturity", json_string(mxs_module_status_to_string(mod->info->status)));
 
     json_t* commands = json_array();
-    cb_param p = {commands, mod->module, host};
-    modulecmd_foreach(mod->module, NULL, modulecmd_cb, &p);
+    cb_param p = {commands, module_namec, host};
+    modulecmd_foreach(module_namec, NULL, modulecmd_cb, &p);
 
     json_t* params = nullptr;
 
@@ -757,7 +744,7 @@ static json_t* module_json_data(const LOADED_MODULE* mod, const char* host)
     json_object_set_new(attr, "commands", commands);
     json_object_set_new(attr, CN_PARAMETERS, params);
     json_object_set_new(obj, CN_ATTRIBUTES, attr);
-    json_object_set_new(obj, CN_LINKS, mxs_json_self_link(host, CN_MODULES, mod->module));
+    json_object_set_new(obj, CN_LINKS, mxs_json_self_link(host, CN_MODULES, module_namec));
 
     return obj;
 }
@@ -876,7 +863,7 @@ MXS_MODULE_ITERATOR mxs_module_iterator_get(const char* type)
 {
     LOADED_MODULE* module = registered;
 
-    while (module && type && (strcmp(module->type, type) != 0))
+    while (module && type && (module->type == type))
     {
         module = module->next;
     }
@@ -906,7 +893,7 @@ MXS_MODULE* mxs_module_iterator_get_next(MXS_MODULE_ITERATOR* iterator)
         {
             loaded_module = loaded_module->next;
         }
-        while (loaded_module && iterator->type && (strcmp(loaded_module->type, iterator->type) != 0));
+        while (loaded_module && iterator->type && (loaded_module->type == iterator->type));
 
         iterator->position = loaded_module;
     }
