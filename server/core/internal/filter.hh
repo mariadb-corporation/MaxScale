@@ -30,10 +30,7 @@
 class FilterDef : public MXS_FILTER_DEF
 {
 public:
-    FilterDef(std::string name,
-              std::string module,
-              mxs::FILTER_API* object,
-              mxs::Filter* instance,
+    FilterDef(std::string name, std::string module, mxs::Filter* instance,
               mxs::ConfigParameters params);
     ~FilterDef();
 
@@ -45,11 +42,6 @@ public:
     const char* module() const
     {
         return m_module.c_str();
-    }
-
-    mxs::FILTER_API* obj() const
-    {
-        return m_obj;
     }
 
     mxs::Filter* instance() const
@@ -88,7 +80,6 @@ private:
     std::string           m_module;         /**< The module to load */
     mxs::ConfigParameters m_parameters;     /**< The filter parameters */
     mxs::Filter*          m_filter;         /**< The runtime filter */
-    mxs::FILTER_API*      m_obj;            /**< The "MODULE_OBJECT" for the filter */
     uint64_t              m_capabilities;
 
     json_t* json_data(const char* host) const;

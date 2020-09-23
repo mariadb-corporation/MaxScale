@@ -101,7 +101,7 @@ SFilterDef filter_alloc(const char* name, const char* module, mxs::ConfigParamet
         return NULL;
     }
 
-    SFilterDef filter(new(std::nothrow) FilterDef(name, module, object, instance, *params));
+    SFilterDef filter(new(std::nothrow) FilterDef(name, module, instance, *params));
 
     if (filter)
     {
@@ -127,16 +127,12 @@ SFilterDef filter_alloc(const char* name, const char* module, mxs::ConfigParamet
     return filter;
 }
 
-FilterDef::FilterDef(std::string name,
-                     std::string module,
-                     FILTER_API* object,
-                     Filter* instance,
+FilterDef::FilterDef(std::string name, std::string module, Filter* instance,
                      mxs::ConfigParameters params)
     : m_name(std::move(name))
     , m_module(std::move(module))
     , m_parameters(std::move(params))
     , m_filter(instance)
-    , m_obj(object)
     , m_capabilities(m_filter->getCapabilities())
 {
     mxb_assert(get_module(m_module.c_str(), MODULE_FILTER)->module_capabilities == m_capabilities);
@@ -238,8 +234,6 @@ json_t* FilterDef::json_data(const char* host) const
 
     json_object_set_new(attr, CN_MODULE, json_string(module()));
     json_object_set_new(attr, CN_PARAMETERS, parameters_to_json());
-
-    mxb_assert(m_obj && m_filter);
 
     if (json_t* diag = instance()->diagnostics())
     {
