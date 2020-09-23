@@ -576,6 +576,39 @@ bool Client::serve_file(const std::string& url) const
     return rval;
 }
 
+// static
+void Client::handle_ws_upgrade(void* cls, MHD_Connection* connection, void* con_cls,
+                               const char* extra_in, size_t extra_in_size,
+                               int socket, MHD_UpgradeResponseHandle* urh)
+{
+    Client* client = static_cast<Client*>(cls);
+    // TODO: Send data to client here
+    MHD_upgrade_action(urh, MHD_UPGRADE_ACTION_CLOSE);
+}
+
+void Client::upgrade_to_ws()
+{
+    // The WebSocket protocol requries the server to perform a "complex" task to make sure it understands the
+    // protocol. This means taking the literal value of the Sec-WebSocket-Key header and concatenating it with
+    // a special UUID, taking the SHA1 of the result and sending the Base64 encoded result back in the
+    // Sec-WebSocket-Accept header.
+    auto key = get_header("Sec-WebSocket-Key") + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
+    uint8_t digest[SHA_DIGEST_LENGTH];
+    SHA1((uint8_t*)key.data(), key.size(), digest);
+    auto encoded = mxs::to_base64(digest, sizeof(digest));
+
+    auto resp = MHD_create_response_for_upgrade(handle_ws_upgrade, this);
+    MHD_add_response_header(resp, "Sec-WebSocket-Accept", encoded.c_str());
+    MHD_add_response_header(resp, "Upgrade", "websocket");
+    MHD_add_response_header(resp, "Connection", "Upgrade");
+
+    // This isn't exactly correct but it'll do for now
+    MHD_add_response_header(resp, "Sec-WebSocket-Protocol", get_header("Sec-WebSocket-Protocol").c_str());
+
+    MHD_queue_response(m_connection, MHD_HTTP_SWITCHING_PROTOCOLS, resp);
+    MHD_destroy_response(resp);
+}
+
 int Client::handle(const std::string& url, const std::string& method,
                    const char* upload_data, size_t* upload_data_size)
 {
@@ -910,7 +943,7 @@ bool mxs_admin_init()
     }
     else if (host_to_sockaddr(config.admin_host.c_str(), config.admin_port, &addr))
     {
-        int options = MHD_USE_EPOLL_INTERNALLY_LINUX_ONLY | MHD_USE_DEBUG;
+        int options = MHD_USE_EPOLL_INTERNALLY_LINUX_ONLY | MHD_USE_DEBUG | MHD_ALLOW_UPGRADE;
 
         if (addr.ss_family == AF_INET6)
         {

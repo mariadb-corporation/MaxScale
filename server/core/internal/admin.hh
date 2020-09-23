@@ -119,6 +119,11 @@ private:
     void         send_token_auth_error() const;
     void         send_no_https_error() const;
     void         add_cors_headers(MHD_Response*) const;
+    void         upgrade_to_ws();
+
+    static void handle_ws_upgrade(void* cls, MHD_Connection* connection, void* con_cls,
+                                  const char* extra_in, size_t extra_in_size,
+                                  int socket, MHD_UpgradeResponseHandle* urh);
 };
 
 /**
