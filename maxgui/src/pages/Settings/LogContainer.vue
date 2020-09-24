@@ -61,6 +61,7 @@ export default {
             logData: [],
             log_file: [],
             prevPageLink: null,
+            connection: null,
         }
     },
 
@@ -113,6 +114,7 @@ export default {
         async fetchLatestLogs() {
             try {
                 this.isLoading = true
+
                 const res = await this.$axios.get('/maxscale/logs')
                 await this.$help.delay(400).then(() => (this.isLoading = false))
                 const {
@@ -123,8 +125,35 @@ export default {
                 this.log_file = log_file
                 this.logData = log
                 this.assignPrevLink({ self, prev })
+                this.openConnection()
             } catch (e) {
                 this.$logger('LogContainer-fetchLatestLogs').error(e)
+            }
+        },
+
+        /**
+         * This function opens websocket connection to get real-time logs
+         */
+        openConnection() {
+            const infoLog = this.$logger('LogContainer-fetchLatestLogs').info
+            const { protocol, host } = window.location
+
+            const socketProtocol = protocol === 'http:' ? 'ws' : 'wss'
+            const socketURI = `${socketProtocol}://${host}/maxscale/logs/stream`
+
+            this.connection = new WebSocket(socketURI)
+
+            this.connection.onopen = () => infoLog(`Socket is opened for getting logs`)
+
+            // push new log to logData
+            this.connection.onmessage = async e => {
+                await this.logData.push(JSON.parse(e.data))
+                /* 
+                scroll to bottom. TODO: if current scroll position is at bottom already,
+                call toBottom(). If user are scrolling up, showing a popup  saying
+                something like "new logs available", clicking will call toBottom()
+                */
+                await this.toBottom()
             }
         },
 

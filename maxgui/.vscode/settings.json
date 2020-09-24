@@ -36,17 +36,7 @@
     "[jsonc]": {
         "editor.defaultFormatter": "esbenp.prettier-vscode"
     },
-    "cSpell.userWords": [
-        "camelcase",
-        "mariadb",
-        "vuetify"
-    ],
-    "cSpell.words": [
-        "devtool",
-        "loginpage",
-        "maxgui",
-        "maxscale",
-        "nightwatch",
-        "vuex"
-    ]
+    "cSpell.userWords": ["camelcase", "mariadb", "vuetify"],
+    "cSpell.words": ["devtool", "loginpage", "maxgui", "maxscale", "nightwatch", "vuex"],
+    "files.trimTrailingWhitespace": true
 }
