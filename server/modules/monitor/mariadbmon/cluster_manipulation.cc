@@ -1585,7 +1585,8 @@ void MariaDBMonitor::check_cluster_operations_support()
         if (server->is_usable())
         {
             auto& info = server->server->info();
-            if (info.type() != ServerType::MARIADB || !server->m_capabilities.gtid)
+            auto type = info.type();
+            if ((type != ServerType::MARIADB && type != ServerType::BLR) || !server->m_capabilities.gtid)
             {
                 supported = false;
                 auto reason = string_printf("The version of '%s' (%s) is not supported. Failover/switchover "
@@ -1920,7 +1921,9 @@ ServerArray MariaDBMonitor::get_redirectables(const MariaDBServer* old_master,
     ServerArray redirectable_slaves;
     for (MariaDBServer* slave : old_master->m_node.children)
     {
-        if (slave->is_usable() && slave != ignored_slave)
+        // For now, do not redirect BRL. It should redirect itself in most cases.
+        // TODO: Once blr supports the queries, redirect it as well.
+        if (slave->is_usable() && slave != ignored_slave && slave->server_type() != ServerType::BLR)
         {
             auto sstatus = slave->slave_connection_status(old_master);
             if (sstatus && !sstatus->gtid_io_pos.empty())
