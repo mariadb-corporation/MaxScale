@@ -64,7 +64,7 @@ constexpr std::array<const char*, int(CMT::END)> master_type_strs
     "IGNORE_DOMAIN_IDS"
 };
 
-static_assert(master_type_strs.size() == size_t(CMT::END));
+static_assert(master_type_strs.size() == size_t(CMT::END), "check master_type_strs");
 }
 
 namespace pinloki

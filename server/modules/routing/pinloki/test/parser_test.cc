@@ -42,11 +42,11 @@ struct DebugHandler : public pinloki::parser::Handler
     {
         if (all)
         {
-            result << "SHOW SLAVE STATUS";
+            result << "SHOW ALL SLAVES STATUS";
         }
         else
         {
-            result << "SHOW ALL SLAVES STATUS";
+            result << "SHOW SLAVE STATUS";
         }
     }
 
