@@ -23,6 +23,8 @@
 #include <maxscale/jansson.hh>
 #include <maxscale/http.hh>
 
+#include "websocket.hh"
+
 /**
  * A list of default headers that are generated with each response
  */
@@ -36,6 +38,10 @@ class HttpResponse
 {
 public:
     using Headers = std::unordered_map<std::string, std::string>;
+    using Handler = WebSocket::Handler;
+
+    HttpResponse(const HttpResponse& response);
+    HttpResponse& operator=(const HttpResponse& response);
 
     /**
      * @brief Create new HTTP response
@@ -44,8 +50,13 @@ public:
      * @param code     HTTP return code
      */
     HttpResponse(int code = MHD_HTTP_OK, json_t* response = NULL);
-    HttpResponse(const HttpResponse& response);
-    HttpResponse& operator=(const HttpResponse& response);
+
+    /**
+     * Create a response that upgrades to a WebSocket connection
+     *
+     * @param handler WebSocket handler to use
+     */
+    HttpResponse(Handler handler);
 
     ~HttpResponse();
 
@@ -123,10 +134,16 @@ public:
      */
     void remove_rows(const std::string& json_ptr, json_t* value);
 
+    Handler websocket_handler()
+    {
+        return m_handler;
+    }
+
 private:
     json_t* m_body;     /**< Message body */
     int     m_code;     /**< The HTTP code for the response */
     Headers m_headers;  /**< Extra headers */
+    Handler m_handler;
 
     std::vector<std::string> m_cookies;
 

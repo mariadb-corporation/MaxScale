@@ -38,20 +38,27 @@ bool json_ptr_matches(const std::string& json_ptr, json_t* obj, json_t* rhs)
 HttpResponse::HttpResponse(int code, json_t* response)
     : m_body(response)
     , m_code(code)
+    , m_headers{{HTTP_RESPONSE_HEADER_DATE, http_get_date()}}
 {
-    string http_date = http_get_date();
-    add_header(HTTP_RESPONSE_HEADER_DATE, http_date);
-
     if (m_body)
     {
         add_header(HTTP_RESPONSE_HEADER_CONTENT_TYPE, "application/json");
     }
 }
 
+HttpResponse::HttpResponse(Handler handler)
+    : m_body(nullptr)
+    , m_code(MHD_HTTP_SWITCHING_PROTOCOLS)
+    , m_headers{{HTTP_RESPONSE_HEADER_DATE, http_get_date()}}
+    , m_handler(handler)
+{
+}
+
 HttpResponse::HttpResponse(const HttpResponse& response)
     : m_body(json_incref(response.m_body))
     , m_code(response.m_code)
     , m_headers(response.m_headers)
+    , m_handler(response.m_handler)
     , m_cookies(response.m_cookies)
 {
 }
@@ -62,6 +69,7 @@ HttpResponse& HttpResponse::operator=(const HttpResponse& response)
     m_body = json_incref(response.m_body);
     m_code = response.m_code;
     m_headers = response.m_headers;
+    m_handler = response.m_handler;
     m_cookies = response.m_cookies;
     json_decref(body);
     return *this;

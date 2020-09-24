@@ -583,8 +583,7 @@ void Client::handle_ws_upgrade(void* cls, MHD_Connection* connection, void* con_
                                int socket, MHD_UpgradeResponseHandle* urh)
 {
     Client* client = static_cast<Client*>(cls);
-    // TODO: Send data to client here
-    MHD_upgrade_action(urh, MHD_UPGRADE_ACTION_CLOSE);
+    WebSocket::create(socket, urh, client->m_ws_handler);
 }
 
 void Client::upgrade_to_ws()
@@ -708,6 +707,22 @@ int Client::process(string url, string method, const char* upload_data, size_t* 
     else
     {
         reply = resource_handle_request(request);
+    }
+
+    m_ws_handler = reply.websocket_handler();
+
+    if (m_ws_handler)
+    {
+        if (get_header("Upgrade") == "websocket")
+        {
+            // The endpoint requested a WebSocket connection, start the upgrade
+            upgrade_to_ws();
+            return MHD_YES;
+        }
+        else
+        {
+            reply = HttpResponse(MHD_HTTP_UPGRADE_REQUIRED);
+        }
     }
 
     string data;

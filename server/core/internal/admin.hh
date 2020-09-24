@@ -20,6 +20,7 @@
 
 #include "httprequest.hh"
 #include "httpresponse.hh"
+#include "websocket.hh"
 
 class Client
 {
@@ -109,6 +110,8 @@ private:
     state           m_state;        /**< Client state */
     std::string     m_user;         /**< The user account */
     Headers         m_headers;
+
+    WebSocket::Handler m_ws_handler;
 
     HttpResponse generate_token(const HttpRequest& request);
     bool         auth_with_token(const std::string& token);
