@@ -310,6 +310,7 @@ Starting with MaxScale 2.2.1, MariaDB Monitor supports replication cluster
 modification. The operations implemented are:
 - _failover_, which replaces a failer master with a slave
 - _switchover_, which swaps a running master with a slave
+- _async-switchover_, which schedules a switchover and returns
 - _rejoin_, which directs servers to replicate from the master
 - _reset-replication_ (added in MaxScale 2.3.0), which deletes binary logs and
 resets gtid:s
@@ -475,15 +476,6 @@ It is safe to perform manual operations even with automatic failover, switchover
 or rejoin enabled since automatic operations cannot happen simultaneously
 with manual ones.
 
-If a switchover or failover fails, automatic failover is disabled to prevent
-master changes to a possibly malfunctioning cluster. Automatic failover can be
-turned on manually via the REST API or with MaxCtrl. Example commands are listed
-below.
-
-```
-maxctrl alter monitor MariaDB-Monitor auto_failover true
-```
-
 When a cluster modification is iniated via the REST-API, the URL path is of the
 form:
 ```
@@ -516,6 +508,26 @@ Example REST-API paths for other commands are listed below.
 /v1/maxscale/modules/mariadbmon/failover?Cluster1
 /v1/maxscale/modules/mariadbmon/rejoin?Cluster1&server3
 /v1/maxscale/modules/mariadbmon/reset-replication?Cluster1&server3
+```
+
+#### Queued switchover
+
+Most cluster modification commands wait until the operation either succeeds or
+fails. _async-switchover_ is an exception, as it returns immediately. Otherwise
+_async-switchover_ works identical to a normal _switchover_ command. Use the
+module command _fetch-cmd-results_ to view the result of the queued command.
+_fetch-cmd-results_ returns the status or result of the latest manual command,
+whether queued or not.
+```
+maxctrl call command mariadbmon async-switchover Cluster1
+OK
+maxctrl call command mariadbmon fetch-cmd-results Cluster1
+{
+    "links": {
+        "self": "http://localhost:8989/v1/maxscale/modules/mariadbmon/fetch-cmd-results"
+    },
+    "meta": "switchover completed successfully."
+}
 ```
 
 ### Automatic activation
