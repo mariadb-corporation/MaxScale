@@ -793,6 +793,16 @@ HttpResponse cb_logs(const HttpRequest& request)
     return HttpResponse(MHD_HTTP_OK, mxs_logs_to_json(request.host(), cursor, rows));
 }
 
+HttpResponse cb_logs_stream(const HttpRequest& request)
+{
+    if (auto fn = mxs_logs_stream(request.get_option("page[cursor]")))
+    {
+        return HttpResponse(fn);
+    }
+
+    return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
+}
+
 HttpResponse cb_flush(const HttpRequest& request)
 {
     int code = MHD_HTTP_INTERNAL_SERVER_ERROR;
@@ -1196,6 +1206,7 @@ public:
         m_get.emplace_back(cb_all_threads, "maxscale", "threads");
         m_get.emplace_back(cb_thread, "maxscale", "threads", ":thread");
         m_get.emplace_back(cb_logs, "maxscale", "logs");
+        m_get.emplace_back(cb_logs_stream, "maxscale", "logs", "stream");
         m_get.emplace_back(cb_tasks, "maxscale", "tasks");
         m_get.emplace_back(cb_all_modules, "maxscale", "modules");
         m_get.emplace_back(cb_module, "maxscale", "modules", ":module");

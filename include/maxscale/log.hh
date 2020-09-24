@@ -20,6 +20,7 @@
 #include <syslog.h>
 #include <unistd.h>
 #include <sstream>
+#include <functional>
 
 #if !defined (MXS_MODULE_NAME)
 #define MXS_MODULE_NAME NULL
@@ -76,6 +77,19 @@ int mxs_get_log_rotation_count();
  * @return The logs as a JSON API resource.
  */
 json_t* mxs_logs_to_json(const char* host, const std::string& cursor, int rows);
+
+/**
+ * Create a stream of logs
+ *
+ * TODO: This should be in an internal header
+ *
+ * @param cursor The cursor where to stream the entries for. An empty cursor means start
+ *               from the latest position.
+ *
+ * @return Function that can be called to read the log. If an empty string is returned, the current
+ *         end of the log is reached. Calling it again can return more data at a later time.
+ */
+std::function<std::string()> mxs_logs_stream(const std::string& cursor);
 
 #define mxs_log_finish  mxb_log_finish
 #define mxs_log_message mxb_log_message

@@ -28,6 +28,7 @@
 
 #include <maxscale/cn_strings.hh>
 #include <maxscale/config.hh>
+#include <maxscale/jansson.hh>
 #include <maxscale/json_api.hh>
 #include <maxscale/session.hh>
 
@@ -86,23 +87,21 @@ struct Cursors
     std::string prev;
 };
 
-std::pair<json_t*, Cursors> get_syslog_data(const std::string& cursor, int rows)
-{
-    json_t* arr = json_array();
-    Cursors cursors;
-
 #ifdef HAVE_SYSTEMD
 
-    sd_journal* j;
-    int rc = sd_journal_open(&j, SD_JOURNAL_LOCAL_ONLY);
+std::string get_cursor(sd_journal* j)
+{
+    char* c;
+    sd_journal_get_cursor(j, &c);
+    std::string cur = c;
+    MXS_FREE(c);
+    return cur;
+}
 
-    auto get_cursor = [j]() {
-            char* c;
-            sd_journal_get_cursor(j, &c);
-            std::string cur = c;
-            MXS_FREE(c);
-            return cur;
-        };
+sd_journal* open_journal(const std::string& cursor)
+{
+    sd_journal* j = nullptr;
+    int rc = sd_journal_open(&j, SD_JOURNAL_LOCAL_ONLY);
 
     if (rc < 0)
     {
@@ -118,61 +117,132 @@ std::pair<json_t*, Cursors> get_syslog_data(const std::string& cursor, int rows)
         }
         else
         {
+            // If the exact entry is not found, the closest available entry is returned
             sd_journal_seek_cursor(j, cursor.c_str());
         }
+    }
 
+    return j;
+}
+
+json_t* entry_to_json(sd_journal* j)
+{
+    json_t* obj = json_object();
+    json_object_set_new(obj, "id", json_string(get_cursor(j).c_str()));
+
+    const void* data;
+    size_t length;
+
+    while (sd_journal_enumerate_data(j, &data, &length) > 0)
+    {
+        std::string s((const char*)data, length);
+        auto pos = s.find_first_of('=');
+        auto key = s.substr(0, pos);
+
+        if (key.front() == '_' || strncmp(key.c_str(), "SYSLOG", 6) == 0)
+        {
+            // Ignore auto-generated entries
+            continue;
+        }
+
+        auto value = s.substr(pos + 1);
+
+        if (!value.empty())
+        {
+            if (key == "PRIORITY")
+            {
+                // Convert the numeric priority value to the string value
+                value = mxb_log_level_to_string(atoi(value.c_str()));
+            }
+
+            std::transform(key.begin(), key.end(), key.begin(), ::tolower);
+            json_object_set_new(obj, key.c_str(), json_string(value.c_str()));
+        }
+    }
+
+    return obj;
+}
+
+class JournalStream
+{
+public:
+
+    static std::shared_ptr<JournalStream> create(const std::string& cursor)
+    {
+        std::shared_ptr<JournalStream> rval;
+
+        if (auto j = open_journal(cursor))
+        {
+            if (cursor.empty())
+            {
+                // If we're streaming only future events, we must go back one event as the current cursor
+                // points to the past-the-end entry in the journal. This makes sure the first new event is the
+                // first one that is sent. For the normal API call the position being at past-the-end is fine
+                // as it iterates the journal backwards.
+                sd_journal_previous(j);
+            }
+
+            rval = std::make_shared<JournalStream>(j);
+        }
+
+        return rval;
+    }
+
+    std::string get_value()
+    {
+        std::string rval;
+
+        if (sd_journal_next(m_j) > 0)
+        {
+            json_t* json = entry_to_json(m_j);
+            rval = mxs::json_dump(json, JSON_COMPACT);
+            json_decref(json);
+        }
+
+        return rval;
+    }
+
+    JournalStream(sd_journal* j)
+        : m_j(j)
+    {
+    }
+
+    ~JournalStream()
+    {
+        sd_journal_close(m_j);
+    }
+
+private:
+    sd_journal* m_j;
+};
+
+#endif
+
+std::pair<json_t*, Cursors> get_syslog_data(const std::string& cursor, int rows)
+{
+    json_t* arr = json_array();
+    Cursors cursors;
+
+#ifdef HAVE_SYSTEMD
+    if (sd_journal* j = open_journal(cursor))
+    {
         for (int i = 0; i < rows && sd_journal_previous(j) > 0; i++)
         {
-            auto id = get_cursor();
-
             if (cursors.current.empty())
             {
-                cursors.current = id;
+                cursors.current = get_cursor(j);
             }
 
-            json_t* obj = json_object();
-            json_object_set_new(obj, "id", json_string(id.c_str()));
-
-            const void* data;
-            size_t length;
-
-            while (sd_journal_enumerate_data(j, &data, &length) > 0)
-            {
-                std::string s((const char*)data, length);
-                auto pos = s.find_first_of('=');
-                auto key = s.substr(0, pos);
-
-                if (key.front() == '_' || strncmp(key.c_str(), "SYSLOG", 6) == 0)
-                {
-                    // Ignore auto-generated entries
-                    continue;
-                }
-
-                auto value = s.substr(pos + 1);
-
-                if (!value.empty())
-                {
-                    if (key == "PRIORITY")
-                    {
-                        // Convert the numeric priority value to the string value
-                        value = mxb_log_level_to_string(atoi(value.c_str()));
-                    }
-
-                    std::transform(key.begin(), key.end(), key.begin(), ::tolower);
-                    json_object_set_new(obj, key.c_str(), json_string(value.c_str()));
-                }
-            }
-
-            json_array_append_new(arr, obj);
+            json_array_append_new(arr, entry_to_json(j));
         }
 
         if (sd_journal_previous(j) > 0)
         {
-            cursors.prev = get_cursor();
+            cursors.prev = get_cursor(j);
         }
-    }
 
-    sd_journal_close(j);
+        sd_journal_close(j);
+    }
 #endif
 
     return {arr, cursors};
@@ -281,6 +351,31 @@ json_t* mxs_logs_to_json(const char* host, const std::string& cursor, int rows)
     json_object_set_new(links, "last", json_string(last.c_str()));
 
     return rval;
+}
+
+std::function<std::string()> mxs_logs_stream(const std::string& cursor)
+{
+    const auto& cnf = mxs::Config::get();
+
+    if (cnf.syslog.get())
+    {
+        if (auto stream = JournalStream::create(cursor))
+        {
+            return [stream]() {
+                       return stream->get_value();
+                   };
+        }
+    }
+    else if (cnf.maxlog.get())
+    {
+        MXS_ERROR("Not yet implemented");
+    }
+    else
+    {
+        MXS_ERROR("Neither `syslog` or `maxlog` is enabled, cannot stream logs.");
+    }
+
+    return {};
 }
 
 bool mxs_log_rotate()
