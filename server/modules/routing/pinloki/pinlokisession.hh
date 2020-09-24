@@ -46,7 +46,7 @@ public:
     void start_slave() override;
     void stop_slave() override;
     void reset_slave() override;
-    void show_slave_status() override;
+    void show_slave_status(bool all) override;
     void show_master_status() override;
     void show_binlogs() override;
     void show_variables(const std::string& like) override;

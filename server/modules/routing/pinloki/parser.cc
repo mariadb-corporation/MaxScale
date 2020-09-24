@@ -96,6 +96,7 @@ enum class ShowType
 {
     MASTER_STATUS,
     SLAVE_STATUS,
+    ALL_SLAVES_STATUS,
     BINLOGS,
 };
 
@@ -262,6 +263,7 @@ DECLARE_ATTR_RULE(variable, "key-value", Variable);
 DECLARE_ATTR_RULE(change_master_variable, "key-value", ChangeMasterVariable);
 DECLARE_ATTR_RULE(show_master, "show master", ShowType);
 DECLARE_ATTR_RULE(show_slave, "show slave", ShowType);
+DECLARE_ATTR_RULE(show_all_slaves, "show all slaves", ShowType);
 DECLARE_ATTR_RULE(show_binlogs, "binary logs", ShowType);
 DECLARE_ATTR_RULE(show_variables, "show variables", ShowVariables);
 DECLARE_ATTR_RULE(show_options, "MASTER, SLAVE, BINLOGS or VARIABLES", Show);
@@ -325,9 +327,12 @@ const auto purge_logs_def = x3::lit("PURGE") > (x3::lit("BINARY") | x3::lit("MAS
 // SHOW commands
 const auto show_master_def = x3::lit("MASTER") > x3::lit("STATUS") > x3::attr(ShowType::MASTER_STATUS);
 const auto show_slave_def = x3::lit("SLAVE") > x3::lit("STATUS") > x3::attr(ShowType::SLAVE_STATUS);
+const auto show_all_slaves_def = x3::lit("ALL") > x3::lit("SLAVES")
+    > x3::lit("STATUS") > x3::attr(ShowType::ALL_SLAVES_STATUS);
 const auto show_binlogs_def = x3::lit("BINARY") > x3::lit("LOGS") > x3::attr(ShowType::BINLOGS);
 const auto show_variables_def = x3::lit("VARIABLES") > x3::lit("LIKE") > q_str;
-const auto show_options_def = (show_master | show_slave | show_binlogs | show_variables);
+const auto show_options_def = (show_master | show_slave | show_all_slaves
+                               | show_binlogs | show_variables);
 const auto show_def = x3::lit("SHOW") > show_options;
 const auto end_of_input_def = x3::eoi | x3::lit(";");
 
@@ -343,7 +348,7 @@ const auto grammar_def = x3::no_case[
 
 // Boost magic that combines the rule declarations and definitions (definitions _must_ end in a _def suffix)
 BOOST_SPIRIT_DEFINE(str, sq_str, dq_str, field, variable, select, set, eq, q_str,
-                    show_master, show_slave, show_binlogs, show_variables, show, set_names,
+                    show_master, show_slave, show_all_slaves, show_binlogs, show_variables, show, set_names,
                     global_or_session, show_options, func, master_gtid_wait,
                     change_master_variable, change_master, slave, purge_logs, end_of_input, grammar);
 
@@ -430,7 +435,11 @@ struct ResultVisitor : public boost::static_visitor<>
             break;
 
         case ShowType::SLAVE_STATUS:
-            m_handler->show_slave_status();
+            m_handler->show_slave_status(false);
+            break;
+
+        case ShowType::ALL_SLAVES_STATUS:
+            m_handler->show_slave_status(true);
             break;
 
         case ShowType::BINLOGS:
