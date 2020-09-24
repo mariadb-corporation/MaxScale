@@ -39,6 +39,7 @@
 
 #include "internal/adminusers.hh"
 #include "internal/resource.hh"
+#include "internal/websocket.hh"
 
 using std::string;
 using std::ifstream;
@@ -983,6 +984,7 @@ bool mxs_admin_init()
 
 void mxs_admin_shutdown()
 {
+    WebSocket::shutdown();
     MHD_stop_daemon(this_unit.daemon);
     MXS_NOTICE("Stopped MaxScale REST API");
 }

@@ -52,6 +52,7 @@ add_library(maxscale-common SHARED
   threadpool.cc
   users.cc
   utils.cc
+  websocket.cc
   workerlocal.cc
   )
 
