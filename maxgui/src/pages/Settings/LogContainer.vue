@@ -69,6 +69,7 @@ export default {
         shouldFetchLogs: async function(val) {
             if (val) {
                 await this.fetchLatestLogs()
+                // TODOS:
                 await this.toBottom()
             }
         },
@@ -77,24 +78,23 @@ export default {
     async mounted() {
         await this.fetchLatestLogs()
         await this.toBottom()
+        await this.openConnection()
+    },
+    beforeDestroy() {
+        if (this.connection) this.disconnect()
     },
     methods: {
         /**
-         * This function scrolls to bottom after latest logs has been fetched
+         * This function scrolls to bottom after latest logs has been fetched.
+         * scroll to bottom. TODO: if current scroll position is at bottom already,
+         * call toBottom(). If user are scrolling up or shouldFetchLogs value change,
+         * it should show a popup saying something like
+         * "new logs available", clicking will call toBottom()
          */
         async toBottom() {
             this.scrolledContent = document.getElementById('scrolled-content')
             this.scrollTarget = document.getElementById('scrollable-logs')
             this.scrollTarget.scrollTop = Math.floor(this.scrolledContent.offsetHeight)
-        },
-
-        /**
-         * This function assigns previous page link.
-         * It assigns null if 'self' link is equal to 'prev' link.
-         */
-        assignPrevLink({ self, prev }) {
-            if (self !== prev) this.prevPageLink = prev
-            else this.prevPageLink = null
         },
 
         /**
@@ -108,24 +108,22 @@ export default {
 
         /**
          * This function fetches latest 50 log lines.
-         * It assigns log_file and logData
-         * It also calls assignPrevLink method to assign prev link
+         * It assigns log_file, logData and prevLink
          */
         async fetchLatestLogs() {
             try {
                 this.isLoading = true
-
                 const res = await this.$axios.get('/maxscale/logs')
                 await this.$help.delay(400).then(() => (this.isLoading = false))
                 const {
                     data: { attributes: { log = [], log_file = null } = {} } = {},
-                    links: { prev, self },
+                    links: { prev = null },
                 } = res.data
 
                 this.log_file = log_file
-                this.logData = log
-                this.assignPrevLink({ self, prev })
-                this.openConnection()
+                // union it instead of assign otherwise there will be duplicated id
+                this.logData = this.$help.lodash.unionBy(this.logData, log, 'id')
+                this.prevPageLink = prev
             } catch (e) {
                 this.$logger('LogContainer-fetchLatestLogs').error(e)
             }
@@ -134,8 +132,7 @@ export default {
         /**
          * This function opens websocket connection to get real-time logs
          */
-        openConnection() {
-            const infoLog = this.$logger('LogContainer-fetchLatestLogs').info
+        async openConnection() {
             const { protocol, host } = window.location
 
             const socketProtocol = protocol === 'http:' ? 'ws' : 'wss'
@@ -143,20 +140,17 @@ export default {
 
             this.connection = new WebSocket(socketURI)
 
-            this.connection.onopen = () => infoLog(`Socket is opened for getting logs`)
-
             // push new log to logData
             this.connection.onmessage = async e => {
                 await this.logData.push(JSON.parse(e.data))
-                /* 
-                scroll to bottom. TODO: if current scroll position is at bottom already,
-                call toBottom(). If user are scrolling up, showing a popup  saying
-                something like "new logs available", clicking will call toBottom()
-                */
                 await this.toBottom()
             }
         },
 
+        disconnect() {
+            this.connection.close()
+            this.logData = []
+        },
         /**
          * This function handles unioning previous cursor logData to current
          * logData.
@@ -183,7 +177,7 @@ export default {
 
         /**
          * This function returns previous logData array from previous cursor page link.
-         * It also calls assignPrevLink method to assign prev link
+         * It also assigns prev link
          * @returns previous logData array
          */
         async getPrevCursorLogs() {
@@ -194,9 +188,9 @@ export default {
                 const res = await this.$axios.get(endpoint)
                 const {
                     data: { attributes: { log: newLogs = [] } = {} } = {},
-                    links: { prev, self },
+                    links: { prev = null },
                 } = res.data
-                this.assignPrevLink({ self, prev })
+                this.prevPageLink = prev
                 return newLogs
             } catch (e) {
                 this.$logger('LogContainer-getPrevCursorLogs').error(e)
