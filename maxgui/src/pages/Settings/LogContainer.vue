@@ -2,9 +2,7 @@
     <div class="log-view-container">
         <p>
             <span class="color text-field-text">
-                <span class="d-inline-block mr-2">
-                    {{ log_file }}
-                </span>
+                <span class="d-block mr-2"> log_source: {{ log_source }} </span>
                 {{
                     $help.dateFormat({
                         value: maxscaleOverviewInfo.started_at,
@@ -76,7 +74,7 @@ export default {
             scrollTop: 100,
             isLoading: false,
             logData: [],
-            log_file: [],
+            log_source: [],
             prevPageLink: null,
             connection: null,
             isNotifShown: false,
@@ -107,19 +105,19 @@ export default {
     methods: {
         /**
          * This function fetches latest 50 log lines.
-         * It assigns log_file, logData and prevLink
+         * It assigns log_source, logData and prevLink
          */
         async fetchLatestLogs() {
             try {
                 this.isLoading = true
-                const res = await this.$axios.get('/maxscale/logs')
+                const res = await this.$axios.get('/maxscale/logs/data')
                 await this.$help.delay(400).then(() => (this.isLoading = false))
                 const {
-                    data: { attributes: { log = [], log_file = null } = {} } = {},
+                    data: { attributes: { log = [], log_source = null } = {} } = {},
                     links: { prev = null },
                 } = res.data
 
-                this.log_file = log_file
+                this.log_source = log_source
                 // union it instead of assign otherwise there will be duplicated id
                 this.logData = this.$help.lodash.unionBy(this.logData, log, 'id')
                 this.prevPageLink = prev
@@ -185,7 +183,7 @@ export default {
                 this.isLoading = true
                 const indexOfEndpoint = this.prevPageLink.indexOf('/maxscale/logs/')
                 const endpoint = this.prevPageLink.slice(indexOfEndpoint)
-                const res = await this.$axios.get(endpoint)
+                const res = await this.$axios.get(`${endpoint}`)
                 const {
                     data: { attributes: { log: newLogs = [] } = {} } = {},
                     links: { prev = null },
