@@ -773,6 +773,11 @@ HttpResponse cb_alter_maxscale(const HttpRequest& request)
 
 HttpResponse cb_logs(const HttpRequest& request)
 {
+    return HttpResponse(MHD_HTTP_OK, mxs_logs_to_json(request.host()));
+}
+
+HttpResponse cb_log_data(const HttpRequest& request)
+{
     int rows = 50;
     auto size = request.get_option("page[size]");
     auto cursor = request.get_option("page[cursor]");
@@ -789,11 +794,10 @@ HttpResponse cb_logs(const HttpRequest& request)
         }
     }
 
-
-    return HttpResponse(MHD_HTTP_OK, mxs_logs_to_json(request.host(), cursor, rows));
+    return HttpResponse(MHD_HTTP_OK, mxs_log_data_to_json(request.host(), cursor, rows));
 }
 
-HttpResponse cb_logs_stream(const HttpRequest& request)
+HttpResponse cb_log_stream(const HttpRequest& request)
 {
     if (auto fn = mxs_logs_stream(request.get_option("page[cursor]")))
     {
@@ -1206,7 +1210,8 @@ public:
         m_get.emplace_back(cb_all_threads, "maxscale", "threads");
         m_get.emplace_back(cb_thread, "maxscale", "threads", ":thread");
         m_get.emplace_back(cb_logs, "maxscale", "logs");
-        m_get.emplace_back(cb_logs_stream, "maxscale", "logs", "stream");
+        m_get.emplace_back(cb_log_data, "maxscale", "logs", "data");
+        m_get.emplace_back(cb_log_stream, "maxscale", "logs", "stream");
         m_get.emplace_back(cb_tasks, "maxscale", "tasks");
         m_get.emplace_back(cb_all_modules, "maxscale", "modules");
         m_get.emplace_back(cb_module, "maxscale", "modules", ":module");

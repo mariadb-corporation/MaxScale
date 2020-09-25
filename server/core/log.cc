@@ -474,7 +474,7 @@ json_t* get_log_priorities()
 }
 }
 
-json_t* mxs_logs_to_json(const char* host, const std::string& cursor, int rows)
+json_t* mxs_logs_to_json(const char* host)
 {
     std::unordered_set<std::string> log_params = {
         "maxlog",     "syslog",    "log_info",       "log_warning",
@@ -500,8 +500,18 @@ json_t* mxs_logs_to_json(const char* host, const std::string& cursor, int rows)
     json_object_set_new(attr, "log_file", json_string(mxb_log_get_filename()));
     json_object_set_new(attr, "log_priorities", get_log_priorities());
 
-    const auto& cnf = mxs::Config::get();
+    json_t* data = json_object();
+    json_object_set_new(data, CN_ATTRIBUTES, attr);
+    json_object_set_new(data, CN_ID, json_string("logs"));
+    json_object_set_new(data, CN_TYPE, json_string("logs"));
 
+    return mxs_json_resource(host, MXS_JSON_API_LOGS, data);
+}
+
+json_t* mxs_log_data_to_json(const char* host, const std::string& cursor, int rows)
+{
+    json_t* attr = json_object();
+    const auto& cnf = mxs::Config::get();
     Cursors cursors;
     json_t* log = nullptr;
     const char* log_source = nullptr;
@@ -517,17 +527,16 @@ json_t* mxs_logs_to_json(const char* host, const std::string& cursor, int rows)
         log_source = "maxlog";
     }
 
-    if (log_source)
+    if (log_source && log)
     {
         json_object_set_new(attr, "log_source", json_string(log_source));
+        json_object_set_new(attr, "log", log);
     }
-
-    json_object_set_new(attr, "log", log);
 
     json_t* data = json_object();
     json_object_set_new(data, CN_ATTRIBUTES, attr);
-    json_object_set_new(data, CN_ID, json_string("logs"));
-    json_object_set_new(data, CN_TYPE, json_string("logs"));
+    json_object_set_new(data, CN_ID, json_string("log_data"));
+    json_object_set_new(data, CN_TYPE, json_string("log_data"));
 
     json_t* rval = mxs_json_resource(host, MXS_JSON_API_LOGS, data);
 

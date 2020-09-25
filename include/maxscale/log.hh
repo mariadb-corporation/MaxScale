@@ -71,12 +71,21 @@ int mxs_get_log_rotation_count();
  * Get MaxScale logs as JSON
  *
  * @param host   The hostname of this MaxScale, sent by the client.
- * @param cursor The cursor where to read log entries for. An empty string means no cursor is open.
- * @param rows   How many rows of logs to read.
  *
  * @return The logs as a JSON API resource.
  */
-json_t* mxs_logs_to_json(const char* host, const std::string& cursor, int rows);
+json_t* mxs_logs_to_json(const char* host);
+
+/**
+ * Get MaxScale log data as JSON
+ *
+ * @param host   The hostname of this MaxScale, sent by the client.
+ * @param cursor The cursor where to read log entries for. An empty string means no cursor is open.
+ * @param rows   How many rows of logs to read.
+ *
+ * @return The log data as a JSON API resource.
+ */
+json_t* mxs_log_data_to_json(const char* host, const std::string& cursor, int rows);
 
 /**
  * Create a stream of logs
