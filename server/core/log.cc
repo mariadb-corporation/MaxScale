@@ -504,14 +504,22 @@ json_t* mxs_logs_to_json(const char* host, const std::string& cursor, int rows)
 
     Cursors cursors;
     json_t* log = nullptr;
+    const char* log_source = nullptr;
 
     if (cnf.syslog.get())
     {
         std::tie(log, cursors) = get_syslog_data(cursor, rows);
+        log_source = "syslog";
     }
     else if (cnf.maxlog.get())
     {
         std::tie(log, cursors) = get_maxlog_data(cursor, rows);
+        log_source = "maxlog";
+    }
+
+    if (log_source)
+    {
+        json_object_set_new(attr, "log_source", json_string(log_source));
     }
 
     json_object_set_new(attr, "log", log);
