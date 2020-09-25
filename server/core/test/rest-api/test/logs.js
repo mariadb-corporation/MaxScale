@@ -40,3 +40,33 @@ describe("Logs", function() {
 
     after(stopMaxScale)
 });
+
+describe("Log Data", function() {
+    before(startMaxScale)
+
+    it("returns log data", async function() {
+        var res = await request.get(base_url + "/maxscale/logs/data", {json: true})
+        res.data.attributes.log.should.not.be.empty
+    });
+
+    it("returns 50 rows of data by default", async function() {
+        var res = await request.get(base_url + "/maxscale/logs/data", {json: true})
+        res.data.attributes.log.length.should.equal(50)
+    });
+
+    it("paginates logs", async function() {
+        var page = await request.get(base_url + "/maxscale/logs/data?page[size]=1", {json: true})
+        page.data.attributes.log.length.should.equal(1)
+    });
+
+    it("has working pagination links", async function() {
+        var page1 = await request.get(base_url + "/maxscale/logs/data?page[size]=1", {json: true})
+        page1.data.attributes.log.length.should.equal(1)
+
+        var page2 = await request.get(page1.links.prev, {json: true, auth: {user: 'admin', password: 'mariadb'}})
+        page2.data.attributes.log.length.should.equal(1)
+        page2.data.attributes.log[0].should.not.deep.equal(page1.data.attributes.log[0])
+    });
+
+    after(stopMaxScale)
+});
