@@ -5,6 +5,7 @@ ExternalProject_Add(jwt-cpp
   CONFIGURE_COMMAND ""
   BUILD_COMMAND ""
   INSTALL_COMMAND ""
+  UPDATE_COMMAND ""
   PATCH_COMMAND cd ${CMAKE_BINARY_DIR}/jwt-cpp-prefix/src/jwt-cpp/ && git apply ${CMAKE_SOURCE_DIR}/cmake/jwt-cpp.patch
   LOG_DOWNLOAD 1
   LOG_UPDATE 1
