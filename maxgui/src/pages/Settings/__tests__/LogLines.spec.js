@@ -12,7 +12,7 @@
  */
 import { expect } from 'chai'
 import mount from '@tests/unit/setup'
-import LogView from '@/pages/Settings/LogView'
+import LogLines from '@/pages/Settings/LogLines'
 
 const dummy_log_data = [
     {
@@ -56,13 +56,13 @@ const dummy_log_data = [
 const mountFactory = () =>
     mount({
         shallow: false,
-        component: LogView,
+        component: LogLines,
         props: {
             logData: dummy_log_data,
         },
     })
 
-describe('LogView', () => {
+describe('LogLines', () => {
     let wrapper
     beforeEach(async () => {
         wrapper = mountFactory()

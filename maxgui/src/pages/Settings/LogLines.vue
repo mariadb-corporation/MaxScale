@@ -30,7 +30,7 @@
 
 <script>
 export default {
-    name: 'log-view',
+    name: 'log-lines',
     props: {
         logData: { type: Array, required: true },
     },

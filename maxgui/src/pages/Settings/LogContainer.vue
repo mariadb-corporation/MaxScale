@@ -49,7 +49,7 @@
                 </template>
 
                 <div id="scrollable-content" v-scroll:#scrollable-wrapper="onScroll">
-                    <log-view :logData="logData" />
+                    <log-lines :logData="logData" />
                     <div id="bottom-log-line" />
                 </div>
             </v-card>
@@ -58,11 +58,11 @@
 </template>
 
 <script>
-import LogView from './LogView'
+import LogLines from './LogLines'
 export default {
     name: 'log-container',
     components: {
-        LogView,
+        LogLines,
     },
     props: {
         maxscaleOverviewInfo: { type: Object, required: true },
