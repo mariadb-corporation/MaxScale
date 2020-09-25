@@ -330,8 +330,8 @@ static bool process_argument(const MODULECMD* cmd,
         case MODULECMD_ARG_MONITOR:
             if ((arg->value.monitor = MonitorManager::find_monitor((char*) value)))
             {
-                const char* eff_name = mxs_module_get_effective_name(arg->value.monitor->m_module.c_str());
-                if (MODULECMD_ALLOW_NAME_MISMATCH(type) || strcasecmp(cmd->domain, eff_name) == 0)
+                std::string eff_name = module_get_effective_name(arg->value.monitor->m_module);
+                if (MODULECMD_ALLOW_NAME_MISMATCH(type) || strcasecmp(cmd->domain, eff_name.c_str()) == 0)
                 {
                     arg->type.type = MODULECMD_ARG_MONITOR;
                     rval = true;
@@ -352,8 +352,8 @@ static bool process_argument(const MODULECMD* cmd,
             {
                 arg->value.filter = f.get();
                 const char* orig_name = f->module();
-                const char* eff_name = mxs_module_get_effective_name(orig_name);
-                if (MODULECMD_ALLOW_NAME_MISMATCH(type) || strcasecmp(cmd->domain, eff_name) == 0)
+                std::string eff_name = module_get_effective_name(orig_name);
+                if (MODULECMD_ALLOW_NAME_MISMATCH(type) || strcasecmp(cmd->domain, eff_name.c_str()) == 0)
                 {
                     arg->type.type = MODULECMD_ARG_FILTER;
                     rval = true;
@@ -472,14 +472,14 @@ const MODULECMD* modulecmd_find_command(const char* domain, const char* identifi
 {
     reset_error();
 
-    const char* effective_domain = mxs_module_get_effective_name(domain);
+    std::string effective_domain = module_get_effective_name(domain);
 
     MODULECMD* rval = NULL;
     std::lock_guard<std::mutex> guard(modulecmd_lock);
 
     for (MODULECMD_DOMAIN* dm = modulecmd_domains; dm; dm = dm->next)
     {
-        if (strcasecmp(effective_domain, dm->domain) == 0)
+        if (strcasecmp(effective_domain.c_str(), dm->domain) == 0)
         {
             for (MODULECMD* cmd = dm->commands; cmd; cmd = cmd->next)
             {

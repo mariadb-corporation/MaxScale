@@ -59,11 +59,11 @@ bool load_all_modules();
 /**
  *@brief Load a module
  *
- * @param module Name of the module to load
- * @param type   Type of module, used purely for registration
- * @return       The module specific entry point structure or NULL
+ * @param name Name of the module to load
+ * @param type Type of module, used purely for registration
+ * @return     The module specific entry point structure or NULL
  */
-void* load_module(const char* module, const char* type);
+void* load_module(const char* name, const char* type);
 
 /**
  * @brief Get a module
@@ -136,7 +136,7 @@ json_t* module_list_to_json(const char* host);
  *
  * @return The effective name (may be the same).
  */
-const char* mxs_module_get_effective_name(const char* name);
+std::string module_get_effective_name(const std::string& name);
 
 /**
  * @brief Convert configuration specification to a MaxScale module in JSON format

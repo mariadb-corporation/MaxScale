@@ -38,6 +38,7 @@
 #include <maxscale/monitor.hh>
 #include <maxscale/query_classifier.hh>
 #include <maxscale/routingworker.hh>
+#include <maxbase/format.hh>
 
 #include "internal/modules.hh"
 #include "internal/config.hh"
@@ -80,6 +81,10 @@ struct NAME_MAPPING
     const char* to;     // What should be loaded instead.
     bool        warned; // Whether a warning has been logged.
 };
+
+LOADED_MODULE* find_module(const string& name);
+void register_module(const char* name, const char* type, void* dlhandle, MXS_MODULE* mod_info);
+LOADED_MODULE* unregister_module(const char* name);
 }
 
 static NAME_MAPPING name_mappings[] =
@@ -92,12 +97,6 @@ static NAME_MAPPING name_mappings[] =
 
 static const size_t N_NAME_MAPPINGS = sizeof(name_mappings) / sizeof(name_mappings[0]);
 
-static LOADED_MODULE* find_module(const char* name);
-static LOADED_MODULE* register_module(const char* name,
-                                      const char* type,
-                                      void* dlhandle,
-                                      MXS_MODULE* mod_info);
-static void unregister_module(const char* name);
 
 static const char* module_type_to_str(MXS_MODULE_API type)
 {
@@ -311,53 +310,34 @@ bool load_all_modules()
     return rv == 0;
 }
 
-void* load_module(const char* module, const char* type)
+void* load_module(const char* name, const char* type)
 {
-    mxb_assert(module);
-    LOADED_MODULE* mod;
-
-    module = mxs_module_get_effective_name(module);
-
-    if ((mod = find_module(module)) == NULL)
+    mxb_assert(name);
+    string eff_name = module_get_effective_name(name);
+    name = eff_name.c_str();
+    LOADED_MODULE* mod = find_module(eff_name);
+    if (!mod)
     {
-        size_t len = strlen(module);
-        char lc_module[len + 1];
-        lc_module[len] = 0;
-        std::transform(module, module + len, lc_module, tolower);
-
         /** The module is not already loaded, search for the shared object */
-        char fname[MAXPATHLEN + 1];
-        snprintf(fname, MAXPATHLEN + 1, "%s/lib%s.so", mxs::libdir(), lc_module);
-
-        if (access(fname, F_OK) == -1)
+        string fname = mxb::string_printf("%s/lib%s.so", mxs::libdir(), eff_name.c_str());
+        auto fnamec = fname.c_str();
+        if (access(fnamec, F_OK) == -1)
         {
-            MXS_ERROR("Unable to find library for "
-                      "module: %s. Module dir: %s",
-                      module,
-                      mxs::libdir());
+            MXS_ERROR("Unable to find library for module '%s'. Module dir: %s", name, mxs::libdir());
             return NULL;
         }
 
-        void* dlhandle = dlopen(fname, RTLD_NOW | RTLD_LOCAL);
-
+        void* dlhandle = dlopen(fnamec, RTLD_NOW | RTLD_LOCAL);
         if (dlhandle == NULL)
         {
-            MXS_ERROR("Unable to load library for module: "
-                      "%s\n\n\t\t      %s."
-                      "\n\n",
-                      module,
-                      dlerror());
+            MXS_ERROR("Unable to load library for module '%s': %s.", name, dlerror());
             return NULL;
         }
 
         void* sym = dlsym(dlhandle, MXS_MODULE_SYMBOL_NAME);
-
         if (sym == NULL)
         {
-            MXS_ERROR("Expected entry point interface missing "
-                      "from module: %s\n\t\t\t      %s.",
-                      module,
-                      dlerror());
+            MXS_ERROR("Expected entry point interface missing in module '%s': %s.", name, dlerror());
             dlclose(dlhandle);
             return NULL;
         }
@@ -365,16 +345,15 @@ void* load_module(const char* module, const char* type)
         void* (* entry_point)() = (void* (*)())sym;
         MXS_MODULE* mod_info = (MXS_MODULE*)entry_point();
 
-        if (!check_module(mod_info, type, module))
+        if (!check_module(mod_info, type, name))
         {
             dlclose(dlhandle);
             return NULL;
         }
 
-        mod = register_module(module, module_type_to_str(mod_info->modapi), dlhandle, mod_info);
-        mxb_assert(mod);
-
-        MXS_NOTICE("Loaded module %s: %s from %s", module, mod_info->version, fname);
+        register_module(name, module_type_to_str(mod_info->modapi), dlhandle, mod_info);
+        mod = find_module(name);
+        MXS_NOTICE("Loaded module %s: %s from %s", name, mod_info->version, fname.c_str());
 
         if (mxs::RoutingWorker::is_running())
         {
@@ -406,25 +385,26 @@ void* load_module(const char* module, const char* type)
 
 void unload_module(const char* module)
 {
-    module = mxs_module_get_effective_name(module);
-
-    LOADED_MODULE* mod = find_module(module);
-
+    string eff_name = module_get_effective_name(module);
+    auto mod = unregister_module(eff_name.c_str());
     if (mod)
     {
-        void* handle = mod->handle;
-        unregister_module(module);
-        dlclose(handle);
+        // The module is no longer in the container and all related memory can be freed.
+        dlclose(mod->handle);
+        delete mod;
     }
 }
+
+namespace
+{
 
 /**
  * Find a module that has been previously loaded.
  *
- * @param name        The name of the module, in lowercase
- * @return              The module handle or NULL if it was not found
+ * @param name The name of the module, in lowercase
+ * @return     The module handle or NULL if it was not found
  */
-static LOADED_MODULE* find_module(const char* name)
+LOADED_MODULE* find_module(const string& name)
 {
     LOADED_MODULE* rval = nullptr;
     auto iter = loaded_modules.find(name);
@@ -436,17 +416,15 @@ static LOADED_MODULE* find_module(const char* name)
 }
 
 /**
- * Register a newly loaded module. The registration allows for single copies
- * to be loaded and cached entry point information to be return.
+ * Register a new loaded module.
  *
  * @param name        The name of the module loaded
- * @param type          The type of the module loaded
- * @param dlhandle      The handle returned by dlopen
- * @param mod_info      The module information
+ * @param type        The type of the module loaded
+ * @param dlhandle    The handle returned by dlopen
+ * @param mod_info    The module information
  * @return The new registered module
  */
-static LOADED_MODULE* register_module(const char* name, const char* type,
-                                      void* dlhandle, MXS_MODULE* mod_info)
+void register_module(const char* name, const char* type, void* dlhandle, MXS_MODULE* mod_info)
 {
     mxb_assert(loaded_modules.count(name) == 0);
     auto mod = new LOADED_MODULE;
@@ -456,35 +434,35 @@ static LOADED_MODULE* register_module(const char* name, const char* type,
     mod->version = mod_info->version;
     mod->modobj = mod_info->module_object;
     mod->info = mod_info;
-
     loaded_modules[name] = mod;
-    return mod;
 }
 
 /**
  * Unregister a module
  *
- * @param name        The name of the module to remove
+ * @param name The name of the module to remove
  */
-static void unregister_module(const char* name)
+LOADED_MODULE* unregister_module(const char* name)
 {
+    LOADED_MODULE* rval = nullptr;
     auto iter = loaded_modules.find(name);
     if (iter != loaded_modules.end())
     {
-        LOADED_MODULE* mod = iter->second;
+        rval = iter->second;
         loaded_modules.erase(iter);
-        // The module is no longer in the container and all related memory can be freed.
-        dlclose(mod->handle);
-        delete mod;
     }
+    return rval;
 }
+
+}
+
 
 void unload_all_modules()
 {
     while (!loaded_modules.empty())
     {
         auto first = loaded_modules.begin();
-        unregister_module(first->first.c_str());
+        unload_module(first->first.c_str());
     }
 }
 
@@ -811,49 +789,36 @@ static const char* module_status_to_string(LOADED_MODULE* ptr)
 
 const MXS_MODULE* get_module(const char* name, const char* type)
 {
-    name = mxs_module_get_effective_name(name);
+    string eff_name = module_get_effective_name(name);
 
-    LOADED_MODULE* mod = find_module(name);
+    LOADED_MODULE* mod = find_module(eff_name);
 
-    if (mod == NULL && type && load_module(name, type))
+    if (mod == NULL && type && load_module(eff_name.c_str(), type))
     {
-        mod = find_module(name);
+        mod = find_module(eff_name);
     }
 
     return mod ? mod->info : NULL;
 }
 
-const char* mxs_module_get_effective_name(const char* name)
+string module_get_effective_name(const string& name)
 {
-    const char* effective_name = NULL;
-    size_t i = 0;
-
-    while (!effective_name && (i < N_NAME_MAPPINGS))
+    string eff_name = mxb::tolower(name);
+    for (auto& nm : name_mappings)
     {
-        NAME_MAPPING& nm = name_mappings[i];
-
-        if (strcasecmp(name, nm.from) == 0)
+        if (eff_name == nm.from)
         {
             if (!nm.warned)
             {
                 MXS_WARNING("%s module '%s' has been deprecated, use '%s' instead.",
-                            nm.type,
-                            nm.from,
-                            nm.to);
+                            nm.type, nm.from, nm.to);
                 nm.warned = true;
             }
-            effective_name = nm.to;
+            eff_name = nm.to;
+            break;
         }
-
-        ++i;
     }
-
-    if (!effective_name)
-    {
-        effective_name = name;
-    }
-
-    return effective_name;
+    return eff_name;
 }
 
 namespace
