@@ -80,9 +80,9 @@ const MXS_MODULE* get_module(const char* name, const char* type);
  * No errors are returned since it is not clear that much can be done
  * to fix issues relating to unloading modules.
  *
- * @param module The name of the module
+ * @param name The name of the module
  */
-void unload_module(const char* module);
+void unload_module(const char* name);
 
 /**
  * @brief Unload all modules

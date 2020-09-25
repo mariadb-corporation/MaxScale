@@ -67,6 +67,16 @@ struct LOADED_MODULE
 
     void* handle {nullptr};     /**< The handle returned by dlopen */
     void* modobj {nullptr};     /**< The module entry points */
+
+    LOADED_MODULE(const string& name, const string& type, void* dlhandle, MXS_MODULE* info)
+        : info(info)
+        , name(name)
+        , type(type)
+        , version(info->version)
+        , handle(dlhandle)
+        , modobj(info->module_object)
+    {
+    }
 };
 
 /**
@@ -83,8 +93,7 @@ struct NAME_MAPPING
 };
 
 LOADED_MODULE* find_module(const string& name);
-void register_module(const char* name, const char* type, void* dlhandle, MXS_MODULE* mod_info);
-LOADED_MODULE* unregister_module(const char* name);
+
 }
 
 static NAME_MAPPING name_mappings[] =
@@ -314,47 +323,66 @@ void* load_module(const char* name, const char* type)
 {
     mxb_assert(name);
     string eff_name = module_get_effective_name(name);
-    name = eff_name.c_str();
-    LOADED_MODULE* mod = find_module(eff_name);
-    if (!mod)
+    auto loaded_module = find_module(eff_name);
+    if (loaded_module)
     {
-        /** The module is not already loaded, search for the shared object */
-        string fname = mxb::string_printf("%s/lib%s.so", mxs::libdir(), eff_name.c_str());
-        auto fnamec = fname.c_str();
-        if (access(fnamec, F_OK) == -1)
-        {
-            MXS_ERROR("Unable to find library for module '%s'. Module dir: %s", name, mxs::libdir());
-            return NULL;
-        }
+        // Module was already loaded, return API functions.
+        return loaded_module->modobj;
+    }
 
+    void* rval = nullptr;
+    string load_errmsg;
+
+    /** The module is not already loaded, search for the shared object */
+    string fname = mxb::string_printf("%s/lib%s.so", mxs::libdir(), eff_name.c_str());
+    auto fnamec = fname.c_str();
+    if (access(fnamec, F_OK) != 0)
+    {
+        int eno = errno;
+        load_errmsg = mxb::string_printf("Cannot access library file '%s'. Error %i: %s",
+                                         fnamec, eno, mxb_strerror(eno));
+    }
+    else
+    {
         void* dlhandle = dlopen(fnamec, RTLD_NOW | RTLD_LOCAL);
-        if (dlhandle == NULL)
+        if (!dlhandle)
         {
-            MXS_ERROR("Unable to load library for module '%s': %s.", name, dlerror());
-            return NULL;
+            load_errmsg = mxb::string_printf("Cannot load library file '%s'. %s.", fnamec, dlerror());
         }
-
-        void* sym = dlsym(dlhandle, MXS_MODULE_SYMBOL_NAME);
-        if (sym == NULL)
+        else
         {
-            MXS_ERROR("Expected entry point interface missing in module '%s': %s.", name, dlerror());
-            dlclose(dlhandle);
-            return NULL;
+            void* sym = dlsym(dlhandle, MXS_MODULE_SYMBOL_NAME);
+            if (!sym)
+            {
+                load_errmsg = mxb::string_printf("Libary file '%s' does not contain the entry point "
+                                                 "function. %s.", fnamec, dlerror());
+                dlclose(dlhandle);
+            }
+            else
+            {
+                // Module was loaded, check that it's valid.
+                auto entry_point = (void* (*)())sym;
+                auto mod_info = (MXS_MODULE*)entry_point();
+                if (!check_module(mod_info, type, eff_name.c_str()))
+                {
+                    dlclose(dlhandle);
+                }
+                else
+                {
+                    loaded_module = new LOADED_MODULE(eff_name, type, dlhandle, mod_info);
+                }
+            }
         }
+    }
 
-        void* (* entry_point)() = (void* (*)())sym;
-        MXS_MODULE* mod_info = (MXS_MODULE*)entry_point();
+    if (loaded_module)
+    {
+        mxb_assert(loaded_modules.count(eff_name) == 0);
+        loaded_modules.insert(std::make_pair(eff_name, loaded_module));
+        MXS_NOTICE("Module '%s' loaded from '%s'.", name, fname.c_str());
+        auto mod_info = loaded_module->info;
 
-        if (!check_module(mod_info, type, name))
-        {
-            dlclose(dlhandle);
-            return NULL;
-        }
-
-        register_module(name, module_type_to_str(mod_info->modapi), dlhandle, mod_info);
-        mod = find_module(name);
-        MXS_NOTICE("Loaded module %s: %s from %s", name, mod_info->version, fname.c_str());
-
+        // Run module process/thread init functions.
         if (mxs::RoutingWorker::is_running())
         {
             if (mod_info->process_init)
@@ -378,20 +406,26 @@ void* load_module(const char* name, const char* type)
                 }
             }
         }
+        rval = loaded_module->modobj;
     }
-
-    return mod->modobj;
+    else if (!load_errmsg.empty())
+    {
+        MXB_ERROR("Cannot load module '%s'. %s", name, load_errmsg.c_str());
+    }
+    return rval;
 }
 
-void unload_module(const char* module)
+void unload_module(const char* name)
 {
-    string eff_name = module_get_effective_name(module);
-    auto mod = unregister_module(eff_name.c_str());
-    if (mod)
+    string eff_name = module_get_effective_name(name);
+    auto iter = loaded_modules.find(eff_name);
+    if (iter != loaded_modules.end())
     {
+        auto module = iter->second;
+        loaded_modules.erase(iter);
         // The module is no longer in the container and all related memory can be freed.
-        dlclose(mod->handle);
-        delete mod;
+        dlclose(module->handle);
+        delete module;
     }
 }
 
@@ -415,47 +449,7 @@ LOADED_MODULE* find_module(const string& name)
     return rval;
 }
 
-/**
- * Register a new loaded module.
- *
- * @param name        The name of the module loaded
- * @param type        The type of the module loaded
- * @param dlhandle    The handle returned by dlopen
- * @param mod_info    The module information
- * @return The new registered module
- */
-void register_module(const char* name, const char* type, void* dlhandle, MXS_MODULE* mod_info)
-{
-    mxb_assert(loaded_modules.count(name) == 0);
-    auto mod = new LOADED_MODULE;
-    mod->name = name;
-    mod->type = type;
-    mod->handle = dlhandle;
-    mod->version = mod_info->version;
-    mod->modobj = mod_info->module_object;
-    mod->info = mod_info;
-    loaded_modules[name] = mod;
 }
-
-/**
- * Unregister a module
- *
- * @param name The name of the module to remove
- */
-LOADED_MODULE* unregister_module(const char* name)
-{
-    LOADED_MODULE* rval = nullptr;
-    auto iter = loaded_modules.find(name);
-    if (iter != loaded_modules.end())
-    {
-        rval = iter->second;
-        loaded_modules.erase(iter);
-    }
-    return rval;
-}
-
-}
-
 
 void unload_all_modules()
 {
