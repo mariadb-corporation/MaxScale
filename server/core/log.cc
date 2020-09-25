@@ -369,6 +369,73 @@ std::pair<json_t*, Cursors> get_maxlog_data(const std::string& cursor, int rows)
     return {arr, cursors};
 }
 
+class LogStream
+{
+public:
+
+    static std::shared_ptr<LogStream> create(const std::string& cursor)
+    {
+        std::shared_ptr<LogStream> rval;
+        std::ifstream file(mxb_log_get_filename());
+
+        if (file.good())
+        {
+            int n = 0;
+
+            if (cursor.empty())
+            {
+                while (file.ignore(std::numeric_limits<std::streamsize>::max(), '\n'))
+                {
+                    ++n;
+                }
+            }
+            else
+            {
+                n = atoi(cursor.c_str());
+
+                for (int i = 0; i < n; i++)
+                {
+                    file.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+                }
+            }
+
+            rval = std::make_shared<LogStream>(std::move(file), n);
+        }
+
+        return rval;
+    }
+
+    std::string get_value()
+    {
+        std::string rval;
+
+        for (std::string line; std::getline(m_file, line);)
+        {
+            if (json_t* obj = line_to_json(line, m_lineno++))
+            {
+                rval = mxs::json_dump(obj, JSON_COMPACT);
+                json_decref(obj);
+                break;
+            }
+        }
+
+        // Clear the eof flag so that new lines are read
+        m_file.clear();
+
+        return rval;
+    }
+
+    LogStream(std::ifstream&& file, int lineno)
+        : m_file(std::move(file))
+        , m_lineno(lineno)
+    {
+    }
+
+private:
+    std::ifstream m_file;
+    int           m_lineno = 0;
+};
+
 json_t* get_log_priorities()
 {
     json_t* arr = json_array();
@@ -493,7 +560,12 @@ std::function<std::string()> mxs_logs_stream(const std::string& cursor)
     }
     else if (cnf.maxlog.get())
     {
-        MXS_ERROR("Not yet implemented");
+        if (auto stream = LogStream::create(cursor))
+        {
+            return [stream]() {
+                       return stream->get_value();
+                   };
+        }
     }
     else
     {
