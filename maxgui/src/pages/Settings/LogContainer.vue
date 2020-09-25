@@ -30,6 +30,7 @@
 
             <v-card
                 id="scrollable-wrapper"
+                ref="scrollableWrapper"
                 :tile="false"
                 class="overflow-y-auto color no-border bg-reflection"
                 :min-height="containerHeight"
@@ -46,7 +47,7 @@
                     </div>
                 </template>
 
-                <div id="scrollable-content" v-scroll:#scrollable-wrapper="onScroll">
+                <div ref="scrollableContent" v-scroll:#scrollable-wrapper="onScroll">
                     <log-lines :logData="logData" />
                     <div id="bottom-log-line" />
                 </div>
@@ -69,8 +70,6 @@ export default {
     data() {
         return {
             containerHeight: document.documentElement.clientHeight * 0.6,
-            scrollableWrapper: null,
-            scrollableContent: null,
             scrollTop: 100,
             isLoading: false,
             logData: [],
@@ -93,8 +92,6 @@ export default {
 
     async mounted() {
         await this.fetchLatestLogs()
-        this.scrollableContent = document.getElementById('scrollable-content')
-        this.scrollableWrapper = document.getElementById('scrollable-wrapper')
         await this.loopFetchOlderLogs()
         // go to bottom on mounted
         this.toBottom('auto')
@@ -171,8 +168,9 @@ export default {
         async handleFetchPrevPage() {
             const prevLogs = await this.getPrevCursorLogs()
             await this.$help.delay(400).then(() => (this.isLoading = false))
+            const { scrollableContent, scrollableWrapper } = this.$refs
             // store current height before union prev logs to logData
-            const currentHeight = this.scrollableContent.scrollHeight
+            const currentHeight = scrollableContent.scrollHeight
 
             if (!this.isLoading)
                 this.logData = this.$help.lodash.unionBy(prevLogs, this.logData, 'id')
@@ -180,8 +178,8 @@ export default {
             await this.$nextTick(() => {
                 const aLineHeight = 24
                 // preseve scroll pos when union to logs and show 3 new log lines
-                this.scrollableWrapper.scrollTop = Math.floor(
-                    this.scrollableContent.offsetHeight - (currentHeight + aLineHeight * 3)
+                scrollableWrapper.$el.scrollTop = Math.floor(
+                    scrollableContent.offsetHeight - (currentHeight + aLineHeight * 3)
                 )
             })
         },
@@ -252,7 +250,8 @@ export default {
          * Check if the log content div is scrollable
          */
         isScrollable() {
-            return this.scrollableContent.scrollHeight > this.scrollableWrapper.clientHeight
+            const { scrollableContent, scrollableWrapper } = this.$refs
+            return scrollableContent.scrollHeight > scrollableWrapper.$el.clientHeight
         },
     },
 }
