@@ -337,6 +337,133 @@ location where the log files are stored.
 }
 ```
 
+## Get log data
+
+```
+GET /v1/maxscale/logs/data
+```
+
+Get the contents of the MaxScale logs. This endpoint was added in MaxScale 2.6.
+
+To navigate the log, use the `prev` link to move backwards to older log
+entries. The latest log entries can be read with the `last` link.
+
+#### Parameters
+
+This endpoint supports the following parameters:
+
+- `page[size]`
+
+  - Set number of rows of data to read. By default, 50 rows of data are read
+    from the log.
+
+- `page[cursor]`
+
+  - Set position from where the log data is retrieved. The default position to
+    retrieve the log data is the end of the log.
+
+    This value should not be modified by the user and the values returned in the
+    `links` object should be used instead. This way the navigation will provide
+    a consistent view of the log that does not overlap.
+
+    Optionally, the `id` values in the returned data can be used as the values
+    for this parameter to read data from a known point in the file.
+
+#### Response
+
+`Status: 200 OK`
+
+```javascript
+{
+    "data": {
+        "attributes": {
+            "log": [
+                {
+                    "id": "572",
+                    "message": "MaxScale started with 8 worker threads, each with a stack size of 8388608 bytes.",
+                    "priority": "notice",
+                    "timestamp": "2020-09-25 10:01:29"
+                },
+                {
+                    "id": "573",
+                    "message": "Loading /home/markusjm/build-develop/maxscale.cnf.",
+                    "priority": "notice",
+                    "timestamp": "2020-09-25 10:01:29"
+                },
+                {
+                    "id": "574",
+                    "message": "/home/markusjm/build-develop/maxscale.cnf.d does not exist, not reading.",
+                    "priority": "notice",
+                    "timestamp": "2020-09-25 10:01:29"
+                }
+            ],
+            "log_source": "maxlog"
+        },
+        "id": "log_data",
+        "type": "log_data"
+    },
+    "links": {
+        "last": "http://localhost:8989/v1/maxscale/logs/?page[size]=3",
+        "prev": "http://localhost:8989/v1/maxscale/logs/?page[cursor]=522&page[size]=3",
+        "self": "http://localhost:8989/v1/maxscale/logs/?page[cursor]=572&page[size]=3"
+    }
+}
+```
+
+## Stream log data
+
+```
+GET /v1/maxscale/logs/stream
+```
+
+Stream the contents of the MaxScale logs. This endpoint was added in MaxScale 2.6.
+
+This endpoint opens a [WebSocket](https://tools.ietf.org/html/rfc6455)
+connection and streams the contents of the log to it. Each WebSocket message
+will contain the JSON representation of the log message. The JSON is formatted
+in the same way as the values in the `log` array of the `/v1/maxscale/logs/data`
+endpoint:
+
+```javascript
+{
+    "id": "572",
+    "message": "MaxScale started with 8 worker threads, each with a stack size of 8388608 bytes.",
+    "priority": "notice",
+    "timestamp": "2020-09-25 10:01:29"
+}
+```
+
+### Limitations
+
+* If the client writes any data to the open socket, it will be treated as
+  an error and the stream is closed.
+
+* The WebSocket ping and close commands are not yet supported and will be
+  treated as errors.
+
+#### Parameters
+
+This endpoint supports the following parameters:
+
+- `page[cursor]`
+
+  - Set position from where the log data is retrieved. The default position to
+    retrieve the log data is the end of the log.
+
+    To stream data from a known point, first read the data via the
+    `/v1/maxscale/logs/data` endpoint and then use the `id` value of the newest
+    log message (i.e. the first value in the `log` array) to start the stream.
+
+#### Response
+
+Upgrade started:
+
+`Status: 101 Switching Protocols`
+
+Client didn't request a WebSocket upgrade:
+
+`Status: 426 Upgrade Required`
+
 ## Update logging parameters
 
 **Note:** The modification of logging parameters via this endpoint has
