@@ -70,13 +70,13 @@ export default {
     data() {
         return {
             containerHeight: document.documentElement.clientHeight * 0.6,
-            scrollTop: 100,
             isLoading: false,
             logData: [],
             log_source: [],
             prevPageLink: null,
             connection: null,
             isNotifShown: false,
+            isAtBottom: false,
         }
     },
 
@@ -87,6 +87,10 @@ export default {
                 await this.fetchLatestLogs()
                 this.toBottom('auto')
             }
+        },
+        isAtBottom: function(val) {
+            // Turn off notif if scroll position is at bottom already
+            if (val) this.isNotifShown = false
         },
     },
 
@@ -113,6 +117,7 @@ export default {
                 await this.handleFetchPrevPage()
             }
         },
+
         /**
          * This function fetches latest 50 log lines.
          * It assigns log_source, logData and prevLink
@@ -150,7 +155,13 @@ export default {
             // push new log to logData
             this.connection.onmessage = async e => {
                 await this.logData.push(JSON.parse(e.data))
-                if (!this.isNotifShown) this.isNotifShown = true
+                /* if scrolled position is at bottom already,
+                 * scroll to bottom to see latest data. Otherwise,
+                 * show notification button (let user controls scroll
+                 * to bottom)
+                 */
+                if (this.isAtBottom) this.toBottom()
+                else this.isNotifShown = true
             }
         },
 
@@ -211,7 +222,9 @@ export default {
             // hide notification
             this.isNotifShown = false
         },
+
         /**
+         * @param {String} behavior - behavior when scroll to target. e.g. smooth, auto, ..
          * This function scrolls to bottom after latest logs has been fetched.
          */
         toBottom(behavior = 'smooth') {
@@ -224,14 +237,13 @@ export default {
         },
 
         /**
+         * @param {Object} e - scroll event
          * This function handles scroll event.
          * It triggers handler methods if scroll position match
          * provided conditions
          */
         async onScroll(e) {
-            // Turn off notif if scroll position is at bottom already
-            if (this.shouldHideNotif(e)) this.isNotifShown = false
-
+            this.isAtBottom = this.checkIsAtBottom(e)
             /* calls handleFetchPrevPage method when there is prevPageLink and
              * current scroll position is 0.u
              */
@@ -240,12 +252,10 @@ export default {
 
         /**
          * @param {Object} e - scroll event
-         * @param returns boolean
+         * @returns returns boolean
          */
-        shouldHideNotif(e) {
-            const remainHeight = e.target.scrollHeight - e.target.scrollTop
-            return Math.floor(this.containerHeight) === remainHeight && this.isNotifShown
-        },
+        checkIsAtBottom: e => e.target.clientHeight === e.target.scrollHeight - e.target.scrollTop,
+
         /**
          * Check if the log content div is scrollable
          */
