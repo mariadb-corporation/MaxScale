@@ -95,6 +95,7 @@ export default {
         await this.fetchLatestLogs()
         this.scrollableContent = document.getElementById('scrollable-content')
         this.scrollableWrapper = document.getElementById('scrollable-wrapper')
+        await this.loopFetchOlderLogs()
         // go to bottom on mounted
         this.toBottom('auto')
         await this.openConnection()
@@ -103,6 +104,18 @@ export default {
         if (this.connection) this.disconnect()
     },
     methods: {
+        /**
+         * This function fetches older logs than current until the log content div
+         * is scrollable. This allows user to scroll up to get old logs if
+         * current logs received are to small which make it unable to scroll.
+         * This may happen when log_source is maxlog and log_debug=1 as
+         * multiple log lines in maxscale is now ignored.
+         */
+        async loopFetchOlderLogs() {
+            while (!this.isScrollable() && this.prevPageLink) {
+                await this.handleFetchPrevPage()
+            }
+        },
         /**
          * This function fetches latest 50 log lines.
          * It assigns log_source, logData and prevLink
@@ -164,7 +177,7 @@ export default {
             if (!this.isLoading)
                 this.logData = this.$help.lodash.unionBy(prevLogs, this.logData, 'id')
 
-            this.$nextTick(() => {
+            await this.$nextTick(() => {
                 const aLineHeight = 24
                 // preseve scroll pos when union to logs and show 3 new log lines
                 this.scrollableWrapper.scrollTop = Math.floor(
@@ -232,9 +245,14 @@ export default {
          * @param returns boolean
          */
         shouldHideNotif(e) {
-            // Turn off notif if scroll position is at bottom already
             const remainHeight = e.target.scrollHeight - e.target.scrollTop
             return Math.floor(this.containerHeight) === remainHeight && this.isNotifShown
+        },
+        /**
+         * Check if the log content div is scrollable
+         */
+        isScrollable() {
+            return this.scrollableContent.scrollHeight > this.scrollableWrapper.clientHeight
         },
     },
 }
