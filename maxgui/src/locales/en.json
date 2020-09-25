@@ -92,6 +92,9 @@
 
     "maxScaleParameters": "MaxScale Parameters",
     "maxscaleLogs": "MaxScale Logs",
+    "newMessagesAvailable": "New messages available",
+    "loadingLogs": "Loading logs",
+
     "protocol": "protocol | protocols",
     "module": "module | modules",
     "forceClosing": "Force closing",

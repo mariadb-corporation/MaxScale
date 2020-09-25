@@ -1,5 +1,5 @@
 <template>
-    <div :class="['d-flex flex-column']">
+    <div class="log-view-container">
         <p>
             <span class="color text-field-text">
                 <span class="d-inline-block mr-2">
@@ -13,9 +13,25 @@
                 }}
             </span>
         </p>
-        <div class="logs-wrapper pa-4 color bg-reflection">
+        <div class="log-lines-container pa-4 color bg-reflection">
+            <v-btn
+                v-if="isNotifShown"
+                class="pa-2 new-log-btn font-weight-medium px-7 text-capitalize"
+                small
+                height="36"
+                color="primary"
+                rounded
+                depressed
+                @click="clickToBottom"
+            >
+                {{ $t('newMessagesAvailable') }}!
+                <v-icon class="arrow-down" size="32">
+                    $expand
+                </v-icon>
+            </v-btn>
+
             <v-card
-                id="scrollable-logs"
+                id="scrollable-wrapper"
                 :tile="false"
                 class="overflow-y-auto color no-border bg-reflection"
                 :min-height="containerHeight"
@@ -27,13 +43,14 @@
                     <div class="d-flex flex-column align-center justify-center mt-2">
                         <v-progress-circular color="primary" indeterminate size="24" />
                         <p class="mt-1 loading-logs-text-indicator color text-field-text">
-                            Loading logs...
+                            {{ $t('loadingLogs') }}...
                         </p>
                     </div>
                 </template>
 
-                <div id="scrolled-content" v-scroll:#scrollable-logs="onScroll">
+                <div id="scrollable-content" v-scroll:#scrollable-wrapper="onScroll">
                     <log-view :logData="logData" />
+                    <div id="bottom-log-line" />
                 </div>
             </v-card>
         </div>
@@ -53,59 +70,41 @@ export default {
     },
     data() {
         return {
-            containerHeight: document.documentElement.clientHeight * 0.6 + 'px',
-            scrollTarget: null,
-            scrolledContent: null,
+            containerHeight: document.documentElement.clientHeight * 0.6,
+            scrollableWrapper: null,
+            scrollableContent: null,
             scrollTop: 100,
             isLoading: false,
             logData: [],
             log_file: [],
             prevPageLink: null,
             connection: null,
+            isNotifShown: false,
         }
     },
 
     watch: {
+        // controls by parent component
         shouldFetchLogs: async function(val) {
             if (val) {
                 await this.fetchLatestLogs()
-                // TODOS:
-                await this.toBottom()
+                this.toBottom('auto')
             }
         },
     },
 
     async mounted() {
         await this.fetchLatestLogs()
-        await this.toBottom()
+        this.scrollableContent = document.getElementById('scrollable-content')
+        this.scrollableWrapper = document.getElementById('scrollable-wrapper')
+        // go to bottom on mounted
+        this.toBottom('auto')
         await this.openConnection()
     },
     beforeDestroy() {
         if (this.connection) this.disconnect()
     },
     methods: {
-        /**
-         * This function scrolls to bottom after latest logs has been fetched.
-         * scroll to bottom. TODO: if current scroll position is at bottom already,
-         * call toBottom(). If user are scrolling up or shouldFetchLogs value change,
-         * it should show a popup saying something like
-         * "new logs available", clicking will call toBottom()
-         */
-        async toBottom() {
-            this.scrolledContent = document.getElementById('scrolled-content')
-            this.scrollTarget = document.getElementById('scrollable-logs')
-            this.scrollTarget.scrollTop = Math.floor(this.scrolledContent.offsetHeight)
-        },
-
-        /**
-         * This function detect scroll up event. It calls
-         * handleFetchPrevPage method when there is prevPageLink and
-         * current scroll position is 0.
-         */
-        async onScroll(e) {
-            if (e.target.scrollTop === 0 && this.prevPageLink) await this.handleFetchPrevPage()
-        },
-
         /**
          * This function fetches latest 50 log lines.
          * It assigns log_file, logData and prevLink
@@ -143,7 +142,7 @@ export default {
             // push new log to logData
             this.connection.onmessage = async e => {
                 await this.logData.push(JSON.parse(e.data))
-                await this.toBottom()
+                if (!this.isNotifShown) this.isNotifShown = true
             }
         },
 
@@ -151,6 +150,7 @@ export default {
             this.connection.close()
             this.logData = []
         },
+
         /**
          * This function handles unioning previous cursor logData to current
          * logData.
@@ -161,7 +161,7 @@ export default {
             const prevLogs = await this.getPrevCursorLogs()
             await this.$help.delay(400).then(() => (this.isLoading = false))
             // store current height before union prev logs to logData
-            const currentHeight = this.scrolledContent.scrollHeight
+            const currentHeight = this.scrollableContent.scrollHeight
 
             if (!this.isLoading)
                 this.logData = this.$help.lodash.unionBy(prevLogs, this.logData, 'id')
@@ -169,8 +169,8 @@ export default {
             this.$nextTick(() => {
                 const aLineHeight = 24
                 // preseve scroll pos when union to logs and show 3 new log lines
-                this.scrollTarget.scrollTop = Math.floor(
-                    this.scrolledContent.offsetHeight - (currentHeight + aLineHeight * 3)
+                this.scrollableWrapper.scrollTop = Math.floor(
+                    this.scrollableContent.offsetHeight - (currentHeight + aLineHeight * 3)
                 )
             })
         },
@@ -196,11 +196,60 @@ export default {
                 this.$logger('LogContainer-getPrevCursorLogs').error(e)
             }
         },
+
+        clickToBottom() {
+            this.toBottom()
+            // hide notification
+            this.isNotifShown = false
+        },
+        /**
+         * This function scrolls to bottom after latest logs has been fetched.
+         */
+        toBottom(behavior = 'smooth') {
+            let bottomEle = document.getElementById('bottom-log-line')
+            bottomEle.scrollIntoView({
+                behavior: behavior,
+                block: 'center',
+                inline: 'start',
+            })
+        },
+
+        /**
+         * This function handles scroll event.
+         * It triggers handler methods if scroll position match
+         * provided conditions
+         */
+        async onScroll(e) {
+            // Turn off notif if scroll position is at bottom already
+            if (this.shouldHideNotif(e)) this.isNotifShown = false
+
+            /* calls handleFetchPrevPage method when there is prevPageLink and
+             * current scroll position is 0.u
+             */
+            if (e.target.scrollTop === 0 && this.prevPageLink) await this.handleFetchPrevPage()
+        },
+
+        /**
+         * @param {Object} e - scroll event
+         * @param returns boolean
+         */
+        shouldHideNotif(e) {
+            // Turn off notif if scroll position is at bottom already
+            const remainHeight = e.target.scrollHeight - e.target.scrollTop
+            return Math.floor(this.containerHeight) === remainHeight && this.isNotifShown
+        },
     },
 }
 </script>
 <style lang="scss" scoped>
 .loading-logs-text-indicator {
     font-size: 0.825rem;
+}
+.new-log-btn {
+    position: absolute;
+    right: 50%;
+    transform: translateX(50%);
+    top: 15%;
+    z-index: 1;
 }
 </style>
