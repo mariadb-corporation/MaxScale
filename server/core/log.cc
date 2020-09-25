@@ -538,7 +538,7 @@ json_t* mxs_log_data_to_json(const char* host, const std::string& cursor, int ro
     json_object_set_new(data, CN_ID, json_string("log_data"));
     json_object_set_new(data, CN_TYPE, json_string("log_data"));
 
-    json_t* rval = mxs_json_resource(host, MXS_JSON_API_LOGS, data);
+    json_t* rval = mxs_json_resource(host, MXS_JSON_API_LOG_DATA, data);
 
     // Create pagination links
     json_t* links = json_object_get(rval, CN_LINKS);

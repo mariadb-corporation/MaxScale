@@ -33,6 +33,7 @@
 #define MXS_JSON_API_MAXSCALE    "/maxscale/"
 #define MXS_JSON_API_THREADS     "/maxscale/threads/"
 #define MXS_JSON_API_LOGS        "/maxscale/logs/"
+#define MXS_JSON_API_LOG_DATA    "/maxscale/logs/data/"
 #define MXS_JSON_API_TASKS       "/maxscale/tasks/"
 #define MXS_JSON_API_MODULES     "/maxscale/modules/"
 #define MXS_JSON_API_QC_STATS    "/maxscale/qc_stats/"
