@@ -348,6 +348,10 @@ Get the contents of the MaxScale logs. This endpoint was added in MaxScale 2.6.
 To navigate the log, use the `prev` link to move backwards to older log
 entries. The latest log entries can be read with the `last` link.
 
+The entries are sorted in ascending order by the time they were logged. This
+means that with the default parameters, the latest logged event is the last
+element in the returned array.
+
 #### Parameters
 
 This endpoint supports the following parameters:
