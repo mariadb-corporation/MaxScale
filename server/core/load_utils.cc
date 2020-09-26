@@ -93,7 +93,9 @@ struct NAME_MAPPING
 };
 
 LOADED_MODULE* find_module(const string& name);
-
+const char*    module_type_to_string(MXS_MODULE_API type);
+const char*    module_maturity_to_string(MXS_MODULE_STATUS type);
+const char*    mxs_module_param_type_to_string(mxs_module_param_type type);
 }
 
 static NAME_MAPPING name_mappings[] =
@@ -106,33 +108,6 @@ static NAME_MAPPING name_mappings[] =
 
 static const size_t N_NAME_MAPPINGS = sizeof(name_mappings) / sizeof(name_mappings[0]);
 
-
-static const char* module_type_to_str(MXS_MODULE_API type)
-{
-    switch (type)
-    {
-    case MXS_MODULE_API_PROTOCOL:
-        return MODULE_PROTOCOL;
-
-    case MXS_MODULE_API_AUTHENTICATOR:
-        return MODULE_AUTHENTICATOR;
-
-    case MXS_MODULE_API_ROUTER:
-        return MODULE_ROUTER;
-
-    case MXS_MODULE_API_MONITOR:
-        return MODULE_MONITOR;
-
-    case MXS_MODULE_API_FILTER:
-        return MODULE_FILTER;
-
-    case MXS_MODULE_API_QUERY_CLASSIFIER:
-        return MODULE_QUERY_CLASSIFIER;
-    }
-
-    mxb_assert(!true);
-    return "unknown";
-}
 
 static bool api_version_mismatch(const MXS_MODULE* mod_info, const char* module)
 {
@@ -448,7 +423,6 @@ LOADED_MODULE* find_module(const string& name)
     }
     return rval;
 }
-
 }
 
 void unload_all_modules()
@@ -658,8 +632,8 @@ static json_t* module_json_data(const LOADED_MODULE* mod, const char* host)
     json_object_set_new(attr, "module_type", json_string(mod->type.c_str()));
     json_object_set_new(attr, "version", json_string(mod->info->version));
     json_object_set_new(attr, CN_DESCRIPTION, json_string(mod->info->description));
-    json_object_set_new(attr, "api", json_string(mxs_module_api_to_string(mod->info->modapi)));
-    json_object_set_new(attr, "maturity", json_string(mxs_module_status_to_string(mod->info->status)));
+    json_object_set_new(attr, "api", json_string(module_type_to_string(mod->info->modapi)));
+    json_object_set_new(attr, "maturity", json_string(module_maturity_to_string(mod->info->status)));
 
     json_t* commands = json_array();
     cb_param p = {commands, module_namec, host};
@@ -879,6 +853,117 @@ void call_finish_funcs(InitType init_type)
         {
             finish_func();
         }
+    }
+}
+
+const char* module_type_to_string(MXS_MODULE_API type)
+{
+    switch (type)
+    {
+    case MXS_MODULE_API_PROTOCOL:
+        return "protocol";
+
+    case MXS_MODULE_API_ROUTER:
+        return "router";
+
+    case MXS_MODULE_API_MONITOR:
+        return "monitor";
+
+    case MXS_MODULE_API_FILTER:
+        return "filter";
+
+    case MXS_MODULE_API_AUTHENTICATOR:
+        return "authenticator";
+
+    case MXS_MODULE_API_QUERY_CLASSIFIER:
+        return "query_classifier";
+
+    default:
+        mxb_assert(!true);
+        return "unknown";
+    }
+}
+
+const char* module_maturity_to_string(MXS_MODULE_STATUS type)
+{
+    switch (type)
+    {
+    case MXS_MODULE_IN_DEVELOPMENT:
+        return "In development";
+
+    case MXS_MODULE_ALPHA_RELEASE:
+        return "Alpha";
+
+    case MXS_MODULE_BETA_RELEASE:
+        return "Beta";
+
+    case MXS_MODULE_GA:
+        return "GA";
+
+    case MXS_MODULE_EXPERIMENTAL:
+        return "Experimental";
+
+    default:
+        mxb_assert(!true);
+        return "Unknown";
+    }
+}
+
+const char* mxs_module_param_type_to_string(mxs_module_param_type type)
+{
+    switch (type)
+    {
+    case MXS_MODULE_PARAM_COUNT:
+        return "count";
+
+    case MXS_MODULE_PARAM_INT:
+        return "int";
+
+    case MXS_MODULE_PARAM_SIZE:
+        return "size";
+
+    case MXS_MODULE_PARAM_BOOL:
+        return "bool";
+
+    case MXS_MODULE_PARAM_STRING:
+        return "string";
+
+    case MXS_MODULE_PARAM_QUOTEDSTRING:
+        return "quoted string";
+
+    case MXS_MODULE_PARAM_PASSWORD:
+        return "password string";
+
+    case MXS_MODULE_PARAM_ENUM:
+        return "enum";
+
+    case MXS_MODULE_PARAM_PATH:
+        return "path";
+
+    case MXS_MODULE_PARAM_SERVICE:
+        return "service";
+
+    case MXS_MODULE_PARAM_SERVER:
+        return "server";
+
+    case MXS_MODULE_PARAM_TARGET:
+        return "target";
+
+    case MXS_MODULE_PARAM_SERVERLIST:
+        return "serverlist";
+
+    case MXS_MODULE_PARAM_TARGETLIST:
+        return "list of targets";
+
+    case MXS_MODULE_PARAM_REGEX:
+        return "regular expression";
+
+    case MXS_MODULE_PARAM_DURATION:
+        return "duration";
+
+    default:
+        mxb_assert(!true);
+        return "unknown";
     }
 }
 }

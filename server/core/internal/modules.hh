@@ -15,7 +15,6 @@
 #include <maxscale/ccdefs.hh>
 #include <maxscale/dcb.hh>
 #include <maxscale/modinfo.hh>
-#include <maxscale/config2.hh>
 
 /* Module types */
 #define MODULE_PROTOCOL         "Protocol"          /**< A protocol module type */

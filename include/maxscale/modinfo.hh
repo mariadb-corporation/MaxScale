@@ -132,12 +132,11 @@ struct MXS_ENUM_VALUE
 /** Module parameter declaration */
 struct MXS_MODULE_PARAM
 {
-    const char*                name;            /**< Name of the parameter */
-    mxs_module_param_type      type;            /**< Type of the parameter */
-    const char*                default_value;   /**< Default value for the parameter, NULL for no default
-                                                 * value */
-    uint64_t              options;              /**< Parameter options */
-    const MXS_ENUM_VALUE* accepted_values;      /**< Only for enum values */
+    const char*           name;             /**< Name of the parameter */
+    mxs_module_param_type type;             /**< Type of the parameter */
+    const char*           default_value;    /**< Default value for the parameter, NULL for no default value */
+    uint64_t              options;          /**< Parameter options */
+    const MXS_ENUM_VALUE* accepted_values;  /**< Only for enum values */
 };
 
 /** Maximum number of parameters that modules can declare */
@@ -190,7 +189,7 @@ struct MXS_MODULE
 
     MXS_MODULE_PARAM parameters[MXS_MODULE_PARAM_MAX + 1];      /**< Declared parameters */
 
-    const mxs::config::Specification* specification;      /**< Configuration specification */
+    const mxs::config::Specification* specification;        /**< Configuration specification */
 };
 
 /**
@@ -236,114 +235,3 @@ struct MXS_MODULE
 
 /** Name of the symbol that MaxScale will load */
 #define MXS_MODULE_SYMBOL_NAME "mxs_get_module_object"
-
-static inline const char* mxs_module_param_type_to_string(enum mxs_module_param_type type)
-{
-    switch (type)
-    {
-    case MXS_MODULE_PARAM_COUNT:
-        return "count";
-
-    case MXS_MODULE_PARAM_INT:
-        return "int";
-
-    case MXS_MODULE_PARAM_SIZE:
-        return "size";
-
-    case MXS_MODULE_PARAM_BOOL:
-        return "bool";
-
-    case MXS_MODULE_PARAM_STRING:
-        return "string";
-
-    case MXS_MODULE_PARAM_QUOTEDSTRING:
-        return "quoted string";
-
-    case MXS_MODULE_PARAM_PASSWORD:
-        return "password string";
-
-    case MXS_MODULE_PARAM_ENUM:
-        return "enum";
-
-    case MXS_MODULE_PARAM_PATH:
-        return "path";
-
-    case MXS_MODULE_PARAM_SERVICE:
-        return "service";
-
-    case MXS_MODULE_PARAM_SERVER:
-        return "server";
-
-    case MXS_MODULE_PARAM_TARGET:
-        return "target";
-
-    case MXS_MODULE_PARAM_SERVERLIST:
-        return "serverlist";
-
-    case MXS_MODULE_PARAM_TARGETLIST:
-        return "list of targets";
-
-    case MXS_MODULE_PARAM_REGEX:
-        return "regular expression";
-
-    case MXS_MODULE_PARAM_DURATION:
-        return "duration";
-
-    default:
-        mxb_assert(!true);
-        return "unknown";
-    }
-}
-
-static inline const char* mxs_module_api_to_string(MXS_MODULE_API type)
-{
-    switch (type)
-    {
-    case MXS_MODULE_API_PROTOCOL:
-        return "protocol";
-
-    case MXS_MODULE_API_ROUTER:
-        return "router";
-
-    case MXS_MODULE_API_MONITOR:
-        return "monitor";
-
-    case MXS_MODULE_API_FILTER:
-        return "filter";
-
-    case MXS_MODULE_API_AUTHENTICATOR:
-        return "authenticator";
-
-    case MXS_MODULE_API_QUERY_CLASSIFIER:
-        return "query_classifier";
-
-    default:
-        mxb_assert(!true);
-        return "unknown";
-    }
-}
-
-static inline const char* mxs_module_status_to_string(MXS_MODULE_STATUS type)
-{
-    switch (type)
-    {
-    case MXS_MODULE_IN_DEVELOPMENT:
-        return "In development";
-
-    case MXS_MODULE_ALPHA_RELEASE:
-        return "Alpha";
-
-    case MXS_MODULE_BETA_RELEASE:
-        return "Beta";
-
-    case MXS_MODULE_GA:
-        return "GA";
-
-    case MXS_MODULE_EXPERIMENTAL:
-        return "Experimental";
-
-    default:
-        mxb_assert(!true);
-        return "Unknown";
-    }
-}
