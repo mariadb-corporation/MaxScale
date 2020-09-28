@@ -280,30 +280,50 @@ json_t* line_to_json(std::string line, int id)
     line.erase(0, prio_end + 1);
     mxb::ltrim(line);
 
-    auto get_value = [&line](char lp, char rp) {
-            std::string rval;
+    std::string session;
+    std::string module;
+    std::string object;
+    std::string function;
 
+    auto get_value = [&](char lp, char rp) {
             if (line.front() == lp)
             {
                 line.erase(0, 1);
-                rval = line.substr(0, line.find_first_of(rp, 1));
-                line.erase(0, rval.size() + 1);
+                std::string val = line.substr(0, line.find_first_of(rp, 1));
+                line.erase(0, val.size() + 1);
+
+                switch (line.front())
+                {
+                case ':':
+                    function = val;
+                    line.erase(0, 1);
+                    break;
+
+                case ';':
+                    object = val;
+                    line.erase(0, 1);
+                    break;
+
+                default:
+                    if (lp == '(')
+                    {
+                        session = val;
+                    }
+                    else
+                    {
+                        module = val;
+                    }
+                    break;
+                }
+
                 mxb::ltrim(line);
             }
-
-            return rval;
         };
 
-    std::string session = get_value('(', ')');
-    std::string module = get_value('[', ']');
-    std::string object = get_value('(', ')');
-
-    if (!session.empty() && object.empty() && !std::all_of(session.begin(), session.end(), ::isdigit))
-    {
-        // Sessions are always just numbers. This can cause false positives if an object name consists of only
-        // numbers. Hopefully people don't do that or use the systemd journal if they do.
-        object.swap(session);
-    }
+    get_value('(', ')');
+    get_value('[', ']');
+    get_value('(', ')');
+    get_value('(', ')');
 
     mxb::trim(line);
 

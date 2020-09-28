@@ -779,7 +779,7 @@ int mxb_log_message(int priority,
 
             // If we know the actual object name, add that also
             auto scope = mxb::LogScope::current_scope();
-            int scope_len = scope ? strlen(scope) + 3 : 0;      // +3 due to "(...) "
+            int scope_len = scope ? strlen(scope) + 4 : 0;      // +4 due to "(...); "
 
             static const char SUPPRESSION[] =
                 " (subsequent similar messages suppressed for %lu milliseconds)";
@@ -870,7 +870,7 @@ int mxb_log_message(int priority,
                 {
                     strcpy(scope_text, "(");
                     strcat(scope_text, scope);
-                    strcat(scope_text, ") ");
+                    strcat(scope_text, "); ");
                 }
 
                 if (augmentation_len)
