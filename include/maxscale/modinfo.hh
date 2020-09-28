@@ -26,33 +26,31 @@ namespace config
 {
 class Specification;
 }
-}
 
 /**
- * The status of the module. This gives some idea of the module
- * maturity.
+ * The status of the module. This gives some idea of the module maturity.
  */
-enum MXS_MODULE_STATUS
+enum class ModuleStatus
 {
-    MXS_MODULE_IN_DEVELOPMENT = 0,
-    MXS_MODULE_ALPHA_RELEASE,
-    MXS_MODULE_BETA_RELEASE,
-    MXS_MODULE_GA,
-    MXS_MODULE_EXPERIMENTAL
+    IN_DEVELOPMENT = 0,
+    ALPHA,
+    BETA,
+    GA,
+    EXPERIMENTAL
 };
-
 /**
  * The API implemented by the module
  */
-enum MXS_MODULE_API
+enum class ModuleType
 {
-    MXS_MODULE_API_PROTOCOL = 0,
-    MXS_MODULE_API_ROUTER,
-    MXS_MODULE_API_MONITOR,
-    MXS_MODULE_API_FILTER,
-    MXS_MODULE_API_AUTHENTICATOR,
-    MXS_MODULE_API_QUERY_CLASSIFIER,
+    PROTOCOL = 0,
+    ROUTER,
+    MONITOR,
+    FILTER,
+    AUTHENTICATOR,
+    QUERY_CLASSIFIER,
 };
+}
 
 /**
  * The module version structure.
@@ -147,8 +145,8 @@ struct MXS_MODULE_PARAM
  */
 struct MXS_MODULE
 {
-    MXS_MODULE_API     modapi;              /**< Module API type */
-    MXS_MODULE_STATUS  status;              /**< Module development status */
+    mxs::ModuleType    modapi;              /**< Module API type */
+    mxs::ModuleStatus  status;              /**< Module development status */
     MXS_MODULE_VERSION api_version;         /**< Module API version */
     const char*        description;         /**< Module description */
     const char*        version;             /**< Module version */

@@ -3807,8 +3807,8 @@ MXS_MODULE* MXS_CREATE_MODULE()
 
     static MXS_MODULE info =
     {
-        MXS_MODULE_API_QUERY_CLASSIFIER,
-        MXS_MODULE_GA,
+        mxs::ModuleType::QUERY_CLASSIFIER,
+        mxs::ModuleStatus::GA,
         MXS_QUERY_CLASSIFIER_VERSION,
         "Query classifier based upon MySQL Embedded",
         "V1.0.0",

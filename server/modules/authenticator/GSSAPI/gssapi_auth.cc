@@ -365,8 +365,8 @@ MXS_MODULE* MXS_CREATE_MODULE()
 {
     static MXS_MODULE info =
     {
-        MXS_MODULE_API_AUTHENTICATOR,
-        MXS_MODULE_GA,
+        mxs::ModuleType::AUTHENTICATOR,
+        mxs::ModuleStatus::GA,
         MXS_AUTHENTICATOR_VERSION,
         "GSSAPI authenticator",
         "V1.0.0",

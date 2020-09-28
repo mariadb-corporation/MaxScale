@@ -581,8 +581,8 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
     static MXS_MODULE info =
     {
-        MXS_MODULE_API_MONITOR,
-        MXS_MODULE_BETA_RELEASE,
+        mxs::ModuleType::MONITOR,
+        mxs::ModuleStatus::BETA,
         MXS_MONITOR_VERSION,
         "MariaDB ColumnStore monitor",
         "V1.0.0",

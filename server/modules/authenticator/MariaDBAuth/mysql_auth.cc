@@ -342,8 +342,8 @@ MXS_MODULE* MXS_CREATE_MODULE()
 {
     static MXS_MODULE info =
     {
-        MXS_MODULE_API_AUTHENTICATOR,
-        MXS_MODULE_GA,
+        mxs::ModuleType::AUTHENTICATOR,
+        mxs::ModuleStatus::GA,
         MXS_AUTHENTICATOR_VERSION,
         "Standard MySQL/MariaDB authentication (mysql_native_password)",
         "V2.1.0",

@@ -1369,8 +1369,8 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 
     static MXS_MODULE info =
     {
-        MXS_MODULE_API_MONITOR,
-        MXS_MODULE_GA,
+        mxs::ModuleType::MONITOR,
+        mxs::ModuleStatus::GA,
         MXS_MONITOR_VERSION,
         "A MariaDB Master/Slave replication monitor",
         "V1.5.0",

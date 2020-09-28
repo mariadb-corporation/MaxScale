@@ -398,8 +398,8 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
                                       "after data modification";
     static MXS_MODULE info =
     {
-        MXS_MODULE_API_FILTER,
-        MXS_MODULE_GA,
+        mxs::ModuleType::FILTER,
+        mxs::ModuleStatus::GA,
         MXS_FILTER_VERSION,
         DESCRIPTION,
         "V1.1.0",

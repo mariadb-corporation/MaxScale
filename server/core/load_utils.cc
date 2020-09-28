@@ -48,6 +48,8 @@
 #include "internal/listener.hh"
 
 using std::string;
+using mxs::ModuleStatus;
+using mxs::ModuleType;
 
 namespace
 {
@@ -93,8 +95,8 @@ struct NAME_MAPPING
 };
 
 LOADED_MODULE* find_module(const string& name);
-const char*    module_type_to_string(MXS_MODULE_API type);
-const char*    module_maturity_to_string(MXS_MODULE_STATUS type);
+const char*    module_type_to_string(ModuleType type);
+const char*    module_maturity_to_string(ModuleStatus type);
 const char*    mxs_module_param_type_to_string(mxs_module_param_type type);
 }
 
@@ -116,32 +118,32 @@ static bool api_version_mismatch(const MXS_MODULE* mod_info, const char* module)
 
     switch (mod_info->modapi)
     {
-    case MXS_MODULE_API_PROTOCOL:
+    case ModuleType::PROTOCOL:
         api = MXS_PROTOCOL_VERSION;
         break;
 
-    case MXS_MODULE_API_AUTHENTICATOR:
+    case ModuleType::AUTHENTICATOR:
         api = MXS_AUTHENTICATOR_VERSION;
         break;
 
-    case MXS_MODULE_API_ROUTER:
+    case ModuleType::ROUTER:
         api = MXS_ROUTER_VERSION;
         break;
 
-    case MXS_MODULE_API_MONITOR:
+    case ModuleType::MONITOR:
         api = MXS_MONITOR_VERSION;
         break;
 
-    case MXS_MODULE_API_FILTER:
+    case ModuleType::FILTER:
         api = MXS_FILTER_VERSION;
         break;
 
-    case MXS_MODULE_API_QUERY_CLASSIFIER:
+    case ModuleType::QUERY_CLASSIFIER:
         api = MXS_QUERY_CLASSIFIER_VERSION;
         break;
 
     default:
-        MXS_ERROR("Unknown module type: 0x%02hhx", mod_info->modapi);
+        MXS_ERROR("Unknown module type: 0x%02hhx", (unsigned char)mod_info->modapi);
         mxb_assert(!true);
         break;
     }
@@ -171,37 +173,37 @@ static bool check_module(const MXS_MODULE* mod_info, const char* type, const cha
     if (type)
     {
         if (strcmp(type, MODULE_PROTOCOL) == 0
-            && mod_info->modapi != MXS_MODULE_API_PROTOCOL)
+            && mod_info->modapi != ModuleType::PROTOCOL)
         {
             MXS_ERROR("Module '%s' does not implement the protocol API.", module);
             success = false;
         }
         if (strcmp(type, MODULE_AUTHENTICATOR) == 0
-            && mod_info->modapi != MXS_MODULE_API_AUTHENTICATOR)
+            && mod_info->modapi != ModuleType::AUTHENTICATOR)
         {
             MXS_ERROR("Module '%s' does not implement the authenticator API.", module);
             success = false;
         }
         if (strcmp(type, MODULE_ROUTER) == 0
-            && mod_info->modapi != MXS_MODULE_API_ROUTER)
+            && mod_info->modapi != ModuleType::ROUTER)
         {
             MXS_ERROR("Module '%s' does not implement the router API.", module);
             success = false;
         }
         if (strcmp(type, MODULE_MONITOR) == 0
-            && mod_info->modapi != MXS_MODULE_API_MONITOR)
+            && mod_info->modapi != ModuleType::MONITOR)
         {
             MXS_ERROR("Module '%s' does not implement the monitor API.", module);
             success = false;
         }
         if (strcmp(type, MODULE_FILTER) == 0
-            && mod_info->modapi != MXS_MODULE_API_FILTER)
+            && mod_info->modapi != ModuleType::FILTER)
         {
             MXS_ERROR("Module '%s' does not implement the filter API.", module);
             success = false;
         }
         if (strcmp(type, MODULE_QUERY_CLASSIFIER) == 0
-            && mod_info->modapi != MXS_MODULE_API_QUERY_CLASSIFIER)
+            && mod_info->modapi != ModuleType::QUERY_CLASSIFIER)
         {
             MXS_ERROR("Module '%s' does not implement the query classifier API.", module);
             success = false;
@@ -584,22 +586,22 @@ json_t* legacy_params_to_json(const LOADED_MODULE* mod)
 
     switch (mod->info->modapi)
     {
-    case MXS_MODULE_API_FILTER:
-    case MXS_MODULE_API_AUTHENTICATOR:
-    case MXS_MODULE_API_QUERY_CLASSIFIER:
+    case ModuleType::FILTER:
+    case ModuleType::AUTHENTICATOR:
+    case ModuleType::QUERY_CLASSIFIER:
         break;
 
-    case MXS_MODULE_API_PROTOCOL:
+    case ModuleType::PROTOCOL:
         extra = common_listener_params();
         ignored = {CN_SERVICE, CN_TYPE, CN_MODULE};
         break;
 
-    case MXS_MODULE_API_ROUTER:
+    case ModuleType::ROUTER:
         extra = common_service_params();
         ignored = {CN_SERVERS, CN_TARGETS, CN_ROUTER, CN_TYPE, CN_CLUSTER, CN_FILTERS};
         break;
 
-    case MXS_MODULE_API_MONITOR:
+    case ModuleType::MONITOR:
         extra = common_monitor_params();
         ignored = {CN_SERVERS, CN_TYPE, CN_MODULE};
         break;
@@ -732,29 +734,6 @@ json_t* module_list_to_json(const char* host)
     return mxs_json_resource(host, MXS_JSON_API_MODULES, arr);
 }
 
-static const char* module_status_to_string(LOADED_MODULE* ptr)
-{
-    switch (ptr->info->status)
-    {
-    case MXS_MODULE_IN_DEVELOPMENT:
-        return "In Development";
-
-    case MXS_MODULE_ALPHA_RELEASE:
-        return "Alpha";
-
-    case MXS_MODULE_BETA_RELEASE:
-        return "Beta";
-
-    case MXS_MODULE_GA:
-        return "GA";
-
-    case MXS_MODULE_EXPERIMENTAL:
-        return "Experimental";
-    }
-
-    return "Unknown";
-}
-
 const MXS_MODULE* get_module(const char* name, const char* type)
 {
     string eff_name = module_get_effective_name(name);
@@ -856,26 +835,26 @@ void call_finish_funcs(InitType init_type)
     }
 }
 
-const char* module_type_to_string(MXS_MODULE_API type)
+const char* module_type_to_string(ModuleType type)
 {
     switch (type)
     {
-    case MXS_MODULE_API_PROTOCOL:
+    case ModuleType::PROTOCOL:
         return "protocol";
 
-    case MXS_MODULE_API_ROUTER:
+    case ModuleType::ROUTER:
         return "router";
 
-    case MXS_MODULE_API_MONITOR:
+    case ModuleType::MONITOR:
         return "monitor";
 
-    case MXS_MODULE_API_FILTER:
+    case ModuleType::FILTER:
         return "filter";
 
-    case MXS_MODULE_API_AUTHENTICATOR:
+    case ModuleType::AUTHENTICATOR:
         return "authenticator";
 
-    case MXS_MODULE_API_QUERY_CLASSIFIER:
+    case ModuleType::QUERY_CLASSIFIER:
         return "query_classifier";
 
     default:
@@ -884,23 +863,23 @@ const char* module_type_to_string(MXS_MODULE_API type)
     }
 }
 
-const char* module_maturity_to_string(MXS_MODULE_STATUS type)
+const char* module_maturity_to_string(ModuleStatus type)
 {
     switch (type)
     {
-    case MXS_MODULE_IN_DEVELOPMENT:
+    case ModuleStatus::IN_DEVELOPMENT:
         return "In development";
 
-    case MXS_MODULE_ALPHA_RELEASE:
+    case ModuleStatus::ALPHA:
         return "Alpha";
 
-    case MXS_MODULE_BETA_RELEASE:
+    case ModuleStatus::BETA:
         return "Beta";
 
-    case MXS_MODULE_GA:
+    case ModuleStatus::GA:
         return "GA";
 
-    case MXS_MODULE_EXPERIMENTAL:
+    case ModuleStatus::EXPERIMENTAL:
         return "Experimental";
 
     default:

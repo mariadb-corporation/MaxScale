@@ -335,8 +335,8 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 
     static MXS_MODULE info =
     {
-        MXS_MODULE_API_ROUTER,
-        MXS_MODULE_GA,
+        mxs::ModuleType::ROUTER,
+        mxs::ModuleStatus::GA,
         MXS_ROUTER_VERSION,
         "Avrorouter",
         "V1.0.0",

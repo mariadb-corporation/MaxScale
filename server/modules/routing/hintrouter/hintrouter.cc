@@ -165,17 +165,17 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
     static MXS_MODULE module =
     {
-        MXS_MODULE_API_ROUTER,                              /* Module type */
-        MXS_MODULE_BETA_RELEASE,                            /* Release status */
-        MXS_ROUTER_VERSION,                                 /* Implemented module API version */
-        "A hint router",                                    /* Description */
-        "V1.0.0",                                           /* Module version */
+        mxs::ModuleType::ROUTER,
+        mxs::ModuleStatus::BETA,
+        MXS_ROUTER_VERSION,
+        "A hint router",
+        "V1.0.0",
         RCAP_TYPE_STMT_INPUT | RCAP_TYPE_RESULTSET_OUTPUT,
         &mxs::RouterApi<HintRouter>::s_api,
-        NULL,                                               /* Process init, can be null */
-        NULL,                                               /* Process finish, can be null */
-        NULL,                                               /* Thread init */
-        NULL,                                               /* Thread finish */
+        NULL,
+        NULL,
+        NULL,
+        NULL,
         {
             {
                 DEFAULT_ACTION,

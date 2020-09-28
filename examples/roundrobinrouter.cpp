@@ -640,8 +640,8 @@ MXS_MODULE* MXS_CREATE_MODULE()
 
     static MXS_MODULE moduleObject =
     {
-        MXS_MODULE_API_ROUTER,          /* Module type */
-        MXS_MODULE_BETA_RELEASE,        /* Release status */
+        mxs::ModuleType::ROUTER,        /* Module type */
+        mxs::ModuleStatus::BETA,        /* Release status */
         MXS_ROUTER_VERSION,             /* Implemented module API version */
         "A simple round robin router",  /* Description */
         "V1.1.0",                       /* Module version */

@@ -418,8 +418,8 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
     static MXS_MODULE info =
     {
-        MXS_MODULE_API_ROUTER,
-        MXS_MODULE_ALPHA_RELEASE,
+        mxs::ModuleType::ROUTER,
+        mxs::ModuleStatus::ALPHA,
         MXS_ROUTER_VERSION,
         "Replicate data changes from MariaDB to Kafka",
         "V1.0.0",

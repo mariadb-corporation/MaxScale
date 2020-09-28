@@ -383,8 +383,8 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 
     static MXS_MODULE info =
     {
-        MXS_MODULE_API_FILTER,
-        MXS_MODULE_EXPERIMENTAL,
+        mxs::ModuleType::FILTER,
+        mxs::ModuleStatus::EXPERIMENTAL,
         MXS_FILTER_VERSION,
         "Data streaming filter",
         "1.0.0",

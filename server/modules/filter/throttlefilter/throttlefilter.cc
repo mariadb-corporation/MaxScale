@@ -34,8 +34,8 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 
     static MXS_MODULE info =
     {
-        MXS_MODULE_API_FILTER,
-        MXS_MODULE_IN_DEVELOPMENT,
+        mxs::ModuleType::FILTER,
+        mxs::ModuleStatus::IN_DEVELOPMENT,
         MXS_FILTER_VERSION,
         description,
         "V1.0.0",

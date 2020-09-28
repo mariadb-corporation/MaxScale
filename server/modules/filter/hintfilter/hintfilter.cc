@@ -92,8 +92,8 @@ MXS_MODULE* MXS_CREATE_MODULE()
 {
     static MXS_MODULE info =
     {
-        MXS_MODULE_API_FILTER,
-        MXS_MODULE_ALPHA_RELEASE,
+        mxs::ModuleType::FILTER,
+        mxs::ModuleStatus::ALPHA,
         MXS_FILTER_VERSION,
         "A hint parsing filter",
         "V1.0.0",

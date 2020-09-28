@@ -51,8 +51,8 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
     static MXS_MODULE info =
     {
-        MXS_MODULE_API_ROUTER,
-        MXS_MODULE_GA,
+        mxs::ModuleType::ROUTER,
+        mxs::ModuleStatus::GA,
         MXS_ROUTER_VERSION,
         "A connection based router to load balance based on connections",
         "V2.0.0",

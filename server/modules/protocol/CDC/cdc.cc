@@ -105,8 +105,8 @@ MXS_MODULE* MXS_CREATE_MODULE()
 
     static MXS_MODULE info =
     {
-        MXS_MODULE_API_PROTOCOL,
-        MXS_MODULE_IN_DEVELOPMENT,
+        mxs::ModuleType::PROTOCOL,
+        mxs::ModuleStatus::IN_DEVELOPMENT,
         MXS_PROTOCOL_VERSION,
         "A Change Data Capture Listener implementation for use in binlog events retrieval",
         "V1.0.0",

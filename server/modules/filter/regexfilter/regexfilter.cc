@@ -268,8 +268,8 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
                                       "expressions to rewrite queries";
     static MXS_MODULE info =
     {
-        MXS_MODULE_API_FILTER,
-        MXS_MODULE_GA,
+        mxs::ModuleType::FILTER,
+        mxs::ModuleStatus::GA,
         MXS_FILTER_VERSION,
         description,
         "V1.1.0",
