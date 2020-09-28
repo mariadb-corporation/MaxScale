@@ -11,7 +11,7 @@
  * Public License.
  */
 import Vue from 'vue'
-import chai, { expect /* , { expect }  */ } from 'chai'
+import chai, { expect } from 'chai'
 import sinon from 'sinon'
 import sinonChai from 'sinon-chai'
 import mount from '@tests/unit/setup'
@@ -45,6 +45,10 @@ describe('LogContainer', () => {
             })
         )
         wrapper = mountFactory()
+        // prevent handleFetchPrevPage being loop fetch
+        await wrapper.setData({
+            prevPageLink: null,
+        })
     })
     afterEach(async function() {
         await axiosStub.restore()
@@ -52,19 +56,20 @@ describe('LogContainer', () => {
     })
 
     it(`Should send request to get maxscale log on mounted`, async () => {
-        await axiosStub.should.have.been.calledOnceWith('/maxscale/logs')
+        await axiosStub.should.have.been.calledOnceWith('/maxscale/logs/data')
         axiosStub.should.have.been.calledOnce
     })
     it(`Should send request to get maxscale log when shouldFetchLogs is true`, async () => {
         await wrapper.setData({
             shouldFetchLogs: true,
+            prevPageLink: null,
         })
-        await axiosStub.should.have.been.calledWith('/maxscale/logs')
+        await axiosStub.should.have.been.calledWith('/maxscale/logs/data')
         axiosStub.should.have.been.calledTwice
     })
 
-    it(`Should pass logData to log-view component`, async () => {
-        const logView = wrapper.findComponent({ name: 'log-view' })
-        expect(logView.vm.$props.logData).to.be.deep.equals(wrapper.vm.$data.logData)
+    it(`Should pass logData to log-lines component`, async () => {
+        const logLines = wrapper.findComponent({ name: 'log-lines' })
+        expect(logLines.vm.$props.logData).to.be.deep.equals(wrapper.vm.$data.logData)
     })
 })
