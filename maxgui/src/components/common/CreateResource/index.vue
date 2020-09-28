@@ -203,7 +203,10 @@ export default {
                     this.selectedForm = this.textTransform(formType)
                     await this.handleFormSelection(this.selectedForm)
                 }
-            } else if (this.form_type) this.SET_FORM_TYPE(null)
+            } else {
+                if (this.form_type) this.SET_FORM_TYPE(null)
+                this.selectedForm = ''
+            }
         },
         resourceId: function(val) {
             // add hyphens when ever input have whitespace
