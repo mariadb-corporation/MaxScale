@@ -69,7 +69,7 @@ export default {
     },
     data() {
         return {
-            containerHeight: document.documentElement.clientHeight * 0.6,
+            containerHeight: 0,
             isLoading: false,
             logData: [],
             log_source: [],
@@ -95,6 +95,8 @@ export default {
     },
 
     async mounted() {
+        this.setContainerHeight()
+        window.addEventListener('resize', this.setContainerHeight)
         await this.fetchLatestLogs()
         await this.loopFetchOlderLogs()
         // go to bottom on mounted
@@ -103,8 +105,12 @@ export default {
     },
     beforeDestroy() {
         if (this.connection) this.disconnect()
+        window.removeEventListener('resize', this.setContainerHeight)
     },
     methods: {
+        setContainerHeight() {
+            this.containerHeight = document.documentElement.clientHeight * 0.6
+        },
         /**
          * This function fetches older logs than current until the log content div
          * is scrollable. This allows user to scroll up to get old logs if
