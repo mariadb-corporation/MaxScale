@@ -61,22 +61,14 @@ const char CN_MODULE_COMMAND[] = "module_command";
 
 struct LOADED_MODULE
 {
+    string      name;               /**< The name of the module */
     MXS_MODULE* info {nullptr};     /**< The module information */
+    void*       handle {nullptr};   /**< The handle returned by dlopen */
 
-    string name;    /**< The name of the module */
-    string type;    /**< The module type */
-    string version; /**< Module version */
-
-    void* handle {nullptr};     /**< The handle returned by dlopen */
-    void* modobj {nullptr};     /**< The module entry points */
-
-    LOADED_MODULE(const string& name, const string& type, void* dlhandle, MXS_MODULE* info)
-        : info(info)
-        , name(name)
-        , type(type)
-        , version(info->version)
+    LOADED_MODULE(string name, void* dlhandle, MXS_MODULE* info)
+        : name(std::move(name))
+        , info(info)
         , handle(dlhandle)
-        , modobj(info->module_object)
     {
     }
 };
@@ -304,7 +296,7 @@ void* load_module(const char* name, const char* type)
     if (loaded_module)
     {
         // Module was already loaded, return API functions.
-        return loaded_module->modobj;
+        return loaded_module->info->module_object;
     }
 
     void* rval = nullptr;
@@ -346,7 +338,7 @@ void* load_module(const char* name, const char* type)
                 }
                 else
                 {
-                    loaded_module = new LOADED_MODULE(eff_name, type, dlhandle, mod_info);
+                    loaded_module = new LOADED_MODULE(eff_name, dlhandle, mod_info);
                 }
             }
         }
@@ -383,7 +375,7 @@ void* load_module(const char* name, const char* type)
                 }
             }
         }
-        rval = loaded_module->modobj;
+        rval = loaded_module->info->module_object;
     }
     else if (!load_errmsg.empty())
     {
@@ -631,7 +623,8 @@ static json_t* module_json_data(const LOADED_MODULE* mod, const char* host)
     json_object_set_new(obj, CN_TYPE, json_string(CN_MODULES));
 
     json_t* attr = json_object();
-    json_object_set_new(attr, "module_type", json_string(mod->type.c_str()));
+    auto mod_type = module_type_to_string(mod->info->modapi);
+    json_object_set_new(attr, "module_type", json_string(mod_type));
     json_object_set_new(attr, "version", json_string(mod->info->version));
     json_object_set_new(attr, CN_DESCRIPTION, json_string(mod->info->description));
     json_object_set_new(attr, "api", json_string(module_type_to_string(mod->info->modapi)));
