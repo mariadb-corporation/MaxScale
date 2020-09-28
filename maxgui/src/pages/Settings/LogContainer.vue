@@ -274,7 +274,7 @@ export default {
     position: absolute;
     right: 50%;
     transform: translateX(50%);
-    top: 15%;
+    bottom: 6%;
     z-index: 1;
 }
 </style>
