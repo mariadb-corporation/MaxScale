@@ -13,6 +13,10 @@
 
 #include "clientconnection.hh"
 #include <maxscale/dcb.hh>
+#include <maxscale/session.hh>
+#include "mxsmongo.hh"
+
+using namespace std;
 
 namespace mxsmongo
 {
@@ -40,7 +44,8 @@ bool ClientConnection::init_connection()
 void ClientConnection::finish_connection()
 {
     TRACE();
-    mxb_assert(!true);
+
+    // TODO: Does something need to be cleaned up?
 }
 
 ClientDCB* ClientConnection::dcb()
@@ -58,8 +63,74 @@ const ClientDCB* ClientConnection::dcb() const
 void ClientConnection::ready_for_reading(DCB* dcb)
 {
     TRACE();
-    // TODO: Read data from client.
-    mxb_assert(!true);
+
+    GWBUF* pBuffer = nullptr;
+    int buffer_len = m_pDcb->read(&pBuffer, MONGOC_DEFAULT_MAX_MSG_SIZE);
+
+    if (buffer_len < 0)
+    {
+        return;
+    }
+
+    if (buffer_len >= MXSMONGO_HEADER_LEN)
+    {
+        // Got the header, the full packet may be available.
+
+        auto link_len = gwbuf_link_length(pBuffer);
+
+        if (link_len < MXSMONGO_HEADER_LEN)
+        {
+            pBuffer = gwbuf_make_contiguous(pBuffer);
+        }
+
+        mongoc_rpc_header_t* pHeader = reinterpret_cast<mongoc_rpc_header_t*>(gwbuf_link_data(pBuffer));
+
+        if (buffer_len >= pHeader->msg_len)
+        {
+            // Ok, we have at least one full packet.
+
+            GWBUF* pPacket = nullptr;
+
+            if (buffer_len == pHeader->msg_len)
+            {
+                // Exactly one.
+                pPacket = pBuffer;
+            }
+            else
+            {
+                // More than one.
+                auto* pPacket = gwbuf_split(&pBuffer, pHeader->msg_len);
+                mxb_assert((int)gwbuf_length(pPacket) == pHeader->msg_len);
+
+                m_pDcb->readq_prepend(pBuffer);
+                m_pDcb->trigger_read_event();
+            }
+
+            // We are not going to be able to parse bson unless the data is
+            // contiguous.
+            if (!gwbuf_is_contiguous(pPacket))
+            {
+                pPacket = gwbuf_make_contiguous(pPacket);
+            }
+
+            handle_one_packet(pPacket);
+        }
+        else
+        {
+            MXS_NOTICE("%d bytes received, still need %d bytes for the package.",
+                       buffer_len, pHeader->msg_len - buffer_len);
+            m_pDcb->readq_prepend(pBuffer);
+        }
+    }
+    else if (buffer_len > 0)
+    {
+        // Not enough data to do anything at all. Save and wait for more.
+        m_pDcb->readq_prepend(pBuffer);
+    }
+    else
+    {
+        // No data, can this happen? In MariaDB this may happen due to manually triggered reads.
+    }
 }
 
 void ClientConnection::write_ready(DCB* pDcb)
@@ -81,10 +152,12 @@ void ClientConnection::error(DCB* dcb)
     mxb_assert(!true);
 }
 
-void ClientConnection::hangup(DCB* dcb)
+void ClientConnection::hangup(DCB* pDcb)
 {
     TRACE();
-    mxb_assert(!true);
+    mxb_assert(m_pDcb == pDcb);
+
+    m_session.kill();
 }
 
 int32_t ClientConnection::write(GWBUF* buffer)
@@ -113,6 +186,43 @@ bool ClientConnection::is_movable() const
     TRACE();
     mxb_assert(!true);
     return true; // Ok?
+}
+
+void ClientConnection::handle_one_packet(GWBUF* pPacket)
+{
+    mongoc_rpc_header_t* pHeader = reinterpret_cast<mongoc_rpc_header_t*>(gwbuf_link_data(pPacket));
+
+    mxb_assert(gwbuf_is_contiguous(pPacket));
+    mxb_assert(gwbuf_length(pPacket) >= MXSMONGO_HEADER_LEN);
+    mxb_assert(pHeader->msg_len == (int)gwbuf_length(pPacket));
+
+    switch (pHeader->opcode)
+    {
+    case MONGOC_OPCODE_COMPRESSED:
+    case MONGOC_OPCODE_DELETE:
+    case MONGOC_OPCODE_GET_MORE:
+    case MONGOC_OPCODE_INSERT:
+    case MONGOC_OPCODE_KILL_CURSORS:
+    case MONGOC_OPCODE_MSG:
+    case MONGOC_OPCODE_REPLY:
+    case MONGOC_OPCODE_UPDATE:
+        MXS_ERROR("Packet %s not handled (yet).", opcode_to_string(pHeader->opcode));
+        mxb_assert(!true);
+        break;
+
+    case MONGOC_OPCODE_QUERY:
+        handle_packet_query(pPacket);
+        break;
+
+    default:
+        MXS_ERROR("Unknown opcode %d.", pHeader->opcode);
+        mxb_assert(!true);
+    }
+}
+
+void ClientConnection::handle_packet_query(GWBUF* pPacket)
+{
+    mxb_assert(!true);
 }
 
 }

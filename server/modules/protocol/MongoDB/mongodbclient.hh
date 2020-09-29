@@ -15,6 +15,7 @@
 #define MXS_MODULE_NAME "mongodbclient"
 
 #include <maxscale/ccdefs.hh>
+#include <maxbase/assert.h>
 #include <maxscale/log.hh>
 
 namespace mxsmongo
