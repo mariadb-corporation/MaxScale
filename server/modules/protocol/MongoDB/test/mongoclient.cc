@@ -12,9 +12,16 @@
 #include <mongocxx/client.hpp>
 #include <mongocxx/instance.hpp>
 
-int main(int, char**) {
+int main(int argc, char** argv) {
+    mongocxx::uri uri {};
+
+    if (argc > 1)
+    {
+        uri = mongocxx::uri { argv[argc - 1] };
+    }
+
     mongocxx::instance inst{};
-    mongocxx::client conn{mongocxx::uri{}};
+    mongocxx::client conn{ uri };
 
     bsoncxx::builder::stream::document document{};
 
