@@ -118,11 +118,11 @@ describe("Log Data", function() {
     after(stopMaxScale)
 });
 
-async function connectWebSocket() {
-    const ws_url = "ws://" + credentials + "@" + host + "/maxscale/logs/stream"
-
+function connectWebSocket() {
     return new Promise((resolve, reject) => {
+        const ws_url = "ws://" + credentials + "@" + host + "/maxscale/logs/stream"
         const ws = new WebSocket(ws_url, 'ws');
+
         ws.on('open', function() {
             resolve(true)
         });
@@ -131,13 +131,16 @@ async function connectWebSocket() {
             reject(err)
         });
     })
-
-    return p
 }
 
-async function testWebSocket() {
-    var p = new Promise((resolve, reject) => {
-        const ws_url = "ws://" + credentials + "@" + host + "/maxscale/logs/stream"
+function openWebSocket(cursor) {
+    return new Promise((resolve, reject) => {
+        var ws_url = "ws://" + credentials + "@" + host + "/maxscale/logs/stream"
+
+        if (cursor) {
+            ws_url += "?page[cursor]=" + cursor
+        }
+
         const ws = new WebSocket(ws_url, 'ws');
 
         ws.on('message', function(msg) {
@@ -148,6 +151,10 @@ async function testWebSocket() {
             reject(err)
         });
     })
+}
+
+async function testWebSocket() {
+    var p = openWebSocket()
 
     // This will cause at least one message to be logged
     var data = { data: { attributes: { parameters: { log_info: true }}}}
@@ -156,6 +163,13 @@ async function testWebSocket() {
     await request.patch(base_url + "/maxscale", {json: data})
 
     var res = await p
+    expect(res.message).to.not.be.empty
+    expect(res.timestamp).to.not.be.empty
+    expect(res.priority).to.not.be.empty
+
+    var log = await request.get(base_url + "/maxscale/logs/data", {json: true})
+
+    res = await openWebSocket(log.data.attributes.log[0].id)
     expect(res.message).to.not.be.empty
     expect(res.timestamp).to.not.be.empty
     expect(res.priority).to.not.be.empty
@@ -171,13 +185,13 @@ describe("Log Streaming", function() {
     it("streams maxlog data", async function() {
         var data = { data: { attributes: { parameters: { maxlog: true, syslog: false }}}}
         await request.patch(base_url + "/maxscale", {json: data})
-        testWebSocket()
+        await testWebSocket()
     });
 
     it("streams syslog data", async function() {
         var data = { data: { attributes: { parameters: { maxlog: false, syslog: true }}}}
         await request.patch(base_url + "/maxscale", {json: data})
-        testWebSocket()
+        await testWebSocket()
     });
 
     it("streaming fails when maxlog and syslog are disabled", async function() {
