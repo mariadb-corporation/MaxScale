@@ -39,11 +39,13 @@ enum class ModuleStatus
     EXPERIMENTAL
 };
 /**
- * The API implemented by the module
+ * The API implemented by the module. "Unknown" is not a valid value for a module, but is used by the loader
+ * when loading an unknown module type.
  */
 enum class ModuleType
 {
-    PROTOCOL = 0,
+    UNKNOWN = 0,
+    PROTOCOL,
     ROUTER,
     MONITOR,
     FILTER,

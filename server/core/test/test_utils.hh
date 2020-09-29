@@ -45,7 +45,8 @@ void preload_module(const char* name, const char* path, const char* type)
     fullpath += "/";
     fullpath += path;
     mxs::set_libdir(fullpath.c_str());
-    load_module(name, type);
+    auto expected_type = type ? module_type_from_string(type) : mxs::ModuleType::UNKNOWN;
+    load_module(name, expected_type);
     mxs::set_libdir(old_libdir.c_str());
 }
 

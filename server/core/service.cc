@@ -96,7 +96,7 @@ const char CN_STRIP_DB_ESC[] = "strip_db_esc";
 
 Service* Service::create(const char* name, const char* router, mxs::ConfigParameters* params)
 {
-    auto router_api = (MXS_ROUTER_API*)load_module(router, MODULE_ROUTER);
+    auto router_api = (MXS_ROUTER_API*)load_module(router, ModuleType::ROUTER);
     if (!router_api)
     {
         MXS_ERROR("Unable to load router module '%s'", router);

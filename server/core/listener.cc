@@ -930,7 +930,7 @@ Listener::create_shared_data(const mxs::ConfigParameters& params, const std::str
 
     // Add protocol and authenticator capabilities from the listener
     std::unique_ptr<mxs::ProtocolModule> protocol_module;
-    auto protocol_api = (MXS_PROTOCOL_API*)load_module(protocol_namez, MODULE_PROTOCOL);
+    auto protocol_api = (MXS_PROTOCOL_API*)load_module(protocol_namez, mxs::ModuleType::PROTOCOL);
     if (protocol_api)
     {
         protocol_module.reset(protocol_api->create_protocol_module());

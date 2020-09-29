@@ -103,7 +103,7 @@ static NAME_MAPPING name_mappings[] =
 static const size_t N_NAME_MAPPINGS = sizeof(name_mappings) / sizeof(name_mappings[0]);
 
 
-static bool api_version_mismatch(const MXS_MODULE* mod_info, const char* module)
+static bool api_version_mismatch(const MXS_MODULE* mod_info, const string& name)
 {
     bool rval = false;
     MXS_MODULE_VERSION api = {};
@@ -145,7 +145,7 @@ static bool api_version_mismatch(const MXS_MODULE* mod_info, const char* module)
         || api.patch != mod_info->api_version.patch)
     {
         MXS_ERROR("API version mismatch for '%s': Need version %d.%d.%d, have %d.%d.%d",
-                  module,
+                  name.c_str(),
                   api.major,
                   api.minor,
                   api.patch,
@@ -158,68 +158,44 @@ static bool api_version_mismatch(const MXS_MODULE* mod_info, const char* module)
     return rval;
 }
 
-static bool check_module(const MXS_MODULE* mod_info, const char* type, const char* module)
+namespace
 {
-    bool success = true;
 
-    if (type)
+bool check_module(const MXS_MODULE* mod_info, const string& name, ModuleType expected_type)
+{
+    auto namec = name.c_str();
+    bool success = true;
+    if (expected_type != ModuleType::UNKNOWN)
     {
-        if (strcmp(type, MODULE_PROTOCOL) == 0
-            && mod_info->modapi != ModuleType::PROTOCOL)
+        auto found_type = mod_info->modapi;
+        if (found_type != expected_type)
         {
-            MXS_ERROR("Module '%s' does not implement the protocol API.", module);
-            success = false;
-        }
-        if (strcmp(type, MODULE_AUTHENTICATOR) == 0
-            && mod_info->modapi != ModuleType::AUTHENTICATOR)
-        {
-            MXS_ERROR("Module '%s' does not implement the authenticator API.", module);
-            success = false;
-        }
-        if (strcmp(type, MODULE_ROUTER) == 0
-            && mod_info->modapi != ModuleType::ROUTER)
-        {
-            MXS_ERROR("Module '%s' does not implement the router API.", module);
-            success = false;
-        }
-        if (strcmp(type, MODULE_MONITOR) == 0
-            && mod_info->modapi != ModuleType::MONITOR)
-        {
-            MXS_ERROR("Module '%s' does not implement the monitor API.", module);
-            success = false;
-        }
-        if (strcmp(type, MODULE_FILTER) == 0
-            && mod_info->modapi != ModuleType::FILTER)
-        {
-            MXS_ERROR("Module '%s' does not implement the filter API.", module);
-            success = false;
-        }
-        if (strcmp(type, MODULE_QUERY_CLASSIFIER) == 0
-            && mod_info->modapi != ModuleType::QUERY_CLASSIFIER)
-        {
-            MXS_ERROR("Module '%s' does not implement the query classifier API.", module);
+            auto expected_type_str = module_type_to_string(expected_type);
+            auto found_type_str = module_type_to_string(found_type);
+            MXS_ERROR("Module '%s' is a %s, not a %s.", namec, found_type_str, expected_type_str);
             success = false;
         }
     }
 
-    if (api_version_mismatch(mod_info, module))
+    if (api_version_mismatch(mod_info, name))
     {
         success = false;
     }
 
     if (mod_info->version == NULL)
     {
-        MXS_ERROR("Module '%s' does not define a version string", module);
+        MXS_ERROR("Module '%s' does not define a version string.", namec);
         success = false;
     }
 
     if (mod_info->module_object == NULL)
     {
-        MXS_ERROR("Module '%s' does not define a module object", module);
+        MXS_ERROR("Module '%s' does not define any API functions.", namec);
         success = false;
     }
 
     return success;
+}
 }
 
 static bool is_maxscale_module(const char* fpath)
@@ -270,7 +246,7 @@ static int load_module_cb(const char* fpath, const struct stat* sb, int typeflag
             {
                 std::string module(name, dot);
 
-                if (is_maxscale_module(fpath) && !load_module(module.c_str(), nullptr))
+                if (is_maxscale_module(fpath) && !load_module(module.c_str(), ModuleType::UNKNOWN))
                 {
                     MXS_WARNING("Failed to load '%s'. Make sure it is not a stale library "
                                 "left over from an old installation of MaxScale.", fpath);
@@ -288,7 +264,7 @@ bool load_all_modules()
     return rv == 0;
 }
 
-void* load_module(const char* name, const char* type)
+void* load_module(const char* name, mxs::ModuleType type)
 {
     mxb_assert(name);
     string eff_name = module_get_effective_name(name);
@@ -332,7 +308,7 @@ void* load_module(const char* name, const char* type)
                 // Module was loaded, check that it's valid.
                 auto entry_point = (void* (*)())sym;
                 auto mod_info = (MXS_MODULE*)entry_point();
-                if (!check_module(mod_info, type, eff_name.c_str()))
+                if (!check_module(mod_info, eff_name, type))
                 {
                     dlclose(dlhandle);
                 }
@@ -597,6 +573,9 @@ json_t* legacy_params_to_json(const LOADED_MODULE* mod)
         extra = common_monitor_params();
         ignored = {CN_SERVERS, CN_TYPE, CN_MODULE};
         break;
+
+    default:
+        mxb_assert(!true); // Module type should never be unknown
     }
 
     if (extra)
@@ -730,14 +709,15 @@ json_t* module_list_to_json(const char* host)
 const MXS_MODULE* get_module(const char* name, const char* type)
 {
     string eff_name = module_get_effective_name(name);
-
     LOADED_MODULE* mod = find_module(eff_name);
-
-    if (mod == NULL && type && load_module(eff_name.c_str(), type))
+    if (mod == NULL && type)
     {
-        mod = find_module(eff_name);
+        auto expected_type = module_type_from_string(type);
+        if (load_module(eff_name.c_str(), expected_type))
+        {
+            mod = find_module(eff_name);
+        }
     }
-
     return mod ? mod->info : NULL;
 }
 
@@ -940,6 +920,35 @@ const char* mxs_module_param_type_to_string(mxs_module_param_type type)
 }
 }
 
+ModuleType module_type_from_string(const string& type_str)
+{
+    auto rval = ModuleType::UNKNOWN;
+    if (type_str == "protocol")
+    {
+        rval = ModuleType::PROTOCOL;
+    }
+    else if (type_str == "router")
+    {
+        rval = ModuleType::ROUTER;
+    }
+    else if (type_str == "monitor")
+    {
+        rval = ModuleType::ROUTER;
+    }
+    else if (type_str == "filter")
+    {
+        rval = ModuleType::ROUTER;
+    }
+    else if (type_str == "authenticator")
+    {
+        rval = ModuleType::ROUTER;
+    }
+    else if (type_str == "query_classifier")
+    {
+        rval = ModuleType::ROUTER;
+    }
+    return rval;
+}
 
 bool modules_thread_init()
 {

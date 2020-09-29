@@ -42,11 +42,11 @@ static void test1()
     int argc = 3;
 
     mxs::set_libdir("../../modules/authenticator/MySQLAuth/");
-    load_module("mysqlauth", MODULE_AUTHENTICATOR);
+    load_module("mysqlauth", mxs::ModuleType::AUTHENTICATOR);
     mxs::set_libdir("../../modules/protocol/MariaDB/mariadbclient/");
-    load_module("mariadbclient", MODULE_PROTOCOL);
+    load_module("mariadbclient", mxs::ModuleType::PROTOCOL);
     mxs::set_libdir("../../modules/routing/readconnroute/");
-    load_module("readconnroute", MODULE_ROUTER);
+    load_module("readconnroute", mxs::ModuleType::ROUTER);
 
     mxs::ConfigParameters parameters;
     parameters.set(CN_CONNECTION_TIMEOUT, "10s");

@@ -85,7 +85,7 @@ const MXS_MODULE_PARAM* common_filter_params()
  */
 SFilterDef filter_alloc(const char* name, const char* module, mxs::ConfigParameters* params)
 {
-    FILTER_API* object = (FILTER_API*)load_module(module, MODULE_FILTER);
+    FILTER_API* object = (FILTER_API*)load_module(module, ModuleType::FILTER);
 
     if (object == NULL)
     {

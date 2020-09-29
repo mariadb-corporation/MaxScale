@@ -59,10 +59,10 @@ bool load_all_modules();
  *@brief Load a module
  *
  * @param name Name of the module to load
- * @param type Type of module, used purely for registration
- * @return     The module specific entry point structure or NULL
+ * @param type Type of module
+ * @return The module specific entry point structure or NULL
  */
-void* load_module(const char* name, const char* type);
+void* load_module(const char* name, mxs::ModuleType type);
 
 /**
  * @brief Get a module
@@ -146,3 +146,5 @@ std::string module_get_effective_name(const std::string& name);
  * @return The specification as a MaxScale module in JSON format
  */
 json_t* spec_module_to_json(const char* host, const mxs::config::Specification& spec);
+
+mxs::ModuleType module_type_from_string(const std::string& type_str);

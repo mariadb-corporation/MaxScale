@@ -41,9 +41,9 @@ mxs::ConfigParameters* Module::create_default_parameters() const
 //
 
 // static
-void* Module::load(const char* zName, const char* zType)
+void* Module::load(const char* zName, mxs::ModuleType type)
 {
-    return load_module(zName, zType);
+    return load_module(zName, type);
 }
 
 // static
