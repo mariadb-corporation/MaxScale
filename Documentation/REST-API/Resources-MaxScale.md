@@ -445,6 +445,10 @@ endpoint:
 * The WebSocket ping and close commands are not yet supported and will be
   treated as errors.
 
+* When `maxlog` is used as source of log data, any log messages logged after log
+  rotation will not be sent if the file was moved or truncated. To fetch new
+  events after log rotation, reopen the WebSocket connection.
+
 #### Parameters
 
 This endpoint supports the following parameters:
