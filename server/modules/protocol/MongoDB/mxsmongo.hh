@@ -34,5 +34,7 @@ const int MXSMONGO_QUERY_HEADER_LEN = sizeof(mongoc_rpc_query_t);
 namespace mxsmongo
 {
 
+std::string to_string(const bson_t& bson);
+
 const char* opcode_to_string(int code);
 }
