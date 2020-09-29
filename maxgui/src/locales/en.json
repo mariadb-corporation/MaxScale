@@ -94,7 +94,7 @@
     "maxscaleLogs": "MaxScale Logs",
     "newMessagesAvailable": "New messages available",
     "loadingLogs": "Loading logs",
-
+    "noLogsFound": "No logs found",
     "protocol": "protocol | protocols",
     "module": "module | modules",
     "forceClosing": "Force closing",

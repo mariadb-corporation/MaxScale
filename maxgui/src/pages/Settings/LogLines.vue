@@ -1,9 +1,9 @@
 <template>
-    <transition-group name="log-lines-wrapper" tag="pre">
+    <transition-group v-if="logData.length" name="log-lines-wrapper" tag="pre">
         <code
             v-for="{ timestamp, priority, message, id } in logData"
             :key="`${id}`"
-            class="d-block log-line color text-code-color text-no-wrap"
+            :class="codeClasses()"
         >
             <span class="pr-4 color text-field-text">{{ timestamp }}</span>
 
@@ -26,6 +26,11 @@
             </span>
         </code>
     </transition-group>
+    <pre v-else-if="!isLoading">
+    <code :class="codeClasses()">
+        {{$t('noLogsFound') }}
+    </code>
+    </pre>
 </template>
 
 <script>
@@ -33,8 +38,10 @@ export default {
     name: 'log-lines',
     props: {
         logData: { type: Array, required: true },
+        isLoading: { type: Boolean, required: true },
     },
     methods: {
+        codeClasses: () => 'd-block log-line color text-code-color text-no-wrap',
         logPriorityColorClasses: level =>
             `color text-${level} ${level === 'alert' ? 'font-weight-bold' : ''}`,
     },
