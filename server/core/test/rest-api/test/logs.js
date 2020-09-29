@@ -41,6 +41,14 @@ describe("Logs", function() {
     after(stopMaxScale)
 });
 
+function checkLog(log) {
+    for (l of log) {
+        l.message.should.not.be.empty
+        l.timestamp.should.not.be.empty
+        l.priority.should.not.be.empty
+    }
+}
+
 describe("Log Data", function() {
     before(startMaxScale)
 
@@ -66,6 +74,44 @@ describe("Log Data", function() {
         var page2 = await request.get(page1.links.prev, {json: true, auth: {user: 'admin', password: 'mariadb'}})
         page2.data.attributes.log.length.should.equal(1)
         page2.data.attributes.log[0].should.not.deep.equal(page1.data.attributes.log[0])
+    });
+
+    it("maxlog parsing works", async function() {
+        var data = { data: { attributes: { parameters: { maxlog: true, syslog: false }}}}
+        await request.patch(base_url + "/maxscale", {json: data})
+
+        var res = await request.get(base_url + "/maxscale/logs/data", {json: true})
+        res.data.attributes.log_source.should.equal("maxlog")
+        res.data.attributes.log.should.not.be.empty
+        checkLog(res.data.attributes.log)
+
+        data.data.attributes.parameters = { maxlog: true, syslog: true }
+        await request.patch(base_url + "/maxscale", {json: data})
+    });
+
+    it("syslog parsing works", async function() {
+        var data = { data: { attributes: { parameters: { maxlog: false, syslog: true }}}}
+        await request.patch(base_url + "/maxscale", {json: data})
+
+        var res = await request.get(base_url + "/maxscale/logs/data", {json: true})
+        res.data.attributes.log_source.should.equal("syslog")
+        res.data.attributes.log.should.not.be.empty
+        checkLog(res.data.attributes.log)
+
+        data.data.attributes.parameters = { maxlog: true, syslog: true }
+        await request.patch(base_url + "/maxscale", {json: data})
+    });
+
+    it("log is not parsed without maxlog or syslog", async function() {
+        var data = { data: { attributes: { parameters: { maxlog: false, syslog: false }}}}
+        await request.patch(base_url + "/maxscale", {json: data})
+
+        var res = await request.get(base_url + "/maxscale/logs/data", {json: true})
+        expect(res.data.attributes.log_source).to.be.undefined
+        expect(res.data.attributes.log).to.be.undefined
+
+        data.data.attributes.parameters = { maxlog: true, syslog: true }
+        await request.patch(base_url + "/maxscale", {json: data})
     });
 
     after(stopMaxScale)
