@@ -59,6 +59,7 @@ const mountFactory = () =>
         component: LogLines,
         props: {
             logData: dummy_log_data,
+            isLoading: false,
         },
     })
 
@@ -91,5 +92,12 @@ describe('LogLines', () => {
                 }`
             )
         })
+    })
+    it(`Should show no logs found when there is no logData`, async () => {
+        await wrapper.setProps({
+            isLoading: false, // loading state is false indicates loading is done
+            logData: [],
+        })
+        expect(wrapper.html().includes('No logs found'))
     })
 })

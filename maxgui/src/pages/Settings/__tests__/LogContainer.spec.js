@@ -68,8 +68,9 @@ describe('LogContainer', () => {
         axiosStub.should.have.been.calledTwice
     })
 
-    it(`Should pass logData to log-lines component`, async () => {
+    it(`Should pass logData and isLoading props to log-lines component`, async () => {
         const logLines = wrapper.findComponent({ name: 'log-lines' })
         expect(logLines.vm.$props.logData).to.be.deep.equals(wrapper.vm.$data.logData)
+        expect(logLines.vm.$props.isLoading).to.be.deep.equals(wrapper.vm.$data.isLoading)
     })
 })

@@ -272,7 +272,7 @@ export default {
             let bottomEle = document.getElementById('bottom-log-line')
             bottomEle.scrollIntoView({
                 behavior: behavior,
-                block: 'center',
+                block: 'nearest',
                 inline: 'start',
             })
         },

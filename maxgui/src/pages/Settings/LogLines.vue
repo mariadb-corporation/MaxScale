@@ -27,9 +27,9 @@
         </code>
     </transition-group>
     <pre v-else-if="!isLoading">
-    <code :class="codeClasses()">
-        {{$t('noLogsFound') }}
-    </code>
+        <code :class="codeClasses()">
+            {{$t('noLogsFound') }}
+        </code>
     </pre>
 </template>
 
