@@ -20,6 +20,7 @@
 #include <maxbase/format.hh>
 #include <maxbase/string.hh>
 #include <maxsql/mariadb.hh>
+#include <errmsg.h>
 
 using std::string;
 using std::vector;
@@ -46,7 +47,7 @@ MariaDB::~MariaDB()
 
 bool MariaDB::open(const std::string& host, int port, const std::string& db)
 {
-    mxb_assert(port >= 0); // MaxScale config loader should not accept negative values. 0 is ok.
+    mxb_assert(port >= 0);      // MaxScale config loader should not accept negative values. 0 is ok.
     close();
 
     auto newconn = mysql_init(nullptr);
@@ -404,10 +405,18 @@ MariaDB::VersionInfo MariaDB::version_info() const
 
 bool MariaDB::open_extra(const string& host, int port, int extra_port, const string& db)
 {
-    bool success = open(host, port, db);
-    if (!success && m_errornum == ER_CON_COUNT_ERROR && extra_port > 0 )
+    bool success = false;
+    if (extra_port > 0)
     {
         success = open(host, extra_port, db);
+        if (!success && (m_errornum == ER_CON_COUNT_ERROR || m_errornum == CR_CONNECTION_ERROR))
+        {
+            success = open(host, port, db);
+        }
+    }
+    else
+    {
+        success = open(host, port, db);
     }
     return success;
 }

@@ -76,8 +76,9 @@ public:
     bool open(const std::string& host, int port, const std::string& db = "");
 
     /**
-     * Open, with extra port. If extra port is greater than 0 and connection with normal port failed due
-     * to too many connections, then connecting using the extra port is attempted.
+     * Open, with extra port. If extra port is greater than 0, try connecting with it. If the connection
+     * fails due to too many connections or if the server is not listening, then try to connect to
+     * normal port.
      *
      * @param host Server host/ip
      * @param port Server port

@@ -24,8 +24,6 @@
 
 #include <string.h>
 #include <strings.h>
-#include <stdbool.h>
-#include <errmsg.h>
 #include <mysql.h>
 
 #include <maxbase/alloc.h>
@@ -86,9 +84,10 @@ MYSQL* mxs_mysql_real_connect(MYSQL* con, SERVER* server, int port, const char* 
     }
 
     MYSQL* mysql = nullptr;
-    if (server->address()[0] == '/')
+    auto address = server->address();
+    if (address[0] == '/')
     {
-        mysql = mysql_real_connect(con, nullptr, user, passwd, nullptr, 0, server->address(), 0);
+        mysql = mysql_real_connect(con, nullptr, user, passwd, nullptr, 0, address, 0);
     }
     else
     {

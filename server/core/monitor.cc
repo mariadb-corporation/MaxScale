@@ -47,6 +47,7 @@
 #include <maxscale/routingworker.hh>
 #include <maxscale/secrets.hh>
 #include <maxscale/utils.hh>
+#include <errmsg.h>
 
 #include "internal/config.hh"
 #include "internal/externcmd.hh"
@@ -1247,44 +1248,54 @@ MonitorServer::ping_or_connect_to_db(const MonitorServer::ConnectionSettings& se
         };
 
     ConnectResult conn_result = ConnectResult::REFUSED;
-    for (int i = 0; i < sett.connect_attempts; i++)
+    auto extra_port = server.extra_port();
+
+    for (int i = 0; i < sett.connect_attempts && conn_result != ConnectResult::NEWCONN_OK; i++)
     {
         auto start = time(nullptr);
         init_conn();
-        // Try first with normal port, then with extra-port.
-        if (mxs_mysql_real_connect(pConn, &server, server.port(), uname.c_str(), dpwd.c_str()))
+        if (extra_port > 0)
         {
-            conn_result = ConnectResult::NEWCONN_OK;
-            break;
-        }
-        else
-        {
-            auto extra_port = server.extra_port();
-            if (extra_port > 0)
+            // Extra-port defined, try it first.
+            if (mxs_mysql_real_connect(pConn, &server, extra_port, uname.c_str(), dpwd.c_str()))
             {
-                init_conn();
-                if (mxs_mysql_real_connect(pConn, &server, extra_port, uname.c_str(), dpwd.c_str()))
+                conn_result = ConnectResult::NEWCONN_OK;
+            }
+            else
+            {
+                // If extra-port connection failed due to too low max_connections or another likely
+                // configuration related error, try normal port.
+                auto err = mysql_errno(pConn);
+                if (err == ER_CON_COUNT_ERROR || err == CR_CONNECTION_ERROR)
                 {
-                    conn_result = ConnectResult::NEWCONN_OK;
-                    MXS_WARNING("Could not connect with normal port to server '%s', using extra_port",
-                                server.name());
-                    break;
+                    init_conn();
+                    if (mxs_mysql_real_connect(pConn, &server, server.port(), uname.c_str(), dpwd.c_str()))
+                    {
+                        conn_result = ConnectResult::NEWCONN_OK;
+                        MXS_WARNING("Could not connect with extra-port to '%s', using normal port.",
+                                    server.name());
+                    }
                 }
             }
         }
-
-        if (conn_result == ConnectResult::REFUSED && difftime(time(nullptr), start) >= sett.connect_timeout)
+        else if (mxs_mysql_real_connect(pConn, &server, server.port(), uname.c_str(), dpwd.c_str()))
         {
-            conn_result = ConnectResult::TIMEOUT;
+            conn_result = ConnectResult::NEWCONN_OK;
         }
 
-        auto err = mysql_errno(pConn);
-        mysql_close(pConn);
-        pConn = nullptr;
-
-        if (err == ER_ACCESS_DENIED_ERROR || err == ER_ACCESS_DENIED_NO_PASSWORD_ERROR)
+        if (conn_result == ConnectResult::REFUSED)
         {
-            conn_result = ConnectResult::ACCESS_DENIED;
+            auto err = mysql_errno(pConn);
+            mysql_close(pConn);
+            pConn = nullptr;
+            if (err == ER_ACCESS_DENIED_ERROR || err == ER_ACCESS_DENIED_NO_PASSWORD_ERROR)
+            {
+                conn_result = ConnectResult::ACCESS_DENIED;
+            }
+            else if (difftime(time(nullptr), start) >= sett.connect_timeout)
+            {
+                conn_result = ConnectResult::TIMEOUT;
+            }
         }
     }
 

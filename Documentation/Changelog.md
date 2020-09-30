@@ -4,6 +4,9 @@
 
 * The Columnstore monitor no longer supports Columnstore versions prior to 1.5.
 * The Database Firewall filter has been deprecated.
+* If *extra_port* is defined for a server, it's used by default for monitor and
+user account manager connections. Normal port is used if the extra-port
+connection fails due to too low *extra_max_connections*-setting on the backend.
 
 For more details, please refer to:
 * [MariaDB MaxScale 2.6.0 Release Notes](Release-Notes/MaxScale-2.6.0-Release-Notes.md)

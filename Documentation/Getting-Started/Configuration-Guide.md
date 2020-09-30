@@ -1591,13 +1591,21 @@ the section [encrypting passwords](#encrypting-passwords) for more information.
 
 ### `extra_port`
 
-An alternative port used to monitor the server. This allows MaxScale to connect
-even when *max_connections* on the backend server has been reached. If this
-parameter is defined and a connection to the normal port fails, the alternative
-port is used.
+An alternative port used for administrative connections to the server.  If this
+setting is defined, MaxScale uses it for monitoring the server and to fetch user
+accounts. Client sessions will still use the normal port.
 
-For more information, read the
-[extra_port documentation](https://mariadb.com/kb/en/library/thread-pool-system-and-status-variables/#extra_port).
+Defining *extra_port* allows MaxScale to connect even when *max_connections* on
+the backend server has been reached. Extra-port connections have their own
+connection limit, which is one by default. This needs to be increased to allow
+both monitor and user account manager to connect.
+
+If the connection to the extra-port fails due to connection number limit or if
+the port is not open on the server, normal port is used.
+
+For more information, see
+[extra_port](https://mariadb.com/kb/en/library/thread-pool-system-and-status-variables/#extra_port)
+and [extra_max_connections](https://mariadb.com/kb/en/thread-pool-system-status-variables/#extra_max_connections).
 
 ### `persistpoolmax`
 
