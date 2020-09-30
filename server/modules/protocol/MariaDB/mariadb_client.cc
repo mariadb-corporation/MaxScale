@@ -1227,7 +1227,8 @@ bool MariaDBClientConnection::route_statement(mxs::Buffer&& buffer)
         // the smallest version number.
         qc_set_server_version(m_version);
 
-        if (process_special_commands(packetbuf, m_command) == SpecialCmdRes::END)
+        if (!session_is_load_active(session)
+            && process_special_commands(packetbuf, m_command) == SpecialCmdRes::END)
         {
             gwbuf_free(packetbuf);
             packetbuf = nullptr;
