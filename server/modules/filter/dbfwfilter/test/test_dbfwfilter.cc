@@ -992,7 +992,7 @@ int main(int argc, char* argv[])
     {
         run_unit_test(
             [&]() {
-                preload_module("dbfwfilter", "server/modules/filter/dbfwfilter/", MODULE_FILTER);
+                preload_module("dbfwfilter", "server/modules/filter/dbfwfilter/", mxs::ModuleType::FILTER);
                 rv = run();
             });
 

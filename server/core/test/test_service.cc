@@ -35,27 +35,13 @@
  */
 static void test1()
 {
-    Service* service;
-    MXS_SESSION* session;
-    DCB* dcb;
-    int result;
-    int argc = 3;
-
-    mxs::set_libdir("../../modules/authenticator/MySQLAuth/");
-    load_module("mysqlauth", mxs::ModuleType::AUTHENTICATOR);
-    mxs::set_libdir("../../modules/protocol/MariaDB/mariadbclient/");
-    load_module("mariadbclient", mxs::ModuleType::PROTOCOL);
-    mxs::set_libdir("../../modules/routing/readconnroute/");
-    load_module("readconnroute", mxs::ModuleType::ROUTER);
-
     mxs::ConfigParameters parameters;
     parameters.set(CN_CONNECTION_TIMEOUT, "10s");
     parameters.set(CN_NET_WRITE_TIMEOUT, "10s");
     parameters.set(CN_CONNECTION_KEEPALIVE, "100s");
     /* Service tests */
-    fprintf(stderr,
-            "testservice : creating service called MyService with router nonexistent");
-    service = Service::create("MyService", "non-existent", &parameters);
+    fprintf(stderr, "testservice : creating service called MyService with router nonexistent");
+    auto service = Service::create("MyService", "non-existent", &parameters);
     mxb_assert_message(NULL == service, "New service with invalid router should be null");
     mxb_assert_message(0 == service_isvalid(service), "Service must not be valid after incorrect creation");
     fprintf(stderr, "\t..done\nValid service creation, router testroute.");
@@ -64,7 +50,7 @@ static void test1()
     mxb_assert_message(NULL != service, "New service with valid router must not be null");
     mxb_assert_message(0 != service_isvalid(service), "Service must be valid after creation");
     mxb_assert_message(0 == strcmp("MyService", service->name()), "Service must have given name");
-    fprintf(stderr, "\t..done\nAdding protocol testprotocol.");
+    fprintf(stderr, "\t..done\nAdding protocol testprotocol.\n");
 
     mxs::ConfigParameters listener_params;
     listener_params.set(CN_ADDRESS, "localhost");

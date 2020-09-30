@@ -928,11 +928,11 @@ Listener::create_shared_data(const mxs::ConfigParameters& params, const std::str
     auto authenticator = params.get_string(CN_AUTHENTICATOR);
     auto authenticator_options = params.get_string(CN_AUTHENTICATOR_OPTIONS);
 
-    // Add protocol and authenticator capabilities from the listener
     std::unique_ptr<mxs::ProtocolModule> protocol_module;
-    auto protocol_api = (MXS_PROTOCOL_API*)load_module(protocol_namez, mxs::ModuleType::PROTOCOL);
-    if (protocol_api)
+    auto module_info = get_module(protocol_name, mxs::ModuleType::PROTOCOL);
+    if (module_info)
     {
+        auto protocol_api = (MXS_PROTOCOL_API*)module_info->module_object;
         protocol_module.reset(protocol_api->create_protocol_module());
     }
     if (!protocol_module)

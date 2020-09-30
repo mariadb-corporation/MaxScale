@@ -58,6 +58,7 @@ const char CN_ARG_MIN[] = "arg_min";
 const char CN_METHOD[] = "method";
 const char CN_MODULES[] = "modules";
 const char CN_MODULE_COMMAND[] = "module_command";
+const char wrong_mod_type[] = "Module '%s' is a %s, not a %s.";
 
 struct LOADED_MODULE
 {
@@ -172,7 +173,7 @@ bool check_module(const MXS_MODULE* mod_info, const string& name, ModuleType exp
         {
             auto expected_type_str = module_type_to_string(expected_type);
             auto found_type_str = module_type_to_string(found_type);
-            MXS_ERROR("Module '%s' is a %s, not a %s.", namec, found_type_str, expected_type_str);
+            MXS_ERROR(wrong_mod_type, namec, found_type_str, expected_type_str);
             success = false;
         }
     }
@@ -299,7 +300,7 @@ void* load_module(const char* name, mxs::ModuleType type)
             void* sym = dlsym(dlhandle, MXS_MODULE_SYMBOL_NAME);
             if (!sym)
             {
-                load_errmsg = mxb::string_printf("Libary file '%s' does not contain the entry point "
+                load_errmsg = mxb::string_printf("Library file '%s' does not contain the entry point "
                                                  "function. %s.", fnamec, dlerror());
                 dlclose(dlhandle);
             }
@@ -719,6 +720,36 @@ const MXS_MODULE* get_module(const char* name, const char* type)
         }
     }
     return mod ? mod->info : NULL;
+}
+
+const MXS_MODULE* get_module(const std::string& name, mxs::ModuleType type)
+{
+    MXS_MODULE* rval = nullptr;
+    string eff_name = module_get_effective_name(name);
+    LOADED_MODULE* module = find_module(eff_name);
+    if (module)
+    {
+        // If the module is already loaded, then it has been validated during loading. Only type needs to
+        // be checked.
+        auto mod_info = module->info;
+        if (type == ModuleType::UNKNOWN || mod_info->modapi == type)
+        {
+            rval = mod_info;
+        }
+        else
+        {
+            auto expected_type_str = module_type_to_string(type);
+            auto found_type_str = module_type_to_string(mod_info->modapi);
+            MXS_ERROR(wrong_mod_type, name.c_str(), found_type_str, expected_type_str);
+        }
+    }
+    // No such module loaded, try to load.
+    else if (load_module(eff_name.c_str(), type))
+    {
+        module = find_module(eff_name);
+        rval = module->info;
+    }
+    return rval;
 }
 
 string module_get_effective_name(const string& name)

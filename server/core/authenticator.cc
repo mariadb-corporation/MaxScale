@@ -28,9 +28,10 @@ std::unique_ptr<AuthenticatorModule>
 authenticator_init(const std::string& authenticator, mxs::ConfigParameters* options)
 {
     std::unique_ptr<AuthenticatorModule> rval;
-    auto func = (mxs::AUTHENTICATOR_API*)load_module(authenticator.c_str(), ModuleType::AUTHENTICATOR);
-    if (func)
+    auto module_info = get_module(authenticator, ModuleType::AUTHENTICATOR);
+    if (module_info)
     {
+        auto func = (mxs::AUTHENTICATOR_API*)module_info->module_object;
         rval.reset(func->create(options));
     }
     return rval;

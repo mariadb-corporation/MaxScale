@@ -96,10 +96,14 @@ const char CN_STRIP_DB_ESC[] = "strip_db_esc";
 
 Service* Service::create(const char* name, const char* router, mxs::ConfigParameters* params)
 {
-    auto router_api = (MXS_ROUTER_API*)load_module(router, ModuleType::ROUTER);
-    if (!router_api)
+    MXS_ROUTER_API* router_api = nullptr;
+    auto module_info = get_module(router, ModuleType::ROUTER);
+    if (module_info)
     {
-        MXS_ERROR("Unable to load router module '%s'", router);
+        router_api = (MXS_ROUTER_API*)module_info->module_object;
+    }
+    else
+    {
         return nullptr;
     }
 

@@ -43,9 +43,9 @@ public:
      * @param zFile_name  The name of the module.
      * @param type        The expected type of the module.
      *
-     * @return The module specific entry point structure or NULL.
+     * @return The module info object or NULL.
      */
-    static void* load(const char* zFile_name, mxs::ModuleType type);
+    static const MXS_MODULE* load(const char* zFile_name, mxs::ModuleType type);
 
     /**
      * Get a module with a specific name, assumed to be of a specific type.

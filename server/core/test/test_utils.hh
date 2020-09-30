@@ -38,15 +38,14 @@
  * If the test uses code that is not a part of the core, the module must be preloaded before the test is
  * started. In most cases this is only required for module-level unit tests (e.g. dbfwfilter).
  */
-void preload_module(const char* name, const char* path, const char* type)
+void preload_module(const char* name, const char* path, mxs::ModuleType type)
 {
     std::string old_libdir = mxs::libdir();
     std::string fullpath = TEST_DIR;
     fullpath += "/";
     fullpath += path;
     mxs::set_libdir(fullpath.c_str());
-    auto expected_type = type ? module_type_from_string(type) : mxs::ModuleType::UNKNOWN;
-    load_module(name, expected_type);
+    get_module(name, type);
     mxs::set_libdir(old_libdir.c_str());
 }
 
@@ -128,9 +127,10 @@ void init_test_env(char* __attribute((unused))path = nullptr, uint32_t init_type
     maxscale::RoutingWorker::init(watchdog_notifier);
     mxs::set_libdir(old_libdir.c_str());
 
-    preload_module("mariadbclient", "server/modules/protocol/MariaDB/", MODULE_PROTOCOL);
-    preload_module("readconnroute", "server/modules/routing/readconnroute/", MODULE_ROUTER);
-    preload_module("mariadbauth", "server/modules/authenticator/MariaDBAuth/", MODULE_AUTHENTICATOR);
+    preload_module("mariadbclient", "server/modules/protocol/MariaDB/", mxs::ModuleType::PROTOCOL);
+    preload_module("readconnroute", "server/modules/routing/readconnroute/", mxs::ModuleType::ROUTER);
+    preload_module("mariadbauth", "server/modules/authenticator/MariaDBAuth/",
+                   mxs::ModuleType::AUTHENTICATOR);
 }
 
 /**

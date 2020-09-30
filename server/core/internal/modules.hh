@@ -73,6 +73,8 @@ void* load_module(const char* name, mxs::ModuleType type);
  */
 const MXS_MODULE* get_module(const char* name, const char* type);
 
+const MXS_MODULE* get_module(const std::string& name, mxs::ModuleType type);
+
 /**
  * @brief Unload a module.
  *

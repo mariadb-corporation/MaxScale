@@ -564,7 +564,12 @@ void qc_process_end(uint32_t kind)
 
 QUERY_CLASSIFIER* qc_load(const char* plugin_name)
 {
-    void* module = load_module(plugin_name, mxs::ModuleType::QUERY_CLASSIFIER);
+    void* module = nullptr;
+    auto module_info = get_module(plugin_name, mxs::ModuleType::QUERY_CLASSIFIER);
+    if (module_info)
+    {
+        module = module_info->module_object;
+    }
 
     if (module)
     {

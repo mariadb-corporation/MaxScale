@@ -85,45 +85,41 @@ const MXS_MODULE_PARAM* common_filter_params()
  */
 SFilterDef filter_alloc(const char* name, const char* module, mxs::ConfigParameters* params)
 {
-    FILTER_API* object = (FILTER_API*)load_module(module, ModuleType::FILTER);
-
-    if (object == NULL)
+    SFilterDef filter;
+    auto module_info = get_module(module, ModuleType::FILTER);
+    if (module_info)
     {
-        MXS_ERROR("Failed to load filter module '%s'.", module);
-        return NULL;
-    }
-
-    Filter* instance = object->createInstance(name, params);
-
-    if (instance == NULL)
-    {
-        MXS_ERROR("Failed to create filter '%s' instance.", name);
-        return NULL;
-    }
-
-    SFilterDef filter(new(std::nothrow) FilterDef(name, module, instance, *params));
-
-    if (filter)
-    {
-        if (auto config = filter->configuration())
+        auto func = (mxs::FILTER_API*)module_info->module_object;
+        auto instance = func->createInstance(name, params);
+        if (instance)
         {
-            if (!config->configure(*params))
+            filter.reset(new(std::nothrow) FilterDef(name, module, instance, *params));
+            if (filter)
             {
-                filter.reset();
+                if (auto config = filter->configuration())
+                {
+                    if (!config->configure(*params))
+                    {
+                        filter.reset();
+                    }
+                }
+            }
+
+            if (filter)
+            {
+                Guard guard(this_unit.lock);
+                this_unit.filters.push_back(filter);
+            }
+            else
+            {
+                delete instance;
             }
         }
-
-        if (filter)
+        else
         {
-            Guard guard(this_unit.lock);
-            this_unit.filters.push_back(filter);
+            MXB_ERROR("Failed to create filter '%s' instance.", name);
         }
     }
-    else
-    {
-        delete instance;
-    }
-
     return filter;
 }
 
