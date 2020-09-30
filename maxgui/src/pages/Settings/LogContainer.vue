@@ -49,7 +49,11 @@
                 </template>
 
                 <div ref="scrollableContent" v-scroll:#scrollable-wrapper="onScroll">
-                    <log-lines :isLoading="isLoading" :logData="filteredLogs" />
+                    <log-lines
+                        :isLoading="isLoading"
+                        :chosenLogLevels="chosenLogLevels"
+                        :logData="logData"
+                    />
                     <div id="bottom-log-line" />
                 </div>
             </v-card>
@@ -72,6 +76,7 @@
  */
 import LogLines from './LogLines'
 import LogFilter from './LogFilter'
+
 export default {
     name: 'log-container',
     components: {
@@ -95,34 +100,37 @@ export default {
             chosenLogLevels: [],
         }
     },
-    computed: {
-        filteredLogs: function() {
-            if (this.chosenLogLevels.length > 0)
-                return this.logData.filter(item => this.chosenLogLevels.includes(item.priority))
-            else return this.logData
-        },
-    },
+
     watch: {
         // controls by parent component
         shouldFetchLogs: async function(val) {
             if (val) {
                 await this.fetchLatestLogs()
-                this.toBottom('auto')
+                await this.$nextTick(async () => {
+                    this.toBottom('auto')
+                })
             }
         },
         isAtBottom: function(val) {
             // Turn off notif if scroll position is at bottom already
             if (val) this.isNotifShown = false
         },
-        chosenLogLevels: async function(_, oldVal) {
-            /* It ignores value on mounted and auto scroll
-             * to bottom after apply log levels filter
-             */
-            if (oldVal.length !== 0) {
-                this.isLoading = true
-                await this.$help.delay(400).then(() => (this.isLoading = false))
-                await this.$nextTick(() => this.toBottom('auto'))
-            }
+
+        chosenLogLevels: async function() {
+            await this.$nextTick(async () => {
+                /* TODO: instead of looping fetching older logs until scroll is
+                 * scrollable, there should be a way to filter older logs in maxscale
+                 * end and returns 50 lines so that div is scrollable.
+                 */
+                /* Needs to delay 350ms to get accurate value from this.isScrollable()
+                 * because log-lines component is wrappered with transition-group
+                 * and the animation is set for 300ms.
+                 * */
+                await this.$help.delay(350)
+                await this.loopFetchOlderLogs()
+
+                this.toBottom('auto')
+            })
         },
     },
 
@@ -139,6 +147,7 @@ export default {
         if (this.connection) this.disconnect()
         window.removeEventListener('resize', this.setContainerHeight)
     },
+
     methods: {
         setContainerHeight() {
             this.containerHeight = document.documentElement.clientHeight * 0.6
@@ -152,8 +161,10 @@ export default {
          */
         async loopFetchOlderLogs() {
             while (!this.isScrollable() && this.prevPageLink) {
+                this.isLoading = true
                 await this.handleFetchPrevPage()
             }
+            this.isLoading = false
         },
 
         /**
@@ -172,7 +183,7 @@ export default {
 
                 this.log_source = log_source
                 // union it instead of assign otherwise there will be duplicated id
-                this.logData = this.$help.lodash.unionBy(this.logData, log, 'id')
+                this.logData = Object.freeze(this.$help.lodash.unionBy(this.logData, log, 'id'))
                 this.prevPageLink = prev
             } catch (e) {
                 this.$logger('LogContainer-fetchLatestLogs').error(e)
@@ -196,14 +207,16 @@ export default {
                 const isFiltering = this.chosenLogLevels.length
                 const matchedFilter = this.chosenLogLevels.includes(newEntry.priority)
                 if ((isFiltering && matchedFilter) || !isFiltering)
-                    await this.logData.push(newEntry)
+                    this.logData = Object.freeze([...this.logData, newEntry])
                 /* if scrolled position is at bottom already,
                  * scroll to bottom to see latest data. Otherwise,
                  * show notification button (let user controls scroll
                  * to bottom)
                  */
-                if (this.isAtBottom) this.toBottom()
-                else this.isNotifShown = true
+                await this.$nextTick(() => {
+                    if (this.isAtBottom) this.toBottom()
+                    else this.isNotifShown = true
+                })
             }
         },
 
@@ -219,14 +232,12 @@ export default {
          * then preserve current scrolling position before unioning logs
          */
         async handleFetchPrevPage() {
-            this.isLoading = true
             const prevLogs = await this.getPrevCursorLogs()
-            await this.$help.delay(400).then(() => (this.isLoading = false))
             const { scrollableContent, scrollableWrapper } = this.$refs
             // store current height before union prev logs to logData
             const currentHeight = scrollableContent.scrollHeight
-            if (!this.isLoading)
-                this.logData = this.$help.lodash.unionBy(prevLogs, this.logData, 'id')
+            await this.$help.delay(400) // delay adding for better UX
+            this.logData = Object.freeze(this.$help.lodash.unionBy(prevLogs, this.logData, 'id'))
 
             await this.$nextTick(() => {
                 const aLineHeight = 24
@@ -286,10 +297,13 @@ export default {
         async onScroll(e) {
             this.isAtBottom = this.checkIsAtBottom(e)
             /* calls handleFetchPrevPage method when there is prevPageLink and
-             * current scroll position is 0. Don't fetch when filtering logs
+             * current scroll position is 0.
              */
-            if (e.target.scrollTop === 0 && this.chosenLogLevels.length === 0 && this.prevPageLink)
+            if (e.target.scrollTop === 0 && this.prevPageLink) {
+                this.isLoading = true
                 await this.handleFetchPrevPage()
+                this.isLoading = false
+            }
         },
 
         /**

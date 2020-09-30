@@ -2,27 +2,29 @@
     <transition-group v-if="logData.length" name="log-lines-wrapper" tag="pre">
         <code
             v-for="{ timestamp, priority, message, id } in logData"
+            v-show="!isFiltering || showChosenLevels(priority)"
             :key="`${id}`"
-            :class="codeClasses()"
+            :class="[codeClasses()]"
         >
-            <span class="pr-4 color text-field-text">{{ timestamp }}</span>
-
-            <span
-                class="log-level d-inline-flex justify-start"
-                :class="logPriorityColorClasses(priority)"
-            >
-                <span>
-                    <icon-sprite-sheet size="13" :frame="priority">
-                        logPriorities
-                    </icon-sprite-sheet>
+            <span>
+                <span class="pr-4 color text-field-text">{{ timestamp }}</span>
+                <span
+                    class="log-level d-inline-flex justify-start"
+                    :class="logPriorityColorClasses(priority)"
+                >
+                    <span>
+                        <icon-sprite-sheet size="13" :frame="priority">
+                            logPriorities
+                        </icon-sprite-sheet>
+                    </span>
+                    <span class="ml-1">{{ priority }}</span>
                 </span>
-                <span class="ml-1">{{ priority }}</span>
-            </span>
 
-            <span class="log-level-divider">:</span>
+                <span class="log-level-divider">:</span>
 
-            <span class="text-wrap" :class="logPriorityColorClasses(priority)">
-                {{ message }}
+                <span class="text-wrap" :class="logPriorityColorClasses(priority)">
+                    {{ message }}
+                </span>
             </span>
         </code>
     </transition-group>
@@ -49,16 +51,30 @@ export default {
     name: 'log-lines',
     props: {
         logData: { type: Array, required: true },
+        chosenLogLevels: { type: Array, required: true },
         isLoading: { type: Boolean, required: true },
     },
+    computed: {
+        isFiltering: function() {
+            if (this.chosenLogLevels.length === 0) return false
+            else return true
+        },
+    },
     methods: {
-        codeClasses: () => 'd-block log-line color text-code-color text-no-wrap',
+        codeClasses: () => 'log-line color text-code-color text-no-wrap',
         logPriorityColorClasses: level =>
             `color text-${level} ${level === 'alert' ? 'font-weight-bold' : ''}`,
+        showChosenLevels(priority) {
+            if (this.isFiltering && this.chosenLogLevels.includes(priority)) return true
+            else return false
+        },
     },
 }
 </script>
 <style lang="scss" scoped>
+.log-line {
+    display: block;
+}
 .log-level {
     width: 75px;
 }
