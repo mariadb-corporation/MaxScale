@@ -489,12 +489,12 @@ void RoutingWorker::delete_zombies()
 
         if (can_close)
         {
-            MXS_DEBUG("Ready to close session %lu", pDcb->session()->id());
+            MXS_DEBUG("Ready to close session %lu", pDcb->session() ? pDcb->session()->id() : 0);
             DCB::Manager::call_destroy(pDcb);
         }
         else
         {
-            MXS_DEBUG("Delaying destruction of session %lu", pDcb->session()->id());
+            MXS_DEBUG("Delaying destruction of session %lu", pDcb->session() ? pDcb->session()->id() : 0);
             slow_zombies.push_back(pDcb);
         }
     }
