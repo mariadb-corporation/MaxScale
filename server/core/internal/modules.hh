@@ -17,10 +17,7 @@
 #include <maxscale/modinfo.hh>
 
 /* Module types */
-#define MODULE_PROTOCOL         "Protocol"          /**< A protocol module type */
 #define MODULE_AUTHENTICATOR    "Authenticator"     /**< An authenticator module type */
-#define MODULE_ROUTER           "Router"            /**< A router module type */
-#define MODULE_MONITOR          "Monitor"           /**< A database monitor module type */
 #define MODULE_FILTER           "Filter"            /**< A filter module type */
 #define MODULE_QUERY_CLASSIFIER "QueryClassifier"   /**< A query classifier module type */
 
@@ -68,11 +65,9 @@ void* load_module(const char* name, mxs::ModuleType type);
  * @brief Get a module
  *
  * @param name Name of the module
- * @param type The module type or NULL for any type
- * @return The loaded module or NULL if the module is not loaded
+ * @param type The module type. If UNKNOWN, any type is accepted.
+ * @return The loaded module or NULL if the module was not loaded
  */
-const MXS_MODULE* get_module(const char* name, const char* type);
-
 const MXS_MODULE* get_module(const std::string& name, mxs::ModuleType type);
 
 /**

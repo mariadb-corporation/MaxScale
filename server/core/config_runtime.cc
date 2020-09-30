@@ -159,14 +159,13 @@ std::string get_module_param_name(const std::string& type)
  * @brief Load module default parameters
  *
  * @param name        Name of the module to load
- * @param module_type Type of the module (MODULE_ROUTER, MODULE_PROTOCOL etc.)
+ * @param module_type Type of the module
  * @param object_type Type of the object (server, service, listener etc.)
  *
  * @return Whether loading succeeded and the list of default parameters
  */
-std::pair<bool, mxs::ConfigParameters> load_defaults(const char* name,
-                                                     const char* module_type,
-                                                     const char* object_type)
+std::pair<bool, mxs::ConfigParameters>
+load_defaults(const char* name, mxs::ModuleType module_type, const char* object_type)
 {
     bool rval = false;
     mxs::ConfigParameters params;
@@ -568,7 +567,7 @@ bool runtime_create_listener(Service* service,
 
     mxs::ConfigParameters params;
     bool ok;
-    tie(ok, params) = load_defaults(proto, MODULE_PROTOCOL, CN_LISTENER);
+    tie(ok, params) = load_defaults(proto, mxs::ModuleType::PROTOCOL, CN_LISTENER);
     params.set(CN_SERVICE, service->name());
     set_if_not_null(params, CN_AUTHENTICATOR, auth);
     set_if_not_null(params, CN_AUTHENTICATOR_OPTIONS, auth_opt);
@@ -661,7 +660,7 @@ bool runtime_create_filter(const char* name, const char* module, mxs::ConfigPara
         SFilterDef filter;
         mxs::ConfigParameters parameters;
         bool ok;
-        tie(ok, parameters) = load_defaults(module, MODULE_FILTER, CN_FILTER);
+        tie(ok, parameters) = load_defaults(module, mxs::ModuleType::FILTER, CN_FILTER);
 
         if (ok)
         {
@@ -1218,10 +1217,9 @@ bool link_object_to_targets(const std::string& target, StringSet& relations)
     return rval;
 }
 
-std::pair<bool, mxs::ConfigParameters> extract_and_validate_params(json_t* json,
-                                                                   const char* module,
-                                                                   const char* module_type,
-                                                                   const char* module_param_name)
+std::pair<bool, mxs::ConfigParameters>
+extract_and_validate_params(json_t* json, const char* module, mxs::ModuleType module_type,
+                            const char* module_param_name)
 {
     bool ok = false;
     mxs::ConfigParameters params;
@@ -2020,7 +2018,7 @@ bool runtime_create_monitor_from_json(json_t* json)
         {
             mxs::ConfigParameters params;
             bool ok;
-            tie(ok, params) = extract_and_validate_params(json, module, MODULE_MONITOR, CN_MONITOR);
+            tie(ok, params) = extract_and_validate_params(json, module, mxs::ModuleType::MONITOR, CN_MONITOR);
 
             if (ok && server_relationship_to_parameter(json, &params))
             {
@@ -2099,7 +2097,7 @@ bool runtime_create_service_from_json(json_t* json)
             const char* router = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_ROUTER));
             bool ok;
             mxs::ConfigParameters params;
-            tie(ok, params) = extract_and_validate_params(json, router, MODULE_ROUTER, CN_SERVICE);
+            tie(ok, params) = extract_and_validate_params(json, router, mxs::ModuleType::ROUTER, CN_SERVICE);
 
             if (ok)
             {
@@ -2142,7 +2140,7 @@ bool runtime_alter_monitor_from_json(Monitor* monitor, json_t* new_json)
     bool success = false;
     std::unique_ptr<json_t> old_json(MonitorManager::monitor_to_json(monitor, ""));
     mxb_assert(old_json.get());
-    const MXS_MODULE* mod = get_module(monitor->m_module.c_str(), MODULE_MONITOR);
+    const MXS_MODULE* mod = get_module(monitor->m_module, mxs::ModuleType::MONITOR);
 
     auto params = monitor->parameters();
     params.set_multiple(extract_parameters(new_json));
@@ -2213,7 +2211,7 @@ bool can_modify_service_params(Service* service, const mxs::ConfigParameters& pa
 {
     bool rval = true;
 
-    const MXS_MODULE* mod = get_module(service->router_name(), MODULE_ROUTER);
+    const MXS_MODULE* mod = get_module(service->router_name(), mxs::ModuleType::ROUTER);
     StringSet routerparams;
 
     for (int i = 0; mod->parameters[i].name; i++)
@@ -2268,7 +2266,7 @@ bool runtime_alter_service_from_json(Service* service, json_t* new_json)
         {
             auto params = service->params();
             params.set_multiple(extract_parameters(new_json));
-            const MXS_MODULE* mod = get_module(service->router_name(), MODULE_ROUTER);
+            const MXS_MODULE* mod = get_module(service->router_name(), mxs::ModuleType::ROUTER);
 
             bool params_valid = mod->specification ?
                 mod->specification->validate(new_params) :

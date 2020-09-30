@@ -160,7 +160,7 @@ bool Resource::matching_variable_path(const string& path, const string& target) 
             || (path == ":server" && ServerManager::find_by_unique_name(target))
             || (path == ":filter" && filter_find(target.c_str()))
             || (path == ":monitor" && MonitorManager::find_monitor(target.c_str()))
-            || (path == ":module" && (get_module(target.c_str(), NULL)
+            || (path == ":module" && (get_module(target, mxs::ModuleType::UNKNOWN)
                                       || target == mxs::Config::get().specification().module()
                                       || target == Server::specification().module()))
             || (path == ":inetuser" && admin_inet_user_exists(target.c_str()))
@@ -923,7 +923,7 @@ HttpResponse cb_module(const HttpRequest& request)
     }
     else
     {
-        const MXS_MODULE* module = get_module(request.last_uri_part().c_str(), NULL);
+        const MXS_MODULE* module = get_module(request.last_uri_part(), mxs::ModuleType::UNKNOWN);
 
         json = module_to_json(module, request.host());
     }

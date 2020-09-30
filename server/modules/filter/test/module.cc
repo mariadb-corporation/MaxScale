@@ -47,9 +47,9 @@ const MXS_MODULE* Module::load(const char* zName, mxs::ModuleType type)
 }
 
 // static
-const MXS_MODULE* Module::get(const char* zName, const char* zType)
+const MXS_MODULE* Module::get(const char* zName, mxs::ModuleType type)
 {
-    return get_module(zName, zType);
+    return get_module(zName, type);
 }
 
 // static

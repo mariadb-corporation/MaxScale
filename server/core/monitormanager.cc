@@ -96,7 +96,7 @@ Monitor* MonitorManager::create_monitor(const string& name, const string& module
 {
     mxb_assert(Monitor::is_main_worker());
     Monitor* new_monitor = nullptr;
-    const MXS_MODULE* module = get_module(module_name.c_str(), MODULE_MONITOR);
+    const MXS_MODULE* module = get_module(module_name, mxs::ModuleType::MONITOR);
     if (module)
     {
         if (module->specification && !module->specification->validate(*params))
@@ -284,7 +284,7 @@ Monitor* MonitorManager::server_is_monitored(const SERVER* server)
 
 std::ostream& MonitorManager::monitor_persist(const Monitor* monitor, std::ostream& os)
 {
-    const MXS_MODULE* mod = get_module(monitor->m_module.c_str(), NULL);
+    const MXS_MODULE* mod = get_module(monitor->m_module, mxs::ModuleType::MONITOR);
     mxb_assert(mod);
 
     os << generate_config_string(monitor->m_name, monitor->parameters(),
@@ -325,7 +325,7 @@ bool MonitorManager::reconfigure_monitor(mxs::Monitor* monitor, const mxs::Confi
 bool MonitorManager::alter_monitor(mxs::Monitor* monitor, const std::string& key, const std::string& value,
                                    std::string* error_out)
 {
-    const MXS_MODULE* mod = get_module(monitor->m_module.c_str(), MODULE_MONITOR);
+    const MXS_MODULE* mod = get_module(monitor->m_module, mxs::ModuleType::MONITOR);
     if (!validate_param(common_monitor_params(), mod->parameters, key, value, error_out))
     {
         return false;

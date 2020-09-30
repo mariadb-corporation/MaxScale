@@ -721,7 +721,7 @@ json_t* Monitor::to_json(const char* host) const
 json_t* Monitor::parameters_to_json() const
 {
     json_t* rval = json_object();
-    const MXS_MODULE* mod = get_module(m_module.c_str(), MODULE_MONITOR);
+    const MXS_MODULE* mod = get_module(m_module, mxs::ModuleType::MONITOR);
     config_add_module_params_json(parameters(),
                                   {CN_TYPE, CN_MODULE, CN_SERVERS},
                                   common_monitor_params(),

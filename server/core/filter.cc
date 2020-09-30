@@ -131,7 +131,7 @@ FilterDef::FilterDef(std::string name, std::string module, Filter* instance,
     , m_filter(instance)
     , m_capabilities(m_filter->getCapabilities())
 {
-    mxb_assert(get_module(m_module.c_str(), MODULE_FILTER)->module_capabilities == m_capabilities);
+    mxb_assert(get_module(m_module, mxs::ModuleType::FILTER)->module_capabilities == m_capabilities);
 }
 
 FilterDef::~FilterDef()
@@ -201,7 +201,7 @@ json_t* FilterDef::parameters_to_json() const
     json_t* rval = json_object();
 
     /** Add custom module parameters */
-    const MXS_MODULE* mod = get_module(module(), MODULE_FILTER);
+    const MXS_MODULE* mod = get_module(m_module, mxs::ModuleType::FILTER);
     config_add_module_params_json(parameters(),
                                   {CN_TYPE, CN_MODULE},
                                   common_filter_params(),
@@ -335,7 +335,7 @@ std::ostream& FilterDef::persist(std::ostream& os) const
     }
     else
     {
-        const MXS_MODULE* mod = get_module(module(), NULL);
+        const MXS_MODULE* mod = get_module(m_module, mxs::ModuleType::FILTER);
         mxb_assert(mod);
 
         os << generate_config_string(name(), parameters(),

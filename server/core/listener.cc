@@ -463,7 +463,7 @@ json_t* Listener::to_json(const char* host) const
     const char CN_AUTHENTICATOR_DIAGNOSTICS[] = "authenticator_diagnostics";
     json_t* param = json_object();
 
-    const MXS_MODULE* mod = get_module(m_protocol.c_str(), MODULE_PROTOCOL);
+    const MXS_MODULE* mod = get_module(m_protocol, mxs::ModuleType::PROTOCOL);
     config_add_module_params_json(m_params,
                                   {CN_TYPE, CN_SERVICE},
                                   common_listener_params(),

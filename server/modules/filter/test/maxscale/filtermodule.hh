@@ -29,7 +29,8 @@ class FilterModule : public SpecificModule<FilterModule, FILTER_API>
     FilterModule& operator=(const FilterModule&);
 
 public:
-    static const char* zName;   /*< The name describing the module type. */
+    static const char*           zName; /*< The name describing the module type. */
+    static const mxs::ModuleType type {mxs::ModuleType::FILTER};
 
     class Session;
     class Instance

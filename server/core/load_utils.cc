@@ -81,7 +81,7 @@ std::map<string, LOADED_MODULE*> loaded_modules;
 
 struct NAME_MAPPING
 {
-    const char* type;   // The type of the module.
+    ModuleType  type;   // The type of the module.
     const char* from;   // Old module name.
     const char* to;     // What should be loaded instead.
     bool        warned; // Whether a warning has been logged.
@@ -95,10 +95,10 @@ const char*    mxs_module_param_type_to_string(mxs_module_param_type type);
 
 static NAME_MAPPING name_mappings[] =
 {
-    {MODULE_MONITOR,       "mysqlmon",    "mariadbmon",    false},
-    {MODULE_PROTOCOL,      "mysqlclient", "mariadbclient", false},
-    {MODULE_PROTOCOL,      "mariadb",     "mariadbclient", true },
-    {MODULE_AUTHENTICATOR, "mysqlauth",   "mariadbauth",   false},
+    {ModuleType::MONITOR,       "mysqlmon",    "mariadbmon",    false},
+    {ModuleType::PROTOCOL,      "mysqlclient", "mariadbclient", false},
+    {ModuleType::PROTOCOL,      "mariadb",     "mariadbclient", true },
+    {ModuleType::AUTHENTICATOR, "mysqlauth",   "mariadbauth",   false},
 };
 
 static const size_t N_NAME_MAPPINGS = sizeof(name_mappings) / sizeof(name_mappings[0]);
@@ -576,7 +576,7 @@ json_t* legacy_params_to_json(const LOADED_MODULE* mod)
         break;
 
     default:
-        mxb_assert(!true); // Module type should never be unknown
+        mxb_assert(!true);      // Module type should never be unknown
     }
 
     if (extra)
@@ -707,21 +707,6 @@ json_t* module_list_to_json(const char* host)
     return mxs_json_resource(host, MXS_JSON_API_MODULES, arr);
 }
 
-const MXS_MODULE* get_module(const char* name, const char* type)
-{
-    string eff_name = module_get_effective_name(name);
-    LOADED_MODULE* mod = find_module(eff_name);
-    if (mod == NULL && type)
-    {
-        auto expected_type = module_type_from_string(type);
-        if (load_module(eff_name.c_str(), expected_type))
-        {
-            mod = find_module(eff_name);
-        }
-    }
-    return mod ? mod->info : NULL;
-}
-
 const MXS_MODULE* get_module(const std::string& name, mxs::ModuleType type)
 {
     MXS_MODULE* rval = nullptr;
@@ -732,7 +717,7 @@ const MXS_MODULE* get_module(const std::string& name, mxs::ModuleType type)
         // If the module is already loaded, then it has been validated during loading. Only type needs to
         // be checked.
         auto mod_info = module->info;
-        if (type == ModuleType::UNKNOWN || mod_info->modapi == type)
+        if (type == mxs::ModuleType::UNKNOWN || mod_info->modapi == type)
         {
             rval = mod_info;
         }
@@ -762,7 +747,7 @@ string module_get_effective_name(const string& name)
             if (!nm.warned)
             {
                 MXS_WARNING("%s module '%s' has been deprecated, use '%s' instead.",
-                            nm.type, nm.from, nm.to);
+                            module_type_to_string(nm.type), nm.from, nm.to);
                 nm.warned = true;
             }
             eff_name = nm.to;

@@ -1839,22 +1839,22 @@ std::pair<const MXS_MODULE_PARAM*, const MXS_MODULE*> get_module_details(const C
     if (type == CN_SERVICE)
     {
         auto name = obj->m_parameters.get_string(CN_ROUTER);
-        return {common_service_params(), get_module(name.c_str(), MODULE_ROUTER)};
+        return {common_service_params(), get_module(name, mxs::ModuleType::ROUTER)};
     }
     else if (type == CN_LISTENER)
     {
         auto name = obj->m_parameters.get_string(CN_PROTOCOL);
-        return {common_listener_params(), get_module(name.c_str(), MODULE_PROTOCOL)};
+        return {common_listener_params(), get_module(name, mxs::ModuleType::PROTOCOL)};
     }
     else if (type == CN_MONITOR)
     {
         auto name = obj->m_parameters.get_string(CN_MODULE);
-        return {common_monitor_params(), get_module(name.c_str(), MODULE_MONITOR)};
+        return {common_monitor_params(), get_module(name, mxs::ModuleType::MONITOR)};
     }
     else if (type == CN_FILTER)
     {
         auto name = obj->m_parameters.get_string(CN_MODULE);
-        return {common_filter_params(), get_module(name.c_str(), MODULE_FILTER)};
+        return {common_filter_params(), get_module(name, mxs::ModuleType::FILTER)};
     }
 
     mxb_assert(!true);
@@ -3453,7 +3453,7 @@ int create_new_service(CONFIG_CONTEXT* obj)
 
     string user = obj->m_parameters.get_string(CN_USER);
     string auth = obj->m_parameters.get_string(CN_PASSWORD);
-    const MXS_MODULE* module = get_module(router.c_str(), MODULE_ROUTER);
+    const MXS_MODULE* module = get_module(router, mxs::ModuleType::ROUTER);
     mxb_assert(module);
 
     if (module->specification && !module->specification->validate(obj->m_parameters))
@@ -3606,7 +3606,7 @@ int create_new_listener(CONFIG_CONTEXT* obj)
     auto protocol = obj->m_parameters.get_string(CN_PROTOCOL);
     mxb_assert(!protocol.empty());
 
-    if (const MXS_MODULE* mod = get_module(protocol.c_str(), MODULE_PROTOCOL))
+    if (const MXS_MODULE* mod = get_module(protocol, mxs::ModuleType::PROTOCOL))
     {
         if (mod->specification && !mod->specification->validate(obj->m_parameters))
         {
@@ -3637,7 +3637,7 @@ int create_new_filter(CONFIG_CONTEXT* obj)
     mxb_assert(!module_str.empty());
     const char* module = module_str.c_str();
 
-    if (const MXS_MODULE* mod = get_module(module, MODULE_FILTER))
+    if (const MXS_MODULE* mod = get_module(module_str, mxs::ModuleType::FILTER))
     {
         if (mod->specification && !mod->specification->validate(obj->m_parameters))
         {

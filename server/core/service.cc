@@ -244,7 +244,7 @@ Service::Service(const std::string& name,
     , m_config(params)
     , m_params(*params)
 {
-    const MXS_MODULE* module = get_module(router_name.c_str(), MODULE_ROUTER);
+    const MXS_MODULE* module = get_module(router_name, mxs::ModuleType::ROUTER);
     m_capabilities = module->module_capabilities;
 
     if (m_config->connection_keepalive)
@@ -734,7 +734,7 @@ std::vector<Service*> service_filter_in_use(const SFilterDef& filter)
  */
 std::ostream& Service::persist(std::ostream& os) const
 {
-    const MXS_MODULE* mod = get_module(router_name(), NULL);
+    const MXS_MODULE* mod = get_module(router_name(), mxs::ModuleType::ROUTER);
     mxb_assert(mod);
 
     mxs::ConfigParameters params_to_print = m_params;
@@ -863,7 +863,7 @@ json_t* service_parameters_to_json(const SERVICE* service)
 {
     json_t* rval = json_object();
 
-    const MXS_MODULE* mod = get_module(service->router_name(), MODULE_ROUTER);
+    const MXS_MODULE* mod = get_module(service->router_name(), mxs::ModuleType::ROUTER);
     config_add_module_params_json(service->params(),
                                   {CN_TYPE, CN_ROUTER, CN_SERVERS, CN_FILTERS},
                                   common_service_params(),
