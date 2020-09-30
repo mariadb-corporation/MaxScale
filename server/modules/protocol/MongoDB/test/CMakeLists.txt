@@ -1,4 +1,3 @@
-include(${CMAKE_SOURCE_DIR}/cmake/BuildMongoCxxDriver.cmake)
 include_directories(${BSON_CXX_INCLUDE_DIR})
 include_directories(${MONGO_CXX_INCLUDE_DIR})
 
