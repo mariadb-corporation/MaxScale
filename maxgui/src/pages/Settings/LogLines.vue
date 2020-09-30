@@ -26,11 +26,10 @@
             </span>
         </code>
     </transition-group>
-    <pre v-else-if="!isLoading">
-        <code :class="codeClasses()">
-            {{$t('noLogsFound') }}
-        </code>
-    </pre>
+
+    <code v-else-if="!isLoading" :class="codeClasses()">
+        {{ $t('noLogsFound') }}
+    </code>
 </template>
 
 <script>
@@ -77,16 +76,15 @@ export default {
 
 pre {
     white-space: pre-wrap;
-
-    code {
-        background-color: transparent;
-        box-shadow: none;
-        line-height: 1.5rem;
-        padding: 0px 5px 0 10px;
-        &::before,
-        &::after {
-            content: none;
-        }
+}
+code {
+    background-color: transparent;
+    box-shadow: none;
+    line-height: 1.5rem;
+    padding: 0px 5px 0 10px;
+    &::before,
+    &::after {
+        content: none;
     }
 }
 </style>
