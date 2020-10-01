@@ -1898,6 +1898,9 @@ MaxScale is the gateway through which all connections go, in order to guarantee
 a more secure system MaxScale enforces a stricter security policy than what the
 server does.
 
+TLS encryption must be enabled for listeners when they are created. For servers,
+the TLS can be enabled after creation but it cannot be disabled or altered.
+
 ### `ssl`
 
 This enables SSL connections when set to true. The parameter takes a boolean

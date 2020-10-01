@@ -433,14 +433,44 @@ bool Server::ParamSSL::from_json(const json_t* pJson, value_type* pValue,
     return ok;
 }
 
-void Server::configure(const mxs::ConfigParameters& params)
+bool Server::configure_ssl(const mxs::ConfigParameters& params)
 {
-    m_settings.configure(params);
+    bool ok;
+    std::unique_ptr<mxs::SSLContext> ctx;
+    std::tie(ok, ctx) = create_ssl(m_name.c_str(), params);
+
+    if (ok)
+    {
+        if (ctx.get())
+        {
+            if (!m_ssl_provider.enabled())
+            {
+                m_ssl_provider.set_context(std::move(ctx));
+            }
+            else
+            {
+                MXS_ERROR("Cannot alter SSL at runtime");
+                ok = false;
+            }
+        }
+        else if (m_ssl_provider.enabled())
+        {
+            MXS_ERROR("Cannot disable SSL at runtime");
+            ok = false;
+        }
+    }
+
+    return ok;
 }
 
-void Server::configure(json_t* params)
+bool Server::configure(const mxs::ConfigParameters& params)
 {
-    m_settings.configure(params);
+    return m_settings.configure(params) && configure_ssl(params);
+}
+
+bool Server::configure(json_t* params)
+{
+    return m_settings.configure(params) && configure_ssl(mxs::ConfigParameters::from_json(params));
 }
 
 Server::Settings::Settings(const std::string& name)
@@ -497,13 +527,10 @@ std::unique_ptr<Server> Server::create(const char* name, const mxs::ConfigParame
 
     if (s_spec.validate(params))
     {
-        auto ssl = create_ssl(name, params);
-
-        if (ssl.first)
+        if (auto server = std::make_unique<Server>(name))
         {
-            if (auto server = std::make_unique<Server>(name, std::move(ssl.second)))
+            if (server->configure(params))
             {
-                server->configure(params);
                 rval = std::move(server);
             }
         }
@@ -518,13 +545,10 @@ std::unique_ptr<Server> Server::create(const char* name, json_t* json)
 
     if (s_spec.validate(json))
     {
-        auto ssl = create_ssl(name, mxs::ConfigParameters::from_json(json));
-
-        if (ssl.first)
+        if (auto server = std::make_unique<Server>(name))
         {
-            if (auto server = std::make_unique<Server>(name, std::move(ssl.second)))
+            if (server->configure(json))
             {
-                server->configure(json);
                 rval = std::move(server);
             }
         }

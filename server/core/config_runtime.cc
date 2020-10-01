@@ -1904,20 +1904,21 @@ bool runtime_alter_server_from_json(Server* server, json_t* new_json)
 
         if (rval && new_parameters)
         {
-            server->configure(new_parameters);
-
-            std::ostringstream ss;
-            server->persist(ss);
-            rval = runtime_save_config(server->name(), ss.str());
-
-            // Restart the monitor that monitors this server to propagate the configuration changes
-            // forward. This causes the monitor to pick up on new timeouts and addresses immediately.
-            if (auto mon = MonitorManager::server_is_monitored(server))
+            if ((rval = server->configure(new_parameters)))
             {
-                if (mon->is_running())
+                std::ostringstream ss;
+                server->persist(ss);
+                rval = runtime_save_config(server->name(), ss.str());
+
+                // Restart the monitor that monitors this server to propagate the configuration changes
+                // forward. This causes the monitor to pick up on new timeouts and addresses immediately.
+                if (auto mon = MonitorManager::server_is_monitored(server))
                 {
-                    mon->stop();
-                    mon->start();
+                    if (mon->is_running())
+                    {
+                        mon->stop();
+                        mon->start();
+                    }
                 }
             }
         }
