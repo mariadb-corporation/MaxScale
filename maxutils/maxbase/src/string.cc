@@ -161,4 +161,14 @@ std::string tolower(const std::string& str)
     std::transform(str.begin(), str.end(), rval.begin(), ::tolower);
     return rval;
 }
+
+std::string tolower(const char* str)
+{
+    string rval;
+    auto len = strlen(str);
+    rval.resize(len);
+    std::transform(str, str + len, rval.begin(), ::tolower);
+    return rval;
+}
+
 }

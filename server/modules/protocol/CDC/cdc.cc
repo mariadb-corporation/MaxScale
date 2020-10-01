@@ -105,6 +105,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
 
     static MXS_MODULE info =
     {
+        MXS_MODULE_NAME,
         mxs::ModuleType::PROTOCOL,
         mxs::ModuleStatus::IN_DEVELOPMENT,
         MXS_PROTOCOL_VERSION,

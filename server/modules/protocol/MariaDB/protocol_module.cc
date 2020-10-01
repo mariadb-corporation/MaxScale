@@ -303,6 +303,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
     static MXS_MODULE info =
     {
+        MXS_MODULE_NAME,
         mxs::ModuleType::PROTOCOL,
         mxs::ModuleStatus::GA,
         MXS_PROTOCOL_VERSION,

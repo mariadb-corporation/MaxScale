@@ -66,9 +66,8 @@ struct LOADED_MODULE
     MXS_MODULE* info {nullptr};     /**< The module information */
     void*       handle {nullptr};   /**< The handle returned by dlopen */
 
-    LOADED_MODULE(string name, void* dlhandle, MXS_MODULE* info)
-        : name(std::move(name))
-        , info(info)
+    LOADED_MODULE(void* dlhandle, MXS_MODULE* info)
+        : info(info)
         , handle(dlhandle)
     {
     }
@@ -316,7 +315,7 @@ void* load_module(const char* name, mxs::ModuleType type)
                 }
                 else
                 {
-                    loaded_module = new LOADED_MODULE(eff_name, dlhandle, mod_info);
+                    loaded_module = new LOADED_MODULE(dlhandle, mod_info);
                 }
             }
         }
@@ -324,10 +323,11 @@ void* load_module(const char* name, mxs::ModuleType type)
 
     if (loaded_module)
     {
-        mxb_assert(loaded_modules.count(eff_name) == 0);
-        loaded_modules.insert(std::make_pair(eff_name, loaded_module));
-        MXS_NOTICE("Module '%s' loaded from '%s'.", name, fname.c_str());
         auto mod_info = loaded_module->info;
+        auto mod_name_low = mxb::tolower(mod_info->name);
+        mxb_assert(loaded_modules.count(mod_name_low) == 0);
+        loaded_modules.insert(std::make_pair(mod_name_low, loaded_module));
+        MXS_NOTICE("Module '%s' loaded from '%s'.", mod_info->name, fname.c_str());
 
         // Run module process/thread init functions.
         if (mxs::RoutingWorker::is_running())
@@ -598,28 +598,28 @@ json_t* legacy_params_to_json(const LOADED_MODULE* mod)
 static json_t* module_json_data(const LOADED_MODULE* mod, const char* host)
 {
     json_t* obj = json_object();
-
-    auto module_namec = mod->name.c_str();
-    json_object_set_new(obj, CN_ID, json_string(module_namec));
+    auto mod_info = mod->info;
+    auto module_name = mod_info->name;
+    json_object_set_new(obj, CN_ID, json_string(module_name));
     json_object_set_new(obj, CN_TYPE, json_string(CN_MODULES));
 
     json_t* attr = json_object();
-    auto mod_type = module_type_to_string(mod->info->modapi);
+    auto mod_type = module_type_to_string(mod_info->modapi);
     json_object_set_new(attr, "module_type", json_string(mod_type));
-    json_object_set_new(attr, "version", json_string(mod->info->version));
-    json_object_set_new(attr, CN_DESCRIPTION, json_string(mod->info->description));
-    json_object_set_new(attr, "api", json_string(module_type_to_string(mod->info->modapi)));
-    json_object_set_new(attr, "maturity", json_string(module_maturity_to_string(mod->info->status)));
+    json_object_set_new(attr, "version", json_string(mod_info->version));
+    json_object_set_new(attr, CN_DESCRIPTION, json_string(mod_info->description));
+    json_object_set_new(attr, "api", json_string(module_type_to_string(mod_info->modapi)));
+    json_object_set_new(attr, "maturity", json_string(module_maturity_to_string(mod_info->status)));
 
     json_t* commands = json_array();
-    cb_param p = {commands, module_namec, host};
-    modulecmd_foreach(module_namec, NULL, modulecmd_cb, &p);
+    cb_param p = {commands, module_name, host};
+    modulecmd_foreach(module_name, NULL, modulecmd_cb, &p);
 
     json_t* params = nullptr;
 
-    if (mod->info->specification)
+    if (mod_info->specification)
     {
-        params = mod->info->specification->to_json();
+        params = mod_info->specification->to_json();
     }
     else
     {
@@ -629,7 +629,7 @@ static json_t* module_json_data(const LOADED_MODULE* mod, const char* host)
     json_object_set_new(attr, "commands", commands);
     json_object_set_new(attr, CN_PARAMETERS, params);
     json_object_set_new(obj, CN_ATTRIBUTES, attr);
-    json_object_set_new(obj, CN_LINKS, mxs_json_self_link(host, CN_MODULES, module_namec));
+    json_object_set_new(obj, CN_LINKS, mxs_json_self_link(host, CN_MODULES, module_name));
 
     return obj;
 }

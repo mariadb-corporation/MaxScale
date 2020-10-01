@@ -561,6 +561,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
 
     static MXS_MODULE info =
     {
+        MXS_MODULE_NAME,
         mxs::ModuleType::FILTER,
         mxs::ModuleStatus::GA,
         MXS_FILTER_VERSION,

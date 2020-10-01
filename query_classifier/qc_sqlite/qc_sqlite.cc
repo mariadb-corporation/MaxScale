@@ -5473,6 +5473,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
 
     static MXS_MODULE info =
     {
+        MXS_MODULE_NAME,
         mxs::ModuleType::QUERY_CLASSIFIER,
         mxs::ModuleStatus::GA,
         MXS_QUERY_CLASSIFIER_VERSION,

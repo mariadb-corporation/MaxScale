@@ -165,6 +165,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
     static MXS_MODULE module =
     {
+        MXS_MODULE_NAME,
         mxs::ModuleType::ROUTER,
         mxs::ModuleStatus::BETA,
         MXS_ROUTER_VERSION,

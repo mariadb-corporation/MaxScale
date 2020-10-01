@@ -97,6 +97,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 
     static MXS_MODULE info =
     {
+        "mirror",
         mxs::ModuleType::ROUTER,
         mxs::ModuleStatus::ALPHA,
         MXS_ROUTER_VERSION,

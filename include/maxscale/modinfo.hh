@@ -147,6 +147,7 @@ struct MXS_MODULE_PARAM
  */
 struct MXS_MODULE
 {
+    const char*        name;                /**< Module name */
     mxs::ModuleType    modapi;              /**< Module API type */
     mxs::ModuleStatus  status;              /**< Module development status */
     MXS_MODULE_VERSION api_version;         /**< Module API version */
