@@ -89,6 +89,12 @@ exports.builder = function (yargs) {
       "Stop all services",
       function (yargs) {
         return yargs
+          .group(["force"], "Stop options:")
+          .option("force", {
+            describe: "Close existing connections after stopping all services",
+            type: "boolean",
+            default: false,
+          })
           .epilog("This command will execute the `stop service` command for " + "all services in MaxScale.")
           .usage("Usage: stop [services|maxscale]");
       },
@@ -96,9 +102,10 @@ exports.builder = function (yargs) {
         maxctrl(argv, function (host) {
           return doRequest(host, "services/", function (res) {
             var promises = [];
+            var opts = argv.force ? "?force=yes" : "";
 
             res.data.forEach(function (i) {
-              promises.push(doRequest(host, "services/" + i.id + "/stop", null, { method: "PUT" }));
+              promises.push(doRequest(host, "services/" + i.id + "/stop" + opts, null, { method: "PUT" }));
             });
 
             return Promise.all(promises).then(() => OK());
