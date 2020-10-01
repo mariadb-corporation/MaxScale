@@ -51,6 +51,21 @@ describe("Listener", function() {
             .should.be.rejected
     });
 
+    it("stop a listener", function() {
+        return request.put(base_url + "/listeners/RW-Split-Listener/stop")
+            .should.be.fulfilled
+    });
+
+    it("start listener", function() {
+        return request.put(base_url + "/listeners/RW-Split-Listener/start")
+            .should.be.fulfilled
+    });
+
+    it("stop a listener and close connections", async function() {
+        await request.put(base_url + "/listeners/RW-Split-Listener/stop?force=yes")
+        await request.put(base_url + "/listeners/RW-Split-Listener/start")
+    });
+
     it("destroy a static listener", function() {
         return request.delete(base_url + "/listeners/RW-Split-Listener")
             .should.be.fulfilled

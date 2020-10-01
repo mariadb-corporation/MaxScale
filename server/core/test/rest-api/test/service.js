@@ -275,13 +275,28 @@ describe("Service", function() {
             .should.be.rejected
     });
 
-    it("destroy a static listener", function() {
-        return request.delete(base_url + "/services/RW-Split-Router/listeners/RW-Split-Listener")
+    it("reload users", function() {
+        return request.post(base_url + "/services/RW-Split-Router/reload")
             .should.be.fulfilled
     });
 
-    it("reload users", function() {
-        return request.post(base_url + "/services/RW-Split-Router/reload")
+    it("stop a service", function() {
+        return request.put(base_url + "/services/RW-Split-Router/stop")
+            .should.be.fulfilled
+    });
+
+    it("start service", function() {
+        return request.put(base_url + "/services/RW-Split-Router/start")
+            .should.be.fulfilled
+    });
+
+    it("stop a service and close connections", async function() {
+        await request.put(base_url + "/services/RW-Split-Router/stop?force=yes")
+        await request.put(base_url + "/services/RW-Split-Router/start")
+    });
+
+    it("destroy a static listener", function() {
+        return request.delete(base_url + "/services/RW-Split-Router/listeners/RW-Split-Listener")
             .should.be.fulfilled
     });
 

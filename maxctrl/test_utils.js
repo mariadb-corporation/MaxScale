@@ -1,6 +1,7 @@
 var child_process = require("child_process")
 const mariadb = require('mariadb');
 var conn
+var connectionError = false
 
 module.exports = function() {
 
@@ -99,14 +100,25 @@ module.exports = function() {
         })
     }
 
+    this.isConnectionOk = function() {
+        return connectionError;
+    }
+
     this.createConnection = function() {
+        connectionError = false
         return mariadb.createConnection({host: '127.0.0.1', port: 4006, user: 'maxuser', password: 'maxpwd'})
             .then(c => {
                 conn = c
+                conn.on('error', (err) => {
+                    connectionError = true
+                })
+            })
+            .catch(err => {
+                connectionError = true
             })
     }
 
-    this. closeConnection = function() {
+    this.closeConnection = function() {
         conn.end()
         conn = null
     }
