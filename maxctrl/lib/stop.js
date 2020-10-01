@@ -22,6 +22,12 @@ exports.builder = function (yargs) {
       "Stop a service",
       function (yargs) {
         return yargs
+          .group(["force"], "Stop options:")
+          .option("force", {
+            describe: "Close existing connections after stopping the service",
+            type: "boolean",
+            default: false,
+          })
           .epilog(
             "Stopping a service will prevent all the listeners for that service " +
               "from accepting new connections. Existing connections will still be " +
@@ -31,7 +37,32 @@ exports.builder = function (yargs) {
       },
       function (argv) {
         maxctrl(argv, function (host) {
-          return doRequest(host, "services/" + argv.name + "/stop", null, { method: "PUT" });
+          var opts = argv.force ? "?force=yes" : "";
+          return doRequest(host, "services/" + argv.name + "/stop" + opts, null, { method: "PUT" });
+        });
+      }
+    )
+    .command(
+      "listener <name>",
+      "Stop a listener",
+      function (yargs) {
+        return yargs
+          .group(["force"], "Stop options:")
+          .option("force", {
+            describe: "Close existing connections after stopping the listener",
+            type: "boolean",
+            default: false,
+          })
+          .epilog(
+            "Stopping a listener will prevent it from accepting new connections. Existing " +
+              "connections will still be handled normally until they are closed."
+          )
+          .usage("Usage: stop listener <name>");
+      },
+      function (argv) {
+        maxctrl(argv, function (host) {
+          var opts = argv.force ? "?force=yes" : "";
+          return doRequest(host, "listeners/" + argv.name + "/stop" + opts, null, { method: "PUT" });
         });
       }
     )

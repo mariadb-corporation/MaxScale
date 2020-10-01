@@ -32,6 +32,20 @@ exports.builder = function (yargs) {
       }
     )
     .command(
+      "listener <name>",
+      "Start a listener",
+      function (yargs) {
+        return yargs
+          .epilog("This starts a listener stopped by `stop listener <name>`")
+          .usage("Usage: start listener <name>");
+      },
+      function (argv) {
+        maxctrl(argv, function (host) {
+          return doRequest(host, "listeners/" + argv.name + "/start", null, { method: "PUT" });
+        });
+      }
+    )
+    .command(
       "monitor <name>",
       "Start a monitor",
       function (yargs) {
