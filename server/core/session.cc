@@ -47,6 +47,7 @@
 #include "internal/session.hh"
 #include "internal/server.hh"
 #include "internal/service.hh"
+#include "internal/listener.hh"
 
 using std::string;
 using std::stringstream;
@@ -1506,6 +1507,42 @@ void Session::set_ttl(int64_t ttl)
 {
     m_ttl = ttl;
     m_ttl_start = mxs_clock();
+}
+
+// static
+void Session::foreach(std::function<void(Session*)> func)
+{
+    mxs::RoutingWorker::execute_concurrently(
+        [func]() {
+            for (auto kv : mxs::RoutingWorker::get_current()->session_registry())
+            {
+                func(static_cast<Session*>(kv.second));
+            }
+        });
+}
+
+// static
+void Session::kill_all(SERVICE* service)
+{
+    Session::foreach(
+        [service](Session* session) {
+            if (session->service == service)
+            {
+                session->kill();
+            }
+        });
+}
+
+// static
+void Session::kill_all(Listener* listener)
+{
+    Session::foreach(
+        [listener](Session* session) {
+            if (session->listener_data()->m_listener_name == listener->name())
+            {
+                session->kill();
+            }
+        });
 }
 
 ListenerSessionData* Session::listener_data()

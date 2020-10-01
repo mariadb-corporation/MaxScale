@@ -297,6 +297,12 @@ HttpResponse cb_stop_service(const HttpRequest& request)
 {
     Service* service = Service::find(request.uri_part(1).c_str());
     serviceStop(service);
+
+    if (request.get_option(CN_FORCE) == CN_YES)
+    {
+        Session::kill_all(service);
+    }
+
     return HttpResponse(MHD_HTTP_NO_CONTENT);
 }
 
@@ -311,6 +317,12 @@ HttpResponse cb_stop_listener(const HttpRequest& request)
 {
     auto listener = listener_find(request.uri_part(1).c_str());
     listener->stop();
+
+    if (request.get_option(CN_FORCE) == CN_YES)
+    {
+        Session::kill_all(listener.get());
+    }
+
     return HttpResponse(MHD_HTTP_NO_CONTENT);
 }
 

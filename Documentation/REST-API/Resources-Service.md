@@ -410,6 +410,14 @@ PUT /v1/services/:name/stop
 
 Stops a started service.
 
+#### Parameters
+
+This endpoint supports the following parameters:
+
+- `force=yes`
+
+  - Close all existing connections that were created through this listener.
+
 #### Response
 
 Service is stopped:

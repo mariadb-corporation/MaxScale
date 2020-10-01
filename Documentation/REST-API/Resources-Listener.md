@@ -244,6 +244,14 @@ PUT /v1/listeners/:name/stop
 Stops a started listener. When a listener is stopped, new connections are no
 longer accepted and are queued until the listener is started again.
 
+#### Parameters
+
+This endpoint supports the following parameters:
+
+- `force=yes`
+
+  - Close all existing connections that were created through this listener.
+
 #### Response
 
 Listener is stopped:

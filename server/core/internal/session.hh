@@ -39,6 +39,7 @@ void dListSessions(DCB*);
 
 void printSession(MXS_SESSION*);
 class Server;
+class Listener;
 
 // Class that holds the session specific filter data
 class SessionFilter
@@ -226,6 +227,29 @@ public:
      * delayed fake hangup event.
      */
     void set_ttl(int64_t ttl);
+
+    /**
+     * Execute a function for each session
+     *
+     * The function is executed concurrently on all routing workers.
+     *
+     * @param func The function executed for each session
+     */
+    static void foreach(std::function<void(Session*)> func);
+
+    /**
+     * Stop all sessions to a particular service
+     *
+     * @param service Stop all sessions that are connected to this service
+     */
+    static void kill_all(SERVICE* service);
+
+    /**
+     * Stop all sessions to a particular listener
+     *
+     * @param listener Stop all sessions that connected via this listener
+     */
+    static void kill_all(Listener* listener);
 
 protected:
     std::unique_ptr<mxs::Endpoint> m_down;
