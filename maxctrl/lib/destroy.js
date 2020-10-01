@@ -22,6 +22,7 @@ exports.builder = function (yargs) {
       "Destroy an unused server",
       function (yargs) {
         return yargs
+          .group(["force"], "Destroy options:")
           .option("force", {
             describe: "Remove the server from monitors and services before destroying it",
             type: "boolean",
@@ -42,6 +43,7 @@ exports.builder = function (yargs) {
       "Destroy an unused monitor",
       function (yargs) {
         return yargs
+          .group(["force"], "Destroy options:")
           .option("force", {
             describe: "Remove monitored servers from the monitor before destroying it",
             type: "boolean",
@@ -78,6 +80,7 @@ exports.builder = function (yargs) {
       "Destroy an unused service",
       function (yargs) {
         return yargs
+          .group(["force"], "Destroy options:")
           .option("force", {
             describe: "Remove filters, listeners and servers from service before destroying it",
             type: "boolean",
@@ -102,6 +105,7 @@ exports.builder = function (yargs) {
       "Destroy an unused filter",
       function (yargs) {
         return yargs
+          .group(["force"], "Destroy options:")
           .option("force", {
             describe: "Automatically remove the filter from all services before destroying it",
             type: "boolean",
