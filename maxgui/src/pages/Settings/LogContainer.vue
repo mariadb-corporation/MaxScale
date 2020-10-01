@@ -76,6 +76,7 @@
  */
 import LogLines from './LogLines'
 import LogFilter from './LogFilter'
+import { mapActions, mapState } from 'vuex'
 
 export default {
     name: 'log-container',
@@ -92,20 +93,25 @@ export default {
             containerHeight: 0,
             isLoading: false,
             logData: [],
-            log_source: [],
-            prevPageLink: null,
             connection: null,
             isNotifShown: false,
             isAtBottom: false,
             chosenLogLevels: [],
         }
     },
-
+    computed: {
+        ...mapState('maxscale', {
+            latest_logs: state => state.latest_logs,
+            prev_log_link: state => state.prev_log_link,
+            log_source: state => state.log_source,
+            prev_log_data: state => state.prev_log_data,
+        }),
+    },
     watch: {
         // controls by parent component
         shouldFetchLogs: async function(val) {
             if (val) {
-                await this.fetchLatestLogs()
+                await this.getLatestLogs()
                 await this.$nextTick(async () => {
                     this.toBottom('auto')
                 })
@@ -127,7 +133,7 @@ export default {
                  * and the animation is set for 300ms.
                  * */
                 await this.$help.delay(350)
-                await this.loopFetchOlderLogs()
+                await this.loopGetOlderLogs()
 
                 this.toBottom('auto')
             })
@@ -137,8 +143,8 @@ export default {
     async mounted() {
         this.setContainerHeight()
         window.addEventListener('resize', this.setContainerHeight)
-        await this.fetchLatestLogs()
-        await this.loopFetchOlderLogs()
+        await this.getLatestLogs()
+        await this.loopGetOlderLogs()
         // go to bottom on mounted
         this.toBottom('auto')
         await this.openConnection()
@@ -149,45 +155,35 @@ export default {
     },
 
     methods: {
+        ...mapActions('maxscale', ['fetchLatestLogs', 'fetchPrevLog']),
+
         setContainerHeight() {
             this.containerHeight = document.documentElement.clientHeight * 0.6
         },
         /**
-         * This function fetches older logs than current until the log content div
+         * This function gets older logs than current until the log content div
          * is scrollable. This allows user to scroll up to get old logs if
          * current logs received are to small which make it unable to scroll.
          * This may happen when log_source is maxlog and log_debug=1 as
          * multiple log lines in maxscale is now ignored.
          */
-        async loopFetchOlderLogs() {
-            while (!this.isScrollable() && this.prevPageLink) {
+        async loopGetOlderLogs() {
+            while (!this.isScrollable() && this.prev_log_link) {
                 this.isLoading = true
-                await this.handleFetchPrevPage()
+                await this.handleUnionPrevLogs()
             }
             this.isLoading = false
         },
 
         /**
-         * This function fetches latest 50 log lines.
-         * It assigns log_source, logData and prevLink
+         * This function get latest 50 log lines.
+         * It assigns latest_logs to logData
          */
-        async fetchLatestLogs() {
-            try {
-                this.isLoading = true
-                const res = await this.$axios.get('/maxscale/logs/data')
-                await this.$help.delay(400).then(() => (this.isLoading = false))
-                const {
-                    data: { attributes: { log = [], log_source = null } = {} } = {},
-                    links: { prev = null },
-                } = res.data
-
-                this.log_source = log_source
-                // union it instead of assign otherwise there will be duplicated id
-                this.logData = Object.freeze(this.$help.lodash.unionBy(this.logData, log, 'id'))
-                this.prevPageLink = prev
-            } catch (e) {
-                this.$logger('LogContainer-fetchLatestLogs').error(e)
-            }
+        async getLatestLogs() {
+            this.isLoading = true
+            await this.fetchLatestLogs()
+            await this.$help.delay(400).then(() => (this.isLoading = false))
+            this.logData = Object.freeze(this.latest_logs)
         },
 
         /**
@@ -226,19 +222,19 @@ export default {
         },
 
         /**
-         * This function handles unioning previous cursor logData to current
-         * logData.
+         * This function handles unioning prev_log_data to current logData.
          * It turns off loading state after 400ms as a minimum loading time
-         * then preserve current scrolling position before unioning logs
+         * then preserves current scrolling position before unioning logs
          */
-        async handleFetchPrevPage() {
-            const prevLogs = await this.getPrevCursorLogs()
+        async handleUnionPrevLogs() {
+            await this.fetchPrevLog()
             const { scrollableContent, scrollableWrapper } = this.$refs
             // store current height before union prev logs to logData
             const currentHeight = scrollableContent.scrollHeight
             await this.$help.delay(400) // delay adding for better UX
-            this.logData = Object.freeze(this.$help.lodash.unionBy(prevLogs, this.logData, 'id'))
-
+            this.logData = Object.freeze(
+                this.$help.lodash.unionBy(this.prev_log_data, this.logData, 'id')
+            )
             await this.$nextTick(() => {
                 const aLineHeight = 24
                 // preseve scroll pos when union to logs and show 3 new log lines
@@ -246,27 +242,6 @@ export default {
                     scrollableContent.offsetHeight - (currentHeight + aLineHeight * 3)
                 )
             })
-        },
-
-        /**
-         * This function returns previous logData array from previous cursor page link.
-         * It also assigns prev link
-         * @returns previous logData array
-         */
-        async getPrevCursorLogs() {
-            try {
-                const indexOfEndpoint = this.prevPageLink.indexOf('/maxscale/logs/')
-                const endpoint = this.prevPageLink.slice(indexOfEndpoint)
-                const res = await this.$axios.get(`${endpoint}`)
-                const {
-                    data: { attributes: { log: newLogs = [] } = {} } = {},
-                    links: { prev = null },
-                } = res.data
-                this.prevPageLink = prev
-                return newLogs
-            } catch (e) {
-                this.$logger('LogContainer-getPrevCursorLogs').error(e)
-            }
         },
 
         clickToBottom() {
@@ -296,12 +271,12 @@ export default {
          */
         async onScroll(e) {
             this.isAtBottom = this.checkIsAtBottom(e)
-            /* calls handleFetchPrevPage method when there is prevPageLink and
+            /* calls handleUnionPrevLogs method when there is prev_log_link and
              * current scroll position is 0.
              */
-            if (e.target.scrollTop === 0 && this.prevPageLink) {
+            if (e.target.scrollTop === 0 && this.prev_log_link) {
                 this.isLoading = true
-                await this.handleFetchPrevPage()
+                await this.handleUnionPrevLogs()
                 this.isLoading = false
             }
         },

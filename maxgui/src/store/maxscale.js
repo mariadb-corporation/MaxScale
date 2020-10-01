@@ -19,6 +19,10 @@ export default {
         thread_stats: [],
         threads_datasets: [],
         maxscale_parameters: {},
+        latest_logs: [],
+        prev_log_link: null,
+        log_source: null,
+        prev_log_data: [],
     },
     mutations: {
         SET_MAXSCALE_OVERVIEW_INFO(state, payload) {
@@ -35,6 +39,18 @@ export default {
         },
         SET_MAXSCALE_PARAMETERS(state, payload) {
             state.maxscale_parameters = payload
+        },
+        SET_LATEST_LOGS(state, payload) {
+            state.latest_logs = payload
+        },
+        SET_PREV_LOG_LINK(state, payload) {
+            state.prev_log_link = payload
+        },
+        SET_LOG_SOURCE(state, payload) {
+            state.log_source = payload
+        },
+        SET_PREV_LOG_DATA(state, payload) {
+            state.prev_log_data = payload
         },
     },
     actions: {
@@ -109,6 +125,42 @@ export default {
                     }
                 })
                 commit('SET_THREADS_DATASETS', dataSets)
+            }
+        },
+        async fetchLatestLogs({ commit }) {
+            try {
+                const res = await this.vue.$axios.get(`/maxscale/logs/data`)
+                const {
+                    data: { attributes: { log = [], log_source = null } = {} } = {},
+                    links: { prev = null },
+                } = res.data
+
+                if (log.length) commit('SET_LATEST_LOGS', Object.freeze(log))
+                if (log_source) commit('SET_LOG_SOURCE', log_source)
+                commit('SET_PREV_LOG_LINK', prev)
+            } catch (e) {
+                const logger = this.vue.$logger('store-maxscale-fetchLatestLogs')
+                logger.error(e)
+            }
+        },
+        /**
+         * This function returns previous logData array from previous cursor page link.
+         * It also assigns prev link
+         * @returns previous logData array
+         */
+        async fetchPrevLog({ commit, state }) {
+            try {
+                const indexOfEndpoint = state.prev_log_link.indexOf('/maxscale/logs/')
+                const endpoint = state.prev_log_link.slice(indexOfEndpoint)
+                const res = await this.vue.$axios.get(endpoint)
+                const {
+                    data: { attributes: { log = [] } = {} } = {},
+                    links: { prev = null },
+                } = res.data
+                commit('SET_PREV_LOG_DATA', log)
+                commit('SET_PREV_LOG_LINK', prev)
+            } catch (e) {
+                this.$logger('LogContainer-getPrevCursorLogs').error(e)
             }
         },
         //-----------------------------------------------Maxscale parameter update---------------------------------
