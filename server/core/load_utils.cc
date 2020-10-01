@@ -48,6 +48,7 @@
 #include "internal/listener.hh"
 
 using std::string;
+using std::unique_ptr;
 using mxs::ModuleStatus;
 using mxs::ModuleType;
 
@@ -71,12 +72,23 @@ struct LOADED_MODULE
         , handle(dlhandle)
     {
     }
+
+    ~LOADED_MODULE()
+    {
+        dlclose(handle);
+    }
 };
 
-/**
- * Module name to module mapping. Stored alphabetically, names in lowercase. Only accessed from the main
- * thread. */
-std::map<string, LOADED_MODULE*> loaded_modules;
+struct ThisUnit
+{
+    /**
+     * Module name to module mapping. Stored alphabetically, names in lowercase. Only accessed from the main
+     * thread. */
+    std::map<string, unique_ptr<LOADED_MODULE>> loaded_modules;
+
+    bool load_all_ok {false};
+};
+ThisUnit this_unit;
 
 struct NAME_MAPPING
 {
@@ -90,6 +102,8 @@ LOADED_MODULE* find_module(const string& name);
 const char*    module_type_to_string(ModuleType type);
 const char*    module_maturity_to_string(ModuleStatus type);
 const char*    mxs_module_param_type_to_string(mxs_module_param_type type);
+
+bool load_module(const string& fpath, mxs::ModuleType type, const string& given_name = "");
 }
 
 static NAME_MAPPING name_mappings[] =
@@ -100,70 +114,66 @@ static NAME_MAPPING name_mappings[] =
     {ModuleType::AUTHENTICATOR, "mysqlauth",   "mariadbauth",   false},
 };
 
-static const size_t N_NAME_MAPPINGS = sizeof(name_mappings) / sizeof(name_mappings[0]);
-
-
-static bool api_version_mismatch(const MXS_MODULE* mod_info, const string& name)
+static bool api_version_match(const MXS_MODULE* mod_info, const string& filepath)
 {
-    bool rval = false;
-    MXS_MODULE_VERSION api = {};
-
+    MXS_MODULE_VERSION required;
     switch (mod_info->modapi)
     {
     case ModuleType::PROTOCOL:
-        api = MXS_PROTOCOL_VERSION;
+        required = MXS_PROTOCOL_VERSION;
         break;
 
     case ModuleType::AUTHENTICATOR:
-        api = MXS_AUTHENTICATOR_VERSION;
+        required = MXS_AUTHENTICATOR_VERSION;
         break;
 
     case ModuleType::ROUTER:
-        api = MXS_ROUTER_VERSION;
+        required = MXS_ROUTER_VERSION;
         break;
 
     case ModuleType::MONITOR:
-        api = MXS_MONITOR_VERSION;
+        required = MXS_MONITOR_VERSION;
         break;
 
     case ModuleType::FILTER:
-        api = MXS_FILTER_VERSION;
+        required = MXS_FILTER_VERSION;
         break;
 
     case ModuleType::QUERY_CLASSIFIER:
-        api = MXS_QUERY_CLASSIFIER_VERSION;
+        required = MXS_QUERY_CLASSIFIER_VERSION;
         break;
 
     default:
-        MXS_ERROR("Unknown module type: 0x%02hhx", (unsigned char)mod_info->modapi);
-        mxb_assert(!true);
+        MXS_ERROR("Unknown module type %i for module '%s' from '%s'.",
+                  (int)mod_info->modapi, mod_info->name, filepath.c_str());
+        return false;
         break;
     }
 
-    if (api.major != mod_info->api_version.major
-        || api.minor != mod_info->api_version.minor
-        || api.patch != mod_info->api_version.patch)
+    bool rval = false;
+    if (required == mod_info->api_version)
     {
-        MXS_ERROR("API version mismatch for '%s': Need version %d.%d.%d, have %d.%d.%d",
-                  name.c_str(),
-                  api.major,
-                  api.minor,
-                  api.patch,
-                  mod_info->api_version.major,
-                  mod_info->api_version.minor,
-                  mod_info->api_version.patch);
         rval = true;
     }
-
+    else
+    {
+        string api_type = module_type_to_string(mod_info->modapi);
+        MXS_ERROR("Module '%s' from '%s' implements wrong version of %s API. "
+                  "Need version %d.%d.%d, found %d.%d.%d",
+                  mod_info->name, filepath.c_str(), api_type.c_str(),
+                  required.major, required.minor, required.patch,
+                  mod_info->api_version.major, mod_info->api_version.minor, mod_info->api_version.patch);
+    }
     return rval;
 }
 
 namespace
 {
 
-bool check_module(const MXS_MODULE* mod_info, const string& name, ModuleType expected_type)
+bool check_module(const MXS_MODULE* mod_info, const string& filepath, ModuleType expected_type)
 {
-    auto namec = name.c_str();
+    auto namec = mod_info->name;
+    auto filepathc = filepath.c_str();
     bool success = true;
     if (expected_type != ModuleType::UNKNOWN)
     {
@@ -172,116 +182,61 @@ bool check_module(const MXS_MODULE* mod_info, const string& name, ModuleType exp
         {
             auto expected_type_str = module_type_to_string(expected_type);
             auto found_type_str = module_type_to_string(found_type);
-            MXS_ERROR(wrong_mod_type, namec, found_type_str, expected_type_str);
+            MXB_ERROR("Module '%s' from '%s' is a %s, not a %s.",
+                      namec, filepathc, found_type_str, expected_type_str);
             success = false;
         }
     }
 
-    if (api_version_mismatch(mod_info, name))
+    if (!api_version_match(mod_info, filepath))
     {
         success = false;
     }
 
-    if (mod_info->version == NULL)
+    if (mod_info->version == nullptr)
     {
-        MXS_ERROR("Module '%s' does not define a version string.", namec);
+        MXS_ERROR("Module '%s' from '%s' does not define a version string.", namec, filepathc);
         success = false;
     }
 
-    if (mod_info->module_object == NULL)
+    if (mod_info->module_object == nullptr)
     {
-        MXS_ERROR("Module '%s' does not define any API functions.", namec);
+        MXS_ERROR("Module '%s' from '%s' does not define any API functions.", namec, filepathc);
         success = false;
     }
 
     return success;
 }
-}
 
-static bool is_maxscale_module(const char* fpath)
+int load_module_cb(const char* fpath, const struct stat* sb, int typeflag, struct FTW* ftwbuf)
 {
-    bool rval = false;
-
-    if (void* dlhandle = dlopen(fpath, RTLD_LAZY | RTLD_LOCAL))
-    {
-        if (void* sym = dlsym(dlhandle, MXS_MODULE_SYMBOL_NAME))
-        {
-            Dl_info info;
-
-            if (dladdr(sym, &info))
-            {
-                if (strcmp(info.dli_fname, fpath) == 0)
-                {
-                    // The module entry point symbol is located in the file we're loading,
-                    // this is a MaxScale module.
-                    rval = true;
-                }
-            }
-        }
-
-        dlclose(dlhandle);
-    }
-
-    if (!rval)
-    {
-        MXS_INFO("Not a MaxScale module: %s", fpath);
-    }
-
-    return rval;
-}
-
-static int load_module_cb(const char* fpath, const struct stat* sb, int typeflag, struct FTW* ftwbuf)
-{
-    int rval = 0;
-
     if (typeflag == FTW_F)
     {
-        const char* filename = fpath + ftwbuf->base;
-
-        if (strncmp(filename, "lib", 3) == 0)
+        // Check that the path looks like an .so-file. Also, avoid loading the main library.
+        auto last_part_ptr = strrchr(fpath, '/');
+        if (last_part_ptr)
         {
-            const char* name = filename + 3;
-
-            if (const char* dot = strchr(filename, '.'))
+            string last_part = (last_part_ptr + 1);
+            if (last_part.find("lib") == 0 && last_part.find(".so") != string::npos
+                && last_part.find("libmaxscale-common.so") == string::npos)
             {
-                std::string module(name, dot);
-
-                if (is_maxscale_module(fpath) && !load_module(module.c_str(), ModuleType::UNKNOWN))
+                if (!load_module(fpath, ModuleType::UNKNOWN))
                 {
-                    MXS_ERROR("Failed to load '%s'. Make sure it is not a stale library "
-                              "left over from an old installation of MaxScale.", fpath);
-                    rval = 1;
+                    this_unit.load_all_ok = false;
                 }
             }
         }
     }
-
-    return rval;
+    return 0;
 }
 
-bool load_all_modules()
+unique_ptr<LOADED_MODULE> load_module_file(const string& filepath, ModuleType type,
+                                           const string& given_name = "")
 {
-    int rv = nftw(mxs::libdir(), load_module_cb, 10, FTW_PHYS);
-    return rv == 0;
-}
-
-void* load_module(const char* name, mxs::ModuleType type)
-{
-    mxb_assert(name);
-    string eff_name = module_get_effective_name(name);
-    auto loaded_module = find_module(eff_name);
-    if (loaded_module)
-    {
-        // Module was already loaded, return API functions.
-        return loaded_module->info->module_object;
-    }
-
-    void* rval = nullptr;
+    unique_ptr<LOADED_MODULE> rval;
     string load_errmsg;
-
-    /** The module is not already loaded, search for the shared object */
-    string fname = mxb::string_printf("%s/lib%s.so", mxs::libdir(), eff_name.c_str());
-    auto fnamec = fname.c_str();
+    // Search for the so-file
+    auto fnamec = filepath.c_str();
     if (access(fnamec, F_OK) != 0)
     {
         int eno = errno;
@@ -309,70 +264,103 @@ void* load_module(const char* name, mxs::ModuleType type)
                 // Module was loaded, check that it's valid.
                 auto entry_point = (void* (*)())sym;
                 auto mod_info = (MXS_MODULE*)entry_point();
-                if (!check_module(mod_info, eff_name, type))
+                if (!check_module(mod_info, filepath, type))
                 {
                     dlclose(dlhandle);
                 }
                 else
                 {
-                    loaded_module = new LOADED_MODULE(dlhandle, mod_info);
+                    rval = std::make_unique<LOADED_MODULE>(dlhandle, mod_info);
                 }
             }
         }
     }
+    if (!load_errmsg.empty())
+    {
+        // The requested module name is not known if we are loading modules from all possible filenames.
+        if (given_name.empty())
+        {
+            MXB_ERROR("%s", load_errmsg.c_str());
+        }
+        else
+        {
+            MXB_ERROR("Cannot load module '%s'. %s", given_name.c_str(), load_errmsg.c_str());
+        }
+    }
+    return rval;
+}
 
+/**
+ *@brief Load a module
+ *
+ * @param fname Filepath to load from
+ * @param name Name of the module to load, as given by user
+ * @param type Type of module
+ * @return The module specific entry point structure or NULL
+ */
+bool load_module(const string& fname, mxs::ModuleType type, const string& name)
+{
+    bool rval = false;
+    auto loaded_module = load_module_file(fname, type, name);
     if (loaded_module)
     {
         auto mod_info = loaded_module->info;
         auto mod_name_low = mxb::tolower(mod_info->name);
-        mxb_assert(loaded_modules.count(mod_name_low) == 0);
-        loaded_modules.insert(std::make_pair(mod_name_low, loaded_module));
-        MXS_NOTICE("Module '%s' loaded from '%s'.", mod_info->name, fname.c_str());
-
-        // Run module process/thread init functions.
-        if (mxs::RoutingWorker::is_running())
+        // The same module may be already loaded from a different filename or link. This mostly only
+        // happens with the load-all command.
+        if (this_unit.loaded_modules.count(mod_name_low) == 0)
         {
-            if (mod_info->process_init)
-            {
-                mod_info->process_init();
-            }
+            auto new_kv = std::make_pair(mod_name_low, std::move(loaded_module));
+            this_unit.loaded_modules.insert(std::move(new_kv));
+            MXS_NOTICE("Module '%s' loaded from '%s'.", mod_info->name, fname.c_str());
 
-            if (mod_info->thread_init)
+            // Run module process/thread init functions.
+            if (mxs::RoutingWorker::is_running())
             {
-                mxs::RoutingWorker::broadcast(
-                    [mod_info]() {
-                        mod_info->thread_init();
-                    }, mxs::RoutingWorker::EXECUTE_AUTO);
-
-                if (mxs::MainWorker::created())
+                if (mod_info->process_init)
                 {
-                    mxs::MainWorker::get()->call(
+                    mod_info->process_init();
+                }
+
+                if (mod_info->thread_init)
+                {
+                    mxs::RoutingWorker::broadcast(
                         [mod_info]() {
                             mod_info->thread_init();
-                        }, mxb::Worker::EXECUTE_AUTO);
+                        }, mxs::RoutingWorker::EXECUTE_AUTO);
+
+                    if (mxs::MainWorker::created())
+                    {
+                        mxs::MainWorker::get()->call(
+                            [mod_info]() {
+                                mod_info->thread_init();
+                            }, mxb::Worker::EXECUTE_AUTO);
+                    }
                 }
             }
+            rval = true;
         }
-        rval = loaded_module->info->module_object;
-    }
-    else if (!load_errmsg.empty())
-    {
-        MXB_ERROR("Cannot load module '%s'. %s", name, load_errmsg.c_str());
     }
     return rval;
+}
+}
+
+bool load_all_modules()
+{
+    this_unit.load_all_ok = true;
+    int rv = nftw(mxs::libdir(), load_module_cb, 10, FTW_PHYS);
+    return this_unit.load_all_ok;
 }
 
 void unload_module(const char* name)
 {
     string eff_name = module_get_effective_name(name);
+    auto& loaded_modules = this_unit.loaded_modules;
     auto iter = loaded_modules.find(eff_name);
     if (iter != loaded_modules.end())
     {
-        auto module = iter->second;
+        auto module = std::move(iter->second);
         loaded_modules.erase(iter);
-        // The module is no longer in the container and all related memory can be freed.
-        dlclose(module->handle);
-        delete module;
     }
 }
 
@@ -388,10 +376,10 @@ namespace
 LOADED_MODULE* find_module(const string& name)
 {
     LOADED_MODULE* rval = nullptr;
-    auto iter = loaded_modules.find(name);
-    if (iter != loaded_modules.end())
+    auto iter = this_unit.loaded_modules.find(name);
+    if (iter != this_unit.loaded_modules.end())
     {
-        rval = iter->second;
+        rval = iter->second.get();
     }
     return rval;
 }
@@ -399,11 +387,7 @@ LOADED_MODULE* find_module(const string& name)
 
 void unload_all_modules()
 {
-    while (!loaded_modules.empty())
-    {
-        auto first = loaded_modules.begin();
-        unload_module(first->first.c_str());
-    }
+    this_unit.loaded_modules.clear();
 }
 
 struct cb_param
@@ -634,9 +618,9 @@ json_t* module_to_json(const MXS_MODULE* module, const char* host)
 {
     json_t* data = NULL;
 
-    for (auto& elem : loaded_modules)
+    for (auto& elem : this_unit.loaded_modules)
     {
-        auto ptr = elem.second;
+        auto ptr = elem.second.get();
         if (ptr->info == module)
         {
             data = module_json_data(ptr, host);
@@ -689,9 +673,9 @@ json_t* module_list_to_json(const char* host)
     json_array_append_new(arr, spec_module_json_data(host, mxs::Config::get().specification()));
     json_array_append_new(arr, spec_module_json_data(host, Server::specification()));
 
-    for (auto& elem : loaded_modules)
+    for (auto& elem : this_unit.loaded_modules)
     {
-        auto ptr = elem.second;
+        auto ptr = elem.second.get();
         if (ptr->info->specification)
         {
             json_array_append_new(arr, spec_module_json_data(host, *ptr->info->specification));
@@ -725,11 +709,15 @@ const MXS_MODULE* get_module(const std::string& name, mxs::ModuleType type)
             MXS_ERROR(wrong_mod_type, name.c_str(), found_type_str, expected_type_str);
         }
     }
-    // No such module loaded, try to load.
-    else if (load_module(eff_name.c_str(), type))
+    else
     {
-        module = find_module(eff_name);
-        rval = module->info;
+        // No such module loaded, try to load.
+        string fname = mxb::string_printf("%s/lib%s.so", mxs::libdir(), eff_name.c_str());
+        if (load_module(fname, type, name))
+        {
+            module = find_module(eff_name);
+            rval = module->info;
+        }
     }
     return rval;
 }
@@ -764,7 +752,7 @@ enum class InitType
 bool call_init_funcs(InitType init_type)
 {
     LOADED_MODULE* failed_init_module = nullptr;
-    for (auto& elem : loaded_modules)
+    for (auto& elem : this_unit.loaded_modules)
     {
         auto mod_info = elem.second->info;
         int rc = 0;
@@ -775,7 +763,7 @@ bool call_init_funcs(InitType init_type)
         }
         if (rc != 0)
         {
-            failed_init_module = elem.second;
+            failed_init_module = elem.second.get();
             break;
         }
     }
@@ -784,7 +772,7 @@ bool call_init_funcs(InitType init_type)
     if (failed_init_module)
     {
         // Init failed for a module. Call finish on so-far initialized modules.
-        for (auto& elem : loaded_modules)
+        for (auto& elem : this_unit.loaded_modules)
         {
             auto mod_info = elem.second->info;
             auto finish_func = (init_type == InitType::PROCESS) ? mod_info->process_finish :
@@ -793,7 +781,7 @@ bool call_init_funcs(InitType init_type)
             {
                 finish_func();
             }
-            if (elem.second == failed_init_module)
+            if (elem.second.get() == failed_init_module)
             {
                 break;
             }
@@ -809,7 +797,7 @@ bool call_init_funcs(InitType init_type)
 
 void call_finish_funcs(InitType init_type)
 {
-    for (auto& elem : loaded_modules)
+    for (auto& elem : this_unit.loaded_modules)
     {
         auto mod_info = elem.second->info;
         auto finish_func = (init_type == InitType::PROCESS) ? mod_info->process_finish :
@@ -961,6 +949,11 @@ ModuleType module_type_from_string(const string& type_str)
         rval = ModuleType::ROUTER;
     }
     return rval;
+}
+
+bool MXS_MODULE_VERSION::operator==(const MXS_MODULE_VERSION& rhs) const
+{
+    return major == rhs.major && minor == rhs.minor && patch == rhs.patch;
 }
 
 bool modules_thread_init()

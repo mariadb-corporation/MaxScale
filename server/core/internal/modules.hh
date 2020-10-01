@@ -53,15 +53,6 @@ void modules_thread_finish();
 bool load_all_modules();
 
 /**
- *@brief Load a module
- *
- * @param name Name of the module to load
- * @param type Type of module
- * @return The module specific entry point structure or NULL
- */
-void* load_module(const char* name, mxs::ModuleType type);
-
-/**
  * @brief Get a module
  *
  * @param name Name of the module

@@ -71,9 +71,11 @@ enum class ModuleType
  */
 struct MXS_MODULE_VERSION
 {
-    int major;
-    int minor;
-    int patch;
+    int major {0};
+    int minor {0};
+    int patch {0};
+
+    bool operator==(const MXS_MODULE_VERSION& rhs) const;
 };
 
 enum mxs_module_param_type
