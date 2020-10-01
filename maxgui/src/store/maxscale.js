@@ -160,7 +160,7 @@ export default {
                 commit('SET_PREV_LOG_DATA', log)
                 commit('SET_PREV_LOG_LINK', prev)
             } catch (e) {
-                this.$logger('LogContainer-getPrevCursorLogs').error(e)
+                this.vue.$logger('store-maxscale-fetchPrevLog').error(e)
             }
         },
         //-----------------------------------------------Maxscale parameter update---------------------------------

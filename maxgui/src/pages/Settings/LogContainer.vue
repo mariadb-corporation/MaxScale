@@ -93,6 +93,7 @@ export default {
             containerHeight: 0,
             isLoading: false,
             logData: [],
+            prevLogData: [],
             connection: null,
             isNotifShown: false,
             isAtBottom: false,
@@ -138,6 +139,10 @@ export default {
                 this.toBottom('auto')
             })
         },
+        prev_log_data: function(val) {
+            // assign prev_log_data when it changes
+            this.prevLogData = val
+        },
     },
 
     async mounted() {
@@ -148,6 +153,8 @@ export default {
         // go to bottom on mounted
         this.toBottom('auto')
         await this.openConnection()
+        // call fetchPrevLog to get prev logs one step ahead
+        await this.fetchPrevLog()
     },
     beforeDestroy() {
         if (this.connection) this.disconnect()
@@ -157,9 +164,62 @@ export default {
     methods: {
         ...mapActions('maxscale', ['fetchLatestLogs', 'fetchPrevLog']),
 
-        setContainerHeight() {
-            this.containerHeight = document.documentElement.clientHeight * 0.6
+        /**
+         * This function get latest 50 log lines.
+         * It assigns latest_logs to logData
+         */
+        async getLatestLogs() {
+            this.isLoading = true
+            await this.fetchLatestLogs()
+            await this.$help.delay(400).then(() => (this.isLoading = false))
+            this.logData = Object.freeze(this.latest_logs)
         },
+
+        /**
+         * @param {Object} e - scroll event
+         * This function handles scroll event.
+         * It triggers handler methods if scroll position match
+         * provided conditions
+         */
+        async onScroll(e) {
+            this.isAtBottom = this.checkIsAtBottom(e)
+            /* calls handleUnionPrevLogs method when there is prev_log_link and
+             * current scroll position is 0.
+             */
+            if (e.target.scrollTop === 0) {
+                this.isLoading = true
+                await this.handleUnionPrevLogs()
+                this.isLoading = false
+            }
+        },
+
+        /**
+         * This function handles unioning prevLogData to current logData.
+         * It delays for 300ms before unioning log data
+         * It also preserves current scrolling position
+         */
+        async handleUnionPrevLogs() {
+            const { scrollableContent, scrollableWrapper } = this.$refs
+            // store current height before unioning prevLogData to logData
+            const currentHeight = scrollableContent.scrollHeight
+            if (this.prevLogData.length) {
+                await this.$help.delay(300) // delay adding for better UX
+                this.logData = Object.freeze(
+                    this.$help.lodash.unionBy(this.prevLogData, this.logData, 'id')
+                )
+                this.prevLogData = [] // clear logs have been prepended to logData
+                await this.$nextTick(() => {
+                    const aLineHeight = 24
+                    // preseve scroll pos after unioning logs and show 3 new log lines
+                    scrollableWrapper.$el.scrollTop = Math.floor(
+                        scrollableContent.offsetHeight - (currentHeight + aLineHeight * 3)
+                    )
+                })
+            }
+            // call fetchPrevLog one step a head so a delay time is always 300ms
+            if (this.prev_log_link) await this.fetchPrevLog()
+        },
+
         /**
          * This function gets older logs than current until the log content div
          * is scrollable. This allows user to scroll up to get old logs if
@@ -174,18 +234,6 @@ export default {
             }
             this.isLoading = false
         },
-
-        /**
-         * This function get latest 50 log lines.
-         * It assigns latest_logs to logData
-         */
-        async getLatestLogs() {
-            this.isLoading = true
-            await this.fetchLatestLogs()
-            await this.$help.delay(400).then(() => (this.isLoading = false))
-            this.logData = Object.freeze(this.latest_logs)
-        },
-
         /**
          * This function opens websocket connection to get real-time logs
          */
@@ -221,27 +269,8 @@ export default {
             this.logData = []
         },
 
-        /**
-         * This function handles unioning prev_log_data to current logData.
-         * It turns off loading state after 400ms as a minimum loading time
-         * then preserves current scrolling position before unioning logs
-         */
-        async handleUnionPrevLogs() {
-            await this.fetchPrevLog()
-            const { scrollableContent, scrollableWrapper } = this.$refs
-            // store current height before union prev logs to logData
-            const currentHeight = scrollableContent.scrollHeight
-            await this.$help.delay(400) // delay adding for better UX
-            this.logData = Object.freeze(
-                this.$help.lodash.unionBy(this.prev_log_data, this.logData, 'id')
-            )
-            await this.$nextTick(() => {
-                const aLineHeight = 24
-                // preseve scroll pos when union to logs and show 3 new log lines
-                scrollableWrapper.$el.scrollTop = Math.floor(
-                    scrollableContent.offsetHeight - (currentHeight + aLineHeight * 3)
-                )
-            })
+        setContainerHeight() {
+            this.containerHeight = document.documentElement.clientHeight * 0.6
         },
 
         clickToBottom() {
@@ -261,24 +290,6 @@ export default {
                 block: 'nearest',
                 inline: 'start',
             })
-        },
-
-        /**
-         * @param {Object} e - scroll event
-         * This function handles scroll event.
-         * It triggers handler methods if scroll position match
-         * provided conditions
-         */
-        async onScroll(e) {
-            this.isAtBottom = this.checkIsAtBottom(e)
-            /* calls handleUnionPrevLogs method when there is prev_log_link and
-             * current scroll position is 0.
-             */
-            if (e.target.scrollTop === 0 && this.prev_log_link) {
-                this.isLoading = true
-                await this.handleUnionPrevLogs()
-                this.isLoading = false
-            }
         },
 
         /**
