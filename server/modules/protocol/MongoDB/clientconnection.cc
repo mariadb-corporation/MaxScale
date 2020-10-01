@@ -114,7 +114,12 @@ void ClientConnection::ready_for_reading(DCB* dcb)
                 pPacket = gwbuf_make_contiguous(pPacket);
             }
 
-            handle_one_packet(pPacket);
+            GWBUF* pResponse = handle_one_packet(pPacket);
+
+            if (pResponse)
+            {
+                m_pDcb->writeq_append(pResponse);
+            }
         }
         else
         {
@@ -189,8 +194,10 @@ bool ClientConnection::is_movable() const
     return true; // Ok?
 }
 
-void ClientConnection::handle_one_packet(GWBUF* pPacket)
+GWBUF* ClientConnection::handle_one_packet(GWBUF* pPacket)
 {
+    GWBUF* pResponse = nullptr;
+
     mongoc_rpc_header_t* pHeader = reinterpret_cast<mongoc_rpc_header_t*>(gwbuf_link_data(pPacket));
 
     mxb_assert(gwbuf_is_contiguous(pPacket));
@@ -212,18 +219,21 @@ void ClientConnection::handle_one_packet(GWBUF* pPacket)
         break;
 
     case MONGOC_OPCODE_QUERY:
-        handle_packet_query(pPacket);
+        pResponse = handle_packet_query(pPacket);
         break;
 
     default:
         MXS_ERROR("Unknown opcode %d.", pHeader->opcode);
         mxb_assert(!true);
     }
+
+    return pResponse;
 }
 
-void ClientConnection::handle_packet_query(GWBUF* pPacket)
+GWBUF* ClientConnection::handle_packet_query(GWBUF* pPacket)
 {
     mxb_assert(!true);
+    return nullptr;
 }
 
 }

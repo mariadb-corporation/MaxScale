@@ -53,8 +53,8 @@ private:
     bool is_movable() const override;
 
 private:
-    void handle_one_packet(GWBUF* pPacket);
-    void handle_packet_query(GWBUF* pPacket);
+    GWBUF* handle_one_packet(GWBUF* pPacket);
+    GWBUF* handle_packet_query(GWBUF* pPacket);
 
 private:
     State           m_state;
