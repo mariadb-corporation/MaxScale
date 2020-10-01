@@ -21,6 +21,13 @@ namespace mxsmongo
 class ClientConnection : public mxs::ClientConnection
 {
 public:
+    enum class State
+    {
+        CONNECTED,
+        HANDSHAKING,
+        READY,
+    };
+
     ClientConnection(MXS_SESSION* pSession, mxs::Component* pComponent);
     ~ClientConnection();
 
@@ -50,6 +57,7 @@ private:
     void handle_packet_query(GWBUF* pPacket);
 
 private:
+    State           m_state;
     MXS_SESSION&    m_session;
     mxs::Component& m_component;
     DCB*            m_pDcb = nullptr;

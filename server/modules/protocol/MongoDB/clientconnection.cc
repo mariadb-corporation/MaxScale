@@ -22,7 +22,8 @@ namespace mxsmongo
 {
 
 ClientConnection::ClientConnection(MXS_SESSION* pSession, mxs::Component* pComponent)
-    : m_session(*pSession)
+    : m_state(State::CONNECTED)
+    , m_session(*pSession)
     , m_component(*pComponent)
 {
     TRACE();
