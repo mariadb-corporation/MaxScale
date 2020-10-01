@@ -14,6 +14,7 @@
 
 #include "mongodbclient.hh"
 #include <maxscale/protocol2.hh>
+#include "mxsmongo.hh"
 
 namespace mxsmongo
 {
@@ -56,11 +57,16 @@ private:
     GWBUF* handle_one_packet(GWBUF* pPacket);
     GWBUF* handle_packet_query(GWBUF* pPacket);
 
+    GWBUF* handshake(GWBUF* pPacket);
+
+    GWBUF* create_handshake_response(const mongoc_rpc_header_t* pReq_hdr);
+
 private:
-    State           m_state;
+    State           m_state { State::CONNECTED };
     MXS_SESSION&    m_session;
     mxs::Component& m_component;
     DCB*            m_pDcb = nullptr;
+    int32_t         m_request_id { 1 };
 };
 
 }

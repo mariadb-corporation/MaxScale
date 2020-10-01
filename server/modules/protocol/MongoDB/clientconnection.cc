@@ -14,6 +14,8 @@
 #include "clientconnection.hh"
 #include <maxscale/dcb.hh>
 #include <maxscale/session.hh>
+#include <bsoncxx/json.hpp>
+#include <bsoncxx/builder/stream/document.hpp>
 #include "mxsmongo.hh"
 
 using namespace std;
@@ -22,8 +24,7 @@ namespace mxsmongo
 {
 
 ClientConnection::ClientConnection(MXS_SESSION* pSession, mxs::Component* pComponent)
-    : m_state(State::CONNECTED)
-    , m_session(*pSession)
+    : m_session(*pSession)
     , m_component(*pComponent)
 {
     TRACE();
@@ -232,8 +233,119 @@ GWBUF* ClientConnection::handle_one_packet(GWBUF* pPacket)
 
 GWBUF* ClientConnection::handle_packet_query(GWBUF* pPacket)
 {
-    mxb_assert(!true);
-    return nullptr;
+    GWBUF* pResponse = nullptr;
+
+    switch (m_state)
+    {
+    case State::CONNECTED:
+    case State::HANDSHAKING:
+        pResponse = handshake(pPacket);
+        break;
+
+    case State::READY:
+        mxb_assert(!true);
+    }
+
+    return pResponse;
+}
+
+GWBUF* ClientConnection::handshake(GWBUF* pPacket)
+{
+    mxb_assert(gwbuf_is_contiguous(pPacket));
+
+    // TODO: Actually do something with the provided data.
+
+    auto link_len = gwbuf_link_length(pPacket);
+
+    uint8_t* pData = gwbuf_link_data(pPacket);
+    uint8_t* pEnd = pData + link_len;
+    mongoc_rpc_header_t* pReq_hdr = reinterpret_cast<mongoc_rpc_header_t*>(gwbuf_link_data(pPacket));
+
+    pData += MXSMONGO_HEADER_LEN;
+
+    uint32_t flags;
+    const char* zCollection;
+    uint32_t nSkip;
+    uint32_t nReturn;
+
+    pData += get_byte4(pData, &flags);
+    pData += get_zstring(pData, &zCollection);
+    pData += get_byte4(pData, &nSkip);
+    pData += get_byte4(pData, &nReturn);
+
+    while (pData < pEnd)
+    {
+        size_t bson_len = get_byte4(pData);
+        bson_t bson;
+        bson_init_static(&bson, pData, bson_len);
+
+        string s = to_string(bson);
+
+        MXS_NOTICE("%s", s.c_str());
+
+        pData += bson_len;
+    }
+
+    mxb_assert(pData == pEnd);
+
+    return create_handshake_response(pReq_hdr);
+}
+
+GWBUF* ClientConnection::create_handshake_response(const mongoc_rpc_header_t* pReq_hdr)
+{
+    // TODO: Do not simply return a hardwired response.
+
+    auto topologyVersion_builder = bsoncxx::builder::stream::document{};
+    bsoncxx::document::value topologyVersion_value = topologyVersion_builder
+        << "processId" << bsoncxx::oid()
+        << "counter" << (int64_t)0
+        << bsoncxx::builder::stream::finalize;
+
+    auto builder = bsoncxx::builder::stream::document{};
+    bsoncxx::document::value doc_value = builder
+        << "ismaster" << true
+        << "topologyVersion" << topologyVersion_value
+        << "maxBsonObjectSize" << (int32_t)16777216
+        << "maxMessageSizeBytes" << (int32_t)48000000
+        << "maxWriteBatchSize" << (int32_t)100000
+        << "localTime" << bsoncxx::types::b_date(std::chrono::system_clock::now())
+        << "logicalSessionTimeoutMinutes" << (int32_t)30
+        << "connectionId" << (int32_t)4
+        << "minWireVersion" << (int32_t)0
+        << "maxWireVersion" << (int32_t)9
+        << "readOnly" << false
+        << "ok" << (double)1
+        << bsoncxx::builder::stream::finalize;
+
+    auto doc_view = doc_value.view();
+    size_t doc_len = doc_view.length();
+
+    int32_t response_flags = 8; // Await capable. Dunno if this should be on.
+    int64_t cursor_id = 0;
+    int32_t starting_from = 0;
+    int32_t number_returned = 1;
+
+    size_t response_size = MXSMONGO_HEADER_LEN
+        + sizeof(response_flags) + sizeof(cursor_id) + sizeof(starting_from) + sizeof(number_returned)
+        + doc_len;
+
+    GWBUF* pResponse = gwbuf_alloc(response_size);
+
+    auto* pRes_hdr = reinterpret_cast<mongoc_rpc_header_t*>(GWBUF_DATA(pResponse));
+    pRes_hdr->msg_len = response_size;
+    pRes_hdr->request_id = m_request_id++;
+    pRes_hdr->response_to = pReq_hdr->request_id;
+    pRes_hdr->opcode = MONGOC_OPCODE_REPLY;
+
+    uint8_t* pData = GWBUF_DATA(pResponse) + MXSMONGO_HEADER_LEN;
+
+    pData += set_byte4(pData, response_flags);
+    pData += set_byte8(pData, cursor_id);
+    pData += set_byte4(pData, starting_from);
+    pData += set_byte4(pData, number_returned);
+    memcpy(pData, doc_view.data(), doc_view.length());
+
+    return pResponse;
 }
 
 }

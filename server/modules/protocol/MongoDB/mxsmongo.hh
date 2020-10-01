@@ -35,16 +35,11 @@ const int MXSMONGO_QUERY_HEADER_LEN = sizeof(mongoc_rpc_query_t);
 namespace mxsmongo
 {
 
-inline uint8_t* get_byte4(uint8_t* pBuffer, uint32_t* pHost32)
+inline int32_t get_byte4(const uint8_t* pBuffer, uint32_t* pHost32)
 {
     uint32_t le32 = *(reinterpret_cast<const uint32_t*>(pBuffer));
     *pHost32 = le32toh(le32);
-    return pBuffer + 4;
-}
-
-inline const uint8_t* get_byte4(const uint8_t* pBuffer, uint32_t* pHost32)
-{
-    return get_byte4(const_cast<uint8_t*>(pBuffer), pHost32);
+    return 4;
 }
 
 inline uint32_t get_byte4(const uint8_t* pBuffer)
@@ -54,16 +49,11 @@ inline uint32_t get_byte4(const uint8_t* pBuffer)
     return host32;
 }
 
-inline uint8_t* get_byte8(uint8_t* pBuffer, uint64_t* pHost64)
+inline int32_t get_byte8(const uint8_t* pBuffer, uint64_t* pHost64)
 {
     uint64_t le64 = *(reinterpret_cast<const uint64_t*>(pBuffer));
     *pHost64 = le64toh(le64);
-    return pBuffer + 8;
-}
-
-inline const uint8_t* get_byte8(const uint8_t* pBuffer, uint64_t* pHost64)
-{
-    return get_byte8(const_cast<uint8_t*>(pBuffer), pHost64);
+    return 8;
 }
 
 inline uint64_t get_byte8(const uint8_t* pBuffer)
@@ -73,20 +63,27 @@ inline uint64_t get_byte8(const uint8_t* pBuffer)
     return host64;
 }
 
-inline uint8_t* set_byte4(uint8_t* pBuffer, uint32_t val)
+inline int32_t get_zstring(const uint8_t* pBuffer, const char** pzString)
+{
+    const char* zString = reinterpret_cast<const char*>(pBuffer);
+    *pzString = zString;
+    return strlen(zString) + 1;
+}
+
+inline int32_t set_byte4(uint8_t* pBuffer, uint32_t val)
 {
     uint32_t le32 = htole32(val);
     auto ple32 = reinterpret_cast<uint32_t*>(pBuffer);
     *ple32 = le32;
-    return pBuffer + sizeof(uint32_t);
+    return 4;
 }
 
-inline uint8_t* set_byte8(uint8_t* pBuffer, uint64_t val)
+inline int32_t set_byte8(uint8_t* pBuffer, uint64_t val)
 {
     uint64_t le64 = htole64(val);
     auto ple64 = reinterpret_cast<uint64_t*>(pBuffer);
     *ple64 = le64;
-    return pBuffer + sizeof(uint64_t);
+    return 8;
 }
 
 std::string to_string(const bson_t& bson);
