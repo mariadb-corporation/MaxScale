@@ -234,3 +234,32 @@ Listener is destroyed:
 Listener cannot be deleted:
 
 `Status: 403 Forbidden`
+
+### Stop a listener
+
+```
+PUT /v1/listeners/:name/stop
+```
+
+Stops a started listener. When a listener is stopped, new connections are no
+longer accepted and are queued until the listener is started again.
+
+#### Response
+
+Listener is stopped:
+
+`Status: 204 No Content`
+
+### Start a listener
+
+```
+PUT /v1/listeners/:name/start
+```
+
+Starts a stopped listener.
+
+#### Response
+
+Listener is started:
+
+`Status: 204 No Content`

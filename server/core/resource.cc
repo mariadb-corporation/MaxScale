@@ -307,6 +307,20 @@ HttpResponse cb_start_service(const HttpRequest& request)
     return HttpResponse(MHD_HTTP_NO_CONTENT);
 }
 
+HttpResponse cb_stop_listener(const HttpRequest& request)
+{
+    auto listener = listener_find(request.uri_part(1).c_str());
+    listener->stop();
+    return HttpResponse(MHD_HTTP_NO_CONTENT);
+}
+
+HttpResponse cb_start_listener(const HttpRequest& request)
+{
+    auto listener = listener_find(request.uri_part(1).c_str());
+    listener->start();
+    return HttpResponse(MHD_HTTP_NO_CONTENT);
+}
+
 HttpResponse cb_create_server(const HttpRequest& request)
 {
     mxb_assert(request.get_json());
@@ -1301,6 +1315,8 @@ public:
         m_put.emplace_back(cb_start_monitor, "monitors", ":monitor", "start");
         m_put.emplace_back(cb_stop_service, "services", ":service", "stop");
         m_put.emplace_back(cb_start_service, "services", ":service", "start");
+        m_put.emplace_back(cb_stop_listener, "listeners", ":listener", "stop");
+        m_put.emplace_back(cb_start_listener, "listeners", ":listener", "start");
         m_put.emplace_back(cb_set_server, "servers", ":server", "set");
         m_put.emplace_back(cb_clear_server, "servers", ":server", "clear");
 
