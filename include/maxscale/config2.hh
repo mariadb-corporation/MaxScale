@@ -1556,10 +1556,10 @@ protected:
      * @param onSet    Optional functor to be called when value is set (at startup).
      */
     template<class ParamType, class ConcreteConfiguration, class Container, int N>
-    void add_native(Container (ConcreteConfiguration::*pArray)[N],
+    void add_native(Container (ConcreteConfiguration::* pArray)[N],
                     int index,
                     typename ParamType::value_type Container::* pValue,
-                    ParamType* pParam,
+                    ParamType * pParam,
                     std::function<void(typename ParamType::value_type)> on_set = nullptr);
 
 private:
@@ -1675,7 +1675,7 @@ public:
 
     Native(ConfigurationType* pConfiguration,
            ParamType* pParam,
-           typename ParamType::value_type ConfigurationType::*pValue,
+           typename ParamType::value_type ConfigurationType::* pValue,
            std::function<void(value_type)> on_set = nullptr)
         : Type(pConfiguration, pParam)
         , m_pValue(pValue)
@@ -1799,7 +1799,7 @@ public:
     ContainedNative(ConfigurationType* pConfiguration,
                     ParamType* pParam,
                     Container ConfigurationType::* pContainer,
-                    typename ParamType::value_type Container::*pValue,
+                    typename ParamType::value_type Container::* pValue,
                     std::function<void(value_type)> on_set = nullptr)
         : Type(pConfiguration, pParam)
         , m_pContainer(pContainer)
@@ -1928,9 +1928,9 @@ public:
 
     IndexedContainedNative(ConfigurationType* pConfiguration,
                            ParamType* pParam,
-                           Container (ConfigurationType::*pArray)[N],
+                           Container(ConfigurationType::* pArray)[N],
                            int index,
-                           typename ParamType::value_type Container::*pValue,
+                           typename ParamType::value_type Container::* pValue,
                            std::function<void(value_type)> on_set = nullptr)
         : Type(pConfiguration, pParam)
         , m_pArray(pArray)
@@ -2045,7 +2045,7 @@ public:
     }
 
 protected:
-    Container (ConfigurationType::*             m_pArray)[N];
+    Container (ConfigurationType::* m_pArray)[N];
     int                                         m_index;
     typename ParamType::value_type Container::* m_pValue;
     std::function<void(value_type)>             m_on_set;
@@ -2782,10 +2782,8 @@ void Configuration::add_native(typename ParamType::value_type ConcreteConfigurat
 {
     ConcreteConfiguration* pThis = static_cast<ConcreteConfiguration*>(this);
     pThis->*pValue = pParam->default_value();
-    m_natives.push_back(std::unique_ptr<Type>(new Native<ParamType,ConcreteConfiguration>(pThis,
-                                                                                          pParam,
-                                                                                          pValue,
-                                                                                          on_set)));
+    m_natives.push_back(std::unique_ptr<Type>(new Native<ParamType, ConcreteConfiguration>(
+                                                  pThis, pParam, pValue, on_set)));
 }
 
 template<class ParamType, class ConcreteConfiguration, class Container>
@@ -2798,17 +2796,14 @@ Configuration::add_native(Container ConcreteConfiguration::* pContainer,
     ConcreteConfiguration* pThis = static_cast<ConcreteConfiguration*>(this);
     (pThis->*pContainer).*pValue = pParam->default_value();
 
-    auto* pType = new ContainedNative<ParamType,ConcreteConfiguration,Container>(pThis,
-                                                                                 pParam,
-                                                                                 pContainer,
-                                                                                 pValue,
-                                                                                 on_set);
+    auto* pType = new ContainedNative<ParamType, ConcreteConfiguration, Container>(
+        pThis, pParam, pContainer, pValue, on_set);
     m_natives.push_back(std::unique_ptr<Type>(pType));
 }
 
 template<class ParamType, class ConcreteConfiguration, class Container, int N>
 void
-Configuration::add_native(Container (ConcreteConfiguration::*pArray)[N],
+Configuration::add_native(Container(ConcreteConfiguration::* pArray)[N],
                           int index,
                           typename ParamType::value_type Container::* pValue,
                           ParamType* pParam,
@@ -2817,15 +2812,10 @@ Configuration::add_native(Container (ConcreteConfiguration::*pArray)[N],
     ConcreteConfiguration* pThis = static_cast<ConcreteConfiguration*>(this);
     (pThis->*pArray)[index].*pValue = pParam->default_value();
 
-    auto* pType = new IndexedContainedNative<ParamType,ConcreteConfiguration,Container,N>(pThis,
-                                                                                          pParam,
-                                                                                          pArray,
-                                                                                          index,
-                                                                                          pValue,
-                                                                                          on_set);
+    auto* pType = new IndexedContainedNative<ParamType, ConcreteConfiguration, Container, N>(
+        pThis, pParam, pArray, index, pValue, on_set);
     m_natives.push_back(std::unique_ptr<Type>(pType));
 }
-
 }
 }
 
