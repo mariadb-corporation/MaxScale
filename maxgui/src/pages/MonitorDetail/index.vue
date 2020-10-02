@@ -205,6 +205,12 @@ export default {
                 })
                 // loop fetch until receive success meta
                 await this.$help.delay(2500).then(async () => await this.switchOverCb())
+            } else {
+                const errArr = meta.errors.map(error => error.detail)
+                this.SET_SNACK_BAR_MESSAGE({
+                    text: errArr,
+                    type: 'error',
+                })
             }
         },
 
