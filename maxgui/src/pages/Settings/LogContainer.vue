@@ -52,7 +52,7 @@
                     <log-lines
                         :isLoading="isLoading"
                         :chosenLogLevels="chosenLogLevels"
-                        :logData="logData"
+                        :allLogData="allLogData"
                     />
                     <div id="bottom-log-line" />
                 </div>
@@ -92,7 +92,7 @@ export default {
         return {
             containerHeight: 0,
             isLoading: false,
-            logData: [],
+            allLogData: [],
             prevLogData: [],
             connection: null,
             isNotifShown: false,
@@ -166,13 +166,13 @@ export default {
 
         /**
          * This function get latest 50 log lines.
-         * It assigns latest_logs to logData
+         * It assigns latest_logs to allLogData
          */
         async getLatestLogs() {
             this.isLoading = true
             await this.fetchLatestLogs()
             await this.$help.delay(400).then(() => (this.isLoading = false))
-            this.logData = Object.freeze(this.latest_logs)
+            this.allLogData = Object.freeze(this.latest_logs)
         },
 
         /**
@@ -194,20 +194,20 @@ export default {
         },
 
         /**
-         * This function handles unioning prevLogData to current logData.
+         * This function handles unioning prevLogData to current allLogData.
          * It delays for 300ms before unioning log data
          * It also preserves current scrolling position
          */
         async handleUnionPrevLogs() {
             const { scrollableContent } = this.$refs
-            // store current scroll height before unioning prevLogData to logData
+            // store current scroll height before unioning prevLogData to allLogData
             const scrollHeight = scrollableContent.scrollHeight
             if (this.prevLogData.length) {
                 await this.$help.delay(300) // delay adding for better UX
-                this.logData = Object.freeze(
-                    this.$help.lodash.unionBy(this.prevLogData, this.logData, 'id')
+                this.allLogData = Object.freeze(
+                    this.$help.lodash.unionBy(this.prevLogData, this.allLogData, 'id')
                 )
-                this.prevLogData = [] // clear logs have been prepended to logData
+                this.prevLogData = [] // clear logs have been prepended to allLogData
                 await this.$nextTick(() => {
                     this.preserveScrollHeight(scrollHeight)
                 })
@@ -241,13 +241,13 @@ export default {
 
             this.connection = new WebSocket(socketURI)
 
-            // push new log to logData
+            // push new log to allLogData
             this.connection.onmessage = async e => {
                 const newEntry = JSON.parse(e.data)
                 const isFiltering = this.chosenLogLevels.length
                 const matchedFilter = this.chosenLogLevels.includes(newEntry.priority)
                 if ((isFiltering && matchedFilter) || !isFiltering)
-                    this.logData = Object.freeze([...this.logData, newEntry])
+                    this.allLogData = Object.freeze([...this.allLogData, newEntry])
                 /* if scrolled position is at bottom already,
                  * scroll to bottom to see latest data. Otherwise,
                  * show notification button (let user controls scroll
@@ -262,7 +262,7 @@ export default {
 
         disconnect() {
             this.connection.close()
-            this.logData = []
+            this.allLogData = []
         },
 
         setContainerHeight() {
