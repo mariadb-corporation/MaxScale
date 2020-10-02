@@ -1213,6 +1213,33 @@ public:
 };
 
 /**
+ * ParamService
+ */
+class ParamService : public ConcreteParam<ParamService, SERVICE*>
+{
+public:
+    ParamService(Specification* pSpecification,
+                 const char* zName,
+                 const char* zDescription,
+                 Modifiable modifiable = Modifiable::AT_STARTUP)
+        : ConcreteParam<ParamService, SERVICE*>(pSpecification, zName, zDescription,
+                                                modifiable, Param::MANDATORY, MXS_MODULE_PARAM_SERVICE,
+                                                nullptr)
+    {
+    }
+
+    std::string type() const override;
+
+    std::string to_string(value_type value) const;
+    bool        from_string(const std::string& value, value_type* pValue,
+                            std::string* pMessage = nullptr) const;
+
+    json_t* to_json(value_type value) const;
+    bool    from_json(const json_t* pJson, value_type* pValue,
+                      std::string* pMessage = nullptr) const;
+};
+
+/**
  * ParamSize
  */
 class ParamSize : public ParamNumber
@@ -2368,6 +2395,11 @@ using Server = ConcreteType<ParamServer>;
  * Target
  */
 using Target = ConcreteType<ParamTarget>;
+
+/**
+ * Service
+ */
+using Service = ConcreteType<ParamService>;
 
 /**
  * String

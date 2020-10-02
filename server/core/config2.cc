@@ -1180,12 +1180,7 @@ bool ParamTarget::from_string(const std::string& value_as_string,
                               value_type* pValue,
                               std::string* pMessage) const
 {
-    *pValue = SERVER::find_by_unique_name(value_as_string);
-
-    if (!*pValue)
-    {
-        *pValue = service_find(value_as_string.c_str());
-    }
+    *pValue = mxs::Target::find(value_as_string);
 
     if (!*pValue && pMessage)
     {
@@ -1203,6 +1198,59 @@ json_t* ParamTarget::to_json(value_type value) const
 
 bool ParamTarget::from_json(const json_t* pJson, value_type* pValue,
                             std::string* pMessage) const
+{
+    bool rv = false;
+
+    if (json_is_string(pJson))
+    {
+        const char* z = json_string_value(pJson);
+
+        rv = from_string(z, pValue, pMessage);
+    }
+    else
+    {
+        *pMessage = "Expected a json string, but got a json ";
+        *pMessage += mxs::json_type_to_string(pJson);
+        *pMessage += ".";
+    }
+
+    return rv;
+}
+
+/**
+ * ParamService
+ */
+std::string ParamService::type() const
+{
+    return "service";
+}
+
+std::string ParamService::to_string(value_type value) const
+{
+    return value ? value->name() : "";
+}
+
+bool ParamService::from_string(const std::string& value_as_string,
+                               value_type* pValue,
+                               std::string* pMessage) const
+{
+    *pValue = service_find(value_as_string.c_str());
+
+    if (!*pValue && pMessage)
+    {
+        *pMessage = "Unknown Service: " + value_as_string;
+    }
+
+    return *pValue;
+}
+
+json_t* ParamService::to_json(value_type value) const
+{
+    return value ? json_string(value->name()) : json_null();
+}
+
+bool ParamService::from_json(const json_t* pJson, value_type* pValue,
+                             std::string* pMessage) const
 {
     bool rv = false;
 
