@@ -212,15 +212,18 @@ GWBUF* ClientConnection::handle_one_packet(GWBUF* pPacket)
     case MONGOC_OPCODE_GET_MORE:
     case MONGOC_OPCODE_INSERT:
     case MONGOC_OPCODE_KILL_CURSORS:
-    case MONGOC_OPCODE_MSG:
     case MONGOC_OPCODE_REPLY:
     case MONGOC_OPCODE_UPDATE:
-        MXS_ERROR("Packet %s not handled (yet).", opcode_to_string(pHeader->opcode));
+        MXS_ERROR("Packet %s not handled (yet).", mongo::opcode_to_string(pHeader->opcode));
         mxb_assert(!true);
         break;
 
+    case MONGOC_OPCODE_MSG:
+        pResponse = handle_op_msg(pPacket);
+        break;
+
     case MONGOC_OPCODE_QUERY:
-        pResponse = handle_packet_query(pPacket);
+        pResponse = handle_op_query(pPacket);
         break;
 
     default:
@@ -231,7 +234,7 @@ GWBUF* ClientConnection::handle_one_packet(GWBUF* pPacket)
     return pResponse;
 }
 
-GWBUF* ClientConnection::handle_packet_query(GWBUF* pPacket)
+GWBUF* ClientConnection::handle_op_query(GWBUF* pPacket)
 {
     GWBUF* pResponse = nullptr;
 
@@ -247,6 +250,63 @@ GWBUF* ClientConnection::handle_packet_query(GWBUF* pPacket)
     }
 
     return pResponse;
+}
+
+GWBUF* ClientConnection::handle_op_msg(GWBUF* pPacket)
+{
+    GWBUF* pResponse = nullptr;
+
+    uint8_t* pData = gwbuf_link_data(pPacket);
+    mongoc_rpc_header_t* pHeader = reinterpret_cast<mongoc_rpc_header_t*>(pData);
+    uint8_t* pEnd = pData + pHeader->msg_len;
+
+    pData += MXSMONGO_HEADER_LEN;
+
+    uint32_t flag_bits;
+    pData += get_byte4(pData, &flag_bits);
+
+    bool checksum_present = mongo::checksum_present(flag_bits);
+    bool exhaust_allowed = mongo::exhaust_allowed(flag_bits);
+    bool more_to_come = mongo::more_to_come(flag_bits);
+
+    mxb_assert(!more_to_come); // We can't handle this yet.
+
+    uint8_t* pSections_end = pEnd - (checksum_present ? sizeof(uint32_t) : 0);
+    size_t sections_size = pSections_end - pData;
+
+    while (pData < pSections_end)
+    {
+        uint8_t kind;
+        pData += get_byte1(pData, &kind);
+
+        switch (kind)
+        {
+        case 0:
+            // Body section encoded as a single BSON object.
+            {
+                uint32_t size;
+                get_byte4(pData, &size);
+                bsoncxx::document::view doc(pData, size);
+                pData += size;
+
+                string s = bsoncxx::to_json(doc);
+
+                MXS_NOTICE("DOC: %s", s.c_str());
+            }
+            break;
+
+        case 1:
+            mxb_assert(!true);
+            break;
+
+        default:
+            mxb_assert(!true);
+        }
+    }
+
+    mxb_assert(!true);
+
+    return nullptr;
 }
 
 GWBUF* ClientConnection::handshake(GWBUF* pPacket)
@@ -320,7 +380,7 @@ GWBUF* ClientConnection::create_handshake_response(const mongoc_rpc_header_t* pR
     auto doc_view = doc_value.view();
     size_t doc_len = doc_view.length();
 
-    int32_t response_flags = 8; // Await capable. Dunno if this should be on.
+    int32_t response_flags = MONGOC_QUERY_AWAIT_DATA; // Dunno if this should be on.
     int64_t cursor_id = 0;
     int32_t starting_from = 0;
     int32_t number_returned = 1;

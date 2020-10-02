@@ -55,7 +55,9 @@ private:
 
 private:
     GWBUF* handle_one_packet(GWBUF* pPacket);
-    GWBUF* handle_packet_query(GWBUF* pPacket);
+
+    GWBUF* handle_op_query(GWBUF* pPacket);
+    GWBUF* handle_op_msg(GWBUF* pPacket);
 
     GWBUF* handshake(GWBUF* pPacket);
 

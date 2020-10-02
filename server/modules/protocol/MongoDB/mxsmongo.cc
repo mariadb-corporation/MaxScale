@@ -156,7 +156,7 @@ string to_string(const bson_t& bson)
     return ss.str();
 }
 
-const char* opcode_to_string(int code)
+const char* mongo::opcode_to_string(int code)
 {
     switch (code)
     {

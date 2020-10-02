@@ -22,6 +22,8 @@
 // them temporarily.
 #define new new_arg
 #define delete delete_arg
+#include <mongoc-flags.h>
+#include <mongoc-flags-private.h>
 #include <mongoc-rpc-private.h>
 #include <mongoc-server-description-private.h>
 #undef new
@@ -34,6 +36,12 @@ const int MXSMONGO_QUERY_HEADER_LEN = sizeof(mongoc_rpc_query_t);
 
 namespace mxsmongo
 {
+
+inline int32_t get_byte1(const uint8_t* pBuffer, uint8_t* pHost8)
+{
+    *pHost8 = *pBuffer;
+    return 1;
+}
 
 inline int32_t get_byte4(const uint8_t* pBuffer, uint32_t* pHost32)
 {
@@ -88,5 +96,26 @@ inline int32_t set_byte8(uint8_t* pBuffer, uint64_t val)
 
 std::string to_string(const bson_t& bson);
 
+namespace mongo
+{
+
 const char* opcode_to_string(int code);
+
+inline bool checksum_present(uint32_t flag_bits)
+{
+    return (flag_bits & MONGOC_MSG_CHECKSUM_PRESENT) ? true : false;
+}
+
+inline bool exhaust_allowed(uint32_t flag_bits)
+{
+    return (flag_bits & MONGOC_MSG_EXHAUST_ALLOWED) ? true : false;
+}
+
+inline bool more_to_come(uint32_t flag_bits)
+{
+    return (flag_bits & MONGOC_MSG_MORE_TO_COME) ? true : false;
+}
+
+}
+
 }
