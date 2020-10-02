@@ -35,7 +35,7 @@
 #include <maxsql/mariadb_connector.hh>
 #include <maxscale/config.hh>
 
-MYSQL* mxs_mysql_real_connect(MYSQL* con, SERVER* server, const char* user, const char* passwd)
+MYSQL* mxs_mysql_real_connect(MYSQL* con, SERVER* server, int port, const char* user, const char* passwd)
 {
     auto ssl = server->ssl().config();
 
@@ -82,31 +82,17 @@ MYSQL* mxs_mysql_real_connect(MYSQL* con, SERVER* server, const char* user, cons
 
     if (!local_address.empty())
     {
-        if (mysql_optionsv(con, MYSQL_OPT_BIND, local_address.c_str()) != 0)
-        {
-            MXS_ERROR("'local_address' specified in configuration file, but could not "
-                      "configure MYSQL handle. MaxScale will try to connect using default "
-                      "address.");
-        }
+        mysql_optionsv(con, MYSQL_OPT_BIND, local_address.c_str());
     }
 
     MYSQL* mysql = nullptr;
-
     if (server->address()[0] == '/')
     {
         mysql = mysql_real_connect(con, nullptr, user, passwd, nullptr, 0, server->address(), 0);
     }
     else
     {
-        mysql = mysql_real_connect(con, server->address(), user, passwd, NULL, server->port(), NULL, 0);
-        auto extra_port = server->extra_port();
-
-        if (!mysql && extra_port > 0)
-        {
-            mysql = mysql_real_connect(con, server->address(), user, passwd, NULL, extra_port, NULL, 0);
-            MXS_WARNING("Could not connect with normal port to server '%s', using extra_port",
-                        server->name());
-        }
+        mysql = mysql_real_connect(con, server->address(), user, passwd, NULL, port, NULL, 0);
     }
 
     if (server_is_db && mysql && mysql_query(mysql, "SET NAMES latin1") != 0)
@@ -114,7 +100,6 @@ MYSQL* mxs_mysql_real_connect(MYSQL* con, SERVER* server, const char* user, cons
         MXS_ERROR("Failed to set latin1 character set: %s", mysql_error(mysql));
         mysql = NULL;
     }
-
 
     if (mysql)
     {

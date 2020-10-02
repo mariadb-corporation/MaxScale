@@ -1220,15 +1220,13 @@ MonitorServer::ping_or_connect_to_db(const MonitorServer::ConnectionSettings& se
             server.set_ping(time_us);
             return ConnectResult::OLDCONN_OK;
         }
-        /** Otherwise close the handle. */
-        mysql_close(pConn);
     }
 
     string uname = sett.username;
     string passwd = sett.password;
-    const Server& srv = static_cast<const Server&>(server);         // Clean this up later.
-    string server_specific_monuser = srv.monitor_user();
+    const auto& srv = static_cast<const Server&>(server);           // Clean this up later.
 
+    string server_specific_monuser = srv.monitor_user();
     if (!server_specific_monuser.empty())
     {
         uname = server_specific_monuser;
@@ -1237,23 +1235,46 @@ MonitorServer::ping_or_connect_to_db(const MonitorServer::ConnectionSettings& se
 
     auto dpwd = mxs::decrypt_password(passwd);
 
-    ConnectResult conn_result = ConnectResult::REFUSED;
+    auto init_conn = [&pConn, &sett]() {
+            if (pConn)
+            {
+                mysql_close(pConn);
+            }
+            pConn = mysql_init(nullptr);
+            mysql_optionsv(pConn, MYSQL_OPT_CONNECT_TIMEOUT, &sett.connect_timeout);
+            mysql_optionsv(pConn, MYSQL_OPT_READ_TIMEOUT, &sett.read_timeout);
+            mysql_optionsv(pConn, MYSQL_OPT_WRITE_TIMEOUT, &sett.write_timeout);
+            mysql_optionsv(pConn, MYSQL_PLUGIN_DIR, mxs::connector_plugindir());
+        };
 
+    ConnectResult conn_result = ConnectResult::REFUSED;
     for (int i = 0; i < sett.connect_attempts; i++)
     {
-        pConn = mysql_init(NULL);
-        mysql_optionsv(pConn, MYSQL_OPT_CONNECT_TIMEOUT, &sett.connect_timeout);
-        mysql_optionsv(pConn, MYSQL_OPT_READ_TIMEOUT, &sett.read_timeout);
-        mysql_optionsv(pConn, MYSQL_OPT_WRITE_TIMEOUT, &sett.write_timeout);
-        mysql_optionsv(pConn, MYSQL_PLUGIN_DIR, mxs::connector_plugindir());
-        auto start = time(NULL);
-
-        if (mxs_mysql_real_connect(pConn, &server, uname.c_str(), dpwd.c_str()))
+        auto start = time(nullptr);
+        init_conn();
+        // Try first with normal port, then with extra-port.
+        if (mxs_mysql_real_connect(pConn, &server, server.port(), uname.c_str(), dpwd.c_str()))
         {
             conn_result = ConnectResult::NEWCONN_OK;
             break;
         }
-        else if (conn_result == ConnectResult::REFUSED && difftime(time(NULL), start) >= sett.connect_timeout)
+        else
+        {
+            auto extra_port = server.extra_port();
+            if (extra_port > 0)
+            {
+                init_conn();
+                if (mxs_mysql_real_connect(pConn, &server, extra_port, uname.c_str(), dpwd.c_str()))
+                {
+                    conn_result = ConnectResult::NEWCONN_OK;
+                    MXS_WARNING("Could not connect with normal port to server '%s', using extra_port",
+                                server.name());
+                    break;
+                }
+            }
+        }
+
+        if (conn_result == ConnectResult::REFUSED && difftime(time(nullptr), start) >= sett.connect_timeout)
         {
             conn_result = ConnectResult::TIMEOUT;
         }
