@@ -361,7 +361,7 @@ std::pair<json_t*, Cursors> get_maxlog_data(const std::string& cursor, int rows)
     {
         int end = std::count(std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>(), '\n');
         file.seekg(std::ios_base::beg);
-        int n = cursor.empty() ? std::max(end - 50, 0) : atoi(cursor.c_str());
+        int n = cursor.empty() ? std::max(end - rows, 0) : atoi(cursor.c_str());
 
         for (int i = 0; i < n; i++)
         {
@@ -380,7 +380,7 @@ std::pair<json_t*, Cursors> get_maxlog_data(const std::string& cursor, int rows)
 
         if (n > 0)
         {
-            cursors.prev = std::to_string(std::max(n - 50, 0));
+            cursors.prev = std::to_string(std::max(n - rows, 0));
         }
 
         cursors.current = std::to_string(n);
