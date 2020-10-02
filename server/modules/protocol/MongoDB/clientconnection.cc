@@ -20,9 +20,6 @@
 
 using namespace std;
 
-namespace mxsmongo
-{
-
 ClientConnection::ClientConnection(MXS_SESSION* pSession, mxs::Component* pComponent)
     : m_session(*pSession)
     , m_component(*pComponent)
@@ -214,7 +211,7 @@ GWBUF* ClientConnection::handle_one_packet(GWBUF* pPacket)
     case MONGOC_OPCODE_KILL_CURSORS:
     case MONGOC_OPCODE_REPLY:
     case MONGOC_OPCODE_UPDATE:
-        MXS_ERROR("Packet %s not handled (yet).", mongo::opcode_to_string(pHeader->opcode));
+        MXS_ERROR("Packet %s not handled (yet).", mxsmongo::opcode_to_string(pHeader->opcode));
         mxb_assert(!true);
         break;
 
@@ -263,11 +260,11 @@ GWBUF* ClientConnection::handle_op_msg(GWBUF* pPacket)
     pData += MXSMONGO_HEADER_LEN;
 
     uint32_t flag_bits;
-    pData += get_byte4(pData, &flag_bits);
+    pData += mxsmongo::get_byte4(pData, &flag_bits);
 
-    bool checksum_present = mongo::checksum_present(flag_bits);
-    bool exhaust_allowed = mongo::exhaust_allowed(flag_bits);
-    bool more_to_come = mongo::more_to_come(flag_bits);
+    bool checksum_present = mxsmongo::checksum_present(flag_bits);
+    bool exhaust_allowed = mxsmongo::exhaust_allowed(flag_bits);
+    bool more_to_come = mxsmongo::more_to_come(flag_bits);
 
     mxb_assert(!more_to_come); // We can't handle this yet.
 
@@ -277,7 +274,7 @@ GWBUF* ClientConnection::handle_op_msg(GWBUF* pPacket)
     while (pData < pSections_end)
     {
         uint8_t kind;
-        pData += get_byte1(pData, &kind);
+        pData += mxsmongo::get_byte1(pData, &kind);
 
         switch (kind)
         {
@@ -285,7 +282,7 @@ GWBUF* ClientConnection::handle_op_msg(GWBUF* pPacket)
             // Body section encoded as a single BSON object.
             {
                 uint32_t size;
-                get_byte4(pData, &size);
+                mxsmongo::get_byte4(pData, &size);
                 bsoncxx::document::view doc(pData, size);
                 pData += size;
 
@@ -328,18 +325,18 @@ GWBUF* ClientConnection::handshake(GWBUF* pPacket)
     uint32_t nSkip;
     uint32_t nReturn;
 
-    pData += get_byte4(pData, &flags);
-    pData += get_zstring(pData, &zCollection);
-    pData += get_byte4(pData, &nSkip);
-    pData += get_byte4(pData, &nReturn);
+    pData += mxsmongo::get_byte4(pData, &flags);
+    pData += mxsmongo::get_zstring(pData, &zCollection);
+    pData += mxsmongo::get_byte4(pData, &nSkip);
+    pData += mxsmongo::get_byte4(pData, &nReturn);
 
     while (pData < pEnd)
     {
-        size_t bson_len = get_byte4(pData);
+        size_t bson_len = mxsmongo::get_byte4(pData);
         bson_t bson;
         bson_init_static(&bson, pData, bson_len);
 
-        string s = to_string(bson);
+        string s = mxsmongo::to_string(bson);
 
         MXS_NOTICE("%s", s.c_str());
 
@@ -399,13 +396,11 @@ GWBUF* ClientConnection::create_handshake_response(const mongoc_rpc_header_t* pR
 
     uint8_t* pData = GWBUF_DATA(pResponse) + MXSMONGO_HEADER_LEN;
 
-    pData += set_byte4(pData, response_flags);
-    pData += set_byte8(pData, cursor_id);
-    pData += set_byte4(pData, starting_from);
-    pData += set_byte4(pData, number_returned);
+    pData += mxsmongo::set_byte4(pData, response_flags);
+    pData += mxsmongo::set_byte8(pData, cursor_id);
+    pData += mxsmongo::set_byte4(pData, starting_from);
+    pData += mxsmongo::set_byte4(pData, number_returned);
     memcpy(pData, doc_view.data(), doc_view.length());
 
     return pResponse;
-}
-
 }

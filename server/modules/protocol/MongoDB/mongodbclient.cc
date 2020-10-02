@@ -30,7 +30,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         "The client to MaxScale MongoDB protocol implementation",
         "V1.0.0",
         MXS_NO_MODULE_CAPABILITIES,
-        &mxs::ProtocolApiGenerator<mxsmongo::ProtocolModule>::s_api,
+        &mxs::ProtocolApiGenerator<ProtocolModule>::s_api,
         nullptr,
         nullptr,
         nullptr,

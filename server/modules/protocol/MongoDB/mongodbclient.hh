@@ -18,9 +18,5 @@
 #include <maxbase/assert.h>
 #include <maxscale/log.hh>
 
-namespace mxsmongo
-{
-}
-
 #define TRACE() \
     MXS_NOTICE("%s", __func__)

@@ -16,10 +16,7 @@
 
 using namespace std;
 
-namespace mxsmongo
-{
-
-string to_string(const bson_t& bson)
+string mxsmongo::to_string(const bson_t& bson)
 {
     stringstream ss;
 
@@ -156,7 +153,7 @@ string to_string(const bson_t& bson)
     return ss.str();
 }
 
-const char* mongo::opcode_to_string(int code)
+const char* mxsmongo::opcode_to_string(int code)
 {
     switch (code)
     {
@@ -191,6 +188,4 @@ const char* mongo::opcode_to_string(int code)
         mxb_assert(!true);
         return "MONGOC_OPCODE_UKNOWN";
     }
-}
-
 }

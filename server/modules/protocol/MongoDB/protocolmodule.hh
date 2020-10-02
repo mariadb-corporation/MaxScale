@@ -15,9 +15,6 @@
 #include "mongodbclient.hh"
 #include <maxscale/protocol2.hh>
 
-namespace mxsmongo
-{
-
 class ProtocolModule : public mxs::ProtocolModule
 {
 public:
@@ -41,5 +38,3 @@ public:
 
     AuthenticatorList create_authenticators(const mxs::ConfigParameters& params) override;
 };
-
-}

@@ -16,9 +16,6 @@
 #include <maxscale/protocol2.hh>
 #include "mxsmongo.hh"
 
-namespace mxsmongo
-{
-
 class ClientConnection : public mxs::ClientConnection
 {
 public:
@@ -70,5 +67,3 @@ private:
     DCB*            m_pDcb = nullptr;
     int32_t         m_request_id { 1 };
 };
-
-}

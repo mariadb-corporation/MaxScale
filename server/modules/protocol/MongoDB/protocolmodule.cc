@@ -16,9 +16,6 @@
 
 using namespace std;
 
-namespace mxsmongo
-{
-
 //static
 ProtocolModule* ProtocolModule::create()
 {
@@ -81,6 +78,4 @@ ProtocolModule::AuthenticatorList ProtocolModule::create_authenticators(const mx
     TRACE();
     mxb_assert(!true);
     return {};
-}
-
 }
