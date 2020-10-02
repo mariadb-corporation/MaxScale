@@ -11,6 +11,7 @@
                 }}
             </span>
         </p>
+
         <log-filter @get-chosen-log-levels="chosenLogLevels = $event" />
         <div class="log-lines-container pa-4 color bg-reflection">
             <v-btn
@@ -53,6 +54,7 @@
                         :isLoading="isLoading"
                         :chosenLogLevels="chosenLogLevels"
                         :allLogData="allLogData"
+                        :filteredLog="filteredLog"
                     />
                     <div id="bottom-log-line" />
                 </div>
@@ -76,7 +78,7 @@
  */
 import LogLines from './LogLines'
 import LogFilter from './LogFilter'
-import { mapActions, mapState } from 'vuex'
+import { mapActions, mapMutations, mapState } from 'vuex'
 
 export default {
     name: 'log-container',
@@ -93,6 +95,7 @@ export default {
             containerHeight: 0,
             isLoading: false,
             allLogData: [],
+            filteredLog: [],
             prevLogData: [],
             connection: null,
             isNotifShown: false,
@@ -106,7 +109,12 @@ export default {
             prev_log_link: state => state.prev_log_link,
             log_source: state => state.log_source,
             prev_log_data: state => state.prev_log_data,
+            prev_filtered_log_link: state => state.prev_filtered_log_link,
+            prev_filtered_log_data: state => state.prev_filtered_log_data,
         }),
+        isFiltering: function() {
+            return this.chosenLogLevels.length
+        },
     },
     watch: {
         // controls by parent component
@@ -122,22 +130,42 @@ export default {
             // Turn off notif if scroll position is at bottom already
             if (val) this.isNotifShown = false
         },
+        isFiltering: async function(val) {
+            if (val) {
+                this.isLoading = true
+                // filtered all logs in the view
+                const filteredAllLogData = this.allLogData.filter(log =>
+                    this.chosenLogLevels.includes(log.priority)
+                )
+                // filtered all logs in the view plus prefetched prevLogData
+                this.filteredLog = Object.freeze([
+                    ...this.prevLogData.filter(log => this.chosenLogLevels.includes(log.priority)),
+                    ...filteredAllLogData,
+                ])
 
-        chosenLogLevels: async function() {
-            await this.$nextTick(async () => {
-                /* TODO: instead of looping fetching older logs until scroll is
-                 * scrollable, there should be a way to filter older logs in maxscale
-                 * end and returns 50 lines so that div is scrollable.
-                 */
-                /* Needs to delay 350ms to get accurate value from this.isScrollable()
-                 * because log-lines component is wrappered with transition-group
-                 * and the animation is set for 300ms.
-                 * */
-                await this.$help.delay(350)
-                await this.loopGetOlderLogs()
-
-                this.toBottom('auto')
-            })
+                await this.$nextTick(async () => {
+                    /* TODO: instead of looping fetching older logs until scroll is
+                     * scrollable, there should be a way to filter older logs in maxscale
+                     * end and returns 50 lines so that div is scrollable.
+                     */
+                    /* Needs to delay 350ms to get accurate value from this.isScrollable()
+                     * because log-lines component is wrappered with transition-group
+                     * and the animation is set for 300ms.
+                     * */
+                    await this.$help.delay(350)
+                    if (!this.isScrollable()) {
+                        await this.handleUnionPrevFilteredLogs()
+                        while (!this.isScrollable() && this.prev_filtered_log_link) {
+                            await this.handleUnionPrevFilteredLogs()
+                        }
+                    }
+                    this.isLoading = false
+                    this.toBottom('auto')
+                })
+            } else {
+                this['SET_PREV_FILTERED_LOG_LINK'](null)
+                this.filteredLog = []
+            }
         },
         prev_log_data: function(val) {
             // assign prev_log_data when it changes
@@ -162,7 +190,8 @@ export default {
     },
 
     methods: {
-        ...mapActions('maxscale', ['fetchLatestLogs', 'fetchPrevLog']),
+        ...mapMutations('maxscale', ['SET_PREV_FILTERED_LOG_LINK']),
+        ...mapActions('maxscale', ['fetchLatestLogs', 'fetchPrevLog', 'fetchPrevFilteredLog']),
 
         /**
          * This function get latest 50 log lines.
@@ -182,17 +211,24 @@ export default {
          * provided conditions
          */
         async onScroll(e) {
-            this.isAtBottom = this.checkIsAtBottom(e)
-            /* calls handleUnionPrevLogs method when there is prev_log_link and
-             * current scroll position is 0.
-             */
-            if (e.target.scrollTop === 0) {
-                this.isLoading = true
-                await this.handleUnionPrevLogs()
-                this.isLoading = false
+            // check is scrollable, only handles scroll events when it's scrollable
+            if (e.target.scrollHeight > e.target.clientHeight) {
+                this.isAtBottom = this.checkIsAtBottom(e)
+                /* calls handleUnionPrevLogs method when there is prev_log_link and
+                 * current scroll position is 0.
+                 */
+                if (e.target.scrollTop === 0) {
+                    await this.handleScrollToTop()
+                }
             }
         },
 
+        async handleScrollToTop() {
+            this.isLoading = true
+            if (this.isFiltering) await this.handleUnionPrevFilteredLogs()
+            else await this.handleUnionPrevLogs()
+            this.isLoading = false
+        },
         /**
          * This function handles unioning prevLogData to current allLogData.
          * It delays for 300ms before unioning log data
@@ -204,10 +240,12 @@ export default {
             const scrollHeight = scrollableContent.scrollHeight
             if (this.prevLogData.length) {
                 await this.$help.delay(300) // delay adding for better UX
+
                 this.allLogData = Object.freeze(
                     this.$help.lodash.unionBy(this.prevLogData, this.allLogData, 'id')
                 )
                 this.prevLogData = [] // clear logs have been prepended to allLogData
+
                 await this.$nextTick(() => {
                     this.preserveScrollHeight(scrollHeight)
                 })
@@ -230,6 +268,33 @@ export default {
             }
             this.isLoading = false
         },
+
+        /**
+         * This function handles unioning prev filtered log to current filteredLog.
+         * It delays for 300ms before unioning log data
+         * It also preserves current scrolling position
+         */
+        async handleUnionPrevFilteredLogs() {
+            if (this.prev_filtered_log_link || this.prev_log_link) {
+                // TODO: add filter params once maxscale supports it
+                await this.fetchPrevFilteredLog()
+                const { scrollableContent } = this.$refs
+                // store current scroll height before unioning prevLogData to allLogData
+                const scrollHeight = scrollableContent.scrollHeight
+                await this.$help.delay(300) // delay adding for better UX
+                // TODO: Once rest api supports filters, don't need to filter it here
+                const prevFilteredLogData = this.prev_filtered_log_data.filter(log =>
+                    this.chosenLogLevels.includes(log.priority)
+                )
+                this.filteredLog = Object.freeze(
+                    this.$help.lodash.unionBy(prevFilteredLogData, this.filteredLog, 'id')
+                )
+                await this.$nextTick(() => {
+                    this.preserveScrollHeight(scrollHeight)
+                })
+            }
+        },
+
         /**
          * This function opens websocket connection to get real-time logs
          */
@@ -244,10 +309,13 @@ export default {
             // push new log to allLogData
             this.connection.onmessage = async e => {
                 const newEntry = JSON.parse(e.data)
-                const isFiltering = this.chosenLogLevels.length
-                const matchedFilter = this.chosenLogLevels.includes(newEntry.priority)
-                if ((isFiltering && matchedFilter) || !isFiltering)
-                    this.allLogData = Object.freeze([...this.allLogData, newEntry])
+
+                if (this.isFiltering && this.isMatchedFilter(newEntry)) {
+                    this.filteredLog = Object.freeze([...this.filteredLog, newEntry])
+                }
+
+                this.allLogData = Object.freeze([...this.allLogData, newEntry])
+
                 /* if scrolled position is at bottom already,
                  * scroll to bottom to see latest data. Otherwise,
                  * show notification button (let user controls scroll
@@ -263,6 +331,13 @@ export default {
         disconnect() {
             this.connection.close()
             this.allLogData = []
+        },
+
+        /**
+         * @param {Object} log - log object
+         */
+        isMatchedFilter(log) {
+            return this.chosenLogLevels.includes(log.priority)
         },
 
         setContainerHeight() {

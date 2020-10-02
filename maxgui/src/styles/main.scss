@@ -257,7 +257,18 @@ input:-webkit-autofill:active {
         }
     }
 }
-
+.v-input__control {
+    .v-input__icon--clear {
+        .v-icon {
+            font-size: 18px !important;
+            color: $error !important;
+            opacity: 0.7;
+            &:hover {
+                opacity: 1;
+            }
+        }
+    }
+}
 //-------------------------------------------------Typography
 h1 {
     font-size: map-deep-get($headings, 'h1', 'size');

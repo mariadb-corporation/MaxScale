@@ -1,8 +1,7 @@
 <template>
-    <transition-group v-if="allLogData.length" name="log-lines-wrapper" tag="pre">
+    <transition-group v-if="logToShow.length" name="log-lines-wrapper" tag="pre">
         <code
-            v-for="{ timestamp, priority, message, id } in allLogData"
-            v-show="!isFiltering || showChosenLevels(priority)"
+            v-for="{ timestamp, priority, message, id } in logToShow"
             :key="`${id}`"
             :class="[codeClasses()]"
         >
@@ -51,6 +50,7 @@ export default {
     name: 'log-lines',
     props: {
         allLogData: { type: Array, required: true },
+        filteredLog: { type: Array, required: true },
         chosenLogLevels: { type: Array, required: true },
         isLoading: { type: Boolean, required: true },
     },
@@ -59,7 +59,12 @@ export default {
             if (this.chosenLogLevels.length === 0) return false
             else return true
         },
+        logToShow: function() {
+            if (this.chosenLogLevels.length) return this.filteredLog
+            else return this.allLogData
+        },
     },
+
     methods: {
         codeClasses: () => 'log-line color text-code-color text-no-wrap',
         logPriorityColorClasses: level =>

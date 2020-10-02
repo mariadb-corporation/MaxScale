@@ -23,6 +23,8 @@ export default {
         prev_log_link: null,
         log_source: null,
         prev_log_data: [],
+        prev_filtered_log_link: null,
+        prev_filtered_log_data: [],
     },
     mutations: {
         SET_MAXSCALE_OVERVIEW_INFO(state, payload) {
@@ -51,6 +53,12 @@ export default {
         },
         SET_PREV_LOG_DATA(state, payload) {
             state.prev_log_data = payload
+        },
+        SET_PREV_FILTERED_LOG_LINK(state, payload) {
+            state.prev_filtered_log_link = payload
+        },
+        SET_PREV_FILTERED_LOG_DATA(state, payload) {
+            state.prev_filtered_log_data = payload
         },
     },
     actions: {
@@ -161,6 +169,26 @@ export default {
                 commit('SET_PREV_LOG_LINK', prev)
             } catch (e) {
                 this.vue.$logger('store-maxscale-fetchPrevLog').error(e)
+            }
+        },
+
+        // TODO: add filter params once maxscale supports it
+        async fetchPrevFilteredLog({ commit, state }) {
+            try {
+                const prevLink = state.prev_filtered_log_link
+                    ? state.prev_filtered_log_link
+                    : state.prev_log_link
+                const indexOfEndpoint = prevLink.indexOf('/maxscale/logs/')
+                const endpoint = prevLink.slice(indexOfEndpoint)
+                const res = await this.vue.$axios.get(endpoint)
+                const {
+                    data: { attributes: { log = [] } = {} } = {},
+                    links: { prev = null },
+                } = res.data
+                commit('SET_PREV_FILTERED_LOG_DATA', log)
+                commit('SET_PREV_FILTERED_LOG_LINK', prev)
+            } catch (e) {
+                this.vue.$logger('store-maxscale-fetchPrevFilteredLog').error(e)
             }
         },
         //-----------------------------------------------Maxscale parameter update---------------------------------

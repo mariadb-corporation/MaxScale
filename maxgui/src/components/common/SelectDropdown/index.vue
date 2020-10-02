@@ -113,17 +113,3 @@ export default {
     },
 }
 </script>
-<style lang="scss" scoped>
-::v-deep .v-input__control {
-    .v-input__icon--clear {
-        .v-icon {
-            font-size: 18px !important;
-            color: $error !important;
-            opacity: 0.7;
-            &:hover {
-                opacity: 1;
-            }
-        }
-    }
-}
-</style>
