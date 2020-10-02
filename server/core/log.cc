@@ -374,7 +374,7 @@ std::pair<json_t*, Cursors> get_maxlog_data(const std::string& cursor, int rows)
         {
             if (json_t* obj = line_to_json(line, n + num_lines))
             {
-                json_array_append(arr, obj);
+                json_array_append_new(arr, obj);
             }
         }
 
