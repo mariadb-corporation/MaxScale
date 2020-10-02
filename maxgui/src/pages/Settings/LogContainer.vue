@@ -199,9 +199,9 @@ export default {
          * It also preserves current scrolling position
          */
         async handleUnionPrevLogs() {
-            const { scrollableContent, scrollableWrapper } = this.$refs
-            // store current height before unioning prevLogData to logData
-            const currentHeight = scrollableContent.scrollHeight
+            const { scrollableContent } = this.$refs
+            // store current scroll height before unioning prevLogData to logData
+            const scrollHeight = scrollableContent.scrollHeight
             if (this.prevLogData.length) {
                 await this.$help.delay(300) // delay adding for better UX
                 this.logData = Object.freeze(
@@ -209,14 +209,10 @@ export default {
                 )
                 this.prevLogData = [] // clear logs have been prepended to logData
                 await this.$nextTick(() => {
-                    const aLineHeight = 24
-                    // preseve scroll pos after unioning logs and show 3 new log lines
-                    scrollableWrapper.$el.scrollTop = Math.floor(
-                        scrollableContent.offsetHeight - (currentHeight + aLineHeight * 3)
-                    )
+                    this.preserveScrollHeight(scrollHeight)
                 })
             }
-            // call fetchPrevLog one step a head so a delay time is always 300ms
+            // prefetch fetchPrevLog one step a head so a delay time is always 300ms
             if (this.prev_log_link) await this.fetchPrevLog()
         },
 
@@ -304,6 +300,24 @@ export default {
         isScrollable() {
             const { scrollableContent, scrollableWrapper } = this.$refs
             return scrollableContent.scrollHeight > scrollableWrapper.$el.clientHeight
+        },
+
+        /**
+         * This function takes previous scroll height and calculates
+         * it while accounting for offset if loading indicator section
+         * is visible and minus the height of three log lines.
+         * It assigns calculated value to scrollableWrapper scrollTop
+         * to remain previous scroll position.
+         * @param {Number} prevScrollHeight
+         */
+        preserveScrollHeight(prevScrollHeight) {
+            const { scrollableContent, scrollableWrapper } = this.$refs
+            const offset = this.isLoading ? 71 : 0 // offset height of loading section
+            const aLineHeight = 24
+            // preseve scroll pos after unioning logs and show 3 new log lines
+            scrollableWrapper.$el.scrollTop = Math.floor(
+                scrollableContent.offsetHeight - (prevScrollHeight + aLineHeight * 3 - offset)
+            )
         },
     },
 }
