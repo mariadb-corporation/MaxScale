@@ -1841,11 +1841,6 @@ std::pair<const MXS_MODULE_PARAM*, const MXS_MODULE*> get_module_details(const C
         auto name = obj->m_parameters.get_string(CN_ROUTER);
         return {common_service_params(), get_module(name, mxs::ModuleType::ROUTER)};
     }
-    else if (type == CN_LISTENER)
-    {
-        auto name = obj->m_parameters.get_string(CN_PROTOCOL);
-        return {common_listener_params(), get_module(name, mxs::ModuleType::PROTOCOL)};
-    }
     else if (type == CN_MONITOR)
     {
         auto name = obj->m_parameters.get_string(CN_MODULE);
@@ -1892,6 +1887,29 @@ CONFIG_CONTEXT* name_to_object(const std::vector<CONFIG_CONTEXT*>& objects,
     return rval;
 }
 
+std::unordered_set<CONFIG_CONTEXT*> get_spec_dependencies(const std::vector<CONFIG_CONTEXT*>& objects,
+                                                          const CONFIG_CONTEXT* obj,
+                                                          const mxs::config::Specification* spec)
+{
+    std::unordered_set<CONFIG_CONTEXT*> rval;
+
+    for (const auto& p : *spec)
+    {
+        if (obj->m_parameters.contains(p.second->name()))
+        {
+            auto t = p.second->type();
+
+            if (t == "service" || t == "server" || t == "target")
+            {
+                std::string v = obj->m_parameters.get_string(p.second->name());
+                rval.insert(name_to_object(objects, obj, v));
+            }
+        }
+    }
+
+    return rval;
+}
+
 std::unordered_set<CONFIG_CONTEXT*> get_dependencies(const std::vector<CONFIG_CONTEXT*>& objects,
                                                      const CONFIG_CONTEXT* obj)
 {
@@ -1902,6 +1920,10 @@ std::unordered_set<CONFIG_CONTEXT*> get_dependencies(const std::vector<CONFIG_CO
     {
         // Servers are leaf objects in the dependency tree, they never have dependencies
         return rval;
+    }
+    else if (type == CN_LISTENER)
+    {
+        return get_spec_dependencies(objects, obj, Listener::specification());
     }
 
     const MXS_MODULE_PARAM* common_params = nullptr;
@@ -1929,19 +1951,8 @@ std::unordered_set<CONFIG_CONTEXT*> get_dependencies(const std::vector<CONFIG_CO
 
     if (module->specification)
     {
-        for (const auto& p : *module->specification)
-        {
-            if (obj->m_parameters.contains(p.second->name()))
-            {
-                auto t = p.second->type();
-
-                if (t == "service" || t == "server" || t == "target")
-                {
-                    std::string v = obj->m_parameters.get_string(p.second->name());
-                    rval.insert(name_to_object(objects, obj, v));
-                }
-            }
-        }
+        auto deps = get_spec_dependencies(objects, obj, module->specification);
+        rval.insert(deps.begin(), deps.end());
     }
 
     if (type == CN_SERVICE && obj->m_parameters.contains(CN_FILTERS))
@@ -2874,7 +2885,7 @@ static bool check_config_objects(CONFIG_CONTEXT* context)
             continue;
         }
 
-        if (type == CN_SERVER)
+        if (type == CN_SERVER || type == CN_LISTENER)
         {
             // Servers are a special case as they don't have a module and the validation is done as a part of
             // the creation process.
@@ -3613,7 +3624,6 @@ int create_new_listener(CONFIG_CONTEXT* obj)
             return 1;
         }
 
-        config_add_defaults(&obj->m_parameters, common_listener_params());
         config_add_defaults(&obj->m_parameters, mod->parameters);
     }
     else
@@ -3622,7 +3632,7 @@ int create_new_listener(CONFIG_CONTEXT* obj)
         return 1;
     }
 
-    return Listener::create(obj->name(), protocol, obj->m_parameters) ? 0 : 1;
+    return Listener::create(obj->name(), obj->m_parameters) ? 0 : 1;
 }
 
 /**

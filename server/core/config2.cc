@@ -17,6 +17,7 @@
 #include "internal/config.hh"
 #include "internal/monitor.hh"
 #include "internal/service.hh"
+#include "internal/listener.hh"
 
 using namespace std;
 
@@ -47,6 +48,9 @@ bool is_core_param(Specification::Kind kind, const std::string& param)
 
     case Specification::GLOBAL:
         break;
+
+    case Specification::LISTENER:
+        return Listener::specification()->find_param(param);
 
     case Specification::SERVER:
         break;
@@ -457,23 +461,20 @@ bool Configuration::configure(const mxs::ConfigParameters& params,
     for (const auto& param : params)
     {
         const auto& name = param.first;
+        const auto& value = param.second;
 
-        if (!is_core_param(m_pSpecification->kind(), name))
+        if (config::Type* pValue = find_value(name.c_str()))
         {
-            const auto& value = param.second;
-
-            config::Type* pValue = find_value(name.c_str());
-
-            if (pValue)
+            string message;
+            if (!pValue->set_from_string(value, &message))
             {
-                string message;
-                if (!pValue->set_from_string(value, &message))
-                {
-                    MXS_ERROR("%s: %s", m_pSpecification->module().c_str(), message.c_str());
-                    configured = false;
-                }
+                MXS_ERROR("%s: %s", m_pSpecification->module().c_str(), message.c_str());
+                configured = false;
             }
-            else if (pUnrecognized)
+        }
+        else if (!is_core_param(m_pSpecification->kind(), name))
+        {
+            if (pUnrecognized)
             {
                 pUnrecognized->set(name, value);
             }

@@ -118,10 +118,6 @@ const MXS_MODULE_PARAM* get_type_parameters(const char* type)
     {
         return common_service_params();
     }
-    else if (strcmp(type, CN_LISTENER) == 0)
-    {
-        return common_listener_params();
-    }
     else if (strcmp(type, CN_MONITOR) == 0)
     {
         return common_monitor_params();
@@ -618,7 +614,7 @@ bool runtime_create_listener(Service* service,
     }
     else if (config_is_valid_name(name, &reason))
     {
-        if (auto listener = Listener::create(name, proto, params))
+        if (auto listener = Listener::create(name, params))
         {
             std::ostringstream ss;
             listener->persist(ss);

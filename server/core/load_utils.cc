@@ -559,11 +559,7 @@ json_t* legacy_params_to_json(const LOADED_MODULE* mod)
     case ModuleType::FILTER:
     case ModuleType::AUTHENTICATOR:
     case ModuleType::QUERY_CLASSIFIER:
-        break;
-
     case ModuleType::PROTOCOL:
-        extra = common_listener_params();
-        ignored = {CN_SERVICE, CN_TYPE, CN_MODULE};
         break;
 
     case ModuleType::ROUTER:

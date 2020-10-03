@@ -342,11 +342,4 @@ std::shared_ptr<Listener> listener_find_by_address(const std::string& address, u
  */
 std::vector<std::shared_ptr<Listener>> listener_find_by_service(const SERVICE* service);
 
-/**
- * Get common listener parameter definitions.
- *
- * @return Listener parameters
- */
-const MXS_MODULE_PARAM* common_listener_params();
-
 void listener_destroy_instances();
