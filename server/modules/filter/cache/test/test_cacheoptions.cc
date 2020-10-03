@@ -297,7 +297,7 @@ int test(FilterModule::Instance& filter_instance, const TEST_CASE& tc)
     listener_params.set(CN_PROTOCOL, "mariadbclient");
     listener_params.set(CN_SERVICE, service->name());
 
-    auto listener_data = mxs::ListenerSessionData::create_test_data(listener_params);
+    auto listener_data = Listener::create_test_data(listener_params);
     mock::Client client("bob", "127.0.0.1");
     mock::Session session(&client, listener_data);
     mock::ResultSetBackend backend;

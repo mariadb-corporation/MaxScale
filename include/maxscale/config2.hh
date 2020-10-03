@@ -51,7 +51,8 @@ public:
         MONITOR,
         ROUTER,
         GLOBAL,
-        SERVER
+        SERVER,
+        LISTENER
     };
 
     using ParamsByName = std::map<std::string, Param*>;     // We want to have them ordered by name.

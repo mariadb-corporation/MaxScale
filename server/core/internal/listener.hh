@@ -32,19 +32,50 @@ public:
         UNIQUE_TCP,     // Unique TCP listening socket for each worker
     };
 
+    struct Config : public mxs::config::Configuration
+    {
+        Config(const std::string& name, Listener* listener);
+
+        std::string   type;
+        std::string   protocol;
+        std::string   authenticator;
+        std::string   authenticator_options;
+        std::string   address;
+        std::string   socket;
+        int64_t       port;
+        SERVICE*      service;
+        qc_sql_mode_t sql_mode;
+        std::string   connection_init_sql_file;
+
+        // TLS configuration parameters
+        bool        ssl;
+        std::string ssl_cert;
+        std::string ssl_key;
+        std::string ssl_ca;
+        std::string ssl_cipher;
+        int64_t     ssl_cert_verify_depth;
+        bool        ssl_verify_peer_certificate;
+        bool        ssl_verify_peer_host;
+
+        mxb::ssl_version::Version ssl_version;
+
+    protected:
+        bool post_configure() override;
+
+        Listener* m_listener;
+    };
+
     ~Listener();
 
     /**
      * Create a new listener
      *
      * @param name     Name of the listener
-     * @param protocol Protocol module to use
      * @param params   Parameters for the listener
      *
      * @return New listener or nullptr on error
      */
-    static std::shared_ptr<Listener> create(const std::string& name, const std::string& protocol,
-                                            const mxs::ConfigParameters& params);
+    static std::shared_ptr<Listener> create(const std::string& name, const mxs::ConfigParameters& params);
 
     /**
      * Destroy a listener
@@ -111,6 +142,14 @@ public:
     const char* state() const;
 
     /**
+     * The service that the listener points to
+     */
+    SERVICE* service()
+    {
+        return m_config.service;
+    }
+
+    /**
      * Convert to JSON
      *
      * @param host The hostname of this server
@@ -156,8 +195,19 @@ public:
         return m_shared_data;
     }
 
-    static std::unique_ptr<mxs::ListenerSessionData>
-    create_shared_data(const mxs::ConfigParameters& params, const std::string& listener_name);
+    bool post_configure();
+
+    /**
+     * Create listener data object for test purposes. The parameters should still be valid listener
+     * settings, as they are parsed normally. Returns a shared_ptr as that is typically used by tests.
+     *
+     * @param params Associated listener settings
+     *
+     * @return New listener data object for test sessions
+     */
+    static std::shared_ptr<mxs::ListenerSessionData> create_test_data(const mxs::ConfigParameters& params);
+
+    static mxs::config::Specification* specification();
 
 private:
     enum State
@@ -169,13 +219,10 @@ private:
         DESTROYED
     };
 
+    Config      m_config;
     std::string m_name;             /**< Name of the listener */
     State       m_state;            /**< Listener state */
-    std::string m_protocol;         /**< Protocol module to load */
-    uint16_t    m_port;             /**< Port to listen on */
-    std::string m_address;          /**< Address to listen with */
 
-    Service*              m_service;        /**< The service to which new sessions are sent */
     mxs::ConfigParameters m_params;         /**< Configuration parameters */
 
     Type m_type;    /**< The type of the listener */
@@ -194,11 +241,7 @@ private:
      * @param port          The port on which the listener listens
      * @param protocol      The protocol module to use
      */
-    Listener(Service* service, const std::string& name,
-             const std::string& address, uint16_t port,
-             const std::string& protocol,
-             const mxs::ConfigParameters& params,
-             std::unique_ptr<mxs::ListenerSessionData> shared_data);
+    Listener(const std::string& name);
 
     /**
      * Listen on a file descriptor shared between all workers

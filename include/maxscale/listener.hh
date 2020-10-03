@@ -54,15 +54,6 @@ public:
         std::vector<uint8_t>     buffer_contents;
     };
 
-    /**
-     * Create listener data object for test purposes. The parameters should still be valid listener
-     * settings, as they are parsed normally. Returns a shared_ptr as that is typically used by tests.
-     *
-     * @param params Associated listener settings
-     * @return New listener data object for test sessions
-     */
-    static std::shared_ptr<mxs::ListenerSessionData> create_test_data(const mxs::ConfigParameters& params);
-
     ListenerSessionData(SSLContext ssl, qc_sql_mode_t default_sql_mode, SERVICE* service,
                         SProtocol protocol_module, const std::string& listener_name,
                         std::vector<SAuthenticator>&& authenticators, ConnectionInitSql&& init_sql);

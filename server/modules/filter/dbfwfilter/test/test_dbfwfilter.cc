@@ -781,7 +781,7 @@ int test(FilterModule::Instance& filter_instance, const FW_TEST& t)
             listener_params.set(CN_PROTOCOL, "mariadbclient");
             listener_params.set(CN_SERVICE, service->name());
 
-            auto listener_data = mxs::ListenerSessionData::create_test_data(listener_params);
+            auto listener_data = Listener::create_test_data(listener_params);
             mock::Client client(zUser, zHost);
             mock::Session session(&client, listener_data);
             mock::OkBackend backend;
