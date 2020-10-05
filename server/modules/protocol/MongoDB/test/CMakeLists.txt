@@ -1,7 +1,7 @@
-include_directories(${BSON_CXX_INCLUDE_DIR})
-include_directories(${MONGO_CXX_INCLUDE_DIR})
-
 if (BUILD_MONGO_CLIENT)
+  include_directories(${BSON_CXX_INCLUDE_DIR})
+  include_directories(${MONGO_CXX_INCLUDE_DIR})
+
   add_executable(mongoclient
     mongoclient.cc
     )

@@ -25,3 +25,4 @@ set_target_properties(mongodbclient PROPERTIES VERSION "1.0.0" LINK_FLAGS -Wl,-z
 install_module(mongodbclient core)
 
 add_subdirectory(test)
+add_subdirectory(wire)
