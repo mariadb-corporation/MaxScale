@@ -59,6 +59,8 @@ const char CN_CONNECTION_INIT_SQL_FILE[] = "connection_init_sql_file";
 
 namespace cfg = mxs::config;
 
+const auto RUNTIME = cfg::Param::Modifiable::AT_RUNTIME;
+
 cfg::Specification s_spec("listener", cfg::Specification::LISTENER);
 
 cfg::ParamString s_type(&s_spec, CN_TYPE, "Object type", "listener");
@@ -69,10 +71,10 @@ cfg::ParamService s_service(&s_spec, CN_SERVICE, "Service to which the listener 
 cfg::ParamString s_address(&s_spec, CN_ADDRESS, "Listener address", "::");
 cfg::ParamString s_socket(&s_spec, CN_SOCKET, "Listener UNIX socket", "");
 cfg::ParamCount s_port(&s_spec, CN_PORT, "Listener port", 0);
-cfg::ParamBool s_ssl(&s_spec, CN_SSL, "Enable TLS for server", false);
-cfg::ParamPath s_ssl_key(&s_spec, CN_SSL_KEY, "TLS private key", cfg::ParamPath::R, "");
-cfg::ParamPath s_ssl_cert(&s_spec, CN_SSL_CERT, "TLS public certificate", cfg::ParamPath::R, "");
-cfg::ParamPath s_ssl_ca(&s_spec, CN_SSL_CA_CERT, "TLS certificate authority", cfg::ParamPath::R, "");
+cfg::ParamBool s_ssl(&s_spec, CN_SSL, "Enable TLS for server", false, RUNTIME);
+cfg::ParamPath s_ssl_key(&s_spec, CN_SSL_KEY, "TLS private key", cfg::ParamPath::R, "", RUNTIME);
+cfg::ParamPath s_ssl_cert(&s_spec, CN_SSL_CERT, "TLS public certificate", cfg::ParamPath::R, "", RUNTIME);
+cfg::ParamPath s_ssl_ca(&s_spec, CN_SSL_CA_CERT, "TLS certificate authority", cfg::ParamPath::R, "", RUNTIME);
 
 cfg::ParamEnum<mxb::ssl_version::Version> s_ssl_version(
     &s_spec, CN_SSL_VERSION, "Minimum TLS protocol version",
@@ -82,27 +84,28 @@ cfg::ParamEnum<mxb::ssl_version::Version> s_ssl_version(
         {mxb::ssl_version::TLS11, "TLSv11"},
         {mxb::ssl_version::TLS12, "TLSv12"},
         {mxb::ssl_version::TLS13, "TLSv13"}
-    }, mxb::ssl_version::SSL_TLS_MAX);
+    }, mxb::ssl_version::SSL_TLS_MAX, RUNTIME);
 
-cfg::ParamString s_ssl_cipher(&s_spec, CN_SSL_CIPHER, "TLS cipher list", "");
+cfg::ParamString s_ssl_cipher(&s_spec, CN_SSL_CIPHER, "TLS cipher list", "", RUNTIME);
 
 cfg::ParamCount s_ssl_cert_verify_depth(
-    &s_spec, CN_SSL_CERT_VERIFY_DEPTH, "TLS certificate verification depth", 9);
+    &s_spec, CN_SSL_CERT_VERIFY_DEPTH, "TLS certificate verification depth", 9, RUNTIME);
 
 cfg::ParamBool s_ssl_verify_peer_certificate(
-    &s_spec, CN_SSL_VERIFY_PEER_CERTIFICATE, "Verify TLS peer certificate", false);
+    &s_spec, CN_SSL_VERIFY_PEER_CERTIFICATE, "Verify TLS peer certificate", false, RUNTIME);
 
 cfg::ParamBool s_ssl_verify_peer_host(
-    &s_spec, CN_SSL_VERIFY_PEER_HOST, "Verify TLS peer host", false);
+    &s_spec, CN_SSL_VERIFY_PEER_HOST, "Verify TLS peer host", false, RUNTIME);
 
 cfg::ParamEnum<qc_sql_mode_t> s_sql_mode(&s_spec, CN_SQL_MODE, "SQL parsing mode",
     {
         {QC_SQL_MODE_DEFAULT, "default"},
         {QC_SQL_MODE_ORACLE, "oracle"}
-    }, QC_SQL_MODE_DEFAULT);
+    }, QC_SQL_MODE_DEFAULT, RUNTIME);
 
 cfg::ParamPath s_connection_init_sql_file(
-    &s_spec, CN_CONNECTION_INIT_SQL_FILE, "Path to connection initialization SQL", cfg::ParamPath::R, "");
+    &s_spec, CN_CONNECTION_INIT_SQL_FILE, "Path to connection initialization SQL", cfg::ParamPath::R, "",
+    RUNTIME);
 
 class RateLimit
 {
@@ -385,6 +388,7 @@ SListener Listener::create(const std::string& name, const mxs::ConfigParameters&
 
         if (listener->m_config.configure(params))
         {
+            listener->set_type();
             return this_unit.add_listener(std::move(listener));
         }
     }
@@ -406,11 +410,30 @@ SListener Listener::create(const std::string& name, json_t* params)
 
         if (listener->m_config.configure(params))
         {
+            listener->set_type();
             return this_unit.add_listener(std::move(listener));
         }
     }
 
     return {};
+}
+
+void Listener::set_type()
+{
+    // Setting the type only once avoids it being repeatedly being set in the post_configure method.
+
+    if (!m_config.socket.empty())
+    {
+        m_type = Type::UNIX_SOCKET;
+    }
+    else if (mxs::have_so_reuseport())
+    {
+        m_type = Type::UNIQUE_TCP;
+    }
+    else
+    {
+        m_type = Type::SHARED_TCP;
+    }
 }
 
 void listener_destroy_instances()
@@ -563,7 +586,7 @@ json_t* Listener::to_json(const char* host) const
     json_object_set_new(attr, CN_STATE, json_string(state()));
     json_object_set_new(attr, CN_PARAMETERS, m_config.to_json());
 
-    json_t* diag = m_shared_data->m_proto_module->print_auth_users_json();
+    json_t* diag = m_shared_data->get()->m_proto_module->print_auth_users_json();
     if (diag)
     {
         json_object_set_new(attr, CN_AUTHENTICATOR_DIAGNOSTICS, diag);
@@ -788,7 +811,7 @@ static ClientConn accept_one_connection(int fd)
 
 ClientDCB* Listener::accept_one_dcb(int fd, const sockaddr_storage* addr, const char* host)
 {
-    auto* session = new(std::nothrow) Session(m_shared_data, host);
+    auto* session = new(std::nothrow) Session(*m_shared_data, host);
     if (!session)
     {
         MXS_OOM();
@@ -796,7 +819,7 @@ ClientDCB* Listener::accept_one_dcb(int fd, const sockaddr_storage* addr, const 
         return NULL;
     }
 
-    auto client_protocol = m_shared_data->m_proto_module->create_client_protocol(session, session);
+    auto client_protocol = m_shared_data->get()->m_proto_module->create_client_protocol(session, session);
     if (!client_protocol)
     {
         delete session;
@@ -943,7 +966,7 @@ uint32_t Listener::poll_handler(MXB_POLL_DATA* data, MXB_WORKER* worker, uint32_
 
 void Listener::reject_connection(int fd, const char* host)
 {
-    if (GWBUF* buf = m_shared_data->m_proto_module->reject(host))
+    if (GWBUF* buf = m_shared_data->get()->m_proto_module->reject(host))
     {
         for (auto b = buf; b; b = b->next)
         {
@@ -991,82 +1014,84 @@ void Listener::accept_connections()
     }
 }
 
-bool Listener::post_configure()
+Listener::SData Listener::create_shared_data()
 {
+    SData rval;
     auto mod = get_module(m_config.protocol, mxs::ModuleType::PROTOCOL);
 
-    if (!mod)
+    if (mod)
     {
-        return false;
-    }
+        auto protocol_api = reinterpret_cast<MXS_PROTOCOL_API*>(mod->module_object);
+        std::unique_ptr<mxs::ProtocolModule> protocol_module {protocol_api->create_protocol_module()};
 
-    auto protocol_api = reinterpret_cast<MXS_PROTOCOL_API*>(mod->module_object);
-    std::unique_ptr<mxs::ProtocolModule> protocol_module {protocol_api->create_protocol_module()};
-
-    if (!protocol_module)
-    {
-        MXS_ERROR("Failed to initialize protocol module '%s' for listener '%s'.",
-                  m_config.protocol.c_str(), m_name.c_str());
-        return false;
-    }
-
-    // TODO: The old behavior where the global sql_mode was used if the listener one isn't configured
-
-    mxs::SSLContext ssl;
-    json_t* js = m_config.to_json();
-    auto params = mxs::ConfigParameters::from_json(js);
-    json_decref(js);
-
-    // TODO: Make SSLContext configurable in some other way
-
-    if (!ssl.read_configuration(m_name, params, true))
-    {
-        return false;
-    }
-
-    ListenerSessionData::ConnectionInitSql init_sql;
-    if (!read_connection_init_sql(m_config.connection_init_sql_file, &init_sql))
-    {
-        return false;
-    }
-
-    std::vector<mxs::SAuthenticatorModule> authenticators;
-
-    if (protocol_module->capabilities() & mxs::ProtocolModule::CAP_AUTH_MODULES)
-    {
-        // If the protocol uses separate authenticator modules, assume that at least one must be created.
-        authenticators = protocol_module->create_authenticators(params);
-
-        if (authenticators.empty())
+        if (protocol_module)
         {
-            return false;
+            // TODO: The old behavior where the global sql_mode was used if the listener one isn't configured
+
+            mxs::SSLContext ssl;
+            json_t* js = m_config.to_json();
+            auto params = mxs::ConfigParameters::from_json(js);
+            json_decref(js);
+
+            // TODO: Make SSLContext configurable in some other way
+
+            if (ssl.read_configuration(m_name, params, true))
+            {
+                ListenerSessionData::ConnectionInitSql init_sql;
+                if (read_connection_init_sql(m_config.connection_init_sql_file, &init_sql))
+                {
+
+                    std::vector<mxs::SAuthenticatorModule> authenticators;
+
+                    if (protocol_module->capabilities() & mxs::ProtocolModule::CAP_AUTH_MODULES)
+                    {
+                        // If the protocol uses separate authenticator modules, assume that at least
+                        // one must be created.
+                        authenticators = protocol_module->create_authenticators(params);
+
+                        if (authenticators.empty())
+                        {
+                            return {};
+                        }
+                    }
+
+                    if (protocol_module->capabilities() & mxs::ProtocolModule::CAP_AUTHDATA)
+                    {
+                        auto svc = static_cast<Service*>(m_config.service);
+
+                        if (!svc->check_update_user_account_manager(protocol_module.get(), m_name))
+                        {
+                            return {};
+                        }
+
+                        rval = std::make_shared<ListenerSessionData>(
+                            move(ssl), m_config.sql_mode, m_config.service, move(protocol_module),
+                            m_name, move(authenticators), move(init_sql));
+                    }
+                }
+            }
+        }
+        else
+        {
+            MXS_ERROR("Failed to initialize protocol module '%s' for listener '%s'.",
+                      m_config.protocol.c_str(), m_name.c_str());
         }
     }
 
-    if (protocol_module->capabilities() & mxs::ProtocolModule::CAP_AUTHDATA)
-    {
-        auto svc = static_cast<Service*>(m_config.service);
+    return rval;
+}
 
-        if (!svc->check_update_user_account_manager(protocol_module.get(), m_name))
-        {
-            return false;
-        }
+bool Listener::post_configure()
+{
+    bool rval = false;
+
+    if (auto data = create_shared_data())
+    {
+        m_shared_data.assign(data);
+        rval = true;
     }
 
-    m_shared_data.reset(new ListenerSessionData(move(ssl), m_config.sql_mode, m_config.service,
-                                                move(protocol_module),
-                                                m_name, move(authenticators), move(init_sql)));
-
-    if (!m_config.socket.empty())
-    {
-        m_type = Type::UNIX_SOCKET;
-    }
-    else
-    {
-        m_type = mxs::have_so_reuseport() ? Type::UNIQUE_TCP : Type::SHARED_TCP;
-    }
-
-    return true;
+    return rval;
 }
 
 /**
@@ -1153,5 +1178,5 @@ Listener::create_test_data(const mxs::ConfigParameters& params)
 {
     SListener listener {new Listener("test_listener")};
     listener->m_config.configure(params);
-    return listener->shared_data();
+    return listener->create_shared_data();
 }

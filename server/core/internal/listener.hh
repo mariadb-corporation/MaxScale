@@ -92,6 +92,14 @@ public:
     static void stop_all();
 
     /**
+     * Get listener config
+     */
+    mxs::config::Configuration* config()
+    {
+        return &m_config;
+    }
+
+    /**
      * Start listening on the configured port
      *
      * @return True if the listener was able to start listening
@@ -191,11 +199,6 @@ public:
      */
     std::ostream& persist(std::ostream& os) const;
 
-    std::shared_ptr<mxs::ListenerSessionData> shared_data() const
-    {
-        return m_shared_data;
-    }
-
     bool post_configure();
 
     /**
@@ -231,7 +234,9 @@ private:
     mxs::WorkerLocal<int> m_local_fd {-1};  /**< File descriptor the listener listens on */
     int                   m_shared_fd {-1}; /**< File descriptor the listener listens on */
 
-    std::shared_ptr<mxs::ListenerSessionData> m_shared_data;    /**< Data shared with sessions */
+    using SData = std::shared_ptr<mxs::ListenerSessionData>;
+
+    mxs::WorkerGlobal<SData> m_shared_data;     /**< Data shared with sessions */
 
     /**
      * Creates a new listener that points to a service
@@ -304,6 +309,9 @@ private:
 
     static bool read_connection_init_sql(const std::string& filepath,
                                          mxs::ListenerSessionData::ConnectionInitSql* output);
+
+    SData create_shared_data();
+    void  set_type();
 };
 
 /**
