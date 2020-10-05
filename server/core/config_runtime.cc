@@ -2253,6 +2253,33 @@ bool runtime_create_listener_from_json(json_t* json, Service* service)
     return rval;
 }
 
+bool runtime_alter_listener_from_json(SListener listener, json_t* new_json)
+{
+    bool rval = false;
+
+    if (validate_service_json(new_json))
+    {
+        if (json_t* new_params = mxs_json_pointer(new_json, MXS_JSON_PTR_PARAMETERS))
+        {
+            auto* cnf = listener->config();
+            json_t* combined_params = merge_json_objects(cnf->to_json(), new_params);
+
+            if (cnf->specification().validate(new_params) && cnf->configure(combined_params))
+            {
+                // TODO: Configure the protocol module as well
+
+                std::ostringstream ss;
+                listener->persist(ss);
+                rval = runtime_save_config(listener->name(), ss.str());
+            }
+
+            json_decref(combined_params);
+        }
+    }
+
+    return rval;
+}
+
 bool runtime_create_user_from_json(json_t* json)
 {
     bool rval = false;

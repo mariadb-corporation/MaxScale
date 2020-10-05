@@ -236,6 +236,16 @@ bool runtime_alter_service_relationships_from_json(Service* service, const char*
 bool runtime_create_listener_from_json(json_t* json, Service* service = nullptr);
 
 /**
+ * @brief Alter a listener using JSON
+ *
+ * @param listener Listener to alter
+ * @param new_json JSON definition of the updated listener
+ *
+ * @return True if the listener was successfully modified to represent @c new_json
+ */
+bool runtime_alter_listener_from_json(std::shared_ptr<Listener> listener, json_t* new_json);
+
+/**
  * @brief Get current runtime error in JSON format
  *
  * @return The latest runtime error in JSON format or NULL if no error has occurred

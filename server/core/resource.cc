@@ -504,6 +504,19 @@ HttpResponse cb_alter_filter(const HttpRequest& request)
     return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
 }
 
+HttpResponse cb_alter_listener(const HttpRequest& request)
+{
+    auto listener = listener_find(request.uri_part(1).c_str());
+    mxb_assert(listener && request.get_json());
+
+    if (runtime_alter_listener_from_json(listener, request.get_json()))
+    {
+        return HttpResponse(MHD_HTTP_NO_CONTENT);
+    }
+
+    return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
+}
+
 HttpResponse cb_alter_service_relationship(const HttpRequest& request, const char* type)
 {
     Service* service = Service::find(request.uri_part(1).c_str());
@@ -1289,6 +1302,7 @@ public:
         m_patch.emplace_back(cb_alter_monitor, "monitors", ":monitor");
         m_patch.emplace_back(cb_alter_service, "services", ":service");
         m_patch.emplace_back(cb_alter_filter, "filters", ":filter");
+        m_patch.emplace_back(cb_alter_listener, "listeners", ":listener");
         m_patch.emplace_back(cb_alter_maxscale, "maxscale", "logs");    // Deprecated
         m_patch.emplace_back(cb_alter_maxscale, "maxscale");
         m_patch.emplace_back(cb_alter_qc, "maxscale", "query_classifier");

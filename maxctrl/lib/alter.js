@@ -216,6 +216,20 @@ exports.builder = function (yargs) {
       }
     )
     .command(
+      "listener <listener> <key> <value> [params...]",
+      "Alter listener parameters",
+      function (yargs) {
+        return yargs
+          .epilog("To display the listener parameters, execute `show listener <listener>`")
+          .usage("Usage: alter listener <listener> <key> <value> ...");
+      },
+      function (argv) {
+        maxctrl(argv, function (host) {
+          return updateParams(host, "listeners/" + argv.listener, argv.key, argv.value, argv.params);
+        });
+      }
+    )
+    .command(
       "logging <key> <value> [params...]",
       "Alter logging parameters",
       function (yargs) {

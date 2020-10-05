@@ -216,6 +216,29 @@ Listener is created:
 
 `Status: 204 No Content`
 
+### Update a listener
+
+```
+PATCH /v1/listeners/:name
+```
+
+The request body must be a JSON object which represents a set of new definitions
+for the listener.
+
+All parameters marked as modifiable at runtime can be modified. Currently, all
+TLS/SSL parameters and the `connection_init_sql_file` and `sql_mode` parameters
+can be modified at runtime.
+
+Parameters that affect the network address or the port the listener listens on
+cannot be modified at runtime. To modify these parameters, recreate the
+listener.
+
+#### Response
+
+Listener is modified:
+
+`Status: 204 No Content`
+
 ### Destroy a listener
 
 ```
