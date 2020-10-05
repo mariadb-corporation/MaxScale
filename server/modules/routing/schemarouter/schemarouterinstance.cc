@@ -234,6 +234,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
     static auto desc = "A database sharding router for simple sharding";
     static MXS_MODULE info =
     {
+        mxs::MODULE_INFO_VERSION,
         MXS_MODULE_NAME,
         mxs::ModuleType::ROUTER,
         mxs::ModuleStatus::BETA,

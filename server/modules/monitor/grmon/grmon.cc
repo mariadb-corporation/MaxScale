@@ -138,6 +138,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
     static MXS_MODULE info =
     {
+        mxs::MODULE_INFO_VERSION,
         MXS_MODULE_NAME,
         mxs::ModuleType::MONITOR,
         mxs::ModuleStatus::GA,

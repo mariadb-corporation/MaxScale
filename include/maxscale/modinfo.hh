@@ -144,11 +144,21 @@ struct MXS_MODULE_PARAM
 /** Maximum number of parameters that modules can declare */
 #define MXS_MODULE_PARAM_MAX 64
 
+namespace maxscale
+{
+constexpr uint32_t MODULE_INFO_VERSION = 26000;
+}
+
 /**
  * The module information structure
  */
 struct MXS_MODULE
 {
+    /**
+     * MaxScale version number the struct was created in. Should match MaxScale version to avoid loading
+     * modules from previous versions.
+     * */
+    uint32_t           mxs_version;
     const char*        name;                /**< Module name */
     mxs::ModuleType    modapi;              /**< Module API type */
     mxs::ModuleStatus  status;              /**< Module development status */

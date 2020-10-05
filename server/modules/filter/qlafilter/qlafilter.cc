@@ -872,6 +872,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
     static const char description[] = "A simple query logging filter";
     static MXS_MODULE info =
     {
+        mxs::MODULE_INFO_VERSION,
         MXS_MODULE_NAME,
         mxs::ModuleType::FILTER,
         mxs::ModuleStatus::GA,

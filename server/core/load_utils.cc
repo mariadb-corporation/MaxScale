@@ -172,8 +172,17 @@ namespace
 
 bool check_module(const MXS_MODULE* mod_info, const string& filepath, ModuleType expected_type)
 {
-    auto namec = mod_info->name;
     auto filepathc = filepath.c_str();
+    // Check the first field of the module-struct to see if the struct is valid for this
+    // MaxScale version.
+    auto obj_version = mod_info->mxs_version;
+    if (obj_version < mxs::MODULE_INFO_VERSION)
+    {
+        MXB_ERROR("Module from '%s' is a for an older version of MaxScale and cannot be loaded.",
+                  filepathc);
+        return false;
+    }
+    auto namec = mod_info->name;
     bool success = true;
     if (expected_type != ModuleType::UNKNOWN)
     {
