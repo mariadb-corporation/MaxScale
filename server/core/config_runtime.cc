@@ -518,50 +518,6 @@ bool validate_param(const MXS_MODULE_PARAM* basic,
     return rval;
 }
 
-bool runtime_create_filter(const char* name, const char* module, mxs::ConfigParameters* params)
-{
-    bool rval = false;
-
-    if (!filter_find(name))
-    {
-        SFilterDef filter;
-        mxs::ConfigParameters parameters;
-        bool ok;
-        tie(ok, parameters) = load_defaults(module, mxs::ModuleType::FILTER, CN_FILTER);
-
-        if (ok)
-        {
-            if (params)
-            {
-                parameters.set_multiple(*params);
-            }
-
-            if (!(filter = filter_alloc(name, module, &parameters)))
-            {
-                MXS_ERROR("Could not create filter '%s' with module '%s'", name, module);
-            }
-        }
-
-        if (filter)
-        {
-            std::ostringstream ss;
-            filter->persist(ss);
-
-            if (runtime_save_config(filter->name(), ss.str()))
-            {
-                MXS_NOTICE("Created filter '%s'", name);
-                rval = true;
-            }
-        }
-    }
-    else
-    {
-        MXS_ERROR("Can't create filter '%s', it already exists", name);
-    }
-
-    return rval;
-}
-
 mxs::ConfigParameters extract_parameters(json_t* json)
 {
     mxs::ConfigParameters rval;
@@ -1927,9 +1883,33 @@ bool runtime_create_filter_from_json(json_t* json)
     {
         const char* name = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_ID));
         const char* module = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_MODULE));
-        auto params = extract_parameters(json);
 
-        rval = runtime_create_filter(name, module, &params);
+        if (!filter_find(name))
+        {
+            mxs::ConfigParameters parameters;
+            bool ok;
+            tie(ok, parameters) = load_defaults(module, mxs::ModuleType::FILTER, CN_FILTER);
+            parameters.set_multiple(extract_parameters(json));
+
+            if (ok)
+            {
+                if (auto filter = filter_alloc(name, module, &parameters))
+                {
+                    std::ostringstream ss;
+                    filter->persist(ss);
+
+                    if (runtime_save_config(filter->name(), ss.str()))
+                    {
+                        MXS_NOTICE("Created filter '%s'", name);
+                        rval = true;
+                    }
+                }
+            }
+        }
+        else
+        {
+            MXS_ERROR("Can't create filter '%s', it already exists", name);
+        }
     }
 
     return rval;
