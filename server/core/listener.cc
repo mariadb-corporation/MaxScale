@@ -168,18 +168,46 @@ private:
 
 thread_local RateLimit rate_limit;
 
+bool is_all_iface(const std::string& a, const std::string& b)
+{
+    std::unordered_set<std::string> addresses {"::", "0.0.0.0"};
+    return addresses.count(a) || addresses.count(b);
+}
+
+bool listener_is_duplicate(const SListener& listener)
+{
+    std::string name = listener->name();
+    std::string address = listener->address();
+    std::lock_guard<std::mutex> guard(listener_lock);
+
+    for (const auto& other : all_listeners)
+    {
+        if (name == other->name())
+        {
+            MXS_ERROR("Listener '%s' already exists", name.c_str());
+            return true;
+        }
+        else if (listener->type() == Listener::Type::UNIX_SOCKET && address == other->address())
+        {
+            MXS_ERROR("Listener '%s' already listens on '%s'", other->name(), address.c_str());
+            return true;
+        }
+        else if (other->port() == listener->port()
+                 && (address == other->address() || is_all_iface(listener->address(), other->address())))
+        {
+            MXS_ERROR("Listener '%s' already listens at [%s]:%d",
+                      other->name(), address.c_str(), listener->port());
+            return true;
+        }
+    }
+
+    return false;
+}
+
 SListener add_listener(SListener&& listener)
 {
-    auto other = listener->type() == Listener::Type::UNIX_SOCKET ?
-        listener_find_by_socket(listener->address()) :
-        listener_find_by_address(listener->address(), listener->port());
-
-    if (other)
+    if (listener_is_duplicate(listener))
     {
-        MXS_ERROR("Creation of listener '%s' for service '%s' failed, because "
-                  "listener '%s' already listens at [%s]:%d.",
-                  listener->name(), listener->service()->name(),
-                  other->name(), other->address(), other->port());
         listener.reset();
     }
     else
@@ -455,47 +483,6 @@ std::vector<SListener> listener_find_by_service(const SERVICE* service)
         if (a->service() == service)
         {
             rval.push_back(a);
-        }
-    }
-
-    return rval;
-}
-
-static bool is_all_iface(const std::string& a, const std::string& b)
-{
-    std::unordered_set<std::string> addresses {"::", "0.0.0.0"};
-    return addresses.count(a) || addresses.count(b);
-}
-
-SListener listener_find_by_socket(const std::string& socket)
-{
-    SListener rval;
-    std::lock_guard<std::mutex> guard(listener_lock);
-
-    for (const auto& listener : all_listeners)
-    {
-        if (listener->address() == socket)
-        {
-            rval = listener;
-            break;
-        }
-    }
-
-    return rval;
-}
-
-SListener listener_find_by_address(const std::string& address, unsigned short port)
-{
-    SListener rval;
-    std::lock_guard<std::mutex> guard(listener_lock);
-
-    for (const auto& listener : all_listeners)
-    {
-        if (port == listener->port()
-            && (listener->address() == address || is_all_iface(listener->address(), address)))
-        {
-            rval = listener;
-            break;
         }
     }
 

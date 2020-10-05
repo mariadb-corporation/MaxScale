@@ -316,25 +316,6 @@ private:
 std::shared_ptr<Listener> listener_find(const std::string& name);
 
 /**
- * Find listener by socket
- *
- * @param socket  Path to a socket file
- *
- * @return The matching listener if one was found
- */
-std::shared_ptr<Listener> listener_find_by_socket(const std::string& socket);
-
-/**
- * Find listener by address and port
- *
- * @param address Network address
- * @param port    Network port
- *
- * @return The matching listener if one was found
- */
-std::shared_ptr<Listener> listener_find_by_address(const std::string& address, unsigned short port);
-
-/**
  * Find all listeners that point to a service
  *
  * @param service Service whose listeners are returned
