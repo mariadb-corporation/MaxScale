@@ -167,6 +167,29 @@ private:
 };
 
 thread_local RateLimit rate_limit;
+
+SListener add_listener(SListener&& listener)
+{
+    auto other = listener->type() == Listener::Type::UNIX_SOCKET ?
+        listener_find_by_socket(listener->address()) :
+        listener_find_by_address(listener->address(), listener->port());
+
+    if (other)
+    {
+        MXS_ERROR("Creation of listener '%s' for service '%s' failed, because "
+                  "listener '%s' already listens at [%s]:%d.",
+                  listener->name(), listener->service()->name(),
+                  other->name(), other->address(), other->port());
+        listener.reset();
+    }
+    else
+    {
+        std::lock_guard<std::mutex> guard(listener_lock);
+        all_listeners.push_back(listener);
+    }
+
+    return listener;
+}
 }
 
 Listener::Config::Config(const std::string& name, Listener* listener)
@@ -251,31 +274,32 @@ SListener Listener::create(const std::string& name, const mxs::ConfigParameters&
 
         if (listener->m_config.configure(params))
         {
-            auto other = listener->type() == Type::UNIX_SOCKET ?
-                listener_find_by_socket(listener->address()) :
-                listener_find_by_address(listener->address(), listener->port());
-
-            if (other)
-            {
-                MXS_ERROR("Creation of listener '%s' for service '%s' failed, because "
-                          "listener '%s' already listens at [%s]:%d.",
-                          listener->name(), listener->service()->name(),
-                          other->name(), other->address(), other->port());
-                listener.reset();
-            }
-            else
-            {
-                std::lock_guard<std::mutex> guard(listener_lock);
-                all_listeners.push_back(listener);
-            }
-        }
-        else
-        {
-            listener.reset();
+            return add_listener(std::move(listener));
         }
     }
 
-    return listener;
+    return {};
+}
+
+SListener Listener::create(const std::string& name, json_t* params)
+{
+    mxb::LogScope scope(name.c_str());
+    SListener listener;
+    std::set<std::string> unknown;
+
+    if (s_spec.validate(params, &unknown))
+    {
+        // TODO: Validate using the protocol module specification if one is available. Currently all protocol
+        // module parameters are ignored.
+        listener.reset(new Listener(name));
+
+        if (listener->m_config.configure(params))
+        {
+            return add_listener(std::move(listener));
+        }
+    }
+
+    return {};
 }
 
 void listener_destroy_instances()

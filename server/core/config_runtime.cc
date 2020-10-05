@@ -518,135 +518,6 @@ bool validate_param(const MXS_MODULE_PARAM* basic,
     return rval;
 }
 
-// Helper for runtime_create_listener
-void set_if_not_null(mxs::ConfigParameters& params, const char* name,
-                     const char* value, const char* dflt = nullptr)
-{
-    if ((!value || strcasecmp(value, CN_DEFAULT) == 0) && dflt)
-    {
-        params.set(name, dflt);
-    }
-    else if (value)
-    {
-        params.set(name, value);
-    }
-}
-
-bool runtime_create_listener(Service* service,
-                             const char* name,
-                             const char* addr,
-                             const char* port,
-                             const char* proto,
-                             const char* auth,
-                             const char* auth_opt,
-                             const char* ssl_key,
-                             const char* ssl_cert,
-                             const char* ssl_ca,
-                             const char* ssl_version,
-                             const char* ssl_depth,
-                             const char* verify_ssl)
-{
-    if (proto == NULL || strcasecmp(proto, CN_DEFAULT) == 0)
-    {
-        proto = "mariadbclient";
-    }
-
-    if (auth && strcasecmp(auth, CN_DEFAULT) == 0)
-    {
-        // The protocol default authenticator is used
-        auth = nullptr;
-    }
-    if (auth_opt && strcasecmp(auth_opt, CN_DEFAULT) == 0)
-    {
-        auth_opt = nullptr;
-    }
-
-    mxs::ConfigParameters params;
-    bool ok;
-    tie(ok, params) = load_defaults(proto, mxs::ModuleType::PROTOCOL, CN_LISTENER);
-    params.set(CN_SERVICE, service->name());
-    set_if_not_null(params, CN_AUTHENTICATOR, auth);
-    set_if_not_null(params, CN_AUTHENTICATOR_OPTIONS, auth_opt);
-    bool use_socket = (addr && *addr == '/');
-
-    if (use_socket)
-    {
-        params.set(CN_SOCKET, addr);
-    }
-    else
-    {
-        set_if_not_null(params, CN_PORT, port, "3306");
-        set_if_not_null(params, CN_ADDRESS, addr, "::");
-    }
-
-    if (ssl_key || ssl_cert || ssl_ca)
-    {
-        params.set(CN_SSL, CN_REQUIRED);
-        set_if_not_null(params, CN_SSL_KEY, ssl_key);
-        set_if_not_null(params, CN_SSL_CERT, ssl_cert);
-        set_if_not_null(params, CN_SSL_CA_CERT, ssl_ca);
-        set_if_not_null(params, CN_SSL_VERSION, ssl_version);
-        set_if_not_null(params, CN_SSL_CERT_VERIFY_DEPTH, ssl_depth);
-        set_if_not_null(params, CN_SSL_VERIFY_PEER_CERTIFICATE, verify_ssl);
-    }
-
-    unsigned short u_port = atoi(port);
-    bool rval = false;
-
-    std::string reason;
-
-    SListener old_listener = use_socket ?
-        listener_find_by_socket(params.get_string(CN_SOCKET)) :
-        listener_find_by_address(params.get_string(CN_ADDRESS), params.get_integer(CN_PORT));
-
-    if (!ok)
-    {
-        MXS_ERROR("Failed to load module '%s'", proto);
-    }
-    else if (listener_find(name))
-    {
-        MXS_ERROR("Listener '%s' already exists", name);
-    }
-    else if (old_listener)
-    {
-        MXS_ERROR("Listener '%s' already listens on [%s]:%u", old_listener->name(),
-                  old_listener->address(), old_listener->port());
-    }
-    else if (config_is_valid_name(name, &reason))
-    {
-        if (auto listener = Listener::create(name, params))
-        {
-            std::ostringstream ss;
-            listener->persist(ss);
-
-            if (runtime_save_config(listener->name(), ss.str()) && listener->listen())
-            {
-                MXS_NOTICE("Created listener '%s' at %s:%u for service '%s'",
-                           name, listener->address(), listener->port(), service->name());
-
-                rval = true;
-            }
-            else
-            {
-                MXS_ERROR("Listener '%s' was created but failed to start it.", name);
-                Listener::destroy(listener);
-                mxb_assert(!listener_find(name));
-            }
-        }
-        else
-        {
-            MXS_ERROR("Failed to create listener '%s'. Read the MaxScale error log "
-                      "for more details.", name);
-        }
-    }
-    else
-    {
-        MXS_ERROR("%s", reason.c_str());
-    }
-
-    return rval;
-}
-
 bool runtime_create_filter(const char* name, const char* module, mxs::ConfigParameters* params)
 {
     bool rval = false;
@@ -2361,42 +2232,42 @@ bool runtime_create_listener_from_json(json_t* json, Service* service)
 
     if (validate_listener_json(json))
     {
-        std::string port = json_int_to_string(mxs_json_pointer(json, MXS_JSON_PTR_PARAM_PORT));
+        const char* name = get_string_or_null(json, MXS_JSON_PTR_ID);
+        std::string reason;
 
-        const char* id = get_string_or_null(json, MXS_JSON_PTR_ID);
-        const char* address = get_string_or_null(json, MXS_JSON_PTR_PARAM_ADDRESS);
-        const char* protocol = get_string_or_null(json, MXS_JSON_PTR_PARAM_PROTOCOL);
-        const char* authenticator = get_string_or_null(json, MXS_JSON_PTR_PARAM_AUTHENTICATOR);
-        const char* authenticator_options =
-            get_string_or_null(json, MXS_JSON_PTR_PARAM_AUTHENTICATOR_OPTIONS);
-        const char* ssl_key = get_string_or_null(json, MXS_JSON_PTR_PARAM_SSL_KEY);
-        const char* ssl_cert = get_string_or_null(json, MXS_JSON_PTR_PARAM_SSL_CERT);
-        const char* ssl_ca_cert = get_string_or_null(json, MXS_JSON_PTR_PARAM_SSL_CA_CERT);
-        const char* ssl_version = get_string_or_null(json, MXS_JSON_PTR_PARAM_SSL_VERSION);
-        const char* ssl_cert_verify_depth =
-            get_string_or_null(json, MXS_JSON_PTR_PARAM_SSL_CERT_VERIFY_DEPTH);
-        const char* ssl_verify_peer_certificate = get_string_or_null(json,
-                                                                     MXS_JSON_PTR_PARAM_SSL_VERIFY_PEER_CERT);
-
-        if (!address)
+        if (config_is_valid_name(name, &reason))
         {
-            address = get_string_or_null(json, MXS_JSON_PTR_PARAM_SOCKET);
-        }
+            json_t* params = mxs_json_pointer(json, MXS_JSON_PTR_PARAMETERS);
+            remove_json_nulls_from_object(params);
 
-        // TODO: Create the listener directly from the JSON and pass ssl_verify_peer_host to it.
-        rval = runtime_create_listener(service,
-                                       id,
-                                       address,
-                                       port.c_str(),
-                                       protocol,
-                                       authenticator,
-                                       authenticator_options,
-                                       ssl_key,
-                                       ssl_cert,
-                                       ssl_ca_cert,
-                                       ssl_version,
-                                       ssl_cert_verify_depth,
-                                       ssl_verify_peer_certificate);
+            // The service is expressed as a relationship instead of a parameter. Add it to the parameters so
+            // that it's expressed in the same way regardless of the way the listener is created.
+            json_object_set_new(params, "service", json_string(service->name()));
+
+            if (auto listener = Listener::create(name, params))
+            {
+                std::ostringstream ss;
+                listener->persist(ss);
+
+                if (runtime_save_config(listener->name(), ss.str()) && listener->listen())
+                {
+                    MXS_NOTICE("Created listener '%s' at %s:%u for service '%s'",
+                               name, listener->address(), listener->port(), service->name());
+
+                    rval = true;
+                }
+                else
+                {
+                    MXS_ERROR("Listener '%s' was created but failed to start it.", name);
+                    Listener::destroy(listener);
+                    mxb_assert(!listener_find(name));
+                }
+            }
+        }
+        else
+        {
+            MXS_ERROR("%s", reason.c_str());
+        }
     }
 
     return rval;

@@ -76,6 +76,7 @@ public:
      * @return New listener or nullptr on error
      */
     static std::shared_ptr<Listener> create(const std::string& name, const mxs::ConfigParameters& params);
+    static std::shared_ptr<Listener> create(const std::string& name, json_t* params);
 
     /**
      * Destroy a listener
