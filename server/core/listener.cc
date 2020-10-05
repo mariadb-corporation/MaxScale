@@ -50,9 +50,6 @@ using ListenerSessionData = mxs::ListenerSessionData;
 
 using SListener = std::shared_ptr<Listener>;
 
-static std::list<SListener> all_listeners;
-static std::mutex listener_lock;
-
 constexpr int BLOCK_TIME = 60;
 
 namespace
@@ -168,19 +165,37 @@ private:
 
 thread_local RateLimit rate_limit;
 
+class ThisUnit
+{
+public:
+    SListener              add_listener(SListener&& listener);
+    void                   destroy_instances();
+    void                   remove(const SListener& listener);
+    json_t*                to_json_collection(const char* host);
+    SListener              find(const std::string& name);
+    std::vector<SListener> find_by_service(const SERVICE* service);
+    void                   stop_all();
+
+private:
+    std::list<SListener> m_listeners;
+    std::mutex           m_lock;
+
+    bool listener_is_duplicate(const SListener& listener);
+} this_unit;
+
 bool is_all_iface(const std::string& a, const std::string& b)
 {
     std::unordered_set<std::string> addresses {"::", "0.0.0.0"};
     return addresses.count(a) || addresses.count(b);
 }
 
-bool listener_is_duplicate(const SListener& listener)
+bool ThisUnit::listener_is_duplicate(const SListener& listener)
 {
     std::string name = listener->name();
     std::string address = listener->address();
-    std::lock_guard<std::mutex> guard(listener_lock);
+    std::lock_guard<std::mutex> guard(m_lock);
 
-    for (const auto& other : all_listeners)
+    for (const auto& other : m_listeners)
     {
         if (name == other->name())
         {
@@ -204,7 +219,7 @@ bool listener_is_duplicate(const SListener& listener)
     return false;
 }
 
-SListener add_listener(SListener&& listener)
+SListener ThisUnit::add_listener(SListener&& listener)
 {
     if (listener_is_duplicate(listener))
     {
@@ -212,11 +227,79 @@ SListener add_listener(SListener&& listener)
     }
     else
     {
-        std::lock_guard<std::mutex> guard(listener_lock);
-        all_listeners.push_back(listener);
+        std::lock_guard<std::mutex> guard(m_lock);
+        m_listeners.push_back(listener);
     }
 
     return listener;
+}
+
+void ThisUnit::destroy_instances()
+{
+    std::lock_guard<std::mutex> guard(m_lock);
+    m_listeners.clear();
+}
+
+void ThisUnit::remove(const SListener& listener)
+{
+    std::lock_guard<std::mutex> guard(m_lock);
+    m_listeners.remove(listener);
+}
+
+void ThisUnit::stop_all()
+{
+    std::lock_guard<std::mutex> guard(m_lock);
+
+    for (const auto& a : m_listeners)
+    {
+        a->stop();
+    }
+}
+
+SListener ThisUnit::find(const std::string& name)
+{
+    SListener rval;
+    std::lock_guard<std::mutex> guard(m_lock);
+
+    for (const auto& a : m_listeners)
+    {
+        if (a->name() == name)
+        {
+            rval = a;
+            break;
+        }
+    }
+
+    return rval;
+}
+
+std::vector<SListener> ThisUnit::find_by_service(const SERVICE* service)
+{
+    std::vector<SListener> rval;
+    std::lock_guard<std::mutex> guard(m_lock);
+
+    for (const auto& a : m_listeners)
+    {
+        if (a->service() == service)
+        {
+            rval.push_back(a);
+        }
+    }
+
+    return rval;
+}
+
+json_t* ThisUnit::to_json_collection(const char* host)
+{
+    json_t* arr = json_array();
+    std::lock_guard<std::mutex> guard(m_lock);
+
+    for (const auto& listener : m_listeners)
+    {
+        json_array_append_new(arr, listener->to_json(host));
+    }
+
+    return mxs_json_resource(host, MXS_JSON_API_LISTENERS, arr);
 }
 }
 
@@ -302,7 +385,7 @@ SListener Listener::create(const std::string& name, const mxs::ConfigParameters&
 
         if (listener->m_config.configure(params))
         {
-            return add_listener(std::move(listener));
+            return this_unit.add_listener(std::move(listener));
         }
     }
 
@@ -323,7 +406,7 @@ SListener Listener::create(const std::string& name, json_t* params)
 
         if (listener->m_config.configure(params))
         {
-            return add_listener(std::move(listener));
+            return this_unit.add_listener(std::move(listener));
         }
     }
 
@@ -332,8 +415,7 @@ SListener Listener::create(const std::string& name, json_t* params)
 
 void listener_destroy_instances()
 {
-    std::lock_guard<std::mutex> guard(listener_lock);
-    all_listeners.clear();
+    this_unit.destroy_instances();
 }
 
 void Listener::close_all_fds()
@@ -362,19 +444,13 @@ void Listener::destroy(const SListener& listener)
     listener->close_all_fds();
     listener->m_state = DESTROYED;
 
-    std::lock_guard<std::mutex> guard(listener_lock);
-    all_listeners.remove(listener);
+    this_unit.remove(listener);
 }
 
 // static
 void Listener::stop_all()
 {
-    std::lock_guard<std::mutex> guard(listener_lock);
-
-    for (const auto& a : all_listeners)
-    {
-        a->stop();
-    }
+    this_unit.stop_all();
 }
 
 // Helper function that executes a function on all workers and checks the result
@@ -458,35 +534,12 @@ bool Listener::start()
 
 SListener listener_find(const std::string& name)
 {
-    SListener rval;
-    std::lock_guard<std::mutex> guard(listener_lock);
-
-    for (const auto& a : all_listeners)
-    {
-        if (a->name() == name)
-        {
-            rval = a;
-            break;
-        }
-    }
-
-    return rval;
+    return this_unit.find(name);
 }
 
 std::vector<SListener> listener_find_by_service(const SERVICE* service)
 {
-    std::vector<SListener> rval;
-    std::lock_guard<std::mutex> guard(listener_lock);
-
-    for (const auto& a : all_listeners)
-    {
-        if (a->service() == service)
-        {
-            rval.push_back(a);
-        }
-    }
-
-    return rval;
+    return this_unit.find_by_service(service);
 }
 
 std::ostream& Listener::persist(std::ostream& os) const
@@ -534,15 +587,7 @@ json_t* Listener::to_json(const char* host) const
 // static
 json_t* Listener::to_json_collection(const char* host)
 {
-    json_t* arr = json_array();
-    std::lock_guard<std::mutex> guard(listener_lock);
-
-    for (const auto& listener : all_listeners)
-    {
-        json_array_append_new(arr, listener->to_json(host));
-    }
-
-    return mxs_json_resource(host, MXS_JSON_API_LISTENERS, arr);
+    return this_unit.to_json_collection(host);
 }
 
 json_t* Listener::to_json_resource(const char* host) const
