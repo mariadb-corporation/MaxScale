@@ -160,12 +160,14 @@ export default {
                         }
                     }
                     this.isLoading = false
-                    this.toBottom('auto')
                 })
             } else {
                 this['SET_PREV_FILTERED_LOG_LINK'](null)
                 this.filteredLog = []
             }
+            await this.$nextTick(async () => {
+                this.toBottom('auto')
+            })
         },
         prev_log_data: function(val) {
             // assign prev_log_data when it changes
