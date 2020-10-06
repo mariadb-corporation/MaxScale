@@ -582,7 +582,7 @@ json_t* Listener::to_json(const char* host) const
     json_object_set_new(attr, CN_STATE, json_string(state()));
     json_object_set_new(attr, CN_PARAMETERS, m_config.to_json());
 
-    json_t* diag = m_shared_data->get()->m_proto_module->print_auth_users_json();
+    json_t* diag = m_shared_data->m_proto_module->print_auth_users_json();
     if (diag)
     {
         json_object_set_new(attr, CN_AUTHENTICATOR_DIAGNOSTICS, diag);
@@ -807,7 +807,7 @@ static ClientConn accept_one_connection(int fd)
 
 ClientDCB* Listener::accept_one_dcb(int fd, const sockaddr_storage* addr, const char* host)
 {
-    auto* session = new(std::nothrow) Session(*m_shared_data, host);
+    auto* session = new(std::nothrow) Session(m_shared_data, host);
     if (!session)
     {
         MXS_OOM();
@@ -815,7 +815,7 @@ ClientDCB* Listener::accept_one_dcb(int fd, const sockaddr_storage* addr, const 
         return NULL;
     }
 
-    auto client_protocol = m_shared_data->get()->m_proto_module->create_client_protocol(session, session);
+    auto client_protocol = m_shared_data->m_proto_module->create_client_protocol(session, session);
     if (!client_protocol)
     {
         delete session;
@@ -962,7 +962,7 @@ uint32_t Listener::poll_handler(MXB_POLL_DATA* data, MXB_WORKER* worker, uint32_
 
 void Listener::reject_connection(int fd, const char* host)
 {
-    if (GWBUF* buf = m_shared_data->get()->m_proto_module->reject(host))
+    if (GWBUF* buf = m_shared_data->m_proto_module->reject(host))
     {
         for (auto b = buf; b; b = b->next)
         {
@@ -1083,8 +1083,20 @@ bool Listener::post_configure()
 
     if (auto data = create_shared_data())
     {
-        m_shared_data.assign(data);
+        auto start_state = m_state;
+
+        if (start_state == STARTED)
+        {
+            stop();
+        }
+
+        m_shared_data = data;
         rval = true;
+
+        if (start_state == STARTED)
+        {
+            start();
+        }
     }
 
     return rval;

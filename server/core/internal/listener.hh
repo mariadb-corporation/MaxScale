@@ -234,7 +234,7 @@ private:
 
     using SData = std::shared_ptr<mxs::ListenerSessionData>;
 
-    mxs::WorkerGlobal<SData> m_shared_data;     /**< Data shared with sessions */
+    SData m_shared_data;    /**< Data shared with sessions */
 
     /**
      * Creates a new listener that points to a service
