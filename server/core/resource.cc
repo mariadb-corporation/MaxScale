@@ -870,7 +870,11 @@ HttpResponse cb_all_modules(const HttpRequest& request)
 
     if (!all_modules_loaded && request.get_option("load") == "all")
     {
-        load_all_modules();
+        if (!load_all_modules())
+        {
+            return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
+        }
+
         all_modules_loaded = true;
     }
 
