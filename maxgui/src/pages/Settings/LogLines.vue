@@ -60,7 +60,7 @@ export default {
             else return true
         },
         logToShow: function() {
-            if (this.chosenLogLevels.length) return this.filteredLog
+            if (this.isFiltering) return this.filteredLog
             else return this.allLogData
         },
     },
@@ -69,10 +69,6 @@ export default {
         codeClasses: () => 'log-line color text-code-color text-no-wrap',
         logPriorityColorClasses: level =>
             `color text-${level} ${level === 'alert' ? 'font-weight-bold' : ''}`,
-        showChosenLevels(priority) {
-            if (this.isFiltering && this.chosenLogLevels.includes(priority)) return true
-            else return false
-        },
     },
 }
 </script>

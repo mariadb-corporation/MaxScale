@@ -52,6 +52,8 @@ const dummy_log_data = [
         timestamp: '2020-09-23 11:04:27',
     },
 ]
+const dummyChosenLogLevels = ['debug']
+const dummyFilteredLog = dummy_log_data.filter(log => dummyChosenLogLevels.includes(log.priority))
 
 const mountFactory = () =>
     mount({
@@ -60,6 +62,8 @@ const mountFactory = () =>
         props: {
             allLogData: dummy_log_data,
             isLoading: false,
+            filteredLog: [],
+            chosenLogLevels: [],
         },
     })
 
@@ -93,11 +97,29 @@ describe('LogLines', () => {
             )
         })
     })
-    it(`Should show no logs found when there is no allLogData`, async () => {
+    it(`Should show no logs found when there logToShow is empty`, async () => {
         await wrapper.setProps({
             isLoading: false, // loading state is false indicates loading is done
             allLogData: [],
         })
         expect(wrapper.html().includes('No logs found'))
+    })
+
+    it(`Should return accurate boolean value for computed property 'isFiltering'`, async () => {
+        expect(wrapper.vm.isFiltering).to.be.false
+        await wrapper.setProps({
+            chosenLogLevels: dummyChosenLogLevels,
+            filteredLog: dummyFilteredLog,
+        })
+        expect(wrapper.vm.isFiltering).to.be.true
+    })
+
+    it(`Should return accurate log data for computed property 'logToShow'`, async () => {
+        expect(wrapper.vm.logToShow).to.be.deep.equals(dummy_log_data)
+        await wrapper.setProps({
+            chosenLogLevels: dummyChosenLogLevels,
+            filteredLog: dummyFilteredLog,
+        })
+        expect(wrapper.vm.logToShow).to.be.deep.equals(dummyFilteredLog)
     })
 })
