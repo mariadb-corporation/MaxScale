@@ -567,15 +567,7 @@ std::vector<SListener> listener_find_by_service(const SERVICE* service)
 
 std::ostream& Listener::persist(std::ostream& os) const
 {
-    os << "[" << m_name << "]\n"
-       << "type=listener\n";
-
-    for (const auto& p : m_params)
-    {
-        os << p.first << "=" << p.second << "\n";
-    }
-
-    return os;
+    return m_config.persist(os);
 }
 
 json_t* Listener::to_json(const char* host) const

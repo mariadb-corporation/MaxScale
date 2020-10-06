@@ -227,8 +227,6 @@ private:
     std::string m_name;             /**< Name of the listener */
     State       m_state;            /**< Listener state */
 
-    mxs::ConfigParameters m_params;         /**< Configuration parameters */
-
     Type m_type;    /**< The type of the listener */
 
     mxs::WorkerLocal<int> m_local_fd {-1};  /**< File descriptor the listener listens on */
