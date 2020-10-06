@@ -1026,6 +1026,7 @@ int SchemaRouterSession::inspect_mapping_states(SSRBackend& bref,
             }
             else if (rc == SHOWDB_FATAL_ERROR)
             {
+                *wbuf = writebuf;
                 return -1;
             }
             else
