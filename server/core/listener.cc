@@ -186,10 +186,14 @@ private:
     bool listener_is_duplicate(const SListener& listener);
 } this_unit;
 
+bool is_all_iface(const std::string& iface)
+{
+    return iface == "::" || iface == "0.0.0.0";
+}
+
 bool is_all_iface(const std::string& a, const std::string& b)
 {
-    std::unordered_set<std::string> addresses {"::", "0.0.0.0"};
-    return addresses.count(a) || addresses.count(b);
+    return is_all_iface(a) || is_all_iface(b);
 }
 
 bool ThisUnit::listener_is_duplicate(const SListener& listener)
