@@ -26,6 +26,7 @@
 #include <maxscale/paths.hh>
 #include <maxscale/query_classifier.hh>
 #include <maxscale/routingworker.hh>
+#include <maxscale/test.hh>
 
 #include <sys/stat.h>
 
@@ -142,6 +143,7 @@ void init_test_env(char* __attribute((unused))path = nullptr, uint32_t init_type
  */
 void run_unit_test(std::function<void ()> func)
 {
+    mxs::test::start_test();
     init_test_env();
     mxs::RoutingWorker::start_workers();
     mxs::RoutingWorker::get(mxs::RoutingWorker::MAIN)->call(func, mxs::RoutingWorker::EXECUTE_AUTO);

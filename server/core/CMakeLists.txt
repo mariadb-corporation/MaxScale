@@ -49,6 +49,7 @@ add_library(maxscale-common SHARED
   session_stats.cc
   ssl.cc
   target.cc
+  test.cc
   threadpool.cc
   users.cc
   utils.cc

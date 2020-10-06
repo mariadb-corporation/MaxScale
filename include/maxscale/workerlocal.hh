@@ -16,6 +16,7 @@
 #include <maxscale/indexedstorage.hh>
 #include <maxscale/mainworker.hh>
 #include <maxscale/routingworker.hh>
+#include <maxscale/test.hh>
 
 namespace maxscale
 {
@@ -169,7 +170,7 @@ public:
      */
     void assign(const T& t)
     {
-        mxb_assert_message(MainWorker::is_main_worker(),
+        mxb_assert_message(MainWorker::is_main_worker() || mxs::test::is_test(),
                            "this method must be called from the main worker thread");
 
         // Update the value of the master copy
@@ -195,7 +196,7 @@ public:
      */
     std::vector<T> values() const
     {
-        mxb_assert_message(MainWorker::is_main_worker(),
+        mxb_assert_message(MainWorker::is_main_worker() || mxs::test::is_test(),
                            "this method must be called from the main worker thread");
         std::vector<T> rval;
         std::mutex lock;
