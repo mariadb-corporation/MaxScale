@@ -962,6 +962,9 @@ add_test_executable(mxs2919_broken_slaves.cpp mxs2919_broken_slaves mxs2919_brok
 # MXS-2972: Caching of shards must take servers into notice
 add_test_executable(mxs2972_shard_caching.cc mxs2972_shard_caching mxs2972_shard_caching LABELS REPL_BACKEND schemarouter)
 
+# MXS-3218: Crash with LOAD DATA LOCAL INFILE
+add_test_executable(mxs3218_ldli_crash.cc mxs3218_ldli_crash replication LABELS REPL_BACKEND)
+
 ############################################
 # END: Normal tests                        #
 ############################################

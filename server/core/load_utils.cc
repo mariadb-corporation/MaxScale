@@ -249,8 +249,9 @@ static int load_module_cb(const char* fpath, const struct stat* sb, int typeflag
 
                 if (is_maxscale_module(fpath) && !load_module(module.c_str(), ModuleType::UNKNOWN))
                 {
-                    MXS_WARNING("Failed to load '%s'. Make sure it is not a stale library "
-                                "left over from an old installation of MaxScale.", fpath);
+                    MXS_ERROR("Failed to load '%s'. Make sure it is not a stale library "
+                              "left over from an old installation of MaxScale.", fpath);
+                    rval = 1;
                 }
             }
         }
