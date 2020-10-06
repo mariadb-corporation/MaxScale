@@ -965,6 +965,9 @@ add_test_executable(mxs2972_shard_caching.cc mxs2972_shard_caching mxs2972_shard
 # MXS-3218: Crash with LOAD DATA LOCAL INFILE
 add_test_executable(mxs3218_ldli_crash.cc mxs3218_ldli_crash replication LABELS REPL_BACKEND)
 
+# MXS-3128: Listener alteration test
+add_test_executable(mxs3128_alter_listener.cc mxs3128_alter_listener replication LABELS REPL_BACKEND)
+
 ############################################
 # END: Normal tests                        #
 ############################################
