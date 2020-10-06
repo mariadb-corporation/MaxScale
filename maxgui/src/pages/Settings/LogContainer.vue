@@ -312,22 +312,26 @@ export default {
             this.connection.onmessage = async e => {
                 const newEntry = JSON.parse(e.data)
 
+                this.allLogData = Object.freeze([...this.allLogData, newEntry])
+
                 if (this.isFiltering && this.isMatchedFilter(newEntry)) {
                     this.filteredLog = Object.freeze([...this.filteredLog, newEntry])
                 }
-
-                this.allLogData = Object.freeze([...this.allLogData, newEntry])
-
-                /* if scrolled position is at bottom already,
-                 * scroll to bottom to see latest data. Otherwise,
-                 * show notification button (let user controls scroll
-                 * to bottom)
-                 */
-                await this.$nextTick(() => {
-                    if (this.isAtBottom) this.toBottom()
-                    else this.isNotifShown = true
-                })
+                if (!this.isFiltering || this.isMatchedFilter(newEntry))
+                    await this.$nextTick(() => {
+                        this.showNotifHandler()
+                    })
             }
+        },
+
+        /* if scrolled position is at bottom already,
+         * scroll to bottom to see latest data. Otherwise,
+         * show notification button (let user controls scroll
+         * to bottom)
+         */
+        showNotifHandler() {
+            if (this.isAtBottom) this.toBottom()
+            else this.isNotifShown = true
         },
 
         disconnect() {
