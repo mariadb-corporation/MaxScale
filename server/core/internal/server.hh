@@ -49,18 +49,6 @@ public:
         bool    from_json(const json_t* pJson, value_type* pValue, std::string* pMessage = nullptr) const;
     };
 
-    class ParamSSL : public mxs::config::ConcreteParam<ParamSSL, bool>
-    {
-    public:
-        ParamSSL(mxs::config::Specification* pSpecification, const char* zName, const char* zDescription);
-        std::string type() const override;
-        std::string to_string(value_type value) const;
-        bool        from_string(const std::string& value, value_type* pValue,
-                                std::string* pMessage = nullptr) const;
-        json_t* to_json(value_type value) const;
-        bool    from_json(const json_t* pJson, value_type* pValue, std::string* pMessage = nullptr) const;
-    };
-
     Server(const std::string& name)
         : m_name(name)
         , m_settings(name)
@@ -387,10 +375,10 @@ private:
         mxs::config::Enum<int64_t> m_rank;
 
         // TLS configuration parameters
-        mxs::config::ConcreteType<ParamSSL> m_ssl;
-        mxs::config::Path                   m_ssl_cert;
-        mxs::config::Path                   m_ssl_key;
-        mxs::config::Path                   m_ssl_ca;
+        mxs::config::Bool m_ssl;
+        mxs::config::Path m_ssl_cert;
+        mxs::config::Path m_ssl_key;
+        mxs::config::Path m_ssl_ca;
 
         mxs::config::Enum<mxb::ssl_version::Version> m_ssl_version;
 
