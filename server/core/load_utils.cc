@@ -176,9 +176,9 @@ bool check_module(const MXS_MODULE* mod_info, const string& filepath, ModuleType
     // Check the first field of the module-struct to see if the struct is valid for this
     // MaxScale version.
     auto obj_version = mod_info->mxs_version;
-    if (obj_version < mxs::MODULE_INFO_VERSION)
+    if (obj_version != mxs::MODULE_INFO_VERSION)
     {
-        MXB_ERROR("Module from '%s' is a for an older version of MaxScale and cannot be loaded.",
+        MXB_ERROR("Module from '%s' is a for a different version of MaxScale and cannot be loaded.",
                   filepathc);
         return false;
     }

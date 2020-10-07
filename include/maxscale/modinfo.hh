@@ -19,6 +19,7 @@
 #include <maxscale/ccdefs.hh>
 #include <stdint.h>
 #include <maxbase/assert.h>
+#include <maxscale/version.h>
 
 namespace maxscale
 {
@@ -146,7 +147,8 @@ struct MXS_MODULE_PARAM
 
 namespace maxscale
 {
-constexpr uint32_t MODULE_INFO_VERSION = 26000;
+constexpr uint32_t MODULE_INFO_VERSION = 10000 * MAXSCALE_VERSION_MAJOR + 100 * MAXSCALE_VERSION_MINOR
+    + MAXSCALE_VERSION_PATCH;
 }
 
 /**
