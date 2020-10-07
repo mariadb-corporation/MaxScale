@@ -35,8 +35,22 @@ int main(int argc, char* argv[])
 
     test.expect(conn.connect(), "Connection with SSL should work: %s", conn.error());
     auto res = conn.field(query);
-    test.tprintf("TLS version: %s", res.c_str());
     test.expect(res == "TLSv1.2", "TLSv1.2 should be in use: %s", res.c_str());
+
+    // Only TLSv1.2 ciphers are configurable in MaxScale. TLSv1.3 uses a different API and should have a new
+    // parameter for it.
+    for (std::string cipher : {"AES128-SHA256", "AES256-SHA256", "AES128-GCM-SHA256"})
+    {
+        for (int i = 1; i <= 4; i++)
+        {
+            test.check_maxctrl("alter server server" + std::to_string(i) + " ssl_cipher " + cipher);
+        }
+
+        test.expect(conn.connect(), "Connection with SSL should work: %s", conn.error());
+        res = conn.field("SELECT variable_value FROM information_schema.session_status "
+                         "WHERE variable_name = 'ssl_cipher'");
+        test.expect(res == cipher, "Cipher should be '%s' but is '%s'", cipher.c_str(), res.c_str());
+    }
 
     for (int i = 1; i <= 4; i++)
     {
@@ -45,7 +59,6 @@ int main(int argc, char* argv[])
 
     test.expect(conn.connect(), "Connection with SSL should work: %s", conn.error());
     res = conn.field(query);
-    test.tprintf("TLS version: %s", res.c_str());
     test.expect(res == "TLSv1.3", "TLSv1.3 should be in use: %s", res.c_str());
 
     for (int i = 1; i <= 4; i++)
