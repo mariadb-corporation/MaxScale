@@ -124,32 +124,4 @@ private:
                                              * see: https://www.openssl.org/docs/ssl/SSL_CTX_new.html */
     SSLConfig m_cfg;
 };
-
-// A SSL connection provider (incoming or outgoing). Used by servers and listeners.
-class SSLProvider
-{
-public:
-    SSLProvider& operator=(SSLProvider&) = delete;
-    SSLProvider(SSLProvider&) = delete;
-
-    SSLProvider(std::unique_ptr<mxs::SSLContext> context);
-
-    // Return true if SSL is enabled
-    bool enabled() const
-    {
-        return m_context.get();
-    }
-
-    // Current configuration, or null if none is set.
-    const mxs::SSLConfig* config() const;
-
-    // The context or nullptr if no context is set
-    mxs::SSLContext* context() const;
-
-    // NOTE: Do not use this, required by binlogrouter
-    void set_context(std::unique_ptr<mxs::SSLContext> ssl);
-
-private:
-    std::unique_ptr<mxs::SSLContext> m_context;     /**< SSL context */
-};
 }

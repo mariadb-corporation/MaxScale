@@ -377,28 +377,6 @@ SSLContext& SSLContext::operator=(SSLContext&& rhs) noexcept
     return *this;
 }
 
-SSLProvider::SSLProvider(std::unique_ptr<mxs::SSLContext> context)
-    : m_context{std::move(context)}
-{
-}
-
-mxs::SSLContext* SSLProvider::context() const
-{
-    mxb_assert_message(mxs::RoutingWorker::get_current(), "Must be used on a RoutingWorker");
-    return m_context.get();
-}
-
-const mxs::SSLConfig* SSLProvider::config() const
-{
-    return m_context ? &(m_context->config()) : nullptr;
-}
-
-void SSLProvider::set_context(std::unique_ptr<mxs::SSLContext> ssl)
-{
-    mxb_assert(ssl);
-    m_context = std::move(ssl);
-}
-
 std::string SSLConfig::to_string() const
 {
     std::ostringstream ss;
