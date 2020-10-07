@@ -1268,7 +1268,7 @@ enum showdb_response SchemaRouterSession::parse_mapping_response(SSRBackend& bre
 
     if (PTR_IS_ERR(ptr))
     {
-        MXS_INFO("Mapping query returned an error.");
+        MXS_ERROR("Mapping query returned an error; closing session.");
         gwbuf_free(buf);
         return SHOWDB_FATAL_ERROR;
     }
