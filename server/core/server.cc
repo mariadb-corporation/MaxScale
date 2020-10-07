@@ -433,44 +433,14 @@ bool Server::ParamSSL::from_json(const json_t* pJson, value_type* pValue,
     return ok;
 }
 
-bool Server::configure_ssl(const mxs::ConfigParameters& params)
-{
-    bool ok;
-    std::unique_ptr<mxs::SSLContext> ctx;
-    std::tie(ok, ctx) = create_ssl(m_name.c_str(), params);
-
-    if (ok)
-    {
-        if (ctx.get())
-        {
-            if (!m_ssl_provider.enabled())
-            {
-                m_ssl_provider.set_context(std::move(ctx));
-            }
-            else
-            {
-                MXS_ERROR("Cannot alter SSL at runtime");
-                ok = false;
-            }
-        }
-        else if (m_ssl_provider.enabled())
-        {
-            MXS_ERROR("Cannot disable SSL at runtime");
-            ok = false;
-        }
-    }
-
-    return ok;
-}
-
 bool Server::configure(const mxs::ConfigParameters& params)
 {
-    return m_settings.configure(params) && configure_ssl(params);
+    return m_settings.configure(params) && post_configure();
 }
 
 bool Server::configure(json_t* params)
 {
-    return m_settings.configure(params) && configure_ssl(mxs::ConfigParameters::from_json(params));
+    return m_settings.configure(params) && post_configure();
 }
 
 Server::Settings::Settings(const std::string& name)
@@ -657,14 +627,15 @@ void Server::set_extra_port(int new_port)
     m_settings.m_extra_port.set(new_port);
 }
 
-const mxs::SSLProvider& Server::ssl() const
+std::shared_ptr<mxs::SSLContext> Server::ssl() const
 {
-    return m_ssl_provider;
+    return *m_ssl_ctx;
 }
 
-mxs::SSLProvider& Server::ssl()
+mxs::SSLConfig Server::ssl_config() const
 {
-    return m_ssl_provider;
+    std::lock_guard<std::mutex> guard(m_ssl_lock);
+    return m_ssl_config;
 }
 
 bool Server::proxy_protocol() const
@@ -836,6 +807,26 @@ json_t* Server::to_json_data(const char* host) const
     json_object_set_new(rval, CN_LINKS, mxs_json_self_link(host, CN_SERVERS, name()));
 
     return rval;
+}
+
+bool Server::post_configure()
+{
+    json_t* js = m_settings.to_json();
+    auto params = mxs::ConfigParameters::from_json(js);
+    json_decref(js);
+
+    bool ok;
+    std::shared_ptr<mxs::SSLContext> ctx;
+    std::tie(ok, ctx) = create_ssl(m_name.c_str(), params);
+
+    if (ok)
+    {
+        m_ssl_ctx.assign(ctx);
+        std::lock_guard<std::mutex> guard(m_ssl_lock);
+        m_ssl_config = ctx ? ctx->config() : mxs::SSLConfig();
+    }
+
+    return ok;
 }
 
 void Server::VersionInfo::set(uint64_t version, const std::string& version_str)

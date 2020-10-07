@@ -61,10 +61,9 @@ public:
         bool    from_json(const json_t* pJson, value_type* pValue, std::string* pMessage = nullptr) const;
     };
 
-    Server(const std::string& name, std::unique_ptr<mxs::SSLContext> ssl = {})
+    Server(const std::string& name)
         : m_name(name)
         , m_settings(name)
-        , m_ssl_provider(std::move(ssl))
     {
     }
 
@@ -304,8 +303,9 @@ public:
     void     clear_status(uint64_t bit) override;
     void     assign_status(uint64_t status) override;
 
-    const mxs::SSLProvider& ssl() const override;
-    mxs::SSLProvider&       ssl() override;
+    std::shared_ptr<mxs::SSLContext> ssl() const;
+
+    mxs::SSLConfig ssl_config() const override;
 
     void        set_variables(std::unordered_map<std::string, std::string>&& variables) override;
     std::string get_variable(const std::string& key) const override;
@@ -410,8 +410,12 @@ private:
     bool              m_active {true};
     int64_t           m_rpl_lag {mxs::Target::RLAG_UNDEFINED};  /**< Replication lag in seconds */
     int64_t           m_ping {mxs::Target::PING_UNDEFINED};     /**< Ping in microseconds */
-    mxs::SSLProvider  m_ssl_provider;
     PoolStats         m_pool_stats;
+
+    // Lock for m_ssl_config
+    mutable std::mutex                                  m_ssl_lock;
+    mxs::SSLConfig                                      m_ssl_config;
+    mxs::WorkerGlobal<std::shared_ptr<mxs::SSLContext>> m_ssl_ctx;
 
     // Character set. Read from backend and sent to client. As no character set has the numeric value of 0, it
     // can be used to detect servers we haven't connected to.
@@ -439,7 +443,7 @@ private:
      */
     void cleanup_persistent_connections() const;
 
-    bool configure_ssl(const mxs::ConfigParameters& params);
+    bool post_configure();
 };
 
 // A connection to a server

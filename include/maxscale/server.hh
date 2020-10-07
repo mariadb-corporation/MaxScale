@@ -276,10 +276,9 @@ public:
     virtual void assign_status(uint64_t status) = 0;
 
     /**
-     * Get SSL provider
+     * Get SSL configuration
      */
-    virtual const mxs::SSLProvider& ssl() const = 0;
-    virtual mxs::SSLProvider&       ssl() = 0;
+    virtual mxs::SSLConfig ssl_config() const = 0;
 
     /**
      * Set server variables
