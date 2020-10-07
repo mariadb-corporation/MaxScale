@@ -81,8 +81,8 @@ From MaxScale 2.2.1 onwards, the module name is `mariadbmon` instead of
 `mysqlmon`. The old name can still be used.
 
 The `user` requires privileges depending on which monitor features are used.
-REPLICATION CLIENT allows the monitor to list slave (replication) connections,
-and is always required. See
+REPLICATION CLIENT (or REPLICATION SLAVE ADMIN for Server 10.5) allows the
+monitor to list replication connections, and is always required. See
 [Cluster manipulation operations](#cluster-manipulation-operations) for more
 information on required privileges.
 
@@ -308,7 +308,7 @@ the *passive*-setting.
 
 Starting with MaxScale 2.2.1, MariaDB Monitor supports replication cluster
 modification. The operations implemented are:
-- _failover_, which replaces a failer master with a slave
+- _failover_, which replaces a failed master with a slave
 - _switchover_, which swaps a running master with a slave
 - _async-switchover_, which schedules a switchover and returns
 - _rejoin_, which directs servers to replicate from the master
@@ -321,16 +321,27 @@ implementation of the commands.
 The cluster operations require that the monitor user (`user`) has the following
 privileges:
 
-- SUPER, to modify slave connections and set globals such as *read\_only*
-- REPLICATION CLIENT, to list slave connections
+- SUPER, to modify slave connections, set globals such as *read\_only* and kill
+connections from other super-users
+- SELECT on mysql.user, to see which users have SUPER
+- REPLICATION CLIENT (REPLICATION SLAVE ADMIN in MariaDB Server 10.5), to list
+slave connections
 - RELOAD, to flush binary logs
 - PROCESS, to check if the *event\_scheduler* process is running
 - SHOW DATABASES and EVENT, to list and modify server events
 
 ```
-MariaDB [(none)]> grant super, replication client, reload, process, show databases,
-event on *.* to 'myuser'@'maxscalehost';
-Query OK, 0 rows affected (0.00 sec)
+GRANT super, replication client, reload, process, show databases, event on *.* to 'myuser'@'maxscalehost';
+GRANT select on mysql.user to 'myuser'@'maxscalehost';
+```
+
+The privilege system was changed in MariaDB Server 10.5. The effects of this on
+the MaxScale monitor user are minor, as the SUPER-privilege contains many of the
+required privileges and is still required to kill connections from other
+super-users.
+```
+GRANT super, reload, process, show databases, event on *.* to 'myuser'@'maxscalehost';
+GRANT select on mysql.user to 'myuser'@'maxscalehost';
 ```
 
 In addition, the monitor needs to know which username and password a

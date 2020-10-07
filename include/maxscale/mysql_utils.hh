@@ -26,12 +26,13 @@
  *
  * @param con    A valid MYSQL structure.
  * @param server The server on which the MySQL engine is running.
+ * @param port   The port to connect to
  * @param user   The MySQL login ID.
  * @param passwd The password for the user.
  *
  * @return New connection or NULL on error
  */
-MYSQL* mxs_mysql_real_connect(MYSQL* mysql, SERVER* server, const char* user, const char* passwd);
+MYSQL* mxs_mysql_real_connect(MYSQL* con, SERVER* server, int port, const char* user, const char* passwd);
 
 /**
  * Execute a query using global query retry settings.

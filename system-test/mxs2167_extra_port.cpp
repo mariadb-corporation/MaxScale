@@ -182,6 +182,18 @@ int main(int argc, char** argv)
         }
     }
 
+    // Change server configuration such that the primary port is wrong. Monitoring should still work.
+    if (test.ok())
+    {
+        string srv_name = "server1";
+        test.maxctrl("alter server " + srv_name + " port 12345");
+        test.maxscales->wait_for_monitor(2);
+        auto status = test.maxscales->get_server_status(srv_name);
+        test.expect(status.count("Running") == 1, "Monitoring of %s through extra-port failed when normal "
+                                                  "port disabled", srv_name.c_str());
+        test.maxctrl("alter server " + srv_name + " port " + std::to_string(test.repl->port[0]));
+    }
+
     // Remove extra_port
     for (int i = 0; i < N_extra_port; i++)
     {

@@ -398,7 +398,19 @@ The second component is a list of user names and network addresses in the format
 *`user`*`@`*`0.0.0.0`*. The first part is the user name and the second part is
 the network address. You can use the `%` character as the wildcard to enable
 user name matching from any address or network matching for all users. After the
-list of users and networks the keyword match is expected.
+list of users and networks the keyword match is expected. This means that the
+following user definitions are supported:
+
+* `user@host`
+* `user@%`
+* `%@host`
+
+Partial wildcards, e.g. `user@192.%` are not supported.
+
+As MaxScale listens to the IPv6 all address by default, IPv4 addresses will be
+mapped into the IPv6 space. This means that the IPv4 address `192.168.0.1` will
+show up in MaxScale as `::ffff:192.168.0.1`. Take this into account when
+defining the `users` directives.
 
 After this either the keyword `any`, `all` or `strict_all` is expected. This
 defined how the rules are matched. If `any` is used when the first rule is

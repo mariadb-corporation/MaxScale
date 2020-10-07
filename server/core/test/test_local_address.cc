@@ -87,7 +87,7 @@ int test(bool success, const char* zHost, const char* zUser, const char* zPasswo
 
     MYSQL* pMysql = mysql_init(NULL);
 
-    MYSQL* pConn = mxs_mysql_real_connect(pMysql, &server, zUser, zPassword);
+    MYSQL* pConn = mxs_mysql_real_connect(pMysql, &server, server.port(), zUser, zPassword);
 
     if (pConn)
     {
