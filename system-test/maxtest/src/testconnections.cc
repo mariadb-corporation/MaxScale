@@ -554,7 +554,7 @@ void TestConnections::process_template(int m, const string& cnf_template_path, c
     {
         tprintf("Adding ssl settings\n");
         const char sed_cmd[] = "sed -i "
-                               "\"s|type=server|type=server\\nssl=required\\nssl_cert=/###access_homedir###/"
+                               "\"s|type=server|type=server\\nssl=true\\nssl_cert=/###access_homedir###/"
                                "certs/client-cert.pem\\nssl_key=/###access_homedir###/certs/client-key.pem"
                                "\\nssl_ca_cert=/###access_homedir###/certs/ca.pem\\nssl_cert_verify_depth=9"
                                "\\nssl_version=MAX|g\" maxscale.cnf";

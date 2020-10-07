@@ -966,8 +966,8 @@ add_test_executable(mxs2972_shard_caching.cc mxs2972_shard_caching mxs2972_shard
 # MXS-3218: Crash with LOAD DATA LOCAL INFILE
 add_test_executable(mxs3218_ldli_crash.cc mxs3218_ldli_crash replication LABELS REPL_BACKEND)
 
-# MXS-3128: Listener alteration test
-add_test_executable(mxs3128_alter_listener.cc mxs3128_alter_listener replication LABELS REPL_BACKEND)
+# MXS-3128: Listener SSL alteration test
+add_test_executable(mxs3128_listener_ssl.cc mxs3128_listener_ssl replication LABELS REPL_BACKEND)
 
 ############################################
 # END: Normal tests                        #
@@ -978,6 +978,9 @@ add_test_executable(mxs3128_alter_listener.cc mxs3128_alter_listener replication
 ############################################
 
 add_test_derived(sql_queries_ssl sql_queries ssl LABELS readwritesplit REPL_BACKEND BACKEND_SSL)
+
+# MXS-3128: Server SSL alteration test
+add_test_executable(mxs3128_server_ssl.cc mxs3128_server_ssl replication LABELS REPL_BACKEND BACKEND_SSL)
 
 ############################################
 # END: backend SSL  tests                  #

@@ -70,7 +70,7 @@ protocol=MySQLClient
 port=4006
 authenticator=GSSAPIAuth
 authenticator_options=principal_name=mariadb/maxscale.test@MAXSCALE.TEST
-ssl=required
+ssl=true
 ssl_cert=/###access_homedir###/certs/server-cert.pem
 ssl_key=/###access_homedir###/certs/server-key.pem
 ssl_ca_cert=/###access_homedir###/certs/ca.pem
@@ -83,7 +83,7 @@ protocol=MySQLClient
 port=4009
 authenticator=GSSAPIAuth
 authenticator_options=principal_name=mariadb/maxscale.test@MAXSCALE.TEST
-ssl=required
+ssl=true
 ssl_cert=/###access_homedir###/certs/server-cert.pem
 ssl_key=/###access_homedir###/certs/server-key.pem
 ssl_ca_cert=/###access_homedir###/certs/ca.pem
@@ -96,7 +96,7 @@ protocol=MySQLClient
 port=4008
 authenticator=GSSAPIAuth
 authenticator_options=principal_name=mariadb/maxscale.test@MAXSCALE.TEST
-ssl=required
+ssl=true
 ssl_cert=/###access_homedir###/certs/server-cert.pem
 ssl_key=/###access_homedir###/certs/server-key.pem
 ssl_ca_cert=/###access_homedir###/certs/ca.pem
