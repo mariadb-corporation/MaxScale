@@ -45,9 +45,20 @@ const mountFactory = () =>
         },
     })
 
+// mockup websocket
+class WebSocket {
+    constructor() {}
+    onmessage() {}
+    close() {}
+    onopen() {}
+}
+
+global.WebSocket = WebSocket
+
 describe('LogContainer', () => {
-    let wrapper, axiosStub
+    let wrapper, axiosStub, wsStub
     beforeEach(async () => {
+        wsStub = sinon.stub(window, 'WebSocket')
         axiosStub = sinon.stub(Vue.prototype.$axios, 'get').returns(
             Promise.resolve({
                 data: {
@@ -58,9 +69,17 @@ describe('LogContainer', () => {
             })
         )
         wrapper = mountFactory()
+        /* async setTimeout doesn't work properly in vue-test-utils as
+         * there is no actual async lifecycle hooks in vue.js. So
+         * allLogData will be always an empty array.
+         * This is a workaround to delay 350ms after mounted hook is called,
+         * so allLogData will be assigned with dummy_log_data
+         */
+        await wrapper.vm.$help.delay(350)
     })
     afterEach(async function() {
         await axiosStub.restore()
+        await wsStub.restore()
         await wrapper.destroy()
     })
 
