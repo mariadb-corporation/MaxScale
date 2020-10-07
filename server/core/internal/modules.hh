@@ -13,13 +13,10 @@
 #pragma once
 
 #include <maxscale/ccdefs.hh>
-#include <maxscale/dcb.hh>
 #include <maxscale/modinfo.hh>
 
-/* Module types */
-#define MODULE_AUTHENTICATOR    "Authenticator"     /**< An authenticator module type */
-#define MODULE_FILTER           "Filter"            /**< A filter module type */
-#define MODULE_QUERY_CLASSIFIER "QueryClassifier"   /**< A query classifier module type */
+#define MODULE_FILTER           "Filter"
+#define MODULE_QUERY_CLASSIFIER "QueryClassifier"
 
 /**
  * Calls init on all loaded modules.
@@ -62,16 +59,6 @@ bool load_all_modules();
 const MXS_MODULE* get_module(const std::string& name, mxs::ModuleType type);
 
 /**
- * @brief Unload a module.
- *
- * No errors are returned since it is not clear that much can be done
- * to fix issues relating to unloading modules.
- *
- * @param name The name of the module
- */
-void unload_module(const char* name);
-
-/**
  * @brief Unload all modules
  *
  * Remove all the modules from the system, called during shutdown
@@ -85,13 +72,6 @@ void unload_all_modules();
  * Diagnostic routine to display all the loaded modules
  */
 void printModules();
-
-/**
- * @brief Print Modules to a DCB
- *
- * Diagnostic routine to display all the loaded modules
- */
-void dprintAllModules(DCB*);
 
 /**
  * @brief Convert module to JSON

@@ -79,8 +79,6 @@ bool MainWorker::created()
 // static
 MainWorker* MainWorker::get()
 {
-    mxb_assert(this_unit.pMain);
-
     return this_unit.pMain;
 }
 

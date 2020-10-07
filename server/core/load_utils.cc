@@ -323,31 +323,71 @@ bool load_module(const string& fname, mxs::ModuleType type, const string& name)
             this_unit.loaded_modules.insert(std::move(new_kv));
             MXS_NOTICE("Module '%s' loaded from '%s'.", mod_info->name, fname.c_str());
 
-            // Run module process/thread init functions.
-            if (mxs::RoutingWorker::is_running())
+            std::atomic_bool init_ok {true};
+            auto process_init = mod_info->process_init;
+            auto thread_init = mod_info->thread_init;
+
+            if (process_init && process_init() != 0)
             {
-                if (mod_info->process_init)
+                init_ok = false;
+            }
+
+            // Run module thread init functions.
+            if (init_ok && thread_init)
+            {
+                auto run_thread_init = [&init_ok, thread_init]() {
+                        if (thread_init() != 0)
+                        {
+                            init_ok = false;
+                        }
+                    };
+                auto exec_auto = mxs::RoutingWorker::EXECUTE_AUTO;
+
+                auto main_worker = mxs::MainWorker::get();
+                if (main_worker)
                 {
-                    mod_info->process_init();
+                    auto mw_state = main_worker->state();
+                    if (mw_state != mxb::Worker::state_t::POLLING
+                        && mw_state != mxb::Worker::state_t::PROCESSING)
+                    {
+                        main_worker = nullptr;
+                    }
                 }
 
-                if (mod_info->thread_init)
+                if (main_worker)
                 {
-                    mxs::RoutingWorker::broadcast(
-                        [mod_info]() {
-                            mod_info->thread_init();
-                        }, mxs::RoutingWorker::EXECUTE_AUTO);
+                    main_worker->call(run_thread_init, exec_auto);
+                }
+                if (mxs::RoutingWorker::is_running())
+                {
+                    mxs::RoutingWorker::broadcast(run_thread_init, exec_auto);
+                }
 
-                    if (mxs::MainWorker::created())
+                if (!init_ok)
+                {
+                    // Try to undo.
+                    auto thread_finish = mod_info->thread_finish;
+                    if (thread_finish)
                     {
-                        mxs::MainWorker::get()->call(
-                            [mod_info]() {
-                                mod_info->thread_init();
-                            }, mxb::Worker::EXECUTE_AUTO);
+                        auto run_thread_finish = [thread_finish]() {
+                                thread_finish();
+                            };
+                        if (main_worker)
+                        {
+                            main_worker->call(run_thread_finish, exec_auto);
+                        }
+                        if (mxs::RoutingWorker::is_running())
+                        {
+                            mxs::RoutingWorker::broadcast(run_thread_finish, exec_auto);
+                        }
                     }
                 }
             }
-            rval = true;
+
+            if (init_ok)
+            {
+                rval = true;
+            }
         }
     }
     return rval;
@@ -359,18 +399,6 @@ bool load_all_modules()
     this_unit.load_all_ok = true;
     int rv = nftw(mxs::libdir(), load_module_cb, 10, FTW_PHYS);
     return this_unit.load_all_ok;
-}
-
-void unload_module(const char* name)
-{
-    string eff_name = module_get_effective_name(name);
-    auto& loaded_modules = this_unit.loaded_modules;
-    auto iter = loaded_modules.find(eff_name);
-    if (iter != loaded_modules.end())
-    {
-        auto module = std::move(iter->second);
-        loaded_modules.erase(iter);
-    }
 }
 
 namespace
@@ -396,6 +424,8 @@ LOADED_MODULE* find_module(const string& name)
 
 void unload_all_modules()
 {
+    // This is only ran when exiting, at which point threads have stopped and ran their own finish functions.
+    modules_process_finish();
     this_unit.loaded_modules.clear();
 }
 

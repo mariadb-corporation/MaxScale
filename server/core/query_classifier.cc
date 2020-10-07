@@ -541,14 +541,7 @@ bool qc_process_init(uint32_t kind)
         }
     }
 
-    bool rc = true;
-
-    if (kind & QC_INIT_PLUGIN)
-    {
-        rc = this_unit.classifier->qc_process_init() == 0;
-    }
-
-    return rc;
+    return true;
 }
 
 void qc_process_end(uint32_t kind)
