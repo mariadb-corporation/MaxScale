@@ -2317,7 +2317,7 @@ MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::handshake()
                     buffer.make_contiguous();
                     if (read_backend_handshake(std::move(buffer)))
                     {
-                        m_hs_state = m_server.ssl().context() ? HandShakeState::START_SSL :
+                        m_hs_state = m_dcb->using_ssl() ? HandShakeState::START_SSL :
                             HandShakeState::SEND_HS_RESP;
                     }
                     else
@@ -2369,7 +2369,7 @@ MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::handshake()
 
         case HandShakeState::SEND_HS_RESP:
             {
-                bool with_ssl = m_server.ssl().context();
+                bool with_ssl = m_dcb->using_ssl();
                 GWBUF* hs_resp = gw_generate_auth_response(with_ssl, with_ssl,
                                                            m_dcb->service()->capabilities());
                 if (m_dcb->writeq_append(hs_resp))

@@ -1925,9 +1925,9 @@ int BackendDCB::ssl_handshake()
     int ssl_rval;
     int return_code;
 
-    if (!m_server->ssl().context() || (!m_encryption.handle && !create_SSL(*m_server->ssl().context())))
+    if (!m_ssl || (!m_encryption.handle && !create_SSL(*m_ssl)))
     {
-        mxb_assert(m_server->ssl().context());
+        mxb_assert(m_ssl);
         return -1;
     }
     m_encryption.state = SSLState::HANDSHAKE_REQUIRED;
@@ -1996,6 +1996,7 @@ BackendDCB::BackendDCB(SERVER* server, int fd, MXS_SESSION* session,
                        DCB::Manager* manager)
     : DCB(fd, server->address(), DCB::Role::BACKEND, session, nullptr, manager)
     , m_server(server)
+    , m_ssl(static_cast<Server*>(server)->ssl())
 {
     mxb_assert(m_server);
 

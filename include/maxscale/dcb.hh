@@ -804,6 +804,14 @@ public:
     }
 
     /**
+     * @return True, if the connection should use SSL.
+     */
+    bool using_ssl() const
+    {
+        return m_ssl.get();
+    }
+
+    /**
      * Initate an SSL handshake with a server.
      *
      * @return -1 if an error occurred,
@@ -824,6 +832,7 @@ private:
     static void hangup_cb(MXB_WORKER* worker, const SERVER* server);
 
     SERVER* const                           m_server;   /**< The associated backend server */
+    std::shared_ptr<mxs::SSLContext>        m_ssl;      /**< SSL context for this connection */
     std::unique_ptr<mxs::BackendConnection> m_protocol; /**< The protocol session */
 };
 
