@@ -24,8 +24,10 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
     static MXS_MODULE info =
     {
-        MXS_MODULE_API_PROTOCOL,
-        MXS_MODULE_IN_DEVELOPMENT,
+        mxs::MODULE_INFO_VERSION,
+        MXS_MODULE_NAME,
+        mxs::ModuleType::PROTOCOL,
+        mxs::ModuleStatus::IN_DEVELOPMENT,
         MXS_PROTOCOL_VERSION,
         "The client to MaxScale MongoDB protocol implementation",
         "V1.0.0",
