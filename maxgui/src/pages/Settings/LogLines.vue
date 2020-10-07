@@ -56,8 +56,7 @@ export default {
     },
     computed: {
         isFiltering: function() {
-            if (this.chosenLogLevels.length === 0) return false
-            else return true
+            return this.chosenLogLevels.length > 0
         },
         logToShow: function() {
             if (this.isFiltering) return this.filteredLog

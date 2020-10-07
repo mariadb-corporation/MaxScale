@@ -140,7 +140,7 @@ export default {
                 const res = await this.vue.$axios.get(`/maxscale/logs/data`)
                 const {
                     data: { attributes: { log = [], log_source = null } = {} } = {},
-                    links: { prev = null },
+                    links: { prev = null } = {},
                 } = res.data
 
                 if (log.length) commit('SET_LATEST_LOGS', Object.freeze(log))

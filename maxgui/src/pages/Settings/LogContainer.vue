@@ -56,7 +56,7 @@
                         :allLogData="allLogData"
                         :filteredLog="filteredLog"
                     />
-                    <div id="bottom-log-line" />
+                    <div ref="bottomLogLine" />
                 </div>
             </v-card>
         </div>
@@ -113,7 +113,7 @@ export default {
             prev_filtered_log_data: state => state.prev_filtered_log_data,
         }),
         isFiltering: function() {
-            return this.chosenLogLevels.length
+            return this.chosenLogLevels.length > 0
         },
     },
     watch: {
@@ -202,7 +202,7 @@ export default {
         async getLatestLogs() {
             this.isLoading = true
             await this.fetchLatestLogs()
-            await this.$help.delay(400).then(() => (this.isLoading = false))
+            await this.$help.delay(300).then(() => (this.isLoading = false))
             this.allLogData = Object.freeze(this.latest_logs)
         },
 
@@ -361,12 +361,13 @@ export default {
          * This function scrolls to bottom after latest logs has been fetched.
          */
         toBottom(behavior = 'smooth') {
-            let bottomEle = document.getElementById('bottom-log-line')
-            bottomEle.scrollIntoView({
-                behavior: behavior,
-                block: 'nearest',
-                inline: 'start',
-            })
+            let bottomEle = this.$refs.bottomLogLine
+            if (bottomEle)
+                bottomEle.scrollIntoView({
+                    behavior: behavior,
+                    block: 'nearest',
+                    inline: 'start',
+                })
         },
 
         /**
@@ -380,7 +381,8 @@ export default {
          */
         isScrollable() {
             const { scrollableContent, scrollableWrapper } = this.$refs
-            return scrollableContent.scrollHeight > scrollableWrapper.$el.clientHeight
+            if (!scrollableContent || !scrollableWrapper) return false
+            else return scrollableContent.scrollHeight > scrollableWrapper.$el.clientHeight
         },
 
         /**

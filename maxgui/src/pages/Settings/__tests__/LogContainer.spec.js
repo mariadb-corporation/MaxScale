@@ -16,6 +16,8 @@ import sinon from 'sinon'
 import sinonChai from 'sinon-chai'
 import mount from '@tests/unit/setup'
 import LogContainer from '@/pages/Settings/LogContainer'
+import { dummy_log_data } from '@tests/unit/utils'
+
 chai.should()
 chai.use(sinonChai)
 
@@ -26,6 +28,10 @@ const dummyMaxscaleOverviewInfo = {
     uptime: 404,
     version: '2.5.4',
 }
+
+const dummyChosenLogLevels = ['warning']
+const dummyFilteredLog = dummy_log_data.filter(log => dummyChosenLogLevels.includes(log.priority))
+
 const mountFactory = () =>
     mount({
         shallow: false,
@@ -34,6 +40,9 @@ const mountFactory = () =>
             shouldFetchLogs: false,
             maxscaleOverviewInfo: dummyMaxscaleOverviewInfo,
         },
+        computed: {
+            prev_log_link: () => null, // prevent loopGetOlderLogs from being called
+        },
     })
 
 describe('LogContainer', () => {
@@ -41,14 +50,14 @@ describe('LogContainer', () => {
     beforeEach(async () => {
         axiosStub = sinon.stub(Vue.prototype.$axios, 'get').returns(
             Promise.resolve({
-                data: {},
+                data: {
+                    data: {
+                        attributes: { log: dummy_log_data, log_source: 'syslog' },
+                    },
+                },
             })
         )
         wrapper = mountFactory()
-        // prevent handleFetchPrevPage being loop fetch
-        await wrapper.setData({
-            prevPageLink: null,
-        })
     })
     afterEach(async function() {
         await axiosStub.restore()
@@ -68,9 +77,22 @@ describe('LogContainer', () => {
         axiosStub.should.have.been.calledTwice
     })
 
-    it(`Should pass logData and isLoading props to log-lines component`, async () => {
+    it(`Should pass necessary props to log-lines component`, async () => {
         const logLines = wrapper.findComponent({ name: 'log-lines' })
-        expect(logLines.vm.$props.logData).to.be.deep.equals(wrapper.vm.$data.logData)
+        expect(logLines.vm.$props.allLogData).to.be.deep.equals(wrapper.vm.$data.allLogData)
+        expect(logLines.vm.$props.filteredLog).to.be.deep.equals(wrapper.vm.$data.filteredLog)
+        expect(logLines.vm.$props.chosenLogLevels).to.be.deep.equals(
+            wrapper.vm.$data.chosenLogLevels
+        )
         expect(logLines.vm.$props.isLoading).to.be.deep.equals(wrapper.vm.$data.isLoading)
+    })
+
+    it(`Should return accurate boolean value for computed property 'isFiltering'`, async () => {
+        expect(wrapper.vm.isFiltering).to.be.false
+        await wrapper.setData({
+            chosenLogLevels: dummyChosenLogLevels,
+            filteredLog: dummyFilteredLog,
+        })
+        expect(wrapper.vm.isFiltering).to.be.true
     })
 })

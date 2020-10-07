@@ -29,3 +29,5 @@ global.localStorage = localStorageMock
 console.error = () => {}
 console.info = () => {}
 console.warn = () => {}
+
+window.HTMLElement.prototype.scrollIntoView = () => {}
