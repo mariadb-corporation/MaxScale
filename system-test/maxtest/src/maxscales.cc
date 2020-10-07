@@ -566,6 +566,7 @@ std::unique_ptr<mxt::MariaDB> MaxScale::open_rwsplit_connection(const std::strin
     sett.password = m_maxscales->password;
     if (m_maxscales->ssl)
     {
+        sett.ssl.enabled = true;
         sett.ssl.key = mxb::string_printf("%s/ssl-cert/client-key.pem", test_dir);
         sett.ssl.cert = mxb::string_printf("%s/ssl-cert/client-cert.pem", test_dir);
         sett.ssl.ca = mxb::string_printf("%s/ssl-cert/ca.pem", test_dir);

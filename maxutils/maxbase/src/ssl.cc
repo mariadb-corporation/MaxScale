@@ -16,17 +16,12 @@
 
 namespace maxbase
 {
-SSLConfig::SSLConfig(const std::string& key, const std::string& cert, const std::string& ca)
-    : key(key)
+SSLConfig::SSLConfig(bool ssl_enabled, const std::string& key, const std::string& cert, const std::string& ca)
+    : enabled(ssl_enabled)
+    , key(key)
     , cert(cert)
     , ca(ca)
 {
-}
-
-// CA must always be defined for non-empty configurations
-bool SSLConfig::empty() const
-{
-    return ca.empty();
 }
 
 namespace ssl_version

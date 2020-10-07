@@ -74,8 +74,8 @@ bool MariaDB::open(const std::string& host, int port, const std::string& db)
         mysql_optionsv(newconn, MYSQL_PLUGIN_DIR, m_settings.plugin_dir.c_str());
     }
 
-    bool ssl_enabled = false;
-    if (!m_settings.ssl.empty())
+    bool ssl_enabled = m_settings.ssl.enabled;
+    if (ssl_enabled)
     {
         // If an option is empty, a null-pointer should be given to mysql_ssl_set.
         auto& ssl = m_settings.ssl;
@@ -112,7 +112,6 @@ bool MariaDB::open(const std::string& host, int port, const std::string& db)
             my_bool verify = 1;
             mysql_optionsv(newconn, MYSQL_OPT_SSL_VERIFY_SERVER_CERT, &verify);
         }
-        ssl_enabled = true;
     }
 
     if (!m_settings.local_address.empty())

@@ -47,8 +47,9 @@ Version from_string(const char* str);
 struct SSLConfig
 {
     SSLConfig() = default;
-    SSLConfig(const std::string& key, const std::string& cert, const std::string& ca);
-    bool empty() const;
+    SSLConfig(bool ssl_enabled, const std::string& key, const std::string& cert, const std::string& ca);
+
+    bool enabled = false;   /** Whether SSL should be used */
 
     std::string key;    /**< SSL private key */
     std::string cert;   /**< SSL certificate */
