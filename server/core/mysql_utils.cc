@@ -35,20 +35,20 @@
 
 MYSQL* mxs_mysql_real_connect(MYSQL* con, SERVER* server, int port, const char* user, const char* passwd)
 {
-    auto ssl = server->ssl().config();
+    auto ssl = server->ssl_config();
 
-    if (ssl)
+    if (ssl.enabled)
     {
         char enforce_tls = 1;
         mysql_optionsv(con, MYSQL_OPT_SSL_ENFORCE, (void*)&enforce_tls);
 
         // If an option is empty, a null-pointer should be given to mysql_ssl_set.
-        const char* ssl_key = ssl->key.empty() ? nullptr : ssl->key.c_str();
-        const char* ssl_cert = ssl->cert.empty() ? nullptr : ssl->cert.c_str();
-        const char* ssl_ca = ssl->ca.empty() ? nullptr : ssl->ca.c_str();
+        const char* ssl_key = ssl.key.empty() ? nullptr : ssl.key.c_str();
+        const char* ssl_cert = ssl.cert.empty() ? nullptr : ssl.cert.c_str();
+        const char* ssl_ca = ssl.ca.empty() ? nullptr : ssl.ca.c_str();
         mysql_ssl_set(con, ssl_key, ssl_cert, ssl_ca, NULL, NULL);
 
-        switch (ssl->version)
+        switch (ssl.version)
         {
         case mxb::ssl_version::TLS11:
             mysql_optionsv(con, MARIADB_OPT_TLS_VERSION, "TLSv1.1,TLSv1.2,TLSv1.3");
@@ -108,7 +108,7 @@ MYSQL* mxs_mysql_real_connect(MYSQL* con, SERVER* server, int port, const char* 
             mxs_update_server_charset(mysql, server);
         }
 
-        if (ssl && mysql_get_ssl_cipher(con) == NULL)
+        if (ssl.enabled && mysql_get_ssl_cipher(con) == NULL)
         {
             MXS_ERROR("An encrypted connection to '%s' could not be created, "
                       "ensure that TLS is enabled on the target server.",

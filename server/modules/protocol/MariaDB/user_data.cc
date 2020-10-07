@@ -312,8 +312,7 @@ bool MariaDBUserManager::update_users()
     for (auto srv : backends)
     {
         // Different backends may have different ssl settings so need to update.
-        const mxb::SSLConfig* srv_ssl_config = srv->ssl().config();
-        sett.ssl = (srv_ssl_config && !srv_ssl_config->empty()) ? *srv_ssl_config : mxb::SSLConfig();
+        sett.ssl = srv->ssl_config();
 
         if (con.open_extra(srv->address(), srv->port(), srv->extra_port()))
         {

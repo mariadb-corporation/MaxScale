@@ -468,17 +468,18 @@ maxsql::Connection::ConnectionDetails Pinloki::generate_details()
                 m_master_config.port = srv->port();
                 details.user = m_master_config.user = m_service->config()->user;
                 details.password = m_master_config.password = m_service->config()->password;
+                auto ssl = srv->ssl_config();
 
-                if (auto ssl = srv->ssl().config())
+                if (ssl.enabled)
                 {
                     details.ssl = m_master_config.ssl = true;
-                    details.ssl_ca = m_master_config.ssl_ca = ssl->ca;
-                    details.ssl_cert = m_master_config.ssl_cert = ssl->cert;
-                    details.ssl_crl = m_master_config.ssl_crl = ssl->crl;
-                    details.ssl_key = m_master_config.ssl_key = ssl->key;
-                    details.ssl_cipher = m_master_config.ssl_cipher = ssl->cipher;
+                    details.ssl_ca = m_master_config.ssl_ca = ssl.ca;
+                    details.ssl_cert = m_master_config.ssl_cert = ssl.cert;
+                    details.ssl_crl = m_master_config.ssl_crl = ssl.crl;
+                    details.ssl_key = m_master_config.ssl_key = ssl.key;
+                    details.ssl_cipher = m_master_config.ssl_cipher = ssl.cipher;
                     details.ssl_verify_server_cert =
-                        m_master_config.ssl_verify_server_cert = ssl->verify_peer;
+                        m_master_config.ssl_verify_server_cert = ssl.verify_peer;
                 }
 
                 m_master_config.use_gtid = true;
