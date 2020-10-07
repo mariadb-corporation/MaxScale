@@ -2264,7 +2264,7 @@ bool runtime_alter_listener_from_json(SListener listener, json_t* new_json)
             auto* cnf = listener->config();
             json_t* combined_params = merge_json_objects(cnf->to_json(), new_params);
 
-            if (cnf->specification().validate(new_params) && cnf->configure(combined_params))
+            if (cnf->specification().validate(combined_params) && cnf->configure(combined_params))
             {
                 // TODO: Configure the protocol module as well
 
