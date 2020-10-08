@@ -47,7 +47,6 @@ using std::unique_ptr;
 using std::move;
 using std::string;
 using ListenerSessionData = mxs::ListenerSessionData;
-
 using SListener = std::shared_ptr<Listener>;
 
 constexpr int BLOCK_TIME = 60;
@@ -167,24 +166,8 @@ private:
 };
 
 thread_local RateLimit rate_limit;
-
-class ThisUnit
-{
-public:
-    SListener              add_listener(SListener&& listener);
-    void                   destroy_instances();
-    void                   remove(const SListener& listener);
-    json_t*                to_json_collection(const char* host);
-    SListener              find(const std::string& name);
-    std::vector<SListener> find_by_service(const SERVICE* service);
-    void                   stop_all();
-
-private:
-    std::list<SListener> m_listeners;
-    std::mutex           m_lock;
-
-    bool listener_is_duplicate(const SListener& listener);
-} this_unit;
+static ListenerManager this_unit;
+}
 
 bool is_all_iface(const std::string& iface)
 {
@@ -196,7 +179,7 @@ bool is_all_iface(const std::string& a, const std::string& b)
     return is_all_iface(a) || is_all_iface(b);
 }
 
-bool ThisUnit::listener_is_duplicate(const SListener& listener)
+bool ListenerManager::listener_is_duplicate(const SListener& listener)
 {
     std::string name = listener->name();
     std::string address = listener->address();
@@ -226,34 +209,52 @@ bool ThisUnit::listener_is_duplicate(const SListener& listener)
     return false;
 }
 
-SListener ThisUnit::add_listener(SListener&& listener)
+template<class Params, class Unknown>
+SListener ListenerManager::create(const std::string& name, Params params, Unknown unknown)
 {
-    if (listener_is_duplicate(listener))
-    {
-        listener.reset();
-    }
-    else
-    {
-        std::lock_guard<std::mutex> guard(m_lock);
-        m_listeners.push_back(listener);
-    }
+    SListener listener;
 
+    if (s_spec.validate(params, &unknown))
+    {
+        if (auto mod = get_module(s_protocol.get(params), mxs::ModuleType::PROTOCOL))
+        {
+            if (!mod->specification || mod->specification->validate(params))
+            {
+                listener.reset(new Listener(name));
+
+                if (listener->m_config.configure(params))
+                {
+                    listener->set_type();
+
+                    if (!listener_is_duplicate(listener))
+                    {
+                        std::lock_guard<std::mutex> guard(m_lock);
+                        m_listeners.push_back(listener);
+                    }
+                    else
+                    {
+                        listener.reset();
+                    }
+                }
+            }
+        }
+    }
     return listener;
 }
 
-void ThisUnit::destroy_instances()
+void ListenerManager::destroy_instances()
 {
     std::lock_guard<std::mutex> guard(m_lock);
     m_listeners.clear();
 }
 
-void ThisUnit::remove(const SListener& listener)
+void ListenerManager::remove(const SListener& listener)
 {
     std::lock_guard<std::mutex> guard(m_lock);
     m_listeners.remove(listener);
 }
 
-void ThisUnit::stop_all()
+void ListenerManager::stop_all()
 {
     std::lock_guard<std::mutex> guard(m_lock);
 
@@ -263,7 +264,7 @@ void ThisUnit::stop_all()
     }
 }
 
-SListener ThisUnit::find(const std::string& name)
+SListener ListenerManager::find(const std::string& name)
 {
     SListener rval;
     std::lock_guard<std::mutex> guard(m_lock);
@@ -280,7 +281,7 @@ SListener ThisUnit::find(const std::string& name)
     return rval;
 }
 
-std::vector<SListener> ThisUnit::find_by_service(const SERVICE* service)
+std::vector<SListener> ListenerManager::find_by_service(const SERVICE* service)
 {
     std::vector<SListener> rval;
     std::lock_guard<std::mutex> guard(m_lock);
@@ -296,7 +297,7 @@ std::vector<SListener> ThisUnit::find_by_service(const SERVICE* service)
     return rval;
 }
 
-json_t* ThisUnit::to_json_collection(const char* host)
+json_t* ListenerManager::to_json_collection(const char* host)
 {
     json_t* arr = json_array();
     std::lock_guard<std::mutex> guard(m_lock);
@@ -307,7 +308,6 @@ json_t* ThisUnit::to_json_collection(const char* host)
     }
 
     return mxs_json_resource(host, MXS_JSON_API_LISTENERS, arr);
-}
 }
 
 Listener::Config::Config(const std::string& name, Listener* listener)
@@ -394,45 +394,15 @@ Listener::~Listener()
 SListener Listener::create(const std::string& name, const mxs::ConfigParameters& params)
 {
     mxb::LogScope scope(name.c_str());
-    SListener listener;
     mxs::ConfigParameters unknown;
-
-    if (s_spec.validate(params, &unknown))
-    {
-        // TODO: Validate using the protocol module specification if one is available. Currently all protocol
-        // module parameters are ignored.
-        listener.reset(new Listener(name));
-
-        if (listener->m_config.configure(params))
-        {
-            listener->set_type();
-            return this_unit.add_listener(std::move(listener));
-        }
-    }
-
-    return {};
+    return this_unit.create(name, params, unknown);
 }
 
 SListener Listener::create(const std::string& name, json_t* params)
 {
     mxb::LogScope scope(name.c_str());
-    SListener listener;
     std::set<std::string> unknown;
-
-    if (s_spec.validate(params, &unknown))
-    {
-        // TODO: Validate using the protocol module specification if one is available. Currently all protocol
-        // module parameters are ignored.
-        listener.reset(new Listener(name));
-
-        if (listener->m_config.configure(params))
-        {
-            listener->set_type();
-            return this_unit.add_listener(std::move(listener));
-        }
-    }
-
-    return {};
+    return this_unit.create(name, params, unknown);
 }
 
 void Listener::set_type()

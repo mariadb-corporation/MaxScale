@@ -18,6 +18,8 @@
 
 class Service;
 
+class ListenerManager;
+
 /**
  * The Listener class is used to link a network port to a service. It defines the name of the
  * protocol module that should be loaded as well as the authenticator that is used.
@@ -219,6 +221,8 @@ public:
     static mxs::config::Specification* specification();
 
 private:
+    friend class ListenerManager;
+
     enum State
     {
         CREATED,
@@ -319,6 +323,28 @@ private:
 
     SData create_shared_data();
     void  set_type();
+};
+
+class ListenerManager
+{
+public:
+    using SListener = std::shared_ptr<Listener>;
+
+    template<class Params, class Unknown>
+    SListener create(const std::string& name, Params params, Unknown unknown);
+
+    void                   destroy_instances();
+    void                   remove(const SListener& listener);
+    json_t*                to_json_collection(const char* host);
+    SListener              find(const std::string& name);
+    std::vector<SListener> find_by_service(const SERVICE* service);
+    void                   stop_all();
+
+private:
+    std::list<SListener> m_listeners;
+    std::mutex           m_lock;
+
+    bool listener_is_duplicate(const SListener& listener);
 };
 
 /**
