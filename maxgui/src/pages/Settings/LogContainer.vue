@@ -52,7 +52,7 @@
                 <div ref="scrollableContent" v-scroll:#scrollable-wrapper="onScroll">
                     <log-lines
                         :isLoading="isLoading"
-                        :chosenLogLevels="chosenLogLevels"
+                        :isFiltering="isFiltering"
                         :allLogData="allLogData"
                         :filteredLog="filteredLog"
                     />

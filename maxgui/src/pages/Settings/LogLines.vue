@@ -51,13 +51,10 @@ export default {
     props: {
         allLogData: { type: Array, required: true },
         filteredLog: { type: Array, required: true },
-        chosenLogLevels: { type: Array, required: true },
         isLoading: { type: Boolean, required: true },
+        isFiltering: { type: Boolean, required: true },
     },
     computed: {
-        isFiltering: function() {
-            return this.chosenLogLevels.length > 0
-        },
         logToShow: function() {
             if (this.isFiltering) return this.filteredLog
             else return this.allLogData

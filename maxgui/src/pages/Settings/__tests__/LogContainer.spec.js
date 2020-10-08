@@ -100,9 +100,7 @@ describe('LogContainer', () => {
         const logLines = wrapper.findComponent({ name: 'log-lines' })
         expect(logLines.vm.$props.allLogData).to.be.deep.equals(wrapper.vm.$data.allLogData)
         expect(logLines.vm.$props.filteredLog).to.be.deep.equals(wrapper.vm.$data.filteredLog)
-        expect(logLines.vm.$props.chosenLogLevels).to.be.deep.equals(
-            wrapper.vm.$data.chosenLogLevels
-        )
+        expect(logLines.vm.$props.isFiltering).to.be.equals(wrapper.vm.isFiltering)
         expect(logLines.vm.$props.isLoading).to.be.deep.equals(wrapper.vm.$data.isLoading)
     })
 

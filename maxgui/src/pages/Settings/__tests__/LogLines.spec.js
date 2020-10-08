@@ -26,7 +26,7 @@ const mountFactory = () =>
             allLogData: dummy_log_data,
             isLoading: false,
             filteredLog: [],
-            chosenLogLevels: [],
+            isFiltering: false,
         },
     })
 
@@ -68,19 +68,10 @@ describe('LogLines', () => {
         expect(wrapper.html().includes('No logs found'))
     })
 
-    it(`Should return accurate boolean value for computed property 'isFiltering'`, async () => {
-        expect(wrapper.vm.isFiltering).to.be.false
-        await wrapper.setProps({
-            chosenLogLevels: dummyChosenLogLevels,
-            filteredLog: dummyFilteredLog,
-        })
-        expect(wrapper.vm.isFiltering).to.be.true
-    })
-
     it(`Should return accurate log data for computed property 'logToShow'`, async () => {
         expect(wrapper.vm.logToShow).to.be.deep.equals(dummy_log_data)
         await wrapper.setProps({
-            chosenLogLevels: dummyChosenLogLevels,
+            isFiltering: true,
             filteredLog: dummyFilteredLog,
         })
         expect(wrapper.vm.logToShow).to.be.deep.equals(dummyFilteredLog)
