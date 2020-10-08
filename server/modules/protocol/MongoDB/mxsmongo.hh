@@ -401,6 +401,11 @@ public:
         return (m_flags & MONGOC_MSG_MORE_TO_COME) ? true : false;
     }
 
+    const std::vector<bsoncxx::document::view>& documents() const
+    {
+        return m_documents;
+    }
+
     std::ostream& out(std::ostream& o) const override
     {
         Packet::out(o);

@@ -238,22 +238,26 @@ GWBUF* ClientConnection::handle_query(const mxsmongo::Query& req)
 {
     GWBUF* pResponse = nullptr;
 
+    // TODO: The assumption here is that the collection is the primary entity,
+    // TODO: which decides what follows. Current assumption is that but for predefined
+    // TODO: collections, a collection will be mapped to an existing table.
+
     if (req.collection() == "admin.$cmd")
     {
-        auto query = req.query();
-
-        if (query.find("ismaster") != query.cend())
+        switch (mxsmongo::get_command(req.query()))
         {
+        case mxsmongo::Command::ISMASTER:
             pResponse = create_handshake_response(req);
-        }
-        else
-        {
+            break;
+
+        case mxsmongo::Command::UNKNOWN:
+            MXS_ERROR("Query not recognized: %s", req.to_string().c_str());
             mxb_assert(!true);
         }
     }
     else
     {
-        MXS_ERROR("Do not know what to do with collection '%s'.", req.zCollection());
+        MXS_ERROR("Don't know what to do with collection '%s'.", req.zCollection());
         mxb_assert(!true);
     }
 
@@ -264,14 +268,58 @@ GWBUF* ClientConnection::handle_msg(const mxsmongo::Msg& req)
 {
     GWBUF* pResponse = nullptr;
 
-    stringstream ss;
-    ss << req;
+    for (const auto& doc : req.documents())
+    {
+        // TODO: Somewhat unclear in what order things should be done here.
+        // TODO: As we know all clients will make regular ismaster queries,
+        // TODO: we start by checking for that.
 
-    MXS_NOTICE("%s", ss.str().c_str());
+        switch (mxsmongo::get_command(doc))
+        {
+        case mxsmongo::Command::ISMASTER:
+            {
+                auto element = doc["$db"];
 
-    mxb_assert(!true);
+                if (element)
+                {
+                    if (element.type() == bsoncxx::type::k_utf8)
+                    {
+                        auto utf8 = element.get_utf8();
 
-    return nullptr;
+                        if (utf8.value == bsoncxx::stdx::string_view("admin"))
+                        {
+                            pResponse = create_handshake_response(req);
+                        }
+                        else
+                        {
+                            MXS_ERROR("Key '$db' found but value not 'admin' but '%s'.",
+                                      utf8.value.data());
+                            mxb_assert(!true);
+                        }
+                    }
+                    else
+                    {
+                        MXS_ERROR("Key '$db' found, but value is not utf8.");
+                        mxb_assert(!true);
+                    }
+                }
+                else
+                {
+                    MXS_ERROR("Document did not contain the expected key '$db': %s",
+                              req.to_string().c_str());
+                    mxb_assert(!true);
+                }
+
+            }
+            break;
+
+        case mxsmongo::Command::UNKNOWN:
+            MXS_ERROR("Dont know what to do:\n%s", req.to_string().c_str());
+            mxb_assert(!true);
+        }
+    }
+
+    return pResponse;
 }
 
 GWBUF* ClientConnection::create_handshake_response(const mxsmongo::Packet& req)
