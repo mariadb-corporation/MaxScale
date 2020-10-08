@@ -59,6 +59,11 @@ public:
 
         mxb::ssl_version::Version ssl_version;
 
+        bool configure(const mxs::ConfigParameters& params,
+                       mxs::ConfigParameters* pUnrecognized = nullptr) override;
+
+        bool configure(json_t* json, std::set<std::string>* pUnrecognized = nullptr) override;
+
     protected:
         bool post_configure() override;
 
@@ -223,9 +228,13 @@ private:
         DESTROYED
     };
 
-    Config      m_config;
-    std::string m_name;             /**< Name of the listener */
-    State       m_state;            /**< Listener state */
+    Config      m_config;   /**< The listener configuration */
+    std::string m_name;     /**< Name of the listener */
+    State       m_state;    /**< Listener state */
+
+    // The configuration parameters given to the listener. These are not validated and are only
+    // used to construct the authenticators.
+    mxs::ConfigParameters m_params;
 
     Type m_type;    /**< The type of the listener */
 

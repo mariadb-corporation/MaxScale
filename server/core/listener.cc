@@ -359,6 +359,19 @@ bool Listener::Config::post_configure()
     return m_listener->post_configure();
 }
 
+bool Listener::Config::configure(const mxs::ConfigParameters& params,
+                                 mxs::ConfigParameters* pUnrecognized)
+{
+    m_listener->m_params = params;
+    return mxs::config::Configuration::configure(params, pUnrecognized);
+}
+
+bool Listener::Config::configure(json_t* json, std::set<std::string>* pUnrecognized)
+{
+    m_listener->m_params = mxs::ConfigParameters::from_json(json);
+    return mxs::config::Configuration::configure(json, pUnrecognized);
+}
+
 // static
 mxs::config::Specification* Listener::specification()
 {
@@ -1013,9 +1026,8 @@ void Listener::accept_connections()
 Listener::SData Listener::create_shared_data()
 {
     SData rval;
-    auto mod = get_module(m_config.protocol, mxs::ModuleType::PROTOCOL);
 
-    if (mod)
+    if (auto mod = get_module(m_config.protocol, mxs::ModuleType::PROTOCOL))
     {
         auto protocol_api = reinterpret_cast<MXS_PROTOCOL_API*>(mod->module_object);
         std::unique_ptr<mxs::ProtocolModule> protocol_module {protocol_api->create_protocol_module()};
@@ -1023,27 +1035,20 @@ Listener::SData Listener::create_shared_data()
         if (protocol_module)
         {
             // TODO: The old behavior where the global sql_mode was used if the listener one isn't configured
-
             mxs::SSLContext ssl;
-            json_t* js = m_config.to_json();
-            auto params = mxs::ConfigParameters::from_json(js);
-            json_decref(js);
 
-            // TODO: Make SSLContext configurable in some other way
-
-            if (ssl.read_configuration(m_name, params, true))
+            if (ssl.read_configuration(m_name, m_params, true))
             {
                 ListenerSessionData::ConnectionInitSql init_sql;
                 if (read_connection_init_sql(m_config.connection_init_sql_file, &init_sql))
                 {
-
                     std::vector<mxs::SAuthenticatorModule> authenticators;
 
                     if (protocol_module->capabilities() & mxs::ProtocolModule::CAP_AUTH_MODULES)
                     {
                         // If the protocol uses separate authenticator modules, assume that at least
                         // one must be created.
-                        authenticators = protocol_module->create_authenticators(params);
+                        authenticators = protocol_module->create_authenticators(m_params);
 
                         if (authenticators.empty())
                         {
