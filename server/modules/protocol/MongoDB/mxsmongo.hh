@@ -114,6 +114,22 @@ inline int32_t set_byte8(uint8_t* pBuffer, uint64_t val)
 
 const char* opcode_to_string(int code);
 
+namespace keys
+{
+
+const char ISMASTER[] = "ismaster";
+
+};
+
+enum class Command
+{
+    UNKNOWN,
+
+    ISMASTER,
+};
+
+Command get_command(const bsoncxx::document::view& doc);
+
 class Packet
 {
 public:
@@ -182,6 +198,13 @@ public:
         o << "opcode     : " << opcode_to_string(opcode()) << "\n";
 
         return o;
+    }
+
+    std::string to_string() const
+    {
+        std::stringstream ss;
+        out(ss);
+        return ss.str();
     }
 
 protected:
