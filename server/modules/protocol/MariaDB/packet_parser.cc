@@ -52,7 +52,6 @@ StringParseRes read_stringz_if_cap(packet_parser::ByteVec& data, uint32_t client
 namespace packet_parser
 {
 
-
 ClientInfo parse_client_capabilities(ByteVec& data, const ClientInfo* old_info)
 {
     auto rval = old_info ? *old_info : ClientInfo();
@@ -308,4 +307,12 @@ mariadb::AuthSwitchReqContents parse_auth_switch_request(ByteVec& data)
     }
     return rval;
 }
+
+void ByteVec::push_back(const std::string& str)
+{
+    auto src = reinterpret_cast<const uint8_t*>(str.data());
+    auto n = str.length() + 1;
+    insert(end(), src, src + n);
+}
+
 }

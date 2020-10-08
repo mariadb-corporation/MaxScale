@@ -60,6 +60,7 @@ using std::move;
 using std::string;
 
 const char WORD_KILL[] = "KILL";
+const string base_plugin = DEFAULT_MYSQL_AUTH_PLUGIN;
 const int CLIENT_CAPABILITIES_LEN = 32;
 const int SSL_REQUEST_PACKET_SIZE = MYSQL_HEADER_LEN + CLIENT_CAPABILITIES_LEN;
 const int NORMAL_HS_RESP_MIN_SIZE = MYSQL_AUTH_PACKET_BASE_SIZE + 2;
@@ -326,182 +327,104 @@ int MariaDBClientConnection::ssl_authenticate_client()
 /**
  * Send the server handshake packet to the client.
  *
- * @return The packet length sent
+ * @return True on success
  */
-int MariaDBClientConnection::send_mysql_client_handshake()
+bool MariaDBClientConnection::send_server_handshake()
 {
     auto service = m_session->service;
+    packet_parser::ByteVec payload;
+    // The exact size depends on a few factors, reserve enough to avoid reallocations in most cases.
+    payload.reserve(130);
 
-    uint8_t mysql_packet_header[4];
-    uint8_t mysql_packet_id = 0;
-    /* uint8_t mysql_filler = GW_MYSQL_HANDSHAKE_FILLER; not needed*/
-    uint8_t mysql_protocol_version = GW_MYSQL_PROTOCOL_VERSION;
-    uint8_t* mysql_handshake_payload = NULL;
-    uint8_t mysql_thread_id_num[4];
-    uint8_t mysql_scramble_buf[9] = "";
-    uint8_t mysql_plugin_data[13] = "";
-    uint8_t mysql_server_capabilities_one[2];
-    uint8_t mysql_server_capabilities_two[2];
-    uint8_t mysql_server_language = service->charset();
-    if (mysql_server_language == 0)
+    // Contents as in https://mariadb.com/kb/en/connection/#initial-handshake-packet
+    payload.push_back((uint8_t)GW_MYSQL_PROTOCOL_VERSION);
+    payload.push_back(get_version_string(service));
+
+    // The length of the following fields all the way until plugin name is 44.
+    const int id_to_plugin_bytes = 44;
+    auto orig_size = payload.size();
+    payload.resize(orig_size + id_to_plugin_bytes);
+    auto ptr = payload.data() + orig_size;
+
+    // Use the session id as the server thread id. Only the low 32bits are sent in the handshake.
+    mariadb::set_byte4(ptr, m_session->id());
+    ptr += 4;
+
+    auto* scramble_storage = m_session_data->scramble;
+    mxb::Worker::gen_random_bytes(scramble_storage, MYSQL_SCRAMBLE_LEN);
+
+    // Write scramble part 1.
+    ptr = mariadb::copy_bytes(ptr, scramble_storage, 8);
+
+    // Filler byte.
+    *ptr++ = 0;
+
+    // 8 bytes of capabilities, sent in three parts.
+    uint64_t caps = GW_MYSQL_CAPABILITIES_SERVER;
+    bool extended_caps = supports_extended_caps(service);
+    if (extended_caps)
     {
-        // Charset 8 is latin1, the server default.
-        mysql_server_language = 8;
-    }
-
-    uint8_t mysql_server_status[2];
-    uint8_t mysql_scramble_len = 21;
-    uint8_t mysql_filler_ten[10] = {};
-    /* uint8_t mysql_last_byte = 0x00; not needed */
-    uint8_t server_scramble[GW_MYSQL_SCRAMBLE_SIZE] {};
-    mxb::Worker::gen_random_bytes(server_scramble, sizeof(server_scramble));
-    bool is_maria = supports_extended_caps(service);
-
-    // copy back to the caller
-    memcpy(m_session_data->scramble, server_scramble, GW_MYSQL_SCRAMBLE_SIZE);
-
-    if (is_maria)
-    {
-        /**
-         * The new 10.2 capability flags are stored in the last 4 bytes of the
-         * 10 byte filler block.
-         */
-        uint32_t new_flags = MXS_EXTRA_CAPABILITIES_SERVER;
-        memcpy(mysql_filler_ten + 6, &new_flags, sizeof(new_flags));
-    }
-
-    // Send the session id as the server thread id. Only the low 32bits are sent in the handshake.
-    auto thread_id = m_session->id();
-    mariadb::set_byte4(mysql_thread_id_num, (uint32_t)(thread_id));
-    memcpy(mysql_scramble_buf, server_scramble, 8);
-
-    memcpy(mysql_plugin_data, server_scramble + 8, 12);
-
-    /**
-     * Use the default authentication plugin name in the initial handshake. If the
-     * authenticator needs to change the authentication method, it should send
-     * an AuthSwitchRequest packet to the client.
-     */
-    const char* plugin_name = DEFAULT_MYSQL_AUTH_PLUGIN;
-    int plugin_name_len = strlen(plugin_name);
-
-    std::string version = get_version_string(service);
-
-    uint32_t mysql_payload_size =
-        sizeof(mysql_protocol_version) + (version.length() + 1) + sizeof(mysql_thread_id_num) + 8
-        + sizeof(    /* mysql_filler */ uint8_t) + sizeof(mysql_server_capabilities_one)
-        + sizeof(mysql_server_language)
-        + sizeof(mysql_server_status) + sizeof(mysql_server_capabilities_two) + sizeof(mysql_scramble_len)
-        + sizeof(mysql_filler_ten) + 12 + sizeof(    /* mysql_last_byte */ uint8_t) + plugin_name_len
-        + sizeof(    /* mysql_last_byte */ uint8_t);
-
-    // allocate memory for packet header + payload
-    GWBUF* buf = gwbuf_alloc(sizeof(mysql_packet_header) + mysql_payload_size);
-    if (!buf)
-    {
-        mxb_assert(buf);
-        return 0;
-    }
-    uint8_t* outbuf = GWBUF_DATA(buf);
-
-    // write packet header with mysql_payload_size
-    mariadb::set_byte3(mysql_packet_header, mysql_payload_size);
-
-    // write packet number, now is 0
-    mysql_packet_header[3] = mysql_packet_id;
-    memcpy(outbuf, mysql_packet_header, sizeof(mysql_packet_header));
-
-    // current buffer pointer
-    mysql_handshake_payload = outbuf + sizeof(mysql_packet_header);
-
-    // write protocol version
-    memcpy(mysql_handshake_payload, &mysql_protocol_version, sizeof(mysql_protocol_version));
-    mysql_handshake_payload = mysql_handshake_payload + sizeof(mysql_protocol_version);
-
-    // write server version plus 0 filler
-    strcpy((char*)mysql_handshake_payload, version.c_str());
-    mysql_handshake_payload = mysql_handshake_payload + version.length();
-
-    *mysql_handshake_payload = 0x00;
-
-    mysql_handshake_payload++;
-
-    // write thread id
-    memcpy(mysql_handshake_payload, mysql_thread_id_num, sizeof(mysql_thread_id_num));
-    mysql_handshake_payload = mysql_handshake_payload + sizeof(mysql_thread_id_num);
-
-    // write scramble buf
-    memcpy(mysql_handshake_payload, mysql_scramble_buf, 8);
-    mysql_handshake_payload = mysql_handshake_payload + 8;
-    *mysql_handshake_payload = GW_MYSQL_HANDSHAKE_FILLER;
-    mysql_handshake_payload++;
-
-    // write server capabilities part one
-    mysql_server_capabilities_one[0] = (uint8_t)GW_MYSQL_CAPABILITIES_SERVER;
-    mysql_server_capabilities_one[1] = (uint8_t)(GW_MYSQL_CAPABILITIES_SERVER >> 8);
-
-    if (is_maria)
-    {
-        /** A MariaDB 10.2 server doesn't send the CLIENT_MYSQL capability
-         * to signal that it supports extended capabilities */
-        mysql_server_capabilities_one[0] &= ~(uint8_t)GW_MYSQL_CAPABILITIES_CLIENT_MYSQL;
+        // A MariaDB 10.2 server or later omits the CLIENT_MYSQL capability. This signals that it supports
+        // extended capabilities.
+        caps &= ~GW_MYSQL_CAPABILITIES_CLIENT_MYSQL;
+        caps |= MXS_EXTRA_CAPS_SERVER64;
     }
 
     if (require_ssl())
     {
-        mysql_server_capabilities_one[1] |= (int)GW_MYSQL_CAPABILITIES_SSL >> 8;
+        caps |= GW_MYSQL_CAPABILITIES_SSL;
     }
 
-    memcpy(mysql_handshake_payload, mysql_server_capabilities_one, sizeof(mysql_server_capabilities_one));
-    mysql_handshake_payload = mysql_handshake_payload + sizeof(mysql_server_capabilities_one);
+    // Convert to little endian, write 2 bytes.
+    uint8_t caps_le[8];
+    mariadb::set_byte8(caps_le, caps);
+    ptr = mariadb::copy_bytes(ptr, caps_le, 2);
 
-    // write server language
-    memcpy(mysql_handshake_payload, &mysql_server_language, sizeof(mysql_server_language));
-    mysql_handshake_payload = mysql_handshake_payload + sizeof(mysql_server_language);
+    // Character set.
+    uint8_t charset = service->charset();
+    if (charset == 0)
+    {
+        charset = 8;         // Charset 8 is latin1, the server default.
+    }
+    *ptr++ = charset;
 
-    // write server status
-    mysql_server_status[0] = 2;
-    mysql_server_status[1] = 0;
-    memcpy(mysql_handshake_payload, mysql_server_status, sizeof(mysql_server_status));
-    mysql_handshake_payload = mysql_handshake_payload + sizeof(mysql_server_status);
+    uint16_t status_flags = 2; // autocommit enabled
+    mariadb::set_byte2(ptr, status_flags);
+    ptr += 2;
 
-    // write server capabilities part two
-    mysql_server_capabilities_two[0] = (uint8_t)(GW_MYSQL_CAPABILITIES_SERVER >> 16);
-    mysql_server_capabilities_two[1] = (uint8_t)(GW_MYSQL_CAPABILITIES_SERVER >> 24);
+    // More capabilities.
+    ptr = mariadb::copy_bytes(ptr, caps_le + 2, 2);
 
-    /** NOTE: pre-2.1 versions sent the fourth byte of the capabilities as
-     *  the value 128 even though there's no such capability. */
+    *ptr++ = MYSQL_SCRAMBLE_LEN + 1; // Plugin data total length, contains 1 filler.
 
-    memcpy(mysql_handshake_payload, mysql_server_capabilities_two, sizeof(mysql_server_capabilities_two));
-    mysql_handshake_payload = mysql_handshake_payload + sizeof(mysql_server_capabilities_two);
+    // 6 bytes filler
+    ptr = mariadb::set_bytes(ptr, 0, 6);
 
-    // write scramble_len
-    memcpy(mysql_handshake_payload, &mysql_scramble_len, sizeof(mysql_scramble_len));
-    mysql_handshake_payload = mysql_handshake_payload + sizeof(mysql_scramble_len);
+    // Capabilities part 3 or 4 filler bytes.
+    ptr = (extended_caps) ? mariadb::copy_bytes(ptr, caps_le + 4, 4) : mariadb::set_bytes(ptr, 0, 4);
 
-    // write 10 filler
-    memcpy(mysql_handshake_payload, mysql_filler_ten, sizeof(mysql_filler_ten));
-    mysql_handshake_payload = mysql_handshake_payload + sizeof(mysql_filler_ten);
+    // Scramble part 2.
+    ptr = mariadb::copy_bytes(ptr, scramble_storage + 8, 12);
 
-    // write plugin data
-    memcpy(mysql_handshake_payload, mysql_plugin_data, 12);
-    mysql_handshake_payload = mysql_handshake_payload + 12;
+    // filler
+    *ptr++ = 0;
 
-    // write last byte, 0
-    *mysql_handshake_payload = 0x00;
-    mysql_handshake_payload++;
+    mxb_assert(ptr - (payload.data() + orig_size) == id_to_plugin_bytes);
+    // Add plugin name.
+    payload.push_back(base_plugin);
 
-    // to be understanded ????
-    memcpy(mysql_handshake_payload, plugin_name, plugin_name_len);
-    mysql_handshake_payload = mysql_handshake_payload + plugin_name_len;
-
-    // write last byte, 0
-    *mysql_handshake_payload = 0x00;
-
-    // writing data in the Client buffer queue
-    write(buf);
-
-    return sizeof(mysql_packet_header) + mysql_payload_size;
+    bool rval = false;
+    // Allocate buffer and send.
+    auto pl_size = payload.size();
+    GWBUF* buf = gwbuf_alloc(MYSQL_HEADER_LEN + pl_size);
+    if (buf)
+    {
+        ptr = GWBUF_DATA(buf);
+        ptr = mariadb::write_header(ptr, pl_size, 0);
+        memcpy(ptr, payload.data(), pl_size);
+        rval = (write(buf) == 1);
+    }
+    return rval;
 }
 
 /**
@@ -1520,8 +1443,7 @@ void MariaDBClientConnection::hangup(DCB* event_dcb)
 
 bool MariaDBClientConnection::init_connection()
 {
-    send_mysql_client_handshake();
-    return true;
+    return send_server_handshake();
 }
 
 void MariaDBClientConnection::finish_connection()

@@ -18,8 +18,20 @@
 
 namespace packet_parser
 {
-using ByteVec = std::vector<uint8_t>;
 using ClientInfo = MYSQL_session::ClientInfo;
+
+class ByteVec : public std::vector<uint8_t>
+{
+public:
+    using std::vector<uint8_t>::push_back;
+
+    /**
+     * Add a null-terminated string.
+     *
+     * @param str The string
+     */
+    void push_back(const std::string& str);
+};
 
 /** Authentication token parsing depends on packet type. */
 enum class AuthPacketType

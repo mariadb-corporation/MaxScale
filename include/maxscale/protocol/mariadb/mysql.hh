@@ -142,6 +142,36 @@ uint16_t get_byte2(const uint8_t* buffer);
 uint32_t get_byte3(const uint8_t* buffer);
 uint32_t get_byte4(const uint8_t* buffer);
 uint64_t get_byte8(const uint8_t* buffer);
+
+/**
+ * Write MySQL-header to buffer.
+ *
+ * @param buffer Destination buffer
+ * @param pl_size Payload size, max 2^24 - 1
+ * @param seq Sequence number
+ * @return Pointer to next byte
+ */
+uint8_t* write_header(uint8_t* buffer, uint32_t pl_size, uint8_t seq);
+
+/**
+ * Same as mempcpy, but for uint8_t*.
+ *
+ * @param dest Destination buffer
+ * @param src Source buffer
+ * @param n Bytes to copy
+ * @return Pointer to next byte
+ */
+uint8_t* copy_bytes(uint8_t* dest, const uint8_t* src, size_t n);
+
+/**
+ * Same as memset.
+ *
+ * @param dest Destination buffer
+ * @param val Value to write
+ * @param n Bytes to write
+ * @return Pointer to next byte
+ */
+uint8_t* set_bytes(uint8_t* dest, uint8_t val, size_t n);
 }
 
 /** MySQL protocol constants */
@@ -228,6 +258,8 @@ enum gw_mysql_capabilities_t
 
 // Default extended flags that MaxScale supports
 constexpr const uint32_t MXS_EXTRA_CAPABILITIES_SERVER = MXS_MARIA_CAP_STMT_BULK_OPERATIONS;
+// Same as above, for uint64.
+constexpr const uint64_t MXS_EXTRA_CAPS_SERVER64 = (1ul << 34u);
 
 enum mxs_mysql_cmd_t
 {

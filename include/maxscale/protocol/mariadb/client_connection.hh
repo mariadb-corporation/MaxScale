@@ -85,7 +85,7 @@ private:
     StateMachineRes process_authentication(AuthType auth_type);
     StateMachineRes process_normal_read();
 
-    int  send_mysql_client_handshake();
+    bool send_server_handshake();
     bool parse_ssl_request_packet(GWBUF* buffer);
     bool parse_handshake_response_packet(GWBUF* buffer);
 

@@ -604,6 +604,26 @@ void set_byte8(uint8_t* buffer, uint64_t val)
     *ple64 = le64;
 }
 
+uint8_t* write_header(uint8_t* buffer, uint32_t pl_size, uint8_t seq)
+{
+    mxb_assert(pl_size <= 0xFFFFFF);
+    uint32_t seq_expanded = (seq << 24u);
+    uint32_t host_bytes = seq_expanded | pl_size;
+    set_byte4(buffer, host_bytes);
+    return buffer + 4;
+}
+
+uint8_t* copy_bytes(uint8_t* dest, const uint8_t* src, size_t n)
+{
+    return static_cast<uint8_t*>(mempcpy(dest, src, n));
+}
+
+uint8_t* set_bytes(uint8_t* dest, uint8_t val, size_t n)
+{
+    memset(dest, val, n);
+    return dest + n;
+}
+
 uint16_t get_byte2(const uint8_t* buffer)
 {
     uint16_t le16 = *(reinterpret_cast<const uint16_t*>(buffer));
