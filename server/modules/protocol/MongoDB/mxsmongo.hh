@@ -112,24 +112,7 @@ inline int32_t set_byte8(uint8_t* pBuffer, uint64_t val)
     return 8;
 }
 
-std::string to_string(const bson_t& bson);
-
 const char* opcode_to_string(int code);
-
-inline bool checksum_present(uint32_t flag_bits)
-{
-    return (flag_bits & MONGOC_MSG_CHECKSUM_PRESENT) ? true : false;
-}
-
-inline bool exhaust_allowed(uint32_t flag_bits)
-{
-    return (flag_bits & MONGOC_MSG_EXHAUST_ALLOWED) ? true : false;
-}
-
-inline bool more_to_come(uint32_t flag_bits)
-{
-    return (flag_bits & MONGOC_MSG_MORE_TO_COME) ? true : false;
-}
 
 class Packet
 {
