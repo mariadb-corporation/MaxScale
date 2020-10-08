@@ -150,10 +150,12 @@ void ClientConnection::write_ready(DCB* pDcb)
     }
 }
 
-void ClientConnection::error(DCB* dcb)
+void ClientConnection::error(DCB* pDcb)
 {
     TRACE();
-    mxb_assert(!true);
+    mxb_assert(m_pDcb == pDcb);
+
+    m_session.kill();
 }
 
 void ClientConnection::hangup(DCB* pDcb)
@@ -196,13 +198,14 @@ GWBUF* ClientConnection::handle_one_packet(GWBUF* pPacket)
 {
     GWBUF* pResponse = nullptr;
 
-    mongoc_rpc_header_t* pHeader = reinterpret_cast<mongoc_rpc_header_t*>(gwbuf_link_data(pPacket));
-
     mxb_assert(gwbuf_is_contiguous(pPacket));
     mxb_assert(gwbuf_length(pPacket) >= MXSMONGO_HEADER_LEN);
-    mxb_assert(pHeader->msg_len == (int)gwbuf_length(pPacket));
 
-    switch (pHeader->opcode)
+    mxsmongo::Packet packet(pPacket);
+
+    mxb_assert(packet.msg_len() == (int)gwbuf_length(pPacket));
+
+    switch (packet.opcode())
     {
     case MONGOC_OPCODE_COMPRESSED:
     case MONGOC_OPCODE_DELETE:
@@ -211,135 +214,67 @@ GWBUF* ClientConnection::handle_one_packet(GWBUF* pPacket)
     case MONGOC_OPCODE_KILL_CURSORS:
     case MONGOC_OPCODE_REPLY:
     case MONGOC_OPCODE_UPDATE:
-        MXS_ERROR("Packet %s not handled (yet).", mxsmongo::opcode_to_string(pHeader->opcode));
+        MXS_ERROR("Packet %s not handled (yet).", mxsmongo::opcode_to_string(packet.opcode()));
         mxb_assert(!true);
         break;
 
     case MONGOC_OPCODE_MSG:
-        pResponse = handle_op_msg(pPacket);
+        pResponse = handle_msg(mxsmongo::Msg(packet));
         break;
 
     case MONGOC_OPCODE_QUERY:
-        pResponse = handle_op_query(pPacket);
+        pResponse = handle_query(mxsmongo::Query(packet));
         break;
 
     default:
-        MXS_ERROR("Unknown opcode %d.", pHeader->opcode);
+        MXS_ERROR("Unknown opcode %d.", packet.opcode());
         mxb_assert(!true);
     }
 
     return pResponse;
 }
 
-GWBUF* ClientConnection::handle_op_query(GWBUF* pPacket)
+GWBUF* ClientConnection::handle_query(const mxsmongo::Query& req)
 {
     GWBUF* pResponse = nullptr;
 
-    pResponse = handshake(pPacket);
+    if (req.collection() == "admin.$cmd")
+    {
+        auto query = req.query();
+
+        if (query.find("ismaster") != query.cend())
+        {
+            pResponse = create_handshake_response(req);
+        }
+        else
+        {
+            mxb_assert(!true);
+        }
+    }
+    else
+    {
+        MXS_ERROR("Do not know what to do with collection '%s'.", req.zCollection());
+        mxb_assert(!true);
+    }
 
     return pResponse;
 }
 
-GWBUF* ClientConnection::handle_op_msg(GWBUF* pPacket)
+GWBUF* ClientConnection::handle_msg(const mxsmongo::Msg& req)
 {
     GWBUF* pResponse = nullptr;
 
-    uint8_t* pData = gwbuf_link_data(pPacket);
-    mongoc_rpc_header_t* pHeader = reinterpret_cast<mongoc_rpc_header_t*>(pData);
-    uint8_t* pEnd = pData + pHeader->msg_len;
+    stringstream ss;
+    ss << req;
 
-    pData += MXSMONGO_HEADER_LEN;
-
-    uint32_t flag_bits;
-    pData += mxsmongo::get_byte4(pData, &flag_bits);
-
-    bool checksum_present = mxsmongo::checksum_present(flag_bits);
-    bool exhaust_allowed = mxsmongo::exhaust_allowed(flag_bits);
-    bool more_to_come = mxsmongo::more_to_come(flag_bits);
-
-    mxb_assert(!more_to_come); // We can't handle this yet.
-
-    uint8_t* pSections_end = pEnd - (checksum_present ? sizeof(uint32_t) : 0);
-    size_t sections_size = pSections_end - pData;
-
-    while (pData < pSections_end)
-    {
-        uint8_t kind;
-        pData += mxsmongo::get_byte1(pData, &kind);
-
-        switch (kind)
-        {
-        case 0:
-            // Body section encoded as a single BSON object.
-            {
-                uint32_t size;
-                mxsmongo::get_byte4(pData, &size);
-                bsoncxx::document::view doc(pData, size);
-                pData += size;
-
-                string s = bsoncxx::to_json(doc);
-
-                MXS_NOTICE("DOC: %s", s.c_str());
-            }
-            break;
-
-        case 1:
-            mxb_assert(!true);
-            break;
-
-        default:
-            mxb_assert(!true);
-        }
-    }
+    MXS_NOTICE("%s", ss.str().c_str());
 
     mxb_assert(!true);
 
     return nullptr;
 }
 
-GWBUF* ClientConnection::handshake(GWBUF* pPacket)
-{
-    mxb_assert(gwbuf_is_contiguous(pPacket));
-
-    // TODO: Actually do something with the provided data.
-
-    auto link_len = gwbuf_link_length(pPacket);
-
-    uint8_t* pData = gwbuf_link_data(pPacket);
-    uint8_t* pEnd = pData + link_len;
-    mongoc_rpc_header_t* pReq_hdr = reinterpret_cast<mongoc_rpc_header_t*>(gwbuf_link_data(pPacket));
-
-    pData += MXSMONGO_HEADER_LEN;
-
-    uint32_t flags;
-    const char* zCollection;
-    uint32_t nSkip;
-    uint32_t nReturn;
-
-    pData += mxsmongo::get_byte4(pData, &flags);
-    pData += mxsmongo::get_zstring(pData, &zCollection);
-    pData += mxsmongo::get_byte4(pData, &nSkip);
-    pData += mxsmongo::get_byte4(pData, &nReturn);
-
-    while (pData < pEnd)
-    {
-        size_t bson_len = mxsmongo::get_byte4(pData);
-        bson_t bson;
-        bson_init_static(&bson, pData, bson_len);
-
-        string s = mxsmongo::to_string(bson);
-
-        MXS_NOTICE("%s", s.c_str());
-
-        pData += bson_len;
-    }
-
-    mxb_assert(pData == pEnd);
-
-    return create_handshake_response(pReq_hdr);
-}
-
-GWBUF* ClientConnection::create_handshake_response(const mongoc_rpc_header_t* pReq_hdr)
+GWBUF* ClientConnection::create_handshake_response(const mxsmongo::Packet& req)
 {
     // TODO: Do not simply return a hardwired response.
 
@@ -382,7 +317,7 @@ GWBUF* ClientConnection::create_handshake_response(const mongoc_rpc_header_t* pR
     auto* pRes_hdr = reinterpret_cast<mongoc_rpc_header_t*>(GWBUF_DATA(pResponse));
     pRes_hdr->msg_len = response_size;
     pRes_hdr->request_id = m_request_id++;
-    pRes_hdr->response_to = pReq_hdr->request_id;
+    pRes_hdr->response_to = req.request_id();
     pRes_hdr->opcode = MONGOC_OPCODE_REPLY;
 
     uint8_t* pData = GWBUF_DATA(pResponse) + MXSMONGO_HEADER_LEN;

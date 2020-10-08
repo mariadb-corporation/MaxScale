@@ -46,12 +46,10 @@ private:
 private:
     GWBUF* handle_one_packet(GWBUF* pPacket);
 
-    GWBUF* handle_op_query(GWBUF* pPacket);
-    GWBUF* handle_op_msg(GWBUF* pPacket);
+    GWBUF* handle_query(const mxsmongo::Query& request);
+    GWBUF* handle_msg(const mxsmongo::Msg& request);
 
-    GWBUF* handshake(GWBUF* pPacket);
-
-    GWBUF* create_handshake_response(const mongoc_rpc_header_t* pReq_hdr);
+    GWBUF* create_handshake_response(const mxsmongo::Packet& request);
 
 private:
     MXS_SESSION&    m_session;
