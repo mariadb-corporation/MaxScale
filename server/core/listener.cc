@@ -1059,11 +1059,11 @@ Listener::SData Listener::create_shared_data()
                         {
                             return {};
                         }
-
-                        rval = std::make_shared<ListenerSessionData>(
-                            move(ssl), m_config.sql_mode, m_config.service, move(protocol_module),
-                            m_name, move(authenticators), move(init_sql));
                     }
+
+                    rval = std::make_shared<ListenerSessionData>(
+                        move(ssl), m_config.sql_mode, m_config.service, move(protocol_module),
+                        m_name, move(authenticators), move(init_sql));
                 }
             }
         }
