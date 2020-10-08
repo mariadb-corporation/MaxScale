@@ -23,7 +23,7 @@ $(<${script_dir}/templates/install.json.template)
 
 # destroying existing box
 if [ -d "install_$box" ]; then
-        ${mdbci_dir}/mdbci destroy $name
+        ${mdbci_dir}/mdbci destroy --force $name
 fi
 
 # starting VM for build
@@ -33,7 +33,7 @@ if [ $? != 0 ] ; then
         if [ $? != 0 ] ; then
 		echo "Error starting VM"
 		if [ "x$do_not_destroy_vm" != "xyes" ] ; then
-                        ${mdbci_dir}/mdbci destroy $name
+                        ${mdbci_dir}/mdbci destroy --force $name
 		fi
 		rm -f ~/vagrant_lock
 		exit 1
@@ -113,7 +113,7 @@ scp $scpopt $sshuser@$IP:/var/log/maxscale/* $logs_publish_dir
 chmod a+r $logs_publish_dir/*
 
 if [ "x$do_not_destroy_vm" != "xyes" ] ; then
-        ${mdbci_dir}/mdbci destroy $name
+        ${mdbci_dir}/mdbci destroy --force $name
 fi
 kill $pid_to_kill
 exit $res
