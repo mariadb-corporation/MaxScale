@@ -153,7 +153,7 @@ public:
      * @param output Output
      * @return True if results of a manual command were available.
      */
-    bool fetch_cmd_results(json_t** output);
+    bool fetch_cmd_result(json_t** output);
 
 protected:
     bool can_be_disabled(const mxs::MonitorServer& server, std::string* errmsg_out) const override;

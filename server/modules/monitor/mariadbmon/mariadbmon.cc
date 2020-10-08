@@ -928,7 +928,7 @@ bool MariaDBMonitor::run_release_locks(json_t** error_out)
     return execute_manual_command(func, release_locks_cmd, error_out);
 }
 
-bool MariaDBMonitor::fetch_cmd_results(json_t** output)
+bool MariaDBMonitor::fetch_cmd_result(json_t** output)
 {
     using ExecState = ManualCommand::ExecState;
     auto current_state = ExecState::NONE;
@@ -960,11 +960,11 @@ bool MariaDBMonitor::fetch_cmd_results(json_t** output)
         break;
 
     case ExecState::SCHEDULED:
-        PRINT_MXS_JSON_ERROR(output, cmd_running_fmt, current_cmd_name.c_str(), "pending");
+        *output = mxs_json_error_append(*output, cmd_running_fmt, current_cmd_name.c_str(), "pending");
         break;
 
     case ExecState::RUNNING:
-        PRINT_MXS_JSON_ERROR(output, cmd_running_fmt, current_cmd_name.c_str(), "running");
+        *output = mxs_json_error_append(*output, cmd_running_fmt, current_cmd_name.c_str(), "running");
         break;
 
     case ExecState::DONE:
@@ -1266,13 +1266,13 @@ bool handle_release_locks(const MODULECMD_ARG* args, json_t** output)
     return mariamon->run_release_locks(output);
 }
 
-bool handle_fetch_cmd_results(const MODULECMD_ARG* args, json_t** output)
+bool handle_fetch_cmd_result(const MODULECMD_ARG* args, json_t** output)
 {
     mxb_assert(args->argc == 1);
     mxb_assert(MODULECMD_GET_TYPE(&args->argv[0].type) == MODULECMD_ARG_MONITOR);
     Monitor* mon = args->argv[0].value.monitor;
     auto mariamon = static_cast<MariaDBMonitor*>(mon);
-    mariamon->fetch_cmd_results(output);
+    mariamon->fetch_cmd_result(output);
     return true;    // result fetch always works, even if there is nothing to return
 }
 
@@ -1357,15 +1357,21 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
                                MXS_ARRAY_NELEMS(release_locks_argv), release_locks_argv,
                                "Release any held server locks for 1 minute.");
 
-    static modulecmd_arg_type_t fetch_cmd_results_argv[] =
+    static modulecmd_arg_type_t fetch_cmd_result_argv[] =
     {
         {MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC},
     };
 
+    static const char fetch_desc[] = "Fetch result of the last scheduled command.";
     modulecmd_register_command(MXS_MODULE_NAME, "fetch-cmd-results", MODULECMD_TYPE_PASSIVE,
-                               handle_fetch_cmd_results,
-                               MXS_ARRAY_NELEMS(fetch_cmd_results_argv), fetch_cmd_results_argv,
-                               "Fetch results from the last scheduled command.");
+                               handle_fetch_cmd_result,
+                               MXS_ARRAY_NELEMS(fetch_cmd_result_argv), fetch_cmd_result_argv,
+                               fetch_desc);
+
+    modulecmd_register_command(MXS_MODULE_NAME, "fetch-cmd-result", MODULECMD_TYPE_PASSIVE,
+                               handle_fetch_cmd_result,
+                               MXS_ARRAY_NELEMS(fetch_cmd_result_argv), fetch_cmd_result_argv,
+                               fetch_desc);
 
     static MXS_MODULE info =
     {
