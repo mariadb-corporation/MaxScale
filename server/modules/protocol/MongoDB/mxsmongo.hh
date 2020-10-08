@@ -191,13 +191,14 @@ public:
         return m_pHeader->opcode;
     }
 
-    virtual std::ostream& out(std::ostream& out) const
+    virtual std::ostream& out(std::ostream& o) const
     {
-        out << "msg_len    : " << msg_len() << std::endl;
-        out << "request_id : " << request_id() << std::endl;
-        out << "response_to: " << response_to() << std::endl;
-        out << "opcode     : " << opcode_to_string(opcode()) << std::endl;
-        return out;
+        o << "msg_len    : " << msg_len() << "\n";
+        o << "request_id : " << request_id() << "\n";
+        o << "response_to: " << response_to() << "\n";
+        o << "opcode     : " << opcode_to_string(opcode()) << "\n";
+
+        return o;
     }
 
 protected:
@@ -232,26 +233,61 @@ public:
         {
             mxsmongo::get_byte4(m_pData, &size);
             mxb_assert(m_pEnd - m_pData == size);
-            m_returnFieldsSelector = bsoncxx::document::view { m_pData, size };
+            m_fields = bsoncxx::document::view { m_pData, size };
             m_pData += size;
         }
 
         mxb_assert(m_pData == m_pEnd);
     }
 
+    uint32_t flags() const
+    {
+        return m_flags;
+    }
+
+    const char* zCollection() const
+    {
+        return m_zCollection;
+    }
+
+    std::string collection() const
+    {
+        return m_zCollection;
+    }
+
+    uint32_t nSkip() const
+    {
+        return m_nSkip;
+    }
+
+    uint32_t nReturn() const
+    {
+        return m_nReturn;
+    }
+
+    const bsoncxx::document::view& query() const
+    {
+        return m_query;
+    }
+
+    const bsoncxx::document::view& fields() const
+    {
+        return m_fields;
+    }
+
     Query(const Query&) = default;
     Query& operator = (const Query&) = default;
 
-    std::ostream& out(std::ostream& out) const override
+    std::ostream& out(std::ostream& o) const override
     {
-        Packet::out(out);
-        out << "flags      : " << m_flags << std::endl;
-        out << "collection : " << m_zCollection << std::endl;
-        out << "nSkip      : " << m_nSkip << std::endl;
-        out << "nReturn           : " << m_nReturn << std::endl;
-        out << "query                : " << bsoncxx::to_json(m_query);
-        out << "returnFieldsSelector : " << bsoncxx::to_json(m_returnFieldsSelector);
-        return out;
+        Packet::out(o);
+        o << "flags      : " << m_flags << "\n";
+        o << "collection : " << m_zCollection << "\n";
+        o << "nSkip      : " << m_nSkip << "\n";
+        o << "nReturn    : " << m_nReturn << "\n";
+        o << "query      : " << bsoncxx::to_json(m_query) << "\n";
+        o << "fields     : " << bsoncxx::to_json(m_fields);
+        return o;
     }
 
 protected:
@@ -260,7 +296,7 @@ protected:
     uint32_t                m_nSkip;
     uint32_t                m_nReturn;
     bsoncxx::document::view m_query;
-    bsoncxx::document::view m_returnFieldsSelector;
+    bsoncxx::document::view m_fields;
 };
 
 class Reply : public Packet
@@ -291,21 +327,21 @@ public:
     Reply(const Reply&) = default;
     Reply& operator = (const Reply&) = default;
 
-    std::ostream& out(std::ostream& out) const override
+    std::ostream& out(std::ostream& o) const override
     {
-        Packet::out(out);
-        out << "flags      : " << m_flags << std::endl;
-        out << "cursorId   : " << m_cursor_id << std::endl;
-        out << "start_from : " << m_start_from << std::endl;
-        out << "nReturned  : " << m_nReturned << std::endl;
-        out << "documents  : ";
+        Packet::out(o);
+        o << "flags      : " << m_flags << "\n";
+        o << "cursorId   : " << m_cursor_id << "\n";
+        o << "start_from : " << m_start_from << "\n";
+        o << "nReturned  : " << m_nReturned << "\n";
+        o << "documents  : \n";
 
         for (const auto& doc : m_documents)
         {
-            out << bsoncxx::to_json(doc);
+            o << bsoncxx::to_json(doc) << "\n";
         }
 
-        return out;
+        return o;
     }
 
 protected:
@@ -382,17 +418,18 @@ public:
         return (m_flags & MONGOC_MSG_MORE_TO_COME) ? true : false;
     }
 
-    std::ostream& out(std::ostream& out) const override
+    std::ostream& out(std::ostream& o) const override
     {
-        Packet::out(out);
-        out << "flags      : " << m_flags << std::endl;
+        Packet::out(o);
+        o << "flags      : " << m_flags << "\n";
+        o << "sections   : \n";
 
         for (const auto& doc : m_documents)
         {
-            out << bsoncxx::to_json(doc);
+            o << bsoncxx::to_json(doc) << "\n";
         }
 
-        return out;
+        return o;
     }
 
 protected:
