@@ -235,16 +235,7 @@ GWBUF* ClientConnection::handle_op_query(GWBUF* pPacket)
 {
     GWBUF* pResponse = nullptr;
 
-    switch (m_state)
-    {
-    case State::CONNECTED:
-    case State::HANDSHAKING:
-        pResponse = handshake(pPacket);
-        break;
-
-    case State::READY:
-        mxb_assert(!true);
-    }
+    pResponse = handshake(pPacket);
 
     return pResponse;
 }

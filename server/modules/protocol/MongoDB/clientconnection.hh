@@ -19,13 +19,6 @@
 class ClientConnection : public mxs::ClientConnection
 {
 public:
-    enum class State
-    {
-        CONNECTED,
-        HANDSHAKING,
-        READY,
-    };
-
     ClientConnection(MXS_SESSION* pSession, mxs::Component* pComponent);
     ~ClientConnection();
 
@@ -61,7 +54,6 @@ private:
     GWBUF* create_handshake_response(const mongoc_rpc_header_t* pReq_hdr);
 
 private:
-    State           m_state { State::CONNECTED };
     MXS_SESSION&    m_session;
     mxs::Component& m_component;
     DCB*            m_pDcb = nullptr;
