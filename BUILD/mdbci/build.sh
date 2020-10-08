@@ -54,7 +54,7 @@ fi
 if [ "$already_running" != "ok" ]; then
 	# destroying existing box
 	if [ -d "$MDBCI_VM_PATH/${name}" ]; then
-		${mdbci_dir}/mdbci destroy $name
+		${mdbci_dir}/mdbci destroy --force $name
 	fi
         # Just in case some old lock file left
         rm -rf ${snapshot_lock_file}
@@ -111,7 +111,7 @@ if [ "$try_already_running" == "yes" ] ; then
 fi
 if [[ "$do_not_destroy_vm" != "yes" && "$try_already_running" != "yes" ]] ; then
   echo "Destroying VM"
-  ${mdbci_dir}/mdbci destroy $name
+  ${mdbci_dir}/mdbci destroy --force $name
 fi
 cd $dir
 

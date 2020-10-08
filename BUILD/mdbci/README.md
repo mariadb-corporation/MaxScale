@@ -34,7 +34,7 @@ Prerequirements:
 * $HOME/team_keys file contains public keys to be installed to VM
 
 By default VM will not stay alive after the build. Please use ```export do_not_destroy_vm=yes```
-to prevent VM from being destroyed. In this case VM have to be destroyed manually by ```mdbci destroy```
+to prevent VM from being destroyed. In this case VM have to be destroyed manually by ```mdbci destroy --force```
 command.
 
 VM will be created in ```$HOME/vms directory```, binary repository will be created the in
