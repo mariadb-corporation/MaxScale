@@ -179,6 +179,7 @@ struct Set
 
 struct ChangeMaster
 {
+    std::string                       connection_name;
     std::vector<ChangeMasterVariable> values;
 };
 
@@ -314,11 +315,11 @@ const auto set_def = x3::lit("SET") > global_or_session > (set_names | (variable
 
 // CHANGE MASTER TO, only accepts a limited set of keys
 const auto change_master_variable_def = change_master_sym > eq > field;
-const auto change_master_def = x3::lit("CHANGE") > x3::lit("MASTER") > x3::lit("TO")
+const auto change_master_def = x3::lit("CHANGE") > x3::lit("MASTER") > -q_str > x3::lit("TO")
     > (change_master_variable % ',');
 
-// START SLAVE et al.
-const auto slave_def = slave_sym > "SLAVE";
+// START SLAVE et al. The connection_name, if any, is ignored.
+const auto slave_def = slave_sym > "SLAVE" > x3::omit[-q_str];
 
 // PURGE {BINARY | MASTER} LOGS TO '<binlog name>'
 const auto purge_logs_def = x3::lit("PURGE") > (x3::lit("BINARY") | x3::lit("MASTER")) > x3::lit("LOGS")
@@ -393,6 +394,12 @@ struct ResultVisitor : public boost::static_visitor<>
 
     void operator()(ChangeMaster& s)
     {
+        if (!s.connection_name.empty())
+        {
+            MXS_SWARNING("Connection name ignored in CHANGE MASTER. "
+                         "Multi-Source Replication is not supported by Binlog Router");
+        }
+
         pinloki::parser::ChangeMasterValues changes;
 
         for (const auto& a : s.values)
@@ -504,7 +511,7 @@ BOOST_FUSION_ADAPT_STRUCT(Variable, key, value);
 BOOST_FUSION_ADAPT_STRUCT(ChangeMasterVariable, key, value);
 BOOST_FUSION_ADAPT_STRUCT(Select, values);
 BOOST_FUSION_ADAPT_STRUCT(Set, values);
-BOOST_FUSION_ADAPT_STRUCT(ChangeMaster, values);
+BOOST_FUSION_ADAPT_STRUCT(ChangeMaster, connection_name, values);
 BOOST_FUSION_ADAPT_STRUCT(ShowVariables, like);
 BOOST_FUSION_ADAPT_STRUCT(PurgeLogs, up_to);
 BOOST_FUSION_ADAPT_STRUCT(MasterGtidWait, gtid, timeout);
