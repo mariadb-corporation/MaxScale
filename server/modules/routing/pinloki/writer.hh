@@ -43,17 +43,19 @@ public:
     void run();
 
     mxq::GtidList get_gtid_io_pos() const;
+    int64_t       master_id() const;
 
 private:
-    Generator         m_generator;
-    mxb::Worker*      m_worker;
-    InventoryWriter&  m_inventory;
-    bool              m_is_bootstrap = false;
-    bool              m_commit_on_query = false;
-    maxsql::GtidList  m_current_gtid_list;
-    std::atomic<bool> m_running {true};
-    std::thread       m_thread;
-    maxbase::Timer    m_timer {10s};
+    Generator            m_generator;
+    mxb::Worker*         m_worker;
+    InventoryWriter&     m_inventory;
+    bool                 m_is_bootstrap = false;
+    bool                 m_commit_on_query = false;
+    maxsql::GtidList     m_current_gtid_list;
+    std::atomic<bool>    m_running {true};
+    std::thread          m_thread;
+    maxbase::Timer       m_timer {10s};
+    std::atomic<int64_t> m_master_id;
 
     mutable std::mutex              m_lock;
     mutable std::condition_variable m_cond;

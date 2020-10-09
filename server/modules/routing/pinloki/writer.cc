@@ -69,6 +69,11 @@ mxq::GtidList Writer::get_gtid_io_pos() const
     return m_current_gtid_list;
 }
 
+int64_t Writer::master_id() const
+{
+    return m_master_id.load(std::memory_order_acquire);
+}
+
 void Writer::update_gtid_list(const mxq::Gtid& gtid)
 {
     std::lock_guard<std::mutex> guard(m_lock);
@@ -115,6 +120,8 @@ void Writer::run()
                 }
 
                 file.add_event(rpl_event);
+
+                m_master_id.store(rpl_event.server_id(), std::memory_order_release);
 
                 switch (rpl_event.event_type())
                 {

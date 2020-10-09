@@ -610,7 +610,7 @@ GWBUF* Pinloki::show_slave_status(bool all) const
     rset->add_column("Last_SQL_Errno", "0");
     rset->add_column("Last_SQL_Error", "");
     rset->add_column("Replicate_Ignore_Server_Ids", "");
-    rset->add_column("Master_Server_Id", std::to_string(m_config.server_id()));
+    rset->add_column("Master_Server_Id", m_writer ? std::to_string(m_writer->master_id()) : "0");
     rset->add_column("Master_SSL_Crl", "");
     rset->add_column("Master_SSL_Crlpath", "");
     rset->add_column("Using_Gtid", "Slave_Pos");
