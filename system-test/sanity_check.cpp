@@ -96,6 +96,17 @@ void test_rwsplit(TestConnections& test)
         mysql_stat(test.maxscales->conn_rwsplit[0]);
         test.try_query(test.maxscales->conn_rwsplit[0], "SELECT 1");
     }
+
+    //
+    // MXS-3229: Hang with COM_SET_OPTION
+    //
+
+    mysql_set_server_option(test.maxscales->conn_rwsplit[0], MYSQL_OPTION_MULTI_STATEMENTS_ON);
+    mysql_set_server_option(test.maxscales->conn_rwsplit[0], MYSQL_OPTION_MULTI_STATEMENTS_OFF);
+
+    // Make sure the connection is still OK
+    test.try_query(test.maxscales->conn_rwsplit[0], "SELECT 1");
+
     test.maxscales->disconnect();
 }
 

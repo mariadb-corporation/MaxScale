@@ -2093,8 +2093,17 @@ void MariaDBBackendConnection::process_result_start(Iter it, Iter end)
         break;
 
     case MYSQL_REPLY_EOF:
-        // EOF packets are never expected as the first response unless changing user.
-        mxb_assert(m_changing_user);
+        // EOF packets are never expected as the first response unless changing user. For some reason the
+        // server also responds with a EOF packet to COM_SET_OPTION even though, according to documentation,
+        // it should respond with an OK packet.
+        if (m_reply.command() == MXS_COM_SET_OPTION)
+        {
+            set_reply_state(ReplyState::DONE);
+        }
+        else
+        {
+            mxb_assert(m_changing_user);
+        }
         break;
 
     default:
