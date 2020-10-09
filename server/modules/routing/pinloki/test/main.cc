@@ -209,15 +209,6 @@ try
         ofs << override_gtid_list;
     }
 
-    // This is for the writer, normally done in pinloki.cc
-    if (auto ifs = std::ifstream(config().gtid_file_path()))
-    {
-        std::string gtid_list_str;
-        ifs >> gtid_list_str;
-        config().set_boot_strap_gtid_list(gtid_list_str);
-    }
-
-
     prog_main(override_gtid_list, host + ":" + std::to_string(port), user, pw);
 }
 catch (maxbase::Exception& ex)

@@ -39,7 +39,7 @@ Writer::Writer(Generator generator, mxb::Worker* worker, InventoryWriter* inv)
     : m_generator(generator)
     , m_worker(worker)
     , m_inventory(*inv)
-    , m_current_gtid_list(m_inventory.config().boot_strap_gtid_list())
+    , m_current_gtid_list(m_inventory.rpl_state())
 {
     mxb_assert(m_worker);
     m_thread = std::thread(&Writer::run, this);
@@ -83,7 +83,7 @@ void Writer::update_gtid_list(const mxq::Gtid& gtid)
 void Writer::start_replication(mxq::Connection& conn)
 {
     std::vector<maxsql::Gtid> gtids;
-    if (m_inventory.rpl_state().empty() && m_current_gtid_list.is_valid())
+    if (!m_inventory.rpl_state().is_valid() && m_current_gtid_list.is_valid())
     {
         // If the m_current_gtid_list is set, meaning a user has set it with
         // set @@global.gtid_slave_pos='0-1000-1234', then the actual start
@@ -166,19 +166,10 @@ void Writer::run()
                 MXS_ERROR("Error received during replication: %s", x.what());
             }
 
-            auto new_gtid_list = m_inventory.config().boot_strap_gtid_list();
-
-            if (new_gtid_list.to_string() == m_current_gtid_list.to_string())
-            {
-                std::unique_lock<std::mutex> guard(m_lock);
-                m_cond.wait_for(guard, std::chrono::seconds(1), [this]() {
-                                    return !m_running;
-                                });
-            }
-            else
-            {
-                m_current_gtid_list = new_gtid_list;
-            }
+            std::unique_lock<std::mutex> guard(m_lock);
+            m_cond.wait_for(guard, std::chrono::seconds(1), [this]() {
+                                return !m_running;
+                            });
         }
     }
 }

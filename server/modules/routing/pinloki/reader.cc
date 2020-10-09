@@ -43,7 +43,7 @@ Reader::Reader(Callback cb, const Config& conf, mxb::Worker* worker, const maxsq
     , m_heartbeat_interval(heartbeat_interval)
     , m_last_event(std::chrono::steady_clock::now())
 {
-    auto gtid_list = maxsql::GtidList::from_string(m_inventory.rpl_state());
+    auto gtid_list = m_inventory.rpl_state();
 
     if (gtid_list.is_included(maxsql::GtidList({m_start_gtid})))
     {
@@ -76,7 +76,7 @@ bool Reader::poll_start_reading(mxb::Worker::Call::action_t action)
     bool continue_poll = true;
     if (action == mxb::Worker::Call::EXECUTE)
     {
-        auto gtid_list = maxsql::GtidList::from_string(m_inventory.rpl_state());
+        auto gtid_list = m_inventory.rpl_state();
         if (gtid_list.is_included(maxsql::GtidList({m_start_gtid})))
         {
             MXB_SINFO("ReplSYNC: Primary synchronized, start file_reader");

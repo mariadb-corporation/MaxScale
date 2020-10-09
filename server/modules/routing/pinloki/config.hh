@@ -47,13 +47,7 @@ public:
     std::string inventory_file_path() const;
     std::string gtid_file_path() const;
     std::string master_info_file() const;
-    /**
-     * @brief boot_strap_gtid_list - a.k.a replication state
-     * @return
-     */
-    maxsql::GtidList boot_strap_gtid_list() const;
-    void             set_boot_strap_gtid_list(const std::string& gtid);
-    uint32_t         server_id() const;
+    uint32_t    server_id() const;
 
     // Network timeout
     std::chrono::seconds net_timeout() const;
@@ -76,8 +70,6 @@ private:
     std::string m_binlog_inventory_file = "binlog.index";
     /* Hashing directory (properly indexing, but the word is already in use) */
     std::string m_binlog_hash_dir = ".hash";
-    /** Gtid used if there in no gtid yet */
-    maxsql::GtidList m_boot_strap_gtid_list;
     /** Where the current master details are stored */
     std::string m_master_ini_path;
     /** Server id reported to the Master */

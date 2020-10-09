@@ -40,7 +40,7 @@ std::vector<std::string> read_inventory_file(const Config& config)
     return file_names;
 }
 
-std::string read_rpl_state(const Config& config)
+maxsql::GtidList read_rpl_state(const Config& config)
 {
     std::string ret;
     if (auto ifs = std::ifstream(config.gtid_file_path()))
@@ -48,7 +48,7 @@ std::string read_rpl_state(const Config& config)
         ifs >> ret;
     }
 
-    return ret;
+    return maxsql::GtidList::from_string(ret);
 }
 }
 
@@ -104,7 +104,7 @@ std::vector<std::string> InventoryWriter::file_names() const
     return m_file_names;
 }
 
-std::string InventoryWriter::rpl_state() const
+maxsql::GtidList InventoryWriter::rpl_state() const
 {
     return read_rpl_state(m_config);
 }
@@ -155,7 +155,7 @@ const std::vector<std::string>& InventoryReader::file_names() const
     return m_file_names = read_inventory_file(m_config);
 }
 
-std::string InventoryReader::rpl_state() const
+maxsql::GtidList InventoryReader::rpl_state() const
 {
     return read_rpl_state(m_config);
 }

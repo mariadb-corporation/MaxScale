@@ -160,12 +160,6 @@ Pinloki::Pinloki(SERVICE* pService, Config&& config)
     , m_config(std::move(config))
     , m_inventory(m_config)
 {
-    auto rpl_state = m_inventory.rpl_state();
-    if (!rpl_state.empty())
-    {
-        m_config.set_boot_strap_gtid_list(rpl_state);
-    }
-
     if (m_master_config.load(m_config))
     {
         if (m_master_config.slave_running)
@@ -642,12 +636,12 @@ GWBUF* Pinloki::show_slave_status(bool all) const
 
 void Pinloki::set_gtid(const mxq::GtidList& gtid)
 {
-    m_config.set_boot_strap_gtid_list(gtid.to_string());
+    // TODO, this is "set @@global.gtid_slave_pos"
 }
 
 mxq::GtidList Pinloki::gtid_io_pos() const
 {
-    return m_writer ? m_writer->get_gtid_io_pos() : m_config.boot_strap_gtid_list();
+    return m_inventory.rpl_state();
 }
 
 void Pinloki::MasterConfig::save(const Config& config) const
