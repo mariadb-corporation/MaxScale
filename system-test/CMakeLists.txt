@@ -169,6 +169,7 @@ add_test_executable(csmon_test.cpp csmon_test csmon_test LABELS csmon CS_BACKEND
 # MXS-682
 # MXS-957
 # MXS-1786
+# MXS-3229
 add_test_executable(sanity_check.cpp sanity_check replication LABELS readwritesplit LIGHT REPL_BACKEND)
 
 # Repeatedly connect to maxscale while the backends reject all connections, expect no crash
