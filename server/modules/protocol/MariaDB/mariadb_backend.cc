@@ -163,11 +163,6 @@ MariaDBBackendConnection::create(MXS_SESSION* session, mxs::Component* component
     return backend_conn;
 }
 
-bool MariaDBBackendConnection::init_connection()
-{
-    return true;
-}
-
 void MariaDBBackendConnection::finish_connection()
 {
     mxb_assert(m_dcb->handler());

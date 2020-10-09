@@ -55,7 +55,9 @@ public:
     void mxs_mysql_execute_kill(uint64_t target_id, kill_type_t type);
     bool in_routing_state() const override;
 
-    json_t* diagnostics() const;
+    json_t* diagnostics() const override;
+
+    int32_t clientReply(GWBUF* buffer, mxs::ReplyRoute& down, const mxs::Reply& reply) override;
 
 private:
     /** Return type of process_special_commands() */

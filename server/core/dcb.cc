@@ -1635,11 +1635,6 @@ SERVICE* DCB::service() const
     return m_session->service;
 }
 
-int32_t DCB::protocol_write(GWBUF* pData)
-{
-    return protocol()->write(pData);
-}
-
 /**
  * ClientDCB
  */

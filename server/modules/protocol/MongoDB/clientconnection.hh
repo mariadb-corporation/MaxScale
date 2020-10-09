@@ -29,6 +29,8 @@ public:
     ClientDCB* dcb() override;
     const ClientDCB* dcb() const override;
 
+    int32_t clientReply(GWBUF* buffer, mxs::ReplyRoute& down, const mxs::Reply& reply) override;
+
     bool in_routing_state() const override
     {
         return true;

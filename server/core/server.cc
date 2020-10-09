@@ -855,6 +855,7 @@ bool ServerEndpoint::connect()
     if ((m_dcb = worker->get_backend_dcb(m_server, m_session, this)))
     {
         m_server->stats().add_connection();
+        m_conn = m_dcb->protocol();
     }
 
     return m_dcb != nullptr;
@@ -879,7 +880,7 @@ int32_t ServerEndpoint::routeQuery(GWBUF* buffer)
 {
     mxb::LogScope scope(m_server->name());
     mxb_assert(is_open());
-    return m_dcb->protocol_write(buffer);
+    return m_conn->write(buffer);
 }
 
 int32_t ServerEndpoint::clientReply(GWBUF* buffer, mxs::ReplyRoute& down, const mxs::Reply& reply)

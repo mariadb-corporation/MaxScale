@@ -32,7 +32,6 @@ public:
 
     int32_t write(GWBUF* buffer) override;
 
-    bool    init_connection() override;
     void    finish_connection() override;
     bool    reuse_connection(BackendDCB* dcb, mxs::Component* upstream) override;
     bool    established() override;
@@ -40,13 +39,6 @@ public:
     bool    can_close() const override;
     int64_t seconds_idle() const override;
     json_t* diagnostics() const override;
-
-    /**
-     *  Check every packet type, if is ok packet then parse it
-     *
-     *  @param buff Buffer, may contain multiple complete packets
-     */
-    void mxs_mysql_get_session_track_info(GWBUF* buff);
 
     void              set_dcb(DCB* dcb) override;
     const BackendDCB* dcb() const override;

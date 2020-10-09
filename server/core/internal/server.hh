@@ -457,8 +457,10 @@ public:
                      const mxs::Reply& reply) override;
 
 private:
-    DCB*            m_dcb {nullptr};
+    BackendDCB*     m_dcb {nullptr};
     mxs::Component* m_up;
     MXS_SESSION*    m_session;
     Server*         m_server;
+
+    mxs::BackendConnection* m_conn {nullptr};
 };

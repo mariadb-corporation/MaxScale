@@ -330,8 +330,6 @@ public:
         return m_writeqlen;
     }
 
-    int32_t protocol_write(GWBUF* pData);
-
     // TODO: Should probably be made protected.
     virtual void shutdown() = 0;
 

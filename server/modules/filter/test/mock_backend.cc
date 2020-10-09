@@ -257,6 +257,11 @@ private:
             return true;
         }
 
+        int32_t clientReply(GWBUF* buffer, mxs::ReplyRoute& down, const mxs::Reply& reply) override
+        {
+            return write(buffer);
+        }
+
     private:
         ResultSetDCB& m_owner;
     };
@@ -306,7 +311,7 @@ void ResultSetBackend::handle_statement(RouterSession* pSession, GWBUF* pStateme
         std::unique_ptr<ResultSet> set = ResultSet::create({"a"});
         set->add_row({std::to_string(++m_counter)});
         ResultSetDCB dcb(pSession->session());
-        dcb.protocol_write(set->as_buffer().release());
+        dcb.protocol()->write(set->as_buffer().release());
 
         enqueue_response(pSession, dcb.create_response());
     }

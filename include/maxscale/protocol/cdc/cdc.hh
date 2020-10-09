@@ -95,6 +95,8 @@ public:
     bool init_connection() override;
     void finish_connection() override;
 
+    int32_t clientReply(GWBUF* buffer, mxs::ReplyRoute& down, const mxs::Reply& reply) override;
+
 private:
     int m_state {CDC_STATE_WAIT_FOR_AUTH};      /*< CDC protocol state */
 

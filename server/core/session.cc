@@ -1340,7 +1340,7 @@ int32_t Session::clientReply(GWBUF* buffer, mxs::ReplyRoute& down, const mxs::Re
         parse_and_set_trx_state(reply);
     }
 
-    return m_client_conn->write(buffer);
+    return m_client_conn->clientReply(buffer, down, reply);
 }
 
 bool Session::handleError(mxs::ErrorType type, GWBUF* error, Endpoint* down, const mxs::Reply& reply)
@@ -1408,7 +1408,7 @@ Session::create_backend_connection(Server* server, BackendDCB::Manager* manager,
             link_backend_connection(pConn);
             dcb->set_connection(std::move(conn));
 
-            if (pConn->init_connection() && dcb->enable_events())
+            if (dcb->enable_events())
             {
                 // The DCB is now connected and added to epoll set. Authentication is done after the EPOLLOUT
                 // event that is triggered once the connection is established.

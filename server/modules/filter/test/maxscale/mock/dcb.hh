@@ -145,6 +145,11 @@ private:
             return true;
         }
 
+        int32_t clientReply(GWBUF* buffer, mxs::ReplyRoute& down, const mxs::Reply& reply) override
+        {
+            return write(buffer);
+        }
+
     private:
         Dcb::Handler* m_pHandler;
         Dcb*          m_dcb {nullptr};

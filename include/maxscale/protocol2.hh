@@ -177,6 +177,17 @@ public:
         return "";
     }
 
+    /**
+     * Route reply to client. This should be called from the session to route a query to client instead of
+     * write(), as write() does not update routing status.
+     *
+     * @param buffer Reply buffer
+     * @param down Path taken
+     * @param reply Reply info
+     * @return True on success
+     */
+    virtual int32_t clientReply(GWBUF* buffer, ReplyRoute& down, const mxs::Reply& reply) = 0;
+
     virtual ClientDCB*       dcb() = 0;
     virtual const ClientDCB* dcb() const = 0;
 
@@ -219,13 +230,6 @@ class BackendConnection : public mxs::ProtocolConnection
 {
 public:
     virtual ~BackendConnection() = default;
-
-    /**
-     * Initialize a connection.
-     *
-     * @return True, if the connection could be initialized, false otherwise.
-     */
-    virtual bool init_connection() = 0;
 
     /**
      * Finalize a connection. Called right before the DCB itself is closed.
