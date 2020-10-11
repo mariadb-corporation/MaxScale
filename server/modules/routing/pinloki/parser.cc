@@ -277,6 +277,8 @@ DECLARE_ATTR_RULE(change_master, "change master", ChangeMaster);
 DECLARE_ATTR_RULE(slave, "slave", Slave);
 DECLARE_ATTR_RULE(purge_logs, "purge logs", PurgeLogs);
 DECLARE_RULE(end_of_input, "end of input");
+DECLARE_ATTR_RULE(command, "command", Command);
+DECLARE_ATTR_RULE(set_statement, "set_stmt", Command);
 DECLARE_ATTR_RULE(grammar, "grammar", Command);
 
 //
@@ -337,21 +339,30 @@ const auto show_options_def = (show_master | show_slave | show_all_slaves
 const auto show_def = x3::lit("SHOW") > show_options;
 const auto end_of_input_def = x3::eoi | x3::lit(";");
 
-// The complete grammar, case insensitive
-const auto grammar_def = x3::no_case[
+const auto command_def =
     master_gtid_wait
     | select
     | set
     | change_master
     | slave
     | show
-    | purge_logs] > end_of_input;
+    | purge_logs;
+
+// SET STATEMENT ... Parsed, but not used (not implemented)
+const auto set_statement_def = x3::lit("SET") > x3::lit("STATEMENT")
+    > x3::omit[variable % ','] > x3::lit("FOR") > command;
+
+// The complete grammar, case insensitive
+const auto grammar_def = x3::no_case[
+    command
+    | set_statement] > end_of_input;
 
 // Boost magic that combines the rule declarations and definitions (definitions _must_ end in a _def suffix)
 BOOST_SPIRIT_DEFINE(str, sq_str, dq_str, field, variable, select, set, eq, q_str,
                     show_master, show_slave, show_all_slaves, show_binlogs, show_variables, show, set_names,
                     global_or_session, show_options, func, master_gtid_wait,
-                    change_master_variable, change_master, slave, purge_logs, end_of_input, grammar);
+                    change_master_variable, change_master, slave, purge_logs, end_of_input,
+                    command, set_statement, grammar);
 
 
 // The visitor class that does the final processing of the result
