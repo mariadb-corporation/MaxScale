@@ -64,7 +64,7 @@ public:
     void          reset_slave();
     GWBUF*        show_slave_status(bool all) const;
     mxq::GtidList gtid_io_pos() const;
-    void          set_gtid(const mxq::GtidList& gtid);
+    void          set_gtid_slave_pos(const maxsql::GtidList& gtid);
 
 private:
     Pinloki(SERVICE* pService, Config&& config);

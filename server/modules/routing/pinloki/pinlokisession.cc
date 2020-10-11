@@ -295,7 +295,8 @@ void PinlokiSession::set(const std::string& key, const std::string& value)
     }
     else if (key == "gtid_slave_pos")
     {
-        m_router->set_gtid(mxq::GtidList::from_string(value));
+        auto gtid = mxq::GtidList::from_string(value);
+        m_router->set_gtid_slave_pos(gtid);
     }
 
     send(modutil_create_ok());

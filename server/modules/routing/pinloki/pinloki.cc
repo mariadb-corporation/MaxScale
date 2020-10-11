@@ -532,9 +532,6 @@ void Pinloki::stop_slave()
     MXS_INFO("Stopping slave");
 
     mxb_assert(m_writer);
-    // The current GTID position must be stored so that subsequent START SLAVE commands know to resume
-    // replication from the correct position.
-    set_gtid(m_writer->get_gtid_io_pos());
 
     m_writer.reset();
     m_master_config.slave_running = false;
@@ -652,9 +649,10 @@ GWBUF* Pinloki::show_slave_status(bool all) const
     return rset->as_buffer().release();
 }
 
-void Pinloki::set_gtid(const mxq::GtidList& gtid)
+void Pinloki::set_gtid_slave_pos(const maxsql::GtidList& gtid)
 {
-    // TODO, this is "set @@global.gtid_slave_pos"
+    mxb_assert(m_writer.get() == nullptr);
+    m_inventory.save_rpl_state(gtid);
 }
 
 mxq::GtidList Pinloki::gtid_io_pos() const

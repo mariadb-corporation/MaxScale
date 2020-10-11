@@ -104,6 +104,18 @@ std::vector<std::string> InventoryWriter::file_names() const
     return m_file_names;
 }
 
+void InventoryWriter::save_rpl_state(const maxsql::GtidList& gtids)
+{
+    if (auto ofs = std::ofstream(m_config.gtid_file_path()))
+    {
+        ofs << gtids;
+    }
+    else
+    {
+        MXB_THROW(BinlogWriteError, "Could not write to " << m_config.gtid_file_path());
+    }
+}
+
 maxsql::GtidList InventoryWriter::rpl_state() const
 {
     return read_rpl_state(m_config);

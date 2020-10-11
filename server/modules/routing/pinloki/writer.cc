@@ -198,10 +198,7 @@ void Writer::save_gtid_list(FileWriter& file_writer)
     if (m_current_gtid_list.is_valid())
     {
         file_writer.commit_txn();
-
-        std::ofstream ofs(m_inventory.config().gtid_file_path());
-        ofs << m_current_gtid_list;
-        ofs.flush();
+        m_inventory.save_rpl_state(m_current_gtid_list);
     }
 }
 }

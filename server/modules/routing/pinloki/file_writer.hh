@@ -14,7 +14,6 @@
 #pragma once
 
 #include "dbconnection.hh"
-#include <maxbase/exception.hh>
 #include "inventory.hh"
 #include "gtid.hh"
 #include "rpl_event.hh"
@@ -24,7 +23,6 @@
 
 namespace pinloki
 {
-DEFINE_EXCEPTION(BinlogWriteError);
 
 class Writer;
 

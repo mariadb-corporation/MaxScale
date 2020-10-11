@@ -14,6 +14,8 @@
 #pragma once
 #include "gtid.hh"
 
+#include <maxbase/exception.hh>
+
 #include <string>
 #include <vector>
 #include <mutex>
@@ -24,6 +26,7 @@
 
 namespace pinloki
 {
+DEFINE_EXCEPTION(BinlogWriteError);
 
 /**
  * @brief List of binlog file names. Thread safe, writable inventory file.
@@ -52,6 +55,8 @@ public:
      * @return the file names
      */
     std::vector<std::string> file_names() const;
+
+    void save_rpl_state(const maxsql::GtidList& gtids);
 
     maxsql::GtidList rpl_state() const;
 
