@@ -285,21 +285,56 @@ void PinlokiSession::select(const std::vector<std::string>& fields)
 
 void PinlokiSession::set(const std::string& key, const std::string& value)
 {
+    GWBUF* buf = nullptr;
+
     if (key == "@slave_connect_state")
     {
         m_gtid = mxq::Gtid::from_string(value);
+
+        if (!m_gtid.is_valid())
+        {
+            buf = modutil_create_mysql_err_msg(1, 0, 1941, "HY000",
+                                               "Could not parse GTID list");
+        }
+        else
+        {
+            buf = modutil_create_ok();
+        }
     }
     else if (key == "@master_heartbeat_period")
     {
         m_heartbeat_period = strtol(value.c_str(), nullptr, 10) / 1000000000;
+        buf = modutil_create_ok();
     }
     else if (key == "gtid_slave_pos")
     {
         auto gtid = mxq::GtidList::from_string(value);
-        m_router->set_gtid_slave_pos(gtid);
+
+        if (!gtid.is_valid())
+        {
+            buf = modutil_create_mysql_err_msg(1, 0, 1941, "HY000",
+                                               "Could not parse GTID list");
+        }
+        else if (m_router->is_slave_running())
+        {
+            buf = modutil_create_mysql_err_msg(
+                1, 0, 1198, "HY000",
+                "This operation cannot be performed as you have a running slave;"
+                " run STOP SLAVE first");
+        }
+        else
+        {
+            m_router->set_gtid_slave_pos(gtid);
+            buf = modutil_create_ok();
+        }
+    }
+    else
+    {
+        MXB_SWARNING("Ignore set " << key << " = " << value);
+        buf = modutil_create_ok();
     }
 
-    send(modutil_create_ok());
+    send(buf);
 }
 
 void PinlokiSession::change_master_to(const parser::ChangeMasterValues& values)
