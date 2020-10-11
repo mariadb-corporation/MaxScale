@@ -290,10 +290,13 @@ std::string Pinloki::change_master(const parser::ChangeMasterValues& values)
             break;
 
         case CMT::MASTER_USE_GTID:
-            m_master_config.use_gtid = strcasecmp(a.second.c_str(), "slave_pos") == 0;
+            // slave_pos or current_pos, does not matter which
+            m_master_config.use_gtid = strcasecmp(a.second.c_str(), "slave_pos") == 0
+                || strcasecmp(a.second.c_str(), "current_pos") == 0;
+
             if (!m_master_config.use_gtid)
             {
-                errors.push_back("MASTER_USE_GTID must specify slave_pos");
+                errors.push_back("MASTER_USE_GTID must specify slave_pos or current_pos");
             }
             break;
 
