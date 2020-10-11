@@ -558,14 +558,29 @@ GWBUF* Pinloki::show_slave_status(bool all) const
     auto rset = ResultSet::create({});
     rset->add_row({});
 
+    auto error = m_writer ? m_writer->get_err() : Error {};
+
+    enum class State {Stopped, Connected, Error};
+
+    State m_state = m_writer == nullptr ? State::Stopped :
+        error.code == 0 ? State::Connected :
+        State::Error;
+
+    std::string sql_state =
+        m_state == State::Stopped ? "" :
+        "Slave has read all relay log; waiting for the slave I/O thread to update it";
+
+    std::string sql_io_state =
+        m_state == State::Stopped ? "" :
+        m_state == State::Connected ? "Waiting for master to send event" :
+        "Reconnecting after a failed master event read";
+
     if (all)
     {
         rset->add_column("Connection_name", "");
-        rset->add_column("Slave_SQL_State",
-                         "Slave has read all relay log; waiting for the slave I/O thread to update it");
+        rset->add_column("Slave_SQL_State", sql_state);
     }
-    rset->add_column("Slave_IO_State", m_writer ? "Waiting for master to send event" :
-                     "Reconnecting after a failed master event read");
+    rset->add_column("Slave_IO_State", sql_io_state);
     rset->add_column("Master_Host", m_master_config.host);
     rset->add_column("Master_User", m_master_config.user);
     rset->add_column("Master_Port", std::to_string(m_master_config.port));
@@ -575,16 +590,20 @@ GWBUF* Pinloki::show_slave_status(bool all) const
     rset->add_column("Relay_Log_File", "");
     rset->add_column("Relay_Log_Pos", "");
     rset->add_column("Relay_Master_Log_File", "");
-    rset->add_column("Slave_IO_Running", m_writer ? "Yes" : "No");
-    rset->add_column("Slave_SQL_Running", m_writer ? "Yes" : "No");
+    rset->add_column("Slave_IO_Running",
+                     m_state == State::Stopped ? "No" :
+                     m_state == State::Connected ? "Yes" :
+                     "Connecting");
+    rset->add_column("Slave_SQL_Running",
+                     m_state == State::Stopped ? "No" : "Yes");
     rset->add_column("Replicate_Do_DB", "");
     rset->add_column("Replicate_Ignore_DB", "");
     rset->add_column("Replicate_Do_Table", "");
     rset->add_column("Replicate_Ignore_Table", "");
     rset->add_column("Replicate_Wild_Do_Table", "");
     rset->add_column("Replicate_Wild_Ignore_Table", "");
-    rset->add_column("Last_Errno", "0");
-    rset->add_column("Last_Error", "");
+    rset->add_column("Last_Errno", std::to_string(error.code));
+    rset->add_column("Last_Error", error.str);
     rset->add_column("Skip_Counter", "0");
     rset->add_column("Exec_Master_Log_Pos", file_and_pos.second.c_str());
     rset->add_column("Relay_Log_Space", "0");
@@ -597,14 +616,14 @@ GWBUF* Pinloki::show_slave_status(bool all) const
     rset->add_column("Master_SSL_Cert", "");
     rset->add_column("Master_SSL_Cipher", "");
     rset->add_column("Master_SSL_Key", "");
-    rset->add_column("Seconds_Behind_Master", m_writer ? "0" : "NULL");
+    rset->add_column("Seconds_Behind_Master", m_state == State::Connected ? "0" : "NULL");
     rset->add_column("Master_SSL_Verify_Server_Cert", "No");
     rset->add_column("Last_IO_Errno", "0");
     rset->add_column("Last_IO_Error", "");
     rset->add_column("Last_SQL_Errno", "0");
     rset->add_column("Last_SQL_Error", "");
     rset->add_column("Replicate_Ignore_Server_Ids", "");
-    rset->add_column("Master_Server_Id", m_writer ? std::to_string(m_writer->master_id()) : "0");
+    rset->add_column("Master_Server_Id", std::to_string(m_inventory.master_id()));
     rset->add_column("Master_SSL_Crl", "");
     rset->add_column("Master_SSL_Crlpath", "");
     rset->add_column("Using_Gtid", "Slave_Pos");
@@ -614,8 +633,7 @@ GWBUF* Pinloki::show_slave_status(bool all) const
     rset->add_column("Parallel_Mode", "conservative");
     rset->add_column("SQL_Delay", "0");
     rset->add_column("SQL_Remaining_Delay", "NULL");
-    rset->add_column("Slave_SQL_Running_State",
-                     "Slave has read all relay log; waiting for the slave I/O thread to update it");
+    rset->add_column("Slave_SQL_Running_State", sql_state);
     rset->add_column("Slave_DDL_Groups", "0");
     rset->add_column("Slave_Non_Transactional_Groups", "0");
     rset->add_column("Slave_Transactional_Groups", "0");

@@ -109,6 +109,16 @@ maxsql::GtidList InventoryWriter::rpl_state() const
     return read_rpl_state(m_config);
 }
 
+void InventoryWriter::set_master_id(int64_t id)
+{
+    m_master_id.store(id, std::memory_order_release);
+}
+
+int64_t InventoryWriter::master_id() const
+{
+    return m_master_id.load(std::memory_order_acquire);
+}
+
 std::string next_string(const std::vector<std::string>& strs, const std::string& str)
 {
     // search in reverse since the file is likely at the end of the vector

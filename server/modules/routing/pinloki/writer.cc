@@ -69,9 +69,10 @@ mxq::GtidList Writer::get_gtid_io_pos() const
     return m_current_gtid_list;
 }
 
-int64_t Writer::master_id() const
+Error Writer::get_err() const
 {
-    return m_master_id.load(std::memory_order_acquire);
+    std::lock_guard<std::mutex> guard(m_lock);
+    return m_error;
 }
 
 void Writer::update_gtid_list(const mxq::Gtid& gtid)
@@ -105,11 +106,19 @@ void Writer::run()
 {
     while (m_running)
     {
+        Error error;
         try
         {
+            // Clear the current error
+            {
+                std::lock_guard<std::mutex> guard(m_lock);
+                m_error = Error {};
+            }
+
             FileWriter file(&m_inventory, *this);
             mxq::Connection conn(get_connection_details());
             start_replication(conn);
+
 
             while (m_running)
             {
@@ -121,7 +130,7 @@ void Writer::run()
 
                 file.add_event(rpl_event);
 
-                m_master_id.store(rpl_event.server_id(), std::memory_order_release);
+                m_inventory.set_master_id(rpl_event.server_id());
 
                 switch (rpl_event.event_type())
                 {
@@ -159,14 +168,24 @@ void Writer::run()
                 }
             }
         }
+        catch (const maxsql::DatabaseError& x)
+        {
+            error = Error {x.code(), x.what()};
+        }
         catch (const std::exception& x)
         {
+            error = Error {-1, x.what()};
+        }
+
+        std::unique_lock<std::mutex> guard(m_lock);
+        if (error.code)
+        {
+            m_error = error;
             if (m_timer.alarm())
             {
-                MXS_ERROR("Error received during replication: %s", x.what());
+                MXS_SERROR("Error received during replication: " << error.str);
             }
 
-            std::unique_lock<std::mutex> guard(m_lock);
             m_cond.wait_for(guard, std::chrono::seconds(1), [this]() {
                                 return !m_running;
                             });

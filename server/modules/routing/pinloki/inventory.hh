@@ -17,6 +17,7 @@
 #include <string>
 #include <vector>
 #include <mutex>
+#include <atomic>
 
 #include "config.hh"
 
@@ -54,6 +55,12 @@ public:
 
     maxsql::GtidList rpl_state() const;
 
+    /** Set by the writer **/
+    void set_master_id(int64_t id);
+
+    /** Last known master ID */
+    int64_t master_id() const;
+
     const Config& config() const
     {
         return m_config;
@@ -71,6 +78,7 @@ private:
 
     mutable std::mutex               m_mutex;
     mutable std::vector<std::string> m_file_names;
+    std::atomic<int64_t>             m_master_id {0};
 };
 
 /**

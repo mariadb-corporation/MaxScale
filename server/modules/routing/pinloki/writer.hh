@@ -21,7 +21,6 @@
 #include "config.hh"
 #include "inventory.hh"
 
-#include <atomic>
 #include <memory>
 #include <thread>
 #include <condition_variable>
@@ -31,6 +30,12 @@ using namespace std::chrono_literals;
 namespace pinloki
 {
 class FileWriter;
+
+struct Error
+{
+    int         code {0};
+    std::string str {};
+};
 
 class Writer
 {
@@ -42,20 +47,21 @@ public:
     ~Writer();
     void run();
 
+    // These are thread safe on their own, but can be inconsistent as a group.
     mxq::GtidList get_gtid_io_pos() const;
-    int64_t       master_id() const;
+    Error         get_err() const;
 
 private:
-    Generator            m_generator;
-    mxb::Worker*         m_worker;
-    InventoryWriter&     m_inventory;
-    bool                 m_is_bootstrap = false;
-    bool                 m_commit_on_query = false;
-    maxsql::GtidList     m_current_gtid_list;
-    std::atomic<bool>    m_running {true};
-    std::thread          m_thread;
-    maxbase::Timer       m_timer {10s};
-    std::atomic<int64_t> m_master_id;
+    Generator         m_generator;
+    mxb::Worker*      m_worker;
+    InventoryWriter&  m_inventory;
+    bool              m_is_bootstrap = false;
+    bool              m_commit_on_query = false;
+    maxsql::GtidList  m_current_gtid_list;
+    std::atomic<bool> m_running {true};
+    std::thread       m_thread;
+    maxbase::Timer    m_timer {10s};
+    Error             m_error;
 
     mutable std::mutex              m_lock;
     mutable std::condition_variable m_cond;
