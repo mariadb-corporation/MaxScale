@@ -944,6 +944,7 @@ int SchemaRouterSession::inspect_mapping_states(SRBackend* bref, GWBUF** wbuf)
             }
             else if (rc == SHOWDB_FATAL_ERROR)
             {
+                *wbuf = writebuf;
                 return -1;
             }
             else
@@ -1145,7 +1146,7 @@ enum showdb_response SchemaRouterSession::parse_mapping_response(SRBackend* bref
 
     if (PTR_IS_ERR(ptr))
     {
-        MXS_INFO("Mapping query returned an error.");
+        MXS_ERROR("Mapping query returned an error; closing session.");
         gwbuf_free(buf);
         return SHOWDB_FATAL_ERROR;
     }
