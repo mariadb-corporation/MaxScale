@@ -31,6 +31,7 @@
 #include "../internal/server.hh"
 #include "../internal/servermanager.hh"
 #include "../internal/config_runtime.hh"
+#include "test_utils.hh"
 
 static mxs::ConfigParameters params;
 
@@ -141,24 +142,17 @@ bool test_serialize()
 
 int main(int argc, char** argv)
 {
-    params.set("address", "localhost");
-
-    /**
-     * Prepare test environment by pre-loading modules. This prevents the server
-     * allocation from failing if multiple modules from different directories are
-     * loaded in one core function call.
-     */
-    mxs_log_init(NULL, NULL, MXS_LOG_TARGET_STDOUT);
-
     int result = 0;
 
-    result += test1();
+    run_unit_test([&]() {
+                      params.set("address", "localhost");
+                      result += test1();
 
-    if (!test_serialize())
-    {
-        result++;
-    }
+                      if (!test_serialize())
+                      {
+                          result++;
+                      }
+                  });
 
-    mxs_log_finish();
-    exit(result);
+    return result;
 }

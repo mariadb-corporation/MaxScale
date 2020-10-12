@@ -284,7 +284,10 @@ int test_integer(config::Integer& value)
         {"1",                    true, 1                   },
         {"-2147483648",          true, -2147483648         },
         {"2147483647",           true, 2147483647          },
-        {"-9223372036854775807", true, -9223372036854775807},   // Should be ...8, but compiler whines.
+
+        // Should be ...8, but compiler whines.
+        {"-9223372036854775807", true, -9223372036854775807},
+
         {"9223372036854775807",  true, 9223372036854775807 },
 
         {"-9223372036854775809", false},
@@ -386,55 +389,59 @@ int test_string(config::String& value)
 
 int main()
 {
-    init_test_env();
-
-    for_each(specification.cbegin(), specification.cend(), [](const config::Specification::value_type& p) {
-                 cout << p.second->documentation() << endl;
-             });
-
-    cout << endl;
-
-    specification.document(cout);
-
-    config::Configuration configuration("test", &specification);
-
     int nErrors = 0;
 
-    config::Bool value_bool(&configuration, &param_bool);
-    nErrors += test_bool(value_bool);
+    run_unit_test(
+        [&]() {
+            for_each(specification.cbegin(), specification.cend(),
+                     [](const config::Specification::value_type& p) {
+                         cout << p.second->documentation() << endl;
+                     });
 
-    config::Count value_count(&configuration, &param_count);
-    nErrors += test_count(value_count);
+            cout << endl;
 
-    config::Duration<std::chrono::seconds> value_duration_1(&configuration, &param_duration_1);
-    nErrors += test_duration(value_duration_1);
+            specification.document(cout);
 
-    config::Duration<std::chrono::milliseconds> value_duration_2(&configuration, &param_duration_2);
-    nErrors += test_duration(value_duration_2);
+            config::Configuration configuration("test", &specification);
 
-    config::Enum<Enum> value_enum(&configuration, &param_enum);
-    nErrors += test_enum(value_enum);
+            config::Bool value_bool(&configuration, &param_bool);
+            nErrors += test_bool(value_bool);
 
-    config::EnumMask<Enum> value_enummask(&configuration, &param_enummask);
-    nErrors += test_enummask(value_enummask);
+            config::Count value_count(&configuration, &param_count);
+            nErrors += test_count(value_count);
 
-    config::Integer value_integer(&configuration, &param_integer);
-    nErrors += test_integer(value_integer);
+            config::Duration<std::chrono::seconds> value_duration_1(&configuration,
+                                                                    &param_duration_1);
+            nErrors += test_duration(value_duration_1);
 
-    config::Path value_path(&configuration, &param_path);
-    nErrors += test_path(value_path);
+            config::Duration<std::chrono::milliseconds> value_duration_2(&configuration,
+                                                                         &param_duration_2);
+            nErrors += test_duration(value_duration_2);
 
-    config::Regex value_regex(&configuration, &param_regex);
-    nErrors += test_regex(value_regex);
+            config::Enum<Enum> value_enum(&configuration, &param_enum);
+            nErrors += test_enum(value_enum);
 
-    config::Server value_server(&configuration, &param_server);
-    nErrors += test_server(value_server);
+            config::EnumMask<Enum> value_enummask(&configuration, &param_enummask);
+            nErrors += test_enummask(value_enummask);
 
-    config::Size value_size(&configuration, &param_size);
-    nErrors += test_size(value_size);
+            config::Integer value_integer(&configuration, &param_integer);
+            nErrors += test_integer(value_integer);
 
-    config::String value_string(&configuration, &param_string);
-    nErrors += test_string(value_string);
+            config::Path value_path(&configuration, &param_path);
+            nErrors += test_path(value_path);
+
+            config::Regex value_regex(&configuration, &param_regex);
+            nErrors += test_regex(value_regex);
+
+            config::Server value_server(&configuration, &param_server);
+            nErrors += test_server(value_server);
+
+            config::Size value_size(&configuration, &param_size);
+            nErrors += test_size(value_size);
+
+            config::String value_string(&configuration, &param_string);
+            nErrors += test_string(value_string);
+        });
 
     return nErrors ? EXIT_FAILURE : EXIT_SUCCESS;
 }
