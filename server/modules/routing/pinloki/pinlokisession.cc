@@ -119,7 +119,7 @@ int32_t PinlokiSession::routeQuery(GWBUF* pPacket)
     case MXS_COM_QUERY:
         {
             auto sql = mxs::extract_sql(buf.get());
-            MXS_INFO("COM_QUERY: %s", sql.c_str());
+            MXS_DEBUG("COM_QUERY: %s", sql.c_str());
             parser::parse(sql, this);
             rval = 1;
         }

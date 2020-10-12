@@ -1921,9 +1921,7 @@ ServerArray MariaDBMonitor::get_redirectables(const MariaDBServer* old_master,
     ServerArray redirectable_slaves;
     for (MariaDBServer* slave : old_master->m_node.children)
     {
-        // For now, do not redirect BLR. It should redirect itself in most cases.
-        // TODO: Once blr supports the queries, redirect it as well.
-        if (slave->is_usable() && slave != ignored_slave && slave->server_type() != ServerType::BLR)
+        if (slave->is_usable() && slave != ignored_slave)
         {
             auto sstatus = slave->slave_connection_status(old_master);
             if (sstatus && !sstatus->gtid_io_pos.empty())

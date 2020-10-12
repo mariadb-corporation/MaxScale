@@ -852,7 +852,7 @@ void MariaDBServer::update_server_version()
     auto& info = srv->info();
     auto type = info.type();
 
-    if (type == ServerType::MARIADB || type == ServerType::MYSQL)
+    if (type == ServerType::MARIADB || type == ServerType::MYSQL || type == ServerType::BLR)
     {
         /* Not a binlog server, check version number and supported features. */
         auto& srv_version = info.version_num();
@@ -864,7 +864,8 @@ void MariaDBServer::update_server_version()
         {
             m_capabilities.basic_support = true;
             // For more specific features, at least MariaDB 10.X is needed.
-            if (type == ServerType::MARIADB && major >= 10)
+            if ((type == ServerType::MARIADB || type == ServerType::BLR)
+                && major >= 10)
             {
                 // 10.0.2 or 10.1.X or greater than 10
                 if (((minor == 0 && patch >= 2) || minor >= 1) || major > 10)
@@ -872,7 +873,10 @@ void MariaDBServer::update_server_version()
                     // Versions with gtid also support the extended slave status query.
                     m_capabilities.gtid = true;
                     m_capabilities.slave_status_all = true;
-                    m_capabilities.events = true;
+                    if (type != ServerType::BLR)
+                    {
+                        m_capabilities.events = true;
+                    }
                 }
                 // 10.1.2 (10.1.1 has limited support, not enough) or 10.2.X or greater than 10
                 if (((minor == 1 && patch >= 2) || minor >= 2) || major > 10)
@@ -881,12 +885,6 @@ void MariaDBServer::update_server_version()
                 }
             }
         }
-    }
-    else if (type == ServerType::BLR)
-    {
-        m_capabilities.basic_support = true;
-        m_capabilities.gtid = true;
-        m_capabilities.slave_status_all = true;
     }
 
     if (m_capabilities.basic_support)
@@ -2148,6 +2146,7 @@ bool MariaDBServer::update_enabled_events()
     }
 
     m_enabled_events = std::move(full_names);
+
     return true;
 }
 

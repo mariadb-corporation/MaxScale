@@ -616,7 +616,9 @@ GWBUF* Pinloki::show_slave_status(bool all) const
     rset->add_column("Master_SSL_Cert", "");
     rset->add_column("Master_SSL_Cipher", "");
     rset->add_column("Master_SSL_Key", "");
-    rset->add_column("Seconds_Behind_Master", m_state == State::Connected ? "0" : "NULL");
+    // Should set Seconds_Behind_Master to null if state != State::Connected,
+    // but that is not (yet) supported by ResultSet.
+    rset->add_column("Seconds_Behind_Master", "0");
     rset->add_column("Master_SSL_Verify_Server_Cert", "No");
     rset->add_column("Last_IO_Errno", "0");
     rset->add_column("Last_IO_Error", "");
