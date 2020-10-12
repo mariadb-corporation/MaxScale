@@ -205,14 +205,14 @@ int main(int argc, char* argv[])
     int nSessions_to_move = nConn_to_move / nConn_per_session;
     int nMax_rounds = nSessions_to_move; // Should be worst case.
 
-    int rebalance_period = 2;
+    int rebalance_period = 1;
     start_rebalancing(test, rebalance_period);
 
     int n = 1;
     bool rebalanced = false;
     while (!rebalanced && (n <= nMax_rounds))
     {
-        sleep(rebalance_period);
+        sleep(rebalance_period * 2);
 
         map<int,int> cbt4 = get_thread_connections(test);
 
