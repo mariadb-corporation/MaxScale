@@ -53,7 +53,7 @@ public:
     static bool parse_kill_query(char* query, uint64_t* thread_id_out, kill_type_t* kt_out,
                                  std::string* user_out);
     void mxs_mysql_execute_kill(uint64_t target_id, kill_type_t type);
-    bool in_routing_state() const;
+    bool in_routing_state() const override;
 
     json_t* diagnostics() const;
 

@@ -2162,3 +2162,8 @@ json_t* maxscale::ClientConnectionBase::diagnostics() const
     json_t* rval = json_object();   // This is not currently used.
     return rval;
 }
+
+bool mxs::ClientConnectionBase::in_routing_state() const
+{
+    return m_dcb != nullptr;
+}

@@ -29,6 +29,11 @@ public:
     ClientDCB* dcb() override;
     const ClientDCB* dcb() const override;
 
+    bool in_routing_state() const override
+    {
+        return true;
+    }
+
 private:
     // DCBHandler
     void ready_for_reading(DCB* dcb) override;

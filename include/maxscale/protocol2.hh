@@ -185,6 +185,14 @@ public:
         // Should not be called for non-supported protocols.
         mxb_assert(!true);
     }
+
+    /**
+     * Is the client protocol in routing state, that is, can data be delivered to
+     * it for further delivery to the client.
+     *
+     * @return True, if in routing state, false otherwise.
+     */
+    virtual bool in_routing_state() const = 0;
 };
 
 /**
@@ -197,6 +205,9 @@ public:
     void             set_dcb(DCB* dcb) override;
     ClientDCB*       dcb() override;
     const ClientDCB* dcb() const override;
+
+    bool in_routing_state() const override;
+
 protected:
     ClientDCB* m_dcb {nullptr};     /**< Dcb used by this protocol connection */
 };

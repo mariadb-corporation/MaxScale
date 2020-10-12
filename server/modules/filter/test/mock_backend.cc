@@ -252,6 +252,11 @@ private:
             return &m_owner;
         }
 
+        bool in_routing_state() const override
+        {
+            return true;
+        }
+
     private:
         ResultSetDCB& m_owner;
     };

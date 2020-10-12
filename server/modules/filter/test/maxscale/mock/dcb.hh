@@ -140,6 +140,11 @@ private:
             return m_dcb;
         }
 
+        bool in_routing_state() const override
+        {
+            return true;
+        }
+
     private:
         Dcb::Handler* m_pHandler;
         Dcb*          m_dcb {nullptr};

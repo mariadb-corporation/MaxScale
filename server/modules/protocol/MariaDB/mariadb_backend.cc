@@ -31,7 +31,6 @@
 #include <maxscale/utils.h>
 #include <maxscale/protocol/mariadb/authenticator.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
-#include <maxscale/protocol/mariadb/client_connection.hh>
 
 #include <openssl/rand.h>
 
@@ -427,7 +426,7 @@ bool MariaDBBackendConnection::session_ok_to_route(DCB* dcb)
         ClientDCB* client_dcb = session->client_connection()->dcb();
         if (client_dcb && client_dcb->state() == DCB::State::POLLING)
         {
-            auto client_protocol = static_cast<MariaDBClientConnection*>(client_dcb->protocol());
+            auto client_protocol = client_dcb->protocol();
             if (client_protocol)
             {
                 if (client_protocol->in_routing_state())
