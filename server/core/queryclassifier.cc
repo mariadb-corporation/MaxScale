@@ -693,7 +693,8 @@ void QueryClassifier::log_transaction_status(GWBUF* querybuf, uint32_t qtype)
         }
 
         MXS_SESSION* ses = session();
-        const char* autocommit = ses->is_autocommit() ? "[enabled]" : "[disabled]";
+        auto mariases = static_cast<MYSQL_session*>(ses->protocol_data());
+        const char* autocommit = mariases->is_autocommit ? "[enabled]" : "[disabled]";
         const char* transaction = ses->is_trx_active() ? "[open]" : "[not open]";
         uint32_t plen = MYSQL_GET_PACKET_LEN(querybuf);
         const char* querytype = qtypestr == NULL ? "N/A" : qtypestr;

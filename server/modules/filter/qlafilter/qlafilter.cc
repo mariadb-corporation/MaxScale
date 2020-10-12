@@ -47,6 +47,7 @@
 #include <maxscale/utils.h>
 #include <maxscale/modulecmd.hh>
 #include <maxscale/json_api.hh>
+#include <maxscale/protocol/mariadb/protocol_classes.hh>
 
 using std::string;
 
@@ -631,7 +632,8 @@ string QlaFilterSession::generate_log_entry(uint64_t data_flags, const LogEventE
     }
     if (data_flags & QlaInstance::LOG_DATA_DEFAULT_DB)
     {
-        std::string db = m_pSession->database().empty() ? "(none)" : m_pSession->database();
+        auto maria_ses = static_cast<MYSQL_session*>(m_pSession->protocol_data());
+        const char* db = maria_ses->db.empty() ? "(none)" : maria_ses->db.c_str();
 
         output << curr_sep << db;
         curr_sep = real_sep;

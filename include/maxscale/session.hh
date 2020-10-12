@@ -176,22 +176,6 @@ public:
         return m_host;
     }
 
-    // The current active default database (i.e. USE <database>)
-    const std::string& database() const
-    {
-        return m_database;
-    }
-
-    void start_database_change(const std::string& database)
-    {
-        m_pending_database = database;
-    }
-
-    void set_database(const std::string& database)
-    {
-        m_database = database;
-    }
-
     virtual mxs::ClientConnection*       client_connection() = 0;
     virtual const mxs::ClientConnection* client_connection() const = 0;
     virtual void                         set_client_connection(mxs::ClientConnection* client_conn) = 0;
@@ -310,48 +294,12 @@ public:
         return m_trx_state & SESSION_TRX_ACTIVE;
     }
 
-    /**
-     * Tells whether autocommit is ON or not.
-     *
-     * Note that the returned value effectively only tells the last value
-     * of the statement "set autocommit=...".
-     *
-     * That is, if the statement "set autocommit=1" has been executed, then
-     * even if a transaction has been started, which implicitly will cause
-     * autocommit to be set to 0 for the duration of the transaction, this
-     * function will still return true.
-     *
-     * Note also that by default autocommit is ON.
-     *
-     * @see get_trx_state
-     *
-     * @return True if autocommit has been set ON, false otherwise.
-     */
-    bool is_autocommit() const
-    {
-        return m_autocommit;
-    }
-
-    /**
-     * Sets the autocommit state of the session.
-     *
-     * NOTE: Only the protocol object may call this.
-     *
-     * @param enable True if autocommit is enabled, false otherwise.
-     */
-    void set_autocommit(bool autocommit)
-    {
-        m_autocommit = autocommit;
-    }
-
 protected:
     State                    m_state;   /**< Current descriptor state */
     uint64_t                 m_id;      /**< Unique session identifier */
     maxscale::RoutingWorker* m_worker;
     std::string              m_user;    /**< The session user. */
     std::string              m_host;
-    std::string              m_database;
-    std::string              m_pending_database;
 
     MXS_SESSION(const std::string& host, SERVICE* service);
 
@@ -372,7 +320,6 @@ public:
     session_close_t close_reason;   /*< Reason why the session was closed */
 
     bool load_active;           /*< Data streaming state (for LOAD DATA LOCAL INFILE) */
-    bool m_autocommit {false};  /*< Whether autocommit is on. */
 
     ProtocolData* protocol_data() const;
     void          set_protocol_data(std::unique_ptr<ProtocolData> new_data);

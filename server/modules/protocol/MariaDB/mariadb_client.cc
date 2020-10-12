@@ -384,18 +384,18 @@ bool MariaDBClientConnection::send_server_handshake()
     uint8_t charset = service->charset();
     if (charset == 0)
     {
-        charset = 8;         // Charset 8 is latin1, the server default.
+        charset = 8;        // Charset 8 is latin1, the server default.
     }
     *ptr++ = charset;
 
-    uint16_t status_flags = 2; // autocommit enabled
+    uint16_t status_flags = 2;      // autocommit enabled
     mariadb::set_byte2(ptr, status_flags);
     ptr += 2;
 
     // More capabilities.
     ptr = mariadb::copy_bytes(ptr, caps_le + 2, 2);
 
-    *ptr++ = MYSQL_SCRAMBLE_LEN + 1; // Plugin data total length, contains 1 filler.
+    *ptr++ = MYSQL_SCRAMBLE_LEN + 1;    // Plugin data total length, contains 1 filler.
 
     // 6 bytes filler
     ptr = mariadb::set_bytes(ptr, 0, 6);
@@ -651,12 +651,12 @@ char* MariaDBClientConnection::handle_variables(GWBUF** read_buffer)
                 switch (sql_mode_parser.get_sql_mode(value.first, value.second))
                 {
                 case SqlModeParser::ORACLE:
-                    m_session->set_autocommit(false);
+                    m_session_data->is_autocommit = false;
                     m_sql_mode = QC_SQL_MODE_ORACLE;
                     break;
 
                 case SqlModeParser::DEFAULT:
-                    m_session->set_autocommit(true);
+                    m_session_data->is_autocommit = true;
                     m_sql_mode = QC_SQL_MODE_DEFAULT;
                     break;
 
@@ -713,7 +713,7 @@ void MariaDBClientConnection::track_transaction_state(MXS_SESSION* session, GWBU
 
     if (session->is_trx_ending())
     {
-        if (session->is_autocommit())
+        if (m_session_data->is_autocommit)
         {
             // Transaction ended, go into inactive state
             session->set_trx_state(SESSION_TRX_INACTIVE);
@@ -730,7 +730,7 @@ void MariaDBClientConnection::track_transaction_state(MXS_SESSION* session, GWBU
         trx_state &= ~SESSION_TRX_STARTING;
         session->set_trx_state(trx_state);
     }
-    else if (!session->is_autocommit() && session->get_trx_state() == SESSION_TRX_INACTIVE)
+    else if (!m_session_data->is_autocommit && session->get_trx_state() == SESSION_TRX_INACTIVE)
     {
         // This state is entered when autocommit was disabled
         session->set_trx_state(SESSION_TRX_ACTIVE | SESSION_TRX_STARTING);
@@ -745,7 +745,7 @@ void MariaDBClientConnection::track_transaction_state(MXS_SESSION* session, GWBU
             if (type & QUERY_TYPE_DISABLE_AUTOCOMMIT)
             {
                 // This disables autocommit and the next statement starts a new transaction
-                session->set_autocommit(false);
+                m_session_data->is_autocommit = false;
                 session->set_trx_state(SESSION_TRX_INACTIVE);
             }
             else
@@ -770,7 +770,7 @@ void MariaDBClientConnection::track_transaction_state(MXS_SESSION* session, GWBU
 
             if (type & QUERY_TYPE_ENABLE_AUTOCOMMIT)
             {
-                session->set_autocommit(true);
+                m_session_data->is_autocommit = true;
             }
         }
     }
@@ -1007,11 +1007,9 @@ MariaDBClientConnection::handle_query_kill(GWBUF* read_buffer, uint32_t packet_l
 void MariaDBClientConnection::handle_use_database(GWBUF* read_buffer)
 {
     auto databases = qc_get_database_names(read_buffer);
-
     if (!databases.empty())
     {
-        m_session_data->db = databases[0];
-        m_session->start_database_change(m_session_data->db);
+        m_pending_db = databases[0];
     }
 }
 
@@ -1085,8 +1083,7 @@ MariaDBClientConnection::process_special_commands(GWBUF* read_buffer, uint8_t cm
         char* start = (char*)GWBUF_DATA(read_buffer);
         char* end = start + GWBUF_LENGTH(read_buffer);
         start += MYSQL_HEADER_LEN + 1;
-        m_session_data->db.assign(start, end);
-        m_session->start_database_change(m_session_data->db);
+        m_pending_db.assign(start, end);
     }
     else if (cmd == MXS_COM_QUERY)
     {
@@ -1762,7 +1759,6 @@ bool MariaDBClientConnection::parse_handshake_response_packet(GWBUF* buffer)
                 m_session->set_user(parse_res.username);
                 m_session_data->auth_token = move(parse_res.token_res.auth_token);
                 m_session_data->db = parse_res.db;
-                m_session->set_database(parse_res.db);
                 m_session_data->plugin = move(parse_res.plugin);
 
                 // Discard the attributes if there is any indication of failed parsing, as the contents
@@ -2380,7 +2376,64 @@ bool MariaDBClientConnection::send_mysql_err_packet(int packet_number, int in_af
     return write(buf);
 }
 
-int32_t MariaDBClientConnection::clientReply(GWBUF* buffer, maxscale::ReplyRoute& down, const mxs::Reply& reply)
+int32_t
+MariaDBClientConnection::clientReply(GWBUF* buffer, maxscale::ReplyRoute& down, const mxs::Reply& reply)
 {
+    if (!m_pending_db.empty())
+    {
+        auto& current_db = m_session_data->db;
+        // Only update the database in case it succeeded. The pending database is cleared regardless of what
+        // was returned to prevent false positives.
+        if (reply.is_ok())
+        {
+            current_db = std::move(m_pending_db);
+        }
+        m_pending_db.clear();
+    }
+
+    auto service = m_session->service;
+    if (reply.is_ok() && service->config()->session_track_trx_state)
+    {
+        parse_and_set_trx_state(reply);
+    }
     return write(buffer);
+}
+
+// Use SESSION_TRACK_STATE_CHANGE, SESSION_TRACK_TRANSACTION_TYPE and
+// SESSION_TRACK_TRANSACTION_CHARACTERISTICS to track transaction state.
+void MariaDBClientConnection::parse_and_set_trx_state(const mxs::Reply& reply)
+{
+    auto autocommit = reply.get_variable("autocommit");
+
+    if (!autocommit.empty())
+    {
+        m_session_data->is_autocommit = strncasecmp(autocommit.c_str(), "ON", 2) == 0;
+    }
+
+    auto trx_state = reply.get_variable("trx_state");
+
+    if (!trx_state.empty())
+    {
+        if (trx_state.find_first_of("TI") == std::string::npos)
+        {
+            m_session->set_trx_state(SESSION_TRX_ACTIVE);
+        }
+        else if (trx_state.find_first_of("rRwWsSL") == std::string::npos)
+        {
+            m_session->set_trx_state(SESSION_TRX_INACTIVE);
+        }
+    }
+    auto trx_characteristics = reply.get_variable("trx_characteristics");
+
+    if (!trx_characteristics.empty())
+    {
+        if (trx_characteristics == "START TRANSACTION READ ONLY;")
+        {
+            m_session->set_trx_state(SESSION_TRX_ACTIVE | SESSION_TRX_READ_ONLY);
+        }
+        else if (trx_characteristics == "START TRANSACTION READ WRITE;")
+        {
+            m_session->set_trx_state(SESSION_TRX_ACTIVE);
+        }
+    }
 }

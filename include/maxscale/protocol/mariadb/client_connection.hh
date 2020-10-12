@@ -204,6 +204,7 @@ private:
     mariadb::SClientAuth m_authenticator;   /**< Client authentication data */
     ChangeUserFields     m_change_user;     /**< User account to change to */
 
+    std::string     m_pending_db;
     mxs::Component* m_downstream {nullptr}; /**< Downstream component, the session */
     MXS_SESSION*    m_session {nullptr};    /**< Generic session */
     MYSQL_session*  m_session_data {nullptr};
@@ -227,4 +228,6 @@ private:
      */
     bool send_mysql_err_packet(int packet_number, int in_affected_rows,
                                int mysql_errno, const char* sqlstate_msg, const char* mysql_message);
+
+    void parse_and_set_trx_state(const mxs::Reply& reply);
 };

@@ -410,13 +410,6 @@ json_t* session_json_data(const Session* session, const char* host, bool rdns)
 
     json_object_set_new(attr, "remote", json_string(result_address.c_str()));
 
-    auto db = session->database();
-
-    if (!db.empty())
-    {
-        json_object_set_new(attr, "default_database", json_string(db.c_str()));
-    }
-
     struct tm result;
     char buf[60];
 
@@ -792,8 +785,6 @@ Session::Session(std::shared_ptr<ListenerSessionData> listener_data,
     {
         m_retain_last_statements = this_unit.retain_last_statements;
     }
-
-    set_autocommit(!(m_listener_data->m_default_sql_mode == QC_SQL_MODE_ORACLE));
 }
 
 Session::~Session()
@@ -1323,23 +1314,6 @@ int32_t Session::routeQuery(GWBUF* buffer)
 
 int32_t Session::clientReply(GWBUF* buffer, mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
-    if (!m_pending_database.empty())
-    {
-        // Only update the database in case it succeeded. The pending database is cleared regardless of what
-        // was returned to prevent false positives.
-        if (reply.is_ok())
-        {
-            m_database = std::move(m_pending_database);
-        }
-
-        m_pending_database.clear();
-    }
-
-    if (reply.is_ok() && service->config()->session_track_trx_state)
-    {
-        parse_and_set_trx_state(reply);
-    }
-
     return m_client_conn->clientReply(buffer, down, reply);
 }
 
@@ -1422,45 +1396,6 @@ Session::create_backend_connection(Server* server, BackendDCB::Manager* manager,
         }
     }
     return dcb;
-}
-
-// Use SESSION_TRACK_STATE_CHANGE, SESSION_TRACK_TRANSACTION_TYPE and
-// SESSION_TRACK_TRANSACTION_CHARACTERISTICS to track transaction state.
-void Session::parse_and_set_trx_state(const mxs::Reply& reply)
-{
-    auto autocommit = reply.get_variable("autocommit");
-
-    if (!autocommit.empty())
-    {
-        set_autocommit(strncasecmp(autocommit.c_str(), "ON", 2) == 0);
-    }
-
-    auto trx_state = reply.get_variable("trx_state");
-
-    if (!trx_state.empty())
-    {
-        if (trx_state.find_first_of("TI") == std::string::npos)
-        {
-            set_trx_state(SESSION_TRX_ACTIVE);
-        }
-        else if (trx_state.find_first_of("rRwWsSL") == std::string::npos)
-        {
-            set_trx_state(SESSION_TRX_INACTIVE);
-        }
-    }
-    auto trx_characteristics = reply.get_variable("trx_characteristics");
-
-    if (!trx_characteristics.empty())
-    {
-        if (trx_characteristics == "START TRANSACTION READ ONLY;")
-        {
-            set_trx_state(SESSION_TRX_ACTIVE | SESSION_TRX_READ_ONLY);
-        }
-        else if (trx_characteristics == "START TRANSACTION READ WRITE;")
-        {
-            set_trx_state(SESSION_TRX_ACTIVE);
-        }
-    }
 }
 
 void Session::tick(int64_t idle)

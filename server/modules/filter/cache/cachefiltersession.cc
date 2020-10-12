@@ -910,7 +910,8 @@ CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* p
                 case StatementType::DUPSERT:
                     if (m_invalidate)
                     {
-                        if (!m_pSession->is_trx_active() && m_pSession->is_autocommit())
+                        auto mariases = static_cast<MYSQL_session*>(m_pSession->protocol_data());
+                        if (!m_pSession->is_trx_active() && mariases->is_autocommit)
                         {
                             m_invalidate_now = true;
                         }

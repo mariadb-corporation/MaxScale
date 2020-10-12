@@ -105,7 +105,7 @@ public:
 
     std::string user;                               /*< username       */
     std::string remote;                             /*< client ip      */
-    std::string db;                                 /*< database       */
+    std::string db;                                 /*< Current default database */
     std::string plugin;                             /*< authentication plugin requested by client */
     uint8_t     next_sequence {0};                  /*< Next packet sequence */
 
@@ -129,4 +129,18 @@ public:
 
     // User entry used by the session.
     mariadb::UserEntryResult user_entry;
+
+    /**
+     * Tells whether autocommit is ON or not. The value effectively only tells the last value
+     * of the statement "set autocommit=...".
+     *
+     * That is, if the statement "set autocommit=1" has been executed, then even if a transaction has
+     * been started, which implicitly will cause autocommit to be set to 0 for the duration of the
+     * transaction, this value will be true.
+     *
+     * By default autocommit is ON. Only the client protocol connection should modify this.
+     *
+     * @see get_trx_state
+     */
+    bool is_autocommit {false};
 };

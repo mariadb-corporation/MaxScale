@@ -18,6 +18,7 @@
 #include <maxscale/modutil.hh>
 #include <maxscale/poll.hh>
 #include <maxscale/clock.h>
+#include <maxscale/protocol/mariadb/protocol_classes.hh>
 
 using namespace maxscale;
 using namespace std::chrono;
@@ -782,7 +783,8 @@ bool RWSplitSession::start_trx_replay()
         }
         else
         {
-            mxb_assert_message(!m_session->is_autocommit() || trx_is_ending(),
+            mxb_assert_message(!static_cast<MYSQL_session*>(m_session->protocol_data())->is_autocommit
+                               || trx_is_ending(),
                                "Session should have autocommit disabled or transaction just ended if the "
                                "transaction had no statements and no query was interrupted");
         }

@@ -145,8 +145,9 @@ int test(mock::Session& session,
     mxb_assert(client.n_responses() == 0);
     mxb_assert(router_session.idle());
 
+    auto mariases = static_cast<MYSQL_session*>(session.protocol_data());
     session.set_trx_state(tc.trx_state);
-    session.set_autocommit(tc.trx_state == SESSION_TRX_INACTIVE);
+    mariases->is_autocommit = (tc.trx_state == SESSION_TRX_INACTIVE);
 
     string select(create_unique_select());
     GWBUF* pStatement;
@@ -251,7 +252,7 @@ int test(mock::Session& session,
 
         cout << "Setting transaction state to SESSION_TRX_INACTIVE" << endl;
         session.set_trx_state(SESSION_TRX_INACTIVE);
-        session.set_autocommit(true);
+        mariases->is_autocommit = true;
 
         pStatement = mock::create_com_query(select);
 

@@ -19,6 +19,7 @@
 
 #include <maxscale/cn_strings.hh>
 #include <maxscale/config.hh>
+#include <maxscale/listener.hh>
 #include <maxscale/modutil.hh>
 #include <maxscale/service.hh>
 #include "user_data.hh"
@@ -39,14 +40,18 @@ MySQLProtocolModule::create_client_protocol(MXS_SESSION* session, mxs::Component
     {
         auto& search_sett = mdb_session->user_search_settings;
         search_sett.listener = m_user_search_settings;
+
         const auto& service_config = *session->service->config();
         search_sett.service.allow_root_user = service_config.enable_root;
 
+        auto def_sqlmode = session->listener_data()->m_default_sql_mode;
+        mdb_session->is_autocommit = (def_sqlmode != QC_SQL_MODE_ORACLE);
+
         mdb_session->remote = session->client_remote();
+
         session->set_protocol_data(std::move(mdb_session));
 
-        new_client_proto = std::unique_ptr<mxs::ClientConnection>(
-            new(std::nothrow) MariaDBClientConnection(session, component));
+        new_client_proto = std::make_unique<MariaDBClientConnection>(session, component);
     }
     return new_client_proto;
 }
