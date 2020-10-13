@@ -36,6 +36,11 @@ struct SETTINGS
     true,   // stop_at_first_error
 };
 
+using TrxState = MYSQL_session::TrxState;
+const auto trx_inactive = TrxState::TRX_INACTIVE;
+const auto trx_active = TrxState::TRX_ACTIVE;
+const auto trx_ro = TrxState::TRX_ACTIVE | TrxState::TRX_READ_ONLY;
+
 // See
 // https://github.com/mariadb-corporation/MaxScale/blob/2.2/Documentation/Filters/Cache.md#cache_inside_transactions
 struct TEST_CASE
@@ -47,47 +52,47 @@ struct TEST_CASE
 {
     {
         CACHE_IN_TRXS_NEVER,
-        SESSION_TRX_INACTIVE,
+        trx_inactive,
         true    // should_use
     },
     {
         CACHE_IN_TRXS_NEVER,
-        SESSION_TRX_ACTIVE,
+        trx_active,
         false   // should_use
     },
     {
         CACHE_IN_TRXS_NEVER,
-        SESSION_TRX_ACTIVE | SESSION_TRX_READ_ONLY,
+        trx_ro,
         false   // should_use
     },
     {
         CACHE_IN_TRXS_READ_ONLY,
-        SESSION_TRX_INACTIVE,
+        trx_inactive,
         true    // should_use
     },
     {
         CACHE_IN_TRXS_READ_ONLY,
-        SESSION_TRX_ACTIVE,
+        trx_active,
         false   // should_use
     },
     {
         CACHE_IN_TRXS_READ_ONLY,
-        SESSION_TRX_ACTIVE | SESSION_TRX_READ_ONLY,
+        trx_ro,
         true    // should_use
     },
     {
         CACHE_IN_TRXS_ALL,
-        SESSION_TRX_INACTIVE,
+        trx_inactive,
         true    // should_use
     },
     {
         CACHE_IN_TRXS_ALL,
-        SESSION_TRX_ACTIVE,
+        trx_active,
         true    // should_use
     },
     {
         CACHE_IN_TRXS_ALL,
-        SESSION_TRX_ACTIVE | SESSION_TRX_READ_ONLY,
+        trx_ro,
         true    // should_use
     },
 };
@@ -146,8 +151,8 @@ int test(mock::Session& session,
     mxb_assert(router_session.idle());
 
     auto mariases = static_cast<MYSQL_session*>(session.protocol_data());
-    session.set_trx_state(tc.trx_state);
-    mariases->is_autocommit = (tc.trx_state == SESSION_TRX_INACTIVE);
+    mariases->trx_state = tc.trx_state;
+    mariases->is_autocommit = (tc.trx_state == MYSQL_session::TRX_INACTIVE);
 
     string select(create_unique_select());
     GWBUF* pStatement;
@@ -204,8 +209,8 @@ int test(mock::Session& session,
             }
         }
 
-        if (tc.trx_state != SESSION_TRX_INACTIVE
-            && tc.trx_state != (SESSION_TRX_ACTIVE | SESSION_TRX_READ_ONLY))
+        if (tc.trx_state != TrxState::TRX_INACTIVE
+            && tc.trx_state != (TrxState::TRX_ACTIVE | TrxState::TRX_READ_ONLY))
         {
             // A transaction, but not a read-only one.
 
@@ -251,7 +256,7 @@ int test(mock::Session& session,
         // original select. So, let's do a select with no transaction.
 
         cout << "Setting transaction state to SESSION_TRX_INACTIVE" << endl;
-        session.set_trx_state(SESSION_TRX_INACTIVE);
+        mariases->trx_state = MYSQL_session::TRX_INACTIVE;
         mariases->is_autocommit = true;
 
         pStatement = mock::create_com_query(select);

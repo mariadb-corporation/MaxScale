@@ -847,22 +847,22 @@ void RWSplitSession::log_master_routing_failure(bool found,
 
 bool RWSplitSession::trx_is_starting() const
 {
-    return m_session->is_trx_starting();
+    return m_session->protocol_data()->is_trx_starting();
 }
 
 bool RWSplitSession::trx_is_read_only() const
 {
-    return m_session->is_trx_read_only();
+    return m_session->protocol_data()->is_trx_read_only();
 }
 
 bool RWSplitSession::trx_is_open() const
 {
-    return m_session->is_trx_active();
+    return m_session->protocol_data()->is_trx_active();
 }
 
 bool RWSplitSession::trx_is_ending() const
 {
-    return m_session->is_trx_ending();
+    return m_session->protocol_data()->is_trx_ending();
 }
 
 bool RWSplitSession::should_replace_master(RWBackend* target)

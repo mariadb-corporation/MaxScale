@@ -23,6 +23,7 @@
 #include <maxscale/modutil.hh>
 #include <maxscale/poll.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
+#include <maxscale/protocol/mariadb/protocol_classes.hh>
 #include <maxscale/query_classifier.hh>
 #include <maxscale/session.hh>
 
@@ -248,7 +249,7 @@ int32_t InsertStreamSession::routeQuery(GWBUF* queue)
     int rc = 0;
     mxb_assert(gwbuf_is_contiguous(queue));
 
-    if (m_pSession->is_trx_active() && extract_insert_target(queue, &target))
+    if (m_pSession->protocol_data()->is_trx_active() && extract_insert_target(queue, &target))
     {
         switch (m_state)
         {
@@ -363,7 +364,8 @@ int32_t InsertStreamSession::clientReply(GWBUF* buffer, const mxs::ReplyRoute& d
             // TODO: This must be done as the LOAD DATA LOCAL INFILE disables the client-side tracking of the
             // transaction state. The LOAD DATA LOCAL INFILE tracking would have to be done independently by
             // all components in the routing chain to make it work correctly.
-            m_pSession->set_trx_state(SESSION_TRX_INACTIVE);
+            auto mariases = static_cast<MYSQL_session*>(m_pSession->protocol_data());
+            mariases->trx_state = MYSQL_session::TRX_INACTIVE;
         }
 
         m_state = m_state == DS_CLOSING_STREAM ? DS_STREAM_CLOSED : DS_REQUEST_ACCEPTED;

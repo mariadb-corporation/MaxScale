@@ -33,12 +33,6 @@ struct Routable;
 class ListenerSessionData;
 }
 
-static constexpr uint32_t SESSION_TRX_INACTIVE = 0;
-static constexpr uint32_t SESSION_TRX_ACTIVE = 1 << 0;      /* 0b0001 */
-static constexpr uint32_t SESSION_TRX_READ_ONLY = 1 << 1;   /* 0b0010 */
-static constexpr uint32_t SESSION_TRX_ENDING = 1 << 2;      /* 0b0100*/
-static constexpr uint32_t SESSION_TRX_STARTING = 1 << 3;    /* 0b1000*/
-
 typedef enum
 {
     SESSION_DUMP_STATEMENTS_NEVER,
@@ -127,6 +121,34 @@ public:
     {
     public:
         virtual ~ProtocolData() = default;
+
+        /**
+         * Tells whether a transaction is starting. Exact meaning depends on the protocol.
+         *
+         * @return True if a transaction is starting
+         */
+        virtual bool is_trx_starting() const = 0;
+
+        /**
+         * Tells whether a transaction is active. Exact meaning depends on the protocol.
+         *
+         * @return True if a transaction is active
+         */
+        virtual bool is_trx_active() const = 0;
+
+        /**
+         * Tells whether a read-only transaction is active. Exact meaning depends on the protocol.
+         *
+         * @return True if a read-only transaction is active
+         */
+        virtual bool is_trx_read_only() const = 0;
+
+        /**
+         * Tells whether a transaction is ending. Exact meaning depends on the protocol.
+         *
+         * @return True if a transaction is ending
+         */
+        virtual bool is_trx_ending() const = 0;
     };
 
     virtual ~MXS_SESSION();
@@ -181,119 +203,6 @@ public:
     virtual void                         set_client_connection(mxs::ClientConnection* client_conn) = 0;
     virtual mxs::ListenerSessionData*    listener_data() = 0;
 
-    /**
-     * Get the transaction state of the session.
-     *
-     * Note that this tells only the state of @e explicitly started transactions.
-     * That is, if @e autocommit is OFF, which means that there is always an
-     * active transaction that is ended with an explicit COMMIT or ROLLBACK,
-     * at which point a new transaction is started, this function will still
-     * return SESSION_TRX_INACTIVE, unless a transaction has explicitly been
-     * started with START TRANSACTION.
-     *
-     * Likewise, if @e autocommit is ON, which means that every statement is
-     * executed in a transaction of its own, this will return false, unless a
-     * transaction has explicitly been started with START TRANSACTION.
-     *
-     * @note The return value is valid only if either a router or a filter
-     *       has declared that it needs RCAP_TYPE_TRANSACTION_TRACKING.
-     *
-     * @return The transaction state.
-     */
-    uint32_t get_trx_state() const
-    {
-        return m_trx_state;
-    }
-
-    /**
-     * Set the transaction state of the session.
-     *
-     * NOTE: Only the protocol object may call this.
-     *
-     * @param new_state The new transaction state.
-     *
-     * @return The previous transaction state.
-     */
-    void set_trx_state(uint32_t new_state)
-    {
-        m_trx_state = new_state;
-    }
-
-    /**
-     * Tells whether an explicit READ ONLY transaction is active.
-     *
-     * @see get_trx_state
-     *
-     * @note The return value is valid only if either a router or a filter
-     *       has declared that it needs RCAP_TYPE_TRANSACTION_TRACKING.
-     *
-     * @return True if an explicit READ ONLY transaction is active,
-     *         false otherwise.
-     */
-    bool is_trx_read_only() const
-    {
-        return m_trx_state & SESSION_TRX_READ_ONLY;
-    }
-
-    /**
-     * Tells whether an explicit READ WRITE transaction is active.
-     *
-     * @see get_trx_state
-     *
-     * @note The return value is valid only if either a router or a filter
-     *       has declared that it needs RCAP_TYPE_TRANSACTION_TRACKING.
-     *
-     * @return True if an explicit READ WRITE  transaction is active,
-     *         false otherwise.
-     */
-    bool is_trx_read_write() const
-    {
-        return !is_trx_read_only();
-    }
-
-    /**
-     * Tells whether a transaction is ending.
-     *
-     * @see get_trx_state
-     *
-     * @note The return value is valid only if either a router or a filter
-     *       has declared that it needs RCAP_TYPE_TRANSACTION_TRACKING.
-     *
-     * @return True if a transaction that was active is ending either via COMMIT or ROLLBACK.
-     */
-    bool is_trx_ending() const
-    {
-        return m_trx_state & SESSION_TRX_ENDING;
-    }
-
-    /**
-     * Tells whether a transaction is starting.
-     *
-     * @note The return value is valid only if either a router or a filter
-     *       has declared that it needs RCAP_TYPE_TRANSACTION_TRACKING.
-     *
-     * @return True if a new transaction is currently starting
-     */
-    bool is_trx_starting() const
-    {
-        return m_trx_state & SESSION_TRX_STARTING;
-    }
-
-    /**
-     * Tells whether a transaction is active.
-     *
-     * @see get_trx_state
-     *
-     * @note The return value is valid only if either a router or a filter
-     *       has declared that it needs RCAP_TYPE_TRANSACTION_TRACKING.
-     *
-     * @return True if a transaction is active, false otherwise.
-     */
-    bool is_trx_active() const
-    {
-        return m_trx_state & SESSION_TRX_ACTIVE;
-    }
-
 protected:
     State                    m_state;   /**< Current descriptor state */
     uint64_t                 m_id;      /**< Unique session identifier */
@@ -326,7 +235,6 @@ public:
 
 private:
     std::unique_ptr<ProtocolData> m_protocol_data;
-    uint32_t                      m_trx_state {SESSION_TRX_INACTIVE};
     bool                          m_killed {false};
 };
 
@@ -381,14 +289,6 @@ bool session_start(MXS_SESSION* session);
 const char* session_get_remote(const MXS_SESSION*);
 const char* session_get_user(const MXS_SESSION*);
 const char* session_state_to_string(MXS_SESSION::State);
-
-/**
- * Convert transaction state to string representation.
- *
- * @param state A transaction state.
- * @return String representation of the state.
- */
-const char* session_trx_state_to_string(uint32_t state);
 
 /**
  * @brief Get a session reference by ID

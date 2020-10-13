@@ -143,4 +143,81 @@ public:
      * @see get_trx_state
      */
     bool is_autocommit {false};
+
+    enum TrxState : uint32_t
+    {
+        TRX_INACTIVE = 0,
+        TRX_ACTIVE = 1 << 0,
+        TRX_READ_ONLY = 1 << 1,
+        TRX_ENDING = 1 << 2,
+        TRX_STARTING = 1 << 3,
+    };
+
+    /**
+     * The transaction state of the session.
+     *
+     * This tells only the state of @e explicitly started transactions.
+     * That is, if @e autocommit is OFF, which means that there is always an
+     * active transaction that is ended with an explicit COMMIT or ROLLBACK,
+     * at which point a new transaction is started, this variable will still
+     * be TRX_INACTIVE, unless a transaction has explicitly been
+     * started with START TRANSACTION.
+     *
+     * Likewise, if @e autocommit is ON, which means that every statement is
+     * executed in a transaction of its own, this will return false, unless a
+     * transaction has explicitly been started with START TRANSACTION.
+     *
+     * The value is valid only if either a router or a filter
+     * has declared that it needs RCAP_TYPE_TRANSACTION_TRACKING.
+     *
+     * Only the client protocol object should write this.
+     */
+    uint32_t trx_state {TRX_INACTIVE};
+
+    /**
+     * Tells whether a transaction is starting.
+     *
+     * @note The return value is valid only if either a router or a filter
+     *       has declared that it needs RCAP_TYPE_TRANSACTION_TRACKING.
+     *
+     * @return True if a new transaction is currently starting
+     */
+    bool is_trx_starting() const override;
+
+    /**
+     * Tells whether a transaction is active.
+     *
+     * @see get_trx_state
+     *
+     * @note The return value is valid only if either a router or a filter
+     *       has declared that it needs RCAP_TYPE_TRANSACTION_TRACKING.
+     *
+     * @return True if a transaction is active, false otherwise.
+     */
+    bool is_trx_active() const override;
+
+    /**
+     * Tells whether an explicit READ ONLY transaction is active.
+     *
+     * @see get_trx_state
+     *
+     * @note The return value is valid only if either a router or a filter
+     *       has declared that it needs RCAP_TYPE_TRANSACTION_TRACKING.
+     *
+     * @return True if an explicit READ ONLY transaction is active,
+     *         false otherwise.
+     */
+    bool is_trx_read_only() const override;
+
+    /**
+     * Tells whether a transaction is ending.
+     *
+     * @see get_trx_state
+     *
+     * @note The return value is valid only if either a router or a filter
+     *       has declared that it needs RCAP_TYPE_TRANSACTION_TRACKING.
+     *
+     * @return True if a transaction that was active is ending either via COMMIT or ROLLBACK.
+     */
+    bool is_trx_ending() const override;
 };

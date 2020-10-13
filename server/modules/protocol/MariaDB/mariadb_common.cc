@@ -457,6 +457,26 @@ std::string MYSQL_session::user_and_host() const
     return "'" + user + "'@'" + remote + "'";
 }
 
+bool MYSQL_session::is_trx_read_only() const
+{
+    return trx_state & TrxState::TRX_READ_ONLY;
+}
+
+bool MYSQL_session::is_trx_ending() const
+{
+    return trx_state & TrxState::TRX_ENDING;
+}
+
+bool MYSQL_session::is_trx_starting() const
+{
+    return trx_state & TrxState::TRX_STARTING;
+}
+
+bool MYSQL_session::is_trx_active() const
+{
+    return trx_state & TrxState::TRX_ACTIVE;
+}
+
 uint64_t mariadb::AuthenticatorModule::capabilities() const
 {
     return 0;

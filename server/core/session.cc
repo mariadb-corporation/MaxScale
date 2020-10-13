@@ -268,37 +268,6 @@ const char* session_get_user(const MXS_SESSION* session)
     return session ? session->user().c_str() : NULL;
 }
 
-const char* session_trx_state_to_string(uint32_t state)
-{
-    if ((state & SESSION_TRX_ACTIVE) == 0)
-    {
-        mxb_assert(state == SESSION_TRX_INACTIVE);
-        return "SESSION_TRX_INACTIVE";
-    }
-    else if (state & SESSION_TRX_ENDING)
-    {
-        if (state & SESSION_TRX_READ_ONLY)
-        {
-            return "SESSION_TRX_READ_ONLY_ENDING";
-        }
-        else
-        {
-            return "SESSION_TRX_READ_WRITE_ENDING";
-        }
-    }
-    else
-    {
-        if (state & SESSION_TRX_READ_ONLY)
-        {
-            return "SESSION_TRX_READ_ONLY";
-        }
-        else
-        {
-            return "SESSION_TRX_READ_WRITE";
-        }
-    }
-}
-
 static bool ses_find_id(DCB* dcb, void* data)
 {
     void** params = (void**)data;

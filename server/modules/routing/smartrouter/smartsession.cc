@@ -116,7 +116,7 @@ int SmartRouterSession::routeQuery(GWBUF* pBuf)
             MXS_SDEBUG("Write all");
             ret = write_to_all(pBuf, Mode::Query);
         }
-        else if (m_qc.target_is_master(route_info.target()) || m_pSession->is_trx_active())
+        else if (m_qc.target_is_master(route_info.target()) || m_pSession->protocol_data()->is_trx_active())
         {
             MXS_SDEBUG("Write to master");
             ret = write_to_master(pBuf);

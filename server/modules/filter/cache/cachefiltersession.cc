@@ -792,6 +792,7 @@ CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* p
         const char* zPrimary_reason = NULL;
         const char* zSecondary_reason = "";
         const CacheConfig& config = m_sCache->config();
+        auto protocol_data = m_pSession->protocol_data();
 
         if (qc_query_is_type(type_mask, QUERY_TYPE_BEGIN_TRX))
         {
@@ -803,7 +804,7 @@ CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* p
             // When a transaction is started, we initially assume it is read-only.
             m_is_read_only = true;
         }
-        else if (!m_pSession->is_trx_active())
+        else if (!protocol_data->is_trx_active())
         {
             if (log_decisions())
             {
@@ -811,7 +812,7 @@ CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* p
             }
             action = CACHE_USE_AND_POPULATE;
         }
-        else if (m_pSession->is_trx_read_only())
+        else if (protocol_data->is_trx_read_only())
         {
             if (config.cache_in_trxs >= CACHE_IN_TRXS_READ_ONLY)
             {
@@ -911,7 +912,7 @@ CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* p
                     if (m_invalidate)
                     {
                         auto mariases = static_cast<MYSQL_session*>(m_pSession->protocol_data());
-                        if (!m_pSession->is_trx_active() && mariases->is_autocommit)
+                        if (!protocol_data->is_trx_active() && mariases->is_autocommit)
                         {
                             m_invalidate_now = true;
                         }
