@@ -938,6 +938,9 @@ add_test_executable(mxs2919_broken_slaves.cpp mxs2919_broken_slaves mxs2919_brok
 # MXS-2972: Caching of shards must take servers into notice
 add_test_executable(mxs2972_shard_caching.cc mxs2972_shard_caching mxs2972_shard_caching LABELS REPL_BACKEND schemarouter)
 
+# MXS-3220: Crash on master reconnection with session command
+add_test_executable(mxs3220_reconnect_crash.cc mxs3220_reconnect_crash mxs3220_reconnect_crash LABELS REPL_BACKEND readwritesplit)
+
 ############################################
 # END: Normal tests                        #
 ############################################
