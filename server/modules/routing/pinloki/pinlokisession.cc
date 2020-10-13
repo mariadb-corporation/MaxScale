@@ -341,11 +341,7 @@ void PinlokiSession::change_master_to(const parser::ChangeMasterValues& values)
 {
     GWBUF* buf = nullptr;
 
-    if (m_router->config().select_master())
-    {
-        buf = create_select_master_error();
-    }
-    else if (m_router->is_slave_running())
+    if (m_router->is_slave_running())
     {
         buf = create_slave_running_error();
     }

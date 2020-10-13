@@ -36,6 +36,8 @@ class Config : public mxs::config::Configuration
 public:
     Config(const std::string& name);
 
+    Config(Config&&) = default;
+
     static mxs::config::Specification& spec();
 
     /** Make a full path. This prefixes "name" with m_binlog_dir/,
@@ -53,6 +55,7 @@ public:
     std::chrono::seconds net_timeout() const;
     // Automatic master selection
     bool select_master() const;
+    void disable_select_master();
 
     // File purging
     int32_t             expire_log_minimum_files() const;
@@ -125,6 +128,7 @@ private:
 
     std::chrono::seconds m_net_timeout;
     bool                 m_select_master;
+    bool                 m_select_master_disabled {false};
 
     int64_t             m_expire_log_minimum_files;
     wall_time::Duration m_expire_log_duration;

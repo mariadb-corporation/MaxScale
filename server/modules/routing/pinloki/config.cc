@@ -108,7 +108,12 @@ std::chrono::seconds Config::net_timeout() const
 
 bool Config::select_master() const
 {
-    return m_select_master;
+    return m_select_master && !m_select_master_disabled;
+}
+
+void Config::disable_select_master()
+{
+    m_select_master_disabled = true;
 }
 
 int32_t Config::expire_log_minimum_files() const

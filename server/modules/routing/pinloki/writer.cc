@@ -109,11 +109,22 @@ void Writer::run()
         Error error;
         try
         {
-            // Clear the current error
+            auto details = get_connection_details();
+
             {
-                std::lock_guard<std::mutex> guard(m_lock);
+                std::unique_lock<std::mutex> guard(m_lock);
+                if (!details.host.is_valid())
+                {
+                    MXB_SWARNING("No (replication) master found. Retrying...");
+                    m_cond.wait_for(guard, std::chrono::seconds(1), [this]() {
+                                        return !m_running;
+                                    });
+
+                    continue;
+                }
                 m_error = Error {};
             }
+
 
             FileWriter file(&m_inventory, *this);
             mxq::Connection conn(get_connection_details());

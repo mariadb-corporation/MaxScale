@@ -262,6 +262,15 @@ std::string Pinloki::change_master(const parser::ChangeMasterValues& values)
 {
     std::lock_guard<std::mutex> guard(m_lock);
 
+    if (m_config.select_master())
+    {
+        MXB_SINFO("Turning off select_master functionality"
+                  " due to 'CHANGE MASTER TO' command. select_master"
+                  " will take effect again in the next MaxScale restart.");
+    }
+
+    m_config.disable_select_master();
+
     using CMT = pinloki::ChangeMasterType;
     std::vector<std::string> errors;
 
