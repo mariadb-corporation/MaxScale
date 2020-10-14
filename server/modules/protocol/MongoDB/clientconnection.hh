@@ -16,6 +16,8 @@
 #include <maxscale/protocol2.hh>
 #include "mxsmongo.hh"
 
+class MYSQL_session;
+
 class ClientConnection : public mxs::ClientConnection
 {
 public:
@@ -62,10 +64,12 @@ private:
         return m_state == READY;
     }
 
-    void set_ready() const
+    void set_ready()
     {
         m_state = READY;
     }
+
+    void setup_session();
 
     GWBUF* handle_one_packet(GWBUF* pPacket);
 
@@ -77,7 +81,8 @@ private:
 private:
     State           m_state { CONNECTED };
     MXS_SESSION&    m_session;
-    mxs::Component& m_component;
+    mxs::Component& m_downstream;
+    MYSQL_session&  m_session_data;
     DCB*            m_pDcb = nullptr;
     int32_t         m_request_id { 1 };
 };
