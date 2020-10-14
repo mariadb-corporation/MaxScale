@@ -264,7 +264,7 @@ std::pair<bool, std::unique_ptr<mxs::SSLContext>> create_ssl(const char* name,
     bool ok = true;
     auto ssl = std::make_unique<mxs::SSLContext>();
 
-    if (!ssl->read_configuration(name, params, false))
+    if (!ssl->configure(params))
     {
         MXS_ERROR("Unable to initialize SSL for server '%s'", name);
         ok = false;

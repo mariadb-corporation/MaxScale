@@ -60,7 +60,20 @@ namespace cfg = mxs::config;
 
 const auto RUNTIME = cfg::Param::Modifiable::AT_RUNTIME;
 
-cfg::Specification s_spec("listener", cfg::Specification::LISTENER);
+class ListenerSpecification : public cfg::Specification
+{
+public:
+    using cfg::Specification::Specification;
+
+protected:
+    template<class Params>
+    bool do_post_validate(Params params) const;
+
+    bool post_validate(const mxs::ConfigParameters& params) const override;
+    bool post_validate(json_t* json) const override;
+};
+
+ListenerSpecification s_spec("listener", cfg::Specification::LISTENER);
 
 cfg::ParamString s_type(&s_spec, CN_TYPE, "Object type", "listener");
 cfg::ParamString s_protocol(&s_spec, CN_PROTOCOL, "Listener protocol to use", "mariadbclient");
@@ -105,6 +118,39 @@ cfg::ParamEnum<qc_sql_mode_t> s_sql_mode(&s_spec, CN_SQL_MODE, "SQL parsing mode
 cfg::ParamPath s_connection_init_sql_file(
     &s_spec, CN_CONNECTION_INIT_SQL_FILE, "Path to connection initialization SQL", cfg::ParamPath::R, "",
     RUNTIME);
+
+template<class Params>
+bool ListenerSpecification::do_post_validate(Params params) const
+{
+    bool ok = true;
+
+    if (s_ssl.get(params))
+    {
+        if (s_ssl_key.get(params).empty())
+        {
+            MXS_ERROR("The 'ssl_key' parameter must be defined when a listener is configured with SSL.");
+            ok = false;
+        }
+
+        if (s_ssl_cert.get(params).empty())
+        {
+            MXS_ERROR("The 'ssl_cert' parameter must be defined when a listener is configured with SSL.");
+            ok = false;
+        }
+    }
+
+    return ok;
+}
+
+bool ListenerSpecification::post_validate(const mxs::ConfigParameters& params) const
+{
+    return do_post_validate(params);
+}
+
+bool ListenerSpecification::post_validate(json_t* json) const
+{
+    return do_post_validate(json);
+}
 
 class RateLimit
 {
@@ -1007,7 +1053,7 @@ Listener::SData Listener::create_shared_data()
             // TODO: The old behavior where the global sql_mode was used if the listener one isn't configured
             mxs::SSLContext ssl;
 
-            if (ssl.read_configuration(m_name, m_params, true))
+            if (ssl.configure(m_params))
             {
                 ListenerSessionData::ConnectionInitSql init_sql;
                 if (read_connection_init_sql(m_config.connection_init_sql_file, &init_sql))

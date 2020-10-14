@@ -407,50 +407,6 @@ std::string SSLConfig::to_string() const
     return ss.str();
 }
 
-bool SSLContext::read_configuration(const std::string& name, const mxs::ConfigParameters& params,
-                                    bool require_cert)
-{
-    bool ok = true;
-    // The enum values convert to bool
-    int value = params.get_enum(CN_SSL, ssl_setting_values());
-    mxb_assert(value != -1);
-    if (value)
-    {
-        auto namez = name.c_str();
-        if (require_cert)
-        {
-            if (!params.contains(CN_SSL_CERT))
-            {
-                MXS_ERROR("Server certificate missing for listener '%s'."
-                          "Please provide the path to the server certificate by adding "
-                          "the ssl_cert=<path> parameter",
-                          namez);
-                ok = false;
-            }
-
-            if (!params.contains(CN_SSL_KEY))
-            {
-                MXS_ERROR("Server private key missing for listener '%s'. "
-                          "Please provide the path to the server certificate key by "
-                          "adding the ssl_key=<path> parameter",
-                          namez);
-                ok = false;
-            }
-        }
-
-        if (ok)
-        {
-            ok = configure(params);
-        }
-    }
-    else
-    {
-        // OK, no SSL configured. Reset to empty.
-        reset();
-    }
-    return ok;
-}
-
 void SSLContext::reset()
 {
     m_cfg = SSLConfig();
@@ -481,25 +437,4 @@ bool SSLContext::configure(const mxs::ConfigParameters& params)
 
     return init();
 }
-}
-
-const MXS_ENUM_VALUE* ssl_setting_values()
-{
-    // Values for the `ssl` parameter. These are plain boolean types but for legacy
-    // reasons the required and disabled keywords need to be allowed.
-    static const MXS_ENUM_VALUE ssl_values[] =
-    {
-        {"required", 1},
-        {"true",     1},
-        {"yes",      1},
-        {"on",       1},
-        {"1",        1},
-        {"disabled", 0},
-        {"false",    0},
-        {"no",       0},
-        {"off",      0},
-        {"0",        0},
-        {NULL}
-    };
-    return ssl_values;
 }

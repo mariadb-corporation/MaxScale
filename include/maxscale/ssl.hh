@@ -43,7 +43,6 @@ class ConfigParameters;
 #define SSL_ERROR_ACCEPT_FAILED  2
 
 extern const MXS_ENUM_VALUE ssl_version_values[];
-const MXS_ENUM_VALUE* ssl_setting_values();
 
 namespace maxscale
 {
@@ -101,17 +100,15 @@ public:
     }
 
     /**
-     * Configure the SSLContext. Empty configuration is accepted.
+     * Configure the SSLContext
      *
-     * @param name Owning object name. Printed to error messages.
      * @param params Configuration parameters
-     * @param require_cert Are certificates required
+     *
      * @return True on success
      */
-    bool read_configuration(const std::string& name, const mxs::ConfigParameters& params, bool require_cert);
+    bool configure(const mxs::ConfigParameters& params);
 
 private:
-    bool configure(const mxs::ConfigParameters& params);
     void reset();
     bool init();
 
