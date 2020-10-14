@@ -969,6 +969,9 @@ add_test_executable(mxs2972_shard_caching.cc mxs2972_shard_caching mxs2972_shard
 # MXS-3218: Crash with LOAD DATA LOCAL INFILE
 add_test_executable(mxs3218_ldli_crash.cc mxs3218_ldli_crash replication LABELS REPL_BACKEND)
 
+# MXS-3220: Crash on master reconnection with session command
+add_test_executable(mxs3220_reconnect_crash.cc mxs3220_reconnect_crash mxs3220_reconnect_crash LABELS REPL_BACKEND readwritesplit)
+
 ############################################
 # END: Normal tests                        #
 ############################################
