@@ -298,7 +298,7 @@ GWBUF* ClientConnection::handle_query(const mxsmongo::Query& req)
         switch (mxsmongo::get_command(req.query()))
         {
         case mxsmongo::Command::ISMASTER:
-            pResponse = create_handshake_response(req);
+            pResponse = create_ismaster_response(req);
             break;
 
         case mxsmongo::Command::UNKNOWN:
@@ -339,7 +339,7 @@ GWBUF* ClientConnection::handle_msg(const mxsmongo::Msg& req)
 
                         if (utf8.value == bsoncxx::stdx::string_view("admin"))
                         {
-                            pResponse = create_handshake_response(req);
+                            pResponse = create_ismaster_response(req);
                         }
                         else
                         {
@@ -373,7 +373,7 @@ GWBUF* ClientConnection::handle_msg(const mxsmongo::Msg& req)
     return pResponse;
 }
 
-GWBUF* ClientConnection::create_handshake_response(const mxsmongo::Packet& req)
+GWBUF* ClientConnection::create_ismaster_response(const mxsmongo::Packet& req)
 {
     // TODO: Do not simply return a hardwired response.
 

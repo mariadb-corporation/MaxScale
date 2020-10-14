@@ -76,7 +76,7 @@ private:
     GWBUF* handle_query(const mxsmongo::Query& request);
     GWBUF* handle_msg(const mxsmongo::Msg& request);
 
-    GWBUF* create_handshake_response(const mxsmongo::Packet& request);
+    GWBUF* create_ismaster_response(const mxsmongo::Packet& request);
 
 private:
     State           m_state { CONNECTED };
