@@ -20,7 +20,7 @@
 #include <maxscale/session.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/protocol/mariadb/protocol_classes.hh>
-#include "mxsmongo.hh"
+#include "mxsmongodatabase.hh"
 
 using namespace std;
 
@@ -171,10 +171,19 @@ void ClientConnection::hangup(DCB* pDcb)
     m_session.kill();
 }
 
-int32_t ClientConnection::write(GWBUF* buffer)
+const char* dbg_decode_response(GWBUF* pPacket);
+
+int32_t ClientConnection::write(GWBUF* pMariaDB_response)
 {
     TRACE();
-    mxb_assert(!true);
+    MXS_NOTICE("MariaDB response: %s", dbg_decode_response(pMariaDB_response));
+
+    mxb_assert(m_sMongo.get());
+
+    GWBUF* pMongo_response = m_sMongo->translate(pMariaDB_response);
+    mxb_assert(pMongo_response);
+
+    m_pDcb->writeq_append(pMongo_response);
     return 0;
 }
 

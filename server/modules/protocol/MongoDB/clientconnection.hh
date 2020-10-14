@@ -18,6 +18,11 @@
 
 class MYSQL_session;
 
+namespace mxsmongo
+{
+class Database;
+}
+
 class ClientConnection : public mxs::ClientConnection
 {
 public:
@@ -79,10 +84,13 @@ private:
     GWBUF* create_ismaster_response(const mxsmongo::Packet& request);
 
 private:
+    using SMongo = std::unique_ptr<mxsmongo::Database>;
+
     State           m_state { CONNECTED };
     MXS_SESSION&    m_session;
     mxs::Component& m_downstream;
     MYSQL_session&  m_session_data;
     DCB*            m_pDcb = nullptr;
     int32_t         m_request_id { 1 };
+    SMongo          m_sMongo;
 };

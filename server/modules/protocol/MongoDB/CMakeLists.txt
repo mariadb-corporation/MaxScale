@@ -10,6 +10,7 @@ include_directories(${BSON_CXX_INCLUDE_DIR})
 add_library(mongodbclient SHARED
   clientconnection.cc
   mxsmongo.cc
+  mxsmongodatabase.cc
   mongodbclient.cc
   protocolmodule.cc
   )
