@@ -526,16 +526,16 @@ Example REST-API paths for other commands are listed below.
 Most cluster modification commands wait until the operation either succeeds or
 fails. _async-switchover_ is an exception, as it returns immediately. Otherwise
 _async-switchover_ works identical to a normal _switchover_ command. Use the
-module command _fetch-cmd-results_ to view the result of the queued command.
-_fetch-cmd-results_ returns the status or result of the latest manual command,
+module command _fetch-cmd-result_ to view the result of the queued command.
+_fetch-cmd-result_ returns the status or result of the latest manual command,
 whether queued or not.
 ```
 maxctrl call command mariadbmon async-switchover Cluster1
 OK
-maxctrl call command mariadbmon fetch-cmd-results Cluster1
+maxctrl call command mariadbmon fetch-cmd-result Cluster1
 {
     "links": {
-        "self": "http://localhost:8989/v1/maxscale/modules/mariadbmon/fetch-cmd-results"
+        "self": "http://localhost:8989/v1/maxscale/modules/mariadbmon/fetch-cmd-result"
     },
     "meta": "switchover completed successfully."
 }
