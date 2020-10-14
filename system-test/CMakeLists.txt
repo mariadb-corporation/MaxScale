@@ -969,6 +969,9 @@ add_test_executable(mxs3218_ldli_crash.cc mxs3218_ldli_crash replication LABELS 
 # MXS-3128: Listener SSL alteration test
 add_test_executable(mxs3128_listener_ssl.cc mxs3128_listener_ssl replication LABELS REPL_BACKEND)
 
+# MXS-3220: Crash on master reconnection with session command
+add_test_executable(mxs3220_reconnect_crash.cc mxs3220_reconnect_crash mxs3220_reconnect_crash LABELS REPL_BACKEND readwritesplit)
+
 ############################################
 # END: Normal tests                        #
 ############################################

@@ -803,11 +803,11 @@ bool RWSplitSession::retry_master_query(RWBackend* backend)
 {
     bool can_continue = false;
 
-    if (backend->is_replaying_history())
+    if (backend->is_replaying_history() && !m_query_queue.empty())
     {
-        // Master failed while it was replaying the session command history
+        // Master failed while it was replaying the session command history while a query was queued for
+        // execution. Re-execute it to trigger a reconnection.
         mxb_assert(m_config.master_reconnection);
-        mxb_assert(!m_query_queue.empty());
 
         retry_query(m_query_queue.front().release());
         m_query_queue.pop_front();
@@ -820,7 +820,10 @@ bool RWSplitSession::retry_master_query(RWBackend* backend)
         // the response will be returned from one of the slaves if the configuration allows it.
 
         mxb_assert(m_sescmd_replier == backend);
-        mxb_assert(backend->next_session_command()->get_position() == m_recv_sescmd + 1);
+        mxb_assert_message(backend->next_session_command()->get_position() == m_recv_sescmd + 1
+                           || backend->is_replaying_history(),
+                           "The master should be executing the latest session command "
+                           "or attempting to replay existing history.");
         mxb_assert(m_qc.current_route_info().target() == TARGET_ALL);
         mxb_assert(!m_current_query.get());
         mxb_assert(!m_sescmd_list.empty());
@@ -836,15 +839,18 @@ bool RWSplitSession::retry_master_query(RWBackend* backend)
             return false;
         }
 
-        for (auto b : m_raw_backends)
+        if (!backend->is_replaying_history())
         {
-            if (b != backend && b->in_use() && b->is_waiting_result())
+            for (auto b : m_raw_backends)
             {
-                MXS_INFO("Master failed, electing '%s' as the replier to session command %lu",
-                         b->name(), b->next_session_command()->get_position());
-                m_sescmd_replier = b;
-                m_expected_responses++;
-                break;
+                if (b != backend && b->in_use() && b->is_waiting_result())
+                {
+                    MXS_INFO("Master failed, electing '%s' as the replier to session command %lu",
+                             b->name(), b->next_session_command()->get_position());
+                    m_sescmd_replier = b;
+                    m_expected_responses++;
+                    break;
+                }
             }
         }
 
@@ -858,9 +864,10 @@ bool RWSplitSession::retry_master_query(RWBackend* backend)
             // Before routing it, pop the failed session command off the list and decrement the number of
             // executed session commands. This "overwrites" the existing command and prevents history
             // duplication.
+            GWBUF* buffer = m_sescmd_list.back()->deep_copy_buffer();
             m_sescmd_list.pop_back();
             --m_sescmd_count;
-            retry_query(backend->next_session_command()->deep_copy_buffer());
+            retry_query(buffer);
 
             MXS_INFO("Master failed, retrying session command %lu",
                      backend->next_session_command()->get_position());

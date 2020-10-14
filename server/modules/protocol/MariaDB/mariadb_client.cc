@@ -2015,6 +2015,11 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_handsh
                     {
                         m_handshake_state = HSState::SSL_NEG;
                     }
+                    else if (parse_handshake_response_packet(buffer))
+                    {
+                        send_authetication_error(AuthErrorType::ACCESS_DENIED);
+                        m_handshake_state = HSState::FAIL;
+                    }
                     else
                     {
                         send_mysql_err_packet(next_seq, 0, er_bad_handshake, sql_errstate,
