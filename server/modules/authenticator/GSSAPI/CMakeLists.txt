@@ -4,7 +4,7 @@ if (GSSAPI_FOUND AND SQLITE_FOUND)
     include_directories(${SQLITE_INCLUDE_DIR})
 
     add_library(gssapiauth SHARED gssapi_auth.cc gssapi_auth_common.cc gssapi_backend_auth.cc)
-    target_link_libraries(gssapiauth maxscale-common ${GSSAPI_LIBS} ${SQLITE_LIBRARIES} mariadbclient)
+    target_link_libraries(gssapiauth maxscale-common ${GSSAPI_LIBS} ${SQLITE_LIBRARIES} mariadbprotocol)
     set_target_properties(gssapiauth PROPERTIES VERSION "1.0.0" LINK_FLAGS -Wl,-z,defs)
     install_module(gssapiauth core)
   else()

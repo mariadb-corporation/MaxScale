@@ -16,6 +16,7 @@
 #include "protocol_module.hh"
 #include <maxscale/protocol/mariadb/client_connection.hh>
 #include <maxscale/protocol/mariadb/backend_connection.hh>
+#include <maxscale/protocol/mariadb/module_info.hh>
 
 #include <maxscale/cn_strings.hh>
 #include <maxscale/config.hh>
@@ -300,11 +301,11 @@ bool MySQLProtocolModule::parse_auth_options(const std::string& opts, mxs::Confi
 }
 
 /**
- * mariadbclient module entry point.
+ * Get MariaDBProtocol module info
  *
  * @return The module object
  */
-extern "C" MXS_MODULE* MXS_CREATE_MODULE()
+MXS_MODULE* mariadbprotocol_info()
 {
     static MXS_MODULE info =
     {

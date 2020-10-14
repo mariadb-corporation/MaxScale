@@ -63,9 +63,8 @@ const char wrong_mod_type[] = "Module '%s' is a %s, not a %s.";
 
 struct LOADED_MODULE
 {
-    string      name;               /**< The name of the module */
-    MXS_MODULE* info {nullptr};     /**< The module information */
-    void*       handle {nullptr};   /**< The handle returned by dlopen */
+    MXS_MODULE* info{nullptr};  /**< The module information */
+    void*       handle{nullptr};/**< The handle returned by dlopen */
 
     LOADED_MODULE(void* dlhandle, MXS_MODULE* info)
         : info(info)
@@ -75,7 +74,11 @@ struct LOADED_MODULE
 
     ~LOADED_MODULE()
     {
-        dlclose(handle);
+        // Built-in modules cannot be closed.
+        if (handle)
+        {
+            dlclose(handle);
+        }
     }
 };
 
@@ -104,15 +107,17 @@ const char*    module_maturity_to_string(ModuleStatus type);
 const char*    mxs_module_param_type_to_string(mxs_module_param_type type);
 
 bool load_module(const string& fpath, mxs::ModuleType type, const string& given_name = "");
-}
 
-static NAME_MAPPING name_mappings[] =
+const char madbproto[] = "mariadbprotocol";
+NAME_MAPPING name_mappings[] =
 {
-    {ModuleType::MONITOR,       "mysqlmon",    "mariadbmon",    false},
-    {ModuleType::PROTOCOL,      "mysqlclient", "mariadbclient", false},
-    {ModuleType::PROTOCOL,      "mariadb",     "mariadbclient", true },
-    {ModuleType::AUTHENTICATOR, "mysqlauth",   "mariadbauth",   false},
+    {ModuleType::MONITOR,       "mysqlmon",      "mariadbmon",  false},
+    {ModuleType::PROTOCOL,      "mysqlclient",   madbproto,     false},
+    {ModuleType::PROTOCOL,      "mariadb",       madbproto,     true },
+    {ModuleType::PROTOCOL,      "mariadbclient", madbproto,     true },
+    {ModuleType::AUTHENTICATOR, "mysqlauth",     "mariadbauth", false},
 };
+}
 
 static bool api_version_match(const MXS_MODULE* mod_info, const string& filepath)
 {
@@ -1013,4 +1018,16 @@ bool modules_process_init()
 void modules_process_finish()
 {
     call_finish_funcs(InitType::PROCESS);
+}
+
+void add_built_in_module(MXS_MODULE* module)
+{
+    auto mod_name_low = mxb::tolower(module->name);
+    mxb_assert(this_unit.loaded_modules.count(mod_name_low) == 0);
+    auto new_module = std::make_unique<LOADED_MODULE>(nullptr, module);
+    auto new_kv = std::make_pair(mod_name_low, std::move(new_module));
+    this_unit.loaded_modules.insert(std::move(new_kv));
+
+    // No need to do initializations. It's assumed that the caller has already ran process-level init if any.
+    // Workers will run their thread-level inits afterwards.
 }

@@ -67,6 +67,7 @@
 #include <maxscale/threadpool.hh>
 #include <maxscale/utils.h>
 #include <maxscale/version.h>
+#include <maxscale/protocol/mariadb/module_info.hh>
 
 #include "internal/admin.hh"
 #include "internal/adminusers.hh"
@@ -2105,6 +2106,7 @@ int main(int argc, char** argv)
 
     watchdog_notifier.start();
 
+    add_built_in_module(mariadbprotocol_info());
     // Initialize the internal query classifier. The actual plugin will be
     // initialized via the module initialization below.
     if (qc_process_init(QC_INIT_SELF))

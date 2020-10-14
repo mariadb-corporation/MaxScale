@@ -76,7 +76,7 @@ protected:
 ListenerSpecification s_spec("listener", cfg::Specification::LISTENER);
 
 cfg::ParamString s_type(&s_spec, CN_TYPE, "Object type", "listener");
-cfg::ParamString s_protocol(&s_spec, CN_PROTOCOL, "Listener protocol to use", "mariadbclient");
+cfg::ParamString s_protocol(&s_spec, CN_PROTOCOL, "Listener protocol to use", "mariadb");
 cfg::ParamString s_authenticator(&s_spec, CN_AUTHENTICATOR, "Listener authenticator", "");
 cfg::ParamString s_authenticator_options(&s_spec, CN_AUTHENTICATOR_OPTIONS, "Authenticator options", "");
 cfg::ParamService s_service(&s_spec, CN_SERVICE, "Service to which the listener connects to");

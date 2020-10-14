@@ -29,6 +29,7 @@
 #include <maxscale/test.hh>
 
 #include <sys/stat.h>
+#include <maxscale/protocol/mariadb/module_info.hh>
 
 #include "../internal/poll.hh"
 #include "../internal/modules.hh"
@@ -129,7 +130,7 @@ void init_test_env(char* __attribute((unused))path = nullptr, uint32_t init_type
     maxscale::RoutingWorker::init(watchdog_notifier);
     mxs::set_libdir(old_libdir.c_str());
 
-    preload_module("mariadbclient", "server/modules/protocol/MariaDB/", mxs::ModuleType::PROTOCOL);
+    add_built_in_module(mariadbprotocol_info());
     preload_module("readconnroute", "server/modules/routing/readconnroute/", mxs::ModuleType::ROUTER);
     preload_module("mariadbauth", "server/modules/authenticator/MariaDBAuth/",
                    mxs::ModuleType::AUTHENTICATOR);

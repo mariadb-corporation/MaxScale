@@ -32,7 +32,7 @@ add_library(pinloki-core
   )
 
 add_dependencies(pinloki-core boost)
-target_link_libraries(pinloki-core maxbase mariadbclient uuid)
+target_link_libraries(pinloki-core maxbase mariadbprotocol uuid)
 
 add_library(binlogrouter SHARED pinloki.cc pinlokisession.cc)
 target_link_libraries(binlogrouter pinloki-core maxscale-common)

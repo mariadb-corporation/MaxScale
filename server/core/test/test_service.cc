@@ -55,7 +55,7 @@ static void test1()
     mxs::ConfigParameters listener_params;
     listener_params.set(CN_ADDRESS, "localhost");
     listener_params.set(CN_PORT, "9876");
-    listener_params.set(CN_PROTOCOL, "mariadbclient");
+    listener_params.set(CN_PROTOCOL, "mariadb");
     listener_params.set(CN_SERVICE, service->name());
 
     mxb_assert_message(Listener::create("TestProtocol", listener_params),

@@ -109,7 +109,7 @@ elseif(WITH_TCMALLOC)
   target_link_libraries(maxscale ${TCMALLOC_LIBRARIES})
 endif()
 
-target_link_libraries(maxscale maxscale-common)
+target_link_libraries(maxscale maxscale-common mariadbprotocol)
 install_executable(maxscale core)
 
 add_executable(maxkeys maxkeys.cc)
