@@ -19,6 +19,12 @@
 class ClientConnection : public mxs::ClientConnection
 {
 public:
+    enum State
+    {
+        CONNECTED,
+        READY
+    };
+
     ClientConnection(MXS_SESSION* pSession, mxs::Component* pComponent);
     ~ClientConnection();
 
@@ -51,6 +57,16 @@ private:
     bool is_movable() const override;
 
 private:
+    bool is_ready() const
+    {
+        return m_state == READY;
+    }
+
+    void set_ready() const
+    {
+        m_state = READY;
+    }
+
     GWBUF* handle_one_packet(GWBUF* pPacket);
 
     GWBUF* handle_query(const mxsmongo::Query& request);
@@ -59,6 +75,7 @@ private:
     GWBUF* create_handshake_response(const mxsmongo::Packet& request);
 
 private:
+    State           m_state { CONNECTED };
     MXS_SESSION&    m_session;
     mxs::Component& m_component;
     DCB*            m_pDcb = nullptr;
