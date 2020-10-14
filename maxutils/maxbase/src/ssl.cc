@@ -16,14 +16,6 @@
 
 namespace maxbase
 {
-SSLConfig::SSLConfig(bool ssl_enabled, const std::string& key, const std::string& cert, const std::string& ca)
-    : enabled(ssl_enabled)
-    , key(key)
-    , cert(cert)
-    , ca(ca)
-{
-}
-
 namespace ssl_version
 {
 

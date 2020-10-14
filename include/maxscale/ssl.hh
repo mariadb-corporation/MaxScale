@@ -56,10 +56,6 @@ struct SSLConfig : public mxb::SSLConfig
 
     // Convert to human readable string representation
     std::string to_string() const;
-
-    std::string crl;                /** SSL certificate revocation list*/
-    int         verify_depth = 9;   /**< SSL certificate verification depth */
-    std::string cipher;             /**< Selected TLS cipher */
 };
 
 /**

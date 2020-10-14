@@ -117,9 +117,23 @@ namespace maxscale
 {
 
 SSLConfig::SSLConfig(const mxs::ConfigParameters& params)
-    : mxb::SSLConfig(params.get_bool(CN_SSL), params.get_string(CN_SSL_KEY), params.get_string(CN_SSL_CERT),
-                     params.get_string(CN_SSL_CA_CERT))
 {
+    if (params.contains(CN_SSL))
+    {
+        enabled = params.get_bool(CN_SSL);
+    }
+    if (params.contains(CN_SSL_KEY))
+    {
+        key = params.get_string(CN_SSL_KEY);
+    }
+    if (params.contains(CN_SSL_CERT))
+    {
+        cert = params.get_string(CN_SSL_CERT);
+    }
+    if (params.contains(CN_SSL_CA_CERT))
+    {
+        ca = params.get_string(CN_SSL_CA_CERT);
+    }
     if (params.contains(CN_SSL_CRL))
     {
         crl = params.get_string(CN_SSL_CRL);

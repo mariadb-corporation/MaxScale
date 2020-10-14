@@ -46,9 +46,6 @@ Version from_string(const char* str);
 // SSL configuration
 struct SSLConfig
 {
-    SSLConfig() = default;
-    SSLConfig(bool ssl_enabled, const std::string& key, const std::string& cert, const std::string& ca);
-
     bool enabled = false;   /** Whether SSL should be used */
 
     std::string key;    /**< SSL private key */
@@ -59,5 +56,9 @@ struct SSLConfig
 
     bool verify_peer {false};   /**< Enable peer certificate verification */
     bool verify_host {false};   /**< Enable peer host verification */
+
+    std::string crl;                /** SSL certificate revocation list*/
+    int         verify_depth = 9;   /**< SSL certificate verification depth */
+    std::string cipher;             /**< Selected TLS cipher */
 };
 }

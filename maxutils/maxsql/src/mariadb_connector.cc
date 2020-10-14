@@ -112,6 +112,16 @@ bool MariaDB::open(const std::string& host, int port, const std::string& db)
             my_bool verify = 1;
             mysql_optionsv(newconn, MYSQL_OPT_SSL_VERIFY_SERVER_CERT, &verify);
         }
+
+        if (!ssl.crl.empty())
+        {
+            mysql_optionsv(newconn, MYSQL_OPT_SSL_CRL, ssl.crl.c_str());
+        }
+
+        if (!ssl.cipher.empty())
+        {
+            mysql_optionsv(newconn, MYSQL_OPT_SSL_CIPHER, ssl.cipher.c_str());
+        }
     }
 
     if (!m_settings.local_address.empty())
