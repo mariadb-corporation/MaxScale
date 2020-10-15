@@ -144,13 +144,6 @@ int main(int argc, char** argv)
                     }
                     test.expect(status.count("Running") == 1, "Server '%s' is not running or monitor could "
                                                               "not connect to it.", srv_namez);
-                    // Also, MaxScale should have used the extra port to connect to nodes 0 & 1.
-                    if (i < N_extra_port)
-                    {
-                        string pat = "Could not connect with normal port to server '" + server_name
-                            + "', using extra_port";
-                        test.log_includes(0, pat.c_str());
-                    }
                 }
 
                 if (test.ok())
