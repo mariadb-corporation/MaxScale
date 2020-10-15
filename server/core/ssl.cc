@@ -362,6 +362,6 @@ bool SSLContext::configure(const mxb::SSLConfig& config)
     }
 #endif
 
-    return init();
+    return m_cfg.enabled ? init() : true;
 }
 }
