@@ -278,7 +278,7 @@ public:
     /**
      * Get SSL configuration
      */
-    virtual mxs::SSLConfig ssl_config() const = 0;
+    virtual mxb::SSLConfig ssl_config() const = 0;
 
     /**
      * Set server variables

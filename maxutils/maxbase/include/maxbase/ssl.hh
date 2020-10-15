@@ -60,5 +60,8 @@ struct SSLConfig
     std::string crl;                /** SSL certificate revocation list*/
     int         verify_depth = 9;   /**< SSL certificate verification depth */
     std::string cipher;             /**< Selected TLS cipher */
+
+    // Convert to human readable string representation
+    std::string to_string() const;
 };
 }

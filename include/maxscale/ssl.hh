@@ -42,20 +42,8 @@ class ConfigParameters;
 #define SSL_ERROR_CLIENT_NOT_SSL 1
 #define SSL_ERROR_ACCEPT_FAILED  2
 
-extern const MXS_ENUM_VALUE ssl_version_values[];
-
 namespace maxscale
 {
-
-// SSL configuration
-struct SSLConfig : public mxb::SSLConfig
-{
-    SSLConfig() = default;
-    SSLConfig(const mxs::ConfigParameters& params);
-
-    // Convert to human readable string representation
-    std::string to_string() const;
-};
 
 /**
  * The SSLContext is used to aggregate the SSL configuration and data for a particular object.
@@ -115,6 +103,6 @@ private:
     SSL_CTX*    m_ctx {nullptr};
     SSL_METHOD* m_method {nullptr};         /**<  SSLv3 or TLS1.0/1.1/1.2 methods
                                              * see: https://www.openssl.org/docs/ssl/SSL_CTX_new.html */
-    SSLConfig m_cfg;
+    mxb::SSLConfig m_cfg;
 };
 }

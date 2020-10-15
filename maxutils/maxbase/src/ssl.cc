@@ -13,6 +13,7 @@
 
 #include <maxbase/ssl.hh>
 #include <strings.h>
+#include <sstream>
 
 namespace maxbase
 {
@@ -69,5 +70,21 @@ Version from_string(const char* str)
     }
     return SSL_UNKNOWN;
 }
+}
+
+std::string SSLConfig::to_string() const
+{
+    std::ostringstream ss;
+
+    ss << "\tSSL initialized:                     yes\n"
+       << "\tSSL method type:                     " << mxb::ssl_version::to_string(version) << "\n"
+       << "\tSSL certificate verification depth:  " << verify_depth << "\n"
+       << "\tSSL peer verification :              " << (verify_peer ? "true" : "false") << "\n"
+       << "\tSSL peer host verification :         " << (verify_host ? "true" : "false") << "\n"
+       << "\tSSL certificate:                     " << cert << "\n"
+       << "\tSSL key:                             " << key << "\n"
+       << "\tSSL CA certificate:                  " << ca << "\n";
+
+    return ss.str();
 }
 }

@@ -293,7 +293,7 @@ public:
 
     std::shared_ptr<mxs::SSLContext> ssl() const;
 
-    mxs::SSLConfig ssl_config() const override;
+    mxb::SSLConfig ssl_config() const override;
 
     void        set_variables(std::unordered_map<std::string, std::string>&& variables) override;
     std::string get_variable(const std::string& key) const override;
@@ -402,7 +402,7 @@ private:
 
     // Lock for m_ssl_config
     mutable std::mutex                                  m_ssl_lock;
-    mxs::SSLConfig                                      m_ssl_config;
+    mxb::SSLConfig                                      m_ssl_config;
     mxs::WorkerGlobal<std::shared_ptr<mxs::SSLContext>> m_ssl_ctx;
 
     // Character set. Read from backend and sent to client. As no character set has the numeric value of 0, it

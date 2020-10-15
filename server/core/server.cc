@@ -564,7 +564,7 @@ std::shared_ptr<mxs::SSLContext> Server::ssl() const
     return *m_ssl_ctx;
 }
 
-mxs::SSLConfig Server::ssl_config() const
+mxb::SSLConfig Server::ssl_config() const
 {
     std::lock_guard<std::mutex> guard(m_ssl_lock);
     return m_ssl_config;

@@ -16,16 +16,6 @@
 #include <maxscale/ssl.hh>
 #include <maxscale/routingworker.hh>
 
-const MXS_ENUM_VALUE ssl_version_values[] =
-{
-    {"MAX",    mxb::ssl_version::SSL_TLS_MAX},
-    {"TLSv10", mxb::ssl_version::TLS10      },
-    {"TLSv11", mxb::ssl_version::TLS11      },
-    {"TLSv12", mxb::ssl_version::TLS12      },
-    {"TLSv13", mxb::ssl_version::TLS13      },
-    {NULL}
-};
-
 namespace
 {
 
@@ -115,50 +105,6 @@ static const char* get_ssl_errors()
 
 namespace maxscale
 {
-
-SSLConfig::SSLConfig(const mxs::ConfigParameters& params)
-{
-    if (params.contains(CN_SSL))
-    {
-        enabled = params.get_bool(CN_SSL);
-    }
-    if (params.contains(CN_SSL_KEY))
-    {
-        key = params.get_string(CN_SSL_KEY);
-    }
-    if (params.contains(CN_SSL_CERT))
-    {
-        cert = params.get_string(CN_SSL_CERT);
-    }
-    if (params.contains(CN_SSL_CA_CERT))
-    {
-        ca = params.get_string(CN_SSL_CA_CERT);
-    }
-    if (params.contains(CN_SSL_CRL))
-    {
-        crl = params.get_string(CN_SSL_CRL);
-    }
-    if (params.contains(CN_SSL_VERSION))
-    {
-        version = (mxb::ssl_version::Version)params.get_enum(CN_SSL_VERSION, ssl_version_values);
-    }
-    if (params.contains(CN_SSL_CERT_VERIFY_DEPTH))
-    {
-        verify_depth = params.get_integer(CN_SSL_CERT_VERIFY_DEPTH);
-    }
-    if (params.contains(CN_SSL_VERIFY_PEER_CERTIFICATE))
-    {
-        verify_peer = params.get_bool(CN_SSL_VERIFY_PEER_CERTIFICATE);
-    }
-    if (params.contains(CN_SSL_VERIFY_PEER_HOST))
-    {
-        verify_host = params.get_bool(CN_SSL_VERIFY_PEER_HOST);
-    }
-    if (params.contains(CN_SSL_CIPHER))
-    {
-        cipher = params.get_string(CN_SSL_CIPHER);
-    }
-}
 
 // static
 std::unique_ptr<SSLContext> SSLContext::create(const mxs::ConfigParameters& params)
@@ -391,25 +337,9 @@ SSLContext& SSLContext::operator=(SSLContext&& rhs) noexcept
     return *this;
 }
 
-std::string SSLConfig::to_string() const
-{
-    std::ostringstream ss;
-
-    ss << "\tSSL initialized:                     yes\n"
-       << "\tSSL method type:                     " << mxb::ssl_version::to_string(version) << "\n"
-       << "\tSSL certificate verification depth:  " << verify_depth << "\n"
-       << "\tSSL peer verification :              " << (verify_peer ? "true" : "false") << "\n"
-       << "\tSSL peer host verification :         " << (verify_host ? "true" : "false") << "\n"
-       << "\tSSL certificate:                     " << cert << "\n"
-       << "\tSSL key:                             " << key << "\n"
-       << "\tSSL CA certificate:                  " << ca << "\n";
-
-    return ss.str();
-}
-
 void SSLContext::reset()
 {
-    m_cfg = SSLConfig();
+    m_cfg = mxb::SSLConfig();
     m_method = nullptr;
     SSL_CTX_free(m_ctx);
     m_ctx = nullptr;
