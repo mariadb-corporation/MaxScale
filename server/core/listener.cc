@@ -1055,7 +1055,7 @@ Listener::SData Listener::create_shared_data()
             // TODO: The old behavior where the global sql_mode was used if the listener one isn't configured
             mxs::SSLContext ssl;
 
-            if (ssl.configure(m_params))
+            if (ssl.configure(create_ssl_config()))
             {
                 ListenerSessionData::ConnectionInitSql init_sql;
                 if (read_connection_init_sql(m_config.connection_init_sql_file, &init_sql))
@@ -1098,6 +1098,24 @@ Listener::SData Listener::create_shared_data()
     }
 
     return rval;
+}
+
+mxb::SSLConfig Listener::create_ssl_config()
+{
+    mxb::SSLConfig cfg;
+
+    cfg.enabled = m_config.ssl;
+    cfg.key = m_config.ssl_key;
+    cfg.cert = m_config.ssl_cert;
+    cfg.ca = m_config.ssl_ca;
+    cfg.version = m_config.ssl_version;
+    cfg.verify_peer = m_config.ssl_verify_peer_certificate;
+    cfg.verify_host = m_config.ssl_verify_peer_host;
+    cfg.crl = m_config.ssl_crl;
+    cfg.verify_depth = m_config.ssl_cert_verify_depth;
+    cfg.cipher = m_config.ssl_cipher;
+
+    return cfg;
 }
 
 bool Listener::post_configure()

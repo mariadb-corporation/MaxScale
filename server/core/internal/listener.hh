@@ -322,8 +322,9 @@ private:
     static bool read_connection_init_sql(const std::string& filepath,
                                          mxs::ListenerSessionData::ConnectionInitSql* output);
 
-    SData create_shared_data();
-    void  set_type();
+    SData          create_shared_data();
+    mxb::SSLConfig create_ssl_config();
+    void           set_type();
 };
 
 class ListenerManager

@@ -431,7 +431,8 @@ private:
      */
     void cleanup_persistent_connections() const;
 
-    bool post_configure();
+    bool           post_configure();
+    mxb::SSLConfig create_ssl_config();
 };
 
 // A connection to a server

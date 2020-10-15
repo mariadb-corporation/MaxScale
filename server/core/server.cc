@@ -258,17 +258,15 @@ bool ServerSpec::do_post_validate(Params params) const
     return rval;
 }
 
-std::pair<bool, std::unique_ptr<mxs::SSLContext>> create_ssl(const char* name,
-                                                             const mxs::ConfigParameters& params)
+std::pair<bool, std::unique_ptr<mxs::SSLContext>> create_ssl(const char* name, const mxb::SSLConfig& config)
 {
     bool ok = true;
-    auto ssl = std::make_unique<mxs::SSLContext>();
+    auto ssl = mxs::SSLContext::create(config);
 
-    if (!ssl->configure(params))
+    if (!ssl)
     {
         MXS_ERROR("Unable to initialize SSL for server '%s'", name);
         ok = false;
-        ssl.reset();
     }
     else if (!ssl->valid())
     {
@@ -749,16 +747,33 @@ bool Server::post_configure()
 
     bool ok;
     std::shared_ptr<mxs::SSLContext> ctx;
-    std::tie(ok, ctx) = create_ssl(m_name.c_str(), params);
+    std::tie(ok, ctx) = create_ssl(m_name.c_str(), create_ssl_config());
 
     if (ok)
     {
         m_ssl_ctx.assign(ctx);
         std::lock_guard<std::mutex> guard(m_ssl_lock);
-        m_ssl_config = ctx ? ctx->config() : mxs::SSLConfig();
+        m_ssl_config = ctx ? ctx->config() : mxb::SSLConfig();
     }
 
     return ok;
+}
+
+mxb::SSLConfig Server::create_ssl_config()
+{
+    mxb::SSLConfig cfg;
+
+    cfg.enabled = m_settings.m_ssl.get();
+    cfg.key = m_settings.m_ssl_key.get();
+    cfg.cert = m_settings.m_ssl_cert.get();
+    cfg.ca = m_settings.m_ssl_ca.get();
+    cfg.version = m_settings.m_ssl_version.get();
+    cfg.verify_peer = m_settings.m_ssl_verify_peer_certificate.get();
+    cfg.verify_host = m_settings.m_ssl_verify_peer_host.get();
+    cfg.verify_depth = m_settings.m_ssl_cert_verify_depth.get();
+    cfg.cipher = m_settings.m_ssl_cipher.get();
+
+    return cfg;
 }
 
 void Server::VersionInfo::set(uint64_t version, const std::string& version_str)

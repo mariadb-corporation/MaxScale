@@ -60,13 +60,13 @@ public:
     ~SSLContext();
 
     /**
-     * Create a new SSL configuration
+     * Create a new SSL context
      *
-     * @param params Parameters from which the SSL configuration is created from
+     * @param params SSL configuration from which the SSLContext is created from
      *
-     * @return A new SSL configuration or nullptr on error
+     * @return A new SSL context or nullptr on error
      */
-    static std::unique_ptr<SSLContext> create(const mxs::ConfigParameters& params);
+    static std::unique_ptr<SSLContext> create(const mxb::SSLConfig& config);
 
     /**
      * Opens a new OpenSSL session for this configuration context
@@ -77,7 +77,7 @@ public:
     }
 
     // SSL configuration
-    const SSLConfig& config() const
+    const mxb::SSLConfig& config() const
     {
         return m_cfg;
     }
@@ -94,7 +94,7 @@ public:
      *
      * @return True on success
      */
-    bool configure(const mxs::ConfigParameters& params);
+    bool configure(const mxb::SSLConfig& config);
 
 private:
     void reset();

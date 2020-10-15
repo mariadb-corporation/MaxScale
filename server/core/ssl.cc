@@ -107,12 +107,12 @@ namespace maxscale
 {
 
 // static
-std::unique_ptr<SSLContext> SSLContext::create(const mxs::ConfigParameters& params)
+std::unique_ptr<SSLContext> SSLContext::create(const mxb::SSLConfig& config)
 {
     std::unique_ptr<SSLContext> rval(new(std::nothrow) SSLContext());
     if (rval)
     {
-        if (!rval->configure(params))
+        if (!rval->configure(config))
         {
             rval = nullptr;
         }
@@ -345,17 +345,14 @@ void SSLContext::reset()
     m_ctx = nullptr;
 }
 
-bool SSLContext::configure(const mxs::ConfigParameters& params)
+bool SSLContext::configure(const mxb::SSLConfig& config)
 {
     reset();
-    mxb_assert(params.get_string(CN_SSL_CA_CERT).empty()
-               || access(params.get_string(CN_SSL_CA_CERT).c_str(), F_OK) == 0);
-    mxb_assert(params.get_string(CN_SSL_CERT).empty()
-               || access(params.get_string(CN_SSL_CERT).c_str(), F_OK) == 0);
-    mxb_assert(params.get_string(CN_SSL_KEY).empty()
-               || access(params.get_string(CN_SSL_KEY).c_str(), F_OK) == 0);
+    mxb_assert(config.ca.empty() || access(config.ca.c_str(), F_OK) == 0);
+    mxb_assert(config.cert.empty() || access(config.cert.c_str(), F_OK) == 0);
+    mxb_assert(config.key.empty() || access(config.key.c_str(), F_OK) == 0);
 
-    m_cfg = SSLConfig(params);
+    m_cfg = config;
 
 #ifndef OPENSSL_1_1
     if (m_cfg.verify_host)
