@@ -99,6 +99,7 @@ cfg::ParamEnum<mxb::ssl_version::Version> s_ssl_version(
     }, mxb::ssl_version::SSL_TLS_MAX, RUNTIME);
 
 cfg::ParamString s_ssl_cipher(&s_spec, CN_SSL_CIPHER, "TLS cipher list", "", RUNTIME);
+cfg::ParamString s_ssl_crl(&s_spec, CN_SSL_CRL, "TLS certificate revocation list", "", RUNTIME);
 
 cfg::ParamCount s_ssl_cert_verify_depth(
     &s_spec, CN_SSL_CERT_VERIFY_DEPTH, "TLS certificate verification depth", 9, RUNTIME);
@@ -374,6 +375,7 @@ Listener::Config::Config(const std::string& name, Listener* listener)
     add_native(&Listener::Config::ssl_ca, &s_ssl_ca);
     add_native(&Listener::Config::ssl_version, &s_ssl_version);
     add_native(&Listener::Config::ssl_cipher, &s_ssl_cipher);
+    add_native(&Listener::Config::ssl_crl, &s_ssl_crl);
     add_native(&Listener::Config::ssl_cert_verify_depth, &s_ssl_cert_verify_depth);
     add_native(&Listener::Config::ssl_verify_peer_certificate, &s_ssl_verify_peer_certificate);
     add_native(&Listener::Config::ssl_verify_peer_host, &s_ssl_verify_peer_host);

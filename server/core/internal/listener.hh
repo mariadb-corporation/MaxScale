@@ -55,6 +55,7 @@ public:
         std::string ssl_key;
         std::string ssl_ca;
         std::string ssl_cipher;
+        std::string ssl_crl;
         int64_t     ssl_cert_verify_depth;
         bool        ssl_verify_peer_certificate;
         bool        ssl_verify_peer_host;
