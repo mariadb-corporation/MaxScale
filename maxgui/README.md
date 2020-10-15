@@ -51,7 +51,7 @@ If maxscale is running, you need to shut it down and then start it again
 #### Install dependencies packages to node_modules
 
 ```
-npm install
+npm ci
 ```
 
 #### Compiles and hot-reloads for development
