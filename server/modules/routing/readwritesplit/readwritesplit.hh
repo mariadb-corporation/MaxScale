@@ -29,12 +29,12 @@
 
 #include <maxbase/shared_mutex.hh>
 #include <maxscale/dcb.hh>
-#include <maxscale/queryclassifier.hh>
 #include <maxscale/router.hh>
 #include <maxscale/service.hh>
 #include <maxscale/session_command.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/routingworker.hh>
+#include <maxscale/protocol/mariadb/queryclassifier.hh>
 #include <maxscale/protocol/mariadb/rwbackend.hh>
 #include <maxscale/session_stats.hh>
 #include <maxscale/workerlocal.hh>

@@ -17,7 +17,7 @@
 #include <iostream>
 #include <maxbase/host.hh>
 #include <maxscale/packet_tracker.hh>
-#include <maxscale/queryclassifier.hh>
+#include <maxscale/protocol/mariadb/queryclassifier.hh>
 
 class SmartRouter;
 
@@ -31,7 +31,7 @@ class SmartRouter;
  *  be marked "is_critical" meaning non-crititcal non-masters, could be allowed to fail.
  */
 
-class SmartRouterSession : public mxs::RouterSession, private mxs::QueryClassifier::Handler
+class SmartRouterSession : public mxs::RouterSession, private mariadb::QueryClassifier::Handler
 {
 public:
     static SmartRouterSession* create(SmartRouter* pRouter, MXS_SESSION* pSession,
@@ -95,8 +95,8 @@ private:
     Mode   m_mode = Mode::Idle;
     GWBUF* m_pDelayed_packet = nullptr;
 
-    Clusters             m_clusters;
-    mxs::QueryClassifier m_qc;
+    Clusters                 m_clusters;
+    mariadb::QueryClassifier m_qc;
     struct Measurement
     {
         maxbase::TimePoint start;

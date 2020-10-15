@@ -11,7 +11,7 @@
  * Public License.
  */
 
-#include <maxscale/queryclassifier.hh>
+#include <maxscale/protocol/mariadb/queryclassifier.hh>
 #include <unordered_map>
 #include <maxbase/alloc.h>
 #include <maxscale/modutil.hh>
@@ -19,13 +19,12 @@
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/protocol/mariadb/protocol_classes.hh>
 
+using mariadb::QueryClassifier;
+
 namespace
 {
 
-using namespace maxscale;
-
 const int QC_TRACE_MSG_LEN = 1000;
-
 
 // Copy of mxs_mysql_extract_ps_id() in modules/protocol/MySQL/mysql_common.cc,
 // but we do not want to create a dependency from maxscale-common to that.
@@ -199,7 +198,7 @@ bool foreach_table(QueryClassifier& qc,
 }
 }
 
-namespace maxscale
+namespace mariadb
 {
 
 QueryClassifier::RouteInfo::RouteInfo()

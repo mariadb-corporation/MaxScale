@@ -30,9 +30,10 @@
 #include <maxscale/session_command.hh>
 #include <maxscale/utils.hh>
 
-using namespace maxscale;
-
 using std::chrono::seconds;
+using maxscale::RWBackend;
+using mariadb::QueryClassifier;
+using RouteInfo = QueryClassifier::RouteInfo;
 
 /**
  * The functions that support the routing of queries to back end
@@ -137,7 +138,7 @@ bool RWSplitSession::track_optimistic_trx(mxs::Buffer* buffer)
  */
 bool RWSplitSession::handle_target_is_all(mxs::Buffer&& buffer)
 {
-    const QueryClassifier::RouteInfo& info = m_qc.current_route_info();
+    const RouteInfo& info = m_qc.current_route_info();
     bool result = false;
     bool is_large = is_large_query(buffer.get());
 
@@ -173,7 +174,7 @@ bool RWSplitSession::handle_routing_failure(mxs::Buffer&& buffer, route_target_t
     }
     else if (can_retry_query() || can_continue_trx_replay())
     {
-        MXS_INFO("Delaying routing: %s", extract_sql(buffer.get()).c_str());
+        MXS_INFO("Delaying routing: %s", mxs::extract_sql(buffer.get()).c_str());
         retry_query(buffer.release());
     }
     else if (m_config.master_failure_mode == RW_ERROR_ON_WRITE)
@@ -210,7 +211,7 @@ void RWSplitSession::send_readonly_error()
 
 bool RWSplitSession::query_not_supported(GWBUF* querybuf)
 {
-    const QueryClassifier::RouteInfo& info = m_qc.current_route_info();
+    const RouteInfo& info = m_qc.current_route_info();
     route_target_t route_target = info.target();
     GWBUF* err = nullptr;
 
@@ -253,7 +254,7 @@ bool RWSplitSession::query_not_supported(GWBUF* querybuf)
  */
 bool RWSplitSession::route_stmt(mxs::Buffer&& buffer)
 {
-    const QueryClassifier::RouteInfo& info = m_qc.current_route_info();
+    const RouteInfo& info = m_qc.current_route_info();
     route_target_t route_target = info.target();
     mxb_assert_message(m_otrx_state != OTRX_ROLLBACK,
                        "OTRX_ROLLBACK should never happen when routing queries");
@@ -283,7 +284,7 @@ bool RWSplitSession::route_stmt(mxs::Buffer&& buffer)
 
 bool RWSplitSession::route_single_stmt(mxs::Buffer&& buffer)
 {
-    const QueryClassifier::RouteInfo& info = m_qc.current_route_info();
+    const RouteInfo& info = m_qc.current_route_info();
     route_target_t route_target = should_route_sescmd_to_master() ? TARGET_MASTER : info.target();
 
     update_trx_statistics();
@@ -354,7 +355,7 @@ bool RWSplitSession::route_single_stmt(mxs::Buffer&& buffer)
 RWBackend* RWSplitSession::get_target(GWBUF* querybuf, route_target_t route_target)
 {
     RWBackend* rval = nullptr;
-    const QueryClassifier::RouteInfo& info = m_qc.current_route_info();
+    const RouteInfo& info = m_qc.current_route_info();
 
     // We can't use a switch here as the route_target is a bitfield where multiple values are set at one time.
     // Mostly this happens when the type is TARGET_NAMED_SERVER and TARGET_SLAVE due to a routing hint.

@@ -22,6 +22,7 @@
 
 using namespace maxscale;
 using namespace std::chrono;
+using mariadb::QueryClassifier;
 
 RWSplitSession::RWSplitSession(RWSplit* instance, MXS_SESSION* session, mxs::SRWBackends backends)
     : mxs::RouterSession(session)

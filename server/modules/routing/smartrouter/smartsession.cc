@@ -106,7 +106,7 @@ int SmartRouterSession::routeQuery(GWBUF* pBuf)
     }
     else
     {
-        auto route_info = m_qc.update_route_info(mxs::QueryClassifier::CURRENT_TARGET_UNDEFINED, pBuf);
+        auto route_info = m_qc.update_route_info(mariadb::QueryClassifier::CURRENT_TARGET_UNDEFINED, pBuf);
         std::string canonical = maxscale::get_canonical(pBuf);
 
         m_measurement = {maxbase::Clock::now(maxbase::NowType::EPollTick), canonical};

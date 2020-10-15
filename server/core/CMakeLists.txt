@@ -34,7 +34,6 @@ add_library(maxscale-common SHARED
   paths.cc
   poll.cc
   query_classifier.cc
-  queryclassifier.cc
   random.cc
   resource.cc
   response_stat.cc

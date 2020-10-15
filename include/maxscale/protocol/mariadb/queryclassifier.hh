@@ -21,7 +21,7 @@
 #include <maxscale/router.hh>
 #include <maxscale/session.hh>
 
-namespace maxscale
+namespace mariadb
 {
 
 class QueryClassifier

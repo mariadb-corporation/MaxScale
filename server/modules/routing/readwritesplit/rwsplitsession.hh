@@ -21,15 +21,15 @@
 
 #include <maxscale/buffer.hh>
 #include <maxscale/modutil.hh>
-#include <maxscale/queryclassifier.hh>
+#include <maxscale/protocol/mariadb/queryclassifier.hh>
 #include <maxscale/protocol/mariadb/rwbackend.hh>
 
-#define TARGET_IS_MASTER(t)       maxscale::QueryClassifier::target_is_master(t)
-#define TARGET_IS_SLAVE(t)        maxscale::QueryClassifier::target_is_slave(t)
-#define TARGET_IS_NAMED_SERVER(t) maxscale::QueryClassifier::target_is_named_server(t)
-#define TARGET_IS_ALL(t)          maxscale::QueryClassifier::target_is_all(t)
-#define TARGET_IS_RLAG_MAX(t)     maxscale::QueryClassifier::target_is_rlag_max(t)
-#define TARGET_IS_LAST_USED(t)    maxscale::QueryClassifier::target_is_last_used(t)
+#define TARGET_IS_MASTER(t)       mariadb::QueryClassifier::target_is_master(t)
+#define TARGET_IS_SLAVE(t)        mariadb::QueryClassifier::target_is_slave(t)
+#define TARGET_IS_NAMED_SERVER(t) mariadb::QueryClassifier::target_is_named_server(t)
+#define TARGET_IS_ALL(t)          mariadb::QueryClassifier::target_is_all(t)
+#define TARGET_IS_RLAG_MAX(t)     mariadb::QueryClassifier::target_is_rlag_max(t)
+#define TARGET_IS_LAST_USED(t)    mariadb::QueryClassifier::target_is_last_used(t)
 
 // External ID to internal ID
 typedef std::map<uint32_t, uint32_t> ClientHandleMap;
@@ -57,7 +57,7 @@ typedef std::unordered_map<uint32_t, ExecInfo> ExecMap;
  * The client session of a RWSplit instance
  */
 class RWSplitSession final : public mxs::RouterSession
-                           , private mxs::QueryClassifier::Handler
+                           , private mariadb::QueryClassifier::Handler
 {
     RWSplitSession(const RWSplitSession&) = delete;
     RWSplitSession& operator=(const RWSplitSession&) = delete;
@@ -65,13 +65,13 @@ class RWSplitSession final : public mxs::RouterSession
 public:
     enum
     {
-        TARGET_UNDEFINED    = maxscale::QueryClassifier::TARGET_UNDEFINED,
-        TARGET_MASTER       = maxscale::QueryClassifier::TARGET_MASTER,
-        TARGET_SLAVE        = maxscale::QueryClassifier::TARGET_SLAVE,
-        TARGET_NAMED_SERVER = maxscale::QueryClassifier::TARGET_NAMED_SERVER,
-        TARGET_ALL          = maxscale::QueryClassifier::TARGET_ALL,
-        TARGET_RLAG_MAX     = maxscale::QueryClassifier::TARGET_RLAG_MAX,
-        TARGET_LAST_USED    = maxscale::QueryClassifier::TARGET_LAST_USED,
+        TARGET_UNDEFINED    = mariadb::QueryClassifier::TARGET_UNDEFINED,
+        TARGET_MASTER       = mariadb::QueryClassifier::TARGET_MASTER,
+        TARGET_SLAVE        = mariadb::QueryClassifier::TARGET_SLAVE,
+        TARGET_NAMED_SERVER = mariadb::QueryClassifier::TARGET_NAMED_SERVER,
+        TARGET_ALL          = mariadb::QueryClassifier::TARGET_ALL,
+        TARGET_RLAG_MAX     = mariadb::QueryClassifier::TARGET_RLAG_MAX,
+        TARGET_LAST_USED    = mariadb::QueryClassifier::TARGET_LAST_USED,
     };
 
     enum otrx_state
@@ -122,7 +122,7 @@ public:
 
     bool handleError(mxs::ErrorType type, GWBUF* pMessage, mxs::Endpoint* pProblem, const mxs::Reply& pReply);
 
-    mxs::QueryClassifier& qc()
+    mariadb::QueryClassifier& qc()
     {
         return m_qc;
     }
@@ -332,25 +332,25 @@ private:
     inline bool can_route_queries() const
     {
         return m_expected_responses == 0
-               || m_qc.load_data_state() == mxs::QueryClassifier::LOAD_DATA_ACTIVE
+               || m_qc.load_data_state() == mariadb::QueryClassifier::LOAD_DATA_ACTIVE
                || m_qc.large_query();
     }
 
-    inline mxs::QueryClassifier::current_target_t get_current_target() const
+    inline mariadb::QueryClassifier::current_target_t get_current_target() const
     {
-        mxs::QueryClassifier::current_target_t current_target;
+        mariadb::QueryClassifier::current_target_t current_target;
 
         if (m_target_node == NULL)
         {
-            current_target = mxs::QueryClassifier::CURRENT_TARGET_UNDEFINED;
+            current_target = mariadb::QueryClassifier::CURRENT_TARGET_UNDEFINED;
         }
         else if (m_target_node == m_current_master)
         {
-            current_target = mxs::QueryClassifier::CURRENT_TARGET_MASTER;
+            current_target = mariadb::QueryClassifier::CURRENT_TARGET_MASTER;
         }
         else
         {
-            current_target = mxs::QueryClassifier::CURRENT_TARGET_SLAVE;
+            current_target = mariadb::QueryClassifier::CURRENT_TARGET_SLAVE;
         }
 
         return current_target;
@@ -407,21 +407,22 @@ private:
 
     ExecMap m_exec_map;     // Information map of COM_STMT_EXECUTE execution
 
-    RWSplit::gtid        m_gtid_pos {0, 0, 0};  /**< Gtid position for causal read */
-    wait_gtid_state      m_wait_gtid;           /**< State of MASTER_GTID_WAIT reply */
-    uint32_t             m_next_seq;            /**< Next packet's sequence number */
-    mxs::QueryClassifier m_qc;                  /**< The query classifier. */
-    int64_t              m_retry_duration;      /**< Total time spent retrying queries */
-    mxs::Buffer          m_current_query;       /**< Current query being executed */
-    Trx                  m_trx;                 /**< Current transaction */
-    bool                 m_is_replay_active;    /**< Whether we are actively replaying a
-                                                 * transaction */
-    bool        m_can_replay_trx;               /**< Whether the transaction can be replayed */
-    Trx         m_replayed_trx;                 /**< The transaction we are replaying */
-    mxs::Buffer m_interrupted_query;            /**< Query that was interrupted mid-transaction. */
-    Trx         m_orig_trx;                     /**< The backup of the transaction we're replaying */
-    mxs::Buffer m_orig_stmt;                    /**< The backup of the statement that was interrupted */
-    int64_t     m_num_trx_replays = 0;          /**< How many times trx replay has been attempted */
+    RWSplit::gtid   m_gtid_pos {0, 0, 0};   /**< Gtid position for causal read */
+    wait_gtid_state m_wait_gtid;            /**< State of MASTER_GTID_WAIT reply */
+    uint32_t        m_next_seq;             /**< Next packet's sequence number */
+
+    mariadb::QueryClassifier m_qc;      /**< The query classifier. */
+
+    int64_t     m_retry_duration;       /**< Total time spent retrying queries */
+    mxs::Buffer m_current_query;        /**< Current query being executed */
+    Trx         m_trx;                  /**< Current transaction */
+    bool        m_is_replay_active;     /**< Whether we are actively replaying a transaction */
+    bool        m_can_replay_trx;       /**< Whether the transaction can be replayed */
+    Trx         m_replayed_trx;         /**< The transaction we are replaying */
+    mxs::Buffer m_interrupted_query;    /**< Query that was interrupted mid-transaction. */
+    Trx         m_orig_trx;             /**< The backup of the transaction we're replaying */
+    mxs::Buffer m_orig_stmt;            /**< The backup of the statement that was interrupted */
+    int64_t     m_num_trx_replays = 0;  /**< How many times trx replay has been attempted */
 
     std::vector<SescmdResp> m_trx_sescmd;   /**< Session commands executed during the transaction */
 
