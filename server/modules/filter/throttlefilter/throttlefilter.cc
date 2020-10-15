@@ -131,7 +131,7 @@ json_t* ThrottleFilter::diagnostics() const
 
 uint64_t ThrottleFilter::getCapabilities() const
 {
-    return RCAP_TYPE_NONE;
+    return RCAP_TYPE_STMT_INPUT;
 }
 
 mxs::config::Configuration* ThrottleFilter::getConfiguration()

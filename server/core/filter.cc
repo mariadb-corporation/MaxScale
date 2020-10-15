@@ -131,7 +131,8 @@ FilterDef::FilterDef(std::string name, std::string module, Filter* instance,
     , m_filter(instance)
     , m_capabilities(m_filter->getCapabilities())
 {
-    mxb_assert(get_module(m_module, mxs::ModuleType::FILTER)->module_capabilities == m_capabilities);
+    mxb_assert_message(get_module(m_module, mxs::ModuleType::FILTER)->module_capabilities == m_capabilities,
+                       "Capability mismatch for filter '%s'", m_module.c_str());
 }
 
 FilterDef::~FilterDef()
