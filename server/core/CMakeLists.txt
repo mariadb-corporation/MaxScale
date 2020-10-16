@@ -76,6 +76,7 @@ target_link_libraries(maxscale-common
   ${MICROHTTPD_LIBRARIES}
   ${GNUTLS_LIBRARIES}
   ${LIBATOMIC_LIBRARIES}
+  mariadbprotocol
 )
 
 if(WITH_ASAN AND ASAN_FOUND)
@@ -108,7 +109,7 @@ elseif(WITH_TCMALLOC)
   target_link_libraries(maxscale ${TCMALLOC_LIBRARIES})
 endif()
 
-target_link_libraries(maxscale maxscale-common mariadbprotocol)
+target_link_libraries(maxscale maxscale-common)
 install_executable(maxscale core)
 
 add_executable(maxkeys maxkeys.cc)

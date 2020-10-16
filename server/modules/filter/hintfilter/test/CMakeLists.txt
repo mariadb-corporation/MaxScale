@@ -1,3 +1,3 @@
 add_executable(test_hintparser test_hintparser.cc)
-target_link_libraries(test_hintparser maxscale-common mariadbprotocol)
+target_link_libraries(test_hintparser maxscale-common)
 add_test(test_hintparser test_hintparser)

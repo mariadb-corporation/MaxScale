@@ -17,7 +17,7 @@ if (JANSSON_FOUND)
     storage.cc
     storagefactory.cc
     )
-  target_link_libraries(cache maxscale-common ${JANSSON_LIBRARIES} mariadbprotocol lzma)
+  target_link_libraries(cache maxscale-common ${JANSSON_LIBRARIES} lzma)
   set_target_properties(cache PROPERTIES VERSION "1.0.0" LINK_FLAGS -Wl,-z,defs)
   install_module(cache core)
 
