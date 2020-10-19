@@ -66,6 +66,12 @@ public:
     /** Last known master ID */
     int64_t master_id() const;
 
+    /** Is the writer connected */
+    void set_is_writer_connected(bool connected);
+
+    /** Is the writer connected */
+    bool is_writer_connected() const;
+
     const Config& config() const
     {
         return m_config;
@@ -84,6 +90,7 @@ private:
     mutable std::mutex               m_mutex;
     mutable std::vector<std::string> m_file_names;
     std::atomic<int64_t>             m_master_id {0};
+    std::atomic<bool>                m_is_writer_connected {false};
 };
 
 /**

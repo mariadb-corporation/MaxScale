@@ -131,6 +131,16 @@ int64_t InventoryWriter::master_id() const
     return m_master_id.load(std::memory_order_acquire);
 }
 
+void InventoryWriter::set_is_writer_connected(bool connected)
+{
+    m_is_writer_connected.store(connected, std::memory_order_release);
+}
+
+bool InventoryWriter::is_writer_connected() const
+{
+    return m_is_writer_connected.load(std::memory_order_acquire);
+}
+
 std::string next_string(const std::vector<std::string>& strs, const std::string& str)
 {
     // search in reverse since the file is likely at the end of the vector

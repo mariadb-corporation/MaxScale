@@ -42,6 +42,7 @@ Writer::Writer(Generator generator, mxb::Worker* worker, InventoryWriter* inv)
     , m_current_gtid_list(m_inventory.rpl_state())
 {
     mxb_assert(m_worker);
+    m_inventory.set_is_writer_connected(false);
     m_thread = std::thread(&Writer::run, this);
 }
 
@@ -125,11 +126,9 @@ void Writer::run()
                 m_error = Error {};
             }
 
-
             FileWriter file(&m_inventory, *this);
             mxq::Connection conn(get_connection_details());
             start_replication(conn);
-
 
             while (m_running)
             {
@@ -142,6 +141,7 @@ void Writer::run()
                 file.add_event(rpl_event);
 
                 m_inventory.set_master_id(rpl_event.server_id());
+                m_inventory.set_is_writer_connected(true);
 
                 switch (rpl_event.event_type())
                 {
@@ -187,6 +187,8 @@ void Writer::run()
         {
             error = Error {-1, x.what()};
         }
+
+        m_inventory.set_is_writer_connected(false);
 
         std::unique_lock<std::mutex> guard(m_lock);
         if (error.code)

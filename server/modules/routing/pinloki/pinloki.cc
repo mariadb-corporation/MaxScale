@@ -571,17 +571,23 @@ GWBUF* Pinloki::show_slave_status(bool all) const
 
     enum class State {Stopped, Connected, Error};
 
-    State m_state = m_writer == nullptr ? State::Stopped :
-        error.code == 0 ? State::Connected :
-        State::Error;
+    State state = State::Error;
+    if (m_inventory.is_writer_connected())
+    {
+        state = State::Connected;
+    }
+    else if (error.code == 0)
+    {
+        state = State::Stopped;
+    }
 
     std::string sql_state =
-        m_state == State::Stopped ? "" :
+        state == State::Stopped ? "" :
         "Slave has read all relay log; waiting for the slave I/O thread to update it";
 
     std::string sql_io_state =
-        m_state == State::Stopped ? "" :
-        m_state == State::Connected ? "Waiting for master to send event" :
+        state == State::Stopped ? "" :
+        state == State::Connected ? "Waiting for master to send event" :
         "Reconnecting after a failed master event read";
 
     if (all)
@@ -600,11 +606,11 @@ GWBUF* Pinloki::show_slave_status(bool all) const
     rset->add_column("Relay_Log_Pos", "");
     rset->add_column("Relay_Master_Log_File", "");
     rset->add_column("Slave_IO_Running",
-                     m_state == State::Stopped ? "No" :
-                     m_state == State::Connected ? "Yes" :
+                     state == State::Stopped ? "No" :
+                     state == State::Connected ? "Yes" :
                      "Connecting");
     rset->add_column("Slave_SQL_Running",
-                     m_state == State::Stopped ? "No" : "Yes");
+                     state == State::Stopped ? "No" : "Yes");
     rset->add_column("Replicate_Do_DB", "");
     rset->add_column("Replicate_Ignore_DB", "");
     rset->add_column("Replicate_Do_Table", "");
