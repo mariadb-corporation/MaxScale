@@ -17,7 +17,7 @@
 #include <maxscale/monitor.hh>
 #include <maxscale/server.hh>
 
-namespace Clustrix
+namespace xpand
 {
 
 enum class Status
@@ -47,9 +47,9 @@ enum class Softfailed
 };
 
 /**
- * Is a particular Clustrix node part of the quorum.
+ * Is a particular Xpand node part of the quorum.
  *
- * @param zName   The name of the Clustrix monitor instance.
+ * @param zName   The name of the Xpand monitor instance.
  * @param pCon    Valid MYSQL handle to the server.
  *
  * @return True, if the node is part of the quorum, false otherwise.
@@ -57,10 +57,10 @@ enum class Softfailed
 bool is_part_of_the_quorum(const char* zName, MYSQL* pCon);
 
 /**
- * Is a particular Clustrix node part of the quorum.
+ * Is a particular Xpand node part of the quorum.
  *
- * @param zName   The name of the Clustrix monitor instance.
- * @param ms      The monitored server object of a Clustrix node.
+ * @param zName   The name of the Xpand monitor instance.
+ * @param ms      The monitored server object of a Xpand node.
  *
  * @return True, if the node is part of the quorum, false otherwise.
  */
@@ -72,9 +72,9 @@ inline bool is_part_of_the_quorum(const char* zName, mxs::MonitorServer& ms)
 }
 
 /**
- * Is a particular Clustrix node being softfailed.
+ * Is a particular Xpand node being softfailed.
  *
- * @param zName  The name of the Clustrix monitor instance.
+ * @param zName  The name of the Xpand monitor instance.
  * @param pCon   Valid MYSQL handle to the server.
  *
  * @return True, if the node is being softfailed, false otherwise.
@@ -85,10 +85,10 @@ bool is_being_softfailed(const char* zName, MYSQL* pCon);
  * Ping or create connection to server and check whether it can be used
  * as hub.
  *
- * @param zName       The name of the Clustrix monitor instance.
+ * @param zName       The name of the Xpand monitor instance.
  * @param settings    Connection settings
  * @param softfailed  Whether a softfailed node is considered ok or not.
- * @param server      Server object referring to a Clustrix node.
+ * @param server      Server object referring to a Xpand node.
  * @param ppCon       Address of pointer to MYSQL object referring to @server
  *                    (@c *ppCon may also be NULL).
  *
@@ -106,7 +106,7 @@ bool ping_or_connect_to_hub(const char* zName,
  * Ping or create connection to server and check whether it can be used
  * as hub.
  *
- * @param zName       The name of the Clustrix monitor instance.
+ * @param zName       The name of the Xpand monitor instance.
  * @param settings    Connection settings
  * @param softfailed  Whether a softfailed node is considered ok or not.
  * @param ms          The monitored server.

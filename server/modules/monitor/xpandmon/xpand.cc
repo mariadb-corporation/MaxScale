@@ -27,7 +27,7 @@ const char CN_STATIC[] = "static";
 const char CN_UNKNOWN[] = "unknown";
 }
 
-std::string Clustrix::to_string(Clustrix::Status status)
+std::string xpand::to_string(xpand::Status status)
 {
     switch (status)
     {
@@ -48,7 +48,7 @@ std::string Clustrix::to_string(Clustrix::Status status)
     return CN_UNKNOWN;
 }
 
-Clustrix::Status Clustrix::status_from_string(const std::string& status)
+xpand::Status xpand::status_from_string(const std::string& status)
 {
     if (status == CN_QUORUM)
     {
@@ -64,12 +64,12 @@ Clustrix::Status Clustrix::status_from_string(const std::string& status)
     }
     else
     {
-        MXB_WARNING("'%s' is an unknown status for a Clustrix node.", status.c_str());
+        MXB_WARNING("'%s' is an unknown status for a Xpand node.", status.c_str());
         return Status::UNKNOWN;
     }
 }
 
-std::string Clustrix::to_string(Clustrix::SubState substate)
+std::string xpand::to_string(xpand::SubState substate)
 {
     switch (substate)
     {
@@ -84,7 +84,7 @@ std::string Clustrix::to_string(Clustrix::SubState substate)
     return CN_UNKNOWN;
 }
 
-Clustrix::SubState Clustrix::substate_from_string(const std::string& substate)
+xpand::SubState xpand::substate_from_string(const std::string& substate)
 {
     if (substate == CN_NORMAL)
     {
@@ -92,12 +92,12 @@ Clustrix::SubState Clustrix::substate_from_string(const std::string& substate)
     }
     else
     {
-        MXB_WARNING("'%s' is an unknown sub-state for a Clustrix node.", substate.c_str());
+        MXB_WARNING("'%s' is an unknown sub-state for a Xpand node.", substate.c_str());
         return SubState::UNKNOWN;
     }
 }
 
-bool Clustrix::is_part_of_the_quorum(const char* zName, MYSQL* pCon)
+bool xpand::is_part_of_the_quorum(const char* zName, MYSQL* pCon)
 {
     bool rv = false;
 
@@ -114,27 +114,27 @@ bool Clustrix::is_part_of_the_quorum(const char* zName, MYSQL* pCon)
             MYSQL_ROW row = mysql_fetch_row(pResult);
             if (row && row[0])
             {
-                Clustrix::Status status = Clustrix::status_from_string(row[0]);
+                xpand::Status status = xpand::status_from_string(row[0]);
 
                 switch (status)
                 {
-                case Clustrix::Status::QUORUM:
+                case xpand::Status::QUORUM:
                     rv = true;
                     break;
 
-                case Clustrix::Status::STATIC:
+                case xpand::Status::STATIC:
                     MXS_NOTICE("%s: Node %s is not part of the quorum (static), switching to "
                                "other node for monitoring.",
                                zName, mysql_get_host_info(pCon));
                     break;
 
-                case Clustrix::Status::DYNAMIC:
+                case xpand::Status::DYNAMIC:
                     MXS_NOTICE("%s: Node %s is not part of the quorum (dynamic), switching to "
                                "other node for monitoring.",
                                zName, mysql_get_host_info(pCon));
                     break;
 
-                case Clustrix::Status::UNKNOWN:
+                case xpand::Status::UNKNOWN:
                     MXS_WARNING("%s: Do not know how to interpret '%s'. Assuming node %s "
                                 "is not part of the quorum.",
                                 zName, row[0], mysql_get_host_info(pCon));
@@ -163,7 +163,7 @@ bool Clustrix::is_part_of_the_quorum(const char* zName, MYSQL* pCon)
     return rv;
 }
 
-bool Clustrix::is_being_softfailed(const char* zName, MYSQL* pCon)
+bool xpand::is_being_softfailed(const char* zName, MYSQL* pCon)
 {
     bool rv = false;
 
@@ -201,22 +201,22 @@ bool Clustrix::is_being_softfailed(const char* zName, MYSQL* pCon)
     return rv;
 }
 
-bool Clustrix::ping_or_connect_to_hub(const char* zName,
-                                      const MonitorServer::ConnectionSettings& settings,
-                                      Softfailed softfailed,
-                                      SERVER& server,
-                                      MYSQL** ppCon)
+bool xpand::ping_or_connect_to_hub(const char* zName,
+                                   const MonitorServer::ConnectionSettings& settings,
+                                   Softfailed softfailed,
+                                   SERVER& server,
+                                   MYSQL** ppCon)
 {
     bool connected = false;
     MonitorServer::ConnectResult rv = Monitor::ping_or_connect_to_db(settings, server, ppCon);
 
     if (Monitor::connection_is_ok(rv))
     {
-        if (Clustrix::is_part_of_the_quorum(zName, *ppCon))
+        if (xpand::is_part_of_the_quorum(zName, *ppCon))
         {
-            if ((softfailed == Softfailed::REJECT) && Clustrix::is_being_softfailed(zName, *ppCon))
+            if ((softfailed == Softfailed::REJECT) && xpand::is_being_softfailed(zName, *ppCon))
             {
-                MXS_NOTICE("%s: The Clustrix node %s used as hub is part of the quorum, "
+                MXS_NOTICE("%s: The Xpand node %s used as hub is part of the quorum, "
                            "but it is being softfailed. Switching to another node.",
                            zName, server.address);
             }

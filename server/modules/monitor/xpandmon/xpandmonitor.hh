@@ -22,11 +22,11 @@
 #include "xpandmembership.hh"
 #include "xpandnode.hh"
 
-class ClustrixMonitor : public maxscale::MonitorWorker
-                      , private ClustrixNode::Persister
+class XpandMonitor : public maxscale::MonitorWorker
+                   , private XpandNode::Persister
 {
-    ClustrixMonitor(const ClustrixMonitor&) = delete;
-    ClustrixMonitor& operator=(const ClustrixMonitor&) = delete;
+    XpandMonitor(const XpandMonitor&) = delete;
+    XpandMonitor& operator=(const XpandMonitor&) = delete;
 public:
     class Config
     {
@@ -65,9 +65,9 @@ public:
         config::Integer                             m_health_check_port;
     };
 
-    ~ClustrixMonitor();
+    ~XpandMonitor();
 
-    static ClustrixMonitor* create(const std::string& name, const std::string& module);
+    static XpandMonitor* create(const std::string& name, const std::string& module);
 
     bool configure(const MXS_CONFIG_PARAMETER* pParams) override;
 
@@ -81,9 +81,9 @@ protected:
     void server_removed(SERVER* pServer) override;
 
 private:
-    ClustrixMonitor(const std::string& name,
-                    const std::string& module,
-                    sqlite3* pDb);
+    XpandMonitor(const std::string& name,
+                 const std::string& module,
+                 sqlite3* pDb);
 
     void pre_loop() override;
     void post_loop() override;
@@ -94,18 +94,18 @@ private:
     bool remove_persisted_information();
     void persist_bootstrap_servers();
 
-    void check_cluster(Clustrix::Softfailed softfailed);
-    void check_hub(Clustrix::Softfailed softfailed);
-    void choose_hub(Clustrix::Softfailed softfailed);
+    void check_cluster(xpand::Softfailed softfailed);
+    void check_hub(xpand::Softfailed softfailed);
+    void choose_hub(xpand::Softfailed softfailed);
 
-    bool choose_dynamic_hub(Clustrix::Softfailed softfailed, std::set<std::string>& ips_checked);
-    bool choose_bootstrap_hub(Clustrix::Softfailed softfailed, std::set<std::string>& ips_checked);
+    bool choose_dynamic_hub(xpand::Softfailed softfailed, std::set<std::string>& ips_checked);
+    bool choose_bootstrap_hub(xpand::Softfailed softfailed, std::set<std::string>& ips_checked);
     bool refresh_using_persisted_nodes(std::set<std::string>& ips_checked);
 
     bool refresh_nodes();
     bool refresh_nodes(MYSQL* pHub_con);
     bool check_cluster_membership(MYSQL* pHub_con,
-                                  std::map<int, ClustrixMembership>* pMemberships);
+                                  std::map<int, XpandMembership>* pMemberships);
 
     void populate_from_bootstrap_servers();
 
@@ -150,18 +150,18 @@ private:
         return mxb::WorkerLoad::get_time_ms();
     }
 
-    // ClustrixNode::Persister
-    void persist(const ClustrixNode& node);
-    void unpersist(const ClustrixNode& node);
+    // XpandNode::Persister
+    void persist(const XpandNode& node);
+    void unpersist(const XpandNode& node);
 
 private:
-    Config                      m_config;
-    std::map<int, ClustrixNode> m_nodes_by_id;
-    std::vector<std::string>    m_health_urls;
-    mxb::http::Async            m_http;
-    uint32_t                    m_delayed_http_check_id {0};
-    long                        m_last_cluster_check {0};
-    SERVER*                     m_pHub_server {nullptr};
-    MYSQL*                      m_pHub_con {nullptr};
-    sqlite3*                    m_pDb {nullptr};
+    Config                   m_config;
+    std::map<int, XpandNode> m_nodes_by_id;
+    std::vector<std::string> m_health_urls;
+    mxb::http::Async         m_http;
+    uint32_t                 m_delayed_http_check_id {0};
+    long                     m_last_cluster_check {0};
+    SERVER*                  m_pHub_server {nullptr};
+    MYSQL*                   m_pHub_con {nullptr};
+    sqlite3*                 m_pDb {nullptr};
 };

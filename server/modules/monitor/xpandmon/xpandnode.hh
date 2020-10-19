@@ -19,14 +19,14 @@
 #include "xpand.hh"
 #include "xpandmembership.hh"
 
-class ClustrixNode
+class XpandNode
 {
 public:
     class Persister
     {
     public:
-        virtual void persist(const ClustrixNode& node) = 0;
-        virtual void unpersist(const ClustrixNode& node) = 0;
+        virtual void persist(const XpandNode& node) = 0;
+        virtual void unpersist(const XpandNode& node) = 0;
     };
 
     enum
@@ -41,13 +41,13 @@ public:
         APPROACH_DEFAULT
     };
 
-    ClustrixNode(Persister* pPersister,
-                 const ClustrixMembership& membership,
-                 const std::string& ip,
-                 int mysql_port,
-                 int health_port,
-                 int health_check_threshold,
-                 SERVER* pServer)
+    XpandNode(Persister* pPersister,
+              const XpandMembership& membership,
+              const std::string& ip,
+              int mysql_port,
+              int health_port,
+              int health_check_threshold,
+              SERVER* pServer)
         : m_persister(*pPersister)
         , m_id(membership.id())
         , m_status(membership.status())
@@ -65,7 +65,7 @@ public:
         m_persister.persist(*this);
     }
 
-    ~ClustrixNode()
+    ~XpandNode()
     {
         if (m_pCon)
         {
@@ -78,12 +78,12 @@ public:
         return m_id;
     }
 
-    Clustrix::Status status() const
+    xpand::Status status() const
     {
         return m_status;
     }
 
-    Clustrix::SubState substate() const
+    xpand::SubState substate() const
     {
         return m_substate;
     }
@@ -178,7 +178,7 @@ public:
         }
     }
 
-    void update(Clustrix::Status status, Clustrix::SubState substate, int instance)
+    void update(xpand::Status status, xpand::SubState substate, int instance)
     {
         m_status = status;
         m_substate = substate;
@@ -193,7 +193,7 @@ public:
 
     bool can_be_used_as_hub(const char* zName,
                             const mxs::MonitorServer::ConnectionSettings& settings,
-                            Clustrix::Softfailed softfailed);
+                            xpand::Softfailed softfailed);
 
     SERVER* server() const
     {
@@ -225,21 +225,21 @@ public:
     }
 
 private:
-    Persister&         m_persister;
-    int                m_id;
-    Clustrix::Status   m_status;
-    Clustrix::SubState m_substate;
-    int                m_instance;
-    std::string        m_ip;
-    int                m_mysql_port {DEFAULT_MYSQL_PORT};
-    int                m_health_port {DEFAULT_HEALTH_PORT};
-    int                m_health_check_threshold {DEFAULT_HEALTH_CHECK_THRESHOLD};
-    int                m_nRunning {0};
-    SERVER*            m_pServer {nullptr};
-    MYSQL*             m_pCon {nullptr};
+    Persister&      m_persister;
+    int             m_id;
+    xpand::Status   m_status;
+    xpand::SubState m_substate;
+    int             m_instance;
+    std::string     m_ip;
+    int             m_mysql_port {DEFAULT_MYSQL_PORT};
+    int             m_health_port {DEFAULT_HEALTH_PORT};
+    int             m_health_check_threshold {DEFAULT_HEALTH_CHECK_THRESHOLD};
+    int             m_nRunning {0};
+    SERVER*         m_pServer {nullptr};
+    MYSQL*          m_pCon {nullptr};
 };
 
-inline std::ostream& operator<<(std::ostream& out, const ClustrixNode& x)
+inline std::ostream& operator<<(std::ostream& out, const XpandNode& x)
 {
     x.print(out);
     return out;

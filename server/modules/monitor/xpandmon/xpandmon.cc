@@ -25,7 +25,7 @@ bool handle_softfail(const MODULECMD_ARG* args, json_t** error_out)
     mxb_assert(MODULECMD_GET_TYPE(&args->argv[0].type) == MODULECMD_ARG_MONITOR);
     mxb_assert(MODULECMD_GET_TYPE(&args->argv[1].type) == MODULECMD_ARG_SERVER);
 
-    ClustrixMonitor* pMon = static_cast<ClustrixMonitor*>(args->argv[0].value.monitor);
+    XpandMonitor* pMon = static_cast<XpandMonitor*>(args->argv[0].value.monitor);
     SERVER* pServer = args->argv[1].value.server;
 
     return pMon->softfail(pServer, error_out);
@@ -37,7 +37,7 @@ bool handle_unsoftfail(const MODULECMD_ARG* args, json_t** error_out)
     mxb_assert(MODULECMD_GET_TYPE(&args->argv[0].type) == MODULECMD_ARG_MONITOR);
     mxb_assert(MODULECMD_GET_TYPE(&args->argv[1].type) == MODULECMD_ARG_SERVER);
 
-    ClustrixMonitor* pMon = static_cast<ClustrixMonitor*>(args->argv[0].value.monitor);
+    XpandMonitor* pMon = static_cast<XpandMonitor*>(args->argv[0].value.monitor);
     SERVER* pServer = args->argv[1].value.server;
 
     return pMon->unsoftfail(pServer, error_out);
@@ -54,7 +54,7 @@ bool handle_unsoftfail(const MODULECMD_ARG* args, json_t** error_out)
  */
 extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
-    MXS_NOTICE("Initialise the MariaDB Clustrix Monitor module.");
+    MXS_NOTICE("Initialise the MariaDB Xpand Monitor module.");
 
     static modulecmd_arg_type_t softfail_argv[] =
     {
@@ -91,17 +91,17 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         MXS_MODULE_API_MONITOR,
         MXS_MODULE_GA,
         MXS_MONITOR_VERSION,
-        "A Clustrix cluster monitor",
+        "A Xpand cluster monitor",
         "V1.0.0",
         MXS_NO_MODULE_CAPABILITIES,
-        &maxscale::MonitorApi<ClustrixMonitor>::s_api,
+        &maxscale::MonitorApi<XpandMonitor>::s_api,
         NULL,                                       /* Process init. */
         NULL,                                       /* Process finish. */
         NULL,                                       /* Thread init. */
         NULL,                                       /* Thread finish. */
     };
 
-    ClustrixMonitor::Config::populate(info);
+    XpandMonitor::Config::populate(info);
 
     return &info;
 }

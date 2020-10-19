@@ -26,19 +26,19 @@ namespace http = mxb::http;
 using namespace std;
 using maxscale::MonitorServer;
 
-#define LOG_JSON_ERROR(ppJson, format, ...) \
-    do { \
-        MXS_ERROR(format, ##__VA_ARGS__); \
-        if (ppJson) \
-        { \
+#define LOG_JSON_ERROR(ppJson, format, ...)                             \
+    do {                                                                \
+        MXS_ERROR(format, ##__VA_ARGS__);                               \
+        if (ppJson)                                                     \
+        {                                                               \
             *ppJson = mxs_json_error_append(*ppJson, format, ##__VA_ARGS__); \
-        } \
+        }                                                               \
     } while (false)
 
 namespace
 {
 
-namespace clustrixmon
+namespace xpandmon
 {
 
 config::Specification specification(MXS_MODULE_NAME, config::Specification::MONITOR);
@@ -46,7 +46,7 @@ config::Specification specification(MXS_MODULE_NAME, config::Specification::MONI
 config::ParamDuration<std::chrono::milliseconds>
 cluster_monitor_interval(&specification,
                          "cluster_monitor_interval",
-                         "How frequently the Clustrix monitor should perform a cluster check.",
+                         "How frequently the Xpand monitor should perform a cluster check.",
                          mxs::config::INTERPRET_AS_MILLISECONDS,
                          std::chrono::milliseconds(DEFAULT_CLUSTER_MONITOR_INTERVAL));
 
@@ -66,7 +66,7 @@ dynamic_node_detection(&specification,
 config::ParamInteger
 health_check_port(&specification,
                   "health_check_port",
-                  "Port number for Clustrix health check.",
+                  "Port number for Xpand health check.",
                   DEFAULT_HEALTH_CHECK_PORT,
                   0, std::numeric_limits<uint16_t>::max()); // min, max
 
@@ -186,7 +186,7 @@ sqlite3* open_or_create_db(const std::string& path)
                       path.c_str(), sqlite3_errmsg(pDb));
         }
         MXS_ERROR("Could not open sqlite3 database for storing information "
-                  "about dynamically detected Clustrix nodes. The Clustrix "
+                  "about dynamically detected Xpand nodes. The Xpand "
                   "monitor will remain dependent upon statically defined "
                   "bootstrap nodes.");
     }
@@ -195,40 +195,40 @@ sqlite3* open_or_create_db(const std::string& path)
 }
 }
 
-ClustrixMonitor::Config::Config(const std::string& name)
-    : m_configuration(name, &clustrixmon::specification)
-    , m_cluster_monitor_interval(&m_configuration, &clustrixmon::cluster_monitor_interval)
-    , m_health_check_threshold(&m_configuration, &clustrixmon::health_check_threshold)
-    , m_dynamic_node_detection(&m_configuration, &clustrixmon::dynamic_node_detection)
-    , m_health_check_port(&m_configuration, &clustrixmon::health_check_port)
+XpandMonitor::Config::Config(const std::string& name)
+    : m_configuration(name, &xpandmon::specification)
+    , m_cluster_monitor_interval(&m_configuration, &xpandmon::cluster_monitor_interval)
+    , m_health_check_threshold(&m_configuration, &xpandmon::health_check_threshold)
+    , m_dynamic_node_detection(&m_configuration, &xpandmon::dynamic_node_detection)
+    , m_health_check_port(&m_configuration, &xpandmon::health_check_port)
 {
 }
 
 //static
-void ClustrixMonitor::Config::populate(MXS_MODULE& module)
+void XpandMonitor::Config::populate(MXS_MODULE& module)
 {
-    clustrixmon::specification.populate(module);
+    xpandmon::specification.populate(module);
 }
 
-bool ClustrixMonitor::Config::configure(const MXS_CONFIG_PARAMETER& params)
+bool XpandMonitor::Config::configure(const MXS_CONFIG_PARAMETER& params)
 {
-    return clustrixmon::specification.configure(m_configuration, params);
+    return xpandmon::specification.configure(m_configuration, params);
 }
 
-ClustrixMonitor::ClustrixMonitor(const string& name, const string& module, sqlite3* pDb)
+XpandMonitor::XpandMonitor(const string& name, const string& module, sqlite3* pDb)
     : MonitorWorker(name, module)
     , m_config(name)
     , m_pDb(pDb)
 {
 }
 
-ClustrixMonitor::~ClustrixMonitor()
+XpandMonitor::~XpandMonitor()
 {
     sqlite3_close_v2(m_pDb);
 }
 
 // static
-ClustrixMonitor* ClustrixMonitor::create(const string& name, const string& module)
+XpandMonitor* XpandMonitor::create(const string& name, const string& module)
 {
     string path = get_datadir();
 
@@ -239,29 +239,29 @@ ClustrixMonitor* ClustrixMonitor::create(const string& name, const string& modul
     {
         MXS_ERROR("Could not create the directory %s, MaxScale will not be "
                   "able to create database for persisting connection "
-                  "information of dynamically detected Clustrix nodes.",
+                  "information of dynamically detected Xpand nodes.",
                   path.c_str());
     }
 
-    path += "/clustrix_nodes-v";
+    path += "/xpand_nodes-v";
     path += std::to_string(SCHEMA_VERSION);
     path += ".db";
 
     sqlite3* pDb = open_or_create_db(path);
 
-    ClustrixMonitor* pThis = nullptr;
+    XpandMonitor* pThis = nullptr;
 
     if (pDb)
     {
         // Even if the creation/opening of the sqlite3 database fails, we will still
         // get a valid database handle.
-        pThis = new ClustrixMonitor(name, module, pDb);
+        pThis = new XpandMonitor(name, module, pDb);
     }
     else
     {
         // The handle will be null, *only* if the opening fails due to a memory
         // allocation error.
-        MXS_ALERT("sqlite3 memory allocation failed, the Clustrix monitor "
+        MXS_ALERT("sqlite3 memory allocation failed, the Xpand monitor "
                   "cannot continue.");
     }
 
@@ -270,9 +270,9 @@ ClustrixMonitor* ClustrixMonitor::create(const string& name, const string& modul
 
 using std::chrono::milliseconds;
 
-bool ClustrixMonitor::configure(const MXS_CONFIG_PARAMETER* pParams)
+bool XpandMonitor::configure(const MXS_CONFIG_PARAMETER* pParams)
 {
-    if (!clustrixmon::specification.validate(*pParams))
+    if (!xpandmon::specification.validate(*pParams))
     {
         return false;
     }
@@ -294,25 +294,25 @@ bool ClustrixMonitor::configure(const MXS_CONFIG_PARAMETER* pParams)
     return true;
 }
 
-void ClustrixMonitor::populate_services()
+void XpandMonitor::populate_services()
 {
     mxb_assert(!is_running());
 
-    // The servers that the Clustrix monitor has been configured with are
+    // The servers that the Xpand monitor has been configured with are
     // only used for bootstrapping and services will not be populated
     // with them.
 }
 
-bool ClustrixMonitor::softfail(SERVER* pServer, json_t** ppError)
+bool XpandMonitor::softfail(SERVER* pServer, json_t** ppError)
 {
     bool rv = false;
 
     if (is_running())
     {
         call([this, pServer, ppError, &rv]() {
-                 rv = perform_softfail(pServer, ppError);
-             },
-             EXECUTE_QUEUED);
+                rv = perform_softfail(pServer, ppError);
+            },
+            EXECUTE_QUEUED);
     }
     else
     {
@@ -325,16 +325,16 @@ bool ClustrixMonitor::softfail(SERVER* pServer, json_t** ppError)
     return true;
 }
 
-bool ClustrixMonitor::unsoftfail(SERVER* pServer, json_t** ppError)
+bool XpandMonitor::unsoftfail(SERVER* pServer, json_t** ppError)
 {
     bool rv = false;
 
     if (is_running())
     {
         call([this, pServer, ppError, &rv]() {
-                 rv = perform_unsoftfail(pServer, ppError);
-             },
-             EXECUTE_QUEUED);
+                rv = perform_unsoftfail(pServer, ppError);
+            },
+            EXECUTE_QUEUED);
     }
     else
     {
@@ -347,26 +347,26 @@ bool ClustrixMonitor::unsoftfail(SERVER* pServer, json_t** ppError)
     return true;
 }
 
-void ClustrixMonitor::server_added(SERVER* pServer)
+void XpandMonitor::server_added(SERVER* pServer)
 {
     // The servers explicitly added to the Cluster monitor are only used
     // as bootstrap servers, so they are not added to any services.
 }
 
-void ClustrixMonitor::server_removed(SERVER* pServer)
+void XpandMonitor::server_removed(SERVER* pServer)
 {
     // @see server_added(), no action is needed.
 }
 
 
-void ClustrixMonitor::pre_loop()
+void XpandMonitor::pre_loop()
 {
     load_server_journal(nullptr);
     if (m_config.dynamic_node_detection())
     {
         // At startup we accept softfailed nodes in an attempt to be able to
         // connect at any cost. It'll be replaced once there is an alternative.
-        check_cluster(Clustrix::Softfailed::ACCEPT);
+        check_cluster(xpand::Softfailed::ACCEPT);
     }
     else
     {
@@ -376,7 +376,7 @@ void ClustrixMonitor::pre_loop()
     make_health_check();
 }
 
-void ClustrixMonitor::post_loop()
+void XpandMonitor::post_loop()
 {
     if (m_pHub_con)
     {
@@ -387,12 +387,12 @@ void ClustrixMonitor::post_loop()
     m_pHub_server = nullptr;
 }
 
-void ClustrixMonitor::tick()
+void XpandMonitor::tick()
 {
     check_maintenance_requests();
     if (m_config.dynamic_node_detection() && should_check_cluster())
     {
-        check_cluster(Clustrix::Softfailed::REJECT);
+        check_cluster(xpand::Softfailed::REJECT);
     }
 
     switch (m_http.status())
@@ -418,7 +418,7 @@ void ClustrixMonitor::tick()
     store_server_journal(nullptr);
 }
 
-void ClustrixMonitor::choose_hub(Clustrix::Softfailed softfailed)
+void XpandMonitor::choose_hub(xpand::Softfailed softfailed)
 {
     mxb_assert(!m_pHub_con);
 
@@ -443,7 +443,7 @@ void ClustrixMonitor::choose_hub(Clustrix::Softfailed softfailed)
 
     if (m_pHub_con)
     {
-        MXS_NOTICE("%s: Monitoring Clustrix cluster state using node %s:%d.",
+        MXS_NOTICE("%s: Monitoring Xpand cluster state using node %s:%d.",
                    name(), m_pHub_server->address, m_pHub_server->port);
     }
     else
@@ -453,11 +453,11 @@ void ClustrixMonitor::choose_hub(Clustrix::Softfailed softfailed)
     }
 }
 
-bool ClustrixMonitor::choose_dynamic_hub(Clustrix::Softfailed softfailed, std::set<string>& ips_checked)
+bool XpandMonitor::choose_dynamic_hub(xpand::Softfailed softfailed, std::set<string>& ips_checked)
 {
     for (auto& kv : m_nodes_by_id)
     {
-        ClustrixNode& node = kv.second;
+        XpandNode& node = kv.second;
 
         if (node.can_be_used_as_hub(name(), settings().conn_settings, softfailed))
         {
@@ -476,13 +476,13 @@ bool ClustrixMonitor::choose_dynamic_hub(Clustrix::Softfailed softfailed, std::s
     return m_pHub_con != nullptr;
 }
 
-bool ClustrixMonitor::choose_bootstrap_hub(Clustrix::Softfailed softfailed, std::set<string>& ips_checked)
+bool XpandMonitor::choose_bootstrap_hub(xpand::Softfailed softfailed, std::set<string>& ips_checked)
 {
     for (auto* pMs : servers())
     {
         if (ips_checked.find(pMs->server->address) == ips_checked.end())
         {
-            if (Clustrix::ping_or_connect_to_hub(name(), settings().conn_settings, softfailed, *pMs))
+            if (xpand::ping_or_connect_to_hub(name(), settings().conn_settings, softfailed, *pMs))
             {
                 m_pHub_con = pMs->con;
                 m_pHub_server = pMs->server;
@@ -504,9 +504,9 @@ bool ClustrixMonitor::choose_bootstrap_hub(Clustrix::Softfailed softfailed, std:
     return m_pHub_con != nullptr;
 }
 
-bool ClustrixMonitor::refresh_using_persisted_nodes(std::set<string>& ips_checked)
+bool XpandMonitor::refresh_using_persisted_nodes(std::set<string>& ips_checked)
 {
-    MXS_NOTICE("Attempting to find a Clustrix bootstrap node from one of the nodes "
+    MXS_NOTICE("Attempting to find a Xpand bootstrap node from one of the nodes "
                "used during the previous run of MaxScale.");
 
     bool refreshed = false;
@@ -543,7 +543,7 @@ bool ClustrixMonitor::refresh_using_persisted_nodes(std::set<string>& ips_checke
                                        nullptr,
                                        port, nullptr, 0))
                 {
-                    if (Clustrix::is_part_of_the_quorum(name(), pHub_con))
+                    if (xpand::is_part_of_the_quorum(name(), pHub_con))
                     {
                         if (refresh_nodes(pHub_con))
                         {
@@ -577,18 +577,18 @@ bool ClustrixMonitor::refresh_using_persisted_nodes(std::set<string>& ips_checke
     return refreshed;
 }
 
-bool ClustrixMonitor::refresh_nodes()
+bool XpandMonitor::refresh_nodes()
 {
     mxb_assert(m_pHub_con);
 
     return refresh_nodes(m_pHub_con);
 }
 
-bool ClustrixMonitor::refresh_nodes(MYSQL* pHub_con)
+bool XpandMonitor::refresh_nodes(MYSQL* pHub_con)
 {
     mxb_assert(pHub_con);
 
-    map<int, ClustrixMembership> memberships;
+    map<int, XpandMembership> memberships;
 
     bool refreshed = check_cluster_membership(pHub_con, &memberships);
 
@@ -610,7 +610,7 @@ bool ClustrixMonitor::refresh_nodes(MYSQL* pHub_con)
                 set<int> nids;
                 for (const auto& kv : m_nodes_by_id)
                 {
-                    const ClustrixNode& node = kv.second;
+                    const XpandNode& node = kv.second;
                     nids.insert(node.id());
                 }
 
@@ -626,7 +626,7 @@ bool ClustrixMonitor::refresh_nodes(MYSQL* pHub_con)
                         bool softfailed = row[4] ? true : false;
 
                         // '@@' ensures no clash with user created servers.
-                        // Monitor name ensures no clash with other Clustrix monitor instances.
+                        // Monitor name ensures no clash with other Xpand monitor instances.
                         string server_name = string("@@") + m_name + ":node-" + std::to_string(id);
 
                         auto nit = m_nodes_by_id.find(id);
@@ -637,7 +637,7 @@ bool ClustrixMonitor::refresh_nodes(MYSQL* pHub_con)
                             // Existing node.
                             mxb_assert(SERVER::find_by_unique_name(server_name));
 
-                            ClustrixNode& node = nit->second;
+                            XpandNode& node = nit->second;
 
                             node.update(ip, mysql_port, health_port);
 
@@ -684,11 +684,11 @@ bool ClustrixMonitor::refresh_nodes(MYSQL* pHub_con)
                                         pServer->set_status(SERVER_DRAINING);
                                     }
 
-                                    const ClustrixMembership& membership = mit->second;
+                                    const XpandMembership& membership = mit->second;
                                     int health_check_threshold = m_config.health_check_threshold();
 
-                                    ClustrixNode node(this, membership, ip, mysql_port, health_port,
-                                                      health_check_threshold, pServer);
+                                    XpandNode node(this, membership, ip, mysql_port, health_port,
+                                                   health_check_threshold, pServer);
 
                                     m_nodes_by_id.insert(make_pair(id, node));
 
@@ -735,8 +735,8 @@ bool ClustrixMonitor::refresh_nodes(MYSQL* pHub_con)
                     auto it = m_nodes_by_id.find(nid);
                     mxb_assert(it != m_nodes_by_id.end());
 
-                    ClustrixNode& node = it->second;
-                    node.set_running(false, ClustrixNode::APPROACH_OVERRIDE);
+                    XpandNode& node = it->second;
+                    node.set_running(false, XpandNode::APPROACH_OVERRIDE);
                 }
 
                 cluster_checked();
@@ -762,7 +762,7 @@ bool ClustrixMonitor::refresh_nodes(MYSQL* pHub_con)
     return refreshed;
 }
 
-void ClustrixMonitor::check_bootstrap_servers()
+void XpandMonitor::check_bootstrap_servers()
 {
     HostPortPairs nodes;
     char* pError = nullptr;
@@ -813,7 +813,7 @@ void ClustrixMonitor::check_bootstrap_servers()
     }
 }
 
-bool ClustrixMonitor::remove_persisted_information()
+bool XpandMonitor::remove_persisted_information()
 {
     char* pError = nullptr;
     int rv;
@@ -833,7 +833,7 @@ bool ClustrixMonitor::remove_persisted_information()
     return rv1 == SQLITE_OK && rv2 == SQLITE_OK;
 }
 
-void ClustrixMonitor::persist_bootstrap_servers()
+void XpandMonitor::persist_bootstrap_servers()
 {
     string values;
 
@@ -871,7 +871,7 @@ void ClustrixMonitor::persist_bootstrap_servers()
     }
 }
 
-void ClustrixMonitor::check_cluster(Clustrix::Softfailed softfailed)
+void XpandMonitor::check_cluster(xpand::Softfailed softfailed)
 {
     if (m_pHub_con)
     {
@@ -889,21 +889,21 @@ void ClustrixMonitor::check_cluster(Clustrix::Softfailed softfailed)
     }
 }
 
-void ClustrixMonitor::check_hub(Clustrix::Softfailed softfailed)
+void XpandMonitor::check_hub(xpand::Softfailed softfailed)
 {
     mxb_assert(m_pHub_con);
     mxb_assert(m_pHub_server);
 
-    if (!Clustrix::ping_or_connect_to_hub(name(), settings().conn_settings, softfailed,
-                                          *m_pHub_server, &m_pHub_con))
+    if (!xpand::ping_or_connect_to_hub(name(), settings().conn_settings, softfailed,
+                                       *m_pHub_server, &m_pHub_con))
     {
         mysql_close(m_pHub_con);
         m_pHub_con = nullptr;
     }
 }
 
-bool ClustrixMonitor::check_cluster_membership(MYSQL* pHub_con,
-                                               std::map<int, ClustrixMembership>* pMemberships)
+bool XpandMonitor::check_cluster_membership(MYSQL* pHub_con,
+                                            std::map<int, XpandMembership>* pMemberships)
 {
     mxb_assert(pHub_con);
     mxb_assert(pMemberships);
@@ -923,7 +923,7 @@ bool ClustrixMonitor::check_cluster_membership(MYSQL* pHub_con,
             set<int> nids;
             for (const auto& kv : m_nodes_by_id)
             {
-                const ClustrixNode& node = kv.second;
+                const XpandNode& node = kv.second;
                 nids.insert(node.id());
             }
 
@@ -941,20 +941,20 @@ bool ClustrixMonitor::check_cluster_membership(MYSQL* pHub_con,
 
                     if (it != m_nodes_by_id.end())
                     {
-                        ClustrixNode& node = it->second;
+                        XpandNode& node = it->second;
 
-                        node.update(Clustrix::status_from_string(status),
-                                    Clustrix::substate_from_string(substate),
+                        node.update(xpand::status_from_string(status),
+                                    xpand::substate_from_string(substate),
                                     instance);
 
                         nids.erase(node.id());
                     }
                     else
                     {
-                        ClustrixMembership membership(nid,
-                                                      Clustrix::status_from_string(status),
-                                                      Clustrix::substate_from_string(substate),
-                                                      instance);
+                        XpandMembership membership(nid,
+                                                   xpand::status_from_string(status),
+                                                   xpand::substate_from_string(substate),
+                                                   instance);
 
                         pMemberships->insert(make_pair(nid, membership));
                     }
@@ -974,7 +974,7 @@ bool ClustrixMonitor::check_cluster_membership(MYSQL* pHub_con,
                 auto it = m_nodes_by_id.find(nid);
                 mxb_assert(it != m_nodes_by_id.end());
 
-                ClustrixNode& node = it->second;
+                XpandNode& node = it->second;
                 node.deactivate_server();
                 m_nodes_by_id.erase(it);
             }
@@ -995,7 +995,7 @@ bool ClustrixMonitor::check_cluster_membership(MYSQL* pHub_con,
     return rv;
 }
 
-void ClustrixMonitor::populate_from_bootstrap_servers()
+void XpandMonitor::populate_from_bootstrap_servers()
 {
     int id = 1;
 
@@ -1003,17 +1003,17 @@ void ClustrixMonitor::populate_from_bootstrap_servers()
     {
         SERVER* pServer = ms->server;
 
-        Clustrix::Status status = Clustrix::Status::UNKNOWN;
-        Clustrix::SubState substate = Clustrix::SubState::UNKNOWN;
+        xpand::Status status = xpand::Status::UNKNOWN;
+        xpand::SubState substate = xpand::SubState::UNKNOWN;
         int instance = 1;
-        ClustrixMembership membership(id, status, substate, instance);
+        XpandMembership membership(id, status, substate, instance);
 
         std::string ip = pServer->address;
         int mysql_port = pServer->port;
         int health_port = m_config.health_check_port();
         int health_check_threshold = m_config.health_check_threshold();
 
-        ClustrixNode node(this, membership, ip, mysql_port, health_port, health_check_threshold, pServer);
+        XpandNode node(this, membership, ip, mysql_port, health_port, health_check_threshold, pServer);
 
         m_nodes_by_id.insert(make_pair(id, node));
         ++id;
@@ -1026,7 +1026,7 @@ void ClustrixMonitor::populate_from_bootstrap_servers()
     update_http_urls();
 }
 
-void ClustrixMonitor::update_server_statuses()
+void XpandMonitor::update_server_statuses()
 {
     mxb_assert(!servers().empty());
 
@@ -1035,14 +1035,14 @@ void ClustrixMonitor::update_server_statuses()
         pMs->stash_current_status();
 
         auto it = find_if(m_nodes_by_id.begin(), m_nodes_by_id.end(),
-                          [pMs](const std::pair<int, ClustrixNode>& element) -> bool {
-                              const ClustrixNode& info = element.second;
+                          [pMs](const std::pair<int, XpandNode>& element) -> bool {
+                              const XpandNode& info = element.second;
                               return pMs->server->address == info.ip();
                           });
 
         if (it != m_nodes_by_id.end())
         {
-            const ClustrixNode& info = it->second;
+            const XpandNode& info = it->second;
 
             if (info.is_running())
             {
@@ -1060,7 +1060,7 @@ void ClustrixMonitor::update_server_statuses()
     }
 }
 
-void ClustrixMonitor::make_health_check()
+void XpandMonitor::make_health_check()
 {
     mxb_assert(m_http.status() != http::Async::PENDING);
 
@@ -1082,7 +1082,7 @@ void ClustrixMonitor::make_health_check()
     }
 }
 
-void ClustrixMonitor::initiate_delayed_http_check()
+void XpandMonitor::initiate_delayed_http_check()
 {
     mxb_assert(m_delayed_http_check_id == 0);
 
@@ -1095,10 +1095,10 @@ void ClustrixMonitor::initiate_delayed_http_check()
         ms = max_delay_ms;
     }
 
-    m_delayed_http_check_id = delayed_call(ms, &ClustrixMonitor::check_http, this);
+    m_delayed_http_check_id = delayed_call(ms, &XpandMonitor::check_http, this);
 }
 
-bool ClustrixMonitor::check_http(Call::action_t action)
+bool XpandMonitor::check_http(Call::action_t action)
 {
     m_delayed_http_check_id = 0;
 
@@ -1124,7 +1124,7 @@ bool ClustrixMonitor::check_http(Call::action_t action)
                 {
                     bool running = (result.code == 200);    // HTTP OK
 
-                    ClustrixNode& node = it->second;
+                    XpandNode& node = it->second;
 
                     node.set_running(running);
 
@@ -1153,12 +1153,12 @@ bool ClustrixMonitor::check_http(Call::action_t action)
     return false;
 }
 
-void ClustrixMonitor::update_http_urls()
+void XpandMonitor::update_http_urls()
 {
     vector<string> health_urls;
     for (const auto& kv : m_nodes_by_id)
     {
-        const ClustrixNode& node = kv.second;
+        const XpandNode& node = kv.second;
         string url = "http://" + node.ip() + ":" + std::to_string(node.health_port());
 
         health_urls.push_back(url);
@@ -1178,7 +1178,7 @@ void ClustrixMonitor::update_http_urls()
     }
 }
 
-bool ClustrixMonitor::perform_softfail(SERVER* pServer, json_t** ppError)
+bool XpandMonitor::perform_softfail(SERVER* pServer, json_t** ppError)
 {
     bool rv = perform_operation(Operation::SOFTFAIL, pServer, ppError);
 
@@ -1189,14 +1189,14 @@ bool ClustrixMonitor::perform_softfail(SERVER* pServer, json_t** ppError)
     return rv;
 }
 
-bool ClustrixMonitor::perform_unsoftfail(SERVER* pServer, json_t** ppError)
+bool XpandMonitor::perform_unsoftfail(SERVER* pServer, json_t** ppError)
 {
     return perform_operation(Operation::UNSOFTFAIL, pServer, ppError);
 }
 
-bool ClustrixMonitor::perform_operation(Operation operation,
-                                        SERVER* pServer,
-                                        json_t** ppError)
+bool XpandMonitor::perform_operation(Operation operation,
+                                     SERVER* pServer,
+                                     json_t** ppError)
 {
     bool performed = false;
 
@@ -1207,19 +1207,19 @@ bool ClustrixMonitor::perform_operation(Operation operation,
 
     if (!m_pHub_con)
     {
-        check_cluster(Clustrix::Softfailed::ACCEPT);
+        check_cluster(xpand::Softfailed::ACCEPT);
     }
 
     if (m_pHub_con)
     {
         auto it = find_if(m_nodes_by_id.begin(), m_nodes_by_id.end(),
-                          [pServer](const std::pair<int, ClustrixNode>& element) {
+                          [pServer](const std::pair<int, XpandNode>& element) {
                               return element.second.server() == pServer;
                           });
 
         if (it != m_nodes_by_id.end())
         {
-            ClustrixNode& node = it->second;
+            XpandNode& node = it->second;
 
             const char ZQUERY_FORMAT[] = "ALTER CLUSTER %s %d";
 
@@ -1267,7 +1267,7 @@ bool ClustrixMonitor::perform_operation(Operation operation,
     else
     {
         LOG_JSON_ERROR(ppError,
-                       "%s: Could not could not connect to any Clustrix node, "
+                       "%s: Could not could not connect to any Xpand node, "
                        "cannot perform %s of %s.",
                        name(), zOperation, pServer->address);
     }
@@ -1275,7 +1275,7 @@ bool ClustrixMonitor::perform_operation(Operation operation,
     return performed;
 }
 
-void ClustrixMonitor::persist(const ClustrixNode& node)
+void XpandMonitor::persist(const XpandNode& node)
 {
     if (!m_pDb)
     {
@@ -1294,7 +1294,7 @@ void ClustrixMonitor::persist(const ClustrixNode& node)
     char* pError = nullptr;
     if (sqlite3_exec(m_pDb, sql_upsert, nullptr, nullptr, &pError) == SQLITE_OK)
     {
-        MXS_INFO("Updated Clustrix node in bookkeeping: %d, '%s', %d, %d.",
+        MXS_INFO("Updated Xpand node in bookkeeping: %d, '%s', %d, %d.",
                  id, zIp, mysql_port, health_port);
     }
     else
@@ -1304,7 +1304,7 @@ void ClustrixMonitor::persist(const ClustrixNode& node)
     }
 }
 
-void ClustrixMonitor::unpersist(const ClustrixNode& node)
+void XpandMonitor::unpersist(const XpandNode& node)
 {
     if (!m_pDb)
     {
@@ -1320,7 +1320,7 @@ void ClustrixMonitor::unpersist(const ClustrixNode& node)
     char* pError = nullptr;
     if (sqlite3_exec(m_pDb, sql_delete, nullptr, nullptr, &pError) == SQLITE_OK)
     {
-        MXS_INFO("Deleted Clustrix node %d from bookkeeping.", id);
+        MXS_INFO("Deleted Xpand node %d from bookkeeping.", id);
     }
     else
     {
