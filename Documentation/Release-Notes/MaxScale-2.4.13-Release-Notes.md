@@ -1,4 +1,4 @@
-# MariaDB MaxScale 2.4.13 Release Notes
+# MariaDB MaxScale 2.4.13 Release Notes -- 2020-10-19
 
 Release 2.4.13 is a GA release.
 
