@@ -111,6 +111,7 @@ bool load_module(const string& fpath, mxs::ModuleType type, const string& given_
 const char madbproto[] = "mariadbprotocol";
 NAME_MAPPING name_mappings[] =
 {
+    {ModuleType::MONITOR,       "clustrixmon",   "xpandmon",    false},
     {ModuleType::MONITOR,       "mysqlmon",      "mariadbmon",  false},
     {ModuleType::PROTOCOL,      "mysqlclient",   madbproto,     false},
     {ModuleType::PROTOCOL,      "mariadb",       madbproto,     true },

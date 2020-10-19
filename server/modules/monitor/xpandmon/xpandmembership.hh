@@ -12,19 +12,19 @@
  */
 #pragma once
 
-#include "clustrixmon.hh"
+#include "xpandmon.hh"
 #include <iostream>
 #include <sstream>
 #include <string>
-#include "clustrix.hh"
+#include "xpand.hh"
 
-class ClustrixMembership
+class XpandMembership
 {
 public:
-    ClustrixMembership(int id,
-                       Clustrix::Status status,
-                       Clustrix::SubState substate,
-                       int instance)
+    XpandMembership(int id,
+                    xpand::Status status,
+                    xpand::SubState substate,
+                    int instance)
         : m_id(id)
         , m_status(status)
         , m_substate(substate)
@@ -37,12 +37,12 @@ public:
         return m_id;
     }
 
-    Clustrix::Status status() const
+    xpand::Status status() const
     {
         return m_status;
     }
 
-    Clustrix::SubState substate() const
+    xpand::SubState substate() const
     {
         return m_substate;
     }
@@ -57,8 +57,8 @@ public:
         std::stringstream ss;
         ss << "{"
            << m_id << ", "
-           << Clustrix::to_string(m_status) << ", "
-           << Clustrix::to_string(m_substate) << ", "
+           << xpand::to_string(m_status) << ", "
+           << xpand::to_string(m_substate) << ", "
            << m_instance
            << "}";
         return ss.str();
@@ -70,13 +70,13 @@ public:
     }
 
 private:
-    int                m_id;
-    Clustrix::Status   m_status;
-    Clustrix::SubState m_substate;
-    int                m_instance;
+    int             m_id;
+    xpand::Status   m_status;
+    xpand::SubState m_substate;
+    int             m_instance;
 };
 
-inline std::ostream& operator<<(std::ostream& out, const ClustrixMembership& x)
+inline std::ostream& operator<<(std::ostream& out, const XpandMembership& x)
 {
     x.print(out);
     return out;

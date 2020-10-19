@@ -40,13 +40,13 @@ These tutorials are for specific use cases and module combinations.
 
  - [Administration Tutorial](Tutorials/Administration-Tutorial.md)
  - [Avro Router Tutorial](Tutorials/Avrorouter-Tutorial.md)
- - [Clustrix Monitor Tutorial](Tutorials/Configuring-Clustrix-Monitor.md)
- - [Clustrix Usage Tutorial](Tutorials/MaxScale-Clustrix-Tutorial.md)
  - [Connection Routing Tutorial](Tutorials/Connection-Routing-Tutorial.md)
  - [Filter Tutorial](Tutorials/Filter-Tutorial.md)
  - [MariaDB Monitor Failover Tutorial](Tutorials/MariaDB-Monitor-Failover.md)
  - [Read Write Splitting Tutorial](Tutorials/Read-Write-Splitting-Tutorial.md)
  - [Simple Schema Sharding Tutorial](Tutorials/Simple-Sharding-Tutorial.md)
+ - [Xpand Monitor Tutorial](Tutorials/Configuring-Xpand-Monitor.md)
+ - [Xpand Usage Tutorial](Tutorials/MaxScale-Xpand-Tutorial.md)
 
 Here are tutorials on monitoring and managing MariaDB MaxScale in cluster environments.
 
@@ -99,10 +99,10 @@ Common options for all monitor modules.
 Module specific documentation.
 
  - [Aurora Monitor](Monitors/Aurora-Monitor.md)
- - [Clustrix Monitor](Monitors/Clustrix-Monitor.md)
  - [ColumnStore Monitor](Monitors/ColumnStore-Monitor.md)
  - [Galera Monitor](Monitors/Galera-Monitor.md)
  - [MariaDB Monitor](Monitors/MariaDB-Monitor.md)
+ - [Xpand Monitor](Monitors/Xpand-Monitor.md)
 
 ## Protocols
 

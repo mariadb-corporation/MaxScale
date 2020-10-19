@@ -922,10 +922,16 @@ bool RWSplitSession::handleError(mxs::ErrorType type, GWBUF* errmsgbuf, mxs::End
         MXS_INFO("Master '%s' failed: %s", backend->name(), mxs::extract_error(errmsgbuf).c_str());
         /** The connection to the master has failed */
 
-        bool expected_response = !reply.is_complete();
+        bool expected_response = backend->is_waiting_result();
 
         if (!expected_response)
         {
+            // We have to use Backend::is_waiting_result as the check since it's updated immediately after a
+            // write to the backend is done. The mxs::Reply is updated only when the backend protocol
+            // processes the query which can be out of sync when handleError is called if the disconnection
+            // happens before authentication completes.
+            mxb_assert(reply.is_complete());
+
             /** The failure of a master is not considered a critical
              * failure as partial functionality still remains. If
              * master_failure_mode is not set to fail_instantly, reads
