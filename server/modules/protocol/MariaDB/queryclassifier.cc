@@ -18,6 +18,7 @@
 #include <maxscale/query_classifier.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/protocol/mariadb/protocol_classes.hh>
+#include <maxscale/protocol/mariadb/query_classifier.hh>
 
 using mariadb::QueryClassifier;
 

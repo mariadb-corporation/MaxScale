@@ -22,7 +22,7 @@
 #include <maxbase/alloc.h>
 #include <maxscale/modutil.hh>
 #include <maxscale/poll.hh>
-#include <maxscale/query_classifier.hh>
+#include <maxscale/protocol/mariadb/query_classifier.hh>
 #include <maxscale/protocol/mariadb/resultset.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 

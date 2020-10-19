@@ -33,7 +33,6 @@ add_library(maxscale-common SHARED
   packet_tracker.cc
   paths.cc
   poll.cc
-  query_classifier.cc
   random.cc
   resource.cc
   response_stat.cc

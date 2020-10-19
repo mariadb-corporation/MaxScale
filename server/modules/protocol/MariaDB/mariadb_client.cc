@@ -36,7 +36,7 @@
 #include <maxscale/protocol/mariadb/backend_connection.hh>
 #include <maxscale/protocol/mariadb/local_client.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
-#include <maxscale/query_classifier.hh>
+#include <maxscale/protocol/mariadb/query_classifier.hh>
 #include <maxscale/router.hh>
 #include <maxscale/routingworker.hh>
 #include <maxscale/session.hh>

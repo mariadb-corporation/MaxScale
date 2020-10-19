@@ -1,3 +1,6 @@
+add_executable(profile_trxboundaryparser profile_trxboundaryparser.cc)
+target_link_libraries(profile_trxboundaryparser maxscale-common)
+
 add_executable(test_parse_kill test_parse_kill.cc)
 add_executable(test_setparser test_setparser.cc)
 add_executable(test_setsqlmodeparser test_setsqlmodeparser.cc)

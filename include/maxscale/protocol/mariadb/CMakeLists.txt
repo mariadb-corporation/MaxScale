@@ -7,6 +7,8 @@ install_custom_file(module_info.hh ${CMAKE_INSTALL_INCLUDEDIR}/maxscale/protocol
 install_custom_file(module_names.hh ${CMAKE_INSTALL_INCLUDEDIR}/maxscale/protocol/mariadb devel)
 install_custom_file(mysql.hh ${CMAKE_INSTALL_INCLUDEDIR}/maxscale/protocol/mariadb devel)
 install_custom_file(protocol_classes.hh ${CMAKE_INSTALL_INCLUDEDIR}/maxscale/protocol/mariadb devel)
+install_custom_file(query_classifier.hh ${CMAKE_INSTALL_INCLUDEDIR}/maxscale/protocol/mariadb devel)
+install_custom_file(queryclassifier.hh ${CMAKE_INSTALL_INCLUDEDIR}/maxscale/protocol/mariadb devel)
 install_custom_file(resultset.hh ${CMAKE_INSTALL_INCLUDEDIR}/maxscale/protocol/mariadb devel)
 install_custom_file(rwbackend.hh ${CMAKE_INSTALL_INCLUDEDIR}/maxscale/protocol/mariadb devel)
 

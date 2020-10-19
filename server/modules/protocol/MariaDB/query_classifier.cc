@@ -11,28 +11,28 @@
  * Public License.
  */
 
-#include "internal/query_classifier.hh"
+#include <maxscale/protocol/mariadb/query_classifier.hh>
+#include "../../../core/internal/query_classifier.hh"
+
 #include <inttypes.h>
 #include <algorithm>
 #include <atomic>
 #include <random>
 #include <unordered_map>
 #include <maxbase/alloc.h>
-#include <maxbase/atomic.h>
 #include <maxbase/format.hh>
 #include <maxbase/pretty_print.hh>
 #include <maxscale/cn_strings.hh>
 #include <maxscale/config.hh>
 #include <maxscale/json_api.hh>
 #include <maxscale/modutil.hh>
-#include <maxscale/pcre2.hh>
 #include <maxscale/routingworker.hh>
 #include <maxscale/utils.h>
 #include <maxscale/jansson.hh>
 #include <maxscale/buffer.hh>
 
-#include "internal/modules.hh"
-#include "internal/trxboundaryparser.hh"
+#include "../../../core/internal/modules.hh"
+#include "trxboundaryparser.hh"
 
 // #define QC_TRACE_ENABLED
 #undef QC_TRACE_ENABLED

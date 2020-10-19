@@ -15,7 +15,7 @@
 #include <maxbase/maxbase.hh>
 #include <maxscale/buffer.hh>
 #include <maxscale/paths.hh>
-#include <maxscale/query_classifier.hh>
+#include <maxscale/protocol/mariadb/query_classifier.hh>
 
 #define MYSQL_HEADER_LEN 4
 

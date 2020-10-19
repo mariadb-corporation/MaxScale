@@ -17,6 +17,7 @@
 #include <algorithm>
 
 #include <maxscale/pcre2.hh>
+#include <maxscale/protocol/mariadb/query_classifier.hh>
 
 namespace
 {

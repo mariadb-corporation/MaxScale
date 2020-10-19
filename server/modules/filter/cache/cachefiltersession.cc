@@ -18,7 +18,7 @@
 #include <maxbase/pretty_print.hh>
 #include <maxscale/modutil.hh>
 #include <maxscale/mysql_utils.hh>
-#include <maxscale/query_classifier.hh>
+#include <maxscale/protocol/mariadb/query_classifier.hh>
 #include <maxscale/protocol/mariadb/protocol_classes.hh>
 #include "storage.hh"
 

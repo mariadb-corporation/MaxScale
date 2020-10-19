@@ -661,66 +661,6 @@ bool qc_thread_init(uint32_t kind);
 void qc_thread_end(uint32_t kind);
 
 /**
- * Parses the statement in the provided buffer and returns a value specifying
- * to what extent the statement could be parsed.
- *
- * There is no need to call this function explicitly before calling any of
- * the other functions; e.g. qc_get_type_mask(). When some particular property of
- * a statement is asked for, the statement will be parsed if it has not been
- * parsed yet. Also, if the statement in the provided buffer has been parsed
- * already then this function will only return the result of that parsing;
- * the statement will not be parsed again.
- *
- * @param stmt     A buffer containing an COM_QUERY or COM_STMT_PREPARE packet.
- * @param collect  A bitmask of @c qc_collect_info_t values. Specifies what information
- *                 should be collected.
- *
- *                 Note that this is merely a hint and does not restrict what
- *                 information can be queried for. If necessary, the statement
- *                 will transparently be reparsed.
- *
- * @return To what extent the statement could be parsed.
- */
-qc_parse_result_t qc_parse(GWBUF* stmt, uint32_t collect);
-
-/**
- * Returns information about affected fields.
- *
- * @param stmt     A buffer containing a COM_QUERY or COM_STMT_PREPARE packet.
- * @param infos    Pointer to pointer that after the call will point to an
- *                 array of QC_FIELD_INFO:s.
- * @param n_infos  Pointer to size_t variable where the number of items
- *                 in @c infos will be returned.
- *
- * @note The returned array belongs to the GWBUF and remains valid for as
- *       long as the GWBUF is valid. If the data is needed for longer than
- *       that, it must be copied.
- */
-void qc_get_field_info(GWBUF* stmt, const QC_FIELD_INFO** infos, size_t* n_infos);
-
-/**
- * Returns information about function usage.
- *
- * @param stmt     A buffer containing a COM_QUERY or COM_STMT_PREPARE packet.
- * @param infos    Pointer to pointer that after the call will point to an
- *                 array of QC_FUNCTION_INFO:s.
- * @param n_infos  Pointer to size_t variable where the number of items
- *                 in @c infos will be returned.
- *
- * @note The returned array belongs to the GWBUF and remains valid for as
- *       long as the GWBUF is valid. If the data is needed for longer than
- *       that, it must be copied.
- *
- * @note For each function, only the fields that any invocation of it directly
- *       accesses will be returned. For instance:
- *
- *           select length(a), length(concat(b, length(a))) from t
- *
- *       will for @length return the field @a and for @c concat the field @b.
- */
-void qc_get_function_info(GWBUF* stmt, const QC_FUNCTION_INFO** infos, size_t* n_infos);
-
-/**
  * Returns the statement, with literals replaced with question marks.
  *
  * @param stmt  A buffer containing a COM_QUERY or COM_STMT_PREPARE packet.
@@ -731,96 +671,11 @@ void qc_get_function_info(GWBUF* stmt, const QC_FUNCTION_INFO** infos, size_t* n
 char* qc_get_canonical(GWBUF* stmt);
 
 /**
- * Returns the name of the created table.
- *
- * @param stmt  A buffer containing a COM_QUERY or COM_STMT_PREPARE packet.
- *
- * @return The name of the created table or NULL if the statement
- *         does not create a table or a memory allocation failed.
- *         The string must be freed by the caller.
- */
-char* qc_get_created_table_name(GWBUF* stmt);
-
-/**
- * Returns the databases accessed by the statement. Note that a
- * possible default database is not returned.
- *
- * @param stmt  A buffer containing a COM_QUERY or COM_STMT_PREPARE packet.
- *
- * @return Vector of strings
- */
-std::vector<std::string> qc_get_database_names(GWBUF* stmt);
-
-/**
- * Returns the operation of the statement.
- *
- * @param stmt  A buffer containing a COM_QUERY or COM_STMT_PREPARE packet.
- *
- * @return The operation of the statement.
- */
-qc_query_op_t qc_get_operation(GWBUF* stmt);
-
-/**
- * Returns the name of the prepared statement, if the statement
- * is a PREPARE or EXECUTE statement.
- *
- * @param stmt  A buffer containing a COM_QUERY or COM_STMT_PREPARE packet.
- *
- * @return The name of the prepared statement, if the statement
- *         is a PREPARE or EXECUTE statement; otherwise NULL.
- *
- * @note The returned string @b must be freed by the caller.
- *
- * @note Even though a COM_STMT_PREPARE can be given to the query
- *       classifier for parsing, this function will in that case
- *       return NULL since the id of the statement is provided by
- *       the server.
- */
-char* qc_get_prepare_name(GWBUF* stmt);
-
-/**
- * Returns the preparable statement of a PREPARE statment. Other query classifier
- * functions can then be used on the returned statement to find out information
- * about the preparable statement. The returned @c GWBUF should not be used for
- * anything else but for obtaining information about the preparable statement.
- *
- * @param stmt  A buffer containing a COM_QUERY or COM_STMT_PREPARE packet.
- *
- * @return The preparable statement, if @stmt was a COM_QUERY PREPARE statement,
- *         or NULL.
- *
- * @attention If the packet was a COM_STMT_PREPARE, then this function will
- *            return NULL and the actual properties of the query can be obtained
- *            by calling any of the qc-functions directly on the GWBUF containing
- *            the COM_STMT_PREPARE. However, the type mask will contain the
- *            bit @c QUERY_TYPE_PREPARE_STMT.
- *
- * @attention The returned @c GWBUF is the property of @c stmt and will be
- *            deleted along with it.
- */
-GWBUF* qc_get_preparable_stmt(GWBUF* stmt);
-
-/**
  * Gets the sql mode of the *calling* thread.
  *
  * @return The mode.
  */
 qc_sql_mode_t qc_get_sql_mode();
-
-/**
- * Returns the tables accessed by the statement.
- *
- * @param stmt       A buffer containing a COM_QUERY or COM_STMT_PREPARE packet.
- * @param tblsize    Pointer to integer where the number of tables is stored.
- * @param fullnames  If true, a table names will include the database name
- *                   as well (if explicitly referred to in the statement).
- *
- * @return Array of strings or NULL if a memory allocation fails.
- *
- * @note The returned array and the strings pointed to @b must be freed
- *       by the caller.
- */
-std::vector<std::string> qc_get_table_names(GWBUF* stmt, bool fullnames);
 
 /**
  * Free tables returned by qc_get_table_names

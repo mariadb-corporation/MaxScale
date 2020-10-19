@@ -74,6 +74,7 @@
 #include <maxscale/modutil.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/protocol/mariadb/protocol_classes.hh>
+#include <maxscale/protocol/mariadb/query_classifier.hh>
 #include <maxscale/pcre2.hh>
 #include <maxbase/alloc.h>
 #include <maxscale/utils.h>
