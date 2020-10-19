@@ -78,7 +78,7 @@ private:
     {
         bool        slave_running = false;
         std::string host;
-        int64_t     port = 0;
+        int64_t     port = 3306;
         std::string user;
         std::string password;
         bool        use_gtid = false;
