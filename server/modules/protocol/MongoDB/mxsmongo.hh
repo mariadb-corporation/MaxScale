@@ -14,6 +14,7 @@
 
 #include "mongodbclient.hh"
 #include <endian.h>
+#include <maxscale/target.hh>
 
 #include <bsoncxx/json.hpp>
 // Claim we are part of Mongo, so that we can include internal headers.
@@ -446,6 +447,41 @@ public:
 protected:
     uint32_t                             m_flags;
     std::vector<bsoncxx::document::view> m_documents;
+};
+
+class Database;
+
+class Mongo
+{
+public:
+    enum State
+    {
+        READY,  // Ready for a command.
+        PENDING // A command is being executed.
+    };
+
+    Mongo();
+    ~Mongo();
+
+    Mongo(const Mongo&) = delete;
+    Mongo& operator = (const Mongo&) = delete;
+
+    GWBUF* handle_request(const mxsmongo::Packet& req, mxs::Component& downstream);
+
+    GWBUF* translate(GWBUF* pMariaDB_response);
+
+private:
+    using SDatabase = std::unique_ptr<Database>;
+
+    GWBUF* handle_query(const mxsmongo::Query& req, mxs::Component& downstream);
+    GWBUF* handle_msg(const mxsmongo::Msg& req, mxs::Component& downstream);
+
+    GWBUF* create_ismaster_response(const mxsmongo::Packet& request);
+
+    State     m_state { READY };
+    int32_t   m_request_id { 1 };
+    SDatabase m_sDatabase;
+
 };
 
 }

@@ -14,7 +14,7 @@ add_library(mongodbclient SHARED
   mongodbclient.cc
   protocolmodule.cc
   )
-add_dependencies(mongodbclient mongo-c-driver mongo-cxx-driver)
+add_dependencies(mongodbclient mariadbprotocol mongo-c-driver mongo-cxx-driver)
 target_link_libraries(mongodbclient
   maxscale-common
   ${MONGO_CXX_LIBRARIES}

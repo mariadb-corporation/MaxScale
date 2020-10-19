@@ -185,12 +185,14 @@ int32_t ClientConnection::write(GWBUF* pMariaDB_response)
     TRACE();
     MXS_NOTICE("MariaDB response: %s", dbg_decode_response(pMariaDB_response));
 
-    mxb_assert(m_sMongo.get());
+    GWBUF* pMongo_response = m_mongo.translate(pMariaDB_response);
 
-    GWBUF* pMongo_response = m_sMongo->translate(pMariaDB_response);
-    mxb_assert(pMongo_response);
+    // Not all Mongo queries generate a response.
+    if (pMongo_response)
+    {
+        m_pDcb->writeq_append(pMongo_response);
+    }
 
-    m_pDcb->writeq_append(pMongo_response);
     return 0;
 }
 

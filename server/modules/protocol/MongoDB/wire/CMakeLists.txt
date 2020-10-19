@@ -1,7 +1,8 @@
 if (BUILD_MONGO_CLIENT)
   add_executable(mongodump
     mongodump.cc
-    ../mxsmongo
+    ../mxsmongo.cc
+    ../mxsmongodatabase.cc
     )
 
   add_dependencies(mongodump mongo-cxx-driver)
