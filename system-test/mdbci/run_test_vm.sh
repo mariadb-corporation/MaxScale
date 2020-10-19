@@ -60,6 +60,8 @@ test_env_list=(
     "name"
     "target"
     "box"
+    "backend_box"
+    "clustrix_box"
     "product"
     "version"
     "do_not_destroy_vm"

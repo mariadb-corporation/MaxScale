@@ -185,7 +185,7 @@ public:
 
                         bypass_whitespace();
 
-                        if (is_set(m_pI))
+                        if (m_pEnd - m_pI > 3 && is_set(m_pI))
                         {
                             rv = parse(pResult);
                         }

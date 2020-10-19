@@ -359,7 +359,7 @@
   "clustrix_000" :
   {
         "hostname" : "clustrix000",
-        "box" : "centos_7_gcp",
+        "box" : "${clustrix_box}",
         "memory_size" : "16192",
         "labels" : [
                 "CLUSTRIX_BACKEND"
@@ -369,7 +369,7 @@
   "clustrix_001" :
   {
         "hostname" : "clustrix001",
-        "box" : "centos_7_gcp",
+        "box" : "${clustrix_box}",
         "memory_size" : "16192",
         "labels" : [
                 "CLUSTRIX_BACKEND"
@@ -379,7 +379,7 @@
   "clustrix_002" :
   {
         "hostname" : "clustrix002",
-        "box" : "centos_7_gcp",
+        "box" : "${clustrix_box}",
         "memory_size" : "16192",
         "labels" : [
                 "CLUSTRIX_BACKEND"
@@ -390,7 +390,7 @@
   {
         "hostname" : "clustrix003",
         "memory_size" : "16192",
-        "box" : "centos_7_gcp",
+        "box" : "${clustrix_box}",
         "labels" : [
                 "CLUSTRIX_BACKEND"
         ]
