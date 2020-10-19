@@ -65,6 +65,7 @@ struct NAME_MAPPING
 
 static NAME_MAPPING name_mappings[] =
 {
+    {MODULE_MONITOR,       "clustrixmon",      "xpandmon",           false},
     {MODULE_MONITOR,       "mysqlmon",         "mariadbmon",         false},
     {MODULE_PROTOCOL,      "mysqlclient",      "mariadbclient",      false},
     {MODULE_PROTOCOL,      "mysqlbackend",     "mariadbbackend",     false},
