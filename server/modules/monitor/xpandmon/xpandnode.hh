@@ -12,12 +12,12 @@
  */
 #pragma once
 
-#include "clustrixmon.hh"
+#include "xpandmon.hh"
 #include <iostream>
 #include <sstream>
 #include <string>
-#include "clustrix.hh"
-#include "clustrixmembership.hh"
+#include "xpand.hh"
+#include "xpandmembership.hh"
 
 class ClustrixNode
 {

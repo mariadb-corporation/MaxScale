@@ -11,7 +11,7 @@
  * Public License.
  */
 
-#include "clustrix.hh"
+#include "xpand.hh"
 #include <maxbase/assert.h>
 
 using maxscale::Monitor;

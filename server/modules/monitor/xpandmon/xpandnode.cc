@@ -11,8 +11,8 @@
  * Public License.
  */
 
-#include "clustrixnode.hh"
-#include "clustrix.hh"
+#include "xpandnode.hh"
+#include "xpand.hh"
 
 bool ClustrixNode::can_be_used_as_hub(const char* zName,
                                       const mxs::MonitorServer::ConnectionSettings& settings,

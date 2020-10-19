@@ -12,15 +12,15 @@
  */
 #pragma once
 
-#include "clustrixmon.hh"
+#include "xpandmon.hh"
 #include <map>
 #include <set>
 #include <sqlite3.h>
 #include <maxscale/config2.hh>
 #include <maxscale/monitor.hh>
 #include <maxbase/http.hh>
-#include "clustrixmembership.hh"
-#include "clustrixnode.hh"
+#include "xpandmembership.hh"
+#include "xpandnode.hh"
 
 class ClustrixMonitor : public maxscale::MonitorWorker
                       , private ClustrixNode::Persister

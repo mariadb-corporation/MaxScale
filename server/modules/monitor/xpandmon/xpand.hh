@@ -12,7 +12,7 @@
  */
 #pragma once
 
-#include "clustrixmon.hh"
+#include "xpandmon.hh"
 #include <string>
 #include <maxscale/monitor.hh>
 #include <maxscale/server.hh>

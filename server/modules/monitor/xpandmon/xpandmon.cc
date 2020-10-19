@@ -11,10 +11,10 @@
  * Public License.
  */
 
-#include "clustrixmon.hh"
+#include "xpandmon.hh"
 #include <maxscale/modinfo.h>
 #include <maxscale/modulecmd.hh>
-#include "clustrixmonitor.hh"
+#include "xpandmonitor.hh"
 
 namespace
 {
