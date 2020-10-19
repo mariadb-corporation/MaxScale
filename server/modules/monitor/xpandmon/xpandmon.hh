@@ -12,7 +12,7 @@
  */
 #pragma once
 
-#define MXS_MODULE_NAME "clustrixmon"
+#define MXS_MODULE_NAME "xpandmon"
 
 #include <maxscale/ccdefs.hh>
 #include <maxbase/log.hh>
