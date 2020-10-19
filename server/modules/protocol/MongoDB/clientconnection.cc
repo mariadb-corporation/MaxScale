@@ -379,7 +379,7 @@ GWBUF* ClientConnection::create_handshake_response(const mxsmongo::Packet& req)
     return pResponse;
 }
 
-int32_t clientReply(GWBUF* buffer, mxs::ReplyRoute& down, const mxs::Reply& reply)
+int32_t ClientConnection::clientReply(GWBUF* buffer, mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
     return write(buffer);
 }
