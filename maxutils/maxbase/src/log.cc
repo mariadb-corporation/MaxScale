@@ -906,11 +906,12 @@ int mxb_log_message(int priority,
                 {
 #ifdef HAVE_SYSTEMD
                     sd_journal_send("MESSAGE=%s", message_text,
-                                    "PRIORITY=%d", priority,
+                                    "PRIORITY=%d", LOG_PRI(priority),
                                     "SESSION=%s", context_len ? context : "",
                                     "MODULE=%s", modname_len ? modname : "",
                                     "OBJECT=%s", scope_len ? scope : "",
                                     "TIMESTAMP=%s", timestamp.c_str(),
+                                    LOG_FAC(priority) ? "SYSLOG_FACILITY=%d" : nullptr, LOG_FAC(priority),
                                     nullptr);
 #else
                     // Debug messages are never logged into syslog
