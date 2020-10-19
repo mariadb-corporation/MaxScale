@@ -120,22 +120,20 @@ value of `threads`.
         "type": "threads",
         "attributes": {
             "stats": {
-                "reads": 2,
-                "writes": 0,
-                "errors": 0,
-                "hangups": 0,
-                "accepts": 0,
-                "blocking_polls": 180,
-                "event_queue_length": 1,
-                "max_event_queue_length": 1,
-                "max_exec_time": 0,
-                "max_queue_time": 0,
-                "current_descriptors": 1,
-                "total_descriptors": 1,
-                "load": {
-                    "last_second": 0,
-                    "last_minute": 0,
-                    "last_hour": 0
+                "reads": 2, // Number of EPOLLIN events
+                "writes": 0, // number of EPOLLOUT events
+                "errors": 0, // Number of EPOLLERR events
+                "hangups": 0, // Number of EPOLLHUP or EPOLLRDHUP events
+                "accepts": 0, // Number of EPOLLIN events for listeners
+                "max_event_queue_length": 1, // Maximum number of events returned by epoll
+                "max_exec_time": 0, // Maximum number of internal ticks (100ms per tick) an event took to execute
+                "max_queue_time": 0, // Maximum number of internal ticks that an event waited in the queue
+                "current_descriptors": 1, // How many file descriptors this thread is handling
+                "total_descriptors": 1, // Total number of file descriptors added to this thread
+                "load": { // Thread load in percentages i.e. 100 is 100%
+                    "last_second": 0, // Load over the past second
+                    "last_minute": 0, // Load over the past minute
+                    "last_hour": 0 // Load over the past hour
                 }
             }
         },
