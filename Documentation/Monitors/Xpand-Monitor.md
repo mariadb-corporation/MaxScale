@@ -1,29 +1,32 @@
-# Clustrix Monitor
+# Xpand Monitor
+
+**NOTE** The Xpand monitor is intended for use with a native Xpand
+cluster, not with the Xpand storage engine.
 
 ## Overview
 
-The Clustrix Monitor is a monitor that monitors a Clustrix cluster. It is
+The Xpand Monitor is a monitor that monitors a Xpand cluster. It is
 capable of detecting the cluster setup and creating corresponding server
 instances within MaxScale.
 
 ## Configuration
 
-A minimal configuration for a monitor requires one server in the Clustrix
+A minimal configuration for a monitor requires one server in the Xpand
 cluster, and a username and a password to connect to the server. Note that
-by default the Clustrix monitor will only use that server in order to
+by default the Xpand monitor will only use that server in order to
 dynamically find out the configuration of the cluster; after startup it
 will completely rely upon information obtained at runtime. To change the
 default behaviour, please see the parameter
 [dynamic_node_detection](#dynamic_node_detection).
 
-To ensure that the Clustrix monitor will be able to start, it is adviseable
+To ensure that the Xpand monitor will be able to start, it is adviseable
 to provide _more_ than one server to cater for the case that not all nodes
 are always up when MaxScale starts.
 
 ```
-[TheClustrixMonitor]
+[TheXpandMonitor]
 type=monitor
-module=clustrixmon
+module=xpandmon
 servers=server1,server2,server3
 user=myuser
 password=mypwd
@@ -32,22 +35,22 @@ password=mypwd
 
 ## Dynamic Servers
 
-The server objects the Clustrix monitor creates for each detected
-Clustrix node will be named like
+The server objects the Xpand monitor creates for each detected
+Xpand node will be named like
 ```
-@@<name-of-clustrix-monitor>:node-<id>
+@@<name-of-xpand-monitor>:node-<id>
 ```
-where `<name-of-clustrix-monitor>` is the name of the Clustrix monitor
+where `<name-of-xpand-monitor>` is the name of the Xpand monitor
 instance, as defined in the MaxScale configuration file, and `<id>` is the
-id of the Clustrix node.
+id of the Xpand node.
 
-For instance, with the Clustrix monitor defined as above and a Clustrix
+For instance, with the Xpand monitor defined as above and a Xpand
 cluster consisting of 3 nodes whose ids are `1`, `2` and `3` respectively,
 the names of the created server objects will be:
 ```
-@@TheClustrixMonitor:node-1
-@@TheClustrixMonitor:node-2
-@@TheClustrixMonitor:node-3
+@@TheXpandMonitor:node-1
+@@TheXpandMonitor:node-2
+@@TheXpandMonitor:node-3
 ```
 
 ### Grants
@@ -76,9 +79,9 @@ The user name must be changed to the one actually being used.
 For a list of optional parameters that all monitors support, read the
 [Monitor Common](Monitor-Common.md) document.
 
-## Clustrix Monitor optional parameters
+## Xpand Monitor optional parameters
 
-These are optional parameters specific to the Clustrix Monitor.
+These are optional parameters specific to the Xpand Monitor.
 
 ### `cluster_monitor_interval`
 
@@ -105,12 +108,12 @@ health_check_threshold=3
 
 ### `dynamic_node_detection`
 
-By default, the Clustrix monitor will only use the bootstrap nodes
-in order to connect to the Clustrix cluster and then find out the
+By default, the Xpand monitor will only use the bootstrap nodes
+in order to connect to the Xpand cluster and then find out the
 cluster configuration dynamically at runtime.
 
 That behaviour can be turned off with this optional parameter, in
-which case all Clustrix nodes must manually be defined as shown below.
+which case all Xpand nodes must manually be defined as shown below.
 
 ```
 [Node-1]
@@ -125,9 +128,9 @@ port=3306
 [Node-3]
 ...
 
-[Clustrix-Monitor]
+[TheXpandMonitor]
 type=monitor
-module=clustrixmon
+module=xpandmon
 servers=Node-1, Node-2, Node-3
 dynamic_node_detection=false
 ```
@@ -151,26 +154,26 @@ is `false`. Note also that the port must be the same for all nodes.
 
 ## Commands
 
-The Clustrix monitor supports the following module commands.
+The Xpand monitor supports the following module commands.
 
 ### `softfail`
 
 With the `softfail` module command, a node can be _softfailed_ via
-MaxScale. The command requires as argument the name of the Clustrix
+MaxScale. The command requires as argument the name of the Xpand
 monitor instance (as defined in the configuration file) and the name
 of the node to be softfailed.
 
 For instance, with a configuration file like
 ```
-[TheClustrixMonitor]
+[TheXpandMonitor]
 type=monitor
-module=clustrixmon
+module=xpandmon
 ...
 ```
-then the node whose server name is `@@TheClustrixMonitor:node-1` can
+then the node whose server name is `@@TheXpandMonitor:node-1` can
 be softfailed like
 ```
-$ maxctrl call command clustrixmon softfail TheClustrixMonitor @@TheClustrixMonitor:node-1
+$ maxctrl call command xpandmon softfail TheXpandMonitor @@TheXpandMonitor:node-1
 ```
 If the softfailing of a node is successfully initiated, then the status
 of the corresponding MaxScale server object will be set to `Draining`,
@@ -184,14 +187,14 @@ of the softfailing operation is.
 ### `unsoftfail`
 
 With the `unsoftfail` module command, a node can be _unsoftfailed_ via
-MaxScale. The command requires as argument the name of the Clustrix
+MaxScale. The command requires as argument the name of the Xpand
 monitor instance (as defined in the configuration file) and the name
 of the node to be unsoftfailed.
 
 With a setup similar to the `softfail` case, a node can be unsoftfailed
 like:
 ```
-$ maxctrl call command clustrixmon unsoftfail TheClustrixMonitor @@TheClustrixMonitor:node-1
+$ maxctrl call command xpandmon unsoftfail TheXpandMonitor @@TheXpandMonitor:node-1
 ```
 If a node is successfully softfailed, then a `Draining` status of
 the corresponding MaxScale server object will be cleared.
@@ -213,6 +216,6 @@ If a node that was softfailed is UNSOFTFAILed then the `Draining`
 status will be cleared.
 
 If the softfailing and unsoftfailing is initiated using the `softfail`
-and `unsoftfail` commands of the Clustrix monitor, then there will be
+and `unsoftfail` commands of the Xpand monitor, then there will be
 no delay between the softfailing or unsoftfailing being initated and the
 `Draining` status being turned on/off.

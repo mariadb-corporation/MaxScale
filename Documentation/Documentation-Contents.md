@@ -49,8 +49,8 @@ These tutorials are for specific use cases and module combinations.
  - [Filter Tutorial](Tutorials/Filter-Tutorial.md)
  - [RabbitMQ and Tee Filter Data Archiving Tutorial](Tutorials/RabbitMQ-And-Tee-Archiving.md)
  - [RabbitMQ Setup and MariaDB MaxScale Integration Tutorial](Tutorials/RabbitMQ-Setup-And-MaxScale-Integration.md)
- - [Clustrix Monitor Tutorial](Tutorials/Configuring-Clustrix-Monitor.md)
- - [MaxScale Clustrix Tutorial](Tutorials/MaxScale-Clustrix-Tutorial.md)
+ - [Xpand Monitor Tutorial](Tutorials/Configuring-Xpand-Monitor.md)
+ - [MaxScale Xpand Tutorial](Tutorials/MaxScale-Xpand-Tutorial.md)
 
 Here are tutorials on monitoring and managing MariaDB MaxScale in cluster environments.
 
@@ -110,7 +110,7 @@ Module specific documentation.
  - [Galera Monitor](Monitors/Galera-Monitor.md)
  - [ColumnStore Monitor](Monitors/ColumnStore-Monitor.md)
  - [Aurora Monitor](Monitors/Aurora-Monitor.md)
- - [Clustrix Monitor](Monitors/Clustrix-Monitor.md)
+ - [Xpand Monitor](Monitors/Xpand-Monitor.md)
 
 ## Protocols
 
