@@ -99,9 +99,18 @@ See
 [MaxScale Troubleshooting](https://mariadb.com/kb/en/mariadb-enterprise/maxscale-troubleshooting/)
 for additional information on how to solve authentication issues.
 
-MaxScale does not support grants to a database whose name contains wildcards,
-e.g. using `grant select on test_.* to 'alice'@'%';` to give access to *test1*
-and *test2*.
+### Wildcard database grants
+
+MaxScale does not support wildcard grants to databases. Although on MariaDB
+Server `grant select on test_.* to 'alice'@'%';` gives access to *test_* as well
+as *test1*, *test2* ..., MaxScale only recognizes the grant to *test_*. If the
+grant-command escapes the wildcard (``grant select on `test\_`.* to
+'alice'@'%';``) both MaxScale and the MariaDB Server interpret it as only
+allowing access to *test_*.
+
+On the MaxScale side, this is performed by simply removing the escape character
+`\` from the database name, controlled by the setting
+[strip_db_esc](../Getting-Started/Configuration-Guide.mcd#strip_db_esc).
 
 ## Authenticator options
 

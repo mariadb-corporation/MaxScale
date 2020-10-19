@@ -403,4 +403,11 @@ struct StringToTHelper<char>
         }
     }
 };
+
+/**
+ * Strip escape characters from a character string.
+ *
+ * @param str String to process
+ */
+void strip_escape_chars(std::string& str);
 }

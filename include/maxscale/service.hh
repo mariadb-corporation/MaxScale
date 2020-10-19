@@ -100,9 +100,13 @@ public:
                                                      * -1 if not explicitly specified. */
         int64_t connection_keepalive;               /**< How often to ping idle sessions */
 
-        bool strip_db_esc;      /**< Remove the '\' characters from database names when querying them from
-                                 * the server. MySQL Workbench seems to escape at least the underscore
-                                 * character. Currently unused as the real use case is unknown. */
+        /**
+         * Remove the '\' characters from database names when querying them from the server. This
+         * is required when users make grants such as "grant select on `test\_1`.* to ..." to avoid
+         * wildcard matching against _. A plain "grant select on `test_1`.* to ..." would normally
+         * grant access to e.g. testA1. MaxScale does not support this type of wilcard matching for
+         * the database, but it must still understand the escaped version of the grant. */
+        bool strip_db_esc {true};
 
         int64_t rank;   /*< The ranking of this service */
     };
