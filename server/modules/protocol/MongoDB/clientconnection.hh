@@ -73,17 +73,11 @@ private:
 
     GWBUF* handle_one_packet(GWBUF* pPacket);
 
-    GWBUF* handle_query(const mxsmongo::Query& request);
-    GWBUF* handle_msg(const mxsmongo::Msg& request);
-
-    GWBUF* create_ismaster_response(const mxsmongo::Packet& request);
-
 private:
     State           m_state { CONNECTED };
     MXS_SESSION&    m_session;
     mxs::Component& m_downstream;
     MYSQL_session&  m_session_data;
     DCB*            m_pDcb = nullptr;
-    int32_t         m_request_id { 1 };
     mxsmongo::Mongo m_mongo;
 };
