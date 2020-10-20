@@ -447,7 +447,6 @@ describe('ServiceDetail index', () => {
                             tableRowStub = [
                                 {
                                     id: 'filter_0',
-                                    index: 0,
                                     type,
                                 },
                             ]
