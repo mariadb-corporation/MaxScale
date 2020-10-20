@@ -141,13 +141,13 @@ std::vector<std::pair<std::string, std::string>> tests =
         "RESET SLAVE ALL", "ERROR"
     },
     {
-        "RESET SLAVE 'a'", "ERROR"
+        "RESET SLAVE 'a'", "RESET SLAVE"
     },
     {
         "SHOW VARIABLES LIKE 'Server_id'", "SHOW VARIABLES LIKE Server_id"
     },
     {
-        "RESET SLAVE ''", "ERROR"
+        "RESET SLAVE ''", "RESET SLAVE"
     },
     {
         "PURGE MASTER LOGS TO 'binlog.000001'", "PURGE BINARY LOGS TO binlog.000001"
