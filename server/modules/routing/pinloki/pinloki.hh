@@ -69,7 +69,7 @@ public:
     void          reset_slave();
     GWBUF*        show_slave_status(bool all) const;
     mxq::GtidList gtid_io_pos() const;
-    void          set_gtid(const mxq::GtidList& gtid);
+    void          set_gtid_slave_pos(const maxsql::GtidList& gtid);
 
 private:
     Pinloki(SERVICE* pService, Config&& config);
@@ -83,7 +83,7 @@ private:
     {
         bool        slave_running = false;
         std::string host;
-        int64_t     port = 0;
+        int64_t     port = 3306;
         std::string user;
         std::string password;
         bool        use_gtid = false;

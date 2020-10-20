@@ -40,7 +40,7 @@ std::vector<std::string> read_inventory_file(const Config& config)
     return file_names;
 }
 
-std::string read_rpl_state(const Config& config)
+maxsql::GtidList read_rpl_state(const Config& config)
 {
     std::string ret;
     if (auto ifs = std::ifstream(config.gtid_file_path()))
@@ -48,7 +48,7 @@ std::string read_rpl_state(const Config& config)
         ifs >> ret;
     }
 
-    return ret;
+    return maxsql::GtidList::from_string(ret);
 }
 }
 
@@ -104,9 +104,41 @@ std::vector<std::string> InventoryWriter::file_names() const
     return m_file_names;
 }
 
-std::string InventoryWriter::rpl_state() const
+void InventoryWriter::save_rpl_state(const maxsql::GtidList& gtids)
+{
+    if (auto ofs = std::ofstream(m_config.gtid_file_path()))
+    {
+        ofs << gtids;
+    }
+    else
+    {
+        MXB_THROW(BinlogWriteError, "Could not write to " << m_config.gtid_file_path());
+    }
+}
+
+maxsql::GtidList InventoryWriter::rpl_state() const
 {
     return read_rpl_state(m_config);
+}
+
+void InventoryWriter::set_master_id(int64_t id)
+{
+    m_master_id.store(id, std::memory_order_release);
+}
+
+int64_t InventoryWriter::master_id() const
+{
+    return m_master_id.load(std::memory_order_acquire);
+}
+
+void InventoryWriter::set_is_writer_connected(bool connected)
+{
+    m_is_writer_connected.store(connected, std::memory_order_release);
+}
+
+bool InventoryWriter::is_writer_connected() const
+{
+    return m_is_writer_connected.load(std::memory_order_acquire);
 }
 
 std::string next_string(const std::vector<std::string>& strs, const std::string& str)
@@ -155,7 +187,7 @@ const std::vector<std::string>& InventoryReader::file_names() const
     return m_file_names = read_inventory_file(m_config);
 }
 
-std::string InventoryReader::rpl_state() const
+maxsql::GtidList InventoryReader::rpl_state() const
 {
     return read_rpl_state(m_config);
 }

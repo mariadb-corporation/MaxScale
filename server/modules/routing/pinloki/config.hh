@@ -35,6 +35,7 @@ class Config : public mxs::config::Configuration
 {
 public:
     Config(const std::string& name);
+    Config(Config&&) = default;
 
     static const mxs::config::Specification* spec();
 
@@ -47,18 +48,13 @@ public:
     std::string inventory_file_path() const;
     std::string gtid_file_path() const;
     std::string master_info_file() const;
-    /**
-     * @brief boot_strap_gtid_list - a.k.a replication state
-     * @return
-     */
-    maxsql::GtidList boot_strap_gtid_list() const;
-    void             set_boot_strap_gtid_list(const std::string& gtid);
-    uint32_t         server_id() const;
+    uint32_t    server_id() const;
 
     // Network timeout
     std::chrono::seconds net_timeout() const;
     // Automatic master selection
     bool select_master() const;
+    void disable_select_master();
 
     // File purging
     int32_t             expire_log_minimum_files() const;
@@ -76,8 +72,6 @@ private:
     std::string m_binlog_inventory_file = "binlog.index";
     /* Hashing directory (properly indexing, but the word is already in use) */
     std::string m_binlog_hash_dir = ".hash";
-    /** Gtid used if there in no gtid yet */
-    maxsql::GtidList m_boot_strap_gtid_list;
     /** Where the current master details are stored */
     std::string m_master_ini_path;
     /** Server id reported to the Master */
@@ -133,6 +127,7 @@ private:
 
     std::chrono::seconds m_net_timeout;
     bool                 m_select_master;
+    bool                 m_select_master_disabled {false};
 
     int64_t             m_expire_log_minimum_files;
     wall_time::Duration m_expire_log_duration;

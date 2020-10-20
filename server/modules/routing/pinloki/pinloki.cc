@@ -160,12 +160,6 @@ Pinloki::Pinloki(SERVICE* pService, Config&& config)
     , m_service(pService)
     , m_inventory(m_config)
 {
-    auto rpl_state = m_inventory.rpl_state();
-    if (!rpl_state.empty())
-    {
-        m_config.set_boot_strap_gtid_list(rpl_state);
-    }
-
     if (m_master_config.load(m_config))
     {
         if (m_master_config.slave_running)
@@ -268,6 +262,15 @@ std::string Pinloki::change_master(const parser::ChangeMasterValues& values)
 {
     std::lock_guard<std::mutex> guard(m_lock);
 
+    if (m_config.select_master())
+    {
+        MXB_SINFO("Turning off select_master functionality"
+                  " due to 'CHANGE MASTER TO' command. select_master"
+                  " will take effect again in the next MaxScale restart.");
+    }
+
+    m_config.disable_select_master();
+
     using CMT = pinloki::ChangeMasterType;
     std::vector<std::string> errors;
 
@@ -296,10 +299,13 @@ std::string Pinloki::change_master(const parser::ChangeMasterValues& values)
             break;
 
         case CMT::MASTER_USE_GTID:
-            m_master_config.use_gtid = strcasecmp(a.second.c_str(), "slave_pos") == 0;
+            // slave_pos or current_pos, does not matter which
+            m_master_config.use_gtid = strcasecmp(a.second.c_str(), "slave_pos") == 0
+                || strcasecmp(a.second.c_str(), "current_pos") == 0;
+
             if (!m_master_config.use_gtid)
             {
-                errors.push_back("MASTER_USE_GTID must specify slave_pos");
+                errors.push_back("MASTER_USE_GTID must specify slave_pos or current_pos");
             }
             break;
 
@@ -539,9 +545,6 @@ void Pinloki::stop_slave()
     MXS_INFO("Stopping slave");
 
     mxb_assert(m_writer);
-    // The current GTID position must be stored so that subsequent START SLAVE commands know to resume
-    // replication from the correct position.
-    set_gtid(m_writer->get_gtid_io_pos());
 
     m_writer.reset();
     m_master_config.slave_running = false;
@@ -565,14 +568,35 @@ GWBUF* Pinloki::show_slave_status(bool all) const
     auto rset = ResultSet::create({});
     rset->add_row({});
 
+    auto error = m_writer ? m_writer->get_err() : Error {};
+
+    enum class State {Stopped, Connected, Error};
+
+    State state = State::Error;
+    if (m_inventory.is_writer_connected())
+    {
+        state = State::Connected;
+    }
+    else if (error.code == 0)
+    {
+        state = State::Stopped;
+    }
+
+    std::string sql_state =
+        state == State::Stopped ? "" :
+        "Slave has read all relay log; waiting for the slave I/O thread to update it";
+
+    std::string sql_io_state =
+        state == State::Stopped ? "" :
+        state == State::Connected ? "Waiting for master to send event" :
+        "Reconnecting after a failed master event read";
+
     if (all)
     {
         rset->add_column("Connection_name", "");
-        rset->add_column("Slave_SQL_State",
-                         "Slave has read all relay log; waiting for the slave I/O thread to update it");
+        rset->add_column("Slave_SQL_State", sql_state);
     }
-    rset->add_column("Slave_IO_State", m_writer ? "Waiting for master to send event" :
-                     "Reconnecting after a failed master event read");
+    rset->add_column("Slave_IO_State", sql_io_state);
     rset->add_column("Master_Host", m_master_config.host);
     rset->add_column("Master_User", m_master_config.user);
     rset->add_column("Master_Port", std::to_string(m_master_config.port));
@@ -582,16 +606,20 @@ GWBUF* Pinloki::show_slave_status(bool all) const
     rset->add_column("Relay_Log_File", "");
     rset->add_column("Relay_Log_Pos", "");
     rset->add_column("Relay_Master_Log_File", "");
-    rset->add_column("Slave_IO_Running", m_writer ? "Yes" : "No");
-    rset->add_column("Slave_SQL_Running", m_writer ? "Yes" : "No");
+    rset->add_column("Slave_IO_Running",
+                     state == State::Stopped ? "No" :
+                     state == State::Connected ? "Yes" :
+                     "Connecting");
+    rset->add_column("Slave_SQL_Running",
+                     state == State::Stopped ? "No" : "Yes");
     rset->add_column("Replicate_Do_DB", "");
     rset->add_column("Replicate_Ignore_DB", "");
     rset->add_column("Replicate_Do_Table", "");
     rset->add_column("Replicate_Ignore_Table", "");
     rset->add_column("Replicate_Wild_Do_Table", "");
     rset->add_column("Replicate_Wild_Ignore_Table", "");
-    rset->add_column("Last_Errno", "0");
-    rset->add_column("Last_Error", "");
+    rset->add_column("Last_Errno", std::to_string(error.code));
+    rset->add_column("Last_Error", error.str);
     rset->add_column("Skip_Counter", "0");
     rset->add_column("Exec_Master_Log_Pos", file_and_pos.second.c_str());
     rset->add_column("Relay_Log_Space", "0");
@@ -604,14 +632,16 @@ GWBUF* Pinloki::show_slave_status(bool all) const
     rset->add_column("Master_SSL_Cert", "");
     rset->add_column("Master_SSL_Cipher", "");
     rset->add_column("Master_SSL_Key", "");
-    rset->add_column("Seconds_Behind_Master", m_writer ? "0" : "NULL");
+    // Should set Seconds_Behind_Master to null if state != State::Connected,
+    // but that is not (yet) supported by ResultSet.
+    rset->add_column("Seconds_Behind_Master", "0");
     rset->add_column("Master_SSL_Verify_Server_Cert", "No");
     rset->add_column("Last_IO_Errno", "0");
     rset->add_column("Last_IO_Error", "");
     rset->add_column("Last_SQL_Errno", "0");
     rset->add_column("Last_SQL_Error", "");
     rset->add_column("Replicate_Ignore_Server_Ids", "");
-    rset->add_column("Master_Server_Id", std::to_string(m_config.server_id()));
+    rset->add_column("Master_Server_Id", std::to_string(m_inventory.master_id()));
     rset->add_column("Master_SSL_Crl", "");
     rset->add_column("Master_SSL_Crlpath", "");
     rset->add_column("Using_Gtid", "Slave_Pos");
@@ -621,8 +651,7 @@ GWBUF* Pinloki::show_slave_status(bool all) const
     rset->add_column("Parallel_Mode", "conservative");
     rset->add_column("SQL_Delay", "0");
     rset->add_column("SQL_Remaining_Delay", "NULL");
-    rset->add_column("Slave_SQL_Running_State",
-                     "Slave has read all relay log; waiting for the slave I/O thread to update it");
+    rset->add_column("Slave_SQL_Running_State", sql_state);
     rset->add_column("Slave_DDL_Groups", "0");
     rset->add_column("Slave_Non_Transactional_Groups", "0");
     rset->add_column("Slave_Transactional_Groups", "0");
@@ -641,14 +670,15 @@ GWBUF* Pinloki::show_slave_status(bool all) const
     return rset->as_buffer().release();
 }
 
-void Pinloki::set_gtid(const mxq::GtidList& gtid)
+void Pinloki::set_gtid_slave_pos(const maxsql::GtidList& gtid)
 {
-    m_config.set_boot_strap_gtid_list(gtid.to_string());
+    mxb_assert(m_writer.get() == nullptr);
+    m_inventory.save_rpl_state(gtid);
 }
 
 mxq::GtidList Pinloki::gtid_io_pos() const
 {
-    return m_writer ? m_writer->get_gtid_io_pos() : m_config.boot_strap_gtid_list();
+    return m_inventory.rpl_state();
 }
 
 void Pinloki::MasterConfig::save(const Config& config) const

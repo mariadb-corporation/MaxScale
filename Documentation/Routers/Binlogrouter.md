@@ -219,8 +219,11 @@ Alternatively servers can be listed in `servers`. The servers should be monitore
 by a monitor. Only servers with the `Master` status are used. If multiple master
 servers are available, the first available master server will be used.
 
-If the monitor parameter `auto_failover` is set, replication will seamlessly
-switch to a new master (determined by the monitor).
+If a `CHANGE MASTER TO` command is received while `select_master` is on, the
+command will be honored and `select_master` turned off until the next reboot.
+This allows the Monitor to perform failover, and more importantly, switchover.
+It also allows the user to manually redirect the Binlogrouter. The current
+master is "sticky", meaning that the same master will be chosen on reboot.
 
 **NOTE:** Do not use `auto_rejoin`. This restriction will be lifted in
 a future version.

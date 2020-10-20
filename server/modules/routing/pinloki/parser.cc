@@ -179,6 +179,7 @@ struct Set
 
 struct ChangeMaster
 {
+    std::string                       connection_name;
     std::vector<ChangeMasterVariable> values;
 };
 
@@ -276,6 +277,8 @@ DECLARE_ATTR_RULE(change_master, "change master", ChangeMaster);
 DECLARE_ATTR_RULE(slave, "slave", Slave);
 DECLARE_ATTR_RULE(purge_logs, "purge logs", PurgeLogs);
 DECLARE_RULE(end_of_input, "end of input");
+DECLARE_ATTR_RULE(command, "command", Command);
+DECLARE_ATTR_RULE(set_statement, "set_stmt", Command);
 DECLARE_ATTR_RULE(grammar, "grammar", Command);
 
 //
@@ -314,11 +317,11 @@ const auto set_def = x3::lit("SET") > global_or_session > (set_names | (variable
 
 // CHANGE MASTER TO, only accepts a limited set of keys
 const auto change_master_variable_def = change_master_sym > eq > field;
-const auto change_master_def = x3::lit("CHANGE") > x3::lit("MASTER") > x3::lit("TO")
+const auto change_master_def = x3::lit("CHANGE") > x3::lit("MASTER") > -q_str > x3::lit("TO")
     > (change_master_variable % ',');
 
-// START SLAVE et al.
-const auto slave_def = slave_sym > "SLAVE";
+// START SLAVE et al. The connection_name, if any, is ignored.
+const auto slave_def = slave_sym > "SLAVE" > x3::omit[-q_str];
 
 // PURGE {BINARY | MASTER} LOGS TO '<binlog name>'
 const auto purge_logs_def = x3::lit("PURGE") > (x3::lit("BINARY") | x3::lit("MASTER")) > x3::lit("LOGS")
@@ -336,21 +339,30 @@ const auto show_options_def = (show_master | show_slave | show_all_slaves
 const auto show_def = x3::lit("SHOW") > show_options;
 const auto end_of_input_def = x3::eoi | x3::lit(";");
 
-// The complete grammar, case insensitive
-const auto grammar_def = x3::no_case[
+const auto command_def =
     master_gtid_wait
     | select
     | set
     | change_master
     | slave
     | show
-    | purge_logs] > end_of_input;
+    | purge_logs;
+
+// SET STATEMENT ... Parsed, but not used (not implemented)
+const auto set_statement_def = x3::lit("SET") > x3::lit("STATEMENT")
+    > x3::omit[variable % ','] > x3::lit("FOR") > command;
+
+// The complete grammar, case insensitive
+const auto grammar_def = x3::no_case[
+    command
+    | set_statement] > end_of_input;
 
 // Boost magic that combines the rule declarations and definitions (definitions _must_ end in a _def suffix)
 BOOST_SPIRIT_DEFINE(str, sq_str, dq_str, field, variable, select, set, eq, q_str,
                     show_master, show_slave, show_all_slaves, show_binlogs, show_variables, show, set_names,
                     global_or_session, show_options, func, master_gtid_wait,
-                    change_master_variable, change_master, slave, purge_logs, end_of_input, grammar);
+                    change_master_variable, change_master, slave, purge_logs, end_of_input,
+                    command, set_statement, grammar);
 
 
 // The visitor class that does the final processing of the result
@@ -393,6 +405,12 @@ struct ResultVisitor : public boost::static_visitor<>
 
     void operator()(ChangeMaster& s)
     {
+        if (!s.connection_name.empty())
+        {
+            MXS_SWARNING("Connection name ignored in CHANGE MASTER. "
+                         "Multi-Source Replication is not supported by Binlog Router");
+        }
+
         pinloki::parser::ChangeMasterValues changes;
 
         for (const auto& a : s.values)
@@ -504,7 +522,7 @@ BOOST_FUSION_ADAPT_STRUCT(Variable, key, value);
 BOOST_FUSION_ADAPT_STRUCT(ChangeMasterVariable, key, value);
 BOOST_FUSION_ADAPT_STRUCT(Select, values);
 BOOST_FUSION_ADAPT_STRUCT(Set, values);
-BOOST_FUSION_ADAPT_STRUCT(ChangeMaster, values);
+BOOST_FUSION_ADAPT_STRUCT(ChangeMaster, connection_name, values);
 BOOST_FUSION_ADAPT_STRUCT(ShowVariables, like);
 BOOST_FUSION_ADAPT_STRUCT(PurgeLogs, up_to);
 BOOST_FUSION_ADAPT_STRUCT(MasterGtidWait, gtid, timeout);

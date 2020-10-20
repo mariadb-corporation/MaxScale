@@ -9,6 +9,12 @@ For more information about MaxScale 2.5, refer to the
 Before starting the upgrade, any existing configuration files should be
 backed up.
 
+## MaxAdmin
+
+The deprecated MaxAdmin interface has been removed in 2.5.0 in favor of the REST
+API and the MaxCtrl command line client. The `cli` and `maxscaled` modules can
+no longer be used.
+
 ## Authentication
 
 The credentials used by services now require additional grants. For a full list

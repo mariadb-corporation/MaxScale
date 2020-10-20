@@ -39,9 +39,10 @@ Writer::Writer(Generator generator, mxb::Worker* worker, InventoryWriter* inv)
     : m_generator(generator)
     , m_worker(worker)
     , m_inventory(*inv)
-    , m_current_gtid_list(m_inventory.config().boot_strap_gtid_list())
+    , m_current_gtid_list(m_inventory.rpl_state())
 {
     mxb_assert(m_worker);
+    m_inventory.set_is_writer_connected(false);
     m_thread = std::thread(&Writer::run, this);
 }
 
@@ -69,6 +70,12 @@ mxq::GtidList Writer::get_gtid_io_pos() const
     return m_current_gtid_list;
 }
 
+Error Writer::get_err() const
+{
+    std::lock_guard<std::mutex> guard(m_lock);
+    return m_error;
+}
+
 void Writer::update_gtid_list(const mxq::Gtid& gtid)
 {
     std::lock_guard<std::mutex> guard(m_lock);
@@ -78,7 +85,7 @@ void Writer::update_gtid_list(const mxq::Gtid& gtid)
 void Writer::start_replication(mxq::Connection& conn)
 {
     std::vector<maxsql::Gtid> gtids;
-    if (m_inventory.rpl_state().empty() && m_current_gtid_list.is_valid())
+    if (!m_inventory.rpl_state().is_valid() && m_current_gtid_list.is_valid())
     {
         // If the m_current_gtid_list is set, meaning a user has set it with
         // set @@global.gtid_slave_pos='0-1000-1234', then the actual start
@@ -100,8 +107,25 @@ void Writer::run()
 {
     while (m_running)
     {
+        Error error;
         try
         {
+            auto details = get_connection_details();
+
+            {
+                std::unique_lock<std::mutex> guard(m_lock);
+                if (!details.host.is_valid())
+                {
+                    MXB_SWARNING("No (replication) master found. Retrying...");
+                    m_cond.wait_for(guard, std::chrono::seconds(1), [this]() {
+                                        return !m_running;
+                                    });
+
+                    continue;
+                }
+                m_error = Error {};
+            }
+
             FileWriter file(&m_inventory, *this);
             mxq::Connection conn(get_connection_details());
             start_replication(conn);
@@ -115,6 +139,9 @@ void Writer::run()
                 }
 
                 file.add_event(rpl_event);
+
+                m_inventory.set_master_id(rpl_event.server_id());
+                m_inventory.set_is_writer_connected(true);
 
                 switch (rpl_event.event_type())
                 {
@@ -152,26 +179,29 @@ void Writer::run()
                 }
             }
         }
+        catch (const maxsql::DatabaseError& x)
+        {
+            error = Error {x.code(), x.what()};
+        }
         catch (const std::exception& x)
         {
+            error = Error {-1, x.what()};
+        }
+
+        m_inventory.set_is_writer_connected(false);
+
+        std::unique_lock<std::mutex> guard(m_lock);
+        if (error.code)
+        {
+            m_error = error;
             if (m_timer.alarm())
             {
-                MXS_ERROR("Error received during replication: %s", x.what());
+                MXS_SERROR("Error received during replication: " << error.str);
             }
 
-            auto new_gtid_list = m_inventory.config().boot_strap_gtid_list();
-
-            if (new_gtid_list.to_string() == m_current_gtid_list.to_string())
-            {
-                std::unique_lock<std::mutex> guard(m_lock);
-                m_cond.wait_for(guard, std::chrono::seconds(1), [this]() {
-                                    return !m_running;
-                                });
-            }
-            else
-            {
-                m_current_gtid_list = new_gtid_list;
-            }
+            m_cond.wait_for(guard, std::chrono::seconds(1), [this]() {
+                                return !m_running;
+                            });
         }
     }
 }
@@ -181,10 +211,7 @@ void Writer::save_gtid_list(FileWriter& file_writer)
     if (m_current_gtid_list.is_valid())
     {
         file_writer.commit_txn();
-
-        std::ofstream ofs(m_inventory.config().gtid_file_path());
-        ofs << m_current_gtid_list;
-        ofs.flush();
+        m_inventory.save_rpl_state(m_current_gtid_list);
     }
 }
 }

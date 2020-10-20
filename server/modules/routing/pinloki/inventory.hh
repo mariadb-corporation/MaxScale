@@ -14,15 +14,19 @@
 #pragma once
 #include "gtid.hh"
 
+#include <maxbase/exception.hh>
+
 #include <string>
 #include <vector>
 #include <mutex>
+#include <atomic>
 
 #include "config.hh"
 
 
 namespace pinloki
 {
+DEFINE_EXCEPTION(BinlogWriteError);
 
 /**
  * @brief List of binlog file names. Thread safe, writable inventory file.
@@ -52,7 +56,21 @@ public:
      */
     std::vector<std::string> file_names() const;
 
-    std::string rpl_state() const;
+    void save_rpl_state(const maxsql::GtidList& gtids);
+
+    maxsql::GtidList rpl_state() const;
+
+    /** Set by the writer **/
+    void set_master_id(int64_t id);
+
+    /** Last known master ID */
+    int64_t master_id() const;
+
+    /** Is the writer connected */
+    void set_is_writer_connected(bool connected);
+
+    /** Is the writer connected */
+    bool is_writer_connected() const;
 
     const Config& config() const
     {
@@ -71,6 +89,8 @@ private:
 
     mutable std::mutex               m_mutex;
     mutable std::vector<std::string> m_file_names;
+    std::atomic<int64_t>             m_master_id {0};
+    std::atomic<bool>                m_is_writer_connected {false};
 };
 
 /**
@@ -82,7 +102,7 @@ class InventoryReader
 public:
     InventoryReader(const Config& config);
     const std::vector<std::string>& file_names() const;
-    std::string                     rpl_state() const;
+    maxsql::GtidList                rpl_state() const;
 
     const Config& config() const
     {
