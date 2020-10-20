@@ -296,8 +296,8 @@ public:
 private:
     const SharedSettings& m_shared;     /**< Settings shared between all servers of the monitor */
 
-    std::atomic_int m_status_request{NO_CHANGE};        /**< Status change request from admin */
-    bool            m_ok_to_check_disk_space{true};     /**< Set to false if check fails */
+    std::atomic_int m_status_request {NO_CHANGE};       /**< Status change request from admin */
+    bool            m_ok_to_check_disk_space {true};    /**< Set to false if check fails */
 
     std::chrono::steady_clock::time_point m_last_variable_update;
 
@@ -448,6 +448,21 @@ public:
     bool clear_server_status(SERVER* srv, int bit, std::string* errmsg_out);
 
     json_t* monitored_server_json_attributes(const SERVER* srv) const;
+
+    /**
+     * Check if monitor owns the cluster
+     *
+     * The monitor that owns is the one who decides the state of the servers in a multi-MaxScale cluster.
+     * Currently only mariadbmon implements cooperative monitoring.
+     *
+     * The default implementation always returns true.
+     *
+     * @return True if this monitor owns and controls the cluster.
+     */
+    virtual bool is_cluster_owner() const
+    {
+        return true;
+    }
 
     const std::string m_name;           /**< Monitor instance name. */
     const std::string m_module;         /**< Name of the monitor module */

@@ -502,6 +502,11 @@ bool MariaDBMonitor::can_be_disabled(const mxs::MonitorServer& mserver, std::str
     return can_be;
 }
 
+bool MariaDBMonitor::is_cluster_owner() const
+{
+    return m_locks_info.have_lock_majority;
+}
+
 void MariaDBMonitor::pre_loop()
 {
     // Read the journal and the last known master.
