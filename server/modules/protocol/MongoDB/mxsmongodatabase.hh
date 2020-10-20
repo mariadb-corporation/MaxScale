@@ -14,6 +14,7 @@
 #pragma once
 
 #include "mongodbclient.hh"
+#include <memory>
 #include <maxscale/target.hh>
 #include "mxsmongo.hh"
 
@@ -29,19 +30,25 @@ public:
         PENDING // A command is being executed.
     };
 
-    /**
-     * @param name  The Mongo database in question.
-     */
-    Database(const std::string& name, Mongo::Context* pContext);
     ~Database();
 
     Database(const Database&) = delete;
     Database& operator = (const Database&) = delete;
 
     /**
-     * Run a Mongo command.
+     * Create a new instance.
      *
-     * @req         The command to be run. *Must* be intended for the database this
+     * @param name      The Mongo database in question.
+     * @param pContext  The context to be used, a reference will be stored.
+     *
+     * @return Unique pointer to the instance.
+     */
+    static std::unique_ptr<Database> create(const std::string& name, Mongo::Context* pContext);
+
+    /**
+     * Handle a Mongo query.
+     *
+     * @req         The query request; *must* be intended for the database this
      *              instance represents.
      * @downstream  The downstream component the command should be (suitably translated)
      *              be sent to, if the response cannot be generated immediately.
@@ -50,8 +57,24 @@ public:
      *         it will be returned to the client, in the latter case @c clientReply
      *         of the client protocol will eventually be called.
      */
-    GWBUF* run_command(const mxsmongo::Query& req, mxs::Component& downstream);
-    GWBUF* run_command(const mxsmongo::Msg& req,  mxs::Component& downstream);
+    GWBUF* handle_query(const mxsmongo::Query& req, mxs::Component& downstream);
+
+    /**
+     * Handle a Mongo command.
+     *
+     * @req         The message request.
+     * @doc         The document containing the command; *must* be intended for the
+     *              database this instance represents.
+     * @downstream  The downstream component the command should be (suitably translated)
+     *              be sent to, if the response cannot be generated immediately.
+     *
+     * @return A GWBUF containing a Mongo response, or nullptr. In the former case
+     *         it will be returned to the client, in the latter case @c clientReply
+     *         of the client protocol will eventually be called.
+     */
+    GWBUF* handle_command(const mxsmongo::Msg& req,
+                          const bsoncxx::document::view& doc,
+                          mxs::Component& downstream);
 
     /**
      * Convert a MariaDB response to a Mongo response. Must only be called
@@ -65,6 +88,8 @@ public:
     GWBUF* translate(GWBUF* pMariaDB_response);
 
 private:
+    Database(const std::string& name, Mongo::Context* pContext);
+
     bool is_ready() const
     {
         return m_state == READY;
@@ -75,9 +100,10 @@ private:
         return m_state == PENDING;
     }
 
-    State           m_state { READY };
-    std::string     m_name;
-    Mongo::Context& m_context;
+    GWBUF* create_ismaster_response(const mxsmongo::Packet& req);
 
+    State             m_state { READY };
+    const std::string m_name;
+    Mongo::Context&   m_context;
 };
 }
