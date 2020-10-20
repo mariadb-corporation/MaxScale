@@ -136,38 +136,33 @@ GWBUF* mxsmongo::Mongo::handle_request(const mxsmongo::Packet& req, mxs::Compone
 
 GWBUF* mxsmongo::Mongo::translate(GWBUF* pResponse)
 {
-    mxb_assert(!true);
-    gwbuf_free(pResponse);
-    return nullptr;
+    mxb_assert(m_sDatabase.get());
+
+    pResponse = m_sDatabase->translate(pResponse);
+
+    m_sDatabase.reset();
+
+    // TODO: In case multiple Mongo requests have been queued up, this is the place where
+    // TODO: a pending one should be handled.
+
+    return pResponse;
 }
 
 GWBUF* mxsmongo::Mongo::handle_query(const mxsmongo::Query& req, mxs::Component& downstream)
 {
     MXS_NOTICE("\n%s\n", req.to_string().c_str());
 
-    GWBUF* pResponse = nullptr;
+    auto sDatabase = Database::create(req.collection(), &m_context);
 
-    // TODO: The assumption here is that the collection is the primary entity,
-    // TODO: which decides what follows. Current assumption is that but for predefined
-    // TODO: collections, a collection will be mapped to an existing table.
+    GWBUF* pResponse = sDatabase->handle_query(req, downstream);
 
-    if (req.collection() == "admin.$cmd")
+    if (!pResponse)
     {
-        switch (mxsmongo::get_command(req.query()))
-        {
-        case mxsmongo::Command::ISMASTER:
-            pResponse = create_ismaster_response(req);
-            break;
-
-        case mxsmongo::Command::UNKNOWN:
-            MXS_ERROR("Query not recognized: %s", req.to_string().c_str());
-            mxb_assert(!true);
-        }
-    }
-    else
-    {
-        MXS_ERROR("Don't know what to do with collection '%s'.", req.zCollection());
-        mxb_assert(!true);
+        // TODO: Not all Mongo request will have an response. E.g an insert will not have,
+        // TODO: but the MariaDB insert we translate it into, obviously will have. So, we
+        // TODO: need to prepare for the case that the Mongo client just keeps on sending
+        // TODO: inserts, without waiting for them to be executed.
+        m_sDatabase = std::move(sDatabase);
     }
 
     return pResponse;
@@ -177,115 +172,44 @@ GWBUF* mxsmongo::Mongo::handle_msg(const mxsmongo::Msg& req, mxs::Component& dow
 {
     MXS_NOTICE("\n%s\n", req.to_string().c_str());
 
+    mxb_assert(req.documents().size() == 1); // TODO
+
     GWBUF* pResponse = nullptr;
 
     for (const auto& doc : req.documents())
     {
-        // TODO: Somewhat unclear in what order things should be done here.
-        // TODO: As we know all clients will make regular ismaster queries,
-        // TODO: we start by checking for that.
+        auto element = doc["$db"];
 
-        switch (mxsmongo::get_command(doc))
+        if (element)
         {
-        case mxsmongo::Command::ISMASTER:
+            if (element.type() == bsoncxx::type::k_utf8)
             {
-                auto element = doc["$db"];
+                auto utf8 = element.get_utf8();
 
-                if (element)
+                string name(utf8.value.data(), utf8.value.size());
+                auto sDatabase = Database::create(name, &m_context);
+
+                pResponse = sDatabase->handle_command(req, doc, downstream);
+
+                if (!pResponse)
                 {
-                    if (element.type() == bsoncxx::type::k_utf8)
-                    {
-                        auto utf8 = element.get_utf8();
-
-                        if (utf8.value == bsoncxx::stdx::string_view("admin"))
-                        {
-                            pResponse = create_ismaster_response(req);
-                        }
-                        else
-                        {
-                            MXS_ERROR("Key '$db' found but value not 'admin' but '%s'.",
-                                      utf8.value.data());
-                            mxb_assert(!true);
-                        }
-                    }
-                    else
-                    {
-                        MXS_ERROR("Key '$db' found, but value is not utf8.");
-                        mxb_assert(!true);
-                    }
+                    // TODO: See handle_query()
+                    m_sDatabase = std::move(sDatabase);
                 }
-                else
-                {
-                    MXS_ERROR("Document did not contain the expected key '$db': %s",
-                              req.to_string().c_str());
-                    mxb_assert(!true);
-                }
-
             }
-            break;
-
-        case mxsmongo::Command::UNKNOWN:
-            MXS_ERROR("Dont know what to do:\n%s", req.to_string().c_str());
+            else
+            {
+                MXS_ERROR("Key '$db' found, but value is not utf8.");
+                mxb_assert(!true);
+            }
+        }
+        else
+        {
+            MXS_ERROR("Document did not contain the expected key '$db': %s",
+                      req.to_string().c_str());
             mxb_assert(!true);
         }
     }
-
-    return pResponse;
-}
-
-GWBUF* mxsmongo::Mongo::create_ismaster_response(const mxsmongo::Packet& req)
-{
-    // TODO: Do not simply return a hardwired response.
-
-    auto topologyVersion_builder = bsoncxx::builder::stream::document{};
-    bsoncxx::document::value topologyVersion_value = topologyVersion_builder
-        << "processId" << m_context.oid()
-        << "counter" << (int64_t)0
-        << bsoncxx::builder::stream::finalize;
-
-    auto builder = bsoncxx::builder::stream::document{};
-    bsoncxx::document::value doc_value = builder
-        << "ismaster" << true
-        << "topologyVersion" << topologyVersion_value
-        << "maxBsonObjectSize" << (int32_t)16777216
-        << "maxMessageSizeBytes" << (int32_t)48000000
-        << "maxWriteBatchSize" << (int32_t)100000
-        << "localTime" << bsoncxx::types::b_date(std::chrono::system_clock::now())
-        << "logicalSessionTimeoutMinutes" << (int32_t)30
-        << "connectionId" << (int32_t)4
-        << "minWireVersion" << (int32_t)0
-        << "maxWireVersion" << (int32_t)9
-        << "readOnly" << false
-        << "ok" << (double)1
-        << bsoncxx::builder::stream::finalize;
-
-    auto doc_view = doc_value.view();
-    size_t doc_len = doc_view.length();
-
-    int32_t response_flags = MONGOC_QUERY_AWAIT_DATA; // Dunno if this should be on.
-    int64_t cursor_id = 0;
-    int32_t starting_from = 0;
-    int32_t number_returned = 1;
-
-    size_t response_size = MXSMONGO_HEADER_LEN
-        + sizeof(response_flags) + sizeof(cursor_id) + sizeof(starting_from) + sizeof(number_returned)
-        + doc_len;
-
-    GWBUF* pResponse = gwbuf_alloc(response_size);
-
-    auto* pRes_hdr = reinterpret_cast<mongoc_rpc_header_t*>(GWBUF_DATA(pResponse));
-    pRes_hdr->msg_len = response_size;
-    pRes_hdr->request_id = m_context.next_request_id();
-    pRes_hdr->response_to = req.request_id();
-    pRes_hdr->opcode = MONGOC_OPCODE_REPLY;
-
-    uint8_t* pData = GWBUF_DATA(pResponse) + MXSMONGO_HEADER_LEN;
-
-    pData += mxsmongo::set_byte4(pData, response_flags);
-    pData += mxsmongo::set_byte8(pData, cursor_id);
-    pData += mxsmongo::set_byte4(pData, starting_from);
-    pData += mxsmongo::set_byte4(pData, number_returned);
-    memcpy(pData, doc_view.data(), doc_view.length());
 
     return pResponse;
 }
