@@ -51,6 +51,11 @@ describe('ServiceDetail - OverviewHeader', () => {
     afterEach(async function() {
         await clock.restore()
         await updateChartSpy.restore()
+        // this prevent fetch loop in line-chart
+        await wrapper.setData({
+            options: null,
+        })
+        await wrapper.destroy()
     })
     it(`Should emit update-chart event`, async () => {
         let count = 0
@@ -70,60 +75,62 @@ describe('ServiceDetail - OverviewHeader', () => {
     })
 
     describe('outlined-overview-card render assertions', () => {
-        let outlineOverviewCards
         const {
             attributes: { router, started },
         } = dummy_all_services[0]
-
-        wrapper = propsMountFactory(defaultProps)
-        const { wrappers } = wrapper.findAllComponents({
-            name: 'outlined-overview-card',
+        let outlineOverviewCards
+        beforeEach(async () => {
+            wrapper = propsMountFactory(defaultProps)
+            outlineOverviewCards = wrapper.findAllComponents({
+                name: 'outlined-overview-card',
+            }).wrappers
         })
-        outlineOverviewCards = wrappers
+        afterEach(async function() {
+            // this prevent fetch loop in line-chart
+            await wrapper.setData({
+                options: null,
+            })
+            await wrapper.destroy()
+        })
+
         it(`Should render 3 outlined-overview-card components`, async () => {
             expect(outlineOverviewCards.length).to.be.equals(3)
         })
 
-        outlineOverviewCards.forEach((card, i) => {
-            let desAppend = 'outlined-overview-card component'
-            switch (i) {
-                case 0:
-                    it(`Should show 'Overview' title in the first ${desAppend}`, async () => {
-                        const title = card.find('.detail-overview__title')
-                        expect(title.text()).to.be.equals('Overview')
-                    })
-                    it(`Should show router in the first ${desAppend}`, async () => {
-                        const cardTitle = card.find('.caption')
-                        const cardBody = card.find('.router')
-                        expect(cardTitle.text()).to.be.equals('ROUTER')
-                        expect(cardBody.text()).to.be.equals(router)
-                    })
-                    break
-                case 1:
-                    it(`Should show started time in the second ${desAppend}`, async () => {
-                        const { dateFormat } = wrapper.vm.$help
-                        const cardTitle = card.find('.caption')
-                        const cardBody = card.find('.started')
-                        expect(cardTitle.text()).to.be.equals('STARTED AT')
-                        expect(cardBody.text()).to.be.equals(dateFormat({ value: started }))
-                    })
-                    break
-                case 2:
-                    it(`Should not show tile in the last ${desAppend}`, async () => {
-                        expect(card.vm.$props.tile).to.be.false
-                    })
-                    it(`Should current connections as title in the last ${desAppend}`, async () => {
-                        const title = card.find('.detail-overview__title')
-                        const { connections, total_connections } = dummy_service_connection_info
-                        expect(title.text()).to.be.equals(
-                            `Current Connections  (${connections}/${total_connections})`
-                        )
-                    })
-                    it(`Should show connections chart in the last ${desAppend}`, async () => {
-                        const lineChart = card.findComponent({ name: 'line-chart' })
-                        expect(lineChart.exists()).to.be.true
-                    })
-            }
+        it(`Should show 'Overview' title in the first outlined-overview-card`, async () => {
+            const title = outlineOverviewCards[0].find('.detail-overview__title')
+            expect(title.text()).to.be.equals('Overview')
+        })
+        it(`Should show 'Overview' title in the first outlined-overview-card`, async () => {
+            const title = outlineOverviewCards[0].find('.detail-overview__title')
+            expect(title.text()).to.be.equals('Overview')
+        })
+        it(`Should show router in the first outlined-overview-card`, async () => {
+            const cardTitle = outlineOverviewCards[0].find('.caption')
+            const cardBody = outlineOverviewCards[0].find('.router')
+            expect(cardTitle.text()).to.be.equals('ROUTER')
+            expect(cardBody.text()).to.be.equals(router)
+        })
+        it(`Should show started time in the second outlined-overview-card`, async () => {
+            const { dateFormat } = wrapper.vm.$help
+            const cardTitle = outlineOverviewCards[1].find('.caption')
+            const cardBody = outlineOverviewCards[1].find('.started')
+            expect(cardTitle.text()).to.be.equals('STARTED AT')
+            expect(cardBody.text()).to.be.equals(dateFormat({ value: started }))
+        })
+        it(`Should not show tile in the last outlined-overview-card`, async () => {
+            expect(outlineOverviewCards[2].vm.$props.tile).to.be.false
+        })
+        it(`Should current connections as title in the last outlined-overview-card`, async () => {
+            const title = outlineOverviewCards[2].find('.detail-overview__title')
+            const { connections, total_connections } = dummy_service_connection_info
+            expect(title.text()).to.be.equals(
+                `Current Connections  (${connections}/${total_connections})`
+            )
+        })
+        it(`Should show connections chart in the last outlined-overview-card`, async () => {
+            const lineChart = outlineOverviewCards[2].findComponent({ name: 'line-chart' })
+            expect(lineChart.exists()).to.be.true
         })
     })
 })
