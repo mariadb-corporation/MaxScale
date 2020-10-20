@@ -100,16 +100,10 @@ GWBUF* mxsmongo::Database::create_ismaster_response(const mxsmongo::Packet& req)
 {
     // TODO: Do not simply return a hardwired response.
 
-    auto topologyVersion_builder = bsoncxx::builder::stream::document{};
-    bsoncxx::document::value topologyVersion_value = topologyVersion_builder
-        << "processId" << m_context.oid()
-        << "counter" << (int64_t)0
-        << bsoncxx::builder::stream::finalize;
-
     auto builder = bsoncxx::builder::stream::document{};
     bsoncxx::document::value doc_value = builder
         << "ismaster" << true
-        << "topologyVersion" << topologyVersion_value
+        << "topologyVersion" << mxsmongo::topology_version()
         << "maxBsonObjectSize" << (int32_t)16777216
         << "maxMessageSizeBytes" << (int32_t)48000000
         << "maxWriteBatchSize" << (int32_t)100000

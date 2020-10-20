@@ -12,7 +12,33 @@
  */
 
 #include "mongodbclient.hh"
+#include <bsoncxx/builder/stream/document.hpp>
+#include "mxsmongo.hh"
 #include "protocolmodule.hh"
+
+namespace
+{
+
+struct ThisUnit
+{
+    bsoncxx::oid             oid;
+    bsoncxx::document::value topology_version;
+
+    ThisUnit()
+        : topology_version(bsoncxx::builder::stream::document()
+                           << "processId" << this->oid
+                           << "counter" << (int64_t)0
+                           << bsoncxx::builder::stream::finalize)
+    {
+    }
+} this_unit;
+
+}
+
+bsoncxx::document::value& mxsmongo::topology_version()
+{
+    return this_unit.topology_version;
+}
 
 /**
  * mongodbclient module entry point.

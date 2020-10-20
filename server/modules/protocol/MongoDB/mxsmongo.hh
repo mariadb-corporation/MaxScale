@@ -14,7 +14,6 @@
 
 #include "mongodbclient.hh"
 #include <endian.h>
-#include <bsoncxx/oid.hpp>
 #include <maxscale/target.hh>
 
 #include <bsoncxx/json.hpp>
@@ -40,6 +39,8 @@ const int MXSMONGO_QUERY_HEADER_LEN = sizeof(mongoc_rpc_query_t);
 
 namespace mxsmongo
 {
+
+bsoncxx::document::value& topology_version();
 
 inline int32_t get_byte1(const uint8_t* pBuffer, uint8_t* pHost8)
 {
@@ -463,11 +464,6 @@ public:
 
         Context() = default;
 
-        const bsoncxx::oid& oid() const
-        {
-            return m_oid;
-        }
-
         int32_t current_request_id() const
         {
             return m_request_id;
@@ -479,8 +475,7 @@ public:
         }
 
     private:
-        const bsoncxx::oid m_oid;
-        int32_t            m_request_id { 1 };
+        int32_t m_request_id { 1 };
     };
 
     enum State
