@@ -239,7 +239,7 @@ GWBUF* mxsmongo::Mongo::create_ismaster_response(const mxsmongo::Packet& req)
 
     auto topologyVersion_builder = bsoncxx::builder::stream::document{};
     bsoncxx::document::value topologyVersion_value = topologyVersion_builder
-        << "processId" << bsoncxx::oid()
+        << "processId" << m_context.oid()
         << "counter" << (int64_t)0
         << bsoncxx::builder::stream::finalize;
 
@@ -275,7 +275,7 @@ GWBUF* mxsmongo::Mongo::create_ismaster_response(const mxsmongo::Packet& req)
 
     auto* pRes_hdr = reinterpret_cast<mongoc_rpc_header_t*>(GWBUF_DATA(pResponse));
     pRes_hdr->msg_len = response_size;
-    pRes_hdr->request_id = m_request_id++;
+    pRes_hdr->request_id = m_context.next_request_id();
     pRes_hdr->response_to = req.request_id();
     pRes_hdr->opcode = MONGOC_OPCODE_REPLY;
 

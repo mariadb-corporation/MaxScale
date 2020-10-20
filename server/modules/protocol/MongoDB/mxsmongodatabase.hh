@@ -32,7 +32,7 @@ public:
     /**
      * @param name  The Mongo database in question.
      */
-    Database(const std::string& name);
+    Database(const std::string& name, Mongo::Context* pContext);
     ~Database();
 
     Database(const Database&) = delete;
@@ -65,9 +65,6 @@ public:
     GWBUF* translate(GWBUF* pMariaDB_response);
 
 private:
-    State       m_state { READY };
-    std::string m_name;
-
     bool is_ready() const
     {
         return m_state == READY;
@@ -77,5 +74,10 @@ private:
     {
         return m_state == PENDING;
     }
+
+    State           m_state { READY };
+    std::string     m_name;
+    Mongo::Context& m_context;
+
 };
 }

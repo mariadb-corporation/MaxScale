@@ -13,8 +13,9 @@
 
 #include "mxsmongodatabase.hh"
 
-mxsmongo::Database::Database(const std::string& name)
+mxsmongo::Database::Database(const std::string& name, Mongo::Context* pContext)
     : m_name(name)
+    , m_context(*pContext)
 {
 }
 

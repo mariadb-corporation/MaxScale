@@ -14,6 +14,7 @@
 
 #include "mongodbclient.hh"
 #include <endian.h>
+#include <bsoncxx/oid.hpp>
 #include <maxscale/target.hh>
 
 #include <bsoncxx/json.hpp>
@@ -454,6 +455,34 @@ class Database;
 class Mongo
 {
 public:
+    class Context
+    {
+    public:
+        Context(const Context&) = delete;
+        Context& operator = (const Context&) = delete;
+
+        Context() = default;
+
+        const bsoncxx::oid& oid() const
+        {
+            return m_oid;
+        }
+
+        int32_t current_request_id() const
+        {
+            return m_request_id;
+        }
+
+        int32_t next_request_id()
+        {
+            return ++m_request_id;
+        }
+
+    private:
+        const bsoncxx::oid m_oid;
+        int32_t            m_request_id { 1 };
+    };
+
     enum State
     {
         READY,  // Ready for a command.
@@ -465,6 +494,11 @@ public:
 
     Mongo(const Mongo&) = delete;
     Mongo& operator = (const Mongo&) = delete;
+
+    Context& context()
+    {
+        return m_context;
+    }
 
     GWBUF* handle_request(const mxsmongo::Packet& req, mxs::Component& downstream);
 
@@ -479,7 +513,7 @@ private:
     GWBUF* create_ismaster_response(const mxsmongo::Packet& request);
 
     State     m_state { READY };
-    int32_t   m_request_id { 1 };
+    Context   m_context;
     SDatabase m_sDatabase;
 
 };
