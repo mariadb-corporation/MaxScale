@@ -1090,7 +1090,7 @@ void MariaDBMonitor::update_cluster_lock_status()
 {
     if (server_locks_in_use())
     {
-        const bool had_lock_majority = m_locks_info.have_lock_majority;
+        const bool had_lock_majority = is_cluster_owner();
 
         int server_locks_free = 0;
         int server_locks_held = 0;
@@ -1166,7 +1166,7 @@ void MariaDBMonitor::update_cluster_lock_status()
                 server->release_all_locks();
             }
         }
-        m_locks_info.have_lock_majority = have_lock_majority;
+        m_locks_info.have_lock_majority.store(have_lock_majority, std::memory_order_relaxed);
     }
 }
 

@@ -319,11 +319,18 @@ private:
     {
         bool time_to_update() const;
 
-        bool           have_lock_majority {false};  /* Is this the primary monitor for the cluster? */
-        mxb::StopWatch last_locking_attempt;        /* Time since last server lock attempt */
+        std::atomic_bool have_lock_majority {false};/* Is this the primary monitor for the cluster? */
+        mxb::StopWatch   last_locking_attempt;      /* Time since last server lock attempt */
 
         /* Time until next locking attempt. Initialized to zero to allow an attempt during first loop. */
         mxb::Duration next_lock_attempt_delay {0};
+
+        void reset()
+        {
+            have_lock_majority = false;
+            last_locking_attempt = mxb::StopWatch();
+            next_lock_attempt_delay = mxb::Duration(0);
+        }
     };
     ClusterLocksInfo m_locks_info;
 

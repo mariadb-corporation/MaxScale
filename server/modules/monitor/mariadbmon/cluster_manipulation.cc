@@ -1905,7 +1905,7 @@ bool MariaDBMonitor::check_gtid_replication(Log log_mode, const MariaDBServer* d
 
 bool MariaDBMonitor::lock_status_is_ok() const
 {
-    return !(server_locks_in_use() && !m_locks_info.have_lock_majority);
+    return !(server_locks_in_use() && !is_cluster_owner());
 }
 
 /**

@@ -476,7 +476,7 @@ json_t* MariaDBMonitor::to_json() const
                         json_integer(m_master_gtid_domain));
     json_object_set_new(rval, "state", to_json(m_state));
     json_object_set_new(rval, "primary",
-                        server_locks_in_use() ? json_boolean(m_locks_info.have_lock_majority) : json_null());
+                        server_locks_in_use() ? json_boolean(is_cluster_owner()) : json_null());
 
     json_t* server_info = json_array();
     for (MariaDBServer* server : servers())
@@ -504,7 +504,7 @@ bool MariaDBMonitor::can_be_disabled(const mxs::MonitorServer& mserver, std::str
 
 bool MariaDBMonitor::is_cluster_owner() const
 {
-    return m_locks_info.have_lock_majority;
+    return m_locks_info.have_lock_majority.load(std::memory_order_relaxed);
 }
 
 void MariaDBMonitor::pre_loop()
@@ -532,7 +532,7 @@ void MariaDBMonitor::pre_loop()
         }
     }
 
-    m_locks_info = ClusterLocksInfo();
+    m_locks_info.reset();
 }
 
 void MariaDBMonitor::tick()
@@ -608,7 +608,7 @@ void MariaDBMonitor::tick()
         srv->assign_status(server->pending_status);
     }
 
-    if (server_locks_in_use() && m_locks_info.have_lock_majority)
+    if (server_locks_in_use() && is_cluster_owner())
     {
         check_acquire_masterlock();
     }
@@ -1039,7 +1039,7 @@ void MariaDBMonitor::check_acquire_masterlock()
 
 bool MariaDBMonitor::is_slave_maxscale() const
 {
-    return server_locks_in_use() && !m_locks_info.have_lock_majority;
+    return server_locks_in_use() && !is_cluster_owner();
 }
 
 void MariaDBMonitor::execute_task_all_servers(const ServerFunction& task)
@@ -1078,7 +1078,7 @@ MariaDBMonitor::ManualCommand::Result MariaDBMonitor::manual_release_locks()
                 released_locks += server->release_all_locks();
             };
         execute_task_all_servers(release_lock_task);
-        m_locks_info.have_lock_majority = false;
+        m_locks_info.have_lock_majority.store(false, std::memory_order_relaxed);
 
         // Set next locking attempt 1 minute to the future.
         m_locks_info.next_lock_attempt_delay = std::chrono::minutes(1);
