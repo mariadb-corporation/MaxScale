@@ -24,7 +24,7 @@
 #include <maxscale/modinfo.hh>
 #include <maxscale/modutil.hh>
 #include <maxscale/pcre2.hh>
-#include <maxscale/query_classifier.hh>
+#include <maxscale/protocol/mariadb/query_classifier.hh>
 
 using std::string;
 

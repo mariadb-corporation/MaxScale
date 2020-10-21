@@ -13,16 +13,16 @@
 #pragma once
 
 #include <maxscale/ccdefs.hh>
-#include <maxscale/query_classifier.hh>
-#include <maxscale/jansson.hh>
+#include <memory>
 
-MXS_BEGIN_DECLS
+struct json_t;
+struct GWBUF;
 
-typedef enum qc_trx_parse_using
+enum qc_trx_parse_using_t
 {
     QC_TRX_PARSE_USING_QC,      /**< Use the query classifier. */
     QC_TRX_PARSE_USING_PARSER,  /**< Use custom parser. */
-} qc_trx_parse_using_t;
+};
 
 /**
  * Returns the type bitmask of transaction related statements.
@@ -74,5 +74,3 @@ std::unique_ptr<json_t> qc_classify_as_json(const char* zHost, const std::string
  * @return A json object containing information about the query classifier cache.
  */
 std::unique_ptr<json_t> qc_cache_as_json(const char* zHost);
-
-MXS_END_DECLS

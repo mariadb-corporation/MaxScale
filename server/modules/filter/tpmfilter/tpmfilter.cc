@@ -55,7 +55,7 @@
 #include <maxscale/config2.hh>
 #include <maxscale/filter.hh>
 #include <maxscale/modutil.hh>
-#include <maxscale/query_classifier.hh>
+#include <maxscale/protocol/mariadb/query_classifier.hh>
 #include <maxscale/session.hh>
 
 class TpmFilter;

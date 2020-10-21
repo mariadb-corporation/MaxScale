@@ -159,3 +159,101 @@ GWBUF* qc_get_preparable_stmt(GWBUF* stmt);
  *       by the caller.
  */
 std::vector<std::string> qc_get_table_names(GWBUF* stmt, bool fullnames);
+
+/**
+ * Returns a bitmask specifying the type(s) of the statement. The result
+ * should be tested against specific qc_query_type_t values* using the
+ * bitwise & operator, never using the == operator.
+ *
+ * @param stmt  A buffer containing a COM_QUERY or COM_STMT_PREPARE packet.
+ *
+ * @return A bitmask with the type(s) the query.
+ *
+ * @see qc_query_is_type
+ */
+uint32_t qc_get_type_mask(GWBUF* stmt);
+
+/**
+ * Returns the type bitmask of transaction related statements.
+ *
+ * If the statement starts a transaction, ends a transaction or
+ * changes the autocommit state, the returned bitmap will be a
+ * combination of:
+ *
+ *    QUERY_TYPE_BEGIN_TRX
+ *    QUERY_TYPE_COMMIT
+ *    QUERY_TYPE_ROLLBACK
+ *    QUERY_TYPE_ENABLE_AUTOCOMMIT
+ *    QUERY_TYPE_DISABLE_AUTOCOMMIT
+ *    QUERY_TYPE_READ  (explicitly read only transaction)
+ *    QUERY_TYPE_WRITE (explicitly read write transaction)
+ *
+ * Otherwise the result will be 0.
+ *
+ * @param stmt A COM_QUERY or COM_STMT_PREPARE packet.
+ *
+ * @return The relevant type bits if the statement is transaction
+ *         related, otherwise 0.
+ */
+uint32_t qc_get_trx_type_mask(GWBUF* stmt);
+
+/**
+ * Returns the string representation of a query operation.
+ *
+ * @param op  A query operation.
+ *
+ * @return The corresponding string.
+ *
+ * @note The returned string is statically allocated and must *not* be freed.
+ */
+const char* qc_op_to_string(qc_query_op_t op);
+
+/**
+ * Returns whether the typemask contains a particular type.
+ *
+ * @param typemask  A bitmask of query types.
+ * @param type      A particular qc_query_type_t value.
+ *
+ * @return True, if the type is in the mask.
+ */
+static inline bool qc_query_is_type(uint32_t typemask, qc_query_type_t type)
+{
+    return (typemask & (uint32_t)type) == (uint32_t)type;
+}
+
+/**
+ * Returns whether the statement has a WHERE or a USING clause.
+ *
+ * @param stmt  A buffer containing a COM_QUERY or COM_STMT_PREPARE packet.
+ *
+ * @return True, if the statement has a WHERE or USING clause, false
+ *         otherwise.
+ */
+bool qc_query_has_clause(GWBUF* stmt);
+
+/**
+ * Returns a string representation of a type bitmask.
+ *
+ * @param typemask  A bit mask of query types.
+ *
+ * @return The corresponding string or NULL if the allocation fails.
+ *
+ * @note The returned string is dynamically allocated and @b must be freed.
+ */
+char* qc_typemask_to_string(uint32_t typemask);
+
+/**
+ * Gets the options of the *calling* thread.
+ *
+ * @return Bit mask of values from qc_option_t.
+ */
+uint32_t qc_get_options();
+
+/**
+ * Sets the options for the *calling* thread.
+ *
+ * @param options Bits from qc_option_t.
+ *
+ * @return true if the options were valid, false otherwise.
+ */
+bool qc_set_options(uint32_t options);

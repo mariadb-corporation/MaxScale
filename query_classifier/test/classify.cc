@@ -15,7 +15,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <string.h>
-#include <maxscale/query_classifier.hh>
+#include <maxscale/protocol/mariadb/query_classifier.hh>
 #include <maxscale/buffer.hh>
 #include <mysql.h>
 #include <unistd.h>

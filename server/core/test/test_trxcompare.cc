@@ -20,6 +20,7 @@
 #include <maxbase/alloc.h>
 #include <maxscale/paths.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
+#include <maxscale/protocol/mariadb/query_classifier.hh>
 #include "../../../query_classifier/test/testreader.hh"
 
 using namespace std;

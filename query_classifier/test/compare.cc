@@ -23,7 +23,7 @@
 #include <maxscale/paths.hh>
 #include <maxscale/log.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
-#include <maxscale/query_classifier.hh>
+#include <maxscale/protocol/mariadb/query_classifier.hh>
 #include <maxbase/string.hh>
 #include "../../server/modules/protocol/MariaDB/setsqlmodeparser.hh"
 #include "testreader.hh"
