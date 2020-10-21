@@ -15,10 +15,6 @@
 /**
  * @file clustrix_nodes.h - work with Clustrix setup
  *
- * ~/.config/mdbci/clustrix_license file have to contain SQL
- * which setups license to the Clustrix node
- *
- * TODO: move functionality of install_clustrix() to MDBCI
  */
 
 #include <cerrno>
@@ -26,10 +22,6 @@
 #include <maxtest/mariadb_nodes.hh>
 #include <maxtest/nodes.hh>
 
-#define CLUSTRIX_DEPS_YUM "yum install -y bzip2 wget screen ntp ntpdate vim htop mdadm"
-#define WGET_CLUSTRIX     "wget http://files.clustrix.com/releases/software/clustrix-9.1.4.el7.tar.bz2"
-#define UNPACK_CLUSTRIX   "tar xvjf clustrix-9.1.4.el7.tar.bz2"
-#define INSTALL_CLUSTRIX  "cd clustrix-9.1.4.el7; sudo ./clxnode_install.py --yes --force"
 
 class Clustrix_nodes : public Mariadb_nodes
 {

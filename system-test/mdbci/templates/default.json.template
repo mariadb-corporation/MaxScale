@@ -363,7 +363,11 @@
         "memory_size" : "16192",
         "labels" : [
                 "CLUSTRIX_BACKEND"
-        ]
+        ],
+        "product" : {
+                "name" : "clustrix",
+                "version" : "5.3.11_13"
+        }
   },
 
   "clustrix_001" :
@@ -373,7 +377,11 @@
         "memory_size" : "16192",
         "labels" : [
                 "CLUSTRIX_BACKEND"
-        ]
+        ],
+        "product" : {
+                "name" : "clustrix",
+                "version" : "5.3.11_13"
+        }
   },
 
   "clustrix_002" :
@@ -383,7 +391,11 @@
         "memory_size" : "16192",
         "labels" : [
                 "CLUSTRIX_BACKEND"
-        ]
+        ],
+        "product" : {
+                "name" : "clustrix",
+                "version" : "5.3.11_13"
+        }
   },
 
   "clustrix_003" :
@@ -393,6 +405,10 @@
         "box" : "${clustrix_box}",
         "labels" : [
                 "CLUSTRIX_BACKEND"
-        ]
+        ],
+        "product" : {
+                "name" : "clustrix",
+                "version" : "5.3.11_13"
+        }
   }
 }
