@@ -541,22 +541,42 @@ public:
         MAX_PAYLOAD_LEN = 0xffffff
     };
 
-    ComPacket(GWBUF* pPacket)
-        : m_pPacket(pPacket)
-        , m_pData(GWBUF_DATA(pPacket))
+    ComPacket(uint8_t* pBuffer)
+        : ComPacket(pBuffer, MYSQL_HEADER_LEN + MYSQL_GET_PAYLOAD_LEN(pBuffer))
+    {
+    }
+
+    ComPacket(uint8_t** ppBuffer)
+        : ComPacket(*ppBuffer)
+    {
+        *ppBuffer += packet_len();
+    }
+
+    ComPacket(uint8_t* pBuffer, uint32_t nBuffer)
+        : m_pBuffer(pBuffer)
+        , m_nBuffer(nBuffer)
+        , m_pData(pBuffer)
         , m_payload_len(MYSQL_GET_PAYLOAD_LEN(m_pData))
         , m_packet_no(MYSQL_GET_PACKET_NO(m_pData))
     {
+        mxb_assert(nBuffer == MYSQL_HEADER_LEN + MYSQL_GET_PAYLOAD_LEN(pBuffer));
+
         m_pData += MYSQL_HEADER_LEN;
     }
 
-    ComPacket(const ComPacket& packet)
-        : m_pPacket(packet.m_pPacket)
-        , m_pData(GWBUF_DATA(m_pPacket))
-        , m_payload_len(packet.m_payload_len)
-        , m_packet_no(packet.m_packet_no)
+    ComPacket(GWBUF* pPacket)
+        : ComPacket(GWBUF_DATA(pPacket), GWBUF_LENGTH(pPacket))
     {
-        m_pData += MYSQL_HEADER_LEN;
+    }
+
+    ComPacket(const ComPacket& packet)
+        : ComPacket(packet.m_pBuffer, packet.m_nBuffer)
+    {
+    }
+
+    uint8_t* buffer() const
+    {
+        return m_pBuffer;
     }
 
     uint32_t payload_len() const
@@ -575,7 +595,8 @@ public:
     }
 
 protected:
-    GWBUF*   m_pPacket;
+    uint8_t* m_pBuffer;
+    uint32_t m_nBuffer;
     uint8_t* m_pData;
 
 private:
@@ -791,8 +812,8 @@ protected:
 class CQRColumnDef : public ComPacket
 {
 public:
-    CQRColumnDef(GWBUF* pPacket)
-        : ComPacket(pPacket)
+    CQRColumnDef(uint8_t** ppBuffer)
+        : ComPacket(ppBuffer)
         , m_catalog(&m_pData)
         , m_schema(&m_pData)
         , m_table(&m_pData)
@@ -815,6 +836,16 @@ public:
 
         m_decimals = *m_pData;
         m_pData += 1;
+    }
+
+    CQRColumnDef(uint8_t* pBuffer)
+        : CQRColumnDef(&pBuffer)
+    {
+    }
+
+    CQRColumnDef(GWBUF* pPacket)
+        : CQRColumnDef(GWBUF_DATA(pPacket))
+    {
     }
 
     const LEncString& catalog() const
@@ -905,7 +936,7 @@ public:
     {
     }
 
-    LEncString as_string()
+    LEncString as_string() const
     {
         mxb_assert(is_string());
         return LEncString(m_pData);
@@ -1271,6 +1302,20 @@ public:
     typedef typename Iterator::Value Value;
     typedef Iterator                 iterator;
 
+    CQRResultsetRow(uint8_t* pBuffer,
+                    const std::vector<enum_field_types>& types)
+        : ComPacket(pBuffer)
+        , m_types(types)
+    {
+    }
+
+    CQRResultsetRow(uint8_t** ppBuffer,
+                    const std::vector<enum_field_types>& types)
+        : ComPacket(ppBuffer)
+        , m_types(types)
+    {
+    }
+
     CQRResultsetRow(GWBUF* pPacket,
                     const std::vector<enum_field_types>& types)
         : ComPacket(pPacket)
@@ -1292,7 +1337,7 @@ public:
 
     iterator end()
     {
-        uint8_t* pEnd = GWBUF_DATA(m_pPacket) + GWBUF_LENGTH(m_pPacket);
+        uint8_t* pEnd = m_pBuffer + m_nBuffer;
         return iterator(pEnd);
     }
 
@@ -1326,15 +1371,24 @@ public:
     typedef CQRTextResultsetRow   TextResultsetRow;
     typedef CQRBinaryResultsetRow BinaryResultsetRow;
 
-    ComQueryResponse(GWBUF* pPacket)
-        : ComPacket(pPacket)
+    ComQueryResponse(uint8_t** ppBuffer)
+        : ComPacket(ppBuffer)
         , m_nFields(&m_pData)
     {
     }
 
+    ComQueryResponse(uint8_t* pBuffer)
+        : ComQueryResponse(&pBuffer)
+    {
+    }
+
+    ComQueryResponse(GWBUF* pPacket)
+        : ComQueryResponse(GWBUF_DATA(pPacket))
+    {
+    }
+
     ComQueryResponse(const ComResponse& packet)
-        : ComPacket(packet)
-        , m_nFields(&m_pData)
+        : ComQueryResponse(packet.buffer())
     {
     }
 
