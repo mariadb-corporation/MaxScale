@@ -28,13 +28,6 @@ public:
 
         // All servers should be at the same GTID
         check_gtid();
-
-        // The master and MaxScale should be at the same file and position
-        auto orig_master_status = master.field("SHOW MASTER STATUS");
-        auto mxs_master_status = maxscale.field("SHOW MASTER STATUS");
-        test.expect(orig_master_status == mxs_master_status,
-                    "Master and MaxScale are at different binlog positions: %s != %s",
-                    orig_master_status.c_str(), mxs_master_status.c_str());
     }
 
     void post() override
