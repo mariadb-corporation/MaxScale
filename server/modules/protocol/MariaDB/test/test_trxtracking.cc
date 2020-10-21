@@ -451,7 +451,7 @@ int main(int argc, char* argv[])
 
         if (mxs_log_init(NULL, ".", MXS_LOG_TARGET_DEFAULT))
         {
-            mxs::set_libdir("../../../query_classifier/qc_sqlite");
+            mxs::set_libdir("../../../../../query_classifier/qc_sqlite");
 
             // We have to setup something in order for the regexes to be compiled.
             if (qc_init(NULL, QC_SQL_MODE_DEFAULT, "qc_sqlite", NULL))

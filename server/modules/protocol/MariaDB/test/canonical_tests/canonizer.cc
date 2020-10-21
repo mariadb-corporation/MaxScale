@@ -42,7 +42,7 @@ int main(int argc, char** argv)
     mxs_log_init(NULL, NULL, MXS_LOG_TARGET_STDOUT);
     atexit(mxs_log_finish);
 
-    mxs::set_libdir("../../../../query_classifier/qc_sqlite/");
+    mxs::set_libdir("../../../../../../query_classifier/qc_sqlite/");
     mxs::set_datadir("/tmp");
     mxs::set_langdir(".");
     mxs::set_process_datadir("/tmp");
