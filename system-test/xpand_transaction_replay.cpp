@@ -21,7 +21,7 @@ using namespace std;
 namespace
 {
 
-const std::string monitor_name = "Clustrix-Monitor";
+const std::string monitor_name = "Xpand-Monitor";
 
 map<string, MaxRest::Server> static_by_address;
 map<string, MaxRest::Server> dynamic_by_address;
@@ -50,11 +50,11 @@ void collect_information(TestConnections& test)
 
         if (node_by_address.count(server.address) == 0)
         {
-            Clustrix_nodes* pClustrix = test.clustrix;
+            Xpand_nodes* pXpand = test.xpand;
 
-            for (auto i = 0; i < pClustrix->N; ++i)
+            for (auto i = 0; i < pXpand->N; ++i)
             {
-                if (pClustrix->IP_private[i] == server.address)
+                if (pXpand->IP_private[i] == server.address)
                 {
                     cout << server.address << " IS NODE " << i << endl;
                     node_by_address[server.address] = i;
@@ -67,13 +67,13 @@ void collect_information(TestConnections& test)
 
 void drop_table(TestConnections& test, MYSQL* pMysql)
 {
-    test.try_query(pMysql, "DROP TABLE IF EXISTS test.clustrix_tr");
+    test.try_query(pMysql, "DROP TABLE IF EXISTS test.xpand_tr");
 }
 
 void create_table(TestConnections& test, MYSQL* pMysql)
 {
-    test.try_query(pMysql, "CREATE TABLE test.clustrix_tr (a INT)");
-    test.try_query(pMysql, "INSERT INTO test.clustrix_tr VALUES (42)");
+    test.try_query(pMysql, "CREATE TABLE test.xpand_tr (a INT)");
+    test.try_query(pMysql, "INSERT INTO test.xpand_tr VALUES (42)");
 }
 
 void setup_database(TestConnections& test)
@@ -110,7 +110,7 @@ bool wait_for_state(TestConnections& test, const std::string& name, int timeout,
     while ((server.state.find(state) == string::npos) && (end - start < timeout));
 
     test.expect(server.state.find(state) != string::npos,
-                "Clustrix node %s did not change state to %s within timeout of %d.",
+                "Xpand node %s did not change state to %s within timeout of %d.",
                 name.c_str(), state.c_str(), timeout);
 
     return server.state.find(state) != string::npos;
@@ -120,16 +120,16 @@ bool stop_server(TestConnections& test, const std::string& name, int node, int t
 {
     bool stopped = false;
 
-    Clustrix_nodes* pClustrix = test.clustrix;
+    Xpand_nodes* pXpand = test.xpand;
 
-    auto rv = pClustrix->ssh_output("service clustrix stop", node, true);
-    test.expect(rv.first == 0, "Could not stop Clustrix on node %d.", node);
+    auto rv = pXpand->ssh_output("service clustrix stop", node, true);
+    test.expect(rv.first == 0, "Could not stop Xpand on node %d.", node);
 
     if (rv.first == 0)
     {
         if (wait_for_state(test, name, timeout, "Down"))
         {
-            cout << "Clustrix on node " << node << " is down." << endl;
+            cout << "Xpand on node " << node << " is down." << endl;
             stopped = true;
         }
     }
@@ -141,16 +141,16 @@ bool start_server(TestConnections& test, const std::string& name, int node, int 
 {
     bool started = false;
 
-    Clustrix_nodes* pClustrix = test.clustrix;
+    Xpand_nodes* pXpand = test.xpand;
 
-    auto rv = pClustrix->ssh_output("service clustrix start", node, true);
-    test.expect(rv.first == 0, "Could not start Clustrix on node %d.", node);
+    auto rv = pXpand->ssh_output("service clustrix start", node, true);
+    test.expect(rv.first == 0, "Could not start Xpand on node %d.", node);
 
     if (rv.first == 0)
     {
         if (wait_for_state(test, name, timeout, "Master"))
         {
-            cout << "Clustrix on node " << node << " is up." << endl;
+            cout << "Xpand on node " << node << " is up." << endl;
             started = true;
         }
     }
@@ -173,7 +173,7 @@ void test_transaction_replay(TestConnections& test, MYSQL* pMysql, const std::st
 {
     cout << "Beginning transaction..." << endl;
     test.try_query(pMysql, "BEGIN");
-    test.try_query(pMysql, "SELECT * FROM test.clustrix_tr");
+    test.try_query(pMysql, "SELECT * FROM test.xpand_tr");
 
     cout << "Stopping server " << name << "(node " << node << ")." << endl;
     int timeout;
@@ -183,10 +183,10 @@ void test_transaction_replay(TestConnections& test, MYSQL* pMysql, const std::st
         // The server we were connected to is now down. If the following
         // succeeds, then reconnect + transaction replay worked as specified.
         cout << "Continuing transaction..." << endl;
-        test.try_query(pMysql, "SELECT * FROM test.clustrix_tr");
+        test.try_query(pMysql, "SELECT * FROM test.xpand_tr");
         test.try_query(pMysql, "COMMIT");
 
-        cout << "Bring Clustrix " << name << "(node " << node << ") up again." << endl;
+        cout << "Bring Xpand " << name << "(node " << node << ") up again." << endl;
 
         timeout = 3 * 60; // Coming up takes time...
         start_server(test, name, node, timeout);
@@ -238,7 +238,7 @@ void run_test(TestConnections& test)
     node = node_by_address[server2.address];
 
     // SECOND TEST: Take down another node but than the one we are connected to.
-    //              That will cause a  Clustrix Group Change event.
+    //              That will cause a  Xpand Group Change event.
     //
     // This requires MaxScale to detect the error and replay the transaction.
     cout << "\nTESTING transaction replay when group change error occurs." << endl;

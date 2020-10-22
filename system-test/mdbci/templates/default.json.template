@@ -356,13 +356,13 @@
 
   },
 
-  "clustrix_000" :
+  "xpand_000" :
   {
-        "hostname" : "clustrix000",
-        "box" : "${clustrix_box}",
+        "hostname" : "xpand000",
+        "box" : "${xpand_box}",
         "memory_size" : "16192",
         "labels" : [
-                "CLUSTRIX_BACKEND"
+                "XPAND_BACKEND"
         ],
         "product" : {
                 "name" : "clustrix",
@@ -370,13 +370,13 @@
         }
   },
 
-  "clustrix_001" :
+  "xpand_001" :
   {
-        "hostname" : "clustrix001",
-        "box" : "${clustrix_box}",
+        "hostname" : "xpand001",
+        "box" : "${xpand_box}",
         "memory_size" : "16192",
         "labels" : [
-                "CLUSTRIX_BACKEND"
+                "XPAND_BACKEND"
         ],
         "product" : {
                 "name" : "clustrix",
@@ -384,13 +384,13 @@
         }
   },
 
-  "clustrix_002" :
+  "xpand_002" :
   {
-        "hostname" : "clustrix002",
-        "box" : "${clustrix_box}",
+        "hostname" : "xpandx002",
+        "box" : "${xpand_box}",
         "memory_size" : "16192",
         "labels" : [
-                "CLUSTRIX_BACKEND"
+                "XPAND_BACKEND"
         ],
         "product" : {
                 "name" : "clustrix",
@@ -398,13 +398,13 @@
         }
   },
 
-  "clustrix_003" :
+  "xpand_003" :
   {
-        "hostname" : "clustrix003",
+        "hostname" : "xpand003",
         "memory_size" : "16192",
-        "box" : "${clustrix_box}",
+        "box" : "${xpand_box}",
         "labels" : [
-                "CLUSTRIX_BACKEND"
+                "XPAND_BACKEND"
         ],
         "product" : {
                 "name" : "clustrix",

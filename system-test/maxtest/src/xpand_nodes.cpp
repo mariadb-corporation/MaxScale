@@ -14,9 +14,9 @@
 #include <fstream>
 #include <iostream>
 #include <regex>
-#include <maxtest/clustrix_nodes.hh>
+#include <maxtest/xpand_nodes.hh>
 
-int Clustrix_nodes::prepare_server(int m)
+int Xpand_nodes::prepare_server(int m)
 {
     int rv = 1;
     int ec;
@@ -27,7 +27,7 @@ int Clustrix_nodes::prepare_server(int m)
 
     if (ec == 0)
     {
-        printf("Clustrix running on node %d.\n", m);
+        printf("Xpand running on node %d.\n", m);
 
         ec = ssh_node(m, "mysql -e 'SELECT @@server_id'", true);
         if (ec == 0)
@@ -36,35 +36,35 @@ int Clustrix_nodes::prepare_server(int m)
         }
         else
         {
-            printf("Could not connect as root to Clustrix on node %d, restarting.\n", m);
+            printf("Could not connect as root to Xpand on node %d, restarting.\n", m);
 
             ec = ssh_node(m, "systemctl restart clustrix", true);
 
             if (ec == 0)
             {
-                printf("Successfully restarted Clustrix on node %d.\n", m);
+                printf("Successfully restarted Xpand on node %d.\n", m);
                 running = true;
             }
             else
             {
-                printf("Could not restart Clustrix on node %d.\n", m);
+                printf("Could not restart Xpand on node %d.\n", m);
             }
         }
     }
     else
     {
-        printf("Clustrix not running on node %d, starting.\n", m);
+        printf("Xpand not running on node %d, starting.\n", m);
 
         ec = ssh_node(m, "systemctl start clustrix", true);
 
         if (ec == 0)
         {
-            printf("Successfully started Clustrix on node %d.\n", m);
+            printf("Successfully started Xpand on node %d.\n", m);
             running = true;
         }
         else
         {
-            printf("Could not start Clustrix on node %d.\n", m);
+            printf("Could not start Xpand on node %d.\n", m);
         }
     }
 
@@ -82,7 +82,7 @@ int Clustrix_nodes::prepare_server(int m)
 
             if (ec != 0)
             {
-                printf("Could not connect to Clustrix as root on node %d, "
+                printf("Could not connect to Xpand as root on node %d, "
                        "sleeping a while (totally at most ~1 minute) and retrying.\n", m);
                 sleep(10);
             }
@@ -91,12 +91,12 @@ int Clustrix_nodes::prepare_server(int m)
 
         if (ec == 0)
         {
-            printf("Could connect as root to Clustrix on node %d.\n", m);
+            printf("Could connect as root to Xpand on node %d.\n", m);
             check_users = true;
         }
         else
         {
-            printf("Could not connect as root to Clustrix on node %d within given timeframe.\n", m);
+            printf("Could not connect as root to Xpand on node %d within given timeframe.\n", m);
         }
     }
 
@@ -113,12 +113,12 @@ int Clustrix_nodes::prepare_server(int m)
 
         if (ec == 0)
         {
-            printf("Can access Clustrix using user '%s'.\n", this->user_name);
+            printf("Can access Xpand using user '%s'.\n", this->user_name);
             rv = 0;
         }
         else
         {
-            printf("Cannot access Clustrix using user '%s', creating users.\n", this->user_name);
+            printf("Cannot access Xpand using user '%s', creating users.\n", this->user_name);
             // TODO: We need an return code here.
             create_users(m);
             rv = 0;
@@ -129,7 +129,7 @@ int Clustrix_nodes::prepare_server(int m)
 }
 
 
-int Clustrix_nodes::start_replication()
+int Xpand_nodes::start_replication()
 {
     int rv = 1;
 
@@ -154,7 +154,7 @@ int Clustrix_nodes::start_replication()
     return rv;
 }
 
-std::string Clustrix_nodes::cnf_servers()
+std::string Xpand_nodes::cnf_servers()
 {
     std::string s;
     for (int i = 0; i < N; i++)
@@ -171,7 +171,7 @@ std::string Clustrix_nodes::cnf_servers()
     return s;
 }
 
-int Clustrix_nodes::check_replication()
+int Xpand_nodes::check_replication()
 {
     int res = 0;
     if (connect() == 0)
@@ -194,7 +194,7 @@ int Clustrix_nodes::check_replication()
     return res;
 }
 
-std::string Clustrix_nodes::block_command(int node) const
+std::string Xpand_nodes::block_command(int node) const
 {
     std::string command = Mariadb_nodes::block_command(node);
 
@@ -207,7 +207,7 @@ std::string Clustrix_nodes::block_command(int node) const
     return command;
 }
 
-std::string Clustrix_nodes::unblock_command(int node) const
+std::string Xpand_nodes::unblock_command(int node) const
 {
     std::string command = Mariadb_nodes::unblock_command(node);
 

@@ -1125,23 +1125,23 @@ set_tests_properties(bug471_big PROPERTIES TIMEOUT 3600)
 ############################################
 
 ############################################
-# BEGIN: tests for Clustrix monitor        #
+# BEGIN: tests for Xpand monitor        #
 ############################################
 
-# creates Clustrix cluster and connect Maxscale to it
-add_test_executable(clustrix_mon.cpp clustrix_mon clustrix_mon LABELS CLUSTRIX_BACKEND UNSTABLE)
-set_tests_properties(clustrix_mon PROPERTIES TIMEOUT 7200)
+# creates Xpand cluster and connect Maxscale to it
+add_test_executable(xpand_mon.cpp xpand_mon xpand_mon LABELS XPAND_BACKEND UNSTABLE)
+set_tests_properties(xpand_mon PROPERTIES TIMEOUT 7200)
 
-add_test_executable(clustrix_basics.cpp clustrix_basics clustrix_basics LABELS CLUSTRIX_BACKEND)
-set_tests_properties(clustrix_basics PROPERTIES TIMEOUT 7200)
+add_test_executable(xpand_basics.cpp xpand_basics xpand_basics LABELS XPAND_BACKEND)
+set_tests_properties(xpand_basics PROPERTIES TIMEOUT 7200)
 
-add_test_executable(clustrix_transaction_replay.cpp clustrix_transaction_replay clustrix_transaction_replay LABELS CLUSTRIX_BACKEND)
-set_tests_properties(clustrix_transaction_replay PROPERTIES TIMEOUT 7200)
+add_test_executable(xpand_transaction_replay.cpp xpand_transaction_replay xpand_transaction_replay LABELS XPAND_BACKEND)
+set_tests_properties(xpand_transaction_replay PROPERTIES TIMEOUT 7200)
 
-add_test_executable(clustrix_distribution.cpp clustrix_distribution clustrix_distribution LABELS CLUSTRIX_BACKEND)
+add_test_executable(xpand_distribution.cpp xpand_distribution xpand_distribution LABELS XPAND_BACKEND)
 
 ############################################
-# END: tests for Clustrix monitor          #
+# END: tests for Xpand monitor          #
 ############################################
 
 ###############################

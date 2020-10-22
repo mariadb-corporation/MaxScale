@@ -37,7 +37,7 @@ const string label_galera_be = "GALERA_BACKEND";
 const string label_big_be = "BIG_REPL_BACKEND";
 const string label_2nd_mxs = "SECOND_MAXSCALE";
 const string label_cs_be = "COLUMNSTORE_BACKEND";
-const string label_clx_be = "CLUSTRIX_BACKEND";
+const string label_clx_be = "XPAND_BACKEND";
 
 const StringSet recognized_mdbci_labels =
 {label_repl_be, label_big_be, label_galera_be, label_2nd_mxs, label_cs_be, label_clx_be};
@@ -143,7 +143,7 @@ void TestConnections::restart_galera(bool value)
 bool TestConnections::verbose = false;
 
 TestConnections::TestConnections(int argc, char* argv[])
-    : no_clustrix(false)
+    : no_xpand(false)
 {
     std::ios::sync_with_stdio(true);
     signal_set(SIGSEGV, sigfatal_handler);
@@ -338,10 +338,10 @@ TestConnections::TestConnections(int argc, char* argv[])
 
     if (m_required_mdbci_labels.count(label_clx_be) == 0)
     {
-        no_clustrix = true;
+        no_xpand = true;
         if (verbose)
         {
-            tprintf("No need to use Clustrix");
+            tprintf("No need to use Xpand");
         }
     }
 
@@ -387,18 +387,18 @@ TestConnections::TestConnections(int argc, char* argv[])
         galera = NULL;
     }
 
-    if (!no_clustrix)
+    if (!no_xpand)
     {
-        clustrix = new Clustrix_nodes("clustrix", test_dir, verbose, m_network_config);
-        clustrix->setup();
-        clustrix->use_ipv6 = false;
-        clustrix->take_snapshot_command = m_take_snapshot_command.c_str();
-        clustrix->revert_snapshot_command = m_revert_snapshot_command.c_str();
-        clustrix->fix_replication();
+        xpand = new Xpand_nodes("xpand", test_dir, verbose, m_network_config);
+        xpand->setup();
+        xpand->use_ipv6 = false;
+        xpand->take_snapshot_command = m_take_snapshot_command.c_str();
+        xpand->revert_snapshot_command = m_revert_snapshot_command.c_str();
+        xpand->fix_replication();
     }
     else
     {
-        clustrix = NULL;
+        xpand = NULL;
     }
 
     maxscales = new Maxscales("maxscale", test_dir, verbose, m_network_config);
@@ -825,7 +825,7 @@ void TestConnections::process_template(int m, const string& cnf_template_path, c
     char* IPcnf;
     mdn[0] = repl;
     mdn[1] = galera;
-    mdn[2] = clustrix;
+    mdn[2] = xpand;
     int i, j;
     int mdn_n = 3;
 
@@ -2265,7 +2265,7 @@ int TestConnections::process_mdbci_template()
 {
     string box = envvar_get_set("box", "centos_7_libvirt");
     string backend_box = envvar_get_set("backend_box", "%s", box.c_str());
-    envvar_get_set("clustrix_box", "%s", backend_box.c_str());
+    envvar_get_set("xpand_box", "%s", backend_box.c_str());
     envvar_get_set("target", "develop");
     envvar_get_set("vm_memory", "2048");
 
