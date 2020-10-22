@@ -30,6 +30,7 @@
 #include <maxscale/target.hh>
 #include <maxscale/workerlocal.hh>
 #include <maxscale/router.hh>
+#include <maxscale/monitor.hh>
 
 class SERVER;
 struct users;
@@ -151,6 +152,13 @@ public:
     virtual std::vector<SERVER*> reachable_servers() const = 0;
 
     /**
+     * Get the cluster that the service uses
+     *
+     * @return The cluster that the service uses or nullptr if it doesn't use one
+     */
+    virtual mxs::Monitor* cluster() const = 0;
+
+    /**
      * Get the user account cache for the current routing worker. Should be only called from a routing
      * worker.
      *
@@ -235,8 +243,8 @@ protected:
     {
     }
 
-    uint64_t     m_capabilities {0}; /**< The capabilities of the service, @see enum routing_capability */
-    mxs::Router* m_router {nullptr}; /**< The router instance for this service */
+    uint64_t     m_capabilities {0};/**< The capabilities of the service, @see enum routing_capability */
+    mxs::Router* m_router {nullptr};/**< The router instance for this service */
 
 private:
     const std::string m_name;

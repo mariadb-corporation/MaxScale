@@ -36,6 +36,7 @@ using std::chrono::duration_cast;
 using Clock = std::chrono::steady_clock;
 using Timepoint = Clock::time_point;
 using std::chrono::milliseconds;
+using std::chrono::seconds;
 
 namespace
 {
@@ -90,9 +91,11 @@ private:
 
     bool connect();
     void process_events();
+    void update_gtid();
     bool process_one_event(SQL::Event& event);
     bool load_gtid_state();
     void save_gtid_state() const;
+    bool is_owner() const;
 
     Config               m_cnf;                     // The configuration the stream was started with
     std::unique_ptr<SQL> m_sql;                     // Database connection
@@ -203,19 +206,8 @@ bool Replicator::Imp::connect()
     return rval;
 }
 
-void Replicator::Imp::process_events()
+void Replicator::Imp::update_gtid()
 {
-    pthread_setname_np(m_thr.native_handle(), "cdc::Replicator");
-
-    if (!load_gtid_state())
-    {
-        m_running = false;
-    }
-
-    qc_thread_init(QC_INIT_BOTH);
-
-    m_rpl.load_metadata(m_cnf.statedir);
-
     auto gtid = m_rpl.load_gtid();
 
     if (!gtid.empty())
@@ -227,9 +219,63 @@ void Replicator::Imp::process_events()
     {
         m_rpl.set_gtid(gtid_pos_t::from_string(m_gtid));
     }
+}
+
+bool Replicator::Imp::is_owner() const
+{
+    bool is_owner = true;
+
+    mxs::MainWorker::get()->call(
+        [&]() {
+            if (const auto* cluster = m_cnf.service->cluster())
+            {
+                is_owner = cluster->is_running() && cluster->is_cluster_owner();
+            }
+        }, mxs::MainWorker::EXECUTE_AUTO);
+
+    return is_owner;
+}
+
+void Replicator::Imp::process_events()
+{
+    bool was_active = true;
+    pthread_setname_np(m_thr.native_handle(), "cdc::Replicator");
+
+    if (!load_gtid_state())
+    {
+        m_running = false;
+    }
+
+    qc_thread_init(QC_INIT_BOTH);
+
+    m_rpl.load_metadata(m_cnf.statedir);
+    update_gtid();
 
     while (m_running)
     {
+        if (!is_owner())
+        {
+            if (was_active)
+            {
+                was_active = false;
+                MXB_NOTICE("Cluster used by service '%s' lost ownership.", m_cnf.service->name());
+            }
+
+            m_sql.reset();
+            // TODO: Don't sleep unconditionally, use a condition variable for a faster shutdown.
+            std::this_thread::sleep_for(seconds(5));
+            continue;
+        }
+
+        if (!was_active)
+        {
+            // Update the latest GTID position and reconnect to the database
+            update_gtid();
+            m_sql.reset();
+            was_active = true;
+            MXB_NOTICE("Cluster used by service '%s' gained ownership.", m_cnf.service->name());
+        }
+
         if (!connect())
         {
             if (m_should_stop)
