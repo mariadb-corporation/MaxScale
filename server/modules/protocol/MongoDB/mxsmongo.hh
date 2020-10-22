@@ -34,6 +34,8 @@
 #include <mongoc/mongoc-opcode.h>
 #include <maxscale/buffer.hh>
 
+class DCB;
+
 const int MXSMONGO_HEADER_LEN       = sizeof(mongoc_rpc_header_t);
 const int MXSMONGO_QUERY_HEADER_LEN = sizeof(mongoc_rpc_query_t);
 
@@ -464,7 +466,15 @@ public:
         Context(const Context&) = delete;
         Context& operator = (const Context&) = delete;
 
-        Context() = default;
+        Context(mxs::Component* pDownstream)
+            : m_downstream(*pDownstream)
+        {
+        }
+
+        mxs::Component& downstream()
+        {
+            return m_downstream;
+        }
 
         int32_t current_request_id() const
         {
@@ -477,7 +487,8 @@ public:
         }
 
     private:
-        int32_t m_request_id { 1 };
+        mxs::Component& m_downstream;
+        int32_t         m_request_id { 1 };
     };
 
     enum State
@@ -486,7 +497,7 @@ public:
         PENDING // A command is being executed.
     };
 
-    Mongo();
+    Mongo(mxs::Component* pDownstream);
     ~Mongo();
 
     Mongo(const Mongo&) = delete;
@@ -497,15 +508,15 @@ public:
         return m_context;
     }
 
-    GWBUF* handle_request(const mxsmongo::Packet& req, mxs::Component& downstream);
+    GWBUF* handle_request(const mxsmongo::Packet& req);
 
-    GWBUF* translate(GWBUF* pMariaDB_response);
+    int32_t clientReply(GWBUF* pMariaDB_response, DCB* pDcb);
 
 private:
     using SDatabase = std::unique_ptr<Database>;
 
-    GWBUF* handle_query(const mxsmongo::Query& req, mxs::Component& downstream);
-    GWBUF* handle_msg(const mxsmongo::Msg& req, mxs::Component& downstream);
+    GWBUF* handle_query(const mxsmongo::Query& req);
+    GWBUF* handle_msg(const mxsmongo::Msg& req);
 
     GWBUF* create_ismaster_response(const mxsmongo::Packet& request);
 

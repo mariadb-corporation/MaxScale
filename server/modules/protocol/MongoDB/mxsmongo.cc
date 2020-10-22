@@ -16,6 +16,7 @@
 #include <map>
 #include <bsoncxx/json.hpp>
 #include <bsoncxx/builder/stream/document.hpp>
+#include <maxscale/dcb.hh>
 #include "mxsmongodatabase.hh"
 
 using namespace std;
@@ -92,7 +93,8 @@ mxsmongo::Command mxsmongo::get_command(const bsoncxx::document::view& doc)
     return command;
 }
 
-mxsmongo::Mongo::Mongo()
+mxsmongo::Mongo::Mongo(mxs::Component* pDownstream)
+    : m_context(pDownstream)
 {
 }
 
@@ -100,7 +102,7 @@ mxsmongo::Mongo::~Mongo()
 {
 }
 
-GWBUF* mxsmongo::Mongo::handle_request(const mxsmongo::Packet& req, mxs::Component& downstream)
+GWBUF* mxsmongo::Mongo::handle_request(const mxsmongo::Packet& req)
 {
     GWBUF* pResponse = nullptr;
 
@@ -118,11 +120,11 @@ GWBUF* mxsmongo::Mongo::handle_request(const mxsmongo::Packet& req, mxs::Compone
         break;
 
     case MONGOC_OPCODE_MSG:
-        pResponse = handle_msg(mxsmongo::Msg(req), downstream);
+        pResponse = handle_msg(mxsmongo::Msg(req));
         break;
 
     case MONGOC_OPCODE_QUERY:
-        pResponse = handle_query(mxsmongo::Query(req), downstream);
+        pResponse = handle_query(mxsmongo::Query(req));
         break;
 
     default:
@@ -133,7 +135,7 @@ GWBUF* mxsmongo::Mongo::handle_request(const mxsmongo::Packet& req, mxs::Compone
     return pResponse;
 }
 
-GWBUF* mxsmongo::Mongo::translate(GWBUF* pResponse)
+int32_t mxsmongo::Mongo::clientReply(GWBUF* pResponse, DCB* pDcb)
 {
     mxb_assert(m_sDatabase.get());
 
@@ -141,19 +143,24 @@ GWBUF* mxsmongo::Mongo::translate(GWBUF* pResponse)
 
     m_sDatabase.reset();
 
+    if (pResponse)
+    {
+        pDcb->writeq_append(pResponse);
+    }
+
     // TODO: In case multiple Mongo requests have been queued up, this is the place where
     // TODO: a pending one should be handled.
 
-    return pResponse;
+    return 0;
 }
 
-GWBUF* mxsmongo::Mongo::handle_query(const mxsmongo::Query& req, mxs::Component& downstream)
+GWBUF* mxsmongo::Mongo::handle_query(const mxsmongo::Query& req)
 {
     MXS_NOTICE("\n%s\n", req.to_string().c_str());
 
     auto sDatabase = Database::create(req.collection(), &m_context);
 
-    GWBUF* pResponse = sDatabase->handle_query(req, downstream);
+    GWBUF* pResponse = sDatabase->handle_query(req);
 
     if (!pResponse)
     {
@@ -167,7 +174,7 @@ GWBUF* mxsmongo::Mongo::handle_query(const mxsmongo::Query& req, mxs::Component&
     return pResponse;
 }
 
-GWBUF* mxsmongo::Mongo::handle_msg(const mxsmongo::Msg& req, mxs::Component& downstream)
+GWBUF* mxsmongo::Mongo::handle_msg(const mxsmongo::Msg& req)
 {
     MXS_NOTICE("\n%s\n", req.to_string().c_str());
 
@@ -188,7 +195,7 @@ GWBUF* mxsmongo::Mongo::handle_msg(const mxsmongo::Msg& req, mxs::Component& dow
                 string name(utf8.value.data(), utf8.value.size());
                 auto sDatabase = Database::create(name, &m_context);
 
-                pResponse = sDatabase->handle_command(req, doc, downstream);
+                pResponse = sDatabase->handle_command(req, doc);
 
                 if (!pResponse)
                 {

@@ -26,8 +26,8 @@ using namespace std;
 
 ClientConnection::ClientConnection(MXS_SESSION* pSession, mxs::Component* pDownstream)
     : m_session(*pSession)
-    , m_downstream(*pDownstream)
     , m_session_data(*static_cast<MYSQL_session*>(pSession->protocol_data()))
+    , m_mongo(pDownstream)
 {
     TRACE();
 }
@@ -185,15 +185,7 @@ int32_t ClientConnection::write(GWBUF* pMariaDB_response)
     TRACE();
     MXS_NOTICE("MariaDB response: %s", dbg_decode_response(pMariaDB_response));
 
-    GWBUF* pMongo_response = m_mongo.translate(pMariaDB_response);
-
-    // Not all Mongo queries generate a response.
-    if (pMongo_response)
-    {
-        m_pDcb->writeq_append(pMongo_response);
-    }
-
-    return 0;
+    return m_mongo.clientReply(pMariaDB_response, m_pDcb);
 }
 
 json_t* ClientConnection::diagnostics() const
@@ -273,7 +265,7 @@ GWBUF* ClientConnection::handle_one_packet(GWBUF* pPacket)
 
     mxb_assert(packet.msg_len() == (int)gwbuf_length(pPacket));
 
-    return m_mongo.handle_request(packet, m_downstream);
+    return m_mongo.handle_request(packet);
 }
 
 int32_t ClientConnection::clientReply(GWBUF* buffer, mxs::ReplyRoute& down, const mxs::Reply& reply)

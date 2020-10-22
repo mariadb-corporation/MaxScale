@@ -50,14 +50,12 @@ public:
      *
      * @req         The query request; *must* be intended for the database this
      *              instance represents.
-     * @downstream  The downstream component the command should be (suitably translated)
-     *              be sent to, if the response cannot be generated immediately.
      *
      * @return A GWBUF containing a Mongo response, or nullptr. In the former case
      *         it will be returned to the client, in the latter case @c clientReply
      *         of the client protocol will eventually be called.
      */
-    GWBUF* handle_query(const mxsmongo::Query& req, mxs::Component& downstream);
+    GWBUF* handle_query(const mxsmongo::Query& req);
 
     /**
      * Handle a Mongo command.
@@ -65,16 +63,13 @@ public:
      * @req         The message request.
      * @doc         The document containing the command; *must* be intended for the
      *              database this instance represents.
-     * @downstream  The downstream component the command should be (suitably translated)
-     *              be sent to, if the response cannot be generated immediately.
      *
      * @return A GWBUF containing a Mongo response, or nullptr. In the former case
      *         it will be returned to the client, in the latter case @c clientReply
      *         of the client protocol will eventually be called.
      */
     GWBUF* handle_command(const mxsmongo::Msg& req,
-                          const bsoncxx::document::view& doc,
-                          mxs::Component& downstream);
+                          const bsoncxx::document::view& doc);
 
     /**
      * Convert a MariaDB response to a Mongo response. Must only be called
@@ -113,11 +108,9 @@ private:
     GWBUF* translate_resultset(GWBUF* pMariadb_response);
 
     GWBUF* command_ismaster(const mxsmongo::Packet& req,
-                            const bsoncxx::document::view& doc,
-                            mxs::Component& downstream);
+                            const bsoncxx::document::view& doc);
     GWBUF* command_find(const mxsmongo::Packet& req,
-                        const bsoncxx::document::view& doc,
-                        mxs::Component& downstream);
+                        const bsoncxx::document::view& doc);
 
     State             m_state { READY };
     const std::string m_name;

@@ -76,7 +76,6 @@ private:
 private:
     State           m_state { CONNECTED };
     MXS_SESSION&    m_session;
-    mxs::Component& m_downstream;
     MYSQL_session&  m_session_data;
     DCB*            m_pDcb = nullptr;
     mxsmongo::Mongo m_mongo;

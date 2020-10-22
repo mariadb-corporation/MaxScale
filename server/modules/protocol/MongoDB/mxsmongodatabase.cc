@@ -36,7 +36,7 @@ unique_ptr<mxsmongo::Database> mxsmongo::Database::create(const std::string& nam
     return unique_ptr<Database>(new Database(name, pContext));
 }
 
-GWBUF* mxsmongo::Database::handle_query(const mxsmongo::Query& req, mxs::Component& downstream)
+GWBUF* mxsmongo::Database::handle_query(const mxsmongo::Query& req)
 {
     mxb_assert(is_ready());
 
@@ -45,11 +45,11 @@ GWBUF* mxsmongo::Database::handle_query(const mxsmongo::Query& req, mxs::Compone
     switch (mxsmongo::get_command(req.query()))
     {
     case mxsmongo::Command::ISMASTER:
-        pResponse = command_ismaster(req, req.query(), downstream);
+        pResponse = command_ismaster(req, req.query());
         break;
 
     case mxsmongo::Command::FIND:
-        pResponse = command_find(req, req.query(), downstream);
+        pResponse = command_find(req, req.query());
         break;
 
     case mxsmongo::Command::UNKNOWN:
@@ -61,8 +61,7 @@ GWBUF* mxsmongo::Database::handle_query(const mxsmongo::Query& req, mxs::Compone
 }
 
 GWBUF* mxsmongo::Database::handle_command(const mxsmongo::Msg& req,
-                                          const bsoncxx::document::view& doc,
-                                          mxs::Component& downstream)
+                                          const bsoncxx::document::view& doc)
 {
     mxb_assert(is_ready());
 
@@ -78,12 +77,12 @@ GWBUF* mxsmongo::Database::handle_command(const mxsmongo::Msg& req,
                             m_name.c_str());
             }
 
-            pResponse = command_ismaster(req, doc, downstream);
+            pResponse = command_ismaster(req, doc);
         }
         break;
 
     case mxsmongo::Command::FIND:
-        pResponse = command_find(req, doc, downstream);
+        pResponse = command_find(req, doc);
         break;
 
     case mxsmongo::Command::UNKNOWN:
@@ -246,8 +245,7 @@ GWBUF* mxsmongo::Database::translate_resultset(GWBUF* pMariaDB_response)
 }
 
 GWBUF* mxsmongo::Database::command_find(const mxsmongo::Packet& req,
-                                        const bsoncxx::document::view& doc,
-                                        mxs::Component& downstream)
+                                        const bsoncxx::document::view& doc)
 {
     auto db = m_name;
     auto element = doc["find"];
@@ -263,7 +261,7 @@ GWBUF* mxsmongo::Database::command_find(const mxsmongo::Packet& req,
 
     GWBUF* pRequest = modutil_create_query(ss.str().c_str());
 
-    downstream.routeQuery(pRequest);
+    m_context.downstream().routeQuery(pRequest);
 
     m_request_id = req.request_id();
 
@@ -271,8 +269,7 @@ GWBUF* mxsmongo::Database::command_find(const mxsmongo::Packet& req,
 }
 
 GWBUF* mxsmongo::Database::command_ismaster(const mxsmongo::Packet& req,
-                                            const bsoncxx::document::view& doc,
-                                            mxs::Component& downstream)
+                                            const bsoncxx::document::view& doc)
 {
     // TODO: Do not simply return a hardwired response.
 
