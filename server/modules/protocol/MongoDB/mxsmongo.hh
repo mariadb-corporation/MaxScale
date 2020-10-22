@@ -120,6 +120,7 @@ const char* opcode_to_string(int code);
 namespace keys
 {
 
+const char FIND[]     = "find";
 const char ISMASTER[] = "ismaster";
 
 };
@@ -128,6 +129,7 @@ enum class Command
 {
     UNKNOWN,
 
+    FIND,
     ISMASTER,
 };
 

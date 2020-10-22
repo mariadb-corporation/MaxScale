@@ -100,10 +100,28 @@ private:
         return m_state == PENDING;
     }
 
-    GWBUF* create_ismaster_response(const mxsmongo::Packet& req);
+    void set_pending()
+    {
+        m_state = PENDING;
+    }
+
+    void set_ready()
+    {
+        m_state = READY;
+    }
+
+    GWBUF* translate_resultset(GWBUF* pMariadb_response);
+
+    GWBUF* command_ismaster(const mxsmongo::Packet& req,
+                            const bsoncxx::document::view& doc,
+                            mxs::Component& downstream);
+    GWBUF* command_find(const mxsmongo::Packet& req,
+                        const bsoncxx::document::view& doc,
+                        mxs::Component& downstream);
 
     State             m_state { READY };
     const std::string m_name;
     Mongo::Context&   m_context;
+    int32_t           m_request_id { 0 };
 };
 }

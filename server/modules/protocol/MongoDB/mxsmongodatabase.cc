@@ -12,7 +12,10 @@
  */
 
 #include "mxsmongodatabase.hh"
+#include <bsoncxx/builder/basic/document.hpp>
 #include <bsoncxx/builder/stream/document.hpp>
+#include <maxscale/modutil.hh>
+#include "../../filter/masking/mysql.hh"
 
 using namespace std;
 
@@ -42,10 +45,12 @@ GWBUF* mxsmongo::Database::handle_query(const mxsmongo::Query& req, mxs::Compone
     switch (mxsmongo::get_command(req.query()))
     {
     case mxsmongo::Command::ISMASTER:
-        pResponse = create_ismaster_response(req);
+        pResponse = command_ismaster(req, req.query(), downstream);
         break;
 
-    // TODO: More commands
+    case mxsmongo::Command::FIND:
+        pResponse = command_find(req, req.query(), downstream);
+        break;
 
     case mxsmongo::Command::UNKNOWN:
         MXS_ERROR("Command not recognized: %s", req.to_string().c_str());
@@ -73,15 +78,22 @@ GWBUF* mxsmongo::Database::handle_command(const mxsmongo::Msg& req,
                             m_name.c_str());
             }
 
-            pResponse = create_ismaster_response(req);
+            pResponse = command_ismaster(req, doc, downstream);
         }
         break;
 
-    // TODO: More commands
+    case mxsmongo::Command::FIND:
+        pResponse = command_find(req, doc, downstream);
+        break;
 
     case mxsmongo::Command::UNKNOWN:
         MXS_ERROR("Command not recognized: %s", req.to_string().c_str());
         mxb_assert(!true);
+    }
+
+    if (!pResponse)
+    {
+        set_pending();
     }
 
     return pResponse;
@@ -89,14 +101,178 @@ GWBUF* mxsmongo::Database::handle_command(const mxsmongo::Msg& req,
 
 GWBUF* mxsmongo::Database::translate(GWBUF* pMariaDB_response)
 {
+    // TODO: Update will be needed when DEPRECATE_EOF it turned on.
+
     mxb_assert(is_pending());
 
-    mxb_assert(!true);
+    GWBUF* pResponse = nullptr;
+
+    ComResponse response(GWBUF_DATA(pMariaDB_response));
+
+    switch (response.type())
+    {
+    case ComResponse::ERR_PACKET:
+        // TODO: Handle this in a sensible manner.
+        mxb_assert(!true);
+        break;
+
+    case ComResponse::OK_PACKET:
+        break;
+
+    case ComResponse::LOCAL_INFILE_PACKET:
+        // This should not happen as the respon
+        mxb_assert(!true);
+        break;
+
+    default:
+        // Must be a result set.
+        pResponse = translate_resultset(pMariaDB_response);
+    }
+
     gwbuf_free(pMariaDB_response);
+
+    set_ready();
+
+    return pResponse;
+}
+
+GWBUF* mxsmongo::Database::translate_resultset(GWBUF* pMariaDB_response)
+{
+    bsoncxx::builder::basic::document builder;
+
+    uint8_t* pBuffer = GWBUF_DATA(pMariaDB_response);
+
+    // A result set, so first we get the number of fields...
+    ComQueryResponse cqr(&pBuffer);
+
+    auto nFields = cqr.nFields();
+
+    vector<string> names;
+    vector<enum_field_types> types;
+
+    for (size_t i = 0; i < nFields; ++i)
+    {
+        // ... and then as many column definitions.
+        ComQueryResponse::ColumnDef column_def(&pBuffer);
+
+        names.push_back(column_def.name().to_string());
+        types.push_back(column_def.type());
+    }
+
+    // The there should be an EOF packet, which should be bypassed.
+    ComResponse eof(&pBuffer);
+    mxb_assert(eof.type() == ComResponse::EOF_PACKET);
+
+    vector<bsoncxx::document::value> documents;
+    uint32_t size_of_documents = 0;
+
+    // Then there will be an arbitrary number of rows. After all rows
+    // (of which there obviously may be 0), there will be an EOF packet.
+    while (ComResponse(pBuffer).type() != ComResponse::EOF_PACKET)
+    {
+        CQRTextResultsetRow row(&pBuffer, types);
+
+        auto it = names.begin();
+        auto jt = row.begin();
+
+        while (it != names.end())
+        {
+            const string& name = *it;
+            const auto& value = *jt;
+
+            if (value.is_string())
+            {
+                builder.append(bsoncxx::builder::basic::kvp(name, value.as_string().to_string()));
+            }
+            else
+            {
+                // TODO: Handle other types as well.
+                builder.append(bsoncxx::builder::basic::kvp(name, ""));
+            }
+
+            auto doc = builder.extract();
+            size_of_documents += doc.view().length();
+
+            documents.push_back(doc);
+
+            ++it;
+            ++jt;
+        }
+    }
+
+    // TODO: In the following is assumed that whatever is returned will
+    // TODO: fit into a Mongo packet.
+
+    bsoncxx::document::value doc_value = builder.extract();
+
+    auto doc_view = doc_value.view();
+    size_t doc_len = doc_view.length();
+
+    int32_t response_flags = MONGOC_QUERY_AWAIT_DATA; // Dunno if this should be on.
+    int64_t cursor_id = 0;
+    int32_t starting_from = 0;
+    int32_t number_returned = documents.size();
+
+    size_t response_size = MXSMONGO_HEADER_LEN
+        + sizeof(response_flags) + sizeof(cursor_id) + sizeof(starting_from) + sizeof(number_returned)
+        + size_of_documents;
+
+    GWBUF* pResponse = gwbuf_alloc(response_size);
+
+    auto* pRes_hdr = reinterpret_cast<mongoc_rpc_header_t*>(GWBUF_DATA(pResponse));
+    pRes_hdr->msg_len = response_size;
+    pRes_hdr->request_id = m_context.next_request_id();
+    pRes_hdr->response_to = m_request_id;
+    pRes_hdr->opcode = MONGOC_OPCODE_REPLY;
+
+    uint8_t* pData = GWBUF_DATA(pResponse) + MXSMONGO_HEADER_LEN;
+
+    pData += mxsmongo::set_byte4(pData, response_flags);
+    pData += mxsmongo::set_byte8(pData, cursor_id);
+    pData += mxsmongo::set_byte4(pData, starting_from);
+    pData += mxsmongo::set_byte4(pData, number_returned);
+
+    for (const auto& doc : documents)
+    {
+        auto view = doc.view();
+        size_t size = view.length();
+
+        memcpy(pData, view.data(), view.length());
+        pData += view.length();
+    }
+
+    return pResponse;
+
+}
+
+GWBUF* mxsmongo::Database::command_find(const mxsmongo::Packet& req,
+                                        const bsoncxx::document::view& doc,
+                                        mxs::Component& downstream)
+{
+    auto db = m_name;
+    auto element = doc["find"];
+
+    mxb_assert(element.type() == bsoncxx::type::k_utf8);
+
+    auto utf8 = element.get_utf8();
+
+    string table(utf8.value.data(), utf8.value.size());
+
+    stringstream ss;
+    ss << "SELECT * FROM " << db << "." << table;
+
+    GWBUF* pRequest = modutil_create_query(ss.str().c_str());
+
+    downstream.routeQuery(pRequest);
+
+    m_request_id = req.request_id();
+
     return nullptr;
 }
 
-GWBUF* mxsmongo::Database::create_ismaster_response(const mxsmongo::Packet& req)
+GWBUF* mxsmongo::Database::command_ismaster(const mxsmongo::Packet& req,
+                                            const bsoncxx::document::view& doc,
+                                            mxs::Component& downstream)
 {
     // TODO: Do not simply return a hardwired response.
 
