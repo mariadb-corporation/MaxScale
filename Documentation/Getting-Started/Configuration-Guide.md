@@ -1020,13 +1020,18 @@ The session trace log is also exposed by REST API and is shown with
 ### `writeq_high_water`
 
 High water mark for network write buffer. When the size of the outbound network
-buffer for a single connection exceeds this value, network traffic throtting for
-that connectino is started. The parameter accepts [size type
-values](#sizes). The default value is 16777216 bytes.
+buffer in MaxScale for a single connection exceeds this value, network traffic
+throtting for that connection is started. The parameter accepts
+[size type values](#sizes). The default value is 16777216 bytes.
 
 More specifically, if the client side write queue is above this value, it will
 block traffic coming from backend servers. If the backend side write queue is
 above this value, it will block traffic from client.
+
+The buffer that this parameter controls is the buffer internal to MaxScale and
+is not the kernel TCP send buffer. This means that the total amount of buffered
+data is determined by both the kernel TCP buffers and the value of
+`writeq_high_water`.
 
 Network throttling is only enabled when both `writeq_high_water` and
 `writeq_low_water` have a non-zero value. To disable throttling, set the value

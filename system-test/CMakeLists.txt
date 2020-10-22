@@ -178,7 +178,7 @@ add_test_executable(backend_auth_fail.cpp backend_auth_fail replication LABELS r
 # Regression case for the bug "MaxScale ignores host in user authentication"
 add_test_executable(auth_hostname.cpp auth_hostname replication LABELS MySQLAuth REPL_BACKEND)
 
-# Regression case for the bug "Wildcard in host column of mysql.user table don't work properly"
+# Test wildcard in user host name (user@127.%.%.%). Also test MXS-3172 escaped wildcard in database grant.
 add_test_executable(auth_wchost.cpp auth_wchost replication LABELS MySQLAuth LIGHT REPL_BACKEND)
 
 # Regression case for the bug "Routing Hints route to server sometimes doesn't work"

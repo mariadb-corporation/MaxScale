@@ -83,7 +83,11 @@ int32_t LocalClient::clientReply(GWBUF* buffer, mxs::ReplyRoute& down, const mxs
 
 bool do_self_destruct(mxs::RoutingWorker::Call::action_t action, LocalClient* data)
 {
-    delete data;
+    if (action == mxb::Worker::Call::EXECUTE)
+    {
+        delete data;
+    }
+
     return false;
 }
 
