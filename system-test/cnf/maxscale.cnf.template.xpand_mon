@@ -2,17 +2,17 @@
 threads=###threads###
 #log_info=1
 
-[Clusterix-Monitor]
+[Xpand-Monitor]
 type=monitor
-module=clustrixmon
-servers=###clustrix_server_line###
+module=xpandmon
+servers=###xpand_server_line###
 user=maxskysql
 password=skysql
 
 [RW-Split-Router]
 type=service
 router=readwritesplit
-servers=###clustrix_server_line###
+servers=###xpand_server_line###
 user=maxskysql
 password=skysql
 slave_selection_criteria=LEAST_GLOBAL_CONNECTIONS
@@ -22,7 +22,7 @@ max_slave_connections=1
 type=service
 router=readconnroute
 router_options=slave
-servers=###clustrix_server_line###
+servers=###xpand_server_line###
 user=maxskysql
 password=skysql
 
@@ -30,7 +30,7 @@ password=skysql
 type=service
 router=readconnroute
 router_options=master
-servers=###clustrix_server_line###
+servers=###xpand_server_line###
 user=maxskysql
 password=skysql
 
@@ -52,4 +52,14 @@ service=Read-Connection-Router-Master
 protocol=MySQLClient
 port=4008
 
-###clustrix_server###
+[CLI]
+type=service
+router=cli
+
+[CLI-Listener]
+type=listener
+service=CLI
+protocol=maxscaled
+socket=default
+
+###xpand_server###

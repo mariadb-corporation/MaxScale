@@ -13,12 +13,8 @@
 #pragma once
 
 /**
- * @file clustrix_nodes.h - work with Clustrix setup
+ * @file xpand_nodes.h - work with Xpand setup
  *
- * ~/.config/mdbci/clustrix_license file have to contain SQL
- * which setups license to the Clustrix node
- *
- * TODO: move functionality of install_clustrix() to MDBCI
  */
 
 #include <cerrno>
@@ -26,40 +22,36 @@
 #include <maxtest/mariadb_nodes.hh>
 #include <maxtest/nodes.hh>
 
-#define CLUSTRIX_DEPS_YUM "yum install -y bzip2 wget screen ntp ntpdate vim htop mdadm"
-#define WGET_CLUSTRIX     "wget http://files.clustrix.com/releases/software/clustrix-9.1.4.el7.tar.bz2"
-#define UNPACK_CLUSTRIX   "tar xvjf clustrix-9.1.4.el7.tar.bz2"
-#define INSTALL_CLUSTRIX  "cd clustrix-9.1.4.el7; sudo ./clxnode_install.py --yes --force"
 
-class Clustrix_nodes : public Mariadb_nodes
+class Xpand_nodes : public Mariadb_nodes
 {
 public:
 
-    Clustrix_nodes(const char* pref, const char* test_cwd, bool verbose, std::string network_config)
+    Xpand_nodes(const char* pref, const char* test_cwd, bool verbose, std::string network_config)
         : Mariadb_nodes(pref, test_cwd, verbose, network_config)
     {
     }
 
     /**
-     * @brief start_cluster Intstalls Clustrix on all nodes, configure license, form cluster
+     * @brief start_cluster Intstalls Xpand on all nodes, configure license, form cluster
      * @return 0 in case of success
      */
     int start_replication();
 
     /**
-     * @brief cnf_servers Generate Clustrix servers description for maxscale.cnf
+     * @brief cnf_servers Generate Xpand servers description for maxscale.cnf
      * @return text for maxscale.cnf
      */
     std::string cnf_servers();
 
     /**
-     * @brief check_replication Checks if Clustrix Cluster is up and running
-     * @return 0 if Clustrix Cluster is ok
+     * @brief check_replication Checks if Xpand Cluster is up and running
+     * @return 0 if Xpand Cluster is ok
      */
     int check_replication();
 
     /**
-     * @brief install_clustrix
+     * @brief perpare_server configurs Xpand on the node
      * @param m node index
      * @return 0 in case of success
      */

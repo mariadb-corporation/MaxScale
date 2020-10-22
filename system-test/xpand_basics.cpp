@@ -24,13 +24,13 @@ namespace
 
 const set<string> bootstrap_servers =
 {
-    "clustrix_server1",
-    "clustrix_server2",
-    "clustrix_server3",
-    "clustrix_server4",
+    "xpand_server1",
+    "xpand_server2",
+    "xpand_server3",
+    "xpand_server4",
 };
 
-const std::string monitor_name = "Clustrix-Monitor";
+const std::string monitor_name = "Xpand-Monitor";
 
 void expect_all_servers_to_be(const MaxRest& maxrest, const std::string& state)
 {
@@ -91,7 +91,7 @@ void check_for_servers(const MaxRest& maxrest)
 
         if (name.find(prefix) != 0)
         {
-            test.expect(false, "The name of a dynamic Clustrix node does not start with \"%s\": %s",
+            test.expect(false, "The name of a dynamic Xpand node does not start with \"%s\": %s",
                         prefix.c_str(), name.c_str());
         }
 
@@ -119,10 +119,10 @@ void check_state_change(const MaxRest& maxrest)
     cout << endl;
 
     int node = 0;
-    string address = test.clustrix->ip_private(node);
+    string address = test.xpand->ip_private(node);
 
     cout << "Blocking node: " << node << endl;
-    test.clustrix->block_node(node);
+    test.xpand->block_node(node);
 
     int cycles = 3;
     cout << "Waiting for " << cycles << " monitor cycles." << endl;
@@ -142,7 +142,7 @@ void check_state_change(const MaxRest& maxrest)
 
     cout << endl;
 
-    test.clustrix->unblock_node(node);
+    test.xpand->unblock_node(node);
     cout << "Waiting for " << cycles << " monitor cycles." << endl;
     test.maxscales->wait_for_monitor(cycles);
 
@@ -154,19 +154,19 @@ void check_softfailing(const MaxRest& maxrest)
 {
     TestConnections& test = maxrest.test();
 
-    string id("@@Clustrix-Monitor:node-2"); // Just an arbitrary dynamic node.
+    string id("@@Xpand-Monitor:node-2"); // Just an arbitrary dynamic node.
 
     MaxRest::Server before = maxrest.show_server(id);
     expect_server_to_be(maxrest, before, "Master, Running");
 
     cout << "Softfailing " << id << "." << endl;
-    maxrest.call_command("clustrixmon", "softfail", monitor_name, { "@@Clustrix-Monitor:node-2" });
+    maxrest.call_command("xpandmon", "softfail", monitor_name, { "@@Xpand-Monitor:node-2" });
 
     MaxRest::Server during = maxrest.show_server(id);
     expect_server_to_be(maxrest, during, "Drained");
 
     cout << "Unsoftfailing " << id << "." << endl;
-    maxrest.call_command("clustrixmon", "unsoftfail", monitor_name, { "@@Clustrix-Monitor:node-2" });
+    maxrest.call_command("xpandrixmon", "unsoftfail", monitor_name, { "@@Xpand-Monitor:node-2" });
 
     MaxRest::Server after = maxrest.show_server(id);
     expect_server_to_be(maxrest, after, "Master, Running");

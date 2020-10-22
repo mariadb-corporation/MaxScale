@@ -2,19 +2,19 @@
 threads=###threads###
 log_info=1
 
-###clustrix_server###
+###xpand_server###
 
-[Clustrix-Monitor]
+[Xpand-Monitor]
 type=monitor
-module=clustrixmon
-servers=###clustrix_server_line###
+module=xpandmon
+servers=###xpand_server_line###
 user=maxskysql
 password=skysql
 
 [RWS]
 type=service
 router=readwritesplit
-cluster=Clustrix-Monitor
+cluster=Xpand-Monitor
 user=maxskysql
 password=skysql
 slave_selection_criteria=LEAST_GLOBAL_CONNECTIONS
@@ -23,7 +23,7 @@ slave_selection_criteria=LEAST_GLOBAL_CONNECTIONS
 type=service
 router=readconnroute
 #router_options=running
-cluster=Clustrix-Monitor
+cluster=Xpand-Monitor
 user=maxskysql
 password=skysql
 

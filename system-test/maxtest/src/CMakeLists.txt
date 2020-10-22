@@ -1,7 +1,7 @@
 add_library(maxtest SHARED
         big_load.cc
         blob_test.cc
-        clustrix_nodes.cpp
+        xpand_nodes.cpp
         config_operations.cc
         different_size.cc
         envv.cc

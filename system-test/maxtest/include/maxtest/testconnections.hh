@@ -10,7 +10,7 @@
 #include <sys/time.h>
 
 #include <maxbase/ccdefs.hh>
-#include <maxtest/clustrix_nodes.hh>
+#include <maxtest/xpand_nodes.hh>
 #include <maxtest/mariadb_nodes.hh>
 #include <maxtest/maxscales.hh>
 #include <maxtest/test_dir.hh>
@@ -96,7 +96,7 @@ public:
      */
     Mariadb_nodes* repl {nullptr};
 
-    Clustrix_nodes* clustrix;
+    Xpand_nodes * xpand;
 
     /**
      * @brief maxscales Maxscale object containing referebces to all Maxscale machines
