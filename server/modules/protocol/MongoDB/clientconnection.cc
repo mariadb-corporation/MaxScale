@@ -261,11 +261,7 @@ GWBUF* ClientConnection::handle_one_packet(GWBUF* pPacket)
     mxb_assert(gwbuf_is_contiguous(pPacket));
     mxb_assert(gwbuf_length(pPacket) >= MXSMONGO_HEADER_LEN);
 
-    mxsmongo::Packet packet(pPacket);
-
-    mxb_assert(packet.msg_len() == (int)gwbuf_length(pPacket));
-
-    return m_mongo.handle_request(packet);
+    return m_mongo.handle_request(pPacket);
 }
 
 int32_t ClientConnection::clientReply(GWBUF* buffer, mxs::ReplyRoute& down, const mxs::Reply& reply)

@@ -14,7 +14,7 @@
 
 #include "mongodbclient.hh"
 #include <endian.h>
-#include <maxscale/target.hh>
+#include <deque>
 
 #include <bsoncxx/json.hpp>
 // Claim we are part of Mongo, so that we can include internal headers.
@@ -33,6 +33,7 @@
 
 #include <mongoc/mongoc-opcode.h>
 #include <maxscale/buffer.hh>
+#include <maxscale/target.hh>
 
 class DCB;
 
@@ -508,7 +509,7 @@ public:
         return m_context;
     }
 
-    GWBUF* handle_request(const mxsmongo::Packet& req);
+    GWBUF* handle_request(GWBUF* pRequest);
 
     int32_t clientReply(GWBUF* pMariaDB_response, DCB* pDcb);
 
@@ -520,10 +521,10 @@ private:
 
     GWBUF* create_ismaster_response(const mxsmongo::Packet& request);
 
-    State     m_state { READY };
-    Context   m_context;
-    SDatabase m_sDatabase;
-
+    State              m_state { READY };
+    Context            m_context;
+    std::deque<GWBUF*> m_requests;
+    SDatabase          m_sDatabase;
 };
 
 }

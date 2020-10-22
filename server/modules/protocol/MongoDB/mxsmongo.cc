@@ -102,34 +102,47 @@ mxsmongo::Mongo::~Mongo()
 {
 }
 
-GWBUF* mxsmongo::Mongo::handle_request(const mxsmongo::Packet& req)
+GWBUF* mxsmongo::Mongo::handle_request(GWBUF* pRequest)
 {
     GWBUF* pResponse = nullptr;
 
-    switch (req.opcode())
+    if (!m_sDatabase)
     {
-    case MONGOC_OPCODE_COMPRESSED:
-    case MONGOC_OPCODE_DELETE:
-    case MONGOC_OPCODE_GET_MORE:
-    case MONGOC_OPCODE_INSERT:
-    case MONGOC_OPCODE_KILL_CURSORS:
-    case MONGOC_OPCODE_REPLY:
-    case MONGOC_OPCODE_UPDATE:
-        MXS_ERROR("Packet %s not handled (yet).", mxsmongo::opcode_to_string(req.opcode()));
-        mxb_assert(!true);
-        break;
+        // If no database operation is in progress, we proceed.
+        mxsmongo::Packet req(pRequest);
 
-    case MONGOC_OPCODE_MSG:
-        pResponse = handle_msg(mxsmongo::Msg(req));
-        break;
+        mxb_assert(req.msg_len() == (int)gwbuf_length(pRequest));
 
-    case MONGOC_OPCODE_QUERY:
-        pResponse = handle_query(mxsmongo::Query(req));
-        break;
+        switch (req.opcode())
+        {
+        case MONGOC_OPCODE_COMPRESSED:
+        case MONGOC_OPCODE_DELETE:
+        case MONGOC_OPCODE_GET_MORE:
+        case MONGOC_OPCODE_INSERT:
+        case MONGOC_OPCODE_KILL_CURSORS:
+        case MONGOC_OPCODE_REPLY:
+        case MONGOC_OPCODE_UPDATE:
+            MXS_ERROR("Packet %s not handled (yet).", mxsmongo::opcode_to_string(req.opcode()));
+            mxb_assert(!true);
+            break;
 
-    default:
-        MXS_ERROR("Unknown opcode %d.", req.opcode());
-        mxb_assert(!true);
+        case MONGOC_OPCODE_MSG:
+            pResponse = handle_msg(mxsmongo::Msg(req));
+            break;
+
+        case MONGOC_OPCODE_QUERY:
+            pResponse = handle_query(mxsmongo::Query(req));
+            break;
+
+        default:
+            MXS_ERROR("Unknown opcode %d.", req.opcode());
+            mxb_assert(!true);
+        }
+    }
+    else
+    {
+        // Otherwise we push it on the request queue.
+        m_requests.push_back(pRequest);
     }
 
     return pResponse;
@@ -148,8 +161,25 @@ int32_t mxsmongo::Mongo::clientReply(GWBUF* pResponse, DCB* pDcb)
         pDcb->writeq_append(pResponse);
     }
 
-    // TODO: In case multiple Mongo requests have been queued up, this is the place where
-    // TODO: a pending one should be handled.
+    if (!m_requests.empty())
+    {
+        do
+        {
+            mxb_assert(!m_sDatabase.get());
+
+            GWBUF* pRequest = m_requests.front();
+            m_requests.pop_front();
+
+            pResponse = handle_request(pRequest);
+
+            if (pResponse)
+            {
+                // The response could be generated immediately, just send it.
+                pDcb->writeq_append(pResponse);
+            }
+        }
+        while (pResponse && !m_requests.empty());
+    }
 
     return 0;
 }
@@ -164,10 +194,7 @@ GWBUF* mxsmongo::Mongo::handle_query(const mxsmongo::Query& req)
 
     if (!pResponse)
     {
-        // TODO: Not all Mongo request will have an response. E.g an insert will not have,
-        // TODO: but the MariaDB insert we translate it into, obviously will have. So, we
-        // TODO: need to prepare for the case that the Mongo client just keeps on sending
-        // TODO: inserts, without waiting for them to be executed.
+        mxb_assert(!m_sDatabase.get());
         m_sDatabase = std::move(sDatabase);
     }
 
