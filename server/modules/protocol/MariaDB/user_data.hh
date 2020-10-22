@@ -189,6 +189,7 @@ public:
     void set_credentials(const std::string& user, const std::string& pw) override;
     void set_backends(const std::vector<SERVER*>& backends) override;
     void set_union_over_backends(bool union_over_backends) override;
+    void set_strip_db_esc(bool strip_db_esc) override;
     void set_service(SERVICE* service) override;
     bool can_update_immediately() const;
 
@@ -236,6 +237,8 @@ private:
     void check_show_dbs_priv(mxq::MariaDB& con, const UserDatabase& userdata,
                              const char* servername);
 
+    std::string form_db_mapping_key(const std::string& user, const std::string& host) const;
+
     mutable std::mutex m_userdb_lock;   /**< Protects UserDatabase from concurrent access */
     UserDatabase       m_userdb;        /**< Contains user account info */
 
@@ -257,6 +260,8 @@ private:
 
     /** Fetch users from all backends and store the union. */
     std::atomic_bool m_union_over_backends {false};
+    /** Remove escape characters '\' from database names when fetching user info from backend. */
+    std::atomic_bool m_strip_db_esc {true};
 
     std::atomic_bool m_can_update {false};      /**< User accounts can or are about to be updated */
     int              m_successful_loads {0};    /**< Successful refreshes */

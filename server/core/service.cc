@@ -1172,7 +1172,8 @@ void Service::update_basic_parameters(const mxs::ConfigParameters& params)
     m_params.set_multiple(params);
     m_config.assign(Config(&m_params));
 
-    if (m_config->connection_keepalive)
+    const auto& config = *m_config;
+    if (config.connection_keepalive)
     {
         m_capabilities |= RCAP_TYPE_REQUEST_TRACKING;
     }
@@ -1180,8 +1181,9 @@ void Service::update_basic_parameters(const mxs::ConfigParameters& params)
     // If the parameter affects the user account manager, update its settings.
     if (m_usermanager)
     {
-        m_usermanager->set_credentials(m_config->user, m_config->password);
-        m_usermanager->set_union_over_backends(m_config->users_from_all);
+        m_usermanager->set_credentials(config.user, config.password);
+        m_usermanager->set_union_over_backends(config.users_from_all);
+        m_usermanager->set_strip_db_esc(config.strip_db_esc);
     }
 }
 
@@ -1625,9 +1627,11 @@ void Service::set_start_user_account_manager(SAccountManager user_manager)
     // backend protocol.
     mxb_assert(!m_usermanager);
     m_usermanager = std::move(user_manager);
-    m_usermanager->set_credentials(m_config->user, m_config->password);
+    const auto& config = *m_config;
+    m_usermanager->set_credentials(config.user, config.password);
     m_usermanager->set_backends(m_data->servers);
-    m_usermanager->set_union_over_backends(m_config->users_from_all);
+    m_usermanager->set_union_over_backends(config.users_from_all);
+    m_usermanager->set_strip_db_esc(config.strip_db_esc);
     m_usermanager->set_service(this);
 
     // Message each routingworker to initialize their own user caches. Wait for completion so that

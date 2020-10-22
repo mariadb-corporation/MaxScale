@@ -171,4 +171,20 @@ std::string tolower(const char* str)
     return rval;
 }
 
+void strip_escape_chars(string& val)
+{
+    if (val.length() > 1)
+    {
+        size_t pos = 0;
+        while (pos < val.length())
+        {
+            if (val[pos] == '\\')
+            {
+                /* Advance after erasing a character, so that \\ -> \ */
+                val.erase(pos, 1);
+            }
+            pos++;
+        }
+    }
+}
 }

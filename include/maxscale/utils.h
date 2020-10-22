@@ -112,7 +112,6 @@ int         gw_getsockerrno(int fd);
 
 void  replace_whitespace(char* str);
 char* squeeze_whitespace(char* str);
-bool  strip_escape_chars(char*);
 
 bool is_valid_posix_path(char* path);
 

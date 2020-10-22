@@ -131,6 +131,11 @@ void MariaDBUserManager::set_union_over_backends(bool union_over_backends)
     m_union_over_backends.store(union_over_backends, relaxed);
 }
 
+void MariaDBUserManager::set_strip_db_esc(bool strip_db_esc)
+{
+    m_strip_db_esc.store(strip_db_esc, relaxed);
+}
+
 std::string MariaDBUserManager::protocol_name() const
 {
     return MXS_MARIADB_PROTOCOL_NAME;
@@ -564,7 +569,7 @@ void MariaDBUserManager::read_dbs_and_roles_mariadb(QResult db_grants, QResult r
 {
     using StringSetMap = UserDatabase::StringSetMap;
 
-    auto map_builder = [](const string& grant_col_name, QResult source) {
+    auto map_builder = [this](const string& grant_col_name, QResult source, bool strip_escape) {
             StringSetMap result;
             auto ind_user = source->get_col_index("user");
             auto ind_host = source->get_col_index("host");
@@ -574,20 +579,25 @@ void MariaDBUserManager::read_dbs_and_roles_mariadb(QResult db_grants, QResult r
             {
                 while (source->next_row())
                 {
-                    string key = source->get_string(ind_user) + "@" + source->get_string(ind_host);
                     string grant = source->get_string(ind_grant);
+                    if (strip_escape)
+                    {
+                        mxb::strip_escape_chars(grant);
+                    }
+                    string key = form_db_mapping_key(source->get_string(ind_user),
+                                                     source->get_string(ind_host));
                     result[key].insert(grant);
                 }
             }
             return result;
         };
 
-    StringSetMap new_db_grants = map_builder("db", std::move(db_grants));
+    StringSetMap new_db_grants = map_builder("db", std::move(db_grants), m_strip_db_esc.load(relaxed));
     StringSetMap new_roles_mapping;
     if (roles)
     {
         // Old backends may not have role data.
-        new_roles_mapping = map_builder("role", std::move(roles));
+        new_roles_mapping = map_builder("role", std::move(roles), false);
     }
 
     output->add_dbs_and_roles(std::move(new_db_grants), std::move(new_roles_mapping));
@@ -683,6 +693,7 @@ void MariaDBUserManager::read_db_privs_clustrix(QResult acl, UserDatabase* outpu
     auto ind_dbname = acl->get_col_index("dbname");
     auto ind_privs = acl->get_col_index("privileges");
     bool have_required_fields = (ind_user >= 0) && (ind_host >= 0) && (ind_dbname >= 0) && (ind_privs >= 0);
+    bool strip_db_esc = m_strip_db_esc.load(relaxed);
 
     if (have_required_fields)
     {
@@ -713,7 +724,11 @@ void MariaDBUserManager::read_db_privs_clustrix(QResult acl, UserDatabase* outpu
             }
             else
             {
-                string key = user + "@" + host;
+                if (strip_db_esc)
+                {
+                    mxb::strip_escape_chars(dbname);
+                }
+                string key = form_db_mapping_key(user, host);
                 result[key].insert(dbname);
             }
         }
@@ -850,6 +865,15 @@ void MariaDBUserManager::check_show_dbs_priv(mxq::MariaDB& con, const UserDataba
             MXB_WARNING(msg, con.connection_settings().user.c_str(), m_service->name(), servername);
         }
     }
+}
+
+std::string MariaDBUserManager::form_db_mapping_key(const string& user, const string& host) const
+{
+    string rval;
+    rval.reserve(user.length() + 1 + host.length());
+    rval.append(user).push_back('@');
+    rval.append(host);
+    return rval;
 }
 
 void UserDatabase::add_entry(const std::string& username, UserEntry&& entry)
