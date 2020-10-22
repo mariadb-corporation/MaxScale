@@ -93,6 +93,11 @@ bool do_self_destruct(mxs::RoutingWorker::Call::action_t action, LocalClient* da
 
 bool LocalClient::handleError(mxs::ErrorType type, GWBUF* error, mxs::Endpoint* down, const mxs::Reply& reply)
 {
+    if (m_down->is_open())
+    {
+        m_down->close();
+    }
+
     if (m_self_destruct)
     {
         // Queue the self-desctruction so that the object remains valid after the handleError call

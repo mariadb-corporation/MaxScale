@@ -48,6 +48,18 @@ public:
     bool connect();
 
     /**
+     * Check if the client is still open
+     *
+     * The client can close on its own due to backend errors.
+     *
+     * @return True if the client is still open and queries can be queued to it
+     */
+    bool is_open() const
+    {
+        return m_down->is_open();
+    }
+
+    /**
      * Queue a new query for execution
      *
      * @param buffer Buffer containing the query. The function takes ownership of the buffer.

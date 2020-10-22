@@ -1450,7 +1450,7 @@ void MariaDBClientConnection::ready_for_reading(DCB* event_dcb)
 
     if (m_state == State::FAILED || m_state == State::QUIT)
     {
-        m_session->kill();
+        stop();
     }
 }
 
@@ -1473,7 +1473,7 @@ void MariaDBClientConnection::error(DCB* event_dcb)
 {
     mxb_assert(m_dcb == event_dcb);
     mxb_assert(m_session->state() != MXS_SESSION::State::STOPPING);
-    m_session->kill();
+    stop();
 }
 
 void MariaDBClientConnection::hangup(DCB* event_dcb)
@@ -1513,9 +1513,9 @@ void MariaDBClientConnection::hangup(DCB* event_dcb)
         send_mysql_err_packet(seqno, 0, 1927, "08S01", errmsg.c_str());
     }
 
-    // We simply close the DCB, this will propagate the closure to any
+    // We simply close the session, this will propagate the closure to any
     // backend descriptors and perform the session cleanup.
-    m_session->kill();
+    stop();
 }
 
 bool MariaDBClientConnection::init_connection()
@@ -1704,7 +1704,7 @@ void MariaDBClientConnection::execute_kill(std::shared_ptr<KillInfo> info)
     MXS_SESSION* ref = session_get_ref(m_session);
     auto origin = mxs::RoutingWorker::get_current();
 
-    auto func = [info, ref, origin]() {
+    auto func = [this, info, ref, origin]() {
             // First, gather the list of servers where the KILL should be sent
             mxs::RoutingWorker::execute_concurrently(
                 [info, ref]() {
@@ -1713,17 +1713,18 @@ void MariaDBClientConnection::execute_kill(std::shared_ptr<KillInfo> info)
 
             // Then move execution back to the original worker to keep all connections on the same thread
             origin->call(
-                [info, ref]() {
+                [this, info, ref]() {
                     for (const auto& a : info->targets)
                     {
                         if (LocalClient* client = LocalClient::create(info->session, a.first))
                         {
                             client->connect();
-                            // TODO: There can be multiple connections to the same server
+                            // TODO: There can be multiple connections to the same server. Currently only one
+                            // connection per server is killed.
                             client->queue_query(modutil_create_query(a.second.c_str()));
+                            client->queue_query(mysql_create_com_quit(NULL, 0));
 
-                            // The LocalClient needs to delete itself once the queries are done
-                            client->self_destruct();
+                            add_local_client(client);
                         }
                     }
 
@@ -2456,4 +2457,21 @@ bool MariaDBClientConnection::send_mysql_err_packet(int packet_number, int in_af
     GWBUF* buf = modutil_create_mysql_err_msg(packet_number, in_affected_rows, mysql_errno,
                                               sqlstate_msg, mysql_message);
     return write(buf);
+}
+
+void MariaDBClientConnection::add_local_client(LocalClient* client)
+{
+    // Prune stale LocalClients before adding the new one
+    auto it = std::remove_if(m_local_clients.begin(), m_local_clients.end(),
+                             std::mem_fn(&LocalClient::is_open));
+
+    m_local_clients.erase(it, m_local_clients.end());
+
+    m_local_clients.emplace_back(client);
+}
+
+void MariaDBClientConnection::stop()
+{
+    m_session->kill();
+    m_local_clients.clear();
 }
