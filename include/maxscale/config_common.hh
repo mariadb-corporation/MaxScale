@@ -30,7 +30,7 @@
 #include <maxbase/jansson.h>
 #include <maxscale/modinfo.hh>
 #include <maxscale/pcre2.hh>
-#include <maxscale/query_classifier.hh>
+#include <maxscale/protocol/mariadb/query_classifier.hh>
 
 class SERVICE;
 class SERVER;

@@ -22,7 +22,6 @@
 #include <maxscale/buffer.hh>
 #include <maxscale/routing.hh>
 #include <maxscale/utils.hh>
-#include "query_classifier.hh"
 
 class DCB;
 class SERVICE;

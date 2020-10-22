@@ -35,7 +35,6 @@
 #include "internal/httpresponse.hh"
 #include "internal/modules.hh"
 #include "internal/monitormanager.hh"
-#include "internal/query_classifier.hh"
 #include "internal/servermanager.hh"
 #include "internal/service.hh"
 #include "internal/session.hh"

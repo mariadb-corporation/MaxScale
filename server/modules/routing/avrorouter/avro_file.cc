@@ -16,7 +16,6 @@
  */
 
 #include "avrorouter.hh"
-#include <maxscale/query_classifier.hh>
 
 #include <blr_constants.hh>
 #include <fcntl.h>

@@ -12,7 +12,6 @@
  */
 
 #include <maxscale/protocol/mariadb/query_classifier.hh>
-#include "../../../core/internal/query_classifier.hh"
 
 #include <inttypes.h>
 #include <algorithm>
@@ -28,10 +27,8 @@
 #include <maxscale/modutil.hh>
 #include <maxscale/routingworker.hh>
 #include <maxscale/utils.h>
-#include <maxscale/jansson.hh>
 #include <maxscale/buffer.hh>
 
-#include "../../../core/internal/modules.hh"
 #include "trxboundaryparser.hh"
 
 // #define QC_TRACE_ENABLED
@@ -553,34 +550,6 @@ void qc_process_end(uint32_t kind)
     {
         this_unit.classifier->qc_process_end();
     }
-}
-
-QUERY_CLASSIFIER* qc_load(const char* plugin_name)
-{
-    void* module = nullptr;
-    auto module_info = get_module(plugin_name, mxs::ModuleType::QUERY_CLASSIFIER);
-    if (module_info)
-    {
-        module = module_info->module_object;
-    }
-
-    if (module)
-    {
-        MXS_INFO("%s loaded.", plugin_name);
-    }
-    else
-    {
-        MXS_ERROR("Could not load %s.", plugin_name);
-    }
-
-    return (QUERY_CLASSIFIER*) module;
-}
-
-void qc_unload(QUERY_CLASSIFIER* classifier)
-{
-    // TODO: The module loading/unloading needs an overhaul before we
-    // TODO: actually can unload something.
-    classifier = NULL;
 }
 
 bool qc_thread_init(uint32_t kind)

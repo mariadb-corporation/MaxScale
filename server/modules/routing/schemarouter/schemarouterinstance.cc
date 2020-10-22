@@ -25,7 +25,6 @@
 #include <maxscale/modinfo.hh>
 #include <maxscale/modutil.hh>
 #include <maxscale/poll.hh>
-#include <maxscale/query_classifier.hh>
 #include <maxscale/router.hh>
 #include <maxscale/secrets.hh>
 

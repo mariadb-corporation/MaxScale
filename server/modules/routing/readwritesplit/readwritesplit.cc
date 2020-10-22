@@ -28,7 +28,6 @@
 #include <maxscale/dcb.hh>
 #include <maxscale/modinfo.hh>
 #include <maxscale/modutil.hh>
-#include <maxscale/query_classifier.hh>
 #include <maxscale/router.hh>
 #include <maxscale/mysql_utils.hh>
 #include <maxscale/routingworker.hh>

@@ -15,7 +15,7 @@
 #include "inmemorystorage.hh"
 #include <maxbase/alloc.h>
 #include <maxscale/modutil.hh>
-#include <maxscale/query_classifier.hh>
+#include <maxscale/protocol/mariadb/query_classifier.hh>
 #include "../../cache.hh"
 #include "inmemorystoragest.hh"
 #include "inmemorystoragemt.hh"

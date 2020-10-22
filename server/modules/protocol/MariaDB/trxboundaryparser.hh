@@ -15,7 +15,7 @@
 #include <maxscale/ccdefs.hh>
 #include <ctype.h>
 #include <maxscale/customparser.hh>
-#include <maxscale/query_classifier.hh>
+#include <maxscale/protocol/mariadb/query_classifier.hh>
 
 namespace maxscale
 {

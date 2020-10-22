@@ -17,7 +17,7 @@
 #include <maxbase/stopwatch.hh>
 #include <maxscale/log.hh>
 #include <maxscale/paths.hh>
-#include <maxscale/protocol/mariadb/query_classifier.hh>
+#include <maxscale/query_classifier.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 
 using namespace std;

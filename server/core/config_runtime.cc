@@ -43,7 +43,6 @@
 #include "internal/modules.hh"
 #include "internal/monitor.hh"
 #include "internal/monitormanager.hh"
-#include "internal/query_classifier.hh"
 #include "internal/servermanager.hh"
 
 typedef std::set<std::string>    StringSet;

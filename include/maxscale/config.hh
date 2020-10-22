@@ -15,6 +15,7 @@
 #include <maxscale/ccdefs.hh>
 #include <maxscale/config2.hh>
 #include <maxscale/session.hh>
+#include <maxscale/query_classifier.hh>
 
 namespace maxscale
 {

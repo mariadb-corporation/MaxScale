@@ -15,6 +15,7 @@
 #include <maxscale/ccdefs.hh>
 #include <maxscale/protocol/mariadb/protocol_classes.hh>
 #include <maxscale/protocol/mariadb/local_client.hh>
+#include <maxscale/protocol/mariadb/query_classifier.hh>
 
 struct KillInfo;
 

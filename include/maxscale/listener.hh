@@ -14,7 +14,7 @@
 
 #include <maxscale/ccdefs.hh>
 #include <maxscale/authenticator.hh>
-#include <maxscale/query_classifier.hh>
+#include <maxscale/protocol/mariadb/query_classifier.hh>
 #include <maxscale/ssl.hh>
 
 class SERVICE;

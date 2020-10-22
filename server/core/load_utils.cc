@@ -1049,3 +1049,31 @@ authenticator_init(const std::string& authenticator, mxs::ConfigParameters* opti
     return rval;
 }
 }
+
+QUERY_CLASSIFIER* qc_load(const char* plugin_name)
+{
+    void* module = nullptr;
+    auto module_info = get_module(plugin_name, mxs::ModuleType::QUERY_CLASSIFIER);
+    if (module_info)
+    {
+        module = module_info->module_object;
+    }
+
+    if (module)
+    {
+        MXS_INFO("%s loaded.", plugin_name);
+    }
+    else
+    {
+        MXS_ERROR("Could not load %s.", plugin_name);
+    }
+
+    return (QUERY_CLASSIFIER*) module;
+}
+
+void qc_unload(QUERY_CLASSIFIER* classifier)
+{
+    // TODO: The module loading/unloading needs an overhaul before we
+    // TODO: actually can unload something.
+    classifier = NULL;
+}
