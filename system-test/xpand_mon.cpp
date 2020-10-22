@@ -12,11 +12,11 @@
  */
 
 /**
- * @file clustrix_mon.cpp - simple Clustrix monitor test
- * Just creates Clustrix cluster and connect Maxscale to it
- * It can be used as a template for clustrix tests
+ * @file xpan_mon.cpp - simple Xpand monitor test
+ * Just creates Xpand cluster and connect Maxscale to it
+ * It can be used as a template for Xpand tests
  *
- * See Clustrix_nodes.h for details about configiration
+ * See xpand_nodes.h for details about configiration
  */
 
 #include <maxtest/testconnections.hh>
