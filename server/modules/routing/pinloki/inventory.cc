@@ -16,6 +16,7 @@
 
 #include <fstream>
 #include <algorithm>
+#include <unistd.h>
 
 namespace pinloki
 {
@@ -44,6 +45,17 @@ maxsql::GtidList read_rpl_state(const Config& config)
 {
     std::string ret;
     if (auto ifs = std::ifstream(config.gtid_file_path()))
+    {
+        ifs >> ret;
+    }
+
+    return maxsql::GtidList::from_string(ret);
+}
+
+maxsql::GtidList read_requested_rpl_state(const Config& config)
+{
+    std::string ret;
+    if (auto ifs = std::ifstream(config.requested_gtid_file_path()))
     {
         ifs >> ret;
     }
@@ -119,6 +131,28 @@ void InventoryWriter::save_rpl_state(const maxsql::GtidList& gtids)
 maxsql::GtidList InventoryWriter::rpl_state() const
 {
     return read_rpl_state(m_config);
+}
+
+void InventoryWriter::save_requested_rpl_state(const maxsql::GtidList& gtids)
+{
+    if (auto ofs = std::ofstream(m_config.requested_gtid_file_path()))
+    {
+        ofs << gtids;
+    }
+    else
+    {
+        MXB_THROW(BinlogWriteError, "Could not write to " << m_config.gtid_file_path());
+    }
+}
+
+void InventoryWriter::clear_requested_rpl_state() const
+{
+    remove(m_config.requested_gtid_file_path().c_str());
+}
+
+maxsql::GtidList InventoryWriter::requested_rpl_state() const
+{
+    return read_requested_rpl_state(m_config);
 }
 
 void InventoryWriter::set_master_id(int64_t id)

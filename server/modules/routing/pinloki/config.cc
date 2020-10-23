@@ -86,6 +86,11 @@ std::string Config::gtid_file_path() const
     return path(m_gtid_file);
 }
 
+std::string Config::requested_gtid_file_path() const
+{
+    return path("requested_rpl_state");
+}
+
 std::string Config::master_info_file() const
 {
     return path(m_master_info_file);
