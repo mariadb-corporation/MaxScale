@@ -105,8 +105,6 @@ private:
         m_state = READY;
     }
 
-    GWBUF* translate_resultset(GWBUF* pMariadb_response);
-
     GWBUF* command_ismaster(const mxsmongo::Packet& req,
                             const bsoncxx::document::view& doc);
     GWBUF* command_find(const mxsmongo::Packet& req,
