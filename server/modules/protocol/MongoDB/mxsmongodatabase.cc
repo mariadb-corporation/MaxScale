@@ -22,6 +22,17 @@ using namespace std;
 class mxsmongo::Database::Command
 {
 public:
+    Command(mxsmongo::Database* pDatabase,
+            GWBUF* pRequest,
+            const mxsmongo::Packet& req,
+            const bsoncxx::document::view& doc)
+        : m_database(*pDatabase)
+        , m_pRequest(gwbuf_clone(pRequest))
+        , m_req(req)
+        , m_doc(doc)
+    {
+    }
+
     virtual ~Command()
     {
         free_request();
@@ -32,17 +43,6 @@ public:
     virtual GWBUF* translate(GWBUF* pMariaDB_response, mxsmongo::Mongo::Context& context) = 0;
 
 protected:
-    Command(mxsmongo::Database* pDatabase,
-            GWBUF* pRequest,
-            const mxsmongo::Packet& req,
-            const bsoncxx::document::view& doc)
-        : m_database(*pDatabase)
-        , m_pRequest(pRequest)
-        , m_req(req)
-        , m_doc(doc)
-    {
-    }
-
     void free_request()
     {
         if (m_pRequest)
@@ -237,6 +237,15 @@ public:
     }
 };
 
+template<class ConcreteCommand>
+unique_ptr<ConcreteCommand> create(mxsmongo::Database* pDatabase,
+                                   GWBUF* pRequest,
+                                   const mxsmongo::Packet& req,
+                                   const bsoncxx::document::view& doc)
+{
+    return unique_ptr<ConcreteCommand>(new ConcreteCommand(pDatabase, pRequest, req, doc));
+}
+
 }
 }
 
@@ -270,7 +279,7 @@ GWBUF* mxsmongo::Database::handle_query(GWBUF* pRequest, const mxsmongo::Query& 
         break;
 
     case mxsmongo::Command::FIND:
-        pResponse = command_find(req, req.query());
+        pResponse = command_find(pRequest, req, req.query());
         break;
 
     case mxsmongo::Command::UNKNOWN:
@@ -304,7 +313,7 @@ GWBUF* mxsmongo::Database::handle_command(GWBUF* pRequest,
         break;
 
     case mxsmongo::Command::FIND:
-        pResponse = command_find(req, doc);
+        pResponse = command_find(pRequest, req, doc);
         break;
 
     case mxsmongo::Command::UNKNOWN:
@@ -322,34 +331,12 @@ GWBUF* mxsmongo::Database::handle_command(GWBUF* pRequest,
 
 GWBUF* mxsmongo::Database::translate(GWBUF* pMariaDB_response)
 {
-    // TODO: Update will be needed when DEPRECATE_EOF it turned on.
-
     mxb_assert(is_pending());
+    mxb_assert(m_sCommand.get());
 
-    GWBUF* pResponse = nullptr;
+    GWBUF* pResponse = m_sCommand->translate(pMariaDB_response, m_context);
 
-    ComResponse response(GWBUF_DATA(pMariaDB_response));
-
-    switch (response.type())
-    {
-    case ComResponse::ERR_PACKET:
-        // TODO: Handle this in a sensible manner.
-        mxb_assert(!true);
-        break;
-
-    case ComResponse::OK_PACKET:
-        break;
-
-    case ComResponse::LOCAL_INFILE_PACKET:
-        // This should not happen as the respon
-        mxb_assert(!true);
-        break;
-
-    default:
-        // Must be a result set.
-        pResponse = translate_resultset(pMariaDB_response, m_context.next_request_id(), m_request_id);
-    }
-
+    m_sCommand.reset();
     gwbuf_free(pMariaDB_response);
 
     set_ready();
@@ -357,28 +344,20 @@ GWBUF* mxsmongo::Database::translate(GWBUF* pMariaDB_response)
     return pResponse;
 }
 
-GWBUF* mxsmongo::Database::command_find(const mxsmongo::Packet& req,
+GWBUF* mxsmongo::Database::command_find(GWBUF* pRequest,
+                                        const mxsmongo::Packet& req,
                                         const bsoncxx::document::view& doc)
 {
-    auto db = m_name;
-    auto element = doc["find"];
+    auto sCommand = command::create<command::Find>(this, pRequest, req, doc);
 
-    mxb_assert(element.type() == bsoncxx::type::k_utf8);
+    GWBUF* pResponse = sCommand->execute(m_context.downstream());
 
-    auto utf8 = element.get_utf8();
+    if (!pResponse)
+    {
+        m_sCommand = std::move(sCommand);
+    }
 
-    string table(utf8.value.data(), utf8.value.size());
-
-    stringstream ss;
-    ss << "SELECT * FROM " << db << "." << table;
-
-    GWBUF* pRequest = modutil_create_query(ss.str().c_str());
-
-    m_context.downstream().routeQuery(pRequest);
-
-    m_request_id = req.request_id();
-
-    return nullptr;
+    return pResponse;
 }
 
 GWBUF* mxsmongo::Database::command_ismaster(const mxsmongo::Packet& req,

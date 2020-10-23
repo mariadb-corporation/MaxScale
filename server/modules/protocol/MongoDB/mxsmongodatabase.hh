@@ -120,12 +120,15 @@ private:
 
     GWBUF* command_ismaster(const mxsmongo::Packet& req,
                             const bsoncxx::document::view& doc);
-    GWBUF* command_find(const mxsmongo::Packet& req,
+    GWBUF* command_find(GWBUF* pRequest,
+                        const mxsmongo::Packet& req,
                         const bsoncxx::document::view& doc);
+
+    using SCommand = std::unique_ptr<Command>;
 
     State             m_state { READY };
     const std::string m_name;
     Mongo::Context&   m_context;
-    int32_t           m_request_id { 0 };
+    SCommand          m_sCommand;
 };
 }
