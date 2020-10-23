@@ -53,7 +53,7 @@ static cfg::ParamPath s_binlogdir(
     &s_spec, "binlogdir", "Path to directory containing binlog files", opts, mxs::datadir());
 
 static cfg::ParamPath s_avrodir(
-    &s_spec, "avrodir", "Path to directory where avro files are stored", opts);
+    &s_spec, "avrodir", "Path to directory where avro files are stored", opts, mxs::datadir());
 
 static cfg::ParamString s_filestem(
     &s_spec, "filestem", "Root part of the binlog file name", "mysql-bin");
