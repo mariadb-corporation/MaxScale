@@ -92,11 +92,6 @@ const shallowMountOptions = {
     computed: defaultComputed,
 }
 
-const mountOptions = {
-    shallow: false,
-    component: ServiceDetail,
-    computed: defaultComputed,
-}
 describe('ServiceDetail index', () => {
     let wrapper, axiosGetStub, axiosPatchStub
 
@@ -199,7 +194,7 @@ describe('ServiceDetail index', () => {
 
     describe('Props passes to child components test assertions', () => {
         before(() => {
-            wrapper = mount(mountOptions)
+            wrapper = mount(shallowMountOptions)
             sinon.stub(wrapper.vm, 'fetchConnectionsAndSession').returns(
                 Promise.resolve({
                     data: {},
@@ -324,7 +319,7 @@ describe('ServiceDetail index', () => {
         const ALL_RELATIONSHIP_TABLES = ['servers', 'filters', 'listeners']
 
         beforeEach(() => {
-            wrapper = mount(mountOptions)
+            wrapper = mount(shallowMountOptions)
             sinon.stub(wrapper.vm, 'fetchConnectionsAndSession').returns(
                 Promise.resolve({
                     data: {},

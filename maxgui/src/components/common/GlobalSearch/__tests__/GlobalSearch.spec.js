@@ -20,14 +20,9 @@ import sinon from 'sinon'
 describe('GlobalSearch.vue', () => {
     let wrapper, axiosStub
 
-    after(async () => {
-        await axiosStub.reset()
-    })
-
-    beforeEach(() => {
-        localStorage.clear()
+    beforeEach(async () => {
         wrapper = mount({
-            shallow: false,
+            shallow: true,
             component: GlobalSearch,
         })
         axiosStub = sinon.stub(wrapper.vm.$axios, 'get').resolves(
@@ -35,21 +30,23 @@ describe('GlobalSearch.vue', () => {
                 data: {},
             })
         )
+        await routeChangesMock(wrapper, '/dashboard/servers')
     })
     afterEach(async function() {
         await axiosStub.restore()
+        wrapper.destroy()
     })
 
-    it(`$data.search as well as $store.state.search_keyword is
-      updated correctly and cleared when route changes`, async () => {
+    it(`$data.search as well as $store.state.search_keyword is updated correctly`, async () => {
         // searching for 'row_server_1'
         await wrapper.setData({ search: 'row_server_1' })
         expect(wrapper.vm.$store.state.search_keyword).to.be.equal('row_server_1')
+    })
 
+    it(`Should cleared search and search_keyword when route changes`, async () => {
+        await wrapper.setData({ search: 'row_server_1' })
         // go to settings page
         await routeChangesMock(wrapper, '/settings')
-
-        expect(wrapper.find('.search-restyle').classes()).to.include('route-settings')
         expect(wrapper.vm.$data.search).to.be.empty
         expect(wrapper.vm.$store.state.search_keyword).to.be.empty
     })
