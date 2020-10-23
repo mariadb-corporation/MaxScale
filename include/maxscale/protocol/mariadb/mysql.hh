@@ -143,6 +143,13 @@ uint32_t get_byte3(const uint8_t* buffer);
 uint32_t get_byte4(const uint8_t* buffer);
 uint64_t get_byte8(const uint8_t* buffer);
 
+struct HeaderData
+{
+    uint32_t pl_length {0};
+    uint8_t  seq {0};
+};
+HeaderData get_header(const uint8_t* buffer);
+
 /**
  * Write MySQL-header to buffer.
  *

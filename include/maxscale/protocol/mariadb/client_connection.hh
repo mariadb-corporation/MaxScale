@@ -97,6 +97,7 @@ private:
     void perform_check_token(AuthType auth_type);
     bool process_normal_packet(mxs::Buffer&& buffer);
     bool route_statement(mxs::Buffer&& buffer);
+    bool route_statement_simple(mxs::Buffer&& buffer);
 
     bool start_change_user(mxs::Buffer&& buffer);
     bool complete_change_user();

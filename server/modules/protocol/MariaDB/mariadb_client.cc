@@ -1042,50 +1042,7 @@ MariaDBClientConnection::process_special_commands(GWBUF* read_buffer, uint8_t cm
         };
 
     auto rval = SpecialCmdRes::CONTINUE;
-    if (cmd == MXS_COM_QUIT)
-    {
-        /** The client is closing the connection. We know that this will be the
-         * last command the client sends so the backend connections are very likely
-         * to be in an idle state.
-         *
-         * If the client is pipelining the queries (i.e. sending N request as
-         * a batch and then expecting N responses) then it is possible that
-         * the backend connections are not idle when the COM_QUIT is received.
-         * In most cases we can assume that the connections are idle. */
-        session_qualify_for_pool(m_session);
-    }
-    else if (cmd == MXS_COM_SET_OPTION)
-    {
-        /**
-         * This seems to be only used by some versions of PHP.
-         *
-         * The option is stored as a two byte integer with the values 0 for enabling
-         * multi-statements and 1 for disabling it.
-         */
-        if (GWBUF_DATA(read_buffer)[MYSQL_HEADER_LEN + 2])
-        {
-            m_session_data->client_info.m_client_capabilities &= ~GW_MYSQL_CAPABILITIES_MULTI_STATEMENTS;
-        }
-        else
-        {
-            m_session_data->client_info.m_client_capabilities |= GW_MYSQL_CAPABILITIES_MULTI_STATEMENTS;
-        }
-    }
-    else if (cmd == MXS_COM_PROCESS_KILL)
-    {
-        uint64_t process_id = mariadb::get_byte4(GWBUF_DATA(read_buffer) + MYSQL_HEADER_LEN + 1);
-        mxs_mysql_execute_kill(process_id, KT_CONNECTION);
-        write_ok_packet(1);
-        rval = SpecialCmdRes::END;
-    }
-    else if (m_command == MXS_COM_INIT_DB)
-    {
-        char* start = (char*)GWBUF_DATA(read_buffer);
-        char* end = start + GWBUF_LENGTH(read_buffer);
-        start += MYSQL_HEADER_LEN + 1;
-        m_pending_db.assign(start, end);
-    }
-    else if (cmd == MXS_COM_QUERY)
+    if (cmd == MXS_COM_QUERY)
     {
         auto packet_len = gwbuf_length(read_buffer);
 
@@ -1119,11 +1076,6 @@ bool MariaDBClientConnection::route_statement(mxs::Buffer&& buffer)
     GWBUF* packetbuf = buffer.release();
     // TODO: Do this only when RCAP_TYPE_CONTIGUOUS_INPUT is requested
     packetbuf = gwbuf_make_contiguous(packetbuf);
-
-    if (m_routing_state == RoutingState::PACKET_START && mxs_mysql_command_will_respond(m_command))
-    {
-        session_retain_statement(m_session, packetbuf);
-    }
 
     bool keep_processing = true;
     if (m_command == MXS_COM_QUERY)
@@ -1170,6 +1122,32 @@ bool MariaDBClientConnection::route_statement(mxs::Buffer&& buffer)
                 rval = m_downstream->routeQuery(packetbuf) != 0;
             }
         }
+    }
+    return rval;
+}
+
+bool MariaDBClientConnection::route_statement_simple(mxs::Buffer&& buffer)
+{
+    auto packetbuf = buffer.release();
+    // Must be done whether or not there were any changes, as the query classifier
+    // is thread and not session specific.
+    qc_set_sql_mode(m_sql_mode);
+    // The query classifier classifies according to the service's server that has
+    // the smallest version number.
+    qc_set_server_version(m_version);
+
+    auto capabilities = service_get_capabilities(m_session->service);
+    if (rcap_type_required(capabilities, RCAP_TYPE_TRANSACTION_TRACKING)
+        && !m_session->service->config()->session_track_trx_state
+        && !session_is_load_active(m_session))
+    {
+        track_transaction_state(m_session, packetbuf);
+    }
+
+    bool rval = false;
+    if (packetbuf)
+    {
+        rval = m_downstream->routeQuery(packetbuf) != 0;
     }
     return rval;
 }
@@ -2339,10 +2317,21 @@ bool MariaDBClientConnection::large_query_continues(const mxs::Buffer& buffer) c
 bool MariaDBClientConnection::process_normal_packet(mxs::Buffer&& buffer)
 {
     bool success = false;
-    track_current_command(buffer);
-    bool is_large = large_query_continues(buffer);
-    if (m_command == MXS_COM_CHANGE_USER)
+    buffer.make_contiguous();
+    auto gwbuf = buffer.get();
+    const uint8_t* data = GWBUF_DATA(gwbuf);
+    auto header = mariadb::get_header(data);
+    m_command = MYSQL_GET_COMMAND(data);
+    bool is_large = (header.pl_length == MYSQL_PACKET_LENGTH_MAX);
+
+    if (mxs_mysql_command_will_respond(m_command))
     {
+        session_retain_statement(m_session, gwbuf);
+    }
+
+    switch (m_command)
+    {
+    case MXS_COM_CHANGE_USER:
         // Client sent a change-user-packet. Parse it but only route it once change-user completes.
         if (start_change_user(move(buffer)))
         {
@@ -2351,15 +2340,65 @@ bool MariaDBClientConnection::process_normal_packet(mxs::Buffer&& buffer)
             m_dcb->trigger_read_event();
             success = true;
         }
-    }
-    else
-    {
+        break;
+
+    case MXS_COM_QUIT:
+        /** The client is closing the connection. We know that this will be the
+         * last command the client sends so the backend connections are very likely
+         * to be in an idle state.
+         *
+         * If the client is pipelining the queries (i.e. sending N request as
+         * a batch and then expecting N responses) then it is possible that
+         * the backend connections are not idle when the COM_QUIT is received.
+         * In most cases we can assume that the connections are idle. */
+        session_qualify_for_pool(m_session);
+        success = route_statement_simple(move(buffer));
+        break;
+
+    case MXS_COM_SET_OPTION:
+        /**
+         * This seems to be only used by some versions of PHP.
+         *
+         * The option is stored as a two byte integer with the values 0 for enabling
+         * multi-statements and 1 for disabling it.
+         */
+        if (data[MYSQL_HEADER_LEN + 2])
+        {
+            m_session_data->client_info.m_client_capabilities &= ~GW_MYSQL_CAPABILITIES_MULTI_STATEMENTS;
+        }
+        else
+        {
+            m_session_data->client_info.m_client_capabilities |= GW_MYSQL_CAPABILITIES_MULTI_STATEMENTS;
+        }
+        success = route_statement_simple(move(buffer));
+        break;
+
+    case MXS_COM_PROCESS_KILL:
+        {
+            uint64_t process_id = mariadb::get_byte4(data + MYSQL_HEADER_LEN + 1);
+            mxs_mysql_execute_kill(process_id, KT_CONNECTION);
+            write_ok_packet(1);
+            success = true;     // No further processing or routing.
+        }
+        break;
+
+    case MXS_COM_INIT_DB:
+        {
+            auto start = data + MYSQL_HEADER_LEN + 1;
+            auto end = data + buffer.length();
+            m_pending_db.assign(start, end);
+            success = route_statement_simple(move(buffer));
+        }
+        break;
+
+    default:
         bool routed = route_statement(move(buffer));
         if (routed && is_large)
         {
             m_routing_state = RoutingState::LARGE_PACKET;
         }
         success = routed;
+        break;
     }
     return success;
 }

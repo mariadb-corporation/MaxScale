@@ -672,6 +672,15 @@ uint64_t get_byte8(const uint8_t* buffer)
     return host64;
 }
 
+HeaderData get_header(const uint8_t* buffer)
+{
+    auto bytes = get_byte4(buffer);
+    HeaderData rval;
+    rval.pl_length = (bytes & 0xFFFFFFu);
+    rval.seq = bytes >> 24u;
+    return rval;
+}
+
 BackendAuthData::BackendAuthData(const char* srv_name)
     : servername(srv_name)
 {
