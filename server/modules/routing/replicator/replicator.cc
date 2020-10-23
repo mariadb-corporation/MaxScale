@@ -20,6 +20,8 @@
 #include <thread>
 #include <tuple>
 #include <vector>
+#include <mutex>
+#include <condition_variable>
 
 #include <mariadb_rpl.h>
 #include <errmsg.h>
@@ -96,6 +98,7 @@ private:
     bool load_gtid_state();
     void save_gtid_state() const;
     bool is_owner() const;
+    void wait();
 
     Config               m_cnf;                     // The configuration the stream was started with
     std::unique_ptr<SQL> m_sql;                     // Database connection
@@ -106,6 +109,9 @@ private:
     std::string          m_current_gtid;            // GTID of the transaction being processed
     bool                 m_implicit_commit {false}; // Commit after next query event
     Rpl                  m_rpl;                     // Class that handles the replicated events
+
+    std::mutex              m_lock;
+    std::condition_variable m_cv;
 
     // NOTE: must be declared last
     std::thread m_thr;      // Thread that receives the replication events
@@ -236,6 +242,12 @@ bool Replicator::Imp::is_owner() const
     return is_owner;
 }
 
+void Replicator::Imp::wait()
+{
+    std::unique_lock<std::mutex> guard(m_lock);
+    m_cv.wait_for(guard, seconds(5));
+}
+
 void Replicator::Imp::process_events()
 {
     bool was_active = true;
@@ -262,8 +274,7 @@ void Replicator::Imp::process_events()
             }
 
             m_sql.reset();
-            // TODO: Don't sleep unconditionally, use a condition variable for a faster shutdown.
-            std::this_thread::sleep_for(seconds(5));
+            wait();
             continue;
         }
 
@@ -284,7 +295,7 @@ void Replicator::Imp::process_events()
             }
 
             // We failed to connect to any of the servers, try again in a few seconds
-            std::this_thread::sleep_for(milliseconds(5000));
+            wait();
             continue;
         }
 
@@ -494,6 +505,7 @@ bool Replicator::Imp::process_one_event(SQL::Event& event)
 Replicator::Imp::~Imp()
 {
     m_should_stop = true;
+    m_cv.notify_one();
     m_thr.join();
 }
 
