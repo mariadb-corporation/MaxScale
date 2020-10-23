@@ -38,9 +38,13 @@ public:
         free_request();
     }
 
-    virtual GWBUF* execute(mxs::Component& downstream) = 0;
+    virtual GWBUF* execute() = 0;
 
-    virtual GWBUF* translate(GWBUF* pMariaDB_response, mxsmongo::Mongo::Context& context) = 0;
+    virtual GWBUF* translate(GWBUF* pMariaDB_response)
+    {
+        mxb_assert(!true);
+        return nullptr;
+    }
 
 protected:
     void free_request()
@@ -182,7 +186,7 @@ class Find : public mxsmongo::Database::Command
 public:
     using mxsmongo::Database::Command::Command;
 
-    GWBUF* execute(mxs::Component& downstream) override
+    GWBUF* execute() override
     {
         auto element = m_doc["find"];
 
@@ -197,12 +201,12 @@ public:
 
         GWBUF* pRequest = modutil_create_query(ss.str().c_str());
 
-        downstream.routeQuery(pRequest);
+        m_database.context().downstream().routeQuery(pRequest);
 
         return nullptr;
     }
 
-    GWBUF* translate(GWBUF* pMariaDB_response, mxsmongo::Mongo::Context& context) override
+    GWBUF* translate(GWBUF* pMariaDB_response) override
     {
         // TODO: Update will be needed when DEPRECATE_EOF it turned on.
         GWBUF* pResponse = nullptr;
@@ -227,7 +231,7 @@ public:
         default:
             // Must be a result set.
             pResponse = translate_resultset(pMariaDB_response,
-                                            context.next_request_id(),
+                                            m_database.context().next_request_id(),
                                             m_req.request_id());
         }
 
@@ -236,6 +240,64 @@ public:
         return pResponse;
     }
 };
+
+class IsMaster :  public mxsmongo::Database::Command
+{
+public:
+    using mxsmongo::Database::Command::Command;
+
+    GWBUF* execute() override
+    {
+        // TODO: Do not simply return a hardwired response.
+
+        auto builder = bsoncxx::builder::stream::document{};
+        bsoncxx::document::value doc_value = builder
+            << "ismaster" << true
+            << "topologyVersion" << mxsmongo::topology_version()
+            << "maxBsonObjectSize" << (int32_t)16777216
+            << "maxMessageSizeBytes" << (int32_t)48000000
+            << "maxWriteBatchSize" << (int32_t)100000
+            << "localTime" << bsoncxx::types::b_date(std::chrono::system_clock::now())
+            << "logicalSessionTimeoutMinutes" << (int32_t)30
+            << "connectionId" << (int32_t)4
+            << "minWireVersion" << (int32_t)0
+            << "maxWireVersion" << (int32_t)9
+            << "readOnly" << false
+            << "ok" << (double)1
+            << bsoncxx::builder::stream::finalize;
+
+        auto doc_view = doc_value.view();
+        size_t doc_len = doc_view.length();
+
+        int32_t response_flags = MONGOC_QUERY_AWAIT_DATA; // Dunno if this should be on.
+        int64_t cursor_id = 0;
+        int32_t starting_from = 0;
+        int32_t number_returned = 1;
+
+        size_t response_size = MXSMONGO_HEADER_LEN
+            + sizeof(response_flags) + sizeof(cursor_id) + sizeof(starting_from) + sizeof(number_returned)
+            + doc_len;
+
+        GWBUF* pResponse = gwbuf_alloc(response_size);
+
+        auto* pRes_hdr = reinterpret_cast<mongoc_rpc_header_t*>(GWBUF_DATA(pResponse));
+        pRes_hdr->msg_len = response_size;
+        pRes_hdr->request_id = m_database.context().next_request_id();
+        pRes_hdr->response_to = m_req.request_id();
+        pRes_hdr->opcode = MONGOC_OPCODE_REPLY;
+
+        uint8_t* pData = GWBUF_DATA(pResponse) + MXSMONGO_HEADER_LEN;
+
+        pData += mxsmongo::set_byte4(pData, response_flags);
+        pData += mxsmongo::set_byte8(pData, cursor_id);
+        pData += mxsmongo::set_byte4(pData, starting_from);
+        pData += mxsmongo::set_byte4(pData, number_returned);
+        memcpy(pData, doc_view.data(), doc_view.length());
+
+        return pResponse;
+    }
+};
+
 
 template<class ConcreteCommand>
 unique_ptr<ConcreteCommand> create(mxsmongo::Database* pDatabase,
@@ -275,7 +337,7 @@ GWBUF* mxsmongo::Database::handle_query(GWBUF* pRequest, const mxsmongo::Query& 
     switch (mxsmongo::get_command(req.query()))
     {
     case mxsmongo::Command::ISMASTER:
-        pResponse = command_ismaster(req, req.query());
+        pResponse = command_ismaster(pRequest, req, req.query());
         break;
 
     case mxsmongo::Command::FIND:
@@ -308,7 +370,7 @@ GWBUF* mxsmongo::Database::handle_command(GWBUF* pRequest,
                             m_name.c_str());
             }
 
-            pResponse = command_ismaster(req, doc);
+            pResponse = command_ismaster(pRequest, req, doc);
         }
         break;
 
@@ -334,7 +396,7 @@ GWBUF* mxsmongo::Database::translate(GWBUF* pMariaDB_response)
     mxb_assert(is_pending());
     mxb_assert(m_sCommand.get());
 
-    GWBUF* pResponse = m_sCommand->translate(pMariaDB_response, m_context);
+    GWBUF* pResponse = m_sCommand->translate(pMariaDB_response);
 
     m_sCommand.reset();
     gwbuf_free(pMariaDB_response);
@@ -350,7 +412,7 @@ GWBUF* mxsmongo::Database::command_find(GWBUF* pRequest,
 {
     auto sCommand = command::create<command::Find>(this, pRequest, req, doc);
 
-    GWBUF* pResponse = sCommand->execute(m_context.downstream());
+    GWBUF* pResponse = sCommand->execute();
 
     if (!pResponse)
     {
@@ -360,54 +422,18 @@ GWBUF* mxsmongo::Database::command_find(GWBUF* pRequest,
     return pResponse;
 }
 
-GWBUF* mxsmongo::Database::command_ismaster(const mxsmongo::Packet& req,
+GWBUF* mxsmongo::Database::command_ismaster(GWBUF* pRequest,
+                                            const mxsmongo::Packet& req,
                                             const bsoncxx::document::view& doc)
 {
-    // TODO: Do not simply return a hardwired response.
+    auto sCommand = command::create<command::IsMaster>(this, pRequest, req, doc);
 
-    auto builder = bsoncxx::builder::stream::document{};
-    bsoncxx::document::value doc_value = builder
-        << "ismaster" << true
-        << "topologyVersion" << mxsmongo::topology_version()
-        << "maxBsonObjectSize" << (int32_t)16777216
-        << "maxMessageSizeBytes" << (int32_t)48000000
-        << "maxWriteBatchSize" << (int32_t)100000
-        << "localTime" << bsoncxx::types::b_date(std::chrono::system_clock::now())
-        << "logicalSessionTimeoutMinutes" << (int32_t)30
-        << "connectionId" << (int32_t)4
-        << "minWireVersion" << (int32_t)0
-        << "maxWireVersion" << (int32_t)9
-        << "readOnly" << false
-        << "ok" << (double)1
-        << bsoncxx::builder::stream::finalize;
+    GWBUF* pResponse = sCommand->execute();
 
-    auto doc_view = doc_value.view();
-    size_t doc_len = doc_view.length();
-
-    int32_t response_flags = MONGOC_QUERY_AWAIT_DATA; // Dunno if this should be on.
-    int64_t cursor_id = 0;
-    int32_t starting_from = 0;
-    int32_t number_returned = 1;
-
-    size_t response_size = MXSMONGO_HEADER_LEN
-        + sizeof(response_flags) + sizeof(cursor_id) + sizeof(starting_from) + sizeof(number_returned)
-        + doc_len;
-
-    GWBUF* pResponse = gwbuf_alloc(response_size);
-
-    auto* pRes_hdr = reinterpret_cast<mongoc_rpc_header_t*>(GWBUF_DATA(pResponse));
-    pRes_hdr->msg_len = response_size;
-    pRes_hdr->request_id = m_context.next_request_id();
-    pRes_hdr->response_to = req.request_id();
-    pRes_hdr->opcode = MONGOC_OPCODE_REPLY;
-
-    uint8_t* pData = GWBUF_DATA(pResponse) + MXSMONGO_HEADER_LEN;
-
-    pData += mxsmongo::set_byte4(pData, response_flags);
-    pData += mxsmongo::set_byte8(pData, cursor_id);
-    pData += mxsmongo::set_byte4(pData, starting_from);
-    pData += mxsmongo::set_byte4(pData, number_returned);
-    memcpy(pData, doc_view.data(), doc_view.length());
+    if (!pResponse)
+    {
+        m_sCommand = std::move(sCommand);
+    }
 
     return pResponse;
 }

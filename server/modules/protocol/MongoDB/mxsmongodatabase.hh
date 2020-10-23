@@ -46,6 +46,14 @@ public:
     }
 
     /**
+     * @return The context.
+     */
+    Mongo::Context& context()
+    {
+        return m_context;
+    }
+
+    /**
      * Create a new instance.
      *
      * @param name      The Mongo database in question.
@@ -118,7 +126,8 @@ private:
         m_state = READY;
     }
 
-    GWBUF* command_ismaster(const mxsmongo::Packet& req,
+    GWBUF* command_ismaster(GWBUF* pRequest,
+                            const mxsmongo::Packet& req,
                             const bsoncxx::document::view& doc);
     GWBUF* command_find(GWBUF* pRequest,
                         const mxsmongo::Packet& req,
