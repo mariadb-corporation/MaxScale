@@ -14,6 +14,7 @@
 
 #include <maxscale/ccdefs.hh>
 #include <maxscale/protocol/mariadb/protocol_classes.hh>
+#include <maxscale/protocol/mariadb/local_client.hh>
 
 struct KillInfo;
 
@@ -105,6 +106,7 @@ private:
 
     SpecialCmdRes process_special_commands(GWBUF* read_buffer, uint8_t cmd);
     SpecialCmdRes handle_query_kill(GWBUF* read_buffer, uint32_t packet_len);
+    void          add_local_client(LocalClient* client);
 
     void track_transaction_state(MXS_SESSION* session, GWBUF* packetbuf);
     void execute_kill_all_others(uint64_t target_id, uint64_t keep_protocol_thread_id, kill_type_t type);
@@ -215,6 +217,13 @@ private:
 
     bool m_user_update_wakeup {false};      /**< Waking up because of user account update? */
     int  m_previous_userdb_version {0};     /**< Userdb version used for first user account search */
+
+    std::vector<std::unique_ptr<LocalClient>> m_local_clients;
+
+    /**
+     * Starts the session shutdown by calling MXS_SESSION::kill
+     */
+    void stop();
 
     /**
      * Send an error packet to the client.
