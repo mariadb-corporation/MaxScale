@@ -154,12 +154,13 @@ public:
         MSG = MONGOC_OPCODE_MSG,
     };
 
+    Packet(const Packet&) = default;
+    Packet& operator = (const Packet&) = default;
+
     Packet(const uint8_t* pData, const uint8_t* pEnd)
-        : m_pData(pData)
-        , m_pEnd(pEnd)
-        , m_pHeader(reinterpret_cast<const mongoc_rpc_header_t*>(m_pData))
+        : m_pEnd(pEnd)
+        , m_pHeader(reinterpret_cast<const mongoc_rpc_header_t*>(pData))
     {
-        m_pData += sizeof(mongoc_rpc_header_t);
     }
 
     Packet(const uint8_t* pData, int32_t size)
@@ -216,16 +217,11 @@ public:
     }
 
 protected:
-    Packet(const Packet&) = default;
-    Packet& operator = (const Packet&) = default;
-
-protected:
-    const uint8_t*             m_pData;
     const uint8_t*             m_pEnd;
     const mongoc_rpc_header_t* m_pHeader;
 };
 
-class Query : public Packet
+class Query final : public Packet
 {
 public:
     Query(const Packet& packet)
@@ -233,25 +229,27 @@ public:
     {
         mxb_assert(opcode() == MONGOC_OPCODE_QUERY);
 
-        m_pData += mxsmongo::get_byte4(m_pData, &m_flags);
-        m_pData += mxsmongo::get_zstring(m_pData, &m_zCollection);
-        m_pData += mxsmongo::get_byte4(m_pData, &m_nSkip);
-        m_pData += mxsmongo::get_byte4(m_pData, &m_nReturn);
+        const uint8_t* pData = reinterpret_cast<const uint8_t*>(m_pHeader) + sizeof(mongoc_rpc_header_t);
+
+        pData += mxsmongo::get_byte4(pData, &m_flags);
+        pData += mxsmongo::get_zstring(pData, &m_zCollection);
+        pData += mxsmongo::get_byte4(pData, &m_nSkip);
+        pData += mxsmongo::get_byte4(pData, &m_nReturn);
 
         uint32_t size;
-        mxsmongo::get_byte4(m_pData, &size);
-        m_query = bsoncxx::document::view { m_pData, size };
-        m_pData += size;
+        mxsmongo::get_byte4(pData, &size);
+        m_query = bsoncxx::document::view { pData, size };
+        pData += size;
 
-        if (m_pData < m_pEnd)
+        if (pData < m_pEnd)
         {
-            mxsmongo::get_byte4(m_pData, &size);
-            mxb_assert(m_pEnd - m_pData == size);
-            m_fields = bsoncxx::document::view { m_pData, size };
-            m_pData += size;
+            mxsmongo::get_byte4(pData, &size);
+            mxb_assert(m_pEnd - pData == size);
+            m_fields = bsoncxx::document::view { pData, size };
+            pData += size;
         }
 
-        mxb_assert(m_pData == m_pEnd);
+        mxb_assert(pData == m_pEnd);
     }
 
     uint32_t flags() const
@@ -313,7 +311,7 @@ protected:
     bsoncxx::document::view m_fields;
 };
 
-class Reply : public Packet
+class Reply final : public Packet
 {
 public:
     Reply(const Packet& packet)
@@ -321,21 +319,23 @@ public:
     {
         mxb_assert(opcode() == MONGOC_OPCODE_REPLY);
 
-        m_pData += mxsmongo::get_byte4(m_pData, &m_flags);
-        m_pData += mxsmongo::get_byte8(m_pData, &m_cursor_id);
-        m_pData += mxsmongo::get_byte4(m_pData, &m_start_from);
-        m_pData += mxsmongo::get_byte4(m_pData, &m_nReturned);
+        const uint8_t* pData = reinterpret_cast<const uint8_t*>(m_pHeader) + sizeof(mongoc_rpc_header_t);
 
-        while (m_pData < m_pEnd)
+        pData += mxsmongo::get_byte4(pData, &m_flags);
+        pData += mxsmongo::get_byte8(pData, &m_cursor_id);
+        pData += mxsmongo::get_byte4(pData, &m_start_from);
+        pData += mxsmongo::get_byte4(pData, &m_nReturned);
+
+        while (pData < m_pEnd)
         {
             uint32_t size;
-            mxsmongo::get_byte4(m_pData, &size);
-            m_documents.push_back(bsoncxx::document::view { m_pData, size });
-            m_pData += size;
+            mxsmongo::get_byte4(pData, &size);
+            m_documents.push_back(bsoncxx::document::view { pData, size });
+            pData += size;
         }
 
         mxb_assert(m_nReturned == (int)m_documents.size());
-        mxb_assert(m_pData == m_pEnd);
+        mxb_assert(pData == m_pEnd);
     }
 
     Reply(const Reply&) = default;
@@ -366,7 +366,7 @@ protected:
     std::vector<bsoncxx::document::view> m_documents;
 };
 
-class Msg : public Packet
+class Msg final : public Packet
 {
 public:
     Msg(const Packet& packet)
@@ -374,7 +374,9 @@ public:
     {
         mxb_assert(opcode() == MONGOC_OPCODE_MSG);
 
-        m_pData += mxsmongo::get_byte4(m_pData, &m_flags);
+        const uint8_t* pData = reinterpret_cast<const uint8_t*>(m_pHeader) + sizeof(mongoc_rpc_header_t);
+
+        pData += mxsmongo::get_byte4(pData, &m_flags);
 
         if (checksum_present())
         {
@@ -382,12 +384,12 @@ public:
         }
 
         const uint8_t* pSections_end = m_pEnd - (checksum_present() ? sizeof(uint32_t) : 0);
-        size_t sections_size = pSections_end - m_pData;
+        size_t sections_size = pSections_end - pData;
 
-        while (m_pData < pSections_end)
+        while (pData < pSections_end)
         {
             uint8_t kind;
-            m_pData += mxsmongo::get_byte1(m_pData, &kind);
+            pData += mxsmongo::get_byte1(pData, &kind);
 
             switch (kind)
             {
@@ -395,9 +397,9 @@ public:
                 // Body section encoded as a single BSON object.
                 {
                     uint32_t size;
-                    mxsmongo::get_byte4(m_pData, &size);
-                    m_documents.push_back(bsoncxx::document::view { m_pData, size });
-                    m_pData += size;
+                    mxsmongo::get_byte4(pData, &size);
+                    m_documents.push_back(bsoncxx::document::view { pData, size });
+                    pData += size;
                 }
                 break;
 
@@ -411,7 +413,7 @@ public:
             }
         }
 
-        mxb_assert(m_pData == pSections_end);
+        mxb_assert(pData == pSections_end);
     }
 
     Msg(const Msg&) = default;
