@@ -1065,70 +1065,15 @@ MariaDBClientConnection::process_special_commands(GWBUF* read_buffer, uint8_t cm
  * only one protocol packet should be routed at a time.
  * TODO: what happens with parsing in this case? Likely it fails.
  *
- * @param buffer     Pointer to the address of GWBUF including the query
+ * @param buffer Buffer to route
  * @return True on success
  */
 bool MariaDBClientConnection::route_statement(mxs::Buffer&& buffer)
 {
-    bool rval = true;
-    auto session = m_session;
-
     GWBUF* packetbuf = buffer.release();
     // TODO: Do this only when RCAP_TYPE_CONTIGUOUS_INPUT is requested
     packetbuf = gwbuf_make_contiguous(packetbuf);
 
-    bool keep_processing = true;
-    if (m_command == MXS_COM_QUERY)
-    {
-        // Track MaxScale-specific sql.
-        char* errmsg = handle_variables(&packetbuf);
-        if (errmsg)
-        {
-            rval = write(modutil_create_mysql_err_msg(1, 0, 1193, "HY000", errmsg)) != 0;
-            MXS_FREE(errmsg);
-            keep_processing = false;
-        }
-    }
-
-    if (keep_processing)
-    {
-        // Must be done whether or not there were any changes, as the query classifier
-        // is thread and not session specific.
-        qc_set_sql_mode(m_sql_mode);
-        // The query classifier classifies according to the service's server that has
-        // the smallest version number.
-        qc_set_server_version(m_version);
-
-        if (!session_is_load_active(session)
-            && process_special_commands(packetbuf, m_command) == SpecialCmdRes::END)
-        {
-            gwbuf_free(packetbuf);
-            packetbuf = nullptr;
-            keep_processing = false;
-        }
-
-        if (keep_processing)
-        {
-            auto capabilities = service_get_capabilities(m_session->service);
-            if (rcap_type_required(capabilities, RCAP_TYPE_TRANSACTION_TRACKING)
-                && !session->service->config()->session_track_trx_state
-                && !session_is_load_active(session))
-            {
-                track_transaction_state(session, packetbuf);
-            }
-
-            if (packetbuf)
-            {
-                rval = m_downstream->routeQuery(packetbuf) != 0;
-            }
-        }
-    }
-    return rval;
-}
-
-bool MariaDBClientConnection::route_statement_simple(mxs::Buffer&& buffer)
-{
-    auto packetbuf = buffer.release();
     // Must be done whether or not there were any changes, as the query classifier
     // is thread and not session specific.
     qc_set_sql_mode(m_sql_mode);
@@ -1136,15 +1081,16 @@ bool MariaDBClientConnection::route_statement_simple(mxs::Buffer&& buffer)
     // the smallest version number.
     qc_set_server_version(m_version);
 
-    auto capabilities = service_get_capabilities(m_session->service);
+    auto service = m_session->service;
+    auto capabilities = service->capabilities();
+
     if (rcap_type_required(capabilities, RCAP_TYPE_TRANSACTION_TRACKING)
-        && !m_session->service->config()->session_track_trx_state
-        && !session_is_load_active(m_session))
+        && !service->config()->session_track_trx_state && !m_session->load_active)
     {
         track_transaction_state(m_session, packetbuf);
     }
 
-    bool rval = false;
+    bool rval = true;
     if (packetbuf)
     {
         rval = m_downstream->routeQuery(packetbuf) != 0;
@@ -2352,7 +2298,7 @@ bool MariaDBClientConnection::process_normal_packet(mxs::Buffer&& buffer)
          * the backend connections are not idle when the COM_QUIT is received.
          * In most cases we can assume that the connections are idle. */
         session_qualify_for_pool(m_session);
-        success = route_statement_simple(move(buffer));
+        success = route_statement(move(buffer));
         break;
 
     case MXS_COM_SET_OPTION:
@@ -2370,7 +2316,7 @@ bool MariaDBClientConnection::process_normal_packet(mxs::Buffer&& buffer)
         {
             m_session_data->client_info.m_client_capabilities |= GW_MYSQL_CAPABILITIES_MULTI_STATEMENTS;
         }
-        success = route_statement_simple(move(buffer));
+        success = route_statement(move(buffer));
         break;
 
     case MXS_COM_PROCESS_KILL:
@@ -2387,18 +2333,47 @@ bool MariaDBClientConnection::process_normal_packet(mxs::Buffer&& buffer)
             auto start = data + MYSQL_HEADER_LEN + 1;
             auto end = data + buffer.length();
             m_pending_db.assign(start, end);
-            success = route_statement_simple(move(buffer));
+            success = route_statement(move(buffer));
+        }
+        break;
+
+    case MXS_COM_QUERY:
+        {
+            // Track MaxScale-specific sql. If the variable setting succeeds, the query is routed normally
+            // so that the same variable is visible on backend.
+            char* errmsg = handle_variables(&gwbuf);
+            if (errmsg)
+            {
+                // No need to route the query, send error to client.
+                success = write(modutil_create_mysql_err_msg(1, 0, 1193, "HY000", errmsg)) != 0;
+                MXS_FREE(errmsg);
+            }
+            else
+            {
+                // Some queries require special handling. Some of these are text versions of other
+                // similarly handled commands.
+                if (process_special_commands(gwbuf, MXS_COM_QUERY) == SpecialCmdRes::END)
+                {
+                    success = true;     // No need to route query.
+                }
+                else
+                {
+                    success = route_statement(move(buffer));
+                }
+            }
         }
         break;
 
     default:
-        bool routed = route_statement(move(buffer));
-        if (routed && is_large)
-        {
-            m_routing_state = RoutingState::LARGE_PACKET;
-        }
-        success = routed;
+        // Not a query, just a command which does not require special handling.
+        success = route_statement(move(buffer));
         break;
+    }
+
+    if (success && is_large)
+    {
+        // This will fail on non-routed packets. Such packets would be malformed anyway.
+        m_routing_state = RoutingState::LARGE_PACKET;
     }
     return success;
 }
