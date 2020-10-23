@@ -19,6 +19,45 @@
 
 using namespace std;
 
+class mxsmongo::Database::Command
+{
+public:
+    virtual ~Command()
+    {
+        free_request();
+    }
+
+    virtual GWBUF* execute(mxs::Component& downstream) = 0;
+
+    virtual GWBUF* translate(GWBUF* pMariaDB_response, mxsmongo::Mongo::Context& context) = 0;
+
+protected:
+    Command(mxsmongo::Database* pDatabase,
+            GWBUF* pRequest,
+            const mxsmongo::Packet& req,
+            const bsoncxx::document::view& doc)
+        : m_database(*pDatabase)
+        , m_pRequest(pRequest)
+        , m_req(req)
+        , m_doc(doc)
+    {
+    }
+
+    void free_request()
+    {
+        if (m_pRequest)
+        {
+            gwbuf_free(m_pRequest);
+            m_pRequest = nullptr;
+        }
+    }
+
+    mxsmongo::Database&     m_database;
+    GWBUF*                  m_pRequest;
+    mxsmongo::Packet        m_req;
+    bsoncxx::document::view m_doc;
+};
+
 namespace
 {
 
@@ -130,9 +169,75 @@ GWBUF* translate_resultset(GWBUF*   pMariaDB_response,
     }
 
     return pResponse;
-
 }
 
+namespace command
+{
+
+// TODO: This will be generalized so that there will be e.g. a base-class ResultSet for
+// TODO: commands that expects, well, a resultset. But for now there is no hierarchy.
+
+class Find : public mxsmongo::Database::Command
+{
+public:
+    using mxsmongo::Database::Command::Command;
+
+    GWBUF* execute(mxs::Component& downstream) override
+    {
+        auto element = m_doc["find"];
+
+        mxb_assert(element.type() == bsoncxx::type::k_utf8);
+
+        auto utf8 = element.get_utf8();
+
+        string table(utf8.value.data(), utf8.value.size());
+
+        stringstream ss;
+        ss << "SELECT * FROM " << m_database.name() << "." << table;
+
+        GWBUF* pRequest = modutil_create_query(ss.str().c_str());
+
+        downstream.routeQuery(pRequest);
+
+        return nullptr;
+    }
+
+    GWBUF* translate(GWBUF* pMariaDB_response, mxsmongo::Mongo::Context& context) override
+    {
+        // TODO: Update will be needed when DEPRECATE_EOF it turned on.
+        GWBUF* pResponse = nullptr;
+
+        ComResponse response(GWBUF_DATA(pMariaDB_response));
+
+        switch (response.type())
+        {
+        case ComResponse::ERR_PACKET:
+            // TODO: Handle this in a sensible manner.
+            mxb_assert(!true);
+            break;
+
+        case ComResponse::OK_PACKET:
+            break;
+
+        case ComResponse::LOCAL_INFILE_PACKET:
+            // This should not happen as the respon
+            mxb_assert(!true);
+            break;
+
+        default:
+            // Must be a result set.
+            pResponse = translate_resultset(pMariaDB_response,
+                                            context.next_request_id(),
+                                            m_req.request_id());
+        }
+
+        gwbuf_free(pMariaDB_response);
+
+        return pResponse;
+    }
+};
+
+}
 }
 
 mxsmongo::Database::Database(const std::string& name, Mongo::Context* pContext)

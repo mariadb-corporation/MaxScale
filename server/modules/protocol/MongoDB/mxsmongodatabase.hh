@@ -24,6 +24,8 @@ namespace mxsmongo
 class Database
 {
 public:
+    class Command;
+
     enum State
     {
         READY,  // Ready for a command.
@@ -34,6 +36,14 @@ public:
 
     Database(const Database&) = delete;
     Database& operator = (const Database&) = delete;
+
+    /**
+     * @return The name of the database.
+     */
+    const std::string& name() const
+    {
+        return m_name;
+    }
 
     /**
      * Create a new instance.
