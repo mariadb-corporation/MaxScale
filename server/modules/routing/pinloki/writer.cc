@@ -43,6 +43,30 @@ Writer::Writer(Generator generator, mxb::Worker* worker, InventoryWriter* inv)
 {
     mxb_assert(m_worker);
     m_inventory.set_is_writer_connected(false);
+
+    std::vector<maxsql::Gtid> gtids;
+    auto req_state = m_inventory.requested_rpl_state();
+    if (req_state.is_valid())
+    {
+        if (m_current_gtid_list.is_included(req_state))
+        {
+            MXB_SDEBUG("The requested gtid is already in the logs, removing.");
+            m_inventory.clear_requested_rpl_state();
+        }
+        else
+        {
+            // When the requested gtid is in the future the actual start state
+            // is one before the requested gtid as the gtid you send to the
+            // server is the gtid you already have (and we don't have it).
+            std::vector<maxsql::Gtid> gtids;
+            for (auto& g : req_state.gtids())
+            {
+                gtids.push_back(g.previous());
+            }
+            m_current_gtid_list = maxsql::GtidList(std::move(gtids));
+        }
+    }
+
     m_thread = std::thread(&Writer::run, this);
 }
 
@@ -84,23 +108,7 @@ void Writer::update_gtid_list(const mxq::Gtid& gtid)
 
 void Writer::start_replication(mxq::Connection& conn)
 {
-    std::vector<maxsql::Gtid> gtids;
-    if (!m_inventory.rpl_state().is_valid() && m_current_gtid_list.is_valid())
-    {
-        // If the m_current_gtid_list is set, meaning a user has set it with
-        // set @@global.gtid_slave_pos='0-1000-1234', then the actual start
-        // state must be one before that gtid.
-        for (auto& g : m_current_gtid_list.gtids())
-        {
-            gtids.push_back(g.previous());
-        }
-    }
-    else
-    {
-        gtids = m_current_gtid_list.gtids();
-    }
-
-    conn.start_replication(m_inventory.config().server_id(), std::move(gtids));
+    conn.start_replication(m_inventory.config().server_id(), m_current_gtid_list);
 }
 
 void Writer::run()
