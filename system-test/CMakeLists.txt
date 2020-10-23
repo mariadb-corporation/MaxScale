@@ -1017,6 +1017,9 @@ add_test_executable(mxs1949_warn_user_injection.cpp mxs1949_warn_user_injection 
 # MXS-2106: NULL values with avrorouter
 add_test_executable(mxs2106_avro_null.cpp mxs2106_avro_null avro LABELS avrorouter REPL_BACKEND)
 
+# MXS-1687: Avrorouter HA test (tests the same mechanism that kafkacdc uses)
+add_test_executable(mxs1687_avro_ha.cc mxs1687_avro_ha mxs1687_avro_ha LABELS avrorouter REPL_BACKEND)
+
 ############################################
 # END: avrorouter tests                    #
 ############################################
