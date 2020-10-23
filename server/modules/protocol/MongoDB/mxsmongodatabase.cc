@@ -257,7 +257,7 @@ unique_ptr<mxsmongo::Database> mxsmongo::Database::create(const std::string& nam
     return unique_ptr<Database>(new Database(name, pContext));
 }
 
-GWBUF* mxsmongo::Database::handle_query(const mxsmongo::Query& req)
+GWBUF* mxsmongo::Database::handle_query(GWBUF* pRequest, const mxsmongo::Query& req)
 {
     mxb_assert(is_ready());
 
@@ -281,7 +281,8 @@ GWBUF* mxsmongo::Database::handle_query(const mxsmongo::Query& req)
     return pResponse;
 }
 
-GWBUF* mxsmongo::Database::handle_command(const mxsmongo::Msg& req,
+GWBUF* mxsmongo::Database::handle_command(GWBUF* pRequest,
+                                          const mxsmongo::Msg& req,
                                           const bsoncxx::document::view& doc)
 {
     mxb_assert(is_ready());

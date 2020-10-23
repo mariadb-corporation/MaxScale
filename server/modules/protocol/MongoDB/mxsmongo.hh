@@ -513,15 +513,13 @@ public:
 
     GWBUF* handle_request(GWBUF* pRequest);
 
-    int32_t clientReply(GWBUF* pMariaDB_response, DCB* pDcb);
+    int32_t clientReply(GWBUF* sMariaDB_response, DCB* pDcb);
 
 private:
     using SDatabase = std::unique_ptr<Database>;
 
-    GWBUF* handle_query(const mxsmongo::Query& req);
-    GWBUF* handle_msg(const mxsmongo::Msg& req);
-
-    GWBUF* create_ismaster_response(const mxsmongo::Packet& request);
+    GWBUF* handle_query(GWBUF* pRequest, const mxsmongo::Query& req);
+    GWBUF* handle_msg(GWBUF* pRequest, const mxsmongo::Msg& req);
 
     State              m_state { READY };
     Context            m_context;

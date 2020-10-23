@@ -58,6 +58,7 @@ public:
     /**
      * Handle a Mongo query.
      *
+     * @pRequest    The GWBUF holding data of @c req.
      * @req         The query request; *must* be intended for the database this
      *              instance represents.
      *
@@ -65,11 +66,12 @@ public:
      *         it will be returned to the client, in the latter case @c clientReply
      *         of the client protocol will eventually be called.
      */
-    GWBUF* handle_query(const mxsmongo::Query& req);
+    GWBUF* handle_query(GWBUF* pRequest, const mxsmongo::Query& req);
 
     /**
      * Handle a Mongo command.
      *
+     * @pRequest    The GWBUF holding data of @c req.
      * @req         The message request.
      * @doc         The document containing the command; *must* be intended for the
      *              database this instance represents.
@@ -78,7 +80,8 @@ public:
      *         it will be returned to the client, in the latter case @c clientReply
      *         of the client protocol will eventually be called.
      */
-    GWBUF* handle_command(const mxsmongo::Msg& req,
+    GWBUF* handle_command(GWBUF* pRequest,
+                          const mxsmongo::Msg& req,
                           const bsoncxx::document::view& doc);
 
     /**

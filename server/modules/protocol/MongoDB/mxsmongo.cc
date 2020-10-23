@@ -127,17 +127,19 @@ GWBUF* mxsmongo::Mongo::handle_request(GWBUF* pRequest)
             break;
 
         case MONGOC_OPCODE_MSG:
-            pResponse = handle_msg(mxsmongo::Msg(req));
+            pResponse = handle_msg(pRequest, mxsmongo::Msg(req));
             break;
 
         case MONGOC_OPCODE_QUERY:
-            pResponse = handle_query(mxsmongo::Query(req));
+            pResponse = handle_query(pRequest, mxsmongo::Query(req));
             break;
 
         default:
             MXS_ERROR("Unknown opcode %d.", req.opcode());
             mxb_assert(!true);
         }
+
+        gwbuf_free(pRequest);
     }
     else
     {
@@ -184,13 +186,13 @@ int32_t mxsmongo::Mongo::clientReply(GWBUF* pResponse, DCB* pDcb)
     return 0;
 }
 
-GWBUF* mxsmongo::Mongo::handle_query(const mxsmongo::Query& req)
+GWBUF* mxsmongo::Mongo::handle_query(GWBUF* pRequest, const mxsmongo::Query& req)
 {
     MXS_NOTICE("\n%s\n", req.to_string().c_str());
 
     auto sDatabase = Database::create(req.collection(), &m_context);
 
-    GWBUF* pResponse = sDatabase->handle_query(req);
+    GWBUF* pResponse = sDatabase->handle_query(pRequest, req);
 
     if (!pResponse)
     {
@@ -201,7 +203,7 @@ GWBUF* mxsmongo::Mongo::handle_query(const mxsmongo::Query& req)
     return pResponse;
 }
 
-GWBUF* mxsmongo::Mongo::handle_msg(const mxsmongo::Msg& req)
+GWBUF* mxsmongo::Mongo::handle_msg(GWBUF* pRequest, const mxsmongo::Msg& req)
 {
     MXS_NOTICE("\n%s\n", req.to_string().c_str());
 
@@ -222,7 +224,7 @@ GWBUF* mxsmongo::Mongo::handle_msg(const mxsmongo::Msg& req)
                 string name(utf8.value.data(), utf8.value.size());
                 auto sDatabase = Database::create(name, &m_context);
 
-                pResponse = sDatabase->handle_command(req, doc);
+                pResponse = sDatabase->handle_command(pRequest, req, doc);
 
                 if (!pResponse)
                 {
