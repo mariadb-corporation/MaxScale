@@ -86,8 +86,10 @@ serves.
 
 #### `server_id`
 
-The _server_id_ used when replicating from the master in direct
-replication mode. The default value is 1234.
+The
+[server_id](https://mariadb.com/kb/en/replication-and-binary-log-system-variables/#server_id)
+used when replicating from the master in direct replication mode. The default
+value is 1234.
 
 #### `source`
 
