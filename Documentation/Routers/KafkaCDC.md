@@ -166,6 +166,13 @@ replication is started from the beginning. The value of this parameter is only
 used if no previously replicated events with GTID positions can be retrieved
 from Kafka.
 
+#### `server_id`
+
+The
+[server_id](https://mariadb.com/kb/en/replication-and-binary-log-system-variables/#server_id)
+used when replicating from the master in direct replication mode. The default
+value is 1234. This parameter was added in MaxScale 2.6.0.
+
 ## Example Configuration
 
 The following configuration defines the minimal setup for streaming replication

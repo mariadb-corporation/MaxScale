@@ -42,6 +42,9 @@ static cfg::ParamCount s_timeout(
 static cfg::ParamString s_gtid(
     &s_spec, "gtid", "The GTID position to start from", "");
 
+static cfg::ParamCount s_server_id(
+    &s_spec, "server_id", "Server ID for direct replication mode", 1234);
+
 // Never used
 class KafkaCDCSession : public mxs::RouterSession
 {
@@ -61,6 +64,7 @@ public:
             , enable_idempotence(s_enable_idempotence.get(params))
             , timeout(s_timeout.get(params))
             , gtid(s_gtid.get(params))
+            , server_id(s_server_id.get(params))
         {
         }
 
@@ -69,6 +73,7 @@ public:
         bool        enable_idempotence;
         int         timeout;
         std::string gtid;
+        int         server_id;
     };
 
     ~KafkaCDC() = default;
