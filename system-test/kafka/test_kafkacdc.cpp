@@ -1,56 +1,11 @@
-#include <future>
-#include <iostream>
-#include <librdkafka/rdkafkacpp.h>
 #include <maxtest/testconnections.hh>
+#include "consumer.hh"
 
 using namespace std::literals::string_literals;
 
-std::unique_ptr<RdKafka::KafkaConsumer> consumer;
-
-void prepare_consumer(TestConnections& test)
+void read_messages(TestConnections& test, Consumer& consumer, int n_expected)
 {
-    std::string err;
-    auto cnf = RdKafka::Conf::create(RdKafka::Conf::CONF_GLOBAL);
-    cnf->set("bootstrap.servers", test.maxscales->ip4(0) + ":9092"s, err);
-    cnf->set("group.id", "kafkacdc", err);
-
-    consumer.reset(RdKafka::KafkaConsumer::create(cnf, err));
-    auto topic = RdKafka::TopicPartition::create("kafkacdc", 0);
-    topic->set_offset(RdKafka::Topic::OFFSET_BEGINNING);
-    consumer->assign({topic});
-    delete cnf;
-    delete topic;
-}
-
-int consume_messages(TestConnections& test)
-{
-    int i = 0;
-    bool ok = true;
-
-    while (ok)
-    {
-        auto msg = consumer->consume(10000);
-
-        if (msg->err() == RdKafka::ERR_NO_ERROR)
-        {
-            std::cout << "Message key: " << *msg->key() << std::endl;
-            std::cout << "Message content: " << std::string((char*)msg->payload(), msg->len()) << std::endl;
-            i++;
-        }
-        else
-        {
-            ok = false;
-        }
-
-        delete msg;
-    }
-
-    return i;
-}
-
-void read_messages(TestConnections& test, int n_expected)
-{
-    int i = consume_messages(test);
+    int i = consumer.consume_messages();
     test.expect(i == n_expected, "Expected %d messages, got %d", n_expected, i);
 }
 
@@ -73,7 +28,7 @@ int main(int argc, char** argv)
     auto conn = test.repl->get_connection(0);
 
     // Connect to Kafka
-    prepare_consumer(test);
+    Consumer consumer(test);
 
     test.tprintf("Inserting data");
     conn.connect();
@@ -87,12 +42,12 @@ int main(int argc, char** argv)
     test.tprintf("Give MaxScale some time to process the events");
     sleep(5);
 
-    read_messages(test, 7);
+    read_messages(test, consumer, 7);
 
     conn.query("INSERT INTO t1 VALUES (4), (5), (6)");
     sleep(5);
 
-    read_messages(test, 3);
+    read_messages(test, consumer, 3);
 
     test.tprintf("Restarting MaxScale and inserting data");
     test.maxscales->stop();
@@ -102,7 +57,7 @@ int main(int argc, char** argv)
     conn.query("INSERT INTO t1 VALUES (7), (8), (9)");
     sleep(5);
 
-    read_messages(test, 3);
+    read_messages(test, consumer, 3);
 
     test.tprintf("Stopping Kafka container");
     test.maxscales->ssh_output("sudo docker rm -vf kafka");
