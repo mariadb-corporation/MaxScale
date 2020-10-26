@@ -212,8 +212,8 @@ json_t* SchemaRouter::diagnostics() const
     return rval;
 }
 
-static const uint64_t CAPABILITIES = RCAP_TYPE_CONTIGUOUS_INPUT | RCAP_TYPE_PACKET_OUTPUT
-    | RCAP_TYPE_RUNTIME_CONFIG | RCAP_TYPE_REQUEST_TRACKING;
+static const uint64_t CAPABILITIES = RCAP_TYPE_CONTIGUOUS_INPUT | RCAP_TYPE_RUNTIME_CONFIG
+    | RCAP_TYPE_REQUEST_TRACKING;
 
 uint64_t SchemaRouter::getCapabilities() const
 {
