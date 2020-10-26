@@ -181,9 +181,22 @@ separate configuration files for _servers_, _filters_, etc.
 The configuration file itself is based on the
 [.ini](https://en.wikipedia.org/wiki/INI_file) file format and consists of
 various sections that are used to build the configuration; these sections define
-services, servers, listeners, monitors and global settings. Parameters, which
-expect a comma-separated list of values can be defined on multiple lines. The
-following is an example of a multi-line definition.
+services, servers, listeners, monitors and global settings.
+
+Comments are defined by prefixing a row with a hash (`#`). Trailing comments are
+not supported.
+
+```
+# This is a comment before a parameter
+some_parameter=123
+```
+
+**Note:** Multi-line parameters have been deprecated in MaxScale 2.6.0 due to
+  the unintuitive way they worked when the same parameter was declared multiple
+  times.
+
+Parameters, which expect a comma-separated list of values can be defined on
+multiple lines. The following is an example of a multi-line definition.
 
 ```
 [MyService]
@@ -197,14 +210,6 @@ servers=server1,
 The values of the parameter that are not on the first line need to have at least
 one whitespace character before them in order for them to be recognized as a
 part of the multi-line parameter.
-
-Comments are defined by prefixing a row with a hash (`#`). Trailing comments are
-not supported.
-
-```
-# This is a comment before a parameter
-some_parameter=123
-```
 
 ## Names
 

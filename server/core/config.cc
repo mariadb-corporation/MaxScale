@@ -1344,9 +1344,15 @@ static int ini_handler(void* userdata, const char* section, const char* name, co
             }
         }
         /** Multi-line parameter */
-        else if (!config_append_param(ptr, name, value))
+        else
         {
-            return 0;
+            MXS_WARNING("Multi-line parameters have been deprecated. "
+                        "Declare the value for '%s' on one line.", name);
+
+            if (!config_append_param(ptr, name, value))
+            {
+                return 0;
+            }
         }
     }
     else if (!config_add_param(ptr, name, value))
