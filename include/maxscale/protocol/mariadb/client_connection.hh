@@ -62,6 +62,8 @@ public:
 
     int32_t clientReply(GWBUF* buffer, mxs::ReplyRoute& down, const mxs::Reply& reply) override;
 
+    static bool process_init();
+
 private:
     /** Return type of process_special_commands() */
     enum class SpecialCmdRes
@@ -106,7 +108,7 @@ private:
     void  handle_use_database(GWBUF* read_buffer);
     char* handle_variables(GWBUF** read_buffer);
 
-    SpecialCmdRes process_special_commands(GWBUF* read_buffer, uint8_t cmd);
+    SpecialCmdRes process_special_queries(mxs::Buffer& buffer);
     SpecialCmdRes handle_query_kill(GWBUF* read_buffer, uint32_t packet_len);
     void          add_local_client(LocalClient* client);
 
@@ -188,6 +190,8 @@ private:
         PACKET_START,   /**< Expecting the client to send a normal packet */
         LARGE_PACKET,   /**< Expecting the client to continue streaming a large packet */
         LOAD_DATA,      /**< Expecting the client to continue streaming CSV-data */
+        CHANGING_DB,    /**< Client is changing database, waiting server response */
+        CHANGING_ROLE,  /**< Client is changing role, waiting server response */
     };
 
     /** Temporary data required during COM_CHANGE_USER. */
@@ -208,7 +212,8 @@ private:
     mariadb::SClientAuth m_authenticator;   /**< Client authentication data */
     ChangeUserFields     m_change_user;     /**< User account to change to */
 
-    std::string     m_pending_db;
+    std::string m_pending_value;        /**< Role or db client is changing to */
+
     mxs::Component* m_downstream {nullptr}; /**< Downstream component, the session */
     MXS_SESSION*    m_session {nullptr};    /**< Generic session */
     MYSQL_session*  m_session_data {nullptr};
@@ -236,4 +241,6 @@ private:
                                int mysql_errno, const char* sqlstate_msg, const char* mysql_message);
 
     void parse_and_set_trx_state(const mxs::Reply& reply);
+    void start_change_role(std::string&& role);
+    void start_change_db(std::string&& db);
 };

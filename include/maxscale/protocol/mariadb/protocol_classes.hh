@@ -106,6 +106,7 @@ public:
     std::string user;                               /*< username       */
     std::string remote;                             /*< client ip      */
     std::string db;                                 /*< Current default database */
+    std::string role;                               /*< Current role */
     std::string plugin;                             /*< authentication plugin requested by client */
     uint8_t     next_sequence {0};                  /*< Next packet sequence */
 
@@ -146,11 +147,11 @@ public:
 
     enum TrxState : uint32_t
     {
-        TRX_INACTIVE = 0,
-        TRX_ACTIVE = 1 << 0,
+        TRX_INACTIVE  = 0,
+        TRX_ACTIVE    = 1 << 0,
         TRX_READ_ONLY = 1 << 1,
-        TRX_ENDING = 1 << 2,
-        TRX_STARTING = 1 << 3,
+        TRX_ENDING    = 1 << 2,
+        TRX_STARTING  = 1 << 3,
     };
 
     /**

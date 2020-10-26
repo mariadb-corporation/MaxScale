@@ -70,6 +70,13 @@ const int MAX_PACKET_SIZE = MYSQL_PACKET_LENGTH_MAX + MYSQL_HEADER_LEN;
 // Default version string sent to clients
 const string default_version = "5.5.5-10.2.12 " MAXSCALE_VERSION "-maxscale";
 
+class ThisUnit
+{
+public:
+    mxb::Regex special_queries_regex;
+};
+ThisUnit this_unit;
+
 string get_version_string(SERVICE* service)
 {
     string service_vrs = service->version_string();
@@ -1009,7 +1016,7 @@ void MariaDBClientConnection::handle_use_database(GWBUF* read_buffer)
     auto databases = qc_get_database_names(read_buffer);
     if (!databases.empty())
     {
-        m_pending_db = databases[0];
+        start_change_db(move(databases[0]));
     }
 }
 
@@ -1017,42 +1024,51 @@ void MariaDBClientConnection::handle_use_database(GWBUF* read_buffer)
  * Some SQL commands/queries need to be detected and handled by the protocol
  * and MaxScale instead of being routed forward as is.
  *
- * @param read_buffer The current read buffer
- * @param cmd         Current command being executed
- *
+ * @param buffer Query buffer
  * @return see @c spec_com_res_t
  */
 MariaDBClientConnection::SpecialCmdRes
-MariaDBClientConnection::process_special_commands(GWBUF* read_buffer, uint8_t cmd)
+MariaDBClientConnection::process_special_queries(mxs::Buffer& buffer)
 {
-    auto is_use_database = [](GWBUF* buffer, size_t packet_len) -> bool {
-            const char USE[] = "USE ";
-            char* ptr = (char*)GWBUF_DATA(buffer) + MYSQL_HEADER_LEN + 1;
-
-            return packet_len > MYSQL_HEADER_LEN + 1 + (sizeof(USE) - 1)
-                   && strncasecmp(ptr, USE, sizeof(USE) - 1) == 0;
-        };
-
-    auto is_kill_query = [](GWBUF* buffer, size_t packet_len) -> bool {
-            const char KILL[] = "KILL ";
-            char* ptr = (char*)GWBUF_DATA(buffer) + MYSQL_HEADER_LEN + 1;
-
-            return packet_len > MYSQL_HEADER_LEN + 1 + (sizeof(KILL) - 1)
-                   && strncasecmp(ptr, KILL, sizeof(KILL) - 1) == 0;
-        };
-
     auto rval = SpecialCmdRes::CONTINUE;
-    if (cmd == MXS_COM_QUERY)
+    // The packet must be at least HEADER + cmd + 5 (USE d) chars in length.
+    const size_t min_len = MYSQL_HEADER_LEN + 1 + 5;
+    auto packet_len = buffer.length();
+    if (packet_len >= min_len)
     {
-        auto packet_len = gwbuf_length(read_buffer);
+        char* sql = nullptr;
+        int len = 0;
 
-        if (is_use_database(read_buffer, packet_len))
+        buffer.make_contiguous();
+        if (modutil_extract_SQL(buffer.get(), &sql, &len))
         {
-            handle_use_database(read_buffer);
-        }
-        else if (is_kill_query(read_buffer, packet_len))
-        {
-            rval = handle_query_kill(read_buffer, packet_len);
+            // TODO: currently causes allocations, optimize later.
+            auto words = this_unit.special_queries_regex.substr(sql, len);
+            if (!words.empty())
+            {
+                // Is a tracked command. Look at the captured parts to figure out which one it is.
+                char c = words[1][0];
+                switch (c)
+                {
+                case 'K':
+                case 'k':
+                    rval = handle_query_kill(buffer.get(), packet_len);
+                    break;
+
+                case 'S':
+                case 's':
+                    start_change_role(move(words[3]));
+                    break;
+
+                case 'U':
+                case 'u':
+                    handle_use_database(buffer.get());
+                    break;
+
+                default:
+                    mxb_assert(!true);
+                }
+            }
         }
     }
 
@@ -1182,6 +1198,13 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_normal
                 m_routing_state = RoutingState::PACKET_START;
             }
         }
+        break;
+
+    case RoutingState::CHANGING_DB:
+    case RoutingState::CHANGING_ROLE:
+        // Client sent something while we are still waiting for server response. Should be rare.
+        // Simplest way to handle this is to wait for the response before routing. Add later.
+        MXB_ERROR("Client sent data while waiting for previous result. Session will be closed.");
         break;
     }
 
@@ -2332,7 +2355,7 @@ bool MariaDBClientConnection::process_normal_packet(mxs::Buffer&& buffer)
         {
             auto start = data + MYSQL_HEADER_LEN + 1;
             auto end = data + buffer.length();
-            m_pending_db.assign(start, end);
+            start_change_db(string(start, end));
             success = route_statement(move(buffer));
         }
         break;
@@ -2352,7 +2375,7 @@ bool MariaDBClientConnection::process_normal_packet(mxs::Buffer&& buffer)
             {
                 // Some queries require special handling. Some of these are text versions of other
                 // similarly handled commands.
-                if (process_special_commands(gwbuf, MXS_COM_QUERY) == SpecialCmdRes::END)
+                if (process_special_queries(buffer) == SpecialCmdRes::END)
                 {
                     success = true;     // No need to route query.
                 }
@@ -2395,16 +2418,39 @@ bool MariaDBClientConnection::send_mysql_err_packet(int packet_number, int in_af
 int32_t
 MariaDBClientConnection::clientReply(GWBUF* buffer, maxscale::ReplyRoute& down, const mxs::Reply& reply)
 {
-    if (!m_pending_db.empty())
+    switch (m_routing_state)
     {
-        auto& current_db = m_session_data->db;
-        // Only update the database in case it succeeded. The pending database is cleared regardless of what
-        // was returned to prevent false positives.
+    case RoutingState::CHANGING_DB:
         if (reply.is_ok())
         {
-            current_db = std::move(m_pending_db);
+            // Database change succeeded.
+            m_session_data->db = move(m_pending_value);
         }
-        m_pending_db.clear();
+        // Regardless of result, database change is complete.
+        m_pending_value.clear();
+        m_routing_state = RoutingState::PACKET_START;
+        break;
+
+    case RoutingState::CHANGING_ROLE:
+        if (reply.is_ok())
+        {
+            // Role change succeeded. Role "NONE" is special, in that it means no role is active.
+            if (m_pending_value == "NONE")
+            {
+                m_session_data->role.clear();
+            }
+            else
+            {
+                m_session_data->role = move(m_pending_value);
+            }
+        }
+        // Regardless of result, role change is complete.
+        m_pending_value.clear();
+        m_routing_state = RoutingState::PACKET_START;
+        break;
+
+    default:
+        break;
     }
 
     auto service = m_session->service;
@@ -2469,4 +2515,47 @@ void MariaDBClientConnection::add_local_client(LocalClient* client)
 void MariaDBClientConnection::kill()
 {
     m_local_clients.clear();
+}
+
+bool MariaDBClientConnection::process_init()
+{
+    /*
+     * We need to detect the following queries:
+     * 1) USE db_name
+     * 2) SET ROLE { role | NONE }
+     * 3) KILL [HARD | SOFT] [CONNECTION | QUERY [ID] ] [thread_id | USER user_name | query_id]
+     *
+     * Construct one regex which captures all of the above. The "?:" disables capturing for redundant groups.
+     */
+    const char regex_string[] =
+        R"(^\s*()"
+        R"(USE\s+(?<db>\w+))"
+        R"(|SET\s+ROLE\s+(?<role>\w+))"
+        R"(|KILL\s+(?:(HARD|SOFT)\s+)?(?:(CONNECTION|QUERY|QUERY\s+ID)\s+)?(\d+|USER\s+\w+))"
+        R"())";
+
+    bool rval = false;
+    mxb::Regex regex(regex_string, PCRE2_CASELESS);
+    if (regex.valid())
+    {
+        this_unit.special_queries_regex = move(regex);
+        rval = true;
+    }
+    else
+    {
+        MXB_ERROR("Regular expression initialization failed. %s", regex.error().c_str());
+    }
+    return rval;
+}
+
+void MariaDBClientConnection::start_change_role(string&& role)
+{
+    m_routing_state = RoutingState::CHANGING_ROLE;
+    m_pending_value = move(role);
+}
+
+void MariaDBClientConnection::start_change_db(string&& db)
+{
+    m_routing_state = RoutingState::CHANGING_DB;
+    m_pending_value = move(db);
 }

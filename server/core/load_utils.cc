@@ -1018,12 +1018,13 @@ void add_built_in_module(MXS_MODULE* module)
 {
     auto mod_name_low = mxb::tolower(module->name);
     mxb_assert(this_unit.loaded_modules.count(mod_name_low) == 0);
+    auto init_func = module->process_init;
+    bool init_ok = init_func ? (init_func() == 0) : true;
+    mxb_assert(init_ok);
+
     auto new_module = std::make_unique<LOADED_MODULE>(nullptr, module, "");
     auto new_kv = std::make_pair(mod_name_low, std::move(new_module));
     this_unit.loaded_modules.insert(std::move(new_kv));
-
-    // No need to do initializations. It's assumed that the caller has already ran process-level init if any.
-    // Workers will run their thread-level inits afterwards.
 }
 
 namespace maxscale

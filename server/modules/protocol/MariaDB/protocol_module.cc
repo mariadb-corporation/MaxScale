@@ -300,6 +300,14 @@ bool MySQLProtocolModule::parse_auth_options(const std::string& opts, mxs::Confi
     return !error;
 }
 
+namespace
+{
+int module_init()
+{
+    return MariaDBClientConnection::process_init() ? 0 : 1;
+}
+}
+
 /**
  * Get MariaDBProtocol module info
  *
@@ -318,7 +326,7 @@ MXS_MODULE* mariadbprotocol_info()
         "V1.1.0",
         MXS_NO_MODULE_CAPABILITIES,
         &mxs::ProtocolApiGenerator<MySQLProtocolModule>::s_api,
-        nullptr,
+        module_init,
         nullptr,
         nullptr,
         nullptr,
