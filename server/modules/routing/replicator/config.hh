@@ -38,5 +38,6 @@ struct Config
     pcre2_code* match = nullptr;
     pcre2_code* exclude = nullptr;
     int         timeout = 10;
+    bool        cooperate = false;
 };
 }

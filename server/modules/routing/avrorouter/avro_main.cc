@@ -94,6 +94,9 @@ static cfg::ParamCount s_server_id(
 static cfg::ParamString s_gtid_start_pos(
     &s_spec, "gtid_start_pos", "GTID position to start replicating from", "");
 
+static cfg::ParamBool s_cooperative_replication(
+    &s_spec, "cooperative_replication", "Cooperate with other instances replicating from the same cluster",
+    false);
 
 AvroConfig::AvroConfig(const std::string& name)
     : mxs::config::Configuration(name, &s_spec)
@@ -110,6 +113,7 @@ AvroConfig::AvroConfig(const std::string& name)
     add_native(&AvroConfig::match, &s_match);
     add_native(&AvroConfig::exclude, &s_exclude);
     add_native(&AvroConfig::codec, &s_codec);
+    add_native(&AvroConfig::cooperative_replication, &s_cooperative_replication);
 }
 
 bool converter_func(Worker::Call::action_t action, Avro* router)

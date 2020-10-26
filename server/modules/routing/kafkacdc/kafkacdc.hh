@@ -45,6 +45,10 @@ static cfg::ParamString s_gtid(
 static cfg::ParamCount s_server_id(
     &s_spec, "server_id", "Server ID for direct replication mode", 1234);
 
+static cfg::ParamBool s_cooperative_replication(
+    &s_spec, "cooperative_replication", "Cooperate with other instances replicating from the same cluster",
+    false);
+
 // Never used
 class KafkaCDCSession : public mxs::RouterSession
 {
@@ -65,6 +69,7 @@ public:
             , timeout(s_timeout.get(params))
             , gtid(s_gtid.get(params))
             , server_id(s_server_id.get(params))
+            , cooperative_replication(s_cooperative_replication.get(params))
         {
         }
 
@@ -74,6 +79,7 @@ public:
         int         timeout;
         std::string gtid;
         int         server_id;
+        bool        cooperative_replication;
     };
 
     ~KafkaCDC() = default;

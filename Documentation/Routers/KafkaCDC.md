@@ -173,6 +173,26 @@ The
 used when replicating from the master in direct replication mode. The default
 value is 1234. This parameter was added in MaxScale 2.6.0.
 
+### `cooperative_replication`
+
+Controls whether multiple instances cooperatively replicate from the same
+cluster. This is a boolean parameter and is disabled by default. It was added in
+MaxScale 2.6.0.
+
+When this parameter is enabled and the monitor pointed to by the `cluster`
+parameter supports cooperative monitoring (currently only `mariadbmon`), the
+replication is only active if the monitor owns the cluster it is monitoring.
+
+Whenever an instance that does not own the cluster gains ownership of the
+cluster, the replication will continue from the latest GTID that was delivered
+to Kafka.
+
+This means that multiple MaxScale instances can replicate from the same set of
+servers and the event is only processed once. This feature does not provide
+exactly-once semantics for the Kafka event delivery. However, it does provide
+high-availability for the `kafkacdc` instances which allows automated failover
+between multiple MaxScale instances.
+
 ## Example Configuration
 
 The following configuration defines the minimal setup for streaming replication

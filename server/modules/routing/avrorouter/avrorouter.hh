@@ -101,6 +101,7 @@ public:
     mxs::config::RegexValue match;
     mxs::config::RegexValue exclude;
     mxs_avro_codec_type     codec;
+    bool                    cooperative_replication;
 };
 
 class AvroSession;

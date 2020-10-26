@@ -373,6 +373,7 @@ std::unique_ptr<cdc::Replicator> KafkaCDC::create_replicator(const Config& confi
         cnf.timeout = config.timeout;
         cnf.gtid = config.gtid;
         cnf.server_id = config.server_id;
+        cnf.cooperate = config.cooperative_replication;
 
         // Make sure the data directory exists
         mxs_mkdir_all(cnf.statedir.c_str(), 0755);

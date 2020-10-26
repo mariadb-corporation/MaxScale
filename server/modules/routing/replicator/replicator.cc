@@ -231,13 +231,16 @@ bool Replicator::Imp::is_owner() const
 {
     bool is_owner = true;
 
-    mxs::MainWorker::get()->call(
-        [&]() {
-            if (const auto* cluster = m_cnf.service->cluster())
-            {
-                is_owner = cluster->is_running() && cluster->is_cluster_owner();
-            }
-        }, mxs::MainWorker::EXECUTE_AUTO);
+    if (m_cnf.cooperate)
+    {
+        mxs::MainWorker::get()->call(
+            [&]() {
+                if (const auto* cluster = m_cnf.service->cluster())
+                {
+                    is_owner = cluster->is_running() && cluster->is_cluster_owner();
+                }
+            }, mxs::MainWorker::EXECUTE_AUTO);
+    }
 
     return is_owner;
 }

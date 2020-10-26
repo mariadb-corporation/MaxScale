@@ -62,6 +62,7 @@ server_id=1111
 avrodir=/var/lib/maxscale/A-avro/
 user=skysql
 password=skysql
+cooperative_replication=true
 
 [A-avro-listener]
 type=listener
@@ -81,7 +82,7 @@ server_id=2222
 avrodir=/var/lib/maxscale/B-avro/
 user=skysql
 password=skysql
-
+cooperative_replication=true
 
 [B-avro-listener]
 type=listener

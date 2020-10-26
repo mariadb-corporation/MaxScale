@@ -165,23 +165,26 @@ currently, if used with Avrorouter, the option `mariadb10_master_gtid` must be
 set to off in the Binlog Server configuration in order to correclty read the
 binlog files.
 
-##### Example configuration
+### `cooperative_replication`
 
-```
-[replication-router]
-type=service
-router=binlogrouter
-router_options=server-id=4000,binlogdir=/var/lib/mysql,filestem=binlog
-user=maxuser
-password=maxpwd
+Controls whether multiple instances cooperatively replicate from the same
+cluster. This is a boolean parameter and is disabled by default. It was
+added in MaxScale 2.6.0.
 
-[avro-router]
-type=service
-router=avrorouter
-binlogdir=/var/lib/mysql
-filestem=binlog
-avrodir=/var/lib/maxscale
-```
+When this parameter is enabled and the monitor pointed to by the `cluster`
+parameter supports cooperative monitoring (currently only `mariadbmon`),
+the replication is only active if the monitor owns the cluster it is
+monitoring.
+
+With this feature, multiple MaxScale instances can replicate from the same set
+of servers and only one of them actively processes the replication stream. This
+allows the avrorouter instances to be made highly-available without having to
+have them all process the events at the same time.
+
+Whenever an instance that does not own the cluster gains ownership of the
+cluster, the replication will continue from the latest GTID processed by that
+instance. This means that if the instance hasn't replicated events that have
+been purged from the binary logs, the replication cannot continue.
 
 #### Avro File Related Parameters
 
@@ -218,6 +221,24 @@ value if individual events in the binary logs are very large. The value is a
 size type parameter which means that it can also be defined with an SI suffix.
 Refer to the [Configuration Guide](../Getting-Started/Configuration-Guide.md)
 for more details about size type parameters and how to use them.
+
+##### Example configuration
+
+```
+[replication-router]
+type=service
+router=binlogrouter
+router_options=server-id=4000,binlogdir=/var/lib/mysql,filestem=binlog
+user=maxuser
+password=maxpwd
+
+[avro-router]
+type=service
+router=avrorouter
+binlogdir=/var/lib/mysql
+filestem=binlog
+avrodir=/var/lib/maxscale
+```
 
 ## Module commands
 

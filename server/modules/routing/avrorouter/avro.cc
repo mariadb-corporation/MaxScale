@@ -89,6 +89,7 @@ Avro::Avro(SERVICE* service, mxs::ConfigParameters* params, AvroConfig&& config)
         cnf.gtid = m_config.gtid;
         cnf.match = m_config.match.code();
         cnf.exclude = m_config.exclude.code();
+        cnf.cooperate = m_config.cooperative_replication;
 
         auto worker = mxs::RoutingWorker::get(mxs::RoutingWorker::MAIN);
         worker->execute(
