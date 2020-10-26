@@ -401,6 +401,11 @@ public:
         return m_host;
     }
 
+    int port() const
+    {
+        return m_port;
+    }
+
 private:
     std::string m_host;
     int         m_port;

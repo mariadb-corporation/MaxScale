@@ -42,3 +42,6 @@ add_test_executable_ex(NAME pinloki_tls SOURCE pinloki_tls.cc
 add_test_executable_ex(NAME pinloki_switchover SOURCE pinloki_switchover.cc
   CONFIG pinloki.cnf VMS repl_backend LABELS pinloki BREAKS_REPL)
 
+# Test a likely upgrade scenario
+add_test_executable_ex(NAME pinloki_upgrade SOURCE pinloki_upgrade.cc
+  CONFIG pinloki.cnf VMS repl_backend LABELS pinloki BREAKS_REPL)
