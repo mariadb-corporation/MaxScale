@@ -13,16 +13,7 @@ int main(int argc, char** argv)
 {
     TestConnections test(argc, argv);
 
-    test.tprintf("Starting Kafka container");
-    auto res = test.maxscales->ssh_output(
-        "sudo docker run -d -e ADVERTISED_HOST="s + test.maxscales->ip4(0)
-        + " -p 9092:9092 -p 2182:2181 --network=host --name=kafka spotify/kafka");
-
-    if (res.rc != 0)
-    {
-        test.tprintf("Failed to start docker container: %s", res.output.c_str());
-        return 1;
-    }
+    Kafka kafka(test);
 
     test.repl->stop_slaves();
     auto conn = test.repl->get_connection(0);
@@ -58,9 +49,6 @@ int main(int argc, char** argv)
     sleep(5);
 
     read_messages(test, consumer, 3);
-
-    test.tprintf("Stopping Kafka container");
-    test.maxscales->ssh_output("sudo docker rm -vf kafka");
     test.repl->fix_replication();
 
     return test.global_result;
