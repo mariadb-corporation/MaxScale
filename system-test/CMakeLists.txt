@@ -104,9 +104,8 @@ add_test_executable(mxs2512_trx_replay_rollback.cpp mxs2512_trx_replay_rollback 
 # MXS-2785: Binlogfilter database rewrite test
 add_test_executable(mxs2785_binlogfilter_rewrite.cpp mxs2785_binlogfilter_rewrite mxs2785_binlogfilter_rewrite LABELS binlogfilter REPL_BACKEND)
 
-# KafkaCDC test case
-add_test_executable(test_kafkacdc.cpp test_kafkacdc test_kafkacdc LABELS kafkacdc REPL_BACKEND)
-target_link_libraries(test_kafkacdc ${RDKAFKA_LIBRARIES})
+# KafkaCDC tests
+add_subdirectory(kafka)
 
 ############################################
 # END: Tests that require GTID             #
