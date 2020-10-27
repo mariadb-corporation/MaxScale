@@ -104,7 +104,7 @@ public:
 
     uint64_t getCapabilities() const override
     {
-        return RCAP_TYPE_CONTIGUOUS_INPUT;
+        return RCAP_TYPE_STMT_INPUT;
     }
 
     mxs::config::Configuration* getConfiguration() override
@@ -275,7 +275,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         MXS_FILTER_VERSION,
         description,
         "V1.1.0",
-        RCAP_TYPE_CONTIGUOUS_INPUT,
+        RCAP_TYPE_STMT_INPUT,
         &mxs::FilterApi<RegexInstance>::s_api,
         NULL,
         NULL,

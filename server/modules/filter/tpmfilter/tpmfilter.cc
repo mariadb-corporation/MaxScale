@@ -203,7 +203,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         MXS_FILTER_VERSION,
         description,
         "V1.0.1",
-        RCAP_TYPE_CONTIGUOUS_INPUT,
+        RCAP_TYPE_STMT_INPUT,
         &mxs::FilterApi<TpmFilter>::s_api,
         NULL,
         NULL,
@@ -366,7 +366,7 @@ json_t* TpmFilter::diagnostics() const
 
 uint64_t TpmFilter::getCapabilities() const
 {
-    return RCAP_TYPE_CONTIGUOUS_INPUT;
+    return RCAP_TYPE_STMT_INPUT;
 }
 
 TpmFilter::~TpmFilter()

@@ -240,7 +240,7 @@ json_t* Pinloki::diagnostics() const
 
 uint64_t Pinloki::getCapabilities() const
 {
-    return RCAP_TYPE_CONTIGUOUS_INPUT;
+    return RCAP_TYPE_STMT_INPUT;
 }
 
 bool Pinloki::configure(mxs::ConfigParameters* pParams)
@@ -872,7 +872,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         MXS_ROUTER_VERSION,
         "Pinloki",
         "V1.0.0",
-        RCAP_TYPE_CONTIGUOUS_INPUT,
+        RCAP_TYPE_STMT_INPUT,
         &mxs::RouterApi<pinloki::Pinloki>::s_api,
         nullptr,
         nullptr,

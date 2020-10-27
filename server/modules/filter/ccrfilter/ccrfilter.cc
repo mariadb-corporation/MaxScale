@@ -222,7 +222,7 @@ public:
 
     uint64_t getCapabilities() const
     {
-        return RCAP_TYPE_CONTIGUOUS_INPUT;
+        return RCAP_TYPE_STMT_INPUT;
     }
 
     mxs::config::Configuration* getConfiguration()
@@ -405,7 +405,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         MXS_FILTER_VERSION,
         DESCRIPTION,
         "V1.1.0",
-        RCAP_TYPE_CONTIGUOUS_INPUT,
+        RCAP_TYPE_STMT_INPUT,
         &mxs::FilterApi<CCRFilter>::s_api,
         nullptr,
         nullptr,

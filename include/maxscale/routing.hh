@@ -68,26 +68,42 @@ public:
  */
 typedef enum routing_capability
 {
-    /**< Statements are delivered one per buffer (currently always on). */
+    /**
+     * routeQuery is called with one packet per buffer (currently always on). The buffer is always contiguous.
+     */
     RCAP_TYPE_STMT_INPUT = 0x0001,      /* 0b0000000000000001 */
-    /**< Each delivered buffer is contiguous; implies RCAP_TYPE_STMT_INPUT (currently always on). */
-    RCAP_TYPE_CONTIGUOUS_INPUT = 0x0003,    /* 0b0000000000000011 */
-    /**< The transaction state and autocommit mode of the session are tracked;
-     *    implies RCAP_TYPE_CONTIGUOUS_INPUT and RCAP_TYPE_STMT_INPUT. */
+
+    /**
+     * The transaction state and autocommit mode of the session are tracked; implies RCAP_TYPE_STMT_INPUT.
+     */
     RCAP_TYPE_TRANSACTION_TRACKING = 0x0007,    /* 0b0000000000000111 */
-    /**< Responses are delivered one per buffer. */
+
+    /**
+     * clientReply is called with one packet per buffer. The buffer is always contiguous.
+     */
     RCAP_TYPE_STMT_OUTPUT = 0x0010,     /* 0b0000000000010000 */
-    /**< Each delivered buffer is contiguous; implies RCAP_TYPE_STMT_OUTPUT. */
-    RCAP_TYPE_CONTIGUOUS_OUTPUT = 0x0030,   /* 0b0000000000110000 */
-    /** Result sets are delivered in one buffer; implies RCAP_TYPE_STMT_OUTPUT. */
+
+    /**
+     * Result sets are delivered in one buffer; implies RCAP_TYPE_STMT_OUTPUT.
+     */
     RCAP_TYPE_RESULTSET_OUTPUT = 0x0050,    /* 0b0000000001110000 */
-    /** Results are delivered as a set of complete packets */
+
+    /**
+     * Results are delivered as a set of complete packets. The buffer passed to clientReply can contain
+     * multiple packets.
+     */
     RCAP_TYPE_PACKET_OUTPUT = 0x0080,   /* 0b0000000010000000 */
-    /** Track session state changes, implies packet output */
+
+    /**
+     * Track session state changes; implies RCAP_TYPE_PACKET_OUTPUT
+     */
     RCAP_TYPE_SESSION_STATE_TRACKING = 0x0180,      /* 0b0000000011000000 */
-    /** Request and response tracking: tells when a response to a query is complete.
-     * Implies packet output. */
-    RCAP_TYPE_REQUEST_TRACKING = 0x0283,    /* 0b0000001010000011 */
+
+    /**
+     * Request and response tracking: tells when a response to a query is complete. Implies
+     * RCAP_TYPE_STMT_INPUT and RCAP_TYPE_PACKET_OUTPUT.
+     */
+    RCAP_TYPE_REQUEST_TRACKING = 0x0283,    /* 0b0000000110000011 */
 } mxs_routing_capability_t;
 
 #define RCAP_TYPE_NONE 0

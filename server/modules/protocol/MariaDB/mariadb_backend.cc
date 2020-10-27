@@ -556,7 +556,7 @@ int MariaDBBackendConnection::normal_read()
 
     if (rcap_type_required(capabilities, RCAP_TYPE_PACKET_OUTPUT)
         || rcap_type_required(capabilities, RCAP_TYPE_STMT_OUTPUT)
-        || rcap_type_required(capabilities, RCAP_TYPE_CONTIGUOUS_OUTPUT)
+        || rcap_type_required(capabilities, RCAP_TYPE_STMT_OUTPUT)
         || proto->m_collect_result
         || proto->m_ignore_replies != 0)
     {
@@ -594,7 +594,7 @@ int MariaDBBackendConnection::normal_read()
 
         read_buffer = tmp;
 
-        if (rcap_type_required(capabilities, RCAP_TYPE_CONTIGUOUS_OUTPUT)
+        if (rcap_type_required(capabilities, RCAP_TYPE_STMT_OUTPUT)
             || proto->m_collect_result
             || proto->m_ignore_replies != 0)
         {

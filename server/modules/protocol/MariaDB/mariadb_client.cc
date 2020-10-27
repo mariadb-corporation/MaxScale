@@ -1172,7 +1172,7 @@ MariaDBClientConnection::process_special_queries(mxs::Buffer& buffer)
 bool MariaDBClientConnection::route_statement(mxs::Buffer&& buffer)
 {
     GWBUF* packetbuf = buffer.release();
-    // TODO: Do this only when RCAP_TYPE_CONTIGUOUS_INPUT is requested
+    // TODO: Do this only when RCAP_TYPE_STMT_INPUT is requested
     packetbuf = gwbuf_make_contiguous(packetbuf);
 
     // Must be done whether or not there were any changes, as the query classifier

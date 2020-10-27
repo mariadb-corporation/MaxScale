@@ -32,17 +32,15 @@ config::ParamEnumMask<mxs_routing_capability_t> capabilities(
     &specification,
     "capabilities",
     "Combination of mxs_routing_capabilitiy_t values.",
-    {
-        { RCAP_TYPE_STMT_INPUT, "RCAP_TYPE_STMT_INPUT" },
-        { RCAP_TYPE_CONTIGUOUS_INPUT, "RCAP_TYPE_CONTIGUOUS_INPUT" },
-        { RCAP_TYPE_TRANSACTION_TRACKING, "RCAP_TYPE_TRANSACTION_TRACKING" },
-        { RCAP_TYPE_STMT_OUTPUT, "RCAP_TYPE_STMT_OUTPUT" },
-        { RCAP_TYPE_CONTIGUOUS_OUTPUT, "RCAP_TYPE_CONTIGUOUS_OUTPUT" },
-        { RCAP_TYPE_RESULTSET_OUTPUT, "RCAP_TYPE_RESULTSET_OUTPUT" },
-        { RCAP_TYPE_PACKET_OUTPUT, "RCAP_TYPE_PACKET_OUTPUT" },
-        { RCAP_TYPE_SESSION_STATE_TRACKING, "RCAP_TYPE_SESSION_STATE_TRACKING" },
-        { RCAP_TYPE_REQUEST_TRACKING, "RCAP_TYPE_REQUEST_TRACKING" }
-    },
+        {
+            {RCAP_TYPE_STMT_INPUT, "RCAP_TYPE_STMT_INPUT"},
+            {RCAP_TYPE_TRANSACTION_TRACKING, "RCAP_TYPE_TRANSACTION_TRACKING"},
+            {RCAP_TYPE_STMT_OUTPUT, "RCAP_TYPE_STMT_OUTPUT"},
+            {RCAP_TYPE_RESULTSET_OUTPUT, "RCAP_TYPE_RESULTSET_OUTPUT"},
+            {RCAP_TYPE_PACKET_OUTPUT, "RCAP_TYPE_PACKET_OUTPUT"},
+            {RCAP_TYPE_SESSION_STATE_TRACKING, "RCAP_TYPE_SESSION_STATE_TRACKING"},
+            {RCAP_TYPE_REQUEST_TRACKING, "RCAP_TYPE_REQUEST_TRACKING"}
+        },
     0);
 }
 }
@@ -64,10 +62,10 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         VERSION_STRING,
         MXS_NO_MODULE_CAPABILITIES,
         &mxs::FilterApi<NullFilter>::s_api,
-        nullptr,   /* Process init. */
-        nullptr,   /* Process finish. */
-        nullptr,   /* Thread init. */
-        nullptr,   /* Thread finish. */
+        nullptr,    /* Process init. */
+        nullptr,    /* Process finish. */
+        nullptr,    /* Thread init. */
+        nullptr,    /* Thread finish. */
         {{nullptr}},
         &nullfilter::specification
     };

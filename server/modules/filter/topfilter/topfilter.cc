@@ -159,7 +159,7 @@ public:
 
     uint64_t getCapabilities() const
     {
-        return RCAP_TYPE_CONTIGUOUS_INPUT;
+        return RCAP_TYPE_STMT_INPUT;
     }
 
     mxs::config::Configuration* getConfiguration()
@@ -324,7 +324,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         "A top N query "
         "logging filter",
         "V1.0.1",
-        RCAP_TYPE_CONTIGUOUS_INPUT,
+        RCAP_TYPE_STMT_INPUT,
         &mxs::FilterApi<TopFilter>::s_api,
         NULL,
         NULL,

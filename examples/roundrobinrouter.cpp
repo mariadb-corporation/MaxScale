@@ -130,7 +130,7 @@ public:
 
     // The routing capabilities that this module requires. The getCapabilities entry point and the
     // capabilities given in the module declaration should be the same.
-    static constexpr const uint64_t CAPABILITIES {RCAP_TYPE_CONTIGUOUS_INPUT | RCAP_TYPE_RESULTSET_OUTPUT};
+    static constexpr const uint64_t CAPABILITIES {RCAP_TYPE_STMT_INPUT | RCAP_TYPE_RESULTSET_OUTPUT};
 
     ~RRRouter();
     static RRRouter*    create(SERVICE* pService, mxs::ConfigParameters* params);

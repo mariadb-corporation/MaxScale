@@ -565,7 +565,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         MXS_FILTER_VERSION,
         "Lua Filter",
         "V1.0.0",
-        RCAP_TYPE_CONTIGUOUS_INPUT,
+        RCAP_TYPE_STMT_INPUT,
         &mxs::FilterApi<LuaFilter>::s_api,
         NULL,                       /* Process init. */
         NULL,                       /* Process finish. */

@@ -294,7 +294,7 @@ const RegexToServers* RegexHintFSession::find_servers(char* sql, int sql_len)
  */
 uint64_t RegexHintFilter::getCapabilities() const
 {
-    return RCAP_TYPE_CONTIGUOUS_INPUT;
+    return RCAP_TYPE_STMT_INPUT;
 }
 
 mxs::config::Configuration* RegexHintFilter::getConfiguration()
@@ -908,7 +908,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         MXS_FILTER_VERSION,
         "A routing hint filter that uses regular expressions to direct queries",
         "V1.1.0",
-        RCAP_TYPE_CONTIGUOUS_INPUT,
+        RCAP_TYPE_STMT_INPUT,
         &mxs::FilterApi<RegexHintFilter>::s_api,
         NULL,                                                                   /* Process init. */
         NULL,                                                                   /* Process finish. */

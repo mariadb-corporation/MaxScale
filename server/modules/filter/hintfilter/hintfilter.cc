@@ -44,7 +44,7 @@ json_t* HintInstance::diagnostics() const
 
 uint64_t HintInstance::getCapabilities() const
 {
-    return RCAP_TYPE_CONTIGUOUS_INPUT;
+    return RCAP_TYPE_STMT_INPUT;
 }
 
 mxs::config::Configuration* HintInstance::getConfiguration()
@@ -99,7 +99,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         MXS_FILTER_VERSION,
         "A hint parsing filter",
         "V1.0.0",
-        RCAP_TYPE_CONTIGUOUS_INPUT,
+        RCAP_TYPE_STMT_INPUT,
         &mxs::FilterApi<HintInstance>::s_api,
         NULL,       /* Process init. */
         NULL,       /* Process finish. */

@@ -56,7 +56,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         MXS_ROUTER_VERSION,
         "Provides routing for the Smart Query feature",
         "V1.0.0",
-        RCAP_TYPE_TRANSACTION_TRACKING | RCAP_TYPE_CONTIGUOUS_INPUT | RCAP_TYPE_CONTIGUOUS_OUTPUT,
+        RCAP_TYPE_TRANSACTION_TRACKING | RCAP_TYPE_STMT_INPUT | RCAP_TYPE_STMT_OUTPUT,
         &mxs::RouterApi<SmartRouter>::s_api,
         nullptr,    /* Process init. */
         nullptr,    /* Process finish. */
@@ -158,7 +158,7 @@ json_t* SmartRouter::diagnostics() const
 
 uint64_t SmartRouter::getCapabilities() const
 {
-    return RCAP_TYPE_TRANSACTION_TRACKING | RCAP_TYPE_CONTIGUOUS_INPUT | RCAP_TYPE_CONTIGUOUS_OUTPUT;
+    return RCAP_TYPE_TRANSACTION_TRACKING | RCAP_TYPE_STMT_INPUT | RCAP_TYPE_STMT_OUTPUT;
 }
 
 // Eviction schedule

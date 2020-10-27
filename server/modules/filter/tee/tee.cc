@@ -176,7 +176,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         MXS_FILTER_VERSION,
         "A tee piece in the filter plumbing",
         "V1.1.0",
-        RCAP_TYPE_CONTIGUOUS_INPUT,
+        RCAP_TYPE_STMT_INPUT,
         &mxs::FilterApi<Tee>::s_api,
         NULL,                               /* Process init. */
         NULL,                               /* Process finish. */
