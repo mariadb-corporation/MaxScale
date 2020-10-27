@@ -35,10 +35,9 @@ enum gwbuf_type_t
     GWBUF_TYPE_HTTP           = (1 << 0),
     GWBUF_TYPE_IGNORABLE      = (1 << 1),
     GWBUF_TYPE_COLLECT_RESULT = (1 << 2),
-    GWBUF_TYPE_RESULT         = (1 << 3),
-    GWBUF_TYPE_REPLY_OK       = (1 << 4),
-    GWBUF_TYPE_REPLAYED       = (1 << 5),
-    GWBUF_TYPE_TRACK_STATE    = (1 << 6),
+    GWBUF_TYPE_REPLY_OK       = (1 << 3),
+    GWBUF_TYPE_REPLAYED       = (1 << 4),
+    GWBUF_TYPE_TRACK_STATE    = (1 << 5),
 };
 
 enum  gwbuf_info_t
@@ -104,11 +103,6 @@ inline bool gwbuf_is_type_undefined(GWBUF* b)
 inline bool gwbuf_is_ignorable(GWBUF* b)
 {
     return b->gwbuf_type & GWBUF_TYPE_IGNORABLE;
-}
-
-inline bool gwbuf_is_collected_result(GWBUF* b)
-{
-    return b->gwbuf_type & GWBUF_TYPE_RESULT;
 }
 
 inline bool gwbuf_should_collect_result(GWBUF* b)
