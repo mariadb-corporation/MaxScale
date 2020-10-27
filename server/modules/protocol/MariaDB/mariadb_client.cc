@@ -1450,7 +1450,7 @@ void MariaDBClientConnection::ready_for_reading(DCB* event_dcb)
 
     if (m_state == State::FAILED || m_state == State::QUIT)
     {
-        stop();
+        m_session->kill();
     }
 }
 
@@ -1473,7 +1473,7 @@ void MariaDBClientConnection::error(DCB* event_dcb)
 {
     mxb_assert(m_dcb == event_dcb);
     mxb_assert(m_session->state() != MXS_SESSION::State::STOPPING);
-    stop();
+    m_session->kill();
 }
 
 void MariaDBClientConnection::hangup(DCB* event_dcb)
@@ -1515,7 +1515,7 @@ void MariaDBClientConnection::hangup(DCB* event_dcb)
 
     // We simply close the session, this will propagate the closure to any
     // backend descriptors and perform the session cleanup.
-    stop();
+    m_session->kill();
 }
 
 bool MariaDBClientConnection::init_connection()
@@ -2470,8 +2470,7 @@ void MariaDBClientConnection::add_local_client(LocalClient* client)
     m_local_clients.emplace_back(client);
 }
 
-void MariaDBClientConnection::stop()
+void MariaDBClientConnection::kill()
 {
-    m_session->kill();
     m_local_clients.clear();
 }
