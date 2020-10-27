@@ -521,7 +521,8 @@ bool UserEntry::host_pattern_is_more_specific(const UserEntry& lhs, const UserEn
 }
 
 /**
- * Read a complete MySQL-protocol packet to output buffer. Returns false on read error.
+ * Read a complete MySQL-protocol packet to output buffer. Returns false on read error. At least the header +
+ * command byte part is contiquous.
  *
  * @param dcb Dcb to read from
  * @param output Output for read packet. Should be empty before calling.

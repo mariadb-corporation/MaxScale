@@ -62,7 +62,12 @@ public:
 
     int32_t clientReply(GWBUF* buffer, mxs::ReplyRoute& down, const mxs::Reply& reply) override;
 
-    static bool process_init();
+    /**
+     * Initialize module-level globals.
+     *
+     * @return True on success
+     */
+    static bool module_init();
 
 private:
     /** Return type of process_special_commands() */
@@ -106,7 +111,7 @@ private:
     void cancel_change_user();
 
     void  handle_use_database(GWBUF* read_buffer);
-    char* handle_variables(GWBUF** read_buffer);
+    char* handle_variables(mxs::Buffer& buffer);
 
     SpecialCmdRes process_special_queries(mxs::Buffer& buffer);
     SpecialCmdRes handle_query_kill(GWBUF* read_buffer, uint32_t packet_len);

@@ -166,6 +166,26 @@ public:
         return m_code.get();
     }
 
+    struct SubstringIndexes
+    {
+        size_t begin {0};
+        size_t end {0};
+
+        bool empty() const;
+    };
+
+    /**
+     * Retrieve a named captured substring from the last match. The capture points are saved in thread local
+     * globals, so this should be called right after a "match" call. The returned values are indexes to
+     * the subject string.
+     *
+     * @param name Substring name
+     * @return Substring indexes. The "end" is the index after the substring.
+     */
+    SubstringIndexes substring_ind_by_name(const char* name) const;
+
+    std::string substring_by_name(const char* subject, const char* name) const;
+
 private:
     std::string                 m_pattern;
     mutable std::string         m_error;

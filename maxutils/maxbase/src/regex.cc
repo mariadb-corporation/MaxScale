@@ -32,6 +32,11 @@ public:
         return m_md;
     }
 
+    pcre2_match_data* match_data()
+    {
+        return m_md;
+    }
+
     void enlarge()
     {
         pcre2_match_data_free(m_md);
@@ -268,5 +273,40 @@ std::string pcre2_substitute(pcre2_code* re,
     }
 
     return rval;
+}
+
+Regex::SubstringIndexes Regex::substring_ind_by_name(const char* name) const
+{
+    SubstringIndexes rval;
+    auto md = this_thread.md.match_data();
+    auto name_uchar = reinterpret_cast<PCRE2_SPTR>(name);
+
+    int ss_num = pcre2_substring_number_from_name(m_code.get(), name_uchar);
+    if (ss_num >= 0)
+    {
+        int ovec_ind = 2 * ss_num;      // ovector contains pairs of indexes to subject string.
+        auto* ptr = pcre2_get_ovector_pointer(md);
+        rval.begin = ptr[ovec_ind];
+        rval.end = ptr[ovec_ind + 1];
+    }
+    return rval;
+}
+
+std::string Regex::substring_by_name(const char* subject, const char* name) const
+{
+    std::string rval;
+    auto indexes = substring_ind_by_name(name);
+    if (!indexes.empty())
+    {
+        auto ptr_begin = subject + indexes.begin;
+        auto ptr_end = subject + indexes.end;
+        rval.assign(ptr_begin, ptr_end);
+    }
+    return rval;
+}
+
+bool Regex::SubstringIndexes::empty() const
+{
+    return end <= begin;
 }
 }

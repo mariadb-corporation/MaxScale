@@ -304,7 +304,7 @@ namespace
 {
 int module_init()
 {
-    return MariaDBClientConnection::process_init() ? 0 : 1;
+    return MariaDBClientConnection::module_init() ? 0 : 1;
 }
 }
 

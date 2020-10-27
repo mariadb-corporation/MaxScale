@@ -628,19 +628,18 @@ void MariaDBClientConnection::update_user_account_entry()
 /**
  * Handle relevant variables
  *
- * @param read_buffer  Pointer to a buffer, assumed to contain a statement.
- *                     May be reallocated if not contiguous.
+ * @param buffer  Buffer, assumed to contain a statement. May be reallocated if not contiguous.
  *
  * @return NULL if successful, otherwise dynamically allocated error message.
  */
-char* MariaDBClientConnection::handle_variables(GWBUF** read_buffer)
+char* MariaDBClientConnection::handle_variables(mxs::Buffer& buffer)
 {
     char* message = NULL;
-
+    auto read_buffer = buffer.get();
     SetParser set_parser;
     SetParser::Result result;
 
-    switch (set_parser.check(read_buffer, &result))
+    switch (set_parser.check(&read_buffer, &result))
     {
     case SetParser::ERROR:
         // In practice only OOM.
@@ -1042,22 +1041,29 @@ MariaDBClientConnection::process_special_queries(mxs::Buffer& buffer)
         buffer.make_contiguous();
         if (modutil_extract_SQL(buffer.get(), &sql, &len))
         {
-            // TODO: currently causes allocations, optimize later.
-            auto words = this_unit.special_queries_regex.substr(sql, len);
-            if (!words.empty())
+            const auto& regex = this_unit.special_queries_regex;
+            auto found = regex.match(sql, len);
+            if (found)
             {
                 // Is a tracked command. Look at the captured parts to figure out which one it is.
-                char c = words[1][0];
+                auto main_ind = regex.substring_ind_by_name("main");
+                mxb_assert(!main_ind.empty());
+                char c = sql[main_ind.begin];
                 switch (c)
                 {
                 case 'K':
                 case 'k':
-                    rval = handle_query_kill(buffer.get(), packet_len);
+                    {
+                        rval = handle_query_kill(buffer.get(), packet_len);
+                    }
                     break;
 
                 case 'S':
                 case 's':
-                    start_change_role(move(words[3]));
+                    {
+                        auto role = regex.substring_by_name(sql, "role");
+                        start_change_role(move(role));
+                    }
                     break;
 
                 case 'U':
@@ -2286,16 +2292,17 @@ bool MariaDBClientConnection::large_query_continues(const mxs::Buffer& buffer) c
 bool MariaDBClientConnection::process_normal_packet(mxs::Buffer&& buffer)
 {
     bool success = false;
-    buffer.make_contiguous();
-    auto gwbuf = buffer.get();
-    const uint8_t* data = GWBUF_DATA(gwbuf);
-    auto header = mariadb::get_header(data);
-    m_command = MYSQL_GET_COMMAND(data);
-    bool is_large = (header.pl_length == MYSQL_PACKET_LENGTH_MAX);
+    bool is_large = false;
+    {
+        const uint8_t* data = buffer.data();
+        auto header = mariadb::get_header(data);
+        m_command = MYSQL_GET_COMMAND(data);
+        is_large = (header.pl_length == MYSQL_PACKET_LENGTH_MAX);
+    }
 
     if (mxs_mysql_command_will_respond(m_command))
     {
-        session_retain_statement(m_session, gwbuf);
+        session_retain_statement(m_session, buffer.get());
     }
 
     switch (m_command)
@@ -2331,19 +2338,26 @@ bool MariaDBClientConnection::process_normal_packet(mxs::Buffer&& buffer)
          * The option is stored as a two byte integer with the values 0 for enabling
          * multi-statements and 1 for disabling it.
          */
-        if (data[MYSQL_HEADER_LEN + 2])
         {
-            m_session_data->client_info.m_client_capabilities &= ~GW_MYSQL_CAPABILITIES_MULTI_STATEMENTS;
+            buffer.make_contiguous();
+            auto& caps = m_session_data->client_info.m_client_capabilities;
+            if (buffer.data()[MYSQL_HEADER_LEN + 2])
+            {
+                caps &= ~GW_MYSQL_CAPABILITIES_MULTI_STATEMENTS;
+            }
+            else
+            {
+                caps |= GW_MYSQL_CAPABILITIES_MULTI_STATEMENTS;
+            }
+            success = route_statement(move(buffer));
         }
-        else
-        {
-            m_session_data->client_info.m_client_capabilities |= GW_MYSQL_CAPABILITIES_MULTI_STATEMENTS;
-        }
-        success = route_statement(move(buffer));
+
         break;
 
     case MXS_COM_PROCESS_KILL:
         {
+            buffer.make_contiguous();
+            const uint8_t* data = buffer.data();
             uint64_t process_id = mariadb::get_byte4(data + MYSQL_HEADER_LEN + 1);
             mxs_mysql_execute_kill(process_id, KT_CONNECTION);
             write_ok_packet(1);
@@ -2353,6 +2367,8 @@ bool MariaDBClientConnection::process_normal_packet(mxs::Buffer&& buffer)
 
     case MXS_COM_INIT_DB:
         {
+            buffer.make_contiguous();
+            const uint8_t* data = buffer.data();
             auto start = data + MYSQL_HEADER_LEN + 1;
             auto end = data + buffer.length();
             start_change_db(string(start, end));
@@ -2364,7 +2380,7 @@ bool MariaDBClientConnection::process_normal_packet(mxs::Buffer&& buffer)
         {
             // Track MaxScale-specific sql. If the variable setting succeeds, the query is routed normally
             // so that the same variable is visible on backend.
-            char* errmsg = handle_variables(&gwbuf);
+            char* errmsg = handle_variables(buffer);
             if (errmsg)
             {
                 // No need to route the query, send error to client.
@@ -2517,8 +2533,10 @@ void MariaDBClientConnection::kill()
     m_local_clients.clear();
 }
 
-bool MariaDBClientConnection::process_init()
+bool MariaDBClientConnection::module_init()
 {
+    mxb_assert(this_unit.special_queries_regex.empty());
+
     /*
      * We need to detect the following queries:
      * 1) USE db_name
@@ -2528,10 +2546,10 @@ bool MariaDBClientConnection::process_init()
      * Construct one regex which captures all of the above. The "?:" disables capturing for redundant groups.
      */
     const char regex_string[] =
-        R"(^\s*()"
+        R"(^\s*(?<main>)"
         R"(USE\s+(?<db>\w+))"
         R"(|SET\s+ROLE\s+(?<role>\w+))"
-        R"(|KILL\s+(?:(HARD|SOFT)\s+)?(?:(CONNECTION|QUERY|QUERY\s+ID)\s+)?(\d+|USER\s+\w+))"
+        R"(|KILL\s+(?:(?<koption>HARD|SOFT)\s+)?(?:(?<ktype>CONNECTION|QUERY|QUERY\s+ID)\s+)?(?<ktarget>\d+|USER\s+\w+))"
         R"())";
 
     bool rval = false;
