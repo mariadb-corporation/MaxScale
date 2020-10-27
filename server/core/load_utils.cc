@@ -25,27 +25,27 @@
 #include <algorithm>
 #include <string>
 
-#include <maxscale/modinfo.hh>
-#include <maxscale/version.h>
-#include <maxscale/paths.hh>
 #include <maxbase/alloc.h>
-#include <maxscale/json_api.hh>
-#include <maxscale/modulecmd.hh>
-#include <maxscale/protocol.hh>
-#include <maxscale/router.hh>
-#include <maxscale/filter.hh>
-#include <maxscale/authenticator.hh>
-#include <maxscale/monitor.hh>
-#include <maxscale/query_classifier.hh>
-#include <maxscale/routingworker.hh>
 #include <maxbase/format.hh>
+#include <maxscale/authenticator.hh>
+#include <maxscale/filter.hh>
+#include <maxscale/json_api.hh>
+#include <maxscale/modinfo.hh>
+#include <maxscale/modulecmd.hh>
+#include <maxscale/monitor.hh>
+#include <maxscale/paths.hh>
+#include <maxscale/protocol.hh>
+#include <maxscale/query_classifier.hh>
+#include <maxscale/router.hh>
+#include <maxscale/routingworker.hh>
+#include <maxscale/version.h>
 
-#include "internal/modules.hh"
 #include "internal/config.hh"
+#include "internal/listener.hh"
+#include "internal/modules.hh"
 #include "internal/monitor.hh"
 #include "internal/server.hh"
 #include "internal/service.hh"
-#include "internal/listener.hh"
 
 using std::string;
 using std::unique_ptr;
@@ -65,10 +65,12 @@ struct LOADED_MODULE
 {
     MXS_MODULE* info{nullptr};  /**< The module information */
     void*       handle{nullptr};/**< The handle returned by dlopen */
+    std::string filepath;       /**< Path to file */
 
-    LOADED_MODULE(void* dlhandle, MXS_MODULE* info)
+    LOADED_MODULE(void* dlhandle, MXS_MODULE* info, const string& filepath)
         : info(info)
         , handle(dlhandle)
+        , filepath(filepath)
     {
     }
 
@@ -89,6 +91,12 @@ struct ThisUnit
      * thread. */
     std::map<string, unique_ptr<LOADED_MODULE>> loaded_modules;
 
+    /**
+     * List of module filepaths already loaded. When loading a library through a link, the target filename
+     * should be added to this list.
+     */
+    std::set<string> loaded_filepaths;
+
     bool load_all_ok {false};
 };
 ThisUnit this_unit;
@@ -107,6 +115,7 @@ const char*    module_maturity_to_string(ModuleStatus type);
 const char*    mxs_module_param_type_to_string(mxs_module_param_type type);
 
 bool load_module(const string& fpath, mxs::ModuleType type, const string& given_name = "");
+bool run_module_thread_init(MXS_MODULE* mod_info);
 
 const char madbproto[] = "mariadbprotocol";
 NAME_MAPPING name_mappings[] =
@@ -225,7 +234,7 @@ bool check_module(const MXS_MODULE* mod_info, const string& filepath, ModuleType
 
 int load_module_cb(const char* fpath, const struct stat* sb, int typeflag, struct FTW* ftwbuf)
 {
-    if (typeflag == FTW_F)
+    if (typeflag == FTW_F && this_unit.loaded_filepaths.count(fpath) == 0)
     {
         // Check that the path looks like an .so-file. Also, avoid loading the main library.
         auto last_part_ptr = strrchr(fpath, '/');
@@ -285,7 +294,12 @@ unique_ptr<LOADED_MODULE> load_module_file(const string& filepath, ModuleType ty
                 }
                 else
                 {
-                    rval = std::make_unique<LOADED_MODULE>(dlhandle, mod_info);
+                    // The path may be a link, get the true filepath. Not essential, but is used to avoid
+                    // loading already loaded files.
+                    char buf[PATH_MAX];
+                    auto real_filepath = realpath(fnamec, buf);
+                    rval = std::make_unique<LOADED_MODULE>(dlhandle, mod_info,
+                                                           real_filepath ? real_filepath : "");
                 }
             }
         }
@@ -325,74 +339,26 @@ bool load_module(const string& fname, mxs::ModuleType type, const string& name)
         // happens with the load-all command.
         if (this_unit.loaded_modules.count(mod_name_low) == 0)
         {
-            auto new_kv = std::make_pair(mod_name_low, std::move(loaded_module));
-            this_unit.loaded_modules.insert(std::move(new_kv));
-            MXS_NOTICE("Module '%s' loaded from '%s'.", mod_info->name, fname.c_str());
+            auto process_init_func = mod_info->process_init;
+            bool process_init_ok = !process_init_func || process_init_func() == 0;
 
-            std::atomic_bool init_ok {true};
-            auto process_init = mod_info->process_init;
-            auto thread_init = mod_info->thread_init;
-
-            if (process_init && process_init() != 0)
+            bool thread_init_ok = false;
+            if (process_init_ok)
             {
-                init_ok = false;
-            }
-
-            // Run module thread init functions.
-            if (init_ok && thread_init)
-            {
-                auto run_thread_init = [&init_ok, thread_init]() {
-                        if (thread_init() != 0)
-                        {
-                            init_ok = false;
-                        }
-                    };
-                auto exec_auto = mxs::RoutingWorker::EXECUTE_AUTO;
-
-                auto main_worker = mxs::MainWorker::get();
-                if (main_worker)
+                thread_init_ok = run_module_thread_init(mod_info);
+                if (!thread_init_ok && mod_info->process_finish)
                 {
-                    auto mw_state = main_worker->state();
-                    if (mw_state != mxb::Worker::state_t::POLLING
-                        && mw_state != mxb::Worker::state_t::PROCESSING)
-                    {
-                        main_worker = nullptr;
-                    }
-                }
-
-                if (main_worker)
-                {
-                    main_worker->call(run_thread_init, exec_auto);
-                }
-                if (mxs::RoutingWorker::is_running())
-                {
-                    mxs::RoutingWorker::broadcast(run_thread_init, exec_auto);
-                }
-
-                if (!init_ok)
-                {
-                    // Try to undo.
-                    auto thread_finish = mod_info->thread_finish;
-                    if (thread_finish)
-                    {
-                        auto run_thread_finish = [thread_finish]() {
-                                thread_finish();
-                            };
-                        if (main_worker)
-                        {
-                            main_worker->call(run_thread_finish, exec_auto);
-                        }
-                        if (mxs::RoutingWorker::is_running())
-                        {
-                            mxs::RoutingWorker::broadcast(run_thread_finish, exec_auto);
-                        }
-                    }
+                    mod_info->process_finish();
                 }
             }
 
-            if (init_ok)
+            if (process_init_ok && thread_init_ok)
             {
                 rval = true;
+                auto new_kv = std::make_pair(mod_name_low, std::move(loaded_module));
+                this_unit.loaded_filepaths.insert(new_kv.second->filepath);
+                this_unit.loaded_modules.insert(std::move(new_kv));
+                MXS_NOTICE("Module '%s' loaded from '%s'.", mod_info->name, fname.c_str());
             }
         }
     }
@@ -964,36 +930,63 @@ const char* mxs_module_param_type_to_string(mxs_module_param_type type)
         return "unknown";
     }
 }
-}
 
-ModuleType module_type_from_string(const string& type_str)
+bool run_module_thread_init(MXS_MODULE* mod_info)
 {
-    auto rval = ModuleType::UNKNOWN;
-    if (type_str == "protocol")
+    std::atomic_bool thread_init_ok {true};
+    auto thread_init_func = mod_info->thread_init;
+    if (thread_init_func)
     {
-        rval = ModuleType::PROTOCOL;
+        auto run_thread_init = [&thread_init_ok, thread_init_func]() {
+                if (thread_init_func() != 0)
+                {
+                    thread_init_ok = false;
+                }
+            };
+        auto exec_auto = mxs::RoutingWorker::EXECUTE_AUTO;
+
+        auto main_worker = mxs::MainWorker::get();
+        if (main_worker)
+        {
+            auto mw_state = main_worker->state();
+            if (mw_state != mxb::Worker::state_t::POLLING
+                && mw_state != mxb::Worker::state_t::PROCESSING)
+            {
+                main_worker = nullptr;
+            }
+        }
+
+        if (main_worker)
+        {
+            main_worker->call(run_thread_init, exec_auto);
+        }
+        if (mxs::RoutingWorker::is_running())
+        {
+            mxs::RoutingWorker::broadcast(run_thread_init, exec_auto);
+        }
+
+        if (!thread_init_ok)
+        {
+            // Try to undo.
+            auto thread_finish_func = mod_info->thread_finish;
+            if (thread_finish_func)
+            {
+                auto run_thread_finish = [thread_finish_func]() {
+                        thread_finish_func();
+                    };
+                if (main_worker)
+                {
+                    main_worker->call(run_thread_finish, exec_auto);
+                }
+                if (mxs::RoutingWorker::is_running())
+                {
+                    mxs::RoutingWorker::broadcast(run_thread_finish, exec_auto);
+                }
+            }
+        }
     }
-    else if (type_str == "router")
-    {
-        rval = ModuleType::ROUTER;
-    }
-    else if (type_str == "monitor")
-    {
-        rval = ModuleType::ROUTER;
-    }
-    else if (type_str == "filter")
-    {
-        rval = ModuleType::ROUTER;
-    }
-    else if (type_str == "authenticator")
-    {
-        rval = ModuleType::ROUTER;
-    }
-    else if (type_str == "query_classifier")
-    {
-        rval = ModuleType::ROUTER;
-    }
-    return rval;
+    return thread_init_ok;
+}
 }
 
 bool MXS_MODULE_VERSION::operator==(const MXS_MODULE_VERSION& rhs) const
@@ -1025,10 +1018,34 @@ void add_built_in_module(MXS_MODULE* module)
 {
     auto mod_name_low = mxb::tolower(module->name);
     mxb_assert(this_unit.loaded_modules.count(mod_name_low) == 0);
-    auto new_module = std::make_unique<LOADED_MODULE>(nullptr, module);
+    auto new_module = std::make_unique<LOADED_MODULE>(nullptr, module, "");
     auto new_kv = std::make_pair(mod_name_low, std::move(new_module));
     this_unit.loaded_modules.insert(std::move(new_kv));
 
     // No need to do initializations. It's assumed that the caller has already ran process-level init if any.
     // Workers will run their thread-level inits afterwards.
+}
+
+namespace maxscale
+{
+
+/**
+ * Initialize an authenticator module. Is in public namespace as it's called from protocol code.
+ *
+ * @param authenticator Authenticator name
+ * @param options Authenticator options
+ * @return Authenticator instance or NULL on error
+ */
+std::unique_ptr<AuthenticatorModule>
+authenticator_init(const std::string& authenticator, mxs::ConfigParameters* options)
+{
+    std::unique_ptr<AuthenticatorModule> rval;
+    auto module_info = get_module(authenticator, ModuleType::AUTHENTICATOR);
+    if (module_info)
+    {
+        auto func = (mxs::AUTHENTICATOR_API*)module_info->module_object;
+        rval.reset(func->create(options));
+    }
+    return rval;
+}
 }
