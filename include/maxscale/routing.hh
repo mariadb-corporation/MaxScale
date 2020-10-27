@@ -99,18 +99,19 @@ enum mxs_routing_capability_t
     RCAP_TYPE_REQUEST_TRACKING = (1 << 3) | RCAP_TYPE_STMT_INPUT | RCAP_TYPE_PACKET_OUTPUT,
 
     /**
-     * clientReply is called with one packet per buffer. The buffer is always contiguous.
+     * clientReply is called with one packet per buffer. The buffer is always contiguous. Implies
+     * RCAP_TYPE_PACKET_OUTPUT.
      *
-     * Binary: 0b0000000000010000
+     * Binary: 0b0000000000010100
      */
-    RCAP_TYPE_STMT_OUTPUT = (1 << 4),
+    RCAP_TYPE_STMT_OUTPUT = (1 << 4) | RCAP_TYPE_PACKET_OUTPUT,
 
     /**
-     * All result are delivered in one buffer.
+     * All result are delivered in one buffer. Implies RCAP_TYPE_REQUEST_TRACKING.
      *
-     * Binary: 0b0000000000100000
+     * Binary: 0b0000000000101101
      */
-    RCAP_TYPE_RESULTSET_OUTPUT = (1 << 5),
+    RCAP_TYPE_RESULTSET_OUTPUT = (1 << 5) | RCAP_TYPE_REQUEST_TRACKING,
 
     /**
      * Track session state changes; implies RCAP_TYPE_PACKET_OUTPUT

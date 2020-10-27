@@ -112,6 +112,7 @@ private:
     StateMachineRes send_connection_init_queries();
     bool            send_delayed_packets();
     int             normal_read();
+    int             ignore_reply(GWBUF* read_buffer);
 
     bool backend_write_delayqueue(GWBUF* buffer);
 

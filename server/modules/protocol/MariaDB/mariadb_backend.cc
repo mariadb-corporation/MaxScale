@@ -552,21 +552,16 @@ int MariaDBBackendConnection::normal_read()
     /** Ask what type of output the router/filter chain expects */
     uint64_t capabilities = service_get_capabilities(session->service);
     bool result_collected = false;
-    auto proto = this;
 
-    if (rcap_type_required(capabilities, RCAP_TYPE_PACKET_OUTPUT)
-        || rcap_type_required(capabilities, RCAP_TYPE_STMT_OUTPUT)
-        || rcap_type_required(capabilities, RCAP_TYPE_STMT_OUTPUT)
-        || proto->m_collect_result
-        || proto->m_ignore_replies != 0)
+    if (rcap_type_required(capabilities, RCAP_TYPE_PACKET_OUTPUT) || m_collect_result || m_ignore_replies)
     {
         GWBUF* tmp;
+        bool track = rcap_type_required(capabilities, RCAP_TYPE_REQUEST_TRACKING)
+            && !rcap_type_required(capabilities, RCAP_TYPE_STMT_OUTPUT);
 
-        if (rcap_type_required(capabilities, RCAP_TYPE_REQUEST_TRACKING)
-            && !rcap_type_required(capabilities, RCAP_TYPE_STMT_OUTPUT)
-            && !proto->m_ignore_replies)
+        if ((track || m_collect_result) && !m_ignore_replies)
         {
-            tmp = proto->track_response(&read_buffer);
+            tmp = track_response(&read_buffer);
         }
         else
         {
@@ -586,84 +581,34 @@ int MariaDBBackendConnection::normal_read()
             }
         }
 
-        if (tmp == NULL)
+        if (!tmp)
         {
             /** No complete packets */
             return 0;
         }
 
         read_buffer = tmp;
+    }
 
-        if (rcap_type_required(capabilities, RCAP_TYPE_STMT_OUTPUT)
-            || proto->m_collect_result
-            || proto->m_ignore_replies != 0)
+    if (rcap_type_required(capabilities, RCAP_TYPE_RESULTSET_OUTPUT) || m_collect_result)
+    {
+        m_collectq.append(read_buffer);
+
+        if (!m_reply.is_complete())
         {
-            if ((tmp = gwbuf_make_contiguous(read_buffer)))
-            {
-                read_buffer = tmp;
-            }
-            else
-            {
-                /** Failed to make the buffer contiguous */
-                gwbuf_free(read_buffer);
-                dcb->trigger_hangup_event();
-                return 0;
-            }
-
-            if (rcap_type_required(capabilities, RCAP_TYPE_RESULTSET_OUTPUT) || m_collect_result)
-            {
-                if (rcap_type_required(capabilities, RCAP_TYPE_REQUEST_TRACKING)
-                    && !rcap_type_required(capabilities, RCAP_TYPE_STMT_OUTPUT))
-                {
-                    m_collectq.append(read_buffer);
-
-                    if (!m_reply.is_complete())
-                    {
-                        return 0;
-                    }
-
-                    read_buffer = m_collectq.release();
-                    proto->m_collect_result = false;
-                    result_collected = true;
-                }
-                else if (expecting_text_result())
-                {
-                    if (mxs_mysql_is_result_set(read_buffer))
-                    {
-                        bool more = false;
-                        int eof_cnt = modutil_count_signal_packets(read_buffer, 0, &more, NULL);
-                        if (more || eof_cnt % 2 != 0)
-                        {
-                            dcb->readq_prepend(read_buffer);
-                            return 0;
-                        }
-                    }
-
-                    // Collected the complete result
-                    proto->m_collect_result = false;
-                    result_collected = true;
-                }
-                else if (expecting_ps_response()
-                         && mxs_mysql_is_prep_stmt_ok(read_buffer)
-                         && !complete_ps_response(read_buffer))
-                {
-                    dcb->readq_prepend(read_buffer);
-                    return 0;
-                }
-                else
-                {
-                    // Collected the complete result
-                    proto->m_collect_result = false;
-                    result_collected = true;
-                }
-            }
+            return 0;
         }
+
+        read_buffer = m_collectq.release();
+        m_collect_result = false;
+        result_collected = true;
     }
 
     if (m_changing_user)
     {
-        if (auth_change_requested(read_buffer)
-            && handle_auth_change_response(read_buffer, dcb))
+        read_buffer = gwbuf_make_contiguous(read_buffer);
+
+        if (auth_change_requested(read_buffer) && handle_auth_change_response(read_buffer, dcb))
         {
             gwbuf_free(read_buffer);
             return 0;
@@ -671,156 +616,48 @@ int MariaDBBackendConnection::normal_read()
         else
         {
             /**
-             * The client protocol always requests an authentication method
-             * switch to the same plugin to be compatible with most connectors.
-             *
-             * To prevent packet sequence number mismatch, always return a sequence
-             * of 3 for the final response to a COM_CHANGE_USER.
+             * The client protocol always requests an authentication method switch to the same plugin to be
+             * compatible with most connectors. To prevent packet sequence number mismatch, always return a
+             * sequence of 3 for the final response to a COM_CHANGE_USER.
              */
             GWBUF_DATA(read_buffer)[3] = 0x3;
             m_changing_user = false;
         }
     }
 
-    if (proto->m_ignore_replies > 0)
+    if (m_ignore_replies > 0)
     {
-        /** The reply to a COM_CHANGE_USER is in packet */
-        GWBUF* query = proto->m_stored_query;
-        proto->m_stored_query = NULL;
-        proto->m_ignore_replies--;
-        mxb_assert(proto->m_ignore_replies >= 0);
-        GWBUF* reply = modutil_get_next_MySQL_packet(&read_buffer);
-
-        while (read_buffer)
-        {
-            /** Skip to the last packet if we get more than one */
-            gwbuf_free(reply);
-            reply = modutil_get_next_MySQL_packet(&read_buffer);
-        }
-
-        mxb_assert(reply);
-        mxb_assert(!read_buffer);
-        uint8_t result = MYSQL_GET_COMMAND(GWBUF_DATA(reply));
-        int rval = 0;
-
-        if (result == MYSQL_REPLY_OK)
-        {
-            MXS_INFO("Response to COM_CHANGE_USER is OK, writing stored query");
-            rval = query ? write(query) : 1;
-        }
-        else if (auth_change_requested(reply))
-        {
-            if (handle_auth_change_response(reply, dcb))
-            {
-                /** Store the query until we know the result of the authentication
-                 * method switch. */
-                proto->m_stored_query = query;
-                proto->m_ignore_replies++;
-
-                gwbuf_free(reply);
-                return rval;
-            }
-            else
-            {
-                /** The server requested a change to something other than
-                 * the default auth plugin */
-                gwbuf_free(query);
-                dcb->trigger_hangup_event();
-
-                // TODO: Use the authenticators to handle COM_CHANGE_USER responses
-                MXS_ERROR("Received AuthSwitchRequest to '%s' when '%s' was expected",
-                          (char*)GWBUF_DATA(reply) + 5,
-                          DEFAULT_MYSQL_AUTH_PLUGIN);
-            }
-        }
-        else
-        {
-            /**
-             * The ignorable command failed when we had a queued query from the
-             * client. Generate a fake hangup event to close the DCB and send
-             * an error to the client.
-             */
-            if (result == MYSQL_REPLY_ERR)
-            {
-                /** The COM_CHANGE USER failed, generate a fake hangup event to
-                 * close the DCB and send an error to the client. */
-                handle_error_response(dcb, reply);
-            }
-            else
-            {
-                /** This should never happen */
-                MXS_ERROR("Unknown response to COM_CHANGE_USER (0x%02hhx), "
-                          "closing connection",
-                          result);
-            }
-
-            gwbuf_free(query);
-            dcb->trigger_hangup_event();
-        }
-
-        gwbuf_free(reply);
-        return rval;
+        return ignore_reply(gwbuf_make_contiguous(read_buffer));
     }
 
     do
     {
-        GWBUF* stmt = NULL;
+        GWBUF* stmt = nullptr;
 
-        if (result_collected)
+        if (!result_collected && rcap_type_required(capabilities, RCAP_TYPE_STMT_OUTPUT))
         {
-            /** The result set or PS response was collected, we know it's complete */
-            stmt = read_buffer;
-            read_buffer = NULL;
-            gwbuf_set_type(stmt, GWBUF_TYPE_RESULT);
-
-            // TODO: Remove this and use RCAP_TYPE_REQUEST_TRACKING in maxrows
-            if (rcap_type_required(capabilities, RCAP_TYPE_STMT_OUTPUT)
-                && rcap_type_required(capabilities, RCAP_TYPE_REQUEST_TRACKING))
-            {
-                GWBUF* tmp = proto->track_response(&stmt);
-                mxb_assert(stmt == nullptr);
-                stmt = tmp;
-            }
-        }
-        else if (rcap_type_required(capabilities, RCAP_TYPE_STMT_OUTPUT)
-                 && !rcap_type_required(capabilities, RCAP_TYPE_RESULTSET_OUTPUT))
-        {
-            // TODO: Get rid of RCAP_TYPE_STMT_OUTPUT and rely on RCAP_TYPE_REQUEST_TRACKING to provide all
-            // the required information.
+            // TODO: Get rid of RCAP_TYPE_STMT_OUTPUT and iterate over all packets in the resultset
             stmt = modutil_get_next_MySQL_packet(&read_buffer);
             mxb_assert_message(stmt, "There should be only complete packets in read_buffer");
 
-            if (!gwbuf_is_contiguous(stmt))
-            {
-                // Make sure the buffer is contiguous
-                stmt = gwbuf_make_contiguous(stmt);
-            }
+            // Make sure the buffer is contiguous
+            stmt = gwbuf_make_contiguous(stmt);
 
-            // TODO: Remove this and use RCAP_TYPE_REQUEST_TRACKING in maxrows
-            if (rcap_type_required(capabilities, RCAP_TYPE_REQUEST_TRACKING))
-            {
-                GWBUF* tmp = proto->track_response(&stmt);
-                mxb_assert(stmt == nullptr);
-                stmt = tmp;
-            }
+            GWBUF* tmp = track_response(&stmt);
+            mxb_assert(!stmt);
+            stmt = tmp;
         }
         else
         {
             stmt = read_buffer;
-            read_buffer = NULL;
+            read_buffer = nullptr;
         }
 
         if (session_ok_to_route(dcb))
         {
-            if (result_collected)
-            {
-                // Mark that this is a buffer containing a collected result
-                gwbuf_set_type(stmt, GWBUF_TYPE_RESULT);
-            }
-
             thread_local mxs::ReplyRoute route;
             route.clear();
-            return_code = proto->m_upstream->clientReply(stmt, route, m_reply);
+            return_code = m_upstream->clientReply(stmt, route, m_reply);
         }
         else    /*< session is closing; replying to client isn't possible */
         {
@@ -830,6 +667,85 @@ int MariaDBBackendConnection::normal_read()
     while (read_buffer);
 
     return return_code;
+}
+
+int MariaDBBackendConnection::ignore_reply(GWBUF* read_buffer)
+{
+    /** The reply to a COM_CHANGE_USER is in packet */
+    GWBUF* query = m_stored_query;
+    m_stored_query = nullptr;
+    m_ignore_replies--;
+    mxb_assert(m_ignore_replies >= 0);
+    GWBUF* reply = modutil_get_next_MySQL_packet(&read_buffer);
+
+    while (read_buffer)
+    {
+        /** Skip to the last packet if we get more than one */
+        gwbuf_free(reply);
+        reply = modutil_get_next_MySQL_packet(&read_buffer);
+    }
+
+    mxb_assert(reply);
+    mxb_assert(!read_buffer);
+    uint8_t result = MYSQL_GET_COMMAND(GWBUF_DATA(reply));
+    int rval = 0;
+
+    if (result == MYSQL_REPLY_OK)
+    {
+        MXS_INFO("Response to COM_CHANGE_USER is OK, writing stored query");
+        rval = query ? write(query) : 1;
+    }
+    else if (auth_change_requested(reply))
+    {
+        if (handle_auth_change_response(reply, m_dcb))
+        {
+            /** Store the query until we know the result of the authentication
+             * method switch. */
+            m_stored_query = query;
+            m_ignore_replies++;
+
+            gwbuf_free(reply);
+            return rval;
+        }
+        else
+        {
+            /** The server requested a change to something other than
+             * the default auth plugin */
+            gwbuf_free(query);
+            m_dcb->trigger_hangup_event();
+
+            // TODO: Use the authenticators to handle COM_CHANGE_USER responses
+            MXS_ERROR("Received AuthSwitchRequest to '%s' when '%s' was expected",
+                      (char*)GWBUF_DATA(reply) + 5, DEFAULT_MYSQL_AUTH_PLUGIN);
+        }
+    }
+    else
+    {
+        /**
+         * The ignorable command failed when we had a queued query from the
+         * client. Generate a fake hangup event to close the DCB and send
+         * an error to the client.
+         */
+        if (result == MYSQL_REPLY_ERR)
+        {
+            /** The COM_CHANGE USER failed, generate a fake hangup event to
+             * close the DCB and send an error to the client. */
+            handle_error_response(m_dcb, reply);
+        }
+        else
+        {
+            /** This should never happen */
+            MXS_ERROR("Unknown response to COM_CHANGE_USER (0x%02hhx), "
+                      "closing connection",
+                      result);
+        }
+
+        gwbuf_free(query);
+        m_dcb->trigger_hangup_event();
+    }
+
+    gwbuf_free(reply);
+    return rval;
 }
 
 void MariaDBBackendConnection::write_ready(DCB* event_dcb)
