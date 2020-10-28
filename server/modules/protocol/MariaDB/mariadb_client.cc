@@ -2462,8 +2462,9 @@ bool MariaDBClientConnection::send_mysql_err_packet(int packet_number, int in_af
 void MariaDBClientConnection::add_local_client(LocalClient* client)
 {
     // Prune stale LocalClients before adding the new one
-    auto it = std::remove_if(m_local_clients.begin(), m_local_clients.end(),
-                             std::mem_fn(&LocalClient::is_open));
+    auto it = std::remove_if(m_local_clients.begin(), m_local_clients.end(), [](const auto& client) {
+                                 return !client->is_open();
+                             });
 
     m_local_clients.erase(it, m_local_clients.end());
 
