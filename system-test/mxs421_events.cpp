@@ -72,12 +72,23 @@ int main(int argc, char* argv[])
     srandom(time(NULL));
 
     TestConnections test(argc, argv);
-    int rc = test.maxscales->ssh_node_f(0, true, "test -f /var/log/auth.log");
+    string secure_log;
+    int rc;
+
+    secure_log = "/var/log/auth.log";
+    rc = test.maxscales->ssh_node_f(0, true, "test -f %s", secure_log.c_str());
+    if (rc != 0)
+    {
+        test.tprintf("'/var/log/auth.log` does not exist. trying with '/var/log/secure'");
+    }
+
+    secure_log = "/var/log/secure";
+    rc = test.maxscales->ssh_node_f(0, true, "test -f %s", secure_log.c_str());
 
     if (rc != 0)
     {
-        test.tprintf("Skipping test, `/var/log/auth.log` does not exist.");
-        return 0;
+        test.tprintf("Neither '/var/log/auth.log`, nor '/var/log/secure' exists, failing.");
+        return 1;
     }
 
     test.maxscales->connect();
@@ -91,17 +102,18 @@ int main(int argc, char* argv[])
     sleep(2);
     // There should be an error in maxscale.log
     test.log_includes(0, user.c_str());
-    // But not in /var/log/auth.log
-    test.expect(!found_in_file(test, "/var/log/auth.log", user),
-                "Unexpectedly found %s in /var/log/auth.log",
-                user.c_str());
+    // But not in the authentication log.
+    test.expect(!found_in_file(test, secure_log.c_str(), user),
+                "Unexpectedly found %s in %s",
+                user.c_str(),
+                secure_log.c_str());
 
     // Turn on 'event.authentication_failure.facility=LOG_AUTH'
     test.maxscales->stop();
     test.maxscales->ssh_node_f(0, true, "sed -i 's/#event/event/' /etc/maxscale.cnf");
     test.maxscales->start();
 
-    // Connect again. This should cause an error to be logged to /var/log/auth.log
+    // Connect again. This should cause an error to be logged to the authentication log.
     user = get_unique_user();
     cout << "user: " << user << endl;
     connect_as_user(test, user);
@@ -109,10 +121,11 @@ int main(int argc, char* argv[])
 
     // There should be an error in maxscale.log, as maxlog is not affected by the syslog setting.
     test.log_includes(0, user.c_str());
-    // And in /var/log/auth.log as that's where authentication errors now should go.
-    test.expect(found_in_file(test, "/var/log/auth.log", user),
-                "Unexpectedly NOT found %s in /var/log/auth.log",
-                user.c_str());
+    // And in the authentication log as that's where authentication errors now should go.
+    test.expect(found_in_file(test, secure_log.c_str(), user),
+                "Unexpectedly NOT found %s in %s",
+                user.c_str(),
+                secure_log.c_str());
 
     return test.global_result;
 }
