@@ -679,6 +679,7 @@ bool Config::configure(const mxs::ConfigParameters& params, mxs::ConfigParameter
 
             if (maxscale::event::validate(name, value) == maxscale::event::ACCEPTED)
             {
+                maxscale::event::configure(name, value);
                 found = true;
             }
 
