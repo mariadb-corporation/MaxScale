@@ -47,7 +47,8 @@ for t in `ls $2/t/*.test|xargs -L 1 basename`
 do
     printf "$t:"
     test_name=${t%%.test}
-    mysqltest --host=${maxscale_000_network} --port=$port \
+    mysqltest --no-defaults \
+              --host=${maxscale_000_network} --port=$port \
               --user=$user --password=$password \
               --logdir=log_$1 \
               --test-file=$2/t/$test_name.test \
