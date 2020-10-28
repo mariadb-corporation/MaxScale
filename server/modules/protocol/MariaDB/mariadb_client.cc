@@ -1724,6 +1724,7 @@ void MariaDBClientConnection::execute_kill(std::shared_ptr<KillInfo> info)
                             client->queue_query(modutil_create_query(a.second.c_str()));
                             client->queue_query(mysql_create_com_quit(NULL, 0));
 
+                            mxb_assert(ref->state() != MXS_SESSION::State::STOPPING);
                             add_local_client(client);
                         }
                     }
