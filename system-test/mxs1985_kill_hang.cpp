@@ -18,6 +18,7 @@ static atomic<bool> running {true};
 
 void mxs1985(TestConnections& test)
 {
+    test.stop_timeout();
     running = true;
     vector<thread> threads;
 
@@ -55,6 +56,7 @@ void mxs1985(TestConnections& test)
 
 void mxs3251(TestConnections& test)
 {
+    test.stop_timeout();
     running = true;
     vector<thread> threads;
 
