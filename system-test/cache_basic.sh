@@ -19,7 +19,8 @@ function run_test
     echo $test_name
     logdir=log_$test_name
     mkdir -p $logdir
-    mysqltest --host=${maxscale_000_network} --port=$port \
+    mysqltest --no-defaults \
+              --host=${maxscale_000_network} --port=$port \
               --user=$user --password=$password \
               --logdir=$logdir \
               --test-file=$dir/t/$test_name.test \
