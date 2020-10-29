@@ -795,6 +795,8 @@ static bool multi_source_replication(MYSQL* conn, int node)
             printf("Node %d: More than one configured slave\n", node);
             fflush(stdout);
         }
+
+        mysql_free_result(res);
     }
     else
     {
