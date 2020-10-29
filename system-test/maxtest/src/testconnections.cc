@@ -346,19 +346,16 @@ TestConnections::~TestConnections()
      *  }
      */
 
-    if (repl)
-    {
-        delete repl;
-    }
-    if (galera)
-    {
-        delete galera;
-    }
+    delete repl;
+    delete galera;
+    delete xpand;
 
     if (maxscale::multiple_maxscales)
     {
         maxscales->stop_all();
     }
+
+    delete maxscales;
 
     if (global_result)
     {

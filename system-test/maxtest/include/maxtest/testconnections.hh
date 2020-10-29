@@ -96,7 +96,7 @@ public:
      */
     Mariadb_nodes* repl {nullptr};
 
-    Xpand_nodes * xpand;
+    Xpand_nodes * xpand {nullptr};
 
     /**
      * @brief maxscales Maxscale object containing referebces to all Maxscale machines
