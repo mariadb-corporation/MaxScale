@@ -28,7 +28,6 @@
 #define PTR_IS_OK(b)           (b[4] == 0x00)
 #define PTR_IS_ERR(b)          (b[4] == 0xff)
 #define PTR_IS_LOCAL_INFILE(b) (b[4] == 0xfb)
-#define IS_FULL_RESPONSE(buf)  (modutil_count_signal_packets(buf, 0, 0) == 2)
 
 /** Static initialization define for modutil_state */
 #define MODUTIL_STATE_INIT {0}
@@ -181,8 +180,8 @@ retblock:
     return len;
 }
 
-int           modutil_count_statements(GWBUF* buffer);
-int           modutil_count_packets(GWBUF* buffer);
+int modutil_count_statements(GWBUF* buffer);
+int modutil_count_packets(GWBUF* buffer);
 
 GWBUF* modutil_create_query(const char* query);
 GWBUF* modutil_create_mysql_err_msg(int packet_number, int affected_rows, int merrno,
@@ -195,28 +194,6 @@ typedef struct
 {
     uint8_t state;
 } modutil_state;
-
-/**
- * @brief Count the number of EOF and ERR packets in the buffer.
- *
- * Only complete packets are inspected and the buffer is assumed to only contain
- * whole packets. If partial packets are in the buffer, they are ignored.
- * The caller must handle the detection of partial packets in buffers.
- *
- * Before the first invocation, the value pointed by the @c state parameter
- * should be initialized with MODUTIL_STATE_INIT. All subsequent calls with a
- * partially processed result set must be made with only unprocessed packets
- * in @c reply.
- *
- * @param reply      Buffer to use
- * @param n_found    Number of previous found packets
- * @param more       Set to true if more results exist
- * @param state      Internal state of the function, NULL if the function is
- *                   only called once per result set
- *
- * @return Total number of EOF and ERR packets including the ones already found
- */
-int modutil_count_signal_packets(GWBUF* reply, int n_found, bool* more, modutil_state* state);
 
 mxs_pcre2_result_t modutil_mysql_wildcard_match(const char* pattern, const char* string);
 
