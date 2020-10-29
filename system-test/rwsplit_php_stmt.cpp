@@ -73,8 +73,8 @@ int main(int argc, char* argv[])
             test_dir,
             Test->maxscales->ip4(0),
             Test->maxscales->rwsplit_port[0],
-            Test->maxscales->user_name,
-            Test->maxscales->password);
+            Test->maxscales->user_name.c_str(),
+            Test->maxscales->password.c_str());
 
     Test->tprintf("Executing PHP script: %s\n", str);
     Test->add_result(system(str), "PHP script FAILED!\n");

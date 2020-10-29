@@ -195,15 +195,16 @@ int Maxscales::start_maxscale(int m)
                              "--log-file=/%s/valgrind%02d.log --trace-children=yes "
                              " --tool=callgrind --callgrind-out-file=/%s/callgrind%02d.log "
                              " /usr/bin/maxscale",
-                             maxscale_log_dir[m], valgring_log_num,
-                             maxscale_log_dir[m], valgring_log_num);
+                             maxscale_log_dir[m].c_str(), valgring_log_num,
+                             maxscale_log_dir[m].c_str(), valgring_log_num);
         }
         else
         {
             res = ssh_node_f(m, false,
                              "sudo --user=maxscale valgrind --leak-check=full --show-leak-kinds=all "
                              "--log-file=/%s/valgrind%02d.log --trace-children=yes "
-                             "--track-origins=yes /usr/bin/maxscale", maxscale_log_dir[m], valgring_log_num);
+                             "--track-origins=yes /usr/bin/maxscale",
+                             maxscale_log_dir[m].c_str(), valgring_log_num);
         }
         valgring_log_num++;
     }

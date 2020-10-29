@@ -6,10 +6,15 @@
 
 using std::string;
 
-char* readenv(const char * name, const char *format, ...)
+string readenv(const char * name, const char *format, ...)
 {
-    char * env = getenv(name);
-    if (!env)
+    string rv;
+    char* env = getenv(name);
+    if (env)
+    {
+        rv = env;
+    }
+    else
     {
         va_list valist;
 
@@ -28,8 +33,11 @@ char* readenv(const char * name, const char *format, ...)
         vsnprintf(env, message_len + 1, format, valist);
         va_end(valist);
         setenv(name, env, 1);
+
+        rv = env;
+        free(env);
     }
-    return env;
+    return rv;
 }
 
 string envvar_get_set(const char* name, const char* format, ...)

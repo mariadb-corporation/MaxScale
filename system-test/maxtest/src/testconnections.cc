@@ -476,8 +476,8 @@ void TestConnections::read_env()
 void TestConnections::print_env()
 {
     printf("Maxscale IP\t%s\n", maxscales->ip4(0));
-    printf("Maxscale User name\t%s\n", maxscales->user_name);
-    printf("Maxscale Password\t%s\n", maxscales->password);
+    printf("Maxscale User name\t%s\n", maxscales->user_name.c_str());
+    printf("Maxscale Password\t%s\n", maxscales->password.c_str());
     printf("Maxscale SSH key\t%s\n", maxscales->sshkey(0));
     printf("Access user\t%s\n", maxscales->access_user(0));
     if (repl)
@@ -662,8 +662,8 @@ void TestConnections::init_maxscale(int m)
                           "iptables -F INPUT;"
                           "rm -rf %s/*.log /tmp/core* /dev/shm/* /var/lib/maxscale/* /var/lib/maxscale/.secrets;"
                           "find /var/*/maxscale -name 'maxscale.lock' -delete;",
-                          maxscales->maxscale_cnf[m],
-                          maxscales->maxscale_log_dir[m]);
+                          maxscales->maxscale_cnf[m].c_str(),
+                          maxscales->maxscale_log_dir[m].c_str());
     if (maxscale::start)
     {
         maxscales->restart_maxscale(m);
@@ -789,9 +789,9 @@ void TestConnections::copy_one_maxscale_log(int i, double timestamp)
                                        "test -e /tmp/core*  && exit 42;",
                                        homedir,
                                        homedir,
-                                       maxscales->maxscale_log_dir[i], homedir,
+                                       maxscales->maxscale_log_dir[i].c_str(), homedir,
                                        homedir,
-                                       maxscales->maxscale_cnf[i], homedir,
+                                       maxscales->maxscale_cnf[i].c_str(), homedir,
                                        homedir);
         sprintf(sys, "%s/logs/*", homedir);
         maxscales->copy_from_node(i, sys, log_dir_i);
@@ -799,9 +799,9 @@ void TestConnections::copy_one_maxscale_log(int i, double timestamp)
     }
     else
     {
-        maxscales->ssh_node_f(i, true, "cp %s/*.logs %s/", maxscales->maxscale_log_dir[i], log_dir_i);
+        maxscales->ssh_node_f(i, true, "cp %s/*.logs %s/", maxscales->maxscale_log_dir[i].c_str(), log_dir_i);
         maxscales->ssh_node_f(i, true, "cp /tmp/core* %s/", log_dir_i);
-        maxscales->ssh_node_f(i, true, "cp %s %s/", maxscales->maxscale_cnf[i], log_dir_i);
+        maxscales->ssh_node_f(i, true, "cp %s %s/", maxscales->maxscale_cnf[i].c_str(), log_dir_i);
         maxscales->ssh_node_f(i, true, "chmod a+r -R %s", log_dir_i);
     }
 }
@@ -850,27 +850,27 @@ int TestConnections::prepare_binlog(int m)
         add_result(maxscales->ssh_node_f(m,
                                          true,
                                          "sed -i \"s/,mariadb10-compatibility=1//\" %s",
-                                         maxscales->maxscale_cnf[m]),
+                                         maxscales->maxscale_cnf[m].c_str()),
                    "Error editing maxscale.cnf");
     }
 
     if (!m_local_maxscale)
     {
         tprintf("Removing all binlog data from Maxscale node");
-        add_result(maxscales->ssh_node_f(m, true, "rm -rf %s", maxscales->maxscale_binlog_dir[m]),
+        add_result(maxscales->ssh_node_f(m, true, "rm -rf %s", maxscales->maxscale_binlog_dir[m].c_str()),
                    "Removing binlog data failed");
 
         tprintf("Creating binlog dir");
-        add_result(maxscales->ssh_node_f(m, true, "mkdir -p %s", maxscales->maxscale_binlog_dir[m]),
+        add_result(maxscales->ssh_node_f(m, true, "mkdir -p %s", maxscales->maxscale_binlog_dir[m].c_str()),
                    "Creating binlog data dir failed");
         tprintf("Set 'maxscale' as a owner of binlog dir");
         add_result(maxscales->ssh_node_f(m,
                                          false,
                                          "%s mkdir -p %s; %s chown maxscale:maxscale -R %s",
                                          maxscales->access_sudo(m),
-                                         maxscales->maxscale_binlog_dir[m],
+                                         maxscales->maxscale_binlog_dir[m].c_str(),
                                          maxscales->access_sudo(m),
-                                         maxscales->maxscale_binlog_dir[m]),
+                                         maxscales->maxscale_binlog_dir[m].c_str()),
                    "directory ownership change failed");
     }
     else
@@ -951,7 +951,7 @@ int TestConnections::start_binlog(int m)
     if (!m_local_maxscale)
     {
         tprintf("ls binlog data dir on Maxscale node\n");
-        add_result(maxscales->ssh_node_f(m, true, "ls -la %s/", maxscales->maxscale_binlog_dir[m]),
+        add_result(maxscales->ssh_node_f(m, true, "ls -la %s/", maxscales->maxscale_binlog_dir[m].c_str()),
                    "ls failed\n");
     }
 

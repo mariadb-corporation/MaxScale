@@ -526,8 +526,8 @@ void run(TestConnections& test)
     {
         const char* zHost = test.maxscales->ip4(0);
         int port = test.maxscales->rwsplit_port[0];
-        const char* zUser = test.maxscales->user_name;
-        const char* zPassword = test.maxscales->password;
+        const char* zUser = test.maxscales->user_name.c_str();
+        const char* zPassword = test.maxscales->password.c_str();
 
         cout << "Connecting to " << zHost << ":" << port << " as " << zUser << ":" << zPassword << endl;
         cout << "Starting clients." << endl;

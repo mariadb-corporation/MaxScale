@@ -21,7 +21,7 @@ int check_sha1(TestConnections* Test)
         Test->maxscales->ssh_node_f(0,
                                     true,
                                     "ls -la %s/mar-bin.0000*",
-                                    Test->maxscales->maxscale_binlog_dir[0]);
+                                    Test->maxscales->maxscale_binlog_dir[0].c_str());
         Test->tprintf("Master");
         Test->set_timeout(50);
         Test->maxscales->ssh_node(0, "ls -la /var/lib/mysql/mar-bin.0000*", false);
@@ -38,7 +38,7 @@ int check_sha1(TestConnections* Test)
         Test->maxscales->ssh_node_f(0,
                                     true,
                                     "ls -la %s/mar-bin.0000*",
-                                    Test->maxscales->maxscale_binlog_dir[0]);
+                                    Test->maxscales->maxscale_binlog_dir[0].c_str());
 
         Test->tprintf("Master");
         Test->set_timeout(50);
@@ -58,7 +58,7 @@ int check_sha1(TestConnections* Test)
         Test->maxscales->ssh_node_f(0,
                                     true,
                                     "ls -la %s/mar-bin.0000*",
-                                    Test->maxscales->maxscale_binlog_dir[0]);
+                                    Test->maxscales->maxscale_binlog_dir[0].c_str());
 
         Test->tprintf("Master");
         Test->set_timeout(50);
@@ -70,7 +70,7 @@ int check_sha1(TestConnections* Test)
             Test->tprintf("FILE: 000000%d", i);
             Test->set_timeout(50);
             std::string cmd = mxb::string_printf("sha1sum %s/mar-bin.00000%d",
-                                                 Test->maxscales->maxscale_binlog_dir[0], i);
+                                                 Test->maxscales->maxscale_binlog_dir[0].c_str(), i);
             auto s_maxscale = Test->maxscales->ssh_output(cmd);
             if (!s_maxscale.output.empty())
             {

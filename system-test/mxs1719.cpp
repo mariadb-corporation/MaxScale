@@ -35,8 +35,8 @@ void run(TestConnections& test)
     MYSQL* pMysql = mysql_init(NULL);
     test.expect(pMysql, "Could not create MYSQL handle.");
 
-    const char* zUser = test.maxscales->user_name;
-    const char* zPassword = test.maxscales->password;
+    const char* zUser = test.maxscales->user_name.c_str();
+    const char* zPassword = test.maxscales->password.c_str();
     int port = test.maxscales->rwsplit_port[0];
 
     if (mysql_real_connect(pMysql,

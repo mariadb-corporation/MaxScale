@@ -22,7 +22,8 @@ void run_test(TestConnections& test, MYSQL* conn)
     test.expect(execute_query_silent(conn, "INSERT INTO t1 VALUES (77, 11);") != 0,
                 "INSERT query succeeded without INSERT privilege");
 
-    test.expect(mysql_change_user(conn, test.repl->user_name, test.repl->password, "test") == 0,
+    test.expect(mysql_change_user(conn,
+                                  test.repl->user_name.c_str(), test.repl->password.c_str(), "test") == 0,
                 "changing user failed: %s", mysql_error(conn));
 
     test.expect(execute_query_silent(conn, "INSERT INTO t1 VALUES (77, 11);") == 0,

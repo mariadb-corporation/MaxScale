@@ -25,8 +25,8 @@ void change_master(TestConnections& test, int slave, int master, const char* nam
                   "START ALL SLAVES",
                   source.c_str(),
                   test.repl->ip_private(master),
-                  test.repl->user_name,
-                  test.repl->password);
+                  test.repl->user_name.c_str(),
+                  test.repl->password.c_str());
 }
 
 void check_status(TestConnections& test, const StringSet& expected_master, const StringSet& expected_slave)

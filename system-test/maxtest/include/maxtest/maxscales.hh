@@ -102,17 +102,17 @@ public:
     /**
      * @brief maxscale_cnf full name of Maxscale configuration file
      */
-    char* maxscale_cnf[256];
+    std::string maxscale_cnf[256];
 
     /**
      * @brief maxscale_log_dir name of log files directory
      */
-    char* maxscale_log_dir[256];
+    std::string maxscale_log_dir[256];
 
     /**
      * @brief maxscale_lbinog_dir name of binlog files (for binlog router) directory
      */
-    char* maxscale_binlog_dir[256];
+    std::string maxscale_binlog_dir[256];
 
     /**
      * @brief N_ports Default number of routers
@@ -129,11 +129,11 @@ public:
     /**
      * @brief   User name to access backend nodes
      */
-    char* user_name;
+    std::string user_name;
     /**
      * @brief   Password to access backend nodes
      */
-    char* password;
+    std::string password;
 
     /**
      * @brief ConnectMaxscale   Opens connections to RWSplit, ReadConn master and ReadConn slave Maxscale
