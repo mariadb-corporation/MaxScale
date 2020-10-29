@@ -17,6 +17,8 @@ class MariaDB;
 class Maxscales : public Nodes
 {
 public:
+    static const int MAX_MAXSCALES = 256;
+
     enum service
     {
         RWSPLIT,
@@ -26,6 +28,8 @@ public:
 
     Maxscales(const char* pref, const char* test_cwd, bool verbose,
               const std::string& network_config);
+
+    ~Maxscales();
 
     bool setup() override;
 
@@ -47,17 +51,17 @@ public:
     /**
      * @brief rwsplit_port RWSplit service port
      */
-    int rwsplit_port[256];
+    int rwsplit_port[MAX_MAXSCALES];
 
     /**
      * @brief readconn_master_port ReadConnection in master mode service port
      */
-    int readconn_master_port[256];
+    int readconn_master_port[MAX_MAXSCALES] {};
 
     /**
      * @brief readconn_slave_port ReadConnection in slave mode service port
      */
-    int readconn_slave_port[256];
+    int readconn_slave_port[MAX_MAXSCALES] {};
 
     /**
      * @brief Get port number of a MaxScale service
@@ -72,59 +76,59 @@ public:
     /**
      * @brief binlog_port binlog router service port
      */
-    int binlog_port[256];
+    int binlog_port[MAX_MAXSCALES] {};
 
     /**
      * @brief conn_rwsplit  MYSQL connection struct to RWSplit service
      */
-    MYSQL* conn_rwsplit[256];
+    MYSQL* conn_rwsplit[MAX_MAXSCALES] {};
 
     /**
      * @brief conn_master   MYSQL connection struct to ReadConnection in master mode service
      */
-    MYSQL* conn_master[256];
+    MYSQL* conn_master[MAX_MAXSCALES] {};
 
     /**
      * @brief conn_slave MYSQL connection struct to ReadConnection in slave mode service
      */
-    MYSQL* conn_slave[256];
+    MYSQL* conn_slave[MAX_MAXSCALES] {};
 
     /**
      * @brief routers Array of 3 MYSQL handlers which contains copies of conn_rwsplit, conn_master, conn_slave
      */
-    MYSQL* routers[256][3];
+    MYSQL* routers[MAX_MAXSCALES][3] {};
 
     /**
      * @brief ports of 3 int which contains copies of rwsplit_port, readconn_master_port, readconn_slave_port
      */
-    int ports[256][3];
+    int ports[MAX_MAXSCALES][3] {};
 
     /**
      * @brief maxscale_cnf full name of Maxscale configuration file
      */
-    std::string maxscale_cnf[256];
+    std::string maxscale_cnf[MAX_MAXSCALES];
 
     /**
      * @brief maxscale_log_dir name of log files directory
      */
-    std::string maxscale_log_dir[256];
+    std::string maxscale_log_dir[MAX_MAXSCALES];
 
     /**
      * @brief maxscale_lbinog_dir name of binlog files (for binlog router) directory
      */
-    std::string maxscale_binlog_dir[256];
+    std::string maxscale_binlog_dir[MAX_MAXSCALES];
 
     /**
      * @brief N_ports Default number of routers
      */
-    int N_ports[256];
+    int N_ports[MAX_MAXSCALES] {};
 
     /**
      * @brief test_dir path to test application
      */
-    char test_dir[4096];
+    char test_dir[4096] {};
 
-    bool ssl;
+    bool ssl = false;
 
     /**
      * @brief   User name to access backend nodes
@@ -359,18 +363,18 @@ public:
     /**
      * @brief use_valrind if true Maxscale will be executed under Valgrind
      */
-    bool use_valgrind;
+    bool use_valgrind {false};
 
     /**
      * @brief use_callgrind if true Maxscale will be executed under Valgrind with
      * --callgrind option
      */
-    bool use_callgrind;
+    bool use_callgrind {false};
 
     /**
      * @brief valgring_log_num Counter for Maxscale restarts to avoid Valgrind log overwriting
      */
-    int valgring_log_num;
+    int valgring_log_num {0};
 
 private:
     bool m_use_ipv6 {false};    /**< Default to ipv6-addresses */

@@ -25,6 +25,14 @@ Maxscales::Maxscales(const char* pref,
     strcpy(this->test_dir, test_cwd);
 }
 
+Maxscales::~Maxscales()
+{
+    for (int i = 0; i < MAX_MAXSCALES; ++i)
+    {
+        close_maxscale_connections(i);
+    }
+}
+
 bool Maxscales::setup()
 {
     read_env();     // Sets e.g. use_valgrind.
@@ -164,6 +172,10 @@ int Maxscales::close_maxscale_connections(int m)
     mysql_close(conn_master[m]);
     mysql_close(conn_slave[m]);
     mysql_close(conn_rwsplit[m]);
+
+    conn_master[m] = nullptr;
+    conn_slave[m] = nullptr;
+    conn_rwsplit[m] = nullptr;
     return 0;
 }
 
