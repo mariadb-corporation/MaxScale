@@ -16,8 +16,7 @@
 #include <inttypes.h>
 #include <string>
 #include <maxbase/alloc.h>
-
-#define NO_THREAD_ID 0
+#include <maxbase/format.hh>
 
 using kill_type_t = MariaDBClientConnection::kill_type_t;
 constexpr auto KT_HARD = MariaDBClientConnection::KT_HARD;
@@ -25,105 +24,126 @@ constexpr auto KT_SOFT = MariaDBClientConnection::KT_SOFT;
 constexpr auto KT_CONNECTION = MariaDBClientConnection::KT_CONNECTION;
 constexpr auto KT_QUERY = MariaDBClientConnection::KT_QUERY;
 
-int test_one_query(const char* query,
-                   bool should_succeed,
-                   uint64_t expected_tid,
-                   uint32_t expected_kt,
-                   std::string expected_user)
+struct test_t
 {
-    char* query_copy = MXS_STRDUP_A(query);
-    uint64_t result_tid = 1111111;
-    kill_type_t result_kt = KT_QUERY;
-    std::string user;
+    std::string query;
+    bool        should_succeed {false};
+    uint64_t    correct_id {0};
+    uint32_t    correct_kt {0};
+    std::string correct_user;
+};
 
-    /* If the parse fails, these should remain unchanged */
-    if (!should_succeed)
+int test_one_query(test_t test)
+{
+    auto& sql = test.query;
+    auto len = sql.length();
+
+    MariaDBClientConnection::KillQueryContents kill_contents;
+    bool is_kill_query = false;
+
+    // This part should closely match MariaDBClientConnection::process_special_queries so that the regex
+    // is used properly.
+    const auto& regex = MariaDBClientConnection::special_queries_regex();
+    auto found = regex.match(sql.c_str(), len);
+    if (found)
     {
-        result_tid = expected_tid;
-        result_kt = (kill_type_t)expected_kt;
-    }
-    bool success = MariaDBClientConnection::parse_kill_query(query_copy, &result_tid, &result_kt, &user);
-    MXS_FREE(query_copy);
+        auto main_ind = regex.substring_ind_by_name("main");
+        mxb_assert(!main_ind.empty());
+        char c = sql[main_ind.begin];
+        switch (c)
+        {
+        case 'K':
+        case 'k':
+            {
+                is_kill_query = true;
+                kill_contents = MariaDBClientConnection::parse_kill_query_elems(sql.c_str());
+            }
+            break;
 
-    if (success == should_succeed && result_tid == expected_tid
-        && result_kt == expected_kt && expected_user == user)
+        default:
+            break;
+        }
+    }
+
+    std::string errmsg;
+    if (is_kill_query != test.should_succeed)
+    {
+        errmsg = mxb::string_printf("Expected success '%d', got '%d'", test.should_succeed, is_kill_query);
+    }
+    else if (kill_contents.kt != test.correct_kt)
+    {
+        errmsg = mxb::string_printf("Expected kill type '%u', got '%u'", test.correct_kt, kill_contents.kt);
+    }
+    else if (kill_contents.id != test.correct_id)
+    {
+        errmsg = mxb::string_printf("Expected thread id '%lu', got '%lu'", test.correct_id, kill_contents.id);
+    }
+    else if (kill_contents.user != test.correct_user)
+    {
+        errmsg = mxb::string_printf("Expected user '%s', got '%s'",
+                                    test.correct_user.c_str(), kill_contents.user.c_str());
+    }
+    if (errmsg.empty())
     {
         return 0;
     }
     else
     {
-        printf("Result wrong on query: '%s'.\n", query);
-        if (success != should_succeed)
-        {
-            printf("Expected success '%d', got '%d'.\n", should_succeed, success);
-        }
-        if (result_tid != expected_tid)
-        {
-            printf("Expected thread id '%" PRIu64 "', got '%" PRIu64 "'.\n", expected_tid, result_tid);
-        }
-        if (result_kt != expected_kt)
-        {
-            printf("Expected kill type '%u', got '%u'.\n", expected_kt, result_kt);
-        }
-        if (expected_user != user)
-        {
-            printf("Expected user '%s', got '%s'.\n", expected_user.c_str(), user.c_str());
-        }
-        printf("\n");
+        printf("Result wrong on query: '%s': %s.\n", sql.c_str(), errmsg.c_str());
         return 1;
     }
 }
-typedef struct test_t
-{
-    const char* query;
-    bool        should_succeed;
-    uint64_t    correct_id;
-    int         correct_kt;
-    const char* correct_user;
-} test_t;
 
 int main(int argc, char** argv)
 {
+    mxs_log_init(NULL, ".", MXS_LOG_TARGET_STDOUT);
+    MariaDBClientConnection::module_init();
+
+    /*
+     * The second column is true for cases where the query matches the regex, but reading the id fails due
+     * to overflow. In these cases the third col is 0, as the parser returns that by default. 0 is not a
+     * valid connection id.
+     *
+     * Also, the regex does not check the remainder of the query. This could be added, but would cause
+     * comments to reject an otherwise fine kill-query. This means that currently, "kill connection 123 HARD"
+     * is interpreted as "kill connection 123".
+     */
+
     test_t tests[] =
     {
         {" kill ConNectioN 123  ",                     true,  123,          KT_CONNECTION          },
         {"kIlL  coNNectioN 987654321  ;",              true,  987654321,    KT_CONNECTION          },
-        {" Ki5L CoNNectioN 987654321  ",               false, 0,            KT_CONNECTION          },
-        {"1",                                          false, 0,            KT_CONNECTION          },
-        {"kILL 1",                                     true,  1,            KT_CONNECTION          },
+        {" Ki5L CoNNectioN 987654321  ",               false,                                      },
+        {"1",                                          false,                                      },
+        {"kILL 1",                                     true,  1,                                   },
         {"\n\t kill \nQueRy 456",                      true,  456,          KT_QUERY               },
-        {"     A         kill 1;     ",                false, 0,            KT_CONNECTION          },
-        {" kill connection 1A",                        false, 0,            KT_CONNECTION          },
-        {" kill connection 1 A ",                      false, 0,            KT_CONNECTION          },
-        {"kill query 7 ; select * ",                   false, 0,            KT_CONNECTION          },
-        // 32-bit integer overflow
-        {"KIll query 12345678901234567890",            false, 0,            KT_QUERY               },
-        {"KIll query   \t    \n    \t   21  \n \t   ", true,  21,           KT_QUERY               },
-        {"KIll   \t    \n    \t   -6  \n \t   ",       false, 0,            KT_CONNECTION          },
-        {"KIll 12345678901234567890123456  \n \t   ",  false, 0,            KT_CONNECTION          },
-        {"kill ;",                                     false, 0,            KT_QUERY               },
-        {" kill ConNectioN 123 HARD",                  false, 123,          KT_CONNECTION          },
-        {" kill ConNectioN 123 SOFT",                  false, 123,          KT_CONNECTION          },
-        {" kill ConNectioN SOFT 123",                  false, 123,          KT_CONNECTION          },
-        {" kill  HARD ConNectioN 123",                 true,  123,          KT_CONNECTION | KT_HARD},
+        {"     A         kill 1;     ",                false,                                      },
+        {" kill connection 1A",                        false,                                      },
+        {" kill connection 1 A ",                      true,  1,            KT_CONNECTION          },
+        {"kill query 7 ; select * ",                   true,  7,            KT_QUERY               },
+        // 64-bit integer overflow
+        {"KIll query 123456789012345678901",           true,  0,            KT_QUERY               },
+        {"KIll query   \t    \t   21  \n \t  ",        true,  21,           KT_QUERY               },
+        {"KIll   \t    \n    \t   -6  \n \t   ",       false,                                      },
+        {"KIll 12345678901234567890123456 \n \t",      true,                                       },
+        {"kill ;",                                     false, 0,                                   },
+        {" kill ConNectioN 123 HARD",                  true, 123,           KT_CONNECTION          },
+        {" kill ConNectioN 123 SOFT",                  true, 123,           KT_CONNECTION          },
+        {" kill ConNectioN SOFT 123",                  false, 0,                                   },
+        {"           kill  HARD ConNectioN 123",       true,  123,          KT_CONNECTION | KT_HARD},
         {" kill  SOFT ConNectioN 123",                 true,  123,          KT_CONNECTION | KT_SOFT},
-        {" kill  HARD 123",                            true,  123,          KT_CONNECTION | KT_HARD},
-        {" kill  SOFT 123",                            true,  123,          KT_CONNECTION | KT_SOFT},
+        {" kill  HARD 123",                            true,  123,          KT_HARD                },
+        {" kill  SOFT 123",                            true,  123,          KT_SOFT                },
         {"KIll soft query 21 ",                        true,  21,           KT_QUERY | KT_SOFT     },
-        {"KIll query soft 21 ",                        false, 21,           KT_QUERY               },
-        {"KIll query user maxuser ",                   true,  NO_THREAD_ID, KT_QUERY, "maxuser"    },
-        {"KIll user query  maxuser ",                  false, NO_THREAD_ID, KT_QUERY               }
+        {"KIll query soft 21 ",                        false,                                      },
+        {"KIll query user maxuser ",                   true, 0,             KT_QUERY, "maxuser"    },
+        {"KIll user               ",                   false,                                      }
     };
     int result = 0;
     int arr_size = sizeof(tests) / sizeof(test_t);
     for (int i = 0; i < arr_size; i++)
     {
-        const char* query = tests[i].query;
-        bool should_succeed = tests[i].should_succeed;
-        uint64_t expected_tid = tests[i].correct_id;
-        int expected_kt = tests[i].correct_kt;
-        std::string expected_user = tests[i].correct_user ? tests[i].correct_user : "";
-        result += test_one_query(query, should_succeed, expected_tid, expected_kt, expected_user);
+        result += test_one_query(tests[i]);
     }
     return result;
 }

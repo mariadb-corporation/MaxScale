@@ -61,9 +61,15 @@ public:
         std::string user;   /**< username */
     };
 
+    /**
+     * Parse elements from a kill query. This function reads values from thread-local regular expression
+     * match data, so it should be called right after a regex has matched.
+     *
+     * @param sql Original query
+     * @return Kill query fields
+     */
     static KillQueryContents parse_kill_query_elems(const char* sql);
-    static bool              parse_kill_query(char* query, uint64_t* thread_id_out, kill_type_t* kt_out,
-                                              std::string* user_out);
+
     void mxs_mysql_execute_kill(uint64_t target_id, kill_type_t type);
     bool in_routing_state() const override;
 
@@ -77,6 +83,13 @@ public:
      * @return True on success
      */
     static bool module_init();
+
+    /**
+     * Get the regular expression for special queries
+     *
+     * @return Regular expression
+     */
+    static const mxb::Regex& special_queries_regex();
 
 private:
     /** Return type of process_special_commands() */
@@ -124,7 +137,7 @@ private:
 
     SpecialCmdRes process_special_queries(mxs::Buffer& buffer);
     void          handle_query_kill(const KillQueryContents& kill_contents);
-    SpecialCmdRes handle_query_kill_old(GWBUF* read_buffer, uint32_t packet_len);
+
     void          add_local_client(LocalClient* client);
 
     void track_transaction_state(MXS_SESSION* session, GWBUF* packetbuf);
