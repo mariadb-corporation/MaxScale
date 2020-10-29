@@ -103,6 +103,8 @@ Mariadb_nodes::~Mariadb_nodes()
             unblock_node(i);
         }
     }
+
+    close_connections();
 }
 
 int Mariadb_nodes::connect(int i, const std::string& db)
