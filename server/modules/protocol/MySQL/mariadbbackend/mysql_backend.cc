@@ -68,8 +68,8 @@ struct AddressInfo
 };
 static AddressInfo get_ip_string_and_port(const sockaddr_storage* sa);
 static bool        gw_connection_established(DCB* dcb);
-static bool gw_auth_is_complete(DCB* dcb);
-json_t*     gw_json_diagnostics(DCB* dcb);
+static bool        gw_auth_is_complete(DCB* dcb);
+json_t*            gw_json_diagnostics(DCB* dcb);
 
 extern "C"
 {
@@ -604,15 +604,19 @@ static std::string get_detailed_error(DCB* dcb)
 {
     std::ostringstream ss;
 
+    ss << " (" << dcb->server->name();
+
     if (int err = gw_getsockerrno(dcb->fd))
     {
-        ss << " (" << err << ", " << mxs_strerror(err) << ")";
+        ss << ": " << err << ", " << mxs_strerror(err);
     }
     else if (dcb->is_fake_event)
     {
         // Fake events should not have TCP socket errors
-        ss << " (Generated event)";
+        ss << ": Generated event";
     }
+
+    ss << ")";
 
     return ss.str();
 }
