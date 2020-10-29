@@ -85,7 +85,7 @@ typedef enum routing_capability
     RCAP_TYPE_PACKET_OUTPUT = 0x0080,   /* 0b0000000010000000 */
     /** Track session state changes, implies packet output */
     RCAP_TYPE_SESSION_STATE_TRACKING = 0x0180,      /* 0b0000000011000000 */
-    /** Request and response tracking: tells when a the response to a query is complete.
+    /** Request and response tracking: tells when a response to a query is complete.
      * Implies packet output. */
     RCAP_TYPE_REQUEST_TRACKING = 0x0283,    /* 0b0000001010000011 */
 } mxs_routing_capability_t;
