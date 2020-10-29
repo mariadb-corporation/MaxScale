@@ -1370,7 +1370,7 @@ void MariaDBClientConnection::ready_for_reading(DCB* event_dcb)
 
     if (m_state == State::FAILED || m_state == State::QUIT)
     {
-        stop();
+        m_session->kill();
     }
 }
 
@@ -1393,7 +1393,7 @@ void MariaDBClientConnection::error(DCB* event_dcb)
 {
     mxb_assert(m_dcb == event_dcb);
     mxb_assert(m_session->state() != MXS_SESSION::State::STOPPING);
-    stop();
+    m_session->kill();
 }
 
 void MariaDBClientConnection::hangup(DCB* event_dcb)
@@ -1435,7 +1435,7 @@ void MariaDBClientConnection::hangup(DCB* event_dcb)
 
     // We simply close the session, this will propagate the closure to any
     // backend descriptors and perform the session cleanup.
-    stop();
+    m_session->kill();
 }
 
 bool MariaDBClientConnection::init_connection()
@@ -1643,6 +1643,7 @@ void MariaDBClientConnection::execute_kill(std::shared_ptr<KillInfo> info)
                             client->queue_query(modutil_create_query(a.second.c_str()));
                             client->queue_query(mysql_create_com_quit(NULL, 0));
 
+                            mxb_assert(ref->state() != MXS_SESSION::State::STOPPING);
                             add_local_client(client);
                         }
                     }
@@ -2442,16 +2443,16 @@ void MariaDBClientConnection::parse_and_set_trx_state(const mxs::Reply& reply)
 void MariaDBClientConnection::add_local_client(LocalClient* client)
 {
     // Prune stale LocalClients before adding the new one
-    auto it = std::remove_if(m_local_clients.begin(), m_local_clients.end(),
-                             std::mem_fn(&LocalClient::is_open));
+    auto it = std::remove_if(m_local_clients.begin(), m_local_clients.end(), [](const auto& client) {
+                                 return !client->is_open();
+                             });
 
     m_local_clients.erase(it, m_local_clients.end());
 
     m_local_clients.emplace_back(client);
 }
 
-void MariaDBClientConnection::stop()
+void MariaDBClientConnection::kill()
 {
-    m_session->kill();
     m_local_clients.clear();
 }

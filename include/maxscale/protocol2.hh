@@ -204,6 +204,18 @@ public:
      * @return True, if in routing state, false otherwise.
      */
     virtual bool in_routing_state() const = 0;
+
+    /**
+     * Called when the session starts to stop
+     *
+     * This can be used to do any preparatory work that needs to be done before the actual shutdown is
+     * started. At this stage the session is still valid and routing works normally.
+     *
+     * The default implementation does nothing.
+     */
+    virtual void kill()
+    {
+    }
 };
 
 /**

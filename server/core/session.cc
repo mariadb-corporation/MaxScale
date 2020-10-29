@@ -109,6 +109,9 @@ void MXS_SESSION::kill(GWBUF* error)
         m_killed = true;
         close_reason = SESSION_CLOSE_HANDLEERROR_FAILED;
 
+        // Call the protocol kill function before changing the session state
+        client_connection()->kill();
+
         if (m_state == State::STARTED)
         {
             // This signals the rest of the system that the session has started the shutdown procedure.

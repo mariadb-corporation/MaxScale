@@ -48,6 +48,7 @@ public:
     int32_t connlimit(int limit) override;
     void    wakeup() override;
     bool    is_movable() const override;
+    void    kill() override;
 
     std::string current_db() const override;
 
@@ -219,11 +220,6 @@ private:
     int  m_previous_userdb_version {0};     /**< Userdb version used for first user account search */
 
     std::vector<std::unique_ptr<LocalClient>> m_local_clients;
-
-    /**
-     * Starts the session shutdown by calling MXS_SESSION::kill
-     */
-    void stop();
 
     /**
      * Send an error packet to the client.
