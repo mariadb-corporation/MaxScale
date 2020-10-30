@@ -6,10 +6,11 @@ threads=###threads###
 [mariadb-cluster]
 type=monitor
 module=mariadbmon
-servers=###server_line###
+servers=###server_line###, pinloki
 user=maxskysql
 password=skysql
-monitor_interval=5000
+monitor_interval=1000
+auto_failover=true
 
 [pinloki-service]
 type=service
@@ -23,3 +24,9 @@ type=listener
 service=pinloki-service
 protocol=mariadbclient
 port=4006
+
+[pinloki]
+type = server
+address = 127.0.0.1
+port = 4006
+protocol = MariaDBBackend

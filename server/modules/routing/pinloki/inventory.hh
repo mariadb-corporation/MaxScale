@@ -56,9 +56,14 @@ public:
      */
     std::vector<std::string> file_names() const;
 
-    void save_rpl_state(const maxsql::GtidList& gtids);
-
+    /** The replication state */
+    void             save_rpl_state(const maxsql::GtidList& gtids);
     maxsql::GtidList rpl_state() const;
+
+    /** Requested replication state (set global gtid_slave_pos='a-b-c') */
+    void             save_requested_rpl_state(const maxsql::GtidList& gtids);
+    void             clear_requested_rpl_state() const;
+    maxsql::GtidList requested_rpl_state() const;
 
     /** Set by the writer **/
     void set_master_id(int64_t id);

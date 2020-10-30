@@ -607,6 +607,14 @@ void ServerInfo::status_from_string(const string& source)
         {
             status |= RELAY;
         }
+        else if (flag == "Slave of External Server")
+        {
+            status |= SERVER_SLAVE_OF_EXT_MASTER;
+        }
+        else if (flag == "Binlog Relay")
+        {
+            status |= BLR;
+        }
     }
 }
 
@@ -624,6 +632,14 @@ std::string ServerInfo::status_to_string(bitfield status)
         if (status & SLAVE)
         {
             items.emplace_back("Slave");
+        }
+        if (status & SERVER_SLAVE_OF_EXT_MASTER)
+        {
+            items.emplace_back("Slave of External Server");
+        }
+        if (status & BLR)
+        {
+            items.emplace_back("Binlog Relay");
         }
         if (status & RUNNING)
         {

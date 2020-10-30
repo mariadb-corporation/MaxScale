@@ -673,7 +673,16 @@ GWBUF* Pinloki::show_slave_status(bool all) const
 void Pinloki::set_gtid_slave_pos(const maxsql::GtidList& gtid)
 {
     mxb_assert(m_writer.get() == nullptr);
-    m_inventory.save_rpl_state(gtid);
+    if (m_inventory.rpl_state().is_included(gtid))
+    {
+        MXB_SERROR("The requested gtid "
+                   << gtid
+                   << " is already in the logs. Time travel is not supported.");
+    }
+    else
+    {
+        m_inventory.save_requested_rpl_state(gtid);
+    }
 }
 
 mxq::GtidList Pinloki::gtid_io_pos() const

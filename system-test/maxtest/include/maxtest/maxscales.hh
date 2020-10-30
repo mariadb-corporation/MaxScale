@@ -393,6 +393,8 @@ struct ServerInfo
     static constexpr bitfield MASTER = (1 << 1);
     static constexpr bitfield SLAVE = (1 << 2);
     static constexpr bitfield RELAY = (1 << 3);
+    static constexpr bitfield SERVER_SLAVE_OF_EXT_MASTER = (1 << 10);
+    static constexpr bitfield BLR = (1 << 12);
 
     static constexpr int GROUP_NONE = -1;
     static constexpr int RLAG_NONE = -1;

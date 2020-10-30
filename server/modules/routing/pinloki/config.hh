@@ -47,6 +47,7 @@ public:
     std::string binlog_dir_path() const;
     std::string inventory_file_path() const;
     std::string gtid_file_path() const;
+    std::string requested_gtid_file_path() const;
     std::string master_info_file() const;
     uint32_t    server_id() const;
 

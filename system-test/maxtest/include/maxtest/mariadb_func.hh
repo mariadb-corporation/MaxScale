@@ -396,6 +396,11 @@ public:
         return mysql_thread_id(m_conn);
     }
 
+    std::string host() const
+    {
+        return m_host;
+    }
+
 private:
     std::string m_host;
     int         m_port;

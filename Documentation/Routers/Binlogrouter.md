@@ -258,6 +258,7 @@ is always kept. The default setting is 2.
 
  1. If you have not configured `select_master=true` (automatic
     master selection), issue a `CHANGE MASTER TO` command to binlogrouter.
+
     ```
     mysql -u USER -pPASSWORD -h maxscale-IP -P binlog-PORT
 
@@ -266,7 +267,9 @@ is always kept. The default setting is 2.
     master_use_gtid=slave_pos;
     START SLAVE;
     ```
+
  1. Redirect each slave to replicate from Binlogrouter
+
     ```
     mysql -u USER -pPASSWORD -h slave-IP -P slave-PORT
 
@@ -304,6 +307,7 @@ configured version 2.5, and it is ready to go:
 
  1. Redirect each slave that replicates from Binlogrouter to replicate from the
     master.
+
     ```
     mysql -u USER -pPASSWORD -h slave-IP -P slave-PORT
 
@@ -314,32 +318,34 @@ configured version 2.5, and it is ready to go:
     START SLAVE;
     SHOW SLAVE STATUS \G
     ```
+
  1. Stop the old version of MaxScale, and start the new one.
     Verify routing functionality.
 
  1. If you have not configured `select_master=true` (automatic
     master selection), issue a `CHANGE MASTER TO` command.
+
     ```
     mysql -u USER -pPASSWORD -h maxscale-IP -P binlog-PORT
 
     CHANGE MASTER TO master_host="master-IP", master_port=master-PORT,
     master_user=USER,master_password="PASSWORD",
     master_use_gtid=slave_pos;
-    START SLAVE;
+
     ```
- 1. You should now see a periodic error message "Error ... Could not find
-    GTID state" in the MaxScale log. This is because Binlogrouter requests
-    replication from the blank state, which no longer exist. Binlogrouter must
-    be told from which gtid to start.
 
  1. Run `maxctrl list servers`. Make sure all your servers are accounted for.
     Pick the lowest gtid on display and issue this command
     to Binlogrouter:
+
     ```
+    STOP SLAVE
     SET @@global.gtid_slave_pos = "lowest-GTID";
+    START SLAVE
     ```
 
  1. Redirect each slave to replicate from Binlogrouter
+
    ```
    mysql -u USER -pPASSWORD -h slave-IP -P slave-PORT
 
@@ -351,14 +357,9 @@ configured version 2.5, and it is ready to go:
    SHOW SLAVE STATUS \G
    ```
 
-If slave-downtime is acceptable, you can skip the first and last steps.
-But in this case you should run `maxctrl list servers` as the first step,
-verify that all your servers are accounted for, and make a note of the
-lowest GTID _**before**_ stopping the old version of MaxScale.
-
 ## Example
 
-The following is a minimal configuration for the binlogrouter. With it, the
+The following is a minimal configuration with automatic master selection. With it, the
 service will accept connections on port 3306.
 
 ```
@@ -378,7 +379,8 @@ monitor_interval=10s
 [Replication-Proxy]
 type=service
 router=binlogrouter
-servers=master1
+cluster=MariaDB-Monitor
+select_master=true
 expire_log_duration=5h
 expire_log_minimum_files=3
 user=maxuser
