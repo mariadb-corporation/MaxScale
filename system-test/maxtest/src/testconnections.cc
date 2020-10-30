@@ -287,8 +287,8 @@ TestConnections::TestConnections(int argc, char* argv[])
 
     timeout = 999999999;
     set_log_copy_interval(999999999);
-    pthread_create(&timeout_thread_p, NULL, timeout_thread, this);
-    pthread_create(&log_copy_thread_p, NULL, log_copy_thread, this);
+    pthread_create(&m_timeout_thread, NULL, &TestConnections::timeout_thread, this);
+    pthread_create(&m_log_copy_thread, NULL, &TestConnections::log_copy_thread, this);
     tprintf("Starting test");
     gettimeofday(&m_start_time, NULL);
     m_logger->reset_timer();
@@ -1641,7 +1641,9 @@ int TestConnections::get_master_server_id(int m)
     mysql_close(conn);
     return master_id;
 }
-void* timeout_thread(void* ptr)
+
+//static
+void* TestConnections::timeout_thread(void* ptr)
 {
     TestConnections* Test = (TestConnections*) ptr;
     struct timespec tim;
@@ -1657,7 +1659,8 @@ void* timeout_thread(void* ptr)
     exit(250);
 }
 
-void* log_copy_thread(void* ptr)
+//static
+void* TestConnections::log_copy_thread(void* ptr)
 {
     TestConnections* Test = (TestConnections*) ptr;
     struct timespec tim;

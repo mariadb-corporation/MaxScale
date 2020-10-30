@@ -163,16 +163,6 @@ public:
      */
     long int log_copy_to_go;
 
-    /**
-     * @brief timeout_thread_p pointer to timeout thread
-     */
-    pthread_t timeout_thread_p;
-
-    /**
-     * @brief log_copy_thread_p pointer to log copying thread
-     */
-    pthread_t log_copy_thread_p;
-
     /** Check whether all nodes are in a valid state */
     static void check_nodes(bool value);
 
@@ -625,6 +615,16 @@ private:
 
     int m_threads {4};      /**< Number of Maxscale threads */
 
+    /**
+     * @brief timeout_thread_p pointer to timeout thread
+     */
+    pthread_t m_timeout_thread;
+
+    /**
+     * @brief log_copy_thread_p pointer to log copying thread
+     */
+    pthread_t m_log_copy_thread;
+
     timeval m_start_time {0, 0};    /**< time when test was started (used by printf to print Timestamp) */
 
     /**
@@ -646,21 +646,21 @@ private:
     bool check_create_vms();
     bool initialize_nodes();
     bool check_backend_versions();
+
+    /**
+     * @brief timeout_thread Thread which terminates test application after 'timeout' milliseconds
+     * @param ptr pointer to TestConnections object
+     * @return void
+     */
+    static void* timeout_thread(void* ptr);
+
+    /**
+     * @brief log_copy_thread Thread which peridically copies logs from Maxscale machine
+     * @param ptr pointer to TestConnections object
+     * @return void
+     */
+    static void* log_copy_thread(void* ptr);
 };
-
-/**
- * @brief timeout_thread Thread which terminates test application after 'timeout' milliseconds
- * @param ptr pointer to TestConnections object
- * @return void
- */
-void* timeout_thread(void* ptr);
-
-/**
- * @brief log_copy_thread Thread which peridically copies logs from Maxscale machine
- * @param ptr pointer to TestConnections object
- * @return void
- */
-void* log_copy_thread(void* ptr);
 
 /**
  * Dump two server status sets as strings
