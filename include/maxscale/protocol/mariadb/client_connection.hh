@@ -19,15 +19,6 @@
 
 struct KillInfo;
 
-/* Type of the kill-command sent by client. */
-enum kill_type_t
-{
-    KT_CONNECTION = (1 << 0),
-    KT_QUERY      = (1 << 1),
-    KT_SOFT       = (1 << 2),
-    KT_HARD       = (1 << 3)
-};
-
 class MariaDBUserManager;
 class MariaDBUserCache;
 struct UserEntryResult;
@@ -35,6 +26,16 @@ struct UserEntryResult;
 class MariaDBClientConnection : public mxs::ClientConnectionBase
 {
 public:
+    /* Type of the kill-command sent by client. */
+    enum kill_type_t : uint32_t
+    {
+        KT_SOFT       = (1 << 0),
+        KT_HARD       = (1 << 1),
+        KT_CONNECTION = (1 << 2),
+        KT_QUERY      = (1 << 3),
+        KT_QUERY_ID   = (1 << 4),
+    };
+
     MariaDBClientConnection(MXS_SESSION* session, mxs::Component* component);
 
     void ready_for_reading(DCB* dcb) override;
@@ -53,8 +54,16 @@ public:
 
     std::string current_db() const override;
 
-    static bool parse_kill_query(char* query, uint64_t* thread_id_out, kill_type_t* kt_out,
-                                 std::string* user_out);
+    struct KillQueryContents
+    {
+        uint32_t    kt {0}; /**< kill options bitfield */
+        uint64_t    id {0}; /**< thread or query id */
+        std::string user;   /**< username */
+    };
+
+    static KillQueryContents parse_kill_query_elems(const char* sql);
+    static bool              parse_kill_query(char* query, uint64_t* thread_id_out, kill_type_t* kt_out,
+                                              std::string* user_out);
     void mxs_mysql_execute_kill(uint64_t target_id, kill_type_t type);
     bool in_routing_state() const override;
 
@@ -114,7 +123,8 @@ private:
     char* handle_variables(mxs::Buffer& buffer);
 
     SpecialCmdRes process_special_queries(mxs::Buffer& buffer);
-    SpecialCmdRes handle_query_kill(GWBUF* read_buffer, uint32_t packet_len);
+    void          handle_query_kill(const KillQueryContents& kill_contents);
+    SpecialCmdRes handle_query_kill_old(GWBUF* read_buffer, uint32_t packet_len);
     void          add_local_client(LocalClient* client);
 
     void track_transaction_state(MXS_SESSION* session, GWBUF* packetbuf);

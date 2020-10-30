@@ -283,6 +283,8 @@ inline bool get_long(const std::string& s, int base, long* value)
     return get_long(s.c_str(), base, value);
 }
 
+bool get_uint64(const char* s, uint64_t* value);
+
 /**
  * Convert a string to a long, assuming a base of 10.
  *

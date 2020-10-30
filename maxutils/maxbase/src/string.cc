@@ -91,6 +91,20 @@ bool get_long(const char* s, int base, long* value)
     return rv;
 }
 
+bool get_uint64(const char* s, uint64_t* value)
+{
+    errno = 0;
+    char* end = nullptr;
+    auto ll = strtoull(s, &end, 10);
+
+    bool rv = (*end == 0 && errno == 0);
+    if (rv && value)
+    {
+        *value = ll;
+    }
+    return rv;
+}
+
 bool get_int(const char* s, int base, int* value)
 {
     long l;

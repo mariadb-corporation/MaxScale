@@ -782,6 +782,83 @@ void MariaDBClientConnection::track_transaction_state(MXS_SESSION* session, GWBU
     }
 }
 
+void MariaDBClientConnection::handle_query_kill(const KillQueryContents& kill_contents)
+{
+    auto kt = kill_contents.kt;
+    // TODO: handle "query id" somehow
+    if ((kt & KT_QUERY_ID) == 0)
+    {
+        if (kill_contents.id > 0)
+        {
+            mxs_mysql_execute_kill(kill_contents.id, (kill_type_t)kt);
+        }
+        else if (!kill_contents.user.empty())
+        {
+            execute_kill_user(kill_contents.user.c_str(), (kill_type_t)kt);
+        }
+    }
+    // Always return OK to client, as we don't yet detect non-existing thread id:s or users.
+    write_ok_packet(1);
+}
+
+MariaDBClientConnection::KillQueryContents
+MariaDBClientConnection::parse_kill_query_elems(const char* sql)
+{
+    const string connection = "connection";
+    const string query = "query";
+    const string hard = "hard";
+    const string soft = "soft";
+
+    auto& regex = this_unit.special_queries_regex;
+
+    auto option = mxb::tolower(regex.substring_by_name(sql, "koption"));
+    auto type = mxb::tolower(regex.substring_by_name(sql, "ktype"));
+    auto target = mxb::tolower(regex.substring_by_name(sql, "ktarget"));
+
+    KillQueryContents rval;
+
+    // Option is either "hard", "soft", or empty.
+    if (option == hard)
+    {
+        rval.kt |= KT_HARD;
+    }
+    else if (option == soft)
+    {
+        rval.kt |= KT_SOFT;
+    }
+    else
+    {
+        mxb_assert(option.empty());
+    }
+
+    // Type is either "connection", "query", "query\s+id" or empty.
+    if (type == connection)
+    {
+        rval.kt |= KT_CONNECTION;
+    }
+    else if (type == query)
+    {
+        rval.kt |= KT_QUERY;
+    }
+    else if (!type.empty())
+    {
+        mxb_assert(type.find(query) == 0);
+        rval.kt |= KT_QUERY_ID;
+    }
+
+    // target is either a query/thread id or "user\s+<username>"
+    if (isdigit(target[0]))
+    {
+        mxb::get_uint64(target.c_str(), &rval.id);
+    }
+    else
+    {
+        auto words = mxb::strtok(target, " ");
+        rval.user = words[1];
+    }
+    return rval;
+}
+
 /**
  * Parse a "KILL [CONNECTION | QUERY] [ <process_id> | USER <username> ]" query.
  * Will modify the argument string even if unsuccessful.
@@ -963,7 +1040,7 @@ bool MariaDBClientConnection::parse_kill_query(char* query, uint64_t* thread_id_
  * @return RES_CONTINUE or RES_END
  */
 MariaDBClientConnection::SpecialCmdRes
-MariaDBClientConnection::handle_query_kill(GWBUF* read_buffer, uint32_t packet_len)
+MariaDBClientConnection::handle_query_kill_old(GWBUF* read_buffer, uint32_t packet_len)
 {
     auto rval = SpecialCmdRes::CONTINUE;
     /* First, we need to detect the text "KILL" (ignorecase) in the start
@@ -1054,7 +1131,9 @@ MariaDBClientConnection::process_special_queries(mxs::Buffer& buffer)
                 case 'K':
                 case 'k':
                     {
-                        rval = handle_query_kill(buffer.get(), packet_len);
+                        auto kill_cmd_contents = parse_kill_query_elems(sql);
+                        handle_query_kill(kill_cmd_contents);
+                        rval = SpecialCmdRes::END;
                     }
                     break;
 
@@ -2550,7 +2629,7 @@ bool MariaDBClientConnection::module_init()
         R"(USE\s+(?<db>\w+))"
         R"(|SET\s+ROLE\s+(?<role>\w+))"
         R"(|KILL\s+(?:(?<koption>HARD|SOFT)\s+)?(?:(?<ktype>CONNECTION|QUERY|QUERY\s+ID)\s+)?(?<ktarget>\d+|USER\s+\w+))"
-        R"())";
+        R"()(?:;|\s+|$))";
 
     bool rval = false;
     mxb::Regex regex(regex_string, PCRE2_CASELESS);

@@ -19,10 +19,16 @@
 
 #define NO_THREAD_ID 0
 
+using kill_type_t = MariaDBClientConnection::kill_type_t;
+constexpr auto KT_HARD = MariaDBClientConnection::KT_HARD;
+constexpr auto KT_SOFT = MariaDBClientConnection::KT_SOFT;
+constexpr auto KT_CONNECTION = MariaDBClientConnection::KT_CONNECTION;
+constexpr auto KT_QUERY = MariaDBClientConnection::KT_QUERY;
+
 int test_one_query(const char* query,
                    bool should_succeed,
                    uint64_t expected_tid,
-                   int expected_kt,
+                   uint32_t expected_kt,
                    std::string expected_user)
 {
     char* query_copy = MXS_STRDUP_A(query);
