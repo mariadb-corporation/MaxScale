@@ -92,7 +92,6 @@ int main(int argc, char* argv[])
         local_result += read_and_execute_queries(Test, deny_file, 1);
 
         Test->add_result(local_result, "********** rules%d test FAILED\n", i);
-        mysql_close(Test->maxscales->conn_rwsplit[0]);
     }
 
     Test->check_maxscale_processes(0, 1);

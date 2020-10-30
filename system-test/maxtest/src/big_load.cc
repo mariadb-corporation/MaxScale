@@ -111,9 +111,9 @@ void load(long int* new_inserts,
 
 void* query_thread1(void* ptr)
 {
-    MYSQL* conn1;
-    MYSQL* conn2;
-    MYSQL* conn3;
+    MYSQL* conn1 = nullptr;
+    MYSQL* conn2 = nullptr;
+    MYSQL* conn3 = nullptr;
     int conn_err = 0;
     thread_data* data = (thread_data*) ptr;
     auto mxs_ip = data->Test->maxscales->ip4(0);
@@ -169,12 +169,19 @@ void* query_thread1(void* ptr)
                 execute_query_silent(conn3, (char*) "SELECT * FROM t1;");
             }
         }
+    }
+
+    if (conn1)
+    {
         mysql_close(conn1);
-        if (data->rwsplit_only == 0)
-        {
-            mysql_close(conn2);
-            mysql_close(conn3);
-        }
+    }
+    if (conn2)
+    {
+        mysql_close(conn2);
+    }
+    if (conn3)
+    {
+        mysql_close(conn3);
     }
     return NULL;
 }

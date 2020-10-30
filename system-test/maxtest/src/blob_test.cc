@@ -8,7 +8,6 @@ int test_longblob(TestConnections* Test,
                   int rows)
 {
     int size = chunk_size;
-    unsigned long* data;
     int i, j;
     MYSQL_BIND param[1];
     char sql[256];
@@ -46,14 +45,12 @@ int test_longblob(TestConnections* Test,
                          mysql_stmt_error(stmt));
 
         Test->tprintf("Filling buffer\n");
-        data = (unsigned long*) malloc(size * sizeof(long int));
+        unsigned long* data = (unsigned long*) malloc(size * sizeof(long int));
 
         if (data == NULL)
         {
             Test->add_result(1, "Memory allocation error\n");
         }
-
-
 
         Test->tprintf("Sending data in %lu bytes chunks, total size is %lu\n",
                       size * sizeof(unsigned long),
@@ -72,6 +69,7 @@ int test_longblob(TestConnections* Test,
                                  "Error inserting data, iteration %d, error %s\n",
                                  i,
                                  mysql_stmt_error(stmt));
+                free(data);
                 return 1;
             }
         }
@@ -86,6 +84,8 @@ int test_longblob(TestConnections* Test,
                          mysql_stmt_error(stmt));
         // }
         Test->add_result(mysql_stmt_close(stmt), "Error closing stmt\n");
+
+        free(data);
     }
 
     if (global_res == Test->global_result)
@@ -206,6 +206,8 @@ int check_longblob_data(TestConnections* Test,
     mysql_stmt_free_result(stmt);
 
     mysql_stmt_close(stmt);
+
+    free(data);
 
     return 0;
 }

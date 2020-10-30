@@ -65,6 +65,7 @@ int main(int argc, char* argv[])
 
     test.try_query(mysql, "COMMIT");
     test.try_query(mysql, "DROP TABLE test.t1");
+    mysql_stmt_close(stmt);
     mysql_close(mysql);
 
     return test.global_result;

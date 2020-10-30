@@ -57,61 +57,61 @@
 
 int main(int argc, char* argv[])
 {
-    TestConnections* Test = new TestConnections(argc, argv);
-    Test->set_timeout(30);
+    TestConnections test(argc, argv);
+    test.set_timeout(30);
     MYSQL* conn_found_rows;
     my_ulonglong rows;
 
 
-    Test->repl->connect();
-    Test->maxscales->connect_maxscale(0);
+    test.repl->connect();
+    test.maxscales->connect_maxscale(0);
 
-    conn_found_rows = open_conn_db_flags(Test->maxscales->rwsplit_port[0],
-                                         Test->maxscales->ip4(0),
+    conn_found_rows = open_conn_db_flags(test.maxscales->rwsplit_port[0],
+                                         test.maxscales->ip4(0),
                                          (char*) "test",
-                                         Test->maxscales->user_name,
-                                         Test->maxscales->password,
+                                         test.maxscales->user_name,
+                                         test.maxscales->password,
                                          CLIENT_FOUND_ROWS,
-                                         Test->ssl);
+                                         test.ssl);
 
-    Test->set_timeout(30);
-    execute_query(Test->maxscales->conn_rwsplit[0], "DROP TABLE IF EXISTS t1");
-    execute_query(Test->maxscales->conn_rwsplit[0],
+    test.set_timeout(30);
+    execute_query(test.maxscales->conn_rwsplit[0], "DROP TABLE IF EXISTS t1");
+    execute_query(test.maxscales->conn_rwsplit[0],
                   "CREATE TABLE t1(id INT PRIMARY KEY, val INT, msg VARCHAR(100))");
-    execute_query(Test->maxscales->conn_rwsplit[0],
+    execute_query(test.maxscales->conn_rwsplit[0],
                   "INSERT INTO t1 VALUES (1, 1, 'foo'), (2, 1, 'bar'), (3, 2, 'baz'), (4, 2, 'abc')");
 
-    Test->set_timeout(30);
-    execute_query_affected_rows(Test->maxscales->conn_rwsplit[0],
+    test.set_timeout(30);
+    execute_query_affected_rows(test.maxscales->conn_rwsplit[0],
                                 "UPDATE t1 SET msg='xyz' WHERE val=2",
                                 &rows);
-    Test->tprintf("update #1: %ld (expeced value is 2)\n", (long) rows);
+    test.tprintf("update #1: %ld (expeced value is 2)\n", (long) rows);
     if (rows != 2)
     {
-        Test->add_result(1, "Affected rows is not 2\n");
+        test.add_result(1, "Affected rows is not 2\n");
     }
 
-    Test->set_timeout(30);
-    execute_query_affected_rows(Test->maxscales->conn_rwsplit[0],
+    test.set_timeout(30);
+    execute_query_affected_rows(test.maxscales->conn_rwsplit[0],
                                 "UPDATE t1 SET msg='xyz' WHERE val=2",
                                 &rows);
-    Test->tprintf("update #2: %ld  (expeced value is 0)\n", (long) rows);
+    test.tprintf("update #2: %ld  (expeced value is 0)\n", (long) rows);
     if (rows != 0)
     {
-        Test->add_result(1, "Affected rows is not 0\n");
+        test.add_result(1, "Affected rows is not 0\n");
     }
 
-    Test->set_timeout(30);
+    test.set_timeout(30);
     execute_query_affected_rows(conn_found_rows, "UPDATE t1 SET msg='xyz' WHERE val=2", &rows);
-    Test->tprintf("update #3: %ld  (expeced value is 2)\n", (long) rows);
+    test.tprintf("update #3: %ld  (expeced value is 2)\n", (long) rows);
     if (rows != 2)
     {
-        Test->add_result(1, "Affected rows is not 2\n");
+        test.add_result(1, "Affected rows is not 2\n");
     }
 
-    Test->maxscales->close_maxscale_connections(0);
+    test.maxscales->close_maxscale_connections(0);
 
-    int rval = Test->global_result;
-    delete Test;
-    return rval;
+    mysql_close(conn_found_rows);
+
+    return test.global_result;
 }

@@ -89,6 +89,7 @@ int main(int argc, char** argv)
         test.repl->start_node(master_index, (char*) "");
         test.maxscales->wait_for_monitor();
     }
+    mysql_close(maxconn);
 
     test.repl->fix_replication();
     return test.global_result;

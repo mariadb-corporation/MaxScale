@@ -206,7 +206,7 @@ char* cdc_auth_srt(char* user, char* password)
 {
     unsigned char sha1pass[20];
     char* str;
-    str = (char*) malloc(42 + strlen(user) * 2);
+    str = (char*) malloc(42 + strlen(user) * 2 + 1);
 
     unsigned char* password_u;
     unsigned char* user_u;

@@ -50,6 +50,7 @@ int read_incremented_field(TestConnections& test)
     {
         test.expect(false, "Could not perform query: %s.", mysql_error(conn));
     }
+    mysql_close(conn);
     return rval;
 }
 

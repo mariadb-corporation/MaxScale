@@ -133,6 +133,8 @@ int main(int argc, char** argv)
                 cout << "server3 joined succesfully, test complete.\n";
             }
         }
+
+        mysql_close(maxconn);
     }
     else
     {

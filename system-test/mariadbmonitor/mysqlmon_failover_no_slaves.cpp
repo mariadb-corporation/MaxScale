@@ -36,7 +36,9 @@ int main(int argc, char** argv)
     delete_slave_binlogs(test);
     basic_test(test);
     MYSQL* conn = test.maxscales->open_rwsplit_connection(0);
-    if (!generate_traffic_and_check(test, conn, 5))
+    bool success = generate_traffic_and_check(test, conn, 5);
+    mysql_close(conn);
+    if (!success)
     {
         return test.global_result;
     }

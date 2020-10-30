@@ -39,5 +39,7 @@ int main(int argc, char** argv)
                 mysql_stmt_error(stmt));
     mysql_stmt_close(stmt);
 
+    free(sqlstr);
+
     return test.global_result;
 }

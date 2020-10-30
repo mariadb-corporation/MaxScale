@@ -96,10 +96,18 @@ int main(int argc, char** argv)
                 while (conn_count < max_conns_limit)
                 {
                     auto conn = open_conn_db_timeout(normal_port, host, "", user, pw, 4, false);
-                    if (conn && execute_query_silent(conn, "SELECT 1") == 0)
+                    if (conn)
                     {
-                        connections.push_back(conn);
-                        conn_count++;
+                        if (execute_query_silent(conn, "SELECT 1") == 0)
+                        {
+                            connections.push_back(conn);
+                            conn_count++;
+                        }
+                        else
+                        {
+                            mysql_close(conn);
+                            break;
+                        }
                     }
                     else
                     {
@@ -169,6 +177,11 @@ int main(int argc, char** argv)
                     else
                     {
                         test.expect(false, "Routing sessions should not work.");
+                    }
+
+                    if (conn)
+                    {
+                        mysql_close(conn);
                     }
                 }
             }
