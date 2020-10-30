@@ -718,7 +718,7 @@ int TestConnections::copy_mariadb_logs(Mariadb_nodes* nrepl,
             {
                 char str[4096];
                 sprintf(str, "LOGS/%s/%s%d_mariadb_log", m_test_name.c_str(), prefix, i);
-                threads.emplace_back(&TestConnections::copy_one_mariadb_log, this, nrepl, i, str);
+                threads.emplace_back(&TestConnections::copy_one_mariadb_log, this, nrepl, i, string(str));
             }
         }
     }
