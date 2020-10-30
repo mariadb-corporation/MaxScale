@@ -400,6 +400,9 @@ struct ServerInfo
     static constexpr bitfield SERVER_SLAVE_OF_EXT_MASTER = (1 << 10);
     static constexpr bitfield BLR = (1 << 12);
 
+    static constexpr bitfield master_st = MASTER | RUNNING;
+    static constexpr bitfield slave_st = SLAVE | RUNNING;
+
     static constexpr int GROUP_NONE = -1;
     static constexpr int RLAG_NONE = -1;
     static constexpr int SRV_ID_NONE = -1;
@@ -502,7 +505,7 @@ public:
     void start();
     void stop();
 
-    std::unique_ptr<mxt::MariaDB> open_rwsplit_connection(const std::string& db = "test");
+    std::unique_ptr<mxt::MariaDB> open_rwsplit_connection(const std::string& db = "");
 
 private:
     Maxscales* const m_maxscales {nullptr};

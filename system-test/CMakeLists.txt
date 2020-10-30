@@ -887,6 +887,10 @@ add_test_executable(mxs2414_host_blocking.cpp mxs2414_host_blocking replication 
 # 5. log_password_mismatch (MXS-2916)
 add_test_executable(pam_authentication.cpp pam_authentication pam_authentication LABELS REPL_BACKEND)
 
+# MXS-3225, MXS-2383 Pam two factor authentication (2FA) test. Works only on Centos so far, so label as
+# HEAVY to prevent runs on general test runs.
+add_test_executable(pam_authentication_2fa.cpp pam_authentication_2fa pam_authentication_2fa LABELS HEAVY REPL_BACKEND)
+
 # MXS-2350: On-demand connection creation
 add_test_executable(mxs2350_lazy_connect.cpp mxs2350_lazy_connect mxs2350_lazy_connect LABELS REPL_BACKEND readwritesplit)
 
