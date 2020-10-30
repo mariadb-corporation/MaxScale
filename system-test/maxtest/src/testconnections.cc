@@ -327,6 +327,10 @@ TestConnections::~TestConnections()
         sleep(15);      // sleep to let logs be written do disks
     }
 
+    m_stop_threads = true;
+    m_timeout_thread.join();
+    m_log_copy_thread.join();
+
     copy_all_logs();
 
     /* Temporary disable snapshot revert due to Galera failures
@@ -1642,34 +1646,41 @@ int TestConnections::get_master_server_id(int m)
 
 void TestConnections::timeout_thread()
 {
-    struct timespec tim;
-    while (m_timeout > 0)
+    while (!m_stop_threads && m_timeout > 0)
     {
+        struct timespec tim;
         tim.tv_sec = 1;
         tim.tv_nsec = 0;
         nanosleep(&tim, NULL);
         m_timeout--;
     }
-    tprintf("\n **** Timeout! *** \n");
-    this->~TestConnections(); // TODO: Pretty dubious.
-    exit(250);
+
+    if (!m_stop_threads)
+    {
+        tprintf("\n **** Timeout! *** \n");
+        exit(250);
+    }
 }
 
 void TestConnections::log_copy_thread()
 {
-    struct timespec tim;
-    while (true)
+    while (!m_stop_threads)
     {
-        while (m_log_copy_to_go > 0)
+        while (!m_stop_threads && m_log_copy_to_go > 0)
         {
+            struct timespec tim;
             tim.tv_sec = 1;
             tim.tv_nsec = 0;
             nanosleep(&tim, NULL);
             m_log_copy_to_go--;
         }
-        m_log_copy_to_go = m_log_copy_interval;
-        tprintf("\n **** Copying all logs *** \n");
-        copy_all_logs_periodic();
+
+        if (!m_stop_threads)
+        {
+            m_log_copy_to_go = m_log_copy_interval;
+            tprintf("\n **** Copying all logs *** \n");
+            copy_all_logs_periodic();
+        }
     }
 }
 

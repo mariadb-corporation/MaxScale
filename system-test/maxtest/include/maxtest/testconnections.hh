@@ -615,12 +615,12 @@ private:
     int m_threads {4};      /**< Number of Maxscale threads */
 
     /**
-     * @brief timeout_thread_p pointer to timeout thread
+     * @brief Timeout thread
      */
     std::thread m_timeout_thread;
 
     /**
-     * @brief log_copy_thread_p pointer to log copying thread
+     * @brief Log copying thread
      */
     std::thread m_log_copy_thread;
 
@@ -645,6 +645,8 @@ private:
     bool check_create_vms();
     bool initialize_nodes();
     bool check_backend_versions();
+
+    bool m_stop_threads {false};
 
     /**
      * @brief timeout_thread Thread which terminates test application after 'timeout' milliseconds
