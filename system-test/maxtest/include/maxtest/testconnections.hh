@@ -648,17 +648,13 @@ private:
 
     /**
      * @brief timeout_thread Thread which terminates test application after 'timeout' milliseconds
-     * @param ptr pointer to TestConnections object
-     * @return void
      */
-    static void timeout_thread(TestConnections* test);
+    void timeout_thread();
 
     /**
      * @brief log_copy_thread Thread which peridically copies logs from Maxscale machine
-     * @param ptr pointer to TestConnections object
-     * @return void
      */
-    static void log_copy_thread(TestConnections* test);
+    void log_copy_thread();
 };
 
 /**

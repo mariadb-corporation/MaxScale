@@ -1640,38 +1640,36 @@ int TestConnections::get_master_server_id(int m)
     return master_id;
 }
 
-//static
-void TestConnections::timeout_thread(TestConnections* Test)
+void TestConnections::timeout_thread()
 {
     struct timespec tim;
-    while (Test->m_timeout > 0)
+    while (m_timeout > 0)
     {
         tim.tv_sec = 1;
         tim.tv_nsec = 0;
         nanosleep(&tim, NULL);
-        Test->m_timeout--;
+        m_timeout--;
     }
-    Test->tprintf("\n **** Timeout! *** \n");
-    Test->~TestConnections();
+    tprintf("\n **** Timeout! *** \n");
+    this->~TestConnections(); // TODO: Pretty dubious.
     exit(250);
 }
 
-//static
-void TestConnections::log_copy_thread(TestConnections* Test)
+void TestConnections::log_copy_thread()
 {
     struct timespec tim;
     while (true)
     {
-        while (Test->m_log_copy_to_go > 0)
+        while (m_log_copy_to_go > 0)
         {
             tim.tv_sec = 1;
             tim.tv_nsec = 0;
             nanosleep(&tim, NULL);
-            Test->m_log_copy_to_go--;
+            m_log_copy_to_go--;
         }
-        Test->m_log_copy_to_go = Test->m_log_copy_interval;
-        Test->tprintf("\n **** Copying all logs *** \n");
-        Test->copy_all_logs_periodic();
+        m_log_copy_to_go = m_log_copy_interval;
+        tprintf("\n **** Copying all logs *** \n");
+        copy_all_logs_periodic();
     }
 }
 
