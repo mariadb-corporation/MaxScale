@@ -596,10 +596,10 @@ void RWSplitSession::clientReply(GWBUF* writebuf, const mxs::ReplyRoute& down, c
         {
             m_expected_responses--;
             mxb_assert(m_expected_responses == 0);
-        }
 
-        // TODO: This would make more sense if it was done at the client protocol level
-        session_book_server_response(m_pSession, (SERVER*)backend->target(), m_expected_responses == 0);
+            // TODO: This would make more sense if it was done at the client protocol level
+            session_book_server_response(m_pSession, (SERVER*)backend->target(), true);
+        }
 
         mxb_assert(m_expected_responses >= 0);
 
