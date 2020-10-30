@@ -102,6 +102,8 @@ int Maxscales::read_env()
 
 int Maxscales::connect_rwsplit(int m, const std::string& db)
 {
+    mysql_close(conn_rwsplit[m]);
+
     conn_rwsplit[m] = open_conn_db(rwsplit_port[m], ip(m), db, user_name, password, ssl);
     routers[m][0] = conn_rwsplit[m];
 
@@ -122,6 +124,8 @@ int Maxscales::connect_rwsplit(int m, const std::string& db)
 
 int Maxscales::connect_readconn_master(int m, const std::string& db)
 {
+    mysql_close(conn_master[m]);
+
     conn_master[m] = open_conn_db(readconn_master_port[m], ip(m), db, user_name, password, ssl);
     routers[m][1] = conn_master[m];
 
@@ -142,6 +146,8 @@ int Maxscales::connect_readconn_master(int m, const std::string& db)
 
 int Maxscales::connect_readconn_slave(int m, const std::string& db)
 {
+    mysql_close(conn_slave[m]);
+
     conn_slave[m] = open_conn_db(readconn_slave_port[m], ip(m), db, user_name, password, ssl);
     routers[m][2] = conn_slave[m];
 
