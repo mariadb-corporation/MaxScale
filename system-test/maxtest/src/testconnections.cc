@@ -285,8 +285,6 @@ TestConnections::TestConnections(int argc, char* argv[])
     sprintf(str, "mkdir -p LOGS/%s", m_test_name.c_str());
     call_system(str);
 
-    timeout = 999999999;
-    set_log_copy_interval(999999999);
     m_timeout_thread = std::thread(&TestConnections::timeout_thread, this);
     m_log_copy_thread = std::thread(&TestConnections::log_copy_thread, this);
     tprintf("Starting test");
@@ -1576,21 +1574,21 @@ int TestConnections::set_timeout(long int timeout_seconds)
 {
     if (m_enable_timeouts)
     {
-        timeout = timeout_seconds;
+        m_timeout = timeout_seconds;
     }
     return 0;
 }
 
 int TestConnections::set_log_copy_interval(long int interval_seconds)
 {
-    log_copy_to_go = interval_seconds;
-    log_copy_interval = interval_seconds;
+    m_log_copy_to_go = interval_seconds;
+    m_log_copy_interval = interval_seconds;
     return 0;
 }
 
 int TestConnections::stop_timeout()
 {
-    timeout = 999999999;
+    m_timeout = 999999999;
     return 0;
 }
 
@@ -1646,12 +1644,12 @@ int TestConnections::get_master_server_id(int m)
 void TestConnections::timeout_thread(TestConnections* Test)
 {
     struct timespec tim;
-    while (Test->timeout > 0)
+    while (Test->m_timeout > 0)
     {
         tim.tv_sec = 1;
         tim.tv_nsec = 0;
         nanosleep(&tim, NULL);
-        Test->timeout--;
+        Test->m_timeout--;
     }
     Test->tprintf("\n **** Timeout! *** \n");
     Test->~TestConnections();
@@ -1664,14 +1662,14 @@ void TestConnections::log_copy_thread(TestConnections* Test)
     struct timespec tim;
     while (true)
     {
-        while (Test->log_copy_to_go > 0)
+        while (Test->m_log_copy_to_go > 0)
         {
             tim.tv_sec = 1;
             tim.tv_nsec = 0;
             nanosleep(&tim, NULL);
-            Test->log_copy_to_go--;
+            Test->m_log_copy_to_go--;
         }
-        Test->log_copy_to_go = Test->log_copy_interval;
+        Test->m_log_copy_to_go = Test->m_log_copy_interval;
         Test->tprintf("\n **** Copying all logs *** \n");
         Test->copy_all_logs_periodic();
     }

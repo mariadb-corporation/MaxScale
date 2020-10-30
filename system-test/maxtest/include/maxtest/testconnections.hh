@@ -150,17 +150,17 @@ public:
     /**
      * @brief timeout seconds until test termination
      */
-    long int timeout;
+    long int m_timeout {999999999}; // Never
 
     /**
-     * @brief log_copy_interval seconds between log copying
+     * @brief m_log_copy_interval seconds between log copying
      */
-    long int log_copy_interval;
+    long int m_log_copy_interval {999999999}; // Never
 
     /**
-     * @brief log_copy_interval seconds until next log copying
+     * @brief m_log_copy_interval seconds until next log copying
      */
-    long int log_copy_to_go;
+    long int m_log_copy_to_go {999999999}; // Never
 
     /** Check whether all nodes are in a valid state */
     static void check_nodes(bool value);
