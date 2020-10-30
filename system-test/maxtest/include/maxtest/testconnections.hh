@@ -6,7 +6,6 @@
 #include <thread>
 #include <functional>
 #include <fcntl.h>
-#include <pthread.h>
 #include <sys/time.h>
 
 #include <maxbase/ccdefs.hh>
@@ -618,12 +617,12 @@ private:
     /**
      * @brief timeout_thread_p pointer to timeout thread
      */
-    pthread_t m_timeout_thread;
+    std::thread m_timeout_thread;
 
     /**
      * @brief log_copy_thread_p pointer to log copying thread
      */
-    pthread_t m_log_copy_thread;
+    std::thread m_log_copy_thread;
 
     timeval m_start_time {0, 0};    /**< time when test was started (used by printf to print Timestamp) */
 
@@ -652,14 +651,14 @@ private:
      * @param ptr pointer to TestConnections object
      * @return void
      */
-    static void* timeout_thread(void* ptr);
+    static void timeout_thread(TestConnections* test);
 
     /**
      * @brief log_copy_thread Thread which peridically copies logs from Maxscale machine
      * @param ptr pointer to TestConnections object
      * @return void
      */
-    static void* log_copy_thread(void* ptr);
+    static void log_copy_thread(TestConnections* test);
 };
 
 /**

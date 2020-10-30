@@ -287,8 +287,8 @@ TestConnections::TestConnections(int argc, char* argv[])
 
     timeout = 999999999;
     set_log_copy_interval(999999999);
-    pthread_create(&m_timeout_thread, NULL, &TestConnections::timeout_thread, this);
-    pthread_create(&m_log_copy_thread, NULL, &TestConnections::log_copy_thread, this);
+    m_timeout_thread = std::thread(&TestConnections::timeout_thread, this);
+    m_log_copy_thread = std::thread(&TestConnections::log_copy_thread, this);
     tprintf("Starting test");
     gettimeofday(&m_start_time, NULL);
     m_logger->reset_timer();
@@ -1643,9 +1643,8 @@ int TestConnections::get_master_server_id(int m)
 }
 
 //static
-void* TestConnections::timeout_thread(void* ptr)
+void TestConnections::timeout_thread(TestConnections* Test)
 {
-    TestConnections* Test = (TestConnections*) ptr;
     struct timespec tim;
     while (Test->timeout > 0)
     {
@@ -1660,9 +1659,8 @@ void* TestConnections::timeout_thread(void* ptr)
 }
 
 //static
-void* TestConnections::log_copy_thread(void* ptr)
+void TestConnections::log_copy_thread(TestConnections* Test)
 {
-    TestConnections* Test = (TestConnections*) ptr;
     struct timespec tim;
     while (true)
     {
@@ -1677,8 +1675,6 @@ void* TestConnections::log_copy_thread(void* ptr)
         Test->tprintf("\n **** Copying all logs *** \n");
         Test->copy_all_logs_periodic();
     }
-
-    return NULL;
 }
 
 int TestConnections::insert_select(int m, int N)
