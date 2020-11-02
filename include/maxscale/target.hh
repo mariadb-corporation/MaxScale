@@ -50,9 +50,8 @@ extern const char* DEFAULT_RANK;
 #define SERVER_DISK_SPACE_EXHAUSTED (1 << 6)    /**<< The disk space of the server is exhausted */
 
 // Bits used by MariaDB Monitor (mostly)
-#define SERVER_SLAVE_OF_EXT_MASTER (1 << 10)    /**<< Server is slave of a non-monitored master */
-#define SERVER_RELAY               (1 << 11)    /**<< Server is a relay */
-#define SERVER_BLR                 (1 << 12)    /**<< Server is a replicating binlog router */
+#define SERVER_RELAY (1 << 11)                  /**<< Server is a relay */
+#define SERVER_BLR   (1 << 12)                  /**<< Server is a replicating binlog router */
 // Bits used by other monitors
 #define SERVER_JOINED            (1 << 20)      /**<< The server is joined in a Galera cluster */
 #define SERVER_MASTER_STICKINESS (1 << 21)      /**<< Server Master stickiness */
@@ -110,12 +109,6 @@ inline bool status_is_blr(uint64_t status)
 inline bool status_is_joined(uint64_t status)
 {
     return (status & (SERVER_RUNNING | SERVER_JOINED | SERVER_MAINT)) == (SERVER_RUNNING | SERVER_JOINED);
-}
-
-inline bool status_is_slave_of_ext_master(uint64_t status)
-{
-    return (status & (SERVER_RUNNING | SERVER_SLAVE_OF_EXT_MASTER))
-           == (SERVER_RUNNING | SERVER_SLAVE_OF_EXT_MASTER);
 }
 
 inline bool status_is_disk_space_exhausted(uint64_t status)
@@ -196,8 +189,8 @@ enum class RLagState
 class Target
 {
 public:
-    enum : int64_t { RLAG_UNDEFINED = -1 };     // Default replication lag value
-    enum : int64_t { PING_UNDEFINED = -1 };     // Default ping value
+    enum : int64_t {RLAG_UNDEFINED = -1};       // Default replication lag value
+    enum : int64_t {PING_UNDEFINED = -1};       // Default ping value
 
     virtual ~Target() = default;
 
@@ -420,11 +413,6 @@ public:
     bool is_in_cluster() const
     {
         return (status() & (SERVER_MASTER | SERVER_SLAVE | SERVER_RELAY | SERVER_JOINED)) != 0;
-    }
-
-    bool is_slave_of_ext_master() const
-    {
-        return status_is_slave_of_ext_master(status());
     }
 
     bool is_low_on_disk_space() const

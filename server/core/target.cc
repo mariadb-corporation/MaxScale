@@ -67,7 +67,6 @@ std::string Target::status_to_string(uint64_t flags, int n_connections)
     const std::string master = "Master";
     const std::string relay = "Relay Master";
     const std::string slave = "Slave";
-    const std::string slave_ext = "Slave of External Server";
     const std::string sticky = "Master Stickiness";
     const std::string auth_err = "Auth Error";
     const std::string running = "Running";
@@ -105,9 +104,6 @@ std::string Target::status_to_string(uint64_t flags, int n_connections)
         concatenate_if(status_is_slave(flags), slave);
         concatenate_if(status_is_blr(flags), blr);
     }
-
-    // May be combined with other MariaDB monitor flags.
-    concatenate_if(flags & SERVER_SLAVE_OF_EXT_MASTER, slave_ext);
 
     // Should this be printed only if server is master?
     concatenate_if(flags & SERVER_MASTER_STICKINESS, sticky);

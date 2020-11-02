@@ -509,8 +509,7 @@ void MariaDBMonitor::assign_server_roles()
 {
     // Remove any existing [Master], [Slave] etc flags from 'pending_status', they are still available in
     // 'mon_prev_status'.
-    const uint64_t remove_bits = SERVER_MASTER | SERVER_SLAVE | SERVER_RELAY | SERVER_SLAVE_OF_EXT_MASTER
-        | SERVER_BLR;
+    const uint64_t remove_bits = SERVER_MASTER | SERVER_SLAVE | SERVER_RELAY | SERVER_BLR;
     for (auto server : servers())
     {
         server->clear_status(remove_bits);
@@ -577,18 +576,6 @@ void MariaDBMonitor::assign_server_roles()
         // Run another graph search, this time assigning slaves.
         reset_node_index_info();
         assign_slave_and_relay_master();
-    }
-
-    if (!m_settings.ignore_external_masters)
-    {
-        // Do a sweep through all the nodes in the cluster (even the master) and mark external slaves.
-        for (MariaDBServer* server : servers())
-        {
-            if (!server->m_node.external_masters.empty())
-            {
-                server->set_status(SERVER_SLAVE_OF_EXT_MASTER);
-            }
-        }
     }
 }
 

@@ -166,8 +166,8 @@ public:
 
     // When a monitor detects that a server is down, these bits should be cleared.
     static constexpr uint64_t SERVER_DOWN_CLEAR_BITS {SERVER_RUNNING | SERVER_AUTH_ERROR | SERVER_MASTER
-                                                      | SERVER_SLAVE | SERVER_SLAVE_OF_EXT_MASTER
-                                                      | SERVER_RELAY | SERVER_JOINED | SERVER_BLR};
+                                                      | SERVER_SLAVE | SERVER_RELAY | SERVER_JOINED
+                                                      | SERVER_BLR};
 
     /**
      * Ping or connect to a database. If connection does not exist or ping fails, a new connection

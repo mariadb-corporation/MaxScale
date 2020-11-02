@@ -423,8 +423,18 @@ json_t* MariaDBMonitor::diagnostics() const
 json_t* MariaDBMonitor::diagnostics(MonitorServer* srv) const
 {
     mxb_assert(mxs::MainWorker::is_main_worker());
-    auto server = get_server(srv);
-    return server ? server->to_json() : nullptr;
+    json_t* result = nullptr;
+
+    if (auto server = get_server(srv))
+    {
+        result = server->to_json();
+
+        json_object_set_new(result, "state_details",
+                            !m_settings.ignore_external_masters && !server->m_node.external_masters.empty() ?
+                            json_string("Slave of External Server") : json_null());
+    }
+
+    return result;
 }
 
 json_t* MariaDBMonitor::to_json(State op)
