@@ -28,11 +28,11 @@ private:
     {
         // The initial server setup is:
         // {master, pinloki-replicant, slave, slave, pinloki}
-        const auto stat_master = mxt::ServerInfo::MASTER | mxt::ServerInfo::RUNNING;
-        const auto stat_slave = mxt::ServerInfo::SLAVE | mxt::ServerInfo::RUNNING;
-        const auto stat_ext_slave = mxt::ServerInfo::SERVER_SLAVE_OF_EXT_MASTER | mxt::ServerInfo::RUNNING;
-        const auto stat_pinloki = mxt::ServerInfo::BLR | mxt::ServerInfo::RUNNING;
-        const auto initial_stats = {stat_master, stat_ext_slave, stat_slave, stat_slave, stat_pinloki};
+        auto stat_master = mxt::ServerInfo::MASTER | mxt::ServerInfo::RUNNING;
+        auto stat_slave = mxt::ServerInfo::SLAVE | mxt::ServerInfo::RUNNING;
+        auto stat_ext_slave = mxt::ServerInfo::SERVER_SLAVE_OF_EXT_MASTER | mxt::ServerInfo::RUNNING;
+        auto stat_pinloki = mxt::ServerInfo::BLR | mxt::ServerInfo::RUNNING;
+        auto initial_stats = {stat_master, stat_ext_slave, stat_slave, stat_slave, stat_pinloki};
 
         Connection regular_slave {test.repl->get_connection(2)};
 
@@ -52,7 +52,7 @@ private:
         test.maxctrl("call command mysqlmon switchover mariadb-cluster server3 server1");
 
         // Check that the server setup is as expected
-        const auto new_stats = {stat_slave, stat_ext_slave, stat_master, stat_slave, stat_pinloki};
+        auto new_stats = {stat_slave, stat_ext_slave, stat_master, stat_slave, stat_pinloki};
         test.maxscale().wait_monitor_ticks(5);
         test.maxscale().check_servers_status(new_stats);
 
