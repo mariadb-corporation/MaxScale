@@ -55,15 +55,7 @@ Writer::Writer(Generator generator, mxb::Worker* worker, InventoryWriter* inv)
         }
         else
         {
-            // When the requested gtid is in the future the actual start state
-            // is one before the requested gtid as the gtid you send to the
-            // server is the gtid you already have (and we don't have it).
-            std::vector<maxsql::Gtid> gtids;
-            for (auto& g : req_state.gtids())
-            {
-                gtids.push_back(g.previous());
-            }
-            m_current_gtid_list = maxsql::GtidList(std::move(gtids));
+            m_current_gtid_list = req_state;
         }
     }
 

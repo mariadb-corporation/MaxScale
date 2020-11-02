@@ -1,6 +1,6 @@
 [maxscale]
 threads=###threads###
-
+log_info=true
 ###server###
 
 [mariadb-cluster]
