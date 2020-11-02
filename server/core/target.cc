@@ -67,7 +67,6 @@ std::string Target::status_to_string(uint64_t flags, int n_connections)
     const std::string master = "Master";
     const std::string relay = "Relay Master";
     const std::string slave = "Slave";
-    const std::string synced = "Synced";
     const std::string slave_ext = "Slave of External Server";
     const std::string sticky = "Master Stickiness";
     const std::string auth_err = "Auth Error";
@@ -107,8 +106,6 @@ std::string Target::status_to_string(uint64_t flags, int n_connections)
         concatenate_if(status_is_blr(flags), blr);
     }
 
-    // The following Galera and Cluster bits may be combined with master/slave.
-    concatenate_if(status_is_joined(flags), synced);
     // May be combined with other MariaDB monitor flags.
     concatenate_if(flags & SERVER_SLAVE_OF_EXT_MASTER, slave_ext);
 

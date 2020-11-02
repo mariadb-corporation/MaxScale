@@ -32,6 +32,7 @@ struct GaleraNode
     std::string cluster_uuid;   /**< Cluster UUID */
     std::string gtid_binlog_pos;
     std::string gtid_current_pos;
+    std::string comment;
     bool        read_only = false;
     int         master_id;
     int         server_id;

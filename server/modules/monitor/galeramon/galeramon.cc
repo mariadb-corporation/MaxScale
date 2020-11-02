@@ -124,6 +124,11 @@ json_t* GaleraMonitor::diagnostics(MonitorServer* server) const
         json_object_set_new(obj, "read_only", json_boolean(it->second.read_only));
         json_object_set_new(obj, "server_id", json_integer(it->second.server_id));
         json_object_set_new(obj, "master_id", json_integer(it->second.master_id));
+
+        if (!it->second.comment.empty())
+        {
+            json_object_set_new(obj, "state_details", json_string(it->second.comment.c_str()));
+        }
     }
 
     return obj;
@@ -207,6 +212,7 @@ void GaleraMonitor::update_server_status(MonitorServer* monitored_server)
         " 'wsrep_cluster_size',"
         " 'wsrep_local_index',"
         " 'wsrep_local_state',"
+        " 'wsrep_local_state_comment',"
         " 'wsrep_desync',"
         " 'wsrep_ready',"
         " 'wsrep_sst_donor_rejects_queries',"
@@ -275,6 +281,20 @@ void GaleraMonitor::update_server_status(MonitorServer* monitored_server)
                 }
 
                 info.local_state = atoi(row[1]);
+            }
+
+            if (strcmp(row[0], "wsrep_local_state_comment") == 0)
+            {
+                info.comment = row[1];
+
+                // The comment sometimes contains extra information. Leave that out as we're only interested
+                // in the string form of the local state.
+                auto pos = info.comment.find(':');
+
+                if (pos != std::string::npos)
+                {
+                    info.comment.erase(pos);
+                }
             }
 
             /* Node is in desync - lets take it offline */

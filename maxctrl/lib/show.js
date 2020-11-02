@@ -244,9 +244,9 @@ const session_fields = [
     description: "How long the session has been idle, in seconds",
   },
   {
-    name: 'Client TLS Cipher',
-    path: 'attributes.client.cipher',
-    description: 'Client TLS cipher'
+    name: "Client TLS Cipher",
+    path: "attributes.client.cipher",
+    description: "Client TLS cipher",
   },
   {
     name: "Connections",
@@ -580,7 +580,13 @@ exports.builder = function (yargs) {
       },
       function (argv) {
         maxctrl(argv, function (host) {
-          return getResource(host, "servers/" + argv.server, server_fields);
+          return getJson(host, "servers/" + argv.server).then((res) => {
+            if (res.data.attributes.state_details) {
+              res.data.attributes.state += ", " + res.data.attributes.state_details;
+            }
+
+            return formatResource(server_fields, res.data);
+          });
         });
       }
     )
@@ -595,7 +601,14 @@ exports.builder = function (yargs) {
       },
       function (argv) {
         maxctrl(argv, function (host) {
-          return getCollectionAsResource(host, "servers/", server_fields);
+          return getJson(host, "servers").then((res) => {
+            for (s of res.data) {
+              if (s.attributes.state_details) {
+                s.attributes.state += ", " + s.attributes.state_details;
+              }
+            }
+            return res.data.map((i) => formatResource(server_fields, i)).join("\n");
+          });
         });
       }
     )

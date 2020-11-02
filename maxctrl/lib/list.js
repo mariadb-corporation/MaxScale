@@ -278,6 +278,10 @@ exports.builder = function (yargs) {
                   s.attributes.parameters.port = "";
                 }
 
+                if (s.attributes.state_details) {
+                  s.attributes.state += ", " + s.attributes.state_details;
+                }
+
                 if (!s.attributes.gtid_current_pos) {
                   // Assign an empty value so we always have something to print
                   s.attributes.gtid_current_pos = "";
