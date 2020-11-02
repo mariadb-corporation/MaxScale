@@ -10,7 +10,7 @@
  * @param format Default value format string
  * @return Enviromental variable value
  */
-char * readenv(const char* name, const char* format, ...) __attribute__ ((format (printf, 2, 3)));
+std::string readenv(const char* name, const char* format, ...) __attribute__ ((format (printf, 2, 3)));
 
 std::string envvar_get_set(const char* name, const char* format, ...)
 __attribute__ ((format (printf, 2, 3)));;

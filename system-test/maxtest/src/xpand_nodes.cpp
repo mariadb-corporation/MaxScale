@@ -113,12 +113,12 @@ int Xpand_nodes::prepare_server(int m)
 
         if (ec == 0)
         {
-            printf("Can access Xpand using user '%s'.\n", this->user_name);
+            printf("Can access Xpand using user '%s'.\n", this->user_name.c_str());
             rv = 0;
         }
         else
         {
-            printf("Cannot access Xpand using user '%s', creating users.\n", this->user_name);
+            printf("Cannot access Xpand using user '%s', creating users.\n", this->user_name.c_str());
             // TODO: We need an return code here.
             create_users(m);
             rv = 0;

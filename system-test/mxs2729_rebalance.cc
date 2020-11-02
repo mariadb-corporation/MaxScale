@@ -25,7 +25,28 @@ using namespace std;
 namespace
 {
 
-ostream& operator << (ostream& out, const std::map<int, int>& m)
+struct ThreadInfo
+{
+    ThreadInfo()
+    {}
+
+    ThreadInfo(int nConnections, int nLoad)
+       : nConnections(nConnections)
+       , nLoad(nLoad)
+    {
+    }
+
+    int nConnections = 0;
+    int nLoad = 0;
+};
+
+ostream& operator << (ostream& out, const ThreadInfo& ti)
+{
+    out << "load=" << ti.nLoad << ", connections=" << ti.nConnections;
+    return out;
+}
+
+ostream& operator << (ostream& out, const std::map<int, ThreadInfo>& m)
 {
     for (auto kv : m)
     {
@@ -34,9 +55,9 @@ ostream& operator << (ostream& out, const std::map<int, int>& m)
     return out;
 }
 
-map<int,int> get_thread_connections(TestConnections& test)
+map<int,ThreadInfo> get_thread_info(TestConnections& test)
 {
-    map<int,int> rv;
+    map<int,ThreadInfo> rv;
     auto result = test.maxctrl("api get maxscale/threads");
     mxb_assert(result.rc == 0);
 
@@ -53,17 +74,22 @@ map<int,int> get_thread_connections(TestConnections& test)
         json_t* pAttributes = json_object_get(pData, "attributes");
         json_t* pStats = json_object_get(pAttributes, "stats");
         json_t* pCurrent_descriptors = json_object_get(pStats, "current_descriptors");
+        json_t* pLoad = json_object_get(pStats, "load");
+        json_t* pLoad_second = json_object_get(pLoad, "last_second");
 
         const char* zId = json_string_value(pId);
         int current_descriptors = json_integer_value(pCurrent_descriptors);
+        int load = json_integer_value(pLoad_second);
 
-        rv.emplace(atoi(zId), current_descriptors);
+        rv.emplace(atoi(zId), ThreadInfo(current_descriptors, load));
     }
 
     return rv;
 }
 
-void move_connections_to_thread(TestConnections& test, int tid, const map<int,int>& connections_by_thread)
+void move_connections_to_thread(TestConnections& test,
+                                int tid,
+                                const map<int,ThreadInfo>& connections_by_thread)
 {
     for (auto kv : connections_by_thread)
     {
@@ -84,15 +110,20 @@ void move_connections_to_thread(TestConnections& test, int tid, const map<int,in
     }
 }
 
-void start_rebalancing(TestConnections& test, int rebalance_period)
+void start_rebalancing(TestConnections& test, int rebalance_period, int rebalance_threshold)
 {
     test.maxctrl("alter maxscale rebalance_window 2");
-    test.maxctrl("alter maxscale rebalance_threshold 10");
 
-    string cmd { "alter maxscale rebalance_period " };
+    string cmd;
+
+    cmd = "alter maxscale rebalance_threshold ";
+    cmd += std::to_string(rebalance_threshold);
+    cmd += "s";
+    test.maxctrl(cmd);
+
+    cmd = "alter maxscale rebalance_period ";
     cmd += std::to_string(rebalance_period);
     cmd += "s";
-
     test.maxctrl(cmd);
 }
 
@@ -127,7 +158,7 @@ int main(int argc, char* argv[])
     TestConnections test(argc, argv);
 
     // cbt = connections by thread
-    map<int,int> cbt1 = get_thread_connections(test);
+    map<int,ThreadInfo> cbt1 = get_thread_info(test);
     cout << "Connection distribution at startup:\n" << cbt1 << endl;
 
     int nMaxscale_threads = cbt1.size();
@@ -136,7 +167,7 @@ int main(int argc, char* argv[])
 
     for (auto kv : cbt1)
     {
-        nConn_total1 += kv.second;
+        nConn_total1 += kv.second.nConnections;
     }
 
     // This is as many connections a thread will have by default after startup.
@@ -160,7 +191,7 @@ int main(int argc, char* argv[])
 
     cout << "Threads ready." << endl;
 
-    map<int,int> cbt2 = get_thread_connections(test);
+    map<int,ThreadInfo> cbt2 = get_thread_info(test);
     cout << "Connection distribution after thread start:\n" << cbt2 << endl;
     mxb_assert(cbt2.size() == cbt1.size());
 
@@ -168,7 +199,7 @@ int main(int argc, char* argv[])
 
     for (auto kv : cbt2)
     {
-        nConn_total2 += kv.second;
+        nConn_total2 += kv.second.nConnections;
     }
 
     int nConn_per_session = (nConn_total2 - nConn_total1) / nThreads;
@@ -176,7 +207,7 @@ int main(int argc, char* argv[])
     move_connections_to_thread(test, 0, cbt2);
     sleep(2); // To allow some time for the explicit moving to have time to finish.
 
-    map<int,int> cbt3 = get_thread_connections(test);
+    map<int,ThreadInfo> cbt3 = get_thread_info(test);
     cout << "Connection distribution after explicit rebalance to thread 0:\n" << cbt3 << endl;
     mxb_assert(cbt3.size() == cbt2.size());
 
@@ -189,8 +220,8 @@ int main(int argc, char* argv[])
 
         if (wid != 0)
         {
-            int conns1 = it1->second;
-            int conns2 = it3->second;
+            int conns1 = it1->second.nConnections;
+            int conns2 = it3->second.nConnections;
 
             test.expect(conns1 == conns2,
                         "Rebalance did not move all connections from thread %d.", wid);
@@ -200,13 +231,13 @@ int main(int argc, char* argv[])
         ++it3;
     }
 
-    int nConn_max = cbt3[0];
+    int nConn_max = cbt3[0].nConnections;
     int nConn_to_move = (nMaxscale_threads - 1) * (nConn_max - nConn_default) / nMaxscale_threads;
-    int nSessions_to_move = nConn_to_move / nConn_per_session;
-    int nMax_rounds = nSessions_to_move; // Should be worst case.
+    int nMax_rounds = nConn_to_move / nConn_per_session; // Should be worst case.
 
     int rebalance_period = 1;
-    start_rebalancing(test, rebalance_period);
+    int rebalance_threshold = 10;
+    start_rebalancing(test, rebalance_period, rebalance_threshold);
 
     int n = 1;
     bool rebalanced = false;
@@ -214,7 +245,7 @@ int main(int argc, char* argv[])
     {
         sleep(rebalance_period * 2);
 
-        map<int,int> cbt4 = get_thread_connections(test);
+        map<int,ThreadInfo> cbt4 = get_thread_info(test);
 
         int avg = 0;
         int min = std::numeric_limits<int>::max();
@@ -222,16 +253,16 @@ int main(int argc, char* argv[])
 
         for (auto kv : cbt4)
         {
-            avg += kv.second;
+            avg += kv.second.nLoad;
 
-            if (kv.second > max)
+            if (kv.second.nLoad > max)
             {
-                max = kv.second;
+                max = kv.second.nLoad;
             }
 
-            if (kv.second < min)
+            if (kv.second.nLoad < min)
             {
-                min = kv.second;
+                min = kv.second.nLoad;
             }
         }
 
@@ -242,9 +273,9 @@ int main(int argc, char* argv[])
         cout << "Min: " << min << endl;
         cout << "Max: " << max << endl;
 
-        // We are happy when the difference between min/max and avg corresponds to
-        // the #connections of a session.
-        rebalanced = (avg - min <= nConn_per_session) && (max - avg <= nConn_per_session);
+        // We are happy when the difference between min and max is what we requested
+        // in the rebalance command.
+        rebalanced = (max - min <= rebalance_threshold);
 
         if (!rebalanced)
         {

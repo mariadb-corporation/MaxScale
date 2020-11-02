@@ -25,6 +25,14 @@ Maxscales::Maxscales(const char* pref,
     strcpy(this->test_dir, test_cwd);
 }
 
+Maxscales::~Maxscales()
+{
+    for (int i = 0; i < MAX_MAXSCALES; ++i)
+    {
+        close_maxscale_connections(i);
+    }
+}
+
 bool Maxscales::setup()
 {
     read_env();     // Sets e.g. use_valgrind.
@@ -94,6 +102,8 @@ int Maxscales::read_env()
 
 int Maxscales::connect_rwsplit(int m, const std::string& db)
 {
+    mysql_close(conn_rwsplit[m]);
+
     conn_rwsplit[m] = open_conn_db(rwsplit_port[m], ip(m), db, user_name, password, ssl);
     routers[m][0] = conn_rwsplit[m];
 
@@ -114,6 +124,8 @@ int Maxscales::connect_rwsplit(int m, const std::string& db)
 
 int Maxscales::connect_readconn_master(int m, const std::string& db)
 {
+    mysql_close(conn_master[m]);
+
     conn_master[m] = open_conn_db(readconn_master_port[m], ip(m), db, user_name, password, ssl);
     routers[m][1] = conn_master[m];
 
@@ -134,6 +146,8 @@ int Maxscales::connect_readconn_master(int m, const std::string& db)
 
 int Maxscales::connect_readconn_slave(int m, const std::string& db)
 {
+    mysql_close(conn_slave[m]);
+
     conn_slave[m] = open_conn_db(readconn_slave_port[m], ip(m), db, user_name, password, ssl);
     routers[m][2] = conn_slave[m];
 
@@ -164,6 +178,10 @@ int Maxscales::close_maxscale_connections(int m)
     mysql_close(conn_master[m]);
     mysql_close(conn_slave[m]);
     mysql_close(conn_rwsplit[m]);
+
+    conn_master[m] = nullptr;
+    conn_slave[m] = nullptr;
+    conn_rwsplit[m] = nullptr;
     return 0;
 }
 
@@ -195,15 +213,16 @@ int Maxscales::start_maxscale(int m)
                              "--log-file=/%s/valgrind%02d.log --trace-children=yes "
                              " --tool=callgrind --callgrind-out-file=/%s/callgrind%02d.log "
                              " /usr/bin/maxscale",
-                             maxscale_log_dir[m], valgring_log_num,
-                             maxscale_log_dir[m], valgring_log_num);
+                             maxscale_log_dir[m].c_str(), valgring_log_num,
+                             maxscale_log_dir[m].c_str(), valgring_log_num);
         }
         else
         {
             res = ssh_node_f(m, false,
                              "sudo --user=maxscale valgrind --leak-check=full --show-leak-kinds=all "
                              "--log-file=/%s/valgrind%02d.log --trace-children=yes "
-                             "--track-origins=yes /usr/bin/maxscale", maxscale_log_dir[m], valgring_log_num);
+                             "--track-origins=yes /usr/bin/maxscale",
+                             maxscale_log_dir[m].c_str(), valgring_log_num);
         }
         valgring_log_num++;
     }

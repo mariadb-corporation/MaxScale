@@ -103,6 +103,8 @@ Mariadb_nodes::~Mariadb_nodes()
             unblock_node(i);
         }
     }
+
+    close_connections();
 }
 
 int Mariadb_nodes::connect(int i, const std::string& db)
@@ -198,17 +200,17 @@ void Mariadb_nodes::read_env()
             //reading sockets
             sprintf(env_name, "%s_%03d_socket", prefixc, i);
             socket[i] = readenv(env_name, " ");
-            if (strcmp(socket[i], " "))
+            if (strcmp(socket[i].c_str(), " "))
             {
-                socket_cmd[i] = (char *) malloc(strlen(socket[i]) + 10);
-                sprintf(socket_cmd[i], "--socket=%s", socket[i]);
+                socket_cmd[i] = "--socket=";
+                socket_cmd[i] += socket[i];
             }
             else
             {
                 socket_cmd[i] = (char *) " ";
             }
             sprintf(env_name, "%s_%03d_socket_cmd", prefixc, i);
-            setenv(env_name, socket_cmd[i], 1);
+            setenv(env_name, socket_cmd[i].c_str(), 1);
 
             // reading start_db_command
             sprintf(env_name, "%s_%03d_start_db_command", prefixc, i);
@@ -233,8 +235,8 @@ void Mariadb_nodes::print_env()
         printf("%s node %d \t%s\tPort=%d\n", prefixc, i, ip4(i), port[i]);
         printf("%s Access user %s\n", prefixc, access_user(i));
     }
-    printf("%s User name %s\n", prefixc, user_name);
-    printf("%s Password %s\n", prefixc, password);
+    printf("%s User name %s\n", prefixc, user_name.c_str());
+    printf("%s Password %s\n", prefixc, password.c_str());
 }
 
 int Mariadb_nodes::find_master()
@@ -317,11 +319,11 @@ int Mariadb_nodes::start_node(int node, const char* param)
     char cmd[PATH_MAX + 1024];
     if (v51)
     {
-        sprintf(cmd, "%s %s --report-host", start_db_command[node], param);
+        sprintf(cmd, "%s %s --report-host", start_db_command[node].c_str(), param);
     }
     else
     {
-        sprintf(cmd, "%s %s", start_db_command[node], param);
+        sprintf(cmd, "%s %s", start_db_command[node].c_str(), param);
     }
     return ssh_node(node, cmd, true);
 }
@@ -391,7 +393,7 @@ void Mariadb_nodes::create_users(int node)
     copy_to_node(node, str, access_homedir(node));
     ssh_node_f(node, true,
                "export node_user=\"%s\"; export node_password=\"%s\"; %s/create_user.sh %s",
-               user_name, password, access_homedir(0), socket_cmd[0]);
+               user_name.c_str(), password.c_str(), access_homedir(0), socket_cmd[0].c_str());
 }
 
 int Mariadb_nodes::create_users()
@@ -519,9 +521,9 @@ int Galera_nodes::start_galera()
     ssh_node_f(0,
                true,
                "export galera_user=\"%s\"; export galera_password=\"%s\"; ./create_user_galera.sh %s",
-               user_name,
-               password,
-               socket_cmd[0]);
+               user_name.c_str(),
+               password.c_str(),
+               socket_cmd[0].c_str());
 
     local_result += robust_connect(5) ? 0 : 1;
     local_result += execute_query(nodes[0], "%s", create_repl_user);
@@ -795,6 +797,8 @@ static bool multi_source_replication(MYSQL* conn, int node)
             printf("Node %d: More than one configured slave\n", node);
             fflush(stdout);
         }
+
+        mysql_free_result(res);
     }
     else
     {
@@ -1291,9 +1295,9 @@ int Mariadb_nodes::configure_ssl(bool require)
 
         sprintf(str,
                 "export node_user=\"%s\"; export node_password=\"%s\"; ./create_user_ssl.sh %s",
-                user_name,
-                password,
-                socket_cmd[0]);
+                user_name.c_str(),
+                password.c_str(),
+                socket_cmd[0].c_str());
         printf("cmd: %s\n", str);
         ssh_node(0, str, false);
     }
@@ -1306,7 +1310,7 @@ int Mariadb_nodes::disable_ssl()
     int local_result = connect();
     local_result += execute_query(
         nodes[0], "DROP USER %s;  grant all privileges on *.*  to '%s'@'%%' identified by '%s';",
-        user_name, user_name, password);
+        user_name.c_str(), user_name.c_str(), password.c_str());
     close_connections();
 
     for (int i = 0; i < N; i++)

@@ -124,8 +124,8 @@ void Config::create_monitor(const char* name, const char* module, int interval)
     test_->set_timeout(120);
     test_->maxscales->ssh_node_f(0, true,
                                  "maxctrl create monitor %s %s monitor_interval=%d user=%s password=%s",
-                                 name, module, interval, test_->maxscales->user_name,
-                                 test_->maxscales->password);
+                                 name, module, interval, test_->maxscales->user_name.c_str(),
+                                 test_->maxscales->password.c_str());
     test_->stop_timeout();
 
     created_monitors_.insert(std::string(name));

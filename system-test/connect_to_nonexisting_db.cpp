@@ -8,8 +8,8 @@
 bool try_connect(TestConnections& test)
 {
     const char* ip = test.maxscales->ip4(0);
-    const char* user = test.maxscales->user_name;
-    const char* pw = test.maxscales->password;
+    const char* user = test.maxscales->user_name.c_str();
+    const char* pw = test.maxscales->password.c_str();
     const char* db = "test_db";
 
     MYSQL* rwsplit = open_conn_db(test.maxscales->rwsplit_port[0], ip, db, user, pw, false);

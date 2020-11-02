@@ -80,10 +80,10 @@ int main(int argc, char* argv[])
     if (rc != 0)
     {
         test.tprintf("'/var/log/auth.log` does not exist. trying with '/var/log/secure'");
-    }
 
-    secure_log = "/var/log/secure";
-    rc = test.maxscales->ssh_node_f(0, true, "test -f %s", secure_log.c_str());
+        secure_log = "/var/log/secure";
+        rc = test.maxscales->ssh_node_f(0, true, "test -f %s", secure_log.c_str());
+    }
 
     if (rc != 0)
     {

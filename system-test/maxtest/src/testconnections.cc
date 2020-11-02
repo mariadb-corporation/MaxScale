@@ -285,10 +285,8 @@ TestConnections::TestConnections(int argc, char* argv[])
     sprintf(str, "mkdir -p LOGS/%s", m_test_name.c_str());
     call_system(str);
 
-    timeout = 999999999;
-    set_log_copy_interval(999999999);
-    pthread_create(&timeout_thread_p, NULL, timeout_thread, this);
-    pthread_create(&log_copy_thread_p, NULL, log_copy_thread, this);
+    m_timeout_thread = std::thread(&TestConnections::timeout_thread, this);
+    m_log_copy_thread = std::thread(&TestConnections::log_copy_thread, this);
     tprintf("Starting test");
     gettimeofday(&m_start_time, NULL);
     m_logger->reset_timer();
@@ -329,6 +327,10 @@ TestConnections::~TestConnections()
         sleep(15);      // sleep to let logs be written do disks
     }
 
+    m_stop_threads = true;
+    m_timeout_thread.join();
+    m_log_copy_thread.join();
+
     copy_all_logs();
 
     /* Temporary disable snapshot revert due to Galera failures
@@ -346,19 +348,16 @@ TestConnections::~TestConnections()
      *  }
      */
 
-    if (repl)
-    {
-        delete repl;
-    }
-    if (galera)
-    {
-        delete galera;
-    }
+    delete repl;
+    delete galera;
+    delete xpand;
 
     if (maxscale::multiple_maxscales)
     {
         maxscales->stop_all();
     }
+
+    delete maxscales;
 
     if (global_result)
     {
@@ -476,8 +475,8 @@ void TestConnections::read_env()
 void TestConnections::print_env()
 {
     printf("Maxscale IP\t%s\n", maxscales->ip4(0));
-    printf("Maxscale User name\t%s\n", maxscales->user_name);
-    printf("Maxscale Password\t%s\n", maxscales->password);
+    printf("Maxscale User name\t%s\n", maxscales->user_name.c_str());
+    printf("Maxscale Password\t%s\n", maxscales->password.c_str());
     printf("Maxscale SSH key\t%s\n", maxscales->sshkey(0));
     printf("Access user\t%s\n", maxscales->access_user(0));
     if (repl)
@@ -662,8 +661,8 @@ void TestConnections::init_maxscale(int m)
                           "iptables -F INPUT;"
                           "rm -rf %s/*.log /tmp/core* /dev/shm/* /var/lib/maxscale/* /var/lib/maxscale/.secrets;"
                           "find /var/*/maxscale -name 'maxscale.lock' -delete;",
-                          maxscales->maxscale_cnf[m],
-                          maxscales->maxscale_log_dir[m]);
+                          maxscales->maxscale_cnf[m].c_str(),
+                          maxscales->maxscale_log_dir[m].c_str());
     if (maxscale::start)
     {
         maxscales->restart_maxscale(m);
@@ -719,7 +718,7 @@ int TestConnections::copy_mariadb_logs(Mariadb_nodes* nrepl,
             {
                 char str[4096];
                 sprintf(str, "LOGS/%s/%s%d_mariadb_log", m_test_name.c_str(), prefix, i);
-                threads.emplace_back(&TestConnections::copy_one_mariadb_log, this, nrepl, i, str);
+                threads.emplace_back(&TestConnections::copy_one_mariadb_log, this, nrepl, i, string(str));
             }
         }
     }
@@ -789,9 +788,9 @@ void TestConnections::copy_one_maxscale_log(int i, double timestamp)
                                        "test -e /tmp/core*  && exit 42;",
                                        homedir,
                                        homedir,
-                                       maxscales->maxscale_log_dir[i], homedir,
+                                       maxscales->maxscale_log_dir[i].c_str(), homedir,
                                        homedir,
-                                       maxscales->maxscale_cnf[i], homedir,
+                                       maxscales->maxscale_cnf[i].c_str(), homedir,
                                        homedir);
         sprintf(sys, "%s/logs/*", homedir);
         maxscales->copy_from_node(i, sys, log_dir_i);
@@ -799,9 +798,9 @@ void TestConnections::copy_one_maxscale_log(int i, double timestamp)
     }
     else
     {
-        maxscales->ssh_node_f(i, true, "cp %s/*.logs %s/", maxscales->maxscale_log_dir[i], log_dir_i);
+        maxscales->ssh_node_f(i, true, "cp %s/*.logs %s/", maxscales->maxscale_log_dir[i].c_str(), log_dir_i);
         maxscales->ssh_node_f(i, true, "cp /tmp/core* %s/", log_dir_i);
-        maxscales->ssh_node_f(i, true, "cp %s %s/", maxscales->maxscale_cnf[i], log_dir_i);
+        maxscales->ssh_node_f(i, true, "cp %s %s/", maxscales->maxscale_cnf[i].c_str(), log_dir_i);
         maxscales->ssh_node_f(i, true, "chmod a+r -R %s", log_dir_i);
     }
 }
@@ -850,27 +849,27 @@ int TestConnections::prepare_binlog(int m)
         add_result(maxscales->ssh_node_f(m,
                                          true,
                                          "sed -i \"s/,mariadb10-compatibility=1//\" %s",
-                                         maxscales->maxscale_cnf[m]),
+                                         maxscales->maxscale_cnf[m].c_str()),
                    "Error editing maxscale.cnf");
     }
 
     if (!m_local_maxscale)
     {
         tprintf("Removing all binlog data from Maxscale node");
-        add_result(maxscales->ssh_node_f(m, true, "rm -rf %s", maxscales->maxscale_binlog_dir[m]),
+        add_result(maxscales->ssh_node_f(m, true, "rm -rf %s", maxscales->maxscale_binlog_dir[m].c_str()),
                    "Removing binlog data failed");
 
         tprintf("Creating binlog dir");
-        add_result(maxscales->ssh_node_f(m, true, "mkdir -p %s", maxscales->maxscale_binlog_dir[m]),
+        add_result(maxscales->ssh_node_f(m, true, "mkdir -p %s", maxscales->maxscale_binlog_dir[m].c_str()),
                    "Creating binlog data dir failed");
         tprintf("Set 'maxscale' as a owner of binlog dir");
         add_result(maxscales->ssh_node_f(m,
                                          false,
                                          "%s mkdir -p %s; %s chown maxscale:maxscale -R %s",
                                          maxscales->access_sudo(m),
-                                         maxscales->maxscale_binlog_dir[m],
+                                         maxscales->maxscale_binlog_dir[m].c_str(),
                                          maxscales->access_sudo(m),
-                                         maxscales->maxscale_binlog_dir[m]),
+                                         maxscales->maxscale_binlog_dir[m].c_str()),
                    "directory ownership change failed");
     }
     else
@@ -951,7 +950,7 @@ int TestConnections::start_binlog(int m)
     if (!m_local_maxscale)
     {
         tprintf("ls binlog data dir on Maxscale node\n");
-        add_result(maxscales->ssh_node_f(m, true, "ls -la %s/", maxscales->maxscale_binlog_dir[m]),
+        add_result(maxscales->ssh_node_f(m, true, "ls -la %s/", maxscales->maxscale_binlog_dir[m].c_str()),
                    "ls failed\n");
     }
 
@@ -1579,21 +1578,21 @@ int TestConnections::set_timeout(long int timeout_seconds)
 {
     if (m_enable_timeouts)
     {
-        timeout = timeout_seconds;
+        m_timeout = timeout_seconds;
     }
     return 0;
 }
 
 int TestConnections::set_log_copy_interval(long int interval_seconds)
 {
-    log_copy_to_go = interval_seconds;
-    log_copy_interval = interval_seconds;
+    m_log_copy_to_go = interval_seconds;
+    m_log_copy_interval = interval_seconds;
     return 0;
 }
 
 int TestConnections::stop_timeout()
 {
-    timeout = 999999999;
+    m_timeout = 999999999;
     return 0;
 }
 
@@ -1644,41 +1643,45 @@ int TestConnections::get_master_server_id(int m)
     mysql_close(conn);
     return master_id;
 }
-void* timeout_thread(void* ptr)
+
+void TestConnections::timeout_thread()
 {
-    TestConnections* Test = (TestConnections*) ptr;
-    struct timespec tim;
-    while (Test->timeout > 0)
+    while (!m_stop_threads && m_timeout > 0)
     {
+        struct timespec tim;
         tim.tv_sec = 1;
         tim.tv_nsec = 0;
         nanosleep(&tim, NULL);
-        Test->timeout--;
+        m_timeout--;
     }
-    Test->tprintf("\n **** Timeout! *** \n");
-    Test->~TestConnections();
-    exit(250);
+
+    if (!m_stop_threads)
+    {
+        tprintf("\n **** Timeout! *** \n");
+        exit(250);
+    }
 }
 
-void* log_copy_thread(void* ptr)
+void TestConnections::log_copy_thread()
 {
-    TestConnections* Test = (TestConnections*) ptr;
-    struct timespec tim;
-    while (true)
+    while (!m_stop_threads)
     {
-        while (Test->log_copy_to_go > 0)
+        while (!m_stop_threads && m_log_copy_to_go > 0)
         {
+            struct timespec tim;
             tim.tv_sec = 1;
             tim.tv_nsec = 0;
             nanosleep(&tim, NULL);
-            Test->log_copy_to_go--;
+            m_log_copy_to_go--;
         }
-        Test->log_copy_to_go = Test->log_copy_interval;
-        Test->tprintf("\n **** Copying all logs *** \n");
-        Test->copy_all_logs_periodic();
-    }
 
-    return NULL;
+        if (!m_stop_threads)
+        {
+            m_log_copy_to_go = m_log_copy_interval;
+            tprintf("\n **** Copying all logs *** \n");
+            copy_all_logs_periodic();
+        }
+    }
 }
 
 int TestConnections::insert_select(int m, int N)

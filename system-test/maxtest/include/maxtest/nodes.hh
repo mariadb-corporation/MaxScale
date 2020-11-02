@@ -82,6 +82,10 @@ public:
      * @return exit code of the coomand
      */
     int ssh_node(int node, const char* ssh, bool sudo);
+    int ssh_node(int node, const std::string& ssh, bool sudo)
+    {
+        return ssh_node(node, ssh.c_str(), sudo);
+    }
     int ssh_node_f(int node, bool sudo, const char* format, ...) mxb_attribute((format(printf, 4, 5)));
 
     /**
