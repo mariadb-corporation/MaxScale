@@ -125,6 +125,8 @@ SQL::Result SQL::result(const std::string& sql)
 
                 rval.push_back(r);
             }
+
+            mysql_free_result(res);
         }
     }
 

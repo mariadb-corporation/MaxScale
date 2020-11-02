@@ -874,7 +874,7 @@ void Session::dump_statements() const
                     // We are in a context where we do not have a current session, so we need to
                     // log the session id ourselves.
 
-                    MXS_NOTICE("(%" PRIu64 ") Stmt %d(%s): %.*s", current_id, n, timestamp, len, pStmt);
+                    MXS_NOTICE("(%" PRIu64 ") Stmt %d(%s): %.*s", id(), n, timestamp, len, pStmt);
                 }
 
                 if (deallocate)
