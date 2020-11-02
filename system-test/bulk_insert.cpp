@@ -90,11 +90,18 @@ int bind_by_column(MYSQL* mysql)
         return show_mysql_error(mysql);
     }
 
+    int nRows = 0;
     MYSQL_RES* res = mysql_store_result(mysql);
 
-    if (res == NULL || mysql_num_rows(res) != 3)
+    if (res)
     {
-        printf("Expected 3 rows but got %d (%s)\n", res ? (int)mysql_num_rows(res) : 0, mysql_error(mysql));
+        nRows = mysql_num_rows(res);
+        mysql_free_result(res);
+    }
+
+    if (nRows != 3)
+    {
+        printf("Expected 3 rows but got %d (%s)\n", nRows, mysql_error(mysql));
         return 1;
     }
 
@@ -187,11 +194,18 @@ int bind_by_row(MYSQL* mysql)
         return show_mysql_error(mysql);
     }
 
+    int nRows = 0;
     MYSQL_RES* res = mysql_store_result(mysql);
 
-    if (res == NULL || mysql_num_rows(res) != 3)
+    if (res)
     {
-        printf("Expected 3 rows but got %d (%s)\n", res ? (int)mysql_num_rows(res) : 0, mysql_error(mysql));
+        nRows = mysql_num_rows(res);
+        mysql_free_result(res);
+    }
+
+    if (nRows != 3)
+    {
+        printf("Expected 3 rows but got %d (%s)\n", nRows, mysql_error(mysql));
         return 1;
     }
 

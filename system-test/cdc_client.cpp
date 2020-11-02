@@ -74,7 +74,9 @@ bool cdc_com(TestConnections* Test)
     Test->tprintf("Auth string: %s", get);
 
     // Send the query to the server
-    if (send_so(sock, get) != 0)
+    int rv = send_so(sock, get);
+    free(get);
+    if (rv != 0)
     {
         Test->tprintf("Cat't send data to scoket");
         return false;

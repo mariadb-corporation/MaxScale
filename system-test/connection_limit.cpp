@@ -96,7 +96,7 @@ void check_max_conn(int router, int max_conn, TestConnections& test)
                          mysql_errno(conn[i]),
                          mysql_error(conn[i]));
     }
-    for (i = 0; i < max_conn; i++)
+    for (i = 0; i <= max_conn; i++)
     {
         mysql_close(conn[i]);
     }

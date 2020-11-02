@@ -68,6 +68,7 @@ int main(int argc, char* argv[])
             Test->tprintf("Trying SELECT\n");
             if (execute_query(conn, (char*) "SELECT * FROM t1") == 0)
             {
+                mysql_close(conn);
                 error = false;
                 break;
             }

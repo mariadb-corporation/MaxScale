@@ -127,8 +127,6 @@ int main(int argc, char* argv[])
         {
             Test->tprintf("********** rules%d test PASSED", i);
         }
-
-        mysql_close(Test->maxscales->conn_rwsplit[0]);
     }
 
     Test->set_timeout(180);
@@ -176,7 +174,6 @@ int main(int argc, char* argv[])
     Test->set_timeout(180);
     Test->try_query(Test->maxscales->conn_rwsplit[0], "DELETE FROM t1");
 
-    mysql_close(Test->maxscales->conn_rwsplit[0]);
     Test->maxscales->stop_maxscale(0);
 
     Test->tprintf("Trying limit_queries clause");

@@ -124,6 +124,8 @@ void test2(TestConnections& test)
     test.add_result(strcmp(buffer2, server_id) != 0,
                     "Expected prepare 2 to go to the master (%s) but it's %s",
                     server_id, buffer2);
+
+    mysql_close(conn);
 }
 
 void test3(TestConnections& test)

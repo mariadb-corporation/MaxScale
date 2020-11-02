@@ -84,6 +84,8 @@ map<int,ThreadInfo> get_thread_info(TestConnections& test)
         rv.emplace(atoi(zId), ThreadInfo(current_descriptors, load));
     }
 
+    json_decref(pJson);
+
     return rv;
 }
 

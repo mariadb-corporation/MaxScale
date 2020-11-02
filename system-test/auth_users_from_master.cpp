@@ -91,43 +91,43 @@
 
 int main(int argc, char* argv[])
 {
-    TestConnections* Test = new TestConnections(argc, argv);
-    Test->set_timeout(10);
+    TestConnections test(argc, argv);
+    test.set_timeout(10);
     int i;
 
-    Test->repl->connect();
-    Test->maxscales->connect_maxscale(0);
+    test.repl->connect();
+    test.maxscales->connect_maxscale(0);
 
-    for (i = 1; i < Test->repl->N; i++)
+    for (i = 1; i < test.repl->N; i++)
     {
-        execute_query(Test->repl->nodes[i], (char*) "stop slave;");
+        execute_query(test.repl->nodes[i], (char*) "stop slave;");
     }
 
-    execute_query(Test->maxscales->conn_rwsplit[0],
+    execute_query(test.maxscales->conn_rwsplit[0],
                   (char*) "CREATE USER 'test_user'@'%%' IDENTIFIED BY 'pass'");
 
-    MYSQL* conn = open_conn_no_db(Test->maxscales->rwsplit_port[0],
-                                  Test->maxscales->ip4(0),
+    MYSQL* conn = open_conn_no_db(test.maxscales->rwsplit_port[0],
+                                  test.maxscales->ip4(0),
                                   (char*) "test_user",
                                   (char*) "pass",
-                                  Test->ssl);
+                                  test.ssl);
 
     if (conn == NULL)
     {
-        Test->add_result(1, "Connections error\n");
+        test.add_result(1, "Connections error\n");
     }
 
-    for (i = 1; i < Test->repl->N; i++)
+    for (i = 1; i < test.repl->N; i++)
     {
-        execute_query(Test->repl->nodes[i], (char*) "start slave;");
+        execute_query(test.repl->nodes[i], (char*) "start slave;");
     }
 
-    execute_query(Test->maxscales->conn_rwsplit[0], (char*) "DROP USER 'test_user'@'%%'");
+    execute_query(test.maxscales->conn_rwsplit[0], (char*) "DROP USER 'test_user'@'%%'");
 
-    Test->repl->close_connections();
-    Test->maxscales->close_maxscale_connections(0);
+    test.repl->close_connections();
+    test.maxscales->close_maxscale_connections(0);
 
-    int rval = Test->global_result;
-    delete Test;
-    return rval;
+    mysql_close(conn);
+
+    return test.global_result;
 }

@@ -63,6 +63,7 @@ void check(TestConnections& test)
             separator = ", ";
         }
         test.tprintf("%s: %s", query2, values.c_str());
+        mysql_free_result(res);
     }
     test.try_query(conn, "COMMIT");
     mysql_close(conn);

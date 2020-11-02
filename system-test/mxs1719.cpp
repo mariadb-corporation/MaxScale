@@ -68,6 +68,8 @@ void run(TestConnections& test)
     {
         test.expect(false, "Could not connect to MaxScale.");
     }
+
+    mysql_close(pMysql);
 }
 }
 

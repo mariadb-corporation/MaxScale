@@ -360,6 +360,7 @@ int main(int argc, char** argv)
                 {
                     test.tprintf("Could not log in: '%s'", err);
                 }
+                mysql_close(maxconn);
                 return rval;
             };
 
