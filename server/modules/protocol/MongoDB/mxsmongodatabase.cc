@@ -300,7 +300,10 @@ public:
     GWBUF* execute() override
     {
         MXS_ERROR("Command not recognized: %s", m_req.to_string().c_str());
-        mxb_assert(!true);
+
+        // Inconvenient during development if every single unknown command leads
+        // to an abort. Now optionally an empty document may be returned instead.
+        mxb_assert(mxsmongo::continue_on_unknown());
 
         auto builder = bsoncxx::builder::stream::document{};
         bsoncxx::document::value doc_value = builder << bsoncxx::builder::stream::finalize;

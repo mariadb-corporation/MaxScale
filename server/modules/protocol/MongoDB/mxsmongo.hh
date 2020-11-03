@@ -43,6 +43,11 @@ const int MXSMONGO_QUERY_HEADER_LEN = sizeof(mongoc_rpc_query_t);
 namespace mxsmongo
 {
 
+/**
+ * Should the execution continue even if an unknown command is encountered.
+ */
+bool continue_on_unknown();
+
 bsoncxx::document::value& topology_version();
 
 inline int32_t get_byte1(const uint8_t* pBuffer, uint8_t* pHost8)

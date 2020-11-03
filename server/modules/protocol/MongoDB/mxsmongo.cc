@@ -31,8 +31,15 @@ struct ThisUnit
         { mxsmongo::keys::FIND,      mxsmongo::Command::FIND },
         { mxsmongo::keys::ISMASTER,  mxsmongo::Command::ISMASTER }
     };
+
+    bool continue_on_unknown = getenv("MONGODBCLIENT_CONTINUE_ON_UNKNOWN") != nullptr;
 } this_unit;
 
+}
+
+bool mxsmongo::continue_on_unknown()
+{
+    return this_unit.continue_on_unknown;
 }
 
 const char* mxsmongo::opcode_to_string(int code)
