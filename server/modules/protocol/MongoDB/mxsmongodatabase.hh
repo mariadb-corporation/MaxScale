@@ -126,12 +126,10 @@ private:
         m_state = READY;
     }
 
-    GWBUF* command_ismaster(GWBUF* pRequest,
-                            const mxsmongo::Packet& req,
-                            const bsoncxx::document::view& doc);
-    GWBUF* command_find(GWBUF* pRequest,
-                        const mxsmongo::Packet& req,
-                        const bsoncxx::document::view& doc);
+    GWBUF* execute(mxsmongo::Command command,
+                   GWBUF* pRequest,
+                   const mxsmongo::Packet& req,
+                   const bsoncxx::document::view& doc);
 
     using SCommand = std::unique_ptr<Command>;
 

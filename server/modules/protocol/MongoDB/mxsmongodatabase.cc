@@ -347,24 +347,7 @@ GWBUF* mxsmongo::Database::handle_query(GWBUF* pRequest, const mxsmongo::Query& 
 {
     mxb_assert(is_ready());
 
-    GWBUF* pResponse = nullptr;
-
-    switch (mxsmongo::get_command(req.query()))
-    {
-    case mxsmongo::Command::ISMASTER:
-        pResponse = command_ismaster(pRequest, req, req.query());
-        break;
-
-    case mxsmongo::Command::FIND:
-        pResponse = command_find(pRequest, req, req.query());
-        break;
-
-    case mxsmongo::Command::UNKNOWN:
-        MXS_ERROR("Command not recognized: %s", req.to_string().c_str());
-        mxb_assert(!true);
-    }
-
-    return pResponse;
+    return execute(mxsmongo::get_command(req.query()), pRequest, req, req.query());
 }
 
 GWBUF* mxsmongo::Database::handle_command(GWBUF* pRequest,
@@ -373,37 +356,7 @@ GWBUF* mxsmongo::Database::handle_command(GWBUF* pRequest,
 {
     mxb_assert(is_ready());
 
-    GWBUF* pResponse = nullptr;
-
-    switch (mxsmongo::get_command(doc))
-    {
-    case mxsmongo::Command::ISMASTER:
-        {
-            if (m_name != "admin")
-            {
-                MXS_WARNING("ismaster command issued on '%s' and not expected 'admin.",
-                            m_name.c_str());
-            }
-
-            pResponse = command_ismaster(pRequest, req, doc);
-        }
-        break;
-
-    case mxsmongo::Command::FIND:
-        pResponse = command_find(pRequest, req, doc);
-        break;
-
-    case mxsmongo::Command::UNKNOWN:
-        MXS_ERROR("Command not recognized: %s", req.to_string().c_str());
-        mxb_assert(!true);
-    }
-
-    if (!pResponse)
-    {
-        set_pending();
-    }
-
-    return pResponse;
+    return execute(mxsmongo::get_command(doc), pRequest, req, doc);
 }
 
 GWBUF* mxsmongo::Database::translate(GWBUF* pMariaDB_response)
@@ -421,33 +374,32 @@ GWBUF* mxsmongo::Database::translate(GWBUF* pMariaDB_response)
     return pResponse;
 }
 
-GWBUF* mxsmongo::Database::command_find(GWBUF* pRequest,
-                                        const mxsmongo::Packet& req,
-                                        const bsoncxx::document::view& doc)
+GWBUF* mxsmongo::Database::execute(mxsmongo::Command cid,
+                                   GWBUF* pRequest,
+                                   const mxsmongo::Packet& req,
+                                   const bsoncxx::document::view& doc)
 {
-    auto sCommand = command::create<command::Find>(this, pRequest, req, doc);
+    GWBUF* pResponse = nullptr;
 
-    GWBUF* pResponse = sCommand->execute();
-
-    if (!pResponse)
+    if (cid != mxsmongo::Command::UNKNOWN)
     {
-        m_sCommand = std::move(sCommand);
+        auto it = this_unit.creators_by_command.find(cid);
+        mxb_assert(it != this_unit.creators_by_command.end());
+
+        auto sCommand = it->second(this, pRequest, req, doc);
+
+        pResponse = sCommand->execute();
+
+        if (!pResponse)
+        {
+            m_sCommand = std::move(sCommand);
+            set_pending();
+        }
     }
-
-    return pResponse;
-}
-
-GWBUF* mxsmongo::Database::command_ismaster(GWBUF* pRequest,
-                                            const mxsmongo::Packet& req,
-                                            const bsoncxx::document::view& doc)
-{
-    auto sCommand = command::create<command::IsMaster>(this, pRequest, req, doc);
-
-    GWBUF* pResponse = sCommand->execute();
-
-    if (!pResponse)
+    else
     {
-        m_sCommand = std::move(sCommand);
+        MXS_ERROR("Command not recognized: %s", req.to_string().c_str());
+        mxb_assert(!true);
     }
 
     return pResponse;
