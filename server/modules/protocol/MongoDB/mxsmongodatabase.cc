@@ -263,7 +263,7 @@ public:
     }
 };
 
-class IsMaster :  public mxsmongo::Database::Command
+class IsMaster : public mxsmongo::Database::Command
 {
 public:
     using mxsmongo::Database::Command::Command;
@@ -292,6 +292,23 @@ public:
     }
 };
 
+class Unknown : public mxsmongo::Database::Command
+{
+public:
+    using mxsmongo::Database::Command::Command;
+
+    GWBUF* execute() override
+    {
+        MXS_ERROR("Command not recognized: %s", m_req.to_string().c_str());
+        mxb_assert(!true);
+
+        auto builder = bsoncxx::builder::stream::document{};
+        bsoncxx::document::value doc_value = builder << bsoncxx::builder::stream::finalize;
+
+        return create_response(doc_value);
+    }
+};
+
 
 template<class ConcreteCommand>
 unique_ptr<mxsmongo::Database::Command> create(mxsmongo::Database* pDatabase,
@@ -314,7 +331,8 @@ struct ThisUnit
     creators_by_command =
     {
         { mxsmongo::Command::FIND,     &command::create<command::Find> },
-        { mxsmongo::Command::ISMASTER, &command::create<command::IsMaster> }
+        { mxsmongo::Command::ISMASTER, &command::create<command::IsMaster> },
+        { mxsmongo::Command::UNKNOWN,  &command::create<command::Unknown> }
     };
 } this_unit;
 
@@ -375,25 +393,17 @@ GWBUF* mxsmongo::Database::execute(mxsmongo::Command cid,
 {
     GWBUF* pResponse = nullptr;
 
-    if (cid != mxsmongo::Command::UNKNOWN)
+    auto it = this_unit.creators_by_command.find(cid);
+    mxb_assert(it != this_unit.creators_by_command.end());
+
+    auto sCommand = it->second(this, pRequest, req, doc);
+
+    pResponse = sCommand->execute();
+
+    if (!pResponse)
     {
-        auto it = this_unit.creators_by_command.find(cid);
-        mxb_assert(it != this_unit.creators_by_command.end());
-
-        auto sCommand = it->second(this, pRequest, req, doc);
-
-        pResponse = sCommand->execute();
-
-        if (!pResponse)
-        {
-            m_sCommand = std::move(sCommand);
-            set_pending();
-        }
-    }
-    else
-    {
-        MXS_ERROR("Command not recognized: %s", req.to_string().c_str());
-        mxb_assert(!true);
+        m_sCommand = std::move(sCommand);
+        set_pending();
     }
 
     return pResponse;
