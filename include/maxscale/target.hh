@@ -54,7 +54,6 @@ extern const char* DEFAULT_RANK;
 #define SERVER_BLR   (1 << 12)                  /**<< Server is a replicating binlog router */
 // Bits used by other monitors
 #define SERVER_JOINED            (1 << 20)      /**<< The server is joined in a Galera cluster */
-#define SERVER_MASTER_STICKINESS (1 << 21)      /**<< Server Master stickiness */
 
 inline bool status_is_connectable(uint64_t status)
 {

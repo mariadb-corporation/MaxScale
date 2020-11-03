@@ -125,9 +125,21 @@ json_t* GaleraMonitor::diagnostics(MonitorServer* server) const
         json_object_set_new(obj, "server_id", json_integer(it->second.server_id));
         json_object_set_new(obj, "master_id", json_integer(it->second.master_id));
 
+        std::vector<std::string> states;
+
         if (!it->second.comment.empty())
         {
-            json_object_set_new(obj, "state_details", json_string(it->second.comment.c_str()));
+            states.push_back(it->second.comment);
+        }
+
+        if (m_disableMasterFailback && server->server->is_master() && it->second.local_index != 0)
+        {
+            states.push_back("Master Stickiness");
+        }
+
+        if (!states.empty())
+        {
+            json_object_set_new(obj, "state_details", json_string(mxb::join(states, ", ").c_str()));
         }
     }
 
@@ -410,7 +422,7 @@ void GaleraMonitor::post_tick()
 
     for (auto ptr : servers())
     {
-        const int repl_bits = (SERVER_SLAVE | SERVER_MASTER | SERVER_MASTER_STICKINESS);
+        const int repl_bits = (SERVER_SLAVE | SERVER_MASTER);
         if ((ptr->pending_status & SERVER_JOINED) && !m_disableMasterRoleSetting)
         {
             if (ptr != m_master)
@@ -426,7 +438,7 @@ void GaleraMonitor::post_tick()
                 {
                     /* set master role and master stickiness */
                     ptr->clear_pending_status(repl_bits);
-                    ptr->set_pending_status(SERVER_MASTER | SERVER_MASTER_STICKINESS);
+                    ptr->set_pending_status(SERVER_MASTER);
                 }
                 else
                 {
