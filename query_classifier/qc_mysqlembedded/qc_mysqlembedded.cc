@@ -66,6 +66,7 @@
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/paths.hh>
 #include <maxscale/utils.h>
+#undef UNKNOWN
 #include <maxscale/modinfo.hh>
 
 #include <stdio.h>

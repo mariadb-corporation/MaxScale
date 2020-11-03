@@ -17,6 +17,7 @@ if (BUILD_MONGO_CLIENT)
     resolv
     sasl2
     ssl
+    pthread
     crypto
     rt
     z

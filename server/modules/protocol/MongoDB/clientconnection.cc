@@ -173,6 +173,13 @@ void ClientConnection::hangup(DCB* pDcb)
 
 const char* dbg_decode_response(GWBUF* pPacket);
 
+#ifndef SS_DEBUG
+const char* dbg_decode_response(GWBUF* pPacket)
+{
+    return "";
+}
+#endif
+
 int32_t ClientConnection::write(GWBUF* pMariaDB_response)
 {
     TRACE();
