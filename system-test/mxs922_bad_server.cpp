@@ -65,11 +65,8 @@ int main(int argc, char* argv[])
 
     for (int i = 0; i < 4; i++)
     {
-        test->maxscales->ssh_node_f(0,
-                                    true,
-                                    "maxctrl create server server%d 3306 %s",
-                                    i + 1,
-                                    test->repl->ip_private(i));
+        test->check_maxctrl("create server server" + std::to_string(i + 1)
+                            + " this-address-does-not-exist 330" + std::to_string(i + 1));
     }
 
     /** Add the servers to the monitor and service */
