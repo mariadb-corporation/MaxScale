@@ -16,6 +16,7 @@
 #include <bsoncxx/builder/stream/document.hpp>
 #include <maxscale/dcb.hh>
 #include <maxscale/listener.hh>
+#include <maxscale/mysql_utils.hh>
 #include <maxscale/routingworker.hh>
 #include <maxscale/session.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
@@ -173,17 +174,10 @@ void ClientConnection::hangup(DCB* pDcb)
 
 const char* dbg_decode_response(GWBUF* pPacket);
 
-#ifndef SS_DEBUG
-const char* dbg_decode_response(GWBUF* pPacket)
-{
-    return "";
-}
-#endif
-
 int32_t ClientConnection::write(GWBUF* pMariaDB_response)
 {
     TRACE();
-    MXS_NOTICE("MariaDB response: %s", dbg_decode_response(pMariaDB_response));
+    MXS_NOTICE("MariaDB response: %s", mxs_response_to_string(pMariaDB_response));
 
     return m_mongo.clientReply(pMariaDB_response, m_pDcb);
 }

@@ -301,24 +301,7 @@ std::unique_ptr<mxq::QueryResult> execute_query(MYSQL* conn, const std::string& 
 }
 }
 
-#if defined (SS_DEBUG)
-/**
- * Return decoded MySQL response packet.
- *
- * Intended to be used when debugging with a GDB-based debugger.
- * For instance, if GDB has been stopped by a breakpoint in
- * clientReply() you can use this function for investigating
- * what the response packet contains:
- *
- * (gdb) p dbg_decode_response(writebuf)
- * $30 = 0x7ffff0d40d54 "Packet no: 1, Payload len: 44, Command : ERR,
- * Code: 1146, Message : Table 'test.blahasdf' doesn't exist"
- *
- * @param pPacket  A MySQL response packet.
- *
- * @return The packet decoded into a descriptive string.
- */
-const char* dbg_decode_response(GWBUF* pPacket)
+const char* mxs_response_to_string(GWBUF* pPacket)
 {
     thread_local std::string rv;
 
@@ -399,7 +382,6 @@ const char* dbg_decode_response(GWBUF* pPacket)
 
     return rv.c_str();
 }
-#endif
 
 void mxs_update_server_charset(MYSQL* mysql, SERVER* server)
 {

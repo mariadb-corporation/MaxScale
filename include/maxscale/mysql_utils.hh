@@ -140,4 +140,22 @@ namespace maxscale
 std::unique_ptr<mxq::QueryResult> execute_query(MYSQL* conn, const std::string& query,
                                                 std::string* errmsg_out = nullptr,
                                                 unsigned int* errno_out = nullptr);
+
 }
+
+/**
+ * Returns a human readable representation of a response packet. Intended to be used
+ * during development or debugging.
+ *
+ * (gdb) p mxs_response_to_string(writebuf)
+ * $30 = 0x7ffff0d40d54 "Packet no: 1, Payload len: 44, Command : ERR,
+ * Code: 1146, Message : Table 'test.blahasdf' doesn't exist"
+ *
+ * @param pPacket  A response packet. Need not be contiguous.
+ *
+ * @return A human-readable representatation of @c pPacket. The returned string
+ *         must not be freed.
+ */
+const char* mxs_response_to_string(GWBUF* pPacket);
+
+
