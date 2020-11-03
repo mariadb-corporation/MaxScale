@@ -2390,17 +2390,31 @@ bool MariaDBClientConnection::module_init()
 
     /*
      * We need to detect the following queries:
-     * 1) USE db_name
+     * 1) USE database
      * 2) SET ROLE { role | NONE }
      * 3) KILL [HARD | SOFT] [CONNECTION | QUERY [ID] ] [thread_id | USER user_name | query_id]
      *
      * Construct one regex which captures all of the above. The "?:" disables capturing for redundant groups.
+     * Comments at start are skipped. Executable comments are not parsed.
      */
     const char regex_string[] =
-        R"(^\s*(?<main>)"
+        // Skip whitespace at beginning.
+        R"(^\s*(?:)"
+        // Skip a line comment
+        R"((?:\s*(--|#).*\n))"
+        // Skip a multiline comment. The comment itself may not contain *, this keeps the regex fast.
+        R"(|(?:\s*\/\*[^\*]*\*\/))"
+        // End comments
+        R"()*)"
+        // <main> captures the entire statement
+        R"(\s*(?<main>)"
+        // Capture "USE database"
         R"(USE\s+(?<db>\w+))"
+        // Capture "SET ROLE role"
         R"(|SET\s+ROLE\s+(?<role>\w+))"
+        // Capture KILL ...
         R"(|KILL\s+(?:(?<koption>HARD|SOFT)\s+)?(?:(?<ktype>CONNECTION|QUERY|QUERY\s+ID)\s+)?(?<ktarget>\d+|USER\s+\w+))"
+        // End of <main>. Also, ensure the statement ends nicely.
         R"()(?:;|\s+|$))";
 
     bool rval = false;
