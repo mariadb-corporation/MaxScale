@@ -56,6 +56,72 @@ protected:
         }
     }
 
+    pair<GWBUF*, uint8_t*> create_response(size_t size_of_documents, size_t nDocuments)
+    {
+        // TODO: In the following is assumed that whatever is returned will
+        // TODO: fit into a Mongo packet.
+
+        int32_t response_flags = MONGOC_QUERY_AWAIT_DATA; // Dunno if this should be on.
+        int64_t cursor_id = 0;
+        int32_t starting_from = 0;
+        int32_t number_returned = nDocuments;
+
+        size_t response_size = MXSMONGO_HEADER_LEN
+            + sizeof(response_flags) + sizeof(cursor_id) + sizeof(starting_from) + sizeof(number_returned)
+            + size_of_documents;
+
+        GWBUF* pResponse = gwbuf_alloc(response_size);
+
+        auto* pRes_hdr = reinterpret_cast<mongoc_rpc_header_t*>(GWBUF_DATA(pResponse));
+        pRes_hdr->msg_len = response_size;
+        pRes_hdr->request_id = m_database.context().next_request_id();
+        pRes_hdr->response_to = m_req.request_id();
+        pRes_hdr->opcode = MONGOC_OPCODE_REPLY;
+
+        uint8_t* pData = GWBUF_DATA(pResponse) + MXSMONGO_HEADER_LEN;
+
+        pData += mxsmongo::set_byte4(pData, response_flags);
+        pData += mxsmongo::set_byte8(pData, cursor_id);
+        pData += mxsmongo::set_byte4(pData, starting_from);
+        pData += mxsmongo::set_byte4(pData, number_returned);
+
+        return make_pair(pResponse, pData);
+    }
+
+    GWBUF* create_response(size_t size_of_documents, const vector<bsoncxx::document::value>& documents)
+    {
+        GWBUF* pResponse;
+        uint8_t* pData;
+
+        tie(pResponse, pData) = create_response(size_of_documents, documents.size());
+
+        for (const auto& doc : documents)
+        {
+            auto view = doc.view();
+            size_t size = view.length();
+
+            memcpy(pData, view.data(), view.length());
+            pData += view.length();
+        }
+
+        return pResponse;
+    }
+
+    GWBUF* create_response(const bsoncxx::document::value& doc)
+    {
+        auto doc_view = doc.view();
+        size_t doc_len = doc_view.length();
+
+        GWBUF* pResponse;
+        uint8_t* pData;
+
+        tie(pResponse, pData) = create_response(doc_len, 1);
+
+        memcpy(pData, doc_view.data(), doc_view.length());
+
+        return pResponse;
+    }
+
     GWBUF* translate_resultset(GWBUF* pMariaDB_response)
     {
         bsoncxx::builder::basic::document builder;
@@ -120,48 +186,7 @@ protected:
             }
         }
 
-        // TODO: In the following is assumed that whatever is returned will
-        // TODO: fit into a Mongo packet.
-
-        bsoncxx::document::value doc_value = builder.extract();
-
-        auto doc_view = doc_value.view();
-        size_t doc_len = doc_view.length();
-
-        int32_t response_flags = MONGOC_QUERY_AWAIT_DATA; // Dunno if this should be on.
-        int64_t cursor_id = 0;
-        int32_t starting_from = 0;
-        int32_t number_returned = documents.size();
-
-        size_t response_size = MXSMONGO_HEADER_LEN
-            + sizeof(response_flags) + sizeof(cursor_id) + sizeof(starting_from) + sizeof(number_returned)
-            + size_of_documents;
-
-        GWBUF* pResponse = gwbuf_alloc(response_size);
-
-        auto* pRes_hdr = reinterpret_cast<mongoc_rpc_header_t*>(GWBUF_DATA(pResponse));
-        pRes_hdr->msg_len = response_size;
-        pRes_hdr->request_id = m_database.context().next_request_id();
-        pRes_hdr->response_to = m_req.request_id();
-        pRes_hdr->opcode = MONGOC_OPCODE_REPLY;
-
-        uint8_t* pData = GWBUF_DATA(pResponse) + MXSMONGO_HEADER_LEN;
-
-        pData += mxsmongo::set_byte4(pData, response_flags);
-        pData += mxsmongo::set_byte8(pData, cursor_id);
-        pData += mxsmongo::set_byte4(pData, starting_from);
-        pData += mxsmongo::set_byte4(pData, number_returned);
-
-        for (const auto& doc : documents)
-        {
-            auto view = doc.view();
-            size_t size = view.length();
-
-            memcpy(pData, view.data(), view.length());
-            pData += view.length();
-        }
-
-        return pResponse;
+        return create_response(size_of_documents, documents);
     }
 
     mxsmongo::Database&     m_database;
@@ -263,35 +288,7 @@ public:
             << "ok" << (double)1
             << bsoncxx::builder::stream::finalize;
 
-        auto doc_view = doc_value.view();
-        size_t doc_len = doc_view.length();
-
-        int32_t response_flags = MONGOC_QUERY_AWAIT_DATA; // Dunno if this should be on.
-        int64_t cursor_id = 0;
-        int32_t starting_from = 0;
-        int32_t number_returned = 1;
-
-        size_t response_size = MXSMONGO_HEADER_LEN
-            + sizeof(response_flags) + sizeof(cursor_id) + sizeof(starting_from) + sizeof(number_returned)
-            + doc_len;
-
-        GWBUF* pResponse = gwbuf_alloc(response_size);
-
-        auto* pRes_hdr = reinterpret_cast<mongoc_rpc_header_t*>(GWBUF_DATA(pResponse));
-        pRes_hdr->msg_len = response_size;
-        pRes_hdr->request_id = m_database.context().next_request_id();
-        pRes_hdr->response_to = m_req.request_id();
-        pRes_hdr->opcode = MONGOC_OPCODE_REPLY;
-
-        uint8_t* pData = GWBUF_DATA(pResponse) + MXSMONGO_HEADER_LEN;
-
-        pData += mxsmongo::set_byte4(pData, response_flags);
-        pData += mxsmongo::set_byte8(pData, cursor_id);
-        pData += mxsmongo::set_byte4(pData, starting_from);
-        pData += mxsmongo::set_byte4(pData, number_returned);
-        memcpy(pData, doc_view.data(), doc_view.length());
-
-        return pResponse;
+        return create_response(doc_value);
     }
 };
 
