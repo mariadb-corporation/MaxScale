@@ -12,8 +12,8 @@ void add_servers(TestConnections* test)
 {
     test->tprintf("Adding the servers");
     test->set_timeout(120);
-    test->maxctrl("link monitor " MONITOR_NAME " server1 server2 server3 server4 ");
-    test->maxctrl("link service " SERVICE_NAME " server1 server2 server3 server4 ");
+    test->check_maxctrl("link monitor " MONITOR_NAME " server1 server2 server3 server4 ");
+    test->check_maxctrl("link service " SERVICE_NAME " server1 server2 server3 server4 ");
     test->stop_timeout();
 }
 
@@ -21,8 +21,8 @@ void remove_servers(TestConnections* test)
 {
     test->tprintf("Remove the servers");
     test->set_timeout(120);
-    test->maxctrl("unlink monitor " MONITOR_NAME " server1 server2 server3 server4 ");
-    test->maxctrl("unlink service " SERVICE_NAME " server1 server2 server3 server4 ");
+    test->check_maxctrl("unlink monitor " MONITOR_NAME " server1 server2 server3 server4 ");
+    test->check_maxctrl("unlink service " SERVICE_NAME " server1 server2 server3 server4 ");
     test->stop_timeout();
 }
 
@@ -33,7 +33,7 @@ void destroy_servers(TestConnections* test)
 
     for (int i = 0; i < 4; i++)
     {
-        test->maxctrl("destroy server server" + std::to_string(i + 1));
+        test->check_maxctrl("destroy server server" + std::to_string(i + 1));
     }
     test->stop_timeout();
 }
