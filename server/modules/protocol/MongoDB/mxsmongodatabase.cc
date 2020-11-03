@@ -56,6 +56,114 @@ protected:
         }
     }
 
+    GWBUF* translate_resultset(GWBUF* pMariaDB_response)
+    {
+        bsoncxx::builder::basic::document builder;
+
+        uint8_t* pBuffer = GWBUF_DATA(pMariaDB_response);
+
+        // A result set, so first we get the number of fields...
+        ComQueryResponse cqr(&pBuffer);
+
+        auto nFields = cqr.nFields();
+
+        vector<string> names;
+        vector<enum_field_types> types;
+
+        for (size_t i = 0; i < nFields; ++i)
+        {
+            // ... and then as many column definitions.
+            ComQueryResponse::ColumnDef column_def(&pBuffer);
+
+            names.push_back(column_def.name().to_string());
+            types.push_back(column_def.type());
+        }
+
+        // The there should be an EOF packet, which should be bypassed.
+        ComResponse eof(&pBuffer);
+        mxb_assert(eof.type() == ComResponse::EOF_PACKET);
+
+        vector<bsoncxx::document::value> documents;
+        uint32_t size_of_documents = 0;
+
+        // Then there will be an arbitrary number of rows. After all rows
+        // (of which there obviously may be 0), there will be an EOF packet.
+        while (ComResponse(pBuffer).type() != ComResponse::EOF_PACKET)
+        {
+            CQRTextResultsetRow row(&pBuffer, types);
+
+            auto it = names.begin();
+            auto jt = row.begin();
+
+            while (it != names.end())
+            {
+                const string& name = *it;
+                const auto& value = *jt;
+
+                if (value.is_string())
+                {
+                    builder.append(bsoncxx::builder::basic::kvp(name, value.as_string().to_string()));
+                }
+                else
+                {
+                    // TODO: Handle other types as well.
+                    builder.append(bsoncxx::builder::basic::kvp(name, ""));
+                }
+
+                auto doc = builder.extract();
+                size_of_documents += doc.view().length();
+
+                documents.push_back(doc);
+
+                ++it;
+                ++jt;
+            }
+        }
+
+        // TODO: In the following is assumed that whatever is returned will
+        // TODO: fit into a Mongo packet.
+
+        bsoncxx::document::value doc_value = builder.extract();
+
+        auto doc_view = doc_value.view();
+        size_t doc_len = doc_view.length();
+
+        int32_t response_flags = MONGOC_QUERY_AWAIT_DATA; // Dunno if this should be on.
+        int64_t cursor_id = 0;
+        int32_t starting_from = 0;
+        int32_t number_returned = documents.size();
+
+        size_t response_size = MXSMONGO_HEADER_LEN
+            + sizeof(response_flags) + sizeof(cursor_id) + sizeof(starting_from) + sizeof(number_returned)
+            + size_of_documents;
+
+        GWBUF* pResponse = gwbuf_alloc(response_size);
+
+        auto* pRes_hdr = reinterpret_cast<mongoc_rpc_header_t*>(GWBUF_DATA(pResponse));
+        pRes_hdr->msg_len = response_size;
+        pRes_hdr->request_id = m_database.context().next_request_id();
+        pRes_hdr->response_to = m_req.request_id();
+        pRes_hdr->opcode = MONGOC_OPCODE_REPLY;
+
+        uint8_t* pData = GWBUF_DATA(pResponse) + MXSMONGO_HEADER_LEN;
+
+        pData += mxsmongo::set_byte4(pData, response_flags);
+        pData += mxsmongo::set_byte8(pData, cursor_id);
+        pData += mxsmongo::set_byte4(pData, starting_from);
+        pData += mxsmongo::set_byte4(pData, number_returned);
+
+        for (const auto& doc : documents)
+        {
+            auto view = doc.view();
+            size_t size = view.length();
+
+            memcpy(pData, view.data(), view.length());
+            pData += view.length();
+        }
+
+        return pResponse;
+    }
+
     mxsmongo::Database&     m_database;
     GWBUF*                  m_pRequest;
     mxsmongo::Packet        m_req;
@@ -65,115 +173,6 @@ protected:
 namespace
 {
 
-GWBUF* translate_resultset(GWBUF*   pMariaDB_response,
-                           uint32_t request_id,
-                           uint32_t response_to)
-{
-    bsoncxx::builder::basic::document builder;
-
-    uint8_t* pBuffer = GWBUF_DATA(pMariaDB_response);
-
-    // A result set, so first we get the number of fields...
-    ComQueryResponse cqr(&pBuffer);
-
-    auto nFields = cqr.nFields();
-
-    vector<string> names;
-    vector<enum_field_types> types;
-
-    for (size_t i = 0; i < nFields; ++i)
-    {
-        // ... and then as many column definitions.
-        ComQueryResponse::ColumnDef column_def(&pBuffer);
-
-        names.push_back(column_def.name().to_string());
-        types.push_back(column_def.type());
-    }
-
-    // The there should be an EOF packet, which should be bypassed.
-    ComResponse eof(&pBuffer);
-    mxb_assert(eof.type() == ComResponse::EOF_PACKET);
-
-    vector<bsoncxx::document::value> documents;
-    uint32_t size_of_documents = 0;
-
-    // Then there will be an arbitrary number of rows. After all rows
-    // (of which there obviously may be 0), there will be an EOF packet.
-    while (ComResponse(pBuffer).type() != ComResponse::EOF_PACKET)
-    {
-        CQRTextResultsetRow row(&pBuffer, types);
-
-        auto it = names.begin();
-        auto jt = row.begin();
-
-        while (it != names.end())
-        {
-            const string& name = *it;
-            const auto& value = *jt;
-
-            if (value.is_string())
-            {
-                builder.append(bsoncxx::builder::basic::kvp(name, value.as_string().to_string()));
-            }
-            else
-            {
-                // TODO: Handle other types as well.
-                builder.append(bsoncxx::builder::basic::kvp(name, ""));
-            }
-
-            auto doc = builder.extract();
-            size_of_documents += doc.view().length();
-
-            documents.push_back(doc);
-
-            ++it;
-            ++jt;
-        }
-    }
-
-    // TODO: In the following is assumed that whatever is returned will
-    // TODO: fit into a Mongo packet.
-
-    bsoncxx::document::value doc_value = builder.extract();
-
-    auto doc_view = doc_value.view();
-    size_t doc_len = doc_view.length();
-
-    int32_t response_flags = MONGOC_QUERY_AWAIT_DATA; // Dunno if this should be on.
-    int64_t cursor_id = 0;
-    int32_t starting_from = 0;
-    int32_t number_returned = documents.size();
-
-    size_t response_size = MXSMONGO_HEADER_LEN
-        + sizeof(response_flags) + sizeof(cursor_id) + sizeof(starting_from) + sizeof(number_returned)
-        + size_of_documents;
-
-    GWBUF* pResponse = gwbuf_alloc(response_size);
-
-    auto* pRes_hdr = reinterpret_cast<mongoc_rpc_header_t*>(GWBUF_DATA(pResponse));
-    pRes_hdr->msg_len = response_size;
-    pRes_hdr->request_id = request_id;
-    pRes_hdr->response_to = response_to;
-    pRes_hdr->opcode = MONGOC_OPCODE_REPLY;
-
-    uint8_t* pData = GWBUF_DATA(pResponse) + MXSMONGO_HEADER_LEN;
-
-    pData += mxsmongo::set_byte4(pData, response_flags);
-    pData += mxsmongo::set_byte8(pData, cursor_id);
-    pData += mxsmongo::set_byte4(pData, starting_from);
-    pData += mxsmongo::set_byte4(pData, number_returned);
-
-    for (const auto& doc : documents)
-    {
-        auto view = doc.view();
-        size_t size = view.length();
-
-        memcpy(pData, view.data(), view.length());
-        pData += view.length();
-    }
-
-    return pResponse;
-}
 
 namespace command
 {
@@ -230,9 +229,7 @@ public:
 
         default:
             // Must be a result set.
-            pResponse = translate_resultset(pMariaDB_response,
-                                            m_database.context().next_request_id(),
-                                            m_req.request_id());
+            pResponse = translate_resultset(pMariaDB_response);
         }
 
         gwbuf_free(pMariaDB_response);
