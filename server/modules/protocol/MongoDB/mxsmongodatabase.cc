@@ -300,15 +300,30 @@ public:
 
 
 template<class ConcreteCommand>
-unique_ptr<ConcreteCommand> create(mxsmongo::Database* pDatabase,
-                                   GWBUF* pRequest,
-                                   const mxsmongo::Packet& req,
-                                   const bsoncxx::document::view& doc)
+unique_ptr<mxsmongo::Database::Command> create(mxsmongo::Database* pDatabase,
+                                               GWBUF* pRequest,
+                                               const mxsmongo::Packet& req,
+                                               const bsoncxx::document::view& doc)
 {
     return unique_ptr<ConcreteCommand>(new ConcreteCommand(pDatabase, pRequest, req, doc));
 }
 
 }
+
+struct ThisUnit
+{
+    const map<mxsmongo::Command,
+              unique_ptr<mxsmongo::Database::Command> (*)(mxsmongo::Database* pDatabase,
+                                                          GWBUF* pRequest,
+                                                          const mxsmongo::Packet& req,
+                                                          const bsoncxx::document::view& doc)>
+    creators_by_command =
+    {
+        { mxsmongo::Command::FIND,     &command::create<command::Find> },
+        { mxsmongo::Command::ISMASTER, &command::create<command::IsMaster> }
+    };
+} this_unit;
+
 }
 
 mxsmongo::Database::Database(const std::string& name, Mongo::Context* pContext)
