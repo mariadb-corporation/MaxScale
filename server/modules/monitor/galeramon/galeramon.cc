@@ -126,10 +126,14 @@ json_t* GaleraMonitor::diagnostics(MonitorServer* server) const
         json_object_set_new(obj, "master_id", json_integer(it->second.master_id));
 
         std::vector<std::string> states;
+        const auto& comment = it->second.comment;
 
-        if (!it->second.comment.empty())
+        if (!comment.empty() && comment != "Synced")
         {
-            states.push_back(it->second.comment);
+            // The Synced state is still functional in 2.6 as readconnroute has it as one of the values for
+            // `router_options`. This should be changed so that the Running state is only assigned for Galera
+            // nodes that can actually be used for routing.
+            states.push_back(comment);
         }
 
         if (m_disableMasterFailback && server->server->is_master() && it->second.local_index != 0)
