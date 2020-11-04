@@ -532,6 +532,34 @@ void SchemaRouterSession::handle_default_db_response()
     }
 }
 
+namespace
+{
+
+mxs::Buffer::iterator skip_packet(mxs::Buffer::iterator it)
+{
+    uint32_t len = *it++;
+    len |= (*it++) << 8;
+    len |= (*it++) << 16;
+    it.advance(len + 1);    // Payload length plus the fourth header byte (packet sequence)
+    return it;
+}
+
+GWBUF* erase_last_packet(GWBUF* input)
+{
+    mxs::Buffer buf(input);
+    auto it = buf.begin();
+    auto end = it;
+
+    while ((end = skip_packet(it)) != buf.end())
+    {
+        it = end;
+    }
+
+    buf.erase(it, end);
+    return buf.release();
+}
+}
+
 void SchemaRouterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
     SRBackend* bref = static_cast<SRBackend*>(down.back()->get_userdata());
@@ -546,6 +574,34 @@ void SchemaRouterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& dow
     {
         MXS_INFO("Reply complete from '%s'", bref->name());
         bref->ack_write();
+
+        const auto& error = reply.error();
+
+        if (error.is_unexpected_error())
+        {
+            // The connection was killed, we can safely ignore it. When the TCP connection is
+            // closed, the router's error handling will sort it out.
+            if (error.code() == ER_CONNECTION_KILLED)
+            {
+                bref->set_close_reason("Connection was killed");
+            }
+            else
+            {
+                mxb_assert(error.code() == ER_SERVER_SHUTDOWN
+                           || error.code() == ER_NORMAL_SHUTDOWN
+                           || error.code() == ER_SHUTDOWN_COMPLETE);
+                bref->set_close_reason(std::string("Server '") + bref->name() + "' is shutting down");
+            }
+
+            // The server sent an error that we didn't expect: treat it as if the connection was closed. The
+            // client shouldn't see this error as we can replace the closed connection.
+
+            if (!(pPacket = erase_last_packet(pPacket)))
+            {
+                // Nothing to route to the client
+                return;
+            }
+        }
     }
 
     if (m_state & INIT_MAPPING)

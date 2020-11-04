@@ -405,7 +405,7 @@ void MariaDBBackendConnection::do_handle_error(DCB* dcb, const std::string& errm
     ss << ")";
 
     mxb_assert(!dcb->hanged_up());
-    GWBUF* errbuf = mysql_create_custom_error(1, 0, 2003, ss.str().c_str());
+    GWBUF* errbuf = mysql_create_custom_error(1, 0, ER_CONNECTION_KILLED, ss.str().c_str());
 
     if (!m_upstream->handleError(type, errbuf, nullptr, m_reply))
     {
