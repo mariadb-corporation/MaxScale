@@ -8,6 +8,11 @@ previous release in the same series.
 For any problems you encounter, please consider submitting a bug
 report on [our Jira](https://jira.mariadb.org/projects/MXS).
 
+## New signature key for the packages
+
+Now packages are signed by MariaDB Enterprise key.
+Public key is here https://downloads.mariadb.com/MariaDB/MariaDB-Enterprise-GPG-KEY
+
 ## Bug fixes
 
 * [MXS-3220](https://jira.mariadb.org/browse/MXS-3220) MaxScale crashes in gwbuf_set_type() upon query retry
