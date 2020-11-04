@@ -184,7 +184,7 @@ public:
 
     void flush_tables()
     {
-        m_producer->poll(1000);
+        m_producer->poll(0);
     }
 
     void prepare_row(const Table& create,

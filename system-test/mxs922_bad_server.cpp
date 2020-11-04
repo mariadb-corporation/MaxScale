@@ -12,8 +12,8 @@ void add_servers(TestConnections* test)
 {
     test->tprintf("Adding the servers");
     test->set_timeout(120);
-    test->maxctrl("link monitor " MONITOR_NAME " server1 server2 server3 server4 ");
-    test->maxctrl("link service " SERVICE_NAME " server1 server2 server3 server4 ");
+    test->check_maxctrl("link monitor " MONITOR_NAME " server1 server2 server3 server4 ");
+    test->check_maxctrl("link service " SERVICE_NAME " server1 server2 server3 server4 ");
     test->stop_timeout();
 }
 
@@ -21,8 +21,8 @@ void remove_servers(TestConnections* test)
 {
     test->tprintf("Remove the servers");
     test->set_timeout(120);
-    test->maxctrl("unlink monitor " MONITOR_NAME " server1 server2 server3 server4 ");
-    test->maxctrl("unlink service " SERVICE_NAME " server1 server2 server3 server4 ");
+    test->check_maxctrl("unlink monitor " MONITOR_NAME " server1 server2 server3 server4 ");
+    test->check_maxctrl("unlink service " SERVICE_NAME " server1 server2 server3 server4 ");
     test->stop_timeout();
 }
 
@@ -33,7 +33,7 @@ void destroy_servers(TestConnections* test)
 
     for (int i = 0; i < 4; i++)
     {
-        test->maxctrl("destroy server server" + std::to_string(i + 1));
+        test->check_maxctrl("destroy server server" + std::to_string(i + 1));
     }
     test->stop_timeout();
 }
@@ -65,11 +65,8 @@ int main(int argc, char* argv[])
 
     for (int i = 0; i < 4; i++)
     {
-        test->maxscales->ssh_node_f(0,
-                                    true,
-                                    "maxctrl create server server%d 3306 %s",
-                                    i + 1,
-                                    test->repl->ip_private(i));
+        test->check_maxctrl("create server server" + std::to_string(i + 1)
+                            + " this-address-does-not-exist 330" + std::to_string(i + 1));
     }
 
     /** Add the servers to the monitor and service */
