@@ -390,15 +390,19 @@ void MariaDBBackendConnection::do_handle_error(DCB* dcb, const std::string& errm
 {
     std::ostringstream ss(errmsg);
 
+    ss << " (" << m_server.name();
+
     if (int err = gw_getsockerrno(dcb->fd()))
     {
-        ss << " (" << err << ", " << mxs_strerror(err) << ")";
+        ss << ": " << err << ", " << mxs_strerror(err);
     }
     else if (dcb->is_fake_event())
     {
         // Fake events should not have TCP socket errors
-        ss << " (Generated event)";
+        ss << ": Generated event";
     }
+
+    ss << ")";
 
     mxb_assert(!dcb->hanged_up());
     GWBUF* errbuf = mysql_create_custom_error(1, 0, 2003, ss.str().c_str());
