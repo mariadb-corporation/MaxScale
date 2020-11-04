@@ -4,6 +4,8 @@ threads=###threads###
 #event.authentication_failure.facility=LOG_AUTH
 #event.authentication_failure.level=LOG_ERR
 
+syslog=true
+
 [MySQL-Monitor]
 type=monitor
 module=mysqlmon
@@ -21,7 +23,7 @@ password=skysql
 
 [RW-Split-Listener]
 type=listener
-service=RW Split Router
+service=RW-Split-Router
 protocol=MySQLClient
 port=4006
 

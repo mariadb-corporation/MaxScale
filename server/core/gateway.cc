@@ -3305,7 +3305,7 @@ static bool handle_debug_args(char* args)
         size_t total_len = 1;
         for (int i = 0; debug_arguments[i].action != NULL; i++)
         {
-            total_len += strlen(debug_arguments[i].name) + 1;
+            total_len += strlen(debug_arguments[i].name) + 2;
         }
         char arglist[total_len];
         arglist[0] = '\0';
