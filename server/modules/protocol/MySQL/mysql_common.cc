@@ -207,7 +207,7 @@ GWBUF* mysql_create_custom_error(int packet_number,
     mysql_state = "HY000";
 
     field_count = 0xff;
-    gw_mysql_set_byte2(mysql_err,    /* mysql_errno */ 2003);
+    gw_mysql_set_byte2(mysql_err, ER_CONNECTION_KILLED);
     mysql_statemsg[0] = '#';
     memcpy(mysql_statemsg + 1, mysql_state, 5);
 

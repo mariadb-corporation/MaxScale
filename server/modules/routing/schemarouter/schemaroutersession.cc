@@ -539,6 +539,55 @@ void SchemaRouterSession::process_sescmd_response(SSRBackend& bref, GWBUF** ppPa
     }
 }
 
+namespace
+{
+static bool connection_was_killed(GWBUF* buffer)
+{
+    bool rval = false;
+
+    if (mxs_mysql_is_err_packet(buffer))
+    {
+        uint8_t buf[2];
+        // First two bytes after the 0xff byte are the error code
+        gwbuf_copy_data(buffer, MYSQL_HEADER_LEN + 1, 2, buf);
+        uint16_t errcode = gw_mysql_get_byte2(buf);
+        rval = errcode == ER_CONNECTION_KILLED;
+    }
+
+    return rval;
+}
+
+bool server_is_shutting_down(GWBUF* writebuf)
+{
+    uint64_t err = mxs_mysql_get_mysql_errno(writebuf);
+    return err == ER_SERVER_SHUTDOWN || err == ER_NORMAL_SHUTDOWN || err == ER_SHUTDOWN_COMPLETE;
+}
+
+mxs::Buffer::iterator skip_packet(mxs::Buffer::iterator it)
+{
+    uint32_t len = *it++;
+    len |= (*it++) << 8;
+    len |= (*it++) << 16;
+    it.advance(len + 1);    // Payload length plus the fourth header byte (packet sequence)
+    return it;
+}
+
+GWBUF* erase_last_packet(GWBUF* input)
+{
+    mxs::Buffer buf(input);
+    auto it = buf.begin();
+    auto end = it;
+
+    while ((end = skip_packet(it)) != buf.end())
+    {
+        it = end;
+    }
+
+    buf.erase(it, end);
+    return buf.release();
+}
+}
+
 void SchemaRouterSession::clientReply(GWBUF* pPacket, DCB* pDcb)
 {
     SSRBackend bref = get_bref_from_dcb(pDcb);
@@ -549,7 +598,46 @@ void SchemaRouterSession::clientReply(GWBUF* pPacket, DCB* pDcb)
         return;
     }
 
+    if (bref->get_reply_state() == REPLY_STATE_DONE
+        && !connection_was_killed(pPacket)
+        && !server_is_shutting_down(pPacket))
+    {
+        /** If we receive an unexpected response from the server, the internal
+         * logic cannot handle this situation. Routing the reply straight to
+         * the client should be the safest thing to do at this point. */
+        MXS_SESSION_ROUTE_REPLY(pDcb->session, pPacket);
+        return;
+    }
+
     bref->process_reply(pPacket);
+
+    const RWBackend::Error& error = bref->error();
+
+    if (error.is_unexpected_error())
+    {
+        // The connection was killed, we can safely ignore it. When the TCP connection is
+        // closed, the router's error handling will sort it out.
+        if (error.code() == ER_CONNECTION_KILLED)
+        {
+            bref->set_close_reason("Connection was killed");
+        }
+        else
+        {
+            mxb_assert(error.code() == ER_SERVER_SHUTDOWN
+                       || error.code() == ER_NORMAL_SHUTDOWN
+                       || error.code() == ER_SHUTDOWN_COMPLETE);
+            bref->set_close_reason(std::string("Server '") + bref->name() + "' is shutting down");
+        }
+
+        // The server sent an error that we didn't expect: treat it as if the connection was closed. The
+        // client shouldn't see this error as we can replace the closed connection.
+
+        if (!(pPacket = erase_last_packet(pPacket)))
+        {
+            // Nothing to route to the client
+            return;
+        }
+    }
 
     if (m_state & INIT_MAPPING)
     {
