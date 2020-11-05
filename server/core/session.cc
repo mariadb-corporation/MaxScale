@@ -1456,7 +1456,7 @@ void Session::parse_and_set_trx_state(const mxs::Reply& reply)
 
     if (!trx_state.empty())
     {
-        if (trx_state.find_first_of("TI") == std::string::npos)
+        if (trx_state.find_first_of("TI") != std::string::npos)
         {
             set_trx_state(SESSION_TRX_ACTIVE);
         }
