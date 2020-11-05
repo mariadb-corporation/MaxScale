@@ -352,9 +352,22 @@ int MariaDBClientConnection::send_mysql_client_handshake()
     uint8_t mysql_server_status[2];
     uint8_t mysql_scramble_len = 21;
     uint8_t mysql_filler_ten[10] = {};
-    /* uint8_t mysql_last_byte = 0x00; not needed */
-    uint8_t server_scramble[GW_MYSQL_SCRAMBLE_SIZE] {};
-    mxb::Worker::gen_random_bytes(server_scramble, sizeof(server_scramble));
+
+    /* gen_random_bytes() generates random bytes (0-255). This is ok as scramble for most clients
+     * (e.g. mariadb) but not for mysql-connector-java. To be on the safe side, ensure every byte
+     * is a non-whitespace character. To do the rescaling of values without noticeable bias, generate
+     * double the required bytes.
+     */
+    uint8_t server_scramble[GW_MYSQL_SCRAMBLE_SIZE];
+    uint8_t random_bytes[2 * sizeof(server_scramble)];
+    mxb::Worker::gen_random_bytes(random_bytes, sizeof(random_bytes));
+    for (size_t i = 0; i < sizeof(server_scramble); i++)
+    {
+        auto ptr = &random_bytes[2 * i];
+        auto val16 = *(reinterpret_cast<uint16_t*>(ptr));
+        server_scramble[i] = '!' + (val16 % (('~' + 1) - '!'));
+    }
+
     bool is_maria = supports_extended_caps(service);
 
     // copy back to the caller
