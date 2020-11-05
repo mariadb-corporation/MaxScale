@@ -239,24 +239,6 @@ then
    cd ../../..
 fi
 
-# Jansson
-git clone https://github.com/akheron/jansson.git
-if [ $? != 0 ]
-then
-    echo "Error cloning jansson"
-    sudo rm -rf $tmpdir
-    exit 1
-fi
-
-cd jansson
-git checkout v2.9
-mkdir build
-cd build
-cmake .. -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_C_FLAGS=-fPIC -DJANSSON_INSTALL_LIB_DIR=$install_libdir
-make
-sudo make install
-cd ../../
-
 # NodeJS
 wget --quiet https://nodejs.org/dist/v10.20.0/node-v10.20.0-linux-x64.tar.gz
 tar -axf node-v10.20.0-linux-x64.tar.gz
