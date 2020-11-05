@@ -257,28 +257,7 @@ make
 sudo make install
 cd ../../
 
-# Avro C API
-wget -q -r -l1 -nH --cut-dirs=2 --no-parent -A.tar.gz --no-directories https://downloads.apache.org/avro/stable/c/
-if [ $? != 0 ]
-then
-    echo "Error getting avro-c"
-    sudo rm -rf $tmpdir
-    exit 1
-fi
-avro_filename=`ls -1 avro*.tar.gz`
-avro_dir=`echo "$avro_filename" | sed "s/.tar.gz//"`
-tar -axf $avro_filename
-mkdir $avro_dir/build
-pushd $avro_dir/build
-# Make sure the library isn't linked against snappy
-sed -i 's/find_package(Snappy)//' ../lang/c/CMakeLists.txt
-cmake .. -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_C_FLAGS=-fPIC -DCMAKE_CXX_FLAGS=-fPIC
-make
-sudo make install
-popd
-
-
-
+# NodeJS
 wget --quiet https://nodejs.org/dist/v10.20.0/node-v10.20.0-linux-x64.tar.gz
 tar -axf node-v10.20.0-linux-x64.tar.gz
 sudo cp -t /usr -r node-v10.20.0-linux-x64/*
