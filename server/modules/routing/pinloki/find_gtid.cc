@@ -134,16 +134,18 @@ bool search_file(const std::string& file_name,
             maxsql::GtidListEvent event = rpl.gtid_list();
 
             uint32_t highest_seq = 0;
+            bool domain_in_list = false;
 
             for (const auto& tid : event.gtid_list.gtids())
             {
                 if (tid.domain_id() == gtid.domain_id())
                 {
+                    domain_in_list = true;
                     highest_seq = std::max(highest_seq, tid.sequence_nr());
                 }
             }
 
-            if (highest_seq && highest_seq < gtid.sequence_nr())
+            if (!domain_in_list || (domain_in_list && highest_seq < gtid.sequence_nr()))
             {
                 result = GtidInThisFile;
             }
