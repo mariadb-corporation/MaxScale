@@ -81,19 +81,17 @@ int main(int argc, char* argv[])
     test->tprintf("Create the servers with correct parameters");
     for (int i = 0; i < 4; i++)
     {
-        test->maxscales->ssh_node_f(0,
-                                    true,
-                                    "maxctrl create server server%d %s %d",
-                                    i + 1,
-                                    test->repl->ip_private(i),
-                                    test->repl->port[i]);
+        std::stringstream ss;
+        ss << "create server server" << i + 1 << " "
+           << test->repl->ip_private(i) << " " << test->repl->port[i];
+        test->check_maxctrl(ss.str());
     }
 
     /**  Add the servers again */
     add_servers(test);
 
     test->tprintf("Wait for the monitor to see the new servers");
-    sleep(2);
+    sleep(5);
 
     do_query(test, false);
 

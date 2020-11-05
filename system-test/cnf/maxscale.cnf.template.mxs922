@@ -1,5 +1,6 @@
 [maxscale]
 threads=###threads###
+users_refresh_time=0
 
 [mysql-monitor]
 type=monitor
