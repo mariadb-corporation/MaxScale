@@ -23,65 +23,45 @@ constexpr auto KT_HARD = MariaDBClientConnection::KT_HARD;
 constexpr auto KT_SOFT = MariaDBClientConnection::KT_SOFT;
 constexpr auto KT_CONNECTION = MariaDBClientConnection::KT_CONNECTION;
 constexpr auto KT_QUERY = MariaDBClientConnection::KT_QUERY;
+using Type = MariaDBClientConnection::SpecialQueryDesc::Type;
 
 struct test_t
 {
     std::string query;
-    bool        should_succeed {false};
+    Type        type {Type::NONE};
     uint64_t    correct_id {0};
     uint32_t    correct_kt {0};
     std::string correct_user;
 };
 
-int test_one_query(test_t test)
+int test_one_query(const test_t& test)
 {
     auto& sql = test.query;
     auto len = sql.length();
 
-    MariaDBClientConnection::KillQueryContents kill_contents;
-    bool is_kill_query = false;
-
-    // This part should closely match MariaDBClientConnection::process_special_queries so that the regex
-    // is used properly.
-    const auto& regex = MariaDBClientConnection::special_queries_regex();
-    auto found = regex.match(sql.c_str(), len);
-    if (found)
-    {
-        auto main_ind = regex.substring_ind_by_name("main");
-        mxb_assert(!main_ind.empty());
-        char c = sql[main_ind.begin];
-        switch (c)
-        {
-        case 'K':
-        case 'k':
-            {
-                is_kill_query = true;
-                kill_contents = MariaDBClientConnection::parse_kill_query_elems(sql.c_str());
-            }
-            break;
-
-        default:
-            break;
-        }
-    }
+    auto query_desc = MariaDBClientConnection::parse_special_query(sql.c_str(), len);
+    auto found_type = query_desc.type;
+    auto found_kt = query_desc.kill_options;
+    auto found_id = query_desc.kill_id;
+    auto& found_user = query_desc.target;
 
     std::string errmsg;
-    if (is_kill_query != test.should_succeed)
+    if (found_type != test.type)
     {
-        errmsg = mxb::string_printf("Expected success '%d', got '%d'", test.should_succeed, is_kill_query);
+        errmsg = mxb::string_printf("Expected type '%i', got '%i'", (int)test.type, (int)found_type);
     }
-    else if (kill_contents.kt != test.correct_kt)
+    else if (found_kt != test.correct_kt)
     {
-        errmsg = mxb::string_printf("Expected kill type '%u', got '%u'", test.correct_kt, kill_contents.kt);
+        errmsg = mxb::string_printf("Expected kill type '%u', got '%u'", test.correct_kt, found_kt);
     }
-    else if (kill_contents.id != test.correct_id)
+    else if (found_id != test.correct_id)
     {
-        errmsg = mxb::string_printf("Expected thread id '%lu', got '%lu'", test.correct_id, kill_contents.id);
+        errmsg = mxb::string_printf("Expected thread id '%lu', got '%lu'", test.correct_id, found_id);
     }
-    else if (kill_contents.user != test.correct_user)
+    else if (found_user != test.correct_user)
     {
         errmsg = mxb::string_printf("Expected user '%s', got '%s'",
-                                    test.correct_user.c_str(), kill_contents.user.c_str());
+                                    test.correct_user.c_str(), found_user.c_str());
     }
     if (errmsg.empty())
     {
@@ -109,41 +89,47 @@ int main(int argc, char** argv)
      * is interpreted as "kill connection 123".
      */
 
+    auto KILL = Type::KILL;
+    auto NONE = Type::NONE;
+
     test_t tests[] =
     {
-        {" kill ConNectioN 123  ",                     true,  123,          KT_CONNECTION          },
-        {"kIlL  coNNectioN 987654321  ;",              true,  987654321,    KT_CONNECTION          },
-        {" Ki5L CoNNectioN 987654321  ",               false,                                      },
-        {"1",                                          false,                                      },
-        {"kILL 1",                                     true,  1,                                   },
-        {"\n\t kill \nQueRy 456",                      true,  456,          KT_QUERY               },
-        {"     A         kill 1;     ",                false,                                      },
-        {" kill connection 1A",                        false,                                      },
-        {" kill connection 1 A ",                      true,  1,            KT_CONNECTION          },
-        {"kill query 7 ; select * ",                   true,  7,            KT_QUERY               },
+        {" kill ConNectioN 123  ",                KILL,  123,       KT_CONNECTION          },
+        {"kIlL  coNNectioN 987654321  ;",         KILL,  987654321, KT_CONNECTION          },
+        {" Ki5L CoNNectioN 987654321  ",          NONE, },
+        {"1",                                     NONE, },
+        {"kILL 1",                                KILL,  1,                                },
+        {"\n\t kill \nQueRy 456",                 KILL,  456,       KT_QUERY               },
+        {"     A         kill 1;     ",           NONE, },
+        {" kill connection 1A",                   NONE, },
+        {" kill connection 1 A ",                 KILL,  1,         KT_CONNECTION          },
+        {"kill query 7 ; select * ",              KILL,  7,         KT_QUERY               },
         // 64-bit integer overflow
-        {"KIll query 123456789012345678901",           true,  0,            KT_QUERY               },
-        {"KIll query   \t    \t   21  \n \t  ",        true,  21,           KT_QUERY               },
-        {"KIll   \t    \n    \t   -6  \n \t   ",       false,                                      },
-        {"KIll 12345678901234567890123456 \n \t",      true,                                       },
-        {"kill ;",                                     false, 0,                                   },
-        {" kill ConNectioN 123 HARD",                  true, 123,           KT_CONNECTION          },
-        {" kill ConNectioN 123 SOFT",                  true, 123,           KT_CONNECTION          },
-        {" kill ConNectioN SOFT 123",                  false, 0,                                   },
-        {"           kill  HARD ConNectioN 123",       true,  123,          KT_CONNECTION | KT_HARD},
-        {" kill  SOFT ConNectioN 123",                 true,  123,          KT_CONNECTION | KT_SOFT},
-        {" kill  HARD 123",                            true,  123,          KT_HARD                },
-        {" kill  SOFT 123",                            true,  123,          KT_SOFT                },
-        {"KIll soft query 21 ",                        true,  21,           KT_QUERY | KT_SOFT     },
-        {"KIll query soft 21 ",                        false,                                      },
-        {"KIll query user maxuser ",                   true, 0,             KT_QUERY, "maxuser"    },
-        {"KIll user               ",                   false,                                      }
+        {"KIll query 123456789012345678901",      KILL,  0,         KT_QUERY               },
+        {"KIll query   \t    \t   21  \n \t  ",   KILL,  21,        KT_QUERY               },
+        {"KIll   \t    \n    \t   -6  \n \t   ",  NONE, },
+        {"KIll 12345678901234567890123456 \n \t", KILL,  },
+        {"kill ;",                                NONE, 0,                                },
+        {" kill ConNectioN 123 HARD",             KILL,  123,       KT_CONNECTION          },
+        {" kill ConNectioN 123 SOFT",             KILL,  123,       KT_CONNECTION          },
+        {" kill ConNectioN SOFT 123",             NONE, 0,                                },
+        {"  /* \ncomment1\ncomment2*/         kill  HARD ConNectioN 123",
+         KILL,  123,       KT_CONNECTION | KT_HARD},
+        {"#line-comment\nkill  SOFT ConNectioN 123",
+         KILL,  123,       KT_CONNECTION | KT_SOFT},
+        {" --line comment USE test;\n #set role my_role\n   kill  HARD 123",
+         KILL,  123,       KT_HARD                },
+        {" kill  SOFT 123",                       KILL,  123,       KT_SOFT                },
+        {"KIll soft query 21 ",                   KILL,  21,        KT_QUERY | KT_SOFT     },
+        {"KIll query soft 21 ",                   NONE, },
+        {"KIll query user maxuser ",              KILL,  0,         KT_QUERY, "maxuser"    },
+        {"KIll user               ",              NONE, }
     };
+
     int result = 0;
-    int arr_size = sizeof(tests) / sizeof(test_t);
-    for (int i = 0; i < arr_size; i++)
+    for (auto& elem : tests)
     {
-        result += test_one_query(tests[i]);
+        result += test_one_query(elem);
     }
     return result;
 }

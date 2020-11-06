@@ -54,21 +54,24 @@ public:
 
     std::string current_db() const override;
 
-    struct KillQueryContents
+    struct SpecialQueryDesc
     {
-        uint32_t    kt {0}; /**< kill options bitfield */
-        uint64_t    id {0}; /**< thread or query id */
-        std::string user;   /**< username */
+        enum class Type {NONE, KILL, SET_ROLE, USE_DB};
+        Type type {Type::NONE};         /**< Query type */
+
+        std::string target;             /**< Db or role to change to, or target user for kill */
+        uint32_t    kill_options {0};   /**< Kill options bitfield */
+        uint64_t    kill_id {0};        /**< Thread or query id for kill */
     };
 
     /**
-     * Parse elements from a kill query. This function reads values from thread-local regular expression
+     * Parse elements from a tracked query. This function reads values from thread-local regular expression
      * match data, so it should be called right after a regex has matched.
      *
      * @param sql Original query
-     * @return Kill query fields
+     * @return Query fields
      */
-    static KillQueryContents parse_kill_query_elems(const char* sql);
+    static SpecialQueryDesc parse_special_query(const char* sql, int len);
 
     void mxs_mysql_execute_kill(uint64_t target_id, kill_type_t type);
     bool in_routing_state() const override;
@@ -83,13 +86,6 @@ public:
      * @return True on success
      */
     static bool module_init();
-
-    /**
-     * Get the regular expression for special queries
-     *
-     * @return Regular expression
-     */
-    static const mxb::Regex& special_queries_regex();
 
 private:
     /** Return type of process_special_commands() */
@@ -136,9 +132,9 @@ private:
     char* handle_variables(mxs::Buffer& buffer);
 
     SpecialCmdRes process_special_queries(mxs::Buffer& buffer);
-    void          handle_query_kill(const KillQueryContents& kill_contents);
+    void          handle_query_kill(const SpecialQueryDesc& kill_contents);
 
-    void          add_local_client(LocalClient* client);
+    void add_local_client(LocalClient* client);
 
     void track_transaction_state(MXS_SESSION* session, GWBUF* packetbuf);
     void execute_kill_all_others(uint64_t target_id, uint64_t keep_protocol_thread_id, kill_type_t type);
@@ -271,4 +267,6 @@ private:
     void parse_and_set_trx_state(const mxs::Reply& reply);
     void start_change_role(std::string&& role);
     void start_change_db(std::string&& db);
+
+    static SpecialQueryDesc parse_kill_query_elems(const char* sql);
 };

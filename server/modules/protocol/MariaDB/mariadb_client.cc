@@ -794,26 +794,27 @@ void MariaDBClientConnection::track_transaction_state(MXS_SESSION* session, GWBU
     }
 }
 
-void MariaDBClientConnection::handle_query_kill(const KillQueryContents& kill_contents)
+void MariaDBClientConnection::handle_query_kill(const SpecialQueryDesc& kill_contents)
 {
-    auto kt = kill_contents.kt;
+    auto kt = kill_contents.kill_options;
+    auto& user = kill_contents.target;
     // TODO: handle "query id" somehow
     if ((kt & KT_QUERY_ID) == 0)
     {
-        if (kill_contents.id > 0)
+        if (kill_contents.kill_id > 0)
         {
-            mxs_mysql_execute_kill(kill_contents.id, (kill_type_t)kt);
+            mxs_mysql_execute_kill(kill_contents.kill_id, (kill_type_t)kt);
         }
-        else if (!kill_contents.user.empty())
+        else if (!user.empty())
         {
-            execute_kill_user(kill_contents.user.c_str(), (kill_type_t)kt);
+            execute_kill_user(user.c_str(), (kill_type_t)kt);
         }
     }
     // Always return OK to client, as we don't yet detect non-existing thread id:s or users.
     write_ok_packet(1);
 }
 
-MariaDBClientConnection::KillQueryContents
+MariaDBClientConnection::SpecialQueryDesc
 MariaDBClientConnection::parse_kill_query_elems(const char* sql)
 {
     const string connection = "connection";
@@ -827,16 +828,17 @@ MariaDBClientConnection::parse_kill_query_elems(const char* sql)
     auto type = mxb::tolower(regex.substring_by_name(sql, "ktype"));
     auto target = mxb::tolower(regex.substring_by_name(sql, "ktarget"));
 
-    KillQueryContents rval;
+    SpecialQueryDesc rval;
+    rval.type = SpecialQueryDesc::Type::KILL;
 
     // Option is either "hard", "soft", or empty.
     if (option == hard)
     {
-        rval.kt |= KT_HARD;
+        rval.kill_options |= KT_HARD;
     }
     else if (option == soft)
     {
-        rval.kt |= KT_SOFT;
+        rval.kill_options |= KT_SOFT;
     }
     else
     {
@@ -846,27 +848,27 @@ MariaDBClientConnection::parse_kill_query_elems(const char* sql)
     // Type is either "connection", "query", "query\s+id" or empty.
     if (type == connection)
     {
-        rval.kt |= KT_CONNECTION;
+        rval.kill_options |= KT_CONNECTION;
     }
     else if (type == query)
     {
-        rval.kt |= KT_QUERY;
+        rval.kill_options |= KT_QUERY;
     }
     else if (!type.empty())
     {
         mxb_assert(type.find(query) == 0);
-        rval.kt |= KT_QUERY_ID;
+        rval.kill_options |= KT_QUERY_ID;
     }
 
     // target is either a query/thread id or "user\s+<username>"
     if (isdigit(target[0]))
     {
-        mxb::get_uint64(target.c_str(), &rval.id);
+        mxb::get_uint64(target.c_str(), &rval.kill_id);
     }
     else
     {
         auto words = mxb::strtok(target, " ");
-        rval.user = words[1];
+        rval.target = words[1];
     }
     return rval;
 }
@@ -891,10 +893,15 @@ MariaDBClientConnection::SpecialCmdRes
 MariaDBClientConnection::process_special_queries(mxs::Buffer& buffer)
 {
     auto rval = SpecialCmdRes::CONTINUE;
-    // The packet must be at least HEADER + cmd + 5 (USE d) chars in length.
-    const size_t min_len = MYSQL_HEADER_LEN + 1 + 5;
     auto packet_len = buffer.length();
-    if (packet_len >= min_len)
+    /* The packet must be at least HEADER + cmd + 5 (USE d) chars in length. Also, if the packet is rather
+     * long, assume that it is not a tracked query. This assumption allows avoiding the make_contiquous-call
+     * on e.g. big inserts. The long packets can only contain one of the tracked queries by having lots of
+     * comments. */
+    const size_t min_len = MYSQL_HEADER_LEN + 1 + 5;
+    const size_t max_len = 10000;
+
+    if (packet_len >= min_len && packet_len <= max_len)
     {
         char* sql = nullptr;
         int len = 0;
@@ -902,41 +909,25 @@ MariaDBClientConnection::process_special_queries(mxs::Buffer& buffer)
         buffer.make_contiguous();
         if (modutil_extract_SQL(buffer.get(), &sql, &len))
         {
-            const auto& regex = this_unit.special_queries_regex;
-            auto found = regex.match(sql, len);
-            if (found)
+            auto fields = parse_special_query(sql, len);
+            switch (fields.type)
             {
-                // Is a tracked command. Look at the captured parts to figure out which one it is.
-                auto main_ind = regex.substring_ind_by_name("main");
-                mxb_assert(!main_ind.empty());
-                char c = sql[main_ind.begin];
-                switch (c)
-                {
-                case 'K':
-                case 'k':
-                    {
-                        auto kill_cmd_contents = parse_kill_query_elems(sql);
-                        handle_query_kill(kill_cmd_contents);
-                        rval = SpecialCmdRes::END;
-                    }
-                    break;
+            case SpecialQueryDesc::Type::NONE:
+                break;
 
-                case 'S':
-                case 's':
-                    {
-                        auto role = regex.substring_by_name(sql, "role");
-                        start_change_role(move(role));
-                    }
-                    break;
+            case SpecialQueryDesc::Type::KILL:
+                handle_query_kill(fields);
+                // The kill-query is not routed to backends, as the id:s would be wrong.
+                rval = SpecialCmdRes::END;
+                break;
 
-                case 'U':
-                case 'u':
-                    handle_use_database(buffer.get());
-                    break;
+            case SpecialQueryDesc::Type::USE_DB:
+                handle_use_database(buffer.get());
+                break;
 
-                default:
-                    mxb_assert(!true);
-                }
+            case SpecialQueryDesc::Type::SET_ROLE:
+                start_change_role(move(fields.target));
+                break;
             }
         }
     }
@@ -2457,7 +2448,43 @@ void MariaDBClientConnection::start_change_db(string&& db)
     m_pending_value = move(db);
 }
 
-const mxb::Regex& MariaDBClientConnection::special_queries_regex()
+MariaDBClientConnection::SpecialQueryDesc
+MariaDBClientConnection::parse_special_query(const char* sql, int len)
 {
-    return this_unit.special_queries_regex;
+    SpecialQueryDesc rval;
+    const auto& regex = this_unit.special_queries_regex;
+    if (regex.match(sql, len))
+    {
+        // Is a tracked command. Look at the captured parts to figure out which one it is.
+        auto main_ind = regex.substring_ind_by_name("main");
+        mxb_assert(!main_ind.empty());
+        char c = sql[main_ind.begin];
+        switch (c)
+        {
+        case 'K':
+        case 'k':
+            {
+                rval = parse_kill_query_elems(sql);
+            }
+            break;
+
+        case 'S':
+        case 's':
+            {
+                rval.type = SpecialQueryDesc::Type::SET_ROLE;
+                rval.target = regex.substring_by_name(sql, "role");
+            }
+            break;
+
+        case 'U':
+        case 'u':
+            rval.type = SpecialQueryDesc::Type::USE_DB;
+            rval.target = regex.substring_by_name(sql, "db");
+            break;
+
+        default:
+            mxb_assert(!true);
+        }
+    }
+    return rval;
 }
