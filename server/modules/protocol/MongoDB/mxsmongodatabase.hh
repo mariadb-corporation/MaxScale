@@ -97,11 +97,11 @@ public:
      * if an earlier call to @c run_command returned @ nullptr and only with
      * the buffer delivered to @c clientReply of the client protocol.
      *
-     * @param pMariaDB_response  A response as received from downstream.
+     * @param mariadb_response  A response as received from downstream.
      *
-     * @return @c pMariaDB_response translated into the equivalent Mongo response.
+     * @return @c mariadb_response translated into the equivalent Mongo response.
      */
-    GWBUF* translate(GWBUF* pMariaDB_response);
+    GWBUF* translate(GWBUF& mariadb_response);
 
 private:
     Database(const std::string& name, Mongo::Context* pContext);

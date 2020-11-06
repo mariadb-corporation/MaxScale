@@ -40,7 +40,7 @@ public:
 
     virtual GWBUF* execute() = 0;
 
-    virtual GWBUF* translate(GWBUF* pMariaDB_response)
+    virtual GWBUF* translate(GWBUF& mariadb_response)
     {
         mxb_assert(!true);
         return nullptr;
@@ -122,11 +122,11 @@ protected:
         return pResponse;
     }
 
-    GWBUF* translate_resultset(GWBUF* pMariaDB_response)
+    GWBUF* translate_resultset(GWBUF& mariadb_response)
     {
         bsoncxx::builder::basic::document builder;
 
-        uint8_t* pBuffer = GWBUF_DATA(pMariaDB_response);
+        uint8_t* pBuffer = GWBUF_DATA(&mariadb_response);
 
         // A result set, so first we get the number of fields...
         ComQueryResponse cqr(&pBuffer);
@@ -230,12 +230,12 @@ public:
         return nullptr;
     }
 
-    GWBUF* translate(GWBUF* pMariaDB_response) override
+    GWBUF* translate(GWBUF& mariadb_response) override
     {
         // TODO: Update will be needed when DEPRECATE_EOF it turned on.
         GWBUF* pResponse = nullptr;
 
-        ComResponse response(GWBUF_DATA(pMariaDB_response));
+        ComResponse response(GWBUF_DATA(&mariadb_response));
 
         switch (response.type())
         {
@@ -254,10 +254,8 @@ public:
 
         default:
             // Must be a result set.
-            pResponse = translate_resultset(pMariaDB_response);
+            pResponse = translate_resultset(mariadb_response);
         }
-
-        gwbuf_free(pMariaDB_response);
 
         return pResponse;
     }
@@ -374,15 +372,14 @@ GWBUF* mxsmongo::Database::handle_command(GWBUF* pRequest,
     return execute(mxsmongo::get_command(doc), pRequest, req, doc);
 }
 
-GWBUF* mxsmongo::Database::translate(GWBUF* pMariaDB_response)
+GWBUF* mxsmongo::Database::translate(GWBUF& mariadb_response)
 {
     mxb_assert(is_pending());
     mxb_assert(m_sCommand.get());
 
-    GWBUF* pResponse = m_sCommand->translate(pMariaDB_response);
+    GWBUF* pResponse = m_sCommand->translate(mariadb_response);
 
     m_sCommand.reset();
-    gwbuf_free(pMariaDB_response);
 
     set_ready();
 

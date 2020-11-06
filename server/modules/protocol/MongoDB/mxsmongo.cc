@@ -157,21 +157,24 @@ GWBUF* mxsmongo::Mongo::handle_request(GWBUF* pRequest)
     return pResponse;
 }
 
-int32_t mxsmongo::Mongo::clientReply(GWBUF* pResponse, DCB* pDcb)
+int32_t mxsmongo::Mongo::clientReply(GWBUF* pMariaDB_response, DCB* pDcb)
 {
     mxb_assert(m_sDatabase.get());
 
-    pResponse = m_sDatabase->translate(pResponse);
+    GWBUF* pMongoDB_response = m_sDatabase->translate(*pMariaDB_response);
+    gwbuf_free(pMariaDB_response);
 
     m_sDatabase.reset();
 
-    if (pResponse)
+    if (pMongoDB_response)
     {
-        pDcb->writeq_append(pResponse);
+        pDcb->writeq_append(pMongoDB_response);
     }
 
     if (!m_requests.empty())
     {
+        // Loop as long as responses to requests can be generated immediately.
+        // If it can't then we'll continue once clientReply() is called anew.
         do
         {
             mxb_assert(!m_sDatabase.get());
@@ -179,15 +182,15 @@ int32_t mxsmongo::Mongo::clientReply(GWBUF* pResponse, DCB* pDcb)
             GWBUF* pRequest = m_requests.front();
             m_requests.pop_front();
 
-            pResponse = handle_request(pRequest);
+            pMongoDB_response = handle_request(pRequest);
 
-            if (pResponse)
+            if (pMongoDB_response)
             {
                 // The response could be generated immediately, just send it.
-                pDcb->writeq_append(pResponse);
+                pDcb->writeq_append(pMongoDB_response);
             }
         }
-        while (pResponse && !m_requests.empty());
+        while (pMongoDB_response && !m_requests.empty());
     }
 
     return 0;
