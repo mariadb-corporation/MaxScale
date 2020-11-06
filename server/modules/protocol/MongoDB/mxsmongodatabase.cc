@@ -15,6 +15,8 @@
 #include <bsoncxx/builder/basic/document.hpp>
 #include <bsoncxx/builder/stream/document.hpp>
 #include <maxscale/modutil.hh>
+#include <maxscale/mysql_utils.hh>
+#include <maxscale/protocol/mariadb/mysql.hh>
 #include "../../filter/masking/mysql.hh"
 
 using namespace std;
@@ -120,6 +122,14 @@ protected:
         memcpy(pData, doc_view.data(), doc_view.length());
 
         return pResponse;
+    }
+
+    GWBUF* create_empty_response()
+    {
+        auto builder = bsoncxx::builder::stream::document{};
+        bsoncxx::document::value doc_value = builder << bsoncxx::builder::stream::finalize;
+
+        return create_response(doc_value);
     }
 
     GWBUF* translate_resultset(GWBUF& mariadb_response)
@@ -240,8 +250,10 @@ public:
         switch (response.type())
         {
         case ComResponse::ERR_PACKET:
-            // TODO: Handle this in a sensible manner.
-            mxb_assert(!true);
+            MXS_WARNING("Mongo request to backend failed: (%d), %s",
+                        mxs_mysql_get_mysql_errno(&mariadb_response),
+                        mxs::extract_error(&mariadb_response).c_str());
+            pResponse = create_empty_response();
             break;
 
         case ComResponse::OK_PACKET:
@@ -303,10 +315,7 @@ public:
         // to an abort. Now optionally an empty document may be returned instead.
         mxb_assert(mxsmongo::continue_on_unknown());
 
-        auto builder = bsoncxx::builder::stream::document{};
-        bsoncxx::document::value doc_value = builder << bsoncxx::builder::stream::finalize;
-
-        return create_response(doc_value);
+        return create_empty_response();
     }
 };
 
