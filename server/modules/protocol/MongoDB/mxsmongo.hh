@@ -128,8 +128,9 @@ const char* opcode_to_string(int code);
 namespace keys
 {
 
-const char FIND[]     = "find";
-const char ISMASTER[] = "ismaster";
+const char FIND[]       = "find";
+const char ISMASTER[]   = "ismaster";
+const char PROJECTION[] = "projection";
 
 };
 

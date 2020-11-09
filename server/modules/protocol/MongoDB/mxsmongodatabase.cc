@@ -222,7 +222,23 @@ public:
 
     GWBUF* execute() override
     {
-        auto element = m_doc["find"];
+        stringstream sql;
+        sql << "SELECT ";
+
+        auto projection = m_doc[mxsmongo::keys::PROJECTION];
+
+        if (projection)
+        {
+            sql << get_columns(projection);
+        }
+        else
+        {
+            sql << "*";
+        }
+
+        sql << " FROM ";
+
+        auto element = m_doc[mxsmongo::keys::FIND];
 
         mxb_assert(element.type() == bsoncxx::type::k_utf8);
 
@@ -230,10 +246,11 @@ public:
 
         string table(utf8.value.data(), utf8.value.size());
 
-        stringstream ss;
-        ss << "SELECT * FROM " << m_database.name() << "." << table;
+        sql << m_database.name() << "." << table;
 
-        GWBUF* pRequest = modutil_create_query(ss.str().c_str());
+        MXS_NOTICE("SQL: %s", sql.str().c_str());
+
+        GWBUF* pRequest = modutil_create_query(sql.str().c_str());
 
         m_database.context().downstream().routeQuery(pRequest);
 
@@ -270,6 +287,42 @@ public:
         }
 
         return pResponse;
+    }
+
+private:
+    string get_columns(const bsoncxx::document::element& projection)
+    {
+        vector<string> columns;
+
+        if (projection.type() == bsoncxx::type::k_document)
+        {
+            bsoncxx::document::view doc = projection.get_document();
+
+            for (auto it = doc.begin(); it != doc.end(); ++it)
+            {
+                const auto& element = *it;
+                const auto& key = element.key();
+
+                string column { key.data(), key.size() };
+
+                if (column != "_id")
+                {
+                    // TODO: Could something meaningful be returned for _id?
+                    columns.push_back(column);
+                }
+            }
+        }
+        else
+        {
+            MXS_ERROR("'%s' is not an object, returning all columns.", mxsmongo::keys::PROJECTION);
+        }
+
+        if (columns.empty())
+        {
+            columns.push_back("*");
+        }
+
+        return mxb::join(columns);
     }
 };
 
