@@ -2403,24 +2403,27 @@ bool MariaDBClientConnection::module_init()
      * Comments at start are skipped. Executable comments are not parsed.
      */
     const char regex_string[] =
-        // Skip whitespace at beginning.
-        R"(^\s*(?:)"
-        // Skip a line comment
-        R"((?:\s*(--|#).*\n))"
-        // Skip a multiline comment. The comment itself may not contain *, this keeps the regex fast.
-        R"(|(?:\s*\/\*[^\*]*\*\/))"
-        // End comments
-        R"()*)"
-        // <main> captures the entire statement
-        R"(\s*(?<main>)"
-        // Capture "USE database"
+        // May start with comments. Individual comments may be preceded by ws (=whitespace).
+        R"(^(?:\s*)"
+        // Line comment
+        R"((?:--|#).*\n)"
+        // Multiline comment
+        R"(|\s*/\*[^*]*\*+([^*/][^*]*\*+)*/)"
+        // Close comments definition. May have ws after.
+        R"()*\s*)"
+        // <main> captures the entire statement.
+        R"((?<main>)"
+        // Capture "USE database".
         R"(USE\s+(?<db>\w+))"
-        // Capture "SET ROLE role"
+        // Capture "SET ROLE role".
         R"(|SET\s+ROLE\s+(?<role>\w+))"
         // Capture KILL ...
         R"(|KILL\s+(?:(?<koption>HARD|SOFT)\s+)?(?:(?<ktype>CONNECTION|QUERY|QUERY\s+ID)\s+)?(?<ktarget>\d+|USER\s+\w+))"
-        // End of <main>. Also, ensure the statement ends nicely.
-        R"()(?:;|\s+|$))";
+        // End of <main>.
+        R"())"
+        // Ensure the statement ends nicely. Either subject ends, or a comment begins. This
+        // last comment is not properly checked as skipping it is not required.
+        R"(\s*(?:;|$|--|#|/\*))";
 
     bool rval = false;
     mxb::Regex regex(regex_string, PCRE2_CASELESS);

@@ -31,7 +31,7 @@ struct test_t
     Type        type {Type::NONE};
     uint64_t    correct_id {0};
     uint32_t    correct_kt {0};
-    std::string correct_user;
+    std::string correct_target;
 };
 
 int test_one_query(const test_t& test)
@@ -43,7 +43,7 @@ int test_one_query(const test_t& test)
     auto found_type = query_desc.type;
     auto found_kt = query_desc.kill_options;
     auto found_id = query_desc.kill_id;
-    auto& found_user = query_desc.target;
+    auto& found_target = query_desc.target;
 
     std::string errmsg;
     if (found_type != test.type)
@@ -58,10 +58,10 @@ int test_one_query(const test_t& test)
     {
         errmsg = mxb::string_printf("Expected thread id '%lu', got '%lu'", test.correct_id, found_id);
     }
-    else if (found_user != test.correct_user)
+    else if (found_target != test.correct_target)
     {
-        errmsg = mxb::string_printf("Expected user '%s', got '%s'",
-                                    test.correct_user.c_str(), found_user.c_str());
+        errmsg = mxb::string_printf("Expected target '%s', got '%s'",
+                                    test.correct_target.c_str(), found_target.c_str());
     }
     if (errmsg.empty())
     {
@@ -83,14 +83,12 @@ int main(int argc, char** argv)
      * The second column is true for cases where the query matches the regex, but reading the id fails due
      * to overflow. In these cases the third col is 0, as the parser returns that by default. 0 is not a
      * valid connection id.
-     *
-     * Also, the regex does not check the remainder of the query. This could be added, but would cause
-     * comments to reject an otherwise fine kill-query. This means that currently, "kill connection 123 HARD"
-     * is interpreted as "kill connection 123".
      */
 
     auto KILL = Type::KILL;
     auto NONE = Type::NONE;
+    auto ROLE = Type::SET_ROLE;
+    auto DB = Type::USE_DB;
 
     test_t tests[] =
     {
@@ -98,11 +96,11 @@ int main(int argc, char** argv)
         {"kIlL  coNNectioN 987654321  ;",         KILL,  987654321, KT_CONNECTION          },
         {" Ki5L CoNNectioN 987654321  ",          NONE, },
         {"1",                                     NONE, },
-        {"kILL 1",                                KILL,  1,                                },
+        {"kILL 1  ;",                             KILL,  1,                                },
         {"\n\t kill \nQueRy 456",                 KILL,  456,       KT_QUERY               },
         {"     A         kill 1;     ",           NONE, },
         {" kill connection 1A",                   NONE, },
-        {" kill connection 1 A ",                 KILL,  1,         KT_CONNECTION          },
+        {" kill connection 1 A ",                 NONE, },
         {"kill query 7 ; select * ",              KILL,  7,         KT_QUERY               },
         // 64-bit integer overflow
         {"KIll query 123456789012345678901",      KILL,  0,         KT_QUERY               },
@@ -110,20 +108,27 @@ int main(int argc, char** argv)
         {"KIll   \t    \n    \t   -6  \n \t   ",  NONE, },
         {"KIll 12345678901234567890123456 \n \t", KILL,  },
         {"kill ;",                                NONE, 0,                                },
-        {" kill ConNectioN 123 HARD",             KILL,  123,       KT_CONNECTION          },
-        {" kill ConNectioN 123 SOFT",             KILL,  123,       KT_CONNECTION          },
+        {" kill ConNectioN 123 HARD",             NONE, 0},
         {" kill ConNectioN SOFT 123",             NONE, 0,                                },
-        {"  /* \ncomment1\ncomment2*/         kill  HARD ConNectioN 123",
+        {"/* \ncomment1\ncomment2*/         kill  HARD ConNectioN 123",
          KILL,  123,       KT_CONNECTION | KT_HARD},
+        {"/*** star* *comm///*EnT ****/  \n--linecomment\n  /***/kill 123",
+         KILL,  123,       },
         {"#line-comment\nkill  SOFT ConNectioN 123",
          KILL,  123,       KT_CONNECTION | KT_SOFT},
-        {" --line comment USE test;\n #set role my_role\n   kill  HARD 123",
+        {"--line comment USE test;\n #set role my_role\n   kill  HARD 123",
          KILL,  123,       KT_HARD                },
-        {" kill  SOFT 123",                       KILL,  123,       KT_SOFT                },
-        {"KIll soft query 21 ",                   KILL,  21,        KT_QUERY | KT_SOFT     },
+        {" kill  SOFT 123",                       KILL, 123,       KT_SOFT                },
+        {"KIll soft query 21 ",                   KILL, 21,        KT_QUERY | KT_SOFT     },
         {"KIll query soft 21 ",                   NONE, },
-        {"KIll query user maxuser ",              KILL,  0,         KT_QUERY, "maxuser"    },
-        {"KIll user               ",              NONE, }
+        {"KIll query user maxuser ",              KILL, 0,         KT_QUERY, "maxuser"    },
+        {"KIll user               ",              NONE, },
+        {" #line-comment\n KILL 2 /* ab */    ",  KILL, 2},
+        {"KILL 42 \n --ab    ",                   KILL, 42},
+        {"use ;",                                 NONE, 0,         0,                     },
+        {"use db1;",                              DB,   0,         0,        "db1"        },
+        {" SET  ASDF;",                           NONE, 0,         0,                     },
+        {"/** comment */ seT  RolE  my_role ;",   ROLE, 0,         0,        "my_role"    },
     };
 
     int result = 0;
