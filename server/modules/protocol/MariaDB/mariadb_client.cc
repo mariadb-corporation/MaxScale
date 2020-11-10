@@ -358,8 +358,20 @@ bool MariaDBClientConnection::send_server_handshake()
     mariadb::set_byte4(ptr, m_session->id());
     ptr += 4;
 
+    /* gen_random_bytes() generates random bytes (0-255). This is ok as scramble for most clients
+     * (e.g. mariadb) but not for mysql-connector-java. To be on the safe side, ensure every byte
+     * is a non-whitespace character. To do the rescaling of values without noticeable bias, generate
+     * double the required bytes.
+     */
+    uint8_t random_bytes[2 * MYSQL_SCRAMBLE_LEN];
+    mxb::Worker::gen_random_bytes(random_bytes, sizeof(random_bytes));
     auto* scramble_storage = m_session_data->scramble;
-    mxb::Worker::gen_random_bytes(scramble_storage, MYSQL_SCRAMBLE_LEN);
+    for (size_t i = 0; i < MYSQL_SCRAMBLE_LEN; i++)
+    {
+        auto src = &random_bytes[2 * i];
+        auto val16 = *(reinterpret_cast<uint16_t*>(src));
+        scramble_storage[i] = '!' + (val16 % (('~' + 1) - '!'));
+    }
 
     // Write scramble part 1.
     ptr = mariadb::copy_bytes(ptr, scramble_storage, 8);
