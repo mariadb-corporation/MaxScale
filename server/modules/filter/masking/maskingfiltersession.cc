@@ -89,6 +89,37 @@ private:
     uint32_t m_options;
     bool     m_disable;
 };
+
+bool should_be_masked(enum_field_types type)
+{
+    switch (type)
+    {
+    case MYSQL_TYPE_BLOB:
+    case MYSQL_TYPE_LONG_BLOB:
+    case MYSQL_TYPE_MEDIUM_BLOB:
+    case MYSQL_TYPE_STRING:
+    case MYSQL_TYPE_TINY_BLOB:
+    case MYSQL_TYPE_VARCHAR:
+    case MYSQL_TYPE_VAR_STRING:
+        return true;
+
+    case MYSQL_TYPE_BIT:
+    case MYSQL_TYPE_DECIMAL:
+    case MYSQL_TYPE_ENUM:
+    case MYSQL_TYPE_GEOMETRY:
+    case MYSQL_TYPE_NEWDECIMAL:
+    case MYSQL_TYPE_SET:
+        // These, although returned as length-encoded strings, also in the case of
+        // a binary resultset row, are not are not considered to be strings from the
+        // perspective of masking.
+        return false;
+
+    default:
+        // Nothing else is considered to be strings even though, in the case of
+        // a textual resultset, that's what they all are.
+        return false;
+    }
+}
 }
 
 MaskingFilterSession::MaskingFilterSession(MXS_SESSION* pSession,
@@ -532,7 +563,7 @@ void MaskingFilterSession::mask_values(ComPacket& response)
                 {
                     ComQueryResponse::TextResultsetRow::Value value = *i;
 
-                    if (value.is_string())
+                    if (should_be_masked(value.type()))
                     {
                         LEncString s = value.as_string();
                         pRule->rewrite(s);
@@ -560,7 +591,7 @@ void MaskingFilterSession::mask_values(ComPacket& response)
                 {
                     ComQueryResponse::BinaryResultsetRow::Value value = *i;
 
-                    if (value.is_string())
+                    if (should_be_masked(value.type()))
                     {
                         LEncString s = value.as_string();
                         pRule->rewrite(s);

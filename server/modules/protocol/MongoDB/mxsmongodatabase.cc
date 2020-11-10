@@ -197,7 +197,7 @@ protected:
                 const string& name = *it;
                 const auto& value = *jt;
 
-                if (value.is_string())
+                if (true) // TODO: Fixed propery in next commit.
                 {
                     const string& s = value.as_string().to_string();
 

@@ -936,51 +936,20 @@ public:
     {
     }
 
+    enum_field_types type() const
+    {
+        return m_type;
+    }
+
     LEncString as_string() const
     {
-        mxb_assert(is_string());
+        //Generally possible if textual protocol, only for string types if binary.
         return LEncString(m_pData);
     }
 
     bool is_null() const
     {
         return m_type == MYSQL_TYPE_NULL;
-    }
-
-    bool is_string() const
-    {
-        return is_string(m_type);
-    }
-
-    static bool is_string(enum_field_types type)
-    {
-        switch (type)
-        {
-        case MYSQL_TYPE_BLOB:
-        case MYSQL_TYPE_LONG_BLOB:
-        case MYSQL_TYPE_MEDIUM_BLOB:
-        case MYSQL_TYPE_STRING:
-        case MYSQL_TYPE_TINY_BLOB:
-        case MYSQL_TYPE_VARCHAR:
-        case MYSQL_TYPE_VAR_STRING:
-            return true;
-
-        // These, although returned as length-encoded strings, also in the case of
-        // a binary resultset row, are not are not considered to be strings from the
-        // perspective of masking.
-        case MYSQL_TYPE_BIT:
-        case MYSQL_TYPE_DECIMAL:
-        case MYSQL_TYPE_ENUM:
-        case MYSQL_TYPE_GEOMETRY:
-        case MYSQL_TYPE_NEWDECIMAL:
-        case MYSQL_TYPE_SET:
-            return false;
-
-        default:
-            // Nothing else is considered to be strings even though, in the case of
-            // a textual resultset, that's what they all are.
-            return false;
-        }
     }
 
 protected:
