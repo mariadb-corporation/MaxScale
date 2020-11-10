@@ -197,30 +197,70 @@ protected:
                 const string& name = *it;
                 const auto& value = *jt;
 
-                if (true) // TODO: Fixed propery in next commit.
+                if (value.is_null())
                 {
-                    const string& s = value.as_string().to_string();
-
-                    if (may_be_json(s))
-                    {
-                        try
-                        {
-                            builder.append(bsoncxx::builder::basic::kvp(name, bsoncxx::from_json(s)));
-                        }
-                        catch (const std::exception&)
-                        {
-                            builder.append(bsoncxx::builder::basic::kvp(name, s));
-                        }
-                    }
-                    else
-                    {
-                        builder.append(bsoncxx::builder::basic::kvp(name, s));
-                    }
+                    builder.append(bsoncxx::builder::basic::kvp(name, bsoncxx::types::b_null {}));
                 }
                 else
                 {
-                    // TODO: Handle other types as well.
-                    builder.append(bsoncxx::builder::basic::kvp(name, ""));
+                    const string& s = value.as_string().to_string();
+
+                    switch (value.type())
+                    {
+                    case MYSQL_TYPE_TINY:
+                    case MYSQL_TYPE_SHORT:
+                    case MYSQL_TYPE_LONG:
+                    case MYSQL_TYPE_LONGLONG:
+                    case MYSQL_TYPE_INT24:
+                        {
+                            int64_t l = strtol(s.c_str(), nullptr, 10);
+                            builder.append(bsoncxx::builder::basic::kvp(name, l));
+                        }
+                        break;
+
+                    case MYSQL_TYPE_FLOAT:
+                        {
+                            float f = atof(s.c_str());
+                            builder.append(bsoncxx::builder::basic::kvp(name, f));
+                        }
+                        break;
+
+                    case MYSQL_TYPE_DOUBLE:
+                    case MYSQL_TYPE_NEWDECIMAL:
+                        {
+                            double d = atof(s.c_str());
+                            builder.append(bsoncxx::builder::basic::kvp(name, d));
+                        }
+                        break;
+
+                    case MYSQL_TYPE_BLOB:
+                        // JSON fields are returned as BLOBs.
+                        if (may_be_json(s))
+                        {
+                            try
+                            {
+                                builder.append(bsoncxx::builder::basic::kvp(name, bsoncxx::from_json(s)));
+                            }
+                            catch (const std::exception&)
+                            {
+                                builder.append(bsoncxx::builder::basic::kvp(name, s));
+                            }
+                        }
+                        else
+                        {
+                            builder.append(bsoncxx::builder::basic::kvp(name, s));
+                        }
+                        break;
+
+                    case MYSQL_TYPE_DATE:
+                    case MYSQL_TYPE_TIME:
+                    case MYSQL_TYPE_DATETIME:
+                    case MYSQL_TYPE_YEAR:
+                        // Times and dates are returned as strings.
+                    default:
+                        // Everything else as strings as well.
+                        builder.append(bsoncxx::builder::basic::kvp(name, s));
+                    }
                 }
 
                 ++it;
