@@ -124,6 +124,27 @@ protected:
         return pResponse;
     }
 
+    static bool may_be_json(const string& s)
+    {
+        // A string whose first non-whitespace character is '{', may represent
+        // a JSON object.
+        bool rv = false;
+
+        auto it = s.begin();
+
+        while (it != s.end() && isspace(*it))
+        {
+            ++it;
+        }
+
+        if (it != s.end())
+        {
+            rv = (*it == '{');
+        }
+
+        return rv;
+    }
+
     GWBUF* create_empty_response()
     {
         auto builder = bsoncxx::builder::stream::document{};
@@ -178,7 +199,23 @@ protected:
 
                 if (value.is_string())
                 {
-                    builder.append(bsoncxx::builder::basic::kvp(name, value.as_string().to_string()));
+                    const string& s = value.as_string().to_string();
+
+                    if (may_be_json(s))
+                    {
+                        try
+                        {
+                            builder.append(bsoncxx::builder::basic::kvp(name, bsoncxx::from_json(s)));
+                        }
+                        catch (const std::exception&)
+                        {
+                            builder.append(bsoncxx::builder::basic::kvp(name, s));
+                        }
+                    }
+                    else
+                    {
+                        builder.append(bsoncxx::builder::basic::kvp(name, s));
+                    }
                 }
                 else
                 {
