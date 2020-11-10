@@ -186,14 +186,14 @@ protected:
                     builder.append(bsoncxx::builder::basic::kvp(name, ""));
                 }
 
-                auto doc = builder.extract();
-                size_of_documents += doc.view().length();
-
-                documents.push_back(doc);
-
                 ++it;
                 ++jt;
             }
+
+            auto doc = builder.extract();
+            size_of_documents += doc.view().length();
+
+            documents.push_back(doc);
         }
 
         return create_response(size_of_documents, documents);
