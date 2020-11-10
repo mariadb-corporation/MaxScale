@@ -2343,7 +2343,7 @@ void MariaDBClientConnection::parse_and_set_trx_state(const mxs::Reply& reply)
     auto trx_state = reply.get_variable("trx_state");
     if (!trx_state.empty())
     {
-        if (trx_state.find_first_of("TI") == std::string::npos)
+        if (trx_state.find_first_of("TI") != std::string::npos)
         {
             ses_trx_state = TrxState::TRX_ACTIVE;
         }
