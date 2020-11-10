@@ -14,6 +14,7 @@
 var fs = require('fs')
 var program = require('yargs');
 var inquirer = require('inquirer')
+var readlineSync = require('readline-sync')
 
 // Note: The version.js file is generated at configuation time. If you are
 // building in-source, manually create the file
@@ -121,6 +122,20 @@ program
     .demandCommand(1, 'At least one command is required')
     .command('*', 'the default command', {}, function(argv) {
         if (argv._.length == 0) {
+
+            // No password given, ask it from the command line
+            // TODO: Combine this into the one in common.js
+            if (argv.password == '') {
+                if (process.stdin.isTTY) {
+                    argv.password = readlineSync.question('Enter password: ', {
+                        hideEchoBack: true
+                    })
+                } else {
+                    var line = fs.readFileSync(0)
+                    argv.password = line.toString().trim()
+                }
+            }
+
             base_opts = ['--user=' + argv.user,
                         '--password=' + argv.password,
                         '--hosts=' + argv.hosts,
