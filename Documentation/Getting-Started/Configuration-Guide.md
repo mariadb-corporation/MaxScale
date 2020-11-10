@@ -1537,6 +1537,15 @@ value of `service` in the listener). If a service defines other services in its
 If the value of `connection_keepalive` is changed at runtime, the change in the
 value takes effect immediately.
 
+As the connection keepalive pings must be done only when there's no ongoing
+query, all requests and responses must be tracked by MaxScale. In the case of
+`readconnroute`, this will incur a small drop in performance. For routers that
+rely on result tracking (e.g. `readwritesplit` and `schemarouter`), the
+performance will be the same with or without `connection_keepalive`.
+
+If you want to avoid the performance cost and you don't need the connection
+keepalive feature, you can disable it with `connection_keepalive=0s`.
+
 ### `net_write_timeout`
 
 This parameter controls how long a network write to the client can stay
