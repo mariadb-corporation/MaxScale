@@ -406,6 +406,11 @@ public:
         return m_port;
     }
 
+    MYSQL_STMT* stmt()
+    {
+        return mysql_stmt_init(m_conn);
+    }
+
 private:
     std::string m_host;
     int         m_port;

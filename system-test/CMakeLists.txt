@@ -974,6 +974,9 @@ add_test_executable(mxs3128_listener_ssl.cc mxs3128_listener_ssl replication LAB
 # MXS-3220: Crash on master reconnection with session command
 add_test_executable(mxs3220_reconnect_crash.cc mxs3220_reconnect_crash mxs3220_reconnect_crash LABELS REPL_BACKEND readwritesplit)
 
+# MXS-3184: FOUND_ROWS with prepared statements
+add_test_executable(mxs3184_ps_found_rows.cc mxs3184_ps_found_rows replication LABELS REPL_BACKEND readwritesplit)
+
 ############################################
 # END: Normal tests                        #
 ############################################
