@@ -104,19 +104,21 @@ int32_t RWSplitSession::routeQuery(GWBUF* querybuf)
         return 0;
     }
 
-    mxb_assert(gwbuf_is_contiguous(querybuf));
+    mxs::Buffer buffer(querybuf);
+    mxb_assert(buffer.is_contiguous());
+
     int rval = 0;
 
-    if (m_is_replay_active && !gwbuf_is_replayed(querybuf))
+    if (m_is_replay_active && !gwbuf_is_replayed(buffer.get()))
     {
         MXS_INFO("New %s received while transaction replay is active: %s",
-                 STRPACKETTYPE(GWBUF_DATA(querybuf)[4]),
-                 mxs::extract_sql(querybuf).c_str());
-        m_query_queue.emplace_back(querybuf);
+                 STRPACKETTYPE(buffer.data()[4]),
+                 mxs::extract_sql(buffer).c_str());
+        m_query_queue.emplace_back(std::move(buffer));
         return 1;
     }
 
-    if ((m_query_queue.empty() || gwbuf_is_replayed(querybuf)) && can_route_queries())
+    if ((m_query_queue.empty() || gwbuf_is_replayed(buffer.get())) && can_route_queries())
     {
         /** Gather the information required to make routing decisions */
         if (!m_qc.large_query())
@@ -127,11 +129,11 @@ int32_t RWSplitSession::routeQuery(GWBUF* querybuf)
                 m_qc.set_load_data_state(QueryClassifier::LOAD_DATA_ACTIVE);
             }
 
-            m_qc.update_route_info(get_current_target(), querybuf);
+            m_qc.update_route_info(get_current_target(), buffer.get());
         }
 
         /** No active or pending queries */
-        if (route_stmt(querybuf))
+        if (route_stmt(std::move(buffer)))
         {
             rval = 1;
         }
@@ -139,12 +141,12 @@ int32_t RWSplitSession::routeQuery(GWBUF* querybuf)
     else
     {
         // Already busy executing a query, put the query in a queue and route it later
-        MXS_INFO("Storing query (len: %d cmd: %0x), expecting %d replies to current command: %s",
-                 gwbuf_length(querybuf), GWBUF_DATA(querybuf)[4], m_expected_responses,
-                 mxs::extract_sql(querybuf, 1024).c_str());
+        MXS_INFO("Storing query (len: %lu cmd: %0x), expecting %d replies to current command: %s",
+                 buffer.length(), buffer.data()[4], m_expected_responses,
+                 mxs::extract_sql(buffer, 1024).c_str());
         mxb_assert(m_expected_responses == 1 || !m_query_queue.empty());
 
-        m_query_queue.emplace_back(querybuf);
+        m_query_queue.emplace_back(std::move(buffer));
         rval = 1;
         mxb_assert(m_expected_responses == 1);
     }
