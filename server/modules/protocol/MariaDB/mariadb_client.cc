@@ -1508,7 +1508,7 @@ void MariaDBClientConnection::execute_kill_user(const char* user, kill_type_t ty
 
 std::string MariaDBClientConnection::current_db() const
 {
-    return m_session_data->db;
+    return m_session_data->current_db;
 }
 
 void MariaDBClientConnection::track_current_command(const mxs::Buffer& buffer)
@@ -1577,6 +1577,7 @@ bool MariaDBClientConnection::parse_handshake_response_packet(GWBUF* buffer)
                 m_session->set_user(parse_res.username);
                 m_session_data->auth_token = move(parse_res.token_res.auth_token);
                 m_session_data->db = parse_res.db;
+                m_session_data->current_db = parse_res.db;
                 m_session_data->plugin = move(parse_res.plugin);
 
                 // Discard the attributes if there is any indication of failed parsing, as the contents
@@ -1725,6 +1726,7 @@ bool MariaDBClientConnection::start_change_user(mxs::Buffer&& buffer)
                 m_change_user.session = std::make_unique<MYSQL_session>(*m_session_data);
                 m_change_user.session->user = parse_res.username;
                 m_change_user.session->db = parse_res.db;
+                m_change_user.session->current_db = parse_res.db;
                 m_change_user.session->plugin = parse_res.plugin;
                 m_change_user.session->client_info.m_charset = parse_res.charset;
                 m_change_user.session->auth_token = parse_res.token_res.auth_token;
@@ -2303,7 +2305,7 @@ MariaDBClientConnection::clientReply(GWBUF* buffer, maxscale::ReplyRoute& down, 
         if (reply.is_ok())
         {
             // Database change succeeded.
-            m_session_data->db = move(m_pending_value);
+            m_session_data->current_db = move(m_pending_value);
         }
         // Regardless of result, database change is complete.
         m_pending_value.clear();

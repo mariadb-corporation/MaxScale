@@ -224,6 +224,7 @@ void ClientConnection::setup_session()
     m_session_data.user = "mongotest";
     m_session.set_user(m_session_data.user);
     m_session_data.db = "";
+    m_session_data.current_db = "";
     m_session_data.plugin = "mysql_native_password";
 
     const auto& authenticators = m_session.listener_data()->m_authenticators;

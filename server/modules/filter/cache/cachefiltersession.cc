@@ -322,7 +322,7 @@ CacheFilterSession* CacheFilterSession::create(std::unique_ptr<SessionCache> sCa
                                                SERVICE* pService)
 {
     CacheFilterSession* pCacheFilterSession = NULL;
-    auto db = static_cast<MYSQL_session*>(pSession->protocol_data())->db;
+    auto db = static_cast<MYSQL_session*>(pSession->protocol_data())->current_db;
     char* zDefaultDb = NULL;
 
     if (!db.empty())

@@ -105,7 +105,8 @@ public:
 
     std::string user;                               /*< username       */
     std::string remote;                             /*< client ip      */
-    std::string db;                                 /*< Current default database */
+    std::string db;                                 /*< Initial default database */
+    std::string current_db;                         /*< Current default database */
     std::string role;                               /*< Current role */
     std::string plugin;                             /*< authentication plugin requested by client */
     uint8_t     next_sequence {0};                  /*< Next packet sequence */
