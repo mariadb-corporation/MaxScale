@@ -156,6 +156,23 @@ std::string get_text_ps_id(GWBUF* buffer)
     return rval;
 }
 
+bool relates_to_previous_stmt(GWBUF* pBuffer)
+{
+    const QC_FUNCTION_INFO* infos = nullptr;
+    size_t n_infos = 0;
+    qc_get_function_info(pBuffer, &infos, &n_infos);
+
+    for (size_t i = 0; i < n_infos; ++i)
+    {
+        if (strcasecmp(infos[i].name, "FOUND_ROWS") == 0)
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 bool foreach_table(QueryClassifier& qc,
                    MXS_SESSION* pSession,
                    GWBUF* querybuf,
@@ -223,6 +240,13 @@ class QueryClassifier::PSManager
     PSManager& operator=(const PSManager&) = delete;
 
 public:
+    struct PreparedStmt
+    {
+        uint32_t type = 0;
+        uint16_t param_count = 0;
+        bool     route_to_last_used = false;
+    };
+
     PSManager()
     {
     }
@@ -237,14 +261,18 @@ public:
                    || qc_query_is_type(qc_get_type_mask(buffer),
                                        QUERY_TYPE_PREPARE_NAMED_STMT));
 
+        PreparedStmt stmt;
+        stmt.type = get_prepare_type(buffer);
+        stmt.route_to_last_used = relates_to_previous_stmt(buffer);
+
         switch (mxs_mysql_get_command(buffer))
         {
         case MXS_COM_QUERY:
-            m_text_ps[get_text_ps_id(buffer)] = get_prepare_type(buffer);
+            m_text_ps.emplace(get_text_ps_id(buffer), std::move(stmt));
             break;
 
         case MXS_COM_STMT_PREPARE:
-            m_binary_ps[id].type = get_prepare_type(buffer);
+            m_binary_ps.emplace(id, std::move(stmt));
             break;
 
         default:
@@ -253,14 +281,14 @@ public:
         }
     }
 
-    uint32_t get_type(uint32_t id) const
+    const PreparedStmt* get(uint32_t id) const
     {
-        uint32_t rval = QUERY_TYPE_UNKNOWN;
+        const PreparedStmt* rval = nullptr;
         BinaryPSMap::const_iterator it = m_binary_ps.find(id);
 
         if (it != m_binary_ps.end())
         {
-            rval = it->second.type;
+            rval = &it->second;
         }
         else
         {
@@ -270,14 +298,14 @@ public:
         return rval;
     }
 
-    uint32_t get_type(std::string id) const
+    const PreparedStmt* get(std::string id) const
     {
-        uint32_t rval = QUERY_TYPE_UNKNOWN;
+        const PreparedStmt* rval = nullptr;
         TextPSMap::const_iterator it = m_text_ps.find(id);
 
         if (it != m_text_ps.end())
         {
-            rval = it->second;
+            rval = &it->second;
         }
         else
         {
@@ -340,14 +368,9 @@ public:
     }
 
 private:
-    struct BinaryPS
-    {
-        uint32_t type = 0;
-        uint16_t param_count = 0;
-    };
 
-    typedef std::unordered_map<uint32_t, BinaryPS>    BinaryPSMap;
-    typedef std::unordered_map<std::string, uint32_t> TextPSMap;
+    using BinaryPSMap = std::unordered_map<uint32_t, PreparedStmt>;
+    using TextPSMap = std::unordered_map<std::string, PreparedStmt>;
 
 private:
     BinaryPSMap m_binary_ps;
@@ -378,16 +401,6 @@ QueryClassifier::QueryClassifier(Handler* pHandler,
 void QueryClassifier::ps_store(GWBUF* pBuffer, uint32_t id)
 {
     return m_sPs_manager->store(pBuffer, id);
-}
-
-uint32_t QueryClassifier::ps_get_type(uint32_t id) const
-{
-    return m_sPs_manager->get_type(id);
-}
-
-uint32_t QueryClassifier::ps_get_type(std::string id) const
-{
-    return m_sPs_manager->get_type(id);
 }
 
 void QueryClassifier::ps_erase(GWBUF* buffer)
@@ -1041,6 +1054,8 @@ QueryClassifier::RouteInfo QueryClassifier::update_route_info(
          *   eventually to master
          */
 
+        bool route_to_last_used = false;
+
         if (m_pHandler->is_locked_to_master())
         {
             /** The session is locked to the master */
@@ -1052,35 +1067,37 @@ QueryClassifier::RouteInfo QueryClassifier::update_route_info(
                 && command == MXS_COM_QUERY
                 && qc_get_operation(pBuffer) == QUERY_OP_EXECUTE)
             {
-                std::string id = get_text_ps_id(pBuffer);
-                type_mask = ps_get_type(id);
+                if (const auto* ps = m_sPs_manager->get(get_text_ps_id(pBuffer)))
+                {
+                    type_mask = ps->type;
+                    route_to_last_used = ps->route_to_last_used;
+                }
             }
             else if (qc_mysql_is_ps_command(command))
             {
                 stmt_id = ps_id_internal_get(pBuffer);
-                type_mask = ps_get_type(stmt_id);
-                m_ps_continuation = query_continues_ps(command, stmt_id, pBuffer);
+
+                if (const auto* ps = m_sPs_manager->get(stmt_id))
+                {
+                    type_mask = ps->type;
+                    route_to_last_used = ps->route_to_last_used;
+                    m_ps_continuation = query_continues_ps(command, stmt_id, pBuffer);
+                }
+            }
+            else if (command == MXS_COM_QUERY && relates_to_previous_stmt(pBuffer))
+            {
+                route_to_last_used = true;
             }
 
             route_target = get_route_target(command, type_mask);
+
+            if (route_target == TARGET_SLAVE && route_to_last_used)
+            {
+                route_target = TARGET_LAST_USED;
+            }
         }
 
         process_routing_hints(pBuffer->hint, &route_target);
-
-        if (route_target == TARGET_SLAVE && command == MXS_COM_QUERY)
-        {
-            const QC_FUNCTION_INFO* infos = nullptr;
-            size_t n_infos = 0;
-            qc_get_function_info(pBuffer, &infos, &n_infos);
-
-            for (size_t i = 0; i < n_infos; ++i)
-            {
-                if (strcasecmp(infos[i].name, "FOUND_ROWS") == 0)
-                {
-                    route_target = TARGET_LAST_USED;
-                }
-            }
-        }
 
         if (protocol_data->is_trx_ending() || qc_query_is_type(type_mask, QUERY_TYPE_BEGIN_TRX))
         {

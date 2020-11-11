@@ -346,17 +346,6 @@ private:
     }
 
     /**
-     * @brief Get the type of a stored prepared statement
-     *
-     * @param id The unique identifier for the prepared statement or the plaintext
-     *           name of the prepared statement
-     *
-     * @return The type of the prepared statement
-     */
-    uint32_t ps_get_type(uint32_t id) const;
-    uint32_t ps_get_type(std::string id) const;
-
-    /**
      * @brief Get the internal ID for the given binary prepared statement
      *
      * @param buffer Buffer containing a binary protocol statement other than COM_STMT_PREPARE
