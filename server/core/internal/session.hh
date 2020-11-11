@@ -251,6 +251,8 @@ public:
      */
     static void kill_all(Listener* listener);
 
+    void notify_userdata_change() override;
+
 protected:
     std::unique_ptr<mxs::Endpoint> m_down;
 
@@ -258,6 +260,9 @@ private:
     void adjust_io_activity(time_t now) const;
     void add_backend_conn(mxs::BackendConnection* conn);
     void remove_backend_conn(mxs::BackendConnection* conn);
+
+    void add_userdata_subscriber(MXS_SESSION::EventSubscriber* obj) override;
+    void remove_userdata_subscriber(MXS_SESSION::EventSubscriber* obj) override;
 
     // Delivers a provided response to the upstream filter that should receive it
     void deliver_response();
@@ -281,13 +286,15 @@ private:
     int64_t           m_ttl = 0;                /*< How many seconds the session has until it is killed  */
     int64_t           m_ttl_start = 0;          /*< The clock tick when TTL was assigned */
 
+    /*< Objects listening for userdata change events */
+    std::set<MXS_SESSION::EventSubscriber*> m_event_subscribers;
+
     BackendConnectionVector m_backends_conns;   /*< Backend connections, in creation order */
     mxs::ClientConnection*  m_client_conn {nullptr};
 
     // Various listener-specific data the session needs. Ownership shared with the listener that
     // created this session.
     std::shared_ptr<mxs::ListenerSessionData> m_listener_data;
-    std::shared_ptr<mxs::ProtocolModule>      m_protocol;
 
     static const int N_LOAD = 30;   // Last 30 seconds.
 

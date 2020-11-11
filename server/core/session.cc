@@ -1620,3 +1620,34 @@ bool Session::is_movable() const
     }
     return true;
 }
+
+void Session::notify_userdata_change()
+{
+    for (auto* subscriber : m_event_subscribers)
+    {
+        subscriber->userdata_changed();
+    }
+}
+
+void Session::add_userdata_subscriber(MXS_SESSION::EventSubscriber* obj)
+{
+    mxb_assert(m_event_subscribers.count(obj) == 0);
+    m_event_subscribers.insert(obj);
+}
+
+void Session::remove_userdata_subscriber(MXS_SESSION::EventSubscriber* obj)
+{
+    mxb_assert(m_event_subscribers.count(obj) == 1);
+    m_event_subscribers.erase(obj);
+}
+
+MXS_SESSION::EventSubscriber::EventSubscriber(MXS_SESSION* session)
+    : m_session(session)
+{
+    m_session->add_userdata_subscriber(this);
+}
+
+MXS_SESSION::EventSubscriber::~EventSubscriber()
+{
+    m_session->remove_userdata_subscriber(this);
+}

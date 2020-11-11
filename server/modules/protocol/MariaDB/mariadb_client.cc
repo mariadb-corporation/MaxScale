@@ -1761,6 +1761,7 @@ bool MariaDBClientConnection::complete_change_user()
     *m_session_data = *m_change_user.session;
     m_change_user.session.reset();
     bool rval = route_statement(move(m_change_user.client_query));
+    m_session->notify_userdata_change();
     return rval;
 }
 
@@ -2297,6 +2298,7 @@ MariaDBClientConnection::clientReply(GWBUF* buffer, maxscale::ReplyRoute& down, 
         {
             // Database change succeeded.
             m_session_data->current_db = move(m_pending_value);
+            m_session->notify_userdata_change();
         }
         // Regardless of result, database change is complete.
         m_pending_value.clear();
@@ -2315,6 +2317,7 @@ MariaDBClientConnection::clientReply(GWBUF* buffer, maxscale::ReplyRoute& down, 
             {
                 m_session_data->role = move(m_pending_value);
             }
+            m_session->notify_userdata_change();
         }
         // Regardless of result, role change is complete.
         m_pending_value.clear();

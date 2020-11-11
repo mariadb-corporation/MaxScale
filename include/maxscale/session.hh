@@ -150,6 +150,22 @@ public:
         virtual bool is_trx_ending() const = 0;
     };
 
+    class EventSubscriber
+    {
+    public:
+        EventSubscriber(MXS_SESSION* session);
+        ~EventSubscriber();
+
+        /**
+         * This is called by the session when the protocol notifies it of a user data change. Only objects
+         * which have registered themselves as being interested in this event are called.
+         */
+        virtual void userdata_changed() = 0;
+
+    private:
+        MXS_SESSION* m_session {nullptr};
+    };
+
     virtual ~MXS_SESSION();
 
     maxscale::RoutingWorker* worker() const
@@ -202,6 +218,12 @@ public:
     virtual void                         set_client_connection(mxs::ClientConnection* client_conn) = 0;
     virtual mxs::ListenerSessionData*    listener_data() = 0;
 
+    /**
+     *  Notify the session that client data has changed. This is supposed to be called by the protocol
+     *  when deemed necessary. The exact call conditions are left unspecified.
+     */
+    virtual void notify_userdata_change() = 0;
+
 protected:
     State                    m_state;   /**< Current descriptor state */
     uint64_t                 m_id;      /**< Unique session identifier */
@@ -235,6 +257,9 @@ public:
 private:
     std::unique_ptr<ProtocolData> m_protocol_data;
     bool                          m_killed {false};
+
+    virtual void add_userdata_subscriber(MXS_SESSION::EventSubscriber* obj) = 0;
+    virtual void remove_userdata_subscriber(MXS_SESSION::EventSubscriber* obj) = 0;
 };
 
 /**
