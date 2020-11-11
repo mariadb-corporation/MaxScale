@@ -47,8 +47,8 @@ struct QUERY_CLASSIFIER
     int32_t (* qc_setup)(qc_sql_mode_t sql_mode, const char* args);
 
     /**
-     * Called once at process startup, after @c qc_setup has successfully
-     * been called.
+     * Called once at process startup. Typically not required, as the standard module loader already
+     * calls this function through the module interface.
      *
      * @return QC_RESULT_OK, if the process initialization succeeded.
      */
