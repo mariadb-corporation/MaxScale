@@ -56,7 +56,9 @@ SchemaRouterSession::SchemaRouterSession(MXS_SESSION* session,
     , m_load_target(NULL)
 {
     m_mysql_session = static_cast<MYSQL_session*>(session->protocol_data());
-    auto current_db = m_mysql_session->db;
+    auto current_db = session->database();
+
+    // TODO: The following is not pretty and is bound to cause problems in the future.
 
     /* To enable connecting directly to a sharded database we first need
      * to disable it for the client DCB's protocol so that we can connect to them */

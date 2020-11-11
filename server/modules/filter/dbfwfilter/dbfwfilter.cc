@@ -1442,7 +1442,7 @@ fw_actions DbfwSession::get_action() const
 int DbfwSession::send_error()
 {
     mxb_assert(m_session);
-    auto db = static_cast<MYSQL_session*>(m_session->protocol_data())->db;
+    auto db = m_session->database();
     std::stringstream ss;
     ss << "Access denied for user '" << user() << "'@'" << remote() << "'";
 
