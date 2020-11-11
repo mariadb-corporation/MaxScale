@@ -3248,6 +3248,7 @@ public:
         if (should_collect(QC_COLLECT_DATABASES))
         {
             char* zCopy = MXS_STRNDUP_A(pToken->z, pToken->n);
+            exposed_sqlite3Dequote(zCopy);
 
             m_database_names.push_back(zCopy);
         }
