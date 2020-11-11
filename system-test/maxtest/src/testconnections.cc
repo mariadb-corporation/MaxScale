@@ -438,11 +438,6 @@ TestConnections::TestConnections(int argc, char* argv[])
         }
     }
 
-    if (maxscale_init)
-    {
-        init_maxscales();
-    }
-
     if (backend_ssl)
     {
         tprintf("Configuring backends for ssl \n");
@@ -452,6 +447,11 @@ TestConnections::TestConnections(int argc, char* argv[])
             galera->configure_ssl(false);
             galera->start_replication();
         }
+    }
+
+    if (maxscale_init)
+    {
+        init_maxscales();
     }
 
     if (mdbci_call_needed)
