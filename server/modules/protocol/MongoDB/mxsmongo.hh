@@ -144,6 +144,8 @@ enum class Command
 
 Command get_command(const bsoncxx::document::view& doc);
 
+std::string projection_to_columns(const bsoncxx::document::view& projection);
+
 class Packet
 {
 public:

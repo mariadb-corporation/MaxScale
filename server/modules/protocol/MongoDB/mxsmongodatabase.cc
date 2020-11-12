@@ -306,7 +306,15 @@ public:
 
         if (projection)
         {
-            sql << get_columns(projection);
+            if (projection.type() == bsoncxx::type::k_document)
+            {
+                sql << mxsmongo::projection_to_columns(projection.get_document());
+            }
+            else
+            {
+                MXS_ERROR("'%s' is not an object, returning all columns.", mxsmongo::keys::PROJECTION);
+                sql << "*";
+            }
         }
         else
         {
@@ -364,42 +372,6 @@ public:
         }
 
         return pResponse;
-    }
-
-private:
-    string get_columns(const bsoncxx::document::element& projection)
-    {
-        vector<string> columns;
-
-        if (projection.type() == bsoncxx::type::k_document)
-        {
-            bsoncxx::document::view doc = projection.get_document();
-
-            for (auto it = doc.begin(); it != doc.end(); ++it)
-            {
-                const auto& element = *it;
-                const auto& key = element.key();
-
-                string column { key.data(), key.size() };
-
-                if (column != "_id")
-                {
-                    // TODO: Could something meaningful be returned for _id?
-                    columns.push_back(column);
-                }
-            }
-        }
-        else
-        {
-            MXS_ERROR("'%s' is not an object, returning all columns.", mxsmongo::keys::PROJECTION);
-        }
-
-        if (columns.empty())
-        {
-            columns.push_back("*");
-        }
-
-        return mxb::join(columns);
     }
 };
 

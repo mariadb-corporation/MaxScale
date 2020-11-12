@@ -100,6 +100,30 @@ mxsmongo::Command mxsmongo::get_command(const bsoncxx::document::view& doc)
     return command;
 }
 
+std::string mxsmongo::projection_to_columns(const bsoncxx::document::view& projection)
+{
+    vector<string> columns;
+
+    for (auto it = projection.begin(); it != projection.end(); ++it)
+    {
+        const auto& element = *it;
+        const auto& key = element.key();
+
+        if (key.compare("_id") != 0)
+        {
+            // TODO: Could something meaningful be returned for _id?
+            columns.push_back(static_cast<string>(key));
+        }
+    }
+
+    if (columns.empty())
+    {
+        columns.push_back("*");
+    }
+
+    return mxb::join(columns);
+}
+
 mxsmongo::Mongo::Mongo(mxs::Component* pDownstream)
     : m_context(pDownstream)
 {
