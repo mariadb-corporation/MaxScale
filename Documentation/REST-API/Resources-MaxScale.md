@@ -606,14 +606,12 @@ GET /v1/maxscale/query_classifier/classify?sql=SELECT+1
         "id": "classify",
         "type": "classify",
         "attributes": {
-            "parameters": {
-                "parse_result": "QC_QUERY_PARSED",
-                "type_mask": "QUERY_TYPE_READ",
-                "operation": "QUERY_OP_SELECT",
-                "has_where_clause": false,
-                "fields": [],
-                "functions": []
-            }
+            "parse_result": "QC_QUERY_PARSED",
+            "type_mask": "QUERY_TYPE_READ",
+            "operation": "QUERY_OP_SELECT",
+            "has_where_clause": false,
+            "fields": [],
+            "functions": []
         }
     }
 }

@@ -13,12 +13,12 @@
 require('./common.js')()
 
 const classify_fields = [
-    {'Parse result': 'attributes.parameters.parse_result'},
-    {'Type mask': 'attributes.parameters.type_mask'},
-    {'Operation': 'attributes.parameters.operation'},
-    {'Has where clause': 'attributes.parameters.has_where_clause'},
-    {'Fields': 'attributes.parameters.fields'},
-    {'Functions': 'attributes.parameters.functions'}
+    {'Parse result': 'attributes.parse_result'},
+    {'Type mask': 'attributes.type_mask'},
+    {'Operation': 'attributes.operation'},
+    {'Has where clause': 'attributes.has_where_clause'},
+    {'Fields': 'attributes.fields'},
+    {'Functions': 'attributes.functions'}
 ]
 
 exports.command = 'classify <statement>'
@@ -28,12 +28,12 @@ exports.handler = function (argv) {
         return doRequest(host,
                          'maxscale/query_classifier/classify?sql=' + argv.statement,
                          (res) => {
-                             if (res.data.attributes.parameters.functions) {
-                                 var a = res.data.attributes.parameters.functions.map((f) => {
+                             if (res.data.attributes.functions) {
+                                 var a = res.data.attributes.functions.map((f) => {
                                      return f.name + ': (' + f.arguments.join(', ') + ')'
                                  });
 
-                                 res.data.attributes.parameters.functions = a;
+                                 res.data.attributes.functions = a;
                              }
 
                              return formatResource(classify_fields, res.data)

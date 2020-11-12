@@ -1518,31 +1518,29 @@ void append_function_info(json_t* pParams, GWBUF* pBuffer)
 
 std::unique_ptr<json_t> qc_classify_as_json(const char* zHost, const std::string& statement)
 {
-    json_t* pParams = json_object();
+    json_t* pAttributes = json_object();
 
     std::unique_ptr<GWBUF> sBuffer(modutil_create_query(statement.c_str()));
     GWBUF* pBuffer = sBuffer.get();
 
     qc_parse_result result = qc_parse(pBuffer, QC_COLLECT_ALL);
 
-    json_object_set_new(pParams, CN_PARSE_RESULT, json_string(qc_result_to_string(result)));
+    json_object_set_new(pAttributes, CN_PARSE_RESULT, json_string(qc_result_to_string(result)));
 
     if (result != QC_QUERY_INVALID)
     {
         char* zType_mask = qc_typemask_to_string(qc_get_type_mask(pBuffer));
-        json_object_set_new(pParams, CN_TYPE_MASK, json_string(zType_mask));
+        json_object_set_new(pAttributes, CN_TYPE_MASK, json_string(zType_mask));
         MXS_FREE(zType_mask);
 
-        json_object_set_new(pParams, CN_OPERATION, json_string(qc_op_to_string(qc_get_operation(pBuffer))));
+        json_object_set_new(pAttributes, CN_OPERATION,
+                            json_string(qc_op_to_string(qc_get_operation(pBuffer))));
         bool has_clause = qc_query_has_clause(pBuffer);
-        json_object_set_new(pParams, CN_HAS_WHERE_CLAUSE, json_boolean(has_clause));
+        json_object_set_new(pAttributes, CN_HAS_WHERE_CLAUSE, json_boolean(has_clause));
 
-        append_field_info(pParams, pBuffer);
-        append_function_info(pParams, pBuffer);
+        append_field_info(pAttributes, pBuffer);
+        append_function_info(pAttributes, pBuffer);
     }
-
-    json_t* pAttributes = json_object();
-    json_object_set_new(pAttributes, CN_PARAMETERS, pParams);
 
     json_t* pSelf = json_object();
     json_object_set_new(pSelf, CN_ID, json_string(CN_CLASSIFY));
