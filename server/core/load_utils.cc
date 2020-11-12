@@ -937,50 +937,65 @@ bool run_module_thread_init(MXS_MODULE* mod_info)
     auto thread_init_func = mod_info->thread_init;
     if (thread_init_func)
     {
-        auto run_thread_init = [&thread_init_ok, thread_init_func]() {
-                if (thread_init_func() != 0)
-                {
-                    thread_init_ok = false;
-                }
-            };
         auto exec_auto = mxs::RoutingWorker::EXECUTE_AUTO;
 
         auto main_worker = mxs::MainWorker::get();
         if (main_worker)
         {
             auto mw_state = main_worker->state();
-            if (mw_state != mxb::Worker::state_t::POLLING
-                && mw_state != mxb::Worker::state_t::PROCESSING)
+            if (mw_state == mxb::Worker::state_t::POLLING
+                || mw_state == mxb::Worker::state_t::PROCESSING)
             {
-                main_worker = nullptr;
+                auto run_thread_init = [&thread_init_ok, thread_init_func]() {
+                        if (thread_init_func() != 0)
+                        {
+                            thread_init_ok = false;
+                        }
+                    };
+                main_worker->call(run_thread_init, exec_auto);
             }
         }
 
-        if (main_worker)
+        if (thread_init_ok)
         {
-            main_worker->call(run_thread_init, exec_auto);
-        }
-        if (mxs::RoutingWorker::is_running())
-        {
-            mxs::RoutingWorker::broadcast(run_thread_init, exec_auto);
-        }
+            std::mutex lock;
+            std::vector<mxb::Worker*> succeeded_workers;
 
-        if (!thread_init_ok)
-        {
-            // Try to undo.
-            auto thread_finish_func = mod_info->thread_finish;
-            if (thread_finish_func)
+            if (mxs::RoutingWorker::is_running())
             {
-                auto run_thread_finish = [thread_finish_func]() {
-                        thread_finish_func();
+                auto run_thread_init = [&thread_init_ok, &lock, &succeeded_workers, thread_init_func]() {
+                        if (thread_init_func() == 0)
+                        {
+                            std::lock_guard<std::mutex> guard(lock);
+                            succeeded_workers.push_back(mxb::Worker::get_current());
+                        }
+                        else
+                        {
+                            thread_init_ok = false;
+                        }
                     };
-                if (main_worker)
+
+                mxb::Semaphore sem;
+                auto n = mxs::RoutingWorker::broadcast(run_thread_init, &sem, exec_auto);
+                sem.wait_n(n);
+            }
+
+            if (!thread_init_ok)
+            {
+                auto thread_finish_func = mod_info->thread_finish;
+                if (thread_finish_func)
                 {
-                    main_worker->call(run_thread_finish, exec_auto);
-                }
-                if (mxs::RoutingWorker::is_running())
-                {
-                    mxs::RoutingWorker::broadcast(run_thread_finish, exec_auto);
+                    mxb::Semaphore sem;
+                    for (auto worker : succeeded_workers)
+                    {
+                        worker->execute(thread_finish_func, &sem, exec_auto);
+                    }
+                    sem.wait_n(succeeded_workers.size());
+
+                    if (main_worker)
+                    {
+                        main_worker->call(thread_finish_func, exec_auto);
+                    }
                 }
             }
         }
