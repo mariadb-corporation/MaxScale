@@ -4827,8 +4827,7 @@ static int32_t qc_sqlite_setup(qc_sql_mode_t sql_mode, const char* cargs)
 static int32_t qc_sqlite_process_init(void)
 {
     QC_TRACE();
-    assert(this_unit.setup);
-    assert(!this_unit.initialized);
+    mxb_assert(!this_unit.initialized);
 
     if (sqlite3_initialize() == 0)
     {
