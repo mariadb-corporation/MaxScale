@@ -703,6 +703,21 @@ initial connection creation is skipped. If the client executes only read
 queries, no connection to the master is made. If only write queries are made,
 only the master connection is used.
 
+### `reuse_prepared_statements`
+
+Reuse identical prepared statements inside the same client connection. This is a
+boolean parameter and is disabled by default. This feature only applies to
+binary protocol prepared statements.
+
+When this parameter is enabled and the connection prepares an identical prepared
+statement multiple times, instead of preparing it on the server the existing
+prepared statement handle is reused. This also means that whenever prepared
+statements are closed by the client, they will be left open by readwritesplit.
+
+Enabling this feature will increase memory usage of a session. The amount of
+memory stored per prepared statement is proportional to the length of the
+prepared SQL statement and the number of parameters the statement has.
+
 ## Router Diagnostics
 
 The `router_diagnostics` output for a readwritesplit service contains the

@@ -244,6 +244,29 @@ bool RWSplitSession::query_not_supported(GWBUF* querybuf)
     return err != nullptr;
 }
 
+bool RWSplitSession::reuse_prepared_stmt(const mxs::Buffer& buffer)
+{
+    const RouteInfo& info = m_qc.current_route_info();
+
+    if (info.command() == MXS_COM_STMT_PREPARE)
+    {
+        auto it = m_ps_cache.find(mxs::extract_sql(buffer));
+
+        if (it != m_ps_cache.end())
+        {
+            mxs::ReplyRoute route;
+            RouterSession::clientReply(gwbuf_deep_clone(it->second.get()), route, mxs::Reply());
+            return true;
+        }
+    }
+    else if (info.command() == MXS_COM_STMT_CLOSE)
+    {
+        return true;
+    }
+
+    return false;
+}
+
 /**
  * Routes a buffer containing a single packet
  *
@@ -258,6 +281,11 @@ bool RWSplitSession::route_stmt(mxs::Buffer&& buffer)
     route_target_t route_target = info.target();
     mxb_assert_message(m_otrx_state != OTRX_ROLLBACK,
                        "OTRX_ROLLBACK should never happen when routing queries");
+
+    if (m_config.reuse_ps && reuse_prepared_stmt(buffer))
+    {
+        return true;
+    }
 
     auto next_master = get_target_backend(BE_MASTER, NULL, mxs::Target::RLAG_UNDEFINED);
 

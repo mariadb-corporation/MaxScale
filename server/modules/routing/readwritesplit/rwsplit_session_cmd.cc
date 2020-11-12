@@ -75,6 +75,11 @@ void RWSplitSession::process_sescmd_response(RWBackend* backend, GWBUF** ppPacke
         {
             discard = false;
 
+            if (m_config.reuse_ps && command == MXS_COM_STMT_PREPARE)
+            {
+                m_ps_cache[sescmd->to_string()].append(gwbuf_clone(*ppPacket));
+            }
+
             if (reply.is_complete())
             {
                 /** First reply to this session command, route it to the client */

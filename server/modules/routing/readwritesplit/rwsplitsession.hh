@@ -199,6 +199,8 @@ private:
 
     int get_max_replication_lag();
 
+    bool reuse_prepared_stmt(const mxs::Buffer& buffer);
+
     bool retry_master_query(mxs::RWBackend* backend);
     bool handle_error_new_connection(mxs::RWBackend* backend, GWBUF* errmsg,
                                      mxs::RWBackend::close_type failure_type);
@@ -431,6 +433,9 @@ private:
     TargetSessionStats& m_server_stats;     /**< The server stats local to this thread, cached in the
                                              * session object. This avoids the lookup involved in getting
                                              * the worker-local value from the worker's container. */
+
+    // Map of COM_STMT_PREPARE responses mapped to their SQL
+    std::unordered_map<std::string, mxs::Buffer> m_ps_cache;
 };
 
 /**

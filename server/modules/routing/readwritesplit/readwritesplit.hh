@@ -220,6 +220,10 @@ static cfg::ParamBool s_lazy_connect(
     &s_spec, "lazy_connect", "Create connections only when needed",
     false, cfg::Param::AT_RUNTIME);
 
+static cfg::ParamBool s_reuse_ps(
+    &s_spec, "reuse_prepared_statements", "Reuse identical prepared statements inside the same connection",
+    false, cfg::Param::AT_RUNTIME);
+
 /** Function that returns a "score" for a server to enable comparison.
  *  Smaller numbers are better.
  */
@@ -262,6 +266,8 @@ struct RWSConfig : public mxs::config::Configuration
         int64_t trx_max_size;           /**< Max transaction size for replaying */
         int64_t trx_max_attempts;       /**< Maximum number of transaction replay attempts */
         bool    trx_retry_on_deadlock;  /**< Replay the transaction if it ends up in a deadlock */
+
+        bool reuse_ps;      /**< Reuse prepared statements */
     };
 
     const Values& values() const
