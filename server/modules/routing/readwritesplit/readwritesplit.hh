@@ -289,14 +289,15 @@ private:
  */
 struct Stats
 {
-    uint64_t n_sessions = 0;        /**< Number sessions created */
-    uint64_t n_queries = 0;         /**< Number of queries forwarded */
-    uint64_t n_master = 0;          /**< Number of stmts sent to master */
-    uint64_t n_slave = 0;           /**< Number of stmts sent to slave */
-    uint64_t n_all = 0;             /**< Number of stmts sent to all */
-    uint64_t n_trx_replay = 0;      /**< Number of replayed transactions */
-    uint64_t n_ro_trx = 0;          /**< Read-only transaction count */
-    uint64_t n_rw_trx = 0;          /**< Read-write transaction count */
+    uint64_t n_sessions = 0;    /**< Number sessions created */
+    uint64_t n_queries = 0;     /**< Number of queries forwarded */
+    uint64_t n_master = 0;      /**< Number of stmts sent to master */
+    uint64_t n_slave = 0;       /**< Number of stmts sent to slave */
+    uint64_t n_all = 0;         /**< Number of stmts sent to all */
+    uint64_t n_trx_replay = 0;  /**< Number of replayed transactions */
+    uint64_t n_ro_trx = 0;      /**< Read-only transaction count */
+    uint64_t n_rw_trx = 0;      /**< Read-write transaction count */
+    uint64_t n_ps_reused = 0;   /**< Number of prepared statements that were reused */
 };
 
 using maxscale::SessionStats;

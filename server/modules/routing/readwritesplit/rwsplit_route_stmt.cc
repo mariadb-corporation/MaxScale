@@ -284,6 +284,7 @@ bool RWSplitSession::route_stmt(mxs::Buffer&& buffer)
 
     if (m_config.reuse_ps && reuse_prepared_stmt(buffer))
     {
+        mxb::atomic::add(&m_router->stats().n_ps_reused, 1, mxb::atomic::RELAXED);
         return true;
     }
 

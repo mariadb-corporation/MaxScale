@@ -284,6 +284,11 @@ json_t* RWSplit::diagnostics() const
     json_object_set_new(rval, "ro_transactions", json_integer(stats().n_ro_trx));
     json_object_set_new(rval, "replayed_transactions", json_integer(stats().n_trx_replay));
 
+    if (m_config.values().reuse_ps)
+    {
+        json_object_set_new(rval, "prepared_statements_reused", json_integer(stats().n_ps_reused));
+    }
+
     json_t* arr = json_array();
 
     for (const auto& a : all_server_stats())
