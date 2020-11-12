@@ -117,9 +117,6 @@ then
          sqlite sqlite-devel pkgconfig lua lua-devel rpm-build createrepo yum-utils \
          gnutls-devel libgcrypt-devel pam-devel libcurl-devel
 
-    # Attempt to install libasan, it'll only work on CentOS 7
-    sudo yum install -y --nogpgcheck libasan
-
     # Attempt to install systemd-devel, doesn't work on CentOS 6
     sudo yum install -y systemd-devel
 
@@ -131,6 +128,8 @@ then
         sudo yum-config-manager --enable rhui-REGION-rhel-server-rhscl
 
     sudo yum -y install devtoolset-7-gcc-c++
+    sudo yum -y install devtoolset-7-libasan-devel
+
 
     # Enable it by default
     echo "source /opt/rh/devtoolset-7/enable" >> ~/.bashrc
