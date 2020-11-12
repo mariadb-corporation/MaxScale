@@ -27,7 +27,7 @@ then
        libssl-dev mariadb-client php perl \
        coreutils libjansson-dev zlib1g-dev \
        libsqlite3-dev libcurl4-gnutls-dev \
-       mariadb-test python python-pip cmake libpam0g-dev \
+       mariadb-test python python-pip cmake libpam0g-dev oathtool \
        libatomic1 \
        libsasl2-dev libxml2-dev
 
@@ -78,7 +78,7 @@ EOL
     sudo zypper -n install gcc gcc-c++ \
                  libopenssl-devel libgcrypt-devel MariaDB-devel MariaDB-test \
                  php perl coreutils libjansson-devel python python-pip \
-                 cmake pam-devel openssl-devel python-devel libjansson-devel \
+                 cmake pam-devel openssl-devel python-devel libjansson-devel oath-toolkit \
                  sqlite3 sqlite3-devel libcurl-devel \
                  gnutls-devel \
                  libatomic1 \
@@ -101,7 +101,7 @@ EOL
                  libgcrypt-devel \
                  openssl-devel mariadb-devel mariadb-test \
                  php perl coreutils python python-pip \
-                 cmake pam-devel python-devel jansson-devel \
+                 cmake pam-devel python-devel jansson-devel oathtool \
                  sqlite sqlite-devel libcurl-devel \
                  gnutls-devel \
                  libatomic \
