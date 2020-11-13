@@ -22,8 +22,10 @@
 #include <maxscale/router.hh>
 #include <maxscale/session_stats.hh>
 #include <maxscale/workerlocal.hh>
+#include <maxscale/config2.hh>
 
 class RCR;
+namespace config = maxscale::config;
 
 /**
  * The client session structure used within this router.
@@ -73,6 +75,21 @@ private:
 class RCR : public mxs::Router
 {
 public:
+    class Config : public config::Configuration
+    {
+    public:
+        Config(const std::string& name);
+        Config(const Config&&) = delete;
+
+        static void populate(MXS_MODULE& module);
+
+        std::string router_options;
+
+    private:
+        static config::Specification s_specification;
+        static config::ParamString   s_router_options;
+    };
+
     /**
      * Create a new RadConn instance
      *
@@ -113,11 +130,11 @@ public:
      *
      * @return True if router reconfiguration was successful
      */
-    bool configure(mxs::ConfigParameters* params);
+    bool configure(mxs::ConfigParameters* pParams);
 
     mxs::config::Configuration* getConfiguration()
     {
-        return nullptr;
+        return &m_config;
     }
 
     /**
@@ -135,9 +152,11 @@ public:
     maxscale::TargetSessionStats combined_target_stats() const;
 
 private:
-    RCR() = default;
+    RCR(SERVICE* service);
 
     uint64_t m_bitmask_and_bitvalue = 0;    /**< Lower 32-bits for bitmask and upper for bitvalue */
 
     mxs::WorkerGlobal<maxscale::TargetSessionStats> m_target_stats;
+
+    Config m_config;
 };

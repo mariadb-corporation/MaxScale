@@ -38,6 +38,16 @@
 
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/modutil.hh>
+#include <maxscale/service.hh>
+
+config::Specification RCR::Config::s_specification(MXS_MODULE_NAME, config::Specification::ROUTER);
+
+config::ParamString RCR::Config::s_router_options(
+    &s_specification,
+    "router_options",
+    "A comma separated list of server roles",
+    ""
+    );
 
 /**
  * The module entry point routine. It is this routine that
@@ -69,7 +79,20 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         }
     };
 
+    RCR::Config::populate(info);
+
     return &info;
+}
+
+RCR::Config::Config(const std::string& name)
+    : config::Configuration(name, &s_specification)
+{
+    add_native(&Config::router_options, &s_router_options);
+}
+
+void RCR::Config::populate(MXS_MODULE& module)
+{
+    module.specification = &s_specification;
 }
 
 /*
@@ -108,13 +131,23 @@ static mxs::Endpoint* get_root_master(const mxs::Endpoints& endpoints)
     return master_host;
 }
 
-bool RCR::configure(mxs::ConfigParameters* params)
+bool RCR::configure(mxs::ConfigParameters* pParams)
 {
+    if (!m_config.specification().validate(*pParams))
+    {
+        return false;
+    }
+
+    if (!m_config.configure(*pParams))
+    {
+        return false;
+    }
+
     uint64_t bitmask = 0;
     uint64_t bitvalue = 0;
     bool ok = true;
 
-    for (const auto& opt : mxs::strtok(params->get_string("router_options"), ", \t"))
+    for (const auto& opt : mxs::strtok(m_config.router_options, ", \t"))
     {
         if (!strcasecmp(opt.c_str(), "master"))
         {
@@ -164,7 +197,7 @@ bool RCR::configure(mxs::ConfigParameters* params)
 // static
 RCR* RCR::create(SERVICE* service, mxs::ConfigParameters* params)
 {
-    RCR* inst = new(std::nothrow) RCR();
+    RCR* inst = new(std::nothrow) RCR(service);
 
     if (inst && !inst->configure(params))
     {
@@ -438,11 +471,18 @@ int RCRSession::routeQuery(GWBUF* queue)
     return m_backend->routeQuery(queue);
 }
 
-int32_t RCRSession::clientReply(GWBUF* pPacket, const maxscale::ReplyRoute& down, const maxscale::Reply& pReply)
+int32_t RCRSession::clientReply(GWBUF* pPacket,
+                                const maxscale::ReplyRoute& down,
+                                const maxscale::Reply& pReply)
 {
     auto rc = RouterSession::clientReply(pPacket, down, pReply);
     m_query_timer.end_interval();
     return rc;
+}
+
+RCR::RCR(SERVICE* service)
+    : m_config(service->name())
+{
 }
 
 maxscale::SessionStats& RCR::session_stats(maxscale::Target* pTarget)
