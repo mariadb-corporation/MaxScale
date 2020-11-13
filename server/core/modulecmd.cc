@@ -23,6 +23,7 @@
 #include "internal/modules.hh"
 #include "internal/monitormanager.hh"
 #include "internal/servermanager.hh"
+#include "internal/session.hh"
 
 /** Size of the error buffer */
 #define MODULECMD_ERRBUF_SIZE 512

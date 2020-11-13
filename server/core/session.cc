@@ -287,14 +287,14 @@ static bool ses_find_id(DCB* dcb, void* data)
     return rval;
 }
 
-MXS_SESSION* session_get_by_id(uint64_t id)
+Session* session_get_by_id(uint64_t id)
 {
     MXS_SESSION* session = NULL;
     void* params[] = {&session, &id};
 
     dcb_foreach(ses_find_id, params);
 
-    return session;
+    return static_cast<Session*>(session);
 }
 
 MXS_SESSION* session_get_ref(MXS_SESSION* session)

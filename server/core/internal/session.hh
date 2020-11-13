@@ -301,3 +301,15 @@ private:
     mutable std::array<int, N_LOAD> m_io_activity {};
     time_t                          m_last_io_activity {0};
 };
+
+/**
+ * @brief Get a session reference by ID
+ *
+ * This creates an additional reference to a session whose unique ID matches @c id.
+ *
+ * @param id Unique session ID
+ * @return Reference to a Session or NULL if the session was not found
+ *
+ * @note The caller must free the session reference by calling session_put_ref
+ */
+Session* session_get_by_id(uint64_t id);

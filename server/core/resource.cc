@@ -549,6 +549,23 @@ HttpResponse cb_alter_service_monitor_relationship(const HttpRequest& request)
     return cb_alter_service_relationship(request, CN_MONITORS);
 }
 
+HttpResponse cb_alter_session_filter_relationship(const HttpRequest& request)
+{
+    // There's a small window between the validation of the session ID and this code that retrieves the
+    // session reference. This should be changed so that the first reference that is retrieved is passed to
+    // the function that needs it.
+    int id = atoi(request.uri_part(1).c_str());
+    Session* session = session_get_by_id(id);
+
+    if (session)
+    {
+        session_put_ref(session);
+        return HttpResponse(MHD_HTTP_OK);
+    }
+
+    return HttpResponse(MHD_HTTP_NOT_FOUND);
+}
+
 HttpResponse cb_alter_qc(const HttpRequest& request)
 {
     mxb_assert(request.get_json());
@@ -1026,6 +1043,23 @@ HttpResponse cb_alter_user(const HttpRequest& request)
     return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
 }
 
+HttpResponse cb_alter_session(const HttpRequest& request)
+{
+    // There's a small window between the validation of the session ID and this code that retrieves the
+    // session reference. This should be changed so that the first reference that is retrieved is passed to
+    // the function that needs it.
+    int id = atoi(request.uri_part(1).c_str());
+    Session* session = session_get_by_id(id);
+
+    if (session)
+    {
+        session_put_ref(session);
+        return HttpResponse(MHD_HTTP_OK);
+    }
+
+    return HttpResponse(MHD_HTTP_NOT_FOUND);
+}
+
 HttpResponse cb_delete_user(const HttpRequest& request)
 {
     string user = request.last_uri_part();
@@ -1306,6 +1340,7 @@ public:
         m_patch.emplace_back(cb_alter_maxscale, "maxscale");
         m_patch.emplace_back(cb_alter_qc, "maxscale", "query_classifier");
         m_patch.emplace_back(cb_alter_user, "users", "inet", ":inetuser");
+        m_patch.emplace_back(cb_alter_session, "sessions", ":session");
 
         /** Update resource relationships directly */
         m_patch.emplace_back(cb_alter_server_service_relationship,
@@ -1324,6 +1359,8 @@ public:
                              "services", ":service", "relationships", "filters");
         m_patch.emplace_back(cb_alter_service_monitor_relationship,
                              "services", ":service", "relationships", "monitors");
+        m_patch.emplace_back(cb_alter_session_filter_relationship,
+                             "sessions", ":session", "relationships", "filters");
 
         /** All patch resources require a request body */
         for (auto& r : m_patch)

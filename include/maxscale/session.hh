@@ -315,18 +315,6 @@ const char* session_get_user(const MXS_SESSION*);
 const char* session_state_to_string(MXS_SESSION::State);
 
 /**
- * @brief Get a session reference by ID
- *
- * This creates an additional reference to a session whose unique ID matches @c id.
- *
- * @param id Unique session ID
- * @return Reference to a MXS_SESSION or NULL if the session was not found
- *
- * @note The caller must free the session reference by calling session_put_ref
- */
-MXS_SESSION* session_get_by_id(uint64_t id);
-
-/**
  * Get the next available unique (assuming no overflow) session id number.
  *
  * @return An unused session id.
