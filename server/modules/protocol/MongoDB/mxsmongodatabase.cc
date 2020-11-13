@@ -333,6 +333,30 @@ public:
 
         sql << m_database.name() << "." << table;
 
+        auto filter = m_doc[mxsmongo::keys::FILTER];
+
+        if (filter)
+        {
+            if (filter.type() == bsoncxx::type::k_document)
+            {
+                const auto& doc = filter.get_document();
+                string where = mxsmongo::filter_to_where_clause(doc);
+
+                MXS_NOTICE("Filter '%s' converted to where clause '%s'.",
+                           bsoncxx::to_json(doc).c_str(),
+                           where.c_str());
+
+                if (!where.empty())
+                {
+                    sql << " WHERE " << where;
+                }
+            }
+            else
+            {
+                MXS_ERROR("'%s' is not an object, returning all rows.", mxsmongo::keys::FILTER);
+            }
+        }
+
         MXS_NOTICE("SQL: %s", sql.str().c_str());
 
         GWBUF* pRequest = modutil_create_query(sql.str().c_str());

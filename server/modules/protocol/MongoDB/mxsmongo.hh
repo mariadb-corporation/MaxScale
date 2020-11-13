@@ -128,6 +128,7 @@ const char* opcode_to_string(int code);
 namespace keys
 {
 
+const char FILTER[]     = "filter";
 const char FIND[]       = "find";
 const char ISMASTER[]   = "ismaster";
 const char PROJECTION[] = "projection";
@@ -145,6 +146,8 @@ enum class Command
 Command get_command(const bsoncxx::document::view& doc);
 
 std::string projection_to_columns(const bsoncxx::document::view& projection);
+
+std::string filter_to_where_clause(const bsoncxx::document::view& filter);
 
 class Packet
 {
