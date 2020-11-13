@@ -249,6 +249,13 @@ mxs::RouterSession* RCR::newSession(MXS_SESSION* session, const mxs::Endpoints& 
     bool connectable_master = master_host ? master_host->target()->is_connectable() : false;
 
     /**
+     * Do not include the master in ranking if the master option is not set
+     * (anything but master), and reads should not be routed to the master.
+     * The master will still be selected, if it is the last man standing.
+     */
+    bool do_not_rank_master = !(bitvalue & SERVER_MASTER) && m_config.master_accept_reads == false;
+
+    /**
      * Find a backend server to connect to. This is the extent of the
      * load balancing algorithm we need to implement for this simple
      * connection router.
@@ -272,6 +279,12 @@ mxs::RouterSession* RCR::newSession(MXS_SESSION* session, const mxs::Endpoints& 
     {
         if (!e->target()->is_connectable())
         {
+            continue;
+        }
+
+        if (do_not_rank_master && e == master_host)
+        {
+            // If no other servers are available the master will still selected
             continue;
         }
 
