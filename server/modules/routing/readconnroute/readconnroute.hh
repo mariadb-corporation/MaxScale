@@ -84,10 +84,12 @@ public:
         static void populate(MXS_MODULE& module);
 
         std::string router_options;
+        bool        master_accept_reads;
 
     private:
         static config::Specification s_specification;
         static config::ParamString   s_router_options;
+        static config::ParamBool     s_master_accept_reads;
     };
 
     /**

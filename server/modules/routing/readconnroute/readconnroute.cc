@@ -49,6 +49,13 @@ config::ParamString RCR::Config::s_router_options(
     ""
     );
 
+config::ParamBool RCR::Config::s_master_accept_reads(
+    &s_specification,
+    "master_accept_reads",
+    "Use master for reads",
+    true
+    );
+
 /**
  * The module entry point routine. It is this routine that
  * must populate the structure that is referred to as the
@@ -88,6 +95,7 @@ RCR::Config::Config(const std::string& name)
     : config::Configuration(name, &s_specification)
 {
     add_native(&Config::router_options, &s_router_options);
+    add_native(&Config::master_accept_reads, &s_master_accept_reads);
 }
 
 void RCR::Config::populate(MXS_MODULE& module)
