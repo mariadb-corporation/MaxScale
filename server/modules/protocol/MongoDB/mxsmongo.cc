@@ -590,6 +590,78 @@ string mxsmongo::filter_to_where_clause(const bsoncxx::document::view& filter)
     return get_condition(filter);
 }
 
+// https://docs.mongodb.com/manual/reference/method/cursor.sort/
+string mxsmongo::sort_to_order_by(const bsoncxx::document::view& sort)
+{
+    string order_by;
+
+    for (auto it = sort.begin(); it != sort.end(); ++it)
+    {
+        const auto& element = *it;
+        const auto& key = element.key();
+
+        if (key.size() == 0)
+        {
+            MXS_ERROR("Fieldname in sort object is empty.");
+            order_by.clear();
+            break;
+        }
+
+        bool ok = true;
+        int value = 0;
+
+        switch (element.type())
+        {
+        case bsoncxx::type::k_int32:
+            value = element.get_int32();
+            break;
+
+        case bsoncxx::type::k_int64:
+            value = element.get_int64();
+            break;
+
+        default:
+            MXS_ERROR("Only integer value ('%s' provided) can be used with sorting fields.",
+                      bsoncxx::to_string(element.type()).c_str());
+            ok = false;
+        }
+
+        if (!ok)
+        {
+            order_by.clear();
+            break;
+        }
+
+        if (value > 1)
+        {
+            MXS_WARNING("Sorting value %d > 1, assuming 1 is meant.", value);
+            value = 1;
+        }
+        else if (value < -1)
+        {
+            MXS_WARNING("Sorting value %d < -1, assuming -1 is meant.", value);
+            value = 1;
+        }
+
+        if (value != 0)
+        {
+            if (!order_by.empty())
+            {
+                order_by += ", ";
+            }
+
+            order_by += static_cast<string>(element.key());
+
+            if (value == -1)
+            {
+                order_by += " DESC";
+            }
+        }
+    }
+
+    return order_by;
+}
+
 mxsmongo::Mongo::Mongo(mxs::Component* pDownstream)
     : m_context(pDownstream)
 {

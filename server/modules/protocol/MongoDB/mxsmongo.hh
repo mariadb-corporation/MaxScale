@@ -132,6 +132,7 @@ const char FILTER[]     = "filter";
 const char FIND[]       = "find";
 const char ISMASTER[]   = "ismaster";
 const char PROJECTION[] = "projection";
+const char SORT[]       = "sort";
 
 };
 
@@ -148,6 +149,8 @@ Command get_command(const bsoncxx::document::view& doc);
 std::string projection_to_columns(const bsoncxx::document::view& projection);
 
 std::string filter_to_where_clause(const bsoncxx::document::view& filter);
+
+std::string sort_to_order_by(const bsoncxx::document::view& sort);
 
 class Packet
 {

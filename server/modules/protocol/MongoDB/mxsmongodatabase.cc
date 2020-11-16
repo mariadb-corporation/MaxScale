@@ -357,6 +357,30 @@ public:
             }
         }
 
+        auto sort = m_doc[mxsmongo::keys::SORT];
+
+        if (sort)
+        {
+            if (sort.type() == bsoncxx::type::k_document)
+            {
+                const auto& doc = sort.get_document();
+                string order_by = mxsmongo::sort_to_order_by(doc);
+
+                MXS_NOTICE("Sort '%s' converted to 'ORDER BY %s'.",
+                           bsoncxx::to_json(doc).c_str(),
+                           order_by.c_str());
+
+                if (!order_by.empty())
+                {
+                    sql << " ORDER BY " << order_by;
+                }
+            }
+            else
+            {
+                MXS_ERROR("'%s' is not an object, not sorting.", mxsmongo::keys::SORT);
+            }
+        }
+
         MXS_NOTICE("SQL: %s", sql.str().c_str());
 
         GWBUF* pRequest = modutil_create_query(sql.str().c_str());
