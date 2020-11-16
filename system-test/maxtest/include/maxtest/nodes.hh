@@ -102,9 +102,16 @@ public:
     const char* ip(int i = 0) const;
 
     /**
+     * @brief mdbci_node_name
+     * @param node
+     * @return name of the node in MDBCI format
+     */
+    std::string mdbci_node_name(int node);
+
+    /**
      * @brief Generate command line to execute command on the node via ssh
      * @param cmd result
-     * @param index index number of the node (index)
+     * @param node number of the node (index)
      * @param ssh command to execute
      * @param sudo if true the command is executed with root privelegues
      */
@@ -112,7 +119,7 @@ public:
 
     /**
      * @brief executes shell command on the node using ssh
-     * @param index number of the node (index)
+     * @param node number of the node (index)
      * @param ssh command to execute
      * @param sudo if true the command is executed with root privelegues
      * @param pointer to variable to store process exit code

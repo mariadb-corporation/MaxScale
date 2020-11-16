@@ -548,6 +548,8 @@ public:
      */
     int reinstall_maxscales();
 
+    std::string get_mdbci_config_name() {return m_mdbci_config_name;}
+
 private:
     void report_result(const char* format, va_list argp);
     void copy_one_mariadb_log(Mariadb_nodes* nrepl, int i, std::string filename);
