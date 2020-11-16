@@ -462,14 +462,14 @@ string element_to_array(const bsoncxx::document::element& element)
 
 const unordered_map<string, ElementValueInfo> converters =
 {
-    { "$eq",  { "=",       &element_to_value } },
-    { "$gt",  { "=",       &element_to_value } },
-    { "$gte", { "=",       &element_to_value } },
-    { "$lt",  { "=",       &element_to_value } },
-    { "$in",  { "IN",      &element_to_array } },
-    { "$lte", { "=",       &element_to_value } },
-    { "$ne",  { "=",       &element_to_value } },
-    { "$nin", { "NOT IN=", &element_to_array } },
+    { "$eq",  { "=",      &element_to_value } },
+    { "$gt",  { ">",      &element_to_value } },
+    { "$gte", { ">=",     &element_to_value } },
+    { "$lt",  { "<",      &element_to_value } },
+    { "$in",  { "IN",     &element_to_array } },
+    { "$lte", { "<=",     &element_to_value } },
+    { "$ne",  { "!=",     &element_to_value } },
+    { "$nin", { "NOT IN", &element_to_array } },
 };
 
 string get_comparison_op_and_value(const bsoncxx::document::view& doc)
