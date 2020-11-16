@@ -25,7 +25,7 @@ file locations, configuration options and version information.
     },
     "data": {
         "attributes": {
-            "parameters": {
+            "parameters": { // Core MaxScale parameters
                 "libdir": "/usr/lib64/maxscale",
                 "datadir": "/var/lib/maxscale",
                 "process_datadir": "/var/lib/maxscale/data16218",
@@ -58,11 +58,11 @@ file locations, configuration options and version information.
                 "dump_last_statements": "never",
                 "load_persisted_configs": false
             },
-            "version": "2.3.6",
-            "commit": "47158faf12c156775c39388652a77f8a8c542d28",
-            "started_at": "Thu, 04 Apr 2019 21:04:06 GMT",
-            "activated_at": "Thu, 04 Apr 2019 21:04:06 GMT",
-            "uptime": 337
+            "version": "2.3.6", // The MaxScale version
+            "commit": "47158faf12c156775c39388652a77f8a8c542d28", // Commit that MaxScale was built from
+            "started_at": "Thu, 04 Apr 2019 21:04:06 GMT", // The time when MaxScale was started
+            "activated_at": "Thu, 04 Apr 2019 21:04:06 GMT", // The last time when the `passive` parameter was set to `false`
+            "uptime": 337 // How many seconds MaxScale has been running
         },
         "id": "maxscale",
         "type": "maxscale"
@@ -298,7 +298,7 @@ location where the log files are stored.
     },
     "data": {
         "attributes": {
-            "parameters": {
+            "parameters": { // Logging parameters
                 "highprecision": false,
                 "maxlog": true,
                 "syslog": true,
@@ -312,8 +312,8 @@ location where the log files are stored.
                 "log_info": true,
                 "log_debug": false
             },
-            "log_file": "/home/markusjm/build/log/maxscale/maxscale.log",
-            "log_priorities": [
+            "log_file": "/home/markusjm/build/log/maxscale/maxscale.log", // The file MaxScale is logging into if `maxlog` is enabled
+            "log_priorities": [ // Active log priorities
                 "error",
                 "warning",
                 "notice",
@@ -412,22 +412,22 @@ parameters it accepts as a module.
             "description": "Firewall Filter",
             "api": "filter",
             "status": "GA",
-            "commands": [
+            "commands": [ // List of module commands
                 {
-                    "id": "rules/reload",
+                    "id": "rules/reload", // Name of the command
                     "type": "module_command",
                     "links": {
                         "self": "http://localhost:8989/v1/modules/dbfwfilter/rules/reload"
                     },
                     "attributes": {
-                        "method": "POST",
-                        "arg_min": 1,
-                        "arg_max": 2,
-                        "parameters": [
+                        "method": "POST", // Whether POST or GET should be used to call this command
+                        "arg_min": 1, // Minimum number of arguments
+                        "arg_max": 2, // Maximum number of arguments
+                        "parameters": [ // Parameter types for the command
                             {
-                                "description": "Filter to reload",
-                                "type": "FILTER",
-                                "required": true
+                                "description": "Filter to reload", // Parameter description
+                                "type": "FILTER", // Value type
+                                "required": true // Whether the parameter is required
                             },
                             {
                                 "description": "Path to rule file",
@@ -438,15 +438,15 @@ parameters it accepts as a module.
                     }
                 }
             ],
-            "parameters": [
+            "parameters": [ // Module parameters
                 {
-                    "name": "rules",
-                    "type": "path"
+                    "name": "rules", // Parameter name
+                    "type": "path" // Parameter type
                 },
                 {
                     "name": "log_match",
                     "type": "bool",
-                    "default_value": "false"
+                    "default_value": "false" // Default value of the parameter
                 },
                 {
                     "name": "log_no_match",
@@ -457,7 +457,7 @@ parameters it accepts as a module.
                     "name": "action",
                     "type": "enum",
                     "default_value": "block",
-                    "enum_values": [
+                    "enum_values": [ // Accepted enumeration values
                         "allow",
                         "block",
                         "ignore"
@@ -569,7 +569,7 @@ Command with output:
     "links": {
         "self": "http://localhost:8989/v1/maxscale/modules/dbfwfilter/rules/json"
     },
-    "meta": [
+    "meta": [ // Output of module command (module dependent)
         {
             "name": "test3",
             "type": "COLUMN",
