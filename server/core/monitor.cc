@@ -466,6 +466,8 @@ const MXS_ENUM_VALUE monitor_event_values[] =
     {"new_donor",         NEW_DONOR_EVENT   },
     {NULL}
 };
+
+const MonitorServer::EventList empty_event_list;
 }
 
 namespace maxscale
@@ -1184,22 +1186,25 @@ int Monitor::launch_command(MonitorServer* ptr, const std::string& event_name)
                                   });
 
     int rv = m_scriptcmd->externcmd_execute();
+
+    string msg_part2 = mxb::string_printf("event '%s' on %s", event_name.c_str(), ptr->server->name());
+    string msg_end = mxb::string_printf("Script was: '%s'", m_scriptcmd->substituted());
+    auto msg_part2c = msg_part2.c_str();
+    auto msg_endc = msg_end.c_str();
+
     if (rv == 0)
     {
-        MXS_NOTICE("Executed monitor script on event '%s'. Script was: '%s'",
-                   ptr->get_event_name(), m_scriptcmd->substituted());
+        MXS_NOTICE("Executed monitor script for %s. %s", msg_part2c, msg_endc);
     }
     else if (rv == -1)
     {
         // Internal error
-        MXS_ERROR("Failed to execute script on server state change event '%s'. Script was: '%s'",
-                  ptr->get_event_name(), m_scriptcmd->substituted());
+        MXS_ERROR("Failed to execute monitor script for %s. %s", msg_part2c, msg_endc);
     }
     else
     {
         // Script returned a non-zero value
-        MXS_ERROR("Script returned %d on event '%s'. Script was: '%s'",
-                  rv, ptr->get_event_name(), m_scriptcmd->substituted());
+        MXS_ERROR("Monitor script returned %d for %s. %s", rv, msg_part2c, msg_endc);
     }
     return rv;
 }
@@ -1433,7 +1438,7 @@ void Monitor::check_maintenance_requests()
 
 void Monitor::detect_handle_state_changes()
 {
-    bool script_enabled = m_scriptcmd && m_settings.events != 0;
+    bool standard_events_enabled = m_scriptcmd && m_settings.events != 0;
     struct EventInfo
     {
         MonitorServer* target {nullptr};
@@ -1450,7 +1455,7 @@ void Monitor::detect_handle_state_changes()
             ptr->triggered_at = time(nullptr);
             ptr->log_state_change();
 
-            if (script_enabled && (event & m_settings.events))
+            if (standard_events_enabled && (event & m_settings.events))
             {
                 script_events.push_back({ptr, get_event_name(event)});
             }
@@ -1458,6 +1463,18 @@ void Monitor::detect_handle_state_changes()
         else if (ptr->auth_status_changed())
         {
             ptr->log_state_change();
+        }
+
+
+        if (m_scriptcmd)
+        {
+            // Handle custom events. Custom events ignore the "events"-setting, as they are (for now)
+            // enabled by monitor-specific settings.
+            auto custom_events = ptr->new_custom_events();
+            for (auto& ev : custom_events)
+            {
+                script_events.push_back({ptr, ev});
+            }
         }
     }
 
@@ -2400,6 +2417,11 @@ void MonitorServer::add_status_request(StatusRequest request)
 bool MonitorServer::is_database() const
 {
     return server->info().is_database();
+}
+
+const MonitorServer::EventList& MonitorServer::new_custom_events() const
+{
+    return empty_event_list;
 }
 }
 

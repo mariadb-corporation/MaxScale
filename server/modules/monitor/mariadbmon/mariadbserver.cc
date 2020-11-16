@@ -2153,6 +2153,7 @@ bool MariaDBServer::update_enabled_events()
 void MariaDBServer::update_server(bool time_to_update_disk_space)
 {
     auto server = this;
+    m_new_events.clear();
     MonitorServer* mon_srv = server;
     ConnectResult conn_status = mon_srv->ping_or_connect();
 
@@ -2537,4 +2538,27 @@ ServerLock MariaDBServer::lock_status(LockType locktype) const
 SERVER::VersionInfo::Type MariaDBServer::server_type() const
 {
     return server->info().type();
+}
+
+void MariaDBServer::update_rlag_state(int64_t limit)
+{
+    mxb_assert(limit >= 0);
+    using mxs::RLagState;
+    auto rlag_now = m_replication_lag;
+    // Only change the state if rlag could be read.
+    if (rlag_now != mxs::Target::RLAG_UNDEFINED)
+    {
+        auto new_state = (rlag_now > limit) ? RLagState::ABOVE_LIMIT : RLagState::BELOW_LIMIT;
+        if (new_state != m_rlag_state)
+        {
+            m_rlag_state = new_state;
+            string new_event = (new_state == RLagState::ABOVE_LIMIT) ? "rlag_above" : "rlag_below";
+            m_new_events.push_back(move(new_event));
+        }
+    }
+}
+
+const MonitorServer::EventList& MariaDBServer::new_custom_events() const
+{
+    return m_new_events;
 }

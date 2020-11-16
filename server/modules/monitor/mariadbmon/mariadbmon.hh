@@ -381,6 +381,8 @@ private:
         ServerArray excluded_servers;           /* Servers which cannot be autoselected when deciding which
                                                  * slave to promote during failover switchover. */
 
+        int64_t script_max_rlag {-1};           /* Repl. lag limit for triggering custom event for script */
+
         MariaDBServer::SharedSettings shared;   /* Settings required by MariaDBServer objects */
     };
 

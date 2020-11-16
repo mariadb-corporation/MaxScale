@@ -107,6 +107,7 @@ MXS_ENUM_VALUE slave_conds_values[] =
     {nullptr}
 };
 
+const char SCRIPT_MAX_RLAG[] = "script_max_replication_lag";
 auto mo_relaxed = std::memory_order_relaxed;
 auto mo_acquire = std::memory_order_acquire;
 auto mo_release = std::memory_order_release;
@@ -303,6 +304,7 @@ bool MariaDBMonitor::configure(const mxs::ConfigParameters* params)
     m_settings.master_conds = params->get_enum(MASTER_CONDITIONS, master_conds_values);
     m_settings.slave_conds = params->get_enum(SLAVE_CONDITIONS, slave_conds_values);
 
+    m_settings.script_max_rlag = params->get_integer(SCRIPT_MAX_RLAG);
     m_settings.excluded_servers.clear();
     /* Reset all monitored state info. The server dependent values must be reset as servers could have been
      * added, removed and modified. */
@@ -611,11 +613,16 @@ void MariaDBMonitor::tick()
     mxb_assert(m_master == NULL || !m_master->has_status(SERVER_SLAVE | SERVER_MASTER));
 
     // Update shared status.
+    auto rlag_limit = m_settings.script_max_rlag;
     for (auto server : servers())
     {
         SERVER* srv = server->server;
         srv->set_replication_lag(server->m_replication_lag);
         srv->assign_status(server->pending_status);
+        if (rlag_limit >= 0)
+        {
+            server->update_rlag_state(rlag_limit);
+        }
     }
 
     if (server_locks_in_use() && is_cluster_owner())
@@ -1491,6 +1498,10 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
             {
                 SLAVE_CONDITIONS,                    MXS_MODULE_PARAM_ENUM,      slave_conds_def.name,
                 MXS_MODULE_OPT_NONE,                 slave_conds_values
+            },
+            {
+                // TODO: May change to duration type once -1 accepted.
+                SCRIPT_MAX_RLAG,                     MXS_MODULE_PARAM_INT,       "-1"
             },
             {MXS_END_MODULE_PARAMS}
         }

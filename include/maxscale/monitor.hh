@@ -280,6 +280,18 @@ public:
 
     bool is_database() const;
 
+    using EventList = std::vector<std::string>;
+
+    /**
+     * If a monitor module implements custom events, it should override this function so that it returns
+     * a list of new events for the current tick. The list should be cleared at the start of a tick.
+     *
+     * The default implementation returns an empty list.
+     *
+     * @return New custom events
+     */
+    virtual const EventList& new_custom_events() const;
+
     SERVER* server = nullptr;       /**< The server being monitored */
     MYSQL*  con = nullptr;          /**< The MySQL connection */
     int     mon_err_count = 0;

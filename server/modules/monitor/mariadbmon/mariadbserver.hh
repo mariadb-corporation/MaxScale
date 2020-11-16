@@ -563,6 +563,16 @@ public:
 
     SERVER::VersionInfo::Type server_type() const;
 
+    /**
+     * Update server replication lag state in relation to the limit. If state changes, writes an event
+     * to the custom events list.
+     *
+     * @param limit Replication lag limit, in seconds. Assumed >= 0.
+     */
+    void update_rlag_state(int64_t limit);
+
+    const EventList& new_custom_events() const override;
+
 private:
     using EventManipulator = std::function<void (const EventInfo& event, json_t** error_out)>;
     using EventStatusMapper = std::function<std::string (const EventInfo& event)>;
@@ -596,6 +606,11 @@ private:
     ServerLock m_masterlock;        /* Master lock status */
 
     bool m_print_update_errormsg {true};    /* Should an update error be printed? */
+
+    /* Replication lag state compared to the MariaDBMonitor-specific replication lag script event limit. */
+    mxs::RLagState m_rlag_state {mxs::RLagState::NONE};
+
+    EventList m_new_events;
 
     bool               update_slave_status(std::string* errmsg_out = NULL);
     bool               sstatus_array_topology_equal(const SlaveStatusArray& new_slave_status);
