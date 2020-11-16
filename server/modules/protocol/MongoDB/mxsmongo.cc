@@ -662,6 +662,80 @@ string mxsmongo::sort_to_order_by(const bsoncxx::document::view& sort)
     return order_by;
 }
 
+namespace
+{
+
+bool get_integer(const bsoncxx::document::element& element, int64_t* pInt)
+{
+    bool rv = true;
+
+    switch (element.type())
+    {
+    case bsoncxx::type::k_int32:
+        *pInt = element.get_int32();
+        break;
+
+    case bsoncxx::type::k_int64:
+        *pInt = element.get_int64();
+        break;
+
+    default:
+        rv = false;
+    }
+
+    return rv;
+}
+
+}
+
+std::string mxsmongo::skip_and_limit_to_limit(const bsoncxx::document::element& skip,
+                                              const bsoncxx::document::element& limit)
+{
+    mxb_assert(skip || limit);
+
+    string rv;
+
+    bool ok = true;
+
+    int64_t nSkip;
+    if (skip && (!get_integer(skip, &nSkip) || nSkip < 0))
+    {
+        ok = false;
+    }
+
+    int64_t nLimit;
+    if (ok && limit && (!get_integer(limit, &nLimit) || nLimit < 0))
+    {
+        ok = false;
+    }
+
+    if (ok)
+    {
+        if (skip && !limit)
+        {
+            nLimit = std::numeric_limits<int64_t>::max();
+        }
+
+        stringstream ss;
+        ss << " LIMIT ";
+
+        if (nSkip != 0)
+        {
+            ss << nSkip << ", ";
+        }
+
+        ss << nLimit;
+
+        rv = ss.str();
+    }
+    else
+    {
+        MXS_ERROR("The value of 'skip' and/or 'limit' is not a valid integer.");
+    }
+
+    return rv;
+}
+
 mxsmongo::Mongo::Mongo(mxs::Component* pDownstream)
     : m_context(pDownstream)
 {

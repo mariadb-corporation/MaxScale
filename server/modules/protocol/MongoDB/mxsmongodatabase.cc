@@ -381,6 +381,19 @@ public:
             }
         }
 
+        auto skip = m_doc[mxsmongo::keys::SKIP];
+        auto limit = m_doc[mxsmongo::keys::LIMIT];
+
+        if (skip || limit)
+        {
+            string s = mxsmongo::skip_and_limit_to_limit(skip, limit);
+
+            if (!s.empty())
+            {
+                sql << s;
+            }
+        }
+
         MXS_NOTICE("SQL: %s", sql.str().c_str());
 
         GWBUF* pRequest = modutil_create_query(sql.str().c_str());
