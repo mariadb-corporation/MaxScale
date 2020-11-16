@@ -1,0 +1,44 @@
+[maxscale]
+threads=###threads###
+log_info=1
+users_refresh_time=2
+
+[MySQL-Monitor]
+type=monitor
+module=mariadbmon
+servers= server1, server2
+user=maxskysql
+password= skysql
+monitor_interval=1000
+failcount=1
+replication_user=repl
+replication_password=repl
+backend_connect_timeout=10
+backend_read_timeout=10
+backend_write_timeout=10
+
+[RWSplit-Router]
+type=service
+router=readwritesplit
+servers=server1, server2
+user=maxskysql
+password=skysql
+
+[RWSplit-Listener]
+type=listener
+service=RWSplit-Router
+protocol=MySQLClient
+port=4006
+authenticator=PAMAuth, mysqlauth
+authenticator_options=pam_mode=password_2FA
+
+[server1]
+type=server
+address=###node_server_IP_1###
+port=###node_server_port_1###
+
+[server2]
+type=server
+address=###node_server_IP_2###
+port=###node_server_port_2###
+
