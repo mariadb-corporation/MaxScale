@@ -11,11 +11,12 @@
  * Public License.
  */
 
-#include <maxbase/format.hh>
-#include <maxtest/testconnections.hh>
-#include <maxtest/mariadb_connector.hh>
-#include "mariadbmonitor/fail_switch_rejoin_common.cpp"
 #include <iostream>
+#include <maxbase/format.hh>
+#include <maxtest/execute_cmd.hh>
+#include <maxtest/mariadb_connector.hh>
+#include <maxtest/testconnections.hh>
+#include "mariadbmonitor/fail_switch_rejoin_common.cpp"
 
 using std::string;
 using std::cout;
@@ -204,32 +205,16 @@ bool test_pam_login(TestConnections& test, int port, const string& user, const s
 
     // Using two passwords is a bit tricky as connector-c does not have a setting for it. Instead, invoke
     // a java app from the commandline.
-    auto url = mxb::string_printf("jdbc:mariadb://%s:%i/?user=%s&password=%s&password2=%s",
-                                  host, port, user.c_str(), pass.c_str(), pass2.c_str());
-
-    auto java_cmd = mxb::string_printf("java -jar %s/jdbc_tool/jdbc_tool_mariadb_2.7.0.jar \"%s\"",
-                                       test_dir, url.c_str());
-    auto process = popen(java_cmd.c_str(), "r");
-    if (process)
+    auto res = jdbc::test_connection(jdbc::ConnectorVersion::MARIADB_270, host, port, user, pass, pass2,
+                                     "select '313';");
+    if (res.success && res.output == "313\n")
     {
-        char buffer[512] {0};
-        string output;
-
-        while (fgets(buffer, sizeof(buffer), process))
-        {
-            output += buffer;
-        }
-
-        int rc = pclose(process);
-        if (rc == 0)
-        {
-            rval = true;
-            test.tprintf("Logged in and queried successfully.");
-        }
-        else
-        {
-            test.tprintf("Login failed");
-        }
+        rval = true;
+        test.tprintf("Logged in and queried successfully.");
+    }
+    else
+    {
+        test.tprintf("Login or query failed");
     }
     return rval;
 }
