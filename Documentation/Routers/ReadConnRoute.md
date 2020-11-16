@@ -17,7 +17,7 @@ connections based on a weighting parameter defined in the server's section.
 For more details about the standard service parameters, refer to the
 [Configuration Guide](../Getting-Started/Configuration-Guide.md).
 
-### Router Options
+### `router_options`
 
 **`router_options`** can contain a comma separated list of valid server
 roles. These roles are used as the valid types of servers the router will
@@ -46,6 +46,17 @@ When a connection is being created and the candidate server is being chosen,
 the list of servers is processed in from first entry to last. This means
 that if two servers with equal weight and status are found, the one that's
 listed first in the _servers_ parameter for the service is chosen.
+
+### `master_accept_reads`
+
+This option can be used to prevent queries from being sent to the current master.
+If `router_options` does not contain "master", the readconnroute instance is
+usually meant for reading. Setting `master_accept_reads=false` excludes the master
+from server selection (and thus from receiving reads).
+
+If `router_options` contains "master", the setting of `master_accept_reads` has no effect.
+
+By default `master_accept_reads=true`.
 
 ## Examples
 
