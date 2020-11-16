@@ -19,7 +19,7 @@
 
 using std::string;
 using std::cout;
-using std::literals::string_literals::operator""s;
+using namespace std::literals::string_literals;
 using mxb::string_printf;
 using mxt::ServerInfo;
 
