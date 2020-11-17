@@ -120,22 +120,22 @@ value of `threads`.
         "type": "threads",
         "attributes": {
             "stats": {
-                "reads": 2,
-                "writes": 0,
-                "errors": 0,
-                "hangups": 0,
-                "accepts": 0,
+                "reads": 2, // Number of read events received
+                "writes": 0, // Number of write events received
+                "errors": 0, // Number of error events received
+                "hangups": 0, // Number of hangup events received
+                "accepts": 0, // Number of accepted connections
                 "blocking_polls": 180,
                 "event_queue_length": 1,
                 "max_event_queue_length": 1,
                 "max_exec_time": 0,
                 "max_queue_time": 0,
-                "current_descriptors": 1,
-                "total_descriptors": 1,
-                "load": {
-                    "last_second": 0,
-                    "last_minute": 0,
-                    "last_hour": 0
+                "current_descriptors": 1, // Current number of managed file descriptors
+                "total_descriptors": 1, // Total number of managed file descriptors
+                "load": { // Average load as a percentage from 0 to 100
+                    "last_second": 0, // Average load over the last second
+                    "last_minute": 0, // Average load over the last minute
+                    "last_hour": 0 // Average load over the last hour
                 }
             }
         },
@@ -144,7 +144,7 @@ value of `threads`.
         }
     }
 }
-```
+1```
 
 ## Get information for all threads
 
@@ -159,6 +159,7 @@ Get the information for all threads. Returns a collection of threads resources.
 `Status: 200 OK`
 
 ```javascript
+// See `/v1/maxscale/threads/:id` for a descriptions of the fields
 {
     "links": {
         "self": "http://localhost:8989/v1/maxscale/threads/"
@@ -316,7 +317,7 @@ location where the log files are stored.
                 "log_to_shm": false
             },
             "log_file": "/home/markusjm/build/log/maxscale/maxscale.log", // The file MaxScale is logging into if `maxlog` is enabled
-            "log_priorities": [ // Active log priorities
+            "log_priorities": [ // Enabled log priorities
                 "error",
                 "warning",
                 "notice",
