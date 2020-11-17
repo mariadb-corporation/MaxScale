@@ -846,7 +846,7 @@ void Server::VersionInfo::set(uint64_t version, const std::string& version_str)
 
     Type new_type = Type::UNKNOWN;
     auto version_strz = version_str.c_str();
-    if (strcasestr(version_strz, "clustrix"))
+    if (strcasestr(version_strz, "xpand") || strcasestr(version_strz, "clustrix"))
     {
         new_type = Type::CLUSTRIX;
     }
