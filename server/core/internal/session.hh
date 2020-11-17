@@ -136,6 +136,7 @@ public:
     void append_session_log(std::string);
     void dump_session_log();
 
+    json_t* as_json_resource(const char* host, bool rdns) const;
     json_t* queries_as_json() const;
     json_t* log_as_json() const;
 

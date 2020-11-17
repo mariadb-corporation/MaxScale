@@ -320,7 +320,7 @@ uint64_t session_get_next_id()
     return mxb::atomic::add(&this_unit.next_session_id, 1, mxb::atomic::RELAXED);
 }
 
-json_t* session_json_data(const Session* session, const char* host, bool rdns)
+json_t* Session::as_json_resource(const char* host, bool rdns) const
 {
     const char CN_SESSIONS[] = "sessions";
 
@@ -328,7 +328,7 @@ json_t* session_json_data(const Session* session, const char* host, bool rdns)
 
     /** ID must be a string */
     stringstream ss;
-    ss << session->id();
+    ss << id();
 
     /** ID and type */
     json_object_set_new(data, CN_ID, json_string(ss.str().c_str()));
@@ -338,13 +338,13 @@ json_t* session_json_data(const Session* session, const char* host, bool rdns)
     json_t* rel = json_object();
 
     /** Service relationship (one-to-one) */
-    std::string self = std::string(MXS_JSON_API_SESSIONS) + std::to_string(session->id()) + "/relationships/";
+    std::string self = std::string(MXS_JSON_API_SESSIONS) + std::to_string(id()) + "/relationships/";
     json_t* services = mxs_json_relationship(host, self + "services", MXS_JSON_API_SERVICES);
-    mxs_json_add_relation(services, session->service->name(), CN_SERVICES);
+    mxs_json_add_relation(services, service->name(), CN_SERVICES);
     json_object_set_new(rel, CN_SERVICES, services);
 
     /** Filter relationships (one-to-many) */
-    auto filter_list = session->get_filters();
+    auto filter_list = get_filters();
 
     if (!filter_list.empty())
     {
@@ -361,15 +361,15 @@ json_t* session_json_data(const Session* session, const char* host, bool rdns)
 
     /** Session attributes */
     json_t* attr = json_object();
-    json_object_set_new(attr, "state", json_string(session_state_to_string(session->state())));
+    json_object_set_new(attr, "state", json_string(session_state_to_string(state())));
 
-    if (!session->user().empty())
+    if (!user().empty())
     {
-        json_object_set_new(attr, CN_USER, json_string(session->user().c_str()));
+        json_object_set_new(attr, CN_USER, json_string(user().c_str()));
     }
 
     string result_address;
-    auto client_dcb = session->client_connection()->dcb();
+    auto client_dcb = client_connection()->dcb();
     auto& remote = client_dcb->remote();
     if (rdns)
     {
@@ -385,7 +385,7 @@ json_t* session_json_data(const Session* session, const char* host, bool rdns)
     struct tm result;
     char buf[60];
 
-    asctime_r(localtime_r(&session->stats.connect, &result), buf);
+    asctime_r(localtime_r(&stats.connect, &result), buf);
     mxb::trim(buf);
 
     json_object_set_new(attr, "connected", json_string(buf));
@@ -398,18 +398,18 @@ json_t* session_json_data(const Session* session, const char* host, bool rdns)
     }
 
     json_t* connection_arr = json_array();
-    for (auto conn : session->backend_connections())
+    for (auto conn : backend_connections())
     {
         json_array_append_new(connection_arr, conn->diagnostics());
     }
 
     json_object_set_new(attr, "connections", connection_arr);
-    json_object_set_new(attr, "client", session->client_connection()->diagnostics());
+    json_object_set_new(attr, "client", client_connection()->diagnostics());
 
-    json_t* queries = session->queries_as_json();
+    json_t* queries = queries_as_json();
     json_object_set_new(attr, "queries", queries);
 
-    json_t* log = session->log_as_json();
+    json_t* log = log_as_json();
     json_object_set_new(attr, "log", log);
 
     json_object_set_new(data, CN_ATTRIBUTES, attr);
@@ -423,7 +423,7 @@ json_t* session_to_json(const MXS_SESSION* session, const char* host, bool rdns)
     stringstream ss;
     ss << MXS_JSON_API_SESSIONS << session->id();
     const Session* s = static_cast<const Session*>(session);
-    return mxs_json_resource(host, ss.str().c_str(), session_json_data(s, host, rdns));
+    return mxs_json_resource(host, ss.str().c_str(), s->as_json_resource(host, rdns));
 }
 
 struct SessionListData
@@ -446,7 +446,7 @@ bool seslist_cb(DCB* dcb, void* data)
     {
         SessionListData* d = (SessionListData*)data;
         Session* session = static_cast<Session*>(dcb->session());
-        json_array_append_new(d->json, session_json_data(session, d->host, d->rdns));
+        json_array_append_new(d->json, session->as_json_resource(d->host, d->rdns));
     }
 
     return true;
