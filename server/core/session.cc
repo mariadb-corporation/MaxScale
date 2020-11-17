@@ -1416,6 +1416,11 @@ void Session::set_ttl(int64_t ttl)
     m_ttl_start = mxs_clock();
 }
 
+bool Session::update(json_t* json)
+{
+    return rval;
+}
+
 // static
 void Session::foreach(std::function<void(Session*)> func)
 {

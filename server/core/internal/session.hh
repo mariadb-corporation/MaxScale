@@ -140,6 +140,9 @@ public:
     json_t* queries_as_json() const;
     json_t* log_as_json() const;
 
+    // Update the session from JSON
+    bool update(json_t* json);
+
     /**
      * Link a session to a backend connection.
      *

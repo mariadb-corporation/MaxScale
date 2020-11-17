@@ -1045,6 +1045,8 @@ HttpResponse cb_alter_user(const HttpRequest& request)
 
 HttpResponse cb_alter_session(const HttpRequest& request)
 {
+    HttpResponse rval(MHD_HTTP_NOT_FOUND);
+
     // There's a small window between the validation of the session ID and this code that retrieves the
     // session reference. This should be changed so that the first reference that is retrieved is passed to
     // the function that needs it.
@@ -1053,11 +1055,30 @@ HttpResponse cb_alter_session(const HttpRequest& request)
 
     if (session)
     {
+        bool ok = false;
+        json_t* json = request.get_json();
+
+        session->worker()->call(
+            [&ok, session, json]() {
+                if (session->state() == Session::State::STARTED)
+                {
+                    ok = session->update(json);
+                }
+            }, mxb::Worker::EXECUTE_AUTO);
+
+        if (ok)
+        {
+            rval = HttpResponse(MHD_HTTP_OK);
+        }
+        else
+        {
+            rval = HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
+        }
+
         session_put_ref(session);
-        return HttpResponse(MHD_HTTP_OK);
     }
 
-    return HttpResponse(MHD_HTTP_NOT_FOUND);
+    return rval;
 }
 
 HttpResponse cb_delete_user(const HttpRequest& request)
