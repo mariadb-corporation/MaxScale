@@ -661,7 +661,8 @@ static void store_client_information(DCB* dcb, GWBUF* buffer)
      * there are extra capabilities stored in the last 4 bytes of the 23 byte filler. */
     if ((proto->client_capabilities & GW_MYSQL_CAPABILITIES_CLIENT_MYSQL) == 0)
     {
-        proto->extra_capabilities = gw_mysql_get_byte4(data + MARIADB_CAP_OFFSET);
+        uint32_t caps = gw_mysql_get_byte4(data + MARIADB_CAP_OFFSET);
+        proto->extra_capabilities = caps & MXS_MARIADB_CAP_SERVER;
     }
 
     if (len > MYSQL_AUTH_PACKET_BASE_SIZE)

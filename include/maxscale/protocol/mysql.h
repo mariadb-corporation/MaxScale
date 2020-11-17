@@ -272,6 +272,9 @@ typedef enum
 #define MXS_MARIA_CAP_COM_MULTI            (1 << 1)
 #define MXS_MARIA_CAP_STMT_BULK_OPERATIONS (1 << 2)
 
+// Only bulk operations are supported
+#define MXS_MARIADB_CAP_SERVER MXS_MARIA_CAP_STMT_BULK_OPERATIONS
+
 typedef enum
 {
     MXS_COM_SLEEP = 0,
