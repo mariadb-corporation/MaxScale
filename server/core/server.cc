@@ -1150,7 +1150,8 @@ void Server::VersionInfo::set(uint64_t version, const std::string& version_str)
     m_version_num.patch = patch;
 
     careful_strcpy(m_version_str, MAX_VERSION_LEN, version_str);
-    if (strcasestr(version_str.c_str(), "clustrix") != NULL)
+    if (strcasestr(version_str.c_str(), "xpand") != NULL
+        || strcasestr(version_str.c_str(), "clustrix") != NULL)
     {
         m_type = Type::CLUSTRIX;
     }
