@@ -290,8 +290,8 @@ public:
     int64_t node_id = -1;           /**< Node id, server_id for M/S or local_index for Galera */
     int64_t master_id = -1;         /**< Master server id of this node */
 
-    mxs_monitor_event_t last_event = SERVER_DOWN_EVENT; /**< The last event that occurred on this server */
-    int64_t             triggered_at = 0;               /**< Time when the last event was triggered */
+    mxs_monitor_event_t last_event {SERVER_DOWN_EVENT}; /**< The last event that occurred on this server */
+    time_t              triggered_at {time(nullptr)};   /**< Time when the last event was triggered */
 
 private:
     const SharedSettings& m_shared;     /**< Settings shared between all servers of the monitor */
@@ -637,7 +637,7 @@ private:
      * @param ptr  The server which has changed state
      * @return Return value of the executed script or -1 on error.
      */
-    int launch_command(MonitorServer* ptr);
+    int launch_command(MonitorServer* ptr, const std::string& event_name);
 
     enum class CredentialsApproach
     {

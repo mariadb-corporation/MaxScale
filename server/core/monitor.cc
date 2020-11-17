@@ -817,9 +817,9 @@ json_t* Monitor::monitored_server_json_attributes(const SERVER* srv) const
         json_object_set_new(rval, "master_id", json_integer(mon_srv->master_id));
 
         const char* event_name = get_event_name(mon_srv->last_event);
-        time_t t = maxscale_started() + MXS_CLOCK_TO_SEC(mon_srv->triggered_at);
         json_object_set_new(rval, "last_event", json_string(event_name));
-        json_object_set_new(rval, "triggered_at", json_string(http_to_date(t).c_str()));
+        string triggered_at = http_to_date(mon_srv->triggered_at);
+        json_object_set_new(rval, "triggered_at", json_string(triggered_at.c_str()));
 
         if (auto extra = diagnostics(mon_srv))
         {
@@ -1127,7 +1127,7 @@ std::string Monitor::child_nodes(MonitorServer* parent)
     return ss.str();
 }
 
-int Monitor::launch_command(MonitorServer* ptr)
+int Monitor::launch_command(MonitorServer* ptr, const std::string& event_name)
 {
     m_scriptcmd->reset_substituted();
 
@@ -1154,8 +1154,8 @@ int Monitor::launch_command(MonitorServer* ptr)
                                       return child_nodes(ptr);
                                   });
 
-    m_scriptcmd->match_substitute("$EVENT", [ptr] {
-                                      return ptr->get_event_name();
+    m_scriptcmd->match_substitute("$EVENT", [&event_name] {
+                                      return event_name;
                                   });
 
     m_scriptcmd->match_substitute("$CREDENTIALS", [this] {
@@ -1433,38 +1433,26 @@ void Monitor::check_maintenance_requests()
 
 void Monitor::detect_handle_state_changes()
 {
-    bool master_down = false;
-    bool master_up = false;
+    bool script_enabled = m_scriptcmd && m_settings.events != 0;
+    struct EventInfo
+    {
+        MonitorServer* target {nullptr};
+        std::string    event_name;
+    };
+    std::vector<EventInfo> script_events;
 
     for (MonitorServer* ptr : m_servers)
     {
         if (ptr->status_changed())
         {
-            /**
-             * The last executed event will be needed if a passive MaxScale is
-             * promoted to an active one and the last event that occurred on
-             * a server was a master_down event.
-             *
-             * In this case, a failover script should be called if no master_up
-             * or new_master events are triggered within a pre-defined time limit.
-             */
             mxs_monitor_event_t event = ptr->get_event_type();
             ptr->last_event = event;
-            ptr->triggered_at = mxs_clock();
+            ptr->triggered_at = time(nullptr);
             ptr->log_state_change();
 
-            if (event == MASTER_DOWN_EVENT)
+            if (script_enabled && (event & m_settings.events))
             {
-                master_down = true;
-            }
-            else if (event == MASTER_UP_EVENT || event == NEW_MASTER_EVENT)
-            {
-                master_up = true;
-            }
-
-            if (m_scriptcmd && (event & m_settings.events))
-            {
-                launch_command(ptr);
+                script_events.push_back({ptr, get_event_name(event)});
             }
         }
         else if (ptr->auth_status_changed())
@@ -1473,9 +1461,9 @@ void Monitor::detect_handle_state_changes()
         }
     }
 
-    if (master_down && master_up)
+    for (auto& elem : script_events)
     {
-        MXS_NOTICE("Master switch detected: lost a master and gained a new one");
+        launch_command(elem.target, elem.event_name);
     }
 }
 
