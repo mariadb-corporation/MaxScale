@@ -85,7 +85,7 @@ ClientInfo parse_client_capabilities(ByteVec& data, const ClientInfo* old_info)
     {
         // We don't support COM_MULTI or progress reporting. The former is not used and the latter requires
         // some extra work to implement correctly.
-        rval.m_extra_capabilities |= (mariadb::get_byte4(ptr) & MXS_EXTRA_CAPABILITIES_SERVER);
+        rval.m_extra_capabilities = (mariadb::get_byte4(ptr) & MXS_EXTRA_CAPABILITIES_SERVER);
     }
     ptr += 4;
     pop_front(data, ptr - data.data());

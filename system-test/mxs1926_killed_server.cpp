@@ -54,7 +54,7 @@ void tune_rowcount(TestConnections& test)
         remove(filename.c_str());
 
         int orig = ROWCOUNT;
-        ROWCOUNT = orig / dur.count() * 10000;
+        ROWCOUNT = orig / (dur.count() + 1) * 10000;
         test.tprintf("Loading %d rows took %ld ms, setting row count to %d",
                      orig,
                      dur.count(),
