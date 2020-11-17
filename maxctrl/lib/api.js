@@ -32,7 +32,7 @@ exports.builder = function (yargs) {
     })
     .command(
       "get <resource> [path]",
-      "Get raw JSON",
+      "Do a GET reqest",
       function (yargs) {
         return yargs
           .epilog(
@@ -56,6 +56,40 @@ exports.builder = function (yargs) {
 
             return argv.pretty ? JSON.stringify(res, null, 2) : JSON.stringify(res);
           });
+        });
+      }
+    )
+    .command(
+      "post <resource> <value>",
+      "Do a POST request",
+      function (yargs) {
+        return yargs
+          .epilog(
+            "Perform a raw REST API call. " +
+              "The provided value is passed as-is to the REST API after building it with JSON.parse"
+          )
+          .usage("Usage: post <resource> <value>");
+      },
+      function (argv) {
+        maxctrl(argv, function (host) {
+          return doRequest(host, argv.resource, null, { method: "POST", body: JSON.parse(argv.value) });
+        });
+      }
+    )
+    .command(
+      "patch <resource> <value>",
+      "Do a PATCH request",
+      function (yargs) {
+        return yargs
+          .epilog(
+            "Perform a raw REST API call. " +
+              "The provided value is passed as-is to the REST API after building it with JSON.parse"
+          )
+          .usage("Usage: patch <resource> [path]");
+      },
+      function (argv) {
+        maxctrl(argv, function (host) {
+          return doRequest(host, argv.resource, null, { method: "PATCH", body: JSON.parse(argv.value) });
         });
       }
     )
