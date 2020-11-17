@@ -51,7 +51,7 @@ const char* mariadb_users_query_format =
     "FROM mysql.user AS u LEFT JOIN mysql.tables_priv AS t "
     "ON (u.user = t.user AND u.host = t.host) WHERE u.plugin IN ('', 'mysql_native_password') %s";
 
-const char* xpand_users_query_format =
+const char* clustrix_users_query_format =
     "SELECT u.username AS user, u.host, a.dbname AS db, "
     "       IF(a.privileges & 1048576, 'Y', 'N') AS select_priv, u.password "
     "FROM system.users AS u LEFT JOIN system.user_acl AS a ON (u.user = a.role) "
@@ -144,7 +144,7 @@ enum server_category_t
 {
     SERVER_NO_ROLES,
     SERVER_ROLES,
-    SERVER_XPAND
+    SERVER_CLUSTRIX
 };
 
 static int    get_users(Listener* listener, bool skip_local, SERVER** srv);
@@ -208,7 +208,7 @@ static char* get_mariadb_users_query(bool include_root, const SERVER::Version& v
     return rval;
 }
 
-static char* get_xpand_users_query(bool include_root)
+static char* get_clustrix_users_query(bool include_root)
 {
     const char* with_root;
 
@@ -223,10 +223,10 @@ static char* get_xpand_users_query(bool include_root)
         with_root = "AND u.username <> 'root'";
     }
 
-    size_t n_bytes = snprintf(NULL, 0, xpand_users_query_format, with_root);
+    size_t n_bytes = snprintf(NULL, 0, clustrix_users_query_format, with_root);
     char* rval = static_cast<char*>(MXS_MALLOC(n_bytes + 1));
     MXS_ABORT_IF_NULL(rval);
-    snprintf(rval, n_bytes + 1, xpand_users_query_format, with_root);
+    snprintf(rval, n_bytes + 1, clustrix_users_query_format, with_root);
 
     return rval;
 }
@@ -243,8 +243,8 @@ static char* get_users_query(const SERVER::Version& version, bool include_root, 
             get_mariadb_101_users_query(include_root);
         break;
 
-    case SERVER_XPAND:
-        rval = get_xpand_users_query(include_root);
+    case SERVER_CLUSTRIX:
+        rval = get_clustrix_users_query(include_root);
         break;
 
     case SERVER_NO_ROLES:
@@ -866,14 +866,14 @@ static bool check_default_table_permissions(MYSQL* mysql,
 }
 
 /**
- * @brief Check table permissions on a Xpand server
+ * @brief Check table permissions on a Clustrix server
  *
  * @return True if the table permissions are OK, false otherwise.
  */
-static bool check_xpand_table_permissions(MYSQL* mysql,
-                                          SERVICE* service,
-                                          SERVER* server,
-                                          const char* user)
+static bool check_clustrix_table_permissions(MYSQL* mysql,
+                                             SERVICE* service,
+                                             SERVER* server,
+                                             const char* user)
 {
     bool rval = true;
 
@@ -948,9 +948,9 @@ static bool check_server_permissions(SERVICE* service,
     }
 
     bool rval = true;
-    if (server->type() == SERVER::Type::XPAND)
+    if (server->type() == SERVER::Type::CLUSTRIX)
     {
-        rval = check_xpand_table_permissions(mysql, service, server, user);
+        rval = check_clustrix_table_permissions(mysql, service, server, user);
     }
     else
     {
@@ -1113,9 +1113,9 @@ struct User
 bool query_and_process_users(const char* query, MYSQL* con, SERVICE* service, int* users,
                              std::vector<User>* userlist, server_category_t category)
 {
-    // Xpand does not have a mysql database. If non-xpand we set the
+    // Clustrix does not have a mysql database. If non-clustrix we set the
     // default database in case CTEs are used.
-    bool rval = (category == SERVER_XPAND || mxs_mysql_query(con, "USE mysql") == 0);
+    bool rval = (category == SERVER_CLUSTRIX || mxs_mysql_query(con, "USE mysql") == 0);
 
     if (rval && mxs_mysql_query(con, query) == 0)
     {
@@ -1197,9 +1197,9 @@ int get_users_from_server(MYSQL* con, SERVER* server, SERVICE* service, Listener
     }
 
     server_category_t category;
-    if (server->type() == SERVER::Type::XPAND)
+    if (server->type() == SERVER::Type::CLUSTRIX)
     {
-        category = SERVER_XPAND;
+        category = SERVER_CLUSTRIX;
     }
     else if (roles_are_available(con, service, server))
     {

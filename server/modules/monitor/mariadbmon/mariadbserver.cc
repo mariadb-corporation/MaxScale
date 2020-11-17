@@ -232,7 +232,7 @@ bool MariaDBServer::do_show_slave_status(string* errmsg_out)
     unsigned int columns = 0;
     string query;
     bool all_slaves_status = false;
-    if (m_srv_type == server_type::XPAND)
+    if (m_srv_type == server_type::CLUSTRIX)
     {
         return false;
     }
@@ -898,9 +898,9 @@ void MariaDBServer::update_server_version()
     m_srv_type = server_type::UNKNOWN;      // TODO: Use type information in SERVER directly
     auto base_server_type = srv->type();
     MYSQL_RES* result;
-    if (base_server_type == SERVER::Type::XPAND)
+    if (base_server_type == SERVER::Type::CLUSTRIX)
     {
-        m_srv_type = server_type::XPAND;
+        m_srv_type = server_type::CLUSTRIX;
     }
     // Check whether this server is a MaxScale Binlog Server.
     else if (mxs_mysql_query(conn, "SELECT @@maxscale_version") == 0
