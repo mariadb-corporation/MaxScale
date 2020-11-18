@@ -532,8 +532,43 @@ bool UserEntry::host_pattern_is_more_specific(const UserEntry& lhs, const UserEn
  */
 bool read_protocol_packet(DCB* dcb, mxs::Buffer* output)
 {
-    // TODO: add optimization where the dcb readq is checked first, as it may contain a complete protocol
-    // packet.
+    auto ensure_contiguous_start = [](GWBUF** ppBuffer) {
+            auto pBuffer = *ppBuffer;
+            // Ensure that the HEADER + command byte is contiguous. This simplifies further parsing.
+            // In the vast majority of cases the start of the buffer is already contiguous.
+            auto link_len = gwbuf_link_length(pBuffer);
+            auto total_len = gwbuf_length(pBuffer);
+            if ((total_len == MYSQL_HEADER_LEN && link_len < MYSQL_HEADER_LEN)
+                || (total_len > MYSQL_HEADER_LEN && link_len <= MYSQL_HEADER_LEN))
+            {
+                *ppBuffer = gwbuf_make_contiguous(pBuffer);
+            }
+        };
+
+    auto dcb_readq = dcb->readq();
+    if (dcb_readq)
+    {
+        // Peek the length of the contained protocol packet. Because the data is in the readq,
+        // it may not be contiquous.
+        auto readq_len = gwbuf_length(dcb_readq);
+        if (readq_len >= MYSQL_HEADER_LEN)
+        {
+            auto prot_packet_len = mxs_mysql_get_packet_len(dcb_readq);
+            if (readq_len >= prot_packet_len)
+            {
+                // No need to read socket as a full packet was already stored.
+                dcb_readq = dcb->readq_release();
+                auto first_packet = gwbuf_split(&dcb_readq, prot_packet_len);
+                dcb->readq_set(dcb_readq);
+                // Since there may be more data remaining, either in the readq or in socket, trigger a read.
+                dcb->trigger_read_event();
+                ensure_contiguous_start(&first_packet);
+                output->reset(first_packet);
+                return true;
+            }
+        }
+    }
+
     const int MAX_PACKET_SIZE = MYSQL_PACKET_LENGTH_MAX + MYSQL_HEADER_LEN;
     GWBUF* read_buffer = nullptr;
     int buffer_len = dcb->read(&read_buffer, MAX_PACKET_SIZE);
@@ -545,16 +580,7 @@ bool read_protocol_packet(DCB* dcb, mxs::Buffer* output)
     if (buffer_len >= MYSQL_HEADER_LEN)
     {
         // Got enough that the entire packet may be available.
-
-        // Ensure that the HEADER + command byte is contiguous. This simplifies further parsing.
-        // In the vast majority of cases the start of the buffer is already contiguous.
-        auto link_len = gwbuf_link_length(read_buffer);
-        if ((buffer_len == MYSQL_HEADER_LEN && link_len < MYSQL_HEADER_LEN)
-            || (buffer_len > MYSQL_HEADER_LEN && link_len <= MYSQL_HEADER_LEN))
-        {
-            read_buffer = gwbuf_make_contiguous(read_buffer);
-        }
-
+        ensure_contiguous_start(&read_buffer);
         int prot_packet_len = MYSQL_GET_PACKET_LEN(read_buffer);
 
         // Protocol packet length read. Either received more than the packet, the exact packet or
