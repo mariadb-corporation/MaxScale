@@ -52,7 +52,7 @@ public:
             UNKNOWN,    /**< Not connected yet */
             MYSQL,      /**< MySQL 5.5 or later. */
             MARIADB,    /**< MariaDB 5.5 or later */
-            CLUSTRIX,   /**< Clustrix node */
+            XPAND,      /**< Xpand node */
             BLR         /**< Binlog router */
         };
 
@@ -251,7 +251,7 @@ public:
     virtual void set_replication_lag(int64_t lag) = 0;
 
     // TODO: Don't expose this to the modules and instead destroy the server
-    //       via ServerManager (currently needed by clustrixmon)
+    //       via ServerManager (currently needed by xpandmon)
     virtual void deactivate() = 0;
 
     /**

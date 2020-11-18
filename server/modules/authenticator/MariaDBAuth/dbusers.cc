@@ -43,13 +43,13 @@ static const char mysqlauth_skip_auth_query[] =
     " WHERE user = '%s' AND (anydb = '1' OR '%s' IN ('', 'information_schema') OR '%s' LIKE db)"
     " LIMIT 1";
 
-const char* clustrix_users_query_format =
+const char* xpand_users_query_format =
     "SELECT u.username AS user, u.host, a.dbname AS db, "
     "       IF(a.privileges & 1048576, 'Y', 'N') AS select_priv, u.password "
     "FROM system.users AS u LEFT JOIN system.user_acl AS a ON (u.user = a.role) "
     "WHERE u.plugin IN ('', 'mysql_native_password') %s";
 
-static char* get_clustrix_users_query(bool include_root)
+static char* get_xpand_users_query(bool include_root)
 {
     const char* with_root;
 
@@ -64,10 +64,10 @@ static char* get_clustrix_users_query(bool include_root)
         with_root = "AND u.username <> 'root'";
     }
 
-    size_t n_bytes = snprintf(NULL, 0, clustrix_users_query_format, with_root);
+    size_t n_bytes = snprintf(NULL, 0, xpand_users_query_format, with_root);
     char* rval = static_cast<char*>(MXS_MALLOC(n_bytes + 1));
     MXS_ABORT_IF_NULL(rval);
-    snprintf(rval, n_bytes + 1, clustrix_users_query_format, with_root);
+    snprintf(rval, n_bytes + 1, xpand_users_query_format, with_root);
 
     return rval;
 }

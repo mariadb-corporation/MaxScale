@@ -221,7 +221,7 @@ private:
 
     bool       update_users();
     LoadResult load_users_mariadb(mxq::MariaDB& conn, SERVER* srv, UserDatabase* output);
-    LoadResult load_users_clustrix(mxq::MariaDB& con, SERVER* srv, UserDatabase* output);
+    LoadResult load_users_xpand(mxq::MariaDB& con, SERVER* srv, UserDatabase* output);
 
     void updater_thread_function();
 
@@ -231,8 +231,8 @@ private:
     void read_proxy_grants(QResult proxies, UserDatabase* output);
     void read_databases(QResult dbs, UserDatabase* output);
 
-    bool read_users_clustrix(QResult users, UserDatabase* output);
-    void read_db_privs_clustrix(QResult acl, UserDatabase* output);
+    bool read_users_xpand(QResult users, UserDatabase* output);
+    void read_db_privs_xpand(QResult acl, UserDatabase* output);
 
     void check_show_dbs_priv(mxq::MariaDB& con, const UserDatabase& userdata,
                              const char* servername);
