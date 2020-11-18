@@ -9,6 +9,15 @@
 #include <iostream>
 #include <maxtest/testconnections.hh>
 
+int install_kerberos(std::string machine_name, std::string maria_version)
+{
+    int res = system((std::string("mdbci install_product --product kerberos_server ") + machine_name).c_str());
+    // Ignoring exit code becase in some versions of MariaDB gssapi is included into client/server
+    system((std::string("mdbci install_product --product plugin_gssapi_client --product-version ") + maria_version + " " + machine_name).c_str());
+    system((std::string("mdbci install_product --product plugin_gssapi_server --product-version ") + maria_version + " " + machine_name).c_str());
+    return res;
+}
+
 int main(int argc, char* argv[])
 {
     TestConnections* Test = new TestConnections(argc, argv);
@@ -36,14 +45,8 @@ int main(int argc, char* argv[])
     sprintf(str, "%s/krb5.conf", test_dir);
     for (i = 0; i < Test->repl->N; i++)
     {
-        Test->repl->ssh_node(i,
-                             (char*)
-                             "yum clean all",
-                             true);
-        Test->repl->ssh_node(i,
-                             (char*)
-                             "yum install -y MariaDB-gssapi-server MariaDB-gssapi-client krb5-workstation pam_krb5",
-                             true);
+        install_kerberos(Test->get_mdbci_config_name() + "/" + Test->repl->mdbci_node_name(i), get_str_version(std::string(Test->repl->version[i])));
+
         Test->repl->copy_to_node_legacy(str, Test->repl->access_homedir[i], i);
         sprintf(str1, "cp %s/krb5.conf /etc/", Test->repl->access_homedir[i]);
         Test->repl->ssh_node(i, str1, true);
@@ -62,18 +65,9 @@ int main(int argc, char* argv[])
     Test->maxscales->ssh_node_f(0, true, (char*) "cp %s/krb5.conf /etc/", Test->maxscales->access_homedir[0]);
 
     Test->tprintf("Instaling Kerberos server packages to Maxscale node\n");
-    Test->maxscales->ssh_node(0, (char*) "yum clean all", true);
-    Test->maxscales->ssh_node(0, (char*) "yum install rng-tools -y", true);
-    Test->maxscales->ssh_node(0, (char*) "rngd -r /dev/urandom -o /dev/random", true);
-    Test->maxscales->ssh_node(0,
-                              (char*)
-                              "yum install -y MariaDB-gssapi-server MariaDB-gssapi-client krb5-server krb5-workstation pam_krb5",
-                              true);
+    install_kerberos(Test->get_mdbci_config_name() + "/" + Test->maxscales->mdbci_node_name(0), get_str_version(std::string(Test->repl->version[0])));
 
-    Test->maxscales->ssh_node_f(0,
-                                true,
-                                (char*)
-                                "yum install -y MariaDB-gssapi-server MariaDB-gssapi-client krb5-server krb5-workstation pam_krb5");
+    Test->maxscales->ssh_node(0, (char*) "rngd -r /dev/urandom -o /dev/random", true);
 
     Test->tprintf("Configuring Kerberos server\n");
     Test->maxscales->ssh_node(0,

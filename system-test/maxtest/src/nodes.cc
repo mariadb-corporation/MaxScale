@@ -401,6 +401,11 @@ const char* Nodes::ip(int i) const
     return use_ipv6 ?  IP6[i] : IP[i];
 }
 
+std::string Nodes::mdbci_node_name(int node)
+{
+    return(string_printf("%s_%03d", prefix, node));
+}
+
 std::string Nodes::get_nc_item(const char* item_name)
 {
     size_t start = network_config.find(item_name);
