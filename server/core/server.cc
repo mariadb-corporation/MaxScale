@@ -1153,7 +1153,7 @@ void Server::VersionInfo::set(uint64_t version, const std::string& version_str)
     if (strcasestr(version_str.c_str(), "xpand") != NULL
         || strcasestr(version_str.c_str(), "clustrix") != NULL)
     {
-        m_type = Type::CLUSTRIX;
+        m_type = Type::XPAND;
     }
     else if (strcasestr(version_str.c_str(), "mariadb") != NULL)
     {
