@@ -77,7 +77,7 @@ const string my_grants_query = "SHOW GRANTS;";
 const string current_user_query = "SELECT current_user();";
 }
 
-namespace clustrix_queries
+namespace xpand_queries
 {
 const string users_query = "SELECT * FROM system.users;";
 const string db_grants_query = "SELECT u.username, u.host, a.dbname, a.privileges FROM system.user_acl AS a "
@@ -339,8 +339,8 @@ bool MariaDBUserManager::update_users()
                 load_result = load_users_mariadb(con, srv, &temp_userdata);
                 break;
 
-            case ServerType::CLUSTRIX:
-                load_result = load_users_clustrix(con, srv, &temp_userdata);
+            case ServerType::XPAND:
+                load_result = load_users_xpand(con, srv, &temp_userdata);
                 break;
 
             case ServerType::UNKNOWN:
@@ -453,10 +453,10 @@ MariaDBUserManager::load_users_mariadb(mxq::MariaDB& con, SERVER* srv, UserDatab
 }
 
 MariaDBUserManager::LoadResult
-MariaDBUserManager::load_users_clustrix(mxq::MariaDB& con, SERVER* srv, UserDatabase* output)
+MariaDBUserManager::load_users_xpand(mxq::MariaDB& con, SERVER* srv, UserDatabase* output)
 {
     using std::move;
-    vector<string> multiquery = {clustrix_queries::users_query, clustrix_queries::db_grants_query,
+    vector<string> multiquery = {xpand_queries::users_query, xpand_queries::db_grants_query,
                                  mariadb_queries::db_names_query};
     auto rval = LoadResult::QUERY_FAILED;
     auto multiq_result = con.multiquery(multiquery);
@@ -467,9 +467,9 @@ MariaDBUserManager::load_users_clustrix(mxq::MariaDB& con, SERVER* srv, UserData
         QResult dbs_res = move(multiq_result[2]);
 
         rval = LoadResult::INVALID_DATA;
-        if (read_users_clustrix(move(users_res), output))
+        if (read_users_xpand(move(users_res), output))
         {
-            read_db_privs_clustrix(move(acl_res), output);
+            read_db_privs_xpand(move(acl_res), output);
             read_databases(move(dbs_res), output);
             rval = LoadResult::SUCCESS;
         }
@@ -478,7 +478,7 @@ MariaDBUserManager::load_users_clustrix(mxq::MariaDB& con, SERVER* srv, UserData
 }
 
 /**
- * Read user fetch results from MariaDB or MySQL server. Clustrix is handled by a different function.
+ * Read user fetch results from MariaDB or MySQL server. Xpand is handled by a different function.
  *
  * @param users Results from query
  * @param srv_info Server version info
@@ -638,9 +638,9 @@ void MariaDBUserManager::read_databases(MariaDBUserManager::QResult dbs, UserDat
     }
 }
 
-bool MariaDBUserManager::read_users_clustrix(QResult users, UserDatabase* output)
+bool MariaDBUserManager::read_users_xpand(QResult users, UserDatabase* output)
 {
-    // Clustrix users are listed different from MariaDB/MySQL. The users-table does not have privilege
+    // Xpand users are listed different from MariaDB/MySQL. The users-table does not have privilege
     // information and may have multiple rows for the same username&host. Multiple rows with the same
     // username&host need to be combined with the matching rows in the user_acl-table (with the
     // "user"-column) to get all database grants for a given user account. Also, privileges are coded into
@@ -665,7 +665,7 @@ bool MariaDBUserManager::read_users_clustrix(QResult users, UserDatabase* output
             auto existing_entry = output->find_mutable_entry_equal(username, host);
             if (existing_entry)
             {
-                // Entry exists, but password may be empty due to how Clustrix handles user data.
+                // Entry exists, but password may be empty due to how Xpand handles user data.
                 if (existing_entry->password.empty() && !pw.empty())
                 {
                     existing_entry->password = pw;
@@ -687,7 +687,7 @@ bool MariaDBUserManager::read_users_clustrix(QResult users, UserDatabase* output
     return has_required_fields;
 }
 
-void MariaDBUserManager::read_db_privs_clustrix(QResult acl, UserDatabase* output)
+void MariaDBUserManager::read_db_privs_xpand(QResult acl, UserDatabase* output)
 {
     auto ind_user = acl->get_col_index("username");
     auto ind_host = acl->get_col_index("host");
@@ -881,7 +881,7 @@ void UserDatabase::add_entry(const std::string& username, UserEntry&& entry)
 {
     auto& entrylist = m_users[username];
     // Find the correct spot to insert. If the hostname pattern already exists, do nothing. Copies should
-    // only exist when summing users from all servers or when processing Clustrix users.
+    // only exist when summing users from all servers or when processing Xpand users.
     auto low_bound = std::lower_bound(entrylist.begin(), entrylist.end(), entry,
                                       UserEntry::host_pattern_is_more_specific);
     // lower_bound is the first valid (not "smaller") position to insert. It can be equal to the new element.
