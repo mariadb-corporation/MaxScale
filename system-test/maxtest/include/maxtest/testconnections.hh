@@ -560,6 +560,9 @@ public:
     mxt::MaxScale& maxscale();
     TestLogger& logger();
 
+    std::string get_mdbci_config_name() {return m_mdbci_config_name;}
+
+
 private:
     void copy_one_mariadb_log(Mariadb_nodes* nrepl, int i, std::string filename);
     void copy_one_maxscale_log(int i, double timestamp);

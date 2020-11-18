@@ -58,6 +58,13 @@ public:
     const std::string& prefix() const;
 
     /**
+     * @brief mdbci_node_name
+     * @param node
+     * @return name of the node in MDBCI format
+     */
+    std::string mdbci_node_name(int node);
+
+    /**
      * Generate the command line to execute a given command on the node via ssh.
      *
      * @param node Node index
