@@ -381,13 +381,13 @@ public:
     ProtocolApiGenerator(const ProtocolApiGenerator&) = delete;
     ProtocolApiGenerator& operator=(const ProtocolApiGenerator&) = delete;
 
-    static mxs::ProtocolModule* create_protocol_module()
+    static mxs::ProtocolModule* create_protocol_module(const mxs::ConfigParameters& params)
     {
         // If protocols require non-authentication-related settings, add passing them here.
         // The unsolved issue is how to separate listener, protocol and authenticator-settings from
         // each other. Currently this is mostly a non-issue as the only authenticator with a setting
         // is gssapi.
-        return ProtocolImplementation::create();
+        return ProtocolImplementation::create(params);
     }
 
     static MXS_PROTOCOL_API s_api;

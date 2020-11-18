@@ -21,10 +21,22 @@
 using namespace std;
 
 //static
-ProtocolModule* ProtocolModule::create()
+ProtocolModule* ProtocolModule::create(const mxs::ConfigParameters& params)
 {
     TRACE();
-    return new ProtocolModule;
+
+    ProtocolModule* pThis = nullptr;
+
+    if (params.empty())
+    {
+        pThis = new ProtocolModule;
+    }
+    else
+    {
+        MXS_ERROR("MongoDB protocol does not support any parameters.");
+    }
+
+    return pThis;
 }
 
 unique_ptr<mxs::ClientConnection>

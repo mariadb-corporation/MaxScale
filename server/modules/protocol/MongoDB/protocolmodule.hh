@@ -14,13 +14,14 @@
 
 #include "mongodbclient.hh"
 #include <maxscale/protocol2.hh>
+#include <maxscale/config2.hh>
 
 class ProtocolModule : public mxs::ProtocolModule
 {
 public:
     using AuthenticatorList = std::vector<mxs::SAuthenticatorModule>;
 
-    static ProtocolModule* create();
+    static ProtocolModule* create(const mxs::ConfigParameters& params);
 
     std::unique_ptr<mxs::ClientConnection>
     create_client_protocol(MXS_SESSION* session, mxs::Component* component) override;

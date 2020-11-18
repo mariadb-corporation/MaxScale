@@ -19,6 +19,7 @@
  */
 
 #include <maxscale/ccdefs.hh>
+#include <maxscale/config_common.hh>
 #include <maxscale/dcbhandler.hh>
 #include <maxscale/target.hh>
 
@@ -79,7 +80,7 @@ struct MXS_PROTOCOL_API
      *
      * @return New protocol module instance
      */
-    mxs::ProtocolModule* (* create_protocol_module)();
+    mxs::ProtocolModule* (* create_protocol_module)(const mxs::ConfigParameters& params);
 };
 
 /**
@@ -87,4 +88,4 @@ struct MXS_PROTOCOL_API
  * the MXS_PROTOCOL structure is changed. See the rules defined in modinfo.h
  * that define how these numbers should change.
  */
-#define MXS_PROTOCOL_VERSION {3, 2, 0}
+#define MXS_PROTOCOL_VERSION {4, 0, 0}

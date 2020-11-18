@@ -49,9 +49,20 @@ class CDCProtocolModule : public mxs::ProtocolModule
 public:
     ~CDCProtocolModule() override = default;
 
-    static CDCProtocolModule* create()
+    static CDCProtocolModule* create(const mxs::ConfigParameters& params)
     {
-        return new(std::nothrow) CDCProtocolModule();
+        CDCProtocolModule* self = nullptr;
+
+        if (params.empty())
+        {
+            self = new(std::nothrow) CDCProtocolModule();
+        }
+        else
+        {
+            MXS_ERROR("CDC protocol does not support any parameters.");
+        }
+
+        return self;
     }
 
     std::unique_ptr<mxs::ClientConnection>

@@ -1048,7 +1048,8 @@ Listener::SData Listener::create_shared_data()
     if (auto mod = get_module(m_config.protocol, mxs::ModuleType::PROTOCOL))
     {
         auto protocol_api = reinterpret_cast<MXS_PROTOCOL_API*>(mod->module_object);
-        std::unique_ptr<mxs::ProtocolModule> protocol_module {protocol_api->create_protocol_module()};
+        mxs::ConfigParameters params; // TODO: Make it possible to actually provide such in the config.
+        std::unique_ptr<mxs::ProtocolModule> protocol_module {protocol_api->create_protocol_module(params)};
 
         if (protocol_module)
         {
