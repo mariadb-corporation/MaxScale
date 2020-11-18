@@ -999,8 +999,10 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_normal
         return StateMachineRes::ERROR;
     }
 
-    mxs::Buffer buffer;
-    if (!read_protocol_packet(m_dcb, &buffer))
+
+    auto read_res = read_protocol_packet(m_dcb);
+    mxs::Buffer buffer = move(read_res.buffer);
+    if (!read_res.success)
     {
         return StateMachineRes::ERROR;
     }
@@ -1783,9 +1785,18 @@ void MariaDBClientConnection::cancel_change_user()
 MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_handshake()
 {
     mxs::Buffer read_buffer;
-    bool read_success = (m_handshake_state == HSState::INIT) ?
+    bool read_success;
+    if (m_handshake_state == HSState::INIT)
+    {
         // The first response from client requires special handling.
-        read_first_client_packet(&read_buffer) : read_protocol_packet(m_dcb, &read_buffer);
+        read_success = read_first_client_packet(&read_buffer);
+    }
+    else
+    {
+        auto read_res = read_protocol_packet(m_dcb);
+        read_buffer = move(read_res.buffer);
+        read_success = read_res.success;
+    }
 
     if (!read_success)
     {
@@ -1989,7 +2000,9 @@ bool MariaDBClientConnection::perform_auth_exchange()
     // Nothing to read on first exchange-call.
     if (m_auth_state == AuthState::CONTINUE_EXCHANGE)
     {
-        if (read_protocol_packet(m_dcb, &read_buffer))
+        auto read_res = read_protocol_packet(m_dcb);
+        read_buffer = move(read_res.buffer);
+        if (read_res.success)
         {
             if (read_buffer.empty())
             {

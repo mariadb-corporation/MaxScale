@@ -512,4 +512,9 @@ int response_length(bool with_ssl, bool ssl_established, const char* user, const
 
 uint8_t* load_hashed_password(const uint8_t* scramble, uint8_t* payload, const uint8_t* passwd);
 
-bool read_protocol_packet(DCB* dcb, mxs::Buffer* output);
+struct ReadResult
+{
+    bool        success {false};
+    mxs::Buffer buffer;
+};
+ReadResult read_protocol_packet(DCB* dcb);

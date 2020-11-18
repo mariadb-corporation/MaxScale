@@ -532,9 +532,9 @@ int MariaDBBackendConnection::normal_read()
     if (m_ignore_replies)
     {
         // Read only one packet. This way any extra packets, which we aren't expecting, are handled normally.
-        mxs::Buffer buffer;
-        return_code = read_protocol_packet(m_dcb, &buffer);
-        read_buffer = buffer.release();
+        ReadResult read_res = read_protocol_packet(m_dcb);
+        return_code = read_res.success ? 1 : 0;
+        read_buffer = read_res.buffer.release();
     }
     else
     {
@@ -2256,8 +2256,9 @@ MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::handshake()
         case HandShakeState::EXPECT_HS:
             {
                 // Read the server handshake.
-                mxs::Buffer buffer;
-                if (!read_protocol_packet(m_dcb, &buffer))
+                auto read_res = read_protocol_packet(m_dcb);
+                auto buffer = std::move(read_res.buffer);
+                if (!read_res.success)
                 {
                     // Socket error.
                     string errmsg = (string)"Handshake with '" + m_server.name() + "' failed.";
@@ -2365,8 +2366,9 @@ MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::handshake()
 
 MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::authenticate()
 {
-    mxs::Buffer buffer;
-    if (!read_protocol_packet(m_dcb, &buffer))
+    auto read_res = read_protocol_packet(m_dcb);
+    auto buffer = std::move(read_res.buffer);
+    if (!read_res.success)
     {
         do_handle_error(m_dcb, "Socket error", mxs::ErrorType::TRANSIENT);
         return StateMachineRes::ERROR;
@@ -2467,8 +2469,9 @@ MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::send_connect
         while (m_init_query_status.ok_packets_received < m_init_query_status.ok_packets_expected)
         {
             // Check result. If server returned anything else than OK, it's an error.
-            mxs::Buffer buffer;
-            if (!read_protocol_packet(m_dcb, &buffer))
+            auto read_res = read_protocol_packet(m_dcb);
+            auto buffer = std::move(read_res.buffer);
+            if (!read_res.success)
             {
                 do_handle_error(m_dcb, "Socket error", mxs::ErrorType::TRANSIENT);
             }
