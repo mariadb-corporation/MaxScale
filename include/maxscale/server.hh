@@ -141,7 +141,7 @@ public:
     {
         MARIADB,
         MYSQL,
-        CLUSTRIX
+        XPAND
     };
 
     enum class RLagState
