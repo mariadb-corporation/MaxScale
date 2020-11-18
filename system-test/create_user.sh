@@ -7,6 +7,8 @@
 
 mysql --force $1 <<EOF >& /dev/null
 
+CREATE DATABASE IF NOT EXISTS test;
+
 DROP USER IF EXISTS '$node_user'@'%';
 CREATE USER '$node_user'@'%' IDENTIFIED BY '$node_password';
 GRANT ALL PRIVILEGES ON *.* TO '$node_user'@'%' $require_ssl WITH GRANT OPTION;
