@@ -254,6 +254,13 @@ Result get_result(MYSQL* conn, std::string sql);
 
 int get_int_version(std::string version);
 
+/**
+ * @brief get_str_version Extract version number from full version string
+ * @param version
+ * @return MariaDB version in xx.xx.xx format
+ */
+std::string get_str_version(std::string version);
+
 // Helper class for performing queries
 class Connection
 {

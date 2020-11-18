@@ -608,6 +608,15 @@ int get_int_version(std::string version)
     return major * 10000 + minor * 100 + patch;
 }
 
+std::string get_str_version(std::string version)
+{
+
+    std::string str_version;
+    int i = version.find('-');
+    if (i > 0) return version.substr(0, i);
+    return version;
+}
+
 bool Connection::connect()
 {
     mysql_close(m_conn);
