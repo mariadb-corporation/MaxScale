@@ -2,7 +2,7 @@
 threads=###threads###
 log_info=1
 
-###xpad_server###
+###xpand_server###
 
 [Xpand-Monitor]
 type=monitor
