@@ -133,23 +133,24 @@ int Xpand_nodes::start_replication()
 {
     int rv = 1;
 
-
-
-    std::string cluster_setup_sql = std::string("ALTER CLUSTER ADD '")
-            + std::string(IP_private[1])
-            + std::string("'");
-    for (int i = 2; i < N; i++)
-    {
-        cluster_setup_sql += std::string(",'")
-                + std::string(IP_private[i])
-                + std::string("'");
-    }
     connect();
-    execute_query(nodes[0], "%s", cluster_setup_sql.c_str());
+
+    // The nodes must be added one by one to the cluster. An attempt to add them
+    // all with one ALTER command will fail, if one or more of them already are in
+    // the cluster.
+
+    for (int i = 1; i < N; ++i)
+    {
+        std::string cluster_setup_sql = std::string("ALTER CLUSTER ADD '")
+           + std::string(IP_private[i])
+           + std::string("'");
+
+       execute_query(nodes[0], "%s", cluster_setup_sql.c_str());
+    }
+
     close_connections();
 
     rv = 0;
-
 
     return rv;
 }
