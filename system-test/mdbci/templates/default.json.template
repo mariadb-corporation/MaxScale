@@ -265,12 +265,17 @@
         "labels" : [
                 "GALERA_BACKEND"
         ],
-        "product" : {
-                "name": "galera",
-                "version": "${galera_version}",
-                "cnf_template" : "galera_server1.cnf",
-                "cnf_template_path": "${cnf_path}"
-        }
+        "products" : [
+                {
+                        "name": "${product}",
+                        "version": "${version}"
+                },
+                {
+                        "name": "galera_config",
+                        "cnf_template" : "galera_server1.cnf"
+                }
+        ],
+        "cnf_template_path": "${cnf_path}"
   },
 
   "galera_001" :
@@ -282,12 +287,17 @@
         "labels" : [
                 "GALERA_BACKEND"
         ],
-        "product" : {
-                "name": "galera",
-                "version": "${galera_version}",
-                "cnf_template" : "galera_server2.cnf",
-                "cnf_template_path": "${cnf_path}"
-        }
+        "products" : [
+                {
+                        "name": "${product}",
+                        "version": "${version}"
+                },
+                {
+                        "name": "galera_config",
+                        "cnf_template" : "galera_server2.cnf"
+                }
+        ],
+        "cnf_template_path": "${cnf_path}"
   },
 
   "galera_002" :
@@ -299,12 +309,17 @@
         "labels" : [
                 "GALERA_BACKEND"
         ],
-        "product" : {
-                "name": "galera",
-                "version": "${galera_version}",
-                "cnf_template" : "galera_server3.cnf",
-                "cnf_template_path": "${cnf_path}"
-        }
+        "products" : [
+                {
+                        "name": "${product}",
+                        "version": "${version}"
+                },
+                {
+                        "name": "galera_config",
+                        "cnf_template" : "galera_server3.cnf"
+                }
+        ],
+        "cnf_template_path": "${cnf_path}"
   },
 
   "galera_003" :
@@ -316,12 +331,17 @@
         "labels" : [
                 "GALERA_BACKEND"
         ],
-        "product" : {
-                "name": "galera",
-                "version": "${galera_version}",
-                "cnf_template" : "galera_server4.cnf",
-                "cnf_template_path": "${cnf_path}"
-        }
+        "products" : [
+                {
+                        "name": "${product}",
+                        "version": "${version}"
+                },
+                {
+                        "name": "galera_config",
+                        "cnf_template" : "galera_server4.cnf"
+                }
+        ],
+        "cnf_template_path": "${cnf_path}"
   },
 
   "maxscale_000" :

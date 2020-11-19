@@ -13,6 +13,8 @@ done
 
 mysql --force <<EOF
 
+CREATE DATABASE IF NOT EXISTS test;
+
 DELETE FROM mysql.user WHERE user = '';
 
 DROP USER IF EXISTS '$galera_user'@'%';

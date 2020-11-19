@@ -485,6 +485,7 @@ int Galera_nodes::start_galera()
         ssh_node(i, "echo [mysqld] > cluster_address.cnf", true);
         ssh_node_f(i, true, "echo wsrep_cluster_address=gcomm://%s >>  cluster_address.cnf", gcomm.c_str());
         ssh_node(i, "cp cluster_address.cnf /etc/my.cnf.d/", true);
+        ssh_node(i, "cp cluster_address.cnf /etc/mysql/my.cnf.d/", true);
 
         ssh_node(i, "rm -rf /var/lib/mysql/*", true);
         ssh_node(i, "mysql_install_db --user=mysql", true);
