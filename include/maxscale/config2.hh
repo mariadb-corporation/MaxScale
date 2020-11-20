@@ -396,7 +396,7 @@ class ConcreteParam : public Param
 public:
     using value_type = NativeType;
 
-    value_type default_value() const
+    virtual value_type default_value() const
     {
         return m_default_value;
     }
@@ -1401,6 +1401,53 @@ private:
 };
 
 /**
+ * ParamModule
+ */
+class ParamModule : public ConcreteParam<ParamModule, const MXS_MODULE*>
+{
+public:
+    ParamModule(Specification* pSpecification,
+                const char* zName,
+                const char* zDescription,
+                mxs::ModuleType module_type)
+        : ConcreteParam<ParamModule, const MXS_MODULE*>(pSpecification, zName, zDescription,
+                                                        Param::AT_STARTUP, Param::MANDATORY,
+                                                        MXS_MODULE_PARAM_STRING, nullptr)
+        , m_module_type(module_type)
+    {
+    }
+
+    ParamModule(Specification* pSpecification,
+                const char* zName,
+                const char* zDescription,
+                mxs::ModuleType module_type,
+                const std::string& default_value)
+        : ConcreteParam<ParamModule, const MXS_MODULE*>(pSpecification, zName, zDescription,
+                                                        Param::AT_STARTUP, Param::OPTIONAL,
+                                                        MXS_MODULE_PARAM_STRING, nullptr)
+        , m_module_type(module_type)
+        , m_default_module(default_value)
+    {
+    }
+
+    value_type default_value() const override;
+
+    std::string type() const override;
+
+    std::string to_string(value_type value) const;
+    bool        from_string(const std::string& value, value_type* pValue,
+                            std::string* pMessage = nullptr) const;
+
+    json_t* to_json(value_type value) const;
+    bool    from_json(const json_t* pJson, value_type* pValue,
+                      std::string* pMessage = nullptr) const;
+
+private:
+    mxs::ModuleType m_module_type;
+    std::string     m_default_module;
+};
+
+/**
  * ParamBitMask
  */
 using ParamBitMask = ParamCount;
@@ -2371,6 +2418,11 @@ using EnumMask = ConcreteType<ParamEnumMask<T>>;
  * Host
  */
 using Host = ConcreteType<ParamHost>;
+
+/**
+ * Module
+ */
+using Module = ConcreteType<ParamModule>;
 
 /**
  * Path

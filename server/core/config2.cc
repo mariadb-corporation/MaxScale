@@ -15,6 +15,7 @@
 
 #include <maxscale/monitor.hh>
 #include "internal/config.hh"
+#include "internal/modules.hh"
 #include "internal/monitor.hh"
 #include "internal/service.hh"
 #include "internal/listener.hh"
@@ -1144,6 +1145,91 @@ json_t* ParamServer::to_json(value_type value) const
 }
 
 bool ParamServer::from_json(const json_t* pJson, value_type* pValue,
+                            std::string* pMessage) const
+{
+    bool rv = false;
+
+    if (json_is_string(pJson))
+    {
+        const char* z = json_string_value(pJson);
+
+        rv = from_string(z, pValue, pMessage);
+    }
+    else
+    {
+        *pMessage = "Expected a json string, but got a json ";
+        *pMessage += mxs::json_type_to_string(pJson);
+        *pMessage += ".";
+    }
+
+    return rv;
+}
+
+/**
+ * ParamModule
+ */
+ParamModule::value_type ParamModule::default_value() const
+{
+    value_type pModule = m_default_value;
+
+    if (!pModule)
+    {
+        pModule = get_module(m_default_module, m_module_type);
+
+        const_cast<ParamModule*>(this)->m_default_value = pModule;
+    }
+
+    return pModule;
+}
+
+std::string ParamModule::type() const
+{
+    return "module";
+}
+
+std::string ParamModule::to_string(value_type value) const
+{
+    return value ? value->name : "";
+}
+
+bool ParamModule::from_string(const std::string& value_as_string,
+                              value_type* pValue,
+                              std::string* pMessage) const
+{
+    bool rv = false;
+
+    if (value_as_string.empty())
+    {
+        *pValue = nullptr;
+        // TODO: Also ok for modules? In other contexts an empty string
+        // TODO: is ok, but in the case of modules?
+        rv = true;
+    }
+    else
+    {
+        *pValue = get_module(value_as_string, m_module_type);
+
+        if (*pValue)
+        {
+            rv = true;
+        }
+        else if (pMessage)
+        {
+            *pMessage = "'";
+            *pMessage += value_as_string;
+            *pMessage += "' does not refer to a a module, or refers to module of the wrong type.";
+        }
+    }
+
+    return rv;
+}
+
+json_t* ParamModule::to_json(value_type value) const
+{
+    return value ? json_string(value->name) : json_null();
+}
+
+bool ParamModule::from_json(const json_t* pJson, value_type* pValue,
                             std::string* pMessage) const
 {
     bool rv = false;
