@@ -1028,7 +1028,7 @@ QueryClassifier::RouteInfo QueryClassifier::update_route_info(
             }
         }
 
-        if (mxs_log_is_priority_enabled(LOG_INFO))
+        if (mxs_log_is_priority_enabled(LOG_INFO) || mxb_log_get_session_trace())
         {
             log_transaction_status(pBuffer, type_mask);
         }
