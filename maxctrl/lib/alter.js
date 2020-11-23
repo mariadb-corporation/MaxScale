@@ -45,7 +45,7 @@ const maxscale_params = [
   "dump_last_statements",
 ];
 
-function setFilters(host, argv) {
+function setFilters(host, endpoint, argv) {
   if (argv.filters.length == 0) {
     // We're removing all filters from the service
     argv.filters = null;
@@ -65,7 +65,7 @@ function setFilters(host, argv) {
 
   _.set(payload, "data.relationships.filters.data", argv.filters);
 
-  return doAsyncRequest(host, "services/" + argv.service, null, { method: "PATCH", body: payload });
+  return doAsyncRequest(host, endpoint, null, { method: "PATCH", body: payload });
 }
 
 function parseValue(value) {
@@ -192,7 +192,7 @@ exports.builder = function (yargs) {
       },
       function (argv) {
         maxctrl(argv, function (host) {
-          return setFilters(host, argv);
+          return setFilters(host, "services/" + argv.service, argv);
         });
       }
     )
@@ -284,6 +284,40 @@ exports.builder = function (yargs) {
           };
 
           return doRequest(host, "users/inet/" + argv.name, null, { method: "PATCH", body: user });
+        });
+      }
+    )
+    .command(
+      "session <session> <key> <value> [params...]",
+      "Alter session parameters",
+      function (yargs) {
+        return yargs
+          .epilog(
+            "Alter parameters of a session. To get the list of modifiable parameters, use `show session <session>`"
+          )
+          .usage("Usage: alter session <session> <key> <value> ...");
+      },
+      function (argv) {
+        maxctrl(argv, function (host) {
+          return updateParams(host, "sessions/" + argv.session, argv.key, argv.value, argv.params);
+        });
+      }
+    )
+    .command(
+      "session-filters <session> [filters...]",
+      "Alter filters of a session",
+      function (yargs) {
+        return yargs
+          .epilog(
+            "The order of the filters given as the second parameter will also be the order " +
+              "in which queries pass through the filter chain. If no filters are given, all " +
+              "existing filters are removed from the session. The syntax is similar to `alter service-filters`."
+          )
+          .usage("Usage: alter session-filters <session> [filters...]");
+      },
+      function (argv) {
+        maxctrl(argv, function (host) {
+          return setFilters(host, "sessions/" + argv.session, argv);
         });
       }
     )
