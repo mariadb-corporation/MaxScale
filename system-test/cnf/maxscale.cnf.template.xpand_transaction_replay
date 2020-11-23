@@ -18,6 +18,7 @@ cluster=Xpand-Monitor
 user=maxskysql
 password=skysql
 transaction_replay=true
+transaction_replay_retry_on_deadlock=true
 
 [RCR]
 type=service
