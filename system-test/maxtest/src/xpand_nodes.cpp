@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2024-10-14
+ * Change Date: 2024-11-16
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -133,23 +133,24 @@ int Xpand_nodes::start_replication()
 {
     int rv = 1;
 
-
-
-    std::string cluster_setup_sql = std::string("ALTER CLUSTER ADD '")
-            + std::string(IP_private[1])
-            + std::string("'");
-    for (int i = 2; i < N; i++)
-    {
-        cluster_setup_sql += std::string(",'")
-                + std::string(IP_private[i])
-                + std::string("'");
-    }
     connect();
-    execute_query(nodes[0], "%s", cluster_setup_sql.c_str());
+
+    // The nodes must be added one by one to the cluster. An attempt to add them
+    // all with one ALTER command will fail, if one or more of them already are in
+    // the cluster.
+
+    for (int i = 1; i < N; ++i)
+    {
+        std::string cluster_setup_sql = std::string("ALTER CLUSTER ADD '")
+           + std::string(IP_private[i])
+           + std::string("'");
+
+       execute_query(nodes[0], "%s", cluster_setup_sql.c_str());
+    }
+
     close_connections();
 
     rv = 0;
-
 
     return rv;
 }
