@@ -343,14 +343,11 @@ json_t* Session::as_json_resource(const char* host, bool rdns) const
     mxs_json_add_relation(services, service->name(), CN_SERVICES);
     json_object_set_new(rel, CN_SERVICES, services);
 
-    /** Filter relationships (one-to-many) */
-    auto filter_list = get_filters();
-
-    if (!filter_list.empty())
+    if (!m_filters.empty())
     {
         json_t* filters = mxs_json_relationship(host, self + "filters", MXS_JSON_API_FILTERS);
 
-        for (const auto& f : filter_list)
+        for (const auto& f : m_filters)
         {
             mxs_json_add_relation(filters, f.filter->name(), CN_FILTERS);
         }
@@ -747,6 +744,9 @@ Session::Session(std::shared_ptr<ListenerSessionData> listener_data,
                  const std::string& host)
     : MXS_SESSION(host, &listener_data->m_service)
     , m_down(static_cast<Service&>(listener_data->m_service).get_connection(this, this))
+    , m_routable(this)
+    , m_head(&m_routable)
+    , m_tail(&m_routable)
     , m_listener_data(std::move(listener_data))
 {
     if (service->config()->retain_last_statements != -1)        // Explicitly set for the service
@@ -1273,7 +1273,7 @@ void Session::dump_session_log()
 
 int32_t Session::routeQuery(GWBUF* buffer)
 {
-    auto rv = m_down->routeQuery(buffer);
+    auto rv = m_head->routeQuery(buffer);
 
     if (response.buffer)
     {
@@ -1286,7 +1286,7 @@ int32_t Session::routeQuery(GWBUF* buffer)
 
 int32_t Session::clientReply(GWBUF* buffer, mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
-    return m_client_conn->clientReply(buffer, down, reply);
+    return m_tail->clientReply(buffer, down, reply);
 }
 
 bool Session::handleError(mxs::ErrorType type, GWBUF* error, Endpoint* down, const mxs::Reply& reply)
@@ -1418,7 +1418,66 @@ void Session::set_ttl(int64_t ttl)
 
 bool Session::update(json_t* json)
 {
+    bool rval = true;
+
+    if (json_t* rel = mxs_json_pointer(json, "/data/relationships/filters/data"))
+    {
+        decltype(m_filters) new_filters;
+        size_t idx;
+        json_t* val;
+
+        json_array_foreach(rel, idx, val)
+        {
+            json_t* name = json_object_get(val, CN_ID);
+
+            if (json_is_string(name))
+            {
+                if (auto f = filter_find(json_string_value(name)))
+                {
+                    new_filters.emplace_back(f);
+                    auto& sf = new_filters.back();
+                    sf.session.reset(sf.instance->newSession(this, service));
+
+                    if (!sf.session)
+                    {
+                        MXS_ERROR("Failed to create filter session for '%s'", sf.filter->name());
+                        return false;
+                    }
+                }
+            }
+        }
+
+        m_filters = std::move(new_filters);
+        setup_routing_chain();
+    }
+
     return rval;
+}
+
+bool Session::setup_routing_chain()
+{
+    mxs::Routable* chain_head = &m_routable;
+
+    for (auto it = m_filters.rbegin(); it != m_filters.rend(); it++)
+    {
+        it->session->setDownstream(chain_head);
+        it->down = chain_head;
+        chain_head = it->session.get();
+    }
+
+    m_head = chain_head;
+
+    mxs::Routable* chain_tail = &m_routable;
+
+    for (auto it = m_filters.begin(); it != m_filters.end(); it++)
+    {
+        it->session->setUpstream(chain_tail);
+        it->up = chain_tail;
+        chain_tail = it->session.get();
+    }
+
+    m_tail = chain_tail;
+    return true;
 }
 
 // static

@@ -53,11 +53,11 @@ public:
     {
     }
 
-    SFilterDef     filter;
-    mxs::Filter*   instance;
-    mxs::Routable* session;
-    mxs::Routable* up;
-    mxs::Routable* down;
+    SFilterDef                          filter;
+    mxs::Filter*                        instance;
+    std::unique_ptr<mxs::FilterSession> session;
+    mxs::Routable*                      up;
+    mxs::Routable*                      down;
 };
 
 class Session : public MXS_SESSION, public mxs::Component
@@ -271,6 +271,32 @@ private:
     // Delivers a provided response to the upstream filter that should receive it
     void deliver_response();
 
+    bool setup_routing_chain();
+
+    class SessionRoutable : public mxs::Routable
+    {
+    public:
+        SessionRoutable(Session* session)
+            : m_session(session)
+        {
+        }
+
+        int32_t routeQuery(GWBUF* pPacket)
+        {
+            return m_session->m_down->routeQuery(pPacket);
+        }
+
+        int32_t clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply)
+        {
+            return m_session->m_client_conn->clientReply(pPacket, const_cast<mxs::ReplyRoute&>(down), reply);
+        }
+
+    private:
+        Session* m_session;
+    };
+
+    friend class SessionRoutable;
+
     struct SESSION_VARIABLE
     {
         session_variable_handler_t handler;
@@ -289,6 +315,10 @@ private:
     Log               m_log;                    /*< Session specific in-memory log */
     int64_t           m_ttl = 0;                /*< How many seconds the session has until it is killed  */
     int64_t           m_ttl_start = 0;          /*< The clock tick when TTL was assigned */
+
+    SessionRoutable m_routable;
+    mxs::Routable*  m_head;
+    mxs::Routable*  m_tail;
 
     /*< Objects listening for userdata change events */
     std::set<MXS_SESSION::EventSubscriber*> m_event_subscribers;
