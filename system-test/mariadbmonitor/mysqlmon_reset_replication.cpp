@@ -50,6 +50,7 @@ int main(int argc, char** argv)
     const char drop_query[] = "DROP TABLE test.t1;";
     const char strict_mode[] = "SET GLOBAL gtid_strict_mode=%i;";
 
+    const int N = 4;
     string server_names[] = {"server1", "server2", "server3", "server4"};
     string master = "Master";
     string slave = "Slave";
@@ -118,7 +119,7 @@ int main(int argc, char** argv)
         expect_server_status(server_names[3], slave);
         // Check that the values on the databases are identical by summing the values.
         int expected_sum = 55;      // 11 * 5
-        for (int i = 0; i < test.repl->N; i++)
+        for (int i = 0; i < N; i++)
         {
             int sum = read_sum(i);
             test.expect(sum == expected_sum,
