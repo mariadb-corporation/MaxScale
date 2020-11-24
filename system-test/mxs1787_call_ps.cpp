@@ -64,5 +64,7 @@ int main(int argc, char* argv[])
     test.expect(mysql_query(test.maxscales->conn_rwsplit[0], "SELECT 1") == 0, "Normal queries should work");
     test.maxscales->disconnect();
 
+    test.stop_timeout();
+
     return test.global_result;
 }

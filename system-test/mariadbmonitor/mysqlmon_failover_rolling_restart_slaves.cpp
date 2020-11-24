@@ -158,8 +158,7 @@ void run(TestConnections& test)
 {
     test.maxscales->wait_for_monitor();
 
-    int N = test.repl->N;
-    cout << "Nodes: " << N << endl;
+    const int N = 4;
 
     check_server_status(test, N);
 

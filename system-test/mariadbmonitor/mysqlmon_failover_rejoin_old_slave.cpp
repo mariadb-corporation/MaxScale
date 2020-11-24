@@ -105,8 +105,7 @@ void run(TestConnections& test)
 {
     test.maxscales->wait_for_monitor();
 
-    int N = test.repl->N;
-    cout << "Nodes: " << N << endl;
+    const int N = 4;
 
     expect(test, "server1", "Master", "Running");
     expect(test, "server2", "Slave", "Running");

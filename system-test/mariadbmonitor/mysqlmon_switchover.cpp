@@ -62,8 +62,7 @@ void run(TestConnections& test)
     auto& mxs = test.maxscale();
     mxs.wait_monitor_ticks();
 
-    int N = test.repl->N;
-    cout << "Nodes: " << N << endl;
+    const int N = 4;
 
     auto master = mxt::ServerInfo::MASTER | mxt::ServerInfo::RUNNING;
     auto slave = mxt::ServerInfo::SLAVE | mxt::ServerInfo::RUNNING;

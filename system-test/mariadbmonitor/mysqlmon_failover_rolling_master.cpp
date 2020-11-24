@@ -213,8 +213,7 @@ void run(XTestConnections& test)
 {
     test.maxscales->wait_for_monitor();
 
-    int N = test.repl->N;
-    cout << "Nodes: " << N << endl;
+    const int N = 4;
 
     cout << "\nConnecting to MaxScale." << endl;
     test.connect_maxscale();
