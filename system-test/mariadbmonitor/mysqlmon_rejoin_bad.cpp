@@ -60,7 +60,7 @@ int main(int argc, char** argv)
     const char READ_ONLY_OFF[] = "SET GLOBAL read_only=0;";
 
     const int FIRST_MOD_NODE = 2;   // Modify nodes 2 & 3
-    const int NODE_COUNT = test.repl->N;
+    const int NODE_COUNT = 4;
     MYSQL** nodes = test.repl->nodes;
     for (int i = FIRST_MOD_NODE; i < NODE_COUNT; i++)
     {

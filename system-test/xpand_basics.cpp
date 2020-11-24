@@ -154,19 +154,36 @@ void check_softfailing(const MaxRest& maxrest)
 {
     TestConnections& test = maxrest.test();
 
-    string id("@@Xpand-Monitor:node-2"); // Just an arbitrary dynamic node.
+    // We'll softfail the node with the largest nid. Any node would do,
+    // but for repeatability the same should be selected each time.
+    auto servers = maxrest.list_servers();
+    string id;
+    int max_nid = -1;
+
+    for (const auto& server : servers)
+    {
+        auto i = server.name.find_last_of("-");
+        auto s = server.name.substr(i + 1);
+        int nid = atoi(s.c_str());
+
+        if (nid > max_nid)
+        {
+            id = server.name;
+            max_nid = nid;
+        }
+    }
 
     MaxRest::Server before = maxrest.show_server(id);
     expect_server_to_be(maxrest, before, "Master, Running");
 
     cout << "Softfailing " << id << "." << endl;
-    maxrest.call_command("xpandmon", "softfail", monitor_name, { "@@Xpand-Monitor:node-2" });
+    maxrest.call_command("xpandmon", "softfail", monitor_name, { id });
 
     MaxRest::Server during = maxrest.show_server(id);
     expect_server_to_be(maxrest, during, "Drained");
 
     cout << "Unsoftfailing " << id << "." << endl;
-    maxrest.call_command("xpandrixmon", "unsoftfail", monitor_name, { "@@Xpand-Monitor:node-2" });
+    maxrest.call_command("xpandmon", "unsoftfail", monitor_name, { id });
 
     MaxRest::Server after = maxrest.show_server(id);
     expect_server_to_be(maxrest, after, "Master, Running");

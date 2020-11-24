@@ -210,6 +210,7 @@ int main(int argc, char** argv)
     int server2_ind = 1;
     int server1_id = test.repl->get_server_id(server1_ind);
 
+    const int N = 4;
     const char* server_names[] = {"server1", "server2", "server3", "server4"};
     auto server1_name = server_names[server1_ind];
     auto server2_name = server_names[server2_ind];
@@ -308,10 +309,10 @@ int main(int argc, char** argv)
     if (test.ok())
     {
            // Check that all other nodes are slaves.
-        for (int i = 1; i < test.repl->N; i++)
+        for (int i = 1; i < N; i++)
         {
             string server_name = server_names[i];
-            auto states = test.maxscales->get_server_status(server_name.c_str());
+            states = test.maxscales->get_server_status(server_name.c_str());
             test.expect(states.count("Slave") == 1, "%s is not a slave.", server_name.c_str());
         }
     }
