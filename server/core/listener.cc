@@ -76,7 +76,8 @@ protected:
 ListenerSpecification s_spec("listener", cfg::Specification::LISTENER);
 
 cfg::ParamString s_type(&s_spec, CN_TYPE, "Object type", "listener");
-cfg::ParamString s_protocol(&s_spec, CN_PROTOCOL, "Listener protocol to use", "mariadb");
+cfg::ParamModule s_protocol(&s_spec, CN_PROTOCOL, "Listener protocol to use",
+                            mxs::ModuleType::PROTOCOL, "mariadb");
 cfg::ParamString s_authenticator(&s_spec, CN_AUTHENTICATOR, "Listener authenticator", "");
 cfg::ParamString s_authenticator_options(&s_spec, CN_AUTHENTICATOR_OPTIONS, "Authenticator options", "");
 cfg::ParamService s_service(&s_spec, CN_SERVICE, "Service to which the listener connects to");
@@ -263,7 +264,16 @@ SListener ListenerManager::create(const std::string& name, Params params, Unknow
 
     if (s_spec.validate(params, &unknown))
     {
-        if (auto mod = get_module(s_protocol.get(params), mxs::ModuleType::PROTOCOL))
+        auto mod = s_protocol.get(params);
+
+        if (!mod)
+        {
+            mod = s_protocol.default_value();
+        }
+
+        mxb_assert(mod);
+
+        if (mod)
         {
             if (!mod->specification || mod->specification->validate(params))
             {
@@ -668,7 +678,8 @@ SERVICE* Listener::service() const
 
 const char* Listener::protocol() const
 {
-    return m_config.protocol.c_str();
+    mxb_assert(m_config.protocol);
+    return m_config.protocol->name;
 }
 
 const char* Listener::state() const
@@ -1045,57 +1056,54 @@ Listener::SData Listener::create_shared_data()
 {
     SData rval;
 
-    if (auto mod = get_module(m_config.protocol, mxs::ModuleType::PROTOCOL))
+    auto protocol_api = reinterpret_cast<MXS_PROTOCOL_API*>(m_config.protocol->module_object);
+    mxs::ConfigParameters params; // TODO: Make it possible to actually provide such in the config.
+    std::unique_ptr<mxs::ProtocolModule> protocol_module {protocol_api->create_protocol_module(params)};
+
+    if (protocol_module)
     {
-        auto protocol_api = reinterpret_cast<MXS_PROTOCOL_API*>(mod->module_object);
-        mxs::ConfigParameters params; // TODO: Make it possible to actually provide such in the config.
-        std::unique_ptr<mxs::ProtocolModule> protocol_module {protocol_api->create_protocol_module(params)};
+        // TODO: The old behavior where the global sql_mode was used if the listener one isn't configured
+        mxs::SSLContext ssl;
 
-        if (protocol_module)
+        if (ssl.configure(create_ssl_config()))
         {
-            // TODO: The old behavior where the global sql_mode was used if the listener one isn't configured
-            mxs::SSLContext ssl;
-
-            if (ssl.configure(create_ssl_config()))
+            ListenerSessionData::ConnectionInitSql init_sql;
+            if (read_connection_init_sql(m_config.connection_init_sql_file, &init_sql))
             {
-                ListenerSessionData::ConnectionInitSql init_sql;
-                if (read_connection_init_sql(m_config.connection_init_sql_file, &init_sql))
+                std::vector<mxs::SAuthenticatorModule> authenticators;
+
+                if (protocol_module->capabilities() & mxs::ProtocolModule::CAP_AUTH_MODULES)
                 {
-                    std::vector<mxs::SAuthenticatorModule> authenticators;
+                    // If the protocol uses separate authenticator modules, assume that at least
+                    // one must be created.
+                    authenticators = protocol_module->create_authenticators(m_params);
 
-                    if (protocol_module->capabilities() & mxs::ProtocolModule::CAP_AUTH_MODULES)
+                    if (authenticators.empty())
                     {
-                        // If the protocol uses separate authenticator modules, assume that at least
-                        // one must be created.
-                        authenticators = protocol_module->create_authenticators(m_params);
-
-                        if (authenticators.empty())
-                        {
-                            return {};
-                        }
+                        return {};
                     }
-
-                    if (protocol_module->capabilities() & mxs::ProtocolModule::CAP_AUTHDATA)
-                    {
-                        auto svc = static_cast<Service*>(m_config.service);
-
-                        if (!svc->check_update_user_account_manager(protocol_module.get(), m_name))
-                        {
-                            return {};
-                        }
-                    }
-
-                    rval = std::make_shared<ListenerSessionData>(
-                        move(ssl), m_config.sql_mode, m_config.service, move(protocol_module),
-                        m_name, move(authenticators), move(init_sql));
                 }
+
+                if (protocol_module->capabilities() & mxs::ProtocolModule::CAP_AUTHDATA)
+                {
+                    auto svc = static_cast<Service*>(m_config.service);
+
+                    if (!svc->check_update_user_account_manager(protocol_module.get(), m_name))
+                    {
+                        return {};
+                    }
+                }
+
+                rval = std::make_shared<ListenerSessionData>(
+                    move(ssl), m_config.sql_mode, m_config.service, move(protocol_module),
+                    m_name, move(authenticators), move(init_sql));
             }
         }
-        else
-        {
-            MXS_ERROR("Failed to initialize protocol module '%s' for listener '%s'.",
-                      m_config.protocol.c_str(), m_name.c_str());
-        }
+    }
+    else
+    {
+        MXS_ERROR("Failed to initialize protocol module '%s' for listener '%s'.",
+                  m_config.protocol->name, m_name.c_str());
     }
 
     return rval;

@@ -1217,7 +1217,7 @@ bool ParamModule::from_string(const std::string& value_as_string,
         {
             *pMessage = "'";
             *pMessage += value_as_string;
-            *pMessage += "' does not refer to a a module, or refers to module of the wrong type.";
+            *pMessage += "' does not refer to a module, or refers to module of the wrong type.";
         }
     }
 

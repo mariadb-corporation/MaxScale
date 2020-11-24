@@ -38,16 +38,16 @@ public:
     {
         Config(const std::string& name, Listener* listener);
 
-        std::string   type;
-        std::string   protocol;
-        std::string   authenticator;
-        std::string   authenticator_options;
-        std::string   address;
-        std::string   socket;
-        int64_t       port;
-        SERVICE*      service;
-        qc_sql_mode_t sql_mode;
-        std::string   connection_init_sql_file;
+        std::string       type;
+        const MXS_MODULE* protocol;
+        std::string       authenticator;
+        std::string       authenticator_options;
+        std::string       address;
+        std::string       socket;
+        int64_t           port;
+        SERVICE*          service;
+        qc_sql_mode_t     sql_mode;
+        std::string       connection_init_sql_file;
 
         // TLS configuration parameters
         bool        ssl;

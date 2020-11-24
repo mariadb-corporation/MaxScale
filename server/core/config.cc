@@ -1828,10 +1828,6 @@ const char* get_missing_module_parameter_name(const CONFIG_CONTEXT* obj)
     {
         return CN_ROUTER;
     }
-    else if (type == CN_LISTENER && !obj->m_parameters.contains(CN_PROTOCOL))
-    {
-        return CN_PROTOCOL;
-    }
     else if ((type == CN_MONITOR || type == CN_FILTER) && !obj->m_parameters.contains(CN_MODULE))
     {
         return CN_MODULE;
@@ -3621,24 +3617,6 @@ int create_new_monitor(CONFIG_CONTEXT* obj, std::set<std::string>& monitored_ser
  */
 int create_new_listener(CONFIG_CONTEXT* obj)
 {
-    auto protocol = obj->m_parameters.get_string(CN_PROTOCOL);
-    mxb_assert(!protocol.empty());
-
-    if (const MXS_MODULE* mod = get_module(protocol, mxs::ModuleType::PROTOCOL))
-    {
-        if (mod->specification && !mod->specification->validate(obj->m_parameters))
-        {
-            return 1;
-        }
-
-        config_add_defaults(&obj->m_parameters, mod->parameters);
-    }
-    else
-    {
-        MXS_ERROR("Unable to load protocol module '%s'.", protocol.c_str());
-        return 1;
-    }
-
     return Listener::create(obj->name(), obj->m_parameters) ? 0 : 1;
 }
 
