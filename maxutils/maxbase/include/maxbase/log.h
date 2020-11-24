@@ -88,6 +88,15 @@ typedef size_t (* mxb_log_context_provider_t)(char* buffer, size_t len);
 typedef void (* mxb_in_memory_log_t)(const char* buffer, size_t len);
 
 /**
+ * Typedef for conditional logging callback
+ *
+ * @param priority The syslog priority under which the message is logged.
+ *
+ * @return True if the message should be logged, false if it should be suppressed.
+ */
+typedef bool (* mxb_should_log_t)(int priority);
+
+/**
  * @brief Initialize the log
  *
  * This function must be called before any of the log function should be
@@ -108,7 +117,8 @@ bool mxb_log_init(const char* ident,
                   const char* filename,
                   mxb_log_target_t target,
                   mxb_log_context_provider_t context_provider,
-                  mxb_in_memory_log_t in_memory_log);
+                  mxb_in_memory_log_t in_memory_log,
+                  mxb_should_log_t should_log);
 
 /**
  * @brief Finalize the log
@@ -284,6 +294,18 @@ int mxb_log_message(int priority,
 int mxb_log_oom(const char* message);
 
 /**
+ * Check if a message at this priority should be logged in the current context
+ *
+ * This function takes the current context (i.e. the session) into consideration when
+ * inspecting whether the message should be logged.
+ *
+ * @param priority The log priority of the message
+ *
+ * @return True if the message should be logged
+ */
+bool mxb_log_should_log(int priority);
+
+/**
  * Log an error, warning, notice, info, or debug  message.
  *
  * @param priority One of the syslog constants (LOG_ERR, LOG_WARNING, ...)
@@ -296,7 +318,7 @@ int mxb_log_oom(const char* message);
  *            MXB_ERROR, MXB_WARNING, etc. macros instead.
  */
 #define MXB_LOG_MESSAGE(priority, format, ...) \
-    (mxb_log_is_priority_enabled(priority) || mxb_log_get_session_trace()  \
+    (mxb_log_should_log(priority) || mxb_log_get_session_trace()  \
      ? mxb_log_message(priority, MXB_MODULE_NAME, __FILE__, __LINE__, __func__, format, ##__VA_ARGS__)  \
      : 0)
 

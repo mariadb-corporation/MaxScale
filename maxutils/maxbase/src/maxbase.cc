@@ -93,14 +93,16 @@ MaxBase::MaxBase(const char* zIdent,
                  const char* zFilename,
                  mxb_log_target_t target,
                  mxb_log_context_provider_t context_provider,
-                 mxb_in_memory_log_t in_memory_log)
+                 mxb_in_memory_log_t in_memory_log,
+                 mxb_should_log_t should_log)
     : m_log_inited(false)
 {
     const char* zMessage = nullptr;
 
     if (maxbase::init())
     {
-        m_log_inited = mxb_log_init(zIdent, zLogdir, zFilename, target, context_provider, in_memory_log);
+        m_log_inited = mxb_log_init(zIdent, zLogdir, zFilename, target,
+                                    context_provider, in_memory_log, should_log);
 
         if (!m_log_inited)
         {

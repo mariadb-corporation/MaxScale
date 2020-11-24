@@ -399,6 +399,7 @@ struct this_unit
     std::unique_ptr<MessageRegistry> sMessage_registry;
     size_t                           (* context_provider)(char* buffer, size_t len);
     void                             (* in_memory_log)(const char* buffer, size_t len);
+    bool                             (* should_log)(int priority);
 } this_unit =
 {
     DEFAULT_LOG_AUGMENTATION,   // augmentation
@@ -460,7 +461,8 @@ bool mxb_log_init(const char* ident,
                   const char* filename,
                   mxb_log_target_t target,
                   mxb_log_context_provider_t context_provider,
-                  mxb_in_memory_log_t in_memory_log)
+                  mxb_in_memory_log_t in_memory_log,
+                  mxb_should_log_t should_log)
 {
     assert(!this_unit.sLogger && !this_unit.sMessage_registry);
 
@@ -523,6 +525,7 @@ bool mxb_log_init(const char* ident,
     {
         this_unit.context_provider = context_provider;
         this_unit.in_memory_log = in_memory_log;
+        this_unit.should_log = should_log;
 
         openlog(ident, LOG_PID | LOG_ODELAY, LOG_USER);
     }
@@ -634,6 +637,11 @@ void mxb_log_set_session_trace(bool enabled)
 bool mxb_log_get_session_trace()
 {
     return this_unit.session_trace;
+}
+
+bool mxb_log_should_log(int priority)
+{
+    return mxb_log_is_priority_enabled(priority) || (this_unit.should_log && this_unit.should_log(priority));
 }
 
 bool mxb_log_rotate()
@@ -946,9 +954,8 @@ int mxb_log_message(int priority,
                 {
                     err = 0;
                 }
-                else if (mxb_log_is_priority_enabled(level))
+                else if (mxb_log_should_log(level))
                 {
-
                     err = this_unit.sLogger->write(msg.c_str(), msg.length()) ? 0 : -1;
                 }
                 else

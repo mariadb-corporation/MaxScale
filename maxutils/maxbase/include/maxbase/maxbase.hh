@@ -79,7 +79,8 @@ public:
             const char* zFilename,
             mxb_log_target_t target,
             mxb_log_context_provider_t context_provider,
-            mxb_in_memory_log_t in_memory_log);
+            mxb_in_memory_log_t in_memory_log,
+            mxb_should_log_t should_log);
 
     /**
      * @brief Initializes MaxBase and the MaxBase log.
@@ -89,7 +90,7 @@ public:
      * @throws std::runtime_error if the initialization failed.
      */
     MaxBase(mxb_log_target_t target)
-        : MaxBase(nullptr, ".", nullptr, target, nullptr, nullptr)
+        : MaxBase(nullptr, ".", nullptr, target, nullptr, nullptr, nullptr)
     {
     }
 
