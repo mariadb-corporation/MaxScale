@@ -142,6 +142,7 @@ public:
 
     // Update the session from JSON
     bool update(json_t* json);
+    void update_log_level(json_t* param, const char* key, int level);
 
     /**
      * Link a session to a backend connection.

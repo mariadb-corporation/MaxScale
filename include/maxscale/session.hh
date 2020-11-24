@@ -224,12 +224,23 @@ public:
      */
     virtual void notify_userdata_change() = 0;
 
+    /**
+     * Check if log level has been explicitly enabled for this session
+     *
+     * @return True if the log is enabled
+     */
+    bool log_is_enabled(int level) const
+    {
+        return m_log_level & (1 << level);
+    }
+
 protected:
     State                    m_state;   /**< Current descriptor state */
     uint64_t                 m_id;      /**< Unique session identifier */
     maxscale::RoutingWorker* m_worker;
     std::string              m_user;    /**< The session user. */
     std::string              m_host;
+    int                      m_log_level = 0;
 
     MXS_SESSION(const std::string& host, SERVICE* service);
 

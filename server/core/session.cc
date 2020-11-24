@@ -409,6 +409,16 @@ json_t* Session::as_json_resource(const char* host, bool rdns) const
     json_t* log = log_as_json();
     json_object_set_new(attr, "log", log);
 
+    json_t* params = json_object();
+#ifdef SS_DEBUG
+    json_object_set_new(params, "log_debug", json_boolean(log_is_enabled(LOG_DEBUG)));
+#endif
+    json_object_set_new(params, "log_info", json_boolean(log_is_enabled(LOG_INFO)));
+    json_object_set_new(params, "log_notice", json_boolean(log_is_enabled(LOG_NOTICE)));
+    json_object_set_new(params, "log_warning", json_boolean(log_is_enabled(LOG_WARNING)));
+    json_object_set_new(params, "log_error", json_boolean(log_is_enabled(LOG_ERR)));
+    json_object_set_new(attr, CN_PARAMETERS, params);
+
     json_object_set_new(data, CN_ATTRIBUTES, attr);
     json_object_set_new(data, CN_LINKS, mxs_json_self_link(host, CN_SESSIONS, ss.str().c_str()));
 
@@ -1416,9 +1426,38 @@ void Session::set_ttl(int64_t ttl)
     m_ttl_start = mxs_clock();
 }
 
+void Session::update_log_level(json_t* param, const char* key, int level)
+{
+    if (json_t* log_level = json_object_get(param, key))
+    {
+        if (json_is_boolean(log_level))
+        {
+            if (json_boolean_value(log_level))
+            {
+                m_log_level |= (1 << level);
+            }
+            else
+            {
+                m_log_level &= ~(1 << level);
+            }
+        }
+    }
+}
+
 bool Session::update(json_t* json)
 {
     bool rval = true;
+
+    if (json_t* param = mxs_json_pointer(json, MXS_JSON_PTR_PARAMETERS))
+    {
+#ifdef SS_DEBUG
+        update_log_level(param, "log_debug", LOG_DEBUG);
+#endif
+        update_log_level(param, "log_info", LOG_INFO);
+        update_log_level(param, "log_notice", LOG_NOTICE);
+        update_log_level(param, "log_warning", LOG_WARNING);
+        update_log_level(param, "log_error", LOG_ERR);
+    }
 
     if (json_t* rel = mxs_json_pointer(json, "/data/relationships/filters/data"))
     {
