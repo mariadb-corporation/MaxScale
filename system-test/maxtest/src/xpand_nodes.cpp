@@ -142,7 +142,7 @@ int Xpand_nodes::start_replication()
     for (int i = 1; i < N; ++i)
     {
         std::string cluster_setup_sql = std::string("ALTER CLUSTER ADD '")
-            + std::string(IP_private[i])
+            + std::string(ip_private(i))
             + std::string("'");
 
         execute_query(nodes[0], "%s", cluster_setup_sql.c_str());

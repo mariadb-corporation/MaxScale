@@ -816,6 +816,9 @@ add_test_executable(pam_authentication.cpp pam_authentication pam_authentication
 # HEAVY to prevent runs on general test runs.
 add_test_executable(pam_authentication_2fa.cpp pam_authentication_2fa pam_authentication_2fa LABELS HEAVY REPL_BACKEND)
 
+# Test three jdbc-connectors.
+add_test_executable(jdbc_connectors.cc jdbc_connectors replication REPL_BACKEND)
+
 # MXS-2350: On-demand connection creation
 add_test_executable(mxs2350_lazy_connect.cpp mxs2350_lazy_connect mxs2350_lazy_connect LABELS REPL_BACKEND readwritesplit)
 
