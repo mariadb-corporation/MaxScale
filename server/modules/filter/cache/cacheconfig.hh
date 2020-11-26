@@ -79,7 +79,7 @@ public:
     }
 
 private:
-    bool post_configure() override;
+    bool post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params) override;
 
 private:
     static config::Specification s_specification;

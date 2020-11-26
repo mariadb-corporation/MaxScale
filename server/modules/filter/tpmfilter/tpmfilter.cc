@@ -111,7 +111,7 @@ public:
     std::string query_delimiter;
     std::string named_pipe;
 
-    bool post_configure() override;
+    bool post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params) override;
 
 private:
     TpmFilter* m_instance;
@@ -216,8 +216,10 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
     return &info;
 }
 
-bool Config::post_configure()
+bool Config::post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params)
 {
+    mxb_assert(nested_params.empty());
+
     // check if the file exists first.
     if (access(named_pipe.c_str(), F_OK) == 0)
     {

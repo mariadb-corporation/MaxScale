@@ -402,8 +402,10 @@ Server::Settings::Settings(const std::string& name)
 {
 }
 
-bool Server::Settings::post_configure()
+bool Server::Settings::post_configure(const std::map<string,mxs::ConfigParameters>& nested)
 {
+    mxb_assert(nested.empty());
+
     auto addr = !m_address.get().empty() ? m_address.get() : m_socket.get();
 
     careful_strcpy(address, MAX_ADDRESS_LEN, addr);

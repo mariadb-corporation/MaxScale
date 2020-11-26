@@ -52,7 +52,8 @@ public:
         ROUTER,
         GLOBAL,
         SERVER,
-        LISTENER
+        LISTENER,
+        PROTOCOL
     };
 
     using ParamsByName = std::map<std::string, Param*>;     // We want to have them ordered by name.
@@ -1617,15 +1618,16 @@ public:
 
 protected:
     /**
-     * Called when configuration has initially been configured, to allow a
-     * Configuration to check any interdependencies between values or to calculate
-     * derived ones.
+     * Called when configuration has initially been configured, to allow a Configuration to configure
+     * nested parameters, check any interdependencies between values or to calculate derived ones.
+     *
+     * @param nested_params  Parameters intended for nested parameters.
      *
      * @return True, if everything is ok.
      *
-     * @note The default implementation returns true.
+     * @note The default implementation returns true if @c nested_params is empty, false otherwise.
      */
-    virtual bool post_configure();
+    virtual bool post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params);
 
     /**
      * Add a native parameter value:

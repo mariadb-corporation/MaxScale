@@ -65,7 +65,8 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         nullptr,
         {
             {MXS_END_MODULE_PARAMS}
-        }
+        },
+        &ProtocolModule::specification
     };
 
     return &info;

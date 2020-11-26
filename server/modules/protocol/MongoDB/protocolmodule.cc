@@ -20,6 +20,37 @@
 
 using namespace std;
 
+mxs::config::Specification ProtocolModule::specification(
+    MXS_MODULE_NAME, mxs::config::Specification::PROTOCOL);
+
+namespace
+{
+namespace mongodbclient
+{
+mxs::config::ParamString user(
+    &ProtocolModule::specification,
+    "user",
+    "The user to use when connecting to the backend.");
+
+mxs::config::ParamString password(
+    &ProtocolModule::specification,
+    "password",
+    "The password to use when connecting to the backend.");
+}
+}
+
+ProtocolModule::Config::Config()
+    : mxs::config::Configuration(MXS_MODULE_NAME, &ProtocolModule::specification)
+{
+    add_native(&Config::user, &mongodbclient::user);
+    add_native(&Config::password, &mongodbclient::user);
+}
+
+ProtocolModule::ProtocolModule(Config&& config)
+    : m_config(std::move(config))
+{
+}
+
 //static
 ProtocolModule* ProtocolModule::create(const mxs::ConfigParameters& params)
 {
@@ -29,7 +60,12 @@ ProtocolModule* ProtocolModule::create(const mxs::ConfigParameters& params)
 
     if (params.empty())
     {
-        pThis = new ProtocolModule;
+        ProtocolModule::Config config;
+
+        if (config.configure(params))
+        {
+            pThis = new ProtocolModule(std::move(config));
+        }
     }
     else
     {

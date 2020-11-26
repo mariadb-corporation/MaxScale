@@ -19,6 +19,16 @@
 class ProtocolModule : public mxs::ProtocolModule
 {
 public:
+    class Config : public mxs::config::Configuration
+    {
+    public:
+        Config();
+        Config(Config&&) = default;
+
+        std::string user;
+        std::string password;
+    };
+
     using AuthenticatorList = std::vector<mxs::SAuthenticatorModule>;
 
     static ProtocolModule* create(const mxs::ConfigParameters& params);
@@ -38,4 +48,12 @@ public:
     std::unique_ptr<mxs::UserAccountManager> create_user_data_manager() override;
 
     AuthenticatorList create_authenticators(const mxs::ConfigParameters& params) override;
+
+    static mxs::config::Specification specification;
+
+private:
+    ProtocolModule(Config&& config);
+
+private:
+    Config m_config;
 };

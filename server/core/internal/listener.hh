@@ -63,12 +63,12 @@ public:
         mxb::ssl_version::Version ssl_version;
 
         bool configure(const mxs::ConfigParameters& params,
-                       mxs::ConfigParameters* pUnrecognized = nullptr) override;
+                       mxs::ConfigParameters* pUnrecognized = nullptr) override final;
 
-        bool configure(json_t* json, std::set<std::string>* pUnrecognized = nullptr) override;
+        bool configure(json_t* json, std::set<std::string>* pUnrecognized = nullptr) override final;
 
     protected:
-        bool post_configure() override;
+        bool post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params) override;
 
         Listener* m_listener;
     };
@@ -207,7 +207,7 @@ public:
      */
     std::ostream& persist(std::ostream& os) const;
 
-    bool post_configure();
+    bool post_configure(const mxs::ConfigParameters& protocol_params);
 
     /**
      * Create listener data object for test purposes. The parameters should still be valid listener
@@ -322,7 +322,7 @@ private:
     static bool read_connection_init_sql(const std::string& filepath,
                                          mxs::ListenerSessionData::ConnectionInitSql* output);
 
-    SData          create_shared_data();
+    SData          create_shared_data(const mxs::ConfigParameters& protocol_params);
     mxb::SSLConfig create_ssl_config();
     void           set_type();
 };

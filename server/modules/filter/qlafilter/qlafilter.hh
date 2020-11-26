@@ -132,7 +132,7 @@ public:
         uint32_t                options;/* Regular expression options */
 
     protected:
-        bool post_configure() final;
+        bool post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params) override final;
 
     private:
         QlaInstance* m_instance;

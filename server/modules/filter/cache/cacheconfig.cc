@@ -200,8 +200,10 @@ CacheConfig::~CacheConfig()
 {
 }
 
-bool CacheConfig::post_configure()
+bool CacheConfig::post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params)
 {
+    mxb_assert(nested_params.empty());
+
     bool configured = true;
 
     if ((this->debug < CACHE_DEBUG_MIN) || (this->debug > CACHE_DEBUG_MAX))

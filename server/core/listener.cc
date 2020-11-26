@@ -43,9 +43,10 @@
 #include "internal/config.hh"
 
 using std::chrono::seconds;
-using std::unique_ptr;
+using std::map;
 using std::move;
 using std::string;
+using std::unique_ptr;
 using ListenerSessionData = mxs::ListenerSessionData;
 using SListener = std::shared_ptr<Listener>;
 
@@ -264,35 +265,20 @@ SListener ListenerManager::create(const std::string& name, Params params, Unknow
 
     if (s_spec.validate(params, &unknown))
     {
-        auto mod = s_protocol.get(params);
+        listener.reset(new Listener(name));
 
-        if (!mod)
+        if (listener->m_config.configure(params))
         {
-            mod = s_protocol.default_value();
-        }
+            listener->set_type();
 
-        mxb_assert(mod);
-
-        if (mod)
-        {
-            if (!mod->specification || mod->specification->validate(params))
+            if (!listener_is_duplicate(listener))
             {
-                listener.reset(new Listener(name));
-
-                if (listener->m_config.configure(params))
-                {
-                    listener->set_type();
-
-                    if (!listener_is_duplicate(listener))
-                    {
-                        std::lock_guard<std::mutex> guard(m_lock);
-                        m_listeners.push_back(listener);
-                    }
-                    else
-                    {
-                        listener.reset();
-                    }
-                }
+                std::lock_guard<std::mutex> guard(m_lock);
+                m_listeners.push_back(listener);
+            }
+            else
+            {
+                listener.reset();
             }
         }
     }
@@ -393,8 +379,12 @@ Listener::Config::Config(const std::string& name, Listener* listener)
     add_native(&Listener::Config::connection_init_sql_file, &s_connection_init_sql_file);
 }
 
-bool Listener::Config::post_configure()
+bool Listener::Config::post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params)
 {
+    mxb_assert(nested_params.size() <=1);
+    mxb_assert(nested_params.size() == 0 ||
+               (nested_params.size() == 1 && nested_params.find(protocol->name) != nested_params.end()));
+
     if (port > 0 && !socket.empty())
     {
         MXS_ERROR("Creation of listener '%s' failed because both 'socket' and 'port' "
@@ -414,7 +404,14 @@ bool Listener::Config::post_configure()
         return false;
     }
 
-    return m_listener->post_configure();
+    mxs::ConfigParameters params;
+
+    if (nested_params.size() == 1)
+    {
+        params = nested_params.at(protocol->name);
+    }
+
+    return m_listener->post_configure(params);
 }
 
 bool Listener::Config::configure(const mxs::ConfigParameters& params,
@@ -1052,13 +1049,12 @@ void Listener::accept_connections()
     }
 }
 
-Listener::SData Listener::create_shared_data()
+Listener::SData Listener::create_shared_data(const mxs::ConfigParameters& protocol_params)
 {
     SData rval;
 
     auto protocol_api = reinterpret_cast<MXS_PROTOCOL_API*>(m_config.protocol->module_object);
-    mxs::ConfigParameters params; // TODO: Make it possible to actually provide such in the config.
-    std::unique_ptr<mxs::ProtocolModule> protocol_module {protocol_api->create_protocol_module(params)};
+    std::unique_ptr<mxs::ProtocolModule> protocol_module {protocol_api->create_protocol_module(protocol_params)};
 
     if (protocol_module)
     {
@@ -1127,11 +1123,11 @@ mxb::SSLConfig Listener::create_ssl_config()
     return cfg;
 }
 
-bool Listener::post_configure()
+bool Listener::post_configure(const mxs::ConfigParameters& protocol_params)
 {
     bool rval = false;
 
-    if (auto data = create_shared_data())
+    if (auto data = create_shared_data(protocol_params))
     {
         auto start_state = m_state;
 
@@ -1236,5 +1232,6 @@ Listener::create_test_data(const mxs::ConfigParameters& params)
 {
     SListener listener {new Listener("test_listener")};
     listener->m_config.configure(params);
-    return listener->create_shared_data();
+    mxs::ConfigParameters protocol_params;
+    return listener->create_shared_data(protocol_params);
 }

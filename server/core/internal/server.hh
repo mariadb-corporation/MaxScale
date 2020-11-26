@@ -388,7 +388,7 @@ private:
         mxs::config::String m_ssl_cipher;
 
     protected:
-        bool post_configure() override;
+        bool post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params) override final;
     };
 
     const std::string m_name;       /**< Server config name */

@@ -163,8 +163,10 @@ QlaInstance::Settings::Settings(const std::string& name, QlaInstance* instance)
     add_native(&Settings::log_file_types, &s_log_type);
 }
 
-bool QlaInstance::Settings::post_configure()
+bool QlaInstance::Settings::post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params)
 {
+    mxb_assert(nested_params.empty());
+
     write_session_log = (log_file_types & LOG_FILE_SESSION);
     write_unified_log = (log_file_types & LOG_FILE_UNIFIED);
     write_stdout_log = (log_file_types & LOG_FILE_STDOUT);

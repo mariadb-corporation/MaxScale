@@ -728,8 +728,10 @@ bool Config::configure(const mxs::ConfigParameters& params, mxs::ConfigParameter
     return configured;
 }
 
-bool Config::post_configure()
+bool Config::post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params)
 {
+    mxb_assert(nested_params.empty());
+
     bool rv = true;
 
     auto whw = this->writeq_high_water.get();

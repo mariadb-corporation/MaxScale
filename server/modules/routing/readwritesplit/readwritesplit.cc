@@ -205,8 +205,10 @@ RWSConfig::RWSConfig(const char* name)
     add_native(&RWSConfig::m_v, &Values::reuse_ps, &s_reuse_ps);
 }
 
-bool RWSConfig::post_configure()
+bool RWSConfig::post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params)
 {
+    mxb_assert(nested_params.empty());
+
     m_v.backend_select_fct = get_backend_select_function(m_v.slave_selection_criteria);
 
     if (m_v.causal_reads != CausalReads::NONE)

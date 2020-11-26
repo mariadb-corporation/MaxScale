@@ -56,6 +56,9 @@ bool is_core_param(Specification::Kind kind, const std::string& param)
     case Specification::SERVER:
         break;
 
+    case Specification::PROTOCOL:
+        break;
+
     default:
         mxb_assert(!true);
     }
@@ -140,6 +143,8 @@ bool Specification::validate(const mxs::ConfigParameters& params,
 {
     bool valid = true;
 
+    map<string, mxs::ConfigParameters> nested_parameters;
+    map<string, const Param*> parameters_with_params;
     set<string> provided;
 
     for (const auto& param : params)
@@ -147,43 +152,55 @@ bool Specification::validate(const mxs::ConfigParameters& params,
         const auto& name = param.first;
         const auto& value = param.second;
 
-        const Param* pParam = find_param(name.c_str());
+        auto i = name.find('.');
 
-        if (pParam)
+        if (i != string::npos)
         {
-            bool param_valid = true;
-            string message;
+            string head = name.substr(0, i);
+            string tail = name.substr(i + 1);
 
-            if (!pParam->validate(value.c_str(), &message))
-            {
-                param_valid = false;
-                valid = false;
-            }
+            nested_parameters[head].set(tail, value);
+        }
+        else
+        {
+            const Param* pParam = find_param(name.c_str());
 
-            if (!message.empty())
+            if (pParam)
             {
-                if (param_valid)
+                provided.insert(name);
+
+                bool param_valid = true;
+                string message;
+
+                if (pParam->validate(value.c_str(), &message))
                 {
-                    MXS_WARNING("%s: %s", name.c_str(), message.c_str());
+                    if (pParam->takes_parameters())
+                    {
+                        parameters_with_params[value] = pParam;
+                    }
                 }
                 else
                 {
-                    MXS_ERROR("%s: %s", name.c_str(), message.c_str());
+                    param_valid = false;
+                    valid = false;
+                }
+
+                if (!message.empty())
+                {
+                    MXB_LOG_MESSAGE(param_valid ? LOG_WARNING : LOG_ERR, "%s: %s", name.c_str(), message.c_str());
                 }
             }
-
-            provided.insert(name);
-        }
-        else if (!is_core_param(m_kind, name))
-        {
-            if (pUnrecognized)
+            else if (!is_core_param(m_kind, name))
             {
-                pUnrecognized->set(name, value);
-            }
-            else
-            {
-                MXS_ERROR("%s: The parameter '%s' is unrecognized.", m_module.c_str(), name.c_str());
-                valid = false;
+                if (pUnrecognized)
+                {
+                    pUnrecognized->set(name, value);
+                }
+                else
+                {
+                    MXS_ERROR("%s: The parameter '%s' is unrecognized.", m_module.c_str(), name.c_str());
+                    valid = false;
+                }
             }
         }
     }
@@ -192,7 +209,58 @@ bool Specification::validate(const mxs::ConfigParameters& params,
     {
         if (mandatory_params_defined(provided))
         {
-            valid = post_validate(params);
+            if (!nested_parameters.empty())
+            {
+                for (const auto& kv : nested_parameters)
+                {
+                    const auto& name = kv.first;
+
+                    auto it = parameters_with_params.find(name);
+
+                    if (it != parameters_with_params.end())
+                    {
+                        const Param* pParam = it->second;
+
+                        mxs::ConfigParameters unrecognized;
+                        bool param_valid = pParam->validate_parameters(name, kv.second, &unrecognized);
+
+                        if (param_valid && !unrecognized.empty())
+                        {
+                            for (const auto& kv : unrecognized)
+                            {
+                                if (pUnrecognized)
+                                {
+                                    // If reporting upwards, we use the qualified name.
+                                    string qname = name + "." + kv.first;
+                                    pUnrecognized->set(qname, kv.second);
+                                }
+                                else
+                                {
+                                    // Otherwise, we report in the context of the module.
+                                    MXS_ERROR("%s: The parameter '%s' is unrecognized.",
+                                              name.c_str(), kv.first.c_str());
+                                    param_valid = false;
+                                }
+                            }
+                        }
+
+                        if (!param_valid)
+                        {
+                            valid = false;
+                        }
+                    }
+                    else
+                    {
+                        MXS_ERROR("'%s' does not refer to a module.", name.c_str());
+                        valid = false;
+                    }
+                }
+            }
+
+            if (valid)
+            {
+                valid = post_validate(params);
+            }
         }
         else
         {
@@ -203,44 +271,65 @@ bool Specification::validate(const mxs::ConfigParameters& params,
     return valid;
 }
 
-bool Specification::validate(json_t* pJson, std::set<std::string>* pUnrecognized) const
+bool Specification::validate(json_t* pParams, std::set<std::string>* pUnrecognized) const
 {
     bool valid = true;
 
-    const char* zKey;
-    json_t* pValue;
+    map<string, json_t*> nested_parameters;
+    map<string, const Param*> parameters_with_params;
     set<string> provided;
 
-    json_object_foreach(pJson, zKey, pValue)
+    const char* zKey;
+    json_t* pValue;
+    json_object_foreach(pParams, zKey, pValue)
     {
-        if (const Param* pParam = find_param(zKey))
+        if (json_typeof(pValue) == JSON_OBJECT)
         {
-            string message;
-            bool param_valid = true;
-
-            if (!pParam->validate(pValue, &message))
-            {
-                param_valid = false;
-                valid = false;
-            }
-
-            if (!message.empty())
-            {
-                MXB_LOG_MESSAGE(param_valid ? LOG_WARNING : LOG_ERR, "%s: %s", zKey, message.c_str());
-            }
-
-            provided.insert(zKey);
+            nested_parameters[zKey] = pValue;
         }
-        else if (!is_core_param(m_kind, zKey))
+        else
         {
-            if (pUnrecognized)
+            if (const Param* pParam = find_param(zKey))
             {
-                pUnrecognized->insert(zKey);
+                provided.insert(zKey);
+
+                string message;
+                bool param_valid = true;
+
+                if (pParam->validate(pValue, &message))
+                {
+                    if (pParam->takes_parameters())
+                    {
+                        mxb_assert(json_typeof(pValue) == JSON_STRING);
+
+                        if (json_typeof(pValue) == JSON_STRING)
+                        {
+                            parameters_with_params[json_string_value(pValue)] = pParam;
+                        }
+                    }
+                }
+                else
+                {
+                    param_valid = false;
+                    valid = false;
+                }
+
+                if (!message.empty())
+                {
+                    MXB_LOG_MESSAGE(param_valid ? LOG_WARNING : LOG_ERR, "%s: %s", zKey, message.c_str());
+                }
             }
-            else
+            else if (!is_core_param(m_kind, zKey))
             {
-                MXS_ERROR("%s: The parameter '%s' is unrecognized.", m_module.c_str(), zKey);
-                valid = false;
+                if (pUnrecognized)
+                {
+                    pUnrecognized->insert(zKey);
+                }
+                else
+                {
+                    MXS_ERROR("%s: The parameter '%s' is unrecognized.", m_module.c_str(), zKey);
+                    valid = false;
+                }
             }
         }
     }
@@ -249,7 +338,58 @@ bool Specification::validate(json_t* pJson, std::set<std::string>* pUnrecognized
     {
         if (mandatory_params_defined(provided))
         {
-            valid = post_validate(pJson);
+            if (!nested_parameters.empty())
+            {
+                for (const auto& kv : nested_parameters)
+                {
+                    const auto& name = kv.first;
+
+                    auto it = parameters_with_params.find(name);
+
+                    if (it != parameters_with_params.end())
+                    {
+                        const Param* pParam = it->second;
+
+                        set<string> unrecognized;
+                        bool param_valid = pParam->validate_parameters(name, kv.second, &unrecognized);
+
+                        if (param_valid && !unrecognized.empty())
+                        {
+                            for (const auto& s : unrecognized)
+                            {
+                                if (pUnrecognized)
+                                {
+                                    // If reporting upwards, we use the qualified name.
+                                    string qname = name + "." + s;
+                                    pUnrecognized->insert(qname);
+                                }
+                                else
+                                {
+                                    // Otherwise, we report in the context of the module.
+                                    MXS_ERROR("%s: The parameter '%s' is unrecognized.",
+                                              name.c_str(), s.c_str());
+                                    param_valid = false;
+                                }
+                            }
+                        }
+
+                        if (!param_valid)
+                        {
+                            valid = false;
+                        }
+                    }
+                    else
+                    {
+                        MXS_ERROR("'%s' does not refer to a module.", name.c_str());
+                        valid = false;
+                    }
+                }
+            }
+
+            if (valid)
+            {
+                valid = post_validate(pParams);
+            }
         }
         else
         {
@@ -488,94 +628,170 @@ const config::Specification& Configuration::specification() const
 bool Configuration::configure(const mxs::ConfigParameters& params,
                               mxs::ConfigParameters* pUnrecognized)
 {
-    mxb_assert(m_pSpecification->validate(params));
+    mxs::ConfigParameters unrecognized;
+    mxb_assert(m_pSpecification->validate(params, &unrecognized));
     mxb_assert(m_pSpecification->size() >= size());
 
     bool configured = true;
+
+    map<string, mxs::ConfigParameters> nested_parameters;
 
     for (const auto& param : params)
     {
         const auto& name = param.first;
         const auto& value = param.second;
 
-        if (config::Type* pValue = find_value(name.c_str()))
+        auto i = name.find('.');
+
+        if (i != string::npos)
         {
-            string message;
-            if (!pValue->set_from_string(value, &message))
-            {
-                MXS_ERROR("%s: %s", m_pSpecification->module().c_str(), message.c_str());
-                configured = false;
-            }
+            string head = name.substr(0, i);
+            string tail = name.substr(i + 1);
+
+            nested_parameters[head].set(tail, value);
         }
-        else if (!is_core_param(m_pSpecification->kind(), name))
+        else
         {
-            if (pUnrecognized)
-            {
-                pUnrecognized->set(name, value);
-            }
-            else
-            {
-                MXS_ERROR("%s: The parameter '%s' is unrecognized.",
-                          m_pSpecification->module().c_str(), name.c_str());
-                configured = false;
-            }
-        }
-    }
-
-    if (configured)
-    {
-        configured = post_configure();
-    }
-
-    return configured;
-}
-
-bool Configuration::configure(json_t* json, std::set<std::string>* pUnrecognized)
-{
-    mxb_assert(m_pSpecification->validate(json));
-    mxb_assert(m_pSpecification->size() >= size());
-
-    bool configured = true;
-    const char* key;
-    json_t* value;
-
-    json_object_foreach(json, key, value)
-    {
-        if (auto pValue = find_value(key))
-        {
-            json_t* old_val = pValue->to_json();
-
-            if (!json_equal(old_val, value))
+            if (config::Type* pValue = find_value(name.c_str()))
             {
                 string message;
-
-                if (!pValue->set_from_json(value, &message))
+                if (!pValue->set_from_string(value, &message))
                 {
                     MXS_ERROR("%s: %s", m_pSpecification->module().c_str(), message.c_str());
                     configured = false;
                 }
             }
-
-            json_decref(old_val);
-        }
-        else if (!is_core_param(m_pSpecification->kind(), key))
-        {
-            if (pUnrecognized)
+            else if (!is_core_param(m_pSpecification->kind(), name))
             {
-                pUnrecognized->insert(key);
-            }
-            else
-            {
-                MXS_ERROR("%s: The parameter '%s' is unrecognized.",
-                          m_pSpecification->module().c_str(), key);
-                configured = false;
+                if (pUnrecognized)
+                {
+                    pUnrecognized->set(name, value);
+                }
+                else
+                {
+                    MXS_ERROR("%s: The parameter '%s' is unrecognized.",
+                              m_pSpecification->module().c_str(), name.c_str());
+                    configured = false;
+                }
             }
         }
     }
 
     if (configured)
     {
-        configured = post_configure();
+        configured = post_configure(nested_parameters);
+    }
+
+    return configured;
+}
+
+namespace
+{
+
+void insert_value(mxs::ConfigParameters& params, const char* zName, json_t* pValue)
+{
+    switch (json_typeof(pValue))
+    {
+    case JSON_STRING:
+        params.set(zName, json_string_value(pValue));
+        break;
+
+    case JSON_INTEGER:
+        params.set(zName, std::to_string(json_real_value(pValue)));
+        break;
+
+    case JSON_REAL:
+        params.set(zName, std::to_string(json_real_value(pValue)));
+        break;
+
+    case JSON_TRUE:
+        params.set(zName, "true");
+        break;
+
+    case JSON_FALSE:
+        params.set(zName, "false");
+        break;
+
+    case JSON_OBJECT:
+        MXS_WARNING("%s: Object value not supported, ignored.", zName);
+        break;
+
+    case JSON_ARRAY:
+        MXS_WARNING("%s: Array value not supported, ignored.", zName);
+        break;
+
+    case JSON_NULL:
+        MXS_WARNING("%s: NULL value not supported, ignored.", zName);
+        break;
+    }
+}
+
+}
+
+bool Configuration::configure(json_t* json, std::set<std::string>* pUnrecognized)
+{
+    set<string> unrecognized;
+    mxb_assert(m_pSpecification->validate(json, &unrecognized));
+    mxb_assert(m_pSpecification->size() >= size());
+
+    bool configured = true;
+
+    map<string, mxs::ConfigParameters> nested_parameters;
+
+    const char* key;
+    json_t* value;
+    json_object_foreach(json, key, value)
+    {
+        if (json_typeof(value) == JSON_OBJECT && find_value(key) == nullptr)
+        {
+            // If the value is an object and there is no parameter with the
+            // specified key, we assume it is the configuration of a nested object.
+            const char* zNested_key;
+            json_t* pNested_value;
+            json_object_foreach(value, zNested_key, pNested_value)
+            {
+                //TODO: We throw away information here, but no can do for the time being.
+                insert_value(nested_parameters[key], zNested_key, pNested_value);
+            }
+        }
+        else
+        {
+            if (config::Type* pValue = find_value(key))
+            {
+                json_t* old_val = pValue->to_json();
+
+                if (!json_equal(old_val, value))
+                {
+                    string message;
+
+                    if (!pValue->set_from_json(value, &message))
+                    {
+                        MXS_ERROR("%s: %s", m_pSpecification->module().c_str(), message.c_str());
+                        configured = false;
+                    }
+                }
+
+                json_decref(old_val);
+            }
+            else if (!is_core_param(m_pSpecification->kind(), key))
+            {
+                if (pUnrecognized)
+                {
+                    pUnrecognized->insert(key);
+                }
+                else
+                {
+                    MXS_ERROR("%s: The parameter '%s' is unrecognized.",
+                              m_pSpecification->module().c_str(), key);
+                    configured = false;
+                }
+            }
+        }
+    }
+
+    if (configured)
+    {
+        configured = post_configure(nested_parameters);
     }
 
     return configured;
@@ -637,9 +853,9 @@ void Configuration::remove(Type* pValue, const std::string& name)
     m_values.erase(it);
 }
 
-bool Configuration::post_configure()
+bool Configuration::post_configure(const std::map<string, mxs::ConfigParameters>& nested_params)
 {
-    return true;
+    return nested_params.empty();
 }
 
 size_t Configuration::size() const

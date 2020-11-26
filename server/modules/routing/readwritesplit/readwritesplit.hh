@@ -279,7 +279,7 @@ private:
     Values                    m_v;  // Master copy of the values
     mxs::WorkerGlobal<Values> m_values;
 
-    bool post_configure() override;
+    bool post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params) override;
 
     static BackendSelectFunction get_backend_select_function(select_criteria_t sc);
 };
