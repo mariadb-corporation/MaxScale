@@ -1716,24 +1716,24 @@ protected:
  * corresponding param type.
  */
 template<class ParamType>
-class ConcreteType : public Type
+class ConcreteTypeBase : public Type
 {
 public:
     using value_type = typename ParamType::value_type;
 
-    ConcreteType(const ConcreteType&) = delete;
-    ConcreteType& operator=(const ConcreteType& value) = delete;
+    ConcreteTypeBase(const ConcreteTypeBase&) = delete;
+    ConcreteTypeBase& operator=(const ConcreteTypeBase& value) = delete;
 
-    ConcreteType(ConcreteType&& rhs)
-        : Type(std::forward<ConcreteType &&>(rhs))
+    ConcreteTypeBase(ConcreteTypeBase&& rhs)
+        : Type(std::forward<ConcreteTypeBase &&>(rhs))
         , m_value(std::move(rhs.m_value))
         , m_on_set(std::move(rhs.m_on_set))
     {
     }
 
-    ConcreteType(Configuration* pConfiguration,
-                 const ParamType* pParam,
-                 std::function<void(value_type)> on_set = nullptr)
+    ConcreteTypeBase(Configuration* pConfiguration,
+                     const ParamType* pParam,
+                     std::function<void(value_type)> on_set = nullptr)
         : Type(pConfiguration, pParam)
         , m_value(pParam->default_value())
         , m_on_set(on_set)
@@ -1823,24 +1823,58 @@ protected:
         return m_value;
     }
 
-    virtual value_type atomic_get() const
-    {
-        std::lock_guard<std::mutex> guard(m_mutex);
-        return non_atomic_get();
-    }
-
-    virtual void atomic_set(const value_type& value)
-    {
-        std::lock_guard<std::mutex> guard(m_mutex);
-        non_atomic_set(value);
-    }
-
 protected:
     value_type                      m_value;
-    mutable std::mutex              m_mutex;
     std::function<void(value_type)> m_on_set;
+
+    virtual value_type atomic_get() const = 0;
+    virtual void       atomic_set(const value_type& value) = 0;
 };
 
+template<class ParamType, class EnableIf = void>
+class ConcreteType : public ConcreteTypeBase<ParamType>
+{
+public:
+    using ConcreteTypeBase<ParamType>::ConcreteTypeBase;
+    using typename ConcreteTypeBase<ParamType>::value_type;
+
+    value_type atomic_get() const override
+    {
+        std::lock_guard<std::mutex> guard(m_mutex);
+        return this->non_atomic_get();
+    }
+
+    void atomic_set(const value_type& value) override
+    {
+        std::lock_guard<std::mutex> guard(m_mutex);
+        this->non_atomic_set(value);
+    }
+private:
+    mutable std::mutex m_mutex;
+};
+
+template<class ParamType>
+class ConcreteType<ParamType,
+                   typename std::enable_if<
+                       std::is_enum<typename ParamType::value_type>::value
+                       || std::is_arithmetic<typename ParamType::value_type>::value
+                       >::type>
+    : public ConcreteTypeBase<ParamType>
+{
+public:
+    using ConcreteTypeBase<ParamType>::ConcreteTypeBase;
+    using typename ConcreteTypeBase<ParamType>::value_type;
+
+    value_type atomic_get() const override
+    {
+        return mxb::atomic::load(&this->m_value, mxb::atomic::RELAXED);
+    }
+
+    void atomic_set(const value_type& value) override
+    {
+        mxb::atomic::store(&this->m_value, value, mxb::atomic::RELAXED);
+    }
+};
 
 template<class ParamType>
 class Number : public ConcreteType<ParamType>
