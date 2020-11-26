@@ -1283,6 +1283,13 @@ void Session::dump_session_log()
 
 int32_t Session::routeQuery(GWBUF* buffer)
 {
+    if (m_rebuild_chain && is_idle())
+    {
+        m_filters = std::move(m_pending_filters);
+        m_rebuild_chain = false;
+        setup_routing_chain();
+    }
+
     auto rv = m_head->routeQuery(buffer);
 
     if (response.buffer)
@@ -1426,6 +1433,14 @@ void Session::set_ttl(int64_t ttl)
     m_ttl_start = mxs_clock();
 }
 
+bool Session::is_idle() const
+{
+    // TODO: This is a placeholder. The is_movable isn't query-aware and a separate is_idle method is needed.
+    return m_client_conn->is_movable()
+           && std::all_of(m_backends_conns.begin(), m_backends_conns.end(),
+                          std::mem_fn(&mxs::BackendConnection::is_movable));
+}
+
 void Session::update_log_level(json_t* param, const char* key, int level)
 {
     if (json_t* log_level = json_object_get(param, key))
@@ -1486,14 +1501,22 @@ bool Session::update(json_t* json)
             }
         }
 
-        m_filters = std::move(new_filters);
-        setup_routing_chain();
+        if (is_idle())
+        {
+            m_filters = std::move(new_filters);
+            setup_routing_chain();
+        }
+        else
+        {
+            m_pending_filters = std::move(new_filters);
+            m_rebuild_chain = true;
+        }
     }
 
     return rval;
 }
 
-bool Session::setup_routing_chain()
+void Session::setup_routing_chain()
 {
     mxs::Routable* chain_head = &m_routable;
 
@@ -1516,7 +1539,6 @@ bool Session::setup_routing_chain()
     }
 
     m_tail = chain_tail;
-    return true;
 }
 
 // static

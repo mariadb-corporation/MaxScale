@@ -145,6 +145,16 @@ public:
     void update_log_level(json_t* param, const char* key, int level);
 
     /**
+     * Test whether the session is idle
+     *
+     * The idleness of the session will be decided by the backend and client connections. For the MariaDB
+     * protocol, this means that there are no queries in progress.
+     *
+     * @return True if the session is idle
+     */
+    bool is_idle() const;
+
+    /**
      * Link a session to a backend connection.
      *
      * @param conn The backend connection to link
@@ -272,7 +282,7 @@ private:
     // Delivers a provided response to the upstream filter that should receive it
     void deliver_response();
 
-    bool setup_routing_chain();
+    void setup_routing_chain();
 
     class SessionRoutable : public mxs::Routable
     {
@@ -320,6 +330,9 @@ private:
     SessionRoutable m_routable;
     mxs::Routable*  m_head;
     mxs::Routable*  m_tail;
+
+    bool       m_rebuild_chain = false;
+    FilterList m_pending_filters;
 
     /*< Objects listening for userdata change events */
     std::set<MXS_SESSION::EventSubscriber*> m_event_subscribers;
