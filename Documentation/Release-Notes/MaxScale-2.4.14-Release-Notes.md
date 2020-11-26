@@ -8,6 +8,8 @@ previous release in the same series.
 For any problems you encounter, please consider submitting a bug
 report on [our Jira](https://jira.mariadb.org/projects/MXS).
 
+**NOTE** 2.4.14 is the last release that is made available for RHEL6, which reaches its EOL at the end of November.
+
 ## Bug fixes
 
 * [MXS-3297](https://jira.mariadb.org/browse/MXS-3297) Extended MariaDB capabilities are not read correctly
