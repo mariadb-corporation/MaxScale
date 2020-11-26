@@ -376,6 +376,40 @@ bool Param::has_default_value() const
     return is_optional();
 }
 
+bool Param::takes_parameters() const
+{
+    return false;
+}
+
+bool Param::validate_parameters(const std::string& value,
+                                const mxs::ConfigParameters& params,
+                                mxs::ConfigParameters* pUnrecognized) const
+{
+    if (pUnrecognized)
+    {
+        *pUnrecognized = params;
+    }
+
+    return pUnrecognized == nullptr;
+}
+
+bool Param::validate_parameters(const std::string& value,
+                                json_t* pParams,
+                                std::set<std::string>* pUnrecognized) const
+{
+    if (pUnrecognized)
+    {
+        const char* zKey;
+        json_t* pValue;
+        json_object_foreach(pParams, zKey, pValue)
+        {
+            pUnrecognized->insert(zKey);
+        }
+    }
+
+    return pUnrecognized == nullptr;
+}
+
 Param::Modifiable Param::modifiable() const
 {
     return m_modifiable;
@@ -1185,6 +1219,51 @@ ParamModule::value_type ParamModule::default_value() const
 std::string ParamModule::type() const
 {
     return "module";
+}
+
+bool ParamModule::takes_parameters() const
+{
+    return true;
+}
+
+bool ParamModule::validate_parameters(const std::string& value,
+                                      const mxs::ConfigParameters& params,
+                                      mxs::ConfigParameters* pUnrecognized) const
+{
+    const MXS_MODULE* pModule = get_module(value, m_module_type);
+    const mxs::config::Specification* pSpecification = pModule ? pModule->specification : nullptr;
+
+    bool valid;
+    if (pSpecification)
+    {
+        valid = pSpecification->validate(params, pUnrecognized);
+    }
+    else
+    {
+        valid = Param::validate_parameters(value, params, pUnrecognized);
+    }
+
+    return valid;
+}
+
+bool ParamModule::validate_parameters(const std::string& value,
+                                      json_t* pParams,
+                                      std::set<std::string>* pUnrecognized) const
+{
+    const MXS_MODULE* pModule = get_module(value, m_module_type);
+    const mxs::config::Specification* pSpecification = pModule ? pModule->specification : nullptr;
+
+    bool valid;
+    if (pSpecification)
+    {
+        valid = pSpecification->validate(pParams, pUnrecognized);
+    }
+    else
+    {
+        valid = Param::validate_parameters(value, pParams, pUnrecognized);
+    }
+
+    return valid;
 }
 
 std::string ParamModule::to_string(value_type value) const

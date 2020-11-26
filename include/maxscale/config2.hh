@@ -294,6 +294,34 @@ public:
     bool has_default_value() const;
 
     /**
+     * Specifies whether the value specified by this parameter takes parameters.
+     * Currently only ParamModule takes parameters.
+     *
+     * @return True, if the value takes parameters. The default implementation returns false.
+     */
+    virtual bool takes_parameters() const;
+
+    /**
+     * Validate parameters of a parameter. Only applicable to parameters that takes
+     * parameters and whose @c takes_parameters() returns true.
+     *
+     * @param value          The value identifying the parameter itself.
+     * @param [pP|p]arams    The (nested) parameters of the parameter identified by @c value.
+     * @param pUnrecognized  If provided, will on output contain the parameters that were not
+     *                       recognized.
+     *
+     * @return True, if the parameters could be validated, false otherwise. If @c pUnrecognized
+     *         is provided, then an unrecognized parameter will not cause the validation to fail.
+     */
+    virtual bool validate_parameters(const std::string& value,
+                                     const mxs::ConfigParameters& params,
+                                     mxs::ConfigParameters* pUnrecognized = nullptr) const;
+
+    virtual bool validate_parameters(const std::string& value,
+                                     json_t* pParams,
+                                     std::set<std::string>* pUnrecognized = nullptr) const;
+
+    /**
      * @return Modifiable::AT_RUNTIME or Modifiable::AT_STARTUP.
      */
     Modifiable modifiable() const;
@@ -1433,6 +1461,16 @@ public:
     value_type default_value() const override;
 
     std::string type() const override;
+
+    bool takes_parameters() const override;
+
+    bool validate_parameters(const std::string& value,
+                             const mxs::ConfigParameters& params,
+                             mxs::ConfigParameters* pUnrecognized = nullptr) const override;
+
+    bool validate_parameters(const std::string& value,
+                             json_t* pParams,
+                             std::set<std::string>* pUnrecognized = nullptr) const override;
 
     std::string to_string(value_type value) const;
     bool        from_string(const std::string& value, value_type* pValue,
