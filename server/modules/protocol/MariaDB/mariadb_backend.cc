@@ -1398,7 +1398,15 @@ bool MariaDBBackendConnection::can_close() const
 
 int64_t MariaDBBackendConnection::seconds_idle() const
 {
-    return MXS_CLOCK_TO_SEC(mxs_clock() - std::max(m_dcb->last_read(), m_dcb->last_write()));
+    int64_t idle = 0;
+
+    // Only treat the connection as idle if there's no buffered data
+    if (!m_dcb->writeq() && !m_dcb->readq())
+    {
+        idle = MXS_CLOCK_TO_SEC(mxs_clock() - std::max(m_dcb->last_read(), m_dcb->last_write()));
+    }
+
+    return idle;
 }
 
 json_t* MariaDBBackendConnection::diagnostics() const
