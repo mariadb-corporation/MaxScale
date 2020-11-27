@@ -534,8 +534,18 @@ int MariaDBBackendConnection::normal_read()
     int nbytes_read = 0;
     int return_code = 0;
 
-    /* read available backend data */
-    return_code = dcb->read(&read_buffer, 0);
+    if (m_ignore_replies)
+    {
+        // Read only one packet. This way any extra packets, which we aren't expecting, are handled normally.
+        mxs::Buffer buffer;
+        return_code = read_protocol_packet(m_dcb, &buffer);
+        read_buffer = buffer.release();
+    }
+    else
+    {
+        // Read all available data
+        return_code = dcb->read(&read_buffer, 0);
+    }
 
     if (return_code < 0)
     {
@@ -699,13 +709,6 @@ int MariaDBBackendConnection::normal_read()
         proto->m_ignore_replies--;
         mxb_assert(proto->m_ignore_replies >= 0);
         GWBUF* reply = modutil_get_next_MySQL_packet(&read_buffer);
-
-        while (read_buffer)
-        {
-            /** Skip to the last packet if we get more than one */
-            gwbuf_free(reply);
-            reply = modutil_get_next_MySQL_packet(&read_buffer);
-        }
 
         mxb_assert(reply);
         mxb_assert(!read_buffer);
