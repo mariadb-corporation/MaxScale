@@ -1876,41 +1876,15 @@ public:
     }
 };
 
-template<class ParamType>
-class Number : public ConcreteType<ParamType>
-{
-public:
-    using value_type = typename ParamType::value_type;
-
-    Number(Configuration* pConfiguration,
-           const ParamType* pParam,
-           std::function<void(value_type)> on_set = nullptr)
-        : ConcreteType<ParamType>(pConfiguration, pParam, on_set)
-    {
-    }
-
-protected:
-    value_type atomic_get() const override final
-    {
-        // this-> as otherwise m_value is not visible.
-        return mxb::atomic::load(&this->m_value, mxb::atomic::RELAXED);
-    }
-
-    void atomic_set(const value_type& value) override final
-    {
-        mxb::atomic::store(&this->m_value, value, mxb::atomic::RELAXED);
-    }
-};
-
 /**
  * Count
  */
-using Count = Number<ParamCount>;
+using Count = ConcreteType<ParamCount>;
 
 /**
  * Integer
  */
-using Integer = Number<ParamInteger>;
+using Integer = ConcreteType<ParamInteger>;
 
 /**
  * BitMask
