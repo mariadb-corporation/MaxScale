@@ -94,7 +94,7 @@ private:
     /**
      * Packets received from router while the connection was busy handshaking/authenticating.
      * Sent to server once connection is ready. */
-    mxs::Buffer m_delayed_packets;
+    std::vector<mxs::Buffer> m_delayed_packets;
 
     /**
      * Contains information about custom connection initialization queries.

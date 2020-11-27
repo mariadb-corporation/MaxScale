@@ -369,8 +369,8 @@ void MariaDBBackendConnection::ready_for_reading(DCB* event_dcb)
             break;
 
         case State::SEND_DELAYQ:
-            send_delayed_packets();
             m_state = State::ROUTING;
+            send_delayed_packets();
             break;
 
         case State::ROUTING:
@@ -988,7 +988,7 @@ int32_t MariaDBBackendConnection::write(GWBUF* queue)
                       m_dcb, m_dcb->fd(), to_string(m_state).c_str());
 
             /** Store data until authentication is complete */
-            m_delayed_packets.append(queue);
+            m_delayed_packets.emplace_back(queue);
             rc = 1;
         }
         break;
@@ -2456,15 +2456,20 @@ MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::authenticate
 
 bool MariaDBBackendConnection::send_delayed_packets()
 {
-    if (!m_delayed_packets.empty())
+    bool rval = true;
+
+    for (auto& b : m_delayed_packets)
     {
-        m_delayed_packets.make_contiguous();
-        /** Send the queued commands to the backend */
-        GWBUF* buffer = m_delayed_packets.release();
-        prepare_for_write(buffer);
-        backend_write_delayqueue(buffer);
+        if (!write(b.release()))
+        {
+            rval = false;
+            break;
+        }
     }
-    return false;
+
+    m_delayed_packets.clear();
+
+    return rval;
 }
 
 MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::send_connection_init_queries()
