@@ -9,6 +9,20 @@
 
 #include <maxtest/testconnections.hh>
 
+void run_test(TestConnections& test, MYSQL* conn)
+{
+    MYSQL_STMT* stmt = mysql_stmt_init(conn);
+    std::string query = "SELECT user FROM mysql.user";
+
+    for (int i = 0; i < 10 && test.ok(); i++)
+    {
+        test.expect(mariadb_stmt_execute_direct(stmt, query.c_str(), query.length()) == 0,
+                    "execute_direct should work: %s", mysql_stmt_error(stmt));
+    }
+
+    mysql_stmt_close(stmt);
+}
+
 int main(int argc, char** argv)
 {
     TestConnections test(argc, argv);
@@ -16,11 +30,10 @@ int main(int argc, char** argv)
     test.set_timeout(30);
     test.maxscales->connect();
 
-    MYSQL_STMT* stmt = mysql_stmt_init(test.maxscales->conn_rwsplit[0]);
-    std::string query = "SELECT user FROM mysql.user";
-    test.expect(mariadb_stmt_execute_direct(stmt, query.c_str(), query.length()) == 0,
-                "execute_direct should work: %s", mysql_stmt_error(stmt));
-    mysql_stmt_close(stmt);
+    test.tprintf("Testing readwritesplit");
+    run_test(test, test.maxscales->conn_rwsplit[0]);
+    test.tprintf("Testing readconnroute");
+    run_test(test, test.maxscales->conn_master[0]);
 
     return test.global_result;
 }
