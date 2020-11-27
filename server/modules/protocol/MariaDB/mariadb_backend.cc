@@ -289,7 +289,7 @@ void MariaDBBackendConnection::prepare_for_write(GWBUF* buffer)
 {
     if (!gwbuf_is_ignorable(buffer))
     {
-        track_query(buffer);
+        track_query(TrackedQuery(buffer));
     }
 
     if (gwbuf_should_collect_result(buffer))
@@ -1827,6 +1827,11 @@ GWBUF* MariaDBBackendConnection::process_packets(GWBUF** result)
         }
 
         it = end;
+
+        if (m_reply.state() == ReplyState::DONE)
+        {
+            break;
+        }
     }
 
     buffer.release();
@@ -1843,6 +1848,20 @@ void MariaDBBackendConnection::process_one_packet(Iter it, Iter end, uint32_t le
         break;
 
     case ReplyState::DONE:
+
+        while (!m_track_queue.empty())
+        {
+            track_query(m_track_queue.front());
+            m_track_queue.pop();
+
+            if (m_reply.state() != ReplyState::DONE)
+            {
+                // There's another reply waiting to be processed, start processing it.
+                process_one_packet(it, end, len);
+                return;
+            }
+        }
+
         if (cmd == MYSQL_REPLY_ERR)
         {
             update_error(++it, end);
@@ -2164,17 +2183,30 @@ void MariaDBBackendConnection::assign_session(MXS_SESSION* session, mxs::Compone
     m_authenticator = client_data->m_current_authenticator->create_backend_authenticator(m_auth_data);
 }
 
+MariaDBBackendConnection::TrackedQuery::TrackedQuery(GWBUF* buffer)
+    : payload_len(MYSQL_GET_PAYLOAD_LEN(GWBUF_DATA(buffer)))
+    , command(MYSQL_GET_COMMAND(GWBUF_DATA(buffer)))
+{
+    mxb_assert(gwbuf_is_contiguous(buffer));
+
+    if (command == MXS_COM_STMT_EXECUTE)
+    {
+        // Extract the flag byte after the statement ID
+        uint8_t flags = GWBUF_DATA(buffer)[MYSQL_PS_ID_OFFSET + MYSQL_PS_ID_SIZE];
+
+        // Any non-zero flag value means that we have an open cursor
+        opening_cursor = flags != 0;
+    }
+}
+
 /**
  * Track a client query
  *
  * Inspects the query and tracks the current command being executed. Also handles detection of
  * multi-packet requests and the special handling that various commands need.
  */
-void MariaDBBackendConnection::track_query(GWBUF* buffer)
+void MariaDBBackendConnection::track_query(const TrackedQuery& query)
 {
-    mxb_assert(gwbuf_is_contiguous(buffer));
-    uint8_t* data = GWBUF_DATA(buffer);
-
     if (m_changing_user)
     {
         // User reauthentication in progress, ignore the contents
@@ -2183,7 +2215,7 @@ void MariaDBBackendConnection::track_query(GWBUF* buffer)
 
     if (session_is_load_active(m_session))
     {
-        if (MYSQL_GET_PAYLOAD_LEN(data) == 0)
+        if (query.payload_len == 0)
         {
             MXS_INFO("Load data ended");
             session_set_load_active(m_session, false);
@@ -2192,8 +2224,14 @@ void MariaDBBackendConnection::track_query(GWBUF* buffer)
     }
     else if (!m_large_query)
     {
+        if (m_reply.state() != ReplyState::DONE)
+        {
+            m_track_queue.push(query);
+            return;
+        }
+
         m_reply.clear();
-        m_reply.set_command(MYSQL_GET_COMMAND(data));
+        m_reply.set_command(query.command);
 
         if (mxs_mysql_command_will_respond(m_reply.command()))
         {
@@ -2202,11 +2240,7 @@ void MariaDBBackendConnection::track_query(GWBUF* buffer)
 
         if (m_reply.command() == MXS_COM_STMT_EXECUTE)
         {
-            // Extract the flag byte after the statement ID
-            uint8_t flags = data[MYSQL_PS_ID_OFFSET + MYSQL_PS_ID_SIZE];
-
-            // Any non-zero flag value means that we have an open cursor
-            m_opening_cursor = flags != 0;
+            m_opening_cursor = query.opening_cursor;
         }
         else if (m_reply.command() == MXS_COM_STMT_FETCH)
         {
@@ -2219,7 +2253,7 @@ void MariaDBBackendConnection::track_query(GWBUF* buffer)
      * byte extraction for the next packet. This way current_command always
      * contains the latest command executed on this backend.
      */
-    m_large_query = MYSQL_GET_PAYLOAD_LEN(data) == MYSQL_PACKET_LENGTH_MAX;
+    m_large_query = query.payload_len == MYSQL_PACKET_LENGTH_MAX;
 }
 
 MariaDBBackendConnection::~MariaDBBackendConnection()
