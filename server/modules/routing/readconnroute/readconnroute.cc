@@ -438,6 +438,7 @@ int RCRSession::routeQuery(GWBUF* queue)
     }
 
     ++m_session_queries;
+    mxb::atomic::add(&m_backend->target()->stats().packets, 1, mxb::atomic::RELAXED);
 
     return m_backend->routeQuery(queue);
 }
