@@ -1452,7 +1452,8 @@ int Mariadb_nodes::prepare_server(int i)
             ssh_node(i, "mysql_install_db; sudo chown -R mysql:mysql /var/lib/mysql", true);
         }
     }
-    ssh_node(i, "service mysql restart", true);
+    stop_node(i);
+    start_node(i, "");
     free(version);
     return ec;
 }
