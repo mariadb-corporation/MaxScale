@@ -23,6 +23,7 @@ public:
 
     std::string user;
     std::string password;
+    bool        continue_on_unknown { false };
 
     static mxs::config::Specification& specification();
 };

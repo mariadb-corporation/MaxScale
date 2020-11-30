@@ -31,15 +31,8 @@ struct ThisUnit
         { mxsmongo::keys::FIND,      mxsmongo::Command::FIND },
         { mxsmongo::keys::ISMASTER,  mxsmongo::Command::ISMASTER }
     };
-
-    bool continue_on_unknown = getenv("MONGODBCLIENT_CONTINUE_ON_UNKNOWN") != nullptr;
 } this_unit;
 
-}
-
-bool mxsmongo::continue_on_unknown()
-{
-    return this_unit.continue_on_unknown;
 }
 
 const char* mxsmongo::opcode_to_string(int code)
@@ -736,8 +729,9 @@ std::string mxsmongo::skip_and_limit_to_limit(const bsoncxx::document::element& 
     return rv;
 }
 
-mxsmongo::Mongo::Mongo(mxs::Component* pDownstream)
+mxsmongo::Mongo::Mongo(mxs::Component* pDownstream, const Config* pConfig)
     : m_context(pDownstream)
+    , m_config(*pConfig)
 {
 }
 
@@ -836,7 +830,7 @@ GWBUF* mxsmongo::Mongo::handle_query(GWBUF* pRequest, const mxsmongo::Query& req
 {
     MXS_NOTICE("\n%s\n", req.to_string().c_str());
 
-    auto sDatabase = Database::create(req.collection(), &m_context);
+    auto sDatabase = Database::create(req.collection(), &m_context, &m_config);
 
     GWBUF* pResponse = sDatabase->handle_query(pRequest, req);
 
@@ -868,7 +862,7 @@ GWBUF* mxsmongo::Mongo::handle_msg(GWBUF* pRequest, const mxsmongo::Msg& req)
                 auto utf8 = element.get_utf8();
 
                 string name(utf8.value.data(), utf8.value.size());
-                auto sDatabase = Database::create(name, &m_context);
+                auto sDatabase = Database::create(name, &m_context, &m_config);
 
                 pResponse = sDatabase->handle_command(pRequest, req, doc);
 

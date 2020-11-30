@@ -29,7 +29,7 @@ ClientConnection::ClientConnection(const Config* pConfig, MXS_SESSION* pSession,
     : m_config(*pConfig)
     , m_session(*pSession)
     , m_session_data(*static_cast<MYSQL_session*>(pSession->protocol_data()))
-    , m_mongo(pDownstream)
+    , m_mongo(pDownstream, pConfig)
 {
     TRACE();
 }

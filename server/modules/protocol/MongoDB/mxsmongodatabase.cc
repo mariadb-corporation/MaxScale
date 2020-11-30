@@ -18,6 +18,7 @@
 #include <maxscale/mysql_utils.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include "../../filter/masking/mysql.hh"
+#include "config.hh"
 
 using namespace std;
 
@@ -476,7 +477,7 @@ public:
 
         // Inconvenient during development if every single unknown command leads
         // to an abort. Now optionally an empty document may be returned instead.
-        mxb_assert(mxsmongo::continue_on_unknown());
+        mxb_assert(m_database.config().continue_on_unknown);
 
         return create_empty_response();
     }
@@ -511,9 +512,12 @@ struct ThisUnit
 
 }
 
-mxsmongo::Database::Database(const std::string& name, Mongo::Context* pContext)
+mxsmongo::Database::Database(const std::string& name,
+                             Mongo::Context* pContext,
+                             const Config* pConfig)
     : m_name(name)
     , m_context(*pContext)
+    , m_config(*pConfig)
 {
 }
 
@@ -523,9 +527,11 @@ mxsmongo::Database::~Database()
 }
 
 //static
-unique_ptr<mxsmongo::Database> mxsmongo::Database::create(const std::string& name, Mongo::Context* pContext)
+unique_ptr<mxsmongo::Database> mxsmongo::Database::create(const std::string& name,
+                                                          Mongo::Context* pContext,
+                                                          const Config* pConfig)
 {
-    return unique_ptr<Database>(new Database(name, pContext));
+    return unique_ptr<Database>(new Database(name, pContext, pConfig));
 }
 
 GWBUF* mxsmongo::Database::handle_query(GWBUF* pRequest, const mxsmongo::Query& req)

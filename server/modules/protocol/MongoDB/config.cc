@@ -29,6 +29,14 @@ mxs::config::ParamString password(
     &specification,
     "password",
     "The password to use when connecting to the backend.");
+
+mxs::config::ParamBool continue_on_unknown(
+    &specification,
+    "continue_on_unknown",
+    "Whether an empty document should unconditionally be returned in case an unknown command "
+    "is encountered. Default is false, which will cause an assertion violation in debug mode.",
+    false);
+
 }
 }
 
@@ -37,6 +45,7 @@ Config::Config()
 {
     add_native(&Config::user, &mongodbclient::user);
     add_native(&Config::password, &mongodbclient::password);
+    add_native(&Config::continue_on_unknown, &mongodbclient::continue_on_unknown);
 }
 
 //static

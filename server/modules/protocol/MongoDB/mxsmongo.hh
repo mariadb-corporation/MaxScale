@@ -40,13 +40,10 @@ class DCB;
 const int MXSMONGO_HEADER_LEN       = sizeof(mongoc_rpc_header_t);
 const int MXSMONGO_QUERY_HEADER_LEN = sizeof(mongoc_rpc_query_t);
 
+class Config;
+
 namespace mxsmongo
 {
-
-/**
- * Should the execution continue even if an unknown command is encountered.
- */
-bool continue_on_unknown();
 
 bsoncxx::document::value& topology_version();
 
@@ -519,7 +516,7 @@ public:
         PENDING // A command is being executed.
     };
 
-    Mongo(mxs::Component* pDownstream);
+    Mongo(mxs::Component* pDownstream, const Config* pConfig);
     ~Mongo();
 
     Mongo(const Mongo&) = delete;
@@ -528,6 +525,11 @@ public:
     Context& context()
     {
         return m_context;
+    }
+
+    const Config& config() const
+    {
+        return m_config;
     }
 
     GWBUF* handle_request(GWBUF* pRequest);
@@ -542,6 +544,7 @@ private:
 
     State              m_state { READY };
     Context            m_context;
+    const Config&      m_config;
     std::deque<GWBUF*> m_requests;
     SDatabase          m_sDatabase;
 };

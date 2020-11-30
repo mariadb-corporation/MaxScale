@@ -18,6 +18,8 @@
 #include <maxscale/target.hh>
 #include "mxsmongo.hh"
 
+class Config;
+
 namespace mxsmongo
 {
 
@@ -54,14 +56,25 @@ public:
     }
 
     /**
+     * @return The config.
+     */
+    const Config& config() const
+    {
+        return m_config;
+    }
+
+    /**
      * Create a new instance.
      *
      * @param name      The Mongo database in question.
      * @param pContext  The context to be used, a reference will be stored.
+     * @param pConfig   The configuration.
      *
      * @return Unique pointer to the instance.
      */
-    static std::unique_ptr<Database> create(const std::string& name, Mongo::Context* pContext);
+    static std::unique_ptr<Database> create(const std::string& name,
+                                            Mongo::Context* pContext,
+                                            const Config* pConfig);
 
     /**
      * Handle a Mongo query.
@@ -104,7 +117,9 @@ public:
     GWBUF* translate(GWBUF& mariadb_response);
 
 private:
-    Database(const std::string& name, Mongo::Context* pContext);
+    Database(const std::string& name,
+             Mongo::Context* pContext,
+             const Config* pConfig);
 
     bool is_ready() const
     {
@@ -136,6 +151,7 @@ private:
     State             m_state { READY };
     const std::string m_name;
     Mongo::Context&   m_context;
+    const Config&     m_config;
     SCommand          m_sCommand;
 };
 }
