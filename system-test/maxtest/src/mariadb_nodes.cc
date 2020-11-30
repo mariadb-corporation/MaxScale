@@ -1300,7 +1300,7 @@ int Mariadb_nodes::configure_ssl(bool require)
                 password.c_str(),
                 socket_cmd[0].c_str());
         printf("cmd: %s\n", str);
-        ssh_node(0, str, false);
+        ssh_node(0, str, true);
 
         auto conn = get_connection(0);
         conn.ssl(true);
