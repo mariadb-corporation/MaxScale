@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2024-10-14
+ * Change Date: 2024-11-26
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -14,6 +14,8 @@
 
 #include <maxscale/ccdefs.hh>
 #include <maxscale/protocol/mariadb/protocol_classes.hh>
+
+#include <queue>
 
 class MariaDBBackendConnection : public mxs::BackendConnection
 {
@@ -94,7 +96,7 @@ private:
     /**
      * Packets received from router while the connection was busy handshaking/authenticating.
      * Sent to server once connection is ready. */
-    mxs::Buffer m_delayed_packets;
+    std::vector<mxs::Buffer> m_delayed_packets;
 
     /**
      * Contains information about custom connection initialization queries.
@@ -155,8 +157,19 @@ private:
     void     process_ok_packet(Iter it, Iter end);
     void     update_error(mxs::Buffer::iterator it, mxs::Buffer::iterator end);
     bool     consume_fetched_rows(GWBUF* buffer);
-    void     track_query(GWBUF* buffer);
     void     set_reply_state(mxs::ReplyState state);
+
+    // Contains the necessary information required to track queries
+    struct TrackedQuery
+    {
+        explicit TrackedQuery(GWBUF* buffer);
+
+        uint32_t payload_len = 0;
+        uint8_t  command = 0;
+        bool     opening_cursor = false;
+    };
+
+    void track_query(const TrackedQuery& query);
 
     /**
      * Set associated client protocol session and upstream. Should be called after creation or when swapping
@@ -183,6 +196,8 @@ private:
     bool        m_large_query = false;
     bool        m_changing_user {false};
     mxs::Reply  m_reply;
+
+    std::queue<TrackedQuery> m_track_queue;
 
     mxs::Component* m_upstream {nullptr};       /**< Upstream component, typically a router */
     MXS_SESSION*    m_session {nullptr};        /**< Generic session */
