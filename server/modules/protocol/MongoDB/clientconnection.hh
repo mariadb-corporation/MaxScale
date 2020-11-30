@@ -70,7 +70,7 @@ private:
         m_state = READY;
     }
 
-    void setup_session();
+    bool setup_session();
 
     GWBUF* handle_one_packet(GWBUF* pPacket);
 

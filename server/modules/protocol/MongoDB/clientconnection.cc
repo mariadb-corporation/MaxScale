@@ -204,8 +204,10 @@ bool ClientConnection::is_movable() const
     return true; // Ok?
 }
 
-void ClientConnection::setup_session()
+bool ClientConnection::setup_session()
 {
+    bool rv = false;
+
     mxb_assert(!is_ready());
 
     // TODO: Hardwired data, currently simply taken from a regular connection attempt.
@@ -237,13 +239,22 @@ void ClientConnection::setup_session()
     m_session_data.client_info.m_charset = 33;
     m_session_data.connect_attrs = connect_attrs;
 
-    session_start(&m_session);
+    if (session_start(&m_session))
+    {
+        set_ready();
+        rv = true;
+    }
+    else
+    {
+        MXS_ERROR("Could not start session, closing client connection.");
+    }
 
-    set_ready();
+    return rv;
 }
 
 GWBUF* ClientConnection::handle_one_packet(GWBUF* pPacket)
 {
+    bool ready = true;
     GWBUF* pResponse = nullptr;
 
     if (!is_ready())
@@ -251,13 +262,22 @@ GWBUF* ClientConnection::handle_one_packet(GWBUF* pPacket)
         // TODO: We immediately setup the session. When proper authentication is used,
         // TODO: the 'isMaster' query can be done without being authenticated and the
         // TODO: session should be setup only once we have authenticated the user.
-        setup_session();
+        ready = setup_session();
     }
 
-    mxb_assert(gwbuf_is_contiguous(pPacket));
-    mxb_assert(gwbuf_length(pPacket) >= MXSMONGO_HEADER_LEN);
+    if (ready)
+    {
+        mxb_assert(gwbuf_is_contiguous(pPacket));
+        mxb_assert(gwbuf_length(pPacket) >= MXSMONGO_HEADER_LEN);
 
-    return m_mongo.handle_request(pPacket);
+        pResponse = m_mongo.handle_request(pPacket);
+    }
+    else
+    {
+        m_session.kill();
+    }
+
+    return pResponse;
 }
 
 int32_t ClientConnection::clientReply(GWBUF* buffer, mxs::ReplyRoute& down, const mxs::Reply& reply)
