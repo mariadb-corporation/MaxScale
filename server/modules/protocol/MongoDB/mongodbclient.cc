@@ -15,6 +15,7 @@
 #include <bsoncxx/builder/stream/document.hpp>
 #include "mxsmongo.hh"
 #include "protocolmodule.hh"
+#include "config.hh"
 
 namespace
 {
@@ -66,7 +67,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         {
             {MXS_END_MODULE_PARAMS}
         },
-        &ProtocolModule::specification
+        &Config::specification()
     };
 
     return &info;

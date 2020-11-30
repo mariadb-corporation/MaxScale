@@ -16,6 +16,7 @@
 #include <maxscale/protocol2.hh>
 #include "mxsmongo.hh"
 
+class Config;
 class MYSQL_session;
 
 class ClientConnection : public mxs::ClientConnection
@@ -27,7 +28,7 @@ public:
         READY
     };
 
-    ClientConnection(MXS_SESSION* pSession, mxs::Component* pComponent);
+    ClientConnection(const Config* pConfig, MXS_SESSION* pSession, mxs::Component* pComponent);
     ~ClientConnection();
 
     bool init_connection() override;
@@ -75,6 +76,7 @@ private:
 
 private:
     State           m_state { CONNECTED };
+    const Config&   m_config;
     MXS_SESSION&    m_session;
     MYSQL_session&  m_session_data;
     DCB*            m_pDcb = nullptr;

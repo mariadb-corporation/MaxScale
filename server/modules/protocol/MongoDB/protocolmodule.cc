@@ -20,32 +20,6 @@
 
 using namespace std;
 
-mxs::config::Specification ProtocolModule::specification(
-    MXS_MODULE_NAME, mxs::config::Specification::PROTOCOL);
-
-namespace
-{
-namespace mongodbclient
-{
-mxs::config::ParamString user(
-    &ProtocolModule::specification,
-    "user",
-    "The user to use when connecting to the backend.");
-
-mxs::config::ParamString password(
-    &ProtocolModule::specification,
-    "password",
-    "The password to use when connecting to the backend.");
-}
-}
-
-ProtocolModule::Config::Config()
-    : mxs::config::Configuration(MXS_MODULE_NAME, &ProtocolModule::specification)
-{
-    add_native(&Config::user, &mongodbclient::user);
-    add_native(&Config::password, &mongodbclient::user);
-}
-
 ProtocolModule::ProtocolModule(Config&& config)
     : m_config(std::move(config))
 {
@@ -58,18 +32,11 @@ ProtocolModule* ProtocolModule::create(const mxs::ConfigParameters& params)
 
     ProtocolModule* pThis = nullptr;
 
-    if (params.empty())
-    {
-        ProtocolModule::Config config;
+    Config config;
 
-        if (config.configure(params))
-        {
-            pThis = new ProtocolModule(std::move(config));
-        }
-    }
-    else
+    if (config.configure(params))
     {
-        MXS_ERROR("MongoDB protocol does not support any parameters.");
+        pThis = new ProtocolModule(std::move(config));
     }
 
     return pThis;
@@ -83,7 +50,7 @@ ProtocolModule::create_client_protocol(MXS_SESSION* pSession, mxs::Component* pC
     unique_ptr<MYSQL_session> sSession_data(new MYSQL_session());
     pSession->set_protocol_data(std::move(sSession_data));
 
-    return unique_ptr<mxs::ClientConnection>(new ClientConnection(pSession, pComponent));
+    return unique_ptr<mxs::ClientConnection>(new ClientConnection(&m_config, pSession, pComponent));
 }
 
 unique_ptr<mxs::BackendConnection>

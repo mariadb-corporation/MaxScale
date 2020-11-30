@@ -25,8 +25,9 @@
 
 using namespace std;
 
-ClientConnection::ClientConnection(MXS_SESSION* pSession, mxs::Component* pDownstream)
-    : m_session(*pSession)
+ClientConnection::ClientConnection(const Config* pConfig, MXS_SESSION* pSession, mxs::Component* pDownstream)
+    : m_config(*pConfig)
+    , m_session(*pSession)
     , m_session_data(*static_cast<MYSQL_session*>(pSession->protocol_data()))
     , m_mongo(pDownstream)
 {
