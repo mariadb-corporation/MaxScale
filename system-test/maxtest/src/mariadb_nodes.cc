@@ -1301,6 +1301,17 @@ int Mariadb_nodes::configure_ssl(bool require)
                 socket_cmd[0].c_str());
         printf("cmd: %s\n", str);
         ssh_node(0, str, false);
+
+        auto conn = get_connection(0);
+        conn.ssl(true);
+        conn.connect();
+
+        if (conn.field("select variable_value from information_schema.session_status "
+                       "where variable_name like 'ssl_version'").empty())
+        {
+            printf("Failed to establish SSL connection to database");
+            local_result++;
+        }
     }
 
     return local_result;
