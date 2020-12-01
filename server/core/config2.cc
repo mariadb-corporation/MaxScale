@@ -283,8 +283,10 @@ bool Specification::validate(json_t* pParams, std::set<std::string>* pUnrecogniz
     json_t* pValue;
     json_object_foreach(pParams, zKey, pValue)
     {
-        if (json_typeof(pValue) == JSON_OBJECT)
+        if (json_typeof(pValue) == JSON_OBJECT && find_param(zKey) == nullptr)
         {
+            // If the value is an object and there is no parameter with the
+            // specified key, we assume it is the configuration of a nested object.
             nested_parameters[zKey] = pValue;
         }
         else
