@@ -914,6 +914,9 @@ add_test_executable(mxs3220_reconnect_crash.cc mxs3220_reconnect_crash mxs3220_r
 # MXS-3184: FOUND_ROWS with prepared statements
 add_test_executable(mxs3184_ps_found_rows.cc mxs3184_ps_found_rows replication LABELS REPL_BACKEND readwritesplit)
 
+# MXS-3108: Alter session test
+add_test_executable(mxs3108_alter_session.cc mxs3108_alter_session mxs3108_alter_session LABELS REPL_BACKEND)
+
 ############################################
 # END: Normal tests                        #
 ############################################

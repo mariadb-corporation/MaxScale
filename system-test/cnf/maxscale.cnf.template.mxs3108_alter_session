@@ -1,0 +1,31 @@
+[maxscale]
+threads=###threads###
+
+###server###
+
+[MySQL-Monitor]
+type=monitor
+module=mysqlmon
+servers=###server_line###
+user=maxskysql
+password=skysql
+monitor_interval=1000
+
+[RW-Split-Router]
+type=service
+router=readwritesplit
+servers=###server_line###
+user=maxskysql
+password=skysql
+
+[RW-Split-Listener]
+type=listener
+service=RW-Split-Router
+protocol=MySQLClient
+port=4006
+
+[Regex]
+type=filter
+module=regexfilter
+match=SELECT 1
+replace=SELECT 2
