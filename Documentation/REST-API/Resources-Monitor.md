@@ -24,10 +24,10 @@ all whitespace replaced with hyphens. The monitor names are case-sensitive.
         "self": "http://localhost:8989/v1/monitors/MariaDB-Monitor"
     },
     "data": {
-        "id": "MariaDB-Monitor",
+        "id": "MariaDB-Monitor", // Name of the monitor
         "type": "monitors",
         "relationships": {
-            "servers": {
+            "servers": { // Servers that are monitored by this monitor
                 "links": {
                     "self": "http://localhost:8989/v1/servers/"
                 },
@@ -44,9 +44,9 @@ all whitespace replaced with hyphens. The monitor names are case-sensitive.
             }
         },
         "attributes": {
-            "module": "mariadbmon",
-            "state": "Running",
-            "parameters": {
+            "module": "mariadbmon", // The module that the monitor uses
+            "state": "Running", // Monitor state
+            "parameters": { // Monitor parameters
                 "user": "maxuser",
                 "password": "maxpwd",
                 "monitor_interval": 10000,
@@ -64,7 +64,7 @@ all whitespace replaced with hyphens. The monitor names are case-sensitive.
                 "allow_cluster_recovery": true,
                 "journal_max_age": 28800
             },
-            "monitor_diagnostics": {
+            "monitor_diagnostics": { // Diagnostic output from the monitor, depends on the monitor module
                 "monitor_id": 0,
                 "detect_stale_master": true,
                 "detect_stale_slave": true,
@@ -121,6 +121,7 @@ Get all monitors.
 `Status: 200 OK`
 
 ```javascript
+// See `/v1/monitors/:name` for a descriptions of the fields
 {
     "links": {
         "self": "http://localhost:8989/v1/monitors/"
