@@ -1555,6 +1555,9 @@ int Mariadb_nodes::prepare_server(int i)
         }
     }
 
+    stop_node(i);
+    start_node(i, "");
+
     return rval;
 }
 

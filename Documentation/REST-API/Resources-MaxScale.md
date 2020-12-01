@@ -157,6 +157,7 @@ Get the information for all threads. Returns a collection of threads resources.
 `Status: 200 OK`
 
 ```javascript
+// See `/v1/maxscale/threads/:id` for a descriptions of the fields
 {
     "links": {
         "self": "http://localhost:8989/v1/maxscale/threads/"
@@ -322,7 +323,7 @@ location where the log files are stored.
                 "log_debug": false
             },
             "log_file": "/home/markusjm/build/log/maxscale/maxscale.log", // The file MaxScale is logging into if `maxlog` is enabled
-            "log_priorities": [ // Active log priorities
+            "log_priorities": [ // Enabled log priorities
                 "error",
                 "warning",
                 "notice",
