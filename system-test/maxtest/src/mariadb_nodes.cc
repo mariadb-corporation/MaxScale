@@ -1304,13 +1304,38 @@ int Mariadb_nodes::configure_ssl(bool require)
 
         auto conn = get_connection(0);
         conn.ssl(true);
-        conn.connect();
 
-        if (conn.field("select variable_value from information_schema.session_status "
-                       "where variable_name like 'ssl_version'").empty())
+        if (!conn.connect())
         {
-            printf("Failed to establish SSL connection to database");
+            printf("Failed to connect to database with SSL enabled: %s\n", conn.error());
             local_result++;
+
+            conn.ssl(false);
+            printf("Attempting to connect without SSL...\n");
+
+            if (conn.connect())
+            {
+                printf("Connection was successful, server is not configured with SSL.\n");
+            }
+            else
+            {
+                printf("Failed to connect to database with SSL disabled: %s\n", conn.error());
+            }
+        }
+        else
+        {
+            auto version = conn.field("select variable_value from information_schema.session_status "
+                                      "where variable_name like 'ssl_version'");
+
+            if (version.empty())
+            {
+                printf("Failed to establish SSL connection to database\n");
+                local_result++;
+            }
+            else
+            {
+                printf("SSL version: %s\n", version.c_str());
+            }
         }
     }
 
