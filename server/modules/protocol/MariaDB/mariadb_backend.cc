@@ -524,23 +524,22 @@ bool MariaDBBackendConnection::handle_auth_change_response(GWBUF* reply, DCB* dc
 int MariaDBBackendConnection::normal_read()
 {
     auto dcb = m_dcb;
-    GWBUF* read_buffer = NULL;
     MXS_SESSION* session = dcb->session();
-    int nbytes_read = 0;
-    int return_code = 0;
 
+    DCB::ReadResult read_res;
     if (m_ignore_replies)
     {
         // Read only one packet. This way any extra packets, which we aren't expecting, are handled normally.
-        ReadResult read_res = read_protocol_packet(m_dcb);
-        return_code = read_res.success ? 1 : 0;
-        read_buffer = read_res.buffer.release();
+        read_res = mariadb::read_protocol_packet(m_dcb);
     }
     else
     {
         // Read all available data
-        return_code = dcb->read(&read_buffer, 0);
+        read_res = dcb->read(MYSQL_HEADER_LEN, 0);
     }
+
+    int return_code = read_res.error() ? -1 : 1;
+    GWBUF* read_buffer = read_res.data.release();
 
     if (return_code < 0)
     {
@@ -548,6 +547,7 @@ int MariaDBBackendConnection::normal_read()
         return 0;
     }
 
+    int nbytes_read = 0;
     if (read_buffer)
     {
         nbytes_read = gwbuf_length(read_buffer);
@@ -2256,9 +2256,9 @@ MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::handshake()
         case HandShakeState::EXPECT_HS:
             {
                 // Read the server handshake.
-                auto read_res = read_protocol_packet(m_dcb);
-                auto buffer = std::move(read_res.buffer);
-                if (!read_res.success)
+                auto read_res = mariadb::read_protocol_packet(m_dcb);
+                auto buffer = std::move(read_res.data);
+                if (read_res.error())
                 {
                     // Socket error.
                     string errmsg = (string)"Handshake with '" + m_server.name() + "' failed.";
@@ -2366,9 +2366,9 @@ MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::handshake()
 
 MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::authenticate()
 {
-    auto read_res = read_protocol_packet(m_dcb);
-    auto buffer = std::move(read_res.buffer);
-    if (!read_res.success)
+    auto read_res = mariadb::read_protocol_packet(m_dcb);
+    auto buffer = std::move(read_res.data);
+    if (read_res.error())
     {
         do_handle_error(m_dcb, "Socket error", mxs::ErrorType::TRANSIENT);
         return StateMachineRes::ERROR;
@@ -2469,9 +2469,9 @@ MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::send_connect
         while (m_init_query_status.ok_packets_received < m_init_query_status.ok_packets_expected)
         {
             // Check result. If server returned anything else than OK, it's an error.
-            auto read_res = read_protocol_packet(m_dcb);
-            auto buffer = std::move(read_res.buffer);
-            if (!read_res.success)
+            auto read_res = mariadb::read_protocol_packet(m_dcb);
+            auto buffer = std::move(read_res.data);
+            if (read_res.error())
             {
                 do_handle_error(m_dcb, "Socket error", mxs::ErrorType::TRANSIENT);
             }

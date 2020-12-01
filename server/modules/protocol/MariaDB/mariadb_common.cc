@@ -530,7 +530,7 @@ bool UserEntry::host_pattern_is_more_specific(const UserEntry& lhs, const UserEn
  * @return Result structure. Success, if reading succeeded. Also returns success if the entire packet was
  * not yet available and the function should be called again later.
  */
-ReadResult read_protocol_packet(DCB* dcb)
+DCB::ReadResult mariadb::read_protocol_packet(DCB* dcb)
 {
     auto ensure_contiguous_start = [](GWBUF** ppBuffer) {
             auto pBuffer = *ppBuffer;
@@ -563,17 +563,24 @@ ReadResult read_protocol_packet(DCB* dcb)
                 // Since there may be more data remaining, either in the readq or in socket, trigger a read.
                 dcb->trigger_read_event();
                 ensure_contiguous_start(&first_packet);
-                return {true, first_packet};
+                DCB::ReadResult rval;
+                rval.status = DCB::ReadResult::Status::READ_OK;
+                rval.data = first_packet;
+                return rval;
             }
         }
     }
 
     const int MAX_PACKET_SIZE = MYSQL_PACKET_LENGTH_MAX + MYSQL_HEADER_LEN;
-    ReadResult rval;
-    GWBUF* read_buffer = nullptr;
-    int buffer_len = dcb->read(&read_buffer, MAX_PACKET_SIZE);
-    if (buffer_len >= MYSQL_HEADER_LEN)
+    DCB::ReadResult read_res = dcb->read(MYSQL_HEADER_LEN, MAX_PACKET_SIZE);
+
+    DCB::ReadResult rval;
+    rval.status = read_res.status;
+    if (read_res)
     {
+        int buffer_len = read_res.data.length();
+        GWBUF* read_buffer = read_res.data.release();
+
         // Got enough that the entire packet may be available.
         ensure_contiguous_start(&read_buffer);
         int prot_packet_len = MYSQL_GET_PACKET_LEN(read_buffer);
@@ -584,14 +591,14 @@ ReadResult read_protocol_packet(DCB* dcb)
         {
             // Got more than needed, save extra to DCB and trigger a read.
             auto first_packet = gwbuf_split(&read_buffer, prot_packet_len);
-            rval.buffer.reset(first_packet);
+            rval.data.reset(first_packet);
             dcb->readq_prepend(read_buffer);
             dcb->trigger_read_event();
         }
         else if (prot_packet_len == buffer_len)
         {
             // Read exact packet. Return it.
-            rval.buffer.reset(read_buffer);
+            rval.data.reset(read_buffer);
             if (buffer_len == MAX_PACKET_SIZE && dcb->socket_bytes_readable() > 0)
             {
                 // Read a maximally long packet when socket has even more. Route this packet,
@@ -603,20 +610,8 @@ ReadResult read_protocol_packet(DCB* dcb)
         {
             // Could not read enough, try again later. Save results to dcb.
             dcb->readq_prepend(read_buffer);
+            rval.status = DCB::ReadResult::Status::INSUFFICIENT_DATA;
         }
-        rval.success = true;
-    }
-    else if (buffer_len > 0)
-    {
-        // Too little data. Save and wait for more.
-        dcb->readq_prepend(read_buffer);
-        rval.success = true;
-    }
-    else if (buffer_len == 0)
-    {
-        // No data was read even though event handler was called. This may happen due to manually triggered
-        // reads (e.g. during SSL-init).
-        rval.success = true;
     }
     return rval;
 }

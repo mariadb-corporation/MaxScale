@@ -286,6 +286,20 @@ public:
      */
     int read(GWBUF** ppHead, int maxbytes);
 
+    struct ReadResult
+    {
+        enum class Status {READ_OK, INSUFFICIENT_DATA, ERROR};
+
+        bool ok() const;
+        bool error() const;
+
+        explicit operator bool() const;
+
+        Status      status {Status::ERROR};
+        mxs::Buffer data;
+    };
+    ReadResult read(uint32_t min_bytes, uint32_t max_bytes);
+
     /**
      * Write data to the DCB.
      *

@@ -145,11 +145,12 @@ void CDCClientConnection::ready_for_reading(DCB* event_dcb)
 
     MXS_SESSION* session = dcb->session();
     CDCClientConnection* protocol = this;
-    GWBUF* head = NULL;
     int auth_val = CDC_STATE_AUTH_FAILED;
 
-    if (dcb->read(&head, 0) > 0)
+    DCB::ReadResult read_res = dcb->read((uint32_t)0, (uint32_t)0);
+    if (read_res.data.length() > 0)
     {
+        GWBUF* head = read_res.data.release();
         switch (protocol->m_state)
         {
         case CDC_STATE_WAIT_FOR_AUTH:

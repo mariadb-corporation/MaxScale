@@ -1000,9 +1000,9 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_normal
     }
 
 
-    auto read_res = read_protocol_packet(m_dcb);
-    mxs::Buffer buffer = move(read_res.buffer);
-    if (!read_res.success)
+    auto read_res = mariadb::read_protocol_packet(m_dcb);
+    mxs::Buffer buffer = move(read_res.data);
+    if (read_res.error())
     {
         return StateMachineRes::ERROR;
     }
@@ -1793,9 +1793,9 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_handsh
     }
     else
     {
-        auto read_res = read_protocol_packet(m_dcb);
-        read_buffer = move(read_res.buffer);
-        read_success = read_res.success;
+        auto read_res = mariadb::read_protocol_packet(m_dcb);
+        read_buffer = move(read_res.data);
+        read_success = !read_res.error();
     }
 
     if (!read_success)
@@ -2000,27 +2000,24 @@ bool MariaDBClientConnection::perform_auth_exchange()
     // Nothing to read on first exchange-call.
     if (m_auth_state == AuthState::CONTINUE_EXCHANGE)
     {
-        auto read_res = read_protocol_packet(m_dcb);
-        read_buffer = move(read_res.buffer);
-        if (read_res.success)
+        auto read_res = mariadb::read_protocol_packet(m_dcb);
+        read_buffer = move(read_res.data);
+        if (read_res)
         {
-            if (read_buffer.empty())
-            {
-                // Not enough data was available yet.
-                return false;
-            }
-            else
-            {
-                update_sequence(read_buffer.get());
-                // Save next sequence to session. Authenticator may use the value.
-                m_session_data->next_sequence = m_sequence + 1;
-            }
+            update_sequence(read_buffer.get());
+            // Save next sequence to session. Authenticator may use the value.
+            m_session_data->next_sequence = m_sequence + 1;
         }
-        else
+        else if (read_res.error())
         {
             // Connection is likely broken, no need to send error message.
             m_auth_state = AuthState::FAIL;
             return true;
+        }
+        else
+        {
+            // Not enough data was available yet.
+            return false;
         }
     }
 

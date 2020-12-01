@@ -65,6 +65,7 @@ struct AuthSwitchReqContents
 };
 
 AuthSwitchReqContents parse_auth_switch_request(const mxs::Buffer& input);
+DCB::ReadResult       read_protocol_packet(DCB* dcb);
 }
 
 /*

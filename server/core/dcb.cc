@@ -253,6 +253,34 @@ void DCB::stop_polling_and_shutdown()
     shutdown();
 }
 
+DCB::ReadResult DCB::read(uint32_t min_bytes, uint32_t max_bytes)
+{
+    mxb_assert(max_bytes >= min_bytes || max_bytes == 0);
+    ReadResult rval;
+    GWBUF* read_buffer = nullptr;
+    int ret = read(&read_buffer, max_bytes);
+    if (ret > 0)
+    {
+        if ((uint32_t)ret >= min_bytes)
+        {
+            // Enough data.
+            rval.data.reset(read_buffer);
+            rval.status = ReadResult::Status::READ_OK;
+        }
+        else
+        {
+            // Not enough data, save any read data to readq.
+            readq_prepend(read_buffer);
+            rval.status = ReadResult::Status::INSUFFICIENT_DATA;
+        }
+    }
+    else if (ret == 0)
+    {
+        rval.status = ReadResult::Status::INSUFFICIENT_DATA;
+    }
+    return rval;
+}
+
 int DCB::read(GWBUF** head, int maxbytes)
 {
     mxb_assert(this->owner == RoutingWorker::get_current());
@@ -2161,4 +2189,19 @@ json_t* maxscale::ClientConnectionBase::diagnostics() const
 bool mxs::ClientConnectionBase::in_routing_state() const
 {
     return m_dcb != nullptr;
+}
+
+bool DCB::ReadResult::ok() const
+{
+    return status == Status::READ_OK;
+}
+
+bool DCB::ReadResult::error() const
+{
+    return status == Status::ERROR;
+}
+
+DCB::ReadResult::operator bool() const
+{
+    return ok();
 }

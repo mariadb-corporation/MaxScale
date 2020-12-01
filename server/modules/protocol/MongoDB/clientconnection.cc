@@ -70,77 +70,64 @@ void ClientConnection::ready_for_reading(DCB* dcb)
 {
     TRACE();
 
-    GWBUF* pBuffer = nullptr;
-    int buffer_len = m_pDcb->read(&pBuffer, MONGOC_DEFAULT_MAX_MSG_SIZE);
-
-    if (buffer_len < 0)
+    DCB::ReadResult read_res = m_pDcb->read(MXSMONGO_HEADER_LEN, MONGOC_DEFAULT_MAX_MSG_SIZE);
+    if (!read_res)
     {
         return;
     }
 
-    if (buffer_len >= MXSMONGO_HEADER_LEN)
+    // Got the header, the full packet may be available.
+    GWBUF* pBuffer = read_res.data.release();
+    auto link_len = gwbuf_link_length(pBuffer);
+
+    if (link_len < MXSMONGO_HEADER_LEN)
     {
-        // Got the header, the full packet may be available.
+        pBuffer = gwbuf_make_contiguous(pBuffer);
+    }
 
-        auto link_len = gwbuf_link_length(pBuffer);
+    mongoc_rpc_header_t* pHeader = reinterpret_cast<mongoc_rpc_header_t*>(gwbuf_link_data(pBuffer));
 
-        if (link_len < MXSMONGO_HEADER_LEN)
+    int buffer_len = read_res.data.length();
+    if (buffer_len >= pHeader->msg_len)
+    {
+        // Ok, we have at least one full packet.
+
+        GWBUF* pPacket = nullptr;
+
+        if (buffer_len == pHeader->msg_len)
         {
-            pBuffer = gwbuf_make_contiguous(pBuffer);
-        }
-
-        mongoc_rpc_header_t* pHeader = reinterpret_cast<mongoc_rpc_header_t*>(gwbuf_link_data(pBuffer));
-
-        if (buffer_len >= pHeader->msg_len)
-        {
-            // Ok, we have at least one full packet.
-
-            GWBUF* pPacket = nullptr;
-
-            if (buffer_len == pHeader->msg_len)
-            {
-                // Exactly one.
-                pPacket = pBuffer;
-            }
-            else
-            {
-                // More than one.
-                auto* pPacket = gwbuf_split(&pBuffer, pHeader->msg_len);
-                mxb_assert((int)gwbuf_length(pPacket) == pHeader->msg_len);
-
-                m_pDcb->readq_prepend(pBuffer);
-                m_pDcb->trigger_read_event();
-            }
-
-            // We are not going to be able to parse bson unless the data is
-            // contiguous.
-            if (!gwbuf_is_contiguous(pPacket))
-            {
-                pPacket = gwbuf_make_contiguous(pPacket);
-            }
-
-            GWBUF* pResponse = handle_one_packet(pPacket);
-
-            if (pResponse)
-            {
-                m_pDcb->writeq_append(pResponse);
-            }
+            // Exactly one.
+            pPacket = pBuffer;
         }
         else
         {
-            MXS_NOTICE("%d bytes received, still need %d bytes for the package.",
-                       buffer_len, pHeader->msg_len - buffer_len);
+            // More than one.
+            pPacket = gwbuf_split(&pBuffer, pHeader->msg_len);
+            mxb_assert((int)gwbuf_length(pPacket) == pHeader->msg_len);
+
             m_pDcb->readq_prepend(pBuffer);
+            m_pDcb->trigger_read_event();
         }
-    }
-    else if (buffer_len > 0)
-    {
-        // Not enough data to do anything at all. Save and wait for more.
-        m_pDcb->readq_prepend(pBuffer);
+
+        // We are not going to be able to parse bson unless the data is
+        // contiguous.
+        if (!gwbuf_is_contiguous(pPacket))
+        {
+            pPacket = gwbuf_make_contiguous(pPacket);
+        }
+
+        GWBUF* pResponse = handle_one_packet(pPacket);
+
+        if (pResponse)
+        {
+            m_pDcb->writeq_append(pResponse);
+        }
     }
     else
     {
-        // No data, can this happen? In MariaDB this may happen due to manually triggered reads.
+        MXS_NOTICE("%d bytes received, still need %d bytes for the package.",
+                   buffer_len, pHeader->msg_len - buffer_len);
+        m_pDcb->readq_prepend(pBuffer);
     }
 }
 
