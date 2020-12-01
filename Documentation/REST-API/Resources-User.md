@@ -24,10 +24,10 @@ user name.
         "self": "http://localhost:8989/v1/users/inet/my-user"
     },
     "data": {
-        "id": "my-user",
-        "type": "inet",
+        "id": "my-user", // Username
+        "type": "inet", // User type
         "attributes": {
-            "account": "admin"
+            "account": "admin" // Type of the user, "admin" for read-write operations, "basic" for read-only
         },
         "relationships": {
             "self": "http://localhost:8989/v1/users/inet/my-user"
@@ -49,6 +49,7 @@ Get all network users.
 `Status: 200 OK`
 
 ```javascript
+// See `/v1/users/inet/` for a descriptions of the fields
 {
     "links": {
         "self": "http://localhost:8989/v1/users/inet"
@@ -82,6 +83,7 @@ UNIX account name that has been enabled.
 `Status: 200 OK`
 
 ```javascript
+// See `/v1/users/inet/` for a descriptions of the fields
 {
     "links": {
         "self": "http://localhost:8989/v1/users/unix/maxscale"
@@ -112,6 +114,7 @@ Get all enabled UNIX accounts.
 `Status: 200 OK`
 
 ```javascript
+// See `/v1/users/inet/` for a descriptions of the fields
 {
     "links": {
         "self": "http://localhost:8989/v1/users/unix"
@@ -145,6 +148,7 @@ accounts.
 `Status: 200 OK`
 
 ```javascript
+// See `/v1/users/inet/` for a descriptions of the fields
 {
     "links": {
         "self": "http://localhost:8989/v1/users/"
@@ -205,11 +209,11 @@ password _my-password_ that is allowed to execute only read-only operations.
 ```javascript
 {
     "data": {
-        "id": "my-user",
-        "type": "inet",
+        "id": "my-user", // The user to create
+        "type": "inet", // The type of the user
         "attributes": {
-            "password": "my-password",
-            "account": "basic"
+            "password": "my-password", // The password to use for the user
+            "account": "basic" // The type of the account
         }
     }
 }
@@ -244,10 +248,10 @@ Here is an example request body enabling the UNIX account _jdoe_ for read-only o
 ```javascript
 {
     "data": {
-        "id": "jdoe",
-        "type": "unix"
+        "id": "jdoe", // Account name
+        "type": "unix" // Account type
         "attributes": {
-            "account": "basic"
+            "account": "basic" // Type of the user account in MaxScale
         }
     }
 }

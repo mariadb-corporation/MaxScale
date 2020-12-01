@@ -1768,6 +1768,13 @@ The `main-site-master` and `main-site-slave` servers will be used as long as
 they are available. When they are no longer available, the `DR-site-master` and
 `DR-site-slave` will be used.
 
+## Monitor
+
+Monitor sections are used to define the monitoring module that watches a set of
+servers. Each server can only be monitored by one monitor.
+
+Common monitor parameters [can be found here](../Monitors/Monitor-Common.md).
+
 ## Listener
 
 A listener defines a port MaxScale listens on for incoming connections. Accepted

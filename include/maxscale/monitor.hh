@@ -371,6 +371,9 @@ public:
      */
     const mxs::ConfigParameters& parameters() const;
 
+    /**
+     * @return The number of monitoring cycles the monitor has done
+     */
     long ticks() const;
 
     /**
