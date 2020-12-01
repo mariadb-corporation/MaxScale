@@ -1296,18 +1296,25 @@ bool MariaDBBackendConnection::established()
 
 void MariaDBBackendConnection::ping()
 {
-    if (m_reply.state() == ReplyState::DONE && m_reply.command() != MXS_COM_STMT_SEND_LONG_DATA)
-    {
-        MXS_INFO("Pinging '%s', idle for %ld seconds", m_server.name(), seconds_idle());
+    mxb_assert(m_reply.state() == ReplyState::DONE);
+    mxb_assert(is_idle());
+    MXS_INFO("Pinging '%s', idle for %ld seconds", m_server.name(), seconds_idle());
 
-        // TODO: Think of a better mechanism for the pings, the ignorable ping mechanism isn't pretty.
-        write(modutil_create_ignorable_ping());
-    }
+    // TODO: Think of a better mechanism for the pings, the ignorable ping mechanism isn't pretty.
+    write(modutil_create_ignorable_ping());
 }
 
 bool MariaDBBackendConnection::can_close() const
 {
     return m_state == State::ROUTING || m_state == State::FAILED;
+}
+
+bool MariaDBBackendConnection::is_idle() const
+{
+    return m_state == State::ROUTING
+           && m_reply.state() == ReplyState::DONE
+           && m_reply.command() != MXS_COM_STMT_SEND_LONG_DATA
+           && m_track_queue.empty();
 }
 
 int64_t MariaDBBackendConnection::seconds_idle() const

@@ -50,6 +50,7 @@ public:
     int32_t connlimit(int limit) override;
     void    wakeup() override;
     bool    is_movable() const override;
+    bool    is_idle() const override;
     void    kill() override;
 
     std::string current_db() const override;

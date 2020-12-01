@@ -68,6 +68,20 @@ public:
     {
         return true;
     }
+
+    /**
+     * Is the connection idle.
+     *
+     * This method is called when the associated session is about to be modified. If the connection is
+     * logically idle, meaning no queries are ongoing and no results are expected, the session will be
+     * modified. If the connection is not idle, the modification is postponed until the connection is idle.
+     *
+     * @return True if the connection is idle.
+     */
+    virtual bool is_idle() const
+    {
+        return true;
+    }
 };
 }
 /**

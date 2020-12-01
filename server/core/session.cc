@@ -1413,7 +1413,7 @@ void Session::tick(int64_t idle)
     {
         for (const auto& a : backend_connections())
         {
-            if (a->seconds_idle() > interval)
+            if (a->seconds_idle() > interval && a->is_idle())
             {
                 a->ping();
             }
@@ -1436,9 +1436,9 @@ void Session::set_ttl(int64_t ttl)
 bool Session::is_idle() const
 {
     // TODO: This is a placeholder. The is_movable isn't query-aware and a separate is_idle method is needed.
-    return m_client_conn->is_movable()
+    return m_client_conn->is_idle()
            && std::all_of(m_backends_conns.begin(), m_backends_conns.end(),
-                          std::mem_fn(&mxs::BackendConnection::is_movable));
+                          std::mem_fn(&mxs::BackendConnection::is_idle));
 }
 
 void Session::update_log_level(json_t* param, const char* key, int level)

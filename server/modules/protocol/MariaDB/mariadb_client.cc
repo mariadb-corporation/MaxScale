@@ -1688,6 +1688,11 @@ bool MariaDBClientConnection::is_movable() const
     return m_auth_state != AuthState::TRY_AGAIN;
 }
 
+bool MariaDBClientConnection::is_idle() const
+{
+    return in_routing_state();
+}
+
 bool MariaDBClientConnection::start_change_user(mxs::Buffer&& buffer)
 {
     // Parse the COM_CHANGE_USER-packet. The packet is somewhat similar to a typical handshake response.
