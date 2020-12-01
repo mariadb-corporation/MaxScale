@@ -15,6 +15,7 @@
 
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <mysqld_error.h>
 #include <maxbase/format.hh>
 #include <maxbase/host.hh>
 #include <maxsql/mariadb_connector.hh>
@@ -60,7 +61,7 @@ const int user_load_fail_limit = 10;
 namespace mariadb_queries
 {
 const string users_query = "SELECT * FROM mysql.user;";
-const string db_grants_query =
+const string db_grants_query_old =
     "SELECT DISTINCT * FROM ("
     // Select users/roles with general db-level privs ...
     "(SELECT a.user, a.host, a.db FROM mysql.db AS a) UNION "
@@ -68,6 +69,19 @@ const string db_grants_query =
     "(SELECT a.user, a.host, a.db FROM mysql.tables_priv AS a) UNION "
     // and finally combine with column-level privs as db-level privs
     "(SELECT a.user, a.host, a.db FROM mysql.columns_priv AS a) ) AS c;";
+
+// The query above does not check the procs_priv-table. To avoid requiring new privileges in existing
+// installations, keep the existing query as an alternative. The old query can be removed in 2.6.
+const string db_grants_query =
+    "SELECT DISTINCT * FROM ("
+    // Select users/roles with general db-level privs
+    "(SELECT a.user, a.host, a.db FROM mysql.db AS a) UNION "
+    // and combine with table privs counting as db-level privs
+    "(SELECT a.user, a.host, a.db FROM mysql.tables_priv AS a) UNION "
+    // and combine with column-level privs as db-level privs
+    "(SELECT a.user, a.host, a.db FROM mysql.columns_priv AS a) UNION "
+    // and combine with procedure-level privs as db-level privs.
+    "(SELECT a.user, a.host, a.db FROM mysql.procs_priv AS a) ) AS c;";
 
 const string proxies_query = "SELECT DISTINCT a.user, a.host FROM mysql.proxies_priv AS a "
                              "WHERE a.proxied_host <> '' AND a.proxied_user <> '';";
@@ -431,6 +445,22 @@ MariaDBUserManager::load_users_mariadb(mxq::MariaDB& con, SERVER* srv, UserDatab
 
     auto rval = LoadResult::QUERY_FAILED;
     auto multiq_result = con.multiquery(multiquery);
+    if (multiq_result.empty())
+    {
+        // If the error indicates insufficient privileges, try again with the old db-grants query.
+        auto errornum = con.errornum();
+        if (errornum == ER_TABLEACCESS_DENIED_ERROR || errornum == ER_COLUMNACCESS_DENIED_ERROR)
+        {
+            const char msg_fmt[] = "Using old user account query due to insufficient privileges. "
+                                   "To avoid this warning, give the service user of '%s' access to "
+                                   "the 'mysql.procs_priv'-table.";
+            MXB_WARNING(msg_fmt, m_service->name());
+
+            multiquery[1] = mariadb_queries::db_grants_query_old;
+            multiq_result = con.multiquery(multiquery);
+        }
+    }
+
     if (multiq_result.size() == multiquery.size())
     {
         QResult users_res = move(multiq_result[0]);
