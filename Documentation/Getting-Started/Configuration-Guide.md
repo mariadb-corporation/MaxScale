@@ -1662,6 +1662,13 @@ Note that the path to be used, is one of the paths returned by:
 There is no default value, but this parameter must be explicitly specified
 if the disk space situation should be monitored.
 
+## Monitor
+
+Monitor sections are used to define the monitoring module that watches a set of
+servers. Each server can only be monitored by one monitor.
+
+Common monitor parameters [can be found here](../Monitors/Monitor-Common.md).
+
 ## Listener
 
 The listener defines a port and protocol pair that is used to listen for
