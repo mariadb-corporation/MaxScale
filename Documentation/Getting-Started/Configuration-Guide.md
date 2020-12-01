@@ -1206,6 +1206,16 @@ down if that event occurs.
 
 The default facility is `LOG_USER` and the default level is `LOG_WARNING`.
 
+Note that you may also have to configure `rsyslog` to ensure that the
+event can be logged to the intended log file. For instance, if the facility
+is chosen to be `LOG_AUTH`, then `/etc/rsyslog.conf` should contain a line
+like
+```
+auth,authpriv.*                 /var/log/auth.log
+```
+for the logged events to end up in `/var/log/auth.log`, where the initial
+`auth` is the relevant entry.
+
 The available events are:
 
 ### 'authentication_failure'
