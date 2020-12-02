@@ -137,6 +137,7 @@ public:
     std::string   admin_pam_rw_service;         /**< PAM service for read-write users */
     std::string   admin_pam_ro_service;         /**< PAM service for read-only users */
     std::string   admin_ssl_key;                /**< Admin SSL key */
+    std::string   admin_ssl_cipher;             /**< Admin allowed SSL ciphers */
     std::string   admin_ssl_cert;               /**< Admin SSL cert */
     std::string   admin_ssl_ca_cert;            /**< Admin SSL CA cert */
     std::string   local_address;                /**< Local address to use when connecting */
@@ -218,6 +219,7 @@ private:
     static config::ParamString              s_admin_pam_rw_service;
     static config::ParamString              s_admin_pam_ro_service;
     static config::ParamString              s_admin_ssl_key;
+    static config::ParamString              s_admin_ssl_cipher;
     static config::ParamString              s_admin_ssl_cert;
     static config::ParamString              s_admin_ssl_ca_cert;
     static config::ParamString              s_local_address;

@@ -88,6 +88,7 @@ constexpr char CN_ADMIN_PORT[] = "admin_port";
 constexpr char CN_ADMIN_SSL_CA_CERT[] = "admin_ssl_ca_cert";
 constexpr char CN_ADMIN_SSL_CERT[] = "admin_ssl_cert";
 constexpr char CN_ADMIN_SSL_KEY[] = "admin_ssl_key";
+constexpr char CN_ADMIN_SSL_CIPHER[] = "admin_ssl_cipher";
 constexpr char CN_AUTO[] = "auto";
 constexpr char CN_DEBUG[] = "debug";
 constexpr char CN_DUMP_LAST_STATEMENTS[] = "dump_last_statements";
@@ -461,6 +462,12 @@ config::ParamString Config::s_admin_ssl_key(
     "Admin SSL key",
     "");
 
+config::ParamString Config::s_admin_ssl_cipher(
+    &Config::s_specification,
+    CN_ADMIN_SSL_CIPHER,
+    "Admin allowed SSL ciphers",
+    "");
+
 config::ParamString Config::s_admin_ssl_cert(
     &Config::s_specification,
     CN_ADMIN_SSL_CERT,
@@ -614,6 +621,7 @@ Config::Config()
     add_native(&admin_pam_rw_service, &s_admin_pam_rw_service);
     add_native(&admin_pam_ro_service, &s_admin_pam_ro_service);
     add_native(&admin_ssl_key, &s_admin_ssl_key);
+    add_native(&admin_ssl_cipher, &s_admin_ssl_cipher);
     add_native(&admin_ssl_cert, &s_admin_ssl_cert);
     add_native(&admin_ssl_ca_cert, &s_admin_ssl_ca_cert);
     add_native(&local_address, &s_local_address);
@@ -3650,6 +3658,7 @@ bool config_is_ssl_parameter(const char* key)
         CN_SSL_CA_CERT,
         CN_SSL,
         CN_SSL_KEY,
+        CN_SSL_CIPHER,
         CN_SSL_VERSION,
         CN_SSL_CERT_VERIFY_DEPTH,
         CN_SSL_VERIFY_PEER_CERTIFICATE,

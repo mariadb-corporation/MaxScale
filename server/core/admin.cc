@@ -83,6 +83,7 @@ static struct ThisUnit
 {
     struct MHD_Daemon* daemon = nullptr;
     std::string        ssl_key;
+    std::string        ssl_cipher;
     std::string        ssl_cert;
     std::string        ssl_ca;
     bool               using_ssl = false;
@@ -278,6 +279,24 @@ static bool load_ssl_certificates()
     const auto& key = config.admin_ssl_key;
     const auto& cert = config.admin_ssl_cert;
     const auto& ca = config.admin_ssl_ca_cert;
+
+    const auto& cipher = config.admin_ssl_cipher;
+
+    // Set cipher appropriately, including some shorcuts.
+    if (cipher.empty())
+        this_unit.ssl_cipher = "NORMAL";
+    else if (cipher == "SSLv3")
+        this_unit.ssl_cipher = "NONE:+VERS-SSL3.0";
+    else if (cipher == "TLSv1.0")
+        this_unit.ssl_cipher = "NONE:+VERS-TLS1.0";
+    else if (cipher == "TLSv1.1")
+        this_unit.ssl_cipher = "NONE:+VERS-TLS1.1";
+    else if (cipher == "TLSv1.2")
+        this_unit.ssl_cipher = "NONE:+VERS-TLS1.2";
+    else if (cipher == "TLSv1.3")
+        this_unit.ssl_cipher = "NONE:+VERS-TLS1.3";
+    else
+        this_unit.ssl_cipher = cipher;
 
     if (!key.empty() && !cert.empty())
     {
@@ -938,6 +957,7 @@ bool mxs_admin_init()
                                             MHD_OPTION_SOCK_ADDR, &addr,
                                             !this_unit.using_ssl ? MHD_OPTION_END :
                                             MHD_OPTION_HTTPS_MEM_KEY, this_unit.ssl_key.c_str(),
+                                            MHD_OPTION_HTTPS_PRIORITIES, this_unit.ssl_cipher.c_str(),
                                             MHD_OPTION_HTTPS_MEM_CERT, this_unit.ssl_cert.c_str(),
                                             this_unit.ssl_ca.empty() ? MHD_OPTION_END :
                                             MHD_OPTION_HTTPS_MEM_TRUST, this_unit.ssl_cert.c_str(),
