@@ -527,17 +527,6 @@ void TestConnections::process_template(int m, const string& cnf_template_path, c
         return;
     }
 
-    if (backend_ssl)
-    {
-        tprintf("Adding ssl settings\n");
-        const char sed_cmd[] = "sed -i "
-                               "\"s|type=server|type=server\\nssl=required\\nssl_cert=/###access_homedir###/"
-                               "certs/client-cert.pem\\nssl_key=/###access_homedir###/certs/client-key.pem"
-                               "\\nssl_ca_cert=/###access_homedir###/certs/ca.pem\\nssl_cert_verify_depth=9"
-                               "\\nssl_version=MAX|g\" maxscale.cnf";
-        system(sed_cmd);
-    }
-
     sprintf(str, "sed -i \"s/###threads###/%d/\"  maxscale.cnf", m_threads);
     system(str);
 
@@ -585,6 +574,17 @@ void TestConnections::process_template(int m, const string& cnf_template_path, c
             execute_query(mdn[j]->nodes[0], (char*) "CREATE DATABASE IF NOT EXISTS test");
             mdn[j]->close_connections();
         }
+    }
+
+    if (backend_ssl)
+    {
+        tprintf("Adding ssl settings\n");
+        const char sed_cmd[] = "sed -i "
+                               "\"s|type *= *server|type=server\\nssl=required\\nssl_cert=/###access_homedir###/"
+                               "certs/client-cert.pem\\nssl_key=/###access_homedir###/certs/client-key.pem"
+                               "\\nssl_ca_cert=/###access_homedir###/certs/ca.pem\\nssl_cert_verify_depth=9"
+                               "\\nssl_version=MAX|g\" maxscale.cnf";
+        system(sed_cmd);
     }
 
     sprintf(str, "sed -i \"s/###access_user###/%s/g\" maxscale.cnf", maxscales->access_user(m));
