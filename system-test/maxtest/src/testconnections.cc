@@ -252,17 +252,6 @@ TestConnections::TestConnections(int argc, char* argv[])
         exit(0);
     }
 
-    if (backend_ssl)
-    {
-        tprintf("Configuring backends for ssl \n");
-        repl->configure_ssl(true);
-        if (galera)
-        {
-            galera->configure_ssl(false);
-            galera->start_replication();
-        }
-    }
-
     if (m_init_maxscale)
     {
         init_maxscales();
@@ -303,17 +292,6 @@ TestConnections::~TestConnections()
     for (auto& a : m_on_destroy)
     {
         a();
-    }
-
-    if (backend_ssl)
-    {
-        repl->disable_ssl();
-        // galera->disable_ssl();
-
-        // TODO: Presumably that repl->disable_ssl() call should remove the SSL requirement,
-        // TODO: but that it does not do as any non-SSL test folling will not work.
-        // TODO: Creating the users seems to fix it, so for the time being we do that.
-        repl->create_users();
     }
 
     // stop all Maxscales to detect crashes on exit
@@ -2259,6 +2237,7 @@ bool TestConnections::initialize_nodes()
         repl = new Mariadb_nodes("node", test_dir, verbose, m_network_config);
         repl->setup();
         repl->set_use_ipv6(m_use_ipv6);
+        repl->ssl = backend_ssl;
         repl->take_snapshot_command = m_take_snapshot_command.c_str();
         repl->revert_snapshot_command = m_revert_snapshot_command.c_str();
         repl_future = std::async(std::launch::async, &Mariadb_nodes::check_nodes, repl);
@@ -2273,6 +2252,7 @@ bool TestConnections::initialize_nodes()
         galera = new Galera_nodes("galera", test_dir, verbose, m_network_config);
         galera->setup();
         galera->set_use_ipv6(false);
+        galera->ssl = backend_ssl;
         galera->take_snapshot_command = m_take_snapshot_command.c_str();
         galera->revert_snapshot_command = m_revert_snapshot_command.c_str();
         galera_future = std::async(std::launch::async, &Galera_nodes::check_nodes, galera);
@@ -2287,6 +2267,7 @@ bool TestConnections::initialize_nodes()
         xpand = new Xpand_nodes("xpand", test_dir, verbose, m_network_config);
         xpand->setup();
         xpand->set_use_ipv6(false);
+        xpand->ssl = backend_ssl;
         xpand->take_snapshot_command = m_take_snapshot_command.c_str();
         xpand->revert_snapshot_command = m_revert_snapshot_command.c_str();
         xpand->fix_replication();
