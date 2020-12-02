@@ -1344,7 +1344,7 @@ public:
 
     iterator end()
     {
-        uint8_t* pEnd = GWBUF_DATA(m_pPacket) + GWBUF_LENGTH(m_pPacket);
+        uint8_t* pEnd = GWBUF_DATA(m_pPacket) + gwbuf_link_length(m_pPacket);
         return iterator(pEnd);
     }
 

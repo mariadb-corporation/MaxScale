@@ -565,7 +565,7 @@ public:
     }
 
     ComPacket(GWBUF* pPacket)
-        : ComPacket(GWBUF_DATA(pPacket), GWBUF_LENGTH(pPacket))
+        : ComPacket(GWBUF_DATA(pPacket), gwbuf_link_length(pPacket))
     {
     }
 

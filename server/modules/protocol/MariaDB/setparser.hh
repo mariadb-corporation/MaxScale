@@ -106,7 +106,7 @@ public:
 
         mxb_assert(gwbuf_length(pBuffer) >= MYSQL_HEADER_LEN);
 
-        size_t buf_len = GWBUF_LENGTH(pBuffer);
+        size_t buf_len = gwbuf_link_length(pBuffer);
         size_t payload_len;
         if (buf_len >= MYSQL_HEADER_LEN)
         {

@@ -115,7 +115,7 @@ bool supports_extended_caps(SERVICE* service)
 uint32_t parse_packet_length(GWBUF* buffer)
 {
     uint32_t prot_packet_len = 0;
-    if (GWBUF_LENGTH(buffer) >= MYSQL_HEADER_LEN)
+    if (gwbuf_link_length(buffer) >= MYSQL_HEADER_LEN)
     {
         // Header in first chunk.
         prot_packet_len = MYSQL_GET_PACKET_LEN(buffer);

@@ -1005,7 +1005,7 @@ void Listener::reject_connection(int fd, const char* host)
     {
         for (auto b = buf; b; b = b->next)
         {
-            write(fd, GWBUF_DATA(b), GWBUF_LENGTH(b));
+            write(fd, GWBUF_DATA(b), gwbuf_link_length(b));
         }
         gwbuf_free(buf);
     }

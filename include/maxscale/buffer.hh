@@ -162,11 +162,6 @@ inline size_t gwbuf_link_length(const GWBUF* b)
     return (size_t)((char*)b->end - (char*)b->start);
 }
 
-inline size_t GWBUF_LENGTH(const GWBUF* b)
-{
-    return gwbuf_link_length(b);
-}
-
 /*< Check whether the buffer is contiguous*/
 inline bool gwbuf_is_contiguous(const GWBUF* b)
 {
@@ -546,7 +541,7 @@ public:
                 if (m_pBuffer)
                 {
                     m_i = GWBUF_DATA(m_pBuffer);
-                    m_end = m_i + GWBUF_LENGTH(m_pBuffer);
+                    m_end = m_i + gwbuf_link_length(m_pBuffer);
                 }
                 else
                 {
@@ -565,7 +560,7 @@ public:
         iterator_base(buf_type pBuffer = NULL)
             : m_pBuffer(pBuffer)
             , m_i(m_pBuffer ? GWBUF_DATA(m_pBuffer) : NULL)
-            , m_end(m_pBuffer ? (m_i + GWBUF_LENGTH(m_pBuffer)) : NULL)
+            , m_end(m_pBuffer ? (m_i + gwbuf_link_length(m_pBuffer)) : NULL)
         {
         }
 
@@ -582,7 +577,7 @@ public:
                 if (m_pBuffer)
                 {
                     m_i = GWBUF_DATA(m_pBuffer);
-                    m_end = m_i + GWBUF_LENGTH(m_pBuffer);
+                    m_end = m_i + gwbuf_link_length(m_pBuffer);
                 }
                 else
                 {

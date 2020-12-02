@@ -1069,7 +1069,7 @@ bool change_current_db(std::string& dest, Shard& shard, GWBUF* buf)
     bool succp = false;
     char db[MYSQL_DATABASE_MAXLEN + 1];
 
-    if (GWBUF_LENGTH(buf) <= MYSQL_DATABASE_MAXLEN - 5)
+    if (gwbuf_link_length(buf) <= MYSQL_DATABASE_MAXLEN - 5)
     {
         /** Copy database name from MySQL packet to session */
         if (extract_database(buf, db))

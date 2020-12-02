@@ -442,7 +442,7 @@ cache_result_t LRUStorage::do_put_value(Token* pToken,
 
     cache_result_t result = CACHE_RESULT_ERROR;
 
-    size_t value_size = GWBUF_LENGTH(pValue);
+    size_t value_size = gwbuf_link_length(pValue);
 
     Node* pNode = NULL;
 
@@ -887,7 +887,7 @@ cache_result_t LRUStorage::get_existing_node(NodesByKey::iterator& i, const GWBU
 {
     cache_result_t result = CACHE_RESULT_OK;
 
-    size_t value_size = GWBUF_LENGTH(pValue);
+    size_t value_size = gwbuf_link_length(pValue);
 
     if (value_size > m_max_size)
     {
@@ -956,7 +956,7 @@ cache_result_t LRUStorage::get_new_node(const CacheKey& key,
 {
     cache_result_t result = CACHE_RESULT_OK;
 
-    size_t value_size = GWBUF_LENGTH(pValue);
+    size_t value_size = gwbuf_link_length(pValue);
     size_t new_size = m_stats.size + value_size;
 
     Node* pNode = NULL;

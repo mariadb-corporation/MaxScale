@@ -281,7 +281,7 @@ private:
         mxb_assert(pBuffer);
 
         unsigned char* begin = GWBUF_DATA(pBuffer);
-        unsigned char* end = begin + GWBUF_LENGTH(pBuffer);
+        unsigned char* end = begin + gwbuf_link_length(pBuffer);
 
         m_response.insert(m_response.end(), begin, end);
 

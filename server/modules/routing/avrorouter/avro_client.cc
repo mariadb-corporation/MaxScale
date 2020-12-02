@@ -113,7 +113,7 @@ int AvroSession::do_registration(GWBUF* data)
 {
     const char reg_uuid[] = "REGISTER UUID=";
     const int reg_uuid_len = strlen(reg_uuid);
-    int data_len = GWBUF_LENGTH(data) - reg_uuid_len;
+    int data_len = gwbuf_link_length(data) - reg_uuid_len;
     char* request = (char*)GWBUF_DATA(data);
     int ret = 0;
 
@@ -321,7 +321,7 @@ void AvroSession::process_command(GWBUF* queue)
     if (command_ptr != NULL)
     {
         char* file_ptr = command_ptr + req_data_len;
-        int data_len = GWBUF_LENGTH(queue) - req_data_len;
+        int data_len = gwbuf_link_length(queue) - req_data_len;
 
         if (data_len > 1)
         {

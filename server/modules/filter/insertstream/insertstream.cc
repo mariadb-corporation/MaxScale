@@ -75,7 +75,7 @@ GWBUF* convert_to_stream(GWBUF* buffer, uint8_t packet_num)
 {
     /** Remove the INSERT INTO ... from the buffer */
     char* dataptr = (char*)GWBUF_DATA(buffer);
-    char* modptr = strnchr_esc_mysql(dataptr + MYSQL_HEADER_LEN + 1, '(', GWBUF_LENGTH(buffer));
+    char* modptr = strnchr_esc_mysql(dataptr + MYSQL_HEADER_LEN + 1, '(', gwbuf_link_length(buffer));
 
     /** Leave some space for the header so we don't have to allocate a new one */
     buffer = gwbuf_consume(buffer, (modptr - dataptr) - MYSQL_HEADER_LEN);
@@ -118,9 +118,9 @@ bool only_implicit_values(GWBUF* buffer)
 {
     bool rval = false;
     char* data = (char*)GWBUF_DATA(buffer);
-    char* ptr = strnchr_esc_mysql(data + MYSQL_HEADER_LEN + 1, '(', GWBUF_LENGTH(buffer));
+    char* ptr = strnchr_esc_mysql(data + MYSQL_HEADER_LEN + 1, '(', gwbuf_link_length(buffer));
 
-    if (ptr && (ptr = strnchr_esc_mysql(ptr, ')', GWBUF_LENGTH(buffer) - (ptr - data))))
+    if (ptr && (ptr = strnchr_esc_mysql(ptr, ')', gwbuf_link_length(buffer) - (ptr - data))))
     {
         /** Skip the closing parenthesis and any whitespace */
         ptr++;

@@ -55,7 +55,7 @@ GWBUF* mysql_create_com_quit(GWBUF* bufparam,
     {
         return 0;
     }
-    mxb_assert(GWBUF_LENGTH(buf) == COM_QUIT_PACKET_SIZE);
+    mxb_assert(gwbuf_link_length(buf) == COM_QUIT_PACKET_SIZE);
 
     data = GWBUF_DATA(buf);
 

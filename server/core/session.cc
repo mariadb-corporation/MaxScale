@@ -811,7 +811,7 @@ bool get_cmd_and_stmt(GWBUF* pBuffer, const char** ppCmd, char** ppStmt, int* pL
         uint8_t header[MYSQL_HEADER_LEN + 1];
         uint8_t* pHeader = NULL;
 
-        if (GWBUF_LENGTH(pBuffer) > MYSQL_HEADER_LEN)
+        if (gwbuf_link_length(pBuffer) > MYSQL_HEADER_LEN)
         {
             pHeader = GWBUF_DATA(pBuffer);
         }

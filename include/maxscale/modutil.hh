@@ -42,7 +42,7 @@ inline bool modutil_is_SQL(GWBUF* buf)
 {
     unsigned char* ptr;
 
-    if (GWBUF_LENGTH(buf) < 5)
+    if (gwbuf_link_length(buf) < 5)
     {
         return 0;
     }
@@ -60,7 +60,7 @@ inline bool modutil_is_SQL_prepare(GWBUF* buf)
 {
     unsigned char* ptr;
 
-    if (GWBUF_LENGTH(buf) < 5)
+    if (gwbuf_link_length(buf) < 5)
     {
         return 0;
     }
@@ -136,7 +136,7 @@ inline bool modutil_MySQL_Query(GWBUF* buf, char** sql, int* length, int* residu
     *residual += (*ptr++ << 16);
     ptr += 2;   // Skip sequence id  and COM_QUERY byte
     *residual = *residual - 1;
-    *length = GWBUF_LENGTH(buf) - 5;
+    *length = gwbuf_link_length(buf) - 5;
     *residual -= *length;
     *sql = (char*)ptr;
     return 1;

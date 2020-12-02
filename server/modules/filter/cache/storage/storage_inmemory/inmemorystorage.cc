@@ -262,7 +262,7 @@ cache_result_t InMemoryStorage::do_put_value(Token* pToken,
         return CACHE_RESULT_OUT_OF_RESOURCES;
     }
 
-    size_t size = GWBUF_LENGTH(pValue);
+    size_t size = gwbuf_link_length(pValue);
 
     Entries::iterator i = m_entries.find(key);
     Entry* pEntry;

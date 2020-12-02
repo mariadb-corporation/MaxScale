@@ -133,7 +133,7 @@ char* modutil_get_SQL(GWBUF* buf)
         {
             dptr = rval;
             ptr += 2;   // Skip sequence id  and COM_QUERY byte
-            len = GWBUF_LENGTH(buf) - 5;
+            len = gwbuf_link_length(buf) - 5;
 
             while (buf && length > 0)
             {
@@ -146,7 +146,7 @@ char* modutil_get_SQL(GWBUF* buf)
                 if (buf)
                 {
                     ptr = GWBUF_DATA(buf);
-                    len = GWBUF_LENGTH(buf);
+                    len = gwbuf_link_length(buf);
                 }
             }
             *dptr = 0;
@@ -338,7 +338,7 @@ GWBUF* modutil_get_next_MySQL_packet(GWBUF** p_readbuf)
         {
             size_t packetlen;
 
-            if (GWBUF_LENGTH(readbuf) >= 3)     // The length is in the 3 first bytes.
+            if (gwbuf_link_length(readbuf) >= 3)     // The length is in the 3 first bytes.
             {
                 uint8_t* data = (uint8_t*)GWBUF_DATA((readbuf));
                 packetlen = MYSQL_GET_PAYLOAD_LEN(data) + 4;
@@ -371,7 +371,7 @@ GWBUF* modutil_get_next_MySQL_packet(GWBUF** p_readbuf)
 static size_t get_complete_packets_length(GWBUF* buffer)
 {
     uint8_t packet_len[3];
-    uint32_t buflen = GWBUF_LENGTH(buffer);
+    uint32_t buflen = gwbuf_link_length(buffer);
     size_t offset = 0;
     size_t total = 0;
 
@@ -397,7 +397,7 @@ static size_t get_complete_packets_length(GWBUF* buffer)
             {
                 read_len -= buflen;
                 buffer = buffer->next;
-                buflen = buffer ? GWBUF_LENGTH(buffer) : 0;
+                buflen = buffer ? gwbuf_link_length(buffer) : 0;
             }
 
             // TODO: Fix GWBUF interface so that this function can be written without

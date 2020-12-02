@@ -535,7 +535,7 @@ static bool parse_query(GWBUF* querybuf)
         MXS_ERROR("Length (%lu) is 0 or query string allocation failed (%p). Buffer is %lu bytes.",
                   len,
                   query_str,
-                  GWBUF_LENGTH(querybuf));
+                  gwbuf_link_length(querybuf));
         parsing_info_done(pi);
         succp = false;
         goto retblock;

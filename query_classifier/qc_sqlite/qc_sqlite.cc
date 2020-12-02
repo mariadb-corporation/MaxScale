@@ -3747,8 +3747,8 @@ static bool parse_query(GWBUF* query, uint32_t collect)
     {
         uint8_t* data = (uint8_t*) GWBUF_DATA(query);
 
-        if ((GWBUF_LENGTH(query) >= MYSQL_HEADER_LEN + 1)
-            && (GWBUF_LENGTH(query) == MYSQL_HEADER_LEN + MYSQL_GET_PAYLOAD_LEN(data)))
+        if ((gwbuf_link_length(query) >= MYSQL_HEADER_LEN + 1)
+            && (gwbuf_link_length(query) == MYSQL_HEADER_LEN + MYSQL_GET_PAYLOAD_LEN(data)))
         {
             uint8_t command = MYSQL_GET_COMMAND(data);
 
@@ -3830,7 +3830,7 @@ static bool parse_query(GWBUF* query, uint32_t collect)
         {
             MXS_ERROR("Packet size %u, provided buffer is %ld.",
                       MYSQL_HEADER_LEN + MYSQL_GET_PAYLOAD_LEN(data),
-                      GWBUF_LENGTH(query));
+                      gwbuf_link_length(query));
         }
     }
     else
@@ -3871,16 +3871,16 @@ static void log_invalid_data(GWBUF* query, const char* message)
 {
     // At this point the query should be contiguous, but better safe than sorry.
 
-    if (GWBUF_LENGTH(query) >= MYSQL_HEADER_LEN + 1)
+    if (gwbuf_link_length(query) >= MYSQL_HEADER_LEN + 1)
     {
         char* sql;
         int length;
 
         if (modutil_extract_SQL(query, &sql, &length))
         {
-            if (length > (int)GWBUF_LENGTH(query) - MYSQL_HEADER_LEN - 1)
+            if (length > (int)gwbuf_link_length(query) - MYSQL_HEADER_LEN - 1)
             {
-                length = (int)GWBUF_LENGTH(query) - MYSQL_HEADER_LEN - 1;
+                length = (int)gwbuf_link_length(query) - MYSQL_HEADER_LEN - 1;
             }
 
             MXS_INFO("Parsing the query failed, %s: %.*s", message, length, sql);

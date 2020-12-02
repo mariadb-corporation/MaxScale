@@ -216,7 +216,7 @@ public:
                 const uint32_t flags = Cache::time_ms();
                 memcached_return_t mrv = memcached_set(sThis->m_pMemc, mkey.data(), mkey.size(),
                                                        reinterpret_cast<const char*>(GWBUF_DATA(pClone)),
-                                                       GWBUF_LENGTH(pClone), sThis->m_mcd_ttl, flags);
+                                                       gwbuf_link_length(pClone), sThis->m_mcd_ttl, flags);
                 cache_result_t rv;
 
                 if (memcached_success(mrv))

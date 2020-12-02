@@ -435,7 +435,7 @@ bool mxs_mysql_is_ps_command(uint8_t cmd);
 static inline uint8_t mxs_mysql_get_command(const GWBUF* buffer)
 {
     mxb_assert(buffer);
-    if (GWBUF_LENGTH(buffer) > MYSQL_HEADER_LEN)
+    if (gwbuf_link_length(buffer) > MYSQL_HEADER_LEN)
     {
         return GWBUF_DATA(buffer)[4];
     }

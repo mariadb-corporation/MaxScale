@@ -439,7 +439,7 @@ public:
     {
         for (GWBUF* b = buffer; b; b = b->next)
         {
-            update(GWBUF_DATA(b), GWBUF_LENGTH(b));
+            update(GWBUF_DATA(b), gwbuf_link_length(b));
         }
     }
 

@@ -293,7 +293,7 @@ int test_non_contiguous()
 
             GWBUF* pHead = gwbuf_split(&pTail, n);
 
-            cout << GWBUF_LENGTH(pHead);
+            cout << gwbuf_link_length(pHead);
 
             pStmt = gwbuf_append(pStmt, pHead);
 

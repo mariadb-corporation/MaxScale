@@ -352,8 +352,8 @@ int CacheFilterSession::routeQuery(GWBUF* pPacket)
 
     // All of these should be guaranteed by RCAP_TYPE_TRANSACTION_TRACKING
     mxb_assert(gwbuf_is_contiguous(pPacket));
-    mxb_assert(GWBUF_LENGTH(pPacket) >= MYSQL_HEADER_LEN + 1);
-    mxb_assert(MYSQL_GET_PAYLOAD_LEN(pData) + MYSQL_HEADER_LEN == GWBUF_LENGTH(pPacket));
+    mxb_assert(gwbuf_link_length(pPacket) >= MYSQL_HEADER_LEN + 1);
+    mxb_assert(MYSQL_GET_PAYLOAD_LEN(pData) + MYSQL_HEADER_LEN == gwbuf_link_length(pPacket));
 
     routing_action_t action = ROUTING_CONTINUE;
 

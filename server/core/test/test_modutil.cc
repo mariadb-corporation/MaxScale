@@ -43,7 +43,7 @@ static int test1()
             "testmodutil : Rudimentary tests.");
     buffer = gwbuf_alloc(100);
     mxb_assert_message(gwbuf_is_contiguous(buffer), "Allocated buffer should be continuos");
-    memset(GWBUF_DATA(buffer), 0, GWBUF_LENGTH(buffer));
+    memset(GWBUF_DATA(buffer), 0, gwbuf_link_length(buffer));
     mxb_assert_message(0 == modutil_is_SQL(buffer), "Default buffer should be diagnosed as not SQL");
     /* There would ideally be some straightforward way to create a SQL buffer? */
     fprintf(stderr, "\t..done\nExtract SQL from buffer");
@@ -155,7 +155,7 @@ void test_single_sql_packet1()
     mxb_assert_message(complete, "Complete packet buffer should not be NULL");
     mxb_assert_message(gwbuf_length(complete) == sizeof(ok),
                        "Complete packet buffer should contain enough data");
-    mxb_assert_message(memcmp(GWBUF_DATA(complete), ok, GWBUF_LENGTH(complete)) == 0,
+    mxb_assert_message(memcmp(GWBUF_DATA(complete), ok, gwbuf_link_length(complete)) == 0,
                        "Complete packet buffer's data should be equal to original data");
     gwbuf_free(complete);
 
@@ -187,7 +187,7 @@ void test_multiple_sql_packets1()
     mxb_assert_message(complete, "Complete packet buffer should not be NULL");
     mxb_assert_message(gwbuf_length(complete) == sizeof(resultset),
                        "Complete packet buffer should contain enough data");
-    mxb_assert_message(memcmp(GWBUF_DATA(complete), resultset, GWBUF_LENGTH(complete)) == 0,
+    mxb_assert_message(memcmp(GWBUF_DATA(complete), resultset, gwbuf_link_length(complete)) == 0,
                        "Complete packet buffer's data should be equal to original data");
     gwbuf_free(complete);
 
@@ -311,7 +311,7 @@ void test_single_sql_packet2()
     mxb_assert_message(buffer == NULL, "Old buffer should be NULL");
     mxb_assert_message(next, "Next packet buffer should not be NULL");
     mxb_assert_message(gwbuf_length(next) == sizeof(ok), "Next packet buffer should contain enough data");
-    mxb_assert_message(memcmp(GWBUF_DATA(next), ok, GWBUF_LENGTH(next)) == 0,
+    mxb_assert_message(memcmp(GWBUF_DATA(next), ok, gwbuf_link_length(next)) == 0,
                        "Next packet buffer's data should be equal to original data");
     gwbuf_free(buffer);
     gwbuf_free(next);
@@ -350,7 +350,7 @@ void test_multiple_sql_packets2()
         mxb_assert_message(next, "Next packet buffer should not be NULL");
         mxb_assert_message(gwbuf_length(next) == packets[i].length,
                            "Next packet buffer should contain enough data");
-        mxb_assert_message(memcmp(GWBUF_DATA(next), &resultset[packets[i].index], GWBUF_LENGTH(next)) == 0,
+        mxb_assert_message(memcmp(GWBUF_DATA(next), &resultset[packets[i].index], gwbuf_link_length(next)) == 0,
                            "Next packet buffer's data should be equal to original data");
         gwbuf_free(next);
     }
@@ -363,7 +363,7 @@ void test_multiple_sql_packets2()
     next = modutil_get_next_MySQL_packet(&buffer);
     mxb_assert_message(buffer == NULL, "Old buffer should be NULL.");
     mxb_assert_message(next, "Next should not be NULL.");
-    mxb_assert_message(GWBUF_LENGTH(next) == PACKET_1_LEN, "Length should match.");
+    mxb_assert_message(gwbuf_link_length(next) == PACKET_1_LEN, "Length should match.");
     gwbuf_free(next);
 
     // Slightly less than one packet
@@ -388,7 +388,7 @@ void test_multiple_sql_packets2()
     next = modutil_get_next_MySQL_packet(&buffer);
     mxb_assert_message(buffer, "Old buffer should not be NULL.");
     mxb_assert_message(next, "Next should not be NULL.");
-    mxb_assert_message(GWBUF_LENGTH(next) == PACKET_1_LEN, "Length should match.");
+    mxb_assert_message(gwbuf_link_length(next) == PACKET_1_LEN, "Length should match.");
     gwbuf_free(next);
 
     next = modutil_get_next_MySQL_packet(&buffer);
@@ -401,7 +401,7 @@ void test_multiple_sql_packets2()
     mxb_assert_message(buffer, "Old buffer should not be NULL.");
     mxb_assert_message(next, "Next should not be NULL.");
     mxb_assert_message(gwbuf_length(next) == PACKET_2_LEN, "Length should match.");
-    mxb_assert_message(memcmp(GWBUF_DATA(next), &resultset[PACKET_2_IDX], GWBUF_LENGTH(next)) == 0,
+    mxb_assert_message(memcmp(GWBUF_DATA(next), &resultset[PACKET_2_IDX], gwbuf_link_length(next)) == 0,
                        "Next packet buffer's data should be equal to original data");
     gwbuf_free(buffer);
     gwbuf_free(next);
@@ -446,7 +446,7 @@ void test_multiple_sql_packets2()
         mxb_assert_message(gwbuf_length(next) == packets[i].length,
                            "Next packet buffer should contain enough data");
         next = gwbuf_make_contiguous(next);
-        mxb_assert_message(memcmp(GWBUF_DATA(next), &resultset[packets[i].index], GWBUF_LENGTH(next)) == 0,
+        mxb_assert_message(memcmp(GWBUF_DATA(next), &resultset[packets[i].index], gwbuf_link_length(next)) == 0,
                            "Next packet buffer's data should be equal to original data");
         gwbuf_free(next);
     }

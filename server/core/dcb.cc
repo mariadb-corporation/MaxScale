@@ -888,7 +888,7 @@ int DCB::socket_write_SSL(GWBUF* writeq, bool* stop_writing)
 {
     int written;
 
-    written = SSL_write(m_encryption.handle, GWBUF_DATA(writeq), GWBUF_LENGTH(writeq));
+    written = SSL_write(m_encryption.handle, GWBUF_DATA(writeq), gwbuf_link_length(writeq));
 
     *stop_writing = false;
     switch ((SSL_get_error(m_encryption.handle, written)))
@@ -952,7 +952,7 @@ int DCB::socket_write(GWBUF* writeq, bool* stop_writing)
 {
     int written = 0;
     int fd = m_fd;
-    size_t nbytes = GWBUF_LENGTH(writeq);
+    size_t nbytes = gwbuf_link_length(writeq);
     void* buf = GWBUF_DATA(writeq);
     int saved_errno;
 
