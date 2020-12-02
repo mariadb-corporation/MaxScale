@@ -14,6 +14,7 @@ report on [our Jira](https://jira.mariadb.org/projects/MXS).
 
 ## Bug fixes
 
+* [MXS-3311](https://jira.mariadb.org/browse/MXS-3311) routed_packets not updated by readconnroute
 * [MXS-3301](https://jira.mariadb.org/browse/MXS-3301) MaxScale does not recognize xpand properly
 * [MXS-3295](https://jira.mariadb.org/browse/MXS-3295) Layout of classify REST API endpoint stores non-parameter data in parameters object
 * [MXS-3293](https://jira.mariadb.org/browse/MXS-3293) Backticks not stripped in USE statements.
@@ -26,6 +27,7 @@ report on [our Jira](https://jira.mariadb.org/projects/MXS).
 * [MXS-3264](https://jira.mariadb.org/browse/MXS-3264) The event mechanism is not configured.
 * [MXS-3256](https://jira.mariadb.org/browse/MXS-3256) Match pinloki initial setup to that of MariaDB server
 * [MXS-3251](https://jira.mariadb.org/browse/MXS-3251) Hang on shutdown when executing KILL query
+* [MXS-3248](https://jira.mariadb.org/browse/MXS-3248) "error  : (1672) Unexpected result state" with connection_keepalive
 * [MXS-3199](https://jira.mariadb.org/browse/MXS-3199) KafkaCDC read stream data too slow
 * [MXS-3172](https://jira.mariadb.org/browse/MXS-3172) Database grants with escape characters do not work (strip_db_esc)
 

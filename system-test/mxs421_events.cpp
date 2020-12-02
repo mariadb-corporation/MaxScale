@@ -91,6 +91,16 @@ int main(int argc, char* argv[])
         return 1;
     }
 
+    // Ensure that non-root programs can log to the authentication log.
+    rc = test.maxscales->ssh_node_f(0, true,
+                                    "echo 'auth,authpriv.*  %s' > /etc/rsyslog.d/99-maxscale.conf; "
+                                    "service rsyslog restart", secure_log.c_str());
+
+    if (rc != 0)
+    {
+        test.tprintf("Could not add /etc/rsyslog.d/99-maxscale.conf or not restart rsyslog. Test may fail.");
+    }
+
     test.maxscales->connect();
 
     string user;

@@ -409,17 +409,11 @@ public:
     int truncate_mariadb_logs();
 
     /**
-     * @brief configure_ssl Modifies my.cnf in order to enable ssl, redefine access user to require ssl
-     * @return 0 if success
+     * Checks that an SSL connection can be created to the node
+     *
+     * @return True if an encrypted connection to the database was created
      */
-    int configure_ssl(bool require);
-
-    /**
-     * @brief disable_ssl Modifies my.cnf in order to get rid of ssl, redefine access user to allow
-     * connections without ssl
-     * @return 0 if success
-     */
-    int disable_ssl();
+    bool check_ssl(int node);
 
     /**
      * @brief Synchronize slaves with the master
