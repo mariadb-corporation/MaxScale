@@ -492,6 +492,20 @@ same query, then the data will be fetched twice and also stored
 twice. So, a `isolated` cache will in general use more memory and
 cause more traffic to the backend compared to a `mixed` cache.
 
+#### `timeout`
+
+The _timeout_ used when performing operations to distributed storages
+such as _redis_ or _memcached_.
+
+```
+timeout=7000ms
+```
+
+The default value is `5000ms`, that is 5 seconds.
+
+The duration can be specified as explained
+[here](../Getting-Started/Configuration-Guide.md#durations).
+
 ### Runtime Configuration
 
 #### `@maxscale.cache.populate`

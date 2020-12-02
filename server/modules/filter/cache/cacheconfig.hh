@@ -42,6 +42,8 @@ enum cache_users_t
 
 const cache_thread_model_t CACHE_DEFAULT_THREAD_MODEL = CACHE_THREAD_MODEL_ST;
 
+const std::chrono::milliseconds CACHE_DEFAULT_TIMEOUT { 5000 };
+
 class CacheConfig : public config::Configuration
 {
 public:
@@ -72,6 +74,7 @@ public:
     cache_invalidate_t   invalidate;
     bool                 clear_cache_on_parse_errors;
     cache_users_t        users;
+    milliseconds         timeout;
 
     static const config::Specification& specification()
     {
@@ -101,4 +104,5 @@ private:
     static config::ParamEnum<cache_invalidate_t>   s_invalidate;
     static config::ParamBool                       s_clear_cache_on_parse_errors;
     static config::ParamEnum<cache_users_t>        s_users;
+    static config::ParamDuration<milliseconds>     s_timeout;
 };
