@@ -18,8 +18,7 @@ ExternalProject_Add(avro-c
   LOG_DOWNLOAD 1
   LOG_UPDATE 1
   LOG_CONFIGURE 1
-  LOG_BUILD 1
-  LOG_INSTALL 1)
+  LOG_BUILD 1)
 
 add_dependencies(avro-c jansson)
 set(AVRO_FOUND TRUE CACHE INTERNAL "")
