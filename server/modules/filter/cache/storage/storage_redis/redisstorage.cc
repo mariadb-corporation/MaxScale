@@ -379,6 +379,11 @@ public:
     {
     }
 
+    bool connected() const
+    {
+        return m_pContext->err == 0;
+    }
+
     const char* errstr() const
     {
         return m_pContext->errstr;
@@ -519,8 +524,15 @@ public:
         tv.tv_usec = milliseconds - (tv.tv_sec * 1000);
         redisContext* pRedis = redisConnectWithTimeout(host.c_str(), port, tv);
 
-        if (pRedis && pRedis->err == 0)
+        if (pRedis)
         {
+            if (pRedis->err != 0)
+            {
+                MXS_ERROR("%s. Are the arguments '%s:%d' valid? Caching will be disabled.",
+                          pRedis->errstr ? pRedis->errstr : "Could not connect to redis",
+                          host.c_str(), port);
+            }
+
             RedisToken* pToken = new (std::nothrow) RedisToken(pRedis, invalidate, ttl);
 
             if (pToken)
@@ -551,6 +563,11 @@ public:
                              GWBUF** ppValue,
                              std::function<void (cache_result_t, GWBUF*)> cb)
     {
+        if (!m_redis.connected())
+        {
+            return CACHE_RESULT_NOT_FOUND;
+        }
+
         vector<char> rkey = key.to_vector();
 
         auto sThis = get_shared();
@@ -609,6 +626,11 @@ public:
                              const GWBUF* pValue,
                              const std::function<void (cache_result_t)>& cb)
     {
+        if (!m_redis.connected())
+        {
+            return CACHE_RESULT_OK;
+        }
+
         mxb_assert(m_invalidate || invalidation_words.empty());
         vector<char> rkey = key.to_vector();
 
@@ -642,6 +664,11 @@ public:
     cache_result_t del_value(const CacheKey& key,
                              const std::function<void (cache_result_t)>& cb)
     {
+        if (!m_redis.connected())
+        {
+            return CACHE_RESULT_NOT_FOUND;
+        }
+
         vector<char> rkey = key.to_vector();
 
         auto sThis = get_shared();
@@ -706,6 +733,11 @@ public:
     {
         mxb_assert(m_invalidate);
 
+        if (!m_redis.connected())
+        {
+            return CACHE_RESULT_OK;
+        }
+
         auto sThis = get_shared();
 
         mxs::thread_pool().execute([sThis, words, cb] () {
@@ -726,6 +758,11 @@ public:
 
     cache_result_t clear()
     {
+        if (!m_redis.connected())
+        {
+            return CACHE_RESULT_OK;
+        }
+
         Redis::Reply reply = m_redis.command("FLUSHALL");
 
         mxb_assert(reply.is_status("OK"));
