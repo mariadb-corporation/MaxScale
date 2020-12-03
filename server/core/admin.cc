@@ -284,19 +284,33 @@ static bool load_ssl_certificates()
 
     // Set cipher appropriately, including some shorcuts.
     if (cipher.empty())
+    {
         this_unit.ssl_cipher = "NORMAL";
+    }
     else if (cipher == "SSLv3")
+    {
         this_unit.ssl_cipher = "NONE:+VERS-SSL3.0";
+    }
     else if (cipher == "TLSv1.0")
+    {
         this_unit.ssl_cipher = "NONE:+VERS-TLS1.0";
+    }
     else if (cipher == "TLSv1.1")
+    {
         this_unit.ssl_cipher = "NONE:+VERS-TLS1.1";
+    }
     else if (cipher == "TLSv1.2")
+    {
         this_unit.ssl_cipher = "NONE:+VERS-TLS1.2";
+    }
     else if (cipher == "TLSv1.3")
+    {
         this_unit.ssl_cipher = "NONE:+VERS-TLS1.3";
+    }
     else
+    {
         this_unit.ssl_cipher = cipher;
+    }
 
     if (!key.empty() && !cert.empty())
     {
