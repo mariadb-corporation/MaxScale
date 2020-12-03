@@ -91,7 +91,8 @@ CacheST* CacheST::create(const std::string& name,
                                    pConfig->soft_ttl.count(),
                                    pConfig->max_count,
                                    pConfig->max_size,
-                                   pConfig->invalidate);
+                                   pConfig->invalidate,
+                                   pConfig->timeout);
 
     const auto& storage_arguments = pConfig->storage_options;
 

@@ -509,12 +509,17 @@ public:
                        int port,
                        bool invalidate,
                        uint32_t ttl,
+                       std::chrono::milliseconds timeout,
                        shared_ptr<Storage::Token>* psToken)
     {
         bool rv = false;
-        redisContext* pRedis = redisConnect(host.c_str(), port);
+        timeval tv;
+        auto milliseconds = timeout.count();
+        tv.tv_sec = milliseconds / 1000;
+        tv.tv_usec = milliseconds - (tv.tv_sec * 1000);
+        redisContext* pRedis = redisConnectWithTimeout(host.c_str(), port, tv);
 
-        if (pRedis)
+        if (pRedis && pRedis->err == 0)
         {
             RedisToken* pToken = new (std::nothrow) RedisToken(pRedis, invalidate, ttl);
 
@@ -530,8 +535,10 @@ public:
         }
         else
         {
-            MXS_ERROR("Could not create redis handle, are the arguments '%s:%d' valid?",
+            MXS_ERROR("%s. Are the arguments '%s:%d' valid?",
+                      pRedis->errstr ? pRedis->errstr : "Could not connect to redis",
                       host.c_str(), port);
+            redisFree(pRedis);
         }
 
         return rv;
@@ -1157,7 +1164,7 @@ RedisStorage* RedisStorage::create(const string& name,
 
 bool RedisStorage::create_token(shared_ptr<Storage::Token>* psToken)
 {
-    return RedisToken::create(m_host, m_port, m_invalidate, m_ttl, psToken);
+    return RedisToken::create(m_host, m_port, m_invalidate, m_ttl, m_config.timeout, psToken);
 }
 
 void RedisStorage::get_config(Config* pConfig)
