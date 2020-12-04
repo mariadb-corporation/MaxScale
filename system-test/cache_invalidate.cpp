@@ -21,6 +21,9 @@ using namespace std;
 namespace
 {
 
+const int PORT_LOCAL_CACHE = 4006;
+const int PORT_REDIS_CACHE = 4007;
+
 void drop(TestConnections& test)
 {
     MYSQL* pMysql = test.maxscales->conn_rwsplit[0];
@@ -76,6 +79,12 @@ void run(TestConnections& test, int port, Expect expect)
 
     Connection c = test.maxscales->get_connection(port);
     c.connect();
+    if (port == PORT_REDIS_CACHE)
+    {
+        // Short sleep, so that the asynchronous connecting surely
+        // has time to finish.
+        sleep(1);
+    }
     c.query("INSERT INTO cache_invalidate values (1)");
 
     Result rows = c.rows("SELECT * FROM cache_invalidate");
@@ -87,9 +96,6 @@ void run(TestConnections& test, int port, Expect expect)
     drop(test);
 }
 }
-
-const int PORT_LOCAL_CACHE = 4006;
-const int PORT_REDIS_CACHE = 4007;
 
 void install_and_start_redis(Maxscales& maxscales)
 {

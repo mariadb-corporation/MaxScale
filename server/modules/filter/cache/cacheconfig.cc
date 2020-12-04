@@ -174,6 +174,15 @@ config::ParamEnum<cache_users_t> CacheConfig::s_users(
     CACHE_USERS_MIXED
     );
 
+config::ParamDuration<std::chrono::milliseconds> CacheConfig::s_timeout(
+    &s_specification,
+    "timeout",
+    "The timeout when performing operations to distributed storages.",
+    mxs::config::NO_INTERPRETATION,
+    CACHE_DEFAULT_TIMEOUT
+    );
+
+
 CacheConfig::CacheConfig(const std::string& name)
     : config::Configuration(name, &s_specification)
 {
@@ -194,6 +203,7 @@ CacheConfig::CacheConfig(const std::string& name)
     add_native(&CacheConfig::invalidate, &s_invalidate);
     add_native(&CacheConfig::clear_cache_on_parse_errors, &s_clear_cache_on_parse_errors);
     add_native(&CacheConfig::users, &s_users);
+    add_native(&CacheConfig::timeout, &s_timeout);
 }
 
 CacheConfig::~CacheConfig()

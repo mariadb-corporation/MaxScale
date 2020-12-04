@@ -18,6 +18,7 @@
 #include <cstdint>
 #include <jansson.h>
 
+#include <chrono>
 #include <functional>
 #include <map>
 #include <string>
@@ -186,13 +187,15 @@ public:
                uint32_t soft_ttl,
                uint32_t max_count,
                uint64_t max_size,
-               cache_invalidate_t invalidate)
+               cache_invalidate_t invalidate,
+               std::chrono::milliseconds timeout)
             : thread_model(thread_model)
             , hard_ttl(hard_ttl)
             , soft_ttl(soft_ttl)
             , max_count(max_count)
             , max_size(max_size)
             , invalidate(invalidate)
+            , timeout(timeout)
         {
         }
 
@@ -240,6 +243,11 @@ public:
          * returned at initialization.
          */
         cache_invalidate_t invalidate = CACHE_INVALIDATE_NEVER;
+
+        /**
+         * Timeout to be used when accessing remote storages.
+         */
+        std::chrono::milliseconds timeout { 0 };
     };
 
     struct Limits

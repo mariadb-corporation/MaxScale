@@ -426,10 +426,15 @@ MemcachedStorage* MemcachedStorage::create(const std::string& name,
                 MXS_NOTICE("Resultsets up to %u bytes in size will be cached by '%s'.",
                            max_value_size, name.c_str());
 
-                std::string memcached_arguments("--SERVER=");
+                std::string memcached_arguments;
+
+                memcached_arguments += "--SERVER=";
                 memcached_arguments += host.address();
                 memcached_arguments += ":";
                 memcached_arguments += std::to_string(host.port());
+
+                memcached_arguments += " --CONNECT-TIMEOUT=";
+                memcached_arguments += std::to_string(config.timeout.count());
 
                 pStorage = new (std::nothrow) MemcachedStorage(name,
                                                                config,

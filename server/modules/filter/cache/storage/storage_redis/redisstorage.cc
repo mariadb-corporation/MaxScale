@@ -374,13 +374,25 @@ public:
     Redis(const Redis&) = delete;
     Redis& operator=(const Redis&) = delete;
 
-    Redis(redisContext* pContext)
+    Redis(redisContext* pContext = nullptr)
         : m_pContext(pContext)
     {
     }
 
+    void reset(redisContext* pContext)
+    {
+        redisFree(m_pContext);
+        m_pContext = pContext;
+    }
+
+    bool connected() const
+    {
+        return m_pContext && (m_pContext->flags & REDIS_CONNECTED);
+    }
+
     const char* errstr() const
     {
+        mxb_assert(m_pContext);
         return m_pContext->errstr;
     }
 
@@ -391,6 +403,8 @@ public:
 
     Reply command(const char* zFormat, ...)
     {
+        mxb_assert(m_pContext);
+
         va_list ap;
         va_start(ap, zFormat);
         void *reply = redisvCommand(m_pContext, zFormat, ap);
@@ -401,6 +415,8 @@ public:
 
     Reply command(int argc, const char **argv, const size_t *argvlen)
     {
+        mxb_assert(m_pContext);
+
         void* pReply = redisCommandArgv(m_pContext, argc, argv, argvlen);
 
         return Reply(static_cast<redisReply*>(pReply));
@@ -408,6 +424,8 @@ public:
 
     int appendCommand(const char* zFormat, ...)
     {
+        mxb_assert(m_pContext);
+
         va_list ap;
         int rv;
 
@@ -420,11 +438,15 @@ public:
 
     int appendCommandArgv(int argc, const char **argv, const size_t *argvlen)
     {
+        mxb_assert(m_pContext);
+
         return redisAppendCommandArgv(m_pContext, argc, argv, argvlen);
     }
 
     int getReply(Reply* pReply)
     {
+        mxb_assert(m_pContext);
+
         void* pV;
 
         int rv = redisGetReply(m_pContext, &pV);
@@ -439,6 +461,8 @@ public:
 
     bool expect_status(const char* zValue, const char* zContext)
     {
+        mxb_assert(m_pContext);
+
         if (!zContext)
         {
             zContext = "unspecified";
@@ -475,6 +499,8 @@ public:
 
     bool expect_n_status(size_t n, const char* zValue, const char* zContext)
     {
+        mxb_assert(m_pContext);
+
         bool rv = true;
 
         for (size_t i = 0; i < n; ++i)
@@ -507,31 +533,23 @@ public:
 
     static bool create(const string& host,
                        int port,
+                       std::chrono::milliseconds timeout,
                        bool invalidate,
                        uint32_t ttl,
                        shared_ptr<Storage::Token>* psToken)
     {
         bool rv = false;
-        redisContext* pRedis = redisConnect(host.c_str(), port);
 
-        if (pRedis)
-        {
-            RedisToken* pToken = new (std::nothrow) RedisToken(pRedis, invalidate, ttl);
+        RedisToken* pToken = new (std::nothrow) RedisToken(host, port, timeout, invalidate, ttl);
 
-            if (pToken)
-            {
-                psToken->reset(pToken);
-                rv = true;
-            }
-            else
-            {
-                redisFree(pRedis);
-            }
-        }
-        else
+        if (pToken)
         {
-            MXS_ERROR("Could not create redis handle, are the arguments '%s:%d' valid?",
-                      host.c_str(), port);
+            psToken->reset(pToken);
+
+            // The call to connect() (-> get_shared() -> shared_from_this()) can be made only
+            // after the pointer has been stored in a shared_ptr.
+            pToken->connect();
+            rv = true;
         }
 
         return rv;
@@ -544,6 +562,12 @@ public:
                              GWBUF** ppValue,
                              std::function<void (cache_result_t, GWBUF*)> cb)
     {
+        if (!connected())
+        {
+            reconnect();
+            return CACHE_RESULT_NOT_FOUND;
+        }
+
         vector<char> rkey = key.to_vector();
 
         auto sThis = get_shared();
@@ -602,6 +626,12 @@ public:
                              const GWBUF* pValue,
                              const std::function<void (cache_result_t)>& cb)
     {
+        if (!connected())
+        {
+            reconnect();
+            return CACHE_RESULT_OK;
+        }
+
         mxb_assert(m_invalidate || invalidation_words.empty());
         vector<char> rkey = key.to_vector();
 
@@ -635,6 +665,12 @@ public:
     cache_result_t del_value(const CacheKey& key,
                              const std::function<void (cache_result_t)>& cb)
     {
+        if (!connected())
+        {
+            reconnect();
+            return CACHE_RESULT_NOT_FOUND;
+        }
+
         vector<char> rkey = key.to_vector();
 
         auto sThis = get_shared();
@@ -699,6 +735,12 @@ public:
     {
         mxb_assert(m_invalidate);
 
+        if (!connected())
+        {
+            reconnect();
+            return CACHE_RESULT_OK;
+        }
+
         auto sThis = get_shared();
 
         mxs::thread_pool().execute([sThis, words, cb] () {
@@ -719,6 +761,12 @@ public:
 
     cache_result_t clear()
     {
+        if (!connected())
+        {
+            reconnect();
+            return CACHE_RESULT_OK;
+        }
+
         Redis::Reply reply = m_redis.command("FLUSHALL");
 
         mxb_assert(reply.is_status("OK"));
@@ -1037,8 +1085,15 @@ private:
         return action;
     }
 
-    RedisToken(redisContext* pRedis, bool invalidate, uint32_t ttl)
-        : m_redis(pRedis)
+private:
+    RedisToken(const string& host,
+               int port,
+               std::chrono::milliseconds timeout,
+               bool invalidate,
+               uint32_t ttl)
+        : m_host(host)
+        , m_port(port)
+        , m_timeout(timeout)
         , m_pWorker(mxb::Worker::get_current())
         , m_invalidate(invalidate)
         , m_set_format("SET %b %b")
@@ -1050,11 +1105,103 @@ private:
         }
     }
 
+    bool connected() const
+    {
+        return m_redis.connected();
+    }
+
+    void set_context(redisContext* pContext)
+    {
+        mxb_assert(m_connecting);
+
+        if (pContext)
+        {
+            if (pContext->err != 0)
+            {
+                MXS_ERROR("%s. Is the address '%s:%d' valid? Caching will not be enabled.",
+                          pContext->errstr ? pContext->errstr : "Could not connect to redis",
+                          m_host.c_str(), m_port);
+            }
+        }
+        else
+        {
+            MXS_ERROR("Could not create Redis handle. Caching will not be enabled.");
+        }
+
+        m_redis.reset(pContext);
+
+        if (connected())
+        {
+            if (m_reconnecting)
+            {
+                // Reconnected after having been disconnected, let's log a note.
+                MXS_NOTICE("Connected to Redis storage. Caching is enabled.");
+            }
+        }
+
+        m_context_got = std::chrono::steady_clock::now();
+        m_connecting = false;
+        m_reconnecting = false;
+    }
+
+    void connect()
+    {
+        mxb_assert(!m_connecting);
+        m_connecting = true;
+
+        auto sThis = get_shared();
+
+        auto host = m_host;
+        auto port = m_port;
+        auto timeout = m_timeout;
+
+        mxs::thread_pool().execute([sThis, host, port, timeout] () {
+                auto milliseconds = timeout.count();
+                timeval tv;
+                tv.tv_sec = milliseconds / 1000;
+                tv.tv_usec = milliseconds - (tv.tv_sec * 1000);
+
+                redisContext* pContext = redisConnectWithTimeout(host.c_str(), port, tv);
+
+                sThis->m_pWorker->execute([sThis, pContext]() {
+                        if (sThis.use_count() > 1) // The session is still alive
+                        {
+                            sThis->set_context(pContext);
+                        }
+                        else
+                        {
+                            redisFree(pContext);
+                        }
+                    }, mxb::Worker::EXECUTE_QUEUED);
+            });
+    }
+
+    void reconnect()
+    {
+        if (!m_connecting)
+        {
+            m_reconnecting = true;
+
+            auto now = std::chrono::steady_clock::now();
+
+            if (now - m_context_got > m_timeout)
+            {
+                connect();
+            }
+        }
+    }
+
 private:
-    Redis        m_redis;
-    mxb::Worker* m_pWorker;
-    bool         m_invalidate;
-    std::string  m_set_format;
+    Redis                                 m_redis;
+    string                                m_host;
+    int                                   m_port;
+    std::chrono::milliseconds             m_timeout;
+    mxb::Worker*                          m_pWorker;
+    bool                                  m_invalidate;
+    std::string                           m_set_format;
+    std::chrono::steady_clock::time_point m_context_got;
+    bool                                  m_connecting { false };
+    bool                                  m_reconnecting { false };
 };
 
 }
@@ -1157,7 +1304,7 @@ RedisStorage* RedisStorage::create(const string& name,
 
 bool RedisStorage::create_token(shared_ptr<Storage::Token>* psToken)
 {
-    return RedisToken::create(m_host, m_port, m_invalidate, m_ttl, psToken);
+    return RedisToken::create(m_host, m_port, m_config.timeout, m_invalidate, m_ttl, psToken);
 }
 
 void RedisStorage::get_config(Config* pConfig)
