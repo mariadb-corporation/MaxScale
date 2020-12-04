@@ -21,6 +21,7 @@
 #include <atomic>
 #include <mutex>
 #include <openssl/sha.h>
+#include <maxbase/json.hh>
 #include <maxbase/semaphore.hh>
 #include <maxbase/stopwatch.hh>
 #include <maxbase/worker.hh>
@@ -282,6 +283,9 @@ public:
     void apply_status_requests();
 
     bool is_database() const;
+
+    mxb::Json journal_data() const;
+    void      read_journal_data(const mxb::Json& data);
 
     using EventList = std::vector<std::string>;
 
@@ -638,6 +642,9 @@ protected:
      */
     virtual bool can_be_disabled(const MonitorServer& server, std::string* errmsg_out) const;
 
+    void read_journal();
+    void write_journal();
+
 private:
     /**
      * Creates a new monitored server object. Called by monitor configuration code. If a monitor wants to
@@ -692,6 +699,8 @@ private:
     ServerVector          m_servers;    /**< Monitored servers */
     mxs::ConfigParameters m_parameters; /**< Configuration parameters in text form */
     Settings              m_settings;   /**< Base class settings */
+
+    std::string journal_filepath() const;
 };
 
 /**

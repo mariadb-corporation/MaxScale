@@ -524,7 +524,7 @@ void MariaDBMonitor::pre_loop()
     // Read the journal and the last known master.
     // Write the corresponding MariaDBServer into the class-specific m_master variable.
     MonitorServer* journal_master = nullptr;
-    load_server_journal(&journal_master);
+    read_journal();
     if (journal_master)
     {
         // This is somewhat questionable, as the journal only contains status bits but no actual topology
@@ -632,7 +632,7 @@ void MariaDBMonitor::tick()
 
     process_state_changes();
     hangup_failed_servers();
-    store_server_journal(m_master);
+    write_journal();
     m_state = State::IDLE;
 }
 

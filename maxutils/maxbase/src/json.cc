@@ -20,8 +20,8 @@ using std::string;
 
 namespace
 {
-const char key_not_found[] = "Key %s was not found in json data.";
-const char val_is_null[] = "%s is null.";
+const char key_not_found[] = "Key '%s' was not found in json data.";
+const char val_is_null[] = "'%s' is null.";
 }
 
 namespace maxbase
@@ -108,7 +108,7 @@ std::string Json::get_string(const char* key) const
             }
             else
             {
-                m_errormsg = mxb::string_printf("%s is not a json string", key);
+                m_errormsg = mxb::string_printf("'%s' is not a json string.", key);
             }
         }
     }
@@ -141,7 +141,7 @@ int64_t Json::get_int(const char* key) const
         }
         else
         {
-            m_errormsg = mxb::string_printf("%s is not a json integer", key);
+            m_errormsg = mxb::string_printf("'%s' is not a json integer.", key);
         }
     }
     else
@@ -192,7 +192,7 @@ std::vector<Json> Json::get_array_elems(const string& key) const
         }
         else
         {
-            m_errormsg = mxb::string_printf("%s is not a json array", keyc);
+            m_errormsg = mxb::string_printf("'%s' is not a json array.", keyc);
         }
     }
     else
@@ -202,7 +202,7 @@ std::vector<Json> Json::get_array_elems(const string& key) const
     return rval;
 }
 
-std::string Json::error_msg() const
+const std::string& Json::error_msg() const
 {
     return m_errormsg;
 }
@@ -281,7 +281,7 @@ bool Json::save(const std::string& filepath)
     else
     {
         int eno = errno;
-        m_errormsg = mxb::string_printf("Json write to file '%s' failed. Error %d, %s.\n",
+        m_errormsg = mxb::string_printf("Json write to file '%s' failed. Error %d, %s.",
                                         filepathc, eno, mxb_strerror(eno));
     }
     return write_ok;
@@ -311,15 +311,17 @@ bool Json::load(const string& filepath)
     auto filepathc = filepath.c_str();
     json_error_t err;
     json_t* obj = json_load_file(filepathc, 0, &err);
+    bool rval = false;
     if (obj)
     {
         m_obj = obj;
+        rval = true;
     }
     else
     {
         m_errormsg = mxb::string_printf("Json read from file '%s' failed: %s", filepathc, err.text);
     }
-    return false;
+    return rval;
 }
 
 void Json::reset()
@@ -327,5 +329,10 @@ void Json::reset()
     json_decref(m_obj);
     m_obj = json_null();
     m_errormsg.clear();
+}
+
+bool Json::ok() const
+{
+    return m_errormsg.empty();
 }
 }

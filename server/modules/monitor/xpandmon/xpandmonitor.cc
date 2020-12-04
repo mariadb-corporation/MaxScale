@@ -362,7 +362,7 @@ void XpandMonitor::server_removed(SERVER* pServer)
 
 void XpandMonitor::pre_loop()
 {
-    load_server_journal(nullptr);
+    read_journal();
     if (m_config.dynamic_node_detection())
     {
         // At startup we accept softfailed nodes in an attempt to be able to
@@ -416,7 +416,7 @@ void XpandMonitor::tick()
     flush_server_status();
     process_state_changes();
     hangup_failed_servers();
-    store_server_journal(nullptr);
+    write_journal();
 }
 
 void XpandMonitor::choose_hub(xpand::Softfailed softfailed)

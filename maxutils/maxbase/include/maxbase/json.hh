@@ -75,7 +75,7 @@ public:
 
     std::vector<Json> get_array_elems(const std::string& key) const;
 
-    std::string error_msg() const;
+    const std::string& error_msg() const;
 
     bool valid() const;
 
@@ -86,6 +86,7 @@ public:
     bool save(const std::string& filepath);
     bool load(const std::string& filepath);
 
+    bool ok() const;
 private:
     json_t*             m_obj{nullptr}; /**< Managed json-object */
     mutable std::string m_errormsg;     /**< Error message container */

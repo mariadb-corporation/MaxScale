@@ -34,6 +34,7 @@
 
 #include <maxbase/alloc.h>
 #include <maxbase/format.hh>
+#include <maxbase/json.hh>
 #include <maxscale/clock.h>
 #include <maxscale/http.hh>
 #include <maxscale/json_api.hh>
@@ -1961,6 +1962,112 @@ MonitorServer* Monitor::create_server(SERVER* server, const MonitorServer::Share
     return new MonitorServer(server, shared);
 }
 
+namespace journal_fields
+{
+const char FIELD_MXSVERSION[] = "maxscale_version";
+const char FIELD_MODULE[] = "module";
+const char FIELD_TIMESTAMP[] = "timestamp";
+const char FIELD_NAME[] = "name";
+const char FIELD_STATUS[] = "status";
+const char FIELD_SERVERS[] = "servers";
+}
+
+void Monitor::write_journal()
+{
+    using mxb::Json;
+    Json data;
+    data.set_string(journal_fields::FIELD_MODULE, m_module.c_str());
+    auto mod = get_module(m_module, mxs::ModuleType::MONITOR);
+    data.set_int(journal_fields::FIELD_MXSVERSION, mod->mxs_version);
+    data.set_int(journal_fields::FIELD_TIMESTAMP, time(nullptr));
+
+    Json servers_data(Json::Type::ARRAY);
+    for (auto* db : servers())
+    {
+        servers_data.add_array_elem(db->journal_data());
+    }
+    data.set_object(journal_fields::FIELD_SERVERS, std::move(servers_data));
+    if (!data.save(journal_filepath()))
+    {
+        MXB_ERROR("Failed to write journal_fields data to disk. %s", data.error_msg().c_str());
+    }
+}
+
+void Monitor::read_journal()
+{
+    using mxb::Json;
+    string journal_path = journal_filepath();
+    if (access(journal_path.c_str(), F_OK) == 0)
+    {
+        Json data(Json::Type::JS_NULL);
+        if (data.load(journal_path))
+        {
+            bool read_ok = false;
+            string fail_reason;
+            int64_t timestamp = data.get_int(journal_fields::FIELD_TIMESTAMP);
+            int64_t version = data.get_int(journal_fields::FIELD_MXSVERSION);
+            string module = data.get_string(journal_fields::FIELD_MODULE);
+
+            if (data.ok())
+            {
+                auto mod = get_module(m_module, mxs::ModuleType::MONITOR);
+                auto max_age = m_settings.journal_max_age;
+                time_t age = time(nullptr) - timestamp;
+
+                if (module != m_module)
+                {
+                    fail_reason = mxb::string_printf("File is for module '%s'. Current module is '%s'.",
+                                                     module.c_str(), m_module.c_str());
+                }
+                else if (version != mod->mxs_version)
+                {
+                    fail_reason = mxb::string_printf("File is for MaxScale version %li. Current "
+                                                     "MaxScale version is %i.", version, mod->mxs_version);
+                }
+                else if (age > max_age)
+                {
+                    fail_reason = mxb::string_printf("File is %li seconds old. Limit is %li seconds.",
+                                                     age, max_age);
+                }
+                else
+                {
+                    // Journal seems valid, try to load data.
+                    auto servers_data = data.get_array_elems(journal_fields::FIELD_SERVERS);
+                    // TODO: check that names are ok
+                    for (auto& elem : servers_data)
+                    {
+                        string srv_name = elem.get_string(journal_fields::FIELD_NAME);
+                        auto* srv = SERVER::find_by_unique_name(srv_name);
+                        auto* mon_srv = get_monitored_server(srv);
+                        mon_srv->read_journal_data(elem);
+                    }
+                }
+            }
+
+            // If an error occurred, the reason is either in the json object (read or conversion error)
+            // or in the local field.
+            if (!fail_reason.empty() || !data.ok())
+            {
+                if (fail_reason.empty())
+                {
+                    fail_reason = data.error_msg();
+                }
+                MXB_WARNING("Discarding journal file '%s'. %s", journal_path.c_str(), fail_reason.c_str());
+            }
+        }
+        else
+        {
+            MXB_ERROR("Failed to read monitor journal file from disk. %s", data.error_msg().c_str());
+        }
+    }
+    // Non-existing journal file is not an error.
+}
+
+std::string Monitor::journal_filepath() const
+{
+    return mxb::string_printf("%s/%s_journal.json", mxs::datadir(), name());
+}
+
 MonitorWorker::MonitorWorker(const string& name, const string& module)
     : Monitor(name, module)
     , m_thread_running(false)
@@ -2192,7 +2299,7 @@ void MonitorWorker::flush_server_status()
 void MonitorWorkerSimple::pre_loop()
 {
     m_master = nullptr;
-    load_server_journal(&m_master);
+    read_journal();
     // Add another overridable function for derived classes (e.g. pre_loop_monsimple) if required.
 }
 
@@ -2273,7 +2380,7 @@ void MonitorWorkerSimple::tick()
     flush_server_status();
     process_state_changes();
     hangup_failed_servers();
-    store_server_journal(m_master);
+    write_journal();
 }
 
 void MonitorWorker::pre_loop()
@@ -2425,6 +2532,21 @@ bool MonitorServer::is_database() const
 const MonitorServer::EventList& MonitorServer::new_custom_events() const
 {
     return empty_event_list;
+}
+
+mxb::Json MonitorServer::journal_data() const
+{
+    mxb::Json rval;
+    rval.set_string(journal_fields::FIELD_NAME, server->name());
+    rval.set_int(journal_fields::FIELD_STATUS, server->status());
+    return rval;
+}
+
+void MonitorServer::read_journal_data(const mxb::Json& data)
+{
+    uint64_t status = data.get_int(journal_fields::FIELD_STATUS);
+    mon_prev_status = status;
+    server->set_status(status);
 }
 }
 
