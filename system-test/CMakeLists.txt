@@ -337,8 +337,9 @@ add_test_executable(mxs321.cpp mxs321 replication LABELS maxscale readwritesplit
 # Load huge file with 'LOAD DATA LOCAL INFILE'
 add_test_executable(mxs365.cpp mxs365 replication LABELS readwritesplit REPL_BACKEND)
 
-# Connect to Maxscale with user with only 'SELECT' priveledge
-add_test_executable(mxs37_table_privilege.cpp mxs37_table_privilege replication LABELS MySQLAuth LIGHT REPL_BACKEND)
+# Test users with different level privileges: database, table, column and procedure.
+# MXS-37, MXS-3303
+add_test_executable(client_privileges.cc client_privileges replication LABELS LIGHT REPL_BACKEND)
 
 # Connect repeatedly to Schema router and execute simple query, check if auth is ok
 add_test_executable(mxs431.cpp mxs431 sharding LABELS schemarouter REPL_BACKEND BREAKS_REPL)

@@ -54,14 +54,25 @@ int main(int argc, char** argv)
     test.add_result(mysql_stmt_execute(stmt), "Failed to execute");
     test.add_result(mysql_stmt_bind_result(stmt, bind), "Failed to bind result");
     test.add_result(mysql_stmt_fetch(stmt), "Failed to fetch result");
-    test.add_result(strcmp(buffer,
-                           server_id[1]) && strcmp(buffer, server_id[2]) && strcmp(buffer, server_id[3]),
-                    "Expected one of the slave server IDs (%s, %s or %s), not '%s'",
-                    server_id[1],
-                    server_id[2],
-                    server_id[3],
-                    buffer);
+    std::string server_ids;
+    bool found = false;
+    for (int i = 1; i < test.repl->N; ++i)
+    {
+        if (strcmp(buffer, server_id[i]) == 0)
+        {
+            found = true;
+        }
 
+        if (!server_ids.empty())
+        {
+            server_ids += ", ";
+        }
+
+        server_ids += server_id[i];
+    }
+
+    test.expect(found, "Expected one of the slave server IDs (%s), not '%s'",
+                server_ids.c_str(), buffer);
 
     mysql_stmt_close(stmt);
 

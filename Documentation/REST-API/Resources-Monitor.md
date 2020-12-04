@@ -25,10 +25,10 @@ Get a single monitor.
         "self": "http://localhost:8989/v1/monitors/MariaDB-Monitor"
     },
     "data": {
-        "id": "MariaDB-Monitor",
+        "id": "MariaDB-Monitor", // Name of the monitor
         "type": "monitors",
         "relationships": {
-            "servers": {
+            "servers": { // Servers that are monitored by this monitor
                 "links": {
                     "self": "http://localhost:8989/v1/servers/"
                 },
@@ -45,10 +45,10 @@ Get a single monitor.
             }
         },
         "attributes": {
-            "module": "mariadbmon",
-            "state": "Running",
-            "ticks": 1,
-            "parameters": {
+            "module": "mariadbmon", // The module that the monitor uses
+            "state": "Running", // Monitor state
+            "ticks": 1, // The number of monitoring cycles the monitor has done
+            "parameters": { // Monitor parameters
                 "user": "maxuser",
                 "password": "*****",
                 "monitor_interval": 5000,
@@ -88,7 +88,7 @@ Get a single monitor.
                 "enforce_simple_topology": false,
                 "cooperative_monitoring_locks": "none"
             },
-            "monitor_diagnostics": {
+            "monitor_diagnostics": { // Diagnostic output from the monitor, depends on the monitor module
                 "master": "server1",
                 "master_gtid_domain_id": 0,
                 "state": "Idle",
@@ -150,6 +150,7 @@ Get all monitors.
 `Status: 200 OK`
 
 ```javascript
+// See `/v1/monitors/:name` for a descriptions of the fields
 {
     "links": {
         "self": "http://localhost:8989/v1/monitors/"
