@@ -11,6 +11,7 @@ add_library(maxbase STATIC
   hexdump.cc
   host.cc
   http.cc
+  json.cc
   log.cc
   logger.cc
   maxbase.cc

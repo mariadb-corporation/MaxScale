@@ -2,7 +2,7 @@
 #include <string>
 #include <maxbase/format.hh>
 #include <maxbase/jansson.h>
-#include <maxtest/json.hh>
+#include <maxbase/json.hh>
 #include <maxbase/string.hh>
 #include <maxtest/envv.hh>
 #include <maxtest/log.hh>

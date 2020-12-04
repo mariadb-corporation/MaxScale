@@ -9,7 +9,6 @@ add_library(maxtest SHARED
         fw_copy_rules.cc
         get_com_select_insert.cc
         get_my_ip.cc
-        json.cc
         log.cc
         mariadb_func.cc
         mariadb_connector.cc
