@@ -74,14 +74,6 @@ public:
         TARGET_LAST_USED    = mariadb::QueryClassifier::TARGET_LAST_USED,
     };
 
-    enum otrx_state
-    {
-        OTRX_INACTIVE,  // No open transactions
-        OTRX_STARTING,  // Transaction starting on slave
-        OTRX_ACTIVE,    // Transaction open on a slave server
-        OTRX_ROLLBACK   // Transaction being rolled back on the slave server
-    };
-
     enum wait_gtid_state
     {
         NONE,
@@ -284,7 +276,7 @@ private:
     // Whether a transaction replay can remain active
     inline bool can_continue_trx_replay() const
     {
-        return m_is_replay_active && m_retry_duration < m_config.delayed_retry_timeout.count();
+        return m_state == TRX_REPLAY && m_retry_duration < m_config.delayed_retry_timeout.count();
     }
 
     inline bool can_recover_servers() const
@@ -376,6 +368,22 @@ private:
         return gw_mysql_get_byte4(ptr);
     }
 
+    bool in_optimistic_trx() const
+    {
+        return m_state == OTRX_STARTING || m_state == OTRX_ACTIVE || m_state == OTRX_ROLLBACK;
+    }
+
+    enum State
+    {
+        ROUTING,        // Normal routing
+        TRX_REPLAY,     // Replaying a transaction
+        OTRX_STARTING,  // Transaction starting on slave
+        OTRX_ACTIVE,    // Transaction open on a slave server
+        OTRX_ROLLBACK   // Transaction being rolled back on the slave server
+    };
+
+    State m_state = ROUTING;
+
     mxs::SRWBackends  m_backends;               /**< Mem. management, not for use outside RWSplitSession */
     mxs::PRWBackends  m_raw_backends;           /**< Backend pointers for use in interfaces . */
     mxs::RWBackend*   m_current_master;         /**< Current master server */
@@ -412,7 +420,6 @@ private:
     int64_t     m_retry_duration;       /**< Total time spent retrying queries */
     mxs::Buffer m_current_query;        /**< Current query being executed */
     Trx         m_trx;                  /**< Current transaction */
-    bool        m_is_replay_active;     /**< Whether we are actively replaying a transaction */
     bool        m_can_replay_trx;       /**< Whether the transaction can be replayed */
     Trx         m_replayed_trx;         /**< The transaction we are replaying */
     mxs::Buffer m_interrupted_query;    /**< Query that was interrupted mid-transaction. */
@@ -421,8 +428,6 @@ private:
     int64_t     m_num_trx_replays = 0;  /**< How many times trx replay has been attempted */
 
     std::vector<SescmdResp> m_trx_sescmd;   /**< Session commands executed during the transaction */
-
-    otrx_state m_otrx_state = OTRX_INACTIVE;    /**< Optimistic trx state*/
 
     TargetSessionStats& m_server_stats;     /**< The server stats local to this thread, cached in the
                                              * session object. This avoids the lookup involved in getting

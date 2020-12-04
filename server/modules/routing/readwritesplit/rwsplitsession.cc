@@ -43,7 +43,6 @@ RWSplitSession::RWSplitSession(RWSplit* instance, MXS_SESSION* session, mxs::SRW
     , m_next_seq(0)
     , m_qc(this, session, m_config.use_sql_variables_in)
     , m_retry_duration(0)
-    , m_is_replay_active(false)
     , m_can_replay_trx(true)
     , m_server_stats(instance->local_server_stats())
 {
@@ -109,7 +108,7 @@ int32_t RWSplitSession::routeQuery(GWBUF* querybuf)
 
     int rval = 0;
 
-    if (m_is_replay_active && !gwbuf_is_replayed(buffer.get()))
+    if (m_state == TRX_REPLAY && !gwbuf_is_replayed(buffer.get()))
     {
         MXS_INFO("New %s received while transaction replay is active: %s",
                  STRPACKETTYPE(buffer.data()[4]),
@@ -229,6 +228,8 @@ static bool connection_was_killed(GWBUF* buffer)
 
 void RWSplitSession::trx_replay_next_stmt()
 {
+    mxb_assert(m_state == TRX_REPLAY);
+
     if (m_replayed_trx.have_stmts())
     {
         // More statements to replay, pop the oldest one and execute it
@@ -238,8 +239,8 @@ void RWSplitSession::trx_replay_next_stmt()
     }
     else
     {
-        // No more statements to execute
-        m_is_replay_active = false;
+        // No more statements to execute, return to normal routing mode
+        m_state = ROUTING;
         mxb::atomic::add(&m_router->stats().n_trx_replay, 1, mxb::atomic::RELAXED);
         m_num_trx_replays = 0;
 
@@ -275,7 +276,7 @@ void RWSplitSession::trx_replay_next_stmt()
                 // Turn the replay flag back on to prevent queries from getting routed before the hangup we
                 // just added is processed. For example, this can happen if the error is sent and the client
                 // manages to send a COM_QUIT that gets processed before the fake hangup event.
-                m_is_replay_active = true;
+                m_state = TRX_REPLAY;
             }
         }
         else
@@ -295,7 +296,7 @@ void RWSplitSession::trx_replay_next_stmt()
 
 void RWSplitSession::manage_transactions(RWBackend* backend, GWBUF* writebuf, const mxs::Reply& reply)
 {
-    if (m_otrx_state == OTRX_ROLLBACK)
+    if (m_state == OTRX_ROLLBACK)
     {
         /** This is the response to the ROLLBACK. If it fails, we must close
          * the connection. The replaying of the transaction can continue
@@ -610,10 +611,10 @@ int32_t RWSplitSession::clientReply(GWBUF* writebuf, const mxs::ReplyRoute& down
             return 1;
         }
 
-        if (m_otrx_state == OTRX_ROLLBACK)
+        if (m_state == OTRX_ROLLBACK)
         {
             // Transaction rolled back, start replaying it on the master
-            m_otrx_state = OTRX_INACTIVE;
+            m_state = ROUTING;
             start_trx_replay();
             gwbuf_free(writebuf);
             session_reset_server_bookkeeping(m_pSession);
@@ -635,7 +636,7 @@ int32_t RWSplitSession::clientReply(GWBUF* writebuf, const mxs::ReplyRoute& down
          * close the backend if it's a slave. */
         process_sescmd_response(backend, &writebuf, reply);
     }
-    else if (m_is_replay_active)
+    else if (m_state == TRX_REPLAY)
     {
         mxb_assert(m_config.transaction_replay);
 
@@ -718,7 +719,7 @@ void RWSplitSession::execute_queued_commands(mxs::RWBackend* backend, bool proce
         // routing queued queries.
     }
     else if (m_expected_responses == 0 && !m_query_queue.empty()
-             && (!m_is_replay_active || processed_sescmd))
+             && (m_state != TRX_REPLAY || processed_sescmd))
     {
         /**
          * All replies received, route any stored queries. This should be done
@@ -737,7 +738,7 @@ bool RWSplitSession::start_trx_replay()
     {
         ++m_num_trx_replays;
 
-        if (!m_is_replay_active)
+        if (m_state != TRX_REPLAY)
         {
             // This is the first time we're retrying this transaction, store it and the interrupted query
             m_orig_trx = m_trx;
@@ -763,7 +764,7 @@ bool RWSplitSession::start_trx_replay()
             m_interrupted_query.reset(m_current_query.release());
 
             MXS_INFO("Starting transaction replay %ld", m_num_trx_replays);
-            m_is_replay_active = true;
+            m_state = TRX_REPLAY;
 
             /**
              * Copy the transaction for replaying and finalize it. This
@@ -982,7 +983,7 @@ bool RWSplitSession::handleError(mxs::ErrorType type, GWBUF* errmsgbuf, mxs::End
             }
         }
 
-        if (trx_is_open() && m_otrx_state == OTRX_INACTIVE && m_trx.target() == backend)
+        if (trx_is_open() && !in_optimistic_trx() && m_trx.target() == backend)
         {
             can_continue = start_trx_replay();
             errmsg += " A transaction is active and cannot be replayed.";
@@ -1040,7 +1041,7 @@ bool RWSplitSession::handleError(mxs::ErrorType type, GWBUF* errmsgbuf, mxs::End
                           backend->name());
             }
         }
-        else if (m_otrx_state != OTRX_INACTIVE)
+        else if (in_optimistic_trx())
         {
             /**
              * The connection was closed mid-transaction or while we were
@@ -1056,7 +1057,6 @@ bool RWSplitSession::handleError(mxs::ErrorType type, GWBUF* errmsgbuf, mxs::End
             }
 
             mxb_assert(trx_is_open());
-            m_otrx_state = OTRX_INACTIVE;
             can_continue = start_trx_replay();
             backend->close(failure_type);
             backend->set_close_reason("Optimistic trx failed: " + mxs::extract_error(errmsgbuf));

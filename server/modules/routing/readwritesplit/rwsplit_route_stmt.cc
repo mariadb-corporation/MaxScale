@@ -94,8 +94,7 @@ bool RWSplitSession::should_try_trx_on_slave(route_target_t route_target) const
 {
     return m_config.optimistic_trx                  // Optimistic transactions are enabled
            && !is_locked_to_master()                // Not locked to master
-           && !m_is_replay_active                   // Not replaying a transaction
-           && m_otrx_state == OTRX_INACTIVE         // Not yet in optimistic mode
+           && m_state == ROUTING                    // In normal routing mode
            && TARGET_IS_MASTER(route_target)        // The target type is master
            && have_connected_slaves()               // At least one connected slave
            && route_info().is_trx_still_read_only();// The start of the transaction is a read-only statement
@@ -107,7 +106,7 @@ bool RWSplitSession::track_optimistic_trx(mxs::Buffer* buffer)
 
     if (trx_is_ending())
     {
-        m_otrx_state = OTRX_INACTIVE;
+        m_state = ROUTING;
     }
     else if (!route_info().is_trx_still_read_only())
     {
@@ -123,7 +122,7 @@ bool RWSplitSession::track_optimistic_trx(mxs::Buffer* buffer)
         buffer->reset(modutil_create_query("ROLLBACK"));
 
         store_stmt = false;
-        m_otrx_state = OTRX_ROLLBACK;
+        m_state = OTRX_ROLLBACK;
     }
 
     return store_stmt;
@@ -276,8 +275,7 @@ bool RWSplitSession::route_stmt(mxs::Buffer&& buffer)
 {
     const RouteInfo& info = route_info();
     route_target_t route_target = info.target();
-    mxb_assert_message(m_otrx_state != OTRX_ROLLBACK,
-                       "OTRX_ROLLBACK should never happen when routing queries");
+    mxb_assert_message(m_state != OTRX_ROLLBACK, "OTRX_ROLLBACK should never happen when routing queries");
 
     if (m_config.reuse_ps && reuse_prepared_stmt(buffer))
     {
@@ -319,13 +317,13 @@ bool RWSplitSession::route_single_stmt(mxs::Buffer&& buffer)
     if (trx_is_starting() && !trx_is_read_only() && should_try_trx_on_slave(route_target))
     {
         // A normal transaction is starting and it qualifies for speculative routing
-        m_otrx_state = OTRX_STARTING;
+        m_state = OTRX_STARTING;
         route_target = TARGET_SLAVE;
     }
-    else if (m_otrx_state == OTRX_STARTING)
+    else if (m_state == OTRX_STARTING)
     {
         // Transaction was started, begin active tracking of its progress
-        m_otrx_state = OTRX_ACTIVE;
+        m_state = OTRX_ACTIVE;
     }
 
     // If delayed query retry is enabled, we need to store the current statement
@@ -338,7 +336,7 @@ bool RWSplitSession::route_single_stmt(mxs::Buffer&& buffer)
          * Route it to the same backend where we routed the previous packet. */
         route_target = TARGET_LAST_USED;
     }
-    else if (m_otrx_state == OTRX_ACTIVE)
+    else if (m_state == OTRX_ACTIVE)
     {
         /** We are speculatively executing a transaction to the slave, keep
          * routing queries to the same server. If the query modifies data,
@@ -898,7 +896,7 @@ bool RWSplitSession::should_replace_master(RWBackend* target)
            &&   // We have a target server and it's not the current master
            target && target != m_current_master
            &&   // We are not inside a transaction (also checks for autocommit=1)
-           (!trx_is_open() || trx_is_starting() || m_is_replay_active)
+           (!trx_is_open() || trx_is_starting() || m_state == TRX_REPLAY)
            &&   // We are not locked to the old master
            !is_locked_to_master();
 }
@@ -916,7 +914,7 @@ bool RWSplitSession::should_migrate_trx(RWBackend* target)
            &&   // We have a target server and it's not the current master
            target && target != m_current_master
            &&   // Transaction replay is not active (replay is only attempted once)
-           !m_is_replay_active
+           m_state != TRX_REPLAY
            &&   // We have an open transaction
            trx_is_open()
            &&   // The transaction can be replayed
