@@ -374,18 +374,25 @@ public:
     Redis(const Redis&) = delete;
     Redis& operator=(const Redis&) = delete;
 
-    Redis(redisContext* pContext)
+    Redis(redisContext* pContext = nullptr)
         : m_pContext(pContext)
     {
     }
 
+    void reset(redisContext* pContext)
+    {
+        redisFree(m_pContext);
+        m_pContext = pContext;
+    }
+
     bool connected() const
     {
-        return m_pContext->err == 0;
+        return m_pContext && m_pContext->err == 0;
     }
 
     const char* errstr() const
     {
+        mxb_assert(m_pContext);
         return m_pContext->errstr;
     }
 
@@ -396,6 +403,8 @@ public:
 
     Reply command(const char* zFormat, ...)
     {
+        mxb_assert(m_pContext);
+
         va_list ap;
         va_start(ap, zFormat);
         void *reply = redisvCommand(m_pContext, zFormat, ap);
@@ -406,6 +415,8 @@ public:
 
     Reply command(int argc, const char **argv, const size_t *argvlen)
     {
+        mxb_assert(m_pContext);
+
         void* pReply = redisCommandArgv(m_pContext, argc, argv, argvlen);
 
         return Reply(static_cast<redisReply*>(pReply));
@@ -413,6 +424,8 @@ public:
 
     int appendCommand(const char* zFormat, ...)
     {
+        mxb_assert(m_pContext);
+
         va_list ap;
         int rv;
 
@@ -425,11 +438,15 @@ public:
 
     int appendCommandArgv(int argc, const char **argv, const size_t *argvlen)
     {
+        mxb_assert(m_pContext);
+
         return redisAppendCommandArgv(m_pContext, argc, argv, argvlen);
     }
 
     int getReply(Reply* pReply)
     {
+        mxb_assert(m_pContext);
+
         void* pV;
 
         int rv = redisGetReply(m_pContext, &pV);
@@ -444,6 +461,8 @@ public:
 
     bool expect_status(const char* zValue, const char* zContext)
     {
+        mxb_assert(m_pContext);
+
         if (!zContext)
         {
             zContext = "unspecified";
@@ -480,6 +499,8 @@ public:
 
     bool expect_n_status(size_t n, const char* zValue, const char* zContext)
     {
+        mxb_assert(m_pContext);
+
         bool rv = true;
 
         for (size_t i = 0; i < n; ++i)
@@ -512,45 +533,19 @@ public:
 
     static bool create(const string& host,
                        int port,
+                       std::chrono::milliseconds timeout,
                        bool invalidate,
                        uint32_t ttl,
-                       std::chrono::milliseconds timeout,
                        shared_ptr<Storage::Token>* psToken)
     {
         bool rv = false;
-        timeval tv;
-        auto milliseconds = timeout.count();
-        tv.tv_sec = milliseconds / 1000;
-        tv.tv_usec = milliseconds - (tv.tv_sec * 1000);
-        redisContext* pRedis = redisConnectWithTimeout(host.c_str(), port, tv);
 
-        if (pRedis)
+        RedisToken* pToken = new (std::nothrow) RedisToken(host, port, timeout, invalidate, ttl);
+
+        if (pToken)
         {
-            if (pRedis->err != 0)
-            {
-                MXS_ERROR("%s. Are the arguments '%s:%d' valid? Caching will be disabled.",
-                          pRedis->errstr ? pRedis->errstr : "Could not connect to redis",
-                          host.c_str(), port);
-            }
-
-            RedisToken* pToken = new (std::nothrow) RedisToken(pRedis, invalidate, ttl);
-
-            if (pToken)
-            {
-                psToken->reset(pToken);
-                rv = true;
-            }
-            else
-            {
-                redisFree(pRedis);
-            }
-        }
-        else
-        {
-            MXS_ERROR("%s. Are the arguments '%s:%d' valid?",
-                      pRedis->errstr ? pRedis->errstr : "Could not connect to redis",
-                      host.c_str(), port);
-            redisFree(pRedis);
+            psToken->reset(pToken);
+            rv = true;
         }
 
         return rv;
@@ -1081,8 +1076,14 @@ private:
         return action;
     }
 
-    RedisToken(redisContext* pRedis, bool invalidate, uint32_t ttl)
-        : m_redis(pRedis)
+    RedisToken(const string& host,
+               int port,
+               std::chrono::milliseconds timeout,
+               bool invalidate,
+               uint32_t ttl)
+        : m_host(host)
+        , m_port(port)
+        , m_timeout(timeout)
         , m_pWorker(mxb::Worker::get_current())
         , m_invalidate(invalidate)
         , m_set_format("SET %b %b")
@@ -1092,13 +1093,39 @@ private:
             m_set_format += " PX ";
             m_set_format += std::to_string(ttl);
         }
+
+        auto milliseconds = timeout.count();
+        timeval tv;
+        tv.tv_sec = milliseconds / 1000;
+        tv.tv_usec = milliseconds - (tv.tv_sec * 1000);
+
+        redisContext* pContext = redisConnectWithTimeout(host.c_str(), port, tv);
+
+        if (pContext)
+        {
+            if (pContext->err != 0)
+            {
+                MXS_ERROR("%s. Are the arguments '%s:%d' valid? Caching will be disabled.",
+                          pContext->errstr ? pContext->errstr : "Could not connect to redis",
+                          host.c_str(), port);
+            }
+
+            m_redis.reset(pContext);
+        }
+        else
+        {
+            MXS_ERROR("Cound not create Redis handle. Caching will be disabled.");
+        }
     }
 
 private:
-    Redis        m_redis;
-    mxb::Worker* m_pWorker;
-    bool         m_invalidate;
-    std::string  m_set_format;
+    Redis                     m_redis;
+    string                    m_host;
+    int                       m_port;
+    std::chrono::milliseconds m_timeout;
+    mxb::Worker*              m_pWorker;
+    bool                      m_invalidate;
+    std::string               m_set_format;
 };
 
 }
@@ -1201,7 +1228,7 @@ RedisStorage* RedisStorage::create(const string& name,
 
 bool RedisStorage::create_token(shared_ptr<Storage::Token>* psToken)
 {
-    return RedisToken::create(m_host, m_port, m_invalidate, m_ttl, m_config.timeout, psToken);
+    return RedisToken::create(m_host, m_port, m_config.timeout, m_invalidate, m_ttl, psToken);
 }
 
 void RedisStorage::get_config(Config* pConfig)
