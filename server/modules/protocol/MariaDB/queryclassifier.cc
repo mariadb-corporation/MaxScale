@@ -399,7 +399,6 @@ QueryClassifier::QueryClassifier(Handler* pHandler,
     : m_pHandler(pHandler)
     , m_pSession(pSession)
     , m_use_sql_variables_in(use_sql_variables_in)
-    , m_have_tmp_tables(false)
     , m_multi_statements_allowed(are_multi_statements_allowed(pSession))
     , m_sPs_manager(new PSManager)
 {
@@ -788,7 +787,6 @@ void QueryClassifier::check_create_tmp_table(GWBUF* querybuf, uint32_t type)
 {
     if (qc_query_is_type(type, QUERY_TYPE_CREATE_TMP_TABLE))
     {
-        set_have_tmp_tables(true);
         std::string table;
 
         for (const auto& t : qc_get_table_names(querybuf, true))
@@ -807,7 +805,7 @@ void QueryClassifier::check_create_tmp_table(GWBUF* querybuf, uint32_t type)
         MXS_INFO("Added temporary table %s", table.c_str());
 
         /** Add the table to the set of temporary tables */
-        add_tmp_table(table);
+        m_route_info.add_tmp_table(table);
     }
 }
 
@@ -919,7 +917,7 @@ QueryClassifier::current_target_t QueryClassifier::handle_multi_temp_and_load(
     /**
      * Check if the query has anything to do with temporary tables.
      */
-    if (have_tmp_tables() && is_packet_a_query(packet_type))
+    if (m_route_info.have_tmp_tables() && is_packet_a_query(packet_type))
     {
         check_drop_tmp_table(querybuf);
         if (is_read_tmp_table(querybuf, *qtype))
@@ -1161,7 +1159,7 @@ QueryClassifier::RouteInfo QueryClassifier::update_route_info(
 // static
 bool QueryClassifier::find_table(QueryClassifier& qc, const std::string& table)
 {
-    if (qc.is_tmp_table(table))
+    if (qc.m_route_info.is_tmp_table(table))
     {
         MXS_INFO("Query targets a temporary table: %s", table.c_str());
         return false;
@@ -1173,7 +1171,7 @@ bool QueryClassifier::find_table(QueryClassifier& qc, const std::string& table)
 // static
 bool QueryClassifier::delete_table(QueryClassifier& qc, const std::string& table)
 {
-    qc.remove_tmp_table(table);
+    qc.m_route_info.remove_tmp_table(table);
     return true;
 }
 }

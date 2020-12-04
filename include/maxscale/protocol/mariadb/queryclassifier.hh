@@ -185,7 +185,35 @@ public:
             m_ps_continuation = value;
         }
 
+        bool have_tmp_tables() const
+        {
+            return !m_tmp_tables.empty();
+        }
+
+        void add_tmp_table(const std::string& table)
+        {
+            m_tmp_tables.insert(table);
+        }
+
+        void remove_tmp_table(const std::string& table)
+        {
+            m_tmp_tables.erase(table);
+        }
+
+        void clear_tmp_tables()
+        {
+            m_tmp_tables.clear();
+        }
+
+        bool is_tmp_table(const std::string& table)
+        {
+            return m_tmp_tables.find(table) != m_tmp_tables.end();
+        }
+
     private:
+
+        using TableSet = std::unordered_set<std::string>;
+
         uint32_t m_target;      /**< Route target type, TARGET_UNDEFINED for unknown */
         uint8_t  m_command;     /**< The command byte, 0xff for unknown commands */
         uint32_t m_type_mask;   /**< The query type, QUERY_TYPE_UNKNOWN for unknown types*/
@@ -198,6 +226,7 @@ public:
         bool              m_prev_large_query;
         bool              m_trx_is_read_only;
         bool              m_ps_continuation;
+        TableSet          m_tmp_tables;             /**< Set of temporary tables */
     };
 
     class Handler
@@ -208,8 +237,6 @@ public:
 
         virtual bool supports_hint(HINT_TYPE hint_type) const = 0;
     };
-
-    typedef std::unordered_set<std::string> TableSet;
 
     // NOTE: For the time being these must be exactly like the ones in readwritesplit.hh
     enum
@@ -277,9 +304,7 @@ public:
 
     void master_replaced()
     {
-        // As the master has changed, we can reset the temporary table information
-        set_have_tmp_tables(false);
-        clear_tmp_tables();
+        m_route_info.clear_tmp_tables();
     }
 
     /**
@@ -346,35 +371,6 @@ private:
         return m_multi_statements_allowed;
     }
 
-    bool have_tmp_tables() const
-    {
-        return m_have_tmp_tables;
-    }
-
-    void set_have_tmp_tables(bool have_tmp_tables)
-    {
-        m_have_tmp_tables = have_tmp_tables;
-    }
-
-    void add_tmp_table(const std::string& table)
-    {
-        m_tmp_tables.insert(table);
-    }
-
-    void remove_tmp_table(const std::string& table)
-    {
-        m_tmp_tables.erase(table);
-    }
-
-    void clear_tmp_tables()
-    {
-        m_tmp_tables.clear();
-    }
-
-    bool is_tmp_table(const std::string& table)
-    {
-        return m_tmp_tables.find(table) != m_tmp_tables.end();
-    }
 
     /**
      * @brief Get the internal ID for the given binary prepared statement
@@ -435,8 +431,6 @@ private:
     Handler*     m_pHandler;
     MXS_SESSION* m_pSession;
     mxs_target_t m_use_sql_variables_in;
-    bool         m_have_tmp_tables;
-    TableSet     m_tmp_tables;                      /**< Set of temporary tables */
     bool         m_multi_statements_allowed;        /**< Are multi-statements allowed */
     SPSManager   m_sPs_manager;
     HandleMap    m_ps_handles;                      /** External ID to internal ID */
