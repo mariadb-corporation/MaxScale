@@ -14,6 +14,9 @@ report on [our Jira](https://jira.mariadb.org/projects/MXS).
 
 ## Bug fixes
 
+* [MXS-3316](https://jira.mariadb.org/browse/MXS-3316) Redis cache storage must be disabled if Redis not connectible 
+* [MXS-3313](https://jira.mariadb.org/browse/MXS-3313) MaxScale cache must use timeout when connecting to redis/memcached 
+* [MXS-3312](https://jira.mariadb.org/browse/MXS-3312) MaxScale not allowing login and sometimes crashes when cache server not available
 * [MXS-3311](https://jira.mariadb.org/browse/MXS-3311) routed_packets not updated by readconnroute
 * [MXS-3301](https://jira.mariadb.org/browse/MXS-3301) MaxScale does not recognize xpand properly
 * [MXS-3295](https://jira.mariadb.org/browse/MXS-3295) Layout of classify REST API endpoint stores non-parameter data in parameters object
