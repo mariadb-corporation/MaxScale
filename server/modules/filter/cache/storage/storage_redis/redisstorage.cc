@@ -387,7 +387,7 @@ public:
 
     bool connected() const
     {
-        return m_pContext && m_pContext->err == 0;
+        return m_pContext && (m_pContext->flags & REDIS_CONNECTED);
     }
 
     const char* errstr() const
