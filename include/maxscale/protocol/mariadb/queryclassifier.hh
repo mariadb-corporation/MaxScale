@@ -31,6 +31,15 @@ class QueryClassifier
     QueryClassifier& operator=(const QueryClassifier&) = delete;
 
 public:
+
+    /** States of a LOAD DATA LOCAL INFILE */
+    enum load_data_state_t
+    {
+        LOAD_DATA_INACTIVE,         /**< Not active */
+        LOAD_DATA_ACTIVE,           /**< Load is active */
+        LOAD_DATA_END               /**< Current query contains an empty packet that ends the load */
+    };
+
     class RouteInfo
     {
     public:
@@ -92,11 +101,103 @@ public:
             m_stmt_id = stmt_id;
         }
 
+        bool large_query() const
+        {
+            return m_large_query;
+        }
+
+        /**
+         * Check if the packet after this will be a continuation of multi-packet query
+         */
+        bool expecting_large_query() const
+        {
+            return m_next_large_query;
+        }
+
+        void set_large_query(bool large_query)
+        {
+            // The value returned from large_query() must lag by one classification result. This means that
+            // the first packet returns false and the subsequent ones return true.
+            m_large_query = m_next_large_query;
+            m_next_large_query = large_query;
+        }
+
+        load_data_state_t load_data_state() const
+        {
+            return m_load_data_state;
+        }
+
+        void set_load_data_state(load_data_state_t state)
+        {
+            if (state == LOAD_DATA_ACTIVE)
+            {
+                mxb_assert(m_load_data_state == LOAD_DATA_INACTIVE);
+                reset_load_data_sent();
+            }
+
+            m_load_data_state = state;
+        }
+
+        uint64_t load_data_sent() const
+        {
+            return m_load_data_sent;
+        }
+
+        void append_load_data_sent(GWBUF* pBuffer)
+        {
+            m_load_data_sent += gwbuf_length(pBuffer);
+        }
+
+        void reset_load_data_sent()
+        {
+            m_load_data_sent = 0;
+        }
+
+        /**
+         * Check if current transaction is still a read-only transaction
+         *
+         * @return True if no statements have been executed that modify data
+         */
+        bool is_trx_still_read_only() const
+        {
+            return m_trx_is_read_only;
+        }
+
+        void set_trx_still_read_only(bool value)
+        {
+            m_trx_is_read_only = value;
+        }
+
+        /**
+         * Whether the current binary protocol statement is a continuation of a previously executed statement.
+         *
+         * All COM_STMT_FETCH are continuations of a previously executed COM_STMT_EXECUTE. A COM_STMT_EXECUTE
+         * can
+         * be a continuation if it has parameters but it doesn't provide the metadata for them.
+         */
+        bool is_ps_continuation() const
+        {
+            return m_ps_continuation;
+        }
+
+        void set_ps_continuation(bool value)
+        {
+            m_ps_continuation = value;
+        }
+
     private:
         uint32_t m_target;      /**< Route target type, TARGET_UNDEFINED for unknown */
         uint8_t  m_command;     /**< The command byte, 0xff for unknown commands */
         uint32_t m_type_mask;   /**< The query type, QUERY_TYPE_UNKNOWN for unknown types*/
         uint32_t m_stmt_id;     /**< Prepared statement ID, 0 for unknown */
+
+        load_data_state_t m_load_data_state;        /**< The LOAD DATA state */
+        uint64_t          m_load_data_sent;         /**< How much data has been sent */
+        bool              m_large_query;            /**< Set to true when processing payloads >= 2^24 bytes */
+        bool              m_next_large_query = false;
+        bool              m_prev_large_query;
+        bool              m_trx_is_read_only;
+        bool              m_ps_continuation;
     };
 
     class Handler
@@ -159,14 +260,6 @@ public:
         CURRENT_TARGET_SLAVE        /**< Current target is a slave */
     };
 
-    /** States of a LOAD DATA LOCAL INFILE */
-    enum load_data_state_t
-    {
-        LOAD_DATA_INACTIVE,         /**< Not active */
-        LOAD_DATA_ACTIVE,           /**< Load is active */
-        LOAD_DATA_END               /**< Current query contains an empty packet that ends the load */
-    };
-
     QueryClassifier(Handler* pHandler,
                     MXS_SESSION* pSession,
                     mxs_target_t use_sql_variables_in);
@@ -189,42 +282,6 @@ public:
         clear_tmp_tables();
     }
 
-    bool large_query() const
-    {
-        return m_large_query;
-    }
-
-    void set_large_query(bool large_query)
-    {
-        m_large_query = large_query;
-    }
-
-    load_data_state_t load_data_state() const
-    {
-        return m_load_data_state;
-    }
-
-    void set_load_data_state(load_data_state_t state)
-    {
-        if (state == LOAD_DATA_ACTIVE)
-        {
-            mxb_assert(m_load_data_state == LOAD_DATA_INACTIVE);
-            reset_load_data_sent();
-        }
-
-        m_load_data_state = state;
-    }
-
-    /**
-     * Check if current transaction is still a read-only transaction
-     *
-     * @return True if no statements have been executed that modify data
-     */
-    bool is_trx_still_read_only() const
-    {
-        return m_trx_is_read_only;
-    }
-
     /**
      * Check if current transaction is still a read-only transaction
      *
@@ -233,17 +290,6 @@ public:
     bool is_trx_starting() const
     {
         return qc_query_is_type(m_route_info.type_mask(), QUERY_TYPE_BEGIN_TRX);
-    }
-
-    /**
-     * Whether the current binary protocol statement is a continuation of a previously executed statement.
-     *
-     * All COM_STMT_FETCH are continuations of a previously executed COM_STMT_EXECUTE. A COM_STMT_EXECUTE can
-     * be a continuation if it has parameters but it doesn't provide the metadata for them.
-     */
-    bool is_ps_continuation() const
-    {
-        return m_ps_continuation;
     }
 
     /**
@@ -298,21 +344,6 @@ private:
     bool multi_statements_allowed() const
     {
         return m_multi_statements_allowed;
-    }
-
-    uint64_t load_data_sent() const
-    {
-        return m_load_data_sent;
-    }
-
-    void append_load_data_sent(GWBUF* pBuffer)
-    {
-        m_load_data_sent += gwbuf_length(pBuffer);
-    }
-
-    void reset_load_data_sent()
-    {
-        m_load_data_sent = 0;
     }
 
     bool have_tmp_tables() const
@@ -401,20 +432,16 @@ private:
 
 
 private:
-    Handler*          m_pHandler;
-    MXS_SESSION*      m_pSession;
-    mxs_target_t      m_use_sql_variables_in;
-    load_data_state_t m_load_data_state;            /**< The LOAD DATA state */
-    uint64_t          m_load_data_sent;             /**< How much data has been sent */
-    bool              m_have_tmp_tables;
-    TableSet          m_tmp_tables;                 /**< Set of temporary tables */
-    bool              m_large_query;                /**< Set to true when processing payloads >= 2^24 bytes */
-    bool              m_multi_statements_allowed;   /**< Are multi-statements allowed */
-    SPSManager        m_sPs_manager;
-    HandleMap         m_ps_handles;                 /** External ID to internal ID */
-    RouteInfo         m_route_info;
-    bool              m_trx_is_read_only;
-    bool              m_ps_continuation;
+    Handler*     m_pHandler;
+    MXS_SESSION* m_pSession;
+    mxs_target_t m_use_sql_variables_in;
+    bool         m_have_tmp_tables;
+    TableSet     m_tmp_tables;                      /**< Set of temporary tables */
+    bool         m_multi_statements_allowed;        /**< Are multi-statements allowed */
+    SPSManager   m_sPs_manager;
+    HandleMap    m_ps_handles;                      /** External ID to internal ID */
+    RouteInfo    m_route_info;
+
 
     uint32_t m_prev_ps_id = 0;      /**< For direct PS execution, storest latest prepared PS ID.
                                      * https://mariadb.com/kb/en/library/com_stmt_execute/#statement-id **/

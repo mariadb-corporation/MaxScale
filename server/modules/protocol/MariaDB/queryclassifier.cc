@@ -212,6 +212,12 @@ QueryClassifier::RouteInfo::RouteInfo()
     , m_command(0xff)
     , m_type_mask(QUERY_TYPE_UNKNOWN)
     , m_stmt_id(0)
+    , m_load_data_state(LOAD_DATA_INACTIVE)
+    , m_load_data_sent(0)
+    , m_large_query(false)
+    , m_prev_large_query(false)
+    , m_trx_is_read_only(true)
+    , m_ps_continuation(false)
 {
 }
 
@@ -223,6 +229,12 @@ QueryClassifier::RouteInfo::RouteInfo(uint32_t target,
     , m_command(command)
     , m_type_mask(type_mask)
     , m_stmt_id(stmt_id)
+    , m_load_data_state(LOAD_DATA_INACTIVE)
+    , m_load_data_sent(0)
+    , m_large_query(false)
+    , m_prev_large_query(false)
+    , m_trx_is_read_only(true)
+    , m_ps_continuation(false)
 {
 }
 
@@ -387,14 +399,9 @@ QueryClassifier::QueryClassifier(Handler* pHandler,
     : m_pHandler(pHandler)
     , m_pSession(pSession)
     , m_use_sql_variables_in(use_sql_variables_in)
-    , m_load_data_state(LOAD_DATA_INACTIVE)
-    , m_load_data_sent(0)
     , m_have_tmp_tables(false)
-    , m_large_query(false)
     , m_multi_statements_allowed(are_multi_statements_allowed(pSession))
     , m_sPs_manager(new PSManager)
-    , m_trx_is_read_only(true)
-    , m_ps_continuation(false)
 {
 }
 
@@ -519,7 +526,7 @@ uint32_t QueryClassifier::get_route_target(uint8_t command, uint32_t qtype)
     auto session_data = m_pSession->protocol_data();
     bool trx_active = session_data->is_trx_active();
     uint32_t target = TARGET_UNDEFINED;
-    bool load_active = (m_load_data_state != LOAD_DATA_INACTIVE);
+    bool load_active = (m_route_info.load_data_state() != LOAD_DATA_INACTIVE);
 
     /**
      * Prepared statements preparations should go to all servers
@@ -665,11 +672,11 @@ void QueryClassifier::ps_store_response(uint32_t internal_id, GWBUF* buffer)
 
 void QueryClassifier::log_transaction_status(GWBUF* querybuf, uint32_t qtype)
 {
-    if (large_query())
+    if (m_route_info.large_query())
     {
         MXS_INFO("> Processing large request with more than 2^24 bytes of data");
     }
-    else if (load_data_state() == QueryClassifier::LOAD_DATA_INACTIVE)
+    else if (m_route_info.load_data_state() == QueryClassifier::LOAD_DATA_INACTIVE)
     {
         uint8_t* packet = GWBUF_DATA(querybuf);
         unsigned char command = packet[4];
@@ -719,7 +726,7 @@ void QueryClassifier::log_transaction_status(GWBUF* querybuf, uint32_t qtype)
     }
     else
     {
-        MXS_INFO("> Processing LOAD DATA LOCAL INFILE: %lu bytes sent.", load_data_sent());
+        MXS_INFO("> Processing LOAD DATA LOCAL INFILE: %lu bytes sent.", m_route_info.load_data_sent());
     }
 }
 
@@ -927,9 +934,9 @@ QueryClassifier::current_target_t QueryClassifier::handle_multi_temp_and_load(
      * Check if this is a LOAD DATA LOCAL INFILE query. If so, send all queries
      * to the master until the last, empty packet arrives.
      */
-    if (load_data_state() == QueryClassifier::LOAD_DATA_ACTIVE)
+    if (m_route_info.load_data_state() == QueryClassifier::LOAD_DATA_ACTIVE)
     {
-        append_load_data_sent(querybuf);
+        m_route_info.append_load_data_sent(querybuf);
     }
 
     return rv;
@@ -979,6 +986,18 @@ bool QueryClassifier::query_continues_ps(uint8_t cmd, uint32_t stmt_id, GWBUF* b
     return rval;
 }
 
+inline bool is_large_query(GWBUF* buf)
+{
+    uint32_t buflen = gwbuf_length(buf);
+
+    // The buffer should contain at most (2^24 - 1) + 4 bytes ...
+    mxb_assert(buflen <= MYSQL_HEADER_LEN + GW_MYSQL_MAX_PACKET_LEN);
+    // ... and the payload should be buflen - 4 bytes
+    mxb_assert(MYSQL_GET_PAYLOAD_LEN(GWBUF_DATA(buf)) == buflen - MYSQL_HEADER_LEN);
+
+    return buflen == MYSQL_HEADER_LEN + GW_MYSQL_MAX_PACKET_LEN;
+}
+
 QueryClassifier::RouteInfo QueryClassifier::update_route_info(
     QueryClassifier::current_target_t current_target,
     GWBUF* pBuffer)
@@ -988,8 +1007,22 @@ QueryClassifier::RouteInfo QueryClassifier::update_route_info(
     uint32_t type_mask = QUERY_TYPE_UNKNOWN;
     uint32_t stmt_id = 0;
 
+    m_route_info.set_large_query(is_large_query(pBuffer));
+
+    if (m_route_info.large_query())
+    {
+        // Trailing part of a multi-packet query, ignore it
+        return m_route_info;
+    }
+
     // Reset for every classification
-    m_ps_continuation = false;
+    m_route_info.set_ps_continuation(false);
+
+    if (m_route_info.load_data_state() == QueryClassifier::LOAD_DATA_INACTIVE
+        && session_is_load_active(m_pSession))
+    {
+        m_route_info.set_load_data_state(QueryClassifier::LOAD_DATA_ACTIVE);
+    }
 
     // TODO: It may be sufficient to simply check whether we are in a read-only
     // TODO: transaction.
@@ -1081,7 +1114,7 @@ QueryClassifier::RouteInfo QueryClassifier::update_route_info(
                 {
                     type_mask = ps->type;
                     route_to_last_used = ps->route_to_last_used;
-                    m_ps_continuation = query_continues_ps(command, stmt_id, pBuffer);
+                    m_route_info.set_ps_continuation(query_continues_ps(command, stmt_id, pBuffer));
                 }
             }
             else if (command == MXS_COM_QUERY && relates_to_previous_stmt(pBuffer))
@@ -1102,21 +1135,22 @@ QueryClassifier::RouteInfo QueryClassifier::update_route_info(
         if (protocol_data->is_trx_ending() || qc_query_is_type(type_mask, QUERY_TYPE_BEGIN_TRX))
         {
             // Transaction is ending or starting
-            m_trx_is_read_only = true;
+            m_route_info.set_trx_still_read_only(true);
         }
         else if (protocol_data->is_trx_active() && !query_type_is_read_only(type_mask))
         {
             // Transaction is no longer read-only
-            m_trx_is_read_only = false;
+            m_route_info.set_trx_still_read_only(false);
         }
     }
-    else if (load_data_state() == QueryClassifier::LOAD_DATA_ACTIVE)
+    else if (m_route_info.load_data_state() == QueryClassifier::LOAD_DATA_ACTIVE)
     {
         /** Empty packet signals end of LOAD DATA LOCAL INFILE, send it to master*/
-        set_load_data_state(QueryClassifier::LOAD_DATA_END);
-        append_load_data_sent(pBuffer);
-        MXS_INFO("> LOAD DATA LOCAL INFILE finished: %lu bytes sent.",
-                 load_data_sent());
+        mxb_assert(gwbuf_length(pBuffer) == 4);
+        session_set_load_active(m_pSession, false);
+        m_route_info.set_load_data_state(QueryClassifier::LOAD_DATA_INACTIVE);
+        m_route_info.append_load_data_sent(pBuffer);
+        MXS_INFO("> LOAD DATA LOCAL INFILE finished: %lu bytes sent.", m_route_info.load_data_sent());
     }
 
     m_route_info = RouteInfo(route_target, command, type_mask, stmt_id);

@@ -92,13 +92,13 @@ bool RWSplitSession::have_connected_slaves() const
 
 bool RWSplitSession::should_try_trx_on_slave(route_target_t route_target) const
 {
-    return m_config.optimistic_trx          // Optimistic transactions are enabled
-           && !is_locked_to_master()        // Not locked to master
-           && !m_is_replay_active           // Not replaying a transaction
-           && m_otrx_state == OTRX_INACTIVE // Not yet in optimistic mode
-           && TARGET_IS_MASTER(route_target)// The target type is master
-           && have_connected_slaves()       // At least one connected slave
-           && m_qc.is_trx_still_read_only();// The start of the transaction is a read-only statement
+    return m_config.optimistic_trx                  // Optimistic transactions are enabled
+           && !is_locked_to_master()                // Not locked to master
+           && !m_is_replay_active                   // Not replaying a transaction
+           && m_otrx_state == OTRX_INACTIVE         // Not yet in optimistic mode
+           && TARGET_IS_MASTER(route_target)        // The target type is master
+           && have_connected_slaves()               // At least one connected slave
+           && route_info().is_trx_still_read_only();// The start of the transaction is a read-only statement
 }
 
 bool RWSplitSession::track_optimistic_trx(mxs::Buffer* buffer)
@@ -109,7 +109,7 @@ bool RWSplitSession::track_optimistic_trx(mxs::Buffer* buffer)
     {
         m_otrx_state = OTRX_INACTIVE;
     }
-    else if (!m_qc.is_trx_still_read_only())
+    else if (!route_info().is_trx_still_read_only())
     {
         // Not a plain SELECT, roll it back on the slave and start it on the master
         MXS_INFO("Rolling back current optimistic transaction");
@@ -138,11 +138,10 @@ bool RWSplitSession::track_optimistic_trx(mxs::Buffer* buffer)
  */
 bool RWSplitSession::handle_target_is_all(mxs::Buffer&& buffer)
 {
-    const RouteInfo& info = m_qc.current_route_info();
+    const RouteInfo& info = route_info();
     bool result = false;
-    bool is_large = is_large_query(buffer.get());
 
-    if (m_qc.large_query())
+    if (route_info().large_query())
     {
         // TODO: Append to the already stored session command instead of disabling history
         MXS_INFO("Large session write, have to disable session command history");
@@ -157,8 +156,6 @@ bool RWSplitSession::handle_target_is_all(mxs::Buffer&& buffer)
         mxb::atomic::add(&m_router->stats().n_all, 1, mxb::atomic::RELAXED);
         mxb::atomic::add(&m_router->stats().n_queries, 1, mxb::atomic::RELAXED);
     }
-
-    m_qc.set_large_query(is_large);
 
     return result;
 }
@@ -211,7 +208,7 @@ void RWSplitSession::send_readonly_error()
 
 bool RWSplitSession::query_not_supported(GWBUF* querybuf)
 {
-    const RouteInfo& info = m_qc.current_route_info();
+    const RouteInfo& info = route_info();
     route_target_t route_target = info.target();
     GWBUF* err = nullptr;
 
@@ -246,7 +243,7 @@ bool RWSplitSession::query_not_supported(GWBUF* querybuf)
 
 bool RWSplitSession::reuse_prepared_stmt(const mxs::Buffer& buffer)
 {
-    const RouteInfo& info = m_qc.current_route_info();
+    const RouteInfo& info = route_info();
 
     if (info.command() == MXS_COM_STMT_PREPARE)
     {
@@ -277,7 +274,7 @@ bool RWSplitSession::reuse_prepared_stmt(const mxs::Buffer& buffer)
  */
 bool RWSplitSession::route_stmt(mxs::Buffer&& buffer)
 {
-    const RouteInfo& info = m_qc.current_route_info();
+    const RouteInfo& info = route_info();
     route_target_t route_target = info.target();
     mxb_assert_message(m_otrx_state != OTRX_ROLLBACK,
                        "OTRX_ROLLBACK should never happen when routing queries");
@@ -313,7 +310,7 @@ bool RWSplitSession::route_stmt(mxs::Buffer&& buffer)
 
 bool RWSplitSession::route_single_stmt(mxs::Buffer&& buffer)
 {
-    const RouteInfo& info = m_qc.current_route_info();
+    const RouteInfo& info = route_info();
     route_target_t route_target = should_route_sescmd_to_master() ? TARGET_MASTER : info.target();
 
     update_trx_statistics();
@@ -334,7 +331,7 @@ bool RWSplitSession::route_single_stmt(mxs::Buffer&& buffer)
     bool store_stmt = m_config.delayed_retry
         || (TARGET_IS_SLAVE(route_target) && m_config.retry_failed_reads);
 
-    if (m_qc.large_query())
+    if (route_info().large_query())
     {
         /** We're processing a large query that's split across multiple packets.
          * Route it to the same backend where we routed the previous packet. */
@@ -384,7 +381,7 @@ bool RWSplitSession::route_single_stmt(mxs::Buffer&& buffer)
 RWBackend* RWSplitSession::get_target(GWBUF* querybuf, route_target_t route_target)
 {
     RWBackend* rval = nullptr;
-    const RouteInfo& info = m_qc.current_route_info();
+    const RouteInfo& info = route_info();
 
     // We can't use a switch here as the route_target is a bitfield where multiple values are set at one time.
     // Mostly this happens when the type is TARGET_NAMED_SERVER and TARGET_SLAVE due to a routing hint.
@@ -770,7 +767,7 @@ RWBackend* RWSplitSession::handle_slave_is_target(uint8_t cmd, uint32_t stmt_id)
     int rlag_max = get_max_replication_lag();
     RWBackend* target = nullptr;
 
-    if (m_qc.is_ps_continuation())
+    if (route_info().is_ps_continuation())
     {
         ExecMap::iterator it = m_exec_map.find(stmt_id);
 
@@ -1050,7 +1047,7 @@ bool RWSplitSession::handle_got_target(mxs::Buffer&& buffer, RWBackend* target, 
      * TODO: This effectively disables pipelining of queries, very bad for batch insert performance. Replace
      *       with proper, per server tracking of which responses need to be sent to the client.
      */
-    mxb_assert_message(!target->is_waiting_result() || m_qc.large_query(),
+    mxb_assert_message(!target->is_waiting_result() || route_info().large_query(),
                        "Node must be idle when routing queries to it");
 
     MXS_INFO("Route query to %s: %s <", target->is_master() ? "master" : "slave", target->name());
@@ -1082,21 +1079,20 @@ bool RWSplitSession::handle_got_target(mxs::Buffer&& buffer, RWBackend* target, 
         gwbuf_set_type(buffer.get(), GWBUF_TYPE_TRACK_STATE);
     }
 
-    if (m_qc.load_data_state() != QueryClassifier::LOAD_DATA_ACTIVE
-        && !m_qc.large_query() && mxs_mysql_command_will_respond(cmd))
+    if (route_info().load_data_state() != QueryClassifier::LOAD_DATA_ACTIVE
+        && !route_info().large_query() && mxs_mysql_command_will_respond(cmd))
     {
         response = mxs::Backend::EXPECT_RESPONSE;
     }
 
-    bool large_query = is_large_query(buffer.get());
     uint32_t orig_id = 0;
 
-    if (!is_locked_to_master() && mxs_mysql_is_ps_command(cmd) && !m_qc.large_query())
+    if (!is_locked_to_master() && mxs_mysql_is_ps_command(cmd) && !route_info().large_query())
     {
         // Store the original ID in case routing fails
         orig_id = extract_binary_ps_id(buffer.get());
         // Replace the ID with our internal one, the backends will replace it with their own ID
-        auto new_id = m_qc.current_route_info().stmt_id();
+        auto new_id = route_info().stmt_id();
         replace_binary_ps_id(buffer.get(), new_id);
 
         if (cmd == MXS_COM_STMT_EXECUTE)
@@ -1132,28 +1128,17 @@ bool RWSplitSession::handle_got_target(mxs::Buffer&& buffer, RWBackend* target, 
         mxb::atomic::add(&target->target()->stats().packets, 1, mxb::atomic::RELAXED);
         m_server_stats[target->target()].inc_total();
 
-        if (TARGET_IS_SLAVE(m_qc.current_route_info().target())
+        if (TARGET_IS_SLAVE(route_info().target())
             && (cmd == MXS_COM_QUERY || cmd == MXS_COM_STMT_EXECUTE))
         {
             target->select_started();
         }
 
-        if (!m_qc.large_query() && response == mxs::Backend::EXPECT_RESPONSE)
+        if (!route_info().large_query() && response == mxs::Backend::EXPECT_RESPONSE)
         {
             /** The server will reply to this command */
             m_expected_responses++;
-
-            if (m_qc.load_data_state() == QueryClassifier::LOAD_DATA_END)
-            {
-                /** The final packet in a LOAD DATA LOCAL INFILE is an empty packet
-                 * to which the server responds with an OK or an ERR packet */
-                mxb_assert(buffer.length() == 4);
-                m_qc.set_load_data_state(QueryClassifier::LOAD_DATA_INACTIVE);
-                session_set_load_active(m_pSession, false);
-            }
         }
-
-        m_qc.set_large_query(large_query);
 
         // Store the current target
         m_prev_target = target;
@@ -1175,7 +1160,7 @@ bool RWSplitSession::handle_got_target(mxs::Buffer&& buffer, RWBackend* target, 
         /** Track the targets of the COM_STMT_EXECUTE statements. This
          * information is used to route all COM_STMT_FETCH commands
          * to the same server where the COM_STMT_EXECUTE was done. */
-        auto& info = m_exec_map[m_qc.current_route_info().stmt_id()];
+        auto& info = m_exec_map[route_info().stmt_id()];
         info.target = target;
         info.metadata_sent.insert(target);
         MXS_INFO("%s on %s", STRPACKETTYPE(cmd), target->name());

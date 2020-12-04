@@ -120,17 +120,7 @@ int32_t RWSplitSession::routeQuery(GWBUF* querybuf)
 
     if ((m_query_queue.empty() || gwbuf_is_replayed(buffer.get())) && can_route_queries())
     {
-        /** Gather the information required to make routing decisions */
-        if (!m_qc.large_query())
-        {
-            if (m_qc.load_data_state() == QueryClassifier::LOAD_DATA_INACTIVE
-                && session_is_load_active(m_session))
-            {
-                m_qc.set_load_data_state(QueryClassifier::LOAD_DATA_ACTIVE);
-            }
-
-            m_qc.update_route_info(get_current_target(), buffer.get());
-        }
+        m_qc.update_route_info(get_current_target(), buffer.get());
 
         /** No active or pending queries */
         if (route_stmt(std::move(buffer)))
@@ -342,7 +332,7 @@ void RWSplitSession::manage_transactions(RWBackend* backend, GWBUF* writebuf, co
 
                 if (m_current_query.get())
                 {
-                    if (m_qc.current_route_info().target() == TARGET_ALL)
+                    if (route_info().target() == TARGET_ALL)
                     {
                         m_trx_sescmd.emplace_back(m_current_query, mxs::Buffer(gwbuf_clone(writebuf)), reply);
                     }
@@ -829,7 +819,7 @@ bool RWSplitSession::retry_master_query(RWBackend* backend)
                            || backend->is_replaying_history(),
                            "The master should be executing the latest session command "
                            "or attempting to replay existing history.");
-        mxb_assert(m_qc.current_route_info().target() == TARGET_ALL);
+        mxb_assert(route_info().target() == TARGET_ALL);
         mxb_assert(!m_current_query.get());
         mxb_assert(!m_sescmd_list.empty());
         mxb_assert(m_sescmd_count >= 2);

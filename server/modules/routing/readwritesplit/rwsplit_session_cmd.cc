@@ -166,7 +166,7 @@ void RWSplitSession::process_sescmd_response(RWBackend* backend, GWBUF** ppPacke
 
 mxs::SSessionCommand RWSplitSession::create_sescmd(GWBUF* buffer)
 {
-    uint8_t cmd = m_qc.current_route_info().command();
+    uint8_t cmd = route_info().command();
 
     if (mxs_mysql_is_ps_command(cmd))
     {
@@ -174,7 +174,7 @@ mxs::SSessionCommand RWSplitSession::create_sescmd(GWBUF* buffer)
         {
             // Remove the command from the PS mapping
             m_qc.ps_erase(buffer);
-            m_exec_map.erase(m_qc.current_route_info().stmt_id());
+            m_exec_map.erase(route_info().stmt_id());
         }
 
         /**
@@ -183,12 +183,12 @@ mxs::SSessionCommand RWSplitSession::create_sescmd(GWBUF* buffer)
          * to remove the need for extra conversions from external to internal form when the command
          * is being replayed on a server.
          */
-        replace_binary_ps_id(buffer, m_qc.current_route_info().stmt_id());
+        replace_binary_ps_id(buffer, route_info().stmt_id());
     }
 
     /** The SessionCommand takes ownership of the buffer */
     mxs::SSessionCommand sescmd(new mxs::SessionCommand(buffer, m_sescmd_count++));
-    auto type = m_qc.current_route_info().type_mask();
+    auto type = route_info().type_mask();
 
     if (qc_query_is_type(type, QUERY_TYPE_PREPARE_NAMED_STMT)
         || qc_query_is_type(type, QUERY_TYPE_PREPARE_STMT))
@@ -197,7 +197,7 @@ mxs::SSessionCommand RWSplitSession::create_sescmd(GWBUF* buffer)
     }
     else if (qc_query_is_type(type, QUERY_TYPE_DEALLOC_PREPARE))
     {
-        mxb_assert(!mxs_mysql_is_ps_command(m_qc.current_route_info().command()));
+        mxb_assert(!mxs_mysql_is_ps_command(route_info().command()));
         m_qc.ps_erase(buffer);
     }
 

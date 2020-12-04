@@ -262,6 +262,11 @@ private:
         mxs::Reply  reply;
     };
 
+    const mariadb::QueryClassifier::RouteInfo& route_info() const
+    {
+        return m_qc.current_route_info();
+    }
+
     inline bool can_retry_query() const
     {
         /** Individual queries can only be retried if we are not inside
@@ -303,7 +308,7 @@ private:
     inline bool should_route_sescmd_to_master() const
     {
         return trx_is_open() && m_config.transaction_replay
-               && TARGET_IS_ALL(m_qc.current_route_info().target());
+               && TARGET_IS_ALL(route_info().target());
     }
 
     std::string get_verbose_status()
@@ -319,23 +324,11 @@ private:
         return status;
     }
 
-    inline bool is_large_query(GWBUF* buf)
-    {
-        uint32_t buflen = gwbuf_length(buf);
-
-        // The buffer should contain at most (2^24 - 1) + 4 bytes ...
-        mxb_assert(buflen <= MYSQL_HEADER_LEN + GW_MYSQL_MAX_PACKET_LEN);
-        // ... and the payload should be buflen - 4 bytes
-        mxb_assert(MYSQL_GET_PAYLOAD_LEN(GWBUF_DATA(buf)) == buflen - MYSQL_HEADER_LEN);
-
-        return buflen == MYSQL_HEADER_LEN + GW_MYSQL_MAX_PACKET_LEN;
-    }
-
     inline bool can_route_queries() const
     {
         return m_expected_responses == 0
-               || m_qc.load_data_state() == mariadb::QueryClassifier::LOAD_DATA_ACTIVE
-               || m_qc.large_query();
+               || route_info().load_data_state() == mariadb::QueryClassifier::LOAD_DATA_ACTIVE
+               || route_info().expecting_large_query();
     }
 
     inline mariadb::QueryClassifier::current_target_t get_current_target() const
@@ -362,7 +355,7 @@ private:
     {
         if (trx_is_ending())
         {
-            mxb::atomic::add(m_qc.is_trx_still_read_only() ?
+            mxb::atomic::add(route_info().is_trx_still_read_only() ?
                              &m_router->stats().n_ro_trx :
                              &m_router->stats().n_rw_trx,
                              1,
