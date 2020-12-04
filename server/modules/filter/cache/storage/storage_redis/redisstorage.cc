@@ -545,6 +545,10 @@ public:
         if (pToken)
         {
             psToken->reset(pToken);
+
+            // The call to connect() (-> get_shared() -> shared_from_this()) can be made only
+            // after the pointer has been stored in a shared_ptr.
+            pToken->connect();
             rv = true;
         }
 
@@ -1093,29 +1097,52 @@ private:
             m_set_format += " PX ";
             m_set_format += std::to_string(ttl);
         }
+    }
 
-        auto milliseconds = timeout.count();
-        timeval tv;
-        tv.tv_sec = milliseconds / 1000;
-        tv.tv_usec = milliseconds - (tv.tv_sec * 1000);
+    void connect()
+    {
+        auto sThis = get_shared();
 
-        redisContext* pContext = redisConnectWithTimeout(host.c_str(), port, tv);
+        auto host = m_host;
+        auto port = m_port;
+        auto timeout = m_timeout;
 
-        if (pContext)
-        {
-            if (pContext->err != 0)
-            {
-                MXS_ERROR("%s. Are the arguments '%s:%d' valid? Caching will be disabled.",
-                          pContext->errstr ? pContext->errstr : "Could not connect to redis",
-                          host.c_str(), port);
-            }
+        mxs::thread_pool().execute([sThis, host, port, timeout] () {
+                auto milliseconds = timeout.count();
+                timeval tv;
+                tv.tv_sec = milliseconds / 1000;
+                tv.tv_usec = milliseconds - (tv.tv_sec * 1000);
 
-            m_redis.reset(pContext);
-        }
-        else
-        {
-            MXS_ERROR("Cound not create Redis handle. Caching will be disabled.");
-        }
+                redisContext* pContext = redisConnectWithTimeout(host.c_str(), port, tv);
+
+                if (pContext)
+                {
+                    if (pContext->err == 0)
+                    {
+                        sThis->m_pWorker->execute([sThis, pContext]() {
+                                if (sThis.use_count() > 1) // The session is still alive
+                                {
+                                    sThis->m_redis.reset(pContext);
+                                }
+                                else
+                                {
+                                    redisFree(pContext);
+                                }
+                            }, mxb::Worker::EXECUTE_QUEUED);
+                    }
+                    else
+                    {
+                        MXS_ERROR("%s. Are the arguments '%s:%d' valid? Caching will not be enabled.",
+                                  pContext->errstr ? pContext->errstr : "Could not connect to redis",
+                                  host.c_str(), port);
+                        redisFree(pContext);
+                    }
+                }
+                else
+                {
+                    MXS_ERROR("Cound not create Redis handle. Caching will not be enabled.");
+                }
+            });
     }
 
 private:
