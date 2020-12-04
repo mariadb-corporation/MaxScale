@@ -43,33 +43,123 @@ public:
     class RouteInfo
     {
     public:
-        RouteInfo();
-        RouteInfo(uint32_t target,
-                  uint8_t command,
-                  uint32_t type_mask,
-                  uint32_t stmt_id);
+        RouteInfo(const RouteInfo&) = default;
+        RouteInfo& operator=(const RouteInfo&) = default;
 
-        void reset();
+        RouteInfo(RouteInfo&&) = default;
+        RouteInfo& operator=(RouteInfo&&) = default;
 
+        RouteInfo() = default;
+
+        /**
+         * Get the current routing target
+         */
         uint32_t target() const
         {
             return m_target;
         }
 
+        /**
+         * Get the MariaDB command
+         */
         uint8_t command() const
         {
             return m_command;
         }
 
+        /**
+         * Get the query type mask
+         */
         uint32_t type_mask() const
         {
             return m_type_mask;
         }
 
+        /**
+         * Get the prepared statement ID in the query
+         */
         uint32_t stmt_id() const
         {
             return m_stmt_id;
         }
+
+        /**
+         * Check if this is a continuation of a previous multi-packet query
+         */
+        bool large_query() const
+        {
+            return m_large_query;
+        }
+
+        /**
+         * Check if the packet after this will be a continuation of multi-packet query
+         */
+        bool expecting_large_query() const
+        {
+            return m_next_large_query;
+        }
+
+        /**
+         * Get the state of the LOAD DATA LOCAL INFILE command
+         */
+        load_data_state_t load_data_state() const
+        {
+            return m_load_data_state;
+        }
+
+        /**
+         * Get number of bytes send in the LOAD DATA LOCAL INFILE
+         */
+        uint64_t load_data_sent() const
+        {
+            return m_load_data_sent;
+        }
+
+        /**
+         * Check if current transaction is still a read-only transaction
+         *
+         * @return True if no statements have been executed that modify data
+         */
+        bool is_trx_still_read_only() const
+        {
+            return m_trx_is_read_only;
+        }
+
+        /**
+         * Whether the current binary protocol statement is a continuation of a previously executed statement.
+         *
+         * All COM_STMT_FETCH are continuations of a previously executed COM_STMT_EXECUTE. A COM_STMT_EXECUTE
+         * can
+         * be a continuation if it has parameters but it doesn't provide the metadata for them.
+         */
+        bool is_ps_continuation() const
+        {
+            return m_ps_continuation;
+        }
+
+        /**
+         * Check if temporary tables have been created
+         *
+         * @return True if temporary tables have been created
+         */
+        bool have_tmp_tables() const
+        {
+            return !m_tmp_tables.empty();
+        }
+
+        /**
+         * Check if the table is a temporary table
+         *
+         * @return True if the table in question is a temporary table
+         */
+        bool is_tmp_table(const std::string& table)
+        {
+            return m_tmp_tables.find(table) != m_tmp_tables.end();
+        }
+
+        //
+        // Setters
+        //
 
         void set_command(uint8_t c)
         {
@@ -101,30 +191,12 @@ public:
             m_stmt_id = stmt_id;
         }
 
-        bool large_query() const
-        {
-            return m_large_query;
-        }
-
-        /**
-         * Check if the packet after this will be a continuation of multi-packet query
-         */
-        bool expecting_large_query() const
-        {
-            return m_next_large_query;
-        }
-
         void set_large_query(bool large_query)
         {
             // The value returned from large_query() must lag by one classification result. This means that
             // the first packet returns false and the subsequent ones return true.
             m_large_query = m_next_large_query;
             m_next_large_query = large_query;
-        }
-
-        load_data_state_t load_data_state() const
-        {
-            return m_load_data_state;
         }
 
         void set_load_data_state(load_data_state_t state)
@@ -138,11 +210,6 @@ public:
             m_load_data_state = state;
         }
 
-        uint64_t load_data_sent() const
-        {
-            return m_load_data_sent;
-        }
-
         void append_load_data_sent(GWBUF* pBuffer)
         {
             m_load_data_sent += gwbuf_length(pBuffer);
@@ -153,41 +220,14 @@ public:
             m_load_data_sent = 0;
         }
 
-        /**
-         * Check if current transaction is still a read-only transaction
-         *
-         * @return True if no statements have been executed that modify data
-         */
-        bool is_trx_still_read_only() const
-        {
-            return m_trx_is_read_only;
-        }
-
         void set_trx_still_read_only(bool value)
         {
             m_trx_is_read_only = value;
         }
 
-        /**
-         * Whether the current binary protocol statement is a continuation of a previously executed statement.
-         *
-         * All COM_STMT_FETCH are continuations of a previously executed COM_STMT_EXECUTE. A COM_STMT_EXECUTE
-         * can
-         * be a continuation if it has parameters but it doesn't provide the metadata for them.
-         */
-        bool is_ps_continuation() const
-        {
-            return m_ps_continuation;
-        }
-
         void set_ps_continuation(bool value)
         {
             m_ps_continuation = value;
-        }
-
-        bool have_tmp_tables() const
-        {
-            return !m_tmp_tables.empty();
         }
 
         void add_tmp_table(const std::string& table)
@@ -205,28 +245,22 @@ public:
             m_tmp_tables.clear();
         }
 
-        bool is_tmp_table(const std::string& table)
-        {
-            return m_tmp_tables.find(table) != m_tmp_tables.end();
-        }
-
     private:
 
         using TableSet = std::unordered_set<std::string>;
 
-        uint32_t m_target;      /**< Route target type, TARGET_UNDEFINED for unknown */
-        uint8_t  m_command;     /**< The command byte, 0xff for unknown commands */
-        uint32_t m_type_mask;   /**< The query type, QUERY_TYPE_UNKNOWN for unknown types*/
-        uint32_t m_stmt_id;     /**< Prepared statement ID, 0 for unknown */
-
-        load_data_state_t m_load_data_state;        /**< The LOAD DATA state */
-        uint64_t          m_load_data_sent;         /**< How much data has been sent */
-        bool              m_large_query;            /**< Set to true when processing payloads >= 2^24 bytes */
+        uint32_t          m_target = QueryClassifier::TARGET_UNDEFINED;
+        uint8_t           m_command = 0xff;
+        uint32_t          m_type_mask = QUERY_TYPE_UNKNOWN;
+        uint32_t          m_stmt_id = 0;
+        load_data_state_t m_load_data_state = LOAD_DATA_INACTIVE;
+        uint64_t          m_load_data_sent = 0;
+        bool              m_large_query = false;
         bool              m_next_large_query = false;
-        bool              m_prev_large_query;
-        bool              m_trx_is_read_only;
-        bool              m_ps_continuation;
-        TableSet          m_tmp_tables;             /**< Set of temporary tables */
+        bool              m_prev_large_query = false;
+        bool              m_trx_is_read_only = true;
+        bool              m_ps_continuation = false;
+        TableSet          m_tmp_tables;
     };
 
     class Handler

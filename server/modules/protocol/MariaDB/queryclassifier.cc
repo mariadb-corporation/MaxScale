@@ -207,45 +207,6 @@ bool foreach_table(QueryClassifier& qc,
 namespace mariadb
 {
 
-QueryClassifier::RouteInfo::RouteInfo()
-    : m_target(QueryClassifier::TARGET_UNDEFINED)
-    , m_command(0xff)
-    , m_type_mask(QUERY_TYPE_UNKNOWN)
-    , m_stmt_id(0)
-    , m_load_data_state(LOAD_DATA_INACTIVE)
-    , m_load_data_sent(0)
-    , m_large_query(false)
-    , m_prev_large_query(false)
-    , m_trx_is_read_only(true)
-    , m_ps_continuation(false)
-{
-}
-
-QueryClassifier::RouteInfo::RouteInfo(uint32_t target,
-                                      uint8_t command,
-                                      uint32_t type_mask,
-                                      uint32_t stmt_id)
-    : m_target(target)
-    , m_command(command)
-    , m_type_mask(type_mask)
-    , m_stmt_id(stmt_id)
-    , m_load_data_state(LOAD_DATA_INACTIVE)
-    , m_load_data_sent(0)
-    , m_large_query(false)
-    , m_prev_large_query(false)
-    , m_trx_is_read_only(true)
-    , m_ps_continuation(false)
-{
-}
-
-void QueryClassifier::RouteInfo::reset()
-{
-    m_target = QueryClassifier::TARGET_UNDEFINED;
-    m_command = 0xff;
-    m_type_mask = QUERY_TYPE_UNKNOWN;
-    m_stmt_id = 0;
-}
-
 class QueryClassifier::PSManager
 {
     PSManager(const PSManager&) = delete;
@@ -1151,7 +1112,10 @@ QueryClassifier::RouteInfo QueryClassifier::update_route_info(
         MXS_INFO("> LOAD DATA LOCAL INFILE finished: %lu bytes sent.", m_route_info.load_data_sent());
     }
 
-    m_route_info = RouteInfo(route_target, command, type_mask, stmt_id);
+    m_route_info.set_target(route_target);
+    m_route_info.set_command(command);
+    m_route_info.set_type_mask(type_mask);
+    m_route_info.set_stmt_id(stmt_id);
 
     return m_route_info;
 }
