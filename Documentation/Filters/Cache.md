@@ -1163,6 +1163,14 @@ there can be unintended sharing.
 ```
 storage=storage_redis
 ```
+If `storage_redis` cannot connect to the Redis server, caching will silently
+be disabled and a connection attempt will be made after a [timeout](#timeout)
+interval.
+
+Note that since each connection attempt itself has the same timeout, reconnection
+attemps will thus be made at `2 * timeout` intervals. The same approach is followed
+also if the connection is lost during the lifetime of the session.
+
 `storage_redis` has the following mandatory arguments:
 
 * `server` using which the location of the server is specified as `host[:port]`.

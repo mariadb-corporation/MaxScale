@@ -562,8 +562,9 @@ public:
                              GWBUF** ppValue,
                              std::function<void (cache_result_t, GWBUF*)> cb)
     {
-        if (!m_redis.connected())
+        if (!connected())
         {
+            reconnect();
             return CACHE_RESULT_NOT_FOUND;
         }
 
@@ -625,8 +626,9 @@ public:
                              const GWBUF* pValue,
                              const std::function<void (cache_result_t)>& cb)
     {
-        if (!m_redis.connected())
+        if (!connected())
         {
+            reconnect();
             return CACHE_RESULT_OK;
         }
 
@@ -663,8 +665,9 @@ public:
     cache_result_t del_value(const CacheKey& key,
                              const std::function<void (cache_result_t)>& cb)
     {
-        if (!m_redis.connected())
+        if (!connected())
         {
+            reconnect();
             return CACHE_RESULT_NOT_FOUND;
         }
 
@@ -732,8 +735,9 @@ public:
     {
         mxb_assert(m_invalidate);
 
-        if (!m_redis.connected())
+        if (!connected())
         {
+            reconnect();
             return CACHE_RESULT_OK;
         }
 
@@ -757,8 +761,9 @@ public:
 
     cache_result_t clear()
     {
-        if (!m_redis.connected())
+        if (!connected())
         {
+            reconnect();
             return CACHE_RESULT_OK;
         }
 
@@ -1080,6 +1085,7 @@ private:
         return action;
     }
 
+private:
     RedisToken(const string& host,
                int port,
                std::chrono::milliseconds timeout,
@@ -1099,8 +1105,50 @@ private:
         }
     }
 
+    bool connected() const
+    {
+        return m_redis.connected();
+    }
+
+    void set_context(redisContext* pContext)
+    {
+        mxb_assert(m_connecting);
+
+        if (pContext)
+        {
+            if (pContext->err != 0)
+            {
+                MXS_ERROR("%s. Is the address '%s:%d' valid? Caching will not be enabled.",
+                          pContext->errstr ? pContext->errstr : "Could not connect to redis",
+                          m_host.c_str(), m_port);
+            }
+        }
+        else
+        {
+            MXS_ERROR("Could not create Redis handle. Caching will not be enabled.");
+        }
+
+        m_redis.reset(pContext);
+
+        if (connected())
+        {
+            if (m_reconnecting)
+            {
+                // Reconnected after having been disconnected, let's log a note.
+                MXS_NOTICE("Connected to Redis storage. Caching is enabled.");
+            }
+        }
+
+        m_context_got = std::chrono::steady_clock::now();
+        m_connecting = false;
+        m_reconnecting = false;
+    }
+
     void connect()
     {
+        mxb_assert(!m_connecting);
+        m_connecting = true;
+
         auto sThis = get_shared();
 
         auto host = m_host;
@@ -1115,44 +1163,45 @@ private:
 
                 redisContext* pContext = redisConnectWithTimeout(host.c_str(), port, tv);
 
-                if (pContext)
-                {
-                    if (pContext->err == 0)
-                    {
-                        sThis->m_pWorker->execute([sThis, pContext]() {
-                                if (sThis.use_count() > 1) // The session is still alive
-                                {
-                                    sThis->m_redis.reset(pContext);
-                                }
-                                else
-                                {
-                                    redisFree(pContext);
-                                }
-                            }, mxb::Worker::EXECUTE_QUEUED);
-                    }
-                    else
-                    {
-                        MXS_ERROR("%s. Are the arguments '%s:%d' valid? Caching will not be enabled.",
-                                  pContext->errstr ? pContext->errstr : "Could not connect to redis",
-                                  host.c_str(), port);
-                        redisFree(pContext);
-                    }
-                }
-                else
-                {
-                    MXS_ERROR("Cound not create Redis handle. Caching will not be enabled.");
-                }
+                sThis->m_pWorker->execute([sThis, pContext]() {
+                        if (sThis.use_count() > 1) // The session is still alive
+                        {
+                            sThis->set_context(pContext);
+                        }
+                        else
+                        {
+                            redisFree(pContext);
+                        }
+                    }, mxb::Worker::EXECUTE_QUEUED);
             });
     }
 
+    void reconnect()
+    {
+        if (!m_connecting)
+        {
+            m_reconnecting = true;
+
+            auto now = std::chrono::steady_clock::now();
+
+            if (now - m_context_got > m_timeout)
+            {
+                connect();
+            }
+        }
+    }
+
 private:
-    Redis                     m_redis;
-    string                    m_host;
-    int                       m_port;
-    std::chrono::milliseconds m_timeout;
-    mxb::Worker*              m_pWorker;
-    bool                      m_invalidate;
-    std::string               m_set_format;
+    Redis                                 m_redis;
+    string                                m_host;
+    int                                   m_port;
+    std::chrono::milliseconds             m_timeout;
+    mxb::Worker*                          m_pWorker;
+    bool                                  m_invalidate;
+    std::string                           m_set_format;
+    std::chrono::steady_clock::time_point m_context_got;
+    bool                                  m_connecting { false };
+    bool                                  m_reconnecting { false };
 };
 
 }
