@@ -93,7 +93,10 @@ scp -i $key $sshopt test_env $me@$ip:~/
 ssh -i $key $sshopt $me@$ip "sudo usermod --shell /bin/bash $me"
 ssh -i $key $sshopt $me@$ip "./MaxScale/BUILD/install_test_build_deps.sh"
 ssh -i $key $sshopt $me@$ip ". ./test_env; env; ./MaxScale/system-test/mdbci/run_test.sh"
-
+if [ $? != 0 ] ; then
+    echo "Tests execution FAILED! exiting"
+    exit 1
+fi
 
 . ${script_dir}/configure_log_dir.sh
 mkdir -p LOGS
