@@ -38,3 +38,5 @@ SELECT COUNT(IF(!c.ispackage, 1, NULL)) as cnt FROM test FOR UPDATE;
 SELECT handler FROM abc FOR UPDATE;
 SELECT * FROM test LOCK IN SHARE MODE;
 SELECT * FROM test FOR SHARE;
+-- comment balabala.
+UPDATE test SET a = '123';
