@@ -65,6 +65,10 @@ mkdir build && cd build
 cmake .. -DBUILD_SYSTEM_TESTS=Y -DBUILDNAME=${mdbci_config_name} -DCMAKE_BUILD_TYPE=Debug
 cd system-test
 make
+if [ $? != 0 ] ; then
+    echo "Test code build FAILED! exiting"
+    exit 1
+fi
 
 echo ${test_set} | grep "NAME#"
 if [ $? == 0 ] ; then
