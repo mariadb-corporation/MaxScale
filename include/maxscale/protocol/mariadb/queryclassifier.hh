@@ -399,6 +399,16 @@ public:
      */
     RouteInfo update_route_info(QueryClassifier::current_target_t current_target, GWBUF* pBuffer);
 
+    /**
+     * Reverts the effects of the latest update_route_info call'
+     *
+     * @note Can only be called after a call to update_route_info() and must only be called once.
+     */
+    void revert_update()
+    {
+        m_route_info = m_prev_route_info;
+    }
+
 private:
     bool multi_statements_allowed() const
     {
@@ -469,6 +479,7 @@ private:
     SPSManager   m_sPs_manager;
     HandleMap    m_ps_handles;                      /** External ID to internal ID */
     RouteInfo    m_route_info;
+    RouteInfo    m_prev_route_info; // Previous state, used for rollback of state
 
 
     uint32_t m_prev_ps_id = 0;      /**< For direct PS execution, storest latest prepared PS ID.

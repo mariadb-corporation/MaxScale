@@ -966,6 +966,9 @@ QueryClassifier::RouteInfo QueryClassifier::update_route_info(
     uint32_t type_mask = QUERY_TYPE_UNKNOWN;
     uint32_t stmt_id = 0;
 
+    // Stash the current state in case we need to roll it back
+    m_prev_route_info = m_route_info;
+
     m_route_info.set_large_query(is_large_query(pBuffer));
 
     if (m_route_info.large_query())

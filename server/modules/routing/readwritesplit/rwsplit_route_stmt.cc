@@ -100,32 +100,42 @@ bool RWSplitSession::should_try_trx_on_slave(route_target_t route_target) const
            && route_info().is_trx_still_read_only();// The start of the transaction is a read-only statement
 }
 
-bool RWSplitSession::track_optimistic_trx(mxs::Buffer* buffer)
+void RWSplitSession::track_optimistic_trx(mxs::Buffer* buffer, const RoutingResult& res)
 {
-    bool store_stmt = true;
-
-    if (trx_is_ending())
+    if (res.type == RoutingResult::Type::OTRX_START)
     {
-        m_state = ROUTING;
+        mxb_assert(res.route_target == TARGET_SLAVE);
+        m_state = OTRX_STARTING;
     }
-    else if (!route_info().is_trx_still_read_only())
+    else if (res.type == RoutingResult::Type::OTRX_END)
     {
-        // Not a plain SELECT, roll it back on the slave and start it on the master
-        MXS_INFO("Rolling back current optimistic transaction");
+        mxb_assert(res.route_target == TARGET_LAST_USED);
 
-        /**
-         * Store the actual statement we were attempting to execute and
-         * replace it with a ROLLBACK. The storing of the statement is
-         * done here to avoid storage of the ROLLBACK.
-         */
-        m_current_query.reset(buffer->release());
-        buffer->reset(modutil_create_query("ROLLBACK"));
+        if (trx_is_ending())
+        {
+            m_state = ROUTING;
+        }
+        else if (!route_info().is_trx_still_read_only())
+        {
+            // Not a plain SELECT, roll it back on the slave and start it on the master
+            MXS_INFO("Rolling back current optimistic transaction");
 
-        store_stmt = false;
-        m_state = OTRX_ROLLBACK;
+            /**
+             * Store the actual statement we were attempting to execute and
+             * replace it with a ROLLBACK. The storing of the statement is
+             * done here to avoid storage of the ROLLBACK.
+             */
+            m_current_query.reset(buffer->release());
+            buffer->reset(modutil_create_query("ROLLBACK"));
+
+            m_state = OTRX_ROLLBACK;
+        }
     }
-
-    return store_stmt;
+    else if (m_state == OTRX_STARTING)
+    {
+        mxb_assert(res.route_target == TARGET_LAST_USED);
+        m_state = OTRX_ACTIVE;
+    }
 }
 
 /**
@@ -309,75 +319,50 @@ bool RWSplitSession::route_stmt(mxs::Buffer&& buffer)
 
 bool RWSplitSession::route_single_stmt(mxs::Buffer&& buffer)
 {
-    const RouteInfo& info = route_info();
-    route_target_t route_target = should_route_sescmd_to_master() ? TARGET_MASTER : info.target();
-
-    update_trx_statistics();
-
-    if (trx_is_starting() && !trx_is_read_only() && should_try_trx_on_slave(route_target))
-    {
-        // A normal transaction is starting and it qualifies for speculative routing
-        m_state = OTRX_STARTING;
-        route_target = TARGET_SLAVE;
-    }
-    else if (m_state == OTRX_STARTING)
-    {
-        // Transaction was started, begin active tracking of its progress
-        m_state = OTRX_ACTIVE;
-    }
-
-    // If delayed query retry is enabled, we need to store the current statement
-    bool store_stmt = m_config.delayed_retry
-        || (TARGET_IS_SLAVE(route_target) && m_config.retry_failed_reads);
-
-    if (route_info().large_query())
-    {
-        /** We're processing a large query that's split across multiple packets.
-         * Route it to the same backend where we routed the previous packet. */
-        route_target = TARGET_LAST_USED;
-    }
-    else if (m_state == OTRX_ACTIVE)
-    {
-        /** We are speculatively executing a transaction to the slave, keep
-         * routing queries to the same server. If the query modifies data,
-         * a rollback is initiated on the slave server. */
-        store_stmt = track_optimistic_trx(&buffer);
-        route_target = TARGET_LAST_USED;
-    }
+    RoutingResult res = resolve_route(buffer, route_info());
 
     bool ok = true;
 
-    if (auto target = get_target(buffer.get(), route_target))
+    if (res.target)
     {
+        update_trx_statistics();
+
+        track_optimistic_trx(&buffer, res);
+
         // We have a valid target, reset retry duration
         m_retry_duration = 0;
 
-        if (!prepare_target(target, route_target))
+        if (!prepare_target(res.target, res.route_target))
         {
             // The connection to target was down and we failed to reconnect
             ok = false;
         }
-        else if (target->has_session_commands())
+        else if (res.target->has_session_commands())
         {
             // We need to wait until the session commands are executed
             m_query_queue.emplace_front(std::move(buffer));
-            MXS_INFO("Queuing query until '%s' completes session command", target->name());
+            MXS_INFO("Queuing query until '%s' completes session command", res.target->name());
         }
         else
         {
+            // If delayed query retry is enabled, we need to store the current statement
+            bool store_stmt = m_state != OTRX_ROLLBACK
+                && (m_config.delayed_retry
+                    || (TARGET_IS_SLAVE(res.route_target) && m_config.retry_failed_reads));
+
             // Target server was found and is in the correct state
-            ok = handle_got_target(std::move(buffer), target, store_stmt);
+            ok = handle_got_target(std::move(buffer), res.target, store_stmt);
         }
     }
     else
     {
-        ok = handle_routing_failure(std::move(buffer), route_target);
+        ok = handle_routing_failure(std::move(buffer), res.route_target);
     }
 
     return ok;
 }
 
-RWBackend* RWSplitSession::get_target(GWBUF* querybuf, route_target_t route_target)
+RWBackend* RWSplitSession::get_target(const mxs::Buffer& buffer, route_target_t route_target)
 {
     RWBackend* rval = nullptr;
     const RouteInfo& info = route_info();
@@ -386,7 +371,7 @@ RWBackend* RWSplitSession::get_target(GWBUF* querybuf, route_target_t route_targ
     // Mostly this happens when the type is TARGET_NAMED_SERVER and TARGET_SLAVE due to a routing hint.
     if (TARGET_IS_NAMED_SERVER(route_target) || TARGET_IS_RLAG_MAX(route_target))
     {
-        rval = handle_hinted_target(querybuf, route_target);
+        rval = handle_hinted_target(buffer.get(), route_target);
     }
     else if (TARGET_IS_LAST_USED(route_target))
     {
@@ -404,6 +389,49 @@ RWBackend* RWSplitSession::get_target(GWBUF* querybuf, route_target_t route_targ
     {
         MXS_ERROR("Unexpected target type: %s", route_target_to_string(route_target));
         mxb_assert(!true);
+    }
+
+    return rval;
+}
+
+RWSplitSession::RoutingResult RWSplitSession::resolve_route(const mxs::Buffer& buffer, const RouteInfo& info)
+{
+    RoutingResult rval;
+    rval.route_target = info.target();
+
+    if (info.large_query())
+    {
+        /** We're processing a large query that's split across multiple packets.
+         * Route it to the same backend where we routed the previous packet. */
+        rval.route_target = TARGET_LAST_USED;
+    }
+    else if (should_route_sescmd_to_master())
+    {
+        rval.route_target = TARGET_MASTER;
+    }
+    else if (trx_is_starting() && !trx_is_read_only() && should_try_trx_on_slave(rval.route_target))
+    {
+        // A normal transaction is starting and it qualifies for speculative routing
+        rval.type = RoutingResult::Type::OTRX_START;
+        rval.route_target = TARGET_SLAVE;
+    }
+    else if (m_state == OTRX_STARTING)
+    {
+        rval.route_target = TARGET_LAST_USED;
+    }
+    else if (m_state == OTRX_ACTIVE)
+    {
+        if (trx_is_ending() || !info.is_trx_still_read_only())
+        {
+            rval.type = RoutingResult::Type::OTRX_END;
+        }
+
+        rval.route_target = TARGET_LAST_USED;
+    }
+
+    if (rval.route_target != TARGET_ALL)
+    {
+        rval.target = get_target(buffer, rval.route_target);
     }
 
     return rval;
@@ -682,7 +710,7 @@ int RWSplitSession::get_max_replication_lag()
  *
  *  @return bool - true if succeeded, false otherwise
  */
-RWBackend* RWSplitSession::handle_hinted_target(GWBUF* querybuf, route_target_t route_target)
+RWBackend* RWSplitSession::handle_hinted_target(const GWBUF* querybuf, route_target_t route_target)
 {
     const char rlag_hint_tag[] = "max_slave_replication_lag";
     const int comparelen = sizeof(rlag_hint_tag);

@@ -117,10 +117,11 @@ int32_t RWSplitSession::routeQuery(GWBUF* querybuf)
         return 1;
     }
 
-    if ((m_query_queue.empty() || gwbuf_is_replayed(buffer.get())) && can_route_queries())
-    {
-        m_qc.update_route_info(get_current_target(), buffer.get());
+    m_qc.update_route_info(get_current_target(), buffer.get());
+    RoutingResult res = resolve_route(buffer, route_info());
 
+    if (can_route_query(buffer))
+    {
         /** No active or pending queries */
         if (route_stmt(std::move(buffer)))
         {
@@ -129,10 +130,17 @@ int32_t RWSplitSession::routeQuery(GWBUF* querybuf)
     }
     else
     {
+        // Roll back the query classifier state to keep it consistent.
+        m_qc.revert_update();
+
         // Already busy executing a query, put the query in a queue and route it later
-        MXS_INFO("Storing query (len: %lu cmd: %0x), expecting %d replies to current command: %s",
+        MXS_INFO("Storing query (len: %lu cmd: %0x), expecting %d replies to current command: %s. "
+                 "Would route %s to '%s'.",
                  buffer.length(), buffer.data()[4], m_expected_responses,
-                 mxs::extract_sql(buffer, 1024).c_str());
+                 mxs::extract_sql(buffer, 1024).c_str(),
+                 route_target_to_string(res.route_target),
+                 res.target ? res.target->name() : "<no target>");
+
         mxb_assert(m_expected_responses == 1 || !m_query_queue.empty());
         mxb_assert(!gwbuf_is_replayed(querybuf));
 

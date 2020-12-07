@@ -150,11 +150,27 @@ private:
     mxs::RWBackend* get_target_backend(backend_type_t btype, const char* name, int max_rlag);
     mxs::RWBackend* get_root_master();
 
+    struct RoutingResult
+    {
+        enum class Type
+        {
+            NORMAL,
+            OTRX_START,
+            OTRX_END
+        };
+
+        route_target_t  route_target = TARGET_UNDEFINED;
+        mxs::RWBackend* target = nullptr;
+        Type            type = Type::NORMAL;
+    };
+
     // The main target selection function
-    mxs::RWBackend* get_target(GWBUF* querybuf, route_target_t route_target);
+    mxs::RWBackend* get_target(const mxs::Buffer& buffer, route_target_t route_target);
+
+    RoutingResult resolve_route(const mxs::Buffer& buffer, const mariadb::QueryClassifier::RouteInfo&);
 
     bool            handle_target_is_all(mxs::Buffer&& buffer);
-    mxs::RWBackend* handle_hinted_target(GWBUF* querybuf, route_target_t route_target);
+    mxs::RWBackend* handle_hinted_target(const GWBUF* querybuf, route_target_t route_target);
     mxs::RWBackend* handle_slave_is_target(uint8_t cmd, uint32_t stmt_id);
     mxs::RWBackend* handle_master_is_target();
     bool            handle_got_target(mxs::Buffer&& buffer, mxs::RWBackend* target, bool store);
@@ -227,11 +243,10 @@ private:
      * Tracks the progress of the optimistic transaction and starts the rollback
      * procedure if the transaction turns out to be one that modifies data.
      *
-     * @param buffer     Current query
-     *
-     * @return Whether the current statement should be stored for the duration of the query
+     * @param buffer Current query
+     * @param res    Routing result
      */
-    bool track_optimistic_trx(mxs::Buffer* buffer);
+    void track_optimistic_trx(mxs::Buffer* buffer, const RoutingResult& res);
 
 private:
     // QueryClassifier::Handler
@@ -317,11 +332,22 @@ private:
         return status;
     }
 
-    inline bool can_route_queries() const
+    inline bool can_route_query(const mxs::Buffer& buffer) const
     {
-        return m_expected_responses == 0
-               || route_info().load_data_state() == mariadb::QueryClassifier::LOAD_DATA_ACTIVE
-               || route_info().expecting_large_query();
+        bool can_route = false;
+
+        if (m_query_queue.empty() || gwbuf_is_replayed(buffer.get()))
+        {
+            if (m_expected_responses == 0
+                || route_info().load_data_state() == mariadb::QueryClassifier::LOAD_DATA_ACTIVE
+                || route_info().large_query())
+            {
+                // Not currently doing anything or we're processing a multi-packet query
+                can_route = true;
+            }
+        }
+
+        return can_route;
     }
 
     inline mariadb::QueryClassifier::current_target_t get_current_target() const
