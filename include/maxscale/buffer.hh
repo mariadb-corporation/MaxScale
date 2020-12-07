@@ -95,39 +95,39 @@ struct GWBUF
 #endif
 };
 
-inline bool gwbuf_is_type_undefined(GWBUF* b)
+inline bool gwbuf_is_type_undefined(const GWBUF* b)
 {
     return b->gwbuf_type == 0;
 }
 
-inline bool gwbuf_is_ignorable(GWBUF* b)
+inline bool gwbuf_is_ignorable(const GWBUF* b)
 {
     return b->gwbuf_type & GWBUF_TYPE_IGNORABLE;
 }
 
-inline bool gwbuf_should_collect_result(GWBUF* b)
+inline bool gwbuf_should_collect_result(const GWBUF* b)
 {
     return b->gwbuf_type & GWBUF_TYPE_COLLECT_RESULT;
 }
 
-inline bool gwbuf_is_reply_ok(GWBUF* b)
+inline bool gwbuf_is_reply_ok(const GWBUF* b)
 {
     return b->gwbuf_type & GWBUF_TYPE_REPLY_OK;
 }
 
 // True if the query is not initiated by the client but an internal replaying mechanism
-inline bool gwbuf_is_replayed(GWBUF* b)
+inline bool gwbuf_is_replayed(const GWBUF* b)
 {
     return b->gwbuf_type & GWBUF_TYPE_REPLAYED;
 }
 
 // Track session state change response
-inline bool gwbuf_should_track_state(GWBUF* b)
+inline bool gwbuf_should_track_state(const GWBUF* b)
 {
     return b->gwbuf_type & GWBUF_TYPE_TRACK_STATE;
 }
 
-inline bool gwbuf_is_parsed(GWBUF* b)
+inline bool gwbuf_is_parsed(const GWBUF* b)
 {
     return b->sbuf->info & GWBUF_INFO_PARSED;
 }
