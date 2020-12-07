@@ -138,6 +138,7 @@ public:
     std::string   admin_pam_ro_service;         /**< PAM service for read-only users */
     std::string   admin_ssl_key;                /**< Admin SSL key */
     std::string   admin_ssl_cert;               /**< Admin SSL cert */
+    admin_ssl_version_t    admin_ssl_version;   /**< Admin allowed SSL versions */
     std::string   admin_ssl_ca_cert;            /**< Admin SSL CA cert */
     std::string   local_address;                /**< Local address to use when connecting */
     bool          load_persisted_configs;       /**< Load persisted configuration files on startup */
@@ -219,6 +220,7 @@ private:
     static config::ParamString              s_admin_pam_ro_service;
     static config::ParamString              s_admin_ssl_key;
     static config::ParamString              s_admin_ssl_cert;
+    static config::ParamEnum<admin_ssl_version_t>              s_admin_ssl_version;
     static config::ParamString              s_admin_ssl_ca_cert;
     static config::ParamString              s_local_address;
     static config::ParamBool                s_load_persisted_configs;
