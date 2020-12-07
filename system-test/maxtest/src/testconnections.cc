@@ -2171,7 +2171,7 @@ bool TestConnections::test_bad_config(int m, const string& config)
                                  true,
                                  "cp /tmp/maxscale.cnf /etc/maxscale.cnf; pkill -9 maxscale; "
                                  "maxscale -U maxscale -lstdout &> /dev/null && sleep 1 && pkill -9 maxscale");
-    return ((ssh_rc == 0) or (ssh_rc >= 256));
+    return ((ssh_rc == 0) || (ssh_rc == 256));
 }
 int TestConnections::call_mdbci(const char* options)
 {
