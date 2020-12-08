@@ -88,6 +88,7 @@ try
     test("[fe80::37f8:99a2:558a:9f5d]:4001", maxbase::Host::Type::IPV6);
     test("[::]:4001", maxbase::Host::Type::IPV6);
     test("google.com:80", maxbase::Host::Type::HostName);
+    test("hello-world.fi:3333", maxbase::Host::Type::HostName);
 
     std::cout << "The following should be INVALID!!!!!\n";
     test("/tmp/socket/", maxbase::Host::Type::Invalid);
@@ -96,6 +97,8 @@ try
     test("[127.0.0.1]:", maxbase::Host::Type::Invalid);
     test("[127.0.0.1:", maxbase::Host::Type::Invalid);
     test("_hello_world.fi:3333", maxbase::Host::Type::Invalid);
+    test("-hello_world.fi:3333", maxbase::Host::Type::Invalid);
+    test("hello--world.fi:3333", maxbase::Host::Type::Invalid);
 
     std::cout << "\nRegular Constructor!!!!!\n";
 
