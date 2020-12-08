@@ -388,6 +388,7 @@ MaxScale::MaxScale(Maxscales* maxscales, TestLogger& log, int node_ind)
 
 ServersInfo MaxScale::get_servers()
 {
+    using mxb::Json;
     const string field_servers = "servers";
     const string field_data = "data";
     const string field_id = "id";
