@@ -1987,9 +1987,11 @@ void Monitor::write_journal()
         servers_data.add_array_elem(db->journal_data());
     }
     data.set_object(journal_fields::FIELD_SERVERS, std::move(servers_data));
+
+    save_monitor_specific_journal_data(data); // Add derived class data if any
     if (!data.save(journal_filepath()))
     {
-        MXB_ERROR("Failed to write journal_fields data to disk. %s", data.error_msg().c_str());
+        MXB_ERROR("Failed to write journal data to disk. %s", data.error_msg().c_str());
     }
 }
 
@@ -2002,7 +2004,6 @@ void Monitor::read_journal()
         Json data(Json::Type::JS_NULL);
         if (data.load(journal_path))
         {
-            bool read_ok = false;
             string fail_reason;
             int64_t timestamp = data.get_int(journal_fields::FIELD_TIMESTAMP);
             int64_t version = data.get_int(journal_fields::FIELD_MXSVERSION);
@@ -2033,19 +2034,50 @@ void Monitor::read_journal()
                 {
                     // Journal seems valid, try to load data.
                     auto servers_data = data.get_array_elems(journal_fields::FIELD_SERVERS);
-                    // TODO: check that names are ok
-                    for (auto& elem : servers_data)
+                    // Check that all server names in journal are also found in current monitor. If not,
+                    // discard journal.
+                    bool servers_found = true;
+                    if (servers_data.size() == m_servers.size())
                     {
-                        string srv_name = elem.get_string(journal_fields::FIELD_NAME);
-                        auto* srv = SERVER::find_by_unique_name(srv_name);
-                        auto* mon_srv = get_monitored_server(srv);
-                        mon_srv->read_journal_data(elem);
+                        for (size_t i = 0; i < servers_data.size(); i++)
+                        {
+                            string jrn_srv_name = servers_data[i].get_string(journal_fields::FIELD_NAME);
+                            if (jrn_srv_name != m_servers[i]->server->name())
+                            {
+                                servers_found = false;
+                                break;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        servers_found = false;
+                    }
+
+                    if (servers_found)
+                    {
+                        for (size_t i = 0; i < servers_data.size(); i++)
+                        {
+                            m_servers[i]->read_journal_data(servers_data[i]);
+                        }
+
+                        if (data.error_msg().empty())
+                        {
+                            load_monitor_specific_journal_data(data);
+                        }
+                    }
+                    else
+                    {
+                        fail_reason = "Servers described in the journal are different from the ones "
+                                      "configured on the current monitor.";
                     }
                 }
             }
 
-            // If an error occurred, the reason is either in the json object (read or conversion error)
-            // or in the local field.
+            // If an error occurred, the error description is either in the json object (read or conversion
+            // error) or in 'fail_reason'. Some of the actual data fields in the journal could also be
+            // missing or have invalid values, but this would require someone to manually edit the json file.
+            // Such errors are not detected and may lead to weird values for one monitor tick.
             if (!fail_reason.empty() || !data.ok())
             {
                 if (fail_reason.empty())
@@ -2066,6 +2098,14 @@ void Monitor::read_journal()
 std::string Monitor::journal_filepath() const
 {
     return mxb::string_printf("%s/%s_journal.json", mxs::datadir(), name());
+}
+
+void Monitor::save_monitor_specific_journal_data(mxb::Json& data)
+{
+}
+
+void Monitor::load_monitor_specific_journal_data(const mxb::Json& data)
+{
 }
 
 MonitorWorker::MonitorWorker(const string& name, const string& module)

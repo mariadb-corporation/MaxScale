@@ -656,6 +656,22 @@ private:
      */
     virtual MonitorServer* create_server(SERVER* server, const MonitorServer::SharedSettings& shared);
 
+    /**
+     * A derived class should override this function if it wishes to save its own journal data.
+     * This is called when saving the monitor journal.
+     *
+     * @param data Journal data with base class fields
+     */
+    virtual void save_monitor_specific_journal_data(mxb::Json& data);
+
+    /**
+     * A derived class should override this function if it wishes to load its own journal data.
+     * This is called when loading the monitor journal.
+     *
+     * @param data Json from journal file
+     */
+    virtual void load_monitor_specific_journal_data(const mxb::Json& data);
+
     bool add_server(SERVER* server);
     void remove_all_servers();
 

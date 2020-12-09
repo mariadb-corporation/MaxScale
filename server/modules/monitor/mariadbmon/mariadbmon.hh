@@ -413,6 +413,9 @@ private:
     MariaDBServer* get_server(mxs::MonitorServer* mon_server) const;
     MariaDBServer* get_server(SERVER* server) const;
 
+    void save_monitor_specific_journal_data(mxb::Json& data) override;
+    void load_monitor_specific_journal_data(const mxb::Json& data) override;
+
     // Cluster discovery and status assignment methods, top levels
     void update_topology();
     void build_replication_graph();

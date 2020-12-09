@@ -1139,6 +1139,32 @@ void MariaDBMonitor::ManualCommand::Result::deep_copy_from(const MariaDBMonitor:
     errors = json_deep_copy(rhs.errors);
 }
 
+namespace journal_fields
+{
+const char MASTER[] = "master_server";
+const char MASTER_GTID_DOMAIN[] = "master_gtid_domain";
+}
+
+void MariaDBMonitor::save_monitor_specific_journal_data(mxb::Json& data)
+{
+    data.set_string(journal_fields::MASTER, m_master->name());
+    data.set_int(journal_fields::MASTER_GTID_DOMAIN, m_master_gtid_domain);
+}
+
+void MariaDBMonitor::load_monitor_specific_journal_data(const mxb::Json& data)
+{
+    string master_name = data.get_string(journal_fields::MASTER);
+    for (auto& elem : m_servers_by_id)
+    {
+        if (strcmp(elem.second->name(), master_name.c_str()) == 0)
+        {
+            m_master = elem.second;
+            break;
+        }
+    }
+    m_master_gtid_domain = data.get_int(journal_fields::MASTER_GTID_DOMAIN);
+}
+
 /**
  * Command handler for 'switchover'
  *
