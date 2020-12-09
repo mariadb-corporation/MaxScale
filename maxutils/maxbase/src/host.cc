@@ -54,13 +54,15 @@ namespace
 bool is_valid_hostname(const std::string& hn)
 {
     auto invalid_char = [](char ch) {
-            bool valid = std::isalnum(ch) || ch == '_' || ch == '.';
+            bool valid = std::isalnum(ch) || ch == '_' || ch == '.' || ch == '-';
             return !valid;
         };
 
     bool ret = std::none_of(begin(hn), end(hn), invalid_char)
         && hn.front() != '_'
-        && (hn.length() <= 253 && hn.length() > 0);
+        && hn.front() != '-'
+        && (hn.length() <= 253 && hn.length() > 0)
+        && hn.find("--") == std::string::npos;
 
     return ret;
 }
