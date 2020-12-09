@@ -15,6 +15,7 @@
 // The following is adapted from SQLite3 version 3.30.1.
 // https://www.sqlite.org/index.html
 
+#include "sqlite_strlike.hh"
 #include <cstdint>
 #include <cstring>
 #include <maxbase/assert.h>
@@ -45,10 +46,6 @@ struct compareInfo
  * @return 0 on match
  */
 int patternCompare(const u8* zPattern, const u8* zString, const compareInfo* pInfo, u32 matchOther);
-
-/* The correct SQL-92 behavior is for the LIKE operator to ignore
-** case.  Thus  'a' LIKE 'A' would be true. */
-const compareInfo likeInfoNorm = {'%', '_', 0, 1};
 
 /* An array to map all upper-case characters into their corresponding
 ** lower-case character.
@@ -451,5 +448,14 @@ int patternCompare(const u8* zPattern, const u8* zString, const compareInfo* pIn
 
 int sql_strlike(const char* zPattern, const char* zStr, unsigned int esc)
 {
+    /* The correct SQL-92 behavior is for the LIKE operator to ignore
+    ** case.  Thus  'a' LIKE 'A' would be true. */
+    const compareInfo likeInfoNorm = {'%', '_', 0, 1};
     return patternCompare((u8*)zPattern, (u8*)zStr, &likeInfoNorm, esc);
+}
+
+int sql_strlike_case(const char* zPattern, const char* zStr, unsigned int esc)
+{
+    const compareInfo likeInfoCase = {'%', '_', 0, 0};
+    return patternCompare((u8*)zPattern, (u8*)zStr, &likeInfoCase, esc);
 }
