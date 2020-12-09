@@ -388,7 +388,7 @@ void MariaDBBackendConnection::ready_for_reading(DCB* event_dcb)
 
 void MariaDBBackendConnection::do_handle_error(DCB* dcb, const std::string& errmsg, mxs::ErrorType type)
 {
-    std::ostringstream ss(errmsg);
+    std::ostringstream ss(errmsg, std::ios_base::app);
 
     ss << " (" << m_server.name();
 
