@@ -104,17 +104,29 @@ bool MariaDBServer::execute_cmd_ex(const string& cmd, QueryRetryMode mode,
     bool rval = false;
     if (query_success)
     {
-        MYSQL_RES* result = mysql_store_result(conn);
-        if (result == NULL)
+        // In case query was a multiquery, loop for more resultsets. Error message is produced from first
+        // non-empty resultset and does not specify the subquery.
+        string results_errmsg;
+        do
+        {
+            MYSQL_RES* result = mysql_store_result(conn);
+            if (result)
+            {
+                int cols = mysql_num_fields(result);
+                int rows = mysql_num_rows(result);
+                if (results_errmsg.empty())
+                {
+                    results_errmsg = string_printf("Query '%s' on '%s' returned %d columns and %d rows "
+                                                   "of data when none was expected.",
+                                                   cmd.c_str(), name(), cols, rows);
+                }
+            }
+        }
+        while (mysql_next_result(conn) == 0);
+
+        if (results_errmsg.empty())
         {
             rval = true;
-        }
-        else if (errmsg_out)
-        {
-            int cols = mysql_num_fields(result);
-            int rows = mysql_num_rows(result);
-            *errmsg_out = string_printf("Query '%s' on '%s' returned %d columns and %d rows of data when "
-                                        "none was expected.", cmd.c_str(), name(), cols, rows);
         }
     }
     else
@@ -1285,6 +1297,12 @@ MariaDBServer::alter_events(BinlogMode binlog_mode, const EventStatusMapper& map
     {
         if (target_events > 0)
         {
+            // Reset character set and collation.
+            string charset_errmsg;
+            if (!execute_cmd("SET NAMES latin1 COLLATE latin1_swedish_ci;", &charset_errmsg))
+            {
+                MXS_ERROR("Could not reset character set: %s", charset_errmsg.c_str());
+            }
             warn_event_scheduler();
         }
         if (target_events == events_altered)
@@ -1350,7 +1368,10 @@ bool MariaDBServer::events_foreach(EventManipulator& func, json_t** error_out)
     auto event_name_ind = event_info->get_col_index("EVENT_NAME");
     auto event_definer_ind = event_info->get_col_index("DEFINER");
     auto event_status_ind = event_info->get_col_index("STATUS");
-    mxb_assert(db_name_ind > 0 && event_name_ind > 0 && event_definer_ind > 0 && event_status_ind > 0);
+    auto charset_ind = event_info->get_col_index("CHARACTER_SET_CLIENT");
+    auto collation_ind = event_info->get_col_index("COLLATION_CONNECTION");
+    mxb_assert(db_name_ind > 0 && event_name_ind > 0 && event_definer_ind > 0 && event_status_ind > 0
+               && charset_ind > 0 && collation_ind > 0);
 
     while (event_info->next_row())
     {
@@ -1358,6 +1379,8 @@ bool MariaDBServer::events_foreach(EventManipulator& func, json_t** error_out)
         event.name = event_info->get_string(db_name_ind) + "." + event_info->get_string(event_name_ind);
         event.definer = event_info->get_string(event_definer_ind);
         event.status = event_info->get_string(event_status_ind);
+        event.charset = event_info->get_string(charset_ind);
+        event.collation = event_info->get_string(collation_ind);
         func(event, error_out);
     }
     return true;
@@ -1395,10 +1418,13 @@ bool MariaDBServer::alter_event(const EventInfo& event, const string& target_sta
         quoted_definer = event.definer;
     }
 
-    string alter_event_query = string_printf("ALTER DEFINER = %s EVENT %s %s;",
-                                             quoted_definer.c_str(),
-                                             event.name.c_str(),
-                                             target_status.c_str());
+    // Change character set and collation to the values in the event description. Otherwise, the event
+    // values could be changed to whatever the monitor connection happens to be using.
+    string alter_event_query = string_printf(
+        "SET NAMES %s COLLATE %s; ALTER DEFINER = %s EVENT %s %s;",
+        event.charset.c_str(), event.collation.c_str(), quoted_definer.c_str(), event.name.c_str(),
+        target_status.c_str());
+
     if (execute_cmd(alter_event_query, &error_msg))
     {
         rval = true;

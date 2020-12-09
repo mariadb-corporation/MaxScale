@@ -82,6 +82,8 @@ public:
         std::string name;       /**< Event name in <database.name> form */
         std::string definer;    /**< Definer of the event */
         std::string status;     /**< Status of the event */
+        std::string charset;    /**< character_set_client-field */
+        std::string collation;  /**< collation_connection-field */
     };
 
     enum class server_type

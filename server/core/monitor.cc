@@ -1162,6 +1162,7 @@ Monitor::ping_or_connect_to_db(const MonitorServer::ConnectionSettings& sett, SE
         mysql_optionsv(pConn, MYSQL_OPT_READ_TIMEOUT, &sett.read_timeout);
         mysql_optionsv(pConn, MYSQL_OPT_WRITE_TIMEOUT, &sett.write_timeout);
         mysql_optionsv(pConn, MYSQL_PLUGIN_DIR, get_connector_plugindir());
+        mysql_optionsv(pConn, MARIADB_OPT_MULTI_STATEMENTS, nullptr);
         time_t start = time(NULL);
 
         if (mxs_mysql_real_connect(pConn, &server, uname.c_str(), dpwd))
