@@ -416,6 +416,11 @@ public:
     bool check_ssl(int node);
 
     /**
+     * Disables the server SSL configuration
+     */
+    void disable_ssl();
+
+    /**
      * @brief Synchronize slaves with the master
      *
      * Only works with master-slave replication and should not be used with Galera clusters.

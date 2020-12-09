@@ -21,7 +21,10 @@ std::string join(StringSet st)
 
 int main(int argc, char** argv)
 {
+    TestConnections::skip_maxscale_start(true);
     TestConnections test(argc, argv);
+    test.repl->disable_ssl();
+    test.maxscales->restart();
 
     for (auto srv : {"server1", "server2", "server3", "server4"})
     {
