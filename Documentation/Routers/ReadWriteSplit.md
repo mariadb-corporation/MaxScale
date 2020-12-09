@@ -428,8 +428,9 @@ The number of seconds to wait until an error is returned to the client when
 ### `transaction_replay`
 
 Replay interrupted transactions. This parameter was added in MaxScale 2.3.0 and
-is disabled by default. Enabling this parameter implicitly enables both the
-`delayed_retry` and `master_reconnection` parameters.
+is disabled by default. Enabling this parameter enables both `delayed_retry` and
+`master_reconnection` and sets `master_failure_mode` to `fail_on_write`, thereby
+overriding any configured values for these parameters.
 
 When the server where the transaction is in progress fails, readwritesplit can
 migrate the transaction to a replacement server. This can completely hide the
