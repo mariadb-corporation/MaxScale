@@ -64,12 +64,14 @@ public:
 private:
     MemcachedStorage(const std::string& name,
                      const Config& config,
-                     uint32_t max_value_size,
-                     const std::string& mcd_config);
+                     const std::string& address,
+                     int port,
+                     uint32_t max_value_size);
 
     std::string  m_name;
     const Config m_config;
+    std::string  m_address;
+    int          m_port;
     const Limits m_limits;
-    std::string  m_mcd_config;
     uint32_t     m_mcd_ttl { 0 };
 };

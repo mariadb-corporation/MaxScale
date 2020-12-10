@@ -48,14 +48,28 @@ public:
         return shared_from_this();
     }
 
-    static bool create(const string& mcd_config,
+    static bool create(const string& address,
+                       int port,
+                       std::chrono::milliseconds timeout,
                        uint32_t soft_ttl,
                        uint32_t hard_ttl,
                        uint32_t mcd_ttl,
                        shared_ptr<Storage::Token>* psToken)
     {
         bool rv = false;
-        memcached_st* pMemc = memcached(mcd_config.c_str(), mcd_config.size());
+
+        string arguments;
+
+        arguments += "--SERVER=";
+        arguments += address;
+        arguments += ":";
+        arguments += std::to_string(port);
+
+        arguments += " --CONNECT-TIMEOUT=";
+        arguments += std::to_string(timeout.count());
+
+
+        memcached_st* pMemc = memcached(arguments.c_str(), arguments.size());
 
         if (pMemc)
         {
@@ -63,11 +77,16 @@ public:
 
             if (memcached_success(mrv))
             {
-                MemcachedToken* pToken = new (std::nothrow) MemcachedToken(pMemc, soft_ttl, hard_ttl, mcd_ttl);
+                MemcachedToken* pToken = new (std::nothrow) MemcachedToken(pMemc, address, port, timeout,
+                                                                           soft_ttl, hard_ttl, mcd_ttl);
 
                 if (pToken)
                 {
                     psToken->reset(pToken);
+
+                    // The call to connect() (-> get_shared() -> shared_from_this()) can be made only
+                    // after the pointer has been stored in a shared_ptr.
+                    pToken->connect();
                     rv = true;
                 }
                 else
@@ -84,8 +103,9 @@ public:
         }
         else
         {
-            MXS_ERROR("Could not create memcached handle, are the arguments '%s' valid?",
-                      mcd_config.c_str());
+            MXS_ERROR("Could not create memcached handle using the arguments '%s'. "
+                      "Is the host/port and timeout combination valid?",
+                      arguments.c_str());
         }
 
         return rv;
@@ -98,6 +118,12 @@ public:
                              GWBUF** ppValue,
                              std::function<void (cache_result_t, GWBUF*)> cb)
     {
+        if (!connected())
+        {
+            reconnect();
+            return CACHE_RESULT_NOT_FOUND;
+        }
+
         if (soft_ttl == CACHE_USE_CONFIG_TTL)
         {
             soft_ttl = m_soft_ttl;
@@ -205,6 +231,12 @@ public:
                              const GWBUF* pValue,
                              const std::function<void (cache_result_t)>& cb)
     {
+        if (!connected())
+        {
+            reconnect();
+            return CACHE_RESULT_OK;
+        }
+
         vector<char> mkey = key.to_vector();
 
         GWBUF* pClone = gwbuf_clone(const_cast<GWBUF*>(pValue));
@@ -251,6 +283,12 @@ public:
     cache_result_t del_value(const CacheKey& key,
                              const std::function<void (cache_result_t)>& cb)
     {
+        if (!connected())
+        {
+            reconnect();
+            return CACHE_RESULT_NOT_FOUND;
+        }
+
         vector<char> mkey = key.to_vector();
 
         auto sThis = get_shared();
@@ -284,8 +322,15 @@ public:
     }
 
 private:
-    MemcachedToken(memcached_st* pMemc, uint32_t soft_ttl, uint32_t hard_ttl, uint32_t mcd_ttl)
+    MemcachedToken(memcached_st* pMemc,
+                   const string& address,
+                   int port,
+                   std::chrono::milliseconds timeout,
+                   uint32_t soft_ttl, uint32_t hard_ttl, uint32_t mcd_ttl)
         : m_pMemc(pMemc)
+        , m_address(address)
+        , m_port(port)
+        , m_timeout(timeout)
         , m_pWorker(mxb::Worker::get_current())
         , m_soft_ttl(soft_ttl)
         , m_hard_ttl(hard_ttl)
@@ -293,24 +338,76 @@ private:
     {
     }
 
+    bool connected() const
+    {
+        return m_connected;
+    }
+
+    void connect()
+    {
+        mxb_assert(!m_connected);
+        mxb_assert(!m_connecting);
+
+        m_connecting = true;
+
+        // TODO: Actually check the connection.
+
+        connection_established();
+    }
+
+    void reconnect()
+    {
+        if (!m_connecting)
+        {
+            m_reconnecting = true;
+
+            auto now = std::chrono::steady_clock::now();
+
+            if (now - m_connection_established > m_timeout)
+            {
+                connect();
+            }
+        }
+    }
+
+    void connection_established()
+    {
+        mxb_assert(m_connecting);
+
+        m_connection_established = std::chrono::steady_clock::now();
+        m_connecting = false;
+        m_reconnecting = false;
+
+        m_connected = true;
+    }
+
 private:
-    memcached_st* m_pMemc;
-    mxb::Worker*  m_pWorker;
-    uint32_t      m_soft_ttl; // Soft TTL in milliseconds
-    uint32_t      m_hard_ttl; // Hard TTL in milliseconds
-    uint32_t      m_mcd_ttl;  // Hard TTL in seconds (rounded up if needed)
+    memcached_st*                         m_pMemc;
+    string                                m_address;
+    int                                   m_port;
+    std::chrono::milliseconds             m_timeout;
+    mxb::Worker*                          m_pWorker;
+    uint32_t                              m_soft_ttl; // Soft TTL in milliseconds
+    uint32_t                              m_hard_ttl; // Hard TTL in milliseconds
+    uint32_t                              m_mcd_ttl;  // Hard TTL in seconds (rounded up if needed)
+    bool                                  m_connected { false };
+    std::chrono::steady_clock::time_point m_connection_established;
+    bool                                  m_connecting { false };
+    bool                                  m_reconnecting { false };
 };
 
 }
 
 MemcachedStorage::MemcachedStorage(const string& name,
                                    const Config& config,
-                                   uint32_t max_value_size,
-                                   const string& mcd_config)
+                                   const string& address,
+                                   int port,
+                                   uint32_t max_value_size)
     : m_name(name)
     , m_config(config)
+    , m_address(address)
+    , m_port(port)
     , m_limits(max_value_size)
-    , m_mcd_config(mcd_config)
     , m_mcd_ttl(config.hard_ttl)
 {
     // memcached supports a TTL with a granularity of a second.
@@ -344,7 +441,7 @@ void MemcachedStorage::finalize()
 }
 
 //static
-MemcachedStorage* MemcachedStorage::create(const std::string& name,
+MemcachedStorage* MemcachedStorage::create(const string& name,
                                            const Config& config,
                                            const std::string& argument_string)
 {
@@ -426,20 +523,11 @@ MemcachedStorage* MemcachedStorage::create(const std::string& name,
                 MXS_NOTICE("Resultsets up to %u bytes in size will be cached by '%s'.",
                            max_value_size, name.c_str());
 
-                std::string memcached_arguments;
-
-                memcached_arguments += "--SERVER=";
-                memcached_arguments += host.address();
-                memcached_arguments += ":";
-                memcached_arguments += std::to_string(host.port());
-
-                memcached_arguments += " --CONNECT-TIMEOUT=";
-                memcached_arguments += std::to_string(config.timeout.count());
-
                 pStorage = new (std::nothrow) MemcachedStorage(name,
                                                                config,
-                                                               max_value_size,
-                                                               memcached_arguments);
+                                                               host.address(),
+                                                               host.port(),
+                                                               max_value_size);
             }
         }
         else
@@ -453,7 +541,9 @@ MemcachedStorage* MemcachedStorage::create(const std::string& name,
 
 bool MemcachedStorage::create_token(std::shared_ptr<Storage::Token>* psToken)
 {
-    return MemcachedToken::create(m_mcd_config,
+    return MemcachedToken::create(m_address,
+                                  m_port,
+                                  m_config.timeout,
                                   m_config.soft_ttl,
                                   m_config.hard_ttl,
                                   m_mcd_ttl,
