@@ -122,6 +122,20 @@ public:
 private:
     RWSplitSession(RWSplit* instance, MXS_SESSION* session, mxs::SRWBackends backends);
 
+    struct RoutingPlan
+    {
+        enum class Type
+        {
+            NORMAL,
+            OTRX_START,
+            OTRX_END
+        };
+
+        route_target_t  route_target = TARGET_UNDEFINED;
+        mxs::RWBackend* target = nullptr;
+        Type            type = Type::NORMAL;
+    };
+
     bool open_connections();
     void process_sescmd_response(mxs::RWBackend* backend, GWBUF** ppPacket, const mxs::Reply& reply);
     void compress_history(mxs::SSessionCommand& sescmd);
@@ -136,8 +150,8 @@ private:
 
     bool route_session_write(GWBUF* querybuf, uint8_t command, uint32_t type);
     void continue_large_session_write(GWBUF* querybuf, uint32_t type);
-    bool route_stmt(mxs::Buffer&& querybuf);
-    bool route_single_stmt(mxs::Buffer&& buffer);
+    bool route_stmt(mxs::Buffer&& querybuf, const RoutingPlan& res);
+    bool route_single_stmt(mxs::Buffer&& buffer, const RoutingPlan& res);
     bool route_stored_query();
     void close_stale_connections();
     void execute_queued_commands(mxs::RWBackend* backend, bool processed_sescmd);
@@ -150,24 +164,10 @@ private:
     mxs::RWBackend* get_target_backend(backend_type_t btype, const char* name, int max_rlag);
     mxs::RWBackend* get_root_master();
 
-    struct RoutingResult
-    {
-        enum class Type
-        {
-            NORMAL,
-            OTRX_START,
-            OTRX_END
-        };
-
-        route_target_t  route_target = TARGET_UNDEFINED;
-        mxs::RWBackend* target = nullptr;
-        Type            type = Type::NORMAL;
-    };
-
     // The main target selection function
     mxs::RWBackend* get_target(const mxs::Buffer& buffer, route_target_t route_target);
 
-    RoutingResult resolve_route(const mxs::Buffer& buffer, const mariadb::QueryClassifier::RouteInfo&);
+    RoutingPlan resolve_route(const mxs::Buffer& buffer, const mariadb::QueryClassifier::RouteInfo&);
 
     bool            handle_target_is_all(mxs::Buffer&& buffer);
     mxs::RWBackend* handle_hinted_target(const GWBUF* querybuf, route_target_t route_target);
@@ -246,7 +246,7 @@ private:
      * @param buffer Current query
      * @param res    Routing result
      */
-    void track_optimistic_trx(mxs::Buffer* buffer, const RoutingResult& res);
+    void track_optimistic_trx(mxs::Buffer* buffer, const RoutingPlan& res);
 
 private:
     // QueryClassifier::Handler
@@ -332,7 +332,7 @@ private:
         return status;
     }
 
-    inline bool can_route_query(const mxs::Buffer& buffer) const
+    inline bool can_route_query(const mxs::Buffer& buffer, const RoutingPlan& res) const
     {
         bool can_route = false;
 
@@ -343,6 +343,13 @@ private:
                 || route_info().large_query())
             {
                 // Not currently doing anything or we're processing a multi-packet query
+                can_route = true;
+            }
+            else if (res.route_target == TARGET_MASTER
+                     && res.target == m_current_master
+                     && m_prev_target == m_current_master)
+            {
+                mxb_assert(m_current_master->is_waiting_result());
                 can_route = true;
             }
         }

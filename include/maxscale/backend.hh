@@ -226,7 +226,7 @@ public:
      */
     inline bool is_waiting_result() const
     {
-        return m_state & WAITING_RESULT;
+        return m_expected_results > 0;
     }
 
     /**
@@ -343,9 +343,8 @@ private:
      */
     enum backend_state
     {
-        IN_USE         = 0x01,  /**< Backend has been taken into use */
-        WAITING_RESULT = 0x02,  /**< Waiting for a reply */
-        FATAL_FAILURE  = 0x04   /**< Backend references that should be dropped */
+        IN_USE        = 0x01,   /**< Backend has been taken into use */
+        FATAL_FAILURE = 0x02    /**< Backend references that should be dropped */
     };
 
     /**
@@ -365,15 +364,16 @@ private:
     // Stringification function
     static std::string to_string(backend_state state);
 
-    bool               m_closed {false};    /**< True if a connection has been opened and closed */
-    time_t             m_closed_at {0};     /**< Timestamp when the backend was last closed */
-    std::string        m_close_reason;      /**< Why the backend was closed */
-    time_t             m_opened_at {0};     /**< Timestamp when the backend was last opened */
-    mxs::Endpoint*     m_backend {nullptr}; /**< Backend server */
-    mxs::Buffer        m_pending_cmd;       /**< Pending commands */
-    int                m_state {0};         /**< State of the backend */
-    SessionCommandList m_session_commands;  /**< List of session commands that are
-                                             * to be executed on this backend server */
+    bool               m_closed {false};        /**< True if a connection has been opened and closed */
+    time_t             m_closed_at {0};         /**< Timestamp when the backend was last closed */
+    std::string        m_close_reason;          /**< Why the backend was closed */
+    time_t             m_opened_at {0};         /**< Timestamp when the backend was last opened */
+    mxs::Endpoint*     m_backend {nullptr};     /**< Backend server */
+    mxs::Buffer        m_pending_cmd;           /**< Pending commands */
+    int                m_state {0};             /**< State of the backend */
+    int                m_expected_results{0};   /**< Number of expected results from this backend */
+    SessionCommandList m_session_commands;      /**< List of session commands that are
+                                                 * to be executed on this backend server */
 
     maxbase::StopWatch     m_session_timer;
     maxbase::IntervalTimer m_select_timer;

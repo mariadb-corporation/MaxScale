@@ -100,14 +100,14 @@ bool RWSplitSession::should_try_trx_on_slave(route_target_t route_target) const
            && route_info().is_trx_still_read_only();// The start of the transaction is a read-only statement
 }
 
-void RWSplitSession::track_optimistic_trx(mxs::Buffer* buffer, const RoutingResult& res)
+void RWSplitSession::track_optimistic_trx(mxs::Buffer* buffer, const RoutingPlan& res)
 {
-    if (res.type == RoutingResult::Type::OTRX_START)
+    if (res.type == RoutingPlan::Type::OTRX_START)
     {
         mxb_assert(res.route_target == TARGET_SLAVE);
         m_state = OTRX_STARTING;
     }
-    else if (res.type == RoutingResult::Type::OTRX_END)
+    else if (res.type == RoutingPlan::Type::OTRX_END)
     {
         mxb_assert(res.route_target == TARGET_LAST_USED);
 
@@ -281,7 +281,7 @@ bool RWSplitSession::reuse_prepared_stmt(const mxs::Buffer& buffer)
  * @return True if routing succeed or if it failed due to unsupported query.
  *         false if backend failure was encountered.
  */
-bool RWSplitSession::route_stmt(mxs::Buffer&& buffer)
+bool RWSplitSession::route_stmt(mxs::Buffer&& buffer, const RoutingPlan& res)
 {
     const RouteInfo& info = route_info();
     route_target_t route_target = info.target();
@@ -313,14 +313,12 @@ bool RWSplitSession::route_stmt(mxs::Buffer&& buffer)
     }
     else
     {
-        return route_single_stmt(std::move(buffer));
+        return route_single_stmt(std::move(buffer), res);
     }
 }
 
-bool RWSplitSession::route_single_stmt(mxs::Buffer&& buffer)
+bool RWSplitSession::route_single_stmt(mxs::Buffer&& buffer, const RoutingPlan& res)
 {
-    RoutingResult res = resolve_route(buffer, route_info());
-
     bool ok = true;
 
     if (res.target)
@@ -394,9 +392,9 @@ RWBackend* RWSplitSession::get_target(const mxs::Buffer& buffer, route_target_t 
     return rval;
 }
 
-RWSplitSession::RoutingResult RWSplitSession::resolve_route(const mxs::Buffer& buffer, const RouteInfo& info)
+RWSplitSession::RoutingPlan RWSplitSession::resolve_route(const mxs::Buffer& buffer, const RouteInfo& info)
 {
-    RoutingResult rval;
+    RoutingPlan rval;
     rval.route_target = info.target();
 
     if (info.large_query())
@@ -412,7 +410,7 @@ RWSplitSession::RoutingResult RWSplitSession::resolve_route(const mxs::Buffer& b
     else if (trx_is_starting() && !trx_is_read_only() && should_try_trx_on_slave(rval.route_target))
     {
         // A normal transaction is starting and it qualifies for speculative routing
-        rval.type = RoutingResult::Type::OTRX_START;
+        rval.type = RoutingPlan::Type::OTRX_START;
         rval.route_target = TARGET_SLAVE;
     }
     else if (m_state == OTRX_STARTING)
@@ -423,7 +421,7 @@ RWSplitSession::RoutingResult RWSplitSession::resolve_route(const mxs::Buffer& b
     {
         if (trx_is_ending() || !info.is_trx_still_read_only())
         {
-            rval.type = RoutingResult::Type::OTRX_END;
+            rval.type = RoutingPlan::Type::OTRX_END;
         }
 
         rval.route_target = TARGET_LAST_USED;
@@ -1069,13 +1067,6 @@ bool RWSplitSession::handle_got_target(mxs::Buffer&& buffer, RWBackend* target, 
 {
     mxb_assert_message(target->in_use(), "Target must be in use before routing to it");
     mxb_assert_message(!target->has_session_commands(), "The session command cursor must not be active");
-
-    /**
-     * TODO: This effectively disables pipelining of queries, very bad for batch insert performance. Replace
-     *       with proper, per server tracking of which responses need to be sent to the client.
-     */
-    mxb_assert_message(!target->is_waiting_result() || route_info().large_query(),
-                       "Node must be idle when routing queries to it");
 
     MXS_INFO("Route query to %s: %s <", target->is_master() ? "master" : "slave", target->name());
 

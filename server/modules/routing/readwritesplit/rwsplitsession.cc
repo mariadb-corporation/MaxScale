@@ -118,12 +118,12 @@ int32_t RWSplitSession::routeQuery(GWBUF* querybuf)
     }
 
     m_qc.update_route_info(get_current_target(), buffer.get());
-    RoutingResult res = resolve_route(buffer, route_info());
+    RoutingPlan res = resolve_route(buffer, route_info());
 
-    if (can_route_query(buffer))
+    if (can_route_query(buffer, res))
     {
         /** No active or pending queries */
-        if (route_stmt(std::move(buffer)))
+        if (route_stmt(std::move(buffer), res))
         {
             rval = 1;
         }
@@ -141,12 +141,12 @@ int32_t RWSplitSession::routeQuery(GWBUF* querybuf)
                  route_target_to_string(res.route_target),
                  res.target ? res.target->name() : "<no target>");
 
-        mxb_assert(m_expected_responses == 1 || !m_query_queue.empty());
+        mxb_assert(m_expected_responses >= 1 || !m_query_queue.empty());
         mxb_assert(!gwbuf_is_replayed(querybuf));
 
         m_query_queue.emplace_back(std::move(buffer));
         rval = 1;
-        mxb_assert(m_expected_responses == 1);
+        mxb_assert(m_expected_responses >= 1);
     }
 
     return rval;
@@ -164,14 +164,20 @@ int32_t RWSplitSession::routeQuery(GWBUF* querybuf)
  */
 bool RWSplitSession::route_stored_query()
 {
+    if (m_query_queue.empty())
+    {
+        return true;
+    }
+
     bool rval = true;
 
     /** Loop over the stored statements as long as the routeQuery call doesn't
      * append more data to the queue. If it appends data to the queue, we need
      * to wait for a response before attempting another reroute */
+    MXS_INFO(">>> Routing stored queries");
+
     while (!m_query_queue.empty())
     {
-        MXS_INFO(">>> Routing stored queries");
         auto query = std::move(m_query_queue.front());
         m_query_queue.pop_front();
 
@@ -194,8 +200,6 @@ bool RWSplitSession::route_stored_query()
             MXS_ERROR("Failed to route queued query.");
         }
 
-        MXS_INFO("<<< Stored queries routed");
-
         if (m_query_queue.empty())
         {
             /** Query successfully routed and no responses are expected */
@@ -214,6 +218,8 @@ bool RWSplitSession::route_stored_query()
             break;
         }
     }
+
+    MXS_INFO("<<< Stored queries routed");
 
     return rval;
 }
@@ -456,7 +462,7 @@ bool RWSplitSession::handle_ignorable_error(RWBackend* backend, const mxs::Error
     }
 
     mxb_assert(trx_is_open() || can_retry_query());
-    mxb_assert(m_expected_responses == 1);
+    mxb_assert(m_expected_responses >= 1);
 
     bool ok = false;
 
@@ -479,7 +485,11 @@ bool RWSplitSession::handle_ignorable_error(RWBackend* backend, const mxs::Error
             warn_unexpected_rollback = false;
         }
 
-        if (backend == m_current_master)
+        if (m_expected_responses > 1)
+        {
+            MXS_INFO("Cannot retry the query as multiple queries were in progress");
+        }
+        else if (backend == m_current_master)
         {
             if (can_retry_query())
             {
@@ -595,14 +605,14 @@ int32_t RWSplitSession::clientReply(GWBUF* writebuf, const mxs::ReplyRoute& down
 
     if (reply.is_complete())
     {
-        MXS_INFO("Reply complete, last reply from %s", backend->name());
+        MXS_INFO("Reply complete from %s.", backend->name());
         backend->ack_write();
 
         /** Got a complete reply, decrement expected response count */
         if (!backend->has_session_commands())
         {
             m_expected_responses--;
-            mxb_assert(m_expected_responses == 0);
+            mxb_assert(m_expected_responses >= 0);
 
             // TODO: This would make more sense if it was done at the client protocol level
             session_book_server_response(m_pSession, (SERVER*)backend->target(), true);
@@ -974,9 +984,14 @@ bool RWSplitSession::handleError(mxs::ErrorType type, GWBUF* errmsgbuf, mxs::End
         else
         {
             // We were expecting a response but we aren't going to get one
-            mxb_assert(m_expected_responses == 1);
+            mxb_assert(m_expected_responses >= 1);
             errmsg += " Lost connection to master server while waiting for a result.";
 
+            if (m_expected_responses > 1)
+            {
+                can_continue = false;
+                errmsg += " Cannot retry query as multiple queries were in progress.";
+            }
             if (can_retry_query())
             {
                 can_continue = retry_master_query(backend);
@@ -1106,6 +1121,7 @@ bool RWSplitSession::handle_error_new_connection(RWBackend* backend, GWBUF* errm
 
         if (!backend->has_session_commands())
         {
+            // Slaves should never have more than one response waiting
             mxb_assert(m_expected_responses == 1);
             m_expected_responses--;
 

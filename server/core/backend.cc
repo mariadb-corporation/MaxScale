@@ -50,10 +50,11 @@ void Backend::close(close_type type)
         if (in_use())
         {
             /** Clean operation counter in bref and in SERVER */
-            if (is_waiting_result())
+            while (is_waiting_result())
             {
-                clear_state(WAITING_RESULT);
+                ack_write();
             }
+
             clear_state(IN_USE);
 
             if (type == CLOSE_FATAL)
@@ -144,25 +145,11 @@ const SSessionCommand& Backend::next_session_command() const
 
 void Backend::clear_state(backend_state state)
 {
-    if ((state & WAITING_RESULT) && (m_state & WAITING_RESULT))
-    {
-        MXB_AT_DEBUG(int prev2 = ) mxb::atomic::add(&m_backend->target()->stats().n_current_ops,
-                                                    -1, mxb::atomic::RELAXED);
-        mxb_assert(prev2 > 0);
-    }
-
     m_state &= ~state;
 }
 
 void Backend::set_state(backend_state state)
 {
-    if ((state & WAITING_RESULT) && (m_state & WAITING_RESULT) == 0)
-    {
-        MXB_AT_DEBUG(int prev2 = ) mxb::atomic::add(&m_backend->target()->stats().n_current_ops,
-                                                    1, mxb::atomic::RELAXED);
-        mxb_assert(prev2 >= 0);
-    }
-
     m_state |= state;
 }
 
@@ -207,7 +194,11 @@ bool Backend::write(GWBUF* buffer, response_type type)
 
     if (rval && type == EXPECT_RESPONSE)
     {
-        set_state(WAITING_RESULT);
+        ++m_expected_results;
+
+        MXB_AT_DEBUG(int prev2 = ) mxb::atomic::add(&m_backend->target()->stats().n_current_ops,
+                                                    1, mxb::atomic::RELAXED);
+        mxb_assert(prev2 >= 0);
     }
 
     return rval;
@@ -215,8 +206,12 @@ bool Backend::write(GWBUF* buffer, response_type type)
 
 void Backend::ack_write()
 {
-    mxb_assert(is_waiting_result());
-    clear_state(WAITING_RESULT);
+    mxb_assert(m_expected_results > 0);
+    --m_expected_results;
+
+    MXB_AT_DEBUG(int prev2 = ) mxb::atomic::add(&m_backend->target()->stats().n_current_ops,
+                                                -1, mxb::atomic::RELAXED);
+    mxb_assert(prev2 > 0);
 }
 
 void Backend::store_command(GWBUF* buffer)
@@ -320,12 +315,6 @@ std::string Backend::to_string(backend_state state)
         if (state & IN_USE)
         {
             rval += "IN_USE";
-        }
-
-        if (state & WAITING_RESULT)
-        {
-            rval += rval.empty() ? "" : "|";
-            rval += "WAITING_RESULT";
         }
 
         if (state & FATAL_FAILURE)
