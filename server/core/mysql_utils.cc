@@ -70,6 +70,7 @@ MYSQL* mxs_mysql_real_connect(MYSQL* con, SERVER* server, const char* user, cons
     char yes = 1;
     mysql_optionsv(con, MYSQL_OPT_RECONNECT, &yes);
     mysql_optionsv(con, MYSQL_INIT_COMMAND, "SET SQL_MODE=''");
+    mysql_optionsv(con, MYSQL_INIT_COMMAND, "SET @@session.autocommit=1;");
 
     MXS_CONFIG* config = config_get_global_options();
 
