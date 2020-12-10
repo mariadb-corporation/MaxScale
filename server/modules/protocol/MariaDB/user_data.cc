@@ -692,6 +692,12 @@ bool MariaDBUserManager::read_users_xpand(QResult users, UserDatabase* output)
             auto host = users->get_string(ind_host);
             auto pw = users->get_string(ind_pw);
 
+            // Hex-form passwords may have a '*' at the beginning, remove it.
+            if (!pw.empty() && pw[0] == '*')
+            {
+                pw.erase(0, 1);
+            }
+
             auto existing_entry = output->find_mutable_entry_equal(username, host);
             if (existing_entry)
             {
