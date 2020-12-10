@@ -214,6 +214,11 @@ public:
                 sThis->m_pWorker->execute([sThis, rv, pValue, cb]() {
                         if (sThis.use_count() > 1) // The session is still alive
                         {
+                            if (rv == CACHE_RESULT_ERROR)
+                            {
+                                sThis->connection_broken();
+                            }
+
                             cb(rv, pValue);
                         }
                         else
@@ -272,6 +277,11 @@ public:
 
                         if (sThis.use_count() > 1) // The session is still alive
                         {
+                            if (rv == CACHE_RESULT_ERROR)
+                            {
+                                sThis->connection_broken();
+                            }
+
                             cb(rv);
                         }
                     }, mxb::Worker::EXECUTE_QUEUED);
@@ -313,6 +323,11 @@ public:
                 sThis->m_pWorker->execute([sThis, rv, cb]() {
                         if (sThis.use_count() > 1) // The session is still alive
                         {
+                            if (rv == CACHE_RESULT_ERROR)
+                            {
+                                sThis->connection_broken();
+                            }
+
                             cb(rv);
                         }
                     }, mxb::Worker::EXECUTE_QUEUED);
@@ -350,9 +365,38 @@ private:
 
         m_connecting = true;
 
-        // TODO: Actually check the connection.
+        auto sThis = get_shared();
 
-        connection_established();
+        mxs::thread_pool().execute([sThis] () {
+                // We check for an arbitrary key, doesn't matter which. In this context
+                // it is a success if we are told it was not found.
+                static const char key[] = "maxscale_memcachedstorage_ping";
+                static const size_t key_length = sizeof(key) - 1;
+
+                memcached_return_t rv = memcached_exist(sThis->m_pMemc, key, key_length);
+                bool pinged = false;
+
+                switch (rv)
+                {
+                case MEMCACHED_SUCCESS:
+                case MEMCACHED_NOTFOUND:
+                    pinged = true;
+                    break;
+
+                default:
+                    MXS_ERROR("Could not ping memcached server, memcached caching will be "
+                              "disabled: %s, %s",
+                              memcached_strerror(sThis->m_pMemc, rv),
+                              memcached_last_error_message(sThis->m_pMemc));
+                }
+
+                sThis->m_pWorker->execute([sThis, pinged]() {
+                        if (sThis.use_count() > 1) // The session is still alive
+                        {
+                            sThis->connection_checked(pinged);
+                        }
+                    }, mxb::Worker::EXECUTE_QUEUED);
+            });
     }
 
     void reconnect()
@@ -363,22 +407,37 @@ private:
 
             auto now = std::chrono::steady_clock::now();
 
-            if (now - m_connection_established > m_timeout)
+            if (now - m_connection_checked > m_timeout)
             {
                 connect();
             }
         }
     }
 
-    void connection_established()
+    void connection_checked(bool success)
     {
         mxb_assert(m_connecting);
 
-        m_connection_established = std::chrono::steady_clock::now();
+        m_connected = success;
+
+        if (connected())
+        {
+            if (m_reconnecting)
+            {
+                // Reconnected after having been disconnected, let's log a note.
+                MXS_NOTICE("Connected to Memcached storage. Caching is enabled.");
+            }
+        }
+
+        m_connection_checked = std::chrono::steady_clock::now();
         m_connecting = false;
         m_reconnecting = false;
+    }
 
-        m_connected = true;
+    void connection_broken()
+    {
+        m_connected = false;
+        m_connection_checked = std::chrono::steady_clock::now();
     }
 
 private:
@@ -391,7 +450,7 @@ private:
     uint32_t                              m_hard_ttl; // Hard TTL in milliseconds
     uint32_t                              m_mcd_ttl;  // Hard TTL in seconds (rounded up if needed)
     bool                                  m_connected { false };
-    std::chrono::steady_clock::time_point m_connection_established;
+    std::chrono::steady_clock::time_point m_connection_checked;
     bool                                  m_connecting { false };
     bool                                  m_reconnecting { false };
 };
