@@ -488,8 +488,9 @@ even if the duration is longer than a second.
 ### `transaction_replay`
 
 Replay interrupted transactions. This parameter was added in MaxScale 2.3.0 and
-is disabled by default. Enabling this parameter implicitly enables both the
-`delayed_retry` and `master_reconnection` parameters.
+is disabled by default. Enabling this parameter enables both `delayed_retry` and
+`master_reconnection` and sets `master_failure_mode` to `fail_on_write`, thereby
+overriding any configured values for these parameters.
 
 When the server where the transaction is in progress fails, readwritesplit can
 migrate the transaction to a replacement server. This can completely hide the
@@ -578,6 +579,10 @@ modifications done by the client itself.
 **Note:** This feature requires MariaDB 10.2.16 or newer to function. In
   addition to this, the `session_track_system_variables` parameter must be set
   to `last_gtid`.
+
+**Note:** This feature does not work with prepared statements. Only SQL
+  statements executed individually (inside a COM_QUERY packet) can be handled by
+  the causal read mechanism.
 
 **Note:** This feature does not work with Galera or any other non-standard
   replication mechanisms. As Galera does not update the `gtid_slave_pos`
