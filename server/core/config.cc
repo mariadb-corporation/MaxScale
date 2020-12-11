@@ -88,6 +88,7 @@ constexpr char CN_ADMIN_PORT[] = "admin_port";
 constexpr char CN_ADMIN_SSL_CA_CERT[] = "admin_ssl_ca_cert";
 constexpr char CN_ADMIN_SSL_CERT[] = "admin_ssl_cert";
 constexpr char CN_ADMIN_SSL_KEY[] = "admin_ssl_key";
+constexpr char CN_ADMIN_SSL_VERSION[] = "admin_ssl_version";
 constexpr char CN_AUTO[] = "auto";
 constexpr char CN_DEBUG[] = "debug";
 constexpr char CN_DUMP_LAST_STATEMENTS[] = "dump_last_statements";
@@ -461,6 +462,18 @@ config::ParamString Config::s_admin_ssl_key(
     "Admin SSL key",
     "");
 
+config::ParamEnum<mxb::ssl_version::Version> Config::s_admin_ssl_version(
+    &Config::s_specification,
+    CN_ADMIN_SSL_VERSION,
+    "Minimum required TLS protocol version for the REST API",
+    {
+        {mxb::ssl_version::SSL_TLS_MAX, "MAX"},
+        {mxb::ssl_version::TLS10, "TLSv10"},
+        {mxb::ssl_version::TLS11, "TLSv11"},
+        {mxb::ssl_version::TLS12, "TLSv12"},
+        {mxb::ssl_version::TLS13, "TLSv13"}
+    }, mxb::ssl_version::SSL_TLS_MAX);
+
 config::ParamString Config::s_admin_ssl_cert(
     &Config::s_specification,
     CN_ADMIN_SSL_CERT,
@@ -615,6 +628,7 @@ Config::Config()
     add_native(&admin_pam_ro_service, &s_admin_pam_ro_service);
     add_native(&admin_ssl_key, &s_admin_ssl_key);
     add_native(&admin_ssl_cert, &s_admin_ssl_cert);
+    add_native(&admin_ssl_version, &s_admin_ssl_version);
     add_native(&admin_ssl_ca_cert, &s_admin_ssl_ca_cert);
     add_native(&local_address, &s_local_address);
     add_native(&load_persisted_configs, &s_load_persisted_configs);
