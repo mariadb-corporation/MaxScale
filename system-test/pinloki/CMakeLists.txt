@@ -45,3 +45,9 @@ add_test_executable_ex(NAME pinloki_switchover SOURCE pinloki_switchover.cc
 # Test a likely upgrade scenario
 add_test_executable_ex(NAME pinloki_upgrade SOURCE pinloki_upgrade.cc
   CONFIG pinloki.cnf VMS repl_backend LABELS pinloki BREAKS_REPL)
+
+# Test pinloki with galera
+#add_test_executable_ex(NAME pinloki_galera SOURCE pinloki_galera.cc
+#  CONFIG pinloki_galera.cnf VMS repl_backend LABELS pinloki BREAKS_REPL)
+
+add_test_executable(pinloki_galera.cc pinloki_galera pinloki_galera LABELS REPL_BACKEND GALERA_BACKEND)
