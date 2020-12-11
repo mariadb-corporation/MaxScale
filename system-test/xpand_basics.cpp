@@ -16,8 +16,11 @@
 #include <maxscale/jansson.hh>
 #include <maxtest/maxrest.hh>
 #include <maxtest/testconnections.hh>
+#include <maxbase/format.hh>
 
 using namespace std;
+
+void check_login(TestConnections& test);
 
 namespace
 {
@@ -177,13 +180,13 @@ void check_softfailing(const MaxRest& maxrest)
     expect_server_to_be(maxrest, before, "Master, Running");
 
     cout << "Softfailing " << id << "." << endl;
-    maxrest.call_command("xpandmon", "softfail", monitor_name, { id });
+    maxrest.call_command("xpandmon", "softfail", monitor_name, {id});
 
     MaxRest::Server during = maxrest.show_server(id);
     expect_server_to_be(maxrest, during, "Drained");
 
     cout << "Unsoftfailing " << id << "." << endl;
-    maxrest.call_command("xpandmon", "unsoftfail", monitor_name, { id });
+    maxrest.call_command("xpandmon", "unsoftfail", monitor_name, {id});
 
     MaxRest::Server after = maxrest.show_server(id);
     expect_server_to_be(maxrest, after, "Master, Running");
@@ -192,12 +195,11 @@ void check_softfailing(const MaxRest& maxrest)
 void run_test(TestConnections& test)
 {
     MaxRest maxrest(&test);
-
+    check_login(test);
     check_for_servers(maxrest);
     check_state_change(maxrest);
     check_softfailing(maxrest);
 }
-
 }
 
 int main(int argc, char* argv[])
@@ -214,4 +216,91 @@ int main(int argc, char* argv[])
     }
 
     return test.global_result;
+}
+
+void check_login(TestConnections& test)
+{
+    test.maxscales->stop();
+    test.xpand->connect();
+    auto conn = test.xpand->nodes[0];
+    const char svc_user[] = "rwsplit_user";
+    const char svc_user_host[] = "'rwsplit_user'@'%'";
+    const char svc_pw[] = "rwsplit_pw";
+
+    const char drop_fmt[] = "DROP USER %s;";
+    const char create_fmt[] = "CREATE USER %s IDENTIFIED BY '%s';";
+
+    string drop_query = mxb::string_printf(drop_fmt, svc_user_host);
+    execute_query_silent(conn, drop_query.c_str());
+    test.try_query(conn, create_fmt, svc_user_host, svc_pw);
+    test.try_query(conn, "GRANT SELECT ON system.membership TO %s;", svc_user_host);
+    test.try_query(conn, "GRANT SELECT ON system.nodeinfo TO %s;", svc_user_host);
+    test.try_query(conn, "GRANT SELECT ON system.softfailed_nodes TO %s;", svc_user_host);
+    test.try_query(conn, "GRANT SUPER ON *.* TO %s;", svc_user_host);
+
+    const char db_user[] = "tester1";
+    const char db_user_host[] = "'tester1'@'%'";
+    const char db_pw[] = "tester1_pw";
+
+    drop_query = mxb::string_printf(drop_fmt, db_user_host);
+    execute_query_silent(conn, drop_query.c_str());
+    test.try_query(conn, create_fmt, db_user_host, db_pw);
+    test.try_query(conn, "GRANT SELECT ON test.* TO %s;", db_user_host);
+
+    const char no_db_user[] = "tester2";
+    const char no_db_user_host[] = "'tester2'@'%'";
+    const char no_db_pw[] = "tester2_pw";
+
+    drop_query = mxb::string_printf(drop_fmt, no_db_user_host);
+    execute_query_silent(conn, drop_query.c_str());
+    test.try_query(conn, create_fmt, no_db_user_host, no_db_pw);
+
+    sleep(1);
+    test.maxscales->start();
+    sleep(1);
+
+    auto test_login = [&](const char* user, const char* pw, const char* db, bool expect_success) {
+            int port = test.maxscales->rwsplit_port[0];
+            auto ip = test.maxscales->ip();
+
+            MYSQL* rwsplit_conn = db ? open_conn_db(port, ip, db, user, pw) :
+                open_conn_no_db(port, ip, user, pw);
+
+            if (expect_success)
+            {
+                test.expect(mysql_errno(rwsplit_conn) == 0, "RWSplit connection failed: '%s'",
+                            mysql_error(rwsplit_conn));
+                if (test.ok())
+                {
+                    test.try_query(rwsplit_conn, "select rand();");
+                    test.tprintf("%s logged in and queried", user);
+                }
+            }
+            else
+            {
+                test.expect(mysql_errno(rwsplit_conn) != 0,
+                            "RWSplit connection succeeded when failure was expected");
+            }
+            mysql_close(rwsplit_conn);
+        };
+
+    if (test.ok())
+    {
+        test_login(svc_user, svc_pw, nullptr, true);
+    }
+    if (test.ok())
+    {
+        test_login(db_user, db_pw, "test", true);
+    }
+
+    /*
+     *  if (test.ok())
+     *  {
+     *   // TODO: this case should fail if the db grant check for Xpand would work. Fix later.
+     *   test_login(no_db_user, no_db_pw, "test", true);
+     *  }
+     */
+    test.try_query(conn, drop_fmt, svc_user_host);
+    test.try_query(conn, drop_fmt, db_user_host);
+    test.try_query(conn, drop_fmt, no_db_user_host);
 }
