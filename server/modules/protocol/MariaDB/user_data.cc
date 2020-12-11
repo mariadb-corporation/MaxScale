@@ -715,6 +715,7 @@ bool MariaDBUserManager::read_users_xpand(QResult users, UserDatabase* output)
                 new_entry.host_pattern = host;
                 new_entry.password = pw;
                 new_entry.plugin = users->get_string(ind_plugin);
+                new_entry.global_db_priv = true; // TODO: Fix later!
                 output->add_entry(username, std::move(new_entry));
             }
         }
