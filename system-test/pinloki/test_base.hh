@@ -2,15 +2,29 @@
 
 // Base class for Pinloki test cases. Provides some utility functions related to replication as well as common
 // testing functionality.
+enum class GtidPos
+{
+    SLAVE,
+    CURRENT
+};
+
+std::string change_master_sql(const char* host, int port,
+                              GtidPos type = GtidPos::SLAVE,
+                              const char* user = "maxskysql",
+                              const char* password = "skysql")
+{
+    std::ostringstream ss;
+
+    ss << "CHANGE MASTER TO MASTER_HOST='" << host << "', MASTER_PORT=" << port
+       << ", MASTER_USER='" << user << "', MASTER_PASSWORD='" << password
+       << "', MASTER_USE_GTID=" << (type == GtidPos::SLAVE ? "SLAVE_POS" : "CURRENT_POS");
+
+    return ss.str();
+}
+
 class TestCase
 {
 public:
-    enum class GtidPos
-    {
-        SLAVE,
-        CURRENT
-    };
-
     TestCase(TestConnections& t)
         : test(t)
         , master(test.repl->get_connection(0))
@@ -129,19 +143,5 @@ protected:
         test.expect(slave_pos == maxscale_pos,
                     "Slave GTID (%s) is not the same as MaxScale GTID (%s)",
                     slave_pos.c_str(), maxscale_pos.c_str());
-    }
-
-    std::string change_master_sql(const char* host, int port,
-                                  GtidPos type = GtidPos::SLAVE,
-                                  const char* user = "maxskysql",
-                                  const char* password = "skysql")
-    {
-        std::ostringstream ss;
-
-        ss << "CHANGE MASTER TO MASTER_HOST='" << host << "', MASTER_PORT=" << port
-           << ", MASTER_USER='" << user << "', MASTER_PASSWORD='" << password
-           << "', MASTER_USE_GTID=" << (type == GtidPos::SLAVE ? "SLAVE_POS" : "CURRENT_POS");
-
-        return ss.str();
     }
 };
