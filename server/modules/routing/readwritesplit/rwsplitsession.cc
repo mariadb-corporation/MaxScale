@@ -338,15 +338,14 @@ void RWSplitSession::manage_transactions(RWBackend* backend, GWBUF* writebuf, co
                     }
 
                     // Add the statement to the transaction once the first part of the result is received.
-                    m_trx.add_stmt(m_current_query.release());
+                    m_trx.add_stmt(backend, m_current_query.release());
                 }
             }
             else
             {
+                // We leave the transaction open to retain the information where it was being executed. This
+                // is needed in case the server where it's being executed on fails.
                 MXS_INFO("Transaction is too big (%lu bytes), can't replay if it fails.", size);
-                m_current_query.reset();
-                m_trx.close();
-                m_trx_sescmd.clear();
                 m_can_replay_trx = false;
             }
         }
@@ -960,7 +959,7 @@ bool RWSplitSession::handleError(mxs::ErrorType type, GWBUF* errmsgbuf, mxs::End
             }
         }
 
-        if (trx_is_open() && m_otrx_state == OTRX_INACTIVE)
+        if (trx_is_open() && m_otrx_state == OTRX_INACTIVE && m_trx.target() == backend)
         {
             can_continue = start_trx_replay();
             errmsg += " A transaction is active and cannot be replayed.";
@@ -996,6 +995,8 @@ bool RWSplitSession::handleError(mxs::ErrorType type, GWBUF* errmsgbuf, mxs::End
 
         if (m_target_node && m_target_node == backend && trx_is_read_only())
         {
+            mxb_assert(m_trx.target() == backend);
+
             // We're no longer locked to this server as it failed
             m_target_node = nullptr;
 

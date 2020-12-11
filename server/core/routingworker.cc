@@ -551,9 +551,18 @@ BackendDCB* RoutingWorker::get_backend_dcb_from_pool(SERVER* pS,
 
     while (!pDcb && !persistent_entries.empty())
     {
-        pDcb = persistent_entries.front().release_dcb();
-        persistent_entries.pop_front();
-        mxb::atomic::add(&pServer->pool_stats().n_persistent, -1);
+        for (auto it = persistent_entries.begin(); it != persistent_entries.end(); ++it)
+        {
+            // If proxy protocol is in use, we can only use DCBs that were
+            // opened by a client from the same host.
+            if (!pServer->proxy_protocol() || it->dcb()->client_remote() == pSession->client_remote())
+            {
+                pDcb = it->release_dcb();
+                persistent_entries.erase(it);
+                mxb::atomic::add(&pServer->pool_stats().n_persistent, -1);
+                break;
+            }
+        }
 
         // Put back the origininal handler.
         pDcb->set_handler(pDcb->protocol());

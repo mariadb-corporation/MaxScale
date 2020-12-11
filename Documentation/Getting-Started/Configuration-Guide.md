@@ -155,6 +155,7 @@ runtime and can only be defined in a configuration file:
 * `admin_ssl_key`
 * `admin_ssl_cert`
 * `admin_ssl_ca_cert`
+* `admin_ssl_version`
 * `admin_enabled`
 
 All other parameters that relate to objects can be altered at runtime or can be
@@ -1130,6 +1131,24 @@ documentation for more details.
 The path to the TLS CA certificate in PEM format. If defined, the client
 certificate, if provided, will be validated against it. This parameter is
 optional starting with MaxScale 2.3.19.
+
+### `admin_ssl_version`
+
+Controls the minimum TLS version required to use the REST API.
+
+Accepted values are:
+
+ * TLSv10
+ * TLSv11
+ * TLSv12
+ * TLSv13
+ * MAX
+
+The default value is MAX which negotiates the highest level of encryption that
+both the client and server support. The list of supported TLS versions depends
+on the operating system and what TLS versions the GnuTLS library supports.
+
+This parameter was added in MaxScale 2.5.7.
 
 ### `admin_enabled`
 

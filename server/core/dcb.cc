@@ -158,6 +158,7 @@ DCB::DCB(int fd,
     , m_uid(this_unit.uid_generator.fetch_add(1, std::memory_order_relaxed))
     , m_fd(fd)
     , m_remote(remote)
+    , m_client_remote(session->client_remote())
     , m_role(role)
     , m_session(session)
     , m_handler(handler)

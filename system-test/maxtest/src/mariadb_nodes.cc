@@ -1644,6 +1644,16 @@ const char* Mariadb_nodes::ip4(int i) const
     return Nodes::ip4(i);
 }
 
+void Mariadb_nodes::disable_ssl()
+{
+    for (int i = 0; i < N; i++)
+    {
+        stop_node(i);
+        ssh_node(i, "rm -f /etc/my.cnf.d/ssl.cnf", true);
+        start_node(i);
+    }
+}
+
 bool Mariadb_nodes::check_ssl(int node)
 {
     bool ok = true;
