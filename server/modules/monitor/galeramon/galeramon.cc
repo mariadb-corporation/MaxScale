@@ -202,7 +202,11 @@ void GaleraMonitor::update_server_status(MonitorServer* monitored_server)
 
     /* Check if the the Galera FSM shows this node is joined to the cluster */
     const char* cluster_member =
-        "SHOW STATUS WHERE Variable_name IN"
+        " SELECT * FROM ("
+        " SELECT * FROM information_schema.SESSION_STATUS"
+        " UNION"
+        " SELECT * FROM information_schema.SESSION_VARIABLES) AS t"
+        " WHERE Variable_name IN"
         " ('wsrep_cluster_state_uuid',"
         " 'wsrep_cluster_size',"
         " 'wsrep_local_index',"

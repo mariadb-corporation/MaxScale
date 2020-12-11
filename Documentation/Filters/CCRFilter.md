@@ -13,6 +13,9 @@ hint guides the routing module to route the statement to the master server where
 data is guaranteed to be in an up-to-date state. Writes from one session do not,
 by default, propagate to other sessions.
 
+*Note:* This filter does not work with prepared statements. Only text protocol
+ queries are handled by this filter.
+
 ### Controlling the Filter with SQL Comments
 
 The triggering of the filter can be limited further by adding MaxScale supported
