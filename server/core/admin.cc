@@ -972,7 +972,7 @@ bool mxs_admin_init()
                                             MHD_OPTION_HTTPS_MEM_CERT, this_unit.ssl_cert.c_str(),
                                             MHD_OPTION_HTTPS_PRIORITIES, this_unit.ssl_version.c_str(),
                                             this_unit.ssl_ca.empty() ? MHD_OPTION_END :
-                                            MHD_OPTION_HTTPS_MEM_TRUST, this_unit.ssl_cert.c_str(),
+                                            MHD_OPTION_HTTPS_MEM_TRUST, this_unit.ssl_ca.c_str(),
                                             MHD_OPTION_END);
     }
 
