@@ -462,17 +462,17 @@ config::ParamString Config::s_admin_ssl_key(
     "Admin SSL key",
     "");
 
-config::ParamEnum<admin_ssl_version_t> Config::s_admin_ssl_version(
+config::ParamEnum<mxb::ssl_version::Version> Config::s_admin_ssl_version(
     &Config::s_specification,
     CN_ADMIN_SSL_VERSION,
-    "Admin allowed SSL version",
+    "Minimum required TLS protocol version for the REST API",
     {
-        {ADMIN_SSL_VERSION_TLS10, "TLSv1.0"},
-        {ADMIN_SSL_VERSION_TLS11, "TLSv1.1"},
-        {ADMIN_SSL_VERSION_TLS12, "TLSv1.2"},
-        {ADMIN_SSL_VERSION_TLS13, "TLSv1.3"}
-    },
-    ADMIN_SSL_VERSION_NORMAL);
+        {mxb::ssl_version::SSL_TLS_MAX, "MAX"},
+        {mxb::ssl_version::TLS10, "TLSv10"},
+        {mxb::ssl_version::TLS11, "TLSv11"},
+        {mxb::ssl_version::TLS12, "TLSv12"},
+        {mxb::ssl_version::TLS13, "TLSv13"}
+    }, mxb::ssl_version::SSL_TLS_MAX);
 
 config::ParamString Config::s_admin_ssl_cert(
     &Config::s_specification,

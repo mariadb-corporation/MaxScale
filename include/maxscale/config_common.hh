@@ -47,16 +47,6 @@ using DiskSpaceLimits = std::unordered_map<std::string, int32_t>;
 #define DEFAULT_ADMIN_HTTP_PORT 8989
 #define DEFAULT_ADMIN_HOST      "127.0.0.1"
 
-/** SSL versions for the REST API */
-enum admin_ssl_version_t
-{
-    ADMIN_SSL_VERSION_NORMAL,
-    ADMIN_SSL_VERSION_TLS10,
-    ADMIN_SSL_VERSION_TLS11,
-    ADMIN_SSL_VERSION_TLS12,
-    ADMIN_SSL_VERSION_TLS13
-};
-
 #define RELEASE_STR_LENGTH 256
 #define SYSNAME_LEN        256
 #define MAX_ADMIN_USER_LEN 1024

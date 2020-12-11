@@ -272,33 +272,33 @@ std::string get_filename(const HttpRequest& request)
     return path;
 }
 
-static const char *get_ssl_version(const enum admin_ssl_version_t ssl_version)
+// Converts mxb::ssl_version::Version into the corresponding GNUTLS configuration string
+static const char* get_ssl_version(const mxb::ssl_version::Version ssl_version)
 {
-    const char *ver;
+    switch (ssl_version)
+    {
+    case mxb::ssl_version::SSL_MAX:
+    case mxb::ssl_version::TLS_MAX:
+    case mxb::ssl_version::SSL_TLS_MAX:
+    case mxb::ssl_version::TLS10:
+        return "NORMAL:-VERS-SSL3.0";
 
-    if (ssl_version == ADMIN_SSL_VERSION_NORMAL)
-    {
-        ver = "NORMAL:-VERS-SSL3.0";
-    }
-    else if (ssl_version == ADMIN_SSL_VERSION_TLS10)
-    {
-        ver = "NORMAL:-VERS-SSL3.0";
-    }
-    else if (ssl_version == ADMIN_SSL_VERSION_TLS11)
-    {
-        ver = "NORMAL:-VERS-SSL3.0:-VERS-TLS1.0";
-    }
-    else if (ssl_version == ADMIN_SSL_VERSION_TLS12)
-    {
-        ver = "NORMAL:-VERS-SSL3.0:-VERS-TLS1.0:-VERS-TLS1.1";
-    }
-    else
-    {
-        ver = "NORMAL:-VERS-SSL3.0:-VERS-TLS1.0:-VERS-TLS1.1:-VERS-TLS1.2";
+    case mxb::ssl_version::TLS11:
+        return "NORMAL:-VERS-SSL3.0:-VERS-TLS1.0";
+
+    case mxb::ssl_version::TLS12:
+        return "NORMAL:-VERS-SSL3.0:-VERS-TLS1.0:-VERS-TLS1.1";
+
+    case mxb::ssl_version::TLS13:
+        return "NORMAL:-VERS-SSL3.0:-VERS-TLS1.0:-VERS-TLS1.1:-VERS-TLS1.2";
+
+    case mxb::ssl_version::SSL_UNKNOWN:
+    default:
+        mxb_assert(!true);
+        break;
     }
 
-    MXS_NOTICE("SSL PRIORITY for REST API set to %s", ver);
-    return ver;
+    return "";
 }
 
 static bool load_ssl_certificates()
@@ -972,7 +972,7 @@ bool mxs_admin_init()
                                             MHD_OPTION_HTTPS_MEM_CERT, this_unit.ssl_cert.c_str(),
                                             MHD_OPTION_HTTPS_PRIORITIES, this_unit.ssl_version.c_str(),
                                             this_unit.ssl_ca.empty() ? MHD_OPTION_END :
-                                            MHD_OPTION_HTTPS_MEM_TRUST, this_unit.ssl_ca.c_str(),
+                                            MHD_OPTION_HTTPS_MEM_TRUST, this_unit.ssl_cert.c_str(),
                                             MHD_OPTION_END);
     }
 

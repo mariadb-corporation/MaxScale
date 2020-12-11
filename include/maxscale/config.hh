@@ -15,6 +15,7 @@
 #include <maxscale/ccdefs.hh>
 #include <maxscale/config2.hh>
 #include <maxscale/session.hh>
+#include <maxbase/ssl.hh>
 
 namespace maxscale
 {
@@ -136,16 +137,18 @@ public:
     bool          admin_enabled;                /**< Admin interface is enabled */
     std::string   admin_pam_rw_service;         /**< PAM service for read-write users */
     std::string   admin_pam_ro_service;         /**< PAM service for read-only users */
-    std::string   admin_ssl_key;                /**< Admin SSL key */
-    std::string   admin_ssl_cert;               /**< Admin SSL cert */
-    admin_ssl_version_t    admin_ssl_version;   /**< Admin allowed SSL versions */
-    std::string   admin_ssl_ca_cert;            /**< Admin SSL CA cert */
-    std::string   local_address;                /**< Local address to use when connecting */
-    bool          load_persisted_configs;       /**< Load persisted configuration files on startup */
-    bool          log_warn_super_user;          /**< Log a warning if incoming client has super-priv. */
-    bool          gui;                          /**< Enable admin GUI */
-    bool          secure_gui;                   /**< Serve GUI only over HTTPS */
-    std::string   debug;
+
+    std::string               admin_ssl_key;    /**< Admin SSL key */
+    std::string               admin_ssl_cert;   /**< Admin SSL cert */
+    std::string               admin_ssl_ca_cert;/**< Admin SSL CA cert */
+    mxb::ssl_version::Version admin_ssl_version;/**< Admin allowed SSL versions */
+
+    std::string local_address;                  /**< Local address to use when connecting */
+    bool        load_persisted_configs;         /**< Load persisted configuration files on startup */
+    bool        log_warn_super_user;            /**< Log a warning if incoming client has super-priv. */
+    bool        gui;                            /**< Enable admin GUI */
+    bool        secure_gui;                     /**< Serve GUI only over HTTPS */
+    std::string debug;
 
     // The following will not be configured via the configuration mechanism.
     bool    config_check;                               /**< Only check config */
@@ -208,25 +211,25 @@ private:
     static config::ParamMilliseconds                    s_rebalance_period;
     static config::ParamCount                           s_rebalance_window;
 
-    static ParamThreadsCount                s_n_threads;
-    static config::ParamString              s_qc_name;
-    static config::ParamString              s_qc_args;
-    static config::ParamEnum<qc_sql_mode_t> s_qc_sql_mode;
-    static config::ParamString              s_admin_host;
-    static config::ParamInteger             s_admin_port;
-    static config::ParamBool                s_admin_auth;
-    static config::ParamBool                s_admin_enabled;
-    static config::ParamString              s_admin_pam_rw_service;
-    static config::ParamString              s_admin_pam_ro_service;
-    static config::ParamString              s_admin_ssl_key;
-    static config::ParamString              s_admin_ssl_cert;
-    static config::ParamEnum<admin_ssl_version_t>              s_admin_ssl_version;
-    static config::ParamString              s_admin_ssl_ca_cert;
-    static config::ParamString              s_local_address;
-    static config::ParamBool                s_load_persisted_configs;
-    static config::ParamBool                s_log_warn_super_user;
-    static config::ParamBool                s_gui;
-    static config::ParamBool                s_secure_gui;
-    static config::ParamString              s_debug;
+    static ParamThreadsCount                            s_n_threads;
+    static config::ParamString                          s_qc_name;
+    static config::ParamString                          s_qc_args;
+    static config::ParamEnum<qc_sql_mode_t>             s_qc_sql_mode;
+    static config::ParamString                          s_admin_host;
+    static config::ParamInteger                         s_admin_port;
+    static config::ParamBool                            s_admin_auth;
+    static config::ParamBool                            s_admin_enabled;
+    static config::ParamString                          s_admin_pam_rw_service;
+    static config::ParamString                          s_admin_pam_ro_service;
+    static config::ParamString                          s_admin_ssl_key;
+    static config::ParamString                          s_admin_ssl_cert;
+    static config::ParamEnum<mxb::ssl_version::Version> s_admin_ssl_version;
+    static config::ParamString                          s_admin_ssl_ca_cert;
+    static config::ParamString                          s_local_address;
+    static config::ParamBool                            s_load_persisted_configs;
+    static config::ParamBool                            s_log_warn_super_user;
+    static config::ParamBool                            s_gui;
+    static config::ParamBool                            s_secure_gui;
+    static config::ParamString                          s_debug;
 };
 }
