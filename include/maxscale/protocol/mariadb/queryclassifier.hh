@@ -400,7 +400,7 @@ public:
     RouteInfo update_route_info(QueryClassifier::current_target_t current_target, GWBUF* pBuffer);
 
     /**
-     * Reverts the effects of the latest update_route_info call'
+     * Reverts the effects of the latest update_route_info call
      *
      * @note Can only be called after a call to update_route_info() and must only be called once.
      */

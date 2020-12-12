@@ -169,7 +169,7 @@ bool RWSplitSession::handle_target_is_all(mxs::Buffer&& buffer)
     return result;
 }
 
-bool RWSplitSession::handle_routing_failure(mxs::Buffer&& buffer, route_target_t route_target)
+bool RWSplitSession::handle_routing_failure(mxs::Buffer&& buffer, const RoutingPlan& res)
 {
     bool ok = true;
     auto next_master = get_master_backend();
@@ -186,7 +186,7 @@ bool RWSplitSession::handle_routing_failure(mxs::Buffer&& buffer, route_target_t
     else if (m_config.master_failure_mode == RW_ERROR_ON_WRITE)
     {
         MXS_INFO("Sending read-only error, no valid target found for %s",
-                 route_target_to_string(route_target));
+                 route_target_to_string(res.route_target));
         send_readonly_error();
 
         if (m_current_master && m_current_master->in_use())
@@ -195,10 +195,18 @@ bool RWSplitSession::handle_routing_failure(mxs::Buffer&& buffer, route_target_t
             m_current_master->set_close_reason("The original master is not available");
         }
     }
+    else if (res.route_target == TARGET_MASTER
+             && (!m_config.delayed_retry || m_retry_duration >= m_config.delayed_retry_timeout.count()))
+    {
+        // Cannot retry the query, log a message that routing has failed
+        log_master_routing_failure(res.target != nullptr, m_current_master, res.target);
+        ok = false;
+    }
+
     else
     {
         MXS_ERROR("Could not find valid server for target type %s (%s: %s), closing connection.\n%s",
-                  route_target_to_string(route_target), STRPACKETTYPE(buffer.data()[4]),
+                  route_target_to_string(res.route_target), STRPACKETTYPE(buffer.data()[4]),
                   mxs::extract_sql(buffer.get()).c_str(), get_verbose_status().c_str());
         ok = false;
     }
@@ -293,16 +301,6 @@ bool RWSplitSession::route_stmt(mxs::Buffer&& buffer, const RoutingPlan& res)
         return true;
     }
 
-    auto next_master = get_master_backend();
-
-    if (should_replace_master(next_master))
-    {
-        mxb_assert(next_master->is_master());
-        MXS_INFO("Replacing old master '%s' with new master '%s'",
-                 m_current_master ? m_current_master->name() : "<no previous master>", next_master->name());
-        replace_master(next_master);
-    }
-
     if (query_not_supported(buffer.get()))
     {
         return true;
@@ -320,26 +318,42 @@ bool RWSplitSession::route_stmt(mxs::Buffer&& buffer, const RoutingPlan& res)
 bool RWSplitSession::route_single_stmt(mxs::Buffer&& buffer, const RoutingPlan& res)
 {
     bool ok = true;
+    auto target = res.target;
 
-    if (res.target)
+    if (res.route_target == TARGET_MASTER && target != m_current_master)
     {
-        update_trx_statistics();
+        if (should_replace_master(target))
+        {
+            MXS_INFO("Replacing old master '%s' with new master '%s'",
+                     m_current_master ? m_current_master->name() : "<no previous master>",
+                     target->name());
+            replace_master(target);
+        }
+        else
+        {
+            target = nullptr;
+        }
+    }
+
+    if (target)
+    {
+        update_statistics(res);
 
         track_optimistic_trx(&buffer, res);
 
         // We have a valid target, reset retry duration
         m_retry_duration = 0;
 
-        if (!prepare_target(res.target, res.route_target))
+        if (!prepare_target(target, res.route_target))
         {
             // The connection to target was down and we failed to reconnect
             ok = false;
         }
-        else if (res.target->has_session_commands())
+        else if (target->has_session_commands())
         {
             // We need to wait until the session commands are executed
             m_query_queue.emplace_front(std::move(buffer));
-            MXS_INFO("Queuing query until '%s' completes session command", res.target->name());
+            MXS_INFO("Queuing query until '%s' completes session command", target->name());
         }
         else
         {
@@ -349,12 +363,12 @@ bool RWSplitSession::route_single_stmt(mxs::Buffer&& buffer, const RoutingPlan& 
                     || (TARGET_IS_SLAVE(res.route_target) && m_config.retry_failed_reads));
 
             // Target server was found and is in the correct state
-            ok = handle_got_target(std::move(buffer), res.target, store_stmt);
+            ok = handle_got_target(std::move(buffer), target, store_stmt);
         }
     }
     else
     {
-        ok = handle_routing_failure(std::move(buffer), res.route_target);
+        ok = handle_routing_failure(std::move(buffer), res);
     }
 
     return ok;
@@ -821,13 +835,7 @@ RWBackend* RWSplitSession::handle_slave_is_target(uint8_t cmd, uint32_t stmt_id)
         target = get_target_backend(BE_SLAVE, NULL, rlag_max);
     }
 
-    if (target)
-    {
-        mxb::atomic::add(&m_router->stats().n_slave, 1, mxb::atomic::RELAXED);
-        m_server_stats[target->target()].inc_read();
-        mxb_assert(target->in_use() || target->can_connect());
-    }
-    else
+    if (!target)
     {
         MXS_INFO("Was supposed to route to slave but finding suitable one failed.");
     }
@@ -980,19 +988,6 @@ bool RWSplitSession::start_trx_migration(RWBackend* target, GWBUF* querybuf)
 RWBackend* RWSplitSession::handle_master_is_target()
 {
     RWBackend* target = get_target_backend(BE_MASTER, NULL, mxs::Target::RLAG_UNDEFINED);
-    RWBackend* rval = nullptr;
-
-    if (target && target == m_current_master)
-    {
-        mxb::atomic::add(&m_router->stats().n_master, 1, mxb::atomic::RELAXED);
-        m_server_stats[target->target()].inc_write();
-        rval = target;
-    }
-    else if (!m_config.delayed_retry || m_retry_duration >= m_config.delayed_retry_timeout.count())
-    {
-        // Cannot retry the query, log a message that routing has failed
-        log_master_routing_failure(target, m_current_master, target);
-    }
 
     if (!m_locked_to_master && m_target_node == m_current_master)
     {
@@ -1000,7 +995,7 @@ RWBackend* RWSplitSession::handle_master_is_target()
         m_target_node = nullptr;
     }
 
-    return rval;
+    return target;
 }
 
 void RWSplitSession::process_stmt_execute(mxs::Buffer* buf, uint32_t id, RWBackend* target)

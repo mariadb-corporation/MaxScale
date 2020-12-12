@@ -174,7 +174,7 @@ private:
     mxs::RWBackend* handle_slave_is_target(uint8_t cmd, uint32_t stmt_id);
     mxs::RWBackend* handle_master_is_target();
     bool            handle_got_target(mxs::Buffer&& buffer, mxs::RWBackend* target, bool store);
-    bool            handle_routing_failure(mxs::Buffer&& buffer, route_target_t route_target);
+    bool            handle_routing_failure(mxs::Buffer&& buffer, const RoutingPlan& res);
     bool            prepare_target(mxs::RWBackend* target, route_target_t route_target);
     bool            prepare_connection(mxs::RWBackend* target);
     bool            create_one_connection_for_sescmd();
@@ -377,8 +377,19 @@ private:
         return current_target;
     }
 
-    void update_trx_statistics()
+    void update_statistics(const RoutingPlan& res)
     {
+        if (res.route_target == TARGET_MASTER)
+        {
+            mxb::atomic::add(&m_router->stats().n_master, 1, mxb::atomic::RELAXED);
+            m_server_stats[res.target->target()].inc_write();
+        }
+        else if (res.route_target == TARGET_SLAVE)
+        {
+            mxb::atomic::add(&m_router->stats().n_slave, 1, mxb::atomic::RELAXED);
+            m_server_stats[res.target->target()].inc_read();
+        }
+
         if (trx_is_ending())
         {
             mxb::atomic::add(route_info().is_trx_still_read_only() ?
