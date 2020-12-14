@@ -195,7 +195,7 @@ AuthRes MariaDBClientAuthenticator::authenticate(const UserEntry* entry, MYSQL_s
 AuthRes MariaDBClientAuthenticator::check_password(MYSQL_session* session, const std::string& stored_pw_hash2)
 {
 
-    const auto& auth_token = session->auth_token;   // Hex-form token sent by client.
+    const auto& auth_token = session->auth_token;   // Binary-form token sent by client.
 
     bool empty_token = auth_token.empty();
     bool empty_pw = stored_pw_hash2.empty();
@@ -213,6 +213,20 @@ AuthRes MariaDBClientAuthenticator::check_password(MYSQL_session* session, const
             rval.msg = empty_token ? "Client gave no password when one was expected" :
                 "Client gave a password when none was expected";
         }
+        return rval;
+    }
+    else if (auth_token.size() != SHA_DIGEST_LENGTH)
+    {
+        AuthRes rval;
+        rval.msg = mxb::string_printf("Client authentication token is %zu bytes when %i was expected",
+                                      auth_token.size(), SHA_DIGEST_LENGTH);
+        return rval;
+    }
+    else if (stored_pw_hash2.length() != 2 * SHA_DIGEST_LENGTH)
+    {
+        AuthRes rval;
+        rval.msg = mxb::string_printf("Stored password hash length is %lu when %i was expected",
+                                      stored_pw_hash2.length(), 2 * SHA_DIGEST_LENGTH);
         return rval;
     }
 

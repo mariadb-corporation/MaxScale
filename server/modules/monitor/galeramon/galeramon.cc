@@ -223,7 +223,7 @@ void GaleraMonitor::update_server_status(MonitorServer* monitored_server)
 
     /* Check if the the Galera FSM shows this node is joined to the cluster */
     const char* cluster_member =
-        " SELECT * FROM ("
+        " SELECT LOWER(VARIABLE_NAME), VARIABLE_VALUE FROM ("
         " SELECT * FROM information_schema.SESSION_STATUS"
         " UNION"
         " SELECT * FROM information_schema.SESSION_VARIABLES) AS t"
