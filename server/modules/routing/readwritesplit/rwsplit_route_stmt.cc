@@ -266,10 +266,11 @@ bool RWSplitSession::route_stmt(mxs::Buffer&& buffer)
     mxb_assert_message(m_otrx_state != OTRX_ROLLBACK,
                        "OTRX_ROLLBACK should never happen when routing queries");
 
-    auto next_master = get_target_backend(BE_MASTER, NULL, mxs::Target::RLAG_UNDEFINED);
+    auto next_master = get_master_backend();
 
     if (should_replace_master(next_master))
     {
+        mxb_assert(next_master->is_master());
         MXS_INFO("Replacing old master '%s' with new master '%s'",
                  m_current_master ? m_current_master->name() : "<no previous master>", next_master->name());
         replace_master(next_master);
