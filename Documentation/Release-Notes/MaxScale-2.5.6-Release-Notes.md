@@ -14,6 +14,7 @@ report on [our Jira](https://jira.mariadb.org/projects/MXS).
 
 ## Bug fixes
 
+* [MXS-3338](https://jira.mariadb.org/browse/MXS-3338) Last statement in read-only transaction doesn't trigger transaction replay
 * [MXS-3335](https://jira.mariadb.org/browse/MXS-3335) MaxScale 2.5.6 and Xpand Direct connection issue with xpandmon 
 * [MXS-3334](https://jira.mariadb.org/browse/MXS-3334) Master failure triggers replay of read-only transaction
 * [MXS-3333](https://jira.mariadb.org/browse/MXS-3333) Malformed error messages
