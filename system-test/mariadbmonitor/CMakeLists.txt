@@ -80,7 +80,8 @@ add_test_executable_ex(NAME mysqlmon_switchover_stress SOURCE mysqlmon_switchove
 add_test_executable_ex(NAME mysqlmon_external_master SOURCE mysqlmon_external_master.cpp
         CONFIG mysqlmon_external_master.cnf VMS repl_backend LABELS mysqlmon)
 
-# Check failover, switchover and rejoin with scheduled server events, uses config of mysqlmon_rejoin_good
+# Check failover, switchover and rejoin with scheduled server events
+# Also, MXS-3158
 add_test_executable_ex(NAME mysqlmon_fail_switch_events SOURCE mysqlmon_fail_switch_events.cpp
         CONFIG mysqlmon_rejoin_good.cnf VMS repl_backend LABELS mysqlmon)
 
