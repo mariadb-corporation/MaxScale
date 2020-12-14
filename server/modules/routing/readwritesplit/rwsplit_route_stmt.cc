@@ -1136,6 +1136,19 @@ bool RWSplitSession::handle_got_target(mxs::Buffer&& buffer, RWBackend* target, 
         // Store the current target
         m_prev_target = target;
 
+        if (m_config.transaction_replay && trx_is_open())
+        {
+            if (!m_trx.target())
+            {
+                MXS_INFO("Transaction starting on '%s'", target->name());
+                m_trx.set_target(target);
+            }
+            else
+            {
+                mxb_assert(m_trx.target() == target);
+            }
+        }
+
         if (m_target_node && trx_is_read_only() && trx_is_ending())
         {
             // Read-only transaction is over, stop routing queries to a specific node
