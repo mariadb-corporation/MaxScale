@@ -361,7 +361,6 @@ bool run_test(TestConnections& test)
 int main(int argc, char* argv[])
 {
     TestConnections::skip_maxscale_start(true);
-    TestConnections::check_nodes(false);
     TestConnections test(argc, argv);
 
     if (!run_test(test))

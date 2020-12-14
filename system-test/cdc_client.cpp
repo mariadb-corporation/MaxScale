@@ -183,7 +183,6 @@ static TestConnections* Test;
 int main(int argc, char* argv[])
 {
     TestConnections::skip_maxscale_start(true);
-    TestConnections::check_nodes(false);
     Test = new TestConnections(argc, argv);
 
     Test->set_timeout(60);
