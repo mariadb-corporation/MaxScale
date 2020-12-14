@@ -1149,12 +1149,6 @@ bool RWSplitSession::handle_got_target(mxs::Buffer&& buffer, RWBackend* target, 
                 mxb_assert(m_trx.target() == target);
             }
         }
-
-        if (m_target_node && trx_is_read_only() && trx_is_ending())
-        {
-            // Read-only transaction is over, stop routing queries to a specific node
-            m_target_node = nullptr;
-        }
     }
     else
     {
