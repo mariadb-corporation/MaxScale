@@ -9,6 +9,24 @@ The Xpand Monitor is a monitor that monitors a Xpand cluster. It is
 capable of detecting the cluster setup and creating corresponding server
 instances within MaxScale.
 
+## Required Grants
+
+The monitor user _must_ have the following grants:
+
+```
+CREATE USER 'maxscale'@'maxscalehost' IDENTIFIED BY 'maxscale-password';
+GRANT SELECT ON system.membership TO 'maxscale'@'maxscalehost';
+GRANT SELECT ON system.nodeinfo TO 'maxscale'@'maxscalehost';
+GRANT SELECT ON system.softfailed_nodes TO 'maxscale'@'maxscalehost';
+```
+
+Further, if you want be able to _softfail_ and _unsoftfail_ a node via MaxScale,
+then the monitor user must have `SUPER` privileges:
+
+```
+GRANT SUPER ON *.* TO 'maxscale'@'maxscalehost';
+```
+
 ## Configuration
 
 A minimal configuration for a monitor requires one server in the Xpand
@@ -52,27 +70,6 @@ the names of the created server objects will be:
 @@TheXpandMonitor:node-2
 @@TheXpandMonitor:node-3
 ```
-
-### Grants
-
-Note that the monitor user _must_ have `SELECT` grant on the following tables:
-
-   * `system.nodeinfo`
-   * `system.membership`
-   * `system.softfailed_nodes`
-
-You can give the necessary grants using the following commands:
-```
-    GRANT SELECT ON system.membership TO 'myuser'@'%';
-    GRANT SELECT ON system.nodeinfo TO 'myuser'@'%';
-    GRANT SELECT ON system.softfailed_nodes TO 'myuser'@'%';
-```
-Further, if you want be able to _softfail_ and _unsoftfail_ a node via MaxScale,
-then the monitor user must have `SUPER` privileges, which can be granted like:
-```
-    GRANT SUPER ON *.* TO 'myuser'@'%';
-```
-The user name must be changed to the one actually being used.
 
 ## Common Monitor Parameters
 

@@ -14,8 +14,8 @@ For example, to create a user for this monitor with the required grants execute
 the following SQL.
 
 ```
-CREATE USER 'maxuser'@'%' IDENTIFIED BY 'maxpwd';
-GRANT ALL ON infinidb_vtable.* TO 'maxuser'@'%';
+CREATE USER 'maxscale'@'maxscalehost' IDENTIFIED BY 'maxscale-password';
+GRANT ALL ON infinidb_vtable.* TO 'maxscale'@'maxscalehost';
 ```
 
 ## Master Selection
