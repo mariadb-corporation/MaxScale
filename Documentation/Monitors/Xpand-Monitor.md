@@ -214,5 +214,5 @@ status will be cleared.
 
 If the softfailing and unsoftfailing is initiated using the `softfail`
 and `unsoftfail` commands of the Xpand monitor, then there will be
-no delay between the softfailing or unsoftfailing being initated and the
+no delay between the softfailing or unsoftfailing being initiated and the
 `Draining` status being turned on/off.

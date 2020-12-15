@@ -129,7 +129,7 @@ servers=server1,server2,server3
 disk_space_threshold=/data:80
 ...
 ```
-However, if the servers are heterogenious with the disk used for the
+However, if the servers are heterogeneous with the disk used for the
 data directory mounted on different paths, then the disk space threshold
 must be specified separately for each server.
 ```
@@ -207,7 +207,7 @@ path. The user running MaxScale should have execution rights to the file itself
 and the directory it resides in. The script may have placeholders which
 MaxScale will substitute with useful information when launching the script.
 
-The placeholders and their substition results are:
+The placeholders and their substitution results are:
 
 * `$INITIATOR` -> IP and port of the server which initiated the event
 * `$EVENT` -> event description, e.g. "server_up"

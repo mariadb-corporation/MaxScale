@@ -266,7 +266,7 @@ considered failed. If automatic failover is enabled (`auto_failover=true`), it
 may be performed at this time. A value of 0 or 1 enables immediate failover.
 
 If automatic failover is not possible, the monitor will try to
-search for another server to fultill the master role. See section
+search for another server to fulfill the master role. See section
 [Master selection](#master-selection)
 for more details. Changing the master may break replication as queries could be
 routed to a server without previous events. To prevent this, avoid having
@@ -304,7 +304,7 @@ on how to enable disk space monitoring.
 
 Once a server has been put to maintenance mode, the disk space situation
 of that server is no longer updated. The server will not be taken out of
-maintanance mode even if more disk space becomes available. The maintenance
+maintenance mode even if more disk space becomes available. The maintenance
 flag must be removed manually:
 ```
 maxctrl clear server server2 Maint
@@ -509,7 +509,7 @@ It is safe to perform manual operations even with automatic failover, switchover
 or rejoin enabled since automatic operations cannot happen simultaneously
 with manual ones.
 
-When a cluster modification is iniated via the REST-API, the URL path is of the
+When a cluster modification is initiated via the REST-API, the URL path is of the
 form:
 ```
 /v1/maxscale/modules/mariadbmon/<operation>?<monitor-instance>&<server-param1>&<server-param2>
@@ -667,7 +667,7 @@ server is the cluster master server, then the cluster itself is considered to
 have an external master.
 
 If a failover/switchover happens, the new master server is set to replicate from
-the cluster external master server. The usename and password for the replication
+the cluster external master server. The username and password for the replication
 are defined in `replication_user` and `replication_password`. The address and
 port used are the ones shown by `SHOW ALL SLAVES STATUS` on the old cluster
 master server. In the case of switchover, the old master also stops replicating
@@ -830,7 +830,7 @@ met.
 This is a comma-separated list of server names that will not be chosen for
 master promotion during a failover or autoselected for switchover. This does not
 affect switchover if the user selects the server to promote. Using this setting
-can disrupt new master selection for failover such that an nonoptimal server is
+can disrupt new master selection for failover such that an non-optimal server is
 chosen. At worst, this will cause replication to break. Alternatively, failover
 may fail if all valid promotion candidates are in the exclusion list.
 
