@@ -912,6 +912,9 @@ add_test_executable(mxs3218_ldli_crash.cc mxs3218_ldli_crash replication LABELS 
 # MXS-3220: Crash on master reconnection with session command
 add_test_executable(mxs3220_reconnect_crash.cc mxs3220_reconnect_crash mxs3220_reconnect_crash LABELS REPL_BACKEND readwritesplit)
 
+# MXS-3339: Hang with COM_STMT_CLOSE in sescmd history
+add_test_executable(mxs3339_stmt_close_hang.cc mxs3339_stmt_close_hang mxs3339_stmt_close_hang LABELS REPL_BACKEND readwritesplit)
+
 ############################################
 # END: Normal tests                        #
 ############################################
