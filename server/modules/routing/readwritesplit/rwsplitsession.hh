@@ -151,6 +151,7 @@ private:
     bool route_single_stmt(mxs::Buffer&& buffer);
     bool route_stored_query();
     void close_stale_connections();
+    void execute_queued_commands(mxs::RWBackend* backend, bool processed_sescmd);
 
     int64_t         get_current_rank();
     mxs::RWBackend* get_hinted_backend(const char* name);

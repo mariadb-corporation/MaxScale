@@ -73,6 +73,16 @@ public:
     std::string to_string();
 
     /**
+     * @brief Get the protocol command of the session command
+     *
+     * @return The protocol command of the session command
+     */
+    uint8_t command() const
+    {
+        return m_command;
+    }
+
+    /**
      * @brief Equality comparison
      *
      * @return True if @c rhs is equal
