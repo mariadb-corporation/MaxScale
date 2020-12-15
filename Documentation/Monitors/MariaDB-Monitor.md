@@ -13,6 +13,41 @@ other similar operations require MariaDB 10.0.2 or later.
 
 Up until MariaDB MaxScale 2.2.0, this monitor was called _MySQL Monitor_.
 
+## Required Grants
+
+The monitor user _must_ have the following grants (REPLICATION CLIENT is named
+REPLICATION SLAVE ADMIN in MariaDB Server 10.5):
+
+```
+CREATE USER 'maxscale'@'maxscalehost' IDENTIFIED BY 'maxscale-password';
+GRANT REPLICATION CLIENT ON *.* TO 'maxscale'@'maxscalehost';
+```
+
+### Cluster Manipulation Grants
+
+If [cluster manipulation operations](#cluster-manipulation-operations) are used,
+the following additional grants are required:
+
+```
+GRANT SUPER, RELOAD, PROCESS, SHOW DATABASES, EVENT ON *.* TO 'maxscale'@'maxscalehost';
+GRANT SELECT ON mysql.user TO 'maxscale'@'maxscalehost';
+```
+
+If `replication_user` and `replication_password` are used, the following grants
+must be given to the user defined by them:
+
+```
+CREATE USER 'replication'@'replicationhost' IDENTIFIED BY 'replication-password';
+GRANT REPLICATION SLAVE ON *.* TO 'replication'@'replicationhost';
+```
+
+MariaDB 10.5.8 and newer versions require a different set of grants:
+
+```
+CREATE USER 'replication'@'replicationhost' IDENTIFIED BY 'replication-password';
+GRANT REPLICATION SLAVE, SLAVE MONITOR ON *.* TO 'replication'@'replicationhost';
+```
+
 ## Master selection
 
 Only one backend can be master at any given time. A master must be running
@@ -80,16 +115,9 @@ password=mypwd
 From MaxScale 2.2.1 onwards, the module name is `mariadbmon` instead of
 `mysqlmon`. The old name can still be used.
 
-The `user` requires privileges depending on which monitor features are used.
-REPLICATION CLIENT (or REPLICATION SLAVE ADMIN for Server 10.5) allows the
-monitor to list replication connections, and is always required. See
-[Cluster manipulation operations](#cluster-manipulation-operations) for more
-information on required privileges.
-
-```
-MariaDB [(none)]> grant replication client on *.* to 'myuser'@'maxscalehost';
-Query OK, 0 rows affected (0.00 sec)
-```
+The grants required by `user` depend on which monitor features are used.  A full
+list of the grants can be found in the [Required Grants](#required-grants)
+section.
 
 ## Common Monitor Parameters
 
@@ -330,19 +358,13 @@ slave connections
 - PROCESS, to check if the *event\_scheduler* process is running
 - SHOW DATABASES and EVENT, to list and modify server events
 
-```
-GRANT super, replication client, reload, process, show databases, event on *.* to 'myuser'@'maxscalehost';
-GRANT select on mysql.user to 'myuser'@'maxscalehost';
-```
+A list of the grants can be found in the [Required Grants](#required-grants)
+section.
 
 The privilege system was changed in MariaDB Server 10.5. The effects of this on
 the MaxScale monitor user are minor, as the SUPER-privilege contains many of the
 required privileges and is still required to kill connections from other
 super-users.
-```
-GRANT super, reload, process, show databases, event on *.* to 'myuser'@'maxscalehost';
-GRANT select on mysql.user to 'myuser'@'maxscalehost';
-```
 
 In addition, the monitor needs to know which username and password a
 slave should use when starting replication. These are given in
