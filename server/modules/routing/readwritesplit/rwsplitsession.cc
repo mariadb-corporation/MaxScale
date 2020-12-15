@@ -135,6 +135,7 @@ int32_t RWSplitSession::routeQuery(GWBUF* querybuf)
                  buffer.length(), buffer.data()[4], m_expected_responses,
                  mxs::extract_sql(buffer, 1024).c_str());
         mxb_assert(m_expected_responses == 1 || !m_query_queue.empty());
+        mxb_assert(!gwbuf_is_replayed(querybuf));
 
         m_query_queue.emplace_back(std::move(buffer));
         rval = 1;
@@ -529,6 +530,12 @@ void RWSplitSession::finish_transaction(mxs::RWBackend* backend)
     }
 
     m_trx_sescmd.clear();
+
+    if (m_target_node && trx_is_read_only())
+    {
+        // Read-only transaction is over, stop routing queries to a specific node
+        m_target_node = nullptr;
+    }
 }
 
 int32_t RWSplitSession::clientReply(GWBUF* writebuf, const mxs::ReplyRoute& down, const mxs::Reply& reply)
@@ -997,6 +1004,12 @@ bool RWSplitSession::handleError(mxs::ErrorType type, GWBUF* errmsgbuf, mxs::End
         {
             mxb_assert(m_trx.target() == backend);
 
+            if (backend->is_waiting_result())
+            {
+                mxb_assert(m_expected_responses == 1);
+                m_expected_responses--;
+            }
+
             // We're no longer locked to this server as it failed
             m_target_node = nullptr;
 
@@ -1019,6 +1032,12 @@ bool RWSplitSession::handleError(mxs::ErrorType type, GWBUF* errmsgbuf, mxs::End
              * be closed. We can safely start retrying the transaction
              * on the master.
              */
+
+            if (backend->is_waiting_result())
+            {
+                mxb_assert(m_expected_responses == 1);
+                m_expected_responses--;
+            }
 
             mxb_assert(trx_is_open());
             m_otrx_state = OTRX_INACTIVE;

@@ -14,10 +14,19 @@ report on [our Jira](https://jira.mariadb.org/projects/MXS).
 
 ## Bug fixes
 
+* [MXS-3338](https://jira.mariadb.org/browse/MXS-3338) Last statement in read-only transaction doesn't trigger transaction replay
+* [MXS-3335](https://jira.mariadb.org/browse/MXS-3335) MaxScale 2.5.6 and Xpand Direct connection issue with xpandmon 
+* [MXS-3334](https://jira.mariadb.org/browse/MXS-3334) Master failure triggers replay of read-only transaction
+* [MXS-3333](https://jira.mariadb.org/browse/MXS-3333) Malformed error messages
+* [MXS-3328](https://jira.mariadb.org/browse/MXS-3328) Persistent Connections on Maxscale 2.5 seem to break client authentication
+* [MXS-3327](https://jira.mariadb.org/browse/MXS-3327) Memcachd/Redis cache storage must be disabled if memcached/redis not reachable
+* [MXS-3326](https://jira.mariadb.org/browse/MXS-3326) Host class does not accept all valid domain names.
+* [MXS-3325](https://jira.mariadb.org/browse/MXS-3325) Redis cache storage does not accept dashes in server names.
 * [MXS-3316](https://jira.mariadb.org/browse/MXS-3316) Redis cache storage must be disabled if Redis not connectible 
 * [MXS-3313](https://jira.mariadb.org/browse/MXS-3313) MaxScale cache must use timeout when connecting to redis/memcached 
 * [MXS-3312](https://jira.mariadb.org/browse/MXS-3312) MaxScale not allowing login and sometimes crashes when cache server not available
 * [MXS-3311](https://jira.mariadb.org/browse/MXS-3311) routed_packets not updated by readconnroute
+* [MXS-3307](https://jira.mariadb.org/browse/MXS-3307) Multiple binlogrouters in the same MaxScale
 * [MXS-3301](https://jira.mariadb.org/browse/MXS-3301) MaxScale does not recognize xpand properly
 * [MXS-3295](https://jira.mariadb.org/browse/MXS-3295) Layout of classify REST API endpoint stores non-parameter data in parameters object
 * [MXS-3293](https://jira.mariadb.org/browse/MXS-3293) Backticks not stripped in USE statements.

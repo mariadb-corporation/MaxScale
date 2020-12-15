@@ -39,6 +39,11 @@ public:
         return m_target;
     }
 
+    void set_target(mxs::RWBackend* tgt)
+    {
+        m_target = tgt;
+    }
+
     /**
      * Add a statement to the transaction
      *
@@ -56,8 +61,7 @@ public:
         m_size += gwbuf_length(buf);
         m_log.emplace_back(buf);
 
-        mxb_assert(!m_target || target == m_target);
-        m_target = target;
+        mxb_assert(target == m_target);
     }
 
     /**

@@ -1250,6 +1250,7 @@ MonitorServer::ping_or_connect_to_db(const MonitorServer::ConnectionSettings& se
             mysql_optionsv(pConn, MYSQL_OPT_READ_TIMEOUT, &sett.read_timeout);
             mysql_optionsv(pConn, MYSQL_OPT_WRITE_TIMEOUT, &sett.write_timeout);
             mysql_optionsv(pConn, MYSQL_PLUGIN_DIR, mxs::connector_plugindir());
+            mysql_optionsv(pConn, MARIADB_OPT_MULTI_STATEMENTS, nullptr);
         };
 
     ConnectResult conn_result = ConnectResult::REFUSED;

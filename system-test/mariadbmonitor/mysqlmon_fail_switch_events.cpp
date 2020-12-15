@@ -14,6 +14,7 @@
 #include <maxtest/testconnections.hh>
 #include "failover_common.cpp"
 #include <string>
+#include <maxbase/format.hh>
 
 using std::string;
 
@@ -27,6 +28,10 @@ const char EV_STATE_DISABLED[] = "DISABLED";
 const char EV_STATE_SLAVE_DISABLED[] = "SLAVESIDE_DISABLED";
 
 const char WRONG_MASTER_FMT[] = "%s is not master as expected. Current master id: %i.";
+
+void expect_event_charset_collation(TestConnections& test, const string& event_name,
+                                    const string& client_charset, const string& collation_connection,
+                                    const string& database_collation);
 
 int read_incremented_field(TestConnections& test)
 {
@@ -308,12 +313,48 @@ int main(int argc, char** argv)
 
     if (test.ok())
     {
-           // Check that all other nodes are slaves.
+        // Check that all other nodes are slaves.
         for (int i = 1; i < N; i++)
         {
             string server_name = server_names[i];
             states = test.maxscales->get_server_status(server_name.c_str());
             test.expect(states.count("Slave") == 1, "%s is not a slave.", server_name.c_str());
+        }
+    }
+
+    if (test.ok())
+    {
+        // MXS-3158 Check that monitor preserves the character set and collation of an even when altering it.
+        test.tprintf("Checking event handling with non-default charset and collation.");
+
+        const char def_charset[] = "latin1";
+        const char def_collation[] = "latin1_swedish_ci";
+
+        expect_event_charset_collation(test, EVENT_NAME, def_charset, def_collation, def_collation);
+        if (test.ok())
+        {
+            // Alter event charset to utf8.
+            const char new_charset[] = "utf8mb4";
+            const char new_collation[] = "utf8mb4_estonian_ci";
+            auto conn = test.repl->nodes[0];
+            test.try_query(conn, "SET NAMES %s COLLATE %s; ALTER EVENT %s ENABLE;",
+                           new_charset, new_collation, EVENT_NAME);
+            check_event_status(test, server1_ind, EVENT_NAME, EV_STATE_ENABLED);
+            expect_event_charset_collation(test, EVENT_NAME, new_charset, new_collation, def_collation);
+
+            if (test.ok())
+            {
+                switchover(test, server2_name);
+                if (test.ok())
+                {
+                    check_event_status(test, server2_ind, EVENT_NAME, EV_STATE_ENABLED);
+                    expect_event_charset_collation(test, EVENT_NAME, new_charset, new_collation,
+                                                   def_collation);
+                }
+
+                // Switchover back.
+                switchover(test, server1_name);
+            }
         }
     }
 
@@ -323,4 +364,37 @@ int main(int argc, char** argv)
         test.repl->fix_replication();
     }
     return test.global_result;
+}
+
+void expect_event_charset_collation(TestConnections& test, const string& event_name,
+                                    const string& client_charset, const string& collation_connection,
+                                    const string& database_collation)
+{
+    auto conn = test.maxscales->rwsplit();
+    conn.connect();
+    string query = mxb::string_printf("select CHARACTER_SET_CLIENT, COLLATION_CONNECTION, DATABASE_COLLATION "
+                                      "from information_schema.EVENTS where EVENT_NAME = '%s';",
+                                      event_name.c_str());
+    Row row = conn.row(query);
+    if (!row.empty())
+    {
+        string& found_charset = row[0];
+        string& found_collation = row[1];
+        string& found_dbcoll = row[2];
+
+        test.tprintf("Event '%s': CHARACTER_SET_CLIENT is '%s', COLLATION_CONNECTION is '%s', "
+                     "DATABASE_COLLATION is '%s'",
+                     EVENT_NAME, found_charset.c_str(), found_collation.c_str(), found_dbcoll.c_str());
+        const char error_fmt[] = "Wrong %s. Found %s, expected %s.";
+        test.expect(found_charset == client_charset, error_fmt, "CHARACTER_SET_CLIENT",
+                    found_charset.c_str(), client_charset.c_str());
+        test.expect(found_collation == collation_connection, error_fmt, "COLLATION_CONNECTION",
+                    found_collation.c_str(), collation_connection.c_str());
+        test.expect(found_dbcoll == database_collation, error_fmt, "DATABASE_COLLATION",
+                    found_dbcoll.c_str(), database_collation.c_str());
+    }
+    else
+    {
+        test.expect(false, "Query '%s' failed.", query.c_str());
+    }
 }

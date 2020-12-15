@@ -285,10 +285,11 @@ bool RWSplitSession::route_stmt(mxs::Buffer&& buffer)
         return true;
     }
 
-    auto next_master = get_target_backend(BE_MASTER, NULL, mxs::Target::RLAG_UNDEFINED);
+    auto next_master = get_master_backend();
 
     if (should_replace_master(next_master))
     {
+        mxb_assert(next_master->is_master());
         MXS_INFO("Replacing old master '%s' with new master '%s'",
                  m_current_master ? m_current_master->name() : "<no previous master>", next_master->name());
         replace_master(next_master);
@@ -1143,10 +1144,17 @@ bool RWSplitSession::handle_got_target(mxs::Buffer&& buffer, RWBackend* target, 
         // Store the current target
         m_prev_target = target;
 
-        if (m_target_node && trx_is_read_only() && trx_is_ending())
+        if (m_config.transaction_replay && trx_is_open())
         {
-            // Read-only transaction is over, stop routing queries to a specific node
-            m_target_node = nullptr;
+            if (!m_trx.target())
+            {
+                MXS_INFO("Transaction starting on '%s'", target->name());
+                m_trx.set_target(target);
+            }
+            else
+            {
+                mxb_assert(m_trx.target() == target);
+            }
         }
     }
     else
