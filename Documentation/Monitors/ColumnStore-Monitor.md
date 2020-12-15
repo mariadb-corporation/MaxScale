@@ -229,7 +229,7 @@ module=csmon
 version=1.5
 servers=CsNode1,CsNode2
 user=myuser
-passwd=mypwd
+password=mypwd
 monitor_interval=5000
 api_key=somekey1234
 ```
