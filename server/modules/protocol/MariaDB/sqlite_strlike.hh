@@ -22,4 +22,9 @@
  * @param esc Escape character
  * @return 0 on match
  */
-int sql_strlike(const char *zPattern, const char *zStr, unsigned int esc);
+int sql_strlike(const char* zPattern, const char* zStr, unsigned int esc);
+
+/**
+ * Case-sensitive version of sql_strlike.
+ */
+int sql_strlike_case(const char* zPattern, const char* zStr, unsigned int esc);

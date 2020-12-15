@@ -16,6 +16,10 @@ add_test(test_setparser test_setparser)
 add_test(test_setsqlmodeparser test_setsqlmodeparser)
 add_test(test_sqlmodeparser test_sqlmodeparser)
 
+add_executable(test_sqlite_strlike test_sqlite_strlike.cc)
+target_link_libraries(test_sqlite_strlike maxscale-common mariadbclient)
+add_test(test_sqlite_strlike test_sqlite_strlike)
+
 add_executable(test_trxtracking test_trxtracking.cc)
 target_link_libraries(test_trxtracking maxscale-common)
 add_test(test_trxtracking test_trxtracking)
