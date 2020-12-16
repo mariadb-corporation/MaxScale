@@ -85,17 +85,41 @@ int main(int argc, char* argv[])
             test.add_result(execute_query(admin_conn, create_db_fmt, fail_db1), create_db_failed);
             test.add_result(execute_query(admin_conn, create_db_fmt, fail_db2), create_db_failed);
 
-            query = mxb::string_printf("GRANT SELECT ON `Area5\\_Files`.* TO %s;", userhostc);
+            const char grant_fmt[] = "GRANT SELECT ON `%s`.* TO %s;";
+            const char revoke_fmt[] = "REVOKE SELECT ON `%s`.* FROM %s;";
+            const char escaped_wc_db[] = "Area5\\_Files";
+            query = mxb::string_printf(grant_fmt, escaped_wc_db, userhostc);
             test.add_result(execute_query(admin_conn, "%s", query.c_str()), "GRANT failed.");
 
             if (test.ok())
             {
+                test.tprintf("Testing database grant with escaped wildcard...");
                 test_login(grant_db, true);
-                // The following will succeed if proper matching is added at some point.
                 test_login(fail_db1, false);
                 test_login(fail_db2, false);
             }
 
+            // Replace escaped wc grant with non-escaped version.
+            query = mxb::string_printf(revoke_fmt, escaped_wc_db, userhostc);
+            test.add_result(execute_query(admin_conn, "%s", query.c_str()), "REVOKE failed.");
+
+            const char wc_db[] = "Area5_Files";
+            query = mxb::string_printf(grant_fmt, wc_db, userhostc);
+            test.add_result(execute_query(admin_conn, "%s", query.c_str()), "GRANT failed.");
+
+            if (test.ok())
+            {
+                // Restart MaxScale to reload users, as the load limit may have been reached.
+                test.maxscales->restart();
+                mxs->wait_for_monitor();
+
+                test.tprintf("Testing database grant with wildcard...");
+                test_login(grant_db, true);
+                test_login(fail_db1, true);
+                test_login(fail_db2, true);
+            }
+
+            test.maxscales->connect();
             const char drop_db_fmt[] = "drop database %s;";
             const char drop_db_failed[] = "DROP DATABASE failed";
             test.add_result(execute_query(admin_conn, drop_db_fmt, grant_db), drop_db_failed);
