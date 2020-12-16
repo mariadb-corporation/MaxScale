@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# The following environment variables are used:
+# node_user     - A custom user to create
+# node_password - The password for the user
+
 # Wait until the node is ready
 
 for ((i=0;i<100;i++))
@@ -17,9 +21,9 @@ CREATE DATABASE IF NOT EXISTS test;
 
 DELETE FROM mysql.user WHERE user = '';
 
-DROP USER IF EXISTS '$galera_user'@'%';
-CREATE USER '$galera_user'@'%' IDENTIFIED BY '$galera_password';
-GRANT ALL PRIVILEGES ON *.* TO '$galera_user'@'%' WITH GRANT OPTION;
+DROP USER IF EXISTS '$node_user'@'%';
+CREATE USER '$node_user'@'%' IDENTIFIED BY '$node_password';
+GRANT ALL PRIVILEGES ON *.* TO '$node_user'@'%' WITH GRANT OPTION;
 
 DROP USER IF EXISTS 'maxskysql'@'%';
 CREATE USER 'maxskysql'@'%' IDENTIFIED BY 'skysql';

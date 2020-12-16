@@ -527,9 +527,10 @@ int Galera_nodes::start_galera()
     sprintf(str, "%s/create_user_galera.sh", test_dir);
     copy_to_node_legacy(str, "~/", 0);
 
-    ssh_node_f(0,
-               true,
-               "export galera_user=\"%s\"; export galera_password=\"%s\"; ./create_user_galera.sh %s",
+    ssh_node_f(0, true,
+               "export node_user=\"%s\"; "
+               "export node_password=\"%s\"; "
+               "./create_user_galera.sh %s",
                user_name.c_str(),
                password.c_str(),
                socket_cmd[0].c_str());
