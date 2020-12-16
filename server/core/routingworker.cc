@@ -564,6 +564,13 @@ BackendDCB* RoutingWorker::get_backend_dcb_from_pool(SERVER* pS,
             }
         }
 
+        // If proxy protocol is in use there is a possibility that 
+        // no DCBs are suitable to use. 
+        if (!pDcb)
+        {
+            break;		
+        }
+
         // Put back the origininal handler.
         pDcb->set_handler(pDcb->protocol());
         auto ses = static_cast<Session*>(pSession);
