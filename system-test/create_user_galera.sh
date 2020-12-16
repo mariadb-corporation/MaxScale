@@ -25,10 +25,6 @@ DROP USER IF EXISTS '$node_user'@'%';
 CREATE USER '$node_user'@'%' IDENTIFIED BY '$node_password';
 GRANT ALL ON *.* TO '$node_user'@'%' WITH GRANT OPTION;
 
-DROP USER IF EXISTS 'maxskysql'@'%';
-CREATE USER 'maxskysql'@'%' IDENTIFIED BY 'skysql';
-GRANT ALL ON *.* TO 'maxskysql'@'%' WITH GRANT OPTION;
-
 DROP USER IF EXISTS 'repl'@'%';
 CREATE USER 'repl'@'%' IDENTIFIED BY 'repl';
 GRANT ALL ON *.* TO 'repl'@'%' WITH GRANT OPTION;
@@ -36,6 +32,10 @@ GRANT ALL ON *.* TO 'repl'@'%' WITH GRANT OPTION;
 DROP USER IF EXISTS 'skysql'@'%';
 CREATE USER 'skysql'@'%' IDENTIFIED BY 'skysql';
 GRANT ALL ON *.* TO 'skysql'@'%' WITH GRANT OPTION;
+
+DROP USER IF EXISTS 'maxskysql'@'%';
+CREATE USER 'maxskysql'@'%' IDENTIFIED BY 'skysql';
+GRANT ALL ON *.* TO 'maxskysql'@'%' WITH GRANT OPTION;
 
 DROP USER IF EXISTS 'maxuser'@'%';
 CREATE USER 'maxuser'@'%' IDENTIFIED BY 'maxpwd';
