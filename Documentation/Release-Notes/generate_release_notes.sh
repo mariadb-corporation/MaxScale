@@ -17,6 +17,10 @@ Release ${VERSION} is a ${maturity} release.
 This document describes the changes in release ${VERSION}, when compared to the
 previous release in the same series.
 
+If you are upgrading from an older major version of MaxScale, please read the
+[upgrading document](../Upgrading/Upgrading-To-MaxScale-$major.$minor.md) for
+this MaxScale version.
+
 For any problems you encounter, please consider submitting a bug
 report on [our Jira](https://jira.mariadb.org/projects/MXS).
 
