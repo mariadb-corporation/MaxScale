@@ -524,14 +524,19 @@ int Galera_nodes::start_galera()
     }
 
     char str[PATH_MAX + 1024];
-    sprintf(str, "%s/create_user_galera.sh", test_dir);
+
+    sprintf(str, "%s/galera_wait_until_ready.sh", test_dir);
     copy_to_node_legacy(str, "~/", 0);
 
+    sprintf(str, "%s/create_user.sh", test_dir);
+    copy_to_node_legacy(str, "~/", 0);
+
+    ssh_node_f(0, true, "./galera_wait_until_ready.sh %s", socket_cmd[0].c_str());
     ssh_node_f(0, true,
                "export require_ssl=\"%s\"; "
                "export node_user=\"%s\"; "
                "export node_password=\"%s\"; "
-               "./create_user_galera.sh %s",
+               "./create_user.sh %s",
                ssl ? "REQUIRE SSL" : "",
                user_name.c_str(),
                password.c_str(),
