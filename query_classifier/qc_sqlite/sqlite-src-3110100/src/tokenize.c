@@ -679,7 +679,7 @@ int sqlite3GetToken(const unsigned char *z, int *tokenType){
         if (pParse) {
           if (z != (const unsigned char *)pParse->zTail) {
             const char *p = (const char*)z - 1;
-            while ((p != pParse->zTail) && sqlite3Isspace(*p)) {
+            while ((p != pParse->zTail) && sqlite3Isspace(*p) && *p != '\n') {
               --p;
             }
 
