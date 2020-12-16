@@ -66,12 +66,8 @@ bool RWSplitSession::prepare_target(RWBackend* target, route_target_t route_targ
 
 void RWSplitSession::retry_query(GWBUF* querybuf, int delay)
 {
-    mxb_assert(querybuf);
-    // Try to route the query again later
-    MXS_SESSION* session = m_session;
-
     /**
-     * Used to distinct retried queries from new ones while we're doing transaction replay.
+     * Used to distinguish retried queries from new ones while we're doing transaction replay.
      * Not the cleanest way to do things but this will have to do for 2.3.
      *
      * TODO: Figure out a way to "cork" the client DCB as that would remove the need for this and be
@@ -79,7 +75,8 @@ void RWSplitSession::retry_query(GWBUF* querybuf, int delay)
      */
     gwbuf_set_type(querybuf, GWBUF_TYPE_REPLAYED);
 
-    session_delay_routing(session, this, querybuf, delay);
+    // Route the query again later
+    session_delay_routing(m_pSession, this, querybuf, delay);
     ++m_retry_duration;
 }
 
@@ -905,29 +902,29 @@ void RWSplitSession::log_master_routing_failure(bool found,
 
     MXS_WARNING("[%s] Write query received from %s@%s. %s. Closing client connection.",
                 m_router->service()->name(),
-                m_session->user().c_str(),
-                m_session->client_remote().c_str(),
+                m_pSession->user().c_str(),
+                m_pSession->client_remote().c_str(),
                 errmsg);
 }
 
 bool RWSplitSession::trx_is_starting() const
 {
-    return m_session->protocol_data()->is_trx_starting();
+    return m_pSession->protocol_data()->is_trx_starting();
 }
 
 bool RWSplitSession::trx_is_read_only() const
 {
-    return m_session->protocol_data()->is_trx_read_only();
+    return m_pSession->protocol_data()->is_trx_read_only();
 }
 
 bool RWSplitSession::trx_is_open() const
 {
-    return m_session->protocol_data()->is_trx_active();
+    return m_pSession->protocol_data()->is_trx_active();
 }
 
 bool RWSplitSession::trx_is_ending() const
 {
-    return m_session->protocol_data()->is_trx_ending();
+    return m_pSession->protocol_data()->is_trx_ending();
 }
 
 bool RWSplitSession::should_replace_master(RWBackend* target)

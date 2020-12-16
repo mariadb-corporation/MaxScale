@@ -436,7 +436,6 @@ private:
     mxs::RWBackend*   m_target_node;            /**< The currently locked target node */
     RoutingPlan       m_prev_plan;              /**< The previous routing plan */
     RWSConfig::Values m_config;                 /**< Configuration for this session */
-    MXS_SESSION*      m_session;                /**< The client session */
 
     uint64_t m_sescmd_count;            /**< Number of executed session commands (starts from 1) */
     int      m_expected_responses;      /**< Number of expected responses to the current query */

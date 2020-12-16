@@ -31,7 +31,6 @@ RWSplitSession::RWSplitSession(RWSplit* instance, MXS_SESSION* session, mxs::SRW
     , m_current_master(nullptr)
     , m_target_node(nullptr)
     , m_config(instance->config())
-    , m_session(session)
     , m_sescmd_count(1)
     , m_expected_responses(0)
     , m_last_keepalive_check(maxbase::Clock::now(maxbase::NowType::EPollTick))
@@ -284,7 +283,7 @@ void RWSplitSession::trx_replay_next_stmt()
                                                           "Transaction checksum mismatch encountered "
                                                           "when replaying transaction.");
 
-                m_session->kill(buf);
+                m_pSession->kill(buf);
 
                 // Turn the replay flag back on to prevent queries from getting routed before the hangup we
                 // just added is processed. For example, this can happen if the error is sent and the client
@@ -318,7 +317,7 @@ void RWSplitSession::manage_transactions(RWBackend* backend, GWBUF* writebuf, co
 
         if (!mxs_mysql_is_ok_packet(writebuf))
         {
-            m_session->kill();
+            m_pSession->kill();
         }
     }
     else if (m_config.transaction_replay && m_can_replay_trx && trx_is_open())
@@ -816,7 +815,7 @@ bool RWSplitSession::start_trx_replay()
         }
         else
         {
-            mxb_assert_message(!static_cast<MYSQL_session*>(m_session->protocol_data())->is_autocommit
+            mxb_assert_message(!static_cast<MYSQL_session*>(m_pSession->protocol_data())->is_autocommit
                                || trx_is_ending(),
                                "Session should have autocommit disabled or transaction just ended if the "
                                "transaction had no statements and no query was interrupted");
@@ -940,7 +939,7 @@ bool RWSplitSession::handleError(mxs::ErrorType type, GWBUF* errmsgbuf, mxs::End
 
         // This effectively causes an instant termination of the client connection and prevents any errors
         // from being sent to the client (MXS-2562).
-        m_session->kill();
+        m_pSession->kill();
         return false;
     }
 
