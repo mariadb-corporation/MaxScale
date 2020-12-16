@@ -12,15 +12,9 @@ do
     mysql -ss $1 -e 'show status like "wsrep_ready"' | grep 'ON' && break || sleep 1
 done
 
-# The removal of the anonymous ''@'localhost' user is done in a somewhat crude
-# way. The proper way would be to do a secure installation or drop the users
-# with DROP USER statements.
-
 mysql --force <<EOF
 
 CREATE DATABASE IF NOT EXISTS test;
-
-DELETE FROM mysql.user WHERE user = '';
 
 DROP USER IF EXISTS '$node_user'@'%';
 CREATE USER '$node_user'@'%' IDENTIFIED BY '$node_password';
