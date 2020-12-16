@@ -1530,6 +1530,7 @@ int main(int argc, char* argv[])
     string classifier2Args("log_unrecognized_statements=1");
     version = 10 * 1000 * 2 * 100;
 #endif
+    string statement;
     const char* zStatement = NULL;
     qc_sql_mode_t sql_mode = QC_SQL_MODE_DEFAULT;
     bool solo = false;
@@ -1581,7 +1582,34 @@ int main(int argc, char* argv[])
             break;
 
         case 's':
-            zStatement = optarg;
+            {
+                const char* z = optarg;
+
+                while (*z)
+                {
+                    switch (*z)
+                    {
+                    case '\\':
+                        if (*(z + 1) == 'n')
+                        {
+                            statement += '\n';
+                            ++z;
+                        }
+                        else
+                        {
+                            statement += *z;
+                        }
+                        break;
+
+                    default:
+                        statement += *z;
+                    }
+
+                    ++z;
+                }
+
+                zStatement = statement.c_str();
+            }
             break;
 
         case 'm':
