@@ -8,6 +8,12 @@ previous release in the same series.
 For any problems you encounter, please consider submitting a bug
 report on [our Jira](https://jira.mariadb.org/projects/MXS).
 
+**NOTE** After the release of 2.5.6 it was noticed that configuring the same
+server for _both_ the persistent pool (configuration settings `persistpoolmax`
+and `persistmaxtime`) and the proxy protocol (configuration setting `proxy_protocol`)
+may in some situations lead to a crash. Using either one is ok. We will release
+2.5.7 with a fix for this as soon as possible (January 2021).
+
 ## New Features
 
 * [MXS-3129](https://jira.mariadb.org/browse/MXS-3129) Add Switchover to WebGUI
