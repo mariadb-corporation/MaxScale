@@ -12,9 +12,10 @@ do
     mysql -ss $1 -e 'show status like "wsrep_ready"' | grep 'ON' && break || sleep 1
 done
 
-mysql --force <<EOF
+mysql --force $1 <<EOF
 
-CREATE DATABASE IF NOT EXISTS test;
+DROP DATABASE IF EXISTS test;
+CREATE DATABASE test;
 
 DROP USER IF EXISTS '$node_user'@'%';
 CREATE USER '$node_user'@'%' IDENTIFIED BY '$node_password';
@@ -36,7 +37,5 @@ DROP USER IF EXISTS 'maxuser'@'%';
 CREATE USER 'maxuser'@'%' IDENTIFIED BY 'maxpwd';
 GRANT ALL ON *.* TO 'maxuser'@'%' $require_ssl WITH GRANT OPTION;
 
-DROP DATABASE IF EXISTS test;
-CREATE DATABASE test;
-
+RESET MASTER;
 EOF

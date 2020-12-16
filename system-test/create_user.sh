@@ -5,9 +5,10 @@
 # node_password - The password for the user
 # require_ssl   - Require SSL for all users except the replication user
 
-mysql --force $1 <<EOF >& /dev/null
+mysql --force $1 <<EOF
 
-CREATE DATABASE IF NOT EXISTS test;
+DROP DATABASE IF EXISTS test;
+CREATE DATABASE test;
 
 DROP USER IF EXISTS '$node_user'@'%';
 CREATE USER '$node_user'@'%' IDENTIFIED BY '$node_password';
