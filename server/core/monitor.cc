@@ -1125,9 +1125,11 @@ int Monitor::launch_command(MonitorServer* ptr)
 }
 
 MonitorServer::ConnectResult
-Monitor::ping_or_connect_to_db(const MonitorServer::ConnectionSettings& sett, SERVER& server, MYSQL** ppConn)
+Monitor::ping_or_connect_to_db(const MonitorServer::ConnectionSettings& sett,
+                               SERVER& server, MYSQL** ppConn, std::string* pError)
 {
     mxb_assert(ppConn);
+    mxb_assert(pError);
     auto pConn = *ppConn;
     if (pConn)
     {
@@ -1137,6 +1139,7 @@ Monitor::ping_or_connect_to_db(const MonitorServer::ConnectionSettings& sett, SE
             return ConnectResult::OLDCONN_OK;
         }
         /** Otherwise close the handle. */
+        *pError = mysql_error(pConn);
         mysql_close(pConn);
         pConn = nullptr;
     }
@@ -1176,6 +1179,7 @@ Monitor::ping_or_connect_to_db(const MonitorServer::ConnectionSettings& sett, SE
             conn_result = ConnectResult::TIMEOUT;
         }
 
+        *pError = mysql_error(pConn);
         auto err = mysql_errno(pConn);
         mysql_close(pConn);
         pConn = nullptr;
@@ -1193,7 +1197,7 @@ Monitor::ping_or_connect_to_db(const MonitorServer::ConnectionSettings& sett, SE
 
 ConnectResult MonitorServer::ping_or_connect(const ConnectionSettings& settings)
 {
-    return Monitor::ping_or_connect_to_db(settings, *server, &con);
+    return Monitor::ping_or_connect_to_db(settings, *server, &con, &latest_error);
 }
 
 /**
@@ -1231,7 +1235,7 @@ void MonitorServer::log_connect_error(ConnectResult rval)
               server->name(),
               server->address,
               server->port,
-              mysql_error(con));
+              latest_error.c_str());
 }
 
 void MonitorServer::log_state_change()

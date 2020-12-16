@@ -246,6 +246,8 @@ private:
     const SERVER::DiskSpaceLimits& monitor_limits;      /**< Monitor-level disk-space limits */
 
     bool ok_to_check_disk_space {true};     /**< Set to false if check fails */
+
+    std::string latest_error;
 };
 
 /**
@@ -268,10 +270,13 @@ public:
      * @param pServer     A server
      * @param ppConn      Address of pointer to a MYSQL instance. The instance should either be
      *                    valid or NULL.
+     * @param pError      Pointer to a string where the error message is stored
+     *
      * @return Connection status.
      */
     static MonitorServer::ConnectResult
-    ping_or_connect_to_db(const MonitorServer::ConnectionSettings& sett, SERVER& server, MYSQL** ppConn);
+    ping_or_connect_to_db(const MonitorServer::ConnectionSettings& sett,
+                          SERVER& server, MYSQL** ppConn, std::string* pError);
 
     static bool connection_is_ok(MonitorServer::ConnectResult connect_result);
 
