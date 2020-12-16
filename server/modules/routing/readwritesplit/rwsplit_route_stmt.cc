@@ -362,8 +362,14 @@ bool RWSplitSession::route_single_stmt(mxs::Buffer&& buffer, const RoutingPlan& 
                 && (m_config.delayed_retry
                     || (TARGET_IS_SLAVE(res.route_target) && m_config.retry_failed_reads));
 
-            // Target server was found and is in the correct state
-            ok = handle_got_target(std::move(buffer), target, store_stmt);
+            if (handle_got_target(std::move(buffer), target, store_stmt))
+            {
+                // Target server was found and is in the correct state. Store the original routing plan but
+                // set the target as the actual target we routed it to.
+                ok = true;
+                m_prev_plan = res;
+                m_prev_plan.target = target;
+            }
         }
     }
     else

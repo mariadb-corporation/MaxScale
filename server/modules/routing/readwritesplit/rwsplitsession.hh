@@ -346,8 +346,10 @@ private:
                 can_route = true;
             }
             else if (res.route_target == TARGET_MASTER
-                     && res.target == m_current_master
-                     && m_prev_target == m_current_master)
+                     && m_prev_plan.route_target == TARGET_MASTER
+                     && res.type == m_prev_plan.type
+                     && res.target == m_prev_plan.target
+                     && res.target == m_current_master)
             {
                 mxb_assert(m_current_master->is_waiting_result());
                 can_route = true;
@@ -433,6 +435,7 @@ private:
     mxs::RWBackend*   m_current_master;         /**< Current master server */
     mxs::RWBackend*   m_target_node;            /**< The currently locked target node */
     mxs::RWBackend*   m_prev_target;            /**< The previous target where a query was sent */
+    RoutingPlan       m_prev_plan;              /**< The previous routing plan */
     RWSConfig::Values m_config;                 /**< Configuration for this session */
     MXS_SESSION*      m_session;                /**< The client session */
 
