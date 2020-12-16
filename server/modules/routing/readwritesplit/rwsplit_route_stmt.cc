@@ -656,7 +656,7 @@ RWBackend* RWSplitSession::get_master_backend()
 
 RWBackend* RWSplitSession::get_last_used_backend()
 {
-    return m_prev_target ? m_prev_target : get_master_backend();
+    return m_prev_plan.target ? m_prev_plan.target : get_master_backend();
 }
 
 /**
@@ -1158,9 +1158,6 @@ bool RWSplitSession::handle_got_target(mxs::Buffer&& buffer, RWBackend* target, 
             /** The server will reply to this command */
             m_expected_responses++;
         }
-
-        // Store the current target
-        m_prev_target = target;
 
         if (m_config.transaction_replay && trx_is_open())
         {

@@ -30,7 +30,6 @@ RWSplitSession::RWSplitSession(RWSplit* instance, MXS_SESSION* session, mxs::SRW
     , m_raw_backends(sptr_vec_to_ptr_vec(m_backends))
     , m_current_master(nullptr)
     , m_target_node(nullptr)
-    , m_prev_target(nullptr)
     , m_config(instance->config())
     , m_session(session)
     , m_sescmd_count(1)
@@ -315,7 +314,7 @@ void RWSplitSession::manage_transactions(RWBackend* backend, GWBUF* writebuf, co
         /** This is the response to the ROLLBACK. If it fails, we must close
          * the connection. The replaying of the transaction can continue
          * regardless of the ROLLBACK result. */
-        mxb_assert(backend == m_prev_target);
+        mxb_assert(backend == m_prev_plan.target);
 
         if (!mxs_mysql_is_ok_packet(writebuf))
         {
@@ -914,7 +913,7 @@ bool RWSplitSession::retry_master_query(RWBackend* backend)
     else if (m_current_query.get())
     {
         // A query was in progress, try to route it again
-        mxb_assert(m_prev_target == backend);
+        mxb_assert(m_prev_plan.target == backend);
         retry_query(m_current_query.release());
         can_continue = true;
     }

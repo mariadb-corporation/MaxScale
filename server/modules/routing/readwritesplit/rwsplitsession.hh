@@ -434,7 +434,6 @@ private:
     mxs::PRWBackends  m_raw_backends;           /**< Backend pointers for use in interfaces . */
     mxs::RWBackend*   m_current_master;         /**< Current master server */
     mxs::RWBackend*   m_target_node;            /**< The currently locked target node */
-    mxs::RWBackend*   m_prev_target;            /**< The previous target where a query was sent */
     RoutingPlan       m_prev_plan;              /**< The previous routing plan */
     RWSConfig::Values m_config;                 /**< Configuration for this session */
     MXS_SESSION*      m_session;                /**< The client session */
