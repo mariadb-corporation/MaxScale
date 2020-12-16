@@ -1,0 +1,34 @@
+[maxscale]
+threads=###threads###
+
+[MySQL-Monitor]
+type=monitor
+module=mysqlmon
+servers= server1
+user=maxskysql
+password= skysql
+monitor_interval=1000
+detect_standalone_master=true
+failcount=1
+
+[RW-Split-Router]
+type=service
+router= readwritesplit
+servers=server1
+user=maxskysql
+password=skysql
+
+[RW-Split-Listener]
+type=listener
+service=RW-Split-Router
+protocol=MySQLClient
+port=4006
+
+[server1]
+type=server
+address=###node_server_IP_1###
+port=###node_server_port_1###
+protocol=MySQLBackend
+proxy_protocol=1
+persistpoolmax=100
+persistmaxtime=100
