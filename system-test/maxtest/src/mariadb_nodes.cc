@@ -528,9 +528,11 @@ int Galera_nodes::start_galera()
     copy_to_node_legacy(str, "~/", 0);
 
     ssh_node_f(0, true,
+               "export require_ssl=\"%s\"; "
                "export node_user=\"%s\"; "
                "export node_password=\"%s\"; "
                "./create_user_galera.sh %s",
+               ssl ? "REQUIRE SSL" : "",
                user_name.c_str(),
                password.c_str(),
                socket_cmd[0].c_str());
