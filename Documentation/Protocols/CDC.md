@@ -18,7 +18,7 @@ For example, the following service entry will look into `/var/cache/maxscale/CDC
 type=service
 router=avrorouter
 user=maxuser
-passwd=maxpwd
+password=maxpwd
 ```
 
 If the `cdcusers` file cannot be found, the service user (_maxuser:maxpwd_ in the example) can be used to connect through the CDC protocol.

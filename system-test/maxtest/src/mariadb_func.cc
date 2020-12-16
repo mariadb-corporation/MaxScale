@@ -613,7 +613,10 @@ std::string get_str_version(std::string version)
 
     std::string str_version;
     int i = version.find('-');
-    if (i > 0) return version.substr(0, i);
+    if (i > 0)
+    {
+        return version.substr(0, i);
+    }
     return version;
 }
 
@@ -628,6 +631,14 @@ bool Connection::connect()
     if (m_ssl)
     {
         set_ssl(m_conn);
+    }
+
+    if (m_timeout)
+    {
+        unsigned int timeout = m_timeout;
+        mysql_optionsv(m_conn, MYSQL_OPT_CONNECT_TIMEOUT, &timeout);
+        mysql_optionsv(m_conn, MYSQL_OPT_READ_TIMEOUT, &timeout);
+        mysql_optionsv(m_conn, MYSQL_OPT_WRITE_TIMEOUT, &timeout);
     }
 
     return mysql_real_connect(m_conn, m_host.c_str(), m_user.c_str(), m_pw.c_str(), m_db.c_str(), m_port,

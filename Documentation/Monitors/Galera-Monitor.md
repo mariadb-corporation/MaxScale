@@ -22,6 +22,21 @@ monitored by galeramon, it will be assigned the `Slave, Running` status as long
 as the replication works. This allows read-scaleout with Galera servers without
 increasing the size of the Galera cluster.
 
+## Required Grants
+
+The Galera Monitor requires the `REPLICATION CLIENT` grant to work:
+
+```
+CREATE USER 'maxscale'@'maxscalehost' IDENTIFIED BY 'maxscale-password';
+GRANT REPLICATION CLIENT ON *.* TO 'maxscale-user'@'maxscalehost';
+```
+
+if `set_donor_nodes` is configured, the `SUPER` grant is required:
+
+```
+GRANT SUPER ON *.* TO 'maxscale'@'maxscalehost';
+```
+
 ## Configuration
 
 A minimal configuration for a monitor requires a set of servers for monitoring

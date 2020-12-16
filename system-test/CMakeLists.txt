@@ -917,6 +917,9 @@ add_test_executable(mxs3184_ps_found_rows.cc mxs3184_ps_found_rows replication L
 # MXS-3108: Alter session test
 add_test_executable(mxs3108_alter_session.cc mxs3108_alter_session mxs3108_alter_session LABELS REPL_BACKEND)
 
+# MXS-3339: Hang with COM_STMT_CLOSE in sescmd history
+add_test_executable(mxs3339_stmt_close_hang.cc mxs3339_stmt_close_hang mxs3339_stmt_close_hang LABELS REPL_BACKEND readwritesplit)
+
 ############################################
 # END: Normal tests                        #
 ############################################

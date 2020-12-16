@@ -307,6 +307,8 @@ int main(int argc, char* argv[])
     TestConnections* Test = new TestConnections(argc, argv);
     Test->set_timeout(30);
     Test->maxscales->connect_rwsplit(0);
+    Test->try_query(Test->maxscales->conn_rwsplit[0], "SET GLOBAL max_allowed_packet=10000000000");
+    Test->maxscales->connect_rwsplit(0);
 
     create_t1(Test->maxscales->conn_rwsplit[0]);
     insert_into_t1(Test->maxscales->conn_rwsplit[0], 1);
@@ -377,7 +379,6 @@ int main(int argc, char* argv[])
 
 
     Test->tprintf("LONGBLOB: Trying send data via RWSplit\n");
-    Test->try_query(Test->maxscales->conn_rwsplit[0], "SET GLOBAL max_allowed_packet=10000000000");
     Test->stop_timeout();
     Test->repl->connect();
     // test_longblob(Test, Test->maxscales->conn_rwsplit[0], (char *) "LONGBLOB", 512 * 1024 / sizeof(long

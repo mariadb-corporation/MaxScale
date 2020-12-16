@@ -680,25 +680,7 @@ int32_t RWSplitSession::clientReply(GWBUF* writebuf, const mxs::ReplyRoute& down
 
     if (reply.is_complete())
     {
-        if (backend->in_use() && backend->has_session_commands())
-        {
-            // Backend is still in use and has more session commands to execute
-            if (backend->execute_session_command() && backend->is_waiting_result())
-            {
-                MXS_INFO("%lu session commands left on '%s'",
-                         backend->session_command_count(), backend->name());
-            }
-        }
-        else if (m_expected_responses == 0 && !m_query_queue.empty()
-                 && (!m_is_replay_active || processed_sescmd))
-        {
-            /**
-             * All replies received, route any stored queries. This should be done
-             * even when transaction replay is active as long as we just completed
-             * a session command.
-             */
-            route_stored_query();
-        }
+        execute_queued_commands(backend, processed_sescmd);
     }
 
     if (m_expected_responses == 0)
@@ -711,6 +693,40 @@ int32_t RWSplitSession::clientReply(GWBUF* writebuf, const mxs::ReplyRoute& down
     }
 
     return rc;
+}
+
+void RWSplitSession::execute_queued_commands(mxs::RWBackend* backend, bool processed_sescmd)
+{
+    mxb_assert(!backend->in_use() || !backend->is_waiting_result());
+
+    while (backend->in_use() && backend->has_session_commands() && !backend->is_waiting_result())
+    {
+        if (backend->execute_session_command())
+        {
+            MXS_INFO("%lu session commands left on '%s'", backend->session_command_count(), backend->name());
+        }
+        else
+        {
+            MXS_INFO("Failed to execute session command on '%s'", backend->name());
+            backend->close();
+        }
+    }
+
+    if (backend->in_use() && backend->is_waiting_result())
+    {
+        // Backend is still in use and it executed something. Wait for the result before
+        // routing queued queries.
+    }
+    else if (m_expected_responses == 0 && !m_query_queue.empty()
+             && (!m_is_replay_active || processed_sescmd))
+    {
+        /**
+         * All replies received, route any stored queries. This should be done
+         * even when transaction replay is active as long as we just completed
+         * a session command.
+         */
+        route_stored_query();
+    }
 }
 
 bool RWSplitSession::start_trx_replay()

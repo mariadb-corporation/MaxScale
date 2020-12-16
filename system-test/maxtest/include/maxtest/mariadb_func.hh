@@ -398,6 +398,11 @@ public:
         m_db = db;
     }
 
+    void set_timeout(int timeout)
+    {
+        m_timeout = timeout;
+    }
+
     uint32_t thread_id() const
     {
         return mysql_thread_id(m_conn);
@@ -425,5 +430,6 @@ private:
     std::string m_pw;
     std::string m_db;
     bool        m_ssl;
+    int         m_timeout = 0;
     MYSQL*      m_conn = nullptr;
 };

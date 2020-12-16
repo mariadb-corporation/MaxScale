@@ -1636,6 +1636,7 @@ void TestConnections::timeout_thread()
 
     if (!m_stop_threads)
     {
+        copy_all_logs();
         tprintf("\n **** Timeout! *** \n");
         exit(250);
     }

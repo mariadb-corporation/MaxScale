@@ -8,7 +8,6 @@
 int main(int argc, char** argv)
 {
     TestConnections::skip_maxscale_start(true);
-    TestConnections::check_nodes(false);
     TestConnections test(argc, argv);
 
     test.repl->connect();

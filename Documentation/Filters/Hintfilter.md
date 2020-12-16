@@ -113,7 +113,7 @@ type=service
 router=readwritesplit
 servers=server1,server2
 user=maxuser
-passwd=maxpwd
+password=maxpwd
 filters=Hint
 
 [Hint]
