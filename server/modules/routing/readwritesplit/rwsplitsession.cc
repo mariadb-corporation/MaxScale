@@ -714,7 +714,13 @@ int32_t RWSplitSession::clientReply(GWBUF* writebuf, const mxs::ReplyRoute& down
 
 void RWSplitSession::execute_queued_commands(mxs::RWBackend* backend, bool processed_sescmd)
 {
-    mxb_assert(!backend->in_use() || !backend->is_waiting_result());
+    mxb_assert(
+        // 1. The backend was closed due to sescmd result mismatch
+        !backend->in_use()
+        // 2. The backend is in use and idle
+        || !backend->is_waiting_result()
+        // 3. We're still waiting for more results from the master
+        || (m_expected_responses > 0 && backend == m_current_master));
 
     while (backend->in_use() && backend->has_session_commands() && !backend->is_waiting_result())
     {
