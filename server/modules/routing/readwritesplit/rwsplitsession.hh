@@ -349,7 +349,10 @@ private:
                      && m_prev_plan.route_target == TARGET_MASTER
                      && res.type == m_prev_plan.type
                      && res.target == m_prev_plan.target
-                     && res.target == m_current_master)
+                     && res.target == m_current_master
+                    // If transaction replay is configured, we cannot stream the queries as we need to know
+                    // what they returned in case the transaction is replayed.
+                     && (!m_config.transaction_replay || !trx_is_open()))
             {
                 mxb_assert(res.type == RoutingPlan::Type::NORMAL);
                 mxb_assert(m_current_master->is_waiting_result());
