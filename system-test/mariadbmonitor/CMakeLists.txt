@@ -102,6 +102,7 @@ add_test_executable_ex(NAME verify_master_failure SOURCE verify_master_failure.c
         CONFIG verify_master_failure.cnf VMS repl_backend LABELS mysqlmon)
 
 # MariaDB-Monitor enforce_simple_topology
+# Also MXS-3324 switchover when autocommit is off on backends.
 add_test_executable_ex(NAME mysqlmon_enforce_simple SOURCE mysqlmon_enforce_simple.cpp
         CONFIG mysqlmon_enforce_simple.cnf VMS repl_backend LABELS mysqlmon)
 

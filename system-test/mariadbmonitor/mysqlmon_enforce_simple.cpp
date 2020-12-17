@@ -97,5 +97,53 @@ int main(int argc, char** argv)
         new_master_id = get_master_server_id(test);
         test.expect(new_master_id == server_ids[master_ind], "Switchover to original master failed.");
     }
+
+    if (test.ok())
+    {
+        // Test that switchover works even if autocommit is off on all backends.
+        test.tprintf("Setting autocommit=0 on all backends, then check that switchover works.");
+        test.maxscales->stop();
+        test.repl->connect();
+        const char set_ac[] = "SET GLOBAL autocommit=%i;";
+        for (int i = 0; i < 4; i++)
+        {
+            test.try_query(test.repl->nodes[i], set_ac, 0);
+        }
+        test.maxscales->start();
+
+        // Check that autocommit is really off.
+        Connection conn = test.repl->get_connection(2);
+        conn.connect();
+        auto row = conn.row("SELECT @@GLOBAL.autocommit;");
+        test.expect(!row.empty() && row[0] == "0", "autocommit is not off");
+
+        new_master_id = get_master_server_id(test);
+        test.expect(new_master_id == server_ids[master_ind], "No valid master");
+
+        if (test.ok())
+        {
+            test.tprintf("Switchover...");
+            string switchover = "call command mariadbmon switchover MariaDB-Monitor";
+            test.maxctrl(switchover);
+            test.maxscales->wait_for_monitor(2);
+            new_master_id = get_master_server_id(test);
+            test.expect(new_master_id != server_ids[master_ind], "Switchover failed.");
+            if (test.ok())
+            {
+                test.expect(new_master_id == server_ids[1], "Switchover to wrong server.");
+            }
+
+            switchover = "call command mariadbmon switchover MariaDB-Monitor " + master_name;
+            test.maxctrl(switchover);
+            test.maxscales->wait_for_monitor(2);
+            new_master_id = get_master_server_id(test);
+            test.expect(new_master_id == server_ids[master_ind], "Switchover to original master failed.");
+        }
+
+        for (int i = 0; i < 4; i++)
+        {
+            test.try_query(test.repl->nodes[i], set_ac, 1);
+        }
+    }
     return test.global_result;
 }
