@@ -74,6 +74,7 @@ MYSQL* mxs_mysql_real_connect(MYSQL* con, SERVER* server, int port, const char* 
     if (server_is_db)
     {
         mysql_optionsv(con, MYSQL_INIT_COMMAND, "SET SQL_MODE=''");
+        mysql_optionsv(con, MYSQL_INIT_COMMAND, "SET @@session.autocommit=1;");
     }
 
     const auto& local_address = mxs::Config::get().local_address;
