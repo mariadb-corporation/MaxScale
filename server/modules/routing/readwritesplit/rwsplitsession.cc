@@ -999,7 +999,7 @@ bool RWSplitSession::handleError(mxs::ErrorType type, GWBUF* errmsgbuf, mxs::End
                 can_continue = false;
                 errmsg += " Cannot retry query as multiple queries were in progress.";
             }
-            if (can_retry_query())
+            else if (can_retry_query())
             {
                 can_continue = retry_master_query(backend);
             }
