@@ -1628,8 +1628,9 @@ void CsMonitor::adjust_dynamic_servers(const Hosts& hosts)
                 {
                     CsDynamicServer* pMs = new CsDynamicServer(this, pServer,
                                                                this->settings().shared, &m_context);
+                    unique_ptr<CsDynamicServer> sMs(pMs);
 
-                    m_nodes_by_id.insert(make_pair(host, pMs));
+                    m_nodes_by_id.insert(make_pair(host, std::move(sMs)));
                 }
             }
             else
