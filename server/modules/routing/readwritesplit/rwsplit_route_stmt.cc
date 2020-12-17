@@ -430,11 +430,7 @@ RWSplitSession::RoutingPlan RWSplitSession::resolve_route(const mxs::Buffer& buf
         rval.type = RoutingPlan::Type::OTRX_START;
         rval.route_target = TARGET_SLAVE;
     }
-    else if (m_state == OTRX_STARTING)
-    {
-        rval.route_target = TARGET_LAST_USED;
-    }
-    else if (m_state == OTRX_ACTIVE)
+    else if (m_state == OTRX_STARTING || m_state == OTRX_ACTIVE)
     {
         if (trx_is_ending() || !info.is_trx_still_read_only())
         {
