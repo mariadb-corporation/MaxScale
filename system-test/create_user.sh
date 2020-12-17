@@ -40,10 +40,11 @@ echo version=$version
 echo major=$major
 echo minor=$minor
 echo maintenance=$maintenance
+echo
 
-#
-# Default database
-#
+##
+## Default database
+##
 
 mysql --force $socket <<EOF
 
@@ -51,9 +52,58 @@ DROP DATABASE IF EXISTS test;
 CREATE DATABASE test;
 EOF
 
-#
-# "Legacy" users.
-#
+##
+## MariaDB
+##
+
+if [ "$type" == "mariadb" ]
+then
+    echo Creating users specific for MariaDB.
+fi
+
+##
+## Galera
+##
+
+if [ "$type" == "galera" ]
+then
+    echo Creating users specific for Galera.
+fi
+
+##
+## Columnstore
+##
+
+if [ "$type" == "columnstore" ]
+then
+    echo Creating users specific for Columnstore.
+fi
+
+##
+## Xpand
+##
+
+# For the time being we give the SUPER privilege, although it might
+# be better to just add it when running the the test that tests
+# softfailing.
+
+if [ "$type" == "xpand" ]
+then
+    echo Creating users specific for Xpand.
+
+    mysql --force $socket <<EOF
+
+    CREATE USER 'xpandmon'@'%' IDENTIFIED BY 'xpandmon';
+    GRANT SELECT ON system.membership TO 'xpandmon'@'%' $require_ssl;
+    GRANT SELECT ON system.nodeinfo TO 'xpandmon'@'%' $require_ssl ;
+    GRANT SELECT ON system.softfailed_nodes TO 'xpandmon'@'%' $require_ssl;
+    GRANT SUPER ON *.* TO 'xpandmon'@'%' $require_ssl;
+EOF
+fi
+
+##
+## "Legacy" users.
+##
 
 mysql --force $socket <<EOF
 
