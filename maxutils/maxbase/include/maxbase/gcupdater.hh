@@ -260,7 +260,7 @@ void GCUpdater<SD>::read_clients(std::vector<int> clients)
         }
         else
         {   // the client was busy, check others first
-            std::rotate(begin(clients), begin(clients), end(clients));
+            std::rotate(begin(clients), begin(clients) + 1, end(clients));
         }
     }
 }
