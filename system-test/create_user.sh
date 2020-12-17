@@ -41,10 +41,21 @@ echo major=$major
 echo minor=$minor
 echo maintenance=$maintenance
 
-mysql --force $1 <<EOF
+#
+# Default database
+#
+
+mysql --force $socket <<EOF
 
 DROP DATABASE IF EXISTS test;
 CREATE DATABASE test;
+EOF
+
+#
+# "Legacy" users.
+#
+
+mysql --force $socket <<EOF
 
 DROP USER IF EXISTS '$node_user'@'%';
 CREATE USER '$node_user'@'%' IDENTIFIED BY '$node_password';
