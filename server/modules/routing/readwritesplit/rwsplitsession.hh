@@ -351,6 +351,7 @@ private:
                      && res.target == m_prev_plan.target
                      && res.target == m_current_master)
             {
+                mxb_assert(res.type == RoutingPlan::Type::NORMAL);
                 mxb_assert(m_current_master->is_waiting_result());
                 can_route = true;
             }
