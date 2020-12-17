@@ -8,7 +8,7 @@
 # node_password - The password for the user
 # require_ssl   - Require SSL for all users except the replication user
 
-if [ $? -ne 2 ]
+if [ $# -ne 2 ]
 then
     echo "usage: create_user.sh <socket> <type>"
     echo
@@ -21,6 +21,25 @@ fi
 
 socket=$1
 type=$2
+version=`mysql -ss $socket -e "SELECT @@version"`
+# version is now e.g. "10.4.12-MariaDB"
+
+# Remove from first '-': "10.4.12-MariaDB" => "10.4.12"
+version=${version%%-*}
+# Remove from first '.': "10.4.12" => "10"
+major=${version%%.*}
+# Remove up until and including first '.': "10.4.12" => "4.12"
+minor=${version#*.}
+# Remove from first '.': "4.12" => "4"
+minor=${minor%%.*}
+# Remove up until and including last '.': "10.4.12" => "12"
+maintenance=${version##*.}
+
+echo type=$type
+echo version=$version
+echo major=$major
+echo minor=$minor
+echo maintenance=$maintenance
 
 mysql --force $1 <<EOF
 
