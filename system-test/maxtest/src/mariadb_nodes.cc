@@ -526,20 +526,22 @@ int Galera_nodes::start_galera()
     char str[PATH_MAX + 1024];
 
     sprintf(str, "%s/galera_wait_until_ready.sh", test_dir);
-    copy_to_node_legacy(str, "~/", 0);
+    copy_to_node(0, str, access_homedir(0));
+
+    ssh_node_f(0, true, "%s/galera_wait_until_ready.sh %s", access_homedir(0), socket_cmd[0].c_str());
 
     sprintf(str, "%s/create_user.sh", test_dir);
-    copy_to_node_legacy(str, "~/", 0);
+    copy_to_node(0, str, access_homedir(0));
 
-    ssh_node_f(0, true, "./galera_wait_until_ready.sh %s", socket_cmd[0].c_str());
     ssh_node_f(0, true,
                "export require_ssl=\"%s\"; "
                "export node_user=\"%s\"; "
                "export node_password=\"%s\"; "
-               "./create_user.sh %s",
+               "%s/create_user.sh %s",
                ssl ? "REQUIRE SSL" : "",
                user_name.c_str(),
                password.c_str(),
+               access_homedir(0),
                socket_cmd[0].c_str());
 
     local_result += robust_connect(5) ? 0 : 1;
