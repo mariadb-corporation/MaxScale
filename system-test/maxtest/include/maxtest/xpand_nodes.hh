@@ -28,7 +28,7 @@ class Xpand_nodes : public Mariadb_nodes
 public:
 
     Xpand_nodes(const char* pref, const char* test_cwd, bool verbose, std::string network_config)
-        : Mariadb_nodes(pref, test_cwd, verbose, network_config)
+        : Mariadb_nodes(pref, test_cwd, verbose, network_config, Type::XPAND)
     {
     }
 
