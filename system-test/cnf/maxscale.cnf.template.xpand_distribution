@@ -8,8 +8,8 @@ log_info=1
 type=monitor
 module=xpandmon
 servers=###xpand_server_line###
-user=maxskysql
-password=skysql
+user=xpandmon
+password=xpandmon
 
 [RWS]
 type=service

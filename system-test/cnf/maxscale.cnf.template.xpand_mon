@@ -6,8 +6,8 @@ threads=###threads###
 type=monitor
 module=xpandmon
 servers=###xpand_server_line###
-user=maxskysql
-password=skysql
+user=xpandmon
+password=xpandmon
 
 [RW-Split-Router]
 type=service
