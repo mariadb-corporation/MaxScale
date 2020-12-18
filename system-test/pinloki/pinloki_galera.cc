@@ -18,8 +18,15 @@ void check_server_id(TestConnections& test, const std::string& id)
 
 std::string replicating_from(Connection& conn)
 {
+    std::string addr;
+
     const auto& rows = conn.rows("SHOW SLAVE STATUS");
-    return rows[0][1];
+    if (!rows.empty() && rows[0].size() >= 2)
+    {
+        addr = rows[0][1];
+    }
+
+    return addr;
 }
 
 void check_table(TestConnections& test, Connection& conn, int n)
