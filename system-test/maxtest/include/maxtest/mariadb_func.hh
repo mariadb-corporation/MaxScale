@@ -297,6 +297,8 @@ public:
 
     Connection& operator=(Connection&& rhs)
     {
+        disconnect();
+
         m_host = std::move(rhs.m_host);
         m_port = std::move(rhs.m_port);
         m_user = std::move(rhs.m_user);
