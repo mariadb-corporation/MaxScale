@@ -16,6 +16,11 @@ int main(int argc, char* argv[])
     test.expect(c.query("ALTER USER skysql REQUIRE NONE"), "ALTER USER: %s", c.error());
     test.expect(c.query("ALTER USER maxskysql REQUIRE NONE"), "ALTER USER: %s", c.error());
 
+    for (int i = 1; i <= 4; i++)
+    {
+        test.check_maxctrl("alter server server" + std::to_string(i) + " ssl false");
+    }
+
     auto conn = test.maxscales->rwsplit();
     test.expect(conn.connect(), "Connection without SSL should work: %s", conn.error());
     test.expect(conn.field(query).empty(), "SSL should be disabled");
