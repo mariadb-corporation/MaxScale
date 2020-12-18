@@ -34,7 +34,7 @@ class RCRSession : public mxs::RouterSession
 {
 public:
     RCRSession(RCR* inst, MXS_SESSION* session, mxs::Endpoint* backend,
-               const mxs::Endpoints& endpoints, uint32_t bitmask, uint32_t bitvalue);
+               const mxs::Endpoints& endpoints, uint32_t bitvalue);
     ~RCRSession();
 
     /**
@@ -56,7 +56,6 @@ public:
 
 private:
     RCR*           m_instance;  /**< Router instance */
-    uint32_t       m_bitmask;   /**< Bitmask to apply to server->status */
     uint32_t       m_bitvalue;  /**< Session specific required value of server->status */
     mxs::Endpoint* m_backend;
     mxs::Endpoints m_endpoints;
@@ -156,7 +155,7 @@ public:
 private:
     RCR(SERVICE* service);
 
-    uint64_t m_bitmask_and_bitvalue = 0;    /**< Lower 32-bits for bitmask and upper for bitvalue */
+    uint64_t m_bitvalue = 0;
 
     mxs::WorkerGlobal<maxscale::TargetSessionStats> m_target_stats;
 

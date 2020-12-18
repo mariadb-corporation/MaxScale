@@ -151,7 +151,6 @@ bool RCR::configure(mxs::ConfigParameters* pParams)
         return false;
     }
 
-    uint64_t bitmask = 0;
     uint64_t bitvalue = 0;
     bool ok = true;
 
@@ -159,22 +158,18 @@ bool RCR::configure(mxs::ConfigParameters* pParams)
     {
         if (!strcasecmp(opt.c_str(), "master"))
         {
-            bitmask |= (SERVER_MASTER | SERVER_SLAVE);
             bitvalue |= SERVER_MASTER;
         }
         else if (!strcasecmp(opt.c_str(), "slave"))
         {
-            bitmask |= (SERVER_MASTER | SERVER_SLAVE);
             bitvalue |= SERVER_SLAVE;
         }
         else if (!strcasecmp(opt.c_str(), "running"))
         {
-            bitmask |= (SERVER_RUNNING);
             bitvalue |= SERVER_RUNNING;
         }
         else if (!strcasecmp(opt.c_str(), "synced"))
         {
-            bitmask |= (SERVER_JOINED);
             bitvalue |= SERVER_JOINED;
         }
         else
@@ -186,17 +181,15 @@ bool RCR::configure(mxs::ConfigParameters* pParams)
         }
     }
 
-    if (bitmask == 0 && bitvalue == 0)
+    if (bitvalue == 0)
     {
         /** No parameters given, use RUNNING as a valid server */
-        bitmask |= (SERVER_RUNNING);
         bitvalue |= SERVER_RUNNING;
     }
 
     if (ok)
     {
-        uint64_t mask = bitmask | (bitvalue << 32);
-        atomic_store_uint64(&m_bitmask_and_bitvalue, mask);
+        atomic_store_uint64(&m_bitvalue, bitvalue);
     }
 
     return ok;
@@ -217,10 +210,9 @@ RCR* RCR::create(SERVICE* service, mxs::ConfigParameters* params)
 }
 
 RCRSession::RCRSession(RCR* inst, MXS_SESSION* session, mxs::Endpoint* backend,
-                       const mxs::Endpoints& endpoints, uint32_t bitmask, uint32_t bitvalue)
+                       const mxs::Endpoints& endpoints, uint32_t bitvalue)
     : mxs::RouterSession(session)
     , m_instance(inst)
-    , m_bitmask(bitmask)
     , m_bitvalue(bitvalue)
     , m_backend(backend)
     , m_endpoints(endpoints)
@@ -237,9 +229,7 @@ RCRSession::~RCRSession()
 
 mxs::RouterSession* RCR::newSession(MXS_SESSION* session, const mxs::Endpoints& endpoints)
 {
-    uint64_t mask = atomic_load_uint64(&m_bitmask_and_bitvalue);
-    uint32_t bitmask = mask;
-    uint32_t bitvalue = mask >> 32;
+    uint64_t bitvalue = atomic_load_uint64(&m_bitvalue);
 
     /**
      * Find the Master host from available servers
@@ -291,7 +281,7 @@ mxs::RouterSession* RCR::newSession(MXS_SESSION* session, const mxs::Endpoints& 
         mxb_assert(e->target()->is_usable());
 
         /* Check server status bits against bitvalue from router_options */
-        if (e->target()->status() & bitmask & bitvalue)
+        if (e->target()->status() & bitvalue)
         {
             if (master_host && connectable_master)
             {
@@ -385,7 +375,7 @@ mxs::RouterSession* RCR::newSession(MXS_SESSION* session, const mxs::Endpoints& 
         return nullptr;
     }
 
-    RCRSession* client_rses = new RCRSession(this, session, candidate, endpoints, bitmask, bitvalue);
+    RCRSession* client_rses = new RCRSession(this, session, candidate, endpoints, bitvalue);
 
     MXS_INFO("New session for server %s. Connections : %d",
              candidate->target()->name(),
@@ -431,7 +421,7 @@ bool RCRSession::connection_is_valid() const
     // 'router_options=slave' in the configuration file and there was only
     // the sole master available at session creation time.
 
-    if (m_backend->target()->is_usable() && (m_backend->target()->status() & m_bitmask & m_bitvalue))
+    if (m_backend->target()->is_usable() && (m_backend->target()->status() & m_bitvalue))
     {
         // Note the use of '==' and not '|'. We must use the former to exclude a
         // 'router_options=slave' that uses the master due to no slave having been
