@@ -38,7 +38,9 @@ public:
     using DBNameCmpMode = mariadb::UserSearchSettings::DBNameCmpMode;
 
     void add_entry(const std::string& username, mariadb::UserEntry&& entry);
-    void add_dbs_and_roles(StringSetMap&& db_grants, StringSetMap&& roles_mapping);
+
+    void add_db_grants(StringSetMap&& db_wc_grants, StringSetMap&& db_grants);
+    void add_role_mapping(StringSetMap&& role_mapping);
 
     void   add_database_name(const std::string& db_name);
     void   clear();
@@ -113,9 +115,11 @@ public:
      */
     json_t* users_to_json() const;
 
+    static std::string form_db_mapping_key(const std::string& user, const std::string& host);
+
 private:
-    bool user_can_access_db(const std::string& user, const std::string& host_pattern, const std::string& db,
-                            bool case_sensitive_db) const;
+    bool user_can_access_db(const std::string& user, const std::string& host_pattern,
+                            const std::string& target_db, bool case_sensitive_db) const;
     bool user_can_access_role(const std::string& user, const std::string& host_pattern,
                               const std::string& target_role) const;
     bool role_can_access_db(const std::string& role, const std::string& db, bool case_sensitive_db) const;
@@ -152,6 +156,8 @@ private:
     AddrType    parse_address_type(const std::string& addr) const;
     PatternType parse_pattern_type(const std::string& host_pattern) const;
 
+    void update_mapping(StringSetMap& target, StringSetMap&& source);
+
     using EntryList = std::vector<mariadb::UserEntry>;
 
     /**
@@ -160,8 +166,12 @@ private:
      */
     std::map<std::string, EntryList> m_users;
 
-    /** Maps "user@host" to allowed databases. Retrieved from mysql.db, mysql.tables_priv and
-     * mysql.columns_priv. */
+    /** Maps "user@host" to allowed databases. Retrieved from mysql.db. The database names may contain
+     * wildcard characters _ and %, and should be matched accordingly. */
+    StringSetMap m_database_wc_grants;
+
+    /** Maps "user@host" to allowed databases. Retrieved from mysql.tables_priv, mysql.columns_priv and
+     * mysql.procs_priv. No wildcards. */
     StringSetMap m_database_grants;
 
     /** Maps "user@host" to allowed roles. Retrieved from mysql.roles_mapping. */
@@ -227,7 +237,8 @@ private:
 
     bool read_users_mariadb(QResult users, const SERVER::VersionInfo& srv_info,
                             UserDatabase* output);
-    void read_dbs_and_roles_mariadb(QResult db_grants, QResult roles, UserDatabase* output);
+    void read_dbs_and_roles_mariadb(QResult db_wc_grants, QResult db_grants, QResult roles,
+                                    UserDatabase* output);
     void read_proxy_grants(QResult proxies, UserDatabase* output);
     void read_databases(QResult dbs, UserDatabase* output);
 
@@ -236,8 +247,6 @@ private:
 
     void check_show_dbs_priv(mxq::MariaDB& con, const UserDatabase& userdata,
                              const char* servername);
-
-    std::string form_db_mapping_key(const std::string& user, const std::string& host) const;
 
     mutable std::mutex m_userdb_lock;   /**< Protects UserDatabase from concurrent access */
     UserDatabase       m_userdb;        /**< Contains user account info */

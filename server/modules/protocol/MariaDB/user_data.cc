@@ -61,22 +61,22 @@ const int user_load_fail_limit = 10;
 namespace mariadb_queries
 {
 const string users_query = "SELECT * FROM mysql.user;";
+
+// Select users/roles with general db-level privs, the db:s may contain wildcards.
+const string db_wc_grants_query = "SELECT DISTINCT user, host, db FROM mysql.db;";
+
 const string db_grants_query_old =
     "SELECT DISTINCT * FROM ("
-    // Select users/roles with general db-level privs ...
-    "(SELECT a.user, a.host, a.db FROM mysql.db AS a) UNION "
-    // and combine with table privs counting as db-level privs
+    // Select table level privs counting as db-level privs
     "(SELECT a.user, a.host, a.db FROM mysql.tables_priv AS a) UNION "
-    // and finally combine with column-level privs as db-level privs
+    // and combine with column-level privs as db-level privs
     "(SELECT a.user, a.host, a.db FROM mysql.columns_priv AS a) ) AS c;";
 
 // The query above does not check the procs_priv-table. To avoid requiring new privileges in existing
 // installations, keep the existing query as an alternative. The old query can be removed in 2.6.
 const string db_grants_query =
     "SELECT DISTINCT * FROM ("
-    // Select users/roles with general db-level privs
-    "(SELECT a.user, a.host, a.db FROM mysql.db AS a) UNION "
-    // and combine with table privs counting as db-level privs
+    // Select table level privs counting as db-level privs
     "(SELECT a.user, a.host, a.db FROM mysql.tables_priv AS a) UNION "
     // and combine with column-level privs as db-level privs
     "(SELECT a.user, a.host, a.db FROM mysql.columns_priv AS a) UNION "
@@ -435,9 +435,10 @@ MariaDBUserManager::load_users_mariadb(mxq::MariaDB& con, SERVER* srv, UserDatab
 
     // Run the queries as one multiquery.
     vector<string> multiquery;
-    multiquery.reserve(5);
-    multiquery = {mariadb_queries::users_query,   mariadb_queries::db_grants_query,
-                  mariadb_queries::proxies_query, mariadb_queries::db_names_query};
+    multiquery.reserve(6);
+    multiquery = {mariadb_queries::users_query,     mariadb_queries::db_wc_grants_query,
+                  mariadb_queries::db_grants_query, mariadb_queries::proxies_query,
+                  mariadb_queries::db_names_query};
     if (role_support)
     {
         multiquery.push_back(mariadb_queries::roles_query);
@@ -456,23 +457,24 @@ MariaDBUserManager::load_users_mariadb(mxq::MariaDB& con, SERVER* srv, UserDatab
                                    "the 'mysql.procs_priv'-table.";
             MXB_WARNING(msg_fmt, m_service->name());
 
-            multiquery[1] = mariadb_queries::db_grants_query_old;
+            multiquery[2] = mariadb_queries::db_grants_query_old;
             multiq_result = con.multiquery(multiquery);
         }
     }
 
-    if (multiq_result.size() == multiquery.size())
+    if (!multiq_result.empty())
     {
         QResult users_res = move(multiq_result[0]);
-        QResult db_grants_res = move(multiq_result[1]);
-        QResult proxies_res = move(multiq_result[2]);
-        QResult dbs_res = move(multiq_result[3]);
-        QResult roles_res = role_support ? move(multiq_result[4]) : nullptr;
+        QResult db_wc_grants_res = move(multiq_result[1]);
+        QResult db_grants_res = move(multiq_result[2]);
+        QResult proxies_res = move(multiq_result[3]);
+        QResult dbs_res = move(multiq_result[4]);
+        QResult roles_res = role_support ? move(multiq_result[5]) : nullptr;
 
         rval = LoadResult::INVALID_DATA;
         if (read_users_mariadb(move(users_res), info, output))
         {
-            read_dbs_and_roles_mariadb(move(db_grants_res), move(roles_res), output);
+            read_dbs_and_roles_mariadb(move(db_wc_grants_res), move(db_grants_res), move(roles_res), output);
             read_proxy_grants(move(proxies_res), output);
             read_databases(move(dbs_res), output);
             rval = LoadResult::SUCCESS;
@@ -595,7 +597,8 @@ bool MariaDBUserManager::read_users_mariadb(QResult users, const SERVER::Version
     return has_required_fields;
 }
 
-void MariaDBUserManager::read_dbs_and_roles_mariadb(QResult db_grants, QResult roles, UserDatabase* output)
+void MariaDBUserManager::read_dbs_and_roles_mariadb(QResult db_wc_grants, QResult db_grants, QResult roles,
+                                                    UserDatabase* output)
 {
     using StringSetMap = UserDatabase::StringSetMap;
 
@@ -614,23 +617,24 @@ void MariaDBUserManager::read_dbs_and_roles_mariadb(QResult db_grants, QResult r
                     {
                         mxb::strip_escape_chars(grant);
                     }
-                    string key = form_db_mapping_key(source->get_string(ind_user),
-                                                     source->get_string(ind_host));
+                    string key = UserDatabase::form_db_mapping_key(source->get_string(ind_user),
+                                                                   source->get_string(ind_host));
                     result[key].insert(grant);
                 }
             }
             return result;
         };
 
-    StringSetMap new_db_grants = map_builder("db", std::move(db_grants), m_strip_db_esc.load(relaxed));
-    StringSetMap new_roles_mapping;
+    StringSetMap db_wc_grants_map = map_builder("db", std::move(db_wc_grants), false);
+    StringSetMap db_grants_map = map_builder("db", std::move(db_grants), m_strip_db_esc.load(relaxed));
+    output->add_db_grants(move(db_wc_grants_map), move(db_grants_map));
+
     if (roles)
     {
         // Old backends may not have role data.
-        new_roles_mapping = map_builder("role", std::move(roles), false);
+        StringSetMap role_mapping = map_builder("role", std::move(roles), false);
+        output->add_role_mapping(move(role_mapping));
     }
-
-    output->add_dbs_and_roles(std::move(new_db_grants), std::move(new_roles_mapping));
 }
 
 void MariaDBUserManager::read_proxy_grants(MariaDBUserManager::QResult proxies, UserDatabase* output)
@@ -714,7 +718,7 @@ bool MariaDBUserManager::read_users_xpand(QResult users, UserDatabase* output)
                 new_entry.host_pattern = host;
                 new_entry.password = pw;
                 new_entry.plugin = users->get_string(ind_plugin);
-                new_entry.global_db_priv = true; // TODO: Fix later!
+                new_entry.global_db_priv = true;    // TODO: Fix later!
                 output->add_entry(username, std::move(new_entry));
             }
         }
@@ -765,7 +769,7 @@ void MariaDBUserManager::read_db_privs_xpand(QResult acl, UserDatabase* output)
                 {
                     mxb::strip_escape_chars(dbname);
                 }
-                string key = form_db_mapping_key(user, host);
+                string key = UserDatabase::form_db_mapping_key(user, host);
                 result[key].insert(dbname);
             }
         }
@@ -904,7 +908,10 @@ void MariaDBUserManager::check_show_dbs_priv(mxq::MariaDB& con, const UserDataba
     }
 }
 
-std::string MariaDBUserManager::form_db_mapping_key(const string& user, const string& host) const
+/**
+ * Generates the string "<user>@<host>"
+ */
+std::string UserDatabase::form_db_mapping_key(const string& user, const string& host)
 {
     string rval;
     rval.reserve(user.length() + 1 + host.length());
@@ -1024,43 +1031,54 @@ size_t UserDatabase::n_entries() const
     return rval;
 }
 
-void UserDatabase::add_dbs_and_roles(StringSetMap&& db_grants, StringSetMap&& roles_mapping)
+/**
+ * Helper function for updating mappings.
+ *
+ * @param target Which mapping to update
+ * @param source Source data
+ */
+void UserDatabase::update_mapping(StringSetMap& target, StringSetMap&& source)
 {
-    auto update_mapping = [](StringSetMap& target, StringSetMap&& source) {
-            if (target.empty())
+    if (target.empty())
+    {
+        // Typical case when not summing users over all servers.
+        target = move(source);
+    }
+    else
+    {
+        // Need to sum the maps element by element, as this function may be called multiple times
+        // for the same target.
+        for (auto& source_elem : source)
+        {
+            const string& userhost = source_elem.first;
+            if (target.count(userhost) == 0)
             {
-                // Typical case when not summing users over all servers.
-                target = move(source);
+                // If the username does not yet exists, simply assign the set contents.
+                target[userhost] = move(source_elem.second);
             }
             else
             {
-                // Need to sum the maps element by element, as this function may be called multiple times
-                // for this UserDatabase.
-                for (auto& source_elem : source)
+                // Sum the string sets.
+                StringSet& existing_elems = target[userhost];
+                StringSet& new_elems = source_elem.second;
+                for (auto& elem : new_elems)
                 {
-                    const string& userhost = source_elem.first;
-                    if (target.count(userhost) == 0)
-                    {
-                        // If the username does not yet exists, simply assign the set contents.
-                        target[userhost] = move(source_elem.second);
-                    }
-                    else
-                    {
-                        // Sum the string sets element by element.
-                        StringSet& existing_elems = target[userhost];
-                        StringSet& new_elems = source_elem.second;
-                        StringSet union_set;
-                        std::set_union(existing_elems.begin(), existing_elems.end(),
-                                       new_elems.begin(), new_elems.end(),
-                                       std::inserter(union_set, union_set.begin()));
-                        target[userhost] = move(union_set);
-                    }
+                    existing_elems.insert(elem);
                 }
             }
-        };
+        }
+    }
+}
 
+void UserDatabase::add_db_grants(StringSetMap&& db_wc_grants, StringSetMap&& db_grants)
+{
+    update_mapping(m_database_wc_grants, move(db_wc_grants));
     update_mapping(m_database_grants, move(db_grants));
-    update_mapping(m_roles_mapping, move(roles_mapping));
+}
+
+void UserDatabase::add_role_mapping(StringSetMap&& role_mapping)
+{
+    update_mapping(m_roles_mapping, move(role_mapping));
 }
 
 bool UserDatabase::check_database_access(const UserEntry& entry, const std::string& db,
@@ -1079,34 +1097,71 @@ bool UserDatabase::check_database_access(const UserEntry& entry, const std::stri
                && role_can_access_db(def_role, db, case_sensitive_db));
 }
 
-bool UserDatabase::user_can_access_db(const string& user, const string& host_pattern, const string& db,
+bool UserDatabase::user_can_access_db(const string& user, const string& host_pattern, const string& target_db,
                                       bool case_sensitive_db) const
 {
-    string key = user + "@" + host_pattern;
-    bool rval = false;
-    auto iter = m_database_grants.find(key);
-    if (iter != m_database_grants.end())
+    string key = form_db_mapping_key(user, host_pattern);
+    bool grant_found = false;
+
+    auto like = [case_sensitive_db](const string& pattern, const string& subject) {
+            char esc = '\\';
+            auto pat = pattern.c_str();
+            auto subj = subject.c_str();
+            int ret = case_sensitive_db ? sql_strlike_case(pat, subj, esc) : sql_strlike(pat, subj, esc);
+            return ret == 0;
+        };
+
+    // Need to check two database grant maps, one may have wildcard grants.
+    auto wc_mapping_iter = m_database_wc_grants.find(key);
+    if (wc_mapping_iter != m_database_wc_grants.end())
     {
-        // User@host has database grants.
-        if (iter->second.count(db))
+        const StringSet& allowed_db_patterns = wc_mapping_iter->second;
+        // First check for exact match. If not found, iterate over each elem.
+        if (allowed_db_patterns.count(target_db))
         {
-            rval = true;    // found exact match.
+            grant_found = true;
         }
-        else if (!case_sensitive_db)
+        else
         {
-            // If comparing db-names case-insensitively, iterate through the set.
-            const StringSet& allowed_dbs = iter->second;
-            for (const auto& allowed_db : allowed_dbs)
+            // Compare each element as in LIKE. Escaped wildcards in the pattern are handled.
+            for (const auto& allowed_db_pattern : allowed_db_patterns)
             {
-                if (strcasecmp(allowed_db.c_str(), db.c_str()) == 0)
+                if (like(allowed_db_pattern, target_db))
                 {
-                    rval = true;
+                    grant_found = true;
                     break;
                 }
             }
         }
     }
-    return rval;
+
+    if (!grant_found)
+    {
+        // Grant not found in the wildcard set, check the normal set. Any wildcards in the elements are
+        // treated as normal characters.
+        auto mapping_iter = m_database_grants.find(key);
+        if (mapping_iter != m_database_grants.end())
+        {
+            const StringSet& allowed_dbs = mapping_iter->second;
+            if (allowed_dbs.count(target_db))
+            {
+                grant_found = true;     // found exact match.
+            }
+            else if (!case_sensitive_db)
+            {
+                // If comparing db-names case-insensitively, iterate through the set.
+                for (const auto& allowed_db : allowed_dbs)
+                {
+                    if (strcasecmp(allowed_db.c_str(), target_db.c_str()) == 0)
+                    {
+                        grant_found = true;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+    return grant_found;
 }
 
 bool UserDatabase::user_can_access_role(const std::string& user, const std::string& host_pattern,
