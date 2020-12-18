@@ -82,13 +82,13 @@ public:
 
         static void populate(MXS_MODULE& module);
 
-        std::string router_options;
-        bool        master_accept_reads;
+        config::EnumMask<uint32_t> router_options;
+        config::Bool               master_accept_reads;
 
     private:
-        static config::Specification s_specification;
-        static config::ParamString   s_router_options;
-        static config::ParamBool     s_master_accept_reads;
+        static config::Specification           s_specification;
+        static config::ParamEnumMask<uint32_t> s_router_options;
+        static config::ParamBool               s_master_accept_reads;
     };
 
     /**
@@ -131,7 +131,10 @@ public:
      *
      * @return True if router reconfiguration was successful
      */
-    bool configure(mxs::ConfigParameters* pParams);
+    bool configure(mxs::ConfigParameters* pParams) override
+    {
+        return true;
+    }
 
     mxs::config::Configuration* getConfiguration()
     {
@@ -154,8 +157,6 @@ public:
 
 private:
     RCR(SERVICE* service);
-
-    uint64_t m_bitvalue = 0;
 
     mxs::WorkerGlobal<maxscale::TargetSessionStats> m_target_stats;
 

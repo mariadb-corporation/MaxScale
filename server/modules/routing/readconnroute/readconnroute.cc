@@ -42,18 +42,26 @@
 
 config::Specification RCR::Config::s_specification(MXS_MODULE_NAME, config::Specification::ROUTER);
 
-config::ParamString RCR::Config::s_router_options(
+config::ParamEnumMask<uint32_t> RCR::Config::s_router_options(
     &s_specification,
     "router_options",
     "A comma separated list of server roles",
-    ""
+{
+    {SERVER_MASTER, "master"},
+    {SERVER_SLAVE, "slave"},
+    {SERVER_RUNNING, "running"},
+    {SERVER_JOINED, "synced"},
+},
+    SERVER_RUNNING,
+    config::Param::AT_RUNTIME
     );
 
 config::ParamBool RCR::Config::s_master_accept_reads(
     &s_specification,
     "master_accept_reads",
     "Use master for reads",
-    true
+    true,
+    config::Param::AT_RUNTIME
     );
 
 /**
@@ -93,9 +101,9 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 
 RCR::Config::Config(const std::string& name)
     : config::Configuration(name, &s_specification)
+    , router_options(this, &s_router_options)
+    , master_accept_reads(this, &s_master_accept_reads)
 {
-    add_native(&Config::router_options, &s_router_options);
-    add_native(&Config::master_accept_reads, &s_master_accept_reads);
 }
 
 void RCR::Config::populate(MXS_MODULE& module)
@@ -139,62 +147,6 @@ static mxs::Endpoint* get_root_master(const mxs::Endpoints& endpoints)
     return master_host;
 }
 
-bool RCR::configure(mxs::ConfigParameters* pParams)
-{
-    if (!m_config.specification().validate(*pParams))
-    {
-        return false;
-    }
-
-    if (!m_config.configure(*pParams))
-    {
-        return false;
-    }
-
-    uint64_t bitvalue = 0;
-    bool ok = true;
-
-    for (const auto& opt : mxs::strtok(m_config.router_options, ", \t"))
-    {
-        if (!strcasecmp(opt.c_str(), "master"))
-        {
-            bitvalue |= SERVER_MASTER;
-        }
-        else if (!strcasecmp(opt.c_str(), "slave"))
-        {
-            bitvalue |= SERVER_SLAVE;
-        }
-        else if (!strcasecmp(opt.c_str(), "running"))
-        {
-            bitvalue |= SERVER_RUNNING;
-        }
-        else if (!strcasecmp(opt.c_str(), "synced"))
-        {
-            bitvalue |= SERVER_JOINED;
-        }
-        else
-        {
-            MXS_ERROR("Unsupported router option \'%s\' for readconnroute. "
-                      "Expected router options are [slave|master|synced|running]",
-                      opt.c_str());
-            ok = false;
-        }
-    }
-
-    if (bitvalue == 0)
-    {
-        /** No parameters given, use RUNNING as a valid server */
-        bitvalue |= SERVER_RUNNING;
-    }
-
-    if (ok)
-    {
-        atomic_store_uint64(&m_bitvalue, bitvalue);
-    }
-
-    return ok;
-}
-
 // static
 RCR* RCR::create(SERVICE* service, mxs::ConfigParameters* params)
 {
@@ -229,7 +181,7 @@ RCRSession::~RCRSession()
 
 mxs::RouterSession* RCR::newSession(MXS_SESSION* session, const mxs::Endpoints& endpoints)
 {
-    uint64_t bitvalue = atomic_load_uint64(&m_bitvalue);
+    uint64_t bitvalue = m_config.router_options.get();
 
     /**
      * Find the Master host from available servers
@@ -243,7 +195,7 @@ mxs::RouterSession* RCR::newSession(MXS_SESSION* session, const mxs::Endpoints& 
      * (anything but master), and reads should not be routed to the master.
      * The master will still be selected, if it is the last man standing.
      */
-    bool do_not_rank_master = !(bitvalue & SERVER_MASTER) && m_config.master_accept_reads == false;
+    bool do_not_rank_master = !(bitvalue & SERVER_MASTER) && m_config.master_accept_reads.get() == false;
 
     /**
      * Find a backend server to connect to. This is the extent of the
