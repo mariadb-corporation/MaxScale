@@ -809,9 +809,6 @@ void TestConnections::process_template(int m, const string& cnf_template_path, c
     sprintf(str, "sed -i \"s|###access_homedir###|%s|g\" maxscale.cnf", maxscales->access_homedir[m]);
     system(str);
 
-    sprintf(str, "sed -i \"s|###maxscale_product###|%s|g\" maxscale.cnf", maxscale_product);
-    system(str);
-
     if (repl && repl->v51)
     {
         system("sed -i \"s/###repl51###/mysql51_replication=true/g\" maxscale.cnf");
@@ -2235,6 +2232,7 @@ int TestConnections::process_mdbci_template()
     envvar_get_set("backend_box", "%s", box.c_str());
     envvar_get_set("target", "develop");
     envvar_get_set("vm_memory", "2048");
+    envvar_get_set("maxscale_product", "maxscale_ci");
 
     string version = envvar_get_set("version", "10.3");
     envvar_get_set("galera_version", "%s", version.c_str());
