@@ -160,6 +160,12 @@ fi
 if [ "$type" == "columnstore" ]
 then
     echo Creating users specific for Columnstore.
+
+    mysql --force $socket <<EOF
+    CREATE USER 'csmon'@'%' IDENTIFIED BY 'csmon'  $require_ssl;
+    GRANT ALL ON infinidb_vtable.* TO 'csmon'@'%';
+EOF
+
 fi
 
 ##
