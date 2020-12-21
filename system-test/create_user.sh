@@ -138,6 +138,19 @@ fi
 if [ "$type" == "galera" ]
 then
     echo Creating users specific for Galera.
+
+    # SUPER needed if 'set_donor_nodes' is configured. Might be better
+    # to give that grant explicitly in tests that actually need that.
+
+    # TODO: Should REPLICATION CLIENT be REPLICATION SLAVE, SLAVE MONITOR
+    # TODO: here as well if version >= 10.5.8.
+
+    mysql --force $socket <<EOF
+    CREATE USER 'galeramon'@'%' IDENTIFIED BY 'galeramon' $require_ssl;
+    GRANT REPLICATION CLIENT ON *.* TO 'galeramon'@'%';
+    GRANT SUPER ON *.* TO 'galeramon'@'%';
+EOF
+
 fi
 
 ##
