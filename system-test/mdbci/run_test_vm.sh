@@ -75,6 +75,7 @@ test_env_list=(
     "test_branch"
     "use_valgrind"
     "use_callgrind"
+    "maxscale_product"
 )
 
 for s in ${test_env_list[@]} ; do
