@@ -21,7 +21,8 @@ fi
 
 socket=$1
 type=$2
-version=`mysql -ss $socket -e "SELECT @@version"`
+version_response=`mysql -ss $socket -e "SELECT @@version"`
+version=$version_response
 # version is now e.g. "10.4.12-MariaDB"
 
 # Remove from first '-': "10.4.12-MariaDB" => "10.4.12"
@@ -34,6 +35,16 @@ minor=${version#*.}
 minor=${minor%%.*}
 # Remove up until and including last '.': "10.4.12" => "12"
 maintenance=${version##*.}
+
+function is_integer() {
+    [[ ${1} == ?(-)+([0-9]) ]]
+}
+
+if ! is_integer $major || ! is_integer $minor || ! is_integer $maintenance
+then
+    echo error: \"$version_response\" does not appear to be a valid MariaDB version string.
+    exit 1
+fi
 
 echo type=$type
 echo version=$version
@@ -88,6 +99,36 @@ EOF
 if [ "$type" == "mariadb" ]
 then
     echo Creating users specific for MariaDB.
+
+    mysql --force $socket <<EOF
+    CREATE USER 'mariadbmon'@'%' IDENTIFIED BY 'mariadbmon' $require_ssl;
+
+    GRANT SUPER, RELOAD, PROCESS, SHOW DATABASES, EVENT ON *.* TO 'mariadbmon'@'%';
+    GRANT SELECT ON mysql.user TO 'mariadbmon'@'%';
+EOF
+
+    if (( $major == 10 && $minor >= 5 ))
+    then
+        mysql --force $socket <<EOF
+        GRANT REPLICATION SLAVE ADMIN ON *.* TO 'mariadbmon'@'%';
+EOF
+    else
+        mysql --force $socket <<EOF
+        GRANT REPLICATION CLIENT ON *.* TO 'mariadbmon'@'%';
+EOF
+    fi
+
+    if (( $major == 10 && (($minor == 5 && $maintenance >= 8) || ( $minor >=6 )) ))
+    then
+        # So, since 10.5.8 we have this.
+        mysql --force $socket <<EOF
+        GRANT REPLICATION SLAVE, SLAVE MONITOR ON *.* TO 'repl'@'%';
+EOF
+    else
+        mysql --force $socket <<EOF
+        GRANT REPLICATION SLAVE ON *.* TO 'repl'@'%';
+EOF
+    fi
 fi
 
 ##
