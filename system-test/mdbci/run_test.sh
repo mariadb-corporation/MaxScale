@@ -62,6 +62,7 @@ mdbci destroy --force ${mdbci_config_name}
 ulimit -c unlimited
 
 cd ${script_dir}/../../
+rm -rf build
 mkdir build && cd build
 cmake .. -DBUILD_SYSTEM_TESTS=Y -DBUILDNAME=${mdbci_config_name} -DCMAKE_BUILD_TYPE=Debug
 cd system-test

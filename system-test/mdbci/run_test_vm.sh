@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# $HOME/.config/mdbci/max-tst.key file should contain private key to access host
+
 # read the name of build scripts directory
 export script_dir="$(dirname $(readlink -f $0))"
 
@@ -10,6 +12,7 @@ export mdbci_config_name=${name:-$box-${curr_date}}
 export mdbci_config_name=`echo ${mdbci_config_name} | sed "s/?//g"`
 export MDBCI_VM_PATH=$HOME/${mdbci_config_name}_vms
 export PATH=$PATH:$HOME/mdbci
+export MDBCI_EXECUTABLE=`which mdbci`
 
 . ${script_dir}/set_run_test_variables.sh
 
@@ -57,6 +60,7 @@ test_env_list=(
     "JOB_NAME"
     "BUILD_NUMBER"
     "BUILD_TIMESTAMP"
+    "MDBCI_EXECUTABLE"
     "name"
     "target"
     "box"
