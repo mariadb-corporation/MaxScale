@@ -664,6 +664,7 @@ void TestConnections::read_env()
         "revert_snapshot_command", "mdbci snapshot revert --path-to-nodes %s --snapshot-name ",
         m_mdbci_config_name.c_str());
     no_vm_revert = readenv_bool("no_vm_revert", true);
+    maxscale_product = readenv("maxscale_product", "maxscale_ci");
 }
 
 void TestConnections::print_env()
@@ -2231,6 +2232,7 @@ int TestConnections::process_mdbci_template()
     envvar_get_set("backend_box", "%s", box.c_str());
     envvar_get_set("target", "develop");
     envvar_get_set("vm_memory", "2048");
+    envvar_get_set("maxscale_product", "maxscale_ci");
 
     string version = envvar_get_set("version", "10.3");
     envvar_get_set("galera_version", "%s", version.c_str());

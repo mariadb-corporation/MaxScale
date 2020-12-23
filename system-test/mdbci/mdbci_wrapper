@@ -4,5 +4,5 @@ export host=$user@$ip 2>&1 >/dev/null
 sshopt="-q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o ConnectTimeout=120  "
 
 rsync  -avz  --progress -e "ssh $sshopt" ${MDBCI_VM_PATH}/ $host:${MDBCI_VM_PATH}/ 2>&1 >/dev/null
-ssh $sshopt $host "MDBCI_VM_PATH=$MDBCI_VM_PATH /home/$user/mdbci/mdbci $*" 2>/dev/null
+ssh $sshopt $host "MDBCI_VM_PATH=${MDBCI_VM_PATH} ${MDBCI_EXECUTABLE} $*" 2>/dev/null
 rsync  -avz  --progress -e "ssh $sshopt" $host:${MDBCI_VM_PATH}/ ${MDBCI_VM_PATH}/ 2>&1 >/dev/null
