@@ -80,6 +80,8 @@ test_env_list=(
     "use_valgrind"
     "use_callgrind"
     "maxscale_product"
+    "force_maxscale_version"
+    "force_backend_version"
 )
 
 for s in ${test_env_list[@]} ; do

@@ -13,3 +13,5 @@ export team_keys=${team_keys:-${HOME}/team_keys}
 export do_not_destroy_vm=${do_not_destroy_vm:-"yes"}
 #export test_set=${test_set:-"-LE UNSTABLE"}
 export test_set=${test_set:-"-I 1,5"}
+export force_maxscale_version=${test_set:-"true"}
+export force_backend_version=${test_set:-"false"}
