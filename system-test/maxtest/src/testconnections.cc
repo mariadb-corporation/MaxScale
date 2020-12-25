@@ -2233,8 +2233,10 @@ int TestConnections::process_mdbci_template()
     envvar_get_set("target", "develop");
     envvar_get_set("vm_memory", "2048");
     envvar_get_set("maxscale_product", "maxscale_ci");
+    envvar_get_set("force_maxscale_version", "true");
+    envvar_get_set("force_backend_version", "true");
 
-    string version = envvar_get_set("version", "10.3");
+    string version = envvar_get_set("version", "10.5");
     envvar_get_set("galera_version", "%s", version.c_str());
 
     string product = envvar_get_set("product", "mariadb");
