@@ -12,7 +12,8 @@
       		"name": "${product}",
 		"version": "${version}",
                 "cnf_template" : "server1.cnf",
-                "cnf_template_path": "${cnf_path}"
+                "cnf_template_path": "${cnf_path}",
+                "force_version": ${force_backend_verion}
 	}
 
   },
@@ -30,7 +31,8 @@
                 "name": "${product}",
                 "version": "${version}",
                 "cnf_template" : "server2.cnf",
-                "cnf_template_path": "${cnf_path}"
+                "cnf_template_path": "${cnf_path}",
+                "force_version": ${force_backend_verion}
         }
   },
 
@@ -47,7 +49,8 @@
                 "name": "${product}",
                 "version": "${version}",
                 "cnf_template" : "server3.cnf",
-                "cnf_template_path": "${cnf_path}"
+                "cnf_template_path": "${cnf_path}",
+                "force_version": ${force_backend_verion}
         }
   },
 
@@ -64,7 +67,8 @@
                 "name": "${product}",
                 "version": "${version}",
                 "cnf_template" : "server4.cnf",
-                "cnf_template_path": "${cnf_path}"
+                "cnf_template_path": "${cnf_path}",
+                "force_version": ${force_backend_verion}
         }
   },
 
@@ -81,7 +85,8 @@
                 "name": "${product}",
                 "version": "${version}",
                 "cnf_template" : "server5.cnf",
-                "cnf_template_path": "${cnf_path}"
+                "cnf_template_path": "${cnf_path}",
+                "force_version": ${force_backend_verion}
         }
   },
 
@@ -98,7 +103,8 @@
                 "name": "${product}",
                 "version": "${version}",
                 "cnf_template" : "server6.cnf",
-                "cnf_template_path": "${cnf_path}"
+                "cnf_template_path": "${cnf_path}",
+                "force_version": ${force_backend_verion}
         }
   },
 
@@ -115,7 +121,8 @@
                 "name": "${product}",
                 "version": "${version}",
                 "cnf_template" : "server7.cnf",
-                "cnf_template_path": "${cnf_path}"
+                "cnf_template_path": "${cnf_path}",
+                "force_version": ${force_backend_verion}
         }
   },
 
@@ -132,7 +139,8 @@
                 "name": "${product}",
                 "version": "${version}",
                 "cnf_template" : "server8.cnf",
-                "cnf_template_path": "${cnf_path}"
+                "cnf_template_path": "${cnf_path}",
+                "force_version": ${force_backend_verion}
         }
   },
 
@@ -150,7 +158,8 @@
                 "name": "${product}",
                 "version": "${version}",
                 "cnf_template" : "server9.cnf",
-                "cnf_template_path": "${cnf_path}"
+                "cnf_template_path": "${cnf_path}",
+                "force_version": ${force_backend_verion}
         }
   },
 
@@ -167,7 +176,8 @@
                 "name": "${product}",
                 "version": "${version}",
                 "cnf_template" : "server10.cnf",
-                "cnf_template_path": "${cnf_path}"
+                "cnf_template_path": "${cnf_path}",
+                "force_version": ${force_backend_verion}
         }
   },
 
@@ -184,7 +194,8 @@
                 "name": "${product}",
                 "version": "${version}",
                 "cnf_template" : "server11.cnf",
-                "cnf_template_path": "${cnf_path}"
+                "cnf_template_path": "${cnf_path}",
+                "force_version": ${force_backend_verion}
         }
   },
 
@@ -201,7 +212,8 @@
                 "name": "${product}",
                 "version": "${version}",
                 "cnf_template" : "server12.cnf",
-                "cnf_template_path": "${cnf_path}"
+                "cnf_template_path": "${cnf_path}",
+                "force_version": ${force_backend_verion}
         }
   },
 
@@ -218,7 +230,8 @@
                 "name": "${product}",
                 "version": "${version}",
                 "cnf_template" : "server13.cnf",
-                "cnf_template_path": "${cnf_path}"
+                "cnf_template_path": "${cnf_path}",
+                "force_version": ${force_backend_verion}
         }
   },
 
@@ -235,7 +248,8 @@
                 "name": "${product}",
                 "version": "${version}",
                 "cnf_template" : "server14.cnf",
-                "cnf_template_path": "${cnf_path}"
+                "cnf_template_path": "${cnf_path}",
+                "force_version": ${force_backend_verion}
         }
   },
 
@@ -252,7 +266,8 @@
                 "name": "${product}",
                 "version": "${version}",
                 "cnf_template" : "server15.cnf",
-                "cnf_template_path": "${cnf_path}"
+                "cnf_template_path": "${cnf_path}",
+                "force_version": ${force_backend_verion}
         }
   },
 
@@ -268,7 +283,8 @@
         "products" : [
                 {
                         "name": "${product}",
-                        "version": "${version}"
+                        "version": "${version}",
+                        "force_version": ${force_backend_verion}
                 },
                 {
                         "name": "galera_config",
@@ -290,7 +306,8 @@
         "products" : [
                 {
                         "name": "${product}",
-                        "version": "${version}"
+                        "version": "${version}",
+                        "force_version": ${force_backend_verion}
                 },
                 {
                         "name": "galera_config",
@@ -312,7 +329,8 @@
         "products" : [
                 {
                         "name": "${product}",
-                        "version": "${version}"
+                        "version": "${version}",
+                        "force_version": ${force_backend_verion}
                 },
                 {
                         "name": "galera_config",
@@ -334,7 +352,8 @@
         "products" : [
                 {
                         "name": "${product}",
-                        "version": "${version}"
+                        "version": "${version}",
+                        "force_version": ${force_backend_verion}
                 },
                 {
                         "name": "galera_config",
@@ -354,8 +373,9 @@
                 "MAXSCALE"
         ],
         "product" : {
-                 "name" : "maxscale_ci",
-                "version" : "${target}"
+                "name" : "${maxscale_product}",
+                "version" : "${target}",
+                "force_version": ${force_maxscale_verion}
         }
 
   },
@@ -370,8 +390,9 @@
                 "SECOND_MAXSCALE"
         ],
         "product" : {
-                "name" : "maxscale_ci",
-                "version" : "${target}"
+                "name" : "${maxscale_product}",
+                "version" : "${target}",
+                "force_version": ${force_maxscale_verion}
         }
 
   },

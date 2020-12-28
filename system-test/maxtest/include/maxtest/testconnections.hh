@@ -148,6 +148,17 @@ public:
     bool binlog_slave_gtid {false};
 
     /**
+     * @brief no_xpand Do not check, restart and use Xpand setup
+     */
+    bool no_xpand;
+
+    /**
+     * @brief maxscale_product 'maxscale' - use production version of Maxscale,
+     *  'maxscale_ci' - CI
+     */
+    char * maxscale_product;
+
+    /**
      * @brief timeout seconds until test termination
      */
     long int m_timeout {999999999}; // Never
