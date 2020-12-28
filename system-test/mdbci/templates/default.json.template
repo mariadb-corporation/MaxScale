@@ -13,7 +13,7 @@
 		"version": "${version}",
                 "cnf_template" : "server1.cnf",
                 "cnf_template_path": "${cnf_path}",
-                "force_version": ${force_backend_verion}
+                "force_version": ${force_backend_version}
 	}
 
   },
@@ -32,7 +32,7 @@
                 "version": "${version}",
                 "cnf_template" : "server2.cnf",
                 "cnf_template_path": "${cnf_path}",
-                "force_version": ${force_backend_verion}
+                "force_version": ${force_backend_version}
         }
   },
 
@@ -50,7 +50,7 @@
                 "version": "${version}",
                 "cnf_template" : "server3.cnf",
                 "cnf_template_path": "${cnf_path}",
-                "force_version": ${force_backend_verion}
+                "force_version": ${force_backend_version}
         }
   },
 
@@ -68,7 +68,7 @@
                 "version": "${version}",
                 "cnf_template" : "server4.cnf",
                 "cnf_template_path": "${cnf_path}",
-                "force_version": ${force_backend_verion}
+                "force_version": ${force_backend_version}
         }
   },
 
@@ -86,7 +86,7 @@
                 "version": "${version}",
                 "cnf_template" : "server5.cnf",
                 "cnf_template_path": "${cnf_path}",
-                "force_version": ${force_backend_verion}
+                "force_version": ${force_backend_version}
         }
   },
 
@@ -104,7 +104,7 @@
                 "version": "${version}",
                 "cnf_template" : "server6.cnf",
                 "cnf_template_path": "${cnf_path}",
-                "force_version": ${force_backend_verion}
+                "force_version": ${force_backend_version}
         }
   },
 
@@ -122,7 +122,7 @@
                 "version": "${version}",
                 "cnf_template" : "server7.cnf",
                 "cnf_template_path": "${cnf_path}",
-                "force_version": ${force_backend_verion}
+                "force_version": ${force_backend_version}
         }
   },
 
@@ -140,7 +140,7 @@
                 "version": "${version}",
                 "cnf_template" : "server8.cnf",
                 "cnf_template_path": "${cnf_path}",
-                "force_version": ${force_backend_verion}
+                "force_version": ${force_backend_version}
         }
   },
 
@@ -159,7 +159,7 @@
                 "version": "${version}",
                 "cnf_template" : "server9.cnf",
                 "cnf_template_path": "${cnf_path}",
-                "force_version": ${force_backend_verion}
+                "force_version": ${force_backend_version}
         }
   },
 
@@ -177,7 +177,7 @@
                 "version": "${version}",
                 "cnf_template" : "server10.cnf",
                 "cnf_template_path": "${cnf_path}",
-                "force_version": ${force_backend_verion}
+                "force_version": ${force_backend_version}
         }
   },
 
@@ -195,7 +195,7 @@
                 "version": "${version}",
                 "cnf_template" : "server11.cnf",
                 "cnf_template_path": "${cnf_path}",
-                "force_version": ${force_backend_verion}
+                "force_version": ${force_backend_version}
         }
   },
 
@@ -213,7 +213,7 @@
                 "version": "${version}",
                 "cnf_template" : "server12.cnf",
                 "cnf_template_path": "${cnf_path}",
-                "force_version": ${force_backend_verion}
+                "force_version": ${force_backend_version}
         }
   },
 
@@ -231,7 +231,7 @@
                 "version": "${version}",
                 "cnf_template" : "server13.cnf",
                 "cnf_template_path": "${cnf_path}",
-                "force_version": ${force_backend_verion}
+                "force_version": ${force_backend_version}
         }
   },
 
@@ -249,7 +249,7 @@
                 "version": "${version}",
                 "cnf_template" : "server14.cnf",
                 "cnf_template_path": "${cnf_path}",
-                "force_version": ${force_backend_verion}
+                "force_version": ${force_backend_version}
         }
   },
 
@@ -267,7 +267,7 @@
                 "version": "${version}",
                 "cnf_template" : "server15.cnf",
                 "cnf_template_path": "${cnf_path}",
-                "force_version": ${force_backend_verion}
+                "force_version": ${force_backend_version}
         }
   },
 
@@ -284,7 +284,7 @@
                 {
                         "name": "${product}",
                         "version": "${version}",
-                        "force_version": ${force_backend_verion}
+                        "force_version": ${force_backend_version}
                 },
                 {
                         "name": "galera_config",
@@ -307,7 +307,7 @@
                 {
                         "name": "${product}",
                         "version": "${version}",
-                        "force_version": ${force_backend_verion}
+                        "force_version": ${force_backend_version}
                 },
                 {
                         "name": "galera_config",
@@ -330,7 +330,7 @@
                 {
                         "name": "${product}",
                         "version": "${version}",
-                        "force_version": ${force_backend_verion}
+                        "force_version": ${force_backend_version}
                 },
                 {
                         "name": "galera_config",
@@ -353,7 +353,7 @@
                 {
                         "name": "${product}",
                         "version": "${version}",
-                        "force_version": ${force_backend_verion}
+                        "force_version": ${force_backend_version}
                 },
                 {
                         "name": "galera_config",
@@ -375,7 +375,7 @@
         "product" : {
                 "name" : "${maxscale_product}",
                 "version" : "${target}",
-                "force_version": ${force_maxscale_verion}
+                "force_version": ${force_maxscale_version}
         }
 
   },
@@ -392,7 +392,7 @@
         "product" : {
                 "name" : "${maxscale_product}",
                 "version" : "${target}",
-                "force_version": ${force_maxscale_verion}
+                "force_version": ${force_maxscale_version}
         }
 
   }
