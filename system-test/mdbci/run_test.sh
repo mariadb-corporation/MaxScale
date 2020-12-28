@@ -37,6 +37,9 @@
 # the value of $test_set after 'NAME#' is used as bash command 
 # line
 # example: '#NAME long_test_time=3600 ./long_test'
+#
+# $maxscale_product - use CI or production version of Maxscale
+# 'maxscale_ci' or 'maxscale'
 
 export vm_memory=${vm_memory:-"2048"}
 export dir=`pwd`
@@ -53,6 +56,7 @@ export mdbci_config_name=`echo ${mdbci_config_name} | sed "s/?//g"`
 
 export provider=`mdbci show provider $box --silent 2> /dev/null`
 export backend_box=${backend_box:-"centos_7_"$provider}
+export maxscale_product=${maxscale_product:-"maxscale_ci"}
 
 mdbci destroy --force ${mdbci_config_name}
 
@@ -62,6 +66,7 @@ ulimit -c unlimited
 
 cd ${script_dir}/../../
 
+rm -rf build
 mkdir build && cd build
 cmake .. -DBUILD_SYSTEM_TESTS=Y -DBUILDNAME=${mdbci_config_name} -DCMAKE_BUILD_TYPE=Debug
 cd system-test
