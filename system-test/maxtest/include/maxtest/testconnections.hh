@@ -153,6 +153,12 @@ public:
     bool no_xpand;
 
     /**
+     * @brief maxscale_product 'maxscale' - use production version of Maxscale,
+     *  'maxscale_ci' - CI
+     */
+    char * maxscale_product;
+
+    /**
      * @brief timeout seconds until test termination
      */
     long int timeout;
