@@ -58,6 +58,16 @@ If `router_options` contains "master", the setting of `master_accept_reads` has 
 
 By default `master_accept_reads=true`.
 
+### `max_replication_lag`
+
+The maximum acceptable replication lag. The value is in seconds and is specified
+as documented [here](../Getting-Started/Configuration-Guide.md#durations). This
+feature is disabled by default.
+
+The replication lag of a server must be less than the configured value in order
+for it to be used for routing. To configure the router to not allow any lag, use
+`max_slave_replication_lag=1`.
+
 ## Examples
 
 The most common use for the readconnroute is to provide either a read or

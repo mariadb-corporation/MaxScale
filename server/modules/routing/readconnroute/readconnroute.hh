@@ -84,11 +84,13 @@ public:
 
         config::EnumMask<uint32_t> router_options;
         config::Bool               master_accept_reads;
+        config::Seconds            max_replication_lag;
 
     private:
         static config::Specification           s_specification;
         static config::ParamEnumMask<uint32_t> s_router_options;
         static config::ParamBool               s_master_accept_reads;
+        static config::ParamSeconds            s_max_replication_lag;
     };
 
     /**

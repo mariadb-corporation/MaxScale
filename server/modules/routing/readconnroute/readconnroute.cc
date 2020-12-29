@@ -64,6 +64,15 @@ config::ParamBool RCR::Config::s_master_accept_reads(
     config::Param::AT_RUNTIME
     );
 
+config::ParamSeconds RCR::Config::s_max_replication_lag(
+    &s_specification,
+    "max_replication_lag",
+    "Maximum acceptable replication lag",
+    config::INTERPRET_AS_SECONDS,
+    std::chrono::seconds(0),
+    config::Param::AT_RUNTIME
+    );
+
 /**
  * The module entry point routine. It is this routine that
  * must populate the structure that is referred to as the
@@ -103,6 +112,7 @@ RCR::Config::Config(const std::string& name)
     : config::Configuration(name, &s_specification)
     , router_options(this, &s_router_options)
     , master_accept_reads(this, &s_master_accept_reads)
+    , max_replication_lag(this, &s_max_replication_lag)
 {
 }
 
@@ -189,6 +199,7 @@ mxs::RouterSession* RCR::newSession(MXS_SESSION* session, const mxs::Endpoints& 
     mxs::Endpoint* master_host = get_root_master(endpoints);
 
     bool connectable_master = master_host ? master_host->target()->is_connectable() : false;
+    int64_t max_lag = m_config.max_replication_lag.get().count();
 
     /**
      * Do not include the master in ranking if the master option is not set
@@ -263,6 +274,11 @@ mxs::RouterSession* RCR::newSession(MXS_SESSION* session, const mxs::Endpoints& 
                  */
                 candidate = nullptr;
                 break;
+            }
+            else if (max_lag && e->target()->replication_lag() >= max_lag)
+            {
+                // This server is lagging too far behind
+                continue;
             }
 
             /* If no candidate set, set first running server as our initial candidate server */
