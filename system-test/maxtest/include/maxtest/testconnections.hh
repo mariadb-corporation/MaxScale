@@ -156,7 +156,7 @@ public:
      * @brief maxscale_product 'maxscale' - use production version of Maxscale,
      *  'maxscale_ci' - CI
      */
-    char * maxscale_product;
+    std::string maxscale_product;
 
     /**
      * @brief timeout seconds until test termination
