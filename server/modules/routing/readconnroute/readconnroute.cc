@@ -180,6 +180,13 @@ RCRSession::RCRSession(RCR* inst, MXS_SESSION* session, mxs::Endpoint* backend,
     , m_endpoints(endpoints)
     , m_session_stats(inst->session_stats(backend->target()))
 {
+    if (backend->target()->is_master() && (m_bitvalue & SERVER_SLAVE))
+    {
+        // Even if we have 'router_options=slave' in the configuration file, we can end up selecting the
+        // master if there are no slaves. In order for the server to be considered valid in
+        // connection_is_valid(), we turn on the SERVER_MASTER bit.
+        m_bitvalue |= SERVER_MASTER;
+    }
 }
 
 RCRSession::~RCRSession()
@@ -191,28 +198,54 @@ RCRSession::~RCRSession()
 
 mxs::RouterSession* RCR::newSession(MXS_SESSION* session, const mxs::Endpoints& endpoints)
 {
+    RCRSession* rses = nullptr;
+
+    if (mxs::Endpoint* candidate = get_connection(endpoints))
+    {
+        mxb_assert(candidate->target()->is_connectable());
+
+        if (candidate->connect())
+        {
+            rses = new RCRSession(this, session, candidate, endpoints, m_config.router_options.get());
+
+            MXS_INFO("New session for server %s. Connections : %d",
+                     candidate->target()->name(),
+                     candidate->target()->stats().n_current);
+        }
+    }
+    else
+    {
+        MXS_ERROR("Failed to create new routing session: Couldn't find eligible candidate server.");
+    }
+
+    return rses;
+}
+
+mxs::Endpoint* RCR::get_connection(const mxs::Endpoints& endpoints)
+{
     uint64_t bitvalue = m_config.router_options.get();
-
-    /**
-     * Find the Master host from available servers
-     */
     mxs::Endpoint* master_host = get_root_master(endpoints);
-
     bool connectable_master = master_host ? master_host->target()->is_connectable() : false;
     int64_t max_lag = m_config.max_replication_lag.get().count();
 
-    /**
-     * Do not include the master in ranking if the master option is not set
-     * (anything but master), and reads should not be routed to the master.
-     * The master will still be selected, if it is the last man standing.
-     */
+    if (bitvalue == SERVER_MASTER)
+    {
+        if (connectable_master)
+        {
+            return master_host;
+        }
+        else
+        {
+            return nullptr;     // No master server, cannot continue.
+        }
+    }
+
+    // Do not include the master in ranking if the master option is not set (anything but master), and reads
+    // should not be routed to the master. The master will still be selected, if it is the last man standing.
     bool do_not_rank_master = !(bitvalue & SERVER_MASTER) && m_config.master_accept_reads.get() == false;
 
-    /**
-     * Find a backend server to connect to. This is the extent of the
-     * load balancing algorithm we need to implement for this simple
-     * connection router.
-     */
+    // Find a backend server to connect to. This is the extent of the load balancing algorithm we need to
+    // implement for this simple connection router.
     mxs::Endpoint* candidate = nullptr;
     auto best_rank = std::numeric_limits<int64_t>::max();
 
@@ -232,48 +265,26 @@ mxs::RouterSession* RCR::newSession(MXS_SESSION* session, const mxs::Endpoints& 
     {
         if (!e->target()->is_connectable())
         {
-            continue;
+            continue;   // Server is down, can't use it.
         }
 
         if (do_not_rank_master && e == master_host)
         {
-            // If no other servers are available the master will still selected
-            continue;
+            continue;   // If no other servers are available the master will still selected
         }
 
         mxb_assert(e->target()->is_usable());
 
-        /* Check server status bits against bitvalue from router_options */
+        // Check server status bits against bitvalue from router_options
         if (e->target()->status() & bitvalue)
         {
-            if (master_host && connectable_master)
+            if (e == master_host && connectable_master
+                && (bitvalue & (SERVER_SLAVE | SERVER_MASTER)) == SERVER_SLAVE)
             {
-                if (e == master_host && (bitvalue & (SERVER_SLAVE | SERVER_MASTER)) == SERVER_SLAVE)
-                {
-                    /* Skip root master here, as it could also be slave of an external server that
-                     * is not in the configuration.  Intermediate masters (Relay Servers) are also
-                     * slave and will be selected as Slave(s)
-                     */
-
-                    continue;
-                }
-                if (e == master_host && bitvalue == SERVER_MASTER)
-                {
-                    /* If option is "master" return only the root Master as there could be
-                     * intermediate masters (Relay Servers) and they must not be selected.
-                     */
-
-                    candidate = master_host;
-                    break;
-                }
-            }
-            else if (bitvalue == SERVER_MASTER)
-            {
-                /* Master_host is nullptr, no master server.  If requested router_option is 'master'
-                 * candidate will be nullptr.
-                 */
-                candidate = nullptr;
-                break;
+                // Skip root master here, as it could also be slave of an external server that is not in the
+                // configuration.  Intermediate masters (Relay Servers) are also slave and will be selected as
+                // Slave(s)
+                continue;
             }
             else if (max_lag && e->target()->replication_lag() >= max_lag)
             {
@@ -281,7 +292,7 @@ mxs::RouterSession* RCR::newSession(MXS_SESSION* session, const mxs::Endpoints& 
                 continue;
             }
 
-            /* If no candidate set, set first running server as our initial candidate server */
+            // If no candidate set, set first running server as our initial candidate server
             if (!candidate || e->target()->rank() < best_rank)
             {
                 best_rank = e->target()->rank();
@@ -296,60 +307,14 @@ mxs::RouterSession* RCR::newSession(MXS_SESSION* session, const mxs::Endpoints& 
         }
     }
 
-    /* If we haven't found a proper candidate yet but a master server is available, we'll pick that
-     * with the assumption that it is "better" than a slave.
-     */
-    if (!candidate)
+    // If we haven't found a proper candidate yet but a master server is available, we'll pick that with the
+    // assumption that it is "better" than a slave.
+    if (!candidate && connectable_master)
     {
-        if (master_host && connectable_master)
-        {
-            candidate = master_host;
-            // Even if we had 'router_options=slave' in the configuration file, we
-            // will still end up here if there are no slaves, but a sole master. So
-            // that the server will be considered valid in connection_is_valid(), we
-            // turn on the SERVER_MASTER bit.
-            //
-            // We must do that so that readconnroute in MaxScale 2.2 will again behave
-            // the same way as it did up until 2.1.12.
-            if (bitvalue & SERVER_SLAVE)
-            {
-                bitvalue |= SERVER_MASTER;
-            }
-        }
-        else
-        {
-            if (!master_host)
-            {
-                MXS_ERROR("Failed to create new routing session. Couldn't find eligible"
-                          " candidate server. Freeing allocated resources.");
-            }
-            else
-            {
-                mxb_assert(!connectable_master);
-                MXS_ERROR("The only possible candidate server (%s) is being drained "
-                          "and thus cannot be used.", master_host->target()->name());
-            }
-            return nullptr;
-        }
-    }
-    else
-    {
-        mxb_assert(candidate->target()->is_connectable());
+        candidate = master_host;
     }
 
-    if (!candidate->connect())
-    {
-        /** The failure is reported in dcb_connect() */
-        return nullptr;
-    }
-
-    RCRSession* client_rses = new RCRSession(this, session, candidate, endpoints, bitvalue);
-
-    MXS_INFO("New session for server %s. Connections : %d",
-             candidate->target()->name(),
-             candidate->target()->stats().n_current);
-
-    return client_rses;
+    return candidate;
 }
 
 /** Log routing failure due to closed session */

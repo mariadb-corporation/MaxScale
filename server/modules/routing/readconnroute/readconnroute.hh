@@ -160,6 +160,8 @@ public:
 private:
     RCR(SERVICE* service);
 
+    mxs::Endpoint* get_connection(const mxs::Endpoints& endpoints);
+
     mxs::WorkerGlobal<maxscale::TargetSessionStats> m_target_stats;
 
     Config m_config;
