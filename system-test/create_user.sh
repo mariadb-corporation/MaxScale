@@ -93,6 +93,29 @@ RESET MASTER;
 EOF
 
 ##
+## Service user for MariaDB, Galera and Columnstore
+##
+## NOTE: Columnstore adds additional grant.
+##
+
+if [ "$type" != "xpand" ]
+then
+    mysql --force $socket <<EOF
+CREATE USER 'maxservice'@'%' IDENTIFIED BY 'maxservice' $require_ssl;
+GRANT SELECT ON mysql.user TO 'maxservice'@'%';
+GRANT SELECT ON mysql.db TO 'maxservice'@'%';
+GRANT SELECT ON mysql.tables_priv TO 'maxservice'@'%';
+GRANT SELECT ON mysql.columns_priv TO 'maxservice'@'%';
+GRANT SELECT ON mysql.procs_priv TO 'maxservice'@'%';
+GRANT SELECT ON mysql.proxies_priv TO 'maxservice'@'%';
+GRANT SELECT ON mysql.roles_mapping TO 'maxservice'@'%';
+GRANT SHOW DATABASES ON *.* TO 'maxservice'@'%';
+
+EOF
+
+fi
+
+##
 ## MariaDB
 ##
 
@@ -164,6 +187,8 @@ then
     mysql --force $socket <<EOF
     CREATE USER 'csmon'@'%' IDENTIFIED BY 'csmon'  $require_ssl;
     GRANT ALL ON infinidb_vtable.* TO 'csmon'@'%';
+
+    GRANT ALL ON infinidb_vtable.* TO 'maxservice'@'%';
 EOF
 
 fi
@@ -187,5 +212,9 @@ then
     GRANT SELECT ON system.nodeinfo TO 'xpandmon'@'%';
     GRANT SELECT ON system.softfailed_nodes TO 'xpandmon'@'%';
     GRANT SUPER ON *.* TO 'xpandmon'@'%';
+
+    CREATE USER 'maxservice'@'%' IDENTIFIED BY 'maxservice' $require_ssl;
+    GRANT SELECT ON system.users TO 'maxservice'@'%';
+    GRANT SELECT ON system.user_acl TO 'maxservice'@'%';
 EOF
 fi
