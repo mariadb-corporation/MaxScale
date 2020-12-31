@@ -87,7 +87,7 @@ void ClientConnection::ready_for_reading(DCB* dcb)
 
     mongoc_rpc_header_t* pHeader = reinterpret_cast<mongoc_rpc_header_t*>(gwbuf_link_data(pBuffer));
 
-    int buffer_len = read_res.data.length();
+    int buffer_len = gwbuf_length(pBuffer);
     if (buffer_len >= pHeader->msg_len)
     {
         // Ok, we have at least one full packet.
