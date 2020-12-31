@@ -165,6 +165,25 @@ private:
     GWBUF* create_standard_error(int sequence, int error_number, const char* msg);
     void   write_ok_packet(int sequence, uint8_t affected_rows = 0, const char* message = nullptr);
 
+    /**
+     * Send an error packet to the client.
+     *
+     * @param packet_number Sequence number
+     * @param in_affected_rows Affected rows
+     * @param mysql_errno Error number
+     * @param sqlstate_msg MySQL state message
+     * @param mysql_message Error message
+     * @return True on success
+     */
+    bool send_mysql_err_packet(int packet_number, int in_affected_rows,
+                               int mysql_errno, const char* sqlstate_msg, const char* mysql_message);
+
+    void parse_and_set_trx_state(const mxs::Reply& reply);
+    void start_change_role(std::string&& role);
+    void start_change_db(std::string&& db);
+
+    static SpecialQueryDesc parse_kill_query_elems(const char* sql);
+
     // General connection state
     enum class State
     {
@@ -251,23 +270,4 @@ private:
     int  m_previous_userdb_version {0};     /**< Userdb version used for first user account search */
 
     std::vector<std::unique_ptr<LocalClient>> m_local_clients;
-
-    /**
-     * Send an error packet to the client.
-     *
-     * @param packet_number Sequence number
-     * @param in_affected_rows Affected rows
-     * @param mysql_errno Error number
-     * @param sqlstate_msg MySQL state message
-     * @param mysql_message Error message
-     * @return True on success
-     */
-    bool send_mysql_err_packet(int packet_number, int in_affected_rows,
-                               int mysql_errno, const char* sqlstate_msg, const char* mysql_message);
-
-    void parse_and_set_trx_state(const mxs::Reply& reply);
-    void start_change_role(std::string&& role);
-    void start_change_db(std::string&& db);
-
-    static SpecialQueryDesc parse_kill_query_elems(const char* sql);
 };
