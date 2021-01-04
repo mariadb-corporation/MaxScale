@@ -212,7 +212,7 @@ json_t* SchemaRouter::diagnostics() const
 }
 
 static const uint64_t CAPABILITIES = RCAP_TYPE_STMT_INPUT | RCAP_TYPE_RUNTIME_CONFIG
-    | RCAP_TYPE_REQUEST_TRACKING;
+    | RCAP_TYPE_REQUEST_TRACKING | RCAP_TYPE_QUERY_CLASSIFICATION;
 
 uint64_t SchemaRouter::getCapabilities() const
 {

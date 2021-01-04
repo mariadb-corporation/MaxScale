@@ -119,6 +119,15 @@ enum mxs_routing_capability_t
      * Binary: 0b0000000001000100
      */
     RCAP_TYPE_SESSION_STATE_TRACKING = (1 << 6) | RCAP_TYPE_PACKET_OUTPUT,
+
+    /**
+     * Query classification is always done. This lets the protocol module know that at least one module in the
+     * routing chain will do query classification on each query. This allows some optimizations to be done
+     * that skip some of the custom mini-parsers for the majority of commands.
+     *
+     * Binary: 0b0000000010000000
+     */
+    RCAP_TYPE_QUERY_CLASSIFICATION = (1 << 7),
 };
 
 #define RCAP_TYPE_NONE 0

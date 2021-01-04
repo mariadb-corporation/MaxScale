@@ -158,7 +158,8 @@ json_t* SmartRouter::diagnostics() const
 
 uint64_t SmartRouter::getCapabilities() const
 {
-    return RCAP_TYPE_TRANSACTION_TRACKING | RCAP_TYPE_STMT_INPUT | RCAP_TYPE_STMT_OUTPUT;
+    return RCAP_TYPE_TRANSACTION_TRACKING | RCAP_TYPE_STMT_INPUT | RCAP_TYPE_STMT_OUTPUT
+           | RCAP_TYPE_QUERY_CLASSIFICATION;
 }
 
 // Eviction schedule
