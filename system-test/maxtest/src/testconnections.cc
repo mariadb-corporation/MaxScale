@@ -448,7 +448,7 @@ void TestConnections::read_env()
         "revert_snapshot_command", "mdbci snapshot revert --path-to-nodes %s --snapshot-name ",
         m_mdbci_config_name.c_str());
     no_vm_revert = readenv_bool("no_vm_revert", true);
-    maxscale_product = readenv("maxscale_product", "maxscale_ci");
+    m_maxscale_product = readenv("maxscale_product", "maxscale_ci");
 }
 
 void TestConnections::print_env()
