@@ -231,6 +231,8 @@ uint64_t SchemaRouter::getCapabilities() const
 extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
     static auto desc = "A database sharding router for simple sharding";
+    auto* api_ptr = &mxs::RouterApi<schemarouter::SchemaRouter>::s_api;
+
     static MXS_MODULE info =
     {
         mxs::MODULE_INFO_VERSION,
@@ -241,37 +243,27 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         desc,
         "V1.0.0",
         schemarouter::CAPABILITIES,
-        &mxs::RouterApi<schemarouter::SchemaRouter>::s_api,
+        api_ptr,
         NULL,
         NULL,
         NULL,
         NULL,
         {
-            {CN_IGNORE_TABLES,
-             MXS_MODULE_PARAM_STRING                                                       },
-            {CN_IGNORE_TABLES_REGEX,
-             MXS_MODULE_PARAM_STRING                                                                                 },
-            {CN_IGNORE_DATABASES,
-             MXS_MODULE_PARAM_STRING                                                                                                     },
-            {CN_IGNORE_DATABASES_REGEX,
-             MXS_MODULE_PARAM_STRING                                                                                                     },
-            {"max_sescmd_history",                         MXS_MODULE_PARAM_COUNT,
-             "0"                                                                                                  },
-            {"disable_sescmd_history",                     MXS_MODULE_PARAM_BOOL,
-             "false"                                                                                                                                     },
-            {"refresh_databases",                          MXS_MODULE_PARAM_BOOL,
-             "true"                                                                                                                                                                            },
+            {CN_IGNORE_TABLES,            MXS_MODULE_PARAM_STRING   },
+            {CN_IGNORE_TABLES_REGEX,      MXS_MODULE_PARAM_STRING   },
+            {CN_IGNORE_DATABASES,         MXS_MODULE_PARAM_STRING   },
+            {CN_IGNORE_DATABASES_REGEX,   MXS_MODULE_PARAM_STRING   },
+            {"max_sescmd_history",        MXS_MODULE_PARAM_COUNT, "0"},
+            {"disable_sescmd_history",    MXS_MODULE_PARAM_BOOL, "false"},
+            {"refresh_databases",         MXS_MODULE_PARAM_BOOL, "true"},
+            {"preferred_server",          MXS_MODULE_PARAM_SERVER, nullptr, MXS_MODULE_OPT_DEPRECATED},
+            {"debug",                     MXS_MODULE_PARAM_BOOL, "false"},
             {
                 "refresh_interval",
                 MXS_MODULE_PARAM_DURATION,
                 DEFAULT_REFRESH_INTERVAL,
                 MXS_MODULE_OPT_DURATION_S
             },
-            {"debug",                                      MXS_MODULE_PARAM_BOOL,
-             "false"                                                                                                                                                                           },
-            {"preferred_server",                           MXS_MODULE_PARAM_SERVER,
-             nullptr,
-             MXS_MODULE_OPT_DEPRECATED                                                                                                                                                },
             {MXS_END_MODULE_PARAMS}
         }
     };
