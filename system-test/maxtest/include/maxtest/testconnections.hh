@@ -153,12 +153,6 @@ public:
     bool no_xpand;
 
     /**
-     * @brief maxscale_product 'maxscale' - use production version of Maxscale,
-     *  'maxscale_ci' - CI
-     */
-    std::string maxscale_product;
-
-    /**
      * @brief timeout seconds until test termination
      */
     long int m_timeout {999999999}; // Never
@@ -627,6 +621,8 @@ private:
     bool no_vm_revert {true};
 
     int m_threads {4};      /**< Number of Maxscale threads */
+
+    std::string m_maxscale_product;      /**<  'maxscale' - use production version of Maxscale, 'maxscale_ci' - CI */
 
     /**
      * @brief Timeout thread
