@@ -197,20 +197,6 @@ bool ClientConnection::setup_session()
 
     mxb_assert(!is_ready());
 
-    // TODO: Hardwired data, currently simply taken from a regular connection attempt.
-    // TODO: There must exist a user 'mongotest@%' with no password.
-
-    const static vector<uint8_t> connect_attrs =
-        {
-            126, 3, 95, 111, 115, 5, 76, 105, 110, 117, 120, 12, 95, 99, 108, 105, 101, 110,
-            116, 95, 110, 97, 109, 101, 10, 108, 105, 98, 109, 97, 114, 105, 97, 100, 98, 4,
-            95, 112, 105, 100, 5, 50, 49, 57, 48, 55, 15, 95, 99, 108, 105, 101, 110, 116, 95,
-            118, 101, 114, 115, 105, 111, 110, 5, 51, 46, 49, 46, 57, 9, 95, 112, 108, 97, 116,
-            102, 111, 114, 109, 6, 120, 56, 54, 95, 54, 52, 12, 112, 114, 111, 103, 114, 97,
-            109, 95, 110, 97, 109, 101, 5, 109, 121, 115, 113, 108, 12, 95, 115, 101, 114, 118,
-            101, 114, 95, 104, 111, 115, 116, 9, 49, 50, 55, 46, 48, 46, 48, 46, 49
-        };
-
     m_session_data.user = "mongotest";
     m_session.set_user(m_session_data.user);
     m_session_data.db = "";
@@ -231,12 +217,10 @@ bool ClientConnection::setup_session()
         | CLIENT_MULTI_RESULTS
         | CLIENT_PS_MULTI_RESULTS
         | CLIENT_PLUGIN_AUTH
-        | CLIENT_CONNECT_ATTRS
         | CLIENT_SESSION_TRACKING
         | CLIENT_PROGRESS;
     m_session_data.client_info.m_extra_capabilities = MXS_MARIA_CAP_STMT_BULK_OPERATIONS;
     m_session_data.client_info.m_charset = 33; // UTF8
-    m_session_data.connect_attrs = connect_attrs;
 
     if (session_start(&m_session))
     {
