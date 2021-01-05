@@ -216,11 +216,6 @@ mxs_pcre2_result_t modutil_mysql_wildcard_match(const char* pattern, const char*
  */
 char* modutil_MySQL_bypass_whitespace(char* sql, size_t len);
 
-/**
- * Creates a COM_PING that does not return a result
- */
-GWBUF* modutil_create_ignorable_ping();
-
 /** Character and token searching functions */
 char* strnchr_esc(char* ptr, char c, int len);
 char* strnchr_esc_mysql(char* ptr, char c, int len);

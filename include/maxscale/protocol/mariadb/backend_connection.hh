@@ -60,6 +60,7 @@ private:
         ROUTING,            /**< Ready to route queries */
         CHANGING_USER,      /**< Processing a COM_CHANGE_USER sent by the user */
         RESET_CONNECTION,   /**< Reset the connection with a COM_CHANGE_USER */
+        PINGING,            /**< Pinging backend server */
         FAILED,             /**< Handshake/authentication failed */
     };
 
@@ -126,6 +127,7 @@ private:
     bool   send_proxy_protocol_header();
     int    handle_persistent_connection(GWBUF* queue);
     GWBUF* create_change_user_packet();
+    void   read_com_ping_response();
     void   do_handle_error(DCB* dcb, const std::string& errmsg,
                            mxs::ErrorType type = mxs::ErrorType::TRANSIENT);
     void prepare_for_write(GWBUF* buffer);

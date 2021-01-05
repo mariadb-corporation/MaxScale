@@ -1353,18 +1353,6 @@ char* modutil_MySQL_bypass_whitespace(char* sql, size_t len)
     return i;
 }
 
-GWBUF* modutil_create_ignorable_ping()
-{
-    static uint8_t com_ping_packet[] =
-    {
-        0x01, 0x00, 0x00, 0x00, 0x0e
-    };
-
-    GWBUF* buf = gwbuf_alloc_and_load(sizeof(com_ping_packet), com_ping_packet);
-    gwbuf_set_type(buf, GWBUF_TYPE_IGNORABLE);
-    return buf;
-}
-
 const char format_str[] = "COM_UNKNOWN(%02hhx)";
 
 // The message always fits inside the buffer

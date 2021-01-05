@@ -364,6 +364,10 @@ void MariaDBBackendConnection::ready_for_reading(DCB* event_dcb)
             read_change_user();
             break;
 
+        case State::PINGING:
+            read_com_ping_response();
+            break;
+
         case State::ROUTING:
             normal_read();
             // Normal read always consumes all data.
@@ -705,6 +709,23 @@ int MariaDBBackendConnection::read_change_user()
     }
 
     return rc;
+}
+
+void MariaDBBackendConnection::read_com_ping_response()
+{
+    DCB::ReadResult res = mariadb::read_protocol_packet(m_dcb);
+
+    if (res.error())
+    {
+        do_handle_error(m_dcb, "Failed to read COM_PING response");
+    }
+    else
+    {
+        mxb_assert(mxs_mysql_get_command(res.data.get()) == MYSQL_REPLY_OK);
+
+        // Route any packets that were received while we were pinging the backend
+        m_state = m_delayed_packets.empty() ? State::ROUTING : State::SEND_DELAYQ;
+    }
 }
 
 void MariaDBBackendConnection::write_ready(DCB* event_dcb)
@@ -1216,8 +1237,17 @@ void MariaDBBackendConnection::ping()
     mxb_assert(is_idle());
     MXS_INFO("Pinging '%s', idle for %ld seconds", m_server.name(), seconds_idle());
 
-    // TODO: Think of a better mechanism for the pings, the ignorable ping mechanism isn't pretty.
-    write(modutil_create_ignorable_ping());
+    constexpr uint8_t com_ping_packet[] =
+    {
+        0x01, 0x00, 0x00, 0x00, 0x0e
+    };
+
+    GWBUF* buffer = gwbuf_alloc_and_load(sizeof(com_ping_packet), com_ping_packet);
+
+    if (m_dcb->writeq_append(buffer))
+    {
+        m_state = State::PINGING;
+    }
 }
 
 bool MariaDBBackendConnection::can_close() const
@@ -2145,6 +2175,10 @@ std::string MariaDBBackendConnection::to_string(State auth_state)
 
     case State::CHANGING_USER:
         rval = "Changing user";
+        break;
+
+    case State::PINGING:
+        rval = "Pinging server";
         break;
     }
     return rval;
