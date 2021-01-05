@@ -191,23 +191,14 @@ bool MariaDBBackendConnection::reuse_connection(BackendDCB* dcb, mxs::Component*
 
         assign_session(dcb->session(), upstream);
         m_dcb = dcb;
-        m_ignore_replies = 0;
 
         /**
          * This is a DCB that was just taken out of the persistent connection pool.
          * We need to sent a COM_CHANGE_USER query to the backend to reset the
          * session state.
          */
-        if (m_stored_query)
-        {
-            /** It is possible that the client DCB is closed before the COM_CHANGE_USER
-             * response is received. */
-            gwbuf_free(m_stored_query);
-            m_stored_query = nullptr;
-        }
 
-        GWBUF* buf = create_change_user_packet();
-        if (dcb->writeq_append(buf))
+        if (dcb->writeq_append(create_change_user_packet()))
         {
             MXS_INFO("Reusing connection, sending COM_CHANGE_USER");
             m_state = State::RESET_CONNECTION;
@@ -530,19 +521,7 @@ int MariaDBBackendConnection::normal_read()
 {
     auto dcb = m_dcb;
     MXS_SESSION* session = dcb->session();
-
-    DCB::ReadResult read_res;
-    if (m_ignore_replies)
-    {
-        // Read only one packet. This way any extra packets, which we aren't expecting, are handled normally.
-        read_res = mariadb::read_protocol_packet(m_dcb);
-    }
-    else
-    {
-        // Read all available data
-        read_res = dcb->read(MYSQL_HEADER_LEN, 0);
-    }
-
+    DCB::ReadResult read_res = dcb->read(MYSQL_HEADER_LEN, 0);
     int return_code = read_res.error() ? -1 : 1;
     GWBUF* read_buffer = read_res.data.release();
 
@@ -578,7 +557,7 @@ int MariaDBBackendConnection::normal_read()
         bool track = rcap_type_required(capabilities, RCAP_TYPE_REQUEST_TRACKING)
             && !rcap_type_required(capabilities, RCAP_TYPE_STMT_OUTPUT);
 
-        if ((track || m_collect_result) && !m_ignore_replies)
+        if (track || m_collect_result || m_ignore_replies)
         {
             tmp = track_response(&read_buffer);
         }
@@ -623,9 +602,12 @@ int MariaDBBackendConnection::normal_read()
         result_collected = true;
     }
 
-    if (m_ignore_replies > 0)
+    if (m_ignore_replies)
     {
-        return ignore_reply(gwbuf_make_contiguous(read_buffer));
+        gwbuf_free(read_buffer);
+        --m_ignore_replies;
+        mxb_assert(m_ignore_replies >= 0);
+        return 1;
     }
 
     do
@@ -725,78 +707,6 @@ int MariaDBBackendConnection::read_change_user()
     return rc;
 }
 
-int MariaDBBackendConnection::ignore_reply(GWBUF* read_buffer)
-{
-    /** The reply to a COM_CHANGE_USER is in packet */
-    GWBUF* query = m_stored_query;
-    m_stored_query = nullptr;
-    m_ignore_replies--;
-    mxb_assert(m_ignore_replies >= 0);
-    GWBUF* reply = modutil_get_next_MySQL_packet(&read_buffer);
-
-    mxb_assert(reply);
-    mxb_assert(!read_buffer);
-    uint8_t result = MYSQL_GET_COMMAND(GWBUF_DATA(reply));
-    int rval = 0;
-
-    if (result == MYSQL_REPLY_OK)
-    {
-        MXS_INFO("Response to COM_CHANGE_USER is OK, writing stored query");
-        rval = query ? write(query) : 1;
-    }
-    else if (auth_change_requested(reply))
-    {
-        if (handle_auth_change_response(reply, m_dcb))
-        {
-            /** Store the query until we know the result of the authentication
-             * method switch. */
-            m_stored_query = query;
-            m_ignore_replies++;
-
-            gwbuf_free(reply);
-            return rval;
-        }
-        else
-        {
-            /** The server requested a change to something other than
-             * the default auth plugin */
-            gwbuf_free(query);
-            m_dcb->trigger_hangup_event();
-
-            // TODO: Use the authenticators to handle COM_CHANGE_USER responses
-            MXS_ERROR("Received AuthSwitchRequest to '%s' when '%s' was expected",
-                      (char*)GWBUF_DATA(reply) + 5, DEFAULT_MYSQL_AUTH_PLUGIN);
-        }
-    }
-    else
-    {
-        /**
-         * The ignorable command failed when we had a queued query from the
-         * client. Generate a fake hangup event to close the DCB and send
-         * an error to the client.
-         */
-        if (result == MYSQL_REPLY_ERR)
-        {
-            /** The COM_CHANGE USER failed, generate a fake hangup event to
-             * close the DCB and send an error to the client. */
-            handle_error_response(m_dcb, reply);
-        }
-        else
-        {
-            /** This should never happen */
-            MXS_ERROR("Unknown response to COM_CHANGE_USER (0x%02hhx), "
-                      "closing connection",
-                      result);
-        }
-
-        gwbuf_free(query);
-        m_dcb->trigger_hangup_event();
-    }
-
-    gwbuf_free(reply);
-    return rval;
-}
-
 void MariaDBBackendConnection::write_ready(DCB* event_dcb)
 {
     mxb_assert(m_dcb == event_dcb);
@@ -847,35 +757,6 @@ void MariaDBBackendConnection::write_ready(DCB* event_dcb)
     }
 }
 
-int MariaDBBackendConnection::handle_persistent_connection(GWBUF* queue)
-{
-    int rc = 0;
-    mxb_assert(m_ignore_replies > 0);
-
-    if (MYSQL_IS_COM_QUIT((uint8_t*)GWBUF_DATA(queue)))
-    {
-        /** The COM_CHANGE_USER was already sent but the session is already
-         * closing. */
-        MXS_INFO("COM_QUIT received while COM_CHANGE_USER is in progress, closing pooled connection");
-        gwbuf_free(queue);
-        m_dcb->trigger_hangup_event();
-    }
-    else
-    {
-        /**
-         * We're still waiting on the reply to the COM_CHANGE_USER, append the
-         * buffer to the stored query. This is possible if the client sends
-         * BLOB data on the first command or is sending multiple COM_QUERY
-         * packets at one time.
-         */
-        MXS_INFO("COM_CHANGE_USER in progress, appending query to queue");
-        m_stored_query = gwbuf_append(m_stored_query, queue);
-        rc = 1;
-    }
-
-    return rc;
-}
-
 /*
  * Write function for backend DCB. Store command to protocol.
  *
@@ -884,11 +765,6 @@ int MariaDBBackendConnection::handle_persistent_connection(GWBUF* queue)
  */
 int32_t MariaDBBackendConnection::write(GWBUF* queue)
 {
-    if (m_ignore_replies > 0)
-    {
-        return handle_persistent_connection(queue);
-    }
-
     int rc = 0;
     switch (m_state)
     {
@@ -940,10 +816,8 @@ int32_t MariaDBBackendConnection::write(GWBUF* queue)
 
     default:
         {
-            MXS_DEBUG("delayed write to dcb %p fd %d protocol state %s.",
-                      m_dcb, m_dcb->fd(), to_string(m_state).c_str());
-
-            /** Store data until authentication is complete */
+            MXS_INFO("Storing query while authentication is done (in state: %s): %s",
+                     to_string(m_state).c_str(), mxs::extract_sql(queue).c_str());
             m_delayed_packets.emplace_back(queue);
             rc = 1;
         }
@@ -1333,7 +1207,7 @@ AddressInfo get_ip_string_and_port(const sockaddr_storage* sa)
 
 bool MariaDBBackendConnection::established()
 {
-    return m_state == State::ROUTING && (m_ignore_replies == 0) && !m_stored_query && m_reply.is_complete();
+    return m_state == State::ROUTING && m_ignore_replies == 0 && m_reply.is_complete();
 }
 
 void MariaDBBackendConnection::ping()
@@ -2214,7 +2088,6 @@ void MariaDBBackendConnection::track_query(const TrackedQuery& query)
 
 MariaDBBackendConnection::~MariaDBBackendConnection()
 {
-    gwbuf_free(m_stored_query);
 }
 
 void MariaDBBackendConnection::set_dcb(DCB* dcb)

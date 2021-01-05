@@ -117,7 +117,6 @@ private:
     StateMachineRes send_connection_init_queries();
     bool            send_delayed_packets();
     int             normal_read();
-    int             ignore_reply(GWBUF* read_buffer);
 
     bool backend_write_delayqueue(GWBUF* buffer);
 
@@ -197,6 +196,5 @@ private:
 
     mxs::Component* m_upstream {nullptr};       /**< Upstream component, typically a router */
     MXS_SESSION*    m_session {nullptr};        /**< Generic session */
-    GWBUF*          m_stored_query {nullptr};   /*< Temporarily stored queries */
     BackendDCB*     m_dcb {nullptr};            /**< Dcb used by this protocol connection */
 };
