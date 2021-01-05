@@ -236,7 +236,7 @@ function askQuestion() {
     if (cmd.toLowerCase() == "exit" || cmd.toLowerCase() == "quit") {
       return Promise.resolve();
     } else {
-      return doCommand(base_opts.concat(cmd.split(" "))).then(
+      return doCommand(base_opts.join(" ") + " " + cmd).then(
         (output) => {
           if (output) {
             console.log(output);

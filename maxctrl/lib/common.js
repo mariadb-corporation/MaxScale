@@ -403,6 +403,8 @@ module.exports = function () {
             return error("Could not connect to MaxScale");
           } else if (err.error.code == "ESOCKETTIMEDOUT") {
             return error("Connection to MaxScale timed out");
+          } else if (err.message) {
+            return error(err.message);
           } else {
             return error(JSON.stringify(err.error, null, 4));
           }
