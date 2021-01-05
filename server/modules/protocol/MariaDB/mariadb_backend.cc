@@ -176,7 +176,6 @@ bool MariaDBBackendConnection::reuse_connection(BackendDCB* dcb, mxs::Component*
 {
     bool rv = false;
     mxb_assert(dcb->session() && !dcb->readq() && !dcb->writeq());
-    mxb_assert(m_ignore_replies >= 0);
 
     if (dcb->state() != DCB::State::POLLING || m_state != State::ROUTING || !m_delayed_packets.empty())
     {
@@ -273,10 +272,7 @@ void MariaDBBackendConnection::handle_error_response(DCB* plain_dcb, GWBUF* buff
  */
 void MariaDBBackendConnection::prepare_for_write(GWBUF* buffer)
 {
-    if (!gwbuf_is_ignorable(buffer))
-    {
-        track_query(TrackedQuery(buffer));
-    }
+    track_query(TrackedQuery(buffer));
 
     if (gwbuf_should_collect_result(buffer))
     {
@@ -555,13 +551,13 @@ int MariaDBBackendConnection::normal_read()
     uint64_t capabilities = service_get_capabilities(session->service);
     bool result_collected = false;
 
-    if (rcap_type_required(capabilities, RCAP_TYPE_PACKET_OUTPUT) || m_collect_result || m_ignore_replies)
+    if (rcap_type_required(capabilities, RCAP_TYPE_PACKET_OUTPUT) || m_collect_result)
     {
         GWBUF* tmp;
         bool track = rcap_type_required(capabilities, RCAP_TYPE_REQUEST_TRACKING)
             && !rcap_type_required(capabilities, RCAP_TYPE_STMT_OUTPUT);
 
-        if (track || m_collect_result || m_ignore_replies)
+        if (track || m_collect_result)
         {
             tmp = track_response(&read_buffer);
         }
@@ -604,14 +600,6 @@ int MariaDBBackendConnection::normal_read()
         read_buffer = m_collectq.release();
         m_collect_result = false;
         result_collected = true;
-    }
-
-    if (m_ignore_replies)
-    {
-        gwbuf_free(read_buffer);
-        --m_ignore_replies;
-        mxb_assert(m_ignore_replies >= 0);
-        return 1;
     }
 
     do
@@ -822,13 +810,6 @@ int32_t MariaDBBackendConnection::write(GWBUF* queue)
             }
             else
             {
-                if (gwbuf_is_ignorable(queue))
-                {
-                    /** The response to this command should be ignored */
-                    m_ignore_replies++;
-                    mxb_assert(m_ignore_replies > 0);
-                }
-
                 /** Write to backend */
                 rc = m_dcb->writeq_append(queue);
             }
@@ -1228,7 +1209,7 @@ AddressInfo get_ip_string_and_port(const sockaddr_storage* sa)
 
 bool MariaDBBackendConnection::established()
 {
-    return m_state == State::ROUTING && m_ignore_replies == 0 && m_reply.is_complete();
+    return m_state == State::ROUTING && m_reply.is_complete();
 }
 
 void MariaDBBackendConnection::ping()

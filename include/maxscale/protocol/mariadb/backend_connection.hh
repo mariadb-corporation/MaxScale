@@ -181,7 +181,6 @@ private:
     static std::string to_string(State auth_state);
 
     uint64_t    m_thread_id {0};                    /**< Backend thread id, received in backend handshake */
-    int         m_ignore_replies {0};               /**< How many replies should be discarded */
     bool        m_collect_result {false};           /**< Collect the next result set as one buffer */
     bool        m_track_state {false};              /**< Track session state */
     bool        m_skip_next {false};
