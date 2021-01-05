@@ -209,8 +209,8 @@ bool MariaDBBackendConnection::reuse_connection(BackendDCB* dcb, mxs::Component*
         GWBUF* buf = create_change_user_packet();
         if (dcb->writeq_append(buf))
         {
-            MXS_INFO("Sent COM_CHANGE_USER");
-            m_ignore_replies++;
+            MXS_INFO("Reusing connection, sending COM_CHANGE_USER");
+            m_state = State::RESET_CONNECTION;
             rv = true;
         }
 
@@ -366,6 +366,11 @@ void MariaDBBackendConnection::ready_for_reading(DCB* event_dcb)
         case State::SEND_DELAYQ:
             m_state = State::ROUTING;
             send_delayed_packets();
+            break;
+
+        case State::RESET_CONNECTION:
+        case State::CHANGING_USER:
+            read_change_user();
             break;
 
         case State::ROUTING:
@@ -618,27 +623,6 @@ int MariaDBBackendConnection::normal_read()
         result_collected = true;
     }
 
-    if (m_changing_user)
-    {
-        read_buffer = gwbuf_make_contiguous(read_buffer);
-
-        if (auth_change_requested(read_buffer) && handle_auth_change_response(read_buffer, dcb))
-        {
-            gwbuf_free(read_buffer);
-            return 0;
-        }
-        else
-        {
-            /**
-             * The client protocol always requests an authentication method switch to the same plugin to be
-             * compatible with most connectors. To prevent packet sequence number mismatch, always return a
-             * sequence of 3 for the final response to a COM_CHANGE_USER.
-             */
-            GWBUF_DATA(read_buffer)[3] = 0x3;
-            m_changing_user = false;
-        }
-    }
-
     if (m_ignore_replies > 0)
     {
         return ignore_reply(gwbuf_make_contiguous(read_buffer));
@@ -681,6 +665,64 @@ int MariaDBBackendConnection::normal_read()
     while (read_buffer);
 
     return return_code;
+}
+
+int MariaDBBackendConnection::read_change_user()
+{
+    DCB::ReadResult read_res = mariadb::read_protocol_packet(m_dcb);
+
+    if (read_res.error())
+    {
+        do_handle_error(m_dcb, "Read from backend failed");
+        return 0;
+    }
+
+    int rc = 1;
+    mxs::Buffer buffer = std::move(read_res.data);
+
+    if (!buffer.empty())
+    {
+        buffer.make_contiguous();
+
+        if (auth_change_requested(buffer.get()) && handle_auth_change_response(buffer.get(), m_dcb))
+        {
+            rc = 0;
+        }
+        else
+        {
+            // The COM_CHANGE_USER is now complete. The reply state must be updated here as the normal
+            // result processing code doesn't deal with the COM_CHANGE_USER responses.
+            set_reply_state(ReplyState::DONE);
+
+            if (m_state == State::CHANGING_USER)
+            {
+                /**
+                 * The client protocol always requests an authentication method switch to the same plugin to
+                 * be compatible with most connectors. To prevent packet sequence number mismatch, always
+                 * return a sequence of 3 for the final response to a COM_CHANGE_USER.
+                 */
+                buffer.data()[3] = 0x3;
+                mxs::ReplyRoute route;
+                rc = m_upstream->clientReply(buffer.release(), route, m_reply);
+            }
+            else
+            {
+                mxb_assert(m_state == State::RESET_CONNECTION);
+
+                if (mxs_mysql_get_command(buffer.get()) == MYSQL_REPLY_ERR)
+                {
+                    std::string errmsg = "Failed to reuse connection: " + mxs::extract_error(buffer.get());
+                    do_handle_error(m_dcb, errmsg, mxs::ErrorType::PERMANENT);
+                }
+            }
+
+            // If packets were received from the router while the COM_CHANGE_USER was in progress, they are
+            // stored in the same delayed queue that is used for the initial connection.
+            m_state = m_delayed_packets.empty() ? State::ROUTING : State::SEND_DELAYQ;
+        }
+    }
+
+    return rc;
 }
 
 int MariaDBBackendConnection::ignore_reply(GWBUF* read_buffer)
@@ -1125,7 +1167,7 @@ bool MariaDBBackendConnection::send_change_user_to_backend()
     bool rval = false;
     if (m_dcb->writeq_append(buffer))
     {
-        m_changing_user = true;
+        m_state = State::CHANGING_USER;
         rval = true;
     }
     return rval;
@@ -2053,7 +2095,7 @@ void MariaDBBackendConnection::process_result_start(Iter it, Iter end)
         }
         else
         {
-            mxb_assert(m_changing_user);
+            mxb_assert_message(!true, "Unexpected EOF packet");
         }
         break;
 
@@ -2125,11 +2167,7 @@ MariaDBBackendConnection::TrackedQuery::TrackedQuery(GWBUF* buffer)
  */
 void MariaDBBackendConnection::track_query(const TrackedQuery& query)
 {
-    if (m_changing_user)
-    {
-        // User reauthentication in progress, ignore the contents
-        return;
-    }
+    mxb_assert(m_state == State::ROUTING);
 
     if (session_is_load_active(m_session))
     {
@@ -2226,6 +2264,14 @@ std::string MariaDBBackendConnection::to_string(State auth_state)
 
     case State::ROUTING:
         rval = "Routing";
+        break;
+
+    case State::RESET_CONNECTION:
+        rval = "Resetting connection";
+        break;
+
+    case State::CHANGING_USER:
+        rval = "Changing user";
         break;
     }
     return rval;

@@ -53,12 +53,14 @@ public:
 private:
     enum class State
     {
-        HANDSHAKING,    /**< Handshaking with backend */
-        AUTHENTICATING, /**< Authenticating with backend */
-        CONNECTION_INIT,/**< Sending connection init file contents */
-        SEND_DELAYQ,    /**< Sending contents of delay queue */
-        ROUTING,        /**< Ready to route queries */
-        FAILED,         /**< Handshake/authentication failed */
+        HANDSHAKING,        /**< Handshaking with backend */
+        AUTHENTICATING,     /**< Authenticating with backend */
+        CONNECTION_INIT,    /**< Sending connection init file contents */
+        SEND_DELAYQ,        /**< Sending contents of delay queue */
+        ROUTING,            /**< Ready to route queries */
+        CHANGING_USER,      /**< Processing a COM_CHANGE_USER sent by the user */
+        RESET_CONNECTION,   /**< Reset the connection with a COM_CHANGE_USER */
+        FAILED,             /**< Handshake/authentication failed */
     };
 
     enum class HandShakeState
@@ -121,6 +123,7 @@ private:
 
     bool   change_user(GWBUF* queue);
     bool   send_change_user_to_backend();
+    int    read_change_user();
     bool   send_proxy_protocol_header();
     int    handle_persistent_connection(GWBUF* queue);
     GWBUF* create_change_user_packet();
@@ -188,7 +191,6 @@ private:
     bool        m_opening_cursor = false;   /**< Whether we are opening a cursor */
     uint32_t    m_expected_rows = 0;        /**< Number of rows a COM_STMT_FETCH is retrieving */
     bool        m_large_query = false;
-    bool        m_changing_user {false};
     mxs::Reply  m_reply;
 
     std::queue<TrackedQuery> m_track_queue;
