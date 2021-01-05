@@ -110,6 +110,7 @@ Documentation for MaxScale protocol modules.
 
  - [Change Data Capture (CDC) Protocol](Protocols/CDC.md)
  - [Change Data Capture (CDC) Users](Protocols/CDC_users.md)
+ - [MongoDB](Protocols/Mongo.md)
 
 The MaxScale CDC Connector provides a C++ API for consuming data from a CDC system.
 
