@@ -22,6 +22,7 @@
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/protocol/mariadb/protocol_classes.hh>
 #include "mxsmongodatabase.hh"
+#include "config.hh"
 
 using namespace std;
 
@@ -197,16 +198,33 @@ bool ClientConnection::setup_session()
 
     mxb_assert(!is_ready());
 
-    m_session_data.user = "mongotest";
+    m_session_data.user = m_config.user;
     m_session.set_user(m_session_data.user);
     m_session_data.db = "";
     m_session_data.current_db = "";
     m_session_data.plugin = "mysql_native_password";
 
+    if (!m_config.password.empty())
+    {
+        const uint8_t* pPassword = reinterpret_cast<const uint8_t*>(m_config.password.data());
+        auto nPassword = m_config.password.length();
+        uint8_t auth_token[SHA_DIGEST_LENGTH];
+
+        gw_sha1_str(pPassword, nPassword, auth_token);
+
+        // This is actually not needed, but as MariaDBAuth (of which we only use the backend part)
+        // uses both of these, better to assign anyway in case someone assumes something to be present.
+        m_session_data.auth_token.assign(auth_token, auth_token + SHA_DIGEST_LENGTH);
+
+        // This will be used when authenticating with the backend.
+        m_session_data.auth_token_phase2.assign(auth_token, auth_token + SHA_DIGEST_LENGTH);
+    }
+
     const auto& authenticators = m_session.listener_data()->m_authenticators;
     mxb_assert(authenticators.size() == 1);
-    m_session_data.m_current_authenticator =
-        static_cast<mariadb::AuthenticatorModule*>(authenticators.front().get());
+    auto* pAuthenticator = static_cast<mariadb::AuthenticatorModule*>(authenticators.front().get());
+
+    m_session_data.m_current_authenticator = pAuthenticator;
     m_session_data.client_info.m_client_capabilities = CLIENT_LONG_FLAG
         | CLIENT_LOCAL_FILES
         | CLIENT_PROTOCOL_41
