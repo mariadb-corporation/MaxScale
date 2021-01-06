@@ -16,6 +16,7 @@
 #include <bsoncxx/builder/stream/document.hpp>
 #include <maxscale/dcb.hh>
 #include <maxscale/listener.hh>
+#include <maxscale/modutil.hh>
 #include <maxscale/mysql_utils.hh>
 #include <maxscale/routingworker.hh>
 #include <maxscale/session.hh>
@@ -166,7 +167,7 @@ const char* dbg_decode_response(GWBUF* pPacket);
 int32_t ClientConnection::write(GWBUF* pMariaDB_response)
 {
     TRACE();
-    //MXS_NOTICE("MariaDB response: %s", mxs_response_to_string(pMariaDB_response));
+    mxb_assert(m_mongo.is_pending());
 
     return m_mongo.clientReply(pMariaDB_response, m_pDcb);
 }
@@ -240,17 +241,7 @@ bool ClientConnection::setup_session()
     m_session_data.client_info.m_extra_capabilities = MXS_MARIA_CAP_STMT_BULK_OPERATIONS;
     m_session_data.client_info.m_charset = 33; // UTF8
 
-    if (session_start(&m_session))
-    {
-        set_ready();
-        rv = true;
-    }
-    else
-    {
-        MXS_ERROR("Could not start session, closing client connection.");
-    }
-
-    return rv;
+    return session_start(&m_session);
 }
 
 GWBUF* ClientConnection::handle_one_packet(GWBUF* pPacket)
@@ -260,10 +251,18 @@ GWBUF* ClientConnection::handle_one_packet(GWBUF* pPacket)
 
     if (!is_ready())
     {
-        // TODO: We immediately setup the session. When proper authentication is used,
-        // TODO: the 'isMaster' query can be done without being authenticated and the
-        // TODO: session should be setup only once we have authenticated the user.
         ready = setup_session();
+
+        if (ready)
+        {
+            set_ready();
+        }
+        else
+        {
+            MXS_ERROR("Could not start session, closing client connection.");
+            gwbuf_free(pPacket);
+            m_session.kill();
+        }
     }
 
     if (ready)
@@ -273,15 +272,41 @@ GWBUF* ClientConnection::handle_one_packet(GWBUF* pPacket)
 
         pResponse = m_mongo.handle_request(pPacket);
     }
-    else
-    {
-        m_session.kill();
-    }
 
     return pResponse;
 }
 
-int32_t ClientConnection::clientReply(GWBUF* buffer, mxs::ReplyRoute& down, const mxs::Reply& reply)
+int32_t ClientConnection::clientReply(GWBUF* pBuffer, mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
-    return write(buffer);
+    int32_t rv = 0;
+
+    if (m_mongo.is_pending())
+    {
+        rv = write(pBuffer);
+    }
+    else
+    {
+        // If there is not a pending command, this is likely to be a server hangup
+        // caused e.g. by an authentication error.
+        // TODO: However, currently 'reply' does not contain anything, but the information
+        // TODO: has to be digged out from 'pBuffer'.
+
+        if (mxs_mysql_is_ok_packet(pBuffer))
+        {
+            MXS_WARNING("Unexpected OK packet received when none was expected.");
+        }
+        else if (mxs_mysql_is_err_packet(pBuffer))
+        {
+            MXS_ERROR("Error received from backend, session is likely to be closed: %s",
+                      mxs::extract_error(pBuffer).c_str());
+        }
+        else
+        {
+            MXS_WARNING("Unexpected response received.");
+        }
+
+        gwbuf_free(pBuffer);
+    }
+
+    return rv;
 }

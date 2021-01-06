@@ -522,6 +522,16 @@ public:
     Mongo(const Mongo&) = delete;
     Mongo& operator = (const Mongo&) = delete;
 
+    State state() const
+    {
+        return m_sDatabase ?  PENDING : READY;
+    }
+
+    bool is_pending() const
+    {
+        return state() == PENDING;
+    }
+
     Context& context()
     {
         return m_context;
