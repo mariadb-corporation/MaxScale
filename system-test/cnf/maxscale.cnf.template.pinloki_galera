@@ -13,7 +13,7 @@ user = maxskysql
 password = skysql
 use_priority=true
 monitor_interval = 1000
-root_node_as_master=false
+#root_node_as_master=false
 
 [RW-Split-Router]
 type=service
@@ -25,7 +25,7 @@ password=skysql
 [RW-Split-Listener]
 type=listener
 service=RW-Split-Router
-protocol=MySQLClient
+protocol=mariadbclient
 port=4006
 
 [pinloki-service]
@@ -47,26 +47,22 @@ port=4008
 type=server
 address=###galera_server_IP_1###
 port=###galera_server_port_1###
-protocol=MySQLBackend
-priority=2
+#priority=2
 
 [galera2]
 type=server
 address=###galera_server_IP_2###
 port=###galera_server_port_2###
-protocol=MySQLBackend
-priority=4
+#priority=4
 
 [galera3]
 type=server
 address=###galera_server_IP_3###
 port=###galera_server_port_3###
-protocol=MySQLBackend
-priority=1
+#priority=1
 
 [galera4]
 type=server
 address=###galera_server_IP_4###
 port=###galera_server_port_4###
-protocol=MySQLBackend
-priority=3
+#priority=3

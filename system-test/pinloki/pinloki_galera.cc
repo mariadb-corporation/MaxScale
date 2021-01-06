@@ -1,20 +1,9 @@
 #include "test_base.hh"
 #include <iostream>
 #include <iomanip>
+#include <maxtest/testconnections.hh>
 
-
-// This test is a combination of pinloki/test_base.hh and galera_priority.cpp.
-
-void check_server_id(TestConnections& test, const std::string& id)
-{
-    test.tprintf("Expecting '%s'...", id.c_str());
-    auto conn = test.maxscales->rwsplit();
-    test.expect(conn.connect(), "Connection should work: %s", conn.error());
-    test.expect(conn.query("BEGIN"), "BEGIN should work: %s", conn.error());
-    auto f = conn.field("SELECT @@server_id");
-    test.expect(f == id, "Expected server_id '%s', not server_id '%s'", id.c_str(), f.c_str());
-    test.expect(conn.query("COMMIT"), "COMMIT should work: %s", conn.error());
-}
+const size_t NUM_GALERAS = 4;
 
 std::string replicating_from(Connection& conn)
 {
@@ -27,6 +16,28 @@ std::string replicating_from(Connection& conn)
     }
 
     return addr;
+}
+
+void block_galera_ip(TestConnections& test, const std::string& galera_ip)
+{
+    size_t i = 0;
+    for (; i < NUM_GALERAS; ++i)
+    {
+        if (galera_ip == test.galera->ip(i))
+        {
+            break;
+        }
+    }
+
+    if (i == NUM_GALERAS)
+    {
+        test.add_result(true, "Expected IP '%s' to be a galera node\n", galera_ip.c_str());
+    }
+    else
+    {
+        std::cout << "Blocking node " << i << " IP " << test.galera->ip(i) << std::endl;
+        test.galera->block_node(i);
+    }
 }
 
 void check_table(TestConnections& test, Connection& conn, int n)
@@ -56,6 +67,7 @@ int main(int argc, char** argv)
     // and make it replicate from pinloki.
     pinloki_replica.query("STOP SLAVE");
     pinloki_replica.query("RESET SLAVE");
+    pinloki_replica.query("SET @@global.gtid_slave_pos = '0-101-1'");
     pinloki_replica.query(change_master_sql(pinloki.host().c_str(), pinloki.port()));
     pinloki_replica.query("START SLAVE");
 
@@ -64,33 +76,50 @@ int main(int argc, char** argv)
     test.expect(rws.connect(), "RWS connection should work: %s", rws.error());
     rws.query("DROP TABLE if exists test.t1");
     test.expect(rws.query("CREATE TABLE test.t1(id INT)"), "CREATE failed: %s", rws.error());
-    test.expect(rws.query("INSERT INTO test.t1 values(1)"), "Insert 1 failed: %s", rws.error());
+    test.expect(rws.query("INSERT INTO test.t1 values(1)"), "INSERT 1 failed: %s", rws.error());
 
-    // Now check that things are as exptected
-    // Galera node 3 should be master,
-    check_server_id(test, galera_ids[2]);
-    // and pinloki should be replicating from it.
-    auto pin_repl_from = replicating_from(pinloki);
-    test.expect(pin_repl_from == test.galera->ip(2), "Pinloki should replicate from the galera node 3");
-    // and the pinloki_replica should replicate from pinloki
+    sleep(2);
+
+    // Check that things are as they should be.
+    // The pinloki_replica should replicate from pinloki
     auto reg_repl_from = replicating_from(pinloki_replica);
     test.expect(reg_repl_from == pinloki.host().c_str(), "pinloki_replica should replicate from pinloki");
-    // and reading test.t1 from pinloki_replica should have 1 row
-    // check_table(test, pinloki_replica, 1); This fails because galera is not in gtid mode
 
-    std::cout << "replicating_from(pinloki) = " << replicating_from(pinloki) << std::endl;
+    // Reading test.t1 from pinloki_replica should have 1 row
+    check_table(test, pinloki_replica, 1);
+
+    auto pinloki_repl_from = replicating_from(pinloki);
+    std::cout << "replicating_from(pinloki) = " << pinloki_repl_from << std::endl;
     std::cout << "replicating_from(pinloki_replica) = " << replicating_from(pinloki_replica) << std::endl;
 
-    /** Block node 3 and node 1 should be master */
-    test.galera->block_node(2);
-    test.maxscales->wait_for_monitor(2);
-    check_server_id(test, galera_ids[0]);
+    auto previous_ip = pinloki_repl_from;
 
-    pin_repl_from = replicating_from(pinloki);
-    test.expect(pin_repl_from == test.galera->ip(0), "Pinloki should replicate from the galera node 0");
+    /** Block the node pinloki is replicating from */
+    block_galera_ip(test, pinloki_repl_from);
 
-    std::cout << "replicating_from(pinloki) = " << replicating_from(pinloki) << std::endl;
-    std::cout << "replicating_from(pinloki_replica) = " << replicating_from(pinloki_replica) << std::endl;
+    /** Make sure pinloki is now replicating from another node */
+    for (int i = 0; i < 60; ++i)    // TODO, takes long, ~30s. What are the timeouts?
+    {
+        pinloki_repl_from = replicating_from(pinloki);
+        std::cout << "replicating_from(pinloki) = " << pinloki_repl_from << std::endl;
+        if (previous_ip != pinloki_repl_from)
+        {
+            break;
+        }
+
+        sleep(1);
+    }
+
+    test.expect(previous_ip != pinloki_repl_from,
+                "pinloki should have started to replicate from another node");
+
+    /** Insert and check */
+    auto conn = test.maxscales->rwsplit();      // for some reason rws is no longer valid?
+    test.expect(conn.connect(), "2nd RWS connection should work: %s", conn.error());
+    test.expect(conn.query("INSERT INTO test.t1 values(2)"), "INSERT 2 failed: %s", conn.error());
+    sleep(2);
+
+    check_table(test, pinloki_replica, 2);
 
     return test.global_result;
 }
