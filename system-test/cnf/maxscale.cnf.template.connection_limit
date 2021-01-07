@@ -1,6 +1,7 @@
 [maxscale]
 threads=###threads###
 log_warning=1
+max_auth_errors_until_block=0
 
 [MySQL-Monitor]
 type=monitor
