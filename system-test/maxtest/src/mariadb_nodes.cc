@@ -49,6 +49,26 @@ const char setup_slave[] =
 const char create_repl_user[] =
     "grant replication slave on *.* to repl@'%%' identified by 'repl'; "
     "FLUSH PRIVILEGES";
+
+const char* to_string(Mariadb_nodes::Type type)
+{
+    switch (type)
+    {
+    case Mariadb_nodes::Type::MARIADB:
+        return "mariadb";
+
+    case Mariadb_nodes::Type::GALERA:
+        return "galera";
+
+    case Mariadb_nodes::Type::COLUMNSTORE:
+        return "columnstore";
+
+    case Mariadb_nodes::Type::XPAND:
+        return "xpand";
+    }
+
+    return nullptr;
+}
 }
 
 void Mariadb_nodes::require_gtid(bool value)
@@ -59,10 +79,12 @@ void Mariadb_nodes::require_gtid(bool value)
 Mariadb_nodes::Mariadb_nodes(const char* pref,
                              const char* test_cwd,
                              bool verbose,
-                             const std::string& network_config)
+                             const std::string& network_config,
+                             Type type)
     : Nodes(pref, network_config, verbose)
     , no_set_pos(false)
     , v51(false)
+    , m_type(type)
 {
     memset(this->nodes, 0, sizeof(this->nodes));
     memset(this->blocked, 0, sizeof(this->blocked));
@@ -387,7 +409,6 @@ int Mariadb_nodes::cleanup_db_nodes()
 void Mariadb_nodes::create_users(int node)
 {
     char str[PATH_MAX + 1024];
-    char dtr[PATH_MAX + 1024];
     // Create users for replication as well as the users that are used by the tests
     sprintf(str, "%s/create_user.sh", test_dir);
     copy_to_node(node, str, access_homedir(node));
@@ -396,12 +417,13 @@ void Mariadb_nodes::create_users(int node)
                "export require_ssl=\"%s\"; "
                "export node_user=\"%s\"; "
                "export node_password=\"%s\"; "
-               "%s/create_user.sh %s",
+               "%s/create_user.sh \"%s\" %s",
                ssl ? "REQUIRE SSL" : "",
                user_name.c_str(),
                password.c_str(),
                access_homedir(0),
-               socket_cmd[0].c_str());
+               socket_cmd[0].c_str(),
+               to_string(m_type));
 }
 
 int Mariadb_nodes::create_users()
@@ -524,15 +546,13 @@ int Galera_nodes::start_galera()
     }
 
     char str[PATH_MAX + 1024];
-    sprintf(str, "%s/create_user_galera.sh", test_dir);
-    copy_to_node_legacy(str, "~/", 0);
 
-    ssh_node_f(0,
-               true,
-               "export galera_user=\"%s\"; export galera_password=\"%s\"; ./create_user_galera.sh %s",
-               user_name.c_str(),
-               password.c_str(),
-               socket_cmd[0].c_str());
+    sprintf(str, "%s/galera_wait_until_ready.sh", test_dir);
+    copy_to_node(0, str, access_homedir(0));
+
+    ssh_node_f(0, true, "%s/galera_wait_until_ready.sh %s", access_homedir(0), socket_cmd[0].c_str());
+
+    create_users(0);
 
     local_result += robust_connect(5) ? 0 : 1;
     local_result += execute_query(nodes[0], "%s", create_repl_user);

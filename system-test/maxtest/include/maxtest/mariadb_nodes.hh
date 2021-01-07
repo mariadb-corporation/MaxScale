@@ -30,11 +30,23 @@
 class Mariadb_nodes : public Nodes
 {
 public:
+    enum class Type
+    {
+        MARIADB,
+        GALERA,
+        COLUMNSTORE,
+        XPAND
+    };
+
     /**
      * @brief Constructor
      * @param pref  name of backend setup (like 'repl' or 'galera')
      */
-    Mariadb_nodes(const char *pref, const char *test_cwd, bool verbose, const std::string& network_config);
+    Mariadb_nodes(const char *pref,
+                  const char *test_cwd,
+                  bool verbose,
+                  const std::string& network_config,
+                  Type type);
 
     bool setup() override;
 
@@ -49,6 +61,11 @@ public:
     const char* access_homedir(int i = 0) const;
 
     const std::string& prefix() const;
+
+    Type type() const
+    {
+        return m_type;
+    }
 
     /**
      * @brief  MYSQL structs for every backend node
@@ -550,6 +567,7 @@ public:
     std::string cnf_server_name;
 
 private:
+    Type m_type;
     bool m_use_ipv6 {false}; /**< Default to ipv6-addresses */
 
     bool check_master_node(MYSQL* conn);
@@ -561,7 +579,7 @@ class Galera_nodes : public Mariadb_nodes
 public:
 
     Galera_nodes(const char *pref, const char *test_cwd, bool verbose, const std::string& network_config)
-        : Mariadb_nodes(pref, test_cwd, verbose, network_config) { }
+        : Mariadb_nodes(pref, test_cwd, verbose, network_config, Type::GALERA) { }
 
     int start_galera();
 
