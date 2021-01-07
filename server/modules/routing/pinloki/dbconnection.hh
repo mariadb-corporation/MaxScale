@@ -52,7 +52,7 @@ public:
         std::string          user;
         std::string          password;
         unsigned long        flags = 0;
-        std::chrono::seconds timeout = std::chrono::seconds(30);
+        std::chrono::seconds timeout = std::chrono::seconds(10);
 
         // TLS variables
         bool        ssl = false;
