@@ -103,7 +103,7 @@ exports.builder = function(yargs) {
                         'parameters': {
                             'protocol': argv.protocol,
                             'authenticator': argv.authenticator,
-                            'authenticator_options': argv.auth_options,
+                            'authenticator_options': argv['authenticator-options'],
                             'ssl_key': argv['tls-key'],
                             'ssl_cert': argv['tls-cert'],
                             'ssl_ca_cert': argv['tls-ca-cert'],
@@ -335,7 +335,7 @@ exports.builder = function(yargs) {
                                 'address': argv.interface,
                                 'protocol': argv.protocol,
                                 'authenticator': argv.authenticator,
-                                'authenticator_options': argv.auth_options,
+                                'authenticator_options': argv['authenticator-options'],
                                 'ssl_key': argv['tls-key'],
                                 'ssl_cert': argv['tls-cert'],
                                 'ssl_ca_cert': argv['tls-ca-cert'],
