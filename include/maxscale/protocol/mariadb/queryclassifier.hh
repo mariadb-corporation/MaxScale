@@ -19,6 +19,7 @@
 #include <unordered_set>
 #include <maxscale/hint.h>
 #include <maxscale/protocol/mariadb/query_classifier.hh>
+#include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/router.hh>
 #include <maxscale/session.hh>
 
@@ -97,6 +98,16 @@ public:
         bool expecting_large_query() const
         {
             return m_next_large_query;
+        }
+
+        /**
+         * Check if the server will generate a response for this packet
+         */
+        bool expecting_response() const
+        {
+            return load_data_state() != LOAD_DATA_ACTIVE
+                   && !large_query()
+                   && mxs_mysql_command_will_respond(command());
         }
 
         /**

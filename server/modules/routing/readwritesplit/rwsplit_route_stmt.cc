@@ -1091,8 +1091,7 @@ bool RWSplitSession::handle_got_target(mxs::Buffer&& buffer, RWBackend* target, 
         gwbuf_set_type(buffer.get(), GWBUF_TYPE_TRACK_STATE);
     }
 
-    if (route_info().load_data_state() != QueryClassifier::LOAD_DATA_ACTIVE
-        && !route_info().large_query() && mxs_mysql_command_will_respond(cmd))
+    if (route_info().expecting_response())
     {
         response = mxs::Backend::EXPECT_RESPONSE;
     }
