@@ -103,12 +103,12 @@ json_t* Tee::diagnostics() const
         json_object_set_new(rval, "user", json_string(m_user.c_str()));
     }
 
-    if (m_match)
+    if (m_match.valid())
     {
         json_object_set_new(rval, "match", json_string(m_match.pattern().c_str()));
     }
 
-    if (m_exclude)
+    if (m_exclude.valid())
     {
         json_object_set_new(rval, "exclude", json_string(m_exclude.pattern().c_str()));
     }

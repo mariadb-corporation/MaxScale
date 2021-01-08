@@ -83,18 +83,18 @@ bool TeeSession::query_matches(GWBUF* buffer)
 {
     bool rval = true;
 
-    if (m_match || m_exclude)
+    if (m_match.valid() || m_exclude.valid())
     {
         std::string sql = mxs::extract_sql(buffer);
 
         if (!sql.empty())
         {
-            if (m_match && !m_match.match(sql))
+            if (m_match.valid() && !m_match.match(sql))
             {
                 MXS_INFO("Query does not match the 'match' pattern: %s", sql.c_str());
                 rval = false;
             }
-            else if (m_exclude && m_exclude.match(sql))
+            else if (m_exclude.valid() && m_exclude.match(sql))
             {
                 MXS_INFO("Query matches the 'exclude' pattern: %s", sql.c_str());
                 rval = false;

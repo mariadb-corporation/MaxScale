@@ -122,11 +122,6 @@ bool Regex::empty() const
     return m_pattern.empty();
 }
 
-Regex::operator bool() const
-{
-    return empty() || valid();
-}
-
 bool Regex::valid() const
 {
     return m_code;

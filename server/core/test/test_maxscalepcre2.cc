@@ -111,13 +111,11 @@ static int test3()
     mxb::Regex r1;
     test_assert(!r1.valid(), "Empty regex is not valid");
     test_assert(r1.empty(), "Empty regex is empty");
-    test_assert(!!r1, "Empty regex evaluates to true");
     test_assert(r1.error().empty(), "No errors stored");
 
     mxb::Regex r2("hello");
     test_assert(r2.valid(), "Regex is valid");
     test_assert(!r2.empty(), "Regex is not empty");
-    test_assert(!!r2, "Regex evaluates to true");
     test_assert(r2.error().empty(), "No errors stored");
     test_assert(r2.match("hello"), "Matches exact match");
     test_assert(r2.match("hello world"), "Matches partial match");
@@ -135,19 +133,16 @@ static int test3()
 
     mxb::Regex r4("[");
     test_assert(!r4.valid(), "Invalid regex is detected");
-    test_assert(!r4, "Invalid regex evaluates to false");
     test_assert(!r4.error().empty(), "Invalid regex has an error message");
 
     mxb::Regex r5("hello");
     mxb::Regex r6;
     r6 = r5;
-    test_assert(r6, "Assigned regex is valid");
-    test_assert(!!r6, "Assigned regex evaluates to true");
+    test_assert(r6.valid(), "Assigned regex is valid");
     test_assert(r6.match("hello world"), "Assigned regex matches");
 
     mxb::Regex r7(r5);
-    test_assert(r7, "Copy-constructed regex is valid");
-    test_assert(!!r7, "Copy-constructed regex evaluates to true");
+    test_assert(r7.valid(), "Copy-constructed regex is valid");
     test_assert(r7.match("hello world"), "Copy-constructed regex matches");
 
     return 0;

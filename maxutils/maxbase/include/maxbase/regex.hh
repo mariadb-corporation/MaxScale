@@ -56,11 +56,6 @@ public:
     bool empty() const;
 
     /**
-     * @return True if the pattern is either empty or it is valid
-     */
-    explicit operator bool() const;
-
-    /**
      * @return True if pattern was compiled successfully
      */
     bool valid() const;
