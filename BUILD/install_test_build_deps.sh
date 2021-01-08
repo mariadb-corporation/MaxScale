@@ -116,6 +116,14 @@ EOL
   sudo pip install JayDeBeApi
 fi
 
+# Methods allow to compare software versions according to semantic versioning
+verlte() {
+    [  "$1" = "`echo -e "$1\n$2" | sort -V | head -n1`" ]
+}
+
+verlt() {
+    [ "$1" = "$2" ] && return 1 || verlte $1 $2
+}
 
 # cmake
 cmake_vrs_cmd="cmake --version"
