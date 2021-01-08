@@ -141,15 +141,15 @@ EOF
 EOF
     fi
 
+    mysql --force $socket <<EOF
+        GRANT REPLICATION SLAVE ON *.* TO 'repl'@'%';
+EOF
+
     if (( $major == 10 && (($minor == 5 && $maintenance >= 8) || ( $minor >=6 )) ))
     then
         # So, since 10.5.8 we have this.
         mysql --force $socket <<EOF
-        GRANT REPLICATION SLAVE, SLAVE MONITOR ON *.* TO 'repl'@'%';
-EOF
-    else
-        mysql --force $socket <<EOF
-        GRANT REPLICATION SLAVE ON *.* TO 'repl'@'%';
+        GRANT SLAVE MONITOR ON *.* TO 'repl'@'%';
 EOF
     fi
 fi
