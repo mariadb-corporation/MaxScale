@@ -54,7 +54,7 @@ namespace pinloki
 
 constexpr int HEADER_LEN = 19;
 
-FileReader::FileReader(const maxsql::Gtid& gtid, const InventoryReader* inv)
+FileReader::FileReader(const maxsql::GtidList& gtid_list, const InventoryReader* inv)
     : m_inotify_fd{inotify_init1(IN_NONBLOCK)}
     , m_inventory(*inv)
 {
@@ -62,6 +62,9 @@ FileReader::FileReader(const maxsql::Gtid& gtid, const InventoryReader* inv)
     {
         MXB_THROW(BinlogReadError, "inotify_init failed: " << errno << ", " << mxb_strerror(errno));
     }
+
+    // TODO. This is where the multiple gtids will be used
+    auto gtid = gtid_list.gtids()[0];
 
     if (gtid.is_valid())
     {

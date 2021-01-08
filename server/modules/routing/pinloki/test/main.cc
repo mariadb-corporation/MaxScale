@@ -64,13 +64,6 @@ bool writer_mode = true;
 void prog_main(const maxsql::GtidList& gtid_list, const std::string& host,
                const std::string& user, const std::string& pw)
 {
-    // Single domain currently
-    maxsql::Gtid gtid;
-    if (gtid_list.is_valid())
-    {
-        gtid = gtid_list.gtids()[0];
-    }
-
     mxb::Worker worker;
     mxq::Connection::ConnectionDetails details = {maxbase::Host::from_string(host), "", user, pw};
 
@@ -87,7 +80,7 @@ void prog_main(const maxsql::GtidList& gtid_list, const std::string& host,
         pinloki::Reader reader([](const auto& event) {
                                    std::cout << event << std::endl;
                                    return true;
-                               }, config(), &worker, gtid, 30s);
+                               }, config(), &worker, gtid_list, 30s);
         worker.start();
         worker.join();
     }

@@ -37,7 +37,7 @@ namespace pinloki
 class FileReader    // : public Storage
 {
 public:
-    FileReader(const maxsql::Gtid& gtid, const InventoryReader* inv);
+    FileReader(const maxsql::GtidList& gtid_list, const InventoryReader* inv);
     ~FileReader();
 
     maxsql::RplEvent fetch_event();
