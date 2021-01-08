@@ -1764,7 +1764,7 @@ void Service::mark_for_wakeup(mxs::ClientConnection* session)
 
 void Service::unmark_for_wakeup(mxs::ClientConnection* session)
 {
-    // Should not assert here, as there may some corner cases where the connection has just been removed
+    // Should not assert here, as there may be some corner cases where the connection has just been removed
     // from the set but event was not processed before closing.
     m_sleeping_clients->erase(session);
 }
