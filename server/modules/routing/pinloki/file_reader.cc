@@ -63,19 +63,27 @@ FileReader::FileReader(const maxsql::GtidList& gtid_list, const InventoryReader*
         MXB_THROW(BinlogReadError, "inotify_init failed: " << errno << ", " << mxb_strerror(errno));
     }
 
-    // TODO. This is where the multiple gtids will be used
-    auto gtid = gtid_list.gtids()[0];
-
-    if (gtid.is_valid())
+    if (gtid_list.gtids().size() > 0)
     {
-        auto gtid_pos = find_gtid_position(gtid, m_inventory);
+        m_catchup = find_gtid_position(gtid_list.gtids(), m_inventory);
 
-        if (gtid_pos.file_name.empty())
+        if (m_catchup[0].file_name.empty())
         {
-            MXB_THROW(GtidNotFoundError, "Could not find '" << gtid << "' in any of the binlogs");
+            MXB_THROW(GtidNotFoundError,
+                      "Could not find '" << m_catchup[0].gtid << "' in any of the binlogs");
         }
 
+        // TODO, m_catchup holds positions that have not yet been reached. The idea is that
+        // the reader starts with the first position (and domain) just like it does here. That
+        // domain (uint32_t) is copied to a set of active domains and the position is dropped
+        // from m_catchup.
+        // As the reader reads, it will skip GTID_EVENTS that are not in an active domain.
+        // As positions in m_catchup are reached the corresponding domain becomes active.
+        // Anyway, something along those lines. It's Friday, I am off now.
+        auto gtid_pos = m_catchup[0];
+
         open(gtid_pos.file_name);
+
         // Generate initial rotate and read format description, gtid list and any
         // binlog checkpoints from the file before jumping to gtid (or end of file).
         m_generate_rotate_to = gtid_pos.file_name;

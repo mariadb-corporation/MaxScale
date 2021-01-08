@@ -26,6 +26,7 @@
 #include "gtid.hh"
 #include "inventory.hh"
 #include "rpl_event.hh"
+#include "find_gtid.hh"
 
 namespace pinloki
 {
@@ -77,5 +78,7 @@ private:
     std::string            m_generate_rotate_to;
     bool                   m_generating_preamble = true;
     int                    m_initial_gtid_file_pos = 0;
+
+    std::vector<GtidPosition> m_catchup;
 };
 }

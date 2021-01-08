@@ -25,32 +25,44 @@
 
 namespace pinloki
 {
+bool operator<(const GtidPosition& lhs, const GtidPosition& rhs);
+
 bool search_file(const std::string& file_name,
                  const maxsql::Gtid& gtid,
                  GtidPosition* pos,
                  bool search_in_file);
 
-GtidPosition find_gtid_position(const maxsql::Gtid& gtid, const InventoryReader& inv)
+std::vector<GtidPosition> find_gtid_position(const std::vector<maxsql::Gtid>& gtids,
+                                             const InventoryReader& inv)
 {
+    std::vector<GtidPosition> ret;
     // Simple linear search. If there can be a lot of files, make this a binary search, or
     // if it really becomes slow, create an index
-    GtidPosition pos;
     const auto& file_names = inv.file_names();
 
     // Search in reverse because the gtid is likely be one of the latest files, and
     // the search can stop as soon as the gtid is greater than the gtid list in the file,
     // uh, expect for the first file which doesn't have a GTID_LIST_EVENT.
 
-    auto last_one = rend(file_names) - 1;   // which is the first, oldest file
-    for (auto ite = rbegin(file_names); ite != rend(file_names); ++ite)
+    // TODO, don't do one gtid at a time, modify search to do all in one go.
+    for (const auto& gtid : gtids)
     {
-        if (search_file(*ite, gtid, &pos, ite == last_one))
+        GtidPosition pos {gtid};
+        auto last_one = rend(file_names) - 1;   // which is the first, oldest file
+        for (auto ite = rbegin(file_names); ite != rend(file_names); ++ite)
         {
-            break;
+            if (search_file(*ite, gtid, &pos, ite == last_one))
+            {
+                break;
+            }
         }
+
+        ret.push_back(pos);
     }
 
-    return pos;
+    sort(begin(ret), end(ret));
+
+    return ret;
 }
 
 /**
@@ -185,5 +197,25 @@ bool search_file(const std::string& file_name,
     }
 
     return success;
+}
+
+bool operator<(const GtidPosition& lhs, const GtidPosition& rhs)
+{
+    if (lhs.file_name.empty())
+    {
+        return true;
+    }
+    else if (rhs.file_name.empty())
+    {
+        return false;
+    }
+
+    auto lhs_pos = lhs.file_name.find_last_of("0123456789");
+    auto rhs_pos = lhs.file_name.find_last_of("0123456789");
+
+    auto lhs_num = std::atoi(&lhs.file_name[lhs_pos]);
+    auto rhs_num = std::atoi(&rhs.file_name[rhs_pos]);
+
+    return lhs_num < rhs_num || (lhs_num == rhs_num && lhs.file_pos < rhs.file_pos);
 }
 }

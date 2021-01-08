@@ -44,16 +44,6 @@ pinloki::InventoryWriter& write_inventory()
 bool test_it(int argc, char* argv[])
 {
     return false;
-
-    pinloki::InventoryReader inv(config());
-
-    auto gtid = maxsql::Gtid::from_string("0-0-9");
-    pinloki::GtidPosition pos = pinloki::find_gtid_position(gtid, inv);
-
-    std::cout << "pos.file_name = " << pos.file_name << "\n";
-    std::cout << "pos.pos = " << pos.file_pos << "\n";
-
-    return true;
 }
 
 using namespace std::literals::chrono_literals;
