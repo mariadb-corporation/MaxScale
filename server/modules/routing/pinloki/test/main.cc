@@ -185,13 +185,6 @@ try
         return EXIT_SUCCESS;
     }
 
-    // This is for the reader
-    if (override_gtid_list.is_valid())
-    {
-        std::ofstream ofs(config().gtid_file_path());
-        ofs << override_gtid_list;
-    }
-
     prog_main(override_gtid_list, host + ":" + std::to_string(port), user, pw);
 }
 catch (maxbase::Exception& ex)

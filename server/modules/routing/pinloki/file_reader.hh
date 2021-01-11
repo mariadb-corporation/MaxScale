@@ -69,6 +69,7 @@ private:
     void              open(const std::string& file_name);
     void              set_inotify_fd();
     std::vector<char> fetch_raw();
+    maxsql::RplEvent  fetch_event_internal();
 
     int                    m_inotify_fd;
     int                    m_inotify_descriptor = -1;
@@ -80,5 +81,7 @@ private:
     int                    m_initial_gtid_file_pos = 0;
 
     std::vector<GtidPosition> m_catchup;
+    std::set<uint32_t>        m_active_domains;
+    bool                      m_skip_gtid = false;
 };
 }

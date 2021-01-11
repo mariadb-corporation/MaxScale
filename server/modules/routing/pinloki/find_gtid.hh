@@ -26,8 +26,9 @@ struct GtidPosition
     long         file_pos;
 };
 
-// Gtid positions sorted by file location. If a gtid is not found it's file_name is empty,
-// and empty positions sort first.
+// Return a vector with GtidPositions of the same size as the input vector.
+// The GtidPositions are sorted by file location. If a gtid is not found its
+// file_name is empty, and empty positions sort first.
 std::vector<GtidPosition> find_gtid_position(const std::vector<maxsql::Gtid>& gtid_list,
                                              const InventoryReader& inv);
 }
