@@ -2241,7 +2241,7 @@ bool TestConnections::initialize_nodes()
     {
         // TODO: Introduce a Backends class derived from Nodes from which MariaDB_nodes, Galera_nodes, etc.
         // TODO: are derived. That way the C++ type alone is sufficient for identifying the backend type.
-        repl = new Mariadb_nodes("node", test_dir, verbose, m_network_config, Mariadb_nodes::Type::MARIADB);
+        repl = new Mariadb_nodes(verbose, m_network_config);
         repl->setup();
         repl->set_use_ipv6(m_use_ipv6);
         repl->ssl = backend_ssl;
@@ -2256,7 +2256,7 @@ bool TestConnections::initialize_nodes()
 
     if (use_galera)
     {
-        galera = new Galera_nodes("galera", test_dir, verbose, m_network_config);
+        galera = new Galera_nodes(verbose, m_network_config);
         galera->setup();
         galera->set_use_ipv6(false);
         galera->ssl = backend_ssl;
@@ -2271,7 +2271,7 @@ bool TestConnections::initialize_nodes()
 
     if (use_xpand)
     {
-        xpand = new Xpand_nodes("xpand", test_dir, verbose, m_network_config);
+        xpand = new Xpand_nodes(verbose, m_network_config);
         xpand->setup();
         xpand->set_use_ipv6(false);
         xpand->ssl = backend_ssl;
@@ -2284,7 +2284,7 @@ bool TestConnections::initialize_nodes()
         xpand = NULL;
     }
 
-    maxscales = new Maxscales("maxscale", test_dir, verbose, m_network_config);
+    maxscales = new Maxscales(verbose, m_network_config);
     maxscales->setup();
     m_maxscale = std::make_unique<mxt::MaxScale>(maxscales, *m_logger, 0);
 

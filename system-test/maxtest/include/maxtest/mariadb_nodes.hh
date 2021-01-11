@@ -42,11 +42,10 @@ public:
      * @brief Constructor
      * @param pref  name of backend setup (like 'repl' or 'galera')
      */
-    Mariadb_nodes(const char *pref,
-                  const char *test_cwd,
-                  bool verbose,
-                  const std::string& network_config,
+    Mariadb_nodes(const char* pref, bool verbose, const std::string& network_config,
                   Type type);
+
+    Mariadb_nodes(bool verbose, const std::string& network_config);
 
     bool setup() override;
 
@@ -151,11 +150,6 @@ public:
      * @brief v51 true indicates that one backed is 5.1
      */
     bool v51;
-
-    /**
-     * @brief test_dir path to test application
-     */
-    char test_dir[4096];
 
     /**
      * @brief List of blocked nodes
@@ -566,6 +560,9 @@ public:
      */
     std::string cnf_server_name;
 
+protected:
+    std::string m_test_dir; /**< path to test application */
+
 private:
     Type m_type;
     bool m_use_ipv6 {false}; /**< Default to ipv6-addresses */
@@ -578,8 +575,10 @@ class Galera_nodes : public Mariadb_nodes
 {
 public:
 
-    Galera_nodes(const char *pref, const char *test_cwd, bool verbose, const std::string& network_config)
-        : Mariadb_nodes(pref, test_cwd, verbose, network_config, Type::GALERA) { }
+    Galera_nodes(bool verbose, const std::string& network_config)
+        : Mariadb_nodes("galera", verbose, network_config, Type::GALERA)
+    {
+    }
 
     int start_galera();
 

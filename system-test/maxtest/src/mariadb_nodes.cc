@@ -20,6 +20,8 @@
 #include <functional>
 #include <algorithm>
 #include <maxtest/envv.hh>
+#include <maxtest/test_dir.hh>
+#include <maxbase/format.hh>
 
 using std::cout;
 using std::endl;
@@ -76,10 +78,7 @@ void Mariadb_nodes::require_gtid(bool value)
     g_require_gtid = value;
 }
 
-Mariadb_nodes::Mariadb_nodes(const char* pref,
-                             const char* test_cwd,
-                             bool verbose,
-                             const std::string& network_config,
+Mariadb_nodes::Mariadb_nodes(const char* pref, bool verbose, const std::string& network_config,
                              Type type)
     : Nodes(pref, network_config, verbose)
     , no_set_pos(false)
@@ -88,7 +87,7 @@ Mariadb_nodes::Mariadb_nodes(const char* pref,
 {
     memset(this->nodes, 0, sizeof(this->nodes));
     memset(this->blocked, 0, sizeof(this->blocked));
-    strcpy(this->test_dir, test_cwd);
+    m_test_dir = test_dir;
 
     auto& prefix_str = prefix();
     if (prefix_str == "node")
@@ -103,6 +102,11 @@ Mariadb_nodes::Mariadb_nodes(const char* pref,
     {
         cnf_server_name = prefix_str + "_server";
     }
+}
+
+Mariadb_nodes::Mariadb_nodes(bool verbose, const string& network_config)
+    : Mariadb_nodes("node", verbose, network_config, Type::MARIADB)
+{
 }
 
 bool Mariadb_nodes::setup()
@@ -408,10 +412,9 @@ int Mariadb_nodes::cleanup_db_nodes()
 
 void Mariadb_nodes::create_users(int node)
 {
-    char str[PATH_MAX + 1024];
     // Create users for replication as well as the users that are used by the tests
-    sprintf(str, "%s/create_user.sh", test_dir);
-    copy_to_node(node, str, access_homedir(node));
+    string str = mxb::string_printf("%s/create_user.sh", m_test_dir.c_str());
+    copy_to_node(node, str.c_str(), access_homedir(node));
 
     ssh_node_f(node, true,
                "export require_ssl=\"%s\"; "
@@ -545,10 +548,8 @@ int Galera_nodes::start_galera()
         }
     }
 
-    char str[PATH_MAX + 1024];
-
-    sprintf(str, "%s/galera_wait_until_ready.sh", test_dir);
-    copy_to_node(0, str, access_homedir(0));
+    string str = mxb::string_printf("%s/galera_wait_until_ready.sh", m_test_dir.c_str());
+    copy_to_node(0, str.c_str(), access_homedir(0));
 
     ssh_node_f(0, true, "%s/galera_wait_until_ready.sh %s", access_homedir(0), socket_cmd[0].c_str());
 
@@ -1436,7 +1437,7 @@ std::string Galera_nodes::get_config_name(int node)
 
 void Mariadb_nodes::reset_server_settings(int node)
 {
-    std::string cnfdir = std::string(test_dir) + "/mdbci/cnf/";
+    std::string cnfdir = m_test_dir + "/mdbci/cnf/";
     std::string cnf = get_config_name(node);
 
     // Note: This is a CentOS specific path
@@ -1445,8 +1446,8 @@ void Mariadb_nodes::reset_server_settings(int node)
     ssh_node_f(node, false, "sudo install -o root -g root -m 0644 ~/%s /etc/my.cnf.d/", cnf.c_str());
 
     // Always configure the backend for SSL
-    std::string ssl_dir = std::string(test_dir) + "/ssl-cert";
-    std::string ssl_cnf = std::string(test_dir) + "/ssl.cnf";
+    std::string ssl_dir = m_test_dir + "/ssl-cert";
+    std::string ssl_cnf = m_test_dir + "/ssl.cnf";
     copy_to_node_legacy(ssl_dir.c_str(), "~/", node);
     copy_to_node_legacy(ssl_cnf.c_str(), "~/", node);
 

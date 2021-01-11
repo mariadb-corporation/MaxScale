@@ -26,8 +26,7 @@ public:
         READCONN_SLAVE
     };
 
-    Maxscales(const char* pref, const char* test_cwd, bool verbose,
-              const std::string& network_config);
+    Maxscales(bool verbose, const std::string& network_config);
 
     ~Maxscales();
 
@@ -122,11 +121,6 @@ public:
      * @brief N_ports Default number of routers
      */
     int N_ports[MAX_MAXSCALES] {};
-
-    /**
-     * @brief test_dir path to test application
-     */
-    char test_dir[4096] {};
 
     bool ssl = false;
 

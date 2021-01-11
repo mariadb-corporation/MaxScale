@@ -15,14 +15,10 @@
 
 using std::string;
 
-Maxscales::Maxscales(const char* pref,
-                     const char* test_cwd,
-                     bool verbose,
-                     const std::string& network_config)
-    : Nodes(pref, network_config, verbose)
+Maxscales::Maxscales(bool verbose, const std::string& network_config)
+    : Nodes("maxscale", network_config, verbose)
     , valgring_log_num(0)
 {
-    strcpy(this->test_dir, test_cwd);
 }
 
 Maxscales::~Maxscales()
