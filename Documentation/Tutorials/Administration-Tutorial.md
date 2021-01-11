@@ -78,45 +78,6 @@ Network listeners count as a user of the service, therefore there will always be
 one user per network port in which the service listens. More details can be
 obtained by using the "show service" command.
 
-## Persistent Connections
-
-When clients who are accessing a database system through MariaDB MaxScale make
-frequent short connections, there may be a benefit in using persistent
-connections. This feature is controlled by two configuration values that are
-specified per server in the relevant server section of the configuration file.
-The configuration options are `persistpoolmax` and `persistmaxtime`.
-
-Normally, when a client connection is terminated, all the related back end
-database connections are also terminated. If the `persistpoolmax` options is set
-to a non-zero integer, then up to that number of connections will be kept in a
-pool for that server. When a new connection is requested by the system to handle
-a client session, then a connection from the pool will be used if possible.
-
-The connection will only be taken from the pool if it has been there for no more
-than `persistmaxtime` seconds. The connection will also be discarded if it has
-been disconnected by the back end server. Connections will be selected so that
-they match the user name and protocol for the new request.
-
-Starting with MaxScale 2.1, when a MySQL protocol connection is taken from the
-pool, the backend protocol module resets the session state. This allows
-persistent connections to be used with no functional limitations.
-
-The session state is reset when the first outgoing network transmission is done.
-This _lazy initialization_ of the persistent connections allows MaxScale to take
-multiple new connections into use but only initialize the ones that it actually
-needs.
-
-**Please note** that in versions before 2.1 the persistent connections may give
-a different environment when compared to a fresh connection. For example, if the
-previous use of the connection issued a "USE mydatabase;" statement then this
-setting will be carried over into the reuse of the same connection. For many
-applications this will not be noticeable, since each request will assume that
-nothing has been set and will issue fresh requests such as "USE" to establish
-the desired configuration. In exceptional cases this feature could be a problem.
-
-It is possible to have pools for as many servers as you wish, with configuration
-values in each server section.
-
 ## What Clients Are Connected To MariaDB MaxScale
 
 To determine what client are currently connected to MariaDB MaxScale, you can
