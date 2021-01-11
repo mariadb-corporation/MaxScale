@@ -7,47 +7,23 @@ reference to all the tasks that may be performed.
 
 ## Starting and Stopping MariaDB MaxScale
 
-### Systemd
+MaxScale uses systemd for managing the process. This means that normal
+`systemctl` commands can be used to start and stop MaxScale. To start MaxScale,
+use `systemctl start maxscale`. To stop it, use `systemctl stop maxscale`.
 
-Most modern operating systems support the Systemd interface.
+The systemd service file for MaxScale is located in
+`/lib/systemd/system/maxscale.service`.
 
-**Starting MaxScale:**
-```
-systemctl start maxscale
-```
+### Additional Options for MaxScale
 
-**Stopping MaxScale:**
-```
-systemctl stop maxscale
-```
-
-The MaxScale service file is located in `/lib/systemd/system/maxscale.service`.
-
-### SysV
-
-Legacy platforms should use the service interface to start MaxScale.
-
-**Starting MaxScale:**
-```
-service maxscale start
-```
-
-**Stopping MaxScale:**
-```
-service maxscale stop
-```
-
-Additional command line arguments can be passed to MariaDB MaxScale with a
-configuration file placed at `/etc/sysconfig/maxscale` on RPM installations and
-`/etc/default/maxscale` file on DEB installations. Set the arguments in a
-variable called `MAXSCALE_OPTIONS` and remember to surround the arguments with
-quotes. The file should only contain environment variable declarations.
-
-```
-MAXSCALE_OPTIONS="--logdir=/home/maxscale/logs --piddir=/tmp --syslog=no"
-```
-
-Note that this is only supported on legacy SysV systems.
+Additional command line options and other systemd configuration options
+can be given to MariaDB MaxScale by creating a drop-in file for the
+service unit file. You can do this with the `systemctl edit maxscale.service`
+command. For more information about systemd drop-in
+files, refer to
+[the systemctl man page](https://www.freedesktop.org/software/systemd/man/systemctl.html)
+and
+[the systemd documentation](https://www.freedesktop.org/software/systemd/man/systemd.unit.html).
 
 ## Checking The Status Of The MariaDB MaxScale Services
 
