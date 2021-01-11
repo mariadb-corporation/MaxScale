@@ -521,19 +521,29 @@ maxsql::Connection::ConnectionDetails Pinloki::generate_details()
 std::string Pinloki::start_slave()
 {
     std::lock_guard<std::mutex> guard(m_lock);
-    const auto& cfg = m_master_config;
+    std::string err_str;
 
-    std::string err_str = verify_master_settings();
-
-    if (err_str.empty())
+    if (m_writer)
     {
-        MXS_INFO("Starting slave");
+        MXS_WARNING("START SLAVE: Slave is already running");
+        // TODO, a server would generate a warning, code 1254.
+    }
+    else
+    {
+        const auto& cfg = m_master_config;
 
-        Writer::Generator generator = std::bind(&Pinloki::generate_details, this);
-        m_writer = std::make_unique<Writer>(generator, mxs::MainWorker::get(), inventory());
+        std::string err_str = verify_master_settings();
 
-        m_master_config.slave_running = true;
-        m_master_config.save(m_config);
+        if (err_str.empty())
+        {
+            MXS_INFO("Starting slave");
+
+            Writer::Generator generator = std::bind(&Pinloki::generate_details, this);
+            m_writer = std::make_unique<Writer>(generator, mxs::MainWorker::get(), inventory());
+
+            m_master_config.slave_running = true;
+            m_master_config.save(m_config);
+        }
     }
 
     return err_str;

@@ -294,8 +294,22 @@ void PinlokiSession::set(const std::string& key, const std::string& value)
 
         if (!m_gtid.is_valid())
         {
-            buf = modutil_create_mysql_err_msg(1, 0, 1941, "HY000",
-                                               "Could not parse GTID list");
+            mxq::GtidList gtid_list = mxq::GtidList::from_string(value);
+
+            if (gtid_list.gtids().size() > 1)
+            {
+                const char* const msg = "Replica trying to connect with "
+                                        "multiple GTIDs (@@slave_connect_state)";
+                MXS_WARNING(msg);
+                buf = modutil_create_mysql_err_msg(1, 0, 1941, "HY000", msg);
+            }
+            else
+            {
+                const char* const msg = "Replica trying to connect with "
+                                        "invalid GTID (@@slave_connect_state)";
+                MXS_WARNING(msg);
+                buf = modutil_create_mysql_err_msg(1, 0, 1941, "HY000", msg);
+            }
         }
         else
         {
@@ -309,12 +323,22 @@ void PinlokiSession::set(const std::string& key, const std::string& value)
     }
     else if (key == "gtid_slave_pos")
     {
-        auto gtid = mxq::GtidList::from_string(value);
+        auto gtid = mxq::Gtid::from_string(value);
 
         if (!gtid.is_valid())
         {
-            buf = modutil_create_mysql_err_msg(1, 0, 1941, "HY000",
-                                               "Could not parse GTID list");
+            mxq::GtidList gtid_list = mxq::GtidList::from_string(value);
+
+            if (gtid_list.gtids().size() > 1)
+            {
+                buf = modutil_create_mysql_err_msg(1, 0, 1941, "HY000",
+                                                   "Only a single GTID allowed for gtid_slave_pos");
+            }
+            else
+            {
+                buf = modutil_create_mysql_err_msg(1, 0, 1941, "HY000",
+                                                   "Could not parse GTID");
+            }
         }
         else if (m_router->is_slave_running())
         {
@@ -325,7 +349,7 @@ void PinlokiSession::set(const std::string& key, const std::string& value)
         }
         else
         {
-            m_router->set_gtid_slave_pos(gtid);
+            m_router->set_gtid_slave_pos(mxq::GtidList({gtid}));
             buf = modutil_create_ok();
         }
     }
