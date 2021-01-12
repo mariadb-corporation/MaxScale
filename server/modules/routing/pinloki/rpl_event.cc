@@ -179,7 +179,7 @@ Rotate RplEvent::rotate() const
 
 bool RplEvent::is_commit() const
 {
-    return strcasecmp(query_event_sql().c_str(), "COMMIT") != 0;
+    return strcasecmp(query_event_sql().c_str(), "COMMIT") == 0;
 }
 
 const char* RplEvent::pHeader() const
