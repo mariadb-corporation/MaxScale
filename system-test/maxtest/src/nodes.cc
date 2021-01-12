@@ -357,11 +357,6 @@ int Nodes::read_basic_env()
     return 0;
 }
 
-const char* Nodes::ip(int i) const
-{
-    return use_ipv6 ? m_ip6[i].c_str() : m_ip4[i].c_str();
-}
-
 std::string Nodes::mdbci_node_name(int node)
 {
     return(mxb::string_printf("%s_%03d", m_prefix.c_str(), node));
@@ -452,11 +447,6 @@ Nodes::SshResult Nodes::ssh_output(const std::string& cmd, int node, bool sudo)
     int exit_code = pclose(output_pipe);
     rval.rc = (WIFEXITED(exit_code)) ? WEXITSTATUS(exit_code) : 256;
     return rval;
-}
-
-bool Nodes::using_ipv6() const
-{
-    return use_ipv6;
 }
 
 const char* Nodes::ip_private(int i) const

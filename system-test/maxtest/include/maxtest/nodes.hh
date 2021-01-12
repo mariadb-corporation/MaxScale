@@ -40,17 +40,7 @@ public:
 
     bool verbose() const;
 
-    /**
-     * @brief Get IP address
-     *
-     * @return The current IP address
-     */
-    const char* ip(int i = 0) const;
-
     const char* hostname(int i = 0) const;
-
-    bool using_ipv6() const;
-
     const char* access_user(int i = 0) const;
     const char* access_homedir(int i = 0) const;
     const char* access_sudo(int i = 0) const;
@@ -157,7 +147,6 @@ public:
     int stop_vm(int node);
 
 protected:
-    bool        use_ipv6 {false}; /**< Default to ipv6-addresses */
     SharedData& m_shared;
 
     Nodes(const char* prefix, SharedData& shared, const std::string& network_config);

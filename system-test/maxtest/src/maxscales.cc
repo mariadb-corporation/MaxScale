@@ -311,7 +311,6 @@ const char* Maxscales::ip(int i) const
 void Maxscales::set_use_ipv6(bool use_ipv6)
 {
     m_use_ipv6 = use_ipv6;
-    this->use_ipv6 = use_ipv6;
 }
 
 const char* Maxscales::hostname(int i) const

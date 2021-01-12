@@ -1638,7 +1638,6 @@ const char* Mariadb_nodes::ip(int i) const
 void Mariadb_nodes::set_use_ipv6(bool use_ipv6)
 {
     m_use_ipv6 = use_ipv6;
-    this->use_ipv6 = use_ipv6;
 }
 
 const char* Mariadb_nodes::ip_private(int i) const
@@ -1724,4 +1723,9 @@ bool Mariadb_nodes::check_ssl(int node)
     }
 
     return ok;
+}
+
+bool Mariadb_nodes::using_ipv6() const
+{
+    return m_use_ipv6;
 }

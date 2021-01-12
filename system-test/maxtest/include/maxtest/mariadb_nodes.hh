@@ -560,6 +560,8 @@ public:
      */
     std::string cnf_server_name;
 
+    bool using_ipv6() const;
+
 protected:
     std::string m_test_dir; /**< path to test application */
 
