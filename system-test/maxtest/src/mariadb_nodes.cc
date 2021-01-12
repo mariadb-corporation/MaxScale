@@ -1655,6 +1655,11 @@ const char* Mariadb_nodes::access_homedir(int i) const
     return Nodes::access_homedir(i);
 }
 
+const char* Mariadb_nodes::access_sudo(int i) const
+{
+    return Nodes::access_sudo(i);
+}
+
 const string& Mariadb_nodes::prefix() const
 {
     return Nodes::prefix();

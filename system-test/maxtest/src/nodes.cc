@@ -56,16 +56,20 @@ bool Nodes::check_nodes()
 string Nodes::generate_ssh_cmd(int node, const string& cmd, bool sudo)
 {
     string rval;
-    if (m_ip4[node] == "127.0.0.1")
+    auto& vmnode = m_vms[node];
+    auto& ip4 = vmnode.m_ip4;
+    auto& sudo_str = vmnode.m_sudo;
+
+    if (ip4 == "127.0.0.1")
     {
         // If node is the local machine, run command as is.
-        rval = sudo ? (m_access_sudo[node] + " " + cmd) : cmd;
+        rval = sudo ? (sudo_str + " " + cmd) : cmd;
     }
     else
     {
         // Run command through ssh. The ControlMaster-option enables use of existing pooled connections,
         // greatly speeding up the operation.
-        string p1 = mxb::string_printf("ssh -i %s ", m_sshkey[node].c_str());
+        string p1 = mxb::string_printf("ssh -i %s ", vmnode.m_sshkey.c_str());
         string p2 = "-o UserKnownHostsFile=/dev/null "
                     "-o CheckHostIP=no "
                     "-o ControlMaster=auto "
@@ -74,8 +78,8 @@ string Nodes::generate_ssh_cmd(int node, const string& cmd, bool sudo)
                     "-o StrictHostKeyChecking=no "
                     "-o LogLevel=quiet ";
 
-        string p3 = mxb::string_printf("%s@%s ", m_access_user[node].c_str(), m_ip4[node].c_str());
-        string p4 = sudo ? mxb::string_printf("'%s %s'", m_access_sudo[node].c_str(), cmd.c_str()) :
+        string p3 = mxb::string_printf("%s@%s ", vmnode.m_username.c_str(), ip4.c_str());
+        string p4 = sudo ? mxb::string_printf("'%s %s'", sudo_str.c_str(), cmd.c_str()) :
             mxb::string_printf("'%s'", cmd.c_str());
         rval = p1 + p2 + p3 + p4;
     }
@@ -86,13 +90,14 @@ FILE* Nodes::open_ssh_connection(int node)
 {
     std::ostringstream ss;
 
-    if (m_ip4[node] == "127.0.0.1")
+    auto& vmnode = m_vms[node];
+    if (vmnode.m_ip4 == "127.0.0.1")
     {
         ss << "bash";
     }
     else
     {
-        ss << "ssh -i " << m_sshkey[node] << " "
+        ss << "ssh -i " << vmnode.m_sshkey << " "
            << "-o UserKnownHostsFile=/dev/null "
            << "-o StrictHostKeyChecking=no "
            << "-o LogLevel=quiet "
@@ -100,8 +105,7 @@ FILE* Nodes::open_ssh_connection(int node)
            << "-o ControlMaster=auto "
            << "-o ControlPath=./maxscale-test-%r@%h:%p "
            << "-o ControlPersist=yes "
-           << m_access_user[node] << "@"
-           << m_ip4[node]
+           << vmnode.m_username << "@" << vmnode.m_ip4
            << (verbose() ? "" : " > /dev/null");
     }
 
@@ -123,7 +127,7 @@ int Nodes::ssh_node(int node, const char* ssh, bool sudo)
         if (sudo)
         {
             fprintf(in, "sudo su -\n");
-            fprintf(in, "cd /home/%s\n", m_access_user[node].c_str());
+            fprintf(in, "cd /home/%s\n", m_vms[node].m_username.c_str());
         }
 
         fprintf(in, "%s\n", ssh);
@@ -182,7 +186,9 @@ int Nodes::copy_to_node(int i, const char* src, const char* dest)
     }
     char sys[strlen(src) + strlen(dest) + 1024];
 
-    if (m_ip4[i] == "127.0.0.1")
+    auto& vmnode = m_vms[i];
+    auto& ip4 = vmnode.m_ip4;
+    if (ip4 == "127.0.0.1")
     {
         sprintf(sys,
                 "cp %s %s",
@@ -201,10 +207,10 @@ int Nodes::copy_to_node(int i, const char* src, const char* dest)
                 "-o StrictHostKeyChecking=no "
                 "-o LogLevel=quiet "
                 "%s %s@%s:%s",
-                m_sshkey[i].c_str(),
+                vmnode.m_sshkey.c_str(),
                 src,
-                m_access_user[i].c_str(),
-                m_ip4[i].c_str(),
+                vmnode.m_username.c_str(),
+                ip4.c_str(),
                 dest);
     }
     if (verbose())
@@ -229,7 +235,9 @@ int Nodes::copy_from_node(int i, const char* src, const char* dest)
         return 1;
     }
     char sys[strlen(src) + strlen(dest) + 1024];
-    if (m_ip4[i] == "127.0.0.1")
+    auto& vmnode = m_vms[i];
+    auto& ip4 = vmnode.m_ip4;
+    if (ip4 == "127.0.0.1")
     {
         sprintf(sys,
                 "cp %s %s",
@@ -247,9 +255,9 @@ int Nodes::copy_from_node(int i, const char* src, const char* dest)
                 "-o ControlPath=./maxscale-test-%%r@%%h:%%p "
                 "-o ControlPersist=yes "
                 "%s@%s:%s %s",
-                m_sshkey[i].c_str(),
-                m_access_user[i].c_str(),
-                m_ip4[i].c_str(),
+                vmnode.m_sshkey.c_str(),
+                vmnode.m_username.c_str(),
+                ip4.c_str(),
                 src,
                 dest);
     }
@@ -272,42 +280,48 @@ int Nodes::read_basic_env()
     N = get_N();
 
     auto prefixc = m_prefix.c_str();
+    m_vms.clear();
+    m_vms.resize(N);
+
+    const char* env_vm_path = getenv("MDBCI_VM_PATH");
+    const char* env_setup_name = getenv("name");
 
     if ((N > 0) && (N < 255))
     {
         for (int i = 0; i < N; i++)
         {
+            VMNode& node = m_vms[i];
             // reading IPs
             sprintf(env_name, "%s_%03d_network", prefixc, i);
-            m_ip4[i] = get_nc_item(env_name);
+            node.m_ip4 = get_nc_item(env_name);
 
             // reading private IPs
             sprintf(env_name, "%s_%03d_private_ip", prefixc, i);
-            auto& priv_ip = m_ip_private[i];
+            auto& priv_ip = node.m_private_ip;
             priv_ip = get_nc_item(env_name);
             if (priv_ip.empty())
             {
-                priv_ip = m_ip4[i];
+                priv_ip = node.m_ip4;
             }
             setenv(env_name, priv_ip.c_str(), 1);
 
             // reading IPv6
             sprintf(env_name, "%s_%03d_network6", prefixc, i);
-            auto& ip6 = m_ip6[i];
+            auto& ip6 = node.m_ip6;
             ip6 = get_nc_item(env_name);
             if (ip6.empty())
             {
-                ip6 = m_ip4[i];
+                ip6 = node.m_ip4;
             }
             setenv(env_name, ip6.c_str(), 1);
 
             //reading sshkey
             sprintf(env_name, "%s_%03d_keyfile", prefixc, i);
-            m_sshkey[i] = get_nc_item(env_name);
+            node.m_sshkey = get_nc_item(env_name);
 
 
             sprintf(env_name, "%s_%03d_whoami", prefixc, i);
-            auto& access_user = m_access_user[i];
+            auto& access_user = node.m_username;
             access_user = get_nc_item(env_name);
             if (access_user.empty())
             {
@@ -316,23 +330,23 @@ int Nodes::read_basic_env()
             setenv(env_name, access_user.c_str(), 1);
 
             sprintf(env_name, "%s_%03d_access_sudo", prefixc, i);
-            m_access_sudo[i] = envvar_get_set(env_name, " sudo ");
+            node.m_sudo = envvar_get_set(env_name, " sudo ");
 
             if (access_user == "root")
             {
-                m_access_homedir[i] = "/root/";
+                node.m_homedir = "/root/";
             }
             else
             {
-                m_access_homedir[i] = mxb::string_printf("/home/%s/", access_user.c_str());
+                node.m_homedir = mxb::string_printf("/home/%s/", access_user.c_str());
             }
 
             sprintf(env_name, "%s_%03d_hostname", prefixc, i);
-            auto& hostname = m_hostname[i];
+            auto& hostname = m_vms[i].m_hostname;
             hostname = get_nc_item(env_name);
             if (hostname.empty())
             {
-                hostname = m_ip_private[i];
+                hostname = node.m_private_ip[i];
             }
             setenv(env_name, hostname.c_str(), 1);
 
@@ -340,17 +354,17 @@ int Nodes::read_basic_env()
             string start_vm_def = mxb::string_printf("curr_dir=`pwd`; "
                                                      "cd %s/%s;vagrant resume %s_%03d ; "
                                                      "cd $curr_dir",
-                                                     getenv("MDBCI_VM_PATH"), getenv("name"), prefixc, i);
-            m_start_vm_command[i] = envvar_get_set(env_name, "%s", start_vm_def.c_str());
-            setenv(env_name, m_start_vm_command[i].c_str(), 1);
+                                                     env_vm_path, env_setup_name, prefixc, i);
+            node.m_start_vm_cmd = envvar_get_set(env_name, "%s", start_vm_def.c_str());
+            setenv(env_name, node.m_start_vm_cmd.c_str(), 1);
 
             sprintf(env_name, "%s_%03d_stop_vm_command", prefixc, i);
             string stop_vm_def = mxb::string_printf("curr_dir=`pwd`; "
                                                     "cd %s/%s;vagrant suspend %s_%03d ; "
                                                     "cd $curr_dir",
-                                                    getenv("MDBCI_VM_PATH"), getenv("name"), prefixc, i);
-            m_stop_vm_command[i] = envvar_get_set(env_name, "%s", stop_vm_def.c_str());
-            setenv(env_name, m_stop_vm_command[i].c_str(), 1);
+                                                    env_vm_path, env_setup_name, prefixc, i);
+            node.m_stop_vm_cmd = envvar_get_set(env_name, "%s", stop_vm_def.c_str());
+            setenv(env_name, node.m_stop_vm_cmd.c_str(), 1);
         }
     }
 
@@ -411,16 +425,6 @@ int Nodes::get_N()
     return n_nodes;
 }
 
-int Nodes::start_vm(int node)
-{
-    return (system(m_start_vm_command[node].c_str()));
-}
-
-int Nodes::stop_vm(int node)
-{
-    return (system(m_stop_vm_command[node].c_str()));
-}
-
 Nodes::SshResult Nodes::ssh_output(const std::string& cmd, int node, bool sudo)
 {
     Nodes::SshResult rval;
@@ -451,37 +455,37 @@ Nodes::SshResult Nodes::ssh_output(const std::string& cmd, int node, bool sudo)
 
 const char* Nodes::ip_private(int i) const
 {
-    return m_ip_private[i].c_str();
+    return m_vms[i].m_private_ip.c_str();
 }
 
 const char* Nodes::ip6(int i) const
 {
-    return m_ip6[i].c_str();
+    return m_vms[i].m_ip6.c_str();
 }
 
 const char* Nodes::hostname(int i) const
 {
-    return m_hostname[i].c_str();
+    return m_vms[i].m_hostname.c_str();
 }
 
 const char* Nodes::access_user(int i) const
 {
-    return m_access_user[i].c_str();
+    return m_vms[i].m_username.c_str();
 }
 
 const char* Nodes::access_homedir(int i) const
 {
-    return m_access_homedir[i].c_str();
+    return m_vms[i].m_homedir.c_str();
 }
 
 const char* Nodes::access_sudo(int i) const
 {
-    return m_access_sudo[i].c_str();
+    return m_vms[i].m_sudo.c_str();
 }
 
 const char* Nodes::sshkey(int i) const
 {
-    return m_sshkey[i].c_str();
+    return m_vms[i].m_sshkey.c_str();
 }
 
 const std::string& Nodes::prefix() const
@@ -491,7 +495,7 @@ const std::string& Nodes::prefix() const
 
 const char* Nodes::ip4(int i) const
 {
-    return m_ip4[i].c_str();
+    return m_vms[i].m_ip4.c_str();
 }
 
 bool Nodes::verbose() const

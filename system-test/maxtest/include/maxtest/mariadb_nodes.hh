@@ -58,6 +58,7 @@ public:
     const char* ip6(int i = 0) const;
     const char* ip_private(int i = 0) const;
     const char* access_homedir(int i = 0) const;
+    const char* access_sudo(int i = 0) const;
 
     const std::string& prefix() const;
 
