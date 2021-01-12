@@ -12,6 +12,10 @@
 
 typedef std::set<std::string> StringSet;
 
+struct SharedData
+{
+    bool verbose {false}; /**< True if printing more details */
+};
 
 class Nodes
 {
@@ -34,10 +38,7 @@ public:
      */
     int N;
 
-    /**
-     * @brief Verbose command output
-     */
-    bool verbose;
+    bool verbose() const;
 
     /**
      * @brief Get IP address
@@ -156,11 +157,10 @@ public:
     int stop_vm(int node);
 
 protected:
-    bool use_ipv6 {false}; /**< Default to ipv6-addresses */
+    bool        use_ipv6 {false}; /**< Default to ipv6-addresses */
+    SharedData& m_shared;
 
-    Nodes(const char* prefix,
-          const std::string& network_config,
-          bool verbose);
+    Nodes(const char* prefix, SharedData& shared, const std::string& network_config);
 
     void init_ssh_masters();
 

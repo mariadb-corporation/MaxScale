@@ -78,9 +78,9 @@ void Mariadb_nodes::require_gtid(bool value)
     g_require_gtid = value;
 }
 
-Mariadb_nodes::Mariadb_nodes(const char* pref, bool verbose, const std::string& network_config,
+Mariadb_nodes::Mariadb_nodes(const char* pref, SharedData& shared, const std::string& network_config,
                              Type type)
-    : Nodes(pref, network_config, verbose)
+    : Nodes(pref, shared, network_config)
     , no_set_pos(false)
     , v51(false)
     , m_type(type)
@@ -104,8 +104,8 @@ Mariadb_nodes::Mariadb_nodes(const char* pref, bool verbose, const std::string& 
     }
 }
 
-Mariadb_nodes::Mariadb_nodes(bool verbose, const string& network_config)
-    : Mariadb_nodes("node", verbose, network_config, Type::MARIADB)
+Mariadb_nodes::Mariadb_nodes(SharedData& shared, const string& network_config)
+    : Mariadb_nodes("node", shared, network_config, Type::MARIADB)
 {
 }
 
@@ -498,7 +498,7 @@ int Mariadb_nodes::start_replication()
 
 int Galera_nodes::start_galera()
 {
-    bool old_verbose = verbose;
+    bool old_verbose = verbose();
     int local_result = 0;
     local_result += stop_nodes();
 
@@ -542,7 +542,7 @@ int Galera_nodes::start_galera()
         {
             cout << "Failed to start node" << i << endl;
             cout << "---------- BEGIN LOGS ----------" << endl;
-            verbose = true;
+            m_shared.verbose = true;
             ssh_node_f(0, true, "sudo journalctl -u mariadb | tail -n 50");
             cout << "----------- END LOGS -----------" << endl;
         }
@@ -559,7 +559,7 @@ int Galera_nodes::start_galera()
     local_result += execute_query(nodes[0], "%s", create_repl_user);
 
     close_connections();
-    verbose = old_verbose;
+    m_shared.verbose = old_verbose;
     return local_result;
 }
 
@@ -751,7 +751,7 @@ bool Mariadb_nodes::bad_slave_thread_status(MYSQL* conn, const char* field, int 
             break;
         }
 
-        if (verbose)
+        if (verbose())
         {
             printf("Node %d: field %s is %s\n", node, field, str);
         }
@@ -767,7 +767,7 @@ bool Mariadb_nodes::bad_slave_thread_status(MYSQL* conn, const char* field, int 
 
     if (strcmp(str, "Yes") != 0)
     {
-        if (verbose)
+        if (verbose())
         {
             printf("Node %d: %s is '%s'\n", node, field, str);
         }
@@ -846,6 +846,7 @@ int Mariadb_nodes::check_replication()
     int master = 0;
     int res = 0;
 
+    const bool verbose = this->verbose();
     if (verbose)
     {
         printf("Checking Master/Slave setup\n");
@@ -976,7 +977,7 @@ int Galera_nodes::check_galera()
 {
     int res = 1;
 
-    if (verbose)
+    if (verbose())
     {
         printf("Checking Galera\n");
         fflush(stdout);
@@ -1024,7 +1025,7 @@ int Mariadb_nodes::set_slave(MYSQL* conn, const char* master_host, int master_po
         sprintf(str, setup_slave_no_pos, master_host, master_port);
     }
 
-    if (this->verbose)
+    if (verbose())
     {
         printf("Setup slave SQL: %s\n", str);
     }
@@ -1226,7 +1227,7 @@ int Mariadb_nodes::get_version(int i)
         version_major[i][4] = 0;
     }
 
-    if (verbose)
+    if (verbose())
     {
         printf("Node %s%d: %s\t %s \t %s\n",
                prefix().c_str(), i, version[i], version_number[i], version_major[i]);
@@ -1577,7 +1578,7 @@ void Mariadb_nodes::replicate_from(int slave, const std::string& host, uint16_t 
                   << "', MASTER_PORT = " << port << ", MASTER_USE_GTID = "
                   << type << ", MASTER_USER='repl', MASTER_PASSWORD='repl';";
 
-    if (verbose)
+    if (verbose())
     {
         std::cout << "Server " << slave + 1
                   << " starting to replicate from server " << master + 1 << std::endl;

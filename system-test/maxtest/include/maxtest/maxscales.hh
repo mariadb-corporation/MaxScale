@@ -26,7 +26,7 @@ public:
         READCONN_SLAVE
     };
 
-    Maxscales(bool verbose, const std::string& network_config);
+    Maxscales(SharedData& shared, const std::string& network_config);
 
     ~Maxscales();
 

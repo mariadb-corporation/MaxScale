@@ -15,8 +15,8 @@
 
 using std::string;
 
-Maxscales::Maxscales(bool verbose, const std::string& network_config)
-    : Nodes("maxscale", network_config, verbose)
+Maxscales::Maxscales(SharedData& shared, const std::string& network_config)
+    : Nodes("maxscale", shared, network_config)
     , valgring_log_num(0)
 {
 }
@@ -108,7 +108,7 @@ int Maxscales::connect_rwsplit(int m, const std::string& db)
 
     if (my_errno)
     {
-        if (verbose)
+        if (verbose())
         {
             printf("Failed to connect to readwritesplit: %d, %s\n", my_errno, mysql_error(conn_rwsplit[m]));
         }
@@ -130,7 +130,7 @@ int Maxscales::connect_readconn_master(int m, const std::string& db)
 
     if (my_errno)
     {
-        if (verbose)
+        if (verbose())
         {
             printf("Failed to connect to readwritesplit: %d, %s\n", my_errno, mysql_error(conn_master[m]));
         }
@@ -152,7 +152,7 @@ int Maxscales::connect_readconn_slave(int m, const std::string& db)
 
     if (my_errno)
     {
-        if (verbose)
+        if (verbose())
         {
             printf("Failed to connect to readwritesplit: %d, %s\n", my_errno, mysql_error(conn_slave[m]));
         }

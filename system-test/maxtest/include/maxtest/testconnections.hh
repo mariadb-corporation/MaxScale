@@ -111,11 +111,6 @@ public:
     int copy_mariadb_logs(Mariadb_nodes* nrepl, const char* prefix, std::vector<std::thread>& threads);
 
     /**
-     * @brief verbose if true more printing activated
-     */
-    static bool verbose;
-
-    /**
      * @brief smoke if true all tests are executed in quick mode
      */
     bool smoke {true};
@@ -567,6 +562,8 @@ public:
 
     std::string get_mdbci_config_name() {return m_mdbci_config_name;}
 
+    void set_verbose(bool val);
+    bool verbose() const;
 
 private:
     void copy_one_mariadb_log(Mariadb_nodes* nrepl, int i, std::string filename);
@@ -580,6 +577,8 @@ private:
 
     std::unique_ptr<mxt::MaxScale>   m_maxscale; /**< Main MaxScale instance */
     std::unique_ptr<TestLogger> m_logger;   /**< Error log container */
+
+    SharedData m_shared;    /**< Data shared with other objects */
 
     std::vector<std::function<void(void)>> m_on_destroy;
 

@@ -27,8 +27,8 @@ class Xpand_nodes : public Mariadb_nodes
 {
 public:
 
-    Xpand_nodes(bool verbose, std::string network_config)
-        : Mariadb_nodes("xpand", verbose, network_config, Type::XPAND)
+    Xpand_nodes(SharedData& shared, std::string network_config)
+        : Mariadb_nodes("xpand", shared, network_config, Type::XPAND)
     {
     }
 
