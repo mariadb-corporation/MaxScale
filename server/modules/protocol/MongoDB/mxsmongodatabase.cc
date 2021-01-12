@@ -49,6 +49,14 @@ public:
         return nullptr;
     }
 
+    GWBUF* create_empty_response()
+    {
+        auto builder = bsoncxx::builder::stream::document{};
+        bsoncxx::document::value doc_value = builder << bsoncxx::builder::stream::finalize;
+
+        return create_response(doc_value);
+    }
+
 protected:
     void free_request()
     {
@@ -144,14 +152,6 @@ protected:
         }
 
         return rv;
-    }
-
-    GWBUF* create_empty_response()
-    {
-        auto builder = bsoncxx::builder::stream::document{};
-        bsoncxx::document::value doc_value = builder << bsoncxx::builder::stream::finalize;
-
-        return create_response(doc_value);
     }
 
     GWBUF* translate_resultset(GWBUF& mariadb_response)
@@ -576,7 +576,17 @@ GWBUF* mxsmongo::Database::execute(mxsmongo::Command cid,
 
     auto sCommand = it->second(this, pRequest, req, doc);
 
-    pResponse = sCommand->execute();
+    try
+    {
+        pResponse = sCommand->execute();
+    }
+    catch (const std::exception& x)
+    {
+        MXS_ERROR("Exeception occurred when parsing MongoDB command: %s", x.what());
+        mxb_assert(!true);
+
+        pResponse = sCommand->create_empty_response();
+    }
 
     if (!pResponse)
     {
