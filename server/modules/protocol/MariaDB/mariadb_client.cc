@@ -518,9 +518,12 @@ MariaDBClientConnection::process_authentication(AuthType auth_type)
                 else
                 {
                     // Should not get client data (or read events) before users have actually been updated.
+                    // This can happen if client hangs up while MaxScale is waiting for the update.
                     MXB_ERROR("Client %s sent data when waiting for user account update. Closing session.",
                               m_session->user_and_host().c_str());
                     send_misc_error("Unexpected client event");
+                    // Unmark because auth state is modified.
+                    m_session->service->unmark_for_wakeup(this);
                     m_auth_state = AuthState::FAIL;
                 }
             }

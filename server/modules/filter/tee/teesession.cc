@@ -57,7 +57,7 @@ TeeSession* TeeSession::create(Tee* my_instance, MXS_SESSION* session, SERVICE* 
 
 TeeSession::~TeeSession()
 {
-    delete m_client;
+    m_client->self_destruct();
 }
 
 int TeeSession::routeQuery(GWBUF* queue)

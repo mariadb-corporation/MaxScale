@@ -930,6 +930,10 @@ add_test_executable(mxs3108_alter_session.cc mxs3108_alter_session mxs3108_alter
 # MXS-3339: Hang with COM_STMT_CLOSE in sescmd history
 add_test_executable(mxs3339_stmt_close_hang.cc mxs3339_stmt_close_hang mxs3339_stmt_close_hang LABELS REPL_BACKEND readwritesplit)
 
+# MXS-3353: Tee filter loses queries
+# Also covers MXS-3365: Missing match setting in filter(s) results in no match at all
+add_test_executable(mxs3353_tee_lost_inserts.cc mxs3353_tee_lost_inserts mxs3353_tee_lost_inserts LABELS REPL_BACKEND readwritesplit)
+
 ############################################
 # END: Normal tests                        #
 ############################################
