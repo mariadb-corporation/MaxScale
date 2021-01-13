@@ -163,11 +163,6 @@ public:
      */
 
     /**
-     * @brief make_snapshot_command Command line to create a snapshot of all VMs
-     */
-    const char* take_snapshot_command;
-
-    /**
      * @brief revert_snapshot_command Command line to revert a snapshot of all VMs
      */
     const char* revert_snapshot_command;
@@ -500,12 +495,6 @@ public:
     void reset_server_settings();
     // Same but for an individual server
     void reset_server_settings(int node);
-
-    /**
-     * @brief revert_nodes_snapshot Execute MDBCI snapshot revert command for all nodes
-     * @return true in case of success
-     */
-    bool revert_nodes_snapshot();
 
     /**
      * @brief prepare_server Initialize MariaDB setup (run mysql_install_db) and create test users

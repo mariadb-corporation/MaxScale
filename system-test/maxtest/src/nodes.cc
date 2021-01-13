@@ -283,9 +283,6 @@ int Nodes::read_basic_env()
     m_vms.clear();
     m_vms.resize(N);
 
-    const char* env_vm_path = getenv("MDBCI_VM_PATH");
-    const char* env_setup_name = getenv("name");
-
     if ((N > 0) && (N < 255))
     {
         for (int i = 0; i < N; i++)
@@ -349,22 +346,6 @@ int Nodes::read_basic_env()
                 hostname = node.m_private_ip[i];
             }
             setenv(env_name, hostname.c_str(), 1);
-
-            sprintf(env_name, "%s_%03d_start_vm_command", prefixc, i);
-            string start_vm_def = mxb::string_printf("curr_dir=`pwd`; "
-                                                     "cd %s/%s;vagrant resume %s_%03d ; "
-                                                     "cd $curr_dir",
-                                                     env_vm_path, env_setup_name, prefixc, i);
-            node.m_start_vm_cmd = envvar_get_set(env_name, "%s", start_vm_def.c_str());
-            setenv(env_name, node.m_start_vm_cmd.c_str(), 1);
-
-            sprintf(env_name, "%s_%03d_stop_vm_command", prefixc, i);
-            string stop_vm_def = mxb::string_printf("curr_dir=`pwd`; "
-                                                    "cd %s/%s;vagrant suspend %s_%03d ; "
-                                                    "cd $curr_dir",
-                                                    env_vm_path, env_setup_name, prefixc, i);
-            node.m_stop_vm_cmd = envvar_get_set(env_name, "%s", stop_vm_def.c_str());
-            setenv(env_name, node.m_stop_vm_cmd.c_str(), 1);
         }
     }
 

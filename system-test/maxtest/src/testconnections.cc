@@ -422,7 +422,7 @@ void TestConnections::read_env()
 
     ssl = readenv_bool("ssl", true);
 
-    if (readenv_bool("mysql51_only", false) || readenv_bool("no_nodes_check", false))
+    if (readenv_bool("no_nodes_check", false))
     {
         maxscale::check_nodes = false;
     }
@@ -438,13 +438,6 @@ void TestConnections::read_env()
     backend_ssl = readenv_bool("backend_ssl", false);
     smoke = readenv_bool("smoke", true);
     m_threads = readenv_int("threads", 4);
-    m_use_snapshots = readenv_bool("use_snapshots", false);
-    m_take_snapshot_command = envvar_get_set(
-        "take_snapshot_command", "mdbci snapshot take --path-to-nodes %s --snapshot-name ",
-        m_mdbci_config_name.c_str());
-    m_revert_snapshot_command = envvar_get_set(
-        "revert_snapshot_command", "mdbci snapshot revert --path-to-nodes %s --snapshot-name ",
-        m_mdbci_config_name.c_str());
     no_vm_revert = readenv_bool("no_vm_revert", true);
     m_maxscale_product = readenv("maxscale_product", "maxscale_ci");
 }
@@ -592,10 +585,6 @@ void TestConnections::process_template(int m, const string& cnf_template_path, c
     sprintf(str, "sed -i \"s|###access_homedir###|%s|g\" maxscale.cnf", maxscales->access_homedir(m));
     system(str);
 
-    if (repl && repl->v51)
-    {
-        system("sed -i \"s/###repl51###/mysql51_replication=true/g\" maxscale.cnf");
-    }
     maxscales->copy_to_node_legacy((char*) "maxscale.cnf", (char*) dest, m);
 }
 
@@ -1874,20 +1863,6 @@ void TestConnections::check_current_persistent_connections(int m, const std::str
            res.output.c_str(), value, name.c_str());
 }
 
-int TestConnections::take_snapshot(char* snapshot_name)
-{
-    char str[m_take_snapshot_command.length() + strlen(snapshot_name) + 2];
-    sprintf(str, "%s %s", m_take_snapshot_command.c_str(), snapshot_name);
-    return call_system(str);
-}
-
-int TestConnections::revert_snapshot(char* snapshot_name)
-{
-    char str[m_revert_snapshot_command.length() + strlen(snapshot_name) + 2];
-    sprintf(str, "%s %s", m_revert_snapshot_command.c_str(), snapshot_name);
-    return call_system(str);
-}
-
 bool TestConnections::test_bad_config(int m, const string& config)
 {
     process_template(m, config, "/tmp/");
@@ -2243,8 +2218,6 @@ bool TestConnections::initialize_nodes()
         repl->setup();
         repl->set_use_ipv6(m_use_ipv6);
         repl->ssl = backend_ssl;
-        repl->take_snapshot_command = m_take_snapshot_command.c_str();
-        repl->revert_snapshot_command = m_revert_snapshot_command.c_str();
         repl_future = std::async(std::launch::async, &Mariadb_nodes::check_nodes, repl);
     }
     else
@@ -2258,8 +2231,6 @@ bool TestConnections::initialize_nodes()
         galera->setup();
         galera->set_use_ipv6(false);
         galera->ssl = backend_ssl;
-        galera->take_snapshot_command = m_take_snapshot_command.c_str();
-        galera->revert_snapshot_command = m_revert_snapshot_command.c_str();
         galera_future = std::async(std::launch::async, &Galera_nodes::check_nodes, galera);
     }
     else
@@ -2273,8 +2244,6 @@ bool TestConnections::initialize_nodes()
         xpand->setup();
         xpand->set_use_ipv6(false);
         xpand->ssl = backend_ssl;
-        xpand->take_snapshot_command = m_take_snapshot_command.c_str();
-        xpand->revert_snapshot_command = m_revert_snapshot_command.c_str();
         xpand->fix_replication();
     }
     else

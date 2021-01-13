@@ -957,22 +957,6 @@ bool Mariadb_nodes::fix_replication()
     return rval;
 }
 
-bool Mariadb_nodes::revert_nodes_snapshot()
-{
-    char str[1024];
-    bool rval = true;
-    for (int i = 0; i < N; i++)
-    {
-        sprintf(str, "%s clean --node-name %s_%03d", revert_snapshot_command, prefix().c_str(), i);
-        if (system(str))
-        {
-            rval = false;
-        }
-        ssh_node_f(i, true, "pkill -9 mysqld");
-    }
-    return rval;
-}
-
 int Galera_nodes::check_galera()
 {
     int res = 1;

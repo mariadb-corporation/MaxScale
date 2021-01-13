@@ -132,9 +132,6 @@ private:
         std::string m_homedir;  /**< Home directory of username */
         std::string m_sudo;     /**< empty or "sudo " */
         std::string m_sshkey;   /**< Path to ssh key */
-
-        std::string m_start_vm_cmd;     /**< Command to resume VM */
-        std::string m_stop_vm_cmd;      /**< Command to suspend VM */
     };
 
     std::string m_prefix;                   /**< Name of backend setup (e.g. 'repl' or 'galera') */
