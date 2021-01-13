@@ -12,6 +12,7 @@
  */
 
 #include "mxsmongodatabase.hh"
+#include <bsoncxx/builder/basic/array.hpp>
 #include <bsoncxx/builder/basic/document.hpp>
 #include <bsoncxx/builder/stream/document.hpp>
 #include <maxscale/modutil.hh>
@@ -437,6 +438,149 @@ public:
     }
 };
 
+// https://docs.mongodb.com/manual/reference/command/insert/
+class Insert : public mxsmongo::Database::Command
+{
+public:
+    using mxsmongo::Database::Command::Command;
+
+    GWBUF* execute() override
+    {
+        stringstream sql;
+        sql << "INSERT INTO ";
+
+        auto insert = m_doc[mxsmongo::keys::INSERT];
+        auto utf8 = insert.get_utf8();
+
+        string table(utf8.value.data(), utf8.value.size());
+
+        sql << "`" << m_database.name() << "`.`" << table << "`";
+        sql << "(id, doc) VALUES ";
+
+        set<bsoncxx::stdx::string_view> ids;
+        auto docs = static_cast<bsoncxx::array::view>(m_doc[mxsmongo::keys::DOCUMENTS].get_array());
+
+        bool first = true;
+        for (auto element : docs)
+        {
+            ++m_nDocuments;
+
+            if (first)
+            {
+                first = false;
+            }
+            else
+            {
+                sql << ", ";
+            }
+
+            sql << "(";
+
+            auto doc = static_cast<bsoncxx::document::view>(element.get_document());
+            auto id = get_id(doc["_id"]);
+
+            sql << "'" << id << "'";
+            sql << ", '";
+            sql << bsoncxx::to_json(doc);
+            sql << "'";
+
+            sql << ")";
+        }
+
+        MXS_NOTICE("SQL: %s", sql.str().c_str());
+
+        GWBUF* pRequest = modutil_create_query(sql.str().c_str());
+
+        m_database.context().downstream().routeQuery(pRequest);
+
+        return nullptr;
+    }
+
+    GWBUF* translate(GWBUF& mariadb_response) override
+    {
+        // TODO: Update will be needed when DEPRECATE_EOF it turned on.
+        GWBUF* pResponse = nullptr;
+
+        bsoncxx::builder::basic::document builder;
+
+        ComResponse response(GWBUF_DATA(&mariadb_response));
+
+        int32_t ok = response.is_ok() ? 1 : 0;
+        int64_t n = response.is_ok() ? m_nDocuments : 0;
+
+        builder.append(bsoncxx::builder::basic::kvp("ok", ok));
+        builder.append(bsoncxx::builder::basic::kvp("n", n));
+
+        switch (response.type())
+        {
+        case ComResponse::ERR_PACKET:
+            {
+                MXS_WARNING("Mongo request to backend failed: (%d), %s",
+                            mxs_mysql_get_mysql_errno(&mariadb_response),
+                            mxs::extract_error(&mariadb_response).c_str());
+
+                ComERR err(response);
+
+                bsoncxx::builder::basic::document mariadb_builder;
+
+                mariadb_builder.append(bsoncxx::builder::basic::kvp("code", err.code()));
+                mariadb_builder.append(bsoncxx::builder::basic::kvp("state", err.state()));
+                mariadb_builder.append(bsoncxx::builder::basic::kvp("message", err.message()));
+
+                builder.append(bsoncxx::builder::basic::kvp("mariadb", mariadb_builder.extract()));
+
+                // TODO: Map MariaDB errors to something sensible from
+                // TODO: https://github.com/mongodb/mongo/blob/master/src/mongo/base/error_codes.yml
+
+                bsoncxx::builder::basic::array array_builder;
+
+                for (int64_t i = 0; i < m_nDocuments; ++i)
+                {
+                    bsoncxx::builder::basic::document error_builder;
+
+                    error_builder.append(bsoncxx::builder::basic::kvp("index", i));
+                    error_builder.append(bsoncxx::builder::basic::kvp("code", 125)); // Command failed.
+                    error_builder.append(bsoncxx::builder::basic::kvp("errmsg", err.message()));
+
+                    array_builder.append(error_builder.extract());
+                }
+
+                builder.append(bsoncxx::builder::basic::kvp("writeErrors", array_builder.extract()));
+            }
+            break;
+
+        case ComResponse::LOCAL_INFILE_PACKET:
+        default:
+            mxb_assert(!true);
+        }
+
+        auto doc = builder.extract();
+
+        MXS_NOTICE("RESPONSE: %s", bsoncxx::to_json(doc).c_str());
+
+        pResponse = create_response(doc);
+
+        return pResponse;
+    }
+
+private:
+    string get_id(const bsoncxx::document::element& element)
+    {
+        string id;
+
+        if (element)
+        {
+            auto oid = element.get_oid().value;
+
+            id = oid.to_string();
+        }
+
+        return id;
+    }
+
+    int64_t m_nDocuments { 0 };
+};
+
 class IsMaster : public mxsmongo::Database::Command
 {
 public:
@@ -505,6 +649,7 @@ struct ThisUnit
     creators_by_command =
     {
         { mxsmongo::Command::FIND,     &command::create<command::Find> },
+        { mxsmongo::Command::INSERT,   &command::create<command::Insert> },
         { mxsmongo::Command::ISMASTER, &command::create<command::IsMaster> },
         { mxsmongo::Command::UNKNOWN,  &command::create<command::Unknown> }
     };

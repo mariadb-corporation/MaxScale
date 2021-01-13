@@ -125,8 +125,10 @@ const char* opcode_to_string(int code);
 namespace keys
 {
 
+const char DOCUMENTS[]  = "documents";
 const char FILTER[]     = "filter";
 const char FIND[]       = "find";
+const char INSERT[]     = "insert";
 const char ISMASTER[]   = "ismaster";
 const char LIMIT[]      = "limit";
 const char PROJECTION[] = "projection";
@@ -140,6 +142,7 @@ enum class Command
     UNKNOWN,
 
     FIND,
+    INSERT,
     ISMASTER,
 };
 

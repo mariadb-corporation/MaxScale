@@ -31,3 +31,26 @@ Note that all MongoDB applications connecting to the MongoDB listener
 port will use the same credentials when the MariaDB database is accessed;
 in that respect it is not possible to distinguish one MongoDB application
 from another.
+
+## Commands
+
+The following lists all MongoDB commands that are supported.
+
+### Insert - https://docs.mongodb.com/manual/reference/command/insert
+
+The following fields are acted upon.
+
+Field | Type | Description
+--------------------------
+insert| string | The name of the target table.
+documents | array | An array of one or more documents to insert to the table.
+
+All other fields are ignored.
+
+The assumption is that there exists a table with the specified name and that
+it has two columns; `id` of type `TEXT` and `doc` of type `JSON`.
+From each document the _id_ is extracted, whereafter the id and the document
+converted to JSON are inserted to the table.
+
+Currently all documents are inserted using a single statement, so either all
+documents will be inserted or none will be.
