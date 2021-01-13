@@ -718,6 +718,52 @@ private:
     uint16_t m_status;
 };
 
+class ComERR : public ComResponse
+{
+public:
+    ComERR(GWBUF* pPacket)
+        : ComResponse(pPacket)
+    {
+        mxb_assert(m_type == ERR_PACKET);
+
+        extract_payload();
+    }
+
+    ComERR(const ComResponse& response)
+        : ComResponse(response)
+    {
+        mxb_assert(m_type == ERR_PACKET);
+
+        extract_payload();
+    }
+
+    uint16_t code() const
+    {
+        return m_error_code;
+    }
+
+    std::string state() const
+    {
+        return std::string(m_pData, m_pData + 5);
+    }
+
+    std::string message() const
+    {
+        return std::string(m_pData + 5, m_pBuffer + m_nBuffer);
+    }
+
+private:
+    void extract_payload()
+    {
+        m_error_code = *m_pData++;
+        m_error_code += (*m_pData++ << 8);
+
+        ++m_pData; // Bypass the state marker.
+    }
+
+    uint16_t m_error_code;
+};
+
 class ComOK : public ComResponse
 {
 public:
