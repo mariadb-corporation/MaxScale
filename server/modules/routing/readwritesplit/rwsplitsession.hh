@@ -345,7 +345,8 @@ private:
                 // Not currently doing anything or we're processing a multi-packet query
                 can_route = true;
             }
-            else if (res.route_target == TARGET_MASTER
+            else if (route_info().stmt_id() != MARIADB_PS_DIRECT_EXEC_ID
+                     && res.route_target == TARGET_MASTER
                      && m_prev_plan.route_target == TARGET_MASTER
                      && res.type == m_prev_plan.type
                      && res.target == m_prev_plan.target

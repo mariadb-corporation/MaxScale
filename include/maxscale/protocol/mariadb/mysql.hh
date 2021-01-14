@@ -60,6 +60,9 @@
 #define MYSQL_PS_WARN_OFFSET   MYSQL_HEADER_LEN + 10
 #define MYSQL_PS_WARN_SIZE     2
 
+/** The statement ID used by binary protocol commands that refer to the latest prepared statement */
+#define MARIADB_PS_DIRECT_EXEC_ID 0xffffffff
+
 /** Name of the default server side authentication plugin */
 #define DEFAULT_MYSQL_AUTH_PLUGIN "mysql_native_password"
 

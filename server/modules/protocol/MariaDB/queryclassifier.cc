@@ -263,7 +263,7 @@ public:
         {
             rval = &it->second;
         }
-        else
+        else if (id != MARIADB_PS_DIRECT_EXEC_ID)
         {
             MXS_WARNING("Using unknown prepared statement with ID %u", id);
         }
@@ -592,17 +592,18 @@ uint32_t QueryClassifier::ps_id_internal_get(GWBUF* pBuffer)
     // All COM_STMT type statements store the ID in the same place
     uint32_t external_id = mysql_extract_ps_id(pBuffer);
 
-    if (external_id == 0xffffffff)
-    {
-        // "Direct execution" that refers to the latest prepared statement
-        external_id = m_prev_ps_id;
-    }
-
-    auto it = m_ps_handles.find(external_id);
+    // MARIADB_PS_DIRECT_EXEC_ID is a special ID that refers to the previous prepared statement
+    uint32_t id = external_id == MARIADB_PS_DIRECT_EXEC_ID ? m_prev_ps_id : external_id;
+    auto it = m_ps_handles.find(id);
 
     if (it != m_ps_handles.end())
     {
         internal_id = it->second;
+    }
+    else if (external_id == MARIADB_PS_DIRECT_EXEC_ID)
+    {
+        // We don't know the ID at this point, pass it along so that we know it's direct execution
+        internal_id = external_id;
     }
     else
     {
