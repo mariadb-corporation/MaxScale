@@ -1664,19 +1664,22 @@ remaining connected to the back end server. If the number of DCBs in the pool
 has reached the value given by `persistpoolmax` then any further DCB that is
 discarded will not be retained, but disconnected and discarded.
 
+When a MariaDB protocol connection is taken from the pool, the state of the
+session is reset. This means that a pooled connection works exactly like a fresh
+connection.
+
 ### `persistmaxtime`
 
-The `persistmaxtime` parameter defaults to zero but can be set to a duration
-as documented [here](#durations). If no explicit unit is provided, the value
-is interpreted as seconds in MaxScale 2.4. In subsequent versions a value
-without a unit may be rejected. Note that since the granularity of the
-parameter is seconds, a value specified in milliseconds will be rejected,
-even if the duration is longer than a second.
+The `persistmaxtime` parameter defaults to zero but can be set to a duration as
+documented [here](#durations). If no explicit unit is provided, the value is
+interpreted as seconds in MaxScale 2.4. In subsequent versions a value without a
+unit may be rejected. Note that since the granularity of the parameter is
+seconds, a value specified in milliseconds will be rejected, even if the
+duration is longer than a second.
 
-A DCB placed in the persistent pool for a
-server will only be reused if the elapsed time since it joined the pool is less
-than the given value. Otherwise, the DCB will be discarded and the connection
-closed.
+A DCB placed in the persistent pool for a server will only be reused if the
+elapsed time since it joined the pool is less than the given value. Otherwise,
+the DCB will be discarded and the connection closed.
 
 For more information about persistent connections, please read the
 [Administration Tutorial](../Tutorials/Administration-Tutorial.md).

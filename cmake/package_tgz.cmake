@@ -25,6 +25,7 @@ install(FILES ${CMAKE_BINARY_DIR}/.cmake-tgz-workaround DESTINATION var/lib/maxs
 install(FILES ${CMAKE_BINARY_DIR}/.cmake-tgz-workaround DESTINATION var/lib/maxscale/maxscale.cnf.d)
 install(FILES ${CMAKE_BINARY_DIR}/.cmake-tgz-workaround DESTINATION etc/maxscale.modules.d)
 install(FILES ${CMAKE_BINARY_DIR}/.cmake-tgz-workaround DESTINATION var/lib/plugin)
+install(FILES ${CMAKE_BINARY_DIR}/.cmake-tgz-workaround DESTINATION ${DEFAULT_CONNECTOR_PLUGIN_SUBPATH})
 
 if(DISTRIB_SUFFIX)
   set(CPACK_PACKAGE_FILE_NAME "maxscale-${MAXSCALE_VERSION}.${DISTRIB_SUFFIX}")

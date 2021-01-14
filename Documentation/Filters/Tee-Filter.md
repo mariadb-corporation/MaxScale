@@ -39,7 +39,8 @@ statements to and accepts a number of optional parameters.
 ### `target`
 
 The target where the filter will duplicate all queries. The target can be either
-a service or a server.
+a service or a server. The duplicate connection that is created to this target
+will be referred to as the "branch target" in this document.
 
 ### `service`
 
@@ -77,6 +78,18 @@ sessions that are connected using this username are replicated.
 ```
 user=john
 ```
+
+## Limitations
+
+- All statements that are executed on the branch target are done in an
+  asynchronous manner. This means that when the client receives the response
+  there is no guarantee that the statement has completed on the branch target.
+
+- Any errors on the branch target will cause the connection to it to be
+  closed. If `target` is a service, it is up to the router to decide whether the
+  connection is closed. For direct connections to servers, any network errors
+  cause the connection to be closed. When the connection is closed, no new
+  queries will be routed to the branch target.
 
 ## Module commands
 

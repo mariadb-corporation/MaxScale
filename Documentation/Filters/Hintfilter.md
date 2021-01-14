@@ -2,6 +2,8 @@
 
 This filter adds routing hints to a service. The filter has no parameters.
 
+[TOC]
+
 ## Limitations
 
 The hintfilter does not support routing hints in prepared statements
@@ -46,23 +48,56 @@ server.
 -- maxscale route to [master | slave | server <server name>]
 ```
 
+#### Route to master
+
+```
+-- maxscale route to master
+```
+
 A `master` value in a routing hint will route the query to a master server. This
 can be used to direct read queries to a master server for a up-to-date result
-with no replication lag. A `slave` value will route the query to a slave
-server. A `server` value will route the query to a named server. The value of
-_<server name>_ needs to be the same as the server section name in maxscale.cnf.
+with no replication lag.
 
-### Name-value hints
+#### Route to slave
 
-These control the behavior and affect the routing decisions made by the router.
+```
+-- maxscale route to slave
+```
+
+A `slave` value will route the query to a slave server. Please note that the
+hints will override any decisions taken by the routers which means that it is
+possible to force writes to a slave server.
+
+#### Route to named server
+
+```
+-- maxsacle route to server <server name>
+```
+
+A `server` value will route the query to a named server. The value of
+`<server name>` needs to be the same as the server section name in
+maxscale.cnf. If the server is not used by the service, the hint is ignored.
+
+#### Route to last used server
+
+```
+-- maxscale route to last
+```
+
+A `last` value will route the query to the server that processed the last
+query. This hint can be used to force certain queries to be grouped to the same
+server.
+
+#### Name-value hints
 
 ```
 -- maxscale <param>=<value>
 ```
 
-Currently the only accepted parameter is `max_slave_replication_lag`. This will
-route the query to a server with lower replication lag then what is defined in
-the hint value.
+These control the behavior and affect the routing decisions made by the
+router. Currently the only accepted parameter is the readwritesplit parameter
+`max_slave_replication_lag`. This will route the query to a server with a lower
+replication lag than this parameter's value.
 
 ## Hint stack
 

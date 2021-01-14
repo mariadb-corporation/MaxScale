@@ -82,6 +82,8 @@ endif()
 find_program(RPMBUILD rpmbuild)
 find_program(DEBBUILD dpkg-buildpackage)
 
+option(TARBALL "Build a tarball package" OFF)
+
 if(TARBALL)
   include(cmake/package_tgz.cmake)
 
