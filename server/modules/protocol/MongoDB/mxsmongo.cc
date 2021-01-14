@@ -28,6 +28,7 @@ struct ThisUnit
 {
     const map<const char*, mxsmongo::Command> commands_by_key =
     {
+        { mxsmongo::keys::DELETE,    mxsmongo::Command::DELETE },
         { mxsmongo::keys::FIND,      mxsmongo::Command::FIND },
         { mxsmongo::keys::INSERT,    mxsmongo::Command::INSERT },
         { mxsmongo::keys::ISMASTER,  mxsmongo::Command::ISMASTER }

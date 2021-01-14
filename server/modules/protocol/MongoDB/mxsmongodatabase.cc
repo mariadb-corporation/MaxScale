@@ -291,6 +291,155 @@ namespace
 namespace command
 {
 
+// https://docs.mongodb.com/manual/reference/command/delete/
+class Delete : public mxsmongo::Database::Command
+{
+public:
+    using mxsmongo::Database::Command::Command;
+
+    GWBUF* execute() override
+    {
+        stringstream sql;
+        sql << "DELETE FROM ";
+
+        auto table = m_doc[mxsmongo::keys::DELETE].get_utf8().value;
+
+        sql << "`" << m_database.name() << "`.`" << string(table.data(), table.size())  << "`";
+
+        auto docs = static_cast<bsoncxx::array::view>(m_doc[mxsmongo::keys::DELETES].get_array());
+
+        size_t nDocs = 0;
+        for (auto element : docs)
+        {
+            ++nDocs;
+
+            if (nDocs > 1)
+            {
+                break;
+            }
+
+            auto doc = static_cast<bsoncxx::document::view>(element.get_document());
+
+            auto q = static_cast<bsoncxx::document::view>(doc["q"].get_document());
+
+            // TODO: Convert q.
+            mxb_assert(q.empty());
+
+            auto limit = doc["limit"];
+
+            if (limit)
+            {
+                sql << " LIMIT ";
+
+                switch (limit.type())
+                {
+                case bsoncxx::type::k_int32:
+                    sql << static_cast<int32_t>(limit.get_int32());
+                    break;
+
+                case bsoncxx::type::k_int64:
+                    sql << static_cast<int64_t>(limit.get_int64());
+                    break;
+
+                default:
+                    mxb_assert(!true);
+                    sql << 0;
+                }
+            }
+        }
+
+        if (nDocs > 1)
+        {
+            // TODO: Since the limit is part of the query object, a Mongo DELETE command
+            // TODO: having more delete documents than one, must be handled as individual
+            // TODO: DELETE statements.
+            mxb_assert(!true);
+        }
+
+        MXS_NOTICE("SQL: %s", sql.str().c_str());
+
+        GWBUF* pRequest = modutil_create_query(sql.str().c_str());
+
+        m_database.context().downstream().routeQuery(pRequest);
+
+        return nullptr;
+    }
+
+    GWBUF* translate(GWBUF& mariadb_response) override
+    {
+        // TODO: Update will be needed when DEPRECATE_EOF it turned on.
+        GWBUF* pResponse = nullptr;
+
+        bsoncxx::builder::basic::document builder;
+
+        ComResponse response(GWBUF_DATA(&mariadb_response));
+
+        int32_t ok = response.is_ok() ? 1 : 0;
+        int64_t n = 0;
+
+        builder.append(bsoncxx::builder::basic::kvp("ok", ok));
+
+        switch (response.type())
+        {
+        case ComResponse::OK_PACKET:
+            {
+                n = ComOK(response).affected_rows();
+            }
+            break;
+
+        case ComResponse::ERR_PACKET:
+            {
+                MXS_WARNING("Mongo request to backend failed: (%d), %s",
+                            mxs_mysql_get_mysql_errno(&mariadb_response),
+                            mxs::extract_error(&mariadb_response).c_str());
+
+                ComERR err(response);
+
+                bsoncxx::builder::basic::document mariadb_builder;
+
+                mariadb_builder.append(bsoncxx::builder::basic::kvp("code", err.code()));
+                mariadb_builder.append(bsoncxx::builder::basic::kvp("state", err.state()));
+                mariadb_builder.append(bsoncxx::builder::basic::kvp("message", err.message()));
+
+                builder.append(bsoncxx::builder::basic::kvp("mariadb", mariadb_builder.extract()));
+
+                // TODO: Map MariaDB errors to something sensible from
+                // TODO: https://github.com/mongodb/mongo/blob/master/src/mongo/base/error_codes.yml
+
+                bsoncxx::builder::basic::array array_builder;
+
+                for (int64_t i = 0; i < 1; ++i) // TODO: With multiple deletes object this must change.
+                {
+                    bsoncxx::builder::basic::document error_builder;
+
+                    error_builder.append(bsoncxx::builder::basic::kvp("index", i));
+                    error_builder.append(bsoncxx::builder::basic::kvp("code", 125)); // Command failed.
+                    error_builder.append(bsoncxx::builder::basic::kvp("errmsg", err.message()));
+
+                    array_builder.append(error_builder.extract());
+                }
+
+                builder.append(bsoncxx::builder::basic::kvp("writeErrors", array_builder.extract()));
+            }
+            break;
+
+        case ComResponse::LOCAL_INFILE_PACKET:
+        default:
+            mxb_assert(!true);
+        }
+
+        builder.append(bsoncxx::builder::basic::kvp("n", n));
+
+        auto doc = builder.extract();
+
+        MXS_NOTICE("RESPONSE: %s", bsoncxx::to_json(doc).c_str());
+
+        pResponse = create_response(doc);
+
+        return pResponse;
+    }
+};
+
 // TODO: This will be generalized so that there will be e.g. a base-class ResultSet for
 // TODO: commands that expects, well, a resultset. But for now there is no hierarchy.
 
@@ -457,7 +606,6 @@ public:
         sql << "`" << m_database.name() << "`.`" << table << "`";
         sql << "(id, doc) VALUES ";
 
-        set<bsoncxx::stdx::string_view> ids;
         auto docs = static_cast<bsoncxx::array::view>(m_doc[mxsmongo::keys::DOCUMENTS].get_array());
 
         bool first = true;
@@ -513,6 +661,9 @@ public:
 
         switch (response.type())
         {
+        case ComResponse::OK_PACKET:
+            break;
+
         case ComResponse::ERR_PACKET:
             {
                 MXS_WARNING("Mongo request to backend failed: (%d), %s",
@@ -648,6 +799,7 @@ struct ThisUnit
                                                           const bsoncxx::document::view& doc)>
     creators_by_command =
     {
+        { mxsmongo::Command::DELETE,   &command::create<command::Delete> },
         { mxsmongo::Command::FIND,     &command::create<command::Find> },
         { mxsmongo::Command::INSERT,   &command::create<command::Insert> },
         { mxsmongo::Command::ISMASTER, &command::create<command::IsMaster> },

@@ -54,3 +54,16 @@ converted to JSON are inserted to the table.
 
 Currently all documents are inserted using a single statement, so either all
 documents will be inserted or none will be.
+
+### Delete - https://docs.mongodb.com/manual/reference/command/insert
+
+The following fields are acted upon.
+
+Field | Type | Description
+--------------------------
+insert| string | The name of the target table.
+deletes | array | An array of one document that describes what to delete.
+
+All other fields are ignored.
+
+**NOTE** Currently the `deletes` array can contain exactly one documents.

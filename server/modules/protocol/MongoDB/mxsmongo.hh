@@ -125,6 +125,8 @@ const char* opcode_to_string(int code);
 namespace keys
 {
 
+const char DELETE[]     = "delete";
+const char DELETES[]    = "deletes";
 const char DOCUMENTS[]  = "documents";
 const char FILTER[]     = "filter";
 const char FIND[]       = "find";
@@ -141,6 +143,7 @@ enum class Command
 {
     UNKNOWN,
 
+    DELETE,
     FIND,
     INSERT,
     ISMASTER,
