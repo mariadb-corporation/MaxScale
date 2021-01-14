@@ -5,8 +5,8 @@ threads=###threads###
 type=monitor
 module=galeramon
 servers=server1,server2,server3
-user=maxskysql
-password=skysql
+user=galeramon
+password=galeramon
 monitor_interval=100
 available_when_donor=true
 

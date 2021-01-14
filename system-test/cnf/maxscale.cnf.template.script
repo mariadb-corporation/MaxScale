@@ -20,8 +20,8 @@ script=/###access_homedir###/script/script.sh  --event=$EVENT --initiator=$INITI
 events=master_down,master_up, slave_up,   server_down  ,server_up,lost_master,lost_slave,new_master,new_slave,server_down,server_up,synced_down,synced_up
 disable_master_role_setting=true
 root_node_as_master=false
-user=maxskysql
-password=skysql
+user=galeramon
+password=galeramon
 monitor_interval=1000
 
 [RW-Split-Router]
