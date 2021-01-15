@@ -140,6 +140,7 @@ GWBUF* gwbuf_alloc(unsigned int size)
     rval->hint = NULL;
     rval->gwbuf_type = GWBUF_TYPE_UNDEFINED;
     rval->server = NULL;
+    rval->id = 0;
 
     return rval;
 }
@@ -247,6 +248,7 @@ static GWBUF* gwbuf_clone_one(GWBUF* buf)
     rval->tail = rval;
     rval->hint = hint_dup(buf->hint);
     rval->next = NULL;
+    rval->id = buf->id;
 
     return rval;
 }
@@ -299,6 +301,7 @@ static GWBUF* gwbuf_deep_clone_portion(const GWBUF* buf, size_t length)
             // The copying of the type is done to retain the type characteristic of the buffer without
             // having a link the orginal data or parsing info.
             rval->gwbuf_type = buf->gwbuf_type;
+            rval->id = buf->id;
         }
         else
         {
@@ -343,6 +346,7 @@ static GWBUF* gwbuf_clone_portion(GWBUF* buf,
     clonebuf->hint = NULL;
     clonebuf->next = NULL;
     clonebuf->tail = clonebuf;
+    clonebuf->id = buf->id;
 
     return clonebuf;
 }
@@ -653,6 +657,18 @@ void* gwbuf_get_buffer_object_data(GWBUF* buf, bufobj_id_t id)
     return bo ? bo->bo_data : NULL;
 }
 
+void gwbuf_set_id(GWBUF* buffer, uint32_t id)
+{
+    validate_buffer(buffer);
+    buffer->id = id;
+}
+
+uint32_t gwbuf_get_id(GWBUF* buffer)
+{
+    validate_buffer(buffer);
+    return buffer->id;
+}
+
 /**
  * @return pointer to next buffer object or NULL
  */
@@ -681,6 +697,7 @@ GWBUF* gwbuf_make_contiguous(GWBUF* orig)
 
     newbuf->gwbuf_type = orig->gwbuf_type;
     newbuf->hint = hint_dup(orig->hint);
+    newbuf->id = orig->id;
     uint8_t* ptr = GWBUF_DATA(newbuf);
 
     while (orig)

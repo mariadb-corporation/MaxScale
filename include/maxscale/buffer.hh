@@ -89,6 +89,7 @@ struct GWBUF
     HINT*       hint;           /*< Hint data for this buffer */
     SERVER*     server;         /*< The target server where the buffer is executed */
     uint32_t    gwbuf_type;     /*< buffer's data type information */
+    uint32_t    id;             /*< Unique ID for this buffer, 0 if no ID is assigned */
 #ifdef SS_DEBUG
     int owner;      /*< Owner of the thread, only for debugging */
 #endif
@@ -406,6 +407,23 @@ void* gwbuf_get_buffer_object_data(GWBUF* buf, bufobj_id_t id);
 #if defined (BUFFER_TRACE)
 extern void dprintAllBuffers(void* pdcb);
 #endif
+
+/**
+ * Assign an ID for this buffer
+ *
+ * @param buffer The buffer to modify
+ * @param id     The ID to set, must be a non-zero value
+ */
+void gwbuf_set_id(GWBUF* buffer, uint32_t id);
+
+/**
+ * Get buffer ID
+ *
+ * @param buffer The buffer to inspect
+ *
+ * @return The ID of the buffer or 0 if no ID is assigned
+ */
+uint32_t gwbuf_get_id(GWBUF* buffer);
 
 /**
  * Debug function for dumping buffer contents to log
@@ -1236,6 +1254,26 @@ public:
     uint8_t* data();
 
     const uint8_t* data() const;
+
+    /**
+     * Set a buffer ID
+     *
+     * @param id ID to set
+     */
+    void set_id(uint32_t id)
+    {
+        gwbuf_set_id(m_pBuffer, id);
+    }
+
+    /**
+     * Get the ID of this buffer
+     *
+     * @return The current ID or 0 if no ID is set
+     */
+    uint32_t id() const
+    {
+        return gwbuf_get_id(m_pBuffer);
+    }
 
     /**
      * Debug function for dumping buffer contents to log
