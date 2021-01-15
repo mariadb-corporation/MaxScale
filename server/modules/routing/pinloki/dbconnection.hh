@@ -127,7 +127,7 @@ public:
      * @brief host
      * @return
      */
-    maxbase::Host host();
+    maxbase::Host host() const;
 
     /**
      * @brief mariadb_error - will not return an error if the server

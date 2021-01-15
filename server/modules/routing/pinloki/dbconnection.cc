@@ -274,7 +274,7 @@ void Connection::discard_result()
     }
 }
 
-maxbase::Host Connection::host()
+maxbase::Host Connection::host() const
 {
     return m_details.host;
 }
