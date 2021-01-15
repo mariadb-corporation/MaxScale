@@ -47,24 +47,6 @@ bool RWBackend::continue_session_command(GWBUF* buffer)
     return Backend::write(buffer, NO_RESPONSE);
 }
 
-void RWBackend::add_ps_handle(uint32_t id, uint32_t handle)
-{
-    m_ps_handles[id] = handle;
-    MXS_INFO("PS response for %s: %u -> %u", name(), id, handle);
-}
-
-uint32_t RWBackend::get_ps_handle(uint32_t id) const
-{
-    BackendHandleMap::const_iterator it = m_ps_handles.find(id);
-
-    if (it != m_ps_handles.end())
-    {
-        return it->second;
-    }
-
-    return 0;
-}
-
 bool RWBackend::write(GWBUF* buffer, response_type type)
 {
     m_last_write = maxbase::Clock::now(maxbase::NowType::EPollTick);
@@ -75,34 +57,6 @@ bool RWBackend::write(GWBUF* buffer, response_type type)
     if (was_large_query)
     {
         return mxs::Backend::write(buffer, Backend::NO_RESPONSE);
-    }
-
-    uint8_t cmd = mxs_mysql_get_command(buffer);
-
-    if (mxs_mysql_is_ps_command(cmd))
-    {
-        // We need to completely separate the buffer this backend owns and the one that the caller owns to
-        // prevent any modifications from affecting the one that was written through this backend. If the
-        // buffer gets placed into the write queue of the DCB, subsequent modifications to the original buffer
-        // would be propagated to the one this backend owns.
-        GWBUF* tmp = gwbuf_deep_clone(buffer);
-        gwbuf_free(buffer);
-        buffer = tmp;
-
-        uint32_t id = mxs_mysql_extract_ps_id(buffer);
-        auto it = m_ps_handles.find(id);
-
-        if (it != m_ps_handles.end())
-        {
-            /** Replace the client handle with the real PS handle */
-            uint8_t* ptr = GWBUF_DATA(buffer) + MYSQL_PS_ID_OFFSET;
-            mariadb::set_byte4(ptr, it->second);
-
-            if (cmd == MXS_COM_STMT_CLOSE)
-            {
-                m_ps_handles.erase(it);
-            }
-        }
     }
 
     return mxs::Backend::write(buffer, type);

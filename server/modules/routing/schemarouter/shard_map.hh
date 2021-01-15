@@ -63,9 +63,6 @@ public:
 
     void         add_statement(std::string stmt, mxs::Target* target);
     void         add_statement(uint32_t id, mxs::Target* target);
-    void         add_ps_handle(uint32_t id, uint32_t handle);
-    uint32_t     get_ps_handle(uint32_t id);
-    bool         remove_ps_handle(uint32_t id);
     mxs::Target* get_statement(std::string stmt);
     mxs::Target* get_statement(uint32_t id);
     bool         remove_statement(std::string stmt);

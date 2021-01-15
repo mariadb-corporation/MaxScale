@@ -390,15 +390,10 @@ public:
     /**
      * @brief Store a prepared statement response
      *
-     * The response maps the internal ID to the external ID that is given to the client. It also collects
-     * the number of parameters in the prepared statement which are required in some cases in the routing
-     * process.
-     *
-     * @param internal_id The internal id (i.e. the session command number)
-     * @param buffer      The buffer containing the OK response to a COM_STMT_PREPARE
+     * @param id          The ID of the prepared statement
+     * @param param_count The number of parameters it takes
      */
-    void ps_store_response(uint32_t internal_id, GWBUF* buffer);
-    void ps_store_response(uint32_t internal_id, uint32_t id, uint16_t param_count);
+    void ps_store_response(uint32_t id, uint16_t param_count);
 
     /**
      * @brief Update the current RouteInfo.
@@ -488,7 +483,6 @@ private:
     mxs_target_t m_use_sql_variables_in;
     bool         m_multi_statements_allowed;        /**< Are multi-statements allowed */
     SPSManager   m_sPs_manager;
-    HandleMap    m_ps_handles;                      /** External ID to internal ID */
     RouteInfo    m_route_info;
     RouteInfo    m_prev_route_info; // Previous state, used for rollback of state
 

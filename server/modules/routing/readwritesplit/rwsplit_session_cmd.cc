@@ -62,10 +62,6 @@ void RWSplitSession::process_sescmd_response(RWBackend* backend, GWBUF** ppPacke
     uint8_t command = sescmd->get_command();
     uint64_t id = sescmd->get_position();
 
-    if (command == MXS_COM_STMT_PREPARE && !reply.error())
-    {
-        backend->add_ps_handle(id, reply.generated_id());
-    }
 
     if (m_recv_sescmd < m_sent_sescmd && id == m_recv_sescmd + 1)
     {
@@ -111,8 +107,7 @@ void RWSplitSession::process_sescmd_response(RWBackend* backend, GWBUF** ppPacke
                 else if (command == MXS_COM_STMT_PREPARE)
                 {
                     /** Map the returned response to the internal ID */
-                    MXS_INFO("PS ID %u maps to internal ID %lu", reply.generated_id(), id);
-                    m_qc.ps_store_response(id, reply.generated_id(), reply.param_count());
+                    m_qc.ps_store_response(reply.generated_id(), reply.param_count());
                 }
 
                 // Discard any slave connections that did not return the same result
@@ -176,14 +171,6 @@ mxs::SSessionCommand RWSplitSession::create_sescmd(GWBUF* buffer)
             m_qc.ps_erase(buffer);
             m_exec_map.erase(route_info().stmt_id());
         }
-
-        /**
-         * Replace the ID with our internal one, the backends will replace it with their own ID
-         * when the packet is being written. We use the internal ID when we store the command
-         * to remove the need for extra conversions from external to internal form when the command
-         * is being replayed on a server.
-         */
-        replace_binary_ps_id(buffer, route_info().stmt_id());
     }
 
     /** The SessionCommand takes ownership of the buffer */
@@ -193,7 +180,8 @@ mxs::SSessionCommand RWSplitSession::create_sescmd(GWBUF* buffer)
     if (qc_query_is_type(type, QUERY_TYPE_PREPARE_NAMED_STMT)
         || qc_query_is_type(type, QUERY_TYPE_PREPARE_STMT))
     {
-        m_qc.ps_store(buffer, sescmd->get_position());
+        mxb_assert(gwbuf_get_id(buffer) != 0 || qc_query_is_type(type, QUERY_TYPE_PREPARE_NAMED_STMT));
+        m_qc.ps_store(buffer, gwbuf_get_id(buffer));
     }
     else if (qc_query_is_type(type, QUERY_TYPE_DEALLOC_PREPARE))
     {

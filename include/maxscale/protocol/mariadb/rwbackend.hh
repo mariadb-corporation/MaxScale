@@ -59,9 +59,6 @@ public:
     RWBackend(mxs::Endpoint* endpoint);
     virtual ~RWBackend() = default;
 
-    void     add_ps_handle(uint32_t id, uint32_t handle);
-    uint32_t get_ps_handle(uint32_t id) const;
-
     bool execute_session_command();
     bool continue_session_command(GWBUF* buffer);
 
@@ -92,9 +89,8 @@ public:
     void sync_averages();
 
 private:
-    BackendHandleMap m_ps_handles;      /**< Internal ID to backend PS handle mapping */
-    ResponseStat     m_response_stat;
-    bool             m_large_query = false;
+    ResponseStat m_response_stat;
+    bool         m_large_query = false;
 
     maxbase::TimePoint m_last_write;
 };

@@ -42,27 +42,6 @@ void Shard::add_statement(uint32_t id, mxs::Target* target)
     m_binary_map[id] = target;
 }
 
-void Shard::add_ps_handle(uint32_t id, uint32_t handle)
-{
-    MXS_DEBUG("ID: [%u] HANDLE: [%u]", id, handle);
-    m_ps_handles[id] = handle;
-}
-
-bool Shard::remove_ps_handle(uint32_t id)
-{
-    return m_ps_handles.erase(id);
-}
-
-uint32_t Shard::get_ps_handle(uint32_t id)
-{
-    PSHandleMap::iterator it = m_ps_handles.find(id);
-    if (it != m_ps_handles.end())
-    {
-        return it->second;
-    }
-    return 0;
-}
-
 std::set<mxs::Target*> Shard::get_all_locations(const std::vector<std::string>& tables)
 {
     if (tables.empty())

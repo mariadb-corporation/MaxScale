@@ -494,11 +494,7 @@ void SchemaRouterSession::process_sescmd_response(SRBackend* bref, GWBUF** ppPac
         {
             if (command == MXS_COM_STMT_PREPARE)
             {
-                MXS_INFO("SERVER: %s ID: %lu HANDLE: %u", bref->name(), id, reply.generated_id());
-                m_shard.add_ps_handle(id, reply.generated_id());
-                m_shard.add_statement(id, bref->target());
-                uint8_t* ptr = GWBUF_DATA(*ppPacket) + MYSQL_PS_ID_OFFSET;
-                gw_mysql_set_byte4(ptr, id);
+                m_shard.add_statement(reply.generated_id(), bref->target());
             }
             /** First reply to this session command, route it to the client */
             ++m_replied_sescmd;
@@ -1599,9 +1595,6 @@ mxs::Target* SchemaRouterSession::get_ps_target(GWBUF* buffer, uint32_t qtype, q
     else if (mxs_mysql_is_ps_command(command))
     {
         uint32_t id = mxs_mysql_extract_ps_id(buffer);
-        uint32_t handle = m_shard.get_ps_handle(id);
-        uint8_t* ptr = GWBUF_DATA(buffer) + MYSQL_PS_ID_OFFSET;
-        gw_mysql_set_byte4(ptr, handle);
         rval = m_shard.get_statement(id);
 
         if (command == MXS_COM_STMT_CLOSE)

@@ -376,8 +376,6 @@ void QueryClassifier::ps_erase(GWBUF* buffer)
     {
         // Erase the type of the statement stored with the internal ID
         m_sPs_manager->erase(ps_id_internal_get(buffer));
-        // ... and then erase the external to internal ID mapping
-        m_ps_handles.erase(qc_mysql_extract_ps_id(buffer));
     }
     else
     {
@@ -587,48 +585,21 @@ uint32_t QueryClassifier::get_route_target(uint8_t command, uint32_t qtype)
 
 uint32_t QueryClassifier::ps_id_internal_get(GWBUF* pBuffer)
 {
-    uint32_t internal_id = 0;
-
     // All COM_STMT type statements store the ID in the same place
-    uint32_t external_id = mysql_extract_ps_id(pBuffer);
+    uint32_t id = mysql_extract_ps_id(pBuffer);
 
     // MARIADB_PS_DIRECT_EXEC_ID is a special ID that refers to the previous prepared statement
-    uint32_t id = external_id == MARIADB_PS_DIRECT_EXEC_ID ? m_prev_ps_id : external_id;
-    auto it = m_ps_handles.find(id);
-
-    if (it != m_ps_handles.end())
-    {
-        internal_id = it->second;
-    }
-    else if (external_id == MARIADB_PS_DIRECT_EXEC_ID)
-    {
-        // We don't know the ID at this point, pass it along so that we know it's direct execution
-        internal_id = external_id;
-    }
-    else
-    {
-        MXS_WARNING("Client requests unknown prepared statement ID '%u' that "
-                    "does not map to an internal ID",
-                    external_id);
-    }
-
-    return internal_id;
+    return id == MARIADB_PS_DIRECT_EXEC_ID ? m_prev_ps_id : id;
 }
 
-void QueryClassifier::ps_store_response(uint32_t internal_id, uint32_t external_id, uint16_t param_count)
+void QueryClassifier::ps_store_response(uint32_t id, uint16_t param_count)
 {
-    m_prev_ps_id = external_id;
-    m_ps_handles[external_id] = internal_id;
+    m_prev_ps_id = id;
 
     if (param_count)
     {
-        m_sPs_manager->set_param_count(internal_id, param_count);
+        m_sPs_manager->set_param_count(id, param_count);
     }
-}
-
-void QueryClassifier::ps_store_response(uint32_t internal_id, GWBUF* buffer)
-{
-    ps_store_response(internal_id, qc_mysql_extract_ps_id(buffer), qc_extract_ps_param_count(buffer));
 }
 
 void QueryClassifier::log_transaction_status(GWBUF* querybuf, uint32_t qtype)
