@@ -120,6 +120,7 @@ int main(int argc, char* argv[])
             }
 
             test.maxscales->connect();
+            admin_conn = mxs->conn_rwsplit[0];
             const char drop_db_fmt[] = "drop database %s;";
             const char drop_db_failed[] = "DROP DATABASE failed";
             test.add_result(execute_query(admin_conn, drop_db_fmt, grant_db), drop_db_failed);
