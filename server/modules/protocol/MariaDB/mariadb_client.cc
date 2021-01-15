@@ -1018,6 +1018,20 @@ bool MariaDBClientConnection::route_statement(mxs::Buffer&& buffer)
     return rval;
 }
 
+bool MariaDBClientConnection::route_prepared_statement(mxs::Buffer&& buffer)
+{
+    buffer.set_id(m_next_ps_id);
+    bool ok = route_statement(move(buffer));
+
+    if (ok)
+    {
+        m_routing_state = RoutingState::PREPARING_PS;
+        ++m_next_ps_id;
+    }
+
+    return ok;
+}
+
 /**
  * @brief Client read event, process data, client already authenticated
  *
@@ -1043,6 +1057,11 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_normal
         return StateMachineRes::ERROR;
     }
 
+    if (m_routing_state == RoutingState::PREPARING_PS)
+    {
+        // A prepared statement is being prepared, read the data once the preparation is complete.
+        return StateMachineRes::IN_PROGRESS;
+    }
 
     auto read_res = mariadb::read_protocol_packet(m_dcb);
     mxs::Buffer buffer = move(read_res.data);
@@ -1111,6 +1130,10 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_normal
         // Client sent something while we are still waiting for server response. Should be rare.
         // Simplest way to handle this is to wait for the response before routing. Add later.
         MXB_ERROR("Client sent data while waiting for previous result. Session will be closed.");
+        break;
+
+    case RoutingState::PREPARING_PS:
+        mxb_assert_message(!true, "We should never end up here");
         break;
     }
 
@@ -2292,6 +2315,10 @@ bool MariaDBClientConnection::process_normal_packet(mxs::Buffer&& buffer)
         }
         break;
 
+    case MXS_COM_STMT_PREPARE:
+        success = route_prepared_statement(move(buffer));
+        break;
+
     case MXS_COM_QUERY:
         {
             // Track MaxScale-specific sql. If the variable setting succeeds, the query is routed normally
@@ -2381,6 +2408,12 @@ MariaDBClientConnection::clientReply(GWBUF* buffer, maxscale::ReplyRoute& down, 
         // Regardless of result, role change is complete.
         m_pending_value.clear();
         m_routing_state = RoutingState::PACKET_START;
+        break;
+
+    case RoutingState::PREPARING_PS:
+        MXS_INFO("Prepared statement complete");
+        m_routing_state = RoutingState::PACKET_START;
+        m_dcb->trigger_read_event();
         break;
 
     default:

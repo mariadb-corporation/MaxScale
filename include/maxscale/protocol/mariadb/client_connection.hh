@@ -124,6 +124,7 @@ private:
     void perform_check_token(AuthType auth_type);
     bool process_normal_packet(mxs::Buffer&& buffer);
     bool route_statement(mxs::Buffer&& buffer);
+    bool route_prepared_statement(mxs::Buffer&& buffer);
 
     bool start_change_user(mxs::Buffer&& buffer);
     bool complete_change_user();
@@ -237,6 +238,7 @@ private:
         LOAD_DATA,      /**< Expecting the client to continue streaming CSV-data */
         CHANGING_DB,    /**< Client is changing database, waiting server response */
         CHANGING_ROLE,  /**< Client is changing role, waiting server response */
+        PREPARING_PS,   /**< Preparing a prepared statement */
     };
 
     /** Temporary data required during COM_CHANGE_USER. */
@@ -269,6 +271,9 @@ private:
 
     bool m_user_update_wakeup {false};      /**< Waking up because of user account update? */
     int  m_previous_userdb_version {0};     /**< Userdb version used for first user account search */
+
+    // The next ID we'll return for a COM_STMT_PREPARE
+    uint32_t m_next_ps_id {1};
 
     std::vector<std::unique_ptr<LocalClient>> m_local_clients;
 };

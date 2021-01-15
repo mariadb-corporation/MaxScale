@@ -165,6 +165,7 @@ private:
         uint32_t payload_len = 0;
         uint8_t  command = 0;
         bool     opening_cursor = false;
+        uint32_t id = 0;
     };
 
     void track_query(const TrackedQuery& query);
@@ -194,6 +195,12 @@ private:
     mxs::Reply  m_reply;
 
     std::queue<TrackedQuery> m_track_queue;
+
+    // The mapping of COM_STMT_PREPARE IDs we sent upstream to the actual IDs that the backend sent us
+    std::unordered_map<uint32_t, uint32_t> m_ps_map;
+
+    // The internal ID of the current COM_STMT_PREPARE
+    uint32_t m_ps_id {0};
 
     mxs::Component* m_upstream {nullptr};       /**< Upstream component, typically a router */
     MXS_SESSION*    m_session {nullptr};        /**< Generic session */
