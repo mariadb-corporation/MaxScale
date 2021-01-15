@@ -114,15 +114,15 @@ supports. The following commands are supported:
      is detected to be in use, the purge stops. This means that the purge will
      stop at the oldest file that a slave is still reading.
 
-     **NOTE:**: You should still take precaution not to purge files that a potential
+     **NOTE:** You should still take precaution not to purge files that a potential
      slave will need in the future. MaxScale can only detect that a file is
      in active use when a slave is connected, and requesting events from it.
 
  * `SHOW MASTER STATUS`
 
-   * Shows the current binlog and position in that file where the binlogrouter
-     is writing the replicated data. These file names will be different from the
-     ones shown by the original master.
+   * Shows the name and position of the file to which the binlogrouter will write
+     the next replicated data. The name and position do not correspond to the
+     name and position in the master.
 
  * `SHOW SLAVE STATUS`
 
@@ -179,8 +179,8 @@ supports. The following commands are supported:
 
  * `SET`
 
-   * This is only for replication purposes and should not be used by actual
-     clients.
+   * `@@global.gtid_slave_pos`: Set the position from which binlogrouter should
+   start replicating. E.g. `SET @@global.gtid_slave_pos="0-1000-1234,1-1001-5678"`
 
 ## Configuration Parameters
 
@@ -205,7 +205,7 @@ binary logs to the slaves. Default value is 1234.
 
 Network connection and read timeout for the connection to the master. The value
 is specified as documented
-[here](../Getting-Started/Configuration-Guide.md#durations). Default value is 30
+[here](../Getting-Started/Configuration-Guide.md#durations). Default value is 10
 seconds.
 
 ### `select_master`
@@ -225,10 +225,10 @@ This allows the Monitor to perform failover, and more importantly, switchover.
 It also allows the user to manually redirect the Binlogrouter. The current
 master is "sticky", meaning that the same master will be chosen on reboot.
 
-**NOTE:** Do not use `auto_rejoin`. This restriction will be lifted in
-a future version.
+**NOTE:** Do not use the Monitor parameter `auto_rejoin`. This restriction will
+be lifted in a future version.
 
-The GTID the replication will start from will be based on the latest replicated
+The GTID the replication will start from, will be based on the latest replicated
 GTID. If no GTID has been replicated, the router will start replication from the
 start. Manual configuration of the GTID can be done by first configuring the
 replication manually with `CHANGE MASTER TO`.
@@ -236,8 +236,8 @@ replication manually with `CHANGE MASTER TO`.
 ### `expire_log_duration`
 
 Duration after which a binary log file can be automatically removed. The default is 0,
-or no automatic removal. This is similar to the [Server system variable
-expire_log_days](https://mariadb.com/kb/en/replication-and-binary-log-system-variables/#expire_logs_days).
+or no automatic removal. This is similar to the server system variable
+[expire_log_days](https://mariadb.com/kb/en/replication-and-binary-log-system-variables/#expire_logs_days).
 
 The duration is measured from the last modification of the log file. Files are
 purged in the order they were created. The automatic purge works in a similar
@@ -254,32 +254,25 @@ is always kept. The default setting is 2.
 
 ## New installation
 
- 1. Configure and start MaxScale
+ 1. Configure and start MaxScale.
 
  1. If you have not configured `select_master=true` (automatic
     master selection), issue a `CHANGE MASTER TO` command to binlogrouter.
-
-    ```
-    mysql -u USER -pPASSWORD -h maxscale-IP -P binlog-PORT
-
-    CHANGE MASTER TO master_host="master-IP", master_port=master-PORT,
-    master_user=USER, master_password="PASSWORD",
-    master_use_gtid=slave_pos;
-    START SLAVE;
-    ```
+```
+mysql -u USER -pPASSWORD -h maxscale-IP -P binlog-PORT
+CHANGE MASTER TO master_host="master-IP", master_port=master-PORT, master_user=USER, master_password="PASSWORD", master_use_gtid=slave_pos;
+START SLAVE;
+```
 
  1. Redirect each slave to replicate from Binlogrouter
-
-    ```
-    mysql -u USER -pPASSWORD -h slave-IP -P slave-PORT
-
-    STOP SLAVE;
-    CHANGE MASTER TO master_host="maxscale-IP", master_port=binlog-PORT,
-    master_user="USER", master_password="PASSWORD",
-    master_use_gtid=slave_pos;
-    START SLAVE;
-    SHOW SLAVE STATUS \G
-    ```
+```
+mysql -u USER -pPASSWORD -h slave-IP -P slave-PORT
+STOP SLAVE;
+CHANGE MASTER TO master_host="maxscale-IP", master_port=binlog-PORT,
+master_user="USER", master_password="PASSWORD", master_use_gtid=slave_pos;
+START SLAVE;
+SHOW SLAVE STATUS \G
+```
 
 ## Upgrading to version 2.5
 
@@ -307,71 +300,94 @@ configured version 2.5, and it is ready to go:
 
  1. Redirect each slave that replicates from Binlogrouter to replicate from the
     master.
-
-    ```
-    mysql -u USER -pPASSWORD -h slave-IP -P slave-PORT
-
-    STOP SLAVE;
-    CHANGE MASTER TO master_host="master-IP", master_port=master-PORT,
-    master_user="USER", master_password="PASSWORD",
-    master_use_gtid=slave_pos;
-    START SLAVE;
-    SHOW SLAVE STATUS \G
-    ```
+```
+mysql -u USER -pPASSWORD -h slave-IP -P slave-PORT
+STOP SLAVE;
+CHANGE MASTER TO master_host="master-IP", master_port=master-PORT,
+master_user="USER", master_password="PASSWORD", master_use_gtid=slave_pos;
+START SLAVE;
+SHOW SLAVE STATUS \G
+```
 
  1. Stop the old version of MaxScale, and start the new one.
     Verify routing functionality.
 
- 1. If you have not configured `select_master=true` (automatic
-    master selection), issue a `CHANGE MASTER TO` command.
-
-    ```
-    mysql -u USER -pPASSWORD -h maxscale-IP -P binlog-PORT
-
-    CHANGE MASTER TO master_host="master-IP", master_port=master-PORT,
-    master_user=USER,master_password="PASSWORD",
-    master_use_gtid=slave_pos;
-
-    ```
+ 1. Issue a `CHANGE MASTER TO` command, or use [select_master](#select_master).
+```
+mysql -u USER -pPASSWORD -h maxscale-IP -P binlog-PORT
+CHANGE MASTER TO master_host="master-IP", master_port=master-PORT,
+master_user=USER,master_password="PASSWORD", master_use_gtid=slave_pos;
+```
 
  1. Run `maxctrl list servers`. Make sure all your servers are accounted for.
-    Pick the lowest gtid on display and issue this command
-    to Binlogrouter:
+    Pick the lowest gtid state (e.g. 0-1000-1234,1-1001-5678) on display and
+    issue this command to Binlogrouter:
+```
+STOP SLAVE
+SET @@global.gtid_slave_pos = "0-1000-1234,1-1001-5678";
+START SLAVE
+```
+**NOTE:** Even with `select_master=true` you have to set @@global.gtid_slave_pos
+if any binlog files have been purged on the master. The server will only stream
+from the start of time if the first binlog file is present.
+See [select_master](#select_master).
 
-    ```
-    STOP SLAVE
-    SET @@global.gtid_slave_pos = "lowest-GTID";
-    START SLAVE
-    ```
+ 1. Redirect each slave to replicate from Binlogrouter.
+```
+mysql -u USER -pPASSWORD -h slave-IP -P slave-PORT
+STOP SLAVE;
+CHANGE MASTER TO master_host="maxscale-IP", master_port=binlog-PORT,
+master_user="USER", master_password="PASSWORD",
+master_use_gtid=slave_pos;
+START SLAVE;
+SHOW SLAVE STATUS \G
+```
 
- 1. Redirect each slave to replicate from Binlogrouter
+## Galera cluster
 
-   ```
-   mysql -u USER -pPASSWORD -h slave-IP -P slave-PORT
+When replicating from a Galera cluster, [select_master](#select_master) must be
+set to true, and the servers must be monitored by the
+[Galera Monitor](https://mariadb.com/kb/en/mariadb-maxscale-25-monitor/).
+Configuring binlogrouter is the same as described above.
 
-   STOP SLAVE;
-   CHANGE MASTER TO master_host="maxscale-IP", master_port=binlog-PORT,
-   master_user="USER", master_password="PASSWORD",
-   master_use_gtid=slave_pos;
-   START SLAVE;
-   SHOW SLAVE STATUS \G
-   ```
+The Galera cluster must be configured to use [Wsrep GTID Mode](https://mariadb.com/kb/en/using-mariadb-gtids-with-mariadb-galera-cluster/).
+
+The MariaDB version must be 10.5.1 or higher.
+The required GTID related server settings for MariaDB/Galera to work with
+Binlogrouter are listed here:
+```
+[mariadb]
+log_slave_updates = ON
+log_bin = pinloki       # binlog file base name. Must be the same on all servers
+gtid_domain_id = 1001   # Must be different for each galera server
+binlog_format = ROW
+
+[galera]
+wsrep_on = ON
+wsrep_gtid_mode = ON
+wsrep_gtid_domain_id = 42  # Must be the same for all servers
+```
 
 ## Example
 
-The following is a minimal configuration with automatic master selection. With it, the
-service will accept connections on port 3306.
+The following is a small configuration file with automatic master selection.
+With it, the service will accept connections on port 3306.
 
 ```
-[master1]
+[server1]
 type=server
 address=192.168.0.1
+port=3306
+
+[server2]
+type=server
+address=192.168.0.2
 port=3306
 
 [MariaDB-Monitor]
 type=monitor
 module=mariadbmon
-servers=master1
+servers=server1, server2
 user=maxuser
 password=maxpwd
 monitor_interval=10s
@@ -399,4 +415,4 @@ port=3306
   and the replication must be started by setting up the GTID to replicate
   from.
 
-* Only replication from MariaDB servers is supported.
+* Only replication from MariaDB servers (including Galera) is supported.
