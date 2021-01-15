@@ -37,6 +37,7 @@ int main(int argc, char* argv[])
     sprintf(rules_dir, "%s/fw/", test_dir);
     int N = 19;
     int i;
+    const bool verbose = Test->verbose();
 
     for (i = 1; i < N + 1; i++)
     {
@@ -52,7 +53,7 @@ int main(int argc, char* argv[])
         sprintf(pass_file, "%s/fw/pass%d", test_dir, i);
         sprintf(deny_file, "%s/fw/deny%d", test_dir, i);
 
-        if (Test->verbose)
+        if (verbose)
         {
             Test->tprintf("Pass file: %s", pass_file);
             Test->tprintf("Deny file: %s", deny_file);
@@ -61,7 +62,7 @@ int main(int argc, char* argv[])
         file = fopen(pass_file, "r");
         if (file != NULL)
         {
-            if (Test->verbose)
+            if (verbose)
             {
                 Test->tprintf("********** Trying queries that should be OK ********** ");
             }
@@ -69,7 +70,7 @@ int main(int argc, char* argv[])
             {
                 if (strlen(sql) > 1)
                 {
-                    if (Test->verbose)
+                    if (verbose)
                     {
                         Test->tprintf("%s", sql);
                     }
@@ -88,7 +89,7 @@ int main(int argc, char* argv[])
         file = fopen(deny_file, "r");
         if (file != NULL)
         {
-            if (Test->verbose)
+            if (verbose)
             {
                 Test->tprintf("********** Trying queries that should FAIL ********** ");
             }
@@ -97,7 +98,7 @@ int main(int argc, char* argv[])
                 Test->set_timeout(180);
                 if (strlen(sql) > 1)
                 {
-                    if (Test->verbose)
+                    if (verbose)
                     {
                         Test->tprintf("%s", sql);
                     }
@@ -132,14 +133,14 @@ int main(int argc, char* argv[])
     Test->set_timeout(180);
 
     // Test for at_times clause
-    if (Test->verbose)
+    if (verbose)
     {
         Test->tprintf("Trying at_times clause");
     }
     copy_rules(Test, (char*) "rules_at_time", rules_dir);
 
 
-    if (Test->verbose)
+    if (verbose)
     {
         Test->tprintf("DELETE quries without WHERE clause will be blocked during the 30 seconds");
         Test->tprintf("Put time to rules.txt: %s", str);
@@ -222,7 +223,7 @@ int main(int argc, char* argv[])
         sleep(1);
         Test->add_result(execute_query_silent(Test->maxscales->conn_rwsplit[0], "SELECT * FROM t1"),
                          "query failed");
-        if (Test->verbose)
+        if (verbose)
         {
             Test->tprintf("%d ", i);
         }

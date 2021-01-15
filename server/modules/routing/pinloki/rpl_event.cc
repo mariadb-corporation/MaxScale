@@ -179,7 +179,7 @@ Rotate RplEvent::rotate() const
 
 bool RplEvent::is_commit() const
 {
-    return strcasecmp(query_event_sql().c_str(), "COMMIT") != 0;
+    return strcasecmp(query_event_sql().c_str(), "COMMIT") == 0;
 }
 
 const char* RplEvent::pHeader() const
@@ -204,17 +204,19 @@ std::string RplEvent::query_event_sql() const
 
     if (event_type() == QUERY_EVENT)
     {
-        constexpr int DBNM_OFF = 8;                 // Database name offset
-        constexpr int VBLK_OFF = 4 + 4 + 1 + 2;     // Varblock offset
-        constexpr int PHDR_OFF = 4 + 4 + 1 + 2 + 2; // Post-header offset
-        constexpr int BINLOG_RPL_HEADER_LEN = 19;
+        constexpr int DBNM_OFF = 4 + 4;                     // Database name offset
+        constexpr int VBLK_OFF = 4 + 4 + 1 + 2;             // Varblock offset
+        constexpr int FIXED_DATA_LEN = 4 + 4 + 1 + 2 + 2;   // Fixed data length of query event
+        constexpr int CRC_LEN = 4;
 
-        const uint8_t* ptr = (const uint8_t*) pBuffer();
+        const uint8_t* ptr = (const uint8_t*) pBody();
         int dblen = ptr[DBNM_OFF];
         int vblklen = mariadb::get_byte2(ptr + VBLK_OFF);
 
-        int len = event_length() - BINLOG_RPL_HEADER_LEN - (PHDR_OFF + vblklen + 1 + dblen);
-        sql.assign((const char*) ptr + PHDR_OFF + vblklen + 1 + dblen, len);
+        size_t data_len = pEnd() - pBody();
+        size_t sql_offs = FIXED_DATA_LEN + vblklen + 1 + dblen;
+        int sql_len = data_len - sql_offs - CRC_LEN;
+        sql.assign((const char*) ptr + sql_offs, sql_len);
     }
 
     return sql;

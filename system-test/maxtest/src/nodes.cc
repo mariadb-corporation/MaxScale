@@ -13,8 +13,8 @@
 
 using std::string;
 
-Nodes::Nodes(const char* prefix, const std::string& network_config, bool verbose)
-    : verbose(verbose)
+Nodes::Nodes(const char* prefix, SharedData& shared, const std::string& network_config)
+    : m_shared(shared)
     , m_prefix(prefix)
     , network_config(network_config)
 {
@@ -102,7 +102,7 @@ FILE* Nodes::open_ssh_connection(int node)
            << "-o ControlPersist=yes "
            << m_access_user[node] << "@"
            << m_ip4[node]
-           << (verbose ? "" :  " > /dev/null");
+           << (verbose() ? "" : " > /dev/null");
     }
 
     return popen(ss.str().c_str(), "w");
@@ -110,7 +110,7 @@ FILE* Nodes::open_ssh_connection(int node)
 
 int Nodes::ssh_node(int node, const char* ssh, bool sudo)
 {
-    if (verbose)
+    if (verbose())
     {
         std::cout << ssh << std::endl;
     }
@@ -207,7 +207,7 @@ int Nodes::copy_to_node(int i, const char* src, const char* dest)
                 m_ip4[i].c_str(),
                 dest);
     }
-    if (verbose)
+    if (verbose())
     {
         printf("%s\n", sys);
     }
@@ -253,7 +253,7 @@ int Nodes::copy_from_node(int i, const char* src, const char* dest)
                 src,
                 dest);
     }
-    if (verbose)
+    if (verbose())
     {
         printf("%s\n", sys);
     }
@@ -357,11 +357,6 @@ int Nodes::read_basic_env()
     return 0;
 }
 
-const char* Nodes::ip(int i) const
-{
-    return use_ipv6 ? m_ip6[i].c_str() : m_ip4[i].c_str();
-}
-
 std::string Nodes::mdbci_node_name(int node)
 {
     return(mxb::string_printf("%s_%03d", m_prefix.c_str(), node));
@@ -454,11 +449,6 @@ Nodes::SshResult Nodes::ssh_output(const std::string& cmd, int node, bool sudo)
     return rval;
 }
 
-bool Nodes::using_ipv6() const
-{
-    return use_ipv6;
-}
-
 const char* Nodes::ip_private(int i) const
 {
     return m_ip_private[i].c_str();
@@ -502,4 +492,9 @@ const std::string& Nodes::prefix() const
 const char* Nodes::ip4(int i) const
 {
     return m_ip4[i].c_str();
+}
+
+bool Nodes::verbose() const
+{
+    return m_shared.verbose;
 }

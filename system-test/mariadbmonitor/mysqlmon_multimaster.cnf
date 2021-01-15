@@ -6,8 +6,8 @@ log_warning=1
 type=monitor
 module=mysqlmon
 servers=server1, server2, server3, server4
-user=maxskysql
-password=skysql
+user=mariadbmon
+password=mariadbmon
 monitor_interval=1000
 
 [RW-Split-Router]

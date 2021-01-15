@@ -575,7 +575,7 @@ void run(TestConnections& test)
 
         cout << "Connecting to " << zHost << ":" << port << " as " << zUser << ":" << zPassword << endl;
         cout << "Starting clients." << endl;
-        Client::start(test.verbose, zHost, port, zUser, zPassword);
+        Client::start(test.verbose(), zHost, port, zUser, zPassword);
 
         time_t start = time(NULL);
 

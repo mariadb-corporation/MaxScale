@@ -30,7 +30,7 @@ using Callback = std::function<bool (const maxsql::RplEvent&)>;
 class Reader
 {
 public:
-    Reader(Callback cb, const Config& conf, mxb::Worker* worker, const maxsql::Gtid& gtid,
+    Reader(Callback cb, const Config& conf, mxb::Worker* worker, const maxsql::GtidList& start_gl,
            const std::chrono::seconds& heartbeat_interval);
     ~Reader();
 
@@ -61,8 +61,8 @@ private:
     maxbase::Timer  m_timer {10s};
 
     // Related to delayed start
-    maxsql::Gtid m_start_gtid;
-    uint32_t     m_startup_poll_dcid = 0;
+    maxsql::GtidList m_start_gtid_list;
+    uint32_t         m_startup_poll_dcid = 0;
 
     // Heartbeat related variables
     uint32_t                              m_heartbeat_dcid = 0;

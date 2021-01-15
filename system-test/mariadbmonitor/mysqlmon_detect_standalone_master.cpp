@@ -35,7 +35,7 @@ void replicate_from(TestConnections& test, int server_ind, int target_ind)
                   << "', MASTER_PORT = " << test.repl->port[target_ind] << ", MASTER_USE_GTID = current_pos, "
                                                              "MASTER_USER='repl', MASTER_PASSWORD='repl';";
     cout << "Server " << server_ind + 1 << " starting to replicate from server " << target_ind + 1 << endl;
-    if (test.verbose)
+    if (test.verbose())
     {
         cout << "Query is '" << change_master.str() << "'" << endl;
     }

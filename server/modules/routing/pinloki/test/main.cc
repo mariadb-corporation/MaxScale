@@ -44,16 +44,6 @@ pinloki::InventoryWriter& write_inventory()
 bool test_it(int argc, char* argv[])
 {
     return false;
-
-    pinloki::InventoryReader inv(config());
-
-    auto gtid = maxsql::Gtid::from_string("0-0-9");
-    pinloki::GtidPosition pos = pinloki::find_gtid_position(gtid, inv);
-
-    std::cout << "pos.file_name = " << pos.file_name << "\n";
-    std::cout << "pos.pos = " << pos.file_pos << "\n";
-
-    return true;
 }
 
 using namespace std::literals::chrono_literals;
@@ -64,13 +54,6 @@ bool writer_mode = true;
 void prog_main(const maxsql::GtidList& gtid_list, const std::string& host,
                const std::string& user, const std::string& pw)
 {
-    // Single domain currently
-    maxsql::Gtid gtid;
-    if (gtid_list.is_valid())
-    {
-        gtid = gtid_list.gtids()[0];
-    }
-
     mxb::Worker worker;
     mxq::Connection::ConnectionDetails details = {maxbase::Host::from_string(host), "", user, pw};
 
@@ -87,7 +70,7 @@ void prog_main(const maxsql::GtidList& gtid_list, const std::string& host,
         pinloki::Reader reader([](const auto& event) {
                                    std::cout << event << std::endl;
                                    return true;
-                               }, config(), &worker, gtid, 30s);
+                               }, config(), &worker, gtid_list, 30s);
         worker.start();
         worker.join();
     }
@@ -200,13 +183,6 @@ try
         std::cout << std::endl;
 
         return EXIT_SUCCESS;
-    }
-
-    // This is for the reader
-    if (override_gtid_list.is_valid())
-    {
-        std::ofstream ofs(config().gtid_file_path());
-        ofs << override_gtid_list;
     }
 
     prog_main(override_gtid_list, host + ":" + std::to_string(port), user, pw);

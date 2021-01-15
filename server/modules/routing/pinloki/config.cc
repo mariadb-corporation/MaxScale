@@ -35,7 +35,7 @@ cfg::ParamCount s_server_id(
     &s_spec, "server_id", "Server ID sent to both slaves and the master", 1234);
 
 cfg::ParamSeconds s_net_timeout(
-    &s_spec, "net_timeout", "Network timeout", cfg::INTERPRET_AS_SECONDS, 30s);
+    &s_spec, "net_timeout", "Network timeout", cfg::INTERPRET_AS_SECONDS, 10s);
 
 cfg::ParamBool s_select_master(
     &s_spec, "select_master", "Automatically select the master server", false);

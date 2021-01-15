@@ -33,33 +33,33 @@ Reader::PollData::PollData(Reader* reader, mxb::Worker* worker)
 {
 }
 
-Reader::Reader(Callback cb, const Config& conf, mxb::Worker* worker, const maxsql::Gtid& gtid,
+Reader::Reader(Callback cb, const Config& conf, mxb::Worker* worker, const maxsql::GtidList& start_gl,
                const std::chrono::seconds& heartbeat_interval)
     : m_cb(cb)
     , m_inventory(conf)
     , m_reader_poll_data(this, worker)
     , m_worker(worker)
-    , m_start_gtid(gtid)
+    , m_start_gtid_list(start_gl)
     , m_heartbeat_interval(heartbeat_interval)
     , m_last_event(std::chrono::steady_clock::now())
 {
     auto gtid_list = m_inventory.rpl_state();
 
-    if (gtid_list.is_included(maxsql::GtidList({m_start_gtid})))
+    if (gtid_list.is_included(m_start_gtid_list))
     {
         start_reading();
     }
     else
     {
         MXB_SINFO("ReplSYNC: reader waiting for primary to synchronize "
-                  << "primary: " << gtid_list << ", replica: " << m_start_gtid);
+                  << "primary: " << gtid_list << ", replica: " << m_start_gtid_list);
         m_startup_poll_dcid = m_worker->delayed_call(1000, &Reader::poll_start_reading, this);
     }
 }
 
 void Reader::start_reading()
 {
-    m_sFile_reader.reset(new FileReader(m_start_gtid, &m_inventory));
+    m_sFile_reader.reset(new FileReader(m_start_gtid_list, &m_inventory));
     m_worker->add_fd(m_sFile_reader->fd(), EPOLLIN, &m_reader_poll_data);
     handle_messages();
 
@@ -77,7 +77,7 @@ bool Reader::poll_start_reading(mxb::Worker::Call::action_t action)
     if (action == mxb::Worker::Call::EXECUTE)
     {
         auto gtid_list = m_inventory.rpl_state();
-        if (gtid_list.is_included(maxsql::GtidList({m_start_gtid})))
+        if (gtid_list.is_included(maxsql::GtidList({m_start_gtid_list})))
         {
             MXB_SINFO("ReplSYNC: Primary synchronized, start file_reader");
             start_reading();
@@ -88,7 +88,7 @@ bool Reader::poll_start_reading(mxb::Worker::Call::action_t action)
             if (m_timer.alarm())
             {
                 MXB_SINFO("ReplSYNC: Reader waiting for primary to sync. "
-                          << "primary: " << gtid_list << ", replica: " << m_start_gtid);
+                          << "primary: " << gtid_list << ", replica: " << m_start_gtid_list);
             }
         }
     }

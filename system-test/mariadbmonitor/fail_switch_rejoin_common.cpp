@@ -16,7 +16,7 @@ void get_output(TestConnections& test)
     test.tprintf("maxctrl output:");
     test.print_maxctrl("list servers");
 
-    if (test.verbose)
+    if (test.verbose())
     {
         test.tprintf("MaxScale output:");
     }
@@ -25,7 +25,7 @@ void get_output(TestConnections& test)
                       "sudo tee -a /var/log/maxscale/maxscale_backup.log "
                       "&& sudo truncate -s 0 /var/log/maxscale/maxscale.log";
     auto res = test.maxscales->ssh_output(cmd);
-    if (test.verbose)
+    if (test.verbose())
     {
         test.tprintf("%s", res.output.c_str());
     }

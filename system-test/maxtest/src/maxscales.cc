@@ -15,14 +15,10 @@
 
 using std::string;
 
-Maxscales::Maxscales(const char* pref,
-                     const char* test_cwd,
-                     bool verbose,
-                     const std::string& network_config)
-    : Nodes(pref, network_config, verbose)
+Maxscales::Maxscales(SharedData& shared, const std::string& network_config)
+    : Nodes("maxscale", shared, network_config)
     , valgring_log_num(0)
 {
-    strcpy(this->test_dir, test_cwd);
 }
 
 Maxscales::~Maxscales()
@@ -112,7 +108,7 @@ int Maxscales::connect_rwsplit(int m, const std::string& db)
 
     if (my_errno)
     {
-        if (verbose)
+        if (verbose())
         {
             printf("Failed to connect to readwritesplit: %d, %s\n", my_errno, mysql_error(conn_rwsplit[m]));
         }
@@ -134,7 +130,7 @@ int Maxscales::connect_readconn_master(int m, const std::string& db)
 
     if (my_errno)
     {
-        if (verbose)
+        if (verbose())
         {
             printf("Failed to connect to readwritesplit: %d, %s\n", my_errno, mysql_error(conn_master[m]));
         }
@@ -156,7 +152,7 @@ int Maxscales::connect_readconn_slave(int m, const std::string& db)
 
     if (my_errno)
     {
-        if (verbose)
+        if (verbose())
         {
             printf("Failed to connect to readwritesplit: %d, %s\n", my_errno, mysql_error(conn_slave[m]));
         }
@@ -315,7 +311,6 @@ const char* Maxscales::ip(int i) const
 void Maxscales::set_use_ipv6(bool use_ipv6)
 {
     m_use_ipv6 = use_ipv6;
-    this->use_ipv6 = use_ipv6;
 }
 
 const char* Maxscales::hostname(int i) const

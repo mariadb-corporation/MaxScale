@@ -143,8 +143,6 @@ void TestConnections::restart_galera(bool value)
     maxscale::restart_galera = value;
 }
 
-bool TestConnections::verbose = false;
-
 TestConnections::TestConnections(int argc, char* argv[])
 {
     std::ios::sync_with_stdio(true);
@@ -215,7 +213,7 @@ TestConnections::TestConnections(int argc, char* argv[])
         std::string src = std::string(test_dir) + "/mdbci/add_core_cnf.sh";
         maxscales->copy_to_node(0, src.c_str(), maxscales->access_homedir(0));
         maxscales->ssh_node_f(0, true, "%s/add_core_cnf.sh %s", maxscales->access_homedir(0),
-                              verbose ? "verbose" : "");
+                              verbose() ? "verbose" : "");
     }
 
 
@@ -408,7 +406,7 @@ void TestConnections::read_mdbci_info()
         tprintf("The name of MDBCI configuration is not defined, exiting!");
         exit(1);
     }
-    if (verbose)
+    if (verbose())
     {
         tprintf("%s", m_network_config.c_str());
     }
@@ -417,7 +415,7 @@ void TestConnections::read_mdbci_info()
 void TestConnections::read_env()
 {
     read_mdbci_info();
-    if (verbose)
+    if (verbose())
     {
         printf("Reading test setup configuration from environmental variables\n");
     }
@@ -518,7 +516,7 @@ void TestConnections::process_template(int m, const string& cnf_template_path, c
     tprintf("Template file is %s\n", template_file.c_str());
 
     sprintf(str, "cp %s maxscale.cnf", template_file.c_str());
-    if (verbose)
+    if (verbose())
     {
         tprintf("Executing '%s' command\n", str);
     }
@@ -1398,7 +1396,7 @@ int TestConnections::create_connections(int m,
     MYSQL* master_conn[conn_N];
     MYSQL* slave_conn[conn_N];
     MYSQL* galera_conn[conn_N];
-
+    const bool verbose = this->verbose();
 
     tprintf("Opening %d connections to each router\n", conn_N);
     for (i = 0; i < conn_N; i++)
@@ -1983,7 +1981,7 @@ int TestConnections::process_mdbci_template()
 
     string name = string(test_dir) + "/mdbci/templates/" + m_mdbci_template + ".json.template";
     string sys = string("envsubst < ") + name + " > " + m_vm_path + ".json";
-    if (verbose)
+    if (verbose())
     {
         std::cout << sys << std::endl;
     }
@@ -2086,7 +2084,7 @@ void TestConnections::set_mdbci_labels()
                           std::inserter(mdbci_labels, mdbci_labels.begin()));
 
     std::string mdbci_labels_str = flatten_stringset(mdbci_labels);
-    if (TestConnections::verbose)
+    if (verbose())
     {
         printf("mdbci-labels: %s\n", mdbci_labels_str.c_str());
     }
@@ -2130,11 +2128,11 @@ bool TestConnections::read_cmdline_options(int argc, char* argv[])
         switch (c)
         {
         case 'v':
-            verbose = true;
+            set_verbose(true);
             break;
 
         case 'n':
-            verbose = false;
+            set_verbose(false);
             break;
 
         case 'q':
@@ -2246,7 +2244,7 @@ bool TestConnections::initialize_nodes()
     {
         // TODO: Introduce a Backends class derived from Nodes from which MariaDB_nodes, Galera_nodes, etc.
         // TODO: are derived. That way the C++ type alone is sufficient for identifying the backend type.
-        repl = new Mariadb_nodes("node", test_dir, verbose, m_network_config, Mariadb_nodes::Type::MARIADB);
+        repl = new Mariadb_nodes(m_shared, m_network_config);
         repl->setup();
         repl->set_use_ipv6(m_use_ipv6);
         repl->ssl = backend_ssl;
@@ -2261,7 +2259,7 @@ bool TestConnections::initialize_nodes()
 
     if (use_galera)
     {
-        galera = new Galera_nodes("galera", test_dir, verbose, m_network_config);
+        galera = new Galera_nodes(m_shared, m_network_config);
         galera->setup();
         galera->set_use_ipv6(false);
         galera->ssl = backend_ssl;
@@ -2276,7 +2274,7 @@ bool TestConnections::initialize_nodes()
 
     if (use_xpand)
     {
-        xpand = new Xpand_nodes("xpand", test_dir, verbose, m_network_config);
+        xpand = new Xpand_nodes(m_shared, m_network_config);
         xpand->setup();
         xpand->set_use_ipv6(false);
         xpand->ssl = backend_ssl;
@@ -2289,7 +2287,7 @@ bool TestConnections::initialize_nodes()
         xpand = NULL;
     }
 
-    maxscales = new Maxscales("maxscale", test_dir, verbose, m_network_config);
+    maxscales = new Maxscales(m_shared, m_network_config);
     maxscales->setup();
     m_maxscale = std::make_unique<mxt::MaxScale>(maxscales, *m_logger, 0);
 
@@ -2336,7 +2334,7 @@ bool TestConnections::check_create_vms()
     bool mdbci_call_needed = false;
     if (missing_mdbci_labels.empty())
     {
-        if (verbose)
+        if (verbose())
         {
             tprintf("Machines with all required labels '%s' are running, MDBCI UP call is not needed",
                     m_mdbci_labels_str.c_str());
@@ -2359,6 +2357,16 @@ bool TestConnections::check_create_vms()
         m_mdbci_called = true;
     }
     return rval;
+}
+
+void TestConnections::set_verbose(bool val)
+{
+    m_shared.verbose = val;
+}
+
+bool TestConnections::verbose() const
+{
+    return m_shared.verbose;
 }
 
 std::string cutoff_string(const string& source, char cutoff)

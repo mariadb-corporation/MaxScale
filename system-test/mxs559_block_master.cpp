@@ -100,9 +100,9 @@ int main(int argc, char* argv[])
     for (int i = 0; i < 60; i++)
     {
         test.set_timeout(60);
-        test.verbose = true;
+        test.set_verbose(true);
         int rc = test.maxscales->connect_maxscale(0);
-        test.verbose = false;
+        test.set_verbose(false);
 
         if (rc == 0)
         {

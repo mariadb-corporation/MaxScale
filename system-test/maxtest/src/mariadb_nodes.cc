@@ -20,6 +20,8 @@
 #include <functional>
 #include <algorithm>
 #include <maxtest/envv.hh>
+#include <maxtest/test_dir.hh>
+#include <maxbase/format.hh>
 
 using std::cout;
 using std::endl;
@@ -76,19 +78,16 @@ void Mariadb_nodes::require_gtid(bool value)
     g_require_gtid = value;
 }
 
-Mariadb_nodes::Mariadb_nodes(const char* pref,
-                             const char* test_cwd,
-                             bool verbose,
-                             const std::string& network_config,
+Mariadb_nodes::Mariadb_nodes(const char* pref, SharedData& shared, const std::string& network_config,
                              Type type)
-    : Nodes(pref, network_config, verbose)
+    : Nodes(pref, shared, network_config)
     , no_set_pos(false)
     , v51(false)
     , m_type(type)
 {
     memset(this->nodes, 0, sizeof(this->nodes));
     memset(this->blocked, 0, sizeof(this->blocked));
-    strcpy(this->test_dir, test_cwd);
+    m_test_dir = test_dir;
 
     auto& prefix_str = prefix();
     if (prefix_str == "node")
@@ -103,6 +102,11 @@ Mariadb_nodes::Mariadb_nodes(const char* pref,
     {
         cnf_server_name = prefix_str + "_server";
     }
+}
+
+Mariadb_nodes::Mariadb_nodes(SharedData& shared, const string& network_config)
+    : Mariadb_nodes("node", shared, network_config, Type::MARIADB)
+{
 }
 
 bool Mariadb_nodes::setup()
@@ -408,10 +412,9 @@ int Mariadb_nodes::cleanup_db_nodes()
 
 void Mariadb_nodes::create_users(int node)
 {
-    char str[PATH_MAX + 1024];
     // Create users for replication as well as the users that are used by the tests
-    sprintf(str, "%s/create_user.sh", test_dir);
-    copy_to_node(node, str, access_homedir(node));
+    string str = mxb::string_printf("%s/create_user.sh", m_test_dir.c_str());
+    copy_to_node(node, str.c_str(), access_homedir(node));
 
     ssh_node_f(node, true,
                "export require_ssl=\"%s\"; "
@@ -495,7 +498,7 @@ int Mariadb_nodes::start_replication()
 
 int Galera_nodes::start_galera()
 {
-    bool old_verbose = verbose;
+    bool old_verbose = verbose();
     int local_result = 0;
     local_result += stop_nodes();
 
@@ -539,16 +542,14 @@ int Galera_nodes::start_galera()
         {
             cout << "Failed to start node" << i << endl;
             cout << "---------- BEGIN LOGS ----------" << endl;
-            verbose = true;
+            m_shared.verbose = true;
             ssh_node_f(0, true, "sudo journalctl -u mariadb | tail -n 50");
             cout << "----------- END LOGS -----------" << endl;
         }
     }
 
-    char str[PATH_MAX + 1024];
-
-    sprintf(str, "%s/galera_wait_until_ready.sh", test_dir);
-    copy_to_node(0, str, access_homedir(0));
+    string str = mxb::string_printf("%s/galera_wait_until_ready.sh", m_test_dir.c_str());
+    copy_to_node(0, str.c_str(), access_homedir(0));
 
     ssh_node_f(0, true, "%s/galera_wait_until_ready.sh %s", access_homedir(0), socket_cmd[0].c_str());
 
@@ -558,7 +559,7 @@ int Galera_nodes::start_galera()
     local_result += execute_query(nodes[0], "%s", create_repl_user);
 
     close_connections();
-    verbose = old_verbose;
+    m_shared.verbose = old_verbose;
     return local_result;
 }
 
@@ -750,7 +751,7 @@ bool Mariadb_nodes::bad_slave_thread_status(MYSQL* conn, const char* field, int 
             break;
         }
 
-        if (verbose)
+        if (verbose())
         {
             printf("Node %d: field %s is %s\n", node, field, str);
         }
@@ -766,7 +767,7 @@ bool Mariadb_nodes::bad_slave_thread_status(MYSQL* conn, const char* field, int 
 
     if (strcmp(str, "Yes") != 0)
     {
-        if (verbose)
+        if (verbose())
         {
             printf("Node %d: %s is '%s'\n", node, field, str);
         }
@@ -845,6 +846,7 @@ int Mariadb_nodes::check_replication()
     int master = 0;
     int res = 0;
 
+    const bool verbose = this->verbose();
     if (verbose)
     {
         printf("Checking Master/Slave setup\n");
@@ -975,7 +977,7 @@ int Galera_nodes::check_galera()
 {
     int res = 1;
 
-    if (verbose)
+    if (verbose())
     {
         printf("Checking Galera\n");
         fflush(stdout);
@@ -1023,7 +1025,7 @@ int Mariadb_nodes::set_slave(MYSQL* conn, const char* master_host, int master_po
         sprintf(str, setup_slave_no_pos, master_host, master_port);
     }
 
-    if (this->verbose)
+    if (verbose())
     {
         printf("Setup slave SQL: %s\n", str);
     }
@@ -1225,7 +1227,7 @@ int Mariadb_nodes::get_version(int i)
         version_major[i][4] = 0;
     }
 
-    if (verbose)
+    if (verbose())
     {
         printf("Node %s%d: %s\t %s \t %s\n",
                prefix().c_str(), i, version[i], version_number[i], version_major[i]);
@@ -1436,7 +1438,7 @@ std::string Galera_nodes::get_config_name(int node)
 
 void Mariadb_nodes::reset_server_settings(int node)
 {
-    std::string cnfdir = std::string(test_dir) + "/mdbci/cnf/";
+    std::string cnfdir = m_test_dir + "/mdbci/cnf/";
     std::string cnf = get_config_name(node);
 
     // Note: This is a CentOS specific path
@@ -1445,8 +1447,8 @@ void Mariadb_nodes::reset_server_settings(int node)
     ssh_node_f(node, false, "sudo install -o root -g root -m 0644 ~/%s /etc/my.cnf.d/", cnf.c_str());
 
     // Always configure the backend for SSL
-    std::string ssl_dir = std::string(test_dir) + "/ssl-cert";
-    std::string ssl_cnf = std::string(test_dir) + "/ssl.cnf";
+    std::string ssl_dir = m_test_dir + "/ssl-cert";
+    std::string ssl_cnf = m_test_dir + "/ssl.cnf";
     copy_to_node_legacy(ssl_dir.c_str(), "~/", node);
     copy_to_node_legacy(ssl_cnf.c_str(), "~/", node);
 
@@ -1576,7 +1578,7 @@ void Mariadb_nodes::replicate_from(int slave, const std::string& host, uint16_t 
                   << "', MASTER_PORT = " << port << ", MASTER_USE_GTID = "
                   << type << ", MASTER_USER='repl', MASTER_PASSWORD='repl';";
 
-    if (verbose)
+    if (verbose())
     {
         std::cout << "Server " << slave + 1
                   << " starting to replicate from server " << master + 1 << std::endl;
@@ -1636,7 +1638,6 @@ const char* Mariadb_nodes::ip(int i) const
 void Mariadb_nodes::set_use_ipv6(bool use_ipv6)
 {
     m_use_ipv6 = use_ipv6;
-    this->use_ipv6 = use_ipv6;
 }
 
 const char* Mariadb_nodes::ip_private(int i) const
@@ -1722,4 +1723,9 @@ bool Mariadb_nodes::check_ssl(int node)
     }
 
     return ok;
+}
+
+bool Mariadb_nodes::using_ipv6() const
+{
+    return m_use_ipv6;
 }

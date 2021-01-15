@@ -21,10 +21,14 @@ namespace pinloki
 
 struct GtidPosition
 {
-    std::string file_name;
-    long        file_pos;
+    maxsql::Gtid gtid;
+    std::string  file_name;
+    long         file_pos;
 };
 
-// Default constructed GtidPosition if not found.
-GtidPosition find_gtid_position(const maxsql::Gtid& gtid, const InventoryReader& inv);
+// Return a vector with GtidPositions of the same size as the input vector.
+// The GtidPositions are sorted by file location. If a gtid is not found its
+// file_name is empty, and empty positions sort first.
+std::vector<GtidPosition> find_gtid_position(const std::vector<maxsql::Gtid>& gtid_list,
+                                             const InventoryReader& inv);
 }

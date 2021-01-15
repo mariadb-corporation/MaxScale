@@ -57,7 +57,7 @@ public:
 private:
     uint8_t                 m_seq = 1;  // Packet sequence number, incremented for each sent packet
     Pinloki*                m_router;
-    mxq::Gtid               m_gtid;
+    mxq::GtidList           m_gtid_list;
     std::unique_ptr<Reader> m_reader;
     int64_t                 m_heartbeat_period = 0;
     uint32_t                m_mgw_dcid = 0; // MASTER_GTID_WAIT delayed call
