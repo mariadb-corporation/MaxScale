@@ -69,6 +69,7 @@ private:
     void save_gtid_list(FileWriter& writer);
     void update_gtid_list(const mxq::Gtid& gtid);
     void start_replication(maxsql::Connection& conn);
+    bool has_master_changed(const maxsql::Connection& conn);
 
     mxq::Connection::ConnectionDetails get_connection_details();
 };
