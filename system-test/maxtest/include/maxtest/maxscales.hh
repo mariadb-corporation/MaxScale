@@ -30,7 +30,7 @@ public:
 
     ~Maxscales();
 
-    bool setup() override;
+    bool setup();
 
     int  read_env();
     void set_use_ipv6(bool use_ipv6);

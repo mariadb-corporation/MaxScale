@@ -97,14 +97,7 @@ public:
 protected:
     SharedData& m_shared;
 
-    Nodes(const char* prefix, SharedData& shared, const std::string& network_config);
-
-    /**
-     * Sets up the nodes. *Must* be called before instance is used.
-     *
-     * @return True, if the instance could be setup, false otherwise.
-     */
-    virtual bool setup() = 0;
+    Nodes(const std::string& prefix, SharedData& shared, const std::string& network_config);
 
     const char* ip4(int i = 0) const;
     const char* ip6(int i = 0) const;

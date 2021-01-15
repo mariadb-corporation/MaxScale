@@ -2212,9 +2212,7 @@ bool TestConnections::initialize_nodes()
 
     if (use_repl)
     {
-        // TODO: Introduce a Backends class derived from Nodes from which MariaDB_nodes, Galera_nodes, etc.
-        // TODO: are derived. That way the C++ type alone is sufficient for identifying the backend type.
-        repl = new Mariadb_nodes(m_shared, m_network_config);
+        repl = new MariaDBCluster(m_shared, m_network_config);
         repl->setup();
         repl->set_use_ipv6(m_use_ipv6);
         repl->ssl = backend_ssl;

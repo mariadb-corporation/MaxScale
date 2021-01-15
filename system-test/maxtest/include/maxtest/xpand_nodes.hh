@@ -28,9 +28,13 @@ class Xpand_nodes : public Mariadb_nodes
 public:
 
     Xpand_nodes(SharedData& shared, std::string network_config)
-        : Mariadb_nodes("xpand", shared, network_config, Type::XPAND)
+        : Mariadb_nodes(shared, "xpand", "xpand_server", network_config)
     {
     }
+
+    bool setup();
+
+    const std::string& type_string() const override;
 
     /**
      * @brief start_cluster Intstalls Xpand on all nodes, configure license, form cluster

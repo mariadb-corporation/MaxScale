@@ -85,17 +85,9 @@ public:
      */
     int global_result {0};
 
-    /**
-     * @brief galera Mariadb_nodes object containing references to Galera setuo
-     */
-    Galera_nodes* galera {nullptr};
-
-    /**
-     * @brief repl Mariadb_nodes object containing references to Master/Slave setuo
-     */
-    Mariadb_nodes* repl {nullptr};
-
-    Xpand_nodes * xpand {nullptr};
+    MariaDBCluster* repl {nullptr};     /**< Master-Slave replication cluster */
+    Galera_nodes*   galera {nullptr};   /**< Galera cluster */
+    Xpand_nodes*    xpand {nullptr};    /**< Xpand cluster */
 
     /**
      * @brief maxscales Maxscale object containing referebces to all Maxscale machines
