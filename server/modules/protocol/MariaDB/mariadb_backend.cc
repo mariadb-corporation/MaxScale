@@ -800,8 +800,8 @@ int32_t MariaDBBackendConnection::write(GWBUF* queue)
 
             if (mxs_mysql_is_ps_command(cmd))
             {
-                uint32_t internal_id = mxs_mysql_extract_ps_id(queue);
-                auto it = m_ps_map.find(internal_id);
+                uint32_t ps_id = mxs_mysql_extract_ps_id(queue);
+                auto it = m_ps_map.find(ps_id);
 
                 if (it != m_ps_map.end())
                 {
@@ -820,13 +820,13 @@ int32_t MariaDBBackendConnection::write(GWBUF* queue)
                         m_ps_map.erase(it);
                     }
                 }
-                else
+                else if (ps_id != MARIADB_PS_DIRECT_EXEC_ID)
                 {
                     gwbuf_free(queue);
 
-                    GWBUF* err = mysql_create_custom_error(
-                        1, 0, ER_UNKNOWN_STMT_HANDLER,
-                        "Unknown prepared statement handler given to MaxScale");
+                    std::stringstream ss;
+                    ss << "Unknown prepared statement handler (" << ps_id << ") given to MaxScale";
+                    GWBUF* err = mysql_create_custom_error(1, 0, ER_UNKNOWN_STMT_HANDLER, ss.str().c_str());
                     mxs::ReplyRoute route;
                     return m_upstream->clientReply(err, route, m_reply);
                 }
