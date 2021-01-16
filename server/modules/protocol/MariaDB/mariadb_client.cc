@@ -1057,9 +1057,11 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_normal
         return StateMachineRes::ERROR;
     }
 
-    if (m_routing_state == RoutingState::PREPARING_PS)
+    if (m_routing_state == RoutingState::CHANGING_DB
+        || m_routing_state == RoutingState::CHANGING_ROLE
+        || m_routing_state == RoutingState::PREPARING_PS)
     {
-        // A prepared statement is being prepared, read the data once the preparation is complete.
+        // We're still waiting for a response from the backend, read more data once we get it.
         return StateMachineRes::IN_PROGRESS;
     }
 
@@ -1127,11 +1129,6 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_normal
 
     case RoutingState::CHANGING_DB:
     case RoutingState::CHANGING_ROLE:
-        // Client sent something while we are still waiting for server response. Should be rare.
-        // Simplest way to handle this is to wait for the response before routing. Add later.
-        MXB_ERROR("Client sent data while waiting for previous result. Session will be closed.");
-        break;
-
     case RoutingState::PREPARING_PS:
         mxb_assert_message(!true, "We should never end up here");
         break;
@@ -2389,6 +2386,7 @@ MariaDBClientConnection::clientReply(GWBUF* buffer, maxscale::ReplyRoute& down, 
         // Regardless of result, database change is complete.
         m_pending_value.clear();
         m_routing_state = RoutingState::PACKET_START;
+        m_dcb->trigger_read_event();
         break;
 
     case RoutingState::CHANGING_ROLE:
@@ -2408,6 +2406,7 @@ MariaDBClientConnection::clientReply(GWBUF* buffer, maxscale::ReplyRoute& down, 
         // Regardless of result, role change is complete.
         m_pending_value.clear();
         m_routing_state = RoutingState::PACKET_START;
+        m_dcb->trigger_read_event();
         break;
 
     case RoutingState::PREPARING_PS:
