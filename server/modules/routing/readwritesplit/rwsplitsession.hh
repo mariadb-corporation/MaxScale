@@ -138,7 +138,6 @@ private:
 
     bool open_connections();
     void process_sescmd_response(mxs::RWBackend* backend, GWBUF** ppPacket, const mxs::Reply& reply);
-    void compress_history(mxs::SSessionCommand& sescmd);
 
     mxs::SSessionCommand create_sescmd(GWBUF* buffer);
 

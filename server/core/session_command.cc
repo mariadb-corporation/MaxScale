@@ -62,11 +62,4 @@ std::string SessionCommand::to_string()
 {
     return mxs::extract_sql(m_buffer.get());
 }
-
-void SessionCommand::mark_as_duplicate(const SessionCommand& rhs)
-{
-    mxb_assert(eq(rhs));
-    // The commands now share the mxs::Buffer that contains the actual command
-    m_buffer = rhs.m_buffer;
-}
 }

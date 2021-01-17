@@ -825,10 +825,30 @@ int32_t MariaDBBackendConnection::write(GWBUF* queue)
                     gwbuf_free(queue);
 
                     std::stringstream ss;
-                    ss << "Unknown prepared statement handler (" << ps_id << ") given to MaxScale";
-                    GWBUF* err = mysql_create_custom_error(1, 0, ER_UNKNOWN_STMT_HANDLER, ss.str().c_str());
-                    mxs::ReplyRoute route;
-                    return m_upstream->clientReply(err, route, m_reply);
+                    ss << "Unknown prepared statement handler (" << ps_id << ") given to MaxScale for "
+                       << STRPACKETTYPE(cmd) << " by '" << m_session->user_and_host() << "'";
+                    MXS_WARNING("%s", ss.str().c_str());
+
+                    // Only send the error if the client expects a response. If an unknown COM_STMT_CLOSE is
+                    // sent, don't
+                    if (cmd != MXS_COM_STMT_CLOSE)
+                    {
+                        GWBUF* err = mysql_create_custom_error(
+                            1, 0, ER_UNKNOWN_STMT_HANDLER, ss.str().c_str());
+
+                        // Send the error as a separate event. This allows the routeQuery of the router to
+                        // finish before we deliver the response.
+                        m_dcb->readq_append(err);
+                        m_dcb->trigger_read_event();
+                    }
+
+                    // This is an error condition that is very likely to happen if something is broken in the
+                    // prepared statement handling. Asserting that we never get here when we're testing helps
+                    // catch the otherwise hard to spot error. Since this code is expected to be hit in
+                    // environments where a connector sends an unknown ID, we can't treat this as a hard error
+                    // and close the session.
+                    mxb_assert(!true);
+                    return 1;
                 }
             }
 
@@ -1919,6 +1939,10 @@ void MariaDBBackendConnection::process_ps_response(Iter it, Iter end)
     uint32_t stmt_id = 0;
     mxb_assert(internal_id != 0);
 
+    // Reset the ID to make sure the debug assertion above will catch any cases where a PS response is read
+    // without a pre-assigned ID.
+    m_ps_id = 0;
+
     // Modifying the ID here is convenient but it doesn't seem right as the iterators should be const
     // iterators. This could be fixed later if a more suitable place is found.
     stmt_id |= *it;
@@ -2121,9 +2145,13 @@ void MariaDBBackendConnection::track_query(const TrackedQuery& query)
             return;
         }
 
-        m_ps_id = query.id;
         m_reply.clear();
         m_reply.set_command(query.command);
+
+        if (query.command == MXS_COM_STMT_PREPARE)
+        {
+            m_ps_id = query.id;
+        }
 
         if (mxs_mysql_command_will_respond(m_reply.command()))
         {

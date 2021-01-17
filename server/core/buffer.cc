@@ -660,6 +660,7 @@ void* gwbuf_get_buffer_object_data(GWBUF* buf, bufobj_id_t id)
 void gwbuf_set_id(GWBUF* buffer, uint32_t id)
 {
     validate_buffer(buffer);
+    mxb_assert(buffer->id == 0);
     buffer->id = id;
 }
 

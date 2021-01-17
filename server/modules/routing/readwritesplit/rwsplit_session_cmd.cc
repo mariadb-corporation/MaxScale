@@ -192,30 +192,6 @@ mxs::SSessionCommand RWSplitSession::create_sescmd(GWBUF* buffer)
     return sescmd;
 }
 
-/**
- * Compress session command history
- *
- * This function removes data duplication by sharing buffers between session
- * commands that have identical data. Only one copy of the actual data is stored
- * for each unique session command.
- *
- * @param sescmd Executed session command
- */
-void RWSplitSession::compress_history(mxs::SSessionCommand& sescmd)
-{
-    auto eq = [&](mxs::SSessionCommand& scmd) {
-            return scmd->eq(*sescmd);
-        };
-
-    auto first = std::find_if(m_sescmd_list.begin(), m_sescmd_list.end(), eq);
-
-    if (first != m_sescmd_list.end())
-    {
-        // Duplicate command, use a reference of the old command instead of duplicating it
-        sescmd->mark_as_duplicate(**first);
-    }
-}
-
 void RWSplitSession::continue_large_session_write(GWBUF* querybuf, uint32_t type)
 {
     for (auto it = m_raw_backends.begin(); it != m_raw_backends.end(); it++)

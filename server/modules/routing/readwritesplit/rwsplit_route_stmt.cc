@@ -586,7 +586,6 @@ bool RWSplitSession::route_session_write(GWBUF* querybuf, uint8_t command, uint3
     else
     {
         discard_old_history(lowest_pos);
-        compress_history(sescmd);
         m_sescmd_list.push_back(sescmd);
     }
 
