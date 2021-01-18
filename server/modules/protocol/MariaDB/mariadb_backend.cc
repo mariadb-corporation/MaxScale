@@ -549,6 +549,7 @@ int MariaDBBackendConnection::normal_read()
 
     /** Ask what type of output the router/filter chain expects */
     uint64_t capabilities = service_get_capabilities(session->service);
+    capabilities |= static_cast<MYSQL_session*>(session->protocol_data())->client_protocol_capabilities();
     bool result_collected = false;
 
     if (rcap_type_required(capabilities, RCAP_TYPE_PACKET_OUTPUT) || m_collect_result)

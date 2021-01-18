@@ -223,4 +223,28 @@ public:
      * @return True if a transaction that was active is ending either via COMMIT or ROLLBACK.
      */
     bool is_trx_ending() const override;
+
+    /**
+     * Sets the capabilities required by the client protocol, to be used by the
+     * backend protocol. This is primarily intended for client protocols other than
+     * MariaDB that use the MariaDB backend protocol.
+     *
+     * @param capabilities  The needed capabilities; a bitmask of @c mxs_routing_capability_t
+     *                      values. Only output capabilities will have an effect.
+     */
+    void set_client_protocol_capabilities(uint64_t capabilities)
+    {
+        m_client_protocol_capabilities |= capabilities;
+    }
+
+    /**
+     * @returns  The client protocol capabilities; a bitmask of @c mxs_routing_capability values.
+     */
+    uint64_t client_protocol_capabilities() const
+    {
+        return m_client_protocol_capabilities;
+    }
+
+private:
+    uint64_t m_client_protocol_capabilities { 0 };
 };
