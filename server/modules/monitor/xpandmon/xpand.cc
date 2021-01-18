@@ -209,7 +209,8 @@ bool xpand::ping_or_connect_to_hub(const char* zName,
                                    MYSQL** ppCon)
 {
     bool connected = false;
-    MonitorServer::ConnectResult rv = MonitorServer::ping_or_connect_to_db(settings, server, ppCon);
+    std::string err;
+    MonitorServer::ConnectResult rv = MonitorServer::ping_or_connect_to_db(settings, server, ppCon, &err);
 
     if (Monitor::connection_is_ok(rv))
     {
@@ -230,7 +231,7 @@ bool xpand::ping_or_connect_to_hub(const char* zName,
     else
     {
         MXS_ERROR("%s: Could either not ping or create connection to %s:%d: %s",
-                  zName, server.address(), server.port(), mysql_error(*ppCon));
+                  zName, server.address(), server.port(), err.c_str());
     }
 
     return connected;

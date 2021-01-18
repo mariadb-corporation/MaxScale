@@ -178,10 +178,13 @@ public:
      * @param pServer     A server
      * @param ppConn      Address of pointer to a MYSQL instance. The instance should either be
      *                    valid or NULL.
+     * @param pError      Pointer where the error message is stored
+     *
      * @return Connection status.
      */
     static ConnectResult
-    ping_or_connect_to_db(const ConnectionSettings& sett, SERVER& server, MYSQL** ppConn);
+    ping_or_connect_to_db(const ConnectionSettings& sett, SERVER& server, MYSQL** ppConn,
+                          std::string* pError);
 
     MonitorServer(SERVER* server, const SharedSettings& shared);
 
@@ -300,6 +303,9 @@ private:
     bool            m_ok_to_check_disk_space{true};     /**< Set to false if check fails */
 
     std::chrono::steady_clock::time_point m_last_variable_update;
+
+    // Latest connection error
+    std::string m_latest_error;
 
     bool should_fetch_server_variables();
 };
