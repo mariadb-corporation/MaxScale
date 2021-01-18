@@ -2,7 +2,7 @@
 
 MariaDB MaxScale is also made available as a tarball, which is named like
 `maxscale-x.y.z.OS.tar.gz` where `x.y.z` is the same as the corresponding version and `OS`
-identifies the operating system, e.g. `maxscale-2.0.1.centos.7.tar.gz`.
+identifies the operating system, e.g. `maxscale-2.5.6.centos.7.tar.gz`.
 
 In order to use the tarball, the following libraries are required:
 
@@ -10,6 +10,7 @@ In order to use the tarball, the following libraries are required:
 - libaio
 - OpenSSL
 - gnutls
+- libatomic
 
 The tarball has been built with the assumption that it will be installed in `/usr/local`.
 However, it is possible to install it in any directory, but in that case MariaDB MaxScale
