@@ -17,6 +17,7 @@
 #include "inventory.hh"
 #include "pinloki.hh"
 #include <maxbase/hexdump.hh>
+#include <maxbase/stopwatch.hh>
 
 #include <fstream>
 #include <iostream>
@@ -103,6 +104,13 @@ void Writer::start_replication(mxq::Connection& conn)
     conn.start_replication(m_inventory.config().server_id(), m_current_gtid_list);
 }
 
+bool Writer::has_master_changed(const mxq::Connection& conn)
+{
+    auto details = get_connection_details();
+
+    return conn.host() != details.host;
+}
+
 void Writer::run()
 {
     while (m_running)
@@ -130,12 +138,20 @@ void Writer::run()
             mxq::Connection conn(get_connection_details());
             start_replication(conn);
 
+            maxbase::Timer timer(1s);   // Check if the master has changed at the most once a second
+
             while (m_running)
             {
                 auto rpl_event = maxsql::RplEvent(conn.get_rpl_msg());
                 if (rpl_event.event_type() != HEARTBEAT_LOG_EVENT)
                 {
                     MXB_SDEBUG("INCOMING " << rpl_event);
+                }
+
+                if (m_inventory.config().select_master() && timer.alarm() && has_master_changed(conn))
+                {
+                    MXB_INFO("Pinloki switching to new master");
+                    break;
                 }
 
                 file.add_event(rpl_event);
