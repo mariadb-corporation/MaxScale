@@ -6,8 +6,8 @@ log_info=1
 type=monitor
 module=galeramon
 servers=server1,server2,server3,server4
-user=maxskysql
-password=skysql
+user=galeramon
+password=galeramon
 monitor_interval=1000
 root_node_as_master=false
 

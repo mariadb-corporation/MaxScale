@@ -149,8 +149,8 @@ log_no_match=true
 type=monitor
 module=galeramon
 servers=gserver1,gserver2,gserver3,gserver4
-user=maxskysql
-password=skysql
+user=galeramon
+password=galeramon
 monitor_interval=100
 root_node_as_master=false
 
