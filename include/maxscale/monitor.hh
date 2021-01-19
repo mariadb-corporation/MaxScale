@@ -560,20 +560,6 @@ protected:
     MonitorServer* get_monitored_server(SERVER* search_server);
 
     /**
-     * @brief Load a journal of server states
-     *
-     * @param master  Set to point to the current master
-     */
-    void load_server_journal(MonitorServer** master);
-
-    /**
-     * @brief Store a journal of server states
-     *
-     * @param master  The current master server or NULL if no master exists
-     */
-    void store_server_journal(MonitorServer* master);
-
-    /**
      * Check if admin is requesting setting or clearing maintenance status on the server and act accordingly.
      * Should be called at the beginning of a monitor loop.
      */
@@ -716,7 +702,6 @@ private:
      */
     std::string gen_serverlist(int status, CredentialsApproach approach = CredentialsApproach::EXCLUDE);
 
-    FILE*   open_data_file(Monitor* monitor, char* path);
     int     get_data_file_path(char* path) const;
     json_t* parameters_to_json() const;
 
@@ -725,7 +710,6 @@ private:
 
     mxb::StopWatch   m_disk_space_checked;              /**< When was disk space checked the last time */
     std::atomic_bool m_status_change_pending {false};   /**< Set when admin requests a status change. */
-    uint8_t          m_journal_hash[SHA_DIGEST_LENGTH]; /**< SHA1 hash of the latest written journal */
 
     /**
      * Has something changed such that journal needs to be updated. This is separate from the time-based

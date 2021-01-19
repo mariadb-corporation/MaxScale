@@ -19,7 +19,6 @@
 #include <atomic>
 #include <fcntl.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 #include <chrono>
 #include <string>
@@ -31,24 +30,20 @@
 #include <mutex>
 #include <mysql.h>
 #include <mysqld_error.h>
+#include <errmsg.h>
 
 #include <maxbase/alloc.h>
 #include <maxbase/format.hh>
 #include <maxbase/json.hh>
-#include <maxscale/clock.h>
 #include <maxscale/http.hh>
-#include <maxscale/json_api.hh>
 #include <maxscale/json_api.hh>
 #include <maxscale/mariadb.hh>
 #include <maxscale/mainworker.hh>
 #include <maxscale/maxscale.h>
 #include <maxscale/mysql_utils.hh>
 #include <maxscale/paths.hh>
-#include <maxscale/pcre2.hh>
-#include <maxscale/routingworker.hh>
 #include <maxscale/secrets.hh>
 #include <maxscale/utils.hh>
-#include <errmsg.h>
 
 #include "internal/config.hh"
 #include "internal/externcmd.hh"
@@ -56,23 +51,6 @@
 #include "internal/modules.hh"
 #include "internal/server.hh"
 #include "internal/service.hh"
-
-/** Schema version, journals must have a matching version */
-#define MMB_SCHEMA_VERSION 2
-
-/** Constants for byte lengths of the values */
-#define MMB_LEN_BYTES          4
-#define MMB_LEN_SCHEMA_VERSION 1
-#define MMB_LEN_CRC32          4
-#define MMB_LEN_VALUE_TYPE     1
-#define MMB_LEN_SERVER_STATUS  8
-
-/** Type of the stored value */
-enum stored_value_type
-{
-    SVT_SERVER = 1,     // Generic server state information
-    SVT_MASTER = 2,     // The master server name
-};
 
 using std::string;
 using std::set;
@@ -174,241 +152,6 @@ const uint64_t all_server_bits = SERVER_RUNNING | SERVER_MAINT | SERVER_MASTER |
 const char journal_name[] = "monitor.dat";
 const char journal_template[] = "%s/%s/%s";
 
-/**
- * @brief Remove .tmp suffix and rename file
- *
- * @param src File to rename
- * @return True if file was successfully renamed
- */
-bool rename_tmp_file(Monitor* monitor, const char* src)
-{
-    bool rval = true;
-    char dest[PATH_MAX + 1];
-    snprintf(dest, sizeof(dest), journal_template, mxs::datadir(), monitor->name(), journal_name);
-
-    if (rename(src, dest) == -1)
-    {
-        rval = false;
-        MXS_ERROR("Failed to rename journal file '%s' to '%s': %d, %s",
-                  src,
-                  dest,
-                  errno,
-                  mxs_strerror(errno));
-    }
-
-    return rval;
-}
-
-/**
- * @brief Open temporary file
- *
- * @param monitor Monitor
- * @param path Output where the path is stored
- * @return Opened file or NULL on error
- */
-FILE* open_tmp_file(Monitor* monitor, char* path)
-{
-    int nbytes = snprintf(path, PATH_MAX, journal_template, mxs::datadir(), monitor->name(), "");
-    int max_bytes = PATH_MAX - (int)sizeof(journal_name);
-    FILE* rval = NULL;
-
-    if (nbytes < max_bytes && mxs_mkdir_all(path, 0744))
-    {
-        strcat(path, journal_name);
-        strcat(path, "XXXXXX");
-        int fd = mkstemp(path);
-
-        if (fd == -1)
-        {
-            MXS_ERROR("Failed to open file '%s': %d, %s", path, errno, mxs_strerror(errno));
-        }
-        else
-        {
-            rval = fdopen(fd, "w");
-        }
-    }
-    else
-    {
-        MXS_ERROR("Path is too long: %d characters exceeds the maximum path "
-                  "length of %d bytes",
-                  nbytes,
-                  max_bytes);
-    }
-
-    return rval;
-}
-
-/**
- * @brief Store server data to in-memory buffer
- *
- * @param monitor Monitor
- * @param data Pointer to in-memory buffer used for storage, should be at least
- *             PATH_MAX bytes long
- * @param size Size of @c data
- */
-void store_data(Monitor* monitor, MonitorServer* master, uint8_t* data, uint32_t size)
-{
-    uint8_t* ptr = data;
-
-    /** Store the data length */
-    mxb_assert(sizeof(size) == MMB_LEN_BYTES);
-    ptr = mxs_set_byte4(ptr, size);
-
-    /** Then the schema version */
-    *ptr++ = MMB_SCHEMA_VERSION;
-
-    /** Store the states of all servers */
-    for (MonitorServer* db : monitor->servers())
-    {
-        *ptr++ = (char)SVT_SERVER;                                  // Value type
-        memcpy(ptr, db->server->name(), strlen(db->server->name()));// Name of the server
-        ptr += strlen(db->server->name());
-        *ptr++ = '\0';      // Null-terminate the string
-
-        auto status = db->server->status();
-        static_assert(sizeof(status) == MMB_LEN_SERVER_STATUS,
-                      "Status size should be MMB_LEN_SERVER_STATUS bytes");
-        ptr = maxscale::set_byteN(ptr, status, MMB_LEN_SERVER_STATUS);
-    }
-
-    /** Store the current root master if we have one */
-    if (master)
-    {
-        *ptr++ = (char)SVT_MASTER;
-        memcpy(ptr, master->server->name(), strlen(master->server->name()));
-        ptr += strlen(master->server->name());
-        *ptr++ = '\0';      // Null-terminate the string
-    }
-
-    /** Calculate the CRC32 for the complete payload minus the CRC32 bytes */
-    uint32_t crc = crc32(0L, NULL, 0);
-    crc = crc32(crc, (uint8_t*)data + MMB_LEN_BYTES, size - MMB_LEN_CRC32);
-    mxb_assert(sizeof(crc) == MMB_LEN_CRC32);
-
-    ptr = mxs_set_byte4(ptr, crc);
-    mxb_assert(ptr - data == size + MMB_LEN_BYTES);
-}
-
-/**
- * Check that memory area contains a null terminator
- */
-static bool has_null_terminator(const char* data, const char* end)
-{
-    while (data < end)
-    {
-        if (*data == '\0')
-        {
-            return true;
-        }
-        data++;
-    }
-
-    return false;
-}
-
-/**
- * Process a generic server
- */
-const char* process_server(Monitor* monitor, const char* data, const char* end)
-{
-    for (MonitorServer* db : monitor->servers())
-    {
-        if (strcmp(db->server->name(), data) == 0)
-        {
-            const unsigned char* sptr = (unsigned char*)strchr(data, '\0');
-            mxb_assert(sptr);
-            sptr++;
-
-            uint64_t status = maxscale::get_byteN(sptr, MMB_LEN_SERVER_STATUS);
-            db->mon_prev_status = status;
-            db->server->set_status(status);
-            db->set_pending_status(status);
-            break;
-        }
-    }
-
-    data += strlen(data) + 1 + MMB_LEN_SERVER_STATUS;
-
-    return data;
-}
-
-/**
- * Process a master
- */
-const char* process_master(Monitor* monitor, MonitorServer** master,
-                           const char* data, const char* end)
-{
-    if (master)
-    {
-        for (MonitorServer* db : monitor->servers())
-        {
-            if (strcmp(db->server->name(), data) == 0)
-            {
-                *master = db;
-                break;
-            }
-        }
-    }
-
-    data += strlen(data) + 1;
-
-    return data;
-}
-
-/**
- * Check that the calculated CRC32 matches the one stored on disk
- */
-bool check_crc32(const uint8_t* data, uint32_t size, const uint8_t* crc_ptr)
-{
-    uint32_t crc = mxs_get_byte4(crc_ptr);
-    uint32_t calculated_crc = crc32(0L, NULL, 0);
-    calculated_crc = crc32(calculated_crc, data, size);
-    return calculated_crc == crc;
-}
-
-/**
- * Process the stored journal data
- */
-bool process_data_file(Monitor* monitor, MonitorServer** master,
-                       const char* data, const char* crc_ptr)
-{
-    const char* ptr = data;
-    MXB_AT_DEBUG(const char* prevptr = ptr);
-
-    while (ptr < crc_ptr)
-    {
-        /** All values contain a null terminated string */
-        if (!has_null_terminator(ptr, crc_ptr))
-        {
-            MXS_ERROR("Possible corrupted journal file (no null terminator found). Ignoring.");
-            return false;
-        }
-
-        stored_value_type type = (stored_value_type)ptr[0];
-        ptr += MMB_LEN_VALUE_TYPE;
-
-        switch (type)
-        {
-        case SVT_SERVER:
-            ptr = process_server(monitor, ptr, crc_ptr);
-            break;
-
-        case SVT_MASTER:
-            ptr = process_master(monitor, master, ptr, crc_ptr);
-            break;
-
-        default:
-            MXS_ERROR("Possible corrupted journal file (unknown stored value). Ignoring.");
-            return false;
-        }
-        mxb_assert(prevptr != ptr);
-        MXB_AT_DEBUG(prevptr = ptr);
-    }
-
-    mxb_assert(ptr == crc_ptr);
-    return true;
-}
-
 bool check_disk_space_exhausted(MonitorServer* pMs,
                                 const std::string& path,
                                 const maxscale::disk::SizesAndName& san,
@@ -478,7 +221,6 @@ Monitor::Monitor(const string& name, const string& module)
     : m_name(name)
     , m_module(module)
 {
-    memset(m_journal_hash, 0, sizeof(m_journal_hash));
 }
 
 void Monitor::stop()
@@ -1495,186 +1237,6 @@ int Monitor::get_data_file_path(char* path) const
 {
     int rv = snprintf(path, PATH_MAX, journal_template, mxs::datadir(), name(), journal_name);
     return rv;
-}
-
-/**
- * @brief Open stored journal file
- *
- * @param monitor Monitor to reload
- * @param path Output where path is stored
- * @return Opened file or NULL on error
- */
-FILE* Monitor::open_data_file(Monitor* monitor, char* path)
-{
-    FILE* rval = NULL;
-    int nbytes = monitor->get_data_file_path(path);
-
-    if (nbytes < PATH_MAX)
-    {
-        if ((rval = fopen(path, "rb")) == NULL && errno != ENOENT)
-        {
-            MXS_ERROR("Failed to open journal file: %d, %s", errno, mxs_strerror(errno));
-        }
-    }
-    else
-    {
-        MXS_ERROR("Path is too long: %d characters exceeds the maximum path "
-                  "length of %d bytes",
-                  nbytes,
-                  PATH_MAX);
-    }
-
-    return rval;
-}
-
-void Monitor::store_server_journal(MonitorServer* master)
-{
-    auto monitor = this;    // TODO: cleanup later
-    /** Calculate how much memory we need to allocate */
-    uint32_t size = MMB_LEN_SCHEMA_VERSION + MMB_LEN_CRC32;
-
-    for (MonitorServer* db : m_servers)
-    {
-        /** Each server is stored as a type byte and a null-terminated string
-         * followed by eight byte server status. */
-        size += MMB_LEN_VALUE_TYPE + strlen(db->server->name()) + 1 + MMB_LEN_SERVER_STATUS;
-    }
-
-    if (master)
-    {
-        /** The master server name is stored as a null terminated string */
-        size += MMB_LEN_VALUE_TYPE + strlen(master->server->name()) + 1;
-    }
-
-    /** 4 bytes for file length, 1 byte for schema version and 4 bytes for CRC32 */
-    uint32_t buffer_size = size + MMB_LEN_BYTES;
-    uint8_t* data = (uint8_t*)MXS_MALLOC(buffer_size);
-    char path[PATH_MAX + 1];
-
-    if (data)
-    {
-        /** Store the data in memory first and compare the current hash to
-         * the hash of the last stored journal. This isn't a fool-proof
-         * method of detecting changes but any failures are mainly of
-         * theoretical nature. */
-        store_data(monitor, master, data, size);
-        uint8_t hash[SHA_DIGEST_LENGTH];
-        SHA1(data, size, hash);
-
-        if (memcmp(monitor->m_journal_hash, hash, sizeof(hash)) != 0)
-        {
-            FILE* file = open_tmp_file(monitor, path);
-
-            if (file)
-            {
-                /** Write the data to a temp file and rename it to the final name */
-                if (fwrite(data, 1, buffer_size, file) == buffer_size && fflush(file) == 0)
-                {
-                    if (!rename_tmp_file(monitor, path))
-                    {
-                        unlink(path);
-                    }
-                    else
-                    {
-                        memcpy(monitor->m_journal_hash, hash, sizeof(hash));
-                    }
-                }
-                else
-                {
-                    MXS_ERROR("Failed to write journal data to disk: %d, %s",
-                              errno,
-                              mxs_strerror(errno));
-                }
-                fclose(file);
-            }
-        }
-    }
-    MXS_FREE(data);
-}
-
-void Monitor::load_server_journal(MonitorServer** master)
-{
-    auto monitor = this;    // TODO: cleanup later
-    char path[PATH_MAX];
-    FILE* file = open_data_file(monitor, path);
-
-    if (file)
-    {
-        uint32_t size = 0;
-        size_t bytes = fread(&size, 1, MMB_LEN_BYTES, file);
-        mxb_assert(sizeof(size) == MMB_LEN_BYTES);
-
-        if (bytes == MMB_LEN_BYTES)
-        {
-            /** Payload contents:
-             *
-             * - One byte of schema version
-             * - `size - 5` bytes of data
-             * - Trailing 4 bytes of CRC32
-             */
-            char* data = (char*)MXS_MALLOC(size);
-
-            if (data && (bytes = fread(data, 1, size, file)) == size)
-            {
-                if (*data == MMB_SCHEMA_VERSION)
-                {
-                    if (check_crc32((uint8_t*)data,
-                                    size - MMB_LEN_CRC32,
-                                    (uint8_t*)data + size - MMB_LEN_CRC32))
-                    {
-                        if (process_data_file(monitor,
-                                              master,
-                                              data + MMB_LEN_SCHEMA_VERSION,
-                                              data + size - MMB_LEN_CRC32))
-                        {
-                            MXS_INFO("Loaded server states from journal file: %s", path);
-                        }
-                    }
-                    else
-                    {
-                        MXS_ERROR("CRC32 mismatch in journal file. Ignoring.");
-                    }
-                }
-                else
-                {
-                    MXS_ERROR("Unknown journal schema version: %d", (int)*data);
-                }
-            }
-            else if (data)
-            {
-                if (ferror(file))
-                {
-                    MXS_ERROR("Failed to read journal file: %d, %s", errno, mxs_strerror(errno));
-                }
-                else
-                {
-                    MXS_ERROR("Failed to read journal file: Expected %u bytes, "
-                              "read %lu bytes.",
-                              size,
-                              bytes);
-                }
-            }
-            MXS_FREE(data);
-        }
-        else
-        {
-            if (ferror(file))
-            {
-                MXS_ERROR("Failed to read journal file length: %d, %s",
-                          errno,
-                          mxs_strerror(errno));
-            }
-            else
-            {
-                MXS_ERROR("Failed to read journal file length: Expected %d bytes, "
-                          "read %lu bytes.",
-                          MMB_LEN_BYTES,
-                          bytes);
-            }
-        }
-
-        fclose(file);
-    }
 }
 
 void Monitor::remove_server_journal()
