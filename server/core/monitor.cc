@@ -501,8 +501,11 @@ const char* Monitor::name() const
 bool Monitor::configure(const mxs::ConfigParameters* params)
 {
     m_settings.interval = params->get_duration<milliseconds>(CN_MONITOR_INTERVAL).count();
-    m_settings.journal_max_age = params->get_duration<seconds>(CN_JOURNAL_MAX_AGE).count();
     m_settings.events = params->get_enum(CN_EVENTS, monitor_event_values);
+
+    m_settings.journal_max_age = params->get_duration<seconds>(CN_JOURNAL_MAX_AGE).count();
+    // Write journal at least once per 5 minutes, just to keep the timestamp up to date.
+    m_journal_max_save_interval = std::min(5 * 60l, m_settings.journal_max_age / 2);
 
     MonitorServer::ConnectionSettings& conn_settings = m_settings.shared.conn_settings;
     conn_settings.read_timeout = params->get_duration<seconds>(CN_BACKEND_READ_TIMEOUT).count();
@@ -1972,6 +1975,14 @@ const char FIELD_STATUS[] = "status";
 const char FIELD_SERVERS[] = "servers";
 }
 
+void Monitor::maybe_write_journal()
+{
+    if (m_journal_update_needed || (time(nullptr) - m_journal_updated > m_journal_max_save_interval))
+    {
+        write_journal();
+    }
+}
+
 void Monitor::write_journal()
 {
     using mxb::Json;
@@ -1988,11 +1999,13 @@ void Monitor::write_journal()
     }
     data.set_object(journal_fields::FIELD_SERVERS, std::move(servers_data));
 
-    save_monitor_specific_journal_data(data); // Add derived class data if any
+    save_monitor_specific_journal_data(data);   // Add derived class data if any
     if (!data.save(journal_filepath()))
     {
         MXB_ERROR("Failed to write journal data to disk. %s", data.error_msg().c_str());
     }
+    m_journal_updated = time(nullptr);
+    m_journal_update_needed = false;
 }
 
 void Monitor::read_journal()
@@ -2327,12 +2340,22 @@ bool MonitorWorker::has_sufficient_permissions()
 
 void MonitorWorker::flush_server_status()
 {
+    bool status_changed = false;
     for (MonitorServer* pMs : servers())
     {
         if (!pMs->server->is_in_maint())
         {
-            pMs->server->assign_status(pMs->pending_status);
+            if (pMs->pending_status != pMs->server->status())
+            {
+                status_changed = true;
+                pMs->server->assign_status(pMs->pending_status);
+            }
         }
+    }
+
+    if (status_changed)
+    {
+        request_journal_update();
     }
 }
 
@@ -2345,6 +2368,7 @@ void MonitorWorkerSimple::pre_loop()
 
 void MonitorWorkerSimple::post_loop()
 {
+    write_journal();
 }
 
 void MonitorWorkerSimple::pre_tick()
@@ -2420,7 +2444,7 @@ void MonitorWorkerSimple::tick()
     flush_server_status();
     process_state_changes();
     hangup_failed_servers();
-    write_journal();
+    maybe_write_journal();
 }
 
 void MonitorWorker::pre_loop()
@@ -2507,6 +2531,11 @@ void MonitorWorker::run_one_tick()
 bool MonitorWorker::immediate_tick_required() const
 {
     return false;
+}
+
+void Monitor::request_journal_update()
+{
+    m_journal_update_needed = true;
 }
 
 MonitorServer::MonitorServer(SERVER* server, const SharedSettings& shared)

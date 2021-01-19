@@ -547,6 +547,11 @@ void MariaDBMonitor::pre_loop()
     m_locks_info.reset();
 }
 
+void MariaDBMonitor::post_loop()
+{
+    write_journal();
+}
+
 void MariaDBMonitor::tick()
 {
     m_state = State::MONITOR;
@@ -612,27 +617,15 @@ void MariaDBMonitor::tick()
     // Sanity check. Master may not be both slave and master.
     mxb_assert(m_master == NULL || !m_master->has_status(SERVER_SLAVE | SERVER_MASTER));
 
-    // Update shared status.
-    auto rlag_limit = m_settings.script_max_rlag;
-    for (auto server : servers())
-    {
-        SERVER* srv = server->server;
-        srv->set_replication_lag(server->m_replication_lag);
-        srv->assign_status(server->pending_status);
-        if (rlag_limit >= 0)
-        {
-            server->update_rlag_state(rlag_limit);
-        }
-    }
-
     if (server_locks_in_use() && is_cluster_owner())
     {
         check_acquire_masterlock();
     }
 
+    flush_server_status();
     process_state_changes();
     hangup_failed_servers();
-    write_journal();
+    maybe_write_journal();
     m_state = State::IDLE;
 }
 
@@ -737,18 +730,28 @@ void MariaDBMonitor::update_master_cycle_info()
 
 void MariaDBMonitor::update_gtid_domain()
 {
-    int64_t domain = m_master->m_gtid_domain_id;
-    if (m_master_gtid_domain != GTID_DOMAIN_UNKNOWN && domain != m_master_gtid_domain)
+    int64_t old_domain = m_master_gtid_domain;
+    int64_t new_domain = m_master->m_gtid_domain_id;
+
+    if (new_domain != old_domain)
     {
-        MXS_NOTICE("Gtid domain id of master has changed: %" PRId64 " -> %" PRId64 ".",
-                   m_master_gtid_domain, domain);
+        if (old_domain != GTID_DOMAIN_UNKNOWN)
+        {
+            MXS_NOTICE("Gtid domain id of master has changed: %li -> %li.",
+                       old_domain, new_domain);
+        }
+        request_journal_update();
+        m_master_gtid_domain = new_domain;
     }
-    m_master_gtid_domain = domain;
 }
 
 void MariaDBMonitor::assign_new_master(MariaDBServer* new_master)
 {
-    mxb::atomic::store(&m_master, new_master, mxb::atomic::RELAXED);
+    if (m_master != new_master)
+    {
+        mxb::atomic::store(&m_master, new_master, mxb::atomic::RELAXED);
+        request_journal_update();
+    }
     update_master_cycle_info();
     m_warn_current_master_invalid = true;
     m_warn_cannot_find_master = true;
@@ -1158,11 +1161,37 @@ void MariaDBMonitor::load_monitor_specific_journal_data(const mxb::Json& data)
     {
         if (strcmp(elem.second->name(), master_name.c_str()) == 0)
         {
-            m_master = elem.second;
+            assign_new_master(elem.second);
             break;
         }
     }
     m_master_gtid_domain = data.get_int(journal_fields::MASTER_GTID_DOMAIN);
+}
+
+void MariaDBMonitor::flush_server_status()
+{
+    // Update shared status.
+    bool status_changed = false;
+    auto rlag_limit = m_settings.script_max_rlag;
+    for (auto server : servers())
+    {
+        SERVER* srv = server->server;
+        srv->set_replication_lag(server->m_replication_lag);
+        if (server->pending_status != srv->status())
+        {
+            status_changed = true;
+            srv->assign_status(server->pending_status);
+        }
+        if (rlag_limit >= 0)
+        {
+            server->update_rlag_state(rlag_limit);
+        }
+    }
+
+    if (status_changed)
+    {
+        request_journal_update();
+    }
 }
 
 /**

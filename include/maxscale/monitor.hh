@@ -642,8 +642,25 @@ protected:
      */
     virtual bool can_be_disabled(const MonitorServer& server, std::string* errmsg_out) const;
 
+    /**
+     * Read monitor journal from json file.
+     */
     void read_journal();
+
+    /**
+     * Write monitor journal to json file
+     */
     void write_journal();
+
+    /**
+     * Write monitor journal if it needs updating.
+     */
+    void maybe_write_journal();
+
+    /**
+     * Call when journal needs updating.
+     */
+    void request_journal_update();
 
 private:
     /**
@@ -709,6 +726,13 @@ private:
     mxb::StopWatch   m_disk_space_checked;              /**< When was disk space checked the last time */
     std::atomic_bool m_status_change_pending {false};   /**< Set when admin requests a status change. */
     uint8_t          m_journal_hash[SHA_DIGEST_LENGTH]; /**< SHA1 hash of the latest written journal */
+
+    /**
+     * Has something changed such that journal needs to be updated. This is separate from the time-based
+     * condition. */
+    bool   m_journal_update_needed {true};
+    time_t m_journal_updated {0};               /**< When was journal last updated? */
+    time_t m_journal_max_save_interval {5 * 60};/**< How often to update journal at minimum */
 
     std::unique_ptr<ExternalCmd> m_scriptcmd;   /**< External command representing the monitor script */
 

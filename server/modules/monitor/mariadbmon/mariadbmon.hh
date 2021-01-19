@@ -162,8 +162,10 @@ protected:
     bool can_be_disabled(const mxs::MonitorServer& server, std::string* errmsg_out) const override;
 
     void pre_loop() override;
+    void post_loop() override;
     void tick() override;
     void process_state_changes() override;
+    void flush_server_status() override;
 
 private:
     using ServerFunction = std::function<void (MariaDBServer*)>;

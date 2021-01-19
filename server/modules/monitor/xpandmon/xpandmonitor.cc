@@ -379,6 +379,7 @@ void XpandMonitor::pre_loop()
 
 void XpandMonitor::post_loop()
 {
+    write_journal();
     if (m_pHub_con)
     {
         mysql_close(m_pHub_con);
@@ -416,7 +417,7 @@ void XpandMonitor::tick()
     flush_server_status();
     process_state_changes();
     hangup_failed_servers();
-    write_journal();
+    maybe_write_journal();
 }
 
 void XpandMonitor::choose_hub(xpand::Softfailed softfailed)
