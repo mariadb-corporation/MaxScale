@@ -515,11 +515,9 @@ protected:
     void detect_handle_state_changes();
 
     /**
-     * Is the journal stale?
-     *
-     * @return True, if the journal is stale, false otherwise.
+     * Remove old format journal file if it exists. Remove this function in MaxScale 2.7.
      */
-    bool journal_is_stale() const;
+    void remove_old_journal();
 
     /**
      * @brief Called when a server has been added to the monitor.
@@ -571,8 +569,6 @@ protected:
      * Injects hangup events for DCB that are connected to servers that are down.
      */
     void hangup_failed_servers();
-
-    void remove_server_journal();
 
     MonitorServer* find_parent_node(MonitorServer* target);
 
@@ -702,7 +698,6 @@ private:
      */
     std::string gen_serverlist(int status, CredentialsApproach approach = CredentialsApproach::EXCLUDE);
 
-    int     get_data_file_path(char* path) const;
     json_t* parameters_to_json() const;
 
     // Waits until the status change request is processed

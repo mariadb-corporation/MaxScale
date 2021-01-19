@@ -1233,63 +1233,10 @@ void Monitor::detect_handle_state_changes()
     }
 }
 
-int Monitor::get_data_file_path(char* path) const
+void Monitor::remove_old_journal()
 {
-    int rv = snprintf(path, PATH_MAX, journal_template, mxs::datadir(), name(), journal_name);
-    return rv;
-}
-
-void Monitor::remove_server_journal()
-{
-    char path[PATH_MAX];
-    if (get_data_file_path(path) < PATH_MAX)
-    {
-        unlink(path);
-    }
-    else
-    {
-        MXS_ERROR("Path to monitor journal directory is too long.");
-    }
-}
-
-bool Monitor::journal_is_stale() const
-{
-    bool is_stale = true;
-    char path[PATH_MAX];
-    auto max_age = m_settings.journal_max_age;
-    if (get_data_file_path(path) < PATH_MAX)
-    {
-        struct stat st;
-
-        if (stat(path, &st) == 0)
-        {
-            time_t tdiff = time(NULL) - st.st_mtim.tv_sec;
-
-            if (tdiff >= max_age)
-            {
-                MXS_NOTICE("Journal file was created %ld seconds ago. Maximum journal "
-                           "age is %ld seconds.", tdiff, max_age);
-            }
-            else
-            {
-                is_stale = false;
-            }
-        }
-        else if (errno == ENOENT)
-        {
-            is_stale = false;
-        }
-        else
-        {
-            MXS_ERROR("Failed to inspect journal file: %d, %s", errno, mxs_strerror(errno));
-        }
-    }
-    else
-    {
-        MXS_ERROR("Path to monitor journal directory is too long.");
-    }
-
-    return is_stale;
+    string path = mxb::string_printf(journal_template, mxs::datadir(), name(), journal_name);
+    unlink(path.c_str());
 }
 
 MonitorServer* Monitor::get_monitored_server(SERVER* search_server)
@@ -1727,11 +1674,7 @@ bool MonitorWorker::start()
     mxb_assert(!is_running());
     mxb_assert(m_thread_running.load() == false);
 
-    if (journal_is_stale())
-    {
-        MXS_NOTICE("Removing stale journal file for monitor '%s'.", name());
-        remove_server_journal();
-    }
+    remove_old_journal();
 
     if (!m_checked)
     {
