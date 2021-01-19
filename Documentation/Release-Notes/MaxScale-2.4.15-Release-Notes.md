@@ -15,6 +15,7 @@ report on [our Jira](https://jira.mariadb.org/projects/MXS).
 ## Bug fixes
 
 * [MXS-3360](https://jira.mariadb.org/browse/MXS-3360) MaxCtrl option --authenticator-options doesn't work
+* [MXS-3346](https://jira.mariadb.org/browse/MXS-3346) When using --basedir, mysql/plugin dir needs to be writable
 * [MXS-3337](https://jira.mariadb.org/browse/MXS-3337) galeramon queries only status, not variables
 * [MXS-3326](https://jira.mariadb.org/browse/MXS-3326) Host class does not accept all valid domain names.
 * [MXS-3325](https://jira.mariadb.org/browse/MXS-3325) Redis cache storage does not accept dashes in server names.
