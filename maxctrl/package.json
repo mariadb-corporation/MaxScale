@@ -19,6 +19,7 @@
   "license": "SEE LICENSE IN ../LICENSE.TXT",
   "dependencies": {
     "cli-table": "^0.3.1",
+    "colors": "^1.4.0",
     "flat": "^5.0.0",
     "globby": "^8.0.2",
     "inquirer": "^6.2.1",
