@@ -17,6 +17,7 @@
 #include <bsoncxx/json.hpp>
 #include <bsoncxx/builder/stream/document.hpp>
 #include <maxscale/dcb.hh>
+#include <maxscale/protocol/mariadb/mysql.hh>
 #include "mxsmongodatabase.hh"
 
 using namespace std;
@@ -792,6 +793,11 @@ GWBUF* mxsmongo::Mongo::handle_request(GWBUF* pRequest)
 int32_t mxsmongo::Mongo::clientReply(GWBUF* pMariaDB_response, DCB* pDcb)
 {
     mxb_assert(m_sDatabase.get());
+
+    // TODO: Remove need for making resultset contiguous and adda
+    // TODO: capability for dealing with resultsets larger than 16MB
+    pMariaDB_response = gwbuf_make_contiguous(pMariaDB_response);
+    mxb_assert(gwbuf_length(pMariaDB_response) < MYSQL_PACKET_LENGTH_MAX);
 
     GWBUF* pMongoDB_response = m_sDatabase->translate(*pMariaDB_response);
     gwbuf_free(pMariaDB_response);

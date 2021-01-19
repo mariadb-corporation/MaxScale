@@ -48,6 +48,9 @@ ProtocolModule::create_client_protocol(MXS_SESSION* pSession, mxs::Component* pC
     TRACE();
 
     unique_ptr<MYSQL_session> sSession_data(new MYSQL_session());
+    // TODO: Drop this, operate on whatever data is delivered to clientReply() and
+    // TODO: send documents to the client in multiple packets.
+    sSession_data->set_client_protocol_capabilities(RCAP_TYPE_RESULTSET_OUTPUT);
     pSession->set_protocol_data(std::move(sSession_data));
 
     return unique_ptr<mxs::ClientConnection>(new ClientConnection(&m_config, pSession, pComponent));
