@@ -1026,7 +1026,7 @@ bool MariaDBClientConnection::route_prepared_statement(mxs::Buffer&& buffer)
     if (ok)
     {
         m_routing_state = RoutingState::PREPARING_PS;
-        ++m_next_ps_id;
+        m_next_ps_id = 1 + (m_next_ps_id % std::numeric_limits<decltype(m_next_ps_id)>::max());
     }
 
     return ok;
