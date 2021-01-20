@@ -230,7 +230,7 @@ add_test_executable(ccrfilter_global.cpp ccrfilter_global_test ccrfilter_global 
 # Tries to reconfigure replication setup to use another node as a Master
 add_test_executable(change_master_during_session.cpp change_master_during_session replication LABELS readwritesplit mysqlmon REPL_BACKEND)
 
-# Executes change_user command in the loop
+# Executes change_user commands. Also tests MXS-3366.
 add_test_executable(change_user.cpp change_user replication LABELS MySQLAuth readwritesplit MySQLProtocol LIGHT REPL_BACKEND)
 
 # Tries to connect to non existing DB, expects no crash
