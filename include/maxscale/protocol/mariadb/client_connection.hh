@@ -15,7 +15,7 @@
 #include <maxscale/ccdefs.hh>
 #include <maxscale/protocol/mariadb/protocol_classes.hh>
 #include <maxscale/protocol/mariadb/local_client.hh>
-#include <maxscale/protocol/mariadb/query_classifier.hh>
+#include <maxscale/protocol/mariadb/queryclassifier.hh>
 
 struct KillInfo;
 
@@ -24,6 +24,7 @@ class MariaDBUserCache;
 struct UserEntryResult;
 
 class MariaDBClientConnection : public mxs::ClientConnectionBase
+                              , public mariadb::QueryClassifier::Handler
 {
 public:
     /* Type of the kill-command sent by client. */
@@ -88,6 +89,25 @@ public:
      */
     static bool module_init();
 
+    //
+    // API functions for mariadb::QueryClassifier::Handler
+    //
+
+    bool lock_to_master() override
+    {
+        return true;
+    }
+
+    bool is_locked_to_master() const override
+    {
+        return false;
+    }
+
+    bool supports_hint(HINT_TYPE hint_type) const override
+    {
+        return false;
+    }
+
 private:
     /** Return type of process_special_commands() */
     enum class SpecialCmdRes
@@ -124,7 +144,7 @@ private:
     void perform_check_token(AuthType auth_type);
     bool process_normal_packet(mxs::Buffer&& buffer);
     bool route_statement(mxs::Buffer&& buffer);
-    bool route_prepared_statement(mxs::Buffer&& buffer);
+    void finish_recording_history(const GWBUF* buffer);
 
     bool start_change_user(mxs::Buffer&& buffer);
     bool complete_change_user();
@@ -238,7 +258,7 @@ private:
         LOAD_DATA,      /**< Expecting the client to continue streaming CSV-data */
         CHANGING_DB,    /**< Client is changing database, waiting server response */
         CHANGING_ROLE,  /**< Client is changing role, waiting server response */
-        PREPARING_PS,   /**< Preparing a prepared statement */
+        RECORD_HISTORY, /**< Recording a command and the result it generated */
     };
 
     /** Temporary data required during COM_CHANGE_USER. */
@@ -272,10 +292,10 @@ private:
     bool m_user_update_wakeup {false};      /**< Waking up because of user account update? */
     int  m_previous_userdb_version {0};     /**< Userdb version used for first user account search */
 
-    // The next ID we'll return for a COM_STMT_PREPARE
-    uint32_t m_next_ps_id {1};
-
     std::vector<std::unique_ptr<LocalClient>> m_local_clients;
 
-    int m_num_responses {0};    // How many responses we are waiting for
+    int                      m_num_responses {0};   // How many responses we are waiting for
+    uint32_t                 m_next_id {1};         // The next ID we'll use for a session command
+    mxs::Buffer              m_pending_cmd;         // Current session command being executed
+    mariadb::QueryClassifier m_qc;
 };

@@ -17,6 +17,8 @@
 #include <maxscale/protocol/mariadb/common_constants.hh>
 #include <maxscale/protocol/mariadb/authenticator.hh>
 
+#include <deque>
+
 namespace mariadb
 {
 using ByteVec = std::vector<uint8_t>;
@@ -132,6 +134,10 @@ public:
 
     // User entry used by the session.
     mariadb::UserEntryResult user_entry;
+
+    // History of all commands that modify the session state. Contains the query itself and the command byte
+    // of the result it returned.
+    std::deque<std::pair<mxs::Buffer, uint8_t>> history;
 
     /**
      * Tells whether autocommit is ON or not. The value effectively only tells the last value

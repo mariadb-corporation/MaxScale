@@ -990,9 +990,50 @@ MariaDBClientConnection::process_special_queries(mxs::Buffer& buffer)
  */
 bool MariaDBClientConnection::route_statement(mxs::Buffer&& buffer)
 {
-    GWBUF* packetbuf = buffer.release();
-    // TODO: Do this only when RCAP_TYPE_STMT_INPUT is requested
-    packetbuf = gwbuf_make_contiguous(packetbuf);
+    buffer.make_contiguous();
+
+    // TODO: Make the history storage a router capability. Current this is done even for readconnroute.
+    uint8_t cmd = mxs_mysql_get_command(buffer.get());
+    const auto current_target = mariadb::QueryClassifier::CURRENT_TARGET_UNDEFINED;
+    const auto& info = m_qc.update_route_info(current_target, buffer.get());
+    bool should_record = cmd != MXS_COM_QUIT && m_qc.target_is_all(info.target());
+
+    if (should_record)
+    {
+        if (cmd == MXS_COM_STMT_CLOSE)
+        {
+            // Instead of handling COM_STMT_CLOSE like a normal command, we can exclude it from the history as
+            // well as remove the original COM_STMT_PREPARE that it refers to. This simplifies the history
+            // replay as all stored commands generate a response and none of them refer to any previous
+            // commands. This means that the history can be executed in a single batch without waiting for any
+            // responses.
+            should_record = false;
+            uint32_t id = mxs_mysql_extract_ps_id(buffer.get());
+
+            auto it = std::find_if(m_session_data->history.begin(),
+                                   m_session_data->history.end(),
+                                   [&](const auto& a) {
+                                       return a.first.id() == id;
+                                   });
+
+            if (it != m_session_data->history.end())
+            {
+                mxb_assert(it->first.id());
+                m_session_data->history.erase(it);
+            }
+        }
+        else
+        {
+            buffer.set_id(m_next_id);
+            m_pending_cmd = buffer;     // Keep a copy for the session command history
+
+            if (cmd == MXS_COM_STMT_PREPARE)
+            {
+                // This will silence the warnings about unknown PS IDs
+                m_qc.ps_store(buffer.get(), m_next_id);
+            }
+        }
+    }
 
     // Must be done whether or not there were any changes, as the query classifier
     // is thread and not session specific.
@@ -1007,7 +1048,7 @@ bool MariaDBClientConnection::route_statement(mxs::Buffer&& buffer)
     if (rcap_type_required(capabilities, RCAP_TYPE_TRANSACTION_TRACKING)
         && !service->config()->session_track_trx_state && !m_session->load_active)
     {
-        track_transaction_state(m_session, packetbuf);
+        track_transaction_state(m_session, buffer.get());
     }
 
     // TODO: The response count and state is currently modified before we route the query to allow routers to
@@ -1021,26 +1062,32 @@ bool MariaDBClientConnection::route_statement(mxs::Buffer&& buffer)
         ++m_num_responses;
     }
 
-    bool rval = true;
-    if (packetbuf)
+    if (should_record)
     {
-        rval = m_downstream->routeQuery(packetbuf) != 0;
+        mxb_assert(expecting_response);
+        m_routing_state = RoutingState::RECORD_HISTORY;
+
+        if (++m_next_id == 0)
+        {
+            m_next_id = 1;
+        }
     }
-    return rval;
+
+    return m_downstream->routeQuery(buffer.release()) != 0;
 }
 
-bool MariaDBClientConnection::route_prepared_statement(mxs::Buffer&& buffer)
+void MariaDBClientConnection::finish_recording_history(const GWBUF* buffer)
 {
-    buffer.set_id(m_next_ps_id);
-    bool ok = route_statement(move(buffer));
+    m_routing_state = RoutingState::PACKET_START;
+    m_dcb->trigger_read_event();
+    uint8_t result = mxs_mysql_get_command(buffer);
 
-    if (ok)
-    {
-        m_routing_state = RoutingState::PREPARING_PS;
-        m_next_ps_id = 1 + (m_next_ps_id % std::numeric_limits<decltype(m_next_ps_id)>::max());
-    }
+    MXS_INFO("Added %s to history: %s (result: %s)",
+             STRPACKETTYPE(m_pending_cmd.data()[4]),
+             mxs::extract_sql(m_pending_cmd).c_str(),
+             result == 0 ? "OK" : "ERR");
 
-    return ok;
+    m_session_data->history.emplace_back(m_pending_cmd.release(), result);
 }
 
 /**
@@ -1070,7 +1117,7 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_normal
 
     if (m_routing_state == RoutingState::CHANGING_DB
         || m_routing_state == RoutingState::CHANGING_ROLE
-        || m_routing_state == RoutingState::PREPARING_PS)
+        || m_routing_state == RoutingState::RECORD_HISTORY)
     {
         // We're still waiting for a response from the backend, read more data once we get it.
         return StateMachineRes::IN_PROGRESS;
@@ -1140,7 +1187,7 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_normal
 
     case RoutingState::CHANGING_DB:
     case RoutingState::CHANGING_ROLE:
-    case RoutingState::PREPARING_PS:
+    case RoutingState::RECORD_HISTORY:
         mxb_assert_message(!true, "We should never end up here");
         break;
     }
@@ -1346,6 +1393,7 @@ MariaDBClientConnection::MariaDBClientConnection(MXS_SESSION* session, mxs::Comp
     , m_session(session)
     , m_session_data(static_cast<MYSQL_session*>(session->protocol_data()))
     , m_version(service_get_version(session->service, SERVICE_VERSION_MIN))
+    , m_qc(this, session, TYPE_ALL)
 {
 }
 
@@ -2323,10 +2371,6 @@ bool MariaDBClientConnection::process_normal_packet(mxs::Buffer&& buffer)
         }
         break;
 
-    case MXS_COM_STMT_PREPARE:
-        success = route_prepared_statement(move(buffer));
-        break;
-
     case MXS_COM_QUERY:
         {
             if (rcap_type_required(m_session->service->capabilities(), RCAP_TYPE_QUERY_CLASSIFICATION))
@@ -2427,10 +2471,8 @@ MariaDBClientConnection::clientReply(GWBUF* buffer, maxscale::ReplyRoute& down, 
             m_dcb->trigger_read_event();
             break;
 
-        case RoutingState::PREPARING_PS:
-            MXS_INFO("Prepared statement complete");
-            m_routing_state = RoutingState::PACKET_START;
-            m_dcb->trigger_read_event();
+        case RoutingState::RECORD_HISTORY:
+            finish_recording_history(buffer);
             break;
 
         default:
@@ -2444,11 +2486,11 @@ MariaDBClientConnection::clientReply(GWBUF* buffer, maxscale::ReplyRoute& down, 
         mxb_assert(m_num_responses >= 0);
     }
 
-    auto service = m_session->service;
-    if (reply.is_ok() && service->config()->session_track_trx_state)
+    if (reply.is_ok() && m_session->service->config()->session_track_trx_state)
     {
         parse_and_set_trx_state(reply);
     }
+
     return write(buffer);
 }
 
