@@ -244,7 +244,7 @@ ChangeUserParseResult parse_change_user_packet(ByteVec& data, uint32_t client_ca
     rval.token_res = parse_auth_token(data, client_caps, AuthPacketType::COM_CHANGE_USER);
     if (rval.token_res.success)
     {
-        auto db_res = read_stringz_if_cap(data, client_caps, GW_MYSQL_CAPABILITIES_CONNECT_WITH_DB);
+        auto db_res = read_stringz_if_cap(data, client_caps, 0); // Is always present.
         if (db_res.success)
         {
             rval.db = std::move(db_res.result_str);
