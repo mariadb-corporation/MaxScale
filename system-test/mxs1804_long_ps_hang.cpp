@@ -23,6 +23,7 @@ void gen_select_sqlstr(char* sqlstr, unsigned int strsize, int sqlsize)
 int main(int argc, char** argv)
 {
     TestConnections test(argc, argv);
+    test.repl->execute_query_all_nodes("SET GLOBAL max_allowed_packet=67108860");
     int sqlsize = 16777215;
     int strsize = sql_str_size(sqlsize);
 
@@ -37,6 +38,7 @@ int main(int argc, char** argv)
                 "Prepare should not fail. Error: %s",
                 mysql_stmt_error(stmt));
     mysql_stmt_close(stmt);
+    free(sqlstr);
 
     return test.global_result;
 }
