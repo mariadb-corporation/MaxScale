@@ -36,6 +36,33 @@ from another.
 
 The following lists all MongoDB commands that are supported.
 
+### Find - https://docs.mongodb.com/manual/reference/command/find
+
+The following fields are acted upon.
+
+Field | Type | Description
+--------------------------
+find| string | The name of the target table.
+projection | document | Optional. The projection specification to determine which fields to includein the returned documents.
+
+All other fields are ignored.
+
+#### Projection
+
+The `projection` parameter determines which fields are returned in the matching documents.
+The `projection` parameter takes a document of the following form:
+```
+{ <field1>: <value>, <field2>: <value> ... }
+```
+
+Projection | Description
+------------------------
+`<field>: <1 or true>` | Specifies the inclusion of a field.
+`<field>: <0 or false>` | Specifies the exclusion of a field. *NOTE* Currently can only be specified for `_id` and will be honored only if other fields are explicitly included.
+
+If a `projection` document is not provided of if it is empty, the entire document
+will be returned.
+
 ### Insert - https://docs.mongodb.com/manual/reference/command/insert
 
 The following fields are acted upon.

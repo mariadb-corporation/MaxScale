@@ -96,9 +96,11 @@ mxsmongo::Command mxsmongo::get_command(const bsoncxx::document::view& doc)
     return command;
 }
 
-string mxsmongo::projection_to_columns(const bsoncxx::document::view& projection)
+vector<string> mxsmongo::projection_to_extractions(const bsoncxx::document::view& projection)
 {
-    vector<string> columns;
+    vector<string> extractions;
+
+    bool id_seen = false;
 
     for (auto it = projection.begin(); it != projection.end(); ++it)
     {
@@ -112,17 +114,40 @@ string mxsmongo::projection_to_columns(const bsoncxx::document::view& projection
 
         if (key.compare("_id") != 0)
         {
-            // TODO: Could something meaningful be returned for _id?
-            columns.push_back(static_cast<string>(key));
+            id_seen = true;
+
+            bool include_id = false;
+
+            switch (element.type())
+            {
+            case bsoncxx::type::k_int32:
+                include_id = static_cast<int32_t>(element.get_int32());
+                break;
+
+            case bsoncxx::type::k_int64:
+                include_id = static_cast<int64_t>(element.get_int64());
+                break;
+
+            case bsoncxx::type::k_bool:
+            default:
+                include_id = static_cast<bool>(element.get_bool());
+            }
+
+            if (!include_id)
+            {
+                continue;
+            }
         }
+
+        extractions.push_back(static_cast<string>(key));
     }
 
-    if (columns.empty())
+    if (!id_seen)
     {
-        columns.push_back("*");
+        extractions.push_back("_id");
     }
 
-    return mxb::join(columns);
+    return extractions;
 }
 
 namespace

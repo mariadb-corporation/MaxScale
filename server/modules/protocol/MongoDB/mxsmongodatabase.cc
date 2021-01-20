@@ -134,37 +134,20 @@ protected:
         return pResponse;
     }
 
-    static bool may_be_json(const string& s)
-    {
-        // A string whose first non-whitespace character is '{', may represent
-        // a JSON object.
-        bool rv = false;
-
-        auto it = s.begin();
-
-        while (it != s.end() && isspace(*it))
-        {
-            ++it;
-        }
-
-        if (it != s.end())
-        {
-            rv = (*it == '{');
-        }
-
-        return rv;
-    }
-
-    GWBUF* translate_resultset(GWBUF& mariadb_response)
+    GWBUF* translate_resultset(vector<string>& extractions, GWBUF& mariadb_response)
     {
         bsoncxx::builder::basic::document builder;
 
         uint8_t* pBuffer = GWBUF_DATA(&mariadb_response);
 
-        // A result set, so first we get the number of fields...
         ComQueryResponse cqr(&pBuffer);
 
         auto nFields = cqr.nFields();
+
+        // If there are no exractions, then we SELECTed the entire document and there should
+        // be just one field (the JSON document). Otherwise there should be as many fields
+        // (JSON_EXTRACT(doc, '$...')) as there are extractions.
+        mxb_assert((extractions.empty() && nFields == 1) || (extractions.size() == nFields));
 
         vector<string> names;
         vector<enum_field_types> types;
@@ -187,92 +170,61 @@ protected:
 
         // Then there will be an arbitrary number of rows. After all rows
         // (of which there obviously may be 0), there will be an EOF packet.
+        int nRow = 0;
         while (ComResponse(pBuffer).type() != ComResponse::EOF_PACKET)
         {
-            CQRTextResultsetRow row(&pBuffer, types);
+            ++nRow;
 
-            auto it = names.begin();
-            auto jt = row.begin();
+            CQRTextResultsetRow row(&pBuffer, types); // Advances pBuffer
 
-            while (it != names.end())
+            auto it = row.begin();
+
+            string json;
+
+            if (extractions.empty())
             {
-                const string& name = *it;
-                const auto& value = *jt;
+                const auto& value = *it++;
+                mxb_assert(it == row.end());
+                // The value is now a JSON object.
+                json = value.as_string().to_string();
+            }
+            else
+            {
+                auto jt = extractions.begin();
 
-                if (value.is_null())
+                bool first = true;
+                json += "{";
+                for (; it != row.end(); ++it, ++jt)
                 {
-                    builder.append(bsoncxx::builder::basic::kvp(name, bsoncxx::types::b_null {}));
-                }
-                else
-                {
-                    const string& s = value.as_string().to_string();
-
-                    switch (value.type())
+                    if (first)
                     {
-                    case MYSQL_TYPE_TINY:
-                    case MYSQL_TYPE_SHORT:
-                    case MYSQL_TYPE_LONG:
-                    case MYSQL_TYPE_LONGLONG:
-                    case MYSQL_TYPE_INT24:
-                        {
-                            int64_t l = strtol(s.c_str(), nullptr, 10);
-                            builder.append(bsoncxx::builder::basic::kvp(name, l));
-                        }
-                        break;
-
-                    case MYSQL_TYPE_FLOAT:
-                        {
-                            float f = atof(s.c_str());
-                            builder.append(bsoncxx::builder::basic::kvp(name, f));
-                        }
-                        break;
-
-                    case MYSQL_TYPE_DOUBLE:
-                    case MYSQL_TYPE_NEWDECIMAL:
-                        {
-                            double d = atof(s.c_str());
-                            builder.append(bsoncxx::builder::basic::kvp(name, d));
-                        }
-                        break;
-
-                    case MYSQL_TYPE_BLOB:
-                        // JSON fields are returned as BLOBs.
-                        if (may_be_json(s))
-                        {
-                            try
-                            {
-                                builder.append(bsoncxx::builder::basic::kvp(name, bsoncxx::from_json(s)));
-                            }
-                            catch (const std::exception&)
-                            {
-                                builder.append(bsoncxx::builder::basic::kvp(name, s));
-                            }
-                        }
-                        else
-                        {
-                            builder.append(bsoncxx::builder::basic::kvp(name, s));
-                        }
-                        break;
-
-                    case MYSQL_TYPE_DATE:
-                    case MYSQL_TYPE_TIME:
-                    case MYSQL_TYPE_DATETIME:
-                    case MYSQL_TYPE_YEAR:
-                        // Times and dates are returned as strings.
-                    default:
-                        // Everything else as strings as well.
-                        builder.append(bsoncxx::builder::basic::kvp(name, s));
+                        first = false;
                     }
-                }
+                    else
+                    {
+                        json += ", ";
+                    }
 
-                ++it;
-                ++jt;
+                    const auto& value = *it;
+
+                    json += "\"" + *jt + "\": " + value.as_string().to_string();
+                }
+                json += "}";
             }
 
-            auto doc = builder.extract();
-            size_of_documents += doc.view().length();
+            try
+            {
+                auto doc = bsoncxx::from_json(json);
 
-            documents.push_back(doc);
+                size_of_documents += doc.view().length();
+
+                documents.push_back(doc);
+            }
+            catch (const std::exception& x)
+            {
+                MXS_ERROR("Could not convert object to JSON: %s", x.what());
+                MXS_NOTICE("String: '%s'", json.c_str());
+            }
         }
 
         return create_response(size_of_documents, documents);
@@ -443,6 +395,7 @@ public:
 // TODO: This will be generalized so that there will be e.g. a base-class ResultSet for
 // TODO: commands that expects, well, a resultset. But for now there is no hierarchy.
 
+// https://docs.mongodb.com/manual/reference/command/find
 class Find : public mxsmongo::Database::Command
 {
 public:
@@ -457,19 +410,31 @@ public:
 
         if (projection)
         {
-            if (projection.type() == bsoncxx::type::k_document)
+            m_extractions = mxsmongo::projection_to_extractions(projection.get_document());
+
+            if (!m_extractions.empty())
             {
-                sql << mxsmongo::projection_to_columns(projection.get_document());
+                string s;
+                for (auto extraction : m_extractions)
+                {
+                    if (!s.empty())
+                    {
+                        s += ", ";
+                    }
+
+                    s += "JSON_EXTRACT(doc, '$." + extraction + "')";
+                }
+
+                sql << s;
             }
             else
             {
-                MXS_ERROR("'%s' is not an object, returning all columns.", mxsmongo::keys::PROJECTION);
-                sql << "*";
+                sql << "doc";
             }
         }
         else
         {
-            sql << "*";
+            sql << "doc";
         }
 
         sql << " FROM ";
@@ -501,6 +466,8 @@ public:
                 {
                     sql << " WHERE " << where;
                 }
+
+                //sql << " WHERE id = '573a1391f29313caabcd70b4' ";
             }
             else
             {
@@ -580,11 +547,14 @@ public:
 
         default:
             // Must be a result set.
-            pResponse = translate_resultset(mariadb_response);
+            pResponse = translate_resultset(m_extractions, mariadb_response);
         }
 
         return pResponse;
     }
+
+private:
+    vector<string> m_extractions;
 };
 
 // https://docs.mongodb.com/manual/reference/command/insert/

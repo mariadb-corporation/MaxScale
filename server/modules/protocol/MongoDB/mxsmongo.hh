@@ -151,7 +151,7 @@ enum class Command
 
 Command get_command(const bsoncxx::document::view& doc);
 
-std::string projection_to_columns(const bsoncxx::document::view& projection);
+std::vector<std::string> projection_to_extractions(const bsoncxx::document::view& projection);
 
 std::string filter_to_where_clause(const bsoncxx::document::view& filter);
 
