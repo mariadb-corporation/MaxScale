@@ -328,6 +328,31 @@ void MariaDBBackendConnection::ready_for_reading(DCB* event_dcb)
                     break;
 
                 case StateMachineRes::DONE:
+                    m_state = State::SEND_HISTORY;
+                    break;
+
+                case StateMachineRes::ERROR:
+                    m_state = State::FAILED;
+                    break;
+                }
+            }
+            break;
+
+        case State::SEND_HISTORY:
+            send_history();
+            m_state = State::READ_HISTORY;
+            break;
+
+        case State::READ_HISTORY:
+            {
+                auto res = read_history_response();
+                switch (res)
+                {
+                case StateMachineRes::IN_PROGRESS:
+                    state_machine_continue = false;
+                    break;
+
+                case StateMachineRes::DONE:
                     m_state = State::SEND_DELAYQ;
                     break;
 
@@ -617,6 +642,85 @@ void MariaDBBackendConnection::normal_read()
         }
     }
     while (read_buffer);
+}
+
+void MariaDBBackendConnection::send_history()
+{
+    MYSQL_session* client_data = static_cast<MYSQL_session*>(m_dcb->session()->protocol_data());
+
+    if (!client_data->history.empty())
+    {
+        for (const auto& a : client_data->history)
+        {
+            mxs::Buffer buffer = a.first;
+            TrackedQuery query(buffer.get());
+            track_query(query);
+            mxb_assert(mxs_mysql_command_will_respond(query.command));
+
+            MXS_INFO("Execute %s on '%s': %s", STRPACKETTYPE(query.command),
+                     m_server.name(), mxs::extract_sql(buffer).c_str());
+
+            m_dcb->writeq_append(buffer.release());
+            m_history_responses.push_back(a.second);
+        }
+    }
+}
+
+MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::read_history_response()
+{
+    StateMachineRes rval = StateMachineRes::DONE;
+
+    while (!m_history_responses.empty())
+    {
+        DCB::ReadResult read_res = m_dcb->read(MYSQL_HEADER_LEN, 0);
+
+        if (read_res.error())
+        {
+            do_handle_error(m_dcb, "Read from backend failed");
+            rval = StateMachineRes::ERROR;
+        }
+        else if (!read_res.data.empty())
+        {
+            GWBUF* read_buffer = read_res.data.release();
+            mxs::Buffer result = track_response(&read_buffer);
+
+            if (read_buffer)
+            {
+                m_dcb->readq_set(read_buffer);
+            }
+
+            if (m_reply.is_complete())
+            {
+                if (mxs_mysql_get_command(result.get()) == m_history_responses.front())
+                {
+                    m_history_responses.pop_front();
+                }
+                else
+                {
+                    // This server sent a different response than the one we sent to the client. Trigger a
+                    // hangup event so that it is closed.
+                    do_handle_error(m_dcb, "History replay failed: wrong response from server",
+                                    mxs::ErrorType::PERMANENT);
+                    m_dcb->trigger_hangup_event();
+                    rval = StateMachineRes::ERROR;
+                }
+            }
+            else
+            {
+                // The result is not yet complete. In practice this only happens with a COM_STMT_PREPARE that
+                // has multiple input/output parameters.
+                rval = StateMachineRes::IN_PROGRESS;
+                break;
+            }
+        }
+        else
+        {
+            rval = StateMachineRes::IN_PROGRESS;
+            break;
+        }
+    }
+
+    return rval;
 }
 
 int MariaDBBackendConnection::read_change_user()
@@ -2111,7 +2215,7 @@ MariaDBBackendConnection::TrackedQuery::TrackedQuery(GWBUF* buffer)
  */
 void MariaDBBackendConnection::track_query(const TrackedQuery& query)
 {
-    mxb_assert(m_state == State::ROUTING);
+    mxb_assert(m_state == State::ROUTING || m_state == State::SEND_HISTORY || m_state == State::READ_HISTORY);
 
     if (session_is_load_active(m_session))
     {
@@ -2228,6 +2332,14 @@ std::string MariaDBBackendConnection::to_string(State auth_state)
 
     case State::POOLED:
         rval = "In pool";
+        break;
+
+    case State::SEND_HISTORY:
+        rval = "Sending stored session command history";
+        break;
+
+    case State::READ_HISTORY:
+        rval = "Reading results of history execution";
         break;
     }
     return rval;

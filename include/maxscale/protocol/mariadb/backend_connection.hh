@@ -63,6 +63,8 @@ private:
         RESET_CONNECTION,   /**< Reset the connection with a COM_CHANGE_USER */
         PINGING,            /**< Pinging backend server */
         POOLED,             /**< The connection is in pool and should not route replies */
+        SEND_HISTORY,       /**< Sending stored session command history */
+        READ_HISTORY,       /**< Reading results of history execution */
         FAILED,             /**< Handshake/authentication failed */
     };
 
@@ -120,6 +122,9 @@ private:
     StateMachineRes send_connection_init_queries();
     bool            send_delayed_packets();
     void            normal_read();
+
+    void            send_history();
+    StateMachineRes read_history_response();
 
     bool backend_write_delayqueue(GWBUF* buffer);
 
@@ -203,6 +208,8 @@ private:
 
     // The internal ID of the current COM_STMT_PREPARE
     uint32_t m_ps_id {0};
+
+    std::deque<uint8_t> m_history_responses;    // The responses to the history that's being replayed
 
     mxs::Component* m_upstream {nullptr};       /**< Upstream component, typically a router */
     MXS_SESSION*    m_session {nullptr};        /**< Generic session */
