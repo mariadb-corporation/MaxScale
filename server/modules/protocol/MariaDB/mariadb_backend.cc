@@ -508,40 +508,26 @@ bool MariaDBBackendConnection::handle_auth_change_response(GWBUF* reply, DCB* dc
 
 /**
  * With authentication completed, read new data and write to backend
- *
- * @return 0 is fail, 1 is success
  */
-int MariaDBBackendConnection::normal_read()
+void MariaDBBackendConnection::normal_read()
 {
-    auto dcb = m_dcb;
-    MXS_SESSION* session = dcb->session();
-    DCB::ReadResult read_res = dcb->read(MYSQL_HEADER_LEN, 0);
-    int return_code = read_res.error() ? -1 : 1;
+    DCB::ReadResult read_res = m_dcb->read(MYSQL_HEADER_LEN, 0);
+
+    if (read_res.error())
+    {
+        do_handle_error(m_dcb, "Read from backend failed");
+        return;
+    }
+    else if (read_res.data.empty())
+    {
+        return;
+    }
+
     GWBUF* read_buffer = read_res.data.release();
-
-    if (return_code < 0)
-    {
-        do_handle_error(dcb, "Read from backend failed");
-        return 0;
-    }
-
-    int nbytes_read = 0;
-    if (read_buffer)
-    {
-        nbytes_read = gwbuf_length(read_buffer);
-    }
-
-    if (nbytes_read == 0)
-    {
-        mxb_assert(read_buffer == NULL);
-        return return_code;
-    }
-    else
-    {
-        mxb_assert(read_buffer != NULL);
-    }
+    mxb_assert(read_buffer);
 
     /** Ask what type of output the router/filter chain expects */
+    MXS_SESSION* session = m_dcb->session();
     uint64_t capabilities = service_get_capabilities(session->service);
     capabilities |= static_cast<MYSQL_session*>(session->protocol_data())->client_protocol_capabilities();
     bool result_collected = false;
@@ -564,20 +550,19 @@ int MariaDBBackendConnection::normal_read()
         // Store any partial packets in the DCB's read buffer
         if (read_buffer)
         {
-            dcb->readq_set(read_buffer);
+            m_dcb->readq_set(read_buffer);
 
             if (m_reply.is_complete())
             {
                 // There must be more than one response in the buffer which we need to process once we've
                 // routed this response.
-                dcb->trigger_read_event();
+                m_dcb->trigger_read_event();
             }
         }
 
         if (!tmp)
         {
-            /** No complete packets */
-            return 0;
+            return;     // No complete packets
         }
 
         read_buffer = tmp;
@@ -589,7 +574,7 @@ int MariaDBBackendConnection::normal_read()
 
         if (!m_reply.is_complete())
         {
-            return 0;
+            return;
         }
 
         read_buffer = m_collectq.release();
@@ -620,11 +605,11 @@ int MariaDBBackendConnection::normal_read()
             read_buffer = nullptr;
         }
 
-        if (session_ok_to_route(dcb))
+        if (session_ok_to_route(m_dcb))
         {
             thread_local mxs::ReplyRoute route;
             route.clear();
-            return_code = m_upstream->clientReply(stmt, route, m_reply);
+            m_upstream->clientReply(stmt, route, m_reply);
         }
         else    /*< session is closing; replying to client isn't possible */
         {
@@ -632,8 +617,6 @@ int MariaDBBackendConnection::normal_read()
         }
     }
     while (read_buffer);
-
-    return return_code;
 }
 
 int MariaDBBackendConnection::read_change_user()

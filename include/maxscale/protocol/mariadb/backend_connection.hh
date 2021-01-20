@@ -119,7 +119,7 @@ private:
     StateMachineRes authenticate();
     StateMachineRes send_connection_init_queries();
     bool            send_delayed_packets();
-    int             normal_read();
+    void            normal_read();
 
     bool backend_write_delayqueue(GWBUF* buffer);
 
