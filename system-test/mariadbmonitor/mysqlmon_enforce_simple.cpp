@@ -140,6 +140,7 @@ int main(int argc, char** argv)
             test.expect(new_master_id == server_ids[master_ind], "Switchover to original master failed.");
         }
 
+        test.repl->connect();
         for (int i = 0; i < 4; i++)
         {
             test.try_query(test.repl->nodes[i], set_ac, 1);
