@@ -1,4 +1,4 @@
-# MariaDB MaxScale 2.4.15 Release Notes
+# MariaDB MaxScale 2.4.15 Release Notes -- 2021-01-21
 
 Release 2.4.15 is a GA release.
 
