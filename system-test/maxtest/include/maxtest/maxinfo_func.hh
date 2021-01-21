@@ -6,15 +6,6 @@ class TestConnections;
 
 int   create_tcp_socket();
 char* get_ip(const char* host);
-char* build_get_query(const char* host, const char* page);
-
-/**
- * @brief get_maxinfo does request to Maxinfo service and return response JSON
- * @param page retrived info name
- * @param Test TestConnection object
- * @return response from Maxinfo
- */
-char* get_maxinfo(const char* page, TestConnections* Test);
 
 char* read_sc(int sock);
 int   send_so(int sock, char* data);

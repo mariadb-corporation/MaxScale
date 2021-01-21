@@ -287,11 +287,6 @@ TestConnections::~TestConnections()
         printf("%s\n", m_logger->all_errors_to_string().c_str());
     }
 
-    for (auto& a : m_on_destroy)
-    {
-        a();
-    }
-
     // stop all Maxscales to detect crashes on exit
     for (int i = 0; i < maxscales->N; i++)
     {
@@ -438,25 +433,6 @@ void TestConnections::read_env()
     backend_ssl = readenv_bool("backend_ssl", false);
     smoke = readenv_bool("smoke", true);
     m_threads = readenv_int("threads", 4);
-    no_vm_revert = readenv_bool("no_vm_revert", true);
-    m_maxscale_product = readenv("maxscale_product", "maxscale_ci");
-}
-
-void TestConnections::print_env()
-{
-    printf("Maxscale IP\t%s\n", maxscales->ip4(0));
-    printf("Maxscale User name\t%s\n", maxscales->user_name.c_str());
-    printf("Maxscale Password\t%s\n", maxscales->password.c_str());
-    printf("Maxscale SSH key\t%s\n", maxscales->sshkey(0));
-    printf("Access user\t%s\n", maxscales->access_user(0));
-    if (repl)
-    {
-        repl->print_env();
-    }
-    if (galera)
-    {
-        galera->print_env();
-    }
 }
 
 /**
@@ -800,290 +776,6 @@ int TestConnections::copy_all_logs_periodic()
     return copy_maxscale_logs(elapsedTime);
 }
 
-int TestConnections::prepare_binlog(int m)
-{
-    char version_str[1024] = "";
-    repl->connect();
-    find_field(repl->nodes[0], "SELECT @@version", "@@version", version_str);
-    tprintf("Master server version '%s'", version_str);
-
-    if (*version_str
-        && strstr(version_str, "10.0") == NULL
-        && strstr(version_str, "10.1") == NULL
-        && strstr(version_str, "10.2") == NULL)
-    {
-        add_result(maxscales->ssh_node_f(m,
-                                         true,
-                                         "sed -i \"s/,mariadb10-compatibility=1//\" %s",
-                                         maxscales->maxscale_cnf[m].c_str()),
-                   "Error editing maxscale.cnf");
-    }
-
-    if (!m_local_maxscale)
-    {
-        tprintf("Removing all binlog data from Maxscale node");
-        add_result(maxscales->ssh_node_f(m, true, "rm -rf %s", maxscales->maxscale_binlog_dir[m].c_str()),
-                   "Removing binlog data failed");
-
-        tprintf("Creating binlog dir");
-        add_result(maxscales->ssh_node_f(m, true, "mkdir -p %s", maxscales->maxscale_binlog_dir[m].c_str()),
-                   "Creating binlog data dir failed");
-        tprintf("Set 'maxscale' as a owner of binlog dir");
-        add_result(maxscales->ssh_node_f(m,
-                                         false,
-                                         "%s mkdir -p %s; %s chown maxscale:maxscale -R %s",
-                                         maxscales->access_sudo(m),
-                                         maxscales->maxscale_binlog_dir[m].c_str(),
-                                         maxscales->access_sudo(m),
-                                         maxscales->maxscale_binlog_dir[m].c_str()),
-                   "directory ownership change failed");
-    }
-    else
-    {
-        perform_manual_action("Remove all local binlog data");
-    }
-
-    return 0;
-}
-
-int TestConnections::start_binlog(int m)
-{
-    char sys1[4096];
-    MYSQL* binlog;
-    char log_file[256];
-    char log_pos[256];
-    char cmd_opt[256];
-
-    int i;
-    int global_result = 0;
-    bool no_pos;
-
-    no_pos = repl->no_set_pos;
-
-    switch (binlog_cmd_option)
-    {
-    case 1:
-        sprintf(cmd_opt, "--binlog-checksum=CRC32");
-        break;
-
-    case 2:
-        sprintf(cmd_opt, "--binlog-checksum=NONE");
-        break;
-
-    default:
-        sprintf(cmd_opt, " ");
-    }
-
-    repl->stop_nodes();
-
-    if (!m_local_maxscale)
-    {
-        binlog =
-            open_conn_no_db(maxscales->binlog_port[m], maxscales->ip4(m), repl->user_name, repl->password,
-                            ssl);
-        execute_query(binlog, "stop slave");
-        execute_query(binlog, "reset slave all");
-        mysql_close(binlog);
-
-        tprintf("Stopping maxscale\n");
-        add_result(maxscales->stop_maxscale(m), "Maxscale stopping failed\n");
-    }
-    else
-    {
-        perform_manual_action(
-            "Perform the equivalent of 'STOP SLAVE; RESET SLAVE ALL' and stop local Maxscale");
-    }
-
-    for (i = 0; i < repl->N; i++)
-    {
-        repl->start_node(i, cmd_opt);
-    }
-    sleep(5);
-
-    tprintf("Connecting to all backend nodes\n");
-    repl->connect();
-
-    tprintf("Stopping everything\n");
-    for (i = 0; i < repl->N; i++)
-    {
-        execute_query(repl->nodes[i], "stop slave");
-        execute_query(repl->nodes[i], "reset slave all");
-        execute_query(repl->nodes[i], "reset master");
-    }
-    prepare_binlog(m);
-    tprintf("Testing binlog when MariaDB is started with '%s' option\n", cmd_opt);
-
-    if (!m_local_maxscale)
-    {
-        tprintf("ls binlog data dir on Maxscale node\n");
-        add_result(maxscales->ssh_node_f(m, true, "ls -la %s/", maxscales->maxscale_binlog_dir[m].c_str()),
-                   "ls failed\n");
-    }
-
-    if (binlog_master_gtid)
-    {
-        // GTID to connect real Master
-        tprintf("GTID for connection 1st slave to master!\n");
-        try_query(repl->nodes[1], "stop slave");
-        try_query(repl->nodes[1], "SET @@global.gtid_slave_pos=''");
-        sprintf(sys1,
-                "CHANGE MASTER TO MASTER_HOST='%s', MASTER_PORT=%d, MASTER_USER='repl', MASTER_PASSWORD='repl', MASTER_USE_GTID=Slave_pos",
-                repl->ip_private(0),
-                repl->port[0]);
-        try_query(repl->nodes[1], "%s", sys1);
-        try_query(repl->nodes[1], "start slave");
-    }
-    else
-    {
-        tprintf("show master status\n");
-        find_field(repl->nodes[0], (char*) "show master status", (char*) "File", &log_file[0]);
-        find_field(repl->nodes[0], (char*) "show master status", (char*) "Position", &log_pos[0]);
-        tprintf("Real master file: %s\n", log_file);
-        tprintf("Real master pos : %s\n", log_pos);
-
-        tprintf("Stopping first slave (node 1)\n");
-        try_query(repl->nodes[1], "stop slave;");
-        // repl->no_set_pos = true;
-        repl->no_set_pos = false;
-        tprintf("Configure first backend slave node to be slave of real master\n");
-        repl->set_slave(repl->nodes[1], repl->ip_private(0), repl->port[0], log_file, log_pos);
-    }
-
-    if (!m_local_maxscale)
-    {
-        tprintf("Starting back Maxscale\n");
-        add_result(maxscales->start_maxscale(m), "Maxscale start failed\n");
-    }
-    else
-    {
-        perform_manual_action("Start Maxscale");
-    }
-
-    tprintf("Connecting to MaxScale binlog router (with any DB)\n");
-    binlog =
-        open_conn_no_db(maxscales->binlog_port[m], maxscales->ip4(m), repl->user_name, repl->password, ssl);
-
-    add_result(mysql_errno(binlog), "Error connection to binlog router %s\n", mysql_error(binlog));
-
-    if (binlog_master_gtid)
-    {
-        // GTID to connect real Master
-        tprintf("GTID for connection binlog router to master!\n");
-        try_query(binlog, "stop slave");
-        try_query(binlog, "SET @@global.gtid_slave_pos=''");
-        sprintf(sys1,
-                "CHANGE MASTER TO MASTER_HOST='%s', MASTER_PORT=%d, MASTER_USER='repl', MASTER_PASSWORD='repl', MASTER_USE_GTID=Slave_pos",
-                repl->ip_private(0),
-                repl->port[0]);
-        try_query(binlog, "%s", sys1);
-    }
-    else
-    {
-        repl->no_set_pos = true;
-        tprintf("configuring Maxscale binlog router\n");
-        repl->set_slave(binlog, repl->ip_private(0), repl->port[0], log_file, log_pos);
-    }
-    // ssl between binlog router and Master
-    if (backend_ssl)
-    {
-        auto homedir = maxscales->access_homedir(m);
-        sprintf(sys1,
-                "CHANGE MASTER TO master_ssl_cert='%s/certs/client-cert.pem', "
-                "master_ssl_ca='%s/certs/ca.pem', master_ssl=1, master_ssl_key='%s/certs/client-key.pem'",
-                homedir, homedir, homedir);
-
-        tprintf("Configuring Master ssl: %s\n", sys1);
-        try_query(binlog, "%s", sys1);
-    }
-    try_query(binlog, "start slave");
-    try_query(binlog, "show slave status");
-
-    if (binlog_slave_gtid)
-    {
-        tprintf("GTID for connection slaves to binlog router!\n");
-        tprintf("Setup all backend nodes except first one to be slaves of binlog Maxscale node\n");
-        fflush(stdout);
-        for (i = 2; i < repl->N; i++)
-        {
-            try_query(repl->nodes[i], "stop slave");
-            try_query(repl->nodes[i], "SET @@global.gtid_slave_pos=''");
-            sprintf(sys1,
-                    "CHANGE MASTER TO MASTER_HOST='%s', MASTER_PORT=%d, MASTER_USER='repl', MASTER_PASSWORD='repl', MASTER_USE_GTID=Slave_pos",
-                    maxscales->ip_private(m),
-                    maxscales->binlog_port[m]);
-            try_query(repl->nodes[i], "%s", sys1);
-            try_query(repl->nodes[i], "start slave");
-        }
-    }
-    else
-    {
-        repl->no_set_pos = false;
-
-        // get Master status from Maxscale binlog
-        tprintf("show master status\n");
-        find_field(binlog, (char*) "show master status", (char*) "File", &log_file[0]);
-        find_field(binlog, (char*) "show master status", (char*) "Position", &log_pos[0]);
-
-        tprintf("Maxscale binlog master file: %s\n", log_file);
-        tprintf("Maxscale binlog master pos : %s\n", log_pos);
-
-        tprintf("Setup all backend nodes except first one to be slaves of binlog Maxscale node\n");
-        fflush(stdout);
-        for (i = 2; i < repl->N; i++)
-        {
-            try_query(repl->nodes[i], "stop slave");
-            repl->set_slave(repl->nodes[i], maxscales->ip_private(m), maxscales->binlog_port[m],
-                            log_file, log_pos);
-        }
-    }
-
-    repl->close_connections();
-    try_query(binlog, "show slave status");
-    mysql_close(binlog);
-    repl->no_set_pos = no_pos;
-    return global_result;
-}
-
-bool TestConnections::replicate_from_master(int m)
-{
-    bool rval = true;
-
-    /** Stop the binlogrouter */
-    MYSQL* conn = open_conn_no_db(maxscales->binlog_port[m],
-                                  maxscales->ip4(m),
-                                  repl->user_name,
-                                  repl->password,
-                                  ssl);
-    execute_query_silent(conn, "stop slave");
-    mysql_close(conn);
-
-    repl->execute_query_all_nodes("STOP SLAVE");
-
-    /** Clean up MaxScale directories */
-    maxscales->stop_maxscale(m);
-    prepare_binlog(m);
-    maxscales->start_maxscale(m);
-
-    char log_file[256] = "";
-    char log_pos[256] = "4";
-
-    repl->connect();
-    execute_query(repl->nodes[0], "RESET MASTER");
-
-    conn = open_conn_no_db(maxscales->binlog_port[m], maxscales->ip4(m), repl->user_name, repl->password, ssl);
-
-    if (find_field(repl->nodes[0], "show master status", "File", log_file)
-        || repl->set_slave(conn, repl->ip_private(0), repl->port[0], log_file, log_pos)
-        || execute_query(conn, "start slave"))
-    {
-        rval = false;
-    }
-
-    mysql_close(conn);
-
-    return rval;
-}
-
 void TestConnections::revert_replicate_from_master()
 {
     char log_file[256] = "";
@@ -1214,37 +906,6 @@ static int read_log(const char* name, char** err_log_content_p)
         printf ("Error reading log %s \n", name);
         return 1;
     }
-}
-
-int TestConnections::find_connected_slave(int m, int* global_result)
-{
-    int conn_num;
-    int all_conn = 0;
-    int current_slave = -1;
-    repl->connect();
-    for (int i = 0; i < repl->N; i++)
-    {
-        conn_num = get_conn_num(repl->nodes[i], maxscales->ip(m), maxscales->hostname(m), (char*) "test");
-        tprintf("connections to %d: %u\n", i, conn_num);
-        if ((i == 0) && (conn_num != 1))
-        {
-            tprintf("There is no connection to master\n");
-            *global_result = 1;
-        }
-        all_conn += conn_num;
-        if ((i != 0) && (conn_num != 0))
-        {
-            current_slave = i;
-        }
-    }
-    if (all_conn != 2)
-    {
-        tprintf("total number of connections is not 2, it is %d\n", all_conn);
-        *global_result = 1;
-    }
-    tprintf("Now connected slave node is %d (%s)\n", current_slave, repl->ip4(current_slave));
-    repl->close_connections();
-    return current_slave;
 }
 
 int TestConnections::find_connected_slave1(int m)
@@ -1524,22 +1185,6 @@ int TestConnections::create_connections(int m,
     return local_result;
 }
 
-int TestConnections::get_client_ip(int m, char* ip)
-{
-    int ret = 1;
-    auto c = maxscales->rwsplit(m);
-
-    if (c.connect())
-    {
-        std::string host = c.field(
-            "SELECT host FROM information_schema.processlist WHERE id = connection_id()");
-        strcpy(ip, host.c_str());
-        ret = 0;
-    }
-
-    return ret;
-}
-
 int TestConnections::set_timeout(long int timeout_seconds)
 {
     if (m_enable_timeouts)
@@ -1801,30 +1446,9 @@ int TestConnections::try_query(MYSQL* conn, const char* format, ...)
     return res;
 }
 
-int TestConnections::try_query_all(int m, const char* sql)
-{
-    return try_query(maxscales->conn_rwsplit[m], "%s", sql)
-           + try_query(maxscales->conn_master[m], "%s", sql)
-           + try_query(maxscales->conn_slave[m], "%s", sql);
-}
-
 StringSet TestConnections::get_server_status(const std::string& name, int m)
 {
     return maxscales->get_server_status(name, m);
-}
-
-int TestConnections::list_dirs(int m)
-{
-    for (int i = 0; i < repl->N; i++)
-    {
-        tprintf("ls on node %d\n", i);
-        repl->ssh_node(i, (char*) "ls -la /var/lib/mysql", true);
-        fflush(stdout);
-    }
-    tprintf("ls maxscale \n");
-    maxscales->ssh_node(m, "ls -la /var/lib/maxscale/", true);
-    fflush(stdout);
-    return 0;
 }
 
 void TestConnections::check_current_operations(int m, int value)
