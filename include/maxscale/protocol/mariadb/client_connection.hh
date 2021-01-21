@@ -276,4 +276,6 @@ private:
     uint32_t m_next_ps_id {1};
 
     std::vector<std::unique_ptr<LocalClient>> m_local_clients;
+
+    int m_num_responses {0};    // How many responses we are waiting for
 };

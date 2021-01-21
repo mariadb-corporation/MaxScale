@@ -1010,6 +1010,17 @@ bool MariaDBClientConnection::route_statement(mxs::Buffer&& buffer)
         track_transaction_state(m_session, packetbuf);
     }
 
+    // TODO: The response count and state is currently modified before we route the query to allow routers to
+    // call clientReply inside routeQuery. This should be changed so that routers don't directly call
+    // clientReply and instead it to be delivered in a separate event.
+
+    bool expecting_response = mxs_mysql_command_will_respond(cmd);
+
+    if (expecting_response)
+    {
+        ++m_num_responses;
+    }
+
     bool rval = true;
     if (packetbuf)
     {
@@ -2379,49 +2390,58 @@ bool MariaDBClientConnection::send_mysql_err_packet(int packet_number, int in_af
 int32_t
 MariaDBClientConnection::clientReply(GWBUF* buffer, maxscale::ReplyRoute& down, const mxs::Reply& reply)
 {
-    switch (m_routing_state)
+    if (m_num_responses == 1)
     {
-    case RoutingState::CHANGING_DB:
-        if (reply.is_ok())
+        switch (m_routing_state)
         {
-            // Database change succeeded.
-            m_session_data->current_db = move(m_pending_value);
-            m_session->notify_userdata_change();
-        }
-        // Regardless of result, database change is complete.
-        m_pending_value.clear();
-        m_routing_state = RoutingState::PACKET_START;
-        m_dcb->trigger_read_event();
-        break;
-
-    case RoutingState::CHANGING_ROLE:
-        if (reply.is_ok())
-        {
-            // Role change succeeded. Role "NONE" is special, in that it means no role is active.
-            if (m_pending_value == "NONE")
+        case RoutingState::CHANGING_DB:
+            if (reply.is_ok())
             {
-                m_session_data->role.clear();
+                // Database change succeeded.
+                m_session_data->current_db = move(m_pending_value);
+                m_session->notify_userdata_change();
             }
-            else
+            // Regardless of result, database change is complete.
+            m_pending_value.clear();
+            m_routing_state = RoutingState::PACKET_START;
+            m_dcb->trigger_read_event();
+            break;
+
+        case RoutingState::CHANGING_ROLE:
+            if (reply.is_ok())
             {
-                m_session_data->role = move(m_pending_value);
+                // Role change succeeded. Role "NONE" is special, in that it means no role is active.
+                if (m_pending_value == "NONE")
+                {
+                    m_session_data->role.clear();
+                }
+                else
+                {
+                    m_session_data->role = move(m_pending_value);
+                }
+                m_session->notify_userdata_change();
             }
-            m_session->notify_userdata_change();
+            // Regardless of result, role change is complete.
+            m_pending_value.clear();
+            m_routing_state = RoutingState::PACKET_START;
+            m_dcb->trigger_read_event();
+            break;
+
+        case RoutingState::PREPARING_PS:
+            MXS_INFO("Prepared statement complete");
+            m_routing_state = RoutingState::PACKET_START;
+            m_dcb->trigger_read_event();
+            break;
+
+        default:
+            break;
         }
-        // Regardless of result, role change is complete.
-        m_pending_value.clear();
-        m_routing_state = RoutingState::PACKET_START;
-        m_dcb->trigger_read_event();
-        break;
+    }
 
-    case RoutingState::PREPARING_PS:
-        MXS_INFO("Prepared statement complete");
-        m_routing_state = RoutingState::PACKET_START;
-        m_dcb->trigger_read_event();
-        break;
-
-    default:
-        break;
+    if (reply.is_complete())
+    {
+        --m_num_responses;
+        mxb_assert(m_num_responses >= 0);
     }
 
     auto service = m_session->service;

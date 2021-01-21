@@ -1306,9 +1306,7 @@ int32_t Session::clientReply(GWBUF* buffer, mxs::ReplyRoute& down, const mxs::Re
 
 bool Session::handleError(mxs::ErrorType type, GWBUF* error, Endpoint* down, const mxs::Reply& reply)
 {
-    mxs::ReplyRoute route;
-    clientReply(gwbuf_clone(error), route, reply);
-    kill();
+    kill(gwbuf_clone(error));
     return false;
 }
 
