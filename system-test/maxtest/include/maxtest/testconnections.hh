@@ -459,20 +459,6 @@ public:
     int list_dirs(int m = 0);
 
     /**
-     * @brief make_snapshot Makes a snapshot for all running VMs
-     * @param snapshot_name name of created snapshot
-     * @return 0 in case of success or mdbci error code in case of error
-     */
-    int take_snapshot(char* snapshot_name);
-
-    /**
-     * @brief revert_snapshot Revert snapshot for all running VMs
-     * @param snapshot_name name of snapshot to revert
-     * @return 0 in case of success or mdbci error code in case of error
-     */
-    int revert_snapshot(char* snapshot_name);
-
-    /**
      * @brief Test a bad configuration
      * @param config Name of the config template
      * @return Always false, the test will time out if the loading is successful
@@ -600,17 +586,9 @@ private:
     std::string m_network_config;       /**< Content of MDBCI network_config file */
     std::string m_vm_path;              /**< Path to the VM Vagrant directory */
 
-    std::string m_take_snapshot_command;    /**< Command line to create a snapshot of all VMs */
-    std::string m_revert_snapshot_command;  /**< Command line to revert a snapshot of all VMs */
-
-    std::string m_ssl_options;       /**< String with ssl configuration for command line client */
-
     bool m_enable_timeouts {true};      /**< Whether timeouts are enabled or not */
     bool m_local_maxscale {false};      /**< MaxScale runs locally, specified using -l. */
     bool m_init_maxscale {true};
-
-    /**< If true, every test is trying to revert snapshot before running the test. Unused for now. */
-    bool m_use_snapshots {false};
 
     /* If true, logs from backends are not copied (needed if case of Aurora RDS backend or similar) */
     bool m_no_backend_log_copy {false};

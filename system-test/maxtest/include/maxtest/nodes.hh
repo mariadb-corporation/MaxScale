@@ -14,7 +14,7 @@ typedef std::set<std::string> StringSet;
 
 struct SharedData
 {
-    bool verbose {false}; /**< True if printing more details */
+    bool verbose {false};   /**< True if printing more details */
 };
 
 class Nodes
@@ -22,15 +22,6 @@ class Nodes
 public:
     virtual ~Nodes();
 
-    /**
-     * Sets up the nodes. *Must* be called before instance is used.
-     *
-     * @return True, if the instance could be setup, false otherwise.
-     */
-    virtual bool setup() = 0;
-
-    const char* ip4(int i = 0) const;
-    const char* ip6(int i = 0) const;
     const char* ip_private(int i = 0) const;
 
     /**
@@ -40,13 +31,6 @@ public:
 
     bool verbose() const;
 
-    const char* hostname(int i = 0) const;
-    const char* access_user(int i = 0) const;
-    const char* access_homedir(int i = 0) const;
-    const char* access_sudo(int i = 0) const;
-    const char* sshkey(int i = 0) const;
-
-    const std::string& prefix() const;
 
     /**
      * @brief mdbci_node_name
@@ -55,19 +39,10 @@ public:
      */
     std::string mdbci_node_name(int node);
 
-    /**
-     * Generate the command line to execute a given command on the node via ssh.
-     *
-     * @param node Node index
-     * @param cmd command to execute
-     * @param sudo Execute command as root
-     */
-    std::string generate_ssh_cmd(int node, const std::string& cmd, bool sudo);
-
     // Simplified C++ version
     struct SshResult
     {
-        int rc {-1};
+        int         rc {-1};
         std::string output;
     };
     SshResult ssh_output(const std::string& cmd, int node = 0, bool sudo = true);
@@ -119,12 +94,58 @@ public:
      */
     int read_basic_env();
 
+protected:
+    SharedData& m_shared;
+
+    Nodes(const char* prefix, SharedData& shared, const std::string& network_config);
+
     /**
-     * @brief get_nc_item Find variable in the MDBCI network_config file
-     * @param item_name Name of the variable
-     * @return value of variable or empty value if not found
+     * Sets up the nodes. *Must* be called before instance is used.
+     *
+     * @return True, if the instance could be setup, false otherwise.
      */
-    std::string get_nc_item(const char* item_name);
+    virtual bool setup() = 0;
+
+    const char* ip4(int i = 0) const;
+    const char* ip6(int i = 0) const;
+
+    const char* hostname(int i = 0) const;
+    const char* access_user(int i = 0) const;
+    const char* access_homedir(int i = 0) const;
+    const char* access_sudo(int i = 0) const;
+    const char* sshkey(int i = 0) const;
+
+    const std::string& prefix() const;
+
+    void init_ssh_masters();
+
+private:
+
+    struct VMNode
+    {
+        std::string m_ip4;          /**< IPv4-address */
+        std::string m_ip6;          /**< IPv6-address */
+        std::string m_private_ip;   /**< Private IP-address for AWS */
+        std::string m_hostname;     /**< Hostname */
+
+        std::string m_username; /**< Unix user name to access nodes via ssh */
+        std::string m_homedir;  /**< Home directory of username */
+        std::string m_sudo;     /**< empty or "sudo " */
+        std::string m_sshkey;   /**< Path to ssh key */
+    };
+
+    std::string m_prefix;                   /**< Name of backend setup (e.g. 'repl' or 'galera') */
+
+    std::vector<VMNode> m_vms;
+
+    std::string network_config;     /**< Contents of MDBCI network_config file */
+
+    std::vector<FILE*> m_ssh_connections;
+
+    bool check_node_ssh(int node);
+
+    // The returned handle must be closed with pclose
+    FILE* open_ssh_connection(int node);
 
     /**
      * Calculate the number of nodes described in the network config file
@@ -133,51 +154,18 @@ public:
     int get_N();
 
     /**
-     * @brief start_vm Start virtual machine
-     * @param node Node number
-     * @return 0 in case of success
+     * @brief get_nc_item Find variable in the MDBCI network_config file
+     * @param item_name Name of the variable
+     * @return value of variable or empty value if not found
      */
-    int start_vm(int node);
+    std::string get_nc_item(const char* item_name);
 
     /**
-     * @brief stop_vm Stop virtual machine
-     * @param node Node number
-     * @return 0 in case of success
+     * Generate the command line to execute a given command on the node via ssh.
+     *
+     * @param node Node index
+     * @param cmd command to execute
+     * @param sudo Execute command as root
      */
-    int stop_vm(int node);
-
-protected:
-    SharedData& m_shared;
-
-    Nodes(const char* prefix, SharedData& shared, const std::string& network_config);
-
-    void init_ssh_masters();
-
-private:
-    static constexpr int max_nodes {30};
-
-    std::string m_prefix;                   /**< Name of backend setup (e.g. 'repl' or 'galera') */
-
-    std::string m_ip4[max_nodes] {};        /**< IPv4-addresses for every backend node */
-    std::string m_ip6[max_nodes] {};        /**< IPv6-addresses for every backend node */
-    std::string m_ip_private[max_nodes] {}; /**< Private IP-addresses for every backend node (for AWS) */
-    std::string m_hostname[max_nodes] {};   /**< Hostnames for every backend node */
-
-    std::string m_start_vm_command[max_nodes] {}; /**< Command to resume VM */
-    std::string m_stop_vm_command[max_nodes] {};  /**< Command to suspend VM */
-
-    std::string network_config; /**< Contents of MDBCI network_config file */
-
-    std::string m_access_user[max_nodes] {};    /**< Unix user name to access nodes via ssh */
-    std::string m_access_homedir[max_nodes] {}; /**< home directory of access_user */
-    std::string m_access_sudo[max_nodes] {};    /**< empty or "sudo " */
-
-    std::string m_sshkey[max_nodes] {}; /**< Path to ssh key for every backend node */
-
-    bool check_node_ssh(int node);
-
-    // The returned handle must be closed with pclose
-    FILE* open_ssh_connection(int node);
-
-    std::vector<FILE*> m_ssh_connections;
+    std::string generate_ssh_cmd(int node, const std::string& cmd, bool sudo);
 };

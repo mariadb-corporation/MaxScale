@@ -58,6 +58,7 @@ public:
     const char* ip6(int i = 0) const;
     const char* ip_private(int i = 0) const;
     const char* access_homedir(int i = 0) const;
+    const char* access_sudo(int i = 0) const;
 
     const std::string& prefix() const;
 
@@ -160,11 +161,6 @@ public:
      * @brief  Open connctions to all backend nodes (to 'test' DB)
      * @return 0 in case of success
      */
-
-    /**
-     * @brief make_snapshot_command Command line to create a snapshot of all VMs
-     */
-    const char* take_snapshot_command;
 
     /**
      * @brief revert_snapshot_command Command line to revert a snapshot of all VMs
@@ -499,12 +495,6 @@ public:
     void reset_server_settings();
     // Same but for an individual server
     void reset_server_settings(int node);
-
-    /**
-     * @brief revert_nodes_snapshot Execute MDBCI snapshot revert command for all nodes
-     * @return true in case of success
-     */
-    bool revert_nodes_snapshot();
 
     /**
      * @brief prepare_server Initialize MariaDB setup (run mysql_install_db) and create test users
