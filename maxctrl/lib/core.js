@@ -46,7 +46,7 @@ program
         alias: 'hosts',
         describe: 'List of MaxScale hosts. The hosts must be in ' +
             'HOST:PORT format and each value must be separated by a comma.',
-        default: 'localhost:8989',
+        default: '127.0.0.1:8989',
         type: 'string'
     })
     .option('t', {

@@ -1403,9 +1403,9 @@ bool set_runtime_dirs(const char* basedir)
 
     if (rv && (rv = handle_path_arg(&path,
                                     basedir,
-                                    "var/" MXS_DEFAULT_CONNECTOR_PLUGIN_SUBPATH,
+                                    MXS_DEFAULT_CONNECTOR_PLUGIN_SUBPATH,
                                     true,
-                                    true)))
+                                    false)))
     {
         set_connector_plugindir(path);
     }
