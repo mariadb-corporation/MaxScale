@@ -537,7 +537,7 @@ string get_comparison_condition(const bsoncxx::document::element& element)
         auto utf8 = element.get_utf8();
         string value(utf8.value.data(), utf8.value.size());
 
-        condition = "(" + field + " = " + value + ")";
+        condition = "( JSON_EXTRACT(doc, '$." + field + "') = " + value + ")";
     }
     else if (element.type() == bsoncxx::type::k_document)
     {
@@ -545,7 +545,7 @@ string get_comparison_condition(const bsoncxx::document::element& element)
 
         if (!op_and_value.empty())
         {
-            condition = "(" + field + op_and_value + ")";
+            condition = "( JSON_EXTRACT(doc, '$." + field + "')" + op_and_value + ")";
         }
     }
 
