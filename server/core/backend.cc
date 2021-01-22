@@ -50,7 +50,7 @@ void Backend::close(close_type type)
         if (in_use())
         {
             /** Clean operation counter in bref and in SERVER */
-            while (is_waiting_result())
+            while (!m_responses.empty())
             {
                 ack_write();
             }
@@ -192,9 +192,9 @@ bool Backend::write(GWBUF* buffer, response_type type)
     mxb_assert(in_use());
     bool rval = m_backend->routeQuery(buffer);
 
-    if (rval && type == EXPECT_RESPONSE)
+    if (rval && type != NO_RESPONSE)
     {
-        ++m_expected_results;
+        m_responses.push_back(type);
 
         MXB_AT_DEBUG(int prev2 = ) mxb::atomic::add(&m_backend->target()->stats().n_current_ops,
                                                     1, mxb::atomic::RELAXED);
@@ -206,8 +206,8 @@ bool Backend::write(GWBUF* buffer, response_type type)
 
 void Backend::ack_write()
 {
-    mxb_assert(m_expected_results > 0);
-    --m_expected_results;
+    mxb_assert(!m_responses.empty());
+    m_responses.pop_front();
 
     MXB_AT_DEBUG(int prev2 = ) mxb::atomic::add(&m_backend->target()->stats().n_current_ops,
                                                 -1, mxb::atomic::RELAXED);

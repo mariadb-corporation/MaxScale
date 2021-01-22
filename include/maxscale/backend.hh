@@ -14,6 +14,7 @@
 
 #include <maxscale/ccdefs.hh>
 
+#include <deque>
 #include <list>
 #include <string>
 #include <memory>
@@ -25,7 +26,6 @@
 
 namespace maxscale
 {
-
 
 class Backend
 {
@@ -47,8 +47,9 @@ public:
      */
     enum response_type
     {
-        EXPECT_RESPONSE,
-        NO_RESPONSE
+        EXPECT_RESPONSE,    // Response will be routed to the client
+        IGNORE_RESPONSE,    // Response will be discarded by the router
+        NO_RESPONSE         // No response will be generated
     };
 
     /**
@@ -226,7 +227,17 @@ public:
      */
     inline bool is_waiting_result() const
     {
-        return m_expected_results > 0;
+        return std::find(m_responses.begin(), m_responses.end(), EXPECT_RESPONSE) != m_responses.end();
+    }
+
+    /**
+     * @brief Check if the next response from this backend should be ignored
+     *
+     * @return True if the result should be ignored
+     */
+    bool should_ignore_response() const
+    {
+        return !m_responses.empty() && m_responses.front() == IGNORE_RESPONSE;
     }
 
     /**
@@ -371,7 +382,6 @@ private:
     mxs::Endpoint*     m_backend {nullptr};     /**< Backend server */
     mxs::Buffer        m_pending_cmd;           /**< Pending commands */
     int                m_state {0};             /**< State of the backend */
-    int                m_expected_results{0};   /**< Number of expected results from this backend */
     SessionCommandList m_session_commands;      /**< List of session commands that are
                                                  * to be executed on this backend server */
 
@@ -379,6 +389,10 @@ private:
     maxbase::IntervalTimer m_select_timer;
     int64_t                m_num_selects {0};
     int64_t                m_history_size {0};
+
+    // Contains the types of responses we're expecting from this backend. Used to detect if multiple commands
+    // were sent to the backend but not all of the results should be sent to the client.
+    std::deque<response_type> m_responses;
 };
 
 typedef std::shared_ptr<Backend> SBackend;
