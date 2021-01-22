@@ -23,6 +23,7 @@
 #include <maxscale/modutil.hh>
 #include <maxscale/protocol/mariadb/queryclassifier.hh>
 #include <maxscale/protocol/mariadb/rwbackend.hh>
+#include <maxscale/protocol/mariadb/protocol_classes.hh>
 
 #define TARGET_IS_MASTER(t)       mariadb::QueryClassifier::target_is_master(t)
 #define TARGET_IS_SLAVE(t)        mariadb::QueryClassifier::target_is_slave(t)
@@ -30,15 +31,6 @@
 #define TARGET_IS_ALL(t)          mariadb::QueryClassifier::target_is_all(t)
 #define TARGET_IS_RLAG_MAX(t)     mariadb::QueryClassifier::target_is_rlag_max(t)
 #define TARGET_IS_LAST_USED(t)    mariadb::QueryClassifier::target_is_last_used(t)
-
-// External ID to internal ID
-typedef std::map<uint32_t, uint32_t> ClientHandleMap;
-
-// Records of the backend who responded to the session commands and whether it succeeded
-typedef std::map<uint64_t, std::pair<mxs::RWBackend*, mxs::Error>> ResponseMap;
-
-/** List of slave responses that arrived before the master and whether they succeeded */
-typedef std::unordered_map<mxs::RWBackend*, mxs::Error> SlaveResponseList;
 
 struct ExecInfo
 {
@@ -137,14 +129,6 @@ private:
     };
 
     bool open_connections();
-
-    mxs::SSessionCommand create_sescmd(GWBUF* buffer);
-
-    // Discards master response history to position @c pos
-    void discard_responses(uint64_t pos);
-
-    // Discards history that happened before a connection reset
-    void discard_old_history(uint64_t lowest_pos);
 
     bool route_session_write(GWBUF* querybuf, uint8_t command, uint32_t type);
     void continue_large_session_write(GWBUF* querybuf, uint32_t type);
@@ -254,21 +238,6 @@ private:
     bool supports_hint(HINT_TYPE hint_type) const;
     bool handle_ignorable_error(mxs::RWBackend* backend, const mxs::Error& error);
 
-    // Struct for holding the results of session commands that are executed inside transactions
-    struct SescmdResp
-    {
-        SescmdResp(const mxs::Buffer& stmt, const mxs::Buffer& res, const mxs::Reply& rep)
-            : statement(stmt)
-            , result(res)
-            , reply(rep)
-        {
-        }
-
-        mxs::Buffer statement;
-        mxs::Buffer result;
-        mxs::Reply  reply;
-    };
-
     const mariadb::QueryClassifier::RouteInfo& route_info() const
     {
         return m_qc.current_route_info();
@@ -295,7 +264,8 @@ private:
 
     inline bool can_recover_servers() const
     {
-        return !m_config.disable_sescmd_history || m_recv_sescmd == 0;
+        const auto* session_data = static_cast<MYSQL_session*>(m_pSession->protocol_data());
+        return !m_config.disable_sescmd_history || session_data->history.empty();
     }
 
     inline bool have_open_connections() const
@@ -435,22 +405,13 @@ private:
     RoutingPlan       m_prev_plan;              /**< The previous routing plan */
     RWSConfig::Values m_config;                 /**< Configuration for this session */
 
-    uint64_t m_sescmd_count;            /**< Number of executed session commands (starts from 1) */
-    int      m_expected_responses;      /**< Number of expected responses to the current query */
-    bool     m_locked_to_master {false};/**< Whether session is permanently locked to the master */
-
-    maxbase::TimePoint m_last_keepalive_check;      /**< When the last ping was done */
-
-    std::deque<mxs::Buffer> m_query_queue;      /**< Queued commands waiting to be executed */
-    RWSplit*                m_router;           /**< The router instance */
-    mxs::SessionCommandList m_sescmd_list;      /**< List of executed session commands */
-    ResponseMap             m_sescmd_responses; /**< Response to each session command */
+    int                     m_expected_responses;       /**< Number of expected responses to the current query
+                                                         * */
+    bool                    m_locked_to_master {false}; /**< Whether session is permanently locked to the
+                                                         * master */
+    std::deque<mxs::Buffer> m_query_queue;              /**< Queued commands waiting to be executed */
+    RWSplit*                m_router;                   /**< The router instance */
     mxs::RWBackend*         m_sescmd_replier {nullptr};
-    SlaveResponseList       m_slave_responses;  /**< Slaves that replied before the master */
-    uint64_t                m_sent_sescmd;      /**< ID of the last sent session command*/
-    uint64_t                m_recv_sescmd;      /**< ID of the most recently completed session
-                                                 * command */
-    uint64_t m_sescmd_prune_pos {0};
 
     ExecMap m_exec_map;     // Information map of COM_STMT_EXECUTE execution
 
