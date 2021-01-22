@@ -574,14 +574,14 @@ private:
     static uint32_t epoll_instance_handler(MXB_POLL_DATA* data, MXB_WORKER* worker, uint32_t events);
     uint32_t        handle_epoll_events(uint32_t events);
 
-    class PersistentEntry
+    class ConnPoolEntry
     {
     public:
-        PersistentEntry(BackendDCB* pDcb);
-        ~PersistentEntry();
+        ConnPoolEntry(BackendDCB* pDcb);
+        ~ConnPoolEntry();
 
-        PersistentEntry(const PersistentEntry&) = delete;
-        PersistentEntry& operator=(const PersistentEntry&) = delete;
+        ConnPoolEntry(const ConnPoolEntry&) = delete;
+        ConnPoolEntry& operator=(const ConnPoolEntry&) = delete;
 
         bool hanged_up() const
         {
@@ -627,15 +627,13 @@ private:
         RoutingWorker& m_owner;
     };
 
-    friend class PoolHandler;
+    using ServerConnPool = std::list<ConnPoolEntry>;
+    using ConnPoolGroup = std::map<SERVER*, ServerConnPool>;
 
-    using PersistentEntries = std::list<PersistentEntry>;
-    using PersistentEntriesByServer = std::map<SERVER*, PersistentEntries>;
-
-    PersistentEntriesByServer m_persistent_entries_by_server;
-    bool                      m_evicting = false;
-    DCBHandler                m_pool_handler;
-    long                      m_next_timeout_check = 0;
+    ConnPoolGroup m_conn_pools_by_server; /**< Pooled connections for each server */
+    bool          m_evicting {false};
+    DCBHandler    m_pool_handler;
+    long          m_next_timeout_check {0};
 
     std::vector<std::function<void()>> m_epoll_tick_funcs;
 };

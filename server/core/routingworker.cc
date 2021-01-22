@@ -108,14 +108,14 @@ bool can_close_dcb(mxs::BackendConnection* b)
 namespace maxscale
 {
 
-RoutingWorker::PersistentEntry::PersistentEntry(BackendDCB* pDcb)
+RoutingWorker::ConnPoolEntry::ConnPoolEntry(BackendDCB* pDcb)
     : m_created(time(nullptr))
     , m_pDcb(pDcb)
 {
     mxb_assert(m_pDcb);
 }
 
-RoutingWorker::PersistentEntry::~PersistentEntry()
+RoutingWorker::ConnPoolEntry::~ConnPoolEntry()
 {
     mxb_assert(!m_pDcb);
 }
@@ -547,18 +547,18 @@ BackendDCB* RoutingWorker::get_backend_dcb_from_pool(SERVER* pS,
 
     evict_dcbs(pServer, Evict::EXPIRED);
 
-    PersistentEntries& persistent_entries = m_persistent_entries_by_server[pServer];
+    ServerConnPool& conn_pool = m_conn_pools_by_server[pServer];
 
-    while (!pDcb && !persistent_entries.empty())
+    while (!pDcb && !conn_pool.empty())
     {
-        for (auto it = persistent_entries.begin(); it != persistent_entries.end(); ++it)
+        for (auto it = conn_pool.begin(); it != conn_pool.end(); ++it)
         {
             // If proxy protocol is in use, we can only use DCBs that were
             // opened by a client from the same host.
             if (!pServer->proxy_protocol() || it->dcb()->client_remote() == pSession->client_remote())
             {
                 pDcb = it->release_dcb();
-                persistent_entries.erase(it);
+                conn_pool.erase(it);
                 mxb::atomic::add(&pServer->pool_stats().n_persistent, -1);
                 break;
             }
@@ -639,9 +639,8 @@ bool RoutingWorker::can_be_destroyed(BackendDCB* pDcb)
                 // is any activity on it.
                 pDcb->set_handler(&m_pool_handler);
 
-                PersistentEntries& persistent_entries = m_persistent_entries_by_server[pServer];
-
-                persistent_entries.emplace_back(pDcb);
+                ServerConnPool& conn_pool = m_conn_pools_by_server[pServer];
+                conn_pool.emplace_back(pDcb);
 
                 // Remove the dcb from the regular book-keeping.
                 auto it = m_dcbs.find(pDcb);
@@ -658,7 +657,7 @@ bool RoutingWorker::can_be_destroyed(BackendDCB* pDcb)
 
 void RoutingWorker::evict_dcbs(Evict evict)
 {
-    for (auto& i : m_persistent_entries_by_server)
+    for (auto& i : m_conn_pools_by_server)
     {
         evict_dcbs(i.first, evict);
     }
@@ -675,7 +674,7 @@ int RoutingWorker::evict_dcbs(const SERVER* pS, Evict evict)
     time_t now = time(nullptr);
 
     auto pServer = const_cast<Server*>(static_cast<const Server*>(pS));
-    PersistentEntries& persistent_entries = m_persistent_entries_by_server[pServer];
+    ServerConnPool& conn_pool = m_conn_pools_by_server[pServer];
 
     vector<BackendDCB*> to_be_evicted;
 
@@ -688,11 +687,11 @@ int RoutingWorker::evict_dcbs(const SERVER* pS, Evict evict)
     auto persistmaxtime = pServer->persistmaxtime();
     auto persistpoolmax = pServer->persistpoolmax();
 
-    auto j = persistent_entries.begin();
+    auto j = conn_pool.begin();
 
-    while (j != persistent_entries.end())
+    while (j != conn_pool.end())
     {
-        PersistentEntry& entry = *j;
+        ConnPoolEntry& entry = *j;
 
         bool hanged_up = entry.hanged_up();
         bool expired = (evict == Evict::ALL) || (now - entry.created() > persistmaxtime);
@@ -701,7 +700,7 @@ int RoutingWorker::evict_dcbs(const SERVER* pS, Evict evict)
         if (hanged_up || expired || too_many)
         {
             to_be_evicted.push_back(entry.release_dcb());
-            j = persistent_entries.erase(j);
+            j = conn_pool.erase(j);
             mxb::atomic::add(&pServer->pool_stats().n_persistent, -1);
         }
         else
@@ -729,19 +728,19 @@ void RoutingWorker::evict_dcb(BackendDCB* pDcb)
 
     m_evicting = true;
 
-    PersistentEntries& persistent_entries = m_persistent_entries_by_server[pDcb->server()];
+    ServerConnPool& conn_pool = m_conn_pools_by_server[pDcb->server()];
 
     // TODO: An issue that we need to do a linear search?
-    auto i = std::find_if(persistent_entries.begin(),
-                          persistent_entries.end(),
-                          [pDcb](const PersistentEntry& entry) {
+    auto i = std::find_if(conn_pool.begin(),
+                          conn_pool.end(),
+                          [pDcb](const ConnPoolEntry& entry) {
                               return entry.dcb() == pDcb;
                           });
 
-    mxb_assert(i != persistent_entries.end());
+    mxb_assert(i != conn_pool.end());
 
     i->release_dcb();
-    persistent_entries.erase(i);
+    conn_pool.erase(i);
 
     close_pooled_dcb(pDcb);
 
