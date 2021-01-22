@@ -144,7 +144,7 @@ protected:
 
         auto nFields = cqr.nFields();
 
-        // If there are no exractions, then we SELECTed the entire document and there should
+        // If there are no extractions, then we SELECTed the entire document and there should
         // be just one field (the JSON document). Otherwise there should be as many fields
         // (JSON_EXTRACT(doc, '$...')) as there are extractions.
         mxb_assert((extractions.empty() && nFields == 1) || (extractions.size() == nFields));
@@ -206,8 +206,9 @@ protected:
                     }
 
                     const auto& value = *it;
+                    auto extraction = *jt;
 
-                    json += "\"" + *jt + "\": " + value.as_string().to_string();
+                    json += create_entry(extraction, value.as_string().to_string());
                 }
                 json += "}";
             }
@@ -228,6 +229,53 @@ protected:
         }
 
         return create_response(size_of_documents, documents);
+    }
+
+    string create_leaf_entry(const string& extraction, const std::string& value)
+    {
+        mxb_assert(extraction.find('.') == string::npos);
+
+        return "\"" + extraction + "\": " + value;
+    }
+
+    string create_nested_entry(const string& extraction, const std::string& value)
+    {
+        string entry;
+        auto i = extraction.find('.');
+
+        if (i == string::npos)
+        {
+            entry = "{ "  + create_leaf_entry(extraction, value) + " }";
+        }
+        else
+        {
+            auto head = extraction.substr(0, i);
+            auto tail = extraction.substr(i + 1);
+
+            entry = "{ \"" + head + "\": " + create_nested_entry(tail, value) + "}";
+        }
+
+        return entry;
+    }
+
+    string create_entry(const string& extraction, const std::string& value)
+    {
+        string entry;
+        auto i = extraction.find('.');
+
+        if (i == string::npos)
+        {
+            entry = create_leaf_entry(extraction, value);
+        }
+        else
+        {
+            auto head = extraction.substr(0, i);
+            auto tail = extraction.substr(i + 1);
+
+            entry = "\"" + head + "\": " + create_nested_entry(tail, value);;
+        }
+
+        return entry;
     }
 
     mxsmongo::Database&     m_database;

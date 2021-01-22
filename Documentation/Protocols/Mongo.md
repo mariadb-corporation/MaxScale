@@ -55,13 +55,35 @@ The `projection` parameter takes a document of the following form:
 { <field1>: <value>, <field2>: <value> ... }
 ```
 
+If a `projection` document is not provided of if it is empty, the entire document
+will be returned.
+
 Projection | Description
 ------------------------
 `<field>: <1 or true>` | Specifies the inclusion of a field.
-`<field>: <0 or false>` | Specifies the exclusion of a field. *NOTE* Currently can only be specified for `_id` and will be honored only if other fields are explicitly included.
+`<field>: <0 or false>` | Specifies the exclusion of a field.
 
-If a `projection` document is not provided of if it is empty, the entire document
-will be returned.
+##### Embedded Field Specification
+For fields in an embedded documents, the field can be specified using:
+
+   * _dot notation_; e.g. `"field.nestedfield": <value>`
+
+Specifying fields in embedded documents using nested form is not supported.
+
+##### `_id` Field Projection
+The `_id` field is included in the returned documents by default unless you
+explicitly specify `_id: 0` in the projection to suppress the field.
+
+#### Inclusion or Exclusion
+A `projection` cannot contain both include and exclude specifications,
+with the exception of the `_id` field:
+
+   * In projections that _explicitly_ include fields, the `_id` field is the only field that can be explicitly excluded.
+   * In projections that _explicitly_ excludes fields, the `_id` field is the only field that can be explicitly include; however, the `_id` field is included by default.
+
+*NOTE* Currently `_id` is the only field that can be excluded, and _only_
+if other fields are exlicitly included.
+*NOTE* Currently exclusion of other fields but `_id` is currently not supported.
 
 ### Insert - https://docs.mongodb.com/manual/reference/command/insert
 
