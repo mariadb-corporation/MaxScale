@@ -903,6 +903,7 @@ int32_t ServerEndpoint::routeQuery(GWBUF* buffer)
 {
     mxb::LogScope scope(m_server->name());
     mxb_assert(is_open());
+    mxb::atomic::add(&m_server->stats().packets, 1, mxb::atomic::RELAXED);
     return m_conn->write(buffer);
 }
 
