@@ -625,7 +625,7 @@ void MariaDBMonitor::tick()
     flush_server_status();
     process_state_changes();
     hangup_failed_servers();
-    maybe_write_journal();
+    write_journal_if_needed();
     m_state = State::IDLE;
 }
 

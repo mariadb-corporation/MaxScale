@@ -1484,7 +1484,7 @@ const char FIELD_STATUS[] = "status";
 const char FIELD_SERVERS[] = "servers";
 }
 
-void Monitor::maybe_write_journal()
+void Monitor::write_journal_if_needed()
 {
     if (m_journal_update_needed || (time(nullptr) - m_journal_updated > m_journal_max_save_interval))
     {
@@ -1949,7 +1949,7 @@ void MonitorWorkerSimple::tick()
     flush_server_status();
     process_state_changes();
     hangup_failed_servers();
-    maybe_write_journal();
+    write_journal_if_needed();
 }
 
 void MonitorWorker::pre_loop()

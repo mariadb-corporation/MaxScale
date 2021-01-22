@@ -637,7 +637,7 @@ protected:
     /**
      * Write monitor journal if it needs updating.
      */
-    void maybe_write_journal();
+    void write_journal_if_needed();
 
     /**
      * Call when journal needs updating.
