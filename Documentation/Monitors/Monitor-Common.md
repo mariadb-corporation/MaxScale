@@ -273,15 +273,16 @@ sent to it once the execution time is greater than twice the configured timeout.
 
 ### `events`
 
-A list of event names which cause the script to be executed. If this option is not defined, all events cause the script to be executed. The list must contain a comma separated list of event names.
+A list of event names which cause the script to be executed. If this option is
+not defined, all events cause the script to be executed. The list must contain a
+comma separated list of event names.
 
 ```
 events=master_down,slave_down
 ```
 
-## Script events
-
-Here is a table of all possible event types and their descriptions that the monitors can be called with.
+The following table contains all the possible event types and their
+descriptions.
 
 Event Name  |Description
 ------------|----------
