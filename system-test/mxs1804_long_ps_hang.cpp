@@ -38,6 +38,7 @@ int main(int argc, char** argv)
                 "Prepare should not fail. Error: %s",
                 mysql_stmt_error(stmt));
     mysql_stmt_close(stmt);
+    free(sqlstr);
 
     free(sqlstr);
 

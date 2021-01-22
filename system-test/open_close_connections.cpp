@@ -21,7 +21,7 @@ void query_thread(TestConnections& test, int thread_id)
                         mariadb_get_infov(conn, MARIADB_CONNECTION_PORT, &port);
                         mariadb_get_infov(conn, MARIADB_CONNECTION_HOST, &host);
 
-                        test.expect(mysql_errno(conn) == 0 || errno == EADDRNOTAVAIL,
+                        test.expect(mysql_errno(conn) == 0 || strstr(mysql_error(conn), "system error: 110")
                                     "Error opening conn to %s:%u, thread num is %d, iteration %ld, error is: %s\n",
                                     host, port, thread_id, i, mysql_error(conn));
 
