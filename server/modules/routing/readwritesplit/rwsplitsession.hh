@@ -137,7 +137,6 @@ private:
     };
 
     bool open_connections();
-    void process_sescmd_response(mxs::RWBackend* backend, GWBUF** ppPacket, const mxs::Reply& reply);
 
     mxs::SSessionCommand create_sescmd(GWBUF* buffer);
 
@@ -149,11 +148,12 @@ private:
 
     bool route_session_write(GWBUF* querybuf, uint8_t command, uint32_t type);
     void continue_large_session_write(GWBUF* querybuf, uint32_t type);
+    bool write_session_command(mxs::RWBackend* backend, mxs::Buffer buffer, uint8_t cmd);
     bool route_stmt(mxs::Buffer&& querybuf, const RoutingPlan& res);
     bool route_single_stmt(mxs::Buffer&& buffer, const RoutingPlan& res);
     bool route_stored_query();
     void close_stale_connections();
-    void execute_queued_commands(mxs::RWBackend* backend, bool processed_sescmd);
+    void execute_queued_commands(mxs::RWBackend* backend);
 
     int64_t         get_current_rank();
     mxs::RWBackend* get_hinted_backend(const char* name);
@@ -168,7 +168,7 @@ private:
 
     RoutingPlan resolve_route(const mxs::Buffer& buffer, const mariadb::QueryClassifier::RouteInfo&);
 
-    bool            handle_target_is_all(mxs::Buffer&& buffer);
+    bool            handle_target_is_all(mxs::Buffer&& buffer, const RoutingPlan& res);
     mxs::RWBackend* handle_hinted_target(const GWBUF* querybuf, route_target_t route_target);
     mxs::RWBackend* handle_slave_is_target(uint8_t cmd, uint32_t stmt_id);
     mxs::RWBackend* handle_master_is_target();
@@ -310,12 +310,6 @@ private:
         return std::none_of(m_raw_backends.begin(), m_raw_backends.end(), [&](mxs::RWBackend* b) {
                                 return b->in_use() && b != backend;
                             });
-    }
-
-    inline bool should_route_sescmd_to_master() const
-    {
-        return trx_is_open() && m_config.transaction_replay
-               && TARGET_IS_ALL(route_info().target());
     }
 
     std::string get_verbose_status()
@@ -475,8 +469,6 @@ private:
     Trx         m_orig_trx;             /**< The backup of the transaction we're replaying */
     mxs::Buffer m_orig_stmt;            /**< The backup of the statement that was interrupted */
     int64_t     m_num_trx_replays = 0;  /**< How many times trx replay has been attempted */
-
-    std::vector<SescmdResp> m_trx_sescmd;   /**< Session commands executed during the transaction */
 
     TargetSessionStats& m_server_stats;     /**< The server stats local to this thread, cached in the
                                              * session object. This avoids the lookup involved in getting

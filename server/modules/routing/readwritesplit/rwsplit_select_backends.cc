@@ -183,7 +183,7 @@ RWBackend* backend_cmp_response_time(PRWBackends& pBackends)
 int get_backend_priority(RWBackend* backend, bool masters_accepts_reads)
 {
     int priority;
-    bool is_busy = backend->in_use() && backend->has_session_commands();
+    bool is_busy = backend->in_use() && backend->should_ignore_response();
     bool acts_slave = backend->is_slave() || (backend->is_master() && masters_accepts_reads);
 
     if (acts_slave)

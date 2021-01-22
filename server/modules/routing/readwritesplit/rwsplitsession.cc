@@ -91,7 +91,8 @@ RWSplitSession::~RWSplitSession()
                                                  backend->num_selects());
     }
 
-    m_router->local_avg_sescmd_sz().add(m_sescmd_list.size());
+    MYSQL_session* data = static_cast<MYSQL_session*>(m_pSession->protocol_data());
+    m_router->local_avg_sescmd_sz().add(data->history.size());
 }
 
 int32_t RWSplitSession::routeQuery(GWBUF* querybuf)
@@ -324,19 +325,13 @@ void RWSplitSession::manage_transactions(RWBackend* backend, GWBUF* writebuf, co
     }
     else if (m_config.transaction_replay && m_can_replay_trx && trx_is_open())
     {
-        if (!backend->has_session_commands())
-        {
-            /**
-             * Session commands are tracked separately from the transaction.
-             * We must not put any response to a session command into
-             * the transaction as they are tracked separately.
-             *
-             * TODO: It might be wise to include the session commands to guarantee
-             * that the session state during the transaction replay remains
-             * consistent if the state change in the middle of the transaction
-             * is intentional.
-             */
+        mxb_assert(!backend->has_session_commands());
 
+        // Never add something we should ignore into the transaction. The checksum is calculated from the
+        // response that is sent upstream via clientReply and this is implied by `should_ignore_response()`
+        // being false.
+        if (!backend->should_ignore_response())
+        {
             int64_t size = m_trx.size() + m_current_query.length();
 
             // A transaction is open and it is eligible for replaying
@@ -348,11 +343,6 @@ void RWSplitSession::manage_transactions(RWBackend* backend, GWBUF* writebuf, co
 
                 if (m_current_query.get())
                 {
-                    if (route_info().target() == TARGET_ALL)
-                    {
-                        m_trx_sescmd.emplace_back(m_current_query, mxs::Buffer(gwbuf_clone(writebuf)), reply);
-                    }
-
                     // Add the statement to the transaction once the first part of the result is received.
                     m_trx.add_stmt(backend, m_current_query.release());
                 }
@@ -370,7 +360,7 @@ void RWSplitSession::manage_transactions(RWBackend* backend, GWBUF* writebuf, co
     {
         // We're retrying the query on the master and we need to keep the current query
     }
-    else if (!backend->has_session_commands())
+    else if (!backend->should_ignore_response())
     {
         /** Normal response, reset the currently active query. This is done before
          * the whole response is complete to prevent it from being retried
@@ -455,7 +445,7 @@ bool is_wsrep_error(const mxs::Error& error)
 
 bool RWSplitSession::handle_ignorable_error(RWBackend* backend, const mxs::Error& error)
 {
-    if (backend->has_session_commands())
+    if (backend->should_ignore_response())
     {
         // Never bypass errors for session commands. TODO: Check whether it would make sense to do so.
         return false;
@@ -519,37 +509,6 @@ void RWSplitSession::finish_transaction(mxs::RWBackend* backend)
     m_trx.close();
     m_can_replay_trx = true;
 
-    for (auto& a : m_trx_sescmd)
-    {
-        auto sescmd = create_sescmd(a.statement.release());
-
-        // Add it to the history list so that it will be executed on reconnection
-        m_sescmd_list.push_back(sescmd);
-
-        // Add it to all backends so that existing connections apply it
-        for (auto a : m_raw_backends)
-        {
-            a->append_session_command(sescmd);
-
-            // Execute it on all the other servers
-            if (a != backend && a->in_use() && !a->is_waiting_result())
-            {
-                a->execute_session_command();
-            }
-        }
-
-        // Make this backend the pre-assigned replier and complete the session command with the stored result
-        m_sescmd_replier = backend;
-        ++m_sent_sescmd;
-        ++m_expected_responses;
-
-        GWBUF* buf = a.result.release();
-        process_sescmd_response(backend, &buf, a.reply);
-        gwbuf_free(buf);
-    }
-
-    m_trx_sescmd.clear();
-
     if (m_target_node && trx_is_read_only())
     {
         // Read-only transaction is over, stop routing queries to a specific node
@@ -600,44 +559,81 @@ int32_t RWSplitSession::clientReply(GWBUF* writebuf, const mxs::ReplyRoute& down
         return 1;
     }
 
+    // TODO: Do this in the client protocol, it seems to be a pretty logical place for it as it already
+    // assigns the prepared statement IDs.
+    if (m_config.reuse_ps && reply.command() == MXS_COM_STMT_PREPARE)
+    {
+        if (m_current_query.get() && !backend->should_ignore_response())
+        {
+            std::string current_sql = mxs::extract_sql(m_current_query);
+            m_ps_cache[current_sql].append(gwbuf_clone(writebuf));
+        }
+    }
+
     // Track transaction contents and handle ROLLBACK with aggressive transaction load balancing
     manage_transactions(backend, writebuf, reply);
 
     if (reply.is_complete())
     {
-        MXS_INFO("Reply complete from %s.", backend->name());
-        backend->ack_write();
-
-        /** Got a complete reply, decrement expected response count */
-        if (!backend->has_session_commands())
+        if (backend->should_ignore_response())
         {
+            MXS_INFO("Reply complete from '%s', discarding it.", backend->name());
+            gwbuf_free(writebuf);
+            writebuf = nullptr;
+        }
+        else
+        {
+            MXS_INFO("Reply complete from '%s'", backend->name());
+            /** Got a complete reply, decrement expected response count */
             m_expected_responses--;
             mxb_assert(m_expected_responses >= 0);
 
             // TODO: This would make more sense if it was done at the client protocol level
             session_book_server_response(m_pSession, (SERVER*)backend->target(), true);
+
+            constexpr const char* LEVEL = "SERIALIZABLE";
+
+            if (reply.get_variable("trx_characteristics").find(LEVEL) != std::string::npos
+                || reply.get_variable("tx_isolation").find(LEVEL) != std::string::npos)
+            {
+                MXS_INFO("Transaction isolation level set to %s, locking session to master", LEVEL);
+                m_locked_to_master = true;
+                lock_to_master();
+            }
+
+            if (reply.command() == MXS_COM_STMT_PREPARE)
+            {
+                m_qc.ps_store_response(reply.generated_id(), reply.param_count());
+            }
+
+            if (!finish_causal_read())
+            {
+                // The query timed out on the slave, retry it on the master
+                gwbuf_free(writebuf);
+                return 1;
+            }
+
+            if (m_state == OTRX_ROLLBACK)
+            {
+                // Transaction rolled back, start replaying it on the master
+                m_state = ROUTING;
+                start_trx_replay();
+                gwbuf_free(writebuf);
+                session_reset_server_bookkeeping(m_pSession);
+                return 1;
+            }
         }
 
-        mxb_assert(m_expected_responses >= 0);
-
+        backend->ack_write();
         backend->select_finished();
 
-        if (!finish_causal_read())
-        {
-            // The query timed out on the slave, retry it on the master
-            gwbuf_free(writebuf);
-            return 1;
-        }
-
-        if (m_state == OTRX_ROLLBACK)
-        {
-            // Transaction rolled back, start replaying it on the master
-            m_state = ROUTING;
-            start_trx_replay();
-            gwbuf_free(writebuf);
-            session_reset_server_bookkeeping(m_pSession);
-            return 1;
-        }
+        mxb_assert(m_expected_responses >= 0);
+    }
+    else if (backend->should_ignore_response())
+    {
+        MXS_INFO("Reply not yet complete from '%s', discarding partial result.", backend->name());
+        gwbuf_free(writebuf);
+        writebuf = nullptr;
     }
     else
     {
@@ -645,47 +641,41 @@ int32_t RWSplitSession::clientReply(GWBUF* writebuf, const mxs::ReplyRoute& down
                  m_expected_responses, backend->name());
     }
 
-    // Later on we need to know whether we processed a session command
-    bool processed_sescmd = backend->has_session_commands();
-
-    if (processed_sescmd)
+    if (writebuf)
     {
-        /** Process the reply to an executed session command. This function can
-         * close the backend if it's a slave. */
-        process_sescmd_response(backend, &writebuf, reply);
-    }
-    else if (m_state == TRX_REPLAY)
-    {
-        mxb_assert(m_config.transaction_replay);
-
-        if (m_expected_responses == 0)
+        if (m_state == TRX_REPLAY)
         {
-            // Current statement is complete, continue with the next one
-            trx_replay_next_stmt();
+            mxb_assert(m_config.transaction_replay);
+
+            if (m_expected_responses == 0)
+            {
+                // Current statement is complete, continue with the next one
+                trx_replay_next_stmt();
+            }
+
+            /**
+             * If the start of the transaction was interrupted, we need to return
+             * the result to the client.
+             *
+             * This retrying of START TRANSACTION is done with the transaction replay
+             * mechanism instead of the normal query retry mechanism because the safeguards
+             * in the routing logic prevent retrying of individual queries inside transactions.
+             *
+             * If the transaction was not empty and some results have already been
+             * sent to the client, we must discard all responses that the client already has.
+             */
+
+            if (!m_replayed_trx.empty())
+            {
+                // Client already has this response, discard it
+                gwbuf_free(writebuf);
+                return 1;
+            }
         }
-
-        /**
-         * If the start of the transaction was interrupted, we need to return
-         * the result to the client.
-         *
-         * This retrying of START TRANSACTION is done with the transaction replay
-         * mechanism instead of the normal query retry mechanism because the safeguards
-         * in the routing logic prevent retrying of individual queries inside transactions.
-         *
-         * If the transaction was not empty and some results have already been
-         * sent to the client, we must discard all responses that the client already has.
-         */
-
-        if (!m_replayed_trx.empty())
+        else if (m_config.transaction_replay && trx_is_ending())
         {
-            // Client already has this response, discard it
-            gwbuf_free(writebuf);
-            return 1;
+            finish_transaction(backend);
         }
-    }
-    else if (m_config.transaction_replay && trx_is_ending())
-    {
-        finish_transaction(backend);
     }
 
     int32_t rc = 1;
@@ -697,9 +687,9 @@ int32_t RWSplitSession::clientReply(GWBUF* writebuf, const mxs::ReplyRoute& down
         rc = RouterSession::clientReply(writebuf, down, reply);
     }
 
-    if (reply.is_complete())
+    if (reply.is_complete() && m_expected_responses == 0)
     {
-        execute_queued_commands(backend, processed_sescmd);
+        execute_queued_commands(backend);
     }
 
     if (m_expected_responses == 0)
@@ -714,36 +704,11 @@ int32_t RWSplitSession::clientReply(GWBUF* writebuf, const mxs::ReplyRoute& down
     return rc;
 }
 
-void RWSplitSession::execute_queued_commands(mxs::RWBackend* backend, bool processed_sescmd)
+void RWSplitSession::execute_queued_commands(mxs::RWBackend* backend)
 {
-    mxb_assert(
-        // 1. The backend was closed due to sescmd result mismatch
-        !backend->in_use()
-        // 2. The backend is in use and idle
-        || !backend->is_waiting_result()
-        // 3. We're still waiting for more results from the master
-        || (m_expected_responses > 0 && backend == m_current_master));
+    mxb_assert(m_expected_responses == 0);
 
-    while (backend->in_use() && backend->has_session_commands() && !backend->is_waiting_result())
-    {
-        if (backend->execute_session_command())
-        {
-            MXS_INFO("%lu session commands left on '%s'", backend->session_command_count(), backend->name());
-        }
-        else
-        {
-            MXS_INFO("Failed to execute session command on '%s'", backend->name());
-            backend->close();
-        }
-    }
-
-    if (backend->in_use() && backend->is_waiting_result())
-    {
-        // Backend is still in use and it executed something. Wait for the result before
-        // routing queued queries.
-    }
-    else if (m_expected_responses == 0 && !m_query_queue.empty()
-             && (m_state != TRX_REPLAY || processed_sescmd))
+    if (!m_query_queue.empty() && m_state != TRX_REPLAY)
     {
         /**
          * All replies received, route any stored queries. This should be done
@@ -798,7 +763,6 @@ bool RWSplitSession::start_trx_replay()
             m_replayed_trx = m_trx;
             m_replayed_trx.finalize();
             m_trx.close();
-            m_trx_sescmd.clear();
 
             if (m_replayed_trx.have_stmts())
             {
@@ -858,72 +822,10 @@ bool RWSplitSession::retry_master_query(RWBackend* backend)
         m_query_queue.pop_front();
         can_continue = true;
     }
-    else if (backend->has_session_commands())
-    {
-        // We were routing a session command to all servers but the master server from which the response
-        // was expected failed: try to route the session command again. If the master is not available,
-        // the response will be returned from one of the slaves if the configuration allows it.
-
-        mxb_assert(m_sescmd_replier == backend);
-        mxb_assert_message(backend->next_session_command()->get_position() == m_recv_sescmd + 1
-                           || backend->is_replaying_history(),
-                           "The master should be executing the latest session command "
-                           "or attempting to replay existing history.");
-        mxb_assert(route_info().target() == TARGET_ALL);
-        mxb_assert(!m_current_query.get());
-        mxb_assert(!m_sescmd_list.empty());
-        mxb_assert(m_sescmd_count >= 2);
-
-        // MXS-2609: Maxscale crash in RWSplitSession::retry_master_query()
-        // To prevent a crash from happening, we make sure the session command list is not empty before
-        // we touch it. This should be converted into a debug assertion once the true root cause of the
-        // problem is found.
-        if (m_sescmd_count < 2 || m_sescmd_list.empty())
-        {
-            MXS_WARNING("Session command list was empty when it should not be");
-            return false;
-        }
-
-        if (!backend->is_replaying_history())
-        {
-            for (auto b : m_raw_backends)
-            {
-                if (b != backend && b->in_use() && b->is_waiting_result())
-                {
-                    MXS_INFO("Master failed, electing '%s' as the replier to session command %lu",
-                             b->name(), b->next_session_command()->get_position());
-                    m_sescmd_replier = b;
-                    m_expected_responses++;
-                    break;
-                }
-            }
-        }
-
-        if (m_sescmd_replier == backend)
-        {
-            // All of the slaves delivered their response before the master failed. This means that we don't
-            // have the result of the session command available and to get it we have to execute it again.
-            // This could be avoided if one of the slave responses was stored up until the master returned its
-            // response.
-
-            // Before routing it, pop the failed session command off the list and decrement the number of
-            // executed session commands. This "overwrites" the existing command and prevents history
-            // duplication.
-            GWBUF* buffer = m_sescmd_list.back()->deep_copy_buffer();
-            m_sescmd_list.pop_back();
-            --m_sescmd_count;
-            retry_query(buffer);
-
-            MXS_INFO("Master failed, retrying session command %lu",
-                     backend->next_session_command()->get_position());
-        }
-
-        can_continue = true;
-    }
     else if (m_current_query.get())
     {
         // A query was in progress, try to route it again
-        mxb_assert(m_prev_plan.target == backend);
+        mxb_assert(m_prev_plan.target == backend || m_prev_plan.route_target == TARGET_ALL);
         retry_query(m_current_query.release());
         can_continue = true;
     }
@@ -1125,37 +1027,31 @@ bool RWSplitSession::handle_error_new_connection(RWBackend* backend, GWBUF* errm
 
     if (backend->is_waiting_result())
     {
-        // Route stored queries if this was the last server we expected a response from
-        route_stored = m_expected_responses == 0;
+        // Slaves should never have more than one response waiting
+        mxb_assert(m_expected_responses == 1);
+        m_expected_responses--;
 
-        if (!backend->has_session_commands())
+        // The backend was busy executing command and the client is expecting a response.
+        if (m_current_query.get() && m_config.retry_failed_reads)
         {
-            // Slaves should never have more than one response waiting
-            mxb_assert(m_expected_responses == 1);
-            m_expected_responses--;
-
-            // The backend was busy executing command and the client is expecting a response.
-            if (m_current_query.get() && m_config.retry_failed_reads)
+            if (!m_config.delayed_retry && is_last_backend(backend))
             {
-                if (!m_config.delayed_retry && is_last_backend(backend))
-                {
-                    MXS_INFO("Cannot retry failed read as there are no candidates to "
-                             "try it on and delayed_retry is not enabled");
-                    return false;
-                }
+                MXS_INFO("Cannot retry failed read as there are no candidates to "
+                         "try it on and delayed_retry is not enabled");
+                return false;
+            }
 
-                MXS_INFO("Re-routing failed read after server '%s' failed", backend->name());
-                route_stored = false;
-                retry_query(m_current_query.release(), 0);
-            }
-            else
-            {
-                // Send an error so that the client knows to proceed.
-                mxs::ReplyRoute route;
-                RouterSession::clientReply(gwbuf_clone(errmsg), route, mxs::Reply());
-                m_current_query.reset();
-                route_stored = true;
-            }
+            MXS_INFO("Re-routing failed read after server '%s' failed", backend->name());
+            route_stored = false;
+            retry_query(m_current_query.release(), 0);
+        }
+        else
+        {
+            // Send an error so that the client knows to proceed.
+            mxs::ReplyRoute route;
+            RouterSession::clientReply(gwbuf_clone(errmsg), route, mxs::Reply());
+            m_current_query.reset();
+            route_stored = true;
         }
     }
 

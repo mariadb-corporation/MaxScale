@@ -29,6 +29,7 @@
 #include <maxscale/server.hh>
 #include <maxscale/session_command.hh>
 #include <maxscale/utils.hh>
+#include <maxscale/protocol/mariadb/protocol_classes.hh>
 
 using std::chrono::seconds;
 using maxscale::RWBackend;
@@ -44,15 +45,12 @@ using RouteInfo = QueryClassifier::RouteInfo;
 bool RWSplitSession::prepare_connection(RWBackend* target)
 {
     mxb_assert(!target->in_use());
-    bool rval = target->connect(&m_sescmd_list);
+    bool rval = target->connect();
 
     if (rval)
     {
         MXS_INFO("Connected to '%s'", target->name());
-        mxb_assert_message(!target->is_waiting_result()
-                           || (!m_sescmd_list.empty() && target->has_session_commands()),
-                           "Session command list must not be empty and target "
-                           "should have unfinished session commands.");
+        mxb_assert(!target->is_waiting_result());
     }
 
     return rval;
@@ -142,7 +140,7 @@ void RWSplitSession::track_optimistic_trx(mxs::Buffer* buffer, const RoutingPlan
  *
  * @return True if routing was successful
  */
-bool RWSplitSession::handle_target_is_all(mxs::Buffer&& buffer)
+bool RWSplitSession::handle_target_is_all(mxs::Buffer&& buffer, const RoutingPlan& res)
 {
     const RouteInfo& info = route_info();
     bool result = false;
@@ -158,6 +156,7 @@ bool RWSplitSession::handle_target_is_all(mxs::Buffer&& buffer)
     }
     else if (route_session_write(buffer.release(), info.command(), info.type_mask()))
     {
+        m_prev_plan = res;
         result = true;
         mxb::atomic::add(&m_router->stats().n_all, 1, mxb::atomic::RELAXED);
         mxb::atomic::add(&m_router->stats().n_queries, 1, mxb::atomic::RELAXED);
@@ -302,9 +301,9 @@ bool RWSplitSession::route_stmt(mxs::Buffer&& buffer, const RoutingPlan& res)
     {
         return true;
     }
-    else if (TARGET_IS_ALL(route_target) && !should_route_sescmd_to_master())
+    else if (TARGET_IS_ALL(route_target))
     {
-        return handle_target_is_all(std::move(buffer));
+        return handle_target_is_all(std::move(buffer), res);
     }
     else
     {
@@ -345,12 +344,6 @@ bool RWSplitSession::route_single_stmt(mxs::Buffer&& buffer, const RoutingPlan& 
         {
             // The connection to target was down and we failed to reconnect
             ok = false;
-        }
-        else if (target->has_session_commands())
-        {
-            // We need to wait until the session commands are executed
-            m_query_queue.emplace_front(std::move(buffer));
-            MXS_INFO("Queuing query until '%s' completes session command", target->name());
         }
         else
         {
@@ -420,10 +413,6 @@ RWSplitSession::RoutingPlan RWSplitSession::resolve_route(const mxs::Buffer& buf
          * Route it to the same backend where we routed the previous packet. */
         rval.route_target = TARGET_LAST_USED;
     }
-    else if (should_route_sescmd_to_master())
-    {
-        rval.route_target = TARGET_MASTER;
-    }
     else if (trx_is_starting() && !trx_is_read_only() && should_try_trx_on_slave(rval.route_target))
     {
         // A normal transaction is starting and it qualifies for speculative routing
@@ -448,6 +437,36 @@ RWSplitSession::RoutingPlan RWSplitSession::resolve_route(const mxs::Buffer& buf
     return rval;
 }
 
+bool RWSplitSession::write_session_command(RWBackend* backend, mxs::Buffer buffer, uint8_t cmd)
+{
+    bool ok = true;
+    mxs::Backend::response_type type = mxs::Backend::NO_RESPONSE;
+
+    if (mxs_mysql_command_will_respond(cmd))
+    {
+        type = backend == m_sescmd_replier ? mxs::Backend::EXPECT_RESPONSE : mxs::Backend::IGNORE_RESPONSE;
+    }
+
+    if (backend->write(buffer.release(), type))
+    {
+        m_server_stats[backend->target()].inc_total();
+        m_server_stats[backend->target()].inc_read();
+        MXS_INFO("Route query to %s: %s", backend->is_master() ? "master" : "slave", backend->name());
+    }
+    else
+    {
+        MXS_ERROR("Failed to execute session command in %s", backend->name());
+        backend->close();
+
+        if (m_config.master_failure_mode == RW_FAIL_INSTANTLY && backend == m_current_master)
+        {
+            ok = false;
+        }
+    }
+
+    return ok;
+}
+
 /**
  * Execute in backends used by current router session.
  * Save session variable commands to router session property
@@ -469,21 +488,15 @@ RWSplitSession::RoutingPlan RWSplitSession::resolve_route(const mxs::Buffer& buf
  */
 bool RWSplitSession::route_session_write(GWBUF* querybuf, uint8_t command, uint32_t type)
 {
-    /** The SessionCommand takes ownership of the buffer */
-    auto sescmd = create_sescmd(querybuf);
-    uint64_t id = sescmd->get_position();
-    bool expecting_response = mxs_mysql_command_will_respond(command);
-    int nsucc = 0;
-    uint64_t lowest_pos = id;
+    MXS_INFO("Session write, routing to all servers.");
+    mxs::Buffer buffer(querybuf);
+    bool ok = true;
 
     // If no connections are open, create one and execute the session command on it
     if (can_recover_servers() && !have_open_connections())
     {
         create_one_connection_for_sescmd();
     }
-
-    MXS_INFO("Session write, routing to all servers.");
-    bool attempted_write = false;
 
     // Pick a new replier for each new session command. This allows the source server to change over
     // the course of the session. The replier will usually be the current master server.
@@ -493,123 +506,69 @@ bool RWSplitSession::route_session_write(GWBUF* querybuf, uint8_t command, uint3
     {
         if (backend->in_use())
         {
-            attempted_write = true;
-            backend->append_session_command(sescmd);
-
-            uint64_t current_pos = backend->next_session_command()->get_position();
-
-            if (current_pos < lowest_pos)
+            if (!m_sescmd_replier || backend == m_current_master)
             {
-                lowest_pos = current_pos;
-            }
-
-            if (backend->is_waiting_result() || backend->execute_session_command())
-            {
-                nsucc += 1;
-                mxb::atomic::add(&backend->target()->stats().packets, 1, mxb::atomic::RELAXED);
-                m_server_stats[backend->target()].inc_total();
-                m_server_stats[backend->target()].inc_read();
-
-                if (!m_sescmd_replier || backend == m_current_master)
-                {
-                    // Return the result from this backend to the client
-                    m_sescmd_replier = backend;
-                }
-
-                MXS_INFO("Route query to %s: %s",
-                         backend->is_master() ? "master" : "slave",
-                         backend->name());
-            }
-            else
-            {
-                backend->close();
-
-                if (m_config.master_failure_mode == RW_FAIL_INSTANTLY && backend == m_current_master)
-                {
-                    MXS_ERROR("Failed to execute session command in Master: %s", backend->name());
-                    return false;
-                }
-                else
-                {
-                    MXS_ERROR("Failed to execute session command in %s", backend->name());
-                }
+                // Return the result from this backend to the client
+                m_sescmd_replier = backend;
             }
         }
     }
 
     if (m_sescmd_replier)
     {
-        mxb_assert(nsucc);
-        if (expecting_response)
+        for (RWBackend* backend : m_raw_backends)
         {
-            m_expected_responses++;
-            mxb_assert(m_expected_responses == 1);
-            MXS_INFO("Will return response from '%s' to the client", m_sescmd_replier->name());
-        }
-    }
-
-    if (m_config.max_sescmd_history > 0 && m_sescmd_list.size() >= (size_t)m_config.max_sescmd_history
-        && !m_config.prune_sescmd_history)
-    {
-        static bool warn_history_exceeded = true;
-        if (warn_history_exceeded)
-        {
-            MXS_WARNING("Router session exceeded session command history limit. "
-                        "Server reconnection is disabled and only servers with "
-                        "consistent session state are used for the duration of"
-                        "the session. To disable this warning and the session "
-                        "command history, add `disable_sescmd_history=true` to "
-                        "service '%s'. To increase the limit (currently %lu), add "
-                        "`max_sescmd_history` to the same service and increase the value.",
-                        m_router->service()->name(),
-                        m_config.max_sescmd_history);
-            warn_history_exceeded = false;
+            if (backend->in_use() && !write_session_command(backend, buffer, command))
+            {
+                ok = false;
+            }
         }
 
-        m_config.disable_sescmd_history = true;
-        m_config.max_sescmd_history = 0;
-        m_sescmd_list.clear();
-    }
-
-    if (m_config.prune_sescmd_history && !m_sescmd_list.empty()
-        && m_sescmd_list.size() >= (size_t)m_config.max_sescmd_history)
-    {
-        // Close to the history limit, remove the oldest command
-        discard_responses(std::min(m_sescmd_list.front()->get_position(), lowest_pos));
-        m_sescmd_list.pop_front();
-    }
-
-    if (m_config.disable_sescmd_history)
-    {
-        discard_responses(lowest_pos);
-    }
-    else
-    {
-        discard_old_history(lowest_pos);
-        m_sescmd_list.push_back(sescmd);
-        m_router->update_max_sescmd_sz(m_sescmd_list.size());
-    }
-
-    if (nsucc)
-    {
-        m_sent_sescmd = id;
-
-        if (!expecting_response)
+        if (ok)
         {
-            /** The command doesn't generate a response so we increment the
-             * completed session command count */
-            m_recv_sescmd++;
+            if (command == MXS_COM_STMT_CLOSE)
+            {
+                // Remove the command from the PS mapping
+                m_qc.ps_erase(buffer.get());
+                m_exec_map.erase(route_info().stmt_id());
+            }
+            else if (qc_query_is_type(type, QUERY_TYPE_PREPARE_NAMED_STMT)
+                     || qc_query_is_type(type, QUERY_TYPE_PREPARE_STMT))
+            {
+                mxb_assert(buffer.id() != 0 || qc_query_is_type(type, QUERY_TYPE_PREPARE_NAMED_STMT));
+                m_qc.ps_store(buffer.get(), buffer.id());
+            }
+            else if (qc_query_is_type(type, QUERY_TYPE_DEALLOC_PREPARE))
+            {
+                mxb_assert(!mxs_mysql_is_ps_command(route_info().command()));
+                m_qc.ps_erase(buffer.get());
+            }
+
+            MYSQL_session* data = static_cast<MYSQL_session*>(m_pSession->protocol_data());
+            m_router->update_max_sescmd_sz(data->history.size());
+
+            m_current_query = std::move(buffer);
+
+            if (mxs_mysql_command_will_respond(command))
+            {
+                m_expected_responses++;
+                mxb_assert(m_expected_responses == 1);
+                MXS_INFO("Will return response from '%s' to the client", m_sescmd_replier->name());
+            }
+        }
+        else
+        {
+            MXS_ERROR("Could not route session command `%s`. Connection status: %s",
+                      mxs::extract_sql(buffer).c_str(), get_verbose_status().c_str());
         }
     }
     else
     {
-        MXS_ERROR("Could not route session command `%s`: %s. Connection status: %s",
-                  sescmd->to_string().c_str(),
-                  attempted_write ? "Write to all backends failed" : "All connections have failed",
-                  get_verbose_status().c_str());
+        MXS_ERROR("No valid candidates for session command `%s`. Connection status: %s",
+                  mxs::extract_sql(buffer).c_str(), get_verbose_status().c_str());
     }
 
-    return nsucc;
+    return ok;
 }
 
 RWBackend* RWSplitSession::get_hinted_backend(const char* name)
@@ -1136,7 +1095,6 @@ bool RWSplitSession::handle_got_target(mxs::Buffer&& buffer, RWBackend* target, 
         }
 
         mxb::atomic::add(&m_router->stats().n_queries, 1, mxb::atomic::RELAXED);
-        mxb::atomic::add(&target->target()->stats().packets, 1, mxb::atomic::RELAXED);
         m_server_stats[target->target()].inc_total();
 
         if (TARGET_IS_SLAVE(route_info().target())
