@@ -40,7 +40,5 @@ int main(int argc, char** argv)
     mysql_stmt_close(stmt);
     free(sqlstr);
 
-    free(sqlstr);
-
     return test.global_result;
 }
