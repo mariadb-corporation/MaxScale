@@ -61,6 +61,13 @@ int main(int argc, char *argv[])
     run_test(test, test.maxscales->conn_master[0]);
     test.maxscales->disconnect();
 
+    // Test MXS-3366.
+    test.maxscales->connect_rwsplit(0, "");
+    auto conn = test.maxscales->conn_rwsplit[0];
+    test.expect(mysql_change_user(conn, "user", "pass2", "test") == 0,
+                "changing user without CLIENT_CONNECT_WITH_DB-flag failed: %s", mysql_error(conn));
+    test.maxscales->disconnect();
+
     test.repl->connect();
     execute_query_silent(test.repl->nodes[0], "DROP USER user@'%%';");
     execute_query_silent(test.repl->nodes[0], "DROP TABLE test.t1");
