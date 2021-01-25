@@ -671,7 +671,7 @@ string mxsmongo::sort_to_order_by(const bsoncxx::document::view& sort)
                 order_by += ", ";
             }
 
-            order_by += static_cast<string>(element.key());
+            order_by += "JSON_EXTRACT(doc, '$." + static_cast<string>(element.key()) + "')";
 
             if (value == -1)
             {

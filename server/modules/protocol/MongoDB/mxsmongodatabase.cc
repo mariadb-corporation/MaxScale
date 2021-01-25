@@ -501,25 +501,16 @@ public:
 
         if (filter)
         {
-            if (filter.type() == bsoncxx::type::k_document)
+            const auto& doc = filter.get_document();
+            string where = mxsmongo::filter_to_where_clause(doc);
+
+            MXS_NOTICE("Filter '%s' converted to where clause '%s'.",
+                       bsoncxx::to_json(doc).c_str(),
+                       where.c_str());
+
+            if (!where.empty())
             {
-                const auto& doc = filter.get_document();
-                string where = mxsmongo::filter_to_where_clause(doc);
-
-                MXS_NOTICE("Filter '%s' converted to where clause '%s'.",
-                           bsoncxx::to_json(doc).c_str(),
-                           where.c_str());
-
-                if (!where.empty())
-                {
-                    sql << " WHERE " << where;
-                }
-
-                //sql << " WHERE id = '573a1391f29313caabcd70b4' ";
-            }
-            else
-            {
-                MXS_ERROR("'%s' is not an object, returning all rows.", mxsmongo::keys::FILTER);
+                sql << " WHERE " << where;
             }
         }
 
@@ -527,23 +518,16 @@ public:
 
         if (sort)
         {
-            if (sort.type() == bsoncxx::type::k_document)
-            {
-                const auto& doc = sort.get_document();
-                string order_by = mxsmongo::sort_to_order_by(doc);
+            const auto& doc = sort.get_document();
+            string order_by = mxsmongo::sort_to_order_by(doc);
 
-                MXS_NOTICE("Sort '%s' converted to 'ORDER BY %s'.",
-                           bsoncxx::to_json(doc).c_str(),
-                           order_by.c_str());
+            MXS_NOTICE("Sort '%s' converted to 'ORDER BY %s'.",
+                       bsoncxx::to_json(doc).c_str(),
+                       order_by.c_str());
 
-                if (!order_by.empty())
-                {
-                    sql << " ORDER BY " << order_by;
-                }
-            }
-            else
+            if (!order_by.empty())
             {
-                MXS_ERROR("'%s' is not an object, not sorting.", mxsmongo::keys::SORT);
+                sql << " ORDER BY " << order_by;
             }
         }
 
