@@ -55,7 +55,7 @@ The `projection` parameter takes a document of the following form:
 { <field1>: <value>, <field2>: <value> ... }
 ```
 
-If a `projection` document is not provided of if it is empty, the entire document
+If a `projection` document is not provided or if it is empty, the entire document
 will be returned.
 
 Projection | Description
@@ -82,7 +82,7 @@ with the exception of the `_id` field:
    * In projections that _explicitly_ excludes fields, the `_id` field is the only field that can be explicitly include; however, the `_id` field is included by default.
 
 *NOTE* Currently `_id` is the only field that can be excluded, and _only_
-if other fields are exlicitly included.
+if other fields are explicitly included.
 *NOTE* Currently exclusion of other fields but `_id` is currently not supported.
 
 ### Insert - https://docs.mongodb.com/manual/reference/command/insert
