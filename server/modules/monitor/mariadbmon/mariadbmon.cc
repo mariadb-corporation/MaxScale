@@ -1150,7 +1150,7 @@ const char MASTER_GTID_DOMAIN[] = "master_gtid_domain";
 
 void MariaDBMonitor::save_monitor_specific_journal_data(mxb::Json& data)
 {
-    data.set_string(journal_fields::MASTER, m_master->name());
+    data.set_string(journal_fields::MASTER, m_master ? m_master->name() : "");
     data.set_int(journal_fields::MASTER_GTID_DOMAIN, m_master_gtid_domain);
 }
 
