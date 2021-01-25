@@ -637,8 +637,15 @@ bool Server::set_address(const string& new_address)
     bool rval = false;
     if (new_address.length() <= MAX_ADDRESS_LEN)
     {
-        careful_strcpy(m_settings.address, MAX_ADDRESS_LEN, new_address);
-        rval = true;
+        if (m_settings.m_address.set(new_address))
+        {
+            careful_strcpy(m_settings.address, MAX_ADDRESS_LEN, new_address);
+            rval = true;
+        }
+        else
+        {
+            MXS_ERROR("The specifed server address '%s' is not valid.", new_address.c_str());
+        }
     }
     else
     {
