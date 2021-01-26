@@ -1021,7 +1021,7 @@ bool RWSplitSession::handleError(mxs::ErrorType type, GWBUF* errmsgbuf, mxs::End
 
         if (m_target_node && m_target_node == backend && trx_is_read_only())
         {
-            mxb_assert(m_trx.target() == backend);
+            mxb_assert(!m_config.transaction_replay || m_trx.target() == backend);
 
             if (backend->is_waiting_result())
             {
