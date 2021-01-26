@@ -23,6 +23,14 @@ CREATE USER 'maxscale'@'maxscalehost' IDENTIFIED BY 'maxscale-password';
 GRANT REPLICATION CLIENT ON *.* TO 'maxscale'@'maxscalehost';
 ```
 
+If the monitor needs to query server disk space (i.e. `disk_space_threshold` is
+set), then the FILE-grant is required with MariaDB Server versions 10.4.7,
+10.3.17, 10.2.26 and 10.1.41 and later.
+
+```
+GRANT FILE ON *.* TO 'maxscale'@'maxscalehost';
+```
+
 ### Cluster Manipulation Grants
 
 If [cluster manipulation operations](#cluster-manipulation-operations) are used,
