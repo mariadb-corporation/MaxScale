@@ -363,7 +363,7 @@ void RWSplitSession::manage_transactions(RWBackend* backend, GWBUF* writebuf, co
     {
         // We're retrying the query on the master and we need to keep the current query
     }
-    else
+    else if (!backend->has_session_commands())
     {
         /** Normal response, reset the currently active query. This is done before
          * the whole response is complete to prevent it from being retried

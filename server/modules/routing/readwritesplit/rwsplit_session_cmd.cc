@@ -81,6 +81,7 @@ void RWSplitSession::process_sescmd_response(RWBackend* backend, GWBUF** ppPacke
                 ++m_recv_sescmd;
                 --m_expected_responses;
                 mxb_assert(m_expected_responses == 0);
+                mxb_assert(m_current_query.empty());
 
                 // TODO: This would make more sense if it was done at the client protocol level
                 session_book_server_response(m_pSession, (SERVER*)backend->target(), true);
