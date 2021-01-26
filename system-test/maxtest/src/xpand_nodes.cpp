@@ -104,10 +104,10 @@ int Xpand_nodes::prepare_server(int m)
     {
         std::string command("mysql ");
         command += "-u ";
-        command += this->user_name;
+        command += "xpandmon";
         command += " ";
         command += "-p";
-        command += this->password;
+        command += "xpandmon";
 
         ec = ssh_node(m, command.c_str(), false);
 
