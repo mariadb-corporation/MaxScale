@@ -377,6 +377,18 @@ void MariaDBBackendConnection::ready_for_reading(DCB* event_dcb)
             read_com_ping_response();
             break;
 
+        case State::PREPARE_PS:
+            normal_read();
+
+            if (m_reply.is_complete())
+            {
+                m_state = State::ROUTING;
+                send_delayed_packets();
+            }
+
+            state_machine_continue = false;
+            break;
+
         case State::ROUTING:
             normal_read();
             // Normal read always consumes all data.
@@ -946,6 +958,16 @@ int32_t MariaDBBackendConnection::write(GWBUF* queue)
             }
             else
             {
+                if (m_reply.command() == MXS_COM_STMT_PREPARE)
+                {
+                    // Stop accepting new queries while a COM_STMT_PREPARE is in progress. This makes sure
+                    // that it completes before other commands that refer to it are processed. This can happen
+                    // when a COM_STMT_PREPARE is routed to multiple backends and a faster backend sends the
+                    // response to the client. This means that while this backend is still busy executing it,
+                    // a COM_STMT_CLOSE for the prepared statement can arrive.
+                    m_state = State::PREPARE_PS;
+                }
+
                 /** Write to backend */
                 rc = m_dcb->writeq_append(queue);
             }
@@ -954,7 +976,7 @@ int32_t MariaDBBackendConnection::write(GWBUF* queue)
 
     default:
         {
-            MXS_INFO("Storing query while authentication is done (in state: %s): %s",
+            MXS_INFO("Storing %s while in state '%s': %s", STRPACKETTYPE(mxs_mysql_get_command(queue)),
                      to_string(m_state).c_str(), mxs::extract_sql(queue).c_str());
             m_delayed_packets.emplace_back(queue);
             rc = 1;
@@ -2341,6 +2363,10 @@ std::string MariaDBBackendConnection::to_string(State auth_state)
     case State::READ_HISTORY:
         rval = "Reading results of history execution";
         break;
+
+    case State::PREPARE_PS:
+        rval = "Preparing a prepared statement";
+        break;
     }
     return rval;
 }
@@ -2537,7 +2563,13 @@ bool MariaDBBackendConnection::send_delayed_packets()
 {
     bool rval = true;
 
-    for (auto& b : m_delayed_packets)
+    // Store the packets in a local variable to prevent modifications to m_delayed_packets while we're
+    // iterating it. This can happen if one of the packets causes the state to change from State::ROUTING to
+    // something else (e.g. multiple COM_STMT_PREPARE packets being sent at the same time).
+    auto packets = m_delayed_packets;
+    m_delayed_packets.clear();
+
+    for (auto& b : packets)
     {
         if (!write(b.release()))
         {
@@ -2545,8 +2577,6 @@ bool MariaDBBackendConnection::send_delayed_packets()
             break;
         }
     }
-
-    m_delayed_packets.clear();
 
     return rval;
 }

@@ -65,6 +65,7 @@ private:
         POOLED,             /**< The connection is in pool and should not route replies */
         SEND_HISTORY,       /**< Sending stored session command history */
         READ_HISTORY,       /**< Reading results of history execution */
+        PREPARE_PS,         /**< Executing a COM_STMT_PREPARE */
         FAILED,             /**< Handshake/authentication failed */
     };
 
