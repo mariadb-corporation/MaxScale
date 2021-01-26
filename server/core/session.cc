@@ -125,7 +125,7 @@ void MXS_SESSION::kill(GWBUF* error)
             client_connection()->write(error);
         }
 
-        DCB::close(client_dcb);
+        ClientDCB::close(client_dcb);
     }
 }
 

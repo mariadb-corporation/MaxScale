@@ -57,7 +57,7 @@ static void test1()
     auto client_protocol = listener_data->m_proto_module->create_client_protocol(session, session);
     auto pProtocol = client_protocol.get();
     auto dcb = ClientDCB::create(fd, "127.0.0.1", sockaddr_storage {},
-                                 session, std::move(client_protocol), nullptr);
+                                 session, std::move(client_protocol), mxs::RoutingWorker::get_current());
     pProtocol->set_dcb(dcb);
     session->set_client_connection(pProtocol);
 
@@ -73,7 +73,7 @@ static void test1()
 
     // TODO, fix this for workers: poll_shutdown();
     fprintf(stderr, "\t..done\nTidy up.");
-    DCB::close(dcb);
+    ClientDCB::close(dcb);
     fprintf(stderr, "\t..done\n");
 }
 

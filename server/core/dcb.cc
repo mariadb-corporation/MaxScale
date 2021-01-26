@@ -768,66 +768,6 @@ int DCB::writeq_drain()
     return total_written;
 }
 
-/**
- * Closes a client/backend dcb, which in the former case always means that
- * the corrsponding socket fd is closed and the dcb itself is freed, and in
- * latter case either the same as in the former or that the dcb is put into
- * the persistent pool.
- *
- * @param dcb The DCB to close
- */
-// static
-void DCB::close(DCB* dcb)
-{
-    mxb_assert(dcb->m_state != State::DISCONNECTED);
-#if defined (SS_DEBUG)
-    RoutingWorker* current = RoutingWorker::get_current();
-    RoutingWorker* owner = static_cast<RoutingWorker*>(dcb->owner);
-    if (current && (current != owner))
-    {
-        MXS_ALERT("DCB::close(%p) called by %d, owned by %d.",
-                  dcb,
-                  current->id(),
-                  owner->id());
-        mxb_assert(owner == RoutingWorker::get_current());
-    }
-#endif
-
-    /**
-     * DCB::close may be called for freshly created dcb, in which case
-     * it only needs to be freed.
-     */
-    if (dcb->state() == State::CREATED && dcb->m_fd == FD_CLOSED)
-    {
-        // A freshly created dcb that was closed before it was taken into use.
-        DCB::free(dcb);
-    }
-
-    if (dcb->prepare_for_destruction())
-    {
-        if (dcb->m_nClose == 0)
-        {
-            dcb->m_nClose = 1;
-
-            if (dcb->m_manager)
-            {
-                dcb->m_manager->destroy(dcb);
-            }
-            else
-            {
-                dcb->destroy();
-            }
-        }
-        else
-        {
-            ++dcb->m_nClose;
-            // TODO: Will this happen on a regular basis?
-            MXS_WARNING("DCB::close(%p) called %u times.", dcb, dcb->m_nClose);
-            mxb_assert(!true);
-        }
-    }
-}
-
 void DCB::destroy()
 {
 #if defined (SS_DEBUG)
@@ -1855,6 +1795,30 @@ int ClientDCB::port() const
     return rval;
 }
 
+void ClientDCB::close(ClientDCB* dcb)
+{
+#if defined (SS_DEBUG)
+    mxb_assert(dcb->m_state != State::DISCONNECTED && dcb->m_fd != FD_CLOSED && dcb->m_manager);
+    auto* current = RoutingWorker::get_current();
+    auto* owner = static_cast<RoutingWorker*>(dcb->owner);
+    mxb_assert(current && current == owner);
+#endif
+
+    // No need to call 'prepare_for_destruction()' as it does nothing for a ClientDCB.
+    if (dcb->m_nClose == 0)
+    {
+        dcb->m_nClose = 1;
+        dcb->m_manager->destroy(dcb);
+    }
+    else
+    {
+        ++dcb->m_nClose;
+        // TODO: Will this happen on a regular basis?
+        MXS_WARNING("DCB::close(%p) called %u times.", dcb, dcb->m_nClose);
+        mxb_assert(!true);
+    }
+}
+
 /**
  * BackendDCB
  */
@@ -2066,6 +2030,60 @@ void BackendDCB::set_connection(std::unique_ptr<mxs::BackendConnection> conn)
 {
     m_handler = conn.get();
     m_protocol = std::move(conn);
+}
+
+void BackendDCB::close(BackendDCB* dcb)
+{
+#if defined (SS_DEBUG)
+    mxb_assert(dcb->m_state != State::DISCONNECTED && dcb->m_state != State::CREATED
+               && dcb->m_fd != FD_CLOSED && dcb->m_manager);
+    auto* current = RoutingWorker::get_current();
+    auto* owner = static_cast<RoutingWorker*>(dcb->owner);
+    mxb_assert(current && current == owner);
+#endif
+
+    if (dcb->prepare_for_destruction())
+    {
+        if (dcb->m_nClose == 0)
+        {
+            dcb->m_nClose = 1;
+            dcb->m_manager->destroy(dcb);
+        }
+        else
+        {
+            ++dcb->m_nClose;
+            // TODO: Will this happen on a regular basis?
+            MXS_WARNING("DCB::close(%p) called %u times.", dcb, dcb->m_nClose);
+            mxb_assert(!true);
+        }
+    }
+}
+
+void BackendDCB::close_or_send_to_pool(BackendDCB* dcb)
+{
+#if defined (SS_DEBUG)
+    mxb_assert(dcb->m_state != State::DISCONNECTED && dcb->m_state != State::CREATED
+               && dcb->m_fd != FD_CLOSED && dcb->m_manager);
+    auto* current = RoutingWorker::get_current();
+    auto* owner = static_cast<RoutingWorker*>(dcb->owner);
+    mxb_assert(current && current == owner);
+#endif
+
+    if (dcb->prepare_for_destruction())
+    {
+        if (dcb->m_nClose == 0)
+        {
+            dcb->m_nClose = 1;
+            dcb->m_manager->destroy(dcb);
+        }
+        else
+        {
+            ++dcb->m_nClose;
+            // TODO: Will this happen on a regular basis?
+            MXS_WARNING("DCB::close(%p) called %u times.", dcb, dcb->m_nClose);
+            mxb_assert(!true);
+        }
+    }
 }
 
 /**

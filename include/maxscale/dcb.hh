@@ -121,15 +121,6 @@ public:
     };
 
     /**
-     * Close the DCB. The called should treat the DCB as having been
-     * deleted although in practice the actual deletion may take place
-     * at a later point in time.
-     *
-     * @param dcb  The dcb to be closed.
-     */
-    static void close(DCB* dcb);
-
-    /**
      * @return The unique identifier of the DCB.
      */
     uint64_t uid() const
@@ -624,6 +615,7 @@ protected:
         Manager* manager);
 
     virtual ~DCB();
+    void destroy();
 
     bool create_SSL(const mxs::SSLContext& ssl);
 
@@ -699,7 +691,6 @@ private:
     int socket_write_SSL(GWBUF* writeq, bool* stop_writing);
     int socket_write(GWBUF* writeq, bool* stop_writing);
 
-    void        destroy();
     static void free(DCB* dcb);
 
     static uint32_t poll_handler(MXB_POLL_DATA* data, MXB_WORKER* worker, uint32_t events);
@@ -725,7 +716,7 @@ public:
            const sockaddr_storage& ip,
            MXS_SESSION* session,
            std::unique_ptr<mxs::ClientConnection> protocol,
-           DCB::Manager* manager = nullptr);
+           DCB::Manager* manager);
 
     const sockaddr_storage& ip() const
     {
@@ -751,6 +742,8 @@ public:
     int ssl_handshake() override;
 
     void shutdown() override;
+
+    static void close(ClientDCB* dcb);
 
 protected:
     // Only for InternalDCB.
@@ -843,6 +836,9 @@ public:
     int ssl_handshake() override;
 
     void set_connection(std::unique_ptr<mxs::BackendConnection> conn);
+
+    static void close_or_send_to_pool(BackendDCB* dcb);
+    static void close(BackendDCB* dcb);
 
 private:
     BackendDCB(SERVER* server, int fd, MXS_SESSION* session,

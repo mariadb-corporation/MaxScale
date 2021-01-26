@@ -184,7 +184,7 @@ void CDCClientConnection::ready_for_reading(DCB* event_dcb)
 
                 write_auth_err();
                 /* force the client connection close */
-                DCB::close(dcb);
+                ClientDCB::close(dcb);
             }
             break;
 
@@ -205,7 +205,7 @@ void CDCClientConnection::ready_for_reading(DCB* event_dcb)
                 gwbuf_free(head);
 
                 /* right now, just force the client connection close */
-                DCB::close(dcb);
+                ClientDCB::close(dcb);
             }
             else
             {
@@ -246,13 +246,13 @@ int32_t CDCClientConnection::write(GWBUF* buffer)
 void CDCClientConnection::error(DCB* event_dcb)
 {
     mxb_assert(m_dcb == event_dcb);
-    DCB::close(m_dcb);
+    ClientDCB::close(m_dcb);
 }
 
 void CDCClientConnection::hangup(DCB* event_dcb)
 {
     mxb_assert(m_dcb == event_dcb);
-    DCB::close(m_dcb);
+    ClientDCB::close(m_dcb);
 }
 
 bool CDCClientConnection::init_connection()

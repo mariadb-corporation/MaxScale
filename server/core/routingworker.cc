@@ -591,7 +591,7 @@ BackendDCB* RoutingWorker::get_backend_dcb_from_pool(SERVER* pS,
                 pDcb->shutdown();
             }
 
-            DCB::close(pDcb);
+            BackendDCB::close(pDcb);
             pDcb = nullptr;
 
             m_evicting = false;
@@ -731,8 +731,7 @@ void RoutingWorker::evict_dcb(BackendDCB* pDcb)
     ServerConnPool& conn_pool = m_conn_pools_by_server[pDcb->server()];
 
     // TODO: An issue that we need to do a linear search?
-    auto i = std::find_if(conn_pool.begin(),
-                          conn_pool.end(),
+    auto i = std::find_if(conn_pool.begin(), conn_pool.end(),
                           [pDcb](const ConnPoolEntry& entry) {
                               return entry.dcb() == pDcb;
                           });
@@ -763,7 +762,7 @@ void RoutingWorker::close_pooled_dcb(BackendDCB* pDcb)
 
     // This will cause can_be_destroyed() to be called. However, the dcb will
     // not be considered for the pool since m_evicting is currently true.
-    DCB::close(pDcb);
+    BackendDCB::close(pDcb);
 }
 
 bool RoutingWorker::pre_run()

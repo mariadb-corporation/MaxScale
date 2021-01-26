@@ -889,7 +889,7 @@ void ServerEndpoint::close()
 {
     mxb::LogScope scope(m_server->name());
     mxb_assert(is_open());
-    DCB::close(m_dcb);
+    BackendDCB::close_or_send_to_pool(m_dcb);
     m_dcb = nullptr;
 
     m_server->stats().remove_connection();
