@@ -51,13 +51,6 @@ MXS_BEGIN_DECLS
 MXB_WORKER* mxs_rworker_get(int worker_id);
 
 /**
- * Return the current routing worker.
- *
- * @return A routing worker, or NULL if there is no current routing worker.
- */
-MXB_WORKER* mxs_rworker_get_current();
-
-/**
  * Return the id of the current routing worker.
  *
  * @return The id of the routing worker, or -1 if there is no current
@@ -65,67 +58,6 @@ MXB_WORKER* mxs_rworker_get_current();
  */
 int mxs_rworker_get_current_id();
 
-/**
- * Broadcast a message to all routing workers.
- *
- * @param msg_id  The message id.
- * @param arg1    Message specific first argument.
- * @param arg2    Message specific second argument.
- *
- * @return The number of messages posted; if less that ne number of workers
- *         then some postings failed.
- *
- * @attention The return value tells *only* whether message could be posted,
- *            *not* that it has reached the worker.
- *
- * @attentsion Exactly the same arguments are passed to all workers. Take that
- *             into account if the passed data must be freed.
- *
- * @attention This function is signal safe.
- */
-size_t mxs_rworker_broadcast_message(uint32_t msg_id, intptr_t arg1, intptr_t arg2);
-
-/**
- * Call a function on all workers
- *
- * A convenience function for executing simple tasks on all workers. The task
- * will be executed immediately on the current worker and thus recursive calls
- * into functions should not be done.
- *
- * @param cb Callback to call
- * @param data Data passed to the callback
- *
- * @return The number of messages posted; if less that ne number of workers
- *         then some postings failed.
- */
-size_t mxs_rworker_broadcast(void (* cb)(void* data), void* data);
-
-/**
- * Add a session to the current routing worker's session container. Currently
- * only required for some special commands e.g. "KILL <process_id>" to work.
- *
- * @param session Session to add.
- * @return true if successful, false if id already existed in map.
- */
-bool mxs_rworker_register_session(MXS_SESSION* session);
-
-/**
- * Remove a session from the current routing worker's session container. Does
- * not actually remove anything from an epoll-set or affect the session in any
- * way.
- *
- * @param id Which id to remove.
- * @return The removed session or NULL if not found.
- */
-bool mxs_rworker_deregister_session(MXS_SESSION* session);
-
-/**
- * Find a session in the current routing worker's session container.
- *
- * @param id Which id to find.
- * @return The found session or NULL if not found.
- */
-MXS_SESSION* mxs_rworker_find_session(uint64_t id);
 
 MXS_END_DECLS
 
@@ -217,6 +149,20 @@ public:
      * @return Session registry.
      */
     SessionsById& session_registry();
+
+    /**
+     * Add a session to the current routing worker's session container.
+     *
+     * @param ses Session to add.
+     */
+    void register_session(MXS_SESSION* ses);
+
+    /**
+     * Remove a session from the current routing worker's session container.
+     *
+     * @param id Which id to remove
+     */
+    void deregister_session(uint64_t session_id);
 
     /**
      * Return the worker associated with the provided worker id.
@@ -528,18 +474,15 @@ private:
     bool try_shutdown(Call::action_t action);
 
 private:
-    const int      m_id;              /*< The id of the worker. */
-    SessionsById   m_sessions;        /*< A mapping of session_id->MXS_SESSION. The map
-                                       *  should contain sessions exclusive to this
-                                       *  worker and not e.g. listener sessions. For now,
-                                       *  it's up to the protocol to decide whether a new
-                                       *  session is added to the map. */
-    Zombies        m_zombies;         /*< DCBs to be deleted. */
-    IndexedStorage m_storage;         /*< The storage of this worker. */
-    DCBs           m_dcbs;            /*< DCBs managed by this worker. */
+    const int      m_id;        /*< The id of the worker. */
+    SessionsById   m_sessions;  /*< A mapping of session_id->MXS_SESSION */
+    Zombies        m_zombies;   /*< DCBs to be deleted. */
+    IndexedStorage m_storage;   /*< The storage of this worker. */
+    DCBs           m_dcbs;      /*< DCBs managed by this worker. */
+
     struct
     {
-        RoutingWorker* pTo { nullptr }; /*< Worker to offload work to. */
+        RoutingWorker* pTo {nullptr};   /*< Worker to offload work to. */
         bool           perform = false;
         int            nSessions = 0;
 

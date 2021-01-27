@@ -449,18 +449,21 @@ void RoutingWorker::destroy(DCB* pDcb)
  */
 void RoutingWorker::process_timeouts()
 {
-    if (mxs_clock() >= m_next_timeout_check)
+    auto now = mxs_clock();
+    if (now >= m_next_timeout_check)
     {
         /** Because the resolutions of the timeouts is one second, we only need to
          * check them once per second. One heartbeat is 100 milliseconds. */
-        m_next_timeout_check = mxs_clock() + 10;
+        m_next_timeout_check = now + 10;
 
-        for (DCB* pDcb : m_dcbs)
+        for (auto& elem : m_sessions)
         {
-            if (pDcb->role() == DCB::Role::CLIENT && pDcb->state() == DCB::State::POLLING)
+            auto* ses = static_cast<Session*>(elem.second);
+            ClientDCB* client_dcb = ses->client_dcb;
+            if (client_dcb->state() == DCB::State::POLLING)
             {
-                auto idle = MXS_CLOCK_TO_SEC(mxs_clock() - pDcb->last_read());
-                static_cast<Session*>(pDcb->session())->tick(idle);
+                auto idle = MXS_CLOCK_TO_SEC(now - client_dcb->last_read());
+                ses->tick(idle);
             }
         }
     }
@@ -1508,42 +1511,23 @@ bool RoutingWorker::try_shutdown(Call::action_t action)
 
     return true;
 }
+
+void RoutingWorker::register_session(MXS_SESSION* ses)
+{
+    MXB_AT_DEBUG(bool rv = ) m_sessions.add(ses);
+    mxb_assert(rv);
 }
 
-size_t mxs_rworker_broadcast_message(uint32_t msg_id, intptr_t arg1, intptr_t arg2)
+void RoutingWorker::deregister_session(uint64_t session_id)
 {
-    return RoutingWorker::broadcast_message(msg_id, arg1, arg2);
+    MXB_AT_DEBUG(bool rv = ) m_sessions.remove(session_id);
+    mxb_assert(rv);
 }
-
-bool mxs_rworker_register_session(MXS_SESSION* session)
-{
-    RoutingWorker* pWorker = RoutingWorker::get_current();
-    mxb_assert(pWorker);
-    return pWorker->session_registry().add(session);
-}
-
-bool mxs_rworker_deregister_session(MXS_SESSION* session)
-{
-    RoutingWorker* pWorker = RoutingWorker::get_current();
-    mxb_assert(pWorker);
-    return pWorker->session_registry().remove(session->id());
-}
-
-MXS_SESSION* mxs_rworker_find_session(uint64_t id)
-{
-    RoutingWorker* pWorker = RoutingWorker::get_current();
-    mxb_assert(pWorker);
-    return pWorker->session_registry().lookup(id);
 }
 
 MXB_WORKER* mxs_rworker_get(int worker_id)
 {
     return RoutingWorker::get(worker_id);
-}
-
-MXB_WORKER* mxs_rworker_get_current()
-{
-    return RoutingWorker::get_current();
 }
 
 int mxs_rworker_get_current_id()
@@ -1657,15 +1641,6 @@ public:
 protected:
     std::function<void ()> m_cb;
 };
-}
-
-size_t mxs_rworker_broadcast(void (* cb)(void* data), void* data)
-{
-    std::unique_ptr<FunctionTask> task(new FunctionTask([cb, data]() {
-                                                            cb(data);
-                                                        }));
-
-    return RoutingWorker::broadcast(std::move(task));
 }
 
 json_t* mxs_rworker_to_json(const char* zHost, int id)

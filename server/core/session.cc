@@ -92,13 +92,12 @@ MXS_SESSION::MXS_SESSION(const std::string& host, SERVICE* service)
     , close_reason(SESSION_CLOSE_NONE)
     , load_active(false)
 {
-    mxs_rworker_register_session(this);
+    mxs::RoutingWorker::get_current()->register_session(this);
 }
 
 MXS_SESSION::~MXS_SESSION()
 {
-    MXB_AT_DEBUG(bool removed = ) mxs_rworker_deregister_session(this);
-    mxb_assert(removed);
+    mxs::RoutingWorker::get_current()->deregister_session(m_id);
 }
 
 void MXS_SESSION::kill(GWBUF* error)
