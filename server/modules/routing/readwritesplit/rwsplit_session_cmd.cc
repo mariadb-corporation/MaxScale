@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2024-11-26
+ * Change Date: 2025-01-25
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -82,6 +82,7 @@ void RWSplitSession::process_sescmd_response(RWBackend* backend, GWBUF** ppPacke
                 ++m_recv_sescmd;
                 --m_expected_responses;
                 mxb_assert(m_expected_responses == 0);
+                mxb_assert(m_current_query.empty());
 
                 // TODO: This would make more sense if it was done at the client protocol level
                 session_book_server_response(m_pSession, (SERVER*)backend->target(), true);

@@ -154,7 +154,14 @@ int main(int argc, char** argv)
             bind(block, 5, 1),
             bind(err, "SELECT SLEEP(10)"),
             noop
-        }
+        },
+        {
+            "MXS-3383: Interrupted insert after session command with slow slaves (causes duplicate insert)",
+            bind(ok, "SET @b = (SELECT SLEEP(@@server_id))"),
+            bind(block, 5),
+            bind(ok, "INSERT INTO test.t1 VALUES ((SELECT SLEEP(10) + @b))", 0),
+            bind(check, "SELECT COUNT(*) FROM test.t1", "2")
+        },
     });
 
     cout << "Create table for testing" << endl;
@@ -165,7 +172,7 @@ int main(int argc, char** argv)
 
     for (auto a : tests)
     {
-        cout << a.description << endl;
+        test.log_printf("%s", a.description.c_str());
         test.maxscales->connect_rwsplit();
         a.pre();
         thread thr(a.block);
@@ -173,6 +180,9 @@ int main(int argc, char** argv)
         test.maxscales->disconnect();
         thr.join();
         a.check();
+
+        // Remove any inserted values
+        query("TRUNCATE TABLE test.t1");
     }
 
     test.maxscales->connect_rwsplit();

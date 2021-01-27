@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2024-11-26
+ * Change Date: 2025-01-25
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -104,10 +104,10 @@ int Xpand_nodes::prepare_server(int m)
     {
         std::string command("mysql ");
         command += "-u ";
-        command += this->user_name;
+        command += "xpandmon";
         command += " ";
         command += "-p";
-        command += this->password;
+        command += "xpandmon";
 
         ec = ssh_node(m, command.c_str(), false);
 

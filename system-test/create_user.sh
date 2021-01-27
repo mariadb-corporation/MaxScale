@@ -126,7 +126,7 @@ then
     mysql --force $socket <<EOF
     CREATE USER 'mariadbmon'@'%' IDENTIFIED BY 'mariadbmon' $require_ssl;
 
-    GRANT SUPER, RELOAD, PROCESS, SHOW DATABASES, EVENT ON *.* TO 'mariadbmon'@'%';
+    GRANT SUPER, FILE, RELOAD, PROCESS, SHOW DATABASES, EVENT ON *.* TO 'mariadbmon'@'%';
     GRANT SELECT ON mysql.user TO 'mariadbmon'@'%';
 EOF
 

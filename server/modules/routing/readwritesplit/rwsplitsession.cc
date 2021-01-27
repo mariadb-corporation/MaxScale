@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2024-11-26
+ * Change Date: 2025-01-25
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -368,7 +368,7 @@ void RWSplitSession::manage_transactions(RWBackend* backend, GWBUF* writebuf, co
     {
         // We're retrying the query on the master and we need to keep the current query
     }
-    else
+    else if (!backend->has_session_commands())
     {
         /** Normal response, reset the currently active query. This is done before
          * the whole response is complete to prevent it from being retried
@@ -1049,7 +1049,7 @@ bool RWSplitSession::handleError(mxs::ErrorType type, GWBUF* errmsgbuf, mxs::End
 
         if (m_target_node && m_target_node == backend && trx_is_read_only())
         {
-            mxb_assert(m_trx.target() == backend);
+            mxb_assert(!m_config.transaction_replay || m_trx.target() == backend);
 
             if (backend->is_waiting_result())
             {
