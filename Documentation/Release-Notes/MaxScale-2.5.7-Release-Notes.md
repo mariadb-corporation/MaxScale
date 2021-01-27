@@ -18,6 +18,7 @@ report on [our Jira](https://jira.mariadb.org/projects/MXS).
 
 ## Bug fixes
 
+* [MXS-3383](https://jira.mariadb.org/browse/MXS-3383) Debug assertion with delayed_retry and master failure
 * [MXS-3374](https://jira.mariadb.org/browse/MXS-3374) MaxScale fails to update IP for a existing node that reappears with a IP change
 * [MXS-3370](https://jira.mariadb.org/browse/MXS-3370) Asynchronicity of tee filter isn't documented
 * [MXS-3365](https://jira.mariadb.org/browse/MXS-3365) Missing match setting in filter(s) results in no match at all
