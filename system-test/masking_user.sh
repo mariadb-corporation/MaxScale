@@ -7,6 +7,7 @@ target=${maxscale_000_whoami}@${maxscale_000_network}:/home/${maxscale_000_whoam
 
 if [ ${maxscale_000_network} != "127.0.0.1" ] ; then
         scp -i $maxscale_000_keyfile -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $source $target
+        ssh -i $maxscale_000_keyfile -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${maxscale_000_whoami}@${maxscale_000_network} "sudo chmod o+r /home/${maxscale_000_whoami}/masking_rules.json"
 else
         cp $source /home/${maxscale_000_whoami}/masking_rules.json
 fi
