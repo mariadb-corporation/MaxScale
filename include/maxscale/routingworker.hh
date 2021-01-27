@@ -520,7 +520,7 @@ private:
     void remove(DCB* pDcb) override;
     void destroy(DCB* pDcb) override;
     // BackendDCB::Manager
-    bool can_be_destroyed(BackendDCB* dcb) override;
+    bool move_to_conn_pool(BackendDCB* dcb) override;
 
     void evict_dcb(BackendDCB* pDcb);
     void close_pooled_dcb(BackendDCB* pDcb);
@@ -630,14 +630,12 @@ private:
     using ServerConnPool = std::list<ConnPoolEntry>;
     using ConnPoolGroup = std::map<SERVER*, ServerConnPool>;
 
-    ConnPoolGroup m_conn_pools_by_server; /**< Pooled connections for each server */
-    bool          m_evicting {false};
+    ConnPoolGroup m_conn_pools_by_server;   /**< Pooled connections for each server */
     DCBHandler    m_pool_handler;
     long          m_next_timeout_check {0};
 
     std::vector<std::function<void()>> m_epoll_tick_funcs;
 };
-
 }
 
 /**

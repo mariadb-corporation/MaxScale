@@ -615,7 +615,8 @@ protected:
         Manager* manager);
 
     virtual ~DCB();
-    void destroy();
+    void        destroy();
+    static void close(DCB* dcb);
 
     bool create_SSL(const mxs::SSLContext& ssl);
 
@@ -629,13 +630,6 @@ protected:
      * @return True, if the DCB was released and can be deleted, false otherwise.
      */
     virtual bool release_from(MXS_SESSION* session) = 0;
-
-    /**
-     * Prepare the instance for destruction.
-     *
-     * @return True if it was prepared and can be destroyed, false otherwise.
-     */
-    virtual bool prepare_for_destruction() = 0;
 
     void stop_polling_and_shutdown();
 
@@ -767,7 +761,6 @@ private:
               DCB::Manager* manager);
 
     bool release_from(MXS_SESSION* session) override;
-    bool prepare_for_destruction() override;
 
     sockaddr_storage                       m_ip;                /**< remote IPv4/IPv6 address */
     std::unique_ptr<mxs::ClientConnection> m_protocol;          /**< The protocol session */
@@ -781,17 +774,15 @@ public:
     {
     public:
         /**
-         * Called by BackendDCB when it is about to be destroyed.
+         * Attempt to move the dcb into the connection pool
          *
-         * @param dcb  The dcb about to be destroyed.
+         * @param dcb  The dcb to move.
+         * @return True, if the dcb was moved to the pool.
          *
-         * @return True, if the dcb can be destroyed, false otherwise.
-         *
-         * If @c false is returned, the state of the DCB will be
-         * changed to what it would be if @close() had never been
-         * called.
+         * If @c false is returned, the dcb should in most
+         * cases be closed by the caller.
          */
-        virtual bool can_be_destroyed(BackendDCB* dcb) = 0;
+        virtual bool move_to_conn_pool(BackendDCB* dcb) = 0;
     };
 
     static BackendDCB* connect(SERVER* server, MXS_SESSION* session, DCB::Manager* manager);
@@ -837,7 +828,18 @@ public:
 
     void set_connection(std::unique_ptr<mxs::BackendConnection> conn);
 
-    static void close_or_send_to_pool(BackendDCB* dcb);
+    /**
+     * Try to send the dcb to the connection pool. If this is not possible, close it.
+     *
+     * @param dcb Dcb to pool or close
+     */
+    static void move_to_pool_or_close(BackendDCB* dcb);
+
+    /**
+     * Close the dcb. The dcb is not actually closed, just put to the zombie queue.
+     *
+     * @param dcb Dcb to close
+     */
     static void close(BackendDCB* dcb);
 
 private:
@@ -845,7 +847,6 @@ private:
                DCB::Manager* manager);
 
     bool release_from(MXS_SESSION* session) override;
-    bool prepare_for_destruction() override;
 
     static void hangup_cb(MXB_WORKER* worker, const SERVER* server);
 

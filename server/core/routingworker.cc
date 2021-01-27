@@ -564,11 +564,11 @@ BackendDCB* RoutingWorker::get_backend_dcb_from_pool(SERVER* pS,
             }
         }
 
-        // If proxy protocol is in use there is a possibility that 
-        // no DCBs are suitable to use. 
+        // If proxy protocol is in use there is a possibility that
+        // no DCBs are suitable to use.
         if (!pDcb)
         {
-            break;		
+            break;
         }
 
         // Put back the origininal handler.
@@ -583,8 +583,6 @@ BackendDCB* RoutingWorker::get_backend_dcb_from_pool(SERVER* pS,
         else
         {
             MXS_WARNING("Failed to reuse a persistent connection.");
-            m_evicting = true;
-
             if (pDcb->state() == DCB::State::POLLING)
             {
                 pDcb->disable_events();
@@ -593,8 +591,6 @@ BackendDCB* RoutingWorker::get_backend_dcb_from_pool(SERVER* pS,
 
             BackendDCB::close(pDcb);
             pDcb = nullptr;
-
-            m_evicting = false;
         }
     }
 
@@ -612,47 +608,39 @@ BackendDCB* RoutingWorker::get_backend_dcb_from_pool(SERVER* pS,
     return pDcb;
 }
 
-bool RoutingWorker::can_be_destroyed(BackendDCB* pDcb)
+bool RoutingWorker::move_to_conn_pool(BackendDCB* pDcb)
 {
-    bool rv = true;
+    bool moved_to_pool = false;
+    auto* pServer = static_cast<Server*>(pDcb->server());
+    auto* session = pDcb->session();
+    long persistpoolmax = pServer->persistpoolmax();
 
-    // Are dcbs being evicted from the pool?
-    if (!m_evicting)
+    if (pDcb->state() == DCB::State::POLLING
+        && !pDcb->hanged_up() && pDcb->protocol()->established()
+        && session && session_valid_for_pool(session)
+        && pServer->is_running()
+        && persistpoolmax > 0 && evict_dcbs(pServer, Evict::EXPIRED) < persistpoolmax)
     {
-        // No, so it can potentially be added to the pool.
-        Server* pServer = static_cast<Server*>(pDcb->server());
-        int persistpoolmax = pServer->persistpoolmax();
-
-        if (pDcb->state() == DCB::State::POLLING
-            && pDcb->protocol()->established()
-            && pDcb->session()
-            && session_valid_for_pool(pDcb->session())
-            && persistpoolmax > 0
-            && pServer->is_running()
-            && !pDcb->hanged_up()
-            && evict_dcbs(pServer, Evict::EXPIRED) < persistpoolmax)
+        if (mxb::atomic::add_limited(&pServer->pool_stats().n_persistent, 1, (int)persistpoolmax))
         {
-            if (mxb::atomic::add_limited(&pServer->pool_stats().n_persistent, 1, persistpoolmax))
-            {
-                pDcb->clear();
-                // Change the handler to one that will close the DCB in case there
-                // is any activity on it.
-                pDcb->set_handler(&m_pool_handler);
+            pDcb->clear();
+            // Change the handler to one that will close the DCB in case there
+            // is any activity on it.
+            pDcb->set_handler(&m_pool_handler);
 
-                ServerConnPool& conn_pool = m_conn_pools_by_server[pServer];
-                conn_pool.emplace_back(pDcb);
+            ServerConnPool& conn_pool = m_conn_pools_by_server[pServer];
+            conn_pool.emplace_back(pDcb);
 
-                // Remove the dcb from the regular book-keeping.
-                auto it = m_dcbs.find(pDcb);
-                mxb_assert(it != m_dcbs.end());
-                m_dcbs.erase(it);
+            // Remove the dcb from the regular book-keeping.
+            auto it = m_dcbs.find(pDcb);
+            mxb_assert(it != m_dcbs.end());
+            m_dcbs.erase(it);
 
-                rv = false;
-            }
+            moved_to_pool = true;
         }
     }
 
-    return rv;
+    return moved_to_pool;
 }
 
 void RoutingWorker::evict_dcbs(Evict evict)
@@ -665,28 +653,21 @@ void RoutingWorker::evict_dcbs(Evict evict)
 
 int RoutingWorker::evict_dcbs(const SERVER* pS, Evict evict)
 {
-    mxb_assert(!m_evicting);
-
-    m_evicting = true;
-
-    int count = 0;
-
-    time_t now = time(nullptr);
-
     auto pServer = const_cast<Server*>(static_cast<const Server*>(pS));
-    ServerConnPool& conn_pool = m_conn_pools_by_server[pServer];
-
-    vector<BackendDCB*> to_be_evicted;
-
     if (!(pServer->status() & SERVER_RUNNING))
     {
         // The server is not running => unconditionally evict all related dcbs.
         evict = Evict::ALL;
     }
+    vector<BackendDCB*> to_be_evicted;
 
     auto persistmaxtime = pServer->persistmaxtime();
     auto persistpoolmax = pServer->persistpoolmax();
 
+    int count = 0;
+    time_t now = time(nullptr);
+
+    ServerConnPool& conn_pool = m_conn_pools_by_server[pServer];
     auto j = conn_pool.begin();
 
     while (j != conn_pool.end())
@@ -716,18 +697,11 @@ int RoutingWorker::evict_dcbs(const SERVER* pS, Evict evict)
     {
         close_pooled_dcb(pDcb);
     }
-
-    m_evicting = false;
-
     return count;
 }
 
 void RoutingWorker::evict_dcb(BackendDCB* pDcb)
 {
-    mxb_assert(!m_evicting);
-
-    m_evicting = true;
-
     ServerConnPool& conn_pool = m_conn_pools_by_server[pDcb->server()];
 
     // TODO: An issue that we need to do a linear search?
@@ -740,16 +714,11 @@ void RoutingWorker::evict_dcb(BackendDCB* pDcb)
 
     i->release_dcb();
     conn_pool.erase(i);
-
     close_pooled_dcb(pDcb);
-
-    m_evicting = false;
 }
 
 void RoutingWorker::close_pooled_dcb(BackendDCB* pDcb)
 {
-    mxb_assert(m_evicting);
-
     // Put the DCB back into the regular book-keeping.
     mxb_assert(m_dcbs.find(pDcb) == m_dcbs.end());
     m_dcbs.insert(pDcb);
@@ -760,8 +729,6 @@ void RoutingWorker::close_pooled_dcb(BackendDCB* pDcb)
         pDcb->shutdown();
     }
 
-    // This will cause can_be_destroyed() to be called. However, the dcb will
-    // not be considered for the pool since m_evicting is currently true.
     BackendDCB::close(pDcb);
 }
 

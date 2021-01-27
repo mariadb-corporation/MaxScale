@@ -1674,12 +1674,6 @@ bool ClientDCB::release_from(MXS_SESSION* session)
     return false;
 }
 
-bool ClientDCB::prepare_for_destruction()
-{
-    mxb_assert(m_fd != FD_CLOSED);
-    return true;
-}
-
 ClientDCB* ClientDCB::create(int fd,
                              const std::string& remote,
                              const sockaddr_storage& ip,
@@ -1796,6 +1790,11 @@ int ClientDCB::port() const
 }
 
 void ClientDCB::close(ClientDCB* dcb)
+{
+    DCB::close(dcb);
+}
+
+void DCB::close(DCB* dcb)
 {
 #if defined (SS_DEBUG)
     mxb_assert(dcb->m_state != State::DISCONNECTED && dcb->m_fd != FD_CLOSED && dcb->m_manager);
@@ -2009,23 +2008,6 @@ bool BackendDCB::release_from(MXS_SESSION* session)
     return true;
 }
 
-bool BackendDCB::prepare_for_destruction()
-{
-    bool prepared = true;
-
-    if (m_manager)
-    {
-        prepared = static_cast<BackendDCB::Manager*>(m_manager)->can_be_destroyed(this);
-
-        if (!prepared)
-        {
-            m_nClose = 0;
-        }
-    }
-
-    return prepared;
-}
-
 void BackendDCB::set_connection(std::unique_ptr<mxs::BackendConnection> conn)
 {
     m_handler = conn.get();
@@ -2034,55 +2016,21 @@ void BackendDCB::set_connection(std::unique_ptr<mxs::BackendConnection> conn)
 
 void BackendDCB::close(BackendDCB* dcb)
 {
-#if defined (SS_DEBUG)
-    mxb_assert(dcb->m_state != State::DISCONNECTED && dcb->m_state != State::CREATED
-               && dcb->m_fd != FD_CLOSED && dcb->m_manager);
-    auto* current = RoutingWorker::get_current();
-    auto* owner = static_cast<RoutingWorker*>(dcb->owner);
-    mxb_assert(current && current == owner);
-#endif
-
-    if (dcb->prepare_for_destruction())
-    {
-        if (dcb->m_nClose == 0)
-        {
-            dcb->m_nClose = 1;
-            dcb->m_manager->destroy(dcb);
-        }
-        else
-        {
-            ++dcb->m_nClose;
-            // TODO: Will this happen on a regular basis?
-            MXS_WARNING("DCB::close(%p) called %u times.", dcb, dcb->m_nClose);
-            mxb_assert(!true);
-        }
-    }
+    mxb_assert(dcb->m_state != State::CREATED);
+    DCB::close(dcb);
 }
 
-void BackendDCB::close_or_send_to_pool(BackendDCB* dcb)
+void BackendDCB::move_to_pool_or_close(BackendDCB* dcb)
 {
-#if defined (SS_DEBUG)
-    mxb_assert(dcb->m_state != State::DISCONNECTED && dcb->m_state != State::CREATED
-               && dcb->m_fd != FD_CLOSED && dcb->m_manager);
-    auto* current = RoutingWorker::get_current();
-    auto* owner = static_cast<RoutingWorker*>(dcb->owner);
-    mxb_assert(current && current == owner);
-#endif
-
-    if (dcb->prepare_for_destruction())
+    bool moved_to_pool = static_cast<BackendDCB::Manager*>(dcb->m_manager)->move_to_conn_pool(dcb);
+    if (moved_to_pool)
     {
-        if (dcb->m_nClose == 0)
-        {
-            dcb->m_nClose = 1;
-            dcb->m_manager->destroy(dcb);
-        }
-        else
-        {
-            ++dcb->m_nClose;
-            // TODO: Will this happen on a regular basis?
-            MXS_WARNING("DCB::close(%p) called %u times.", dcb, dcb->m_nClose);
-            mxb_assert(!true);
-        }
+        dcb->m_nClose = 0;
+    }
+    else
+    {
+        // Close normally
+        BackendDCB::close(dcb);
     }
 }
 
