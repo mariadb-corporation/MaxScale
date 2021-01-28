@@ -18,33 +18,7 @@ typedef std::set<std::string> StringSet;
 class TestLogger;
 
 /**
- * @brief Class contains references to Master/Slave and Galera test setups
- * Test setup should consist of two setups: one Master/Slave and one Galera.
- *
- * Maxscale should be configured separatelly for every test.
- *
- * Test setup should be described by enviromental variables:
- * - Maxscale_IP - IP adress of Maxscale machine
- * - Maxscale_User - User name to access Maxscale services
- * - Maxscale_Password - Password to access Maxscale services
- * - Maxscale_sshkey - ssh key for Maxscale machine
- * - maxscale_cnf - name of maxscale .cnf file (full)
- * - KillVMCommand - Command to kill a node (should handle one parameter: IP address of virtual machine to
- * kill)
- * - StartVMCommand - Command to restart virtual machine (should handle one parameter: IP address of virtual
- * machine to kill)
- * - GetLogsCommand - Command to copy log files from node virtual machines (should handle one parameter: IP
- * address of virtual machine to kill)
- * - SysbenchDir - path to SysBench directory (sysbanch should be >= 0.5)
- * - node_N - Number of Master/Slave setup nodes
- * - node_NNN - IP address of node NNN (NNN - 3 digits node index starting from 000)
- * - node_port_NNN - MariaDB port for node NNN
- * - node_sshkey_NNN - ssh key to access node NNN (should be sutable for 'root' and 'ec2-user')
- * - node_User - User name to access Master/Slav setup
- * - node_Password - Password to access Master/Slave setup
- * - galera_N, galera_NNN, galera_port_NNN, galera_sshkey_NNN, galera_User, galera_Password - same for Galera
- * setup
- *
+ * Main system test class
  */
 class TestConnections
 {
@@ -81,28 +55,6 @@ public:
     }
 
     /**
-     * @brief global_result Result of test, 0 if PASSED
-     */
-    int global_result {0};
-
-    /**
-     * @brief galera Mariadb_nodes object containing references to Galera setuo
-     */
-    Galera_nodes* galera {nullptr};
-
-    /**
-     * @brief repl Mariadb_nodes object containing references to Master/Slave setuo
-     */
-    Mariadb_nodes* repl {nullptr};
-
-    Xpand_nodes * xpand {nullptr};
-
-    /**
-     * @brief maxscales Maxscale object containing referebces to all Maxscale machines
-     */
-    Maxscales* maxscales {nullptr};
-
-    /**
      * @brief copy_mariadb_logs copies MariaDB logs from backend
      * @param repl Mariadb_nodes object
      * @param prefix file name prefix
@@ -110,57 +62,20 @@ public:
      */
     int copy_mariadb_logs(Mariadb_nodes* nrepl, const char* prefix, std::vector<std::thread>& threads);
 
-    /**
-     * @brief smoke if true all tests are executed in quick mode
-     */
-    bool smoke {true};
+    MariaDBCluster* repl {nullptr};     /**< Master-Slave replication cluster */
+    Galera_nodes*   galera {nullptr};   /**< Galera cluster */
+    Xpand_nodes*    xpand {nullptr};    /**< Xpand cluster */
+    Maxscales*      maxscales {nullptr}; /**< MaxScale nodes */
 
-    /**
-     * @brief binlog_cmd_option index of mariadb start option
-     */
-    int binlog_cmd_option {0};
+    int global_result {0}; /**< Result of test, 0 if PASSED */
+    bool smoke {true}; /**< Run tests in quick mode. Only affects some long tests. */
 
-    /**
-     * @brief ssl if true ssl will be used
-     */
-    int ssl {false};
+    int ssl {false}; /**< Use SSL */
+    bool backend_ssl {false}; /**< Add SSL-settings to backend server configurations */
 
-    /**
-     * @brief backend_ssl if true ssl configuratio for all servers will be added
-     */
-    bool backend_ssl {false};
-
-    /**
-     * @brief binlog_master_gtid If true start_binlog() function configures Maxscale
-     * binlog router to use GTID to connect to Master
-     */
-    bool binlog_master_gtid {false};
-
-    /**
-     * @brief binlog_slave_gtid If true start_binlog() function configures slaves
-     * to use GTID to connect to Maxscale binlog router
-     */
-    bool binlog_slave_gtid {false};
-
-    /**
-     * @brief no_xpand Do not check, restart and use Xpand setup
-     */
-    bool no_xpand;
-
-    /**
-     * @brief timeout seconds until test termination
-     */
-    long int m_timeout {999999999}; // Never
-
-    /**
-     * @brief m_log_copy_interval seconds between log copying
-     */
-    long int m_log_copy_interval {999999999}; // Never
-
-    /**
-     * @brief m_log_copy_interval seconds until next log copying
-     */
-    long int m_log_copy_to_go {999999999}; // Never
+    long int m_timeout {999999999}; /**< Seconds until test termination, default never */
+    long int m_log_copy_interval {999999999}; /**< Seconds between log copies, default never */
+    long int m_log_copy_to_go {999999999}; /**< Seconds until next log copy */
 
     /** Check whether all nodes are in a valid state */
     static void check_nodes(bool value);
@@ -219,11 +134,6 @@ public:
     void read_env();
 
     /**
-     * @brief PrintIP   Prints all Maxscale and Master/Slave and Galera setups info
-     */
-    void print_env();
-
-    /**
      * @brief InitMaxscale  Copies MaxSclae.cnf and start MaxScale
      * @param m Number of Maxscale node
      */
@@ -235,27 +145,9 @@ public:
     void init_maxscales();
 
     /**
-     * @brief start_binlog configure first node as Master, Second as slave connected to Master and others as
-     * slave connected to MaxScale binlog router
-     * @return  0 in case of success
-     */
-    int start_binlog(int m = 0);
-
-    /**
-     * @brief Start binlogrouter replication from master
-     */
-    bool replicate_from_master(int m = 0);
-
-    /**
      * @brief Stop binlogrouter replication from master
      */
     void revert_replicate_from_master();
-
-    /**
-     * @brief prepare_binlog clean up binlog directory, set proper access rights to it
-     * @return 0
-     */
-    int prepare_binlog(int m = 0);
 
     /**
      * @brief start_mm configure first node as Master for second, Second as Master for first
@@ -291,10 +183,7 @@ public:
      * false for no connection.
      * @return  0 if connections are in the expected state
      */
-    int test_maxscale_connections(int m,
-                                  bool rw_split,
-                                  bool rc_master,
-                                  bool rc_slave);
+    int test_maxscale_connections(int m, bool rw_split, bool rc_master, bool rc_slave);
 
     /**
      * @brief Create a number of connections to all services, run simple query, close all connections
@@ -309,20 +198,8 @@ public:
      *- no connections to RWSplit with Galera backend
      * @return  0 in case of success
      */
-    int create_connections(int m,
-                           int conn_N,
-                           bool rwsplit_flag,
-                           bool master_flag,
-                           bool slave_flag,
+    int create_connections(int m, int conn_N, bool rwsplit_flag, bool master_flag, bool slave_flag,
                            bool galera_flag);
-
-    /**
-     * Trying to get client IP address by connection to DB via RWSplit and execution 'show processlist'
-     *
-     * @param ip client IP address as it visible by Maxscale
-     * @return 0 in case of success
-     */
-    int get_client_ip(int m, char* ip);
 
     /**
      * @brief set_timeout startes timeout thread which terminates test application after timeout_seconds
@@ -398,14 +275,6 @@ public:
     void log_excludes(int m, const char* pattern);
 
     /**
-     * @brief FindConnectedSlave Finds slave node which has connections from MaxScale
-     * @param Test TestConnections object which contains info about test setup
-     * @param global_result pointer to variable which is increased in case of error
-     * @return index of found slave node
-     */
-    int find_connected_slave(int m, int* global_result);
-
-    /**
      * @brief FindConnectedSlave1 same as FindConnectedSlave() but does not increase global_result
      * @param Test  TestConnections object which contains info about test setup
      * @return index of found slave node
@@ -430,13 +299,6 @@ public:
     int try_query(MYSQL* conn, const char* sql, ...) mxb_attribute((format(printf, 3, 4)));
 
     /**
-     * @brief try_query_all Executes SQL query on all MaxScale connections
-     * @param sql SQL string
-     * @return 0 if ok
-     */
-    int try_query_all(int m, const char* sql);
-
-    /**
      * @brief Get the set of labels that are assigned to server @c name
      *
      * @param name The name of the server that must be present in the output `list servers`
@@ -451,12 +313,6 @@ public:
      * @return 0 if check is done
      */
     int check_maxscale_processes(int m, int expected);
-
-    /**
-     * @brief list_dirs Execute 'ls' on binlog directory on all repl nodes and on Maxscale node
-     * @return 0
-     */
-    int list_dirs(int m = 0);
 
     /**
      * @brief Test a bad configuration
@@ -514,16 +370,6 @@ public:
     int get_master_server_id(int m = 0);
 
     /**
-     * Add a callback that is called when the test ends
-     *
-     * @param func Function to call
-     */
-    void on_destroy(std::function<void(void)> func)
-    {
-        m_on_destroy.push_back(func);
-    }
-
-    /**
      * @brief process_mdbci_template Read template file from maxscale-system-test/mdbci/templates
      * and replace all placeholders with acutal values
      * @return 0 in case of success
@@ -566,8 +412,6 @@ private:
 
     SharedData m_shared;    /**< Data shared with other objects */
 
-    std::vector<std::function<void(void)>> m_on_destroy;
-
     std::string m_test_name;            /**< Test name */
     std::string m_cnf_template_path;    /**< MaxScale config file template used by test */
 
@@ -594,24 +438,13 @@ private:
     bool m_no_backend_log_copy {false};
     bool m_no_maxscale_log_copy {false};    /**< Do not download MaxScale logs. */
 
-    /** If true tests do not revert VMs after the test even if test failed (use it for debugging) */
-    bool no_vm_revert {true};
-
     int m_threads {4};      /**< Number of Maxscale threads */
 
-    std::string m_maxscale_product;      /**<  'maxscale' - use production version of Maxscale, 'maxscale_ci' - CI */
+    std::thread m_timeout_thread; /**< Timeout thread */
+    std::thread m_log_copy_thread; /**< Log copying thread */
+    bool m_stop_threads {false};
 
-    /**
-     * @brief Timeout thread
-     */
-    std::thread m_timeout_thread;
-
-    /**
-     * @brief Log copying thread
-     */
-    std::thread m_log_copy_thread;
-
-    timeval m_start_time {0, 0};    /**< time when test was started (used by printf to print Timestamp) */
+    timeval m_start_time {0, 0};   /**< time when test was started (used by printf to print Timestamp) */
 
     /**
      * If true IPv6 addresses will be used to connect Maxscale and backed Also IPv6 addresses go to
@@ -632,8 +465,6 @@ private:
     bool check_create_vms();
     bool initialize_nodes();
     bool check_backend_versions();
-
-    bool m_stop_threads {false};
 
     /**
      * @brief timeout_thread Thread which terminates test application after 'timeout' milliseconds

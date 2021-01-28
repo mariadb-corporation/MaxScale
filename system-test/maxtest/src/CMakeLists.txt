@@ -20,7 +20,6 @@ add_library(maxtest SHARED
         rds_vpc.cc
         sql_t1.cc
         tcp_connection.cc
-        test_binlog_fnc.cc
         testconnections.cc
         ${CMAKE_CURRENT_BINARY_DIR}/test_info.cc)
 

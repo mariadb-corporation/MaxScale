@@ -16,6 +16,13 @@
 #include <regex>
 #include <maxtest/xpand_nodes.hh>
 
+using std::string;
+
+namespace
+{
+const string type_xpand = "xpand";
+}
+
 int Xpand_nodes::prepare_server(int m)
 {
     int rv = 1;
@@ -219,4 +226,14 @@ std::string Xpand_nodes::unblock_command(int node) const
     command += "ip6tables -I INPUT -p tcp --dport 3581 -j ACCEPT";
 
     return command;
+}
+
+bool Xpand_nodes::setup()
+{
+    return Mariadb_nodes::setup();
+}
+
+const std::string& Xpand_nodes::type_string() const
+{
+    return type_xpand;
 }

@@ -13,7 +13,7 @@
 
 using std::string;
 
-Nodes::Nodes(const char* prefix, SharedData& shared, const std::string& network_config)
+Nodes::Nodes(const string& prefix, SharedData& shared, const std::string& network_config)
     : m_shared(shared)
     , m_prefix(prefix)
     , network_config(network_config)

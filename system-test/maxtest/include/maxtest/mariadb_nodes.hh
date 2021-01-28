@@ -30,25 +30,6 @@
 class Mariadb_nodes : public Nodes
 {
 public:
-    enum class Type
-    {
-        MARIADB,
-        GALERA,
-        COLUMNSTORE,
-        XPAND
-    };
-
-    /**
-     * @brief Constructor
-     * @param pref  name of backend setup (like 'repl' or 'galera')
-     */
-    Mariadb_nodes(const char* pref, SharedData& shared, const std::string& network_config,
-                  Type type);
-
-    Mariadb_nodes(SharedData& shared, const std::string& network_config);
-
-    bool setup() override;
-
     virtual ~Mariadb_nodes();
 
     void set_use_ipv6(bool use_ipv6);
@@ -61,11 +42,6 @@ public:
     const char* access_sudo(int i = 0) const;
 
     const std::string& prefix() const;
-
-    Type type() const
-    {
-        return m_type;
-    }
 
     /**
      * @brief  MYSQL structs for every backend node
@@ -552,15 +528,48 @@ public:
 
     bool using_ipv6() const;
 
+    /**
+     * Get cluster type as string. The returned value is given to create_user.sh and should match one
+     * of the expected values.
+     *
+     * @return Cluster type
+     */
+    virtual const std::string& type_string() const = 0;
+
 protected:
+    /**
+     * Constructor
+     *
+     * @param shared Global data
+     * @param nwconf_prefix Node prefix in network config file
+     * @param cnf_server_prefix Node prefix in MaxScale config file
+     * @param network_config Network config contents
+     */
+    Mariadb_nodes(SharedData& shared, const std::string& nwconf_prefix,
+                  const std::string& cnf_server_prefix, const std::string& network_config);
+
+    bool setup();
+
     std::string m_test_dir; /**< path to test application */
 
 private:
-    Type m_type;
     bool m_use_ipv6 {false}; /**< Default to ipv6-addresses */
 
     bool check_master_node(MYSQL* conn);
     bool bad_slave_thread_status(MYSQL* conn, const char* field, int node);
+};
+
+/**
+ * Standard MariaDB master-slave replication cluster.
+ */
+class MariaDBCluster : public Mariadb_nodes
+{
+public:
+    MariaDBCluster(SharedData& shared, const std::string& network_config);
+
+    bool setup();
+
+    const std::string& type_string() const override;
 };
 
 class Galera_nodes : public Mariadb_nodes
@@ -568,9 +577,13 @@ class Galera_nodes : public Mariadb_nodes
 public:
 
     Galera_nodes(SharedData& shared, const std::string& network_config)
-        : Mariadb_nodes("galera", shared, network_config, Type::GALERA)
+        : Mariadb_nodes(shared, "galera", "gserver", network_config)
     {
     }
+
+    bool setup();
+
+    const std::string& type_string() const override;
 
     int start_galera();
 

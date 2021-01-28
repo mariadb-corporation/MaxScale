@@ -52,25 +52,9 @@ const char create_repl_user[] =
     "grant replication slave on *.* to repl@'%%' identified by 'repl'; "
     "FLUSH PRIVILEGES";
 
-const char* to_string(Mariadb_nodes::Type type)
-{
-    switch (type)
-    {
-    case Mariadb_nodes::Type::MARIADB:
-        return "mariadb";
-
-    case Mariadb_nodes::Type::GALERA:
-        return "galera";
-
-    case Mariadb_nodes::Type::COLUMNSTORE:
-        return "columnstore";
-
-    case Mariadb_nodes::Type::XPAND:
-        return "xpand";
-    }
-
-    return nullptr;
-}
+const string type_mariadb = "mariadb";
+const string type_galera = "galera";
+const string type_columnstore = "columnstore";
 }
 
 void Mariadb_nodes::require_gtid(bool value)
@@ -78,35 +62,16 @@ void Mariadb_nodes::require_gtid(bool value)
     g_require_gtid = value;
 }
 
-Mariadb_nodes::Mariadb_nodes(const char* pref, SharedData& shared, const std::string& network_config,
-                             Type type)
-    : Nodes(pref, shared, network_config)
+Mariadb_nodes::Mariadb_nodes(SharedData& shared, const std::string& nwconf_prefix,
+                             const std::string& cnf_server_prefix, const std::string& network_config)
+    : Nodes(nwconf_prefix, shared, network_config)
     , no_set_pos(false)
     , v51(false)
-    , m_type(type)
+    , cnf_server_name(cnf_server_prefix)
 {
     memset(this->nodes, 0, sizeof(this->nodes));
     memset(this->blocked, 0, sizeof(this->blocked));
     m_test_dir = test_dir;
-
-    auto& prefix_str = prefix();
-    if (prefix_str == "node")
-    {
-        cnf_server_name = "server";
-    }
-    else if (prefix_str == "galera")
-    {
-        cnf_server_name = "gserver";
-    }
-    else
-    {
-        cnf_server_name = prefix_str + "_server";
-    }
-}
-
-Mariadb_nodes::Mariadb_nodes(SharedData& shared, const string& network_config)
-    : Mariadb_nodes("node", shared, network_config, Type::MARIADB)
-{
 }
 
 bool Mariadb_nodes::setup()
@@ -426,7 +391,7 @@ void Mariadb_nodes::create_users(int node)
                password.c_str(),
                access_homedir(0),
                socket_cmd[0].c_str(),
-               to_string(m_type));
+               type_string().c_str());
 }
 
 int Mariadb_nodes::create_users()
@@ -494,6 +459,11 @@ int Mariadb_nodes::start_replication()
     disconnect();
 
     return local_result;
+}
+
+bool Galera_nodes::setup()
+{
+    return Mariadb_nodes::setup();
 }
 
 int Galera_nodes::start_galera()
@@ -1420,6 +1390,11 @@ std::string Galera_nodes::get_config_name(int node)
     return ss.str();
 }
 
+const std::string& Galera_nodes::type_string() const
+{
+    return type_galera;
+}
+
 void Mariadb_nodes::reset_server_settings(int node)
 {
     std::string cnfdir = m_test_dir + "/mdbci/cnf/";
@@ -1717,4 +1692,19 @@ bool Mariadb_nodes::check_ssl(int node)
 bool Mariadb_nodes::using_ipv6() const
 {
     return m_use_ipv6;
+}
+
+MariaDBCluster::MariaDBCluster(SharedData& shared, const string& network_config)
+    : Mariadb_nodes(shared, "node", "server", network_config)
+{
+}
+
+bool MariaDBCluster::setup()
+{
+    return Mariadb_nodes::setup();
+}
+
+const std::string& MariaDBCluster::type_string() const
+{
+    return type_mariadb;
 }
