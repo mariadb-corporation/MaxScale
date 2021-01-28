@@ -485,9 +485,9 @@ public:
         return m_last_write;
     }
 
-    bool is_closed() const
+    bool is_open() const
     {
-        return m_nClose != 0;
+        return m_open;
     }
 
     bool hanged_up() const
@@ -646,36 +646,41 @@ protected:
         bool     verify_host = false;
     };
 
-    const uint64_t    m_uid;                        /**< Unique identifier for this DCB */
-    int               m_fd;                         /**< The descriptor */
-    const std::string m_remote;                     /**< The remote host */
-    const std::string m_client_remote;              /**< The host of the client that created this connection
-                                                     * */
-    const Role        m_role;                       /**< The role of the DCB */
-    MXS_SESSION*      m_session;                    /**< The owning session */
-    Handler*          m_handler;                    /**< The event handler of the DCB */
-    Manager*          m_manager;                    /**< The DCB manager to use */
-    int64_t           m_last_read;                  /**< Last time the DCB received data */
-    int64_t           m_last_write;                 /**< Last time the DCB sent data */
-    const uint64_t    m_high_water;                 /**< High water mark of write queue */
-    const uint64_t    m_low_water;                  /**< Low water mark of write queue */
-    State             m_state = State::CREATED;     /**< Current state */
-    Encryption        m_encryption;                 /**< Encryption state */
-    Stats             m_stats;                      /**< DCB related statistics */
-    CALLBACK*         m_callbacks = nullptr;        /**< The list of callbacks for the DCB */
-    bool              m_high_water_reached = false; /**< High water mark reached, to determine whether we need
-                                                     * to release throttle */
-    uint64_t m_writeqlen = 0;                       /**< Bytes in writeq */
-    GWBUF*   m_writeq = nullptr;                    /**< Write Data Queue */
-    GWBUF*   m_readq = nullptr;                     /**< Read queue for incomplete reads */
-    uint32_t m_triggered_event = 0;                 /**< Triggered event to be delivered to handler */
-    uint32_t m_triggered_event_old = 0;             /**< Triggered event before disabling events */
-    uint32_t m_nClose = 0;                          /**< How many times dcb_close has been called. */
-    bool     m_hanged_up = false;                   /**< Has thethis can be called only once */
-    bool     m_is_fake_event = false;
-    bool     m_silence_errors = false;
+    const uint64_t m_uid;   /**< Unique identifier for this DCB */
+    int            m_fd;    /**< The descriptor */
+
+    const Role        m_role;           /**< The role of the DCB */
+    const std::string m_remote;         /**< The remote host */
+    const std::string m_client_remote;  /**< The host of the client that created this connection */
+
+    MXS_SESSION*   m_session;               /**< The owning session */
+    Handler*       m_handler;               /**< The event handler of the DCB */
+    Manager*       m_manager;               /**< The DCB manager to use */
+    const uint64_t m_high_water;            /**< High water mark of write queue */
+    const uint64_t m_low_water;             /**< Low water mark of write queue */
+    CALLBACK*      m_callbacks = nullptr;   /**< The list of callbacks for the DCB */
+
+    State      m_state = State::CREATED;/**< Current state */
+    int64_t    m_last_read;             /**< Last time the DCB received data */
+    int64_t    m_last_write;            /**< Last time the DCB sent data */
+    Encryption m_encryption;            /**< Encryption state */
+    Stats      m_stats;                 /**< DCB related statistics */
+
+    uint64_t m_writeqlen = 0;           /**< Bytes in writeq */
+    GWBUF*   m_writeq = nullptr;        /**< Write Data Queue */
+    GWBUF*   m_readq = nullptr;         /**< Read queue for incomplete reads */
+    uint32_t m_triggered_event = 0;     /**< Triggered event to be delivered to handler */
+    uint32_t m_triggered_event_old = 0; /**< Triggered event before disabling events */
+
+    bool m_hanged_up = false;       /**< Has the dcb been hanged up? */
+    bool m_is_fake_event = false;
+    bool m_silence_errors = false;
+    bool m_high_water_reached = false;      /**< High water mark throttle status */
+
 private:
     friend class Manager;
+
+    bool m_open {true};     /**< Is dcb still open, i.e. close() not called? */
 
     GWBUF* basic_read(int bytesavailable, int maxbytes, int nreadtotal, int* nsingleread);
 

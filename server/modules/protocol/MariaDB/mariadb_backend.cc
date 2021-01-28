@@ -932,7 +932,7 @@ void MariaDBBackendConnection::error(DCB* event_dcb)
 void MariaDBBackendConnection::hangup(DCB* event_dcb)
 {
     mxb_assert(m_dcb == event_dcb);
-    mxb_assert(!m_dcb->is_closed());
+    mxb_assert(m_dcb->is_open());
     MXS_SESSION* session = m_dcb->session();
     mxb_assert(session);
 

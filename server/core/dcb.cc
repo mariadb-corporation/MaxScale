@@ -157,9 +157,9 @@ DCB::DCB(int fd,
     : MXB_POLL_DATA{&DCB::poll_handler, get_dcb_owner()}
     , m_uid(this_unit.uid_generator.fetch_add(1, std::memory_order_relaxed))
     , m_fd(fd)
+    , m_role(role)
     , m_remote(remote)
     , m_client_remote(session->client_remote())
-    , m_role(role)
     , m_session(session)
     , m_handler(handler)
     , m_manager(manager)
@@ -782,7 +782,7 @@ void DCB::destroy()
         mxb_assert(owner == current);
     }
 #endif
-    mxb_assert(m_nClose != 0);
+    mxb_assert(!m_open);
 
     if (m_state == State::POLLING)
     {
@@ -1207,7 +1207,7 @@ uint32_t DCB::process_events(uint32_t events)
         return rc;
     }
 
-    if (m_nClose != 0)
+    if (!m_open)
     {
         mxb_assert(!true);
         return rc;
@@ -1224,7 +1224,7 @@ uint32_t DCB::process_events(uint32_t events)
      * epoll_wait.
      */
 
-    if ((events & EPOLLERR) && (m_nClose == 0))
+    if ((events & EPOLLERR) && (m_open))
     {
         mxb_assert(m_handler);
 
@@ -1233,7 +1233,7 @@ uint32_t DCB::process_events(uint32_t events)
         m_handler->error(this);
     }
 
-    if ((events & EPOLLOUT) && (m_nClose == 0))
+    if ((events & EPOLLOUT) && (m_open))
     {
         mxb_assert(m_handler);
 
@@ -1242,7 +1242,7 @@ uint32_t DCB::process_events(uint32_t events)
         m_handler->write_ready(this);
     }
 
-    if ((events & EPOLLIN) && (m_nClose == 0))
+    if ((events & EPOLLIN) && (m_open))
     {
         mxb_assert(m_handler);
 
@@ -1265,7 +1265,7 @@ uint32_t DCB::process_events(uint32_t events)
         }
     }
 
-    if ((events & EPOLLHUP) && (m_nClose == 0))
+    if ((events & EPOLLHUP) && (m_open))
     {
         mxb_assert(m_handler);
 
@@ -1280,7 +1280,7 @@ uint32_t DCB::process_events(uint32_t events)
     }
 
 #ifdef EPOLLRDHUP
-    if ((events & EPOLLRDHUP) && (m_nClose == 0))
+    if ((events & EPOLLRDHUP) && (m_open))
     {
         mxb_assert(m_handler);
 
@@ -1316,7 +1316,7 @@ uint32_t DCB::event_handler(DCB* dcb, uint32_t events)
     // may lead to the addition of another fake event we loop until
     // there is no fake event or the dcb has been closed.
 
-    while ((dcb->m_nClose == 0) && (dcb->m_triggered_event != 0))
+    while ((dcb->m_open) && (dcb->m_triggered_event != 0))
     {
         events = dcb->m_triggered_event;
         dcb->m_triggered_event = 0;
@@ -1346,7 +1346,7 @@ uint32_t DCB::poll_handler(MXB_POLL_DATA* data, MXB_WORKER* worker, uint32_t eve
      *
      * @see FakeEventTask()
      */
-    if (dcb->m_nClose == 0)
+    if (dcb->m_open)
     {
         rval = DCB::event_handler(dcb, events);
     }
@@ -1374,7 +1374,7 @@ public:
         RoutingWorker& rworker = static_cast<RoutingWorker&>(worker);
 
         if (rworker.dcbs().count(m_dcb) != 0    // If the dcb is found in the book-keeping,
-            && !m_dcb->is_closed()              // it has not been closed, and
+            && m_dcb->is_open()                 // it has not been closed, and
             && m_dcb->uid() == m_uid)           // it really is the one (not another one that just
                                                 // happened to get the same address).
         {
@@ -1803,17 +1803,15 @@ void DCB::close(DCB* dcb)
     mxb_assert(current && current == owner);
 #endif
 
-    // No need to call 'prepare_for_destruction()' as it does nothing for a ClientDCB.
-    if (dcb->m_nClose == 0)
+    if (dcb->m_open)
     {
-        dcb->m_nClose = 1;
+        dcb->m_open = false;
         dcb->m_manager->destroy(dcb);
     }
     else
     {
-        ++dcb->m_nClose;
         // TODO: Will this happen on a regular basis?
-        MXS_WARNING("DCB::close(%p) called %u times.", dcb, dcb->m_nClose);
+        MXS_WARNING("DCB::close(%p) called on a closed dcb.", dcb);
         mxb_assert(!true);
     }
 }
@@ -1863,7 +1861,7 @@ void BackendDCB::hangup_cb(MXB_WORKER* worker, const SERVER* server)
             // TODO: Remove the need for downcast.
             BackendDCB* backend_dcb = static_cast<BackendDCB*>(dcb);
 
-            if (backend_dcb->m_server == server && backend_dcb->m_nClose == 0)
+            if (backend_dcb->m_server == server && backend_dcb->is_open())
             {
                 if (!backend_dcb->m_hanged_up)
                 {
@@ -2025,7 +2023,7 @@ void BackendDCB::move_to_pool_or_close(BackendDCB* dcb)
     bool moved_to_pool = static_cast<BackendDCB::Manager*>(dcb->m_manager)->move_to_conn_pool(dcb);
     if (moved_to_pool)
     {
-        dcb->m_nClose = 0;
+        mxb_assert(dcb->is_open());
     }
     else
     {
