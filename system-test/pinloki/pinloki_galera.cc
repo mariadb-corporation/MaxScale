@@ -78,7 +78,7 @@ int main(int argc, char** argv)
     test.expect(rws.query("CREATE TABLE test.t1(id INT)"), "CREATE failed: %s", rws.error());
     test.expect(rws.query("INSERT INTO test.t1 values(1)"), "INSERT 1 failed: %s", rws.error());
 
-    sleep(2);
+    sleep(5);
 
     // Check that things are as they should be.
     // The pinloki_replica should replicate from pinloki
@@ -117,7 +117,8 @@ int main(int argc, char** argv)
     auto conn = test.maxscales->rwsplit();      // for some reason rws is no longer valid?
     test.expect(conn.connect(), "2nd RWS connection should work: %s", conn.error());
     test.expect(conn.query("INSERT INTO test.t1 values(2)"), "INSERT 2 failed: %s", conn.error());
-    sleep(2);
+
+    sleep(5);
 
     check_table(test, pinloki_replica, 2);
 
