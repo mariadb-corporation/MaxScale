@@ -548,7 +548,7 @@ BackendDCB* RoutingWorker::get_backend_dcb_from_pool(SERVER* pS,
 
     BackendDCB* pDcb = nullptr;
 
-    evict_dcbs(pServer, Evict::EXPIRED);
+    pool_close_expired_conns_by_server(pServer);
 
     ServerConnPool& conn_pool = m_conn_pools_by_server[pServer];
 
@@ -622,7 +622,7 @@ bool RoutingWorker::move_to_conn_pool(BackendDCB* pDcb)
         && !pDcb->hanged_up() && pDcb->protocol()->established()
         && session && session_valid_for_pool(session)
         && pServer->is_running()
-        && persistpoolmax > 0 && evict_dcbs(pServer, Evict::EXPIRED) < persistpoolmax)
+        && persistpoolmax > 0 && pool_close_expired_conns_by_server(pServer) < persistpoolmax)
     {
         if (mxb::atomic::add_limited(&pServer->pool_stats().n_persistent, 1, (int)persistpoolmax))
         {
@@ -646,61 +646,77 @@ bool RoutingWorker::move_to_conn_pool(BackendDCB* pDcb)
     return moved_to_pool;
 }
 
-void RoutingWorker::evict_dcbs(Evict evict)
+void RoutingWorker::pool_close_all_conns()
 {
-    for (auto& i : m_conn_pools_by_server)
+    for (auto& kv : m_conn_pools_by_server)
     {
-        evict_dcbs(i.first, evict);
+        pool_close_all_conns_by_server(kv.first);
+    }
+    m_conn_pools_by_server.clear();
+}
+
+
+void RoutingWorker::pool_close_all_conns_by_server(SERVER* pSrv)
+{
+    auto it = m_conn_pools_by_server.find(pSrv);
+    if (it != m_conn_pools_by_server.end())
+    {
+        auto& server_pool = it->second;
+        // Close all entries in the server-specific pool, then adjust pool stats.
+        for (auto& pool_entry : server_pool)
+        {
+            BackendDCB* dcb = pool_entry.release_dcb();
+            close_pooled_dcb(dcb);
+        }
+        mxb::atomic::add(&pSrv->pool_stats().n_persistent, -server_pool.size());
+        server_pool.clear();
     }
 }
 
-int RoutingWorker::evict_dcbs(const SERVER* pS, Evict evict)
+int RoutingWorker::pool_close_expired_conns_by_server(SERVER* pSrv)
 {
-    auto pServer = const_cast<Server*>(static_cast<const Server*>(pS));
-    if (!(pServer->status() & SERVER_RUNNING))
+    auto* pServer = static_cast<Server*>(pSrv);
+    if (pServer->is_down())
     {
         // The server is not running => unconditionally evict all related dcbs.
-        evict = Evict::ALL;
+        // TODO: Remove once clear this is not called on downed servers.
+        pool_close_all_conns_by_server(pServer);
+        return 0;
     }
-    vector<BackendDCB*> to_be_evicted;
 
     auto persistmaxtime = pServer->persistmaxtime();
     auto persistpoolmax = pServer->persistpoolmax();
 
-    int count = 0;
     time_t now = time(nullptr);
+    vector<BackendDCB*> expired_conns;
 
     ServerConnPool& conn_pool = m_conn_pools_by_server[pServer];
-    auto j = conn_pool.begin();
-
-    while (j != conn_pool.end())
+    // First go through the list and gather the expired connections.
+    auto it = conn_pool.begin();
+    while (it != conn_pool.end())
     {
-        ConnPoolEntry& entry = *j;
-
-        bool hanged_up = entry.hanged_up();
-        bool expired = (evict == Evict::ALL) || (now - entry.created() > persistmaxtime);
-        bool too_many = (count > persistpoolmax);
-
-        if (hanged_up || expired || too_many)
+        ConnPoolEntry& entry = *it;
+        if (entry.hanged_up() || (now - entry.created() > persistmaxtime))
         {
-            to_be_evicted.push_back(entry.release_dcb());
-            j = conn_pool.erase(j);
-            mxb::atomic::add(&pServer->pool_stats().n_persistent, -1);
+            expired_conns.push_back(entry.release_dcb());
+            it = conn_pool.erase(it);
         }
         else
         {
-            ++count;
-            ++j;
+            ++it;
         }
     }
 
-    pServer->pool_stats().persistmax = MXS_MAX(pServer->pool_stats().persistmax, count);
+    mxb::atomic::add(&pServer->pool_stats().n_persistent, -expired_conns.size());
+    // TODO: Add persistmax-calculation once it's clear where it should be calculated and how.
 
-    for (BackendDCB* pDcb : to_be_evicted)
+    for (BackendDCB* pDcb : expired_conns)
     {
         close_pooled_dcb(pDcb);
     }
-    return count;
+    // TODO: Add check for too large pool once the pool size calculation is clear. Pool can be overused
+    // if user runtime reduces max pool size.
+    return conn_pool.size();
 }
 
 void RoutingWorker::evict_dcb(BackendDCB* pDcb)
@@ -752,7 +768,7 @@ bool RoutingWorker::pre_run()
 
 void RoutingWorker::post_run()
 {
-    evict_dcbs(Evict::ALL);
+    pool_close_all_conns();
 
     qc_thread_end(QC_INIT_SELF);
     modules_thread_finish();
@@ -1494,7 +1510,7 @@ bool RoutingWorker::try_shutdown(Call::action_t action)
 {
     if (action == Call::EXECUTE)
     {
-        evict_dcbs(Evict::ALL);
+        pool_close_all_conns();
 
         if (m_sessions.empty())
         {

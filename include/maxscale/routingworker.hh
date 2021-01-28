@@ -420,14 +420,9 @@ public:
 
     BackendDCB* get_backend_dcb_from_pool(SERVER* pServer, MXS_SESSION* pSession, mxs::Component* upstream);
 
-    enum class Evict
-    {
-        EXPIRED,
-        ALL
-    };
-
-    void evict_dcbs(Evict evict);
-    int  evict_dcbs(const SERVER* server, Evict evict);
+    void pool_close_all_conns();
+    void pool_close_all_conns_by_server(SERVER* pSrv);
+    int  pool_close_expired_conns_by_server(SERVER* pSrv);
 
     /**
      * Register a function to be called every epoll_tick.

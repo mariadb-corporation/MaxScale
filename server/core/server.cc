@@ -466,14 +466,6 @@ Server* Server::create_test_server()
     return new Server(name);
 }
 
-void Server::cleanup_persistent_connections() const
-{
-    RoutingWorker::execute_concurrently(
-        [this]() {
-            RoutingWorker::get_current()->evict_dcbs(this, RoutingWorker::Evict::EXPIRED);
-        });
-}
-
 uint64_t Server::status() const
 {
     return m_status;
@@ -717,8 +709,6 @@ json_t* Server::json_attributes() const
 
     json_object_set_new(attr, CN_VERSION_STRING, json_string(m_info.version_string()));
     json_object_set_new(attr, "replication_lag", json_integer(replication_lag()));
-
-    cleanup_persistent_connections();
 
     json_t* statistics = stats().to_json();
     json_object_set_new(statistics, "persistent_connections", json_integer(m_pool_stats.n_persistent));
