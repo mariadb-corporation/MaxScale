@@ -182,7 +182,9 @@ int main(int argc, char** argv)
         a.check();
 
         // Remove any inserted values
+        test.maxscales->connect_rwsplit();
         query("TRUNCATE TABLE test.t1");
+        test.maxscales->disconnect();
     }
 
     test.maxscales->connect_rwsplit();
