@@ -126,6 +126,7 @@ private:
 
     void            send_history();
     StateMachineRes read_history_response();
+    void            compare_responses();
 
     bool backend_write_delayqueue(GWBUF* buffer);
 
@@ -153,6 +154,8 @@ private:
     void   mxs_mysql_parse_ok_packet(GWBUF* buff, size_t packet_offset, size_t packet_len);
     int    gw_decode_mysql_server_handshake(uint8_t* payload);
     GWBUF* gw_generate_auth_response(bool with_ssl, bool ssl_established, uint64_t service_capabilities);
+
+    std::string create_response_mismatch_error();
 
     uint32_t create_capabilities(bool with_ssl, bool db_specified, uint64_t capabilities);
     GWBUF*   process_packets(GWBUF** result);
@@ -207,10 +210,17 @@ private:
     // The mapping of COM_STMT_PREPARE IDs we sent upstream to the actual IDs that the backend sent us
     std::unordered_map<uint32_t, uint32_t> m_ps_map;
 
-    // The internal ID of the current COM_STMT_PREPARE
-    uint32_t m_ps_id {0};
+    // The internal ID of the current query
+    uint32_t m_current_id {0};
 
-    std::deque<uint8_t> m_history_responses;    // The responses to the history that's being replayed
+    // The ID and response to the command that will be added to the history. This is stored in a separate
+    // variable in case the correct response that is delivered to the client isn't available when this backend
+    // receive the response.
+    std::vector<std::pair<uint32_t, bool>> m_ids_to_check;
+
+    // The responses to the history that's being replayed. The IDs are not needed as we know any future
+    // commands will be queued until we complete the history replay.
+    std::deque<bool> m_history_responses;
 
     mxs::Component* m_upstream {nullptr};       /**< Upstream component, typically a router */
     MXS_SESSION*    m_session {nullptr};        /**< Generic session */

@@ -1087,7 +1087,7 @@ void MariaDBClientConnection::finish_recording_history(const GWBUF* buffer)
              mxs::extract_sql(m_pending_cmd).c_str(),
              result == 0 ? "OK" : "ERR");
 
-    m_session_data->history.emplace_back(m_pending_cmd.release(), result);
+    m_session_data->history.emplace_back(m_pending_cmd.release(), result == 0);
 }
 
 /**
