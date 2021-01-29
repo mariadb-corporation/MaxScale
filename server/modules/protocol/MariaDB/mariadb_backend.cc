@@ -783,9 +783,33 @@ void MariaDBBackendConnection::compare_responses()
 
     if (!m_ids_to_check.empty() && !data->history.empty())
     {
+        uint32_t first = data->history.front().first.id();
+        uint32_t last = data->history.back().first.id();
+
+        auto it = std::remove_if(
+            m_ids_to_check.begin(), m_ids_to_check.end(), [&](const auto& a) {
+                return a.first > first && a.first < last;
+            });
+
+        // If the ID wasn't found and there's a smaller and a larger ID in the history, this means that a
+        // COM_STMT_CLOSE caused a COM_STMT_PREPARE to be erased.
+        //
+        // TODO: Assert that the ID was indeed a COM_STMT_PREPARE
+        if (it != m_ids_to_check.end())
+        {
+            // TODO: This isn't a really good solution as it ignores possible problems. The only real
+            // solution is to keep a history of all the responses to any recoded command. This is a bit
+            // complex as we don't know how many must be kept in memory.
+
+            MXS_INFO("%s erased %lu commands from history, skipping result checks.",
+                     m_server.name(), std::distance(it, m_ids_to_check.end()));
+
+            m_ids_to_check.erase(it, m_ids_to_check.end());
+        }
+
         // Since m_ids_to_check is ordered, we only need to check the oldest ID to know if the response has
         // been pruned from the history.
-        if (m_ids_to_check.front().first < data->history.front().first.id())
+        if (!m_ids_to_check.empty() && m_ids_to_check.front().first < first)
         {
             error = true;
         }
