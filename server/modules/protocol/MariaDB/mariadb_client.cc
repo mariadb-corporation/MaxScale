@@ -1022,6 +1022,12 @@ bool MariaDBClientConnection::route_statement(mxs::Buffer&& buffer)
                 m_session_data->history.erase(it);
             }
         }
+        else if (cmd == MXS_COM_STMT_RESET)
+        {
+            // COM_STMT_RESET is useless in the history, no point in recording it as new connections don't
+            // need it.
+            should_record = false;
+        }
         else
         {
             buffer.set_id(m_next_id);
