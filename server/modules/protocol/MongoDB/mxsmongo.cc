@@ -32,6 +32,8 @@ struct ThisUnit
         { mxsmongo::keys::DELETE,    mxsmongo::Command::DELETE },
         { mxsmongo::keys::FIND,      mxsmongo::Command::FIND },
         { mxsmongo::keys::INSERT,    mxsmongo::Command::INSERT },
+        { mxsmongo::keys::UPDATE,    mxsmongo::Command::UPDATE },
+
         { mxsmongo::keys::ISMASTER,  mxsmongo::Command::ISMASTER }
     };
 } this_unit;
@@ -435,6 +437,7 @@ string element_to_value(const document_element_or_array_item& x)
 
     default:
         MXS_ERROR("Cannot convert a '%s' to a value.", bsoncxx::to_string(x.type()).c_str());
+        ss << "null";
     }
 
     return ss.str();
@@ -532,14 +535,7 @@ string get_comparison_condition(const bsoncxx::document::element& element)
 
     string field = static_cast<string>(element.key());
 
-    if (element.type() == bsoncxx::type::k_utf8)
-    {
-        auto utf8 = element.get_utf8();
-        string value(utf8.value.data(), utf8.value.size());
-
-        condition = "( JSON_EXTRACT(doc, '$." + field + "') = " + value + ")";
-    }
-    else if (element.type() == bsoncxx::type::k_document)
+    if (element.type() == bsoncxx::type::k_document)
     {
         string op_and_value = get_comparison_op_and_value(element.get_document());
 
@@ -547,6 +543,12 @@ string get_comparison_condition(const bsoncxx::document::element& element)
         {
             condition = "( JSON_EXTRACT(doc, '$." + field + "')" + op_and_value + ")";
         }
+    }
+    else
+    {
+        string value = element_to_value(element);
+
+        condition = "( JSON_EXTRACT(doc, '$." + field + "') = " + value + ")";
     }
 
     return condition;
@@ -604,6 +606,11 @@ string get_condition(const bsoncxx::document::view& doc)
     return where;
 }
 
+}
+
+string mxsmongo::to_string(const bsoncxx::document::element& element)
+{
+    return element_to_value(element);
 }
 
 string mxsmongo::filter_to_where_clause(const bsoncxx::document::view& filter)

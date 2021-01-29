@@ -133,9 +133,14 @@ const char FIND[]       = "find";
 const char INSERT[]     = "insert";
 const char ISMASTER[]   = "ismaster";
 const char LIMIT[]      = "limit";
+const char MULTI[]      = "multi";
 const char PROJECTION[] = "projection";
+const char Q[]          = "q";
+const char U[]          = "u";
 const char SKIP[]       = "skip";
 const char SORT[]       = "sort";
+const char UPDATE[]     = "update";
+const char UPDATES[]    = "updates";
 
 };
 
@@ -147,9 +152,12 @@ enum class Command
     FIND,
     INSERT,
     ISMASTER,
+    UPDATE
 };
 
 Command get_command(const bsoncxx::document::view& doc);
+
+std::string to_string(const bsoncxx::document::element& element);
 
 std::vector<std::string> projection_to_extractions(const bsoncxx::document::view& projection);
 

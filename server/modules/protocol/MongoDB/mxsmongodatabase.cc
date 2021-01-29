@@ -59,6 +59,14 @@ public:
     }
 
 protected:
+    string get_table(const char* zCommand)
+    {
+        auto utf8 = m_doc[zCommand].get_utf8();
+        string table(utf8.value.data(), utf8.value.size());
+
+        return "`" + m_database.name() + "`.`" + table + "`";
+    }
+
     void free_request()
     {
         if (m_pRequest)
@@ -121,6 +129,8 @@ protected:
 
     GWBUF* create_response(const bsoncxx::document::value& doc)
     {
+        MXS_NOTICE("RESPONSE: %s", bsoncxx::to_json(doc).c_str());
+
         auto doc_view = doc.view();
         size_t doc_len = doc_view.length();
 
@@ -432,8 +442,6 @@ public:
 
         auto doc = builder.extract();
 
-        MXS_NOTICE("RESPONSE: %s", bsoncxx::to_json(doc).c_str());
-
         pResponse = create_response(doc);
 
         return pResponse;
@@ -709,8 +717,6 @@ public:
 
         auto doc = builder.extract();
 
-        MXS_NOTICE("RESPONSE: %s", bsoncxx::to_json(doc).c_str());
-
         pResponse = create_response(doc);
 
         return pResponse;
@@ -733,6 +739,293 @@ private:
 
     int64_t m_nDocuments { 0 };
 };
+
+// https://docs.mongodb.com/manual/reference/command/update
+class Update : public mxsmongo::Database::Command
+{
+public:
+    using mxsmongo::Database::Command::Command;
+
+    GWBUF* execute() override
+    {
+        GWBUF* pResponse = nullptr;
+        stringstream sql;
+        sql << "UPDATE " << get_table(mxsmongo::keys::UPDATE) << " ";
+
+        auto updates = static_cast<bsoncxx::array::view>(m_doc[mxsmongo::keys::UPDATES].get_array());
+
+        // TODO: Deal with multiple updates.
+        mxb_assert(!updates[1]);
+
+        sql << "SET doc = ";
+
+        auto update = static_cast<bsoncxx::document::view>(updates[0].get_document());
+        auto u = update[mxsmongo::keys::U];
+
+        switch (get_update_kind(u))
+        {
+        case AGGREGATION_PIPELINE:
+            MXS_ERROR("Aggregation pipeline not supported: '%s'", bsoncxx::to_json(update).c_str());
+            pResponse = create_response(0, 0, 0);
+            break;
+
+        case REPLACEMENT_DOCUMENT:
+            sql << "'"
+                << bsoncxx::to_json(static_cast<bsoncxx::document::view>(u.get_document()))
+                << "'";
+            break;
+
+        case UPDATE_OPERATORS:
+            {
+                auto doc = static_cast<bsoncxx::document::view>(u.get_document());
+                sql << translate_update_operations(doc);
+            }
+            break;
+
+        case INVALID:
+            MXS_ERROR("Invalid combination of updates: '%s'", bsoncxx::to_json(update).c_str());
+            pResponse = create_response(0, 0, 0);
+        }
+
+        if (!pResponse)
+        {
+            auto q = static_cast<bsoncxx::document::view>(update[mxsmongo::keys::Q].get_document());
+            string where = mxsmongo::filter_to_where_clause(q);
+
+            if (!where.empty())
+            {
+                sql << "WHERE " << where;
+            }
+
+            auto multi = m_doc[mxsmongo::keys::MULTI];
+
+            if (!multi || !multi.get_bool())
+            {
+                sql << " LIMIT 1";
+            }
+
+            MXS_NOTICE("SQL: %s", sql.str().c_str());
+
+            GWBUF* pRequest = modutil_create_query(sql.str().c_str());
+
+            m_database.context().downstream().routeQuery(pRequest);
+        }
+
+        return pResponse;
+    };
+
+    GWBUF* translate(GWBUF& mariadb_response) override
+    {
+        // TODO: Update will be needed when DEPRECATE_EOF it turned on.
+        bsoncxx::builder::basic::document builder;
+
+        ComResponse response(GWBUF_DATA(&mariadb_response));
+
+        int32_t is_ok = response.is_ok() ? 1 : 0;
+        int64_t n = 0;
+        int64_t nModified = 0;
+
+        switch (response.type())
+        {
+        case ComResponse::OK_PACKET:
+            {
+                ComOK ok(response);
+                nModified = ok.affected_rows();
+
+                string s = ok.info().to_string();
+
+                if (s.find("Rows matched: ") == 0)
+                {
+                    n = atol(s.c_str() + 14);
+                }
+
+                MXS_NOTICE("INFO: %s", s.c_str());
+            }
+            break;
+
+        case ComResponse::ERR_PACKET:
+            {
+                MXS_WARNING("Mongo request to backend failed: (%d), %s",
+                            mxs_mysql_get_mysql_errno(&mariadb_response),
+                            mxs::extract_error(&mariadb_response).c_str());
+
+                ComERR err(response);
+
+                bsoncxx::builder::basic::document mariadb_builder;
+
+                mariadb_builder.append(bsoncxx::builder::basic::kvp("code", err.code()));
+                mariadb_builder.append(bsoncxx::builder::basic::kvp("state", err.state()));
+                mariadb_builder.append(bsoncxx::builder::basic::kvp("message", err.message()));
+
+                builder.append(bsoncxx::builder::basic::kvp("mariadb", mariadb_builder.extract()));
+
+                // TODO: Map MariaDB errors to something sensible from
+                // TODO: https://github.com/mongodb/mongo/blob/master/src/mongo/base/error_codes.yml
+
+                bsoncxx::builder::basic::array array_builder;
+
+                for (int64_t i = 0; i < 1; ++i)
+                {
+                    bsoncxx::builder::basic::document error_builder;
+
+                    error_builder.append(bsoncxx::builder::basic::kvp("index", i));
+                    error_builder.append(bsoncxx::builder::basic::kvp("code", 125)); // Command failed.
+                    error_builder.append(bsoncxx::builder::basic::kvp("errmsg", err.message()));
+
+                    array_builder.append(error_builder.extract());
+                }
+
+                builder.append(bsoncxx::builder::basic::kvp("writeErrors", array_builder.extract()));
+            }
+            break;
+
+        case ComResponse::LOCAL_INFILE_PACKET:
+        default:
+            mxb_assert(!true);
+        }
+
+        return create_response(builder, is_ok, n, nModified);
+    };
+
+private:
+    enum Kind
+    {
+        AGGREGATION_PIPELINE,
+        REPLACEMENT_DOCUMENT,
+        UPDATE_OPERATORS,
+        INVALID
+    };
+
+    Kind get_update_kind(const bsoncxx::document::element& element)
+    {
+        Kind kind = INVALID;
+
+        if (element.type() == bsoncxx::type::k_array)
+        {
+            kind = AGGREGATION_PIPELINE;
+        }
+        else
+        {
+            auto doc = static_cast<bsoncxx::document::view>(element.get_document());
+
+            for (auto field : doc)
+            {
+                const char* zData = field.key().data();
+
+                if (*zData == '$')
+                {
+                    if (strcmp(zData, "$set") != 0 && strcmp(zData, "$unset"))
+                    {
+                        MXS_ERROR("'%s' contains other than the supported '$set' and '$unset' "
+                                  "operations.", bsoncxx::to_json(doc).c_str());
+                        kind = INVALID;
+                        break;
+                    }
+                    else
+                    {
+                        if (kind == INVALID)
+                        {
+                            kind = UPDATE_OPERATORS;
+                        }
+                        else if (kind != UPDATE_OPERATORS)
+                        {
+                            MXS_ERROR("'%s' contains both fields and update operators.",
+                                      bsoncxx::to_json(doc).c_str());
+                            kind = INVALID;
+                            break;
+                        }
+                    }
+                }
+                else
+                {
+                    if (kind == INVALID)
+                    {
+                        kind = REPLACEMENT_DOCUMENT;
+                    }
+                    else if (kind != REPLACEMENT_DOCUMENT)
+                    {
+                        MXS_ERROR("'%s' contains both fields and update operators.",
+                                  bsoncxx::to_json(doc).c_str());
+                        kind = INVALID;
+                        break;
+                    }
+                }
+            }
+        }
+
+        return kind;
+    }
+
+    string translate_update_operations(const bsoncxx::document::view& doc)
+    {
+        string rv;
+
+        for (auto element : doc)
+        {
+            if (!rv.empty())
+            {
+                rv += ", ";
+            }
+
+            if (element.key().compare("$set") == 0)
+            {
+                rv += "JSON_SET(doc, ";
+            }
+            else if (element.key().compare("$unset") == 0)
+            {
+                rv += "JSON_REMOVE(doc, ";
+            }
+            else
+            {
+                mxb_assert(!true);
+            }
+
+            auto fields = static_cast<bsoncxx::document::view>(element.get_document());
+
+            string s;
+            for (auto field : fields)
+            {
+                if (!s.empty())
+                {
+                    s += ", ";
+                }
+
+                s += "'$.";
+                s += field.key().data();
+                s += "', ";
+                s += mxsmongo::to_string(field);
+            }
+
+            rv += s;
+
+            rv += ")";
+        }
+
+        rv += " ";
+
+        return rv;
+    }
+
+    GWBUF* create_response(bsoncxx::builder::basic::document& builder,
+                           int32_t ok,
+                           int64_t n,
+                           int64_t nModified)
+    {
+        builder.append(bsoncxx::builder::basic::kvp("ok", ok));
+        builder.append(bsoncxx::builder::basic::kvp("n", n));
+        builder.append(bsoncxx::builder::basic::kvp("nModified", nModified));
+
+        return Command::create_response(builder.extract());
+    }
+
+    GWBUF* create_response(int32_t ok, int64_t n, int64_t nModified)
+    {
+        bsoncxx::builder::basic::document builder;
+
+        return create_response(builder, ok, n, nModified);
+    }
+};
+
 
 class IsMaster : public mxsmongo::Database::Command
 {
@@ -805,7 +1098,8 @@ struct ThisUnit
         { mxsmongo::Command::FIND,     &command::create<command::Find> },
         { mxsmongo::Command::INSERT,   &command::create<command::Insert> },
         { mxsmongo::Command::ISMASTER, &command::create<command::IsMaster> },
-        { mxsmongo::Command::UNKNOWN,  &command::create<command::Unknown> }
+        { mxsmongo::Command::UNKNOWN,  &command::create<command::Unknown> },
+        { mxsmongo::Command::UPDATE,   &command::create<command::Update> }
     };
 } this_unit;
 
