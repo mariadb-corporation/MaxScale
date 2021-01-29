@@ -310,11 +310,7 @@ public:
     GWBUF* execute() override
     {
         stringstream sql;
-        sql << "DELETE FROM ";
-
-        auto table = m_doc[mxsmongo::keys::DELETE].get_utf8().value;
-
-        sql << "`" << m_database.name() << "`.`" << string(table.data(), table.size())  << "`";
+        sql << "DELETE FROM " << get_table(mxsmongo::keys::DELETE);
 
         auto docs = static_cast<bsoncxx::array::view>(m_doc[mxsmongo::keys::DELETES].get_array());
 
@@ -493,17 +489,7 @@ public:
             sql << "doc";
         }
 
-        sql << " FROM ";
-
-        auto element = m_doc[mxsmongo::keys::FIND];
-
-        mxb_assert(element.type() == bsoncxx::type::k_utf8);
-
-        auto utf8 = element.get_utf8();
-
-        string table(utf8.value.data(), utf8.value.size());
-
-        sql << m_database.name() << "." << table;
+        sql << " FROM " << get_table(mxsmongo::keys::FIND);
 
         auto filter = m_doc[mxsmongo::keys::FILTER];
 
@@ -606,15 +592,7 @@ public:
     GWBUF* execute() override
     {
         stringstream sql;
-        sql << "INSERT INTO ";
-
-        auto insert = m_doc[mxsmongo::keys::INSERT];
-        auto utf8 = insert.get_utf8();
-
-        string table(utf8.value.data(), utf8.value.size());
-
-        sql << "`" << m_database.name() << "`.`" << table << "`";
-        sql << "(id, doc) VALUES ";
+        sql << "INSERT INTO " << get_table(mxsmongo::keys::INSERT) << " (id, doc) VALUES ";
 
         auto docs = static_cast<bsoncxx::array::view>(m_doc[mxsmongo::keys::DOCUMENTS].get_array());
 
