@@ -769,18 +769,24 @@ class ComOK : public ComResponse
 public:
     ComOK(GWBUF* pPacket)
         : ComResponse(pPacket)
+        , m_affected_rows(&m_pData)
+        , m_last_insert_id(&m_pData)
+        , m_status(mariadb::consume_byte2(&m_pData))
+        , m_warnings(mariadb::consume_byte2(&m_pData))
+        , m_info(&m_pData)
     {
         mxb_assert(m_type == OK_PACKET);
-
-        extract_payload();
     }
 
     ComOK(const ComResponse& response)
         : ComResponse(response)
+        , m_affected_rows(&m_pData)
+        , m_last_insert_id(&m_pData)
+        , m_status(mariadb::consume_byte2(&m_pData))
+        , m_warnings(mariadb::consume_byte2(&m_pData))
+        , m_info(&m_pData)
     {
         mxb_assert(m_type == OK_PACKET);
-
-        extract_payload();
     }
 
     uint64_t affected_rows() const
@@ -803,24 +809,17 @@ public:
         return m_status;
     }
 
-private:
-    void extract_payload()
+    const LEncString& info() const
     {
-        m_affected_rows = LEncInt(&m_pData).value();
-        m_last_insert_id = LEncInt(&m_pData).value();
-
-        m_status = *m_pData++;
-        m_status += (*m_pData++ << 8);
-
-        m_warnings = *m_pData++;
-        m_warnings += (*m_pData++ << 8);
+        return m_info;
     }
 
 private:
-    uint64_t m_affected_rows;
-    uint64_t m_last_insert_id;
-    uint16_t m_status;
-    uint16_t m_warnings;
+    LEncInt    m_affected_rows;
+    LEncInt    m_last_insert_id;
+    uint16_t   m_status;
+    uint16_t   m_warnings;
+    LEncString m_info;
 };
 
 /**
