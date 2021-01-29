@@ -146,6 +146,40 @@ uint32_t get_byte3(const uint8_t* buffer);
 uint32_t get_byte4(const uint8_t* buffer);
 uint64_t get_byte8(const uint8_t* buffer);
 
+/**
+ * Protocol unpacking functions that take pointer to pointer to buffer and that move
+ * the pointer forward as many bytes that are consumed.
+ */
+
+inline uint16_t consume_byte2(uint8_t** buffer)
+{
+    uint16_t rv = get_byte2(*buffer);
+    *buffer += 2;
+    return rv;
+}
+
+inline uint32_t consume_byte3(uint8_t** buffer)
+{
+    uint32_t rv = get_byte3(*buffer);
+    *buffer += 3;
+    return rv;
+}
+
+inline uint32_t consume_byte4(uint8_t** buffer)
+{
+    uint32_t rv = get_byte4(*buffer);
+    *buffer += 4;
+    return rv;
+}
+
+inline uint64_t consume_byte8(uint8_t** buffer)
+{
+    uint64_t rv = get_byte8(*buffer);
+    *buffer += 8;
+    return rv;
+}
+
+
 struct HeaderData
 {
     uint32_t pl_length {0};
