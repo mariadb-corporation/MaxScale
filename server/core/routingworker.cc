@@ -440,12 +440,8 @@ void RoutingWorker::destroy(DCB* pDcb)
 }
 
 /**
- * Close sessions that have been idle or write to the socket has taken for too long.
- *
- * If the time since a session last sent data is greater than the set connection_timeout
- * value in the service, it is disconnected. If the time since last write
- * to the socket is greater net_write_timeout the session is also disconnected.
- * The timeouts are disabled by default.
+ * If a second has passed since last keepalive tick, tick all sessions again.
+ * Also checks connection pool for expired connections.
  */
 void RoutingWorker::process_timeouts()
 {
@@ -466,6 +462,30 @@ void RoutingWorker::process_timeouts()
                 ses->tick(idle);
             }
         }
+
+        // Close expired connections in the thread local pool. If the server is down, purge all connections.
+        for (auto it = m_conn_pools_by_server.begin(); it != m_conn_pools_by_server.end();)
+        {
+            auto* pServer = it->first;
+            if (pServer->is_down())
+            {
+                pool_close_all_conns_by_server(pServer);
+                it = m_conn_pools_by_server.erase(it);
+            }
+            else
+            {
+                pool_close_expired_conns_by_server(pServer);
+                if (it->second.empty())
+                {
+                    it = m_conn_pools_by_server.erase(it);
+                }
+                else
+                {
+                    it++;
+                }
+            }
+        }
+        // TODO: Should pool connections also be pinged regularly?
     }
 }
 
@@ -543,13 +563,9 @@ BackendDCB* RoutingWorker::get_backend_dcb_from_pool(SERVER* pS,
                                                      mxs::Component* pUpstream)
 {
     Server* pServer = static_cast<Server*>(pS);
-
     mxb_assert(pServer);
 
     BackendDCB* pDcb = nullptr;
-
-    pool_close_expired_conns_by_server(pServer);
-
     ServerConnPool& conn_pool = m_conn_pools_by_server[pServer];
 
     while (!pDcb && !conn_pool.empty())
@@ -617,12 +633,13 @@ bool RoutingWorker::move_to_conn_pool(BackendDCB* pDcb)
     auto* pServer = static_cast<Server*>(pDcb->server());
     auto* session = pDcb->session();
     long persistpoolmax = pServer->persistpoolmax();
+    long pool_conns = m_conn_pools_by_server[pServer].size();
 
     if (pDcb->state() == DCB::State::POLLING
         && !pDcb->hanged_up() && pDcb->protocol()->established()
         && session && session_valid_for_pool(session)
         && pServer->is_running()
-        && persistpoolmax > 0 && pool_close_expired_conns_by_server(pServer) < persistpoolmax)
+        && persistpoolmax > 0 && pool_conns < persistpoolmax)
     {
         if (mxb::atomic::add_limited(&pServer->pool_stats().n_persistent, 1, (int)persistpoolmax))
         {
@@ -676,14 +693,6 @@ void RoutingWorker::pool_close_all_conns_by_server(SERVER* pSrv)
 int RoutingWorker::pool_close_expired_conns_by_server(SERVER* pSrv)
 {
     auto* pServer = static_cast<Server*>(pSrv);
-    if (pServer->is_down())
-    {
-        // The server is not running => unconditionally evict all related dcbs.
-        // TODO: Remove once clear this is not called on downed servers.
-        pool_close_all_conns_by_server(pServer);
-        return 0;
-    }
-
     auto persistmaxtime = pServer->persistmaxtime();
     auto persistpoolmax = pServer->persistpoolmax();
 
