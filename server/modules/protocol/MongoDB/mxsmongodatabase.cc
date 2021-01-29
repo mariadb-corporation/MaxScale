@@ -76,6 +76,15 @@ protected:
         }
     }
 
+    void send_downstream(const string& sql)
+    {
+        MXS_NOTICE("SQL: %s", sql.c_str());
+
+        GWBUF* pRequest = modutil_create_query(sql.c_str());
+
+        m_database.context().downstream().routeQuery(pRequest);
+    }
+
     pair<GWBUF*, uint8_t*> create_response(size_t size_of_documents, size_t nDocuments)
     {
         // TODO: In the following is assumed that whatever is returned will
@@ -362,11 +371,7 @@ public:
             mxb_assert(!true);
         }
 
-        MXS_NOTICE("SQL: %s", sql.str().c_str());
-
-        GWBUF* pRequest = modutil_create_query(sql.str().c_str());
-
-        m_database.context().downstream().routeQuery(pRequest);
+        send_downstream(sql.str());
 
         return nullptr;
     }
@@ -538,11 +543,7 @@ public:
             }
         }
 
-        MXS_NOTICE("SQL: %s", sql.str().c_str());
-
-        GWBUF* pRequest = modutil_create_query(sql.str().c_str());
-
-        m_database.context().downstream().routeQuery(pRequest);
+        send_downstream(sql.str());
 
         return nullptr;
     }
@@ -623,11 +624,7 @@ public:
             sql << ")";
         }
 
-        MXS_NOTICE("SQL: %s", sql.str().c_str());
-
-        GWBUF* pRequest = modutil_create_query(sql.str().c_str());
-
-        m_database.context().downstream().routeQuery(pRequest);
+        send_downstream(sql.str());
 
         return nullptr;
     }
@@ -782,11 +779,7 @@ public:
                 sql << " LIMIT 1";
             }
 
-            MXS_NOTICE("SQL: %s", sql.str().c_str());
-
-            GWBUF* pRequest = modutil_create_query(sql.str().c_str());
-
-            m_database.context().downstream().routeQuery(pRequest);
+            send_downstream(sql.str());
         }
 
         return pResponse;
