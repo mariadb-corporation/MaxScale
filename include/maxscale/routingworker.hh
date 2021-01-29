@@ -266,9 +266,9 @@ public:
      *
      * @return How many workers the task was posted to.
      */
-    static size_t broadcast(std::function<void ()> func, mxb::Semaphore* pSem, execute_mode_t mode);
+    static size_t broadcast(const std::function<void ()>& func, mxb::Semaphore* pSem, execute_mode_t mode);
 
-    static size_t broadcast(std::function<void ()> func, enum execute_mode_t mode)
+    static size_t broadcast(const std::function<void ()>& func, enum execute_mode_t mode)
     {
         return broadcast(func, NULL, mode);
     }
@@ -293,7 +293,7 @@ public:
      *            otherwise the task is delivered via the message loop.
      */
     static size_t execute_serially(Task& task);
-    static size_t execute_serially(std::function<void()> func);
+    static size_t execute_serially(const std::function<void()>& func);
 
     /**
      * Executes a task on all workers concurrently and waits until all workers
@@ -311,7 +311,7 @@ public:
      *            otherwise the task is delivered via the message loop.
      */
     static size_t execute_concurrently(Task& task);
-    static size_t execute_concurrently(std::function<void()> func);
+    static size_t execute_concurrently(const std::function<void()>& func);
 
     /**
      * Broadcast a message to all worker.

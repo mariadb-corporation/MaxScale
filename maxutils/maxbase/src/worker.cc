@@ -484,14 +484,14 @@ bool Worker::post_disposable(DisposableTask* pTask, enum execute_mode_t mode)
     return posted;
 }
 
-bool Worker::execute(function<void ()> func, mxb::Semaphore* pSem, execute_mode_t mode)
+bool Worker::execute(const function<void ()>& func, mxb::Semaphore* pSem, execute_mode_t mode)
 {
 
     class CustomTask : public Task
     {
     public:
 
-        CustomTask(function<void ()> func)
+        CustomTask(const function<void ()>& func)
             : m_func(func)
         {
         }
@@ -529,7 +529,7 @@ bool Worker::call(Task& task, execute_mode_t mode)
     return execute(&task, &sem, mode) && sem.wait();
 }
 
-bool Worker::call(function<void ()> func, execute_mode_t mode)
+bool Worker::call(const function<void ()>& func, execute_mode_t mode)
 {
     mxb::Semaphore sem;
     return execute(func, &sem, mode) && sem.wait();

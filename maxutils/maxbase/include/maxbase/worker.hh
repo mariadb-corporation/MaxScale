@@ -538,7 +538,7 @@ public:
      *
      * @return True, if task was posted to the worker
      */
-    bool execute(std::function<void ()> func, mxb::Semaphore* pSem, enum execute_mode_t mode);
+    bool execute(const std::function<void ()>& func, mxb::Semaphore* pSem, enum execute_mode_t mode);
 
     bool execute(std::function<void ()> func, enum execute_mode_t mode)
     {
@@ -565,7 +565,7 @@ public:
      *
      * @return True if function was executed on the worker.
      */
-    bool call(std::function<void ()> func, enum execute_mode_t mode);
+    bool call(const std::function<void ()>& func, enum execute_mode_t mode);
 
     /**
      * Post a message to a worker.

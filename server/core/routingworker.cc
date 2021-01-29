@@ -946,7 +946,7 @@ size_t RoutingWorker::broadcast(std::unique_ptr<DisposableTask> sTask)
 }
 
 // static
-size_t RoutingWorker::broadcast(std::function<void ()> func,
+size_t RoutingWorker::broadcast(const std::function<void ()>& func,
                                 mxb::Semaphore* pSem,
                                 mxb::Worker::execute_mode_t mode)
 {
@@ -990,7 +990,7 @@ size_t RoutingWorker::execute_serially(Task& task)
 }
 
 // static
-size_t RoutingWorker::execute_serially(std::function<void()> func)
+size_t RoutingWorker::execute_serially(const std::function<void()>& func)
 {
     Semaphore sem;
     size_t n = 0;
@@ -1019,7 +1019,7 @@ size_t RoutingWorker::execute_concurrently(Task& task)
 }
 
 // static
-size_t RoutingWorker::execute_concurrently(std::function<void()> func)
+size_t RoutingWorker::execute_concurrently(const std::function<void()>& func)
 {
     Semaphore sem;
     return sem.wait_n(RoutingWorker::broadcast(func, &sem, EXECUTE_AUTO));
