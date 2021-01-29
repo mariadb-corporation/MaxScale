@@ -1076,18 +1076,19 @@ bool MariaDBClientConnection::route_statement(mxs::Buffer&& buffer)
     return m_downstream->routeQuery(buffer.release()) != 0;
 }
 
-void MariaDBClientConnection::finish_recording_history(const GWBUF* buffer)
+void MariaDBClientConnection::finish_recording_history(const GWBUF* buffer, const mxs::Reply& reply)
 {
-    m_routing_state = RoutingState::PACKET_START;
-    m_dcb->trigger_read_event();
-    uint8_t result = mxs_mysql_get_command(buffer);
+    if (reply.is_complete())
+    {
+        m_routing_state = RoutingState::PACKET_START;
+        m_dcb->trigger_read_event();
 
-    MXS_INFO("Added %s to history: %s (result: %s)",
-             STRPACKETTYPE(m_pending_cmd.data()[4]),
-             mxs::extract_sql(m_pending_cmd).c_str(),
-             result == 0 ? "OK" : "ERR");
+        MXS_INFO("Added %s to history with ID %u: %s (result: %s)",
+                 STRPACKETTYPE(m_pending_cmd.data()[4]), m_pending_cmd.id(),
+                 mxs::extract_sql(m_pending_cmd).c_str(), reply.is_ok() ? "OK" : "ERR");
 
-    m_session_data->history.emplace_back(m_pending_cmd.release(), result == 0);
+        m_session_data->history.emplace_back(m_pending_cmd.release(), reply.is_ok());
+    }
 }
 
 /**
@@ -2472,7 +2473,7 @@ MariaDBClientConnection::clientReply(GWBUF* buffer, maxscale::ReplyRoute& down, 
             break;
 
         case RoutingState::RECORD_HISTORY:
-            finish_recording_history(buffer);
+            finish_recording_history(buffer, reply);
             break;
 
         default:

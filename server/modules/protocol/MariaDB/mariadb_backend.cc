@@ -380,7 +380,10 @@ void MariaDBBackendConnection::ready_for_reading(DCB* event_dcb)
         case State::PREPARE_PS:
             normal_read();
 
-            if (m_reply.is_complete())
+            // The reply must be complete and we must have no pending queries to track. If m_track_queue is
+            // not empty, that means the current result is not for the COM_STMT_PREPARE but for a command that
+            // was executed before it.
+            if (m_reply.is_complete() && m_track_queue.empty())
             {
                 m_state = State::ROUTING;
                 send_delayed_packets();
@@ -655,7 +658,7 @@ void MariaDBBackendConnection::normal_read()
     }
     while (read_buffer);
 
-    if (!m_ids_to_check.empty())
+    if (!m_ids_to_check.empty() && m_reply.is_complete())
     {
         compare_responses();
     }
@@ -1017,7 +1020,7 @@ int32_t MariaDBBackendConnection::write(GWBUF* queue)
             }
             else
             {
-                if (m_reply.command() == MXS_COM_STMT_PREPARE)
+                if (cmd == MXS_COM_STMT_PREPARE)
                 {
                     // Stop accepting new queries while a COM_STMT_PREPARE is in progress. This makes sure
                     // that it completes before other commands that refer to it are processed. This can happen
@@ -2320,7 +2323,8 @@ MariaDBBackendConnection::TrackedQuery::TrackedQuery(GWBUF* buffer)
  */
 void MariaDBBackendConnection::track_query(const TrackedQuery& query)
 {
-    mxb_assert(m_state == State::ROUTING || m_state == State::SEND_HISTORY || m_state == State::READ_HISTORY);
+    mxb_assert(m_state == State::ROUTING || m_state == State::SEND_HISTORY
+               || m_state == State::READ_HISTORY || m_state == State::PREPARE_PS);
 
     if (session_is_load_active(m_session))
     {
@@ -2651,11 +2655,19 @@ bool MariaDBBackendConnection::send_delayed_packets()
     auto packets = m_delayed_packets;
     m_delayed_packets.clear();
 
-    for (auto& b : packets)
+    for (auto it = packets.begin(); it != packets.end(); ++it)
     {
-        if (!write(b.release()))
+        if (!write(it->release()))
         {
             rval = false;
+            break;
+        }
+        else if (m_state != State::ROUTING)
+        {
+            // One of the packets caused the state to change. Put the rest of the packets back into the
+            // delayed packet queue.
+            mxb_assert(m_delayed_packets.empty());
+            m_delayed_packets.assign(std::next(it), packets.end());
             break;
         }
     }
