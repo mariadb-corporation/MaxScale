@@ -65,8 +65,15 @@ private:
         test.repl->stop_node(2);
 
         // Check that pinloki was redirected again
-        sleep(5);
-        repl_from = replicating_from(maxscale);
+        for (int i = 0; i < 60; ++i)
+        {
+            repl_from = replicating_from(maxscale);
+            if (repl_from == master_ip)
+            {
+                break;
+            }
+            sleep(1);
+        }
         test.expect(repl_from == master_ip, "Pinloki should replicate from the original master");
     }
 };
