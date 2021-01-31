@@ -260,8 +260,18 @@ void MariaDBBackendConnection::handle_error_response(DCB* plain_dcb, GWBUF* buff
  */
 void MariaDBBackendConnection::prepare_for_write(GWBUF* buffer)
 {
-    track_query(TrackedQuery(buffer));
+    TrackedQuery query(buffer);
 
+    if (m_reply.state() == ReplyState::DONE && m_track_queue.empty())
+    {
+        track_query(query);
+    }
+    else
+    {
+        m_track_queue.push(std::move(query));
+    }
+
+    // TODO: These probably should be stored in TrackedQuery as well
     if (gwbuf_should_collect_result(buffer))
     {
         m_collect_result = true;
@@ -674,8 +684,15 @@ void MariaDBBackendConnection::send_history()
         {
             mxs::Buffer buffer = a.first;
             TrackedQuery query(buffer.get());
-            track_query(query);
-            mxb_assert(mxs_mysql_command_will_respond(query.command));
+
+            if (m_reply.state() == ReplyState::DONE && m_track_queue.empty())
+            {
+                track_query(query);
+            }
+            else
+            {
+                m_track_queue.push(query);
+            }
 
             MXS_INFO("Execute %s on '%s': %s", STRPACKETTYPE(query.command),
                      m_server.name(), mxs::extract_sql(buffer).c_str());
@@ -1945,22 +1962,8 @@ void MariaDBBackendConnection::process_one_packet(Iter it, Iter end, uint32_t le
 
         while (!m_track_queue.empty())
         {
-            // Pop the first query out of the track queue
-            auto query = std::move(m_track_queue.front());
+            track_query(m_track_queue.front());
             m_track_queue.pop();
-
-            // Stash the remaining queries in a local variable so that track_query() thinks there's
-            // nothing queued
-            decltype (m_track_queue) tmp;
-            tmp.swap(m_track_queue);
-
-            // Do the actual tracking. After this call, m_track_queue must never be empty as we know that:
-            //   1. The state is ReplyState::DONE
-            //   2. The track queue is empty
-            track_query(query);
-            mxb_assert(m_track_queue.empty());
-
-            m_track_queue.swap(tmp);
 
             if (m_reply.state() != ReplyState::DONE)
             {
@@ -2361,12 +2364,6 @@ void MariaDBBackendConnection::track_query(const TrackedQuery& query)
     }
     else if (!m_large_query)
     {
-        if (m_reply.state() != ReplyState::DONE || !m_track_queue.empty())
-        {
-            m_track_queue.push(query);
-            return;
-        }
-
         m_reply.clear();
         m_reply.set_command(query.command);
 
