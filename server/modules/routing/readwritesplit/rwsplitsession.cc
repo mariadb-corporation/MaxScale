@@ -90,6 +90,8 @@ RWSplitSession::~RWSplitSession()
                                                  backend->select_timer().total(),
                                                  backend->num_selects());
     }
+
+    m_router->local_avg_sescmd_sz().add(m_sescmd_list.size());
 }
 
 int32_t RWSplitSession::routeQuery(GWBUF* querybuf)

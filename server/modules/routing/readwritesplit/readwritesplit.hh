@@ -289,16 +289,16 @@ private:
  */
 struct Stats
 {
-    uint64_t n_sessions = 0;    /**< Number sessions created */
-    uint64_t n_queries = 0;     /**< Number of queries forwarded */
-    uint64_t n_master = 0;      /**< Number of stmts sent to master */
-    uint64_t n_slave = 0;       /**< Number of stmts sent to slave */
-    uint64_t n_all = 0;         /**< Number of stmts sent to all */
-    uint64_t n_trx_replay = 0;  /**< Number of replayed transactions */
-    uint64_t n_ro_trx = 0;      /**< Read-only transaction count */
-    uint64_t n_rw_trx = 0;      /**< Read-write transaction count */
-    uint64_t n_ps_reused = 0;   /**< Number of prepared statements that were reused */
-    uint64_t max_sescmd_sz = 0; /**< Max m_sescmd_list.size() of all sessions */
+    uint64_t n_sessions = 0;        /**< Number sessions created */
+    uint64_t n_queries = 0;         /**< Number of queries forwarded */
+    uint64_t n_master = 0;          /**< Number of stmts sent to master */
+    uint64_t n_slave = 0;           /**< Number of stmts sent to slave */
+    uint64_t n_all = 0;             /**< Number of stmts sent to all */
+    uint64_t n_trx_replay = 0;      /**< Number of replayed transactions */
+    uint64_t n_ro_trx = 0;          /**< Read-only transaction count */
+    uint64_t n_rw_trx = 0;          /**< Read-write transaction count */
+    uint64_t n_ps_reused = 0;       /**< Number of prepared statements that were reused */
+    uint64_t n_max_sescmd_sz = 0;   /**< Max m_sescmd_list.size() of all sessions */
 };
 
 using maxscale::SessionStats;
@@ -329,14 +329,16 @@ public:
     RWSplit(SERVICE* service);
     ~RWSplit();
 
-    SERVICE*                 service() const;
-    const RWSConfig::Values& config() const;
-    Stats&                   stats();
-    const Stats&             stats() const;
-    TargetSessionStats&      local_server_stats();
-    TargetSessionStats       all_server_stats() const;
-    std::string              last_gtid() const;
-    void                     set_last_gtid(const std::string& gtid);
+    SERVICE*                    service() const;
+    const RWSConfig::Values&    config() const;
+    Stats&                      stats();
+    const Stats&                stats() const;
+    TargetSessionStats&         local_server_stats();
+    TargetSessionStats          all_server_stats() const;
+    maxbase::CumulativeAverage& local_avg_sescmd_sz();
+    int64_t                     avg_sescmd_sz() const;
+    std::string                 last_gtid() const;
+    void                        set_last_gtid(const std::string& gtid);
 
     bool have_enough_servers() const
     {
@@ -403,10 +405,11 @@ private:
     bool check_causal_reads(SERVER* server) const;
     void set_warnings(json_t* json) const;
 
-    SERVICE*                              m_service;    /**< Service where the router belongs*/
-    RWSConfig                             m_config;
-    Stats                                 m_stats;
-    mxs::WorkerGlobal<TargetSessionStats> m_server_stats;
-    gtid                                  m_last_gtid {0, 0, 0};
-    mutable mxb::shared_mutex             m_last_gtid_lock;
+    SERVICE*                                      m_service;/**< Service where the router belongs*/
+    RWSConfig                                     m_config;
+    Stats                                         m_stats;
+    mxs::WorkerGlobal<TargetSessionStats>         m_server_stats;
+    mxs::WorkerGlobal<maxbase::CumulativeAverage> m_avg_sescmd_sz;
+    gtid                                          m_last_gtid {0, 0, 0};
+    mutable mxb::shared_mutex                     m_last_gtid_lock;
 };
