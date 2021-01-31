@@ -285,6 +285,7 @@ json_t* RWSplit::diagnostics() const
     json_object_set_new(rval, "rw_transactions", json_integer(stats().n_rw_trx));
     json_object_set_new(rval, "ro_transactions", json_integer(stats().n_ro_trx));
     json_object_set_new(rval, "replayed_transactions", json_integer(stats().n_trx_replay));
+    json_object_set_new(rval, "max_sescmd_history_length", json_integer(stats().max_sescmd_sz));
 
     if (m_config.values().reuse_ps)
     {
@@ -332,6 +333,16 @@ uint64_t RWSplit::getCapabilities() const
 bool RWSplit::configure(mxs::ConfigParameters* params)
 {
     return false;
+}
+
+void RWSplit::update_max_sescmd_sz(uint64_t maybe_max)
+{
+    uint64_t expected = __atomic_load_n(&m_stats.max_sescmd_sz, __ATOMIC_RELAXED);
+    while (expected < maybe_max
+           && !__atomic_compare_exchange_n(&m_stats.max_sescmd_sz, &expected, maybe_max,
+                                           true, __ATOMIC_RELEASE, __ATOMIC_RELAXED))
+    {
+    }
 }
 
 /**

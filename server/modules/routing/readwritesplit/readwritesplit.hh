@@ -298,6 +298,7 @@ struct Stats
     uint64_t n_ro_trx = 0;      /**< Read-only transaction count */
     uint64_t n_rw_trx = 0;      /**< Read-write transaction count */
     uint64_t n_ps_reused = 0;   /**< Number of prepared statements that were reused */
+    uint64_t max_sescmd_sz = 0; /**< Max m_sescmd_list.size() of all sessions */
 };
 
 using maxscale::SessionStats;
@@ -395,6 +396,8 @@ public:
     {
         return &m_config;
     }
+
+    void update_max_sescmd_sz(uint64_t maybe_max);
 
 private:
     bool check_causal_reads(SERVER* server) const;

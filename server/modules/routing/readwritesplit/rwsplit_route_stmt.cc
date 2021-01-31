@@ -587,6 +587,7 @@ bool RWSplitSession::route_session_write(GWBUF* querybuf, uint8_t command, uint3
     {
         discard_old_history(lowest_pos);
         m_sescmd_list.push_back(sescmd);
+        m_router->update_max_sescmd_sz(m_sescmd_list.size());
     }
 
     if (nsucc)
