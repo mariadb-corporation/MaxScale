@@ -654,13 +654,6 @@ char* MariaDBClientConnection::handle_variables(mxs::Buffer& buffer)
     SetParser set_parser;
     SetParser::Result result;
 
-    // If the router needs query classification, we can skip the custom parsing for all non-SET SQL commands.
-    if (rcap_type_required(m_session->service->capabilities(), RCAP_TYPE_QUERY_CLASSIFICATION)
-        && qc_get_operation(read_buffer) != QUERY_OP_SET)
-    {
-        return nullptr;
-    }
-
     switch (set_parser.check(&read_buffer, &result))
     {
     case SetParser::ERROR:
@@ -896,31 +889,6 @@ void MariaDBClientConnection::handle_use_database(GWBUF* read_buffer)
     }
 }
 
-bool MariaDBClientConnection::is_special_query(mxs::Buffer& buffer)
-{
-    bool rval = true;
-
-    if (rcap_type_required(m_session->service->capabilities(), RCAP_TYPE_QUERY_CLASSIFICATION))
-    {
-        switch (qc_get_operation(buffer.get()))
-        {
-        case QUERY_OP_CHANGE_DB:
-        case QUERY_OP_SET:
-            // TODO: Add KILL to qc_query_op_t
-            // case QUERY_OP_KILL:
-
-            // We need to process this command
-            break;
-
-        default:
-            rval = false;
-            break;
-        }
-    }
-
-    return rval;
-}
-
 /**
  * Some SQL commands/queries need to be detected and handled by the protocol
  * and MaxScale instead of being routed forward as is.
@@ -933,45 +901,42 @@ MariaDBClientConnection::process_special_queries(mxs::Buffer& buffer)
 {
     auto rval = SpecialCmdRes::CONTINUE;
 
-    if (is_special_query(buffer))
+    auto packet_len = buffer.length();
+    /* The packet must be at least HEADER + cmd + 5 (USE d) chars in length. Also, if the packet is rather
+     * long, assume that it is not a tracked query. This assumption allows avoiding the
+     * make_contiquous-call
+     * on e.g. big inserts. The long packets can only contain one of the tracked queries by having lots of
+     * comments. */
+    const size_t min_len = MYSQL_HEADER_LEN + 1 + 5;
+    const size_t max_len = 10000;
+
+    if (packet_len >= min_len && packet_len <= max_len)
     {
-        auto packet_len = buffer.length();
-        /* The packet must be at least HEADER + cmd + 5 (USE d) chars in length. Also, if the packet is rather
-         * long, assume that it is not a tracked query. This assumption allows avoiding the
-         * make_contiquous-call
-         * on e.g. big inserts. The long packets can only contain one of the tracked queries by having lots of
-         * comments. */
-        const size_t min_len = MYSQL_HEADER_LEN + 1 + 5;
-        const size_t max_len = 10000;
+        char* sql = nullptr;
+        int len = 0;
 
-        if (packet_len >= min_len && packet_len <= max_len)
+        buffer.make_contiguous();
+        if (modutil_extract_SQL(buffer.get(), &sql, &len))
         {
-            char* sql = nullptr;
-            int len = 0;
-
-            buffer.make_contiguous();
-            if (modutil_extract_SQL(buffer.get(), &sql, &len))
+            auto fields = parse_special_query(sql, len);
+            switch (fields.type)
             {
-                auto fields = parse_special_query(sql, len);
-                switch (fields.type)
-                {
-                case SpecialQueryDesc::Type::NONE:
-                    break;
+            case SpecialQueryDesc::Type::NONE:
+                break;
 
-                case SpecialQueryDesc::Type::KILL:
-                    handle_query_kill(fields);
-                    // The kill-query is not routed to backends, as the id:s would be wrong.
-                    rval = SpecialCmdRes::END;
-                    break;
+            case SpecialQueryDesc::Type::KILL:
+                handle_query_kill(fields);
+                // The kill-query is not routed to backends, as the id:s would be wrong.
+                rval = SpecialCmdRes::END;
+                break;
 
-                case SpecialQueryDesc::Type::USE_DB:
-                    handle_use_database(buffer.get());
-                    break;
+            case SpecialQueryDesc::Type::USE_DB:
+                handle_use_database(buffer.get());
+                break;
 
-                case SpecialQueryDesc::Type::SET_ROLE:
-                    start_change_role(move(fields.target));
-                    break;
-                }
+            case SpecialQueryDesc::Type::SET_ROLE:
+                start_change_role(move(fields.target));
+                break;
             }
         }
     }
