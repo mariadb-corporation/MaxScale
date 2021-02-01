@@ -37,7 +37,7 @@ int main(int argc, char** argv)
         };
 
     // Create a table
-    test.maxscales->connect();
+    test.maxscales->connect_rwsplit();
     ok("CREATE OR REPLACE TABLE test.t1 (id INT)");
     test.maxscales->disconnect();
 
@@ -47,13 +47,12 @@ int main(int argc, char** argv)
     test.repl->disconnect();
 
     // Try to do a transaction across multiple master failures
-    test.maxscales->connect();
+    test.maxscales->connect_rwsplit();
 
     cout << "Start transaction, insert a value and read it" << endl;
     ok("SET @a = 1");
     ok("START TRANSACTION");
     ok("SELECT @a");
-    ok("SET @a = 2");
     ok("INSERT INTO test.t1 VALUES (1)");
     ok("SELECT * FROM test.t1 WHERE id = 1");
 
@@ -64,7 +63,6 @@ int main(int argc, char** argv)
     ok("INSERT INTO test.t1 VALUES (2)");
     ok("SELECT * FROM test.t1 WHERE id = 2");
     ok("SELECT @a");
-    ok("SET @a = 3");
 
     cout << "Killing second master" << endl;
     kill_master();
@@ -73,7 +71,6 @@ int main(int argc, char** argv)
     ok("INSERT INTO test.t1 VALUES (3)");
     ok("SELECT * FROM test.t1 WHERE id = 3");
     ok("SELECT @a");
-    ok("SET @a = 4");
 
     cout << "Killing third master" << endl;
     kill_master();
@@ -89,14 +86,14 @@ int main(int argc, char** argv)
     ok("COMMIT");
     test.maxscales->disconnect();
 
-    test.maxscales->connect();
+    test.maxscales->connect_rwsplit();
     cout << "Checking results" << endl;
     Row r = get_row(test.maxscales->conn_rwsplit[0], "SELECT SUM(id), @@last_insert_id FROM t1");
     test.expect(!r.empty() && r[0] == "6", "All rows were not inserted: %s",
                 r.empty() ? "No rows" : r[0].c_str());
     test.maxscales->disconnect();
 
-    test.maxscales->connect();
+    test.maxscales->connect_rwsplit();
     ok("DROP TABLE test.t1");
     test.maxscales->disconnect();
 
