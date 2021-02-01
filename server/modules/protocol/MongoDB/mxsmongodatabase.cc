@@ -297,6 +297,37 @@ protected:
         return entry;
     }
 
+    void add_error(bsoncxx::builder::basic::document& builder, const ComERR& err)
+    {
+        MXS_WARNING("Mongo request to backend failed: (%d), %s", err.code(), err.message().c_str());
+
+        bsoncxx::builder::basic::document mariadb_builder;
+
+        mariadb_builder.append(bsoncxx::builder::basic::kvp("code", err.code()));
+        mariadb_builder.append(bsoncxx::builder::basic::kvp("state", err.state()));
+        mariadb_builder.append(bsoncxx::builder::basic::kvp("message", err.message()));
+
+        builder.append(bsoncxx::builder::basic::kvp("mariadb", mariadb_builder.extract()));
+
+        // TODO: Map MariaDB errors to something sensible from
+        // TODO: https://github.com/mongodb/mongo/blob/master/src/mongo/base/error_codes.yml
+
+        bsoncxx::builder::basic::array array_builder;
+
+        for (int64_t i = 0; i < 1; ++i) // TODO: With multiple updates/deletes object this must change.
+        {
+            bsoncxx::builder::basic::document error_builder;
+
+            error_builder.append(bsoncxx::builder::basic::kvp("index", i));
+            error_builder.append(bsoncxx::builder::basic::kvp("code", 125)); // Command failed.
+            error_builder.append(bsoncxx::builder::basic::kvp("errmsg", err.message()));
+
+            array_builder.append(error_builder.extract());
+        }
+
+        builder.append(bsoncxx::builder::basic::kvp("writeErrors", array_builder.extract()));
+    }
+
     mxsmongo::Database&     m_database;
     GWBUF*                  m_pRequest;
     mxsmongo::Packet        m_req;
@@ -393,45 +424,11 @@ public:
         switch (response.type())
         {
         case ComResponse::OK_PACKET:
-            {
-                n = ComOK(response).affected_rows();
-            }
+            n = ComOK(response).affected_rows();
             break;
 
         case ComResponse::ERR_PACKET:
-            {
-                MXS_WARNING("Mongo request to backend failed: (%d), %s",
-                            mxs_mysql_get_mysql_errno(&mariadb_response),
-                            mxs::extract_error(&mariadb_response).c_str());
-
-                ComERR err(response);
-
-                bsoncxx::builder::basic::document mariadb_builder;
-
-                mariadb_builder.append(bsoncxx::builder::basic::kvp("code", err.code()));
-                mariadb_builder.append(bsoncxx::builder::basic::kvp("state", err.state()));
-                mariadb_builder.append(bsoncxx::builder::basic::kvp("message", err.message()));
-
-                builder.append(bsoncxx::builder::basic::kvp("mariadb", mariadb_builder.extract()));
-
-                // TODO: Map MariaDB errors to something sensible from
-                // TODO: https://github.com/mongodb/mongo/blob/master/src/mongo/base/error_codes.yml
-
-                bsoncxx::builder::basic::array array_builder;
-
-                for (int64_t i = 0; i < 1; ++i) // TODO: With multiple deletes object this must change.
-                {
-                    bsoncxx::builder::basic::document error_builder;
-
-                    error_builder.append(bsoncxx::builder::basic::kvp("index", i));
-                    error_builder.append(bsoncxx::builder::basic::kvp("code", 125)); // Command failed.
-                    error_builder.append(bsoncxx::builder::basic::kvp("errmsg", err.message()));
-
-                    array_builder.append(error_builder.extract());
-                }
-
-                builder.append(bsoncxx::builder::basic::kvp("writeErrors", array_builder.extract()));
-            }
+            add_error(builder, ComERR(response));
             break;
 
         case ComResponse::LOCAL_INFILE_PACKET:
@@ -557,14 +554,14 @@ public:
 
         switch (response.type())
         {
+        case ComResponse::OK_PACKET:
+            break;
+
         case ComResponse::ERR_PACKET:
             MXS_WARNING("Mongo request to backend failed: (%d), %s",
                         mxs_mysql_get_mysql_errno(&mariadb_response),
                         mxs::extract_error(&mariadb_response).c_str());
             pResponse = create_empty_response();
-            break;
-
-        case ComResponse::OK_PACKET:
             break;
 
         case ComResponse::LOCAL_INFILE_PACKET:
@@ -650,39 +647,7 @@ public:
             break;
 
         case ComResponse::ERR_PACKET:
-            {
-                MXS_WARNING("Mongo request to backend failed: (%d), %s",
-                            mxs_mysql_get_mysql_errno(&mariadb_response),
-                            mxs::extract_error(&mariadb_response).c_str());
-
-                ComERR err(response);
-
-                bsoncxx::builder::basic::document mariadb_builder;
-
-                mariadb_builder.append(bsoncxx::builder::basic::kvp("code", err.code()));
-                mariadb_builder.append(bsoncxx::builder::basic::kvp("state", err.state()));
-                mariadb_builder.append(bsoncxx::builder::basic::kvp("message", err.message()));
-
-                builder.append(bsoncxx::builder::basic::kvp("mariadb", mariadb_builder.extract()));
-
-                // TODO: Map MariaDB errors to something sensible from
-                // TODO: https://github.com/mongodb/mongo/blob/master/src/mongo/base/error_codes.yml
-
-                bsoncxx::builder::basic::array array_builder;
-
-                for (int64_t i = 0; i < m_nDocuments; ++i)
-                {
-                    bsoncxx::builder::basic::document error_builder;
-
-                    error_builder.append(bsoncxx::builder::basic::kvp("index", i));
-                    error_builder.append(bsoncxx::builder::basic::kvp("code", 125)); // Command failed.
-                    error_builder.append(bsoncxx::builder::basic::kvp("errmsg", err.message()));
-
-                    array_builder.append(error_builder.extract());
-                }
-
-                builder.append(bsoncxx::builder::basic::kvp("writeErrors", array_builder.extract()));
-            }
+            add_error(builder, ComERR(response));
             break;
 
         case ComResponse::LOCAL_INFILE_PACKET:
@@ -815,39 +780,7 @@ public:
             break;
 
         case ComResponse::ERR_PACKET:
-            {
-                MXS_WARNING("Mongo request to backend failed: (%d), %s",
-                            mxs_mysql_get_mysql_errno(&mariadb_response),
-                            mxs::extract_error(&mariadb_response).c_str());
-
-                ComERR err(response);
-
-                bsoncxx::builder::basic::document mariadb_builder;
-
-                mariadb_builder.append(bsoncxx::builder::basic::kvp("code", err.code()));
-                mariadb_builder.append(bsoncxx::builder::basic::kvp("state", err.state()));
-                mariadb_builder.append(bsoncxx::builder::basic::kvp("message", err.message()));
-
-                builder.append(bsoncxx::builder::basic::kvp("mariadb", mariadb_builder.extract()));
-
-                // TODO: Map MariaDB errors to something sensible from
-                // TODO: https://github.com/mongodb/mongo/blob/master/src/mongo/base/error_codes.yml
-
-                bsoncxx::builder::basic::array array_builder;
-
-                for (int64_t i = 0; i < 1; ++i)
-                {
-                    bsoncxx::builder::basic::document error_builder;
-
-                    error_builder.append(bsoncxx::builder::basic::kvp("index", i));
-                    error_builder.append(bsoncxx::builder::basic::kvp("code", 125)); // Command failed.
-                    error_builder.append(bsoncxx::builder::basic::kvp("errmsg", err.message()));
-
-                    array_builder.append(error_builder.extract());
-                }
-
-                builder.append(bsoncxx::builder::basic::kvp("writeErrors", array_builder.extract()));
-            }
+            add_error(builder, ComERR(response));
             break;
 
         case ComResponse::LOCAL_INFILE_PACKET:
