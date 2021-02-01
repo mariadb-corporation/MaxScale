@@ -2318,6 +2318,11 @@ bool MariaDBClientConnection::process_normal_packet(mxs::Buffer&& buffer)
 
     case MXS_COM_QUERY:
         {
+            if (rcap_type_required(m_session->service->capabilities(), RCAP_TYPE_QUERY_CLASSIFICATION))
+            {
+                buffer.make_contiguous();
+            }
+
             // Track MaxScale-specific sql. If the variable setting succeeds, the query is routed normally
             // so that the same variable is visible on backend.
             char* errmsg = handle_variables(buffer);
