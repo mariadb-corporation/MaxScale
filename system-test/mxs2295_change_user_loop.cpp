@@ -5,7 +5,7 @@
 
 #include <maxtest/testconnections.hh>
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     TestConnections test(argc, argv);
 
@@ -22,8 +22,11 @@ int main(int argc, char *argv[])
 
         test.set_timeout(60);
 
-        // Interleaved session commands, reads and "writes" (`SELECT @@last_insert_id` is treated as a master-only read)
-        test.expect(conn.query("SET @a = (SELECT SLEEP(case @@server_id when 1 then 0 else 0.01 end))"), "Query failed: %s", conn.error());
+        // Interleaved session commands, reads and "writes" (`SELECT @@last_insert_id` is treated as a
+        // master-only read)
+        test.expect(conn.query("SET @a = (SELECT SLEEP(case @@server_id when 1 then 0 else 0.01 end))"),
+                    "Query failed: %s",
+                    conn.error());
         test.expect(conn.query("USE test"), "Query failed: %s", conn.error());
         test.expect(conn.query("SET SQL_MODE=''"), "Query failed: %s", conn.error());
         test.expect(conn.query("USE test"), "Query failed: %s", conn.error());
@@ -71,7 +74,6 @@ int main(int argc, char *argv[])
                 slave_response.c_str(), master_response.c_str());
 
     test.log_excludes(0, "Router session exceeded session command history limit");
-    test.log_includes(0, "Resetting session command history");
 
     return test.global_result;
 }
