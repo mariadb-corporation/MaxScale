@@ -77,6 +77,20 @@ const char* mxsmongo::opcode_to_string(int code)
     }
 }
 
+mxsmongo::error::Code mxsmongo::error::from_mariadb_code(int code)
+{
+    // TODO: Expand the range of used codes.
+
+    switch (code)
+    {
+    case 0:
+        return OK;
+
+    default:
+        return COMMAND_FAILED;
+    }
+}
+
 mxsmongo::Command mxsmongo::get_command(const bsoncxx::document::view& doc)
 {
     mxsmongo::Command command = mxsmongo::Command::UNKNOWN;

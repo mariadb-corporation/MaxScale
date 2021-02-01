@@ -58,6 +58,16 @@ public:
         return create_response(doc_value);
     }
 
+    GWBUF* create_error_response(const std::string& message, mxsmongo::error::Code code)
+    {
+        bsoncxx::builder::basic::document builder;
+
+        builder.append(bsoncxx::builder::basic::kvp("$err", message.c_str()));
+        builder.append(bsoncxx::builder::basic::kvp("code", static_cast<int32_t>(code)));
+
+        return create_response(builder.extract());
+    }
+
 protected:
     string get_table(const char* zCommand)
     {
@@ -319,7 +329,8 @@ protected:
             bsoncxx::builder::basic::document error_builder;
 
             error_builder.append(bsoncxx::builder::basic::kvp("index", i));
-            error_builder.append(bsoncxx::builder::basic::kvp("code", 125)); // Command failed.
+            int32_t code = mxsmongo::error::from_mariadb_code(err.code());
+            error_builder.append(bsoncxx::builder::basic::kvp("code", code));
             error_builder.append(bsoncxx::builder::basic::kvp("errmsg", err.message()));
 
             array_builder.append(error_builder.extract());
@@ -558,10 +569,16 @@ public:
             break;
 
         case ComResponse::ERR_PACKET:
-            MXS_WARNING("Mongo request to backend failed: (%d), %s",
-                        mxs_mysql_get_mysql_errno(&mariadb_response),
-                        mxs::extract_error(&mariadb_response).c_str());
-            pResponse = create_empty_response();
+            {
+                ComERR err(response);
+
+                MXS_WARNING("Mongo request to backend failed: (%d), %s", err.code(), err.message().c_str());
+
+                // TODO: Check error and act accordingly. E.g. if the table does not exist, it should not be
+                // TODO: an error but simply cause no documents to be returned.
+
+                pResponse = create_error_response(err.message(), mxsmongo::error::from_mariadb_code(err.code()));
+            }
             break;
 
         case ComResponse::LOCAL_INFILE_PACKET:
@@ -705,8 +722,14 @@ public:
         switch (get_update_kind(u))
         {
         case AGGREGATION_PIPELINE:
-            MXS_ERROR("Aggregation pipeline not supported: '%s'", bsoncxx::to_json(update).c_str());
-            pResponse = create_response(0, 0, 0);
+            {
+                string message("Aggregation pipeline not supported: '");
+                message += bsoncxx::to_json(update);
+                message += "'.";
+
+                MXS_ERROR("%s", message.c_str());
+                pResponse = create_error_response(message, mxsmongo::error::COMMAND_FAILED);
+            }
             break;
 
         case REPLACEMENT_DOCUMENT:
@@ -723,8 +746,14 @@ public:
             break;
 
         case INVALID:
-            MXS_ERROR("Invalid combination of updates: '%s'", bsoncxx::to_json(update).c_str());
-            pResponse = create_response(0, 0, 0);
+            {
+                string message("Invalid combination of updates: '");
+                message += bsoncxx::to_json(update);
+                message += "'.";
+
+                MXS_ERROR("%s", message.c_str());
+                pResponse = create_error_response(message, mxsmongo::error::COMMAND_FAILED);
+            }
         }
 
         if (!pResponse)
@@ -1082,7 +1111,7 @@ GWBUF* mxsmongo::Database::execute(mxsmongo::Command cid,
         MXS_ERROR("Exeception occurred when parsing MongoDB command: %s", x.what());
         mxb_assert(!true);
 
-        pResponse = sCommand->create_empty_response();
+        pResponse = sCommand->create_error_response(x.what(), mxsmongo::error::FAILED_TO_PARSE);
     }
 
     if (!pResponse)

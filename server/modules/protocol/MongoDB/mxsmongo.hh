@@ -122,6 +122,23 @@ inline int32_t set_byte8(uint8_t* pBuffer, uint64_t val)
 
 const char* opcode_to_string(int code);
 
+namespace error
+{
+// https://github.com/mongodb/mongo/blob/master/src/mongo/base/error_codes.yml
+
+enum Code
+{
+    // TODO: Add more
+
+    OK              = 0,
+    FAILED_TO_PARSE = 9,
+    COMMAND_FAILED  = 125
+};
+
+Code from_mariadb_code(int code);
+
+}
+
 namespace keys
 {
 
