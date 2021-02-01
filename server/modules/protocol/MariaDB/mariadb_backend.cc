@@ -1006,7 +1006,17 @@ int32_t MariaDBBackendConnection::write(GWBUF* queue)
             queue = gwbuf_make_contiguous(queue);
             prepare_for_write(queue);
 
-            if (mxs_mysql_is_ps_command(cmd))
+            // If the buffer contains a large query, we have to ignore the command byte and just write it. The
+            // state of m_large_query must be updated for each routed packet to accurately know whether the
+            // command byte is accurate or not.
+            bool was_large = m_large_query;
+            m_large_query = mxs_mysql_get_packet_len(queue) == MYSQL_PACKET_LENGTH_MAX + MYSQL_HEADER_LEN;
+
+            if (was_large)
+            {
+                rc = m_dcb->writeq_append(queue);
+            }
+            else if (mxs_mysql_is_ps_command(cmd))
             {
                 uint32_t ps_id = mxs_mysql_extract_ps_id(queue);
                 auto it = m_ps_map.find(ps_id);
@@ -1089,6 +1099,24 @@ int32_t MariaDBBackendConnection::write(GWBUF* queue)
                 {
                     compare_responses();
                 }
+            }
+        }
+        break;
+
+    case State::PREPARE_PS:
+        {
+            if (m_large_query)
+            {
+                // A continuation of a large COM_STMT_PREPARE
+                m_large_query = mxs_mysql_get_packet_len(queue) == MYSQL_PACKET_LENGTH_MAX + MYSQL_HEADER_LEN;
+                rc = m_dcb->writeq_append(queue);
+            }
+            else
+            {
+                MXS_INFO("Storing %s while in state '%s': %s", STRPACKETTYPE(mxs_mysql_get_command(queue)),
+                         to_string(m_state).c_str(), mxs::extract_sql(queue).c_str());
+                m_delayed_packets.emplace_back(queue);
+                rc = 1;
             }
         }
         break;
@@ -2387,13 +2415,6 @@ void MariaDBBackendConnection::track_query(const TrackedQuery& query)
             set_reply_state(ReplyState::RSET_ROWS);
         }
     }
-
-    /**
-     * If the buffer contains a large query, we have to skip the command
-     * byte extraction for the next packet. This way current_command always
-     * contains the latest command executed on this backend.
-     */
-    m_large_query = query.payload_len == MYSQL_PACKET_LENGTH_MAX;
 }
 
 MariaDBBackendConnection::~MariaDBBackendConnection()
