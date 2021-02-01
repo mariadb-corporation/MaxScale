@@ -668,9 +668,20 @@ void MariaDBBackendConnection::normal_read()
     }
     while (read_buffer);
 
-    if (!m_ids_to_check.empty() && m_reply.is_complete())
+    if (m_reply.is_complete())
     {
-        compare_responses();
+        if (m_current_id)
+        {
+            // Reset the ID after storing it to make sure debug assertions will catch any cases where a PS
+            // response is read without a pre-assigned ID.
+            m_ids_to_check.emplace_back(m_current_id, m_reply.is_ok());
+            m_current_id = 0;
+        }
+
+        if (!m_ids_to_check.empty())
+        {
+            compare_responses();
+        }
     }
 }
 
@@ -2154,10 +2165,6 @@ void MariaDBBackendConnection::process_ps_response(Iter it, Iter end)
     uint32_t stmt_id = 0;
     mxb_assert(internal_id != 0);
 
-    // Reset the ID to make sure the debug assertion above will catch any cases where a PS response is read
-    // without a pre-assigned ID.
-    m_current_id = 0;
-
     // Modifying the ID here is convenient but it doesn't seem right as the iterators should be const
     // iterators. This could be fixed later if a more suitable place is found.
     stmt_id |= *it;
@@ -2232,11 +2239,6 @@ void MariaDBBackendConnection::process_reply_start(Iter it, Iter end)
 void MariaDBBackendConnection::process_result_start(Iter it, Iter end)
 {
     uint8_t cmd = *it;
-
-    if (m_current_id)
-    {
-        m_ids_to_check.emplace_back(m_current_id, cmd == 0);
-    }
 
     switch (cmd)
     {
