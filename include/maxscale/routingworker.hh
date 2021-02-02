@@ -423,7 +423,6 @@ public:
 
     void pool_close_all_conns();
     void pool_close_all_conns_by_server(SERVER* pSrv);
-    int  pool_close_expired_conns_by_server(SERVER* pSrv);
 
     /**
      * Register a function to be called every epoll_tick.
@@ -516,11 +515,14 @@ private:
     class ConnPoolEntry
     {
     public:
-        ConnPoolEntry(mxs::BackendConnection* pConn);
+        explicit ConnPoolEntry(mxs::BackendConnection* pConn);
         ~ConnPoolEntry();
 
-        ConnPoolEntry(const ConnPoolEntry&) = delete;
-        ConnPoolEntry& operator=(const ConnPoolEntry&) = delete;
+        ConnPoolEntry(ConnPoolEntry&& rhs)
+            : m_created(rhs.m_created)
+            , m_pConn(rhs.release_conn())
+        {
+        }
 
         bool hanged_up() const
         {
@@ -566,10 +568,30 @@ private:
         RoutingWorker& m_owner;
     };
 
-    using ServerConnPool = std::list<ConnPoolEntry>;
-    using ConnPoolGroup = std::map<SERVER*, ServerConnPool>;
+    class ConnectionPool
+    {
+    public:
+        ConnectionPool(mxs::RoutingWorker* owner, SERVER* target_server);
+        ConnectionPool(ConnectionPool&& rhs);
 
-    ConnPoolGroup m_conn_pools_by_server;   /**< Pooled connections for each server */
+        void remove_and_close(mxs::BackendConnection* conn);
+        void close_expired();
+        void close_all();
+        bool empty() const;
+
+        mxs::BackendConnection* get_connection();
+        mxs::BackendConnection* get_connection(const std::string& client_remote);
+        void                    add_connection(mxs::BackendConnection* conn);
+
+    private:
+        std::map<mxs::BackendConnection*, ConnPoolEntry> m_contents;
+
+        mxs::RoutingWorker* m_owner {nullptr};
+        SERVER*             m_target_server {nullptr};
+    };
+    using ConnPoolGroup = std::map<SERVER*, ConnectionPool>;
+
+    ConnPoolGroup m_pool_group;     /**< Pooled connections for each server */
     DCBHandler    m_pool_handler;
     long          m_next_timeout_check {0};
 
