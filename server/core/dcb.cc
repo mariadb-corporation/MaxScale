@@ -2018,18 +2018,9 @@ void BackendDCB::close(BackendDCB* dcb)
     DCB::close(dcb);
 }
 
-void BackendDCB::move_to_pool_or_close(BackendDCB* dcb)
+BackendDCB::Manager* BackendDCB::manager() const
 {
-    bool moved_to_pool = static_cast<BackendDCB::Manager*>(dcb->m_manager)->move_to_conn_pool(dcb);
-    if (moved_to_pool)
-    {
-        mxb_assert(dcb->is_open());
-    }
-    else
-    {
-        // Close normally
-        BackendDCB::close(dcb);
-    }
+    return static_cast<Manager*>(m_manager);
 }
 
 /**

@@ -800,6 +800,7 @@ public:
     void reset(MXS_SESSION* session);
 
     mxs::BackendConnection* protocol() const override;
+    Manager*                manager() const;
 
     /**
      * Hangup all BackendDCBs connected to a particular server.
@@ -832,13 +833,6 @@ public:
     int ssl_handshake() override;
 
     void set_connection(std::unique_ptr<mxs::BackendConnection> conn);
-
-    /**
-     * Try to send the dcb to the connection pool. If this is not possible, close it.
-     *
-     * @param dcb Dcb to pool or close
-     */
-    static void move_to_pool_or_close(BackendDCB* dcb);
 
     /**
      * Close the dcb. The dcb is not actually closed, just put to the zombie queue.

@@ -866,28 +866,37 @@ bool ServerEndpoint::connect()
     mxb::LogScope scope(m_server->name());
     auto worker = mxs::RoutingWorker::get_current();
 
-    if ((m_dcb = worker->get_backend_dcb(m_server, m_session, this)))
+    if ((m_conn = worker->get_backend_connection(m_server, m_session, this)))
     {
         m_server->stats().add_connection();
-        m_conn = m_dcb->protocol();
     }
 
-    return m_dcb != nullptr;
+    return m_conn != nullptr;
 }
 
 void ServerEndpoint::close()
 {
     mxb::LogScope scope(m_server->name());
-    mxb_assert(is_open());
-    BackendDCB::move_to_pool_or_close(m_dcb);
-    m_dcb = nullptr;
 
+    auto* dcb = m_conn->dcb();
+    // Try to move the connection into the pool. If it fails, close normally.
+    bool moved_to_pool = dcb->manager()->move_to_conn_pool(dcb);
+    if (moved_to_pool)
+    {
+        mxb_assert(dcb->is_open());
+    }
+    else
+    {
+        BackendDCB::close(dcb);
+    }
+
+    m_conn = nullptr;
     m_server->stats().remove_connection();
 }
 
 bool ServerEndpoint::is_open() const
 {
-    return m_dcb;
+    return m_conn;
 }
 
 int32_t ServerEndpoint::routeQuery(GWBUF* buffer)

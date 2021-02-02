@@ -1341,7 +1341,7 @@ void Session::remove_backend_conn(mxs::BackendConnection* conn)
     m_backends_conns.erase(iter);
 }
 
-BackendDCB*
+mxs::BackendConnection*
 Session::create_backend_connection(Server* server, BackendDCB::Manager* manager, mxs::Component* upstream)
 {
     std::unique_ptr<BackendConnection> conn;
@@ -1383,7 +1383,7 @@ Session::create_backend_connection(Server* server, BackendDCB::Manager* manager,
             }
         }
     }
-    return dcb;
+    return dcb->protocol();
 }
 
 void Session::tick(int64_t idle)

@@ -108,16 +108,16 @@ bool can_close_dcb(mxs::BackendConnection* b)
 namespace maxscale
 {
 
-RoutingWorker::ConnPoolEntry::ConnPoolEntry(BackendDCB* pDcb)
+RoutingWorker::ConnPoolEntry::ConnPoolEntry(mxs::BackendConnection* pConn)
     : m_created(time(nullptr))
-    , m_pDcb(pDcb)
+    , m_pConn(pConn)
 {
-    mxb_assert(m_pDcb);
+    mxb_assert(m_pConn);
 }
 
 RoutingWorker::ConnPoolEntry::~ConnPoolEntry()
 {
-    mxb_assert(!m_pDcb);
+    mxb_assert(!m_pConn);
 }
 
 RoutingWorker::DCBHandler::DCBHandler(RoutingWorker* pOwner)
@@ -539,31 +539,31 @@ void RoutingWorker::remove(DCB* pDcb)
     m_dcbs.erase(it);
 }
 
-BackendDCB* RoutingWorker::get_backend_dcb(SERVER* pS, MXS_SESSION* pSession, mxs::Component* pUpstream)
+mxs::BackendConnection*
+RoutingWorker::get_backend_connection(SERVER* pSrv, MXS_SESSION* pSes, mxs::Component* pUpstream)
 {
-    Server* pServer = static_cast<Server*>(pS);
-    auto pSes = static_cast<Session*>(pSession);
-    BackendDCB* pDcb = nullptr;
+    auto* pServer = static_cast<Server*>(pSrv);
+    auto* pSession = static_cast<Session*>(pSes);
+    mxs::BackendConnection* pConn = nullptr;
 
     if (pServer->persistent_conns_enabled() && pServer->is_running())
     {
-        pDcb = get_backend_dcb_from_pool(pS, pSes, pUpstream);
+        pConn = pool_get_connection(pSrv, pSession, pUpstream);
     }
 
-    if (!pDcb)
+    if (!pConn)
     {
-        pDcb = pSes->create_backend_connection(pServer, this, pUpstream);
+        pConn = pSession->create_backend_connection(pServer, this, pUpstream);
     }
-
-    return pDcb;
+    return pConn;
 }
 
-BackendDCB* RoutingWorker::get_backend_dcb_from_pool(SERVER* pS,
-                                                     MXS_SESSION* pSession,
-                                                     mxs::Component* pUpstream)
+mxs::BackendConnection*
+RoutingWorker::pool_get_connection(SERVER* pSrv, MXS_SESSION* pSes, mxs::Component* pUpstream)
 {
-    Server* pServer = static_cast<Server*>(pS);
+    auto pServer = static_cast<Server*>(pSrv);
     mxb_assert(pServer);
+    auto pSession = static_cast<Session*>(pSes);
 
     BackendDCB* pDcb = nullptr;
     ServerConnPool& conn_pool = m_conn_pools_by_server[pServer];
@@ -574,9 +574,9 @@ BackendDCB* RoutingWorker::get_backend_dcb_from_pool(SERVER* pS,
         {
             // If proxy protocol is in use, we can only use DCBs that were
             // opened by a client from the same host.
-            if (!pServer->proxy_protocol() || it->dcb()->client_remote() == pSession->client_remote())
+            if (!pServer->proxy_protocol() || it->conn()->dcb()->client_remote() == pSession->client_remote())
             {
-                pDcb = it->release_dcb();
+                pDcb = it->release_conn()->dcb();
                 conn_pool.erase(it);
                 mxb::atomic::add(&pServer->pool_stats().n_persistent, -1);
                 break;
@@ -590,10 +590,9 @@ BackendDCB* RoutingWorker::get_backend_dcb_from_pool(SERVER* pS,
             break;
         }
 
-        // Put back the origininal handler.
+        // Put back the original handler.
         pDcb->set_handler(pDcb->protocol());
-        auto ses = static_cast<Session*>(pSession);
-        ses->link_backend_connection(pDcb->protocol());
+        pSession->link_backend_connection(pDcb->protocol());
 
         if (pDcb->protocol()->reuse_connection(pDcb, pUpstream))
         {
@@ -624,20 +623,21 @@ BackendDCB* RoutingWorker::get_backend_dcb_from_pool(SERVER* pS,
         mxb::atomic::add(&pServer->pool_stats().n_new_conn, 1, mxb::atomic::RELAXED);
     }
 
-    return pDcb;
+    return pDcb ? pDcb->protocol() : nullptr;
 }
 
 bool RoutingWorker::move_to_conn_pool(BackendDCB* pDcb)
 {
     bool moved_to_pool = false;
     auto* pServer = static_cast<Server*>(pDcb->server());
-    auto* session = pDcb->session();
+    auto* pSession = pDcb->session();
     long persistpoolmax = pServer->persistpoolmax();
     long pool_conns = m_conn_pools_by_server[pServer].size();
+    auto* pConn = pDcb->protocol();
 
     if (pDcb->state() == DCB::State::POLLING
-        && !pDcb->hanged_up() && pDcb->protocol()->established()
-        && session && session_valid_for_pool(session)
+        && !pDcb->hanged_up() && pConn->established()
+        && pSession && session_valid_for_pool(pSession)
         && pServer->is_running()
         && persistpoolmax > 0 && pool_conns < persistpoolmax)
     {
@@ -649,7 +649,7 @@ bool RoutingWorker::move_to_conn_pool(BackendDCB* pDcb)
             pDcb->set_handler(&m_pool_handler);
 
             ServerConnPool& conn_pool = m_conn_pools_by_server[pServer];
-            conn_pool.emplace_back(pDcb);
+            conn_pool.emplace_back(pConn);
 
             // Remove the dcb from the regular book-keeping.
             auto it = m_dcbs.find(pDcb);
@@ -682,8 +682,8 @@ void RoutingWorker::pool_close_all_conns_by_server(SERVER* pSrv)
         // Close all entries in the server-specific pool, then adjust pool stats.
         for (auto& pool_entry : server_pool)
         {
-            BackendDCB* dcb = pool_entry.release_dcb();
-            close_pooled_dcb(dcb);
+            BackendDCB* pDcb = pool_entry.release_conn()->dcb();
+            close_pooled_dcb(pDcb);
         }
         mxb::atomic::add(&pSrv->pool_stats().n_persistent, -server_pool.size());
         server_pool.clear();
@@ -697,7 +697,7 @@ int RoutingWorker::pool_close_expired_conns_by_server(SERVER* pSrv)
     auto persistpoolmax = pServer->persistpoolmax();
 
     time_t now = time(nullptr);
-    vector<BackendDCB*> expired_conns;
+    vector<mxs::BackendConnection*> expired_conns;
 
     ServerConnPool& conn_pool = m_conn_pools_by_server[pServer];
     // First go through the list and gather the expired connections.
@@ -707,7 +707,7 @@ int RoutingWorker::pool_close_expired_conns_by_server(SERVER* pSrv)
         ConnPoolEntry& entry = *it;
         if (entry.hanged_up() || (now - entry.created() > persistmaxtime))
         {
-            expired_conns.push_back(entry.release_dcb());
+            expired_conns.push_back(entry.release_conn());
             it = conn_pool.erase(it);
         }
         else
@@ -719,9 +719,9 @@ int RoutingWorker::pool_close_expired_conns_by_server(SERVER* pSrv)
     mxb::atomic::add(&pServer->pool_stats().n_persistent, -expired_conns.size());
     // TODO: Add persistmax-calculation once it's clear where it should be calculated and how.
 
-    for (BackendDCB* pDcb : expired_conns)
+    for (auto* pConn : expired_conns)
     {
-        close_pooled_dcb(pDcb);
+        close_pooled_dcb(pConn->dcb());
     }
     // TODO: Add check for too large pool once the pool size calculation is clear. Pool can be overused
     // if user runtime reduces max pool size.
@@ -735,12 +735,12 @@ void RoutingWorker::evict_dcb(BackendDCB* pDcb)
     // TODO: An issue that we need to do a linear search?
     auto i = std::find_if(conn_pool.begin(), conn_pool.end(),
                           [pDcb](const ConnPoolEntry& entry) {
-                              return entry.dcb() == pDcb;
+                              return entry.conn() == pDcb->protocol();
                           });
 
     mxb_assert(i != conn_pool.end());
 
-    i->release_dcb();
+    i->release_conn();
     conn_pool.erase(i);
     close_pooled_dcb(pDcb);
 }

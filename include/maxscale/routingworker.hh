@@ -416,9 +416,10 @@ public:
         return m_dcbs;
     }
 
-    BackendDCB* get_backend_dcb(SERVER* pServer, MXS_SESSION* pSession, mxs::Component* upstream);
+    mxs::BackendConnection*
+    get_backend_connection(SERVER* pSrv, MXS_SESSION* pSes, mxs::Component* pUpstream);
 
-    BackendDCB* get_backend_dcb_from_pool(SERVER* pServer, MXS_SESSION* pSession, mxs::Component* upstream);
+    mxs::BackendConnection* pool_get_connection(SERVER* pSrv, MXS_SESSION* pSes, mxs::Component* pUpstream);
 
     void pool_close_all_conns();
     void pool_close_all_conns_by_server(SERVER* pSrv);
@@ -515,7 +516,7 @@ private:
     class ConnPoolEntry
     {
     public:
-        ConnPoolEntry(BackendDCB* pDcb);
+        ConnPoolEntry(mxs::BackendConnection* pConn);
         ~ConnPoolEntry();
 
         ConnPoolEntry(const ConnPoolEntry&) = delete;
@@ -523,7 +524,7 @@ private:
 
         bool hanged_up() const
         {
-            return m_pDcb->hanged_up();
+            return m_pConn->dcb()->hanged_up();
         }
 
         time_t created() const
@@ -531,21 +532,21 @@ private:
             return m_created;
         }
 
-        BackendDCB* dcb() const
+        mxs::BackendConnection* conn() const
         {
-            return m_pDcb;
+            return m_pConn;
         }
 
-        BackendDCB* release_dcb()
+        mxs::BackendConnection* release_conn()
         {
-            BackendDCB* pDcb = m_pDcb;
-            m_pDcb = nullptr;
-            return pDcb;
+            mxs::BackendConnection* pConn = m_pConn;
+            m_pConn = nullptr;
+            return pConn;
         }
 
     private:
-        time_t      m_created;  /*< Time when entry was created. */
-        BackendDCB* m_pDcb;
+        time_t                  m_created;  /*< Time when entry was created. */
+        mxs::BackendConnection* m_pConn {nullptr};
     };
 
     class DCBHandler : public DCB::Handler

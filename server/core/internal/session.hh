@@ -168,8 +168,8 @@ public:
      */
     void unlink_backend_connection(mxs::BackendConnection* conn);
 
-    BackendDCB* create_backend_connection(Server* server, BackendDCB::Manager* manager,
-                                          mxs::Component* upstream);
+    mxs::BackendConnection*
+    create_backend_connection(Server* server, BackendDCB::Manager* manager, mxs::Component* upstream);
 
     const BackendConnectionVector& backend_connections() const
     {
