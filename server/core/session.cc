@@ -151,7 +151,6 @@ void Session::link_backend_connection(mxs::BackendConnection* conn)
     mxb_assert(dcb->role() == DCB::Role::BACKEND);
 
     mxb::atomic::add(&refcount, 1);
-    dcb->reset(this);
     add_backend_conn(conn);
 }
 
@@ -1369,6 +1368,7 @@ Session::create_backend_connection(Server* server, BackendDCB::Manager* manager,
             auto pConn = conn.get();
             link_backend_connection(pConn);
             dcb->set_connection(std::move(conn));
+            dcb->reset(this);
 
             if (dcb->enable_events())
             {

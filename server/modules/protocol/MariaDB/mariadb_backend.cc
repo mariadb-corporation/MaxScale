@@ -172,42 +172,30 @@ void MariaDBBackendConnection::finish_connection()
     m_dcb->writeq_append(mysql_create_com_quit(nullptr, 0));
 }
 
-bool MariaDBBackendConnection::reuse_connection(BackendDCB* dcb, mxs::Component* upstream)
+bool MariaDBBackendConnection::reuse(MXS_SESSION* session, mxs::Component* upstream)
 {
     bool rv = false;
-    mxb_assert(dcb->session() && !dcb->readq() && !dcb->writeq());
+    mxb_assert(!m_dcb->session() && !m_dcb->readq() && !m_dcb->writeq());
 
-    if (dcb->state() != DCB::State::POLLING || m_state != State::ROUTING || !m_delayed_packets.empty())
+    if (m_dcb->state() != DCB::State::POLLING || m_state != State::POOLED || !m_delayed_packets.empty())
     {
-        MXS_INFO("DCB and protocol state do not qualify for pooling: %s, %s, %s",
-                 mxs::to_string(dcb->state()), to_string(m_state).c_str(),
+        MXS_INFO("DCB and protocol state do not qualify for reuse: %s, %s, %s",
+                 mxs::to_string(m_dcb->state()), to_string(m_state).c_str(),
                  m_delayed_packets.empty() ? "no packets" : "stored packets");
     }
     else
     {
-        MXS_SESSION* orig_session = m_session;
-        mxs::Component* orig_upstream = m_upstream;
-
-        assign_session(dcb->session(), upstream);
-        m_dcb = dcb;
+        assign_session(session, upstream);
+        m_dcb->reset(session);
 
         /**
-         * This is a DCB that was just taken out of the persistent connection pool.
-         * We need to sent a COM_CHANGE_USER query to the backend to reset the
-         * session state.
-         */
-
-        if (dcb->writeq_append(create_change_user_packet()))
+         * This is a connection that was just taken out of the persistent connection pool.
+         * Send a COM_CHANGE_USER query to the backend to reset the session state. */
+        if (m_dcb->writeq_append(create_change_user_packet()))
         {
             MXS_INFO("Reusing connection, sending COM_CHANGE_USER");
             m_state = State::RESET_CONNECTION;
             rv = true;
-        }
-
-        if (!rv)
-        {
-            // Restore situation
-            assign_session(orig_session, orig_upstream);
         }
     }
 
@@ -367,6 +355,12 @@ void MariaDBBackendConnection::ready_for_reading(DCB* event_dcb)
         case State::ROUTING:
             normal_read();
             // Normal read always consumes all data.
+            state_machine_continue = false;
+            break;
+
+        case State::POOLED:
+            mxb_assert(!true);      // Should not currently happen.
+            m_state = State::FAILED;
             state_machine_continue = false;
             break;
 
@@ -2248,6 +2242,10 @@ std::string MariaDBBackendConnection::to_string(State auth_state)
     case State::PINGING:
         rval = "Pinging server";
         break;
+
+    case State::POOLED:
+        rval = "In pool";
+        break;
     }
     return rval;
 }
@@ -2546,4 +2544,13 @@ MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::send_connect
         break;
     }
     return rval;
+}
+
+void MariaDBBackendConnection::set_to_pooled()
+{
+    m_session = nullptr;
+    m_upstream = nullptr;
+    m_state = State::POOLED;
+    // TODO: Likely other fields need to be modified as well, either here or in 'reuse_connection'.
+    // Clean it up once situation clarifies.
 }

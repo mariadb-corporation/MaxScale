@@ -35,8 +35,9 @@ public:
     int32_t write(GWBUF* buffer) override;
 
     void    finish_connection() override;
-    bool    reuse_connection(BackendDCB* dcb, mxs::Component* upstream) override;
+    bool    reuse(MXS_SESSION* session, mxs::Component* upstream) override;
     bool    established() override;
+    void    set_to_pooled() override;
     void    ping() override;
     bool    can_close() const override;
     bool    is_idle() const override;
@@ -61,6 +62,7 @@ private:
         CHANGING_USER,      /**< Processing a COM_CHANGE_USER sent by the user */
         RESET_CONNECTION,   /**< Reset the connection with a COM_CHANGE_USER */
         PINGING,            /**< Pinging backend server */
+        POOLED,             /**< The connection is in pool and should not route replies */
         FAILED,             /**< Handshake/authentication failed */
     };
 

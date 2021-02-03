@@ -647,7 +647,7 @@ RoutingWorker::pool_get_connection(SERVER* pSrv, MXS_SESSION* pSes, mxs::Compone
             pDcb->set_handler(candidate);
             pSession->link_backend_connection(candidate);
 
-            if (candidate->reuse_connection(pDcb, pUpstream))
+            if (candidate->reuse(pSes, pUpstream))
             {
                 mxb::atomic::add(&pServer->pool_stats().n_from_pool, 1, mxb::atomic::RELAXED);
                 found_conn = candidate;
@@ -655,6 +655,7 @@ RoutingWorker::pool_get_connection(SERVER* pSrv, MXS_SESSION* pSes, mxs::Compone
             else
             {
                 // Reusing the current candidate failed. Close connection, then try with another candidate.
+                pSession->unlink_backend_connection(candidate);
                 MXS_WARNING("Failed to reuse a persistent connection.");
                 if (pDcb->state() == DCB::State::POLLING)
                 {
@@ -719,6 +720,7 @@ bool RoutingWorker::move_to_conn_pool(BackendDCB* pDcb)
 
             if (moved_to_pool)
             {
+                pConn->set_to_pooled();
                 pDcb->clear();
                 // Change the handler to one that will close the DCB in case there
                 // is any activity on it.
