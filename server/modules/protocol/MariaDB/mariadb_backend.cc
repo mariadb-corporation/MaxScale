@@ -445,6 +445,7 @@ void MariaDBBackendConnection::do_handle_error(DCB* dcb, const std::string& errm
     if (!m_upstream->handleError(type, errbuf, nullptr, m_reply))
     {
         mxb_assert(m_session->state() == MXS_SESSION::State::STOPPING);
+        m_state = State::FAILED;
     }
 
     gwbuf_free(errbuf);
