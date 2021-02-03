@@ -592,6 +592,21 @@ mxs::BackendConnection* RoutingWorker::ConnectionPool::get_connection(const std:
     return rval;
 }
 
+void RoutingWorker::ConnectionPool::set_capacity(int global_capacity)
+{
+    if (m_global_capacity != global_capacity)
+    {
+        // Capacity has changed, recalculate local capacity.
+        long n = this_unit.nWorkers;
+        long base_amount = global_capacity / n;
+        long leftover = global_capacity - n * base_amount;
+        auto local_capacity = base_amount + ((m_owner->m_id < leftover) ? 1 : 0);
+
+        m_global_capacity = global_capacity;
+        m_capacity = local_capacity;
+    }
+}
+
 mxs::BackendConnection*
 RoutingWorker::pool_get_connection(SERVER* pSrv, MXS_SESSION* pSes, mxs::Component* pUpstream)
 {
@@ -670,10 +685,9 @@ bool RoutingWorker::move_to_conn_pool(BackendDCB* pDcb)
 {
     bool moved_to_pool = false;
     auto* pServer = static_cast<Server*>(pDcb->server());
-    long pool_cap = pServer->persistpoolmax();
-
+    long global_pool_cap = pServer->persistpoolmax();
     // For pooling to be possible, several conditions must be met. Check the most obvious ones first.
-    if (pool_cap > 0)
+    if (global_pool_cap > 0)
     {
         auto* pSession = pDcb->session();
         auto* pConn = pDcb->protocol();
@@ -682,34 +696,38 @@ bool RoutingWorker::move_to_conn_pool(BackendDCB* pDcb)
             && pSession && pSession->qualifies_for_pooling
             && pServer->is_running())
         {
-            // All ok. Try to reserve a spot from the pool. TODO: use thread-specific limits.
-            if (mxb::atomic::add_limited(&pServer->pool_stats().n_persistent, 1, (int)pool_cap))
+            // All ok. Try to add the connection to pool.
+            auto pool_iter = m_pool_group.find(pServer);
+            if (pool_iter != m_pool_group.end())
+            {
+                auto& pool = pool_iter->second;
+                if (pool.has_space())
+                {
+                    pool.add_connection(pConn);
+                    moved_to_pool = true;
+                }
+            }
+            else
+            {
+                // First pooled connection for the server.
+                ConnectionPool new_pool(this, pServer, global_pool_cap);
+                new_pool.add_connection(pConn);
+                auto kv = std::make_pair(pServer, std::move(new_pool));
+                m_pool_group.insert(std::move(kv));
+                moved_to_pool = true;
+            }
+
+            if (moved_to_pool)
             {
                 pDcb->clear();
                 // Change the handler to one that will close the DCB in case there
                 // is any activity on it.
                 pDcb->set_handler(&m_pool_handler);
 
-                auto pool_iter = m_pool_group.find(pServer);
-                if (pool_iter != m_pool_group.end())
-                {
-                    pool_iter->second.add_connection(pConn);
-                }
-                else
-                {
-                    // First pooled connection for the server.
-                    ConnectionPool new_pool(this, pServer);
-                    new_pool.add_connection(pConn);
-                    auto kv = std::make_pair(pServer, std::move(new_pool));
-                    m_pool_group.insert(std::move(kv));
-                }
-
                 // Remove the dcb from the regular book-keeping.
                 auto it = m_dcbs.find(pDcb);
                 mxb_assert(it != m_dcbs.end());
                 m_dcbs.erase(it);
-
-                moved_to_pool = true;
             }
         }
     }
@@ -760,6 +778,24 @@ void RoutingWorker::ConnectionPool::close_expired()
         }
     }
 
+    // Check that pool is not over capacity. This can only happen if user reduces capacity via a runtime
+    // config modification.
+    auto global_cap = pServer->persistpoolmax();
+    set_capacity(global_cap);
+    int over_cap_conns = m_contents.size() - m_capacity;
+    if (over_cap_conns > 0)
+    {
+        // Just take the first extra connections found.
+        int conns_removed = 0;
+        auto remover_it = m_contents.begin();
+        while (conns_removed < over_cap_conns)
+        {
+            expired_conns.push_back(remover_it->second.release_conn());
+            remover_it = m_contents.erase(remover_it);
+            conns_removed++;
+        }
+    }
+
     mxb::atomic::add(&pServer->pool_stats().n_persistent, -expired_conns.size());
     // TODO: Add persistmax-calculation once it's clear where it should be calculated and how.
 
@@ -767,8 +803,6 @@ void RoutingWorker::ConnectionPool::close_expired()
     {
         m_owner->close_pooled_dcb(pConn->dcb());
     }
-    // TODO: Add check for too large pool once the pool size calculation is clear. Pool can be overused
-    // if user runtime reduces max pool size.
 }
 
 void RoutingWorker::ConnectionPool::remove_and_close(mxs::BackendConnection* conn)
@@ -802,17 +836,26 @@ void RoutingWorker::ConnectionPool::add_connection(mxs::BackendConnection* conn)
     m_contents.emplace(conn, ConnPoolEntry(conn));
 }
 
-RoutingWorker::ConnectionPool::ConnectionPool(mxs::RoutingWorker* owner, SERVER* target_server)
+RoutingWorker::ConnectionPool::ConnectionPool(mxs::RoutingWorker* owner, SERVER* target_server,
+                                              int global_capacity)
     : m_owner(owner)
     , m_target_server(target_server)
 {
+    set_capacity(global_capacity);
 }
 
 RoutingWorker::ConnectionPool::ConnectionPool(RoutingWorker::ConnectionPool&& rhs)
     : m_contents(std::move(rhs.m_contents))
     , m_owner(rhs.m_owner)
     , m_target_server(rhs.m_target_server)
+    , m_global_capacity(rhs.m_global_capacity)
+    , m_capacity(rhs.m_capacity)
 {
+}
+
+bool RoutingWorker::ConnectionPool::has_space() const
+{
+    return m_contents.size() - m_capacity;
 }
 
 void RoutingWorker::evict_dcb(BackendDCB* pDcb)

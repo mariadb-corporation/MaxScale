@@ -571,23 +571,29 @@ private:
     class ConnectionPool
     {
     public:
-        ConnectionPool(mxs::RoutingWorker* owner, SERVER* target_server);
+        ConnectionPool(mxs::RoutingWorker* owner, SERVER* target_server, int global_capacity);
         ConnectionPool(ConnectionPool&& rhs);
 
         void remove_and_close(mxs::BackendConnection* conn);
         void close_expired();
         void close_all();
         bool empty() const;
+        bool has_space() const;
 
         mxs::BackendConnection* get_connection();
         mxs::BackendConnection* get_connection(const std::string& client_remote);
         void                    add_connection(mxs::BackendConnection* conn);
 
     private:
+        void set_capacity(int global_capacity);
+
         std::map<mxs::BackendConnection*, ConnPoolEntry> m_contents;
 
         mxs::RoutingWorker* m_owner {nullptr};
         SERVER*             m_target_server {nullptr};
+
+        int m_global_capacity {0}; // Total pool capacity for the target server across all threads.
+        int m_capacity {0};        // Capacity for this pool.
     };
     using ConnPoolGroup = std::map<SERVER*, ConnectionPool>;
 
