@@ -243,6 +243,11 @@ private:
         return m_qc.current_route_info();
     }
 
+    MYSQL_session* protocol_data() const
+    {
+        return static_cast<MYSQL_session*>(m_pSession->protocol_data());
+    }
+
     inline bool can_retry_query() const
     {
         /** Individual queries can only be retried if we are not inside
@@ -264,8 +269,8 @@ private:
 
     inline bool can_recover_servers() const
     {
-        const auto* session_data = static_cast<MYSQL_session*>(m_pSession->protocol_data());
-        return !m_config.disable_sescmd_history || session_data->history.empty();
+        return !m_config.disable_sescmd_history
+               || protocol_data()->history.empty();
     }
 
     inline bool have_open_connections() const

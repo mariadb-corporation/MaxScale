@@ -544,8 +544,7 @@ bool RWSplitSession::route_session_write(GWBUF* querybuf, uint8_t command, uint3
                 m_qc.ps_erase(buffer.get());
             }
 
-            MYSQL_session* data = static_cast<MYSQL_session*>(m_pSession->protocol_data());
-            m_router->update_max_sescmd_sz(data->history.size());
+            m_router->update_max_sescmd_sz(protocol_data()->history.size());
 
             m_current_query = std::move(buffer);
 

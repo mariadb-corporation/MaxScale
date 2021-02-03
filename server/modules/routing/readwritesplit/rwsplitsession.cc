@@ -87,8 +87,7 @@ RWSplitSession::~RWSplitSession()
                                                  backend->num_selects());
     }
 
-    MYSQL_session* data = static_cast<MYSQL_session*>(m_pSession->protocol_data());
-    m_router->local_avg_sescmd_sz().add(data->history.size());
+    m_router->local_avg_sescmd_sz().add(protocol_data()->history.size());
 }
 
 int32_t RWSplitSession::routeQuery(GWBUF* querybuf)
@@ -775,7 +774,7 @@ bool RWSplitSession::start_trx_replay()
                  * a transaction or autocommit should be disabled.
                  */
                 mxb_assert_message(qc_get_trx_type_mask(m_interrupted_query.get()) & QUERY_TYPE_BEGIN_TRX
-                                   || !static_cast<MYSQL_session*>(m_pSession->protocol_data())->is_autocommit,
+                                   || !protocol_data()->is_autocommit,
                                    "The current query should start a transaction "
                                    "or autocommit should be disabled");
 
@@ -786,8 +785,7 @@ bool RWSplitSession::start_trx_replay()
         }
         else
         {
-            mxb_assert_message(!static_cast<MYSQL_session*>(m_pSession->protocol_data())->is_autocommit
-                               || trx_is_ending(),
+            mxb_assert_message(!protocol_data()->is_autocommit || trx_is_ending(),
                                "Session should have autocommit disabled or transaction just ended if the "
                                "transaction had no statements and no query was interrupted");
         }
