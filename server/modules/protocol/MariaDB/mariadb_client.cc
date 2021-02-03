@@ -1136,11 +1136,28 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_normal
         {
             // No command bytes, just continue routing large packet.
             bool is_large = large_query_continues(buffer);
-            routed = route_statement(move(buffer));
+            routed = m_downstream->routeQuery(buffer.release()) != 0;
+
             if (!is_large)
             {
                 // Large packet routing completed.
                 m_routing_state = RoutingState::PACKET_START;
+            }
+        }
+        break;
+
+    case RoutingState::LARGE_HISTORY_PACKET:
+        {
+            // A continuation of a recoded command, append it to the current command and route it forward
+            m_pending_cmd.append(gwbuf_clone(buffer.get()));
+            bool is_large = large_query_continues(buffer);
+            routed = m_downstream->routeQuery(buffer.release()) != 0;
+
+            if (!is_large)
+            {
+                // Large packet routing completed.
+                m_routing_state = RoutingState::RECORD_HISTORY;
+                mxb_assert(m_pending_cmd.length() > MYSQL_PACKET_LENGTH_MAX + MYSQL_HEADER_LEN);
             }
         }
         break;
@@ -2384,8 +2401,17 @@ bool MariaDBClientConnection::process_normal_packet(mxs::Buffer&& buffer)
     if (success && is_large)
     {
         // This will fail on non-routed packets. Such packets would be malformed anyway.
-        m_routing_state = RoutingState::LARGE_PACKET;
+        // TODO: Add a DISCARD_LARGE_PACKET state for discarding the tail end of anything we don't support
+        if (m_routing_state == RoutingState::RECORD_HISTORY)
+        {
+            m_routing_state = RoutingState::LARGE_HISTORY_PACKET;
+        }
+        else
+        {
+            m_routing_state = RoutingState::LARGE_PACKET;
+        }
     }
+
     return success;
 }
 

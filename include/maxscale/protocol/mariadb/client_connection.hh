@@ -252,12 +252,13 @@ private:
 
     enum class RoutingState
     {
-        PACKET_START,   /**< Expecting the client to send a normal packet */
-        LARGE_PACKET,   /**< Expecting the client to continue streaming a large packet */
-        LOAD_DATA,      /**< Expecting the client to continue streaming CSV-data */
-        CHANGING_DB,    /**< Client is changing database, waiting server response */
-        CHANGING_ROLE,  /**< Client is changing role, waiting server response */
-        RECORD_HISTORY, /**< Recording a command and the result it generated */
+        PACKET_START,           /**< Expecting the client to send a normal packet */
+        LARGE_PACKET,           /**< Expecting the client to continue streaming a large packet */
+        LARGE_HISTORY_PACKET,   /**< The client will continue writing a large command that is recorded */
+        LOAD_DATA,              /**< Expecting the client to continue streaming CSV-data */
+        CHANGING_DB,            /**< Client is changing database, waiting server response */
+        CHANGING_ROLE,          /**< Client is changing role, waiting server response */
+        RECORD_HISTORY,         /**< Recording a command and the result it generated */
     };
 
     /** Temporary data required during COM_CHANGE_USER. */
