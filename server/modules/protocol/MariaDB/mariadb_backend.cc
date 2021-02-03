@@ -1824,9 +1824,12 @@ void MariaDBBackendConnection::process_one_packet(Iter it, Iter end, uint32_t le
         break;
 
     case ReplyState::PREPARE:
-        if (--m_ps_packets == 0)
+        if (cmd == MYSQL_REPLY_EOF)
         {
-            set_reply_state(ReplyState::DONE);
+            if (--m_ps_packets == 0)
+            {
+                set_reply_state(ReplyState::DONE);
+            }
         }
         break;
     }
@@ -1973,16 +1976,20 @@ void MariaDBBackendConnection::process_ps_response(Iter it, Iter end)
 
     m_ps_packets = 0;
 
+    // NOTE: The binary protocol is broken as it allows the column and parameter counts to overflow. This
+    // means we can't rely on them if there ever is a query that has a column or parameter count that exceeds
+    // the capacity of the 16-bit unsigned integer use to store it.
+
     if (columns)
     {
-        // Column definition packets plus one for the EOF
-        m_ps_packets += columns + 1;
+        // Server will send the column definition packets followed by an EOF packet
+        ++m_ps_packets;
     }
 
     if (params)
     {
-        // Parameter definition packets plus one for the EOF
-        m_ps_packets += params + 1;
+        // Server will send the parameter definition packets followed by an EOF packet
+        ++m_ps_packets;
     }
 
     set_reply_state(m_ps_packets == 0 ? ReplyState::DONE : ReplyState::PREPARE);
