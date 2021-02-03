@@ -269,7 +269,7 @@ private:
 
     inline bool can_recover_servers() const
     {
-        return !m_config.disable_sescmd_history
+        return !m_pSession->service->config()->disable_sescmd_history
                || protocol_data()->history.empty();
     }
 

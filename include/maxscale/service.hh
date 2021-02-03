@@ -109,6 +109,10 @@ public:
         bool strip_db_esc {true};
 
         int64_t rank;   /*< The ranking of this service */
+
+        bool    prune_sescmd_history {false};
+        bool    disable_sescmd_history {false};
+        int64_t max_sescmd_history {50};
     };
 
     State  state {State::ALLOC};        /**< The service state */

@@ -1059,6 +1059,11 @@ void MariaDBClientConnection::finish_recording_history(const GWBUF* buffer, cons
                  mxs::extract_sql(m_pending_cmd).c_str(), reply.is_ok() ? "OK" : "ERR");
 
         m_session_data->history.emplace_back(m_pending_cmd.release(), reply.is_ok());
+
+        if (m_session_data->history.size() > (size_t)m_session->service->config()->max_sescmd_history)
+        {
+            m_session_data->history.pop_front();
+        }
     }
 }
 

@@ -156,18 +156,6 @@ static cfg::ParamBool s_retry_failed_reads(
     &s_spec, "retry_failed_reads", "Automatically retry failed reads outside of transactions",
     true, cfg::Param::AT_RUNTIME);
 
-static cfg::ParamBool s_prune_sescmd_history(
-    &s_spec, "prune_sescmd_history", "Prune old session command history if the limit is exceeded",
-    false, cfg::Param::AT_RUNTIME);
-
-static cfg::ParamBool s_disable_sescmd_history(
-    &s_spec, "disable_sescmd_history", "Disable session command history",
-    false, cfg::Param::AT_RUNTIME);
-
-static cfg::ParamCount s_max_sescmd_history(
-    &s_spec, "max_sescmd_history", "Session command history size",
-    50, cfg::Param::AT_RUNTIME);
-
 static cfg::ParamBool s_strict_multi_stmt(
     &s_spec, "strict_multi_stmt", "Lock connection to master after multi-statement query",
     false, cfg::Param::AT_RUNTIME);
@@ -232,7 +220,7 @@ using std::chrono::seconds;
 
 struct RWSConfig : public mxs::config::Configuration
 {
-    RWSConfig(const char* name);
+    RWSConfig(SERVICE* service);
 
     struct Values
     {
@@ -244,9 +232,6 @@ struct RWSConfig : public mxs::config::Configuration
         mxs_target_t use_sql_variables_in;      /**< Whether to send user variables to master or all nodes */
         failure_mode master_failure_mode;       /**< Master server failure handling mode */
         seconds      max_slave_replication_lag; /**< Maximum replication lag */
-        int64_t      max_sescmd_history;        /**< Maximum amount of session commands to store */
-        bool         prune_sescmd_history;      /**< Prune session command history */
-        bool         disable_sescmd_history;    /**< Disable session command history */
         bool         master_accept_reads;       /**< Use master for reads */
         bool         strict_multi_stmt;         /**< Force non-multistatement queries to be routed to the
                                                  * master after a multistatement query. */
@@ -278,6 +263,7 @@ struct RWSConfig : public mxs::config::Configuration
 private:
     Values                    m_v;  // Master copy of the values
     mxs::WorkerGlobal<Values> m_values;
+    SERVICE*                  m_service;
 
     bool post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params) override;
 

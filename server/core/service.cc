@@ -234,6 +234,9 @@ Service::Config::Config(mxs::ConfigParameters* params)
     , connection_keepalive(params->get_duration<std::chrono::seconds>(CN_CONNECTION_KEEPALIVE).count())
     , strip_db_esc(params->get_bool(CN_STRIP_DB_ESC))
     , rank(params->get_enum(CN_RANK, rank_values))
+    , prune_sescmd_history(params->get_bool(CN_PRUNE_SESCMD_HISTORY))
+    , disable_sescmd_history(params->get_bool(CN_DISABLE_SESCMD_HISTORY))
+    , max_sescmd_history(params->get_integer(CN_MAX_SESCMD_HISTORY))
 {
 }
 
@@ -1161,7 +1164,10 @@ bool Service::is_basic_parameter(const std::string& name)
         CN_FILTERS,
         CN_RETAIN_LAST_STATEMENTS,
         CN_CONNECTION_KEEPALIVE,
-        CN_RANK
+        CN_RANK,
+        CN_DISABLE_SESCMD_HISTORY,
+        CN_MAX_SESCMD_HISTORY,
+        CN_PRUNE_SESCMD_HISTORY,
     };
 
     return names.find(name) != names.end();
@@ -1197,37 +1203,40 @@ const MXS_MODULE_PARAM* common_service_params()
 {
     static const MXS_MODULE_PARAM config_service_params[] =
     {
-        {CN_TYPE,                 MXS_MODULE_PARAM_STRING,   CN_SERVICE, MXS_MODULE_OPT_REQUIRED  },
-        {CN_ROUTER,               MXS_MODULE_PARAM_STRING,   NULL,       MXS_MODULE_OPT_REQUIRED  },
-        {CN_ROUTER_OPTIONS,       MXS_MODULE_PARAM_STRING},
-        {CN_SERVERS,              MXS_MODULE_PARAM_STRING},
-        {CN_TARGETS,              MXS_MODULE_PARAM_STRING},
-        {CN_USER,                 MXS_MODULE_PARAM_STRING,   NULL,       MXS_MODULE_OPT_REQUIRED  },
-        {CN_PASSWORD,             MXS_MODULE_PARAM_PASSWORD, NULL,       MXS_MODULE_OPT_REQUIRED  },
-        {CN_ENABLE_ROOT_USER,     MXS_MODULE_PARAM_BOOL,     "false"},
-        {CN_MAX_CONNECTIONS,      MXS_MODULE_PARAM_COUNT,    "0"},
-        {CN_CONNECTION_TIMEOUT,   MXS_MODULE_PARAM_DURATION, "0",        MXS_MODULE_OPT_DURATION_S},
-        {CN_NET_WRITE_TIMEOUT,    MXS_MODULE_PARAM_DURATION, "0",        MXS_MODULE_OPT_DURATION_S},
-        {CN_AUTH_ALL_SERVERS,     MXS_MODULE_PARAM_BOOL,     "false"},
-        {CN_STRIP_DB_ESC,         MXS_MODULE_PARAM_BOOL,     "true"},
+        {CN_TYPE,                   MXS_MODULE_PARAM_STRING,   CN_SERVICE, MXS_MODULE_OPT_REQUIRED  },
+        {CN_ROUTER,                 MXS_MODULE_PARAM_STRING,   NULL,       MXS_MODULE_OPT_REQUIRED  },
+        {CN_ROUTER_OPTIONS,         MXS_MODULE_PARAM_STRING},
+        {CN_SERVERS,                MXS_MODULE_PARAM_STRING},
+        {CN_TARGETS,                MXS_MODULE_PARAM_STRING},
+        {CN_USER,                   MXS_MODULE_PARAM_STRING,   NULL,       MXS_MODULE_OPT_REQUIRED  },
+        {CN_PASSWORD,               MXS_MODULE_PARAM_PASSWORD, NULL,       MXS_MODULE_OPT_REQUIRED  },
+        {CN_ENABLE_ROOT_USER,       MXS_MODULE_PARAM_BOOL,     "false"},
+        {CN_MAX_CONNECTIONS,        MXS_MODULE_PARAM_COUNT,    "0"},
+        {CN_CONNECTION_TIMEOUT,     MXS_MODULE_PARAM_DURATION, "0",        MXS_MODULE_OPT_DURATION_S},
+        {CN_NET_WRITE_TIMEOUT,      MXS_MODULE_PARAM_DURATION, "0",        MXS_MODULE_OPT_DURATION_S},
+        {CN_AUTH_ALL_SERVERS,       MXS_MODULE_PARAM_BOOL,     "false"},
+        {CN_STRIP_DB_ESC,           MXS_MODULE_PARAM_BOOL,     "true"},
         {
             CN_LOCALHOST_MATCH_WILDCARD_HOST, MXS_MODULE_PARAM_BOOL, "true", MXS_MODULE_OPT_DEPRECATED
         },
-        {CN_VERSION_STRING,       MXS_MODULE_PARAM_STRING},
-        {CN_FILTERS,              MXS_MODULE_PARAM_STRING},
-        {CN_LOG_AUTH_WARNINGS,    MXS_MODULE_PARAM_BOOL,     "true"},
+        {CN_VERSION_STRING,         MXS_MODULE_PARAM_STRING},
+        {CN_FILTERS,                MXS_MODULE_PARAM_STRING},
+        {CN_LOG_AUTH_WARNINGS,      MXS_MODULE_PARAM_BOOL,     "true"},
         {
             CN_SESSION_TRACK_TRX_STATE, MXS_MODULE_PARAM_BOOL, "false"
         },
         {
             CN_RETAIN_LAST_STATEMENTS, MXS_MODULE_PARAM_INT, "-1"
         },
-        {CN_SESSION_TRACE,        MXS_MODULE_PARAM_BOOL,     "false"},
-        {CN_CLUSTER,              MXS_MODULE_PARAM_STRING},
+        {CN_SESSION_TRACE,          MXS_MODULE_PARAM_BOOL,     "false"},
+        {CN_CLUSTER,                MXS_MODULE_PARAM_STRING},
         {
             CN_RANK, MXS_MODULE_PARAM_ENUM, DEFAULT_RANK, MXS_MODULE_OPT_ENUM_UNIQUE, rank_values
         },
-        {CN_CONNECTION_KEEPALIVE, MXS_MODULE_PARAM_DURATION, "300s",     MXS_MODULE_OPT_DURATION_S},
+        {CN_CONNECTION_KEEPALIVE,   MXS_MODULE_PARAM_DURATION, "300s",     MXS_MODULE_OPT_DURATION_S},
+        {CN_MAX_SESCMD_HISTORY,     MXS_MODULE_PARAM_COUNT,    "50"},
+        {CN_DISABLE_SESCMD_HISTORY, MXS_MODULE_PARAM_BOOL,     "false"},
+        {CN_PRUNE_SESCMD_HISTORY,   MXS_MODULE_PARAM_BOOL,     "true"},
         {NULL}
     };
     return config_service_params;

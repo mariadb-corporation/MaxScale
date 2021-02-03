@@ -147,10 +147,6 @@ bool RWSplitSession::handle_target_is_all(mxs::Buffer&& buffer, const RoutingPla
 
     if (route_info().large_query())
     {
-        // TODO: Append to the already stored session command instead of disabling history
-        MXS_INFO("Large session write, have to disable session command history");
-        m_config.disable_sescmd_history = true;
-
         continue_large_session_write(buffer.get(), info.type_mask());
         result = true;
     }

@@ -85,7 +85,7 @@ void RWSplit::set_warnings(json_t* json) const
 
 RWSplit::RWSplit(SERVICE* service)
     : m_service(service)
-    , m_config(service->name())
+    , m_config(service)
 {
 }
 
@@ -192,15 +192,13 @@ bool RWSplit::gtid::empty() const
     return domain == 0 && server_id == 0 && sequence == 0;
 }
 
-RWSConfig::RWSConfig(const char* name)
-    : mxs::config::Configuration(name, &s_spec)
+RWSConfig::RWSConfig(SERVICE* service)
+    : mxs::config::Configuration(service->name(), &s_spec)
+    , m_service(service)
 {
     add_native(&RWSConfig::m_v, &Values::slave_selection_criteria, &s_slave_selection_criteria);
     add_native(&RWSConfig::m_v, &Values::use_sql_variables_in, &s_use_sql_variables_in);
     add_native(&RWSConfig::m_v, &Values::master_failure_mode, &s_master_failure_mode);
-    add_native(&RWSConfig::m_v, &Values::max_sescmd_history, &s_max_sescmd_history);
-    add_native(&RWSConfig::m_v, &Values::prune_sescmd_history, &s_prune_sescmd_history);
-    add_native(&RWSConfig::m_v, &Values::disable_sescmd_history, &s_disable_sescmd_history);
     add_native(&RWSConfig::m_v, &Values::master_accept_reads, &s_master_accept_reads);
     add_native(&RWSConfig::m_v, &Values::strict_multi_stmt, &s_strict_multi_stmt);
     add_native(&RWSConfig::m_v, &Values::strict_sp_calls, &s_strict_sp_calls);
@@ -233,12 +231,6 @@ bool RWSConfig::post_configure(const std::map<std::string, mxs::ConfigParameters
         m_v.retry_failed_reads = true;
     }
 
-    /** These options cancel each other out */
-    if (m_v.disable_sescmd_history && m_v.max_sescmd_history > 0)
-    {
-        m_v.max_sescmd_history = 0;
-    }
-
     if (m_v.optimistic_trx)
     {
         // Optimistic transaction routing requires transaction replay
@@ -262,7 +254,7 @@ bool RWSConfig::post_configure(const std::map<std::string, mxs::ConfigParameters
 
     bool rval = true;
 
-    if (m_v.master_reconnection && m_v.disable_sescmd_history)
+    if (m_v.master_reconnection && m_service->config()->disable_sescmd_history)
     {
         MXS_ERROR("Both 'master_reconnection' and 'disable_sescmd_history' are enabled: "
                   "Master reconnection cannot be done without session command history.");
