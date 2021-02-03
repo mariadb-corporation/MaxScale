@@ -679,9 +679,9 @@ void MariaDBBackendConnection::normal_read()
             m_current_id = 0;
         }
 
-        if (!m_ids_to_check.empty())
+        if (!compare_responses())
         {
-            compare_responses();
+            do_handle_error(m_dcb, create_response_mismatch_error(), mxs::ErrorType::PERMANENT);
         }
     }
 }
@@ -694,7 +694,7 @@ void MariaDBBackendConnection::send_history()
     {
         for (const auto& a : client_data->history)
         {
-            mxs::Buffer buffer = a.first;
+            mxs::Buffer buffer = a;
             TrackedQuery query(buffer.get());
 
             if (m_reply.state() == ReplyState::DONE && m_track_queue.empty())
@@ -710,7 +710,7 @@ void MariaDBBackendConnection::send_history()
                      m_server.name(), mxs::extract_sql(buffer).c_str());
 
             m_dcb->writeq_append(buffer.release());
-            m_history_responses.push_back(a.second);
+            m_history_responses.push_back(a.id());
         }
     }
 }
@@ -740,7 +740,11 @@ MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::read_history
 
             if (m_reply.is_complete())
             {
-                if (m_reply.is_ok() == m_history_responses.front())
+                MYSQL_session* client_data = static_cast<MYSQL_session*>(m_dcb->session()->protocol_data());
+                auto it = client_data->history_responses.find(m_history_responses.front());
+                mxb_assert(it != client_data->history_responses.end());
+
+                if (it != client_data->history_responses.end() && m_reply.is_ok() == it->second)
                 {
                     m_history_responses.pop_front();
                 }
@@ -787,67 +791,33 @@ std::string MariaDBBackendConnection::create_response_mismatch_error()
     return ss.str();
 }
 
-void MariaDBBackendConnection::compare_responses()
+bool MariaDBBackendConnection::compare_responses()
 {
-    bool error = false;
+    bool ok = true;
     MYSQL_session* data = static_cast<MYSQL_session*>(m_session->protocol_data());
+    auto it = m_ids_to_check.begin();
 
-    for (auto it = data->history.rbegin(); it != data->history.rend(); ++it)
+    while (it != m_ids_to_check.end())
     {
-        auto kv_it = std::find_if(
-            m_ids_to_check.begin(), m_ids_to_check.end(), [&](const auto& a) {
-                return a.first == it->first.id();
-            });
+        auto response_it = data->history_responses.find(it->first);
 
-        if (kv_it != m_ids_to_check.end())
+        if (response_it != data->history_responses.end())
         {
-            if (kv_it->second != it->second)
+            if (it->second != response_it->second)
             {
-                error = true;
+                ok = false;
+                break;
             }
 
-            m_ids_to_check.erase(kv_it);
+            it = m_ids_to_check.erase(it);
         }
-    }
-
-    if (!m_ids_to_check.empty() && !data->history.empty())
-    {
-        uint32_t first = data->history.front().first.id();
-        uint32_t last = data->history.back().first.id();
-
-        auto it = std::remove_if(
-            m_ids_to_check.begin(), m_ids_to_check.end(), [&](const auto& a) {
-                return a.first > first && a.first < last;
-            });
-
-        // If the ID wasn't found and there's a smaller and a larger ID in the history, this means that a
-        // COM_STMT_CLOSE caused a COM_STMT_PREPARE to be erased.
-        //
-        // TODO: Assert that the ID was indeed a COM_STMT_PREPARE
-        if (it != m_ids_to_check.end())
+        else
         {
-            // TODO: This isn't a really good solution as it ignores possible problems. The only real
-            // solution is to keep a history of all the responses to any recoded command. This is a bit
-            // complex as we don't know how many must be kept in memory.
-
-            MXS_INFO("%s erased %lu commands from history, skipping result checks.",
-                     m_server.name(), std::distance(it, m_ids_to_check.end()));
-
-            m_ids_to_check.erase(it, m_ids_to_check.end());
-        }
-
-        // Since m_ids_to_check is ordered, we only need to check the oldest ID to know if the response has
-        // been pruned from the history.
-        if (!m_ids_to_check.empty() && m_ids_to_check.front().first < first)
-        {
-            error = true;
+            ++it;
         }
     }
 
-    if (error)
-    {
-        do_handle_error(m_dcb, create_response_mismatch_error(), mxs::ErrorType::PERMANENT);
-    }
+    return ok;
 }
 
 int MariaDBBackendConnection::read_change_user()
@@ -999,6 +969,18 @@ int32_t MariaDBBackendConnection::write(GWBUF* queue)
 
     case State::ROUTING:
         {
+            if (!compare_responses())
+            {
+                // We can't call do_handle_error here as it would cause the handleError function of the router
+                // to be called while it's still in the routeQuery function. Triggering a hangup event will
+                // close the connection and cause an eventual history replay failure to be generated. This is
+                // definitely not efficient but it's the best we can do until the backend protocol knows when
+                // it's in the pool.
+                m_dcb->trigger_hangup_event();
+                gwbuf_free(queue);
+                return 1;
+            }
+
             auto cmd = static_cast<mxs_mysql_cmd_t>(mxs_mysql_get_command(queue));
 
             MXS_DEBUG("write to dcb %p fd %d protocol state %s.",
@@ -1095,11 +1077,6 @@ int32_t MariaDBBackendConnection::write(GWBUF* queue)
 
                 /** Write to backend */
                 rc = m_dcb->writeq_append(queue);
-
-                if (!m_ids_to_check.empty())
-                {
-                    compare_responses();
-                }
             }
         }
         break;

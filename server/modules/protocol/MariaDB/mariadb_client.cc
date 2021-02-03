@@ -978,12 +978,12 @@ bool MariaDBClientConnection::route_statement(mxs::Buffer&& buffer)
             auto it = std::find_if(m_session_data->history.begin(),
                                    m_session_data->history.end(),
                                    [&](const auto& a) {
-                                       return a.first.id() == id;
+                                       return a.id() == id;
                                    });
 
             if (it != m_session_data->history.end())
             {
-                mxb_assert(it->first.id());
+                mxb_assert(it->id());
                 m_session_data->history.erase(it);
             }
         }
@@ -1058,7 +1058,8 @@ void MariaDBClientConnection::finish_recording_history(const GWBUF* buffer, cons
                  STRPACKETTYPE(m_pending_cmd.data()[4]), m_pending_cmd.id(),
                  mxs::extract_sql(m_pending_cmd).c_str(), reply.is_ok() ? "OK" : "ERR");
 
-        m_session_data->history.emplace_back(m_pending_cmd.release(), reply.is_ok());
+        m_session_data->history_responses.emplace(m_pending_cmd.id(), reply.is_ok());
+        m_session_data->history.emplace_back(m_pending_cmd.release());
 
         if (m_session_data->history.size() > (size_t)m_session->service->config()->max_sescmd_history)
         {

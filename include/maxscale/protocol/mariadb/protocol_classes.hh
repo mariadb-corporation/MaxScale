@@ -135,9 +135,11 @@ public:
     // User entry used by the session.
     mariadb::UserEntryResult user_entry;
 
-    // History of all commands that modify the session state. Contains the query itself and a boolean
-    // indicating whether it succeeded.
-    std::deque<std::pair<mxs::Buffer, bool>> history;
+    // History of all commands that modify the session state
+    std::deque<mxs::Buffer> history;
+
+    // The responses to the executed commands, contains the ID and the result
+    std::unordered_map<uint32_t, bool> history_responses;
 
     /**
      * Tells whether autocommit is ON or not. The value effectively only tells the last value
