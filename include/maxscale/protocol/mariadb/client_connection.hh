@@ -297,5 +297,6 @@ private:
     int                      m_num_responses {0};   // How many responses we are waiting for
     uint32_t                 m_next_id {1};         // The next ID we'll use for a session command
     mxs::Buffer              m_pending_cmd;         // Current session command being executed
+    size_t                   m_max_sescmd_history;  // Number of stored session commands
     mariadb::QueryClassifier m_qc;
 };

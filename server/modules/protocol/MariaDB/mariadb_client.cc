@@ -1051,17 +1051,17 @@ void MariaDBClientConnection::finish_recording_history(const GWBUF* buffer, cons
 {
     if (reply.is_complete())
     {
-        m_routing_state = RoutingState::PACKET_START;
-        m_dcb->trigger_read_event();
-
         MXS_INFO("Added %s to history with ID %u: %s (result: %s)",
                  STRPACKETTYPE(m_pending_cmd.data()[4]), m_pending_cmd.id(),
-                 mxs::extract_sql(m_pending_cmd).c_str(), reply.is_ok() ? "OK" : "ERR");
+                 mxs::extract_sql(m_pending_cmd, 200).c_str(),
+                 reply.is_ok() ? "OK" : reply.error().message().c_str());
 
+        m_routing_state = RoutingState::PACKET_START;
+        m_dcb->trigger_read_event();
         m_session_data->history_responses.emplace(m_pending_cmd.id(), reply.is_ok());
         m_session_data->history.emplace_back(m_pending_cmd.release());
 
-        if (m_session_data->history.size() > (size_t)m_session->service->config()->max_sescmd_history)
+        if (m_session_data->history.size() > m_max_sescmd_history)
         {
             m_session_data->history.pop_front();
         }
@@ -1388,6 +1388,7 @@ MariaDBClientConnection::MariaDBClientConnection(MXS_SESSION* session, mxs::Comp
     , m_session(session)
     , m_session_data(static_cast<MYSQL_session*>(session->protocol_data()))
     , m_version(service_get_version(session->service, SERVICE_VERSION_MIN))
+    , m_max_sescmd_history(m_session->service->config()->max_sescmd_history)
     , m_qc(this, session, TYPE_ALL)
 {
 }
