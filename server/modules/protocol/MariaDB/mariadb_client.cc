@@ -993,6 +993,13 @@ bool MariaDBClientConnection::route_statement(mxs::Buffer&& buffer)
             // need it.
             should_record = false;
         }
+        else if (cmd == MXS_COM_CHANGE_USER)
+        {
+            // COM_CHANGE_USER resets the whole connection. Any new connections will already be using the new
+            // credentials which means we can safely reset the history here.
+            should_record = false;
+            m_session_data->history.clear();
+        }
         else
         {
             buffer.set_id(m_next_id);
@@ -1848,6 +1855,11 @@ bool MariaDBClientConnection::start_change_user(mxs::Buffer&& buffer)
                 m_change_user.session->client_info.m_charset = parse_res.charset;
                 m_change_user.session->auth_token = parse_res.token_res.auth_token;
                 m_change_user.session->connect_attrs = parse_res.attr_res.attr_data;
+
+                // Keep track of the session command responses across COM_CHANGE_USER boundaries. This allows
+                // the backends to asynchronously execute any pending commands while the client protocol
+                // completes the COM_CHANGE_USER. We can erase the history when the COM_CHANGE_USER completes.
+                m_change_user.session->history_responses = m_session_data->history_responses;
 
                 // Point the session used by the connection to the temporary session so other authentication-
                 // related functions access it. Backend connections will still see the old session data.
