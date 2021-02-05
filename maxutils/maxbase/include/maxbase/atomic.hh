@@ -88,37 +88,5 @@ bool compare_exchange(T* ptr, T* expected, T desired, int success_model = ACQ_RE
     return __atomic_compare_exchange_n(ptr, expected, desired, true, success_model, fail_model);
 }
 
-/**
- * Add to a value if it doesn't exceed a limit
- *
- * If the value of `ptr` + `value` is less than or equal to `limit`, the value is atomically added.
- *
- * @param ptr   Pointer to value to add to
- * @param value Value to add
- * @param limit Upper limit that is not exceeded
- *
- * @return True if value was modified, false if the addition failed.
- */
-template<class T>
-bool add_limited(T* ptr, T value, T limit)
-{
-    T expected;
-    T next_value;
-
-    do
-    {
-        expected = mxb::atomic::load(ptr, mxb::atomic::ACQUIRE);
-
-        if (limit < expected + value)
-        {
-            return false;
-        }
-
-        next_value = expected + value;
-    }
-    while (!mxb::atomic::compare_exchange(ptr, &expected, next_value));
-
-    return true;
-}
 }
 }

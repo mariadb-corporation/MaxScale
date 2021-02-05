@@ -22,32 +22,7 @@ int atomic_add(int* variable, int value)
     return __atomic_fetch_add(variable, value, __ATOMIC_SEQ_CST);
 }
 
-uint32_t atomic_add_uint32(uint32_t* variable, int32_t value)
-{
-    return __atomic_fetch_add(variable, value, __ATOMIC_SEQ_CST);
-}
-
-int64_t atomic_add_int64(int64_t* variable, int64_t value)
-{
-    return __atomic_fetch_add(variable, value, __ATOMIC_SEQ_CST);
-}
-
-uint64_t atomic_add_uint64(uint64_t* variable, int64_t value)
-{
-    return __atomic_fetch_add(variable, value, __ATOMIC_SEQ_CST);
-}
-
-int atomic_load_int(const int* variable)
-{
-    return __atomic_load_n(variable, __ATOMIC_SEQ_CST);
-}
-
 int32_t atomic_load_int32(const int32_t* variable)
-{
-    return __atomic_load_n(variable, __ATOMIC_SEQ_CST);
-}
-
-int64_t atomic_load_int64(const int64_t* variable)
 {
     return __atomic_load_n(variable, __ATOMIC_SEQ_CST);
 }
@@ -62,37 +37,7 @@ uint64_t atomic_load_uint64(const uint64_t* variable)
     return __atomic_load_n(variable, __ATOMIC_SEQ_CST);
 }
 
-void* atomic_load_ptr(void* const* variable)
-{
-    return __atomic_load_n(variable, __ATOMIC_SEQ_CST);
-}
-
-void atomic_store_int(int* variable, int value)
-{
-    __atomic_store_n(variable, value, __ATOMIC_SEQ_CST);
-}
-
 void atomic_store_int32(int32_t* variable, int32_t value)
-{
-    __atomic_store_n(variable, value, __ATOMIC_SEQ_CST);
-}
-
-void atomic_store_int64(int64_t* variable, int64_t value)
-{
-    __atomic_store_n(variable, value, __ATOMIC_SEQ_CST);
-}
-
-void atomic_store_uint32(uint32_t* variable, uint32_t value)
-{
-    __atomic_store_n(variable, value, __ATOMIC_SEQ_CST);
-}
-
-void atomic_store_uint64(uint64_t* variable, uint64_t value)
-{
-    __atomic_store_n(variable, value, __ATOMIC_SEQ_CST);
-}
-
-void atomic_store_ptr(void** variable, void* value)
 {
     __atomic_store_n(variable, value, __ATOMIC_SEQ_CST);
 }
@@ -107,7 +52,3 @@ bool atomic_cas_ptr(void** variable, void** old_value, void* new_value)
                                        __ATOMIC_SEQ_CST);
 }
 
-int atomic_exchange_int(int* variable, int new_value)
-{
-    return __atomic_exchange_n(variable, new_value, __ATOMIC_SEQ_CST);
-}
