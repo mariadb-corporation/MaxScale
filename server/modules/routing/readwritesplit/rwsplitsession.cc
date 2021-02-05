@@ -320,8 +320,6 @@ void RWSplitSession::manage_transactions(RWBackend* backend, GWBUF* writebuf, co
     }
     else if (m_config.transaction_replay && m_can_replay_trx && trx_is_open())
     {
-        mxb_assert(!backend->has_session_commands());
-
         // Never add something we should ignore into the transaction. The checksum is calculated from the
         // response that is sent upstream via clientReply and this is implied by `should_ignore_response()`
         // being false.
@@ -806,17 +804,7 @@ bool RWSplitSession::retry_master_query(RWBackend* backend)
 {
     bool can_continue = false;
 
-    if (backend->is_replaying_history() && !m_query_queue.empty())
-    {
-        // Master failed while it was replaying the session command history while a query was queued for
-        // execution. Re-execute it to trigger a reconnection.
-        mxb_assert(m_config.master_reconnection);
-
-        retry_query(m_query_queue.front().release());
-        m_query_queue.pop_front();
-        can_continue = true;
-    }
-    else if (m_current_query.get())
+    if (m_current_query.get())
     {
         // A query was in progress, try to route it again
         mxb_assert(m_prev_plan.target == backend || m_prev_plan.route_target == TARGET_ALL);
@@ -826,7 +814,7 @@ bool RWSplitSession::retry_master_query(RWBackend* backend)
     else
     {
         // This should never happen
-        mxb_assert_message(!true, "m_current_query is empty and no session commands being executed");
+        mxb_assert_message(!true, "m_current_query is empty");
         MXS_ERROR("Current query unexpectedly empty when trying to retry query on master");
     }
 

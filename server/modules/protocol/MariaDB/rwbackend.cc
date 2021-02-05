@@ -30,23 +30,6 @@ RWBackend::RWBackend(mxs::Endpoint* ref)
 {
 }
 
-bool RWBackend::execute_session_command()
-{
-    const auto& sescmd = next_session_command();
-    const char* cmd = STRPACKETTYPE(sescmd->command());
-    MXS_INFO("Execute sescmd #%lu on '%s': [%s] %s",
-             sescmd->get_position(), name(), cmd, sescmd->to_string().c_str());
-
-    m_last_write = maxbase::Clock::now(maxbase::NowType::EPollTick);
-    return mxs::Backend::execute_session_command();
-}
-
-bool RWBackend::continue_session_command(GWBUF* buffer)
-{
-    m_last_write = maxbase::Clock::now(maxbase::NowType::EPollTick);
-    return Backend::write(buffer, NO_RESPONSE);
-}
-
 bool RWBackend::write(GWBUF* buffer, response_type type)
 {
     m_last_write = maxbase::Clock::now(maxbase::NowType::EPollTick);

@@ -27,7 +27,6 @@
 #include <maxscale/modutil.hh>
 #include <maxscale/router.hh>
 #include <maxscale/server.hh>
-#include <maxscale/session_command.hh>
 #include <maxscale/utils.hh>
 #include <maxscale/protocol/mariadb/protocol_classes.hh>
 
@@ -1014,7 +1013,6 @@ void RWSplitSession::process_stmt_execute(mxs::Buffer* buf, uint32_t id, RWBacke
 bool RWSplitSession::handle_got_target(mxs::Buffer&& buffer, RWBackend* target, bool store)
 {
     mxb_assert_message(target->in_use(), "Target must be in use before routing to it");
-    mxb_assert_message(!target->has_session_commands(), "The session command cursor must not be active");
 
     MXS_INFO("Route query to %s: %s <", target->is_master() ? "master" : "slave", target->name());
 

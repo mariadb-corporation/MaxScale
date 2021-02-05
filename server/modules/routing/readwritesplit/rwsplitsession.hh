@@ -427,12 +427,11 @@ private:
     RoutingPlan       m_prev_plan;              /**< The previous routing plan */
     RWSConfig::Values m_config;                 /**< Configuration for this session */
 
-    int                     m_expected_responses;       /**< Number of expected responses to the current query
-                                                         * */
-    bool                    m_locked_to_master {false}; /**< Whether session is permanently locked to the
-                                                         * master */
-    std::deque<mxs::Buffer> m_query_queue;              /**< Queued commands waiting to be executed */
-    RWSplit*                m_router;                   /**< The router instance */
+    int  m_expected_responses;          /**< Number of expected responses to the current query */
+    bool m_locked_to_master {false};    /**< Whether session is permanently locked to the master */
+
+    std::deque<mxs::Buffer> m_query_queue;  /**< Queued commands waiting to be executed */
+    RWSplit*                m_router;       /**< The router instance */
     mxs::RWBackend*         m_sescmd_replier {nullptr};
 
     ExecMap m_exec_map;     // Information map of COM_STMT_EXECUTE execution

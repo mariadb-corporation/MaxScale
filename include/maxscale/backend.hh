@@ -20,7 +20,6 @@
 #include <memory>
 
 #include <maxscale/service.hh>
-#include <maxscale/session_command.hh>
 #include <maxbase/stopwatch.hh>
 
 
@@ -62,65 +61,6 @@ public:
     virtual ~Backend();
 
     /**
-     * @brief Execute the next session command in the queue
-     *
-     * @return True if the command was executed successfully
-     */
-    virtual bool execute_session_command();
-
-    /**
-     * @brief Add a new session command to the tail of the command queue
-     *
-     * @param buffer   Session command to add
-     * @param sequence Sequence identifier of this session command, returned when
-     *                 the session command is completed
-     */
-    void append_session_command(GWBUF* buffer, uint64_t sequence);
-    void append_session_command(const SSessionCommand& sescmd);
-    void append_session_command(const SessionCommandList& sescmdlist);
-
-    /**
-     * @brief Mark the current session command as successfully executed
-     *
-     * This should be called when the response to the command is received
-     *
-     * @return The sequence identifier for this session command
-     */
-    uint64_t complete_session_command();
-
-    /**
-     * @brief Get number of session commands
-     *
-     * @return Number of session commands
-     */
-    size_t session_command_count() const;
-
-    /**
-     * @brief Check if there are session commands waiting to be executed
-     *
-     * @return True if there are session commands waiting to be executed
-     */
-    inline bool has_session_commands() const
-    {
-        mxb_assert(in_use());
-        return !m_session_commands.empty();
-    }
-
-    /**
-     * @brief Get the first session command
-     *
-     * Returns the first session command in the list of session commands
-     * to be executed.
-     *
-     * This should only be called when at least one session command has been
-     * added to the backend. If no session commands have been added, behavior
-     * is undefined.
-     *
-     * @return The first session command
-     */
-    const SSessionCommand& next_session_command() const;
-
-    /**
      * @brief Get pointer to server reference
      *
      * @return Pointer to server reference
@@ -155,11 +95,9 @@ public:
     /**
      * @brief Create a new connection
      *
-     * @param sescmd  Pointer to a list of session commands to execute
-     *
      * @return True if connection was successfully created
      */
-    bool connect(SessionCommandList* sescmd = NULL);
+    bool connect();
 
     /**
      * @brief Close the backend
@@ -182,23 +120,6 @@ public:
      * @brief Mark that a reply to a query was received and processed
      */
     void ack_write();
-
-    /**
-     * @brief Store a command
-     *
-     * The command is stored and executed once the session can execute
-     * the next command.
-     *
-     * @param buffer Buffer to store
-     */
-    void store_command(GWBUF* buffer);
-
-    /**
-     * @brief Write the stored command to the backend server
-     *
-     * @return True if command was written successfully
-     */
-    bool write_stored_command();
 
     /**
      * @brief Check if backend is in use
@@ -295,17 +216,6 @@ public:
     }
 
     /**
-     * Is the backend replaying session command history
-     *
-     * @return If a list of session commands was provided at connect time, the function returns true as long
-     *         as the backend has not completed those session commands.
-     */
-    inline bool is_replaying_history() const
-    {
-        return m_history_size > 0;
-    }
-
-    /**
      * @brief Get the object name of this server
      *
      * @return The unique object name of this server
@@ -375,20 +285,17 @@ private:
     // Stringification function
     static std::string to_string(backend_state state);
 
-    bool               m_closed {false};        /**< True if a connection has been opened and closed */
-    time_t             m_closed_at {0};         /**< Timestamp when the backend was last closed */
-    std::string        m_close_reason;          /**< Why the backend was closed */
-    time_t             m_opened_at {0};         /**< Timestamp when the backend was last opened */
-    mxs::Endpoint*     m_backend {nullptr};     /**< Backend server */
-    mxs::Buffer        m_pending_cmd;           /**< Pending commands */
-    int                m_state {0};             /**< State of the backend */
-    SessionCommandList m_session_commands;      /**< List of session commands that are
-                                                 * to be executed on this backend server */
+    bool           m_closed {false};        /**< True if a connection has been opened and closed */
+    time_t         m_closed_at {0};         /**< Timestamp when the backend was last closed */
+    std::string    m_close_reason;          /**< Why the backend was closed */
+    time_t         m_opened_at {0};         /**< Timestamp when the backend was last opened */
+    mxs::Endpoint* m_backend {nullptr};     /**< Backend server */
+    mxs::Buffer    m_pending_cmd;           /**< Pending commands */
+    int            m_state {0};             /**< State of the backend */
 
     maxbase::StopWatch     m_session_timer;
     maxbase::IntervalTimer m_select_timer;
     int64_t                m_num_selects {0};
-    int64_t                m_history_size {0};
 
     // Contains the types of responses we're expecting from this backend. Used to detect if multiple commands
     // were sent to the backend but not all of the results should be sent to the client.

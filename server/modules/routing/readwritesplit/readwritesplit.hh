@@ -31,7 +31,6 @@
 #include <maxscale/dcb.hh>
 #include <maxscale/router.hh>
 #include <maxscale/service.hh>
-#include <maxscale/session_command.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/routingworker.hh>
 #include <maxscale/protocol/mariadb/queryclassifier.hh>

@@ -42,7 +42,6 @@ add_library(maxscale-common SHARED
   servermanager.cc
   service.cc
   session.cc
-  session_command.cc
   session_stats.cc
   ssl.cc
   target.cc
