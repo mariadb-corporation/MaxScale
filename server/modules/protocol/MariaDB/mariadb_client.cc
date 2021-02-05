@@ -1071,6 +1071,7 @@ void MariaDBClientConnection::finish_recording_history(const GWBUF* buffer, cons
         if (m_session_data->history.size() > m_max_sescmd_history)
         {
             m_session_data->history.pop_front();
+            m_session_data->history_pruned = true;
         }
     }
 }
