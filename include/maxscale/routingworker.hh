@@ -424,6 +424,8 @@ public:
     void pool_close_all_conns();
     void pool_close_all_conns_by_server(SERVER* pSrv);
 
+    static void pool_set_size(const std::string& srvname, int64_t size);
+
     /**
      * Register a function to be called every epoll_tick.
      */
@@ -579,21 +581,18 @@ private:
         void close_all();
         bool empty() const;
         bool has_space() const;
+        void set_capacity(int global_capacity);
 
         mxs::BackendConnection* get_connection();
         mxs::BackendConnection* get_connection(const std::string& client_remote);
         void                    add_connection(mxs::BackendConnection* conn);
 
     private:
-        void set_capacity(int global_capacity);
-
         std::map<mxs::BackendConnection*, ConnPoolEntry> m_contents;
 
         mxs::RoutingWorker* m_owner {nullptr};
         SERVER*             m_target_server {nullptr};
-
-        int m_global_capacity {0}; // Total pool capacity for the target server across all threads.
-        int m_capacity {0};        // Capacity for this pool.
+        int                 m_capacity {0}; // Capacity for this pool.
     };
     using ConnPoolGroup = std::map<SERVER*, ConnectionPool>;
 

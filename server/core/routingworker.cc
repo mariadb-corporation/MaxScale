@@ -594,17 +594,12 @@ mxs::BackendConnection* RoutingWorker::ConnectionPool::get_connection(const std:
 
 void RoutingWorker::ConnectionPool::set_capacity(int global_capacity)
 {
-    if (m_global_capacity != global_capacity)
-    {
-        // Capacity has changed, recalculate local capacity.
-        long n = this_unit.nWorkers;
-        long base_amount = global_capacity / n;
-        long leftover = global_capacity - n * base_amount;
-        auto local_capacity = base_amount + ((m_owner->m_id < leftover) ? 1 : 0);
-
-        m_global_capacity = global_capacity;
-        m_capacity = local_capacity;
-    }
+    // Capacity has changed, recalculate local capacity.
+    long n = this_unit.nWorkers;
+    long base_amount = global_capacity / n;
+    long leftover = global_capacity - n * base_amount;
+    auto local_capacity = base_amount + ((m_owner->m_id < leftover) ? 1 : 0);
+    m_capacity = local_capacity;
 }
 
 mxs::BackendConnection*
@@ -782,9 +777,7 @@ void RoutingWorker::ConnectionPool::close_expired()
 
     // Check that pool is not over capacity. This can only happen if user reduces capacity via a runtime
     // config modification.
-    auto global_cap = pServer->persistpoolmax();
-    set_capacity(global_cap);
-    int over_cap_conns = m_contents.size() - m_capacity;
+    int64_t over_cap_conns = m_contents.size() - m_capacity;
     if (over_cap_conns > 0)
     {
         // Just take the first extra connections found.
@@ -850,14 +843,13 @@ RoutingWorker::ConnectionPool::ConnectionPool(RoutingWorker::ConnectionPool&& rh
     : m_contents(std::move(rhs.m_contents))
     , m_owner(rhs.m_owner)
     , m_target_server(rhs.m_target_server)
-    , m_global_capacity(rhs.m_global_capacity)
     , m_capacity(rhs.m_capacity)
 {
 }
 
 bool RoutingWorker::ConnectionPool::has_space() const
 {
-    return m_contents.size() - m_capacity;
+    return (int)m_contents.size() < m_capacity;
 }
 
 void RoutingWorker::evict_dcb(BackendDCB* pDcb)
@@ -1670,6 +1662,22 @@ void RoutingWorker::deregister_session(uint64_t session_id)
 {
     MXB_AT_DEBUG(bool rv = ) m_sessions.remove(session_id);
     mxb_assert(rv);
+}
+
+void RoutingWorker::pool_set_size(const std::string& srvname, int64_t size)
+{
+    auto rworker = RoutingWorker::get_current();
+    // Check if the worker has a pool with the given server name and update if found.
+    // The pool may not exist if pooling was previously disabled or empty.
+    for (auto& kv : rworker->m_pool_group)
+    {
+        if (kv.first->name() == srvname)
+        {
+            kv.second.set_capacity(size);
+            break;
+        }
+    }
+
 }
 }
 

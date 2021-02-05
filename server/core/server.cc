@@ -277,6 +277,15 @@ std::pair<bool, std::unique_ptr<mxs::SSLContext>> create_ssl(const char* name, c
 
     return {ok, std::move(ssl)};
 }
+
+void persistpoolmax_modified(const std::string& srvname, int64_t pool_size)
+{
+    auto func = [=]() {
+        RoutingWorker::pool_set_size(srvname, pool_size);
+    };
+    mxs::RoutingWorker::broadcast(func, nullptr, mxb::Worker::EXECUTE_AUTO);
+}
+
 }
 
 Server::ParamDiskSpaceLimits::ParamDiskSpaceLimits(cfg::Specification* pSpecification,
@@ -385,7 +394,9 @@ Server::Settings::Settings(const std::string& name)
     , m_priority(this, &s_priority)
     , m_monitoruser(this, &s_monitoruser)
     , m_monitorpw(this, &s_monitorpw)
-    , m_persistpoolmax(this, &s_persistpoolmax)
+    , m_persistpoolmax(this, &s_persistpoolmax, [name](int64_t val) {
+                           persistpoolmax_modified(name, val);
+                       })
     , m_persistmaxtime(this, &s_persistmaxtime)
     , m_proxy_protocol(this, &s_proxy_protocol)
     , m_disk_space_threshold(this, &s_disk_space_threshold)
