@@ -182,23 +182,24 @@ static bool resolve_maxscale_conf_fname(char** cnf_full_path,
                                         const char* home_dir,
                                         char* cnf_file_arg);
 
-static char* check_dir_access(char* dirname, bool, bool);
-static int   set_user(const char* user);
-bool         pid_file_exists();
-void         write_child_exit_code(int fd, int code);
-static bool  change_cwd();
-static void  log_exit_status();
-static bool  daemonize();
-static bool  sniff_configuration(const char* filepath);
-static bool  modules_process_init();
-static void  modules_process_finish();
-static void  disable_module_unloading(const char* arg);
-static void  enable_module_unloading(const char* arg);
-static void  enable_statement_logging(const char* arg);
-static void  disable_statement_logging(const char* arg);
-static void  redirect_output_to_file(const char* arg);
-static bool  user_is_acceptable(const char* specified_user);
-static bool  init_sqlite3();
+static bool check_dir_access(const char* dirname, bool wr, bool rd);
+bool        check_paths();
+static int  set_user(const char* user);
+bool        pid_file_exists();
+void        write_child_exit_code(int fd, int code);
+static bool change_cwd();
+static void log_exit_status();
+static bool daemonize();
+static bool sniff_configuration(const char* filepath);
+static bool modules_process_init();
+static void modules_process_finish();
+static void disable_module_unloading(const char* arg);
+static void enable_module_unloading(const char* arg);
+static void enable_statement_logging(const char* arg);
+static void disable_statement_logging(const char* arg);
+static void redirect_output_to_file(const char* arg);
+static bool user_is_acceptable(const char* specified_user);
+static bool init_sqlite3();
 
 struct DEBUG_ARGUMENT
 {
@@ -714,51 +715,32 @@ static bool resolve_maxscale_conf_fname(char** cnf_full_path,
  * @return NULL if directory can be read and written, an error message if either
  *      read or write is not permitted.
  */
-static char* check_dir_access(char* dirname, bool rd, bool wr)
+static bool check_dir_access(const char* dirname, bool rd, bool wr)
 {
-    char errbuf[PATH_MAX * 2];
-    char* errstr = NULL;
-
-    if (dirname == NULL)
-    {
-        errstr = MXS_STRDUP_A("Directory argument is NULL");
-        goto retblock;
-    }
+    mxb_assert(dirname);
+    std::ostringstream ss;
 
     if (access(dirname, F_OK) != 0)
     {
-        snprintf(errbuf, PATH_MAX * 2 - 1, "Can't access '%s'.", dirname);
-        errbuf[PATH_MAX * 2 - 1] = '\0';
-        errstr = MXS_STRDUP_A(errbuf);
-        goto retblock;
+        ss << "Can't access '" << dirname << "'.";
     }
-
-    if (rd && !path_is_readable(dirname))
+    else if (rd && access(dirname, R_OK) != 0)
     {
-        snprintf(errbuf,
-                 PATH_MAX * 2 - 1,
-                 "MaxScale doesn't have read permission "
-                 "to '%s'.",
-                 dirname);
-        errbuf[PATH_MAX * 2 - 1] = '\0';
-        errstr = MXS_STRDUP_A(errbuf);
-        goto retblock;
+        ss << "MaxScale doesn't have read permission to '" << dirname << "'.";
     }
-
-    if (wr && !path_is_writable(dirname))
+    else if (wr && access(dirname, W_OK) != 0)
     {
-        snprintf(errbuf,
-                 PATH_MAX * 2 - 1,
-                 "MaxScale doesn't have write permission "
-                 "to '%s'.",
-                 dirname);
-        errbuf[PATH_MAX * 2 - 1] = '\0';
-        errstr = MXS_STRDUP_A(errbuf);
-        goto retblock;
+        ss << "MaxScale doesn't have write permission to '" << dirname << "'.";
     }
 
-retblock:
-    return errstr;
+    auto err = ss.str();
+
+    if (!err.empty())
+    {
+        print_log_n_stderr(true, true, err.c_str(), err.c_str(), errno);
+    }
+
+    return err.empty();
 }
 
 static bool init_log()
@@ -1427,6 +1409,10 @@ bool set_dirs(const char* basedir)
 
     rv = set_runtime_dirs(basedir);
 
+    // The two paths here are not inside set_runtime_dirs on purpose: they are set by --basedir but not by
+    // --runtimedir. The former is used with tarball installations and the latter is used to run multiple
+    // MaxScale instances on the same server.
+
     if (rv && (rv = handle_path_arg(&path, basedir, MXS_DEFAULT_LIB_SUBPATH, true, false)))
     {
         set_libdir(path);
@@ -1824,7 +1810,10 @@ int main(int argc, char** argv)
             break;
 
         case '?':
-            usage();
+            if (check_paths())
+            {
+                usage();
+            }
             rc = EXIT_SUCCESS;
             goto return_main;
 
@@ -2053,6 +2042,12 @@ int main(int argc, char** argv)
     }
 
     if (!config_load_global(cnf_file_path))
+    {
+        rc = MAXSCALE_BADCONFIG;
+        goto return_main;
+    }
+
+    if (!check_paths())
     {
         rc = MAXSCALE_BADCONFIG;
         goto return_main;
@@ -2690,20 +2685,26 @@ bool handle_path_arg(char** dest, const char* path, const char* arg, bool rd, bo
             strcat(pathbuffer, arg);
         }
 
-        if ((errstr = check_dir_access(pathbuffer, rd, wr)) == NULL)
-        {
-            *dest = MXS_STRDUP_A(pathbuffer);
-            rval = true;
-        }
-        else
-        {
-            print_log_n_stderr(true, true, errstr, errstr, 0);
-            MXS_FREE(errstr);
-            errstr = NULL;
-        }
+        *dest = MXS_STRDUP_A(pathbuffer);
+        rval = true;
     }
 
     return rval;
+}
+
+bool check_paths()
+{
+    return check_dir_access(get_logdir(), true, false)
+           && check_dir_access(get_cachedir(), true, true)
+           && check_dir_access(get_configdir(), true, false)
+           && check_dir_access(get_module_configdir(), true, false)
+           && check_dir_access(get_datadir(), true, false)
+           && check_dir_access(get_langdir(), true, false)
+           && check_dir_access(get_piddir(), true, true)
+           && check_dir_access(get_config_persistdir(), true, true)
+           && check_dir_access(get_connector_plugindir(), true, false)
+           && check_dir_access(get_libdir(), true, false)
+           && check_dir_access(get_execdir(), true, false);
 }
 
 void set_log_augmentation(const char* value)
