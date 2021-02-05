@@ -18,7 +18,6 @@
 #include <list>
 
 #include <maxscale/router.hh>
-#include <maxscale/session_command.hh>
 #include <maxscale/protocol/mariadb/client_connection.hh>
 
 #include "shard_map.hh"
@@ -117,7 +116,7 @@ private:
 
     /** Routing functions */
     bool         route_session_write(GWBUF* querybuf, uint8_t command);
-    void         process_sescmd_response(SRBackend* bref, GWBUF** ppPacket, const mxs::Reply& reply);
+    bool         write_session_command(SRBackend* backend, mxs::Buffer buffer, uint8_t cmd);
     mxs::Target* resolve_query_target(GWBUF* pPacket,
                                       uint32_t type,
                                       uint8_t command,
@@ -132,7 +131,6 @@ private:
     void                 route_queued_query();
     void                 synchronize_shards();
     void                 handle_mapping_reply(SRBackend* bref, GWBUF** pPacket);
-    bool                 handle_statement(GWBUF* querybuf, SRBackend* bref, uint8_t command, uint32_t type);
     std::string          get_cache_key() const;
 
     /** Member variables */
@@ -149,8 +147,6 @@ private:
     int                    m_state;         /**< Initialization state bitmask */
     std::list<mxs::Buffer> m_queue;         /**< Query that was received before the session was ready */
     Stats                  m_stats;         /**< Statistics for this router */
-    uint64_t               m_sent_sescmd;   /**< The latest session command being executed */
-    uint64_t               m_replied_sescmd;/**< The last session command reply that was sent to the client */
     mxs::Target*           m_load_target;   /**< Target for LOAD DATA LOCAL INFILE */
     SRBackend*             m_sescmd_replier {nullptr};
     int                    m_num_init_db = 0;

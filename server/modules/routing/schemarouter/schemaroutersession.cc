@@ -51,8 +51,6 @@ SchemaRouterSession::SchemaRouterSession(MXS_SESSION* session,
     , m_router(router)
     , m_shard(m_router->m_shard_manager.get_shard(get_cache_key(), m_config->refresh_min_interval))
     , m_state(0)
-    , m_sent_sescmd(0)
-    , m_replied_sescmd(0)
     , m_load_target(NULL)
 {
     m_mysql_session = static_cast<MYSQL_session*>(session->protocol_data());
@@ -407,41 +405,21 @@ int32_t SchemaRouterSession::routeQuery(GWBUF* pPacket)
 
             MXS_INFO("Route query to \t%s <", bref->name());
 
-            if (bref->has_session_commands())
+            uint8_t cmd = mxs_mysql_get_command(pPacket);
+
+            auto responds = mxs_mysql_command_will_respond(cmd) ?
+                mxs::Backend::EXPECT_RESPONSE :
+                mxs::Backend::NO_RESPONSE;
+
+            if (bref->write(pPacket, responds))
             {
-                /** Store current statement if execution of the previous
-                 * session command hasn't been completed. */
-                bref->store_command(pPacket);
-                pPacket = NULL;
+                /** Add one query response waiter to backend reference */
+                mxb::atomic::add(&m_router->m_stats.n_queries, 1, mxb::atomic::RELAXED);
                 ret = 1;
-            }
-            else if (qc_query_is_type(type, QUERY_TYPE_PREPARE_STMT))
-            {
-                if (handle_statement(pPacket, bref, command, type))
-                {
-                    mxb::atomic::add(&m_router->m_stats.n_sescmd, 1, mxb::atomic::RELAXED);
-                    mxb::atomic::add(&m_router->m_stats.n_queries, 1, mxb::atomic::RELAXED);
-                    ret = 1;
-                }
             }
             else
             {
-                uint8_t cmd = mxs_mysql_get_command(pPacket);
-
-                auto responds = mxs_mysql_command_will_respond(cmd) ?
-                    mxs::Backend::EXPECT_RESPONSE :
-                    mxs::Backend::NO_RESPONSE;
-
-                if (bref->write(pPacket, responds))
-                {
-                    /** Add one query response waiter to backend reference */
-                    mxb::atomic::add(&m_router->m_stats.n_queries, 1, mxb::atomic::RELAXED);
-                    ret = 1;
-                }
-                else
-                {
-                    gwbuf_free(pPacket);
-                }
+                gwbuf_free(pPacket);
             }
         }
     }
@@ -479,36 +457,6 @@ void SchemaRouterSession::handle_mapping_reply(SRBackend* bref, GWBUF** pPacket)
     if (rc == -1)
     {
         m_pSession->kill();
-    }
-}
-
-void SchemaRouterSession::process_sescmd_response(SRBackend* bref, GWBUF** ppPacket, const mxs::Reply& reply)
-{
-    uint8_t command = bref->next_session_command()->get_command();
-    uint64_t id = bref->next_session_command()->get_position();
-
-    if (m_replied_sescmd < m_sent_sescmd && id == m_replied_sescmd + 1 && m_sescmd_replier == bref)
-    {
-        if (reply.is_complete())
-        {
-            if (command == MXS_COM_STMT_PREPARE)
-            {
-                m_shard.add_statement(reply.generated_id(), bref->target());
-            }
-            /** First reply to this session command, route it to the client */
-            ++m_replied_sescmd;
-        }
-    }
-    else
-    {
-        // The reply to this session command is already being sent to the client, discard it
-        gwbuf_free(*ppPacket);
-        *ppPacket = NULL;
-    }
-
-    if (reply.is_complete())
-    {
-        bref->complete_session_command();
     }
 }
 
@@ -561,44 +509,44 @@ int32_t SchemaRouterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& 
 {
     SRBackend* bref = static_cast<SRBackend*>(down.back()->get_userdata());
 
-    if (m_closed)       // The bref should always be valid
+    const auto& error = reply.error();
+
+    if (error.is_unexpected_error())
+    {
+        // The connection was killed, we can safely ignore it. When the TCP connection is
+        // closed, the router's error handling will sort it out.
+        if (error.code() == ER_CONNECTION_KILLED)
+        {
+            bref->set_close_reason("Connection was killed");
+        }
+        else
+        {
+            mxb_assert(error.code() == ER_SERVER_SHUTDOWN
+                       || error.code() == ER_NORMAL_SHUTDOWN
+                       || error.code() == ER_SHUTDOWN_COMPLETE);
+            bref->set_close_reason(std::string("Server '") + bref->name() + "' is shutting down");
+        }
+
+        // The server sent an error that we didn't expect: treat it as if the connection was closed. The
+        // client shouldn't see this error as we can replace the closed connection.
+
+        if (!(pPacket = erase_last_packet(pPacket)))
+        {
+            // Nothing to route to the client
+            return 0;
+        }
+    }
+
+    if (bref->should_ignore_response())
     {
         gwbuf_free(pPacket);
-        return 0;
+        pPacket = nullptr;
     }
 
     if (reply.is_complete())
     {
         MXS_INFO("Reply complete from '%s'", bref->name());
         bref->ack_write();
-
-        const auto& error = reply.error();
-
-        if (error.is_unexpected_error())
-        {
-            // The connection was killed, we can safely ignore it. When the TCP connection is
-            // closed, the router's error handling will sort it out.
-            if (error.code() == ER_CONNECTION_KILLED)
-            {
-                bref->set_close_reason("Connection was killed");
-            }
-            else
-            {
-                mxb_assert(error.code() == ER_SERVER_SHUTDOWN
-                           || error.code() == ER_NORMAL_SHUTDOWN
-                           || error.code() == ER_SHUTDOWN_COMPLETE);
-                bref->set_close_reason(std::string("Server '") + bref->name() + "' is shutting down");
-            }
-
-            // The server sent an error that we didn't expect: treat it as if the connection was closed. The
-            // client shouldn't see this error as we can replace the closed connection.
-
-            if (!(pPacket = erase_last_packet(pPacket)))
-            {
-                // Nothing to route to the client
-                return 0;
-            }
-        }
     }
 
     if (m_state & INIT_MAPPING)
@@ -616,23 +564,6 @@ int32_t SchemaRouterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& 
     {
         mxb_assert(m_state == INIT_READY);
         route_queued_query();
-    }
-    else if (reply.is_complete())
-    {
-        if (bref->has_session_commands())
-        {
-            process_sescmd_response(bref, &pPacket, reply);
-        }
-
-        if (bref->has_session_commands() && bref->execute_session_command())
-        {
-            MXS_INFO("Backend '%s' processed reply and starts to execute active cursor.",
-                     bref->name());
-        }
-        else if (bref->write_stored_command())
-        {
-            mxb::atomic::add(&m_router->m_stats.n_queries, 1, mxb::atomic::RELAXED);
-        }
     }
 
     int32_t rc = 1;
@@ -748,6 +679,30 @@ retblock:
     return succp;
 }
 
+bool SchemaRouterSession::write_session_command(SRBackend* backend, mxs::Buffer buffer, uint8_t cmd)
+{
+    bool ok = true;
+    mxs::Backend::response_type type = mxs::Backend::NO_RESPONSE;
+
+    if (mxs_mysql_command_will_respond(cmd))
+    {
+        type = backend == m_sescmd_replier ? mxs::Backend::EXPECT_RESPONSE : mxs::Backend::IGNORE_RESPONSE;
+    }
+
+    if (backend->write(buffer.release(), type))
+    {
+        MXS_INFO("Route query to %s: %s", backend->is_master() ? "master" : "slave", backend->name());
+    }
+    else
+    {
+        MXS_ERROR("Failed to execute session command in %s", backend->name());
+        backend->close();
+        ok = false;
+    }
+
+    return ok;
+}
+
 /**
  * Execute in backends used by current router session.
  * Save session variable commands to router session property
@@ -762,54 +717,31 @@ retblock:
  */
 bool SchemaRouterSession::route_session_write(GWBUF* querybuf, uint8_t command)
 {
-    bool succp = false;
+    bool ok = false;
+    mxs::Buffer buffer(querybuf);
 
-    MXS_INFO("Session write, routing to all servers.");
     mxb::atomic::add(&m_stats.longest_sescmd, 1, mxb::atomic::RELAXED);
-
-    /** Increment the session command count */
-    ++m_sent_sescmd;
 
     for (const auto& b : m_backends)
     {
-        if (b->in_use())
+        if (b->in_use() && !m_sescmd_replier)
         {
-            GWBUF* buffer = gwbuf_clone(querybuf);
+            m_sescmd_replier = b.get();
+        }
+    }
 
-            b->append_session_command(buffer, m_sent_sescmd);
-
-            if (mxs_log_is_priority_enabled(LOG_INFO))
+    for (const auto& b : m_backends)
+    {
+        if (b->in_use() && write_session_command(b.get(), buffer, command))
+        {
+            if (b.get() == m_sescmd_replier)
             {
-                MXS_INFO("Route query to %s\t%s",
-                         b->target()->is_master() ? "master" : "slave",
-                         b->name());
-            }
-
-            if (b->session_command_count() == 1)
-            {
-                if (b->execute_session_command())
-                {
-                    m_sescmd_replier = b.get();
-                    succp = true;
-                }
-                else
-                {
-                    MXS_ERROR("Failed to execute session command in '%s'", b->name());
-                }
-            }
-            else
-            {
-                mxb_assert(b->session_command_count() > 1);
-                /** The server is already executing a session command */
-                MXS_INFO("Backend '%s' already executing sescmd.",
-                         b->name());
-                succp = true;
+                ok = true;
             }
         }
     }
 
-    gwbuf_free(querybuf);
-    return succp;
+    return ok;
 }
 
 /**
@@ -1477,45 +1409,6 @@ void SchemaRouterSession::send_databases()
     mxs::RouterSession::clientReply(set->as_buffer().release(), down, reply);
 }
 
-bool SchemaRouterSession::handle_statement(GWBUF* querybuf, SRBackend* bref, uint8_t command, uint32_t type)
-{
-    bool succp = false;
-
-    mxb::atomic::add(&m_stats.longest_sescmd, 1, mxb::atomic::RELAXED);
-
-    /** Increment the session command count */
-    ++m_sent_sescmd;
-
-    if (bref->in_use())
-    {
-        GWBUF* buffer = gwbuf_clone(querybuf);
-        bref->append_session_command(buffer, m_sent_sescmd);
-
-        if (bref->session_command_count() == 1)
-        {
-            if (bref->execute_session_command())
-            {
-                m_sescmd_replier = bref;
-                succp = true;
-            }
-            else
-            {
-                MXS_ERROR("Failed to execute session command in '%s'", bref->name());
-            }
-        }
-        else
-        {
-            mxb_assert(bref->session_command_count() > 1);
-            /** The server is already executing a session command */
-            MXS_INFO("Backend '%s' already executing sescmd.", bref->name());
-            succp = true;
-        }
-    }
-
-    gwbuf_free(querybuf);
-    return succp;
-}
-
 mxs::Target* SchemaRouterSession::get_query_target(GWBUF* buffer)
 {
     auto tables = qc_get_table_names(buffer, true);
@@ -1587,6 +1480,13 @@ mxs::Target* SchemaRouterSession::get_ps_target(GWBUF* buffer, uint32_t qtype, q
     else if (qc_query_is_type(qtype, QUERY_TYPE_PREPARE_STMT))
     {
         rval = m_shard.get_location(qc_get_table_names(buffer, true));
+
+        if (rval)
+        {
+            mxb_assert(gwbuf_get_id(buffer) != 0);
+            m_shard.add_statement(gwbuf_get_id(buffer), rval);
+        }
+
         MXS_INFO("Prepare statement on server %s", rval ? rval->name() : "<no target found>");
     }
     else if (mxs_mysql_is_ps_command(command))
