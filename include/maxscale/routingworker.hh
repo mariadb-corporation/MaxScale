@@ -426,6 +426,17 @@ public:
 
     static void pool_set_size(const std::string& srvname, int64_t size);
 
+    struct ConnectionPoolStats
+    {
+        size_t curr_size {0};   /**< Current pool size */
+        size_t max_size {0};    /**< Maximum pool size achieved since startup */
+        size_t times_empty {0}; /**< Times the current pool was empty */
+        size_t times_found {0}; /**< Times when a connection was available from the pool */
+
+        void add(const ConnectionPoolStats& rhs);
+    };
+    static ConnectionPoolStats pool_get_stats(const SERVER* pSrv);
+
     /**
      * Register a function to be called every epoll_tick.
      */
@@ -583,6 +594,8 @@ private:
         bool has_space() const;
         void set_capacity(int global_capacity);
 
+        ConnectionPoolStats stats() const;
+
         mxs::BackendConnection* get_connection();
         mxs::BackendConnection* get_connection(const std::string& client_remote);
         void                    add_connection(mxs::BackendConnection* conn);
@@ -593,8 +606,9 @@ private:
         mxs::RoutingWorker* m_owner {nullptr};
         SERVER*             m_target_server {nullptr};
         int                 m_capacity {0}; // Capacity for this pool.
+        ConnectionPoolStats m_stats;
     };
-    using ConnPoolGroup = std::map<SERVER*, ConnectionPool>;
+    using ConnPoolGroup = std::map<const SERVER*, ConnectionPool>;
 
     ConnPoolGroup m_pool_group;     /**< Pooled connections for each server */
     DCBHandler    m_pool_handler;

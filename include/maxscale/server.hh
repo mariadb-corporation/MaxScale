@@ -95,14 +95,6 @@ public:
         char m_version_str[MAX_VERSION_LEN + 1] {'\0'};     /**< Server version string */
     };
 
-    struct PoolStats
-    {
-        int      n_persistent = 0;  /**< Current persistent pool */
-        uint64_t n_new_conn = 0;    /**< Times the current pool was empty */
-        uint64_t n_from_pool = 0;   /**< Times when a connection was available from the pool */
-        int      persistmax = 0;    /**< Maximum pool size actually achieved since startup */
-    };
-
     /**
      * Find a server with the specified name.
      *
@@ -163,13 +155,6 @@ public:
      * @param charset Character set to set
      */
     virtual void set_charset(uint8_t charset) = 0;
-
-    /**
-     * Connection pool statistics
-     *
-     * @return A reference to the pool statistics object
-     */
-    virtual PoolStats& pool_stats() = 0;
 
     /**
      * Check if server has disk space threshold settings.

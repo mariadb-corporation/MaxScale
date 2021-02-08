@@ -281,11 +281,10 @@ std::pair<bool, std::unique_ptr<mxs::SSLContext>> create_ssl(const char* name, c
 void persistpoolmax_modified(const std::string& srvname, int64_t pool_size)
 {
     auto func = [=]() {
-        RoutingWorker::pool_set_size(srvname, pool_size);
-    };
+            RoutingWorker::pool_set_size(srvname, pool_size);
+        };
     mxs::RoutingWorker::broadcast(func, nullptr, mxb::Worker::EXECUTE_AUTO);
 }
-
 }
 
 Server::ParamDiskSpaceLimits::ParamDiskSpaceLimits(cfg::Specification* pSpecification,
@@ -600,10 +599,6 @@ void Server::set_charset(uint8_t charset)
     m_charset = charset;
 }
 
-Server::PoolStats& Server::pool_stats()
-{
-    return m_pool_stats;
-}
 void Server::set_variables(std::unordered_map<std::string, std::string>&& variables)
 {
     std::lock_guard<std::mutex> guard(m_var_lock);
@@ -722,10 +717,11 @@ json_t* Server::json_attributes() const
     json_object_set_new(attr, "replication_lag", json_integer(replication_lag()));
 
     json_t* statistics = stats().to_json();
-    json_object_set_new(statistics, "persistent_connections", json_integer(m_pool_stats.n_persistent));
-    json_object_set_new(statistics, "max_pool_size", json_integer(m_pool_stats.persistmax));
-    json_object_set_new(statistics, "reused_connections", json_integer(m_pool_stats.n_from_pool));
-    json_object_set_new(statistics, "connection_pool_empty", json_integer(m_pool_stats.n_new_conn));
+    auto pool_stats = mxs::RoutingWorker::pool_get_stats(this);
+    json_object_set_new(statistics, "persistent_connections", json_integer(pool_stats.curr_size));
+    json_object_set_new(statistics, "max_pool_size", json_integer(pool_stats.max_size));
+    json_object_set_new(statistics, "reused_connections", json_integer(pool_stats.times_found));
+    json_object_set_new(statistics, "connection_pool_empty", json_integer(pool_stats.times_empty));
     maxbase::Duration response_ave(mxb::from_secs(response_time_average()));
     json_object_set_new(statistics, "adaptive_avg_select_time",
                         json_string(mxb::to_string(response_ave).c_str()));

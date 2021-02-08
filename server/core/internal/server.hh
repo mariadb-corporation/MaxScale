@@ -306,7 +306,6 @@ public:
     void       set_charset(uint8_t charset) override;
     bool       proxy_protocol() const override;
     void       set_proxy_protocol(bool proxy_protocol) override;
-    PoolStats& pool_stats();
     bool       is_mxs_service() const override;
 
 private:
@@ -398,7 +397,6 @@ private:
     bool              m_active {true};
     int64_t           m_rpl_lag {mxs::Target::RLAG_UNDEFINED};  /**< Replication lag in seconds */
     int64_t           m_ping {mxs::Target::PING_UNDEFINED};     /**< Ping in microseconds */
-    PoolStats         m_pool_stats;
 
     // Lock for m_ssl_config
     mutable std::mutex                                  m_ssl_lock;

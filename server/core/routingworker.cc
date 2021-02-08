@@ -464,7 +464,7 @@ void RoutingWorker::process_timeouts()
         }
 
         // Close expired connections in the thread local pool. If the server is down, purge all connections.
-        for (auto it = m_pool_group.begin(); it != m_pool_group.end();)
+        for (auto it = m_pool_group.begin(); it != m_pool_group.end(); ++it)
         {
             auto* pServer = it->first;
             auto& server_pool = it->second;
@@ -472,19 +472,10 @@ void RoutingWorker::process_timeouts()
             if (pServer->is_down())
             {
                 server_pool.close_all();
-                it = m_pool_group.erase(it);
             }
             else
             {
                 server_pool.close_expired();
-                if (server_pool.empty())
-                {
-                    it = m_pool_group.erase(it);
-                }
-                else
-                {
-                    it++;
-                }
             }
         }
         // TODO: Should pool connections also be pinged regularly?
@@ -569,8 +560,12 @@ mxs::BackendConnection* RoutingWorker::ConnectionPool::get_connection()
         auto it = m_contents.begin();
         rval = it->second.release_conn();
         m_contents.erase(it);
-
-        mxb::atomic::add(&m_target_server->pool_stats().n_persistent, -1);
+        m_stats.curr_size--;
+        m_stats.times_found++;
+    }
+    else
+    {
+        m_stats.times_empty++;
     }
     return rval;
 }
@@ -585,9 +580,15 @@ mxs::BackendConnection* RoutingWorker::ConnectionPool::get_connection(const std:
         {
             rval = pool_entry.release_conn();
             m_contents.erase(it);
-            mxb::atomic::add(&m_target_server->pool_stats().n_persistent, -1);
+            m_stats.curr_size--;
+            m_stats.times_found++;
             break;
         }
+    }
+    if (!rval)
+    {
+        // The pool may not have been empty, but the effect is the same.
+        m_stats.times_empty++;
     }
     return rval;
 }
@@ -644,7 +645,6 @@ RoutingWorker::pool_get_connection(SERVER* pSrv, MXS_SESSION* pSes, mxs::Compone
 
             if (candidate->reuse(pSes, pUpstream))
             {
-                mxb::atomic::add(&pServer->pool_stats().n_from_pool, 1, mxb::atomic::RELAXED);
                 found_conn = candidate;
             }
             else
@@ -666,10 +666,6 @@ RoutingWorker::pool_get_connection(SERVER* pSrv, MXS_SESSION* pSes, mxs::Compone
             // Put the dcb back to the regular book-keeping.
             mxb_assert(m_dcbs.find(found_conn->dcb()) == m_dcbs.end());
             m_dcbs.insert(found_conn->dcb());
-        }
-        else
-        {
-            mxb::atomic::add(&pServer->pool_stats().n_new_conn, 1, mxb::atomic::RELAXED);
         }
     }
     // else: the server does not have an entry in the pool group.
@@ -791,13 +787,11 @@ void RoutingWorker::ConnectionPool::close_expired()
         }
     }
 
-    mxb::atomic::add(&pServer->pool_stats().n_persistent, -expired_conns.size());
-    // TODO: Add persistmax-calculation once it's clear where it should be calculated and how.
-
     for (auto* pConn : expired_conns)
     {
         m_owner->close_pooled_dcb(pConn->dcb());
     }
+    m_stats.curr_size = m_contents.size();
 }
 
 void RoutingWorker::ConnectionPool::remove_and_close(mxs::BackendConnection* conn)
@@ -806,19 +800,20 @@ void RoutingWorker::ConnectionPool::remove_and_close(mxs::BackendConnection* con
     mxb_assert(it != m_contents.end());
     it->second.release_conn();
     m_contents.erase(it);
+    m_stats.curr_size--;
     m_owner->close_pooled_dcb(conn->dcb());
 }
 
 void RoutingWorker::ConnectionPool::close_all()
 {
-    // Close all entries in the server-specific pool, then adjust pool stats.
+    // Close all entries in the server-specific pool.
     for (auto& pool_entry : m_contents)
     {
         BackendDCB* dcb = pool_entry.second.release_conn()->dcb();
         m_owner->close_pooled_dcb(dcb);
     }
-    mxb::atomic::add(&m_target_server->pool_stats().n_persistent, -m_contents.size());
     m_contents.clear();
+    m_stats.curr_size = 0;
 }
 
 bool RoutingWorker::ConnectionPool::empty() const
@@ -829,6 +824,8 @@ bool RoutingWorker::ConnectionPool::empty() const
 void RoutingWorker::ConnectionPool::add_connection(mxs::BackendConnection* conn)
 {
     m_contents.emplace(conn, ConnPoolEntry(conn));
+    m_stats.curr_size++;
+    m_stats.max_size = std::max(m_stats.max_size, m_stats.curr_size);
 }
 
 RoutingWorker::ConnectionPool::ConnectionPool(mxs::RoutingWorker* owner, SERVER* target_server,
@@ -844,12 +841,18 @@ RoutingWorker::ConnectionPool::ConnectionPool(RoutingWorker::ConnectionPool&& rh
     , m_owner(rhs.m_owner)
     , m_target_server(rhs.m_target_server)
     , m_capacity(rhs.m_capacity)
+    , m_stats(rhs.m_stats)
 {
 }
 
 bool RoutingWorker::ConnectionPool::has_space() const
 {
     return (int)m_contents.size() < m_capacity;
+}
+
+RoutingWorker::ConnectionPoolStats RoutingWorker::ConnectionPool::stats() const
+{
+    return m_stats;
 }
 
 void RoutingWorker::evict_dcb(BackendDCB* pDcb)
@@ -1677,7 +1680,44 @@ void RoutingWorker::pool_set_size(const std::string& srvname, int64_t size)
             break;
         }
     }
+}
 
+RoutingWorker::ConnectionPoolStats RoutingWorker::pool_get_stats(const SERVER* pSrv)
+{
+    mxb_assert(mxs::MainWorker::is_main_worker());
+    int n_workers = this_unit.nWorkers;
+    // Bad for cache, but this is unlikely to be called thousands of times per second.
+    ConnectionPoolStats thread_stats[n_workers];
+
+    auto fetch_thread_stats = [&]() {
+            auto rworker = RoutingWorker::get_current();
+            ConnectionPoolStats* output = &thread_stats[rworker->m_id];
+            auto& pool_grp = rworker->m_pool_group;
+
+            auto it = pool_grp.find(pSrv);
+            if (it != pool_grp.end())
+            {
+                *output = it->second.stats();
+            }
+        };
+
+    mxs::RoutingWorker::execute_concurrently(fetch_thread_stats);
+
+    // Calculate the sum.
+    RoutingWorker::ConnectionPoolStats rval;
+    for (auto& stats : thread_stats)
+    {
+        rval.add(stats);
+    }
+    return rval;
+}
+
+void RoutingWorker::ConnectionPoolStats::add(const ConnectionPoolStats& rhs)
+{
+    curr_size += rhs.curr_size;
+    max_size += rhs.max_size;
+    times_found += rhs.times_found;
+    times_empty += rhs.times_empty;
 }
 }
 
