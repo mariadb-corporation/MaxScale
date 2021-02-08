@@ -145,6 +145,7 @@ private:
     bool process_normal_packet(mxs::Buffer&& buffer);
     bool route_statement(mxs::Buffer&& buffer);
     void finish_recording_history(const GWBUF* buffer, const mxs::Reply& reply);
+    bool record_for_history(mxs::Buffer& buffer, uint8_t cmd);
 
     bool start_change_user(mxs::Buffer&& buffer);
     bool complete_change_user();

@@ -944,26 +944,13 @@ MariaDBClientConnection::process_special_queries(mxs::Buffer& buffer)
     return rval;
 }
 
-/**
- * Route an SQL protocol packet. If the original client packet is less than 16MB, buffer should
- * contain the complete packet. If the client packet is large (split into multiple protocol packets),
- * only one protocol packet should be routed at a time.
- * TODO: what happens with parsing in this case? Likely it fails.
- *
- * @param buffer Buffer to route
- * @return True on success
- */
-bool MariaDBClientConnection::route_statement(mxs::Buffer&& buffer)
+bool MariaDBClientConnection::record_for_history(mxs::Buffer& buffer, uint8_t cmd)
 {
-    buffer.make_contiguous();
-
-    // TODO: Make the history storage a router capability. Current this is done even for readconnroute.
-    uint8_t cmd = mxs_mysql_get_command(buffer.get());
+    bool should_record = false;
     const auto current_target = mariadb::QueryClassifier::CURRENT_TARGET_UNDEFINED;
     const auto& info = m_qc.update_route_info(current_target, buffer.get());
-    bool should_record = cmd != MXS_COM_QUIT && m_qc.target_is_all(info.target());
 
-    if (should_record)
+    if (cmd != MXS_COM_QUIT && m_qc.target_is_all(info.target()))
     {
         if (cmd == MXS_COM_STMT_CLOSE)
         {
@@ -972,7 +959,6 @@ bool MariaDBClientConnection::route_statement(mxs::Buffer&& buffer)
             // replay as all stored commands generate a response and none of them refer to any previous
             // commands. This means that the history can be executed in a single batch without waiting for any
             // responses.
-            should_record = false;
             uint32_t id = mxs_mysql_extract_ps_id(buffer.get());
 
             auto it = std::find_if(m_session_data->history.begin(),
@@ -985,32 +971,61 @@ bool MariaDBClientConnection::route_statement(mxs::Buffer&& buffer)
             {
                 mxb_assert(it->id());
                 m_session_data->history.erase(it);
+                m_qc.ps_erase(buffer.get());
             }
         }
         else if (cmd == MXS_COM_STMT_RESET)
         {
             // COM_STMT_RESET is useless in the history, no point in recording it as new connections don't
             // need it.
-            should_record = false;
         }
         else if (cmd == MXS_COM_CHANGE_USER)
         {
             // COM_CHANGE_USER resets the whole connection. Any new connections will already be using the new
             // credentials which means we can safely reset the history here.
-            should_record = false;
             m_session_data->history.clear();
         }
         else
         {
             buffer.set_id(m_next_id);
-            m_pending_cmd = buffer;     // Keep a copy for the session command history
+            m_pending_cmd = buffer;         // Keep a copy for the session command history
+            should_record = true;
 
             if (cmd == MXS_COM_STMT_PREPARE)
             {
                 // This will silence the warnings about unknown PS IDs
                 m_qc.ps_store(buffer.get(), m_next_id);
             }
+
+            if (++m_next_id == 0)
+            {
+                m_next_id = 1;
+            }
         }
+    }
+
+    return should_record;
+}
+
+/**
+ * Route an SQL protocol packet. If the original client packet is less than 16MB, buffer should
+ * contain the complete packet. If the client packet is large (split into multiple protocol packets),
+ * only one protocol packet should be routed at a time.
+ * TODO: what happens with parsing in this case? Likely it fails.
+ *
+ * @param buffer Buffer to route
+ * @return True on success
+ */
+bool MariaDBClientConnection::route_statement(mxs::Buffer&& buffer)
+{
+    bool recording = false;
+    uint8_t cmd = mxs_mysql_get_command(buffer.get());
+
+    buffer.make_contiguous();
+
+    if (m_session->service->capabilities() & RCAP_TYPE_SESCMD_HISTORY)
+    {
+        recording = record_for_history(buffer, cmd);
     }
 
     // Must be done whether or not there were any changes, as the query classifier
@@ -1040,15 +1055,10 @@ bool MariaDBClientConnection::route_statement(mxs::Buffer&& buffer)
         ++m_num_responses;
     }
 
-    if (should_record)
+    if (recording)
     {
         mxb_assert(expecting_response);
         m_routing_state = RoutingState::RECORD_HISTORY;
-
-        if (++m_next_id == 0)
-        {
-            m_next_id = 1;
-        }
     }
 
     return m_downstream->routeQuery(buffer.release()) != 0;

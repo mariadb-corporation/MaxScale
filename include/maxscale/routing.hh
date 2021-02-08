@@ -128,6 +128,15 @@ enum mxs_routing_capability_t
      * Binary: 0b0000000010000000
      */
     RCAP_TYPE_QUERY_CLASSIFICATION = (1 << 7),
+
+    /**
+     * Track modifications to the session state and automatically restore them whenever a reconnection occurs.
+     * This capability must be declared by the router in order for it to be able to safely reconnect
+     * mid-session.
+     *
+     * Binary: 0b0000000100000000
+     */
+    RCAP_TYPE_SESCMD_HISTORY = (1 << 8),
 };
 
 #define RCAP_TYPE_NONE 0
