@@ -63,6 +63,7 @@ void test_trx_replay(TestConnections& test, MYSQL* mysql)
     test.check_maxctrl("alter service RW-Split-Router transaction_replay true");
     test.check_maxctrl("alter service RW-Split-Router delayed_retry_timeout 30s");
     test.maxscales->connect_rwsplit();
+    mysql = test.maxscales->conn_rwsplit[0];
 
     const std::string query = "SELECT SLEEP(1)";
     const int NUM_QUERY = 15;
@@ -95,6 +96,7 @@ void test_optimistic_trx(TestConnections& test, MYSQL* mysql)
     // Enable optimistic_trx and reconnect to take it into use
     test.check_maxctrl("alter service RW-Split-Router optimistic_trx true");
     test.maxscales->connect_rwsplit();
+    mysql = test.maxscales->conn_rwsplit[0];
 
     const std::string read_query = "SELECT * FROM test.t1";
     const std::string write_query = "INSERT INTO test.t1 VALUES (1)";
