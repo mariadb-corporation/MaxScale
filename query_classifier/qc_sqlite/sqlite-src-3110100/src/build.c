@@ -3751,11 +3751,13 @@ SrcList* sqlite3SrcListCat(sqlite3 *db, SrcList *pHead, SrcList *pTail)
   if ( pHead==0 ){
     return pTail;
   }
+  /* After call to sqlite3SrcListEnlarge(), pNew->nSrc is already final size. */
+  int nSrc = pHead->nSrc;
   pNew = sqlite3SrcListEnlarge(db, pHead, pTail->nSrc, pHead->nSrc);
   if (!db->mallocFailed){
     int i;
     for(i=0; i<pTail->nSrc; i++){
-      pNew->a[pNew->nSrc - 1 + i] = pTail->a[i];
+      pNew->a[nSrc + i] = pTail->a[i];
       memset(&pTail->a[i], 0, sizeof(pTail->a[0]));
     }
     pTail->nSrc = 0;
