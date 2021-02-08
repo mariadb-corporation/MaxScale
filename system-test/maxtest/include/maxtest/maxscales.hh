@@ -1,5 +1,6 @@
 #pragma once
 
+#include <functional>
 #include <string>
 #include <thread>
 #include <vector>
@@ -410,6 +411,7 @@ struct ServerInfo
     int64_t     server_id {SRV_ID_NONE};
     int64_t     master_group {GROUP_NONE};
     int64_t     rlag {RLAG_NONE};
+    int64_t     pool_conns {0};
 
     struct SlaveConnection
     {
@@ -458,10 +460,13 @@ public:
     void check_servers_status(const std::vector<ServerInfo::bitfield>& expected_status);
 
     void check_master_groups(const std::vector<int>& expected_groups);
+    void check_pool_connections(const std::vector<int>& expected_conns);
 
 private:
     std::vector<ServerInfo> m_servers;
     TestLogger&             m_log;
+
+    void check_servers_property(size_t n_expected, const std::function<void(size_t)>& tester);
 };
 
 class MaxScale

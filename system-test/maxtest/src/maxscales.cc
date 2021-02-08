@@ -392,6 +392,7 @@ ServersInfo MaxScale::get_servers()
     const string field_rlag = "replication_lag";
     const string field_serverid = "server_id";
     const string field_slave_conns = "slave_connections";
+    const string field_statistics = "statistics";
 
     // Slave conn fields
     const string field_scon_name = "connection_name";
@@ -399,6 +400,9 @@ ServersInfo MaxScale::get_servers()
     const string field_scon_id = "master_server_id";
     const string field_scon_io = "slave_io_running";
     const string field_scon_sql = "slave_sql_running";
+
+    // Statistics fields
+    const string field_pers_conns = "persistent_connections";
 
     auto try_get_int = [](const Json& json, const string& key, int64_t failval) {
             int64_t rval = failval;
@@ -446,6 +450,10 @@ ServersInfo MaxScale::get_servers()
                         info.slave_connections.push_back(std::move(conn_info));
                     }
                 }
+
+                auto stats = attr.get_object(field_statistics);
+                info.pool_conns = try_get_int(stats, field_pers_conns, -1);
+
                 rval.add(info);
             }
         }
@@ -481,14 +489,25 @@ size_t ServersInfo::size() const
     return m_servers.size();
 }
 
-void ServersInfo::check_servers_status(const std::vector<ServerInfo::bitfield>& expected_status)
+void ServersInfo::check_servers_property(size_t n_expected, const std::function<void(size_t)>& tester)
 {
     // Checking only some of the servers is ok.
-    auto n_expected = expected_status.size();
     if (n_expected <= m_servers.size())
     {
         for (size_t i = 0; i < n_expected; i++)
         {
+            tester(i);
+        }
+    }
+    else
+    {
+        m_log.add_failure("Expected at least %zu servers, found %zu.", n_expected, m_servers.size());
+    }
+}
+
+void ServersInfo::check_servers_status(const std::vector<ServerInfo::bitfield>& expected_status)
+{
+    auto tester = [&](size_t i) {
             auto expected = expected_status[i];
             auto& info = m_servers[i];
             if (expected != info.status)
@@ -498,22 +517,13 @@ void ServersInfo::check_servers_status(const std::vector<ServerInfo::bitfield>& 
                 m_log.add_failure("Wrong status for %s. Got '%s', expected '%s'.",
                                   info.name.c_str(), found_str.c_str(), expected_str.c_str());
             }
-        }
-    }
-    else
-    {
-        m_log.add_failure("Expected at least %zu servers, found %zu.", n_expected, m_servers.size());
-    }
+        };
+    check_servers_property(expected_status.size(), tester);
 }
 
 void ServersInfo::check_master_groups(const std::vector<int>& expected_groups)
 {
-    auto n_expected = expected_groups.size();
-    if (n_expected <= m_servers.size())
-    {
-        // Checking only some of the servers is ok.
-        for (size_t i = 0; i < n_expected; i++)
-        {
+    auto tester = [&](size_t i) {
             auto expected = expected_groups[i];
             auto& info = m_servers[i];
             if (expected != info.master_group)
@@ -521,12 +531,22 @@ void ServersInfo::check_master_groups(const std::vector<int>& expected_groups)
                 m_log.add_failure("Wrong master group for %s. Got '%li', expected '%i'.",
                                   info.name.c_str(), info.master_group, expected);
             }
-        }
-    }
-    else
-    {
-        m_log.add_failure("Expected at least %zu servers, found %zu.", n_expected, m_servers.size());
-    }
+        };
+    check_servers_property(expected_groups.size(), tester);
+}
+
+void ServersInfo::check_pool_connections(const std::vector<int>& expected_conns)
+{
+    auto tester = [&](size_t i) {
+            auto expected = expected_conns[i];
+            auto& info = m_servers[i];
+            if (expected != info.pool_conns)
+            {
+                m_log.add_failure("Wrong connection pool size for %s. Got '%li', expected '%i'.",
+                                  info.name.c_str(), info.pool_conns, expected);
+            }
+        };
+    check_servers_property(expected_conns.size(), tester);
 }
 
 ServersInfo::ServersInfo(TestLogger& log)
