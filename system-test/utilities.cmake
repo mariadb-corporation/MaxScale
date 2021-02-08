@@ -81,7 +81,7 @@ endfunction()
 function(add_test_script name script template labels)
   list(APPEND labels ${ARGN})
   add_template(${name} ${template} "${labels}")
-  add_test(NAME ${name} COMMAND non_native_setup ${name} ${script} WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+  add_test(NAME ${name} COMMAND non_native_setup ${name} ${CMAKE_CURRENT_SOURCE_DIR}/${script} WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
   add_test_properties(${name} ${labels})
 endfunction()
 

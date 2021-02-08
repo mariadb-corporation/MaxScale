@@ -20,8 +20,6 @@ int main(int argc, char* argv[])
     }
 
     std::string sys =
-        std::string(test_dir) +
-        std::string("/") +
         std::string(argv[2]) +
         std::string(" ") +
         std::string(argv[1]);
