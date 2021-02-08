@@ -454,20 +454,20 @@ void RoutingWorker::process_timeouts()
 
         for (auto& elem : m_sessions)
         {
-            auto* ses = static_cast<Session*>(elem.second);
+            auto* pSes = static_cast<Session*>(elem.second);
             // TODO: indexing the config() for every session every second may cost some. Could be
             // improved by storing sessions ordered by service.
-            int pooling_time = ses->service->config()->idle_session_pooling_time;
+            int pooling_time = pSes->service->config()->idle_session_pooling_time;
 
-            ClientDCB* client_dcb = ses->client_dcb;
-            if (client_dcb->state() == DCB::State::POLLING)
+            ClientDCB* pClient = pSes->client_dcb;
+            if (pClient->state() == DCB::State::POLLING)
             {
-                auto idle = MXS_CLOCK_TO_SEC(now - client_dcb->last_read());
-                ses->tick(idle);
+                auto idle = MXS_CLOCK_TO_SEC(now - pClient->last_read());
+                pSes->tick(idle);
 
-                if (pooling_time >= 0 && idle > pooling_time && ses->can_pool_backends())
+                if (pooling_time >= 0 && idle > pooling_time && pSes->can_pool_backends())
                 {
-                    for (auto& backend : ses->backend_connections())
+                    for (auto& backend : pSes->backend_connections())
                     {
                         if (backend->established() && backend->is_idle())
                         {

@@ -453,9 +453,8 @@ private:
     mxs::Component* m_up;
     MXS_SESSION*    m_session;
     Server*         m_server;
-
-    bool m_conn_pooled {false};     /**< Is the actual connection currently pooled away? */
-    bool m_can_try_pooling {true};  /**< If pooling fails, don't try it again */
+    bool            m_conn_pooled {false};      /**< Is the actual connection currently pooled away? */
+    bool            m_can_try_pooling {true};   /**< If pooling fails, don't try it again */
 
     mxs::BackendConnection* m_conn {nullptr};
 };
