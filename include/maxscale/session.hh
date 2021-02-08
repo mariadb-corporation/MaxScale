@@ -193,6 +193,16 @@ public:
         m_user = user;
     }
 
+    bool can_pool_backends() const
+    {
+        return m_can_pool_backends;
+    }
+
+    void set_can_pool_backends(bool value)
+    {
+        m_can_pool_backends = value;
+    }
+
     /**
      * Abruptly stop the session
      *
@@ -251,7 +261,7 @@ public:
     MXS_SESSION_STATS stats;                    /*< Session statistics */
     SERVICE*          service;                  /*< The service this session is using */
     int               refcount;                 /*< Reference count on the session */
-    bool              qualifies_for_pooling;    /*< Whether this session qualifies for the connection pool */
+
     struct
     {
         mxs::Routable* up;          /*< Upward component to receive buffer. */
@@ -267,7 +277,13 @@ public:
 
 private:
     std::unique_ptr<ProtocolData> m_protocol_data;
-    bool                          m_killed {false};
+
+    bool m_killed {false};
+
+    /**
+     * Is session in a state where backend connections can be donated to pool and reattached to session?
+     * Updated by protocol code. */
+    bool m_can_pool_backends {false};
 
     virtual void add_userdata_subscriber(MXS_SESSION::EventSubscriber* obj) = 0;
     virtual void remove_userdata_subscriber(MXS_SESSION::EventSubscriber* obj) = 0;
@@ -383,20 +399,6 @@ json_t* session_to_json(const MXS_SESSION* session, const char* host, bool rdns)
  * @return A JSON array with all sessions
  */
 json_t* session_list_to_json(const char* host, bool rdns);
-
-/**
- * Qualify the session for connection pooling
- *
- * @param session Session to qualify
- */
-void session_qualify_for_pool(MXS_SESSION* session);
-
-/**
- * Check if the session qualifies for connection pooling
- *
- * @param session
- */
-bool session_valid_for_pool(const MXS_SESSION* session);
 
 /**
  * @brief Return the session of the dcb currently being processed

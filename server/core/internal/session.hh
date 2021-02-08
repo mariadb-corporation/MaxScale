@@ -104,7 +104,6 @@ public:
     };
 
     using FilterList = std::vector<SessionFilter>;
-    using DCBSet = std::unordered_set<DCB*>;
     using BackendConnectionVector = std::vector<mxs::BackendConnection*>;
 
     Session(std::shared_ptr<mxs::ListenerSessionData> listener_data,

@@ -113,6 +113,11 @@ public:
         bool    prune_sescmd_history {false};
         bool    disable_sescmd_history {false};
         int64_t max_sescmd_history {50};
+
+        /**
+         * Can backend connections be pooled while session is still running? Configured as seconds the
+         * session must be idle before backend connections can be pooled. */
+        int64_t idle_session_pooling_time {-1};
     };
 
     State  state {State::ALLOC};        /**< The service state */

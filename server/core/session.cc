@@ -87,7 +87,6 @@ MXS_SESSION::MXS_SESSION(const std::string& host, SERVICE* service)
     , stats{time(0)}
     , service(service)
     , refcount(1)
-    , qualifies_for_pooling(false)
     , response{}
     , close_reason(SESSION_CLOSE_NONE)
     , load_active(false)
@@ -462,16 +461,6 @@ json_t* session_list_to_json(const char* host, bool rdns)
     SessionListData data(host, rdns);
     dcb_foreach(seslist_cb, &data);
     return mxs_json_resource(host, MXS_JSON_API_SESSIONS, data.json);
-}
-
-void session_qualify_for_pool(MXS_SESSION* session)
-{
-    session->qualifies_for_pooling = true;
-}
-
-bool session_valid_for_pool(const MXS_SESSION* session)
-{
-    return session->qualifies_for_pooling;
 }
 
 MXS_SESSION* session_get_current()

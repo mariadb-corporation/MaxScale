@@ -92,6 +92,7 @@ const char CN_ROUTER_DIAGNOSTICS[] = "router_diagnostics";
 const char CN_ROUTER_OPTIONS[] = "router_options";
 const char CN_SESSION_TRACK_TRX_STATE[] = "session_track_trx_state";
 const char CN_STRIP_DB_ESC[] = "strip_db_esc";
+const char CN_IDLE_SESSION_POOL_TIME[] = "idle_session_pool_time";
 }
 
 Service* Service::create(const char* name, const char* router, mxs::ConfigParameters* params)
@@ -237,6 +238,7 @@ Service::Config::Config(mxs::ConfigParameters* params)
     , prune_sescmd_history(params->get_bool(CN_PRUNE_SESCMD_HISTORY))
     , disable_sescmd_history(params->get_bool(CN_DISABLE_SESCMD_HISTORY))
     , max_sescmd_history(params->get_integer(CN_MAX_SESCMD_HISTORY))
+    , idle_session_pooling_time(params->get_integer(CN_IDLE_SESSION_POOL_TIME))
 {
 }
 
@@ -1168,6 +1170,7 @@ bool Service::is_basic_parameter(const std::string& name)
         CN_DISABLE_SESCMD_HISTORY,
         CN_MAX_SESCMD_HISTORY,
         CN_PRUNE_SESCMD_HISTORY,
+        CN_IDLE_SESSION_POOL_TIME,
     };
 
     return names.find(name) != names.end();
@@ -1237,6 +1240,7 @@ const MXS_MODULE_PARAM* common_service_params()
         {CN_MAX_SESCMD_HISTORY,     MXS_MODULE_PARAM_COUNT,    "50"},
         {CN_DISABLE_SESCMD_HISTORY, MXS_MODULE_PARAM_BOOL,     "false"},
         {CN_PRUNE_SESCMD_HISTORY,   MXS_MODULE_PARAM_BOOL,     "true"},
+        {CN_IDLE_SESSION_POOL_TIME, MXS_MODULE_PARAM_INT,      "-1"},
         {NULL}
     };
     return config_service_params;

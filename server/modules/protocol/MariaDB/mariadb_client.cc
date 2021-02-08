@@ -1216,7 +1216,7 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_normal
     else if (m_command == MXS_COM_QUIT)
     {
         /** Close router session which causes closing of backends */
-        mxb_assert_message(session_valid_for_pool(m_session), "Session should qualify for pooling");
+        mxb_assert_message(m_session->can_pool_backends(), "Session should qualify for pooling");
         m_state = State::QUIT;
         rval = StateMachineRes::DONE;
     }
@@ -1345,7 +1345,7 @@ void MariaDBClientConnection::hangup(DCB* event_dcb)
     mxb_assert(m_dcb == event_dcb);
 
     MXS_SESSION* session = m_session;
-    if (session && !session_valid_for_pool(session))
+    if (session && !session->can_pool_backends())
     {
         if (session_get_dump_statements() == SESSION_DUMP_STATEMENTS_ON_ERROR)
         {
@@ -1406,9 +1406,11 @@ MariaDBClientConnection::MariaDBClientConnection(MXS_SESSION* session, mxs::Comp
     , m_session(session)
     , m_session_data(static_cast<MYSQL_session*>(session->protocol_data()))
     , m_version(service_get_version(session->service, SERVICE_VERSION_MIN))
-    , m_max_sescmd_history(m_session->service->config()->max_sescmd_history)
     , m_qc(this, session, TYPE_ALL)
 {
+    const auto& svc_config = *m_session->service->config();
+    m_max_sescmd_history = svc_config.max_sescmd_history;
+    m_track_pooling_status = svc_config.idle_session_pooling_time >= 0;
 }
 
 /**
@@ -2341,7 +2343,7 @@ bool MariaDBClientConnection::process_normal_packet(mxs::Buffer&& buffer)
          * a batch and then expecting N responses) then it is possible that
          * the backend connections are not idle when the COM_QUIT is received.
          * In most cases we can assume that the connections are idle. */
-        session_qualify_for_pool(m_session);
+        m_session->set_can_pool_backends(true);
         success = route_statement(move(buffer));
         break;
 
@@ -2519,6 +2521,25 @@ MariaDBClientConnection::clientReply(GWBUF* buffer, maxscale::ReplyRoute& down, 
         parse_and_set_trx_state(reply);
     }
 
+    if (m_track_pooling_status && !m_pooling_permanent_disable)
+    {
+        // TODO: Configurable? Also, must be many other situations where backend conns should not be runtime-
+        // pooled.
+        if (m_session_data->history.size() > m_max_sescmd_history)
+        {
+            m_pooling_permanent_disable = true;
+            m_session->set_can_pool_backends(false);
+        }
+        else
+        {
+            bool reply_complete = reply.is_complete();
+            bool waiting_response = m_num_responses > 0;
+            // Trx status detection is likely lacking.
+            bool trx_on = m_session_data->is_trx_active() && !m_session_data->is_trx_ending();
+            bool pooling_ok = reply_complete && !waiting_response && !trx_on;
+            m_session->set_can_pool_backends(pooling_ok);
+        }
+    }
     return write(buffer);
 }
 

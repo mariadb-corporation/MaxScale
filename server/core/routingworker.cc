@@ -455,11 +455,30 @@ void RoutingWorker::process_timeouts()
         for (auto& elem : m_sessions)
         {
             auto* ses = static_cast<Session*>(elem.second);
+            // TODO: indexing the config() for every session every second may cost some. Could be
+            // improved by storing sessions ordered by service.
+            int pooling_time = ses->service->config()->idle_session_pooling_time;
+
             ClientDCB* client_dcb = ses->client_dcb;
             if (client_dcb->state() == DCB::State::POLLING)
             {
                 auto idle = MXS_CLOCK_TO_SEC(now - client_dcb->last_read());
                 ses->tick(idle);
+
+                if (pooling_time >= 0 && idle > pooling_time && ses->can_pool_backends())
+                {
+                    for (auto& backend : ses->backend_connections())
+                    {
+                        if (backend->established() && backend->is_idle())
+                        {
+                            auto pEp = static_cast<ServerEndpoint*>(backend->upstream());
+                            if (pEp->can_try_pooling())
+                            {
+                                pEp->try_to_pool();
+                            }
+                        }
+                    }
+                }
             }
         }
 
@@ -547,6 +566,10 @@ RoutingWorker::get_backend_connection(SERVER* pSrv, MXS_SESSION* pSes, mxs::Comp
     if (!pConn)
     {
         pConn = pSession->create_backend_connection(pServer, this, pUpstream);
+        if (pConn)
+        {
+            pServer->stats().add_connection();
+        }
     }
     return pConn;
 }
@@ -658,6 +681,7 @@ RoutingWorker::pool_get_connection(SERVER* pSrv, MXS_SESSION* pSes, mxs::Compone
                     pDcb->shutdown();
                 }
                 BackendDCB::close(pDcb);
+                pServer->stats().remove_connection();
             }
         }
 
@@ -685,7 +709,7 @@ bool RoutingWorker::move_to_conn_pool(BackendDCB* pDcb)
         auto* pConn = pDcb->protocol();
         // Pooling enabled for the server. Check connection, session and server status.
         if (pDcb->state() == DCB::State::POLLING && !pDcb->hanged_up() && pConn->established()
-            && pSession && pSession->qualifies_for_pooling
+            && pSession && pSession->can_pool_backends()
             && pServer->is_running())
         {
             // All ok. Try to add the connection to pool.
@@ -875,6 +899,7 @@ void RoutingWorker::close_pooled_dcb(BackendDCB* pDcb)
         pDcb->shutdown();
     }
 
+    pDcb->server()->stats().remove_connection();
     BackendDCB::close(pDcb);
 }
 

@@ -300,6 +300,7 @@ public:
 
     virtual const BackendDCB* dcb() const = 0;
     virtual BackendDCB*       dcb() = 0;
+    virtual mxs::Component*   upstream() const = 0;
 };
 
 class UserAccountCache;

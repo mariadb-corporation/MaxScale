@@ -300,4 +300,7 @@ private:
     mxs::Buffer              m_pending_cmd;         // Current session command being executed
     size_t                   m_max_sescmd_history;  // Number of stored session commands
     mariadb::QueryClassifier m_qc;
+
+    bool m_track_pooling_status {false};        /**< Does pooling status need to be tracked? */
+    bool m_pooling_permanent_disable {false};   /**< Is pooling disabled permanently for this session? */
 };

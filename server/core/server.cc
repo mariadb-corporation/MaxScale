@@ -869,15 +869,10 @@ mxs::Target* ServerEndpoint::target() const
 
 bool ServerEndpoint::connect()
 {
-    mxb_assert(!is_open());
+    mxb_assert(!m_conn || m_conn_pooled);
     mxb::LogScope scope(m_server->name());
     auto worker = mxs::RoutingWorker::get_current();
-
-    if ((m_conn = worker->get_backend_connection(m_server, m_session, this)))
-    {
-        m_server->stats().add_connection();
-    }
-
+    m_conn = worker->get_backend_connection(m_server, m_session, this);
     return m_conn != nullptr;
 }
 
@@ -885,33 +880,46 @@ void ServerEndpoint::close()
 {
     mxb::LogScope scope(m_server->name());
 
-    auto* dcb = m_conn->dcb();
-    // Try to move the connection into the pool. If it fails, close normally.
-    bool moved_to_pool = dcb->manager()->move_to_conn_pool(dcb);
-    if (moved_to_pool)
+    if (!m_conn_pooled)
     {
-        mxb_assert(dcb->is_open());
+        auto* dcb = m_conn->dcb();
+        // Try to move the connection into the pool. If it fails, close normally.
+        bool moved_to_pool = dcb->manager()->move_to_conn_pool(dcb);
+        if (moved_to_pool)
+        {
+            mxb_assert(dcb->is_open());
+        }
+        else
+        {
+            BackendDCB::close(dcb);
+            m_server->stats().remove_connection();
+        }
+        m_conn = nullptr;
     }
-    else
-    {
-        BackendDCB::close(dcb);
-    }
-
-    m_conn = nullptr;
-    m_server->stats().remove_connection();
 }
 
 bool ServerEndpoint::is_open() const
 {
-    return m_conn;
+    return m_conn || m_conn_pooled;
 }
 
 int32_t ServerEndpoint::routeQuery(GWBUF* buffer)
 {
     mxb::LogScope scope(m_server->name());
     mxb_assert(is_open());
-    mxb::atomic::add(&m_server->stats().packets, 1, mxb::atomic::RELAXED);
-    return m_conn->write(buffer);
+    int32_t rval = 0;
+
+    if (m_conn_pooled && connect())
+    {
+        m_conn_pooled = false;
+    }
+
+    if (!m_conn_pooled)
+    {
+        rval = m_conn->write(buffer);
+        mxb::atomic::add(&m_server->stats().packets, 1, mxb::atomic::RELAXED);
+    }
+    return rval;
 }
 
 int32_t ServerEndpoint::clientReply(GWBUF* buffer, mxs::ReplyRoute& down, const mxs::Reply& reply)
@@ -928,6 +936,27 @@ bool ServerEndpoint::handleError(mxs::ErrorType type, GWBUF* error,
     mxb::LogScope scope(m_server->name());
     mxb_assert(is_open());
     return m_up->handleError(type, error, this, reply);
+}
+
+bool ServerEndpoint::can_try_pooling() const
+{
+    return m_conn && !m_conn_pooled && m_can_try_pooling;
+}
+
+void ServerEndpoint::try_to_pool()
+{
+    auto* dcb = m_conn->dcb();
+    // Try to move the connection into the pool. If it fails, do not try again.
+    bool moved_to_pool = dcb->manager()->move_to_conn_pool(dcb);
+    if (moved_to_pool)
+    {
+        m_conn_pooled = true;
+        m_conn = nullptr;
+    }
+    else
+    {
+        m_can_try_pooling = false;
+    }
 }
 
 std::unique_ptr<mxs::Endpoint> Server::get_connection(mxs::Component* up, MXS_SESSION* session)

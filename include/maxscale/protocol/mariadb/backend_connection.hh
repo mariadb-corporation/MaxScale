@@ -48,7 +48,9 @@ public:
     const BackendDCB* dcb() const override;
     BackendDCB*       dcb() override;
 
-    uint64_t thread_id() const;
+    uint64_t        thread_id() const;
+    mxs::Component* upstream() const override;
+
     uint32_t server_capabilities {0};   /**< Server capabilities TODO: private */
 
 private:

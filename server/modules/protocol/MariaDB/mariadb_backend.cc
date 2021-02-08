@@ -857,21 +857,28 @@ int MariaDBBackendConnection::read_change_user()
                 buffer.data()[3] = 0x3;
                 mxs::ReplyRoute route;
                 rc = m_upstream->clientReply(buffer.release(), route, m_reply);
-            }
-            else
-            {
-                mxb_assert(m_state == State::RESET_CONNECTION);
 
+                // If packets were received from the router while the COM_CHANGE_USER was in progress,
+                // they are stored in the same delayed queue that is used for the initial connection.
+                m_state = State::SEND_DELAYQ;
+            }
+            else if (m_state == State::RESET_CONNECTION)
+            {
                 if (mxs_mysql_get_command(buffer.get()) == MYSQL_REPLY_ERR)
                 {
                     std::string errmsg = "Failed to reuse connection: " + mxs::extract_error(buffer.get());
                     do_handle_error(m_dcb, errmsg, mxs::ErrorType::PERMANENT);
                 }
+                else
+                {
+                    // Connection is being attached to a new session, so all initializations must be redone.
+                    m_state = State::CONNECTION_INIT;
+                }
             }
-
-            // If packets were received from the router while the COM_CHANGE_USER was in progress, they are
-            // stored in the same delayed queue that is used for the initial connection.
-            m_state = m_delayed_packets.empty() ? State::ROUTING : State::SEND_DELAYQ;
+            else
+            {
+                mxb_assert(!true);
+            }
         }
     }
 
@@ -2794,4 +2801,9 @@ void MariaDBBackendConnection::set_to_pooled()
     m_state = State::POOLED;
     // TODO: Likely other fields need to be modified as well, either here or in 'reuse_connection'.
     // Clean it up once situation clarifies.
+}
+
+mxs::Component* MariaDBBackendConnection::upstream() const
+{
+    return m_upstream;
 }
