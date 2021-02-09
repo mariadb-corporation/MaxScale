@@ -19,17 +19,15 @@ void check_conn_pool_size(TestConnections& test, const IntVector& expected)
 
 int main(int argc, char* argv[])
 {
-    TestConnections::require_galera(true);
     TestConnections test(argc, argv);
 
-    test.add_result(test.create_connections(0, 70, true, true, true, true),
+    test.add_result(test.create_connections(0, 70, true, true, true, false),
                     "Error creating connections");
     sleep(5);
     test.set_timeout(20);
 
     test.tprintf("Test 1:");
-    // First 4 elements are the replication servers, last 4 are galera.
-    IntVector expected = {1, 5, 10, 30, 10, 15, 0, 0};
+    IntVector expected = {1, 5, 10, 30};
     check_conn_pool_size(test, expected);
 
     test.stop_timeout();
@@ -48,7 +46,7 @@ int main(int argc, char* argv[])
     test.set_timeout(20);
     test.tprintf("Test 3:");
 
-    expected = {1, 5, 10, 0, 10, 0, 0, 0};
+    expected = {1, 5, 10, 0};
     check_conn_pool_size(test, expected);
 
     test.tprintf("Sleeping 30 seconds");
@@ -58,7 +56,7 @@ int main(int argc, char* argv[])
 
     test.tprintf("Test 4:");
 
-    expected = {1, 0, 0, 0, 10, 0, 0, 0};
+    expected = {1, 0, 0, 0};
     check_conn_pool_size(test, expected);
 
     return test.global_result;
