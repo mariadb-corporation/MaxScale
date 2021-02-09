@@ -167,6 +167,12 @@ void MariaDBBackendConnection::finish_connection()
 {
     mxb_assert(m_dcb->handler());
 
+    if (m_state != State::POOLED)
+    {
+        MYSQL_session* data = static_cast<MYSQL_session*>(m_session->protocol_data());
+        data->history_response_cbs.erase(this);
+    }
+
     // Always send a COM_QUIT to the backend being closed. This causes the connection to be closed faster.
     m_dcb->silence_errors();
     m_dcb->writeq_append(mysql_create_com_quit(nullptr, 0));
@@ -794,6 +800,7 @@ std::string MariaDBBackendConnection::create_response_mismatch_error()
 bool MariaDBBackendConnection::compare_responses()
 {
     bool ok = true;
+    bool found = false;
     MYSQL_session* data = static_cast<MYSQL_session*>(m_session->protocol_data());
     auto it = m_ids_to_check.begin();
 
@@ -810,11 +817,24 @@ bool MariaDBBackendConnection::compare_responses()
             }
 
             it = m_ids_to_check.erase(it);
+            found = true;
         }
         else
         {
             ++it;
         }
+    }
+
+    if (!found && !m_ids_to_check.empty())
+    {
+        data->history_response_cbs.emplace(
+            this, [this]() {
+                if (!compare_responses())
+                {
+                    do_handle_error(m_dcb, create_response_mismatch_error(),
+                                    mxs::ErrorType::PERMANENT);
+                }
+            });
     }
 
     return ok;
@@ -976,18 +996,6 @@ int32_t MariaDBBackendConnection::write(GWBUF* queue)
 
     case State::ROUTING:
         {
-            if (!compare_responses())
-            {
-                // We can't call do_handle_error here as it would cause the handleError function of the router
-                // to be called while it's still in the routeQuery function. Triggering a hangup event will
-                // close the connection and cause an eventual history replay failure to be generated. This is
-                // definitely not efficient but it's the best we can do until the backend protocol knows when
-                // it's in the pool.
-                m_dcb->trigger_hangup_event();
-                gwbuf_free(queue);
-                return 1;
-            }
-
             auto cmd = static_cast<mxs_mysql_cmd_t>(mxs_mysql_get_command(queue));
 
             MXS_DEBUG("write to dcb %p fd %d protocol state %s.",
@@ -2796,6 +2804,9 @@ MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::send_connect
 
 void MariaDBBackendConnection::set_to_pooled()
 {
+    MYSQL_session* data = static_cast<MYSQL_session*>(m_session->protocol_data());
+    data->history_response_cbs.erase(this);
+
     m_session = nullptr;
     m_upstream = nullptr;
     m_state = State::POOLED;

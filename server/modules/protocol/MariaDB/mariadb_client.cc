@@ -1073,7 +1073,7 @@ void MariaDBClientConnection::finish_recording_history(const GWBUF* buffer, cons
                  mxs::extract_sql(m_pending_cmd, 200).c_str(),
                  reply.is_ok() ? "OK" : reply.error().message().c_str());
 
-        m_routing_state = RoutingState::PACKET_START;
+        m_routing_state = RoutingState::COMPARE_RESPONSES;
         m_dcb->trigger_read_event();
         m_session_data->history_responses.emplace(m_pending_cmd.id(), reply.is_ok());
         m_session_data->history.emplace_back(m_pending_cmd.release());
@@ -1117,6 +1117,20 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_normal
     {
         // We're still waiting for a response from the backend, read more data once we get it.
         return StateMachineRes::IN_PROGRESS;
+    }
+    else if (m_routing_state == RoutingState::COMPARE_RESPONSES)
+    {
+        // A session command that was recorded was just processed. Call the installed callbacks for any
+        // backends that responded before the accepted response was received.
+        auto callbacks = std::move(m_session_data->history_response_cbs);
+        m_session_data->history_response_cbs.clear();
+
+        for (const auto& a : callbacks)
+        {
+            a.second();
+        }
+
+        m_routing_state = RoutingState::PACKET_START;
     }
 
     auto read_res = mariadb::read_protocol_packet(m_dcb);
@@ -1201,6 +1215,7 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_normal
     case RoutingState::CHANGING_DB:
     case RoutingState::CHANGING_ROLE:
     case RoutingState::RECORD_HISTORY:
+    case RoutingState::COMPARE_RESPONSES:
         mxb_assert_message(!true, "We should never end up here");
         break;
     }

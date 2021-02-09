@@ -14,6 +14,7 @@
 
 #include <maxscale/ccdefs.hh>
 #include <maxscale/session.hh>
+#include <maxscale/protocol2.hh>
 #include <maxscale/protocol/mariadb/common_constants.hh>
 #include <maxscale/protocol/mariadb/authenticator.hh>
 
@@ -144,6 +145,9 @@ public:
     // Whether the history has been pruned of old commands. If true, reconnection should only take place if it
     // is acceptable to lose some state history (i.e. prune_sescmd_history is enabled).
     bool history_pruned {false};
+
+    // Callbacks that will be called once when the response to the latest session command completes.
+    std::unordered_map<mxs::BackendConnection*, std::function<void ()>> history_response_cbs;
 
     /**
      * Tells whether autocommit is ON or not. The value effectively only tells the last value
