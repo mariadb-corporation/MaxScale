@@ -180,6 +180,7 @@ static void   log_startup_error(int eno, const char* format, ...) mxb_attribute(
 static void   log_startup_error(const char* format, ...) mxb_attribute((format(printf, 1, 2)));
 static bool   resolve_maxscale_conf_fname(string* cnf_full_path, const string& cnf_file_arg);
 static char*  check_dir_access(char* dirname, bool, bool);
+bool          check_paths();
 static int    set_user(const char* user);
 bool          pid_file_exists();
 void          write_child_exit_code(int fd, int code);
@@ -667,51 +668,32 @@ static bool resolve_maxscale_conf_fname(string* cnf_full_path, const string& cnf
  * @return NULL if directory can be read and written, an error message if either
  *      read or write is not permitted.
  */
-static char* check_dir_access(char* dirname, bool rd, bool wr)
+static bool check_dir_access(const char* dirname, bool rd, bool wr)
 {
-    char errbuf[PATH_MAX * 2];
-    char* errstr = NULL;
-
-    if (dirname == NULL)
-    {
-        errstr = MXS_STRDUP_A("Directory argument is NULL");
-        goto retblock;
-    }
+    mxb_assert(dirname);
+    std::ostringstream ss;
 
     if (access(dirname, F_OK) != 0)
     {
-        snprintf(errbuf, PATH_MAX * 2 - 1, "Can't access '%s'.", dirname);
-        errbuf[PATH_MAX * 2 - 1] = '\0';
-        errstr = MXS_STRDUP_A(errbuf);
-        goto retblock;
+        ss << "Can't access '" << dirname << "'.";
     }
-
-    if (rd && !path_is_readable(dirname))
+    else if (rd && access(dirname, R_OK) != 0)
     {
-        snprintf(errbuf,
-                 PATH_MAX * 2 - 1,
-                 "MaxScale doesn't have read permission "
-                 "to '%s'.",
-                 dirname);
-        errbuf[PATH_MAX * 2 - 1] = '\0';
-        errstr = MXS_STRDUP_A(errbuf);
-        goto retblock;
+        ss << "MaxScale doesn't have read permission to '" << dirname << "'.";
     }
-
-    if (wr && !path_is_writable(dirname))
+    else if (wr && access(dirname, W_OK) != 0)
     {
-        snprintf(errbuf,
-                 PATH_MAX * 2 - 1,
-                 "MaxScale doesn't have write permission "
-                 "to '%s'.",
-                 dirname);
-        errbuf[PATH_MAX * 2 - 1] = '\0';
-        errstr = MXS_STRDUP_A(errbuf);
-        goto retblock;
+        ss << "MaxScale doesn't have write permission to '" << dirname << "'.";
     }
 
-retblock:
-    return errstr;
+    auto err = ss.str();
+
+    if (!err.empty())
+    {
+        print_alert(errno, "%s", err.c_str());
+    }
+
+    return err.empty();
 }
 
 static bool init_log()
@@ -1390,6 +1372,10 @@ bool set_dirs(const char* basedir)
 
     rv = set_runtime_dirs(basedir);
 
+    // The two paths here are not inside set_runtime_dirs on purpose: they are set by --basedir but not by
+    // --runtimedir. The former is used with tarball installations and the latter is used to run multiple
+    // MaxScale instances on the same server.
+
     if (rv && (rv = handle_path_arg(&path, basedir, MXS_DEFAULT_LIB_SUBPATH, true, false)))
     {
         set_libdir(path.c_str());
@@ -1780,7 +1766,10 @@ int main(int argc, char** argv)
             break;
 
         case '?':
-            usage();
+            if (check_paths())
+            {
+                usage();
+            }
             return EXIT_SUCCESS;
 
         case 'c':
@@ -1906,6 +1895,12 @@ int main(int argc, char** argv)
     MainWorker main_worker(&watchdog_notifier);
 
     if (!config_load_global(cnf_file_path.c_str()))
+    {
+        rc = MAXSCALE_BADCONFIG;
+        return rc;
+    }
+
+    if (!check_paths())
     {
         rc = MAXSCALE_BADCONFIG;
         return rc;
@@ -2460,20 +2455,26 @@ bool handle_path_arg(std::string* dest, const char* path, const char* arg, bool 
             strcat(pathbuffer, arg);
         }
 
-        if ((errstr = check_dir_access(pathbuffer, rd, wr)) == NULL)
-        {
-            *dest = pathbuffer;
-            rval = true;
-        }
-        else
-        {
-            log_startup_error("%s", errstr);
-            MXS_FREE(errstr);
-            errstr = NULL;
-        }
+        *dest = pathbuffer;
+        rval = true;
     }
 
     return rval;
+}
+
+bool check_paths()
+{
+    return check_dir_access(mxs::logdir(), true, false)
+           && check_dir_access(mxs::cachedir(), true, true)
+           && check_dir_access(mxs::configdir(), true, false)
+           && check_dir_access(mxs::module_configdir(), true, false)
+           && check_dir_access(mxs::datadir(), true, false)
+           && check_dir_access(mxs::langdir(), true, false)
+           && check_dir_access(mxs::piddir(), true, true)
+           && check_dir_access(mxs::config_persistdir(), true, true)
+           && check_dir_access(mxs::connector_plugindir(), true, false)
+           && check_dir_access(mxs::libdir(), true, false)
+           && check_dir_access(mxs::execdir(), true, false);
 }
 
 void set_log_augmentation(const char* value)

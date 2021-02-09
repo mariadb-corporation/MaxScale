@@ -18,10 +18,12 @@ rm -r $maxscaledir/secondary/lib/maxscale
 rm -r $maxscaledir/secondary/cache/maxscale
 rm -r $maxscaledir/secondary/run/maxscale
 
+mkdir -m 0755 -p $maxscaledir/etc/maxscale.modules.d/
 mkdir -m 0755 -p $maxscaledir/lib/maxscale/maxscale.cnf.d
 mkdir -m 0755 -p $maxscaledir/cache/maxscale
 mkdir -m 0755 -p $maxscaledir/run/maxscale
 mkdir -m 0755 -p $maxscaledir/log/maxscale
+mkdir -m 0755 -p $maxscaledir/secondary/etc/maxscale.modules.d/
 mkdir -m 0755 -p $maxscaledir/secondary/lib/maxscale/maxscale.cnf.d
 mkdir -m 0755 -p $maxscaledir/secondary/cache/maxscale
 mkdir -m 0755 -p $maxscaledir/secondary/run/maxscale

@@ -7,6 +7,10 @@ cachedir=@CMAKE_INSTALL_PREFIX@/cache/maxscale
 language=@CMAKE_INSTALL_PREFIX@/lib/maxscale/
 piddir=@CMAKE_INSTALL_PREFIX@/run/maxscale/
 sharedir=@CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@
+persistdir=@CMAKE_INSTALL_PREFIX@/lib/maxscale/maxscale.cnf.d/
+module_configdir=@CMAKE_INSTALL_PREFIX@/etc/maxscale.modules.d/
+# This isn't really correct but it's OK as long as it's an empty directory
+connector_plugindir=@CMAKE_INSTALL_PREFIX@/etc/maxscale.modules.d/
 
 [server1]
 type=server
