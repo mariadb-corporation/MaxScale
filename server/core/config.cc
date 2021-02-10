@@ -721,6 +721,16 @@ bool Config::configure(const mxs::ConfigParameters& params, mxs::ConfigParameter
 
         if (configured)
         {
+            // TODO: this needs to be fixed at a higher level. For a
+            // config value with a default and an on_set() function,
+            // the on_set() function should be called at config time
+            // else any side effect that the function has (like copying
+            // the value somewhere) will not happen. The problem is not
+            // trivial as config values are mostly initialized in a constructor,
+            // leading to problems related to initialization order
+            // in the constructor, across translation units and threads.
+            qc_cache_properties.max_size = qc_cache_max_size.get();
+
             if (DEFAULT_QC_CACHE_SIZE == 0)
             {
                 MXS_WARNING("Failed to automatically detect available system memory: disabling the query "
