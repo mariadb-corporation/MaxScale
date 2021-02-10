@@ -1766,10 +1766,7 @@ int main(int argc, char** argv)
             break;
 
         case '?':
-            if (check_paths())
-            {
-                usage();
-            }
+            usage();
             return EXIT_SUCCESS;
 
         case 'c':
@@ -1899,6 +1896,11 @@ int main(int argc, char** argv)
         rc = MAXSCALE_BADCONFIG;
         return rc;
     }
+
+    // Try to create the persisted configuration directory. This needs to be done before the path validation
+    // done by check_paths() to prevent it from failing. The directory wont' exist if it's the first time
+    // MaxScale is starting up with this configuration.
+    mxs_mkdir_all(mxs::config_persistdir(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
 
     if (!check_paths())
     {
