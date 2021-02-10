@@ -22,10 +22,27 @@
 
 namespace
 {
-const char* const MAX_QPS_CFG = "max_qps";
-const char* const SAMPLING_DURATION_CFG = "sampling_duration";
-const char* const THROTTLE_DURATION_CFG = "throttling_duration";
-const char* const CONTINUOUS_DURATION_CFG = "continuous_duration";
+namespace cfg = mxs::config;
+using std::chrono::milliseconds;
+
+cfg::Specification s_spec(MXS_MODULE_NAME, cfg::Specification::FILTER);
+
+cfg::ParamInteger s_max_qps(
+    &s_spec, "max_qps", "Maximum queries per second",
+    1, std::numeric_limits<int64_t>::max());
+
+cfg::ParamMilliseconds s_throttling_duration(
+    &s_spec, "throttling_duration",
+    "How long a session is allowed to be throttled before MaxScale disconnects the session",
+    cfg::INTERPRET_AS_MILLISECONDS);
+
+cfg::ParamMilliseconds s_sampling_duration(
+    &s_spec, "sampling_duration", "The window of time over which QPS is measured",
+    cfg::INTERPRET_AS_MILLISECONDS, milliseconds(250));
+
+cfg::ParamMilliseconds s_continuous_duration(
+    &s_spec, "continuous_duration", "Continuous throttling window",
+    cfg::INTERPRET_AS_MILLISECONDS, milliseconds(2000));
 }
 
 extern "C" MXS_MODULE* MXS_CREATE_MODULE()
@@ -48,12 +65,9 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         NULL,                               /* Thread init. */
         NULL,                               /* Thread finish. */
         {
-            {MAX_QPS_CFG,                   MXS_MODULE_PARAM_INT,       nullptr, MXS_MODULE_OPT_REQUIRED},
-            {SAMPLING_DURATION_CFG,         MXS_MODULE_PARAM_DURATION,  "250ms"},
-            {THROTTLE_DURATION_CFG,         MXS_MODULE_PARAM_DURATION,  nullptr, MXS_MODULE_OPT_REQUIRED},
-            {CONTINUOUS_DURATION_CFG,       MXS_MODULE_PARAM_DURATION,  "2000ms"},
             {MXS_END_MODULE_PARAMS}
-        }
+        },
+        &s_spec
     };
 
     return &info;
@@ -62,61 +76,23 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 namespace throttle
 {
 
-ThrottleFilter::ThrottleFilter(const ThrottleConfig& config)
-    : m_config(config)
+ThrottleConfig::ThrottleConfig(const char* name)
+    : mxs::config::Configuration(name, &s_spec)
+{
+    add_native(&ThrottleConfig::max_qps, &s_max_qps);
+    add_native(&ThrottleConfig::sampling_duration, &s_sampling_duration);
+    add_native(&ThrottleConfig::throttling_duration, &s_throttling_duration);
+    add_native(&ThrottleConfig::continuous_duration, &s_continuous_duration);
+}
+
+ThrottleFilter::ThrottleFilter(const char* name)
+    : m_config(name)
 {
 }
 
 ThrottleFilter* ThrottleFilter::create(const char* zName, mxs::ConfigParameters* pParams)
 {
-    int max_qps = pParams->get_integer(MAX_QPS_CFG);
-    int sample_msecs =
-        pParams->get_duration<std::chrono::milliseconds>(SAMPLING_DURATION_CFG).count();
-    int throttle_msecs =
-        pParams->get_duration<std::chrono::milliseconds>(THROTTLE_DURATION_CFG).count();
-    int cont_msecs =
-        pParams->get_duration<std::chrono::milliseconds>(CONTINUOUS_DURATION_CFG).count();
-    bool config_ok = true;
-
-    if (max_qps < 2)
-    {
-        MXS_ERROR("Config value %s must be > 1", MAX_QPS_CFG);
-        config_ok = false;
-    }
-
-    // TODO: These checks are unnecessary as a MXS_MODULE_PARAM_DURATION is required to be positive.
-    if (sample_msecs < 0)
-    {
-        MXS_ERROR("Config value %s must be >= 0", SAMPLING_DURATION_CFG);
-        config_ok = false;
-    }
-
-    if (throttle_msecs <= 0)
-    {
-        MXS_ERROR("Config value %s must be > 0", THROTTLE_DURATION_CFG);
-        config_ok = false;
-    }
-
-    if (cont_msecs < 0)
-    {
-        MXS_ERROR("Config value %s must be >= 0", CONTINUOUS_DURATION_CFG);
-        config_ok = false;
-    }
-
-    ThrottleFilter* filter {NULL};
-    if (config_ok)
-    {
-        maxbase::Duration sampling_duration {std::chrono::milliseconds(sample_msecs)};
-        maxbase::Duration throttling_duration {std::chrono::milliseconds(throttle_msecs)};
-        maxbase::Duration continuous_duration {std::chrono::milliseconds(cont_msecs)};
-
-        ThrottleConfig config = {max_qps,             sampling_duration,
-                                 throttling_duration, continuous_duration};
-
-        filter = new ThrottleFilter(config);
-    }
-
-    return filter;
+    return new ThrottleFilter(zName);
 }
 
 ThrottleSession* ThrottleFilter::newSession(MXS_SESSION* mxsSession, SERVICE* service)
@@ -136,7 +112,7 @@ uint64_t ThrottleFilter::getCapabilities() const
 
 mxs::config::Configuration* ThrottleFilter::getConfiguration()
 {
-    return nullptr;
+    return &m_config;
 }
 
 const ThrottleConfig& ThrottleFilter::config() const

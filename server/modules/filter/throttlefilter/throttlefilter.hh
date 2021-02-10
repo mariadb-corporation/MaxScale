@@ -13,6 +13,7 @@
 #pragma once
 
 #include <maxscale/filter.hh>
+#include <maxscale/config2.hh>
 #include "throttlesession.hh"
 #include <maxbase/eventcount.hh>
 #include <maxbase/stopwatch.hh>
@@ -23,13 +24,14 @@
 namespace throttle
 {
 
-struct ThrottleConfig
+struct ThrottleConfig : public mxs::config::Configuration
 {
+    ThrottleConfig(const char* name);
 
-    int               max_qps;              // if this many queries per second is exceeded..
-    maxbase::Duration sampling_duration;    // .. in this time window, then cap qps to max_qps ..
-    maxbase::Duration throttling_duration;  // .. for this long before disconnect.
-    maxbase::Duration continuous_duration;  // What time window is considered continuous meddling.
+    int64_t                   max_qps;              // if this many queries per second is exceeded..
+    std::chrono::milliseconds sampling_duration;    // .. in this time window, then cap qps to max_qps ..
+    std::chrono::milliseconds throttling_duration;  // .. for this long before disconnect.
+    std::chrono::milliseconds continuous_duration;  // What time window is considered continuous meddling.
 
     // Example: max 100qps and sampling 5s. As soon as more than 500 queries are made in less
     // then any 5s period throttling is triggered (because 501 > 100qps * 5 s). But also note
@@ -62,7 +64,7 @@ public:
     const ThrottleConfig& config() const;
     void                  sessionClose(ThrottleSession* session);
 private:
-    ThrottleFilter(const ThrottleConfig& config);
+    ThrottleFilter(const char* name);
 
     ThrottleConfig m_config;
 };
