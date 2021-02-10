@@ -115,6 +115,8 @@ add_subdirectory(kafka)
 # BEGIN: Normal tests                      #
 ############################################
 
+add_subdirectory(mongodbclient)
+
 # Routing sanity check. Also acts as the regression test case the following issues:
 #
 # MXS-127
