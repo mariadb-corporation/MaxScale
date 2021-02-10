@@ -1224,9 +1224,10 @@ public:
     ParamTarget(Specification* pSpecification,
                 const char* zName,
                 const char* zDescription,
+                Param::Kind kind = Param::MANDATORY,
                 Modifiable modifiable = Modifiable::AT_STARTUP)
         : ConcreteParam<ParamTarget, mxs::Target*>(pSpecification, zName, zDescription,
-                                                   modifiable, Param::MANDATORY, MXS_MODULE_PARAM_TARGET,
+                                                   modifiable, kind, MXS_MODULE_PARAM_TARGET,
                                                    nullptr)
     {
     }
@@ -1251,9 +1252,10 @@ public:
     ParamService(Specification* pSpecification,
                  const char* zName,
                  const char* zDescription,
+                 Param::Kind kind = Param::MANDATORY,
                  Modifiable modifiable = Modifiable::AT_STARTUP)
         : ConcreteParam<ParamService, SERVICE*>(pSpecification, zName, zDescription,
-                                                modifiable, Param::MANDATORY, MXS_MODULE_PARAM_SERVICE,
+                                                modifiable, kind, MXS_MODULE_PARAM_SERVICE,
                                                 nullptr)
     {
     }
