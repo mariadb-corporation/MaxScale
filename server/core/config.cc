@@ -1436,9 +1436,7 @@ static bool config_load_and_process(const char* filename, bool (* process_config
                 rval = config_load_dir(dir, &dcontext, &config_context);
             }
 
-            /** Create the persisted configuration directory if it doesn't exist */
             const char* persist_cnf = get_config_persistdir();
-            mxs_mkdir_all(persist_cnf, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
 
             if (config_get_global_options()->load_persisted_configs
                 && is_directory(persist_cnf) && contains_cnf_files(persist_cnf))
