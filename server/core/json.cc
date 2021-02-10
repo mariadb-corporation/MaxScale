@@ -155,4 +155,27 @@ bool get_json_bool(json_t* json, const char* ptr, bool* out)
 
     return rval;
 }
+
+void json_remove_nulls(json_t* json)
+{
+    const char* key;
+    json_t* value;
+    void* tmp;
+
+    json_object_foreach_safe(json, tmp, key, value)
+    {
+        if (json_is_null(value))
+        {
+            json_object_del(json, key);
+        }
+    }
+}
+
+json_t* json_merge(json_t* dest, json_t* src)
+{
+    mxs::json_remove_nulls(dest);
+    mxs::json_remove_nulls(src);
+    json_object_update(dest, src);
+    return dest;
+}
 }

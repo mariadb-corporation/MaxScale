@@ -207,40 +207,6 @@ std::string get_cycle_name(mxs::Target* item, mxs::Target* target)
     return rval;
 }
 
-// Helper function that removes keys with null values
-void remove_json_nulls_from_object(json_t* json)
-{
-    const char* key;
-    json_t* value;
-    void* tmp;
-
-    json_object_foreach_safe(json, tmp, key, value)
-    {
-        if (json_is_null(value))
-        {
-            json_object_del(json, key);
-        }
-    }
-}
-
-/**
- * Combine `dest` and `src` into one object
- *
- * Removes JSON nulls and updates `dest` with the contents of `src` (both objects are modified).
- *
- * @param dest JSON object where the result is stored
- * @param src  JSON object from which the values are taken
- *
- * @return The value of `dest`. Note that reference counts aren't incremented.
- */
-json_t* merge_json_objects(json_t* dest, json_t* src)
-{
-    remove_json_nulls_from_object(dest);
-    remove_json_nulls_from_object(src);
-    json_object_update(dest, src);
-    return dest;
-}
-
 bool link_service_to_monitor(Service* service, mxs::Monitor* monitor)
 {
     bool ok = service->change_cluster(monitor);
@@ -1710,7 +1676,7 @@ bool runtime_create_server_from_json(json_t* json)
         && extract_relations(json, relations, to_monitor_rel))
     {
         json_t* params = mxs_json_pointer(json, MXS_JSON_PTR_PARAMETERS);
-        remove_json_nulls_from_object(params);
+        mxs::json_remove_nulls(params);
         const char* name = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_ID));
         mxb_assert(name);
 
@@ -1752,7 +1718,7 @@ bool runtime_alter_server_from_json(Server* server, json_t* new_json)
             rval = false;
             new_parameters = mxs_json_pointer(old_json.get(), MXS_JSON_PTR_PARAMETERS);
             json_object_update(new_parameters, parameters);
-            remove_json_nulls_from_object(new_parameters);
+            mxs::json_remove_nulls(new_parameters);
 
             if (Server::specification().validate(new_parameters))
             {
@@ -2126,7 +2092,7 @@ bool runtime_alter_service_from_json(Service* service, json_t* new_json)
                 if (auto cnf = service->router()->getConfiguration())
                 {
                     // Merge the new parameters with the old ones to create a complete definition.
-                    json_t* combined_params = merge_json_objects(cnf->to_json(), new_params);
+                    json_t* combined_params = mxs::json_merge(cnf->to_json(), new_params);
                     rval = cnf->configure(combined_params);
                     json_decref(combined_params);
                 }
@@ -2173,7 +2139,7 @@ bool runtime_alter_filter_from_json(const SFilterDef& filter, json_t* new_json)
             if (json_t* new_params = mxs_json_pointer(new_json, MXS_JSON_PTR_PARAMETERS))
             {
                 // The new parameters are merged with the old parameters to get a complete filter definition.
-                json_t* params = merge_json_objects(config->to_json(), new_params);
+                json_t* params = mxs::json_merge(config->to_json(), new_params);
 
                 if (config->specification().validate(params)
                     && can_modify_params(config, params)
@@ -2217,7 +2183,7 @@ bool runtime_create_listener_from_json(json_t* json, Service* service)
         if (config_is_valid_name(name, &reason))
         {
             json_t* params = mxs_json_pointer(json, MXS_JSON_PTR_PARAMETERS);
-            remove_json_nulls_from_object(params);
+            mxs::json_remove_nulls(params);
 
             // The service is expressed as a relationship instead of a parameter. Add it to the parameters so
             // that it's expressed in the same way regardless of the way the listener is created.
@@ -2261,7 +2227,7 @@ bool runtime_alter_listener_from_json(SListener listener, json_t* new_json)
         if (json_t* new_params = mxs_json_pointer(new_json, MXS_JSON_PTR_PARAMETERS))
         {
             auto* cnf = listener->config();
-            json_t* combined_params = merge_json_objects(cnf->to_json(), new_params);
+            json_t* combined_params = mxs::json_merge(cnf->to_json(), new_params);
 
             if (cnf->specification().validate(combined_params) && cnf->configure(combined_params))
             {
@@ -2359,7 +2325,7 @@ bool runtime_alter_maxscale_from_json(json_t* json)
     if (validate_object_json(json))
     {
         json_t* params = mxs_json_pointer(json, MXS_JSON_PTR_PARAMETERS);
-        json_t* new_params = merge_json_objects(mxs::Config::get().to_json(), params);
+        json_t* new_params = mxs::json_merge(mxs::Config::get().to_json(), params);
         auto& cfg = mxs::Config::get();
 
         // TODO: Don't strip out these parameters and define them in the core specification instead.

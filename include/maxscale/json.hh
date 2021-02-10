@@ -81,4 +81,25 @@ bool get_json_float(json_t* json, const char* ptr, double* out);
  * @return True if value was unpacked
  */
 bool get_json_bool(json_t* json, const char* ptr, bool* out);
+
+/**
+ * Remove null values from JSON objects
+ *
+ * Removes any keys with JSON null values.
+ *
+ * @param json JSON to modify
+ */
+void json_remove_nulls(json_t* json);
+
+/**
+ * Combine `dest` and `src` into one object
+ *
+ * Removes JSON nulls and updates `dest` with the contents of `src` (both objects are modified).
+ *
+ * @param dest JSON object where the result is stored
+ * @param src  JSON object from which the values are taken
+ *
+ * @return The value of `dest`. Note that reference counts aren't incremented.
+ */
+json_t* json_merge(json_t* dest, json_t* src);
 }
