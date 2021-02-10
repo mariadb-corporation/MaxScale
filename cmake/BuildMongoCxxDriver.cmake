@@ -38,7 +38,11 @@ ExternalProject_Add(mongo-cxx-driver
 add_dependencies(mongo-cxx-driver mongo-c-driver)
 
 set(BSON_CXX_INCLUDE_DIR  ${MONGO_CXX_DRIVER_INSTALL}/include/bsoncxx/v_noabi CACHE_INTERNAL "")
-set(BSON_CXX_LIBRARIES    ${MONGO_CXX_DRIVER_INSTALL}/lib/libbsoncxx-static.a)
+#Depending on OS it's either lib or lib64, so for the time being taken from the build directory.
+#set(BSON_CXX_LIBRARIES    ${MONGO_CXX_DRIVER_INSTALL}/lib/libbsoncxx-static.a)
+set(BSON_CXX_LIBRARIES    ${MONGO_CXX_DRIVER_BINARY}/src/bsoncxx/libbsoncxx-static.a)
 
 set(MONGO_CXX_INCLUDE_DIR ${MONGO_CXX_DRIVER_INSTALL}/include/mongocxx/v_noabi CACHE INTERNAL "")
-set(MONGO_CXX_LIBRARIES   ${MONGO_CXX_DRIVER_INSTALL}/lib/libmongocxx-static.a)
+#Depending on OS it's either lib or lib64, so for the time being taken from the build directory.
+#set(MONGO_CXX_LIBRARIES   ${MONGO_CXX_DRIVER_INSTALL}/lib/libmongocxx-static.a)
+set(MONGO_CXX_LIBRARIES   ${MONGO_CXX_DRIVER_BINARY}/src/mongocxx/libmongocxx-static.a)

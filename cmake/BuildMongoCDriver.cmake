@@ -38,9 +38,13 @@ ExternalProject_Add(mongo-c-driver
   LOG_INSTALL 1)
 
 set(BSON_C_INCLUDE_DIR  ${MONGO_C_DRIVER_INSTALL}/include/libbson-1.0 CACHE INTERNAL "")
-set(BSON_C_LIBRARIES    ${MONGO_C_DRIVER_INSTALL}/lib/libbson-static-1.0.a)
+#Depending on OS it's either lib or lib64, so for the time being taken from the build directory.
+#set(BSON_C_LIBRARIES    ${MONGO_C_DRIVER_INSTALL}/lib/libbson-static-1.0.a)
+set(BSON_C_LIBRARIES    ${MONGO_C_DRIVER_BINARY}/src/libbson/libbson-static-1.0.a)
 
 set(MONGO_C_INCLUDE_DIR ${MONGO_C_DRIVER_INSTALL}/include/libmongoc-1.0 CACHE INTERNAL "")
 set(MONGO_C_SRC_DIR     ${MONGO_C_DRIVER_SOURCE}/src/libmongoc/src/mongoc CACHE INTERNAL "")
 set(MONGO_C_BUILD_DIR   ${MONGO_C_DRIVER_BINARY}/src/libmongoc/src/mongoc CACHE INTERNAL "")
-set(MONGO_C_LIBRARIES   ${MONGO_C_DRIVER_INSTALL}/lib/libmongoc-static-1.0.a)
+#Depending on OS it's either lib or lib64, so for the time being taken from the build directory.
+#set(MONGO_C_LIBRARIES   ${MONGO_C_DRIVER_INSTALL}/lib64/libmongoc-static-1.0.a)
+set(MONGO_C_LIBRARIES   ${MONGO_C_DRIVER_BINARY}/src/libmongoc/libmongoc-static-1.0.a)
