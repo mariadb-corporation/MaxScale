@@ -1361,7 +1361,7 @@ static int ini_handler(void* userdata, const char* section, const char* name, co
 
     if (ptr && !ptr->m_was_persisted && this_unit.is_persisted_config)
     {
-        MXS_WARNING("Found static and runtime configurations for '%s', ignoring static "
+        MXS_WARNING("Found static and runtime configurations for [%s], ignoring static "
                     "configuration. Move the runtime changes into the static configuration "
                     "file and remove the generated file in '%s' to remove this warning.",
                     ptr->name(), mxs::config_persistdir());
