@@ -203,6 +203,16 @@ public:
         m_can_pool_backends = value;
     }
 
+    bool normal_quit() const
+    {
+        return m_normal_quit;
+    }
+
+    void set_normal_quit()
+    {
+        m_normal_quit = true;
+    }
+
     /**
      * Abruptly stop the session
      *
@@ -279,6 +289,11 @@ private:
     std::unique_ptr<ProtocolData> m_protocol_data;
 
     bool m_killed {false};
+
+    /**
+     * Is the session shutting down "normally" e.g. via COM_QUIT? If session ended abnormally,
+     * last statements can be logged. */
+    bool m_normal_quit {false};
 
     /**
      * Is session in a state where backend connections can be donated to pool and reattached to session?

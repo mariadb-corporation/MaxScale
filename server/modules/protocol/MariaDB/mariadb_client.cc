@@ -1216,7 +1216,7 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_normal
     else if (m_command == MXS_COM_QUIT)
     {
         /** Close router session which causes closing of backends */
-        mxb_assert_message(m_session->can_pool_backends(), "Session should qualify for pooling");
+        mxb_assert_message(m_session->normal_quit(), "Session should be quitting normally");
         m_state = State::QUIT;
         rval = StateMachineRes::DONE;
     }
@@ -1344,17 +1344,16 @@ void MariaDBClientConnection::hangup(DCB* event_dcb)
 {
     mxb_assert(m_dcb == event_dcb);
 
-    MXS_SESSION* session = m_session;
-    if (session && !session->can_pool_backends())
+    if (!m_session->normal_quit())
     {
         if (session_get_dump_statements() == SESSION_DUMP_STATEMENTS_ON_ERROR)
         {
-            session_dump_statements(session);
+            session_dump_statements(m_session);
         }
 
         if (session_get_session_trace())
         {
-            session_dump_log(session);
+            session_dump_log(m_session);
         }
 
         // The client did not send a COM_QUIT packet
@@ -2344,6 +2343,7 @@ bool MariaDBClientConnection::process_normal_packet(mxs::Buffer&& buffer)
          * the backend connections are not idle when the COM_QUIT is received.
          * In most cases we can assume that the connections are idle. */
         m_session->set_can_pool_backends(true);
+        m_session->set_normal_quit();
         success = route_statement(move(buffer));
         break;
 
