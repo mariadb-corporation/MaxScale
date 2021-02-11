@@ -50,10 +50,27 @@ extern "C" {
 #include <mutex>
 #include <maxbase/alloc.h>
 #include <maxscale/config_common.hh>
+#include <maxscale/config2.hh>
 #include <maxscale/filter.hh>
 #include <maxscale/modutil.hh>
 #include <maxscale/protocol/mariadb/query_classifier.hh>
 #include <maxscale/session.hh>
+
+namespace
+{
+
+namespace cfg = mxs::config;
+
+cfg::Specification s_spec(MXS_MODULE_NAME, cfg::Specification::FILTER);
+
+cfg::ParamPath s_global_script(
+    &s_spec, "global_script", "Path to global level Lua script",
+    cfg::ParamPath::R, "");
+
+cfg::ParamPath s_session_script(
+    &s_spec, "session", "Path to session level Lua script",
+    cfg::ParamPath::R, "");
+}
 
 static int id_pool = 0;
 static GWBUF* current_global_query = NULL;
@@ -136,6 +153,21 @@ static int lua_get_canonical(lua_State* state)
 class LuaFilter : public mxs::Filter
 {
 public:
+
+    class Config : public mxs::config::Configuration
+    {
+    public:
+        Config(LuaFilter* instance, const char* name);
+
+        std::string global_script;
+        std::string session_script;
+
+    protected:
+        bool post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params) override;
+
+        LuaFilter* m_instance;
+    };
+
     static LuaFilter* create(const char* name, mxs::ConfigParameters* params);
     bool              configure(mxs::ConfigParameters* params);
 
@@ -147,17 +179,24 @@ public:
 
     mxs::config::Configuration* getConfiguration()
     {
-        return nullptr;
+        return &m_config;
     }
 
     lua_State* global_lua_state();
 
+    bool post_configure();
+
     mutable std::mutex m_lock;
 
 private:
-    lua_State*  m_global_lua_state {nullptr};
-    std::string m_global_script;
-    std::string m_session_script;
+
+    LuaFilter(const char* name)
+        : m_config(this, name)
+    {
+    }
+
+    lua_State* m_global_lua_state {nullptr};
+    Config     m_config;
 };
 
 /**
@@ -209,6 +248,14 @@ void expose_functions(lua_State* state, GWBUF** active_buffer)
     lua_setglobal(state, "lua_get_canonical");
 }
 
+LuaFilter::Config::Config(LuaFilter* instance, const char* name)
+    : mxs::config::Configuration(name, &s_spec)
+    , m_instance(instance)
+{
+    add_native(&Config::global_script, &s_global_script);
+    add_native(&Config::session_script, &s_session_script);
+}
+
 /**
  * Create a new instance of the Lua filter.
  *
@@ -220,31 +267,28 @@ void expose_functions(lua_State* state, GWBUF** active_buffer)
  */
 LuaFilter* LuaFilter::create(const char* name, mxs::ConfigParameters* params)
 {
-    auto my_instance = new LuaFilter();
-    if (!my_instance->configure(params))
-    {
-        delete my_instance;
-        my_instance = nullptr;
-    }
-    return my_instance;
+    return new LuaFilter(name);
 }
 
-bool LuaFilter::configure(mxs::ConfigParameters* params)
+bool LuaFilter::Config::post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params)
+{
+    return m_instance->post_configure();
+}
+
+bool LuaFilter::post_configure()
 {
     bool error = false;
-    m_global_script = params->get_string("global_script");
-    m_session_script = params->get_string("session_script");
 
-    if (!m_global_script.empty())
+    if (!m_config.global_script.empty())
     {
         if ((m_global_lua_state = luaL_newstate()))
         {
             luaL_openlibs(m_global_lua_state);
 
-            if (luaL_dofile(m_global_lua_state, m_global_script.c_str()))
+            if (luaL_dofile(m_global_lua_state, m_config.global_script.c_str()))
             {
                 MXS_ERROR("Failed to execute global script at '%s':%s.",
-                          m_global_script.c_str(), lua_tostring(m_global_lua_state, -1));
+                          m_config.global_script.c_str(), lua_tostring(m_global_lua_state, -1));
                 error = true;
             }
             else if (m_global_lua_state)
@@ -279,7 +323,7 @@ uint64_t LuaFilter::getCapabilities() const
 mxs::FilterSession* LuaFilter::newSession(MXS_SESSION* session, SERVICE* service)
 {
     auto new_session = new LuaFilterSession(session, service, this);
-    if (!new_session->prepare_session(m_session_script))
+    if (!new_session->prepare_session(m_config.session_script))
     {
         delete new_session;
         new_session = nullptr;
@@ -519,13 +563,13 @@ json_t* LuaFilter::diagnostics() const
             lua_pop(m_global_lua_state, -1);
         }
     }
-    if (!m_global_script.empty())
+    if (!m_config.global_script.empty())
     {
-        json_object_set_new(rval, "global_script", json_string(m_global_script.c_str()));
+        json_object_set_new(rval, "global_script", json_string(m_config.global_script.c_str()));
     }
-    if (!m_session_script.empty())
+    if (!m_config.session_script.empty())
     {
-        json_object_set_new(rval, "session_script", json_string(m_session_script.c_str()));
+        json_object_set_new(rval, "session_script", json_string(m_config.session_script.c_str()));
     }
     return rval;
 }
@@ -567,15 +611,14 @@ MXS_MODULE* MXS_CREATE_MODULE()
         "V1.0.0",
         RCAP_TYPE_STMT_INPUT,
         &mxs::FilterApi<LuaFilter>::s_api,
-        NULL,                       /* Process init. */
-        NULL,                       /* Process finish. */
-        NULL,                       /* Thread init. */
-        NULL,                       /* Thread finish. */
+        nullptr,
+        nullptr,
+        nullptr,
+        nullptr,
         {
-            {"global_script",      MXS_MODULE_PARAM_PATH,  NULL, MXS_MODULE_OPT_PATH_R_OK},
-            {"session_script",     MXS_MODULE_PARAM_PATH,  NULL, MXS_MODULE_OPT_PATH_R_OK},
             {MXS_END_MODULE_PARAMS}
-        }
+        },
+        &s_spec
     };
 
     return &info;
