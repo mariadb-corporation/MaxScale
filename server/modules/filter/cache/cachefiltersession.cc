@@ -22,6 +22,8 @@
 #include <maxscale/protocol/mariadb/protocol_classes.hh>
 #include "storage.hh"
 
+using mxb::Worker;
+
 namespace
 {
 
@@ -258,6 +260,8 @@ CacheFilterSession::CacheFilterSession(MXS_SESSION* pSession,
     , m_invalidate_now(false)
     , m_clear_cache(false)
     , m_user_specific(m_sCache->config().users == CACHE_USERS_ISOLATED)
+    , m_processing(false)
+    , m_did(0)
 {
     m_key.data_hash = 0;
     m_key.full_hash = 0;
@@ -313,6 +317,12 @@ CacheFilterSession::~CacheFilterSession()
 {
     MXS_FREE(m_zUseDb);
     MXS_FREE(m_zDefaultDb);
+
+    if (m_did != 0)
+    {
+        Worker::get_current()->cancel_delayed_call(m_did);
+        m_did = 0;
+    }
 }
 
 std::shared_ptr<CacheFilterSession> CacheFilterSession::release()
@@ -363,6 +373,27 @@ void CacheFilterSession::close()
 
 int CacheFilterSession::routeQuery(GWBUF* pPacket)
 {
+    if (m_processing)
+    {
+        m_queued_packets.push_back(pPacket);
+        return 1;
+    }
+    else
+    {
+        m_processing = true;
+
+        // The following is necessary for the case that the delayed call
+        // made in read_for_another_call() arrives *after* a routeQuery()
+        // call made due to the client having sent more data. With this
+        // it is ensured that the packets are handled in the right order.
+        if (!m_queued_packets.empty())
+        {
+            m_queued_packets.push_back(pPacket);
+            pPacket = m_queued_packets.front().release();
+            m_queued_packets.pop_front();
+        }
+    }
+
     uint8_t* pData = static_cast<uint8_t*>(GWBUF_DATA(pPacket));
 
     // All of these should be guaranteed by RCAP_TYPE_TRANSACTION_TRACKING
@@ -722,6 +753,7 @@ int CacheFilterSession::flush_response(const mxs::ReplyRoute& down, const mxs::R
     if (next_response)
     {
         rv = FilterSession::clientReply(next_response, down, reply);
+        ready_for_another_call();
     }
 
     return rv;
@@ -1165,6 +1197,7 @@ CacheFilterSession::routing_action_t CacheFilterSession::route_SELECT(cache_acti
                         mxs::Reply reply;
 
                         sThis->m_up.clientReply(pResponse, down, reply);
+                        sThis->ready_for_another_call();
                     }
                 }
                 else
@@ -1189,6 +1222,7 @@ CacheFilterSession::routing_action_t CacheFilterSession::route_SELECT(cache_acti
                 // All set, arrange for the response to be delivered when
                 // we return from the routeQuery() processing.
                 set_response(pResponse);
+                ready_for_another_call();
             }
         }
         else
@@ -1620,5 +1654,43 @@ int CacheFilterSession::continue_routing(GWBUF* pPacket)
         }
     }
 
+    if (!mxs_mysql_command_will_respond(MYSQL_GET_COMMAND(GWBUF_DATA(pPacket))))
+    {
+        m_processing = false;
+    }
+
     return m_down.routeQuery(pPacket);
+}
+
+void CacheFilterSession::ready_for_another_call()
+{
+    mxb_assert(m_processing);
+    m_processing = false;
+
+    if (!m_queued_packets.empty())
+    {
+        Worker* pWorker = Worker::get_current();
+
+        m_did = pWorker->delayed_call(0, [this](Worker::Call::action_t action) {
+                m_did = 0;
+
+                if (action == Worker::Call::EXECUTE)
+                {
+                    // We may already be processing, if a packet arrived from the client
+                    // and processed, before the delayed call got handled.
+                    if (!m_processing)
+                    {
+                        if (!m_queued_packets.empty())
+                        {
+                            GWBUF* pPacket = m_queued_packets.front().release();
+                            mxb_assert(pPacket);
+                            m_queued_packets.pop_front();
+
+                            routeQuery(pPacket);
+                        }
+                    }
+                }
+                return false;
+            });
+    }
 }

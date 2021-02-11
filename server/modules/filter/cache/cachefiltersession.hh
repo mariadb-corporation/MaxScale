@@ -13,6 +13,7 @@
 #pragma once
 
 #include <maxscale/ccdefs.hh>
+#include <deque>
 #include <unordered_set>
 #include <maxscale/buffer.hh>
 #include <maxscale/filter.hh>
@@ -177,6 +178,8 @@ private:
 
     int continue_routing(GWBUF* pPacket);
 
+    void ready_for_another_call();
+
 private:
     CacheFilterSession(MXS_SESSION* pSession,
                        SERVICE* pService,
@@ -187,23 +190,26 @@ private:
     using Tables = std::unordered_set<std::string>;
     using SCacheFilterSession = std::shared_ptr<CacheFilterSession>;
 
-    SCacheFilterSession   m_sThis;          /**< Shared pointer to this. */
-    cache_session_state_t m_state;          /**< What state is the session in, what data is expected. */
-    SSessionCache         m_sCache;         /**< The cache instance the session is associated with. */
-    GWBUF*                m_res;            /**< The response buffer. */
-    GWBUF*                m_next_response;  /**< The next response routed to the client. */
-    CacheKey              m_key;            /**< Key storage. */
-    char*                 m_zDefaultDb;     /**< The default database. */
-    char*                 m_zUseDb;         /**< Pending default database. Needs server response. */
-    bool                  m_refreshing;     /**< Whether the session is updating a stale cache entry. */
-    bool                  m_is_read_only;   /**< Whether the current trx has been read-only in pratice. */
-    bool                  m_use;            /**< Whether the cache should be used in this session. */
-    bool                  m_populate;       /**< Whether the cache should be populated in this session. */
-    uint32_t              m_soft_ttl;       /**< The soft TTL used in the session. */
-    uint32_t              m_hard_ttl;       /**< The hard TTL used in the session. */
-    bool                  m_invalidate;     /**< Whether invalidation should be performed. */
-    bool                  m_invalidate_now; /**< Should invalidation be done at next response. */
-    Tables                m_tables;         /**< Tables selected or modified. */
-    bool                  m_clear_cache;    /**< Whether the entire cache should be cleared. */
-    bool                  m_user_specific;  /**< Whether a user specific cache should be used. */
+    SCacheFilterSession     m_sThis;          /**< Shared pointer to this. */
+    cache_session_state_t   m_state;          /**< What state is the session in, what data is expected. */
+    SSessionCache           m_sCache;         /**< The cache instance the session is associated with. */
+    GWBUF*                  m_res;            /**< The response buffer. */
+    GWBUF*                  m_next_response;  /**< The next response routed to the client. */
+    CacheKey                m_key;            /**< Key storage. */
+    char*                   m_zDefaultDb;     /**< The default database. */
+    char*                   m_zUseDb;         /**< Pending default database. Needs server response. */
+    bool                    m_refreshing;     /**< Whether the session is updating a stale cache entry. */
+    bool                    m_is_read_only;   /**< Whether the current trx has been read-only in pratice. */
+    bool                    m_use;            /**< Whether the cache should be used in this session. */
+    bool                    m_populate;       /**< Whether the cache should be populated in this session. */
+    uint32_t                m_soft_ttl;       /**< The soft TTL used in the session. */
+    uint32_t                m_hard_ttl;       /**< The hard TTL used in the session. */
+    bool                    m_invalidate;     /**< Whether invalidation should be performed. */
+    bool                    m_invalidate_now; /**< Should invalidation be done at next response. */
+    Tables                  m_tables;         /**< Tables selected or modified. */
+    bool                    m_clear_cache;    /**< Whether the entire cache should be cleared. */
+    bool                    m_user_specific;  /**< Whether a user specific cache should be used. */
+    std::deque<mxs::Buffer> m_queued_packets; /**< Queued statements, waiting for current to finish. */
+    bool                    m_processing;     /**< Is query processing on-going. */
+    uint32_t                m_did;            /**< Delayed call id. */
 };
