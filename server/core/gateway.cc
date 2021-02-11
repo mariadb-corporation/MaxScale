@@ -2466,6 +2466,16 @@ bool handle_path_arg(std::string* dest, const char* path, const char* arg, bool 
 
 bool check_paths()
 {
+    // The default path for the connector_plugindir isn't valid. This doesn't matter that much as we don't
+    // include the plugins in the installation.
+    if (strcmp(mxs::connector_plugindir(), MXS_DEFAULT_CONNECTOR_PLUGINDIR) != 0)
+    {
+        if (!check_dir_access(mxs::connector_plugindir(), true, false))
+        {
+            return false;
+        }
+    }
+
     return check_dir_access(mxs::logdir(), true, false)
            && check_dir_access(mxs::cachedir(), true, true)
            && check_dir_access(mxs::configdir(), true, false)
@@ -2474,7 +2484,6 @@ bool check_paths()
            && check_dir_access(mxs::langdir(), true, false)
            && check_dir_access(mxs::piddir(), true, true)
            && check_dir_access(mxs::config_persistdir(), true, true)
-           && check_dir_access(mxs::connector_plugindir(), true, false)
            && check_dir_access(mxs::libdir(), true, false)
            && check_dir_access(mxs::execdir(), true, false);
 }
