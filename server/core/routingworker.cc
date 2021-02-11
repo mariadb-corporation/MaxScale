@@ -583,7 +583,6 @@ mxs::BackendConnection* RoutingWorker::ConnectionPool::get_connection()
         auto it = m_contents.begin();
         rval = it->second.release_conn();
         m_contents.erase(it);
-        m_stats.curr_size--;
         m_stats.times_found++;
     }
     else
@@ -603,7 +602,6 @@ mxs::BackendConnection* RoutingWorker::ConnectionPool::get_connection(const std:
         {
             rval = pool_entry.release_conn();
             m_contents.erase(it);
-            m_stats.curr_size--;
             m_stats.times_found++;
             break;
         }
@@ -815,7 +813,6 @@ void RoutingWorker::ConnectionPool::close_expired()
     {
         m_owner->close_pooled_dcb(pConn->dcb());
     }
-    m_stats.curr_size = m_contents.size();
 }
 
 void RoutingWorker::ConnectionPool::remove_and_close(mxs::BackendConnection* conn)
@@ -824,7 +821,6 @@ void RoutingWorker::ConnectionPool::remove_and_close(mxs::BackendConnection* con
     mxb_assert(it != m_contents.end());
     it->second.release_conn();
     m_contents.erase(it);
-    m_stats.curr_size--;
     m_owner->close_pooled_dcb(conn->dcb());
 }
 
@@ -837,7 +833,6 @@ void RoutingWorker::ConnectionPool::close_all()
         m_owner->close_pooled_dcb(dcb);
     }
     m_contents.clear();
-    m_stats.curr_size = 0;
 }
 
 bool RoutingWorker::ConnectionPool::empty() const
@@ -848,8 +843,7 @@ bool RoutingWorker::ConnectionPool::empty() const
 void RoutingWorker::ConnectionPool::add_connection(mxs::BackendConnection* conn)
 {
     m_contents.emplace(conn, ConnPoolEntry(conn));
-    m_stats.curr_size++;
-    m_stats.max_size = std::max(m_stats.max_size, m_stats.curr_size);
+    m_stats.max_size = std::max(m_stats.max_size, m_contents.size());
 }
 
 RoutingWorker::ConnectionPool::ConnectionPool(mxs::RoutingWorker* owner, SERVER* target_server,
@@ -876,6 +870,7 @@ bool RoutingWorker::ConnectionPool::has_space() const
 
 RoutingWorker::ConnectionPoolStats RoutingWorker::ConnectionPool::stats() const
 {
+    m_stats.curr_size = m_contents.size();
     return m_stats;
 }
 

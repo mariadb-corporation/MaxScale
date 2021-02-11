@@ -603,10 +603,10 @@ private:
     private:
         std::map<mxs::BackendConnection*, ConnPoolEntry> m_contents;
 
-        mxs::RoutingWorker* m_owner {nullptr};
-        SERVER*             m_target_server {nullptr};
-        int                 m_capacity {0}; // Capacity for this pool.
-        ConnectionPoolStats m_stats;
+        mxs::RoutingWorker*         m_owner {nullptr};
+        SERVER*                     m_target_server {nullptr};
+        int                         m_capacity {0}; // Capacity for this pool.
+        mutable ConnectionPoolStats m_stats;
     };
     using ConnPoolGroup = std::map<const SERVER*, ConnectionPool>;
 
