@@ -27,21 +27,100 @@
 #include "tee.hh"
 #include "teesession.hh"
 
-static const MXS_ENUM_VALUE option_values[] =
+namespace
 {
-    {"ignorecase", PCRE2_CASELESS},
-    {"case",       0             },
-    {"extended",   PCRE2_EXTENDED},
-    {NULL}
+namespace cfg = mxs::config;
+
+class TeeSpecification : public cfg::Specification
+{
+public:
+    using cfg::Specification::Specification;
+
+protected:
+    template<class Params>
+    bool do_post_validate(Params params) const;
+
+    bool post_validate(const mxs::ConfigParameters& params) const
+    {
+        return do_post_validate(params);
+    }
+
+    bool post_validate(json_t* json) const
+    {
+        return do_post_validate(json);
+    }
 };
 
-Tee::Tee(const char* name, mxs::ConfigParameters* params)
+TeeSpecification s_spec(MXS_MODULE_NAME, cfg::Specification::FILTER);
+
+cfg::ParamTarget s_target(
+    &s_spec, "target", "The target where the queries are duplicated",
+    cfg::Param::OPTIONAL);
+
+cfg::ParamService s_service(
+    &s_spec, "service", "The service where the queries are duplicated",
+    cfg::Param::OPTIONAL);
+
+cfg::ParamRegex s_match(
+    &s_spec, "match", "Only include queries matching this pattern",
+    "");
+
+cfg::ParamRegex s_exclude(
+    &s_spec, "exclude", "Exclude queries matching this pattern",
+    "");
+
+cfg::ParamString s_source(
+    &s_spec, "source", "Only include queries done from this address",
+    "");
+
+cfg::ParamString s_user(
+    &s_spec, "user", "Only include queries done by this user",
+    "");
+
+cfg::ParamEnum<uint32_t> s_options(
+    &s_spec, "options", "Regular expression options",
+    {
+        {PCRE2_CASELESS, "ignorecase"},
+        {0, "case"},
+        {PCRE2_EXTENDED, "extended"},
+    }, 0);
+
+template<class Params>
+bool TeeSpecification::do_post_validate(Params params) const
+{
+    bool ok = false;
+
+    if (!s_target.get(params) && !s_service.get(params))
+    {
+        // The `service` parameter is deprecated, don't mention it in the hopes that people stop using it.
+        MXS_ERROR("Parameter `target` must be defined");
+    }
+    else if (s_target.get(params) && s_service.get(params))
+    {
+        MXS_ERROR("Both `service` and `target` cannot be defined at the same time");
+    }
+    else
+    {
+        ok = true;
+    }
+
+    return ok;
+}
+}
+
+Tee::Config::Config(const char* name)
+    : mxs::config::Configuration(name, &s_spec)
+{
+    add_native(&Config::target, &s_target);
+    add_native(&Config::user, &s_user);
+    add_native(&Config::source, &s_source);
+    add_native(&Config::match, &s_match);
+    add_native(&Config::exclude, &s_exclude);
+}
+
+Tee::Tee(const char* name)
     : m_name(name)
-    , m_target(params->get_target(params->contains("service") ? "service" : "target"))
-    , m_user(params->get_string("user"))
-    , m_source(params->get_string("source"))
-    , m_match(params->get_string("match"), params->get_enum("options", option_values))
-    , m_exclude(params->get_string("exclude"), params->get_enum("options", option_values))
+    , m_config(name)
     , m_enabled(true)
 {
 }
@@ -58,18 +137,7 @@ Tee::Tee(const char* name, mxs::ConfigParameters* params)
  */
 Tee* Tee::create(const char* name, mxs::ConfigParameters* params)
 {
-    Tee* rv = nullptr;
-
-    if (params->contains_all({"service", "target"}))
-    {
-        MXS_ERROR("Both `service` and `target` cannot be defined at the same time");
-    }
-    else
-    {
-        rv = new Tee(name, params);
-    }
-
-    return rv;
+    return new Tee(name);
 }
 
 TeeSession* Tee::newSession(MXS_SESSION* pSession, SERVICE* pService)
@@ -91,26 +159,26 @@ json_t* Tee::diagnostics() const
 {
     json_t* rval = json_object();
 
-    if (m_source.length())
+    if (m_config.source.length())
     {
-        json_object_set_new(rval, "source", json_string(m_source.c_str()));
+        json_object_set_new(rval, "source", json_string(m_config.source.c_str()));
     }
 
-    json_object_set_new(rval, "target", json_string(m_target->name()));
+    json_object_set_new(rval, "target", json_string(m_config.target->name()));
 
-    if (m_user.length())
+    if (m_config.user.length())
     {
-        json_object_set_new(rval, "user", json_string(m_user.c_str()));
+        json_object_set_new(rval, "user", json_string(m_config.user.c_str()));
     }
 
-    if (m_match)
+    if (m_config.match)
     {
-        json_object_set_new(rval, "match", json_string(m_match.pattern().c_str()));
+        json_object_set_new(rval, "match", json_string(m_config.match.pattern().c_str()));
     }
 
-    if (m_exclude)
+    if (m_config.exclude)
     {
-        json_object_set_new(rval, "exclude", json_string(m_exclude.pattern().c_str()));
+        json_object_set_new(rval, "exclude", json_string(m_config.exclude.pattern().c_str()));
     }
 
     json_object_set_new(rval, "enabled", json_boolean(m_enabled));
@@ -183,21 +251,9 @@ MXS_MODULE* MXS_CREATE_MODULE()
         NULL,                               /* Thread init. */
         NULL,                               /* Thread finish. */
         {
-            {"service",                      MXS_MODULE_PARAM_SERVICE, NULL},
-            {"target",                       MXS_MODULE_PARAM_TARGET,  NULL},
-            {"match",                        MXS_MODULE_PARAM_REGEX},
-            {"exclude",                      MXS_MODULE_PARAM_REGEX},
-            {"source",                       MXS_MODULE_PARAM_STRING},
-            {"user",                         MXS_MODULE_PARAM_STRING},
-            {
-                "options",
-                MXS_MODULE_PARAM_ENUM,
-                "ignorecase",
-                MXS_MODULE_OPT_NONE,
-                option_values
-            },
             {MXS_END_MODULE_PARAMS}
-        }
+        },
+        &s_spec
     };
 
     return &info;

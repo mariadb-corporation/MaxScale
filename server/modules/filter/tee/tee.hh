@@ -19,6 +19,7 @@
 
 #include <maxscale/filter.hh>
 #include <maxscale/service.hh>
+#include <maxscale/config2.hh>
 
 #include "teesession.hh"
 
@@ -32,6 +33,17 @@ class Tee : public mxs::Filter
     const Tee& operator=(const Tee&);
 public:
 
+    struct Config : public mxs::config::Configuration
+    {
+        Config(const char* name);
+
+        mxs::Target*            target;
+        std::string             user;   /* The user name to filter on */
+        std::string             source; /* The source of the client connection */
+        mxs::config::RegexValue match;  /* Compiled match pattern */
+        mxs::config::RegexValue exclude;/* Compiled exclude pattern*/
+    };
+
     static Tee* create(const char* zName, mxs::ConfigParameters* ppParams);
     TeeSession* newSession(MXS_SESSION* session, SERVICE* service);
     json_t*     diagnostics() const;
@@ -43,32 +55,32 @@ public:
 
     mxs::config::Configuration* getConfiguration()
     {
-        return nullptr;
+        return &m_config;
     }
 
     bool user_matches(const char* user) const
     {
-        return m_user.length() == 0 || strcmp(user, m_user.c_str()) == 0;
+        return m_config.user.length() == 0 || strcmp(user, m_config.user.c_str()) == 0;
     }
 
     bool remote_matches(const char* remote) const
     {
-        return m_source.length() == 0 || strcmp(remote, m_source.c_str()) == 0;
+        return m_config.source.length() == 0 || strcmp(remote, m_config.source.c_str()) == 0;
     }
 
     mxs::Target* get_target() const
     {
-        return m_target;
+        return m_config.target;
     }
 
     const mxb::Regex& get_match() const
     {
-        return m_match;
+        return m_config.match;
     }
 
     const mxb::Regex& get_exclude() const
     {
-        return m_exclude;
+        return m_config.exclude;
     }
 
     void set_enabled(bool value)
@@ -82,13 +94,9 @@ public:
     }
 
 private:
-    Tee(const char* name, mxs::ConfigParameters* params);
+    Tee(const char* name);
 
-    std::string  m_name;
-    mxs::Target* m_target;
-    std::string  m_user;    /* The user name to filter on */
-    std::string  m_source;  /* The source of the client connection */
-    mxb::Regex   m_match;   /* Compiled match pattern */
-    mxb::Regex   m_exclude; /* Compiled exclude pattern*/
-    bool         m_enabled;
+    std::string m_name;
+    Config      m_config;
+    bool        m_enabled;
 };
