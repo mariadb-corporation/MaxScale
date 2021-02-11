@@ -18,6 +18,7 @@
 #include <maxbase/alloc.h>
 #include <maxscale/modinfo.hh>
 #include <maxscale/modutil.hh>
+#include <maxscale/config2.hh>
 #include "mysqlhint.hh"
 
 /**
@@ -25,6 +26,8 @@
  * hints to the buffers that carry the requests.
  *
  */
+
+mxs::config::Specification s_spec(MXS_MODULE_NAME, mxs::config::Specification::FILTER);
 
 // static
 HintInstance* HintInstance::create(const char* zName, mxs::ConfigParameters* ppParams)
@@ -107,7 +110,8 @@ MXS_MODULE* MXS_CREATE_MODULE()
         NULL,       /* Thread finish. */
         {
             {MXS_END_MODULE_PARAMS}
-        }
+        },
+        &s_spec
     };
 
     return &info;
