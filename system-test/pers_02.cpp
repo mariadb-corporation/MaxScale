@@ -15,12 +15,11 @@
 
 int main(int argc, char* argv[])
 {
-    TestConnections::require_galera(true);
     TestConnections* Test = new TestConnections(argc, argv);
 
     Test->set_timeout(60);
     Test->repl->execute_query_all_nodes((char*) "set global max_connections = 20;");
-    Test->create_connections(0, 75, true, true, true, true);
+    Test->create_connections(0, 75, true, true, true, false);
 
     Test->stop_timeout();
     Test->repl->stop_nodes();
@@ -33,7 +32,7 @@ int main(int argc, char* argv[])
     sleep(10);
 
     Test->set_timeout(60);
-    Test->add_result(Test->create_connections(0, 70, true, true, true, true),
+    Test->add_result(Test->create_connections(0, 70, true, true, true, false),
                      "Connections creation error \n");
 
     Test->check_maxscale_alive(0);

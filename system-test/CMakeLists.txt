@@ -1082,7 +1082,7 @@ add_test_executable(mxs1476.cpp mxs1476 mxs1476 LABELS galeramon GALERA_BACKEND)
 add_test_executable(mxs1751_available_when_donor_crash.cpp mxs1751_available_when_donor_crash mxs1751_available_when_donor_crash LABELS galeramon GALERA_BACKEND)
 
 # Persistant connection test
-add_test_executable(pers_01.cpp pers_01 pers_01 LABELS maxscale REPL_BACKEND readwritesplit GALERA_BACKEND)
+add_test_executable(pers_01.cpp pers_01 pers_01 LABELS maxscale REPL_BACKEND readwritesplit)
 
 # Test with extremely big blob inserting/selecting with > 16 mb data blocks
 add_test_executable(mxs1110_16mb.cpp mxs1110_16mb longblob_filters LABELS readwritesplit readconnroute HEAVY REPL_BACKEND GALERA_BACKEND)
@@ -1100,8 +1100,8 @@ add_test_script(mxs791_galera.sh mxs791.sh galera LABELS UNSTABLE HEAVY GALERA_B
  # https://jira.mariadb.org/browse/MXS-1585
 add_test_executable(mxs1585.cpp mxs1585 mxs1585 LABELS GALERA_BACKEND)
 
-# Test with persistant connections configured and big number iof opened connections ,expect no crash
-add_test_executable(pers_02.cpp pers_02 pers_01 LABELS maxscale GALERA_BACKEND REPL_BACKEND readwritesplit)
+# Test big number of opened connections with persistent connections configured
+add_test_executable(pers_02.cpp pers_02 pers_01 LABELS maxscale REPL_BACKEND readwritesplit)
 
 # Test of external script execution
 add_test_executable(script.cpp script script LABELS maxscale REPL_BACKEND GALERA_BACKEND)

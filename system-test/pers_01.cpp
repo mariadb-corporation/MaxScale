@@ -1,129 +1,63 @@
 /**
- * @file pers_01.cpp - Persistent connection tests
- * open 70 connections to all Maxscale services
- * close connections
- * TEST1: check value of "Persistent measured pool size" output, expect:
- *  @verbatim
- *  server1:    1
- *  server2:    5
- *  server3:    10
- *  server4:    30
- *  gserver1:    10
- *  gserver2:    15
- *  gserver3:    0
- *  gserver4:    0
- *  @endverbatim
- * Test2: wait 10 seconds, check "Persistent measured pool size" again. expect the same
- * Test3: wait 30 seconds more, expect:
- *  @verbatim
- *  server1:    1
- *  server2:    5
- *  server3:    10
- *  server4:    0
- *  gserver1:    10
- *  gserver2:    0
- *  gserver3:    0
- *  gserver4:    0
- *  @endverbatim
- *
+ * @file pers_01.cpp - Persistent connection test
+ * Open 70 connections to all Maxscale services
+ * Close connections
+ * Check that connection pool behaves as expected as time passes
  */
 
 
 #include <maxtest/testconnections.hh>
 
-void check_pers_conn(TestConnections* Test, int pers_conn_expected[], const std::string& server)
+using IntVector = std::vector<int>;
+
+void check_conn_pool_size(TestConnections& test, const IntVector& expected)
 {
-    for (int i = 0; i < 4; i++)
-    {
-        Test->check_current_persistent_connections(0, server + std::to_string(i + 1), pers_conn_expected[i]);
-    }
+    auto& mxs = test.maxscale();
+    auto info = mxs.get_servers();
+    info.check_pool_connections(expected);
 }
 
 int main(int argc, char* argv[])
 {
-    TestConnections::require_galera(true);
-    TestConnections* Test = new TestConnections(argc, argv);
-    int pers_conn_expected[4];
-    int galera_pers_conn_expected[4];
+    TestConnections test(argc, argv);
 
-
-    pers_conn_expected[0] = 1;
-    pers_conn_expected[1] = 5;
-    pers_conn_expected[2] = 10;
-    pers_conn_expected[3] = 30;
-
-    galera_pers_conn_expected[0] = 10;
-    galera_pers_conn_expected[1] = 15;
-    galera_pers_conn_expected[2] = 0;
-    galera_pers_conn_expected[3] = 0;
-
-    Test->add_result(Test->create_connections(0, 70, true, true, true, true),
-                     "Error creating connections");
+    test.add_result(test.create_connections(0, 70, true, true, true, false),
+                    "Error creating connections");
     sleep(5);
-    Test->set_timeout(20);
+    test.set_timeout(20);
 
-    Test->tprintf("Test 1:");
-    check_pers_conn(Test, pers_conn_expected, (char*) "server");
+    test.tprintf("Test 1:");
+    IntVector expected = {1, 5, 10, 30};
+    check_conn_pool_size(test, expected);
 
-    Test->tprintf("Galera: ");
-    check_pers_conn(Test, galera_pers_conn_expected, (char*) "gserver");
+    test.stop_timeout();
 
-    Test->stop_timeout();
-
-    Test->tprintf("Sleeping 10 seconds");
+    test.tprintf("Sleeping 10 seconds");
     sleep(10);
 
-    Test->set_timeout(20);
-    Test->tprintf("Test 2:");
-    check_pers_conn(Test, pers_conn_expected, (char*) "server");
+    test.set_timeout(20);
+    test.tprintf("Test 2:");
+    check_conn_pool_size(test, expected);
 
-    Test->tprintf("Galera: ");
-    check_pers_conn(Test, galera_pers_conn_expected, (char*) "gserver");
-
-    Test->tprintf("Sleeping 30 seconds");
-    Test->stop_timeout();
+    test.tprintf("Sleeping 30 seconds");
+    test.stop_timeout();
     sleep(30);
 
-    Test->set_timeout(20);
-    Test->tprintf("Test 3:");
+    test.set_timeout(20);
+    test.tprintf("Test 3:");
 
-    pers_conn_expected[0] = 1;
-    pers_conn_expected[1] = 5;
-    pers_conn_expected[2] = 10;
-    pers_conn_expected[3] = 0;
+    expected = {1, 5, 10, 0};
+    check_conn_pool_size(test, expected);
 
-    galera_pers_conn_expected[0] = 10;
-    galera_pers_conn_expected[1] = 0;
-    galera_pers_conn_expected[2] = 0;
-    galera_pers_conn_expected[3] = 0;
-
-    check_pers_conn(Test, pers_conn_expected, (char*) "server");
-
-    Test->tprintf("Galera: ");
-    check_pers_conn(Test, galera_pers_conn_expected, (char*) "gserver");
-
-    Test->tprintf("Sleeping 30 seconds");
-    Test->stop_timeout();
+    test.tprintf("Sleeping 30 seconds");
+    test.stop_timeout();
     sleep(30);
-    Test->set_timeout(20);
+    test.set_timeout(20);
 
-    Test->tprintf("Test 3:");
+    test.tprintf("Test 4:");
 
-    pers_conn_expected[0] = 1;
-    pers_conn_expected[1] = 0;
-    pers_conn_expected[2] = 0;
-    pers_conn_expected[3] = 0;
+    expected = {1, 0, 0, 0};
+    check_conn_pool_size(test, expected);
 
-    galera_pers_conn_expected[0] = 10;
-    galera_pers_conn_expected[1] = 0;
-    galera_pers_conn_expected[2] = 0;
-    galera_pers_conn_expected[3] = 0;
-
-    check_pers_conn(Test, pers_conn_expected, (char*) "server");
-
-    Test->tprintf("Galera: ");
-    check_pers_conn(Test, galera_pers_conn_expected, (char*) "gserver");
-    int rval = Test->global_result;
-    delete Test;
-    return rval;
+    return test.global_result;
 }
