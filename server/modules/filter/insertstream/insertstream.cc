@@ -26,11 +26,14 @@
 #include <maxscale/protocol/mariadb/protocol_classes.hh>
 #include <maxscale/protocol/mariadb/query_classifier.hh>
 #include <maxscale/session.hh>
+#include <maxscale/config2.hh>
 
 #include "insertstream.hh"
 
 namespace
 {
+
+mxs::config::Specification s_spec(MXS_MODULE_NAME, mxs::config::Specification::FILTER);
 
 static uint64_t CAPS = RCAP_TYPE_TRANSACTION_TRACKING;
 
@@ -408,10 +411,9 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         NULL,
         NULL,
         {
-            {"source",          MXS_MODULE_PARAM_STRING },
-            {"user",            MXS_MODULE_PARAM_STRING },
             {MXS_END_MODULE_PARAMS}
-        }
+        },
+        &s_spec
     };
 
     return &info;
