@@ -8,8 +8,6 @@ language=@CMAKE_INSTALL_PREFIX@/secondary/lib/maxscale/
 piddir=@CMAKE_INSTALL_PREFIX@/secondary/run/maxscale
 persistdir=@CMAKE_INSTALL_PREFIX@/secondary/lib/maxscale/maxscale.cnf.d/
 module_configdir=@CMAKE_INSTALL_PREFIX@/secondary/etc/maxscale.modules.d/
-# This isn't really correct but it's OK as long as it's an empty directory
-connector_plugindir=@CMAKE_INSTALL_PREFIX@/secondary/etc/maxscale.modules.d/
 admin_auth=false
 admin_port=8990
 

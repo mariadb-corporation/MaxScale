@@ -2696,6 +2696,16 @@ bool handle_path_arg(char** dest, const char* path, const char* arg, bool rd, bo
 
 bool check_paths()
 {
+    // The default path for the connector_plugindir isn't valid. This doesn't matter that much as we don't
+    // include the plugins in the installation.
+    if (strcmp(get_connector_plugindir(), default_connector_plugindir) != 0)
+    {
+        if (!check_dir_access(get_connector_plugindir(), true, false))
+        {
+            return false;
+        }
+    }
+
     return check_dir_access(get_logdir(), true, false)
            && check_dir_access(get_cachedir(), true, true)
            && check_dir_access(get_configdir(), true, false)
@@ -2704,7 +2714,6 @@ bool check_paths()
            && check_dir_access(get_langdir(), true, false)
            && check_dir_access(get_piddir(), true, true)
            && check_dir_access(get_config_persistdir(), true, true)
-           && check_dir_access(get_connector_plugindir(), true, false)
            && check_dir_access(get_libdir(), true, false)
            && check_dir_access(get_execdir(), true, false);
 }
