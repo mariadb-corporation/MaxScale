@@ -12,6 +12,8 @@
  */
 #pragma once
 
+#define MXS_MODULE_NAME "mirror"
+
 #include <maxscale/ccdefs.hh>
 
 #include <maxscale/router.hh>
