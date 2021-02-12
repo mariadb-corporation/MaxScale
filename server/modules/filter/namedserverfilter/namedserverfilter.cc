@@ -299,7 +299,7 @@ uint64_t RegexHintFilter::getCapabilities() const
 
 mxs::config::Configuration* RegexHintFilter::getConfiguration()
 {
-    return nullptr;
+    return &m_settings;
 }
 
 /**
