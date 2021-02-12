@@ -75,6 +75,8 @@ public:
     json_t*        to_json(const char* host) const;
     static json_t* filter_list_to_json(const char* host);
 
+    static mxs::config::Specification* specification();
+
 private:
     std::string           m_name;           /**< The Filter name */
     std::string           m_module;         /**< The module to load */

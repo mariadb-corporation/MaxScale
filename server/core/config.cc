@@ -1859,6 +1859,29 @@ const char* get_missing_module_parameter_name(const CONFIG_CONTEXT* obj)
     return nullptr;
 }
 
+bool is_valid_module(const CONFIG_CONTEXT* obj)
+{
+    std::string type = obj->m_parameters.get_string(CN_TYPE);
+
+    if (type == CN_SERVICE)
+    {
+        auto name = obj->m_parameters.get_string(CN_ROUTER);
+        return get_module(name, mxs::ModuleType::ROUTER);
+    }
+    else if (type == CN_MONITOR)
+    {
+        auto name = obj->m_parameters.get_string(CN_MODULE);
+        return get_module(name, mxs::ModuleType::MONITOR);
+    }
+    else if (type == CN_FILTER)
+    {
+        auto name = obj->m_parameters.get_string(CN_MODULE);
+        return get_module(name, mxs::ModuleType::FILTER);
+    }
+
+    return true;
+}
+
 std::pair<const MXS_MODULE_PARAM*, const MXS_MODULE*> get_module_details(const CONFIG_CONTEXT* obj)
 {
     std::string type = obj->m_parameters.get_string(CN_TYPE);
@@ -1876,7 +1899,7 @@ std::pair<const MXS_MODULE_PARAM*, const MXS_MODULE*> get_module_details(const C
     else if (type == CN_FILTER)
     {
         auto name = obj->m_parameters.get_string(CN_MODULE);
-        return {common_filter_params(), get_module(name, mxs::ModuleType::FILTER)};
+        return {nullptr, get_module(name, mxs::ModuleType::FILTER)};
     }
 
     mxb_assert(!true);
@@ -1959,9 +1982,9 @@ std::unordered_set<CONFIG_CONTEXT*> get_dependencies(const std::vector<CONFIG_CO
 
     for (const auto* p : {common_params, module->parameters})
     {
-        mxb_assert(p);
+        mxb_assert(p || type == CN_FILTER);
 
-        for (int i = 0; p[i].name; i++)
+        for (int i = 0; p && p[i].name; i++)
         {
             if (obj->m_parameters.contains(p[i].name))
             {
@@ -2912,10 +2935,17 @@ static bool check_config_objects(CONFIG_CONTEXT* context)
             continue;
         }
 
-        if (type == CN_SERVER || type == CN_LISTENER)
+        if (!is_valid_module(obj))
+        {
+            continue;
+        }
+
+        if (type == CN_SERVER || type == CN_LISTENER || type == CN_FILTER)
         {
             // Servers are a special case as they don't have a module and the validation is done as a part of
-            // the creation process.
+            // the creation process. Filters and listeners validate the parameters when they are being
+            // constructed. This is done after the dependency order of the modules is resolved which allows
+            // parameters that refer to other objects to be validated.
             continue;
         }
 

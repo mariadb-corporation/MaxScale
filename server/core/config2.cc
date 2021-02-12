@@ -36,7 +36,7 @@ bool is_core_param(Specification::Kind kind, const std::string& param)
     switch (kind)
     {
     case Specification::FILTER:
-        pzCore_params = common_filter_params();
+        return FilterDef::specification()->find_param(param);
         break;
 
     case Specification::MONITOR:

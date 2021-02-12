@@ -121,10 +121,6 @@ const MXS_MODULE_PARAM* get_type_parameters(const char* type)
     {
         return common_monitor_params();
     }
-    else if (strcmp(type, CN_FILTER) == 0)
-    {
-        return common_filter_params();
-    }
 
     MXS_NOTICE("Module type with no default parameters used: %s", type);
     mxb_assert_message(!true, "Module type with no default parameters used");

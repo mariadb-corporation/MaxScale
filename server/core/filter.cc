@@ -53,25 +53,22 @@ static struct
     std::vector<SFilterDef> filters;
 } this_unit;
 
-static const MXS_MODULE_PARAM config_filter_params[] =
+namespace
 {
-    {
-        CN_TYPE, MXS_MODULE_PARAM_STRING,
-        CN_FILTER,
-        MXS_MODULE_OPT_REQUIRED
-    },
-    {
-        CN_MODULE,
-        MXS_MODULE_PARAM_STRING,
-        NULL,
-        MXS_MODULE_OPT_REQUIRED
-    },
-    {NULL}
-};
 
-const MXS_MODULE_PARAM* common_filter_params()
+namespace cfg = mxs::config;
+
+cfg::Specification s_spec(CN_FILTERS, cfg::Specification::FILTER);
+
+cfg::ParamString s_type(&s_spec, CN_TYPE, "The type of the object", CN_FILTER);
+
+cfg::ParamModule s_module(&s_spec, CN_MODULE, "The filter module to use", mxs::ModuleType::FILTER);
+}
+
+// static
+mxs::config::Specification* FilterDef::specification()
 {
-    return config_filter_params;
+    return &s_spec;
 }
 
 /**
@@ -102,6 +99,11 @@ SFilterDef filter_alloc(const char* name, const char* module, mxs::ConfigParamet
                     {
                         filter.reset();
                     }
+                }
+                else
+                {
+                    // If the filter doesn't have a configuration, it must also not declare any parameters.
+                    mxb_assert(module_info->specification->begin() == module_info->specification->end());
                 }
             }
 
@@ -199,21 +201,11 @@ Filter* filter_def_get_instance(const MXS_FILTER_DEF* filter_def)
 
 json_t* FilterDef::parameters_to_json() const
 {
-    json_t* rval = json_object();
-
-    /** Add custom module parameters */
-    const MXS_MODULE* mod = get_module(m_module, mxs::ModuleType::FILTER);
-    config_add_module_params_json(parameters(),
-                                  {CN_TYPE, CN_MODULE},
-                                  common_filter_params(),
-                                  mod->parameters,
-                                  rval);
+    json_t* rval = nullptr;
 
     if (auto cfg = m_filter->getConfiguration())
     {
-        auto json = cfg->to_json();
-        json_object_update(rval, json);
-        json_decref(json);
+        rval = cfg->to_json();
     }
 
     return rval;
@@ -336,12 +328,7 @@ std::ostream& FilterDef::persist(std::ostream& os) const
     }
     else
     {
-        const MXS_MODULE* mod = get_module(m_module, mxs::ModuleType::FILTER);
-        mxb_assert(mod);
-
-        os << generate_config_string(name(), parameters(),
-                                     common_filter_params(),
-                                     mod->parameters);
+        mxb_assert(!true);
     }
 
     return os;
