@@ -1923,6 +1923,7 @@ expr(A) ::= nm(X) DOT nm(Y) DOT nm(Z). {
 term(A) ::= INTEGER|FLOAT|BLOB(X).  {spanExpr(&A, pParse, @X, &X);}
 term(A) ::= STRING(X).              {spanExpr(&A, pParse, @X, &X);}
 term(A) ::= CHARSET_NAME_KW(X) STRING(Y). {spanExpr(&A, pParse, @X, &Y);}
+term(A) ::= CHARSET_NAME_KW(X) BLOB(Y). {spanExpr(&A, pParse, @X, &Y);}
 expr(A) ::= VARIABLE(X).     {
   if( X.n>=2 && X.z[0]=='#' && sqlite3Isdigit(X.z[1]) ){
     /* When doing a nested parse, one can include terms in an expression
