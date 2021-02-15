@@ -84,7 +84,7 @@ bool Mirror::configure(mxs::ConfigParameters* params)
 void Mirror::ship(json_t* obj)
 {
     {
-        mxb::shared_lock<mxb::shared_mutex> guard(m_rw_lock);
+        std::shared_lock<mxb::shared_mutex> guard(m_rw_lock);
         m_exporter->ship(obj);
     }
 

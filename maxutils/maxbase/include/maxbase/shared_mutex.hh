@@ -15,6 +15,7 @@
 #include <maxbase/ccdefs.hh>
 
 #include <pthread.h>
+#include <shared_mutex>
 
 namespace maxbase
 {
@@ -54,28 +55,5 @@ public:
 
 private:
     pthread_rwlock_t m_lock = PTHREAD_RWLOCK_INITIALIZER;
-};
-
-// Minimal implementation of std::shared_lock from C++14 that only implements construction time locking
-template<class T>
-class shared_lock
-{
-public:
-    shared_lock(const shared_lock&) = delete;
-    shared_lock& operator=(const shared_lock&) = delete;
-
-    shared_lock(T& t)
-        : m_t(t)
-    {
-        m_t.lock_shared();
-    }
-
-    ~shared_lock()
-    {
-        m_t.unlock_shared();
-    }
-
-private:
-    T& m_t;
 };
 }

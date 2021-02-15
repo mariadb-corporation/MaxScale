@@ -155,7 +155,7 @@ int64_t RWSplit::avg_sescmd_sz() const
 
 std::string RWSplit::last_gtid() const
 {
-    mxb::shared_lock<mxb::shared_mutex> guard(m_last_gtid_lock);
+    std::shared_lock<mxb::shared_mutex> guard(m_last_gtid_lock);
     return m_last_gtid.to_string();
 }
 
