@@ -1275,6 +1275,12 @@ void MariaDBClientConnection::ready_for_reading(DCB* event_dcb)
                     break;
 
                 case StateMachineRes::DONE:
+                    if (auth_type == AuthType::NORMAL_AUTH)
+                    {
+                        // Allow pooling for fresh sessions. This allows pooling in situations where
+                        // the client/connector does not send any queries at start and session stays idle.
+                        m_session->set_can_pool_backends(true);
+                    }
                     m_state = State::READY;
                     break;
 

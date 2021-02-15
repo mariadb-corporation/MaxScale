@@ -912,6 +912,7 @@ int32_t ServerEndpoint::routeQuery(GWBUF* buffer)
     if (m_conn_pooled && connect())
     {
         m_conn_pooled = false;
+        MXB_INFO("Session %lu connection to %s restored from pool.", m_session->id(), m_server->name());
     }
 
     if (!m_conn_pooled)
@@ -952,6 +953,7 @@ void ServerEndpoint::try_to_pool()
     {
         m_conn_pooled = true;
         m_conn = nullptr;
+        MXB_INFO("Session %lu connection to %s pooled.", m_session->id(), m_server->name());
     }
     else
     {
