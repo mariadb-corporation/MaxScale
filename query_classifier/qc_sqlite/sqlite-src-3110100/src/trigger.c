@@ -366,7 +366,7 @@ TriggerStep *sqlite3TriggerSelectStep(sqlite3 *db, Select *pSelect){
 */
 static TriggerStep *triggerStepAllocate(
   sqlite3 *db,                /* Database connection */
-  u8 op,                      /* Trigger opcode */
+  u16 op,                     /* Trigger opcode */
   Token *pName                /* The target name */
 ){
   TriggerStep *pTriggerStep;

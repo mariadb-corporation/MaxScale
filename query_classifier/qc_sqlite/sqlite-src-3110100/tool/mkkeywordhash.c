@@ -804,7 +804,7 @@ int main(int argc, char **argv){
   }
   printf("%s  };\n", j==0 ? "" : "\n");
 
-  printf("  static const unsigned char aCode[%d] = {\n", nKeyword);
+  printf("  static const unsigned short aCode[%d] = {\n", nKeyword);
   for(i=j=0; i<nKeyword; i++){
     char *zToken = aKeywordTable[i].zTokenType;
     if( j==0 ) printf("    ");

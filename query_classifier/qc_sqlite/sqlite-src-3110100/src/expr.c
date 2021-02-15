@@ -464,7 +464,7 @@ Expr *sqlite3ExprAlloc(
   pNew = sqlite3DbMallocRawNN(db, sizeof(Expr)+nExtra);
   if( pNew ){
     memset(pNew, 0, sizeof(Expr));
-    pNew->op = (u8)op;
+    pNew->op = (u16)op;
     pNew->iAgg = -1;
     if( pToken ){
       if( nExtra==0 ){
@@ -1544,7 +1544,7 @@ int sqlite3ExprIsInteger(Expr *p, int *pValue){
 ** TRUE.
 */
 int sqlite3ExprCanBeNull(const Expr *p){
-  u8 op;
+  u16 op;
   while( p->op==TK_UPLUS || p->op==TK_UMINUS ){ p = p->pLeft; }
   op = p->op;
   if( op==TK_REGISTER ) op = p->op2;
@@ -1574,7 +1574,7 @@ int sqlite3ExprCanBeNull(const Expr *p){
 ** answer.
 */
 int sqlite3ExprNeedsNoAffinityChange(const Expr *p, char aff){
-  u8 op;
+  u16 op;
   if( aff==SQLITE_AFF_BLOB ) return 1;
   while( p->op==TK_UPLUS || p->op==TK_UMINUS ){ p = p->pLeft; }
   op = p->op;

@@ -1073,7 +1073,7 @@ selectnowith(A) ::= selectnowith(X) multiselect_op(Y) oneselect(Z).  {
 #endif
   }
   if( pRhs ){
-    pRhs->op = (u8)Y;
+    pRhs->op = (u16)Y;
     pRhs->pPrior = pLhs;
     if( ALWAYS(pLhs) ) pLhs->selFlags &= ~SF_MultiValue;
     pRhs->selFlags &= ~SF_MultiValue;
@@ -1327,7 +1327,7 @@ from(A) ::= FROM seltablist(X). {
 //
 stl_prefix(A) ::= seltablist(X) joinop(Y).    {
    A = X;
-   if( ALWAYS(A && A->nSrc>0) ) A->a[A->nSrc-1].fg.jointype = (u8)Y;
+   if( ALWAYS(A && A->nSrc>0) ) A->a[A->nSrc-1].fg.jointype = (u16)Y;
 }
 stl_prefix(A) ::= .                           {A = 0;}
 seltablist(A) ::= stl_prefix(X) nm(Y) dbnm(D) as(Z) indexed_opt(I)
@@ -2233,7 +2233,7 @@ expr(A) ::= expr(X) NOT NULL(E). {spanUnaryPostfix(&A,pParse,TK_NOTNULL,&X,&E);}
   static void binaryToUnaryIfNull(Parse *pParse, Expr *pY, Expr *pA, int op){
     sqlite3 *db = pParse->db;
     if( pA && pY && pY->op==TK_NULL ){
-      pA->op = (u8)op;
+      pA->op = (u16)op;
       sqlite3ExprDelete(db, pA->pRight);
       pA->pRight = 0;
     }
