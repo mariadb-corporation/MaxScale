@@ -619,6 +619,22 @@ void MaxScale::alter_monitor(const string& mon_name, const string& setting, cons
     m_log.expect(res.rc == 0 && res.output == "OK", "Alter monitor command '%s' failed.", cmd.c_str());
 }
 
+void MaxScale::alter_service(const string& svc_name, const string& setting, const string& value)
+{
+    string cmd = mxb::string_printf("alter service %s %s %s", svc_name.c_str(),
+                                    setting.c_str(), value.c_str());
+    auto res = m_maxscales->maxctrl(cmd);
+    m_log.expect(res.rc == 0 && res.output == "OK", "Alter service command '%s' failed.", cmd.c_str());
+}
+
+void MaxScale::alter_server(const string& srv_name, const string& setting, const string& value)
+{
+    string cmd = mxb::string_printf("alter server %s %s %s", srv_name.c_str(),
+                                    setting.c_str(), value.c_str());
+    auto res = m_maxscales->maxctrl(cmd);
+    m_log.expect(res.rc == 0 && res.output == "OK", "Alter server command '%s' failed.", cmd.c_str());
+}
+
 void ServerInfo::status_from_string(const string& source)
 {
     auto flags = mxb::strtok(source, ",");

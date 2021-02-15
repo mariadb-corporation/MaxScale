@@ -500,6 +500,8 @@ public:
     void check_servers_status(const std::vector<ServerInfo::bitfield>& expected_status);
 
     void alter_monitor(const std::string& mon_name, const std::string& setting, const std::string& value);
+    void alter_service(const std::string& svc_name, const std::string& setting, const std::string& value);
+    void alter_server(const std::string& srv_name, const std::string& setting, const std::string& value);
 
     void start();
     void stop();

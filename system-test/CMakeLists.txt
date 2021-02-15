@@ -1081,7 +1081,7 @@ add_test_executable(mxs1476.cpp mxs1476 mxs1476 LABELS galeramon GALERA_BACKEND)
 # https://jira.mariadb.org/browse/MXS-1751
 add_test_executable(mxs1751_available_when_donor_crash.cpp mxs1751_available_when_donor_crash mxs1751_available_when_donor_crash LABELS galeramon GALERA_BACKEND)
 
-# Persistant connection test
+# Persistant connection test. Also MXS-3265.
 add_test_executable(pers_01.cpp pers_01 pers_01 LABELS maxscale REPL_BACKEND readwritesplit)
 
 # Test with extremely big blob inserting/selecting with > 16 mb data blocks
