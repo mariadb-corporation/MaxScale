@@ -338,7 +338,7 @@ GWBUF* modutil_get_next_MySQL_packet(GWBUF** p_readbuf)
         {
             size_t packetlen;
 
-            if (gwbuf_link_length(readbuf) >= 3)     // The length is in the 3 first bytes.
+            if (gwbuf_link_length(readbuf) >= 3)    // The length is in the 3 first bytes.
             {
                 uint8_t* data = (uint8_t*)GWBUF_DATA((readbuf));
                 packetlen = MYSQL_GET_PAYLOAD_LEN(data) + 4;
@@ -921,48 +921,50 @@ static inline bool is_next(uint8_t* it, uint8_t* end, const std::string& str)
     return true;
 }
 
+const char IS_SPACE = 0b00000001;
+const char IS_DIGIT = 0b00000010;
+const char IS_ALPHA = 0b00000100;
+const char IS_ALNUM = 0b00001000;
+const char IS_XDIGIT = 0b00010000;
+const char IS_SPECIAL = 0b00100000;
 
-// Class for fast char type lookups
 class LUT
 {
 public:
-    LUT(const std::string& values)
+    LUT()
     {
-        for (const auto& a : values)
-        {
-            m_table[(uint8_t)a] = true;
-        }
+        set(IS_SPACE, ::isspace);
+        set(IS_DIGIT, ::isdigit);
+        set(IS_ALPHA, ::isalpha);
+        set(IS_ALNUM, ::isalnum);
+        set(IS_XDIGIT, ::isxdigit);
+        set(IS_SPECIAL, [](uint8_t c) {
+                return isdigit(c) || isspace(c) || std::string("\"'`#-/\\").find(
+                    c) != std::string::npos;
+            });
     }
 
-    LUT(std::function<bool(uint8_t)> is_type)
+    inline bool operator()(char bit, uint8_t c) const
     {
-        for (int i = 0; i <= std::numeric_limits<uint8_t>::max(); i++)
-        {
-            m_table[i] = is_type(i);
-        }
-    }
-
-    inline bool operator()(uint8_t c) const
-    {
-        return m_table[c];
+        return m_table[c] & bit;
     }
 
 private:
-    std::array<bool, 256> m_table = {};
+    void set(char bit, std::function<bool(uint8_t)> is_type)
+    {
+        for (int i = 0; i <= std::numeric_limits<uint8_t>::max(); i++)
+        {
+            if (is_type(i))
+            {
+                m_table[i] |= bit;
+            }
+        }
+    }
+
+    std::array<char, 256> m_table = {};
 };
 
-// Optimized versions of standard functions that ignore the locale and use a lookup table
-static const LUT is_space(::isspace);
-static const LUT is_digit(::isdigit);
-static const LUT is_alpha(::isalpha);
-static const LUT is_alnum(::isalnum);
-static const LUT is_xdigit(::isxdigit);
-
-// For detection of characters that need special treatment, helps speed up processing of keywords etc.
-static const LUT is_special([](uint8_t c) {
-                                return isdigit(c) || isspace(c) || std::string("\"'`#-/\\").find(
-                                    c) != std::string::npos;
-                            });
+static LUT lut;
 
 static inline std::pair<bool, uint8_t*> probe_number(uint8_t* it, uint8_t* end)
 {
@@ -977,7 +979,7 @@ static inline std::pair<bool, uint8_t*> probe_number(uint8_t* it, uint8_t* end)
 
     while (it != end)
     {
-        if (is_digit(*it) || (allow_hex && is_xdigit(*it)))
+        if (lut(IS_DIGIT, *it) || (allow_hex && lut(IS_XDIGIT, * it)))
         {
             // Digit or hex-digit, skip it
         }
@@ -997,7 +999,7 @@ static inline std::pair<bool, uint8_t*> probe_number(uint8_t* it, uint8_t* end)
                 // Possible scientific notation number
                 auto next_it = it + 1;
 
-                if (next_it == end || (!is_digit(*next_it) && *next_it != '-'))
+                if (next_it == end || (!lut(IS_DIGIT, *next_it) && *next_it != '-'))
                 {
                     rval.first = false;
                     break;
@@ -1014,18 +1016,18 @@ static inline std::pair<bool, uint8_t*> probe_number(uint8_t* it, uint8_t* end)
                 // Possible decimal number
                 auto next_it = it + 1;
 
-                if (next_it != end && !is_digit(*next_it))
+                if (next_it != end && !lut(IS_DIGIT, *next_it))
                 {
                     /** The fractional part of a decimal is optional in MariaDB. */
                     rval.second = it;
                     break;
                 }
-                mxb_assert(is_digit(*next_it));
+                mxb_assert(lut(IS_DIGIT, *next_it));
             }
             else
             {
                 // If we have a non-text character, we treat it as a number
-                rval.first = !is_alpha(*it);
+                rval.first = !lut(IS_ALPHA, *it);
                 break;
             }
         }
@@ -1048,7 +1050,7 @@ static inline bool is_negation(const std::string& str, int i)
         rval = true;
         for (int j = i - 1; j >= 0; j--)
         {
-            if (!is_space(str[j]))
+            if (!lut(IS_SPACE, str[j]))
             {
                 /** If we find a previously converted value, we know that it
                  * is not a negation but a subtraction. */
@@ -1094,7 +1096,7 @@ std::string get_canonical(GWBUF* querybuf)
 
     for (; it != end; ++it)
     {
-        if (!is_special(*it))
+        if (!lut(IS_SPECIAL, *it))
         {
             // Normal character, no special handling required
             rval[i++] = *it;
@@ -1114,9 +1116,9 @@ std::string get_canonical(GWBUF* querybuf)
                 break;
             }
         }
-        else if (is_space(*it))
+        else if (lut(IS_SPACE, *it))
         {
-            if (i == 0 || is_space(rval[i - 1]))
+            if (i == 0 || lut(IS_SPACE, rval[i - 1]))
             {
                 // Leading or repeating whitespace, skip it
             }
@@ -1184,7 +1186,7 @@ std::string get_canonical(GWBUF* querybuf)
                 break;
             }
         }
-        else if (is_digit(*it) && (i == 0 || (!is_alnum(rval[i - 1]) && rval[i - 1] != '_')))
+        else if (lut(IS_DIGIT, *it) && (i == 0 || (!lut(IS_ALNUM, rval[i - 1]) && rval[i - 1] != '_')))
         {
             auto num_end = probe_number(it, end);
 
@@ -1228,7 +1230,7 @@ std::string get_canonical(GWBUF* querybuf)
     }
 
     // Remove trailing whitespace
-    while (i > 0 && is_space(rval[i - 1]))
+    while (i > 0 && lut(IS_SPACE, rval[i - 1]))
     {
         --i;
     }
