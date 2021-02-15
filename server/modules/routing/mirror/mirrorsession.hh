@@ -12,8 +12,7 @@
  */
 #pragma once
 
-#include <maxscale/ccdefs.hh>
-
+#include "common.hh"
 #include "mirror.hh"
 #include "mirrorbackend.hh"
 

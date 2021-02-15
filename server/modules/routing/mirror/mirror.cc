@@ -17,23 +17,16 @@
 // static
 Mirror* Mirror::create(SERVICE* pService, mxs::ConfigParameters* params)
 {
-    std::unique_ptr<Mirror> rval(new Mirror(pService));
-
-    if (!rval->configure(params))
-    {
-        rval.reset();
-    }
-
-    return rval.release();
+    return new Mirror(pService);
 }
 
 mxs::RouterSession* Mirror::newSession(MXS_SESSION* pSession, const mxs::Endpoints& endpoints)
 {
     const auto& children = m_service->get_children();
 
-    if (std::find(children.begin(), children.end(), m_main) == children.end())
+    if (std::find(children.begin(), children.end(), m_config.main) == children.end())
     {
-        MXS_ERROR("Main target '%s' is not listed in `targets`", m_main->name());
+        MXS_ERROR("Main target '%s' is not listed in `targets`", m_config.main->name());
         return nullptr;
     }
 
@@ -63,18 +56,14 @@ uint64_t Mirror::getCapabilities() const
     return caps;
 }
 
-bool Mirror::configure(mxs::ConfigParameters* params)
+bool Mirror::post_configure()
 {
     bool rval = false;
-    auto main_tgt = params->get_target("main");
-    const auto& children = m_service->get_children();
-
     std::lock_guard<mxb::shared_mutex> guard(m_rw_lock);
 
-    if (auto exporter = build_exporter(params))
+    if (auto exporter = build_exporter(m_config))
     {
         m_exporter = std::move(exporter);
-        m_main = main_tgt;
         rval = true;
     }
 
@@ -111,33 +100,9 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         NULL,
         NULL,
         {
-            {
-                "main",
-                MXS_MODULE_PARAM_TARGET,
-                nullptr,
-                MXS_MODULE_OPT_REQUIRED
-            },
-            {
-                CN_EXPORTER,
-                MXS_MODULE_PARAM_ENUM,
-                nullptr,
-                MXS_MODULE_OPT_REQUIRED | MXS_MODULE_OPT_ENUM_UNIQUE,
-                exporter_type_values
-            },
-            {
-                CN_FILE,
-                MXS_MODULE_PARAM_STRING
-            },
-            {
-                CN_KAFKA_BROKER,
-                MXS_MODULE_PARAM_STRING
-            },
-            {
-                CN_KAFKA_TOPIC,
-                MXS_MODULE_PARAM_STRING
-            },
             {MXS_END_MODULE_PARAMS}
-        }
+        },
+        Config::spec()
     };
 
     return &info;

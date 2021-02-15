@@ -80,21 +80,19 @@ private:
     std::string                        m_topic;
 };
 
-std::unique_ptr<Exporter> build_exporter(mxs::ConfigParameters* params)
+std::unique_ptr<Exporter> build_exporter(const Config& config)
 {
     std::unique_ptr<Exporter> rval;
-    Exporter::Type type = (Exporter::Type)params->get_enum(CN_EXPORTER, exporter_type_values);
-    std::string uri = params->get_string(CN_FILE);
 
-    switch (type)
+    switch (config.exporter)
     {
-    case Exporter::Type::LOG:
+    case ExporterType::EXPORT_LOG:
         rval.reset(new LogExporter);
         break;
 
-    case Exporter::Type::FILE:
+    case ExporterType::EXPORT_FILE:
         {
-            int fd = open(uri.c_str(), O_APPEND | O_WRONLY | O_CREAT,
+            int fd = open(config.file.c_str(), O_APPEND | O_WRONLY | O_CREAT,
                           S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH);
 
             if (fd != -1)
@@ -103,22 +101,22 @@ std::unique_ptr<Exporter> build_exporter(mxs::ConfigParameters* params)
             }
             else
             {
-                MXS_ERROR("Failed to open file '%s', %d, %s", uri.c_str(), errno, mxs_strerror(errno));
+                MXS_ERROR("Failed to open file '%s', %d, %s", config.file.c_str(), errno,
+                          mxs_strerror(errno));
             }
         }
         break;
 
-    case Exporter::Type::KAFKA:
+    case ExporterType::EXPORT_KAFKA:
         {
             std::string err;
             auto cnf = RdKafka::Conf::create(RdKafka::Conf::CONF_GLOBAL);
 
-            if (cnf->set("bootstrap.servers", params->get_string(CN_KAFKA_BROKER), err)
-                == RdKafka::Conf::ConfResult::CONF_OK)
+            if (cnf->set("bootstrap.servers", config.kafka_broker, err) == RdKafka::Conf::ConfResult::CONF_OK)
             {
                 if (auto producer = RdKafka::Producer::create(cnf, err))
                 {
-                    rval.reset(new KafkaExporter(producer, params->get_string(CN_KAFKA_TOPIC)));
+                    rval.reset(new KafkaExporter(producer, config.kafka_topic));
                 }
                 else
                 {

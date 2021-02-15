@@ -12,15 +12,14 @@
  */
 #pragma once
 
-#define MXS_MODULE_NAME "mirror"
-
-#include <maxscale/ccdefs.hh>
+#include "common.hh"
 
 #include <maxscale/router.hh>
 #include <maxscale/backend.hh>
 #include <maxbase/shared_mutex.hh>
 
 #include "exporter.hh"
+#include "config.hh"
 
 class MirrorSession;
 
@@ -35,27 +34,34 @@ public:
     mxs::RouterSession* newSession(MXS_SESSION* pSession, const mxs::Endpoints& endpoints);
     json_t*             diagnostics() const;
     uint64_t            getCapabilities() const;
-    bool                configure(mxs::ConfigParameters* params);
+
+    bool configure(mxs::ConfigParameters* params)
+    {
+        return true;
+    }
 
     void ship(json_t* obj);
 
     mxs::Target* get_main() const
     {
-        return m_main;
+        return m_config.main;
     }
 
     mxs::config::Configuration* getConfiguration()
     {
-        return nullptr;
+        return &m_config;
     }
+
+    bool post_configure();
 
 private:
     Mirror(SERVICE* pService)
-        : m_service(pService)
+        : m_config(pService->name(), this)
+        , m_service(pService)
     {
     }
 
-    mxs::Target*              m_main;
+    Config                    m_config;
     std::unique_ptr<Exporter> m_exporter;
     mxb::shared_mutex         m_rw_lock;
     SERVICE*                  m_service;

@@ -12,7 +12,7 @@
  */
 #pragma once
 
-#include <maxscale/ccdefs.hh>
+#include "common.hh"
 
 #include <vector>
 #include <memory>
