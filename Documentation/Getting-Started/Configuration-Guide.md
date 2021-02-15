@@ -2052,7 +2052,7 @@ certificates. This parameter is only accepted by listeners.
 type=server
 address=10.131.24.62
 port=3306
-ssl=required
+ssl=true
 ssl_cert=/usr/local/mariadb/maxscale/ssl/crt.max-client.pem
 ssl_key=/usr/local/mariadb/maxscale/ssl/key.max-client.pem
 ssl_ca_cert=/usr/local/mariadb/maxscale/ssl/crt.ca.maxscale.pem
@@ -2070,7 +2070,7 @@ type=listener
 service=RW-Split-Router
 protocol=MariaDBClient
 port=3306
-ssl=required
+ssl=true
 ssl_cert=/usr/local/mariadb/maxscale/ssl/crt.maxscale.pem
 ssl_key=/usr/local/mariadb/maxscale/ssl/key.csr.maxscale.pem
 ssl_ca_cert=/usr/local/mariadb/maxscale/ssl/crt.ca.maxscale.pem
