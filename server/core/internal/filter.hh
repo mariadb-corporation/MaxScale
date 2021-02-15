@@ -30,8 +30,7 @@
 class FilterDef : public MXS_FILTER_DEF
 {
 public:
-    FilterDef(std::string name, std::string module, mxs::Filter* instance,
-              mxs::ConfigParameters params);
+    FilterDef(std::string name, std::string module, mxs::Filter* instance);
     ~FilterDef();
 
     const char* name() const
@@ -54,16 +53,6 @@ public:
         return m_capabilities;
     }
 
-    const mxs::ConfigParameters& parameters() const
-    {
-        return m_parameters;
-    }
-
-    void set_parameters(mxs::ConfigParameters params)
-    {
-        m_parameters = std::move(params);
-    }
-
     mxs::config::Configuration* configuration() const
     {
         mxb_assert(instance());
@@ -78,11 +67,10 @@ public:
     static mxs::config::Specification* specification();
 
 private:
-    std::string           m_name;           /**< The Filter name */
-    std::string           m_module;         /**< The module to load */
-    mxs::ConfigParameters m_parameters;     /**< The filter parameters */
-    mxs::Filter*          m_filter;         /**< The runtime filter */
-    uint64_t              m_capabilities;
+    std::string  m_name;            /**< The Filter name */
+    std::string  m_module;          /**< The module to load */
+    mxs::Filter* m_filter;          /**< The runtime filter */
+    uint64_t     m_capabilities;
 
     json_t* json_data(const char* host) const;
     json_t* parameters_to_json() const;
@@ -90,8 +78,10 @@ private:
 
 typedef std::shared_ptr<FilterDef> SFilterDef;
 
-SFilterDef filter_alloc(const char* name, const char* module, mxs::ConfigParameters* params);
-void       filter_free(const SFilterDef& filter);
+SFilterDef filter_alloc(const char* name, const mxs::ConfigParameters params);
+SFilterDef filter_alloc(const char* name, json_t* params);
+
+void filter_free(const SFilterDef& filter);
 
 // Find the internal filter representation
 SFilterDef filter_find(const std::string& name);

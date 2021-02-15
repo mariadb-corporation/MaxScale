@@ -3693,9 +3693,7 @@ int create_new_filter(CONFIG_CONTEXT* obj)
             return 1;
         }
 
-        config_add_defaults(&obj->m_parameters, mod->parameters);
-
-        if (!filter_alloc(obj->name(), module, &obj->m_parameters))
+        if (!filter_alloc(obj->name(), obj->m_parameters))
         {
             MXS_ERROR("Failed to create filter '%s'.", obj->name());
             error_count++;

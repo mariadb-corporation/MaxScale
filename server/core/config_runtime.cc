@@ -1847,25 +1847,27 @@ bool runtime_create_filter_from_json(json_t* json)
 
         if (!filter_find(name))
         {
-            mxs::ConfigParameters parameters;
-            bool ok;
-            tie(ok, parameters) = load_defaults(module, mxs::ModuleType::FILTER, CN_FILTER);
-            parameters.set_multiple(extract_parameters(json));
+            json_t* parameters = mxs_json_pointer(json, MXS_JSON_PTR_PARAMETERS);
 
-            if (ok)
+            // A filter is allowed to be constructed without parameters. To handle this gracefully, we
+            // allocate an empty object. In addition, the module name is injected into it to make the
+            // construction behave uniformly across all parameter types.
+            parameters = parameters ? json_incref(parameters) : json_object();
+            json_object_set(parameters, CN_MODULE, json_string(module));
+
+            if (auto filter = filter_alloc(name, parameters))
             {
-                if (auto filter = filter_alloc(name, module, &parameters))
-                {
-                    std::ostringstream ss;
-                    filter->persist(ss);
+                std::ostringstream ss;
+                filter->persist(ss);
 
-                    if (runtime_save_config(filter->name(), ss.str()))
-                    {
-                        MXS_NOTICE("Created filter '%s'", name);
-                        rval = true;
-                    }
+                if (runtime_save_config(filter->name(), ss.str()))
+                {
+                    MXS_NOTICE("Created filter '%s'", name);
+                    rval = true;
                 }
             }
+
+            json_decref(parameters);
         }
         else
         {

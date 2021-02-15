@@ -71,31 +71,31 @@ mxs::config::Specification* FilterDef::specification()
     return &s_spec;
 }
 
-/**
- * Allocate a new filter
- *
- * @param name   The filter name
- * @param module The module to load
- * @param params Module parameters
- *
- * @return The newly created filter or NULL if an error occurred
- */
-SFilterDef filter_alloc(const char* name, const char* module, mxs::ConfigParameters* params)
+template<class Params, class Unrecognized>
+SFilterDef do_filter_alloc(const char* name, Params params, Unrecognized unrecognized)
 {
     SFilterDef filter;
-    auto module_info = get_module(module, ModuleType::FILTER);
-    if (module_info)
+
+    if (s_spec.validate(params, unrecognized))
     {
-        auto func = (mxs::FILTER_API*)module_info->module_object;
-        auto instance = func->createInstance(name, params);
-        if (instance)
+        auto module = s_module.get(params);
+        mxb_assert(module);
+        mxb_assert(module->specification);
+
+        if (module->specification->validate(params))
         {
-            filter.reset(new(std::nothrow) FilterDef(name, module, instance, *params));
-            if (filter)
+            auto func = (mxs::FILTER_API*)module->module_object;
+
+            // TODO: Remove this from the API
+            mxs::ConfigParameters empty;
+
+            if (auto instance = func->createInstance(name, &empty))
             {
+                filter = std::make_shared<FilterDef>(name, module->name, instance);
+
                 if (auto config = filter->configuration())
                 {
-                    if (!config->configure(*params))
+                    if (!config->configure(params))
                     {
                         filter.reset();
                     }
@@ -103,33 +103,40 @@ SFilterDef filter_alloc(const char* name, const char* module, mxs::ConfigParamet
                 else
                 {
                     // If the filter doesn't have a configuration, it must also not declare any parameters.
-                    mxb_assert(module_info->specification->begin() == module_info->specification->end());
+                    mxb_assert(module->specification->begin() == module->specification->end());
                 }
-            }
 
-            if (filter)
-            {
-                Guard guard(this_unit.lock);
-                this_unit.filters.push_back(filter);
+                if (filter)
+                {
+                    Guard guard(this_unit.lock);
+                    this_unit.filters.push_back(filter);
+                }
             }
             else
             {
-                delete instance;
+                MXB_ERROR("Failed to create filter '%s'.", name);
             }
         }
-        else
-        {
-            MXB_ERROR("Failed to create filter '%s' instance.", name);
-        }
     }
+
     return filter;
 }
 
-FilterDef::FilterDef(std::string name, std::string module, Filter* instance,
-                     mxs::ConfigParameters params)
+SFilterDef filter_alloc(const char* name, const mxs::ConfigParameters params)
+{
+    mxs::ConfigParameters unrecognized;
+    return do_filter_alloc(name, params, &unrecognized);
+}
+
+SFilterDef filter_alloc(const char* name, json_t* params)
+{
+    std::set<std::string> unrecognized;
+    return do_filter_alloc(name, params, &unrecognized);
+}
+
+FilterDef::FilterDef(std::string name, std::string module, Filter* instance)
     : m_name(std::move(name))
     , m_module(std::move(module))
-    , m_parameters(std::move(params))
     , m_filter(instance)
     , m_capabilities(m_filter->getCapabilities())
 {
