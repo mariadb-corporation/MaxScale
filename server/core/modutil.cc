@@ -1040,29 +1040,6 @@ static inline std::pair<bool, uint8_t*> probe_number(uint8_t* it, uint8_t* end)
     return rval;
 }
 
-static inline bool is_negation(const std::string& str, int i)
-{
-    bool rval = false;
-
-    if (i > 0 && str[i - 1] == '-')
-    {
-        // Possibly a negative number
-        rval = true;
-        for (int j = i - 1; j >= 0; j--)
-        {
-            if (!lut(IS_SPACE, str[j]))
-            {
-                /** If we find a previously converted value, we know that it
-                 * is not a negation but a subtraction. */
-                rval = str[j] != '?';
-                break;
-            }
-        }
-    }
-
-    return rval;
-}
-
 static inline uint8_t* find_char(uint8_t* it, uint8_t* end, char c)
 {
     for (; it != end; ++it)
@@ -1091,24 +1068,29 @@ std::string get_canonical(GWBUF* querybuf)
     mxb_assert(gwbuf_is_contiguous(querybuf));
     uint8_t* it = GWBUF_DATA(querybuf) + MYSQL_HEADER_LEN + 1;
     uint8_t* end = GWBUF_DATA(querybuf) + gwbuf_length(querybuf);
+
     std::string rval(end - it, 0);
-    int i = 0;
+    auto it_out = (uint8_t*) &*rval.begin();
+    uint8_t* it_out_begin = it_out;
+    bool was_converted = false;
 
     for (; it != end; ++it)
     {
+        bool did_conversion = false;
+
         if (!lut(IS_SPECIAL, *it))
         {
             // Normal character, no special handling required
-            rval[i++] = *it;
+            *it_out++ = *it;
         }
         else if (*it == '\\')
         {
             // Jump over any escaped values
-            rval[i++] = *it++;
+            *it_out++ = *it++;
 
             if (it != end)
             {
-                rval[i++] = *it;
+                *it_out++ = *it;
             }
             else
             {
@@ -1118,13 +1100,13 @@ std::string get_canonical(GWBUF* querybuf)
         }
         else if (lut(IS_SPACE, *it))
         {
-            if (i == 0 || lut(IS_SPACE, rval[i - 1]))
+            if (it == it_out_begin || lut(IS_SPACE, *(it_out - 1)))
             {
                 // Leading or repeating whitespace, skip it
             }
             else
             {
-                rval[i++] = ' ';
+                *it_out++ = ' ';
             }
         }
         else if (*it == '/' && is_next(it, end, "/*"))
@@ -1156,7 +1138,7 @@ std::string get_canonical(GWBUF* querybuf)
             else
             {
                 // Executable comment, treat it as normal SQL
-                rval[i++] = *it;
+                *it_out++ = *it;
             }
         }
         else if ((*it == '#' || *it == '-')
@@ -1186,19 +1168,20 @@ std::string get_canonical(GWBUF* querybuf)
                 break;
             }
         }
-        else if (lut(IS_DIGIT, *it) && (i == 0 || (!lut(IS_ALNUM, rval[i - 1]) && rval[i - 1] != '_')))
+        else if (lut(IS_DIGIT, *it) && !lut(IS_ALNUM, *(it_out - 1)) && *(it_out - 1) != '_')
         {
             auto num_end = probe_number(it, end);
 
             if (num_end.first)
             {
-                if (is_negation(rval, i))
+                if (!was_converted && *(it_out - 1) == '-')
                 {
                     // Remove the sign
-                    i--;
+                    --it_out;
                 }
-                rval[i++] = '?';
+                *it_out++ = '?';
                 it = num_end.second;
+                did_conversion = true;
             }
         }
         else if (*it == '\'' || *it == '"')
@@ -1208,7 +1191,7 @@ std::string get_canonical(GWBUF* querybuf)
             {
                 break;
             }
-            rval[i++] = '?';
+            *it_out++ = '?';
         }
         else if (*it == '`')
         {
@@ -1217,26 +1200,28 @@ std::string get_canonical(GWBUF* querybuf)
             {
                 break;
             }
-            std::copy(start, it, &rval[i]);
-            i += std::distance(start, it);
-            rval[i++] = '`';
+            std::copy(start, it, &*it_out);
+            it_out += it - start;
+            *it_out++ = '`';
         }
         else
         {
-            rval[i++] = *it;
+            *it_out++ = *it;
         }
+
+        was_converted = did_conversion;
 
         mxb_assert(it != end);
     }
 
     // Remove trailing whitespace
-    while (i > 0 && lut(IS_SPACE, rval[i - 1]))
+    while (lut(IS_SPACE, *(it_out - 1)))
     {
-        --i;
+        --it_out;
     }
 
     // Shrink the buffer so that the internal bookkeeping of std::string remains up to date
-    rval.resize(i);
+    rval.resize(it_out - it_out_begin);
 
     return rval;
 }
