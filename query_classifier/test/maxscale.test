@@ -163,3 +163,6 @@ OPTIMIZE LOCAL TABLE t WAIT 42;
 
 # MXS-3292
 USE `test`;
+
+# MXS-3404
+SELECT rdba_test() AS crmid, trim(LEADING 0 FROM @@server_id);
