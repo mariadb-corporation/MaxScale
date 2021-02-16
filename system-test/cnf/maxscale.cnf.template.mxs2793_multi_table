@@ -16,7 +16,7 @@ router=schemarouter
 servers=###server_line###
 user=maxskysql
 password=skysql
-ignore_databases_regex=.*
+ignore_tables_regex=.*
 
 [Sharding-Listener]
 type=listener

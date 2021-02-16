@@ -23,8 +23,7 @@ router=schemarouter
 servers=###server_line###
 user=maxskysql
 password=skysql
-ignore_databases_regex=.*
-preferred_server=server1
+ignore_tables_regex=.*
 filters=Matcher
 
 [Schemarouter-Listener]

@@ -16,7 +16,7 @@ servers=server1,server2,server3,server4
 user=maxskysql
 password=skysql
 auth_all_servers=1
-ignore_databases_regex=.*
+ignore_tables_regex=.*
 
 [Sharding-Listener]
 type=listener
