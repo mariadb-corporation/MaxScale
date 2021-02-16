@@ -313,13 +313,7 @@ mxs::config::Configuration* RegexHintFilter::getConfiguration()
  */
 RegexHintFilter* RegexHintFilter::create(const char* name, mxs::ConfigParameters* params)
 {
-    auto instance = new RegexHintFilter(name);
-    if (!instance->configure(params))
-    {
-        delete instance;
-        instance = nullptr;
-    }
-    return instance;
+    return new RegexHintFilter(name);
 }
 
 /**
@@ -824,17 +818,13 @@ int RegexHintFilter::ovector_size() const
     return m_ovector_size;
 }
 
-bool RegexHintFilter::configure(mxs::ConfigParameters* params)
+bool RegexHintFilter::post_configure()
 {
     const char MATCH_STR[] = "match";
     const char SERVER_STR[] = "server";
     const char TARGET_STR[] = "target";
 
     auto& sett = m_settings;
-    if (!sett.configure(*params))
-    {
-        return false;
-    }
 
     if (!sett.m_source.empty())
     {
@@ -885,7 +875,7 @@ MappingVector& RegexHintFilter::mapping()
 }
 
 RegexHintFilter::RegexHintFilter(const std::string& name)
-    : m_settings(name)
+    : m_settings(name, this)
 {
 }
 
@@ -922,8 +912,9 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
     return &info;
 }
 
-RegexHintFilter::Settings::Settings(const string& name)
+RegexHintFilter::Settings::Settings(const string& name, RegexHintFilter* filter)
     : mxs::config::Configuration(name, &s_spec)
+    , m_filter(filter)
 {
     add_native(&Settings::m_user, &s_user);
     add_native(&Settings::m_source, &s_source);

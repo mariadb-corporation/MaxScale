@@ -57,12 +57,14 @@ public:
     MappingVector& mapping();
     int            ovector_size() const;
 
+    bool post_configure();
+
 private:
 
     class Settings : public mxs::config::Configuration
     {
     public:
-        explicit Settings(const std::string& name);
+        explicit Settings(const std::string& name, RegexHintFilter* filter);
 
         static constexpr int n_regex_max {25};
 
@@ -81,6 +83,14 @@ private:
             std::string target;
         };
         MatchAndTarget m_match_targets[n_regex_max];
+
+    protected:
+        bool post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params) override
+        {
+            return m_filter->post_configure();
+        }
+
+        RegexHintFilter* m_filter;
     };
 
     SourceHostVector m_sources;         /* Source addresses to restrict matches */
