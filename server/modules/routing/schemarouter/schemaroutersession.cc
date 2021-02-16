@@ -47,9 +47,9 @@ SchemaRouterSession::SchemaRouterSession(MXS_SESSION* session,
     , m_closed(false)
     , m_client(static_cast<MariaDBClientConnection*>(session->client_connection()))
     , m_backends(std::move(backends))
-    , m_config(router->m_config)
+    , m_config(*router->m_config.values())
     , m_router(router)
-    , m_shard(m_router->m_shard_manager.get_shard(get_cache_key(), m_config->refresh_min_interval))
+    , m_shard(m_router->m_shard_manager.get_shard(get_cache_key(), m_config.refresh_interval.count()))
     , m_state(0)
     , m_load_target(NULL)
 {
@@ -345,7 +345,7 @@ int32_t SchemaRouterSession::routeQuery(GWBUF* pPacket)
                 char errbuf[128 + MYSQL_DATABASE_MAXLEN];
                 snprintf(errbuf, sizeof(errbuf), "Unknown database: %s", db);
 
-                if (m_config->debug)
+                if (m_config.debug)
                 {
                     sprintf(errbuf + strlen(errbuf), " ([%" PRIu64 "]: DB change failed)", m_pSession->id());
                 }
@@ -880,7 +880,7 @@ bool SchemaRouterSession::handle_default_db()
         MXS_INFO("Connecting to a non-existent database '%s'", m_connect_db.c_str());
         char errmsg[128 + MYSQL_DATABASE_MAXLEN + 1];
         sprintf(errmsg, "Unknown database '%s'", m_connect_db.c_str());
-        if (m_config->debug)
+        if (m_config.debug)
         {
             sprintf(errmsg + strlen(errmsg), " ([%" PRIu64 "]: DB not found on connect)", m_pSession->id());
         }
@@ -1063,31 +1063,25 @@ bool SchemaRouterSession::ignore_duplicate_table(const std::string& data)
     bool rval = false;
 
     std::string db = data.substr(0, data.find("."));
-    if (m_config->ignored_tables.count(data) || always_ignore.count(db))
+
+    if (always_ignore.count(db))
     {
         rval = true;
     }
-    else if (m_config->ignore_regex)
+
+    if (!m_config.ignore_tables.empty())
     {
-        pcre2_match_data* match_data = pcre2_match_data_create_from_pattern(m_config->ignore_regex, NULL);
+        auto it = std::find(m_config.ignore_tables.begin(), m_config.ignore_tables.end(), data);
 
-        if (match_data == NULL)
-        {
-            throw std::bad_alloc();
-        }
-
-        if (pcre2_match(m_config->ignore_regex,
-                        (PCRE2_SPTR) data.c_str(),
-                        PCRE2_ZERO_TERMINATED,
-                        0,
-                        0,
-                        match_data,
-                        NULL) >= 0)
+        if (it != m_config.ignore_tables.end())
         {
             rval = true;
         }
+    }
 
-        pcre2_match_data_free(match_data);
+    if (!m_config.ignore_tables_regex.empty() && m_config.ignore_tables_regex.match(data))
+    {
+        rval = true;
     }
 
     return rval;

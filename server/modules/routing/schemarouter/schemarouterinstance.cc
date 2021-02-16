@@ -30,46 +30,63 @@
 
 using std::string;
 
+namespace
+{
+namespace cfg = mxs::config;
+
+cfg::Specification s_spec(MXS_MODULE_NAME, cfg::Specification::ROUTER);
+
+cfg::ParamStringList s_ignore_tables(
+    &s_spec, "ignore_tables", "List of tables to ignore when checking for duplicates",
+    ",", cfg::ParamStringList::value_type{}, cfg::Param::AT_RUNTIME);
+
+cfg::ParamRegex s_ignore_tables_regex(
+    &s_spec, "ignore_tables_regex", "Regex of tables to ignore when checking for duplicates",
+    "", cfg::Param::AT_RUNTIME);
+
+cfg::ParamBool s_refresh_databases(
+    &s_spec, "refresh_databases", "Refresh database mapping information",
+    true, cfg::Param::AT_RUNTIME);
+
+cfg::ParamSeconds s_refresh_interval(
+    &s_spec, "refresh_interval", "How often to refresh the database mapping information",
+    cfg::INTERPRET_AS_SECONDS, std::chrono::seconds(300), cfg::Param::AT_RUNTIME);
+
+cfg::ParamBool s_debug(
+    &s_spec, "debug", "Enable debug mode",
+    false, cfg::Param::AT_RUNTIME);
+}
+
 namespace schemarouter
 {
 
-#define DEFAULT_REFRESH_INTERVAL "300s"
+Config::Config(const char* name)
+    : mxs::config::Configuration(name, &s_spec)
+{
+    add_native(&Config::m_v, &Values::ignore_tables, &s_ignore_tables);
+    add_native(&Config::m_v, &Values::ignore_tables_regex, &s_ignore_tables_regex);
+    add_native(&Config::m_v, &Values::refresh_databases, &s_refresh_databases);
+    add_native(&Config::m_v, &Values::refresh_interval, &s_refresh_interval);
+    add_native(&Config::m_v, &Values::debug, &s_debug);
+}
 
 /**
  * @file schemarouter.c The entry points for the simple sharding router module.
  */
 
-SchemaRouter::SchemaRouter(SERVICE* service, SConfig config)
-    : m_config(config)
+SchemaRouter::SchemaRouter(SERVICE* service)
+    : m_config(service->name())
     , m_service(service)
-{
-}
-
-SchemaRouter::~SchemaRouter()
 {
 }
 
 SchemaRouter* SchemaRouter::create(SERVICE* pService, mxs::ConfigParameters* params)
 {
-    // TODO: This is wrong: a router shouldn't modify core parameters. This should be expressed in some other
-    // form that the service would know to behave differently if a router requires authentication from all
-    // servers.
-
-    // if (!params->contains("auth_all_servers"))
-    // {
-    //     MXS_NOTICE("Authentication data is fetched from all servers. To disable this "
-    //                "add 'auth_all_servers=0' to the service.");
-    //     pService->users_from_all = true;
-    // }
-
-    SConfig config(new Config(params));
-    return new SchemaRouter(pService, config);
+    return new SchemaRouter(pService);
 }
 
 bool SchemaRouter::configure(mxs::ConfigParameters* params)
 {
-    SConfig config(new Config(params));
-    m_config = config;
     return true;
 }
 
@@ -249,21 +266,9 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         NULL,
         NULL,
         {
-            {CN_IGNORE_TABLES,            MXS_MODULE_PARAM_STRING   },
-            {CN_IGNORE_TABLES_REGEX,      MXS_MODULE_PARAM_STRING   },
-            {CN_IGNORE_DATABASES,         MXS_MODULE_PARAM_STRING   },
-            {CN_IGNORE_DATABASES_REGEX,   MXS_MODULE_PARAM_STRING   },
-            {"refresh_databases",         MXS_MODULE_PARAM_BOOL, "true"},
-            {"preferred_server",          MXS_MODULE_PARAM_SERVER, nullptr, MXS_MODULE_OPT_DEPRECATED},
-            {"debug",                     MXS_MODULE_PARAM_BOOL, "false"},
-            {
-                "refresh_interval",
-                MXS_MODULE_PARAM_DURATION,
-                DEFAULT_REFRESH_INTERVAL,
-                MXS_MODULE_OPT_DURATION_S
-            },
             {MXS_END_MODULE_PARAMS}
-        }
+        },
+        &s_spec
     };
 
     return &info;

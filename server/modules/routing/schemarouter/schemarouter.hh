@@ -31,38 +31,41 @@
 #include <maxscale/service.hh>
 #include <maxscale/backend.hh>
 #include <maxscale/protocol/mariadb/rwbackend.hh>
-
-const char* const CN_IGNORE_DATABASES = "ignore_databases";
-const char* const CN_IGNORE_DATABASES_REGEX = "ignore_databases_regex";
-const char* const CN_IGNORE_TABLES = "ignore_tables";
-const char* const CN_IGNORE_TABLES_REGEX = "ignore_tables_regex";
+#include <maxscale/config2.hh>
 
 namespace schemarouter
 {
 /**
  * Configuration values
  */
-struct Config
+struct Config : public mxs::config::Configuration
 {
-    double refresh_min_interval;            /**< Minimum required interval between
-                                             * refreshes of databases */
-    bool refresh_databases;                 /**< Are databases refreshed when
-                                             * they are not found in the hashtable */
-    bool                  debug;            /**< Enable verbose debug messages to clients */
-    pcre2_code*           ignore_regex;     /**< Regular expression used to ignore tables */
-    pcre2_match_data*     ignore_match_data;/**< Match data for @c ignore_regex */
-    std::set<std::string> ignored_tables;   /**< Set of ignored tables */
+    Config(const char* name);
 
-    Config(mxs::ConfigParameters* conf);
-
-    ~Config()
+    struct Values
     {
-        pcre2_match_data_free(ignore_match_data);
-        pcre2_code_free(ignore_regex);
-    }
-};
+        std::chrono::seconds     refresh_interval;
+        bool                     refresh_databases;
+        bool                     debug;
+        std::vector<std::string> ignore_tables;
+        mxs::config::RegexValue  ignore_tables_regex;
+    };
 
-typedef std::shared_ptr<Config> SConfig;
+    const mxs::WorkerGlobal<Values>& values() const
+    {
+        return m_values;
+    }
+
+private:
+    bool post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params) override
+    {
+        m_values.assign(m_v);
+        return true;
+    }
+
+    Values                    m_v;
+    mxs::WorkerGlobal<Values> m_values;
+};
 
 /**
  * Router statistics

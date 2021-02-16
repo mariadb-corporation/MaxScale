@@ -139,7 +139,7 @@ private:
 
     MYSQL_session*         m_mysql_session; /**< Session client data (username, password, SHA1). */
     SRBackendList          m_backends;      /**< Backend references */
-    SConfig                m_config;        /**< Session specific configuration */
+    Config::Values         m_config;        /**< Session specific configuration */
     SchemaRouter*          m_router;        /**< The router instance */
     Shard                  m_shard;         /**< Database to server mapping */
     std::string            m_connect_db;    /**< Database the user was trying to connect to */

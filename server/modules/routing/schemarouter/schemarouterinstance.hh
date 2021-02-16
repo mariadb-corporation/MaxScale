@@ -34,7 +34,6 @@ class SchemaRouterSession;
 class SchemaRouter : public Router
 {
 public:
-    ~SchemaRouter();
     static SchemaRouter* create(SERVICE* pService, mxs::ConfigParameters* params);
     mxs::RouterSession*  newSession(MXS_SESSION* pSession, const Endpoints& endpoints);
     json_t*              diagnostics() const;
@@ -43,17 +42,17 @@ public:
 
     mxs::config::Configuration* getConfiguration()
     {
-        return nullptr;
+        return &m_config;
     }
 
 private:
     friend class SchemaRouterSession;
 
     /** Internal functions */
-    SchemaRouter(SERVICE* service, SConfig config);
+    SchemaRouter(SERVICE* service);
 
     /** Member variables */
-    SConfig      m_config;          /*< expanded config info from SERVICE */
+    Config       m_config;
     ShardManager m_shard_manager;   /*< Shard maps hashed by user name */
     SERVICE*     m_service;         /*< Pointer to service */
     std::mutex   m_lock;            /*< Lock for the instance data */

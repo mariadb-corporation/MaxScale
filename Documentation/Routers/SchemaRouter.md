@@ -126,26 +126,19 @@ ignore_tables_regex=^db1|^db2|^db3\.t
 
 ### `preferred_server`
 
-This parameter has been deprecated in MaxScale 2.5.0. It is no longer needed
-after the fix to MXS-2793 made it possible to correctly store the database
-location information.
-
-The name of a server in MaxScale which will be used as the preferred server
-when a database is found on more than one server. If a database exists on
-two servers, of which neither is the server referred by this parameter, the
-server that replies first will be assigned as the location of the database.
-
-This parameter allows deterministic conflict resolution when a sharded cluster
-has a central database server and one or more sharded databases spread across
-multiple servers which replicate from the central database server.
+This parameter has been removed in MaxScale 2.6.0. It is no longer needed after
+the fix to MXS-2793 made it possible to correctly store the database location
+information.
 
 ### `ignore_databases`
 
-This parameter has been deprecated, use [ignore_tables](#ignore_tables) instead.
+This parameter has been removed in MaxScale 2.6.0, use
+[ignore_tables](#ignore_tables) instead.
 
 ### `ignore_databases_regex`
 
-This parameter has been deprecated, use [ignore_tables_regex](#ignore_tables_regex) instead.
+This parameter has been removed in MaxScale 2.6.0, use
+[ignore_tables_regex](#ignore_tables_regex) instead.
 
 
 ## Table Family Sharding
