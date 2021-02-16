@@ -891,7 +891,7 @@ static uint32_t resolve_query_type(parsing_info_t* pi, THD* thd)
     /** SELECT ..INTO variable|OUTFILE|DUMPFILE */
     if (lex->result != NULL)
     {
-        if (lex->result->send_eof())
+        if (dynamic_cast<select_to_file*>(lex->result))
         {
             // SELECT ... INTO DUMPFILE|OUTFILE ...
             type = QUERY_TYPE_WRITE;
