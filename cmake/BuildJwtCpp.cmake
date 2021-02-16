@@ -2,6 +2,7 @@
 ExternalProject_Add(jwt-cpp
   GIT_REPOSITORY "https://github.com/Thalhammer/jwt-cpp.git"
   GIT_TAG "v0.4.0"
+  GIT_SHALLOW TRUE
   CONFIGURE_COMMAND ""
   BUILD_COMMAND ""
   INSTALL_COMMAND ""
