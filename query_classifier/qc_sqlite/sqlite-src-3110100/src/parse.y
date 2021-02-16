@@ -646,7 +646,7 @@ columnid(A) ::= nm(X). {
   QUERY QUICK
   RAISE RECURSIVE /*REINDEX*/ RELEASE /*RENAME*/ /*REPLACE*/ RESET RESTRICT ROLLBACK ROLLUP ROW
   SAVEPOINT SELECT_OPTIONS_KW /*SEQUENCE*/ SHARE SLAVE /*START*/ STATEMENT STATUS
-  TABLES TEMP TEMPTABLE /*TRIGGER*/
+  TABLES TEMP TEMPTABLE /*TRIGGER*/ TRIM TRIM_ARG
   /*TRUNCATE*/
   // TODO: UNSIGNED is a reserved word and should not automatically convert into an identifer.
   // TODO: However, if not here then rules such as CAST need to be modified.
@@ -1073,7 +1073,7 @@ selectnowith(A) ::= selectnowith(X) multiselect_op(Y) oneselect(Z).  {
 #endif
   }
   if( pRhs ){
-    pRhs->op = (u8)Y;
+    pRhs->op = (u16)Y;
     pRhs->pPrior = pLhs;
     if( ALWAYS(pLhs) ) pLhs->selFlags &= ~SF_MultiValue;
     pRhs->selFlags &= ~SF_MultiValue;
@@ -1327,7 +1327,7 @@ from(A) ::= FROM seltablist(X). {
 //
 stl_prefix(A) ::= seltablist(X) joinop(Y).    {
    A = X;
-   if( ALWAYS(A && A->nSrc>0) ) A->a[A->nSrc-1].fg.jointype = (u8)Y;
+   if( ALWAYS(A && A->nSrc>0) ) A->a[A->nSrc-1].fg.jointype = (u16)Y;
 }
 stl_prefix(A) ::= .                           {A = 0;}
 seltablist(A) ::= stl_prefix(X) nm(Y) dbnm(D) as(Z) indexed_opt(I)
@@ -1923,6 +1923,7 @@ expr(A) ::= nm(X) DOT nm(Y) DOT nm(Z). {
 term(A) ::= INTEGER|FLOAT|BLOB(X).  {spanExpr(&A, pParse, @X, &X);}
 term(A) ::= STRING(X).              {spanExpr(&A, pParse, @X, &X);}
 term(A) ::= CHARSET_NAME_KW(X) STRING(Y). {spanExpr(&A, pParse, @X, &Y);}
+term(A) ::= CHARSET_NAME_KW(X) BLOB(Y). {spanExpr(&A, pParse, @X, &Y);}
 expr(A) ::= VARIABLE(X).     {
   if( X.n>=2 && X.z[0]=='#' && sqlite3Isdigit(X.z[1]) ){
     /* When doing a nested parse, one can include terms in an expression
@@ -2129,6 +2130,17 @@ expr(A) ::= keyword_as_function(X) LP distinct(D) exprlist(Y) RP(E). {
     A.pExpr->flags |= EP_Distinct;
   }
 }
+
+trim_arg1_opt ::= TRIM_ARG.
+trim_arg1_opt ::= .
+
+trim_arg2 ::= INTEGER|STRING.
+
+expr(A) ::= TRIM(X) LP trim_arg1_opt trim_arg2 FROM expr(Y) RP(Z). {
+  ExprList* pArgs = sqlite3ExprListAppend(pParse, NULL, Y.pExpr);
+  A.pExpr = sqlite3ExprFunction(pParse, pArgs, &X);
+  spanSet(&A, &X, &Z);
+}
 %endif
 expr(A) ::= id(X) LP STAR RP(E) wf_opt. {
   A.pExpr = sqlite3ExprFunction(pParse, 0, &X);
@@ -2232,7 +2244,7 @@ expr(A) ::= expr(X) NOT NULL(E). {spanUnaryPostfix(&A,pParse,TK_NOTNULL,&X,&E);}
   static void binaryToUnaryIfNull(Parse *pParse, Expr *pY, Expr *pA, int op){
     sqlite3 *db = pParse->db;
     if( pA && pY && pY->op==TK_NULL ){
-      pA->op = (u8)op;
+      pA->op = (u16)op;
       sqlite3ExprDelete(db, pA->pRight);
       pA->pRight = 0;
     }

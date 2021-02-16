@@ -58,6 +58,8 @@ int main()
 
         qc_end();
 
+        gwbuf_free(stmt);
+
         rv = EXIT_SUCCESS;
     }
     else

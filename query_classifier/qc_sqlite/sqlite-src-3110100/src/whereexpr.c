@@ -999,7 +999,7 @@ static void exprAnalyze(
   else if( pExpr->op==TK_BETWEEN && pWC->op==TK_AND ){
     ExprList *pList = pExpr->x.pList;
     int i;
-    static const u8 ops[] = {TK_GE, TK_LE};
+    static const u16 ops[] = {TK_GE, TK_LE};
     assert( pList!=0 );
     assert( pList->nExpr==2 );
     for(i=0; i<2; i++){
@@ -1216,7 +1216,7 @@ static void exprAnalyze(
 ** the WhereClause.a[] array.  The slot[] array grows as needed to contain
 ** all terms of the WHERE clause.
 */
-void sqlite3WhereSplit(WhereClause *pWC, Expr *pExpr, u8 op){
+void sqlite3WhereSplit(WhereClause *pWC, Expr *pExpr, u16 op){
   Expr *pE2 = sqlite3ExprSkipCollate(pExpr);
   pWC->op = op;
   if( pE2==0 ) return;
