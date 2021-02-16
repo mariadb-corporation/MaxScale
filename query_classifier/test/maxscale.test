@@ -165,4 +165,5 @@ OPTIMIZE LOCAL TABLE t WAIT 42;
 USE `test`;
 
 # MXS-3404
-SELECT rdba_test() AS crmid, trim(LEADING 0 FROM @@server_id);
+# qc_mysqlembedded claims that "trim(LEADING ...)" is ltrim, to avoid that we use BOTH.
+SELECT rdba_test() AS crmid, trim(BOTH 0 FROM @@server_id);

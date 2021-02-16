@@ -646,7 +646,7 @@ columnid(A) ::= nm(X). {
   QUERY QUICK
   RAISE RECURSIVE /*REINDEX*/ RELEASE /*RENAME*/ /*REPLACE*/ RESET RESTRICT ROLLBACK ROLLUP ROW
   SAVEPOINT SELECT_OPTIONS_KW /*SEQUENCE*/ SHARE SLAVE /*START*/ STATEMENT STATUS
-  TABLES TEMP TEMPTABLE /*TRIGGER*/
+  TABLES TEMP TEMPTABLE /*TRIGGER*/ TRIM TRIM_ARG
   /*TRUNCATE*/
   // TODO: UNSIGNED is a reserved word and should not automatically convert into an identifer.
   // TODO: However, if not here then rules such as CAST need to be modified.
@@ -2129,6 +2129,17 @@ expr(A) ::= keyword_as_function(X) LP distinct(D) exprlist(Y) RP(E). {
   if( D==SF_Distinct && A.pExpr ){
     A.pExpr->flags |= EP_Distinct;
   }
+}
+
+trim_arg1_opt ::= TRIM_ARG.
+trim_arg1_opt ::= .
+
+trim_arg2 ::= INTEGER|STRING.
+
+expr(A) ::= TRIM(X) LP trim_arg1_opt trim_arg2 FROM expr(Y) RP(Z). {
+  ExprList* pArgs = sqlite3ExprListAppend(pParse, NULL, Y.pExpr);
+  A.pExpr = sqlite3ExprFunction(pParse, pArgs, &X);
+  spanSet(&A, &X, &Z);
 }
 %endif
 expr(A) ::= id(X) LP STAR RP(E) wf_opt. {
