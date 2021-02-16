@@ -9,6 +9,17 @@ For more information about MaxScale 2.6, refer to the
 Before starting the upgrade, any existing configuration files should be backed
 up.
 
+## Removed Parameters
+
+### Schemarouter
+
+The deprecated aliases for the schemarouter parameters `ignore_databases` and
+`ignore_databases_regex` have been removed. They can be replaced with
+`ignore_tables` and `ignore_tables_regex`.
+
+In addition, the `preferred_server` parameter that was deprecated in 2.5 has
+also been removed.
+
 ## Session Command History
 
 The `prune_sescmd_history`, `max_sescmd_history` and `disable_sescmd_history`
