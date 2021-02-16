@@ -52,12 +52,12 @@ foreach x $extras {
 
 # Some additional #defines related to token codes.
 #
-puts "\n/* The token codes above must all fit in 8 bits */"
-puts [format "#define %-20s %-6s" TKFLG_MASK 0xff]
+puts "\n/* The token codes above must all fit in 12 bits */"
+puts [format "#define %-20s %-6s" TKFLG_MASK 0xfff]
 puts "\n/* Flags that can be added to a token code when it is not"
 puts "** being stored in a u8: */"
 foreach {fg val comment} {
-  TKFLG_DONTFOLD  0x100  {/* Omit constant folding optimizations */}
+  TKFLG_DONTFOLD  0x1000  {/* Omit constant folding optimizations */}
 } {
   puts [format "#define %-20s %-6s %s" $fg $val $comment]
 }

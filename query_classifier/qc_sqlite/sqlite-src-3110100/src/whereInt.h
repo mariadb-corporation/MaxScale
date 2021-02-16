@@ -74,7 +74,7 @@ struct WhereLevel {
   int addrLikeRep;      /* LIKE range processing address */
 #endif
   u8 iFrom;             /* Which entry in the FROM clause */
-  u8 op, p3, p5;        /* Opcode, P3 & P5 of the opcode that ends the loop */
+  u16 op, p3, p5;       /* Opcode, P3 & P5 of the opcode that ends the loop */
   int p1, p2;           /* Operands of the opcode used to ends the loop */
   union {               /* Information that depends on pWLoop->wsFlags */
     struct {
@@ -314,7 +314,7 @@ struct WhereScan {
 struct WhereClause {
   WhereInfo *pWInfo;       /* WHERE clause processing context */
   WhereClause *pOuter;     /* Outer conjunction */
-  u8 op;                   /* Split operator.  TK_AND or TK_OR */
+  u16 op;                  /* Split operator.  TK_AND or TK_OR */
   int nTerm;               /* Number of terms */
   int nSlot;               /* Number of entries in a[] */
   WhereTerm *a;            /* Each a[] describes a term of the WHERE cluase */
@@ -476,7 +476,7 @@ Bitmask sqlite3WhereCodeOneLoopStart(
 /* whereexpr.c: */
 void sqlite3WhereClauseInit(WhereClause*,WhereInfo*);
 void sqlite3WhereClauseClear(WhereClause*);
-void sqlite3WhereSplit(WhereClause*,Expr*,u8);
+void sqlite3WhereSplit(WhereClause*,Expr*,u16);
 Bitmask sqlite3WhereExprUsage(WhereMaskSet*, Expr*);
 Bitmask sqlite3WhereExprListUsage(WhereMaskSet*, ExprList*);
 void sqlite3WhereExprAnalyze(SrcList*, WhereClause*);

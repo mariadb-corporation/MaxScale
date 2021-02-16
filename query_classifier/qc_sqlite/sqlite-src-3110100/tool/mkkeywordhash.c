@@ -176,6 +176,7 @@ static Keyword aKeywordTable[] = {
   { "BETWEEN",          "TK_BETWEEN",      ALWAYS                 },
 #ifdef MAXSCALE
   { "BINARY",           "TK_BINARY",       ALWAYS                 },
+  { "BOTH",             "TK_TRIM_ARG",     ALWAYS                 },
 #endif
   { "BY",               "TK_BY",           ALWAYS                 },
 #ifdef MAXSCALE
@@ -336,6 +337,7 @@ static Keyword aKeywordTable[] = {
   { "KEY",              "TK_KEY",          ALWAYS                 },
 #ifdef MAXSCALE
   { "KEYS",             "TK_KEYS",         ALWAYS                 },
+  { "LEADING",          "TK_TRIM_ARG"  ,   ALWAYS                 },
 #endif
   { "LEFT",             "TK_JOIN_KW",      ALWAYS                 },
   { "LIKE",             "TK_LIKE_KW",      ALWAYS                 },
@@ -479,9 +481,13 @@ static Keyword aKeywordTable[] = {
   { "TIES",             "TK_TIES",         ANALYZE                },
 #endif
   { "TO",               "TK_TO",           ALWAYS                 },
+#ifdef MAXSCALE
+  { "TRAILING",         "TK_TRIM_ARG",     ALWAYS                 },
+#endif
   { "TRANSACTION",      "TK_TRANSACTION",  ALWAYS                 },
   { "TRIGGER",          "TK_TRIGGER",      TRIGGER                },
 #ifdef MAXSCALE
+  { "TRIM",             "TK_TRIM",         ALWAYS                 },
   { "TRUNCATE",         "TK_TRUNCATE",     ALWAYS                 },
   { "UNBOUNDED",        "TK_UNBOUNDED",    ALWAYS                 },
 #endif
@@ -804,7 +810,7 @@ int main(int argc, char **argv){
   }
   printf("%s  };\n", j==0 ? "" : "\n");
 
-  printf("  static const unsigned char aCode[%d] = {\n", nKeyword);
+  printf("  static const unsigned short aCode[%d] = {\n", nKeyword);
   for(i=j=0; i<nKeyword; i++){
     char *zToken = aKeywordTable[i].zTokenType;
     if( j==0 ) printf("    ");
