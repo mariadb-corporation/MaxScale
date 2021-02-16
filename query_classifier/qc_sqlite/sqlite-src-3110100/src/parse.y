@@ -2060,11 +2060,15 @@ wf_frame_units ::= ROWS.
 
 wf_frame_start ::= UNBOUNDED PRECEDING.
 wf_frame_start ::= CURRENT ROW.
-wf_frame_start ::= term PRECEDING.
+wf_frame_start ::= term(X) PRECEDING. {
+    sqlite3ExprDelete(pParse->db, X.pExpr);
+}
 
 wf_frame_bound ::= wf_frame_start.
 wf_frame_bound ::= UNBOUNDED FOLLOWING.
-wf_frame_bound ::= term FOLLOWING.
+wf_frame_bound ::= term(X) FOLLOWING. {
+    sqlite3ExprDelete(pParse->db, X.pExpr);
+}
 
 wf_frame_extent ::= wf_frame_start.
 wf_frame_extent ::= BETWEEN wf_frame_bound AND wf_frame_bound.
