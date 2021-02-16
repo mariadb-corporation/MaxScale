@@ -21,6 +21,16 @@
 class HintRouter : public mxs::Router
 {
 public:
+
+    struct Config : public mxs::config::Configuration
+    {
+        Config(const char* name);
+
+        HINT_TYPE   default_action;
+        std::string default_server;
+        int64_t     max_slaves;
+    };
+
     static HintRouter* create(SERVICE* pService, mxs::ConfigParameters* params);
     HintRouterSession* newSession(MXS_SESSION* pSession, const mxs::Endpoints& endpoints);
     json_t*            diagnostics() const;
@@ -36,16 +46,16 @@ public:
 
     mxs::config::Configuration* getConfiguration()
     {
-        return nullptr;
+        return &m_config;
     }
 
     HINT_TYPE get_default_action() const
     {
-        return m_default_action;
+        return m_config.default_action;
     }
     const string& get_default_server() const
     {
-        return m_default_server;
+        return m_config.default_server;
     }
     /* Simple, approximate statistics */
     volatile unsigned int m_routed_to_master;
@@ -53,15 +63,10 @@ public:
     volatile unsigned int m_routed_to_named;
     volatile unsigned int m_routed_to_all;
 private:
-    HintRouter(SERVICE* pService,
-               HINT_TYPE default_action,
-               string& default_server,
-               int max_slaves);
+    HintRouter(SERVICE* pService);
 
-    HINT_TYPE    m_default_action;
-    string       m_default_server;
-    int          m_max_slaves;
     volatile int m_total_slave_conns;
+    Config       m_config;
 private:
     HintRouter(const HintRouter&);
     HintRouter& operator=(const HintRouter&);
