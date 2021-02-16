@@ -12,6 +12,7 @@
  */
 
 #include <maxtest/testconnections.hh>
+#include <maxtest/galera_cluster.hh>
 
 int main(int argc, char* argv[])
 {

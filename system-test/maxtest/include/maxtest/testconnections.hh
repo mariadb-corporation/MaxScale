@@ -10,12 +10,14 @@
 
 #include <maxbase/ccdefs.hh>
 #include <maxtest/xpand_nodes.hh>
-#include <maxtest/mariadb_nodes.hh>
+#include <maxtest/mariadb_cluster.hh>
 #include <maxtest/maxscales.hh>
 #include <maxtest/test_dir.hh>
 
 typedef std::set<std::string> StringSet;
 class TestLogger;
+class MariaDBCluster;
+class Galera_nodes;
 
 /**
  * Main system test class

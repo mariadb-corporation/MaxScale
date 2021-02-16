@@ -4,7 +4,8 @@
 #include <maxtest/testconnections.hh>
 #include <maxtest/sql_t1.hh>
 #include <maxtest/get_com_select_insert.hh>
-
+#include <maxtest/galera_cluster.hh>
+#include <maxtest/mariadb_cluster.hh>
 
 void load(long int* new_inserts,
           long int* new_selects,

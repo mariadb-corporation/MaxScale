@@ -15,17 +15,20 @@
 #include <future>
 #include <regex>
 #include <limits.h>
-#include <maxbase/stacktrace.hh>
-#include <maxbase/string.hh>
 #include <algorithm>
 
+#include <maxbase/format.hh>
+#include <maxbase/stacktrace.hh>
+#include <maxbase/string.hh>
+
+#include <maxtest/envv.hh>
+#include <maxtest/galera_cluster.hh>
 #include <maxtest/log.hh>
+#include <maxtest/mariadb_cluster.hh>
 #include <maxtest/mariadb_func.hh>
 #include <maxtest/sql_t1.hh>
 #include <maxtest/testconnections.hh>
 #include <maxtest/test_info.hh>
-#include <maxtest/envv.hh>
-#include <maxbase/format.hh>
 
 using namespace mxb;
 using std::cout;

@@ -4,9 +4,10 @@
  * - read data via RWsplit, ReadConn master, ReadConn slave, compare with inserted data
  */
 
+#include <maxtest/testconnections.hh>
 #include <maxtest/blob_test.hh>
 #include <maxtest/fw_copy_rules.hh>
-#include <maxtest/testconnections.hh>
+#include <maxtest/galera_cluster.hh>
 
 int main(int argc, char* argv[])
 {

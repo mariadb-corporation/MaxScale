@@ -52,8 +52,6 @@ const char create_repl_user[] =
     "grant replication slave on *.* to repl@'%%' identified by 'repl'; "
     "FLUSH PRIVILEGES";
 
-const string type_mariadb = "mariadb";
-const string type_galera = "galera";
 const string type_columnstore = "columnstore";
 }
 
@@ -461,78 +459,6 @@ int Mariadb_nodes::start_replication()
     return local_result;
 }
 
-bool Galera_nodes::setup()
-{
-    return Mariadb_nodes::setup();
-}
-
-int Galera_nodes::start_galera()
-{
-    bool old_verbose = verbose();
-    int local_result = 0;
-    local_result += stop_nodes();
-
-    std::stringstream ss;
-
-    for (int i = 0; i < N; i++)
-    {
-        ss << (i == 0 ? "" : ",") << ip_private(i);
-    }
-
-    auto gcomm = ss.str();
-
-    for (int i = 0; i < N; i++)
-    {
-        // Remove the grastate.dat file
-
-        ssh_node(i, "echo [mysqld] > cluster_address.cnf", true);
-        ssh_node_f(i, true, "echo wsrep_cluster_address=gcomm://%s >>  cluster_address.cnf", gcomm.c_str());
-        ssh_node(i, "cp cluster_address.cnf /etc/my.cnf.d/", true);
-        ssh_node(i, "cp cluster_address.cnf /etc/mysql/my.cnf.d/", true);
-
-        ssh_node(i, "rm -rf /var/lib/mysql/*", true);
-        ssh_node(i, "mysql_install_db --user=mysql", true);
-
-        ssh_node_f(i,
-                   true,
-                   "sed -i 's/###NODE-ADDRESS###/%s/' /etc/my.cnf.d/* /etc/mysql/my.cnf.d/*;"
-                   "sed -i \"s|###GALERA-LIB-PATH###|$(ls /usr/lib*/galera*/*.so)|g\" /etc/my.cnf.d/* /etc/mysql/my.cnf.d/*",
-                   ip_private(i));
-    }
-
-    printf("Starting new Galera cluster\n");
-    fflush(stdout);
-
-    // Start the first node that also starts a new cluster
-    ssh_node_f(0, true, "galera_new_cluster");
-
-    for (int i = 1; i < N; i++)
-    {
-        if (start_node(i, "") != 0)
-        {
-            cout << "Failed to start node" << i << endl;
-            cout << "---------- BEGIN LOGS ----------" << endl;
-            m_shared.verbose = true;
-            ssh_node_f(0, true, "sudo journalctl -u mariadb | tail -n 50");
-            cout << "----------- END LOGS -----------" << endl;
-        }
-    }
-
-    string str = mxb::string_printf("%s/galera_wait_until_ready.sh", m_test_dir.c_str());
-    copy_to_node(0, str.c_str(), access_homedir(0));
-
-    ssh_node_f(0, true, "%s/galera_wait_until_ready.sh %s", access_homedir(0), socket_cmd[0].c_str());
-
-    create_users(0);
-
-    local_result += robust_connect(5) ? 0 : 1;
-    local_result += execute_query(nodes[0], "%s", create_repl_user);
-
-    close_connections();
-    m_shared.verbose = old_verbose;
-    return local_result;
-}
-
 int Mariadb_nodes::clean_iptables(int node)
 {
     return ssh_node_f(node,
@@ -925,47 +851,6 @@ bool Mariadb_nodes::fix_replication()
     }
 
     return rval;
-}
-
-int Galera_nodes::check_galera()
-{
-    int res = 1;
-
-    if (verbose())
-    {
-        printf("Checking Galera\n");
-        fflush(stdout);
-    }
-
-    if (connect() == 0)
-    {
-        Row r = get_row(nodes[0], "SHOW STATUS WHERE Variable_name='wsrep_cluster_size'");
-
-        if (r.size() == 2)
-        {
-            if (r[1] == std::to_string(N))
-            {
-                res = 0;
-            }
-            else
-            {
-                cout << "Expected cluster size: " << N << " Actual size: " << r[1] << endl;
-            }
-        }
-        else
-        {
-            cout << "Unexpected result size: "
-                 << (r.empty() ? "Empty result" : std::to_string(r.size())) << endl;
-        }
-    }
-    else
-    {
-        cout << "Failed to connect to the cluster" << endl;
-    }
-
-    disconnect();
-
-    return res;
 }
 
 int Mariadb_nodes::set_slave(MYSQL* conn, const char* master_host, int master_port,
@@ -1383,18 +1268,6 @@ std::string Mariadb_nodes::get_config_name(int node)
     return ss.str();
 }
 
-std::string Galera_nodes::get_config_name(int node)
-{
-    std::stringstream ss;
-    ss << "galera_server" << node + 1 << ".cnf";
-    return ss.str();
-}
-
-const std::string& Galera_nodes::type_string() const
-{
-    return type_galera;
-}
-
 void Mariadb_nodes::reset_server_settings(int node)
 {
     std::string cnfdir = m_test_dir + "/mdbci/cnf/";
@@ -1692,19 +1565,4 @@ bool Mariadb_nodes::check_ssl(int node)
 bool Mariadb_nodes::using_ipv6() const
 {
     return m_use_ipv6;
-}
-
-MariaDBCluster::MariaDBCluster(SharedData& shared, const string& network_config)
-    : Mariadb_nodes(shared, "node", "server", network_config)
-{
-}
-
-bool MariaDBCluster::setup()
-{
-    return Mariadb_nodes::setup();
-}
-
-const std::string& MariaDBCluster::type_string() const
-{
-    return type_mariadb;
 }

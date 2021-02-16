@@ -7,6 +7,7 @@
 
 #include <iostream>
 #include <maxtest/testconnections.hh>
+#include <maxtest/galera_cluster.hh>
 #include <maxtest/sql_t1.hh>
 
 int main(int argc, char* argv[])

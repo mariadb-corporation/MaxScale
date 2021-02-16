@@ -5,7 +5,7 @@
 
 #include <maxtest/testconnections.hh>
 #include <iostream>
-
+#include <maxtest/galera_cluster.hh>
 #include <maxbase/string.hh>
 
 int main(int argc, char* argv[])

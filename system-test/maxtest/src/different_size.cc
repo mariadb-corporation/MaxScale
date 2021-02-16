@@ -1,6 +1,7 @@
 #include <iostream>
 #include <unistd.h>
 #include <maxtest/testconnections.hh>
+#include <maxtest/mariadb_cluster.hh>
 
 using namespace std;
 

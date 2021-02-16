@@ -7,11 +7,13 @@ add_library(maxtest SHARED
         envv.cc
         execute_cmd.cc
         fw_copy_rules.cc
+        galera_cluster.cc
         get_com_select_insert.cc
         get_my_ip.cc
         json.cc
         log.cc
         mariadb_func.cc
+        mariadb_cluster.cc
         mariadb_connector.cc
         mariadb_nodes.cc
         maxinfo_func.cc

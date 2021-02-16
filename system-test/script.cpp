@@ -35,6 +35,7 @@
 
 #include <iostream>
 #include <maxtest/testconnections.hh>
+#include <maxtest/galera_cluster.hh>
 
 void test_script_monitor(TestConnections* Test, Mariadb_nodes* nodes, char* expected_filename)
 {
