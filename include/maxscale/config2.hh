@@ -1432,6 +1432,60 @@ private:
 };
 
 /**
+ * ParamStringList
+ */
+class ParamStringList : public ConcreteParam<ParamStringList, std::vector<std::string>>
+{
+public:
+    ParamStringList(Specification* pSpecification,
+                    const char* zName,
+                    const char* zDescription,
+                    const char* zDelimiter,
+                    Modifiable modifiable = Modifiable::AT_STARTUP)
+        : ParamStringList(pSpecification, zName, zDescription, zDelimiter,
+                          modifiable, Param::MANDATORY, value_type())
+    {
+    }
+
+    ParamStringList(Specification* pSpecification,
+                    const char* zName,
+                    const char* zDescription,
+                    const char* zDelimiter,
+                    value_type default_value,
+                    Modifiable modifiable = Modifiable::AT_STARTUP)
+        : ParamStringList(pSpecification, zName, zDescription, zDelimiter,
+                          modifiable, Param::OPTIONAL, default_value)
+    {
+    }
+
+    std::string type() const override;
+
+    std::string to_string(value_type value) const;
+    bool        from_string(const std::string& value, value_type* pValue,
+                            std::string* pMessage = nullptr) const;
+
+    json_t* to_json(value_type value) const;
+    bool    from_json(const json_t* pJson, value_type* pValue,
+                      std::string* pMessage = nullptr) const;
+
+private:
+    ParamStringList(Specification* pSpecification,
+                    const char* zName,
+                    const char* zDescription,
+                    const char* zDelimiter,
+                    Modifiable modifiable,
+                    Kind kind,
+                    value_type default_value)
+        : ConcreteParam<ParamStringList, std::vector<std::string>>(
+            pSpecification, zName, zDescription, modifiable, kind, MXS_MODULE_PARAM_STRING, default_value)
+        , m_delimiter(zDelimiter)
+    {
+    }
+
+    const char* m_delimiter;
+};
+
+/**
  * ParamModule
  */
 class ParamModule : public ConcreteParam<ParamModule, const MXS_MODULE*>

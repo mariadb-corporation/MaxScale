@@ -1828,5 +1828,78 @@ bool ParamString::from_json(const json_t* pJson,
 
     return rv;
 }
+
+/**
+ * ParamStringList
+ */
+std::string ParamStringList::type() const
+{
+    return "stringlist";
+}
+
+std::string ParamStringList::to_string(value_type value) const
+{
+    return mxb::join(value, m_delimiter);
+}
+
+bool ParamStringList::from_string(const std::string& value_as_string,
+                                  value_type* pValue,
+                                  std::string* pMessage) const
+{
+    auto values = mxb::strtok(value_as_string, m_delimiter);
+
+    // TODO: Are there cases where we don't want to trim the values?
+    for (auto& v : values)
+    {
+        mxb::trim(v);
+    }
+
+    *pValue = std::move(values);
+
+    return true;
+}
+
+json_t* ParamStringList::to_json(value_type value) const
+{
+    json_t* arr = json_array();
+
+    for (const auto& v : value)
+    {
+        json_array_append_new(arr, json_string(v.c_str()));
+    }
+
+    return arr;
+}
+
+bool ParamStringList::from_json(const json_t* pJson,
+                                value_type* pValue,
+                                std::string* pMessage) const
+{
+    bool ok = true;
+    value_type values;
+    values.reserve(json_array_size(pJson));
+    size_t i;
+    json_t* v;
+
+    json_array_foreach(pJson, i, v)
+    {
+        if (json_is_string(v))
+        {
+            values.push_back(json_string_value(v));
+        }
+        else
+        {
+            ok = false;
+            break;
+        }
+    }
+
+    if (ok)
+    {
+        *pValue = std::move(values);
+    }
+
+    return ok;
+}
 }
 }
