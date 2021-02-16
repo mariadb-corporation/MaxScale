@@ -32,7 +32,12 @@ mxs::config::Specification s_spec(MXS_MODULE_NAME, mxs::config::Specification::F
 // static
 HintInstance* HintInstance::create(const char* zName, mxs::ConfigParameters* ppParams)
 {
-    return new(std::nothrow) HintInstance;
+    return new(std::nothrow) HintInstance(zName);
+}
+
+HintInstance::HintInstance(const char* zName)
+    : m_config(zName, &s_spec)
+{
 }
 
 mxs::FilterSession* HintInstance::newSession(MXS_SESSION* pSession, SERVICE* pService)
@@ -52,7 +57,7 @@ uint64_t HintInstance::getCapabilities() const
 
 mxs::config::Configuration* HintInstance::getConfiguration()
 {
-    return nullptr;
+    return &m_config;
 }
 
 HintSession::HintSession(MXS_SESSION* session, SERVICE* service)

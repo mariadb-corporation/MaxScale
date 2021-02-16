@@ -102,8 +102,7 @@ SFilterDef do_filter_alloc(const char* name, Params params, Unrecognized unrecog
                 }
                 else
                 {
-                    // If the filter doesn't have a configuration, it must also not declare any parameters.
-                    mxb_assert(module->specification->begin() == module->specification->end());
+                    mxb_assert_message(!true, "Filter '%s' does not have a mxs::config::Configuration", name);
                 }
 
                 if (filter)

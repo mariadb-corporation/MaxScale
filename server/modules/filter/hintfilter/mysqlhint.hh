@@ -15,6 +15,7 @@
 #include <maxscale/ccdefs.hh>
 #include <maxscale/hint.h>
 #include <maxscale/filter.hh>
+#include <maxscale/config2.hh>
 
 namespace std
 {
@@ -38,6 +39,12 @@ public:
     json_t*                     diagnostics() const;
     uint64_t                    getCapabilities() const;
     mxs::config::Configuration* getConfiguration();
+
+private:
+    HintInstance(const char* zName);
+
+    // This is mainly here to improve error reporting when an unsupported parameter is used
+    mxs::config::Configuration m_config;
 };
 
 enum TOKEN_VALUE

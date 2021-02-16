@@ -2158,6 +2158,8 @@ bool runtime_alter_filter_from_json(const SFilterDef& filter, json_t* new_json)
         else
         {
             MXS_ERROR("Filter '%s' does not support reconfiguration.", filter->module());
+            mxb_assert_message(!true, "Filter '%s' does not have a mxs::config::Configuration",
+                               filter->module());
         }
     }
 
