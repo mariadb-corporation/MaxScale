@@ -1083,6 +1083,42 @@ std::string get_canonical(GWBUF* querybuf)
             // Normal character, no special handling required
             *it_out++ = *it;
         }
+        else if (lut(IS_SPACE, *it))
+        {
+            if (it == it_out_begin || lut(IS_SPACE, *(it_out - 1)))
+            {
+                // Leading or repeating whitespace, skip it
+            }
+            else
+            {
+                *it_out++ = ' ';
+            }
+        }
+        else if (lut(IS_DIGIT, *it) && !lut(IS_ALNUM, *(it_out - 1)) && *(it_out - 1) != '_')
+        {
+            auto num_end = probe_number(it, end);
+
+            if (num_end.first)
+            {
+                if (!was_converted && *(it_out - 1) == '-')
+                {
+                    // Remove the sign
+                    --it_out;
+                }
+                *it_out++ = '?';
+                it = num_end.second;
+                did_conversion = true;
+            }
+        }
+        else if (*it == '\'' || *it == '"')
+        {
+            char c = *it;
+            if ((it = find_char(it + 1, end, c)) == end)
+            {
+                break;
+            }
+            *it_out++ = '?';
+        }
         else if (*it == '\\')
         {
             // Jump over any escaped values
@@ -1096,17 +1132,6 @@ std::string get_canonical(GWBUF* querybuf)
             {
                 // Query that ends with a backslash
                 break;
-            }
-        }
-        else if (lut(IS_SPACE, *it))
-        {
-            if (it == it_out_begin || lut(IS_SPACE, *(it_out - 1)))
-            {
-                // Leading or repeating whitespace, skip it
-            }
-            else
-            {
-                *it_out++ = ' ';
             }
         }
         else if (*it == '/' && is_next(it, end, "/*"))
@@ -1167,31 +1192,6 @@ std::string get_canonical(GWBUF* querybuf)
             {
                 break;
             }
-        }
-        else if (lut(IS_DIGIT, *it) && !lut(IS_ALNUM, *(it_out - 1)) && *(it_out - 1) != '_')
-        {
-            auto num_end = probe_number(it, end);
-
-            if (num_end.first)
-            {
-                if (!was_converted && *(it_out - 1) == '-')
-                {
-                    // Remove the sign
-                    --it_out;
-                }
-                *it_out++ = '?';
-                it = num_end.second;
-                did_conversion = true;
-            }
-        }
-        else if (*it == '\'' || *it == '"')
-        {
-            char c = *it;
-            if ((it = find_char(it + 1, end, c)) == end)
-            {
-                break;
-            }
-            *it_out++ = '?';
         }
         else if (*it == '`')
         {
