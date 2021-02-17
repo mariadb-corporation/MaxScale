@@ -32,6 +32,7 @@
 #include <set>
 #include <vector>
 #include <unordered_set>
+#include <fstream>
 
 #include <maxbase/atomic.hh>
 #include <maxbase/jansson.h>
@@ -53,8 +54,8 @@
 #include <maxscale/json_api.hh>
 #include <maxscale/routingworker.hh>
 #include <maxscale/housekeeper.h>
-#include <fstream>
 #include <maxscale/modutil.hh>
+#include <maxscale/config2.hh>
 
 #include "internal/config.hh"
 #include "internal/filter.hh"
@@ -93,6 +94,112 @@ const char CN_ROUTER_OPTIONS[] = "router_options";
 const char CN_SESSION_TRACK_TRX_STATE[] = "session_track_trx_state";
 const char CN_STRIP_DB_ESC[] = "strip_db_esc";
 const char CN_IDLE_SESSION_POOL_TIME[] = "idle_session_pool_time";
+
+namespace cfg = mxs::config;
+
+cfg::Specification s_spec(CN_SERVICES, cfg::Specification::ROUTER);
+
+cfg::ParamString s_type(&s_spec, CN_TYPE, "The type of the object", CN_SERVICE);
+cfg::ParamModule s_router(&s_spec, CN_ROUTER, "The router to use", mxs::ModuleType::ROUTER);
+
+cfg::ParamStringList s_servers(
+    &s_spec, "servers", "List of servers to use",
+    ",", {}, cfg::Param::AT_RUNTIME);
+
+cfg::ParamStringList s_targets(
+    &s_spec, "targets", "List of targets to use",
+    ",", {}, cfg::Param::AT_RUNTIME);
+
+cfg::ParamString s_cluster(
+    &s_spec, "cluster", "The cluster of servers to use",
+    "", cfg::Param::AT_RUNTIME);
+
+cfg::ParamStringList s_filters(
+    &s_spec, "filters", "List of filters to use",
+    "|", {}, cfg::Param::AT_RUNTIME);
+
+cfg::ParamString s_user(
+    &s_spec, "user", "Username used to retrieve database users",
+    cfg::Param::AT_RUNTIME);
+
+cfg::ParamString s_password(
+    &s_spec, "password", "Password for the user used to retrieve database users",
+    cfg::Param::AT_RUNTIME);
+
+cfg::ParamBool s_enable_root_user(
+    &s_spec, "enable_root_user", "Allow the root user to connect to this service",
+    false, cfg::Param::AT_RUNTIME);
+
+cfg::ParamCount s_max_connections(
+    &s_spec, "max_connections", "Maximum number of connections",
+    0, cfg::Param::AT_RUNTIME);
+
+cfg::ParamSeconds s_connection_timeout(
+    &s_spec, "connection_timeout", "Connection idle timeout",
+    cfg::INTERPRET_AS_SECONDS, std::chrono::seconds(0), cfg::Param::AT_RUNTIME);
+
+cfg::ParamSeconds s_net_write_timeout(
+    &s_spec, "net_write_timeout", "Network write timeout",
+    cfg::INTERPRET_AS_SECONDS, std::chrono::seconds(0), cfg::Param::AT_RUNTIME);
+
+cfg::ParamBool s_auth_all_servers(
+    &s_spec, "auth_all_servers", "Retrieve users from all backend servers instead of only one",
+    false, cfg::Param::AT_RUNTIME);
+
+cfg::ParamBool s_strip_db_esc(
+    &s_spec, "strip_db_esc", "Strip escape characters from database names",
+    true, cfg::Param::AT_RUNTIME);
+
+cfg::ParamBool s_localhost_match_wildcard_host(
+    &s_spec, "localhost_match_wildcard_host", "Match localhost to wildcard host",
+    true, cfg::Param::AT_RUNTIME);
+
+cfg::ParamString s_version_string(
+    &s_spec, "version_string", "Custom version string to use",
+    "", cfg::Param::AT_RUNTIME);
+
+cfg::ParamBool s_log_auth_warnings(
+    &s_spec, "log_auth_warnings", "Log a warning when client authentication fails",
+    true, cfg::Param::AT_RUNTIME);
+
+cfg::ParamBool s_session_track_trx_state(
+    &s_spec, "session_track_trx_state", "Track session state using server responses",
+    false, cfg::Param::AT_RUNTIME);
+
+cfg::ParamInteger s_retain_last_statements(
+    &s_spec, "retain_last_statements", "Number of statements kept in memory",
+    -1, cfg::Param::AT_RUNTIME);
+
+cfg::ParamBool s_session_trace(
+    &s_spec, "session_trace", "Enable session tracing for this service",
+    false, cfg::Param::AT_RUNTIME);
+
+cfg::ParamEnum<int64_t> s_rank(
+    &s_spec, CN_RANK, "Service rank",
+    {
+        {RANK_PRIMARY, "primary"},
+        {RANK_SECONDARY, "secondary"}
+    }, RANK_PRIMARY, cfg::Param::AT_RUNTIME);
+
+cfg::ParamSeconds s_connection_keepalive(
+    &s_spec, "connection_keepalive", "How ofted idle connections are pinged",
+    cfg::INTERPRET_AS_SECONDS, std::chrono::seconds(300), cfg::Param::AT_RUNTIME);
+
+cfg::ParamBool s_prune_sescmd_history(
+    &s_spec, "prune_sescmd_history", "Prune old session command history if the limit is exceeded",
+    false, cfg::Param::AT_RUNTIME);
+
+cfg::ParamBool s_disable_sescmd_history(
+    &s_spec, "disable_sescmd_history", "Disable session command history",
+    false, cfg::Param::AT_RUNTIME);
+
+cfg::ParamCount s_max_sescmd_history(
+    &s_spec, "max_sescmd_history", "Session command history size",
+    50, cfg::Param::AT_RUNTIME);
+
+cfg::ParamSeconds s_idle_session_pool_time(
+    &s_spec, "idle_session_pool_time", "Put connections into pool after session has been idle for this long",
+    cfg::INTERPRET_AS_SECONDS, std::chrono::seconds(-1), cfg::Param::AT_RUNTIME);
 }
 
 Service* Service::create(const char* name, const char* router, mxs::ConfigParameters* params)
