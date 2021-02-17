@@ -252,8 +252,9 @@ protected:
     {
     }
 
-    uint64_t     m_capabilities {0};/**< The capabilities of the service, @see enum routing_capability */
-    mxs::Router* m_router {nullptr};/**< The router instance for this service */
+    uint64_t m_capabilities {0};    /**< The capabilities of the service, @see enum routing_capability */
+
+    std::unique_ptr<mxs::Router> m_router;
 
 private:
     const std::string m_name;

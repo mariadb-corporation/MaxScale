@@ -237,7 +237,7 @@ Service* Service::create(const char* name, const char* router, mxs::ConfigParame
         service->state = State::FAILED;
         return nullptr;
     }
-    service->m_router = router_inst;
+    service->m_router.reset(router_inst);
 
     service->m_capabilities |= service->m_router->getCapabilities();
 
@@ -369,11 +369,6 @@ Service::Service(const std::string& name,
 Service::~Service()
 {
     mxb_assert((m_refcount == 0 && !active()) || maxscale_teardown_in_progress() || state == State::FAILED);
-
-    if (m_router)
-    {
-        delete m_router;
-    }
 
     auto manager = user_account_manager();
     if (manager)
@@ -1856,7 +1851,7 @@ void SERVICE::set_custom_version_suffix(const string& custom_version_suffix)
 
 Router* SERVICE::router() const
 {
-    return m_router;
+    return m_router.get();
 }
 
 void Service::wakeup_sessions_waiting_userdata()
