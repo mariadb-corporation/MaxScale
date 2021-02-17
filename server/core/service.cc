@@ -65,6 +65,7 @@
 #include "internal/maxscale.hh"
 #include "internal/servermanager.hh"
 #include "internal/monitor.hh"
+#include "internal/monitormanager.hh"
 
 /** This define is needed in CentOS 6 systems */
 #if !defined (UINT64_MAX)
@@ -97,7 +98,27 @@ const char CN_IDLE_SESSION_POOL_TIME[] = "idle_session_pool_time";
 
 namespace cfg = mxs::config;
 
-cfg::Specification s_spec(CN_SERVICES, cfg::Specification::ROUTER);
+class ServiceSpec : public cfg::Specification
+{
+public:
+    using cfg::Specification::Specification;
+
+private:
+    template<class Params>
+    bool do_post_validate(Params params) const;
+
+    bool post_validate(const mxs::ConfigParameters& params) const override
+    {
+        return do_post_validate(params);
+    }
+
+    bool post_validate(json_t* json) const override
+    {
+        return do_post_validate(json);
+    }
+};
+
+ServiceSpec s_spec(CN_SERVICES, cfg::Specification::ROUTER);
 
 cfg::ParamString s_type(&s_spec, CN_TYPE, "The type of the object", CN_SERVICE);
 cfg::ParamModule s_router(&s_spec, CN_ROUTER, "The router to use", mxs::ModuleType::ROUTER);
@@ -200,44 +221,94 @@ cfg::ParamCount s_max_sescmd_history(
 cfg::ParamSeconds s_idle_session_pool_time(
     &s_spec, "idle_session_pool_time", "Put connections into pool after session has been idle for this long",
     cfg::INTERPRET_AS_SECONDS, std::chrono::seconds(-1), cfg::Param::AT_RUNTIME);
+
+template<class Params>
+bool ServiceSpec::do_post_validate(Params params) const
+{
+    bool ok = true;
+    auto servers = s_servers.get(params);
+    auto targets = s_targets.get(params);
+    std::string cluster = s_cluster.get(params);
+
+    if (!servers.empty() + !targets.empty() + !cluster.empty() > 1)
+    {
+        MXS_ERROR("Only one '%s', '%s' or '%s' is allowed.", s_servers.name().c_str(),
+                  s_targets.name().c_str(), s_cluster.name().c_str());
+        ok = false;
+    }
+    else if (!servers.empty())
+    {
+        auto it = std::find_if_not(servers.begin(), servers.end(), ServerManager::find_by_unique_name);
+
+        if (it != servers.end())
+        {
+            MXS_ERROR("'%s' is not a valid server", it->c_str());
+            ok = false;
+        }
+    }
+    else if (!targets.empty())
+    {
+        auto it = std::find_if_not(targets.begin(), targets.end(), mxs::Target::find);
+
+        if (it != targets.end())
+        {
+            MXS_ERROR("'%s' is not a valid target", it->c_str());
+            ok = false;
+        }
+    }
+    else if (!cluster.empty())
+    {
+        if (!MonitorManager::find_monitor(cluster.c_str()))
+        {
+            MXS_ERROR("'%s' is not a valid cluster", cluster.c_str());
+            ok = false;
+        }
+    }
+
+    auto filters = s_filters.get(params);
+
+    if (!filters.empty())
+    {
+        auto it = std::find_if_not(filters.begin(), filters.end(), filter_find);
+
+        if (it != filters.end())
+        {
+            MXS_ERROR("'%s' is not a valid filter", it->c_str());
+            ok = false;
+        }
+    }
+
+    return ok;
+}
 }
 
-Service* Service::create(const char* name, const char* router, mxs::ConfigParameters* params)
+Service* Service::create(const char* name, const char* router, const mxs::ConfigParameters& params)
 {
-    MXS_ROUTER_API* router_api = nullptr;
-    auto module_info = get_module(router, ModuleType::ROUTER);
-    if (module_info)
-    {
-        router_api = (MXS_ROUTER_API*)module_info->module_object;
-    }
-    else
+    mxs::ConfigParameters unknown;
+
+    if (!s_spec.validate(params, &unknown))
     {
         return nullptr;
     }
 
-    // TODO: Think of a cleaner way to do this, e.g. reference.
-    mxs::ConfigParameters empty;
-    if (!params)
-    {
-        params = &empty;
-    }
+    auto module = s_router.get(params);
 
-    std::unique_ptr<Service> service;
-    service.reset(new(std::nothrow) Service(name, router, params));
-    if (!service)
+    if (module->specification && !module->specification->validate(params))
     {
-        MXS_OOM();
         return nullptr;
     }
 
-    auto router_inst = router_api->createInstance(service.get(), params);
-    if (!router_inst)
+    std::unique_ptr<Service> service(new Service(name, router, params));
+
+    MXS_ROUTER_API* router_api = (MXS_ROUTER_API*)module->module_object;
+    service->m_router.reset(router_api->createInstance(service.get(), params));
+
+    if (!service->m_router)
     {
         MXS_ERROR("%s: Failed to create router instance. Service not started.", service->name());
         service->state = State::FAILED;
         return nullptr;
     }
-    service->m_router.reset(router_inst);
 
     service->m_capabilities |= service->m_router->getCapabilities();
 
