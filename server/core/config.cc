@@ -3543,7 +3543,7 @@ int create_new_service(CONFIG_CONTEXT* obj)
     config_add_defaults(&obj->m_parameters, module->parameters);
 
     int error_count = 0;
-    Service* service = Service::create(obj->name(), router.c_str(), &obj->m_parameters);
+    Service* service = Service::create(obj->name(), router.c_str(), obj->m_parameters);
 
     if (service)
     {

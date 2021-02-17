@@ -1912,7 +1912,7 @@ bool runtime_create_service_from_json(json_t* json)
 
             if (ok)
             {
-                if (auto service = Service::create(name, router, &params))
+                if (auto service = Service::create(name, router, params))
                 {
                     if (update_service_relationships(service, json))
                     {

@@ -300,8 +300,10 @@ Service* Service::create(const char* name, const char* router, const mxs::Config
 
     std::unique_ptr<Service> service(new Service(name, router, params));
 
+    // TODO: Change the router API to use a reference
+    mxs::ConfigParameters param_copy = params;
     MXS_ROUTER_API* router_api = (MXS_ROUTER_API*)module->module_object;
-    service->m_router.reset(router_api->createInstance(service.get(), params));
+    service->m_router.reset(router_api->createInstance(service.get(), &param_copy));
 
     if (!service->m_router)
     {
@@ -314,7 +316,7 @@ Service* Service::create(const char* name, const char* router, const mxs::Config
 
     if (auto config = service->m_router->getConfiguration())
     {
-        if (!config->configure(*params))
+        if (!config->configure(params))
         {
             MXS_ERROR("%s: Failed to configure router instance.", service->name());
             return nullptr;
@@ -328,9 +330,9 @@ Service* Service::create(const char* name, const char* router, const mxs::Config
     return service_ptr;
 }
 
-static std::string get_version_string(mxs::ConfigParameters* params)
+static std::string get_version_string(const mxs::ConfigParameters& params)
 {
-    std::string version_string = params->get_string(CN_VERSION_STRING);
+    std::string version_string = params.get_string(CN_VERSION_STRING);
 
     if (!version_string.empty() && version_string[0] != '5')
     {
@@ -398,34 +400,34 @@ uint64_t Service::status() const
     return status;
 }
 
-Service::Config::Config(mxs::ConfigParameters* params)
-    : user(params->get_string(CN_USER))
-    , password(params->get_string(CN_PASSWORD))
+Service::Config::Config(const mxs::ConfigParameters& params)
+    : user(params.get_string(CN_USER))
+    , password(params.get_string(CN_PASSWORD))
     , version_string(get_version_string(params))
-    , max_connections(params->get_integer(CN_MAX_CONNECTIONS))
-    , enable_root(params->get_bool(CN_ENABLE_ROOT_USER))
-    , users_from_all(params->get_bool(CN_AUTH_ALL_SERVERS))
-    , log_auth_warnings(params->get_bool(CN_LOG_AUTH_WARNINGS))
-    , session_track_trx_state(params->get_bool(CN_SESSION_TRACK_TRX_STATE))
-    , conn_idle_timeout(params->get_duration<std::chrono::seconds>(CN_CONNECTION_TIMEOUT).count())
-    , net_write_timeout(params->get_duration<std::chrono::seconds>(CN_NET_WRITE_TIMEOUT).count())
-    , retain_last_statements(params->get_integer(CN_RETAIN_LAST_STATEMENTS))
-    , connection_keepalive(params->get_duration<std::chrono::seconds>(CN_CONNECTION_KEEPALIVE).count())
-    , strip_db_esc(params->get_bool(CN_STRIP_DB_ESC))
-    , rank(params->get_enum(CN_RANK, rank_values))
-    , prune_sescmd_history(params->get_bool(CN_PRUNE_SESCMD_HISTORY))
-    , disable_sescmd_history(params->get_bool(CN_DISABLE_SESCMD_HISTORY))
-    , max_sescmd_history(params->get_integer(CN_MAX_SESCMD_HISTORY))
-    , idle_session_pooling_time(params->get_integer(CN_IDLE_SESSION_POOL_TIME))
+    , max_connections(params.get_integer(CN_MAX_CONNECTIONS))
+    , enable_root(params.get_bool(CN_ENABLE_ROOT_USER))
+    , users_from_all(params.get_bool(CN_AUTH_ALL_SERVERS))
+    , log_auth_warnings(params.get_bool(CN_LOG_AUTH_WARNINGS))
+    , session_track_trx_state(params.get_bool(CN_SESSION_TRACK_TRX_STATE))
+    , conn_idle_timeout(params.get_duration<std::chrono::seconds>(CN_CONNECTION_TIMEOUT).count())
+    , net_write_timeout(params.get_duration<std::chrono::seconds>(CN_NET_WRITE_TIMEOUT).count())
+    , retain_last_statements(params.get_integer(CN_RETAIN_LAST_STATEMENTS))
+    , connection_keepalive(params.get_duration<std::chrono::seconds>(CN_CONNECTION_KEEPALIVE).count())
+    , strip_db_esc(params.get_bool(CN_STRIP_DB_ESC))
+    , rank(params.get_enum(CN_RANK, rank_values))
+    , prune_sescmd_history(params.get_bool(CN_PRUNE_SESCMD_HISTORY))
+    , disable_sescmd_history(params.get_bool(CN_DISABLE_SESCMD_HISTORY))
+    , max_sescmd_history(params.get_integer(CN_MAX_SESCMD_HISTORY))
+    , idle_session_pooling_time(params.get_integer(CN_IDLE_SESSION_POOL_TIME))
 {
 }
 
 Service::Service(const std::string& name,
                  const std::string& router_name,
-                 mxs::ConfigParameters* params)
+                 const mxs::ConfigParameters& params)
     : SERVICE(name, router_name)
     , m_config(params)
-    , m_params(*params)
+    , m_params(params)
 {
     const MXS_MODULE* module = get_module(router_name, mxs::ModuleType::ROUTER);
     m_capabilities = module->module_capabilities;
@@ -1352,7 +1354,7 @@ bool Service::is_basic_parameter(const std::string& name)
 void Service::update_basic_parameters(const mxs::ConfigParameters& params)
 {
     m_params.set_multiple(params);
-    m_config.assign(Config(&m_params));
+    m_config.assign(Config(m_params));
 
     const auto& config = *m_config;
     if (config.connection_keepalive)

@@ -84,7 +84,7 @@ public:
 
     struct Config
     {
-        Config(mxs::ConfigParameters* params);
+        Config(const mxs::ConfigParameters& params);
 
         std::string user;                           /**< Username */
         std::string password;                       /**< Password */

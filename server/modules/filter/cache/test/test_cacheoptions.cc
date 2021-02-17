@@ -295,7 +295,7 @@ int test(FilterModule::Instance& filter_instance, const TEST_CASE& tc)
     parameters.set(CN_NET_WRITE_TIMEOUT, "10s");
     parameters.set(CN_CONNECTION_KEEPALIVE, "100s");
 
-    auto service = Service::create("service", "readconnroute", &parameters);
+    auto service = Service::create("service", "readconnroute", parameters);
 
     mxs::ConfigParameters listener_params;
     listener_params.set(CN_ADDRESS, "0.0.0.0");

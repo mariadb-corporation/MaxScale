@@ -41,11 +41,11 @@ static void test1()
     parameters.set(CN_CONNECTION_KEEPALIVE, "100s");
     /* Service tests */
     fprintf(stderr, "testservice : creating service called MyService with router nonexistent");
-    auto service = Service::create("MyService", "non-existent", &parameters);
+    auto service = Service::create("MyService", "non-existent", parameters);
     mxb_assert_message(NULL == service, "New service with invalid router should be null");
     mxb_assert_message(0 == service_isvalid(service), "Service must not be valid after incorrect creation");
     fprintf(stderr, "\t..done\nValid service creation, router testroute.");
-    service = Service::create("MyService", "readconnroute", &parameters);
+    service = Service::create("MyService", "readconnroute", parameters);
 
     mxb_assert_message(NULL != service, "New service with valid router must not be null");
     mxb_assert_message(0 != service_isvalid(service), "Service must be valid after creation");

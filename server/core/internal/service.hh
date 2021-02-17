@@ -66,7 +66,7 @@ public:
      *
      * @return The newly created service or NULL if an error occurred
      */
-    static Service* create(const char* name, const char* router, mxs::ConfigParameters* params);
+    static Service* create(const char* name, const char* router, const mxs::ConfigParameters& params);
 
     /**
      * Destroy a service
@@ -290,7 +290,7 @@ private:
 
     mxs::ConfigParameters m_params;
 
-    Service(const std::string& name, const std::string& router, mxs::ConfigParameters* params);
+    Service(const std::string& name, const std::string& router, const mxs::ConfigParameters& params);
 
     /**
      * Recalculate internal data

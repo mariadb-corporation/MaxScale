@@ -771,7 +771,7 @@ int test(FilterModule::Instance& filter_instance, const FW_TEST& t)
             parameters.set("connection_timeout", "10s");
             parameters.set(CN_NET_WRITE_TIMEOUT, "10s");
             parameters.set(CN_CONNECTION_KEEPALIVE, "100s");
-            auto service = Service::create("service", "readconnroute", &parameters);
+            auto service = Service::create("service", "readconnroute", parameters);
 
             static int port = 3306;
 
