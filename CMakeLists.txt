@@ -1,10 +1,5 @@
-if(PACKAGE)
-  cmake_minimum_required(VERSION 2.8.12)
-else()
-  cmake_minimum_required(VERSION 2.8)
-endif()
-
 message(STATUS "CMake version: ${CMAKE_VERSION}")
+cmake_minimum_required(VERSION 3.16)
 
 include(${CMAKE_SOURCE_DIR}/cmake/macros.cmake)
 enable_testing()
