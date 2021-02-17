@@ -12,6 +12,17 @@
 #include <maxbase/format.hh>
 
 using std::string;
+using std::move;
+
+namespace
+{
+// Options given when running ssh from command line. The first line enables connection multiplexing,
+// allowing repeated ssh-invocations to use an existing connection.
+// Second line disables host ip and key checks.
+const char ssh_opts[] = "-o ControlMaster=auto -o ControlPath=./maxscale-test-%r@%h:%p -o ControlPersist=yes "
+                        "-o CheckHostIP=no -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "
+                        "-o LogLevel=quiet ";
+}
 
 Nodes::Nodes(const string& prefix, SharedData& shared, const std::string& network_config)
     : m_shared(shared)
@@ -20,12 +31,33 @@ Nodes::Nodes(const string& prefix, SharedData& shared, const std::string& networ
 {
 }
 
-Nodes::~Nodes()
+Nodes::VMNode::VMNode(SharedData& shared)
+    : m_shared(shared)
 {
-    for (auto a : m_ssh_connections)
+}
+
+Nodes::VMNode::~VMNode()
+{
+    if (m_ssh_master_pipe)
     {
-        pclose(a);
+        fprintf(m_ssh_master_pipe, "exit\n");
+        pclose(m_ssh_master_pipe);
     }
+}
+
+Nodes::VMNode::VMNode(Nodes::VMNode&& rhs)
+    : m_ip4(move(rhs.m_ip4))
+    , m_ip6(move(rhs.m_ip6))
+    , m_private_ip(move(rhs.m_private_ip))
+    , m_hostname(move(rhs.m_hostname))
+    , m_username(move(rhs.m_username))
+    , m_homedir(move(rhs.m_homedir))
+    , m_sudo(move(rhs.m_sudo))
+    , m_sshkey(move(rhs.m_sshkey))
+    , m_ssh_master_pipe(rhs.m_ssh_master_pipe)
+    , m_shared(rhs.m_shared)
+{
+    rhs.m_ssh_master_pipe = nullptr;
 }
 
 bool Nodes::check_node_ssh(int node)
@@ -53,120 +85,122 @@ bool Nodes::check_nodes()
     return std::all_of(f.begin(), f.end(), std::mem_fn(&std::future<bool>::get));
 }
 
-string Nodes::generate_ssh_cmd(int node, const string& cmd, bool sudo)
+bool Nodes::VMNode::init_ssh_master()
 {
-    string rval;
-    auto& vmnode = m_vms[node];
-    auto& ip4 = vmnode.m_ip4;
-    auto& sudo_str = vmnode.m_sudo;
-
-    if (ip4 == "127.0.0.1")
+    if (m_ip4 == "127.0.0.1")
     {
-        // If node is the local machine, run command as is.
-        rval = sudo ? (sudo_str + " " + cmd) : cmd;
+        m_type = NodeType::LOCAL;
+        return true;
+    }
+
+    m_ssh_cmd_p1 = mxb::string_printf("ssh -i %s %s %s@%s",
+                                      m_sshkey.c_str(), ssh_opts,
+                                      m_username.c_str(), m_ip4.c_str());
+
+    // For initiating the master connection, just part1 is enough.
+    FILE* instream = popen(m_ssh_cmd_p1.c_str(), "w");
+    bool rval = false;
+    if (instream)
+    {
+        m_ssh_master_pipe = instream;
+        rval = true;
     }
     else
     {
-        // Run command through ssh. The ControlMaster-option enables use of existing pooled connections,
-        // greatly speeding up the operation.
-        string p1 = mxb::string_printf("ssh -i %s ", vmnode.m_sshkey.c_str());
-        string p2 = "-o UserKnownHostsFile=/dev/null "
-                    "-o CheckHostIP=no "
-                    "-o ControlMaster=auto "
-                    "-o ControlPath=./maxscale-test-%r@%h:%p "
-                    "-o ControlPersist=yes "
-                    "-o StrictHostKeyChecking=no "
-                    "-o LogLevel=quiet ";
-
-        string p3 = mxb::string_printf("%s@%s ", vmnode.m_username.c_str(), ip4.c_str());
-        string p4 = sudo ? mxb::string_printf("'%s %s'", sudo_str.c_str(), cmd.c_str()) :
-            mxb::string_printf("'%s'", cmd.c_str());
-        rval = p1 + p2 + p3 + p4;
+        std::cout << m_name << ": popen() failed when forming master ssh connection\n";
     }
     return rval;
 }
 
-FILE* Nodes::open_ssh_connection(int node)
+int Nodes::VMNode::run_cmd(const std::string& cmd, CmdPriv priv)
 {
-    std::ostringstream ss;
-
-    auto& vmnode = m_vms[node];
-    if (vmnode.m_ip4 == "127.0.0.1")
+    bool verbose = m_shared.verbose;
+    string opening_cmd;
+    if (m_type == NodeType::LOCAL)
     {
-        ss << "bash";
+        opening_cmd = "bash";
     }
     else
     {
-        ss << "ssh -i " << vmnode.m_sshkey << " "
-           << "-o UserKnownHostsFile=/dev/null "
-           << "-o StrictHostKeyChecking=no "
-           << "-o LogLevel=quiet "
-           << "-o CheckHostIP=no "
-           << "-o ControlMaster=auto "
-           << "-o ControlPath=./maxscale-test-%r@%h:%p "
-           << "-o ControlPersist=yes "
-           << vmnode.m_username << "@" << vmnode.m_ip4
-           << (verbose() ? "" : " > /dev/null");
+        opening_cmd = m_ssh_cmd_p1;
+        if (!verbose)
+        {
+            opening_cmd += " > /dev/null";
+        }
+    }
+    if (verbose)
+    {
+        std::cout << opening_cmd << "\n";
     }
 
-    return popen(ss.str().c_str(), "w");
-}
-
-int Nodes::ssh_node(int node, const char* ssh, bool sudo)
-{
-    if (verbose())
+    // TODO: Is this 2-stage execution necessary? Could the command just be ran in one go?
+    int rc = -1;
+    FILE* pipe = popen(opening_cmd.c_str(), "w");
+    if (pipe)
     {
-        std::cout << ssh << std::endl;
-    }
-
-    int rc = 1;
-    FILE* in = open_ssh_connection(node);
-
-    if (in)
-    {
+        bool sudo = (priv == CmdPriv::SUDO);
         if (sudo)
         {
-            fprintf(in, "sudo su -\n");
-            fprintf(in, "cd /home/%s\n", m_vms[node].m_username.c_str());
+            fprintf(pipe, "sudo su -\n");
+            fprintf(pipe, "cd /home/%s\n", m_username.c_str());
         }
 
-        fprintf(in, "%s\n", ssh);
-        rc = pclose(in);
+        fprintf(pipe, "%s\n", cmd.c_str());
+        if (sudo)
+        {
+            fprintf(pipe, "exit\n");    // Exits sudo
+        }
+        fprintf(pipe, "exit\n");    // Exits ssh / bash
+        rc = pclose(pipe);
+    }
+    else
+    {
+        std::cout << m_name << ": popen() failed";
     }
 
     if (WIFEXITED(rc))
     {
-        return WEXITSTATUS(rc);
+        rc = WEXITSTATUS(rc);
     }
     else if (WIFSIGNALED(rc) && WTERMSIG(rc) == SIGHUP)
     {
         // SIGHUP appears to happen for SSH connections
-        return 0;
+        rc = 0;
     }
     else
     {
-        std::cout << strerror(errno) << std::endl;
-        return 256;
+        std::cout << strerror(errno) << "\n";
+        rc = 256;
     }
+    return rc;
 }
 
-void Nodes::init_ssh_masters()
+int Nodes::ssh_node(int node, const string& ssh, bool sudo)
 {
-    std::vector<std::thread> threads;
-    m_ssh_connections.resize(N);
+    return m_vms[node].run_cmd(ssh, sudo ? VMNode::CmdPriv::SUDO : VMNode::CmdPriv::NORMAL);
+}
 
-    for (int i = 0; i < N; i++)
+bool Nodes::setup()
+{
+    std::vector<std::future<bool>> futures;
+    futures.reserve(m_vms.size());
+    for (auto& vm : m_vms)
     {
-        threads.emplace_back(
-            [this, i]() {
-                m_ssh_connections[i] = open_ssh_connection(i);
-            });
+        auto func = [&vm]() {
+                return vm.init_ssh_master();
+            };
+        futures.emplace_back(std::async(std::launch::async, func));
     }
 
-    for (auto& a : threads)
+    bool rval = true;
+    for (auto& fut : futures)
     {
-        a.join();
+        if (!fut.get())
+        {
+            rval = false;
+        }
     }
+    return rval;
 }
 
 int Nodes::ssh_node_f(int node, bool sudo, const char* format, ...)
@@ -281,13 +315,14 @@ int Nodes::read_basic_env()
 
     auto prefixc = m_prefix.c_str();
     m_vms.clear();
-    m_vms.resize(N);
+    m_vms.reserve(N);
 
     if ((N > 0) && (N < 255))
     {
         for (int i = 0; i < N; i++)
         {
-            VMNode& node = m_vms[i];
+            VMNode node(m_shared);
+            node.m_name = mxb::string_printf("%s_%03d", prefixc, i);
             // reading IPs
             sprintf(env_name, "%s_%03d_network", prefixc, i);
             node.m_ip4 = get_nc_item(env_name);
@@ -339,13 +374,14 @@ int Nodes::read_basic_env()
             }
 
             sprintf(env_name, "%s_%03d_hostname", prefixc, i);
-            auto& hostname = m_vms[i].m_hostname;
+            auto& hostname = node.m_hostname;
             hostname = get_nc_item(env_name);
             if (hostname.empty())
             {
                 hostname = node.m_private_ip[i];
             }
             setenv(env_name, hostname.c_str(), 1);
+            m_vms.push_back(move(node));
         }
     }
 
@@ -354,7 +390,7 @@ int Nodes::read_basic_env()
 
 std::string Nodes::mdbci_node_name(int node)
 {
-    return(mxb::string_printf("%s_%03d", m_prefix.c_str(), node));
+    return m_vms[node].m_name;
 }
 
 std::string Nodes::get_nc_item(const char* item_name)
@@ -406,32 +442,57 @@ int Nodes::get_N()
     return n_nodes;
 }
 
+Nodes::SshResult Nodes::VMNode::run_cmd_output(const string& cmd, CmdPriv priv)
+{
+    bool sudo = (priv == CmdPriv::SUDO);
+
+    string total_cmd;
+    total_cmd.reserve(512);
+    if (m_type == NodeType::LOCAL)
+    {
+        // The command can be ran as is.
+        if (sudo)
+        {
+            total_cmd.append(m_sudo).append(" ");
+        }
+        total_cmd.append(cmd);
+    }
+    else
+    {
+        string ssh_cmd_p2 = sudo ? mxb::string_printf("'%s %s'", m_sudo.c_str(), cmd.c_str()) :
+            mxb::string_printf("'%s'", cmd.c_str());
+        total_cmd.append(m_ssh_cmd_p1).append(" ").append(ssh_cmd_p2);
+    }
+
+    Nodes::SshResult rval;
+    FILE* pipe = popen(total_cmd.c_str(), "r");
+    if (pipe)
+    {
+        const size_t buflen = 1024;
+        string collected_output;
+        collected_output.reserve(buflen);   // May end up larger.
+
+        char buffer[buflen];
+        while (fgets(buffer, buflen, pipe))
+        {
+            collected_output.append(buffer);
+        }
+        mxb::rtrim(collected_output);
+        rval.output = std::move(collected_output);
+
+        int exit_code = pclose(pipe);
+        rval.rc = (WIFEXITED(exit_code)) ? WEXITSTATUS(exit_code) : 256;
+    }
+    else
+    {
+        std::cout << m_name << ": popen() failed when running command " << total_cmd << "\n";
+    }
+    return rval;
+}
+
 Nodes::SshResult Nodes::ssh_output(const std::string& cmd, int node, bool sudo)
 {
-    Nodes::SshResult rval;
-    string ssh_cmd = generate_ssh_cmd(node, cmd, sudo);
-    FILE* output_pipe = popen(ssh_cmd.c_str(), "r");
-    if (!output_pipe)
-    {
-        printf("Error opening ssh %s\n", strerror(errno));
-        return rval;
-    }
-
-    const size_t buflen = 1024;
-    string collected_output;
-    collected_output.reserve(buflen);   // May end up larger.
-
-    char buffer[buflen];
-    while (fgets(buffer, buflen, output_pipe))
-    {
-        collected_output.append(buffer);
-    }
-    mxb::rtrim(collected_output);
-    rval.output = std::move(collected_output);
-
-    int exit_code = pclose(output_pipe);
-    rval.rc = (WIFEXITED(exit_code)) ? WEXITSTATUS(exit_code) : 256;
-    return rval;
+    return m_vms[node].run_cmd_output(cmd, sudo ? VMNode::CmdPriv::SUDO : VMNode::CmdPriv::NORMAL);
 }
 
 const char* Nodes::ip_private(int i) const

@@ -20,7 +20,7 @@ struct SharedData
 class Nodes
 {
 public:
-    virtual ~Nodes();
+    virtual ~Nodes() = default;
 
     const char* ip_private(int i = 0) const;
 
@@ -54,11 +54,7 @@ public:
      * @param sudo if true the command is executed with root privelegues
      * @return exit code of the coomand
      */
-    int ssh_node(int node, const char* ssh, bool sudo);
-    int ssh_node(int node, const std::string& ssh, bool sudo)
-    {
-        return ssh_node(node, ssh.c_str(), sudo);
-    }
+    int ssh_node(int node, const std::string& ssh, bool sudo);
     int ssh_node_f(int node, bool sudo, const char* format, ...) mxb_attribute((format(printf, 4, 5)));
 
     /**
@@ -110,12 +106,42 @@ protected:
 
     const std::string& prefix() const;
 
-    void init_ssh_masters();
+    virtual bool setup();
 
 private:
 
-    struct VMNode
+    class VMNode
     {
+    public:
+        VMNode(SharedData& shared);
+        VMNode(VMNode&& rhs);
+        ~VMNode();
+
+        bool init_ssh_master();
+
+        enum class CmdPriv {NORMAL, SUDO};
+
+        /**
+         * Run a command on the VM, either through ssh or local terminal. No output.
+         *
+         * @param cmd Command string
+         * @param priv Sudo or normal user
+         * @return Return code
+         */
+        int run_cmd(const std::string& cmd, CmdPriv priv = CmdPriv::NORMAL);
+
+        /**
+         * Run a command on the VM, either through ssh or local terminal. Fetches output.
+         *
+         * @param cmd Command string
+         * @param priv Sudo or normal user
+         * @return Return code and command output
+         */
+        Nodes::SshResult
+        run_cmd_output(const std::string& cmd, CmdPriv priv = CmdPriv::NORMAL);
+
+        std::string m_name;     /**< E.g. "node_001" */
+
         std::string m_ip4;          /**< IPv4-address */
         std::string m_ip6;          /**< IPv6-address */
         std::string m_private_ip;   /**< Private IP-address for AWS */
@@ -125,6 +151,14 @@ private:
         std::string m_homedir;  /**< Home directory of username */
         std::string m_sudo;     /**< empty or "sudo " */
         std::string m_sshkey;   /**< Path to ssh key */
+
+    private:
+        enum class NodeType {LOCAL, REMOTE};
+
+        NodeType    m_type {NodeType::REMOTE};      /**< SSH only used on remote nodes */
+        std::string m_ssh_cmd_p1;                   /**< Start of remote command string */
+        FILE*       m_ssh_master_pipe {nullptr};    /**< Master ssh pipe. Kept open for ssh multiplex */
+        SharedData& m_shared;
     };
 
     std::string m_prefix;                   /**< Name of backend setup (e.g. 'repl' or 'galera') */
@@ -133,12 +167,7 @@ private:
 
     std::string network_config;     /**< Contents of MDBCI network_config file */
 
-    std::vector<FILE*> m_ssh_connections;
-
     bool check_node_ssh(int node);
-
-    // The returned handle must be closed with pclose
-    FILE* open_ssh_connection(int node);
 
     /**
      * Calculate the number of nodes described in the network config file
@@ -153,12 +182,4 @@ private:
      */
     std::string get_nc_item(const char* item_name);
 
-    /**
-     * Generate the command line to execute a given command on the node via ssh.
-     *
-     * @param node Node index
-     * @param cmd command to execute
-     * @param sudo Execute command as root
-     */
-    std::string generate_ssh_cmd(int node, const std::string& cmd, bool sudo);
 };
