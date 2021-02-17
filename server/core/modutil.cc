@@ -1141,9 +1141,8 @@ static inline std::pair<bool, uint8_t*> probe_number(uint8_t* it, uint8_t* end)
 
                 if (next_it != end && !is_digit(*next_it))
                 {
-                    /** No number after the period, not a decimal number.
-                     * The fractional part of the number is optional in MariaDB. */
-                    rval.first = false;
+                    /** The fractional part of a decimal is optional in MariaDB. */
+                    rval.second = it;
                     break;
                 }
                 mxb_assert(is_digit(*next_it));
