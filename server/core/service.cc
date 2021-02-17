@@ -323,6 +323,44 @@ Service* Service::create(const char* name, const char* router, const mxs::Config
         }
     }
 
+    auto servers = s_servers.get(params);
+    auto targets = s_targets.get(params);
+    auto filters = s_filters.get(params);
+    auto cluster = s_cluster.get(params);
+
+    if (!servers.empty())
+    {
+        for (const auto& a : servers)
+        {
+            Server* server = ServerManager::find_by_unique_name(a);
+            mxb_assert(server);
+            service->m_data->targets.push_back(server);
+        }
+    }
+    else if (!targets.empty())
+    {
+        for (const auto& a : targets)
+        {
+            mxs::Target* target = mxs::Target::find(a);
+            mxb_assert(target);
+            service->m_data->targets.push_back(target);
+        }
+    }
+    else if (!cluster.empty())
+    {
+        Monitor* pMonitor = MonitorManager::find_monitor(cluster.c_str());
+        mxb_assert(pMonitor);
+        service->set_cluster(pMonitor);
+    }
+
+    service->targets_updated();
+
+    if (!filters.empty())
+    {
+        MXB_AT_DEBUG(bool ok = ) service->set_filters(filters);
+        mxb_assert(ok);
+    }
+
     auto service_ptr = service.release();
     LockGuard guard(this_unit.lock);
     this_unit.services.push_back(service_ptr);
