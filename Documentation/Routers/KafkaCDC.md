@@ -211,3 +211,5 @@ topic=my-cdc-topic
 * The KafkaCDC module provides at-least-once semantics for the generated
   events. This means that each replication event is delivered to kafka at least
   once but there can be duplicate events in case of failures.
+
+* Authentication to Kafka is not currently supported.
