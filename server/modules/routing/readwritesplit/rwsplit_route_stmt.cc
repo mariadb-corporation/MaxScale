@@ -224,11 +224,20 @@ bool RWSplitSession::query_not_supported(GWBUF* querybuf)
 
     if (mxs_mysql_is_ps_command(info.command()) && info.stmt_id() == 0)
     {
-        // Unknown PS ID, can't route this query
-        std::stringstream ss;
-        ss << "Unknown prepared statement handler (" << extract_binary_ps_id(querybuf)
-           << ") given to MaxScale";
-        err = modutil_create_mysql_err_msg(1, 0, ER_UNKNOWN_STMT_HANDLER, "HY000", ss.str().c_str());
+        if (mxs_mysql_command_will_respond(info.command()))
+        {
+            // Unknown PS ID, can't route this query
+            std::stringstream ss;
+            ss << "Unknown prepared statement handler (" << extract_binary_ps_id(querybuf)
+               << ") given to MaxScale";
+            err = modutil_create_mysql_err_msg(1, 0, ER_UNKNOWN_STMT_HANDLER, "HY000", ss.str().c_str());
+        }
+        else
+        {
+            // The command doesn't expect a response which means we mustn't send one. Sending an unexpected
+            // error will cause the client to go out of sync.
+            return true;
+        }
     }
     else if (TARGET_IS_ALL(route_target) && (TARGET_IS_MASTER(route_target) || TARGET_IS_SLAVE(route_target)))
     {
