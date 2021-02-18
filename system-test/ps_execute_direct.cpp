@@ -1,5 +1,6 @@
 /**
  * MXS-2490: Unknown prepared statement handler (0) given to mysqld_stmt_execute
+ * MXS-3392: Connection reset fails after execute_direct for an unknown table
  *
  * See:
  *
@@ -9,7 +10,7 @@
 
 #include <maxtest/testconnections.hh>
 
-void run_test(TestConnections& test, MYSQL* conn)
+void mxs2490(TestConnections& test, MYSQL* conn)
 {
     MYSQL_STMT* stmt = mysql_stmt_init(conn);
     std::string query = "SELECT user FROM mysql.user";
@@ -23,6 +24,15 @@ void run_test(TestConnections& test, MYSQL* conn)
     mysql_stmt_close(stmt);
 }
 
+void mxs3392(TestConnections& test, MYSQL* conn)
+{
+    MYSQL_STMT* stmt = mysql_stmt_init(conn);
+    test.expect(mariadb_stmt_execute_direct(stmt, "SELECT 1 FROM test.nonexisting_table", -1),
+                "Direct execution should fail");
+    test.expect(mysql_stmt_close(stmt) == 0, "Closing the statement should work: %s", mysql_error(conn));
+    test.expect(mysql_reset_connection(conn) == 0, "Connection reset should work: %s", mysql_error(conn));
+}
+
 int main(int argc, char** argv)
 {
     TestConnections test(argc, argv);
@@ -30,10 +40,14 @@ int main(int argc, char** argv)
     test.set_timeout(30);
     test.maxscales->connect();
 
+    test.tprintf("MXS-2490: PS direct execution");
     test.tprintf("Testing readwritesplit");
-    run_test(test, test.maxscales->conn_rwsplit[0]);
+    mxs2490(test, test.maxscales->conn_rwsplit[0]);
     test.tprintf("Testing readconnroute");
-    run_test(test, test.maxscales->conn_master[0]);
+    mxs2490(test, test.maxscales->conn_master[0]);
+
+    test.tprintf("MXS-3392: mariadb_stmt_execute_direct sends send an extra error");
+    mxs3392(test, test.maxscales->conn_rwsplit[0]);
 
     return test.global_result;
 }
