@@ -979,7 +979,7 @@ static inline std::pair<bool, uint8_t*> probe_number(uint8_t* it, uint8_t* end)
 
     while (it != end)
     {
-        if (lut(IS_DIGIT, *it) || (allow_hex && lut(IS_XDIGIT, * it)))
+        if (lut(IS_DIGIT, *it) || (allow_hex && lut(IS_XDIGIT, *it)))
         {
             // Digit or hex-digit, skip it
         }
@@ -1063,6 +1063,9 @@ static inline uint8_t* find_char(uint8_t* it, uint8_t* end, char c)
 namespace maxscale
 {
 
+#define likely(x)   __builtin_expect (!!(x), 1)
+#define unlikely(x) __builtin_expect (!!(x), 0)
+
 std::string get_canonical(GWBUF* querybuf)
 {
     mxb_assert(gwbuf_is_contiguous(querybuf));
@@ -1078,7 +1081,7 @@ std::string get_canonical(GWBUF* querybuf)
     {
         bool did_conversion = false;
 
-        if (!lut(IS_SPECIAL, *it))
+        if (likely(!lut(IS_SPECIAL, *it)))
         {
             // Normal character, no special handling required
             *it_out++ = *it;
