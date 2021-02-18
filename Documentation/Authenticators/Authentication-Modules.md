@@ -71,12 +71,17 @@ If using MariaDB ColumnStore, the following grant is required:
 GRANT ALL ON infinidb_vtable.* TO 'maxscale'@'maxscalehost';
 ```
 
-### Clustrix support
+### Xpand
 
-The UAM of the MaxScale MySQL protocol implementation also supports Clustrix
-servers. If the backends of the service are Clustrix servers, users are fetched
-from the *system.users*-table and database grants from the
-*system.user_acl*-table.
+The system tables of Xpand are not the same as those of a regular
+MariaDB server. Consquently, a different set of GRANTs are needed.
+
+The service user must have the following grants:
+```
+CREATE USER 'maxscale'@'maxscalehost' IDENTIFIED BY 'maxscale-password';
+GRANT SELECT ON system.users TO 'maxscale'@'maxscalehost';
+GRANT SELECT ON system.user_acl TO 'maxscale'@'maxscalehost';
+```
 
 ## Limitations and troubleshooting
 
