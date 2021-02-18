@@ -179,7 +179,7 @@ public:
 
     int64_t rank() const override
     {
-        return m_config->rank;
+        return config()->rank;
     }
 
     int64_t  replication_lag() const override;
@@ -202,9 +202,9 @@ public:
         return std::find(m_data->targets.begin(), m_data->targets.end(), target) != m_data->targets.end();
     }
 
-    const mxs::WorkerGlobal<Config>& config() const override
+    const mxs::WorkerGlobal<Config::Values>& config() const override
     {
-        return m_config;
+        return m_config.values();
     }
 
     std::vector<SERVER*> reachable_servers() const final
@@ -282,14 +282,6 @@ private:
         uint64_t target_capabilities {0};
     };
 
-    mxs::WorkerGlobal<Data>   m_data;
-    mxs::WorkerGlobal<Config> m_config;
-    std::atomic<int64_t>      m_refcount {1};
-    bool                      m_active {true};
-    mxs::Monitor*             m_monitor {nullptr};  /**< A possibly associated monitor */
-
-    mxs::ConfigParameters m_params;
-
     Service(const std::string& name, const std::string& router, const mxs::ConfigParameters& params);
 
     /**
@@ -304,6 +296,16 @@ private:
 
     // Helper for calculating version values
     std::pair<uint64_t, uint64_t> get_versions(const std::vector<SERVER*>& servers) const;
+
+    bool post_configure() override;
+
+    mxs::WorkerGlobal<Data> m_data;
+    Config                  m_config;
+    std::atomic<int64_t>    m_refcount {1};
+    bool                    m_active {true};
+    mxs::Monitor*           m_monitor {nullptr};    /**< A possibly associated monitor */
+
+    mxs::ConfigParameters m_params;
 
     // User account manager. Can only be set once.
     SAccountManager m_usermanager;

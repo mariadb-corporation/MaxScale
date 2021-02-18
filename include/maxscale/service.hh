@@ -22,7 +22,7 @@
 #include <openssl/dh.h>
 
 #include <maxbase/jansson.h>
-#include <maxscale/config.hh>
+#include <maxscale/config2.hh>
 #include <maxscale/protocol.hh>
 #include <maxscale/dcb.hh>
 #include <maxscale/filter.hh>
@@ -82,42 +82,71 @@ public:
         STOPPED,    /**< The service has been stopped */
     };
 
-    struct Config
+    struct Config : public mxs::config::Configuration
     {
-        Config(const mxs::ConfigParameters& params);
+        Config(SERVICE* service);
 
-        std::string user;                           /**< Username */
-        std::string password;                       /**< Password */
-        std::string version_string;                 /**< Version string sent to clients */
-        int         max_connections;                /**< Maximum client connections */
-        bool        enable_root;                    /**< Allow root user  access */
-        bool        users_from_all;                 /**< Load users from all servers */
-        bool        log_auth_warnings;              /**< Log authentication failures and warnings */
-        bool        session_track_trx_state;        /**< Get transaction state via session track mechanism */
-        int64_t     conn_idle_timeout;              /**< Session timeout in seconds */
-        int64_t     net_write_timeout;              /**< Write timeout in seconds */
-        int32_t     retain_last_statements;         /**< How many statements to retain per session,
-                                                     * -1 if not explicitly specified. */
-        int64_t connection_keepalive;               /**< How often to ping idle sessions */
+        struct Values
+        {
+            std::string       type;     // Always "service"
+            const MXS_MODULE* router;   // The router module
 
-        /**
-         * Remove the '\' characters from database names when querying them from the server. This
-         * is required when users make grants such as "grant select on `test\_1`.* to ..." to avoid
-         * wildcard matching against _. A plain "grant select on `test_1`.* to ..." would normally
-         * grant access to e.g. testA1. MaxScale does not support this type of wilcard matching for
-         * the database, but it must still understand the escaped version of the grant. */
-        bool strip_db_esc {true};
+            std::vector<std::string> servers;
+            std::vector<std::string> targets;
+            std::vector<std::string> filters;
+            std::string              cluster;
 
-        int64_t rank;   /*< The ranking of this service */
+            std::string user;                       /**< Username */
+            std::string password;                   /**< Password */
+            std::string version_string;             /**< Version string sent to clients */
+            int64_t     max_connections;            /**< Maximum client connections */
+            bool        enable_root;                /**< Allow root user  access */
+            bool        users_from_all;             /**< Load users from all servers */
+            bool        log_auth_warnings;          /**< Log authentication failures and warnings */
+            bool        session_track_trx_state;    /**< Get transaction state via session track mechanism */
+            bool        session_trace;
 
-        bool    prune_sescmd_history {false};
-        bool    disable_sescmd_history {false};
-        int64_t max_sescmd_history {50};
+            std::chrono::seconds conn_idle_timeout;     /**< Session timeout in seconds */
+            std::chrono::seconds net_write_timeout;     /**< Write timeout in seconds */
 
-        /**
-         * Can backend connections be pooled while session is still running? Configured as seconds the
-         * session must be idle before backend connections can be pooled. */
-        int64_t idle_session_pooling_time {-1};
+            int64_t retain_last_statements;     /**< How many statements to retain per session,
+                                                 * -1 if not explicitly specified. */
+
+            std::chrono::seconds connection_keepalive;      /**< How often to ping idle sessions */
+
+            /**
+             * Remove the '\' characters from database names when querying them from the server. This
+             * is required when users make grants such as "grant select on `test\_1`.* to ..." to avoid
+             * wildcard matching against _. A plain "grant select on `test_1`.* to ..." would normally
+             * grant access to e.g. testA1. MaxScale does not support this type of wilcard matching for
+             * the database, but it must still understand the escaped version of the grant. */
+            bool strip_db_esc;
+
+            bool localhost_match_wildcard_host;
+
+            int64_t rank;   /*< The ranking of this service */
+
+            bool    prune_sescmd_history;
+            bool    disable_sescmd_history;
+            int64_t max_sescmd_history;
+
+            /**
+             * Can backend connections be pooled while session is still running? Configured as seconds the
+             * session must be idle before backend connections can be pooled. */
+            std::chrono::seconds idle_session_pooling_time;
+        };
+
+        const mxs::WorkerGlobal<Values>& values() const
+        {
+            return m_values;
+        }
+
+    private:
+        bool post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params) override;
+
+        Values                    m_v;
+        mxs::WorkerGlobal<Values> m_values;
+        SERVICE*                  m_service;
     };
 
     State  state {State::ALLOC};        /**< The service state */
@@ -142,7 +171,7 @@ public:
      *
      * @return Reference to the WorkerGlobal configuration object
      */
-    virtual const mxs::WorkerGlobal<Config>& config() const = 0;
+    virtual const mxs::WorkerGlobal<Config::Values>& config() const = 0;
 
     /**
      * Get server version
@@ -244,6 +273,8 @@ public:
     mxs::Router* router() const;
 
 protected:
+    friend class Configuration;
+
     SERVICE(const std::string& name,
             const std::string& router_name)
         : started(time(nullptr))
@@ -255,6 +286,8 @@ protected:
     uint64_t m_capabilities {0};    /**< The capabilities of the service, @see enum routing_capability */
 
     std::unique_ptr<mxs::Router> m_router;
+
+    virtual bool post_configure() = 0;
 
 private:
     const std::string m_name;

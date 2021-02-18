@@ -457,7 +457,7 @@ void RoutingWorker::process_timeouts()
             auto* pSes = static_cast<Session*>(elem.second);
             // TODO: indexing the config() for every session every second may cost some. Could be
             // improved by storing sessions ordered by service.
-            int pooling_time = pSes->service->config()->idle_session_pooling_time;
+            int64_t pooling_time = pSes->service->config()->idle_session_pooling_time.count();
 
             ClientDCB* pClient = pSes->client_dcb;
             if (pClient->state() == DCB::State::POLLING)

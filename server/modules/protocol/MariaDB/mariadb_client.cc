@@ -1430,7 +1430,7 @@ MariaDBClientConnection::MariaDBClientConnection(MXS_SESSION* session, mxs::Comp
 {
     const auto& svc_config = *m_session->service->config();
     m_max_sescmd_history = svc_config.max_sescmd_history;
-    m_track_pooling_status = svc_config.idle_session_pooling_time >= 0;
+    m_track_pooling_status = svc_config.idle_session_pooling_time.count() >= 0;
 }
 
 /**

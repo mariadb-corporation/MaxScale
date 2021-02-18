@@ -323,43 +323,7 @@ Service* Service::create(const char* name, const char* router, const mxs::Config
         }
     }
 
-    auto servers = s_servers.get(params);
-    auto targets = s_targets.get(params);
-    auto filters = s_filters.get(params);
-    auto cluster = s_cluster.get(params);
-
-    if (!servers.empty())
-    {
-        for (const auto& a : servers)
-        {
-            Server* server = ServerManager::find_by_unique_name(a);
-            mxb_assert(server);
-            service->m_data->targets.push_back(server);
-        }
-    }
-    else if (!targets.empty())
-    {
-        for (const auto& a : targets)
-        {
-            mxs::Target* target = mxs::Target::find(a);
-            mxb_assert(target);
-            service->m_data->targets.push_back(target);
-        }
-    }
-    else if (!cluster.empty())
-    {
-        Monitor* pMonitor = MonitorManager::find_monitor(cluster.c_str());
-        mxb_assert(pMonitor);
-        service->set_cluster(pMonitor);
-    }
-
-    service->targets_updated();
-
-    if (!filters.empty())
-    {
-        MXB_AT_DEBUG(bool ok = ) service->set_filters(filters);
-        mxb_assert(ok);
-    }
+    service->m_config.configure(params, &unknown);
 
     auto service_ptr = service.release();
     LockGuard guard(this_unit.lock);
@@ -438,39 +402,49 @@ uint64_t Service::status() const
     return status;
 }
 
-Service::Config::Config(const mxs::ConfigParameters& params)
-    : user(params.get_string(CN_USER))
-    , password(params.get_string(CN_PASSWORD))
-    , version_string(get_version_string(params))
-    , max_connections(params.get_integer(CN_MAX_CONNECTIONS))
-    , enable_root(params.get_bool(CN_ENABLE_ROOT_USER))
-    , users_from_all(params.get_bool(CN_AUTH_ALL_SERVERS))
-    , log_auth_warnings(params.get_bool(CN_LOG_AUTH_WARNINGS))
-    , session_track_trx_state(params.get_bool(CN_SESSION_TRACK_TRX_STATE))
-    , conn_idle_timeout(params.get_duration<std::chrono::seconds>(CN_CONNECTION_TIMEOUT).count())
-    , net_write_timeout(params.get_duration<std::chrono::seconds>(CN_NET_WRITE_TIMEOUT).count())
-    , retain_last_statements(params.get_integer(CN_RETAIN_LAST_STATEMENTS))
-    , connection_keepalive(params.get_duration<std::chrono::seconds>(CN_CONNECTION_KEEPALIVE).count())
-    , strip_db_esc(params.get_bool(CN_STRIP_DB_ESC))
-    , rank(params.get_enum(CN_RANK, rank_values))
-    , prune_sescmd_history(params.get_bool(CN_PRUNE_SESCMD_HISTORY))
-    , disable_sescmd_history(params.get_bool(CN_DISABLE_SESCMD_HISTORY))
-    , max_sescmd_history(params.get_integer(CN_MAX_SESCMD_HISTORY))
-    , idle_session_pooling_time(params.get_integer(CN_IDLE_SESSION_POOL_TIME))
+Service::Config::Config(SERVICE* service)
+    : mxs::config::Configuration(service->name(), &s_spec)
+    , m_service(service)
 {
+    add_native(&Config::m_v, &Values::type, &s_type);
+    add_native(&Config::m_v, &Values::router, &s_router);
+    add_native(&Config::m_v, &Values::servers, &s_servers);
+    add_native(&Config::m_v, &Values::targets, &s_targets);
+    add_native(&Config::m_v, &Values::cluster, &s_cluster);
+    add_native(&Config::m_v, &Values::filters, &s_filters);
+    add_native(&Config::m_v, &Values::user, &s_user);
+    add_native(&Config::m_v, &Values::password, &s_password);
+    add_native(&Config::m_v, &Values::enable_root, &s_enable_root_user);
+    add_native(&Config::m_v, &Values::max_connections, &s_max_connections);
+    add_native(&Config::m_v, &Values::conn_idle_timeout, &s_connection_timeout);
+    add_native(&Config::m_v, &Values::net_write_timeout, &s_net_write_timeout);
+    add_native(&Config::m_v, &Values::users_from_all, &s_auth_all_servers);
+    add_native(&Config::m_v, &Values::strip_db_esc, &s_strip_db_esc);
+    add_native(&Config::m_v, &Values::localhost_match_wildcard_host, &s_localhost_match_wildcard_host);
+    add_native(&Config::m_v, &Values::version_string, &s_version_string);
+    add_native(&Config::m_v, &Values::log_auth_warnings, &s_log_auth_warnings);
+    add_native(&Config::m_v, &Values::session_track_trx_state, &s_session_track_trx_state);
+    add_native(&Config::m_v, &Values::retain_last_statements, &s_retain_last_statements);
+    add_native(&Config::m_v, &Values::session_trace, &s_session_trace);
+    add_native(&Config::m_v, &Values::rank, &s_rank);
+    add_native(&Config::m_v, &Values::connection_keepalive, &s_connection_keepalive);
+    add_native(&Config::m_v, &Values::prune_sescmd_history, &s_prune_sescmd_history);
+    add_native(&Config::m_v, &Values::disable_sescmd_history, &s_disable_sescmd_history);
+    add_native(&Config::m_v, &Values::max_sescmd_history, &s_max_sescmd_history);
+    add_native(&Config::m_v, &Values::idle_session_pooling_time, &s_idle_session_pool_time);
 }
 
 Service::Service(const std::string& name,
                  const std::string& router_name,
                  const mxs::ConfigParameters& params)
     : SERVICE(name, router_name)
-    , m_config(params)
+    , m_config(this)
     , m_params(params)
 {
     const MXS_MODULE* module = get_module(router_name, mxs::ModuleType::ROUTER);
     m_capabilities = module->module_capabilities;
 
-    if (m_config->connection_keepalive)
+    if (config()->connection_keepalive.count())
     {
         // The connection keepalive relies on knowing when a connection is logically idle
         m_capabilities |= RCAP_TYPE_REQUEST_TRACKING;
@@ -1392,10 +1366,10 @@ bool Service::is_basic_parameter(const std::string& name)
 void Service::update_basic_parameters(const mxs::ConfigParameters& params)
 {
     m_params.set_multiple(params);
-    m_config.assign(Config(m_params));
+    m_config.configure(m_params);
 
-    const auto& config = *m_config;
-    if (config.connection_keepalive)
+    const auto& config = *m_config.values();
+    if (config.connection_keepalive.count())
     {
         m_capabilities |= RCAP_TYPE_REQUEST_TRACKING;
     }
@@ -1853,7 +1827,7 @@ void Service::set_start_user_account_manager(SAccountManager user_manager)
     // backend protocol.
     mxb_assert(!m_usermanager);
     m_usermanager = std::move(user_manager);
-    const auto& config = *m_config;
+    const auto& config = *m_config.values();
     m_usermanager->set_credentials(config.user, config.password);
     m_usermanager->set_backends(m_data->servers);
     m_usermanager->set_union_over_backends(config.users_from_all);
@@ -2068,4 +2042,50 @@ bool Service::remove_cluster(mxs::Monitor* monitor)
     }
 
     return rval;
+}
+
+bool SERVICE::Config::post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params)
+{
+    m_values.assign(m_v);
+    return m_service->post_configure();
+}
+
+bool Service::post_configure()
+{
+    const auto& cnf = *m_config.values();
+
+    if (!cnf.servers.empty())
+    {
+        for (const auto& a : cnf.servers)
+        {
+            Server* server = ServerManager::find_by_unique_name(a);
+            mxb_assert(server);
+            m_data->targets.push_back(server);
+        }
+    }
+    else if (!cnf.targets.empty())
+    {
+        for (const auto& a : cnf.targets)
+        {
+            mxs::Target* target = mxs::Target::find(a);
+            mxb_assert(target);
+            m_data->targets.push_back(target);
+        }
+    }
+    else if (!cnf.cluster.empty())
+    {
+        Monitor* pMonitor = MonitorManager::find_monitor(cnf.cluster.c_str());
+        mxb_assert(pMonitor);
+        set_cluster(pMonitor);
+    }
+
+    targets_updated();
+
+    if (!cnf.filters.empty())
+    {
+        MXB_AT_DEBUG(bool ok = ) set_filters(cnf.filters);
+        mxb_assert(ok);
+    }
+
+    return true;
 }

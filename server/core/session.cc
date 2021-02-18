@@ -1384,7 +1384,7 @@ Session::create_backend_connection(Server* server, BackendDCB::Manager* manager,
 void Session::tick(int64_t idle)
 {
     const auto& svc_config = *service->config();
-    if (auto timeout = svc_config.conn_idle_timeout)
+    if (auto timeout = svc_config.conn_idle_timeout.count())
     {
         if (idle > timeout)
         {
@@ -1394,7 +1394,7 @@ void Session::tick(int64_t idle)
         }
     }
 
-    if (auto net_timeout = svc_config.net_write_timeout)
+    if (auto net_timeout = svc_config.net_write_timeout.count())
     {
         if (idle > net_timeout && client_dcb->writeq_len() > 0)
         {
@@ -1404,7 +1404,7 @@ void Session::tick(int64_t idle)
         }
     }
 
-    if (auto interval = svc_config.connection_keepalive)
+    if (auto interval = svc_config.connection_keepalive.count())
     {
         for (const auto& a : backend_connections())
         {
