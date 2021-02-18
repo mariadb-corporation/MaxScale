@@ -1,5 +1,5 @@
 message(STATUS "CMake version: ${CMAKE_VERSION}")
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.10) # TODO change to 3.16 once test deps installer fixed
 
 include(${CMAKE_SOURCE_DIR}/cmake/macros.cmake)
 enable_testing()
