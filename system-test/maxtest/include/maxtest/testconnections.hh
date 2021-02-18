@@ -75,9 +75,12 @@ public:
     int ssl {false}; /**< Use SSL */
     bool backend_ssl {false}; /**< Add SSL-settings to backend server configurations */
 
-    long int m_timeout {999999999}; /**< Seconds until test termination, default never */
-    long int m_log_copy_interval {999999999}; /**< Seconds between log copies, default never */
-    long int m_log_copy_to_go {999999999}; /**< Seconds until next log copy */
+    long int m_timeout {999999999};             /**< Seconds until test termination, default never */
+    long int m_log_copy_interval {999999999};   /**< Seconds between log copies, default never */
+    long int m_log_copy_to_go {999999999};      /**< Seconds until next log copy */
+
+    // The total test timeout, not affected by set_timeout calls
+    std::chrono::seconds m_test_timeout {450};
 
     /** Check whether all nodes are in a valid state */
     static void check_nodes(bool value);
@@ -209,6 +212,12 @@ public:
      * @return 0 if success
      */
     int set_timeout(long int timeout_seconds);
+
+    /**
+     * @brief Set total timeout for the whole test
+     * @param total_timeout The timeout for the test
+     */
+    void set_test_timeout(std::chrono::seconds total_timeout);
 
     /**
      * @brief set_log_copy_interval sets interval for periodic log copying
