@@ -1,4 +1,4 @@
-# MariaDB MaxScale 2.5.8 Release Notes
+# MariaDB MaxScale 2.5.8 Release Notes -- 2021-02-18
 
 Release 2.5.8 is a GA release.
 
