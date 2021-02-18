@@ -27,10 +27,10 @@
  * prefix_User - User name to access backend setup (should have full access to 'test' DB with GRANT OPTION)
  * prefix_Password - Password to access backend setup
  */
-class Mariadb_nodes : public Nodes
+class MariaDBCluster : public Nodes
 {
 public:
-    virtual ~Mariadb_nodes();
+    virtual ~MariaDBCluster();
 
     void set_use_ipv6(bool use_ipv6);
 
@@ -545,8 +545,8 @@ protected:
      * @param cnf_server_prefix Node prefix in MaxScale config file
      * @param network_config Network config contents
      */
-    Mariadb_nodes(SharedData& shared, const std::string& nwconf_prefix,
-                  const std::string& cnf_server_prefix, const std::string& network_config);
+    MariaDBCluster(SharedData& shared, const std::string& nwconf_prefix,
+                   const std::string& cnf_server_prefix, const std::string& network_config);
 
     bool setup();
 

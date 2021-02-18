@@ -260,7 +260,7 @@ void run(XTestConnections& test)
 
 int main(int argc, char* argv[])
 {
-    Mariadb_nodes::require_gtid(true);
+    MariaDBCluster::require_gtid(true);
     XTestConnections test(argc, argv);
 
     try

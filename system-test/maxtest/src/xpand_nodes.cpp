@@ -23,7 +23,7 @@ namespace
 const string type_xpand = "xpand";
 }
 
-int Xpand_nodes::prepare_server(int m)
+int XpandCluster::prepare_server(int m)
 {
     int rv = 1;
     int ec;
@@ -136,7 +136,7 @@ int Xpand_nodes::prepare_server(int m)
 }
 
 
-int Xpand_nodes::start_replication()
+int XpandCluster::start_replication()
 {
     int rv = 1;
 
@@ -162,7 +162,7 @@ int Xpand_nodes::start_replication()
     return rv;
 }
 
-std::string Xpand_nodes::cnf_servers()
+std::string XpandCluster::cnf_servers()
 {
     std::string s;
     for (int i = 0; i < N; i++)
@@ -179,7 +179,7 @@ std::string Xpand_nodes::cnf_servers()
     return s;
 }
 
-int Xpand_nodes::check_replication()
+int XpandCluster::check_replication()
 {
     int res = 0;
     if (connect() == 0)
@@ -202,9 +202,9 @@ int Xpand_nodes::check_replication()
     return res;
 }
 
-std::string Xpand_nodes::block_command(int node) const
+std::string XpandCluster::block_command(int node) const
 {
-    std::string command = Mariadb_nodes::block_command(node);
+    std::string command = MariaDBCluster::block_command(node);
 
     // Block health-check port as well.
     command += ";";
@@ -215,9 +215,9 @@ std::string Xpand_nodes::block_command(int node) const
     return command;
 }
 
-std::string Xpand_nodes::unblock_command(int node) const
+std::string XpandCluster::unblock_command(int node) const
 {
-    std::string command = Mariadb_nodes::unblock_command(node);
+    std::string command = MariaDBCluster::unblock_command(node);
 
     // Unblock health-check port as well.
     command += ";";
@@ -228,12 +228,12 @@ std::string Xpand_nodes::unblock_command(int node) const
     return command;
 }
 
-bool Xpand_nodes::setup()
+bool XpandCluster::setup()
 {
-    return Mariadb_nodes::setup();
+    return MariaDBCluster::setup();
 }
 
-const std::string& Xpand_nodes::type_string() const
+const std::string& XpandCluster::type_string() const
 {
     return type_xpand;
 }

@@ -11,7 +11,7 @@
  * Public License.
  */
 
-#include <maxtest/mariadb_cluster.hh>
+#include <maxtest/replication_cluster.hh>
 
 using std::string;
 namespace
@@ -19,17 +19,17 @@ namespace
 const string type_mariadb = "mariadb";
 }
 
-MariaDBCluster::MariaDBCluster(SharedData& shared, const string& network_config)
-    : Mariadb_nodes(shared, "node", "server", network_config)
+ReplicationCluster::ReplicationCluster(SharedData& shared, const string& network_config)
+    : MariaDBCluster(shared, "node", "server", network_config)
 {
 }
 
-bool MariaDBCluster::setup()
+bool ReplicationCluster::setup()
 {
-    return Mariadb_nodes::setup();
+    return MariaDBCluster::setup();
 }
 
-const std::string& MariaDBCluster::type_string() const
+const std::string& ReplicationCluster::type_string() const
 {
     return type_mariadb;
 }

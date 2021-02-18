@@ -3,7 +3,7 @@
 /**
  *  Reads COM_SELECT and COM_INSERT variables from all nodes and stores into 'selects' and 'inserts'
  */
-int get_global_status_allnodes(long int* selects, long int* inserts, Mariadb_nodes* nodes, int silent)
+int get_global_status_allnodes(long int* selects, long int* inserts, MariaDBCluster* nodes, int silent)
 {
     int i;
     MYSQL_RES* res;

@@ -421,7 +421,7 @@ bool check_server_status(TestConnections& test, int id)
 {
     bool is_master = false;
 
-    Mariadb_nodes* pRepl = test.repl;
+    MariaDBCluster* pRepl = test.repl;
 
     string server = string("server") + std::to_string(id);
 
@@ -589,7 +589,7 @@ void run(TestConnections& test)
 
 int main(int argc, char* argv[])
 {
-    Mariadb_nodes::require_gtid(true);
+    MariaDBCluster::require_gtid(true);
     TestConnections test(argc, argv);
 
     run(test);

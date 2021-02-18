@@ -88,7 +88,7 @@ bool set_read_only_on_slaves(TestConnections& test, bool set)
 {
     test.tprintf("%s read only on slaves.", set ? "Setting" : "Removing");
 
-    Mariadb_nodes& ms = *test.repl;
+    MariaDBCluster& ms = *test.repl;
 
     for (int i = 0; i < ms.N; ++i)
     {

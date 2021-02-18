@@ -13,7 +13,6 @@ add_library(maxtest SHARED
         json.cc
         log.cc
         mariadb_func.cc
-        mariadb_cluster.cc
         mariadb_connector.cc
         mariadb_nodes.cc
         maxinfo_func.cc
@@ -21,6 +20,7 @@ add_library(maxtest SHARED
         maxscales.cc
         nodes.cc
         rds_vpc.cc
+        replication_cluster.cc
         sql_t1.cc
         tcp_connection.cc
         testconnections.cc

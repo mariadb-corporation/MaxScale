@@ -23,12 +23,12 @@ namespace
 const string type_galera = "galera";
 }
 
-bool Galera_nodes::setup()
+bool GaleraCluster::setup()
 {
-    return Mariadb_nodes::setup();
+    return MariaDBCluster::setup();
 }
 
-int Galera_nodes::start_galera()
+int GaleraCluster::start_galera()
 {
     bool old_verbose = verbose();
     int local_result = 0;
@@ -98,7 +98,7 @@ int Galera_nodes::start_galera()
     return local_result;
 }
 
-int Galera_nodes::check_galera()
+int GaleraCluster::check_galera()
 {
     int res = 1;
 
@@ -139,14 +139,14 @@ int Galera_nodes::check_galera()
     return res;
 }
 
-std::string Galera_nodes::get_config_name(int node)
+std::string GaleraCluster::get_config_name(int node)
 {
     std::stringstream ss;
     ss << "galera_server" << node + 1 << ".cnf";
     return ss.str();
 }
 
-const std::string& Galera_nodes::type_string() const
+const std::string& GaleraCluster::type_string() const
 {
     return type_galera;
 }

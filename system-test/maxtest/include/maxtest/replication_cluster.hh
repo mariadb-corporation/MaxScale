@@ -18,10 +18,10 @@
 /**
  * Standard MariaDB master-slave replication cluster.
  */
-class MariaDBCluster : public Mariadb_nodes
+class ReplicationCluster : public MariaDBCluster
 {
 public:
-    MariaDBCluster(SharedData& shared, const std::string& network_config);
+    ReplicationCluster(SharedData& shared, const std::string& network_config);
 
     bool setup();
 

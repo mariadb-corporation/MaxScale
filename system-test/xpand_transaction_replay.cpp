@@ -50,7 +50,7 @@ void collect_information(TestConnections& test)
 
         if (node_by_address.count(server.address) == 0)
         {
-            Xpand_nodes* pXpand = test.xpand;
+            XpandCluster* pXpand = test.xpand;
 
             for (auto i = 0; i < pXpand->N; ++i)
             {
@@ -120,7 +120,7 @@ bool stop_server(TestConnections& test, const std::string& name, int node, int t
 {
     bool stopped = false;
 
-    Xpand_nodes* pXpand = test.xpand;
+    XpandCluster* pXpand = test.xpand;
 
     auto rv = pXpand->ssh_output("service clustrix stop", node, true);
     test.expect(rv.rc == 0, "Could not stop Xpand on node %d.", node);
@@ -141,7 +141,7 @@ bool start_server(TestConnections& test, const std::string& name, int node, int 
 {
     bool started = false;
 
-    Xpand_nodes* pXpand = test.xpand;
+    XpandCluster* pXpand = test.xpand;
 
     auto rv = pXpand->ssh_output("service clustrix start", node, true);
     test.expect(rv.rc == 0, "Could not start Xpand on node %d.", node);

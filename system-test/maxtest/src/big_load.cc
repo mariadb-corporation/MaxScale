@@ -5,7 +5,7 @@
 #include <maxtest/sql_t1.hh>
 #include <maxtest/get_com_select_insert.hh>
 #include <maxtest/galera_cluster.hh>
-#include <maxtest/mariadb_cluster.hh>
+#include <maxtest/replication_cluster.hh>
 
 void load(long int* new_inserts,
           long int* new_selects,
@@ -21,7 +21,7 @@ void load(long int* new_inserts,
 {
     char sql[1000000];
     thread_data data;
-    Mariadb_nodes* nodes;
+    MariaDBCluster* nodes;
     if (galera)
     {
         nodes = Test->galera;

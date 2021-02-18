@@ -23,12 +23,12 @@
 #include <maxtest/nodes.hh>
 
 
-class Xpand_nodes : public Mariadb_nodes
+class XpandCluster : public MariaDBCluster
 {
 public:
 
-    Xpand_nodes(SharedData& shared, std::string network_config)
-        : Mariadb_nodes(shared, "xpand", "xpand_server", network_config)
+    XpandCluster(SharedData& shared, std::string network_config)
+        : MariaDBCluster(shared, "xpand", "xpand_server", network_config)
     {
     }
 

@@ -8,7 +8,7 @@
 
 int main(int argc, char** argv)
 {
-    Mariadb_nodes::require_gtid(true);
+    MariaDBCluster::require_gtid(true);
     TestConnections::require_repl_version("10.3.8");
     TestConnections test(argc, argv);
     test.repl->execute_query_all_nodes("SET GLOBAL session_track_system_variables='last_gtid'");

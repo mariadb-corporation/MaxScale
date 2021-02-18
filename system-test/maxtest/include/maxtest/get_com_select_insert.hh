@@ -1,6 +1,6 @@
 #pragma once
 
-class Mariadb_nodes;
+class MariaDBCluster;
 
 /**
  * @brief get_global_status_allnodes Reads COM_SELECT and COM_INSERT variables from all nodes and stores into
@@ -11,7 +11,7 @@ class Mariadb_nodes;
  * @param silent if 1 do not print anything
  * @return 0 in case of success
  */
-int get_global_status_allnodes(long int* selects, long int* inserts, Mariadb_nodes* nodes, int silent);
+int get_global_status_allnodes(long int* selects, long int* inserts, MariaDBCluster* nodes, int silent);
 
 /**
  * @brief print_delta Prints difference in COM_SELECT and COM_INSERT

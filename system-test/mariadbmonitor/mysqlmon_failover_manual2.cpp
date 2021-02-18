@@ -55,7 +55,7 @@ void try_query(TestConnections& test, const std::string& query)
     try_query(test, query.c_str());
 }
 
-void stop_node(Mariadb_nodes& nodes, int node)
+void stop_node(MariaDBCluster& nodes, int node)
 {
     if (nodes.stop_node(node) != 0)
     {
@@ -160,7 +160,7 @@ void run(TestConnections& test)
 
 int main(int argc, char** argv)
 {
-    Mariadb_nodes::require_gtid(true);
+    MariaDBCluster::require_gtid(true);
     TestConnections test(argc, argv);
 
     try

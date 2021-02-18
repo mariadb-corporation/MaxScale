@@ -15,12 +15,12 @@
 
 #include <maxtest/mariadb_nodes.hh>
 
-class Galera_nodes : public Mariadb_nodes
+class GaleraCluster : public MariaDBCluster
 {
 public:
 
-    Galera_nodes(SharedData& shared, const std::string& network_config)
-        : Mariadb_nodes(shared, "galera", "gserver", network_config)
+    GaleraCluster(SharedData& shared, const std::string& network_config)
+        : MariaDBCluster(shared, "galera", "gserver", network_config)
     {
     }
 

@@ -10,14 +10,14 @@
 
 #include <maxbase/ccdefs.hh>
 #include <maxtest/xpand_nodes.hh>
-#include <maxtest/mariadb_cluster.hh>
+#include <maxtest/replication_cluster.hh>
 #include <maxtest/maxscales.hh>
 #include <maxtest/test_dir.hh>
 
 typedef std::set<std::string> StringSet;
 class TestLogger;
-class MariaDBCluster;
-class Galera_nodes;
+class ReplicationCluster;
+class GaleraCluster;
 
 /**
  * Main system test class
@@ -62,12 +62,12 @@ public:
      * @param prefix file name prefix
      * @return 0 if success
      */
-    int copy_mariadb_logs(Mariadb_nodes* nrepl, const char* prefix, std::vector<std::thread>& threads);
+    int copy_mariadb_logs(MariaDBCluster* nrepl, const char* prefix, std::vector<std::thread>& threads);
 
-    MariaDBCluster* repl {nullptr};     /**< Master-Slave replication cluster */
-    Galera_nodes*   galera {nullptr};   /**< Galera cluster */
-    Xpand_nodes*    xpand {nullptr};    /**< Xpand cluster */
-    Maxscales*      maxscales {nullptr}; /**< MaxScale nodes */
+    ReplicationCluster* repl {nullptr};     /**< Master-Slave replication cluster */
+    GaleraCluster*      galera {nullptr};   /**< Galera cluster */
+    XpandCluster*       xpand {nullptr};    /**< Xpand cluster */
+    Maxscales*          maxscales {nullptr};/**< MaxScale nodes */
 
     int global_result {0}; /**< Result of test, 0 if PASSED */
     bool smoke {true}; /**< Run tests in quick mode. Only affects some long tests. */
@@ -400,7 +400,7 @@ public:
     bool verbose() const;
 
 private:
-    void copy_one_mariadb_log(Mariadb_nodes* nrepl, int i, std::string filename);
+    void copy_one_mariadb_log(MariaDBCluster* nrepl, int i, std::string filename);
     void copy_one_maxscale_log(int i, double timestamp);
 
     void set_template_and_labels();

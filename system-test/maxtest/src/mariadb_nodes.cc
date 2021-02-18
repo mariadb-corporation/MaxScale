@@ -55,13 +55,13 @@ const char create_repl_user[] =
 const string type_columnstore = "columnstore";
 }
 
-void Mariadb_nodes::require_gtid(bool value)
+void MariaDBCluster::require_gtid(bool value)
 {
     g_require_gtid = value;
 }
 
-Mariadb_nodes::Mariadb_nodes(SharedData& shared, const std::string& nwconf_prefix,
-                             const std::string& cnf_server_prefix, const std::string& network_config)
+MariaDBCluster::MariaDBCluster(SharedData& shared, const std::string& nwconf_prefix,
+                               const std::string& cnf_server_prefix, const std::string& network_config)
     : Nodes(nwconf_prefix, shared, network_config)
     , no_set_pos(false)
     , v51(false)
@@ -72,7 +72,7 @@ Mariadb_nodes::Mariadb_nodes(SharedData& shared, const std::string& nwconf_prefi
     m_test_dir = test_dir;
 }
 
-bool Mariadb_nodes::setup()
+bool MariaDBCluster::setup()
 {
     read_env();
     Nodes::init_ssh_masters();
@@ -83,7 +83,7 @@ bool Mariadb_nodes::setup()
     return true;
 }
 
-Mariadb_nodes::~Mariadb_nodes()
+MariaDBCluster::~MariaDBCluster()
 {
     for (int i = 0; i < N; i++)
     {
@@ -96,7 +96,7 @@ Mariadb_nodes::~Mariadb_nodes()
     close_connections();
 }
 
-int Mariadb_nodes::connect(int i, const std::string& db)
+int MariaDBCluster::connect(int i, const std::string& db)
 {
     if (nodes[i] == NULL || mysql_ping(nodes[i]) != 0)
     {
@@ -117,7 +117,7 @@ int Mariadb_nodes::connect(int i, const std::string& db)
     }
 }
 
-int Mariadb_nodes::connect(const std::string& db)
+int MariaDBCluster::connect(const std::string& db)
 {
     int res = 0;
 
@@ -129,7 +129,7 @@ int Mariadb_nodes::connect(const std::string& db)
     return res;
 }
 
-bool Mariadb_nodes::robust_connect(int n)
+bool MariaDBCluster::robust_connect(int n)
 {
     bool rval = false;
 
@@ -150,7 +150,7 @@ bool Mariadb_nodes::robust_connect(int n)
     return rval;
 }
 
-void Mariadb_nodes::close_connections()
+void MariaDBCluster::close_connections()
 {
     for (int i = 0; i < N; i++)
     {
@@ -162,7 +162,7 @@ void Mariadb_nodes::close_connections()
     }
 }
 
-void Mariadb_nodes::read_env()
+void MariaDBCluster::read_env()
 {
     char env_name[64];
 
@@ -216,7 +216,7 @@ void Mariadb_nodes::read_env()
     }
 }
 
-void Mariadb_nodes::print_env()
+void MariaDBCluster::print_env()
 {
     auto prefixc = prefix().c_str();
     for (int i = 0; i < N; i++)
@@ -228,7 +228,7 @@ void Mariadb_nodes::print_env()
     printf("%s Password %s\n", prefixc, password.c_str());
 }
 
-int Mariadb_nodes::find_master()
+int MariaDBCluster::find_master()
 {
     char str[255];
     char master_IP[256];
@@ -265,7 +265,7 @@ int Mariadb_nodes::find_master()
     return master_node;
 }
 
-void Mariadb_nodes::change_master(int NewMaster, int OldMaster)
+void MariaDBCluster::change_master(int NewMaster, int OldMaster)
 {
     for (int i = 0; i < N; i++)
     {
@@ -298,12 +298,12 @@ void Mariadb_nodes::change_master(int NewMaster, int OldMaster)
     }
 }
 
-int Mariadb_nodes::stop_node(int node)
+int MariaDBCluster::stop_node(int node)
 {
     return ssh_node(node, stop_db_command[node], true);
 }
 
-int Mariadb_nodes::start_node(int node, const char* param)
+int MariaDBCluster::start_node(int node, const char* param)
 {
     char cmd[PATH_MAX + 1024];
     if (v51)
@@ -317,7 +317,7 @@ int Mariadb_nodes::start_node(int node, const char* param)
     return ssh_node(node, cmd, true);
 }
 
-int Mariadb_nodes::stop_nodes()
+int MariaDBCluster::stop_nodes()
 {
     std::vector<std::thread> workers;
     int local_result = 0;
@@ -338,7 +338,7 @@ int Mariadb_nodes::stop_nodes()
     return local_result;
 }
 
-int Mariadb_nodes::stop_slaves()
+int MariaDBCluster::stop_slaves()
 {
     int i;
     int global_result = 0;
@@ -353,12 +353,12 @@ int Mariadb_nodes::stop_slaves()
     return global_result;
 }
 
-int Mariadb_nodes::cleanup_db_node(int node)
+int MariaDBCluster::cleanup_db_node(int node)
 {
     return ssh_node(node, cleanup_db_command[node], true);
 }
 
-int Mariadb_nodes::cleanup_db_nodes()
+int MariaDBCluster::cleanup_db_nodes()
 {
     int i;
     int local_result = 0;
@@ -373,7 +373,7 @@ int Mariadb_nodes::cleanup_db_nodes()
     return local_result;
 }
 
-void Mariadb_nodes::create_users(int node)
+void MariaDBCluster::create_users(int node)
 {
     // Create users for replication as well as the users that are used by the tests
     string str = mxb::string_printf("%s/create_user.sh", m_test_dir.c_str());
@@ -392,7 +392,7 @@ void Mariadb_nodes::create_users(int node)
                type_string().c_str());
 }
 
-int Mariadb_nodes::create_users()
+int MariaDBCluster::create_users()
 {
     for (int i = 0; i < N; i++)
     {
@@ -408,7 +408,7 @@ int Mariadb_nodes::create_users()
     return 0;
 }
 
-int Mariadb_nodes::start_replication()
+int MariaDBCluster::start_replication()
 {
     int local_result = 0;
 
@@ -459,7 +459,7 @@ int Mariadb_nodes::start_replication()
     return local_result;
 }
 
-int Mariadb_nodes::clean_iptables(int node)
+int MariaDBCluster::clean_iptables(int node)
 {
     return ssh_node_f(node,
                       true,
@@ -471,7 +471,7 @@ int Mariadb_nodes::clean_iptables(int node)
 }
 
 
-void Mariadb_nodes::block_node_from_node(int src, int dest)
+void MariaDBCluster::block_node_from_node(int src, int dest)
 {
     std::ostringstream ss;
 
@@ -480,7 +480,7 @@ void Mariadb_nodes::block_node_from_node(int src, int dest)
     ssh_node_f(src, true, "%s", ss.str().c_str());
 }
 
-void Mariadb_nodes::unblock_node_from_node(int src, int dest)
+void MariaDBCluster::unblock_node_from_node(int src, int dest)
 {
     std::ostringstream ss;
 
@@ -489,7 +489,7 @@ void Mariadb_nodes::unblock_node_from_node(int src, int dest)
     ssh_node_f(src, true, "%s", ss.str().c_str());
 }
 
-std::string Mariadb_nodes::block_command(int node) const
+std::string MariaDBCluster::block_command(int node) const
 {
     const char FORMAT[] =
         "iptables -I INPUT -p tcp --dport %d -j REJECT;"
@@ -502,7 +502,7 @@ std::string Mariadb_nodes::block_command(int node) const
     return command;
 }
 
-std::string Mariadb_nodes::unblock_command(int node) const
+std::string MariaDBCluster::unblock_command(int node) const
 {
     const char FORMAT[] =
         "iptables -I INPUT -p tcp --dport %d -j ACCEPT;"
@@ -515,7 +515,7 @@ std::string Mariadb_nodes::unblock_command(int node) const
     return command;
 }
 
-int Mariadb_nodes::block_node(int node)
+int MariaDBCluster::block_node(int node)
 {
     std::string command = block_command(node);
 
@@ -526,7 +526,7 @@ int Mariadb_nodes::block_node(int node)
     return local_result;
 }
 
-int Mariadb_nodes::unblock_node(int node)
+int MariaDBCluster::unblock_node(int node)
 {
     std::string command = unblock_command(node);
 
@@ -538,7 +538,7 @@ int Mariadb_nodes::unblock_node(int node)
     return local_result;
 }
 
-int Mariadb_nodes::block_all_nodes()
+int MariaDBCluster::block_all_nodes()
 {
     int rval = 0;
     std::vector<std::thread> threads;
@@ -559,7 +559,7 @@ int Mariadb_nodes::block_all_nodes()
 }
 
 
-int Mariadb_nodes::unblock_all_nodes()
+int MariaDBCluster::unblock_all_nodes()
 {
     int rval = 0;
     std::vector<std::thread> threads;
@@ -593,7 +593,7 @@ bool is_readonly(MYSQL* conn)
     return rval;
 }
 
-bool Mariadb_nodes::check_master_node(MYSQL* conn)
+bool MariaDBCluster::check_master_node(MYSQL* conn)
 {
     bool rval = true;
 
@@ -633,7 +633,7 @@ bool Mariadb_nodes::check_master_node(MYSQL* conn)
  * @param node Node index
  * @return false if requested field is 'Yes'
  */
-bool Mariadb_nodes::bad_slave_thread_status(MYSQL* conn, const char* field, int node)
+bool MariaDBCluster::bad_slave_thread_status(MYSQL* conn, const char* field, int node)
 {
     char str[1024] = "";
     bool rval = false;
@@ -737,7 +737,7 @@ static bool multi_source_replication(MYSQL* conn, int node)
     return rval;
 }
 
-int Mariadb_nodes::check_replication()
+int MariaDBCluster::check_replication()
 {
     int master = 0;
     int res = 0;
@@ -811,7 +811,7 @@ int Mariadb_nodes::check_replication()
     return res;
 }
 
-bool Mariadb_nodes::fix_replication()
+bool MariaDBCluster::fix_replication()
 {
     bool rval = true;
     int attempts = 25;
@@ -853,8 +853,8 @@ bool Mariadb_nodes::fix_replication()
     return rval;
 }
 
-int Mariadb_nodes::set_slave(MYSQL* conn, const char* master_host, int master_port,
-                             const char* log_file, const char* log_pos)
+int MariaDBCluster::set_slave(MYSQL* conn, const char* master_host, int master_port,
+                              const char* log_file, const char* log_pos)
 {
     char str[1024];
 
@@ -871,7 +871,7 @@ int Mariadb_nodes::set_slave(MYSQL* conn, const char* master_host, int master_po
     return execute_query(conn, "%s", str);
 }
 
-int Mariadb_nodes::set_repl_user()
+int MariaDBCluster::set_repl_user()
 {
     int global_result = 0;
     global_result += connect();
@@ -883,7 +883,7 @@ int Mariadb_nodes::set_repl_user()
     return global_result;
 }
 
-int Mariadb_nodes::get_server_id(int index)
+int MariaDBCluster::get_server_id(int index)
 {
     int id = -1;
     char str[1024];
@@ -900,14 +900,14 @@ int Mariadb_nodes::get_server_id(int index)
     return id;
 }
 
-std::string Mariadb_nodes::get_server_id_str(int index)
+std::string MariaDBCluster::get_server_id_str(int index)
 {
     std::stringstream ss;
     ss << get_server_id(index);
     return ss.str();
 }
 
-std::vector<std::string> Mariadb_nodes::get_all_server_ids_str()
+std::vector<std::string> MariaDBCluster::get_all_server_ids_str()
 {
     std::vector<std::string> rval;
 
@@ -919,7 +919,7 @@ std::vector<std::string> Mariadb_nodes::get_all_server_ids_str()
     return rval;
 }
 
-std::vector<int> Mariadb_nodes::get_all_server_ids()
+std::vector<int> MariaDBCluster::get_all_server_ids()
 {
     std::vector<int> rval;
 
@@ -991,7 +991,7 @@ bool do_flush_hosts(MYSQL* conn)
     return local_result == 0;
 }
 
-int Mariadb_nodes::flush_hosts()
+int MariaDBCluster::flush_hosts()
 {
     if (this->nodes[0] == NULL && (this->connect() != 0))
     {
@@ -1020,7 +1020,7 @@ int Mariadb_nodes::flush_hosts()
     return all_ok;
 }
 
-int Mariadb_nodes::execute_query_all_nodes(const char* sql)
+int MariaDBCluster::execute_query_all_nodes(const char* sql)
 {
     int local_result = 0;
     connect();
@@ -1032,7 +1032,7 @@ int Mariadb_nodes::execute_query_all_nodes(const char* sql)
     return local_result;
 }
 
-int Mariadb_nodes::get_version(int i)
+int MariaDBCluster::get_version(int i)
 {
     int local_result = 0;
     if (find_field(nodes[i], "SELECT @@version", "@@version", version[i]))
@@ -1074,7 +1074,7 @@ int Mariadb_nodes::get_version(int i)
     return local_result;
 }
 
-int Mariadb_nodes::get_versions()
+int MariaDBCluster::get_versions()
 {
     int local_result = 0;
 
@@ -1096,7 +1096,7 @@ int Mariadb_nodes::get_versions()
     return local_result;
 }
 
-std::string Mariadb_nodes::get_lowest_version()
+std::string MariaDBCluster::get_lowest_version()
 {
     std::string rval;
     get_versions();
@@ -1117,7 +1117,7 @@ std::string Mariadb_nodes::get_lowest_version()
     return rval;
 }
 
-int Mariadb_nodes::truncate_mariadb_logs()
+int MariaDBCluster::truncate_mariadb_logs()
 {
     std::vector<std::future<int>> results;
 
@@ -1168,7 +1168,7 @@ static void wait_until_pos(MYSQL* mysql, int filenum, int pos)
     while (slave_filenum < filenum || slave_pos < pos);
 }
 
-void Mariadb_nodes::sync_slaves(int node)
+void MariaDBCluster::sync_slaves(int node)
 {
     if (this->nodes[node] == NULL)
     {
@@ -1205,7 +1205,7 @@ void Mariadb_nodes::sync_slaves(int node)
     }
 }
 
-void Mariadb_nodes::close_active_connections()
+void MariaDBCluster::close_active_connections()
 {
     if (this->nodes[0] == NULL)
     {
@@ -1238,37 +1238,37 @@ void Mariadb_nodes::close_active_connections()
 }
 
 
-void Mariadb_nodes::stash_server_settings(int node)
+void MariaDBCluster::stash_server_settings(int node)
 {
     ssh_node(node, "sudo rm -rf /etc/my.cnf.d.backup/", true);
     ssh_node(node, "sudo mkdir /etc/my.cnf.d.backup/", true);
     ssh_node(node, "sudo cp -r /etc/my.cnf.d/* /etc/my.cnf.d.backup/", true);
 }
 
-void Mariadb_nodes::restore_server_settings(int node)
+void MariaDBCluster::restore_server_settings(int node)
 {
     ssh_node(node, "sudo mv -f /etc/my.cnf.d.backup/* /etc/my.cnf.d/", true);
 }
 
-void Mariadb_nodes::disable_server_setting(int node, const char* setting)
+void MariaDBCluster::disable_server_setting(int node, const char* setting)
 {
     ssh_node_f(node, true, "sudo sed -i 's/%s/#%s/' /etc/my.cnf.d/*", setting, setting);
 }
 
-void Mariadb_nodes::add_server_setting(int node, const char* setting)
+void MariaDBCluster::add_server_setting(int node, const char* setting)
 {
     ssh_node_f(node, true, "sudo sed -i '$a [server]' /etc/my.cnf.d/*server*.cnf");
     ssh_node_f(node, true, "sudo sed -i '$a %s' /etc/my.cnf.d/*server*.cnf", setting);
 }
 
-std::string Mariadb_nodes::get_config_name(int node)
+std::string MariaDBCluster::get_config_name(int node)
 {
     std::stringstream ss;
     ss << "server" << node + 1 << ".cnf";
     return ss.str();
 }
 
-void Mariadb_nodes::reset_server_settings(int node)
+void MariaDBCluster::reset_server_settings(int node)
 {
     std::string cnfdir = m_test_dir + "/mdbci/cnf/";
     std::string cnf = get_config_name(node);
@@ -1289,7 +1289,7 @@ void Mariadb_nodes::reset_server_settings(int node)
     ssh_node_f(node, true, "chown mysql:mysql -R /etc/ssl-cert");
 }
 
-void Mariadb_nodes::reset_server_settings()
+void MariaDBCluster::reset_server_settings()
 {
     for (int node = 0; node < N; node++)
     {
@@ -1321,7 +1321,7 @@ string extract_version_from_string(const string& version)
     return version.substr(pos1, pos2 - pos1);
 }
 
-int Mariadb_nodes::prepare_server(int i)
+int MariaDBCluster::prepare_server(int i)
 {
     cleanup_db_node(i);
     reset_server_settings(i);
@@ -1377,7 +1377,7 @@ int Mariadb_nodes::prepare_server(int i)
     return rval;
 }
 
-int Mariadb_nodes::prepare_servers()
+int MariaDBCluster::prepare_servers()
 {
     int rval = 0;
     std::vector<std::thread> threads;
@@ -1397,12 +1397,12 @@ int Mariadb_nodes::prepare_servers()
     return rval;
 }
 
-void Mariadb_nodes::replicate_from(int slave, int master, const char* type)
+void MariaDBCluster::replicate_from(int slave, int master, const char* type)
 {
     replicate_from(slave, ip_private(master), port[master], type);
 }
 
-void Mariadb_nodes::replicate_from(int slave, const std::string& host, uint16_t port, const char* type)
+void MariaDBCluster::replicate_from(int slave, const std::string& host, uint16_t port, const char* type)
 {
     std::stringstream change_master;
 
@@ -1422,7 +1422,7 @@ void Mariadb_nodes::replicate_from(int slave, const std::string& host, uint16_t 
     execute_query(nodes[slave], "START SLAVE;");
 }
 
-void Mariadb_nodes::limit_nodes(int new_N)
+void MariaDBCluster::limit_nodes(int new_N)
 {
     if (N > new_N)
     {
@@ -1433,7 +1433,7 @@ void Mariadb_nodes::limit_nodes(int new_N)
     }
 }
 
-std::string Mariadb_nodes::cnf_servers()
+std::string MariaDBCluster::cnf_servers()
 {
     std::string s;
     for (int i = 0; i < N; i++)
@@ -1450,7 +1450,7 @@ std::string Mariadb_nodes::cnf_servers()
     return s;
 }
 
-std::string Mariadb_nodes::cnf_servers_line()
+std::string MariaDBCluster::cnf_servers_line()
 {
     std::string s = cnf_server_name + std::to_string(1);
     for (int i = 1; i < N; i++)
@@ -1462,47 +1462,47 @@ std::string Mariadb_nodes::cnf_servers_line()
     return s;
 }
 
-const char* Mariadb_nodes::ip(int i) const
+const char* MariaDBCluster::ip(int i) const
 {
     return m_use_ipv6 ? Nodes::ip6(i) : Nodes::ip4(i);
 }
 
-void Mariadb_nodes::set_use_ipv6(bool use_ipv6)
+void MariaDBCluster::set_use_ipv6(bool use_ipv6)
 {
     m_use_ipv6 = use_ipv6;
 }
 
-const char* Mariadb_nodes::ip_private(int i) const
+const char* MariaDBCluster::ip_private(int i) const
 {
     return Nodes::ip_private(i);
 }
 
-const char* Mariadb_nodes::ip6(int i) const
+const char* MariaDBCluster::ip6(int i) const
 {
     return Nodes::ip6(i);
 }
 
-const char* Mariadb_nodes::access_homedir(int i) const
+const char* MariaDBCluster::access_homedir(int i) const
 {
     return Nodes::access_homedir(i);
 }
 
-const char* Mariadb_nodes::access_sudo(int i) const
+const char* MariaDBCluster::access_sudo(int i) const
 {
     return Nodes::access_sudo(i);
 }
 
-const string& Mariadb_nodes::prefix() const
+const string& MariaDBCluster::prefix() const
 {
     return Nodes::prefix();
 }
 
-const char* Mariadb_nodes::ip4(int i) const
+const char* MariaDBCluster::ip4(int i) const
 {
     return Nodes::ip4(i);
 }
 
-void Mariadb_nodes::disable_ssl()
+void MariaDBCluster::disable_ssl()
 {
     for (int i = 0; i < N; i++)
     {
@@ -1512,7 +1512,7 @@ void Mariadb_nodes::disable_ssl()
     }
 }
 
-bool Mariadb_nodes::check_ssl(int node)
+bool MariaDBCluster::check_ssl(int node)
 {
     bool ok = true;
     auto conn = get_connection(node);
@@ -1562,7 +1562,7 @@ bool Mariadb_nodes::check_ssl(int node)
     return ok;
 }
 
-bool Mariadb_nodes::using_ipv6() const
+bool MariaDBCluster::using_ipv6() const
 {
     return m_use_ipv6;
 }
