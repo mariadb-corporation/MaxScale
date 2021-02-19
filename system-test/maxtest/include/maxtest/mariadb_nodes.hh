@@ -552,6 +552,12 @@ protected:
 
     bool setup();
 
+    /**
+     * @returns SELECT that returns anonymous users in such a way that each returned row
+     *          can directly be given as argument to DROP USER.
+     */
+    virtual std::string anonymous_users_query() const;
+
     std::string m_test_dir; /**< path to test application */
 
 private:

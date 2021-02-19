@@ -292,3 +292,8 @@ const std::string& XpandCluster::type_string() const
 {
     return type_xpand;
 }
+
+std::string XpandCluster::anonymous_users_query() const
+{
+    return "SELECT CONCAT('\\'', user, '\\'@\\'', host, '\\'') FROM system.users WHERE user = ''";
+}
