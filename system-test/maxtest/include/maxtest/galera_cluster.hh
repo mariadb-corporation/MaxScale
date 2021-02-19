@@ -19,7 +19,7 @@ class GaleraCluster : public MariaDBCluster
 {
 public:
 
-    GaleraCluster(SharedData& shared, const std::string& network_config)
+    GaleraCluster(SharedData* shared, const std::string& network_config)
         : MariaDBCluster(shared, "galera", "gserver", network_config)
     {
     }

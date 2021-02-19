@@ -147,6 +147,7 @@ void TestConnections::restart_galera(bool value)
 }
 
 TestConnections::TestConnections(int argc, char* argv[])
+    : global_result(m_shared.log.m_n_fails)
 {
     std::ios::sync_with_stdio(true);
     signal_set(SIGSEGV, sigfatal_handler);
@@ -157,7 +158,6 @@ TestConnections::TestConnections(int argc, char* argv[])
     signal_set(SIGBUS, sigfatal_handler);
 #endif
     gettimeofday(&m_start_time, NULL);
-    m_logger = std::make_unique<TestLogger>(&global_result);
     read_env();
 
     if (!read_cmdline_options(argc, argv))
@@ -279,7 +279,7 @@ TestConnections::TestConnections(int argc, char* argv[])
     m_log_copy_thread = std::thread(&TestConnections::log_copy_thread, this);
     tprintf("Starting test");
     gettimeofday(&m_start_time, NULL);
-    m_logger->reset_timer();
+    logger().reset_timer();
 }
 
 TestConnections::~TestConnections()
@@ -287,7 +287,7 @@ TestConnections::~TestConnections()
     if (global_result > 0)
     {
         printf("\nTEST FAILURES:\n");
-        printf("%s\n", m_logger->all_errors_to_string().c_str());
+        printf("%s\n", logger().all_errors_to_string().c_str());
     }
 
     // stop all Maxscales to detect crashes on exit
@@ -346,7 +346,7 @@ void TestConnections::add_result(bool result, const char* format, ...)
     {
         va_list argp;
         va_start(argp, format);
-        m_logger->add_failure_v(format, argp);
+        logger().add_failure_v(format, argp);
         va_end(argp);
     }
 }
@@ -355,7 +355,7 @@ bool TestConnections::expect(bool result, const char* format, ...)
 {
     va_list argp;
     va_start(argp, format);
-    m_logger->expect_v(result, format, argp);
+    logger().expect_v(result, format, argp);
     va_end(argp);
     return result;
 }
@@ -364,7 +364,7 @@ void TestConnections::add_failure(const char* format, ...)
 {
     va_list argp;
     va_start(argp, format);
-    m_logger->add_failure_v(format, argp);
+    logger().add_failure_v(format, argp);
     va_end(argp);
 }
 
@@ -1219,7 +1219,7 @@ void TestConnections::tprintf(const char* format, ...)
 {
     va_list argp;
     va_start(argp, format);
-    m_logger->log_msg(format, argp);
+    logger().log_msg(format, argp);
     va_end(argp);
 }
 
@@ -1701,7 +1701,7 @@ mxt::MaxScale& TestConnections::maxscale()
 
 TestLogger& TestConnections::logger()
 {
-    return *m_logger;
+    return m_shared.log;
 }
 
 bool TestConnections::read_cmdline_options(int argc, char* argv[])
@@ -1844,7 +1844,7 @@ bool TestConnections::initialize_nodes()
 
     if (use_repl)
     {
-        repl = new ReplicationCluster(m_shared, m_network_config);
+        repl = new ReplicationCluster(&m_shared, m_network_config);
         repl->setup();
         repl->set_use_ipv6(m_use_ipv6);
         repl->ssl = backend_ssl;
@@ -1857,7 +1857,7 @@ bool TestConnections::initialize_nodes()
 
     if (use_galera)
     {
-        galera = new GaleraCluster(m_shared, m_network_config);
+        galera = new GaleraCluster(&m_shared, m_network_config);
         galera->setup();
         galera->set_use_ipv6(false);
         galera->ssl = backend_ssl;
@@ -1870,7 +1870,7 @@ bool TestConnections::initialize_nodes()
 
     if (use_xpand)
     {
-        xpand = new XpandCluster(m_shared, m_network_config);
+        xpand = new XpandCluster(&m_shared, m_network_config);
         xpand->setup();
         xpand->set_use_ipv6(false);
         xpand->ssl = backend_ssl;
@@ -1881,9 +1881,9 @@ bool TestConnections::initialize_nodes()
         xpand = NULL;
     }
 
-    maxscales = new Maxscales(m_shared, m_network_config);
+    maxscales = new Maxscales(&m_shared, m_network_config);
     maxscales->setup();
-    m_maxscale = std::make_unique<mxt::MaxScale>(maxscales, *m_logger, 0);
+    m_maxscale = std::make_unique<mxt::MaxScale>(maxscales, m_shared, 0);
 
     bool maxscale_ok = maxscales->check_nodes();
     bool repl_ok = !use_repl || repl_future.get();

@@ -1,15 +1,15 @@
 #include <maxtest/nodes.hh>
 
 #include <algorithm>
-#include <sstream>
 #include <cstring>
 #include <future>
 #include <functional>
 #include <iostream>
 #include <string>
 #include <csignal>
-#include <maxtest/envv.hh>
 #include <maxbase/format.hh>
+#include <maxtest/envv.hh>
+#include <maxtest/log.hh>
 
 using std::string;
 using std::move;
@@ -24,8 +24,8 @@ const char ssh_opts[] = "-o ControlMaster=auto -o ControlPath=./maxscale-test-%r
                         "-o LogLevel=quiet ";
 }
 
-Nodes::Nodes(const string& prefix, SharedData& shared, const std::string& network_config)
-    : m_shared(shared)
+Nodes::Nodes(const string& prefix, SharedData* shared, const std::string& network_config)
+    : m_shared(*shared)
     , m_prefix(prefix)
     , network_config(network_config)
 {

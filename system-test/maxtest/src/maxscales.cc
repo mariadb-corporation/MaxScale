@@ -15,7 +15,7 @@
 
 using std::string;
 
-Maxscales::Maxscales(SharedData& shared, const std::string& network_config)
+Maxscales::Maxscales(SharedData* shared, const std::string& network_config)
     : Nodes("maxscale", shared, network_config)
     , valgring_log_num(0)
 {
@@ -362,7 +362,7 @@ void MaxScale::wait_monitor_ticks(int ticks)
         auto res = curl_rest_api("maxscale/debug/monitor_wait");
         if (res.rc)
         {
-            m_log.add_failure("Monitor wait failed. Error %i, %s", res.rc, res.output.c_str());
+            logger().add_failure("Monitor wait failed. Error %i, %s", res.rc, res.output.c_str());
             break;
         }
     }
@@ -378,9 +378,9 @@ Nodes::SshResult MaxScale::curl_rest_api(const std::string& path)
     return res;
 }
 
-MaxScale::MaxScale(Maxscales* maxscales, TestLogger& log, int node_ind)
+MaxScale::MaxScale(Maxscales* maxscales, SharedData& shared, int node_ind)
     : m_maxscales(maxscales)
-    , m_log(log)
+    , m_shared(shared)
     , m_node_ind(node_ind)
 {
 }
@@ -414,7 +414,7 @@ ServersInfo MaxScale::get_servers()
             return rval;
         };
 
-    ServersInfo rval(m_log);
+    ServersInfo rval(logger());
     auto res = curl_rest_api(field_servers);
     if (res.rc == 0)
     {
@@ -463,12 +463,12 @@ ServersInfo MaxScale::get_servers()
         }
         else
         {
-            m_log.add_failure("Invalid data from REST-API servers query: %s", all.error_msg().c_str());
+            logger().add_failure("Invalid data from REST-API servers query: %s", all.error_msg().c_str());
         }
     }
     else
     {
-        m_log.add_failure("REST-API servers query failed. Error %i, %s", res.rc, mxb_strerror(res.rc));
+        logger().add_failure("REST-API servers query failed. Error %i, %s", res.rc, mxb_strerror(res.rc));
     }
     return rval;
 }
@@ -587,18 +587,18 @@ void MaxScale::check_servers_status(const std::vector<ServerInfo::bitfield>& exp
 void MaxScale::start()
 {
     auto res = m_maxscales->start_maxscale(m_node_ind);
-    m_log.expect(res == 0, "MaxScale start failed, error %i.", res);
+    logger().expect(res == 0, "MaxScale start failed, error %i.", res);
 }
 
 void MaxScale::stop()
 {
     auto res = m_maxscales->stop_maxscale(m_node_ind);
-    m_log.expect(res == 0, "MaxScale stop failed, error %i.", res);
+    logger().expect(res == 0, "MaxScale stop failed, error %i.", res);
 }
 
 std::unique_ptr<mxt::MariaDB> MaxScale::open_rwsplit_connection(const std::string& db)
 {
-    auto conn = std::make_unique<mxt::MariaDB>(m_log);
+    auto conn = std::make_unique<mxt::MariaDB>(logger());
     auto& sett = conn->connection_settings();
     sett.user = m_maxscales->user_name;
     sett.password = m_maxscales->password;
@@ -618,7 +618,12 @@ void MaxScale::alter_monitor(const string& mon_name, const string& setting, cons
     string cmd = mxb::string_printf("alter monitor %s %s %s", mon_name.c_str(),
                                     setting.c_str(), value.c_str());
     auto res = m_maxscales->maxctrl(cmd);
-    m_log.expect(res.rc == 0 && res.output == "OK", "Alter monitor command '%s' failed.", cmd.c_str());
+    logger().expect(res.rc == 0 && res.output == "OK", "Alter monitor command '%s' failed.", cmd.c_str());
+}
+
+TestLogger& MaxScale::logger()
+{
+    return m_shared.log;
 }
 
 void ServerInfo::status_from_string(const string& source)

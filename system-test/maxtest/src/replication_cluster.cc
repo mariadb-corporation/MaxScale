@@ -19,7 +19,7 @@ namespace
 const string type_mariadb = "mariadb";
 }
 
-ReplicationCluster::ReplicationCluster(SharedData& shared, const string& network_config)
+ReplicationCluster::ReplicationCluster(SharedData* shared, const string& network_config)
     : MariaDBCluster(shared, "node", "server", network_config)
 {
 }

@@ -27,7 +27,7 @@ class XpandCluster : public MariaDBCluster
 {
 public:
 
-    XpandCluster(SharedData& shared, std::string network_config)
+    XpandCluster(SharedData* shared, std::string network_config)
         : MariaDBCluster(shared, "xpand", "xpand_server", network_config)
     {
     }

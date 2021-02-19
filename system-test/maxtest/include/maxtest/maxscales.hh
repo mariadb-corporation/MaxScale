@@ -27,7 +27,7 @@ public:
         READCONN_SLAVE
     };
 
-    Maxscales(SharedData& shared, const std::string& network_config);
+    Maxscales(SharedData* shared, const std::string& network_config);
 
     ~Maxscales();
 
@@ -475,7 +475,7 @@ public:
     MaxScale(const MaxScale& rhs) = delete;
     MaxScale& operator=(const MaxScale& rhs) = delete;
 
-    MaxScale(Maxscales* maxscales, TestLogger& log, int node_ind);
+    MaxScale(Maxscales* maxscales, SharedData& shared, int node_ind);
 
     /**
      * Wait for monitors to tick.
@@ -508,7 +508,7 @@ public:
 
 private:
     Maxscales* const m_maxscales {nullptr};
-    TestLogger&      m_log;
+    SharedData&      m_shared;
     int              m_node_ind {-1};       /**< Node index of this MaxScale */
 
     std::string m_rest_user {"admin"};
@@ -517,5 +517,6 @@ private:
     std::string m_rest_port {"8989"};
 
     Nodes::SshResult curl_rest_api(const std::string& path);
+    TestLogger&      logger();
 };
 }

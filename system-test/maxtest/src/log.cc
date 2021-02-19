@@ -27,7 +27,7 @@ void TestLogger::add_failure_v(const char* format, va_list args)
 
     printf("%s: TEST_FAILED! %s\n", timeinfo.c_str(), msg.c_str());
     m_fails.push_back(timeinfo + ": " + msg);
-    *m_global_result += 1;
+    m_n_fails++;
 }
 
 void TestLogger::expect(bool result, const char* format, ...)
@@ -46,8 +46,7 @@ void TestLogger::expect_v(bool result, const char* format, va_list args)
     }
 }
 
-TestLogger::TestLogger(int* global_result)
-    : m_global_result(global_result)
+TestLogger::TestLogger()
 {
     reset_timer();
 }

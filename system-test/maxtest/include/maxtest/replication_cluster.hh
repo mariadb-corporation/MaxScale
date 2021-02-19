@@ -21,7 +21,7 @@
 class ReplicationCluster : public MariaDBCluster
 {
 public:
-    ReplicationCluster(SharedData& shared, const std::string& network_config);
+    ReplicationCluster(SharedData* shared, const std::string& network_config);
 
     bool setup();
 
