@@ -275,3 +275,8 @@ std::string Xpand_nodes::unblock_command(int node) const
 
     return command;
 }
+
+std::string Xpand_nodes::anonymous_users_query() const
+{
+    return "SELECT CONCAT('\\'', user, '\\'@\\'', host, '\\'') FROM system.users WHERE user = ''";
+}

@@ -535,8 +535,14 @@ public:
      */
     std::string cnf_server_name;
 
-private:
+protected:
+    /**
+     * @returns SELECT that returns anonymous users in such a way that each returned row
+     *          can directly be given as argument to DROP USER.
+     */
+    virtual std::string anonymous_users_query() const;
 
+private:
     bool check_master_node(MYSQL* conn);
     bool bad_slave_thread_status(MYSQL* conn, const char* field, int node);
 };

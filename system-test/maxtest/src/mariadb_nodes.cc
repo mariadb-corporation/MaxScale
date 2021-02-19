@@ -1028,6 +1028,11 @@ std::vector<int> Mariadb_nodes::get_all_server_ids()
     return rval;
 }
 
+std::string Mariadb_nodes::anonymous_users_query() const
+{
+    return "SELECT CONCAT('\\'', user, '\\'@\\'', host, '\\'') FROM mysql.user WHERE user = ''";
+}
+
 bool Mariadb_nodes::prepare_for_test(MYSQL* conn)
 {
     int local_result = 0;
@@ -1047,9 +1052,7 @@ bool Mariadb_nodes::prepare_for_test(MYSQL* conn)
         local_result++;
     }
 
-    if (mysql_query(conn,
-                    "SELECT CONCAT('\\'', user, '\\'@\\'', host, '\\'') FROM mysql.user WHERE user = ''")
-        == 0)
+    if (mysql_query(conn, anonymous_users_query().c_str()) == 0)
     {
         MYSQL_RES* res = mysql_store_result(conn);
 
