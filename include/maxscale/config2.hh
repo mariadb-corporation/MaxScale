@@ -1668,7 +1668,7 @@ public:
     }
 
     /**
-     * @return Return the configuration as a json array.
+     * @return Return the configuration as a json object.
      */
     json_t* to_json() const;
 
