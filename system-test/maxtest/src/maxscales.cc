@@ -414,7 +414,7 @@ ServersInfo MaxScale::get_servers()
             return rval;
         };
 
-    ServersInfo rval(logger());
+    ServersInfo rval(&m_shared.log);
     auto res = curl_rest_api(field_servers);
     if (res.rc == 0)
     {
@@ -505,7 +505,7 @@ void ServersInfo::check_servers_property(size_t n_expected, const std::function<
     }
     else
     {
-        m_log.add_failure("Expected at least %zu servers, found %zu.", n_expected, m_servers.size());
+        m_log->add_failure("Expected at least %zu servers, found %zu.", n_expected, m_servers.size());
     }
 }
 
@@ -518,7 +518,7 @@ void ServersInfo::check_servers_status(const std::vector<ServerInfo::bitfield>& 
             {
                 string found_str = info.status_to_string();
                 string expected_str = ServerInfo::status_to_string(expected);
-                m_log.add_failure("Wrong status for %s. Got '%s', expected '%s'.",
+                m_log->add_failure("Wrong status for %s. Got '%s', expected '%s'.",
                                   info.name.c_str(), found_str.c_str(), expected_str.c_str());
             }
         };
@@ -532,7 +532,7 @@ void ServersInfo::check_master_groups(const std::vector<int>& expected_groups)
             auto& info = m_servers[i];
             if (expected != info.master_group)
             {
-                m_log.add_failure("Wrong master group for %s. Got '%li', expected '%i'.",
+                m_log->add_failure("Wrong master group for %s. Got '%li', expected '%i'.",
                                   info.name.c_str(), info.master_group, expected);
             }
         };
@@ -546,14 +546,14 @@ void ServersInfo::check_pool_connections(const std::vector<int>& expected_conns)
             auto& info = m_servers[i];
             if (expected != info.pool_conns)
             {
-                m_log.add_failure("Wrong connection pool size for %s. Got '%li', expected '%i'.",
+                m_log->add_failure("Wrong connection pool size for %s. Got '%li', expected '%i'.",
                                   info.name.c_str(), info.pool_conns, expected);
             }
         };
     check_servers_property(expected_conns.size(), tester);
 }
 
-ServersInfo::ServersInfo(TestLogger& log)
+ServersInfo::ServersInfo(TestLogger* log)
     : m_log(log)
 {
 }

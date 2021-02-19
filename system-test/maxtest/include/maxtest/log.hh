@@ -1,5 +1,6 @@
 #pragma once
 
+#include <mutex>
 #include <string>
 #include <vector>
 
@@ -25,6 +26,7 @@ public:
 private:
     int64_t                   m_start_time_us {0};
     std::vector<std::string>  m_fails;
+    std::mutex                m_lock; /**< Protects against concurrent logging */
 
     std::string time_string() const;
     std::string prepare_msg(const char* format, va_list args) const;

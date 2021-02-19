@@ -26,7 +26,11 @@ void TestLogger::add_failure_v(const char* format, va_list args)
     string timeinfo = time_string();
 
     printf("%s: TEST_FAILED! %s\n", timeinfo.c_str(), msg.c_str());
-    m_fails.push_back(timeinfo + ": " + msg);
+    string full_msg;
+    full_msg.reserve(timeinfo.length() + 2 + msg.length());
+    full_msg.append(timeinfo).append(": ").append(msg);
+    std::lock_guard<std::mutex> guard(m_lock);
+    m_fails.push_back(move(full_msg));
     m_n_fails++;
 }
 
@@ -53,7 +57,10 @@ TestLogger::TestLogger()
 
 std::string TestLogger::all_errors_to_string()
 {
-    return mxb::create_list_string(m_fails, "\n");
+    string rval;
+    std::lock_guard<std::mutex> guard(m_lock);
+    rval = mxb::create_list_string(m_fails, "\n");
+    return rval;
 }
 
 void TestLogger::log_msg(const char* format, va_list args)

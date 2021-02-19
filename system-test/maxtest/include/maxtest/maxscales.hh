@@ -438,7 +438,7 @@ struct ServerInfo
 class ServersInfo
 {
 public:
-    ServersInfo(TestLogger& log);
+    ServersInfo(TestLogger* log);
 
     ServersInfo(const ServersInfo& rhs) = default;
     ServersInfo& operator=(const ServersInfo& rhs);
@@ -464,7 +464,7 @@ public:
 
 private:
     std::vector<ServerInfo> m_servers;
-    TestLogger&             m_log;
+    TestLogger*             m_log {nullptr};
 
     void check_servers_property(size_t n_expected, const std::function<void(size_t)>& tester);
 };
