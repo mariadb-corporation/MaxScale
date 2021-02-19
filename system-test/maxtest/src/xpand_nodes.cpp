@@ -138,26 +138,78 @@ int XpandCluster::prepare_server(int m)
 
 int XpandCluster::start_replication()
 {
-    int rv = 1;
+    int rv = 0;
 
-    connect();
-
-    // The nodes must be added one by one to the cluster. An attempt to add them
-    // all with one ALTER command will fail, if one or more of them already are in
-    // the cluster.
-
-    for (int i = 1; i < N; ++i)
+    if (connect() == 0)
     {
-        std::string cluster_setup_sql = std::string("ALTER CLUSTER ADD '")
-            + std::string(ip_private(i))
-            + std::string("'");
+        // The nodes must be added one by one to the cluster. An attempt to add them
+        // all with one ALTER command will fail, if one or more of them already are in
+        // the cluster.
 
-        execute_query(nodes[0], "%s", cluster_setup_sql.c_str());
+        for (int i = 1; i < N; ++i)
+        {
+            std::string cluster_setup_sql = std::string("ALTER CLUSTER ADD '")
+                + std::string(ip_private(i))
+                + std::string("'");
+
+            bool retry = false;
+            int attempts = 0;
+
+            do
+            {
+                ++attempts;
+
+                rv = execute_query(nodes[0], "%s", cluster_setup_sql.c_str());
+
+                if (rv != 0)
+                {
+                    std::string error(mysql_error(nodes[0]));
+
+                    if (error.find("already in cluster") != std::string::npos)
+                    {
+                        // E.g. '[25609] Bad parameter.: Host "10.166.0.171" already in cluster'
+                        // That's ok and can be ignored.
+                        rv = 0;
+                    }
+                    else if (error.find("addition is pending") != std::string::npos)
+                    {
+                        // E.g. '[50180] Multiple nodes cannot be added when an existing addition is pending'
+                        // Sleep and retry.
+
+                        if (attempts < 5)
+                        {
+                            printf("Retrying after %d seconds.", attempts);
+                            sleep(attempts);
+                            retry = true;
+                        }
+                        else
+                        {
+                            printf("After %d attempts, still could not add node to cluster, bailing out.",
+                                   attempts);
+                            retry = false;
+                        }
+                    }
+                    else
+                    {
+                        printf("Fatal error when setting up xpand: %s", error.c_str());
+                        retry = false;
+                    }
+                }
+            }
+            while (rv != 0 && retry);
+
+            if (rv != 0)
+            {
+                break;
+            }
+        }
+
+        close_connections();
     }
-
-    close_connections();
-
-    rv = 0;
+    else
+    {
+        rv = 1;
+    }
 
     return rv;
 }
@@ -186,8 +238,11 @@ int XpandCluster::check_replication()
     {
         for (int i = 0; i < N; i++)
         {
-            if (execute_query_count_rows(nodes[i], "select * from system.nodeinfo") != N)
+            int n = execute_query_count_rows(nodes[i], "select * from system.nodeinfo");
+
+            if (n != N)
             {
+                printf("Expected %d nodes configured at node %d, found %d", N, i, n);
                 res = 1;
             }
         }
