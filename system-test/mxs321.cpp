@@ -107,7 +107,8 @@ int main(int argc, char* argv[])
     /** Create connections to readconnroute slave */
     create_and_check_connections(Test, 3);
 
-    Test->repl->flush_hosts();
+    // TODO: Just a simple flush_hosts() may be sufficient.
+    Test->repl->prepare_for_test();
 
     int rval = Test->global_result;
     delete Test;

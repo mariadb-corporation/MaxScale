@@ -82,7 +82,7 @@ bool Mariadb_nodes::setup()
 {
     read_env();
     truncate_mariadb_logs();
-    flush_hosts();
+    prepare_for_test();
     close_active_connections();
 
     return true;
@@ -874,7 +874,7 @@ bool Mariadb_nodes::fix_replication()
             if (check_replication() == 0)
             {
                 cout << "Replication is fixed" << endl;
-                rval = flush_hosts();
+                rval = prepare_for_test();
             }
             else
             {
@@ -1028,7 +1028,7 @@ std::vector<int> Mariadb_nodes::get_all_server_ids()
     return rval;
 }
 
-bool do_flush_hosts(MYSQL* conn)
+bool do_prepare_for_test(MYSQL* conn)
 {
     int local_result = 0;
 
@@ -1088,11 +1088,11 @@ bool do_flush_hosts(MYSQL* conn)
     return local_result == 0;
 }
 
-int Mariadb_nodes::flush_hosts()
+bool Mariadb_nodes::prepare_for_test()
 {
     if (this->nodes[0] == NULL && (this->connect() != 0))
     {
-        return 1;
+        return false;
     }
 
     bool all_ok = true;
@@ -1100,7 +1100,7 @@ int Mariadb_nodes::flush_hosts()
 
     for (int i = 0; i < N; i++)
     {
-        std::packaged_task<bool(MYSQL*)> task(do_flush_hosts);
+        std::packaged_task<bool(MYSQL*)> task(do_prepare_for_test);
         futures.push_back(task.get_future());
         std::thread(std::move(task), nodes[i]).detach();
     }

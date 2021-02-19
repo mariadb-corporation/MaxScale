@@ -354,10 +354,10 @@ public:
     std::vector<std::string> get_all_server_ids_str();
 
     /**
-     * @brief Execute 'mysqladmin flush-hosts' on all nodes
-     * @return 0 in case of success
+     * @brief Flush hosts, adjust settings, remove anonymous users, etc.
+     * @return True in case of success, false otherwise.
      */
-    int flush_hosts();
+    bool prepare_for_test();
 
     /**
      * @brief Execute query on all nodes

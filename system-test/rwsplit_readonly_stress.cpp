@@ -112,7 +112,7 @@ int main(int argc, char* argv[])
     }
 
     /** Clean up test environment */
-    Test->repl->flush_hosts();
+    Test->repl->prepare_for_test();
     int rval = Test->global_result;
     delete Test;
     return rval;
