@@ -86,6 +86,8 @@ public:
      */
     int read_basic_env();
 
+    void write_env_vars();
+
 protected:
     SharedData& m_shared;
 
@@ -109,7 +111,7 @@ private:
     class VMNode
     {
     public:
-        VMNode(SharedData& shared);
+        VMNode(SharedData& shared, const std::string& name);
         VMNode(VMNode&& rhs);
         ~VMNode();
 
@@ -136,6 +138,13 @@ private:
         Nodes::SshResult
         run_cmd_output(const std::string& cmd, CmdPriv priv = CmdPriv::NORMAL);
 
+        bool configure(const std::string& network_config);
+
+        /**
+         * Write node network info to environment variables. This is mainly needed by script-type tests.
+         */
+        void write_node_env_vars();
+
         std::string m_name;     /**< E.g. "node_001" */
 
         std::string m_ip4;          /**< IPv4-address */
@@ -149,6 +158,8 @@ private:
         std::string m_sshkey;   /**< Path to ssh key */
 
     private:
+        std::string get_nc_item(const std::string& item_name, const std::string& network_config);
+
         enum class NodeType {LOCAL, REMOTE};
 
         NodeType    m_type {NodeType::REMOTE};      /**< SSH only used on remote nodes */
@@ -161,7 +172,7 @@ private:
 
     std::vector<VMNode> m_vms;
 
-    std::string network_config;     /**< Contents of MDBCI network_config file */
+    std::string m_network_config;       /**< Contents of MDBCI network_config file */
 
     bool check_node_ssh(int node);
 
@@ -170,12 +181,4 @@ private:
      * @return Number of nodes
      */
     int get_N();
-
-    /**
-     * @brief get_nc_item Find variable in the MDBCI network_config file
-     * @param item_name Name of the variable
-     * @return value of variable or empty value if not found
-     */
-    std::string get_nc_item(const char* item_name);
-
 };

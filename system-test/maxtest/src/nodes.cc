@@ -27,12 +27,13 @@ const char ssh_opts[] = "-o ControlMaster=auto -o ControlPath=./maxscale-test-%r
 Nodes::Nodes(const string& prefix, SharedData* shared, const std::string& network_config)
     : m_shared(*shared)
     , m_prefix(prefix)
-    , network_config(network_config)
+    , m_network_config(network_config)
 {
 }
 
-Nodes::VMNode::VMNode(SharedData& shared)
-    : m_shared(shared)
+Nodes::VMNode::VMNode(SharedData& shared, const string& name)
+    : m_name(name)
+    , m_shared(shared)
 {
 }
 
@@ -310,7 +311,6 @@ int Nodes::copy_from_node_legacy(const char* src, const char* dest, int i)
 
 int Nodes::read_basic_env()
 {
-    char env_name[64];
     N = get_N();
 
     auto prefixc = m_prefix.c_str();
@@ -321,71 +321,63 @@ int Nodes::read_basic_env()
     {
         for (int i = 0; i < N; i++)
         {
-            VMNode node(m_shared);
-            node.m_name = mxb::string_printf("%s_%03d", prefixc, i);
-            // reading IPs
-            sprintf(env_name, "%s_%03d_network", prefixc, i);
-            node.m_ip4 = get_nc_item(env_name);
+            string node_name = mxb::string_printf("%s_%03d", prefixc, i);
+            VMNode node(m_shared, node_name);
 
-            // reading private IPs
-            sprintf(env_name, "%s_%03d_private_ip", prefixc, i);
-            auto& priv_ip = node.m_private_ip;
-            priv_ip = get_nc_item(env_name);
-            if (priv_ip.empty())
+            if (node.configure(m_network_config))
             {
-                priv_ip = node.m_ip4;
-            }
-            setenv(env_name, priv_ip.c_str(), 1);
-
-            // reading IPv6
-            sprintf(env_name, "%s_%03d_network6", prefixc, i);
-            auto& ip6 = node.m_ip6;
-            ip6 = get_nc_item(env_name);
-            if (ip6.empty())
-            {
-                ip6 = node.m_ip4;
-            }
-            setenv(env_name, ip6.c_str(), 1);
-
-            //reading sshkey
-            sprintf(env_name, "%s_%03d_keyfile", prefixc, i);
-            node.m_sshkey = get_nc_item(env_name);
-
-
-            sprintf(env_name, "%s_%03d_whoami", prefixc, i);
-            auto& access_user = node.m_username;
-            access_user = get_nc_item(env_name);
-            if (access_user.empty())
-            {
-                access_user = "vagrant";
-            }
-            setenv(env_name, access_user.c_str(), 1);
-
-            sprintf(env_name, "%s_%03d_access_sudo", prefixc, i);
-            node.m_sudo = envvar_get_set(env_name, " sudo ");
-
-            if (access_user == "root")
-            {
-                node.m_homedir = "/root/";
+                m_vms.push_back(move(node));
             }
             else
             {
-                node.m_homedir = mxb::string_printf("/home/%s/", access_user.c_str());
+                break;
             }
-
-            sprintf(env_name, "%s_%03d_hostname", prefixc, i);
-            auto& hostname = node.m_hostname;
-            hostname = get_nc_item(env_name);
-            if (hostname.empty())
-            {
-                hostname = node.m_private_ip[i];
-            }
-            setenv(env_name, hostname.c_str(), 1);
-            m_vms.push_back(move(node));
         }
     }
 
     return 0;
+}
+
+bool Nodes::VMNode::configure(const std::string& network_config)
+{
+    auto& name = m_name;
+    string field_network = name + "_network";
+
+    bool success = false;
+    string ip4 = get_nc_item(field_network, network_config);
+    if (!ip4.empty())
+    {
+        m_ip4 = ip4;
+
+        string field_network6 = name + "_network6";
+        string field_private_ip = name + "_private_ip";
+        string field_hostname = name + "_hostname";
+        string field_keyfile = name + "_keyfile";
+        string field_whoami = name + "_whoami";
+        string field_access_sudo = name + "_access_sudo";
+
+        string ip6 = get_nc_item(field_network6, network_config);
+        m_ip6 = !ip6.empty() ? ip6 : m_ip4;
+
+        string priv_ip = get_nc_item(field_private_ip, network_config);
+        m_private_ip = !priv_ip.empty() ? priv_ip : m_ip4;
+
+        string hostname = get_nc_item(field_hostname, network_config);
+        m_hostname = !hostname.empty() ? hostname : m_private_ip;
+
+        string access_user = get_nc_item(field_whoami, network_config);
+        m_username = !access_user.empty() ? access_user : "vagrant";
+
+        m_homedir = (m_username == "root") ? "/root/" :
+            mxb::string_printf("/home/%s/", m_username.c_str());
+
+        m_sudo = envvar_get_set(field_access_sudo.c_str(), " sudo ");
+        m_sshkey = get_nc_item(field_keyfile, network_config);
+
+        success = true;
+    }
+
+    return success;
 }
 
 std::string Nodes::mdbci_node_name(int node)
@@ -393,7 +385,14 @@ std::string Nodes::mdbci_node_name(int node)
     return m_vms[node].m_name;
 }
 
-std::string Nodes::get_nc_item(const char* item_name)
+/**
+ * Find variable in the MDBCI network config file.
+ *
+ * @param item_name Name of the variable
+ * @param network_config File contents
+ * @return value of variable or empty value if not found
+ */
+std::string Nodes::VMNode::get_nc_item(const string& item_name, const string& network_config)
 {
     size_t start = network_config.find(item_name);
     if (start == std::string::npos)
@@ -415,7 +414,7 @@ std::string Nodes::get_nc_item(const char* item_name)
     std::string str = network_config.substr(equal + 1, end - equal - 1);
     str.erase(remove(str.begin(), str.end(), ' '), str.end());
 
-    setenv(item_name, str.c_str(), 1);
+    setenv(item_name.c_str(), str.c_str(), 1);
 
     return str;
 }
@@ -426,7 +425,7 @@ int Nodes::get_N()
     while (true)
     {
         string item = mxb::string_printf("%s_%03d_network", m_prefix.c_str(), n_nodes);
-        if (network_config.find(item) != string::npos)
+        if (m_network_config.find(item) != string::npos)
         {
             n_nodes++;
         }
@@ -490,6 +489,21 @@ Nodes::SshResult Nodes::VMNode::run_cmd_output(const string& cmd, CmdPriv priv)
     return rval;
 }
 
+void Nodes::VMNode::write_node_env_vars()
+{
+    auto& name = m_name;
+    auto write_env_var = [this](const string& suffix, const string& val) {
+            string env_var_name = m_name + suffix;
+            setenv(env_var_name.c_str(), val.c_str(), 1);
+        };
+
+    write_env_var("_network", m_ip4);
+    write_env_var("_network6", m_ip6);
+    write_env_var("_private_ip", m_private_ip);
+    write_env_var("_hostname", m_hostname);
+    write_env_var("_whoami", m_username);
+}
+
 Nodes::SshResult Nodes::ssh_output(const std::string& cmd, int node, bool sudo)
 {
     return m_vms[node].run_cmd_output(cmd, sudo ? VMNode::CmdPriv::SUDO : VMNode::CmdPriv::NORMAL);
@@ -543,4 +557,12 @@ const char* Nodes::ip4(int i) const
 bool Nodes::verbose() const
 {
     return m_shared.verbose;
+}
+
+void Nodes::write_env_vars()
+{
+    for (auto& vm : m_vms)
+    {
+        vm.write_node_env_vars();
+    }
 }

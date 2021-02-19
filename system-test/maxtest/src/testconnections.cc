@@ -1963,6 +1963,21 @@ bool TestConnections::verbose() const
     return m_shared.verbose;
 }
 
+void TestConnections::write_node_env_vars()
+{
+    auto write_env_vars = [](Nodes* nodes) {
+            if (nodes)
+            {
+                nodes->write_env_vars();
+            }
+        };
+
+    write_env_vars(repl);
+    write_env_vars(galera);
+    write_env_vars(xpand);
+    write_env_vars(maxscales);
+}
+
 std::string cutoff_string(const string& source, char cutoff)
 {
     auto pos = source.find(cutoff);
