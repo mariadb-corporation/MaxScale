@@ -969,7 +969,7 @@ static LUT lut;
 static inline std::pair<bool, uint8_t*> probe_number(uint8_t* it, uint8_t* end)
 {
     mxb_assert(it != end);
-    mxb_assert(is_digit(*it));
+    mxb_assert(isdigit(*it));
     std::pair<bool, uint8_t*> rval = std::make_pair(true, it);
     bool is_hex = *it == '0';
     bool allow_hex = false;
