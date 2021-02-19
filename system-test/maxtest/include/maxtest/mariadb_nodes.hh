@@ -355,8 +355,10 @@ public:
 
     /**
      * @brief Flush hosts, adjust settings, remove anonymous users, etc.
+     * @param conn Valid handle to some node.
      * @return True in case of success, false otherwise.
      */
+    bool prepare_for_test(MYSQL* conn);
     bool prepare_for_test();
 
     /**
