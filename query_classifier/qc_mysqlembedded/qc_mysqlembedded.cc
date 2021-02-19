@@ -1912,6 +1912,7 @@ static void parsing_info_done(void* ptr)
             {
                 thd = (THD*) mysql->thd;
                 thd->end_statement();
+                thd->cleanup_after_query();
                 (*mysql->methods->free_embedded_thd)(mysql);
                 mysql->thd = NULL;
             }

@@ -87,7 +87,8 @@ int main(int argc, char* argv[])
 
     test.stop_timeout();
     test.tprintf("Make sure that replication works");
-    test.repl->flush_hosts();
+    // TODO: Just a simple flush_hosts() may be sufficient.
+    test.repl->prepare_for_test();
     if (!test.repl->fix_replication())
     {
         test.tprintf("Replication is broken!");
