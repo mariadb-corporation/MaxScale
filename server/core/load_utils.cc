@@ -114,8 +114,22 @@ const char*    module_type_to_string(ModuleType type);
 const char*    module_maturity_to_string(ModuleStatus type);
 const char*    mxs_module_param_type_to_string(mxs_module_param_type type);
 
-bool load_module(const string& fpath, mxs::ModuleType type, const string& given_name = "");
-bool run_module_thread_init(MXS_MODULE* mod_info);
+enum class LoadResult
+{
+    OK,
+    ERR,
+    NOT_A_MODULE,
+};
+
+struct LoadAttempt
+{
+    LoadResult                result;
+    std::string               error;
+    unique_ptr<LOADED_MODULE> module;
+};
+
+LoadAttempt load_module(const string& fpath, mxs::ModuleType type, const string& given_name = "");
+bool        run_module_thread_init(MXS_MODULE* mod_info);
 
 const char madbproto[] = "mariadbprotocol";
 NAME_MAPPING name_mappings[] =
@@ -244,8 +258,11 @@ int load_module_cb(const char* fpath, const struct stat* sb, int typeflag, struc
             if (last_part.find("lib") == 0 && last_part.find(".so") != string::npos
                 && last_part.find("libmaxscale-common.so") == string::npos)
             {
-                if (!load_module(fpath, ModuleType::UNKNOWN))
+                auto res = load_module(fpath, ModuleType::UNKNOWN);
+
+                if (res.result == LoadResult::ERR)
                 {
+                    MXS_ERROR("%s", res.error.c_str());
                     this_unit.load_all_ok = false;
                 }
             }
@@ -254,69 +271,87 @@ int load_module_cb(const char* fpath, const struct stat* sb, int typeflag, struc
     return 0;
 }
 
-unique_ptr<LOADED_MODULE> load_module_file(const string& filepath, ModuleType type,
-                                           const string& given_name = "")
+LoadAttempt load_module_file(const string& filepath, ModuleType type, const string& given_name = "")
 {
-    unique_ptr<LOADED_MODULE> rval;
-    string load_errmsg;
+    LoadAttempt res;
+    res.result = LoadResult::ERR;
+
     // Search for the so-file
     auto fnamec = filepath.c_str();
     if (access(fnamec, F_OK) != 0)
     {
         int eno = errno;
-        load_errmsg = mxb::string_printf("Cannot access library file '%s'. Error %i: %s",
-                                         fnamec, eno, mxb_strerror(eno));
+        res.error = mxb::string_printf("Cannot access library file '%s'. Error %i: %s",
+                                       fnamec, eno, mxb_strerror(eno));
     }
     else
     {
         void* dlhandle = dlopen(fnamec, RTLD_NOW | RTLD_LOCAL);
         if (!dlhandle)
         {
-            load_errmsg = mxb::string_printf("Cannot load library file '%s'. %s.", fnamec, dlerror());
+            res.error = mxb::string_printf("Cannot load library file '%s'. %s.", fnamec, dlerror());
         }
         else
         {
+            Dl_info info;
             void* sym = dlsym(dlhandle, MXS_MODULE_SYMBOL_NAME);
+
             if (!sym)
             {
-                load_errmsg = mxb::string_printf("Library file '%s' does not contain the entry point "
-                                                 "function. %s.", fnamec, dlerror());
+                res.result = LoadResult::NOT_A_MODULE;
+                res.error = mxb::string_printf("Library file '%s' does not contain the entry point "
+                                               "function. %s.", fnamec, dlerror());
+                dlclose(dlhandle);
+            }
+            else if (dladdr(sym, &info) == 0)
+            {
+                res.result = LoadResult::NOT_A_MODULE;
+                res.error = mxb::string_printf("Failed to get module entry point for '%s'.", fnamec);
                 dlclose(dlhandle);
             }
             else
             {
-                // Module was loaded, check that it's valid.
-                auto entry_point = (void* (*)())sym;
-                auto mod_info = (MXS_MODULE*)entry_point();
-                if (!check_module(mod_info, filepath, type))
+                // Sometimes the path returned in dli_fname seems to point at the symbolic link instead of the
+                // file that it points to. Comparing the concrete files instead of the links should be more
+                // stable.
+                char file_path[PATH_MAX] = "";
+                char symbol_path[PATH_MAX] = "";
+                realpath(filepath.c_str(), file_path);
+                realpath(info.dli_fname, symbol_path);
+
+                if (strcmp(file_path, symbol_path) != 0)
                 {
+                    res.result = LoadResult::NOT_A_MODULE;
+                    res.error = mxb::string_printf(
+                        "Not a MaxScale module (defined in '%s', module is '%s'): %s",
+                        symbol_path, file_path, fnamec);
                     dlclose(dlhandle);
                 }
                 else
                 {
-                    // The path may be a link, get the true filepath. Not essential, but is used to avoid
-                    // loading already loaded files.
-                    char buf[PATH_MAX];
-                    auto real_filepath = realpath(fnamec, buf);
-                    rval = std::make_unique<LOADED_MODULE>(dlhandle, mod_info,
-                                                           real_filepath ? real_filepath : "");
+                    // Module was loaded, check that it's valid.
+                    auto entry_point = (void* (*)())sym;
+                    auto mod_info = (MXS_MODULE*)entry_point();
+                    if (!check_module(mod_info, filepath, type))
+                    {
+                        dlclose(dlhandle);
+                    }
+                    else
+                    {
+                        // The path may be a link, get the true filepath. Not essential, but is used to avoid
+                        // loading already loaded files.
+                        char buf[PATH_MAX];
+                        auto real_filepath = realpath(fnamec, buf);
+                        res.module = std::make_unique<LOADED_MODULE>(dlhandle, mod_info,
+                                                                     real_filepath ? real_filepath : "");
+                        res.result = LoadResult::OK;
+                    }
                 }
             }
         }
     }
-    if (!load_errmsg.empty())
-    {
-        // The requested module name is not known if we are loading modules from all possible filenames.
-        if (given_name.empty())
-        {
-            MXB_ERROR("%s", load_errmsg.c_str());
-        }
-        else
-        {
-            MXB_ERROR("Cannot load module '%s'. %s", given_name.c_str(), load_errmsg.c_str());
-        }
-    }
-    return rval;
+
+    return res;
 }
 
 /**
@@ -327,16 +362,15 @@ unique_ptr<LOADED_MODULE> load_module_file(const string& filepath, ModuleType ty
  * @param type Type of module
  * @return The module specific entry point structure or NULL
  */
-bool load_module(const string& fname, mxs::ModuleType type, const string& name)
+LoadAttempt load_module(const string& fname, mxs::ModuleType type, const string& name)
 {
-    bool rval = false;
-    auto loaded_module = load_module_file(fname, type, name);
-    if (loaded_module)
+    auto res = load_module_file(fname, type, name);
+    if (res.result == LoadResult::OK)
     {
-        auto mod_info = loaded_module->info;
+        auto mod_info = res.module->info;
         auto mod_name_low = mxb::tolower(mod_info->name);
-        // The same module may be already loaded from a different filename or link. This mostly only
-        // happens with the load-all command.
+        // The same module may be already loaded from a symbolic link. This only
+        // happens when called from load_all_modules().
         if (this_unit.loaded_modules.count(mod_name_low) == 0)
         {
             auto process_init_func = mod_info->process_init;
@@ -354,15 +388,20 @@ bool load_module(const string& fname, mxs::ModuleType type, const string& name)
 
             if (process_init_ok && thread_init_ok)
             {
-                rval = true;
-                auto new_kv = std::make_pair(mod_name_low, std::move(loaded_module));
+                auto new_kv = std::make_pair(mod_name_low, std::move(res.module));
                 this_unit.loaded_filepaths.insert(new_kv.second->filepath);
                 this_unit.loaded_modules.insert(std::move(new_kv));
                 MXS_NOTICE("Module '%s' loaded from '%s'.", mod_info->name, fname.c_str());
             }
+            else
+            {
+                res.result = LoadResult::ERR;
+                res.error = "Module initialization failed";
+            }
         }
     }
-    return rval;
+
+    return res;
 }
 }
 
@@ -724,10 +763,23 @@ const MXS_MODULE* get_module(const std::string& name, mxs::ModuleType type)
     {
         // No such module loaded, try to load.
         string fname = mxb::string_printf("%s/lib%s.so", mxs::libdir(), eff_name.c_str());
-        if (load_module(fname, type, name))
+        auto res = load_module(fname, type, name);
+
+        if (res.result == LoadResult::OK)
         {
-            module = find_module(eff_name);
-            rval = module->info;
+            if ((module = find_module(eff_name)))
+            {
+                rval = module->info;
+            }
+            else
+            {
+                MXS_ERROR("Module '%s' was not found after being loaded successfully: "
+                          "library name and module name are different.", fname.c_str());
+            }
+        }
+        else
+        {
+            MXS_ERROR("%s", res.error.c_str());
         }
     }
     return rval;
