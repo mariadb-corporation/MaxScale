@@ -931,7 +931,7 @@ std::vector<int> MariaDBCluster::get_all_server_ids()
     return rval;
 }
 
-bool Mariadb_nodes::prepare_for_test(MYSQL* conn)
+bool MariaDBCluster::prepare_for_test(MYSQL* conn)
 {
     int local_result = 0;
 
@@ -1003,8 +1003,8 @@ bool MariaDBCluster::prepare_for_test()
 
     for (int i = 0; i < N; i++)
     {
-        bool (Mariadb_nodes::*function)(MYSQL*) = &Mariadb_nodes::prepare_for_test;
-        std::packaged_task<bool(Mariadb_nodes*, MYSQL*)> task(function);
+        bool (MariaDBCluster::*function)(MYSQL*) = &MariaDBCluster::prepare_for_test;
+        std::packaged_task<bool(MariaDBCluster*, MYSQL*)> task(function);
         futures.push_back(task.get_future());
         std::thread(std::move(task), this, nodes[i]).detach();
     }
