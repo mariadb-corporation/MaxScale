@@ -27,10 +27,10 @@
  * prefix_User - User name to access backend setup (should have full access to 'test' DB with GRANT OPTION)
  * prefix_Password - Password to access backend setup
  */
-class Mariadb_nodes : public Nodes
+class MariaDBCluster : public Nodes
 {
 public:
-    virtual ~Mariadb_nodes();
+    virtual ~MariaDBCluster();
 
     void set_use_ipv6(bool use_ipv6);
 
@@ -545,8 +545,8 @@ protected:
      * @param cnf_server_prefix Node prefix in MaxScale config file
      * @param network_config Network config contents
      */
-    Mariadb_nodes(SharedData& shared, const std::string& nwconf_prefix,
-                  const std::string& cnf_server_prefix, const std::string& network_config);
+    MariaDBCluster(SharedData& shared, const std::string& nwconf_prefix,
+                   const std::string& cnf_server_prefix, const std::string& network_config);
 
     bool setup();
 
@@ -557,52 +557,4 @@ private:
 
     bool check_master_node(MYSQL* conn);
     bool bad_slave_thread_status(MYSQL* conn, const char* field, int node);
-};
-
-/**
- * Standard MariaDB master-slave replication cluster.
- */
-class MariaDBCluster : public Mariadb_nodes
-{
-public:
-    MariaDBCluster(SharedData& shared, const std::string& network_config);
-
-    bool setup();
-
-    const std::string& type_string() const override;
-};
-
-class Galera_nodes : public Mariadb_nodes
-{
-public:
-
-    Galera_nodes(SharedData& shared, const std::string& network_config)
-        : Mariadb_nodes(shared, "galera", "gserver", network_config)
-    {
-    }
-
-    bool setup();
-
-    const std::string& type_string() const override;
-
-    int start_galera();
-
-    virtual int start_replication()
-    {
-        return start_galera();
-    }
-
-    int check_galera();
-
-    virtual int check_replication()
-    {
-        return check_galera();
-    }
-
-    std::string get_config_name(int node) override;
-
-    virtual void sync_slaves(int node = 0)
-    {
-        sleep(10);
-    }
 };

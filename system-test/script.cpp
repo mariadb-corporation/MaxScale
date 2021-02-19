@@ -35,8 +35,9 @@
 
 #include <iostream>
 #include <maxtest/testconnections.hh>
+#include <maxtest/galera_cluster.hh>
 
-void test_script_monitor(TestConnections* Test, Mariadb_nodes* nodes, char* expected_filename)
+void test_script_monitor(TestConnections* Test, MariaDBCluster* nodes, char* expected_filename)
 {
     Test->set_timeout(200);
     auto homedir = Test->maxscales->access_homedir(0);

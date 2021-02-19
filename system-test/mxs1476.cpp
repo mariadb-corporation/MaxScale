@@ -6,6 +6,7 @@
  */
 
 #include <maxtest/testconnections.hh>
+#include <maxtest/galera_cluster.hh>
 
 void list_servers(TestConnections& test)
 {

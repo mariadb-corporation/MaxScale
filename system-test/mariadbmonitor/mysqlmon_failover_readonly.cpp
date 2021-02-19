@@ -22,7 +22,7 @@ using std::cout;
 
 int main(int argc, char** argv)
 {
-    Mariadb_nodes::require_gtid(true);
+    MariaDBCluster::require_gtid(true);
     TestConnections test(argc, argv);
     // Delete binlogs to sync gtid:s
     delete_slave_binlogs(test);

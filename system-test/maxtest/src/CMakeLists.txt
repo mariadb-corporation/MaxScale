@@ -7,6 +7,7 @@ add_library(maxtest SHARED
         envv.cc
         execute_cmd.cc
         fw_copy_rules.cc
+        galera_cluster.cc
         get_com_select_insert.cc
         get_my_ip.cc
         log.cc
@@ -18,6 +19,7 @@ add_library(maxtest SHARED
         maxscales.cc
         nodes.cc
         rds_vpc.cc
+        replication_cluster.cc
         sql_t1.cc
         tcp_connection.cc
         testconnections.cc

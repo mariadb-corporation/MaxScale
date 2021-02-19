@@ -73,7 +73,7 @@ void test_replay_failure(TestConnections& test)
 
 int main(int argc, char* argv[])
 {
-    Mariadb_nodes::require_gtid(true);
+    MariaDBCluster::require_gtid(true);
     TestConnections test(argc, argv);
 
     test_replay_ok(test);

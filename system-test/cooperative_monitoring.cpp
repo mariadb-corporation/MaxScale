@@ -45,7 +45,7 @@ bool release_monitor_locks(TestConnections& test, const MonitorInfo& mon_info);
 int main(int argc, char* argv[])
 {
     TestConnections::multiple_maxscales(true);
-    Mariadb_nodes::require_gtid(true);
+    MariaDBCluster::require_gtid(true);
     TestConnections test(argc, argv);
 
     const int N_maxscales = test.maxscales->N;

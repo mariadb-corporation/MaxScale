@@ -21,7 +21,7 @@ using std::endl;
 int main(int argc, char** argv)
 {
     interactive = strcmp(argv[argc - 1], "interactive") == 0;
-    Mariadb_nodes::require_gtid(true);
+    MariaDBCluster::require_gtid(true);
     TestConnections test(argc, argv);
     int ec;
     MYSQL* maxconn = test.maxscales->open_rwsplit_connection(0);

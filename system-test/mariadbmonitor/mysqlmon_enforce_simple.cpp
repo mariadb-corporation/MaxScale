@@ -35,7 +35,7 @@ int get_master_server_id(TestConnections& test)
 
 int main(int argc, char** argv)
 {
-    Mariadb_nodes::require_gtid(true);
+    MariaDBCluster::require_gtid(true);
     TestConnections::skip_maxscale_start(true);
 
     TestConnections test(argc, argv);

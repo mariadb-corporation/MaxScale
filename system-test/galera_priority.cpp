@@ -12,6 +12,7 @@
  */
 
 #include <maxtest/testconnections.hh>
+#include <maxtest/galera_cluster.hh>
 
 void check_server_id(TestConnections& test, const std::string& id)
 {

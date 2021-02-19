@@ -1,4 +1,5 @@
 #include <maxtest/config_operations.hh>
+#include <maxtest/replication_cluster.hh>
 
 // The configuration should use these names for the services, listeners and monitors
 #define SERVICE_NAME1  "rwsplit-service"

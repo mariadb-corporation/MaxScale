@@ -35,7 +35,7 @@ string server_names[] = {"server1", "server2", "server3", "server4"};
 
 int main(int argc, char** argv)
 {
-    Mariadb_nodes::require_gtid(true);
+    MariaDBCluster::require_gtid(true);
     TestConnections test(argc, argv);
     //delete_slave_binlogs(test);
     // Set up test table

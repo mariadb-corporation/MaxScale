@@ -63,7 +63,7 @@ static void expect(TestConnections& test, const char* zServer, const char* zStat
 int main(int argc, char** argv)
 {
     interactive = strcmp(argv[argc - 1], "interactive") == 0;
-    Mariadb_nodes::require_gtid(true);
+    MariaDBCluster::require_gtid(true);
     TestConnections test(argc, argv);
     test.repl->connect();
 

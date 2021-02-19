@@ -2,6 +2,7 @@
 #include <iostream>
 #include <iomanip>
 #include <maxtest/testconnections.hh>
+#include <maxtest/galera_cluster.hh>
 
 const size_t NUM_GALERAS = 4;
 

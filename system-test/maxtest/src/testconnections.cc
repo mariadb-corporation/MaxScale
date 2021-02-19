@@ -15,17 +15,20 @@
 #include <future>
 #include <regex>
 #include <limits.h>
-#include <maxbase/stacktrace.hh>
-#include <maxbase/string.hh>
 #include <algorithm>
 
+#include <maxbase/format.hh>
+#include <maxbase/stacktrace.hh>
+#include <maxbase/string.hh>
+
+#include <maxtest/envv.hh>
+#include <maxtest/galera_cluster.hh>
 #include <maxtest/log.hh>
+#include <maxtest/replication_cluster.hh>
 #include <maxtest/mariadb_func.hh>
 #include <maxtest/sql_t1.hh>
 #include <maxtest/testconnections.hh>
 #include <maxtest/test_info.hh>
-#include <maxtest/envv.hh>
-#include <maxbase/format.hh>
 
 using namespace mxb;
 using std::cout;
@@ -498,7 +501,7 @@ void TestConnections::process_template(int m, const string& cnf_template_path, c
     sprintf(str, "sed -i \"s/###threads###/%d/\"  maxscale.cnf", m_threads);
     system(str);
 
-    Mariadb_nodes* mdn[3];
+    MariaDBCluster* mdn[3];
     const char* IPcnf;
     mdn[0] = repl;
     mdn[1] = galera;
@@ -618,7 +621,7 @@ void TestConnections::init_maxscale(int m)
     }
 }
 
-void TestConnections::copy_one_mariadb_log(Mariadb_nodes* nrepl, int i, std::string filename)
+void TestConnections::copy_one_mariadb_log(MariaDBCluster* nrepl, int i, std::string filename)
 {
     auto log_retrive_commands =
     {
@@ -645,7 +648,7 @@ void TestConnections::copy_one_mariadb_log(Mariadb_nodes* nrepl, int i, std::str
     }
 }
 
-int TestConnections::copy_mariadb_logs(Mariadb_nodes* nrepl,
+int TestConnections::copy_mariadb_logs(MariaDBCluster* nrepl,
                                        const char* prefix,
                                        std::vector<std::thread>& threads)
 {
@@ -1840,11 +1843,11 @@ bool TestConnections::initialize_nodes()
 
     if (use_repl)
     {
-        repl = new MariaDBCluster(m_shared, m_network_config);
+        repl = new ReplicationCluster(m_shared, m_network_config);
         repl->setup();
         repl->set_use_ipv6(m_use_ipv6);
         repl->ssl = backend_ssl;
-        repl_future = std::async(std::launch::async, &Mariadb_nodes::check_nodes, repl);
+        repl_future = std::async(std::launch::async, &MariaDBCluster::check_nodes, repl);
     }
     else
     {
@@ -1853,11 +1856,11 @@ bool TestConnections::initialize_nodes()
 
     if (use_galera)
     {
-        galera = new Galera_nodes(m_shared, m_network_config);
+        galera = new GaleraCluster(m_shared, m_network_config);
         galera->setup();
         galera->set_use_ipv6(false);
         galera->ssl = backend_ssl;
-        galera_future = std::async(std::launch::async, &Galera_nodes::check_nodes, galera);
+        galera_future = std::async(std::launch::async, &GaleraCluster::check_nodes, galera);
     }
     else
     {
@@ -1866,7 +1869,7 @@ bool TestConnections::initialize_nodes()
 
     if (use_xpand)
     {
-        xpand = new Xpand_nodes(m_shared, m_network_config);
+        xpand = new XpandCluster(m_shared, m_network_config);
         xpand->setup();
         xpand->set_use_ipv6(false);
         xpand->ssl = backend_ssl;
@@ -1889,7 +1892,7 @@ bool TestConnections::initialize_nodes()
 
 bool TestConnections::check_backend_versions()
 {
-    auto tester = [this](Mariadb_nodes* cluster, const string& required_vrs_str) {
+    auto tester = [this](MariaDBCluster* cluster, const string& required_vrs_str) {
             bool rval = true;
             if (cluster && !required_vrs_str.empty())
             {
