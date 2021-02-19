@@ -83,7 +83,8 @@ int main(int argc, char** argv)
 
     test.tprintf("Flushing backend hosts");
     test.set_timeout(60);
-    test.repl->flush_hosts();
+    // TODO: Just a simple flush_hosts() may be sufficient.
+    test.repl->prepare_for_test();
 
     test.tprintf("Dropping tables and users");
     test.set_timeout(60);

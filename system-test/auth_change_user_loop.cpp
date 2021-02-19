@@ -110,7 +110,8 @@ int main(int argc, char* argv[])
         pthread_join(parall_traffic1[j], NULL);
     }
     Test->tprintf("All threads are finished");
-    Test->repl->flush_hosts();
+    // TODO: Just a simple flush_hosts() may be sufficient.
+    Test->repl->prepare_for_test();
 
     Test->tprintf("Change user to '%s' in order to be able to DROP user",
                   Test->maxscales->user_name.c_str());
