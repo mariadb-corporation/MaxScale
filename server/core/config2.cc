@@ -1426,7 +1426,14 @@ ParamModule::value_type ParamModule::default_value() const
 
     if (!pModule)
     {
-        pModule = get_module(m_default_module, m_module_type);
+        if (!m_default_module.empty())
+        {
+            pModule = get_module(m_default_module, m_module_type);
+        }
+        else
+        {
+            pModule = nullptr;
+        }
 
         const_cast<ParamModule*>(this)->m_default_value = pModule;
     }
