@@ -805,13 +805,19 @@ class ParamDuration : public ConcreteParam<ParamDuration<T>, T>
 public:
     using value_type = T;
 
+    enum class DurationType
+    {
+        UNSIGNED,   // Negative durations are not allowed
+        SIGNED      // Negative durations are allowed
+    };
+
     ParamDuration(Specification* pSpecification,
                   const char* zName,
                   const char* zDescription,
                   mxs::config::DurationInterpretation interpretation,
                   Param::Modifiable modifiable = Param::Modifiable::AT_STARTUP)
         : ParamDuration(pSpecification, zName, zDescription, modifiable, Param::MANDATORY,
-                        interpretation, value_type())
+                        interpretation, DurationType::UNSIGNED, value_type())
     {
     }
 
@@ -822,7 +828,19 @@ public:
                   value_type default_value,
                   Param::Modifiable modifiable = Param::Modifiable::AT_STARTUP)
         : ParamDuration(pSpecification, zName, zDescription, modifiable, Param::OPTIONAL,
-                        interpretation, default_value)
+                        interpretation, DurationType::UNSIGNED, default_value)
+    {
+    }
+
+    ParamDuration(Specification* pSpecification,
+                  const char* zName,
+                  const char* zDescription,
+                  mxs::config::DurationInterpretation interpretation,
+                  value_type default_value,
+                  DurationType duration_type,
+                  Param::Modifiable modifiable = Param::Modifiable::AT_STARTUP)
+        : ParamDuration(pSpecification, zName, zDescription, modifiable, Param::OPTIONAL,
+                        interpretation, duration_type, default_value)
     {
     }
 
@@ -844,15 +862,18 @@ private:
                   Param::Modifiable modifiable,
                   Param::Kind kind,
                   mxs::config::DurationInterpretation interpretation,
+                  DurationType duration_type,
                   value_type default_value)
         : ConcreteParam<ParamDuration<T>, T>(pSpecification, zName, zDescription,
                                              modifiable, kind, MXS_MODULE_PARAM_DURATION, default_value)
         , m_interpretation(interpretation)
+        , m_duration_type(duration_type)
     {
     }
 
 private:
     mxs::config::DurationInterpretation m_interpretation;
+    DurationType                        m_duration_type;
 };
 
 using ParamMilliseconds = ParamDuration<std::chrono::milliseconds>;
@@ -2601,7 +2622,16 @@ bool ParamDuration<T>::from_string(const std::string& value_as_string,
     mxs::config::DurationUnit unit;
 
     std::chrono::milliseconds duration;
-    bool valid = get_suffixed_duration(value_as_string.c_str(), m_interpretation, &duration, &unit);
+    const char* str = value_as_string.c_str();
+    bool negate = false;
+
+    if (*str == '-' && m_duration_type == DurationType::SIGNED)
+    {
+        negate = true;
+        ++str;
+    }
+
+    bool valid = get_suffixed_duration(str, m_interpretation, &duration, &unit);
 
     if (valid)
     {
@@ -2614,6 +2644,11 @@ bool ParamDuration<T>::from_string(const std::string& value_as_string,
                 *pMessage += ". Use the suffixes 'h' (hour), 'm' (minute) 's' (second) or ";
                 *pMessage += "'ms' (milliseconds).";
             }
+        }
+
+        if (negate)
+        {
+            duration = -duration;
         }
 
         *pValue = std::chrono::duration_cast<value_type>(duration);

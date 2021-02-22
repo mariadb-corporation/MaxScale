@@ -61,6 +61,14 @@ param_duration_2(&specification,
                  "Specifies the duration of something.",
                  mxs::config::INTERPRET_AS_MILLISECONDS);
 
+config::ParamDuration<std::chrono::seconds>
+param_duration_3(&specification,
+                 "duration_parameter_3",
+                 "Specifies the duration of something.",
+                 mxs::config::INTERPRET_AS_SECONDS,
+                 std::chrono::seconds(-1),
+                 config::ParamSeconds::DurationType::SIGNED);
+
 enum Enum
 {
     ENUM_ONE = 1,
@@ -233,6 +241,31 @@ int test_duration(config::Duration<std::chrono::milliseconds>& value)
         {"1s",     true, std::chrono::milliseconds {1000   }},
         {"1m",     true, std::chrono::milliseconds {60000  }},
         {"1h",     true, std::chrono::milliseconds {3600000}},
+
+        {"1x",     false},
+        {"a",      false},
+        {"-",      false},
+        {"second", false}
+    };
+
+    return test(value, entries, elements_in_array(entries));
+}
+
+int test_signed_duration(config::Duration<std::chrono::seconds>& value)
+{
+    static const TestEntry<config::Duration<std::chrono::seconds>::value_type> entries[] =
+    {
+        {"-1",     true, std::chrono::seconds      {-1   }},
+        {"-1ms",   true, std::chrono::seconds      {0    }},
+        {"-1s",    true, std::chrono::seconds      {-1   }},
+        {"-1m",    true, std::chrono::seconds      {-60  }},
+        {"-1h",    true, std::chrono::seconds      {-3600}},
+
+        {"1",      true, std::chrono::seconds      {1    }},
+        {"1ms",    true, std::chrono::seconds      {0    }},
+        {"1s",     true, std::chrono::seconds      {1    }},
+        {"1m",     true, std::chrono::seconds      {60   }},
+        {"1h",     true, std::chrono::seconds      {3600 }},
 
         {"1x",     false},
         {"a",      false},
@@ -417,6 +450,10 @@ int main()
             config::Duration<std::chrono::milliseconds> value_duration_2(&configuration,
                                                                          &param_duration_2);
             nErrors += test_duration(value_duration_2);
+
+            config::Duration<std::chrono::seconds> value_duration_3(&configuration,
+                                                                    &param_duration_3);
+            nErrors += test_signed_duration(value_duration_3);
 
             config::Enum<Enum> value_enum(&configuration, &param_enum);
             nErrors += test_enum(value_enum);

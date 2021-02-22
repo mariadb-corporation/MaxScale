@@ -220,7 +220,8 @@ cfg::ParamCount s_max_sescmd_history(
 
 cfg::ParamSeconds s_idle_session_pool_time(
     &s_spec, "idle_session_pool_time", "Put connections into pool after session has been idle for this long",
-    cfg::INTERPRET_AS_SECONDS, std::chrono::seconds(-1), cfg::Param::AT_RUNTIME);
+    cfg::INTERPRET_AS_SECONDS, std::chrono::seconds(-1),
+    cfg::ParamSeconds::DurationType::SIGNED, cfg::Param::AT_RUNTIME);
 
 template<class Params>
 bool ServiceSpec::do_post_validate(Params params) const
