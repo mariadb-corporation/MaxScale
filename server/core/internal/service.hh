@@ -153,6 +153,9 @@ public:
 
     json_t* json_parameters() const;
 
+    // Configure service from given JSON parameters
+    bool configure(json_t* params);
+
     // TODO: Make these private
     mutable std::mutex lock;
 

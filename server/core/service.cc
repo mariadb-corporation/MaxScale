@@ -1385,6 +1385,18 @@ json_t* Service::json_parameters() const
     return rval;
 }
 
+bool Service::configure(json_t* params)
+{
+    mxs::config::Configuration* router_cnf = m_router->getConfiguration();
+    mxb_assert(router_cnf);
+    std::set<std::string> unknown;
+
+    return m_config.specification().validate(params, &unknown)
+           && router_cnf->specification().validate(params)
+           && m_config.configure(params, &unknown)
+           && router_cnf->configure(params);
+}
+
 uint64_t service_get_version(const SERVICE* svc, service_version_which_t which)
 {
     return static_cast<const Service*>(svc)->get_version(which);

@@ -2018,55 +2018,6 @@ bool runtime_alter_service_relationships_from_json(Service* service, const char*
     return rval;
 }
 
-bool can_modify_service_params(Service* service, const mxs::ConfigParameters& params)
-{
-    bool rval = true;
-
-    const MXS_MODULE* mod = get_module(service->router_name(), mxs::ModuleType::ROUTER);
-    StringSet routerparams;
-
-    for (int i = 0; mod->parameters[i].name; i++)
-    {
-        routerparams.insert(mod->parameters[i].name);
-    }
-
-    if (mod->specification)
-    {
-        for (const auto& p : *mod->specification)
-        {
-            routerparams.insert(p.second->name());
-        }
-    }
-
-    // Get new or updated parameters by comparing all given parameters to the ones in the service. This
-    // prevents unnecessary modifications of parameters and any log messages that the operations would
-    // generate.
-    std::vector<std::pair<std::string, std::string>> newparams;
-    std::set_difference(params.begin(), params.end(), service->params().begin(), service->params().end(),
-                        std::back_inserter(newparams));
-
-    for (const auto& a : newparams)
-    {
-        if (routerparams.count(a.first))
-        {
-            if ((service->capabilities() & RCAP_TYPE_RUNTIME_CONFIG) == 0)
-            {
-                MXS_ERROR("Router '%s' does not support reconfiguration.", service->router_name());
-                rval = false;
-                break;
-            }
-        }
-        else if (!is_dynamic_param(a.first))
-        {
-            MXS_ERROR("Runtime modifications to static service parameters is not supported: %s=%s",
-                      a.first.c_str(), a.second.c_str());
-            rval = false;
-        }
-    }
-
-    return rval;
-}
-
 bool runtime_alter_service_from_json(Service* service, json_t* new_json)
 {
     bool rval = validate_service_json(new_json);
@@ -2075,39 +2026,10 @@ bool runtime_alter_service_from_json(Service* service, json_t* new_json)
     {
         if (json_t* new_params = mxs_json_pointer(new_json, MXS_JSON_PTR_PARAMETERS))
         {
-            auto params = service->params();
-            params.set_multiple(extract_parameters(new_json));
-            const MXS_MODULE* mod = get_module(service->router_name(), mxs::ModuleType::ROUTER);
-
-            bool params_valid = mod->specification ?
-                mod->specification->validate(new_params) :
-                validate_param(common_service_params(), mod->parameters, &params);
-
-            if (params_valid && can_modify_service_params(service, params))
-            {
-                service->update_basic_parameters(params);
-
-                if (auto cnf = service->router()->getConfiguration())
-                {
-                    // Merge the new parameters with the old ones to create a complete definition.
-                    json_t* combined_params = mxs::json_merge(cnf->to_json(), new_params);
-                    rval = cnf->configure(combined_params);
-                    json_decref(combined_params);
-                }
-                else if (service->capabilities() & RCAP_TYPE_RUNTIME_CONFIG)
-                {
-                    if (!service->router()->configure(&params))
-                    {
-                        rval = false;
-                        MXS_ERROR("Reconfiguration of service '%s' failed. See log file for more details.",
-                                  service->name());
-                    }
-                }
-            }
-            else
-            {
-                rval = false;
-            }
+            json_t* params = service->json_parameters();
+            mxs::json_merge(params, new_params);
+            rval = service->configure(params);
+            json_decref(params);
         }
 
         if (rval)
