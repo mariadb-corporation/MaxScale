@@ -1027,6 +1027,15 @@ bool MariaDBClientConnection::route_statement(mxs::Buffer&& buffer)
     {
         recording = record_for_history(buffer, cmd);
     }
+    else if (cmd == MXS_COM_STMT_PREPARE)
+    {
+        buffer.set_id(m_next_id);
+
+        if (++m_next_id == 0)
+        {
+            m_next_id = 1;
+        }
+    }
 
     // Must be done whether or not there were any changes, as the query classifier
     // is thread and not session specific.

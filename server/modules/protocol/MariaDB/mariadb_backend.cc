@@ -1062,8 +1062,9 @@ int32_t MariaDBBackendConnection::write(GWBUF* queue)
                     // prepared statement handling. Asserting that we never get here when we're testing helps
                     // catch the otherwise hard to spot error. Since this code is expected to be hit in
                     // environments where a connector sends an unknown ID, we can't treat this as a hard error
-                    // and close the session.
-                    mxb_assert(!true);
+                    // and close the session. The only known exception to this is the test for MXS-3392 which
+                    // causes a COM_STMT_CLOSE with a zero ID to be sent.
+                    mxb_assert(!true || (cmd == MXS_COM_STMT_CLOSE && ps_id == 0));
                     return 1;
                 }
             }
