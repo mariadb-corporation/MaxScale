@@ -287,7 +287,9 @@ Service* Service::create(const char* name, const char* router, const mxs::Config
 {
     mxs::ConfigParameters unknown;
 
-    if (!s_spec.validate(params, &unknown))
+    if (!s_spec.validate(params, &unknown)
+        // TODO: Remove this check once the `router` parameter is removed
+        || !get_module(router, mxs::ModuleType::ROUTER))
     {
         return nullptr;
     }
@@ -1754,7 +1756,6 @@ void Service::targets_updated()
 
     // Update the global value based on the local cached value. Since modifications to services are always
     // done on the same thread, there's no possibility of lost updates.
-    mxb_assert(mxs::MainWorker::is_main_worker());
     m_data.assign(data);
 
     // Also update the servers queried by the user account manager.

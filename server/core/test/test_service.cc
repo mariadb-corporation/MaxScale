@@ -39,6 +39,10 @@ static void test1()
     parameters.set(CN_CONNECTION_TIMEOUT, "10s");
     parameters.set(CN_NET_WRITE_TIMEOUT, "10s");
     parameters.set(CN_CONNECTION_KEEPALIVE, "100s");
+    parameters.set(CN_USER, "user");
+    parameters.set(CN_PASSWORD, "password");
+    parameters.set(CN_ROUTER, "readwritesplit");
+
     /* Service tests */
     fprintf(stderr, "testservice : creating service called MyService with router nonexistent");
     auto service = Service::create("MyService", "non-existent", parameters);
