@@ -151,6 +151,8 @@ public:
     // TODO: Make JSON output internal (could iterate over get_filters() but that takes the service lock)
     json_t* json_relationships(const char* host) const;
 
+    json_t* json_parameters() const;
+
     // TODO: Make these private
     mutable std::mutex lock;
 

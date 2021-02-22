@@ -325,6 +325,42 @@ Service* Service::create(const char* name, const char* router, const mxs::Config
     }
 
     service->m_config.configure(params, &unknown);
+    const auto& cnf = *service->m_config.values();
+
+    // The values for the various target types and filters are only read from the configuration object when
+    // the service is created. At runtime, the servers are added individually via add_target().
+    if (!cnf.servers.empty())
+    {
+        for (const auto& a : cnf.servers)
+        {
+            Server* server = ServerManager::find_by_unique_name(a);
+            mxb_assert(server);
+            service->m_data->targets.push_back(server);
+        }
+    }
+    else if (!cnf.targets.empty())
+    {
+        for (const auto& a : cnf.targets)
+        {
+            mxs::Target* target = mxs::Target::find(a);
+            mxb_assert(target);
+            service->m_data->targets.push_back(target);
+        }
+    }
+    else if (!cnf.cluster.empty())
+    {
+        Monitor* pMonitor = MonitorManager::find_monitor(cnf.cluster.c_str());
+        mxb_assert(pMonitor);
+        service->set_cluster(pMonitor);
+    }
+
+    service->targets_updated();
+
+    if (!cnf.filters.empty())
+    {
+        MXB_AT_DEBUG(bool ok = ) service->set_filters(cnf.filters);
+        mxb_assert(ok);
+    }
 
     auto service_ptr = service.release();
     LockGuard guard(this_unit.lock);
@@ -1054,16 +1090,7 @@ static const char* service_state_to_string(SERVICE::State state)
 
 json_t* service_parameters_to_json(const SERVICE* service)
 {
-    json_t* rval = json_object();
-
-    const MXS_MODULE* mod = get_module(service->router_name(), mxs::ModuleType::ROUTER);
-    config_add_module_params_json(service->params(),
-                                  {CN_TYPE, CN_ROUTER, CN_SERVERS, CN_FILTERS},
-                                  common_service_params(),
-                                  mod->parameters,
-                                  rval);
-
-    return rval;
+    return static_cast<const Service*>(service)->json_parameters();
 }
 
 static json_t* service_all_listeners_json_data(const char* host, const SERVICE* service)
@@ -1331,6 +1358,31 @@ json_t* service_relations_to_server(const SERVER* server, const std::string& hos
     return rel;
 }
 
+json_t* Service::json_parameters() const
+{
+    json_t* rval = m_config.to_json();
+
+    if (auto config = m_router->getConfiguration())
+    {
+        json_t* tmp = config->to_json();
+        json_object_update(rval, tmp);
+        json_decref(tmp);
+    }
+
+    // These parameters aren't supposed to be modified directly and should instead be modified via the
+    // relationship mechanism in the REST API. Including them in the parameter output results in problems if
+    // the parameters are read and then send back via the REST API.
+    json_object_del(rval, CN_SERVERS);
+    json_object_del(rval, CN_TARGETS);
+    json_object_del(rval, CN_CLUSTER);
+    json_object_del(rval, CN_FILTERS);
+
+    // Mask the password so that it is not leaked via the REST API
+    json_object_set_new(rval, CN_PASSWORD, json_string("*****"));
+
+    return rval;
+}
+
 uint64_t service_get_version(const SERVICE* svc, service_version_which_t which)
 {
     return static_cast<const Service*>(svc)->get_version(which);
@@ -1368,20 +1420,6 @@ void Service::update_basic_parameters(const mxs::ConfigParameters& params)
 {
     m_params.set_multiple(params);
     m_config.configure(m_params);
-
-    const auto& config = *m_config.values();
-    if (config.connection_keepalive.count())
-    {
-        m_capabilities |= RCAP_TYPE_REQUEST_TRACKING;
-    }
-
-    // If the parameter affects the user account manager, update its settings.
-    if (m_usermanager)
-    {
-        m_usermanager->set_credentials(config.user, config.password);
-        m_usermanager->set_union_over_backends(config.users_from_all);
-        m_usermanager->set_strip_db_esc(config.strip_db_esc);
-    }
 }
 
 void Service::update_basic_parameter(const std::string& key, const std::string& value)
@@ -2053,39 +2091,19 @@ bool SERVICE::Config::post_configure(const std::map<std::string, mxs::ConfigPara
 
 bool Service::post_configure()
 {
-    const auto& cnf = *m_config.values();
+    const auto& config = *m_config.values();
 
-    if (!cnf.servers.empty())
+    if (config.connection_keepalive.count())
     {
-        for (const auto& a : cnf.servers)
-        {
-            Server* server = ServerManager::find_by_unique_name(a);
-            mxb_assert(server);
-            m_data->targets.push_back(server);
-        }
-    }
-    else if (!cnf.targets.empty())
-    {
-        for (const auto& a : cnf.targets)
-        {
-            mxs::Target* target = mxs::Target::find(a);
-            mxb_assert(target);
-            m_data->targets.push_back(target);
-        }
-    }
-    else if (!cnf.cluster.empty())
-    {
-        Monitor* pMonitor = MonitorManager::find_monitor(cnf.cluster.c_str());
-        mxb_assert(pMonitor);
-        set_cluster(pMonitor);
+        m_capabilities |= RCAP_TYPE_REQUEST_TRACKING;
     }
 
-    targets_updated();
-
-    if (!cnf.filters.empty())
+    // If the parameter affects the user account manager, update its settings.
+    if (m_usermanager)
     {
-        MXB_AT_DEBUG(bool ok = ) set_filters(cnf.filters);
-        mxb_assert(ok);
+        m_usermanager->set_credentials(config.user, config.password);
+        m_usermanager->set_union_over_backends(config.users_from_all);
+        m_usermanager->set_strip_db_esc(config.strip_db_esc);
     }
 
     return true;
