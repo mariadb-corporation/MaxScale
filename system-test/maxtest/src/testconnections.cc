@@ -1197,6 +1197,11 @@ int TestConnections::set_timeout(long int timeout_seconds)
     return 0;
 }
 
+void TestConnections::set_test_timeout(std::chrono::seconds timeout)
+{
+    m_test_timeout = timeout;
+}
+
 int TestConnections::set_log_copy_interval(long int interval_seconds)
 {
     m_log_copy_to_go = interval_seconds;
@@ -1260,12 +1265,12 @@ int TestConnections::get_master_server_id(int m)
 
 void TestConnections::timeout_thread()
 {
-    while (!m_stop_threads && m_timeout > 0)
+    using Clock = std::chrono::steady_clock;
+    auto start = Clock::now();
+
+    while (!m_stop_threads && m_timeout > 0 && Clock::now() - start < m_test_timeout)
     {
-        struct timespec tim;
-        tim.tv_sec = 1;
-        tim.tv_nsec = 0;
-        nanosleep(&tim, NULL);
+        std::this_thread::sleep_for(std::chrono::seconds(1));
         m_timeout--;
     }
 
