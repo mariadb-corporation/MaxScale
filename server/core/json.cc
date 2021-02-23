@@ -171,11 +171,10 @@ void json_remove_nulls(json_t* json)
     }
 }
 
-json_t* json_merge(json_t* dest, json_t* src)
+void json_merge(json_t* dest, json_t* src)
 {
     mxs::json_remove_nulls(dest);
     mxs::json_remove_nulls(src);
     json_object_update(dest, src);
-    return dest;
 }
 }

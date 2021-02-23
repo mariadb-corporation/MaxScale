@@ -94,12 +94,11 @@ void json_remove_nulls(json_t* json);
 /**
  * Combine `dest` and `src` into one object
  *
- * Removes JSON nulls and updates `dest` with the contents of `src` (both objects are modified).
+ * Removes JSON nulls and updates `dest` with the contents of `src`. Both objects are modified as a result of
+ * this function call.
  *
- * @param dest JSON object where the result is stored
- * @param src  JSON object from which the values are taken
- *
- * @return The value of `dest`. Note that reference counts aren't incremented.
+ * @param dest JSON object where the combined result is stored
+ * @param src  JSON object from where the values are copied
  */
-json_t* json_merge(json_t* dest, json_t* src);
+void json_merge(json_t* dest, json_t* src);
 }

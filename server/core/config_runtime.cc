@@ -2059,7 +2059,8 @@ bool runtime_alter_filter_from_json(const SFilterDef& filter, json_t* new_json)
             if (json_t* new_params = mxs_json_pointer(new_json, MXS_JSON_PTR_PARAMETERS))
             {
                 // The new parameters are merged with the old parameters to get a complete filter definition.
-                json_t* params = mxs::json_merge(config->to_json(), new_params);
+                json_t* params = config->to_json();
+                mxs::json_merge(params, new_params);
 
                 if (config->specification().validate(params)
                     && can_modify_params(config, params)
@@ -2149,9 +2150,10 @@ bool runtime_alter_listener_from_json(SListener listener, json_t* new_json)
         if (json_t* new_params = mxs_json_pointer(new_json, MXS_JSON_PTR_PARAMETERS))
         {
             auto* cnf = listener->config();
-            json_t* combined_params = mxs::json_merge(cnf->to_json(), new_params);
+            json_t* params = cnf->to_json();
+            mxs::json_merge(params, new_params);
 
-            if (cnf->specification().validate(combined_params) && cnf->configure(combined_params))
+            if (cnf->specification().validate(params) && cnf->configure(params))
             {
                 // TODO: Configure the protocol module as well
 
@@ -2160,7 +2162,7 @@ bool runtime_alter_listener_from_json(SListener listener, json_t* new_json)
                 rval = runtime_save_config(listener->name(), ss.str());
             }
 
-            json_decref(combined_params);
+            json_decref(params);
         }
     }
 
@@ -2246,8 +2248,9 @@ bool runtime_alter_maxscale_from_json(json_t* json)
 
     if (validate_object_json(json))
     {
-        json_t* params = mxs_json_pointer(json, MXS_JSON_PTR_PARAMETERS);
-        json_t* new_params = mxs::json_merge(mxs::Config::get().to_json(), params);
+        json_t* new_params = mxs_json_pointer(json, MXS_JSON_PTR_PARAMETERS);
+        json_t* params = mxs::Config::get().to_json();
+        mxs::json_merge(params, new_params);
         auto& cfg = mxs::Config::get();
 
         // TODO: Don't strip out these parameters and define them in the core specification instead.
@@ -2255,22 +2258,22 @@ bool runtime_alter_maxscale_from_json(json_t* json)
         json_t* value;
         void* ptr;
 
-        json_object_foreach_safe(new_params, ptr, key, value)
+        json_object_foreach_safe(params, ptr, key, value)
         {
             if (ignored_core_parameters(key))
             {
-                json_object_del(new_params, key);
+                json_object_del(params, key);
             }
         }
 
-        if (cfg.specification().validate(new_params) && cfg.configure(new_params))
+        if (cfg.specification().validate(params) && cfg.configure(params))
         {
             std::ostringstream ss;
             mxs::Config::get().persist(ss);
             rval = runtime_save_config("maxscale", ss.str());
         }
 
-        json_decref(new_params);
+        json_decref(params);
     }
 
     return rval;
