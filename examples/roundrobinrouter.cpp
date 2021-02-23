@@ -58,6 +58,9 @@
 #define RR_DEBUG(msg, ...)
 #endif
 
+namespace
+{
+
 /* This router handles different query types in a different manner. Some queries
  * require that a "write_backend" is set. */
 const uint32_t q_route_to_rr = (QUERY_TYPE_LOCAL_READ | QUERY_TYPE_READ
@@ -77,18 +80,29 @@ const uint32_t q_route_to_write = (QUERY_TYPE_WRITE | QUERY_TYPE_PREPARE_NAMED_S
                                    | QUERY_TYPE_PREPARE_STMT | QUERY_TYPE_EXEC_STMT
                                    | QUERY_TYPE_CREATE_TMP_TABLE | QUERY_TYPE_READ_TMP_TABLE);
 
-const char MAX_BACKENDS[] = "max_backends";
-const char WRITE_BACKEND[] = "write_backend";
-const char PRINT_ON_ROUTING[] = "print_on_routing";
-const char DUMMY[] = "dummy_setting";
 
-/* Enum setting definition example */
-static const MXS_ENUM_VALUE enum_example[] =
-{
-    {"two",  2},
-    {"zero", 0},
-    {NULL}      /* Last must be NULL */
-};
+namespace cfg = mxs::config;
+
+cfg::Specification s_spec(MXS_MODULE_NAME, cfg::Specification::ROUTER);
+
+cfg::ParamCount s_max_backends(
+    &s_spec, "max_backends", "Maximum number of backends to use",
+    0);
+
+cfg::ParamBool s_print_on_routing(
+    &s_spec, "print_on_routing", "Print messages when routing queries",
+    false);
+
+cfg::ParamTarget s_write_backend(
+    &s_spec, "write_backend", "Target used for writes");
+
+cfg::ParamEnum<uint64_t> s_dummy(
+    &s_spec, "dummy_setting", "A parameter that takes an enumeration",
+    {
+        {2, "two"},
+        {0, "zero"},
+    }, 2);
+}
 
 using std::string;
 using std::cout;
@@ -123,6 +137,16 @@ private:
     void decide_target(GWBUF* querybuf, mxs::Endpoint*& target, bool& route_to_all);
 };
 
+struct Config : public mxs::config::Configuration
+{
+    Config(const char* name);
+
+    int64_t      max_backends;      /* How many backend servers to use */
+    mxs::Target* write_server;      /* Where to send write etc. "unsafe" queries */
+    bool         print_on_routing;  /* Print a message on every packet routed? */
+    uint64_t     example_enum;      /* Not used */
+};
+
 /* Each service using this router will have a router object instance. */
 class RRRouter : public mxs::Router
 {
@@ -149,18 +173,14 @@ public:
 
     mxs::config::Configuration* getConfiguration()
     {
-        return nullptr;
+        return &m_config;
     }
 
 private:
     friend class RRRouterSession;
 
     SERVICE* m_service;             /* Service this router is part of */
-    /* Router settings */
-    unsigned int m_max_backends;    /* How many backend servers to use */
-    mxs::Target* m_write_server;    /* Where to send write etc. "unsafe" queries */
-    bool         m_print_on_routing;/* Print a message on every packet routed? */
-    uint64_t     m_example_enum;    /* Not used */
+    Config   m_config;
 
     /* Methods */
     RRRouter(SERVICE* service);
@@ -171,28 +191,32 @@ private:
     std::atomic<uint64_t> m_routing_c;      /* Client packets routed */
 };
 
+Config::Config(const char* name)
+    : mxs::config::Configuration(name, &s_spec)
+{
+    add_native(&Config::max_backends, &s_max_backends);
+    add_native(&Config::write_server, &s_write_backend);
+    add_native(&Config::print_on_routing, &s_print_on_routing);
+    add_native(&Config::example_enum, &s_dummy);
+}
+
 /**
  * Constructs a new router instance, called by the static `create` method.
  */
 RRRouter::RRRouter(SERVICE* service)
     : m_service(service)
+    , m_config(service->name())
     , m_routing_s(0)
     , m_routing_f(0)
     , m_routing_c(0)
 {
     RR_DEBUG("Creating instance.");
-    /* Read options specific to round robin router. */
-    const mxs::ConfigParameters& params = service->params();
-    m_max_backends = params.get_integer(MAX_BACKENDS);
-    m_write_server = params.get_server(WRITE_BACKEND);
-    m_print_on_routing = params.get_bool(PRINT_ON_ROUTING);
-    m_example_enum = params.get_enum(DUMMY, enum_example);
 
     RR_DEBUG("Settings read:");
-    RR_DEBUG("'%s': %d", MAX_BACKENDS, m_max_backends);
-    RR_DEBUG("'%s': %p", WRITE_BACKEND, m_write_server);
-    RR_DEBUG("'%s': %d", PRINT_ON_ROUTING, m_print_on_routing);
-    RR_DEBUG("'%s': %lu", DUMMY, m_example_enum);
+    RR_DEBUG("'%s': %d", MAX_BACKENDS, m_config.max_backends);
+    RR_DEBUG("'%s': %p", WRITE_BACKEND, m_config.write_server);
+    RR_DEBUG("'%s': %d", PRINT_ON_ROUTING, m_config.print_on_routing);
+    RR_DEBUG("'%s': %lu", DUMMY, m_config.example_enum);
 }
 
 /**
@@ -225,7 +249,7 @@ mxs::RouterSession* RRRouter::newSession(MXS_SESSION* session, const mxs::Endpoi
 
     for (auto e : endpoints)
     {
-        if (e->target() == m_write_server)
+        if (e->target() == m_config.write_server)
         {
             write_backend = e;
         }
@@ -300,7 +324,7 @@ json_t* RRRouter::diagnostics() const
 int RRRouterSession::routeQuery(GWBUF* querybuf)
 {
     int rval = 0;
-    const bool print = m_router->m_print_on_routing;
+    const bool print = m_router->m_config.print_on_routing;
     mxs::Endpoint* target = nullptr;
     bool route_to_all = false;
 
@@ -353,7 +377,7 @@ int RRRouterSession::routeQuery(GWBUF* querybuf)
     {
         MXS_ERROR("Could not find a valid routing backend. Either the "
                   "'%s' is not set or the command is not recognized.",
-                  WRITE_BACKEND);
+                  s_write_backend.name().c_str());
         gwbuf_free(querybuf);
     }
     if (rval == 1)
@@ -394,7 +418,7 @@ int32_t RRRouterSession::clientReply(GWBUF* buf, const mxs::ReplyRoute& down, co
     int32_t rc = RouterSession::clientReply(buf, down, reply);
 
     m_router->m_routing_c++;
-    if (m_router->m_print_on_routing)
+    if (m_router->m_config.print_on_routing)
     {
         MXS_NOTICE("Replied to client.\n");
     }
@@ -654,31 +678,9 @@ MXS_MODULE* MXS_CREATE_MODULE()
         NULL,                           /* Thread init */
         NULL,                           /* Thread finish */
         {
-            /* Next is an array of MODULE_PARAM structs, max 64 items. These define all
-             * the possible parameters that this module accepts. This is required
-             * since the module loader also parses the configuration file for the module.
-             * Any unrecognised parameters in the config file are discarded.
-             *
-             * Note that many common parameters, such as backend servers, are
-             * already set to the upper level "service"-object.
-             */
-            {                           /* For simple types, only 3 of the 5 struct fields need to be
-                                         * defined. */
-                MAX_BACKENDS,           /* Setting identifier in maxscale.cnf */
-                MXS_MODULE_PARAM_INT,   /* Setting type */
-                "0"                     /* Default value */
-            },
-            {PRINT_ON_ROUTING,        MXS_MODULE_PARAM_BOOL,    "false"},
-            {WRITE_BACKEND,           MXS_MODULE_PARAM_SERVER,  NULL   },
-            {   /* Enum types require an array with allowed values. */
-                DUMMY,
-                MXS_MODULE_PARAM_ENUM,
-                "the_answer",
-                MXS_MODULE_OPT_NONE,
-                enum_example
-            },
             {MXS_END_MODULE_PARAMS}
-        }
+        },
+        &s_spec
     };
     return &moduleObject;
 }
