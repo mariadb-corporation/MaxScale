@@ -1645,6 +1645,13 @@ public:
     std::ostream& persist(std::ostream& out) const;
 
     /**
+     * Append the configuration to an already persisted configuration.
+     *
+     * @param out  The stream to persist to.
+     */
+    std::ostream& persist_append(std::ostream& out) const;
+
+    /**
      * Fill the object with the param-name/param-value pairs of the configuration.
      *
      * @param pJson  The json object to be filled.

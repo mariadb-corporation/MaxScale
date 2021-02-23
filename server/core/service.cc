@@ -966,7 +966,7 @@ std::ostream& Service::persist(std::ostream& os) const
     mxb_assert(cnf);
 
     cnf->persist(os);
-    m_config.persist(os);
+    m_config.persist_append(os);
 
     const auto& data = *m_data;
 

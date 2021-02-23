@@ -814,7 +814,11 @@ const Type* Configuration::find_value(const string& name) const
 ostream& Configuration::persist(ostream& out) const
 {
     out << '[' << m_name << ']' << '\n';
+    return persist_append(out);
+}
 
+ostream& Configuration::persist_append(ostream& out) const
+{
     for (const auto& entry : m_values)
     {
         Type* pValue = entry.second;
