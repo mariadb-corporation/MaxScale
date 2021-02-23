@@ -157,8 +157,6 @@ public:
         return m_name.c_str();
     }
 
-    virtual const mxs::ConfigParameters& params() const = 0;
-
     const char* router_name() const
     {
         return m_router_name.c_str();

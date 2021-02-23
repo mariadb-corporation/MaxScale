@@ -90,23 +90,6 @@ public:
     bool is_basic_parameter(const std::string& name);
 
     /**
-     * Update a basic service parameter
-     *
-     * Update a parameter that is common to all services.
-     *
-     * @param name    Name of the parameter to update
-     * @param value   The new value of the parameter
-     */
-    void update_basic_parameter(const std::string& name, const std::string& value);
-
-    /**
-     * Update multiple basic parameters
-     *
-     * @param params Parameters to update
-     */
-    void update_basic_parameters(const mxs::ConfigParameters& params);
-
-    /**
      * Set the list of filters for this service
      *
      * @param filters Filters to set
@@ -224,21 +207,6 @@ public:
      */
     bool can_be_destroyed() const;
 
-    const mxs::ConfigParameters& params() const override
-    {
-        return m_params;
-    }
-
-    void remove_parameter(const std::string& key)
-    {
-        m_params.remove(key);
-    }
-
-    void set_parameter(const std::string& key, const std::string& value)
-    {
-        m_params.set(key, value);
-    }
-
     void incref();
 
     void decref();
@@ -287,7 +255,7 @@ private:
         uint64_t target_capabilities {0};
     };
 
-    Service(const std::string& name, const std::string& router, const mxs::ConfigParameters& params);
+    Service(const std::string& name, const std::string& router);
 
     /**
      * Recalculate internal data
@@ -309,8 +277,6 @@ private:
     std::atomic<int64_t>    m_refcount {1};
     bool                    m_active {true};
     mxs::Monitor*           m_monitor {nullptr};    /**< A possibly associated monitor */
-
-    mxs::ConfigParameters m_params;
 
     // User account manager. Can only be set once.
     SAccountManager m_usermanager;

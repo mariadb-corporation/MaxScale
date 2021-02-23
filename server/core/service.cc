@@ -301,7 +301,7 @@ Service* Service::create(const char* name, const char* router, const mxs::Config
         return nullptr;
     }
 
-    std::unique_ptr<Service> service(new Service(name, router, params));
+    std::unique_ptr<Service> service(new Service(name, router));
 
     // TODO: Change the router API to use a reference
     mxs::ConfigParameters param_copy = params;
@@ -473,12 +473,9 @@ Service::Config::Config(SERVICE* service)
     add_native(&Config::m_v, &Values::idle_session_pooling_time, &s_idle_session_pool_time);
 }
 
-Service::Service(const std::string& name,
-                 const std::string& router_name,
-                 const mxs::ConfigParameters& params)
+Service::Service(const std::string& name, const std::string& router_name)
     : SERVICE(name, router_name)
     , m_config(this)
-    , m_params(params)
 {
     const MXS_MODULE* module = get_module(router_name, mxs::ModuleType::ROUTER);
     m_capabilities = module->module_capabilities;
@@ -965,25 +962,11 @@ std::vector<Service*> service_filter_in_use(const SFilterDef& filter)
  */
 std::ostream& Service::persist(std::ostream& os) const
 {
-    const MXS_MODULE* mod = get_module(router_name(), mxs::ModuleType::ROUTER);
-    mxb_assert(mod);
+    auto cnf = m_router->getConfiguration();
+    mxb_assert(cnf);
 
-    mxs::ConfigParameters params_to_print = m_params;
-    // The next text-mode parameter may not be up-to-date, print them manually. TODO: Fix
-    params_to_print.remove(CN_FILTERS);
-    params_to_print.remove(CN_SERVERS);
-    params_to_print.remove(CN_TARGETS);
-    params_to_print.remove(CN_CLUSTER);
-
-    if (auto cnf = m_router->getConfiguration())
-    {
-        cnf->persist(os);
-        os << serialize_params(params_to_print, common_service_params());
-    }
-    else
-    {
-        os << generate_config_string(name(), params_to_print, common_service_params(), mod->parameters);
-    }
+    cnf->persist(os);
+    m_config.persist(os);
 
     const auto& data = *m_data;
 
@@ -1428,18 +1411,6 @@ bool Service::is_basic_parameter(const std::string& name)
     };
 
     return names.find(name) != names.end();
-}
-
-void Service::update_basic_parameters(const mxs::ConfigParameters& params)
-{
-    m_params.set_multiple(params);
-    m_config.configure(m_params);
-}
-
-void Service::update_basic_parameter(const std::string& key, const std::string& value)
-{
-    m_params.set(key, value);
-    update_basic_parameters(m_params);
 }
 
 const MXS_MODULE_PARAM* common_service_params()
