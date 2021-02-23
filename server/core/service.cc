@@ -1139,7 +1139,14 @@ json_t* service_attributes(const char* host, const SERVICE* service)
     json_object_set_new(attr, "statistics", service->stats().to_json());
 
     /** Add service parameters and listeners */
-    json_object_set_new(attr, CN_PARAMETERS, service_parameters_to_json(service));
+    json_t* params = service_parameters_to_json(service);
+
+    // Mask the password to prevent it from leaking. This does cause a problem when a GET request is followed
+    // by a PATCH request with the same resource.The password is changed to the masked version which causes
+    // problems that are sometimes hard to track.
+    json_object_set_new(params, CN_PASSWORD, json_string("*****"));
+
+    json_object_set_new(attr, CN_PARAMETERS, params);
     json_object_set_new(attr, CN_LISTENERS, service_all_listeners_json_data(host, service));
 
     return attr;
@@ -1359,9 +1366,6 @@ json_t* Service::json_parameters() const
         json_object_update(rval, tmp);
         json_decref(tmp);
     }
-
-    // Mask the password so that it is not leaked via the REST API
-    json_object_set_new(rval, CN_PASSWORD, json_string("*****"));
 
     return rval;
 }
