@@ -80,16 +80,6 @@ public:
     ~Service();
 
     /**
-     * Check if name matches a basic service parameter
-     *
-     * Basic parameters are common to all services. These include, for example, the
-     * `user` and `password` parameters.
-     *
-     * @return True if the parameter is a basic service parameter
-     */
-    bool is_basic_parameter(const std::string& name);
-
-    /**
      * Set the list of filters for this service
      *
      * @param filters Filters to set
@@ -135,6 +125,8 @@ public:
     json_t* json_relationships(const char* host) const;
 
     json_t* json_parameters() const;
+
+    static mxs::config::Specification* specification();
 
     // Configure service from given JSON parameters
     bool configure(json_t* params);
@@ -595,5 +587,3 @@ void service_add_server(mxs::Monitor* pMonitor, SERVER* pServer);
  * @param server   A server.
  */
 void service_remove_server(mxs::Monitor* pMonitor, SERVER* pServer);
-
-const MXS_MODULE_PARAM* common_service_params();

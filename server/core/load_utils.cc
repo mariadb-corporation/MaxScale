@@ -594,11 +594,7 @@ json_t* legacy_params_to_json(const LOADED_MODULE* mod)
     case ModuleType::AUTHENTICATOR:
     case ModuleType::QUERY_CLASSIFIER:
     case ModuleType::PROTOCOL:
-        break;
-
     case ModuleType::ROUTER:
-        extra = common_service_params();
-        ignored = {CN_SERVERS, CN_TARGETS, CN_ROUTER, CN_TYPE, CN_CLUSTER, CN_FILTERS};
         break;
 
     case ModuleType::MONITOR:
@@ -654,6 +650,13 @@ static json_t* module_json_data(const LOADED_MODULE* mod, const char* host)
     else
     {
         params = legacy_params_to_json(mod);
+    }
+
+    if (mod_info->modapi == mxs::ModuleType::ROUTER)
+    {
+        json_t* core_params = Service::specification()->to_json();
+        json_object_update(params, core_params);
+        json_decref(core_params);
     }
 
     json_object_set_new(attr, "commands", commands);

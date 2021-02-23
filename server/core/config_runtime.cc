@@ -113,11 +113,7 @@ const Relationship to_filter_rel
 
 const MXS_MODULE_PARAM* get_type_parameters(const char* type)
 {
-    if (strcmp(type, CN_SERVICE) == 0)
-    {
-        return common_service_params();
-    }
-    else if (strcmp(type, CN_MONITOR) == 0)
+    if (strcmp(type, CN_MONITOR) == 0)
     {
         return common_monitor_params();
     }
@@ -1907,34 +1903,32 @@ bool runtime_create_service_from_json(json_t* json)
         {
             const char* router = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_ROUTER));
             bool ok;
-            mxs::ConfigParameters params;
-            tie(ok, params) = extract_and_validate_params(json, router, mxs::ModuleType::ROUTER, CN_SERVICE);
+            mxs::ConfigParameters params = extract_parameters(json);
+            params.set(CN_ROUTER, router);
+            params.set(CN_TYPE, CN_SERVICE);
 
-            if (ok)
+            if (auto service = Service::create(name, router, params))
             {
-                if (auto service = Service::create(name, router, params))
+                if (update_service_relationships(service, json))
                 {
-                    if (update_service_relationships(service, json))
-                    {
-                        std::ostringstream ss;
-                        service->persist(ss);
+                    std::ostringstream ss;
+                    service->persist(ss);
 
-                        if (runtime_save_config(name, ss.str()))
-                        {
-                            MXS_NOTICE("Created service '%s'", name);
-                            serviceStart(service);
-                            rval = true;
-                        }
-                        else
-                        {
-                            MXS_ERROR("Failed to serialize service '%s'", name);
-                        }
+                    if (runtime_save_config(name, ss.str()))
+                    {
+                        MXS_NOTICE("Created service '%s'", name);
+                        serviceStart(service);
+                        rval = true;
+                    }
+                    else
+                    {
+                        MXS_ERROR("Failed to serialize service '%s'", name);
                     }
                 }
-                else
-                {
-                    MXS_ERROR("Could not create service '%s' with module '%s'", name, router);
-                }
+            }
+            else
+            {
+                MXS_ERROR("Could not create service '%s' with module '%s'", name, router);
             }
         }
         else

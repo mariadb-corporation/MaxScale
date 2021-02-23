@@ -44,7 +44,7 @@ bool is_core_param(Specification::Kind kind, const std::string& param)
         break;
 
     case Specification::ROUTER:
-        pzCore_params = common_service_params();
+        return ::Service::specification()->find_param(param);
         break;
 
     case Specification::GLOBAL:

@@ -1889,7 +1889,7 @@ std::pair<const MXS_MODULE_PARAM*, const MXS_MODULE*> get_module_details(const C
     if (type == CN_SERVICE)
     {
         auto name = obj->m_parameters.get_string(CN_ROUTER);
-        return {common_service_params(), get_module(name, mxs::ModuleType::ROUTER)};
+        return {nullptr, get_module(name, mxs::ModuleType::ROUTER)};
     }
     else if (type == CN_MONITOR)
     {
@@ -1982,7 +1982,7 @@ std::unordered_set<CONFIG_CONTEXT*> get_dependencies(const std::vector<CONFIG_CO
 
     for (const auto* p : {common_params, module->parameters})
     {
-        mxb_assert(p || type == CN_FILTER);
+        mxb_assert(p || type == CN_FILTER || type == CN_SERVICE);
 
         for (int i = 0; p && p[i].name; i++)
         {
@@ -2940,15 +2940,16 @@ static bool check_config_objects(CONFIG_CONTEXT* context)
             continue;
         }
 
-        if (type == CN_SERVER || type == CN_LISTENER || type == CN_FILTER)
+        if (type == CN_SERVER || type == CN_LISTENER || type == CN_FILTER || type == CN_SERVICE)
         {
             // Servers are a special case as they don't have a module and the validation is done as a part of
-            // the creation process. Filters and listeners validate the parameters when they are being
+            // the creation process. Filters, services and listeners validate the parameters when they are being
             // constructed. This is done after the dependency order of the modules is resolved which allows
             // parameters that refer to other objects to be validated.
             continue;
         }
 
+        mxb_assert(type == CN_MONITOR);
         const MXS_MODULE_PARAM* param_set = nullptr;
         const MXS_MODULE* mod = nullptr;
         std::tie(param_set, mod) = get_module_details(obj);

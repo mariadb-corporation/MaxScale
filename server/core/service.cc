@@ -283,6 +283,12 @@ bool ServiceSpec::do_post_validate(Params params) const
 }
 }
 
+// static
+mxs::config::Specification* Service::specification()
+{
+    return &s_spec;
+}
+
 Service* Service::create(const char* name, const char* router, const mxs::ConfigParameters& params)
 {
     mxs::ConfigParameters unknown;
@@ -1375,78 +1381,6 @@ bool Service::configure(json_t* params)
 uint64_t service_get_version(const SERVICE* svc, service_version_which_t which)
 {
     return static_cast<const Service*>(svc)->get_version(which);
-}
-
-bool Service::is_basic_parameter(const std::string& name)
-{
-    static const std::set<std::string> names =
-    {
-        CN_AUTH_ALL_SERVERS,
-        CN_CONNECTION_TIMEOUT,
-        CN_NET_WRITE_TIMEOUT,
-        CN_ENABLE_ROOT_USER,
-        CN_LOCALHOST_MATCH_WILDCARD_HOST,
-        CN_LOG_AUTH_WARNINGS,
-        CN_MAX_CONNECTIONS,
-        CN_PASSWORD,
-        CN_STRIP_DB_ESC,
-        CN_USER,
-        CN_VERSION_STRING,
-        CN_FILTERS,
-        CN_RETAIN_LAST_STATEMENTS,
-        CN_CONNECTION_KEEPALIVE,
-        CN_RANK,
-        CN_DISABLE_SESCMD_HISTORY,
-        CN_MAX_SESCMD_HISTORY,
-        CN_PRUNE_SESCMD_HISTORY,
-        CN_IDLE_SESSION_POOL_TIME,
-    };
-
-    return names.find(name) != names.end();
-}
-
-const MXS_MODULE_PARAM* common_service_params()
-{
-    static const MXS_MODULE_PARAM config_service_params[] =
-    {
-        {CN_TYPE,                   MXS_MODULE_PARAM_STRING,   CN_SERVICE, MXS_MODULE_OPT_REQUIRED  },
-        {CN_ROUTER,                 MXS_MODULE_PARAM_STRING,   NULL,       MXS_MODULE_OPT_REQUIRED  },
-        {CN_ROUTER_OPTIONS,         MXS_MODULE_PARAM_STRING},
-        {CN_SERVERS,                MXS_MODULE_PARAM_STRING},
-        {CN_TARGETS,                MXS_MODULE_PARAM_STRING},
-        {CN_USER,                   MXS_MODULE_PARAM_STRING,   NULL,       MXS_MODULE_OPT_REQUIRED  },
-        {CN_PASSWORD,               MXS_MODULE_PARAM_PASSWORD, NULL,       MXS_MODULE_OPT_REQUIRED  },
-        {CN_ENABLE_ROOT_USER,       MXS_MODULE_PARAM_BOOL,     "false"},
-        {CN_MAX_CONNECTIONS,        MXS_MODULE_PARAM_COUNT,    "0"},
-        {CN_CONNECTION_TIMEOUT,     MXS_MODULE_PARAM_DURATION, "0",        MXS_MODULE_OPT_DURATION_S},
-        {CN_NET_WRITE_TIMEOUT,      MXS_MODULE_PARAM_DURATION, "0",        MXS_MODULE_OPT_DURATION_S},
-        {CN_AUTH_ALL_SERVERS,       MXS_MODULE_PARAM_BOOL,     "false"},
-        {CN_STRIP_DB_ESC,           MXS_MODULE_PARAM_BOOL,     "true"},
-        {
-            CN_LOCALHOST_MATCH_WILDCARD_HOST, MXS_MODULE_PARAM_BOOL, "true", MXS_MODULE_OPT_DEPRECATED
-        },
-        {CN_VERSION_STRING,         MXS_MODULE_PARAM_STRING},
-        {CN_FILTERS,                MXS_MODULE_PARAM_STRING},
-        {CN_LOG_AUTH_WARNINGS,      MXS_MODULE_PARAM_BOOL,     "true"},
-        {
-            CN_SESSION_TRACK_TRX_STATE, MXS_MODULE_PARAM_BOOL, "false"
-        },
-        {
-            CN_RETAIN_LAST_STATEMENTS, MXS_MODULE_PARAM_INT, "-1"
-        },
-        {CN_SESSION_TRACE,          MXS_MODULE_PARAM_BOOL,     "false"},
-        {CN_CLUSTER,                MXS_MODULE_PARAM_STRING},
-        {
-            CN_RANK, MXS_MODULE_PARAM_ENUM, DEFAULT_RANK, MXS_MODULE_OPT_ENUM_UNIQUE, rank_values
-        },
-        {CN_CONNECTION_KEEPALIVE,   MXS_MODULE_PARAM_DURATION, "300s",     MXS_MODULE_OPT_DURATION_S},
-        {CN_MAX_SESCMD_HISTORY,     MXS_MODULE_PARAM_COUNT,    "50"},
-        {CN_DISABLE_SESCMD_HISTORY, MXS_MODULE_PARAM_BOOL,     "false"},
-        {CN_PRUNE_SESCMD_HISTORY,   MXS_MODULE_PARAM_BOOL,     "true"},
-        {CN_IDLE_SESSION_POOL_TIME, MXS_MODULE_PARAM_INT,      "-1"},
-        {NULL}
-    };
-    return config_service_params;
 }
 
 ServiceEndpoint::ServiceEndpoint(MXS_SESSION* session, Service* service, mxs::Component* up)
