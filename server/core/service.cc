@@ -327,40 +327,44 @@ Service* Service::create(const char* name, const char* router, const mxs::Config
     }
 
     service->m_config.configure(params, &unknown);
-    const auto& cnf = *service->m_config.values();
+
+    auto servers = s_servers.get(params);
+    auto targets = s_targets.get(params);
+    auto cluster = s_cluster.get(params);
+    auto filters = s_filters.get(params);
 
     // The values for the various target types and filters are only read from the configuration object when
     // the service is created. At runtime, the servers are added individually via add_target().
-    if (!cnf.servers.empty())
+    if (!servers.empty())
     {
-        for (const auto& a : cnf.servers)
+        for (const auto& a : servers)
         {
             Server* server = ServerManager::find_by_unique_name(a);
             mxb_assert(server);
             service->m_data->targets.push_back(server);
         }
     }
-    else if (!cnf.targets.empty())
+    else if (!targets.empty())
     {
-        for (const auto& a : cnf.targets)
+        for (const auto& a : targets)
         {
             mxs::Target* target = mxs::Target::find(a);
             mxb_assert(target);
             service->m_data->targets.push_back(target);
         }
     }
-    else if (!cnf.cluster.empty())
+    else if (!cluster.empty())
     {
-        Monitor* pMonitor = MonitorManager::find_monitor(cnf.cluster.c_str());
+        Monitor* pMonitor = MonitorManager::find_monitor(cluster.c_str());
         mxb_assert(pMonitor);
         service->set_cluster(pMonitor);
     }
 
     service->targets_updated();
 
-    if (!cnf.filters.empty())
+    if (!filters.empty())
     {
-        MXB_AT_DEBUG(bool ok = ) service->set_filters(cnf.filters);
+        MXB_AT_DEBUG(bool ok = ) service->set_filters(filters);
         mxb_assert(ok);
     }
 
@@ -447,10 +451,6 @@ Service::Config::Config(SERVICE* service)
 {
     add_native(&Config::m_v, &Values::type, &s_type);
     add_native(&Config::m_v, &Values::router, &s_router);
-    add_native(&Config::m_v, &Values::servers, &s_servers);
-    add_native(&Config::m_v, &Values::targets, &s_targets);
-    add_native(&Config::m_v, &Values::cluster, &s_cluster);
-    add_native(&Config::m_v, &Values::filters, &s_filters);
     add_native(&Config::m_v, &Values::user, &s_user);
     add_native(&Config::m_v, &Values::password, &s_password);
     add_native(&Config::m_v, &Values::enable_root, &s_enable_root_user);
@@ -1353,14 +1353,6 @@ json_t* Service::json_parameters() const
         json_object_update(rval, tmp);
         json_decref(tmp);
     }
-
-    // These parameters aren't supposed to be modified directly and should instead be modified via the
-    // relationship mechanism in the REST API. Including them in the parameter output results in problems if
-    // the parameters are read and then send back via the REST API.
-    json_object_del(rval, CN_SERVERS);
-    json_object_del(rval, CN_TARGETS);
-    json_object_del(rval, CN_CLUSTER);
-    json_object_del(rval, CN_FILTERS);
 
     // Mask the password so that it is not leaked via the REST API
     json_object_set_new(rval, CN_PASSWORD, json_string("*****"));

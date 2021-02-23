@@ -91,11 +91,6 @@ public:
             std::string       type;     // Always "service"
             const MXS_MODULE* router;   // The router module
 
-            std::vector<std::string> servers;
-            std::vector<std::string> targets;
-            std::vector<std::string> filters;
-            std::string              cluster;
-
             std::string user;                       /**< Username */
             std::string password;                   /**< Password */
             std::string version_string;             /**< Version string sent to clients */
