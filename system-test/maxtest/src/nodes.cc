@@ -219,47 +219,34 @@ int Nodes::copy_to_node(int i, const char* src, const char* dest)
     {
         return 1;
     }
-    char sys[strlen(src) + strlen(dest) + 1024];
+    return m_vms[i].copy_to_node(src, dest) ? 0 : 1;
+}
 
-    auto& vmnode = m_vms[i];
-    auto& ip4 = vmnode.m_ip4;
-    if (ip4 == "127.0.0.1")
+bool Nodes::VMNode::copy_to_node(const string& src, const string& dest)
+{
+    string cmd;
+    if (m_type == NodeType::LOCAL)
     {
-        sprintf(sys,
-                "cp %s %s",
-                src,
-                dest);
+        cmd = mxb::string_printf("cp %s %s", src.c_str(), dest.c_str());
     }
     else
     {
-        sprintf(sys,
-                "scp -q -r -i %s "
-                "-o UserKnownHostsFile=/dev/null "
-                "-o CheckHostIP=no "
-                "-o ControlMaster=auto "
-                "-o ControlPath=./maxscale-test-%%r@%%h:%%p "
-                "-o ControlPersist=yes "
-                "-o StrictHostKeyChecking=no "
-                "-o LogLevel=quiet "
-                "%s %s@%s:%s",
-                vmnode.m_sshkey.c_str(),
-                src,
-                vmnode.m_username.c_str(),
-                ip4.c_str(),
-                dest);
+        cmd = mxb::string_printf("scp -q -r -i %s %s %s %s@%s:%s",
+                                 m_sshkey.c_str(), ssh_opts, src.c_str(),
+                                 m_username.c_str(), m_ip4.c_str(), dest.c_str());
     }
-    if (verbose())
+
+    if (m_shared.verbose)
     {
-        printf("%s\n", sys);
+        printf("%s\n", cmd.c_str());
     }
 
-    return system(sys);
+    int rc = system(cmd.c_str());
+    return rc == 0;
 }
-
 
 int Nodes::copy_to_node_legacy(const char* src, const char* dest, int i)
 {
-
     return copy_to_node(i, src, dest);
 }
 
@@ -269,39 +256,30 @@ int Nodes::copy_from_node(int i, const char* src, const char* dest)
     {
         return 1;
     }
-    char sys[strlen(src) + strlen(dest) + 1024];
-    auto& vmnode = m_vms[i];
-    auto& ip4 = vmnode.m_ip4;
-    if (ip4 == "127.0.0.1")
+    return m_vms[i].copy_from_node(src, dest) ? 0 : 1;
+}
+
+bool Nodes::VMNode::copy_from_node(const string& src, const string& dest)
+{
+    string cmd;
+    if (m_type == NodeType::LOCAL)
     {
-        sprintf(sys,
-                "cp %s %s",
-                src,
-                dest);
+        cmd = mxb::string_printf("cp %s %s", src.c_str(), dest.c_str());
     }
     else
     {
-        sprintf(sys,
-                "scp -q -r -i %s -o UserKnownHostsFile=/dev/null "
-                "-o StrictHostKeyChecking=no "
-                "-o LogLevel=quiet "
-                "-o CheckHostIP=no "
-                "-o ControlMaster=auto "
-                "-o ControlPath=./maxscale-test-%%r@%%h:%%p "
-                "-o ControlPersist=yes "
-                "%s@%s:%s %s",
-                vmnode.m_sshkey.c_str(),
-                vmnode.m_username.c_str(),
-                ip4.c_str(),
-                src,
-                dest);
-    }
-    if (verbose())
-    {
-        printf("%s\n", sys);
+        cmd = mxb::string_printf("scp -q -r -i %s %s %s@%s:%s %s",
+                                 m_sshkey.c_str(), ssh_opts, m_username.c_str(), m_ip4.c_str(),
+                                 src.c_str(), dest.c_str());
     }
 
-    return system(sys);
+    if (m_shared.verbose)
+    {
+        printf("%s\n", cmd.c_str());
+    }
+
+    int rc = system(cmd.c_str());
+    return rc == 0;
 }
 
 int Nodes::copy_from_node_legacy(const char* src, const char* dest, int i)
@@ -504,6 +482,46 @@ void Nodes::VMNode::write_node_env_vars()
     write_env_var("_whoami", m_username);
 }
 
+const char* Nodes::VMNode::ip4() const
+{
+    return m_ip4.c_str();
+}
+
+const char* Nodes::VMNode::ip6() const
+{
+    return m_ip6.c_str();
+}
+
+const char* Nodes::VMNode::priv_ip() const
+{
+    return m_private_ip.c_str();
+}
+
+const char* Nodes::VMNode::hostname() const
+{
+    return m_hostname.c_str();
+}
+
+const char* Nodes::VMNode::access_user() const
+{
+    return m_username.c_str();
+}
+
+const char* Nodes::VMNode::access_homedir() const
+{
+    return m_homedir.c_str();
+}
+
+const char* Nodes::VMNode::access_sudo() const
+{
+    return m_sudo.c_str();
+}
+
+const char* Nodes::VMNode::sshkey() const
+{
+    return m_sshkey.c_str();
+}
+
 Nodes::SshResult Nodes::ssh_output(const std::string& cmd, int node, bool sudo)
 {
     return m_vms[node].run_cmd_output(cmd, sudo ? VMNode::CmdPriv::SUDO : VMNode::CmdPriv::NORMAL);
@@ -511,37 +529,37 @@ Nodes::SshResult Nodes::ssh_output(const std::string& cmd, int node, bool sudo)
 
 const char* Nodes::ip_private(int i) const
 {
-    return m_vms[i].m_private_ip.c_str();
+    return m_vms[i].priv_ip();
 }
 
 const char* Nodes::ip6(int i) const
 {
-    return m_vms[i].m_ip6.c_str();
+    return m_vms[i].ip6();
 }
 
 const char* Nodes::hostname(int i) const
 {
-    return m_vms[i].m_hostname.c_str();
+    return m_vms[i].hostname();
 }
 
 const char* Nodes::access_user(int i) const
 {
-    return m_vms[i].m_username.c_str();
+    return m_vms[i].access_user();
 }
 
 const char* Nodes::access_homedir(int i) const
 {
-    return m_vms[i].m_homedir.c_str();
+    return m_vms[i].access_homedir();
 }
 
 const char* Nodes::access_sudo(int i) const
 {
-    return m_vms[i].m_sudo.c_str();
+    return m_vms[i].access_sudo();
 }
 
 const char* Nodes::sshkey(int i) const
 {
-    return m_vms[i].m_sshkey.c_str();
+    return m_vms[i].sshkey();
 }
 
 const std::string& Nodes::prefix() const
@@ -551,7 +569,7 @@ const std::string& Nodes::prefix() const
 
 const char* Nodes::ip4(int i) const
 {
-    return m_vms[i].m_ip4.c_str();
+    return m_vms[i].ip4();
 }
 
 bool Nodes::verbose() const

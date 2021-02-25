@@ -145,7 +145,31 @@ private:
          */
         void write_node_env_vars();
 
-        std::string m_name;     /**< E.g. "node_001" */
+        /**
+         * Copy a local file to the node.
+         *
+         * @param src Source file on the local filesystem
+         * @param dest Destination file on the remote file system
+         * @return True on success
+         */
+        bool copy_to_node(const std::string& src, const std::string& dest);
+
+        bool copy_from_node(const std::string& src, const std::string& dest);
+
+        const char* ip4() const;
+        const char* ip6() const;
+        const char* priv_ip() const;
+        const char* hostname() const;
+
+        const char* access_user() const;
+        const char* access_homedir() const;
+        const char* access_sudo() const;
+        const char* sshkey() const;
+
+        const std::string m_name;     /**< E.g. "node_001" */
+
+    private:
+        std::string get_nc_item(const std::string& item_name, const std::string& network_config);
 
         std::string m_ip4;          /**< IPv4-address */
         std::string m_ip6;          /**< IPv6-address */
@@ -156,9 +180,6 @@ private:
         std::string m_homedir;  /**< Home directory of username */
         std::string m_sudo;     /**< empty or "sudo " */
         std::string m_sshkey;   /**< Path to ssh key */
-
-    private:
-        std::string get_nc_item(const std::string& item_name, const std::string& network_config);
 
         enum class NodeType {LOCAL, REMOTE};
 
