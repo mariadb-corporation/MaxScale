@@ -74,13 +74,16 @@ MariaDBCluster::MariaDBCluster(SharedData& shared, const std::string& nwconf_pre
 
 bool MariaDBCluster::setup()
 {
+    bool rval = false;
     read_env();
-    Nodes::init_ssh_masters();
-    truncate_mariadb_logs();
-    prepare_for_test();
-    close_active_connections();
-
-    return true;
+    if (Nodes::setup())
+    {
+        truncate_mariadb_logs();
+        prepare_for_test();
+        close_active_connections();
+        rval = true;
+    }
+    return rval;
 }
 
 MariaDBCluster::~MariaDBCluster()

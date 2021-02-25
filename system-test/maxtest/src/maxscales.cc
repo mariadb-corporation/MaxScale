@@ -31,20 +31,24 @@ Maxscales::~Maxscales()
 
 bool Maxscales::setup()
 {
+    bool rval = false;
     read_env();     // Sets e.g. use_valgrind.
-    Nodes::init_ssh_masters();
 
-    if (this->use_valgrind)
+    if (Nodes::setup())
     {
-        for (int i = 0; i < N; i++)
+        if (this->use_valgrind)
         {
-            ssh_node_f(i, true, "yum install -y valgrind gdb 2>&1");
-            ssh_node_f(i, true, "apt install -y --force-yes valgrind gdb 2>&1");
-            ssh_node_f(i, true, "zypper -n install valgrind gdb 2>&1");
-            ssh_node_f(i, true, "rm -rf /var/cache/maxscale/maxscale.lock");
+            for (int i = 0; i < N; i++)
+            {
+                ssh_node_f(i, true, "yum install -y valgrind gdb 2>&1");
+                ssh_node_f(i, true, "apt install -y --force-yes valgrind gdb 2>&1");
+                ssh_node_f(i, true, "zypper -n install valgrind gdb 2>&1");
+                ssh_node_f(i, true, "rm -rf /var/cache/maxscale/maxscale.lock");
+            }
         }
+        rval = true;
     }
-    return true;
+    return rval;
 }
 
 int Maxscales::read_env()
