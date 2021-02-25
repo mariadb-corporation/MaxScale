@@ -170,6 +170,7 @@ void MariaDBCluster::read_env()
     char env_name[64];
 
     read_basic_env();
+    N = Nodes::n_nodes();
 
     auto prefixc = prefix().c_str();
     sprintf(env_name, "%s_user", prefixc);

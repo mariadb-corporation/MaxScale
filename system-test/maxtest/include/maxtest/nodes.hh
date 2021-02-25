@@ -20,13 +20,7 @@ public:
 
     const char* ip_private(int i = 0) const;
 
-    /**
-     * @brief Number of backend nodes
-     */
-    int N;
-
     bool verbose() const;
-
 
     /**
      * @brief mdbci_node_name
@@ -81,12 +75,15 @@ public:
     bool check_nodes();
 
     /**
-     * @brief read_basic_env Read IP, sshkey, etc - common parameters for all kinds of nodes
-     * @return 0 in case of success
+     * Read node settings such as IPs, sshkey, etc from network config contents.
+     *
+     * @return Number of of nodes successfully read and created
      */
     int read_basic_env();
 
     void write_env_vars();
+
+    int n_nodes() const;
 
 protected:
     SharedData& m_shared;
@@ -196,10 +193,4 @@ private:
     std::string m_network_config;       /**< Contents of MDBCI network_config file */
 
     bool check_node_ssh(int node);
-
-    /**
-     * Calculate the number of nodes described in the network config file
-     * @return Number of nodes
-     */
-    int get_N();
 };

@@ -20,6 +20,8 @@ class Maxscales : public Nodes
 public:
     static const int MAX_MAXSCALES = 256;
 
+    int N {0};
+
     enum service
     {
         RWSPLIT,

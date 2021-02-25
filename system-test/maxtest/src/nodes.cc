@@ -78,7 +78,7 @@ bool Nodes::check_nodes()
 {
     std::vector<std::future<bool>> f;
 
-    for (int i = 0; i < N; i++)
+    for (size_t i = 0; i < m_vms.size(); i++)
     {
         f.push_back(std::async(std::launch::async, &Nodes::check_node_ssh, this, i));
     }
@@ -215,7 +215,7 @@ int Nodes::ssh_node_f(int node, bool sudo, const char* format, ...)
 
 int Nodes::copy_to_node(int i, const char* src, const char* dest)
 {
-    if (i >= N)
+    if (i >= (int)m_vms.size())
     {
         return 1;
     }
@@ -252,7 +252,7 @@ int Nodes::copy_to_node_legacy(const char* src, const char* dest, int i)
 
 int Nodes::copy_from_node(int i, const char* src, const char* dest)
 {
-    if (i >= N)
+    if (i >= (int)m_vms.size())
     {
         return 1;
     }
@@ -289,31 +289,25 @@ int Nodes::copy_from_node_legacy(const char* src, const char* dest, int i)
 
 int Nodes::read_basic_env()
 {
-    N = get_N();
-
-    auto prefixc = m_prefix.c_str();
     m_vms.clear();
-    m_vms.reserve(N);
+    m_vms.reserve(4);
 
-    if ((N > 0) && (N < 255))
+    for (int i = 0; true; i++)
     {
-        for (int i = 0; i < N; i++)
-        {
-            string node_name = mxb::string_printf("%s_%03d", prefixc, i);
-            VMNode node(m_shared, node_name);
+        string node_name = mxb::string_printf("%s_%03d", m_prefix.c_str(), i);
+        VMNode node(m_shared, node_name);
 
-            if (node.configure(m_network_config))
-            {
-                m_vms.push_back(move(node));
-            }
-            else
-            {
-                break;
-            }
+        if (node.configure(m_network_config))
+        {
+            m_vms.push_back(move(node));
+        }
+        else
+        {
+            break;
         }
     }
 
-    return 0;
+    return m_vms.size();
 }
 
 bool Nodes::VMNode::configure(const std::string& network_config)
@@ -395,28 +389,6 @@ std::string Nodes::VMNode::get_nc_item(const string& item_name, const string& ne
     setenv(item_name.c_str(), str.c_str(), 1);
 
     return str;
-}
-
-int Nodes::get_N()
-{
-    int n_nodes = 0;
-    while (true)
-    {
-        string item = mxb::string_printf("%s_%03d_network", m_prefix.c_str(), n_nodes);
-        if (m_network_config.find(item) != string::npos)
-        {
-            n_nodes++;
-        }
-        else
-        {
-            break;
-        }
-    }
-
-    // Is this required?
-    string env_name = m_prefix + "_N";
-    setenv(env_name.c_str(), std::to_string(n_nodes).c_str(), 1);
-    return n_nodes;
 }
 
 Nodes::SshResult Nodes::VMNode::run_cmd_output(const string& cmd, CmdPriv priv)
@@ -583,4 +555,9 @@ void Nodes::write_env_vars()
     {
         vm.write_node_env_vars();
     }
+}
+
+int Nodes::n_nodes() const
+{
+    return m_vms.size();
 }
