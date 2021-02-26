@@ -402,7 +402,8 @@ public:
     int reinstall_maxscales();
 
     mxt::MaxScale& maxscale();
-    TestLogger& logger();
+    mxt::MaxScale& maxscale2();
+    TestLogger&    logger();
 
     std::string get_mdbci_config_name() {return m_mdbci_config_name;}
 
@@ -420,7 +421,8 @@ private:
 
     bool too_few_maxscales() const;
 
-    std::unique_ptr<mxt::MaxScale>   m_maxscale; /**< Main MaxScale instance */
+    std::unique_ptr<mxt::MaxScale>   m_maxscale;  /**< Main MaxScale instance */
+    std::unique_ptr<mxt::MaxScale>   m_maxscale2; /**< Secondary MaxScale instance */
 
     SharedData m_shared;    /**< Data shared with other objects */
 

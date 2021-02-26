@@ -1739,6 +1739,11 @@ mxt::MaxScale& TestConnections::maxscale()
     return *m_maxscale;
 }
 
+mxt::MaxScale& TestConnections::maxscale2()
+{
+    return *m_maxscale2;
+}
+
 TestLogger& TestConnections::logger()
 {
     return m_shared.log;
@@ -1916,6 +1921,10 @@ bool TestConnections::initialize_nodes()
     maxscales = new Maxscales(&m_shared);
     maxscales->setup(m_network_config);
     m_maxscale = std::make_unique<mxt::MaxScale>(maxscales, m_shared, 0);
+    if (maxscales->N > 1)
+    {
+        m_maxscale2 = std::make_unique<mxt::MaxScale>(maxscales, m_shared, 1);
+    }
 
     bool maxscale_ok = maxscales->check_nodes();
     bool repl_ok = !use_repl || repl_future.get();

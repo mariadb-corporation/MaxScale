@@ -45,7 +45,7 @@ add_subdirectory(cdc_datatypes)
 # BEGIN: Tests that require GTID           #
 ############################################
 
-# Configures 'keepalived' on two Maxscale machines and tried failover
+# Two MaxScales with cooperative monitoring.
 add_test_executable(cooperative_monitoring.cpp cooperative_monitoring cooperative_monitoring LABELS REPL_BACKEND SECOND_MAXSCALE)
 
 add_subdirectory(mariadbmonitor)
@@ -700,9 +700,6 @@ add_test_executable(test_hints.cpp test_hints hints2 LABELS hintfilter readwrite
 # TODO: make it working with zypper and apt, move part of KDC setup to MDBCI
 add_test_executable(kerberos_setup.cpp kerberos_setup kerberos LABELS HEAVY gssapi REPL_BACKEND)
 add_test_derived(kerberos_setup_ssl kerberos_setup kerberos_ssl LABELS HEAVY gssapi BACKEND_SSL REPL_BACKEND)
-
-# Configures 'keepalived' on two Maxscale machines and tried failover
-#add_test_executable(keepalived.cpp keepalived keepalived LABELS REPL_BACKEND SECOND_MAXSCALE)
 
 # a tool to delete RDS Aurora cluster
 add_test_executable_notest(delete_rds.cpp delete_rds replication LABELS EXTERN_BACKEND)
