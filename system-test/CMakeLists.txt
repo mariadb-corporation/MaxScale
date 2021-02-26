@@ -87,6 +87,10 @@ add_test_executable(mxs1778_causal_reads.cpp mxs1778_causal_reads mxs1778_causal
 # https://jira.mariadb.org/browse/MXS-2443
 add_test_executable(mxs2443_global_causal_reads.cpp mxs2443_global_causal_reads mxs2443_global_causal_reads LABELS readwritesplit REPL_BACKEND)
 
+# MXS-3416: Unexpected OK packet with causal_reads=global
+# https://jira.mariadb.org/browse/MXS-3416
+add_test_executable(mxs3416_causal_reads_extra_packet.cpp mxs3416_causal_reads_extra_packet mxs2443_global_causal_reads LABELS readwritesplit REPL_BACKEND)
+
 # MXS-1720: Test causal_reads=fast
 # https://jira.mariadb.org/browse/MXS-1720
 add_test_executable(mxs1720_fast_causal_reads.cpp mxs1720_fast_causal_reads mxs1720_fast_causal_reads LABELS readwritesplit REPL_BACKEND)
