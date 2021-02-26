@@ -1,10 +1,10 @@
 #pragma once
 
 #include <errno.h>
+#include <map>
 #include <string>
 #include <set>
 #include <vector>
-#include <string>
 
 #include <maxtest/ccdefs.hh>
 #include <maxbase/string.hh>
@@ -20,6 +20,8 @@ struct CmdResult
     int         rc{-1};
     std::string output;
 };
+
+using NetworkConfig = std::map<std::string, std::string>;
 
 class VMNode
 {
@@ -53,12 +55,14 @@ public:
      */
     mxt::CmdResult run_cmd_output(const std::string& cmd, CmdPriv priv = CmdPriv::NORMAL);
 
-    bool configure(const std::string& network_config);
+    bool configure(const mxt::NetworkConfig& nwconfig);
 
     /**
      * Write node network info to environment variables. This is mainly needed by script-type tests.
      */
     void write_node_env_vars();
+
+    void set_local();
 
     /**
      * Copy a local file to the node.
@@ -83,7 +87,7 @@ public:
     const std::string m_name;       /**< E.g. "node_001" */
 
 private:
-    std::string get_nc_item(const std::string& item_name, const std::string& network_config);
+    std::string get_nc_item(const mxt::NetworkConfig& nwconfig, const std::string& search_key);
 
     std::string m_ip4;          /**< IPv4-address */
     std::string m_ip6;          /**< IPv6-address */
@@ -167,7 +171,7 @@ public:
      *
      * @return Number of of nodes successfully read and created
      */
-    int read_basic_env();
+    int read_basic_env(const mxt::NetworkConfig& nwconfig);
 
     void write_env_vars();
 
@@ -176,7 +180,7 @@ public:
 protected:
     SharedData& m_shared;
 
-    Nodes(const std::string& prefix, SharedData* shared, const std::string& network_config);
+    Nodes(const std::string& prefix, SharedData* shared);
 
     const char* ip4(int i = 0) const;
     const char* ip6(int i = 0) const;
@@ -191,12 +195,12 @@ protected:
 
     virtual bool setup();
 
+    mxt::VMNode& node(int i);
+
 private:
     std::string m_prefix;                   /**< Name of backend setup (e.g. 'repl' or 'galera') */
 
     std::vector<mxt::VMNode> m_vms;
-
-    std::string m_network_config;       /**< Contents of MDBCI network_config file */
 
     bool check_node_ssh(int node);
 };

@@ -25,10 +25,9 @@ const char ssh_opts[] = "-o ControlMaster=auto -o ControlPath=./maxscale-test-%r
                         "-o LogLevel=quiet ";
 }
 
-Nodes::Nodes(const string& prefix, SharedData* shared, const std::string& network_config)
+Nodes::Nodes(const std::string& prefix, SharedData* shared)
     : m_shared(*shared)
     , m_prefix(prefix)
-    , m_network_config(network_config)
 {
 }
 
@@ -50,7 +49,8 @@ VMNode::~VMNode()
 }
 
 VMNode::VMNode(VMNode&& rhs)
-    : m_ip4(move(rhs.m_ip4))
+    : m_name(rhs.m_name)
+    , m_ip4(move(rhs.m_ip4))
     , m_ip6(move(rhs.m_ip6))
     , m_private_ip(move(rhs.m_private_ip))
     , m_hostname(move(rhs.m_hostname))
@@ -295,7 +295,7 @@ int Nodes::copy_from_node_legacy(const char* src, const char* dest, int i)
     return copy_from_node(i, src, dest);
 }
 
-int Nodes::read_basic_env()
+int Nodes::read_basic_env(const mxt::NetworkConfig& nwconfig)
 {
     m_vms.clear();
     m_vms.reserve(4);
@@ -305,7 +305,7 @@ int Nodes::read_basic_env()
         string node_name = mxb::string_printf("%s_%03d", m_prefix.c_str(), i);
         mxt::VMNode node(m_shared, node_name);
 
-        if (node.configure(m_network_config))
+        if (node.configure(nwconfig))
         {
             m_vms.push_back(move(node));
         }
@@ -318,13 +318,13 @@ int Nodes::read_basic_env()
     return m_vms.size();
 }
 
-bool mxt::VMNode::configure(const std::string& network_config)
+bool mxt::VMNode::configure(const mxt::NetworkConfig& network_config)
 {
     auto& name = m_name;
     string field_network = name + "_network";
 
     bool success = false;
-    string ip4 = get_nc_item(field_network, network_config);
+    string ip4 = get_nc_item(network_config, field_network);
     if (!ip4.empty())
     {
         m_ip4 = ip4;
@@ -336,23 +336,23 @@ bool mxt::VMNode::configure(const std::string& network_config)
         string field_whoami = name + "_whoami";
         string field_access_sudo = name + "_access_sudo";
 
-        string ip6 = get_nc_item(field_network6, network_config);
+        string ip6 = get_nc_item(network_config, field_network6);
         m_ip6 = !ip6.empty() ? ip6 : m_ip4;
 
-        string priv_ip = get_nc_item(field_private_ip, network_config);
+        string priv_ip = get_nc_item(network_config, field_private_ip);
         m_private_ip = !priv_ip.empty() ? priv_ip : m_ip4;
 
-        string hostname = get_nc_item(field_hostname, network_config);
+        string hostname = get_nc_item(network_config, field_hostname);
         m_hostname = !hostname.empty() ? hostname : m_private_ip;
 
-        string access_user = get_nc_item(field_whoami, network_config);
+        string access_user = get_nc_item(network_config, field_whoami);
         m_username = !access_user.empty() ? access_user : "vagrant";
 
         m_homedir = (m_username == "root") ? "/root/" :
             mxb::string_printf("/home/%s/", m_username.c_str());
 
         m_sudo = envvar_get_set(field_access_sudo.c_str(), " sudo ");
-        m_sshkey = get_nc_item(field_keyfile, network_config);
+        m_sshkey = get_nc_item(network_config, field_keyfile);
 
         success = true;
     }
@@ -368,37 +368,33 @@ std::string Nodes::mdbci_node_name(int node)
 namespace maxtest
 {
 /**
- * Find variable in the MDBCI network config file.
+ * Read key value from MDBCI network config contents.
  *
- * @param item_name Name of the variable
- * @param network_config File contents
+ * @param nwconfig File contents as a map
+ * @param search_key Name of field to read
  * @return value of variable or empty value if not found
  */
-std::string VMNode::get_nc_item(const string& item_name, const string& network_config)
+std::string VMNode::get_nc_item(const mxt::NetworkConfig& nwconfig, const string& search_key)
 {
-    size_t start = network_config.find(item_name);
-    if (start == std::string::npos)
+    string rval;
+    auto it = nwconfig.find(search_key);
+    if (it != nwconfig.end())
     {
-        return "";
+        rval = it->second;
     }
 
-    size_t end = network_config.find("\n", start);
-    size_t equal = network_config.find("=", start);
-    if (end == std::string::npos)
+    if (m_shared.verbose)
     {
-        end = network_config.length();
+        if (rval.empty())
+        {
+            printf("'%s' not found in network config.\n", search_key.c_str());
+        }
+        else
+        {
+            printf("'%s' is '%s'\n", search_key.c_str(), rval.c_str());
+        }
     }
-    if (equal == std::string::npos)
-    {
-        return "";
-    }
-
-    std::string str = network_config.substr(equal + 1, end - equal - 1);
-    str.erase(remove(str.begin(), str.end(), ' '), str.end());
-
-    setenv(item_name.c_str(), str.c_str(), 1);
-
-    return str;
+    return rval;
 }
 
 mxt::CmdResult VMNode::run_cmd_output(const string& cmd, CmdPriv priv)
@@ -451,7 +447,6 @@ mxt::CmdResult VMNode::run_cmd_output(const string& cmd, CmdPriv priv)
 
 void VMNode::write_node_env_vars()
 {
-    auto& name = m_name;
     auto write_env_var = [this](const string& suffix, const string& val) {
             string env_var_name = m_name + suffix;
             setenv(env_var_name.c_str(), val.c_str(), 1);
@@ -502,6 +497,14 @@ const char* VMNode::access_sudo() const
 const char* VMNode::sshkey() const
 {
     return m_sshkey.c_str();
+}
+
+void VMNode::set_local()
+{
+    m_ip4 = "127.0.0.1";
+    m_ip6 = m_ip4;
+    m_private_ip = m_ip4;
+    m_type = NodeType::LOCAL;
 }
 }
 
@@ -571,4 +574,9 @@ void Nodes::write_env_vars()
 int Nodes::n_nodes() const
 {
     return m_vms.size();
+}
+
+mxt::VMNode& Nodes::node(int i)
+{
+    return m_vms[i];
 }

@@ -180,7 +180,7 @@ public:
      * @brief reads IP, Ports, sshkeys for every node from enviromental variables as well as number of nodes
      *(N) and  User/Password
      */
-    void read_env();
+    void read_env(const mxt::NetworkConfig& nwconfig);
     /**
      * @brief  prints all nodes information
      * @return 0
@@ -547,12 +547,11 @@ protected:
      * @param shared Global data
      * @param nwconf_prefix Node prefix in network config file
      * @param cnf_server_prefix Node prefix in MaxScale config file
-     * @param network_config Network config contents
      */
     MariaDBCluster(SharedData* shared, const std::string& nwconf_prefix,
-                   const std::string& cnf_server_prefix, const std::string& network_config);
+                   const std::string& cnf_server_prefix);
 
-    bool setup();
+    bool setup(const mxt::NetworkConfig& nwconfig);
 
     /**
      * @returns SELECT that returns anonymous users in such a way that each returned row

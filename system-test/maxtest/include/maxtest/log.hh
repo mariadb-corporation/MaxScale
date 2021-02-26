@@ -34,6 +34,7 @@ private:
 
 struct SharedData
 {
-    TestLogger log;             /**< Error log container */
-    bool       verbose {false}; /**< True if printing more details */
+    TestLogger log;                     /**< Error log container */
+    bool       verbose {false};         /**< True if printing more details */
+    bool       local_maxscale {false};  /**< MaxScale running locally */
 };

@@ -15,8 +15,8 @@
 
 using std::string;
 
-Maxscales::Maxscales(SharedData* shared, const std::string& network_config)
-    : Nodes("maxscale", shared, network_config)
+Maxscales::Maxscales(SharedData* shared)
+    : Nodes("maxscale", shared)
     , valgring_log_num(0)
 {
 }
@@ -29,10 +29,16 @@ Maxscales::~Maxscales()
     }
 }
 
-bool Maxscales::setup()
+bool Maxscales::setup(const mxt::NetworkConfig& nwconfig)
 {
     bool rval = false;
-    read_env();     // Sets e.g. use_valgrind.
+    read_env(nwconfig);     // Sets e.g. use_valgrind.
+
+    if (m_shared.local_maxscale)
+    {
+        // MaxScale is running locally, overwrite node address.
+        node(0).set_local();
+    }
 
     if (Nodes::setup())
     {
@@ -51,11 +57,11 @@ bool Maxscales::setup()
     return rval;
 }
 
-int Maxscales::read_env()
+int Maxscales::read_env(const mxt::NetworkConfig& nwconfig)
 {
     char env_name[64];
 
-    read_basic_env();
+    read_basic_env(nwconfig);
     N = Nodes::n_nodes();
 
     auto prefixc = prefix().c_str();

@@ -27,12 +27,12 @@ class XpandCluster : public MariaDBCluster
 {
 public:
 
-    XpandCluster(SharedData* shared, std::string network_config)
-        : MariaDBCluster(shared, "xpand", "xpand_server", network_config)
+    XpandCluster(SharedData* shared)
+        : MariaDBCluster(shared, "xpand", "xpand_server")
     {
     }
 
-    bool setup();
+    bool setup(const mxt::NetworkConfig& nwconfig);
 
     const std::string& type_string() const override;
 

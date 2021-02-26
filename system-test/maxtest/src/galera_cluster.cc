@@ -25,9 +25,9 @@ namespace
 const string type_galera = "galera";
 }
 
-bool GaleraCluster::setup()
+bool GaleraCluster::setup(const mxt::NetworkConfig& nwconfig)
 {
-    return MariaDBCluster::setup();
+    return MariaDBCluster::setup(nwconfig);
 }
 
 int GaleraCluster::start_galera()
