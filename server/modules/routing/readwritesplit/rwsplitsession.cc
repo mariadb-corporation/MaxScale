@@ -550,9 +550,12 @@ void RWSplitSession::clientReply(GWBUF* writebuf, const mxs::ReplyRoute& down, c
 {
     RWBackend* backend = static_cast<RWBackend*>(down.back()->get_userdata());
 
-    if ((writebuf = handle_causal_read_reply(writebuf, reply, backend)) == NULL)
+    if (!backend->has_session_commands())
     {
-        return;     // Nothing to route, return
+        if ((writebuf = handle_causal_read_reply(writebuf, reply, backend)) == NULL)
+        {
+            return;     // Nothing to route, return
+        }
     }
 
     const auto& error = reply.error();
@@ -605,18 +608,18 @@ void RWSplitSession::clientReply(GWBUF* writebuf, const mxs::ReplyRoute& down, c
 
             // TODO: This would make more sense if it was done at the client protocol level
             session_book_server_response(m_pSession, (SERVER*)backend->target(), true);
+
+            if (!finish_causal_read())
+            {
+                // The query timed out on the slave, retry it on the master
+                gwbuf_free(writebuf);
+                return;
+            }
         }
 
         mxb_assert(m_expected_responses >= 0);
 
         backend->select_finished();
-
-        if (!finish_causal_read())
-        {
-            // The query timed out on the slave, retry it on the master
-            gwbuf_free(writebuf);
-            return;
-        }
 
         if (m_otrx_state == OTRX_ROLLBACK)
         {
