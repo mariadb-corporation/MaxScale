@@ -13,6 +13,7 @@
 
 using std::string;
 using std::move;
+using CmdPriv = mxt::VMNode::CmdPriv;
 
 namespace
 {
@@ -31,13 +32,15 @@ Nodes::Nodes(const string& prefix, SharedData* shared, const std::string& networ
 {
 }
 
-Nodes::VMNode::VMNode(SharedData& shared, const string& name)
+namespace maxtest
+{
+VMNode::VMNode(SharedData& shared, const string& name)
     : m_name(name)
     , m_shared(shared)
 {
 }
 
-Nodes::VMNode::~VMNode()
+VMNode::~VMNode()
 {
     if (m_ssh_master_pipe)
     {
@@ -46,7 +49,7 @@ Nodes::VMNode::~VMNode()
     }
 }
 
-Nodes::VMNode::VMNode(Nodes::VMNode&& rhs)
+VMNode::VMNode(VMNode&& rhs)
     : m_ip4(move(rhs.m_ip4))
     , m_ip6(move(rhs.m_ip6))
     , m_private_ip(move(rhs.m_private_ip))
@@ -60,6 +63,8 @@ Nodes::VMNode::VMNode(Nodes::VMNode&& rhs)
 {
     rhs.m_ssh_master_pipe = nullptr;
 }
+}
+
 
 bool Nodes::check_node_ssh(int node)
 {
@@ -86,7 +91,9 @@ bool Nodes::check_nodes()
     return std::all_of(f.begin(), f.end(), std::mem_fn(&std::future<bool>::get));
 }
 
-bool Nodes::VMNode::init_ssh_master()
+namespace maxtest
+{
+bool VMNode::init_ssh_master()
 {
     if (m_ip4 == "127.0.0.1")
     {
@@ -113,7 +120,7 @@ bool Nodes::VMNode::init_ssh_master()
     return rval;
 }
 
-int Nodes::VMNode::run_cmd(const std::string& cmd, CmdPriv priv)
+int VMNode::run_cmd(const std::string& cmd, CmdPriv priv)
 {
     bool verbose = m_shared.verbose;
     string opening_cmd;
@@ -175,10 +182,11 @@ int Nodes::VMNode::run_cmd(const std::string& cmd, CmdPriv priv)
     }
     return rc;
 }
+}
 
 int Nodes::ssh_node(int node, const string& ssh, bool sudo)
 {
-    return m_vms[node].run_cmd(ssh, sudo ? VMNode::CmdPriv::SUDO : VMNode::CmdPriv::NORMAL);
+    return m_vms[node].run_cmd(ssh, sudo ? CmdPriv::SUDO : CmdPriv::NORMAL);
 }
 
 bool Nodes::setup()
@@ -222,7 +230,7 @@ int Nodes::copy_to_node(int i, const char* src, const char* dest)
     return m_vms[i].copy_to_node(src, dest) ? 0 : 1;
 }
 
-bool Nodes::VMNode::copy_to_node(const string& src, const string& dest)
+bool mxt::VMNode::copy_to_node(const string& src, const string& dest)
 {
     string cmd;
     if (m_type == NodeType::LOCAL)
@@ -259,7 +267,7 @@ int Nodes::copy_from_node(int i, const char* src, const char* dest)
     return m_vms[i].copy_from_node(src, dest) ? 0 : 1;
 }
 
-bool Nodes::VMNode::copy_from_node(const string& src, const string& dest)
+bool mxt::VMNode::copy_from_node(const string& src, const string& dest)
 {
     string cmd;
     if (m_type == NodeType::LOCAL)
@@ -295,7 +303,7 @@ int Nodes::read_basic_env()
     for (int i = 0; true; i++)
     {
         string node_name = mxb::string_printf("%s_%03d", m_prefix.c_str(), i);
-        VMNode node(m_shared, node_name);
+        mxt::VMNode node(m_shared, node_name);
 
         if (node.configure(m_network_config))
         {
@@ -310,7 +318,7 @@ int Nodes::read_basic_env()
     return m_vms.size();
 }
 
-bool Nodes::VMNode::configure(const std::string& network_config)
+bool mxt::VMNode::configure(const std::string& network_config)
 {
     auto& name = m_name;
     string field_network = name + "_network";
@@ -357,6 +365,8 @@ std::string Nodes::mdbci_node_name(int node)
     return m_vms[node].m_name;
 }
 
+namespace maxtest
+{
 /**
  * Find variable in the MDBCI network config file.
  *
@@ -364,7 +374,7 @@ std::string Nodes::mdbci_node_name(int node)
  * @param network_config File contents
  * @return value of variable or empty value if not found
  */
-std::string Nodes::VMNode::get_nc_item(const string& item_name, const string& network_config)
+std::string VMNode::get_nc_item(const string& item_name, const string& network_config)
 {
     size_t start = network_config.find(item_name);
     if (start == std::string::npos)
@@ -391,7 +401,7 @@ std::string Nodes::VMNode::get_nc_item(const string& item_name, const string& ne
     return str;
 }
 
-Nodes::SshResult Nodes::VMNode::run_cmd_output(const string& cmd, CmdPriv priv)
+mxt::CmdResult VMNode::run_cmd_output(const string& cmd, CmdPriv priv)
 {
     bool sudo = (priv == CmdPriv::SUDO);
 
@@ -409,11 +419,11 @@ Nodes::SshResult Nodes::VMNode::run_cmd_output(const string& cmd, CmdPriv priv)
     else
     {
         string ssh_cmd_p2 = sudo ? mxb::string_printf("'%s %s'", m_sudo.c_str(), cmd.c_str()) :
-            mxb::string_printf("'%s'", cmd.c_str());
+                            mxb::string_printf("'%s'", cmd.c_str());
         total_cmd.append(m_ssh_cmd_p1).append(" ").append(ssh_cmd_p2);
     }
 
-    Nodes::SshResult rval;
+    mxt::CmdResult rval;
     FILE* pipe = popen(total_cmd.c_str(), "r");
     if (pipe)
     {
@@ -439,7 +449,7 @@ Nodes::SshResult Nodes::VMNode::run_cmd_output(const string& cmd, CmdPriv priv)
     return rval;
 }
 
-void Nodes::VMNode::write_node_env_vars()
+void VMNode::write_node_env_vars()
 {
     auto& name = m_name;
     auto write_env_var = [this](const string& suffix, const string& val) {
@@ -454,49 +464,50 @@ void Nodes::VMNode::write_node_env_vars()
     write_env_var("_whoami", m_username);
 }
 
-const char* Nodes::VMNode::ip4() const
+const char* VMNode::ip4() const
 {
     return m_ip4.c_str();
 }
 
-const char* Nodes::VMNode::ip6() const
+const char* VMNode::ip6() const
 {
     return m_ip6.c_str();
 }
 
-const char* Nodes::VMNode::priv_ip() const
+const char* VMNode::priv_ip() const
 {
     return m_private_ip.c_str();
 }
 
-const char* Nodes::VMNode::hostname() const
+const char* VMNode::hostname() const
 {
     return m_hostname.c_str();
 }
 
-const char* Nodes::VMNode::access_user() const
+const char* VMNode::access_user() const
 {
     return m_username.c_str();
 }
 
-const char* Nodes::VMNode::access_homedir() const
+const char* VMNode::access_homedir() const
 {
     return m_homedir.c_str();
 }
 
-const char* Nodes::VMNode::access_sudo() const
+const char* VMNode::access_sudo() const
 {
     return m_sudo.c_str();
 }
 
-const char* Nodes::VMNode::sshkey() const
+const char* VMNode::sshkey() const
 {
     return m_sshkey.c_str();
 }
+}
 
-Nodes::SshResult Nodes::ssh_output(const std::string& cmd, int node, bool sudo)
+mxt::CmdResult Nodes::ssh_output(const std::string& cmd, int node, bool sudo)
 {
-    return m_vms[node].run_cmd_output(cmd, sudo ? VMNode::CmdPriv::SUDO : VMNode::CmdPriv::NORMAL);
+    return m_vms[node].run_cmd_output(cmd, sudo ? CmdPriv::SUDO : CmdPriv::NORMAL);
 }
 
 const char* Nodes::ip_private(int i) const

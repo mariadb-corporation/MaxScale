@@ -351,7 +351,7 @@ public:
      *
      * @return The exit code and output of MaxCtrl
      */
-    Nodes::SshResult maxctrl(const std::string& cmd, int m = 0, bool sudo = true)
+    mxt::CmdResult maxctrl(const std::string& cmd, int m = 0, bool sudo = true)
     {
         return maxscales->maxctrl(cmd, m, sudo);
     }

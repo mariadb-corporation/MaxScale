@@ -324,7 +324,7 @@ public:
      *
      * @return The exit code and output of MaxCtrl
      */
-    SshResult maxctrl(const std::string& cmd, int m = 0, bool sudo = true)
+    mxt::CmdResult maxctrl(const std::string& cmd, int m = 0, bool sudo = true)
     {
         return ssh_output("maxctrl " + cmd, m, sudo);
     }
@@ -518,7 +518,7 @@ private:
     std::string m_rest_ip {"127.0.0.1"};
     std::string m_rest_port {"8989"};
 
-    Nodes::SshResult curl_rest_api(const std::string& path);
+    mxt::CmdResult   curl_rest_api(const std::string& path);
     TestLogger&      logger();
 };
 }

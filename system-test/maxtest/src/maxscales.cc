@@ -369,7 +369,7 @@ void MaxScale::wait_monitor_ticks(int ticks)
     }
 }
 
-Nodes::SshResult MaxScale::curl_rest_api(const std::string& path)
+mxt::CmdResult MaxScale::curl_rest_api(const std::string& path)
 {
     string cmd = mxb::string_printf("curl --silent --show-error http://%s:%s@%s:%s/v1/%s",
                                     m_rest_user.c_str(), m_rest_pw.c_str(),
