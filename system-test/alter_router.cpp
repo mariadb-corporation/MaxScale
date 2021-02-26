@@ -103,7 +103,7 @@ void alter_schemarouter(TestConnections& test)
     test.expect(!conn.query("SELECT 1"), "Query before reconfiguration should fail");
     conn.disconnect();
 
-    test.check_maxctrl("alter service SchemaRouter ignore_databases_regex \".*\"");
+    test.check_maxctrl("alter service SchemaRouter ignore_tables_regex \".*\"");
 
     conn.connect();
     test.expect(conn.query("SELECT 1"), "Query after reconfiguration should work: %s", conn.error());
