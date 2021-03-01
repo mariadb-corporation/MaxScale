@@ -5,32 +5,74 @@
  * - try to restore broken backends
  */
 
-
 #include <iostream>
-#include <unistd.h>
+#include <stdlib.h>
 #include <maxtest/testconnections.hh>
 
-using namespace std;
+using std::cout;
+using std::endl;
+using std::string;
+
+namespace
+{
+
+void print_usage(const char* zProgram)
+{
+    cout << "usage: " << zProgram << "[<flags>] <name> <script>\n"
+         << "\n"
+         << "where\n"
+         << "  <flags>   are flags that will be provided to the TestConnections contructor,\n"
+         << "  <name>    is the name of the test, and\n"
+         << "  <script>  is the program that will be invoked." << endl;
+}
+
+}
 
 int main(int argc, char* argv[])
 {
-    if (argc < 3)
+    const char* zScript = nullptr;
+    const char* zName = nullptr;
+
+    for (int i = 1; i < argc; ++i)
     {
-        return 1;
+        if (*argv[i] != '-')
+        {
+            zName = argv[i];
+
+            if (i + 1 < argc)
+            {
+                zScript = argv[i + 1];
+            }
+
+            break;
+        }
     }
 
-    std::string sys =
-        std::string(test_dir) +
-        std::string("/") +
-        std::string(argv[2]) +
-        std::string(" ") +
-        std::string(argv[1]);
+    int rv = 1;
 
-    TestConnections test(argc, argv);
-    sleep(3);
-    setenv("src_dir", test_dir, 1);
+    if (zName && zScript)
+    {
+        std::string sys =
+            std::string(test_dir) +
+            std::string("/") +
+            std::string(zScript) +
+            std::string(" ") +
+            std::string(zName);
 
-    test.add_result(system(sys.c_str()), "Test %s FAILED!", argv[1]);
+        TestConnections test(argc, argv);
+        test.write_node_env_vars();
 
-    return test.global_result;
+        sleep(3);
+        setenv("src_dir", test_dir, 1);
+
+        test.add_result(system(sys.c_str()), "Test %s FAILED!", argv[1]);
+
+        rv = test.global_result;
+    }
+    else
+    {
+        print_usage(argv[0]);
+    }
+
+    return rv;
 }
