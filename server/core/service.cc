@@ -1375,8 +1375,28 @@ bool Service::configure(json_t* params)
     mxs::config::Configuration* router_cnf = m_router->getConfiguration();
     mxb_assert(router_cnf);
     std::set<std::string> unknown;
+    bool ok = true;
 
-    return m_config.specification().validate(params, &unknown)
+    // The service specification defines the following parameters but doesn't use them in its
+    // mxs::config::Configuration class. The current configuration system doesn't detect that a parameter that
+    // doesn't support modification at runtime is being modified and even if it did it wouldn't check the ones
+    // that aren't used by the configuration.
+    // TODO: Maybe do this inside the mxs::config::Configuration?
+    for (auto name : {s_servers.name(), s_targets.name(), s_filters.name(), s_cluster.name()})
+    {
+        if (json_t* value = json_object_get(params, name.c_str()))
+        {
+            // Null values should be ignored
+            if (!json_is_null(value))
+            {
+                MXS_ERROR("Parameter '%s' cannot be modified at runtime", name.c_str());
+                ok = false;
+            }
+        }
+    }
+
+    return ok
+           && m_config.specification().validate(params, &unknown)
            && router_cnf->specification().validate(params)
            && m_config.configure(params, &unknown)
            && router_cnf->configure(params);
