@@ -167,3 +167,7 @@ USE `test`;
 # MXS-3404
 # qc_mysqlembedded claims that "trim(LEADING ...)" is ltrim, to avoid that we use BOTH.
 SELECT rdba_test() AS crmid, trim(BOTH 0 FROM @@server_id);
+SELECT trim(@@server_id);
+SELECT trim("text");
+SELECT trim(BOTH " " FROM "  text");
+SELECT trim(BOTH FROM "  text");

@@ -2135,12 +2135,15 @@ expr(A) ::= keyword_as_function(X) LP distinct(D) exprlist(Y) RP(E). {
   }
 }
 
-trim_arg1_opt ::= TRIM_ARG.
-trim_arg1_opt ::= .
 
-trim_arg2 ::= INTEGER|STRING.
+%type trim_args {ExprSpan}
+%destructor trim_args {sqlite3ExprDelete(pParse->db, $$.pExpr);}
+trim_args(A) ::= TRIM_ARG term FROM expr(X). { A = X; }
+trim_args(A) ::= TRIM_ARG FROM expr(X). { A = X; }
+trim_args(A) ::= term FROM expr(X). { A = X; }
+trim_args(A) ::= expr(X). { A = X; }
 
-expr(A) ::= TRIM(X) LP trim_arg1_opt trim_arg2 FROM expr(Y) RP(Z). {
+expr(A) ::= TRIM(X) LP trim_args(Y) RP(Z). {
   ExprList* pArgs = sqlite3ExprListAppend(pParse, NULL, Y.pExpr);
   A.pExpr = sqlite3ExprFunction(pParse, pArgs, &X);
   spanSet(&A, &X, &Z);
