@@ -38,10 +38,13 @@ public:
         Config(const char* name);
 
         mxs::Target*            target;
+        SERVICE*                service;
         std::string             user;   /* The user name to filter on */
         std::string             source; /* The source of the client connection */
         mxs::config::RegexValue match;  /* Compiled match pattern */
         mxs::config::RegexValue exclude;/* Compiled exclude pattern*/
+
+        bool post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params) override;
     };
 
     static Tee* create(const char* zName, mxs::ConfigParameters* ppParams);

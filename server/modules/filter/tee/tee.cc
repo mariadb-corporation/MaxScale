@@ -112,10 +112,22 @@ Tee::Config::Config(const char* name)
     : mxs::config::Configuration(name, &s_spec)
 {
     add_native(&Config::target, &s_target);
+    add_native(&Config::service, &s_service);
     add_native(&Config::user, &s_user);
     add_native(&Config::source, &s_source);
     add_native(&Config::match, &s_match);
     add_native(&Config::exclude, &s_exclude);
+}
+
+bool Tee::Config::post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params)
+{
+    if (service)
+    {
+        mxb_assert(!target);
+        target = service;
+    }
+
+    return true;
 }
 
 Tee::Tee(const char* name)
