@@ -60,7 +60,7 @@ void MariaDBCluster::require_gtid(bool value)
     g_require_gtid = value;
 }
 
-MariaDBCluster::MariaDBCluster(SharedData& shared, const std::string& nwconf_prefix,
+MariaDBCluster::MariaDBCluster(SharedData* shared, const std::string& nwconf_prefix,
                                const std::string& cnf_server_prefix, const std::string& network_config)
     : Nodes(nwconf_prefix, shared, network_config)
     , no_set_pos(false)

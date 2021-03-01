@@ -1,5 +1,6 @@
 #pragma once
 
+#include <mutex>
 #include <string>
 #include <vector>
 
@@ -9,7 +10,7 @@
 class TestLogger
 {
 public:
-    TestLogger(int* global_result);
+    TestLogger();
 
     void expect(bool result, const char* format, ...) __attribute__ ((format(printf, 3, 4)));
     void add_failure(const char* format, ...) __attribute__ ((format(printf, 2, 3)));
@@ -20,11 +21,19 @@ public:
     void log_msg(const char* format, va_list args);
     void reset_timer();
 
+    int m_n_fails {0}; /**< Number of test fails. TODO: private */
+
 private:
     int64_t                   m_start_time_us {0};
     std::vector<std::string>  m_fails;
-    int*                      m_global_result {nullptr};
+    std::mutex                m_lock; /**< Protects against concurrent logging */
 
     std::string time_string() const;
     std::string prepare_msg(const char* format, va_list args) const;
+};
+
+struct SharedData
+{
+    TestLogger log;             /**< Error log container */
+    bool       verbose {false}; /**< True if printing more details */
 };

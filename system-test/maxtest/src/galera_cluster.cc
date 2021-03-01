@@ -13,7 +13,9 @@
 
 #include <maxtest/galera_cluster.hh>
 #include <iostream>
+#include <maxtest/log.hh>
 #include <maxbase/format.hh>
+
 using std::cout;
 using std::endl;
 using std::string;

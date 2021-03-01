@@ -11,11 +11,7 @@
 #include <maxtest/mariadb_func.hh>
 
 typedef std::set<std::string> StringSet;
-
-struct SharedData
-{
-    bool verbose {false};   /**< True if printing more details */
-};
+class SharedData;
 
 class Nodes
 {
@@ -93,7 +89,7 @@ public:
 protected:
     SharedData& m_shared;
 
-    Nodes(const std::string& prefix, SharedData& shared, const std::string& network_config);
+    Nodes(const std::string& prefix, SharedData* shared, const std::string& network_config);
 
     const char* ip4(int i = 0) const;
     const char* ip6(int i = 0) const;

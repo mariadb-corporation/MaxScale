@@ -547,7 +547,7 @@ protected:
      * @param cnf_server_prefix Node prefix in MaxScale config file
      * @param network_config Network config contents
      */
-    MariaDBCluster(SharedData& shared, const std::string& nwconf_prefix,
+    MariaDBCluster(SharedData* shared, const std::string& nwconf_prefix,
                    const std::string& cnf_server_prefix, const std::string& network_config);
 
     bool setup();

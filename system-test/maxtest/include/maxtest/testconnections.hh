@@ -9,6 +9,7 @@
 #include <sys/time.h>
 
 #include <maxbase/ccdefs.hh>
+#include <maxtest/log.hh>
 #include <maxtest/xpand_nodes.hh>
 #include <maxtest/replication_cluster.hh>
 #include <maxtest/maxscales.hh>
@@ -69,7 +70,7 @@ public:
     XpandCluster*       xpand {nullptr};    /**< Xpand cluster */
     Maxscales*          maxscales {nullptr};/**< MaxScale nodes */
 
-    int global_result {0}; /**< Result of test, 0 if PASSED */
+    int& global_result; /**< Result of test, 0 if PASSED */
     bool smoke {true}; /**< Run tests in quick mode. Only affects some long tests. */
 
     int ssl {false}; /**< Use SSL */
