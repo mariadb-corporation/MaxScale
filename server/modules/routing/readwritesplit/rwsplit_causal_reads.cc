@@ -91,11 +91,13 @@ GWBUF* RWSplitSession::handle_causal_read_reply(GWBUF* writebuf,
 
         if (m_wait_gtid == WAITING_FOR_HEADER)
         {
+            mxb_assert(m_prev_plan.target == backend);
             writebuf = discard_master_wait_gtid_result(writebuf);
         }
 
         if (m_wait_gtid == UPDATING_PACKETS && writebuf)
         {
+            mxb_assert(m_prev_plan.target == backend);
             correct_packet_sequence(writebuf);
         }
     }

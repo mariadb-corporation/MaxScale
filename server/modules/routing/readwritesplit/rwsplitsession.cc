@@ -513,9 +513,12 @@ int32_t RWSplitSession::clientReply(GWBUF* writebuf, const mxs::ReplyRoute& down
 {
     RWBackend* backend = static_cast<RWBackend*>(down.back()->get_userdata());
 
-    if ((writebuf = handle_causal_read_reply(writebuf, reply, backend)) == NULL)
+    if (!backend->should_ignore_response())
     {
-        return 1;       // Nothing to route, return
+        if ((writebuf = handle_causal_read_reply(writebuf, reply, backend)) == NULL)
+        {
+            return 1;       // Nothing to route, return
+        }
     }
 
     const auto& error = reply.error();

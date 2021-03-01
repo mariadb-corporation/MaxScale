@@ -55,3 +55,8 @@ not 100% backward compatible with the binlog router delivered with
 earlier MaxScale versions. If you use the binlog router, carefully
 assess whether the functionality provided by the new one fulfills
 your requirements, before upgrading MaxScale.
+
+## Tee Filter
+
+The tee filter parameter `service` has been deprecated in favor of the `target`
+parameter. All usages of `service` can be replaced with `target`.
