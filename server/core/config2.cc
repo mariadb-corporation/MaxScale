@@ -1886,7 +1886,7 @@ bool ParamStringList::from_json(const json_t* pJson,
                                 value_type* pValue,
                                 std::string* pMessage) const
 {
-    bool ok = true;
+    bool ok = json_is_array(pJson);
     value_type values;
     values.reserve(json_array_size(pJson));
     size_t i;
