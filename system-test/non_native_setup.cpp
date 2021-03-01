@@ -6,11 +6,10 @@
  */
 
 
-#include <iostream>
-#include <unistd.h>
 #include <maxtest/testconnections.hh>
+#include <maxbase/format.hh>
 
-using namespace std;
+using std::string;
 
 int main(int argc, char* argv[])
 {
@@ -19,16 +18,15 @@ int main(int argc, char* argv[])
         return 1;
     }
 
-    std::string sys =
-        std::string(argv[2]) +
-        std::string(" ") +
-        std::string(argv[1]);
-
     TestConnections test(argc, argv);
+    test.write_node_env_vars();
+
     sleep(3);
     setenv("src_dir", test_dir, 1);
-
-    test.add_result(system(sys.c_str()), "Test %s FAILED!", argv[1]);
-
+    const char* test_name = argv[1];
+    const char* test_script = argv[2];
+    string script_cmd = mxb::string_printf("%s %s", test_script, test_name);
+    int script_res = system(script_cmd.c_str());
+    test.expect(script_res == 0, "Test %s FAILED!", test_name);
     return test.global_result;
 }
