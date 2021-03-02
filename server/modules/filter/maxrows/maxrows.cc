@@ -52,11 +52,11 @@ config::ParamEnum<MaxRowsConfig::Mode> max_resultset_return(
     "max_resultset_return",
     "Specifies what the filter sends to the client when the rows or size limit "
     "is hit; an empty packet, an error packet or an ok packet.",
-    {
-        { MaxRowsConfig::Mode::EMPTY, "empty" },
-        { MaxRowsConfig::Mode::ERR,   "error" },
-        { MaxRowsConfig::Mode::OK,    "ok" }
-    },
+        {
+            {MaxRowsConfig::Mode::EMPTY, "empty"},
+            {MaxRowsConfig::Mode::ERR, "error"},
+            {MaxRowsConfig::Mode::OK, "ok"}
+        },
     MaxRowsConfig::Mode::EMPTY);
 }
 }
@@ -136,20 +136,11 @@ int MaxRowsSession::clientReply(GWBUF* data, const mxs::ReplyRoute& down, const 
     return rv;
 }
 
-//static
+// static
 MaxRows* MaxRows::create(const char* name, mxs::ConfigParameters* params)
 {
-    MaxRows* filter = nullptr;
-    Config config(name);
-
-    if (config.configure(*params))
-    {
-        filter = new(std::nothrow) MaxRows(name, std::move(config));
-    }
-
-    return filter;
+    return new MaxRows(name);
 }
-
 
 extern "C"
 {
@@ -166,10 +157,10 @@ MXS_MODULE* MXS_CREATE_MODULE()
         "V1.0.0",
         MaxRows::CAPABILITIES,
         &mxs::FilterApi<MaxRows>::s_api,
-        nullptr,       /* Process init. */
-        nullptr,       /* Process finish. */
-        nullptr,       /* Thread init. */
-        nullptr,       /* Thread finish. */
+        nullptr,        /* Process init. */
+        nullptr,        /* Process finish. */
+        nullptr,        /* Thread init. */
+        nullptr,        /* Thread finish. */
         {{nullptr}},
         &maxrows::specification
     };

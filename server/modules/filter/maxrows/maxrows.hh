@@ -114,9 +114,9 @@ public:
     }
 
 private:
-    MaxRows(const char* name, Config&& config)
+    MaxRows(const char* name)
         : m_name(name)
-        , m_config(std::move(config))
+        , m_config(name)
     {
     }
 
