@@ -109,9 +109,8 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 // MaskingFilter
 //
 
-MaskingFilter::MaskingFilter(Config&& config, auto_ptr<MaskingRules> sRules)
-    : m_config(std::move(config))
-    , m_sRules(sRules.release())
+MaskingFilter::MaskingFilter(const char* zName)
+    : m_config(zName, *this)
 {
     MXS_NOTICE("Masking filter [%s] created.", m_config.name().c_str());
 }
@@ -123,39 +122,38 @@ MaskingFilter::~MaskingFilter()
 // static
 MaskingFilter* MaskingFilter::create(const char* zName, mxs::ConfigParameters* pParams)
 {
-    MaskingFilter* pFilter = NULL;
+    return new MaskingFilter(zName);
+}
 
-    Config config(zName);
+bool MaskingFilter::post_configure()
+{
+    bool ok = false;
+    auto_ptr<MaskingRules> sRules = MaskingRules::load(m_config.rules().c_str());
 
-    if (config.configure(*pParams))
+    if (sRules.get())
     {
-        auto_ptr<MaskingRules> sRules = MaskingRules::load(config.rules().c_str());
+        ok = true;
+        m_sRules.reset(sRules.release());
 
-        if (sRules.get())
+        if (m_config.treat_string_arg_as_field())
         {
-            pFilter = new MaskingFilter(std::move(config), sRules);
+            QC_CACHE_PROPERTIES cache_properties;
+            qc_get_cache_properties(&cache_properties);
 
-            if (config.treat_string_arg_as_field())
+            if (cache_properties.max_size != 0)
             {
-                QC_CACHE_PROPERTIES cache_properties;
-                qc_get_cache_properties(&cache_properties);
+                MXS_NOTICE("The parameter 'treat_string_arg_as_field' is enabled for %s, "
+                           "disabling the query classifier cache.",
+                           m_config.name().c_str());
 
-                if (cache_properties.max_size != 0)
-                {
-                    MXS_NOTICE("The parameter 'treat_string_arg_as_field' is enabled for %s, "
-                               "disabling the query classifier cache.",
-                               zName);
-
-                    cache_properties.max_size = 0;
-                    qc_set_cache_properties(&cache_properties);
-                }
+                cache_properties.max_size = 0;
+                qc_set_cache_properties(&cache_properties);
             }
         }
     }
 
-    return pFilter;
+    return ok;
 }
-
 
 MaskingFilterSession* MaskingFilter::newSession(MXS_SESSION* pSession, SERVICE* pService)
 {

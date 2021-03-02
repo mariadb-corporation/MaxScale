@@ -50,8 +50,10 @@ public:
     }
     SMaskingRules rules() const;
 
+    bool post_configure();
+
 private:
-    MaskingFilter(Config&& config, std::auto_ptr<MaskingRules> sRules);
+    MaskingFilter(const char* zName);
 
     MaskingFilter(const MaskingFilter&);
     MaskingFilter& operator=(const MaskingFilter&);

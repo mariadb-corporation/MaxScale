@@ -13,6 +13,7 @@
 
 #define MXS_MODULE_NAME "masking"
 #include "maskingfilterconfig.hh"
+#include "maskingfilter.hh"
 
 namespace
 {
@@ -28,10 +29,10 @@ config::ParamEnum<MaskingFilterConfig::large_payload_t> large_payload(
     &specification,
     "large_payload",
     "How large, i.e. larger than 16MB, payloads should be handled.",
-    {
-        { MaskingFilterConfig::LARGE_IGNORE, "ignore" },
-        { MaskingFilterConfig::LARGE_ABORT,  "abort" }
-    },
+        {
+            {MaskingFilterConfig::LARGE_IGNORE, "ignore"},
+            {MaskingFilterConfig::LARGE_ABORT, "abort"}
+        },
     MaskingFilterConfig::LARGE_ABORT);
 
 config::ParamPath rules(
@@ -44,10 +45,10 @@ config::ParamEnum<MaskingFilterConfig::warn_type_mismatch_t> warn_type_mismatch(
     &specification,
     "warn_type_mismatch",
     "Log warning if rule matches a column that is not of expected type.",
-    {
-        { MaskingFilterConfig::WARN_NEVER, "never" },
-        { MaskingFilterConfig::WARN_ALWAYS, "always" }
-    },
+        {
+            {MaskingFilterConfig::WARN_NEVER, "never"},
+            {MaskingFilterConfig::WARN_ALWAYS, "always"}
+        },
     MaskingFilterConfig::WARN_NEVER);
 
 config::ParamBool prevent_function_usage(
@@ -89,13 +90,12 @@ config::ParamBool treat_string_arg_as_field(
     "If true, then strings given as arguments to function will be handles "
     "as if they were names.",
     true);
-
+}
 }
 
-}
-
-MaskingFilterConfig::MaskingFilterConfig(const char* zName)
+MaskingFilterConfig::MaskingFilterConfig(const char* zName, MaskingFilter& filter)
     : mxs::config::Configuration(zName, &masking::specification)
+    , m_filter(filter)
 {
     add_native(&MaskingFilterConfig::m_large_payload, &masking::large_payload);
     add_native(&MaskingFilterConfig::m_rules, &masking::rules);
@@ -108,8 +108,13 @@ MaskingFilterConfig::MaskingFilterConfig(const char* zName)
     add_native(&MaskingFilterConfig::m_treat_string_arg_as_field, &masking::treat_string_arg_as_field);
 }
 
-//static
+// static
 void MaskingFilterConfig::populate(MXS_MODULE& info)
 {
     info.specification = &masking::specification;
+}
+
+bool MaskingFilterConfig::post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params)
+{
+    return m_filter.post_configure();
 }

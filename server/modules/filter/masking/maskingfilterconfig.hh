@@ -17,11 +17,13 @@
 #include <maxscale/modinfo.hh>
 #include <string>
 
+class MaskingFilter;
+
 class MaskingFilterConfig : public mxs::config::Configuration
 {
 public:
     MaskingFilterConfig(const MaskingFilterConfig&) = delete;
-    MaskingFilterConfig& operator = (const MaskingFilterConfig&) = delete;
+    MaskingFilterConfig& operator=(const MaskingFilterConfig&) = delete;
 
     enum warn_type_mismatch_t
     {
@@ -35,17 +37,12 @@ public:
         LARGE_ABORT
     };
 
-    MaskingFilterConfig(const char* zName);
+    MaskingFilterConfig(const char* zName, MaskingFilter& filter);
 
     MaskingFilterConfig(MaskingFilterConfig&&) = default;
 
     ~MaskingFilterConfig()
     {
-    }
-
-    const std::string& name() const
-    {
-        return m_name;
     }
 
     large_payload_t large_payload() const
@@ -100,8 +97,10 @@ public:
 
     static void populate(MXS_MODULE& info);
 
+protected:
+    bool post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params) override;
+
 private:
-    std::string          m_name;
     large_payload_t      m_large_payload;
     std::string          m_rules;
     warn_type_mismatch_t m_warn_type_mismatch;
@@ -111,4 +110,5 @@ private:
     bool                 m_check_subqueries;
     bool                 m_require_fully_parsed;
     bool                 m_treat_string_arg_as_field;
+    MaskingFilter&       m_filter;
 };
