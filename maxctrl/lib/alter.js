@@ -88,12 +88,13 @@ function parseValue(value) {
     return value
 }
 
-function processArgs(key, value, extra) {
+function updateParams(host, resource, key, value, extra){
     var arr = [key, value].concat(extra)
 
-    if (arr.length % 2 != 0 || arr.findIndex(v => v === 'null' || v === '') != -1) {
-        // Odd number of arguments or invalid value, return null for error
-        return null
+    if (arr.length % 2 != 0) {
+        return error('No value defined for parameter `' + extra[extra.length - 1] + '`')
+    } else if (arr.findIndex(v => v === 'null' || v === '') != -1) {
+        return error('Found empty or null value in parameter list: ' + JSON.stringify(arr))
     }
 
     var keys = arr.filter((v, i) => i % 2 == 0)
@@ -104,21 +105,7 @@ function processArgs(key, value, extra) {
         params[k] = parseValue(values[i])
     })
 
-    return params
-}
-
-function updateParams(host, resource, key, value, extra){
-    var params = processArgs(key, value, extra)
-
-    if (params) {
-        return updateValue(host, resource, 'data.attributes.parameters', params)
-    } else {
-        if (extra.length % 2 != 0) {
-            return error('No value defined for parameter `' + extra[extra.length - 1] + '`')
-        } else {
-            return error('Invalid value')
-        }
-    }
+    return updateValue(host, resource, 'data.attributes.parameters', params)
 }
 
 exports.command = 'alter <command>'
