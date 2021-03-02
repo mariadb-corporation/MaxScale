@@ -1484,6 +1484,14 @@ void Session::book_server_response(SERVER* pServer, bool final_response)
     if (m_retain_last_statements && !m_last_queries.empty())
     {
         mxb_assert(m_current_query >= 0);
+
+        if (m_current_query < 0)
+        {
+            MXS_ALERT("Internal logic error, disabling retain_last_statements.");
+            m_retain_last_statements = 0;
+            return;
+        }
+
         // If enough queries have been sent by the client, without it waiting
         // for the responses, then at this point it may be so that the query
         // object has been popped from the size limited queue. That's apparent

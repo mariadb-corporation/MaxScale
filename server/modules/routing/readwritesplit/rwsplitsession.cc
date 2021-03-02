@@ -734,7 +734,7 @@ void RWSplitSession::clientReply(GWBUF* writebuf, DCB* backend_dcb)
         /** Got a complete reply, decrement expected response count */
         m_expected_responses--;
 
-        if (!backend->is_replaying_history())
+        if (!backend->is_replaying_history() && !backend->local_infile_requested())
         {
             session_book_server_response(m_pSession, backend->backend()->server, m_expected_responses == 0);
         }
