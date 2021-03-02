@@ -91,7 +91,7 @@ function parseValue(value) {
 function processArgs(key, value, extra) {
     var arr = [key, value].concat(extra)
 
-    if (arr.length % 2 != 0 || arr.findIndex(v => v == 'null' || v == '') != -1) {
+    if (arr.length % 2 != 0 || arr.findIndex(v => v === 'null' || v === '') != -1) {
         // Odd number of arguments or invalid value, return null for error
         return null
     }
