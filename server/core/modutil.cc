@@ -939,7 +939,7 @@ public:
         set(IS_ALNUM, ::isalnum);
         set(IS_XDIGIT, ::isxdigit);
         set(IS_SPECIAL, [](uint8_t c) {
-                return isdigit(c) || isspace(c) || std::string("\"'`#-/\\").find(
+                return isdigit(c) || std::string("\"'`#-/\\").find(
                     c) != std::string::npos;
             });
     }
@@ -1086,18 +1086,8 @@ std::string get_canonical(GWBUF* querybuf)
             // Normal character, no special handling required
             *it_out++ = *it;
         }
-        else if (lut(IS_SPACE, *it))
-        {
-            if (it == it_out_begin || lut(IS_SPACE, *(it_out - 1)))
-            {
-                // Leading or repeating whitespace, skip it
-            }
-            else
-            {
-                *it_out++ = ' ';
-            }
-        }
-        else if (lut(IS_DIGIT, *it) && !lut(IS_ALNUM, *(it_out - 1)) && *(it_out - 1) != '_')
+        else if (lut(IS_DIGIT, *it)
+                 && (it_out != it_out_begin && !lut(IS_ALNUM, *(it_out - 1)) && *(it_out - 1) != '_'))
         {
             auto num_end = probe_number(it, end);
 
