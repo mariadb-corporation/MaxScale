@@ -283,6 +283,8 @@ public:
         return m_config;
     }
 
+    bool post_configure();
+
 private:
     DbfwConfig         m_config;
     int                m_log_match = 0; /*< Log matching and/or non-matching queries */

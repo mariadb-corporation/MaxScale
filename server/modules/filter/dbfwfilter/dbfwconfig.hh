@@ -28,17 +28,21 @@ enum fw_actions
     FW_ACTION_IGNORE
 };
 
+class Dbfw;
+
 class DbfwConfig : public mxs::config::Configuration
 {
 public:
     DbfwConfig(const DbfwConfig&) = delete;
     DbfwConfig& operator=(const DbfwConfig&) = delete;
 
-    DbfwConfig(const std::string& name);
+    DbfwConfig(const std::string& name, Dbfw* filter);
 
     DbfwConfig(DbfwConfig&& rhs) = default;
 
     static void populate(MXS_MODULE& module);
+
+    bool post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params) override;
 
     std::string rules;
     bool        log_match;
@@ -47,4 +51,7 @@ public:
     bool        treat_string_arg_as_field;
     bool        strict;
     fw_actions  action;
+
+private:
+    Dbfw* m_filter;
 };

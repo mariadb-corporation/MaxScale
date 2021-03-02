@@ -1194,7 +1194,7 @@ int global_version = 1;
 }
 
 Dbfw::Dbfw(const char* zName)
-    : m_config(zName)
+    : m_config(zName, this)
     , m_version(atomic_add(&global_version, 1))
 {
 }
@@ -1208,37 +1208,33 @@ Dbfw* Dbfw::create(const char* zName, mxs::ConfigParameters* pParams)
     MXS_NOTICE("The Database Firewall filter has been deprecated and will be removed "
                "in MariaDB MaxScale 2.7.");
 
+    return new Dbfw(zName);
+}
+
+bool Dbfw::post_configure()
+{
     RuleList rules;
     UserMap users;
-    auto rval = std::make_unique<Dbfw>(zName);
+    bool ok = process_rule_file(m_config.rules, &rules, &users);
 
-    // TODO: Move this into DbfwConfig::post_configure so that it's done when runtime changes are done
-    if (rval->getConfiguration()->configure(*pParams)
-        && process_rule_file(rval->m_config.rules, &rules, &users))
+    if (ok && (treat_string_as_field() || treat_string_arg_as_field()))
     {
-        if (rval->treat_string_as_field() || rval->treat_string_arg_as_field())
+        QC_CACHE_PROPERTIES cache_properties;
+        qc_get_cache_properties(&cache_properties);
+
+        if (cache_properties.max_size != 0)
         {
-            QC_CACHE_PROPERTIES cache_properties;
-            qc_get_cache_properties(&cache_properties);
+            MXS_NOTICE("The parameter 'treat_string_arg_as_field' or(and) "
+                       "'treat_string_as_field' is enabled for %s, "
+                       "disabling the query classifier cache.",
+                       m_config.name().c_str());
 
-            if (cache_properties.max_size != 0)
-            {
-                MXS_NOTICE("The parameter 'treat_string_arg_as_field' or(and) "
-                           "'treat_string_as_field' is enabled for %s, "
-                           "disabling the query classifier cache.",
-                           zName);
-
-                cache_properties.max_size = 0;
-                qc_set_cache_properties(&cache_properties);
-            }
+            cache_properties.max_size = 0;
+            qc_set_cache_properties(&cache_properties);
         }
     }
-    else
-    {
-        rval.reset();
-    }
 
-    return rval.release();
+    return ok;
 }
 
 DbfwSession* Dbfw::newSession(MXS_SESSION* session, SERVICE* service)

@@ -12,6 +12,7 @@
  */
 
 #include "dbfwconfig.hh"
+#include "dbfwfilter.hh"
 
 namespace config = mxs::config;
 
@@ -84,8 +85,9 @@ config::ParamEnum<fw_actions> action(
 }
 }
 
-DbfwConfig::DbfwConfig(const std::string& name)
+DbfwConfig::DbfwConfig(const std::string& name, Dbfw* filter)
     : config::Configuration(name, &dbfwfilter::specification)
+    , m_filter(filter)
 {
     add_native(&DbfwConfig::rules, &dbfwfilter::rules);
     add_native(&DbfwConfig::log_match, &dbfwfilter::log_match);
@@ -100,4 +102,9 @@ DbfwConfig::DbfwConfig(const std::string& name)
 void DbfwConfig::populate(MXS_MODULE& module)
 {
     module.specification = &dbfwfilter::specification;
+}
+
+bool DbfwConfig::post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params)
+{
+    return m_filter->post_configure();
 }
