@@ -336,10 +336,10 @@ public:
     /**
      * @brief Process a template configuration file
      *
-     * @param cnf_template_path Config file template path
+     * @param config_file Config file template path
      * @param dest Destination file name for actual configuration file
      */
-    void process_template(int m, const std::string& cnf_template_path,
+    void process_template(int m, const std::string& config_file,
                           const char* dest = "/etc/maxscale.cnf");
 
     /**

@@ -512,22 +512,13 @@ void TestConnections::set_template_and_labels()
     m_test_labels = parse_to_stringset(m_test_labels_str);
 }
 
-void TestConnections::process_template(int m, const string& cnf_template_path, const char* dest)
+void TestConnections::process_template(int m, const string& config_file, const char* dest)
 {
-    struct stat stb;
     char str[4096];
-    string template_file = cnf_template_path;
 
-    char extended_template_file[1024 + 12];
-    sprintf(extended_template_file, "%s.%03d", cnf_template_path.c_str(), m);
-    if (stat(extended_template_file, &stb) == 0)
-    {
-        template_file = extended_template_file;
-    }
+    tprintf("Processing MaxScale config file %s\n", config_file.c_str());
 
-    tprintf("Template file is %s\n", template_file.c_str());
-
-    sprintf(str, "cp %s maxscale.cnf", template_file.c_str());
+    sprintf(str, "cp %s maxscale.cnf", config_file.c_str());
     if (verbose())
     {
         tprintf("Executing '%s' command\n", str);
@@ -624,7 +615,28 @@ void TestConnections::init_maxscales()
 void TestConnections::init_maxscale(int m)
 {
     auto homedir = maxscales->access_homedir(m);
-    process_template(m, m_cnf_template_path, homedir);
+    // The config file path can be multivalued when running a test with multiple MaxScales.
+    // Select the correct file.
+    auto filepaths = mxb::strtok(m_cnf_template_path, ";");
+    int n_files = filepaths.size();
+    if (m < n_files)
+    {
+        // Have a separate config file for this MaxScale.
+        process_template(m, filepaths[m], homedir);
+    }
+    else if (n_files >= 1)
+    {
+        // Not enough config files given for all MaxScales. Use the config of first MaxScale. This can
+        // happen with the "check_backends"-test.
+        tprintf("MaxScale %i does not have a designated config file, only found %i files in test definition. "
+                "Using main MaxScale config file instead.", m, n_files);
+        process_template(m, filepaths[0], homedir);
+    }
+    else
+    {
+        tprintf("No MaxScale config files defined. MaxScale may not start.");
+    }
+
     if (maxscales->ssh_node_f(m, true, "test -d %s/certs", homedir))
     {
         tprintf("SSL certificates not found, copying to maxscale");
@@ -1701,8 +1713,8 @@ StringSet TestConnections::parse_to_stringset(const string& source)
     {
         char* ptr = &copy[0];
         char* save_ptr = nullptr;
-        // mdbci uses ',' and cmake uses ';'. Add ' ' as well to ensure trimming.
-        const char delim[] = ",; ";
+        // mdbci uses ',' and cmake uses ';'. Add ' ' and newline as well to ensure trimming.
+        const char delim[] = ",; \n";
         char* token = strtok_r(ptr, delim, &save_ptr);
         while (token)
         {

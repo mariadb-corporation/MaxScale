@@ -45,9 +45,6 @@ add_subdirectory(cdc_datatypes)
 # BEGIN: Tests that require GTID           #
 ############################################
 
-# Two MaxScales with cooperative monitoring.
-add_test_executable(cooperative_monitoring.cpp cooperative_monitoring cooperative_monitoring LABELS REPL_BACKEND SECOND_MAXSCALE)
-
 add_subdirectory(mariadbmonitor)
 add_subdirectory(pinloki)
 
