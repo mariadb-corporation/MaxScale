@@ -1637,6 +1637,7 @@ GWBUF* MariaDBBackendConnection::gw_generate_auth_response(bool with_ssl, bool s
     const char* auth_plugin_name = DEFAULT_MYSQL_AUTH_PLUGIN;
 
     const std::string& username = client_data->user;
+    // TODO: Make this a member function, only MariaDBBackendConnection uses it
     long bytes = response_length(with_ssl,
                                  ssl_established,
                                  username.c_str(),
@@ -1644,9 +1645,12 @@ GWBUF* MariaDBBackendConnection::gw_generate_auth_response(bool with_ssl, bool s
                                  client_data->db.c_str(),
                                  auth_plugin_name);
 
-    if (capabilities & this->server_capabilities & GW_MYSQL_CAPABILITIES_CONNECT_ATTRS)
+    if (!with_ssl || ssl_established)
     {
-        bytes += client_data->connect_attrs.size();
+        if (capabilities & this->server_capabilities & GW_MYSQL_CAPABILITIES_CONNECT_ATTRS)
+        {
+            bytes += client_data->connect_attrs.size();
+        }
     }
 
     // allocating the GWBUF
