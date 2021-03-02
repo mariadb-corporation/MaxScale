@@ -48,16 +48,18 @@ public:
 
     mxs::config::Configuration* getConfiguration()
     {
-        return m_sConfig.get();
+        return &m_config;
     }
 
+    bool post_configure();
+
 private:
-    CacheFilter(std::unique_ptr<CacheConfig> sConfig, std::unique_ptr<Cache> sCache);
+    CacheFilter(const char* zName);
 
     CacheFilter(const CacheFilter&);
     CacheFilter& operator=(const CacheFilter&);
 
 private:
-    std::unique_ptr<CacheConfig> m_sConfig;
-    std::unique_ptr<Cache>       m_sCache;
+    CacheConfig            m_config;
+    std::unique_ptr<Cache> m_sCache;
 };

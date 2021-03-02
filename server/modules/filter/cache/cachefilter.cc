@@ -139,9 +139,8 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 // CacheFilter
 //
 
-CacheFilter::CacheFilter(std::unique_ptr<CacheConfig> sConfig, std::unique_ptr<Cache> sCache)
-    : m_sConfig(std::move(sConfig))
-    , m_sCache(std::move(sCache))
+CacheFilter::CacheFilter(const char* zName)
+    : m_config(zName, this)
 {
 }
 
@@ -152,56 +151,54 @@ CacheFilter::~CacheFilter()
 // static
 CacheFilter* CacheFilter::create(const char* zName, mxs::ConfigParameters* pParams)
 {
-    CacheFilter* pFilter = nullptr;
+    return new CacheFilter(zName);
+}
 
-    std::unique_ptr<CacheConfig> sConfig(new(std::nothrow) CacheConfig(zName));
+bool CacheFilter::post_configure()
+{
+    Cache* pCache = nullptr;
 
-    if (sConfig && sConfig->configure(*pParams))
+    switch (m_config.thread_model)
     {
-        Cache* pCache = nullptr;
+    case CACHE_THREAD_MODEL_MT:
+        MXS_NOTICE("Creating shared cache.");
+        MXS_EXCEPTION_GUARD(pCache = CacheMT::create(m_config.name(), &m_config));
+        break;
 
-        switch (sConfig->thread_model)
-        {
-        case CACHE_THREAD_MODEL_MT:
-            MXS_NOTICE("Creating shared cache.");
-            MXS_EXCEPTION_GUARD(pCache = CacheMT::create(zName, sConfig.get()));
-            break;
+    case CACHE_THREAD_MODEL_ST:
+        MXS_NOTICE("Creating thread specific cache.");
+        MXS_EXCEPTION_GUARD(pCache = CachePT::create(m_config.name(), &m_config));
+        break;
 
-        case CACHE_THREAD_MODEL_ST:
-            MXS_NOTICE("Creating thread specific cache.");
-            MXS_EXCEPTION_GUARD(pCache = CachePT::create(zName, sConfig.get()));
-            break;
-
-        default:
-            mxb_assert(!true);
-        }
-
-        if (pCache)
-        {
-            Storage::Limits limits;
-            pCache->get_limits(&limits);
-
-            uint32_t max_resultset_size = sConfig->max_resultset_size;
-
-            if (max_resultset_size == 0)
-            {
-                max_resultset_size = std::numeric_limits<uint32_t>::max();
-            }
-
-            if (max_resultset_size > limits.max_value_size)
-            {
-                MXS_WARNING("The used cache storage limits the maximum size of a value to "
-                            "%u bytes, but either no value has been specified for "
-                            "max_resultset_size or the value is larger. Setting "
-                            "max_resultset_size to the maximum size.", limits.max_value_size);
-                sConfig->max_resultset_size = limits.max_value_size;
-            }
-
-            pFilter = new(std::nothrow) CacheFilter(std::move(sConfig), unique_ptr<Cache>(pCache));
-        }
+    default:
+        mxb_assert(!true);
     }
 
-    return pFilter;
+    if (pCache)
+    {
+        Storage::Limits limits;
+        pCache->get_limits(&limits);
+
+        uint32_t max_resultset_size = m_config.max_resultset_size;
+
+        if (max_resultset_size == 0)
+        {
+            max_resultset_size = std::numeric_limits<uint32_t>::max();
+        }
+
+        if (max_resultset_size > limits.max_value_size)
+        {
+            MXS_WARNING("The used cache storage limits the maximum size of a value to "
+                        "%u bytes, but either no value has been specified for "
+                        "max_resultset_size or the value is larger. Setting "
+                        "max_resultset_size to the maximum size.", limits.max_value_size);
+            m_config.max_resultset_size = limits.max_value_size;
+        }
+
+        m_sCache.reset(pCache);
+    }
+
+    return pCache != nullptr;
 }
 
 CacheFilterSession* CacheFilter::newSession(MXS_SESSION* pSession, SERVICE* pService)

@@ -14,6 +14,7 @@
 #define MXS_MODULE_NAME "cache"
 #include "cacheconfig.hh"
 #include "cache.hh"
+#include "cachefilter.hh"
 
 config::Specification CacheConfig::s_specification(MXS_MODULE_NAME, config::Specification::FILTER);
 
@@ -141,10 +142,10 @@ config::ParamEnum<cache_invalidate_t> CacheConfig::s_invalidate(
     &s_specification,
     "invalidate",
     "An enumeration options specifying how the cache should perform cache invalidation.",
-    {
-        {CACHE_INVALIDATE_NEVER, "never"},
-        {CACHE_INVALIDATE_CURRENT, "current"},
-    },
+{
+    {CACHE_INVALIDATE_NEVER, "never"},
+    {CACHE_INVALIDATE_CURRENT, "current"},
+},
     CACHE_INVALIDATE_NEVER
     );
 
@@ -167,10 +168,10 @@ config::ParamEnum<cache_users_t> CacheConfig::s_users(
     &s_specification,
     "users",
     "Specifies whether cached data is shared between users.",
-    {
-        {CACHE_USERS_ISOLATED, "isolated"},
-        {CACHE_USERS_MIXED, "mixed"}
-    },
+{
+    {CACHE_USERS_ISOLATED, "isolated"},
+    {CACHE_USERS_MIXED, "mixed"}
+},
     CACHE_USERS_MIXED
     );
 
@@ -183,8 +184,9 @@ config::ParamDuration<std::chrono::milliseconds> CacheConfig::s_timeout(
     );
 
 
-CacheConfig::CacheConfig(const std::string& name)
+CacheConfig::CacheConfig(const std::string& name, CacheFilter* filter)
     : config::Configuration(name, &s_specification)
+    , m_pFilter(filter)
 {
     add_native(&CacheConfig::storage, &s_storage);
     add_native(&CacheConfig::storage_options, &s_storage_options);
@@ -253,6 +255,13 @@ bool CacheConfig::post_configure(const std::map<std::string, mxs::ConfigParamete
                         this->max_size);
             this->max_resultset_size = this->max_size;
         }
+    }
+
+    // The check for m_pFilter here is for the unit tests that don't allocate a CacheFilter instance. This
+    // should be changed in some way so that the post-configuration step is handled in a more abstract manner.
+    if (configured && m_pFilter)
+    {
+        configured = m_pFilter->post_configure();
     }
 
     return configured;

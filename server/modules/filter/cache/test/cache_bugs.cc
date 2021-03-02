@@ -49,7 +49,7 @@ int mxs_2727()
 
     const size_t MAX_SIZE = 10;
 
-    CacheConfig config("MXS-2727");
+    CacheConfig config("MXS-2727", nullptr);
     config.storage = std::string("storage_inmemory");
     config.soft_ttl = std::chrono::seconds(1);
     config.hard_ttl = std::chrono::seconds(10);

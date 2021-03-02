@@ -42,7 +42,9 @@ enum cache_users_t
 
 const cache_thread_model_t CACHE_DEFAULT_THREAD_MODEL = CACHE_THREAD_MODEL_ST;
 
-const std::chrono::milliseconds CACHE_DEFAULT_TIMEOUT { 5000 };
+const std::chrono::milliseconds CACHE_DEFAULT_TIMEOUT {5000};
+
+class CacheFilter;
 
 class CacheConfig : public config::Configuration
 {
@@ -50,7 +52,7 @@ public:
     CacheConfig(const CacheConfig&) = delete;
     CacheConfig& operator=(const CacheConfig&) = delete;
 
-    CacheConfig(const std::string& name);
+    CacheConfig(const std::string& name, CacheFilter* filter);
     ~CacheConfig();
 
     CacheConfig(CacheConfig&& rhs) = default;
@@ -85,6 +87,8 @@ private:
     bool post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params) override;
 
 private:
+    CacheFilter* m_pFilter;
+
     static config::Specification s_specification;
 
     static config::ParamString                     s_storage;
