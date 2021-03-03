@@ -43,6 +43,8 @@ public:
 
     const std::string& prefix() const;
 
+    int N {0};
+
     /**
      * @brief  MYSQL structs for every backend node
      */
