@@ -255,11 +255,11 @@ TestConnections::TestConnections(int argc, char* argv[])
                 m_no_maxscale_log_copy = true;
                 m_local_maxscale = true;
 
-                std::regex regex1("maxscale_000_network=[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+");
+                std::regex regex1("maxscale_000_network[\\s]*=[\\s]*[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+");
                 std::string replace1("maxscale_000_network=127.0.0.1");
                 m_network_config = regex_replace(m_network_config, regex1, replace1);
 
-                std::regex regex2("maxscale_000_private_ip=[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+");
+                std::regex regex2("maxscale_000_private_ip[\\s]*=[\\s]*[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+");
                 std::string replace2("maxscale_000_private_ip=127.0.0.1");
                 m_network_config = regex_replace(m_network_config, regex2, replace2);
             }
