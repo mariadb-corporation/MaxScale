@@ -30,27 +30,17 @@ master cluster, which for all practical purposes should be a master-slave
 ReadWriteSplit. This document does not go into details about setting up
 master-slave clusters, but suffice to say, that when setting up the ColumnStore
 servers they should be configured to be slaves of a MariaDB server running an
-InnoDB engine. The ReadWriteSplit [documentation](ReadWriteSplit.md) has more on
-master-slave setup.
-
-### Service as a Server
-
-Currently the configuration for a router (service) can have a number of servers,
-but not other routers (services). Suppose you have a cluster of servers that are
-managed by ReadWriteSplit. In order for that cluster to be routed-to by
-SmartRouter, the service must be exposed as a server. A server section in the
-configuration file that exposes a service instead of defining an actual server,
-is known as *Service as a Server*.
+InnoDB engine.
+The ReadWriteSplit [documentation](ReadWriteSplit.md) has more on master-slave setup.
 
 #### Example
 
-![SR-config-layout](images/sr-config.png)
-
-Suppose we have a service like
+Suppose we have a Transactional service like
 ```
 [RWS-Row]
 type=service
 router=readwritesplit
+servers = row_server_1, row_server_2, ...
 ```
 for which we have defined the listener
 ```
@@ -61,50 +51,37 @@ socket=/tmp/rws-row.sock
 ```
 That is, that service can be accessed using the socket `/tmp/rws-row.sock`.
 
-A server section that would expose that service as a server, looks like this:
+The Analytical service could look like this
 ```
-[RWS-Row-as-a-server]
-type=server
-socket=/tmp/rws-row.sock
+[RWS-Column]
+type = service
+router = readwritesplit
+servers = column_server_1, column_server_2, ...
+
+[RWS-Column-Listener]
+type = listener
+service = RWS-Column
+socket = /tmp/rws-col.sock
 ```
-Assuming we have defined `RWS-Column`, `RWS-Column-Listener` and
-`RWS-Column-as-a-server` similarly, we can define the SmartQuery
-service as follows:
+
+Then we can define the SmartQuery service as follows
 ```
 [SmartQuery]
 type = service
 router = smartrouter
-servers = RWS-Row-as-a-server, RWS-Column-as-a-server
-master = RWS-Row-as-a-server
-user = <user>
-password = <password>
+targets = RWS-Row, RWS-Column
+master = RWS-Row
 
 [SmartQuery-Listener]
 type = listener
 service = SmartQuery
-protocol = mariadbclient
 port = <port>
 ```
-Note that the SmartQuery listener listens on a port, while the Service as a Server
-listeners listen on a Unix domain socket. The reason is that there is a significant
-performance benefit when SmartRouter accesses the services over a Unix domain socket
-compared to accessing them over a TCP/IP socket.
+Note that the SmartQuery listener listens on a port, while the Row and Column
+service listeners listen on Unix domain sockets. The reason is that there is a
+significant performance benefit when SmartRouter accesses the services over a
+Unix domain socket compared to accessing them over a TCP/IP socket.
 
-Note that RWS-Row-as-a-server is designated as the master.
-
-The RWS-Row-as-a-server looks like this:
-```
-[RWS-Row-Listener]
-type = listener
-service = RWS-Row
-protocol = mariadbclient
-socket = /tmp/rws-row.sock
-
-[RWS-Row-as-a-server]
-type     = server
-socket = /tmp/rws-row.sock
-protocol = MariaDBBackend
-```
 A complete configuration example can be found at the end of this document.
 
 ## Cluster selection - how queries are routed
@@ -133,7 +110,7 @@ SmartRouter.
 ## Limitations
 
 * `LOAD DATA LOCAL INFILE` is not supported.
-* The performance data is not persisted. The measurements have to be performed
+* The performance data is not persisted. The measurements will be performed
 anew after each startup.
 
 ## Complete configuration example
@@ -144,13 +121,11 @@ anew after each startup.
 type = server
 address = <ip>
 port = <port>
-protocol = MariaDBBackend
 
 [row_server_2]
 type = server
 address = <ip>
 port = <port>
-protocol = MariaDBBackend
 
 [Row-Monitor]
 type = monitor
@@ -164,7 +139,6 @@ monitor_interval = 2000ms
 type = server
 address = <ip>
 port = <port>
-protocol = MariaDBBackend
 
 [Column-Monitor]
 type = monitor
@@ -185,7 +159,6 @@ password = <password>
 [RWS-Row-Listener]
 type = listener
 service = RWS-Row
-protocol = mariadbclient
 socket = /tmp/rws-row.sock
 
 # Columnstore Read write split
@@ -199,31 +172,19 @@ password = <password>
 [RWS-Column-Listener]
 type = listener
 service = RWS-Column
-protocol = mariadbclient
 socket = /tmp/rws-col.sock
-
-[RWS-Row-as-a-server]
-type = server
-socket = /tmp/rws-row.sock
-protocol = MariaDBBackend
-
-[RWS-Column-as-a-server]
-type     = server
-socket = /tmp/rws-col.sock
-protocol = MariaDBBackend
 
 # Smart Query router
 [SmartQuery]
 type = service
 router = smartrouter
-servers = RWS-Row-as-a-server, RWS-Column-as-a-server
-master = RWS-Row-as-a-server
+targets = RWS-Row, RWS-Column
+master = RWS-Row
 user = <user>
 password = <password>
 
 [SmartQuery-Listener]
 type = listener
 service = SmartQuery
-protocol = mariadbclient
 port = <port>
 ```
