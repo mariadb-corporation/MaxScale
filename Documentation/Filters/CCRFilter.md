@@ -20,7 +20,7 @@ by default, propagate to other sessions.
 
 The triggering of the filter can be limited further by adding MaxScale supported
 comments to queries and/or by using regular expressions. The query comments take
-precedence: if a comment is found it is obayed even if a regular expression
+precedence: if a comment is found it is obeyed even if a regular expression
 parameter might give a different result. Even a comment cannot cause a
 SELECT-query to trigger the filter. Such a comment is considered an error and
 ignored.
@@ -37,7 +37,7 @@ INSERT INTO departments VALUES ('d1234', 'NewDepartment'); -- maxscale ccr=ignor
 would normally cause the filter to trigger, but does not because of the
 comment. The `match`-comment typically has no effect, since write queries by
 default trigger the filter anyway. It can be used to override an ignore-type
-regular expression that would othewise prevent triggering.
+regular expression that would otherwise prevent triggering.
 
 ## Filter Parameters
 

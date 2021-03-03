@@ -203,7 +203,7 @@ if a column that should be masked, is used in conjunction with some
 function. As the masking filter works _only_ on the basis of the
 information in the returned result-set, if the name of a column is
 not present in the result-set, then the masking filter cannot mask a
-value. This means that the masking filter bascially can be bypassed
+value. This means that the masking filter basically can be bypassed
 with a query like:
 ```
 SELECT CONCAT(masked_column) FROM tbl;
@@ -368,7 +368,7 @@ SELECT ssn FROM person UNION SELECT ssn FROM person2;
 ```
 will _only_ return masked values, even if the `ssn` values from
 `person2` in principle should not be masked. The same effect is
-observed even with a non-sensical query like
+observed even with a nonsensical query like
 ```
 SELECT ssn FROM person2 UNION SELECT ssn FROM person2;
 ```
@@ -400,13 +400,13 @@ The `match` value must be a valid pcre2 regular expression.
 
 The obfuscate rule allows the obfuscation of the value
 by passing it through an obfuscation algorithm.
-Current solution uses a nonreversible obfuscation approach.
+Current solution uses a non-reversible obfuscation approach.
 
 However, note that although it is in principle impossible to obtain the
 original value from the obfuscated one, if the range of possible original
 values is limited, it is straightforward to figure out the possible
 original values by running all possible values through the obfuscation
-algortihm and then comparing the results.
+algorithm and then comparing the results.
 
 The minimal configuration is:
 

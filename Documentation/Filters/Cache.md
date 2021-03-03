@@ -196,7 +196,7 @@ sharing.
 
 The cache filter has no mandatory parameters but a range of optional ones.
 Note that it is advisable to specify `max_size` to prevent the cache from
-using up all memory there is, in case there is very litte overlap among the
+using up all memory there is, in case there is very little overlap among the
 queries.
 
 #### `storage`
@@ -250,7 +250,7 @@ soft_ttl=60s
 The default value is `0`, which means no limit. If the value of `soft_ttl` is
 larger than `hard_ttl` it will be adjusted down to the same value.
 
-The duration can be specifed as explained
+The duration can be specified as explained
 [here](../Getting-Started/Configuration-Guide.md#durations).
 If no explicit unit has been specified, the value is interpreted as seconds
 in MaxScale 2.4. In subsequent versions a value without a unit may be rejected.
@@ -324,7 +324,7 @@ allowed values are:
      it implies that there will be synchronization between threads, on
      the other hand that all threads will use data fetched by any thread.
    * `thread_specific`: The cached data is specific to a thread. On the
-     one hand it implies that no synchonization is needed between threads,
+     one hand it implies that no synchronization is needed between threads,
      on the other hand that the very same data may be fetched and stored
      multiple times.
 
@@ -430,7 +430,7 @@ Default is `true`.
 The value affects the initial state of the MaxScale user
 variables using which the behaviour of the cache can be modified
 at runtime. Please see
-[Runtime Configuration](#runtime-configuation)
+[Runtime Configuration](#runtime-configuration)
 for details.
 
 #### `invalidate`
@@ -727,7 +727,7 @@ or, in case an array is used, as
 
 The `store` field specifies in what circumstances data should be stored to
 the cache and the `use` field specifies in what circumstances the data in
-the cache should be used. In both cases, the value is a JSON array containg
+the cache should be used. In both cases, the value is a JSON array containing
 objects.
 
 If an array of rule objects is specified, then, when looking for a rule that
@@ -1096,7 +1096,7 @@ The presence of a shared cache _may_ provide a performance benefit
   server,
 * if the used SELECT statements are heavy (that is, take a significant
   amount of time) to process for the database server, or
-* if the presence of the cache reducues the overall load of an
+* if the presence of the cache reduces the overall load of an
   otherwise overloaded database server.
 
 As a general rule a _shared_ storage should not be used without first
@@ -1168,7 +1168,7 @@ be disabled and a connection attempt will be made after a [timeout](#timeout)
 interval.
 
 Note that since each connection attempt itself has the same timeout, reconnection
-attemps will thus be made at `2 * timeout` intervals. The same approach is followed
+attempts will thus be made at `2 * timeout` intervals. The same approach is followed
 also if the connection is lost during the lifetime of the session.
 
 `storage_redis` has the following mandatory arguments:
