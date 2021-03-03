@@ -684,68 +684,30 @@ bool Config::configure(const mxs::ConfigParameters& params, mxs::ConfigParameter
 
     if (configured)
     {
-        for (const auto& kv : unrecognized)
+        // TODO: this needs to be fixed at a higher level. For a
+        // config value with a default and an on_set() function,
+        // the on_set() function should be called at config time
+        // else any side effect that the function has (like copying
+        // the value somewhere) will not happen. The problem is not
+        // trivial as config values are mostly initialized in a constructor,
+        // leading to problems related to initialization order
+        // in the constructor, across translation units and threads.
+        qc_cache_properties.max_size = qc_cache_max_size.get();
+
+        if (DEFAULT_QC_CACHE_SIZE == 0)
         {
-            bool found = false;
-
-            const auto& name = kv.first;
-            const auto& value = kv.second;
-
-            if (maxscale::event::validate(name, value) == maxscale::event::ACCEPTED)
-            {
-                maxscale::event::configure(name, value);
-                found = true;
-            }
-
-            if (!found)
-            {
-                for (int i = 0; !found && config_pre_parse_global_params[i]; ++i)
-                {
-                    found = (name == config_pre_parse_global_params[i]);
-                }
-            }
-
-            if (!found)
-            {
-                if (pUnrecognized)
-                {
-                    pUnrecognized->set(name, value);
-                }
-                else
-                {
-                    MXS_ERROR("Unknown global parameter '%s'.", name.c_str());
-                    configured = false;
-                }
-            }
+            MXS_WARNING("Failed to automatically detect available system memory: disabling the query "
+                        "classifier cache. To enable it, add '%s' to the configuration file.",
+                        CN_QUERY_CLASSIFIER_CACHE_SIZE);
         }
-
-        if (configured)
+        else if (this->qc_cache_properties.max_size == 0)
         {
-            // TODO: this needs to be fixed at a higher level. For a
-            // config value with a default and an on_set() function,
-            // the on_set() function should be called at config time
-            // else any side effect that the function has (like copying
-            // the value somewhere) will not happen. The problem is not
-            // trivial as config values are mostly initialized in a constructor,
-            // leading to problems related to initialization order
-            // in the constructor, across translation units and threads.
-            qc_cache_properties.max_size = qc_cache_max_size.get();
-
-            if (DEFAULT_QC_CACHE_SIZE == 0)
-            {
-                MXS_WARNING("Failed to automatically detect available system memory: disabling the query "
-                            "classifier cache. To enable it, add '%s' to the configuration file.",
-                            CN_QUERY_CLASSIFIER_CACHE_SIZE);
-            }
-            else if (this->qc_cache_properties.max_size == 0)
-            {
-                MXS_NOTICE("Query classifier cache is disabled");
-            }
-            else
-            {
-                MXS_NOTICE("Using up to %s of memory for query classifier cache",
-                           mxb::pretty_size(this->qc_cache_properties.max_size).c_str());
-            }
+            MXS_NOTICE("Query classifier cache is disabled");
+        }
+        else
+        {
+            MXS_NOTICE("Using up to %s of memory for query classifier cache",
+                       mxb::pretty_size(this->qc_cache_properties.max_size).c_str());
         }
     }
 
@@ -757,6 +719,25 @@ bool Config::post_configure(const std::map<std::string, mxs::ConfigParameters>& 
     mxb_assert(nested_params.empty() || (nested_params.size() == 1 && nested_params.count("event")));
 
     bool rv = true;
+    auto it = nested_params.find("event");
+
+    if (it != nested_params.end())
+    {
+        for (const auto& kv : it->second)
+        {
+            const auto& name = "event." + kv.first;
+            const auto& value = kv.second;
+
+            if (maxscale::event::validate(name, value) == maxscale::event::ACCEPTED)
+            {
+                maxscale::event::configure(name, value);
+            }
+            else
+            {
+                rv = false;
+            }
+        }
+    }
 
     auto whw = this->writeq_high_water.get();
     auto wlw = this->writeq_low_water.get();
