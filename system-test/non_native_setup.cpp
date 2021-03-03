@@ -10,7 +10,7 @@
 #include <maxbase/format.hh>
 #include <maxtest/testconnections.hh>
 
-using std::string;
+using namespace std;
 
 namespace
 {
