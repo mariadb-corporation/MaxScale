@@ -754,7 +754,7 @@ bool Config::configure(const mxs::ConfigParameters& params, mxs::ConfigParameter
 
 bool Config::post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params)
 {
-    mxb_assert(nested_params.empty());
+    mxb_assert(nested_params.empty() || (nested_params.size() == 1 && nested_params.count("event")));
 
     bool rv = true;
 

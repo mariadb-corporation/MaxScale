@@ -251,8 +251,20 @@ bool Specification::validate(const mxs::ConfigParameters& params,
                     }
                     else
                     {
-                        MXS_ERROR("'%s' does not refer to a module.", name.c_str());
-                        valid = false;
+                        if (pUnrecognized)
+                        {
+                            for (const auto& params : kv.second)
+                            {
+                                const auto& key = params.first;
+                                const auto& value = params.second;
+                                pUnrecognized->set(name + "." + key, value);
+                            }
+                        }
+                        else
+                        {
+                            MXS_ERROR("'%s' does not refer to a module.", name.c_str());
+                            valid = false;
+                        }
                     }
                 }
             }
