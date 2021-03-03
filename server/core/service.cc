@@ -208,7 +208,7 @@ cfg::ParamSeconds s_connection_keepalive(
 
 cfg::ParamBool s_prune_sescmd_history(
     &s_spec, "prune_sescmd_history", "Prune old session command history if the limit is exceeded",
-    false, cfg::Param::AT_RUNTIME);
+    true, cfg::Param::AT_RUNTIME);
 
 cfg::ParamBool s_disable_sescmd_history(
     &s_spec, "disable_sescmd_history", "Disable session command history",
