@@ -60,7 +60,6 @@ int main(int argc, char* argv[])
             std::string(zName);
 
         TestConnections test(argc, argv);
-        test.write_node_env_vars();
 
         sleep(3);
         setenv("src_dir", test_dir, 1);
