@@ -90,11 +90,11 @@ describe("Alter Commands", function () {
 
   it("alters service with multiple parameters", function () {
     return verifyCommand(
-      "alter service Read-Connection-Router user testuser connection_timeout 123",
+      "alter service Read-Connection-Router user testuser connection_timeout 123s",
       "services/Read-Connection-Router"
     ).then(function (res) {
       res.data.attributes.parameters.user.should.equal("testuser");
-      res.data.attributes.parameters.connection_timeout.should.equal(123);
+      res.data.attributes.parameters.connection_timeout.should.equal(123000);
     });
   });
 
