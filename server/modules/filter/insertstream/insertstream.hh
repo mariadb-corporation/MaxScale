@@ -40,7 +40,9 @@ public:
     mxs::config::Configuration* getConfiguration();
 
 private:
-    InsertStream();
+    InsertStream(const char* name);
+
+    mxs::config::Configuration m_config;
 };
 
 class InsertStreamSession : public maxscale::FilterSession

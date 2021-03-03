@@ -208,13 +208,14 @@ GWBUF* create_load_data_command(const char* target)
 }
 }
 
-InsertStream::InsertStream()
+InsertStream::InsertStream(const char* name)
+    : m_config(name, &s_spec)
 {
 }
 
 InsertStream* InsertStream::create(const char* name, mxs::ConfigParameters* params)
 {
-    return new InsertStream;
+    return new InsertStream(name);
 }
 
 mxs::FilterSession* InsertStream::newSession(MXS_SESSION* pSession, SERVICE* pService)
@@ -235,7 +236,7 @@ uint64_t InsertStream::getCapabilities() const
 }
 mxs::config::Configuration* InsertStream::getConfiguration()
 {
-    return nullptr;
+    return &m_config;
 }
 
 InsertStreamSession::InsertStreamSession(MXS_SESSION* pSession, SERVICE* pService, InsertStream* filter)
