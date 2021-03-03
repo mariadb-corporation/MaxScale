@@ -58,14 +58,6 @@ user=maxskysql
 password=skysql
 monitor_interval=1000
 
-[InternalMonitor]
-type=monitor
-module=mariadbmon
-servers=RWS1-As-Server, RWS2-As-Server, RWS3-As-Server, RWS4-As-Server
-user=maxskysql
-password=skysql
-monitor_interval=1000
-
 [RWS1]
 type=service
 router=readwritesplit
@@ -78,11 +70,6 @@ slave_selection_criteria=ADAPTIVE_ROUTING
 type=listener
 service=RWS1
 protocol=mariadbclient
-socket=/tmp/rws1.sock
-
-[RWS1-As-Server]
-type=server
-protocol=mariadbbackend
 socket=/tmp/rws1.sock
 
 [RWS2]
@@ -99,11 +86,6 @@ service=RWS2
 protocol=mariadbclient
 socket=/tmp/rws2.sock
 
-[RWS2-As-Server]
-type=server
-protocol=mariadbbackend
-socket=/tmp/rws2.sock
-
 [RWS3]
 type=service
 router=readwritesplit
@@ -116,11 +98,6 @@ slave_selection_criteria=ADAPTIVE_ROUTING
 type=listener
 service=RWS3
 protocol=mariadbclient
-socket=/tmp/rws3.sock
-
-[RWS3-As-Server]
-type=server
-protocol=mariadbbackend
 socket=/tmp/rws3.sock
 
 [RWS4]
@@ -137,16 +114,11 @@ service=RWS4
 protocol=mariadbclient
 socket=/tmp/rws4.sock
 
-[RWS4-As-Server]
-type=server
-protocol=mariadbbackend
-socket=/tmp/rws4.sock
-
 [SmartQuery]
 type=service
 router=smartrouter
-servers=RWS1-As-Server, RWS2-As-Server, RWS3-As-Server, RWS4-As-Server
-master=RWS1-As-Server
+targets=RWS1, RWS2, RWS3, RWS4
+master=RWS1
 user=maxskysql
 password=skysql
 
