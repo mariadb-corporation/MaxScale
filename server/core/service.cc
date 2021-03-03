@@ -309,6 +309,9 @@ Service* Service::create(const char* name, const char* router, const mxs::Config
 
     std::unique_ptr<Service> service(new Service(name, router));
 
+    MXB_AT_DEBUG(bool ok = ) service->m_config.configure(params, &unknown);
+    mxb_assert(ok);
+
     // TODO: Change the router API to use a reference
     mxs::ConfigParameters param_copy = params;
     MXS_ROUTER_API* router_api = (MXS_ROUTER_API*)module->module_object;
@@ -328,11 +331,10 @@ Service* Service::create(const char* name, const char* router, const mxs::Config
         if (!config->configure(params))
         {
             MXS_ERROR("%s: Failed to configure router instance.", service->name());
+            service->state = State::FAILED;
             return nullptr;
         }
     }
-
-    service->m_config.configure(params, &unknown);
 
     auto servers = s_servers.get(params);
     auto targets = s_targets.get(params);
