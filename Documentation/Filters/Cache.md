@@ -2,9 +2,6 @@
 
 This filter was introduced in MariaDB MaxScale 2.1.
 
-Table of Contents
-=================
-
 [TOC]
 
 ## Overview

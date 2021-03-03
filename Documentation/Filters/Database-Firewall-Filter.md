@@ -1,8 +1,5 @@
 # Database Firewall filter
 
-Table of Contents
-=================
-
 [TOC]
 
 ## Overview

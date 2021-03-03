@@ -2,18 +2,7 @@
 
 This document describes the version 1 of the MaxScale REST API.
 
-## Table of Contents
-
-- [Resources](#resources)
-- [Common Request Parameter](#common-request-parameters)
-- [HTTP Headers](#http-headers)
-  - [Request Headers](#request-headers)
-  - [Response Headers](#response-headers)
-- [Response Codes](#response-codes)
-  - [2xx Success](#2xx-success)
-  - [3xx Redirection](#3xx-redirection)
-  - [4xx Client Error](#4xx-client-error)
-  - [5xx Server Error](#5xx-server-error)
+[TOC]
 
 ## Note About Syntax
 

@@ -6,22 +6,7 @@ best practices and possible pitfalls in module development. We predict that
 *filters* and *routers* are the module types developers are most likely to work
 on, so the APIs of these two are discussed in detail.
 
-## Table of Contents
-
-* [Introduction](#introduction)
-  * [Module categories](#module-categories)
-  * [Common definitions and headers](#common-definitions-and-headers)
-* [Module information container](#module-information-container)
-  * [Module API](#module-api)
-* [Overview](#overview)
-  * [General module management](#general-module-management)
-  * [Protocol](#protocol)
-  * [Authenticator](#authenticator)
-  * [Filter and Router](#filter-and-router)
-  * [Monitor](#monitor)
-* [Compiling, installing and running](#compiling-installing-and-running)
-* [Hands-on example: RoundRobinRouter](#hands-on-example-roundrobinrouter)
-* [Summary and conclusion](#summary-and-conclusion)
+[TOC]
 
 ## Introduction
 
