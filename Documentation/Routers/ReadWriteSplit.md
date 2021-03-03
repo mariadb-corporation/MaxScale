@@ -280,81 +280,21 @@ the slave with the least amount of connections
 
 ### `max_sescmd_history`
 
-**`max_sescmd_history`** sets a limit on how many distinct session commands each
-session can execute before the session command history is disabled. The default
-is 50 session commands starting with MaxScale 2.3.0. In older versions, the
-session command history was disabled by default.
-
-```
-# Set a limit on the session command history
-max_sescmd_history=1500
-```
-
-When a session command is executed for the first time, it is stored in
-memory. Any subsequent executions of the same command are stored as references
-to the original command. By storing references instead of copies of the data,
-the amount of memory used is reduced.
-
-If you have long-running sessions which change the session state often, increase
-the value of this parameter if server reconnections fail due to disabled session
-command history.
-
-When a limitation is set, it effectively creates a cap on the session's memory
-consumption. This might be useful if connection pooling is used and the sessions
-use large amounts of session commands.
+This parameter has been moved to
+[the MaxScale core](../Getting-Started/Configuration-Guide.md#max_sescmd_history)
+in MaxScale 2.6.0.
 
 ### `disable_sescmd_history`
 
-This option disables the session command history. This way no history is stored
-and if a slave server fails, the router will not try to replace the failed
-slave. Disabling session command history will allow long-lived connections
-without causing a constant growth in the memory consumption.
-
-This option is only intended to be enabled if the value of
-`max_slave_connections` is lowered below the default value. This will allow a
-failed slave to be replaced with a standby slave server.
-
-In versions 2.0 and older, the session command history is enabled by default.
-In version 2.1 and 2.2, the session command history is disabled by default.  In
-2.3 and newer versions, the session command is enabled but it is limited to a
-default of 50 session commands after which the history is disabled.
-
-```
-# Disable the session command history
-disable_sescmd_history=true
-```
+This parameter has been moved to
+[the MaxScale core](../Getting-Started/Configuration-Guide.md#disable_sescmd_history)
+in MaxScale 2.6.0.
 
 ### `prune_sescmd_history`
 
-This option prunes the session command history when it exceeds the value
-configured in `max_sescmd_history`. When this option is enabled, only a set
-number of statements are stored in the history. This limits the per-session
-memory use while still allowing safe reconnections. This parameter was added in
-MaxScale 2.3.4 and is disabled by default.
-
-This parameter is intended to be used with pooled connections that remain in use
-for a very long time. Most connection pool implementations do not reset the
-session state and instead re-initialize it with new values. This causes the
-session command history to grow at roughly a constant rate for the lifetime of
-the pooled connection.
-
-Each client-side session that uses a pooled connection only executes a finite
-amount of session commands. By retaining a shorter history that encompasses all
-session commands the individual clients execute, the session state of a pooled
-connection can be accurately recreated on another server.
-
-If the session command history pruning is enabled, there is a theoretical
-possibility that upon server reconnection the session states of the connections
-are inconsistent. This can only happen if the length of the stored history is
-shorter than the list of relevant statements that affect the session state. In
-practice the default value of 50 session commands is a fairly reasonable value
-and the risk of inconsistent session state is relatively low.
-
-In case the default history length is too short for safe pruning, set the value
-of `max_sescmd_history` to the total number of commands that affect the session
-state plus a safety margin of 10. The safety margin reserves some extra space
-for new commands that might be executed due to changes in the client side
-application.
+This parameter has been moved to
+[the MaxScale core](../Getting-Started/Configuration-Guide.md#prune_sescmd_history)
+in MaxScale 2.6.0.
 
 ### `master_accept_reads`
 

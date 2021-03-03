@@ -1612,6 +1612,75 @@ versions a value without a unit may be rejected. Note that since the granularity
 of the timeout is seconds, a timeout specified in milliseconds will be rejected,
 even if the duration is longer than a second.
 
+### `max_sescmd_history`
+
+`max_sescmd_history` sets a limit on how many distinct session commands each
+session can execute before the session command history is disabled. The default
+is 50 session commands.
+
+If you have long-running sessions which change the session state often, increase
+the value of this parameter if server reconnections fail due to disabled session
+command history.
+
+When a limitation is set, it effectively creates a cap on the session's memory
+consumption. This might be useful if connection pooling is used and the sessions
+use large amounts of session commands.
+
+This parameter was moved into the MaxScale core in MaxScale 2.6.0. The parameter
+can be configured for all routers that support the session command
+history. Currently only `readwritesplit` and `schemarouter` support it.
+
+### `prune_sescmd_history`
+
+This option enables pruning of the session command history when it exceeds the
+value configured in `max_sescmd_history`. When this option is enabled, only a
+set number of statements are stored in the history. This limits the per-session
+memory use while still allowing safe reconnections. This parameter is enabled by
+default.
+
+This parameter is intended to be used with pooled connections that remain in use
+for a very long time. Most connection pool implementations do not reset the
+session state and instead re-initialize it with new values. This causes the
+session command history to grow at roughly a constant rate for the lifetime of
+the pooled connection.
+
+Each client-side session that uses a pooled connection only executes a finite
+amount of session commands. By retaining a shorter history that encompasses all
+session commands the individual clients execute, the session state of a pooled
+connection can be accurately recreated on another server.
+
+When the session command history pruning is enabled, there is a theoretical
+possibility that upon server reconnection the session states of the connections
+are inconsistent. This can only happen if the length of the stored history is
+shorter than the list of relevant statements that affect the session state. In
+practice the default value of 50 session commands is a fairly reasonable value
+and the risk of inconsistent session state is relatively low.
+
+In case the default history length is too short for safe pruning, set the value
+of `max_sescmd_history` to the total number of commands that affect the session
+state plus a safety margin of 10. The safety margin reserves some extra space
+for new commands that might be executed due to changes in the client side
+application.
+
+This parameter was moved into the MaxScale core in MaxScale 2.6.0. The parameter
+can be configured for all routers that support the session command
+history. Currently only `readwritesplit` and `schemarouter` support it.
+
+### `disable_sescmd_history`
+
+This option disables the session command history. This way no history is stored
+and if a slave server fails, the router will not try to replace the failed
+slave. Disabling session command history will allow long-lived connections
+without causing a constant growth in the memory consumption.
+
+This parameter should only be used when either the memory footprint must be as
+small as possible or when the pruning of the session command history is not
+acceptable.
+
+This parameter was moved into the MaxScale core in MaxScale 2.6.0. The parameter
+can be configured for all routers that support the session command
+history. Currently only `readwritesplit` and `schemarouter` support it.
+
 ## Server
 
 Server sections define the backend database servers MaxScale uses. A server is

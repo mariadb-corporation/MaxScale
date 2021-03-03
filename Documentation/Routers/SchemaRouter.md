@@ -170,15 +170,15 @@ value pairs.
 
 ### `max_sescmd_history`
 
-Set a limit on the number of session modifying commands a session can execute.
-This sets an effective cap on the memory consumption of the session.
+This parameter has been moved to
+[the MaxScale core](../Getting-Started/Configuration-Guide.md#max_sescmd_history)
+in MaxScale 2.6.0.
 
 ### `disable_sescmd_history`
 
-Disable the session command history. This will prevent growing memory consumption
-of a long-running session and allows pooled connections to MariaDB MaxScale to be used.
-The drawback of this is the fact that if a server goes down, the session state
-will not be consistent anymore.
+This parameter has been moved to
+[the MaxScale core](../Getting-Started/Configuration-Guide.md#disable_sescmd_history)
+in MaxScale 2.6.0.
 
 ### `refresh_databases`
 
