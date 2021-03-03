@@ -12,6 +12,7 @@
  */
 #pragma once
 
+#include <maxbase/ccdefs.hh>
 
 namespace maxtest
 {

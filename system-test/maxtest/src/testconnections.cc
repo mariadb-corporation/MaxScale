@@ -290,7 +290,7 @@ TestConnections::~TestConnections()
         printf("%s\n", logger().all_errors_to_string().c_str());
     }
 
-    if (!m_local_maxscale)
+    if (!m_shared.local_maxscale)
     {
         // stop all Maxscales to detect crashes on exit
         for (int i = 0; i < maxscales->N; i++)
@@ -387,29 +387,66 @@ void TestConnections::read_mdbci_info()
     m_mdbci_config_name = envvar_get_set("mdbci_config_name", "local");
     m_vm_path = m_mdbci_vm_path + "/" + m_mdbci_config_name;
 
+    const char errmsg_fmt[] = "Failed to open '%s', exiting!";
+
+    bool error = false;
     if (!m_mdbci_config_name.empty())
     {
-        std::ifstream nc_file;
-        nc_file.open(m_vm_path + "_network_config");
-        std::stringstream strStream;
-        strStream << nc_file.rdbuf();
-        m_network_config = strStream.str();
-        nc_file.close();
+        m_network_config.clear();
+        string nwconf_filepath = m_vm_path + "_network_config";
+        std::ifstream nwconf_file(nwconf_filepath);
+        if (nwconf_file.is_open())
+        {
+            string line;
+            while (std::getline(nwconf_file, line))
+            {
+                if (!line.empty())
+                {
+                    // The line should be of form <key> = <value>.
+                    auto eq_pos = line.find('=');
+                    if (eq_pos != string::npos && eq_pos > 0 && eq_pos < line.length() - 1)
+                    {
+                        string key = line.substr(0, eq_pos);
+                        string val = line.substr(eq_pos + 1, string::npos);
+                        mxb::trim(key);
+                        mxb::trim(val);
+                        if (!key.empty() && !val.empty())
+                        {
+                            m_network_config.insert(std::make_pair(key, val));
+                        }
+                    }
+                }
+            }
 
-        nc_file.open(m_vm_path + "_configured_labels");
-        std::stringstream strStream1;
-        strStream1 << nc_file.rdbuf();
-        m_configured_mdbci_labels = parse_to_stringset(strStream1.str());
-        nc_file.close();
+            string labels_filepath = m_vm_path + "_configured_labels";
+            std::ifstream labels_file(labels_filepath);
+            if (labels_file.is_open())
+            {
+                std::stringstream buffer;
+                buffer << labels_file.rdbuf();
+                m_configured_mdbci_labels = parse_to_stringset(buffer.str());
+            }
+            else
+            {
+                tprintf(errmsg_fmt, labels_filepath.c_str());
+                error = true;
+            }
+        }
+        else
+        {
+            tprintf(errmsg_fmt, nwconf_filepath.c_str());
+            error = true;
+        }
     }
     else
     {
         tprintf("The name of MDBCI configuration is not defined, exiting!");
-        exit(1);
+        error = true;
     }
-    if (verbose())
+
+    if (error)
     {
-        tprintf("%s", m_network_config.c_str());
+        exit(1);
     }
 }
 
@@ -1549,15 +1586,15 @@ int TestConnections::call_mdbci(const char* options)
     read_env();
     if (repl)
     {
-        repl->read_basic_env();
+        repl->read_basic_env(m_network_config);
     }
     if (galera)
     {
-        galera->read_basic_env();
+        galera->read_basic_env(m_network_config);
     }
     if (maxscales)
     {
-        maxscales->read_basic_env();
+        maxscales->read_basic_env(m_network_config);
     }
     return 0;
 }
@@ -1799,15 +1836,7 @@ bool TestConnections::read_cmdline_options(int argc, char* argv[])
                 maxscale::manual_debug = true;
                 m_init_maxscale = false;
                 m_no_maxscale_log_copy = true;
-                m_local_maxscale = true;
-
-                std::regex regex1("maxscale_000_network[\\s]*=[\\s]*[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+");
-                std::string replace1("maxscale_000_network=127.0.0.1");
-                m_network_config = regex_replace(m_network_config, regex1, replace1);
-
-                std::regex regex2("maxscale_000_private_ip[\\s]*=[\\s]*[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+");
-                std::string replace2("maxscale_000_private_ip=127.0.0.1");
-                m_network_config = regex_replace(m_network_config, regex2, replace2);
+                m_shared.local_maxscale = true;
             }
             break;
 
@@ -1851,8 +1880,8 @@ bool TestConnections::initialize_nodes()
 
     if (use_repl)
     {
-        repl = new ReplicationCluster(&m_shared, m_network_config);
-        repl->setup();
+        repl = new ReplicationCluster(&m_shared);
+        repl->setup(m_network_config);
         repl->set_use_ipv6(m_use_ipv6);
         repl->ssl = backend_ssl;
         repl_future = std::async(std::launch::async, &MariaDBCluster::check_nodes, repl);
@@ -1864,8 +1893,8 @@ bool TestConnections::initialize_nodes()
 
     if (use_galera)
     {
-        galera = new GaleraCluster(&m_shared, m_network_config);
-        galera->setup();
+        galera = new GaleraCluster(&m_shared);
+        galera->setup(m_network_config);
         galera->set_use_ipv6(false);
         galera->ssl = backend_ssl;
         galera_future = std::async(std::launch::async, &GaleraCluster::check_nodes, galera);
@@ -1877,8 +1906,8 @@ bool TestConnections::initialize_nodes()
 
     if (use_xpand)
     {
-        xpand = new XpandCluster(&m_shared, m_network_config);
-        xpand->setup();
+        xpand = new XpandCluster(&m_shared);
+        xpand->setup(m_network_config);
         xpand->set_use_ipv6(false);
         xpand->ssl = backend_ssl;
         xpand->fix_replication();
@@ -1888,8 +1917,8 @@ bool TestConnections::initialize_nodes()
         xpand = NULL;
     }
 
-    maxscales = new Maxscales(&m_shared, m_network_config);
-    maxscales->setup();
+    maxscales = new Maxscales(&m_shared);
+    maxscales->setup(m_network_config);
     m_maxscale = std::make_unique<mxt::MaxScale>(maxscales, m_shared, 0);
 
     bool maxscale_ok = maxscales->check_nodes();

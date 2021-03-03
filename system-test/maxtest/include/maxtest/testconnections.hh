@@ -351,7 +351,7 @@ public:
      *
      * @return The exit code and output of MaxCtrl
      */
-    Nodes::SshResult maxctrl(const std::string& cmd, int m = 0, bool sudo = true)
+    mxt::CmdResult maxctrl(const std::string& cmd, int m = 0, bool sudo = true)
     {
         return maxscales->maxctrl(cmd, m, sudo);
     }
@@ -421,7 +421,6 @@ private:
     bool too_few_maxscales() const;
 
     std::unique_ptr<mxt::MaxScale>   m_maxscale; /**< Main MaxScale instance */
-    std::unique_ptr<TestLogger> m_logger;   /**< Error log container */
 
     SharedData m_shared;    /**< Data shared with other objects */
 
@@ -434,17 +433,17 @@ private:
     StringSet   m_required_mdbci_labels;/**< MDBCI-labels required by test. Subset of test labels. */
     std::string m_mdbci_labels_str;     /**< MDBCI-labels in string form. Used on the command line. */
 
-    StringSet m_configured_mdbci_labels;    /**< MDBCI-labels already configured on the VM setup */
+    mxt::NetworkConfig m_network_config;          /**< Contents of MDBCI network_config file */
+    StringSet          m_configured_mdbci_labels; /**< MDBCI-labels already configured on the VM setup */
 
     std::string m_mdbci_config_name;    /**< Name of MDBCI VMs set */
     std::string m_mdbci_vm_path;        /**< Path to directory with MDBCI VMs descriptions */
     std::string m_mdbci_template;       /**< Name of mdbci VMs template file */
     std::string m_target;               /**< Name of Maxscale repository in the CI */
-    std::string m_network_config;       /**< Content of MDBCI network_config file */
     std::string m_vm_path;              /**< Path to the VM Vagrant directory */
 
+
     bool m_enable_timeouts {true};      /**< Whether timeouts are enabled or not */
-    bool m_local_maxscale {false};      /**< MaxScale runs locally, specified using -l. */
     bool m_init_maxscale {true};
 
     /* If true, logs from backends are not copied (needed if case of Aurora RDS backend or similar) */

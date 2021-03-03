@@ -61,8 +61,8 @@ void MariaDBCluster::require_gtid(bool value)
 }
 
 MariaDBCluster::MariaDBCluster(SharedData* shared, const std::string& nwconf_prefix,
-                               const std::string& cnf_server_prefix, const std::string& network_config)
-    : Nodes(nwconf_prefix, shared, network_config)
+                               const std::string& cnf_server_prefix)
+    : Nodes(nwconf_prefix, shared)
     , no_set_pos(false)
     , v51(false)
     , cnf_server_name(cnf_server_prefix)
@@ -72,10 +72,10 @@ MariaDBCluster::MariaDBCluster(SharedData* shared, const std::string& nwconf_pre
     m_test_dir = test_dir;
 }
 
-bool MariaDBCluster::setup()
+bool MariaDBCluster::setup(const mxt::NetworkConfig& nwconfig)
 {
     bool rval = false;
-    read_env();
+    read_env(nwconfig);
     if (Nodes::setup())
     {
         truncate_mariadb_logs();
@@ -165,11 +165,11 @@ void MariaDBCluster::close_connections()
     }
 }
 
-void MariaDBCluster::read_env()
+void MariaDBCluster::read_env(const mxt::NetworkConfig& nwconfig)
 {
     char env_name[64];
 
-    read_basic_env();
+    read_basic_env(nwconfig);
     N = Nodes::n_nodes();
 
     auto prefixc = prefix().c_str();

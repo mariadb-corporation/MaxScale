@@ -29,13 +29,13 @@ public:
         READCONN_SLAVE
     };
 
-    Maxscales(SharedData* shared, const std::string& network_config);
+    Maxscales(SharedData* shared);
 
     ~Maxscales();
 
-    bool setup();
+    bool setup(const mxt::NetworkConfig& nwconfig);
 
-    int  read_env();
+    int  read_env(const mxt::NetworkConfig& nwconfig);
     void set_use_ipv6(bool use_ipv6);
 
     const char* ip4(int i = 0) const;
@@ -324,7 +324,7 @@ public:
      *
      * @return The exit code and output of MaxCtrl
      */
-    SshResult maxctrl(const std::string& cmd, int m = 0, bool sudo = true)
+    mxt::CmdResult maxctrl(const std::string& cmd, int m = 0, bool sudo = true)
     {
         return ssh_output("maxctrl " + cmd, m, sudo);
     }
@@ -520,7 +520,7 @@ private:
     std::string m_rest_ip {"127.0.0.1"};
     std::string m_rest_port {"8989"};
 
-    Nodes::SshResult curl_rest_api(const std::string& path);
+    mxt::CmdResult   curl_rest_api(const std::string& path);
     TestLogger&      logger();
 };
 }
