@@ -49,6 +49,7 @@ namespace
 
 static char auth_failure_response[] = "{\"errors\": [ { \"detail\": \"Access denied\" } ] }";
 static char no_https_response[] = "{\"errors\": [ { \"detail\": \"Connection is not encrypted\" } ] }";
+static char not_admin_response[] = "{\"errors\": [ { \"detail\": \"Administrative access required\" } ] }";
 
 // The page served when the GUI is accessed without HTTPS
 const char* gui_not_secure_page =
@@ -511,6 +512,17 @@ void Client::send_token_auth_error() const
     MHD_destroy_response(response);
 }
 
+void Client::send_write_access_error() const
+{
+    MHD_Response* response =
+        MHD_create_response_from_buffer(sizeof(not_admin_response) - 1,
+                                        not_admin_response,
+                                        MHD_RESPMEM_PERSISTENT);
+
+    MHD_queue_response(m_connection, MHD_HTTP_FORBIDDEN, response);
+    MHD_destroy_response(response);
+}
+
 void Client::send_no_https_error() const
 {
     MHD_Response* response =
@@ -908,6 +920,11 @@ bool Client::auth(MHD_Connection* connection, const char* url, const char* metho
                     send_token_auth_error();
                     rval = false;
                 }
+                else if (!authorize_user(m_user.c_str(), method, url))
+                {
+                    send_write_access_error();
+                    rval = false;
+                }
             }
             else if (token.substr(0, 7) == "Bearer ")
             {
@@ -916,6 +933,11 @@ bool Client::auth(MHD_Connection* connection, const char* url, const char* metho
                 if (!auth_with_token(token.substr(7)))
                 {
                     send_token_auth_error();
+                    rval = false;
+                }
+                else if (!authorize_user(m_user.c_str(), method, url))
+                {
+                    send_write_access_error();
                     rval = false;
                 }
             }

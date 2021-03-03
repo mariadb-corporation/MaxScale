@@ -912,10 +912,12 @@ If a transaction reads data before updating it, the rows should be locked by
 using `SELECT ... FOR UPDATE`. This will prevent overlapping transactions when
 multiple transactions are being replayed that modify the same set of rows.
 
-If the connection to the server where the transaction is being executed is lost
-when the final `COMMIT` is being executed, there is a possibility for duplicate
-transaction execution in certain cases. This can happen if the transaction
-consists of the following statement types:
+If the connection to the server where the transaction is being executed is
+lost when the final `COMMIT` is being executed, it is impossible to know
+whether the transaction was successfully committed. This means that there
+is a possibility for duplicate transaction execution which can result in
+data duplication in certain cases. Data duplication can happen if the
+transaction consists of the following statement types:
 
 * INSERT of rows into a table that does not have an auto-increment primary key
 * A "blind update" of one or more rows e.g. `UPDATE t SET c = c + 1 WHERE id = 123`
@@ -928,6 +930,13 @@ In all cases the problem of duplicate transaction execution can be avoided by
 including a `SELECT ... FOR UPDATE` in the statement. This will guarantee that
 in the case that the transaction fails when it is being committed, the row is
 only modified if it matches the expected contents.
+
+Similarly, a connection loss during `COMMIT` can also result in transaction
+replay failure. This happens due to the same reason as duplicate transaction
+execution but the retried transaction will not be committed. This can be
+considered a success case as the transaction replay detected that the results of
+the two transactions are different. In these cases readwritesplit will abort the
+transaction and close the client connection.
 
 Any changes to the session state (e.g. autocommit state, SQL mode) done inside a
 transaction will remain in effect even if the connection to the server where the

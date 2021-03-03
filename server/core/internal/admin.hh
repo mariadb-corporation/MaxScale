@@ -120,6 +120,7 @@ private:
     size_t       request_data_length() const;
     void         send_basic_auth_error() const;
     void         send_token_auth_error() const;
+    void         send_write_access_error() const;
     void         send_no_https_error() const;
     void         add_cors_headers(MHD_Response*) const;
     void         upgrade_to_ws();
