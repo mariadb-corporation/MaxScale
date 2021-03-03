@@ -12,4 +12,4 @@
 # Public License.
 #
 
-./node_modules/mocha/bin/mocha
+npm test
