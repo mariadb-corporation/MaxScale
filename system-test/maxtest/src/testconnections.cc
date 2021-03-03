@@ -290,15 +290,18 @@ TestConnections::~TestConnections()
         printf("%s\n", logger().all_errors_to_string().c_str());
     }
 
-    // stop all Maxscales to detect crashes on exit
-    for (int i = 0; i < maxscales->N; i++)
+    if (!m_local_maxscale)
     {
-        stop_maxscale(i);
-    }
+        // stop all Maxscales to detect crashes on exit
+        for (int i = 0; i < maxscales->N; i++)
+        {
+            stop_maxscale(i);
+        }
 
-    if (maxscales->use_valgrind)
-    {
-        sleep(15);      // sleep to let logs be written do disks
+        if (maxscales->use_valgrind)
+        {
+            sleep(15);      // sleep to let logs be written do disks
+        }
     }
 
     m_stop_threads = true;
