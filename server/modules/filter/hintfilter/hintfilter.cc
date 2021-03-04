@@ -32,7 +32,7 @@ mxs::config::Specification s_spec(MXS_MODULE_NAME, mxs::config::Specification::F
 // static
 HintInstance* HintInstance::create(const char* zName, mxs::ConfigParameters* ppParams)
 {
-    return new(std::nothrow) HintInstance(zName);
+    return new HintInstance(zName);
 }
 
 HintInstance::HintInstance(const char* zName)
@@ -65,16 +65,6 @@ HintSession::HintSession(MXS_SESSION* session, SERVICE* service)
 {
 }
 
-/**
- * The routeQuery entry point. This is passed the query buffer
- * to which the filter should be applied. Once applied the
- * query should normally be passed to the downstream component
- * (filter or router) in the filter chain.
- *
- * @param instance  The filter instance data
- * @param session   The filter session
- * @param queue     The query data
- */
 int HintSession::routeQuery(GWBUF* queue)
 {
     if (modutil_is_SQL(queue) && gwbuf_length(queue) > 5)
@@ -85,18 +75,7 @@ int HintSession::routeQuery(GWBUF* queue)
     return mxs::FilterSession::routeQuery(queue);
 }
 
-extern "C"
-{
-
-/**
- * The module entry point routine. It is this routine that
- * must populate the structure that is referred to as the
- * "module object", this is a structure with the set of
- * external entry points for this module.
- *
- * @return The module object
- */
-MXS_MODULE* MXS_CREATE_MODULE()
+extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
     static MXS_MODULE info =
     {
@@ -120,5 +99,4 @@ MXS_MODULE* MXS_CREATE_MODULE()
     };
 
     return &info;
-}
 }
