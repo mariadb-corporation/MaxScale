@@ -11,7 +11,7 @@
  * Public License.
  */
 
-// https://docs.mongodb.com/drivers/node/usage-examples/insertOne/
+// https://docs.mongodb.com/drivers/node/usage-examples/deleteOne/
 
 const mariadb = require('mariadb');
 const { MongoClient } = require('mongodb');
@@ -30,7 +30,7 @@ before(async function () {
     }
 });
 
-describe('INSERT', function () {
+describe('DELETE', function () {
     let conn;
     let client;
     let collection;
@@ -57,61 +57,39 @@ describe('INSERT', function () {
         collection = database.collection("mongo");
     });
 
-    it('inserts one document', async function () {
+    it('deletes one document', async function () {
         const original = { hello: "world" };
-        const result = await collection.insertOne(original);
 
-        assert.strictEqual(result.insertedCount, 1, "Should be able to insert a document.");
+        var result = await collection.insertOne(original);
+        assert.strictEqual(result.insertedCount, 1);
 
         var rows = await conn.query("SELECT * FROM test.mongo");
+        assert.strictEqual(rows.length, 1);
 
-        assert.strictEqual(rows.length, 1, "One row should have been inserted.");
+        result = await collection.deleteOne();
+        assert.strictEqual(result.deletedCount, 1);
 
-        var row = rows[0];
-
-        var inserted = JSON.parse(row.doc);
-
-        delete original["_id"]; // insertOne() adds it.
-        delete inserted["_id"]; // TODO: Check what real MongoDB returns.
-
-        assert.deepStrictEqual(original, inserted, "Original and inserted objects should be identical");
+        rows = await conn.query("SELECT * FROM test.mongo");
+        assert.strictEqual(rows.length, 0);
     });
 
-    it('inserts many documents', async function () {
+    it('deletes many documents', async function () {
         const originals = [
+            { hello1: "world1" },
             { hello2: "world2" },
-            { hello3: "world3" },
-        ];
+            { hello3: "world3" } ];
 
-        const result = await collection.insertMany(originals);
-
-        assert.strictEqual(result.insertedCount, originals.length, "Should be able to insert documents.");
+        var result = await collection.insertMany(originals);
+        assert.strictEqual(result.insertedCount, originals.length);
 
         var rows = await conn.query("SELECT * FROM test.mongo");
+        assert.strictEqual(rows.length, originals.length);
 
-        // There is already one document.
-        assert.strictEqual(rows.length, 3, "Two rows should have been inserted.");
+        result = await collection.deleteMany();
+        assert.strictEqual(result.deletedCount, originals.length);
 
-        var inserteds = [];
-
-        for (var i = 1; i < rows.length; ++i) {
-            var inserted = JSON.parse(rows[i].doc);
-
-            delete originals[i - 1]["_id"]; // insertMany() adds it.
-            delete inserted["_id"]; // TODO: Check what real MongoDB returns.
-
-            inserteds.push(inserted);
-        }
-
-        assert.strictEqual(originals.length, inserteds.length);
-
-        for (var i = 0; i < originals.length; ++i)
-        {
-            var original = originals[i];
-            var inserted = inserteds[i];
-
-            assert.deepStrictEqual(original, inserted, "Original and inserted objects should be identical");
-        }
+        rows = await conn.query("SELECT * FROM test.mongo");
+        assert.strictEqual(rows.length, 0);
     });
 
     after(function () {

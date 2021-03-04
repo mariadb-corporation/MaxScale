@@ -739,13 +739,13 @@ std::string mxsmongo::skip_and_limit_to_limit(const bsoncxx::document::element& 
 
     bool ok = true;
 
-    int64_t nSkip;
+    int64_t nSkip = 0;
     if (skip && (!get_integer(skip, &nSkip) || nSkip < 0))
     {
         ok = false;
     }
 
-    int64_t nLimit;
+    int64_t nLimit = std::numeric_limits<int64_t>::max();
     if (ok && limit && (!get_integer(limit, &nLimit) || nLimit < 0))
     {
         ok = false;
@@ -753,11 +753,6 @@ std::string mxsmongo::skip_and_limit_to_limit(const bsoncxx::document::element& 
 
     if (ok)
     {
-        if (skip && !limit)
-        {
-            nLimit = std::numeric_limits<int64_t>::max();
-        }
-
         stringstream ss;
         ss << " LIMIT ";
 

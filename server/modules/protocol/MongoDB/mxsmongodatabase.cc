@@ -386,21 +386,25 @@ public:
 
             if (limit)
             {
-                sql << " LIMIT ";
+                bool deleteOne = false;
 
                 switch (limit.type())
                 {
                 case bsoncxx::type::k_int32:
-                    sql << static_cast<int32_t>(limit.get_int32());
+                    deleteOne = (static_cast<int32_t>(limit.get_int32()) != 0);
                     break;
 
                 case bsoncxx::type::k_int64:
-                    sql << static_cast<int64_t>(limit.get_int64());
+                    deleteOne = (static_cast<int64_t>(limit.get_int64()) != 0);
                     break;
 
                 default:
                     mxb_assert(!true);
-                    sql << 0;
+                }
+
+                if (deleteOne)
+                {
+                    sql << " LIMIT 1";
                 }
             }
         }
@@ -766,7 +770,7 @@ public:
                 sql << "WHERE " << where;
             }
 
-            auto multi = m_doc[mxsmongo::keys::MULTI];
+            auto multi = update[mxsmongo::keys::MULTI];
 
             if (!multi || !multi.get_bool())
             {
