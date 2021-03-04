@@ -305,7 +305,14 @@ bool RWSplitSession::route_single_stmt(GWBUF* querybuf)
         else if (mxs_mysql_is_ps_command(command) && stmt_id == 0)
         {
             // Unknown prepared statement ID
-            succp = send_unknown_ps_error(extract_binary_ps_id(querybuf));
+            if (mxs_mysql_command_will_respond(command))
+            {
+                succp = send_unknown_ps_error(extract_binary_ps_id(querybuf));
+            }
+            else
+            {
+                succp = true;
+            }
         }
         else if (TARGET_IS_NAMED_SERVER(route_target) || TARGET_IS_RLAG_MAX(route_target))
         {
