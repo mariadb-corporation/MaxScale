@@ -20,16 +20,6 @@ function(add_template_manual name template)
   add_template(${name} ${template} "CONFIG")
 endfunction()
 
-# Helper function to add a configuration template
-function(add_test_info name cnf_file_path labels)
-  if (NOT EXISTS ${cnf_file_path})
-    message(FATAL_ERROR "Config file ${cnf_file_path} not found.")
-  endif()
-
-  set(new_def "{\"${name}\", \"${cnf_file_path}\", \"${labels}\"}")
-  set(TEST_DEFINITIONS "${TEST_DEFINITIONS}${new_def}," CACHE INTERNAL "")
-endfunction()
-
 # Helper function for adding properties to a test. Adds the default timeout and labels.
 function(add_test_properties name labels)
   list(APPEND labels ${ARGN})
@@ -107,7 +97,7 @@ function(add_test_executable_ex)
       elseif("${now_parsing}" STREQUAL "SOURCE")
         list(APPEND source_file ${elem})
       elseif("${now_parsing}" STREQUAL "CONFIG")
-        list(APPEND config_file ${elem})
+        list(APPEND config_files ${elem})
       elseif("${now_parsing}" STREQUAL "LIBS")
         list(APPEND link_libraries ${elem})
       elseif("${now_parsing}" STREQUAL "VMS")
@@ -155,9 +145,9 @@ function(add_test_executable_ex)
     message(FATAL_ERROR "SOURCE ${errmsg}")
   endif()
 
-  list(LENGTH config_file list_len)
-  if (NOT ${list_len} EQUAL 1)
-    message(FATAL_ERROR "CONFIG ${errmsg}")
+  list(LENGTH config_files list_len)
+  if (${list_len} LESS 1)
+    message(FATAL_ERROR "CONFIG is not set")
   endif()
 
   # VMS may be multivalued. If not using any backends, the value should be "none".
@@ -181,8 +171,19 @@ function(add_test_executable_ex)
     endforeach()
   endif()
 
-  set(config_file_path "${CMAKE_CURRENT_SOURCE_DIR}/${config_file}")
-  add_test_info(${name} ${config_file_path} "${vms_upper}")
+  # Config file can be multivalued. Check that the files exist and concatenate them.
+  foreach(elem ${config_files})
+    set(cnf_file_path ${CMAKE_CURRENT_SOURCE_DIR}/${elem})
+    if (NOT EXISTS ${cnf_file_path})
+      message(FATAL_ERROR "Config file ${cnf_file_path} not found.")
+    endif()
+    list(APPEND cnf_file_path_total ${cnf_file_path})
+  endforeach()
+
+  # Add test name, config file(s) and label(s) to the total test definitions variable,
+  # which will be written to test_info.cc.
+  set(new_def "{\"${name}\", \"${cnf_file_path_total}\", \"${vms_upper}\"}")
+  set(TEST_DEFINITIONS "${TEST_DEFINITIONS}${new_def}," CACHE INTERNAL "")
 
   if ("${n_source_file}" EQUAL 1)
     add_executable(${name} ${source_file})

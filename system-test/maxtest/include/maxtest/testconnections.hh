@@ -336,10 +336,10 @@ public:
     /**
      * @brief Process a template configuration file
      *
-     * @param cnf_template_path Config file template path
+     * @param config_file Config file template path
      * @param dest Destination file name for actual configuration file
      */
-    void process_template(int m, const std::string& cnf_template_path,
+    void process_template(int m, const std::string& config_file,
                           const char* dest = "/etc/maxscale.cnf");
 
     /**
@@ -402,7 +402,8 @@ public:
     int reinstall_maxscales();
 
     mxt::MaxScale& maxscale();
-    TestLogger& logger();
+    mxt::MaxScale& maxscale2();
+    TestLogger&    logger();
 
     std::string get_mdbci_config_name() {return m_mdbci_config_name;}
 
@@ -420,7 +421,8 @@ private:
 
     bool too_few_maxscales() const;
 
-    std::unique_ptr<mxt::MaxScale>   m_maxscale; /**< Main MaxScale instance */
+    std::unique_ptr<mxt::MaxScale>   m_maxscale;  /**< Main MaxScale instance */
+    std::unique_ptr<mxt::MaxScale>   m_maxscale2; /**< Secondary MaxScale instance */
 
     SharedData m_shared;    /**< Data shared with other objects */
 
