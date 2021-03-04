@@ -17,13 +17,12 @@ using std::string;
 
 Maxscales::Maxscales(SharedData* shared)
     : Nodes("maxscale", shared)
-    , valgring_log_num(0)
 {
 }
 
 Maxscales::~Maxscales()
 {
-    for (int i = 0; i < MAX_MAXSCALES; ++i)
+    for (int i = 0; i < N_MXS; ++i)
     {
         close_maxscale_connections(i);
     }
@@ -42,7 +41,7 @@ bool Maxscales::setup(const mxt::NetworkConfig& nwconfig)
 
     if (Nodes::setup())
     {
-        if (this->use_valgrind)
+        if (this->m_use_valgrind)
         {
             for (int i = 0; i < N; i++)
             {
@@ -82,26 +81,23 @@ int Maxscales::read_env(const mxt::NetworkConfig& nwconfig)
             maxscale_log_dir[i] = readenv(env_name, DEFAULT_MAXSCALE_LOG_DIR);
 
             sprintf(env_name, "%s_%03d_binlog_dir", prefixc, i);
-            maxscale_binlog_dir[i] = readenv(env_name, DEFAULT_MAXSCALE_BINLOG_DIR);
+            m_binlog_dir[i] = readenv(env_name, DEFAULT_MAXSCALE_BINLOG_DIR);
 
             rwsplit_port[i] = 4006;
             readconn_master_port[i] = 4008;
             readconn_slave_port[i] = 4009;
-            binlog_port[i] = 5306;
 
             ports[i][0] = rwsplit_port[i];
             ports[i][1] = readconn_master_port[i];
             ports[i][2] = readconn_slave_port[i];
-
-            N_ports[0] = 3;
         }
     }
 
-    use_valgrind = readenv_bool("use_valgrind", false);
-    use_callgrind = readenv_bool("use_callgrind", false);
-    if (use_callgrind)
+    m_use_valgrind = readenv_bool("use_valgrind", false);
+    m_use_callgrind = readenv_bool("use_callgrind", false);
+    if (m_use_callgrind)
     {
-        use_valgrind = true;
+        m_use_valgrind = true;
     }
 
     return 0;
@@ -195,7 +191,7 @@ int Maxscales::close_maxscale_connections(int m)
 int Maxscales::restart_maxscale(int m)
 {
     int res;
-    if (use_valgrind)
+    if (m_use_valgrind)
     {
         res = stop_maxscale(m);
         res += start_maxscale(m);
@@ -211,17 +207,17 @@ int Maxscales::restart_maxscale(int m)
 int Maxscales::start_maxscale(int m)
 {
     int res;
-    if (use_valgrind)
+    if (m_use_valgrind)
     {
-        if (use_callgrind)
+        if (m_use_callgrind)
         {
             res = ssh_node_f(m, false,
                              "sudo --user=maxscale valgrind -d "
                              "--log-file=/%s/valgrind%02d.log --trace-children=yes "
                              " --tool=callgrind --callgrind-out-file=/%s/callgrind%02d.log "
                              " /usr/bin/maxscale",
-                             maxscale_log_dir[m].c_str(), valgring_log_num,
-                             maxscale_log_dir[m].c_str(), valgring_log_num);
+                             maxscale_log_dir[m].c_str(), m_valgrind_log_num,
+                             maxscale_log_dir[m].c_str(), m_valgrind_log_num);
         }
         else
         {
@@ -229,9 +225,9 @@ int Maxscales::start_maxscale(int m)
                              "sudo --user=maxscale valgrind --leak-check=full --show-leak-kinds=all "
                              "--log-file=/%s/valgrind%02d.log --trace-children=yes "
                              "--track-origins=yes /usr/bin/maxscale",
-                             maxscale_log_dir[m].c_str(), valgring_log_num);
+                             maxscale_log_dir[m].c_str(), m_valgrind_log_num);
         }
-        valgring_log_num++;
+        m_valgrind_log_num++;
     }
     else
     {
@@ -244,7 +240,7 @@ int Maxscales::start_maxscale(int m)
 int Maxscales::stop_maxscale(int m)
 {
     int res;
-    if (use_valgrind)
+    if (m_use_valgrind)
     {
         const char kill_vgrind[] = "kill $(pidof valgrind) 2>&1 > /dev/null";
         res = ssh_node(m, kill_vgrind, true);
@@ -362,6 +358,41 @@ const char* Maxscales::ip4(int i) const
 const std::string& Maxscales::node_name(int i) const
 {
     return node(i).m_name;
+}
+
+mxt::CmdResult Maxscales::maxctrl(const string& cmd, int m, bool sudo)
+{
+    using CmdPriv = mxt::VMNode::CmdPriv;
+    return node(m).run_cmd_output(cmd, sudo ? CmdPriv::SUDO : CmdPriv::NORMAL);
+}
+
+bool Maxscales::use_valgrind() const
+{
+    return m_use_valgrind;
+}
+
+int Maxscales::restart(int m)
+{
+    return restart_maxscale(m);
+}
+
+
+int Maxscales::start(int m)
+{
+    return start_maxscale(m);
+}
+
+void Maxscales::stop_all()
+{
+    for (int i = 0; i < N; i++)
+    {
+        stop(i);
+    }
+}
+
+int Maxscales::stop(int m)
+{
+    return stop_maxscale(m);
 }
 
 namespace maxtest
