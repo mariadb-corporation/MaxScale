@@ -42,7 +42,7 @@ void master_retry_test(TestConnections& test)
     const int MAX_QUERIES = 10000;
     bool ok = false;
 
-    test.maxctrl("alter service RW-Split-Router causal_reads_timeout 1");
+    test.maxctrl("alter service RW-Split-Router causal_reads_timeout 1s");
 
     auto conn = test.maxscales->rwsplit();
     test.expect(conn.connect(), "Connection should work");

@@ -9,7 +9,7 @@ int main(int argc, char* argv[])
 {
     TestConnections test(argc, argv);
 
-    test.maxctrl("alter monitor MariaDB-Monitor monitor_interval 99999");
+    test.maxctrl("alter monitor MariaDB-Monitor monitor_interval 99999ms");
 
     auto conn = test.maxscales->rwsplit();
     conn.connect();
@@ -29,7 +29,7 @@ int main(int argc, char* argv[])
     thr.join();
 
 
-    test.maxctrl("alter monitor MariaDB-Monitor monitor_interval 1000");
+    test.maxctrl("alter monitor MariaDB-Monitor monitor_interval 1000ms");
 
     return test.global_result;
 }

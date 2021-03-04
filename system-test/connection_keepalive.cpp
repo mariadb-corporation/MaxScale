@@ -28,7 +28,7 @@ int main(int argc, char* argv[])
     test.expect(conn.query("SELECT 1"), "SELECT should work: %s", conn.error());
 
     test.tprintf("Alter the connection_keepalive so that if it takes effect the session will be closed");
-    test.check_maxctrl("alter service RW-Split-Router connection_keepalive 3000");
+    test.check_maxctrl("alter service RW-Split-Router connection_keepalive 3000s");
 
     sleep(20);
 

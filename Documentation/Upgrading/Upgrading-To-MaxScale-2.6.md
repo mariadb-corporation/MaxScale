@@ -9,6 +9,30 @@ For more information about MaxScale 2.6, refer to the
 Before starting the upgrade, any existing configuration files should be backed
 up.
 
+## Duration Type Parameters
+
+Using duration type parameters without an explicit suffix has been deprecated in
+MaxScale 2.4. In MaxScale 2.6 they are no longer allowed when used with the REST
+API or MaxCtrl. This means that any `create` or `alter` commands in MaxCtrl that
+use a duration type parameter must explicitly specify the suffix of the unit.
+
+For example, the following command:
+
+```
+maxctrl alter service My-Service connection_keepalive 30000
+```
+
+should be replaced with:
+
+```
+maxctrl alter service My-Service connection_keepalive 30000ms
+```
+
+Duration type parameters can still be defined in the configuration file without
+an explicit suffix but this behavior is deprecated. The recommended approach is
+to add explicit suffixes to all duration type parameters when upgrading to
+MaxScale 2.6.
+
 ## Removed Parameters
 
 ### Schemarouter

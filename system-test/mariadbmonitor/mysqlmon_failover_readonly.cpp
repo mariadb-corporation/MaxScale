@@ -154,7 +154,7 @@ int main(int argc, char** argv)
     {
         // Some of the following tests depend on manipulating backends during the same monitor tick or
         // between ticks. Slow down the monitor to make this more likely. Not fool-proof in the slightest.
-        test.check_maxctrl("alter monitor MariaDB-Monitor monitor_interval 4000");
+        test.check_maxctrl("alter monitor MariaDB-Monitor monitor_interval 4000ms");
     }
 
     if (test.ok())

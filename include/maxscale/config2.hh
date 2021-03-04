@@ -2646,7 +2646,8 @@ bool ParamDuration<T>::from_string(const std::string& value_as_string,
         {
             if (pMessage)
             {
-                *pMessage = "Specifying durations without a suffix denoting the unit has been deprecated: ";
+                *pMessage = "Specifying durations without a suffix denoting the unit has been deprecated ";
+                *pMessage += "and will be removed in Maxscale 2.7.0: ";
                 *pMessage += value_as_string;
                 *pMessage += ". Use the suffixes 'h' (hour), 'm' (minute) 's' (second) or ";
                 *pMessage += "'ms' (milliseconds).";
@@ -2672,7 +2673,7 @@ bool ParamDuration<T>::from_string(const std::string& value_as_string,
 template<class T>
 json_t* ParamDuration<T>::to_json(const value_type& value) const
 {
-    return json_integer(std::chrono::duration_cast<std::chrono::milliseconds>(value).count());
+    return json_string(to_string(value).c_str());
 }
 
 template<class T>
@@ -2692,20 +2693,13 @@ bool ParamDuration<T>::from_json(const json_t* pJson,
 {
     bool rv = false;
 
-    if (json_is_integer(pJson))
-    {
-        std::chrono::milliseconds ms(json_integer_value(pJson));
-
-        *pValue = std::chrono::duration_cast<value_type>(ms);
-        rv = true;
-    }
-    else if (json_is_string(pJson))
+    if (json_is_string(pJson))
     {
         return from_string(json_string_value(pJson), pValue, pMessage);
     }
     else
     {
-        *pMessage = "Expected a json integer, but got a json ";
+        *pMessage = "Expected a json string with a duration, but got a json ";
         *pMessage += mxs::json_type_to_string(pJson);
         *pMessage += ".";
     }

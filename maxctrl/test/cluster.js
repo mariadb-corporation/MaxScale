@@ -127,10 +127,10 @@ describe("Cluster Sync", function () {
   before(startDoubleMaxScale);
 
   it("sync global options", function () {
-    return doCommand("alter maxscale auth_connect_timeout 12000 --hosts " + secondary_host)
+    return doCommand("alter maxscale auth_connect_timeout 12000ms --hosts " + secondary_host)
       .then(() => verifyCommand("cluster sync " + secondary_host + " --hosts " + primary_host, "maxscale"))
       .then(function (res) {
-        res.data.attributes.parameters.auth_connect_timeout.should.equal(12000);
+        res.data.attributes.parameters.auth_connect_timeout.should.equal("12000ms");
       });
   });
 

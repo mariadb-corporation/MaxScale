@@ -94,7 +94,7 @@ describe("Alter Commands", function () {
       "services/Read-Connection-Router"
     ).then(function (res) {
       res.data.attributes.parameters.user.should.equal("testuser");
-      res.data.attributes.parameters.connection_timeout.should.equal(123000);
+      res.data.attributes.parameters.connection_timeout.should.equal("123000ms");
     });
   });
 
@@ -181,18 +181,18 @@ describe("Alter Commands", function () {
   });
 
   it("alters maxscale", function () {
-    return verifyCommand("alter maxscale auth_connect_timeout 5000", "maxscale").then(function (res) {
-      res.data.attributes.parameters.auth_connect_timeout.should.equal(5000);
+    return verifyCommand("alter maxscale auth_connect_timeout 5000ms", "maxscale").then(function (res) {
+      res.data.attributes.parameters.auth_connect_timeout.should.equal("5000ms");
     });
   });
 
   it("alters maxscale with multiple parameters", function () {
     return verifyCommand(
-      "alter maxscale auth_connect_timeout 12000 auth_read_timeout 12000",
+      "alter maxscale auth_connect_timeout 12000ms auth_read_timeout 12000ms",
       "maxscale"
     ).then(function (res) {
-      res.data.attributes.parameters.auth_connect_timeout.should.equal(12000);
-      res.data.attributes.parameters.auth_read_timeout.should.equal(12000);
+      res.data.attributes.parameters.auth_connect_timeout.should.equal("12000ms");
+      res.data.attributes.parameters.auth_read_timeout.should.equal("12000ms");
     });
   });
 
