@@ -359,6 +359,11 @@ const char* Maxscales::ip4(int i) const
     return Nodes::ip4(i);
 }
 
+const std::string& Maxscales::node_name(int i) const
+{
+    return node(i).m_name;
+}
+
 namespace maxtest
 {
 
@@ -585,6 +590,20 @@ ServersInfo& ServersInfo::operator=(ServersInfo&& rhs) noexcept
     return *this;
 }
 
+ServerInfo ServersInfo::get_master() const
+{
+    ServerInfo rval;
+    for (const auto& server : m_servers)
+    {
+        if (server.status & ServerInfo::MASTER)
+        {
+            rval = server;
+            break;
+        }
+    }
+    return rval;
+}
+
 void MaxScale::check_servers_status(const std::vector<ServerInfo::bitfield>& expected_status)
 {
     auto data = get_servers();
@@ -631,6 +650,16 @@ void MaxScale::alter_monitor(const string& mon_name, const string& setting, cons
 TestLogger& MaxScale::logger()
 {
     return m_shared.log;
+}
+
+mxt::CmdResult MaxScale::maxctrl(const string& cmd)
+{
+    return m_maxscales->maxctrl(cmd, m_node_ind);
+}
+
+const std::string& MaxScale::name() const
+{
+    return m_maxscales->node_name(m_node_ind);
 }
 
 void ServerInfo::status_from_string(const string& source)
