@@ -47,11 +47,11 @@ public:
      *
      * @param zName The name given to the filter in the configuration file. Can be stored if required for
      * e.g. log messages.
-     * @param ppParams Configuration parameters parsed from the configuration file
+     *
      * @return The object on success, NULL on failure. Failure is typically caused by an invalid
      * configuration parameter.
      */
-    static ExampleFilter* create(const char* zName, mxs::ConfigParameters* ppParams);
+    static ExampleFilter* create(const char* zName);
 
     /*
      * Creates a new session for this filter. This is called when a new client connects.

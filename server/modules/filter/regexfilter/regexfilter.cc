@@ -94,7 +94,7 @@ public:
 
     RegexInstance(const char* name);
 
-    static RegexInstance* create(const char* name, mxs::ConfigParameters* params);
+    static RegexInstance* create(const char* name);
     mxs::FilterSession*   newSession(MXS_SESSION* session, SERVICE* service) override;
 
     json_t* diagnostics() const override
@@ -175,7 +175,7 @@ bool Config::post_configure()
 }
 
 // static
-RegexInstance* RegexInstance::create(const char* name, mxs::ConfigParameters* params)
+RegexInstance* RegexInstance::create(const char* name)
 {
     return new RegexInstance(name);
 }

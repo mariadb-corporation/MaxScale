@@ -33,7 +33,7 @@ public:
     InsertStream(const InsertStream&) = delete;
     InsertStream& operator=(const InsertStream&) = delete;
 
-    static InsertStream*        create(const char* zName, mxs::ConfigParameters* ppParams);
+    static InsertStream*        create(const char* zName);
     mxs::FilterSession*         newSession(MXS_SESSION* pSession, SERVICE* pService);
     json_t*                     diagnostics() const;
     uint64_t                    getCapabilities() const;

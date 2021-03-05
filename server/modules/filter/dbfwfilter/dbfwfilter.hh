@@ -189,11 +189,9 @@ public:
     /**
      * Create a new Dbfw instance
      *
-     * @param params Configuration parameters for this instance
-     *
      * @return New instance or NULL on error
      */
-    static Dbfw* create(const char* zName, mxs::ConfigParameters* ppParams);
+    static Dbfw* create(const char* zName);
 
     /**
      * Create a new filter session

@@ -183,11 +183,10 @@ struct FILTER_API
      * other API functions.
      *
      * @param name    Name of the filter instance
-     * @param params  Filter parameters
      *
      * @return New filter instance on NULL on error
      */
-    Filter* (* createInstance)(const char* name, mxs::ConfigParameters* params);
+    Filter* (* createInstance)(const char* name);
 };
 }
 
@@ -211,10 +210,10 @@ public:
     FilterApi(const FilterApi&) = delete;
     FilterApi& operator=(const FilterApi&) = delete;
 
-    static Filter* createInstance(const char* name, mxs::ConfigParameters* params)
+    static Filter* createInstance(const char* name)
     {
         Filter* inst = nullptr;
-        MXS_EXCEPTION_GUARD(inst = FilterClass::create(name, params));
+        MXS_EXCEPTION_GUARD(inst = FilterClass::create(name));
         return inst;
     }
 

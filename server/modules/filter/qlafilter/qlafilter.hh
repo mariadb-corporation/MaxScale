@@ -70,7 +70,7 @@ public:
      * @param params    The array of name/value pair parameters for the filter
      * @return          The new filter instance, or NULL on error
      */
-    static QlaInstance* create(const char* name, mxs::ConfigParameters* params);
+    static QlaInstance* create(const char* name);
 
     /**
      * Read contents of unified log file and save to json object.

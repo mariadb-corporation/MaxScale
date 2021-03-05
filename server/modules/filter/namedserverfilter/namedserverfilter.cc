@@ -311,7 +311,7 @@ mxs::config::Configuration& RegexHintFilter::getConfiguration()
  *
  * @return The new instance or null on error
  */
-RegexHintFilter* RegexHintFilter::create(const char* name, mxs::ConfigParameters* params)
+RegexHintFilter* RegexHintFilter::create(const char* name)
 {
     return new RegexHintFilter(name);
 }

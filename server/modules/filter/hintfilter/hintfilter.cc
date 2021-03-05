@@ -30,7 +30,7 @@
 mxs::config::Specification s_spec(MXS_MODULE_NAME, mxs::config::Specification::FILTER);
 
 // static
-HintInstance* HintInstance::create(const char* zName, mxs::ConfigParameters* ppParams)
+HintInstance* HintInstance::create(const char* zName)
 {
     return new HintInstance(zName);
 }

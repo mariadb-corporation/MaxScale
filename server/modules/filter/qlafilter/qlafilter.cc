@@ -229,7 +229,7 @@ bool QlaInstance::post_configure()
     return true;
 }
 
-QlaInstance* QlaInstance::create(const char* name, mxs::ConfigParameters* params)
+QlaInstance* QlaInstance::create(const char* name)
 {
     return new QlaInstance(name);
 }

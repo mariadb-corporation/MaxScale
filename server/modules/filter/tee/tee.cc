@@ -147,7 +147,7 @@ Tee::Tee(const char* name)
  *
  * @return The instance data for this new instance
  */
-Tee* Tee::create(const char* name, mxs::ConfigParameters* params)
+Tee* Tee::create(const char* name)
 {
     return new Tee(name);
 }

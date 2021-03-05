@@ -47,7 +47,7 @@ public:
 
     RegexHintFilter(const std::string& name);
 
-    static RegexHintFilter*     create(const char* zName, mxs::ConfigParameters* ppParams);
+    static RegexHintFilter*     create(const char* zName);
     mxs::FilterSession*         newSession(MXS_SESSION* session, SERVICE* service);
     json_t*                     diagnostics() const;
     uint64_t                    getCapabilities() const;

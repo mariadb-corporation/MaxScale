@@ -121,7 +121,7 @@ class TpmFilter : public mxs::Filter
 {
 public:
     ~TpmFilter();
-    static TpmFilter*   create(const char* name, mxs::ConfigParameters* params);
+    static TpmFilter*   create(const char* name);
     mxs::FilterSession* newSession(MXS_SESSION* session, SERVICE* service);
     json_t*             diagnostics() const;
     uint64_t            getCapabilities() const;
@@ -158,7 +158,7 @@ public:
 
 
 private:
-    TpmFilter(const char* name, mxs::ConfigParameters* params)
+    TpmFilter(const std::string& name)
         : m_config(name, this)
     {
     }
@@ -256,9 +256,9 @@ bool Config::post_configure(const std::map<std::string, mxs::ConfigParameters>& 
 }
 
 // static
-TpmFilter* TpmFilter::create(const char* name, mxs::ConfigParameters* params)
+TpmFilter* TpmFilter::create(const char* name)
 {
-    return new TpmFilter(name, params);
+    return new TpmFilter(name);
 }
 
 mxs::FilterSession* TpmFilter::newSession(MXS_SESSION* session, SERVICE* service)

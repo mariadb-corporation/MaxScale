@@ -213,7 +213,7 @@ InsertStream::InsertStream(const char* name)
 {
 }
 
-InsertStream* InsertStream::create(const char* name, mxs::ConfigParameters* params)
+InsertStream* InsertStream::create(const char* name)
 {
     return new InsertStream(name);
 }

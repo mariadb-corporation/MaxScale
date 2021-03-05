@@ -27,7 +27,7 @@ class CacheFilter : public mxs::Filter
 public:
     ~CacheFilter();
 
-    static CacheFilter* create(const char* zName, mxs::ConfigParameters* ppParams);
+    static CacheFilter* create(const char* zName);
 
     Cache& cache()
     {

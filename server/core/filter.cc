@@ -86,10 +86,7 @@ SFilterDef do_filter_alloc(const char* name, Params params, Unrecognized unrecog
         {
             auto func = (mxs::FILTER_API*)module->module_object;
 
-            // TODO: Remove this from the API
-            mxs::ConfigParameters empty;
-
-            if (auto instance = func->createInstance(name, &empty))
+            if (auto instance = func->createInstance(name))
             {
                 filter = std::make_shared<FilterDef>(name, module->name, instance);
 

@@ -142,7 +142,7 @@ struct Config : public mxs::config::Configuration
 class TopFilter : public mxs::Filter
 {
 public:
-    static TopFilter* create(const std::string& name, mxs::ConfigParameters* params)
+    static TopFilter* create(const std::string& name)
     {
         return new TopFilter(name);
     }

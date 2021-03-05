@@ -149,7 +149,7 @@ CacheFilter::~CacheFilter()
 }
 
 // static
-CacheFilter* CacheFilter::create(const char* zName, mxs::ConfigParameters* pParams)
+CacheFilter* CacheFilter::create(const char* zName)
 {
     return new CacheFilter(zName);
 }

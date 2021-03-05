@@ -47,7 +47,7 @@ public:
         bool post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params) override;
     };
 
-    static Tee* create(const char* zName, mxs::ConfigParameters* ppParams);
+    static Tee* create(const char* zName);
     TeeSession* newSession(MXS_SESSION* session, SERVICE* service);
     json_t*     diagnostics() const;
 

@@ -43,7 +43,7 @@ public:
     ~BinlogFilter();
 
     // Creates a new filter instance
-    static BinlogFilter* create(const char* zName, mxs::ConfigParameters* ppParams);
+    static BinlogFilter* create(const char* zName);
 
     // Creates a new session for this filter
     BinlogFilterSession* newSession(MXS_SESSION* pSession, SERVICE* pService);

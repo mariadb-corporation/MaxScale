@@ -91,7 +91,7 @@ ExampleFilter::~ExampleFilter()
 }
 
 // static
-ExampleFilter* ExampleFilter::create(const char* zName, mxs::ConfigParameters* pParams)
+ExampleFilter* ExampleFilter::create(const char* zName)
 {
     return new ExampleFilter(zName);
 }

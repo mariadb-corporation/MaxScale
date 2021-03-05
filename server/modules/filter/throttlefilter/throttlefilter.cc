@@ -90,7 +90,7 @@ ThrottleFilter::ThrottleFilter(const char* name)
 {
 }
 
-ThrottleFilter* ThrottleFilter::create(const char* zName, mxs::ConfigParameters* pParams)
+ThrottleFilter* ThrottleFilter::create(const char* zName)
 {
     return new ThrottleFilter(zName);
 }

@@ -120,7 +120,7 @@ MaskingFilter::~MaskingFilter()
 }
 
 // static
-MaskingFilter* MaskingFilter::create(const char* zName, mxs::ConfigParameters* pParams)
+MaskingFilter* MaskingFilter::create(const char* zName)
 {
     return new MaskingFilter(zName);
 }

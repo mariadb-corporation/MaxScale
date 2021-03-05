@@ -137,7 +137,7 @@ int MaxRowsSession::clientReply(GWBUF* data, const mxs::ReplyRoute& down, const 
 }
 
 // static
-MaxRows* MaxRows::create(const char* name, mxs::ConfigParameters* params)
+MaxRows* MaxRows::create(const char* name)
 {
     return new MaxRows(name);
 }

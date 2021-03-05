@@ -168,7 +168,7 @@ public:
         LuaFilter* m_instance;
     };
 
-    static LuaFilter* create(const char* name, mxs::ConfigParameters* params);
+    static LuaFilter* create(const char* name);
     bool              configure(mxs::ConfigParameters* params);
 
     mxs::FilterSession* newSession(MXS_SESSION* session, SERVICE* service);
@@ -265,7 +265,7 @@ LuaFilter::Config::Config(LuaFilter* instance, const char* name)
  * @param params  Filter parameters
  * @return The instance data for this new instance
  */
-LuaFilter* LuaFilter::create(const char* name, mxs::ConfigParameters* params)
+LuaFilter* LuaFilter::create(const char* name)
 {
     return new LuaFilter(name);
 }

@@ -51,7 +51,7 @@ struct ThrottleConfig : public mxs::config::Configuration
 class ThrottleFilter : public mxs::Filter
 {
 public:
-    static ThrottleFilter* create(const char* zName, mxs::ConfigParameters* pParams);
+    static ThrottleFilter* create(const char* zName);
     ThrottleFilter(const ThrottleFilter&) = delete;
     ThrottleFilter& operator=(const ThrottleFilter&) = delete;
 

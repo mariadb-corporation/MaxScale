@@ -191,7 +191,7 @@ class CCRFilter : public mxs::Filter
 public:
     friend class CCRSession;    // Session needs to access & modify data in filter object
 
-    static CCRFilter* create(const char* name, mxs::ConfigParameters* params)
+    static CCRFilter* create(const char* name)
     {
         return new CCRFilter(name);
     }
