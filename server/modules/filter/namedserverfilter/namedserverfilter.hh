@@ -51,7 +51,7 @@ public:
     mxs::FilterSession*         newSession(MXS_SESSION* session, SERVICE* service);
     json_t*                     diagnostics() const;
     uint64_t                    getCapabilities() const;
-    mxs::config::Configuration* getConfiguration();
+    mxs::config::Configuration& getConfiguration();
 
 
     MappingVector& mapping();

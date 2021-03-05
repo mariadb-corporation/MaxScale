@@ -90,9 +90,9 @@ public:
         return true;
     }
 
-    mxs::config::Configuration* getConfiguration()
+    mxs::config::Configuration& getConfiguration()
     {
-        return &m_settings;
+        return m_settings;
     }
 
     uint64_t getCapabilities() const;

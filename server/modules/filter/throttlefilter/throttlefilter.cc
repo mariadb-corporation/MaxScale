@@ -110,9 +110,9 @@ uint64_t ThrottleFilter::getCapabilities() const
     return RCAP_TYPE_STMT_INPUT;
 }
 
-mxs::config::Configuration* ThrottleFilter::getConfiguration()
+mxs::config::Configuration& ThrottleFilter::getConfiguration()
 {
-    return &m_config;
+    return m_config;
 }
 
 const ThrottleConfig& ThrottleFilter::config() const

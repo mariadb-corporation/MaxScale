@@ -124,9 +124,9 @@ uint64_t ExampleFilter::getCapabilities() const
     // return RCAP_TYPE_STMT_INPUT | RCAP_TYPE_RESULTSET_OUTPUT;
 }
 
-mxs::config::Configuration* ExampleFilter::getConfiguration()
+mxs::config::Configuration& ExampleFilter::getConfiguration()
 {
-    return &m_config;
+    return m_config;
 }
 
 void ExampleFilter::query_seen()

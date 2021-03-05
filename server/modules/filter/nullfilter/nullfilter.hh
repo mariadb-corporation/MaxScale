@@ -41,9 +41,9 @@ public:
 
     uint64_t getCapabilities() const;
 
-    mxs::config::Configuration* getConfiguration()
+    mxs::config::Configuration& getConfiguration()
     {
-        return &m_config;
+        return m_config;
     }
 
 private:

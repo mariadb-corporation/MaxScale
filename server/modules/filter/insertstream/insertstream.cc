@@ -234,9 +234,9 @@ uint64_t InsertStream::getCapabilities() const
 {
     return CAPS;
 }
-mxs::config::Configuration* InsertStream::getConfiguration()
+mxs::config::Configuration& InsertStream::getConfiguration()
 {
-    return &m_config;
+    return m_config;
 }
 
 InsertStreamSession::InsertStreamSession(MXS_SESSION* pSession, SERVICE* pService, InsertStream* filter)

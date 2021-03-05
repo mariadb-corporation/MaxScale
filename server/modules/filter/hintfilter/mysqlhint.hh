@@ -38,7 +38,7 @@ public:
     mxs::FilterSession*         newSession(MXS_SESSION* pSession, SERVICE* pService);
     json_t*                     diagnostics() const;
     uint64_t                    getCapabilities() const;
-    mxs::config::Configuration* getConfiguration();
+    mxs::config::Configuration& getConfiguration();
 
 private:
     HintInstance(const char* zName);

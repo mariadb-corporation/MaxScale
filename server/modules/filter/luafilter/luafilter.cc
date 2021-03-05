@@ -177,9 +177,9 @@ public:
     json_t*  diagnostics() const;
     uint64_t getCapabilities() const;
 
-    mxs::config::Configuration* getConfiguration()
+    mxs::config::Configuration& getConfiguration()
     {
-        return &m_config;
+        return m_config;
     }
 
     lua_State* global_lua_state();

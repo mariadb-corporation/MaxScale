@@ -297,9 +297,9 @@ uint64_t RegexHintFilter::getCapabilities() const
     return RCAP_TYPE_STMT_INPUT;
 }
 
-mxs::config::Configuration* RegexHintFilter::getConfiguration()
+mxs::config::Configuration& RegexHintFilter::getConfiguration()
 {
-    return &m_settings;
+    return m_settings;
 }
 
 /**

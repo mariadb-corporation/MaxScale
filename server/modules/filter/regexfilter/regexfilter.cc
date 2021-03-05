@@ -107,9 +107,9 @@ public:
         return RCAP_TYPE_STMT_INPUT;
     }
 
-    mxs::config::Configuration* getConfiguration() override
+    mxs::config::Configuration& getConfiguration() override
     {
-        return &m_config;
+        return m_config;
     }
 
     const Config& config()const

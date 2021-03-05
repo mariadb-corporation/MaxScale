@@ -82,7 +82,7 @@ public:
      *
      * @return The configuration for this filter instance
      */
-    mxs::config::Configuration* getConfiguration();
+    mxs::config::Configuration& getConfiguration();
 
     // Specific to ExampleFilter. Called by a session when it sees a query.
     void query_seen();

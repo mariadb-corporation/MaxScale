@@ -56,9 +56,9 @@ public:
         return RCAP_TYPE_STMT_INPUT;
     }
 
-    mxs::config::Configuration* getConfiguration()
+    mxs::config::Configuration& getConfiguration()
     {
-        return &m_config;
+        return m_config;
     }
 
     bool user_matches(const char* user) const

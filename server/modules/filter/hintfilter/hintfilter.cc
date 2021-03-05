@@ -55,9 +55,9 @@ uint64_t HintInstance::getCapabilities() const
     return RCAP_TYPE_STMT_INPUT;
 }
 
-mxs::config::Configuration* HintInstance::getConfiguration()
+mxs::config::Configuration& HintInstance::getConfiguration()
 {
-    return &m_config;
+    return m_config;
 }
 
 HintSession::HintSession(MXS_SESSION* session, SERVICE* service)
