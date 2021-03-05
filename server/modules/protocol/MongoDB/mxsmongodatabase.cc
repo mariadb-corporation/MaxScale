@@ -23,6 +23,7 @@
 #include "config.hh"
 
 using namespace std;
+using mxb::Worker;
 
 class mxsmongo::Database::Command
 {
@@ -77,7 +78,7 @@ public:
     }
 
 protected:
-    string get_table(const char* zCommand)
+    string get_table(const char* zCommand) const
     {
         auto utf8 = m_doc[zCommand].get_utf8();
         string table(utf8.value.data(), utf8.value.size());
@@ -360,6 +361,132 @@ namespace
 namespace command
 {
 
+class TableCreatingCommand : public mxsmongo::Database::Command
+{
+public:
+    using mxsmongo::Database::Command::Command;
+
+    ~TableCreatingCommand()
+    {
+        if (m_dcid)
+        {
+            Worker::get_current()->cancel_delayed_call(m_dcid);
+        }
+    }
+
+    GWBUF* execute() override final
+    {
+        if (m_statement.empty())
+        {
+            m_statement = create_statement();
+        }
+
+        send_downstream(m_statement);
+
+        return nullptr;
+    }
+
+    State translate(GWBUF& mariadb_response, GWBUF** ppResponse) override final
+    {
+        State state = BUSY;
+        GWBUF* pResponse = nullptr;
+
+        ComResponse response(GWBUF_DATA(&mariadb_response));
+
+        if (m_mode == NORMAL)
+        {
+            if (!response.is_err() || ComERR(response).code() != ER_NO_SUCH_TABLE)
+            {
+                state = translate(response, &pResponse);
+            }
+            else
+            {
+                // The table did not exist, so it must be created.
+                mxb_assert(m_dcid == 0);
+
+                m_dcid = Worker::get_current()->delayed_call(0, [this](Worker::Call::action_t action) {
+                        m_dcid = 0;
+
+                        if (action == Worker::Call::EXECUTE)
+                        {
+                            m_mode = TABLE_CREATING;
+
+                            stringstream ss;
+                            ss << "CREATE TABLE " << table_name() << " (id TEXT, doc JSON)";
+
+                            send_downstream(ss.str());
+                        }
+
+                        return false;
+                    });
+            }
+        }
+        else
+        {
+            mxb_assert(m_mode == TABLE_CREATING);
+            mxb_assert(!m_statement.empty());
+
+            switch (response.type())
+            {
+            case ComResponse::OK_PACKET:
+                MXS_NOTICE("TABLE created, now executing statment.");
+                m_mode = NORMAL;
+                send_downstream(m_statement);
+                break;
+
+            case ComResponse::ERR_PACKET:
+                {
+                    ComERR err(response);
+
+                    auto code = err.code();
+
+                    if (code == ER_TABLE_EXISTS_ERROR)
+                    {
+                        MXS_NOTICE("TABLE created by someone else, now executing statment.");
+                        m_mode = NORMAL;
+                        send_downstream(m_statement);
+                    }
+                    else
+                    {
+                        MXS_ERROR("Could not create table: (%d), %s", err.code(), err.message().c_str());
+                        pResponse = create_error_response(err.message(),
+                                                          mxsmongo::error::from_mariadb_code(code));
+                        state = READY;
+                    }
+                }
+                break;
+
+            default:
+                mxb_assert(!true);
+                MXS_ERROR("Expected OK or ERR packet, received something else.");
+                pResponse = create_error_response("Unexpected response received from backend.",
+                                                  mxsmongo::error::COMMAND_FAILED);
+                state = READY;
+            }
+        }
+
+        mxb_assert((state == BUSY && pResponse == nullptr) || (state == READY && pResponse != nullptr));
+        *ppResponse = pResponse;
+        return state;
+    }
+
+protected:
+    virtual string create_statement() const = 0;
+    virtual string table_name() const = 0;
+    virtual State translate(ComResponse& response, GWBUF** ppResponse) = 0;
+
+private:
+    enum Mode
+    {
+        NORMAL,
+        TABLE_CREATING,
+    };
+
+    Mode     m_mode { NORMAL };
+    string   m_statement;
+    uint32_t m_dcid { 0 };
+};
+
 // https://docs.mongodb.com/manual/reference/command/delete/
 class Delete : public mxsmongo::Database::Command
 {
@@ -622,15 +749,15 @@ private:
 };
 
 // https://docs.mongodb.com/manual/reference/command/insert/
-class Insert : public mxsmongo::Database::Command
+class Insert : public TableCreatingCommand
 {
 public:
-    using mxsmongo::Database::Command::Command;
+    using TableCreatingCommand::TableCreatingCommand;
 
-    GWBUF* execute() override
+    string create_statement() const override final
     {
         stringstream sql;
-        sql << "INSERT INTO " << get_table(mxsmongo::keys::INSERT) << " (id, doc) VALUES ";
+        sql << "INSERT INTO " << table_name() << " (id, doc) VALUES ";
 
         auto docs = static_cast<bsoncxx::array::view>(m_doc[mxsmongo::keys::DOCUMENTS].get_array());
 
@@ -661,19 +788,17 @@ public:
             sql << ")";
         }
 
-        send_downstream(sql.str());
-
-        return nullptr;
+        return sql.str();
     }
 
-    State translate(GWBUF& mariadb_response, GWBUF** ppResponse) override
+    string table_name() const override final
     {
-        // TODO: Update will be needed when DEPRECATE_EOF it turned on.
-        GWBUF* pResponse = nullptr;
+        return get_table(mxsmongo::keys::INSERT);
+    }
 
+    State translate(ComResponse& response, GWBUF** ppResponse) override final
+    {
         bsoncxx::builder::basic::document builder;
-
-        ComResponse response(GWBUF_DATA(&mariadb_response));
 
         int32_t ok = response.is_ok() ? 1 : 0;
         int64_t n = response.is_ok() ? m_nDocuments : 0;
@@ -697,14 +822,14 @@ public:
 
         auto doc = builder.extract();
 
-        pResponse = create_response(doc);
+        GWBUF* pResponse = create_response(doc);
 
         *ppResponse = pResponse;
         return READY;
     }
 
 private:
-    string get_id(const bsoncxx::document::element& element)
+    string get_id(const bsoncxx::document::element& element) const
     {
         string id;
 
@@ -718,7 +843,7 @@ private:
         return id;
     }
 
-    int64_t m_nDocuments { 0 };
+    mutable int64_t m_nDocuments { 0 };
 };
 
 // https://docs.mongodb.com/manual/reference/command/update
