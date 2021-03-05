@@ -31,7 +31,20 @@
 #include "examplefilter.hh"
 #include <maxscale/config2.hh>
 
-static const char CN_COUNT_GLOBALS[] = "global_counts";
+namespace
+{
+namespace cfg = mxs::config;
+
+cfg::Specification s_spec(MXS_MODULE_NAME, cfg::Specification::FILTER);
+
+cfg::ParamString s_an_example_parameter(
+    &s_spec, "an_example_parameter", "An example string parameter",
+    "a-default-value", cfg::Param::AT_STARTUP);
+
+cfg::ParamBool s_global_counts(
+    &s_spec, "global_counts", "Whether sessions increment the global counters",
+    true, cfg::Param::AT_STARTUP);
+}
 
 // This declares a module in MaxScale
 extern "C" MXS_MODULE* MXS_CREATE_MODULE()
@@ -54,18 +67,23 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         NULL,                                   /* Thread init. */
         NULL,                                   /* Thread finish. */
         {
-            {"an_example_parameter",MXS_MODULE_PARAM_STRING,    "a-default-value"},
-            {CN_COUNT_GLOBALS,    MXS_MODULE_PARAM_BOOL,      "true"           },
             {MXS_END_MODULE_PARAMS}
-        }
+        },
+        &s_spec
     };
 
     return &info;
 }
 
-ExampleFilter::ExampleFilter(const mxs::ConfigParameters* pParams)
+ExampleFilter::ExampleFilter(const std::string& name)
+    : m_config(name)
 {
-    m_collect_global_counts = pParams->get_bool(CN_COUNT_GLOBALS);
+}
+
+ExampleFilter::ExampleConfig::ExampleConfig(const std::string& name)
+    : mxs::config::Configuration(name, &s_spec)
+{
+    add_native(&ExampleConfig::collect_global_counts, &s_global_counts);
 }
 
 ExampleFilter::~ExampleFilter()
@@ -75,7 +93,7 @@ ExampleFilter::~ExampleFilter()
 // static
 ExampleFilter* ExampleFilter::create(const char* zName, mxs::ConfigParameters* pParams)
 {
-    return new ExampleFilter(pParams);
+    return new ExampleFilter(zName);
 }
 
 ExampleFilterSession* ExampleFilter::newSession(MXS_SESSION* pSession, SERVICE* pService)
@@ -108,12 +126,12 @@ uint64_t ExampleFilter::getCapabilities() const
 
 mxs::config::Configuration* ExampleFilter::getConfiguration()
 {
-    return nullptr;
+    return &m_config;
 }
 
 void ExampleFilter::query_seen()
 {
-    if (m_collect_global_counts)
+    if (m_config.collect_global_counts)
     {
         m_total_queries.fetch_add(1, std::memory_order_relaxed);
     }
@@ -121,7 +139,7 @@ void ExampleFilter::query_seen()
 
 void ExampleFilter::reply_seen()
 {
-    if (m_collect_global_counts)
+    if (m_config.collect_global_counts)
     {
         m_total_replies.fetch_add(1, std::memory_order_relaxed);
     }

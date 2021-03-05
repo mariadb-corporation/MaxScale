@@ -15,6 +15,8 @@
 #include <maxscale/ccdefs.hh>
 #include <atomic>
 #include <maxscale/filter.hh>
+#include <maxscale/config2.hh>
+
 #include "examplefiltersession.hh"
 
 /**
@@ -31,6 +33,13 @@ class ExampleFilter : public mxs::Filter
 
 public:
     ~ExampleFilter();
+
+    struct ExampleConfig : public mxs::config::Configuration
+    {
+        ExampleConfig(const std::string& name);
+
+        bool collect_global_counts {false};     /**< Should sessions manipulate the total counts */
+    };
 
     /**
      * Creates a new filter instance. A separate function from the ctor is used so that NULL can be
@@ -83,11 +92,12 @@ public:
 
 private:
     // Used by the create function
-    ExampleFilter(const mxs::ConfigParameters* pParams);
+    ExampleFilter(const std::string& name);
 
     // The fields are specific to ExampleFilter.
     std::atomic<int> m_total_queries {0};   /**< How many queries has this filter seen */
     std::atomic<int> m_total_replies {0};   /**< How many replies has this filter seen */
 
-    bool m_collect_global_counts {false};   /**< Should sessions manipulate the total counts */
+    // The object that stores the configuration variables
+    ExampleConfig m_config;
 };
