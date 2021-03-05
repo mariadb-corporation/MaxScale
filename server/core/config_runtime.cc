@@ -1457,7 +1457,7 @@ Server* get_server_by_address(json_t* params)
     return ServerManager::find_by_address(addr, port);
 }
 
-bool can_modify_params(mxs::config::Configuration* cnf, json_t* json)
+bool can_modify_params(const mxs::config::Configuration& cnf, json_t* json)
 {
     bool rval = true;
     const char* key;
@@ -1465,7 +1465,7 @@ bool can_modify_params(mxs::config::Configuration* cnf, json_t* json)
 
     json_object_foreach(json, key, value)
     {
-        if (auto pValue = cnf->find_value(key))
+        if (auto pValue = cnf.find_value(key))
         {
             if (!pValue->parameter().is_modifiable_at_runtime())
             {
@@ -1474,7 +1474,7 @@ bool can_modify_params(mxs::config::Configuration* cnf, json_t* json)
                 if (!json_equal(old_value, value))
                 {
                     MXS_ERROR("%s: Parameter '%s' cannot be modified at runtime",
-                              cnf->specification().module().c_str(), key);
+                              cnf.specification().module().c_str(), key);
                     rval = false;
                 }
 
@@ -2048,35 +2048,28 @@ bool runtime_alter_filter_from_json(const SFilterDef& filter, json_t* new_json)
 
     if (validate_filter_json(new_json))
     {
-        if (auto config = filter->configuration())
+        auto& config = filter->configuration();
+
+        if (json_t* new_params = mxs_json_pointer(new_json, MXS_JSON_PTR_PARAMETERS))
         {
-            if (json_t* new_params = mxs_json_pointer(new_json, MXS_JSON_PTR_PARAMETERS))
-            {
-                // The new parameters are merged with the old parameters to get a complete filter definition.
-                json_t* params = config->to_json();
-                mxs::json_merge(params, new_params);
+            // The new parameters are merged with the old parameters to get a complete filter definition.
+            json_t* params = config.to_json();
+            mxs::json_merge(params, new_params);
 
-                if (config->specification().validate(params)
-                    && can_modify_params(config, params)
-                    && config->configure(params))
-                {
-                    std::ostringstream ss;
-                    filter->persist(ss);
-                    rval = runtime_save_config(filter->name(), ss.str());
-                }
-
-                json_decref(params);
-            }
-            else
+            if (config.specification().validate(params)
+                && can_modify_params(config, params)
+                && config.configure(params))
             {
-                MXS_ERROR("No parameters defined");
+                std::ostringstream ss;
+                filter->persist(ss);
+                rval = runtime_save_config(filter->name(), ss.str());
             }
+
+            json_decref(params);
         }
         else
         {
-            MXS_ERROR("Filter '%s' does not support reconfiguration.", filter->module());
-            mxb_assert_message(!true, "Filter '%s' does not have a mxs::config::Configuration",
-                               filter->module());
+            MXS_ERROR("No parameters defined");
         }
     }
 

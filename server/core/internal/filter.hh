@@ -53,7 +53,7 @@ public:
         return m_capabilities;
     }
 
-    mxs::config::Configuration* configuration() const
+    mxs::config::Configuration& configuration() const
     {
         mxb_assert(instance());
         return instance()->getConfiguration();

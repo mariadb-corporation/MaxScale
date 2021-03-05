@@ -93,19 +93,7 @@ SFilterDef do_filter_alloc(const char* name, Params params, Unrecognized unrecog
             {
                 filter = std::make_shared<FilterDef>(name, module->name, instance);
 
-                if (auto config = filter->configuration())
-                {
-                    if (!config->configure(params))
-                    {
-                        filter.reset();
-                    }
-                }
-                else
-                {
-                    mxb_assert_message(!true, "Filter '%s' does not have a mxs::config::Configuration", name);
-                }
-
-                if (filter)
+                if (filter->configuration().configure(params))
                 {
                     Guard guard(this_unit.lock);
                     this_unit.filters.push_back(filter);
@@ -207,14 +195,7 @@ Filter* filter_def_get_instance(const MXS_FILTER_DEF* filter_def)
 
 json_t* FilterDef::parameters_to_json() const
 {
-    json_t* rval = nullptr;
-
-    if (auto cfg = m_filter->getConfiguration())
-    {
-        rval = cfg->to_json();
-    }
-
-    return rval;
+    return configuration().to_json();
 }
 
 json_t* FilterDef::json_data(const char* host) const
@@ -326,16 +307,9 @@ void FilterSession::set_response(GWBUF* pResponse) const
 
 std::ostream& FilterDef::persist(std::ostream& os) const
 {
-    if (auto config = configuration())
-    {
-        config->persist(os);
-        os << "type=filter\n";
-        os << "module=" << module() << "\n";
-    }
-    else
-    {
-        mxb_assert(!true);
-    }
+    configuration().persist(os);
+    os << "type=filter\n";
+    os << "module=" << module() << "\n";
 
     return os;
 }

@@ -35,7 +35,7 @@ auto_ptr<FilterModule::Instance> FilterModule::createInstance(const char* zName,
 
     if (pFilter)
     {
-        if (pFilter->getConfiguration()->configure(*pParameters))
+        if (pFilter->getConfiguration().configure(*pParameters))
         {
             sInstance.reset(new Instance(this, pFilter));
         }
