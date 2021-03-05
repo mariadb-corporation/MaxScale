@@ -341,22 +341,37 @@ private:
 };
 }
 
+KafkaCDC::Config::Config(const std::string& name, KafkaCDC* router)
+    : mxs::config::Configuration(name, &s_spec)
+    , m_router(router)
+{
+    add_native(&Config::bootstrap_servers, &s_bootstrap_servers);
+    add_native(&Config::topic, &s_topic);
+    add_native(&Config::enable_idempotence, &s_enable_idempotence);
+    add_native(&Config::timeout, &s_timeout);
+    add_native(&Config::gtid, &s_gtid);
+    add_native(&Config::server_id, &s_server_id);
+    add_native(&Config::cooperative_replication, &s_cooperative_replication);
+}
+
+bool KafkaCDC::Config::post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params)
+{
+    return m_router->post_configure();
+}
+
 // static
 KafkaCDC* KafkaCDC::create(SERVICE* pService, mxs::ConfigParameters* params)
 {
-    KafkaCDC* rval = nullptr;
+    return new KafkaCDC(pService);
+}
 
-    if (s_spec.validate(*params))
-    {
-        Config config(*params);
-
-        if (auto rpl = create_replicator(config, pService))
-        {
-            rval = new KafkaCDC(pService, std::move(config), std::move(rpl));
-        }
-    }
-
-    return rval;
+bool KafkaCDC::post_configure()
+{
+    // Resetting m_replicator before assigning the new values makes sure the old one stops
+    // before the new one starts.
+    m_replicator.reset();
+    m_replicator = create_replicator(m_config, m_service);
+    return m_replicator.get();
 }
 
 // static
@@ -386,9 +401,8 @@ std::unique_ptr<cdc::Replicator> KafkaCDC::create_replicator(const Config& confi
     return rval;
 }
 
-KafkaCDC::KafkaCDC(SERVICE* pService, Config&& config, std::unique_ptr<cdc::Replicator>&& rpl)
-    : m_config(std::move(config))
-    , m_replicator(std::move(rpl))
+KafkaCDC::KafkaCDC(SERVICE* pService)
+    : m_config(pService->name(), this)
     , m_service(pService)
 {
 }
@@ -401,19 +415,7 @@ json_t* KafkaCDC::diagnostics() const
 
 bool KafkaCDC::configure(mxs::ConfigParameters* params)
 {
-    bool rval = false;
-
-    if (s_spec.validate(*params))
-    {
-        // Resetting m_replicator before assigning the new values makes sure the old one stops
-        // before the new one starts.
-        m_replicator.reset();
-        m_config = Config(*params);
-        m_replicator = create_replicator(m_config, m_service);
-        rval = true;
-    }
-
-    return rval;
+    return false;
 }
 
 extern "C" MXS_MODULE* MXS_CREATE_MODULE()

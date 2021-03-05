@@ -60,26 +60,23 @@ public:
     KafkaCDC(const KafkaCDC&) = delete;
     KafkaCDC& operator=(const KafkaCDC&) = delete;
 
-    struct Config
+    class Config : public mxs::config::Configuration
     {
-        Config(const mxs::ConfigParameters& params)
-            : bootstrap_servers(s_bootstrap_servers.get(params))
-            , topic(s_topic.get(params))
-            , enable_idempotence(s_enable_idempotence.get(params))
-            , timeout(s_timeout.get(params))
-            , gtid(s_gtid.get(params))
-            , server_id(s_server_id.get(params))
-            , cooperative_replication(s_cooperative_replication.get(params))
-        {
-        }
+    public:
+        Config(const std::string& name, KafkaCDC* router);
+
+        bool post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params);
 
         std::string bootstrap_servers;
         std::string topic;
         bool        enable_idempotence;
-        int         timeout;
+        int64_t     timeout;
         std::string gtid;
-        int         server_id;
+        int64_t     server_id;
         bool        cooperative_replication;
+
+    private:
+        KafkaCDC* m_router;
     };
 
     ~KafkaCDC() = default;
@@ -104,11 +101,13 @@ public:
 
     mxs::config::Configuration* getConfiguration()
     {
-        return nullptr;
+        return &m_config;
     }
 
+    bool post_configure();
+
 private:
-    KafkaCDC(SERVICE* pService, Config&& config, std::unique_ptr<cdc::Replicator>&& rpl);
+    KafkaCDC(SERVICE* pService);
 
     static std::unique_ptr<cdc::Replicator> create_replicator(const Config& config, SERVICE* service);
 
