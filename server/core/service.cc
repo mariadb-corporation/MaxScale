@@ -309,8 +309,11 @@ Service* Service::create(const char* name, const char* router, const mxs::Config
 
     std::unique_ptr<Service> service(new Service(name, router));
 
-    MXB_AT_DEBUG(bool ok = ) service->m_config.configure(params, &unknown);
-    mxb_assert(ok);
+    if (!service->m_config.configure(params, &unknown))
+    {
+        service->state = State::FAILED;
+        return nullptr;
+    }
 
     // TODO: Change the router API to use a reference
     mxs::ConfigParameters param_copy = params;
