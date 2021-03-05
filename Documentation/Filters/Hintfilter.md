@@ -71,7 +71,7 @@ possible to force writes to a slave server.
 #### Route to named server
 
 ```
--- maxsacle route to server <server name>
+-- maxscale route to server <server name>
 ```
 
 A `server` value will route the query to a named server. The value of

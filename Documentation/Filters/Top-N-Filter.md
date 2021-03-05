@@ -1,22 +1,6 @@
 # Top Filter
 
-Table of Contents
-=================
-
-* [Overview](#overview)
-* [Configuration](#configuration)
-   * [Filter Options](#filter-options)
-   * [Filter Parameters](#filter-parameters)
-      * [filebase](#filebase)
-      * [count](#count)
-      * [match, exclude and options](#match-exclude-and-options)
-      * [exclude](#exclude)
-      * [source](#source)
-      * [user](#user)
-* [Examples](#examples)
-   * [Example 1 - Heavily Contended Table](#example-1---heavily-contended-table)
-   * [Example 2 - One Application Server is Slow](#example-2---one-application-server-is-slow)
-* [Output Report](#output-report)
+[TOC]
 
 ## Overview
 
