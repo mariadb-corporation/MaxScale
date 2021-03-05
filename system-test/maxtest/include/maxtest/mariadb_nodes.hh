@@ -121,16 +121,6 @@ public:
     char version_number[256][256];
 
     /**
-     * @brief connect open connections to all nodes
-     * @return 0  in case of success
-     */
-
-    /**
-     * @brief v51 true indicates that one backed is 5.1
-     */
-    bool v51;
-
-    /**
      * @brief List of blocked nodes
      */
     bool blocked[256];

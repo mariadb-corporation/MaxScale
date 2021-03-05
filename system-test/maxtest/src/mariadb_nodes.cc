@@ -64,7 +64,6 @@ MariaDBCluster::MariaDBCluster(SharedData* shared, const std::string& nwconf_pre
                                const std::string& cnf_server_prefix)
     : Nodes(shared)
     , no_set_pos(false)
-    , v51(false)
     , cnf_server_name(cnf_server_prefix)
     , m_prefix(nwconf_prefix)
 {
@@ -310,15 +309,7 @@ int MariaDBCluster::stop_node(int node)
 
 int MariaDBCluster::start_node(int node, const char* param)
 {
-    char cmd[PATH_MAX + 1024];
-    if (v51)
-    {
-        sprintf(cmd, "%s %s --report-host", start_db_command[node].c_str(), param);
-    }
-    else
-    {
-        sprintf(cmd, "%s %s", start_db_command[node].c_str(), param);
-    }
+    string cmd = mxb::string_printf("%s %s", start_db_command[node].c_str(), param);
     return ssh_node(node, cmd, true);
 }
 
@@ -1086,22 +1077,10 @@ int MariaDBCluster::get_version(int i)
 int MariaDBCluster::get_versions()
 {
     int local_result = 0;
-
-    v51 = false;
-
     for (int i = 0; i < N; i++)
     {
         local_result += get_version(i);
     }
-
-    for (int i = 0; i < N; i++)
-    {
-        if (strcmp(version_major[i], "5.1") == 0)
-        {
-            v51 = true;
-        }
-    }
-
     return local_result;
 }
 
