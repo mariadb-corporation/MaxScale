@@ -327,14 +327,14 @@ Service* Service::create(const char* name, const char* router, const mxs::Config
         return nullptr;
     }
 
-    service->m_capabilities |= service->m_router->getCapabilities();
-
     if (!service->m_router->getConfiguration().configure(params))
     {
         MXS_ERROR("%s: Failed to configure router instance.", service->name());
         service->state = State::FAILED;
         return nullptr;
     }
+
+    service->m_capabilities |= service->m_router->getCapabilities();
 
     auto servers = s_servers.get(params);
     auto targets = s_targets.get(params);
