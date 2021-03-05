@@ -12,6 +12,7 @@
  */
 
 #include "mxsmongodatabase.hh"
+#include <mysqld_error.h>
 #include <bsoncxx/builder/basic/array.hpp>
 #include <bsoncxx/builder/basic/document.hpp>
 #include <bsoncxx/builder/stream/document.hpp>
@@ -576,12 +577,21 @@ public:
             {
                 ComERR err(response);
 
-                MXS_WARNING("Mongo request to backend failed: (%d), %s", err.code(), err.message().c_str());
+                auto code = err.code();
 
-                // TODO: Check error and act accordingly. E.g. if the table does not exist, it should not be
-                // TODO: an error but simply cause no documents to be returned.
+                if (code == ER_NO_SUCH_TABLE)
+                {
+                    vector<bsoncxx::document::value> documents;
+                    uint32_t size_of_documents = 0;
 
-                pResponse = create_error_response(err.message(), mxsmongo::error::from_mariadb_code(err.code()));
+                    pResponse = create_response(size_of_documents, documents);
+                }
+                else
+                {
+                    MXS_WARNING("Mongo request to backend failed: (%d), %s", code, err.message().c_str());
+
+                    pResponse = create_error_response(err.message(), mxsmongo::error::from_mariadb_code(code));
+                }
             }
             break;
 
