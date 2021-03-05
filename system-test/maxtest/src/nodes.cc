@@ -580,3 +580,8 @@ mxt::VMNode& Nodes::node(int i)
 {
     return m_vms[i];
 }
+
+const mxt::VMNode& Nodes::node(int i) const
+{
+    return m_vms[i];
+}

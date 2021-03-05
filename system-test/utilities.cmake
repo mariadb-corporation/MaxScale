@@ -171,7 +171,7 @@ function(add_test_executable_ex)
     endforeach()
   endif()
 
-  # Config file can be multivalued. Check that the files exist and concatenate them.
+  # Config file can be multivalued. Check that the files exist and add to list.
   foreach(elem ${config_files})
     set(cnf_file_path ${CMAKE_CURRENT_SOURCE_DIR}/${elem})
     if (NOT EXISTS ${cnf_file_path})

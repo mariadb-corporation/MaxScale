@@ -195,7 +195,8 @@ protected:
 
     virtual bool setup();
 
-    mxt::VMNode& node(int i);
+    mxt::VMNode&       node(int i);
+    const mxt::VMNode& node(int i) const;
 
 private:
     std::string m_prefix;                   /**< Name of backend setup (e.g. 'repl' or 'galera') */

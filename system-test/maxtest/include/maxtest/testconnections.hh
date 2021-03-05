@@ -410,6 +410,7 @@ public:
     void set_verbose(bool val);
     bool verbose() const;
     void write_node_env_vars();
+    int  n_maxscales() const;
 
 private:
     void copy_one_mariadb_log(MariaDBCluster* nrepl, int i, std::string filename);

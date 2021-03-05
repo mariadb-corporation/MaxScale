@@ -49,6 +49,7 @@ public:
     const char* sshkey(int i = 0) const;
 
     const std::string& prefix() const;
+    const std::string& node_name(int i) const;
 
     /**
      * @brief rwsplit_port RWSplit service port
@@ -454,6 +455,14 @@ public:
     size_t            size() const;
 
     /**
+     * Return the server info of the master. If no masters are found, returns a default server info object.
+     * If multiple masters are found, returns the first.
+     *
+     * @return Server info of master.
+     */
+    ServerInfo get_master() const;
+
+    /**
      * Check that server status is as expected. Increments global error counter if differences found.
      *
      * @param expected_status Expected server statuses. Each status should be a bitfield of values defined
@@ -504,6 +513,16 @@ public:
     void alter_monitor(const std::string& mon_name, const std::string& setting, const std::string& value);
     void alter_service(const std::string& svc_name, const std::string& setting, const std::string& value);
     void alter_server(const std::string& srv_name, const std::string& setting, const std::string& value);
+
+    /**
+     * Run a custom MaxCtrl command.
+     *
+     * @param cmd The command.
+     * @return Result structure
+     */
+    mxt::CmdResult maxctrl(const std::string& cmd);
+
+    const std::string& name() const;
 
     void start();
     void stop();

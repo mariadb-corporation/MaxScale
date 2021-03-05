@@ -2035,6 +2035,17 @@ void TestConnections::write_node_env_vars()
     write_env_vars(maxscales);
 }
 
+int TestConnections::n_maxscales() const
+{
+    // A maximum of two MaxScales are supported so far. Defining only MaxScale2 is an error.
+    int rval = 0;
+    if (m_maxscale)
+    {
+        rval = (m_maxscale2) ? 2 : 1;
+    }
+    return rval;
+}
+
 std::string cutoff_string(const string& source, char cutoff)
 {
     auto pos = source.find(cutoff);
