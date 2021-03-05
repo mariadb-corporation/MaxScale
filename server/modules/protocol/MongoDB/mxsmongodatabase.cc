@@ -401,24 +401,36 @@ public:
             }
             else
             {
-                // The table did not exist, so it must be created.
-                mxb_assert(m_dcid == 0);
+                if (m_database.config().auto_create_tables)
+                {
+                    // The table did not exist, so it must be created.
+                    mxb_assert(m_dcid == 0);
 
-                m_dcid = Worker::get_current()->delayed_call(0, [this](Worker::Call::action_t action) {
-                        m_dcid = 0;
+                    m_dcid = Worker::get_current()->delayed_call(0, [this](Worker::Call::action_t action) {
+                            m_dcid = 0;
 
-                        if (action == Worker::Call::EXECUTE)
-                        {
-                            m_mode = TABLE_CREATING;
+                            if (action == Worker::Call::EXECUTE)
+                            {
+                                m_mode = TABLE_CREATING;
 
-                            stringstream ss;
-                            ss << "CREATE TABLE " << table_name() << " (id TEXT, doc JSON)";
+                                stringstream ss;
+                                ss << "CREATE TABLE " << table_name() << " (id TEXT, doc JSON)";
 
-                            send_downstream(ss.str());
-                        }
+                                send_downstream(ss.str());
+                            }
 
-                        return false;
-                    });
+                            return false;
+                        });
+                }
+                else
+                {
+                    stringstream ss;
+                    ss << "Table " << table_name() << " does not exist, and 'auto_create_tables' "
+                       << "is false.";
+
+                    pResponse = create_error_response(ss.str(), mxsmongo::error::COMMAND_FAILED);
+                    state = READY;
+                }
             }
         }
         else

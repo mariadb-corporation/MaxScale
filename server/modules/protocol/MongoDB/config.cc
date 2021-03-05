@@ -33,9 +33,17 @@ mxs::config::ParamString password(
 mxs::config::ParamBool continue_on_unknown(
     &specification,
     "continue_on_unknown",
-    "Whether an empty document should unconditionally be returned in case an unknown command "
-    "is encountered. Default is false, which will cause an assertion violation in debug mode.",
+    "Whether an empty document should unconditionally be returned in case an unknown  Mongo "
+    "command is encountered.",
     false);
+
+mxs::config::ParamBool auto_create_tables(
+    &specification,
+    "auto_create_tables",
+    "Whether tables should be created automatically. If enabled, whenever a document is "
+    "inserted to a collection the corresponding table will automatically be created if "
+    "it does not exist already.",
+    true);
 
 }
 }
@@ -46,6 +54,7 @@ Config::Config()
     add_native(&Config::user, &mongodbclient::user);
     add_native(&Config::password, &mongodbclient::password);
     add_native(&Config::continue_on_unknown, &mongodbclient::continue_on_unknown);
+    add_native(&Config::auto_create_tables, &mongodbclient::auto_create_tables);
 }
 
 //static

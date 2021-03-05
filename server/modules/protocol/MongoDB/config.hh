@@ -24,6 +24,7 @@ public:
     std::string user;
     std::string password;
     bool        continue_on_unknown { false };
+    bool        auto_create_tables  { true };
 
     static mxs::config::Specification& specification();
 };
