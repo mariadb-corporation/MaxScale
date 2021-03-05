@@ -102,9 +102,9 @@ public:
     /**
      * Get listener config
      */
-    mxs::config::Configuration* config()
+    mxs::config::Configuration& config()
     {
-        return &m_config;
+        return m_config;
     }
 
     /**

@@ -2136,11 +2136,11 @@ bool runtime_alter_listener_from_json(SListener listener, json_t* new_json)
     {
         if (json_t* new_params = mxs_json_pointer(new_json, MXS_JSON_PTR_PARAMETERS))
         {
-            auto* cnf = listener->config();
-            json_t* params = cnf->to_json();
+            auto& cnf = listener->config();
+            json_t* params = cnf.to_json();
             mxs::json_merge(params, new_params);
 
-            if (cnf->specification().validate(params) && cnf->configure(params))
+            if (cnf.specification().validate(params) && cnf.configure(params))
             {
                 // TODO: Configure the protocol module as well
 
