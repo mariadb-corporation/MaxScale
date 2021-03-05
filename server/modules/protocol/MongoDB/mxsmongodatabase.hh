@@ -116,15 +116,18 @@ public:
      */
     GWBUF* translate(GWBUF& mariadb_response);
 
-private:
-    Database(const std::string& name,
-             Mongo::Context* pContext,
-             const Config* pConfig);
-
+    /**
+     * @return True, if there is no pending activity, false otherwise.
+     */
     bool is_ready() const
     {
         return m_state == READY;
     }
+
+private:
+    Database(const std::string& name,
+             Mongo::Context* pContext,
+             const Config* pConfig);
 
     bool is_pending() const
     {

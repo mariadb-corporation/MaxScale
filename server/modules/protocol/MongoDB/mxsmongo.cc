@@ -843,33 +843,41 @@ int32_t mxsmongo::Mongo::clientReply(GWBUF* pMariaDB_response, DCB* pDcb)
     GWBUF* pMongoDB_response = m_sDatabase->translate(*pMariaDB_response);
     gwbuf_free(pMariaDB_response);
 
-    m_sDatabase.reset();
-
-    if (pMongoDB_response)
+    if (m_sDatabase->is_ready())
     {
-        pDcb->writeq_append(pMongoDB_response);
-    }
+        m_sDatabase.reset();
 
-    if (!m_requests.empty())
-    {
-        // Loop as long as responses to requests can be generated immediately.
-        // If it can't then we'll continue once clientReply() is called anew.
-        do
+        if (pMongoDB_response)
         {
-            mxb_assert(!m_sDatabase.get());
-
-            GWBUF* pRequest = m_requests.front();
-            m_requests.pop_front();
-
-            pMongoDB_response = handle_request(pRequest);
-
-            if (pMongoDB_response)
-            {
-                // The response could be generated immediately, just send it.
-                pDcb->writeq_append(pMongoDB_response);
-            }
+            pDcb->writeq_append(pMongoDB_response);
         }
-        while (pMongoDB_response && !m_requests.empty());
+
+        if (!m_requests.empty())
+        {
+            // Loop as long as responses to requests can be generated immediately.
+            // If it can't then we'll continue once clientReply() is called anew.
+            do
+            {
+                mxb_assert(!m_sDatabase.get());
+
+                GWBUF* pRequest = m_requests.front();
+                m_requests.pop_front();
+
+                pMongoDB_response = handle_request(pRequest);
+
+                if (pMongoDB_response)
+                {
+                    // The response could be generated immediately, just send it.
+                    pDcb->writeq_append(pMongoDB_response);
+                }
+            }
+            while (pMongoDB_response && !m_requests.empty());
+        }
+    }
+    else
+    {
+        // If the database is not ready, there cannot be a response.
+        mxb_assert(pMongoDB_response == nullptr);
     }
 
     return 0;

@@ -38,6 +38,12 @@ public:
     {
     }
 
+    enum State
+    {
+        BUSY,
+        READY
+    };
+
     virtual ~Command()
     {
         free_request();
@@ -45,10 +51,11 @@ public:
 
     virtual GWBUF* execute() = 0;
 
-    virtual GWBUF* translate(GWBUF& mariadb_response)
+    virtual State translate(GWBUF& mariadb_response, GWBUF** ppMongo_response)
     {
         mxb_assert(!true);
-        return nullptr;
+        *ppMongo_response = nullptr;
+        return READY;
     }
 
     GWBUF* create_empty_response()
@@ -423,7 +430,7 @@ public:
         return nullptr;
     }
 
-    GWBUF* translate(GWBUF& mariadb_response) override
+    State translate(GWBUF& mariadb_response, GWBUF** ppResponse) override
     {
         // TODO: Update will be needed when DEPRECATE_EOF it turned on.
         GWBUF* pResponse = nullptr;
@@ -458,7 +465,8 @@ public:
 
         pResponse = create_response(doc);
 
-        return pResponse;
+        *ppResponse = pResponse;
+        return READY;
     }
 };
 
@@ -561,7 +569,7 @@ public:
         return nullptr;
     }
 
-    GWBUF* translate(GWBUF& mariadb_response) override
+    State translate(GWBUF& mariadb_response, GWBUF** ppResponse) override
     {
         // TODO: Update will be needed when DEPRECATE_EOF it turned on.
         GWBUF* pResponse = nullptr;
@@ -605,7 +613,8 @@ public:
             pResponse = translate_resultset(m_extractions, mariadb_response);
         }
 
-        return pResponse;
+        *ppResponse = pResponse;
+        return READY;
     }
 
 private:
@@ -657,7 +666,7 @@ public:
         return nullptr;
     }
 
-    GWBUF* translate(GWBUF& mariadb_response) override
+    State translate(GWBUF& mariadb_response, GWBUF** ppResponse) override
     {
         // TODO: Update will be needed when DEPRECATE_EOF it turned on.
         GWBUF* pResponse = nullptr;
@@ -690,7 +699,8 @@ public:
 
         pResponse = create_response(doc);
 
-        return pResponse;
+        *ppResponse = pResponse;
+        return READY;
     }
 
 private:
@@ -793,7 +803,7 @@ public:
         return pResponse;
     };
 
-    GWBUF* translate(GWBUF& mariadb_response) override
+    State translate(GWBUF& mariadb_response, GWBUF** ppResponse) override
     {
         // TODO: Update will be needed when DEPRECATE_EOF it turned on.
         bsoncxx::builder::basic::document builder;
@@ -831,7 +841,10 @@ public:
             mxb_assert(!true);
         }
 
-        return create_response(builder, is_ok, n, nModified);
+        GWBUF* pResponse = create_response(builder, is_ok, n, nModified);
+
+        *ppResponse = pResponse;
+        return READY;
     };
 
 private:
@@ -1095,11 +1108,17 @@ GWBUF* mxsmongo::Database::translate(GWBUF& mariadb_response)
     mxb_assert(is_pending());
     mxb_assert(m_sCommand.get());
 
-    GWBUF* pResponse = m_sCommand->translate(mariadb_response);
+    GWBUF* pResponse;
+    Command::State state = m_sCommand->translate(mariadb_response, &pResponse);
 
-    m_sCommand.reset();
+    if (state == Command::READY)
+    {
+        mxb_assert(state == Command::READY);
 
-    set_ready();
+        m_sCommand.reset();
+
+        set_ready();
+    }
 
     return pResponse;
 }

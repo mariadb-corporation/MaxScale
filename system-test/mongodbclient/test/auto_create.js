@@ -63,6 +63,13 @@ describe('AUTO_CREATE', function () {
         assert(!hasNext);
     });
 
+    it('Creates collection (i.e. table) to be inserted into', async function () {
+        const original = { hello: "world" };
+        const result = await collection.insertOne(original);
+
+        assert.strictEqual(result.insertedCount, 1, "Should be able to insert a document.");
+    });
+
     after(function () {
         if (client) {
             client.close();
