@@ -62,10 +62,11 @@ void MariaDBCluster::require_gtid(bool value)
 
 MariaDBCluster::MariaDBCluster(SharedData* shared, const std::string& nwconf_prefix,
                                const std::string& cnf_server_prefix)
-    : Nodes(nwconf_prefix, shared)
+    : Nodes(shared)
     , no_set_pos(false)
     , v51(false)
     , cnf_server_name(cnf_server_prefix)
+    , m_prefix(nwconf_prefix)
 {
     memset(this->nodes, 0, sizeof(this->nodes));
     memset(this->blocked, 0, sizeof(this->blocked));
@@ -169,7 +170,7 @@ void MariaDBCluster::read_env(const mxt::NetworkConfig& nwconfig)
 {
     char env_name[64];
 
-    read_basic_env(nwconfig);
+    read_basic_env(nwconfig, m_prefix);
     N = Nodes::n_nodes();
 
     auto prefixc = prefix().c_str();
@@ -1502,7 +1503,7 @@ const char* MariaDBCluster::access_sudo(int i) const
 
 const string& MariaDBCluster::prefix() const
 {
-    return Nodes::prefix();
+    return m_prefix;
 }
 
 const char* MariaDBCluster::ip4(int i) const

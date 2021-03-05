@@ -1590,15 +1590,15 @@ int TestConnections::call_mdbci(const char* options)
     read_env();
     if (repl)
     {
-        repl->read_basic_env(m_network_config);
+        repl->read_basic_env(m_network_config, repl->prefix());
     }
     if (galera)
     {
-        galera->read_basic_env(m_network_config);
+        galera->read_basic_env(m_network_config, galera->prefix());
     }
     if (maxscales)
     {
-        maxscales->read_basic_env(m_network_config);
+        maxscales->read_basic_env(m_network_config, maxscales->prefix());
     }
     return 0;
 }

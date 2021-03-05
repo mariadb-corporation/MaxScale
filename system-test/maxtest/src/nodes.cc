@@ -25,9 +25,8 @@ const char ssh_opts[] = "-o ControlMaster=auto -o ControlPath=./maxscale-test-%r
                         "-o LogLevel=quiet ";
 }
 
-Nodes::Nodes(const std::string& prefix, SharedData* shared)
+Nodes::Nodes(SharedData* shared)
     : m_shared(*shared)
-    , m_prefix(prefix)
 {
 }
 
@@ -295,14 +294,14 @@ int Nodes::copy_from_node_legacy(const char* src, const char* dest, int i)
     return copy_from_node(i, src, dest);
 }
 
-int Nodes::read_basic_env(const mxt::NetworkConfig& nwconfig)
+int Nodes::read_basic_env(const mxt::NetworkConfig& nwconfig, const string& prefix)
 {
     m_vms.clear();
     m_vms.reserve(4);
 
     for (int i = 0; true; i++)
     {
-        string node_name = mxb::string_printf("%s_%03d", m_prefix.c_str(), i);
+        string node_name = mxb::string_printf("%s_%03d", prefix.c_str(), i);
         mxt::VMNode node(m_shared, node_name);
 
         if (node.configure(nwconfig))
@@ -547,11 +546,6 @@ const char* Nodes::access_sudo(int i) const
 const char* Nodes::sshkey(int i) const
 {
     return m_vms[i].sshkey();
-}
-
-const std::string& Nodes::prefix() const
-{
-    return m_prefix;
 }
 
 const char* Nodes::ip4(int i) const

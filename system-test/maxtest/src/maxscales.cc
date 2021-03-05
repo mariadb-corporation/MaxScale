@@ -9,14 +9,16 @@
 #include <maxtest/mariadb_connector.hh>
 #include <maxtest/testconnections.hh>
 
-#define DEFAULT_MAXSCALE_CNF        "/etc/maxscale.cnf"
-#define DEFAULT_MAXSCALE_LOG_DIR    "/var/log/maxscale/"
-#define DEFAULT_MAXSCALE_BINLOG_DIR "/var/lib/maxscale/Binlog_Service/"
 
 using std::string;
 
+namespace
+{
+const string my_prefix = "maxscale";
+}
+
 Maxscales::Maxscales(SharedData* shared)
-    : Nodes("maxscale", shared)
+    : Nodes(shared)
 {
 }
 
@@ -60,10 +62,10 @@ int Maxscales::read_env(const mxt::NetworkConfig& nwconfig)
 {
     char env_name[64];
 
-    read_basic_env(nwconfig);
+    read_basic_env(nwconfig, my_prefix);
     N = Nodes::n_nodes();
 
-    auto prefixc = prefix().c_str();
+    auto prefixc = my_prefix.c_str();
     sprintf(env_name, "%s_user", prefixc);
     user_name = readenv(env_name, "skysql");
 
@@ -75,13 +77,13 @@ int Maxscales::read_env(const mxt::NetworkConfig& nwconfig)
         for (int i = 0; i < N; i++)
         {
             sprintf(env_name, "%s_%03d_cnf", prefixc, i);
-            maxscale_cnf[i] = readenv(env_name, DEFAULT_MAXSCALE_CNF);
+            maxscale_cnf[i] = readenv(env_name, "/etc/maxscale.cnf");
 
             sprintf(env_name, "%s_%03d_log_dir", prefixc, i);
-            maxscale_log_dir[i] = readenv(env_name, DEFAULT_MAXSCALE_LOG_DIR);
+            maxscale_log_dir[i] = readenv(env_name, "/var/log/maxscale/");
 
             sprintf(env_name, "%s_%03d_binlog_dir", prefixc, i);
-            m_binlog_dir[i] = readenv(env_name, DEFAULT_MAXSCALE_BINLOG_DIR);
+            m_binlog_dir[i] = readenv(env_name, "/var/lib/maxscale/Binlog_Service/");
 
             rwsplit_port[i] = 4006;
             readconn_master_port[i] = 4008;
@@ -347,7 +349,7 @@ const char* Maxscales::sshkey(int i) const
 
 const std::string& Maxscales::prefix() const
 {
-    return Nodes::prefix();
+    return my_prefix;
 }
 
 const char* Maxscales::ip4(int i) const
