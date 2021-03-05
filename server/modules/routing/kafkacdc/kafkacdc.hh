@@ -99,9 +99,9 @@ public:
     json_t* diagnostics() const;
     bool    configure(mxs::ConfigParameters* param);
 
-    mxs::config::Configuration* getConfiguration()
+    mxs::config::Configuration& getConfiguration()
     {
-        return &m_config;
+        return m_config;
     }
 
     bool post_configure();

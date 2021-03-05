@@ -326,14 +326,11 @@ Service* Service::create(const char* name, const char* router, const mxs::Config
 
     service->m_capabilities |= service->m_router->getCapabilities();
 
-    if (auto config = service->m_router->getConfiguration())
+    if (!service->m_router->getConfiguration().configure(params))
     {
-        if (!config->configure(params))
-        {
-            MXS_ERROR("%s: Failed to configure router instance.", service->name());
-            service->state = State::FAILED;
-            return nullptr;
-        }
+        MXS_ERROR("%s: Failed to configure router instance.", service->name());
+        service->state = State::FAILED;
+        return nullptr;
     }
 
     auto servers = s_servers.get(params);
@@ -970,10 +967,7 @@ std::vector<Service*> service_filter_in_use(const SFilterDef& filter)
  */
 std::ostream& Service::persist(std::ostream& os) const
 {
-    auto cnf = m_router->getConfiguration();
-    mxb_assert(cnf);
-
-    cnf->persist(os);
+    m_router->getConfiguration().persist(os);
     m_config.persist_append(os);
 
     const auto& data = *m_data;
@@ -1362,20 +1356,16 @@ json_t* Service::json_parameters() const
 {
     json_t* rval = m_config.to_json();
 
-    if (auto config = m_router->getConfiguration())
-    {
-        json_t* tmp = config->to_json();
-        json_object_update(rval, tmp);
-        json_decref(tmp);
-    }
+    json_t* tmp = m_router->getConfiguration().to_json();
+    json_object_update(rval, tmp);
+    json_decref(tmp);
 
     return rval;
 }
 
 bool Service::configure(json_t* params)
 {
-    mxs::config::Configuration* router_cnf = m_router->getConfiguration();
-    mxb_assert(router_cnf);
+    mxs::config::Configuration& router_cnf = m_router->getConfiguration();
     std::set<std::string> unknown;
     bool ok = true;
 
@@ -1399,9 +1389,9 @@ bool Service::configure(json_t* params)
 
     return ok
            && m_config.specification().validate(params, &unknown)
-           && router_cnf->specification().validate(params)
+           && router_cnf.specification().validate(params)
            && m_config.configure(params, &unknown)
-           && router_cnf->configure(params);
+           && router_cnf.configure(params);
 }
 
 uint64_t service_get_version(const SERVICE* svc, service_version_which_t which)

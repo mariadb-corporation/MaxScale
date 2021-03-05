@@ -379,9 +379,9 @@ public:
     bool configure(mxs::ConfigParameters* params);
 
 
-    mxs::config::Configuration* getConfiguration()
+    mxs::config::Configuration& getConfiguration()
     {
-        return &m_config;
+        return m_config;
     }
 
     void update_max_sescmd_sz(uint64_t maybe_max);

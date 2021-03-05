@@ -16,13 +16,19 @@
 
 using namespace maxscale;
 
-Cat::~Cat()
+namespace
+{
+mxs::config::Specification s_spec(MXS_MODULE_NAME, mxs::config::Specification::ROUTER);
+}
+
+Cat::Cat(const std::string& name)
+    : m_config(name, &s_spec)
 {
 }
 
 Cat* Cat::create(SERVICE* pService, mxs::ConfigParameters* params)
 {
-    return new Cat();
+    return new Cat(pService->name());
 }
 
 mxs::RouterSession* Cat::newSession(MXS_SESSION* pSession, const Endpoints& endpoints)

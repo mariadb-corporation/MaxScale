@@ -13,6 +13,7 @@
 #pragma once
 
 #include <maxscale/router.hh>
+#include <maxscale/config2.hh>
 
 class CatSession;
 
@@ -21,10 +22,10 @@ class CatSession;
  */
 class Cat : public mxs::Router
 {
+public:
     Cat(const Cat&) = delete;
     Cat& operator=(const Cat&) = delete;
-public:
-    ~Cat();
+
     static Cat*         create(SERVICE* pService, mxs::ConfigParameters* params);
     mxs::RouterSession* newSession(MXS_SESSION* pSession, const mxs::Endpoints& endpoints);
     json_t*             diagnostics() const;
@@ -35,14 +36,15 @@ public:
         return false;
     }
 
-    mxs::config::Configuration* getConfiguration()
+    mxs::config::Configuration& getConfiguration()
     {
-        return nullptr;
+        return m_config;
     }
 
 private:
     friend class CatSession;
 
-    /** Internal functions */
-    Cat() = default;
+    Cat(const std::string& name);
+
+    mxs::config::Configuration m_config;
 };

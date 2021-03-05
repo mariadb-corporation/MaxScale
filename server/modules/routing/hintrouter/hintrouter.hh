@@ -44,9 +44,9 @@ public:
         return false;
     }
 
-    mxs::config::Configuration* getConfiguration()
+    mxs::config::Configuration& getConfiguration()
     {
-        return &m_config;
+        return m_config;
     }
 
     HINT_TYPE get_default_action() const

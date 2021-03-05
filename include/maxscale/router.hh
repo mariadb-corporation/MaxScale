@@ -149,7 +149,7 @@ public:
      * @return The configuration for the router instance or nullptr if the router does not use the new
      *         configuration mechanism
      */
-    virtual mxs::config::Configuration* getConfiguration() = 0;
+    virtual mxs::config::Configuration& getConfiguration() = 0;
 };
 
 /**

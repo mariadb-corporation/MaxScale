@@ -40,9 +40,9 @@ public:
     uint64_t             getCapabilities() const;
     bool                 configure(mxs::ConfigParameters* param);
 
-    mxs::config::Configuration* getConfiguration()
+    mxs::config::Configuration& getConfiguration()
     {
-        return &m_config;
+        return m_config;
     }
 
 private:
