@@ -84,12 +84,6 @@ public:
 
     json_t* diagnostics() const;
 
-    bool configure(mxs::ConfigParameters* param)
-    {
-        // TODO: Implement this
-        return true;
-    }
-
     mxs::config::Configuration& getConfiguration()
     {
         return m_settings;

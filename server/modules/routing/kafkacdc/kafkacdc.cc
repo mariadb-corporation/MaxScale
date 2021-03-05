@@ -413,11 +413,6 @@ json_t* KafkaCDC::diagnostics() const
     return json_pack("{s:s}", "status", m_replicator->ok() ? "ok" : "error");
 }
 
-bool KafkaCDC::configure(mxs::ConfigParameters* params)
-{
-    return false;
-}
-
 extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
     static MXS_MODULE info =

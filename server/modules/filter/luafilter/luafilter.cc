@@ -169,7 +169,6 @@ public:
     };
 
     static LuaFilter* create(const char* name);
-    bool              configure(mxs::ConfigParameters* params);
 
     mxs::FilterSession* newSession(MXS_SESSION* session, SERVICE* service);
     ~LuaFilter();

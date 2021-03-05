@@ -160,15 +160,7 @@ static mxs::Endpoint* get_root_master(const mxs::Endpoints& endpoints)
 // static
 RCR* RCR::create(SERVICE* service, mxs::ConfigParameters* params)
 {
-    RCR* inst = new(std::nothrow) RCR(service);
-
-    if (inst && !inst->configure(params))
-    {
-        delete inst;
-        inst = nullptr;
-    }
-
-    return inst;
+    return new RCR(service);
 }
 
 RCRSession::RCRSession(RCR* inst, MXS_SESSION* session, mxs::Endpoint* backend,

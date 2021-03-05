@@ -166,11 +166,6 @@ public:
         return CAPABILITIES;
     }
 
-    bool configure(mxs::ConfigParameters* params)
-    {
-        return false;
-    }
-
     mxs::config::Configuration& getConfiguration()
     {
         return m_config;

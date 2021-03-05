@@ -121,26 +121,6 @@ public:
     virtual uint64_t getCapabilities() const = 0;
 
     /**
-     * @brief Configure router instance at runtime
-     *
-     * This function is guaranteed to be called by only one thread at a time.
-     * The router must declare the RCAP_TYPE_RUNTIME_CONFIG in its capabilities
-     * in order for this function to be called.
-     *
-     * Modifications to the router should be made in an atomic manner so that
-     * existing sessions do not read a partial configuration. One way to do this
-     * is to use shared pointers for storing configurations.
-     *
-     * @param params   Updated parameters for the service. The parameters are
-     *                 validated before this function is called.
-     *
-     * @return True if reconfiguration was successful, false if reconfiguration
-     *         failed. If reconfiguration failed, the state of the router
-     *         instance should not be modified.
-     */
-    virtual bool configure(mxs::ConfigParameters* param) = 0;
-
-    /**
      * Get the configuration of a router instance
      *
      * The configure method of the returned configuration will be called after the initial creation of the

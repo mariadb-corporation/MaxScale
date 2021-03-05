@@ -31,11 +31,6 @@ public:
     json_t*             diagnostics() const;
     uint64_t            getCapabilities() const;
 
-    bool configure(mxs::ConfigParameters* params)
-    {
-        return false;
-    }
-
     mxs::config::Configuration& getConfiguration()
     {
         return m_config;

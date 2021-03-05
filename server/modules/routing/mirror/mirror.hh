@@ -35,11 +35,6 @@ public:
     json_t*             diagnostics() const;
     uint64_t            getCapabilities() const;
 
-    bool configure(mxs::ConfigParameters* params)
-    {
-        return true;
-    }
-
     void ship(json_t* obj);
 
     mxs::Target* get_main() const

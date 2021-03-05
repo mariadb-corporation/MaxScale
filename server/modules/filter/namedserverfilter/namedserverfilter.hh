@@ -102,7 +102,6 @@ private:
 
     bool check_source_host(const char* remote, const struct sockaddr_storage* ip);
     bool check_source_hostnames(const struct sockaddr_storage* ip);
-    bool configure(mxs::ConfigParameters* params);
     void set_source_addresses(const std::string& input_host_names);
     bool add_source_address(const std::string& input_host);
     void form_regex_server_mapping(int pcre_ops);

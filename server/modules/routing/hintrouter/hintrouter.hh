@@ -39,11 +39,6 @@ public:
         return RCAP_TYPE_NONE;
     }
 
-    bool configure(mxs::ConfigParameters* params)
-    {
-        return false;
-    }
-
     mxs::config::Configuration& getConfiguration()
     {
         return m_config;

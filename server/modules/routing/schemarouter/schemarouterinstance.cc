@@ -85,11 +85,6 @@ SchemaRouter* SchemaRouter::create(SERVICE* pService, mxs::ConfigParameters* par
     return new SchemaRouter(pService);
 }
 
-bool SchemaRouter::configure(mxs::ConfigParameters* params)
-{
-    return true;
-}
-
 /**
  * @node Search all RUNNING backend servers and connect
  *

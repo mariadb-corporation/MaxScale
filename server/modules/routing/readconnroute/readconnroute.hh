@@ -126,18 +126,6 @@ public:
      */
     uint64_t getCapabilities() const;
 
-    /**
-     * Reconfigure the router instance
-     *
-     * @param params New configuration parameters
-     *
-     * @return True if router reconfiguration was successful
-     */
-    bool configure(mxs::ConfigParameters* pParams) override
-    {
-        return true;
-    }
-
     mxs::config::Configuration& getConfiguration()
     {
         return m_config;

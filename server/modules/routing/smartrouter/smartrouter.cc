@@ -85,16 +85,6 @@ void SmartRouter::Config::populate(MXS_MODULE& module)
     module.specification = &smartrouter::specification;
 }
 
-bool SmartRouter::configure(mxs::ConfigParameters* pParams)
-{
-    if (!smartrouter::specification.validate(*pParams))
-    {
-        return false;
-    }
-
-    return m_config.configure(*pParams);
-}
-
 SERVICE* SmartRouter::service() const
 {
     return m_service;
@@ -138,15 +128,7 @@ mxs::RouterSession* SmartRouter::newSession(MXS_SESSION* pSession, const mxs::En
 // static
 SmartRouter* SmartRouter::create(SERVICE* pService, mxs::ConfigParameters* pParams)
 {
-    SmartRouter* pRouter = new(std::nothrow) SmartRouter(pService);
-
-    if (pRouter && !pRouter->configure(pParams))
-    {
-        delete pRouter;
-        pRouter = nullptr;
-    }
-
-    return pRouter;
+    return new SmartRouter(pService);
 }
 
 json_t* SmartRouter::diagnostics() const

@@ -341,11 +341,6 @@ uint64_t RWSplit::getCapabilities() const
     return CAPABILITIES;
 }
 
-bool RWSplit::configure(mxs::ConfigParameters* params)
-{
-    return false;
-}
-
 void RWSplit::update_max_sescmd_sz(uint64_t maybe_max)
 {
     using namespace maxbase::atomic;

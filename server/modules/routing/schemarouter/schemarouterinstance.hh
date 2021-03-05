@@ -38,7 +38,6 @@ public:
     mxs::RouterSession*  newSession(MXS_SESSION* pSession, const Endpoints& endpoints);
     json_t*              diagnostics() const;
     uint64_t             getCapabilities() const;
-    bool                 configure(mxs::ConfigParameters* param);
 
     mxs::config::Configuration& getConfiguration()
     {

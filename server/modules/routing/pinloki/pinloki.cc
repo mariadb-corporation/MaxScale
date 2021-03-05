@@ -243,11 +243,6 @@ uint64_t Pinloki::getCapabilities() const
     return RCAP_TYPE_STMT_INPUT;
 }
 
-bool Pinloki::configure(mxs::ConfigParameters* pParams)
-{
-    return true;
-}
-
 const Config& Pinloki::config() const
 {
     return m_config;
