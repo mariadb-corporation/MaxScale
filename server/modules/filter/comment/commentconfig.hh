@@ -21,9 +21,7 @@ public:
     CommentConfig(const CommentConfig&) = delete;
     CommentConfig& operator = (const CommentConfig&) = delete;
 
-    CommentConfig(const char* zName);
-
-    CommentConfig(CommentConfig&& rhs) = default;
+    CommentConfig(const std::string& name);
 
     static void populate(MXS_MODULE& info);
 

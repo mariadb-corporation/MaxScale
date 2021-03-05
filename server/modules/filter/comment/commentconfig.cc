@@ -30,8 +30,8 @@ config::ParamString inject(
     config::ParamString::Quotes::REQUIRED);
 }
 
-CommentConfig::CommentConfig(const char* zName)
-    : mxs::config::Configuration(zName, &comment::specification)
+CommentConfig::CommentConfig(const std::string& name)
+    : mxs::config::Configuration(name, &comment::specification)
 {
     add_native(&CommentConfig::inject, &comment::inject);
 }

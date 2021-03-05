@@ -25,10 +25,8 @@ public:
     CommentFilter(const CommentFilter&) = delete;
     CommentFilter& operator=(const CommentFilter&) = delete;
 
-    ~CommentFilter();
-
     // Creates a new filter instance
-    static CommentFilter* create(const char* zName, mxs::ConfigParameters* ppParams);
+    static CommentFilter* create(const char* zName);
 
     // Creates a new session for this filter
     CommentFilterSession* newSession(MXS_SESSION* pSession, SERVICE* pService);
@@ -51,7 +49,7 @@ public:
 
 private:
     // Used in the create function
-    CommentFilter(CommentConfig&& config);
+    CommentFilter(const std::string& name);
 
     CommentConfig m_config;
 };

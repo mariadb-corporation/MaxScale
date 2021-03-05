@@ -33,10 +33,10 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         "V1.0.0",
         RCAP_TYPE_NONE,
         &mxs::FilterApi<CommentFilter>::s_api,
-        NULL,                     /* Process init. */
-        NULL,                     /* Process finish. */
-        NULL,                     /* Thread init. */
-        NULL,                     /* Thread finish. */
+        NULL,                       /* Process init. */
+        NULL,                       /* Process finish. */
+        NULL,                       /* Thread init. */
+        NULL,                       /* Thread finish. */
     };
 
     static bool populated = false;
@@ -50,29 +50,15 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
     return &info;
 }
 
-CommentFilter::CommentFilter(CommentConfig&& config)
-    : m_config(std::move(config))
-{
-    MXS_INFO("Comment filter with comment [%s] created.", m_config.inject.c_str());
-}
-
-
-CommentFilter::~CommentFilter()
+CommentFilter::CommentFilter(const std::string& name)
+    : m_config(name)
 {
 }
 
 // static
-CommentFilter* CommentFilter::create(const char* zName, mxs::ConfigParameters* pParams)
+CommentFilter* CommentFilter::create(const char* zName)
 {
-    CommentFilter* filter = nullptr;
-    CommentConfig config(zName);
-
-    if (config.configure(*pParams))
-    {
-        filter = new CommentFilter(std::move(config));
-    }
-
-    return filter;
+    return new CommentFilter(zName);
 }
 
 CommentFilterSession* CommentFilter::newSession(MXS_SESSION* pSession, SERVICE* pService)
@@ -80,15 +66,11 @@ CommentFilterSession* CommentFilter::newSession(MXS_SESSION* pSession, SERVICE* 
     return CommentFilterSession::create(pSession, pService, this);
 }
 
-// static
 json_t* CommentFilter::diagnostics() const
 {
-    json_t* rval = json_object();
-    m_config.fill(rval);
-    return rval;
+    return m_config.to_json();
 }
 
-// static
 uint64_t CommentFilter::getCapabilities() const
 {
     return RCAP_TYPE_NONE;
