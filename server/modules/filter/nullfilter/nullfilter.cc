@@ -83,50 +83,15 @@ NullFilter::NullFilter::Config::Config(const std::string& name)
     add_native(&Config::capabilities, &nullfilter::capabilities);
 }
 
-NullFilter::NullFilter(Config&& config)
-    : m_config(std::move(config))
-{
-    std::ostringstream os;
-
-    os << "Null filter [" << config.name() << "] created, capabilities:";
-
-    if (m_config.capabilities)
-    {
-        const auto& values = nullfilter::capabilities.values();
-
-        for (const auto& value : values)
-        {
-            if ((m_config.capabilities & value.first) == value.first)
-            {
-                os << " " << value.second;
-            }
-        }
-    }
-    else
-    {
-        os << " (none)";
-    }
-
-    MXS_NOTICE("%s", os.str().c_str());
-}
-
-NullFilter::~NullFilter()
+NullFilter::NullFilter(const std::string& name)
+    : m_config(name)
 {
 }
 
 // static
-NullFilter* NullFilter::create(const char* zName, mxs::ConfigParameters* pParams)
+NullFilter* NullFilter::create(const char* zName)
 {
-    NullFilter* pFilter = NULL;
-
-    Config config(zName);
-
-    if (config.configure(*pParams))
-    {
-        pFilter = new NullFilter(std::move(config));
-    }
-
-    return pFilter;
+    return new NullFilter(zName);
 }
 
 
@@ -138,7 +103,7 @@ NullFilterSession* NullFilter::newSession(MXS_SESSION* pSession, SERVICE* pServi
 // static
 json_t* NullFilter::diagnostics() const
 {
-    return NULL;
+    return m_config.to_json();
 }
 
 uint64_t NullFilter::getCapabilities() const

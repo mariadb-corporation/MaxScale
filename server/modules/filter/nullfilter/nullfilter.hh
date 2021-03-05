@@ -27,13 +27,11 @@ public:
     {
     public:
         Config(const std::string& name);
-        Config(Config&& other) = default;
 
         uint32_t capabilities;
     };
 
-    ~NullFilter();
-    static NullFilter* create(const char* zName, mxs::ConfigParameters* pParams);
+    static NullFilter* create(const char* zName);
 
     NullFilterSession* newSession(MXS_SESSION* pSession, SERVICE* pService);
 
@@ -47,7 +45,7 @@ public:
     }
 
 private:
-    NullFilter(Config&& config);
+    NullFilter(const std::string& name);
 
 private:
     Config m_config;
