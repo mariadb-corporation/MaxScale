@@ -45,95 +45,15 @@ public:
 
     int N {0};
 
-    /**
-     * @brief  MYSQL structs for every backend node
-     */
-    MYSQL* nodes[256];
-    /**
-     * @brief  IP address strings for every backend node
-     */
+    MYSQL* nodes[256] {};  /**< MYSQL structs for every backend node */
+    int    port[256];      /**< MariaDB port for every backend node */
 
-    /**
-     * @brief  MariaDB port for every backend node
-     */
-    int port[256];
-    /**
-     * @brief Unix socket to connecto to MariaDB
-     */
-    std::string socket[256];
-    /**
-     * @brief 'socket=$socket' line
-     */
-    std::string socket_cmd[256];
+    std::string user_name;  /**< User name to access backend nodes */
+    std::string password;   /**< Password to access backend nodes */
 
-    /**
-     * @brief   User name to access backend nodes
-     */
-    std::string user_name;
-    /**
-     * @brief   Password to access backend nodes
-     */
-    std::string password;
-    /**
-     * @brief master index of node which was last configured to be Master
-     */
-    int master;
-
-    /**
-     * @brief start_db_command Command to start DB server
-     */
-    std::string start_db_command[256];
-
-    /**
-     * @brief stop_db_command Command to start DB server
-     */
-    std::string stop_db_command[256];
-
-    /**
-     * @brief cleanup_db_command Command to remove all
-     * data files and re-install DB with mysql_install_db
-     */
-    std::string cleanup_db_command[256];
-
-    /**
-     * @brief ssl if true ssl will be used
-     */
-    int ssl;
-
-    /**
-     * @brief no_set_pos if set to true setup_binlog function do not set log position
-     */
-    bool no_set_pos;
-
-    /**
-     * @brief version Value of @@version
-     */
-    char version[256][256];
-
-    /**
-     * @brief version major part of number value of @@version
-     */
-    char version_major[256][256];
-
-    /**
-     * @brief version Number part of @@version
-     */
-    char version_number[256][256];
-
-    /**
-     * @brief List of blocked nodes
-     */
-    bool blocked[256];
-
-    /**
-     * @brief  Open connctions to all backend nodes (to 'test' DB)
-     * @return 0 in case of success
-     */
-
-    /**
-     * @brief revert_snapshot_command Command line to revert a snapshot of all VMs
-     */
-    const char* revert_snapshot_command;
+    int  master;            /**< index of node which was last configured to be Master */
+    int  ssl;               /**< Use ssl? */
+    char version[256][256]; /**< Value of @@version */
 
     int connect(int i, const std::string& db = "test");
     int connect(const std::string& db = "test");
@@ -342,7 +262,7 @@ public:
      *
      * @return List of server IDs
      */
-    std::vector<int> get_all_server_ids();
+    std::vector<int>         get_all_server_ids();
     std::vector<std::string> get_all_server_ids_str();
 
     /**
@@ -515,12 +435,9 @@ public:
      */
     std::string cnf_servers_line();
 
-    /**
-     * @brief cnf_server_name Prefix for backend server name ('server', 'gserver')
-     */
-    std::string cnf_server_name;
-
     bool using_ipv6() const;
+
+    const std::string& cnf_srv_name() const;
 
     /**
      * Get cluster type as string. The returned value is given to create_user.sh and should match one
@@ -549,11 +466,23 @@ protected:
      */
     virtual std::string anonymous_users_query() const;
 
-    std::string m_test_dir; /**< path to test application */
+    std::string m_test_dir;         /**< path to test application */
+    std::string m_cnf_server_name;  /**< Prefix for backend server name ('server', 'gserver') */
+    std::string m_socket_cmd[256];  /**< 'socket=$socket' line */
 
 private:
     std::string m_prefix;           /**< Name of backend setup (e.g. 'repl' or 'galera') */
     bool        m_use_ipv6 {false}; /**< Default to ipv6-addresses */
+    bool        m_blocked[256] {};  /**< List of blocked nodes */
+
+    std::string m_socket[256];      /**< Unix socket to connecto to MariaDB */
+
+    std::string m_start_db_command[256];    /**< Command to start DB server */
+    std::string m_stop_db_command[256];     /**< Command to stop DB server */
+
+    /**
+     * Command to remove all data files and re-install DB with mysql_install_db */
+    std::string m_cleanup_db_command[256];
 
     bool check_master_node(MYSQL* conn);
     bool bad_slave_thread_status(MYSQL* conn, const char* field, int node);

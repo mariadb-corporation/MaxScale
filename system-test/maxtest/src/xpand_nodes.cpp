@@ -223,7 +223,7 @@ std::string XpandCluster::cnf_servers()
     for (int i = 0; i < N; i++)
     {
         s += std::string("\\n[")
-                + cnf_server_name
+                + m_cnf_server_name
                 + std::to_string(i + 1)
                 + std::string("]\\ntype=server\\naddress=")
                 + std::string(ip_private(i))
