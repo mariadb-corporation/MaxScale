@@ -30,6 +30,7 @@
 class MariaDBCluster : public Nodes
 {
 public:
+    static constexpr int N_MAX = 32;
     virtual ~MariaDBCluster();
 
     void set_use_ipv6(bool use_ipv6);
@@ -45,15 +46,15 @@ public:
 
     int N {0};
 
-    MYSQL* nodes[256] {};  /**< MYSQL structs for every backend node */
-    int    port[256];      /**< MariaDB port for every backend node */
+    MYSQL* nodes[N_MAX] {};    /**< MYSQL structs for every backend node */
+    int    port[N_MAX];     /**< MariaDB port for every backend node */
 
     std::string user_name;  /**< User name to access backend nodes */
     std::string password;   /**< Password to access backend nodes */
 
-    int  master;            /**< index of node which was last configured to be Master */
-    int  ssl;               /**< Use ssl? */
-    char version[256][256]; /**< Value of @@version */
+    int  master;                /**< index of node which was last configured to be Master */
+    int  ssl;                   /**< Use ssl? */
+    char version[N_MAX][256];   /**< Value of @@version */
 
     int connect(int i, const std::string& db = "test");
     int connect(const std::string& db = "test");
@@ -91,6 +92,7 @@ public:
      *(N) and  User/Password
      */
     void read_env(const mxt::NetworkConfig& nwconfig);
+
     /**
      * @brief  prints all nodes information
      * @return 0
@@ -468,21 +470,21 @@ protected:
 
     std::string m_test_dir;         /**< path to test application */
     std::string m_cnf_server_name;  /**< Prefix for backend server name ('server', 'gserver') */
-    std::string m_socket_cmd[256];  /**< 'socket=$socket' line */
+    std::string m_socket_cmd[N_MAX];/**< 'socket=$socket' line */
 
 private:
-    std::string m_prefix;           /**< Name of backend setup (e.g. 'repl' or 'galera') */
-    bool        m_use_ipv6 {false}; /**< Default to ipv6-addresses */
-    bool        m_blocked[256] {};  /**< List of blocked nodes */
+    std::string m_prefix;                   /**< Name of backend setup (e.g. 'repl' or 'galera') */
+    bool        m_use_ipv6 {false};         /**< Default to ipv6-addresses */
+    bool        m_blocked[N_MAX] {};   /**< List of blocked nodes */
 
-    std::string m_socket[256];      /**< Unix socket to connecto to MariaDB */
+    std::string m_socket[N_MAX];        /**< Unix socket to connecto to MariaDB */
 
-    std::string m_start_db_command[256];    /**< Command to start DB server */
-    std::string m_stop_db_command[256];     /**< Command to stop DB server */
+    std::string m_start_db_command[N_MAX];      /**< Command to start DB server */
+    std::string m_stop_db_command[N_MAX];       /**< Command to stop DB server */
 
     /**
      * Command to remove all data files and re-install DB with mysql_install_db */
-    std::string m_cleanup_db_command[256];
+    std::string m_cleanup_db_command[N_MAX];
 
     bool check_master_node(MYSQL* conn);
     bool bad_slave_thread_status(MYSQL* conn, const char* field, int node);
