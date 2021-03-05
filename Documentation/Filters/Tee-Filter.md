@@ -100,7 +100,7 @@ The tee filter supports the following module commands.
 
 ### `tee disable [FILTER]`
 
-This commmad disables a tee filter instance. A disabled tee filter will not send
+This command disables a tee filter instance. A disabled tee filter will not send
 any queries to the target service.
 
 ### `tee enable [FILTER]`
@@ -119,7 +119,7 @@ orders to be replicated to it. Deletes and updates are not, however, required.
 Set up a service in MariaDB MaxScale, called Orders, to communicate with the
 order processing system with the tee filter applied to it. Also set up a service
 to talk to the datamart server, using the DataMart service. The tee filter would
-have as it’s service entry the DataMart service, by adding a match parameter of
+have as its service entry the DataMart service, by adding a match parameter of
 "insert into orders" would then result in all requests being sent to the order
 processing system, and insert statements that include the orders table being
 additionally sent to the datamart server.

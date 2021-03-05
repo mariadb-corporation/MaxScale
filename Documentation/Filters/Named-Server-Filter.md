@@ -21,7 +21,7 @@ Also, in indexed mode, the server names (targets) may contain a list of names or
 special tags `->master` or `->slave`.
 
 Below is a configuration example for the filter in indexed-mode. The legacy mode
-is not recommeded and may be removed in a future release. In the example, a
+is not recommended and may be removed in a future release. In the example, a
 SELECT on TableOne (*match01*) results in routing hints to two named servers,
 while a SELECT on TableTwo is suggested to be routed to the master server of the
 service. Whether a list of server names is interpreted as a route-to-any or
@@ -90,7 +90,7 @@ target01=MyServer2
 This optional parameter defines an IP address or mask which a connecting
 client's IP address is matched against. Only sessions whose address matches this
 setting will have this filter active and performing the regex matching. Traffic
-from unmatching client IPs is simply left as is and routed straight through.
+from other client IPs is simply left as is and routed straight through.
 
 ```
 source=127.0.0.1
@@ -114,8 +114,8 @@ source=192.168.21.3,192.168.10.%
 
 This optional parameter defines a user name the connecting client username is
 matched against. Only sessions that are connected using this username will have
-the match and routing hints applied to them. Traffic from unmatching client user
-names is simply left as is and routed straight through.
+the match and routing hints applied to them. Traffic from users is simply left
+as is and routed straight through.
 
 ```
 user=john
