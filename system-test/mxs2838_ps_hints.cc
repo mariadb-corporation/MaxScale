@@ -8,22 +8,24 @@
 
 #include <maxtest/testconnections.hh>
 
-int main(int argc, char* argv[])
+std::string test_one_hint(TestConnections& test, std::string hint)
 {
-    TestConnections test(argc, argv);
     Connection conn = test.maxscales->rwsplit();
-    Connection master = test.repl->get_connection(0);
-
-    test.expect(master.connect(), "Connection to master failed: %s", master.error());
     test.expect(conn.connect(), "Connection to MaxScale failed: %s", conn.error());
 
-    std::string id = master.field("SELECT @@server_id");
     MYSQL_STMT* stmt = conn.stmt();
-
-    std::string query = "SELECT @@server_id -- maxscale route to master";
+    std::string query = "SELECT @@server_id -- maxscale " + hint;
 
     test.expect(mysql_stmt_prepare(stmt, query.c_str(), query.size()) == 0,
                 "PREPARE failed: %s", conn.error());
+
+    if (hint == "route to slave")
+    {
+        // Wait for a while to make sure the slave has completed it. The preparation of prepared statements is
+        // asynchronous which means the master can accept reads if the slaves are busy.
+        sleep(2);
+    }
+
     test.expect(mysql_stmt_execute(stmt) == 0,
                 "EXECUTE failed: %s", conn.error());
 
@@ -42,9 +44,27 @@ int main(int argc, char* argv[])
     test.expect(mysql_stmt_fetch(stmt) == 0,
                 "Failed to fetch result: %s", mysql_stmt_error(stmt));
 
-    test.expect(buffer == id, "Expected ID '%s' but got ID '%s'", id.c_str(), buffer);
-
     mysql_stmt_close(stmt);
+    return buffer;
+}
+
+int main(int argc, char* argv[])
+{
+    TestConnections test(argc, argv);
+    test.repl->connect();
+    std::string master_id = test.repl->get_server_id_str(0);
+    std::string slave_id = test.repl->get_server_id_str(1);
+
+    auto expect_eq = [&](std::string id, std::string hint) {
+            auto res = test_one_hint(test, hint);
+            test.expect(res == id, "Expected '%s' but got '%s' for hint: %s",
+                        id.c_str(), res.c_str(), hint.c_str());
+        };
+
+    expect_eq(master_id, "route to master");
+    expect_eq(master_id, "route to server server1");
+    expect_eq(slave_id, "route to slave");
+    expect_eq(slave_id, "route to server server2");
 
     return test.global_result;
 }
