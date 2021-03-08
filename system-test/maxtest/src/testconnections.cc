@@ -44,6 +44,7 @@ const StringSet recognized_mdbci_labels =
 
 const int MDBCI_FAIL = 200;     // Exit code when failure caused by MDBCI non-zero exit
 const int BROKEN_VM_FAIL = 201; // Exit code when failure caused by broken VMs
+const int TEST_SKIPPED = 202;   // Exit code when skipping test. Should match value expected by cmake.
 }
 
 namespace maxscale
@@ -210,7 +211,7 @@ TestConnections::TestConnections(int argc, char* argv[])
                     printf("-%c, --%s\n", o->val, o->name);
                     ++o;
                 }
-                exit(0);
+                exit(TEST_SKIPPED);
             }
             break;
 
@@ -353,7 +354,7 @@ TestConnections::TestConnections(int argc, char* argv[])
     if (maxscale::require_columnstore)
     {
         cout << "ColumnStore testing is not yet implemented, skipping test" << endl;
-        exit(0);
+        exit(TEST_SKIPPED);
     }
 
     std::future<bool> repl_future;
@@ -482,7 +483,7 @@ TestConnections::TestConnections(int argc, char* argv[])
             tprintf("Test requires a higher version of backend servers, skipping test.");
             tprintf("Required version: %s", maxscale::required_repl_version.c_str());
             tprintf("Master-slave version: %s", ver_repl.c_str());
-            exit(0);
+            exit(TEST_SKIPPED);
         }
     }
 
@@ -497,7 +498,7 @@ TestConnections::TestConnections(int argc, char* argv[])
             tprintf("Test requires a higher version of backend servers, skipping test.");
             tprintf("Required version: %s", maxscale::required_galera_version.c_str());
             tprintf("Galera version: %s", ver_galera.c_str());
-            exit(0);
+            exit(TEST_SKIPPED);
         }
     }
 
