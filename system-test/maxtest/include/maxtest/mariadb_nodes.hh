@@ -477,8 +477,6 @@ private:
     bool        m_use_ipv6 {false};         /**< Default to ipv6-addresses */
     bool        m_blocked[N_MAX] {};   /**< List of blocked nodes */
 
-    std::string m_socket[N_MAX];        /**< Unix socket to connecto to MariaDB */
-
     std::string m_start_db_command[N_MAX];      /**< Command to start DB server */
     std::string m_stop_db_command[N_MAX];       /**< Command to stop DB server */
 
