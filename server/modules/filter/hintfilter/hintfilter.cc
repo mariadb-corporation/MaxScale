@@ -67,12 +67,23 @@ HintSession::HintSession(MXS_SESSION* session, SERVICE* service)
 
 int HintSession::routeQuery(GWBUF* queue)
 {
-    if (modutil_is_SQL(queue) && gwbuf_length(queue) > 5)
+    if (HINT* hint = process_hints(queue))
     {
-        process_hints(queue);
+        queue->hint = hint_splice(queue->hint, hint);
     }
 
     return mxs::FilterSession::routeQuery(queue);
+}
+
+int HintSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply)
+{
+    if (reply.is_complete() && reply.error() && m_current_id)
+    {
+        m_ps.erase(m_current_id);
+        m_current_id = 0;
+    }
+
+    return mxs::FilterSession::clientReply(pPacket, down, reply);
 }
 
 extern "C" MXS_MODULE* MXS_CREATE_MODULE()

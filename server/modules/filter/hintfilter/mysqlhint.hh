@@ -65,6 +65,29 @@ enum TOKEN_VALUE
     TOK_END
 };
 
+// A simple C++ wrapper for a routing hint
+class Hint
+{
+public:
+    Hint(HINT* hint)
+        : m_hint(hint)
+    {
+    }
+
+    ~Hint()
+    {
+        hint_free(m_hint);
+    }
+
+    HINT* dup()
+    {
+        return hint_dup(m_hint);
+    }
+
+private:
+    HINT* m_hint {nullptr};
+};
+
 // Class that parses text into MaxScale hints
 class HintParser
 {
@@ -104,9 +127,18 @@ public:
 
     HintSession(MXS_SESSION* session, SERVICE* service);
     int routeQuery(GWBUF* queue);
+    int clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply);
 
 private:
+
     HintParser m_parser;
 
-    void process_hints(GWBUF* buffer);
+    // Contains the current COM_STMT_PREPARE ID being executed. This is used to erase the prepared statement
+    // in case it fails.
+    uint32_t m_current_id {0};
+
+    // A mapping of prepared statement IDs to the hints that they contain
+    std::unordered_map<uint32_t, Hint> m_ps;
+
+    HINT* process_hints(GWBUF* data);
 };

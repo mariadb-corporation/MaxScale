@@ -17,6 +17,7 @@
 
 #include <maxscale/filter.hh>
 #include <maxscale/buffer.hh>
+#include <maxscale/protocol/mariadb/mysql.hh>
 
 #include "mysqlhint.hh"
 
@@ -398,15 +399,46 @@ HINT* HintParser::parse(InputIter it, InputIter end)
     return rval;
 }
 
-void HintSession::process_hints(GWBUF* buffer)
+HINT* HintSession::process_hints(GWBUF* data)
 {
-    mxs::Buffer buf(buffer);
-    HINT* hint = m_parser.parse(std::next(buf.begin(), 5), buf.end());
+    HINT* hint = nullptr;
+    mxs::Buffer buffer(data);
+    uint8_t cmd = mxs_mysql_get_command(buffer.get());
 
-    if (hint)
+    if (cmd == MXS_COM_QUERY)
     {
-        buffer->hint = hint_splice(buffer->hint, hint);
+        hint = m_parser.parse(std::next(buffer.begin(), 5), buffer.end());
+    }
+    else if (cmd == MXS_COM_STMT_PREPARE)
+    {
+        if (HINT* tmp = m_parser.parse(std::next(buffer.begin(), 5), buffer.end()))
+        {
+            uint32_t id = buffer.id();
+            mxb_assert(id != 0);
+            mxb_assert(m_ps.find(id) == m_ps.end());
+
+            // We optimistically assume that the prepared statement will be successful and store it in the
+            // map. If it doesn't, we'll erase it when we get the error. The client protocol guarantees that
+            // only one binary protocol prepared statement is executed at a time.
+            m_ps.emplace(id, tmp);
+            m_current_id = id;
+        }
+    }
+    else if (cmd == MXS_COM_STMT_CLOSE)
+    {
+        m_ps.erase(mxs_mysql_extract_ps_id(buffer.get()));
+    }
+    else if (mxs_mysql_is_ps_command(cmd))
+    {
+        auto it = m_ps.find(mxs_mysql_extract_ps_id(buffer.get()));
+
+        if (it != m_ps.end())
+        {
+            hint = it->second.dup();
+        }
     }
 
-    buf.release();
+    buffer.release();
+
+    return hint;
 }
