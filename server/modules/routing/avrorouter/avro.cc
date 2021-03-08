@@ -50,36 +50,26 @@ using namespace maxscale;
 // static
 Avro* Avro::create(SERVICE* service, mxs::ConfigParameters* params)
 {
-    Avro* router = nullptr;
-    AvroConfig config(service->name());
-    mxb_assert(config.specification().validate(*params));
-
-    if (config.configure(*params))
-    {
-        router = new Avro(service, params, std::move(config));
-
-        if (router && !params->contains(CN_SERVERS) && !params->contains(CN_CLUSTER))
-        {
-            conversion_task_ctl(router, true);
-        }
-    }
-
-    return router;
+    return new Avro(service);
 }
 
-Avro::Avro(SERVICE* service, mxs::ConfigParameters* params, AvroConfig&& config)
+Avro::Avro(SERVICE* service)
     : service(service)
     , current_pos(4)
     , binlog_fd(-1)
     , trx_count(0)
     , row_count(0)
     , task_handle(0)
-    , m_config(std::move(config))
+    , m_config(service, *this)
+{
+}
+
+bool Avro::post_configure()
 {
     uint64_t block_size = m_config.block_size;
     mxs_avro_codec_type codec = m_config.codec;
 
-    if (params->contains(CN_SERVERS) || params->contains(CN_CLUSTER))
+    if (!service->get_children().empty())
     {
         MXS_NOTICE("Replicating directly from a master server");
         cdc::Config cnf;
@@ -90,6 +80,8 @@ Avro::Avro(SERVICE* service, mxs::ConfigParameters* params, AvroConfig&& config)
         cnf.match = m_config.match.code();
         cnf.exclude = m_config.exclude.code();
         cnf.cooperate = m_config.cooperative_replication;
+
+        conversion_task_ctl(this, false);
 
         auto worker = mxs::RoutingWorker::get(mxs::RoutingWorker::MAIN);
         worker->execute(
@@ -121,9 +113,12 @@ Avro::Avro(SERVICE* service, mxs::ConfigParameters* params, AvroConfig&& config)
         // TODO: Do these in Avro::create
         avro_load_conversion_state(this);
         handler->load_metadata(m_config.avrodir);
+
+        conversion_task_ctl(this, true);
     }
 
     MXS_NOTICE("Avro files stored at: %s", m_config.avrodir.c_str());
+    return true;
 }
 
 mxs::RouterSession* Avro::newSession(MXS_SESSION* session, const Endpoints& endpoints)

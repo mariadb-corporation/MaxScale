@@ -84,10 +84,13 @@ static const MXS_ENUM_VALUE codec_values[] =
     {NULL}
 };
 
+class Avro;
+class AvroSession;
+
 class AvroConfig : public mxs::config::Configuration
 {
 public:
-    AvroConfig(const std::string& name);
+    AvroConfig(SERVICE* service, Avro& router);
 
     std::string             filestem;
     std::string             binlogdir;
@@ -102,9 +105,14 @@ public:
     mxs::config::RegexValue exclude;
     mxs_avro_codec_type     codec;
     bool                    cooperative_replication;
-};
 
-class AvroSession;
+protected:
+    bool post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params) override;
+
+private:
+    Avro&    m_router;
+    SERVICE* m_service;
+};
 
 class Avro : public mxs::Router
 {
@@ -133,6 +141,8 @@ public:
         return m_config;
     }
 
+    bool post_configure();
+
     SERVICE*    service;    /*< Pointer to the service using this router */
     std::string binlog_name;/*< Name of the current binlog file */
     uint64_t    current_pos;/*< Current binlog position */
@@ -147,7 +157,7 @@ private:
     std::unique_ptr<cdc::Replicator> m_replicator;
     AvroConfig                       m_config;
 
-    Avro(SERVICE* service, mxs::ConfigParameters* params, AvroConfig&& config);
+    Avro(SERVICE* service);
 };
 
 class AvroSession : public mxs::RouterSession

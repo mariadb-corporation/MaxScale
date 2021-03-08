@@ -98,8 +98,9 @@ static cfg::ParamBool s_cooperative_replication(
     &s_spec, "cooperative_replication", "Cooperate with other instances replicating from the same cluster",
     false);
 
-AvroConfig::AvroConfig(const std::string& name)
-    : mxs::config::Configuration(name, &s_spec)
+AvroConfig::AvroConfig(SERVICE* service, Avro& router)
+    : mxs::config::Configuration(service->name(), &s_spec)
+    , m_router(router)
 {
     add_native(&AvroConfig::filestem, &s_filestem);
     add_native(&AvroConfig::binlogdir, &s_binlogdir);
@@ -114,6 +115,11 @@ AvroConfig::AvroConfig(const std::string& name)
     add_native(&AvroConfig::exclude, &s_exclude);
     add_native(&AvroConfig::codec, &s_codec);
     add_native(&AvroConfig::cooperative_replication, &s_cooperative_replication);
+}
+
+bool AvroConfig::post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params)
+{
+    return m_router.post_configure();
 }
 
 bool converter_func(Worker::Call::action_t action, Avro* router)
