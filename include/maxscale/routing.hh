@@ -96,9 +96,9 @@ typedef enum routing_capability
     /**
      * Request and response tracking: tells when a the response to a query is complete.
      *
-     * Binary: 0b0000 0001 1000 0011
+     * Binary: 0b0000 0010 1000 0011
      */
-    RCAP_TYPE_REQUEST_TRACKING = 0x0183,
+    RCAP_TYPE_REQUEST_TRACKING = 0x0283,
 } mxs_routing_capability_t;
 
 #define RCAP_TYPE_NONE 0
