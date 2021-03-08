@@ -147,8 +147,22 @@ void TestConnections::restart_galera(bool value)
     maxscale::restart_galera = value;
 }
 
-TestConnections::TestConnections(int argc, char* argv[])
+TestConnections::TestConnections()
     : global_result(m_shared.log.m_n_fails)
+{
+}
+
+TestConnections::TestConnections(int argc, char* argv[])
+    : TestConnections()
+{
+    int rc = prepare_for_test(argc, argv);
+    if (rc != 0)
+    {
+        exit(rc);
+    }
+}
+
+int TestConnections::prepare_for_test(int argc, char* argv[])
 {
     std::ios::sync_with_stdio(true);
     signal_set(SIGSEGV, sigfatal_handler);
@@ -281,9 +295,32 @@ TestConnections::TestConnections(int argc, char* argv[])
     tprintf("Starting test");
     gettimeofday(&m_start_time, NULL);
     logger().reset_timer();
+    return 0;
 }
 
 TestConnections::~TestConnections()
+{
+    if (!m_cleaned_up)
+    {
+        // Gets here if cleanup has not been explicitly called.
+        int rc = cleanup();
+        if (rc != 0)
+        {
+            exit(rc);
+        }
+        if (global_result)
+        {
+            // This causes the test to fail if a core dump is found
+            exit(1);
+        }
+    }
+    delete repl;
+    delete galera;
+    delete xpand;
+    delete maxscales;
+}
+
+int TestConnections::cleanup()
 {
     if (global_result > 0)
     {
@@ -326,22 +363,12 @@ TestConnections::~TestConnections()
      *  }
      */
 
-    delete repl;
-    delete galera;
-    delete xpand;
-
     if (maxscale::multiple_maxscales)
     {
         maxscales->stop_all();
     }
-
-    delete maxscales;
-
-    if (global_result)
-    {
-        // This causes the test to fail if a core dump is found
-        exit(1);
-    }
+    m_cleaned_up = true;
+    return 0;
 }
 
 void TestConnections::add_result(bool result, const char* format, ...)
@@ -2031,6 +2058,33 @@ int TestConnections::n_maxscales() const
     if (m_maxscale)
     {
         rval = (m_maxscale2) ? 2 : 1;
+    }
+    return rval;
+}
+
+int TestConnections::run_test(int argc, char* argv[], const std::function<int(TestConnections&)>& testfunc)
+{
+    int init_rc = prepare_for_test(argc, argv);
+    int test_errors = 0;
+    if (init_rc == 0)
+    {
+        test_errors = testfunc(*this);
+    }
+    int cleanup_rc = cleanup();
+
+    // Return actual test error count only if init and cleanup succeed.
+    int rval = 0;
+    if (init_rc != 0)
+    {
+        rval = init_rc;
+    }
+    else if (cleanup_rc != 0)
+    {
+        rval = cleanup_rc;
+    }
+    else
+    {
+        rval = test_errors;
     }
     return rval;
 }
