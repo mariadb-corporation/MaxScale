@@ -387,9 +387,8 @@ void TestConnections::read_mdbci_info()
     m_mdbci_config_name = envvar_get_set("mdbci_config_name", "local");
     m_vm_path = m_mdbci_vm_path + "/" + m_mdbci_config_name;
 
-    const char errmsg_fmt[] = "Failed to open '%s', exiting!";
+    const char warnmsg_fmt[] = "Warning: Failed to open '%s'. File needs to be created.";
 
-    bool error = false;
     if (!m_mdbci_config_name.empty())
     {
         m_network_config.clear();
@@ -428,24 +427,17 @@ void TestConnections::read_mdbci_info()
             }
             else
             {
-                tprintf(errmsg_fmt, labels_filepath.c_str());
-                error = true;
+                tprintf(warnmsg_fmt, labels_filepath.c_str());
             }
         }
         else
         {
-            tprintf(errmsg_fmt, nwconf_filepath.c_str());
-            error = true;
+            tprintf(warnmsg_fmt, nwconf_filepath.c_str());
         }
     }
     else
     {
         tprintf("The name of MDBCI configuration is not defined, exiting!");
-        error = true;
-    }
-
-    if (error)
-    {
         exit(1);
     }
 }
