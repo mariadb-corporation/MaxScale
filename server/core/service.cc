@@ -316,9 +316,8 @@ Service* Service::create(const char* name, const char* router, const mxs::Config
     }
 
     // TODO: Change the router API to use a reference
-    mxs::ConfigParameters param_copy = params;
     MXS_ROUTER_API* router_api = (MXS_ROUTER_API*)module->module_object;
-    service->m_router.reset(router_api->createInstance(service.get(), &param_copy));
+    service->m_router.reset(router_api->createInstance(service.get()));
 
     if (!service->m_router)
     {

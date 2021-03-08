@@ -26,7 +26,7 @@ Cat::Cat(const std::string& name)
 {
 }
 
-Cat* Cat::create(SERVICE* pService, mxs::ConfigParameters* params)
+Cat* Cat::create(SERVICE* pService)
 {
     return new Cat(pService->name());
 }

@@ -62,7 +62,7 @@ HintRouter::HintRouter(SERVICE* pService)
 }
 
 // static
-HintRouter* HintRouter::create(SERVICE* pService, mxs::ConfigParameters* params)
+HintRouter* HintRouter::create(SERVICE* pService)
 {
     HR_ENTRY();
     return new HintRouter(pService);

@@ -48,7 +48,7 @@
 using namespace maxscale;
 
 // static
-Avro* Avro::create(SERVICE* service, mxs::ConfigParameters* params)
+Avro* Avro::create(SERVICE* service)
 {
     return new Avro(service);
 }

@@ -120,7 +120,7 @@ class Avro : public mxs::Router
     Avro& operator=(const Avro&) = delete;
 
 public:
-    static Avro* create(SERVICE* service, mxs::ConfigParameters* params);
+    static Avro* create(SERVICE* service);
 
     mxs::RouterSession* newSession(MXS_SESSION* session, const mxs::Endpoints& endpoints);
 

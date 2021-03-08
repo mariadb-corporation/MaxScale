@@ -343,7 +343,7 @@ public:
      *
      * @return New router instance or NULL on error
      */
-    static RWSplit* create(SERVICE* pService, mxs::ConfigParameters* params);
+    static RWSplit* create(SERVICE* pService);
 
     /**
      * @brief Create a new session for this router instance

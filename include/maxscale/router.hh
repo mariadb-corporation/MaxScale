@@ -147,7 +147,7 @@ struct MXS_ROUTER_API
      *
      * @return New router instance on NULL on error
      */
-    Router* (* createInstance)(SERVICE* service, mxs::ConfigParameters* params);
+    Router* (* createInstance)(SERVICE* service);
 };
 }
 
@@ -191,10 +191,10 @@ public:
     RouterApi(const RouterApi&) = delete;
     RouterApi& operator=(const RouterApi&) = delete;
 
-    static Router* createInstance(SERVICE* pService, mxs::ConfigParameters* params)
+    static Router* createInstance(SERVICE* pService)
     {
         Router* inst = nullptr;
-        MXS_EXCEPTION_GUARD(inst = RouterClass::create(pService, params));
+        MXS_EXCEPTION_GUARD(inst = RouterClass::create(pService));
         return inst;
     }
 

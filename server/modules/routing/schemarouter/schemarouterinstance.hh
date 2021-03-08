@@ -34,7 +34,7 @@ class SchemaRouterSession;
 class SchemaRouter : public Router
 {
 public:
-    static SchemaRouter* create(SERVICE* pService, mxs::ConfigParameters* params);
+    static SchemaRouter* create(SERVICE* pService);
     mxs::RouterSession*  newSession(MXS_SESSION* pSession, const Endpoints& endpoints);
     json_t*              diagnostics() const;
     uint64_t             getCapabilities() const;

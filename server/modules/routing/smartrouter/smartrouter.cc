@@ -126,7 +126,7 @@ mxs::RouterSession* SmartRouter::newSession(MXS_SESSION* pSession, const mxs::En
 }
 
 // static
-SmartRouter* SmartRouter::create(SERVICE* pService, mxs::ConfigParameters* pParams)
+SmartRouter* SmartRouter::create(SERVICE* pService)
 {
     return new SmartRouter(pService);
 }

@@ -65,7 +65,7 @@ public:
         SmartRouter*   m_router;
     };
 
-    static SmartRouter* create(SERVICE* pService, mxs::ConfigParameters* pParams);
+    static SmartRouter* create(SERVICE* pService);
 
     mxs::RouterSession* newSession(MXS_SESSION* pSession, const mxs::Endpoints& endpoints);
 

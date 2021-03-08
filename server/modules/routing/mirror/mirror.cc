@@ -15,7 +15,7 @@
 #include "mirrorsession.hh"
 
 // static
-Mirror* Mirror::create(SERVICE* pService, mxs::ConfigParameters* params)
+Mirror* Mirror::create(SERVICE* pService)
 {
     return new Mirror(pService);
 }

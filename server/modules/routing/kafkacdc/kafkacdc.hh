@@ -84,7 +84,7 @@ public:
     // Router capabilities
     static constexpr uint64_t CAPS = RCAP_TYPE_RUNTIME_CONFIG;
 
-    static KafkaCDC* create(SERVICE* pService, mxs::ConfigParameters* params);
+    static KafkaCDC* create(SERVICE* pService);
 
     mxs::RouterSession* newSession(MXS_SESSION* pSession, const mxs::Endpoints& endpoints)
     {

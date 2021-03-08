@@ -273,7 +273,7 @@ bool RWSConfig::post_configure(const std::map<std::string, mxs::ConfigParameters
  * API function definitions
  */
 
-RWSplit* RWSplit::create(SERVICE* service, mxs::ConfigParameters* params)
+RWSplit* RWSplit::create(SERVICE* service)
 {
     return new RWSplit(service);
 }

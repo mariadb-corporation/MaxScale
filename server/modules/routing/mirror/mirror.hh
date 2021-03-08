@@ -30,7 +30,7 @@ public:
     Mirror& operator=(const Mirror&) = delete;
 
     ~Mirror() = default;
-    static Mirror*      create(SERVICE* pService, mxs::ConfigParameters* params);
+    static Mirror*      create(SERVICE* pService);
     mxs::RouterSession* newSession(MXS_SESSION* pSession, const mxs::Endpoints& endpoints);
     json_t*             diagnostics() const;
     uint64_t            getCapabilities() const;

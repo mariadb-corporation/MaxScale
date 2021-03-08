@@ -48,7 +48,7 @@ public:
     Pinloki& operator=(const Pinloki&) = delete;
 
     ~Pinloki() = default;
-    static Pinloki*     create(SERVICE* pService, mxs::ConfigParameters* pParams);
+    static Pinloki*     create(SERVICE* pService);
     mxs::RouterSession* newSession(MXS_SESSION* pSession, const mxs::Endpoints& endpoints);
     json_t*             diagnostics() const;
     uint64_t            getCapabilities() const;

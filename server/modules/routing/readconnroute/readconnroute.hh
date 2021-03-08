@@ -101,7 +101,7 @@ public:
      *
      * @return The new instance or nullptr on error
      */
-    static RCR* create(SERVICE* service, mxs::ConfigParameters* params);
+    static RCR* create(SERVICE* service);
 
     /**
      * Create a new session for this router instance

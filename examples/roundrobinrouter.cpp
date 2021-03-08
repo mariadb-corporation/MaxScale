@@ -157,7 +157,7 @@ public:
     static constexpr const uint64_t CAPABILITIES {RCAP_TYPE_STMT_INPUT | RCAP_TYPE_RESULTSET_OUTPUT};
 
     ~RRRouter();
-    static RRRouter*    create(SERVICE* pService, mxs::ConfigParameters* params);
+    static RRRouter*    create(SERVICE* pService);
     mxs::RouterSession* newSession(MXS_SESSION* session, const mxs::Endpoints& endpoints);
     json_t*             diagnostics() const;
 
@@ -277,10 +277,10 @@ mxs::RouterSession* RRRouter::newSession(MXS_SESSION* session, const mxs::Endpoi
  * (router sessions).
  *
  * @param service   The service this router is being created for
- * @param options   The options for this query router
+ *
  * @return          NULL in failure, pointer to router in success.
  */
-RRRouter* RRRouter::create(SERVICE* pService, mxs::ConfigParameters* params)
+RRRouter* RRRouter::create(SERVICE* pService)
 {
     return new(std::nothrow) RRRouter(pService);
 }

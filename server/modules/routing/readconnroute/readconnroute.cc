@@ -158,7 +158,7 @@ static mxs::Endpoint* get_root_master(const mxs::Endpoints& endpoints)
 }
 
 // static
-RCR* RCR::create(SERVICE* service, mxs::ConfigParameters* params)
+RCR* RCR::create(SERVICE* service)
 {
     return new RCR(service);
 }

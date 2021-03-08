@@ -80,7 +80,7 @@ SchemaRouter::SchemaRouter(SERVICE* service)
 {
 }
 
-SchemaRouter* SchemaRouter::create(SERVICE* pService, mxs::ConfigParameters* params)
+SchemaRouter* SchemaRouter::create(SERVICE* pService)
 {
     return new SchemaRouter(pService);
 }

@@ -195,7 +195,7 @@ bool Pinloki::post_configure()
 }
 
 // static
-Pinloki* Pinloki::create(SERVICE* pService, mxs::ConfigParameters* pParams)
+Pinloki* Pinloki::create(SERVICE* pService)
 {
     pService->set_custom_version_suffix("-BinlogRouter");
     return new Pinloki(pService);

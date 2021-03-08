@@ -31,7 +31,7 @@ public:
         int64_t     max_slaves;
     };
 
-    static HintRouter* create(SERVICE* pService, mxs::ConfigParameters* params);
+    static HintRouter* create(SERVICE* pService);
     HintRouterSession* newSession(MXS_SESSION* pSession, const mxs::Endpoints& endpoints);
     json_t*            diagnostics() const;
     uint64_t getCapabilities() const

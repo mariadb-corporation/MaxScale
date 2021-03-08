@@ -360,7 +360,7 @@ bool KafkaCDC::Config::post_configure(const std::map<std::string, mxs::ConfigPar
 }
 
 // static
-KafkaCDC* KafkaCDC::create(SERVICE* pService, mxs::ConfigParameters* params)
+KafkaCDC* KafkaCDC::create(SERVICE* pService)
 {
     return new KafkaCDC(pService);
 }
