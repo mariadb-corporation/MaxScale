@@ -326,15 +326,6 @@ Service* Service::create(const char* name, const char* router, const mxs::Config
         return nullptr;
     }
 
-    if (!service->m_router->getConfiguration().configure(params))
-    {
-        MXS_ERROR("%s: Failed to configure router instance.", service->name());
-        service->state = State::FAILED;
-        return nullptr;
-    }
-
-    service->m_capabilities |= service->m_router->getCapabilities();
-
     auto servers = s_servers.get(params);
     auto targets = s_targets.get(params);
     auto cluster = s_cluster.get(params);
@@ -374,6 +365,18 @@ Service* Service::create(const char* name, const char* router, const mxs::Config
         MXB_AT_DEBUG(bool ok = ) service->set_filters(filters);
         mxb_assert(ok);
     }
+
+    // Configure the router as the last step. This makes sure that whenever a router is configured, the
+    // service has already been fully configured with a valid configuration. Mostly this helps with cases
+    // where the router inspects a part of the service (e.g. the servers it uses) when it is being configured.
+    if (!service->m_router->getConfiguration().configure(params))
+    {
+        MXS_ERROR("%s: Failed to configure router instance.", service->name());
+        service->state = State::FAILED;
+        return nullptr;
+    }
+
+    service->m_capabilities |= service->m_router->getCapabilities();
 
     auto service_ptr = service.release();
     LockGuard guard(this_unit.lock);
