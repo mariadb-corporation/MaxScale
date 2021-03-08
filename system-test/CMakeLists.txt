@@ -147,6 +147,9 @@ add_test_executable(rhint_crash.cpp rhint_crash hints LABELS readwritesplit hint
 # Regression case for the bug "The end comment tag in hints isn't properly detected"
 add_test_executable(rhint_comment.cpp rhint_comment hints LABELS readwritesplit hintfilter REPL_BACKEND)
 
+# MXS-2838: Hints in prepared statements
+add_test_executable(mxs2838_ps_hints.cc mxs2838_ps_hints mxs2838_ps_hints LABELS hintfilter REPL_BACKEND)
+
 # MaxGUI test
 add_test_executable(test_maxgui.cc test_maxgui test_maxgui LABELS maxgui REPL_BACKEND)
 
