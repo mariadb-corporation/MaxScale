@@ -34,7 +34,7 @@ using namespace std::literals::string_literals;
 class Config : public mxs::config::Configuration
 {
 public:
-    Config(const std::string& name);
+    Config(const std::string& name, std::function<bool()> callback);
     Config(Config&&) = default;
 
     static const mxs::config::Specification* spec();
@@ -62,6 +62,9 @@ public:
     wall_time::Duration expire_log_duration() const;
     wall_time::Duration purge_startup_delay() const;
     wall_time::Duration purge_poll_timeout() const;
+
+    bool post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params) override;
+
 private:
     /** Where the binlog files are stored */
     std::string m_binlog_dir;
@@ -134,5 +137,7 @@ private:
     wall_time::Duration m_expire_log_duration;
     wall_time::Duration m_purge_startup_delay;
     wall_time::Duration m_purge_poll_timeout;
+
+    std::function<bool()> m_cb;
 };
 }

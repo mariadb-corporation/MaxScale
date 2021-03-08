@@ -66,8 +66,12 @@ maxsql::GtidList read_requested_rpl_state(const Config& config)
 
 InventoryWriter::InventoryWriter(const Config& config)
     : m_config(config)
-    , m_file_names(read_inventory_file(config))
 {
+}
+
+void InventoryWriter::configure()
+{
+    m_file_names = read_inventory_file(m_config);
 }
 
 void InventoryWriter::push_back(const std::string& file_name)

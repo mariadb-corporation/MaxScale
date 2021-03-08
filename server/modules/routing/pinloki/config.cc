@@ -19,6 +19,8 @@
 #include <sstream>
 #include <uuid/uuid.h>
 
+#include "pinloki.hh"
+
 namespace
 {
 namespace cfg = maxscale::config;
@@ -153,8 +155,14 @@ std::string gen_uuid()
     return uuid_str;
 }
 
-Config::Config(const std::string& name)
+bool Config::post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params)
+{
+    return m_cb();
+}
+
+Config::Config(const std::string& name, std::function<bool()> callback)
     : cfg::Configuration(name, &s_spec)
+    , m_cb(callback)
 {
     add_native(&Config::m_binlog_dir, &s_datadir);
     add_native(&Config::m_server_id, &s_server_id);

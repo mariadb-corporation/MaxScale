@@ -155,11 +155,19 @@ std::pair<std::string, std::string> get_file_name_and_size(const std::string& fi
     return {file, size};
 }
 
-Pinloki::Pinloki(SERVICE* pService, Config&& config)
-    : m_config(std::move(config))
-    , m_service(pService)
-    , m_inventory(m_config)
+Pinloki::Pinloki(SERVICE* pService)
+    : m_config(pService->name(), [this]() {
+                   return post_configure();
+               }),
+    m_service(pService),
+    m_inventory(m_config)
 {
+}
+
+bool Pinloki::post_configure()
+{
+    m_inventory.configure();
+
     if (m_master_config.load(m_config))
     {
         if (m_master_config.slave_running)
@@ -172,7 +180,7 @@ Pinloki::Pinloki(SERVICE* pService, Config&& config)
         start_slave();
     }
 
-    // Kick of the independent purging
+    // Kick off the independent purging
     if (m_config.expire_log_duration().count())
     {
         maxbase::Worker* worker = maxbase::Worker::get_current();
@@ -182,21 +190,15 @@ Pinloki::Pinloki(SERVICE* pService, Config&& config)
         auto ms = duration_cast<milliseconds>(m_config.purge_startup_delay());
         worker->delayed_call(ms, &Pinloki::purge_old_binlogs, this);
     }
+
+    return true;
 }
 
 // static
 Pinloki* Pinloki::create(SERVICE* pService, mxs::ConfigParameters* pParams)
 {
-    Pinloki* rval = nullptr;
-    Config config(pService->name());
-
-    if (config.configure(*pParams))
-    {
-        rval = new Pinloki(pService, std::move(config));
-        pService->set_custom_version_suffix("-BinlogRouter");
-    }
-
-    return rval;
+    pService->set_custom_version_suffix("-BinlogRouter");
+    return new Pinloki(pService);
 }
 
 mxs::RouterSession* Pinloki::newSession(MXS_SESSION* pSession, const mxs::Endpoints& endpoints)

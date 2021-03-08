@@ -82,6 +82,8 @@ public:
         return m_config;
     }
 
+    void configure();
+
 private:
     // Read or re-read the file
     void read_file() const;

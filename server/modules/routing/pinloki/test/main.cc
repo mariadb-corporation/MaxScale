@@ -30,7 +30,9 @@
 
 pinloki::Config& config()
 {
-    static pinloki::Config cfg("test");
+    static pinloki::Config cfg("test", []() {
+                                   return true;
+                               });
     return cfg;
 }
 

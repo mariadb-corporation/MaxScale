@@ -58,6 +58,8 @@ public:
         return m_config;
     }
 
+    bool post_configure();
+
     const Config&    config() const;
     InventoryWriter* inventory();
 
@@ -71,7 +73,7 @@ public:
     void          set_gtid_slave_pos(const maxsql::GtidList& gtid);
 
 private:
-    Pinloki(SERVICE* pService, Config&& config);
+    Pinloki(SERVICE* pService);
 
     maxsql::Connection::ConnectionDetails generate_details();
 
