@@ -1160,13 +1160,26 @@ public:
 
     GWBUF* execute() override
     {
-        MXS_ERROR("Command not recognized: %s", m_req.to_string().c_str());
+        GWBUF* pResponse = nullptr;
 
-        // Inconvenient during development if every single unknown command leads
-        // to an abort. Now optionally an empty document may be returned instead.
-        mxb_assert(m_database.config().continue_on_unknown);
+        stringstream ss;
+        ss << "Command not recognized: '" << bsoncxx::to_json(m_doc) << "'";
+        auto s = ss.str();
 
-        return create_empty_response();
+        switch (m_database.config().on_unknown_command)
+        {
+        case Config::RETURN_ERROR:
+            MXS_ERROR("%s", s.c_str());
+            pResponse = create_error_response(s, mxsmongo::error::COMMAND_FAILED);
+            break;
+
+        case Config::RETURN_EMPTY:
+            MXS_WARNING("%s", s.c_str());
+            pResponse = create_empty_response();
+            break;
+        }
+
+        return pResponse;
     }
 };
 

@@ -21,10 +21,16 @@ public:
     Config();
     Config(Config&&) = default;
 
-    std::string user;
-    std::string password;
-    bool        continue_on_unknown { false };
-    bool        auto_create_tables  { true };
+    enum OnUnknownCommand
+    {
+        RETURN_ERROR,
+        RETURN_EMPTY,
+    };
+
+    std::string      user;
+    std::string      password;
+    OnUnknownCommand on_unknown_command { RETURN_ERROR };
+    bool             auto_create_tables { true };
 
     static mxs::config::Specification& specification();
 };

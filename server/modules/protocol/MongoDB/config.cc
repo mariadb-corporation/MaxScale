@@ -30,12 +30,16 @@ mxs::config::ParamString password(
     "password",
     "The password to use when connecting to the backend.");
 
-mxs::config::ParamBool continue_on_unknown(
+mxs::config::ParamEnum<Config::OnUnknownCommand> on_unknown_command(
     &specification,
-    "continue_on_unknown",
-    "Whether an empty document should unconditionally be returned in case an unknown  Mongo "
+    "on_unknown_command",
+    "Whether to return an error or an empty document in case an unknown Mongo "
     "command is encountered.",
-    false);
+    {
+        { Config::RETURN_ERROR, "return_error" },
+        { Config::RETURN_EMPTY, "return_empty" }
+    },
+    Config::RETURN_ERROR);
 
 mxs::config::ParamBool auto_create_tables(
     &specification,
@@ -53,7 +57,7 @@ Config::Config()
 {
     add_native(&Config::user, &mongodbclient::user);
     add_native(&Config::password, &mongodbclient::password);
-    add_native(&Config::continue_on_unknown, &mongodbclient::continue_on_unknown);
+    add_native(&Config::on_unknown_command, &mongodbclient::on_unknown_command);
     add_native(&Config::auto_create_tables, &mongodbclient::auto_create_tables);
 }
 
