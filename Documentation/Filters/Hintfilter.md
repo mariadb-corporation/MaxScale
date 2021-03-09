@@ -4,11 +4,6 @@ This filter adds routing hints to a service. The filter has no parameters.
 
 [TOC]
 
-## Limitations
-
-The hintfilter does not support routing hints in prepared statements
-([MXS-2838](https://jira.mariadb.org/browse/MXS-2838)).
-
 # Hint Syntax
 
 **Note:** If a query has more than one comment only the first comment is
@@ -134,6 +129,58 @@ they are on the stack:
 ```
 -- maxscale begin <hint content>
 ```
+
+# Prepared Statements
+
+The hintfilter supports routing hints in prepared statements for both the
+`PREPARE` and `EXECUTE` SQL commands as well as the binary protocol prepared
+statements.
+
+## Binary Protocol
+
+With binary protocol prepared statements, a routing hint in the prepared
+statement is applied to the execution of the statement but not the preparation
+of it. The preparation of the statement is routed normally and is sent to all
+servers.
+
+For example, when the following prepared statement is prepared with the MariaDB
+Connector-C function `mariadb_stmt_prepare` and then executed with
+`mariadb_stmt_execute` the result is always returned from the master:
+
+```
+SELECT user FROM accounts WHERE id = ? -- maxscale route to master
+```
+
+Support for binary protocol prepared statements was added in MaxScale 2.6.0
+([MXS-2838](https://jira.mariadb.org/browse/MXS-2838)).
+
+The protocol commands that the routing hints are applied to are:
+
+* COM_STMT_EXECUTE
+* COM_STMT_BULK_EXECUTE
+* COM_STMT_SEND_LONG_DATA
+* COM_STMT_FETCH
+* COM_STMT_RESET
+
+## Text Protocol
+
+Text protocol prepared statements (i.e. the `PREPARE` and `EXECUTE` SQL
+commands) behave differently. If a `PREPARE` command has a routing hint, it will
+be routed according to the routing hint. Any subsequent `EXECUTE` command will
+not be affected by the routing hint in the `PREPARE` statement. This means they
+must have their own routing hints.
+
+The following example is the recommended method of executing text protocol
+prepared statements with hints:
+
+```
+PREPARE my_ps FROM 'SELECT user FROM accounts WHERE id = ?';
+EXECUTE my_ps USING 123; -- maxscale route to master
+```
+
+The `PREPARE` is routed normally and will be routed to all servers. The
+`EXECUTE` will be routed to the master as a result of it having the `route to
+master` hint.
 
 # Examples
 
