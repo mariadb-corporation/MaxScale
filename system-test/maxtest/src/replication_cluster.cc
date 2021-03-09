@@ -19,6 +19,8 @@ namespace
 const string type_mariadb = "mariadb";
 }
 
+namespace maxtest
+{
 ReplicationCluster::ReplicationCluster(SharedData* shared)
     : MariaDBCluster(shared, "node", "server")
 {
@@ -32,4 +34,6 @@ bool ReplicationCluster::setup(const mxt::NetworkConfig& nwconfig)
 const std::string& ReplicationCluster::type_string() const
 {
     return type_mariadb;
+}
+
 }

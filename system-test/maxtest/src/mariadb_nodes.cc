@@ -19,9 +19,10 @@
 #include <future>
 #include <functional>
 #include <algorithm>
-#include <maxtest/envv.hh>
-#include <maxtest/test_dir.hh>
 #include <maxbase/format.hh>
+#include <maxtest/envv.hh>
+#include <maxtest/log.hh>
+#include <maxtest/test_dir.hh>
 
 using std::cout;
 using std::endl;
@@ -29,7 +30,7 @@ using std::string;
 
 namespace
 {
-static bool g_require_gtid = false;
+bool g_require_gtid = false;
 
 const char setup_slave[] =
     "change master to MASTER_HOST='%s', "
@@ -52,7 +53,12 @@ void MariaDBCluster::require_gtid(bool value)
     g_require_gtid = value;
 }
 
-MariaDBCluster::MariaDBCluster(SharedData* shared, const std::string& nwconf_prefix,
+bool MariaDBCluster::get_require_gtid()
+{
+    return g_require_gtid;
+}
+
+MariaDBCluster::MariaDBCluster(mxt::SharedData* shared, const std::string& nwconf_prefix,
                                const std::string& cnf_server_prefix)
     : Nodes(shared)
     , m_cnf_server_name(cnf_server_prefix)
@@ -408,7 +414,8 @@ int MariaDBCluster::start_replication()
         execute_query(nodes[i], "SET GLOBAL read_only=OFF");
         execute_query(nodes[i], "STOP SLAVE;");
 
-        if (g_require_gtid)
+        bool using_gtid = m_shared.settings.req_mariadb_gtid;
+        if (using_gtid)
         {
             execute_query(nodes[i], "SET GLOBAL gtid_slave_pos='0-1-0'");
         }
@@ -423,7 +430,7 @@ int MariaDBCluster::start_replication()
                           "%s",
                           ip_private(0),
                           port[0],
-                          g_require_gtid ?
+                          using_gtid ?
                           "MASTER_USE_GTID=slave_pos" :
                           "MASTER_LOG_FILE='mar-bin.000001', MASTER_LOG_POS=4");
 
@@ -650,7 +657,7 @@ bool MariaDBCluster::bad_slave_thread_status(MYSQL* conn, const char* field, int
     return rval;
 }
 
-static bool wrong_replication_type(MYSQL* conn)
+bool MariaDBCluster::wrong_replication_type(MYSQL* conn)
 {
     bool rval = true;
 
@@ -660,12 +667,13 @@ static bool wrong_replication_type(MYSQL* conn)
 
         if (find_field(conn, "SHOW SLAVE STATUS", "Gtid_IO_Pos", str) == 0)
         {
+            bool require_gtid = m_shared.settings.req_mariadb_gtid;
             // If the test requires GTID based replication, Gtid_IO_Pos must not be empty
-            if ((rval = (*str != '\0') != g_require_gtid))
+            if ((rval = (*str != '\0') != require_gtid))
             {
                 printf("Wrong value for 'Gtid_IO_Pos' (%s), expected it to be %s.\n",
                        str,
-                       g_require_gtid ? "not empty" : "empty");
+                       require_gtid ? "not empty" : "empty");
             }
             else
             {

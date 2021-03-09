@@ -29,7 +29,7 @@ public:
         READCONN_SLAVE
     };
 
-    Maxscales(SharedData* shared);
+    Maxscales(mxt::SharedData* shared);
 
     ~Maxscales();
 
@@ -280,10 +280,10 @@ private:
 };
 
 class TestConnections;
-class TestLogger;
 
 namespace maxtest
 {
+class TestLogger;
 
 /**
  * Contains information about one server as seen by MaxScale.
@@ -438,7 +438,7 @@ private:
     std::string m_rest_ip {"127.0.0.1"};
     std::string m_rest_port {"8989"};
 
-    mxt::CmdResult curl_rest_api(const std::string& path);
-    TestLogger&    logger();
+    mxt::CmdResult   curl_rest_api(const std::string& path);
+    mxt::TestLogger& logger();
 };
 }

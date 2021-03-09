@@ -17,7 +17,7 @@ namespace
 const string my_prefix = "maxscale";
 }
 
-Maxscales::Maxscales(SharedData* shared)
+Maxscales::Maxscales(mxt::SharedData* shared)
     : Nodes(shared)
 {
 }
@@ -35,7 +35,7 @@ bool Maxscales::setup(const mxt::NetworkConfig& nwconfig)
     bool rval = false;
     read_env(nwconfig);     // Sets e.g. use_valgrind.
 
-    if (m_shared.local_maxscale)
+    if (m_shared.settings.local_maxscale)
     {
         // MaxScale is running locally, overwrite node address.
         node(0).set_local();

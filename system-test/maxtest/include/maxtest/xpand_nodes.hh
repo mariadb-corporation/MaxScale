@@ -27,7 +27,7 @@ class XpandCluster : public MariaDBCluster
 {
 public:
 
-    XpandCluster(SharedData* shared)
+    XpandCluster(mxt::SharedData* shared)
         : MariaDBCluster(shared, "xpand", "xpand_server")
     {
     }

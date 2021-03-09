@@ -4,6 +4,9 @@
 #include <string>
 #include <vector>
 
+namespace maxtest
+{
+
 /**
  * System test error log container.
  */
@@ -32,9 +35,26 @@ private:
     std::string prepare_msg(const char* format, va_list args) const;
 };
 
+/**
+ * Various global settings.
+ */
+struct Settings
+{
+    bool       verbose {false};         /**< True if printing more details */
+    bool       local_maxscale {false};  /**< MaxScale running locally */
+
+    bool       req_mariadb_gtid {false};    /**< MariaDB master-slave should use gtid replication */
+    bool       req_two_maxscales {false};   /**< Test requires a second MaxScale */
+};
+
+/**
+ * Data shared across test classes.
+ */
 struct SharedData
 {
     TestLogger log;                     /**< Error log container */
+    Settings   settings;
     bool       verbose {false};         /**< True if printing more details */
-    bool       local_maxscale {false};  /**< MaxScale running locally */
 };
+
+}

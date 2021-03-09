@@ -25,7 +25,7 @@ const char ssh_opts[] = "-o ControlMaster=auto -o ControlPath=./maxscale-test-%r
                         "-o LogLevel=quiet ";
 }
 
-Nodes::Nodes(SharedData* shared)
+Nodes::Nodes(mxt::SharedData* shared)
     : m_shared(*shared)
 {
 }

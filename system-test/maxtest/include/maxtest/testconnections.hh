@@ -16,8 +16,12 @@
 #include <maxtest/test_dir.hh>
 
 typedef std::set<std::string> StringSet;
-class TestLogger;
+
+namespace maxtest
+{
 class ReplicationCluster;
+}
+
 class GaleraCluster;
 
 /**
@@ -81,10 +85,10 @@ public:
      */
     int copy_mariadb_logs(MariaDBCluster* nrepl, const char* prefix, std::vector<std::thread>& threads);
 
-    ReplicationCluster* repl {nullptr};     /**< Master-Slave replication cluster */
-    GaleraCluster*      galera {nullptr};   /**< Galera cluster */
-    XpandCluster*       xpand {nullptr};    /**< Xpand cluster */
-    Maxscales*          maxscales {nullptr};/**< MaxScale nodes */
+    mxt::ReplicationCluster* repl {nullptr};     /**< Master-Slave replication cluster */
+    GaleraCluster*           galera {nullptr};   /**< Galera cluster */
+    XpandCluster*            xpand {nullptr};    /**< Xpand cluster */
+    Maxscales*               maxscales {nullptr};/**< MaxScale nodes */
 
     int& global_result; /**< Result of test, 0 if PASSED */
     bool smoke {true}; /**< Run tests in quick mode. Only affects some long tests. */
@@ -104,9 +108,6 @@ public:
 
     /** Skip initial start of MaxScale */
     static void skip_maxscale_start(bool value);
-
-    /** Prepare multiple maxscale instances */
-    static void multiple_maxscales(bool value);
 
     /** Test requires a certain backend version  */
     static void require_repl_version(const char* version);
@@ -417,9 +418,10 @@ public:
      */
     int reinstall_maxscales();
 
-    mxt::MaxScale& maxscale();
-    mxt::MaxScale& maxscale2();
-    TestLogger&    logger();
+    mxt::MaxScale&      maxscale();
+    mxt::MaxScale&      maxscale2();
+    mxt::TestLogger&    logger();
+    mxt::Settings&      settings();
 
     std::string get_mdbci_config_name() {return m_mdbci_config_name;}
 
@@ -441,7 +443,7 @@ private:
     std::unique_ptr<mxt::MaxScale>   m_maxscale;  /**< Main MaxScale instance */
     std::unique_ptr<mxt::MaxScale>   m_maxscale2; /**< Secondary MaxScale instance */
 
-    SharedData m_shared;    /**< Data shared with other objects */
+    mxt::SharedData m_shared;    /**< Data shared with other objects */
 
     std::string m_test_name;            /**< Test name */
     std::string m_cnf_template_path;    /**< MaxScale config file template used by test */

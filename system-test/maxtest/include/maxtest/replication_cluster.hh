@@ -15,6 +15,8 @@
 
 #include <maxtest/mariadb_nodes.hh>
 
+namespace maxtest
+{
 /**
  * Standard MariaDB master-slave replication cluster.
  */
@@ -27,3 +29,4 @@ public:
 
     const std::string& type_string() const override;
 };
+}

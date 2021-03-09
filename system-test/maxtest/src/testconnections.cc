@@ -64,7 +64,6 @@ static std::string required_galera_version;
 static bool restart_galera = false;
 static bool require_galera = false;
 static bool require_columnstore = false;
-static bool multiple_maxscales = false;
 }
 
 static void perform_manual_action(const char* zMessage)
@@ -117,11 +116,6 @@ void TestConnections::skip_maxscale_start(bool value)
     maxscale::start = !value;
 }
 
-void TestConnections::multiple_maxscales(bool value)
-{
-    maxscale::multiple_maxscales = value;
-}
-
 void TestConnections::require_repl_version(const char* version)
 {
     maxscale::required_repl_version = version;
@@ -155,6 +149,9 @@ TestConnections::TestConnections()
 TestConnections::TestConnections(int argc, char* argv[])
     : TestConnections()
 {
+    // These are required for backwards compatibility.
+    m_shared.settings.req_mariadb_gtid = MariaDBCluster::get_require_gtid();
+
     int rc = prepare_for_test(argc, argv);
     if (rc != 0)
     {
@@ -328,7 +325,7 @@ int TestConnections::cleanup()
         printf("%s\n", logger().all_errors_to_string().c_str());
     }
 
-    if (!m_shared.local_maxscale)
+    if (!settings().local_maxscale)
     {
         // stop all Maxscales to detect crashes on exit
         for (int i = 0; i < maxscales->N; i++)
@@ -363,7 +360,7 @@ int TestConnections::cleanup()
      *  }
      */
 
-    if (maxscale::multiple_maxscales)
+    if (settings().req_two_maxscales)
     {
         maxscales->stop_all();
     }
@@ -623,7 +620,7 @@ void TestConnections::init_maxscales()
     // Always initialize the first MaxScale
     init_maxscale(0);
 
-    if (maxscale::multiple_maxscales)
+    if (settings().req_two_maxscales)
     {
         for (int i = 1; i < maxscales->N; i++)
         {
@@ -1776,9 +1773,14 @@ mxt::MaxScale& TestConnections::maxscale2()
     return *m_maxscale2;
 }
 
-TestLogger& TestConnections::logger()
+mxt::TestLogger& TestConnections::logger()
 {
     return m_shared.log;
+}
+
+mxt::Settings& TestConnections::settings()
+{
+    return m_shared.settings;
 }
 
 bool TestConnections::read_cmdline_options(int argc, char* argv[])
@@ -1869,7 +1871,7 @@ bool TestConnections::read_cmdline_options(int argc, char* argv[])
                 maxscale::manual_debug = true;
                 m_init_maxscale = false;
                 m_no_maxscale_log_copy = true;
-                m_shared.local_maxscale = true;
+                m_shared.settings.local_maxscale = true;
             }
             break;
 
@@ -1913,7 +1915,7 @@ bool TestConnections::initialize_nodes()
 
     if (use_repl)
     {
-        repl = new ReplicationCluster(&m_shared);
+        repl = new mxt::ReplicationCluster(&m_shared);
         repl->setup(m_network_config);
         repl->set_use_ipv6(m_use_ipv6);
         repl->ssl = backend_ssl;
