@@ -457,6 +457,7 @@ void VMNode::write_node_env_vars()
     write_env_var("_private_ip", m_private_ip);
     write_env_var("_hostname", m_hostname);
     write_env_var("_whoami", m_username);
+    write_env_var("_keyfile", m_sshkey);
 }
 
 const char* VMNode::ip4() const
