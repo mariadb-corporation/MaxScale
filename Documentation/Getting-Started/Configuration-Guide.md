@@ -1466,15 +1466,23 @@ servers.
 
 ### `strip_db_esc`
 
-The strip_db_esc parameter strips escape characters from database names of
-grants when loading the users from the backend server.
+This setting controls whether escape characters (`\`) are removed from database
+names when loading user grants from a backend server. The setting takes a
+boolean value and is on by default. When enabled, a grant such as
+``grant select on `test\_`.* to 'user'@'%';`` is read as
+``grant select on `test_`.* to 'user'@'%';``
 
-This parameter takes a boolean value and when enabled, will strip all backslash (`\`)
-characters from the database names. The default value for this parameter is true
-since MaxScale 2.0.1. In previous version, the default value was false.
+This setting has no effect on database-level grants fetched from a MariaDB
+Server. The database names of a MariaDB Server are compared using the LIKE
+operator to properly handle wildcards and escaped wildcards. This setting may
+affect database names in table and column level grants, although these typically
+do not contain backlashes.
+
+This setting does affect database names when reading grants from an
+Xpand-server.
 
 Some visual database management tools automatically escape some characters and
-this might cause conflicts when MariaDB MaxScale tries to authenticate users.
+this might cause conflicts when MaxScale tries to authenticate users.
 
 ### `log_auth_warnings`
 

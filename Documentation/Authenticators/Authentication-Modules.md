@@ -74,7 +74,7 @@ GRANT ALL ON infinidb_vtable.* TO 'maxscale'@'maxscalehost';
 ### Xpand
 
 The system tables of Xpand are not the same as those of a regular
-MariaDB server. Consquently, a different set of GRANTs are needed.
+MariaDB server. Consequently, a different set of GRANTs are needed.
 
 The service user must have the following grants:
 ```
@@ -107,16 +107,14 @@ for additional information on how to solve authentication issues.
 
 ### Wildcard database grants
 
-MaxScale does not support wildcard grants to databases. Although on MariaDB
-Server `grant select on test_.* to 'alice'@'%';` gives access to *test_* as well
-as *test1*, *test2* ..., MaxScale only recognizes the grant to *test_*. If the
-grant-command escapes the wildcard (``grant select on `test\_`.* to
-'alice'@'%';``) both MaxScale and the MariaDB Server interpret it as only
-allowing access to *test_*.
-
-On the MaxScale side, this is performed by simply removing the escape character
-`\` from the database name, controlled by the setting
-[strip_db_esc](../Getting-Started/Configuration-Guide.mcd#strip_db_esc).
+MaxScale supports wildcards `_` and `%` for database-level grants. As with
+MariaDB Server, `grant select on test_.* to 'alice'@'%';` gives access to
+*test_* as well as *test1*, *test2* and so on. If the GRANT command escapes the
+wildcard (``grant select on `test\_`.* to 'alice'@'%';``) both MaxScale and the
+MariaDB Server interpret it as only allowing access to *test_*. `_` and `%`
+are only interpreted as wildcards when the grant is to a database:
+``grant select on `test_`.t1 to 'alice'@'%';`` only grants access to the
+*test_.t1*-table, not to *test1.t1*.
 
 ## Authenticator options
 
