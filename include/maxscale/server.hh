@@ -69,8 +69,9 @@ public:
          *
          * @param version_num Version number from server
          * @param version_string Version string from server
+         * @return True if version data changed
          */
-        void set(uint64_t version_num, const std::string& version_string);
+        bool set(uint64_t version_num, const std::string& version_string);
 
         /**
          * Return true if the server is a real database and can process queries. Returns false if server
@@ -83,6 +84,7 @@ public:
         Type           type() const;
         const Version& version_num() const;
         const char*    version_string() const;
+        std::string    type_string() const;
 
     private:
         static const int MAX_VERSION_LEN = 256;

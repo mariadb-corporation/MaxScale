@@ -14,33 +14,22 @@
 #include "internal/server.hh"
 
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
 
 #include <mutex>
-#include <sstream>
 #include <string>
 #include <vector>
 
 #include <maxbase/alloc.h>
 #include <maxbase/atomic.hh>
-#include <maxbase/format.hh>
 #include <maxbase/stopwatch.hh>
 #include <maxbase/log.hh>
 
-#include <maxscale/config.hh>
 #include <maxscale/config2.hh>
 #include <maxscale/session.hh>
 #include <maxscale/dcb.hh>
-#include <maxscale/poll.hh>
 #include <maxscale/ssl.hh>
-#include <maxscale/paths.hh>
-#include <maxscale/utils.h>
 #include <maxscale/json_api.hh>
-#include <maxscale/clock.h>
 #include <maxscale/http.hh>
 #include <maxscale/routingworker.hh>
 
@@ -770,12 +759,14 @@ uint64_t Server::gtid_pos(uint32_t domain) const
 
 void Server::set_version(uint64_t version_num, const std::string& version_str)
 {
-    if (version_str != m_info.version_string())
+    bool changed = m_info.set(version_num, version_str);
+    if (changed)
     {
-        MXS_NOTICE("Server '%s' version: %s", name(), version_str.c_str());
+        auto type_string = m_info.type_string();
+        auto vrs = m_info.version_num();
+        MXS_NOTICE("'%s' sent version string '%s'. Detected type: '%s', version: %i.%i.%i.",
+                   name(), version_str.c_str(), type_string.c_str(), vrs.major, vrs.minor, vrs.patch);
     }
-
-    m_info.set(version_num, version_str);
 }
 
 json_t* Server::json_attributes() const
@@ -845,7 +836,7 @@ json_t* Server::to_json_data(const char* host) const
     return rval;
 }
 
-void Server::VersionInfo::set(uint64_t version, const std::string& version_str)
+bool Server::VersionInfo::set(uint64_t version, const std::string& version_str)
 {
     uint32_t major = version / 10000;
     uint32_t minor = (version - major * 10000) / 100;
@@ -871,17 +862,23 @@ void Server::VersionInfo::set(uint64_t version, const std::string& version_str)
         new_type = Type::MYSQL;     // Used for any unrecognized server types.
     }
 
+    bool changed = false;
     /* This only protects against concurrent writing which could result in garbled values. Reads are not
      * synchronized. Since writing is rare, this is an unlikely issue. Readers should be prepared to
      * sometimes get inconsistent values. */
     Guard lock(m_lock);
 
-    m_type = new_type;
-    m_version_num.total = version;
-    m_version_num.major = major;
-    m_version_num.minor = minor;
-    m_version_num.patch = patch;
-    careful_strcpy(m_version_str, MAX_VERSION_LEN, version_str);
+    if (new_type != m_type || version != m_version_num.total || version_str != m_version_str)
+    {
+        m_type = new_type;
+        m_version_num.total = version;
+        m_version_num.major = major;
+        m_version_num.minor = minor;
+        m_version_num.patch = patch;
+        careful_strcpy(m_version_str, MAX_VERSION_LEN, version_str);
+        changed = true;
+    }
+    return changed;
 }
 
 const Server::VersionInfo::Version& Server::VersionInfo::version_num() const
@@ -903,6 +900,34 @@ bool SERVER::VersionInfo::is_database() const
 {
     auto t = m_type;
     return t == Type::MARIADB || t == Type::XPAND || t == Type::MYSQL;
+}
+
+std::string SERVER::VersionInfo::type_string() const
+{
+    string type_str;
+    switch (m_type)
+    {
+    case Type::UNKNOWN:
+        type_str = "Unknown";
+        break;
+
+    case Type::MYSQL:
+        type_str = "MySQL";
+        break;
+
+    case Type::MARIADB:
+        type_str = "MariaDB";
+        break;
+
+    case Type::XPAND:
+        type_str = "Xpand";
+        break;
+
+    case Type::BLR:
+        type_str = "MaxScale Binlog Router";
+        break;
+    }
+    return type_str;
 }
 
 const SERVER::VersionInfo& Server::info() const
