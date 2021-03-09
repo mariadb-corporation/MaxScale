@@ -56,7 +56,7 @@ bool rpl_lag_is_ok(mxs::RWBackend* backend, int max_rlag)
 {
     auto rlag = backend->target()->replication_lag();
     return max_rlag == mxs::Target::RLAG_UNDEFINED
-           || (rlag != mxs::Target::RLAG_UNDEFINED && rlag <= max_rlag);
+           || (rlag != mxs::Target::RLAG_UNDEFINED && rlag < max_rlag);
 }
 
 bool gtid_pos_is_ok(mxs::RWBackend* backend, RWSplit::gtid gtid_pos)
