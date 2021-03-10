@@ -1146,15 +1146,9 @@ void MariaDBBackendConnection::error(DCB* event_dcb)
 
         if (getsockopt(m_dcb->fd(), SOL_SOCKET, SO_ERROR, &error, (socklen_t*) &len) == 0 && error != 0)
         {
-            const char* error_strz = mxs_strerror(errno);
-            if (dcb_state != DCB::State::POLLING)
-            {
-                MXS_ERROR("DCB in state %s got error '%s'.", mxs::to_string(dcb_state), error_strz);
-            }
-            else
-            {
-                MXS_ERROR("Error '%s' in session that is not ready for routing.", error_strz);
-            }
+            MXS_ERROR("Network error for session in state %s (%s): %d, %s",
+                      session_state_to_string(m_session->state()), mxs::to_string(dcb_state),
+                      error, mxs_strerror(error));
         }
     }
     else
@@ -1188,9 +1182,9 @@ void MariaDBBackendConnection::hangup(DCB* event_dcb)
         {
             if (error != 0 && session->state() != MXS_SESSION::State::STOPPING)
             {
-                MXS_ERROR("Hangup in session that is not ready for routing, "
-                          "Error reported is '%s'.",
-                          mxs_strerror(errno));
+                MXS_ERROR("Network hangup for session in state %s (%s): %d, %s",
+                          session_state_to_string(session->state()), mxs::to_string(m_dcb->state()),
+                          error, mxs_strerror(error));
             }
         }
     }
