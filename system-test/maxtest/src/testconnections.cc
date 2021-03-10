@@ -298,7 +298,7 @@ TestConnections::~TestConnections()
             stop_maxscale(i);
         }
 
-        if (maxscales->use_valgrind)
+        if (maxscales->use_valgrind())
         {
             sleep(15);      // sleep to let logs be written do disks
         }
@@ -978,7 +978,7 @@ int TestConnections::find_connected_slave1(int m)
 
 int TestConnections::check_maxscale_processes(int m, int expected)
 {
-    const char* ps_cmd = maxscales->use_valgrind ?
+    const char* ps_cmd = maxscales->use_valgrind() ?
         "ps ax | grep valgrind | grep maxscale | grep -v grep | wc -l" :
         "ps -C maxscale | grep maxscale | wc -l";
 
@@ -1590,15 +1590,15 @@ int TestConnections::call_mdbci(const char* options)
     read_env();
     if (repl)
     {
-        repl->read_basic_env(m_network_config);
+        repl->read_basic_env(m_network_config, repl->prefix());
     }
     if (galera)
     {
-        galera->read_basic_env(m_network_config);
+        galera->read_basic_env(m_network_config, galera->prefix());
     }
     if (maxscales)
     {
-        maxscales->read_basic_env(m_network_config);
+        maxscales->read_basic_env(m_network_config, maxscales->prefix());
     }
     return 0;
 }

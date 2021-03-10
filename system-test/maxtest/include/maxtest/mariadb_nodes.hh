@@ -121,16 +121,6 @@ public:
     char version_number[256][256];
 
     /**
-     * @brief connect open connections to all nodes
-     * @return 0  in case of success
-     */
-
-    /**
-     * @brief v51 true indicates that one backed is 5.1
-     */
-    bool v51;
-
-    /**
      * @brief List of blocked nodes
      */
     bool blocked[256];
@@ -562,7 +552,8 @@ protected:
     std::string m_test_dir; /**< path to test application */
 
 private:
-    bool m_use_ipv6 {false}; /**< Default to ipv6-addresses */
+    std::string m_prefix;           /**< Name of backend setup (e.g. 'repl' or 'galera') */
+    bool        m_use_ipv6 {false}; /**< Default to ipv6-addresses */
 
     bool check_master_node(MYSQL* conn);
     bool bad_slave_thread_status(MYSQL* conn, const char* field, int node);

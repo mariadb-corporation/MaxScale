@@ -169,9 +169,11 @@ public:
     /**
      * Read node settings such as IPs, sshkey, etc from network config contents.
      *
+     * @param nwconfig Network config values
+     * @param prefix Key prefix
      * @return Number of of nodes successfully read and created
      */
-    int read_basic_env(const mxt::NetworkConfig& nwconfig);
+    int read_basic_env(const mxt::NetworkConfig& nwconfig, const std::string& prefix);
 
     void write_env_vars();
 
@@ -180,7 +182,7 @@ public:
 protected:
     SharedData& m_shared;
 
-    Nodes(const std::string& prefix, SharedData* shared);
+    Nodes(SharedData* shared);
 
     const char* ip4(int i = 0) const;
     const char* ip6(int i = 0) const;
@@ -191,16 +193,12 @@ protected:
     const char* access_sudo(int i = 0) const;
     const char* sshkey(int i = 0) const;
 
-    const std::string& prefix() const;
-
     virtual bool setup();
 
     mxt::VMNode&       node(int i);
     const mxt::VMNode& node(int i) const;
 
 private:
-    std::string m_prefix;                   /**< Name of backend setup (e.g. 'repl' or 'galera') */
-
     std::vector<mxt::VMNode> m_vms;
 
     bool check_node_ssh(int node);

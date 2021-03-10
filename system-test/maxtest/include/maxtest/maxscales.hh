@@ -18,7 +18,7 @@ class MariaDB;
 class Maxscales : public Nodes
 {
 public:
-    static const int MAX_MAXSCALES = 256;
+    static const int N_MXS = 2;
 
     int N {0};
 
@@ -51,20 +51,9 @@ public:
     const std::string& prefix() const;
     const std::string& node_name(int i) const;
 
-    /**
-     * @brief rwsplit_port RWSplit service port
-     */
-    int rwsplit_port[MAX_MAXSCALES];
-
-    /**
-     * @brief readconn_master_port ReadConnection in master mode service port
-     */
-    int readconn_master_port[MAX_MAXSCALES] {};
-
-    /**
-     * @brief readconn_slave_port ReadConnection in slave mode service port
-     */
-    int readconn_slave_port[MAX_MAXSCALES] {};
+    int rwsplit_port[N_MXS] {-1};           /**< RWSplit port */
+    int readconn_master_port[N_MXS] {-1};   /**< ReadConnection in master mode port */
+    int readconn_slave_port[N_MXS] {-1};    /**< ReadConnection in slave mode port */
 
     /**
      * @brief Get port number of a MaxScale service
@@ -76,66 +65,20 @@ public:
      */
     int port(enum service type = RWSPLIT, int m = 0) const;
 
-    /**
-     * @brief binlog_port binlog router service port
-     */
-    int binlog_port[MAX_MAXSCALES] {};
+    MYSQL* conn_rwsplit[N_MXS] {nullptr};   /**< Connection to RWSplit */
+    MYSQL* conn_master[N_MXS] {nullptr};    /**< Connection to ReadConnection in master mode */
+    MYSQL* conn_slave[N_MXS] {nullptr};     /**< Connection to ReadConnection in slave mode */
 
-    /**
-     * @brief conn_rwsplit  MYSQL connection struct to RWSplit service
-     */
-    MYSQL* conn_rwsplit[MAX_MAXSCALES] {};
+    MYSQL* routers[N_MXS][3] {{nullptr}};   /**< conn_rwsplit, conn_master, conn_slave */
+    int    ports[N_MXS][3] {{-1}};          /**< rwsplit_port, readconn_master_port, readconn_slave_port */
 
-    /**
-     * @brief conn_master   MYSQL connection struct to ReadConnection in master mode service
-     */
-    MYSQL* conn_master[MAX_MAXSCALES] {};
-
-    /**
-     * @brief conn_slave MYSQL connection struct to ReadConnection in slave mode service
-     */
-    MYSQL* conn_slave[MAX_MAXSCALES] {};
-
-    /**
-     * @brief routers Array of 3 MYSQL handlers which contains copies of conn_rwsplit, conn_master, conn_slave
-     */
-    MYSQL* routers[MAX_MAXSCALES][3] {};
-
-    /**
-     * @brief ports of 3 int which contains copies of rwsplit_port, readconn_master_port, readconn_slave_port
-     */
-    int ports[MAX_MAXSCALES][3] {};
-
-    /**
-     * @brief maxscale_cnf full name of Maxscale configuration file
-     */
-    std::string maxscale_cnf[MAX_MAXSCALES];
-
-    /**
-     * @brief maxscale_log_dir name of log files directory
-     */
-    std::string maxscale_log_dir[MAX_MAXSCALES];
-
-    /**
-     * @brief maxscale_lbinog_dir name of binlog files (for binlog router) directory
-     */
-    std::string maxscale_binlog_dir[MAX_MAXSCALES];
-
-    /**
-     * @brief N_ports Default number of routers
-     */
-    int N_ports[MAX_MAXSCALES] {};
+    std::string maxscale_cnf[N_MXS];    /**< full name of Maxscale configuration file */
+    std::string maxscale_log_dir[N_MXS];/**< name of log files directory */
 
     bool ssl = false;
 
-    /**
-     * @brief   User name to access backend nodes
-     */
-    std::string user_name;
-    /**
-     * @brief   Password to access backend nodes
-     */
-    std::string password;
+    std::string user_name;  /**< User name to access backend nodes */
+    std::string password;   /**< Password to access backend nodes */
 
     /**
      * @brief ConnectMaxscale   Opens connections to RWSplit, ReadConn master and ReadConn slave Maxscale
@@ -263,59 +206,28 @@ public:
     }
 
     /**
-     * @brief CloseReadSlave Closes ReadConn slave connections stored in maxscales->conn_slave[0]
-     */
-    void close_readconn_slave(int m = 0)
-    {
-        mysql_close(conn_slave[m]);
-        conn_slave[m] = NULL;
-    }
-
-    /**
      * @brief restart_maxscale Issues 'service maxscale restart' command
      */
     int restart_maxscale(int m = 0);
-    int restart(int m = 0)
-    {
-        return restart_maxscale(m);
-    }
+    int restart(int m = 0);
 
     /**
-     * @brief alias for restart_maxscale
+     * Issues 'service maxscale start' command
      */
     int start_maxscale(int m = 0);
-
-    int start(int m = 0)
-    {
-        return start_maxscale(m);
-    }
+    int start(int m = 0);
 
     /**
      * @brief stop_maxscale Issues 'service maxscale stop' command
      */
     int stop_maxscale(int m = 0);
-    int stop(int m = 0)
-    {
-        return stop_maxscale(m);
-    }
+    int stop(int m = 0);
 
-    // Helper for stopping all maxscales
-    void stop_all()
-    {
-        std::vector<std::thread> thr;
+    /**
+     * Helper for stopping all maxscales
+     */
+    void stop_all();
 
-        for (int i = 0; i < N; i++)
-        {
-            thr.emplace_back([this, i]() {
-                                 stop(i);
-                             });
-        }
-
-        for (auto& a : thr)
-        {
-            a.join();
-        }
-    }
     /**
      * Execute a MaxCtrl command
      *
@@ -325,10 +237,7 @@ public:
      *
      * @return The exit code and output of MaxCtrl
      */
-    mxt::CmdResult maxctrl(const std::string& cmd, int m = 0, bool sudo = true)
-    {
-        return ssh_output("maxctrl " + cmd, m, sudo);
-    }
+    mxt::CmdResult maxctrl(const std::string& cmd, int m = 0, bool sudo = true);
 
     /**
      * @brief get_maxscale_memsize Gets size of the memory consumed by Maxscale process
@@ -358,24 +267,16 @@ public:
      */
     void wait_for_monitor(int intervals = 2, int m = 0);
 
-    /**
-     * @brief use_valrind if true Maxscale will be executed under Valgrind
-     */
-    bool use_valgrind {false};
-
-    /**
-     * @brief use_callgrind if true Maxscale will be executed under Valgrind with
-     * --callgrind option
-     */
-    bool use_callgrind {false};
-
-    /**
-     * @brief valgring_log_num Counter for Maxscale restarts to avoid Valgrind log overwriting
-     */
-    int valgring_log_num {0};
+    bool use_valgrind() const;
 
 private:
     bool m_use_ipv6 {false};    /**< Default to ipv6-addresses */
+
+    int  m_valgrind_log_num {0};    /**< Counter for Maxscale restarts to avoid Valgrind log overwriting */
+    bool m_use_valgrind {false};    /**< Run MaxScale under Valgrind? */
+    bool m_use_callgrind {false};   /**< Run MaxScale under Valgrind with --callgrind option */
+
+    std::string m_binlog_dir[N_MXS];    /**< Directory of binlog files (for binlog router) */
 };
 
 class TestConnections;
@@ -539,7 +440,7 @@ private:
     std::string m_rest_ip {"127.0.0.1"};
     std::string m_rest_port {"8989"};
 
-    mxt::CmdResult   curl_rest_api(const std::string& path);
-    TestLogger&      logger();
+    mxt::CmdResult curl_rest_api(const std::string& path);
+    TestLogger&    logger();
 };
 }
