@@ -116,3 +116,5 @@ EOL
   sudo pip install JayDeBeApi
 fi
 
+# Install a recent cmake in case the package manager installed an old version.
+$src_dir/install_cmake.sh

@@ -1,10 +1,10 @@
 #!/bin/bash
 
-# Do the real building work. This script is executed on build VM and
-# requires a working installation of CMake.
+# Do the real building work. This script is executed on build VM.
 
 # Build in a temp directory so we don't pollute cwd
 tmpdir=$(mktemp -d)
+scriptdir=$(dirname $(realpath $0))
 
 cd $tmpdir
 
@@ -72,7 +72,7 @@ then
   apt_cmd="sudo -E apt-get -q -o Dpkg::Options::=--force-confold \
        -o Dpkg::Options::=--force-confdef \
        -y --force-yes"
-  ${apt_cmd} install dpkg-dev git wget \
+  ${apt_cmd} install dpkg-dev git wget cmake \
        build-essential libssl-dev ncurses-dev bison flex \
        perl libtool tcl tcl-dev uuid \
        uuid-dev libsqlite3-dev liblzma-dev libpam0g-dev pkg-config \
@@ -126,7 +126,7 @@ then
         enable_power_tools="--enablerepo=powertools"
     fi
     sudo yum install -y --nogpgcheck ${enable_power_tools} \
-         gcc gcc-c++ ncurses-devel bison glibc-devel \
+         gcc gcc-c++ ncurses-devel bison glibc-devel cmake \
          libgcc perl make libtool openssl-devel libaio libaio-devel  \
          systemtap-sdt-devel rpm-sign \
          gnupg flex rpmdevtools git wget tcl tcl-devel openssl libuuid-devel xz-devel \
@@ -181,7 +181,7 @@ then
     sudo zypper -n refresh
     sudo zypper -n update
     sudo zypper -n remove gettext-runtime-mini
-    sudo zypper -n install gcc gcc-c++ ncurses-devel bison glibc-devel libgcc_s1 perl \
+    sudo zypper -n install gcc gcc-c++ cmake ncurses-devel bison glibc-devel libgcc_s1 perl \
          make libtool libopenssl-devel libaio libaio-devel flex \
          git wget tcl tcl-devel libuuid-devel \
          xz-devel sqlite3 sqlite3-devel pkg-config lua lua-devel \
@@ -216,46 +216,8 @@ verlt() {
     [ "$1" = "$2" ] && return 1 || verlte $1 $2
 }
 
-# cmake
-cmake_vrs_cmd="cmake --version"
-cmake_version_ok=0
-cmake_version_required="3.16.0"
-if command -v ${cmake_vrs_cmd} &> /dev/null ; then
-  cmake_version=`${cmake_vrs_cmd} | grep "cmake version" | awk '{ print $3 }'`
-  if verlt $cmake_version $cmake_version_required ; then
-    echo "Found CMake ${cmake_version}, which is too old."
-  else
-    cmake_version_ok=1
-    echo "Found CMake ${cmake_version}, which is recent enough."
-  fi
-else
-  echo "CMake not found"
-fi
-
-if [ $cmake_version_ok -eq 0 ] ; then
-
-    if is_arm
-    then
-        cmake_version="3.20.2"
-        cmake_filename="cmake-${cmake_version}-linux-aarch64.tar.gz"
-        wget https://github.com/Kitware/CMake/releases/download/v${cmake_version}/${cmake_filename}
-        sudo tar -axf ${cmake_filename} -C /usr/ --strip-components=1
-    else
-        cmake_filename="cmake-3.16.8-Linux-x86_64.tar.gz"
-        wget -q http://max-tst-01.mariadb.com/ci-repository/${cmake_filename} --no-check-certificate
-        if [ $? != 0 ] ; then
-            echo "CMake could not be downloaded from Maxscale build server, trying from cmake.org"
-            wget -q https://cmake.org/files/v3.16/${cmake_filename} --no-check-certificate
-        fi
-        sudo tar xzf ${cmake_filename} -C /usr/ --strip-components=1
-    fi
-
-  cmake_version=`${cmake_vrs_cmd} | grep "cmake version" | awk '{ print $3 }'`
-  if verlt $cmake_version $cmake_version_required ; then
-    echo "CMake installation failed"
-    exit 1
-  fi
-fi
+# Install a recent cmake in case the package manager installed an old version.
+$scriptdir/install_cmake.sh
 
 # TCL
 system_tcl_version=$(tclsh <<< 'puts [info patchlevel]')
