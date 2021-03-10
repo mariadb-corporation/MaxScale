@@ -171,9 +171,12 @@ int XpandCluster::start_replication()
                         // That's ok and can be ignored.
                         rv = 0;
                     }
-                    else if (error.find("addition is pending") != std::string::npos)
+                    else if (error.find("addition is pending") != std::string::npos
+                             || error.find("group change in progress") != std::string::npos)
                     {
                         // E.g. '[50180] Multiple nodes cannot be added when an existing addition is pending'
+                        // E.g. '[16388] Group change during GTM operation: group change in progress,
+                        //       try restarting transaction'
                         // Sleep and retry.
 
                         if (attempts < 5)
