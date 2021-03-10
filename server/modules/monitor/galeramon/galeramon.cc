@@ -201,11 +201,7 @@ void GaleraMonitor::update_server_status(MonitorServer* monitored_server)
     std::string server_string = monitored_server->server->info().version_string();
 
     /* Check if the the Galera FSM shows this node is joined to the cluster */
-    const char* cluster_member =
-        " SELECT LOWER(VARIABLE_NAME), VARIABLE_VALUE FROM ("
-        " SELECT * FROM information_schema.SESSION_STATUS"
-        " UNION"
-        " SELECT * FROM information_schema.SESSION_VARIABLES) AS t"
+    const char* where =
         " WHERE Variable_name IN"
         " ('wsrep_cluster_state_uuid',"
         " 'wsrep_cluster_size',"
@@ -216,125 +212,132 @@ void GaleraMonitor::update_server_status(MonitorServer* monitored_server)
         " 'wsrep_sst_donor_rejects_queries',"
         " 'wsrep_reject_queries')";
 
-    if (mxs_mysql_query(monitored_server->con, cluster_member) == 0
-        && (result = mysql_store_result(monitored_server->con)) != NULL)
+    GaleraNode info = {};
+
+    for (std::string cluster_member : {"SHOW STATUS", "SHOW VARIABLES"})
     {
-        if (mysql_field_count(monitored_server->con) < 2)
+        cluster_member += where;
+
+        if (mxs_mysql_query(monitored_server->con, cluster_member.c_str()) == 0
+            && (result = mysql_store_result(monitored_server->con)) != NULL)
         {
+            if (mysql_field_count(monitored_server->con) < 2)
+            {
+                mysql_free_result(result);
+                MXS_ERROR("Unexpected result for \"%s\". "
+                          "Expected 2 columns. MySQL Version: %s",
+                          cluster_member.c_str(),
+                          server_string.c_str());
+                return;
+            }
+            while ((row = mysql_fetch_row(result)))
+            {
+                if (strcasecmp(row[0], "wsrep_cluster_size") == 0)
+                {
+                    info.cluster_size = atoi(row[1]);
+                }
+
+                if (strcasecmp(row[0], "wsrep_local_index") == 0)
+                {
+                    char* endchar;
+                    long local_index = strtol(row[1], &endchar, 10);
+                    if (*endchar != '\0'
+                        || (errno == ERANGE && (local_index == LONG_MAX || local_index == LONG_MIN)))
+                    {
+                        if (warn_erange_on_local_index)
+                        {
+                            MXS_WARNING("Invalid 'wsrep_local_index' on server '%s': %s",
+                                        monitored_server->server->name(),
+                                        row[1]);
+                            warn_erange_on_local_index = false;
+                        }
+                        local_index = -1;
+                        /* Force joined = 0 */
+                        info.joined = 0;
+                    }
+
+                    info.local_index = local_index;
+                }
+
+                mxb_assert(row[0] && row[1]);
+
+                if (strcasecmp(row[0], "wsrep_local_state") == 0)
+                {
+                    if (strcmp(row[1], "4") == 0)
+                    {
+                        info.joined = 1;
+                    }
+                    /* Check if the node is a donor and is using xtrabackup, in this case it can stay alive */
+                    else if (strcmp(row[1], "2") == 0 && m_availableWhenDonor == 1
+                             && using_xtrabackup(monitored_server, server_string.c_str()))
+                    {
+                        info.joined = 1;
+                    }
+                    else
+                    {
+                        /* Force joined = 0 */
+                        info.joined = 0;
+                    }
+
+                    info.local_state = atoi(row[1]);
+                }
+
+                /* Node is in desync - lets take it offline */
+                if (strcasecmp(row[0], "wsrep_desync") == 0)
+                {
+                    if (config_truth_value(row[1]))
+                    {
+                        info.joined = 0;
+                    }
+                }
+
+                /* Node rejects queries - lets take it offline */
+                if (strcasecmp(row[0], "wsrep_reject_queries") == 0)
+                {
+                    if (strcasecmp(row[1], "ALL") == 0 || strcasecmp(row[1], "ALL_KILL") == 0)
+                    {
+                        info.joined = 0;
+                    }
+                }
+
+                /* Node rejects queries - lets take it offline */
+                if (strcasecmp(row[0], "wsrep_sst_donor_rejects_queries") == 0)
+                {
+                    if (config_truth_value(row[1]))
+                    {
+                        info.joined = 0;
+                    }
+                }
+
+                /* Node is not ready - lets take it offline */
+                if (strcasecmp(row[0], "wsrep_ready") == 0)
+                {
+                    if (!config_truth_value(row[1]))
+                    {
+                        info.joined = 0;
+                    }
+                }
+
+                if (strcasecmp(row[0], "wsrep_cluster_state_uuid") == 0 && row[1] && *row[1])
+                {
+                    info.cluster_uuid = row[1];
+                }
+            }
+
             mysql_free_result(result);
-            MXS_ERROR("Unexpected result for \"%s\". "
-                      "Expected 2 columns. MySQL Version: %s",
-                      cluster_member,
-                      server_string.c_str());
+        }
+        else
+        {
+            monitored_server->mon_report_query_error();
             return;
         }
-        GaleraNode info = {};
-        while ((row = mysql_fetch_row(result)))
-        {
-            if (strcmp(row[0], "wsrep_cluster_size") == 0)
-            {
-                info.cluster_size = atoi(row[1]);
-            }
-
-            if (strcmp(row[0], "wsrep_local_index") == 0)
-            {
-                char* endchar;
-                long local_index = strtol(row[1], &endchar, 10);
-                if (*endchar != '\0'
-                    || (errno == ERANGE && (local_index == LONG_MAX || local_index == LONG_MIN)))
-                {
-                    if (warn_erange_on_local_index)
-                    {
-                        MXS_WARNING("Invalid 'wsrep_local_index' on server '%s': %s",
-                                    monitored_server->server->name(),
-                                    row[1]);
-                        warn_erange_on_local_index = false;
-                    }
-                    local_index = -1;
-                    /* Force joined = 0 */
-                    info.joined = 0;
-                }
-
-                info.local_index = local_index;
-            }
-
-            mxb_assert(row[0] && row[1]);
-
-            if (strcmp(row[0], "wsrep_local_state") == 0)
-            {
-                if (strcmp(row[1], "4") == 0)
-                {
-                    info.joined = 1;
-                }
-                /* Check if the node is a donor and is using xtrabackup, in this case it can stay alive */
-                else if (strcmp(row[1], "2") == 0 && m_availableWhenDonor == 1
-                         && using_xtrabackup(monitored_server, server_string.c_str()))
-                {
-                    info.joined = 1;
-                }
-                else
-                {
-                    /* Force joined = 0 */
-                    info.joined = 0;
-                }
-
-                info.local_state = atoi(row[1]);
-            }
-
-            /* Node is in desync - lets take it offline */
-            if (strcmp(row[0], "wsrep_desync") == 0)
-            {
-                if (config_truth_value(row[1]))
-                {
-                    info.joined = 0;
-                }
-            }
-
-            /* Node rejects queries - lets take it offline */
-            if (strcmp(row[0], "wsrep_reject_queries") == 0)
-            {
-                if (strcasecmp(row[1], "ALL") == 0 || strcasecmp(row[1], "ALL_KILL") == 0)
-                {
-                    info.joined = 0;
-                }
-            }
-
-            /* Node rejects queries - lets take it offline */
-            if (strcmp(row[0], "wsrep_sst_donor_rejects_queries") == 0)
-            {
-                if (config_truth_value(row[1]))
-                {
-                    info.joined = 0;
-                }
-            }
-
-            /* Node is not ready - lets take it offline */
-            if (strcmp(row[0], "wsrep_ready") == 0)
-            {
-                if (!config_truth_value(row[1]))
-                {
-                    info.joined = 0;
-                }
-            }
-
-            if (strcmp(row[0], "wsrep_cluster_state_uuid") == 0 && row[1] && *row[1])
-            {
-                info.cluster_uuid = row[1];
-            }
-        }
-
-        mysql_free_result(result);
-
-        get_gtid(monitored_server, &info);
-        get_slave_status(monitored_server, &info);
-        monitored_server->node_id = info.joined ? info.local_index : -1;
-
-        m_info[monitored_server] = info;
     }
-    else
-    {
-        monitored_server->mon_report_query_error();
-    }
+
+    get_gtid(monitored_server, &info);
+    get_slave_status(monitored_server, &info);
+    monitored_server->node_id = info.joined ? info.local_index : -1;
+
+    m_info[monitored_server] = info;
 
     calculate_cluster();
 }
