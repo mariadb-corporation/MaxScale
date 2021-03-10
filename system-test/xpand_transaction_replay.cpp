@@ -164,6 +164,11 @@ MaxRest::Server get_current_server(TestConnections& test, MYSQL* pMysql)
 
     test.expect(row.size() == 1, "1 row expected, %d received.", (int)row.size());
 
+    if (row.size() != 1)
+    {
+        throw std::runtime_error(mysql_error(pMysql));
+    }
+
     string address = row[0];
 
     return dynamic_by_address[address];
@@ -172,6 +177,7 @@ MaxRest::Server get_current_server(TestConnections& test, MYSQL* pMysql)
 void test_transaction_replay(TestConnections& test, MYSQL* pMysql, const std::string& name, int node)
 {
     cout << "Beginning transaction..." << endl;
+
     test.try_query(pMysql, "BEGIN");
     test.try_query(pMysql, "SELECT * FROM test.xpand_tr");
 
@@ -236,6 +242,9 @@ void run_test(TestConnections& test)
     }
 
     node = node_by_address[server2.address];
+
+    // Sleep a short while to allow things to stabalize.
+    sleep(2);
 
     // SECOND TEST: Take down another node but than the one we are connected to.
     //              That will cause a  Xpand Group Change event.
