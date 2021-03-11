@@ -12,7 +12,8 @@
  */
 
 const mariadb = require('mariadb');
-const { MongoClient } = require('mongodb');
+const mongodb = require('mongodb')
+const MongoClient = mongodb.MongoClient;
 
 const assert = require('assert');
 
@@ -33,6 +34,8 @@ describe('MISCALLENOUS', function () {
     let client;
     let collection;
     const N = 20;
+
+    const valid_ids = [ "blah", 42, mongodb.ObjectID() ];
 
     before(async function () {
         // MariaDB
@@ -58,27 +61,29 @@ describe('MISCALLENOUS', function () {
 
     it('Can insert using client specified id', async function () {
         var o = { hello: "world"};
-        var result;
 
-        o._id = "blah";
-        result = await collection.insertOne(o);
-        assert.strictEqual(result.insertedCount, 1, "Should be able to insert a document.");
+        for (var i = 0; i < valid_ids.length; ++i)
+        {
+            var id = valid_ids[i];
 
-        o._id = 42;
-        result = await collection.insertOne(o);
-        assert.strictEqual(result.insertedCount, 1, "Should be able to insert a document.");
+            o._id = id;
+            var result = await collection.insertOne(o);
+            assert.strictEqual(result.insertedCount, 1, "Should be able to insert a document.");
+        }
+    });
 
-        o._id = 3.14;
-        result = await collection.insertOne(o);
-        assert.strictEqual(result.insertedCount, 1, "Should be able to insert a document.");
+    it('Can fetch using client specified id', async function () {
+        var query = {};
 
-        o._id = true;
-        result = await collection.insertOne(o);
-        assert.strictEqual(result.insertedCount, 1, "Should be able to insert a document.");
+        for (var i = 0; i < valid_ids.length; ++i)
+        {
+            var id = valid_ids[i];
 
-        o._id = null;
-        result = await collection.insertOne(o);
-        assert.strictEqual(result.insertedCount, 1, "Should be able to insert a document.");
+            query["_id"] = id;
+            var doc = await collection.findOne(query);
+            assert(doc)
+            assert.deepStrictEqual(doc["_id"], id);
+        }
     });
 
     after(function () {

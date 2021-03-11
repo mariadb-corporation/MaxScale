@@ -847,10 +847,6 @@ private:
 
         switch (element.type())
         {
-        case bsoncxx::type::k_double:
-            ss << element.get_double();
-            break;
-
         case bsoncxx::type::k_utf8:
             {
                 const auto& utf8 = element.get_utf8();
@@ -862,18 +858,6 @@ private:
             ss << "'" << element.get_oid().value.to_string() << "'";
             break;
 
-        case bsoncxx::type::k_bool:
-            ss << element.get_bool();
-            break;
-
-        case bsoncxx::type::k_date:
-            ss << element.get_date();
-            break;
-
-        case bsoncxx::type::k_null:
-            ss << "null";
-            break;
-
         case bsoncxx::type::k_int32:
             ss << element.get_int32();
             break;
@@ -882,18 +866,21 @@ private:
             ss << element.get_int64();
             break;
 
-        case bsoncxx::type::k_decimal128:
-            ss << element.get_decimal128().value.to_string();
-            break;
-
+            // By design not using 'default' so that if a new type is introduced,
+            // an explicit decision regarding what to do with it, will be needed.
         case bsoncxx::type::k_array:
         case bsoncxx::type::k_binary:
+        case bsoncxx::type::k_bool:
         case bsoncxx::type::k_code:
+        case bsoncxx::type::k_decimal128:
+        case bsoncxx::type::k_double:
         case bsoncxx::type::k_codewscope:
+        case bsoncxx::type::k_date:
         case bsoncxx::type::k_dbpointer:
         case bsoncxx::type::k_document:
         case bsoncxx::type::k_maxkey:
         case bsoncxx::type::k_minkey:
+        case bsoncxx::type::k_null:
         case bsoncxx::type::k_regex:
         case bsoncxx::type::k_symbol:
         case bsoncxx::type::k_timestamp:

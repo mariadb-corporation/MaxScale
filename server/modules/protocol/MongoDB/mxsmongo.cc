@@ -548,8 +548,9 @@ string get_comparison_condition(const bsoncxx::document::element& element)
     string condition;
 
     string field = static_cast<string>(element.key());
+    auto type = element.type();
 
-    if (element.type() == bsoncxx::type::k_document)
+    if (type == bsoncxx::type::k_document)
     {
         string op_and_value = get_comparison_op_and_value(element.get_document());
 
@@ -560,7 +561,19 @@ string get_comparison_condition(const bsoncxx::document::element& element)
     }
     else
     {
-        string value = element_to_value(element);
+        string value;
+
+        if (type == bsoncxx::type::k_oid && field == "_id")
+        {
+            // If the value is an Oid and the field is _id, then we assume that
+            // _id is an ObjectID like '{ $oid: "..." }'.
+            field += ".$oid";
+            value = "'" + element.get_oid().value.to_string() + "'";
+        }
+        else
+        {
+            value = element_to_value(element);
+        }
 
         condition = "( JSON_EXTRACT(doc, '$." + field + "') = " + value + ")";
     }
