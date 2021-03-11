@@ -365,7 +365,7 @@ const std::string& Maxscales::node_name(int i) const
 mxt::CmdResult Maxscales::maxctrl(const string& cmd, int m, bool sudo)
 {
     using CmdPriv = mxt::VMNode::CmdPriv;
-    return node(m).run_cmd_output(cmd, sudo ? CmdPriv::SUDO : CmdPriv::NORMAL);
+    return node(m).run_cmd_output("maxctrl " + cmd, sudo ? CmdPriv::SUDO : CmdPriv::NORMAL);
 }
 
 bool Maxscales::use_valgrind() const
