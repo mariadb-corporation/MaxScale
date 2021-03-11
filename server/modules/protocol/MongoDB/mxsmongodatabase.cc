@@ -414,7 +414,9 @@ public:
                                 m_mode = TABLE_CREATING;
 
                                 stringstream ss;
-                                ss << "CREATE TABLE " << table_name() << " (id TEXT, doc JSON)";
+                                ss << "CREATE TABLE "
+                                   << table_name()
+                                   << " (id TEXT NOT NULL UNIQUE, doc JSON)";
 
                                 send_downstream(ss.str());
                             }

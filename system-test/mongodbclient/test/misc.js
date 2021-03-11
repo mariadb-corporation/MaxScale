@@ -11,49 +11,31 @@
  * Public License.
  */
 
-const mariadb = require('mariadb');
-const mongodb = require('mongodb')
-const MongoClient = mongodb.MongoClient;
+const test = require('./mongotest');
 
-const assert = require('assert');
+const config = test.config;
 
-var host = process.env.maxscale_000_network;
-var mariadb_port = 4008;
-var mongodb_port = 4711;
-var user = 'maxskysql';
-var password = 'skysql';
+const mariadb = test.mariadb;
+const mongodb = test.mongodb;
+const assert = test.assert;
 
-before(async function () {
-    if (!process.env.maxscale_000_network) {
-        throw new Error("The environment variable 'maxscale_000_network' must be set.");
-    }
-});
 
 describe('MISCALLENOUS', function () {
     let conn;
     let client;
     let collection;
-    const N = 20;
 
     const valid_ids = [ "blah", 42, mongodb.ObjectID() ];
 
     before(async function () {
         // MariaDB
-        conn = await mariadb.createConnection({
-            host: host,
-            port: mariadb_port,
-            user: user,
-            password: password });
-
-        await conn.query("USE test");
-        await conn.query("DROP TABLE IF EXISTS mongo");
-        await conn.query("CREATE TABLE mongo (id TEXT, doc JSON)");
+        conn = await test.MariaDB.createConnection();
 
         // MxsMongo
-        var uri = "mongodb://" + host + ":" + mongodb_port;
+        client = await test.MxsMongo.createClient();
 
-        client = new MongoClient(uri, { useUnifiedTopology: true });
-        await client.connect();
+        // Ensure table will be autocreated.
+        await conn.query("DROP TABLE IF EXISTS test.mongo");
 
         const database = client.db("test");
         collection = database.collection("mongo");
@@ -83,6 +65,26 @@ describe('MISCALLENOUS', function () {
             var doc = await collection.findOne(query);
             assert(doc)
             assert.deepStrictEqual(doc["_id"], id);
+        }
+    });
+
+    it('Cannot insert many using same id', async function () {
+        var o = { hello: "world", _id: "4711" };
+
+        var result;
+
+        result = await collection.insertOne(o);
+        assert.strictEqual(result.insertedCount, 1, "Should be able to insert a document.");
+
+        try {
+            result = await collection.insertOne(o);
+            assert(false, "Exception should be thrown.");
+        }
+        catch (x) {
+            assert(x.writeErrors);
+            assert(x.writeErrors.length == 1);
+            assert(x.writeErrors[0].errmsg);
+            assert(x.writeErrors[0].errmsg.indexOf("Duplicate entry") == 0);
         }
     });
 
