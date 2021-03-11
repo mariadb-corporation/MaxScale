@@ -1,5 +1,7 @@
 # Default test timeout
 set(TEST_TIMEOUT 900)
+# Return code for skipped tests
+set(TEST_SKIP_RC 202)
 
 # Adds linebreaks to curly brackets in a variable.
 function(add_linebreaks source_var dest_var)
@@ -26,6 +28,7 @@ function(add_test_properties name labels)
   # Remove the LABELS-string from the list if it's there.
   list(REMOVE_ITEM labels "LABELS")
   set_property(TEST ${name} PROPERTY TIMEOUT ${TEST_TIMEOUT})
+  set_property(TEST ${name} PROPERTY SKIP_RETURN_CODE ${TEST_SKIP_RC})
   set_property(TEST ${name} APPEND PROPERTY LABELS ${labels})
 endfunction()
 

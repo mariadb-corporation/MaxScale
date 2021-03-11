@@ -50,6 +50,7 @@ const StringSet recognized_mdbci_labels =
 
 const int MDBCI_FAIL = 200;     // Exit code when failure caused by MDBCI non-zero exit
 const int BROKEN_VM_FAIL = 201; // Exit code when failure caused by broken VMs
+const int TEST_SKIPPED = 202;   // Exit code when skipping test. Should match value expected by cmake.
 }
 
 namespace maxscale
@@ -162,12 +163,12 @@ TestConnections::TestConnections(int argc, char* argv[])
 
     if (!read_cmdline_options(argc, argv))
     {
-        exit(0);
+        exit(TEST_SKIPPED);
     }
     if (maxscale::require_columnstore)
     {
         cout << "ColumnStore testing is not yet implemented, skipping test" << endl;
-        exit(0);
+        exit(TEST_SKIPPED);
     }
 
     set_template_and_labels();
@@ -250,7 +251,7 @@ TestConnections::TestConnections(int argc, char* argv[])
     if (!check_backend_versions())
     {
         tprintf("Skipping test.");
-        exit(0);
+        exit(TEST_SKIPPED);
     }
 
     if (m_init_maxscale)
