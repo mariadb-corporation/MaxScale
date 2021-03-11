@@ -1689,6 +1689,36 @@ This parameter was moved into the MaxScale core in MaxScale 2.6.0. The parameter
 can be configured for all routers that support the session command
 history. Currently only `readwritesplit` and `schemarouter` support it.
 
+### `idle_session_pool_time`
+
+Normally, MaxScale only pools backend connections when a session is closed
+(controlled by server settings *persistpoolmax* and *persistmaxtime*).
+Connections in the pool can then be attached to new sessions instead of creating
+new connections to backends. *idle_session_pool_time* allows MaxScale to pool backend
+connections also for running sessions, and only re-attach the connection when the
+session is doing a query. This effectively allows multiple sessions to share
+backends connections. This *pre-emptive pooling* only affects idle sessions.
+*idle_session_pool_time* is given in seconds, and defines the amount of time a
+session must be idle before its backend connections may be pooled. It defaults
+to -1, which means disabled.
+
+This feature has a significant drawback: when a backend connection is reused, it
+needs to be restored to a correct state. This means reauthenticating and
+replaying session commands. This can add a significant delay before the
+connection is actually ready for a query. If the session command history size
+exceeds the value of *max_sescmd_history*, pre-emptive pooling is disabled for
+the session.
+
+This feature is currently experimental. There are several situations where
+pooling needs to be disabled (temporarily or permanently) to avoid interfering
+with session state. MaxScale only detects the most obvious cases, e.g.
+transactions. When using pre-emptive pooling, avoid commands such as "LOCK
+TABLES" and "GET LOCK", and don't create or use temporary tables or prepared
+statements.
+
+This feature should only be used when minimizing the backend connection count is
+a priority, even at the cost of query delay and throughput.
+
 ## Server
 
 Server sections define the backend database servers MaxScale uses. A server is

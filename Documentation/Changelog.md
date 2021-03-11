@@ -8,6 +8,9 @@
 user account manager connections. Normal port is used if the extra-port
 connection fails due to too low *extra_max_connections*-setting on the backend.
 * The deprecated `required` and `disabled` values for the `ssl` parameter have been removed.
+* Backend connection multiplexing added. See
+[idle_session_pool_time](Getting-Started/Configuration-Guide.md#idle_session_pool_time)
+for more information.
 
 For more details, please refer to:
 * [MariaDB MaxScale 2.6.0 Release Notes](Release-Notes/MaxScale-2.6.0-Release-Notes.md)
