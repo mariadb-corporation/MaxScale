@@ -853,7 +853,6 @@ void MariaDBServer::update_server_version()
 {
     auto conn = con;
     auto srv = server;
-    mxs_mysql_update_server_version(srv, conn);
 
     m_capabilities = Capabilities();
     auto& info = srv->info();

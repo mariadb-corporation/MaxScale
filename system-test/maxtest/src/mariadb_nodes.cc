@@ -31,14 +31,6 @@ namespace
 {
 static bool g_require_gtid = false;
 
-const char setup_slave_no_pos[] =
-    "change master to MASTER_HOST='%s', "
-    "MASTER_USER='repl', "
-    "MASTER_PASSWORD='repl', "
-    "MASTER_LOG_FILE='mar-bin.000001', "
-    "MASTER_LOG_POS=4, "
-    "MASTER_PORT=%d";
-
 const char setup_slave[] =
     "change master to MASTER_HOST='%s', "
     "MASTER_USER='repl', "
@@ -63,12 +55,9 @@ void MariaDBCluster::require_gtid(bool value)
 MariaDBCluster::MariaDBCluster(SharedData* shared, const std::string& nwconf_prefix,
                                const std::string& cnf_server_prefix)
     : Nodes(shared)
-    , no_set_pos(false)
-    , cnf_server_name(cnf_server_prefix)
+    , m_cnf_server_name(cnf_server_prefix)
     , m_prefix(nwconf_prefix)
 {
-    memset(this->nodes, 0, sizeof(this->nodes));
-    memset(this->blocked, 0, sizeof(this->blocked));
     m_test_dir = test_dir;
 }
 
@@ -90,7 +79,7 @@ MariaDBCluster::~MariaDBCluster()
 {
     for (int i = 0; i < N; i++)
     {
-        if (blocked[i])
+        if (m_blocked[i])
         {
             unblock_node(i);
         }
@@ -192,30 +181,30 @@ void MariaDBCluster::read_env(const mxt::NetworkConfig& nwconfig)
 
             //reading sockets
             sprintf(env_name, "%s_%03d_socket", prefixc, i);
-            socket[i] = readenv(env_name, " ");
-            if (strcmp(socket[i].c_str(), " "))
+            m_socket[i] = readenv(env_name, " ");
+            if (strcmp(m_socket[i].c_str(), " "))
             {
-                socket_cmd[i] = "--socket=";
-                socket_cmd[i] += socket[i];
+                m_socket_cmd[i] = "--socket=";
+                m_socket_cmd[i] += m_socket[i];
             }
             else
             {
-                socket_cmd[i] = (char *) " ";
+                m_socket_cmd[i] = (char *) " ";
             }
             sprintf(env_name, "%s_%03d_socket_cmd", prefixc, i);
-            setenv(env_name, socket_cmd[i].c_str(), 1);
+            setenv(env_name, m_socket_cmd[i].c_str(), 1);
 
             // reading start_db_command
             sprintf(env_name, "%s_%03d_start_db_command", prefixc, i);
-            start_db_command[i] = readenv(env_name, (char *) "systemctl start mariadb || service mysql start");
+            m_start_db_command[i] = readenv(env_name, (char *) "systemctl start mariadb || service mysql start");
 
             // reading stop_db_command
             sprintf(env_name, "%s_%03d_stop_db_command", prefixc, i);
-            stop_db_command[i] = readenv(env_name, (char *) "systemctl stop mariadb || service mysql stop");
+            m_stop_db_command[i] = readenv(env_name, (char *) "systemctl stop mariadb || service mysql stop");
 
             // reading cleanup_db_command
             sprintf(env_name, "%s_%03d_cleanup_db_command", prefixc, i);
-            cleanup_db_command[i] = readenv(env_name, (char *) "rm -rf /var/lib/mysql/*; killall -9 mysqld");
+            m_cleanup_db_command[i] = readenv(env_name, (char *) "rm -rf /var/lib/mysql/*; killall -9 mysqld");
         }
     }
 }
@@ -304,12 +293,12 @@ void MariaDBCluster::change_master(int NewMaster, int OldMaster)
 
 int MariaDBCluster::stop_node(int node)
 {
-    return ssh_node(node, stop_db_command[node], true);
+    return ssh_node(node, m_stop_db_command[node], true);
 }
 
 int MariaDBCluster::start_node(int node, const char* param)
 {
-    string cmd = mxb::string_printf("%s %s", start_db_command[node].c_str(), param);
+    string cmd = mxb::string_printf("%s %s", m_start_db_command[node].c_str(), param);
     return ssh_node(node, cmd, true);
 }
 
@@ -351,7 +340,7 @@ int MariaDBCluster::stop_slaves()
 
 int MariaDBCluster::cleanup_db_node(int node)
 {
-    return ssh_node(node, cleanup_db_command[node], true);
+    return ssh_node(node, m_cleanup_db_command[node], true);
 }
 
 int MariaDBCluster::cleanup_db_nodes()
@@ -384,7 +373,7 @@ void MariaDBCluster::create_users(int node)
                user_name.c_str(),
                password.c_str(),
                access_homedir(0),
-               socket_cmd[0].c_str(),
+               m_socket_cmd[0].c_str(),
                type_string().c_str());
 }
 
@@ -518,7 +507,7 @@ int MariaDBCluster::block_node(int node)
     int local_result = 0;
     local_result += ssh_node_f(node, true, "%s", command.c_str());
 
-    blocked[node] = true;
+    m_blocked[node] = true;
     return local_result;
 }
 
@@ -530,7 +519,7 @@ int MariaDBCluster::unblock_node(int node)
     local_result += clean_iptables(node);
     local_result += ssh_node_f(node, true, "%s", command.c_str());
 
-    blocked[node] = false;
+    m_blocked[node] = false;
     return local_result;
 }
 
@@ -855,11 +844,6 @@ int MariaDBCluster::set_slave(MYSQL* conn, const char* master_host, int master_p
     char str[1024];
 
     sprintf(str, setup_slave, master_host, log_file, log_pos, master_port);
-    if (no_set_pos)
-    {
-        sprintf(str, setup_slave_no_pos, master_host, master_port);
-    }
-
     if (verbose())
     {
         printf("Setup slave SQL: %s\n", str);
@@ -1050,26 +1034,28 @@ int MariaDBCluster::get_version(int i)
             strcpy(version[i], res.output.c_str());
         }
     }
-    strcpy(version_number[i], version[i]);
-    char* str = strchr(version_number[i], '-');
+    char version_number[256] {0};
+    strcpy(version_number, version[i]);
+    char* str = strchr(version_number, '-');
     if (str)
     {
         str[0] = 0;
     }
-    strcpy(version_major[i], version_number[i]);
-    if (strstr(version_major[i], "5.") == version_major[i])
+    char version_major[256]{0};
+    strcpy(version_major, version_number);
+    if (strstr(version_major, "5.") == version_major)
     {
-        version_major[i][3] = 0;
+        version_major[3] = 0;
     }
-    if (strstr(version_major[i], "10.") == version_major[i])
+    if (strstr(version_major, "10.") == version_major)
     {
-        version_major[i][4] = 0;
+        version_major[4] = 0;
     }
 
     if (verbose())
     {
         printf("Node %s%d: %s\t %s \t %s\n",
-               prefix().c_str(), i, version[i], version_number[i], version_major[i]);
+               prefix().c_str(), i, version[i], version_number, version_major);
     }
     return local_result;
 }
@@ -1340,7 +1326,7 @@ int MariaDBCluster::prepare_server(int i)
             // Disable 'validate_password' plugin, searach for random temporal
             // password in the log and reseting passord to empty string
             ssh_node(i, "/usr/sbin/mysqld --initialize; sudo chown -R mysql:mysql /var/lib/mysql", true);
-            ssh_node(i, start_db_command[i], true);
+            ssh_node(i, m_start_db_command[i], true);
             auto res_temp_pw = ssh_output("cat /var/log/mysqld.log | grep \"temporary password\" | sed -n -e 's/^.*: //p'",
                                           i, true);
             rval = res_temp_pw.rc;
@@ -1348,8 +1334,8 @@ int MariaDBCluster::prepare_server(int i)
             ssh_node_f(i, true, "mysqladmin -uroot -p'%s' password '%s'", temp_pw, temp_pw);
             ssh_node_f(i, false,
                        "echo \"UNINSTALL PLUGIN validate_password\" | sudo mysql -uroot -p'%s'", temp_pw);
-            ssh_node(i, stop_db_command[i], true);
-            ssh_node(i, start_db_command[i], true);
+            ssh_node(i, m_stop_db_command[i], true);
+            ssh_node(i, m_start_db_command[i], true);
             ssh_node_f(i, true, "mysqladmin -uroot -p'%s' password ''", temp_pw);
         }
         else
@@ -1427,7 +1413,7 @@ std::string MariaDBCluster::cnf_servers()
     for (int i = 0; i < N; i++)
     {
         s += std::string("\\n[") +
-                cnf_server_name +
+                m_cnf_server_name +
                 std::to_string(i + 1) +
                 std::string("]\\ntype=server\\naddress=") +
                 std::string(ip_private(i)) +
@@ -1440,12 +1426,10 @@ std::string MariaDBCluster::cnf_servers()
 
 std::string MariaDBCluster::cnf_servers_line()
 {
-    std::string s = cnf_server_name + std::to_string(1);
+    std::string s = m_cnf_server_name + std::to_string(1);
     for (int i = 1; i < N; i++)
     {
-        s += std::string(",") +
-                cnf_server_name +
-                std::to_string(i + 1);
+        s += std::string(",") + m_cnf_server_name + std::to_string(i + 1);
     }
     return s;
 }
@@ -1553,4 +1537,9 @@ bool MariaDBCluster::check_ssl(int node)
 bool MariaDBCluster::using_ipv6() const
 {
     return m_use_ipv6;
+}
+
+const std::string& MariaDBCluster::cnf_srv_name() const
+{
+    return m_cnf_server_name;
 }

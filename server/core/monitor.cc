@@ -987,7 +987,7 @@ MonitorServer::ping_or_connect_to_db(const MonitorServer::ConnectionSettings& se
 
     auto dpwd = mxs::decrypt_password(passwd);
 
-    auto init_conn = [&pConn, &sett]() {
+    auto connect = [&pConn, &sett, &server, &uname, &dpwd](int port) {
             if (pConn)
             {
                 mysql_close(pConn);
@@ -998,6 +998,7 @@ MonitorServer::ping_or_connect_to_db(const MonitorServer::ConnectionSettings& se
             mysql_optionsv(pConn, MYSQL_OPT_WRITE_TIMEOUT, &sett.write_timeout);
             mysql_optionsv(pConn, MYSQL_PLUGIN_DIR, mxs::connector_plugindir());
             mysql_optionsv(pConn, MARIADB_OPT_MULTI_STATEMENTS, nullptr);
+            return mxs_mysql_real_connect(pConn, &server, port, uname.c_str(), dpwd.c_str()) != nullptr;
         };
 
     ConnectResult conn_result = ConnectResult::REFUSED;
@@ -1006,11 +1007,10 @@ MonitorServer::ping_or_connect_to_db(const MonitorServer::ConnectionSettings& se
     for (int i = 0; i < sett.connect_attempts && conn_result != ConnectResult::NEWCONN_OK; i++)
     {
         auto start = time(nullptr);
-        init_conn();
         if (extra_port > 0)
         {
             // Extra-port defined, try it first.
-            if (mxs_mysql_real_connect(pConn, &server, extra_port, uname.c_str(), dpwd.c_str()))
+            if (connect(extra_port))
             {
                 conn_result = ConnectResult::NEWCONN_OK;
             }
@@ -1021,8 +1021,7 @@ MonitorServer::ping_or_connect_to_db(const MonitorServer::ConnectionSettings& se
                 auto err = mysql_errno(pConn);
                 if (err == ER_CON_COUNT_ERROR || err == CR_CONNECTION_ERROR)
                 {
-                    init_conn();
-                    if (mxs_mysql_real_connect(pConn, &server, server.port(), uname.c_str(), dpwd.c_str()))
+                    if (connect(server.port()))
                     {
                         conn_result = ConnectResult::NEWCONN_OK;
                         MXS_WARNING("Could not connect with extra-port to '%s', using normal port.",
@@ -1031,7 +1030,7 @@ MonitorServer::ping_or_connect_to_db(const MonitorServer::ConnectionSettings& se
                 }
             }
         }
-        else if (mxs_mysql_real_connect(pConn, &server, server.port(), uname.c_str(), dpwd.c_str()))
+        else if (connect(server.port()))
         {
             conn_result = ConnectResult::NEWCONN_OK;
         }
@@ -1072,7 +1071,28 @@ MonitorServer::ping_or_connect_to_db(const MonitorServer::ConnectionSettings& se
 
 ConnectResult MonitorServer::ping_or_connect()
 {
-    return ping_or_connect_to_db(m_shared.conn_settings, *server, &con, &m_latest_error);
+    auto old_type = server->info().type();
+    auto connect = [this] {
+            return ping_or_connect_to_db(m_shared.conn_settings, *server, &con, &m_latest_error);
+        };
+
+    auto res = connect();
+    if (res == ConnectResult::NEWCONN_OK)
+    {
+        mxs_mysql_update_server_version(server, con);
+        if (server->info().type() != old_type)
+        {
+            /**
+             * The server type affects the init commands sent by mxs_mysql_real_connect.
+             * If server type changed, reconnect so that the correct commands are sent.
+             * This typically only happens during startup.
+             */
+            mysql_close(con);
+            con = nullptr;
+            res = connect();
+        }
+    }
+    return res;
 }
 
 static constexpr seconds variable_update_interval = 10min;

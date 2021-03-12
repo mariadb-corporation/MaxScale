@@ -217,8 +217,6 @@ void GaleraMonitor::update_server_status(MonitorServer* monitored_server)
     MYSQL_ROW row;
     MYSQL_RES* result;
 
-    /* get server version string */
-    mxs_mysql_update_server_version(monitored_server->server, monitored_server->con);
     std::string server_string = monitored_server->server->info().version_string();
 
     /* Check if the the Galera FSM shows this node is joined to the cluster */

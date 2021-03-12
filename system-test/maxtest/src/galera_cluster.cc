@@ -85,7 +85,7 @@ int GaleraCluster::start_galera()
     string str = mxb::string_printf("%s/galera_wait_until_ready.sh", m_test_dir.c_str());
     copy_to_node(0, str.c_str(), access_homedir(0));
 
-    ssh_node_f(0, true, "%s/galera_wait_until_ready.sh %s", access_homedir(0), socket_cmd[0].c_str());
+    ssh_node_f(0, true, "%s/galera_wait_until_ready.sh %s", access_homedir(0), m_socket_cmd[0].c_str());
 
     create_users(0);
     const char create_repl_user[] =

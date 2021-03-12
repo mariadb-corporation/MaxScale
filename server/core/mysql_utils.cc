@@ -268,7 +268,7 @@ void mxs_mysql_update_server_version(SERVER* dest, MYSQL* source)
     // This function should only be called for a live connection.
     const char* version_string = mysql_get_server_info(source);
     unsigned long version_num = mysql_get_server_version(source);
-    mxb_assert(version_string != NULL && version_num != 0);
+    mxb_assert(version_string && version_num != 0);
     dest->set_version(version_num, version_string);
 }
 
