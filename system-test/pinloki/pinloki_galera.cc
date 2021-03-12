@@ -50,8 +50,9 @@ void check_table(TestConnections& test, Connection& conn, int n)
 
 int main(int argc, char** argv)
 {
+    TestConnections::require_galera(true);
+    TestConnections::restart_galera(true);
     TestConnections test(argc, argv);
-    test.require_galera(true);
     test.galera->connect();
     auto galera_ids = test.galera->get_all_server_ids_str();
 
