@@ -104,6 +104,12 @@ inline int32_t get_zstring(const uint8_t* pBuffer, const char** pzString)
     return strlen(zString) + 1;
 }
 
+inline int32_t set_byte1(uint8_t* pBuffer, uint8_t val)
+{
+    *pBuffer = val;
+    return 1;
+}
+
 inline int32_t set_byte4(uint8_t* pBuffer, uint32_t val)
 {
     uint32_t le32 = htole32(val);

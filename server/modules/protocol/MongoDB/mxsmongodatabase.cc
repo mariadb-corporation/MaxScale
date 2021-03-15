@@ -104,7 +104,197 @@ protected:
         m_database.context().downstream().routeQuery(pRequest);
     }
 
-    pair<GWBUF*, uint8_t*> create_response(size_t size_of_documents, size_t nDocuments)
+    GWBUF* create_response(const bsoncxx::document::value& doc)
+    {
+        GWBUF* pResponse = nullptr;
+
+        switch (m_req.opcode())
+        {
+        case mxsmongo::Packet::QUERY:
+            pResponse = create_reply_response(doc);
+            break;
+
+        case mxsmongo::Packet::MSG:
+            pResponse = create_msg_response(doc);
+            break;
+
+        default:
+            mxb_assert(!true);
+        }
+
+        return pResponse;
+    }
+
+    GWBUF* translate_resultset(vector<string>& extractions, GWBUF* pMariadb_response)
+    {
+        bool is_msg_response = (m_req.opcode() == mxsmongo::Packet::MSG);
+
+        // msg response
+        bsoncxx::builder::basic::array firstBatch_builder;
+
+        // reply response
+        vector<bsoncxx::document::value> documents;
+        uint32_t size_of_documents = 0;
+
+        if (pMariadb_response)
+        {
+            uint8_t* pBuffer = GWBUF_DATA(pMariadb_response);
+
+            ComQueryResponse cqr(&pBuffer);
+
+            auto nFields = cqr.nFields();
+
+            // If there are no extractions, then we SELECTed the entire document and there should
+            // be just one field (the JSON document). Otherwise there should be as many fields
+            // (JSON_EXTRACT(doc, '$...')) as there are extractions.
+            mxb_assert((extractions.empty() && nFields == 1) || (extractions.size() == nFields));
+
+            vector<string> names;
+            vector<enum_field_types> types;
+
+            for (size_t i = 0; i < nFields; ++i)
+            {
+                // ... and then as many column definitions.
+                ComQueryResponse::ColumnDef column_def(&pBuffer);
+
+                names.push_back(column_def.name().to_string());
+                types.push_back(column_def.type());
+            }
+
+            // The there should be an EOF packet, which should be bypassed.
+            ComResponse eof(&pBuffer);
+            mxb_assert(eof.type() == ComResponse::EOF_PACKET);
+
+            // Then there will be an arbitrary number of rows. After all rows
+            // (of which there obviously may be 0), there will be an EOF packet.
+            int nRow = 0;
+            while (ComResponse(pBuffer).type() != ComResponse::EOF_PACKET)
+            {
+                ++nRow;
+
+                CQRTextResultsetRow row(&pBuffer, types); // Advances pBuffer
+
+                auto it = row.begin();
+
+                string json;
+
+                if (extractions.empty())
+                {
+                    const auto& value = *it++;
+                    mxb_assert(it == row.end());
+                    // The value is now a JSON object.
+                    json = value.as_string().to_string();
+                }
+                else
+                {
+                    auto jt = extractions.begin();
+
+                    bool first = true;
+                    json += "{";
+                    for (; it != row.end(); ++it, ++jt)
+                    {
+                        if (first)
+                        {
+                            first = false;
+                        }
+                        else
+                        {
+                            json += ", ";
+                        }
+
+                        const auto& value = *it;
+                        auto extraction = *jt;
+
+                        json += create_entry(extraction, value.as_string().to_string());
+                    }
+                    json += "}";
+                }
+
+                try
+                {
+                    auto doc = bsoncxx::from_json(json);
+
+                    if (is_msg_response)
+                    {
+                        firstBatch_builder.append(doc);
+                    }
+                    else
+                    {
+                        size_of_documents += doc.view().length();
+                        documents.push_back(doc);
+                    }
+                }
+                catch (const std::exception& x)
+                {
+                    MXS_ERROR("Could not convert object to JSON: %s", x.what());
+                    MXS_NOTICE("String: '%s'", json.c_str());
+                }
+            }
+        }
+
+        GWBUF* pResponse = nullptr;
+
+        if (is_msg_response)
+        {
+            bsoncxx::builder::basic::document cursor_builder;
+            cursor_builder.append(bsoncxx::builder::basic::kvp("firstBatch", firstBatch_builder.extract()));
+            cursor_builder.append(bsoncxx::builder::basic::kvp("partialResultsReturned", false));
+            cursor_builder.append(bsoncxx::builder::basic::kvp("id", int64_t(0)));
+            cursor_builder.append(bsoncxx::builder::basic::kvp("ns", get_table(mxsmongo::keys::FIND)));
+
+            bsoncxx::builder::basic::document msg_builder;
+            msg_builder.append(bsoncxx::builder::basic::kvp("cursor", cursor_builder.extract()));
+            msg_builder.append(bsoncxx::builder::basic::kvp("ok", int32_t(1)));
+
+            pResponse = create_msg_response(msg_builder.extract());
+        }
+        else
+        {
+            pResponse = create_reply_response(size_of_documents, documents);
+        }
+
+        return pResponse;
+    }
+
+    void add_error(bsoncxx::builder::basic::document& builder, const ComERR& err)
+    {
+        MXS_WARNING("Mongo request to backend failed: (%d), %s", err.code(), err.message().c_str());
+
+        bsoncxx::builder::basic::document mariadb_builder;
+
+        mariadb_builder.append(bsoncxx::builder::basic::kvp("code", err.code()));
+        mariadb_builder.append(bsoncxx::builder::basic::kvp("state", err.state()));
+        mariadb_builder.append(bsoncxx::builder::basic::kvp("message", err.message()));
+
+        builder.append(bsoncxx::builder::basic::kvp("mariadb", mariadb_builder.extract()));
+
+        // TODO: Map MariaDB errors to something sensible from
+        // TODO: https://github.com/mongodb/mongo/blob/master/src/mongo/base/error_codes.yml
+
+        bsoncxx::builder::basic::array array_builder;
+
+        for (int64_t i = 0; i < 1; ++i) // TODO: With multiple updates/deletes object this must change.
+        {
+            bsoncxx::builder::basic::document error_builder;
+
+            error_builder.append(bsoncxx::builder::basic::kvp("index", i));
+            int32_t code = mxsmongo::error::from_mariadb_code(err.code());
+            error_builder.append(bsoncxx::builder::basic::kvp("code", code));
+            error_builder.append(bsoncxx::builder::basic::kvp("errmsg", err.message()));
+
+            array_builder.append(error_builder.extract());
+        }
+
+        builder.append(bsoncxx::builder::basic::kvp("writeErrors", array_builder.extract()));
+    }
+
+    mxsmongo::Database&     m_database;
+    GWBUF*                  m_pRequest;
+    mxsmongo::Packet        m_req;
+    bsoncxx::document::view m_doc;
+
+private:
+    pair<GWBUF*, uint8_t*> create_reply_response_buffer(size_t size_of_documents, size_t nDocuments)
     {
         // TODO: In the following is assumed that whatever is returned will
         // TODO: fit into a Mongo packet.
@@ -136,12 +326,12 @@ protected:
         return make_pair(pResponse, pData);
     }
 
-    GWBUF* create_response(size_t size_of_documents, const vector<bsoncxx::document::value>& documents)
+    GWBUF* create_reply_response(size_t size_of_documents, const vector<bsoncxx::document::value>& documents)
     {
         GWBUF* pResponse;
         uint8_t* pData;
 
-        tie(pResponse, pData) = create_response(size_of_documents, documents.size());
+        tie(pResponse, pData) = create_reply_response_buffer(size_of_documents, documents.size());
 
         for (const auto& doc : documents)
         {
@@ -155,9 +345,9 @@ protected:
         return pResponse;
     }
 
-    GWBUF* create_response(const bsoncxx::document::value& doc)
+    GWBUF* create_reply_response(const bsoncxx::document::value& doc)
     {
-        MXS_NOTICE("RESPONSE: %s", bsoncxx::to_json(doc).c_str());
+        MXS_NOTICE("REPLY_RESPONSE: %s", bsoncxx::to_json(doc).c_str());
 
         auto doc_view = doc.view();
         size_t doc_len = doc_view.length();
@@ -165,108 +355,43 @@ protected:
         GWBUF* pResponse;
         uint8_t* pData;
 
-        tie(pResponse, pData) = create_response(doc_len, 1);
+        tie(pResponse, pData) = create_reply_response_buffer(doc_len, 1);
 
         memcpy(pData, doc_view.data(), doc_view.length());
 
         return pResponse;
     }
 
-    GWBUF* translate_resultset(vector<string>& extractions, GWBUF& mariadb_response)
+    GWBUF* create_msg_response(const bsoncxx::document::value& doc)
     {
-        bsoncxx::builder::basic::document builder;
+        MXS_NOTICE("MSG_RESPONSE: %s", bsoncxx::to_json(doc).c_str());
 
-        uint8_t* pBuffer = GWBUF_DATA(&mariadb_response);
+        uint32_t flag_bits = 0;
+        uint8_t kind = 0;
+        uint32_t doc_length = doc.view().length();
+        uint32_t checksum = 0;
 
-        ComQueryResponse cqr(&pBuffer);
+        size_t response_size = MXSMONGO_HEADER_LEN
+            + sizeof(flag_bits) + sizeof(kind) + doc_length; // + sizeof(checksum);
 
-        auto nFields = cqr.nFields();
+        GWBUF* pResponse = gwbuf_alloc(response_size);
 
-        // If there are no extractions, then we SELECTed the entire document and there should
-        // be just one field (the JSON document). Otherwise there should be as many fields
-        // (JSON_EXTRACT(doc, '$...')) as there are extractions.
-        mxb_assert((extractions.empty() && nFields == 1) || (extractions.size() == nFields));
+        auto* pRes_hdr = reinterpret_cast<mongoc_rpc_header_t*>(GWBUF_DATA(pResponse));
+        pRes_hdr->msg_len = response_size;
+        pRes_hdr->request_id = m_database.context().next_request_id();
+        pRes_hdr->response_to = m_req.request_id();
+        pRes_hdr->opcode = MONGOC_OPCODE_MSG;
 
-        vector<string> names;
-        vector<enum_field_types> types;
+        uint8_t* pData = GWBUF_DATA(pResponse) + MXSMONGO_HEADER_LEN;
 
-        for (size_t i = 0; i < nFields; ++i)
-        {
-            // ... and then as many column definitions.
-            ComQueryResponse::ColumnDef column_def(&pBuffer);
+        pData += mxsmongo::set_byte4(pData, flag_bits);
 
-            names.push_back(column_def.name().to_string());
-            types.push_back(column_def.type());
-        }
+        pData += mxsmongo::set_byte1(pData, kind);
+        memcpy(pData, doc.view().data(), doc_length);
+        pData += doc_length;
+        //pData += mxsmongo::set_byte4(pData, checksum);
 
-        // The there should be an EOF packet, which should be bypassed.
-        ComResponse eof(&pBuffer);
-        mxb_assert(eof.type() == ComResponse::EOF_PACKET);
-
-        vector<bsoncxx::document::value> documents;
-        uint32_t size_of_documents = 0;
-
-        // Then there will be an arbitrary number of rows. After all rows
-        // (of which there obviously may be 0), there will be an EOF packet.
-        int nRow = 0;
-        while (ComResponse(pBuffer).type() != ComResponse::EOF_PACKET)
-        {
-            ++nRow;
-
-            CQRTextResultsetRow row(&pBuffer, types); // Advances pBuffer
-
-            auto it = row.begin();
-
-            string json;
-
-            if (extractions.empty())
-            {
-                const auto& value = *it++;
-                mxb_assert(it == row.end());
-                // The value is now a JSON object.
-                json = value.as_string().to_string();
-            }
-            else
-            {
-                auto jt = extractions.begin();
-
-                bool first = true;
-                json += "{";
-                for (; it != row.end(); ++it, ++jt)
-                {
-                    if (first)
-                    {
-                        first = false;
-                    }
-                    else
-                    {
-                        json += ", ";
-                    }
-
-                    const auto& value = *it;
-                    auto extraction = *jt;
-
-                    json += create_entry(extraction, value.as_string().to_string());
-                }
-                json += "}";
-            }
-
-            try
-            {
-                auto doc = bsoncxx::from_json(json);
-
-                size_of_documents += doc.view().length();
-
-                documents.push_back(doc);
-            }
-            catch (const std::exception& x)
-            {
-                MXS_ERROR("Could not convert object to JSON: %s", x.what());
-                MXS_NOTICE("String: '%s'", json.c_str());
-            }
-        }
-
-        return create_response(size_of_documents, documents);
+        return pResponse;
     }
 
     string create_leaf_entry(const string& extraction, const std::string& value)
@@ -315,43 +440,6 @@ protected:
 
         return entry;
     }
-
-    void add_error(bsoncxx::builder::basic::document& builder, const ComERR& err)
-    {
-        MXS_WARNING("Mongo request to backend failed: (%d), %s", err.code(), err.message().c_str());
-
-        bsoncxx::builder::basic::document mariadb_builder;
-
-        mariadb_builder.append(bsoncxx::builder::basic::kvp("code", err.code()));
-        mariadb_builder.append(bsoncxx::builder::basic::kvp("state", err.state()));
-        mariadb_builder.append(bsoncxx::builder::basic::kvp("message", err.message()));
-
-        builder.append(bsoncxx::builder::basic::kvp("mariadb", mariadb_builder.extract()));
-
-        // TODO: Map MariaDB errors to something sensible from
-        // TODO: https://github.com/mongodb/mongo/blob/master/src/mongo/base/error_codes.yml
-
-        bsoncxx::builder::basic::array array_builder;
-
-        for (int64_t i = 0; i < 1; ++i) // TODO: With multiple updates/deletes object this must change.
-        {
-            bsoncxx::builder::basic::document error_builder;
-
-            error_builder.append(bsoncxx::builder::basic::kvp("index", i));
-            int32_t code = mxsmongo::error::from_mariadb_code(err.code());
-            error_builder.append(bsoncxx::builder::basic::kvp("code", code));
-            error_builder.append(bsoncxx::builder::basic::kvp("errmsg", err.message()));
-
-            array_builder.append(error_builder.extract());
-        }
-
-        builder.append(bsoncxx::builder::basic::kvp("writeErrors", array_builder.extract()));
-    }
-
-    mxsmongo::Database&     m_database;
-    GWBUF*                  m_pRequest;
-    mxsmongo::Packet        m_req;
-    bsoncxx::document::view m_doc;
 };
 
 namespace
@@ -730,10 +818,7 @@ public:
 
                 if (code == ER_NO_SUCH_TABLE)
                 {
-                    vector<bsoncxx::document::value> documents;
-                    uint32_t size_of_documents = 0;
-
-                    pResponse = create_response(size_of_documents, documents);
+                    pResponse = translate_resultset(m_extractions, nullptr);
                 }
                 else
                 {
@@ -751,7 +836,7 @@ public:
 
         default:
             // Must be a result set.
-            pResponse = translate_resultset(m_extractions, mariadb_response);
+            pResponse = translate_resultset(m_extractions, &mariadb_response);
         }
 
         *ppResponse = pResponse;
