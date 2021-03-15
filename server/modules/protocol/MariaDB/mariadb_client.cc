@@ -2540,36 +2540,46 @@ MariaDBClientConnection::clientReply(GWBUF* buffer, maxscale::ReplyRoute& down, 
         }
     }
 
-    if (reply.is_complete())
+    if (m_command == MXS_COM_BINLOG_DUMP)
     {
-        --m_num_responses;
-        mxb_assert(m_num_responses >= 0);
+        // A COM_BINLOG_DUMP is treated as an endless result. Stop counting the expected responses as the data
+        // isn't in the normal result format we expect it to be in. The protocol could go into a more special
+        // mode to bypass all processing but this alone cuts out most of it.
+    }
+    else
+    {
+        if (reply.is_complete())
+        {
+            --m_num_responses;
+            mxb_assert(m_num_responses >= 0);
+        }
+
+        if (reply.is_ok() && m_session->service->config()->session_track_trx_state)
+        {
+            parse_and_set_trx_state(reply);
+        }
+
+        if (m_track_pooling_status && !m_pooling_permanent_disable)
+        {
+            // TODO: Configurable? Also, must be many other situations where backend conns should not be
+            // runtime-pooled.
+            if (m_session_data->history.size() > m_max_sescmd_history)
+            {
+                m_pooling_permanent_disable = true;
+                m_session->set_can_pool_backends(false);
+            }
+            else
+            {
+                bool reply_complete = reply.is_complete();
+                bool waiting_response = m_num_responses > 0;
+                // Trx status detection is likely lacking.
+                bool trx_on = m_session_data->is_trx_active() && !m_session_data->is_trx_ending();
+                bool pooling_ok = reply_complete && !waiting_response && !trx_on;
+                m_session->set_can_pool_backends(pooling_ok);
+            }
+        }
     }
 
-    if (reply.is_ok() && m_session->service->config()->session_track_trx_state)
-    {
-        parse_and_set_trx_state(reply);
-    }
-
-    if (m_track_pooling_status && !m_pooling_permanent_disable)
-    {
-        // TODO: Configurable? Also, must be many other situations where backend conns should not be runtime-
-        // pooled.
-        if (m_session_data->history.size() > m_max_sescmd_history)
-        {
-            m_pooling_permanent_disable = true;
-            m_session->set_can_pool_backends(false);
-        }
-        else
-        {
-            bool reply_complete = reply.is_complete();
-            bool waiting_response = m_num_responses > 0;
-            // Trx status detection is likely lacking.
-            bool trx_on = m_session_data->is_trx_active() && !m_session_data->is_trx_ending();
-            bool pooling_ok = reply_complete && !waiting_response && !trx_on;
-            m_session->set_can_pool_backends(pooling_ok);
-        }
-    }
     return write(buffer);
 }
 
