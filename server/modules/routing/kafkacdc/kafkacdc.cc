@@ -77,18 +77,16 @@ public:
         m_producer->flush(m_timeout);
     }
 
-    static SRowEventHandler create(const std::string& broker,
-                                   const std::string& topic,
-                                   bool enable_idempotence)
+    static SRowEventHandler create(const KafkaCDC::Config& config)
     {
         std::string err;
         SRowEventHandler rval;
 
-        if (auto cnf = create_config(broker, enable_idempotence))
+        if (auto cnf = create_config(config))
         {
             if (auto producer = RdKafka::Producer::create(cnf.get(), err))
             {
-                rval.reset(new KafkaEventHandler(SProducer(producer), broker, topic));
+                rval.reset(new KafkaEventHandler(SProducer(producer), config));
             }
             else
             {
@@ -103,7 +101,7 @@ public:
     {
         gtid_pos_t rval;
 
-        if (auto cnf = create_config(m_broker, false))
+        if (auto cnf = create_config(m_config))
         {
             std::string err;
 
@@ -111,12 +109,12 @@ public:
             {
                 int64_t high = RdKafka::Topic::OFFSET_INVALID;
                 int64_t low = RdKafka::Topic::OFFSET_INVALID;
-                auto rc = consumer->query_watermark_offsets(m_topic, 0, &low, &high, m_timeout);
+                auto rc = consumer->query_watermark_offsets(m_config.topic, 0, &low, &high, m_timeout);
 
                 if (high != RdKafka::Topic::OFFSET_INVALID && high > 0)
                 {
                     std::vector<RdKafka::TopicPartition*> partitions;
-                    partitions.push_back(RdKafka::TopicPartition::create(m_topic, 0, high - 1));
+                    partitions.push_back(RdKafka::TopicPartition::create(m_config.topic, 0, high - 1));
                     consumer->assign(partitions);
                     auto msg = consumer->consume(m_timeout);
 
@@ -253,16 +251,14 @@ public:
     }
 
 private:
-    std::string m_key;
-    std::string m_broker;
-    std::string m_topic;
-    SProducer   m_producer;
-    json_t*     m_obj;
-    int         m_timeout = 10000;
+    std::string             m_key;
+    const KafkaCDC::Config& m_config;
+    SProducer               m_producer;
+    json_t*                 m_obj;
+    int                     m_timeout = 10000;
 
-    KafkaEventHandler(SProducer producer, const std::string& broker, const std::string& topic)
-        : m_broker(broker)
-        , m_topic(topic)
+    KafkaEventHandler(SProducer producer, const KafkaCDC::Config& config)
+        : m_config(config)
         , m_producer(std::move(producer))
     {
     }
@@ -285,7 +281,7 @@ private:
         do
         {
             err = m_producer->produce(
-                m_topic, RdKafka::Topic::PARTITION_UA, RdKafka::Producer::RK_MSG_FREE,
+                m_config.topic, RdKafka::Topic::PARTITION_UA, RdKafka::Producer::RK_MSG_FREE,
                 json, strlen(json), key, keylen, 0, nullptr);
 
             if (err == RdKafka::ERR__QUEUE_FULL)
@@ -304,7 +300,7 @@ private:
         return err != RdKafka::ERR_NO_ERROR;
     }
 
-    static std::unique_ptr<RdKafka::Conf> create_config(const std::string& broker, bool enable_idempotence)
+    static std::unique_ptr<RdKafka::Conf> create_config(const KafkaCDC::Config& config)
     {
         constexpr const auto OK = RdKafka::Conf::ConfResult::CONF_OK;
         std::string err;
@@ -317,7 +313,7 @@ private:
                 MXS_ERROR("Failed to set Kafka event logger: %s", err.c_str());
                 cnf.reset();
             }
-            else if (cnf->set("bootstrap.servers", broker, err) != OK)
+            else if (cnf->set("bootstrap.servers", config.bootstrap_servers, err) != OK)
             {
                 MXS_ERROR("Failed to set `bootstrap.servers`: %s", err.c_str());
                 cnf.reset();
@@ -327,7 +323,7 @@ private:
                 MXS_ERROR("Failed to set `group.id`: %s", err.c_str());
                 cnf.reset();
             }
-            else if (enable_idempotence
+            else if (config.enable_idempotence
                      && (cnf->set("enable.idempotence", "true", err) != OK
                          || cnf->set("message.send.max.retries", "10000000", err) != OK))
             {
@@ -378,9 +374,7 @@ bool KafkaCDC::post_configure()
 std::unique_ptr<cdc::Replicator> KafkaCDC::create_replicator(const Config& config, SERVICE* service)
 {
     std::unique_ptr<cdc::Replicator> rval;
-    if (auto handler = KafkaEventHandler::create(config.bootstrap_servers,
-                                                 config.topic,
-                                                 config.enable_idempotence))
+    if (auto handler = KafkaEventHandler::create(config))
     {
         cdc::Config cnf;
         cnf.service = service;
