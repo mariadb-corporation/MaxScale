@@ -49,6 +49,22 @@ static cfg::ParamBool s_cooperative_replication(
     &s_spec, "cooperative_replication", "Cooperate with other instances replicating from the same cluster",
     false);
 
+static cfg::ParamBool s_kafka_ssl(
+    &s_spec, "kafka_ssl", "Enable SSL for Kafka connections",
+    false);
+
+static cfg::ParamPath s_kafka_ssl_ca(
+    &s_spec, "kafka_ssl_ca", "SSL Certificate Authority file in PEM format",
+    cfg::ParamPath::R, "");
+
+static cfg::ParamPath s_kafka_ssl_cert(
+    &s_spec, "kafka_ssl_cert", "SSL public certificate file in PEM format",
+    cfg::ParamPath::R, "");
+
+static cfg::ParamPath s_kafka_ssl_key(
+    &s_spec, "kafka_ssl_key", "SSL private key file in PEM format",
+    cfg::ParamPath::R, "");
+
 // Never used
 class KafkaCDCSession : public mxs::RouterSession
 {
@@ -74,6 +90,11 @@ public:
         std::string gtid;
         int64_t     server_id;
         bool        cooperative_replication;
+
+        bool        ssl;
+        std::string ssl_ca;
+        std::string ssl_key;
+        std::string ssl_cert;
 
     private:
         KafkaCDC* m_router;

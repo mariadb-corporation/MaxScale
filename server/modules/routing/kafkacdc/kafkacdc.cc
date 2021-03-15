@@ -330,6 +330,32 @@ private:
                 MXS_ERROR("Failed to enable idempotent producer: %s", err.c_str());
                 cnf.reset();
             }
+            else if (config.ssl)
+            {
+                if (cnf->set("security.protocol", "ssl", err) != OK)
+                {
+                    MXS_ERROR("Failed to set `security.protocol`: %s", err.c_str());
+                    cnf.reset();
+                }
+                else if (!config.ssl_ca.empty()
+                         && cnf->set("ssl.ca.location", config.ssl_ca, err) != OK)
+                {
+                    MXS_ERROR("Failed to set CA certificate: %s", err.c_str());
+                    cnf.reset();
+                }
+                else if (!config.ssl_cert.empty()
+                         && cnf->set("ssl.certificate.location", config.ssl_cert, err) != OK)
+                {
+                    MXS_ERROR("Failed to set public certificate: %s", err.c_str());
+                    cnf.reset();
+                }
+                else if (!config.ssl_key.empty()
+                         && cnf->set("ssl.key.location", config.ssl_key, err) != OK)
+                {
+                    MXS_ERROR("Failed to set private key: %s", err.c_str());
+                    cnf.reset();
+                }
+            }
         }
 
         return cnf;
@@ -348,6 +374,10 @@ KafkaCDC::Config::Config(const std::string& name, KafkaCDC* router)
     add_native(&Config::gtid, &s_gtid);
     add_native(&Config::server_id, &s_server_id);
     add_native(&Config::cooperative_replication, &s_cooperative_replication);
+    add_native(&Config::ssl, &s_kafka_ssl);
+    add_native(&Config::ssl_ca, &s_kafka_ssl_ca);
+    add_native(&Config::ssl_cert, &s_kafka_ssl_cert);
+    add_native(&Config::ssl_key, &s_kafka_ssl_key);
 }
 
 bool KafkaCDC::Config::post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params)
