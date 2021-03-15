@@ -156,55 +156,47 @@ void MariaDBCluster::close_connections()
 
 void MariaDBCluster::read_env(const mxt::NetworkConfig& nwconfig)
 {
-    char env_name[64];
+    auto prefixc = m_prefix.c_str();
+
+    string key_user = mxb::string_printf("%s_user", prefixc);
+    user_name = envvar_get_set(key_user.c_str(), "skysql");
+
+    string key_pw = mxb::string_printf("%s_password", prefixc);
+    password = envvar_get_set(key_pw.c_str(), "skysql");
+
+    string key_ssl = mxb::string_printf("%s_ssl", prefixc);
+    ssl = readenv_bool(key_ssl.c_str(), false);
 
     read_basic_env(nwconfig, m_prefix);
     N = Nodes::n_nodes();
 
-    auto prefixc = prefix().c_str();
-    sprintf(env_name, "%s_user", prefixc);
-    user_name = readenv(env_name, "skysql");
-
-    sprintf(env_name, "%s_password", prefixc);
-    password = readenv(env_name, "skysql");
-
-    sprintf(env_name, "%s_ssl", prefixc);
-    ssl = readenv_bool(env_name, false);
+    const string space = " ";
+    const char start_db_def[] = "systemctl start mariadb || service mysql start";
+    const char stop_db_def[] = "systemctl stop mariadb || service mysql stop";
+    const char clean_db_def[] = "rm -rf /var/lib/mysql/*; killall -9 mysqld";
 
     if ((N > 0) && (N < 255))
     {
         for (int i = 0; i < N; i++)
         {
-            // reading ports
-            sprintf(env_name, "%s_%03d_port", prefixc, i);
-            port[i] = readenv_int(env_name, 3306);
+            string key_port = mxb::string_printf("%s_%03d_port", prefixc, i);
+            port[i] = readenv_int(key_port.c_str(), 3306);
 
-            //reading sockets
-            sprintf(env_name, "%s_%03d_socket", prefixc, i);
-            m_socket[i] = readenv(env_name, " ");
-            if (strcmp(m_socket[i].c_str(), " "))
-            {
-                m_socket_cmd[i] = "--socket=";
-                m_socket_cmd[i] += m_socket[i];
-            }
-            else
-            {
-                m_socket_cmd[i] = (char *) " ";
-            }
-            sprintf(env_name, "%s_%03d_socket_cmd", prefixc, i);
-            setenv(env_name, m_socket_cmd[i].c_str(), 1);
+            string key_socket = mxb::string_printf("%s_%03d_socket", prefixc, i);
+            string val_socket = envvar_get_set(key_socket.c_str(), "%s", space.c_str());
+            m_socket_cmd[i] = (val_socket != space) ? ("--socket=" + val_socket) : space;
 
-            // reading start_db_command
-            sprintf(env_name, "%s_%03d_start_db_command", prefixc, i);
-            m_start_db_command[i] = readenv(env_name, (char *) "systemctl start mariadb || service mysql start");
+            string key_socket_cmd = mxb::string_printf("%s_%03d_socket_cmd", prefixc, i);
+            setenv(key_socket_cmd.c_str(), m_socket_cmd[i].c_str(), 1);
 
-            // reading stop_db_command
-            sprintf(env_name, "%s_%03d_stop_db_command", prefixc, i);
-            m_stop_db_command[i] = readenv(env_name, (char *) "systemctl stop mariadb || service mysql stop");
+            string key_start_db_cmd = mxb::string_printf("%s_%03d_start_db_command", prefixc, i);
+            m_start_db_command[i] = envvar_get_set(key_start_db_cmd.c_str(), start_db_def);
 
-            // reading cleanup_db_command
-            sprintf(env_name, "%s_%03d_cleanup_db_command", prefixc, i);
-            m_cleanup_db_command[i] = readenv(env_name, (char *) "rm -rf /var/lib/mysql/*; killall -9 mysqld");
+            string key_stop_db_cmd = mxb::string_printf("%s_%03d_stop_db_command", prefixc, i);
+            m_stop_db_command[i] = envvar_get_set(key_stop_db_cmd.c_str(), stop_db_def);
+
+            string key_clear_db_cmd = mxb::string_printf("%s_%03d_cleanup_db_command", prefixc, i);
+            m_cleanup_db_command[i] = envvar_get_set(key_clear_db_cmd.c_str(), clean_db_def);
         }
     }
 }

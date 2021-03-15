@@ -60,30 +60,28 @@ bool Maxscales::setup(const mxt::NetworkConfig& nwconfig)
 
 int Maxscales::read_env(const mxt::NetworkConfig& nwconfig)
 {
-    char env_name[64];
+    auto prefixc = my_prefix.c_str();
+    string key_user = mxb::string_printf("%s_user", prefixc);
+    user_name = envvar_get_set(key_user.c_str(), "skysql");
+
+    string key_pw = mxb::string_printf("%s_password", prefixc);
+    password = envvar_get_set(key_pw.c_str(), "skysql");
 
     read_basic_env(nwconfig, my_prefix);
     N = Nodes::n_nodes();
-
-    auto prefixc = my_prefix.c_str();
-    sprintf(env_name, "%s_user", prefixc);
-    user_name = readenv(env_name, "skysql");
-
-    sprintf(env_name, "%s_password", prefixc);
-    password = readenv(env_name, "skysql");
 
     if ((N > 0) && (N < 255))
     {
         for (int i = 0; i < N; i++)
         {
-            sprintf(env_name, "%s_%03d_cnf", prefixc, i);
-            maxscale_cnf[i] = readenv(env_name, "/etc/maxscale.cnf");
+            string key_cnf = mxb::string_printf("%s_%03d_cnf", prefixc, i);
+            maxscale_cnf[i] = envvar_get_set(key_cnf.c_str(), "/etc/maxscale.cnf");
 
-            sprintf(env_name, "%s_%03d_log_dir", prefixc, i);
-            maxscale_log_dir[i] = readenv(env_name, "/var/log/maxscale/");
+            string key_log_dir = mxb::string_printf("%s_%03d_log_dir", prefixc, i);
+            maxscale_log_dir[i] = envvar_get_set(key_log_dir.c_str(), "/var/log/maxscale/");
 
-            sprintf(env_name, "%s_%03d_binlog_dir", prefixc, i);
-            m_binlog_dir[i] = readenv(env_name, "/var/lib/maxscale/Binlog_Service/");
+            string key_binlog_dir = mxb::string_printf("%s_%03d_binlog_dir", prefixc, i);
+            m_binlog_dir[i] = envvar_get_set(key_binlog_dir.c_str(), "/var/lib/maxscale/Binlog_Service/");
 
             rwsplit_port[i] = 4006;
             readconn_master_port[i] = 4008;
