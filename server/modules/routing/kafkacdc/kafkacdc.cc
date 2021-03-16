@@ -20,6 +20,24 @@
 namespace
 {
 
+std::string to_string(SaslMech mech)
+{
+    switch (mech)
+    {
+    case PLAIN:
+        return "PLAIN";
+
+    case SCRAM_SHA_256:
+        return "SCRAM-SHA-256";
+
+    case SCRAM_SHA_512:
+        return "SCRAM-SHA-512";
+    }
+
+    mxb_assert(!true);
+    return "";
+}
+
 const char* roweventtype_to_string(RowEvent type)
 {
     switch (type)
@@ -356,6 +374,30 @@ private:
                     cnf.reset();
                 }
             }
+
+            if (!config.sasl_user.empty() && !config.sasl_password.empty())
+            {
+                if (cnf->set("security.protocol", config.ssl ? "sasl_ssl" : "sasl_plaintext", err) != OK)
+                {
+                    MXS_ERROR("Failed to set `security.protocol`: %s", err.c_str());
+                    cnf.reset();
+                }
+                else if (cnf->set("sasl.mechanism", to_string(config.sasl_mechanism), err) != OK)
+                {
+                    MXS_ERROR("Failed to set `sasl.mechanism`: %s", err.c_str());
+                    cnf.reset();
+                }
+                else if (cnf->set("sasl.username", config.sasl_user, err) != OK)
+                {
+                    MXS_ERROR("Failed to set `sasl.username`: %s", err.c_str());
+                    cnf.reset();
+                }
+                else if (cnf->set("sasl.password", config.sasl_password, err) != OK)
+                {
+                    MXS_ERROR("Failed to set `sasl.password`: %s", err.c_str());
+                    cnf.reset();
+                }
+            }
         }
 
         return cnf;
@@ -378,6 +420,9 @@ KafkaCDC::Config::Config(const std::string& name, KafkaCDC* router)
     add_native(&Config::ssl_ca, &s_kafka_ssl_ca);
     add_native(&Config::ssl_cert, &s_kafka_ssl_cert);
     add_native(&Config::ssl_key, &s_kafka_ssl_key);
+    add_native(&Config::sasl_user, &s_kafka_sasl_user);
+    add_native(&Config::sasl_password, &s_kafka_sasl_password);
+    add_native(&Config::sasl_mechanism, &s_kafka_sasl_mechanism);
 }
 
 bool KafkaCDC::Config::post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params)

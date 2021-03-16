@@ -65,6 +65,30 @@ static cfg::ParamPath s_kafka_ssl_key(
     &s_spec, "kafka_ssl_key", "SSL private key file in PEM format",
     cfg::ParamPath::R, "");
 
+static cfg::ParamString s_kafka_sasl_user(
+    &s_spec, "kafka_sasl_user", "SASL username used for authentication",
+    "");
+
+static cfg::ParamString s_kafka_sasl_password(
+    &s_spec, "kafka_sasl_password", "SASL password for the user",
+    "");
+
+enum SaslMech
+{
+    PLAIN,
+    SCRAM_SHA_256,
+    SCRAM_SHA_512,
+};
+
+static cfg::ParamEnum<SaslMech> s_kafka_sasl_mechanism(
+    &s_spec, "kafka_sasl_mechanism", "SASL mechanism to use",
+{
+    {PLAIN, "PLAIN"},
+    {SCRAM_SHA_256, "SCRAM-SHA-256"},
+    {SCRAM_SHA_512, "SCRAM-SHA-512"},
+},
+    PLAIN);
+
 // Never used
 class KafkaCDCSession : public mxs::RouterSession
 {
@@ -95,6 +119,10 @@ public:
         std::string ssl_ca;
         std::string ssl_key;
         std::string ssl_cert;
+
+        std::string sasl_user;
+        std::string sasl_password;
+        SaslMech    sasl_mechanism;
 
     private:
         KafkaCDC* m_router;
