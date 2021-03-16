@@ -776,6 +776,7 @@ enum set_type_t
     SET_TYPE_NAMES,
     SET_TYPE_PASSWORD,
     SET_TYPE_ROLE,
+    SET_TYPE_DEFAULT_ROLE,
     SET_TYPE_UNKNOWN
 };
 
@@ -828,6 +829,32 @@ set_type_t get_set_type(const char* s)
                 {
                     // YES it was!
                     rv = SET_TYPE_NAMES;
+                }
+            }
+            else if (s - token == 7)    // Might be "default"
+            {
+                if (strncasecmp(token, "default", 7) == 0)
+                {
+                    // YES it was!
+                    while (isspace(*s))
+                    {
+                        ++s;
+                    }
+
+                    token = s;
+
+                    while (!isspace(*s) && (*s != 0) && (*s != '='))
+                    {
+                        ++s;
+                    }
+
+                    if (s - token == 4) // Might be "role"
+                    {
+                        if (strncasecmp(token, "role", 4) == 0)
+                        {
+                            rv = SET_TYPE_DEFAULT_ROLE;
+                        }
+                    }
                 }
             }
             else if (s - token == 8)    // Might be "password
@@ -999,6 +1026,10 @@ static uint32_t resolve_query_type(parsing_info_t* pi, THD* thd)
             switch (get_set_type(pi->pi_query_plain_str))
             {
             case SET_TYPE_PASSWORD:
+                type |= QUERY_TYPE_WRITE;
+                break;
+
+            case SET_TYPE_DEFAULT_ROLE:
                 type |= QUERY_TYPE_WRITE;
                 break;
 

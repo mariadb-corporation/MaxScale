@@ -4107,7 +4107,8 @@ typedef enum mxs_reset
 typedef enum mxs_set
 {
     MXS_SET_VARIABLES,
-    MXS_SET_TRANSACTION
+    MXS_SET_TRANSACTION,
+    MXS_SET_DEFAULT_ROLE,
 } mxs_set_t;
 
 typedef enum mxs_show

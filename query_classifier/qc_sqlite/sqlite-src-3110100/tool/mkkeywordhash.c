@@ -432,6 +432,9 @@ static Keyword aKeywordTable[] = {
   { "REVOKE",           "TK_REVOKE",       ALWAYS                 },
 #endif
   { "RIGHT",            "TK_JOIN_KW",      ALWAYS                 },
+#ifdef MAXSCALE
+  { "ROLE",             "TK_ROLE",         ALWAYS                 },
+#endif
   { "ROLLBACK",         "TK_ROLLBACK",     ALWAYS                 },
 #ifdef MAXSCALE
   { "ROLLUP",           "TK_ROLLUP",       ALWAYS                 },
