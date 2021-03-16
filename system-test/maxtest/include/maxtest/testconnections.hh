@@ -338,15 +338,6 @@ public:
     bool test_bad_config(int m, const std::string& config);
 
     /**
-     * @brief Process a template configuration file
-     *
-     * @param config_file Config file template path
-     * @param dest Destination file name for actual configuration file
-     */
-    void process_template(int m, const std::string& config_file,
-                          const char* dest = "/etc/maxscale.cnf");
-
-    /**
      * Execute a MaxCtrl command
      *
      * @param cmd  Command to execute, without the `maxctrl` part
@@ -493,6 +484,7 @@ private:
     bool check_create_vm_dir();
     void read_vms_info();
     bool run_shell_command(const std::string& cmd, const std::string& errmsg = "");
+    bool process_template(int m, const std::string& config_file_path, const char* dest = "/etc/maxscale.cnf");
 
     /**
      * @brief timeout_thread Thread which terminates test application after 'timeout' milliseconds
