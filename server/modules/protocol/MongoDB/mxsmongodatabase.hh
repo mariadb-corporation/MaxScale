@@ -17,6 +17,7 @@
 #include <memory>
 #include <maxscale/target.hh>
 #include "mxsmongo.hh"
+#include "mxsmongocommand.hh"
 
 class Config;
 
@@ -26,7 +27,7 @@ namespace mxsmongo
 class Database
 {
 public:
-    class Command;
+    using Command = mxsmongo::CommandX;
 
     enum State
     {

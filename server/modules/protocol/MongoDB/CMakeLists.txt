@@ -11,6 +11,7 @@ add_library(mongodbclient SHARED
   clientconnection.cc
   config.cc
   mxsmongo.cc
+  mxsmongocommand.cc
   mxsmongodatabase.cc
   mongodbclient.cc
   protocolmodule.cc
