@@ -63,6 +63,24 @@ public:
 // https://docs.mongodb.com/manual/reference/command/replSetGetConfig/
 
 // https://docs.mongodb.com/manual/reference/command/replSetGetStatus/
+class ReplSetGetStatus : public mxsmongo::Command
+{
+public:
+    using mxsmongo::Command::Command;
+
+    GWBUF* execute() override
+    {
+        bsoncxx::builder::basic::document builder;
+
+        builder.append(bsoncxx::builder::basic::kvp("ok", 0));
+        builder.append(bsoncxx::builder::basic::kvp("errmsg", "not running with --replSet"));
+        builder.append(bsoncxx::builder::basic::kvp("code", (int32_t)error::Code::NO_REPLICATION_ENABLED));
+        builder.append(bsoncxx::builder::basic::kvp("codeName", "NoReplicationEnabled"));
+
+        return create_response(builder.extract());
+    }
+};
+
 
 // https://docs.mongodb.com/manual/reference/command/replSetInitiate/
 

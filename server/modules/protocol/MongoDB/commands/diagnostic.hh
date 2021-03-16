@@ -74,6 +74,29 @@ public:
 // https://docs.mongodb.com/manual/reference/command/features/
 
 // https://docs.mongodb.com/manual/reference/command/getCmdLineOpts/
+class GetCmdLineOpts : public mxsmongo::Command
+{
+public:
+    using mxsmongo::Command::Command;
+
+    GWBUF* execute() override
+    {
+        bsoncxx::builder::basic::document builder;
+
+        bsoncxx::builder::basic::array argv_builder;
+        argv_builder.append("maxscale");
+
+        bsoncxx::builder::basic::array parsed_builder;
+
+        builder.append(bsoncxx::builder::basic::kvp("argv", argv_builder.extract()));
+        builder.append(bsoncxx::builder::basic::kvp("parsed", parsed_builder.extract()));
+        builder.append(bsoncxx::builder::basic::kvp("ok", 1));
+
+        return create_response(builder.extract());
+    }
+};
+
+
 
 // https://docs.mongodb.com/manual/reference/command/getLog/
 class GetLog : public mxsmongo::Command

@@ -36,7 +36,7 @@
 #include "commands/sessions.hh"
 //#include "commands/administration.hh"
 #include "commands/diagnostic.hh"
-//#include "commands/free_monitoring.hh"
+#include "commands/free_monitoring.hh"
 //#include "commands/system_events_auditing.hh"
 
 using namespace std;
@@ -95,15 +95,18 @@ struct ThisUnit
 {
     CreatorsByName creators_by_name =
     {
-        { mxb::tolower(mxsmongo::key::BUILDINFO),   &create_command<command::BuildInfo> },
-        { mxb::tolower(mxsmongo::key::DELETE),      &create_command<command::Delete> },
-        { mxb::tolower(mxsmongo::key::ENDSESSIONS), &create_command<command::EndSessions> },
-        { mxb::tolower(mxsmongo::key::FIND),        &create_command<command::Find> },
-        { mxb::tolower(mxsmongo::key::GETLOG),      &create_command<command::GetLog> },
-        { mxb::tolower(mxsmongo::key::INSERT),      &create_command<command::Insert> },
-        { mxb::tolower(mxsmongo::key::ISMASTER),    &create_command<command::IsMaster> },
-        { mxb::tolower(mxsmongo::key::UPDATE),      &create_command<command::Update> },
-        { mxb::tolower(mxsmongo::key::WHATSMYURI),  &create_command<command::WhatsMyUri> },
+        { mxb::tolower(key::BUILDINFO),               &create_command<command::BuildInfo> },
+        { mxb::tolower(key::DELETE),                  &create_command<command::Delete> },
+        { mxb::tolower(key::ENDSESSIONS),             &create_command<command::EndSessions> },
+        { mxb::tolower(key::FIND),                    &create_command<command::Find> },
+        { mxb::tolower(key::GETLOG),                  &create_command<command::GetLog> },
+        { mxb::tolower(key::GETCMDLINEOPTS),          &create_command<command::GetCmdLineOpts> },
+        { mxb::tolower(key::GETFREEMONITORINGSTATUS), &create_command<command::GetFreeMonitoringStatus> },
+        { mxb::tolower(key::INSERT),                  &create_command<command::Insert> },
+        { mxb::tolower(key::ISMASTER),                &create_command<command::IsMaster> },
+        { mxb::tolower(key::UPDATE),                  &create_command<command::Update> },
+        { mxb::tolower(key::REPLSETGETSTATUS),        &create_command<command::ReplSetGetStatus> },
+        { mxb::tolower(key::WHATSMYURI),              &create_command<command::WhatsMyUri> },
     };
 } this_unit;
 

@@ -24,6 +24,22 @@ namespace command
 {
 
 // https://docs.mongodb.com/manual/reference/command/getFreeMonitoringStatus/
+class GetFreeMonitoringStatus : public mxsmongo::Command
+{
+public:
+    using mxsmongo::Command::Command;
+
+    GWBUF* execute() override
+    {
+        bsoncxx::builder::basic::document builder;
+
+        builder.append(bsoncxx::builder::basic::kvp("state", "undecided"));
+        builder.append(bsoncxx::builder::basic::kvp("ok", 1));
+
+        return create_response(builder.extract());
+    }
+};
+
 
 // https://docs.mongodb.com/manual/reference/command/setFreeMonitoring/
 

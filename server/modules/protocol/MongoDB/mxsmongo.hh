@@ -136,9 +136,10 @@ enum Code
 {
     // TODO: Add more
 
-    OK              = 0,
-    FAILED_TO_PARSE = 9,
-    COMMAND_FAILED  = 125
+    OK                     = 0,
+    FAILED_TO_PARSE        = 9,
+    NO_REPLICATION_ENABLED = 76,
+    COMMAND_FAILED         = 125
 };
 
 Code from_mariadb_code(int code);
@@ -148,26 +149,29 @@ Code from_mariadb_code(int code);
 namespace key
 {
 
-const char BUILDINFO[]   = "buildInfo";
-const char DELETE[]      = "delete";
-const char DELETES[]     = "deletes";
-const char DOCUMENTS[]   = "documents";
-const char ENDSESSIONS[] = "endSessions";
-const char FILTER[]      = "filter";
-const char FIND[]        = "find";
-const char GETLOG[]      = "getLog";
-const char INSERT[]      = "insert";
-const char ISMASTER[]    = "isMaster";
-const char LIMIT[]       = "limit";
-const char MULTI[]       = "multi";
-const char PROJECTION[]  = "projection";
-const char Q[]           = "q";
-const char SKIP[]        = "skip";
-const char SORT[]        = "sort";
-const char U[]           = "u";
-const char UPDATE[]      = "update";
-const char UPDATES[]     = "updates";
-const char WHATSMYURI[]  = "whatsmyuri";
+const char BUILDINFO[]               = "buildInfo";
+const char DELETE[]                  = "delete";
+const char DELETES[]                 = "deletes";
+const char DOCUMENTS[]               = "documents";
+const char ENDSESSIONS[]             = "endSessions";
+const char FILTER[]                  = "filter";
+const char FIND[]                    = "find";
+const char GETCMDLINEOPTS[]          = "getCmdLineOpts";
+const char GETFREEMONITORINGSTATUS[] = "getFreeMonitoringStatus";
+const char GETLOG[]                  = "getLog";
+const char INSERT[]                  = "insert";
+const char ISMASTER[]                = "isMaster";
+const char LIMIT[]                   = "limit";
+const char MULTI[]                   = "multi";
+const char PROJECTION[]              = "projection";
+const char Q[]                       = "q";
+const char REPLSETGETSTATUS[]        = "replSetGetStatus";
+const char SKIP[]                    = "skip";
+const char SORT[]                    = "sort";
+const char U[]                       = "u";
+const char UPDATE[]                  = "update";
+const char UPDATES[]                 = "updates";
+const char WHATSMYURI[]              = "whatsmyuri";
 
 };
 
