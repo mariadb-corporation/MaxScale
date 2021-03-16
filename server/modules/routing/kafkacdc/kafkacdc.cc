@@ -318,89 +318,63 @@ private:
         return err != RdKafka::ERR_NO_ERROR;
     }
 
-    static std::unique_ptr<RdKafka::Conf> create_config(const KafkaCDC::Config& config)
+    static std::unique_ptr<RdKafka::Conf> create_config(const std::map<std::string, std::string>& values)
     {
-        constexpr const auto OK = RdKafka::Conf::ConfResult::CONF_OK;
+        constexpr auto OK = RdKafka::Conf::ConfResult::CONF_OK;
         std::string err;
         std::unique_ptr<RdKafka::Conf> cnf(RdKafka::Conf::create(RdKafka::Conf::CONF_GLOBAL));
 
-        if (cnf)
+        for (const auto& kv : values)
         {
-            if (cnf->set("event_cb", &kafka_logger, err) != OK)
+            if (!kv.second.empty()      // Skipping empty values here makes the value assignment code simpler
+                && cnf->set(kv.first, kv.second, err) != OK)
             {
-                MXS_ERROR("Failed to set Kafka event logger: %s", err.c_str());
+                MXS_ERROR("Failed to set `%s`: %s", kv.first.c_str(), err.c_str());
                 cnf.reset();
-            }
-            else if (cnf->set("bootstrap.servers", config.bootstrap_servers, err) != OK)
-            {
-                MXS_ERROR("Failed to set `bootstrap.servers`: %s", err.c_str());
-                cnf.reset();
-            }
-            else if (cnf->set("group.id", "maxscale-kafkacdc", err) != OK)
-            {
-                MXS_ERROR("Failed to set `group.id`: %s", err.c_str());
-                cnf.reset();
-            }
-            else if (config.enable_idempotence
-                     && (cnf->set("enable.idempotence", "true", err) != OK
-                         || cnf->set("message.send.max.retries", "10000000", err) != OK))
-            {
-                MXS_ERROR("Failed to enable idempotent producer: %s", err.c_str());
-                cnf.reset();
-            }
-            else if (config.ssl)
-            {
-                if (cnf->set("security.protocol", "ssl", err) != OK)
-                {
-                    MXS_ERROR("Failed to set `security.protocol`: %s", err.c_str());
-                    cnf.reset();
-                }
-                else if (!config.ssl_ca.empty()
-                         && cnf->set("ssl.ca.location", config.ssl_ca, err) != OK)
-                {
-                    MXS_ERROR("Failed to set CA certificate: %s", err.c_str());
-                    cnf.reset();
-                }
-                else if (!config.ssl_cert.empty()
-                         && cnf->set("ssl.certificate.location", config.ssl_cert, err) != OK)
-                {
-                    MXS_ERROR("Failed to set public certificate: %s", err.c_str());
-                    cnf.reset();
-                }
-                else if (!config.ssl_key.empty()
-                         && cnf->set("ssl.key.location", config.ssl_key, err) != OK)
-                {
-                    MXS_ERROR("Failed to set private key: %s", err.c_str());
-                    cnf.reset();
-                }
-            }
-
-            if (!config.sasl_user.empty() && !config.sasl_password.empty())
-            {
-                if (cnf->set("security.protocol", config.ssl ? "sasl_ssl" : "sasl_plaintext", err) != OK)
-                {
-                    MXS_ERROR("Failed to set `security.protocol`: %s", err.c_str());
-                    cnf.reset();
-                }
-                else if (cnf->set("sasl.mechanism", to_string(config.sasl_mechanism), err) != OK)
-                {
-                    MXS_ERROR("Failed to set `sasl.mechanism`: %s", err.c_str());
-                    cnf.reset();
-                }
-                else if (cnf->set("sasl.username", config.sasl_user, err) != OK)
-                {
-                    MXS_ERROR("Failed to set `sasl.username`: %s", err.c_str());
-                    cnf.reset();
-                }
-                else if (cnf->set("sasl.password", config.sasl_password, err) != OK)
-                {
-                    MXS_ERROR("Failed to set `sasl.password`: %s", err.c_str());
-                    cnf.reset();
-                }
+                break;
             }
         }
 
+        if (cnf && cnf->set("event_cb", &kafka_logger, err) != OK)
+        {
+            MXS_ERROR("Failed to set Kafka event logger: %s", err.c_str());
+            cnf.reset();
+        }
+
         return cnf;
+    }
+
+    static std::unique_ptr<RdKafka::Conf> create_config(const KafkaCDC::Config& config)
+    {
+        // The configuration documentation for the connector:
+        // https://github.com/edenhill/librdkafka/blob/master/CONFIGURATION.md
+        std::map<std::string, std::string> values;
+        values["bootstrap.servers"] = config.bootstrap_servers;
+        values["group.id"] = "maxscale-kafkacdc";
+
+        if (config.enable_idempotence)
+        {
+            values["enable.idempotence"] = "true";
+            values["message.send.max.retries"] = "10000000";
+        }
+
+        if (config.ssl)
+        {
+            values["security.protocol"] = "ssl";
+            values["ssl.ca.location"] = config.ssl_ca;
+            values["ssl.certificate.location"] = config.ssl_cert;
+            values["ssl.key.location"] = config.ssl_key;
+        }
+
+        if (!config.sasl_user.empty() && !config.sasl_password.empty())
+        {
+            values["security.protocol"] = config.ssl ? "sasl_ssl" : "sasl_plaintext";
+            values["sasl.mechanism"] = to_string(config.sasl_mechanism);
+            values["sasl.username"] = config.sasl_user;
+            values["sasl.password"] = config.sasl_password;
+        }
+
+        return create_config(values);
     }
 };
 }
