@@ -171,3 +171,8 @@ SELECT trim(@@server_id);
 SELECT trim("text");
 SELECT trim(BOTH " " FROM "  text");
 SELECT trim(BOTH FROM "  text");
+
+# MXS-3445
+SET DEFAULT ROLE 'MBK';
+SET DEFAULT ROLE NONE;
+SET DEFAULT ROLE 'MBK' FOR 'user'@'host';
