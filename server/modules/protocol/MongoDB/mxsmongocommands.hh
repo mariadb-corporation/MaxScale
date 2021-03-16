@@ -28,10 +28,10 @@ namespace
 namespace command
 {
 
-class TableCreatingCommand : public mxsmongo::CommandX
+class TableCreatingCommand : public mxsmongo::Command
 {
 public:
-    using mxsmongo::CommandX::CommandX;
+    using mxsmongo::Command::Command;
 
     ~TableCreatingCommand()
     {
@@ -169,10 +169,10 @@ private:
 };
 
 // https://docs.mongodb.com/manual/reference/command/delete/
-class Delete : public mxsmongo::Database::Command
+class Delete : public mxsmongo::Command
 {
 public:
-    using mxsmongo::CommandX::CommandX;
+    using mxsmongo::Command::Command;
 
     GWBUF* execute() override
     {
@@ -282,10 +282,10 @@ public:
 // TODO: commands that expects, well, a resultset. But for now there is no hierarchy.
 
 // https://docs.mongodb.com/manual/reference/command/find
-class Find : public mxsmongo::Database::Command
+class Find : public mxsmongo::Command
 {
 public:
-    using mxsmongo::CommandX::CommandX;
+    using mxsmongo::Command::Command;
 
     GWBUF* execute() override
     {
@@ -563,10 +563,10 @@ private:
 };
 
 // https://docs.mongodb.com/manual/reference/command/update
-class Update : public mxsmongo::Database::Command
+class Update : public mxsmongo::Command
 {
 public:
-    using mxsmongo::CommandX::CommandX;
+    using mxsmongo::Command::Command;
 
     GWBUF* execute() override
     {
@@ -816,7 +816,7 @@ private:
         builder.append(bsoncxx::builder::basic::kvp("n", n));
         builder.append(bsoncxx::builder::basic::kvp("nModified", nModified));
 
-        return mxsmongo::Database::Command::create_response(builder.extract());
+        return mxsmongo::Command::create_response(builder.extract());
     }
 
     GWBUF* create_response(int32_t ok, int64_t n, int64_t nModified)
@@ -828,10 +828,10 @@ private:
 };
 
 
-class IsMaster : public mxsmongo::Database::Command
+class IsMaster : public mxsmongo::Command
 {
 public:
-    using mxsmongo::CommandX::CommandX;
+    using mxsmongo::Command::Command;
 
     GWBUF* execute() override
     {
@@ -857,10 +857,10 @@ public:
     }
 };
 
-class Unknown : public mxsmongo::Database::Command
+class Unknown : public mxsmongo::Command
 {
 public:
-    using mxsmongo::CommandX::CommandX;
+    using mxsmongo::Command::Command;
 
     GWBUF* execute() override
     {

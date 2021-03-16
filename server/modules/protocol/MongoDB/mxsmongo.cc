@@ -22,24 +22,6 @@
 
 using namespace std;
 
-namespace
-{
-
-struct ThisUnit
-{
-    const map<const char*, mxsmongo::Command> commands_by_key =
-    {
-        { mxsmongo::keys::DELETE,    mxsmongo::Command::DELETE },
-        { mxsmongo::keys::FIND,      mxsmongo::Command::FIND },
-        { mxsmongo::keys::INSERT,    mxsmongo::Command::INSERT },
-        { mxsmongo::keys::UPDATE,    mxsmongo::Command::UPDATE },
-
-        { mxsmongo::keys::ISMASTER,  mxsmongo::Command::ISMASTER }
-    };
-} this_unit;
-
-}
-
 const char* mxsmongo::opcode_to_string(int code)
 {
     switch (code)
@@ -89,27 +71,6 @@ mxsmongo::error::Code mxsmongo::error::from_mariadb_code(int code)
     default:
         return COMMAND_FAILED;
     }
-}
-
-mxsmongo::Command mxsmongo::get_command(const bsoncxx::document::view& doc)
-{
-    mxsmongo::Command command = mxsmongo::Command::UNKNOWN;
-
-    // TODO: At some point it might be good to apply some kind of heuristic for
-    // TODO: deciding whether to loop over the keys of the document or over
-    // TODO: the keys in the map. Or, can we be certain that e.g. the first
-    // TODO: field in the document is the command?
-
-    for (const auto& kv : this_unit.commands_by_key)
-    {
-        if (doc.find(kv.first) != doc.cend())
-        {
-            command = kv.second;
-            break;
-        }
-    }
-
-    return command;
 }
 
 vector<string> mxsmongo::projection_to_extractions(const bsoncxx::document::view& projection)

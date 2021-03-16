@@ -27,18 +27,18 @@ namespace mxsmongo
 
 class Database;
 
-class CommandX
+class Command
 {
 public:
-    CommandX(Database* pDatabase,
-             GWBUF* pRequest,
-             const Packet& req,
-             const bsoncxx::document::view& doc);
+    Command(Database* pDatabase,
+            GWBUF* pRequest,
+            const Packet& req,
+            const bsoncxx::document::view& doc);
 
-    static std::unique_ptr<CommandX> get(mxsmongo::Database* pDatabase,
-                                         GWBUF* pRequest,
-                                         const mxsmongo::Packet& req,
-                                         const bsoncxx::document::view& doc);
+    static std::unique_ptr<Command> get(mxsmongo::Database* pDatabase,
+                                        GWBUF* pRequest,
+                                        const mxsmongo::Packet& req,
+                                        const bsoncxx::document::view& doc);
 
     enum State
     {
@@ -46,7 +46,7 @@ public:
         READY
     };
 
-    virtual ~CommandX();
+    virtual ~Command();
 
     virtual GWBUF* execute() = 0;
 

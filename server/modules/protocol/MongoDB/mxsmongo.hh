@@ -167,19 +167,6 @@ const char UPDATES[]    = "updates";
 
 };
 
-enum class Command
-{
-    UNKNOWN,
-
-    DELETE,
-    FIND,
-    INSERT,
-    ISMASTER,
-    UPDATE
-};
-
-Command get_command(const bsoncxx::document::view& doc);
-
 std::string to_string(const bsoncxx::document::element& element);
 
 std::vector<std::string> projection_to_extractions(const bsoncxx::document::view& projection);

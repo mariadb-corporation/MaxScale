@@ -20,43 +20,6 @@
 using namespace std;
 using mxb::Worker;
 
-namespace
-{
-
-namespace command
-{
-
-template<class ConcreteCommand>
-unique_ptr<mxsmongo::Database::Command> create(mxsmongo::Database* pDatabase,
-                                               GWBUF* pRequest,
-                                               const mxsmongo::Packet& req,
-                                               const bsoncxx::document::view& doc)
-{
-    return unique_ptr<ConcreteCommand>(new ConcreteCommand(pDatabase, pRequest, req, doc));
-}
-
-}
-
-struct ThisUnit
-{
-    const map<mxsmongo::Command,
-              unique_ptr<mxsmongo::Database::Command> (*)(mxsmongo::Database* pDatabase,
-                                                          GWBUF* pRequest,
-                                                          const mxsmongo::Packet& req,
-                                                          const bsoncxx::document::view& doc)>
-    creators_by_command =
-    {
-        { mxsmongo::Command::DELETE,   &command::create<command::Delete> },
-        { mxsmongo::Command::FIND,     &command::create<command::Find> },
-        { mxsmongo::Command::INSERT,   &command::create<command::Insert> },
-        { mxsmongo::Command::ISMASTER, &command::create<command::IsMaster> },
-        { mxsmongo::Command::UNKNOWN,  &command::create<command::Unknown> },
-        { mxsmongo::Command::UPDATE,   &command::create<command::Update> }
-    };
-} this_unit;
-
-}
-
 mxsmongo::Database::Database(const std::string& name,
                              Mongo::Context* pContext,
                              const Config* pConfig)
@@ -83,7 +46,7 @@ GWBUF* mxsmongo::Database::handle_query(GWBUF* pRequest, const mxsmongo::Query& 
 {
     mxb_assert(is_ready());
 
-    return execute(mxsmongo::get_command(req.query()), pRequest, req, req.query());
+    return execute(pRequest, req, req.query());
 }
 
 GWBUF* mxsmongo::Database::handle_command(GWBUF* pRequest,
@@ -92,7 +55,7 @@ GWBUF* mxsmongo::Database::handle_command(GWBUF* pRequest,
 {
     mxb_assert(is_ready());
 
-    return execute(mxsmongo::get_command(doc), pRequest, req, doc);
+    return execute(pRequest, req, doc);
 }
 
 GWBUF* mxsmongo::Database::translate(GWBUF& mariadb_response)
@@ -115,17 +78,13 @@ GWBUF* mxsmongo::Database::translate(GWBUF& mariadb_response)
     return pResponse;
 }
 
-GWBUF* mxsmongo::Database::execute(mxsmongo::Command cid,
-                                   GWBUF* pRequest,
+GWBUF* mxsmongo::Database::execute(GWBUF* pRequest,
                                    const mxsmongo::Packet& req,
                                    const bsoncxx::document::view& doc)
 {
     GWBUF* pResponse = nullptr;
 
-    auto it = this_unit.creators_by_command.find(cid);
-    mxb_assert(it != this_unit.creators_by_command.end());
-
-    auto sCommand = it->second(this, pRequest, req, doc);
+    auto sCommand = mxsmongo::Command::get(this, pRequest, req, doc);
 
     try
     {

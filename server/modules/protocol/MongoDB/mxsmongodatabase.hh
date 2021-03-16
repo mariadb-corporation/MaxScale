@@ -27,8 +27,6 @@ namespace mxsmongo
 class Database
 {
 public:
-    using Command = mxsmongo::CommandX;
-
     enum State
     {
         READY,  // Ready for a command.
@@ -145,10 +143,7 @@ private:
         m_state = READY;
     }
 
-    GWBUF* execute(mxsmongo::Command command,
-                   GWBUF* pRequest,
-                   const mxsmongo::Packet& req,
-                   const bsoncxx::document::view& doc);
+    GWBUF* execute(GWBUF* pRequest, const mxsmongo::Packet& req, const bsoncxx::document::view& doc);
 
     using SCommand = std::unique_ptr<Command>;
 

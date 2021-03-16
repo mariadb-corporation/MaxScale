@@ -24,18 +24,18 @@ namespace
 {
 
 template<class ConcreteCommand>
-unique_ptr<mxsmongo::Database::Command> create_command(mxsmongo::Database* pDatabase,
-                                                       GWBUF* pRequest,
-                                                       const mxsmongo::Packet& req,
-                                                       const bsoncxx::document::view& doc)
+unique_ptr<mxsmongo::Command> create_command(mxsmongo::Database* pDatabase,
+                                             GWBUF* pRequest,
+                                             const mxsmongo::Packet& req,
+                                             const bsoncxx::document::view& doc)
 {
     return unique_ptr<ConcreteCommand>(new ConcreteCommand(pDatabase, pRequest, req, doc));
 }
 
-using CreatorFunction = unique_ptr<mxsmongo::Database::Command> (*)(mxsmongo::Database* pDatabase,
-                                                                    GWBUF* pRequest,
-                                                                    const mxsmongo::Packet& req,
-                                                                    const bsoncxx::document::view& doc);
+using CreatorFunction = unique_ptr<mxsmongo::Command> (*)(mxsmongo::Database* pDatabase,
+                                                          GWBUF* pRequest,
+                                                          const mxsmongo::Packet& req,
+                                                          const bsoncxx::document::view& doc);
 using CreatorsByName = const map<string, CreatorFunction>;
 
 struct ThisUnit
@@ -55,10 +55,10 @@ struct ThisUnit
 namespace mxsmongo
 {
 
-CommandX::CommandX(Database* pDatabase,
-                   GWBUF* pRequest,
-                   const Packet& req,
-                   const bsoncxx::document::view& doc)
+Command::Command(Database* pDatabase,
+                 GWBUF* pRequest,
+                 const Packet& req,
+                 const bsoncxx::document::view& doc)
     : m_database(*pDatabase)
     , m_pRequest(gwbuf_clone(pRequest))
     , m_req(req)
@@ -66,16 +66,16 @@ CommandX::CommandX(Database* pDatabase,
 {
 }
 
-CommandX::~CommandX()
+Command::~Command()
 {
     free_request();
 }
 
 //static
-unique_ptr<CommandX> CommandX::get(mxsmongo::Database* pDatabase,
-                                   GWBUF* pRequest,
-                                   const mxsmongo::Packet& req,
-                                   const bsoncxx::document::view& doc)
+unique_ptr<Command> Command::get(mxsmongo::Database* pDatabase,
+                                 GWBUF* pRequest,
+                                 const mxsmongo::Packet& req,
+                                 const bsoncxx::document::view& doc)
 {
     CreatorFunction create = nullptr;
 
@@ -86,6 +86,7 @@ unique_ptr<CommandX> CommandX::get(mxsmongo::Database* pDatabase,
         if (it != this_unit.creators_by_name.end())
         {
             create = it->second;
+            break;
         }
     }
 
@@ -97,14 +98,14 @@ unique_ptr<CommandX> CommandX::get(mxsmongo::Database* pDatabase,
     return create(pDatabase, pRequest, req, doc);
 }
 
-CommandX::State CommandX::translate(GWBUF& mariadb_response, GWBUF** ppMongo_response)
+Command::State Command::translate(GWBUF& mariadb_response, GWBUF** ppMongo_response)
 {
     mxb_assert(!true);
     *ppMongo_response = nullptr;
     return READY;
 }
 
-GWBUF* CommandX::create_empty_response()
+GWBUF* Command::create_empty_response()
 {
     auto builder = bsoncxx::builder::stream::document{};
     bsoncxx::document::value doc_value = builder << bsoncxx::builder::stream::finalize;
@@ -112,7 +113,7 @@ GWBUF* CommandX::create_empty_response()
     return create_response(doc_value);
 }
 
-GWBUF* CommandX::create_error_response(const std::string& message, error::Code code)
+GWBUF* Command::create_error_response(const std::string& message, error::Code code)
 {
     bsoncxx::builder::basic::document builder;
 
@@ -122,7 +123,7 @@ GWBUF* CommandX::create_error_response(const std::string& message, error::Code c
     return create_response(builder.extract());
 }
 
-string CommandX::get_table(const char* zCommand) const
+string Command::get_table(const char* zCommand) const
 {
     auto utf8 = m_doc[zCommand].get_utf8();
     string table(utf8.value.data(), utf8.value.size());
@@ -130,7 +131,7 @@ string CommandX::get_table(const char* zCommand) const
     return "`" + m_database.name() + "`.`" + table + "`";
 }
 
-void CommandX::free_request()
+void Command::free_request()
 {
     if (m_pRequest)
     {
@@ -139,7 +140,7 @@ void CommandX::free_request()
     }
 }
 
-void CommandX::send_downstream(const string& sql)
+void Command::send_downstream(const string& sql)
 {
     MXS_NOTICE("SQL: %s", sql.c_str());
 
@@ -148,7 +149,7 @@ void CommandX::send_downstream(const string& sql)
     m_database.context().downstream().routeQuery(pRequest);
 }
 
-GWBUF* CommandX::create_response(const bsoncxx::document::value& doc)
+GWBUF* Command::create_response(const bsoncxx::document::value& doc)
 {
     GWBUF* pResponse = nullptr;
 
@@ -169,7 +170,7 @@ GWBUF* CommandX::create_response(const bsoncxx::document::value& doc)
     return pResponse;
 }
 
-GWBUF* CommandX::translate_resultset(vector<string>& extractions, GWBUF* pMariadb_response)
+GWBUF* Command::translate_resultset(vector<string>& extractions, GWBUF* pMariadb_response)
 {
     bool is_msg_response = (m_req.opcode() == Packet::MSG);
 
@@ -300,7 +301,7 @@ GWBUF* CommandX::translate_resultset(vector<string>& extractions, GWBUF* pMariad
     return pResponse;
 }
 
-void CommandX::add_error(bsoncxx::builder::basic::document& builder, const ComERR& err)
+void Command::add_error(bsoncxx::builder::basic::document& builder, const ComERR& err)
 {
     MXS_WARNING("Mongo request to backend failed: (%d), %s", err.code(), err.message().c_str());
 
@@ -332,7 +333,7 @@ void CommandX::add_error(bsoncxx::builder::basic::document& builder, const ComER
     builder.append(bsoncxx::builder::basic::kvp("writeErrors", array_builder.extract()));
 }
 
-pair<GWBUF*, uint8_t*> CommandX::create_reply_response_buffer(size_t size_of_documents, size_t nDocuments)
+pair<GWBUF*, uint8_t*> Command::create_reply_response_buffer(size_t size_of_documents, size_t nDocuments)
 {
     // TODO: In the following is assumed that whatever is returned will
     // TODO: fit into a Mongo packet.
@@ -364,7 +365,7 @@ pair<GWBUF*, uint8_t*> CommandX::create_reply_response_buffer(size_t size_of_doc
     return make_pair(pResponse, pData);
 }
 
-GWBUF* CommandX::create_reply_response(size_t size_of_documents,
+GWBUF* Command::create_reply_response(size_t size_of_documents,
                                       const vector<bsoncxx::document::value>& documents)
 {
     GWBUF* pResponse;
@@ -384,7 +385,7 @@ GWBUF* CommandX::create_reply_response(size_t size_of_documents,
     return pResponse;
 }
 
-GWBUF* CommandX::create_reply_response(const bsoncxx::document::value& doc)
+GWBUF* Command::create_reply_response(const bsoncxx::document::value& doc)
 {
     MXS_NOTICE("REPLY_RESPONSE: %s", bsoncxx::to_json(doc).c_str());
 
@@ -401,7 +402,7 @@ GWBUF* CommandX::create_reply_response(const bsoncxx::document::value& doc)
     return pResponse;
 }
 
-GWBUF* CommandX::create_msg_response(const bsoncxx::document::value& doc)
+GWBUF* Command::create_msg_response(const bsoncxx::document::value& doc)
 {
     MXS_NOTICE("MSG_RESPONSE: %s", bsoncxx::to_json(doc).c_str());
 
@@ -433,14 +434,14 @@ GWBUF* CommandX::create_msg_response(const bsoncxx::document::value& doc)
     return pResponse;
 }
 
-string CommandX::create_leaf_entry(const string& extraction, const std::string& value)
+string Command::create_leaf_entry(const string& extraction, const std::string& value)
 {
     mxb_assert(extraction.find('.') == string::npos);
 
     return "\"" + extraction + "\": " + value;
 }
 
-string CommandX::create_nested_entry(const string& extraction, const std::string& value)
+string Command::create_nested_entry(const string& extraction, const std::string& value)
 {
     string entry;
     auto i = extraction.find('.');
@@ -460,7 +461,7 @@ string CommandX::create_nested_entry(const string& extraction, const std::string
     return entry;
 }
 
-string CommandX::create_entry(const string& extraction, const std::string& value)
+string Command::create_entry(const string& extraction, const std::string& value)
 {
     string entry;
     auto i = extraction.find('.');
