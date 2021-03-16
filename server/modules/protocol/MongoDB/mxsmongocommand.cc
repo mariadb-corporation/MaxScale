@@ -446,7 +446,7 @@ GWBUF* Command::create_reply_response(size_t size_of_documents,
 
 GWBUF* Command::create_reply_response(const bsoncxx::document::value& doc)
 {
-    MXS_NOTICE("REPLY_RESPONSE: %s", bsoncxx::to_json(doc).c_str());
+    MXS_NOTICE("Response(REPLY): %s", bsoncxx::to_json(doc).c_str());
 
     auto doc_view = doc.view();
     size_t doc_len = doc_view.length();
@@ -463,7 +463,7 @@ GWBUF* Command::create_reply_response(const bsoncxx::document::value& doc)
 
 GWBUF* Command::create_msg_response(const bsoncxx::document::value& doc)
 {
-    MXS_NOTICE("MSG_RESPONSE: %s", bsoncxx::to_json(doc).c_str());
+    MXS_NOTICE("Response(MSG): %s", bsoncxx::to_json(doc).c_str());
 
     uint32_t flag_bits = 0;
     uint8_t kind = 0;

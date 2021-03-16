@@ -777,7 +777,7 @@ GWBUF* mxsmongo::Mongo::handle_request(GWBUF* pRequest)
         case MONGOC_OPCODE_KILL_CURSORS:
         case MONGOC_OPCODE_REPLY:
         case MONGOC_OPCODE_UPDATE:
-            MXS_ERROR("Packet %s not handled (yet).", mxsmongo::opcode_to_string(req.opcode()));
+            MXS_ERROR("Packet %s not handled.", mxsmongo::opcode_to_string(req.opcode()));
             mxb_assert(!true);
             break;
 
@@ -859,7 +859,7 @@ int32_t mxsmongo::Mongo::clientReply(GWBUF* pMariaDB_response, DCB* pDcb)
 
 GWBUF* mxsmongo::Mongo::handle_query(GWBUF* pRequest, const mxsmongo::Query& req)
 {
-    MXS_NOTICE("\n%s\n", req.to_string().c_str());
+    MXB_NOTICE("Request(QUERY): %s, %s", req.zCollection(), bsoncxx::to_json(req.query()).c_str());
 
     auto sDatabase = Database::create(req.collection(), &m_context, &m_config);
 
@@ -876,7 +876,20 @@ GWBUF* mxsmongo::Mongo::handle_query(GWBUF* pRequest, const mxsmongo::Query& req
 
 GWBUF* mxsmongo::Mongo::handle_msg(GWBUF* pRequest, const mxsmongo::Msg& req)
 {
-    MXS_NOTICE("\n%s\n", req.to_string().c_str());
+    stringstream ss;
+    ss << "[";
+    auto& documents = req.documents();
+    for (const auto& doc : documents)
+    {
+        if (ss.str().length() != 1)
+        {
+            ss << ", ";
+        }
+        ss << bsoncxx::to_json(doc);
+    }
+    ss << "]";
+
+    MXB_NOTICE("Request(MSG): %s", ss.str().c_str());
 
     mxb_assert(req.documents().size() == 1); // TODO
 

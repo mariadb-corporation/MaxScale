@@ -37,7 +37,7 @@ public:
 
         auto builder = bsoncxx::builder::stream::document{};
         bsoncxx::document::value doc_value = builder
-            << "ismaster" << true
+            << "isMaster" << true
             << "topologyVersion" << mxsmongo::topology_version()
             << "maxBsonObjectSize" << (int32_t)16777216
             << "maxMessageSizeBytes" << (int32_t)48000000

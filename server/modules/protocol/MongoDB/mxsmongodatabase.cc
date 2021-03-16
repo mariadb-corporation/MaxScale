@@ -91,7 +91,6 @@ GWBUF* mxsmongo::Database::execute(GWBUF* pRequest,
     catch (const std::exception& x)
     {
         MXS_ERROR("Exeception occurred when parsing MongoDB command: %s", x.what());
-        mxb_assert(!true);
 
         pResponse = sCommand->create_error_response(x.what(), mxsmongo::error::FAILED_TO_PARSE);
     }
