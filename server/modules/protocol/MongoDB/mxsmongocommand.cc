@@ -14,6 +14,7 @@
 #include "mxsmongocommand.hh"
 #include <bsoncxx/builder/basic/array.hpp>
 #include <bsoncxx/builder/stream/document.hpp>
+#include <maxbase/string.hh>
 #include <maxscale/modutil.hh>
 #include "mxsmongodatabase.hh"
 #include "mxsmongocommands.hh"
@@ -44,11 +45,14 @@ struct ThisUnit
 {
     CreatorsByName creators_by_name =
     {
-        { mxsmongo::key::DELETE,   &create_command<command::Delete> },
-        { mxsmongo::key::FIND,     &create_command<command::Find> },
-        { mxsmongo::key::INSERT,   &create_command<command::Insert> },
-        { mxsmongo::key::ISMASTER, &create_command<command::IsMaster> },
-        { mxsmongo::key::UPDATE,   &create_command<command::Update> }
+        { mxb::tolower(mxsmongo::key::BUILDINFO),   &create_command<command::BuildInfo> },
+        { mxb::tolower(mxsmongo::key::DELETE),      &create_command<command::Delete> },
+        { mxb::tolower(mxsmongo::key::ENDSESSIONS), &create_command<command::EndSessions> },
+        { mxb::tolower(mxsmongo::key::FIND),        &create_command<command::Find> },
+        { mxb::tolower(mxsmongo::key::INSERT),      &create_command<command::Insert> },
+        { mxb::tolower(mxsmongo::key::ISMASTER),    &create_command<command::IsMaster> },
+        { mxb::tolower(mxsmongo::key::UPDATE),      &create_command<command::Update> },
+        { mxb::tolower(mxsmongo::key::WHATSMYURI),  &create_command<command::WhatsMyUri> },
     };
 } this_unit;
 
@@ -84,6 +88,7 @@ unique_ptr<Command> Command::get(mxsmongo::Database* pDatabase,
     for (auto element : doc)
     {
         string name(element.key().data(), element.key().length());
+        mxb::lower_case(name);
 
         auto it = this_unit.creators_by_name.find(name);
 

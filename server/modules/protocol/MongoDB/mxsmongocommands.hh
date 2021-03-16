@@ -12,6 +12,7 @@
  */
 
 #include "mxsmongocommand.hh"
+#include <bsoncxx/builder/basic/array.hpp>
 #include <bsoncxx/builder/stream/document.hpp>
 #include <mysqld_error.h>
 #include <maxbase/worker.hh>
@@ -166,6 +167,62 @@ private:
     Mode     m_mode { NORMAL };
     string   m_statement;
     uint32_t m_dcid { 0 };
+};
+
+// https://docs.mongodb.com/manual/reference/command/buildInfo/
+class BuildInfo : public mxsmongo::Command
+{
+public:
+    using mxsmongo::Command::Command;
+
+    GWBUF* execute() override
+    {
+        // TODO: Do not simply return a hardwired response.
+        bsoncxx::builder::basic::document builder;
+
+        builder.append(bsoncxx::builder::basic::kvp("version", "4.4.1"));
+
+        bsoncxx::builder::basic::array version_builder;
+
+        version_builder.append(4);
+        version_builder.append(4);
+        version_builder.append(1);
+
+        builder.append(bsoncxx::builder::basic::kvp("versionArray", version_builder.extract()));
+
+        return create_response(builder.extract());
+    }
+};
+
+//https://docs.mongodb.com/manual/reference/command/endSessions/
+class EndSessions : public mxsmongo::Command
+{
+public:
+    using mxsmongo::Command::Command;
+
+    GWBUF* execute() override
+    {
+        bsoncxx::builder::basic::document builder;
+
+        return create_response(builder.extract());
+    }
+};
+
+//https://docs.mongodb.com/manual/reference/command/whatsmyuri/
+class WhatsMyUri : public mxsmongo::Command
+{
+public:
+    using mxsmongo::Command::Command;
+
+    GWBUF* execute() override
+    {
+        bsoncxx::builder::basic::document builder;
+
+        builder.append(bsoncxx::builder::basic::kvp("you", "127.0.0.1:49388"));
+        builder.append(bsoncxx::builder::basic::kvp("ok", 1));
+
+        return create_response(builder.extract());
+    }
 };
 
 // https://docs.mongodb.com/manual/reference/command/delete/

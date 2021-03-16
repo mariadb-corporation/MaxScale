@@ -148,22 +148,25 @@ Code from_mariadb_code(int code);
 namespace key
 {
 
-const char DELETE[]     = "delete";
-const char DELETES[]    = "deletes";
-const char DOCUMENTS[]  = "documents";
-const char FILTER[]     = "filter";
-const char FIND[]       = "find";
-const char INSERT[]     = "insert";
-const char ISMASTER[]   = "ismaster";
-const char LIMIT[]      = "limit";
-const char MULTI[]      = "multi";
-const char PROJECTION[] = "projection";
-const char Q[]          = "q";
-const char SKIP[]       = "skip";
-const char SORT[]       = "sort";
-const char U[]          = "u";
-const char UPDATE[]     = "update";
-const char UPDATES[]    = "updates";
+const char BUILDINFO[]   = "buildInfo";
+const char DELETE[]      = "delete";
+const char DELETES[]     = "deletes";
+const char DOCUMENTS[]   = "documents";
+const char ENDSESSIONS[] = "endSessions";
+const char FILTER[]      = "filter";
+const char FIND[]        = "find";
+const char INSERT[]      = "insert";
+const char ISMASTER[]    = "isMaster";
+const char LIMIT[]       = "limit";
+const char MULTI[]       = "multi";
+const char PROJECTION[]  = "projection";
+const char Q[]           = "q";
+const char SKIP[]        = "skip";
+const char SORT[]        = "sort";
+const char U[]           = "u";
+const char UPDATE[]      = "update";
+const char UPDATES[]     = "updates";
+const char WHATSMYURI[]  = "whatsmyuri";
 
 };
 

@@ -18,7 +18,6 @@
 #include "config.hh"
 
 using namespace std;
-using mxb::Worker;
 
 mxsmongo::Database::Database(const std::string& name,
                              Mongo::Context* pContext,
