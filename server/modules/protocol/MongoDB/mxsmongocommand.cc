@@ -16,8 +16,41 @@
 #include <bsoncxx/builder/stream/document.hpp>
 #include <maxscale/modutil.hh>
 #include "mxsmongodatabase.hh"
+#include "mxsmongocommands.hh"
 
 using namespace std;
+
+namespace
+{
+
+template<class ConcreteCommand>
+unique_ptr<mxsmongo::Database::Command> create_command(mxsmongo::Database* pDatabase,
+                                                       GWBUF* pRequest,
+                                                       const mxsmongo::Packet& req,
+                                                       const bsoncxx::document::view& doc)
+{
+    return unique_ptr<ConcreteCommand>(new ConcreteCommand(pDatabase, pRequest, req, doc));
+}
+
+using CreatorFunction = unique_ptr<mxsmongo::Database::Command> (*)(mxsmongo::Database* pDatabase,
+                                                                    GWBUF* pRequest,
+                                                                    const mxsmongo::Packet& req,
+                                                                    const bsoncxx::document::view& doc);
+using CreatorsByName = const map<string, CreatorFunction>;
+
+struct ThisUnit
+{
+    CreatorsByName creators_by_name =
+    {
+        { mxsmongo::keys::DELETE,   &create_command<command::Delete> },
+        { mxsmongo::keys::FIND,     &create_command<command::Find> },
+        { mxsmongo::keys::INSERT,   &create_command<command::Insert> },
+        { mxsmongo::keys::ISMASTER, &create_command<command::IsMaster> },
+        { mxsmongo::keys::UPDATE,   &create_command<command::Update> }
+    };
+} this_unit;
+
+}
 
 namespace mxsmongo
 {
@@ -36,6 +69,32 @@ CommandX::CommandX(Database* pDatabase,
 CommandX::~CommandX()
 {
     free_request();
+}
+
+//static
+unique_ptr<CommandX> CommandX::get(mxsmongo::Database* pDatabase,
+                                   GWBUF* pRequest,
+                                   const mxsmongo::Packet& req,
+                                   const bsoncxx::document::view& doc)
+{
+    CreatorFunction create = nullptr;
+
+    for (auto element : doc)
+    {
+        auto it = this_unit.creators_by_name.find(element.key().data());
+
+        if (it != this_unit.creators_by_name.end())
+        {
+            create = it->second;
+        }
+    }
+
+    if (!create)
+    {
+        create = &create_command<command::Unknown>;
+    }
+
+    return create(pDatabase, pRequest, req, doc);
 }
 
 CommandX::State CommandX::translate(GWBUF& mariadb_response, GWBUF** ppMongo_response)

@@ -35,6 +35,11 @@ public:
              const Packet& req,
              const bsoncxx::document::view& doc);
 
+    static std::unique_ptr<CommandX> get(mxsmongo::Database* pDatabase,
+                                         GWBUF* pRequest,
+                                         const mxsmongo::Packet& req,
+                                         const bsoncxx::document::view& doc);
+
     enum State
     {
         BUSY,
