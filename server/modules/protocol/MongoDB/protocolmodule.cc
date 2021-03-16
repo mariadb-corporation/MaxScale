@@ -28,8 +28,6 @@ ProtocolModule::ProtocolModule(Config&& config)
 //static
 ProtocolModule* ProtocolModule::create(const mxs::ConfigParameters& params)
 {
-    TRACE();
-
     ProtocolModule* pThis = nullptr;
 
     Config config;
@@ -45,8 +43,6 @@ ProtocolModule* ProtocolModule::create(const mxs::ConfigParameters& params)
 unique_ptr<mxs::ClientConnection>
 ProtocolModule::create_client_protocol(MXS_SESSION* pSession, mxs::Component* pComponent)
 {
-    TRACE();
-
     unique_ptr<MYSQL_session> sSession_data(new MYSQL_session());
     // TODO: Drop this, operate on whatever data is delivered to clientReply() and
     // TODO: send documents to the client in multiple packets.
@@ -61,46 +57,38 @@ ProtocolModule::create_backend_protocol(MXS_SESSION* pSession,
                                         SERVER* pServer,
                                         mxs::Component* pComponent)
 {
-    TRACE();
     return MariaDBBackendConnection::create(pSession, pComponent, *pServer);
 }
 
 string ProtocolModule::auth_default() const
 {
-    TRACE();
     mxb_assert(!true);
     return "";
 }
 
 GWBUF* ProtocolModule::reject(const string& host)
 {
-    TRACE();
     mxb_assert(!true);
     return nullptr;
 }
 
 uint64_t ProtocolModule::capabilities() const
 {
-    TRACE();
     return mxs::ProtocolModule::CAP_BACKEND | mxs::ProtocolModule::CAP_AUTH_MODULES;
 }
 
 string ProtocolModule::name() const
 {
-    TRACE();
     return MXS_MODULE_NAME;
 }
 
 unique_ptr<mxs::UserAccountManager> ProtocolModule::create_user_data_manager()
 {
-    TRACE();
     return std::unique_ptr<mxs::UserAccountManager>(new MariaDBUserManager());
 }
 
 ProtocolModule::AuthenticatorList ProtocolModule::create_authenticators(const mxs::ConfigParameters& params)
 {
-    TRACE();
-
     // TODO: For now we just load the default MariaDB authenticator.
 
     AuthenticatorList authenticators;

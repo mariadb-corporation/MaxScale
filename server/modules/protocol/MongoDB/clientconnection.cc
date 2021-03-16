@@ -33,17 +33,14 @@ ClientConnection::ClientConnection(const Config* pConfig, MXS_SESSION* pSession,
     , m_session_data(*static_cast<MYSQL_session*>(pSession->protocol_data()))
     , m_mongo(pDownstream, pConfig)
 {
-    TRACE();
 }
 
 ClientConnection::~ClientConnection()
 {
-    TRACE();
 }
 
 bool ClientConnection::init_connection()
 {
-    TRACE();
     // TODO: If we need to initially send something to the MongoDB client,
     // TODO: that should be done here.
     return true;
@@ -51,27 +48,21 @@ bool ClientConnection::init_connection()
 
 void ClientConnection::finish_connection()
 {
-    TRACE();
-
     // TODO: Does something need to be cleaned up?
 }
 
 ClientDCB* ClientConnection::dcb()
 {
-    TRACE();
     return static_cast<ClientDCB*>(m_pDcb);
 }
 
 const ClientDCB* ClientConnection::dcb() const
 {
-    TRACE();
     return static_cast<const ClientDCB*>(m_pDcb);
 }
 
 void ClientConnection::ready_for_reading(DCB* dcb)
 {
-    TRACE();
-
     DCB::ReadResult read_res = m_pDcb->read(MXSMONGO_HEADER_LEN, MONGOC_DEFAULT_MAX_MSG_SIZE);
     if (!read_res)
     {
@@ -135,7 +126,6 @@ void ClientConnection::ready_for_reading(DCB* dcb)
 
 void ClientConnection::write_ready(DCB* pDcb)
 {
-    TRACE();
     mxb_assert(m_pDcb == pDcb);
     mxb_assert(m_pDcb->state() != DCB::State::DISCONNECTED);
 
@@ -148,7 +138,6 @@ void ClientConnection::write_ready(DCB* pDcb)
 
 void ClientConnection::error(DCB* pDcb)
 {
-    TRACE();
     mxb_assert(m_pDcb == pDcb);
 
     m_session.kill();
@@ -156,7 +145,6 @@ void ClientConnection::error(DCB* pDcb)
 
 void ClientConnection::hangup(DCB* pDcb)
 {
-    TRACE();
     mxb_assert(m_pDcb == pDcb);
 
     m_session.kill();
@@ -166,7 +154,6 @@ const char* dbg_decode_response(GWBUF* pPacket);
 
 int32_t ClientConnection::write(GWBUF* pMariaDB_response)
 {
-    TRACE();
     mxb_assert(m_mongo.is_pending());
 
     return m_mongo.clientReply(pMariaDB_response, m_pDcb);
@@ -174,21 +161,18 @@ int32_t ClientConnection::write(GWBUF* pMariaDB_response)
 
 json_t* ClientConnection::diagnostics() const
 {
-    TRACE();
     mxb_assert(!true);
     return nullptr;
 }
 
 void ClientConnection::set_dcb(DCB* dcb)
 {
-    TRACE();
     mxb_assert(!m_pDcb);
     m_pDcb = dcb;
 }
 
 bool ClientConnection::is_movable() const
 {
-    TRACE();
     mxb_assert(!true);
     return true; // Ok?
 }

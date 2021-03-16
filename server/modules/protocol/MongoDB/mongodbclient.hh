@@ -17,6 +17,3 @@
 #include <maxscale/ccdefs.hh>
 #include <maxbase/assert.h>
 #include <maxscale/log.hh>
-
-#define TRACE() \
-    MXS_NOTICE("%s", __func__)
