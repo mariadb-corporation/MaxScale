@@ -193,6 +193,59 @@ exactly-once semantics for the Kafka event delivery. However, it does provide
 high-availability for the `kafkacdc` instances which allows automated failover
 between multiple MaxScale instances.
 
+### `kafka_ssl`
+
+Enable SSL for Kafka connections. This is a boolean parameter and is disabled by
+default.
+
+### `kafka_ssl_ca`
+
+Path to the certificate authority file in PEM format. If this is not provided,
+the default system certificates will be used.
+
+### `kafka_ssl_cert`
+
+Path to the public certificate in PEM format.
+
+The client must provide a certificate if the Kafka server performs authentication
+of the client certificates. This feature is enabled by default in Kafka and is
+controlled by
+[`ssl.endpoint.identification.algorithm`](https://kafka.apache.org/documentation/#brokerconfigs_ssl.endpoint.identification.algorithm).
+
+If `kafka_ssl_cert` is provided, `kafka_ssl_key` must also be provided.
+
+### `kafka_ssl_key`
+
+Path to the private key in PEM format.
+
+If `kafka_ssl_key` is provided, `kafka_ssl_cert` must also be provided.
+
+### `kafka_sasl_user`
+
+Username for SASL authentication.
+
+If `kafka_sasl_user` is provided, `kafka_sasl_password` must also be provided.
+
+### `kafka_sasl_password`
+
+Password for SASL authentication.
+
+If `kafka_sasl_password` is provided, `kafka_sasl_user` must also be provided.
+
+### `kafka_sasl_mechanism`
+
+The SASL mechanism used. The default value is `PLAIN` which uses plaintext
+authentication. It is recommended to enable SSL whenever plaintext
+authentication is used.
+
+Allowed values are:
+* `PLAIN`
+* `SCRAM-SHA-256`
+* `SCRAM-SHA-512`
+
+The value that should be used depends on the SASL mechanism used by the
+Kafka broker.
+
 ## Example Configuration
 
 The following configuration defines the minimal setup for streaming replication
