@@ -21,73 +21,12 @@
 
 #include "../replicator/replicator.hh"
 
-namespace cfg = maxscale::config;
-
-constexpr const uint32_t PATH_FLAGS = cfg::ParamPath::C | cfg::ParamPath::W;
-
-static cfg::Specification s_spec(MXS_MODULE_NAME, cfg::Specification::ROUTER);
-
-static cfg::ParamString s_bootstrap_servers(
-    &s_spec, "bootstrap_servers", "Bootstrap servers in host:port format");
-
-static cfg::ParamString s_topic(
-    &s_spec, "topic", "The topic where replicated events are sent");
-
-static cfg::ParamBool s_enable_idempotence(
-    &s_spec, "enable_idempotence", "Enables idempotent Kafka producer", false);
-
-static cfg::ParamCount s_timeout(
-    &s_spec, "timeout", "Connection and read timeout for replication", 10);
-
-static cfg::ParamString s_gtid(
-    &s_spec, "gtid", "The GTID position to start from", "");
-
-static cfg::ParamCount s_server_id(
-    &s_spec, "server_id", "Server ID for direct replication mode", 1234);
-
-static cfg::ParamBool s_cooperative_replication(
-    &s_spec, "cooperative_replication", "Cooperate with other instances replicating from the same cluster",
-    false);
-
-static cfg::ParamBool s_kafka_ssl(
-    &s_spec, "kafka_ssl", "Enable SSL for Kafka connections",
-    false);
-
-static cfg::ParamPath s_kafka_ssl_ca(
-    &s_spec, "kafka_ssl_ca", "SSL Certificate Authority file in PEM format",
-    cfg::ParamPath::R, "");
-
-static cfg::ParamPath s_kafka_ssl_cert(
-    &s_spec, "kafka_ssl_cert", "SSL public certificate file in PEM format",
-    cfg::ParamPath::R, "");
-
-static cfg::ParamPath s_kafka_ssl_key(
-    &s_spec, "kafka_ssl_key", "SSL private key file in PEM format",
-    cfg::ParamPath::R, "");
-
-static cfg::ParamString s_kafka_sasl_user(
-    &s_spec, "kafka_sasl_user", "SASL username used for authentication",
-    "");
-
-static cfg::ParamString s_kafka_sasl_password(
-    &s_spec, "kafka_sasl_password", "SASL password for the user",
-    "");
-
 enum SaslMech
 {
     PLAIN,
     SCRAM_SHA_256,
     SCRAM_SHA_512,
 };
-
-static cfg::ParamEnum<SaslMech> s_kafka_sasl_mechanism(
-    &s_spec, "kafka_sasl_mechanism", "SASL mechanism to use",
-{
-    {PLAIN, "PLAIN"},
-    {SCRAM_SHA_256, "SCRAM-SHA-256"},
-    {SCRAM_SHA_512, "SCRAM-SHA-512"},
-},
-    PLAIN);
 
 // Never used
 class KafkaCDCSession : public mxs::RouterSession

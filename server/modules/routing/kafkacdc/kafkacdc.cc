@@ -20,6 +20,112 @@
 namespace
 {
 
+namespace cfg = maxscale::config;
+
+constexpr const uint32_t PATH_FLAGS = cfg::ParamPath::C | cfg::ParamPath::W;
+
+class KafkaSpecification : public cfg::Specification
+{
+    using cfg::Specification::Specification;
+
+protected:
+    template<class Param>
+    bool do_post_validate(Param param) const;
+    bool post_validate(const mxs::ConfigParameters& params) const;
+    bool post_validate(json_t* json) const;
+};
+
+KafkaSpecification s_spec(MXS_MODULE_NAME, cfg::Specification::ROUTER);
+
+cfg::ParamString s_bootstrap_servers(
+    &s_spec, "bootstrap_servers", "Bootstrap servers in host:port format");
+
+cfg::ParamString s_topic(
+    &s_spec, "topic", "The topic where replicated events are sent");
+
+cfg::ParamBool s_enable_idempotence(
+    &s_spec, "enable_idempotence", "Enables idempotent Kafka producer", false);
+
+cfg::ParamCount s_timeout(
+    &s_spec, "timeout", "Connection and read timeout for replication", 10);
+
+cfg::ParamString s_gtid(
+    &s_spec, "gtid", "The GTID position to start from", "");
+
+cfg::ParamCount s_server_id(
+    &s_spec, "server_id", "Server ID for direct replication mode", 1234);
+
+cfg::ParamBool s_cooperative_replication(
+    &s_spec, "cooperative_replication", "Cooperate with other instances replicating from the same cluster",
+    false);
+
+cfg::ParamBool s_kafka_ssl(
+    &s_spec, "kafka_ssl", "Enable SSL for Kafka connections",
+    false);
+
+cfg::ParamPath s_kafka_ssl_ca(
+    &s_spec, "kafka_ssl_ca", "SSL Certificate Authority file in PEM format",
+    cfg::ParamPath::R, "");
+
+cfg::ParamPath s_kafka_ssl_cert(
+    &s_spec, "kafka_ssl_cert", "SSL public certificate file in PEM format",
+    cfg::ParamPath::R, "");
+
+cfg::ParamPath s_kafka_ssl_key(
+    &s_spec, "kafka_ssl_key", "SSL private key file in PEM format",
+    cfg::ParamPath::R, "");
+
+cfg::ParamString s_kafka_sasl_user(
+    &s_spec, "kafka_sasl_user", "SASL username used for authentication",
+    "");
+
+cfg::ParamString s_kafka_sasl_password(
+    &s_spec, "kafka_sasl_password", "SASL password for the user",
+    "");
+
+cfg::ParamEnum<SaslMech> s_kafka_sasl_mechanism(
+    &s_spec, "kafka_sasl_mechanism", "SASL mechanism to use",
+    {
+        {PLAIN, "PLAIN"},
+        {SCRAM_SHA_256, "SCRAM-SHA-256"},
+        {SCRAM_SHA_512, "SCRAM-SHA-512"},
+    },
+    PLAIN);
+
+template<class Param>
+bool KafkaSpecification::do_post_validate(Param param) const
+{
+    bool ok = true;
+
+    if (s_kafka_ssl_key.get(param).empty() != s_kafka_ssl_cert.get(param).empty())
+    {
+        MXS_ERROR("Both '%s' and '%s' must be defined",
+                  s_kafka_ssl_key.name().c_str(),
+                  s_kafka_ssl_cert.name().c_str());
+        ok = false;
+    }
+
+    if (s_kafka_sasl_user.get(param).empty() != s_kafka_sasl_password.get(param).empty())
+    {
+        MXS_ERROR("Both '%s' and '%s' must be defined",
+                  s_kafka_sasl_user.name().c_str(),
+                  s_kafka_sasl_password.name().c_str());
+        ok = false;
+    }
+
+    return ok;
+}
+
+bool KafkaSpecification::post_validate(const mxs::ConfigParameters& params) const
+{
+    return do_post_validate(params);
+}
+
+bool KafkaSpecification::post_validate(json_t* json) const
+{
+    return do_post_validate(json);
+}
+
 std::string to_string(SaslMech mech)
 {
     switch (mech)
