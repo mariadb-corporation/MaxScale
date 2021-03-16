@@ -145,7 +145,7 @@ Code from_mariadb_code(int code);
 
 }
 
-namespace keys
+namespace key
 {
 
 const char DELETE[]     = "delete";
@@ -159,9 +159,9 @@ const char LIMIT[]      = "limit";
 const char MULTI[]      = "multi";
 const char PROJECTION[] = "projection";
 const char Q[]          = "q";
-const char U[]          = "u";
 const char SKIP[]       = "skip";
 const char SORT[]       = "sort";
+const char U[]          = "u";
 const char UPDATE[]     = "update";
 const char UPDATES[]    = "updates";
 

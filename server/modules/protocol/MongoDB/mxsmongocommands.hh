@@ -22,7 +22,7 @@ using namespace std;
 
 using mxb::Worker;
 
-namespace
+namespace mxsmongo
 {
 
 namespace command
@@ -177,9 +177,9 @@ public:
     GWBUF* execute() override
     {
         stringstream sql;
-        sql << "DELETE FROM " << get_table(mxsmongo::keys::DELETE);
+        sql << "DELETE FROM " << get_table(mxsmongo::key::DELETE);
 
-        auto docs = static_cast<bsoncxx::array::view>(m_doc[mxsmongo::keys::DELETES].get_array());
+        auto docs = static_cast<bsoncxx::array::view>(m_doc[mxsmongo::key::DELETES].get_array());
 
         size_t nDocs = 0;
         for (auto element : docs)
@@ -292,7 +292,7 @@ public:
         stringstream sql;
         sql << "SELECT ";
 
-        auto projection = m_doc[mxsmongo::keys::PROJECTION];
+        auto projection = m_doc[mxsmongo::key::PROJECTION];
 
         if (projection)
         {
@@ -323,9 +323,9 @@ public:
             sql << "doc";
         }
 
-        sql << " FROM " << get_table(mxsmongo::keys::FIND);
+        sql << " FROM " << get_table(mxsmongo::key::FIND);
 
-        auto filter = m_doc[mxsmongo::keys::FILTER];
+        auto filter = m_doc[mxsmongo::key::FILTER];
 
         if (filter)
         {
@@ -342,7 +342,7 @@ public:
             }
         }
 
-        auto sort = m_doc[mxsmongo::keys::SORT];
+        auto sort = m_doc[mxsmongo::key::SORT];
 
         if (sort)
         {
@@ -359,8 +359,8 @@ public:
             }
         }
 
-        auto skip = m_doc[mxsmongo::keys::SKIP];
-        auto limit = m_doc[mxsmongo::keys::LIMIT];
+        auto skip = m_doc[mxsmongo::key::SKIP];
+        auto limit = m_doc[mxsmongo::key::LIMIT];
 
         if (skip || limit)
         {
@@ -437,7 +437,7 @@ public:
         stringstream sql;
         sql << "INSERT INTO " << table_name() << " (id, doc) VALUES ";
 
-        auto docs = static_cast<bsoncxx::array::view>(m_doc[mxsmongo::keys::DOCUMENTS].get_array());
+        auto docs = static_cast<bsoncxx::array::view>(m_doc[mxsmongo::key::DOCUMENTS].get_array());
 
         bool first = true;
         for (auto element : docs)
@@ -471,7 +471,7 @@ public:
 
     string table_name() const override final
     {
-        return get_table(mxsmongo::keys::INSERT);
+        return get_table(mxsmongo::key::INSERT);
     }
 
     State translate(ComResponse& response, GWBUF** ppResponse) override final
@@ -572,9 +572,9 @@ public:
     {
         GWBUF* pResponse = nullptr;
         stringstream sql;
-        sql << "UPDATE " << get_table(mxsmongo::keys::UPDATE) << " ";
+        sql << "UPDATE " << get_table(mxsmongo::key::UPDATE) << " ";
 
-        auto updates = static_cast<bsoncxx::array::view>(m_doc[mxsmongo::keys::UPDATES].get_array());
+        auto updates = static_cast<bsoncxx::array::view>(m_doc[mxsmongo::key::UPDATES].get_array());
 
         // TODO: Deal with multiple updates.
         mxb_assert(!updates[1]);
@@ -582,7 +582,7 @@ public:
         sql << "SET doc = ";
 
         auto update = static_cast<bsoncxx::document::view>(updates[0].get_document());
-        auto u = update[mxsmongo::keys::U];
+        auto u = update[mxsmongo::key::U];
 
         switch (get_update_kind(u))
         {
@@ -623,7 +623,7 @@ public:
 
         if (!pResponse)
         {
-            auto q = static_cast<bsoncxx::document::view>(update[mxsmongo::keys::Q].get_document());
+            auto q = static_cast<bsoncxx::document::view>(update[mxsmongo::key::Q].get_document());
             string where = mxsmongo::filter_to_where_clause(q);
 
             if (!where.empty())
@@ -631,7 +631,7 @@ public:
                 sql << "WHERE " << where;
             }
 
-            auto multi = update[mxsmongo::keys::MULTI];
+            auto multi = update[mxsmongo::key::MULTI];
 
             if (!multi || !multi.get_bool())
             {
@@ -711,11 +711,13 @@ private:
 
             for (auto field : doc)
             {
-                const char* zData = field.key().data();
+                const char* pData = field.key().data(); // Not necessarily null-terminated.
 
-                if (*zData == '$')
+                if (*pData == '$')
                 {
-                    if (strcmp(zData, "$set") != 0 && strcmp(zData, "$unset"))
+                    string name(pData, field.key().length());
+
+                    if (name != "$set" && name != "$unset")
                     {
                         MXS_ERROR("'%s' contains other than the supported '$set' and '$unset' "
                                   "operations.", bsoncxx::to_json(doc).c_str());

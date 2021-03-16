@@ -23,30 +23,32 @@ using namespace std;
 namespace
 {
 
+using namespace mxsmongo;
+
 template<class ConcreteCommand>
-unique_ptr<mxsmongo::Command> create_command(mxsmongo::Database* pDatabase,
-                                             GWBUF* pRequest,
-                                             const mxsmongo::Packet& req,
-                                             const bsoncxx::document::view& doc)
+unique_ptr<Command> create_command(Database* pDatabase,
+                                   GWBUF* pRequest,
+                                   const Packet& req,
+                                   const bsoncxx::document::view& doc)
 {
     return unique_ptr<ConcreteCommand>(new ConcreteCommand(pDatabase, pRequest, req, doc));
 }
 
-using CreatorFunction = unique_ptr<mxsmongo::Command> (*)(mxsmongo::Database* pDatabase,
-                                                          GWBUF* pRequest,
-                                                          const mxsmongo::Packet& req,
-                                                          const bsoncxx::document::view& doc);
+using CreatorFunction = unique_ptr<Command> (*)(Database* pDatabase,
+                                                GWBUF* pRequest,
+                                                const Packet& req,
+                                                const bsoncxx::document::view& doc);
 using CreatorsByName = const map<string, CreatorFunction>;
 
 struct ThisUnit
 {
     CreatorsByName creators_by_name =
     {
-        { mxsmongo::keys::DELETE,   &create_command<command::Delete> },
-        { mxsmongo::keys::FIND,     &create_command<command::Find> },
-        { mxsmongo::keys::INSERT,   &create_command<command::Insert> },
-        { mxsmongo::keys::ISMASTER, &create_command<command::IsMaster> },
-        { mxsmongo::keys::UPDATE,   &create_command<command::Update> }
+        { mxsmongo::key::DELETE,   &create_command<command::Delete> },
+        { mxsmongo::key::FIND,     &create_command<command::Find> },
+        { mxsmongo::key::INSERT,   &create_command<command::Insert> },
+        { mxsmongo::key::ISMASTER, &create_command<command::IsMaster> },
+        { mxsmongo::key::UPDATE,   &create_command<command::Update> }
     };
 } this_unit;
 
@@ -81,7 +83,9 @@ unique_ptr<Command> Command::get(mxsmongo::Database* pDatabase,
 
     for (auto element : doc)
     {
-        auto it = this_unit.creators_by_name.find(element.key().data());
+        string name(element.key().data(), element.key().length());
+
+        auto it = this_unit.creators_by_name.find(name);
 
         if (it != this_unit.creators_by_name.end())
         {
@@ -285,7 +289,7 @@ GWBUF* Command::translate_resultset(vector<string>& extractions, GWBUF* pMariadb
         cursor_builder.append(bsoncxx::builder::basic::kvp("firstBatch", firstBatch_builder.extract()));
         cursor_builder.append(bsoncxx::builder::basic::kvp("partialResultsReturned", false));
         cursor_builder.append(bsoncxx::builder::basic::kvp("id", int64_t(0)));
-        cursor_builder.append(bsoncxx::builder::basic::kvp("ns", get_table(keys::FIND)));
+        cursor_builder.append(bsoncxx::builder::basic::kvp("ns", get_table(key::FIND)));
 
         bsoncxx::builder::basic::document msg_builder;
         msg_builder.append(bsoncxx::builder::basic::kvp("cursor", cursor_builder.extract()));
