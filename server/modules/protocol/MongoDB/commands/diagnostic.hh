@@ -76,6 +76,50 @@ public:
 // https://docs.mongodb.com/manual/reference/command/getCmdLineOpts/
 
 // https://docs.mongodb.com/manual/reference/command/getLog/
+class GetLog : public mxsmongo::Command
+{
+public:
+    using mxsmongo::Command::Command;
+
+    GWBUF* execute() override
+    {
+        bsoncxx::builder::basic::document builder;
+
+        auto element = m_doc[mxsmongo::key::GETLOG];
+
+        const auto& utf8 = element.get_utf8().value;
+        string value(utf8.data(), utf8.size());
+
+        if (value == "*")
+        {
+            bsoncxx::builder::basic::array names_builder;
+            names_builder.append("global");
+            names_builder.append("startupWarnings");
+
+            builder.append(bsoncxx::builder::basic::kvp("names", names_builder.extract()));
+            builder.append(bsoncxx::builder::basic::kvp("ok", 1));
+        }
+        else if (value == "global" || value == "startupWarnings")
+        {
+            bsoncxx::builder::basic::array log_builder;
+
+            builder.append(bsoncxx::builder::basic::kvp("totalLinesWritten", 0));
+            builder.append(bsoncxx::builder::basic::kvp("log", log_builder.extract()));
+            builder.append(bsoncxx::builder::basic::kvp("ok", 1));
+        }
+        else
+        {
+            string message("No RamLog names: ");
+            message += value;
+
+            builder.append(bsoncxx::builder::basic::kvp("ok", 0));
+            builder.append(bsoncxx::builder::basic::kvp("errmsg", value));
+        }
+
+        return create_response(builder.extract());
+    }
+};
+
 
 // https://docs.mongodb.com/manual/reference/command/hostInfo/
 

@@ -155,6 +155,7 @@ const char DOCUMENTS[]   = "documents";
 const char ENDSESSIONS[] = "endSessions";
 const char FILTER[]      = "filter";
 const char FIND[]        = "find";
+const char GETLOG[]      = "getLog";
 const char INSERT[]      = "insert";
 const char ISMASTER[]    = "isMaster";
 const char LIMIT[]       = "limit";

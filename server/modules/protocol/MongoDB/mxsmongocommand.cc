@@ -99,6 +99,7 @@ struct ThisUnit
         { mxb::tolower(mxsmongo::key::DELETE),      &create_command<command::Delete> },
         { mxb::tolower(mxsmongo::key::ENDSESSIONS), &create_command<command::EndSessions> },
         { mxb::tolower(mxsmongo::key::FIND),        &create_command<command::Find> },
+        { mxb::tolower(mxsmongo::key::GETLOG),      &create_command<command::GetLog> },
         { mxb::tolower(mxsmongo::key::INSERT),      &create_command<command::Insert> },
         { mxb::tolower(mxsmongo::key::ISMASTER),    &create_command<command::IsMaster> },
         { mxb::tolower(mxsmongo::key::UPDATE),      &create_command<command::Update> },
