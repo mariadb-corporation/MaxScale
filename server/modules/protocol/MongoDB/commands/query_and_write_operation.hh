@@ -11,17 +11,12 @@
  * Public License.
  */
 
-#include "../mxsmongocommand.hh"
-#include <bsoncxx/builder/basic/array.hpp>
-#include <bsoncxx/builder/stream/document.hpp>
-#include <mysqld_error.h>
+//
+// https://docs.mongodb.com/manual/reference/command/nav-crud/
+//
+
+#include "defs.hh"
 #include <maxbase/worker.hh>
-#include "../mxsmongodatabase.hh"
-#include "../config.hh"
-
-using namespace std;
-
-using mxb::Worker;
 
 namespace mxsmongo
 {
@@ -33,6 +28,8 @@ class TableCreatingCommand : public mxsmongo::Command
 {
 public:
     using mxsmongo::Command::Command;
+
+    using Worker = mxb::Worker;
 
     ~TableCreatingCommand()
     {
@@ -169,61 +166,6 @@ private:
     uint32_t m_dcid { 0 };
 };
 
-// https://docs.mongodb.com/manual/reference/command/buildInfo/
-class BuildInfo : public mxsmongo::Command
-{
-public:
-    using mxsmongo::Command::Command;
-
-    GWBUF* execute() override
-    {
-        // TODO: Do not simply return a hardwired response.
-        bsoncxx::builder::basic::document builder;
-
-        builder.append(bsoncxx::builder::basic::kvp("version", "4.4.1"));
-
-        bsoncxx::builder::basic::array version_builder;
-
-        version_builder.append(4);
-        version_builder.append(4);
-        version_builder.append(1);
-
-        builder.append(bsoncxx::builder::basic::kvp("versionArray", version_builder.extract()));
-
-        return create_response(builder.extract());
-    }
-};
-
-//https://docs.mongodb.com/manual/reference/command/endSessions/
-class EndSessions : public mxsmongo::Command
-{
-public:
-    using mxsmongo::Command::Command;
-
-    GWBUF* execute() override
-    {
-        bsoncxx::builder::basic::document builder;
-
-        return create_response(builder.extract());
-    }
-};
-
-//https://docs.mongodb.com/manual/reference/command/whatsmyuri/
-class WhatsMyUri : public mxsmongo::Command
-{
-public:
-    using mxsmongo::Command::Command;
-
-    GWBUF* execute() override
-    {
-        bsoncxx::builder::basic::document builder;
-
-        builder.append(bsoncxx::builder::basic::kvp("you", "127.0.0.1:49388"));
-        builder.append(bsoncxx::builder::basic::kvp("ok", 1));
-
-        return create_response(builder.extract());
-    }
-};
 
 // https://docs.mongodb.com/manual/reference/command/delete/
 class Delete : public mxsmongo::Command
@@ -335,10 +277,8 @@ public:
     }
 };
 
-// TODO: This will be generalized so that there will be e.g. a base-class ResultSet for
-// TODO: commands that expects, well, a resultset. But for now there is no hierarchy.
 
-// https://docs.mongodb.com/manual/reference/command/find
+// https://docs.mongodb.com/manual/reference/command/find/
 class Find : public mxsmongo::Command
 {
 public:
@@ -483,6 +423,13 @@ private:
     vector<string> m_extractions;
 };
 
+
+// https://docs.mongodb.com/manual/reference/command/findAndModify/
+
+// https://docs.mongodb.com/manual/reference/command/getLastError/
+
+// https://docs.mongodb.com/manual/reference/command/getMore/
+
 // https://docs.mongodb.com/manual/reference/command/insert/
 class Insert : public TableCreatingCommand
 {
@@ -619,7 +566,10 @@ private:
     mutable int64_t m_nDocuments { 0 };
 };
 
-// https://docs.mongodb.com/manual/reference/command/update
+
+// https://docs.mongodb.com/manual/reference/command/resetError/
+
+// https://docs.mongodb.com/manual/reference/command/update/
 class Update : public mxsmongo::Command
 {
 public:
@@ -886,65 +836,6 @@ private:
     }
 };
 
-
-class IsMaster : public mxsmongo::Command
-{
-public:
-    using mxsmongo::Command::Command;
-
-    GWBUF* execute() override
-    {
-        // TODO: Do not simply return a hardwired response.
-
-        auto builder = bsoncxx::builder::stream::document{};
-        bsoncxx::document::value doc_value = builder
-            << "ismaster" << true
-            << "topologyVersion" << mxsmongo::topology_version()
-            << "maxBsonObjectSize" << (int32_t)16777216
-            << "maxMessageSizeBytes" << (int32_t)48000000
-            << "maxWriteBatchSize" << (int32_t)100000
-            << "localTime" << bsoncxx::types::b_date(std::chrono::system_clock::now())
-            << "logicalSessionTimeoutMinutes" << (int32_t)30
-            << "connectionId" << (int32_t)4
-            << "minWireVersion" << (int32_t)0
-            << "maxWireVersion" << (int32_t)9
-            << "readOnly" << false
-            << "ok" << (double)1
-            << bsoncxx::builder::stream::finalize;
-
-        return create_response(doc_value);
-    }
-};
-
-class Unknown : public mxsmongo::Command
-{
-public:
-    using mxsmongo::Command::Command;
-
-    GWBUF* execute() override
-    {
-        GWBUF* pResponse = nullptr;
-
-        stringstream ss;
-        ss << "Command not recognized: '" << bsoncxx::to_json(m_doc) << "'";
-        auto s = ss.str();
-
-        switch (m_database.config().on_unknown_command)
-        {
-        case Config::RETURN_ERROR:
-            MXS_ERROR("%s", s.c_str());
-            pResponse = create_error_response(s, mxsmongo::error::COMMAND_FAILED);
-            break;
-
-        case Config::RETURN_EMPTY:
-            MXS_WARNING("%s", s.c_str());
-            pResponse = create_empty_response();
-            break;
-        }
-
-        return pResponse;
-    }
-};
 
 }
 

@@ -17,12 +17,62 @@
 #include <maxbase/string.hh>
 #include <maxscale/modutil.hh>
 #include "mxsmongodatabase.hh"
-#include "commands/mxsmongocommands.hh"
+
+//
+// The include order, which has no impact on the functionality, is the one
+// used here: https://docs.mongodb.com/manual/reference/command/
+//
+// Files that contain no implemented commands are commented out.
+//
+//#include "commands/aggregation.hh"
+//#include "commands/geospatial.hh"
+#include "commands/query_and_write_operation.hh"
+//#include "commands/query_plan_cache.hh"
+//#include "commands/authentication.hh"
+//#include "commands/user_management.hh"
+//#include "commands/role_management.hh"
+#include "commands/replication.hh"
+//#include "commands/sharding.hh"
+#include "commands/sessions.hh"
+//#include "commands/administration.hh"
+#include "commands/diagnostic.hh"
+//#include "commands/free_monitoring.hh"
+//#include "commands/system_events_auditing.hh"
 
 using namespace std;
 
 namespace
 {
+
+class Unknown : public mxsmongo::Command
+{
+public:
+    using mxsmongo::Command::Command;
+
+    GWBUF* execute() override
+    {
+        GWBUF* pResponse = nullptr;
+
+        stringstream ss;
+        ss << "Command not recognized: '" << bsoncxx::to_json(m_doc) << "'";
+        auto s = ss.str();
+
+        switch (m_database.config().on_unknown_command)
+        {
+        case Config::RETURN_ERROR:
+            MXS_ERROR("%s", s.c_str());
+            pResponse = create_error_response(s, mxsmongo::error::COMMAND_FAILED);
+            break;
+
+        case Config::RETURN_EMPTY:
+            MXS_WARNING("%s", s.c_str());
+            pResponse = create_empty_response();
+            break;
+        }
+
+        return pResponse;
+    }
+};
 
 using namespace mxsmongo;
 
@@ -101,7 +151,7 @@ unique_ptr<Command> Command::get(mxsmongo::Database* pDatabase,
 
     if (!create)
     {
-        create = &create_command<command::Unknown>;
+        create = &create_command<Unknown>;
     }
 
     return create(pDatabase, pRequest, req, doc);
