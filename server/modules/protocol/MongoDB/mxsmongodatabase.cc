@@ -11,7 +11,6 @@
  * Public License.
  */
 
-#include "mxsmongocommands.hh"
 #include "mxsmongodatabase.hh"
 #include <maxscale/mysql_utils.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>

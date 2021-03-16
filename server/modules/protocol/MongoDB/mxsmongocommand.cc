@@ -17,7 +17,7 @@
 #include <maxbase/string.hh>
 #include <maxscale/modutil.hh>
 #include "mxsmongodatabase.hh"
-#include "mxsmongocommands.hh"
+#include "commands/mxsmongocommands.hh"
 
 using namespace std;
 

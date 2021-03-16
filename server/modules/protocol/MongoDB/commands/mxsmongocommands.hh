@@ -11,13 +11,13 @@
  * Public License.
  */
 
-#include "mxsmongocommand.hh"
+#include "../mxsmongocommand.hh"
 #include <bsoncxx/builder/basic/array.hpp>
 #include <bsoncxx/builder/stream/document.hpp>
 #include <mysqld_error.h>
 #include <maxbase/worker.hh>
-#include "mxsmongodatabase.hh"
-#include "config.hh"
+#include "../mxsmongodatabase.hh"
+#include "../config.hh"
 
 using namespace std;
 
