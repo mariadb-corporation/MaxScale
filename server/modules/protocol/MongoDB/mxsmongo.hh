@@ -34,6 +34,7 @@
 
 #include <mongoc/mongoc-opcode.h>
 #include <maxscale/buffer.hh>
+#include <maxscale/protocol2.hh>
 #include <maxscale/target.hh>
 
 class DCB;
@@ -534,10 +535,17 @@ public:
         Context(const Context&) = delete;
         Context& operator = (const Context&) = delete;
 
-        Context(mxs::Component* pDownstream)
-            : m_downstream(*pDownstream)
+        Context(mxs::ClientConnection* pClient_connection,
+                mxs::Component* pDownstream)
+            : m_client_connection(*pClient_connection)
+            , m_downstream(*pDownstream)
             , m_connection_id(++s_connection_id)
         {
+        }
+
+        mxs::ClientConnection& client_connection()
+        {
+            return m_client_connection;
         }
 
         mxs::Component& downstream()
@@ -561,9 +569,10 @@ public:
         }
 
     private:
-        mxs::Component& m_downstream;
-        int32_t         m_request_id { 1 };
-        int64_t         m_connection_id;
+        mxs::ClientConnection& m_client_connection;
+        mxs::Component&        m_downstream;
+        int32_t                m_request_id { 1 };
+        int64_t                m_connection_id;
 
         static std::atomic_int64_t s_connection_id;
     };
@@ -574,7 +583,9 @@ public:
         PENDING // A command is being executed.
     };
 
-    Mongo(mxs::Component* pDownstream, const Config* pConfig);
+    Mongo(mxs::ClientConnection* pClient_connection,
+          mxs::Component* pDownstream,
+          const Config* pConfig);
     ~Mongo();
 
     Mongo(const Mongo&) = delete;

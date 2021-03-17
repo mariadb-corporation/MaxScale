@@ -197,7 +197,12 @@ public:
     {
         DocumentBuilder doc;
 
-        doc.append(kvp("you", "127.0.0.1:49388")); // TODO: Return proper.
+        ClientDCB* pDcb = m_database.context().client_connection().dcb();
+
+        stringstream you;
+        you << pDcb->client_remote() << ":" << pDcb->port();
+
+        doc.append(kvp("you", you.str()));
         doc.append(kvp("ok", 1));
 
         return create_response(doc.extract());

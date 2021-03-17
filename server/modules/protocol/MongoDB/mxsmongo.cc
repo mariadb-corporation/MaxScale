@@ -749,8 +749,10 @@ std::string mxsmongo::skip_and_limit_to_limit(const bsoncxx::document::element& 
 
 std::atomic_int64_t mxsmongo::Mongo::Context::s_connection_id;
 
-mxsmongo::Mongo::Mongo(mxs::Component* pDownstream, const Config* pConfig)
-    : m_context(pDownstream)
+mxsmongo::Mongo::Mongo(mxs::ClientConnection* pClient_connection,
+                       mxs::Component* pDownstream,
+                       const Config* pConfig)
+    : m_context(pClient_connection, pDownstream)
     , m_config(*pConfig)
 {
 }
