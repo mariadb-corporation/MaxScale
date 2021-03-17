@@ -45,16 +45,16 @@ using namespace std::literals::string_literals;
 
 namespace cfg = mxs::config;
 
-const char CN_EXTRA_PORT[] = "extra_port";
-const char CN_MONITORPW[] = "monitorpw";
-const char CN_MONITORUSER[] = "monitoruser";
-const char CN_PERSISTMAXTIME[] = "persistmaxtime";
-const char CN_PERSISTPOOLMAX[] = "persistpoolmax";
-const char CN_PRIORITY[] = "priority";
-const char CN_PROXY_PROTOCOL[] = "proxy_protocol";
-
 namespace
 {
+
+constexpr const char CN_EXTRA_PORT[] = "extra_port";
+constexpr const char CN_MONITORPW[] = "monitorpw";
+constexpr const char CN_MONITORUSER[] = "monitoruser";
+constexpr const char CN_PERSISTMAXTIME[] = "persistmaxtime";
+constexpr const char CN_PERSISTPOOLMAX[] = "persistpoolmax";
+constexpr const char CN_PRIORITY[] = "priority";
+constexpr const char CN_PROXY_PROTOCOL[] = "proxy_protocol";
 
 const char ERR_TOO_LONG_CONFIG_VALUE[] = "The new value for %s is too long. Maximum length is %i characters.";
 

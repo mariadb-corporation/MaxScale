@@ -22,15 +22,6 @@
 #include <maxscale/target.hh>
 
 /**
- * Server configuration parameters names
- */
-extern const char CN_MONITORPW[];
-extern const char CN_MONITORUSER[];
-extern const char CN_PERSISTMAXTIME[];
-extern const char CN_PERSISTPOOLMAX[];
-extern const char CN_PROXY_PROTOCOL[];
-
-/**
  * The SERVER structure defines a backend server. Each server has a name
  * or IP address for the server, a port that the server listens on and
  * the name of a protocol module that is loaded to implement the protocol
