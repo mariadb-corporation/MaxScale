@@ -139,8 +139,10 @@ unique_ptr<Command> Command::get(mxsmongo::Database* pDatabase,
 {
     CreatorFunction create = nullptr;
 
-    for (auto element : doc)
+    if (!doc.empty())
     {
+        // The command *must* be the first element,
+        auto element = *doc.begin();
         string name(element.key().data(), element.key().length());
         mxb::lower_case(name);
 
@@ -149,7 +151,6 @@ unique_ptr<Command> Command::get(mxsmongo::Database* pDatabase,
         if (it != this_unit.creators_by_name.end())
         {
             create = it->second;
-            break;
         }
     }
 
