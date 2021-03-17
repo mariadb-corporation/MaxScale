@@ -61,7 +61,7 @@ public:
         doc.append(kvp("javascriptEngine", "mozjs")); // We lie
         doc.append(kvp("bits", 64));
         doc.append(kvp("debug", debug));
-        doc.append(kvp("maxBsonObjectSize", 16 * 1024 * 1024));
+        doc.append(kvp("maxBsonObjectSize", MXSMONGO_MAX_BSON_OBJECT_SIZE));
         doc.append(kvp("opensll", openssl.extract()));
         doc.append(kvp("modules", modules.extract()));
         doc.append(kvp("ok", 1));

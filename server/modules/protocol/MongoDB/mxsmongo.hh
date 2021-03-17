@@ -14,6 +14,7 @@
 
 #include "mongodbclient.hh"
 #include <endian.h>
+#include <atomic>
 #include <deque>
 
 #include <bsoncxx/json.hpp>
@@ -41,11 +42,20 @@ const int MXSMONGO_HEADER_LEN       = sizeof(mongoc_rpc_header_t);
 const int MXSMONGO_QUERY_HEADER_LEN = sizeof(mongoc_rpc_query_t);
 
 // The Mongo version we claim to be.
-#define MXSMONGO_VERSION_MAJOR "4"
-#define MXSMONGO_VERSION_MINOR "4"
-#define MXSMONGO_VERSION_PATCH "1"
+const int MXSMONGO_VERSION_MAJOR = 4;
+const int MXSMONGO_VERSION_MINOR = 4;
+const int MXSMONGO_VERSION_PATCH = 1;
 
-#define MXSMONGO_VERSION MXSMONGO_VERSION_MAJOR "." MXSMONGO_VERSION_MINOR "." MXSMONGO_VERSION_PATCH
+const char* const MXSMONGO_VERSION = "4.4.1";
+
+// See mongo: src/mongo/db/wire_version.h, 6 is the version that uses OP_MSG messages.
+const int MXSMONGO_MIN_WIRE_VERSION = 6;
+const int MXSMONGO_MAX_WIRE_VERSION = 6;
+
+// Defaults of Mongo server.
+const int MXSMONGO_MAX_BSON_OBJECT_SIZE   = 16 * 1024 * 1024;
+const int MXSMONGO_MAX_MESSAGE_SIZE_BYTES = 48 * 1000* 1000;
+const int MXSMONGO_MAX_WRITE_BATCH_SIZE   = 100000;
 
 class Config;
 
@@ -526,12 +536,18 @@ public:
 
         Context(mxs::Component* pDownstream)
             : m_downstream(*pDownstream)
+            , m_connection_id(++s_connection_id)
         {
         }
 
         mxs::Component& downstream()
         {
             return m_downstream;
+        }
+
+        int64_t connection_id() const
+        {
+            return m_connection_id;
         }
 
         int32_t current_request_id() const
@@ -547,6 +563,9 @@ public:
     private:
         mxs::Component& m_downstream;
         int32_t         m_request_id { 1 };
+        int64_t         m_connection_id;
+
+        static std::atomic_int64_t s_connection_id;
     };
 
     enum State

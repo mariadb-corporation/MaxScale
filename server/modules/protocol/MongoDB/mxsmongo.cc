@@ -747,6 +747,8 @@ std::string mxsmongo::skip_and_limit_to_limit(const bsoncxx::document::element& 
     return rv;
 }
 
+std::atomic_int64_t mxsmongo::Mongo::Context::s_connection_id;
+
 mxsmongo::Mongo::Mongo(mxs::Component* pDownstream, const Config* pConfig)
     : m_context(pDownstream)
     , m_config(*pConfig)
