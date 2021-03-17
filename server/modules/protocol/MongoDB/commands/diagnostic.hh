@@ -16,6 +16,7 @@
 //
 
 #include "defs.hh"
+#include <openssl/opensslv.h>
 
 namespace mxsmongo
 {
@@ -33,20 +34,45 @@ public:
 
     GWBUF* execute() override
     {
-        // TODO: Do not simply return a hardwired response.
-        bsoncxx::builder::basic::document builder;
+        using document_builder = bsoncxx::builder::basic::document;
+        using array_builder = bsoncxx::builder::basic::array;
+        using bsoncxx::builder::basic::kvp;
 
-        builder.append(bsoncxx::builder::basic::kvp("version", "4.4.1"));
+        document_builder buildInfo;
 
-        bsoncxx::builder::basic::array version_builder;
+        array_builder versionArray;
+        versionArray.append(MXSMONGO_VERSION_MAJOR);
+        versionArray.append(MXSMONGO_VERSION_MINOR);
+        versionArray.append(MXSMONGO_VERSION_PATCH);
+        versionArray.append(0);
 
-        version_builder.append(4);
-        version_builder.append(4);
-        version_builder.append(1);
+        array_builder storageEngines;
+        document_builder openssl;
+        openssl.append(kvp("running", OPENSSL_VERSION_TEXT));
+        openssl.append(kvp("compiled", OPENSSL_VERSION_TEXT));
+        array_builder modules;
 
-        builder.append(bsoncxx::builder::basic::kvp("versionArray", version_builder.extract()));
+#if defined(SS_DEBUG)
+        bool debug = true;
+#else
+        bool debug = false;
+#endif
+        // Order the same as that in the documentation.
+        buildInfo.append(kvp("gitVersion", MAXSCALE_COMMIT));
+        buildInfo.append(kvp("versionArray", versionArray.extract()));
+        buildInfo.append(kvp("version", MXSMONGO_VERSION));
+        buildInfo.append(kvp("storageEngines", storageEngines.extract()));
+        buildInfo.append(kvp("javascriptEngine", "mozjs")); // We lie
+        buildInfo.append(kvp("bits", 64));
+        buildInfo.append(kvp("debug", debug));
+        buildInfo.append(kvp("maxBsonObjectSize", 16 * 1024 * 1024));
+        buildInfo.append(kvp("opensll", openssl.extract()));
+        buildInfo.append(kvp("modules", modules.extract()));
+        buildInfo.append(kvp("ok", 1));
 
-        return create_response(builder.extract());
+        buildInfo.append(kvp("maxscale", MAXSCALE_VERSION));
+
+        return create_response(buildInfo.extract());
     }
 };
 
@@ -95,7 +121,6 @@ public:
         return create_response(builder.extract());
     }
 };
-
 
 
 // https://docs.mongodb.com/manual/reference/command/getLog/

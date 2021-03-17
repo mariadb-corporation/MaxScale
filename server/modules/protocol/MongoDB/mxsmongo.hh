@@ -40,6 +40,13 @@ class DCB;
 const int MXSMONGO_HEADER_LEN       = sizeof(mongoc_rpc_header_t);
 const int MXSMONGO_QUERY_HEADER_LEN = sizeof(mongoc_rpc_query_t);
 
+// The Mongo version we claim to be.
+#define MXSMONGO_VERSION_MAJOR "4"
+#define MXSMONGO_VERSION_MINOR "4"
+#define MXSMONGO_VERSION_PATCH "1"
+
+#define MXSMONGO_VERSION MXSMONGO_VERSION_MAJOR "." MXSMONGO_VERSION_MINOR "." MXSMONGO_VERSION_PATCH
+
 class Config;
 
 namespace mxsmongo
