@@ -269,16 +269,19 @@ int TestConnections::prepare_for_test(int argc, char* argv[])
         }
     }
 
-    char str[1024];
-    sprintf(str, "mkdir -p LOGS/%s", m_test_name.c_str());
-    call_system(str);
+    int rc = -1;
+    string create_logdir_cmd = "mkdir -p LOGS/" + m_test_name;
+    if (run_shell_command(create_logdir_cmd, "Failed to create logs directory."))
+    {
+        m_timeout_thread = std::thread(&TestConnections::timeout_thread, this);
+        m_log_copy_thread = std::thread(&TestConnections::log_copy_thread, this);
+        tprintf("Starting test");
+        gettimeofday(&m_start_time, nullptr);
+        logger().reset_timer();
+        rc = 0;
+    }
 
-    m_timeout_thread = std::thread(&TestConnections::timeout_thread, this);
-    m_log_copy_thread = std::thread(&TestConnections::log_copy_thread, this);
-    tprintf("Starting test");
-    gettimeofday(&m_start_time, NULL);
-    logger().reset_timer();
-    return 0;
+    return rc;
 }
 
 TestConnections::~TestConnections()
@@ -1576,30 +1579,33 @@ int TestConnections::call_mdbci(const char* options)
             tprintf("Failed to generate MDBCI virtual machines template");
             return 1;
         }
-        if (system((std::string("mdbci --override --template ") + m_vm_path
-                    + ".json generate " + m_mdbci_config_name).c_str()))
+
+        string mdbci_gen_cmd = mxb::string_printf("mdbci --override --template %s.json generate %s",
+                                                  m_vm_path.c_str(), m_mdbci_config_name.c_str());
+        if (!run_shell_command(mdbci_gen_cmd, "MDBCI failed to generate virtual machines description"))
         {
-            tprintf("MDBCI failed to generate virtual machines description");
             return 1;
         }
-        if (system((std::string("cp -r ") + test_dir + std::string("/mdbci/cnf ")
-                    + m_vm_path + "/").c_str()))
+
+        string copy_cmd = mxb::string_printf("cp -r %s/mdbci/cnf %s/", test_dir, m_vm_path.c_str());
+        if (!run_shell_command(copy_cmd, "Failed to copy my.cnf files"))
         {
-            tprintf("Failed to copy my.cnf files");
             return 1;
         }
     }
 
-    if (system((std::string("mdbci up ") + m_mdbci_config_name + " --labels " + m_required_mdbci_labels_str + " "
-                + options).c_str()))
+    string mdbci_up_cmd = mxb::string_printf("mdbci up %s --labels %s %s",
+                                             m_mdbci_config_name.c_str(), m_required_mdbci_labels_str.c_str(),
+                                             options);
+    if (!run_shell_command(mdbci_up_cmd, "MDBCI failed to bring up virtual machines"))
     {
-        tprintf("MDBCI failed to bring up virtual machines");
         return 1;
     }
 
     std::string team_keys = envvar_get_set("team_keys", "~/.ssh/id_rsa.pub");
-    string cmd = "mdbci public_keys --key " + team_keys + " " + m_mdbci_config_name;
-    system(cmd.c_str());
+    string keys_cmd = mxb::string_printf("mdbci public_keys --key %s %s",
+                                         team_keys.c_str(), m_mdbci_config_name.c_str());
+    run_shell_command(keys_cmd);
     read_vms_info();
     if (repl)
     {
@@ -1682,9 +1688,10 @@ int TestConnections::reinstall_maxscales()
         maxscales->ssh_node(i, "yum remove maxscale -y", true);
         maxscales->ssh_node(i, "yum clean all", true);
 
-        string cmd = mxb::string_printf("mdbci install_product --product maxscale_ci --product-version %s %s/%s_%03d",
-                                        m_target.c_str(), m_mdbci_config_name.c_str(), maxscales->prefix().c_str(), i);
-        if (system(cmd.c_str()))
+        string install_cmd = mxb::string_printf(
+            "mdbci install_product --product maxscale_ci --product-version %s %s/%s_%03d",
+            m_target.c_str(), m_mdbci_config_name.c_str(), maxscales->prefix().c_str(), i);
+        if (!run_shell_command(install_cmd, "MaxScale install failed."))
         {
             return 1;
         }
@@ -2070,12 +2077,33 @@ void TestConnections::set_signal_handlers()
 
 bool TestConnections::check_create_vm_dir()
 {
-    bool rval = true;
-    string cmd = "mkdir -p " + m_mdbci_vm_path;
-    if (system(cmd.c_str()))
+    bool rval = false;
+    string mkdir_cmd = "mkdir -p " + m_mdbci_vm_path;
+    if (run_shell_command(mkdir_cmd, "Failed to create MDBCI VMs directory."))
     {
-        tprintf("Unable to create MDBCI VMs direcory '%s', exiting", m_mdbci_vm_path.c_str());
+        rval = true;
+    }
+    return rval;
+}
+
+bool TestConnections::run_shell_command(const string& cmd, const string& errmsg)
+{
+    bool rval = true;
+    auto cmdc = cmd.c_str();
+
+    int rc = system(cmdc);
+    if (rc != 0)
+    {
         rval = false;
+        string msgp2 = mxb::string_printf("Shell command '%s' returned %i.", cmdc, rc);
+        if (errmsg.empty())
+        {
+            add_failure("%s", msgp2.c_str());
+        }
+        else
+        {
+            add_failure("%s %s", errmsg.c_str(), msgp2.c_str());
+        }
     }
     return rval;
 }
