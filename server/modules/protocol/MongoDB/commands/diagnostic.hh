@@ -17,6 +17,7 @@
 
 #include "defs.hh"
 #include <openssl/opensslv.h>
+#include <maxscale/config.hh>
 
 namespace mxsmongo
 {
@@ -105,8 +106,13 @@ public:
     {
         DocumentBuilder doc;
 
+        auto& config = mxs::Config::get();
+
         ArrayBuilder argv;
-        argv.append("maxscale");
+        for (const auto arg : config.argv)
+        {
+            argv.append(arg);
+        }
 
         ArrayBuilder parsed;
 
