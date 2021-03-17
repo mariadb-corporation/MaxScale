@@ -74,7 +74,11 @@ exports.builder = function (yargs) {
               "closed. When all connections are closed, the server is put into the " +
               "`maintenance` state and added back to all the services where it was " +
               "removed from. To take the server back into use, execute " +
-              "`clear server <server> maintenance`."
+              "`clear server <server> maintenance`." +
+              "\n\n" +
+              "Warning: This command is not safe to interrupt. If interrupted, " +
+              "the servers might not be added back to the service. For a better " +
+              "alternative, use `set server <server> drain`."
           )
           .usage("Usage: drain server <server>");
       },
