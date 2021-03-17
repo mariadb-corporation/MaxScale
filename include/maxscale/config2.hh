@@ -2081,6 +2081,25 @@ bool ParamDuration<T>::from_string(const std::string& value_as_string,
                 *pMessage += "'ms' (milliseconds).";
             }
         }
+        else if (unit == mxs::config::DURATION_IN_MILLISECONDS && m_interpretation == INTERPRET_AS_SECONDS)
+        {
+            if (duration < std::chrono::seconds(1) && duration > std::chrono::seconds(0))
+            {
+                if (pMessage)
+                {
+                    *pMessage = "Cannot set '" + this->name() + "' to " + value_as_string
+                        + ": value must be defined in seconds.";
+                }
+
+                valid = false;
+            }
+            else if (duration.count() % 1000 && pMessage)
+            {
+                std::chrono::seconds sec = std::chrono::duration_cast<std::chrono::seconds>(duration);
+                *pMessage = "Ignoring fractional part of '" + value_as_string + " for '" + this->name()
+                    + "': value converted to " + std::to_string(sec.count()) + "s.";
+            }
+        }
 
         *pValue = std::chrono::duration_cast<value_type>(duration);
     }

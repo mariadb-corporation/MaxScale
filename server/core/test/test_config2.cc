@@ -210,7 +210,8 @@ int test_duration(config::Duration<std::chrono::seconds>& value)
     static const TestEntry<config::Duration<std::chrono::seconds>::value_type> entries[] =
     {
         {"1",      true, std::chrono::seconds {1   }},
-        {"1ms",    true, std::chrono::seconds {0   }},
+        {"1ms",    false},
+        {"1001ms", true, std::chrono::seconds {1   }},
         {"1s",     true, std::chrono::seconds {1   }},
         {"1m",     true, std::chrono::seconds {60  }},
         {"1h",     true, std::chrono::seconds {3600}},
