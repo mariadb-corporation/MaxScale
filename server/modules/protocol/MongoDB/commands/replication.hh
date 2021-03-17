@@ -70,14 +70,14 @@ public:
 
     GWBUF* execute() override
     {
-        bsoncxx::builder::basic::document builder;
+        DocumentBuilder doc;
 
-        builder.append(bsoncxx::builder::basic::kvp("ok", 0));
-        builder.append(bsoncxx::builder::basic::kvp("errmsg", "not running with --replSet"));
-        builder.append(bsoncxx::builder::basic::kvp("code", (int32_t)error::Code::NO_REPLICATION_ENABLED));
-        builder.append(bsoncxx::builder::basic::kvp("codeName", "NoReplicationEnabled"));
+        doc.append(kvp("ok", 0));
+        doc.append(kvp("errmsg", "not running with --replSet"));
+        doc.append(kvp("code", (int32_t)error::Code::NO_REPLICATION_ENABLED));
+        doc.append(kvp("codeName", "NoReplicationEnabled"));
 
-        return create_response(builder.extract());
+        return create_response(doc.extract());
     }
 };
 

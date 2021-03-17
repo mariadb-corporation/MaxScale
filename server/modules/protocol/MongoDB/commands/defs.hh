@@ -20,3 +20,16 @@
 
 using namespace std;
 
+namespace mxsmongo
+{
+
+namespace command
+{
+
+using DocumentBuilder = bsoncxx::builder::basic::document;
+using ArrayBuilder = bsoncxx::builder::basic::array;
+using bsoncxx::builder::basic::kvp;
+
+}
+
+}

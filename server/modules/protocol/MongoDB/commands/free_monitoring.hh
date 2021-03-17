@@ -31,12 +31,12 @@ public:
 
     GWBUF* execute() override
     {
-        bsoncxx::builder::basic::document builder;
+        DocumentBuilder doc;
 
-        builder.append(bsoncxx::builder::basic::kvp("state", "undecided"));
-        builder.append(bsoncxx::builder::basic::kvp("ok", 1));
+        doc.append(kvp("state", "undecided"));
+        doc.append(kvp("ok", 1));
 
-        return create_response(builder.extract());
+        return create_response(doc.extract());
     }
 };
 

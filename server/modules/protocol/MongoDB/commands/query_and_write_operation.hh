@@ -242,14 +242,14 @@ public:
         // TODO: Update will be needed when DEPRECATE_EOF it turned on.
         GWBUF* pResponse = nullptr;
 
-        bsoncxx::builder::basic::document builder;
+        DocumentBuilder doc;
 
         ComResponse response(GWBUF_DATA(&mariadb_response));
 
         int32_t ok = response.is_ok() ? 1 : 0;
         int64_t n = 0;
 
-        builder.append(bsoncxx::builder::basic::kvp("ok", ok));
+        doc.append(kvp("ok", ok));
 
         switch (response.type())
         {
@@ -258,7 +258,7 @@ public:
             break;
 
         case ComResponse::ERR_PACKET:
-            add_error(builder, ComERR(response));
+            add_error(doc, ComERR(response));
             break;
 
         case ComResponse::LOCAL_INFILE_PACKET:
@@ -266,11 +266,9 @@ public:
             mxb_assert(!true);
         }
 
-        builder.append(bsoncxx::builder::basic::kvp("n", n));
+        doc.append(kvp("n", n));
 
-        auto doc = builder.extract();
-
-        pResponse = create_response(doc);
+        pResponse = create_response(doc.extract());
 
         *ppResponse = pResponse;
         return READY;
@@ -480,13 +478,13 @@ public:
 
     State translate(ComResponse& response, GWBUF** ppResponse) override final
     {
-        bsoncxx::builder::basic::document builder;
+        DocumentBuilder doc;
 
         int32_t ok = response.is_ok() ? 1 : 0;
         int64_t n = response.is_ok() ? m_nDocuments : 0;
 
-        builder.append(bsoncxx::builder::basic::kvp("ok", ok));
-        builder.append(bsoncxx::builder::basic::kvp("n", n));
+        doc.append(kvp("ok", ok));
+        doc.append(kvp("n", n));
 
         switch (response.type())
         {
@@ -494,7 +492,7 @@ public:
             break;
 
         case ComResponse::ERR_PACKET:
-            add_error(builder, ComERR(response));
+            add_error(doc, ComERR(response));
             break;
 
         case ComResponse::LOCAL_INFILE_PACKET:
@@ -502,9 +500,7 @@ public:
             mxb_assert(!true);
         }
 
-        auto doc = builder.extract();
-
-        GWBUF* pResponse = create_response(doc);
+        GWBUF* pResponse = create_response(doc.extract());
 
         *ppResponse = pResponse;
         return READY;
@@ -654,7 +650,7 @@ public:
     State translate(GWBUF& mariadb_response, GWBUF** ppResponse) override
     {
         // TODO: Update will be needed when DEPRECATE_EOF it turned on.
-        bsoncxx::builder::basic::document builder;
+        DocumentBuilder doc;
 
         ComResponse response(GWBUF_DATA(&mariadb_response));
 
@@ -681,7 +677,7 @@ public:
             break;
 
         case ComResponse::ERR_PACKET:
-            add_error(builder, ComERR(response));
+            add_error(doc, ComERR(response));
             break;
 
         case ComResponse::LOCAL_INFILE_PACKET:
@@ -689,7 +685,7 @@ public:
             mxb_assert(!true);
         }
 
-        GWBUF* pResponse = create_response(builder, is_ok, n, nModified);
+        GWBUF* pResponse = create_response(doc, is_ok, n, nModified);
 
         *ppResponse = pResponse;
         return READY;
@@ -816,21 +812,21 @@ private:
         return rv;
     }
 
-    GWBUF* create_response(bsoncxx::builder::basic::document& builder,
+    GWBUF* create_response(DocumentBuilder& builder,
                            int32_t ok,
                            int64_t n,
                            int64_t nModified)
     {
-        builder.append(bsoncxx::builder::basic::kvp("ok", ok));
-        builder.append(bsoncxx::builder::basic::kvp("n", n));
-        builder.append(bsoncxx::builder::basic::kvp("nModified", nModified));
+        builder.append(kvp("ok", ok));
+        builder.append(kvp("n", n));
+        builder.append(kvp("nModified", nModified));
 
         return mxsmongo::Command::create_response(builder.extract());
     }
 
     GWBUF* create_response(int32_t ok, int64_t n, int64_t nModified)
     {
-        bsoncxx::builder::basic::document builder;
+        DocumentBuilder builder;
 
         return create_response(builder, ok, n, nModified);
     }

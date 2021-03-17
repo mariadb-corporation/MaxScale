@@ -34,23 +34,19 @@ public:
 
     GWBUF* execute() override
     {
-        using document_builder = bsoncxx::builder::basic::document;
-        using array_builder = bsoncxx::builder::basic::array;
-        using bsoncxx::builder::basic::kvp;
+        DocumentBuilder doc;
 
-        document_builder buildInfo;
-
-        array_builder versionArray;
+        ArrayBuilder versionArray;
         versionArray.append(MXSMONGO_VERSION_MAJOR);
         versionArray.append(MXSMONGO_VERSION_MINOR);
         versionArray.append(MXSMONGO_VERSION_PATCH);
         versionArray.append(0);
 
-        array_builder storageEngines;
-        document_builder openssl;
+        ArrayBuilder storageEngines;
+        DocumentBuilder openssl;
         openssl.append(kvp("running", OPENSSL_VERSION_TEXT));
         openssl.append(kvp("compiled", OPENSSL_VERSION_TEXT));
-        array_builder modules;
+        ArrayBuilder modules;
 
 #if defined(SS_DEBUG)
         bool debug = true;
@@ -58,21 +54,21 @@ public:
         bool debug = false;
 #endif
         // Order the same as that in the documentation.
-        buildInfo.append(kvp("gitVersion", MAXSCALE_COMMIT));
-        buildInfo.append(kvp("versionArray", versionArray.extract()));
-        buildInfo.append(kvp("version", MXSMONGO_VERSION));
-        buildInfo.append(kvp("storageEngines", storageEngines.extract()));
-        buildInfo.append(kvp("javascriptEngine", "mozjs")); // We lie
-        buildInfo.append(kvp("bits", 64));
-        buildInfo.append(kvp("debug", debug));
-        buildInfo.append(kvp("maxBsonObjectSize", 16 * 1024 * 1024));
-        buildInfo.append(kvp("opensll", openssl.extract()));
-        buildInfo.append(kvp("modules", modules.extract()));
-        buildInfo.append(kvp("ok", 1));
+        doc.append(kvp("gitVersion", MAXSCALE_COMMIT));
+        doc.append(kvp("versionArray", versionArray.extract()));
+        doc.append(kvp("version", MXSMONGO_VERSION));
+        doc.append(kvp("storageEngines", storageEngines.extract()));
+        doc.append(kvp("javascriptEngine", "mozjs")); // We lie
+        doc.append(kvp("bits", 64));
+        doc.append(kvp("debug", debug));
+        doc.append(kvp("maxBsonObjectSize", 16 * 1024 * 1024));
+        doc.append(kvp("opensll", openssl.extract()));
+        doc.append(kvp("modules", modules.extract()));
+        doc.append(kvp("ok", 1));
 
-        buildInfo.append(kvp("maxscale", MAXSCALE_VERSION));
+        doc.append(kvp("maxscale", MAXSCALE_VERSION));
 
-        return create_response(buildInfo.extract());
+        return create_response(doc.extract());
     }
 };
 
@@ -107,18 +103,18 @@ public:
 
     GWBUF* execute() override
     {
-        bsoncxx::builder::basic::document builder;
+        DocumentBuilder doc;
 
-        bsoncxx::builder::basic::array argv_builder;
-        argv_builder.append("maxscale");
+        ArrayBuilder argv;
+        argv.append("maxscale");
 
-        bsoncxx::builder::basic::array parsed_builder;
+        ArrayBuilder parsed;
 
-        builder.append(bsoncxx::builder::basic::kvp("argv", argv_builder.extract()));
-        builder.append(bsoncxx::builder::basic::kvp("parsed", parsed_builder.extract()));
-        builder.append(bsoncxx::builder::basic::kvp("ok", 1));
+        doc.append(kvp("argv", argv.extract()));
+        doc.append(kvp("parsed", parsed.extract()));
+        doc.append(kvp("ok", 1));
 
-        return create_response(builder.extract());
+        return create_response(doc.extract());
     }
 };
 
@@ -131,7 +127,7 @@ public:
 
     GWBUF* execute() override
     {
-        bsoncxx::builder::basic::document builder;
+        DocumentBuilder doc;
 
         auto element = m_doc[mxsmongo::key::GETLOG];
 
@@ -140,31 +136,31 @@ public:
 
         if (value == "*")
         {
-            bsoncxx::builder::basic::array names_builder;
-            names_builder.append("global");
-            names_builder.append("startupWarnings");
+            ArrayBuilder names;
+            names.append("global");
+            names.append("startupWarnings");
 
-            builder.append(bsoncxx::builder::basic::kvp("names", names_builder.extract()));
-            builder.append(bsoncxx::builder::basic::kvp("ok", 1));
+            doc.append(kvp("names", names.extract()));
+            doc.append(kvp("ok", 1));
         }
         else if (value == "global" || value == "startupWarnings")
         {
-            bsoncxx::builder::basic::array log_builder;
+            ArrayBuilder log;
 
-            builder.append(bsoncxx::builder::basic::kvp("totalLinesWritten", 0));
-            builder.append(bsoncxx::builder::basic::kvp("log", log_builder.extract()));
-            builder.append(bsoncxx::builder::basic::kvp("ok", 1));
+            doc.append(kvp("totalLinesWritten", 0));
+            doc.append(kvp("log", log.extract()));
+            doc.append(kvp("ok", 1));
         }
         else
         {
             string message("No RamLog names: ");
             message += value;
 
-            builder.append(bsoncxx::builder::basic::kvp("ok", 0));
-            builder.append(bsoncxx::builder::basic::kvp("errmsg", value));
+            doc.append(kvp("ok", 0));
+            doc.append(kvp("errmsg", value));
         }
 
-        return create_response(builder.extract());
+        return create_response(doc.extract());
     }
 };
 
@@ -199,12 +195,12 @@ public:
 
     GWBUF* execute() override
     {
-        bsoncxx::builder::basic::document builder;
+        DocumentBuilder doc;
 
-        builder.append(bsoncxx::builder::basic::kvp("you", "127.0.0.1:49388"));
-        builder.append(bsoncxx::builder::basic::kvp("ok", 1));
+        doc.append(kvp("you", "127.0.0.1:49388")); // TODO: Return proper.
+        doc.append(kvp("ok", 1));
 
-        return create_response(builder.extract());
+        return create_response(doc.extract());
     }
 };
 

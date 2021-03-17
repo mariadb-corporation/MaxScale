@@ -35,9 +35,9 @@ public:
 
     GWBUF* execute() override
     {
-        bsoncxx::builder::basic::document builder;
+        DocumentBuilder doc;
 
-        return create_response(builder.extract());
+        return create_response(doc.extract());
     }
 };
 
