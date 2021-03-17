@@ -92,7 +92,7 @@ GWBUF* mxsmongo::Database::execute(GWBUF* pRequest,
     {
         MXS_ERROR("Exeception occurred when parsing MongoDB command: %s", x.what());
 
-        pResponse = sCommand->create_error_response(x.what(), mxsmongo::error::FAILED_TO_PARSE);
+        pResponse = sCommand->create_hard_error(x.what(), mxsmongo::error::FAILED_TO_PARSE);
     }
 
     if (!pResponse)

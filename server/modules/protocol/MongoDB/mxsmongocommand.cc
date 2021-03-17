@@ -53,15 +53,25 @@ public:
     {
         GWBUF* pResponse = nullptr;
 
+        string command;
+        if (!m_doc.empty())
+        {
+            auto element = *m_doc.begin();
+            auto key = element.key();
+            command = string(key.data(), key.length());
+        }
+
         stringstream ss;
-        ss << "Command not recognized: '" << bsoncxx::to_json(m_doc) << "'";
+        ss << "no such command: '" << command << "'";
         auto s = ss.str();
 
         switch (m_database.config().on_unknown_command)
         {
         case Config::RETURN_ERROR:
-            MXS_ERROR("%s", s.c_str());
-            pResponse = create_error_response(s, mxsmongo::error::COMMAND_FAILED);
+            {
+                MXS_ERROR("%s", s.c_str());
+                pResponse = create_soft_error(s, mxsmongo::error::COMMAND_NOT_FOUND);
+            }
             break;
 
         case Config::RETURN_EMPTY:
@@ -177,14 +187,26 @@ GWBUF* Command::create_empty_response()
     return create_response(doc_value);
 }
 
-GWBUF* Command::create_error_response(const std::string& message, error::Code code)
+GWBUF* Command::create_soft_error(const std::string& message, error::Code code)
 {
-    bsoncxx::builder::basic::document builder;
+    command::DocumentBuilder doc;
 
-    builder.append(bsoncxx::builder::basic::kvp("$err", message.c_str()));
-    builder.append(bsoncxx::builder::basic::kvp("code", static_cast<int32_t>(code)));
+    doc.append(command::kvp("ok", 0));
+    doc.append(command::kvp("errmsg", message.c_str()));
+    doc.append(command::kvp("code", static_cast<int32_t>(code)));
+    doc.append(command::kvp("codeName", "")); // TODO: Create mapping code -> codeName.
 
-    return create_response(builder.extract());
+    return create_response(doc.extract());
+}
+
+GWBUF* Command::create_hard_error(const std::string& message, error::Code code)
+{
+    command::DocumentBuilder doc;
+
+    doc.append(command::kvp("$err", message.c_str()));
+    doc.append(command::kvp("code", static_cast<int32_t>(code)));
+
+    return create_response(doc.extract());
 }
 
 string Command::get_table(const char* zCommand) const

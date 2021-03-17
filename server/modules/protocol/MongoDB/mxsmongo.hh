@@ -156,6 +156,7 @@ enum Code
 
     OK                     = 0,
     FAILED_TO_PARSE        = 9,
+    COMMAND_NOT_FOUND      = 59,
     NO_REPLICATION_ENABLED = 76,
     COMMAND_FAILED         = 125
 };

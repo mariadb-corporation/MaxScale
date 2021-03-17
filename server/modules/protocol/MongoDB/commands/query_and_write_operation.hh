@@ -95,7 +95,7 @@ public:
                     ss << "Table " << table_name() << " does not exist, and 'auto_create_tables' "
                        << "is false.";
 
-                    pResponse = create_error_response(ss.str(), mxsmongo::error::COMMAND_FAILED);
+                    pResponse = create_hard_error(ss.str(), mxsmongo::error::COMMAND_FAILED);
                     state = READY;
                 }
             }
@@ -128,8 +128,8 @@ public:
                     else
                     {
                         MXS_ERROR("Could not create table: (%d), %s", err.code(), err.message().c_str());
-                        pResponse = create_error_response(err.message(),
-                                                          mxsmongo::error::from_mariadb_code(code));
+                        pResponse = create_hard_error(err.message(),
+                                                      mxsmongo::error::from_mariadb_code(code));
                         state = READY;
                     }
                 }
@@ -138,8 +138,8 @@ public:
             default:
                 mxb_assert(!true);
                 MXS_ERROR("Expected OK or ERR packet, received something else.");
-                pResponse = create_error_response("Unexpected response received from backend.",
-                                                  mxsmongo::error::COMMAND_FAILED);
+                pResponse = create_hard_error("Unexpected response received from backend.",
+                                              mxsmongo::error::COMMAND_FAILED);
                 state = READY;
             }
         }
@@ -398,7 +398,7 @@ public:
                 {
                     MXS_WARNING("Mongo request to backend failed: (%d), %s", code, err.message().c_str());
 
-                    pResponse = create_error_response(err.message(), mxsmongo::error::from_mariadb_code(code));
+                    pResponse = create_hard_error(err.message(), mxsmongo::error::from_mariadb_code(code));
                 }
             }
             break;
@@ -596,7 +596,7 @@ public:
                 message += "'.";
 
                 MXS_ERROR("%s", message.c_str());
-                pResponse = create_error_response(message, mxsmongo::error::COMMAND_FAILED);
+                pResponse = create_hard_error(message, mxsmongo::error::COMMAND_FAILED);
             }
             break;
 
@@ -620,7 +620,7 @@ public:
                 message += "'.";
 
                 MXS_ERROR("%s", message.c_str());
-                pResponse = create_error_response(message, mxsmongo::error::COMMAND_FAILED);
+                pResponse = create_hard_error(message, mxsmongo::error::COMMAND_FAILED);
             }
         }
 
