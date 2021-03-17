@@ -689,14 +689,9 @@ int MariaDBBackendConnection::normal_read()
         }
         else
         {
-            /**
-             * The client protocol always requests an authentication method
-             * switch to the same plugin to be compatible with most connectors.
-             *
-             * To prevent packet sequence number mismatch, always return a sequence
-             * of 3 for the final response to a COM_CHANGE_USER.
-             */
-            GWBUF_DATA(read_buffer)[3] = 0x3;
+            // Fix the packet sequence number to be the same what the client expects
+            MYSQL_session* client_data = static_cast<MYSQL_session*>(session->protocol_data());
+            GWBUF_DATA(read_buffer)[3] = client_data->next_sequence;
             m_changing_user = false;
         }
     }

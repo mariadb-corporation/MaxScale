@@ -1516,15 +1516,8 @@ void MariaDBClientConnection::hangup(DCB* event_dcb)
             errmsg += ": " + extra;
         }
 
-        int seqno = 1;
-
-        if (m_state == State::CHANGING_USER)
-        {
-            // In case a COM_CHANGE_USER is in progress, we need to send the error with the seqno 3
-            seqno = 3;
-        }
-
-        send_mysql_err_packet(seqno, 0, 1927, "08S01", errmsg.c_str());
+        MYSQL_session* client_data = static_cast<MYSQL_session*>(session->protocol_data());
+        send_mysql_err_packet(client_data->next_sequence, 0, 1927, "08S01", errmsg.c_str());
     }
 
     // We simply close the session, this will propagate the closure to any
@@ -2439,6 +2432,9 @@ bool MariaDBClientConnection::process_normal_packet(mxs::Buffer&& buffer)
     bool is_large = large_query_continues(buffer);
     if (m_command == MXS_COM_CHANGE_USER)
     {
+        update_sequence(buffer.get());
+        m_session_data->next_sequence = m_sequence + 1;
+
         // Client sent a change-user-packet. Parse it but only route it once change-user completes.
         if (start_change_user(move(buffer)))
         {
