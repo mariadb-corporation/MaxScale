@@ -548,8 +548,9 @@ static int get_release_string(char* release);
 namespace maxscale
 {
 
-Config::Config()
+Config::Config(int argc, char** argv)
     : config::Configuration(CN_MAXSCALE, &s_specification)
+    , argv(argv, argv + argc)
     , log_debug(this, &s_log_debug, [](bool enable) {
 #ifndef SS_DEBUG
                     MXS_WARNING("The 'log_debug' option has no effect in release mode.");
@@ -670,11 +671,22 @@ Config::Config()
 }
 
 // static
-Config& Config::get()
+Config& Config::init(int argc, char** argv)
 {
-    static Config config;
+#if defined(SS_DEBUG)
+    static bool inited;
+    mxb_assert((!inited && argc && argv) || (inited && !argc && !argv));
+    inited = true;
+#endif
+    static Config config(argc, argv);
 
     return config;
+}
+
+// static
+Config& Config::get()
+{
+    return init(0, nullptr);
 }
 
 bool Config::configure(const mxs::ConfigParameters& params, mxs::ConfigParameters* pUnrecognized)

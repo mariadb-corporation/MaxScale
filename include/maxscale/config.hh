@@ -30,6 +30,16 @@ public:
     Config& operator=(const Config&) = delete;
 
     /**
+     * Initialize the config object. To be called *once* at program startup.
+     *
+     * @param argc  The argc provided to main.
+     * @param argv  The argv procided to main.
+     *
+     * @return The MaxScale global configuration.
+     */
+    static Config& init(int argc, char** argv);
+
+    /**
      * @return The MaxScale global configuration.
      */
     static Config& get();
@@ -92,6 +102,8 @@ public:
     };
 
     using SessionDumpStatements = config::Enum<session_dump_statements_t>;
+
+    std::vector<std::string> argv;                  /**< Copy of the argv array given to main. */
 
     // RUNTIME-modifiable automatically configured parameters.
     config::Bool          log_debug;                /**< Whether debug messages are logged. */
@@ -170,7 +182,7 @@ public:
                    mxs::ConfigParameters* pUnrecognized = nullptr) override;
 
 private:
-    Config();
+    Config(int argc, char** argv);
 
     bool post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params) override;
 

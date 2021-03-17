@@ -1463,7 +1463,7 @@ int main(int argc, char** argv)
 {
     int rc = MAXSCALE_SHUTDOWN;
 
-    mxs::Config& cnf = mxs::Config::get();
+    mxs::Config& cnf = mxs::Config::init(argc, argv);
 
     maxscale_reset_starttime();
 
