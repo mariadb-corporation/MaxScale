@@ -33,25 +33,22 @@ public:
 
     GWBUF* execute() override
     {
-        // TODO: Do not simply return a hardwired response.
+        DocumentBuilder doc;
 
-        auto builder = bsoncxx::builder::stream::document{};
-        bsoncxx::document::value doc_value = builder
-            << "isMaster" << true
-            << "topologyVersion" << mxsmongo::topology_version()
-            << "maxBsonObjectSize" << (int32_t)16777216
-            << "maxMessageSizeBytes" << (int32_t)48000000
-            << "maxWriteBatchSize" << (int32_t)100000
-            << "localTime" << bsoncxx::types::b_date(std::chrono::system_clock::now())
-            << "logicalSessionTimeoutMinutes" << (int32_t)30
-            << "connectionId" << (int32_t)4
-            << "minWireVersion" << (int32_t)0
-            << "maxWireVersion" << (int32_t)9
-            << "readOnly" << false
-            << "ok" << (double)1
-            << bsoncxx::builder::stream::finalize;
+        doc.append(kvp("isMaster", true));
+        doc.append(kvp("topologyVersion", mxsmongo::topology_version()));
+        doc.append(kvp("maxBsonObjectSize", 16 * 1024 * 1024));
+        doc.append(kvp("maxMessageSizeBytes", 48000000));
+        doc.append(kvp("maxWriteBatchSize", 100000));
+        doc.append(kvp("localTime", bsoncxx::types::b_date(std::chrono::system_clock::now())));
+        doc.append(kvp("logicalSessionTimeoutMinutes", 30));
+        doc.append(kvp("connectionId", 4)); // TODO: Return proper.
+        doc.append(kvp("minWireVersion", 0)); // TODO: Return proper minimum.
+        doc.append(kvp("maxWireVersion", 9)); // TODO: Return proper maximum.
+        doc.append(kvp("readOnly", false));
+        doc.append(kvp("ok", 1));
 
-        return create_response(doc_value);
+        return create_response(doc.extract());
     }
 };
 
