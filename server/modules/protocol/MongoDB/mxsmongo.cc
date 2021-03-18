@@ -385,8 +385,11 @@ string get_logical_condition(const bsoncxx::document::element& element)
     }
     else
     {
-        MXS_ERROR("Operator is not recognized: '%s'.",
-                  static_cast<string>(key).c_str());
+        stringstream ss;
+        ss << "unknown top level operator: " << key;
+
+        MXS_ERROR("%s", ss.str().c_str());
+        throw mxsmongo::SoftError(ss.str(), mxsmongo::error::BAD_VALUE);
     }
 
     return condition;

@@ -5,6 +5,7 @@
 #endif
 
 MXSMONGO_ERROR(OK,                          0, "OK")
+MXSMONGO_ERROR(BAD_VALUE,                   2, "BadValue")
 MXSMONGO_ERROR(FAILED_TO_PARSE,             9, "FailedToParse")
 MXSMONGO_ERROR(COMMAND_NOT_FOUND,          59, "CommandNotFound")
 MXSMONGO_ERROR(NO_REPLICATION_ENABLED,     76, "NoReplicationEnabled")
