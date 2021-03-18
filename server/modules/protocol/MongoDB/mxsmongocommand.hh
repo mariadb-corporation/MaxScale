@@ -52,10 +52,10 @@ public:
 
     virtual State translate(GWBUF& mariadb_response, GWBUF** ppMongo_response);
 
-    GWBUF* create_empty_response();
+    GWBUF* create_empty_response() const;
 
-    GWBUF* create_hard_error(const std::string& message, int mongo_code);
-    GWBUF* create_soft_error(const std::string& message, int mongo_code);
+    GWBUF* create_hard_error(const std::string& message, int mongo_code) const;
+    GWBUF* create_soft_error(const std::string& message, int mongo_code) const;
 
 protected:
     std::string get_table(const char* zCommand) const;
@@ -64,7 +64,7 @@ protected:
 
     void send_downstream(const std::string& sql);
 
-    GWBUF* create_response(const bsoncxx::document::value& doc);
+    GWBUF* create_response(const bsoncxx::document::value& doc) const;
 
     GWBUF* translate_resultset(std::vector<std::string>& extractions, GWBUF* pMariadb_response);
 
@@ -76,19 +76,20 @@ protected:
     bsoncxx::document::view m_doc;
 
 private:
-    std::pair<GWBUF*, uint8_t*> create_reply_response_buffer(size_t size_of_documents, size_t nDocuments);
+    std::pair<GWBUF*, uint8_t*> create_reply_response_buffer(size_t size_of_documents,
+                                                             size_t nDocuments) const;
 
     GWBUF* create_reply_response(size_t size_of_documents, const std::
-                                 vector<bsoncxx::document::value>& documents);
-    GWBUF* create_reply_response(const bsoncxx::document::value& doc);
+                                 vector<bsoncxx::document::value>& documents) const;
+    GWBUF* create_reply_response(const bsoncxx::document::value& doc) const;
 
-    GWBUF* create_msg_response(const bsoncxx::document::value& doc);
+    GWBUF* create_msg_response(const bsoncxx::document::value& doc) const;
 
-    std::string create_leaf_entry(const std::string& extraction, const std::string& value);
+    std::string create_leaf_entry(const std::string& extraction, const std::string& value) const;
 
-    std::string create_nested_entry(const std::string& extraction, const std::string& value);
+    std::string create_nested_entry(const std::string& extraction, const std::string& value) const;
 
-    std::string create_entry(const std::string& extraction, const std::string& value);
+    std::string create_entry(const std::string& extraction, const std::string& value) const;
 };
 
 }

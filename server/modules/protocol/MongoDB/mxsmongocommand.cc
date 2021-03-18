@@ -179,7 +179,7 @@ Command::State Command::translate(GWBUF& mariadb_response, GWBUF** ppMongo_respo
     return READY;
 }
 
-GWBUF* Command::create_empty_response()
+GWBUF* Command::create_empty_response() const
 {
     auto builder = bsoncxx::builder::stream::document{};
     bsoncxx::document::value doc_value = builder << bsoncxx::builder::stream::finalize;
@@ -187,7 +187,7 @@ GWBUF* Command::create_empty_response()
     return create_response(doc_value);
 }
 
-GWBUF* Command::create_soft_error(const std::string& message, int code)
+GWBUF* Command::create_soft_error(const std::string& message, int code) const
 {
     mxb_assert(*mxsmongo::error::name(code));
 
@@ -201,7 +201,7 @@ GWBUF* Command::create_soft_error(const std::string& message, int code)
     return create_response(doc.extract());
 }
 
-GWBUF* Command::create_hard_error(const std::string& message, int code)
+GWBUF* Command::create_hard_error(const std::string& message, int code) const
 {
     mxb_assert(*mxsmongo::error::name(code));
 
@@ -239,7 +239,7 @@ void Command::send_downstream(const string& sql)
     m_database.context().downstream().routeQuery(pRequest);
 }
 
-GWBUF* Command::create_response(const bsoncxx::document::value& doc)
+GWBUF* Command::create_response(const bsoncxx::document::value& doc) const
 {
     GWBUF* pResponse = nullptr;
 
@@ -423,7 +423,7 @@ void Command::add_error(bsoncxx::builder::basic::document& builder, const ComERR
     builder.append(bsoncxx::builder::basic::kvp("writeErrors", array_builder.extract()));
 }
 
-pair<GWBUF*, uint8_t*> Command::create_reply_response_buffer(size_t size_of_documents, size_t nDocuments)
+pair<GWBUF*, uint8_t*> Command::create_reply_response_buffer(size_t size_of_documents, size_t nDocuments) const
 {
     // TODO: In the following is assumed that whatever is returned will
     // TODO: fit into a Mongo packet.
@@ -456,7 +456,7 @@ pair<GWBUF*, uint8_t*> Command::create_reply_response_buffer(size_t size_of_docu
 }
 
 GWBUF* Command::create_reply_response(size_t size_of_documents,
-                                      const vector<bsoncxx::document::value>& documents)
+                                      const vector<bsoncxx::document::value>& documents) const
 {
     GWBUF* pResponse;
     uint8_t* pData;
@@ -475,7 +475,7 @@ GWBUF* Command::create_reply_response(size_t size_of_documents,
     return pResponse;
 }
 
-GWBUF* Command::create_reply_response(const bsoncxx::document::value& doc)
+GWBUF* Command::create_reply_response(const bsoncxx::document::value& doc) const
 {
     MXS_NOTICE("Response(REPLY): %s", bsoncxx::to_json(doc).c_str());
 
@@ -492,7 +492,7 @@ GWBUF* Command::create_reply_response(const bsoncxx::document::value& doc)
     return pResponse;
 }
 
-GWBUF* Command::create_msg_response(const bsoncxx::document::value& doc)
+GWBUF* Command::create_msg_response(const bsoncxx::document::value& doc) const
 {
     MXS_NOTICE("Response(MSG): %s", bsoncxx::to_json(doc).c_str());
 
@@ -524,14 +524,14 @@ GWBUF* Command::create_msg_response(const bsoncxx::document::value& doc)
     return pResponse;
 }
 
-string Command::create_leaf_entry(const string& extraction, const std::string& value)
+string Command::create_leaf_entry(const string& extraction, const std::string& value) const
 {
     mxb_assert(extraction.find('.') == string::npos);
 
     return "\"" + extraction + "\": " + value;
 }
 
-string Command::create_nested_entry(const string& extraction, const std::string& value)
+string Command::create_nested_entry(const string& extraction, const std::string& value) const
 {
     string entry;
     auto i = extraction.find('.');
@@ -551,7 +551,7 @@ string Command::create_nested_entry(const string& extraction, const std::string&
     return entry;
 }
 
-string Command::create_entry(const string& extraction, const std::string& value)
+string Command::create_entry(const string& extraction, const std::string& value) const
 {
     string entry;
     auto i = extraction.find('.');
