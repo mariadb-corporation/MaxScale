@@ -745,6 +745,10 @@ uint32_t QueryClassifier::determine_query_type(GWBUF* querybuf, int command)
         type = QUERY_TYPE_WRITE;
         break;
 
+    case MXS_COM_FIELD_LIST:    /**< This is essentially SHOW COLUMNS */
+        type = QUERY_TYPE_READ;
+        break;
+
     case MXS_COM_QUERY:
         type = qc_get_type_mask(querybuf);
         break;
