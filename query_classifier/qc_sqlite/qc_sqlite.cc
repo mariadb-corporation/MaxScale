@@ -3092,6 +3092,10 @@ public:
             }
             break;
 
+        case MXS_SET_DEFAULT_ROLE:
+            m_type_mask = QUERY_TYPE_WRITE;
+            break;
+
         default:
             mxb_assert(!true);
         }

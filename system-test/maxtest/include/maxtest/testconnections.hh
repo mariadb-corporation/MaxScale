@@ -28,14 +28,30 @@ class TestConnections
 public:
     using StringSet = std::set<std::string>;
 
+    TestConnections();
+
     /**
-     * @brief TestConnections constructor: reads environmental variables, copies MaxScale.cnf for MaxScale
-     * machine
-     * @param test_exec_name Path to currect executable
+     * Combined constructor and test system initialization. Reads environment variables,
+     * copies MaxScale.cnf for MaxScale machine etc. Only meant for backwards compatibility.
+     * Use 'run_test' instead.
+     *
+     * @param argc Command line argument count
+     * @param argv Command line arguments
      */
     TestConnections(int argc, char* argv[]);
 
     ~TestConnections();
+
+    /**
+     * Run a test. Runs test system initialization, the test itself, and cleanup.
+     *
+     * @param argc Command line argument count
+     * @param argv Command line arguments
+     * @param testfunc Test function
+     * @return Return value.
+     */
+    int run_test(int argc, char* argv[], const std::function<int(TestConnections&)>& testfunc);
+
 
     /**
      * @brief Is the test still ok?
@@ -473,6 +489,8 @@ private:
     bool m_reinstall_maxscale {false};
     bool m_mdbci_called {false};     /**< Was mdbci called when setting up test system? */
 
+    bool m_cleaned_up {false}; /**< Cleanup done? */
+
     std::string flatten_stringset(const StringSet& set);
     StringSet   parse_to_stringset(const std::string& source);
 
@@ -490,6 +508,9 @@ private:
      * @brief log_copy_thread Thread which peridically copies logs from Maxscale machine
      */
     void log_copy_thread();
+
+    int prepare_for_test(int argc, char* argv[]);
+    int cleanup();
 };
 
 /**

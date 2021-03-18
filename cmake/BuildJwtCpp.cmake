@@ -5,6 +5,7 @@ ExternalProject_Add(jwt-cpp
   GIT_SHALLOW TRUE
   CONFIGURE_COMMAND ""
   BUILD_COMMAND ""
+  UPDATE_COMMAND ""
   INSTALL_COMMAND ""
   UPDATE_COMMAND ""
   PATCH_COMMAND cd ${CMAKE_BINARY_DIR}/jwt-cpp-prefix/src/jwt-cpp/ && git checkout -f && git apply ${CMAKE_SOURCE_DIR}/cmake/jwt-cpp.patch

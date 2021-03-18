@@ -869,12 +869,10 @@ int MariaDBBackendConnection::read_change_user()
 
             if (m_state == State::CHANGING_USER)
             {
-                /**
-                 * The client protocol always requests an authentication method switch to the same plugin to
-                 * be compatible with most connectors. To prevent packet sequence number mismatch, always
-                 * return a sequence of 3 for the final response to a COM_CHANGE_USER.
-                 */
-                buffer.data()[3] = 0x3;
+                // Fix the packet sequence number to be the same what the client expects
+                MYSQL_session* client_data = static_cast<MYSQL_session*>(m_session->protocol_data());
+                buffer.data()[3] = client_data->next_sequence;
+
                 mxs::ReplyRoute route;
                 rc = m_upstream->clientReply(buffer.release(), route, m_reply);
 

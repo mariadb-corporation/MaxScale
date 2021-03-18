@@ -644,7 +644,7 @@ columnid(A) ::= nm(X). {
   OF OFFSET OPEN
   PARTITIONS PASSWORD PREVIOUS
   QUERY QUICK
-  RAISE RECURSIVE /*REINDEX*/ RELEASE /*RENAME*/ /*REPLACE*/ RESET RESTRICT ROLLBACK ROLLUP ROW
+  RAISE RECURSIVE /*REINDEX*/ RELEASE /*RENAME*/ /*REPLACE*/ RESET RESTRICT ROLE ROLLBACK ROLLUP ROW
   SAVEPOINT SELECT_OPTIONS_KW /*SEQUENCE*/ SHARE SLAVE /*START*/ STATEMENT STATUS
   TABLES TEMP TEMPTABLE /*TRIGGER*/ TRIM TRIM_ARG
   /*TRUNCATE*/
@@ -3279,6 +3279,14 @@ cmd ::= SET STATEMENT variable_assignments(X) FOR cmd. {
   // it will be freed by that callback). The variable definitions we
   // just throw away, as they are of no interest.
   sqlite3ExprListDelete(pParse->db, X);
+}
+
+role ::= STRING.
+role ::= id.     // Covers NONE as well.
+
+// Covers '... FOR 'user'@'host' as well. Stmt will be partial parsed, but type will be correct.
+cmd ::= SET DEFAULT ROLE role. {
+  maxscaleSet(pParse, 0, MXS_SET_DEFAULT_ROLE, 0);
 }
 
 //////////////////////// The USE statement ////////////////////////////////////
