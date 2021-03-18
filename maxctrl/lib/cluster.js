@@ -99,16 +99,16 @@ async function getDiffs(a, b) {
   var dest = {};
 
   for (i of collections) {
-    dest[i] = await simpleRequest(b, i);
-    src[i] = await simpleRequest(a, i);
+    dest[i] = await doRequest(b, i);
+    src[i] = await doRequest(a, i);
   }
 
   for (i of endpoints) {
     // Treating the resource endpoints as arrays allows the same functions to be used
     // to compare individual resources and resource collections
-    dest[i] = await simpleRequest(b, i);
+    dest[i] = await doRequest(b, i);
     dest[i].data = [dest[i].data];
-    src[i] = await simpleRequest(a, i);
+    src[i] = await doRequest(a, i);
     src[i].data = [src[i].data];
   }
 
@@ -125,7 +125,7 @@ async function getDiffs(a, b) {
 
 // Returns a set with the parameters that can be modified at runtime.
 async function getModifiableParams(host) {
-  var module = await simpleRequest(host, "maxscale/modules/maxscale");
+  var module = await doRequest(host, "maxscale/modules/maxscale");
   var modifiable = _.filter(module.data.attributes.parameters, (v) => v.modifiable);
   return new Set(_.map(modifiable, (v) => v.name));
 }
@@ -136,30 +136,30 @@ async function syncDiffs(host, src, dest) {
     // If the service has listeners, delete those first. Otherwise the deletion will fail.
     if (i.attributes.listeners) {
       for (j of i.attributes.listeners) {
-        await simpleRequest(host, "services/" + i.id + "/listeners/" + j.id, { method: "DELETE" });
+        await doRequest(host, "services/" + i.id + "/listeners/" + j.id, { method: "DELETE" });
       }
     }
 
-    var body = { method: "PATCH", body: _.set({}, "data.relationships", {}) };
-    await simpleRequest(host, "services/" + i.id, body);
-    await simpleRequest(host, "services/" + i.id, { method: "DELETE" });
+    var body = { method: "PATCH", data: _.set({}, "data.relationships", {}) };
+    await doRequest(host, "services/" + i.id, body);
+    await doRequest(host, "services/" + i.id, { method: "DELETE" });
   }
 
   // Delete old monitors
   for (i of getDifference(dest.monitors, src.monitors)) {
-    var body = { method: "PATCH", body: _.set({}, "data.relationships", {}) };
-    await simpleRequest(host, "monitors/" + i.id, body);
-    await simpleRequest(host, "monitors/" + i.id, { method: "DELETE" });
+    var body = { method: "PATCH", data: _.set({}, "data.relationships", {}) };
+    await doRequest(host, "monitors/" + i.id, body);
+    await doRequest(host, "monitors/" + i.id, { method: "DELETE" });
   }
 
   // Delete old servers
   for (i of getDifference(dest.servers, src.servers)) {
     // The servers must be unlinked from all services and monitors before they can be deleted
-    await simpleRequest(host, "servers/" + i.id, {
+    await doRequest(host, "servers/" + i.id, {
       method: "PATCH",
-      body: _.set({}, "data.relationships", {}),
+      data: _.set({}, "data.relationships", {}),
     });
-    await simpleRequest(host, "servers/" + i.id, { method: "DELETE" });
+    await doRequest(host, "servers/" + i.id, { method: "DELETE" });
   }
 
   // Add new servers first, this way other objects can directly define their relationships
@@ -167,20 +167,20 @@ async function syncDiffs(host, src, dest) {
     // Create the servers without relationships, those are generated when services and
     // monitors are handled
     var newserv = _.pick(i, ["id", "type", "attributes.parameters"]);
-    await simpleRequest(host, "servers", { method: "POST", body: { data: newserv } });
+    await doRequest(host, "servers", { method: "POST", data: { data: newserv } });
   }
 
   // Add new monitors
   for (i of getDifference(src.monitors, dest.monitors)) {
-    await simpleRequest(host, "monitors", { method: "POST", body: { data: i } });
+    await doRequest(host, "monitors", { method: "POST", data: { data: i } });
   }
 
   // Add new services
   for (i of getDifference(src.services, dest.services)) {
     // We must omit the listeners as they haven't been created yet
-    await simpleRequest(host, "services", {
+    await doRequest(host, "services", {
       method: "POST",
-      body: { data: _.omit(i, "relationships.listeners") },
+      data: { data: _.omit(i, "relationships.listeners") },
     });
 
     // Create listeners for the new service right after it is created. This removes the need to update the
@@ -188,7 +188,7 @@ async function syncDiffs(host, src, dest) {
     // normal listener creation code.
     if (i.attributes.listeners) {
       for (j of i.attributes.listeners) {
-        await simpleRequest(host, "services/" + i.id + "/listeners", { method: "POST", body: { data: j } });
+        await doRequest(host, "services/" + i.id + "/listeners", { method: "POST", data: { data: j } });
       }
     }
   }
@@ -200,10 +200,10 @@ async function syncDiffs(host, src, dest) {
 
   for (i of relevant_keys) {
     for (j of getDifference(dest[i], src[i])) {
-      await simpleRequest(host, i + "/" + j.id, { method: "DELETE" });
+      await doRequest(host, i + "/" + j.id, { method: "DELETE" });
     }
     for (j of getDifference(src[i], dest[i])) {
-      await simpleRequest(host, i, { method: "POST", body: { data: j } });
+      await doRequest(host, i, { method: "POST", data: { data: j } });
     }
   }
 
@@ -212,7 +212,7 @@ async function syncDiffs(host, src, dest) {
   // cannot currently be patched.
   for (i of _.difference(collections, ["users", "filters"])) {
     for (j of src[i].data) {
-      await simpleRequest(host, i + "/" + j.id, { method: "PATCH", body: { data: j } });
+      await doRequest(host, i + "/" + j.id, { method: "PATCH", data: { data: j } });
     }
   }
 
@@ -222,7 +222,7 @@ async function syncDiffs(host, src, dest) {
   for (i of endpoints) {
     for (j of src[i].data) {
       j.attributes.parameters = _.pickBy(j.attributes.parameters, (v, k) => params.has(k));
-      await simpleRequest(host, i, { method: "PATCH", body: { data: j } });
+      await doRequest(host, i, { method: "PATCH", data: { data: j } });
     }
   }
 }

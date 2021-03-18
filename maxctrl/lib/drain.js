@@ -103,10 +103,10 @@ exports.builder = function (yargs) {
 
             var addServersBack = () => {
               _.set(res, path, services);
-              return doRequest(host, target, { method: "PATCH", body: res });
+              return doRequest(host, target, { method: "PATCH", data: res });
             };
 
-            return doRequest(host, target, { method: "PATCH", body: res })
+            return doRequest(host, target, { method: "PATCH", data: res })
               .then(() => waitUntilZero(host, target, "data.attributes.statistics.connections", timeout))
               .then(() => doRequest(host, target + "/set?state=maintenance", { method: "PUT" }))
               .then(addServersBack, addServersBack); // Try to add the servers back even if we receive an error

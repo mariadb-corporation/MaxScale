@@ -182,7 +182,7 @@ exports.builder = function (yargs) {
         }
 
         maxctrl(argv, function (host) {
-          return doRequest(host, "servers", { method: "POST", body: server });
+          return doRequest(host, "servers", { method: "POST", data: server });
         });
       }
     )
@@ -251,7 +251,7 @@ exports.builder = function (yargs) {
           if (err) {
             return Promise.reject(err);
           }
-          return doRequest(host, "monitors", { method: "POST", body: monitor });
+          return doRequest(host, "monitors", { method: "POST", data: monitor });
         });
       }
     )
@@ -342,7 +342,7 @@ exports.builder = function (yargs) {
             }
           }
 
-          return doRequest(host, "services", { method: "POST", body: service });
+          return doRequest(host, "services", { method: "POST", data: service });
         });
       }
     )
@@ -376,7 +376,7 @@ exports.builder = function (yargs) {
           }
           filter.data.attributes.parameters = argv.params.reduce(to_obj, {});
 
-          return doRequest(host, "filters", { method: "POST", body: filter });
+          return doRequest(host, "filters", { method: "POST", data: filter });
         });
       }
     )
@@ -499,7 +499,7 @@ exports.builder = function (yargs) {
             listener.data.attributes.parameters.ssl = true;
           }
 
-          return doRequest(host, "listeners", { method: "POST", body: listener });
+          return doRequest(host, "listeners", { method: "POST", data: listener });
         });
       }
     )
@@ -536,7 +536,7 @@ exports.builder = function (yargs) {
         };
 
         maxctrl(argv, function (host) {
-          return doRequest(host, "users/inet", { method: "POST", body: user });
+          return doRequest(host, "users/inet", { method: "POST", data: user });
         });
       }
     )

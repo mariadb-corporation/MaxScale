@@ -54,7 +54,7 @@ function addServer(argv, path, targets) {
         _.set(res, "data.relationships.monitors.data", monitors);
         delete res.data.attributes;
 
-        return doRequest(host, path, { method: "PATCH", body: res });
+        return doRequest(host, path, { method: "PATCH", data: res });
       });
   });
 }
