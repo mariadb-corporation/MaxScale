@@ -8,7 +8,7 @@ module.exports = function () {
     throw new Error("MAXSCALE_DIR is not set");
   }
 
-  this.request = require("request-promise-native");
+  this.axios = require("axios");
   this.chai = require("chai");
   this.assert = require("assert");
   this.chaiAsPromised = require("chai-as-promised");
@@ -84,10 +84,10 @@ module.exports = function () {
 
   // Execute a single MaxCtrl command and request a resource via the REST API,
   // returns a Promise with the JSON format resource as an argument
-  this.verifyCommand = function (command, resource) {
-    return doCommand(command).then(function () {
-      return request.get(host + resource, { json: true, auth: { user: "admin", password: "mariadb" } });
-    });
+  this.verifyCommand = async function (command, resource) {
+    await doCommand(command);
+    var res = await axios({ url: host + resource, auth: { username: "admin", password: "mariadb" } });
+    return res.data;
   };
 
   this.sleepFor = function (time) {

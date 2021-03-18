@@ -1,11 +1,12 @@
 require("../test_utils.js")();
 
 describe("Set/Clear Commands", function () {
-  before(function () {
-    return startMaxScale().then(function () {
-      return request.put(host + "monitors/MariaDB-Monitor/stop", {
-        auth: { user: "admin", password: "mariadb" },
-      });
+  before(async function () {
+    await startMaxScale();
+    await axios({
+      url: host + "monitors/MariaDB-Monitor/stop",
+      method: "put",
+      auth: { username: "admin", password: "mariadb" },
     });
   });
 

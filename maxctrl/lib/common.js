@@ -11,12 +11,13 @@
  * Public License.
  */
 
-var request = require("request-promise-native");
+var axios = require("axios");
 var colors = require("colors/safe");
 var Table = require("cli-table");
 var consoleLib = require("console");
 var os = require("os");
 var fs = require("fs");
+var https = require("https");
 var readlineSync = require("readline-sync");
 
 function normalizeWhitespace(table) {
@@ -69,18 +70,6 @@ module.exports = function () {
 
     try {
       await pingCluster(argv.hosts);
-    } catch (err) {
-      if (err.error.cert) {
-        // TLS errors cause extremely verbose errors, truncate the certifiate details
-        // from the error output
-        delete err.error.cert;
-      }
-
-      // One of the HTTP request pings to the cluster failed, log the error
-      argv.reject(JSON.stringify(err.error, null, 4));
-    }
-
-    try {
       var rval = [];
 
       for (i of argv.hosts) {
@@ -289,7 +278,7 @@ module.exports = function () {
   this.updateValue = function (host, resource, key, value) {
     var body = {};
     _.set(body, key, value);
-    return doRequest(host, resource, { method: "PATCH", body: body });
+    return doRequest(host, resource, { method: "PATCH", data: body });
   };
 
   // Helper for converting endpoints to acutal URLs
@@ -310,33 +299,36 @@ module.exports = function () {
 
   // Set TLS certificates
   this.setTlsCerts = function (args) {
-    args.agentOptions = {};
+    agentOptions = {};
     if (this.argv["tls-key"]) {
-      args.agentOptions.key = fs.readFileSync(this.argv["tls-key"]);
+      agentOptions.key = fs.readFileSync(this.argv["tls-key"]);
     }
 
     if (this.argv["tls-cert"]) {
-      args.agentOptions.cert = fs.readFileSync(this.argv["tls-cert"]);
+      agentOptions.cert = fs.readFileSync(this.argv["tls-cert"]);
     }
 
     if (this.argv["tls-ca-cert"]) {
-      args.agentOptions.ca = fs.readFileSync(this.argv["tls-ca-cert"]);
+      agentOptions.ca = fs.readFileSync(this.argv["tls-ca-cert"]);
     }
 
     if (this.argv["tls-passphrase"]) {
-      args.agentOptions.passphrase = this.argv["tls-passphrase"];
+      agentOptions.passphrase = this.argv["tls-passphrase"];
     }
 
     if (!this.argv["tls-verify-server-cert"]) {
-      args.agentOptions.checkServerIdentity = function () {};
+      agentOptions.rejectUnauthorized = false;
+    }
+
+    if (Object.keys(agentOptions).length > 0) {
+      args.httpsAgent = new https.Agent(agentOptions);
     }
   };
 
   this.simpleRequest = function (host, resource, obj) {
     args = obj || {};
-    args.uri = getUri(host, this.argv.secure, resource);
-    args.auth = { user: argv.u, pass: argv.p };
-    args.json = true;
+    args.url = getUri(host, this.argv.secure, resource);
+    args.auth = { username: argv.u, password: argv.p };
     args.timeout = this.argv.timeout;
 
     try {
@@ -345,7 +337,7 @@ module.exports = function () {
       return error("Failed to set TLS certificates: " + JSON.stringify(err, null, 4));
     }
 
-    return request(args);
+    return axios(args);
   };
 
   // Helper for executing requests and handling their responses, returns a
@@ -354,43 +346,35 @@ module.exports = function () {
   this.doRequest = async function (host, resource, obj) {
     try {
       var res = await simpleRequest(host, resource, obj);
-      return res ? res : OK();
+      return res.data ? res.data : OK();
     } catch (err) {
-      if (err.response && err.response.body) {
+      if (err.response) {
+        var extra = "";
+        if (err.response.data) {
+          extra = JSON.stringify(err.response.data, null, 4);
+        }
+
+        var host = err.config.url.replace(resource, "").replace("/v1/", "");
+
         return error(
           "Server at " +
-            err.response.request.uri.host +
-            " responded with status code " +
-            err.statusCode +
-            " to `" +
-            err.response.request.method +
+            host +
+            " responded with " +
+            err.response.status +
             " " +
-            resource +
-            "`:" +
-            JSON.stringify(err.response.body, null, 4)
-        );
-      } else if (err.statusCode) {
-        return error(
-          "Server at " +
-            err.response.request.uri.host +
-            " responded with status code " +
-            err.statusCode +
+            err.response.statusText +
             " to `" +
-            err.response.request.method +
+            err.config.method.toUpperCase() +
             " " +
             resource +
             "`"
         );
-      } else if (err.error) {
-        if (err.error.code == "ECONNREFUSED") {
-          return error("Could not connect to MaxScale");
-        } else if (err.error.code == "ESOCKETTIMEDOUT") {
-          return error("Connection to MaxScale timed out");
-        } else if (err.message) {
-          return error(err.message);
-        } else {
-          return error(JSON.stringify(err.error, null, 4));
-        }
+      } else if (err.code == "ECONNREFUSED") {
+        return error("Could not connect to MaxScale");
+      } else if (err.code == "ESOCKETTIMEDOUT") {
+        return error("Connection to MaxScale timed out");
+      } else if (err.message) {
+        return error(err.message);
       } else {
         return error("Undefined error: " + JSON.stringify(err, null, 4));
       }
@@ -517,11 +501,10 @@ function pingCluster(hosts) {
   if (hosts.length > 1) {
     hosts.forEach(function (i) {
       args = {};
-      args.uri = getUri(i, this.argv.secure, "");
-      args.auth = { user: argv.u, pass: argv.p };
-      args.json = true;
+      args.url = getUri(i, this.argv.secure, "");
+      args.auth = { username: argv.u, password: argv.p };
       setTlsCerts(args);
-      promises.push(request(args));
+      promises.push(axios(args));
     });
   }
 
