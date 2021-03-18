@@ -176,39 +176,66 @@ int TestConnections::prepare_for_test(int argc, char* argv[])
         return 1;
     }
 
-    read_vms_info();
-
-    if (!check_create_vms())
+    bool vm_setup_ok = false;
+    read_network_config();
+    if (required_machines_are_running())
     {
-        exit(MDBCI_FAIL);
+        vm_setup_ok = true;
+    }
+    else
+    {
+        if (call_mdbci(""))
+        {
+            m_mdbci_called = true;
+            // Network config should exist now.
+            if (read_network_config())
+            {
+                if (required_machines_are_running())
+                {
+                    vm_setup_ok = true;
+                }
+                else
+                {
+                    add_failure("Still missing VMs after running MDBCI.");
+                }
+            }
+            else
+            {
+                add_failure("Failed to read network_config or configured_labels after running MDBCI.");
+            }
+        }
+    }
+
+    if (!vm_setup_ok)
+    {
+        return MDBCI_FAIL;
     }
 
     bool node_error = !initialize_nodes();
-    bool initialize = false;
+    bool run_core_config = false;
 
     if (node_error || too_few_maxscales())
     {
-        initialize = true;
         tprintf("Recreating VMs: %s", node_error ? "node check failed" : "too many maxscales");
-
-        if (call_mdbci("--recreate"))
+        if (!call_mdbci("--recreate") || !initialize_nodes())
         {
             exit(MDBCI_FAIL);
         }
+        run_core_config = true;
+
     }
 
     if (m_reinstall_maxscale)
     {
-        initialize = true;
-
         if (reinstall_maxscales())
         {
             tprintf("Failed to install Maxscale: target is %s", m_target.c_str());
             exit(MDBCI_FAIL);
         }
+        run_core_config = true;
     }
 
-    if (initialize)
+    if (run_core_config)
     {
         std::string src = std::string(test_dir) + "/mdbci/add_core_cnf.sh";
         maxscales->copy_to_node(0, src.c_str(), maxscales->access_homedir(0));
@@ -380,10 +407,14 @@ void TestConnections::add_failure(const char* format, ...)
     va_end(argp);
 }
 
-bool TestConnections::read_vms_info()
+/**
+ * Read the contents of both the 'network_config' and 'configured_labels'-files. The files may not exist
+ * if the VM setup has not yet been initialized.
+ *
+ * @return True on success
+ */
+bool TestConnections::read_network_config()
 {
-    // Read the contents of both the 'network_config' and 'configured_labels'-files. The files may not exist
-    // if the VM setup has not yet been initialized.
     m_network_config.clear();
     m_configured_mdbci_labels.clear();
     const char warnmsg_fmt[] = "Warning: Failed to open '%s'. File needs to be created.";
@@ -1620,58 +1651,54 @@ bool TestConnections::test_bad_config(int m, const string& config)
                                  "maxscale -U maxscale -lstdout &> /dev/null && sleep 1 && pkill -9 maxscale");
     return ((ssh_rc == 0) || (ssh_rc == 256));
 }
-int TestConnections::call_mdbci(const char* options)
+
+/**
+ * Run MDBCI to bring up nodes.
+ *
+ * @return True on success
+ */
+bool TestConnections::call_mdbci(const char* options)
 {
-    struct stat buf;
-    string filepath = m_mdbci_vm_path + "/" + m_mdbci_config_name;
-    if (stat(filepath.c_str(), &buf))
+    if (access(m_vm_path.c_str(), F_OK) != 0)
     {
-        if (!process_mdbci_template())
+        // Directory does not exist, must be first time running mdbci.
+        bool ok = false;
+        if (process_mdbci_template())
         {
-            add_failure("Failed to generate MDBCI virtual machines template");
-            return 1;
+            string mdbci_gen_cmd = mxb::string_printf("mdbci --override --template %s.json generate %s",
+                                                      m_vm_path.c_str(), m_mdbci_config_name.c_str());
+            if (run_shell_command(mdbci_gen_cmd, "MDBCI failed to generate virtual machines description"))
+            {
+                string copy_cmd = mxb::string_printf("cp -r %s/mdbci/cnf %s/", test_dir, m_vm_path.c_str());
+                if (run_shell_command(copy_cmd, "Failed to copy my.cnf files"))
+                {
+                    ok = true;
+                }
+            }
         }
 
-        string mdbci_gen_cmd = mxb::string_printf("mdbci --override --template %s.json generate %s",
-                                                  m_vm_path.c_str(), m_mdbci_config_name.c_str());
-        if (!run_shell_command(mdbci_gen_cmd, "MDBCI failed to generate virtual machines description"))
+        if (!ok)
         {
-            return 1;
-        }
-
-        string copy_cmd = mxb::string_printf("cp -r %s/mdbci/cnf %s/", test_dir, m_vm_path.c_str());
-        if (!run_shell_command(copy_cmd, "Failed to copy my.cnf files"))
-        {
-            return 1;
+            return false;
         }
     }
 
+    bool rval = false;
     string mdbci_up_cmd = mxb::string_printf("mdbci up %s --labels %s %s",
                                              m_mdbci_config_name.c_str(), m_required_mdbci_labels_str.c_str(),
                                              options);
-    if (!run_shell_command(mdbci_up_cmd, "MDBCI failed to bring up virtual machines"))
+    if (run_shell_command(mdbci_up_cmd, "MDBCI failed to bring up virtual machines"))
     {
-        return 1;
+        std::string team_keys = envvar_get_set("team_keys", "~/.ssh/id_rsa.pub");
+        string keys_cmd = mxb::string_printf("mdbci public_keys --key %s %s",
+                                             team_keys.c_str(), m_mdbci_config_name.c_str());
+        if (run_shell_command(keys_cmd, "MDBCI failed to upload ssh keys."))
+        {
+            rval = true;
+        }
     }
 
-    std::string team_keys = envvar_get_set("team_keys", "~/.ssh/id_rsa.pub");
-    string keys_cmd = mxb::string_printf("mdbci public_keys --key %s %s",
-                                         team_keys.c_str(), m_mdbci_config_name.c_str());
-    run_shell_command(keys_cmd);
-    read_vms_info();
-    if (repl)
-    {
-        repl->read_basic_env(m_network_config, repl->prefix());
-    }
-    if (galera)
-    {
-        galera->read_basic_env(m_network_config, galera->prefix());
-    }
-    if (maxscales)
-    {
-        maxscales->read_basic_env(m_network_config, maxscales->prefix());
-    }
-    return 0;
+    return rval;
 }
 
 /**
@@ -2018,15 +2045,14 @@ bool TestConnections::check_backend_versions()
     return repl_ok && galera_ok;
 }
 
-bool TestConnections::check_create_vms()
+bool TestConnections::required_machines_are_running()
 {
-    bool rval = true;
+    bool rval = false;
     StringSet missing_mdbci_labels;
     std::set_difference(m_required_mdbci_labels.begin(), m_required_mdbci_labels.end(),
                         m_configured_mdbci_labels.begin(), m_configured_mdbci_labels.end(),
                         std::inserter(missing_mdbci_labels, missing_mdbci_labels.begin()));
 
-    bool mdbci_call_needed = false;
     if (missing_mdbci_labels.empty())
     {
         if (verbose())
@@ -2034,23 +2060,15 @@ bool TestConnections::check_create_vms()
             tprintf("Machines with all required labels '%s' are running, MDBCI UP call is not needed",
                     m_required_mdbci_labels_str.c_str());
         }
+        rval = true;
     }
     else
     {
         string missing_labels_str = flatten_stringset(missing_mdbci_labels);
         tprintf("Machines with labels '%s' are not running, MDBCI UP call is needed",
                 missing_labels_str.c_str());
-        mdbci_call_needed = true;
     }
 
-    if (mdbci_call_needed)
-    {
-        if (call_mdbci(""))
-        {
-            rval = false;
-        }
-        m_mdbci_called = true;
-    }
     return rval;
 }
 
