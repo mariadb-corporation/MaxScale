@@ -45,7 +45,7 @@ module.exports = function () {
   // The main entry point into the library. This function is used to do
   // cluster health checks and to propagate the commands to multiple
   // servers.
-  this.maxctrl = function (argv, cb) {
+  this.maxctrl = async function (argv, cb) {
     // No password given, ask it from the command line
     if (argv.p == "") {
       if (process.stdin.isTTY) {
@@ -67,42 +67,34 @@ module.exports = function () {
       argv.reject("No hosts defined");
     }
 
-    return pingCluster(argv.hosts).then(
-      function () {
-        var promises = [];
-        var rval = [];
+    try {
+      await pingCluster(argv.hosts);
+    } catch (err) {
+      if (err.error.cert) {
+        // TLS errors cause extremely verbose errors, truncate the certifiate details
+        // from the error output
+        delete err.error.cert;
+      }
 
-        argv.hosts.forEach(function (i) {
-          promises.push(
-            cb(i).then(function (output) {
-              if (argv.hosts.length > 1) {
-                rval.push(colors.yellow(i));
-              }
-              rval.push(output);
-            })
-          );
-        });
+      // One of the HTTP request pings to the cluster failed, log the error
+      argv.reject(JSON.stringify(err.error, null, 4));
+    }
 
-        return Promise.all(promises).then(
-          function () {
-            argv.resolve(argv.quiet ? undefined : rval.join(os.EOL));
-          },
-          function (err) {
-            argv.reject(err);
-          }
-        );
-      },
-      function (err) {
-        if (err.error.cert) {
-          // TLS errors cause extremely verbose errors, truncate the certifiate details
-          // from the error output
-          delete err.error.cert;
+    try {
+      var rval = [];
+
+      for (i of argv.hosts) {
+        if (argv.hosts.length > 1) {
+          rval.push(colors.yellow(i));
         }
 
-        // One of the HTTP request pings to the cluster failed, log the error
-        argv.reject(JSON.stringify(err.error, null, 4));
+        rval.push(await cb(i));
       }
-    );
+
+      argv.resolve(argv.quiet ? undefined : rval.join(os.EOL));
+    } catch (err) {
+      argv.reject(err);
+    }
   };
 
   // Filter and format a JSON API resource from JSON to a table
@@ -156,8 +148,9 @@ module.exports = function () {
   };
 
   // Get a resource as raw collection; a matrix of strings
-  this.getRawCollection = function (host, resource, fields) {
-    return getJson(host, resource).then((res) => filterResource(res, fields));
+  this.getRawCollection = async function (host, resource, fields) {
+    var res = await getJson(host, resource);
+    return filterResource(res, fields);
   };
 
   // Convert the raw matrix of strings into a formatted string
@@ -177,40 +170,40 @@ module.exports = function () {
   };
 
   // Request a resource collection and format it as a string
-  this.getCollection = function (host, resource, fields) {
-    return getRawCollection(host, resource, fields).then((res) => rawCollectionAsTable(res, fields));
+  this.getCollection = async function (host, resource, fields) {
+    var res = await getRawCollection(host, resource, fields);
+    return rawCollectionAsTable(res, fields);
   };
 
   // Request a part of a resource as a collection and return it as a string
-  this.getSubCollection = function (host, resource, subres, fields) {
-    return doRequest(host, resource).then(function (res) {
-      var header = [];
+  this.getSubCollection = async function (host, resource, subres, fields) {
+    var res = await doRequest(host, resource);
+    var header = [];
 
-      fields.forEach(function (i) {
-        header.push(i.name);
-      });
-
-      var table = getTable(header);
-
-      _.getPath(res.data, subres, []).forEach(function (i) {
-        row = [];
-
-        fields.forEach(function (p) {
-          var v = _.getPath(i, p.path, "");
-
-          if (Array.isArray(v) && typeof v[0] != "object") {
-            v = v.join(", ");
-          } else if (typeof v == "object") {
-            v = JSON.stringify(v, null, 4);
-          }
-          row.push(v);
-        });
-
-        table.push(row);
-      });
-
-      return tableToString(table);
+    fields.forEach(function (i) {
+      header.push(i.name);
     });
+
+    var table = getTable(header);
+
+    _.getPath(res.data, subres, []).forEach(function (i) {
+      row = [];
+
+      fields.forEach(function (p) {
+        var v = _.getPath(i, p.path, "");
+
+        if (Array.isArray(v) && typeof v[0] != "object") {
+          v = v.join(", ");
+        } else if (typeof v == "object") {
+          v = JSON.stringify(v, null, 4);
+        }
+        row.push(v);
+      });
+
+      table.push(row);
+    });
+
+    return tableToString(table);
   };
 
   // Format and filter a JSON object into a string by using a key-value list
@@ -281,18 +274,15 @@ module.exports = function () {
   };
 
   // Request a single resource and format it with a key-value list
-  this.getResource = function (host, resource, fields) {
-    return doRequest(host, resource).then((res) => {
-      return formatResource(fields, res.data);
-    });
+  this.getResource = async function (host, resource, fields) {
+    var res = await doRequest(host, resource);
+    return formatResource(fields, res.data);
   };
 
   // Perform a getResource on a collection of resources and return it in string format
-  this.getCollectionAsResource = function (host, resource, fields) {
-    return doRequest(host, resource).then((res) => {
-      //return formatResource(fields, res.data[0])
-      return res.data.map((i) => formatResource(fields, i)).join("\n");
-    });
+  this.getCollectionAsResource = async function (host, resource, fields) {
+    var res = await doRequest(host, resource);
+    return res.data.map((i) => formatResource(fields, i)).join("\n");
   };
 
   // Perform a PATCH on a resource
