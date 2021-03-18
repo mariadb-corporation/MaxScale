@@ -87,6 +87,16 @@ const char* mxsmongo::error::name(int mongo_code)
     }
 }
 
+GWBUF* mxsmongo::SoftError::create_response(const mxsmongo::Command& command) const
+{
+    return command.create_soft_error(what(), m_code);
+}
+
+GWBUF* mxsmongo::HardError::create_response(const mxsmongo::Command& command) const
+{
+    return command.create_hard_error(what(), m_code);
+}
+
 vector<string> mxsmongo::projection_to_extractions(const bsoncxx::document::view& projection)
 {
     vector<string> extractions;

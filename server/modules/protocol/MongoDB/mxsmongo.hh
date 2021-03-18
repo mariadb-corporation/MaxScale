@@ -16,6 +16,7 @@
 #include <endian.h>
 #include <atomic>
 #include <deque>
+#include <stdexcept>
 
 #include <bsoncxx/json.hpp>
 // Claim we are part of Mongo, so that we can include internal headers.
@@ -158,6 +159,39 @@ int from_mariadb_code(int code);
 const char* name(int code);
 
 }
+
+class Command;
+
+class Exception : public std::runtime_error
+{
+public:
+    Exception(const std::string& message, int code)
+        : std::runtime_error(message)
+        , m_code(code)
+    {
+    }
+
+    virtual GWBUF* create_response(const Command& command) const = 0;
+
+protected:
+    int m_code;
+};
+
+class SoftError : public Exception
+{
+public:
+    using Exception::Exception;
+
+    GWBUF* create_response(const Command& command) const override final;
+};
+
+class HardError : public Exception
+{
+public:
+    using Exception::Exception;
+
+    GWBUF* create_response(const Command& command) const override final;
+};
 
 namespace key
 {

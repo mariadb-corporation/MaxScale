@@ -88,6 +88,10 @@ GWBUF* mxsmongo::Database::execute(GWBUF* pRequest,
     {
         pResponse = sCommand->execute();
     }
+    catch (const mxsmongo::Exception& x)
+    {
+        pResponse = x.create_response(*sCommand.get());
+    }
     catch (const std::exception& x)
     {
         MXS_ERROR("Exeception occurred when parsing MongoDB command: %s", x.what());
