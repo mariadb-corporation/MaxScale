@@ -65,7 +65,7 @@ function setFilters(host, endpoint, argv) {
 
   _.set(payload, "data.relationships.filters.data", argv.filters);
 
-  return doRequest(host, endpoint, null, { method: "PATCH", body: payload });
+  return doRequest(host, endpoint, { method: "PATCH", body: payload });
 }
 
 function parseValue(value) {
@@ -270,7 +270,7 @@ exports.builder = function (yargs) {
             },
           };
 
-          return doRequest(host, "users/inet/" + argv.name, null, { method: "PATCH", body: user });
+          return doRequest(host, "users/inet/" + argv.name, { method: "PATCH", body: user });
         });
       }
     )

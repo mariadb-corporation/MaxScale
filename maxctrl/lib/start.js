@@ -27,7 +27,7 @@ exports.builder = function (yargs) {
       },
       function (argv) {
         maxctrl(argv, function (host) {
-          return doRequest(host, "services/" + argv.name + "/start", null, { method: "PUT" });
+          return doRequest(host, "services/" + argv.name + "/start", { method: "PUT" });
         });
       }
     )
@@ -41,7 +41,7 @@ exports.builder = function (yargs) {
       },
       function (argv) {
         maxctrl(argv, function (host) {
-          return doRequest(host, "listeners/" + argv.name + "/start", null, { method: "PUT" });
+          return doRequest(host, "listeners/" + argv.name + "/start", { method: "PUT" });
         });
       }
     )
@@ -55,7 +55,7 @@ exports.builder = function (yargs) {
       },
       function (argv) {
         maxctrl(argv, function (host) {
-          return doRequest(host, "monitors/" + argv.name + "/start", null, { method: "PUT" });
+          return doRequest(host, "monitors/" + argv.name + "/start", { method: "PUT" });
         });
       }
     )
@@ -69,11 +69,11 @@ exports.builder = function (yargs) {
       },
       function (argv) {
         maxctrl(argv, function (host) {
-          return doRequest(host, "services/", function (res) {
+          return doRequest(host, "services/").then(function (res) {
             var promises = [];
 
             res.data.forEach(function (i) {
-              promises.push(doRequest(host, "services/" + i.id + "/start", null, { method: "PUT" }));
+              promises.push(doRequest(host, "services/" + i.id + "/start", { method: "PUT" }));
             });
 
             return Promise.all(promises).then(() => OK());

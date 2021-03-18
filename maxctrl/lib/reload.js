@@ -25,7 +25,7 @@ exports.builder = function (yargs) {
       },
       function (argv) {
         maxctrl(argv, function (host) {
-          return doRequest(host, "services/" + argv.service + "/reload", null, { method: "POST" });
+          return doRequest(host, "services/" + argv.service + "/reload", { method: "POST" });
         });
       }
     )

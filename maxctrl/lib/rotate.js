@@ -27,7 +27,7 @@ exports.builder = function (yargs) {
       },
       function (argv) {
         maxctrl(argv, function (host) {
-          return doRequest(host, "maxscale/logs/flush/", null, { method: "POST" });
+          return doRequest(host, "maxscale/logs/flush/", { method: "POST" });
         });
       }
     )

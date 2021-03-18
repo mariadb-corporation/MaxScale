@@ -44,7 +44,7 @@ exports.builder = function (yargs) {
           target += "&force=yes";
         }
         maxctrl(argv, function (host) {
-          return doRequest(host, target, null, { method: "PUT" });
+          return doRequest(host, target, { method: "PUT" });
         });
       }
     )

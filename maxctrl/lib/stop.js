@@ -38,7 +38,7 @@ exports.builder = function (yargs) {
       function (argv) {
         maxctrl(argv, function (host) {
           var opts = argv.force ? "?force=yes" : "";
-          return doRequest(host, "services/" + argv.name + "/stop" + opts, null, { method: "PUT" });
+          return doRequest(host, "services/" + argv.name + "/stop" + opts, { method: "PUT" });
         });
       }
     )
@@ -62,7 +62,7 @@ exports.builder = function (yargs) {
       function (argv) {
         maxctrl(argv, function (host) {
           var opts = argv.force ? "?force=yes" : "";
-          return doRequest(host, "listeners/" + argv.name + "/stop" + opts, null, { method: "PUT" });
+          return doRequest(host, "listeners/" + argv.name + "/stop" + opts, { method: "PUT" });
         });
       }
     )
@@ -80,7 +80,7 @@ exports.builder = function (yargs) {
       },
       function (argv) {
         maxctrl(argv, function (host) {
-          return doRequest(host, "monitors/" + argv.name + "/stop", null, { method: "PUT" });
+          return doRequest(host, "monitors/" + argv.name + "/stop", { method: "PUT" });
         });
       }
     )
@@ -100,12 +100,12 @@ exports.builder = function (yargs) {
       },
       function (argv) {
         maxctrl(argv, function (host) {
-          return doRequest(host, "services/", function (res) {
+          return doRequest(host, "services/").then(function (res) {
             var promises = [];
             var opts = argv.force ? "?force=yes" : "";
 
             res.data.forEach(function (i) {
-              promises.push(doRequest(host, "services/" + i.id + "/stop" + opts, null, { method: "PUT" }));
+              promises.push(doRequest(host, "services/" + i.id + "/stop" + opts, { method: "PUT" }));
             });
 
             return Promise.all(promises).then(() => OK());

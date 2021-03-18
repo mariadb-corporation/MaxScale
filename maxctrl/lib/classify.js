@@ -25,7 +25,7 @@ exports.command = "classify <statement>";
 exports.desc = "Classify statement";
 exports.handler = function (argv) {
   maxctrl(argv, function (host) {
-    return doRequest(host, "maxscale/query_classifier/classify?sql=" + argv.statement, (res) => {
+    return doRequest(host, "maxscale/query_classifier/classify?sql=" + argv.statement).then((res) => {
       if (res.data.attributes.functions) {
         var a = res.data.attributes.functions.map((f) => {
           return f.name + ": (" + f.arguments.join(", ") + ")";

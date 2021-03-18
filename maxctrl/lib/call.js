@@ -28,7 +28,7 @@ exports.builder = function (yargs) {
       function (argv) {
         // First we have to find the correct method to use
         maxctrl(argv, function (host) {
-          return doRequest(host, "maxscale/modules/" + argv.module + "/", function (resp) {
+          return doRequest(host, "maxscale/modules/" + argv.module + "/").then(function (resp) {
             // A GET request will return the correct error if the command is not found
             var verb = "GET";
 
@@ -41,11 +41,10 @@ exports.builder = function (yargs) {
             return doRequest(
               host,
               "maxscale/modules/" + argv.module + "/" + argv.command + "?" + argv.params.join("&"),
-              function (resp) {
-                return JSON.stringify(resp, null, 4);
-              },
               { method: verb }
-            );
+            ).then(function (resp) {
+              return JSON.stringify(resp, null, 4);
+            });
           });
         });
       }

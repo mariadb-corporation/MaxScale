@@ -28,7 +28,7 @@ exports.builder = function (yargs) {
       function (argv) {
         var target = "servers/" + argv.server + "/clear?state=" + argv.state;
         maxctrl(argv, function (host) {
-          return doRequest(host, target, null, { method: "PUT" });
+          return doRequest(host, target, { method: "PUT" });
         });
       }
     )

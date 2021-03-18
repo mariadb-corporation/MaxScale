@@ -29,23 +29,25 @@ function waitUntilZero(host, target, path, timeout) {
       // possible that parallel requests are executed which could cause problems. Upgrading to
       // a newer Node.js would allow the use of async/await which should make these sorts of
       // things easier to deal with.
-      doRequest(host, target, (res) => {
-        var v = _.get(res, path, -1);
+      doRequest(host, target)
+        .then((res) => {
+          var v = _.get(res, path, -1);
 
-        if (v <= 0 || total >= timeout) {
-          // Value is zero or the timeout was hit
-          clearInterval(timer);
+          if (v <= 0 || total >= timeout) {
+            // Value is zero or the timeout was hit
+            clearInterval(timer);
 
-          if (v == -1) {
-            // This should never happen as long as correct versions are used
-            reject("Invalid path: " + path);
-          } else if (total >= timeout) {
-            reject("Drain timeout exceeded");
-          } else {
-            resolve();
+            if (v == -1) {
+              // This should never happen as long as correct versions are used
+              reject("Invalid path: " + path);
+            } else if (total >= timeout) {
+              reject("Drain timeout exceeded");
+            } else {
+              resolve();
+            }
           }
-        }
-      }).catch((err) => reject(err));
+        })
+        .catch((err) => reject(err));
     }, 2000);
   });
 }
@@ -88,7 +90,7 @@ exports.builder = function (yargs) {
           var path = "data.relationships.services.data";
           var timeout = argv["drain-timeout"];
 
-          return doRequest(host, target, (res) => {
+          return doRequest(host, target).then((res) => {
             // Store the services, used later to add the server back into them
             var services = _.get(res, path, []);
 
@@ -100,12 +102,12 @@ exports.builder = function (yargs) {
 
             var addServersBack = () => {
               _.set(res, path, services);
-              return doRequest(host, target, null, { method: "PATCH", body: res });
+              return doRequest(host, target, { method: "PATCH", body: res });
             };
 
-            return doRequest(host, target, null, { method: "PATCH", body: res })
+            return doRequest(host, target, { method: "PATCH", body: res })
               .then(() => waitUntilZero(host, target, "data.attributes.statistics.connections", timeout))
-              .then(() => doRequest(host, target + "/set?state=maintenance", null, { method: "PUT" }))
+              .then(() => doRequest(host, target + "/set?state=maintenance", { method: "PUT" }))
               .then(addServersBack, addServersBack); // Try to add the servers back even if we receive an error
           });
         });

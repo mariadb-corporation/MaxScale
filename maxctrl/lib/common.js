@@ -183,7 +183,7 @@ module.exports = function () {
 
   // Request a part of a resource as a collection and return it as a string
   this.getSubCollection = function (host, resource, subres, fields) {
-    return doRequest(host, resource, function (res) {
+    return doRequest(host, resource).then(function (res) {
       var header = [];
 
       fields.forEach(function (i) {
@@ -282,14 +282,14 @@ module.exports = function () {
 
   // Request a single resource and format it with a key-value list
   this.getResource = function (host, resource, fields) {
-    return doRequest(host, resource, (res) => {
+    return doRequest(host, resource).then((res) => {
       return formatResource(fields, res.data);
     });
   };
 
   // Perform a getResource on a collection of resources and return it in string format
   this.getCollectionAsResource = function (host, resource, fields) {
-    return doRequest(host, resource, (res) => {
+    return doRequest(host, resource).then((res) => {
       //return formatResource(fields, res.data[0])
       return res.data.map((i) => formatResource(fields, i)).join("\n");
     });
@@ -299,7 +299,7 @@ module.exports = function () {
   this.updateValue = function (host, resource, key, value) {
     var body = {};
     _.set(body, key, value);
-    return doRequest(host, resource, null, { method: "PATCH", body: body });
+    return doRequest(host, resource, { method: "PATCH", body: body });
   };
 
   // Helper for converting endpoints to acutal URLs
@@ -361,65 +361,55 @@ module.exports = function () {
   // Helper for executing requests and handling their responses, returns a
   // promise that is fulfilled when all requests successfully complete. The
   // promise is rejected if any of the requests fails.
-  this.doRequest = function (host, resource, cb, obj) {
-    return simpleRequest(host, resource, obj).then(
-      function (res) {
-        if (res && cb) {
-          // Request OK, returns data
-          return cb(res);
+  this.doRequest = async function (host, resource, obj) {
+    try {
+      var res = await simpleRequest(host, resource, obj);
+      return res ? res : OK();
+    } catch (err) {
+      if (err.response && err.response.body) {
+        return error(
+          "Server at " +
+            err.response.request.uri.host +
+            " responded with status code " +
+            err.statusCode +
+            " to `" +
+            err.response.request.method +
+            " " +
+            resource +
+            "`:" +
+            JSON.stringify(err.response.body, null, 4)
+        );
+      } else if (err.statusCode) {
+        return error(
+          "Server at " +
+            err.response.request.uri.host +
+            " responded with status code " +
+            err.statusCode +
+            " to `" +
+            err.response.request.method +
+            " " +
+            resource +
+            "`"
+        );
+      } else if (err.error) {
+        if (err.error.code == "ECONNREFUSED") {
+          return error("Could not connect to MaxScale");
+        } else if (err.error.code == "ESOCKETTIMEDOUT") {
+          return error("Connection to MaxScale timed out");
+        } else if (err.message) {
+          return error(err.message);
         } else {
-          // Request OK, no data or data is ignored
-          return OK();
+          return error(JSON.stringify(err.error, null, 4));
         }
-      },
-      function (err) {
-        if (err.response && err.response.body) {
-          return error(
-            "Server at " +
-              err.response.request.uri.host +
-              " responded with status code " +
-              err.statusCode +
-              " to `" +
-              err.response.request.method +
-              " " +
-              resource +
-              "`:" +
-              JSON.stringify(err.response.body, null, 4)
-          );
-        } else if (err.statusCode) {
-          return error(
-            "Server at " +
-              err.response.request.uri.host +
-              " responded with status code " +
-              err.statusCode +
-              " to `" +
-              err.response.request.method +
-              " " +
-              resource +
-              "`"
-          );
-        } else if (err.error) {
-          if (err.error.code == "ECONNREFUSED") {
-            return error("Could not connect to MaxScale");
-          } else if (err.error.code == "ESOCKETTIMEDOUT") {
-            return error("Connection to MaxScale timed out");
-          } else if (err.message) {
-            return error(err.message);
-          } else {
-            return error(JSON.stringify(err.error, null, 4));
-          }
-        } else {
-          return error("Undefined error: " + JSON.stringify(err, null, 4));
-        }
+      } else {
+        return error("Undefined error: " + JSON.stringify(err, null, 4));
       }
-    );
+    }
   };
 
   // Perform a request and return the resulting JSON as a promise
   this.getJson = function (host, resource) {
-    return doRequest(host, resource, (res) => {
-      return res;
-    });
+    return doRequest(host, resource);
   };
 
   // Return an error message as a rejected promise

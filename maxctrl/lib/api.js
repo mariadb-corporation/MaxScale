@@ -45,7 +45,7 @@ exports.builder = function (yargs) {
       },
       function (argv) {
         maxctrl(argv, function (host) {
-          return doRequest(host, argv.resource, (res) => {
+          return doRequest(host, argv.resource).then((res) => {
             if (argv.path) {
               res = _.getPath(res, argv.path);
             }
@@ -72,7 +72,7 @@ exports.builder = function (yargs) {
       },
       function (argv) {
         maxctrl(argv, function (host) {
-          return doRequest(host, argv.resource, null, { method: "POST", body: JSON.parse(argv.value) });
+          return doRequest(host, argv.resource, { method: "POST", body: JSON.parse(argv.value) });
         });
       }
     )
@@ -89,7 +89,7 @@ exports.builder = function (yargs) {
       },
       function (argv) {
         maxctrl(argv, function (host) {
-          return doRequest(host, argv.resource, null, { method: "PATCH", body: JSON.parse(argv.value) });
+          return doRequest(host, argv.resource, { method: "PATCH", body: JSON.parse(argv.value) });
         });
       }
     )

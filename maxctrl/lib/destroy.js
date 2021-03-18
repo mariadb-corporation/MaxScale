@@ -34,7 +34,7 @@ exports.builder = function (yargs) {
       function (argv) {
         maxctrl(argv, function (host) {
           var opts = argv.force ? "?force=yes" : "";
-          return doRequest(host, "servers/" + argv.name + opts, null, { method: "DELETE" });
+          return doRequest(host, "servers/" + argv.name + opts, { method: "DELETE" });
         });
       }
     )
@@ -55,7 +55,7 @@ exports.builder = function (yargs) {
       function (argv) {
         maxctrl(argv, function (host) {
           var opts = argv.force ? "?force=yes" : "";
-          return doRequest(host, "monitors/" + argv.name + opts, null, { method: "DELETE" });
+          return doRequest(host, "monitors/" + argv.name + opts, { method: "DELETE" });
         });
       }
     )
@@ -71,7 +71,7 @@ exports.builder = function (yargs) {
         maxctrl(argv, async function (host) {
           // The GET before the DELETE makes sure we're deleting a listener of the given servie
           await simpleRequest(host, "services/" + argv.service + "/listeners/" + argv.name);
-          return doRequest(host, "listeners/" + argv.name, null, { method: "DELETE" });
+          return doRequest(host, "listeners/" + argv.name, { method: "DELETE" });
         });
       }
     )
@@ -96,7 +96,7 @@ exports.builder = function (yargs) {
       function (argv) {
         maxctrl(argv, function (host) {
           var opts = argv.force ? "?force=yes" : "";
-          return doRequest(host, "services/" + argv.name + opts, null, { method: "DELETE" });
+          return doRequest(host, "services/" + argv.name + opts, { method: "DELETE" });
         });
       }
     )
@@ -117,7 +117,7 @@ exports.builder = function (yargs) {
       function (argv) {
         maxctrl(argv, function (host) {
           var opts = argv.force ? "?force=yes" : "";
-          return doRequest(host, "filters/" + argv.name + opts, null, { method: "DELETE" });
+          return doRequest(host, "filters/" + argv.name + opts, { method: "DELETE" });
         });
       }
     )
@@ -135,7 +135,7 @@ exports.builder = function (yargs) {
       },
       function (argv) {
         maxctrl(argv, function (host) {
-          return doRequest(host, "users/inet/" + argv.name, null, { method: "DELETE" });
+          return doRequest(host, "users/inet/" + argv.name, { method: "DELETE" });
         });
       }
     )

@@ -14,7 +14,7 @@ require("./common.js")();
 
 function removeServer(argv, path, targets) {
   maxctrl(argv, function (host) {
-    return doRequest(host, path, function (res) {
+    return doRequest(host, path).then(function (res) {
       var servers = _.get(res, "data.relationships.servers.data", []);
       var services = _.get(res, "data.relationships.services.data", []);
       var monitors = _.get(res, "data.relationships.monitors.data", []);
@@ -43,7 +43,7 @@ function removeServer(argv, path, targets) {
       }
       delete res.data.attributes;
 
-      return doRequest(host, path, null, { method: "PATCH", body: res });
+      return doRequest(host, path, { method: "PATCH", body: res });
     });
   });
 }
