@@ -54,8 +54,8 @@ public:
 
     GWBUF* create_empty_response();
 
-    GWBUF* create_hard_error(const std::string& message, error::Code code);
-    GWBUF* create_soft_error(const std::string& message, error::Code code);
+    GWBUF* create_hard_error(const std::string& message, int mongo_code);
+    GWBUF* create_soft_error(const std::string& message, int mongo_code);
 
 protected:
     std::string get_table(const char* zCommand) const;

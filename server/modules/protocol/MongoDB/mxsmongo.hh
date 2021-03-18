@@ -148,20 +148,14 @@ const char* opcode_to_string(int code);
 
 namespace error
 {
-// https://github.com/mongodb/mongo/blob/master/src/mongo/base/error_codes.yml
 
-enum Code
-{
-    // TODO: Add more
+#define MXSMONGO_ERROR(symbol, code, name) const int symbol = code;
+#include "mxsmongoerror.hh"
+#undef MXSMONGO_ERROR
 
-    OK                     = 0,
-    FAILED_TO_PARSE        = 9,
-    COMMAND_NOT_FOUND      = 59,
-    NO_REPLICATION_ENABLED = 76,
-    COMMAND_FAILED         = 125
-};
+int from_mariadb_code(int code);
 
-Code from_mariadb_code(int code);
+const char* name(int code);
 
 }
 

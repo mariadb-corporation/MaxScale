@@ -67,14 +67,7 @@ public:
 
     GWBUF* execute() override
     {
-        DocumentBuilder doc;
-
-        doc.append(kvp("ok", 0));
-        doc.append(kvp("errmsg", "not running with --replSet"));
-        doc.append(kvp("code", (int32_t)error::Code::NO_REPLICATION_ENABLED));
-        doc.append(kvp("codeName", "NoReplicationEnabled"));
-
-        return create_response(doc.extract());
+        return create_soft_error("not running with --replSet", error::NO_REPLICATION_ENABLED);
     }
 };
 

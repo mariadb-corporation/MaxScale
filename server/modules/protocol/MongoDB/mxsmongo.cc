@@ -59,7 +59,7 @@ const char* mxsmongo::opcode_to_string(int code)
     }
 }
 
-mxsmongo::error::Code mxsmongo::error::from_mariadb_code(int code)
+int mxsmongo::error::from_mariadb_code(int code)
 {
     // TODO: Expand the range of used codes.
 
@@ -70,6 +70,20 @@ mxsmongo::error::Code mxsmongo::error::from_mariadb_code(int code)
 
     default:
         return COMMAND_FAILED;
+    }
+}
+
+const char* mxsmongo::error::name(int mongo_code)
+{
+    switch (mongo_code)
+    {
+#define MXSMONGO_ERROR(symbol, code, name) case symbol: { return name; }
+#include "mxsmongoerror.hh"
+#undef MXSMONGO_ERROR
+
+    default:
+        mxb_assert(!true);
+        return "";
     }
 }
 

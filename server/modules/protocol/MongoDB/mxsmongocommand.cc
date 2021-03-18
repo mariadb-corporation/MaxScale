@@ -187,24 +187,28 @@ GWBUF* Command::create_empty_response()
     return create_response(doc_value);
 }
 
-GWBUF* Command::create_soft_error(const std::string& message, error::Code code)
+GWBUF* Command::create_soft_error(const std::string& message, int code)
 {
+    mxb_assert(*mxsmongo::error::name(code));
+
     command::DocumentBuilder doc;
 
     doc.append(command::kvp("ok", 0));
     doc.append(command::kvp("errmsg", message.c_str()));
-    doc.append(command::kvp("code", static_cast<int32_t>(code)));
-    doc.append(command::kvp("codeName", "")); // TODO: Create mapping code -> codeName.
+    doc.append(command::kvp("code", code));
+    doc.append(command::kvp("codeName", mxsmongo::error::name(code)));
 
     return create_response(doc.extract());
 }
 
-GWBUF* Command::create_hard_error(const std::string& message, error::Code code)
+GWBUF* Command::create_hard_error(const std::string& message, int code)
 {
+    mxb_assert(*mxsmongo::error::name(code));
+
     command::DocumentBuilder doc;
 
     doc.append(command::kvp("$err", message.c_str()));
-    doc.append(command::kvp("code", static_cast<int32_t>(code)));
+    doc.append(command::kvp("code", code));
 
     return create_response(doc.extract());
 }
