@@ -403,6 +403,7 @@ public:
 
     /** Whether to require GTID based replication, defaults to false */
     static void require_gtid(bool value);
+    static bool get_require_gtid();
 
     /**
      * Configure a server as a slave of another server
@@ -457,7 +458,7 @@ protected:
      * @param nwconf_prefix Node prefix in network config file
      * @param cnf_server_prefix Node prefix in MaxScale config file
      */
-    MariaDBCluster(SharedData* shared, const std::string& nwconf_prefix,
+    MariaDBCluster(mxt::SharedData* shared, const std::string& nwconf_prefix,
                    const std::string& cnf_server_prefix);
 
     bool setup(const mxt::NetworkConfig& nwconfig);
@@ -486,4 +487,5 @@ private:
 
     bool check_master_node(MYSQL* conn);
     bool bad_slave_thread_status(MYSQL* conn, const char* field, int node);
+    bool wrong_replication_type(MYSQL* conn);
 };

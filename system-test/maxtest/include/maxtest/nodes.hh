@@ -11,10 +11,11 @@
 #include <maxtest/mariadb_func.hh>
 
 typedef std::set<std::string> StringSet;
-class SharedData;
 
 namespace maxtest
 {
+class SharedData;
+
 struct CmdResult
 {
     int         rc{-1};
@@ -180,9 +181,9 @@ public:
     int n_nodes() const;
 
 protected:
-    SharedData& m_shared;
+    mxt::SharedData& m_shared;
 
-    Nodes(SharedData* shared);
+    Nodes(mxt::SharedData* shared);
 
     const char* ip4(int i = 0) const;
     const char* ip6(int i = 0) const;

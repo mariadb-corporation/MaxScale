@@ -17,6 +17,7 @@
 #include <limits.h>
 #include <algorithm>
 
+#include <maxbase/assert.h>
 #include <maxbase/format.hh>
 #include <maxbase/stacktrace.hh>
 #include <maxbase/string.hh>
@@ -57,14 +58,12 @@ namespace maxscale
 {
 
 static bool start = true;
-static bool check_nodes = true;
 static bool manual_debug = false;
 static std::string required_repl_version;
 static std::string required_galera_version;
 static bool restart_galera = false;
 static bool require_galera = false;
 static bool require_columnstore = false;
-static bool multiple_maxscales = false;
 }
 
 static void perform_manual_action(const char* zMessage)
@@ -107,19 +106,9 @@ void sigfatal_handler(int i)
     raise(i);
 }
 
-void TestConnections::check_nodes(bool value)
-{
-    maxscale::check_nodes = value;
-}
-
 void TestConnections::skip_maxscale_start(bool value)
 {
     maxscale::start = !value;
-}
-
-void TestConnections::multiple_maxscales(bool value)
-{
-    maxscale::multiple_maxscales = value;
 }
 
 void TestConnections::require_repl_version(const char* version)
@@ -155,6 +144,9 @@ TestConnections::TestConnections()
 TestConnections::TestConnections(int argc, char* argv[])
     : TestConnections()
 {
+    // These are required for backwards compatibility.
+    m_shared.settings.req_mariadb_gtid = MariaDBCluster::get_require_gtid();
+
     int rc = prepare_for_test(argc, argv);
     if (rc != 0)
     {
@@ -165,36 +157,27 @@ TestConnections::TestConnections(int argc, char* argv[])
 int TestConnections::prepare_for_test(int argc, char* argv[])
 {
     std::ios::sync_with_stdio(true);
-    signal_set(SIGSEGV, sigfatal_handler);
-    signal_set(SIGABRT, sigfatal_handler);
-    signal_set(SIGFPE, sigfatal_handler);
-    signal_set(SIGILL, sigfatal_handler);
-#ifdef SIGBUS
-    signal_set(SIGBUS, sigfatal_handler);
-#endif
-    gettimeofday(&m_start_time, NULL);
-    read_env();
+    set_signal_handlers();
+    gettimeofday(&m_start_time, nullptr);
+
+    // Read basic settings from env variables first, as cmdline may override.
+    read_basic_settings();
 
     if (!read_cmdline_options(argc, argv))
     {
-        exit(TEST_SKIPPED);
+        return TEST_SKIPPED;
     }
-    if (maxscale::require_columnstore)
+    else if (maxscale::require_columnstore)
     {
-        cout << "ColumnStore testing is not yet implemented, skipping test" << endl;
-        exit(TEST_SKIPPED);
+        tprintf("ColumnStore testing is not yet implemented, skipping test");
+        return TEST_SKIPPED;
+    }
+    else if (!read_test_info() || !check_create_vm_dir())
+    {
+        return 1;
     }
 
-    set_template_and_labels();
-    tprintf("Test: '%s', config template: '%s', labels: '%s'",
-            m_test_name.c_str(), m_cnf_template_path.c_str(), m_test_labels_str.c_str());
-    set_mdbci_labels();
-
-    if (m_test_labels.count("BACKEND_SSL") > 0)
-    {
-        backend_ssl = true;
-        tprintf("Test has BACKEND_SSL label");
-    }
+    read_vms_info();
 
     if (!check_create_vms())
     {
@@ -250,7 +233,7 @@ int TestConnections::prepare_for_test(int argc, char* argv[])
         galera->start_replication();
     }
 
-    if (maxscale::check_nodes)
+    if (m_check_nodes)
     {
         if (repl && !repl->fix_replication())
         {
@@ -328,7 +311,7 @@ int TestConnections::cleanup()
         printf("%s\n", logger().all_errors_to_string().c_str());
     }
 
-    if (!m_shared.local_maxscale)
+    if (!settings().local_maxscale)
     {
         // stop all Maxscales to detect crashes on exit
         for (int i = 0; i < maxscales->N; i++)
@@ -363,7 +346,7 @@ int TestConnections::cleanup()
      *  }
      */
 
-    if (maxscale::multiple_maxscales)
+    if (settings().req_two_maxscales)
     {
         maxscales->stop_all();
     }
@@ -399,90 +382,71 @@ void TestConnections::add_failure(const char* format, ...)
     va_end(argp);
 }
 
-void TestConnections::read_mdbci_info()
+void TestConnections::read_vms_info()
 {
-    m_mdbci_vm_path = envvar_get_set("MDBCI_VM_PATH", "%s/vms/", getenv("HOME"));
-
-    string cmd = "mkdir -p " + m_mdbci_vm_path;
-    if (system(cmd.c_str()))
-    {
-        tprintf("Unable to create MDBCI VMs direcory '%s', exiting", m_mdbci_vm_path.c_str());
-        exit(MDBCI_FAIL);
-    }
-    m_mdbci_template = envvar_get_set("template", "default");
-    m_target = envvar_get_set("target", "develop");
-
-    m_mdbci_config_name = envvar_get_set("mdbci_config_name", "local");
-    m_vm_path = m_mdbci_vm_path + "/" + m_mdbci_config_name;
-
+    // Read the contents of both the 'network_config' and 'configured_labels'-files. The files may not exist
+    // if the VM setup has not yet been initialized.
+    m_network_config.clear();
+    m_configured_mdbci_labels.clear();
     const char warnmsg_fmt[] = "Warning: Failed to open '%s'. File needs to be created.";
 
-    if (!m_mdbci_config_name.empty())
+    string nwconf_filepath = m_vm_path + "_network_config";
+    std::ifstream nwconf_file(nwconf_filepath);
+    if (nwconf_file.is_open())
     {
-        m_network_config.clear();
-        string nwconf_filepath = m_vm_path + "_network_config";
-        std::ifstream nwconf_file(nwconf_filepath);
-        if (nwconf_file.is_open())
+        string line;
+        while (std::getline(nwconf_file, line))
         {
-            string line;
-            while (std::getline(nwconf_file, line))
+            if (!line.empty())
             {
-                if (!line.empty())
+                // The line should be of form <key> = <value>.
+                auto eq_pos = line.find('=');
+                if (eq_pos != string::npos && eq_pos > 0 && eq_pos < line.length() - 1)
                 {
-                    // The line should be of form <key> = <value>.
-                    auto eq_pos = line.find('=');
-                    if (eq_pos != string::npos && eq_pos > 0 && eq_pos < line.length() - 1)
+                    string key = line.substr(0, eq_pos);
+                    string val = line.substr(eq_pos + 1, string::npos);
+                    mxb::trim(key);
+                    mxb::trim(val);
+                    if (!key.empty() && !val.empty())
                     {
-                        string key = line.substr(0, eq_pos);
-                        string val = line.substr(eq_pos + 1, string::npos);
-                        mxb::trim(key);
-                        mxb::trim(val);
-                        if (!key.empty() && !val.empty())
-                        {
-                            m_network_config.insert(std::make_pair(key, val));
-                        }
+                        m_network_config.insert(std::make_pair(key, val));
                     }
                 }
             }
+        }
 
-            string labels_filepath = m_vm_path + "_configured_labels";
-            std::ifstream labels_file(labels_filepath);
-            if (labels_file.is_open())
-            {
-                std::stringstream buffer;
-                buffer << labels_file.rdbuf();
-                m_configured_mdbci_labels = parse_to_stringset(buffer.str());
-            }
-            else
-            {
-                tprintf(warnmsg_fmt, labels_filepath.c_str());
-            }
+        string labels_filepath = m_vm_path + "_configured_labels";
+        std::ifstream labels_file(labels_filepath);
+        if (labels_file.is_open())
+        {
+            std::stringstream buffer;
+            buffer << labels_file.rdbuf();
+            m_configured_mdbci_labels = parse_to_stringset(buffer.str());
         }
         else
         {
-            tprintf(warnmsg_fmt, nwconf_filepath.c_str());
+            tprintf(warnmsg_fmt, labels_filepath.c_str());
         }
     }
     else
     {
-        tprintf("The name of MDBCI configuration is not defined, exiting!");
-        exit(1);
+        tprintf(warnmsg_fmt, nwconf_filepath.c_str());
     }
 }
 
-void TestConnections::read_env()
+void TestConnections::read_basic_settings()
 {
-    read_mdbci_info();
-    if (verbose())
-    {
-        printf("Reading test setup configuration from environmental variables\n");
-    }
-
+    // The following settings can be overridden by cmdline settings, but not by mdbci.
     ssl = readenv_bool("ssl", true);
+    m_use_ipv6 = readenv_bool("use_ipv6", false);
+    backend_ssl = readenv_bool("backend_ssl", false);
+    smoke = readenv_bool("smoke", true);
+    m_threads = readenv_int("threads", 4);
+    m_no_maxscale_log_copy = readenv_bool("no_maxscale_log_copy", false);
 
     if (readenv_bool("no_nodes_check", false))
     {
-        maxscale::check_nodes = false;
+        m_check_nodes = false;
     }
 
     if (readenv_bool("no_maxscale_start", false))
@@ -490,18 +454,21 @@ void TestConnections::read_env()
         maxscale::start = false;
     }
 
+    // The following settings are final, and not modified by either command line parameters or mdbci.
     m_no_backend_log_copy = readenv_bool("no_backend_log_copy", false);
-    m_no_maxscale_log_copy = readenv_bool("no_maxscale_log_copy", false);
-    m_use_ipv6 = readenv_bool("use_ipv6", false);
-    backend_ssl = readenv_bool("backend_ssl", false);
-    smoke = readenv_bool("smoke", true);
-    m_threads = readenv_int("threads", 4);
+    m_mdbci_vm_path = envvar_get_set("MDBCI_VM_PATH", "%s/vms/", getenv("HOME"));
+    m_mdbci_config_name = envvar_get_set("mdbci_config_name", "local");
+    mxb_assert(!m_mdbci_vm_path.empty() && !m_mdbci_config_name.empty());
+    m_vm_path = m_mdbci_vm_path + "/" + m_mdbci_config_name;
+
+    m_mdbci_template = envvar_get_set("template", "default");
+    m_target = envvar_get_set("target", "develop");
 }
 
 /**
- * Set config template file and test labels.
+ * Using the test name as given on the cmdline, get test config file and labels.
  */
-void TestConnections::set_template_and_labels()
+bool TestConnections::read_test_info()
 {
     const TestDefinition* found = nullptr;
     for (int i = 0; test_definitions[i].name; i++)
@@ -517,19 +484,37 @@ void TestConnections::set_template_and_labels()
     if (found)
     {
         m_cnf_template_path = found->config_template;
-        m_test_labels_str = found->labels;
+        // Parse the labels-string to a set.
+        auto test_labels = parse_to_stringset(found->labels);
+
+        /**
+         * MDBCI recognizes labels which affect backend configuration. Save those labels to a separate field.
+         * Also save a string version, as that is needed for mdbci.
+         */
+        StringSet mdbci_labels;
+        mdbci_labels.insert("MAXSCALE");
+        std::set_intersection(test_labels.begin(), test_labels.end(),
+                              recognized_mdbci_labels.begin(), recognized_mdbci_labels.end(),
+                              std::inserter(mdbci_labels, mdbci_labels.begin()));
+
+        m_required_mdbci_labels = mdbci_labels;
+        m_required_mdbci_labels_str = flatten_stringset(mdbci_labels);
+
+        tprintf("Test: '%s', MaxScale config file: '%s', all labels: '%s', mdbci labels: '%s'",
+                m_test_name.c_str(), m_cnf_template_path.c_str(), found->labels,
+                m_required_mdbci_labels_str.c_str());
+
+        if (test_labels.count("BACKEND_SSL") > 0)
+        {
+            backend_ssl = true;
+        }
     }
     else
     {
-        printf("Failed to find configuration template for test '%s', using default template '%s' and "
-               "labels '%s'.\n",
-               m_test_name.c_str(), default_template, label_repl_be.c_str());
-        m_cnf_template_path = default_template;
-        m_test_labels_str = label_repl_be;
+        add_failure("Could not find '%s' in the CMake-generated test definitions array.",
+                    m_test_name.c_str());
     }
-
-    // Parse the labels-string to a set.
-    m_test_labels = parse_to_stringset(m_test_labels_str);
+    return found != nullptr;
 }
 
 void TestConnections::process_template(int m, const string& config_file, const char* dest)
@@ -623,7 +608,7 @@ void TestConnections::init_maxscales()
     // Always initialize the first MaxScale
     init_maxscale(0);
 
-    if (maxscale::multiple_maxscales)
+    if (settings().req_two_maxscales)
     {
         for (int i = 1; i < maxscales->N; i++)
         {
@@ -1605,7 +1590,7 @@ int TestConnections::call_mdbci(const char* options)
         }
     }
 
-    if (system((std::string("mdbci up ") + m_mdbci_config_name + " --labels " + m_mdbci_labels_str + " "
+    if (system((std::string("mdbci up ") + m_mdbci_config_name + " --labels " + m_required_mdbci_labels_str + " "
                 + options).c_str()))
     {
         tprintf("MDBCI failed to bring up virtual machines");
@@ -1615,7 +1600,7 @@ int TestConnections::call_mdbci(const char* options)
     std::string team_keys = envvar_get_set("team_keys", "~/.ssh/id_rsa.pub");
     string cmd = "mdbci public_keys --key " + team_keys + " " + m_mdbci_config_name;
     system(cmd.c_str());
-    read_env();
+    read_vms_info();
     if (repl)
     {
         repl->read_basic_env(m_network_config, repl->prefix());
@@ -1749,27 +1734,6 @@ StringSet TestConnections::parse_to_stringset(const string& source)
     return rval;
 }
 
-/**
- * MDBCI recognizes labels which affect backend configuration. Save those labels to a separate field.
- * Also save a string version.
- */
-void TestConnections::set_mdbci_labels()
-{
-    StringSet mdbci_labels;
-    mdbci_labels.insert("MAXSCALE");
-    std::set_intersection(recognized_mdbci_labels.begin(), recognized_mdbci_labels.end(),
-                          m_test_labels.begin(), m_test_labels.end(),
-                          std::inserter(mdbci_labels, mdbci_labels.begin()));
-
-    std::string mdbci_labels_str = flatten_stringset(mdbci_labels);
-    if (verbose())
-    {
-        printf("mdbci-labels: %s\n", mdbci_labels_str.c_str());
-    }
-    m_required_mdbci_labels = mdbci_labels;
-    m_mdbci_labels_str = mdbci_labels_str;
-}
-
 mxt::MaxScale& TestConnections::maxscale()
 {
     return *m_maxscale;
@@ -1780,9 +1744,14 @@ mxt::MaxScale& TestConnections::maxscale2()
     return *m_maxscale2;
 }
 
-TestLogger& TestConnections::logger()
+mxt::TestLogger& TestConnections::logger()
 {
     return m_shared.log;
+}
+
+mxt::Settings& TestConnections::settings()
+{
+    return m_shared.settings;
 }
 
 bool TestConnections::read_cmdline_options(int argc, char* argv[])
@@ -1803,6 +1772,7 @@ bool TestConnections::read_cmdline_options(int argc, char* argv[])
         {0,                    0,                 0, 0  }
     };
 
+    bool rval = true;
     int c;
     int option_index = 0;
 
@@ -1828,15 +1798,13 @@ bool TestConnections::read_cmdline_options(int argc, char* argv[])
         case 'h':
             {
                 printf("Options:\n");
-
                 struct option* o = long_options;
-
                 while (o->name)
                 {
                     printf("-%c, --%s\n", o->val, o->name);
                     ++o;
                 }
-                return false;
+                rval = false;
             }
             break;
 
@@ -1853,7 +1821,7 @@ bool TestConnections::read_cmdline_options(int argc, char* argv[])
 
         case 'r':
             printf("Nodes are not checked before test and are not restarted\n");
-            maxscale::check_nodes = false;
+            m_check_nodes = false;
             break;
 
         case 'g':
@@ -1873,7 +1841,7 @@ bool TestConnections::read_cmdline_options(int argc, char* argv[])
                 maxscale::manual_debug = true;
                 m_init_maxscale = false;
                 m_no_maxscale_log_copy = true;
-                m_shared.local_maxscale = true;
+                m_shared.settings.local_maxscale = true;
             }
             break;
 
@@ -1889,7 +1857,7 @@ bool TestConnections::read_cmdline_options(int argc, char* argv[])
     }
 
     m_test_name = (optind < argc) ? argv[optind] : basename(argv[0]);
-    return true;
+    return rval;
 }
 
 bool TestConnections::initialize_nodes()
@@ -1917,7 +1885,7 @@ bool TestConnections::initialize_nodes()
 
     if (use_repl)
     {
-        repl = new ReplicationCluster(&m_shared);
+        repl = new mxt::ReplicationCluster(&m_shared);
         repl->setup(m_network_config);
         repl->set_use_ipv6(m_use_ipv6);
         repl->ssl = backend_ssl;
@@ -2008,7 +1976,7 @@ bool TestConnections::check_create_vms()
         if (verbose())
         {
             tprintf("Machines with all required labels '%s' are running, MDBCI UP call is not needed",
-                    m_mdbci_labels_str.c_str());
+                    m_required_mdbci_labels_str.c_str());
         }
     }
     else
@@ -2089,6 +2057,29 @@ int TestConnections::run_test(int argc, char* argv[], const std::function<int(Te
     else
     {
         rval = test_errors;
+    }
+    return rval;
+}
+
+void TestConnections::set_signal_handlers()
+{
+    signal_set(SIGSEGV, sigfatal_handler);
+    signal_set(SIGABRT, sigfatal_handler);
+    signal_set(SIGFPE, sigfatal_handler);
+    signal_set(SIGILL, sigfatal_handler);
+#ifdef SIGBUS
+    signal_set(SIGBUS, sigfatal_handler);
+#endif
+}
+
+bool TestConnections::check_create_vm_dir()
+{
+    bool rval = true;
+    string cmd = "mkdir -p " + m_mdbci_vm_path;
+    if (system(cmd.c_str()))
+    {
+        tprintf("Unable to create MDBCI VMs direcory '%s', exiting", m_mdbci_vm_path.c_str());
+        rval = false;
     }
     return rval;
 }

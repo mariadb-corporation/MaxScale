@@ -16,8 +16,12 @@
 #include <maxtest/test_dir.hh>
 
 typedef std::set<std::string> StringSet;
-class TestLogger;
+
+namespace maxtest
+{
 class ReplicationCluster;
+}
+
 class GaleraCluster;
 
 /**
@@ -81,10 +85,10 @@ public:
      */
     int copy_mariadb_logs(MariaDBCluster* nrepl, const char* prefix, std::vector<std::thread>& threads);
 
-    ReplicationCluster* repl {nullptr};     /**< Master-Slave replication cluster */
-    GaleraCluster*      galera {nullptr};   /**< Galera cluster */
-    XpandCluster*       xpand {nullptr};    /**< Xpand cluster */
-    Maxscales*          maxscales {nullptr};/**< MaxScale nodes */
+    mxt::ReplicationCluster* repl {nullptr};     /**< Master-Slave replication cluster */
+    GaleraCluster*           galera {nullptr};   /**< Galera cluster */
+    XpandCluster*            xpand {nullptr};    /**< Xpand cluster */
+    Maxscales*               maxscales {nullptr};/**< MaxScale nodes */
 
     int& global_result; /**< Result of test, 0 if PASSED */
     bool smoke {true}; /**< Run tests in quick mode. Only affects some long tests. */
@@ -99,14 +103,8 @@ public:
     // The total test timeout, not affected by set_timeout calls
     std::chrono::seconds m_test_timeout {450};
 
-    /** Check whether all nodes are in a valid state */
-    static void check_nodes(bool value);
-
     /** Skip initial start of MaxScale */
     static void skip_maxscale_start(bool value);
-
-    /** Prepare multiple maxscale instances */
-    static void multiple_maxscales(bool value);
 
     /** Test requires a certain backend version  */
     static void require_repl_version(const char* version);
@@ -144,16 +142,6 @@ public:
     bool expect(bool result, const char* format, ...) __attribute__ ((format(printf, 3, 4)));
 
     void add_failure(const char* format, ...) __attribute__ ((format(printf, 2, 3)));
-
-    /**
-     * @brief read_mdbci_info Reads name of MDBCI config and tryes to load all network info
-     */
-    void read_mdbci_info();
-
-    /**
-     * @brief ReadEnv Reads all Maxscale and Master/Slave and Galera setups info from environmental variables
-     */
-    void read_env();
 
     /**
      * @brief InitMaxscale  Copies MaxSclae.cnf and start MaxScale
@@ -417,9 +405,10 @@ public:
      */
     int reinstall_maxscales();
 
-    mxt::MaxScale& maxscale();
-    mxt::MaxScale& maxscale2();
-    TestLogger&    logger();
+    mxt::MaxScale&      maxscale();
+    mxt::MaxScale&      maxscale2();
+    mxt::TestLogger&    logger();
+    mxt::Settings&      settings();
 
     std::string get_mdbci_config_name() {return m_mdbci_config_name;}
 
@@ -432,8 +421,8 @@ private:
     void copy_one_mariadb_log(MariaDBCluster* nrepl, int i, std::string filename);
     void copy_one_maxscale_log(int i, double timestamp);
 
-    void set_template_and_labels();
-    void set_mdbci_labels();
+    bool read_test_info();
+
     bool log_matches(int m, const char* pattern);
 
     bool too_few_maxscales() const;
@@ -441,16 +430,13 @@ private:
     std::unique_ptr<mxt::MaxScale>   m_maxscale;  /**< Main MaxScale instance */
     std::unique_ptr<mxt::MaxScale>   m_maxscale2; /**< Secondary MaxScale instance */
 
-    SharedData m_shared;    /**< Data shared with other objects */
+    mxt::SharedData m_shared;    /**< Data shared with other objects */
 
     std::string m_test_name;            /**< Test name */
     std::string m_cnf_template_path;    /**< MaxScale config file template used by test */
 
-    std::string m_test_labels_str;  /**< Test labels as given in CMakeLists.txt and required by the test */
-    StringSet   m_test_labels;      /**< Test labels parsed to a set. */
-
-    StringSet   m_required_mdbci_labels;/**< MDBCI-labels required by test. Subset of test labels. */
-    std::string m_mdbci_labels_str;     /**< MDBCI-labels in string form. Used on the command line. */
+    StringSet   m_required_mdbci_labels;     /**< MDBCI-labels required by test. Subset of test labels. */
+    std::string m_required_mdbci_labels_str; /**< MDBCI-labels in string form. Used on the command line. */
 
     mxt::NetworkConfig m_network_config;          /**< Contents of MDBCI network_config file */
     StringSet          m_configured_mdbci_labels; /**< MDBCI-labels already configured on the VM setup */
@@ -463,7 +449,11 @@ private:
 
 
     bool m_enable_timeouts {true};      /**< Whether timeouts are enabled or not */
-    bool m_init_maxscale {true};
+
+    // Basic options read at startup. Some of these can be set both as env vars or on
+    // the command line. If both, the value read from command line takes priority.
+    bool m_init_maxscale {true};        /**< Is MaxScale initialized normally? */
+    bool m_check_nodes {true};          /**< Check nodes when preparing for test? */
 
     /* If true, logs from backends are not copied (needed if case of Aurora RDS backend or similar) */
     bool m_no_backend_log_copy {false};
@@ -471,11 +461,11 @@ private:
 
     int m_threads {4};      /**< Number of Maxscale threads */
 
-    std::thread m_timeout_thread; /**< Timeout thread */
+    std::thread m_timeout_thread;  /**< Timeout thread */
     std::thread m_log_copy_thread; /**< Log copying thread */
     bool m_stop_threads {false};
 
-    timeval m_start_time {0, 0};   /**< time when test was started (used by printf to print Timestamp) */
+    timeval m_start_time {0, 0};   /**< Test object creation time. Used for log copying. */
 
     /**
      * If true IPv6 addresses will be used to connect Maxscale and backed Also IPv6 addresses go to
@@ -494,10 +484,14 @@ private:
     std::string flatten_stringset(const StringSet& set);
     StringSet   parse_to_stringset(const std::string& source);
 
+    void set_signal_handlers();
     bool read_cmdline_options(int argc, char* argv[]);
+    void read_basic_settings();
     bool check_create_vms();
     bool initialize_nodes();
     bool check_backend_versions();
+    bool check_create_vm_dir();
+    void read_vms_info();
 
     /**
      * @brief timeout_thread Thread which terminates test application after 'timeout' milliseconds

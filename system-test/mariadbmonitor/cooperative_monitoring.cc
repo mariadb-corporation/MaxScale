@@ -45,9 +45,9 @@ int test_main(TestConnections& test);
 
 int main(int argc, char* argv[])
 {
-    TestConnections::multiple_maxscales(true);
-    MariaDBCluster::require_gtid(true);
     TestConnections test;
+    test.settings().req_mariadb_gtid = true;
+    test.settings().req_two_maxscales = true;
     return test.run_test(argc, argv, test_main);
 }
 

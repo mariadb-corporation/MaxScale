@@ -19,7 +19,7 @@ class GaleraCluster : public MariaDBCluster
 {
 public:
 
-    GaleraCluster(SharedData* shared)
+    GaleraCluster(mxt::SharedData* shared)
         : MariaDBCluster(shared, "galera", "gserver")
     {
     }

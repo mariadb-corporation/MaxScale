@@ -12,6 +12,8 @@ namespace
 const int sec_to_us = std::micro::den;
 }
 
+namespace maxtest
+{
 void TestLogger::add_failure(const char* format, ...)
 {
     va_list valist;
@@ -102,4 +104,5 @@ void TestLogger::reset_timer()
     timeval now {0};
     gettimeofday(&now, nullptr);
     m_start_time_us = sec_to_us * now.tv_sec + now.tv_usec;
+}
 }

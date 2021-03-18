@@ -15,10 +15,10 @@
 #include <maxtest/ccdefs.hh>
 #include <maxsql/mariadb_connector.hh>
 
-class TestLogger;
-
 namespace maxtest
 {
+class TestLogger;
+
 /**
  * Connection helper class for tests. Reports errors to the system test log.
  */
