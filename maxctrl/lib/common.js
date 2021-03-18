@@ -496,7 +496,7 @@ var tsvopts = {
     "mid-mid": "",
     right: "",
     "right-mid": "",
-    middle: "	",
+    middle: "\t",
   },
   style: {
     "padding-left": 0,
