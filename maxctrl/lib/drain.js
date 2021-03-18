@@ -53,7 +53,7 @@ function waitUntilZero(host, target, path, timeout) {
 }
 
 exports.command = "drain <command>";
-exports.desc = "Drain objects";
+exports.desc = "Drain objects (deprecated)";
 exports.handler = function () {};
 exports.builder = function (yargs) {
   yargs
@@ -67,7 +67,7 @@ exports.builder = function (yargs) {
     })
     .command(
       "server <server>",
-      "Drain a server of connections",
+      "Drain a server of connections (deprecated)",
       function (yargs) {
         return yargs
           .epilog(
@@ -80,7 +80,8 @@ exports.builder = function (yargs) {
               "\n\n" +
               "Warning: This command is not safe to interrupt. If interrupted, " +
               "the servers might not be added back to the service. For a better " +
-              "alternative, use `set server <server> drain`."
+              "alternative, use `set server <server> drain`. This command has been " +
+              "deprecated in MaxScale 2.6.0."
           )
           .usage("Usage: drain server <server>");
       },
