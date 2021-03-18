@@ -38,7 +38,7 @@ exports.builder = function (yargs) {
               }
             });
 
-            return doAsyncRequest(
+            return doRequest(
               host,
               "maxscale/modules/" + argv.module + "/" + argv.command + "?" + argv.params.join("&"),
               function (resp) {

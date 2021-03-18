@@ -65,7 +65,7 @@ function setFilters(host, endpoint, argv) {
 
   _.set(payload, "data.relationships.filters.data", argv.filters);
 
-  return doAsyncRequest(host, endpoint, null, { method: "PATCH", body: payload });
+  return doRequest(host, endpoint, null, { method: "PATCH", body: payload });
 }
 
 function parseValue(value) {

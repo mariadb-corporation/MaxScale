@@ -43,7 +43,7 @@ function removeServer(argv, path, targets) {
       }
       delete res.data.attributes;
 
-      return doAsyncRequest(host, path, null, { method: "PATCH", body: res });
+      return doRequest(host, path, null, { method: "PATCH", body: res });
     });
   });
 }

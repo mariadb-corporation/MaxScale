@@ -361,7 +361,7 @@ module.exports = function () {
   // Helper for executing requests and handling their responses, returns a
   // promise that is fulfilled when all requests successfully complete. The
   // promise is rejected if any of the requests fails.
-  this.doAsyncRequest = function (host, resource, cb, obj) {
+  this.doRequest = function (host, resource, cb, obj) {
     return simpleRequest(host, resource, obj).then(
       function (res) {
         if (res && cb) {
@@ -415,14 +415,9 @@ module.exports = function () {
     );
   };
 
-  // Perform a request, alias for doAsyncRequest
-  this.doRequest = function (host, resource, cb, obj) {
-    return doAsyncRequest(host, resource, cb, obj);
-  };
-
   // Perform a request and return the resulting JSON as a promise
   this.getJson = function (host, resource) {
-    return doAsyncRequest(host, resource, (res) => {
+    return doRequest(host, resource, (res) => {
       return res;
     });
   };
