@@ -186,7 +186,8 @@ string get_and_condition(const bsoncxx::array::view& array)
         }
         else
         {
-            MXS_ERROR("An element of an $and array is not a document.");
+            throw mxsmongo::SoftError("$or/$and/$nor entries need to be full objects",
+                                      mxsmongo::error::BAD_VALUE);
         }
     }
 
@@ -210,7 +211,7 @@ string get_and_condition(const bsoncxx::document::element& element)
     }
     else
     {
-        MXS_ERROR("The value of an $and element is not an array.");
+        throw mxsmongo::SoftError("$and must be an array", mxsmongo::error::BAD_VALUE);
     }
 
     return condition;
@@ -246,7 +247,8 @@ string get_nor_condition(const bsoncxx::array::view& array)
         }
         else
         {
-            MXS_ERROR("An element of a $nor array is not a document.");
+            throw mxsmongo::SoftError("$or/$and/$nor entries need to be full objects",
+                                      mxsmongo::error::BAD_VALUE);
         }
     }
 
@@ -270,7 +272,7 @@ string get_nor_condition(const bsoncxx::document::element& element)
     }
     else
     {
-        MXS_ERROR("The value of a $nor element is not an array.");
+        throw mxsmongo::SoftError("$nor must be an array", mxsmongo::error::BAD_VALUE);
     }
 
     return condition;
@@ -330,7 +332,8 @@ string get_or_condition(const bsoncxx::array::view& array)
         }
         else
         {
-            MXS_ERROR("An element of an $or array is not a document.");
+            throw mxsmongo::SoftError("$or/$and/$nor entries need to be full objects",
+                                      mxsmongo::error::BAD_VALUE);
         }
     }
 
@@ -354,7 +357,7 @@ string get_or_condition(const bsoncxx::document::element& element)
     }
     else
     {
-        MXS_ERROR("The value of an $or element is not an array.");
+        throw mxsmongo::SoftError("$or must be an array", mxsmongo::error::BAD_VALUE);
     }
 
     return condition;
@@ -388,7 +391,6 @@ string get_logical_condition(const bsoncxx::document::element& element)
         stringstream ss;
         ss << "unknown top level operator: " << key;
 
-        MXS_ERROR("%s", ss.str().c_str());
         throw mxsmongo::SoftError(ss.str(), mxsmongo::error::BAD_VALUE);
     }
 
@@ -438,8 +440,12 @@ string element_to_value(const document_element_or_array_item& x)
         break;
 
     default:
-        MXS_ERROR("Cannot convert a '%s' to a value.", bsoncxx::to_string(x.type()).c_str());
-        ss << "null";
+        {
+            // TODO: Mongo deals gracefully with this.
+            ss << "cannot convert a " << bsoncxx::to_string(x.type()) << " to a value for comparison";
+
+            throw mxsmongo::SoftError(ss.str(), mxsmongo::error::BAD_VALUE);
+        }
     }
 
     return ss.str();
@@ -458,17 +464,9 @@ string element_to_array(const bsoncxx::document::element& element)
             const auto& item = *it;
 
             string value = element_to_value(item);
+            mxb_assert(!value.empty());
 
-            if (!value.empty())
-            {
-                values.push_back(value);
-            }
-            else
-            {
-                MXS_ERROR("All values of an array cannot be converted.");
-                values.clear();
-                break;
-            }
+            values.push_back(value);
         }
     }
     else
@@ -521,9 +519,9 @@ string get_comparison_op_and_value(const bsoncxx::document::view& doc)
         }
         else
         {
-            MXS_ERROR("No converter found for '%s'. Invalid operator?", op.c_str());
-            rv.clear();
-            break;
+            stringstream ss;
+            ss << "unknown operator: " << op;
+            throw mxsmongo::SoftError(ss.str(), mxsmongo::error::BAD_VALUE);
         }
     }
 
@@ -645,70 +643,45 @@ string mxsmongo::sort_to_order_by(const bsoncxx::document::view& sort)
 
         if (key.size() == 0)
         {
-            MXS_ERROR("Fieldname in sort object is empty.");
-            order_by.clear();
-            break;
+            throw mxsmongo::SoftError("FieldPath cannot be constructed with empty string",
+                                      mxsmongo::error::LOCATION40352);
         }
 
-        bool ok = true;
-        int value = 0;
+        int64_t value = 0;
 
-        switch (element.type())
+        if (!mxsmongo::get_integer(element, &value))
         {
-        case bsoncxx::type::k_int32:
-            value = element.get_int32();
-            break;
+            stringstream ss;
+            // TODO: Should actually be the value itself, and not its type.
+            ss << "Illegal key in $sort specification: "
+               << element.key() << ": " << bsoncxx::to_string(element.type());
 
-        case bsoncxx::type::k_int64:
-            value = element.get_int64();
-            break;
-
-        default:
-            MXS_ERROR("Only integer value ('%s' provided) can be used with sorting fields.",
-                      bsoncxx::to_string(element.type()).c_str());
-            ok = false;
+            throw mxsmongo::SoftError(ss.str(), mxsmongo::error::LOCATION15974);
         }
 
-        if (!ok)
+        if (value != 1 && value != -1)
         {
-            order_by.clear();
-            break;
+            throw mxsmongo::SoftError("$sort key ordering must be 1 (for ascending) or -1 (for descending)",
+                                      mxsmongo::error::LOCATION15975);
         }
 
-        if (value > 1)
+        if (!order_by.empty())
         {
-            MXS_WARNING("Sorting value %d > 1, assuming 1 is meant.", value);
-            value = 1;
-        }
-        else if (value < -1)
-        {
-            MXS_WARNING("Sorting value %d < -1, assuming -1 is meant.", value);
-            value = 1;
+            order_by += ", ";
         }
 
-        if (value != 0)
+        order_by += "JSON_EXTRACT(doc, '$." + static_cast<string>(element.key()) + "')";
+
+        if (value == -1)
         {
-            if (!order_by.empty())
-            {
-                order_by += ", ";
-            }
-
-            order_by += "JSON_EXTRACT(doc, '$." + static_cast<string>(element.key()) + "')";
-
-            if (value == -1)
-            {
-                order_by += " DESC";
-            }
+            order_by += " DESC";
         }
     }
 
     return order_by;
 }
 
-namespace
-{
-
-bool get_integer(const bsoncxx::document::element& element, int64_t* pInt)
+bool mxsmongo::get_integer(const bsoncxx::document::element& element, int64_t* pInt)
 {
     bool rv = true;
 
@@ -722,53 +695,13 @@ bool get_integer(const bsoncxx::document::element& element, int64_t* pInt)
         *pInt = element.get_int64();
         break;
 
+    case bsoncxx::type::k_double:
+        // Integers are often passed as double.
+        *pInt = element.get_double();
+        break;
+
     default:
         rv = false;
-    }
-
-    return rv;
-}
-
-}
-
-std::string mxsmongo::skip_and_limit_to_limit(const bsoncxx::document::element& skip,
-                                              const bsoncxx::document::element& limit)
-{
-    mxb_assert(skip || limit);
-
-    string rv;
-
-    bool ok = true;
-
-    int64_t nSkip = 0;
-    if (skip && (!get_integer(skip, &nSkip) || nSkip < 0))
-    {
-        ok = false;
-    }
-
-    int64_t nLimit = std::numeric_limits<int64_t>::max();
-    if (ok && limit && (!get_integer(limit, &nLimit) || nLimit < 0))
-    {
-        ok = false;
-    }
-
-    if (ok)
-    {
-        stringstream ss;
-        ss << " LIMIT ";
-
-        if (nSkip != 0)
-        {
-            ss << nSkip << ", ";
-        }
-
-        ss << nLimit;
-
-        rv = ss.str();
-    }
-    else
-    {
-        MXS_ERROR("The value of 'skip' and/or 'limit' is not a valid integer.");
     }
 
     return rv;

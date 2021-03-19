@@ -354,18 +354,7 @@ public:
             }
         }
 
-        auto skip = m_doc[mxsmongo::key::SKIP];
-        auto limit = m_doc[mxsmongo::key::LIMIT];
-
-        if (skip || limit)
-        {
-            string s = mxsmongo::skip_and_limit_to_limit(skip, limit);
-
-            if (!s.empty())
-            {
-                sql << s;
-            }
-        }
+        sql << convert_skip_and_limit();
 
         send_downstream(sql.str());
 
@@ -418,6 +407,70 @@ public:
     }
 
 private:
+    string convert_skip_and_limit()
+    {
+        string rv;
+
+        auto skip = m_doc[mxsmongo::key::SKIP];
+        auto limit = m_doc[mxsmongo::key::LIMIT];
+
+        if (skip || limit)
+        {
+            int64_t nSkip = 0;
+            if (skip && (!get_integer(skip, &nSkip) || nSkip < 0))
+            {
+                stringstream ss;
+                int code;
+                if (nSkip < 0)
+                {
+                    ss << "Skip value must be non-negative, but received: " << nSkip;
+                    code = mxsmongo::error::BAD_VALUE;
+                }
+                else
+                {
+                    ss << "Failed to parse: " << bsoncxx::to_json(m_doc) << ". 'skip' field must be numeric.";
+                    code = mxsmongo::error::FAILED_TO_PARSE;
+                }
+
+                throw mxsmongo::SoftError(ss.str(), code);
+            }
+
+            int64_t nLimit = std::numeric_limits<int64_t>::max();
+            if (limit && (!get_integer(limit, &nLimit) || nLimit < 0))
+            {
+                stringstream ss;
+                int code;
+
+                if (nLimit < 0)
+                {
+                    ss << "Limit value must be non-negative, but received: " << nLimit;
+                    code = mxsmongo::error::BAD_VALUE;
+                }
+                else
+                {
+                    ss << "Failed to parse: " << bsoncxx::to_json(m_doc) << ". 'limit' field must be numeric.";
+                    code = mxsmongo::error::FAILED_TO_PARSE;
+                }
+
+                throw mxsmongo::SoftError(ss.str(), code);
+            }
+
+            stringstream ss;
+            ss << " LIMIT ";
+
+            if (nSkip != 0)
+            {
+                ss << nSkip << ", ";
+            }
+
+            ss << nLimit;
+
+            rv = ss.str();
+        }
+
+        return rv;
+    }
+
     vector<string> m_extractions;
 };
 

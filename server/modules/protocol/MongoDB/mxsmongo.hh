@@ -222,6 +222,8 @@ const char WHATSMYURI[]              = "whatsmyuri";
 
 };
 
+bool get_integer(const bsoncxx::document::element& element, int64_t* pInt);
+
 std::string to_string(const bsoncxx::document::element& element);
 
 std::vector<std::string> projection_to_extractions(const bsoncxx::document::view& projection);
@@ -229,9 +231,6 @@ std::vector<std::string> projection_to_extractions(const bsoncxx::document::view
 std::string filter_to_where_clause(const bsoncxx::document::view& filter);
 
 std::string sort_to_order_by(const bsoncxx::document::view& sort);
-
-std::string skip_and_limit_to_limit(const bsoncxx::document::element& skip,
-                                    const bsoncxx::document::element& limit);
 
 class Packet
 {
