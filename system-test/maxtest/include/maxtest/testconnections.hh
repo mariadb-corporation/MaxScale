@@ -378,11 +378,10 @@ public:
 
 
     /**
-     * @brief resinstall_maxscales Remove Maxscale form all nodes and installs new ones
-     * (to be used for run_test_snapshot)
-     * @return 0 in case of success
+     * Remove MaxScale form all nodes and installs new ones (to be used for run_test_snapshot)
+     * @return True on success
      */
-    int reinstall_maxscales();
+    bool reinstall_maxscales();
 
     mxt::MaxScale&      maxscale();
     mxt::MaxScale&      maxscale2();
@@ -404,7 +403,7 @@ private:
 
     bool log_matches(int m, const char* pattern);
 
-    bool too_few_maxscales() const;
+    bool enough_maxscales() const;
 
     std::unique_ptr<mxt::MaxScale>   m_maxscale;  /**< Main MaxScale instance */
     std::unique_ptr<mxt::MaxScale>   m_maxscale2; /**< Secondary MaxScale instance */
@@ -433,6 +432,7 @@ private:
     // the command line. If both, the value read from command line takes priority.
     bool m_init_maxscale {true};        /**< Is MaxScale initialized normally? */
     bool m_check_nodes {true};          /**< Check nodes when preparing for test? */
+    bool m_mxs_manual_debug {false};    /**< Manually debugging MaxScale? */
 
     /* If true, logs from backends are not copied (needed if case of Aurora RDS backend or similar) */
     bool m_no_backend_log_copy {false};
@@ -475,6 +475,7 @@ private:
     bool process_template(int m, const std::string& config_file_path, const char* dest = "/etc/maxscale.cnf");
     bool process_mdbci_template();
     bool call_mdbci(const char* options);
+    int setup_vms();
 
     /**
      * @brief timeout_thread Thread which terminates test application after 'timeout' milliseconds
