@@ -25,8 +25,44 @@ class ReplicationCluster : public MariaDBCluster
 public:
     ReplicationCluster(SharedData* shared);
 
-    bool setup(const mxt::NetworkConfig& nwconfig);
-
+    int start_replication() override;
+    int check_replication() override;
+    void sync_slaves(int node = 0) override;
     const std::string& type_string() const override;
+
+    /**
+     * @brief find_master Tries to find Master node
+     * @return Index of Master node
+     */
+    int find_master();
+
+    /**
+     * @brief change_master set a new master node for Master/Slave setup
+     * @param NewMaster index of new Master node
+     * @param OldMaster index of current Master node
+     */
+    void change_master(int NewMaster, int OldMaster);
+
+    /**
+     * @brief Creates 'repl' user on all nodes
+     * @return 0 if everything is ok
+     */
+    int set_repl_user();
+
+    /**
+     * @brief executes 'CHANGE MASTER TO ..' and 'START SLAVE'
+     * @param MYSQL conn struct of slave node
+     * @param master_host IP address of master node
+     * @param master_port port of master node
+     * @param log_file name of log file
+     * @param log_pos initial position
+     * @return 0 if everything is ok
+     */
+    int set_slave(MYSQL* conn, const char* master_host, int master_port,
+                  const char* log_file, const char* log_pos);
+private:
+    bool check_master_node(MYSQL* conn);
+    bool bad_slave_thread_status(MYSQL* conn, const char* field, int node);
+    bool wrong_replication_type(MYSQL* conn);
 };
 }

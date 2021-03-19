@@ -24,27 +24,14 @@ public:
     {
     }
 
-    bool setup(const mxt::NetworkConfig& nwconfig);
-
     const std::string& type_string() const override;
 
-    int start_galera();
-
-    virtual int start_replication()
-    {
-        return start_galera();
-    }
-
-    int check_galera();
-
-    virtual int check_replication()
-    {
-        return check_galera();
-    }
+    int start_replication() override;
+    int check_replication() override;
 
     std::string get_config_name(int node) override;
 
-    virtual void sync_slaves(int node = 0)
+    virtual void sync_slaves(int node = 0) override
     {
         sleep(10);
     }

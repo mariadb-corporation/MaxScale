@@ -269,11 +269,6 @@ std::string XpandCluster::unblock_command(int node) const
     return command;
 }
 
-bool XpandCluster::setup(const mxt::NetworkConfig& nwconfig)
-{
-    return MariaDBCluster::setup(nwconfig);
-}
-
 const std::string& XpandCluster::type_string() const
 {
     return type_xpand;
