@@ -9,7 +9,7 @@ describe("Request Options", function() {
     })
 
     it("Sparse fieldset with one field", function() {
-        return request.get(base_url + "/services/RW-Split-Router?fields[services]=state", {json: true})
+        return request.get(base_url + "/services/RW-Split-Router?fields[services]=state")
             .then((res) => {
                 validate_func(res).should.be.true
                 res.data.should.have.keys("attributes", "id", "type", "links")
@@ -19,7 +19,7 @@ describe("Request Options", function() {
     })
 
     it("Sparse fieldset with two fields", function() {
-        return request.get(base_url + "/services/RW-Split-Router?fields[services]=state,router", {json: true})
+        return request.get(base_url + "/services/RW-Split-Router?fields[services]=state,router")
             .then((res) => {
                 validate_func(res).should.be.true
                 res.data.should.have.keys("attributes", "id", "type", "links")
@@ -29,7 +29,7 @@ describe("Request Options", function() {
     })
 
     it("Sparse fieldset with sub-field", function() {
-        return request.get(base_url + "/services/RW-Split-Router?fields[services]=router_diagnostics/route_master", {json: true})
+        return request.get(base_url + "/services/RW-Split-Router?fields[services]=router_diagnostics/route_master")
             .then((res) => {
                 validate_func(res).should.be.true
                 res.data.should.have.keys("attributes", "id", "type", "links")
@@ -39,7 +39,7 @@ describe("Request Options", function() {
     })
 
     it("Sparse fieldset with two sub-fields", function() {
-        return request.get(base_url + "/services/RW-Split-Router?fields[services]=router_diagnostics/route_master,router_diagnostics/queries", {json: true})
+        return request.get(base_url + "/services/RW-Split-Router?fields[services]=router_diagnostics/route_master,router_diagnostics/queries")
             .then((res) => {
                 validate_func(res).should.be.true
                 res.data.should.have.keys("attributes", "id", "type", "links")
@@ -49,7 +49,7 @@ describe("Request Options", function() {
     })
 
     it("Sparse fieldset with multiple sub-fields in different objects", function() {
-        return request.get(base_url + "/services/RW-Split-Router?fields[services]=router_diagnostics/route_master,router_diagnostics/queries,state,statistics/connections", {json: true})
+        return request.get(base_url + "/services/RW-Split-Router?fields[services]=router_diagnostics/route_master,router_diagnostics/queries,state,statistics/connections")
             .then((res) => {
                 validate_func(res).should.be.true
                 res.data.should.have.keys("attributes", "id", "type", "links")
@@ -61,7 +61,7 @@ describe("Request Options", function() {
     })
 
     it("Sparse fieldset with relationships", function() {
-        return request.get(base_url + "/services/RW-Split-Router?fields[services]=servers", {json: true})
+        return request.get(base_url + "/services/RW-Split-Router?fields[services]=servers")
             .then((res) => {
                 validate_func(res).should.be.true
                 res.data.should.have.keys("relationships", "id", "type", "links")

@@ -5,16 +5,14 @@ describe("Service", function() {
 
     it("change service parameter", function() {
         return request.get(base_url + "/services/RW-Split-Router")
-            .then(function(resp) {
-                var svc = JSON.parse(resp)
+            .then(function(svc) {
                 svc.data.attributes.parameters.enable_root_user = true
                 return request.patch(base_url + "/services/RW-Split-Router", {json: svc})
             })
             .then(function(resp) {
                 return request.get(base_url + "/services/RW-Split-Router")
             })
-            .then(function(resp) {
-                var svc = JSON.parse(resp)
+            .then(function(svc) {
                 svc.data.attributes.parameters.enable_root_user.should.be.true
             })
     });
@@ -22,40 +20,35 @@ describe("Service", function() {
 
     it("missing relationships are not removed", function() {
         return request.get(base_url + "/services/RW-Split-Router")
-            .then(function(resp) {
-                var svc = JSON.parse(resp)
+            .then(function(svc) {
                 delete svc.data.relationships["servers"]
                 return request.patch(base_url + "/services/RW-Split-Router", {json: svc})
             })
             .then(function(resp) {
                 return request.get(base_url + "/services/RW-Split-Router")
             })
-            .then(function(resp) {
-                var svc = JSON.parse(resp)
+            .then(function(svc) {
                 svc.data.relationships.should.not.be.empty
             })
     });
 
     it("remove service relationship", function() {
         return request.get(base_url + "/services/RW-Split-Router")
-            .then(function(resp) {
-                var svc = JSON.parse(resp)
+            .then(function(svc) {
                 svc.data.relationships.servers.data = null
                 return request.patch(base_url + "/services/RW-Split-Router", {json: svc})
             })
             .then(function(resp) {
                 return request.get(base_url + "/services/RW-Split-Router")
             })
-            .then(function(resp) {
-                var svc = JSON.parse(resp)
+            .then(function(svc) {
                 svc.data.relationships.should.have.keys("listeners")
             })
     });
 
     it("add service relationship", function() {
         return request.get(base_url + "/services/RW-Split-Router")
-            .then(function(resp) {
-                var svc = JSON.parse(resp)
+            .then(function(svc) {
                 svc.data.relationships = {
                     servers: {
                         data: [
@@ -72,17 +65,14 @@ describe("Service", function() {
             .then(function(resp) {
                 return request.get(base_url + "/services/RW-Split-Router")
             })
-            .then(function(resp) {
-                var svc = JSON.parse(resp)
+            .then(function(svc) {
                 svc.data.relationships.servers.data[0].id.should.be.equal("server1")
             })
     });
 
     it("add service→service relationship", function() {
         return request.get(base_url + "/services/RW-Split-Router")
-            .then(function(resp) {
-                var svc = JSON.parse(resp)
-
+            .then(function(svc) {
                 svc.data.relationships.services = {
                     data: [ {id: "SchemaRouter-Router", type: "services"} ]
                 }
@@ -92,54 +82,47 @@ describe("Service", function() {
             .then(function(resp) {
                 return request.get(base_url + "/services/RW-Split-Router")
             })
-            .then(function(resp) {
-                var svc = JSON.parse(resp)
+            .then(function(svc) {
                 svc.data.relationships.services.data[0].id.should.be.equal("SchemaRouter-Router")
             })
     });
 
     it("remove service→service relationship", function() {
         return request.get(base_url + "/services/RW-Split-Router")
-            .then(function(resp) {
-                var svc = JSON.parse(resp)
+            .then(function(svc) {
                 svc.data.relationships.services.data = null
                 return request.patch(base_url + "/services/RW-Split-Router", {json: svc})
             })
             .then(function(resp) {
                 return request.get(base_url + "/services/RW-Split-Router")
             })
-            .then(function(resp) {
-                var svc = JSON.parse(resp)
+            .then(function(svc) {
                 svc.data.relationships.services.data.should.be.empty
             })
     });
 
     it("add service→monitor relationship", function() {
         return request.get(base_url + "/services/RW-Split-Router")
-            .then(function(resp) {
-                var svc = JSON.parse(resp)
+            .then(function(svc) {
                 svc.data.relationships = {monitors: {data: [{id: "MariaDB-Monitor", type: "monitors"}]}, servers: {data: null}, services: {data: null}}
                 return request.patch(base_url + "/services/RW-Split-Router", {json: svc})
             })
             .then(() => request.get(base_url + "/services/RW-Split-Router"))
-            .then(function(resp) {
-                var svc = JSON.parse(resp)
+            .then(function(svc) {
                 svc.data.relationships.monitors.data[0].id.should.be.equal("MariaDB-Monitor")
             })
     });
 
     it("remove service→monitor relationship", function() {
         return request.get(base_url + "/services/RW-Split-Router")
-            .then(function(resp) {
-                var svc = JSON.parse(resp)
+            .then(function(svc) {
                 svc.data.relationships.monitors.data = null
                 return request.patch(base_url + "/services/RW-Split-Router", {json: svc})
             })
             .then(function(resp) {
                 return request.get(base_url + "/services/RW-Split-Router")
             })
-            .then(function(resp) {
-                var svc = JSON.parse(resp)
+            .then(function(svc) {
                 svc.data.relationships.should.not.have.keys("monitors")
             })
     });
@@ -151,7 +134,7 @@ describe("Service", function() {
 
     it("remove service→server relationship via `relationships` endpoint", function() {
         return request.patch(base_url + "/services/RW-Split-Router/relationships/servers", { json: {data: null}})
-            .then(() => request.get(base_url + "/services/RW-Split-Router", { json: true }))
+            .then(() => request.get(base_url + "/services/RW-Split-Router"))
             .then((res) => {
                 res.data.relationships.should.not.have.keys("servers")
             })
@@ -165,7 +148,7 @@ describe("Service", function() {
                                  {id: "server3", type: "servers"},
                                  {id: "server4", type: "servers"},
                              ]}})
-            .then(() => request.get(base_url + "/services/RW-Split-Router", { json: true}))
+            .then(() => request.get(base_url + "/services/RW-Split-Router"))
             .then((res) => {
                 res.data.relationships.servers.data.should.have.lengthOf(4)
             })
@@ -176,7 +159,7 @@ describe("Service", function() {
                              { json: { data: [
                                  {id: "QLA", type: "filters"},
                              ]}})
-            .then(() => request.get(base_url + "/services/RW-Split-Router", { json: true}))
+            .then(() => request.get(base_url + "/services/RW-Split-Router"))
             .then((res) => {
                 res.data.relationships.filters.data.should.have.lengthOf(1)
             })
@@ -187,7 +170,7 @@ describe("Service", function() {
                              { json: { data: [
                                  {id: "SchemaRouter-Router", type: "services"},
                              ]}})
-            .then(() => request.get(base_url + "/services/RW-Split-Router", { json: true}))
+            .then(() => request.get(base_url + "/services/RW-Split-Router"))
             .then((res) => {
                 res.data.relationships.services.data.should.have.lengthOf(1)
             })
@@ -196,7 +179,7 @@ describe("Service", function() {
     it("remove service→filter relationship via `relationships` endpoint", function() {
         return request.patch(base_url + "/services/RW-Split-Router/relationships/filters",
                              { json: { data: null}})
-            .then(() => request.get(base_url + "/services/RW-Split-Router", { json: true}))
+            .then(() => request.get(base_url + "/services/RW-Split-Router"))
             .then((res) => {
                 res.data.relationships.should.not.have.keys("filters")
             })
@@ -205,7 +188,7 @@ describe("Service", function() {
     it("remove service→service relationship via `relationships` endpoint", function() {
         return request.patch(base_url + "/services/RW-Split-Router/relationships/services",
                              { json: { data: null}})
-            .then(() => request.get(base_url + "/services/RW-Split-Router", { json: true}))
+            .then(() => request.get(base_url + "/services/RW-Split-Router"))
             .then((res) => {
                 res.data.relationships.services.data.should.be.empty
             })
@@ -222,7 +205,7 @@ describe("Service", function() {
         return request.patch(base_url + "/services/RW-Split-Router/", {json: body})
             .then(() => request.patch(base_url + "/services/RW-Split-Router/relationships/monitors",
                                       { json: {data: [{id: "MariaDB-Monitor", type: "monitors"}]}}))
-            .then(() => request.get(base_url + "/services/RW-Split-Router", { json: true}))
+            .then(() => request.get(base_url + "/services/RW-Split-Router"))
             .then((res) => {
                 res.data.relationships.monitors.data[0].id.should.be.equal("MariaDB-Monitor")
             })
@@ -231,7 +214,7 @@ describe("Service", function() {
     it("remove service→monitor relationship via `relationships` endpoint", function() {
         return request.patch(base_url + "/services/RW-Split-Router/relationships/monitors",
                              { json: { data: null}})
-            .then(() => request.get(base_url + "/services/RW-Split-Router", { json: true}))
+            .then(() => request.get(base_url + "/services/RW-Split-Router"))
             .then((res) => {
                 res.data.relationships.should.not.have.keys("monitors")
             })

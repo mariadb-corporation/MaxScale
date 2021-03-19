@@ -10,12 +10,11 @@
   "license": "SEE LICENSE IN ../../../../LICENSE.txt",
   "dependencies": {
     "ajv": "^5.5.2",
+    "axios": "^0.21.1",
     "chai": "^3.5.0",
     "chai-as-promised": "^6.0.0",
     "mariadb": "^2.0.1-beta",
     "mocha": "^7.1.1",
-    "request": "^2.87.0",
-    "request-promise-native": "^1.0.5",
     "ws": "^7.3.1"
   }
 }

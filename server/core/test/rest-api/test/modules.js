@@ -9,7 +9,7 @@ describe("Module parameters", function() {
             obj.data.attributes.parameters.find(e => e.name == name).type.should.equal(type)
         }
 
-        var core = await request.get(base_url + "/maxscale/modules/maxscale", {json: true})
+        var core = await request.get(base_url + "/maxscale/modules/maxscale")
         check_type(core, "admin_auth", "bool")
         check_type(core, "admin_host", "string")
         check_type(core, "admin_port", "int")
@@ -19,7 +19,7 @@ describe("Module parameters", function() {
         check_type(core, "query_classifier_cache_size", "size")
         check_type(core, "rebalance_window", "count")
 
-        var mon = await request.get(base_url + "/maxscale/modules/mariadbmon", {json: true})
+        var mon = await request.get(base_url + "/maxscale/modules/mariadbmon")
         check_type(mon, "events", "enum_mask")
     });
 

@@ -3,16 +3,14 @@ require("../utils.js")()
 
 function set_value(key, value) {
     return request.get(base_url + "/maxscale")
-        .then(function(resp) {
-            var d = JSON.parse(resp)
+        .then(function(d) {
             d.data.attributes.parameters[key] = value;
             return request.patch(base_url + "/maxscale", { json: d })
         })
         .then(function() {
             return request.get(base_url + "/maxscale")
         })
-        .then(function(resp) {
-            var d = JSON.parse(resp)
+        .then(function(d) {
             d.data.attributes.parameters[key].should.deep.equal(value)
         })
 }

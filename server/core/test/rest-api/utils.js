@@ -402,14 +402,14 @@ var json_api_schema = {
 }
 
 function validate_json(data) {
-    return validate_func(JSON.parse(data))
+    return validate_func(data)
 }
 
 var child_process = require("child_process")
 
 module.exports = function() {
     this.fs = require("fs")
-    this.request = require("request-promise-native")
+    this.axios = require("axios")
     this.chai = require("chai")
     this.assert = require("assert")
     this.chaiAsPromised = require("chai-as-promised")
@@ -420,9 +420,42 @@ module.exports = function() {
     this.ajv = new Ajv({$data: true, allErrors: true, extendRefs: true, verbose: true})
     this.validate_func = ajv.compile(json_api_schema)
     this.validate = validate_json
-    this.credentials = "admin:mariadb"
     this.host = "localhost:8989/v1"
-    this.base_url = "http://" + this.credentials + "@" + this.host
+    this.base_url = "http://" + this.host
+
+    this.doRequest = async function(method, endpoint, opts) {
+        var o = opts || {}
+
+        if (!o.auth) {
+            o.auth = {username:"admin", password:"mariadb"}
+        }
+
+        o.method = method
+        o.url = endpoint
+        o.data = o.json // Backwards compatibility with request
+        var res = await axios(o)
+
+        return o.resolveWithFullResponse ? res : res.data
+    }
+
+    this.request = {
+        get: function(endpoint, opts) {
+            return doRequest("GET", endpoint, opts)
+        },
+        put: function(endpoint, opts) {
+            return doRequest("PUT", endpoint, opts)
+        },
+        post: function(endpoint, opts) {
+            return doRequest("POST", endpoint, opts)
+        },
+        patch: function(endpoint, opts) {
+            return doRequest("PATCH", endpoint, opts)
+        },
+        delete: function(endpoint, opts) {
+            return doRequest("DELETE", endpoint, opts)
+        },
+    }
+
     this.startMaxScale = function(done) {
         child_process.execFile("./start_maxscale.sh", function(err, stdout, stderr) {
             if (process.env.MAXSCALE_DIR == null) {

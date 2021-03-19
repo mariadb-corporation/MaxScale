@@ -3,16 +3,14 @@ require("../utils.js")()
 
 function set_auth(auth, value) {
     return request.get(auth + host + "/maxscale")
-        .then(function(resp) {
-            var d = JSON.parse(resp)
+        .then(function(d) {
             d.data.attributes.parameters.admin_auth = value;
             return request.patch(auth + host + "/maxscale", { json: d })
         })
         .then(function() {
             return request.get(auth + host + "/maxscale")
         })
-        .then(function(resp) {
-            var d = JSON.parse(resp)
+        .then(function(d) {
             d.data.attributes.parameters.admin_auth.should.equal(value)
         })
 }
@@ -53,9 +51,9 @@ describe("Authentication", function() {
         }
     }
 
-    var auth1 = "http://" + user1.data.id + ":" + user1.data.attributes.password + "@"
-    var auth2 = "http://" + user2.data.id + ":" + user2.data.attributes.password + "@"
-    var auth3 = "http://" + user3.data.id + ":" + user3.data.attributes.password + "@"
+    var auth1 = {username: user1.data.id, password: user1.data.attributes.password}
+    var auth2 = {username: user2.data.id, password: user2.data.attributes.password}
+    var auth3 = {username: user3.data.id, password: user3.data.attributes.password}
 
     it("add user", function() {
         return request.post(base_url + "/users/inet", { json: user1 })
@@ -68,52 +66,51 @@ describe("Authentication", function() {
     })
 
     it("unauthorized request with authentication", function() {
-        return request.get(base_url + "/maxscale").auth()
+        return request.get(base_url + "/maxscale", {auth: {}})
             .should.be.rejected
     })
 
     it("authorized request with authentication", function() {
-        return request.get(auth1 + host + "/maxscale")
+        return request.get(base_url + "/maxscale", {auth: auth1})
             .should.be.fulfilled
     })
 
     it("replace user", function() {
-        return request.post(auth1 + host + "/users/inet", { json: user2 })
+        return request.post(base_url + "/users/inet", { json: user2, auth: auth1 })
             .then(function() {
-                return request.get(auth1 + host + "/users/inet/" + user2.data.id)
+                return request.get(base_url + "/users/inet/" + user2.data.id, { auth: auth1 })
             })
             .then(function() {
-                return request.delete(auth1 + host + "/users/inet/" + user1.data.id)
+                return request.delete(base_url + "/users/inet/" + user1.data.id, { auth: auth1 })
             })
             .should.be.fulfilled
     })
 
     it("create basic user", function() {
-        return request.post(auth2 + host + "/users/inet", { json: user3 })
+        return request.post(base_url + "/users/inet", { json: user3, auth: auth2 })
             .should.be.fulfilled
     })
 
     it("accept read request with basic user", function() {
-        return request.get(auth3 + host + "/servers/server1/")
+        return request.get(base_url + "/servers/server1/", { auth: auth3 })
             .should.be.fulfilled
     })
 
     it("reject write request with basic user", function() {
-        return request.get(auth3 + host + "/servers/server1/")
-            .then(function(res) {
-                var obj = JSON.parse(res)
-                return request.patch(auth3 + host + "/servers/server1/", {json: obj})
+        return request.get(base_url + "/servers/server1/", { auth: auth3 })
+            .then(function(obj) {
+                return request.patch(base_url + "/servers/server1/", {json: obj, auth: auth3})
                     .should.be.rejected
             })
     })
 
     it("request with wrong user", function() {
-        return request.get(auth1 + host + "/maxscale")
+        return request.get(base_url + "/maxscale", { auth: auth1 })
             .should.be.rejected
     })
 
     it("request with correct user", function() {
-        return request.get(auth2 + host + "/maxscale")
+        return request.get(base_url + "/maxscale", { auth: auth2 })
             .should.be.fulfilled
     })
 
@@ -133,7 +130,7 @@ describe("JSON Web Tokens", function() {
 
     // it("generates valid token", function() {
     //     var token = ''
-    //     return request.get(base_url + "/auth", {json: true})
+    //     return request.get(base_url + "/auth")
     //         .then((res) => {
     //             token = res.meta.token
     //         })
@@ -141,16 +138,9 @@ describe("JSON Web Tokens", function() {
     //         .should.be.fulfilled
     // })
 
-    it("rejects invalid token with correct credentials", function() {
+    it("rejects invalid token", function() {
         var token = 'thisisnotavalidjsonwebtoken'
-        return request.get(base_url + "/servers", {headers: {'Authorization': 'Bearer ' + token}})
-            .should.be.rejected
-    })
-
-
-    it("rejects invalid token with incorrect credentials", function() {
-        var token = 'thisisnotavalidjsonwebtoken'
-        return request.get("http://" + host + "/servers", {headers: {'Authorization': 'Bearer ' + token}})
+        return request.get(base_url + "/servers", {auth: {}, headers: {'Authorization': 'Bearer ' + token}})
             .should.be.rejected
     })
 

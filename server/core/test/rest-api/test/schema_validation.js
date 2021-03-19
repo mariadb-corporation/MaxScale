@@ -36,12 +36,12 @@ describe("Resource Collections", function() {
 
     tests.forEach(function(endpoint) {
         it(endpoint + ': resource found', function() {
-            return request(base_url + endpoint)
+            return request.get(base_url + endpoint)
                 .should.be.fulfilled
         });
 
         it(endpoint + ': resource schema is valid', function() {
-            return request(base_url + endpoint)
+            return request.get(base_url + endpoint)
                 .should.eventually.satisfy(validate)
         });
     })
@@ -71,12 +71,12 @@ describe("Individual Resources", function() {
 
     tests.forEach(function(endpoint) {
         it(endpoint + ': resource found', function() {
-            return request(base_url + endpoint)
+            return request.get(base_url + endpoint)
                 .should.be.fulfilled
         });
 
         it(endpoint + ': resource schema is valid', function() {
-            return request(base_url + endpoint)
+            return request.get(base_url + endpoint)
                 .should.eventually.satisfy(validate)
         });
     })
@@ -116,19 +116,10 @@ describe("Resource Self Links", function() {
     ]
 
     tests.forEach(function(endpoint) {
-        it(endpoint + ': correct self link', function() {
-            var obj = null;
-            return request.get(base_url + endpoint)
-                .then(function(resp) {
-                    obj = JSON.parse(resp)
-                    return request.get(obj.links.self,
-                                       {auth: {user: 'admin', password: 'mariadb'}})
-                })
-                .then(function(resp) {
-                    var obj_self = JSON.parse(resp)
-                    obj_self.links.self.should.be.equal(obj.links.self)
-                })
-            .should.be.fulfilled
+        it(endpoint + ': correct self link', async function() {
+            var obj = await request.get(base_url + endpoint)
+            var obj_self = await request.get(obj.links.self)
+            obj_self.links.self.should.be.equal(obj.links.self)
         });
     })
 
@@ -163,13 +154,12 @@ describe("Resource Relationship Self Links", function() {
 
     for (k of Object.keys(endpoints)) {
         it(k + ': correct resource self link', async function() {
-            const opts = {auth: {user: 'admin', password: 'mariadb'}, json: true}
-            var res = await request.get(base_url + '/' + endpoints[k], opts)
+            var res = await request.get(base_url + '/' + endpoints[k])
 
             for (o of res.data) {
                 for (r of endpoints[k]) {
                     if (o.relationships[r]) {
-                        var self = await request.get(o.relationships[r].links.self, opts)
+                        var self = await request.get(o.relationships[r].links.self)
                         self.should.be.deep.equal(o.relationships[r])
                     }
                 }

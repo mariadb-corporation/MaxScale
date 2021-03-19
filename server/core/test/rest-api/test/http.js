@@ -14,7 +14,7 @@ describe("HTTP Headers", function() {
             .then(() => request.get(base_url + "/servers/server1", {resolveWithFullResponse: true}))
             .then(function(resp) {
                 etag_one = resp.headers.etag
-                var srv = JSON.parse(resp.body)
+                var srv = resp.data
                 delete srv.data.relationships
                 srv.data.attributes.parameters.port = 1234
                 return request.patch(base_url + "/servers/server1", {json: srv})
@@ -37,7 +37,7 @@ describe("HTTP Headers", function() {
 
                 // Modify resource after three seconds
                 setTimeout(function() {
-                    var srv = JSON.parse(resp.body)
+                    var srv = resp.data
 
                     srv.data.relationships = {
                         services: {

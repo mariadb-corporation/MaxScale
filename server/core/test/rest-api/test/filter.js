@@ -62,7 +62,7 @@ describe("Filter Relationships", function() {
     });
 
     it("request filter", function() {
-        return request.get(base_url + "/filters/" + rel_filter.data.id, { json: true })
+        return request.get(base_url + "/filters/" + rel_filter.data.id)
             .then((res) => {
                 // The service-filter relationships can't be modified from filters
                 res.data.relationships.should.not.have.keys("services")

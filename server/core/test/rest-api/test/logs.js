@@ -6,8 +6,7 @@ describe("Logs", function() {
 
     it("change logging options", function() {
         return request.get(base_url + "/maxscale/logs")
-            .then(function(resp) {
-                var logs = JSON.parse(resp)
+            .then(function(logs) {
                 logs.data.attributes.parameters.maxlog.should.be.true
                 logs.data.attributes.parameters.syslog.should.be.true
                 logs.data.attributes.parameters.ms_timestamp.should.be.false
@@ -23,8 +22,7 @@ describe("Logs", function() {
             .then(function(resp) {
                 return request.get(base_url + "/maxscale/logs")
             })
-            .then(function(resp) {
-                var logs = JSON.parse(resp)
+            .then(function(logs) {
                 logs.data.attributes.parameters.maxlog.should.be.false
                 logs.data.attributes.parameters.syslog.should.be.false
                 logs.data.attributes.parameters.ms_timestamp.should.be.true
@@ -54,25 +52,25 @@ describe("Log Data", function() {
     before(startMaxScale)
 
     it("returns log data", async function() {
-        var res = await request.get(base_url + "/maxscale/logs/data", {json: true})
+        var res = await request.get(base_url + "/maxscale/logs/data")
         res.data.attributes.log.should.not.be.empty
     });
 
     it("returns 50 rows of data by default", async function() {
-        var res = await request.get(base_url + "/maxscale/logs/data", {json: true})
+        var res = await request.get(base_url + "/maxscale/logs/data")
         res.data.attributes.log.length.should.equal(50)
     });
 
     it("paginates logs", async function() {
-        var page = await request.get(base_url + "/maxscale/logs/data?page[size]=1", {json: true})
+        var page = await request.get(base_url + "/maxscale/logs/data?page[size]=1")
         page.data.attributes.log.length.should.equal(1)
     });
 
     it("has working pagination links", async function() {
-        var page1 = await request.get(base_url + "/maxscale/logs/data?page[size]=1", {json: true})
+        var page1 = await request.get(base_url + "/maxscale/logs/data?page[size]=1")
         page1.data.attributes.log.length.should.equal(1)
 
-        var page2 = await request.get(page1.links.prev, {json: true, auth: {user: 'admin', password: 'mariadb'}})
+        var page2 = await request.get(page1.links.prev)
         page2.data.attributes.log.length.should.equal(1)
         page2.data.attributes.log[0].should.not.deep.equal(page1.data.attributes.log[0])
     });
@@ -81,7 +79,7 @@ describe("Log Data", function() {
         var data = { data: { attributes: { parameters: { maxlog: true, syslog: false }}}}
         await request.patch(base_url + "/maxscale", {json: data})
 
-        var res = await request.get(base_url + "/maxscale/logs/data", {json: true})
+        var res = await request.get(base_url + "/maxscale/logs/data")
         res.data.attributes.log_source.should.equal("maxlog")
         res.data.attributes.log.should.not.be.empty
         checkLog(res.data.attributes.log)
@@ -94,7 +92,7 @@ describe("Log Data", function() {
         var data = { data: { attributes: { parameters: { maxlog: false, syslog: true }}}}
         await request.patch(base_url + "/maxscale", {json: data})
 
-        var res = await request.get(base_url + "/maxscale/logs/data", {json: true})
+        var res = await request.get(base_url + "/maxscale/logs/data")
         res.data.attributes.log_source.should.equal("syslog")
         res.data.attributes.log.should.not.be.empty
         checkLog(res.data.attributes.log)
@@ -107,7 +105,7 @@ describe("Log Data", function() {
         var data = { data: { attributes: { parameters: { maxlog: false, syslog: false }}}}
         await request.patch(base_url + "/maxscale", {json: data})
 
-        var res = await request.get(base_url + "/maxscale/logs/data", {json: true})
+        var res = await request.get(base_url + "/maxscale/logs/data")
         expect(res.data.attributes.log_source).to.be.undefined
         expect(res.data.attributes.log).to.be.undefined
 
@@ -120,7 +118,7 @@ describe("Log Data", function() {
 
 function connectWebSocket() {
     return new Promise((resolve, reject) => {
-        const ws_url = "ws://" + credentials + "@" + host + "/maxscale/logs/stream"
+        const ws_url = "ws://" + "admin:mariadb" + "@" + host + "/maxscale/logs/stream"
         const ws = new WebSocket(ws_url, 'ws');
 
         ws.on('open', function() {
@@ -135,7 +133,7 @@ function connectWebSocket() {
 
 function openWebSocket(cursor) {
     return new Promise((resolve, reject) => {
-        var ws_url = "ws://" + credentials + "@" + host + "/maxscale/logs/stream"
+        var ws_url = "ws://" + "admin:mariadb" + "@" + host + "/maxscale/logs/stream"
 
         if (cursor) {
             ws_url += "?page[cursor]=" + cursor
@@ -167,7 +165,7 @@ async function testWebSocket() {
     expect(res.timestamp).to.not.be.empty
     expect(res.priority).to.not.be.empty
 
-    var log = await request.get(base_url + "/maxscale/logs/data", {json: true})
+    var log = await request.get(base_url + "/maxscale/logs/data")
 
     res = await openWebSocket(log.data.attributes.log[0].id)
     expect(res.message).to.not.be.empty

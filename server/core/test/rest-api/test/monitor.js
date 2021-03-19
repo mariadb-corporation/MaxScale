@@ -70,7 +70,7 @@ describe("Monitor Relationships", function() {
         var mon = {data: {relationships: {servers: null}}}
         return request.patch(base_url + "/monitors/MariaDB-Monitor", {json: mon})
             .should.be.rejected
-            .then(() => request.get(base_url + "/monitors/MariaDB-Monitor", { json: true }))
+            .then(() => request.get(base_url + "/monitors/MariaDB-Monitor"))
             .then((res) => {
                 res.data.relationships.should.have.keys("servers")
             })
@@ -79,7 +79,7 @@ describe("Monitor Relationships", function() {
     it("missing relationships are not removed", function() {
         var mon = {data: {relationships: {}}}
         return request.patch(base_url + "/monitors/MariaDB-Monitor", {json: mon})
-        .then(() => request.get(base_url + "/monitors/MariaDB-Monitor", { json: true }))
+        .then(() => request.get(base_url + "/monitors/MariaDB-Monitor"))
         .then((res) => {
             res.data.relationships.should.have.keys("servers")
         })
@@ -88,7 +88,7 @@ describe("Monitor Relationships", function() {
     it("remove relationships from old monitor", function() {
         var mon = {data: {relationships: {servers: {data: null}}}}
         return request.patch(base_url + "/monitors/MariaDB-Monitor", {json: mon})
-        .then(() => request.get(base_url + "/monitors/MariaDB-Monitor", { json: true }))
+        .then(() => request.get(base_url + "/monitors/MariaDB-Monitor"))
         .then((res) => {
             res.data.relationships.should.not.have.keys("servers")
         })
@@ -107,7 +107,7 @@ describe("Monitor Relationships", function() {
                 }
             }}}
         return request.patch(base_url + "/monitors/" + monitor.data.id, {json: mon})
-            .then(() => request.get(base_url + "/monitors/" + monitor.data.id, { json: true }))
+            .then(() => request.get(base_url + "/monitors/" + monitor.data.id))
             .then((res) => {
                 res.data.relationships.servers.data.should.have.lengthOf(4)
             })
@@ -116,7 +116,7 @@ describe("Monitor Relationships", function() {
     it("move relationships back to old monitor", function() {
         var mon = {data: {relationships: {servers: {data: null}}}}
         return request.patch(base_url + "/monitors/" + monitor.data.id, {json: mon})
-            .then(() => request.get(base_url + "/monitors/" + monitor.data.id, { json: true }))
+            .then(() => request.get(base_url + "/monitors/" + monitor.data.id))
             .then((res) => {
                 res.data.relationships.should.not.have.keys("servers")
             })
@@ -130,7 +130,7 @@ describe("Monitor Relationships", function() {
                     ]}
                 return request.patch(base_url + "/monitors/MariaDB-Monitor", {json: mon})
             })
-            .then(() => request.get(base_url + "/monitors/MariaDB-Monitor", { json: true }))
+            .then(() => request.get(base_url + "/monitors/MariaDB-Monitor"))
             .then((res) => {
                 res.data.relationships.servers.data.should.have.lengthOf(4)
             })
@@ -148,7 +148,7 @@ describe("Monitor Relationships", function() {
 
         return request.patch(base_url + "/services/RW-Split-Router", {json: {data: {relationships: {services: {data: null}, servers: {data: null}}}}})
             .then(() => request.patch(base_url + "/monitors/MariaDB-Monitor", {json: mon}))
-            .then(() => request.get(base_url + "/services/RW-Split-Router", { json: true }))
+            .then(() => request.get(base_url + "/services/RW-Split-Router"))
             .then((res) => {
                 res.data.relationships.monitors.data[0].id.should.be.equal("MariaDB-Monitor")
                 res.data.relationships.should.not.have.keys("servers")
@@ -159,7 +159,7 @@ describe("Monitor Relationships", function() {
     it("remove service relationships from monitor", function() {
         var mon = {data: {relationships: {services: {data: null}}}}
         return request.patch(base_url + "/monitors/MariaDB-Monitor", {json: mon})
-        .then(() => request.get(base_url + "/monitors/MariaDB-Monitor", { json: true }))
+        .then(() => request.get(base_url + "/monitors/MariaDB-Monitor"))
         .then((res) => {
             res.data.relationships.should.not.have.keys("services")
         })
@@ -177,11 +177,11 @@ describe("Monitor Relationships", function() {
 
         return request.patch(base_url + "/monitors/MariaDB-Monitor/relationships/servers", {json: old})
         .then(() => request.patch(base_url + "/monitors/" + monitor.data.id + "/relationships/servers", {json: created}))
-        .then(() => request.get(base_url + "/monitors/MariaDB-Monitor", { json: true }))
+        .then(() => request.get(base_url + "/monitors/MariaDB-Monitor"))
         .then((res) => {
             res.data.relationships.servers.data.should.have.lengthOf(3)
         })
-        .then(() => request.get(base_url + "/monitors/" + monitor.data.id , { json: true }))
+        .then(() => request.get(base_url + "/monitors/" + monitor.data.id ))
         .then((res) => {
             res.data.relationships.servers.data.should.have.lengthOf(1)
                 .that.deep.includes({ id: "server1", type: "servers" })
@@ -203,11 +203,11 @@ describe("Monitor Relationships", function() {
 
         return request.patch(base_url + "/monitors/" + monitor.data.id + "/relationships/servers", {json: {data: null}})
         .then(() => request.patch(base_url + "/monitors/MariaDB-Monitor/relationships/servers", {json: old}))
-        .then(() => request.get(base_url + "/monitors/MariaDB-Monitor", { json: true }))
+        .then(() => request.get(base_url + "/monitors/MariaDB-Monitor"))
         .then((res) => {
             res.data.relationships.servers.data.should.have.lengthOf(4)
         })
-        .then(() => request.get(base_url + "/monitors/" + monitor.data.id , { json: true }))
+        .then(() => request.get(base_url + "/monitors/" + monitor.data.id ))
         .then((res) => {
             res.data.relationships.should.not.have.keys("servers")
         })
@@ -217,13 +217,13 @@ describe("Monitor Relationships", function() {
         return request.patch(base_url + "/monitors/MariaDB-Monitor/relationships/servers", {json: {data: null}})
             .then(() => request.patch(base_url + "/monitors/MariaDB-Monitor/relationships/services",
                                       {json: {data:[ {id: "RW-Split-Router", type: "services"}]}}))
-            .then(() => request.get(base_url + "/services/RW-Split-Router", { json: true }))
+            .then(() => request.get(base_url + "/services/RW-Split-Router"))
             .then((res) => res.data.relationships.monitors.data[0].id.should.be.equal("MariaDB-Monitor"))
     });
 
     it("remove service relationships from monitor via `relationships` endpoint", function() {
         return request.patch(base_url + "/monitors/MariaDB-Monitor/relationships/services", {json: {data: null}})
-        .then(() => request.get(base_url + "/monitors/MariaDB-Monitor", { json: true }))
+        .then(() => request.get(base_url + "/monitors/MariaDB-Monitor"))
         .then((res) => res.data.relationships.should.not.have.keys("services"))
     });
 
@@ -243,8 +243,7 @@ describe("Monitor Actions", function() {
             .then(function() {
                 return request.get(base_url + "/monitors/MariaDB-Monitor")
             })
-            .then(function(resp) {
-                var mon = JSON.parse(resp)
+            .then(function(mon) {
                 mon.data.attributes.state.should.be.equal("Stopped")
             })
     });
@@ -254,8 +253,7 @@ describe("Monitor Actions", function() {
             .then(function() {
                 return request.get(base_url + "/monitors/MariaDB-Monitor")
             })
-            .then(function(resp) {
-                var mon = JSON.parse(resp)
+            .then(function(mon) {
                 mon.data.attributes.state.should.be.equal("Running")
             })
     });
@@ -281,8 +279,7 @@ describe("Monitor Regressions", function() {
             .then(function() {
                 return request.get(base_url + "/monitors/MariaDB-Monitor")
             })
-            .then(function(resp) {
-                var mon = JSON.parse(resp)
+            .then(function(mon) {
                 mon.data.relationships.servers.data.should.not.be.empty
             })
     });

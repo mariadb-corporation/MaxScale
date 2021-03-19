@@ -161,7 +161,7 @@ describe("Server Relationships", function() {
     });
 
     it("request server", function() {
-        return request.get(base_url + "/servers/" + rel_server.data.id, { json: true })
+        return request.get(base_url + "/servers/" + rel_server.data.id)
             .then((res) => {
                 res.data.relationships.services.data.should.have.lengthOf(2)
             })
@@ -170,7 +170,7 @@ describe("Server Relationships", function() {
     it("add relationships with `relationships` endpoint", function() {
         return request.patch(base_url + "/servers/" + rel_server.data.id + "/relationships/monitors",
                              { json: { data: [ { "id": "MariaDB-Monitor", "type": "monitors" }]}})
-            .then(() => request.get(base_url + "/servers/" + rel_server.data.id, {json: true}))
+            .then(() => request.get(base_url + "/servers/" + rel_server.data.id))
             .then((res) => {
                 res.data.relationships.monitors.data.should.have.lengthOf(1)
                     .that.has.deep.include({ "id": "MariaDB-Monitor", "type": "monitors" })
@@ -186,7 +186,7 @@ describe("Server Relationships", function() {
     it("remove relationships with `relationships` endpoint", function() {
         var body = {data: null}
         return request.patch(base_url + "/servers/" + rel_server.data.id + "/relationships/monitors", { json: body })
-            .then(() => request.get(base_url + "/servers/" + rel_server.data.id, {json: true}))
+            .then(() => request.get(base_url + "/servers/" + rel_server.data.id))
             .then((res) => {
                 // Only monitor relationship should be undefined
                 res.data.relationships.should.not.have.keys("monitors")
@@ -199,7 +199,7 @@ describe("Server Relationships", function() {
         rel_server.data.relationships["monitors"] = null
         return request.patch(base_url + "/servers/" + rel_server.data.id, {json: rel_server})
             .should.be.rejected
-            .then(() => request.get(base_url + "/servers/" + rel_server.data.id, {json: true}))
+            .then(() => request.get(base_url + "/servers/" + rel_server.data.id))
             .then((res) => {
                 res.data.relationships.should.have.keys("services")
             })
@@ -209,7 +209,7 @@ describe("Server Relationships", function() {
         rel_server.data.relationships = {}
         return request.patch(base_url + "/servers/" + rel_server.data.id, {json: rel_server})
             .should.be.fulfilled
-            .then(() => request.get(base_url + "/servers/" + rel_server.data.id, {json: true}))
+            .then(() => request.get(base_url + "/servers/" + rel_server.data.id))
             .then((res) => {
                 res.data.relationships.should.have.keys("services")
             })
@@ -220,7 +220,7 @@ describe("Server Relationships", function() {
         rel_server.data.relationships["monitors"] = {data: null}
         return request.patch(base_url + "/servers/" + rel_server.data.id, {json: rel_server})
             .should.be.fulfilled
-            .then(() => request.get(base_url + "/servers/" + rel_server.data.id, {json: true}))
+            .then(() => request.get(base_url + "/servers/" + rel_server.data.id))
             .then((res) => {
                 res.data.relationships.should.not.have.keys("services")
                 res.data.relationships.should.not.have.keys("monitors")
@@ -231,7 +231,7 @@ describe("Server Relationships", function() {
         payload = {data: {relationships: {services: {data: [{type: "services", id: "RW-Split-Router"}]}}}}
         return request.patch(base_url + "/servers/" + rel_server.data.id, {json: payload})
             .should.be.fulfilled
-            .then(() => request.get(base_url + "/servers/" + rel_server.data.id, {json: true}))
+            .then(() => request.get(base_url + "/servers/" + rel_server.data.id))
             .then((res) => {
                 res.data.relationships.services.data[0].id.should.equal("RW-Split-Router")
                 payload.data.relationships.services.data = null
@@ -262,8 +262,7 @@ describe("Server State", function() {
             .then(function(resp) {
                 return request.get(base_url + "/servers/" + server.data.id)
             })
-            .then(function(resp) {
-                var srv = JSON.parse(resp)
+            .then(function(srv) {
                 srv.data.attributes.state.should.match(/Maintenance/)
             })
     });
@@ -273,8 +272,7 @@ describe("Server State", function() {
             .then(function(resp) {
                 return request.get(base_url + "/servers/" + server.data.id)
             })
-            .then(function(resp) {
-                var srv = JSON.parse(resp)
+            .then(function(srv) {
                 srv.data.attributes.state.should.match(/Maintenance/)
                 srv.data.attributes.statistics.connections.should.be.equal(0)
             })
@@ -285,8 +283,7 @@ describe("Server State", function() {
             .then(function(resp) {
                 return request.get(base_url + "/servers/" + server.data.id)
             })
-            .then(function(resp) {
-                var srv = JSON.parse(resp)
+            .then(function(srv) {
                 srv.data.attributes.state.should.not.match(/Maintenance/)
             })
     });
