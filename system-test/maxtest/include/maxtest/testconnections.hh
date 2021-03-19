@@ -492,6 +492,7 @@ private:
     bool check_backend_versions();
     bool check_create_vm_dir();
     void read_vms_info();
+    bool run_shell_command(const std::string& cmd, const std::string& errmsg = "");
 
     /**
      * @brief timeout_thread Thread which terminates test application after 'timeout' milliseconds
