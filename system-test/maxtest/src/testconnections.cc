@@ -13,7 +13,6 @@
 #include <fstream>
 #include <iostream>
 #include <future>
-#include <regex>
 #include <limits.h>
 #include <algorithm>
 
@@ -520,90 +519,123 @@ bool TestConnections::read_test_info()
     return found != nullptr;
 }
 
-void TestConnections::process_template(int m, const string& config_file, const char* dest)
+/**
+ * Process a MaxScale configuration file. Replaces the placeholders in the text with correct values.
+ *
+ * @param config_file_path Config file template path
+ * @param dest Destination file name for actual configuration file
+ * @return True on success
+ */
+bool TestConnections::process_template(int m, const string& config_file_path, const char* dest)
 {
-    char str[4096];
-
-    tprintf("Processing MaxScale config file %s\n", config_file.c_str());
-
-    sprintf(str, "cp %s maxscale.cnf", config_file.c_str());
-    if (verbose())
+    tprintf("Processing MaxScale config file %s\n", config_file_path.c_str());
+    std::ifstream config_file(config_file_path);
+    string file_contents;
+    if (config_file.is_open())
     {
-        tprintf("Executing '%s' command\n", str);
-    }
-    if (system(str) != 0)
-    {
-        tprintf("Error copying maxscale.cnf template\n");
-        return;
+        file_contents.reserve(10000);
+        file_contents.assign((std::istreambuf_iterator<char>(config_file)),
+                             (std::istreambuf_iterator<char>()));
     }
 
-    sprintf(str, "sed -i \"s/###threads###/%d/\"  maxscale.cnf", m_threads);
-    system(str);
-
-    MariaDBCluster* mdn[3];
-    const char* IPcnf;
-    mdn[0] = repl;
-    mdn[1] = galera;
-    mdn[2] = xpand;
-    int i, j;
-    int mdn_n = 3;
-
-    for (j = 0; j < mdn_n; j++)
+    if (file_contents.empty())
     {
-        if (mdn[j])
-        {
-            for (i = 0; i < mdn[j]->N; i++)
+        int eno = errno;
+        add_failure("Failed to read MaxScale config file template '%s' or file was empty. Error %i: %s",
+                    config_file_path.c_str(), eno, mxb_strerror(eno));
+        return false;
+    }
+
+    // Replace various items in the config file text, then write it to disk. Define a helper function.
+    auto replace_text = [&file_contents](const string& what, const string& replacement) {
+            bool found = true;
+            while (found)
             {
-                if (mdn[j]->using_ipv6())
+                auto pos = file_contents.find(what);
+                if (pos != string::npos)
                 {
-                    IPcnf = mdn[j]->ip6(i);
+                    file_contents.replace(pos, what.length(), replacement);
                 }
                 else
                 {
-                    IPcnf = mdn[j]->ip_private(i);
+                    found = false;
                 }
-                sprintf(str, "sed -i \"s/###%s_server_IP_%0d###/%s/\" maxscale.cnf",
-                        mdn[j]->prefix().c_str(), i + 1, IPcnf);
-                system(str);
+            }
+        };
 
-                sprintf(str, "sed -i \"s/###%s_server_port_%0d###/%d/\" maxscale.cnf",
-                        mdn[j]->prefix().c_str(), i + 1, mdn[j]->port[i]);
-                system(str);
+    replace_text("###threads###", std::to_string(m_threads));
+
+    MariaDBCluster* clusters[] = {repl, galera, xpand};
+    for (auto cluster : clusters)
+    {
+        if (cluster)
+        {
+            bool using_ip6 = cluster->using_ipv6();
+            auto& prefix = cluster->prefix();
+
+            for (int i = 0; i < cluster->N; i++)
+            {
+                // The placeholders in the config template use the node name prefix, not the MaxScale config
+                // server name prefix.
+                string ip_ph = mxb::string_printf("###%s_server_IP_%0d###", prefix.c_str(), i + 1);
+                string ip_str = using_ip6 ? cluster->ip6(i) : cluster->ip_private(i);
+                replace_text(ip_ph, ip_str);
+
+                string port_ph = mxb::string_printf("###%s_server_port_%0d###", prefix.c_str(), i + 1);
+                string port_str = std::to_string(cluster->port[i]);
+                replace_text(port_ph, port_str);
             }
 
-            sprintf(str,
-                    "sed -i \"s/###%s###/%s/\" maxscale.cnf",
-                    mdn[j]->cnf_srv_name().c_str(), mdn[j]->cnf_servers().c_str());
-            system(str);
-            sprintf(str,
-                    "sed -i \"s/###%s_line###/%s/\" maxscale.cnf",
-                    mdn[j]->cnf_srv_name().c_str(), mdn[j]->cnf_servers_line().c_str());
-            system(str);
+            // The following generates basic server definitions for all servers.
+            string all_servers_ph = mxb::string_printf("###%s###", cluster->cnf_srv_name().c_str());
+            string all_servers_str = cluster->cnf_servers();
+            replace_text(all_servers_ph, all_servers_str);
 
-            mdn[j]->connect();
-            execute_query(mdn[j]->nodes[0], (char*) "CREATE DATABASE IF NOT EXISTS test");
-            mdn[j]->close_connections();
+            // The following generates one line with server names. Used with monitors and services.
+            string all_servers_line_ph = mxb::string_printf("###%s_line###", cluster->cnf_srv_name().c_str());
+            string all_server_line_str = cluster->cnf_servers_line();
+            replace_text(all_servers_line_ph, all_server_line_str);
         }
     }
 
-    if (backend_ssl)
+    bool rval = false;
+    // Do the remaining replacements with sed, for now.
+    const string target_file = "maxscale.cnf";
+    std::ofstream output_file(target_file);
+    if (output_file.is_open())
     {
-        tprintf("Adding ssl settings\n");
-        const char sed_cmd[] = "sed -i "
-                               "\"s|type *= *server|type=server\\nssl=true\\nssl_cert=/###access_homedir###/"
-                               "certs/client-cert.pem\\nssl_key=/###access_homedir###/certs/client-key.pem"
-                               "\\nssl_ca_cert=/###access_homedir###/certs/ca.pem\\nssl_cert_verify_depth=9"
-                               "\\nssl_version=MAX|g\" maxscale.cnf";
-        system(sed_cmd);
+        output_file << file_contents;
+        output_file.close();
+
+        const string edit_failed = "Config file edit failed";
+        if (backend_ssl)
+        {
+            tprintf("Adding ssl settings\n");
+            const string sed_cmd = "sed -i "
+                                   "\"s|type *= *server|type=server\\nssl=true\\nssl_cert=/###access_homedir###/"
+                                   "certs/client-cert.pem\\nssl_key=/###access_homedir###/certs/client-key.pem"
+                                   "\\nssl_ca_cert=/###access_homedir###/certs/ca.pem\\nssl_cert_verify_depth=9"
+                                   "\\nssl_version=MAX|g\" maxscale.cnf";
+            run_shell_command(sed_cmd, edit_failed);
+        }
+
+        string sed_cmd = mxb::string_printf("sed -i \"s/###access_user###/%s/g\" %s",
+                                            maxscales->access_user(m), target_file.c_str());
+        run_shell_command(sed_cmd, edit_failed);
+
+        sed_cmd = mxb::string_printf("sed -i \"s|###access_homedir###|%s|g\" %s",
+                                     maxscales->access_homedir(m), target_file.c_str());
+        run_shell_command(sed_cmd, edit_failed);
+
+        maxscales->copy_to_node(m, "maxscale.cnf", dest);
+        rval = true;
     }
-
-    sprintf(str, "sed -i \"s/###access_user###/%s/g\" maxscale.cnf", maxscales->access_user(m));
-    system(str);
-
-    sprintf(str, "sed -i \"s|###access_homedir###|%s|g\" maxscale.cnf", maxscales->access_homedir(m));
-    system(str);
-
-    maxscales->copy_to_node_legacy((char*) "maxscale.cnf", (char*) dest, m);
+    else
+    {
+        int eno = errno;
+        add_failure("Could not write to '%s'. Error %i, %s", target_file.c_str(), eno, mxb_strerror(eno));
+    }
+    return rval;
 }
 
 void TestConnections::init_maxscales()
@@ -644,6 +676,19 @@ void TestConnections::init_maxscale(int m)
     {
         tprintf("No MaxScale config files defined. MaxScale may not start.");
     }
+
+    // TODO: Do this somewhere better.
+    auto create_test_db = [](MariaDBCluster* cluster) {
+            if (cluster)
+            {
+                cluster->connect();
+                execute_query(cluster->nodes[0], "CREATE DATABASE IF NOT EXISTS test;");
+                cluster->close_connections();
+            }
+        };
+    create_test_db(repl);
+    create_test_db(galera);
+    create_test_db(xpand);
 
     if (maxscales->ssh_node_f(m, true, "test -d %s/certs", homedir))
     {

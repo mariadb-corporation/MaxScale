@@ -1409,19 +1409,21 @@ void MariaDBCluster::limit_nodes(int new_N)
 
 std::string MariaDBCluster::cnf_servers()
 {
-    std::string s;
+    string rval;
+    rval.reserve(100 * N);
+    bool use_ip6 = using_ipv6();
     for (int i = 0; i < N; i++)
     {
-        s += std::string("\\n[") +
-                m_cnf_server_name +
-                std::to_string(i + 1) +
-                std::string("]\\ntype=server\\naddress=") +
-                std::string(ip_private(i)) +
-                std::string("\\nport=") +
-                std::to_string(port[i]) +
-                std::string("\\nprotocol=MySQLBackend\\n");
+        string one_server = mxb::string_printf("[%s%i]\n"
+                                               "type=server\n"
+                                               "address=%s\n"
+                                               "port=%i\n\n",
+                                               m_cnf_server_name.c_str(), i + 1,
+                                               use_ip6 ? ip6(i) : ip_private(i),
+                                               port[i]);
+        rval += one_server;
     }
-    return s;
+    return rval;
 }
 
 std::string MariaDBCluster::cnf_servers_line()
