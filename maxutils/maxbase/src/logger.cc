@@ -25,6 +25,7 @@
 #include <ctime>
 
 #include <maxbase/string.hh>
+#include <maxbase/log.hh>
 
 /**
  * Error logging for the logger itself.
@@ -124,7 +125,10 @@ std::unique_ptr<Logger> FileLogger::create(const std::string& filename)
 
         if (logger)
         {
-            logger->write_header();
+            if (mxb_log_is_maxlog_enabled())
+            {
+                logger->write_header();
+            }
         }
         else
         {
@@ -149,6 +153,11 @@ FileLogger::~FileLogger()
 
 bool FileLogger::write(const char* msg, int len)
 {
+    if (!mxb_log_is_maxlog_enabled())
+    {
+        return true;
+    }
+
     bool rval = true;
     std::lock_guard<std::mutex> guard(m_lock);
 
@@ -206,7 +215,11 @@ FileLogger::FileLogger(int fd, const std::string& filename)
 
 void FileLogger::close(const char* msg)
 {
-    write_footer(msg);
+    if (mxb_log_is_maxlog_enabled())
+    {
+        write_footer(msg);
+    }
+
     ::close(m_fd);
     m_fd = -1;
 }

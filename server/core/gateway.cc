@@ -707,9 +707,6 @@ static bool init_log()
     }
     else if (mxs_log_init(NULL, mxs::logdir(), cnf.log_target))
     {
-        mxs_log_set_syslog_enabled(cnf.syslog.get());
-        mxs_log_set_maxlog_enabled(cnf.maxlog.get());
-
         // Since init_log() may be called more than once, we need to ensure
         // that the cleanup-function is not registered more than once.
         static bool atexit_registered = false;
@@ -1896,6 +1893,9 @@ int main(int argc, char** argv)
         rc = MAXSCALE_BADCONFIG;
         return rc;
     }
+
+    mxs_log_set_syslog_enabled(cnf.syslog.get());
+    mxs_log_set_maxlog_enabled(cnf.maxlog.get());
 
     // Try to create the persisted configuration directory. This needs to be done before the path validation
     // done by check_paths() to prevent it from failing. The directory wont' exist if it's the first time
