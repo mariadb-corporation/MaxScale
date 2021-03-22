@@ -30,15 +30,20 @@ class Database;
 class Command
 {
 public:
+    using DocumentVector = std::vector<bsoncxx::document::view>;
+    using DocumentArguments = std::unordered_map<std::string, DocumentVector>;
+
     Command(Database* pDatabase,
             GWBUF* pRequest,
             const Packet& req,
-            const bsoncxx::document::view& doc);
+            const bsoncxx::document::view& doc,
+            const DocumentArguments& arguments);
 
     static std::unique_ptr<Command> get(mxsmongo::Database* pDatabase,
                                         GWBUF* pRequest,
                                         const mxsmongo::Packet& req,
-                                        const bsoncxx::document::view& doc);
+                                        const bsoncxx::document::view& doc,
+                                        const DocumentArguments& arguments);
 
     enum State
     {
@@ -74,6 +79,7 @@ protected:
     GWBUF*                  m_pRequest;
     Packet                  m_req;
     bsoncxx::document::view m_doc;
+    DocumentArguments       m_arguments;
 
 private:
     std::pair<GWBUF*, uint8_t*> create_reply_response_buffer(size_t size_of_documents,

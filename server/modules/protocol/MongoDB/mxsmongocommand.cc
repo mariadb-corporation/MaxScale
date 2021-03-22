@@ -90,15 +90,17 @@ template<class ConcreteCommand>
 unique_ptr<Command> create_command(Database* pDatabase,
                                    GWBUF* pRequest,
                                    const Packet& req,
-                                   const bsoncxx::document::view& doc)
+                                   const bsoncxx::document::view& doc,
+                                   const Command::DocumentArguments& arguments)
 {
-    return unique_ptr<ConcreteCommand>(new ConcreteCommand(pDatabase, pRequest, req, doc));
+    return unique_ptr<ConcreteCommand>(new ConcreteCommand(pDatabase, pRequest, req, doc, arguments));
 }
 
 using CreatorFunction = unique_ptr<Command> (*)(Database* pDatabase,
                                                 GWBUF* pRequest,
                                                 const Packet& req,
-                                                const bsoncxx::document::view& doc);
+                                                const bsoncxx::document::view& doc,
+                                                const Command::DocumentArguments& arguments);
 using CreatorsByName = const map<string, CreatorFunction>;
 
 struct ThisUnit
@@ -128,11 +130,13 @@ namespace mxsmongo
 Command::Command(Database* pDatabase,
                  GWBUF* pRequest,
                  const Packet& req,
-                 const bsoncxx::document::view& doc)
+                 const bsoncxx::document::view& doc,
+                 const DocumentArguments& arguments)
     : m_database(*pDatabase)
     , m_pRequest(gwbuf_clone(pRequest))
     , m_req(req)
     , m_doc(doc)
+    , m_arguments(arguments)
 {
 }
 
@@ -145,7 +149,8 @@ Command::~Command()
 unique_ptr<Command> Command::get(mxsmongo::Database* pDatabase,
                                  GWBUF* pRequest,
                                  const mxsmongo::Packet& req,
-                                 const bsoncxx::document::view& doc)
+                                 const bsoncxx::document::view& doc,
+                                 const DocumentArguments& arguments)
 {
     CreatorFunction create = nullptr;
 
@@ -169,7 +174,7 @@ unique_ptr<Command> Command::get(mxsmongo::Database* pDatabase,
         create = &create_command<Unknown>;
     }
 
-    return create(pDatabase, pRequest, req, doc);
+    return create(pDatabase, pRequest, req, doc, arguments);
 }
 
 Command::State Command::translate(GWBUF& mariadb_response, GWBUF** ppMongo_response)

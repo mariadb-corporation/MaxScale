@@ -44,7 +44,9 @@ GWBUF* mxsmongo::Database::handle_query(GWBUF* pRequest, const mxsmongo::Query& 
 {
     mxb_assert(is_ready());
 
-    return execute(pRequest, req, req.query());
+    Command::DocumentArguments arguments;
+
+    return execute(pRequest, req, req.query(), arguments);
 }
 
 GWBUF* mxsmongo::Database::handle_command(GWBUF* pRequest,
@@ -53,7 +55,7 @@ GWBUF* mxsmongo::Database::handle_command(GWBUF* pRequest,
 {
     mxb_assert(is_ready());
 
-    return execute(pRequest, req, doc);
+    return execute(pRequest, req, doc, req.arguments());
 }
 
 GWBUF* mxsmongo::Database::translate(GWBUF& mariadb_response)
@@ -78,11 +80,12 @@ GWBUF* mxsmongo::Database::translate(GWBUF& mariadb_response)
 
 GWBUF* mxsmongo::Database::execute(GWBUF* pRequest,
                                    const mxsmongo::Packet& req,
-                                   const bsoncxx::document::view& doc)
+                                   const bsoncxx::document::view& doc,
+                                   const mxsmongo::Command::DocumentArguments& arguments)
 {
     GWBUF* pResponse = nullptr;
 
-    auto sCommand = mxsmongo::Command::get(this, pRequest, req, doc);
+    auto sCommand = mxsmongo::Command::get(this, pRequest, req, doc, arguments);
 
     try
     {

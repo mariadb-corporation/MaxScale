@@ -463,6 +463,9 @@ protected:
 class Msg final : public Packet
 {
 public:
+    using DocumentVector = std::vector<bsoncxx::document::view>;
+    using DocumentArguments = std::unordered_map<std::string, DocumentVector>;
+
     Msg(const Packet& packet)
         : Packet(packet)
     {
@@ -490,20 +493,66 @@ public:
             case 0:
                 // Body section encoded as a single BSON object.
                 {
+                    mxb_assert(m_document.empty());
                     uint32_t size;
                     mxsmongo::get_byte4(pData, &size);
-                    m_documents.push_back(bsoncxx::document::view { pData, size });
+                    m_document = bsoncxx::document::view { pData, size };
                     pData += size;
                 }
                 break;
 
             case 1:
-                // TODO
-                mxb_assert(!true);
+                {
+                    uint32_t total_size;
+                    mxsmongo::get_byte4(pData, &total_size);
+                    auto* pEnd = pData + total_size;
+                    pData += 4;
+
+                    const char* zIdentifier = reinterpret_cast<const char*>(pData); // NULL-terminated
+                    while (*pData && pData != pEnd)
+                    {
+                        ++pData;
+                    }
+
+                    if (pData != pEnd)
+                    {
+                        MXB_NOTICE("zIdentifier: %s", zIdentifier);
+
+                        ++pData; // NULL-terminator
+
+                        auto& documents = m_arguments[zIdentifier];
+
+                        // And now there are documents all the way down...
+                        while (pData < pEnd)
+                        {
+                            uint32_t size;
+                            mxsmongo::get_byte4(pData, &size);
+                            if (pData + size <= pEnd)
+                            {
+                                mxb_assert(pData + size <= pEnd);
+                                bsoncxx::document::view doc { pData, size };
+                                MXB_NOTICE("DOC: %s", bsoncxx::to_json(doc).c_str());
+                                documents.push_back(doc);
+                                pData += size;
+                            }
+                            else
+                            {
+                                mxb_assert(!true);
+                                // TODO: Close connection.
+                            }
+                        }
+                    }
+                    else
+                    {
+                        mxb_assert(!true);
+                        // TODO: Close connection.
+                    }
+                }
                 break;
 
             default:
                 mxb_assert(!true);
+                // TODO: Close connection.
             }
         }
 
@@ -528,28 +577,52 @@ public:
         return (m_flags & MONGOC_MSG_MORE_TO_COME) ? true : false;
     }
 
-    const std::vector<bsoncxx::document::view>& documents() const
+    const bsoncxx::document::view& document() const
     {
-        return m_documents;
+        return m_document;
+    }
+
+    const DocumentArguments& arguments() const
+    {
+        return m_arguments;
     }
 
     std::ostream& out(std::ostream& o) const override
     {
         Packet::out(o);
         o << "flags      : " << m_flags << "\n";
-        o << "sections   : \n";
+        o << "document   : " << bsoncxx::to_json(m_document) << "\n";
+        o << "arguments  : " << "\n";
 
-        for (const auto& doc : m_documents)
+        for (const auto& rv : m_arguments)
         {
-            o << bsoncxx::to_json(doc) << "\n";
+            o << rv.first << " ";
+
+            bool first = true;
+            for (const auto& doc  : rv.second)
+            {
+                if (!first)
+                {
+                    o << ", ";
+                }
+                else
+                {
+                    first = false;
+                }
+
+                o << bsoncxx::to_json(doc);
+            }
+
+            o << "\n";
         }
 
         return o;
     }
 
-protected:
-    uint32_t                             m_flags;
-    std::vector<bsoncxx::document::view> m_documents;
+private:
+    uint32_t                m_flags { 0 };
+    bsoncxx::document::view m_document;
+    DocumentArguments       m_arguments;
 };
 
 class Database;

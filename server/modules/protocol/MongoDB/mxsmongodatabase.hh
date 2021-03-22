@@ -143,7 +143,10 @@ private:
         m_state = READY;
     }
 
-    GWBUF* execute(GWBUF* pRequest, const mxsmongo::Packet& req, const bsoncxx::document::view& doc);
+    GWBUF* execute(GWBUF* pRequest,
+                   const mxsmongo::Packet& req,
+                   const bsoncxx::document::view& doc,
+                   const Command::DocumentArguments& arguments);
 
     using SCommand = std::unique_ptr<Command>;
 

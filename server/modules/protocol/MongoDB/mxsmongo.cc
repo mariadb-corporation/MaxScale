@@ -840,58 +840,42 @@ GWBUF* mxsmongo::Mongo::handle_query(GWBUF* pRequest, const mxsmongo::Query& req
 
 GWBUF* mxsmongo::Mongo::handle_msg(GWBUF* pRequest, const mxsmongo::Msg& req)
 {
-    stringstream ss;
-    ss << "[";
-    auto& documents = req.documents();
-    for (const auto& doc : documents)
-    {
-        if (ss.str().length() != 1)
-        {
-            ss << ", ";
-        }
-        ss << bsoncxx::to_json(doc);
-    }
-    ss << "]";
-
-    MXB_NOTICE("Request(MSG): %s", ss.str().c_str());
-
-    mxb_assert(req.documents().size() == 1); // TODO
+    MXB_NOTICE("Request(MSG): %s", bsoncxx::to_json(req.document()).c_str());
 
     GWBUF* pResponse = nullptr;
 
-    for (const auto& doc : req.documents())
+    const auto& doc = req.document();
+
+    auto element = doc["$db"];
+
+    if (element)
     {
-        auto element = doc["$db"];
-
-        if (element)
+        if (element.type() == bsoncxx::type::k_utf8)
         {
-            if (element.type() == bsoncxx::type::k_utf8)
+            auto utf8 = element.get_utf8();
+
+            string name(utf8.value.data(), utf8.value.size());
+            auto sDatabase = Database::create(name, &m_context, &m_config);
+
+            pResponse = sDatabase->handle_command(pRequest, req, doc);
+
+            if (!pResponse)
             {
-                auto utf8 = element.get_utf8();
-
-                string name(utf8.value.data(), utf8.value.size());
-                auto sDatabase = Database::create(name, &m_context, &m_config);
-
-                pResponse = sDatabase->handle_command(pRequest, req, doc);
-
-                if (!pResponse)
-                {
-                    // TODO: See handle_query()
-                    m_sDatabase = std::move(sDatabase);
-                }
-            }
-            else
-            {
-                MXS_ERROR("Key '$db' found, but value is not utf8.");
-                mxb_assert(!true);
+                // TODO: See handle_query()
+                m_sDatabase = std::move(sDatabase);
             }
         }
         else
         {
-            MXS_ERROR("Document did not contain the expected key '$db': %s",
-                      req.to_string().c_str());
+            MXS_ERROR("Key '$db' found, but value is not utf8.");
             mxb_assert(!true);
         }
+    }
+    else
+    {
+        MXS_ERROR("Document did not contain the expected key '$db': %s",
+                  req.to_string().c_str());
+        mxb_assert(!true);
     }
 
     return pResponse;
