@@ -630,14 +630,30 @@ public:
         stringstream sql;
         sql << "UPDATE " << get_table(mxsmongo::key::UPDATE) << " ";
 
-        auto updates = static_cast<bsoncxx::array::view>(m_doc[mxsmongo::key::UPDATES].get_array());
+        bsoncxx::document::view update;
 
-        // TODO: Deal with multiple updates.
-        mxb_assert(!updates[1]);
+        auto it = m_arguments.find(mxsmongo::key::UPDATES);
+
+        if (it != m_arguments.end())
+        {
+            const auto& updates = it->second;
+            // TODO: Deal with multiple updates.
+            mxb_assert(updates.size() <= 1);
+            mxb_assert(updates.size() != 0);
+            update = updates[0];
+        }
+        else
+        {
+            auto updates = static_cast<bsoncxx::array::view>(m_doc[mxsmongo::key::UPDATES].get_array());
+
+            // TODO: Deal with multiple updates.
+            mxb_assert(!updates[1]);
+
+            update = static_cast<bsoncxx::document::view>(updates[0].get_document());
+        }
 
         sql << "SET doc = ";
 
-        auto update = static_cast<bsoncxx::document::view>(updates[0].get_document());
         auto u = update[mxsmongo::key::U];
 
         switch (get_update_kind(u))
@@ -679,12 +695,16 @@ public:
 
         if (!pResponse)
         {
-            auto q = static_cast<bsoncxx::document::view>(update[mxsmongo::key::Q].get_document());
-            string where = mxsmongo::filter_to_where_clause(q);
+            auto q = update[mxsmongo::key::Q];
 
-            if (!where.empty())
+            if (q)
             {
-                sql << "WHERE " << where;
+                string where = mxsmongo::filter_to_where_clause(q.get_document());
+
+                if (!where.empty())
+                {
+                    sql << "WHERE " << where;
+                }
             }
 
             auto multi = update[mxsmongo::key::MULTI];
