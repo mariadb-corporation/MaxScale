@@ -697,14 +697,25 @@ public:
         {
             auto q = update[mxsmongo::key::Q];
 
-            if (q)
+            if (!q)
             {
-                string where = mxsmongo::filter_to_where_clause(q.get_document());
+                throw mxsmongo::SoftError("BSON field 'update.updates.q' is missing but a required field",
+                                          mxsmongo::error::LOCATION40414);
+            }
 
-                if (!where.empty())
-                {
-                    sql << "WHERE " << where;
-                }
+            if (q.type() != bsoncxx::type::k_document)
+            {
+                stringstream ss;
+                ss << "BSON field 'update.updates.q' is the wrong type '" << bsoncxx::to_string(q.type())
+                   << "', expected type 'object'";
+                throw SoftError(ss.str(), mxsmongo::error::TYPE_MISMATCH);
+            }
+
+            string where = mxsmongo::filter_to_where_clause(q.get_document());
+
+            if (!where.empty())
+            {
+                sql << "WHERE " << where;
             }
 
             auto multi = update[mxsmongo::key::MULTI];
