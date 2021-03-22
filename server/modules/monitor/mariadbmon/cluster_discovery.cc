@@ -748,8 +748,9 @@ bool MariaDBMonitor::master_is_valid(std::string* reason_out)
     {
         is_valid = false;
     }
-    // 2) read_only has been activated on the master.
-    else if (m_master->is_running() && m_master->is_read_only())
+    // 2) read_only has been activated on the master. If 'enforce_writable_master' is on, allow a read_only
+    // master.
+    else if (m_master->is_running() && m_master->is_read_only() && !m_settings.enforce_writable_master)
     {
         is_valid = false;
         reason = "it is in read-only mode";

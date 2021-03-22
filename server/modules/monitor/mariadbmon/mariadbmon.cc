@@ -64,7 +64,7 @@ namespace
 {
 const char DETECT_STALE_MASTER[] = "detect_stale_master";
 const char DETECT_STALE_SLAVE[] = "detect_stale_slave";
-
+const char ENFORCE_WRITABLE_MASTER[] = "enforce_writable_master";
 const char failover_cmd[] = "failover";
 const char switchover_cmd[] = "switchover";
 const char rejoin_cmd[] = "rejoin";
@@ -287,6 +287,7 @@ bool MariaDBMonitor::configure(const mxs::ConfigParameters* params)
     m_settings.auto_failover = params->get_bool(CN_AUTO_FAILOVER);
     m_settings.auto_rejoin = params->get_bool(CN_AUTO_REJOIN);
     m_settings.enforce_read_only_slaves = params->get_bool(CN_ENFORCE_READONLY);
+    m_settings.enforce_writable_master = params->get_bool(ENFORCE_WRITABLE_MASTER);
     m_settings.enforce_simple_topology = params->get_bool(CN_ENFORCE_SIMPLE_TOPOLOGY);
     m_settings.verify_master_failure = params->get_bool(CN_VERIFY_MASTER_FAILURE);
     m_settings.master_failure_timeout =
@@ -683,6 +684,12 @@ void MariaDBMonitor::process_state_changes()
     {
         // Check if any servers should be autojoined to the cluster and try to join them.
         handle_auto_rejoin();
+    }
+
+    /* Check if the master has read-only on and turn it off if user so wishes. */
+    if (m_settings.enforce_writable_master && can_perform_cluster_ops())
+    {
+        enforce_writable_on_master();
     }
 
     /* Check if any slave servers have read-only off and turn it on if user so wishes. Again, do not
@@ -1517,6 +1524,9 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
             },
             {
                 CN_ENFORCE_READONLY,                 MXS_MODULE_PARAM_BOOL,      "false"
+            },
+            {
+                ENFORCE_WRITABLE_MASTER,             MXS_MODULE_PARAM_BOOL,      "false"
             },
             {
                 CN_NO_PROMOTE_SERVERS,               MXS_MODULE_PARAM_SERVERLIST

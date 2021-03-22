@@ -1801,6 +1801,35 @@ void MariaDBMonitor::enforce_read_only_on_slaves()
     }
 }
 
+
+void MariaDBMonitor::enforce_writable_on_master()
+{
+    bool error = false;
+    if (m_master && m_master->is_read_only() && !m_master->is_in_maintenance())
+    {
+        auto type = m_master->server_type();
+        if (type == ServerType::MARIADB || type == ServerType::MYSQL)
+        {
+            const char QUERY[] = "SET GLOBAL read_only=0;";
+            MYSQL* conn = m_master->con;
+            if (mxs_mysql_query(conn, QUERY) == 0)
+            {
+                MXS_NOTICE("read_only set to OFF on '%s'.", m_master->name());
+            }
+            else
+            {
+                MXS_ERROR("Disabling read_only on '%s' failed: '%s'.", m_master->name(), mysql_error(conn));
+                error = true;
+            }
+        }
+    }
+
+    if (error)
+    {
+        delay_auto_cluster_ops();
+    }
+}
+
 void MariaDBMonitor::handle_low_disk_space_master()
 {
     if (m_master && m_master->is_master() && m_master->is_low_on_disk_space())
