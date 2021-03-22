@@ -16,6 +16,7 @@
 #include <endian.h>
 #include <atomic>
 #include <deque>
+#include <sstream>
 #include <stdexcept>
 
 #include <bsoncxx/json.hpp>
@@ -338,12 +339,27 @@ public:
         if (pData < m_pEnd)
         {
             mxsmongo::get_byte4(pData, &size);
-            mxb_assert(m_pEnd - pData == size);
+            if (m_pEnd - pData != size)
+            {
+                mxb_assert(!true);
+                std::stringstream ss;
+                ss << "Malformed packet, expected " << size << " bytes for document, "
+                   << m_pEnd - pData << " found.";
+
+                throw std::runtime_error(ss.str());
+            }
             m_fields = bsoncxx::document::view { pData, size };
             pData += size;
         }
 
-        mxb_assert(pData == m_pEnd);
+        if (pData != m_pEnd)
+        {
+            mxb_assert(!true);
+            std::stringstream ss;
+            ss << "Malformed packet, " << m_pEnd - pData << " trailing bytes found.";
+
+            throw std::runtime_error(ss.str());
+        }
     }
 
     uint32_t flags() const
@@ -496,6 +512,15 @@ public:
                     mxb_assert(m_document.empty());
                     uint32_t size;
                     mxsmongo::get_byte4(pData, &size);
+
+                    if (pData + size > pSections_end)
+                    {
+                        std::stringstream ss;
+                        ss << "Malformed packet, section(0) size " << size << " larger "
+                           << "than available amount " << pSections_end - pData << " of data.";
+                        throw std::runtime_error(ss.str());
+                    }
+
                     m_document = bsoncxx::document::view { pData, size };
                     pData += size;
                 }
@@ -505,6 +530,15 @@ public:
                 {
                     uint32_t total_size;
                     mxsmongo::get_byte4(pData, &total_size);
+
+                    if (pData + total_size > pSections_end)
+                    {
+                        std::stringstream ss;
+                        ss << "Malformed packet, section(1) size " << total_size << " larger "
+                           << "than available amount " << pSections_end - pData << " of data.";
+                        throw std::runtime_error(ss.str());
+                    }
+
                     auto* pEnd = pData + total_size;
                     pData += 4;
 
@@ -529,7 +563,6 @@ public:
                             mxsmongo::get_byte4(pData, &size);
                             if (pData + size <= pEnd)
                             {
-                                mxb_assert(pData + size <= pEnd);
                                 bsoncxx::document::view doc { pData, size };
                                 MXB_NOTICE("DOC: %s", bsoncxx::to_json(doc).c_str());
                                 documents.push_back(doc);
@@ -538,25 +571,38 @@ public:
                             else
                             {
                                 mxb_assert(!true);
-                                // TODO: Close connection.
+                                std::stringstream ss;
+                                ss << "Malformed packet, expected " << size << " bytes for document, "
+                                   << pEnd - pData << " found.";
+                                throw std::runtime_error(ss.str());
                             }
                         }
                     }
                     else
                     {
                         mxb_assert(!true);
-                        // TODO: Close connection.
+                        throw std::runtime_error("Malformed packet, 'identifier' not NULL-terminated.");
                     }
                 }
                 break;
 
             default:
-                mxb_assert(!true);
-                // TODO: Close connection.
+                {
+                    mxb_assert(!true);
+                    std::stringstream ss;
+                    ss << "Malformed packet, expected a 'kind' of 0 or 1, received " << kind << ".";
+                    throw std::runtime_error(ss.str());
+                }
             }
         }
 
-        mxb_assert(pData == pSections_end);
+        if (pData != pSections_end)
+        {
+            mxb_assert(!true);
+            std::stringstream ss;
+            ss << "Malformed packet, " << pSections_end - pData << " trailing bytes found.";
+            throw std::runtime_error(ss.str());
+        }
     }
 
     Msg(const Msg&) = default;
@@ -717,6 +763,8 @@ public:
     int32_t clientReply(GWBUF* sMariaDB_response, DCB* pDcb);
 
 private:
+    void kill_client();
+
     using SDatabase = std::unique_ptr<Database>;
 
     GWBUF* handle_query(GWBUF* pRequest, const mxsmongo::Query& req);

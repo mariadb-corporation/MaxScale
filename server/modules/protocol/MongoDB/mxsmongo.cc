@@ -17,6 +17,7 @@
 #include <bsoncxx/json.hpp>
 #include <bsoncxx/builder/stream/document.hpp>
 #include <maxscale/dcb.hh>
+#include <maxscale/session.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include "mxsmongodatabase.hh"
 
@@ -727,35 +728,51 @@ GWBUF* mxsmongo::Mongo::handle_request(GWBUF* pRequest)
 
     if (!m_sDatabase)
     {
-        // If no database operation is in progress, we proceed.
-        mxsmongo::Packet req(pRequest);
-
-        mxb_assert(req.msg_len() == (int)gwbuf_length(pRequest));
-
-        switch (req.opcode())
+        try
         {
-        case MONGOC_OPCODE_COMPRESSED:
-        case MONGOC_OPCODE_DELETE:
-        case MONGOC_OPCODE_GET_MORE:
-        case MONGOC_OPCODE_INSERT:
-        case MONGOC_OPCODE_KILL_CURSORS:
-        case MONGOC_OPCODE_REPLY:
-        case MONGOC_OPCODE_UPDATE:
-            MXS_ERROR("Packet %s not handled.", mxsmongo::opcode_to_string(req.opcode()));
-            mxb_assert(!true);
-            break;
+            // If no database operation is in progress, we proceed.
+            mxsmongo::Packet req(pRequest);
 
-        case MONGOC_OPCODE_MSG:
-            pResponse = handle_msg(pRequest, mxsmongo::Msg(req));
-            break;
+            mxb_assert(req.msg_len() == (int)gwbuf_length(pRequest));
 
-        case MONGOC_OPCODE_QUERY:
-            pResponse = handle_query(pRequest, mxsmongo::Query(req));
-            break;
+            switch (req.opcode())
+            {
+            case MONGOC_OPCODE_COMPRESSED:
+            case MONGOC_OPCODE_DELETE:
+            case MONGOC_OPCODE_GET_MORE:
+            case MONGOC_OPCODE_INSERT:
+            case MONGOC_OPCODE_KILL_CURSORS:
+            case MONGOC_OPCODE_REPLY:
+            case MONGOC_OPCODE_UPDATE:
+                {
+                    mxb_assert(!true);
+                    stringstream ss;
+                    ss << "Unsupported packet " << mxsmongo::opcode_to_string(req.opcode()) << " received.";
+                    throw std::runtime_error(ss.str());
+                }
+                break;
 
-        default:
-            MXS_ERROR("Unknown opcode %d.", req.opcode());
-            mxb_assert(!true);
+            case MONGOC_OPCODE_MSG:
+                pResponse = handle_msg(pRequest, mxsmongo::Msg(req));
+                break;
+
+            case MONGOC_OPCODE_QUERY:
+                pResponse = handle_query(pRequest, mxsmongo::Query(req));
+                break;
+
+            default:
+                {
+                    mxb_assert(!true);
+                    stringstream ss;
+                    ss << "Unknown packet " << req.opcode() << " received.";
+                    throw std::runtime_error(ss.str());
+                }
+            }
+        }
+        catch (const std::exception& x)
+        {
+            MXS_ERROR("%s. Closing client connection.", x.what());
+            kill_client();
         }
 
         gwbuf_free(pRequest);
@@ -819,6 +836,11 @@ int32_t mxsmongo::Mongo::clientReply(GWBUF* pMariaDB_response, DCB* pDcb)
     }
 
     return 0;
+}
+
+void mxsmongo::Mongo::kill_client()
+{
+    m_context.client_connection().dcb()->session()->kill();
 }
 
 GWBUF* mxsmongo::Mongo::handle_query(GWBUF* pRequest, const mxsmongo::Query& req)
