@@ -377,21 +377,6 @@ public:
     static bool get_require_gtid();
 
     /**
-     * Configure a server as a slave of another server
-     *
-     * The servers are configured with GTID replicating using the configured
-     * GTID position, either slave_pos or current_pos.
-     *
-     * @param slave  The node index to assign as slave
-     * @param master The node index of the master
-     * @param type   Replication type
-     */
-    void replicate_from(int slave, int master, const char* type = "current_pos");
-
-    // Replicates from a host and a port instead of a known server
-    void replicate_from(int slave, const std::string& host, uint16_t port, const char* type = "current_pos");
-
-    /**
      * @brief limit_nodes Restart replication for only new_N nodes
      * @param new_N new number of nodes in replication
      */

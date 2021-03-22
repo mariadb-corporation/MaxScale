@@ -495,4 +495,29 @@ int ReplicationCluster::set_slave(MYSQL* conn, const char* master_host, int mast
     return execute_query(conn, "%s", str);
 }
 
+void ReplicationCluster::replicate_from(int slave, int master, const char* type)
+{
+    replicate_from(slave, ip_private(master), port[master], type);
+}
+
+void ReplicationCluster::replicate_from(int slave, const std::string& host, uint16_t port, const char* type)
+{
+    std::stringstream change_master;
+
+    change_master << "CHANGE MASTER TO MASTER_HOST = '" << host
+                  << "', MASTER_PORT = " << port << ", MASTER_USE_GTID = "
+                  << type << ", MASTER_USER='repl', MASTER_PASSWORD='repl';";
+
+    if (verbose())
+    {
+        std::cout << "Server " << slave + 1
+                  << " starting to replicate from server " << master + 1 << std::endl;
+        std::cout << "Query is '" << change_master.str() << "'" << std::endl;
+    }
+
+    execute_query(nodes[slave], "STOP SLAVE;");
+    execute_query(nodes[slave], "%s", change_master.str().c_str());
+    execute_query(nodes[slave], "START SLAVE;");
+}
+
 }
