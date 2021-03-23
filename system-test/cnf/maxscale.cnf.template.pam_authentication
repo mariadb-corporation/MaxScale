@@ -1,5 +1,6 @@
 [maxscale]
 threads=###threads###
+admin_pam_readwrite_service=duckburg
 log_info=1
 
 [MySQL-Monitor]

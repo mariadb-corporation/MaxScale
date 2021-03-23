@@ -15,6 +15,7 @@
 #include "mariadbmonitor/fail_switch_rejoin_common.cpp"
 #include <iostream>
 #include <string>
+#include <maxtest/envv.hh>
 
 using std::string;
 using std::cout;
@@ -82,6 +83,7 @@ int main(int argc, char** argv)
     if (test.ok())
     {
         cout << "PAM-plugin installed and users created on all servers. Starting MaxScale.\n";
+        test.maxscales->restart(0);
     }
     else
     {
@@ -175,6 +177,17 @@ int main(int argc, char** argv)
     auto update_users = [&test]() {
         test.maxscales->execute_maxadmin_command(0, "reload dbusers RWSplit-Router");
     };
+
+    if (test.ok())
+    {
+        // First, test that MaxCtrl login with the pam user works.
+        string cmd = string_printf("-u %s -p %s show maxscale", pam_user, pam_pw);
+        test.check_maxctrl(cmd);
+        if (test.ok())
+        {
+            cout << "'maxctrl " << cmd << "' works.\n";
+        }
+    }
 
     const char create_pam_user_fmt[] = "CREATE OR REPLACE USER '%s'@'%%' IDENTIFIED VIA pam USING '%s';";
     if (test.ok())
