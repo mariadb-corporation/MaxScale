@@ -403,8 +403,6 @@ private:
 
     bool log_matches(int m, const char* pattern);
 
-    bool enough_maxscales() const;
-
     std::unique_ptr<mxt::MaxScale>   m_maxscale;  /**< Main MaxScale instance */
     std::unique_ptr<mxt::MaxScale>   m_maxscale2; /**< Secondary MaxScale instance */
 

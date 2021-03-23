@@ -23,6 +23,7 @@
 #include <maxtest/envv.hh>
 #include <maxtest/log.hh>
 #include <maxtest/test_dir.hh>
+#include <cassert>
 
 using std::cout;
 using std::endl;
@@ -54,16 +55,24 @@ MariaDBCluster::MariaDBCluster(mxt::SharedData* shared, const std::string& nwcon
     m_test_dir = test_dir;
 }
 
-bool MariaDBCluster::setup(const mxt::NetworkConfig& nwconfig)
+bool MariaDBCluster::setup(const mxt::NetworkConfig& nwconfig, int n_min_expected)
 {
     bool rval = false;
-    read_env(nwconfig);
-    if (Nodes::init_ssh_masters())
+    int found = read_nodes_info(nwconfig);
+    if (found < n_min_expected)
     {
-        truncate_mariadb_logs();
-        prepare_for_test();
-        close_active_connections();
-        rval = true;
+        m_shared.log.add_failure("Found %i node(s) in network_config when at least %i was expected.",
+                                 found, n_min_expected);
+    }
+    else
+    {
+        if (Nodes::init_ssh_masters())
+        {
+            truncate_mariadb_logs();
+            prepare_for_test();
+            close_active_connections();
+            rval = true;
+        }
     }
     return rval;
 }
@@ -147,7 +156,7 @@ void MariaDBCluster::close_connections()
     }
 }
 
-void MariaDBCluster::read_env(const mxt::NetworkConfig& nwconfig)
+int MariaDBCluster::read_nodes_info(const mxt::NetworkConfig& nwconfig)
 {
     auto prefixc = m_prefix.c_str();
 
@@ -160,38 +169,47 @@ void MariaDBCluster::read_env(const mxt::NetworkConfig& nwconfig)
     string key_ssl = mxb::string_printf("%s_ssl", prefixc);
     ssl = readenv_bool(key_ssl.c_str(), false);
 
-    read_basic_env(nwconfig, m_prefix);
-    N = Nodes::n_nodes();
-
     const string space = " ";
     const char start_db_def[] = "systemctl start mariadb || service mysql start";
     const char stop_db_def[] = "systemctl stop mariadb || service mysql stop";
     const char clean_db_def[] = "rm -rf /var/lib/mysql/*; killall -9 mysqld";
 
-    if ((N > 0) && (N < 255))
+    clear_vms();
+    int i = 0;
+    while (i < N_MAX)
     {
-        for (int i = 0; i < N; i++)
+        string node_name = mxb::string_printf("%s_%03d", prefixc, i);
+        if (add_node(nwconfig, node_name))
         {
-            string key_port = mxb::string_printf("%s_%03d_port", prefixc, i);
+            string key_port = node_name + "_port";
             port[i] = readenv_int(key_port.c_str(), 3306);
 
-            string key_socket = mxb::string_printf("%s_%03d_socket", prefixc, i);
+            string key_socket = node_name + "_socket";
             string val_socket = envvar_get_set(key_socket.c_str(), "%s", space.c_str());
             m_socket_cmd[i] = (val_socket != space) ? ("--socket=" + val_socket) : space;
 
-            string key_socket_cmd = mxb::string_printf("%s_%03d_socket_cmd", prefixc, i);
+            string key_socket_cmd = node_name + "_socket_cmd";
             setenv(key_socket_cmd.c_str(), m_socket_cmd[i].c_str(), 1);
 
-            string key_start_db_cmd = mxb::string_printf("%s_%03d_start_db_command", prefixc, i);
+            string key_start_db_cmd = node_name + "_start_db_command";
             m_start_db_command[i] = envvar_get_set(key_start_db_cmd.c_str(), start_db_def);
 
-            string key_stop_db_cmd = mxb::string_printf("%s_%03d_stop_db_command", prefixc, i);
+            string key_stop_db_cmd = node_name + "_stop_db_command";
             m_stop_db_command[i] = envvar_get_set(key_stop_db_cmd.c_str(), stop_db_def);
 
-            string key_clear_db_cmd = mxb::string_printf("%s_%03d_cleanup_db_command", prefixc, i);
+            string key_clear_db_cmd = node_name + "_cleanup_db_command";
             m_cleanup_db_command[i] = envvar_get_set(key_clear_db_cmd.c_str(), clean_db_def);
+            i++;
+        }
+        else
+        {
+            break;
         }
     }
+
+    assert(i == Nodes::n_nodes());
+    N = i;
+    return i;
 }
 
 void MariaDBCluster::print_env()

@@ -34,6 +34,7 @@ using namespace mxb;
 using std::cout;
 using std::endl;
 using std::string;
+using std::move;
 
 namespace
 {
@@ -374,14 +375,7 @@ int TestConnections::setup_vms()
     {
         if (initialize_nodes())
         {
-            if (enough_maxscales())
-            {
-                nodes_ok = true;
-            }
-            else
-            {
-                tprintf("Recreating VMs because not enough MaxScales.");
-            }
+            nodes_ok = true;
         }
         else
         {
@@ -394,7 +388,7 @@ int TestConnections::setup_vms()
             if (call_mdbci_and_check("--recreate"))
             {
                 maxscale_installed = true;
-                if (initialize_nodes() && enough_maxscales())
+                if (initialize_nodes())
                 {
                     nodes_ok = true;
                 }
@@ -1859,12 +1853,6 @@ bool TestConnections::reinstall_maxscales()
     return rval;
 }
 
-bool TestConnections::enough_maxscales() const
-{
-    int n_mxs = maxscales->N;
-    return n_mxs >= 2 || (n_mxs == 1 && m_required_mdbci_labels.count(label_2nd_mxs) == 0);
-}
-
 std::string TestConnections::flatten_stringset(const StringSet& set)
 {
     string rval;
@@ -2026,30 +2014,54 @@ bool TestConnections::read_cmdline_options(int argc, char* argv[])
 
 bool TestConnections::initialize_nodes()
 {
+    const char errmsg[] = "Failed to initialize node group '%s'.";
+    bool error = false;
+    mxt::BoolFuncArray funcs;
+
     delete repl;
     repl = nullptr;
-    std::future<bool> repl_future;
     bool use_repl = m_required_mdbci_labels.count(label_repl_be) > 0;
     if (use_repl)
     {
+        bool big_repl = m_required_mdbci_labels.count(label_big_be) > 0;
+        int n_min_expected = big_repl ? 15 : 4;
         repl = new mxt::ReplicationCluster(&m_shared);
-        repl->setup(m_network_config);
-        repl->set_use_ipv6(m_use_ipv6);
-        repl->ssl = backend_ssl;
-        repl_future = std::async(std::launch::async, &MariaDBCluster::check_nodes, repl);
+        if (repl->setup(m_network_config, n_min_expected))
+        {
+            repl->set_use_ipv6(m_use_ipv6);
+            repl->ssl = backend_ssl;
+            auto check_ssh = [this]() {
+                    return repl->check_nodes_ssh();
+                };
+            funcs.push_back(move(check_ssh));
+        }
+        else
+        {
+            error = true;
+            add_failure(errmsg, repl->prefix().c_str());
+        }
     }
 
     delete galera;
     galera = nullptr;
-    std::future<bool> galera_future;
     bool use_galera = m_required_mdbci_labels.count(label_galera_be) > 0;
     if (use_galera)
     {
         galera = new GaleraCluster(&m_shared);
-        galera->setup(m_network_config);
-        galera->set_use_ipv6(false);
-        galera->ssl = backend_ssl;
-        galera_future = std::async(std::launch::async, &GaleraCluster::check_nodes, galera);
+        if (galera->setup(m_network_config, 4))
+        {
+            galera->set_use_ipv6(false);
+            galera->ssl = backend_ssl;
+            auto check_ssh = [this]() {
+                    return galera->check_nodes_ssh();
+                };
+            funcs.push_back(move(check_ssh));
+        }
+        else
+        {
+            error = true;
+            add_failure(errmsg, galera->prefix().c_str());
+        }
     }
 
     delete xpand;
@@ -2058,24 +2070,45 @@ bool TestConnections::initialize_nodes()
     if (use_xpand)
     {
         xpand = new XpandCluster(&m_shared);
-        xpand->setup(m_network_config);
-        xpand->set_use_ipv6(false);
-        xpand->ssl = backend_ssl;
-        xpand->fix_replication();
+        if (xpand->setup(m_network_config, 4))
+        {
+            xpand->set_use_ipv6(false);
+            xpand->ssl = backend_ssl;
+            xpand->fix_replication();
+            auto check_ssh = [this]() {
+                    return xpand->check_nodes_ssh();
+                };
+            funcs.push_back(move(check_ssh));
+        }
+        else
+        {
+            error = true;
+            add_failure(errmsg, xpand->prefix().c_str());
+        }
     }
 
+    delete maxscales;
     maxscales = new Maxscales(&m_shared);
-    maxscales->setup(m_network_config);
-    m_maxscale = std::make_unique<mxt::MaxScale>(maxscales, m_shared, 0);
-    if (maxscales->N > 1)
+    int n_mxs_expected = (m_required_mdbci_labels.count(label_2nd_mxs) > 0) ? 2 : 1;
+    if (maxscales->setup(m_network_config, n_mxs_expected))
     {
-        m_maxscale2 = std::make_unique<mxt::MaxScale>(maxscales, m_shared, 1);
+        m_maxscale = std::make_unique<mxt::MaxScale>(maxscales, m_shared, 0);
+        if (n_mxs_expected > 1)
+        {
+            m_maxscale2 = std::make_unique<mxt::MaxScale>(maxscales, m_shared, 1);
+        }
+        auto check_ssh = [this]() {
+                return maxscales->check_nodes_ssh();
+            };
+        funcs.push_back(move(check_ssh));
+    }
+    else
+    {
+        error = true;
+        add_failure(errmsg, maxscales->prefix().c_str());
     }
 
-    bool maxscale_ok = maxscales->check_nodes();
-    bool repl_ok = !use_repl || repl_future.get();
-    bool galera_ok = !use_galera || galera_future.get();
-    return maxscale_ok && repl_ok && galera_ok;
+    return error ? false : mxt::concurrent_run(funcs);
 }
 
 bool TestConnections::check_backend_versions()

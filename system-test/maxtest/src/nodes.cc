@@ -78,16 +78,17 @@ bool Nodes::check_node_ssh(int node)
     return res;
 }
 
-bool Nodes::check_nodes()
+bool Nodes::check_nodes_ssh()
 {
-    std::vector<std::future<bool>> f;
-
+    mxt::BoolFuncArray f;
+    f.reserve(m_vms.size());
     for (size_t i = 0; i < m_vms.size(); i++)
     {
-        f.push_back(std::async(std::launch::async, &Nodes::check_node_ssh, this, i));
+        auto func = [this, i]() {
+            return check_node_ssh(i);};
+        f.push_back(move(func));
     }
-
-    return std::all_of(f.begin(), f.end(), std::mem_fn(&std::future<bool>::get));
+    return mxt::concurrent_run(f);
 }
 
 namespace maxtest
@@ -190,25 +191,17 @@ int Nodes::ssh_node(int node, const string& ssh, bool sudo)
 
 bool Nodes::init_ssh_masters()
 {
-    std::vector<std::future<bool>> futures;
-    futures.reserve(m_vms.size());
+    mxt::BoolFuncArray funcs;
+    funcs.reserve(m_vms.size());
     for (auto& vm : m_vms)
     {
         auto func = [&vm]() {
                 return vm.init_ssh_master();
             };
-        futures.emplace_back(std::async(std::launch::async, func));
+        funcs.push_back(move(func));
     }
 
-    bool rval = true;
-    for (auto& fut : futures)
-    {
-        if (!fut.get())
-        {
-            rval = false;
-        }
-    }
-    return rval;
+    return mxt::concurrent_run(funcs);
 }
 
 int Nodes::ssh_node_f(int node, bool sudo, const char* format, ...)
@@ -315,6 +308,24 @@ int Nodes::read_basic_env(const mxt::NetworkConfig& nwconfig, const string& pref
     }
 
     return m_vms.size();
+}
+
+void Nodes::clear_vms()
+{
+    m_vms.clear();
+    m_vms.reserve(4);
+}
+
+bool Nodes::add_node(const mxt::NetworkConfig& nwconfig, const string& name)
+{
+    bool rval = false;
+    mxt::VMNode node(m_shared, name);
+    if (node.configure(nwconfig))
+    {
+        m_vms.push_back(move(node));
+        rval = true;
+    }
+    return rval;
 }
 
 bool mxt::VMNode::configure(const mxt::NetworkConfig& network_config)
@@ -579,4 +590,28 @@ mxt::VMNode& Nodes::node(int i)
 const mxt::VMNode& Nodes::node(int i) const
 {
     return m_vms[i];
+}
+
+namespace maxtest
+{
+bool concurrent_run(const BoolFuncArray& funcs)
+{
+    std::vector<std::future<bool>> futures;
+    futures.reserve(funcs.size());
+
+    for (auto& func : funcs)
+    {
+        futures.emplace_back(std::async(std::launch::async, func));
+    }
+
+    bool rval = true;
+    for (auto& fut : futures)
+    {
+        if (!fut.get())
+        {
+            rval = false;
+        }
+    }
+    return rval;
+}
 }

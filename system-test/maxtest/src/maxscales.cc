@@ -8,6 +8,7 @@
 #include <maxtest/log.hh>
 #include <maxtest/mariadb_connector.hh>
 #include <maxtest/testconnections.hh>
+#include <cassert>
 
 
 using std::string;
@@ -30,35 +31,42 @@ Maxscales::~Maxscales()
     }
 }
 
-bool Maxscales::setup(const mxt::NetworkConfig& nwconfig)
+bool Maxscales::setup(const mxt::NetworkConfig& nwconfig, int n_min_expected)
 {
     bool rval = false;
-    read_env(nwconfig);     // Sets e.g. use_valgrind.
-
-    if (m_shared.settings.local_maxscale)
+    int found = read_nodes_info(nwconfig);
+    if (found < n_min_expected)
     {
-        // MaxScale is running locally, overwrite node address.
-        node(0).set_local();
+        m_shared.log.add_failure("Found %i MaxScale(s) in network_config when at least %i was expected.",
+                                 found, n_min_expected);
     }
-
-    if (Nodes::init_ssh_masters())
+    else
     {
-        if (this->m_use_valgrind)
+        if (m_shared.settings.local_maxscale)
         {
-            for (int i = 0; i < N; i++)
-            {
-                ssh_node_f(i, true, "yum install -y valgrind gdb 2>&1");
-                ssh_node_f(i, true, "apt install -y --force-yes valgrind gdb 2>&1");
-                ssh_node_f(i, true, "zypper -n install valgrind gdb 2>&1");
-                ssh_node_f(i, true, "rm -rf /var/cache/maxscale/maxscale.lock");
-            }
+            // MaxScale is running locally, overwrite node address.
+            node(0).set_local();
         }
-        rval = true;
+
+        if (Nodes::init_ssh_masters())
+        {
+            if (this->m_use_valgrind)
+            {
+                for (int i = 0; i < N; i++)
+                {
+                    ssh_node_f(i, true, "yum install -y valgrind gdb 2>&1");
+                    ssh_node_f(i, true, "apt install -y --force-yes valgrind gdb 2>&1");
+                    ssh_node_f(i, true, "zypper -n install valgrind gdb 2>&1");
+                    ssh_node_f(i, true, "rm -rf /var/cache/maxscale/maxscale.lock");
+                }
+            }
+            rval = true;
+        }
     }
     return rval;
 }
 
-int Maxscales::read_env(const mxt::NetworkConfig& nwconfig)
+int Maxscales::read_nodes_info(const mxt::NetworkConfig& nwconfig)
 {
     auto prefixc = my_prefix.c_str();
     string key_user = mxb::string_printf("%s_user", prefixc);
@@ -67,20 +75,20 @@ int Maxscales::read_env(const mxt::NetworkConfig& nwconfig)
     string key_pw = mxb::string_printf("%s_password", prefixc);
     password = envvar_get_set(key_pw.c_str(), "skysql");
 
-    read_basic_env(nwconfig, my_prefix);
-    N = Nodes::n_nodes();
-
-    if ((N > 0) && (N < 255))
+    clear_vms();
+    int i = 0;
+    while (i < N_MXS)
     {
-        for (int i = 0; i < N; i++)
+        string node_name = mxb::string_printf("%s_%03d", prefixc, i);
+        if (add_node(nwconfig, node_name))
         {
-            string key_cnf = mxb::string_printf("%s_%03d_cnf", prefixc, i);
+            string key_cnf = node_name + "_cnf";
             maxscale_cnf[i] = envvar_get_set(key_cnf.c_str(), "/etc/maxscale.cnf");
 
-            string key_log_dir = mxb::string_printf("%s_%03d_log_dir", prefixc, i);
+            string key_log_dir = node_name + "_log_dir";
             maxscale_log_dir[i] = envvar_get_set(key_log_dir.c_str(), "/var/log/maxscale/");
 
-            string key_binlog_dir = mxb::string_printf("%s_%03d_binlog_dir", prefixc, i);
+            string key_binlog_dir = node_name + "_binlog_dir";
             m_binlog_dir[i] = envvar_get_set(key_binlog_dir.c_str(), "/var/lib/maxscale/Binlog_Service/");
 
             rwsplit_port[i] = 4006;
@@ -90,8 +98,16 @@ int Maxscales::read_env(const mxt::NetworkConfig& nwconfig)
             ports[i][0] = rwsplit_port[i];
             ports[i][1] = readconn_master_port[i];
             ports[i][2] = readconn_slave_port[i];
+            i++;
+        }
+        else
+        {
+            break;
         }
     }
+
+    assert(i == Nodes::n_nodes());
+    N = i;
 
     m_use_valgrind = readenv_bool("use_valgrind", false);
     m_use_callgrind = readenv_bool("use_callgrind", false);
@@ -99,8 +115,7 @@ int Maxscales::read_env(const mxt::NetworkConfig& nwconfig)
     {
         m_use_valgrind = true;
     }
-
-    return 0;
+    return i;
 }
 
 int Maxscales::connect_rwsplit(int m, const std::string& db)

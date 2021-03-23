@@ -88,12 +88,6 @@ public:
     }
 
     /**
-     * @brief reads IP, Ports, sshkeys for every node from enviromental variables as well as number of nodes
-     *(N) and  User/Password
-     */
-    void read_env(const mxt::NetworkConfig& nwconfig);
-
-    /**
      * @brief  prints all nodes information
      * @return 0
      */
@@ -406,7 +400,7 @@ public:
      */
     virtual const std::string& type_string() const = 0;
 
-    bool setup(const mxt::NetworkConfig& nwconfig);
+    bool setup(const mxt::NetworkConfig& nwconfig, int n_min_expected);
 
 protected:
     /**
@@ -440,4 +434,6 @@ private:
     /**
      * Command to remove all data files and re-install DB with mysql_install_db */
     std::string m_cleanup_db_command[N_MAX];
+
+    int read_nodes_info(const mxt::NetworkConfig& nwconfig);
 };
