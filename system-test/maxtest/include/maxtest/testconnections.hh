@@ -376,18 +376,6 @@ public:
      */
     int get_master_server_id(int m = 0);
 
-    /**
-     * @brief process_mdbci_template Read template file from maxscale-system-test/mdbci/templates
-     * and replace all placeholders with acutal values
-     * @return 0 in case of success
-     */
-    int process_mdbci_template();
-
-    /**
-     * @brief call_mdbci Execute MDBCI to bring up nodes
-     * @return 0 if success
-     */
-    int call_mdbci(const char* options);
 
     /**
      * @brief resinstall_maxscales Remove Maxscale form all nodes and installs new ones
@@ -478,13 +466,15 @@ private:
     void set_signal_handlers();
     bool read_cmdline_options(int argc, char* argv[]);
     void read_basic_settings();
-    bool check_create_vms();
+    bool required_machines_are_running();
     bool initialize_nodes();
     bool check_backend_versions();
     bool check_create_vm_dir();
-    void read_vms_info();
+    bool read_network_config();
     bool run_shell_command(const std::string& cmd, const std::string& errmsg = "");
     bool process_template(int m, const std::string& config_file_path, const char* dest = "/etc/maxscale.cnf");
+    bool process_mdbci_template();
+    bool call_mdbci(const char* options);
 
     /**
      * @brief timeout_thread Thread which terminates test application after 'timeout' milliseconds
