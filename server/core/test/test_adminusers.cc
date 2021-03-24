@@ -55,6 +55,7 @@ static int test1()
 
 int main(int argc, char** argv)
 {
+    mxs::Config::init(argc, argv);
     int result = 0;
     char* home, buf[1024];
 

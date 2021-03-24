@@ -562,9 +562,10 @@ int test()
     return errors ? EXIT_FAILURE : EXIT_SUCCESS;
 }
 
-int main()
+int main(int argc, char** argv)
 {
     int rc = EXIT_FAILURE;
+    mxs::Config::init(argc, argv);
 
     if (mxs_log_init(NULL, ".", MXS_LOG_TARGET_DEFAULT))
     {

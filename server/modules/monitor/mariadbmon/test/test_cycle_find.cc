@@ -74,8 +74,9 @@ private:
     MariaDBServer* get_server(int id);
 };
 
-int main()
+int main(int argc, char** argv)
 {
+    mxs::Config::init(argc, argv);
     maxbase::init();
     maxbase::Log log;
     mxb::WatchdogNotifier notifier(0);
