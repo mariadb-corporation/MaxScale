@@ -31,6 +31,16 @@ bool maxtest::MariaDB::open(const std::string& host, int port, const std::string
     return ret;
 }
 
+bool maxtest::MariaDB::try_open(const std::string& host, int port, const std::string& db)
+{
+    auto ret = mxq::MariaDB::open(host, port, db);
+    if (!ret)
+    {
+        m_log.log_msgf("Connection to [%s]:%u failed. %s", host.c_str(), port, error());
+    }
+    return ret;
+}
+
 bool maxtest::MariaDB::cmd(const std::string& sql)
 {
     // The test connector can do one retry in case connection was lost.

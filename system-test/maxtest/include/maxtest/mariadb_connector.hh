@@ -28,6 +28,7 @@ public:
     explicit MariaDB(TestLogger& log);
 
     bool open(const std::string& host, int port, const std::string& db = "");
+    bool try_open(const std::string& host, int port, const std::string& db = "");
 
     bool cmd(const std::string& sql);
     bool cmd_f(const char* format, ...) mxb_attribute((format (printf, 2, 3)));

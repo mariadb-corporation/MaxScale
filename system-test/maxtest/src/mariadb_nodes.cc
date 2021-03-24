@@ -22,6 +22,7 @@
 #include <maxbase/format.hh>
 #include <maxtest/envv.hh>
 #include <maxtest/log.hh>
+#include <maxtest/mariadb_connector.hh>
 #include <maxtest/test_dir.hh>
 #include <cassert>
 
@@ -61,8 +62,8 @@ bool MariaDBCluster::setup(const mxt::NetworkConfig& nwconfig, int n_min_expecte
     int found = read_nodes_info(nwconfig);
     if (found < n_min_expected)
     {
-        m_shared.log.add_failure("Found %i node(s) in network_config when at least %i was expected.",
-                                 found, n_min_expected);
+        logger().add_failure("Found %i node(s) in network_config when at least %i was expected.",
+                             found, n_min_expected);
     }
     else
     {
@@ -183,7 +184,7 @@ int MariaDBCluster::read_nodes_info(const mxt::NetworkConfig& nwconfig)
         string node_name = mxb::string_printf("%s_%03d", prefixc, i);
         if (add_node(nwconfig, node_name))
         {
-            auto srv = std::make_unique<mxt::MariaDBServer>(*node(i));
+            auto srv = std::make_unique<mxt::MariaDBServer>(*node(i), *this, i);
             string key_port = node_name + "_port";
             port[i] = readenv_int(key_port.c_str(), 3306);
 
@@ -626,81 +627,6 @@ int MariaDBCluster::execute_query_all_nodes(const char* sql)
     return local_result;
 }
 
-int MariaDBCluster::get_version(int i)
-{
-    int local_result = 0;
-    if (find_field(nodes[i], "SELECT @@version", "@@version", version[i]))
-    {
-        cout << "Failed to get version: " << mysql_error(nodes[i])
-             << ", trying ssh node and use MariaDB client" << endl;
-        auto res = ssh_output("mysql --batch --silent  -e \"select @@version\"", i, true);
-        if (res.rc)
-        {
-            local_result++;
-            cout << "Failed to get version, node " << i << " is broken" << endl;
-        }
-        else
-        {
-            strcpy(version[i], res.output.c_str());
-        }
-    }
-    char version_number[256] {0};
-    strcpy(version_number, version[i]);
-    char* str = strchr(version_number, '-');
-    if (str)
-    {
-        str[0] = 0;
-    }
-    char version_major[256]{0};
-    strcpy(version_major, version_number);
-    if (strstr(version_major, "5.") == version_major)
-    {
-        version_major[3] = 0;
-    }
-    if (strstr(version_major, "10.") == version_major)
-    {
-        version_major[4] = 0;
-    }
-
-    if (verbose())
-    {
-        printf("Node %s%d: %s\t %s \t %s\n",
-               prefix().c_str(), i, version[i], version_number, version_major);
-    }
-    return local_result;
-}
-
-int MariaDBCluster::get_versions()
-{
-    int local_result = 0;
-    for (int i = 0; i < N; i++)
-    {
-        local_result += get_version(i);
-    }
-    return local_result;
-}
-
-std::string MariaDBCluster::get_lowest_version()
-{
-    std::string rval;
-    get_versions();
-
-    int lowest = INT_MAX;
-
-    for (int i = 0; i < N; i++)
-    {
-        int int_version = get_int_version(version[i]);
-
-        if (lowest > int_version)
-        {
-            rval = version[i];
-            lowest = int_version;
-        }
-    }
-
-    return rval;
-}
-
 int MariaDBCluster::truncate_mariadb_logs()
 {
     std::vector<std::future<int>> results;
@@ -1065,22 +991,126 @@ const std::string& MariaDBCluster::cnf_srv_name() const
     return m_cnf_server_name;
 }
 
-maxtest::MariaDBServer::MariaDBServer(VMNode& vm)
+bool MariaDBCluster::update_status()
+{
+    bool rval = true;
+    for (auto& srv : m_backends)
+    {
+        if (!srv->update_status())
+        {
+            rval = false;
+        }
+    }
+    return rval;
+}
+
+bool MariaDBCluster::check_backend_versions(uint64_t min_vrs)
+{
+    bool rval = false;
+    if (update_status())
+    {
+        bool version_ok = true;
+        for (auto& srv : m_backends)
+        {
+            if (srv->m_status.version_num < min_vrs)
+            {
+                // Old backend is classified as test skip, not a failed test.
+                logger().log_msgf("Server version on '%s' is %lu when at least %lu is required.",
+                                  srv->m_vm.m_name.c_str(), srv->m_status.version_num, min_vrs);
+                version_ok = false;
+            }
+        }
+        rval = version_ok;
+    }
+    else
+    {
+        logger().add_failure("Failed to update servers of cluster '%s'.", m_prefix.c_str());
+    }
+    return rval;
+}
+
+mxt::TestLogger& MariaDBCluster::logger()
+{
+    return m_shared.log;
+}
+
+mxt::MariaDBServer* MariaDBCluster::backend(int i)
+{
+    return m_backends[i].get();
+}
+
+namespace maxtest
+{
+maxtest::MariaDBServer::MariaDBServer(VMNode& vm, MariaDBCluster& cluster, int ind)
     : m_vm(vm)
+    , m_cluster(cluster)
+    , m_ind(ind)
 {
 }
 
-bool maxtest::MariaDBServer::start_database()
+bool MariaDBServer::start_database()
 {
     return m_vm.run_cmd_sudo(m_settings.start_db_cmd) == 0;
 }
 
-bool maxtest::MariaDBServer::stop_database()
+bool MariaDBServer::stop_database()
 {
     return m_vm.run_cmd_sudo(m_settings.stop_db_cmd) == 0;
 }
 
-bool maxtest::MariaDBServer::cleanup_database()
+bool MariaDBServer::cleanup_database()
 {
     return m_vm.run_cmd_sudo(m_settings.cleanup_db_cmd) == 0;
+}
+
+const MariaDBServer::Status& MariaDBServer::status() const
+{
+    return m_status;
+}
+
+bool MariaDBServer::update_status()
+{
+    bool rval = false;
+    auto con = try_open_connection();
+    if (con->is_open())
+    {
+        m_status.version_num = con->version_info().version;
+        auto res = con->query("SELECT @@server_id, @@read_only;");
+        if (res && res->next_row())
+        {
+            m_status.server_id = res->get_int(0);
+            m_status.read_only = res->get_bool(1);
+            if (!res->error())
+            {
+                rval = true;
+            }
+        }
+    }
+    return rval;
+}
+
+std::unique_ptr<mxt::MariaDB> MariaDBServer::try_open_connection()
+{
+    auto conn = std::make_unique<mxt::MariaDB>(m_vm.shared().log);
+    auto& sett = conn->connection_settings();
+    sett.user = m_cluster.user_name;
+    sett.password = m_cluster.password;
+    if (m_cluster.ssl)
+    {
+        sett.ssl.key = mxb::string_printf("%s/ssl-cert/client-key.pem", test_dir);
+        sett.ssl.cert = mxb::string_printf("%s/ssl-cert/client-cert.pem", test_dir);
+        sett.ssl.ca = mxb::string_printf("%s/ssl-cert/ca.pem", test_dir);
+    }
+    conn->try_open(m_vm.ip4s(), m_cluster.port[m_ind]);
+    return conn;
+}
+
+std::string MariaDBServer::version_as_string()
+{
+    auto v = m_status.version_num;
+    uint32_t major = v / 10000;
+    uint32_t minor = (v - major * 10000) / 100;
+    uint32_t patch = v - major * 10000 - minor * 100;
+    return mxb::string_printf("%i.%i.%i", major, minor, patch);
+}
 }

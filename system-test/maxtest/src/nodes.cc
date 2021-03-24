@@ -442,6 +442,11 @@ const char* VMNode::ip4() const
     return m_ip4.c_str();
 }
 
+const string& VMNode::ip4s() const
+{
+    return m_ip4;
+}
+
 const char* VMNode::ip6() const
 {
     return m_ip6.c_str();
@@ -483,6 +488,11 @@ void VMNode::set_local()
     m_ip6 = m_ip4;
     m_private_ip = m_ip4;
     m_type = NodeType::LOCAL;
+}
+
+SharedData& VMNode::shared()
+{
+    return m_shared;
 }
 }
 

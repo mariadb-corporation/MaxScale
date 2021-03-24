@@ -21,17 +21,41 @@ class MariaDBCluster;
 
 namespace maxtest
 {
+class MariaDB;
+class TestLogger;
+
 class MariaDBServer
 {
     friend class ::MariaDBCluster;
 public:
-    MariaDBServer(VMNode& vm);
+    MariaDBServer(VMNode& vm, MariaDBCluster& cluster, int ind);
 
     bool start_database();
     bool stop_database();
     bool cleanup_database();
 
+    std::string version_as_string();
+
+    struct Status
+    {
+        uint64_t version_num {0};
+        int64_t  server_id {-1};
+        bool     read_only {false};
+    };
+
+    /**
+     * Try to open a connection to the server. Failure is not a test error.
+     *
+     * @return The connection. Success can be checked by 'is_open'.
+     */
+    std::unique_ptr<mxt::MariaDB> try_open_connection();
+    bool                          update_status();
+    const Status&                 status() const;
+
 private:
+
+    Status m_status;
+
     struct Settings
     {
         std::string start_db_cmd;   /**< Command to start DB server process */
@@ -39,8 +63,10 @@ private:
         std::string cleanup_db_cmd; /**< Command to remove all data files */
     };
 
-    Settings m_settings;
-    VMNode&  m_vm;
+    Settings        m_settings;
+    VMNode&         m_vm;
+    MariaDBCluster& m_cluster;
+    int             m_ind {-1};
 };
 }
 
@@ -79,9 +105,8 @@ public:
     std::string user_name;  /**< User name to access backend nodes */
     std::string password;   /**< Password to access backend nodes */
 
-    int  master;                /**< index of node which was last configured to be Master */
-    int  ssl;                   /**< Use ssl? */
-    char version[N_MAX][256];   /**< Value of @@version */
+    int master;                 /**< index of node which was last configured to be Master */
+    int ssl;                    /**< Use ssl? */
 
     int connect(int i, const std::string& db = "test");
     int connect(const std::string& db = "test");
@@ -259,25 +284,6 @@ public:
     int execute_query_all_nodes(const char* sql);
 
     /**
-     * @brief execute 'SELECT @@version' against one node and store result in 'version' field
-     * @param i Node index
-     * @return 0 in case of success
-     */
-    int get_version(int i);
-
-    /**
-     * @brief execute 'SELECT @@version' against all nodes and store result in 'version' field
-     * @return 0 in case of success
-     */
-    int get_versions();
-
-    /**
-     * @brief Return lowest server version in the cluster
-     * @return The version string of the server with the lowest version number
-     */
-    std::string get_lowest_version();
-
-    /**
      * @brief truncate_mariadb_logs clean ups MariaDB logs on backend nodes
      * @return 0 if success
      */
@@ -412,6 +418,10 @@ public:
     virtual const std::string& type_string() const = 0;
 
     bool setup(const mxt::NetworkConfig& nwconfig, int n_min_expected);
+    bool update_status();
+    bool check_backend_versions(uint64_t min_version);
+
+    mxt::MariaDBServer* backend(int i);
 
 protected:
     /**
@@ -429,6 +439,8 @@ protected:
      *          can directly be given as argument to DROP USER.
      */
     virtual std::string anonymous_users_query() const;
+
+    mxt::TestLogger& logger();
 
     std::string m_test_dir;         /**< path to test application */
     std::string m_cnf_server_name;  /**< Prefix for backend server name ('server', 'gserver') */

@@ -412,6 +412,11 @@ bool MariaDB::open_extra(const string& host, int port, int extra_port, const str
     return success;
 }
 
+bool MariaDB::is_open() const
+{
+    return m_conn != nullptr;
+}
+
 MariaDBQueryResult::MariaDBQueryResult(MYSQL_RES* resultset)
     : QueryResult(column_names(resultset))
     , m_resultset(resultset)
