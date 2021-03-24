@@ -2,6 +2,8 @@
 
 This filter was introduced in MariaDB MaxScale 2.1.
 
+[TOC]
+
 ## Overview
 The Maxrows filter is capable of restricting the amount of rows that a SELECT,
  a prepared statement or stored procedure could return to the client application.

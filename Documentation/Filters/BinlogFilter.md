@@ -2,6 +2,8 @@
 
 This filter was introduced in MariaDB MaxScale 2.3.0.
 
+[TOC]
+
 ## Overview
 
 The `binlogfilter` can be combined with a `binlogrouter` service to selectively

@@ -1,5 +1,7 @@
 # Tee Filter
 
+[TOC]
+
 ## Overview
 
 The tee filter is a "plumbing" fitting in the MariaDB MaxScale filter toolkit.

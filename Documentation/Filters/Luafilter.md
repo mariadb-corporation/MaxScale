@@ -8,6 +8,8 @@ information on how to write Lua scripts.
 *Note:* This module is a part of the experimental module package,
  `maxscale-experimental`.
 
+[TOC]
+
 ## Filter Parameters
 
 The luafilter has two parameters. They control which scripts will be called by

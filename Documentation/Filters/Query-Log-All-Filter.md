@@ -1,5 +1,7 @@
 # Query Log All Filter
 
+[TOC]
+
 ## Overview
 
 The Query Log All (QLA) filter logs query content. Logs are written to a file in
