@@ -627,10 +627,26 @@ string mxsmongo::to_string(const bsoncxx::document::element& element)
     return element_to_value(element);
 }
 
-string mxsmongo::filter_to_where_clause(const bsoncxx::document::view& filter)
+string mxsmongo::query_to_where_condition(const bsoncxx::document::view& query)
 {
-    return get_condition(filter);
+    return get_condition(query);
 }
+
+string mxsmongo::query_to_where_clause(const bsoncxx::document::view& query)
+{
+    string clause;
+    string condition = query_to_where_condition(query);
+
+    if (!condition.empty())
+    {
+        clause += "WHERE ";
+        clause += condition;
+        clause += " ";
+    }
+
+    return clause;
+}
+
 
 // https://docs.mongodb.com/manual/reference/method/cursor.sort/
 string mxsmongo::sort_to_order_by(const bsoncxx::document::view& sort)
@@ -650,7 +666,7 @@ string mxsmongo::sort_to_order_by(const bsoncxx::document::view& sort)
 
         int64_t value = 0;
 
-        if (!mxsmongo::get_integer(element, &value))
+        if (!mxsmongo::get_number_as_integer(element, &value))
         {
             stringstream ss;
             // TODO: Should actually be the value itself, and not its type.
@@ -696,9 +712,55 @@ bool mxsmongo::get_integer(const bsoncxx::document::element& element, int64_t* p
         *pInt = element.get_int64();
         break;
 
+    default:
+        rv = false;
+    }
+
+    return rv;
+}
+
+bool mxsmongo::get_number_as_integer(const bsoncxx::document::element& element, int64_t* pInt)
+{
+    bool rv = true;
+
+    switch (element.type())
+    {
+    case bsoncxx::type::k_int32:
+        *pInt = element.get_int32();
+        break;
+
+    case bsoncxx::type::k_int64:
+        *pInt = element.get_int64();
+        break;
+
     case bsoncxx::type::k_double:
         // Integers are often passed as double.
         *pInt = element.get_double();
+        break;
+
+    default:
+        rv = false;
+    }
+
+    return rv;
+}
+
+bool mxsmongo::get_number_as_double(const bsoncxx::document::element& element, double_t* pDouble)
+{
+    bool rv = true;
+
+    switch (element.type())
+    {
+    case bsoncxx::type::k_int32:
+        *pDouble = element.get_int32();
+        break;
+
+    case bsoncxx::type::k_int64:
+        *pDouble = element.get_int64();
+        break;
+
+    case bsoncxx::type::k_double:
+        *pDouble = element.get_double();
         break;
 
     default:

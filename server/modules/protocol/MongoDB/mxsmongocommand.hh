@@ -62,6 +62,8 @@ public:
     GWBUF* create_hard_error(const std::string& message, int mongo_code) const;
     GWBUF* create_soft_error(const std::string& message, int mongo_code) const;
 
+    static void check_write_batch_size(int size);
+
 protected:
     std::string get_table(const char* zCommand) const;
 

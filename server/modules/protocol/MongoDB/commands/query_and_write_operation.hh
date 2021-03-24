@@ -176,60 +176,40 @@ public:
     GWBUF* execute() override
     {
         stringstream sql;
-        sql << "DELETE FROM " << get_table(mxsmongo::key::DELETE);
+        sql << "DELETE FROM " << get_table(mxsmongo::key::DELETE) << " ";
 
-        auto docs = static_cast<bsoncxx::array::view>(m_doc[mxsmongo::key::DELETES].get_array());
+        auto it = m_arguments.find(mxsmongo::key::DELETES);
 
-        size_t nDocs = 0;
-        for (auto element : docs)
+        if (it != m_arguments.end())
         {
-            ++nDocs;
+            const auto& deletes = it->second;
+            check_write_batch_size(deletes.size());
+            mxb_assert(deletes.size() == 1);
 
-            if (nDocs > 1)
-            {
-                break;
-            }
-
-            auto doc = static_cast<bsoncxx::document::view>(element.get_document());
-
-            auto q = static_cast<bsoncxx::document::view>(doc["q"].get_document());
-
-            // TODO: Convert q.
-            mxb_assert(q.empty());
-
-            auto limit = doc["limit"];
-
-            if (limit)
-            {
-                bool deleteOne = false;
-
-                switch (limit.type())
-                {
-                case bsoncxx::type::k_int32:
-                    deleteOne = (static_cast<int32_t>(limit.get_int32()) != 0);
-                    break;
-
-                case bsoncxx::type::k_int64:
-                    deleteOne = (static_cast<int64_t>(limit.get_int64()) != 0);
-                    break;
-
-                default:
-                    mxb_assert(!true);
-                }
-
-                if (deleteOne)
-                {
-                    sql << " LIMIT 1";
-                }
-            }
+            sql << convert_document(deletes[0]);
         }
-
-        if (nDocs > 1)
+        else
         {
-            // TODO: Since the limit is part of the query object, a Mongo DELETE command
-            // TODO: having more delete documents than one, must be handled as individual
-            // TODO: DELETE statements.
-            mxb_assert(!true);
+            auto element = m_doc[mxsmongo::key::DELETES];
+
+            if (!element)
+            {
+                throw mxsmongo::SoftError("BSON field 'delete.deletes' is missing but a required field",
+                                          mxsmongo::error::LOCATION40414);
+            }
+
+            if (element.type() != bsoncxx::type::k_array)
+            {
+                throw mxsmongo::SoftError("invalid parameter: expected an object (deletes)",
+                                          mxsmongo::error::LOCATION10065);
+            }
+
+            auto deletes = static_cast<bsoncxx::array::view>(element.get_array());
+            auto nDeletes = std::distance(deletes.begin(), deletes.end());
+            check_write_batch_size(nDeletes);
+            mxb_assert(nDeletes == 1); // TODO
+
+            sql << convert_document(deletes[0].get_document());
         }
 
         send_downstream(sql.str());
@@ -247,7 +227,7 @@ public:
         ComResponse response(GWBUF_DATA(&mariadb_response));
 
         int32_t ok = response.is_ok() ? 1 : 0;
-        int64_t n = 0;
+        int32_t n = 0;
 
         doc.append(kvp("ok", ok));
 
@@ -272,6 +252,57 @@ public:
 
         *ppResponse = pResponse;
         return READY;
+    }
+
+private:
+    static string convert_document(const bsoncxx::document::view& doc)
+    {
+        stringstream sql;
+
+        auto q = doc["q"];
+
+        if (!q)
+        {
+            throw SoftError("BSON field 'delete.deletes.q' is missing but a required field",
+                            mxsmongo::error::LOCATION40414);
+        }
+
+        if (q.type() != bsoncxx::type::k_document)
+        {
+            stringstream ss;
+            ss << "BSON field 'delete.deletes.q' is the wrong type '"
+               << bsoncxx::to_string(q.type()) << "' expected type 'object'";
+            throw SoftError(ss.str(), mxsmongo::error::TYPE_MISMATCH);
+        }
+
+        sql << mxsmongo::query_to_where_clause(q.get_document());
+
+        auto limit = doc["limit"];
+
+        if (limit)
+        {
+            double nLimit = 0;
+
+            if (get_number_as_double(limit, &nLimit))
+            {
+                if (nLimit != 0 && nLimit != 1)
+                {
+                    stringstream ss;
+                    ss << "The limit field in delete objects must be 0 or 1. Got " << nLimit;
+
+                    throw mxsmongo::SoftError(ss.str(), mxsmongo::error::FAILED_TO_PARSE);
+                }
+            }
+
+            // Yes, if the type of the value is something else, there is no limit.
+
+            if (nLimit == 1)
+            {
+                sql << " LIMIT 1";
+            }
+        }
+
+        return sql.str();
     }
 };
 
@@ -318,23 +349,15 @@ public:
             sql << "doc";
         }
 
-        sql << " FROM " << get_table(mxsmongo::key::FIND);
+        sql << " FROM " << get_table(mxsmongo::key::FIND) << " ";
 
         auto filter = m_doc[mxsmongo::key::FILTER];
 
         if (filter)
         {
             const auto& doc = filter.get_document();
-            string where = mxsmongo::filter_to_where_clause(doc);
 
-            MXS_NOTICE("Filter '%s' converted to where clause '%s'.",
-                       bsoncxx::to_json(doc).c_str(),
-                       where.c_str());
-
-            if (!where.empty())
-            {
-                sql << " WHERE " << where;
-            }
+            sql << mxsmongo::query_to_where_clause(doc);
         }
 
         auto sort = m_doc[mxsmongo::key::SORT];
@@ -350,7 +373,7 @@ public:
 
             if (!order_by.empty())
             {
-                sql << " ORDER BY " << order_by;
+                sql << "ORDER BY " << order_by << " ";
             }
         }
 
@@ -417,7 +440,7 @@ private:
         if (skip || limit)
         {
             int64_t nSkip = 0;
-            if (skip && (!get_integer(skip, &nSkip) || nSkip < 0))
+            if (skip && (!get_number_as_integer(skip, &nSkip) || nSkip < 0))
             {
                 stringstream ss;
                 int code;
@@ -436,7 +459,7 @@ private:
             }
 
             int64_t nLimit = std::numeric_limits<int64_t>::max();
-            if (limit && (!get_integer(limit, &nLimit) || nLimit < 0))
+            if (limit && (!get_number_as_integer(limit, &nLimit) || nLimit < 0))
             {
                 stringstream ss;
                 int code;
@@ -456,7 +479,7 @@ private:
             }
 
             stringstream ss;
-            ss << " LIMIT ";
+            ss << "LIMIT ";
 
             if (nSkip != 0)
             {
@@ -492,33 +515,65 @@ public:
         stringstream sql;
         sql << "INSERT INTO " << table_name() << " (id, doc) VALUES ";
 
-        auto docs = static_cast<bsoncxx::array::view>(m_doc[mxsmongo::key::DOCUMENTS].get_array());
+        auto it = m_arguments.find(mxsmongo::key::DOCUMENTS);
 
-        bool first = true;
-        for (auto element : docs)
+        if (it != m_arguments.end())
         {
-            ++m_nDocuments;
+            const auto& docs = it->second;
+            check_write_batch_size(docs.size());
 
-            if (first)
+            bool first = true;
+            for (auto doc : docs)
             {
-                first = false;
+                ++m_nDocuments;
+
+                if (first)
+                {
+                    first = false;
+                }
+                else
+                {
+                    sql << ", ";
+                }
+
+                sql << convert_document(doc);
             }
-            else
+        }
+        else
+        {
+            auto element = m_doc[mxsmongo::key::DOCUMENTS];
+
+            if (!element)
             {
-                sql << ", ";
+                throw mxsmongo::SoftError("BSON field 'insert.documents' is missing but a required field",
+                                          mxsmongo::error::LOCATION40414);
             }
 
-            sql << "(";
+            if (element.type() != bsoncxx::type::k_array)
+            {
+                throw mxsmongo::SoftError("invalid parameter: expected an object (documents)",
+                                          mxsmongo::error::LOCATION10065);
+            }
 
-            auto doc = static_cast<bsoncxx::document::view>(element.get_document());
-            auto id = get_id(doc["_id"]);
+            auto documents = static_cast<bsoncxx::array::view>(element.get_array());
+            check_write_batch_size(std::distance(documents.begin(), documents.end()));
 
-            sql << id;
-            sql << ", '";
-            sql << bsoncxx::to_json(doc);
-            sql << "'";
+            bool first = true;
+            for (auto element : documents)
+            {
+                ++m_nDocuments;
 
-            sql << ")";
+                if (first)
+                {
+                    first = false;
+                }
+                else
+                {
+                    sql << ", ";
+                }
+
+                sql << convert_document(element.get_document());
+            }
         }
 
         return sql.str();
@@ -560,7 +615,24 @@ public:
     }
 
 private:
-    string get_id(const bsoncxx::document::element& element) const
+    static string convert_document(const bsoncxx::document::view& doc)
+    {
+        stringstream sql;
+        sql << "(";
+
+        auto id = get_id(doc["_id"]);
+
+        sql << id;
+        sql << ", '";
+        sql << bsoncxx::to_json(doc);
+        sql << "'";
+
+        sql << ")";
+
+        return sql.str();
+    }
+
+    static string get_id(const bsoncxx::document::element& element)
     {
         stringstream ss;
 
@@ -637,6 +709,8 @@ public:
         if (it != m_arguments.end())
         {
             const auto& updates = it->second;
+            check_write_batch_size(updates.size());
+
             // TODO: Deal with multiple updates.
             mxb_assert(updates.size() <= 1);
             mxb_assert(updates.size() != 0);
@@ -644,7 +718,22 @@ public:
         }
         else
         {
-            auto updates = static_cast<bsoncxx::array::view>(m_doc[mxsmongo::key::UPDATES].get_array());
+            auto element = m_doc[mxsmongo::key::UPDATES];
+
+            if (!element)
+            {
+                throw mxsmongo::SoftError("BSON field 'update.updates' is missing but a required field",
+                                          mxsmongo::error::LOCATION40414);
+            }
+
+            if (element.type() != bsoncxx::type::k_array)
+            {
+                throw mxsmongo::SoftError("invalid parameter: expected an object (updates)",
+                                          mxsmongo::error::LOCATION10065);
+            }
+
+            auto updates = static_cast<bsoncxx::array::view>(element.get_array());
+            check_write_batch_size(std::distance(updates.begin(), updates.end()));
 
             // TODO: Deal with multiple updates.
             mxb_assert(!updates[1]);
@@ -711,18 +800,13 @@ public:
                 throw SoftError(ss.str(), mxsmongo::error::TYPE_MISMATCH);
             }
 
-            string where = mxsmongo::filter_to_where_clause(q.get_document());
-
-            if (!where.empty())
-            {
-                sql << "WHERE " << where;
-            }
+            sql << mxsmongo::query_to_where_clause(q.get_document());
 
             auto multi = update[mxsmongo::key::MULTI];
 
             if (!multi || !multi.get_bool())
             {
-                sql << " LIMIT 1";
+                sql << "LIMIT 1";
             }
 
             send_downstream(sql.str());
@@ -739,8 +823,8 @@ public:
         ComResponse response(GWBUF_DATA(&mariadb_response));
 
         int32_t is_ok = response.is_ok() ? 1 : 0;
-        int64_t n = 0;
-        int64_t nModified = 0;
+        int32_t n = 0;
+        int32_t nModified = 0;
 
         switch (response.type())
         {
@@ -898,8 +982,8 @@ private:
 
     GWBUF* create_response(DocumentBuilder& builder,
                            int32_t ok,
-                           int64_t n,
-                           int64_t nModified)
+                           int32_t n,
+                           int32_t nModified)
     {
         builder.append(kvp("ok", ok));
         builder.append(kvp("n", n));
@@ -908,7 +992,7 @@ private:
         return mxsmongo::Command::create_response(builder.extract());
     }
 
-    GWBUF* create_response(int32_t ok, int64_t n, int64_t nModified)
+    GWBUF* create_response(int32_t ok, int32_t n, int32_t nModified)
     {
         DocumentBuilder builder;
 

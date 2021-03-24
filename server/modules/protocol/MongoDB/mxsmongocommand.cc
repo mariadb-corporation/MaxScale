@@ -218,6 +218,18 @@ GWBUF* Command::create_hard_error(const std::string& message, int code) const
     return create_response(doc.extract());
 }
 
+//static
+void Command::check_write_batch_size(int size)
+{
+    if (size < 1 || size > MXSMONGO_MAX_WRITE_BATCH_SIZE)
+    {
+        stringstream ss;
+        ss << "Write batch sizes must be between 1 and " << MXSMONGO_MAX_WRITE_BATCH_SIZE
+           << ". Got " << size << " operations.";
+        throw mxsmongo::SoftError(ss.str(), mxsmongo::error::INVALID_LENGTH);
+    }
+}
+
 string Command::get_table(const char* zCommand) const
 {
     auto utf8 = m_doc[zCommand].get_utf8();

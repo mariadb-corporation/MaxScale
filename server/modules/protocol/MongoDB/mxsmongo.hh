@@ -224,12 +224,15 @@ const char WHATSMYURI[]              = "whatsmyuri";
 };
 
 bool get_integer(const bsoncxx::document::element& element, int64_t* pInt);
+bool get_number_as_integer(const bsoncxx::document::element& element, int64_t* pInt);
+bool get_number_as_double(const bsoncxx::document::element& element, double* pDouble);
 
 std::string to_string(const bsoncxx::document::element& element);
 
 std::vector<std::string> projection_to_extractions(const bsoncxx::document::view& projection);
 
-std::string filter_to_where_clause(const bsoncxx::document::view& filter);
+std::string query_to_where_condition(const bsoncxx::document::view& filter);
+std::string query_to_where_clause(const bsoncxx::document::view& filter);
 
 std::string sort_to_order_by(const bsoncxx::document::view& sort);
 

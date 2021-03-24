@@ -14,6 +14,7 @@
 #include "mxsmongodatabase.hh"
 #include <maxscale/mysql_utils.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
+#include <bsoncxx/exception/exception.hpp>
 #include "config.hh"
 
 using namespace std;
@@ -95,9 +96,14 @@ GWBUF* mxsmongo::Database::execute(GWBUF* pRequest,
     {
         pResponse = x.create_response(*sCommand.get());
     }
+    catch (const bsoncxx::exception& x)
+    {
+        MXS_ERROR("bsoncxx exeception occurred when parsing MongoDB command: %s", x.what());
+        pResponse = sCommand->create_hard_error(x.what(), mxsmongo::error::FAILED_TO_PARSE);
+    }
     catch (const std::exception& x)
     {
-        MXS_ERROR("Exeception occurred when parsing MongoDB command: %s", x.what());
+        MXS_ERROR("std exception occurred when parsing MongoDB command: %s", x.what());
 
         pResponse = sCommand->create_hard_error(x.what(), mxsmongo::error::FAILED_TO_PARSE);
     }
