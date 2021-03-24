@@ -46,7 +46,7 @@ public:
 
     int N {0};
 
-    MYSQL* nodes[N_MAX] {};    /**< MYSQL structs for every backend node */
+    MYSQL* nodes[N_MAX] {}; /**< MYSQL structs for every backend node */
     int    port[N_MAX];     /**< MariaDB port for every backend node */
 
     std::string user_name;  /**< User name to access backend nodes */
@@ -424,9 +424,9 @@ protected:
     std::string m_socket_cmd[N_MAX];/**< 'socket=$socket' line */
 
 private:
-    std::string m_prefix;                   /**< Name of backend setup (e.g. 'repl' or 'galera') */
-    bool        m_use_ipv6 {false};         /**< Default to ipv6-addresses */
-    bool        m_blocked[N_MAX] {};   /**< List of blocked nodes */
+    std::string m_prefix;               /**< Name of backend setup (e.g. 'repl' or 'galera') */
+    bool        m_use_ipv6 {false};     /**< Default to ipv6-addresses */
+    bool        m_blocked[N_MAX] {};    /**< List of blocked nodes */
 
     std::string m_start_db_command[N_MAX];      /**< Command to start DB server */
     std::string m_stop_db_command[N_MAX];       /**< Command to stop DB server */

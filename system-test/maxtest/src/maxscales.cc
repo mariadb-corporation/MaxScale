@@ -577,7 +577,7 @@ void ServersInfo::check_servers_status(const std::vector<ServerInfo::bitfield>& 
                 string found_str = info.status_to_string();
                 string expected_str = ServerInfo::status_to_string(expected);
                 m_log->add_failure("Wrong status for %s. Got '%s', expected '%s'.",
-                                  info.name.c_str(), found_str.c_str(), expected_str.c_str());
+                                   info.name.c_str(), found_str.c_str(), expected_str.c_str());
             }
         };
     check_servers_property(expected_status.size(), tester);
@@ -591,7 +591,7 @@ void ServersInfo::check_master_groups(const std::vector<int>& expected_groups)
             if (expected != info.master_group)
             {
                 m_log->add_failure("Wrong master group for %s. Got '%li', expected '%i'.",
-                                  info.name.c_str(), info.master_group, expected);
+                                   info.name.c_str(), info.master_group, expected);
             }
         };
     check_servers_property(expected_groups.size(), tester);
@@ -605,7 +605,7 @@ void ServersInfo::check_pool_connections(const std::vector<int>& expected_conns)
             if (expected != info.pool_conns)
             {
                 m_log->add_failure("Wrong connection pool size for %s. Got '%li', expected '%i'.",
-                                  info.name.c_str(), info.pool_conns, expected);
+                                   info.name.c_str(), info.pool_conns, expected);
             }
         };
     check_servers_property(expected_conns.size(), tester);

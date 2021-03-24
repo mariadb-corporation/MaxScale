@@ -413,7 +413,7 @@ int ReplicationCluster::find_master()
                        (char*) "show slave status;",
                        (char*) "Master_Host",
                        &str[0]
-        ) == 0)
+                       ) == 0)
         {
             found = 1;
             strcpy(master_IP, str);
@@ -483,7 +483,7 @@ int ReplicationCluster::set_repl_user()
 }
 
 int ReplicationCluster::set_slave(MYSQL* conn, const char* master_host, int master_port,
-                              const char* log_file, const char* log_pos)
+                                  const char* log_file, const char* log_pos)
 {
     char str[1024];
 
@@ -519,5 +519,4 @@ void ReplicationCluster::replicate_from(int slave, const std::string& host, uint
     execute_query(nodes[slave], "%s", change_master.str().c_str());
     execute_query(nodes[slave], "START SLAVE;");
 }
-
 }

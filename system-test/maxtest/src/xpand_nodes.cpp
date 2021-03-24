@@ -238,7 +238,7 @@ int XpandCluster::check_replication()
         res = 1;
     }
 
-    close_connections(); // Some might have been created by connect().
+    close_connections();    // Some might have been created by connect().
 
     return res;
 }

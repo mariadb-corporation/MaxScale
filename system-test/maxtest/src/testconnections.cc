@@ -325,33 +325,33 @@ int TestConnections::cleanup()
 int TestConnections::setup_vms()
 {
     auto call_mdbci_and_check = [this](const char* mdbci_options = "") {
-        bool vms_found = false;
-        if (call_mdbci(mdbci_options))
-        {
-            m_mdbci_called = true;
-            // Network config should exist now.
-            if (read_network_config())
+            bool vms_found = false;
+            if (call_mdbci(mdbci_options))
             {
-                if (required_machines_are_running())
+                m_mdbci_called = true;
+                // Network config should exist now.
+                if (read_network_config())
                 {
-                    vms_found = true;
+                    if (required_machines_are_running())
+                    {
+                        vms_found = true;
+                    }
+                    else
+                    {
+                        add_failure("Still missing VMs after running MDBCI.");
+                    }
                 }
                 else
                 {
-                    add_failure("Still missing VMs after running MDBCI.");
+                    add_failure("Failed to read network_config or configured_labels after running MDBCI.");
                 }
             }
             else
             {
-                add_failure("Failed to read network_config or configured_labels after running MDBCI.");
+                add_failure("MDBCI failed.");
             }
-        }
-        else
-        {
-            add_failure("MDBCI failed.");
-        }
-        return vms_found;
-    };
+            return vms_found;
+        };
 
     bool maxscale_installed = false;
 
@@ -423,7 +423,7 @@ int TestConnections::setup_vms()
             string src = string(test_dir) + "/mdbci/add_core_cnf.sh";
             maxscales->copy_to_node(0, src.c_str(), maxscales->access_homedir(0));
             maxscales->ssh_node_f(0, true, "%s/add_core_cnf.sh %s", maxscales->access_homedir(0),
-                                                                 verbose() ? "verbose" : "");
+                                  verbose() ? "verbose" : "");
         }
     }
 
@@ -1149,7 +1149,7 @@ int TestConnections::check_maxscale_processes(int m, int expected)
         if (atoi(maxscale_num.output.c_str()) != expected)
         {
             add_result(1, "Number of MaxScale processes is not %d, it is %s\n",
-                expected, maxscale_num.output.c_str());
+                       expected, maxscale_num.output.c_str());
         }
     }
 
@@ -1697,10 +1697,10 @@ bool TestConnections::test_bad_config(int m, const string& config)
     set_timeout(20);
 
     int ssh_rc = maxscales->ssh_node_f(m,
-                                 true,
-                                 "cp /tmp/maxscale.cnf /etc/maxscale.cnf; pkill -9 maxscale; "
-                                 "maxscale -U maxscale -lstdout &> /dev/null && sleep 1 && pkill -9 maxscale");
-    return ((ssh_rc == 0) || (ssh_rc == 256));
+                                       true,
+                                       "cp /tmp/maxscale.cnf /etc/maxscale.cnf; pkill -9 maxscale; "
+                                       "maxscale -U maxscale -lstdout &> /dev/null && sleep 1 && pkill -9 maxscale");
+    return (ssh_rc == 0) || (ssh_rc == 256);
 }
 
 /**
@@ -2114,23 +2114,23 @@ bool TestConnections::initialize_nodes()
 bool TestConnections::check_backend_versions()
 {
     auto tester = [this](MariaDBCluster* cluster, const string& required_vrs_str) {
-        bool rval = true;
-        if (cluster && !required_vrs_str.empty())
-        {
-            string found_vrs_str = cluster->get_lowest_version();
-            int found_vrs = get_int_version(found_vrs_str);
-            int required_vrs = get_int_version(required_vrs_str);
-
-            if (found_vrs < required_vrs)
+            bool rval = true;
+            if (cluster && !required_vrs_str.empty())
             {
-                tprintf("Test cluster '%s' version '%s' is too low, test '%s' requires at least '%s'.",
-                        cluster->prefix().c_str(), found_vrs_str.c_str(),
-                        m_test_name.c_str(), required_vrs_str.c_str());
-                rval = false;
+                string found_vrs_str = cluster->get_lowest_version();
+                int found_vrs = get_int_version(found_vrs_str);
+                int required_vrs = get_int_version(required_vrs_str);
+
+                if (found_vrs < required_vrs)
+                {
+                    tprintf("Test cluster '%s' version '%s' is too low, test '%s' requires at least '%s'.",
+                            cluster->prefix().c_str(), found_vrs_str.c_str(),
+                            m_test_name.c_str(), required_vrs_str.c_str());
+                    rval = false;
+                }
             }
-        }
-        return rval;
-    };
+            return rval;
+        };
 
     auto repl_ok = tester(repl, maxscale::required_repl_version);
     auto galera_ok = tester(galera, maxscale::required_galera_version);
