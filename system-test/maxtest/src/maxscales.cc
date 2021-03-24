@@ -45,7 +45,7 @@ bool Maxscales::setup(const mxt::NetworkConfig& nwconfig, int n_min_expected)
         if (m_shared.settings.local_maxscale)
         {
             // MaxScale is running locally, overwrite node address.
-            node(0).set_local();
+            node(0)->set_local();
         }
 
         if (Nodes::init_ssh_masters())
@@ -372,13 +372,13 @@ const char* Maxscales::ip4(int i) const
 
 const std::string& Maxscales::node_name(int i) const
 {
-    return node(i).m_name;
+    return node(i)->m_name;
 }
 
 mxt::CmdResult Maxscales::maxctrl(const string& cmd, int m, bool sudo)
 {
     using CmdPriv = mxt::VMNode::CmdPriv;
-    return node(m).run_cmd_output("maxctrl " + cmd, sudo ? CmdPriv::SUDO : CmdPriv::NORMAL);
+    return node(m)->run_cmd_output("maxctrl " + cmd, sudo ? CmdPriv::SUDO : CmdPriv::NORMAL);
 }
 
 bool Maxscales::use_valgrind() const

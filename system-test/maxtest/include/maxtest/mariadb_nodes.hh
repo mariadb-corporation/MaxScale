@@ -17,6 +17,17 @@
 #include <maxtest/mariadb_func.hh>
 #include <maxtest/nodes.hh>
 
+namespace maxtest
+{
+class MariaDBServer
+{
+public:
+    MariaDBServer(VMNode& vm);
+private:
+    VMNode& m_vm;
+};
+}
+
 /**
  * @brief A class to handle backend nodes
  * Contains references up to 256 nodes, info about IP, port, ssh key, use name and password for each node
@@ -434,6 +445,8 @@ private:
     /**
      * Command to remove all data files and re-install DB with mysql_install_db */
     std::string m_cleanup_db_command[N_MAX];
+
+    std::vector<std::unique_ptr<mxt::MariaDBServer>> m_backends;
 
     int read_nodes_info(const mxt::NetworkConfig& nwconfig);
 };

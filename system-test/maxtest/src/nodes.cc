@@ -46,22 +46,6 @@ VMNode::~VMNode()
         pclose(m_ssh_master_pipe);
     }
 }
-
-VMNode::VMNode(VMNode&& rhs)
-    : m_name(rhs.m_name)
-    , m_ip4(move(rhs.m_ip4))
-    , m_ip6(move(rhs.m_ip6))
-    , m_private_ip(move(rhs.m_private_ip))
-    , m_hostname(move(rhs.m_hostname))
-    , m_username(move(rhs.m_username))
-    , m_homedir(move(rhs.m_homedir))
-    , m_sudo(move(rhs.m_sudo))
-    , m_sshkey(move(rhs.m_sshkey))
-    , m_ssh_master_pipe(rhs.m_ssh_master_pipe)
-    , m_shared(rhs.m_shared)
-{
-    rhs.m_ssh_master_pipe = nullptr;
-}
 }
 
 
@@ -187,7 +171,7 @@ int VMNode::run_cmd(const std::string& cmd, CmdPriv priv)
 
 int Nodes::ssh_node(int node, const string& ssh, bool sudo)
 {
-    return m_vms[node].run_cmd(ssh, sudo ? CmdPriv::SUDO : CmdPriv::NORMAL);
+    return m_vms[node]->run_cmd(ssh, sudo ? CmdPriv::SUDO : CmdPriv::NORMAL);
 }
 
 bool Nodes::init_ssh_masters()
@@ -197,7 +181,7 @@ bool Nodes::init_ssh_masters()
     for (auto& vm : m_vms)
     {
         auto func = [&vm]() {
-                return vm.init_ssh_master();
+                return vm->init_ssh_master();
             };
         funcs.push_back(move(func));
     }
@@ -220,7 +204,7 @@ int Nodes::copy_to_node(int i, const char* src, const char* dest)
     {
         return 1;
     }
-    return m_vms[i].copy_to_node(src, dest) ? 0 : 1;
+    return m_vms[i]->copy_to_node(src, dest) ? 0 : 1;
 }
 
 bool mxt::VMNode::copy_to_node(const string& src, const string& dest)
@@ -257,7 +241,7 @@ int Nodes::copy_from_node(int i, const char* src, const char* dest)
     {
         return 1;
     }
-    return m_vms[i].copy_from_node(src, dest) ? 0 : 1;
+    return m_vms[i]->copy_from_node(src, dest) ? 0 : 1;
 }
 
 bool mxt::VMNode::copy_from_node(const string& src, const string& dest)
@@ -288,29 +272,6 @@ int Nodes::copy_from_node_legacy(const char* src, const char* dest, int i)
     return copy_from_node(i, src, dest);
 }
 
-int Nodes::read_basic_env(const mxt::NetworkConfig& nwconfig, const string& prefix)
-{
-    m_vms.clear();
-    m_vms.reserve(4);
-
-    for (int i = 0; true; i++)
-    {
-        string node_name = mxb::string_printf("%s_%03d", prefix.c_str(), i);
-        mxt::VMNode node(m_shared, node_name);
-
-        if (node.configure(nwconfig))
-        {
-            m_vms.push_back(move(node));
-        }
-        else
-        {
-            break;
-        }
-    }
-
-    return m_vms.size();
-}
-
 void Nodes::clear_vms()
 {
     m_vms.clear();
@@ -320,8 +281,8 @@ void Nodes::clear_vms()
 bool Nodes::add_node(const mxt::NetworkConfig& nwconfig, const string& name)
 {
     bool rval = false;
-    mxt::VMNode node(m_shared, name);
-    if (node.configure(nwconfig))
+    auto node = std::make_unique<mxt::VMNode>(m_shared, name);
+    if (node->configure(nwconfig))
     {
         m_vms.push_back(move(node));
         rval = true;
@@ -373,7 +334,7 @@ bool mxt::VMNode::configure(const mxt::NetworkConfig& network_config)
 
 std::string Nodes::mdbci_node_name(int node)
 {
-    return m_vms[node].m_name;
+    return m_vms[node]->m_name;
 }
 
 namespace maxtest
@@ -522,47 +483,47 @@ void VMNode::set_local()
 
 mxt::CmdResult Nodes::ssh_output(const std::string& cmd, int node, bool sudo)
 {
-    return m_vms[node].run_cmd_output(cmd, sudo ? CmdPriv::SUDO : CmdPriv::NORMAL);
+    return m_vms[node]->run_cmd_output(cmd, sudo ? CmdPriv::SUDO : CmdPriv::NORMAL);
 }
 
 const char* Nodes::ip_private(int i) const
 {
-    return m_vms[i].priv_ip();
+    return m_vms[i]->priv_ip();
 }
 
 const char* Nodes::ip6(int i) const
 {
-    return m_vms[i].ip6();
+    return m_vms[i]->ip6();
 }
 
 const char* Nodes::hostname(int i) const
 {
-    return m_vms[i].hostname();
+    return m_vms[i]->hostname();
 }
 
 const char* Nodes::access_user(int i) const
 {
-    return m_vms[i].access_user();
+    return m_vms[i]->access_user();
 }
 
 const char* Nodes::access_homedir(int i) const
 {
-    return m_vms[i].access_homedir();
+    return m_vms[i]->access_homedir();
 }
 
 const char* Nodes::access_sudo(int i) const
 {
-    return m_vms[i].access_sudo();
+    return m_vms[i]->access_sudo();
 }
 
 const char* Nodes::sshkey(int i) const
 {
-    return m_vms[i].sshkey();
+    return m_vms[i]->sshkey();
 }
 
 const char* Nodes::ip4(int i) const
 {
-    return m_vms[i].ip4();
+    return m_vms[i]->ip4();
 }
 
 bool Nodes::verbose() const
@@ -574,7 +535,7 @@ void Nodes::write_env_vars()
 {
     for (auto& vm : m_vms)
     {
-        vm.write_node_env_vars();
+        vm->write_node_env_vars();
     }
 }
 
@@ -583,14 +544,14 @@ int Nodes::n_nodes() const
     return m_vms.size();
 }
 
-mxt::VMNode& Nodes::node(int i)
+mxt::VMNode* Nodes::node(int i)
 {
-    return m_vms[i];
+    return m_vms[i].get();
 }
 
-const mxt::VMNode& Nodes::node(int i) const
+const mxt::VMNode* Nodes::node(int i) const
 {
-    return m_vms[i];
+    return m_vms[i].get();
 }
 
 namespace maxtest

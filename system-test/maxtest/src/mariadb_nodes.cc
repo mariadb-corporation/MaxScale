@@ -175,12 +175,15 @@ int MariaDBCluster::read_nodes_info(const mxt::NetworkConfig& nwconfig)
     const char clean_db_def[] = "rm -rf /var/lib/mysql/*; killall -9 mysqld";
 
     clear_vms();
+    m_backends.clear();
+
     int i = 0;
     while (i < N_MAX)
     {
         string node_name = mxb::string_printf("%s_%03d", prefixc, i);
         if (add_node(nwconfig, node_name))
         {
+            auto srv = std::make_unique<mxt::MariaDBServer>(*node(i));
             string key_port = node_name + "_port";
             port[i] = readenv_int(key_port.c_str(), 3306);
 
@@ -199,6 +202,8 @@ int MariaDBCluster::read_nodes_info(const mxt::NetworkConfig& nwconfig)
 
             string key_clear_db_cmd = node_name + "_cleanup_db_command";
             m_cleanup_db_command[i] = envvar_get_set(key_clear_db_cmd.c_str(), clean_db_def);
+
+            m_backends.push_back(move(srv));
             i++;
         }
         else
@@ -206,6 +211,7 @@ int MariaDBCluster::read_nodes_info(const mxt::NetworkConfig& nwconfig)
             break;
         }
     }
+
 
     assert(i == Nodes::n_nodes());
     N = i;
@@ -1077,4 +1083,9 @@ bool MariaDBCluster::using_ipv6() const
 const std::string& MariaDBCluster::cnf_srv_name() const
 {
     return m_cnf_server_name;
+}
+
+maxtest::MariaDBServer::MariaDBServer(VMNode& vm)
+    : m_vm(vm)
+{
 }
