@@ -195,14 +195,13 @@ int MariaDBCluster::read_nodes_info(const mxt::NetworkConfig& nwconfig)
             setenv(key_socket_cmd.c_str(), m_socket_cmd[i].c_str(), 1);
 
             string key_start_db_cmd = node_name + "_start_db_command";
-            m_start_db_command[i] = envvar_get_set(key_start_db_cmd.c_str(), start_db_def);
+            srv->m_settings.start_db_cmd = envvar_get_set(key_start_db_cmd.c_str(), start_db_def);
 
             string key_stop_db_cmd = node_name + "_stop_db_command";
-            m_stop_db_command[i] = envvar_get_set(key_stop_db_cmd.c_str(), stop_db_def);
+            srv->m_settings.stop_db_cmd = envvar_get_set(key_stop_db_cmd.c_str(), stop_db_def);
 
             string key_clear_db_cmd = node_name + "_cleanup_db_command";
-            m_cleanup_db_command[i] = envvar_get_set(key_clear_db_cmd.c_str(), clean_db_def);
-
+            srv->m_settings.cleanup_db_cmd = envvar_get_set(key_clear_db_cmd.c_str(), clean_db_def);
             m_backends.push_back(move(srv));
             i++;
         }
@@ -232,12 +231,12 @@ void MariaDBCluster::print_env()
 
 int MariaDBCluster::stop_node(int node)
 {
-    return ssh_node(node, m_stop_db_command[node], true);
+    return ssh_node(node, m_backends[node]->m_settings.stop_db_cmd, true);
 }
 
 int MariaDBCluster::start_node(int node, const char* param)
 {
-    string cmd = mxb::string_printf("%s %s", m_start_db_command[node].c_str(), param);
+    string cmd = mxb::string_printf("%s %s", m_backends[node]->m_settings.start_db_cmd.c_str(), param);
     return ssh_node(node, cmd, true);
 }
 
@@ -275,26 +274,6 @@ int MariaDBCluster::stop_slaves()
     }
     close_connections();
     return global_result;
-}
-
-int MariaDBCluster::cleanup_db_node(int node)
-{
-    return ssh_node(node, m_cleanup_db_command[node], true);
-}
-
-int MariaDBCluster::cleanup_db_nodes()
-{
-    int i;
-    int local_result = 0;
-
-    for (i = 0; i < N; i++)
-    {
-        printf("Cleaning node %d\n", i);
-        fflush(stdout);
-        local_result += cleanup_db_node(i);
-        fflush(stdout);
-    }
-    return local_result;
 }
 
 void MariaDBCluster::create_users(int node)
@@ -860,7 +839,7 @@ string extract_version_from_string(const string& version)
 
 int MariaDBCluster::prepare_server(int i)
 {
-    cleanup_db_node(i);
+    m_backends[i]->cleanup_database();
     reset_server_settings(i);
 
     // Note: These should be done by MDBCI
@@ -889,7 +868,8 @@ int MariaDBCluster::prepare_server(int i)
             // Disable 'validate_password' plugin, searach for random temporal
             // password in the log and reseting passord to empty string
             ssh_node(i, "/usr/sbin/mysqld --initialize; sudo chown -R mysql:mysql /var/lib/mysql", true);
-            ssh_node(i, m_start_db_command[i], true);
+            auto& srv = m_backends[i];
+            srv->start_database();
             auto res_temp_pw = ssh_output(
                 "cat /var/log/mysqld.log | grep \"temporary password\" | sed -n -e 's/^.*: //p'",
                 i, true);
@@ -898,8 +878,8 @@ int MariaDBCluster::prepare_server(int i)
             ssh_node_f(i, true, "mysqladmin -uroot -p'%s' password '%s'", temp_pw, temp_pw);
             ssh_node_f(i, false,
                        "echo \"UNINSTALL PLUGIN validate_password\" | sudo mysql -uroot -p'%s'", temp_pw);
-            ssh_node(i, m_stop_db_command[i], true);
-            ssh_node(i, m_start_db_command[i], true);
+            srv->stop_database();
+            srv->start_database();
             ssh_node_f(i, true, "mysqladmin -uroot -p'%s' password ''", temp_pw);
         }
         else
@@ -1088,4 +1068,19 @@ const std::string& MariaDBCluster::cnf_srv_name() const
 maxtest::MariaDBServer::MariaDBServer(VMNode& vm)
     : m_vm(vm)
 {
+}
+
+bool maxtest::MariaDBServer::start_database()
+{
+    return m_vm.run_cmd_sudo(m_settings.start_db_cmd) == 0;
+}
+
+bool maxtest::MariaDBServer::stop_database()
+{
+    return m_vm.run_cmd_sudo(m_settings.stop_db_cmd) == 0;
+}
+
+bool maxtest::MariaDBServer::cleanup_database()
+{
+    return m_vm.run_cmd_sudo(m_settings.cleanup_db_cmd) == 0;
 }

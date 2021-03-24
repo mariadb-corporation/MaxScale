@@ -17,14 +17,30 @@
 #include <maxtest/mariadb_func.hh>
 #include <maxtest/nodes.hh>
 
+class MariaDBCluster;
+
 namespace maxtest
 {
 class MariaDBServer
 {
+    friend class ::MariaDBCluster;
 public:
     MariaDBServer(VMNode& vm);
+
+    bool start_database();
+    bool stop_database();
+    bool cleanup_database();
+
 private:
-    VMNode& m_vm;
+    struct Settings
+    {
+        std::string start_db_cmd;   /**< Command to start DB server process */
+        std::string stop_db_cmd;    /**< Command to stop DB server process */
+        std::string cleanup_db_cmd; /**< Command to remove all data files */
+    };
+
+    Settings m_settings;
+    VMNode&  m_vm;
 };
 }
 
@@ -115,22 +131,6 @@ public:
      * @return  0 in case of success
      */
     int stop_slaves();
-
-    /**
-     * @brief cleanup_db_node Removes all data files and reinstall DB
-     * with mysql_install_db
-     * @param node
-     * @return 0 in case of success
-     */
-    int cleanup_db_node(int node);
-
-    /**
-     * @brief cleanup_db_node Removes all data files and reinstall DB
-     * with mysql_install_db for all nodes
-     * @param node
-     * @return 0 in case of success
-     */
-    int cleanup_db_nodes();
 
     /**
      * Start replication in manner relevant to the cluster.
@@ -438,13 +438,6 @@ private:
     std::string m_prefix;               /**< Name of backend setup (e.g. 'repl' or 'galera') */
     bool        m_use_ipv6 {false};     /**< Default to ipv6-addresses */
     bool        m_blocked[N_MAX] {};    /**< List of blocked nodes */
-
-    std::string m_start_db_command[N_MAX];      /**< Command to start DB server */
-    std::string m_stop_db_command[N_MAX];       /**< Command to stop DB server */
-
-    /**
-     * Command to remove all data files and re-install DB with mysql_install_db */
-    std::string m_cleanup_db_command[N_MAX];
 
     std::vector<std::unique_ptr<mxt::MariaDBServer>> m_backends;
 

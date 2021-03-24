@@ -51,6 +51,8 @@ public:
      */
     int run_cmd(const std::string& cmd, CmdPriv priv = CmdPriv::NORMAL);
 
+    int run_cmd_sudo(const std::string& cmd);
+
     /**
      * Run a command on the VM, either through ssh or local terminal. Fetches output.
      *

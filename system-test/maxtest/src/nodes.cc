@@ -167,6 +167,11 @@ int VMNode::run_cmd(const std::string& cmd, CmdPriv priv)
     }
     return rc;
 }
+
+int VMNode::run_cmd_sudo(const string& cmd)
+{
+    return run_cmd(cmd, CmdPriv::SUDO);
+}
 }
 
 int Nodes::ssh_node(int node, const string& ssh, bool sudo)
