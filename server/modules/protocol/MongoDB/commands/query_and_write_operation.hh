@@ -95,7 +95,7 @@ public:
                     ss << "Table " << table_name() << " does not exist, and 'auto_create_tables' "
                        << "is false.";
 
-                    pResponse = create_hard_error(ss.str(), mxsmongo::error::COMMAND_FAILED);
+                    pResponse = create_hard_error(ss.str(), error::COMMAND_FAILED);
                     state = READY;
                 }
             }
@@ -128,8 +128,7 @@ public:
                     else
                     {
                         MXS_ERROR("Could not create table: (%d), %s", err.code(), err.message().c_str());
-                        pResponse = create_hard_error(err.message(),
-                                                      mxsmongo::error::from_mariadb_code(code));
+                        pResponse = create_hard_error(err.message(), error::from_mariadb_code(code));
                         state = READY;
                     }
                 }
@@ -139,7 +138,7 @@ public:
                 mxb_assert(!true);
                 MXS_ERROR("Expected OK or ERR packet, received something else.");
                 pResponse = create_hard_error("Unexpected response received from backend.",
-                                              mxsmongo::error::COMMAND_FAILED);
+                                              error::COMMAND_FAILED);
                 state = READY;
             }
         }
@@ -194,14 +193,14 @@ public:
 
             if (!element)
             {
-                throw mxsmongo::SoftError("BSON field 'delete.deletes' is missing but a required field",
-                                          mxsmongo::error::LOCATION40414);
+                throw SoftError("BSON field 'delete.deletes' is missing but a required field",
+                                error::LOCATION40414);
             }
 
             if (element.type() != bsoncxx::type::k_array)
             {
-                throw mxsmongo::SoftError("invalid parameter: expected an object (deletes)",
-                                          mxsmongo::error::LOCATION10065);
+                throw SoftError("invalid parameter: expected an object (deletes)",
+                                error::LOCATION10065);
             }
 
             auto deletes = static_cast<bsoncxx::array::view>(element.get_array());
@@ -264,7 +263,7 @@ private:
         if (!q)
         {
             throw SoftError("BSON field 'delete.deletes.q' is missing but a required field",
-                            mxsmongo::error::LOCATION40414);
+                            error::LOCATION40414);
         }
 
         if (q.type() != bsoncxx::type::k_document)
@@ -272,12 +271,18 @@ private:
             stringstream ss;
             ss << "BSON field 'delete.deletes.q' is the wrong type '"
                << bsoncxx::to_string(q.type()) << "' expected type 'object'";
-            throw SoftError(ss.str(), mxsmongo::error::TYPE_MISMATCH);
+            throw SoftError(ss.str(), error::TYPE_MISMATCH);
         }
 
         sql << mxsmongo::query_to_where_clause(q.get_document());
 
         auto limit = doc["limit"];
+
+        if (!limit)
+        {
+            throw SoftError("BSON field 'delete.deletes.limit' is missing but a required field",
+                            error::LOCATION40414);
+        }
 
         if (limit)
         {
@@ -290,7 +295,7 @@ private:
                     stringstream ss;
                     ss << "The limit field in delete objects must be 0 or 1. Got " << nLimit;
 
-                    throw mxsmongo::SoftError(ss.str(), mxsmongo::error::FAILED_TO_PARSE);
+                    throw SoftError(ss.str(), error::FAILED_TO_PARSE);
                 }
             }
 
@@ -410,7 +415,7 @@ public:
                 {
                     MXS_WARNING("Mongo request to backend failed: (%d), %s", code, err.message().c_str());
 
-                    pResponse = create_hard_error(err.message(), mxsmongo::error::from_mariadb_code(code));
+                    pResponse = create_hard_error(err.message(), error::from_mariadb_code(code));
                 }
             }
             break;
@@ -447,15 +452,15 @@ private:
                 if (nSkip < 0)
                 {
                     ss << "Skip value must be non-negative, but received: " << nSkip;
-                    code = mxsmongo::error::BAD_VALUE;
+                    code = error::BAD_VALUE;
                 }
                 else
                 {
                     ss << "Failed to parse: " << bsoncxx::to_json(m_doc) << ". 'skip' field must be numeric.";
-                    code = mxsmongo::error::FAILED_TO_PARSE;
+                    code = error::FAILED_TO_PARSE;
                 }
 
-                throw mxsmongo::SoftError(ss.str(), code);
+                throw SoftError(ss.str(), code);
             }
 
             int64_t nLimit = std::numeric_limits<int64_t>::max();
@@ -467,15 +472,15 @@ private:
                 if (nLimit < 0)
                 {
                     ss << "Limit value must be non-negative, but received: " << nLimit;
-                    code = mxsmongo::error::BAD_VALUE;
+                    code = error::BAD_VALUE;
                 }
                 else
                 {
                     ss << "Failed to parse: " << bsoncxx::to_json(m_doc) << ". 'limit' field must be numeric.";
-                    code = mxsmongo::error::FAILED_TO_PARSE;
+                    code = error::FAILED_TO_PARSE;
                 }
 
-                throw mxsmongo::SoftError(ss.str(), code);
+                throw SoftError(ss.str(), code);
             }
 
             stringstream ss;
@@ -545,14 +550,14 @@ public:
 
             if (!element)
             {
-                throw mxsmongo::SoftError("BSON field 'insert.documents' is missing but a required field",
-                                          mxsmongo::error::LOCATION40414);
+                throw SoftError("BSON field 'insert.documents' is missing but a required field",
+                                error::LOCATION40414);
             }
 
             if (element.type() != bsoncxx::type::k_array)
             {
-                throw mxsmongo::SoftError("invalid parameter: expected an object (documents)",
-                                          mxsmongo::error::LOCATION10065);
+                throw SoftError("invalid parameter: expected an object (documents)",
+                                error::LOCATION10065);
             }
 
             auto documents = static_cast<bsoncxx::array::view>(element.get_array());
@@ -730,14 +735,14 @@ public:
 
             if (!element)
             {
-                throw mxsmongo::SoftError("BSON field 'update.updates' is missing but a required field",
-                                          mxsmongo::error::LOCATION40414);
+                throw SoftError("BSON field 'update.updates' is missing but a required field",
+                                error::LOCATION40414);
             }
 
             if (element.type() != bsoncxx::type::k_array)
             {
-                throw mxsmongo::SoftError("invalid parameter: expected an object (updates)",
-                                          mxsmongo::error::LOCATION10065);
+                throw SoftError("invalid parameter: expected an object (updates)",
+                                error::LOCATION10065);
             }
 
             auto updates = static_cast<bsoncxx::array::view>(element.get_array());
@@ -762,7 +767,7 @@ public:
                 message += "'.";
 
                 MXS_ERROR("%s", message.c_str());
-                pResponse = create_hard_error(message, mxsmongo::error::COMMAND_FAILED);
+                pResponse = create_hard_error(message, error::COMMAND_FAILED);
             }
             break;
 
@@ -786,7 +791,7 @@ public:
                 message += "'.";
 
                 MXS_ERROR("%s", message.c_str());
-                pResponse = create_hard_error(message, mxsmongo::error::COMMAND_FAILED);
+                pResponse = create_hard_error(message, error::COMMAND_FAILED);
             }
         }
 
@@ -796,8 +801,8 @@ public:
 
             if (!q)
             {
-                throw mxsmongo::SoftError("BSON field 'update.updates.q' is missing but a required field",
-                                          mxsmongo::error::LOCATION40414);
+                throw SoftError("BSON field 'update.updates.q' is missing but a required field",
+                                error::LOCATION40414);
             }
 
             if (q.type() != bsoncxx::type::k_document)
@@ -805,7 +810,7 @@ public:
                 stringstream ss;
                 ss << "BSON field 'update.updates.q' is the wrong type '" << bsoncxx::to_string(q.type())
                    << "', expected type 'object'";
-                throw SoftError(ss.str(), mxsmongo::error::TYPE_MISMATCH);
+                throw SoftError(ss.str(), error::TYPE_MISMATCH);
             }
 
             sql << mxsmongo::query_to_where_clause(q.get_document());
