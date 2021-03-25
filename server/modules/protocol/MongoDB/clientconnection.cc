@@ -26,6 +26,7 @@
 #include "config.hh"
 
 using namespace std;
+using namespace mxsmongo;
 
 ClientConnection::ClientConnection(const Config* pConfig, MXS_SESSION* pSession, mxs::Component* pDownstream)
     : m_config(*pConfig)
@@ -63,7 +64,7 @@ const ClientDCB* ClientConnection::dcb() const
 
 void ClientConnection::ready_for_reading(DCB* dcb)
 {
-    DCB::ReadResult read_res = m_pDcb->read(MXSMONGO_HEADER_LEN, MONGOC_DEFAULT_MAX_MSG_SIZE);
+    DCB::ReadResult read_res = m_pDcb->read(mongo::HEADER_LEN, mongo::MAX_MSG_SIZE);
     if (!read_res)
     {
         return;
@@ -73,12 +74,12 @@ void ClientConnection::ready_for_reading(DCB* dcb)
     GWBUF* pBuffer = read_res.data.release();
     auto link_len = gwbuf_link_length(pBuffer);
 
-    if (link_len < MXSMONGO_HEADER_LEN)
+    if (link_len < mongo::HEADER_LEN)
     {
         pBuffer = gwbuf_make_contiguous(pBuffer);
     }
 
-    mongoc_rpc_header_t* pHeader = reinterpret_cast<mongoc_rpc_header_t*>(gwbuf_link_data(pBuffer));
+    mongo::HEADER* pHeader = reinterpret_cast<mongo::HEADER*>(gwbuf_link_data(pBuffer));
 
     int buffer_len = gwbuf_length(pBuffer);
     if (buffer_len >= pHeader->msg_len)
@@ -252,7 +253,7 @@ GWBUF* ClientConnection::handle_one_packet(GWBUF* pPacket)
     if (ready)
     {
         mxb_assert(gwbuf_is_contiguous(pPacket));
-        mxb_assert(gwbuf_length(pPacket) >= MXSMONGO_HEADER_LEN);
+        mxb_assert(gwbuf_length(pPacket) >= mongo::HEADER_LEN);
 
         pResponse = m_mongo.handle_request(pPacket);
     }

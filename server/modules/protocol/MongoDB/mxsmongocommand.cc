@@ -221,10 +221,10 @@ GWBUF* Command::create_hard_error(const std::string& message, int code) const
 //static
 void Command::check_write_batch_size(int size)
 {
-    if (size < 1 || size > MXSMONGO_MAX_WRITE_BATCH_SIZE)
+    if (size < 1 || size > mongo::MAX_WRITE_BATCH_SIZE)
     {
         stringstream ss;
-        ss << "Write batch sizes must be between 1 and " << MXSMONGO_MAX_WRITE_BATCH_SIZE
+        ss << "Write batch sizes must be between 1 and " << mongo::MAX_WRITE_BATCH_SIZE
            << ". Got " << size << " operations.";
         throw mxsmongo::SoftError(ss.str(), mxsmongo::error::INVALID_LENGTH);
     }
@@ -450,19 +450,19 @@ pair<GWBUF*, uint8_t*> Command::create_reply_response_buffer(size_t size_of_docu
     int32_t starting_from = 0;
     int32_t number_returned = nDocuments;
 
-    size_t response_size = MXSMONGO_HEADER_LEN
+    size_t response_size = mongo::HEADER_LEN
         + sizeof(response_flags) + sizeof(cursor_id) + sizeof(starting_from) + sizeof(number_returned)
         + size_of_documents;
 
     GWBUF* pResponse = gwbuf_alloc(response_size);
 
-    auto* pRes_hdr = reinterpret_cast<mongoc_rpc_header_t*>(GWBUF_DATA(pResponse));
+    auto* pRes_hdr = reinterpret_cast<mongo::HEADER*>(GWBUF_DATA(pResponse));
     pRes_hdr->msg_len = response_size;
     pRes_hdr->request_id = m_database.context().next_request_id();
     pRes_hdr->response_to = m_req.request_id();
     pRes_hdr->opcode = MONGOC_OPCODE_REPLY;
 
-    uint8_t* pData = GWBUF_DATA(pResponse) + MXSMONGO_HEADER_LEN;
+    uint8_t* pData = GWBUF_DATA(pResponse) + mongo::HEADER_LEN;
 
     pData += set_byte4(pData, response_flags);
     pData += set_byte8(pData, cursor_id);
@@ -518,18 +518,18 @@ GWBUF* Command::create_msg_response(const bsoncxx::document::value& doc) const
     uint32_t doc_length = doc.view().length();
     uint32_t checksum = 0;
 
-    size_t response_size = MXSMONGO_HEADER_LEN
+    size_t response_size = mongo::HEADER_LEN
         + sizeof(flag_bits) + sizeof(kind) + doc_length; // + sizeof(checksum);
 
     GWBUF* pResponse = gwbuf_alloc(response_size);
 
-    auto* pRes_hdr = reinterpret_cast<mongoc_rpc_header_t*>(GWBUF_DATA(pResponse));
+    auto* pRes_hdr = reinterpret_cast<mongo::HEADER*>(GWBUF_DATA(pResponse));
     pRes_hdr->msg_len = response_size;
     pRes_hdr->request_id = m_database.context().next_request_id();
     pRes_hdr->response_to = m_req.request_id();
     pRes_hdr->opcode = MONGOC_OPCODE_MSG;
 
-    uint8_t* pData = GWBUF_DATA(pResponse) + MXSMONGO_HEADER_LEN;
+    uint8_t* pData = GWBUF_DATA(pResponse) + mongo::HEADER_LEN;
 
     pData += set_byte4(pData, flag_bits);
 

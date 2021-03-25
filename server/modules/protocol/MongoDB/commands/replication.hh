@@ -37,14 +37,14 @@ public:
 
         doc.append(kvp("isMaster", true));
         doc.append(kvp("topologyVersion", mxsmongo::topology_version()));
-        doc.append(kvp("maxBsonObjectSize", MXSMONGO_MAX_BSON_OBJECT_SIZE));
-        doc.append(kvp("maxMessageSizeBytes", MXSMONGO_MAX_MESSAGE_SIZE_BYTES));
-        doc.append(kvp("maxWriteBatchSize", MXSMONGO_MAX_WRITE_BATCH_SIZE));
+        doc.append(kvp("maxBsonObjectSize", mongo::MAX_BSON_OBJECT_SIZE));
+        doc.append(kvp("maxMessageSizeBytes", mongo::MAX_MSG_SIZE));
+        doc.append(kvp("maxWriteBatchSize", mongo::MAX_WRITE_BATCH_SIZE));
         doc.append(kvp("localTime", bsoncxx::types::b_date(std::chrono::system_clock::now())));
         doc.append(kvp("logicalSessionTimeoutMinutes", 30));
         doc.append(kvp("connectionId", m_database.context().connection_id()));
-        doc.append(kvp("minWireVersion", MXSMONGO_MIN_WIRE_VERSION));
-        doc.append(kvp("maxWireVersion", MXSMONGO_MAX_WIRE_VERSION));
+        doc.append(kvp("minWireVersion", MIN_WIRE_VERSION));
+        doc.append(kvp("maxWireVersion", MAX_WIRE_VERSION));
         doc.append(kvp("readOnly", false));
         doc.append(kvp("ok", 1));
 

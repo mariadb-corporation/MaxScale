@@ -18,52 +18,48 @@
 #include <deque>
 #include <sstream>
 #include <stdexcept>
-
 #include <bsoncxx/json.hpp>
-// Claim we are part of Mongo, so that we can include internal headers.
-#define MONGOC_COMPILATION
-// libmongoc is C and they use 'new' and 'delete' both as names of fields
-// in structures and as arguments in function prototypes. So we redefine
-// them temporarily.
-#define new new_arg
-#define delete delete_arg
-#include <mongoc-flags.h>
-#include <mongoc-flags-private.h>
-#include <mongoc-rpc-private.h>
-#include <mongoc-server-description-private.h>
-#undef new
-#undef delete
-
-#include <mongoc/mongoc-opcode.h>
+#include <mongoc/mongoc.h>
 #include <maxscale/buffer.hh>
 #include <maxscale/protocol2.hh>
 #include <maxscale/target.hh>
 
 class DCB;
 
-const int MXSMONGO_HEADER_LEN       = sizeof(mongoc_rpc_header_t);
-const int MXSMONGO_QUERY_HEADER_LEN = sizeof(mongoc_rpc_query_t);
-
-// The Mongo version we claim to be.
-const int MXSMONGO_VERSION_MAJOR = 4;
-const int MXSMONGO_VERSION_MINOR = 4;
-const int MXSMONGO_VERSION_PATCH = 1;
-
-const char* const MXSMONGO_VERSION = "4.4.1";
-
-// See mongo: src/mongo/db/wire_version.h, 6 is the version that uses OP_MSG messages.
-const int MXSMONGO_MIN_WIRE_VERSION = 6;
-const int MXSMONGO_MAX_WIRE_VERSION = 6;
-
-// Defaults of Mongo server.
-const int MXSMONGO_MAX_BSON_OBJECT_SIZE   = 16 * 1024 * 1024;
-const int MXSMONGO_MAX_MESSAGE_SIZE_BYTES = 48 * 1000* 1000;
-const int MXSMONGO_MAX_WRITE_BATCH_SIZE   = 100000;
-
 class Config;
 
 namespace mxsmongo
 {
+
+namespace mongo
+{
+
+struct HEADER
+{
+    int32_t msg_len;
+    int32_t request_id;
+    int32_t response_to;
+    int32_t opcode;
+};
+
+const int HEADER_LEN = sizeof(HEADER);
+
+const int MAX_BSON_OBJECT_SIZE = 16 * 1024 * 1024;
+const int MAX_MSG_SIZE         = 48 * 1000* 1000;
+const int MAX_WRITE_BATCH_SIZE = 100000;
+
+}
+
+// The Mongo version we claim to be.
+const int MONGO_VERSION_MAJOR = 4;
+const int MONGO_VERSION_MINOR = 4;
+const int MONGO_VERSION_PATCH = 1;
+
+const char* const MONGO_ZVERSION = "4.4.1";
+
+// See mongo: src/mongo/db/wire_version.h, 6 is the version that uses OP_MSG messages.
+const int MIN_WIRE_VERSION = 6;
+const int MAX_WIRE_VERSION = 6;
 
 bsoncxx::document::value& topology_version();
 
@@ -257,7 +253,7 @@ public:
 
     Packet(const uint8_t* pData, const uint8_t* pEnd)
         : m_pEnd(pEnd)
-        , m_pHeader(reinterpret_cast<const mongoc_rpc_header_t*>(pData))
+        , m_pHeader(reinterpret_cast<const mongo::HEADER*>(pData))
     {
     }
 
@@ -315,8 +311,8 @@ public:
     }
 
 protected:
-    const uint8_t*             m_pEnd;
-    const mongoc_rpc_header_t* m_pHeader;
+    const uint8_t*       m_pEnd;
+    const mongo::HEADER* m_pHeader;
 };
 
 class Query final : public Packet
@@ -327,7 +323,7 @@ public:
     {
         mxb_assert(opcode() == MONGOC_OPCODE_QUERY);
 
-        const uint8_t* pData = reinterpret_cast<const uint8_t*>(m_pHeader) + sizeof(mongoc_rpc_header_t);
+        const uint8_t* pData = reinterpret_cast<const uint8_t*>(m_pHeader) + sizeof(mongo::HEADER);
 
         pData += mxsmongo::get_byte4(pData, &m_flags);
         pData += mxsmongo::get_zstring(pData, &m_zCollection);
@@ -432,7 +428,7 @@ public:
     {
         mxb_assert(opcode() == MONGOC_OPCODE_REPLY);
 
-        const uint8_t* pData = reinterpret_cast<const uint8_t*>(m_pHeader) + sizeof(mongoc_rpc_header_t);
+        const uint8_t* pData = reinterpret_cast<const uint8_t*>(m_pHeader) + sizeof(mongo::HEADER);
 
         pData += mxsmongo::get_byte4(pData, &m_flags);
         pData += mxsmongo::get_byte8(pData, &m_cursor_id);
@@ -482,6 +478,14 @@ protected:
 class Msg final : public Packet
 {
 public:
+    enum
+    {
+        NONE             = 0,
+        CHECKSUM_PRESENT = 1 << 0,
+        MORE_TO_COME     = 1 << 1,
+        EXHAUST_ALLOWED  = 1 << 16
+    };
+
     using DocumentVector = std::vector<bsoncxx::document::view>;
     using DocumentArguments = std::unordered_map<std::string, DocumentVector>;
 
@@ -490,7 +494,7 @@ public:
     {
         mxb_assert(opcode() == MONGOC_OPCODE_MSG);
 
-        const uint8_t* pData = reinterpret_cast<const uint8_t*>(m_pHeader) + sizeof(mongoc_rpc_header_t);
+        const uint8_t* pData = reinterpret_cast<const uint8_t*>(m_pHeader) + sizeof(mongo::HEADER);
 
         pData += mxsmongo::get_byte4(pData, &m_flags);
 
@@ -613,17 +617,17 @@ public:
 
     bool checksum_present() const
     {
-        return (m_flags & MONGOC_MSG_CHECKSUM_PRESENT) ? true : false;
+        return (m_flags & CHECKSUM_PRESENT) ? true : false;
     }
 
     bool exhaust_allowed() const
     {
-        return (m_flags & MONGOC_MSG_EXHAUST_ALLOWED) ? true : false;
+        return (m_flags & EXHAUST_ALLOWED) ? true : false;
     }
 
     bool more_to_come() const
     {
-        return (m_flags & MONGOC_MSG_MORE_TO_COME) ? true : false;
+        return (m_flags & MORE_TO_COME) ? true : false;
     }
 
     const bsoncxx::document::view& document() const

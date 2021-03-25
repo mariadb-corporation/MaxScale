@@ -38,9 +38,9 @@ public:
         DocumentBuilder doc;
 
         ArrayBuilder versionArray;
-        versionArray.append(MXSMONGO_VERSION_MAJOR);
-        versionArray.append(MXSMONGO_VERSION_MINOR);
-        versionArray.append(MXSMONGO_VERSION_PATCH);
+        versionArray.append(MONGO_VERSION_MAJOR);
+        versionArray.append(MONGO_VERSION_MINOR);
+        versionArray.append(MONGO_VERSION_PATCH);
         versionArray.append(0);
 
         ArrayBuilder storageEngines;
@@ -57,12 +57,12 @@ public:
         // Order the same as that in the documentation.
         doc.append(kvp("gitVersion", MAXSCALE_COMMIT));
         doc.append(kvp("versionArray", versionArray.extract()));
-        doc.append(kvp("version", MXSMONGO_VERSION));
+        doc.append(kvp("version", MONGO_ZVERSION));
         doc.append(kvp("storageEngines", storageEngines.extract()));
         doc.append(kvp("javascriptEngine", "mozjs")); // We lie
         doc.append(kvp("bits", 64));
         doc.append(kvp("debug", debug));
-        doc.append(kvp("maxBsonObjectSize", MXSMONGO_MAX_BSON_OBJECT_SIZE));
+        doc.append(kvp("maxBsonObjectSize", mongo::MAX_BSON_OBJECT_SIZE));
         doc.append(kvp("opensll", openssl.extract()));
         doc.append(kvp("modules", modules.extract()));
         doc.append(kvp("ok", 1));
