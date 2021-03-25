@@ -100,18 +100,6 @@ public:
     void print_env();
 
     /**
-     * @brief find_master Tries to find Master node
-     * @return Index of Master node
-     */
-    int find_master();
-    /**
-     * @brief change_master set a new master node for Master/Slave setup
-     * @param NewMaster index of new Master node
-     * @param OldMaster index of current Master node
-     */
-    void change_master(int NewMaster, int OldMaster);
-
-    /**
      * @brief stop_nodes stops mysqld on all nodes
      * @return  0 in case of success
      */
@@ -140,10 +128,11 @@ public:
     int cleanup_db_nodes();
 
     /**
-     * @brief configures nodes and starts Master/Slave replication
-     * @return  0 in case of success
+     * Start replication in manner relevant to the cluster.
+     *
+     * @return  0 on success
      */
-    virtual int start_replication();
+    virtual int start_replication() = 0;
 
     // Create the default users used by all tests
     void create_users(int node);
@@ -231,25 +220,7 @@ public:
      * @param master Index of master node
      * @return 0 if everything is ok
      */
-    virtual int check_replication();
-
-    /**
-     * @brief executes 'CHANGE MASTER TO ..' and 'START SLAVE'
-     * @param MYSQL conn struct of slave node
-     * @param master_host IP address of master node
-     * @param master_port port of master node
-     * @param log_file name of log file
-     * @param log_pos initial position
-     * @return 0 if everything is ok
-     */
-    int set_slave(MYSQL* conn, const char* master_host, int master_port,
-                  const char* log_file, const char* log_pos);
-
-    /**
-     * @brief Creates 'repl' user on all nodes
-     * @return 0 if everything is ok
-     */
-    int set_repl_user();
+    virtual int check_replication() = 0;
 
     /**
      * @brief Get the server_id of the node
@@ -325,7 +296,7 @@ public:
      * Only works with master-slave replication and should not be used with Galera clusters.
      * The function expects that the first node, @c nodes[0], is the master.
      */
-    virtual void sync_slaves(int node = 0);
+    virtual void sync_slaves(int node = 0) = 0;
 
     /**
      * @brief Close all connections to this node
@@ -450,6 +421,8 @@ public:
      */
     virtual const std::string& type_string() const = 0;
 
+    bool setup(const mxt::NetworkConfig& nwconfig);
+
 protected:
     /**
      * Constructor
@@ -460,8 +433,6 @@ protected:
      */
     MariaDBCluster(mxt::SharedData* shared, const std::string& nwconf_prefix,
                    const std::string& cnf_server_prefix);
-
-    bool setup(const mxt::NetworkConfig& nwconfig);
 
     /**
      * @returns SELECT that returns anonymous users in such a way that each returned row
@@ -484,8 +455,4 @@ private:
     /**
      * Command to remove all data files and re-install DB with mysql_install_db */
     std::string m_cleanup_db_command[N_MAX];
-
-    bool check_master_node(MYSQL* conn);
-    bool bad_slave_thread_status(MYSQL* conn, const char* field, int node);
-    bool wrong_replication_type(MYSQL* conn);
 };

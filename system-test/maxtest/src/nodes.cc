@@ -188,7 +188,7 @@ int Nodes::ssh_node(int node, const string& ssh, bool sudo)
     return m_vms[node].run_cmd(ssh, sudo ? CmdPriv::SUDO : CmdPriv::NORMAL);
 }
 
-bool Nodes::setup()
+bool Nodes::init_ssh_masters()
 {
     std::vector<std::future<bool>> futures;
     futures.reserve(m_vms.size());

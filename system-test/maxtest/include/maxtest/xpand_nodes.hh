@@ -32,27 +32,19 @@ public:
     {
     }
 
-    bool setup(const mxt::NetworkConfig& nwconfig);
-
     const std::string& type_string() const override;
 
     /**
      * @brief start_cluster Intstalls Xpand on all nodes, configure license, form cluster
      * @return 0 in case of success
      */
-    int start_replication();
-
-    /**
-     * @brief cnf_servers Generate Xpand servers description for maxscale.cnf
-     * @return text for maxscale.cnf
-     */
-    std::string cnf_servers();
+    int start_replication() override;
 
     /**
      * @brief check_replication Checks if Xpand Cluster is up and running
      * @return 0 if Xpand Cluster is ok
      */
-    int check_replication();
+    int check_replication() override;
 
     /**
      * @brief perpare_server configurs Xpand on the node
@@ -63,6 +55,10 @@ public:
 
     std::string block_command(int node) const override;
     std::string unblock_command(int node) const override;
+
+    void sync_slaves(int node = 0) override
+    {
+    }
 
 private:
     std::string anonymous_users_query() const override;

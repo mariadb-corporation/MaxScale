@@ -194,7 +194,7 @@ protected:
     const char* access_sudo(int i = 0) const;
     const char* sshkey(int i = 0) const;
 
-    virtual bool setup();
+    virtual bool init_ssh_masters();
 
     mxt::VMNode&       node(int i);
     const mxt::VMNode& node(int i) const;

@@ -41,7 +41,7 @@ bool Maxscales::setup(const mxt::NetworkConfig& nwconfig)
         node(0).set_local();
     }
 
-    if (Nodes::setup())
+    if (Nodes::init_ssh_masters())
     {
         if (this->m_use_valgrind)
         {

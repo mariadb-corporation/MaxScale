@@ -25,12 +25,7 @@ namespace
 const string type_galera = "galera";
 }
 
-bool GaleraCluster::setup(const mxt::NetworkConfig& nwconfig)
-{
-    return MariaDBCluster::setup(nwconfig);
-}
-
-int GaleraCluster::start_galera()
+int GaleraCluster::start_replication()
 {
     bool old_verbose = verbose();
     int local_result = 0;
@@ -100,7 +95,7 @@ int GaleraCluster::start_galera()
     return local_result;
 }
 
-int GaleraCluster::check_galera()
+int GaleraCluster::check_replication()
 {
     int res = 1;
 

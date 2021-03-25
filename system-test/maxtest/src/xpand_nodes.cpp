@@ -217,23 +217,6 @@ int XpandCluster::start_replication()
     return rv;
 }
 
-std::string XpandCluster::cnf_servers()
-{
-    std::string s;
-    for (int i = 0; i < N; i++)
-    {
-        s += std::string("\\n[")
-                + m_cnf_server_name
-                + std::to_string(i + 1)
-                + std::string("]\\ntype=server\\naddress=")
-                + std::string(ip_private(i))
-                + std::string("\\nport=")
-                + std::to_string(port[i])
-                + std::string("\\nprotocol=MySQLBackend\\n");
-    }
-    return s;
-}
-
 int XpandCluster::check_replication()
 {
     int res = 0;
@@ -284,11 +267,6 @@ std::string XpandCluster::unblock_command(int node) const
     command += "ip6tables -I INPUT -p tcp --dport 3581 -j ACCEPT";
 
     return command;
-}
-
-bool XpandCluster::setup(const mxt::NetworkConfig& nwconfig)
-{
-    return MariaDBCluster::setup(nwconfig);
 }
 
 const std::string& XpandCluster::type_string() const
