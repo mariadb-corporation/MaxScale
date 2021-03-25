@@ -43,12 +43,6 @@ public:
     int start_replication();
 
     /**
-     * @brief cnf_servers Generate Xpand servers description for maxscale.cnf
-     * @return text for maxscale.cnf
-     */
-    std::string cnf_servers();
-
-    /**
      * @brief check_replication Checks if Xpand Cluster is up and running
      * @return 0 if Xpand Cluster is ok
      */
