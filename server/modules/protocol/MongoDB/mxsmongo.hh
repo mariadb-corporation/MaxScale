@@ -207,6 +207,7 @@ const char INSERT[]                  = "insert";
 const char ISMASTER[]                = "isMaster";
 const char LIMIT[]                   = "limit";
 const char MULTI[]                   = "multi";
+const char ORDERED[]                 = "ordered";
 const char PROJECTION[]              = "projection";
 const char Q[]                       = "q";
 const char REPLSETGETSTATUS[]        = "replSetGetStatus";

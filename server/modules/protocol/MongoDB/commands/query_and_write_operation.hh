@@ -174,6 +174,23 @@ public:
 
     GWBUF* execute() override
     {
+        auto ordered = m_doc[mxsmongo::key::ORDERED];
+
+        if (ordered)
+        {
+            if (ordered.type() != bsoncxx::type::k_bool)
+            {
+                stringstream ss;
+                ss << "BSON field 'delete.ordered' is the wrong type '"
+                   << bsoncxx::to_string(ordered.type())
+                   << "', expected type 'bool'";
+
+                throw SoftError(ss.str(), error::TYPE_MISMATCH);
+            }
+
+            m_ordered = ordered.get_bool();
+        }
+
         auto it = m_arguments.find(mxsmongo::key::DELETES);
 
         if (it != m_arguments.end())
@@ -238,6 +255,8 @@ public:
 
         ComResponse response(GWBUF_DATA(&mariadb_response));
 
+        bool abort = false;
+
         switch (response.type())
         {
         case ComResponse::OK_PACKET:
@@ -245,6 +264,11 @@ public:
             break;
 
         case ComResponse::ERR_PACKET:
+            if (m_ordered)
+            {
+                abort = true;
+            }
+
             add_error(m_write_errors, ComERR(response), m_it - m_statements.begin());
             break;
 
@@ -257,7 +281,7 @@ public:
 
         State rv = BUSY;
 
-        if (m_it == m_statements.end())
+        if (m_it == m_statements.end() || abort)
         {
             DocumentBuilder doc;
 
@@ -352,6 +376,7 @@ private:
     }
 
 private:
+    bool                           m_ordered { true };
     vector<string>                 m_statements;
     vector<string>::iterator       m_it;
     int32_t                        m_n { 0 };
