@@ -56,10 +56,18 @@ int32_t MirrorSession::routeQuery(GWBUF* pPacket)
     {
         m_query = mxs::extract_sql(pPacket);
         m_command = GWBUF_DATA(pPacket)[4];
+        bool expecting_response = mxs_mysql_command_will_respond(m_command);
 
         for (const auto& a : m_backends)
         {
-            if (a->in_use() && a->write(gwbuf_clone(pPacket)))
+            auto type = mxs::Backend::NO_RESPONSE;
+
+            if (expecting_response)
+            {
+                type = a.get() == m_main ? mxs::Backend::EXPECT_RESPONSE : mxs::Backend::IGNORE_RESPONSE;
+            }
+
+            if (a->in_use() && a->write(gwbuf_clone(pPacket), type))
             {
                 if (a.get() == m_main)
                 {
@@ -67,7 +75,7 @@ int32_t MirrorSession::routeQuery(GWBUF* pPacket)
                     rc = 1;
                 }
 
-                if (mxs_mysql_command_will_respond(GWBUF_DATA(pPacket)[4]))
+                if (expecting_response)
                 {
                     ++m_responses;
                 }
