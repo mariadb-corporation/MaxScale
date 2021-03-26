@@ -47,6 +47,11 @@ public:
         return m_config;
     }
 
+    const Config& config() const
+    {
+        return m_config;
+    }
+
     bool post_configure();
 
 private:

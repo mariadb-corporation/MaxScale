@@ -61,6 +61,14 @@ cfg::ParamString s_kafka_broker(
 cfg::ParamString s_kafka_topic(
     &s_spec, "kafka_topic", "Kafka topic where data is exported", "");
 
+cfg::ParamEnum<ErrorAction> s_on_error(
+    &s_spec, "on_error", "What to do when a non-main connection fails",
+    {
+        {ErrorAction::ERRACT_IGNORE, "ignore"},
+        {ErrorAction::ERRACT_CLOSE, "close"},
+    },
+    ErrorAction::ERRACT_IGNORE);
+
 template<class Params>
 bool MirrorSpec::do_post_validate(Params params) const
 {
@@ -108,6 +116,7 @@ Config::Config(const char* name, Mirror* instance)
     add_native(&Config::file, &s_file);
     add_native(&Config::kafka_broker, &s_kafka_broker);
     add_native(&Config::kafka_topic, &s_kafka_topic);
+    add_native(&Config::on_error, &s_on_error);
 }
 
 bool Config::post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params)

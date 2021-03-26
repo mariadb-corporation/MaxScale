@@ -24,6 +24,12 @@ enum ExporterType
     EXPORT_KAFKA,
 };
 
+enum ErrorAction
+{
+    ERRACT_IGNORE,
+    ERRACT_CLOSE,
+};
+
 class Mirror;
 
 struct Config : public mxs::config::Configuration
@@ -35,6 +41,7 @@ struct Config : public mxs::config::Configuration
     std::string  file;
     std::string  kafka_broker;
     std::string  kafka_topic;
+    ErrorAction  on_error;
 
     static mxs::config::Specification* spec();
 
