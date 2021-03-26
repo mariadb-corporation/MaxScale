@@ -92,6 +92,41 @@ The kafka topic where the metrics are sent.
 
 This is a mandatory parameter when configured with `exporter=kafka`.
 
+### `on_error`
+
+What to do when a backend network connection fails. Accepted values are:
+
+* `ignore`
+
+  * Ignore the failing backend if it's not the backend that the `main` parameter
+    points to.
+
+* `close`
+
+  * Close the client connection when the first backend fails.
+
+The default value is `ignore`.
+
+This parameter was added in MaxScale 2.6.0. Older versions always ignored
+failing backends.
+
+### `report`
+
+When to report the result of the queries. Accepted values are:
+
+* `always`
+
+ * Always report the result for all queries.
+
+* `on_conflict`
+
+  * Only report when one or more backends returns a conflicting result.
+
+The default value is `always`.
+
+This parameter was added in MaxScale 2.6.0. Older versions always reported the
+result.
+
 ## Example Configuration
 
 ```
