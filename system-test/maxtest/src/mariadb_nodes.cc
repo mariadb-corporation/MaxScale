@@ -184,7 +184,8 @@ int MariaDBCluster::read_nodes_info(const mxt::NetworkConfig& nwconfig)
         string node_name = mxb::string_printf("%s_%03d", prefixc, i);
         if (add_node(nwconfig, node_name))
         {
-            auto srv = std::make_unique<mxt::MariaDBServer>(*node(i), *this, i);
+            string cnf_name = m_cnf_server_name + std::to_string(i + 1);
+            auto srv = std::make_unique<mxt::MariaDBServer>(cnf_name, *node(i), *this, i);
             string key_port = node_name + "_port";
             port[i] = readenv_int(key_port.c_str(), 3306);
 
@@ -1041,8 +1042,10 @@ mxt::MariaDBServer* MariaDBCluster::backend(int i)
 
 namespace maxtest
 {
-maxtest::MariaDBServer::MariaDBServer(VMNode& vm, MariaDBCluster& cluster, int ind)
-    : m_vm(vm)
+maxtest::MariaDBServer::MariaDBServer(const string& cnf_name, VMNode& vm, MariaDBCluster& cluster,
+                                      int ind)
+    : m_cnf_name(cnf_name)
+    , m_vm(vm)
     , m_cluster(cluster)
     , m_ind(ind)
 {
@@ -1112,5 +1115,10 @@ std::string MariaDBServer::version_as_string()
     uint32_t minor = (v - major * 10000) / 100;
     uint32_t patch = v - major * 10000 - minor * 100;
     return mxb::string_printf("%i.%i.%i", major, minor, patch);
+}
+
+const string& MariaDBServer::name() const
+{
+    return m_cnf_name;
 }
 }

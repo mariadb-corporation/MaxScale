@@ -23,6 +23,7 @@ public:
 
     void log_msgf(const char* format, ...) __attribute__ ((format(printf, 2, 3)));
     void log_msg(const char* format, va_list args);
+    void log_msg(const std::string& str);
     void reset_timer();
 
     int m_n_fails {0};      /**< Number of test fails. TODO: private */

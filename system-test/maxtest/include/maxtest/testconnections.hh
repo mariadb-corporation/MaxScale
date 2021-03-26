@@ -393,6 +393,13 @@ public:
         return m_mdbci_config_name;
     }
 
+    /**
+     * Get the master server as seen by MaxScale monitor. Only considers the Master-Slave-cluster.
+     *
+     * @return Master server, or null if none.
+     */
+    mxt::MariaDBServer* get_repl_master();
+
     void set_verbose(bool val);
     bool verbose() const;
     void write_node_env_vars();

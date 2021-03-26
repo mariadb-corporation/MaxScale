@@ -292,13 +292,14 @@ class TestLogger;
 struct ServerInfo
 {
     using bitfield = uint32_t;
-    static constexpr bitfield DOWN = 0;
+    static constexpr bitfield UNKNOWN = 0;
     static constexpr bitfield RUNNING = (1 << 0);
     static constexpr bitfield MASTER = (1 << 1);
     static constexpr bitfield SLAVE = (1 << 2);
     static constexpr bitfield RELAY = (1 << 3);
     static constexpr bitfield SERVER_SLAVE_OF_EXT_MASTER = (1 << 10);
     static constexpr bitfield BLR = (1 << 12);
+    static constexpr bitfield DOWN = (1 << 13);
 
     static constexpr bitfield master_st = MASTER | RUNNING;
     static constexpr bitfield slave_st = SLAVE | RUNNING;
@@ -310,13 +311,15 @@ struct ServerInfo
     static std::string status_to_string(bitfield status);
     std::string        status_to_string() const;
     void               status_from_string(const std::string& source);
+    std::string        to_string_short() const;
 
     std::string name {"<unknown>"}; /**< Server name */
-    bitfield    status {0};         /**< Status bitfield */
+    bitfield    status {UNKNOWN};   /**< Status bitfield */
     int64_t     server_id {SRV_ID_NONE};
     int64_t     master_group {GROUP_NONE};
     int64_t     rlag {RLAG_NONE};
     int64_t     pool_conns {0};
+    std::string gtid;
 
     struct SlaveConnection
     {
@@ -354,6 +357,7 @@ public:
     void add(ServerInfo&& info);
 
     const ServerInfo& get(size_t i) const;
+    ServerInfo        get(const std::string& cnf_name) const;
     size_t            size() const;
 
     /**
@@ -374,6 +378,13 @@ public:
 
     void check_master_groups(const std::vector<int>& expected_groups);
     void check_pool_connections(const std::vector<int>& expected_conns);
+
+    void print();
+
+    /**
+     * Get starting server states for a master-slave cluster: master + 3 slaves.
+     */
+    static const std::vector<ServerInfo::bitfield>& default_repl_states();
 
 private:
     std::vector<ServerInfo> m_servers;

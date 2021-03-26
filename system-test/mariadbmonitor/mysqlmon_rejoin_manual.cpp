@@ -23,12 +23,12 @@ int main(int argc, char** argv)
     interactive = strcmp(argv[argc - 1], "interactive") == 0;
     MariaDBCluster::require_gtid(true);
     TestConnections test(argc, argv);
-    int ec;
     MYSQL* maxconn = test.maxscales->open_rwsplit_connection(0);
     // Set up test table
     basic_test(test);
     // Delete binlogs to sync gtid:s
     delete_slave_binlogs(test);
+    auto& mxs = test.maxscale();
     char result_tmp[bufsize];
     // Advance gtid:s a bit to so gtid variables are updated.
     generate_traffic_and_check(test, maxconn, 10);
@@ -37,9 +37,16 @@ int main(int argc, char** argv)
     print_gtids(test);
     get_input();
 
+    mxs.check_servers_status(mxt::ServersInfo::default_repl_states());
+    if (test.ok())
+    {
+        return test.global_result;
+    }
     cout << "Stopping master and waiting for failover. Check that another server is promoted." << endl;
-    const int old_master_id = get_master_server_id(test);   // Read master id now before shutdown.
-    const int master_index = test.repl->master;
+    auto old_master = test.get_repl_master();
+
+    const int old_master_id = old_master->status().server_id;   // Read master id now before shutdown.
+    const int master_index = old_master_id - 1;
     test.repl->stop_node(master_index);
 
     // Wait until failover is performed
@@ -122,7 +129,8 @@ int main(int argc, char** argv)
             if (find_field(conn, sstatus_query.c_str(), "Master_Host", result) == 0)
             {
                 test.expect(strcmp(result, test.repl->ip_private(0)) == 0,
-                        "server3 did not rejoin the cluster (%s != %s).", result, test.repl->ip_private(0));
+                            "server3 did not rejoin the cluster (%s != %s).", result,
+                            test.repl->ip_private(0));
             }
             else
             {

@@ -511,7 +511,7 @@ void ReplicationCluster::replicate_from(int slave, const std::string& host, uint
     if (verbose())
     {
         std::cout << "Server " << slave + 1
-                  << " starting to replicate from server " << master + 1 << std::endl;
+                  << " starting to replicate from " << host << ":" << port << std::endl;
         std::cout << "Query is '" << change_master.str() << "'" << std::endl;
     }
 
