@@ -75,6 +75,7 @@ protected:
 
     GWBUF* translate_resultset(std::vector<std::string>& extractions, GWBUF* pMariadb_response);
 
+    void add_error(bsoncxx::builder::basic::array& builder, const ComERR& err, int index);
     void add_error(bsoncxx::builder::basic::document& builder, const ComERR& err);
 
     Database&               m_database;

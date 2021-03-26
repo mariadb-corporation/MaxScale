@@ -174,18 +174,17 @@ public:
 
     GWBUF* execute() override
     {
-        stringstream sql;
-        sql << "DELETE FROM " << get_table(mxsmongo::key::DELETE) << " ";
-
         auto it = m_arguments.find(mxsmongo::key::DELETES);
 
         if (it != m_arguments.end())
         {
             const auto& deletes = it->second;
             check_write_batch_size(deletes.size());
-            mxb_assert(deletes.size() == 1);
 
-            sql << convert_document(deletes[0]);
+            for (auto doc : deletes)
+            {
+                m_statements.push_back(convert_document(doc));
+            }
         }
         else
         {
@@ -206,12 +205,28 @@ public:
             auto deletes = static_cast<bsoncxx::array::view>(element.get_array());
             auto nDeletes = std::distance(deletes.begin(), deletes.end());
             check_write_batch_size(nDeletes);
-            mxb_assert(nDeletes == 1); // TODO
 
-            sql << convert_document(deletes[0].get_document());
+            int i = 0;
+            for (auto element : deletes)
+            {
+                if (element.type() != bsoncxx::type::k_document)
+                {
+                    stringstream ss;
+                    ss << "BSON field 'delete.deletes."
+                       << i << "' is the wrong type '"
+                       << bsoncxx::to_string(element.type())
+                       << "', expected type 'object'";
+
+                    throw SoftError(ss.str(), error::TYPE_MISMATCH);
+                }
+
+                m_statements.push_back(convert_document(element.get_document()));
+            }
         }
 
-        send_downstream(sql.str());
+        m_it = m_statements.begin();
+
+        execute_one_statement();
 
         return nullptr;
     }
@@ -221,23 +236,16 @@ public:
         // TODO: Update will be needed when DEPRECATE_EOF it turned on.
         GWBUF* pResponse = nullptr;
 
-        DocumentBuilder doc;
-
         ComResponse response(GWBUF_DATA(&mariadb_response));
-
-        int32_t ok = response.is_ok() ? 1 : 0;
-        int32_t n = 0;
-
-        doc.append(kvp("ok", ok));
 
         switch (response.type())
         {
         case ComResponse::OK_PACKET:
-            n = ComOK(response).affected_rows();
+            m_n += ComOK(response).affected_rows();
             break;
 
         case ComResponse::ERR_PACKET:
-            add_error(doc, ComERR(response));
+            add_error(m_write_errors, ComERR(response), m_it - m_statements.begin());
             break;
 
         case ComResponse::LOCAL_INFILE_PACKET:
@@ -245,18 +253,51 @@ public:
             mxb_assert(!true);
         }
 
-        doc.append(kvp("n", n));
+        ++m_it;
 
-        pResponse = create_response(doc.extract());
+        State rv = BUSY;
+
+        if (m_it == m_statements.end())
+        {
+            DocumentBuilder doc;
+
+            auto write_errors = m_write_errors.extract();
+
+            int32_t ok = (m_n != 0 || write_errors.view().empty());
+
+            doc.append(kvp("ok", ok));
+            doc.append(kvp("n", m_n));
+
+            if (!write_errors.view().empty())
+            {
+                doc.append(kvp("writeErrors", write_errors));
+            }
+
+            pResponse = create_response(doc.extract());
+            rv = READY;
+        }
+        else
+        {
+            execute_one_statement();
+        }
 
         *ppResponse = pResponse;
-        return READY;
+        return rv;
     }
 
 private:
-    static string convert_document(const bsoncxx::document::view& doc)
+    void execute_one_statement()
+    {
+        mxb_assert(m_it != m_statements.end());
+
+        send_downstream(*m_it);
+    }
+
+    string convert_document(const bsoncxx::document::view& doc)
     {
         stringstream sql;
+
+        sql << "DELETE FROM " << get_table(mxsmongo::key::DELETE) << " ";
 
         auto q = doc["q"];
 
@@ -309,6 +350,12 @@ private:
 
         return sql.str();
     }
+
+private:
+    vector<string>                 m_statements;
+    vector<string>::iterator       m_it;
+    int32_t                        m_n { 0 };
+    bsoncxx::builder::basic::array m_write_errors;
 };
 
 
@@ -594,7 +641,7 @@ public:
         DocumentBuilder doc;
 
         int32_t ok = response.is_ok() ? 1 : 0;
-        int64_t n = response.is_ok() ? m_nDocuments : 0;
+        int32_t n = response.is_ok() ? m_nDocuments : 0;
 
         doc.append(kvp("ok", ok));
         doc.append(kvp("n", n));

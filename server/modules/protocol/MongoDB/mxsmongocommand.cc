@@ -408,36 +408,39 @@ GWBUF* Command::translate_resultset(vector<string>& extractions, GWBUF* pMariadb
     return pResponse;
 }
 
-void Command::add_error(bsoncxx::builder::basic::document& builder, const ComERR& err)
+void Command::add_error(bsoncxx::builder::basic::array& array, const ComERR& err, int index)
 {
     MXS_WARNING("Mongo request to backend failed: (%d), %s", err.code(), err.message().c_str());
 
-    bsoncxx::builder::basic::document mariadb_builder;
+    bsoncxx::builder::basic::document mariadb;
 
-    mariadb_builder.append(bsoncxx::builder::basic::kvp("code", err.code()));
-    mariadb_builder.append(bsoncxx::builder::basic::kvp("state", err.state()));
-    mariadb_builder.append(bsoncxx::builder::basic::kvp("message", err.message()));
-
-    builder.append(bsoncxx::builder::basic::kvp("mariadb", mariadb_builder.extract()));
+    mariadb.append(bsoncxx::builder::basic::kvp("code", err.code()));
+    mariadb.append(bsoncxx::builder::basic::kvp("state", err.state()));
+    mariadb.append(bsoncxx::builder::basic::kvp("message", err.message()));
 
     // TODO: Map MariaDB errors to something sensible from
     // TODO: https://github.com/mongodb/mongo/blob/master/src/mongo/base/error_codes.yml
 
     bsoncxx::builder::basic::array array_builder;
 
-    for (int64_t i = 0; i < 1; ++i) // TODO: With multiple updates/deletes object this must change.
-    {
-        bsoncxx::builder::basic::document error_builder;
+    bsoncxx::builder::basic::document error;
 
-        error_builder.append(bsoncxx::builder::basic::kvp("index", i));
-        int32_t code = error::from_mariadb_code(err.code());
-        error_builder.append(bsoncxx::builder::basic::kvp("code", code));
-        error_builder.append(bsoncxx::builder::basic::kvp("errmsg", err.message()));
+    error.append(bsoncxx::builder::basic::kvp("index", index));
+    int32_t code = error::from_mariadb_code(err.code());
+    error.append(bsoncxx::builder::basic::kvp("code", code));
+    error.append(bsoncxx::builder::basic::kvp("errmsg", err.message()));
+    error.append(bsoncxx::builder::basic::kvp("mariadb", mariadb.extract()));
 
-        array_builder.append(error_builder.extract());
-    }
+    array.append(error.extract());
+}
 
-    builder.append(bsoncxx::builder::basic::kvp("writeErrors", array_builder.extract()));
+void Command::add_error(bsoncxx::builder::basic::document& response, const ComERR& err)
+{
+    bsoncxx::builder::basic::array array;
+
+    add_error(array, err, 0);
+
+    response.append(bsoncxx::builder::basic::kvp("writeErrors", array.extract()));
 }
 
 pair<GWBUF*, uint8_t*> Command::create_reply_response_buffer(size_t size_of_documents, size_t nDocuments) const
