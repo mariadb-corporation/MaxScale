@@ -1,5 +1,7 @@
 # Named Server Filter
 
+[TOC]
+
 ## Overview
 
 The **namedserverfilter** is a MariaDB MaxScale filter module able to route

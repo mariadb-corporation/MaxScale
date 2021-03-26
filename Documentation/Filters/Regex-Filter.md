@@ -1,5 +1,7 @@
 # Regex Filter
 
+[TOC]
+
 ## Overview
 
 The Regex filter is a filter module for MariaDB MaxScale that is able to rewrite query content using regular expression matches and text substitution. It uses the PCRE2 syntax which differs from the POSIX regular expressions used in MariaDB MaxScale versions prior to 1.3.0.

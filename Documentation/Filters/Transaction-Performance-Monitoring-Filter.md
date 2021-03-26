@@ -1,5 +1,7 @@
 # Transaction Performance Monitoring Filter
 
+[TOC]
+
 ## Overview
 
 The Transaction Performance Monitoring (TPM) filter is a filter module for MaxScale

@@ -2,6 +2,8 @@
 
 This filter was introduced in MariaDB MaxScale 2.1.
 
+[TOC]
+
 ## Overview
 
 The Consistent Critical Read (CCR) filter allows consistent critical reads to be

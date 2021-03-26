@@ -2,6 +2,8 @@
 
 This filter was added in MariaDB MaxScale 2.3
 
+[TOC]
+
 ## Overview
 
 The throttle filter replaces and extends on the limit_queries functionality of

@@ -369,14 +369,7 @@ public:
 
     const char* error() const
     {
-        thread_local std::string my_err;
-
-        if (m_conn)
-        {
-            my_err = std::to_string(mysql_thread_id(m_conn)) + ": " + mysql_error(m_conn);
-        }
-
-        return my_err.c_str();
+        return mysql_error(m_conn);
     }
 
     bool change_user(std::string user, std::string pw, std::string db = "test")

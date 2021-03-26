@@ -2,6 +2,8 @@
 
 This filter was introduced in MariaDB MaxScale 2.1.
 
+[TOC]
+
 ## Overview
 The _insertstream_ filter converts bulk inserts into CSV data streams that are
 consumed by the backend server via the LOAD DATA LOCAL INFILE mechanism. This
