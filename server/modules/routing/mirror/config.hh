@@ -30,6 +30,12 @@ enum ErrorAction
     ERRACT_CLOSE,
 };
 
+enum ReportAction
+{
+    REPORT_ALWAYS,
+    REPORT_ON_CONFLICT,
+};
+
 class Mirror;
 
 struct Config : public mxs::config::Configuration
@@ -42,6 +48,7 @@ struct Config : public mxs::config::Configuration
     std::string  kafka_broker;
     std::string  kafka_topic;
     ErrorAction  on_error;
+    ReportAction report;
 
     static mxs::config::Specification* spec();
 

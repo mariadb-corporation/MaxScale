@@ -52,6 +52,7 @@ private:
     mxs::ReplyRoute         m_last_route;
 
     void route_queued_queries();
+    bool should_report() const;
     void generate_report();
     void finalize_reply();
 };

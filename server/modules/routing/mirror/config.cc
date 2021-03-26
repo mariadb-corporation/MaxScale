@@ -69,6 +69,14 @@ cfg::ParamEnum<ErrorAction> s_on_error(
     },
     ErrorAction::ERRACT_IGNORE);
 
+cfg::ParamEnum<ReportAction> s_report(
+    &s_spec, "report", "When to generate the report for an SQL command",
+    {
+        {ReportAction::REPORT_ALWAYS, "always"},
+        {ReportAction::REPORT_ON_CONFLICT, "on_conflict"},
+    },
+    ReportAction::REPORT_ALWAYS);
+
 template<class Params>
 bool MirrorSpec::do_post_validate(Params params) const
 {
@@ -117,6 +125,7 @@ Config::Config(const char* name, Mirror* instance)
     add_native(&Config::kafka_broker, &s_kafka_broker);
     add_native(&Config::kafka_topic, &s_kafka_topic);
     add_native(&Config::on_error, &s_on_error);
+    add_native(&Config::report, &s_report);
 }
 
 bool Config::post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params)

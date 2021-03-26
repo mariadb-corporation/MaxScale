@@ -192,36 +192,67 @@ bool MirrorSession::handleError(mxs::ErrorType type,
     return m_router->config().on_error == ErrorAction::ERRACT_IGNORE && backend != m_main;
 }
 
-void MirrorSession::generate_report()
+bool MirrorSession::should_report() const
 {
-    json_t* obj = json_object();
-    json_object_set_new(obj, "query", json_string(m_query.c_str()));
-    json_object_set_new(obj, "command", json_string(STRPACKETTYPE(m_command)));
-    json_object_set_new(obj, "session", json_integer(m_pSession->id()));
-    json_object_set_new(obj, "query_id", json_integer(++m_num_queries));
+    bool rval = true;
 
-    json_t* arr = json_array();
-
-    for (const auto& a : m_backends)
+    if (m_router->config().report == ReportAction::REPORT_ON_CONFLICT)
     {
-        if (a->in_use())
+        rval = false;
+        std::string checksum;
+
+        for (const auto& a : m_backends)
         {
-            const char* type = a->reply().error() ?
-                "error" : (a->reply().is_resultset() ? "resultset" : "ok");
-
-            json_t* o = json_object();
-            json_object_set_new(o, "target", json_string(a->name()));
-            json_object_set_new(o, "checksum", json_string(a->checksum().hex().c_str()));
-            json_object_set_new(o, "rows", json_integer(a->reply().rows_read()));
-            json_object_set_new(o, "warnings", json_integer(a->reply().num_warnings()));
-            json_object_set_new(o, "duration", json_integer(a->duration()));
-            json_object_set_new(o, "type", json_string(type));
-
-            json_array_append_new(arr, o);
+            if (a->in_use())
+            {
+                if (checksum.empty())
+                {
+                    checksum = a->checksum().hex();
+                }
+                else if (checksum != a->checksum().hex())
+                {
+                    rval = true;
+                }
+            }
         }
     }
 
-    json_object_set_new(obj, "results", arr);
+    return rval;
+}
 
-    m_router->ship(obj);
+void MirrorSession::generate_report()
+{
+    if (should_report())
+    {
+        json_t* obj = json_object();
+        json_object_set_new(obj, "query", json_string(m_query.c_str()));
+        json_object_set_new(obj, "command", json_string(STRPACKETTYPE(m_command)));
+        json_object_set_new(obj, "session", json_integer(m_pSession->id()));
+        json_object_set_new(obj, "query_id", json_integer(++m_num_queries));
+
+        json_t* arr = json_array();
+
+        for (const auto& a : m_backends)
+        {
+            if (a->in_use())
+            {
+                const char* type = a->reply().error() ?
+                    "error" : (a->reply().is_resultset() ? "resultset" : "ok");
+
+                json_t* o = json_object();
+                json_object_set_new(o, "target", json_string(a->name()));
+                json_object_set_new(o, "checksum", json_string(a->checksum().hex().c_str()));
+                json_object_set_new(o, "rows", json_integer(a->reply().rows_read()));
+                json_object_set_new(o, "warnings", json_integer(a->reply().num_warnings()));
+                json_object_set_new(o, "duration", json_integer(a->duration()));
+                json_object_set_new(o, "type", json_string(type));
+
+                json_array_append_new(arr, o);
+            }
+        }
+
+        json_object_set_new(obj, "results", arr);
+
+        m_router->ship(obj);
+    }
 }
