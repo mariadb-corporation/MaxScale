@@ -53,6 +53,8 @@ public:
     const Status&                 status() const;
     const std::string&            name() const;
 
+    VMNode& vm_node();
+
 private:
     Status m_status;
 
@@ -371,13 +373,14 @@ public:
     void reset_server_settings(int node);
 
     /**
-     * @brief prepare_server Initialize MariaDB setup (run mysql_install_db) and create test users
-     * Tries to detect Mysql 5.7 installation and disable 'validate_password' pluging
+     * Initialize MariaDB setup (run mysql_install_db) and create test users
+     *
      * @param i Node index
-     * @return 0 in case of success
+     * @return True on success
      */
-    virtual int prepare_server(int i);
-    int         prepare_servers();
+    virtual bool prepare_server(int i);
+
+    bool prepare_servers();
 
     /**
      * Static functions
