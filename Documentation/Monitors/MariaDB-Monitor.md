@@ -290,15 +290,33 @@ multiplying that by `failcount`:
 (monitor_interval + backend_connect_timeout) * failcount
 ```
 
+### `enforce_writable_master`
+
+This feature is disabled by default. If set to ON, the monitor attempts to
+disable the *read_only*-flag on the master when seen. The flag is
+checked every monitor tick. The monitor user requires the SUPER-privilege for
+this feature to work.
+
+Typically, the master server should never be in read-only-mode. Such a situation
+may arise due to misconfiguration or accident, or perhaps if MaxScale crashed
+during switchover.
+
+When this feature is enabled, setting the master manually to *read_only* will no
+longer cause the monitor to search for another master. The master will instead
+for a moment lose its [Master]-status (no writes), until the monitor again
+enables writes on the master. When starting from scratch, the monitor still
+prefers to select a writable server as master if possible.
+
 ### `enforce_read_only_slaves`
 
-This feature is disabled by default. If set to ON, the monitor attempts to set
-the server `read_only` flag to ON on any slave server with `read_only` OFF. The
-flag is checked at every monitor iteration. The monitor user requires the
-SUPER-privilege for this feature to work. While the `read_only`-flag is ON, only
-users with the SUPER-privilege can write to the backend server. If temporary
-write access is required, this feature should be disabled before attempting to
-disable `read_only`. Otherwise the monitor would quickly re-enable it.
+This feature is disabled by default. If set to ON, the monitor attempts to
+enable the *read_only*-flag on any writable slave server. The flag is checked
+every monitor tick. The monitor user requires the SUPER-privilege for this
+feature to work. While the `read_only`-flag is ON, only users with the
+SUPER-privilege (or READ_ONLY ADMIN) can write to the backend server. If
+temporary write access is required, this feature should be disabled before
+attempting to disable *read_only*. Otherwise the monitor will quickly re-enable
+it.
 
 ### `maintenance_on_low_disk_space`
 
