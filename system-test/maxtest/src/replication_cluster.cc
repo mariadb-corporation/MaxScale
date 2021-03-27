@@ -181,10 +181,10 @@ int ReplicationCluster::start_replication()
     return local_result;
 }
 
-int ReplicationCluster::check_replication()
+bool ReplicationCluster::check_replication()
 {
     int master = 0;
-    int res = 0;
+    int res = true;
 
     const bool verbose = this->verbose();
     if (verbose)
@@ -196,20 +196,20 @@ int ReplicationCluster::check_replication()
     if (connect())
     {
         cout << "Failed to connect to all servers" << endl;
-        return 1;
+        return false;
     }
 
     if (!update_status())
     {
         cout << "Failed to update status" << endl;
-        return 1;
+        return false;
     }
 
-    for (int i = 0; i < N && res == 0; i++)
+    for (int i = 0; i < N && res; i++)
     {
         if (ssl && !check_ssl(i))
         {
-            res = 1;
+            res = false;
         }
 
         if (mysql_query(nodes[i], "SELECT COUNT(*) FROM mysql.user") == 0)
@@ -219,14 +219,14 @@ int ReplicationCluster::check_replication()
         else
         {
             cout << mysql_error(nodes[i]) << endl;
-            res = 1;
+            res = false;
         }
 
         if (i == master)
         {
             if (!check_master_node(nodes[i]))
             {
-                res = 1;
+                res = false;
                 if (verbose)
                 {
                     printf("Master node check failed for node %d\n", i);
@@ -239,7 +239,7 @@ int ReplicationCluster::check_replication()
                  || multi_source_replication(nodes[i], i)
                  || is_readonly(nodes[i]))
         {
-            res = 1;
+            res = false;
             if (verbose)
             {
                 printf("Slave %d check failed\n", i);

@@ -99,6 +99,7 @@ public:
 
 private:
     std::string get_nc_item(const mxt::NetworkConfig& nwconfig, const std::string& search_key);
+    bool        verbose() const;
 
     std::string m_ip4;          /**< IPv4-address */
     std::string m_ip6;          /**< IPv6-address */

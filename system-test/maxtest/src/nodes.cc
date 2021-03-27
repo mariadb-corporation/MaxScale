@@ -107,7 +107,6 @@ bool VMNode::init_ssh_master()
 
 int VMNode::run_cmd(const std::string& cmd, CmdPriv priv)
 {
-    bool verbose = m_shared.verbose;
     string opening_cmd;
     if (m_type == NodeType::LOCAL)
     {
@@ -116,12 +115,12 @@ int VMNode::run_cmd(const std::string& cmd, CmdPriv priv)
     else
     {
         opening_cmd = m_ssh_cmd_p1;
-        if (!verbose)
+        if (!verbose())
         {
             opening_cmd += " > /dev/null";
         }
     }
-    if (verbose)
+    if (verbose())
     {
         std::cout << opening_cmd << "\n";
     }
@@ -226,7 +225,7 @@ bool mxt::VMNode::copy_to_node(const string& src, const string& dest)
                                  m_username.c_str(), m_ip4.c_str(), dest.c_str());
     }
 
-    if (m_shared.verbose)
+    if (verbose())
     {
         printf("%s\n", cmd.c_str());
     }
@@ -263,7 +262,7 @@ bool mxt::VMNode::copy_from_node(const string& src, const string& dest)
                                  src.c_str(), dest.c_str());
     }
 
-    if (m_shared.verbose)
+    if (verbose())
     {
         printf("%s\n", cmd.c_str());
     }
@@ -360,7 +359,7 @@ std::string VMNode::get_nc_item(const mxt::NetworkConfig& nwconfig, const string
         rval = it->second;
     }
 
-    if (m_shared.verbose)
+    if (verbose())
     {
         if (rval.empty())
         {
@@ -494,6 +493,11 @@ SharedData& VMNode::shared()
 {
     return m_shared;
 }
+
+bool VMNode::verbose() const
+{
+    return m_shared.settings.verbose;
+}
 }
 
 mxt::CmdResult Nodes::ssh_output(const std::string& cmd, int node, bool sudo)
@@ -543,7 +547,7 @@ const char* Nodes::ip4(int i) const
 
 bool Nodes::verbose() const
 {
-    return m_shared.verbose;
+    return m_shared.settings.verbose;
 }
 
 void Nodes::write_env_vars()

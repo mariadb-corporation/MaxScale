@@ -26,7 +26,7 @@ public:
     ReplicationCluster(SharedData* shared);
 
     int                start_replication() override;
-    int                check_replication() override;
+    bool               check_replication() override;
     void               sync_slaves(int node = 0) override;
     const std::string& type_string() const override;
 

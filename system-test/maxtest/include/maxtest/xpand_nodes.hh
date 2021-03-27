@@ -40,11 +40,7 @@ public:
      */
     int start_replication() override;
 
-    /**
-     * @brief check_replication Checks if Xpand Cluster is up and running
-     * @return 0 if Xpand Cluster is ok
-     */
-    int check_replication() override;
+    bool check_replication() override;
 
     bool prepare_server(int i) override;
 

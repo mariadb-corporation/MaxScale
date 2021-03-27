@@ -56,6 +56,5 @@ struct SharedData
 {
     TestLogger log;                     /**< Error log container */
     Settings   settings;
-    bool       verbose {false};         /**< True if printing more details */
 };
 }

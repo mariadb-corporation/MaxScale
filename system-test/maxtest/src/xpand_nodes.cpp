@@ -215,9 +215,9 @@ int XpandCluster::start_replication()
     return rv;
 }
 
-int XpandCluster::check_replication()
+bool XpandCluster::check_replication()
 {
-    int res = 0;
+    bool res = true;
     if (connect() == 0)
     {
         for (int i = 0; i < N; i++)
@@ -227,13 +227,13 @@ int XpandCluster::check_replication()
             if (n != N)
             {
                 printf("Expected %d nodes configured at node %d, found %d", N, i, n);
-                res = 1;
+                res = false;
             }
         }
     }
     else
     {
-        res = 1;
+        res = false;
     }
 
     close_connections();    // Some might have been created by connect().

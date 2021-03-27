@@ -26,8 +26,8 @@ public:
 
     const std::string& type_string() const override;
 
-    int start_replication() override;
-    int check_replication() override;
+    int  start_replication() override;
+    bool check_replication() override;
 
     std::string get_config_name(int node) override;
 

@@ -462,7 +462,7 @@ bool MariaDBCluster::fix_replication()
     bool rval = true;
     int attempts = 25;
 
-    if (check_replication())
+    if (!check_replication())
     {
         cout << prefix() << ": Replication is broken, fixing..." << endl;
         rval = false;
@@ -475,13 +475,13 @@ bool MariaDBCluster::fix_replication()
                 cout << "Starting replication" << endl;
                 start_replication();
 
-                while (check_replication() && (attempts > 0))
+                while (!check_replication() && (attempts > 0))
                 {
                     cout << "Replication is still broken, waiting" << endl;
                     sleep(10);
                     attempts--;
                 }
-                if (check_replication() == 0)
+                if (check_replication())
                 {
                     cout << "Replication is fixed" << endl;
                     rval = prepare_for_test();

@@ -2164,12 +2164,12 @@ bool TestConnections::required_machines_are_running()
 
 void TestConnections::set_verbose(bool val)
 {
-    m_shared.verbose = val;
+    m_shared.settings.verbose = val;
 }
 
 bool TestConnections::verbose() const
 {
-    return m_shared.verbose;
+    return m_shared.settings.verbose;
 }
 
 void TestConnections::write_node_env_vars()

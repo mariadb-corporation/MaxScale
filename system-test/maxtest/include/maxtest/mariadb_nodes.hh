@@ -250,9 +250,9 @@ public:
     /**
      * @brief Check if all slaves have "Slave_IO_Running" set to "Yes" and master has N-1 slaves
      * @param master Index of master node
-     * @return 0 if everything is ok
+     * @return True if everything is ok
      */
-    virtual int check_replication() = 0;
+    virtual bool check_replication() = 0;
 
     /**
      * @brief Get the server_id of the node
