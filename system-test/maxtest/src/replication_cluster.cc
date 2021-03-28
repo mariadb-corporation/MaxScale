@@ -13,7 +13,9 @@
 
 #include <maxtest/replication_cluster.hh>
 #include <maxtest/log.hh>
+#include <maxtest/mariadb_connector.hh>
 #include <iostream>
+#include <maxbase/format.hh>
 
 using std::string;
 using std::cout;
@@ -34,54 +36,14 @@ const char setup_slave[] =
     "MASTER_PORT=%d; "
     "start slave;";
 
-/**
- * @brief multi_source_replication Check if slave is connected to more then one master
- * @param conn MYSQL struct (have to be open)
- * @param node Node index
- * @return false if multisource replication is not detected
- */
-bool multi_source_replication(MYSQL* conn, int node)
-{
-    bool rval = true;
-    MYSQL_RES* res;
-
-    if (mysql_query(conn, "SHOW ALL SLAVES STATUS") == 0
-        && (res = mysql_store_result(conn)))
-    {
-        if (mysql_num_rows(res) == 1)
-        {
-            rval = false;
-        }
-        else
-        {
-            printf("Node %d: More than one configured slave\n", node);
-            fflush(stdout);
-        }
-
-        mysql_free_result(res);
-    }
-    else
-    {
-        printf("Node %d does not support SHOW ALL SLAVE STATUS, ignoring multi source replication check\n",
-               node);
-        fflush(stdout);
-        rval = false;
-    }
-
-    return rval;
-}
-
-bool is_readonly(MYSQL* conn)
+bool is_readonly(mxt::MariaDB* conn)
 {
     bool rval = false;
-    char output[512];
-    find_field(conn, "SHOW VARIABLES LIKE 'read_only'", "Value", output);
-
-    if (strcasecmp(output, "OFF") != 0)
+    auto res = conn->try_query("select @@read_only;");
+    if (res && res->next_row() && res->get_bool(0) == true)
     {
         rval = true;
     }
-
     return rval;
 }
 
@@ -147,31 +109,20 @@ int ReplicationCluster::start_replication()
 
     robust_connect(10);
 
+    string change_master = mxb::string_printf(
+        "change master to master_host='%s', master_port=%i, master_user='repl', master_password='repl', "
+        "master_use_gtid=slave_pos;",
+        ip_private(0), port[0]);
+
     for (int i = 0; i < N; i++)
     {
         execute_query(nodes[i], "SET GLOBAL read_only=OFF");
         execute_query(nodes[i], "STOP SLAVE;");
-
-        bool using_gtid = m_shared.settings.req_mariadb_gtid;
-        if (using_gtid)
-        {
-            execute_query(nodes[i], "SET GLOBAL gtid_slave_pos='0-1-0'");
-        }
+        execute_query(nodes[i], "SET GLOBAL gtid_slave_pos='0-1-0'");
 
         if (i != 0)
         {
-            // TODO: Reuse the code in sync_slaves() to get the actual file name and position
-            execute_query(nodes[i],
-                          "CHANGE MASTER TO "
-                          "MASTER_HOST='%s', MASTER_PORT=%d, "
-                          "MASTER_USER='repl', MASTER_PASSWORD='repl', "
-                          "%s",
-                          ip_private(0),
-                          port[0],
-                          using_gtid ?
-                          "MASTER_USE_GTID=slave_pos" :
-                          "MASTER_LOG_FILE='mar-bin.000001', MASTER_LOG_POS=4");
-
+            execute_query(nodes[i], "%s", change_master.c_str());
             execute_query(nodes[i], "START SLAVE");
         }
     }
@@ -183,14 +134,11 @@ int ReplicationCluster::start_replication()
 
 bool ReplicationCluster::check_replication()
 {
-    int master = 0;
     int res = true;
-
     const bool verbose = this->verbose();
     if (verbose)
     {
-        printf("Checking Master/Slave setup\n");
-        fflush(stdout);
+        logger().log_msgf("Checking Master-Slave cluster.");
     }
 
     if (connect())
@@ -205,6 +153,7 @@ bool ReplicationCluster::check_replication()
         return false;
     }
 
+    int master_ind = 0;     // The first server should be master.
     for (int i = 0; i < N && res; i++)
     {
         if (ssl && !check_ssl(i))
@@ -212,38 +161,40 @@ bool ReplicationCluster::check_replication()
             res = false;
         }
 
-        if (mysql_query(nodes[i], "SELECT COUNT(*) FROM mysql.user") == 0)
+        auto srv = backend(i);
+        auto conn = srv->try_open_admin_connection();
+        if (conn->is_open())
         {
-            mysql_free_result(mysql_store_result(nodes[i]));
-        }
-        else
-        {
-            cout << mysql_error(nodes[i]) << endl;
-            res = false;
-        }
-
-        if (i == master)
-        {
-            if (!check_master_node(nodes[i]))
+            auto res1 = conn->try_query("SELECT COUNT(*) FROM mysql.user;");
+            if (!res1)
             {
                 res = false;
-                if (verbose)
+            }
+
+            auto conn_ptr = conn.get();
+            if (i == master_ind)
+            {
+                if (!check_master_node(conn_ptr))
                 {
-                    printf("Master node check failed for node %d\n", i);
+                    res = false;
+                    logger().log_msgf("Master node check failed for node %d.", i);
+                }
+            }
+            else
+            {
+                if (!good_slave_thread_status(conn_ptr, i) || is_readonly(conn_ptr))
+                {
+                    res = false;
+                    if (verbose)
+                    {
+                        printf("Slave %d check failed\n", i);
+                    }
                 }
             }
         }
-        else if (bad_slave_thread_status(nodes[i], "Slave_IO_Running", i)
-                 || bad_slave_thread_status(nodes[i], "Slave_SQL_Running", i)
-                 || wrong_replication_type(nodes[i])
-                 || multi_source_replication(nodes[i], i)
-                 || is_readonly(nodes[i]))
+        else
         {
             res = false;
-            if (verbose)
-            {
-                printf("Slave %d check failed\n", i);
-            }
         }
     }
 
@@ -255,111 +206,109 @@ bool ReplicationCluster::check_replication()
     return res;
 }
 
-bool ReplicationCluster::check_master_node(MYSQL* conn)
+bool ReplicationCluster::check_master_node(mxt::MariaDB* conn)
 {
-    bool rval = true;
-
-    if (mysql_query(conn, "SHOW SLAVE STATUS"))
+    bool rval = false;
+    auto res = conn->try_query("show all slaves status;");
+    if (res)
     {
-        cout << mysql_error(conn) << endl;
-        rval = false;
-    }
-    else
-    {
-        MYSQL_RES* res = mysql_store_result(conn);
-
-        if (res)
+        if (res->get_row_count() == 0)
         {
-            if (mysql_num_rows(res) > 0)
+            if (!is_readonly(conn))
             {
-                cout << "The master is configured as a slave" << endl;
-                rval = false;
+                rval = true;
             }
-            mysql_free_result(res);
+            else
+            {
+                logger().log_msg("The master is in read-only mode.");
+            }
+        }
+        else
+        {
+            logger().log_msg("The master is configured as a slave.");
         }
     }
-
-    if (is_readonly(conn))
-    {
-        printf("The master is in read-only mode\n");
-        rval = false;
-    }
-
     return rval;
 }
 
 /**
- * @brief bad_slave_thread_status Check if field in the slave status outpur is not 'yes'
+ * Check replication connection status
+ *
  * @param conn MYSQL struct (connection have to be open)
- * @param field Field to check
  * @param node Node index
- * @return false if requested field is 'Yes'
+ * @return True if all is well
  */
-bool ReplicationCluster::bad_slave_thread_status(MYSQL* conn, const char* field, int node)
+bool ReplicationCluster::good_slave_thread_status(mxt::MariaDB* conn, int node)
 {
-    char str[1024] = "";
     bool rval = false;
+    bool multisource_repl = false;
+    bool gtid_ok = false;
+    string io_running;
+    string sql_running;
+
+    const string y = "Yes";
+    const string n = "No";
 
     // Doing 3 attempts to check status
     for (int i = 0; i < 2; i++)
     {
-        if (find_field(conn, "SHOW SLAVE STATUS;", field, str) != 0)
+        auto res = conn->try_query("show all slaves status;");
+        if (res)
         {
-            printf("Node %d: %s not found in SHOW SLAVE STATUS\n", node, field);
-            break;
-        }
-
-        if (verbose())
-        {
-            printf("Node %d: field %s is %s\n", node, field, str);
-        }
-
-        if (strcmp(str, "Yes") == 0 || strcmp(str, "No") == 0)
-        {
-            break;
-        }
-
-        /** Any other state is transient and we should try again */
-        sleep(1);
-    }
-
-    if (strcmp(str, "Yes") != 0)
-    {
-        if (verbose())
-        {
-            printf("Node %d: %s is '%s'\n", node, field, str);
-        }
-        rval = true;
-    }
-
-    return rval;
-}
-
-bool ReplicationCluster::wrong_replication_type(MYSQL* conn)
-{
-    bool rval = true;
-
-    for (int i = 0; i < 2; i++)
-    {
-        char str[1024] = "";
-
-        if (find_field(conn, "SHOW SLAVE STATUS", "Gtid_IO_Pos", str) == 0)
-        {
-            bool require_gtid = m_shared.settings.req_mariadb_gtid;
-            // If the test requires GTID based replication, Gtid_IO_Pos must not be empty
-            if ((rval = (*str != '\0') != require_gtid))
+            int rows = res->get_row_count();
+            if (rows != 1)
             {
-                printf("Wrong value for 'Gtid_IO_Pos' (%s), expected it to be %s.\n",
-                       str,
-                       require_gtid ? "not empty" : "empty");
+                if (rows > 1)
+                {
+                    multisource_repl = true;
+                }
+                break;
             }
             else
             {
-                break;
+                res->next_row();
+                io_running = res->get_string("Slave_IO_Running");
+                sql_running = res->get_string("Slave_SQL_Running");
+                if (!io_running.empty() && io_running != y && io_running != n)
+                {
+                    // May not be final value, wait and try again.
+                    sleep(1);
+                }
+                else
+                {
+                    string gtid_io = res->get_string("Gtid_IO_Pos");
+                    string using_gtid = res->get_string("Using_Gtid");
+                    if (!gtid_io.empty() && !using_gtid.empty())
+                    {
+                        gtid_ok = true;
+                    }
+                    break;
+                }
             }
         }
-        sleep(1);
     }
+
+    if (!gtid_ok)
+    {
+        logger().log_msgf("Node %d: Not using gtid replication.", node);
+    }
+    else if (multisource_repl)
+    {
+        logger().log_msgf("Node %d: More than one configured slave.", node);
+    }
+    else
+    {
+        if (io_running == y && sql_running == y)
+        {
+            rval = true;
+        }
+        else
+        {
+            logger().log_msgf("Node %d: Slave_IO_Running: '%s', Slave_SQL_Running: '%s'",
+                              node, io_running.c_str(), sql_running.c_str());
+        }
+    }
+
     return rval;
 }
 

@@ -48,7 +48,7 @@ public:
      *
      * @return The connection. Success can be checked by 'is_open'.
      */
-    std::unique_ptr<mxt::MariaDB> try_open_connection();
+    std::unique_ptr<mxt::MariaDB> try_open_admin_connection();
     bool                          update_status();
     const Status&                 status() const;
     const std::string&            name() const;

@@ -1059,7 +1059,7 @@ const MariaDBServer::Status& MariaDBServer::status() const
 bool MariaDBServer::update_status()
 {
     bool rval = false;
-    auto con = try_open_connection();
+    auto con = try_open_admin_connection();
     if (con->is_open())
     {
         m_status.version_num = con->version_info().version;
@@ -1077,7 +1077,7 @@ bool MariaDBServer::update_status()
     return rval;
 }
 
-std::unique_ptr<mxt::MariaDB> MariaDBServer::try_open_connection()
+std::unique_ptr<mxt::MariaDB> MariaDBServer::try_open_admin_connection()
 {
     auto conn = std::make_unique<mxt::MariaDB>(m_vm.shared().log);
     auto& sett = conn->connection_settings();
