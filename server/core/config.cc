@@ -3505,7 +3505,7 @@ int create_new_service(CONFIG_CONTEXT* obj)
                 {
                     service->add_target(s);
                 }
-                else if (auto s = service_find(mxb::trimmed_copy(a).c_str()))
+                else if (auto s = Service::find(mxb::trimmed_copy(a)))
                 {
                     service->add_target(s);
                 }

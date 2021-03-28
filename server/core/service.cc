@@ -1538,17 +1538,42 @@ void Service::targets_updated()
     }
 }
 
-void Service::remove_target(mxs::Target* target)
+void Service::propagate_target_update()
+{
+    targets_updated();
+
+    for (Service* service : m_parents)
+    {
+        service->propagate_target_update();
+    }
+}
+
+void Service::remove_target(SERVER* target)
 {
     auto& targets = m_data->targets;
     targets.erase(std::remove(targets.begin(), targets.end(), target), targets.end());
-    targets_updated();
+    propagate_target_update();
 }
 
-void Service::add_target(mxs::Target* target)
+void Service::remove_target(Service* target)
+{
+    auto& targets = m_data->targets;
+    targets.erase(std::remove(targets.begin(), targets.end(), target), targets.end());
+    propagate_target_update();
+    target->remove_parent(this);
+}
+
+void Service::add_target(SERVER* target)
 {
     m_data->targets.push_back(target);
-    targets_updated();
+    propagate_target_update();
+}
+
+void Service::add_target(Service* target)
+{
+    m_data->targets.push_back(target);
+    target->add_parent(this);
+    propagate_target_update();
 }
 
 int64_t Service::replication_lag() const
