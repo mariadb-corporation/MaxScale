@@ -841,6 +841,12 @@ private:
 
         auto u = update[mxsmongo::key::U];
 
+        if (!u)
+        {
+            throw SoftError("BSON field 'update.updates.u' is missing but a required field",
+                            error::LOCATION40414);
+        }
+
         switch (get_update_kind(u))
         {
         case AGGREGATION_PIPELINE:
@@ -918,36 +924,53 @@ private:
     {
         Kind kind = INVALID;
 
-        if (element.type() == bsoncxx::type::k_array)
+        switch (element.type())
         {
+        case bsoncxx::type::k_array:
             kind = AGGREGATION_PIPELINE;
-        }
-        else
-        {
-            auto doc = static_cast<bsoncxx::document::view>(element.get_document());
+            break;
 
-            for (auto field : doc)
+        case bsoncxx::type::k_document:
             {
-                const char* pData = field.key().data(); // Not necessarily null-terminated.
+                auto doc = static_cast<bsoncxx::document::view>(element.get_document());
 
-                if (*pData == '$')
+                for (auto field : doc)
                 {
-                    string name(pData, field.key().length());
+                    const char* pData = field.key().data(); // Not necessarily null-terminated.
 
-                    if (name != "$set" && name != "$unset")
+                    if (*pData == '$')
                     {
-                        MXS_ERROR("'%s' contains other than the supported '$set' and '$unset' "
-                                  "operations.", bsoncxx::to_json(doc).c_str());
-                        kind = INVALID;
-                        break;
+                        string name(pData, field.key().length());
+
+                        if (name != "$set" && name != "$unset")
+                        {
+                            MXS_ERROR("'%s' contains other than the supported '$set' and '$unset' "
+                                      "operations.", bsoncxx::to_json(doc).c_str());
+                            kind = INVALID;
+                            break;
+                        }
+                        else
+                        {
+                            if (kind == INVALID)
+                            {
+                                kind = UPDATE_OPERATORS;
+                            }
+                            else if (kind != UPDATE_OPERATORS)
+                            {
+                                MXS_ERROR("'%s' contains both fields and update operators.",
+                                          bsoncxx::to_json(doc).c_str());
+                                kind = INVALID;
+                                break;
+                            }
+                        }
                     }
                     else
                     {
                         if (kind == INVALID)
                         {
-                            kind = UPDATE_OPERATORS;
+                            kind = REPLACEMENT_DOCUMENT;
                         }
-                        else if (kind != UPDATE_OPERATORS)
+                        else if (kind != REPLACEMENT_DOCUMENT)
                         {
                             MXS_ERROR("'%s' contains both fields and update operators.",
                                       bsoncxx::to_json(doc).c_str());
@@ -956,21 +979,11 @@ private:
                         }
                     }
                 }
-                else
-                {
-                    if (kind == INVALID)
-                    {
-                        kind = REPLACEMENT_DOCUMENT;
-                    }
-                    else if (kind != REPLACEMENT_DOCUMENT)
-                    {
-                        MXS_ERROR("'%s' contains both fields and update operators.",
-                                  bsoncxx::to_json(doc).c_str());
-                        kind = INVALID;
-                        break;
-                    }
-                }
             }
+            break;
+
+        default:
+            throw SoftError("Update argument must be either an object or an array", error::FAILED_TO_PARSE);
         }
 
         return kind;
