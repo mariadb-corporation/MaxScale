@@ -120,8 +120,76 @@ public:
         return nullptr;
     }
 
+    State translate(GWBUF& mariadb_response, GWBUF** ppResponse) override final
+    {
+        // TODO: Update will be needed when DEPRECATE_EOF it turned on.
+        GWBUF* pResponse = nullptr;
+
+        ComResponse response(GWBUF_DATA(&mariadb_response));
+
+        bool abort = false;
+
+        switch (response.type())
+        {
+        case ComResponse::OK_PACKET:
+            interpret(ComOK(response));
+            break;
+
+        case ComResponse::ERR_PACKET:
+            if (m_ordered)
+            {
+                abort = true;
+            }
+
+            add_error(m_write_errors, ComERR(response), m_it - m_statements.begin());
+            break;
+
+        case ComResponse::LOCAL_INFILE_PACKET:
+        default:
+            mxb_assert(!true);
+        }
+
+        ++m_it;
+
+        State rv = BUSY;
+
+        if (m_it == m_statements.end() || abort)
+        {
+            DocumentBuilder doc;
+
+            auto write_errors = m_write_errors.extract();
+            bool ok = write_errors.view().empty();
+
+            doc.append(kvp("ok", ok));
+            doc.append(kvp("n", m_n));
+
+            amend_response(doc);
+
+            if (!ok)
+            {
+                doc.append(kvp("writeErrors", write_errors));
+            }
+
+            pResponse = create_response(doc.extract());
+            rv = READY;
+        }
+        else
+        {
+            execute_one_statement();
+        }
+
+        *ppResponse = pResponse;
+        return rv;
+    }
+
 protected:
     virtual string convert_document(const bsoncxx::document::view& doc) = 0;
+
+    virtual void interpret(const ComOK& response) = 0;
+
+    virtual void amend_response(DocumentBuilder& response)
+    {
+    }
 
     void execute_one_statement()
     {
@@ -294,67 +362,6 @@ public:
     {
     }
 
-    State translate(GWBUF& mariadb_response, GWBUF** ppResponse) override
-    {
-        // TODO: Update will be needed when DEPRECATE_EOF it turned on.
-        GWBUF* pResponse = nullptr;
-
-        ComResponse response(GWBUF_DATA(&mariadb_response));
-
-        bool abort = false;
-
-        switch (response.type())
-        {
-        case ComResponse::OK_PACKET:
-            m_n += ComOK(response).affected_rows();
-            break;
-
-        case ComResponse::ERR_PACKET:
-            if (m_ordered)
-            {
-                abort = true;
-            }
-
-            add_error(m_write_errors, ComERR(response), m_it - m_statements.begin());
-            break;
-
-        case ComResponse::LOCAL_INFILE_PACKET:
-        default:
-            mxb_assert(!true);
-        }
-
-        ++m_it;
-
-        State rv = BUSY;
-
-        if (m_it == m_statements.end() || abort)
-        {
-            DocumentBuilder doc;
-
-            auto write_errors = m_write_errors.extract();
-
-            int32_t ok = (m_n != 0 || write_errors.view().empty());
-
-            doc.append(kvp("ok", ok));
-            doc.append(kvp("n", m_n));
-
-            if (!write_errors.view().empty())
-            {
-                doc.append(kvp("writeErrors", write_errors));
-            }
-
-            pResponse = create_response(doc.extract());
-            rv = READY;
-        }
-        else
-        {
-            execute_one_statement();
-        }
-
-        *ppResponse = pResponse;
-        return rv;
-    }
-
 private:
     string convert_document(const bsoncxx::document::view& doc) override
     {
@@ -412,6 +419,11 @@ private:
         }
 
         return sql.str();
+    }
+
+    void interpret(const ComOK& response)
+    {
+        m_n += response.affected_rows();
     }
 };
 
@@ -821,80 +833,6 @@ public:
     {
     }
 
-    State translate(GWBUF& mariadb_response, GWBUF** ppResponse) override
-    {
-        // TODO: Update will be needed when DEPRECATE_EOF it turned on.
-        GWBUF* pResponse = nullptr;
-
-        ComResponse response(GWBUF_DATA(&mariadb_response));
-
-        bool abort = false;
-
-        switch (response.type())
-        {
-        case ComResponse::OK_PACKET:
-            {
-                ComOK ok(response);
-                m_nModified += ok.affected_rows();
-
-                string s = ok.info().to_string();
-
-                if (s.find("Rows matched: ") == 0)
-                {
-                    m_n += atol(s.c_str() + 14);
-                }
-
-                MXS_NOTICE("INFO: %s", s.c_str());
-            }
-            break;
-
-        case ComResponse::ERR_PACKET:
-            if (m_ordered)
-            {
-                abort = true;
-            }
-
-            add_error(m_write_errors, ComERR(response), m_it - m_statements.begin());
-            break;
-
-        case ComResponse::LOCAL_INFILE_PACKET:
-        default:
-            mxb_assert(!true);
-        }
-
-        ++m_it;
-
-        State rv = BUSY;
-
-        if (m_it == m_statements.end() || abort)
-        {
-            DocumentBuilder doc;
-
-            auto write_errors = m_write_errors.extract();
-
-            int32_t ok = (m_nModified != 0 || write_errors.view().empty());
-
-            doc.append(kvp("ok", ok));
-            doc.append(kvp("n", m_n));
-            doc.append(kvp("nModified", m_nModified));
-
-            if (!write_errors.view().empty())
-            {
-                doc.append(kvp("writeErrors", write_errors));
-            }
-
-            pResponse = create_response(doc.extract());
-            rv = READY;
-        }
-        else
-        {
-            execute_one_statement();
-        }
-
-        *ppResponse = pResponse;
-        return rv;
-    };
-
 private:
     string convert_document(const bsoncxx::document::view& update)
     {
@@ -1087,6 +1025,24 @@ private:
 
         return rv;
     }
+
+    void interpret(const ComOK& response)
+    {
+        m_nModified += response.affected_rows();
+
+        string s = response.info().to_string();
+
+        if (s.find("Rows matched: ") == 0)
+        {
+            m_n += atol(s.c_str() + 14);
+        }
+    }
+
+    void amend_response(DocumentBuilder& doc)
+    {
+        doc.append(kvp("nModified", m_nModified));
+    }
+
 
 private:
     int32_t m_nModified { 0 };
