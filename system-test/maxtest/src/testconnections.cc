@@ -34,6 +34,7 @@ using namespace mxb;
 using std::cout;
 using std::endl;
 using std::string;
+using std::move;
 
 namespace
 {
@@ -57,7 +58,6 @@ namespace maxscale
 {
 
 static bool start = true;
-static bool manual_debug = false;
 static std::string required_repl_version;
 static std::string required_galera_version;
 static bool restart_galera = false;
@@ -176,84 +176,22 @@ int TestConnections::prepare_for_test(int argc, char* argv[])
         return 1;
     }
 
-    bool vm_setup_ok = false;
-    read_network_config();
-    if (required_machines_are_running())
+    int rc = setup_vms();
+    if (rc != 0)
     {
-        vm_setup_ok = true;
+        return rc;
     }
-    else
-    {
-        if (call_mdbci(""))
-        {
-            m_mdbci_called = true;
-            // Network config should exist now.
-            if (read_network_config())
-            {
-                if (required_machines_are_running())
-                {
-                    vm_setup_ok = true;
-                }
-                else
-                {
-                    add_failure("Still missing VMs after running MDBCI.");
-                }
-            }
-            else
-            {
-                add_failure("Failed to read network_config or configured_labels after running MDBCI.");
-            }
-        }
-    }
-
-    if (!vm_setup_ok)
-    {
-        return MDBCI_FAIL;
-    }
-
-    bool node_error = !initialize_nodes();
-    bool run_core_config = false;
-
-    if (node_error || too_few_maxscales())
-    {
-        tprintf("Recreating VMs: %s", node_error ? "node check failed" : "too many maxscales");
-        if (!call_mdbci("--recreate") || !initialize_nodes())
-        {
-            exit(MDBCI_FAIL);
-        }
-        run_core_config = true;
-
-    }
-
-    if (m_reinstall_maxscale)
-    {
-        if (reinstall_maxscales())
-        {
-            tprintf("Failed to install Maxscale: target is %s", m_target.c_str());
-            exit(MDBCI_FAIL);
-        }
-        run_core_config = true;
-    }
-
-    if (run_core_config)
-    {
-        std::string src = std::string(test_dir) + "/mdbci/add_core_cnf.sh";
-        maxscales->copy_to_node(0, src.c_str(), maxscales->access_homedir(0));
-        maxscales->ssh_node_f(0, true, "%s/add_core_cnf.sh %s", maxscales->access_homedir(0),
-                              verbose() ? "verbose" : "");
-    }
-
 
     maxscales->set_use_ipv6(m_use_ipv6);
     maxscales->ssl = ssl;
 
     // Stop MaxScale to prevent it from interfering with the replication setup process
-    if (!maxscale::manual_debug)
+    if (!m_mxs_manual_debug)
     {
         maxscales->stop_all();
     }
 
-    if ((maxscale::restart_galera) && (galera))
+    if (galera && maxscale::restart_galera)
     {
         galera->stop_nodes();
         galera->start_replication();
@@ -263,48 +201,53 @@ int TestConnections::prepare_for_test(int argc, char* argv[])
     {
         if (repl && !repl->fix_replication())
         {
-            exit(BROKEN_VM_FAIL);
+            rc = BROKEN_VM_FAIL;
         }
         if (galera && !galera->fix_replication())
         {
-            exit(BROKEN_VM_FAIL);
+            rc = BROKEN_VM_FAIL;
         }
     }
 
-    if (!check_backend_versions())
+    if (rc == 0)
     {
-        tprintf("Skipping test.");
-        exit(TEST_SKIPPED);
-    }
-
-    if (m_init_maxscale)
-    {
-        init_maxscales();
-    }
-
-    if (m_mdbci_called)
-    {
-        auto res = maxscales->ssh_output("maxscale --version-full", 0, false);
-        if (res.rc != 0)
+        if (!check_backend_versions())
         {
-            tprintf("Error retrieving MaxScale version info");
-        }
-        else
-        {
-            tprintf("Maxscale_full_version_start:\n%s\nMaxscale_full_version_end\n", res.output.c_str());
+            tprintf("Skipping test.");
+            rc = TEST_SKIPPED;
         }
     }
 
-    int rc = -1;
-    string create_logdir_cmd = "mkdir -p LOGS/" + m_test_name;
-    if (run_shell_command(create_logdir_cmd, "Failed to create logs directory."))
+    if (rc == 0)
     {
-        m_timeout_thread = std::thread(&TestConnections::timeout_thread, this);
-        m_log_copy_thread = std::thread(&TestConnections::log_copy_thread, this);
-        tprintf("Starting test");
-        gettimeofday(&m_start_time, nullptr);
-        logger().reset_timer();
-        rc = 0;
+        if (m_init_maxscale)
+        {
+            init_maxscales();
+        }
+
+        if (m_mdbci_called)
+        {
+            auto res = maxscales->ssh_output("maxscale --version-full", 0, false);
+            if (res.rc != 0)
+            {
+                tprintf("Error retrieving MaxScale version info");
+            }
+            else
+            {
+                tprintf("Maxscale_full_version_start:\n%s\nMaxscale_full_version_end\n", res.output.c_str());
+            }
+        }
+
+        string create_logdir_cmd = "mkdir -p LOGS/" + m_test_name;
+        if (run_shell_command(create_logdir_cmd, "Failed to create logs directory."))
+        {
+            m_timeout_thread = std::thread(&TestConnections::timeout_thread, this);
+            m_log_copy_thread = std::thread(&TestConnections::log_copy_thread, this);
+            tprintf("Starting test");
+            gettimeofday(&m_start_time, nullptr);
+            logger().reset_timer();
+            rc = 0;
+        }
     }
 
     return rc;
@@ -379,6 +322,114 @@ int TestConnections::cleanup()
     return 0;
 }
 
+int TestConnections::setup_vms()
+{
+    auto call_mdbci_and_check = [this](const char* mdbci_options = "") {
+        bool vms_found = false;
+        if (call_mdbci(mdbci_options))
+        {
+            m_mdbci_called = true;
+            // Network config should exist now.
+            if (read_network_config())
+            {
+                if (required_machines_are_running())
+                {
+                    vms_found = true;
+                }
+                else
+                {
+                    add_failure("Still missing VMs after running MDBCI.");
+                }
+            }
+            else
+            {
+                add_failure("Failed to read network_config or configured_labels after running MDBCI.");
+            }
+        }
+        else
+        {
+            add_failure("MDBCI failed.");
+        }
+        return vms_found;
+    };
+
+    bool maxscale_installed = false;
+
+    bool vms_found = false;
+    if (read_network_config() && required_machines_are_running())
+    {
+        vms_found = true;
+    }
+    else
+    {
+        // Not all VMs were found. Call MDBCI first time.
+        if (call_mdbci_and_check())
+        {
+            vms_found = true;
+            maxscale_installed = true;
+        }
+    }
+
+    bool nodes_ok = false;
+    if (vms_found)
+    {
+        if (initialize_nodes())
+        {
+            nodes_ok = true;
+        }
+        else
+        {
+            tprintf("Recreating VMs because node check failed.");
+        }
+
+        if (!nodes_ok)
+        {
+            // Node init failed, call mdbci again. Is this worth even trying?
+            if (call_mdbci_and_check("--recreate"))
+            {
+                maxscale_installed = true;
+                if (initialize_nodes())
+                {
+                    nodes_ok = true;
+                }
+            }
+
+            if (!nodes_ok)
+            {
+                add_failure("Could not initialize nodes even after 'mdbci --recreate'. Exiting.");
+            }
+        }
+    }
+
+    int rval = MDBCI_FAIL;
+    if (nodes_ok)
+    {
+        rval = 0;
+        if (m_reinstall_maxscale)
+        {
+            if (reinstall_maxscales())
+            {
+                maxscale_installed = true;
+            }
+            else
+            {
+                add_failure("Failed to install Maxscale: target is %s", m_target.c_str());
+                rval = MDBCI_FAIL;
+            }
+        }
+
+        if (rval == 0 && maxscale_installed)
+        {
+            string src = string(test_dir) + "/mdbci/add_core_cnf.sh";
+            maxscales->copy_to_node(0, src.c_str(), maxscales->access_homedir(0));
+            maxscales->ssh_node_f(0, true, "%s/add_core_cnf.sh %s", maxscales->access_homedir(0),
+                                                                 verbose() ? "verbose" : "");
+        }
+    }
+
+    return rval;
+}
+
 void TestConnections::add_result(bool result, const char* format, ...)
 {
     if (result)
@@ -409,7 +460,7 @@ void TestConnections::add_failure(const char* format, ...)
 
 /**
  * Read the contents of both the 'network_config' and 'configured_labels'-files. The files may not exist
- * if the VM setup has not yet been initialized.
+ * if the VM setup has not yet been initialized (first test of the test run).
  *
  * @return True on success
  */
@@ -1781,8 +1832,9 @@ std::string dump_status(const StringSet& current, const StringSet& expected)
     return ss.str();
 }
 
-int TestConnections::reinstall_maxscales()
+bool TestConnections::reinstall_maxscales()
 {
+    bool rval = true;
     for (int i = 0; i < maxscales->N; i++)
     {
         printf("Installing Maxscale on node %d\n", i);
@@ -1795,15 +1847,10 @@ int TestConnections::reinstall_maxscales()
             m_target.c_str(), m_mdbci_config_name.c_str(), maxscales->prefix().c_str(), i);
         if (!run_shell_command(install_cmd, "MaxScale install failed."))
         {
-            return 1;
+            rval = false;
         }
     }
-    return 0;
-}
-
-bool TestConnections::too_few_maxscales() const
-{
-    return maxscales->N < 2 && m_required_mdbci_labels.count(label_2nd_mxs) > 0;
+    return rval;
 }
 
 std::string TestConnections::flatten_stringset(const StringSet& set)
@@ -1916,7 +1963,7 @@ bool TestConnections::read_cmdline_options(int argc, char* argv[])
         case 's':
             printf("Maxscale won't be started\n");
             maxscale::start = false;
-            maxscale::manual_debug = true;
+            m_mxs_manual_debug = true;
             break;
 
         case 'i':
@@ -1943,7 +1990,7 @@ bool TestConnections::read_cmdline_options(int argc, char* argv[])
                 printf("MaxScale assumed to be running locally; not started and logs not downloaded.");
 
                 maxscale::start = false;
-                maxscale::manual_debug = true;
+                m_mxs_manual_debug = true;
                 m_init_maxscale = false;
                 m_no_maxscale_log_copy = true;
                 m_shared.settings.local_maxscale = true;
@@ -1967,30 +2014,54 @@ bool TestConnections::read_cmdline_options(int argc, char* argv[])
 
 bool TestConnections::initialize_nodes()
 {
+    const char errmsg[] = "Failed to initialize node group '%s'.";
+    bool error = false;
+    mxt::BoolFuncArray funcs;
+
     delete repl;
     repl = nullptr;
-    std::future<bool> repl_future;
     bool use_repl = m_required_mdbci_labels.count(label_repl_be) > 0;
     if (use_repl)
     {
+        bool big_repl = m_required_mdbci_labels.count(label_big_be) > 0;
+        int n_min_expected = big_repl ? 15 : 4;
         repl = new mxt::ReplicationCluster(&m_shared);
-        repl->setup(m_network_config);
-        repl->set_use_ipv6(m_use_ipv6);
-        repl->ssl = backend_ssl;
-        repl_future = std::async(std::launch::async, &MariaDBCluster::check_nodes, repl);
+        if (repl->setup(m_network_config, n_min_expected))
+        {
+            repl->set_use_ipv6(m_use_ipv6);
+            repl->ssl = backend_ssl;
+            auto check_ssh = [this]() {
+                    return repl->check_nodes_ssh();
+                };
+            funcs.push_back(move(check_ssh));
+        }
+        else
+        {
+            error = true;
+            add_failure(errmsg, repl->prefix().c_str());
+        }
     }
 
     delete galera;
     galera = nullptr;
-    std::future<bool> galera_future;
     bool use_galera = m_required_mdbci_labels.count(label_galera_be) > 0;
     if (use_galera)
     {
         galera = new GaleraCluster(&m_shared);
-        galera->setup(m_network_config);
-        galera->set_use_ipv6(false);
-        galera->ssl = backend_ssl;
-        galera_future = std::async(std::launch::async, &GaleraCluster::check_nodes, galera);
+        if (galera->setup(m_network_config, 4))
+        {
+            galera->set_use_ipv6(false);
+            galera->ssl = backend_ssl;
+            auto check_ssh = [this]() {
+                    return galera->check_nodes_ssh();
+                };
+            funcs.push_back(move(check_ssh));
+        }
+        else
+        {
+            error = true;
+            add_failure(errmsg, galera->prefix().c_str());
+        }
     }
 
     delete xpand;
@@ -1999,24 +2070,45 @@ bool TestConnections::initialize_nodes()
     if (use_xpand)
     {
         xpand = new XpandCluster(&m_shared);
-        xpand->setup(m_network_config);
-        xpand->set_use_ipv6(false);
-        xpand->ssl = backend_ssl;
-        xpand->fix_replication();
+        if (xpand->setup(m_network_config, 4))
+        {
+            xpand->set_use_ipv6(false);
+            xpand->ssl = backend_ssl;
+            xpand->fix_replication();
+            auto check_ssh = [this]() {
+                    return xpand->check_nodes_ssh();
+                };
+            funcs.push_back(move(check_ssh));
+        }
+        else
+        {
+            error = true;
+            add_failure(errmsg, xpand->prefix().c_str());
+        }
     }
 
+    delete maxscales;
     maxscales = new Maxscales(&m_shared);
-    maxscales->setup(m_network_config);
-    m_maxscale = std::make_unique<mxt::MaxScale>(maxscales, m_shared, 0);
-    if (maxscales->N > 1)
+    int n_mxs_expected = (m_required_mdbci_labels.count(label_2nd_mxs) > 0) ? 2 : 1;
+    if (maxscales->setup(m_network_config, n_mxs_expected))
     {
-        m_maxscale2 = std::make_unique<mxt::MaxScale>(maxscales, m_shared, 1);
+        m_maxscale = std::make_unique<mxt::MaxScale>(maxscales, m_shared, 0);
+        if (n_mxs_expected > 1)
+        {
+            m_maxscale2 = std::make_unique<mxt::MaxScale>(maxscales, m_shared, 1);
+        }
+        auto check_ssh = [this]() {
+                return maxscales->check_nodes_ssh();
+            };
+        funcs.push_back(move(check_ssh));
+    }
+    else
+    {
+        error = true;
+        add_failure(errmsg, maxscales->prefix().c_str());
     }
 
-    bool maxscale_ok = maxscales->check_nodes();
-    bool repl_ok = !use_repl || repl_future.get();
-    bool galera_ok = !use_galera || galera_future.get();
-    return maxscale_ok && repl_ok && galera_ok;
+    return error ? false : mxt::concurrent_run(funcs);
 }
 
 bool TestConnections::check_backend_versions()

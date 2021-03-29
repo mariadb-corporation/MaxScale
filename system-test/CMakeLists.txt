@@ -812,9 +812,6 @@ add_test_executable(mxs2417_ignore_persisted_cnf.cpp mxs2417_ignore_persisted_cn
 # MXS-2450: Crash on COM_CHANGE_USER with disable_sescmd_history=true
 add_test_executable(mxs2450_change_user_crash.cpp mxs2450_change_user_crash mxs2450_change_user_crash LABELS REPL_BACKEND readwritesplit)
 
-# MXS-1662: PAM admin authentication
-add_test_executable(mxs1662_pam_admin.cpp mxs1662_pam_admin mxs1662_pam_admin LABELS REPL_BACKEND)
-
 # MXS-2414: Block host after repeated authentication failures
 add_test_executable(mxs2414_host_blocking.cpp mxs2414_host_blocking replication LABELS REPL_BACKEND)
 
@@ -824,6 +821,8 @@ add_test_executable(mxs2414_host_blocking.cpp mxs2414_host_blocking replication 
 # 3. skip_authentication and match_host (MXS-2941)
 # 4. lower_case_table_names
 # 5. log_password_mismatch (MXS-2916)
+#
+# Also tests MXS-1662: PAM admin authentication
 add_test_executable(pam_authentication.cpp pam_authentication pam_authentication LABELS REPL_BACKEND)
 
 # MXS-3225, MXS-2383 Pam two factor authentication (2FA) test. Works only on Centos so far, so label as

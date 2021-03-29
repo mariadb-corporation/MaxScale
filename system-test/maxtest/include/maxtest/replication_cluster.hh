@@ -60,6 +60,22 @@ public:
      */
     int set_slave(MYSQL* conn, const char* master_host, int master_port,
                   const char* log_file, const char* log_pos);
+
+    /**
+     * Configure a server as a slave of another server
+     *
+     * The servers are configured with GTID replicating using the configured
+     * GTID position, either slave_pos or current_pos.
+     *
+     * @param slave  The node index to assign as slave
+     * @param master The node index of the master
+     * @param type   Replication type
+     */
+    void replicate_from(int slave, int master, const char* type = "current_pos");
+
+    // Replicates from a host and a port instead of a known server
+    void replicate_from(int slave, const std::string& host, uint16_t port, const char* type = "current_pos");
+
 private:
     bool check_master_node(MYSQL* conn);
     bool bad_slave_thread_status(MYSQL* conn, const char* field, int node);

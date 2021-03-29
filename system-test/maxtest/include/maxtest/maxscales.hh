@@ -33,9 +33,8 @@ public:
 
     ~Maxscales();
 
-    bool setup(const mxt::NetworkConfig& nwconfig);
+    bool setup(const mxt::NetworkConfig& nwconfig, int n_min_expected);
 
-    int  read_env(const mxt::NetworkConfig& nwconfig);
     void set_use_ipv6(bool use_ipv6);
 
     const char* ip4(int i = 0) const;
@@ -277,6 +276,8 @@ private:
     bool m_use_callgrind {false};   /**< Run MaxScale under Valgrind with --callgrind option */
 
     std::string m_binlog_dir[N_MXS];    /**< Directory of binlog files (for binlog router) */
+
+    int  read_nodes_info(const mxt::NetworkConfig& nwconfig);
 };
 
 class TestConnections;

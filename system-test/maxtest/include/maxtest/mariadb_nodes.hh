@@ -88,12 +88,6 @@ public:
     }
 
     /**
-     * @brief reads IP, Ports, sshkeys for every node from enviromental variables as well as number of nodes
-     *(N) and  User/Password
-     */
-    void read_env(const mxt::NetworkConfig& nwconfig);
-
-    /**
      * @brief  prints all nodes information
      * @return 0
      */
@@ -377,21 +371,6 @@ public:
     static bool get_require_gtid();
 
     /**
-     * Configure a server as a slave of another server
-     *
-     * The servers are configured with GTID replicating using the configured
-     * GTID position, either slave_pos or current_pos.
-     *
-     * @param slave  The node index to assign as slave
-     * @param master The node index of the master
-     * @param type   Replication type
-     */
-    void replicate_from(int slave, int master, const char* type = "current_pos");
-
-    // Replicates from a host and a port instead of a known server
-    void replicate_from(int slave, const std::string& host, uint16_t port, const char* type = "current_pos");
-
-    /**
      * @brief limit_nodes Restart replication for only new_N nodes
      * @param new_N new number of nodes in replication
      */
@@ -421,7 +400,7 @@ public:
      */
     virtual const std::string& type_string() const = 0;
 
-    bool setup(const mxt::NetworkConfig& nwconfig);
+    bool setup(const mxt::NetworkConfig& nwconfig, int n_min_expected);
 
 protected:
     /**
@@ -455,4 +434,6 @@ private:
     /**
      * Command to remove all data files and re-install DB with mysql_install_db */
     std::string m_cleanup_db_command[N_MAX];
+
+    int read_nodes_info(const mxt::NetworkConfig& nwconfig);
 };

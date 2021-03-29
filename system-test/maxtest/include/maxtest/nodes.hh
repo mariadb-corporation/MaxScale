@@ -1,6 +1,7 @@
 #pragma once
 
 #include <errno.h>
+#include <functional>
 #include <map>
 #include <string>
 #include <set>
@@ -23,6 +24,9 @@ struct CmdResult
 };
 
 using NetworkConfig = std::map<std::string, std::string>;
+
+using BoolFuncArray = std::vector<std::function<bool(void)>>;
+bool concurrent_run(const BoolFuncArray& funcs);
 
 class VMNode
 {
@@ -165,7 +169,7 @@ public:
      * @param node Node index
      * @return True if node is ok, false if start failed
      */
-    bool check_nodes();
+    bool check_nodes_ssh();
 
     /**
      * Read node settings such as IPs, sshkey, etc from network config contents.
@@ -198,6 +202,9 @@ protected:
 
     mxt::VMNode&       node(int i);
     const mxt::VMNode& node(int i) const;
+
+    void clear_vms();
+    bool add_node(const mxt::NetworkConfig& nwconfig, const std::string& name);
 
 private:
     std::vector<mxt::VMNode> m_vms;
