@@ -78,7 +78,7 @@ std::string TestLogger::time_string() const
     gettimeofday(&now, nullptr);
 
     // Generate time stamp.
-    struct tm broken_down_time {0};
+    struct tm broken_down_time { 0 };
     localtime_r(&now.tv_sec, &broken_down_time);
     char timebuf[10];
     strftime(timebuf, sizeof(timebuf), "%T", &broken_down_time);

@@ -611,7 +611,7 @@ bool MariaDBCluster::prepare_for_test()
 
     for (int i = 0; i < N; i++)
     {
-        bool (MariaDBCluster::*function)(MYSQL*) = &MariaDBCluster::prepare_for_test;
+        bool (MariaDBCluster::* function)(MYSQL*) = &MariaDBCluster::prepare_for_test;
         std::packaged_task<bool(MariaDBCluster*, MYSQL*)> task(function);
         futures.push_back(task.get_future());
         std::thread(std::move(task), this, nodes[i]).detach();
@@ -884,8 +884,9 @@ int MariaDBCluster::prepare_server(int i)
             // password in the log and reseting passord to empty string
             ssh_node(i, "/usr/sbin/mysqld --initialize; sudo chown -R mysql:mysql /var/lib/mysql", true);
             ssh_node(i, m_start_db_command[i], true);
-            auto res_temp_pw = ssh_output("cat /var/log/mysqld.log | grep \"temporary password\" | sed -n -e 's/^.*: //p'",
-                                          i, true);
+            auto res_temp_pw = ssh_output(
+                "cat /var/log/mysqld.log | grep \"temporary password\" | sed -n -e 's/^.*: //p'",
+                i, true);
             rval = res_temp_pw.rc;
             auto temp_pw = res_temp_pw.output.c_str();
             ssh_node_f(i, true, "mysqladmin -uroot -p'%s' password '%s'", temp_pw, temp_pw);

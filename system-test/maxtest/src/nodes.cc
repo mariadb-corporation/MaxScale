@@ -85,7 +85,8 @@ bool Nodes::check_nodes_ssh()
     for (size_t i = 0; i < m_vms.size(); i++)
     {
         auto func = [this, i]() {
-            return check_node_ssh(i);};
+                return check_node_ssh(i);
+            };
         f.push_back(move(func));
     }
     return mxt::concurrent_run(f);
@@ -425,7 +426,7 @@ mxt::CmdResult VMNode::run_cmd_output(const string& cmd, CmdPriv priv)
     else
     {
         string ssh_cmd_p2 = sudo ? mxb::string_printf("'%s %s'", m_sudo.c_str(), cmd.c_str()) :
-                            mxb::string_printf("'%s'", cmd.c_str());
+            mxb::string_printf("'%s'", cmd.c_str());
         total_cmd.append(m_ssh_cmd_p1).append(" ").append(ssh_cmd_p2);
     }
 

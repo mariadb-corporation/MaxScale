@@ -85,16 +85,16 @@ public:
      */
     int copy_mariadb_logs(MariaDBCluster* nrepl, const char* prefix, std::vector<std::thread>& threads);
 
-    mxt::ReplicationCluster* repl {nullptr};     /**< Master-Slave replication cluster */
-    GaleraCluster*           galera {nullptr};   /**< Galera cluster */
-    XpandCluster*            xpand {nullptr};    /**< Xpand cluster */
-    Maxscales*               maxscales {nullptr};/**< MaxScale nodes */
+    mxt::ReplicationCluster* repl {nullptr};        /**< Master-Slave replication cluster */
+    GaleraCluster*           galera {nullptr};      /**< Galera cluster */
+    XpandCluster*            xpand {nullptr};       /**< Xpand cluster */
+    Maxscales*               maxscales {nullptr};   /**< MaxScale nodes */
 
-    int& global_result; /**< Result of test, 0 if PASSED */
-    bool smoke {true}; /**< Run tests in quick mode. Only affects some long tests. */
+    int& global_result;     /**< Result of test, 0 if PASSED */
+    bool smoke {true};      /**< Run tests in quick mode. Only affects some long tests. */
 
-    int ssl {false}; /**< Use SSL */
-    bool backend_ssl {false}; /**< Add SSL-settings to backend server configurations */
+    int  ssl {false};           /**< Use SSL */
+    bool backend_ssl {false};   /**< Add SSL-settings to backend server configurations */
 
     long int m_timeout {999999999};             /**< Seconds until test termination, default never */
     long int m_log_copy_interval {999999999};   /**< Seconds between log copies, default never */
@@ -383,12 +383,15 @@ public:
      */
     bool reinstall_maxscales();
 
-    mxt::MaxScale&      maxscale();
-    mxt::MaxScale&      maxscale2();
-    mxt::TestLogger&    logger();
-    mxt::Settings&      settings();
+    mxt::MaxScale&   maxscale();
+    mxt::MaxScale&   maxscale2();
+    mxt::TestLogger& logger();
+    mxt::Settings&   settings();
 
-    std::string get_mdbci_config_name() {return m_mdbci_config_name;}
+    std::string get_mdbci_config_name()
+    {
+        return m_mdbci_config_name;
+    }
 
     void set_verbose(bool val);
     bool verbose() const;
@@ -403,19 +406,19 @@ private:
 
     bool log_matches(int m, const char* pattern);
 
-    std::unique_ptr<mxt::MaxScale>   m_maxscale;  /**< Main MaxScale instance */
-    std::unique_ptr<mxt::MaxScale>   m_maxscale2; /**< Secondary MaxScale instance */
+    std::unique_ptr<mxt::MaxScale> m_maxscale;      /**< Main MaxScale instance */
+    std::unique_ptr<mxt::MaxScale> m_maxscale2;     /**< Secondary MaxScale instance */
 
-    mxt::SharedData m_shared;    /**< Data shared with other objects */
+    mxt::SharedData m_shared;   /**< Data shared with other objects */
 
     std::string m_test_name;            /**< Test name */
     std::string m_cnf_template_path;    /**< MaxScale config file template used by test */
 
-    StringSet   m_required_mdbci_labels;     /**< MDBCI-labels required by test. Subset of test labels. */
-    std::string m_required_mdbci_labels_str; /**< MDBCI-labels in string form. Used on the command line. */
+    StringSet   m_required_mdbci_labels;    /**< MDBCI-labels required by test. Subset of test labels. */
+    std::string m_required_mdbci_labels_str;/**< MDBCI-labels in string form. Used on the command line. */
 
-    mxt::NetworkConfig m_network_config;          /**< Contents of MDBCI network_config file */
-    StringSet          m_configured_mdbci_labels; /**< MDBCI-labels already configured on the VM setup */
+    mxt::NetworkConfig m_network_config;            /**< Contents of MDBCI network_config file */
+    StringSet          m_configured_mdbci_labels;   /**< MDBCI-labels already configured on the VM setup */
 
     std::string m_mdbci_config_name;    /**< Name of MDBCI VMs set */
     std::string m_mdbci_vm_path;        /**< Path to directory with MDBCI VMs descriptions */
@@ -438,11 +441,11 @@ private:
 
     int m_threads {4};      /**< Number of Maxscale threads */
 
-    std::thread m_timeout_thread;  /**< Timeout thread */
-    std::thread m_log_copy_thread; /**< Log copying thread */
-    bool m_stop_threads {false};
+    std::thread m_timeout_thread;   /**< Timeout thread */
+    std::thread m_log_copy_thread;  /**< Log copying thread */
+    bool        m_stop_threads {false};
 
-    timeval m_start_time {0, 0};   /**< Test object creation time. Used for log copying. */
+    timeval m_start_time {0, 0};    /**< Test object creation time. Used for log copying. */
 
     /**
      * If true IPv6 addresses will be used to connect Maxscale and backed Also IPv6 addresses go to
@@ -454,9 +457,9 @@ private:
      * and re-installed on all Maxscale nodes. Used for 'run_test_snapshot'.
      */
     bool m_reinstall_maxscale {false};
-    bool m_mdbci_called {false};     /**< Was mdbci called when setting up test system? */
+    bool m_mdbci_called {false};    /**< Was mdbci called when setting up test system? */
 
-    bool m_cleaned_up {false}; /**< Cleanup done? */
+    bool m_cleaned_up {false};      /**< Cleanup done? */
 
     std::string flatten_stringset(const StringSet& set);
     StringSet   parse_to_stringset(const std::string& source);
@@ -473,7 +476,7 @@ private:
     bool process_template(int m, const std::string& config_file_path, const char* dest = "/etc/maxscale.cnf");
     bool process_mdbci_template();
     bool call_mdbci(const char* options);
-    int setup_vms();
+    int  setup_vms();
 
     /**
      * @brief timeout_thread Thread which terminates test application after 'timeout' milliseconds
@@ -501,7 +504,7 @@ std::string dump_status(const StringSet& current, const StringSet& expected);
 
 /**
  * Return substring before first cutoff char.
-
+ *
  * @param source Source string
  * @param cutoff Cutoff character
  * @return Result

@@ -277,7 +277,7 @@ private:
 
     std::string m_binlog_dir[N_MXS];    /**< Directory of binlog files (for binlog router) */
 
-    int  read_nodes_info(const mxt::NetworkConfig& nwconfig);
+    int read_nodes_info(const mxt::NetworkConfig& nwconfig);
 };
 
 class TestConnections;
