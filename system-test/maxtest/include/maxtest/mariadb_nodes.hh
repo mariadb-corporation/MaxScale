@@ -422,6 +422,7 @@ public:
     bool setup(const mxt::NetworkConfig& nwconfig, int n_min_expected);
     bool update_status();
     bool check_backend_versions(uint64_t min_version);
+    bool check_create_test_db();
 
     mxt::MariaDBServer* backend(int i);
 

@@ -1011,6 +1011,23 @@ mxt::MariaDBServer* MariaDBCluster::backend(int i)
     return m_backends[i].get();
 }
 
+bool MariaDBCluster::check_create_test_db()
+{
+    bool rval = false;
+    if (!m_backends.empty())
+    {
+        auto conn = m_backends[0]->try_open_admin_connection();
+        if (conn->is_open())
+        {
+            if (conn->cmd("DROP DATABASE IF EXISTS test;") && conn->cmd("CREATE DATABASE test;"))
+            {
+                rval = true;
+            }
+        }
+    }
+    return rval;
+}
+
 namespace maxtest
 {
 maxtest::MariaDBServer::MariaDBServer(const string& cnf_name, VMNode& vm, MariaDBCluster& cluster,
