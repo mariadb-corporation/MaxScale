@@ -783,8 +783,6 @@ public:
 
     GWBUF* execute() override
     {
-        bsoncxx::document::view update;
-
         auto it = m_arguments.find(mxsmongo::key::UPDATES);
 
         if (it != m_arguments.end())
@@ -792,10 +790,10 @@ public:
             const auto& updates = it->second;
             check_write_batch_size(updates.size());
 
-            // TODO: Deal with multiple updates.
-            mxb_assert(updates.size() <= 1);
-            mxb_assert(updates.size() != 0);
-            update = updates[0];
+            for (auto doc : updates)
+            {
+                m_statements.push_back(convert_document(doc));
+            }
         }
         else
         {
@@ -814,15 +812,31 @@ public:
             }
 
             auto updates = static_cast<bsoncxx::array::view>(element.get_array());
-            check_write_batch_size(std::distance(updates.begin(), updates.end()));
+            auto nUpdates = std::distance(updates.begin(), updates.end());
+            check_write_batch_size(nUpdates);
 
-            // TODO: Deal with multiple updates.
-            mxb_assert(!updates[1]);
+            int i = 0;
+            for (auto element : updates)
+            {
+                if (element.type() != bsoncxx::type::k_document)
+                {
+                    stringstream ss;
+                    ss << "BSON field 'update.updates."
+                       << i << "' is the wrong type '"
+                       << bsoncxx::to_string(element.type())
+                       << "', expected type 'object'";
 
-            update = static_cast<bsoncxx::document::view>(updates[0].get_document());
+                    throw SoftError(ss.str(), error::TYPE_MISMATCH);
+                }
+
+                m_statements.push_back(convert_document(element.get_document()));
+            }
         }
 
-        send_downstream(convert_document(update));
+        m_it = m_statements.begin();
+        mxb_assert(m_statements.size() == 1);
+
+        execute_one_statement();
 
         return nullptr;
     };
@@ -872,6 +886,13 @@ public:
     };
 
 private:
+    void execute_one_statement()
+    {
+        mxb_assert(m_it != m_statements.end());
+
+        send_downstream(*m_it);
+    }
+
     string convert_document(const bsoncxx::document::view& update)
     {
         stringstream sql;
@@ -1082,6 +1103,10 @@ private:
 
         return create_response(builder, ok, n, nModified);
     }
+
+private:
+    vector<string>           m_statements;
+    vector<string>::iterator m_it;
 };
 
 
