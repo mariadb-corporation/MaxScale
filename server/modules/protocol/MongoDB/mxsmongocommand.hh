@@ -33,7 +33,8 @@ public:
     using DocumentVector = std::vector<bsoncxx::document::view>;
     using DocumentArguments = std::unordered_map<std::string, DocumentVector>;
 
-    Command(Database* pDatabase,
+    Command(const std::string& name,
+            Database* pDatabase,
             GWBUF* pRequest,
             const Packet& req,
             const bsoncxx::document::view& doc,
@@ -78,6 +79,7 @@ protected:
     void add_error(bsoncxx::builder::basic::array& builder, const ComERR& err, int index);
     void add_error(bsoncxx::builder::basic::document& builder, const ComERR& err);
 
+    const std::string       m_name;
     Database&               m_database;
     GWBUF*                  m_pRequest;
     Packet                  m_req;

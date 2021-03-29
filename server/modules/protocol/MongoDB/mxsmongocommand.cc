@@ -87,16 +87,18 @@ public:
 using namespace mxsmongo;
 
 template<class ConcreteCommand>
-unique_ptr<Command> create_command(Database* pDatabase,
+unique_ptr<Command> create_command(const string& name,
+                                   Database* pDatabase,
                                    GWBUF* pRequest,
                                    const Packet& req,
                                    const bsoncxx::document::view& doc,
                                    const Command::DocumentArguments& arguments)
 {
-    return unique_ptr<ConcreteCommand>(new ConcreteCommand(pDatabase, pRequest, req, doc, arguments));
+    return unique_ptr<ConcreteCommand>(new ConcreteCommand(name, pDatabase, pRequest, req, doc, arguments));
 }
 
-using CreatorFunction = unique_ptr<Command> (*)(Database* pDatabase,
+using CreatorFunction = unique_ptr<Command> (*)(const string& name,
+                                                Database* pDatabase,
                                                 GWBUF* pRequest,
                                                 const Packet& req,
                                                 const bsoncxx::document::view& doc,
@@ -127,12 +129,14 @@ struct ThisUnit
 namespace mxsmongo
 {
 
-Command::Command(Database* pDatabase,
+Command::Command(const string& name,
+                 Database* pDatabase,
                  GWBUF* pRequest,
                  const Packet& req,
                  const bsoncxx::document::view& doc,
                  const DocumentArguments& arguments)
-    : m_database(*pDatabase)
+    : m_name(name)
+    , m_database(*pDatabase)
     , m_pRequest(gwbuf_clone(pRequest))
     , m_req(req)
     , m_doc(doc)
@@ -153,15 +157,15 @@ unique_ptr<Command> Command::get(mxsmongo::Database* pDatabase,
                                  const DocumentArguments& arguments)
 {
     CreatorFunction create = nullptr;
+    string name;
 
     if (!doc.empty())
     {
         // The command *must* be the first element,
         auto element = *doc.begin();
-        string name(element.key().data(), element.key().length());
-        mxb::lower_case(name);
+        name.append(element.key().data(), element.key().length());
 
-        auto it = this_unit.creators_by_name.find(name);
+        auto it = this_unit.creators_by_name.find(mxb::tolower(name));
 
         if (it != this_unit.creators_by_name.end())
         {
@@ -171,10 +175,11 @@ unique_ptr<Command> Command::get(mxsmongo::Database* pDatabase,
 
     if (!create)
     {
+        name = "unknown";
         create = &create_command<Unknown>;
     }
 
-    return create(pDatabase, pRequest, req, doc, arguments);
+    return create(name, pDatabase, pRequest, req, doc, arguments);
 }
 
 Command::State Command::translate(GWBUF& mariadb_response, GWBUF** ppMongo_response)
