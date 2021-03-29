@@ -143,9 +143,6 @@ TestConnections::TestConnections()
 TestConnections::TestConnections(int argc, char* argv[])
     : TestConnections()
 {
-    // These are required for backwards compatibility.
-    m_shared.settings.req_mariadb_gtid = MariaDBCluster::get_require_gtid();
-
     int rc = prepare_for_test(argc, argv);
     if (rc != 0)
     {

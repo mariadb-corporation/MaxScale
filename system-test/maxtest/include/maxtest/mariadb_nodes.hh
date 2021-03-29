@@ -388,7 +388,6 @@ public:
 
     /** Whether to require GTID based replication, defaults to false */
     static void require_gtid(bool value);
-    static bool get_require_gtid();
 
     /**
      * @brief limit_nodes Restart replication for only new_N nodes

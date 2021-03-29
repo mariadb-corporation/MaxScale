@@ -23,7 +23,6 @@ using std::cout;
 int main(int argc, char** argv)
 {
     interactive = strcmp(argv[argc - 1], "interactive") == 0;
-    MariaDBCluster::require_gtid(true);
     TestConnections test(argc, argv);
     test.repl->connect();
     // Delete binlogs to sync gtid:s

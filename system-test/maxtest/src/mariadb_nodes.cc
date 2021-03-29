@@ -33,10 +33,6 @@ using std::move;
 
 namespace
 {
-bool g_require_gtid = false;
-
-const string type_columnstore = "columnstore";
-
 /**
  * Tries to find MariaDB server version number in the output of 'mysqld --version'
  *
@@ -59,16 +55,6 @@ string extract_version_from_string(const string& version)
     }
     return version.substr(pos1, pos2 - pos1);
 }
-}
-
-void MariaDBCluster::require_gtid(bool value)
-{
-    g_require_gtid = value;
-}
-
-bool MariaDBCluster::get_require_gtid()
-{
-    return g_require_gtid;
 }
 
 MariaDBCluster::MariaDBCluster(mxt::SharedData* shared, const std::string& nwconf_prefix,

@@ -42,7 +42,6 @@ public:
 
 int main(int argc, char** argv)
 {
-    MariaDBCluster::require_gtid(true);
     TestConnections test(argc, argv);
     return MasterSelectTest(test).result();
 }

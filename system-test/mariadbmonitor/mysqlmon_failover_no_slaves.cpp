@@ -30,7 +30,6 @@ const string maint = "Maintenance";
 int main(int argc, char** argv)
 {
     interactive = strcmp(argv[argc - 1], "interactive") == 0;
-    MariaDBCluster::require_gtid(true);
     TestConnections test(argc, argv);
 
     delete_slave_binlogs(test);

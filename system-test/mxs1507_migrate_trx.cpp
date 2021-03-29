@@ -12,7 +12,6 @@ using namespace std;
 
 int main(int argc, char** argv)
 {
-    MariaDBCluster::require_gtid(true);
     TestConnections test(argc, argv);
     string master = "server1";
     string slave = "server2";

@@ -29,7 +29,6 @@ void basic_test(TestConnections& test)
 
 int main(int argc, char** argv)
 {
-    MariaDBCluster::require_gtid(true);
     TestConnections::require_repl_version("10.3.8");
     TestConnections test(argc, argv);
 

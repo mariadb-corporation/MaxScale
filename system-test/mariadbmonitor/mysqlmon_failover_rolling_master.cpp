@@ -260,7 +260,6 @@ void run(XTestConnections& test)
 
 int main(int argc, char* argv[])
 {
-    MariaDBCluster::require_gtid(true);
     XTestConnections test(argc, argv);
 
     try

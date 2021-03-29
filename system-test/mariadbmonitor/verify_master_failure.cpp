@@ -8,7 +8,6 @@
 
 int main(int argc, char* argv[])
 {
-    MariaDBCluster::require_gtid(true);
     TestConnections test(argc, argv);
 
     test.tprintf("Blocking master and checking that master failure is delayed at least once.");

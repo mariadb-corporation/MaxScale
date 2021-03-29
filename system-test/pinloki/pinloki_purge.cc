@@ -48,7 +48,6 @@ public:
 
 int main(int argc, char** argv)
 {
-    MariaDBCluster::require_gtid(true);
     TestConnections test(argc, argv);
     return PurgeTest(test).result();
 }

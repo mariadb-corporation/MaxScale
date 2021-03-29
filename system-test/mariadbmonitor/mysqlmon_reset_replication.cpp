@@ -21,7 +21,6 @@ using std::cout;
 
 int main(int argc, char** argv)
 {
-    MariaDBCluster::require_gtid(true);
     TestConnections test(argc, argv);
 
     auto expect_server_status = [&test](const string& server_name, const string& status) {
