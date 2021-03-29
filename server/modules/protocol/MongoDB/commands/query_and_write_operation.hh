@@ -783,6 +783,23 @@ public:
 
     GWBUF* execute() override
     {
+        auto ordered = m_doc[mxsmongo::key::ORDERED];
+
+        if (ordered)
+        {
+            if (ordered.type() != bsoncxx::type::k_bool)
+            {
+                stringstream ss;
+                ss << "BSON field 'update.ordered' is the wrong type '"
+                   << bsoncxx::to_string(ordered.type())
+                   << "', expected type 'bool'";
+
+                throw SoftError(ss.str(), error::TYPE_MISMATCH);
+            }
+
+            m_ordered = ordered.get_bool();
+        }
+
         auto it = m_arguments.find(mxsmongo::key::UPDATES);
 
         if (it != m_arguments.end())
@@ -834,7 +851,6 @@ public:
         }
 
         m_it = m_statements.begin();
-        mxb_assert(m_statements.size() == 1);
 
         execute_one_statement();
 
@@ -844,26 +860,24 @@ public:
     State translate(GWBUF& mariadb_response, GWBUF** ppResponse) override
     {
         // TODO: Update will be needed when DEPRECATE_EOF it turned on.
-        DocumentBuilder doc;
+        GWBUF* pResponse = nullptr;
 
         ComResponse response(GWBUF_DATA(&mariadb_response));
 
-        int32_t is_ok = response.is_ok() ? 1 : 0;
-        int32_t n = 0;
-        int32_t nModified = 0;
+        bool abort = false;
 
         switch (response.type())
         {
         case ComResponse::OK_PACKET:
             {
                 ComOK ok(response);
-                nModified = ok.affected_rows();
+                m_nModified += ok.affected_rows();
 
                 string s = ok.info().to_string();
 
                 if (s.find("Rows matched: ") == 0)
                 {
-                    n = atol(s.c_str() + 14);
+                    m_n += atol(s.c_str() + 14);
                 }
 
                 MXS_NOTICE("INFO: %s", s.c_str());
@@ -871,7 +885,12 @@ public:
             break;
 
         case ComResponse::ERR_PACKET:
-            add_error(doc, ComERR(response));
+            if (m_ordered)
+            {
+                abort = true;
+            }
+
+            add_error(m_write_errors, ComERR(response), m_it - m_statements.begin());
             break;
 
         case ComResponse::LOCAL_INFILE_PACKET:
@@ -879,10 +898,37 @@ public:
             mxb_assert(!true);
         }
 
-        GWBUF* pResponse = create_response(doc, is_ok, n, nModified);
+        ++m_it;
+
+        State rv = BUSY;
+
+        if (m_it == m_statements.end() || abort)
+        {
+            DocumentBuilder doc;
+
+            auto write_errors = m_write_errors.extract();
+
+            int32_t ok = (m_nModified != 0 || write_errors.view().empty());
+
+            doc.append(kvp("ok", ok));
+            doc.append(kvp("n", m_n));
+            doc.append(kvp("nModified", m_nModified));
+
+            if (!write_errors.view().empty())
+            {
+                doc.append(kvp("writeErrors", write_errors));
+            }
+
+            pResponse = create_response(doc.extract());
+            rv = READY;
+        }
+        else
+        {
+            execute_one_statement();
+        }
 
         *ppResponse = pResponse;
-        return READY;
+        return rv;
     };
 
 private:
@@ -1085,28 +1131,13 @@ private:
         return rv;
     }
 
-    GWBUF* create_response(DocumentBuilder& builder,
-                           int32_t ok,
-                           int32_t n,
-                           int32_t nModified)
-    {
-        builder.append(kvp("ok", ok));
-        builder.append(kvp("n", n));
-        builder.append(kvp("nModified", nModified));
-
-        return mxsmongo::Command::create_response(builder.extract());
-    }
-
-    GWBUF* create_response(int32_t ok, int32_t n, int32_t nModified)
-    {
-        DocumentBuilder builder;
-
-        return create_response(builder, ok, n, nModified);
-    }
-
 private:
-    vector<string>           m_statements;
-    vector<string>::iterator m_it;
+    bool                           m_ordered { true };
+    vector<string>                 m_statements;
+    vector<string>::iterator       m_it;
+    int32_t                        m_n { 0 };
+    int32_t                        m_nModified { 0 };
+    bsoncxx::builder::basic::array m_write_errors;
 };
 
 
