@@ -24,6 +24,120 @@ namespace mxsmongo
 namespace command
 {
 
+class OrderedCommand : public Command
+{
+public:
+    OrderedCommand(const std::string& name,
+                   Database* pDatabase,
+                   GWBUF* pRequest,
+                   const Packet& req,
+                   const bsoncxx::document::view& doc,
+                   const DocumentArguments& arguments,
+                   const std::string& array_key)
+        : Command(name, pDatabase, pRequest, req, doc, arguments)
+        , m_key(array_key)
+    {
+    }
+
+public:
+    GWBUF* execute() override final
+    {
+        auto ordered = m_doc[mxsmongo::key::ORDERED];
+
+        if (ordered)
+        {
+            if (ordered.type() != bsoncxx::type::k_bool)
+            {
+                stringstream ss;
+                ss << "BSON field '" << m_name << ".ordered' is the wrong type '"
+                   << bsoncxx::to_string(ordered.type())
+                   << "', expected type 'bool'";
+
+                throw SoftError(ss.str(), error::TYPE_MISMATCH);
+            }
+
+            m_ordered = ordered.get_bool();
+        }
+
+        auto it = m_arguments.find(m_key);
+
+        if (it != m_arguments.end())
+        {
+            const auto& documents = it->second;
+            check_write_batch_size(documents.size());
+
+            for (auto doc : documents)
+            {
+                m_statements.push_back(convert_document(doc));
+            }
+        }
+        else
+        {
+            auto element = m_doc[m_key];
+
+            if (!element)
+            {
+                stringstream ss;
+                ss << "BSON field '" << m_name << "." << m_key << "' is missing but a required field";
+
+                throw SoftError(ss.str(), error::LOCATION40414);
+            }
+
+            if (element.type() != bsoncxx::type::k_array)
+            {
+                stringstream ss;
+                ss << "invalid parameter: expected an object (" << m_key << ")";
+
+                throw SoftError(ss.str(), error::LOCATION10065);
+            }
+
+            auto documents = static_cast<bsoncxx::array::view>(element.get_array());
+            auto nDocuments = std::distance(documents.begin(), documents.end());
+            check_write_batch_size(nDocuments);
+
+            int i = 0;
+            for (auto element : documents)
+            {
+                if (element.type() != bsoncxx::type::k_document)
+                {
+                    stringstream ss;
+                    ss << "BSON field '" << m_name << "." << m_key << "."
+                       << i << "' is the wrong type '"
+                       << bsoncxx::to_string(element.type())
+                       << "', expected type 'object'";
+
+                    throw SoftError(ss.str(), error::TYPE_MISMATCH);
+                }
+
+                m_statements.push_back(convert_document(element.get_document()));
+            }
+        }
+
+        m_it = m_statements.begin();
+
+        execute_one_statement();
+
+        return nullptr;
+    }
+
+protected:
+    virtual string convert_document(const bsoncxx::document::view& doc) = 0;
+
+    void execute_one_statement()
+    {
+        mxb_assert(m_it != m_statements.end());
+
+        send_downstream(*m_it);
+    }
+
+    string                         m_key;
+    bool                           m_ordered { true };
+    vector<string>                 m_statements;
+    vector<string>::iterator       m_it;
+    int32_t                        m_n { 0 };
+    bsoncxx::builder::basic::array m_write_errors;
+};
+
 class TableCreatingCommand : public mxsmongo::Command
 {
 public:
@@ -167,85 +281,17 @@ private:
 
 
 // https://docs.mongodb.com/manual/reference/command/delete/
-class Delete : public mxsmongo::Command
+class Delete : public OrderedCommand
 {
 public:
-    using mxsmongo::Command::Command;
-
-    GWBUF* execute() override
+    Delete(const std::string& name,
+           Database* pDatabase,
+           GWBUF* pRequest,
+           const Packet& req,
+           const bsoncxx::document::view& doc,
+           const DocumentArguments& arguments)
+        : OrderedCommand(name, pDatabase, pRequest, req, doc, arguments, mxsmongo::key::DELETES)
     {
-        auto ordered = m_doc[mxsmongo::key::ORDERED];
-
-        if (ordered)
-        {
-            if (ordered.type() != bsoncxx::type::k_bool)
-            {
-                stringstream ss;
-                ss << "BSON field 'delete.ordered' is the wrong type '"
-                   << bsoncxx::to_string(ordered.type())
-                   << "', expected type 'bool'";
-
-                throw SoftError(ss.str(), error::TYPE_MISMATCH);
-            }
-
-            m_ordered = ordered.get_bool();
-        }
-
-        auto it = m_arguments.find(mxsmongo::key::DELETES);
-
-        if (it != m_arguments.end())
-        {
-            const auto& deletes = it->second;
-            check_write_batch_size(deletes.size());
-
-            for (auto doc : deletes)
-            {
-                m_statements.push_back(convert_document(doc));
-            }
-        }
-        else
-        {
-            auto element = m_doc[mxsmongo::key::DELETES];
-
-            if (!element)
-            {
-                throw SoftError("BSON field 'delete.deletes' is missing but a required field",
-                                error::LOCATION40414);
-            }
-
-            if (element.type() != bsoncxx::type::k_array)
-            {
-                throw SoftError("invalid parameter: expected an object (deletes)",
-                                error::LOCATION10065);
-            }
-
-            auto deletes = static_cast<bsoncxx::array::view>(element.get_array());
-            auto nDeletes = std::distance(deletes.begin(), deletes.end());
-            check_write_batch_size(nDeletes);
-
-            int i = 0;
-            for (auto element : deletes)
-            {
-                if (element.type() != bsoncxx::type::k_document)
-                {
-                    stringstream ss;
-                    ss << "BSON field 'delete.deletes."
-                       << i << "' is the wrong type '"
-                       << bsoncxx::to_string(element.type())
-                       << "', expected type 'object'";
-
-                    throw SoftError(ss.str(), error::TYPE_MISMATCH);
-                }
-
-                m_statements.push_back(convert_document(element.get_document()));
-            }
-        }
-
-        m_it = m_statements.begin();
-
-        execute_one_statement();
-
-        return nullptr;
     }
 
     State translate(GWBUF& mariadb_response, GWBUF** ppResponse) override
@@ -310,14 +356,7 @@ public:
     }
 
 private:
-    void execute_one_statement()
-    {
-        mxb_assert(m_it != m_statements.end());
-
-        send_downstream(*m_it);
-    }
-
-    string convert_document(const bsoncxx::document::view& doc)
+    string convert_document(const bsoncxx::document::view& doc) override
     {
         stringstream sql;
 
@@ -374,13 +413,6 @@ private:
 
         return sql.str();
     }
-
-private:
-    bool                           m_ordered { true };
-    vector<string>                 m_statements;
-    vector<string>::iterator       m_it;
-    int32_t                        m_n { 0 };
-    bsoncxx::builder::basic::array m_write_errors;
 };
 
 
@@ -776,86 +808,18 @@ private:
 // https://docs.mongodb.com/manual/reference/command/resetError/
 
 // https://docs.mongodb.com/manual/reference/command/update/
-class Update : public mxsmongo::Command
+class Update : public OrderedCommand
 {
 public:
-    using mxsmongo::Command::Command;
-
-    GWBUF* execute() override
+    Update(const std::string& name,
+           Database* pDatabase,
+           GWBUF* pRequest,
+           const Packet& req,
+           const bsoncxx::document::view& doc,
+           const DocumentArguments& arguments)
+        : OrderedCommand(name, pDatabase, pRequest, req, doc, arguments, mxsmongo::key::UPDATES)
     {
-        auto ordered = m_doc[mxsmongo::key::ORDERED];
-
-        if (ordered)
-        {
-            if (ordered.type() != bsoncxx::type::k_bool)
-            {
-                stringstream ss;
-                ss << "BSON field 'update.ordered' is the wrong type '"
-                   << bsoncxx::to_string(ordered.type())
-                   << "', expected type 'bool'";
-
-                throw SoftError(ss.str(), error::TYPE_MISMATCH);
-            }
-
-            m_ordered = ordered.get_bool();
-        }
-
-        auto it = m_arguments.find(mxsmongo::key::UPDATES);
-
-        if (it != m_arguments.end())
-        {
-            const auto& updates = it->second;
-            check_write_batch_size(updates.size());
-
-            for (auto doc : updates)
-            {
-                m_statements.push_back(convert_document(doc));
-            }
-        }
-        else
-        {
-            auto element = m_doc[mxsmongo::key::UPDATES];
-
-            if (!element)
-            {
-                throw SoftError("BSON field 'update.updates' is missing but a required field",
-                                error::LOCATION40414);
-            }
-
-            if (element.type() != bsoncxx::type::k_array)
-            {
-                throw SoftError("invalid parameter: expected an object (updates)",
-                                error::LOCATION10065);
-            }
-
-            auto updates = static_cast<bsoncxx::array::view>(element.get_array());
-            auto nUpdates = std::distance(updates.begin(), updates.end());
-            check_write_batch_size(nUpdates);
-
-            int i = 0;
-            for (auto element : updates)
-            {
-                if (element.type() != bsoncxx::type::k_document)
-                {
-                    stringstream ss;
-                    ss << "BSON field 'update.updates."
-                       << i << "' is the wrong type '"
-                       << bsoncxx::to_string(element.type())
-                       << "', expected type 'object'";
-
-                    throw SoftError(ss.str(), error::TYPE_MISMATCH);
-                }
-
-                m_statements.push_back(convert_document(element.get_document()));
-            }
-        }
-
-        m_it = m_statements.begin();
-
-        execute_one_statement();
-
-        return nullptr;
-    };
+    }
 
     State translate(GWBUF& mariadb_response, GWBUF** ppResponse) override
     {
@@ -932,13 +896,6 @@ public:
     };
 
 private:
-    void execute_one_statement()
-    {
-        mxb_assert(m_it != m_statements.end());
-
-        send_downstream(*m_it);
-    }
-
     string convert_document(const bsoncxx::document::view& update)
     {
         stringstream sql;
@@ -1132,12 +1089,7 @@ private:
     }
 
 private:
-    bool                           m_ordered { true };
-    vector<string>                 m_statements;
-    vector<string>::iterator       m_it;
-    int32_t                        m_n { 0 };
-    int32_t                        m_nModified { 0 };
-    bsoncxx::builder::basic::array m_write_errors;
+    int32_t m_nModified { 0 };
 };
 
 
