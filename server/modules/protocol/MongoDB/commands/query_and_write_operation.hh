@@ -783,9 +783,6 @@ public:
 
     GWBUF* execute() override
     {
-        stringstream sql;
-        sql << "UPDATE " << get_table(mxsmongo::key::UPDATE) << " ";
-
         bsoncxx::document::view update;
 
         auto it = m_arguments.find(mxsmongo::key::UPDATES);
@@ -825,7 +822,60 @@ public:
             update = static_cast<bsoncxx::document::view>(updates[0].get_document());
         }
 
-        sql << "SET doc = ";
+        send_downstream(convert_document(update));
+
+        return nullptr;
+    };
+
+    State translate(GWBUF& mariadb_response, GWBUF** ppResponse) override
+    {
+        // TODO: Update will be needed when DEPRECATE_EOF it turned on.
+        DocumentBuilder doc;
+
+        ComResponse response(GWBUF_DATA(&mariadb_response));
+
+        int32_t is_ok = response.is_ok() ? 1 : 0;
+        int32_t n = 0;
+        int32_t nModified = 0;
+
+        switch (response.type())
+        {
+        case ComResponse::OK_PACKET:
+            {
+                ComOK ok(response);
+                nModified = ok.affected_rows();
+
+                string s = ok.info().to_string();
+
+                if (s.find("Rows matched: ") == 0)
+                {
+                    n = atol(s.c_str() + 14);
+                }
+
+                MXS_NOTICE("INFO: %s", s.c_str());
+            }
+            break;
+
+        case ComResponse::ERR_PACKET:
+            add_error(doc, ComERR(response));
+            break;
+
+        case ComResponse::LOCAL_INFILE_PACKET:
+        default:
+            mxb_assert(!true);
+        }
+
+        GWBUF* pResponse = create_response(doc, is_ok, n, nModified);
+
+        *ppResponse = pResponse;
+        return READY;
+    };
+
+private:
+    string convert_document(const bsoncxx::document::view& update)
+    {
+        stringstream sql;
+        sql << "UPDATE " << get_table(mxsmongo::key::UPDATE) << " SET DOC = ";
 
         auto u = update[mxsmongo::key::U];
 
@@ -891,56 +941,9 @@ public:
             sql << "LIMIT 1";
         }
 
-        send_downstream(sql.str());
+        return sql.str();
+    }
 
-        return nullptr;
-    };
-
-    State translate(GWBUF& mariadb_response, GWBUF** ppResponse) override
-    {
-        // TODO: Update will be needed when DEPRECATE_EOF it turned on.
-        DocumentBuilder doc;
-
-        ComResponse response(GWBUF_DATA(&mariadb_response));
-
-        int32_t is_ok = response.is_ok() ? 1 : 0;
-        int32_t n = 0;
-        int32_t nModified = 0;
-
-        switch (response.type())
-        {
-        case ComResponse::OK_PACKET:
-            {
-                ComOK ok(response);
-                nModified = ok.affected_rows();
-
-                string s = ok.info().to_string();
-
-                if (s.find("Rows matched: ") == 0)
-                {
-                    n = atol(s.c_str() + 14);
-                }
-
-                MXS_NOTICE("INFO: %s", s.c_str());
-            }
-            break;
-
-        case ComResponse::ERR_PACKET:
-            add_error(doc, ComERR(response));
-            break;
-
-        case ComResponse::LOCAL_INFILE_PACKET:
-        default:
-            mxb_assert(!true);
-        }
-
-        GWBUF* pResponse = create_response(doc, is_ok, n, nModified);
-
-        *ppResponse = pResponse;
-        return READY;
-    };
-
-private:
     enum Kind
     {
         AGGREGATION_PIPELINE,
