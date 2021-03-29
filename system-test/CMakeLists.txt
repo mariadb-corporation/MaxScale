@@ -932,6 +932,9 @@ set_tests_properties(mxs3454_ps_in_trx PROPERTIES WILL_FAIL TRUE)
 # MXS-3459: LOAD DATA LOCAL INFILE fails with binary data
 add_test_executable(mxs3459_binary_ldli.cc mxs3459_binary_ldli replication LABELS REPL_BACKEND)
 
+# MXS-3462: Service to service routing with `cluster` doesn't work
+add_test_executable(mxs3462_sts_update.cc mxs3462_sts_update mxs3462_sts_update LABELS REPL_BACKEND)
+
 ############################################
 # END: Normal tests                        #
 ############################################
