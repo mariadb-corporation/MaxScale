@@ -1925,6 +1925,7 @@ bool TestConnections::read_cmdline_options(int argc, char* argv[])
         {"no-timeouts",        no_argument,       0, 'z'},
         {"local-maxscale",     optional_argument, 0, 'l'},
         {"reinstall-maxscale", no_argument,       0, 'm'},
+        {"serial-run",         no_argument,       0, 'e'},
         {0,                    0,                 0, 0  }
     };
 
@@ -1932,7 +1933,7 @@ bool TestConnections::read_cmdline_options(int argc, char* argv[])
     int c;
     int option_index = 0;
 
-    while ((c = getopt_long(argc, argv, "hvnqsirgzlm::", long_options, &option_index)) != -1)
+    while ((c = getopt_long(argc, argv, "hvnqsirgzlme::", long_options, &option_index)) != -1)
     {
         switch (c)
         {
@@ -1991,8 +1992,7 @@ bool TestConnections::read_cmdline_options(int argc, char* argv[])
 
         case 'l':
             {
-                printf("MaxScale assumed to be running locally; not started and logs not downloaded.");
-
+                printf("MaxScale assumed to be running locally; not started and logs not downloaded.\n");
                 maxscale::start = false;
                 m_mxs_manual_debug = true;
                 m_init_maxscale = false;
@@ -2002,8 +2002,13 @@ bool TestConnections::read_cmdline_options(int argc, char* argv[])
             break;
 
         case 'm':
-            printf("Maxscale will be reinstalled");
+            printf("Maxscale will be reinstalled.\n");
             m_reinstall_maxscale = true;
+            break;
+
+        case 'e':
+            printf("Preferring serial execution.\n");
+            m_shared.settings.allow_concurrent_run = false;
             break;
 
         default:
@@ -2112,7 +2117,7 @@ bool TestConnections::initialize_nodes()
         add_failure(errmsg, maxscales->prefix().c_str());
     }
 
-    return error ? false : mxt::concurrent_run(funcs);
+    return error ? false : m_shared.concurrent_run(funcs);
 }
 
 bool TestConnections::check_backend_versions()

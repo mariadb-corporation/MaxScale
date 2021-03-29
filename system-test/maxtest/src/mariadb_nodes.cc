@@ -810,7 +810,7 @@ bool MariaDBCluster::prepare_servers()
             };
         threads.push_back(move(func));
     }
-    return mxt::concurrent_run(threads);
+    return m_shared.concurrent_run(threads);
 }
 
 void MariaDBCluster::limit_nodes(int new_N)

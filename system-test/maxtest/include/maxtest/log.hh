@@ -1,11 +1,14 @@
 #pragma once
 
+#include <functional>
 #include <mutex>
 #include <string>
 #include <vector>
 
 namespace maxtest
 {
+
+using BoolFuncArray = std::vector<std::function<bool (void)>>;
 
 /**
  * System test error log container.
@@ -42,10 +45,10 @@ private:
  */
 struct Settings
 {
-    bool verbose {false};           /**< True if printing more details */
-    bool local_maxscale {false};    /**< MaxScale running locally */
+    bool verbose {false};               /**< True if printing more details */
+    bool local_maxscale {false};        /**< MaxScale running locally */
+    bool allow_concurrent_run {true};   /**< Allow concurrent_run to run concurrently */
 
-    bool req_mariadb_gtid {false};      /**< MariaDB master-slave should use gtid replication */
     bool req_two_maxscales {false};     /**< Test requires a second MaxScale */
 };
 
@@ -56,5 +59,7 @@ struct SharedData
 {
     TestLogger log;                     /**< Error log container */
     Settings   settings;
+
+    bool concurrent_run(const BoolFuncArray& funcs);
 };
 }

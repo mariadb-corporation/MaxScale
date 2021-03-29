@@ -1,7 +1,7 @@
 #include <maxtest/log.hh>
 
 #include <cstdarg>
-#include <ratio>
+#include <future>
 #include <sys/time.h>
 #include <maxbase/format.hh>
 #include <maxbase/string.hh>
@@ -117,5 +117,39 @@ void TestLogger::reset_timer()
     timeval now {0};
     gettimeofday(&now, nullptr);
     m_start_time_us = sec_to_us * now.tv_sec + now.tv_usec;
+}
+
+bool SharedData::concurrent_run(const BoolFuncArray& funcs)
+{
+    bool rval = true;
+    if (settings.allow_concurrent_run)
+    {
+        std::vector<std::future<bool>> futures;
+        futures.reserve(funcs.size());
+
+        for (auto& func : funcs)
+        {
+            futures.emplace_back(std::async(std::launch::async, func));
+        }
+
+        for (auto& fut : futures)
+        {
+            if (!fut.get())
+            {
+                rval = false;
+            }
+        }
+    }
+    else
+    {
+        for (auto& func : funcs)
+        {
+            if (!func())
+            {
+                rval = false;
+            }
+        }
+    }
+    return rval;
 }
 }

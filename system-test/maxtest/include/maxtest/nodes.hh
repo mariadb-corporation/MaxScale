@@ -25,9 +25,6 @@ struct CmdResult
 
 using NetworkConfig = std::map<std::string, std::string>;
 
-using BoolFuncArray = std::vector<std::function<bool (void)>>;
-bool concurrent_run(const BoolFuncArray& funcs);
-
 class VMNode
 {
 public:

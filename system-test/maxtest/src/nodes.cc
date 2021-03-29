@@ -73,7 +73,7 @@ bool Nodes::check_nodes_ssh()
             };
         f.push_back(move(func));
     }
-    return mxt::concurrent_run(f);
+    return m_shared.concurrent_run(f);
 }
 
 namespace maxtest
@@ -190,7 +190,7 @@ bool Nodes::init_ssh_masters()
         funcs.push_back(move(func));
     }
 
-    return mxt::concurrent_run(funcs);
+    return m_shared.concurrent_run(funcs);
 }
 
 int Nodes::ssh_node_f(int node, bool sudo, const char* format, ...)
@@ -571,28 +571,4 @@ mxt::VMNode* Nodes::node(int i)
 const mxt::VMNode* Nodes::node(int i) const
 {
     return m_vms[i].get();
-}
-
-namespace maxtest
-{
-bool concurrent_run(const BoolFuncArray& funcs)
-{
-    std::vector<std::future<bool>> futures;
-    futures.reserve(funcs.size());
-
-    for (auto& func : funcs)
-    {
-        futures.emplace_back(std::async(std::launch::async, func));
-    }
-
-    bool rval = true;
-    for (auto& fut : futures)
-    {
-        if (!fut.get())
-        {
-            rval = false;
-        }
-    }
-    return rval;
-}
 }
