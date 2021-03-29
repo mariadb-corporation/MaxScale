@@ -783,7 +783,6 @@ public:
 
     GWBUF* execute() override
     {
-        GWBUF* pResponse = nullptr;
         stringstream sql;
         sql << "UPDATE " << get_table(mxsmongo::key::UPDATE) << " ";
 
@@ -839,7 +838,7 @@ public:
                 message += "'.";
 
                 MXS_ERROR("%s", message.c_str());
-                pResponse = create_hard_error(message, error::COMMAND_FAILED);
+                throw HardError(message, error::COMMAND_FAILED);
             }
             break;
 
@@ -863,41 +862,38 @@ public:
                 message += "'.";
 
                 MXS_ERROR("%s", message.c_str());
-                pResponse = create_hard_error(message, error::COMMAND_FAILED);
+                throw HardError(message, error::COMMAND_FAILED);
             }
         }
 
-        if (!pResponse)
+        auto q = update[mxsmongo::key::Q];
+
+        if (!q)
         {
-            auto q = update[mxsmongo::key::Q];
-
-            if (!q)
-            {
-                throw SoftError("BSON field 'update.updates.q' is missing but a required field",
-                                error::LOCATION40414);
-            }
-
-            if (q.type() != bsoncxx::type::k_document)
-            {
-                stringstream ss;
-                ss << "BSON field 'update.updates.q' is the wrong type '" << bsoncxx::to_string(q.type())
-                   << "', expected type 'object'";
-                throw SoftError(ss.str(), error::TYPE_MISMATCH);
-            }
-
-            sql << mxsmongo::query_to_where_clause(q.get_document());
-
-            auto multi = update[mxsmongo::key::MULTI];
-
-            if (!multi || !multi.get_bool())
-            {
-                sql << "LIMIT 1";
-            }
-
-            send_downstream(sql.str());
+            throw SoftError("BSON field 'update.updates.q' is missing but a required field",
+                            error::LOCATION40414);
         }
 
-        return pResponse;
+        if (q.type() != bsoncxx::type::k_document)
+        {
+            stringstream ss;
+            ss << "BSON field 'update.updates.q' is the wrong type '" << bsoncxx::to_string(q.type())
+               << "', expected type 'object'";
+            throw SoftError(ss.str(), error::TYPE_MISMATCH);
+        }
+
+        sql << mxsmongo::query_to_where_clause(q.get_document());
+
+        auto multi = update[mxsmongo::key::MULTI];
+
+        if (!multi || !multi.get_bool())
+        {
+            sql << "LIMIT 1";
+        }
+
+        send_downstream(sql.str());
+
+        return nullptr;
     };
 
     State translate(GWBUF& mariadb_response, GWBUF** ppResponse) override
