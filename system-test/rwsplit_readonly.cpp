@@ -276,8 +276,6 @@ int main(int argc, char* argv[])
     execute_query(Test->repl->nodes[0], "DROP TABLE test.readonly");
     Test->repl->disconnect();
 
-    /** Clean up test environment */
-    Test->repl->prepare_for_test();
     int rval = Test->global_result;
     delete Test;
     return rval;

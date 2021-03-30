@@ -81,11 +81,6 @@ int main(int argc, char** argv)
         a.join();
     }
 
-    test.tprintf("Flushing backend hosts");
-    test.set_timeout(60);
-    // TODO: Just a simple flush_hosts() may be sufficient.
-    test.repl->prepare_for_test();
-
     test.tprintf("Dropping tables and users");
     test.set_timeout(60);
     test.try_query(test.maxscales->conn_rwsplit[0], "DROP TABLE test.t1;");
