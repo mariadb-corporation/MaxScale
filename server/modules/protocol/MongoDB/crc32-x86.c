@@ -26,7 +26,6 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#include <wiredtiger_config.h>
 #if defined(_M_AMD64)
 #include <intrin.h>
 #endif

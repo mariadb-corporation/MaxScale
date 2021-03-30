@@ -38,7 +38,6 @@
  * little endian.
  */
 
-#include <wiredtiger_config.h>
 #include <inttypes.h>
 #include <stddef.h>
 

@@ -13,6 +13,9 @@ add_library(mongodbclient SHARED
   mxsmongodatabase.cc
   mongodbclient.cc
   protocolmodule.cc
+
+  checksum.c
+  crc32-x86.c
   )
 add_dependencies(mongodbclient mariadbprotocol mongo-c-driver mongo-cxx-driver)
 target_link_libraries(mongodbclient
