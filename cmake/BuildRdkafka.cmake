@@ -6,7 +6,7 @@
 # RDKAFKA_LIBRARIES   - Path to the librdkafka static library
 #
 
-set(RDKAFKA_URL "https://github.com/edenhill/librdkafka/archive/v1.2.1.tar.gz" CACHE STRING "librdkafka source tarball")
+set(RDKAFKA_URL "https://github.com/edenhill/librdkafka/archive/refs/tags/v1.6.1.tar.gz" CACHE STRING "librdkafka source tarball")
 
 ExternalProject_Add(librdkafka
   URL ${RDKAFKA_URL}
