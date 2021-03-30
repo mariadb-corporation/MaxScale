@@ -289,7 +289,7 @@ bool RWSplitSession::route_stmt(mxs::Buffer&& buffer)
     {
         return true;
     }
-    else if (TARGET_IS_ALL(route_target) && !should_route_sescmd_to_master())
+    else if (TARGET_IS_ALL(route_target))
     {
         return handle_target_is_all(std::move(buffer));
     }
@@ -302,7 +302,7 @@ bool RWSplitSession::route_stmt(mxs::Buffer&& buffer)
 bool RWSplitSession::route_single_stmt(mxs::Buffer&& buffer)
 {
     const QueryClassifier::RouteInfo& info = m_qc.current_route_info();
-    route_target_t route_target = should_route_sescmd_to_master() ? TARGET_MASTER : info.target();
+    route_target_t route_target = info.target();
 
     update_trx_statistics();
 

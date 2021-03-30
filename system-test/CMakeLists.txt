@@ -926,8 +926,6 @@ add_test_executable(mxs3353_tee_lost_inserts.cc mxs3353_tee_lost_inserts mxs3353
 
 # MXS-3454: PS inside trx with transaction_replay fails
 add_test_executable(mxs3454_ps_in_trx.cc mxs3454_ps_in_trx mxs3454_ps_in_trx LABELS REPL_BACKEND readwritesplit)
-# TODO: Remove this once MXS-3454 is fixed
-set_tests_properties(mxs3454_ps_in_trx PROPERTIES WILL_FAIL TRUE)
 
 # MXS-3459: LOAD DATA LOCAL INFILE fails with binary data
 add_test_executable(mxs3459_binary_ldli.cc mxs3459_binary_ldli replication LABELS REPL_BACKEND)

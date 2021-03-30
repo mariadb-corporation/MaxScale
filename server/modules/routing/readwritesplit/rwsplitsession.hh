@@ -302,12 +302,6 @@ private:
                             });
     }
 
-    inline bool should_route_sescmd_to_master() const
-    {
-        return trx_is_open() && m_config.transaction_replay
-               && TARGET_IS_ALL(m_qc.current_route_info().target());
-    }
-
     std::string get_verbose_status()
     {
         std::string status;
@@ -425,8 +419,6 @@ private:
     Trx         m_orig_trx;                     /**< The backup of the transaction we're replaying */
     mxs::Buffer m_orig_stmt;                    /**< The backup of the statement that was interrupted */
     int64_t     m_num_trx_replays = 0;          /**< How many times trx replay has been attempted */
-
-    std::vector<SescmdResp> m_trx_sescmd;   /**< Session commands executed during the transaction */
 
     otrx_state m_otrx_state = OTRX_INACTIVE;    /**< Optimistic trx state*/
 
