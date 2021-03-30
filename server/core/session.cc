@@ -1542,10 +1542,10 @@ ListenerSessionData* Session::listener_data()
 void Session::adjust_io_activity(time_t now) const
 {
     int secs = now - m_last_io_activity;
-    if (secs == 0)
+    if (secs <= 0)
     {
-        // Session is being frequently used, several updates during one second.
-        // The load values need not be adjusted.
+        // Session is being frequently used, several updates during one second. The load values need not be
+        // adjusted. If the value is negative, the clock has gone backwards and we just have to ignore this.
     }
     else
     {
