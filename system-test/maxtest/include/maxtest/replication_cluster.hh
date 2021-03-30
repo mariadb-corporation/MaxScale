@@ -54,12 +54,9 @@ public:
      * @param MYSQL conn struct of slave node
      * @param master_host IP address of master node
      * @param master_port port of master node
-     * @param log_file name of log file
-     * @param log_pos initial position
      * @return 0 if everything is ok
      */
-    int set_slave(MYSQL* conn, const char* master_host, int master_port,
-                  const char* log_file, const char* log_pos);
+    int set_slave(MYSQL* conn, const char* master_host, int master_port);
 
     /**
      * Configure a server as a slave of another server

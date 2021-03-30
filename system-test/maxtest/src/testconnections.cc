@@ -968,15 +968,12 @@ int TestConnections::copy_all_logs_periodic()
 
 void TestConnections::revert_replicate_from_master()
 {
-    char log_file[256] = "";
-
     repl->connect();
     execute_query(repl->nodes[0], "RESET MASTER");
-    find_field(repl->nodes[0], "show master status", "File", log_file);
 
     for (int i = 1; i < repl->N; i++)
     {
-        repl->set_slave(repl->nodes[i], repl->ip_private(0), repl->port[0], log_file, (char*)"4");
+        repl->set_slave(repl->nodes[i], repl->ip_private(0), repl->port[0]);
         execute_query(repl->nodes[i], "start slave");
     }
 }
@@ -984,10 +981,6 @@ void TestConnections::revert_replicate_from_master()
 int TestConnections::start_mm(int m)
 {
     int i;
-    char log_file1[256];
-    char log_pos1[256];
-    char log_file2[256];
-    char log_pos2[256];
 
     tprintf("Stopping maxscale\n");
     int global_result = maxscales->stop_maxscale(m);
@@ -1010,14 +1003,8 @@ int TestConnections::start_mm(int m)
 
     execute_query(repl->nodes[0], "SET GLOBAL READ_ONLY=ON");
 
-    find_field(repl->nodes[0], (char*) "show master status", (char*) "File", log_file1);
-    find_field(repl->nodes[0], (char*) "show master status", (char*) "Position", log_pos1);
-
-    find_field(repl->nodes[1], (char*) "show master status", (char*) "File", log_file2);
-    find_field(repl->nodes[1], (char*) "show master status", (char*) "Position", log_pos2);
-
-    repl->set_slave(repl->nodes[0], repl->ip_private(1), repl->port[1], log_file2, log_pos2);
-    repl->set_slave(repl->nodes[1], repl->ip_private(0), repl->port[0], log_file1, log_pos1);
+    repl->set_slave(repl->nodes[0], repl->ip_private(1), repl->port[1]);
+    repl->set_slave(repl->nodes[1], repl->ip_private(0), repl->port[0]);
 
     repl->close_connections();
 
