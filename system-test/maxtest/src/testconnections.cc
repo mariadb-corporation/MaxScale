@@ -2021,10 +2021,10 @@ bool TestConnections::initialize_nodes()
             {
                 new_cluster->set_use_ipv6(ipv6);
                 new_cluster->ssl = be_ssl;
-                auto check_ssh = [new_cluster]() {
-                        return new_cluster->check_nodes_ssh();
+                auto prepare_cluster = [new_cluster]() {
+                        return new_cluster->prepare_cluster_for_test();
                     };
-                funcs.push_back(move(check_ssh));
+                funcs.push_back(move(prepare_cluster));
             }
             else
             {
@@ -2075,10 +2075,10 @@ bool TestConnections::initialize_nodes()
         {
             m_maxscale2 = std::make_unique<mxt::MaxScale>(maxscales, m_shared, 1);
         }
-        auto check_ssh = [this]() {
-                return maxscales->check_nodes_ssh();
+        auto prepare_maxscales = [this]() {
+                return maxscales->prepare_for_test();
             };
-        funcs.push_back(move(check_ssh));
+        funcs.push_back(move(prepare_maxscales));
     }
     else
     {

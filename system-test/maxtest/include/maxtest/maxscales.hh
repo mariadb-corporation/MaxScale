@@ -267,6 +267,7 @@ public:
     void wait_for_monitor(int intervals = 2, int m = 0);
 
     bool use_valgrind() const;
+    bool prepare_for_test();
 
 private:
     bool m_use_ipv6 {false};    /**< Default to ipv6-addresses */

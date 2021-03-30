@@ -270,6 +270,8 @@ public:
     std::vector<int>         get_all_server_ids();
     std::vector<std::string> get_all_server_ids_str();
 
+    bool prepare_cluster_for_test();
+
     /**
      * @brief Flush hosts, adjust settings, remove anonymous users, etc.
      * @param conn Valid handle to some node.

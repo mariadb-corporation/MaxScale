@@ -33,6 +33,7 @@ public:
     VMNode(const VMNode&) = delete;
 
     bool init_ssh_master();
+    void close_ssh_master();
 
     enum class CmdPriv
     {
@@ -91,6 +92,7 @@ public:
     const std::string& ip4s() const;
 
     SharedData& shared();
+    bool        is_remote() const;
 
     const std::string m_name;       /**< E.g. "node_001" */
 

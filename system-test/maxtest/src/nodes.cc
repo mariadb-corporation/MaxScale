@@ -40,11 +40,7 @@ VMNode::VMNode(SharedData& shared, const string& name)
 
 VMNode::~VMNode()
 {
-    if (m_ssh_master_pipe)
-    {
-        fprintf(m_ssh_master_pipe, "exit\n");
-        pclose(m_ssh_master_pipe);
-    }
+    close_ssh_master();
 }
 }
 
@@ -80,29 +76,57 @@ namespace maxtest
 {
 bool VMNode::init_ssh_master()
 {
+    close_ssh_master();
+    bool init_ok = false;
     if (m_ip4 == "127.0.0.1")
     {
         m_type = NodeType::LOCAL;
-        return true;
-    }
-
-    m_ssh_cmd_p1 = mxb::string_printf("ssh -i %s %s %s@%s",
-                                      m_sshkey.c_str(), ssh_opts,
-                                      m_username.c_str(), m_ip4.c_str());
-
-    // For initiating the master connection, just part1 is enough.
-    FILE* instream = popen(m_ssh_cmd_p1.c_str(), "w");
-    bool rval = false;
-    if (instream)
-    {
-        m_ssh_master_pipe = instream;
-        rval = true;
+        init_ok = true;     // No master connection needed for local.
     }
     else
     {
-        std::cout << m_name << ": popen() failed when forming master ssh connection\n";
+        m_ssh_cmd_p1 = mxb::string_printf("ssh -i %s %s %s@%s",
+                                          m_sshkey.c_str(), ssh_opts,
+                                          m_username.c_str(), m_ip4.c_str());
+
+        // For initiating the master connection, just part1 is enough.
+        FILE* instream = popen(m_ssh_cmd_p1.c_str(), "w");
+        if (instream)
+        {
+            m_ssh_master_pipe = instream;
+            init_ok = true;
+        }
+        else
+        {
+            shared().log.log_msgf("popen() failed on '%s' when forming master ssh connection.",
+                                  m_name.c_str());
+        }
+    }
+
+    // Test the connection. If this doesn't work, continuing is pointless.
+    bool rval = true;
+    if (init_ok)
+    {
+        if (run_cmd("ls > /dev/null") == 0)
+        {
+            rval = true;
+        }
+        else
+        {
+            shared().log.log_msgf("SSH/Bash check on '%s' failed.", m_name.c_str());
+        }
     }
     return rval;
+}
+
+void VMNode::close_ssh_master()
+{
+    if (m_ssh_master_pipe)
+    {
+        fprintf(m_ssh_master_pipe, "exit\n");
+        pclose(m_ssh_master_pipe);
+        m_ssh_master_pipe = nullptr;
+    }
 }
 
 int VMNode::run_cmd(const std::string& cmd, CmdPriv priv)
@@ -497,6 +521,11 @@ SharedData& VMNode::shared()
 bool VMNode::verbose() const
 {
     return m_shared.settings.verbose;
+}
+
+bool VMNode::is_remote() const
+{
+    return m_type == NodeType::REMOTE;
 }
 }
 

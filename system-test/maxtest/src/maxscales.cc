@@ -33,35 +33,13 @@ Maxscales::~Maxscales()
 
 bool Maxscales::setup(const mxt::NetworkConfig& nwconfig, int n_min_expected)
 {
-    bool rval = false;
+    bool rval = true;
     int found = read_nodes_info(nwconfig);
     if (found < n_min_expected)
     {
         m_shared.log.add_failure("Found %i MaxScale(s) in network_config when at least %i was expected.",
                                  found, n_min_expected);
-    }
-    else
-    {
-        if (m_shared.settings.local_maxscale)
-        {
-            // MaxScale is running locally, overwrite node address.
-            node(0)->set_local();
-        }
-
-        if (Nodes::init_ssh_masters())
-        {
-            if (this->m_use_valgrind)
-            {
-                for (int i = 0; i < N; i++)
-                {
-                    ssh_node_f(i, true, "yum install -y valgrind gdb 2>&1");
-                    ssh_node_f(i, true, "apt install -y --force-yes valgrind gdb 2>&1");
-                    ssh_node_f(i, true, "zypper -n install valgrind gdb 2>&1");
-                    ssh_node_f(i, true, "rm -rf /var/cache/maxscale/maxscale.lock");
-                }
-            }
-            rval = true;
-        }
+        rval = false;
     }
     return rval;
 }
@@ -408,6 +386,32 @@ void Maxscales::stop_all()
 int Maxscales::stop(int m)
 {
     return stop_maxscale(m);
+}
+
+bool Maxscales::prepare_for_test()
+{
+    if (m_shared.settings.local_maxscale)
+    {
+        // MaxScale is running locally, overwrite node address.
+        node(0)->set_local();
+    }
+
+    bool rval = false;
+    if (Nodes::init_ssh_masters())
+    {
+        if (m_use_valgrind)
+        {
+            for (int i = 0; i < N; i++)
+            {
+                ssh_node_f(i, true, "yum install -y valgrind gdb 2>&1");
+                ssh_node_f(i, true, "apt install -y --force-yes valgrind gdb 2>&1");
+                ssh_node_f(i, true, "zypper -n install valgrind gdb 2>&1");
+                ssh_node_f(i, true, "rm -rf /var/cache/maxscale/maxscale.lock");
+            }
+        }
+        rval = true;
+    }
+    return rval;
 }
 
 namespace maxtest
