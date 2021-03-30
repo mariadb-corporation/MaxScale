@@ -27,6 +27,15 @@ namespace mxsmongo
 
 class Database;
 
+template<class T>
+T element_as(const std::string& command, const char* zKey, const bsoncxx::document::element& element);
+
+template<>
+bsoncxx::document::view element_as<bsoncxx::document::view>(const std::string& command,
+                                                            const char* zKey,
+                                                            const bsoncxx::document::element& element);
+
+
 class Command
 {
 public:
@@ -82,6 +91,22 @@ public:
     static void check_write_batch_size(int size);
 
 protected:
+    template<class Type>
+    bool optional(const char* zKey, Type* pElement)
+    {
+        bool rv = false;
+
+        auto element = m_doc[zKey];
+
+        if (element)
+        {
+            *pElement = element_as<Type>(m_name, zKey, element);
+            rv = true;
+        }
+
+        return rv;
+    }
+
     std::string get_table(const char* zCommand) const;
 
     void free_request();

@@ -147,6 +147,24 @@ struct ThisUnit
 namespace mxsmongo
 {
 
+template<>
+bsoncxx::document::view element_as<bsoncxx::document::view>(const string& command,
+                                                            const char* zKey,
+                                                            const bsoncxx::document::element& element)
+{
+    if (element.type() != bsoncxx::type::k_document)
+    {
+        stringstream ss;
+        ss << "BSON field '" << command << "." << zKey << "' is the wrong type '"
+           << bsoncxx::to_string(element.type()) << "', expected type 'object'";
+
+        throw SoftError(ss.str(), error::TYPE_MISMATCH);
+    }
+
+    return element.get_document();
+}
+
+
 Command::~Command()
 {
     free_request();
