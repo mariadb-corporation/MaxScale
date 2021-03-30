@@ -25,7 +25,7 @@
 //
 // Files that contain no implemented commands are commented out.
 //
-//#include "commands/aggregation.hh"
+#include "commands/aggregation.hh"
 //#include "commands/geospatial.hh"
 #include "commands/query_and_write_operation.hh"
 //#include "commands/query_plan_cache.hh"
@@ -128,6 +128,7 @@ struct ThisUnit
     CreatorsByName creators_by_name =
     {
         { mxb::tolower(key::BUILDINFO),               &create_command<command::BuildInfo> },
+        { mxb::tolower(key::COUNT),                   &create_command<command::Count> },
         { mxb::tolower(key::DELETE),                  &create_command<command::Delete> },
         { mxb::tolower(key::ENDSESSIONS),             &create_command<command::EndSessions> },
         { mxb::tolower(key::FIND),                    &create_command<command::Find> },
