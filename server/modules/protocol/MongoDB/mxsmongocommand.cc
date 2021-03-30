@@ -286,6 +286,70 @@ void Command::check_write_batch_size(int size)
     }
 }
 
+string Command::convert_skip_and_limit() const
+{
+    string rv;
+
+    auto skip = m_doc[mxsmongo::key::SKIP];
+    auto limit = m_doc[mxsmongo::key::LIMIT];
+
+    if (skip || limit)
+    {
+        int64_t nSkip = 0;
+        if (skip && (!get_number_as_integer(skip, &nSkip) || nSkip < 0))
+        {
+            stringstream ss;
+            int code;
+            if (nSkip < 0)
+            {
+                ss << "Skip value must be non-negative, but received: " << nSkip;
+                code = error::BAD_VALUE;
+            }
+            else
+            {
+                ss << "Failed to parse: " << bsoncxx::to_json(m_doc) << ". 'skip' field must be numeric.";
+                code = error::FAILED_TO_PARSE;
+            }
+
+            throw SoftError(ss.str(), code);
+        }
+
+        int64_t nLimit = std::numeric_limits<int64_t>::max();
+        if (limit && (!get_number_as_integer(limit, &nLimit) || nLimit < 0))
+        {
+            stringstream ss;
+            int code;
+
+            if (nLimit < 0)
+            {
+                ss << "Limit value must be non-negative, but received: " << nLimit;
+                code = error::BAD_VALUE;
+            }
+            else
+            {
+                ss << "Failed to parse: " << bsoncxx::to_json(m_doc) << ". 'limit' field must be numeric.";
+                code = error::FAILED_TO_PARSE;
+            }
+
+            throw SoftError(ss.str(), code);
+        }
+
+        stringstream ss;
+        ss << "LIMIT ";
+
+        if (nSkip != 0)
+        {
+            ss << nSkip << ", ";
+        }
+
+        ss << nLimit;
+
+        rv = ss.str();
+    }
+
+    return rv;
+}
+
 string Command::get_table(const char* zCommand) const
 {
     auto utf8 = m_doc[zCommand].get_utf8();

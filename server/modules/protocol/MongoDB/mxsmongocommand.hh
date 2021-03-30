@@ -107,6 +107,15 @@ protected:
         return rv;
     }
 
+    /**
+     * Converts the values of a 'skip' and 'limit' to the corresponding
+     * LIMIT clause.
+     *
+     * @return A LIMIT clause, if 'skip' and/or 'limit' are present in the
+     *         command object, otherwise an empty string.
+     */
+    std::string convert_skip_and_limit() const;
+
     std::string get_table(const char* zCommand) const;
 
     void free_request();
