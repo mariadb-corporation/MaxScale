@@ -33,16 +33,32 @@ public:
     using DocumentVector = std::vector<bsoncxx::document::view>;
     using DocumentArguments = std::unordered_map<std::string, DocumentVector>;
 
+    template<class ConcretePacket>
     Command(const std::string& name,
             Database* pDatabase,
             GWBUF* pRequest,
-            const Packet& req,
+            const ConcretePacket& req,
             const bsoncxx::document::view& doc,
-            const DocumentArguments& arguments);
+            const DocumentArguments& arguments)
+        : m_name(name)
+        , m_database(*pDatabase)
+        , m_pRequest(gwbuf_clone(pRequest))
+        , m_req(req)
+        , m_doc(doc)
+        , m_arguments(arguments)
+        , m_append_checksum(checksum_used(req))
+    {
+    }
 
     static std::unique_ptr<Command> get(mxsmongo::Database* pDatabase,
                                         GWBUF* pRequest,
-                                        const mxsmongo::Packet& req,
+                                        const mxsmongo::Query& req,
+                                        const bsoncxx::document::view& doc,
+                                        const DocumentArguments& arguments);
+
+    static std::unique_ptr<Command> get(mxsmongo::Database* pDatabase,
+                                        GWBUF* pRequest,
+                                        const mxsmongo::Msg& req,
                                         const bsoncxx::document::view& doc,
                                         const DocumentArguments& arguments);
 
@@ -87,6 +103,16 @@ protected:
     DocumentArguments       m_arguments;
 
 private:
+    bool checksum_used(const Msg& req)
+    {
+        return req.checksum_present();
+    }
+
+    bool checksum_used(const Query&)
+    {
+        return false;
+    }
+
     std::pair<GWBUF*, uint8_t*> create_reply_response_buffer(size_t size_of_documents,
                                                              size_t nDocuments) const;
 
@@ -101,6 +127,8 @@ private:
     std::string create_nested_entry(const std::string& extraction, const std::string& value) const;
 
     std::string create_entry(const std::string& extraction, const std::string& value) const;
+
+    bool m_append_checksum { false };
 };
 
 }

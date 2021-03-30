@@ -27,10 +27,11 @@ namespace command
 class OrderedCommand : public Command
 {
 public:
+    template<class ConcretePacket>
     OrderedCommand(const std::string& name,
                    Database* pDatabase,
                    GWBUF* pRequest,
-                   const Packet& req,
+                   const ConcretePacket& req,
                    const bsoncxx::document::view& doc,
                    const DocumentArguments& arguments,
                    const std::string& array_key)
@@ -352,10 +353,11 @@ private:
 class Delete : public OrderedCommand
 {
 public:
+    template<class ConcretePacket>
     Delete(const std::string& name,
            Database* pDatabase,
            GWBUF* pRequest,
-           const Packet& req,
+           const ConcretePacket& req,
            const bsoncxx::document::view& doc,
            const DocumentArguments& arguments)
         : OrderedCommand(name, pDatabase, pRequest, req, doc, arguments, mxsmongo::key::DELETES)
@@ -823,10 +825,11 @@ private:
 class Update : public OrderedCommand
 {
 public:
+    template<class ConcretePacket>
     Update(const std::string& name,
            Database* pDatabase,
            GWBUF* pRequest,
-           const Packet& req,
+           const ConcretePacket& req,
            const bsoncxx::document::view& doc,
            const DocumentArguments& arguments)
         : OrderedCommand(name, pDatabase, pRequest, req, doc, arguments, mxsmongo::key::UPDATES)

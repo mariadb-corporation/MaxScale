@@ -79,14 +79,9 @@ GWBUF* mxsmongo::Database::translate(GWBUF& mariadb_response)
     return pResponse;
 }
 
-GWBUF* mxsmongo::Database::execute(GWBUF* pRequest,
-                                   const mxsmongo::Packet& req,
-                                   const bsoncxx::document::view& doc,
-                                   const mxsmongo::Command::DocumentArguments& arguments)
+GWBUF* mxsmongo::Database::execute(std::unique_ptr<Command> sCommand)
 {
     GWBUF* pResponse = nullptr;
-
-    auto sCommand = mxsmongo::Command::get(this, pRequest, req, doc, arguments);
 
     try
     {

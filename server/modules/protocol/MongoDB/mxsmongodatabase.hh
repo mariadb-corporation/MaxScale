@@ -143,10 +143,18 @@ private:
         m_state = READY;
     }
 
+    GWBUF* execute(std::unique_ptr<Command> sCommand);
+
+    template<class ConcretePacket>
     GWBUF* execute(GWBUF* pRequest,
-                   const mxsmongo::Packet& req,
+                   const ConcretePacket& req,
                    const bsoncxx::document::view& doc,
-                   const Command::DocumentArguments& arguments);
+                   const Command::DocumentArguments& arguments)
+    {
+        auto sCommand = mxsmongo::Command::get(this, pRequest, req, doc, arguments);
+
+        return execute(std::move(sCommand));
+    }
 
     using SCommand = std::unique_ptr<Command>;
 

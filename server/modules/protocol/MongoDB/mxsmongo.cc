@@ -20,8 +20,16 @@
 #include <maxscale/session.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include "mxsmongodatabase.hh"
+#include "crc32.h"
 
 using namespace std;
+
+namespace
+{
+
+uint32_t (*crc32_func)(const void *, size_t) = wiredtiger_crc32c_func();
+
+}
 
 mxsmongo::Query::Query(const Packet& packet)
     : Packet(packet)
@@ -77,7 +85,19 @@ mxsmongo::Msg::Msg(const Packet& packet)
 
     if (checksum_present())
     {
-        // TODO: Check checksum.
+        const uint8_t* p = reinterpret_cast<const uint8_t*>(m_pHeader);
+
+        uint32_t checksum = crc32_func(p, m_pHeader->msg_len - sizeof(uint32_t));
+
+        p += (m_pHeader->msg_len - sizeof(uint32_t));
+        const uint32_t* pChecksum = reinterpret_cast<const uint32_t*>(p);
+
+        if (checksum != *pChecksum)
+        {
+            std::stringstream ss;
+            ss << "Invalid checksum, expected " << checksum << ", got " << *pChecksum << ".";
+            throw std::runtime_error(ss.str());
+        }
     }
 
     const uint8_t* pSections_end = m_pEnd - (checksum_present() ? sizeof(uint32_t) : 0);

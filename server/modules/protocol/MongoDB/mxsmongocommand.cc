@@ -17,6 +17,7 @@
 #include <maxbase/string.hh>
 #include <maxscale/modutil.hh>
 #include "mxsmongodatabase.hh"
+#include "crc32.h"
 
 //
 // The include order, which has no impact on the functionality, is the one
@@ -43,6 +44,8 @@ using namespace std;
 
 namespace
 {
+
+uint32_t (*crc32_func)(const void *, size_t) = wiredtiger_crc32c_func();
 
 class Unknown : public mxsmongo::Command
 {
@@ -90,17 +93,32 @@ template<class ConcreteCommand>
 unique_ptr<Command> create_command(const string& name,
                                    Database* pDatabase,
                                    GWBUF* pRequest,
-                                   const Packet& req,
+                                   const Query* pQuery,
+                                   const Msg* pMsg,
                                    const bsoncxx::document::view& doc,
                                    const Command::DocumentArguments& arguments)
 {
-    return unique_ptr<ConcreteCommand>(new ConcreteCommand(name, pDatabase, pRequest, req, doc, arguments));
+    unique_ptr<ConcreteCommand> sCommand;
+
+    if (pQuery)
+    {
+        mxb_assert(!pMsg);
+        sCommand.reset(new ConcreteCommand(name, pDatabase, pRequest, *pQuery, doc, arguments));
+    }
+    else
+    {
+        mxb_assert(pMsg);
+        sCommand.reset(new ConcreteCommand(name, pDatabase, pRequest, *pMsg, doc, arguments));
+    }
+
+    return sCommand;
 }
 
 using CreatorFunction = unique_ptr<Command> (*)(const string& name,
                                                 Database* pDatabase,
                                                 GWBUF* pRequest,
-                                                const Packet& req,
+                                                const Query* pQuery,
+                                                const Msg* pMsg,
                                                 const bsoncxx::document::view& doc,
                                                 const Command::DocumentArguments& arguments);
 using CreatorsByName = const map<string, CreatorFunction>;
@@ -129,32 +147,15 @@ struct ThisUnit
 namespace mxsmongo
 {
 
-Command::Command(const string& name,
-                 Database* pDatabase,
-                 GWBUF* pRequest,
-                 const Packet& req,
-                 const bsoncxx::document::view& doc,
-                 const DocumentArguments& arguments)
-    : m_name(name)
-    , m_database(*pDatabase)
-    , m_pRequest(gwbuf_clone(pRequest))
-    , m_req(req)
-    , m_doc(doc)
-    , m_arguments(arguments)
-{
-}
-
 Command::~Command()
 {
     free_request();
 }
 
-//static
-unique_ptr<Command> Command::get(mxsmongo::Database* pDatabase,
-                                 GWBUF* pRequest,
-                                 const mxsmongo::Packet& req,
-                                 const bsoncxx::document::view& doc,
-                                 const DocumentArguments& arguments)
+namespace
+{
+
+pair<string, CreatorFunction> get_creator(const bsoncxx::document::view& doc)
 {
     CreatorFunction create = nullptr;
     string name;
@@ -179,7 +180,39 @@ unique_ptr<Command> Command::get(mxsmongo::Database* pDatabase,
         create = &create_command<Unknown>;
     }
 
-    return create(name, pDatabase, pRequest, req, doc, arguments);
+    return make_pair(name, create);
+}
+
+}
+
+//static
+unique_ptr<Command> Command::get(mxsmongo::Database* pDatabase,
+                                 GWBUF* pRequest,
+                                 const mxsmongo::Query& query,
+                                 const bsoncxx::document::view& doc,
+                                 const DocumentArguments& arguments)
+{
+    auto creator = get_creator(doc);
+
+    const string& name = creator.first;
+    CreatorFunction create = creator.second;
+
+    return create(name, pDatabase, pRequest, &query, nullptr, doc, arguments);
+}
+
+//static
+unique_ptr<Command> Command::get(mxsmongo::Database* pDatabase,
+                                 GWBUF* pRequest,
+                                 const mxsmongo::Msg& msg,
+                                 const bsoncxx::document::view& doc,
+                                 const DocumentArguments& arguments)
+{
+    auto creator = get_creator(doc);
+
+    const string& name = creator.first;
+    CreatorFunction create = creator.second;
+
+    return create(name, pDatabase, pRequest, nullptr, &msg, doc, arguments);
 }
 
 Command::State Command::translate(GWBUF& mariadb_response, GWBUF** ppMongo_response)
@@ -524,10 +557,14 @@ GWBUF* Command::create_msg_response(const bsoncxx::document::value& doc) const
     uint32_t flag_bits = 0;
     uint8_t kind = 0;
     uint32_t doc_length = doc.view().length();
-    uint32_t checksum = 0;
 
-    size_t response_size = mongo::HEADER_LEN
-        + sizeof(flag_bits) + sizeof(kind) + doc_length; // + sizeof(checksum);
+    size_t response_size = mongo::HEADER_LEN + sizeof(flag_bits) + sizeof(kind) + doc_length;
+
+    if (m_append_checksum)
+    {
+        flag_bits |= Msg::CHECKSUM_PRESENT;
+        response_size += sizeof(uint32_t); // sizeof checksum
+    }
 
     GWBUF* pResponse = gwbuf_alloc(response_size);
 
@@ -544,7 +581,12 @@ GWBUF* Command::create_msg_response(const bsoncxx::document::value& doc) const
     pData += set_byte1(pData, kind);
     memcpy(pData, doc.view().data(), doc_length);
     pData += doc_length;
-    //pData += set_byte4(pData, checksum);
+
+    if (m_append_checksum)
+    {
+        uint32_t checksum = crc32_func(gwbuf_link_data(pResponse), response_size - sizeof(uint32_t));
+        pData += set_byte4(pData, checksum);
+    }
 
     return pResponse;
 }
