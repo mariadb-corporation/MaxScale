@@ -23,6 +23,172 @@
 
 using namespace std;
 
+mxsmongo::Query::Query(const Packet& packet)
+    : Packet(packet)
+{
+    mxb_assert(opcode() == MONGOC_OPCODE_QUERY);
+
+    const uint8_t* pData = reinterpret_cast<const uint8_t*>(m_pHeader) + sizeof(mongo::HEADER);
+
+    pData += mxsmongo::get_byte4(pData, &m_flags);
+    pData += mxsmongo::get_zstring(pData, &m_zCollection);
+    pData += mxsmongo::get_byte4(pData, &m_nSkip);
+    pData += mxsmongo::get_byte4(pData, &m_nReturn);
+
+    uint32_t size;
+    mxsmongo::get_byte4(pData, &size);
+    m_query = bsoncxx::document::view { pData, size };
+    pData += size;
+
+    if (pData < m_pEnd)
+    {
+        mxsmongo::get_byte4(pData, &size);
+        if (m_pEnd - pData != size)
+        {
+            mxb_assert(!true);
+            std::stringstream ss;
+            ss << "Malformed packet, expected " << size << " bytes for document, "
+               << m_pEnd - pData << " found.";
+
+            throw std::runtime_error(ss.str());
+        }
+        m_fields = bsoncxx::document::view { pData, size };
+        pData += size;
+    }
+
+    if (pData != m_pEnd)
+    {
+        mxb_assert(!true);
+        std::stringstream ss;
+        ss << "Malformed packet, " << m_pEnd - pData << " trailing bytes found.";
+
+        throw std::runtime_error(ss.str());
+    }
+}
+
+mxsmongo::Msg::Msg(const Packet& packet)
+    : Packet(packet)
+{
+    mxb_assert(opcode() == MONGOC_OPCODE_MSG);
+
+    const uint8_t* pData = reinterpret_cast<const uint8_t*>(m_pHeader) + sizeof(mongo::HEADER);
+
+    pData += mxsmongo::get_byte4(pData, &m_flags);
+
+    if (checksum_present())
+    {
+        // TODO: Check checksum.
+    }
+
+    const uint8_t* pSections_end = m_pEnd - (checksum_present() ? sizeof(uint32_t) : 0);
+    size_t sections_size = pSections_end - pData;
+
+    while (pData < pSections_end)
+    {
+        uint8_t kind;
+        pData += mxsmongo::get_byte1(pData, &kind);
+
+        switch (kind)
+        {
+        case 0:
+            // Body section encoded as a single BSON object.
+            {
+                mxb_assert(m_document.empty());
+                uint32_t size;
+                mxsmongo::get_byte4(pData, &size);
+
+                if (pData + size > pSections_end)
+                {
+                    std::stringstream ss;
+                    ss << "Malformed packet, section(0) size " << size << " larger "
+                       << "than available amount " << pSections_end - pData << " of data.";
+                    throw std::runtime_error(ss.str());
+                }
+
+                m_document = bsoncxx::document::view { pData, size };
+                pData += size;
+            }
+            break;
+
+        case 1:
+            {
+                uint32_t total_size;
+                mxsmongo::get_byte4(pData, &total_size);
+
+                if (pData + total_size > pSections_end)
+                {
+                    std::stringstream ss;
+                    ss << "Malformed packet, section(1) size " << total_size << " larger "
+                       << "than available amount " << pSections_end - pData << " of data.";
+                    throw std::runtime_error(ss.str());
+                }
+
+                auto* pEnd = pData + total_size;
+                pData += 4;
+
+                const char* zIdentifier = reinterpret_cast<const char*>(pData); // NULL-terminated
+                while (*pData && pData != pEnd)
+                {
+                    ++pData;
+                }
+
+                if (pData != pEnd)
+                {
+                    MXB_NOTICE("zIdentifier: %s", zIdentifier);
+
+                    ++pData; // NULL-terminator
+
+                    auto& documents = m_arguments[zIdentifier];
+
+                    // And now there are documents all the way down...
+                    while (pData < pEnd)
+                    {
+                        uint32_t size;
+                        mxsmongo::get_byte4(pData, &size);
+                        if (pData + size <= pEnd)
+                        {
+                            bsoncxx::document::view doc { pData, size };
+                            MXB_NOTICE("DOC: %s", bsoncxx::to_json(doc).c_str());
+                            documents.push_back(doc);
+                            pData += size;
+                        }
+                        else
+                        {
+                            mxb_assert(!true);
+                            std::stringstream ss;
+                            ss << "Malformed packet, expected " << size << " bytes for document, "
+                               << pEnd - pData << " found.";
+                            throw std::runtime_error(ss.str());
+                        }
+                    }
+                }
+                else
+                {
+                    mxb_assert(!true);
+                    throw std::runtime_error("Malformed packet, 'identifier' not NULL-terminated.");
+                }
+            }
+            break;
+
+        default:
+            {
+                mxb_assert(!true);
+                std::stringstream ss;
+                ss << "Malformed packet, expected a 'kind' of 0 or 1, received " << kind << ".";
+                throw std::runtime_error(ss.str());
+            }
+        }
+    }
+
+    if (pData != pSections_end)
+    {
+        mxb_assert(!true);
+        std::stringstream ss;
+        ss << "Malformed packet, " << pSections_end - pData << " trailing bytes found.";
+        throw std::runtime_error(ss.str());
+    }
+}
+
 const char* mxsmongo::opcode_to_string(int code)
 {
     switch (code)
