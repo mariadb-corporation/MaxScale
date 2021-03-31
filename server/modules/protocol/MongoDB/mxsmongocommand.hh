@@ -35,6 +35,11 @@ bsoncxx::document::view element_as<bsoncxx::document::view>(const std::string& c
                                                             const char* zKey,
                                                             const bsoncxx::document::element& element);
 
+template<>
+std::string element_as<std::string>(const std::string& command,
+                                    const char* zKey,
+                                    const bsoncxx::document::element& element);
+
 
 class Command
 {
@@ -107,6 +112,21 @@ protected:
         }
 
         return rv;
+    }
+
+    template<class Type>
+    Type required(const char* zKey)
+    {
+        auto element = m_doc[zKey];
+
+        if (!element)
+        {
+            std::stringstream ss;
+            ss << "BSON field '" << m_name << "." << zKey << "' is missing but a required field";
+            throw SoftError(ss.str(), error::LOCATION40414);
+        }
+
+        return element_as<Type>(m_name, zKey, element);
     }
 
     /**
