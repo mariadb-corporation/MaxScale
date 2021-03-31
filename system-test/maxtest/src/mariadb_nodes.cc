@@ -1032,6 +1032,25 @@ bool MariaDBCluster::prepare_cluster_for_test()
     return rval;
 }
 
+MariaDBCluster::ConnArray MariaDBCluster::admin_connect_to_all()
+{
+    ConnArray rval;
+    rval.resize(N);
+
+    mxt::BoolFuncArray funcs;
+    funcs.reserve(rval.size());
+    for (size_t i = 0; i < rval.size(); i++)
+    {
+        auto add_connection = [this, &rval, i]() {
+                rval[i] = m_backends[i]->try_open_admin_connection();
+                return true;
+            };
+        funcs.push_back(std::move(add_connection));
+    }
+    m_shared.concurrent_run(funcs);
+    return rval;
+}
+
 namespace maxtest
 {
 maxtest::MariaDBServer::MariaDBServer(const string& cnf_name, VMNode& vm, MariaDBCluster& cluster,

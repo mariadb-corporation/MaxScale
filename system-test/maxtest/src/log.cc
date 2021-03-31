@@ -152,4 +152,10 @@ bool SharedData::concurrent_run(const BoolFuncArray& funcs)
     }
     return rval;
 }
+
+std::string cutoff_string(const string& source, char cutoff)
+{
+    auto pos = source.find(cutoff);
+    return (pos != string::npos) ? source.substr(0, pos) : source;
+}
 }

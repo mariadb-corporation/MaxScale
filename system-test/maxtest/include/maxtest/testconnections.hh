@@ -508,12 +508,3 @@ private:
  * @return String form comparison of status sets
  */
 std::string dump_status(const StringSet& current, const StringSet& expected);
-
-/**
- * Return substring before first cutoff char.
- *
- * @param source Source string
- * @param cutoff Cutoff character
- * @return Result
- */
-std::string cutoff_string(const std::string& source, char cutoff);
