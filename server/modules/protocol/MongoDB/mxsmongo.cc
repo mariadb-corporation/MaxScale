@@ -19,6 +19,7 @@
 #include <maxscale/dcb.hh>
 #include <maxscale/session.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
+#include "../../filter/masking/mysql.hh"
 #include "mxsmongodatabase.hh"
 #include "crc32.h"
 
@@ -282,6 +283,18 @@ GWBUF* mxsmongo::SoftError::create_response(const mxsmongo::Command& command) co
 GWBUF* mxsmongo::HardError::create_response(const mxsmongo::Command& command) const
 {
     return command.create_hard_error(what(), m_code);
+}
+
+mxsmongo::MariaDBError::MariaDBError(const ComERR& err)
+    : Exception("Mongo request failed due to MariaDB error.", error::COMMAND_FAILED)
+    , m_mariadb_code(err.code())
+    , m_mariadb_message(err.message())
+{
+}
+
+GWBUF* mxsmongo::MariaDBError::create_response(const mxsmongo::Command& command) const
+{
+    return command.create_mariadb_error(what(), m_code, m_mariadb_message, m_mariadb_code);
 }
 
 vector<string> mxsmongo::projection_to_extractions(const bsoncxx::document::view& projection)

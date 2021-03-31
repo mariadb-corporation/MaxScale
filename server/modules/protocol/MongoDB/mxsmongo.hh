@@ -27,6 +27,7 @@
 class DCB;
 
 class Config;
+class ComERR;
 
 namespace mxsmongo
 {
@@ -188,6 +189,18 @@ public:
     using Exception::Exception;
 
     GWBUF* create_response(const Command& command) const override final;
+};
+
+class MariaDBError : public Exception
+{
+public:
+    MariaDBError(const ComERR& err);
+
+    GWBUF* create_response(const Command& command) const override final;
+
+private:
+    int         m_mariadb_code;
+    std::string m_mariadb_message;
 };
 
 namespace key

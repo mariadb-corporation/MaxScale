@@ -87,6 +87,8 @@ public:
 
     GWBUF* create_hard_error(const std::string& message, int mongo_code) const;
     GWBUF* create_soft_error(const std::string& message, int mongo_code) const;
+    GWBUF* create_mariadb_error(const std::string& message, int mongo_code,
+                                const std::string& mariadb_message, int mariadb_code) const;
 
     static void check_write_batch_size(int size);
 
@@ -135,6 +137,7 @@ protected:
     Packet                  m_req;
     bsoncxx::document::view m_doc;
     DocumentArguments       m_arguments;
+    std::string             m_last_statement;
 
 private:
     bool checksum_used(const Msg& req)

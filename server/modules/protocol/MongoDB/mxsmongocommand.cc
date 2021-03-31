@@ -275,6 +275,26 @@ GWBUF* Command::create_hard_error(const std::string& message, int code) const
     return create_response(doc.extract());
 }
 
+GWBUF* Command::create_mariadb_error(const std::string& message, int mongo_code,
+                                     const std::string& mariadb_message, int mariadb_code) const
+{
+    string json = bsoncxx::to_json(m_doc);
+    string sql = m_last_statement;
+
+    command::DocumentBuilder mariadb;
+    mariadb.append(command::kvp("code", mariadb_code));
+    mariadb.append(command::kvp("message", mariadb_message));
+    mariadb.append(command::kvp("command", json));
+    mariadb.append(command::kvp("sql", sql));
+
+    command::DocumentBuilder error;
+    error.append(command::kvp("$err", message));
+    error.append(command::kvp("code", mongo_code));
+    error.append(command::kvp("mariadb", mariadb.extract()));
+
+    return create_response(error.extract());
+}
+
 //static
 void Command::check_write_batch_size(int size)
 {
@@ -371,6 +391,8 @@ void Command::free_request()
 void Command::send_downstream(const string& sql)
 {
     MXS_NOTICE("SQL: %s", sql.c_str());
+
+    m_last_statement = sql;
 
     GWBUF* pRequest = modutil_create_query(sql.c_str());
 
