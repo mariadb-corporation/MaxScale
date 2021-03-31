@@ -456,6 +456,7 @@ ServersInfo MaxScale::get_servers()
     const string field_serverid = "server_id";
     const string field_slave_conns = "slave_connections";
     const string field_statistics = "statistics";
+    const string field_gtid = "gtid_current_pos";
 
     // Slave conn fields
     const string field_scon_name = "connection_name";
@@ -487,12 +488,13 @@ ServersInfo MaxScale::get_servers()
                 info.name = elem.get_string(field_id);
                 auto attr = elem.get_object(field_attr);
                 string state = attr.get_string(field_state);
+                info.status_from_string(state);
 
                 // The following depend on the monitor and may be null.
                 info.master_group = try_get_int(attr, field_mgroup, ServerInfo::GROUP_NONE);
                 info.rlag = try_get_int(attr, field_rlag, ServerInfo::RLAG_NONE);
                 info.server_id = try_get_int(attr, field_serverid, ServerInfo::SRV_ID_NONE);
-                info.status_from_string(state);
+                attr.try_get_string(field_gtid, &info.gtid);
 
                 if (attr.contains(field_slave_conns))
                 {
@@ -545,6 +547,20 @@ void ServersInfo::add(ServerInfo&& info)
 const ServerInfo& ServersInfo::get(size_t i) const
 {
     return m_servers[i];
+}
+
+ServerInfo ServersInfo::get(const std::string& cnf_name) const
+{
+    ServerInfo rval;
+    for (auto& elem : m_servers)
+    {
+        if (elem.name == cnf_name)
+        {
+            rval = elem;
+            break;
+        }
+    }
+    return rval;
 }
 
 size_t ServersInfo::size() const
@@ -651,6 +667,34 @@ ServerInfo ServersInfo::get_master() const
     return rval;
 }
 
+void ServersInfo::print()
+{
+    if (m_servers.empty())
+    {
+        m_log->log_msgf("No server info received from REST api.");
+    }
+    else
+    {
+        string total_msg;
+        auto n = m_servers.size();
+        total_msg.reserve(n * 30);
+        total_msg += "Server information from REST api:\n";
+        for (auto& elem : m_servers)
+        {
+            total_msg.append(elem.to_string_short()).append("\n");
+        }
+        m_log->log_msg(total_msg);
+    }
+}
+
+const std::vector<ServerInfo::bitfield>& ServersInfo::default_repl_states()
+{
+    static const std::vector<mxt::ServerInfo::bitfield> def_repl_states =
+    {mxt::ServerInfo::master_st,
+     mxt::ServerInfo::slave_st, mxt::ServerInfo::slave_st, mxt::ServerInfo::slave_st};
+    return def_repl_states;
+}
+
 void MaxScale::check_servers_status(const std::vector<ServerInfo::bitfield>& expected_status)
 {
     auto data = get_servers();
@@ -729,11 +773,15 @@ void MaxScale::alter_server(const string& srv_name, const string& setting, const
 void ServerInfo::status_from_string(const string& source)
 {
     auto flags = mxb::strtok(source, ",");
-    status = 0;
+    status = UNKNOWN;
     for (string& flag : flags)
     {
         mxb::trim(flag);
-        if (flag == "Running")
+        if (flag == "Down")
+        {
+            status |= DOWN;
+        }
+        else if (flag == "Running")
         {
             status |= RUNNING;
         }
@@ -762,11 +810,15 @@ void ServerInfo::status_from_string(const string& source)
 
 std::string ServerInfo::status_to_string(bitfield status)
 {
-    std::string rval;
+    std::string rval = "Unknown";
     if (status)
     {
         std::vector<string> items;
         items.reserve(2);
+        if (status & DOWN)
+        {
+            items.emplace_back("Down");
+        }
         if (status & MASTER)
         {
             items.emplace_back("Master");
@@ -799,5 +851,10 @@ std::string ServerInfo::status_to_string(bitfield status)
 std::string ServerInfo::status_to_string() const
 {
     return status_to_string(status);
+}
+
+std::string ServerInfo::to_string_short() const
+{
+    return mxb::string_printf("%10s, %15s, %s", name.c_str(), status_to_string().c_str(), gtid.c_str());
 }
 }

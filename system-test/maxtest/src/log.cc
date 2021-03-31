@@ -80,6 +80,11 @@ void TestLogger::log_msg(const char* format, va_list args)
     printf("%s: %s\n", timeinfo.c_str(), msg.c_str());
 }
 
+void TestLogger::log_msg(const string& str)
+{
+    log_msgf("%s", str.c_str());
+}
+
 std::string TestLogger::time_string() const
 {
     timeval now {0};

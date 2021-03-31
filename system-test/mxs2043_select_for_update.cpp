@@ -88,11 +88,13 @@ bool set_read_only_on_slaves(TestConnections& test, bool set)
 {
     test.tprintf("%s read only on slaves.", set ? "Setting" : "Removing");
 
-    MariaDBCluster& ms = *test.repl;
+    auto& ms = *test.repl;
+    ms.update_status();
+    auto master_id = test.maxscale().get_servers().get_master().server_id;
 
     for (int i = 0; i < ms.N; ++i)
     {
-        if (i != ms.master)
+        if (ms.backend(i)->status().server_id != master_id)
         {
             test.try_query(ms.nodes[i], "set global read_only=%d", set ? 1 : 0);
         }

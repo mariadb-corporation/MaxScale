@@ -2269,6 +2269,32 @@ bool TestConnections::run_shell_command(const string& cmd, const string& errmsg)
     return rval;
 }
 
+mxt::MariaDBServer* TestConnections::get_repl_master()
+{
+    mxt::MariaDBServer* rval = nullptr;
+    if (repl)
+    {
+        auto server_info = m_maxscale->get_servers();
+        for (size_t i = 0; i < server_info.size() && !rval; i++)
+        {
+            auto& info = server_info.get(i);
+            if (info.status & mxt::ServerInfo::MASTER)
+            {
+                for (int j = 0; j < repl->N; j++)
+                {
+                    auto* be = repl->backend(j);
+                    if (be->status().server_id == info.server_id)
+                    {
+                        rval = be;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+    return rval;
+}
+
 std::string cutoff_string(const string& source, char cutoff)
 {
     auto pos = source.find(cutoff);

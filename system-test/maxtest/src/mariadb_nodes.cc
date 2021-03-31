@@ -29,12 +29,36 @@
 using std::cout;
 using std::endl;
 using std::string;
+using std::move;
 
 namespace
 {
 bool g_require_gtid = false;
 
 const string type_columnstore = "columnstore";
+
+/**
+ * Tries to find MariaDB server version number in the output of 'mysqld --version'
+ *
+ * @param version String returned by 'mysqld --version'
+ * @return String with version number
+ */
+string extract_version_from_string(const string& version)
+{
+    int pos1 = 0;
+    int pos2 = 0;
+    int l = version.length();
+    while ((!isdigit(version[pos1])) && (pos1 < l))
+    {
+        pos1++;
+    }
+    pos2 = pos1;
+    while (((isdigit(version[pos2]) || version[pos2] == '.')) && (pos2 < l))
+    {
+        pos2++;
+    }
+    return version.substr(pos1, pos2 - pos1);
+}
 }
 
 void MariaDBCluster::require_gtid(bool value)
@@ -184,7 +208,8 @@ int MariaDBCluster::read_nodes_info(const mxt::NetworkConfig& nwconfig)
         string node_name = mxb::string_printf("%s_%03d", prefixc, i);
         if (add_node(nwconfig, node_name))
         {
-            auto srv = std::make_unique<mxt::MariaDBServer>(*node(i), *this, i);
+            string cnf_name = m_cnf_server_name + std::to_string(i + 1);
+            auto srv = std::make_unique<mxt::MariaDBServer>(cnf_name, *node(i), *this, i);
             string key_port = node_name + "_port";
             port[i] = readenv_int(key_port.c_str(), 3306);
 
@@ -445,24 +470,30 @@ bool MariaDBCluster::fix_replication()
         if (unblock_all_nodes() == 0)
         {
             cout << "Prepare nodes" << endl;
-            prepare_servers();
-            cout << "Starting replication" << endl;
-            start_replication();
+            if (prepare_servers())
+            {
+                cout << "Starting replication" << endl;
+                start_replication();
 
-            while (check_replication() && (attempts > 0))
-            {
-                cout << "Replication is still broken, waiting" << endl;
-                sleep(10);
-                attempts--;
-            }
-            if (check_replication() == 0)
-            {
-                cout << "Replication is fixed" << endl;
-                rval = prepare_for_test();
+                while (check_replication() && (attempts > 0))
+                {
+                    cout << "Replication is still broken, waiting" << endl;
+                    sleep(10);
+                    attempts--;
+                }
+                if (check_replication() == 0)
+                {
+                    cout << "Replication is fixed" << endl;
+                    rval = prepare_for_test();
+                }
+                else
+                {
+                    cout << "FATAL ERROR: Replication is still broken" << endl;
+                }
             }
             else
             {
-                cout << "FATAL ERROR: Replication is still broken" << endl;
+                logger().add_failure("Server preparation failed.");
             }
         }
         else
@@ -739,106 +770,61 @@ void MariaDBCluster::reset_server_settings()
     }
 }
 
-/**
- * @brief extract_version_from_string Tries to find MariaDB server version number in the output of 'mysqld
- *--version'
- * Function does not allocate any memory
- * @param version String returned by 'mysqld --version'
- * @return pointer to the string with version number
- */
-string extract_version_from_string(const string& version)
+bool MariaDBCluster::prepare_server(int i)
 {
-    int pos1 = 0;
-    int pos2 = 0;
-    int l = version.length();
-    while ((!isdigit(version[pos1])) && (pos1 < l))
-    {
-        pos1++;
-    }
-    pos2 = pos1;
-    while (((isdigit(version[pos2]) || version[pos2] == '.')) && (pos2 < l))
-    {
-        pos2++;
-    }
-    return version.substr(pos1, pos2 - pos1);
-}
-
-int MariaDBCluster::prepare_server(int i)
-{
-    m_backends[i]->cleanup_database();
+    auto& srv = m_backends[i];
+    auto& vm = srv->vm_node();
+    srv->cleanup_database();
     reset_server_settings(i);
 
     // Note: These should be done by MDBCI
-    ssh_node(i, "test -d /etc/apparmor.d/ && "
-                "ln -s /etc/apparmor.d/usr.sbin.mysqld /etc/apparmor.d/disable/usr.sbin.mysqld && "
-                "sudo service apparmor restart && "
-                "chmod a+r -R /etc/my.cnf.d/*", true);
+    vm.run_cmd_sudo("test -d /etc/apparmor.d/ && "
+                    "ln -s /etc/apparmor.d/usr.sbin.mysqld /etc/apparmor.d/disable/usr.sbin.mysqld && "
+                    "sudo service apparmor restart && "
+                    "chmod a+r -R /etc/my.cnf.d/*");
 
-    int rval;
-    auto res_version = ssh_output("/usr/sbin/mysqld --version", i, false);
-    rval = res_version.rc;
+    bool rval = false;
+    const char vrs_cmd[] = "/usr/sbin/mysqld --version";
+    auto res_version = vm.run_cmd_output(vrs_cmd);
 
     if (res_version.rc == 0)
     {
         string version_digits = extract_version_from_string(res_version.output);
-        auto version_digitsc = version_digits.c_str();
-
-        printf("Detected server version on node %d is %s\n", i, version_digitsc);
-
-        if (memcmp(version_digitsc, "5.", 2) == 0)
+        if (version_digits.compare(0, 3, "10.") == 0)
         {
-            ssh_node(i, "sed -i \"s/binlog_row_image=full//\" /etc/my.cnf.d/*.cnf", true);
-        }
-        if (memcmp(version_digitsc, "5.7", 3) == 0)
-        {
-            // Disable 'validate_password' plugin, searach for random temporal
-            // password in the log and reseting passord to empty string
-            ssh_node(i, "/usr/sbin/mysqld --initialize; sudo chown -R mysql:mysql /var/lib/mysql", true);
-            auto& srv = m_backends[i];
-            srv->start_database();
-            auto res_temp_pw = ssh_output(
-                "cat /var/log/mysqld.log | grep \"temporary password\" | sed -n -e 's/^.*: //p'",
-                i, true);
-            rval = res_temp_pw.rc;
-            auto temp_pw = res_temp_pw.output.c_str();
-            ssh_node_f(i, true, "mysqladmin -uroot -p'%s' password '%s'", temp_pw, temp_pw);
-            ssh_node_f(i, false,
-                       "echo \"UNINSTALL PLUGIN validate_password\" | sudo mysql -uroot -p'%s'", temp_pw);
-            srv->stop_database();
-            srv->start_database();
-            ssh_node_f(i, true, "mysqladmin -uroot -p'%s' password ''", temp_pw);
+            cout << "Executing mysql_install_db on node" << i << endl;
+            vm.run_cmd_sudo("mysql_install_db; sudo chown -R mysql:mysql /var/lib/mysql");
+            rval = true;
         }
         else
         {
-            cout << "Executing mysql_install_db on node" << i << endl;
-            ssh_node(i, "mysql_install_db; sudo chown -R mysql:mysql /var/lib/mysql", true);
+            logger().add_failure("'%s' on '%s' returned '%s'. Detected server version '%s' is not "
+                                 "supported by the test system.",
+                                 vrs_cmd, vm.m_name.c_str(), res_version.output.c_str(),
+                                 version_digits.c_str());
         }
     }
+    else
+    {
+        logger().add_failure("'%s' failed.", vrs_cmd);
+    }
 
-    stop_node(i);
-    start_node(i, "");
-
+    srv->stop_database();
+    srv->start_database();
     return rval;
 }
 
-int MariaDBCluster::prepare_servers()
+bool MariaDBCluster::prepare_servers()
 {
-    int rval = 0;
-    std::vector<std::thread> threads;
-
+    mxt::BoolFuncArray threads;
     for (int i = 0; i < N; i++)
     {
-        threads.emplace_back([&, i]() {
-                                 rval += prepare_server(i);
-                             });
+        auto func = [this, i]() {
+                return prepare_server(i);
+            };
+        threads.push_back(move(func));
     }
-
-    for (auto& a : threads)
-    {
-        a.join();
-    }
-
-    return rval;
+    return mxt::concurrent_run(threads);
 }
 
 void MariaDBCluster::limit_nodes(int new_N)
@@ -1041,8 +1027,10 @@ mxt::MariaDBServer* MariaDBCluster::backend(int i)
 
 namespace maxtest
 {
-maxtest::MariaDBServer::MariaDBServer(VMNode& vm, MariaDBCluster& cluster, int ind)
-    : m_vm(vm)
+maxtest::MariaDBServer::MariaDBServer(const string& cnf_name, VMNode& vm, MariaDBCluster& cluster,
+                                      int ind)
+    : m_cnf_name(cnf_name)
+    , m_vm(vm)
     , m_cluster(cluster)
     , m_ind(ind)
 {
@@ -1112,5 +1100,15 @@ std::string MariaDBServer::version_as_string()
     uint32_t minor = (v - major * 10000) / 100;
     uint32_t patch = v - major * 10000 - minor * 100;
     return mxb::string_printf("%i.%i.%i", major, minor, patch);
+}
+
+const string& MariaDBServer::name() const
+{
+    return m_cnf_name;
+}
+
+VMNode& MariaDBServer::vm_node()
+{
+    return m_vm;
 }
 }

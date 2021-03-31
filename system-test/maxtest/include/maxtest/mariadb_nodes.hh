@@ -28,7 +28,7 @@ class MariaDBServer
 {
     friend class ::MariaDBCluster;
 public:
-    MariaDBServer(VMNode& vm, MariaDBCluster& cluster, int ind);
+    MariaDBServer(const std::string& cnf_name, VMNode& vm, MariaDBCluster& cluster, int ind);
 
     bool start_database();
     bool stop_database();
@@ -51,9 +51,11 @@ public:
     std::unique_ptr<mxt::MariaDB> try_open_connection();
     bool                          update_status();
     const Status&                 status() const;
+    const std::string&            name() const;
+
+    VMNode& vm_node();
 
 private:
-
     Status m_status;
 
     struct Settings
@@ -63,10 +65,11 @@ private:
         std::string cleanup_db_cmd; /**< Command to remove all data files */
     };
 
-    Settings        m_settings;
-    VMNode&         m_vm;
-    MariaDBCluster& m_cluster;
-    int             m_ind {-1};
+    const std::string m_cnf_name;   /**< MaxScale config name of server */
+    Settings          m_settings;
+    VMNode&           m_vm;
+    MariaDBCluster&   m_cluster;
+    const int         m_ind {-1};
 };
 }
 
@@ -105,7 +108,6 @@ public:
     std::string user_name;  /**< User name to access backend nodes */
     std::string password;   /**< Password to access backend nodes */
 
-    int master;                 /**< index of node which was last configured to be Master */
     int ssl;                    /**< Use ssl? */
 
     int connect(int i, const std::string& db = "test");
@@ -371,13 +373,14 @@ public:
     void reset_server_settings(int node);
 
     /**
-     * @brief prepare_server Initialize MariaDB setup (run mysql_install_db) and create test users
-     * Tries to detect Mysql 5.7 installation and disable 'validate_password' pluging
+     * Initialize MariaDB setup (run mysql_install_db) and create test users
+     *
      * @param i Node index
-     * @return 0 in case of success
+     * @return True on success
      */
-    virtual int prepare_server(int i);
-    int         prepare_servers();
+    virtual bool prepare_server(int i);
+
+    bool prepare_servers();
 
     /**
      * Static functions

@@ -17,80 +17,69 @@ using std::string;
 
 int main(int argc, char** argv)
 {
-    interactive = strcmp(argv[argc - 1], "interactive") == 0;
     MariaDBCluster::require_gtid(true);
     TestConnections test(argc, argv);
-    MYSQL* maxconn = test.maxscales->open_rwsplit_connection(0);
     // Set up test table
     basic_test(test);
     // Delete binlogs to sync gtid:s
     delete_slave_binlogs(test);
-    char result_tmp[bufsize];
-    // Advance gtid:s a bit to so gtid variables are updated.
-    generate_traffic_and_check(test, maxconn, 10);
-    test.maxscales->wait_for_monitor();
-    test.tprintf(LINE);
-    print_gtids(test);
-    get_input();
 
-    test.tprintf("Stopping master and waiting for failover. Check that another server is promoted.");
-    test.tprintf(LINE);
-    const int old_master_id = get_master_server_id(test);   // Read master id now before shutdown.
-    const int master_index = test.repl->master;
-    test.repl->stop_node(master_index);
-    test.maxscales->wait_for_monitor();
-    // Recreate maxscale session
+    auto& mxs = test.maxscale();
+    // Advance gtid:s a bit to so gtid variables are updated.
+    MYSQL* maxconn = test.maxscales->open_rwsplit_connection(0);
+    generate_traffic_and_check(test, maxconn, 10);
     mysql_close(maxconn);
-    maxconn = test.maxscales->open_rwsplit_connection(0);
-    get_output(test);
-    int master_id = get_master_server_id(test);
     test.tprintf(LINE);
-    test.tprintf(PRINT_ID, master_id);
-    const bool failover_ok = (master_id > 0 && master_id != old_master_id);
-    test.expect(failover_ok, "Master did not change or no master detected.");
-    string gtid_final;
-    if (failover_ok)
+    mxs.wait_monitor_ticks();
+    mxs.get_servers().print();
+    mxs.check_servers_status(mxt::ServersInfo::default_repl_states());
+    auto old_master = test.get_repl_master();
+    test.expect(old_master, "No master at start.");
+    mxt::MariaDBServer* new_master = nullptr;
+
+    if (test.ok())
     {
-        test.tprintf("Sending more inserts.");
-        generate_traffic_and_check(test, maxconn, 5);
-        test.maxscales->wait_for_monitor();
-        if (find_field(maxconn, GTID_QUERY, GTID_FIELD, result_tmp) == 0)
+        test.tprintf("Stopping master and waiting for failover. Check that another server is promoted.");
+        test.tprintf(LINE);
+        old_master->stop_database();
+        mxs.wait_monitor_ticks(2);
+        new_master = test.get_repl_master();
+        test.expect(new_master && new_master != old_master, "Master did not change or no master detected.");
+
+        string gtid_final_master;
+        if (test.ok())
         {
-            gtid_final = result_tmp;
+            test.tprintf("'%s' is new master.", new_master->name().c_str());
+            test.tprintf("Sending more inserts.");
+            maxconn = test.maxscales->open_rwsplit_connection(0);
+            generate_traffic_and_check(test, maxconn, 5);
+            mxs.wait_monitor_ticks(1);
+            auto status_before_rejoin = mxs.get_servers();
+            status_before_rejoin.print();
+            gtid_final_master = status_before_rejoin.get(new_master->name()).gtid;
+            string gtid_old_master_before = status_before_rejoin.get(old_master->name()).gtid;
+            test.expect(gtid_final_master != gtid_old_master_before, "Old master is still replicating.");
         }
-        print_gtids(test);
+
         test.tprintf("Bringing old master back online. It should rejoin the cluster and catch up in events.");
         test.tprintf(LINE);
+        old_master->start_database();
+        mxs.wait_monitor_ticks(2);
 
-        test.repl->start_node(master_index, (char*) "");
-        test.maxscales->wait_for_monitor();
-        get_output(test);
-
-        test.repl->connect();
-        test.maxscales->wait_for_monitor();
-        string gtid_old_master;
-        if (find_field(test.repl->nodes[master_index], GTID_QUERY, GTID_FIELD, result_tmp) == 0)
+        if (test.ok())
         {
-            gtid_old_master = result_tmp;
-        }
-        test.tprintf(LINE);
-        print_gtids(test);
-        test.tprintf(LINE);
-        test.expect(gtid_final == gtid_old_master, "Old master did not successfully rejoin the cluster.");
-        // Switch master back to server1 so last check is faster
-        test.maxscales->ssh_output("maxctrl call command mysqlmon switchover MySQL-Monitor server1 server2");
-        test.maxscales->wait_for_monitor();     // Wait for monitor to update status
-        get_output(test);
-        master_id = get_master_server_id(test);
-        test.expect(master_id == old_master_id, "Switchover back to server1 failed.");
-    }
-    else
-    {
-        test.repl->start_node(master_index, (char*) "");
-        test.maxscales->wait_for_monitor();
-    }
-    mysql_close(maxconn);
+            auto status_after_rejoin = mxs.get_servers();
+            status_after_rejoin.print();
+            string gtid_old_master_after = status_after_rejoin.get(old_master->name()).gtid;
+            test.expect(gtid_final_master == gtid_old_master_after,
+                        "Old master did not successfully rejoin the cluster.");
 
-    test.repl->fix_replication();
+            test.tprintf("Switchover back to server1");
+            mxs.maxctrl("call command mysqlmon switchover MySQL-Monitor server1 server2");
+            mxs.wait_monitor_ticks(2);
+            mxs.check_servers_status(mxt::ServersInfo::default_repl_states());
+        }
+    }
+
     return test.global_result;
 }

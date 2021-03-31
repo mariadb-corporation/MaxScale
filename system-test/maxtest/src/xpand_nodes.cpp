@@ -11,10 +11,8 @@
  * Public License.
  */
 
-#include <fstream>
-#include <iostream>
-#include <regex>
 #include <maxtest/xpand_nodes.hh>
+#include <iostream>
 
 using std::string;
 
@@ -23,9 +21,9 @@ namespace
 const string type_xpand = "xpand";
 }
 
-int XpandCluster::prepare_server(int m)
+bool XpandCluster::prepare_server(int m)
 {
-    int rv = 1;
+    bool rv = false;
     int ec;
 
     bool running = false;
@@ -121,14 +119,14 @@ int XpandCluster::prepare_server(int m)
         if (ec == 0)
         {
             printf("Can access Xpand using user '%s'.\n", this->user_name.c_str());
-            rv = 0;
+            rv = true;
         }
         else
         {
             printf("Cannot access Xpand using user '%s', creating users.\n", this->user_name.c_str());
             // TODO: We need an return code here.
             create_users(m);
-            rv = 0;
+            rv = true;
         }
     }
 

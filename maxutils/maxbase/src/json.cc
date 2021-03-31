@@ -247,6 +247,19 @@ bool Json::try_get_int(const std::string& key, int64_t* out) const
     return rval;
 }
 
+bool Json::try_get_string(const string& key, std::string* out) const
+{
+    bool rval = false;
+    auto keyc = key.c_str();
+    json_t* obj = json_object_get(m_obj, keyc);
+    if (obj && json_is_string(obj))
+    {
+        *out = json_string_value(obj);
+        rval = true;
+    }
+    return rval;
+}
+
 void Json::set_string(const char* key, const char* value)
 {
     json_object_set_new(m_obj, key, json_string(value));

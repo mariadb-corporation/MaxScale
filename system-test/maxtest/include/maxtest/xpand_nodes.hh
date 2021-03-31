@@ -46,12 +46,7 @@ public:
      */
     int check_replication() override;
 
-    /**
-     * @brief perpare_server configurs Xpand on the node
-     * @param m node index
-     * @return 0 in case of success
-     */
-    int prepare_server(int i);
+    bool prepare_server(int i) override;
 
     std::string block_command(int node) const override;
     std::string unblock_command(int node) const override;

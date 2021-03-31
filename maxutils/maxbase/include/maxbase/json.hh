@@ -72,6 +72,7 @@ public:
     int64_t get_int(const std::string& key) const;
 
     bool try_get_int(const std::string& key, int64_t* out) const;
+    bool try_get_string(const std::string& key, std::string* out) const;
 
     std::vector<Json> get_array_elems(const std::string& key) const;
 
