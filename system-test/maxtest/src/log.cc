@@ -65,6 +65,14 @@ std::string TestLogger::all_errors_to_string()
     return rval;
 }
 
+void TestLogger::log_msgf(const char* format, ...)
+{
+    va_list valist;
+    va_start(valist, format);
+    log_msg(format, valist);
+    va_end(valist);
+}
+
 void TestLogger::log_msg(const char* format, va_list args)
 {
     string msg = prepare_msg(format, args);

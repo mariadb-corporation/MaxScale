@@ -1,10 +1,10 @@
 #pragma once
 
-#include <errno.h>
 #include <functional>
 #include <map>
-#include <string>
+#include <memory>
 #include <set>
+#include <string>
 #include <vector>
 
 #include <maxtest/ccdefs.hh>
@@ -32,8 +32,8 @@ class VMNode
 {
 public:
     VMNode(SharedData& shared, const std::string& name);
-    VMNode(VMNode&& rhs);
     ~VMNode();
+    VMNode(const VMNode&) = delete;
 
     bool init_ssh_master();
 
@@ -50,6 +50,8 @@ public:
      * @return Return code
      */
     int run_cmd(const std::string& cmd, CmdPriv priv = CmdPriv::NORMAL);
+
+    int run_cmd_sudo(const std::string& cmd);
 
     /**
      * Run a command on the VM, either through ssh or local terminal. Fetches output.
@@ -88,6 +90,10 @@ public:
     const char* access_homedir() const;
     const char* access_sudo() const;
     const char* sshkey() const;
+
+    const std::string& ip4s() const;
+
+    SharedData& shared();
 
     const std::string m_name;       /**< E.g. "node_001" */
 
@@ -171,15 +177,6 @@ public:
      */
     bool check_nodes_ssh();
 
-    /**
-     * Read node settings such as IPs, sshkey, etc from network config contents.
-     *
-     * @param nwconfig Network config values
-     * @param prefix Key prefix
-     * @return Number of of nodes successfully read and created
-     */
-    int read_basic_env(const mxt::NetworkConfig& nwconfig, const std::string& prefix);
-
     void write_env_vars();
 
     int n_nodes() const;
@@ -200,14 +197,14 @@ protected:
 
     virtual bool init_ssh_masters();
 
-    mxt::VMNode&       node(int i);
-    const mxt::VMNode& node(int i) const;
+    mxt::VMNode*       node(int i);
+    const mxt::VMNode* node(int i) const;
 
     void clear_vms();
     bool add_node(const mxt::NetworkConfig& nwconfig, const std::string& name);
 
 private:
-    std::vector<mxt::VMNode> m_vms;
+    std::vector<std::unique_ptr<mxt::VMNode>> m_vms;
 
     bool check_node_ssh(int node);
 };

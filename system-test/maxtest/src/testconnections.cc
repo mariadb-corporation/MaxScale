@@ -213,8 +213,15 @@ int TestConnections::prepare_for_test(int argc, char* argv[])
     {
         if (!check_backend_versions())
         {
-            tprintf("Skipping test.");
-            rc = TEST_SKIPPED;
+            if (ok())
+            {
+                tprintf("Skipping test.");
+                rc = TEST_SKIPPED;
+            }
+            else
+            {
+                rc = global_result;
+            }
         }
     }
 
@@ -2113,21 +2120,12 @@ bool TestConnections::initialize_nodes()
 
 bool TestConnections::check_backend_versions()
 {
-    auto tester = [this](MariaDBCluster* cluster, const string& required_vrs_str) {
+    auto tester = [](MariaDBCluster* cluster, const string& required_vrs_str) {
             bool rval = true;
             if (cluster && !required_vrs_str.empty())
             {
-                string found_vrs_str = cluster->get_lowest_version();
-                int found_vrs = get_int_version(found_vrs_str);
                 int required_vrs = get_int_version(required_vrs_str);
-
-                if (found_vrs < required_vrs)
-                {
-                    tprintf("Test cluster '%s' version '%s' is too low, test '%s' requires at least '%s'.",
-                            cluster->prefix().c_str(), found_vrs_str.c_str(),
-                            m_test_name.c_str(), required_vrs_str.c_str());
-                    rval = false;
-                }
+                rval = cluster->check_backend_versions(required_vrs);
             }
             return rval;
         };

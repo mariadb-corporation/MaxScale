@@ -141,6 +141,7 @@ public:
     ConnectionSettings& connection_settings();
 
     VersionInfo version_info() const;
+    bool        is_open() const;
 
 private:
     void clear_errors();

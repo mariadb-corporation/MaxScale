@@ -199,9 +199,9 @@ int ReplicationCluster::check_replication()
         return 1;
     }
 
-    if ((res = get_versions()) != 0)
+    if (!update_status())
     {
-        cout << "Failed to get versions" << endl;
+        cout << "Failed to update status" << endl;
         return 1;
     }
 

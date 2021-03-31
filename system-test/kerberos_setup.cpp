@@ -45,7 +45,9 @@ int main(int argc, char* argv[])
     sprintf(str, "%s/krb5.conf", test_dir);
     for (i = 0; i < Test->repl->N; i++)
     {
-        install_kerberos(Test->get_mdbci_config_name() + "/" + Test->repl->mdbci_node_name(i), get_str_version(std::string(Test->repl->version[i])));
+        std::string machine_name = Test->get_mdbci_config_name() + "/" + Test->repl->mdbci_node_name(i);
+        std::string maria_vrs = Test->repl->backend(i)->version_as_string();
+        install_kerberos(machine_name, maria_vrs);
         auto homedir = Test->repl->access_homedir(i);
         Test->repl->copy_to_node_legacy(str, homedir, i);
         sprintf(str1, "cp %s/krb5.conf /etc/", homedir);
@@ -68,7 +70,9 @@ int main(int argc, char* argv[])
     Test->maxscales->ssh_node_f(0, true, "cp %s/krb5.conf /etc/", mxs_homedir);
 
     Test->tprintf("Instaling Kerberos server packages to Maxscale node\n");
-    install_kerberos(Test->get_mdbci_config_name() + "/" + Test->maxscales->mdbci_node_name(0), get_str_version(std::string(Test->repl->version[0])));
+    std::string machine_name = Test->get_mdbci_config_name() + "/" + Test->maxscales->mdbci_node_name(0);
+    std::string maria_vrs = Test->repl->backend(0)->version_as_string();
+    install_kerberos(machine_name, maria_vrs);
 
     Test->maxscales->ssh_node(0, (char*) "rngd -r /dev/urandom -o /dev/random", true);
 
