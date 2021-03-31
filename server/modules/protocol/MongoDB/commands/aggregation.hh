@@ -145,6 +145,116 @@ private:
 };
 
 // https://docs.mongodb.com/manual/reference/command/distinct/
+class Distinct : public mxsmongo::Command
+{
+public:
+    using mxsmongo::Command::Command;
+
+    GWBUF* execute() override
+    {
+        stringstream sql;
+
+        string key = required<string>(key::KEY);
+        string extract = "JSON_EXTRACT(doc, '$." + key + "')";
+
+        sql << "SELECT DISTINCT(" << extract << ") FROM " << get_table(key::DISTINCT) << " ";
+
+        bsoncxx::document::view query;
+        if (optional(key::QUERY, &query))
+        {
+            sql << mxsmongo::query_to_where_clause(query);
+            sql << "AND ";
+        }
+        else
+        {
+            sql << "WHERE ";
+        }
+
+        sql << extract << " IS NOT NULL";
+
+        send_downstream(sql.str());
+
+        return nullptr;
+    }
+
+    State translate(GWBUF& mariadb_response, GWBUF** ppResponse) override
+    {
+        uint8_t* pBuffer = GWBUF_DATA(&mariadb_response);
+
+        ComResponse response(pBuffer);
+
+        int32_t ok = 0;
+        stringstream json;
+        json << "{ \"values\": [";
+
+        switch (response.type())
+        {
+        case ComResponse::OK_PACKET:
+            mxb_assert(!true);
+            break;
+
+        case ComResponse::ERR_PACKET:
+            {
+                ComERR err(response);
+
+                auto code = err.code();
+
+                if (code == ER_NO_SUCH_TABLE)
+                {
+                    ok = 1;
+                }
+                else
+                {
+                    throw MariaDBError(err);
+                }
+            }
+            break;
+
+        case ComResponse::LOCAL_INFILE_PACKET:
+            mxb_assert(!true);
+            break;
+
+        default:
+            {
+                ok = 1;
+
+                ComQueryResponse cqr(&pBuffer);
+                mxb_assert(cqr.nFields() == 1);
+
+                ComQueryResponse::ColumnDef column_def(&pBuffer);
+                vector<enum_field_types> types { column_def.type() };
+
+                ComResponse eof(&pBuffer);
+                mxb_assert(eof.type() == ComResponse::EOF_PACKET);
+
+                bool first = true;
+                while (ComResponse(pBuffer).type() != ComResponse::EOF_PACKET)
+                {
+                    if (first)
+                    {
+                        first = false;
+                    }
+                    else
+                    {
+                        json << ", ";
+                    }
+
+                    CQRTextResultsetRow row(&pBuffer, types); // Advances pBuffer
+                    auto it = row.begin();
+
+                    json << (*it).as_string().to_string();
+                }
+            }
+        }
+
+        json << "], \"ok\": " << ok << "}";
+
+        auto doc = bsoncxx::from_json(json.str());
+
+        *ppResponse = create_response(doc);
+        return READY;
+    }
+};
 
 // https://docs.mongodb.com/manual/reference/command/mapReduce/
 
