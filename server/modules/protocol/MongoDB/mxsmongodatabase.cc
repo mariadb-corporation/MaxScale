@@ -64,8 +64,23 @@ GWBUF* mxsmongo::Database::translate(GWBUF& mariadb_response)
     mxb_assert(is_pending());
     mxb_assert(m_sCommand.get());
 
-    GWBUF* pResponse;
-    Command::State state = m_sCommand->translate(mariadb_response, &pResponse);
+    GWBUF* pResponse = nullptr;
+
+    Command::State state = Command::READY;
+
+    try
+    {
+        state = m_sCommand->translate(mariadb_response, &pResponse);
+    }
+    catch (const mxsmongo::Exception& x)
+    {
+        pResponse = x.create_response(*m_sCommand.get());
+    }
+    catch (const std::exception& x)
+    {
+        MXS_ERROR("std exception occurred when parsing MongoDB command: %s", x.what());
+        pResponse = m_sCommand->create_hard_error(x.what(), mxsmongo::error::COMMAND_FAILED);
+    }
 
     if (state == Command::READY)
     {
