@@ -132,6 +132,7 @@ struct ThisUnit
         { mxb::tolower(key::CREATE),                  &create_command<command::Create> },
         { mxb::tolower(key::DELETE),                  &create_command<command::Delete> },
         { mxb::tolower(key::DISTINCT),                &create_command<command::Distinct> },
+        { mxb::tolower(key::DROP),                    &create_command<command::Drop> },
         { mxb::tolower(key::ENDSESSIONS),             &create_command<command::EndSessions> },
         { mxb::tolower(key::FIND),                    &create_command<command::Find> },
         { mxb::tolower(key::GETLOG),                  &create_command<command::GetLog> },

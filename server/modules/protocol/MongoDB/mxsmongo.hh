@@ -213,6 +213,7 @@ const char DELETE[]                  = "delete";
 const char DELETES[]                 = "deletes";
 const char DISTINCT[]                = "distinct";
 const char DOCUMENTS[]               = "documents";
+const char DROP[]                    = "drop";
 const char ENDSESSIONS[]             = "endSessions";
 const char FILTER[]                  = "filter";
 const char FIND[]                    = "find";

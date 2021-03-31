@@ -102,6 +102,68 @@ public:
 // https://docs.mongodb.com/manual/reference/command/currentOp/
 
 // https://docs.mongodb.com/manual/reference/command/drop/
+class Drop : public Command
+{
+public:
+    using Command::Command;
+
+    GWBUF* execute() override
+    {
+        stringstream sql;
+
+        sql << "DROP TABLE " << get_table(key::DROP);
+
+        send_downstream(sql.str());
+
+        return nullptr;
+    }
+
+    State translate(GWBUF& mariadb_response, GWBUF** ppResponse) override
+    {
+        ComResponse response(GWBUF_DATA(&mariadb_response));
+
+        int32_t ok = 0;
+
+        switch (response.type())
+        {
+        case ComResponse::OK_PACKET:
+            ok = 1;
+            break;
+
+        case ComResponse::ERR_PACKET:
+            {
+                ComERR err(response);
+
+                if (err.code() == ER_BAD_TABLE_ERROR)
+                {
+                    throw SoftError("ns not found", error::NAMESPACE_NOT_FOUND);
+                }
+                else
+                {
+                    throw MariaDBError(ComERR(response));
+                }
+            }
+            break;
+
+        case ComResponse::LOCAL_INFILE_PACKET:
+            mxb_assert(!true);
+            break;
+
+        default:
+            mxb_assert(!true);
+        }
+
+        DocumentBuilder doc;
+
+        doc.append(kvp("ok", ok));
+        doc.append(kvp("ns", get_table(key::DROP)));
+        doc.append(kvp("nIndexesWas", 1)); // TODO: Report real value.
+
+        *ppResponse = create_response(doc.extract());
+        return READY;
+    }
+};
+
 
 // https://docs.mongodb.com/manual/reference/command/dropDatabase/
 
