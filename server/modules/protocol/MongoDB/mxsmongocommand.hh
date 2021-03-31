@@ -138,7 +138,13 @@ protected:
      */
     std::string convert_skip_and_limit() const;
 
-    std::string get_table(const char* zCommand) const;
+    enum Quoted
+    {
+        NO,
+        YES
+    };
+
+    const std::string& table(Quoted quoted = Quoted::YES) const;
 
     void free_request();
 
@@ -185,7 +191,9 @@ private:
 
     std::string create_entry(const std::string& extraction, const std::string& value) const;
 
-    bool m_append_checksum { false };
+    bool                m_append_checksum { false };
+    mutable std::string m_quoted_table;
+    mutable std::string m_unquoted_table;
 };
 
 }

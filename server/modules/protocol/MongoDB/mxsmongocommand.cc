@@ -392,21 +392,28 @@ string Command::convert_skip_and_limit() const
     return rv;
 }
 
-string Command::get_table(const char* zCommand) const
+const string& Command::table(Quoted quoted) const
 {
-    auto element = m_doc[zCommand];
-
-    if (element.type() != bsoncxx::type::k_utf8)
+    if (m_quoted_table.empty())
     {
-        stringstream ss;
-        ss << "collection name has invalid type " << bsoncxx::to_string(element.type());
-        throw SoftError(ss.str(), error::BAD_VALUE);
+        auto element = m_doc[m_name];
+        mxb_assert(element);
+
+        if (element.type() != bsoncxx::type::k_utf8)
+        {
+            stringstream ss;
+            ss << "collection name has invalid type " << bsoncxx::to_string(element.type());
+            throw SoftError(ss.str(), error::BAD_VALUE);
+        }
+
+        auto utf8 = element.get_utf8();
+        string table(utf8.value.data(), utf8.value.size());
+
+        m_quoted_table = "`" + m_database.name() + "`.`" + table + "`";
+        m_unquoted_table = m_database.name() + "." + table;
     }
 
-    auto utf8 = element.get_utf8();
-    string table(utf8.value.data(), utf8.value.size());
-
-    return "`" + m_database.name() + "`.`" + table + "`";
+    return quoted == Quoted::YES ? m_quoted_table : m_unquoted_table;
 }
 
 void Command::free_request()
@@ -565,7 +572,7 @@ GWBUF* Command::translate_resultset(vector<string>& extractions, GWBUF* pMariadb
         cursor_builder.append(bsoncxx::builder::basic::kvp("firstBatch", firstBatch_builder.extract()));
         cursor_builder.append(bsoncxx::builder::basic::kvp("partialResultsReturned", false));
         cursor_builder.append(bsoncxx::builder::basic::kvp("id", int64_t(0)));
-        cursor_builder.append(bsoncxx::builder::basic::kvp("ns", get_table(key::FIND)));
+        cursor_builder.append(bsoncxx::builder::basic::kvp("ns", table(Quoted::NO)));
 
         bsoncxx::builder::basic::document msg_builder;
         msg_builder.append(bsoncxx::builder::basic::kvp("cursor", cursor_builder.extract()));

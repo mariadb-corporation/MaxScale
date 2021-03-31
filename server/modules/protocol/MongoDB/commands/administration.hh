@@ -43,7 +43,7 @@ public:
     {
         stringstream sql;
 
-        sql << "CREATE TABLE " << get_table(key::CREATE) << " (id TEXT NOT NULL UNIQUE, doc JSON)";
+        sql << "CREATE TABLE " << table() << " (id TEXT NOT NULL UNIQUE, doc JSON)";
 
         send_downstream(sql.str());
 
@@ -69,7 +69,7 @@ public:
                 if (err.code() == ER_TABLE_EXISTS_ERROR)
                 {
                     stringstream ss;
-                    ss << "Collection already exists. NS: " << get_table(key::CREATE);
+                    ss << "Collection already exists. NS: " << table(Quoted::NO);
                     throw SoftError(ss.str(), error::NAMESPACE_EXISTS);
                 }
                 else
@@ -111,7 +111,7 @@ public:
     {
         stringstream sql;
 
-        sql << "DROP TABLE " << get_table(key::DROP);
+        sql << "DROP TABLE " << table();
 
         send_downstream(sql.str());
 
@@ -156,7 +156,7 @@ public:
         DocumentBuilder doc;
 
         doc.append(kvp("ok", ok));
-        doc.append(kvp("ns", get_table(key::DROP)));
+        doc.append(kvp("ns", table(Quoted::NO)));
         doc.append(kvp("nIndexesWas", 1)); // TODO: Report real value.
 
         *ppResponse = create_response(doc.extract());

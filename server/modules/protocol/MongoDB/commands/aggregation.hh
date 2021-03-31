@@ -35,17 +35,16 @@ public:
     {
         stringstream sql;
 
-        string table = get_table(key::COUNT);
         string limit = convert_skip_and_limit();
 
         if (limit.empty())
         {
-            sql << "SELECT count(id) FROM " << table << " ";
+            sql << "SELECT count(id) FROM " << table() << " ";
         }
         else
         {
             // A simple 'SELECT count(...) ... LIMIT ...' returns an empty set with no information.
-            sql << "SELECT count(id) FROM (SELECT id FROM " << table << " ";
+            sql << "SELECT count(id) FROM (SELECT id FROM " << table() << " ";
         }
 
         bsoncxx::document::view query;
@@ -157,7 +156,7 @@ public:
         string key = required<string>(key::KEY);
         string extract = "JSON_EXTRACT(doc, '$." + key + "')";
 
-        sql << "SELECT DISTINCT(" << extract << ") FROM " << get_table(key::DISTINCT) << " ";
+        sql << "SELECT DISTINCT(" << extract << ") FROM " << table() << " ";
 
         bsoncxx::document::view query;
         if (optional(key::QUERY, &query))

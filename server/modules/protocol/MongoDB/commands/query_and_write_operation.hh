@@ -369,7 +369,7 @@ private:
     {
         stringstream sql;
 
-        sql << "DELETE FROM " << get_table(key::DELETE) << " ";
+        sql << "DELETE FROM " << table() << " ";
 
         auto q = doc["q"];
 
@@ -472,7 +472,7 @@ public:
             sql << "doc";
         }
 
-        sql << " FROM " << get_table(key::FIND) << " ";
+        sql << " FROM " << table() << " ";
 
         auto filter = m_doc[key::FILTER];
 
@@ -640,7 +640,7 @@ public:
 
     string table_name() const override final
     {
-        return get_table(key::INSERT);
+        return table();
     }
 
     State translate(ComResponse& response, GWBUF** ppResponse) override final
@@ -776,7 +776,7 @@ private:
     string convert_document(const bsoncxx::document::view& update)
     {
         stringstream sql;
-        sql << "UPDATE " << get_table(key::UPDATE) << " SET DOC = ";
+        sql << "UPDATE " << table() << " SET DOC = ";
 
         auto u = update[key::U];
 
