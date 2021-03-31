@@ -224,6 +224,7 @@ const char INSERT[]                  = "insert";
 const char ISMASTER[]                = "isMaster";
 const char KEY[]                     = "key";
 const char LIMIT[]                   = "limit";
+const char LISTDATABASES[]           = "listDatabases";
 const char MULTI[]                   = "multi";
 const char ORDERED[]                 = "ordered";
 const char PROJECTION[]              = "projection";

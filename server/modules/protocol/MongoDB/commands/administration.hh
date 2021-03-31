@@ -188,6 +188,111 @@ public:
 // https://docs.mongodb.com/manual/reference/command/listCollections/
 
 // https://docs.mongodb.com/manual/reference/command/listDatabases/
+class ListDatabases : public Command
+{
+public:
+    using Command::Command;
+
+    GWBUF* execute() override
+    {
+        if (m_database.name() != "admin")
+        {
+            throw SoftError("listDatabases may only be run against the admin database.",
+                            error::UNAUTHORIZED);
+        }
+
+        stringstream sql;
+        sql << "SELECT table_schema, table_name, (data_length + index_length) `bytes` "
+            << "FROM information_schema.tables "
+            << "WHERE table_schema NOT IN ('information_schema', 'performance_schema', 'mysql')";
+
+        send_downstream(sql.str());
+
+        return nullptr;
+    }
+
+    State translate(GWBUF& mariadb_response, GWBUF** ppResponse) override
+    {
+        ComResponse response(GWBUF_DATA(&mariadb_response));
+
+        DocumentBuilder doc;
+
+        switch (response.type())
+        {
+        case ComResponse::OK_PACKET:
+            mxb_assert(!true);
+            break;
+
+        case ComResponse::ERR_PACKET:
+            throw MariaDBError(ComERR(response));
+            break;
+
+        case ComResponse::LOCAL_INFILE_PACKET:
+            mxb_assert(!true);
+            break;
+
+        default:
+            {
+                uint8_t* pBuffer = gwbuf_link_data(&mariadb_response);
+
+                ComQueryResponse cqr(&pBuffer);
+                auto nFields = cqr.nFields();
+
+                vector<enum_field_types> types;
+
+                for (size_t i = 0; i < nFields; ++i)
+                {
+                    ComQueryResponse::ColumnDef column_def(&pBuffer);
+
+                    types.push_back(column_def.type());
+                }
+
+                ComResponse eof(&pBuffer);
+                mxb_assert(eof.type() == ComResponse::EOF_PACKET);
+
+                map<string, int32_t> size_by_db;
+                int32_t total_size = 0;
+
+                while (ComResponse(pBuffer).type() != ComResponse::EOF_PACKET)
+                {
+                    CQRTextResultsetRow row(&pBuffer, types); // Advances pBuffer
+                    auto it = row.begin();
+
+                    auto table_schema = (*it++).as_string().to_string();
+                    auto table_name = (*it++).as_string().to_string();
+                    auto bytes = std::stol((*it++).as_string().to_string());
+                    mxb_assert(it == row.end());
+
+                    size_by_db[table_schema] += bytes;
+                    total_size += bytes;
+                }
+
+                ArrayBuilder databases;
+
+                for (const auto& kv : size_by_db)
+                {
+                    const auto& name = kv.first;
+                    const auto& bytes = kv.second;
+
+                    DocumentBuilder database;
+                    database.append(kvp("name", name));
+                    database.append(kvp("sizeOnDisk", bytes));
+                    database.append(kvp("empty", bytes == 0));
+
+                    databases.append(database.extract());
+                }
+
+                doc.append(kvp("databases", databases.extract()));
+                doc.append(kvp("totalSize", total_size));
+                doc.append(kvp("ok", 1));
+            }
+        }
+
+        *ppResponse = create_response(doc.extract());
+        return READY;
+    }
+};
+
 
 // https://docs.mongodb.com/manual/reference/command/listIndexes/
 
