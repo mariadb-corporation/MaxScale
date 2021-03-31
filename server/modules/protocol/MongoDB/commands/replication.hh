@@ -26,17 +26,17 @@ namespace command
 // https://docs.mongodb.com/manual/reference/command/applyOps/
 
 // https://docs.mongodb.com/manual/reference/command/isMaster/
-class IsMaster : public mxsmongo::Command
+class IsMaster : public Command
 {
 public:
-    using mxsmongo::Command::Command;
+    using Command::Command;
 
     GWBUF* execute() override
     {
         DocumentBuilder doc;
 
         doc.append(kvp("isMaster", true));
-        doc.append(kvp("topologyVersion", mxsmongo::topology_version()));
+        doc.append(kvp("topologyVersion", topology_version()));
         doc.append(kvp("maxBsonObjectSize", mongo::MAX_BSON_OBJECT_SIZE));
         doc.append(kvp("maxMessageSizeBytes", mongo::MAX_MSG_SIZE));
         doc.append(kvp("maxWriteBatchSize", mongo::MAX_WRITE_BATCH_SIZE));
@@ -60,10 +60,10 @@ public:
 // https://docs.mongodb.com/manual/reference/command/replSetGetConfig/
 
 // https://docs.mongodb.com/manual/reference/command/replSetGetStatus/
-class ReplSetGetStatus : public mxsmongo::Command
+class ReplSetGetStatus : public Command
 {
 public:
-    using mxsmongo::Command::Command;
+    using Command::Command;
 
     GWBUF* execute() override
     {

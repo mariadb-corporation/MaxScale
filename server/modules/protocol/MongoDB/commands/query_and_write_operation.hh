@@ -43,7 +43,7 @@ public:
 public:
     GWBUF* execute() override final
     {
-        auto ordered = m_doc[mxsmongo::key::ORDERED];
+        auto ordered = m_doc[key::ORDERED];
 
         if (ordered)
         {
@@ -207,10 +207,10 @@ protected:
     bsoncxx::builder::basic::array m_write_errors;
 };
 
-class TableCreatingCommand : public mxsmongo::Command
+class TableCreatingCommand : public Command
 {
 public:
-    using mxsmongo::Command::Command;
+    using Command::Command;
 
     using Worker = mxb::Worker;
 
@@ -360,7 +360,7 @@ public:
            const ConcretePacket& req,
            const bsoncxx::document::view& doc,
            const DocumentArguments& arguments)
-        : OrderedCommand(name, pDatabase, pRequest, req, doc, arguments, mxsmongo::key::DELETES)
+        : OrderedCommand(name, pDatabase, pRequest, req, doc, arguments, key::DELETES)
     {
     }
 
@@ -369,7 +369,7 @@ private:
     {
         stringstream sql;
 
-        sql << "DELETE FROM " << get_table(mxsmongo::key::DELETE) << " ";
+        sql << "DELETE FROM " << get_table(key::DELETE) << " ";
 
         auto q = doc["q"];
 
@@ -387,7 +387,7 @@ private:
             throw SoftError(ss.str(), error::TYPE_MISMATCH);
         }
 
-        sql << mxsmongo::query_to_where_clause(q.get_document());
+        sql << query_to_where_clause(q.get_document());
 
         auto limit = doc["limit"];
 
@@ -431,21 +431,21 @@ private:
 
 
 // https://docs.mongodb.com/manual/reference/command/find/
-class Find : public mxsmongo::Command
+class Find : public Command
 {
 public:
-    using mxsmongo::Command::Command;
+    using Command::Command;
 
     GWBUF* execute() override
     {
         stringstream sql;
         sql << "SELECT ";
 
-        auto projection = m_doc[mxsmongo::key::PROJECTION];
+        auto projection = m_doc[key::PROJECTION];
 
         if (projection)
         {
-            m_extractions = mxsmongo::projection_to_extractions(projection.get_document());
+            m_extractions = projection_to_extractions(projection.get_document());
 
             if (!m_extractions.empty())
             {
@@ -472,23 +472,23 @@ public:
             sql << "doc";
         }
 
-        sql << " FROM " << get_table(mxsmongo::key::FIND) << " ";
+        sql << " FROM " << get_table(key::FIND) << " ";
 
-        auto filter = m_doc[mxsmongo::key::FILTER];
+        auto filter = m_doc[key::FILTER];
 
         if (filter)
         {
             const auto& doc = filter.get_document();
 
-            sql << mxsmongo::query_to_where_clause(doc);
+            sql << query_to_where_clause(doc);
         }
 
-        auto sort = m_doc[mxsmongo::key::SORT];
+        auto sort = m_doc[key::SORT];
 
         if (sort)
         {
             const auto& doc = sort.get_document();
-            string order_by = mxsmongo::sort_to_order_by(doc);
+            string order_by = sort_to_order_by(doc);
 
             MXS_NOTICE("Sort '%s' converted to 'ORDER BY %s'.",
                        bsoncxx::to_json(doc).c_str(),
@@ -574,7 +574,7 @@ public:
         stringstream sql;
         sql << "INSERT INTO " << table_name() << " (id, doc) VALUES ";
 
-        auto it = m_arguments.find(mxsmongo::key::DOCUMENTS);
+        auto it = m_arguments.find(key::DOCUMENTS);
 
         if (it != m_arguments.end())
         {
@@ -600,7 +600,7 @@ public:
         }
         else
         {
-            auto element = m_doc[mxsmongo::key::DOCUMENTS];
+            auto element = m_doc[key::DOCUMENTS];
 
             if (!element)
             {
@@ -640,7 +640,7 @@ public:
 
     string table_name() const override final
     {
-        return get_table(mxsmongo::key::INSERT);
+        return get_table(key::INSERT);
     }
 
     State translate(ComResponse& response, GWBUF** ppResponse) override final
@@ -768,7 +768,7 @@ public:
            const ConcretePacket& req,
            const bsoncxx::document::view& doc,
            const DocumentArguments& arguments)
-        : OrderedCommand(name, pDatabase, pRequest, req, doc, arguments, mxsmongo::key::UPDATES)
+        : OrderedCommand(name, pDatabase, pRequest, req, doc, arguments, key::UPDATES)
     {
     }
 
@@ -776,9 +776,9 @@ private:
     string convert_document(const bsoncxx::document::view& update)
     {
         stringstream sql;
-        sql << "UPDATE " << get_table(mxsmongo::key::UPDATE) << " SET DOC = ";
+        sql << "UPDATE " << get_table(key::UPDATE) << " SET DOC = ";
 
-        auto u = update[mxsmongo::key::U];
+        auto u = update[key::U];
 
         if (!u)
         {
@@ -823,7 +823,7 @@ private:
             }
         }
 
-        auto q = update[mxsmongo::key::Q];
+        auto q = update[key::Q];
 
         if (!q)
         {
@@ -839,9 +839,9 @@ private:
             throw SoftError(ss.str(), error::TYPE_MISMATCH);
         }
 
-        sql << mxsmongo::query_to_where_clause(q.get_document());
+        sql << query_to_where_clause(q.get_document());
 
-        auto multi = update[mxsmongo::key::MULTI];
+        auto multi = update[key::MULTI];
 
         if (!multi || !multi.get_bool())
         {
@@ -965,7 +965,7 @@ private:
                 s += "'$.";
                 s += field.key().data();
                 s += "', ";
-                s += mxsmongo::to_string(field);
+                s += to_string(field);
             }
 
             rv += s;

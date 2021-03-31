@@ -24,10 +24,10 @@ namespace command
 {
 
 // https://docs.mongodb.com/manual/reference/command/getFreeMonitoringStatus/
-class GetFreeMonitoringStatus : public mxsmongo::Command
+class GetFreeMonitoringStatus : public Command
 {
 public:
-    using mxsmongo::Command::Command;
+    using Command::Command;
 
     GWBUF* execute() override
     {

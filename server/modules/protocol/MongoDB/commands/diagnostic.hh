@@ -28,10 +28,10 @@ namespace command
 // https://docs.mongodb.com/manual/reference/command/availableQueryOptions/
 
 // https://docs.mongodb.com/manual/reference/command/buildInfo/
-class BuildInfo : public mxsmongo::Command
+class BuildInfo : public Command
 {
 public:
-    using mxsmongo::Command::Command;
+    using Command::Command;
 
     GWBUF* execute() override
     {
@@ -97,10 +97,10 @@ public:
 // https://docs.mongodb.com/manual/reference/command/features/
 
 // https://docs.mongodb.com/manual/reference/command/getCmdLineOpts/
-class GetCmdLineOpts : public mxsmongo::Command
+class GetCmdLineOpts : public Command
 {
 public:
-    using mxsmongo::Command::Command;
+    using Command::Command;
 
     GWBUF* execute() override
     {
@@ -126,16 +126,16 @@ public:
 
 
 // https://docs.mongodb.com/manual/reference/command/getLog/
-class GetLog : public mxsmongo::Command
+class GetLog : public Command
 {
 public:
-    using mxsmongo::Command::Command;
+    using Command::Command;
 
     GWBUF* execute() override
     {
         DocumentBuilder doc;
 
-        auto element = m_doc[mxsmongo::key::GETLOG];
+        auto element = m_doc[key::GETLOG];
 
         const auto& utf8 = element.get_utf8().value;
         string value(utf8.data(), utf8.size());
@@ -194,10 +194,10 @@ public:
 // https://docs.mongodb.com/manual/reference/command/validate/
 
 // https://docs.mongodb.com/manual/reference/command/whatsmyuri/
-class WhatsMyUri : public mxsmongo::Command
+class WhatsMyUri : public Command
 {
 public:
-    using mxsmongo::Command::Command;
+    using Command::Command;
 
     GWBUF* execute() override
     {

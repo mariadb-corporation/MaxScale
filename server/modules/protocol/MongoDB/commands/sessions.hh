@@ -28,10 +28,10 @@ namespace command
 // https://docs.mongodb.com/manual/reference/command/commitTransaction/
 
 // https://docs.mongodb.com/manual/reference/command/endSessions/
-class EndSessions : public mxsmongo::Command
+class EndSessions : public Command
 {
 public:
-    using mxsmongo::Command::Command;
+    using Command::Command;
 
     GWBUF* execute() override
     {

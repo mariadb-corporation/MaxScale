@@ -26,16 +26,16 @@ namespace command
 // https://docs.mongodb.com/manual/reference/command/aggregate/
 
 // https://docs.mongodb.com/manual/reference/command/count/
-class Count : public mxsmongo::Command
+class Count : public Command
 {
 public:
-    using mxsmongo::Command::Command;
+    using Command::Command;
 
     GWBUF* execute() override
     {
         stringstream sql;
 
-        string table = get_table(mxsmongo::key::COUNT);
+        string table = get_table(key::COUNT);
         string limit = convert_skip_and_limit();
 
         if (limit.empty())
@@ -51,7 +51,7 @@ public:
         bsoncxx::document::view query;
         if (optional(key::QUERY, &query))
         {
-            sql << mxsmongo::query_to_where_clause(query);
+            sql << query_to_where_clause(query);
         }
 
         if (!limit.empty())
@@ -145,10 +145,10 @@ private:
 };
 
 // https://docs.mongodb.com/manual/reference/command/distinct/
-class Distinct : public mxsmongo::Command
+class Distinct : public Command
 {
 public:
-    using mxsmongo::Command::Command;
+    using Command::Command;
 
     GWBUF* execute() override
     {
@@ -162,7 +162,7 @@ public:
         bsoncxx::document::view query;
         if (optional(key::QUERY, &query))
         {
-            sql << mxsmongo::query_to_where_clause(query);
+            sql << query_to_where_clause(query);
             sql << "AND ";
         }
         else
