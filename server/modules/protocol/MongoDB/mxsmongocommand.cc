@@ -35,7 +35,7 @@
 #include "commands/replication.hh"
 //#include "commands/sharding.hh"
 #include "commands/sessions.hh"
-//#include "commands/administration.hh"
+#include "commands/administration.hh"
 #include "commands/diagnostic.hh"
 #include "commands/free_monitoring.hh"
 //#include "commands/system_events_auditing.hh"
@@ -129,6 +129,7 @@ struct ThisUnit
     {
         { mxb::tolower(key::BUILDINFO),               &create_command<command::BuildInfo> },
         { mxb::tolower(key::COUNT),                   &create_command<command::Count> },
+        { mxb::tolower(key::CREATE),                  &create_command<command::Create> },
         { mxb::tolower(key::DELETE),                  &create_command<command::Delete> },
         { mxb::tolower(key::DISTINCT),                &create_command<command::Distinct> },
         { mxb::tolower(key::ENDSESSIONS),             &create_command<command::EndSessions> },
@@ -392,7 +393,16 @@ string Command::convert_skip_and_limit() const
 
 string Command::get_table(const char* zCommand) const
 {
-    auto utf8 = m_doc[zCommand].get_utf8();
+    auto element = m_doc[zCommand];
+
+    if (element.type() != bsoncxx::type::k_utf8)
+    {
+        stringstream ss;
+        ss << "collection name has invalid type " << bsoncxx::to_string(element.type());
+        throw SoftError(ss.str(), error::BAD_VALUE);
+    }
+
+    auto utf8 = element.get_utf8();
     string table(utf8.value.data(), utf8.value.size());
 
     return "`" + m_database.name() + "`.`" + table + "`";

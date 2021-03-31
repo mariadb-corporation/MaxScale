@@ -34,6 +34,68 @@ namespace command
 // https://docs.mongodb.com/manual/reference/command/convertToCapped/
 
 // https://docs.mongodb.com/manual/reference/command/create/
+class Create : public Command
+{
+public:
+    using Command::Command;
+
+    GWBUF* execute() override
+    {
+        stringstream sql;
+
+        sql << "CREATE TABLE " << get_table(key::CREATE) << " (id TEXT NOT NULL UNIQUE, doc JSON)";
+
+        send_downstream(sql.str());
+
+        return nullptr;
+    }
+
+    State translate(GWBUF& mariadb_response, GWBUF** ppResponse) override
+    {
+        ComResponse response(GWBUF_DATA(&mariadb_response));
+
+        int32_t ok = 0;
+
+        switch (response.type())
+        {
+        case ComResponse::OK_PACKET:
+            ok = 1;
+            break;
+
+        case ComResponse::ERR_PACKET:
+            {
+                ComERR err(response);
+
+                if (err.code() == ER_TABLE_EXISTS_ERROR)
+                {
+                    stringstream ss;
+                    ss << "Collection already exists. NS: " << get_table(key::CREATE);
+                    throw SoftError(ss.str(), error::NAMESPACE_EXISTS);
+                }
+                else
+                {
+                    throw MariaDBError(ComERR(response));
+                }
+            }
+            break;
+
+        case ComResponse::LOCAL_INFILE_PACKET:
+            mxb_assert(!true);
+            break;
+
+        default:
+            mxb_assert(!true);
+        }
+
+        DocumentBuilder doc;
+
+        doc.append(kvp("ok", ok));
+
+        *ppResponse = create_response(doc.extract());
+        return READY;
+    }
+};
+
 
 // https://docs.mongodb.com/manual/reference/command/createIndexes/
 

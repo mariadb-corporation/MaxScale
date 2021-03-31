@@ -208,6 +208,7 @@ namespace key
 
 const char BUILDINFO[]               = "buildInfo";
 const char COUNT[]                   = "count";
+const char CREATE[]                  = "create";
 const char DELETE[]                  = "delete";
 const char DELETES[]                 = "deletes";
 const char DISTINCT[]                = "distinct";
