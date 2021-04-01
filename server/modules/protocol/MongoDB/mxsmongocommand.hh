@@ -27,19 +27,35 @@ namespace mxsmongo
 
 class Database;
 
+enum class Conversion
+{
+    STRICT,
+    RELAXED
+};
+
 template<class T>
-T element_as(const std::string& command, const char* zKey, const bsoncxx::document::element& element);
+T element_as(const std::string& command,
+             const char* zKey,
+             const bsoncxx::document::element& element,
+             Conversion conversion = Conversion::STRICT);
 
 template<>
 bsoncxx::document::view element_as<bsoncxx::document::view>(const std::string& command,
                                                             const char* zKey,
-                                                            const bsoncxx::document::element& element);
+                                                            const bsoncxx::document::element& element,
+                                                            Conversion conversion);
 
 template<>
 std::string element_as<std::string>(const std::string& command,
                                     const char* zKey,
-                                    const bsoncxx::document::element& element);
+                                    const bsoncxx::document::element& element,
+                                    Conversion conversion);
 
+template<>
+bool element_as<bool>(const std::string& command,
+                      const char* zKey,
+                      const bsoncxx::document::element& element,
+                      Conversion conversion);
 
 class Command
 {
@@ -99,7 +115,7 @@ public:
 
 protected:
     template<class Type>
-    bool optional(const char* zKey, Type* pElement)
+    bool optional(const char* zKey, Type* pElement, Conversion conversion = Conversion::STRICT)
     {
         bool rv = false;
 
@@ -107,7 +123,7 @@ protected:
 
         if (element)
         {
-            *pElement = element_as<Type>(m_name, zKey, element);
+            *pElement = element_as<Type>(m_name, zKey, element, conversion);
             rv = true;
         }
 
@@ -115,7 +131,7 @@ protected:
     }
 
     template<class Type>
-    Type required(const char* zKey)
+    Type required(const char* zKey, Conversion conversion = Conversion::STRICT)
     {
         auto element = m_doc[zKey];
 
@@ -126,7 +142,7 @@ protected:
             throw SoftError(ss.str(), error::LOCATION40414);
         }
 
-        return element_as<Type>(m_name, zKey, element);
+        return element_as<Type>(m_name, zKey, element, conversion);
     }
 
     /**

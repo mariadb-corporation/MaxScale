@@ -140,6 +140,7 @@ struct ThisUnit
         { mxb::tolower(key::GETFREEMONITORINGSTATUS), &create_command<command::GetFreeMonitoringStatus> },
         { mxb::tolower(key::INSERT),                  &create_command<command::Insert> },
         { mxb::tolower(key::ISMASTER),                &create_command<command::IsMaster> },
+        { mxb::tolower(key::LISTCOLLECTIONS),         &create_command<command::ListCollections> },
         { mxb::tolower(key::LISTDATABASES),           &create_command<command::ListDatabases> },
         { mxb::tolower(key::UPDATE),                  &create_command<command::Update> },
         { mxb::tolower(key::REPLSETGETSTATUS),        &create_command<command::ReplSetGetStatus> },
@@ -155,7 +156,8 @@ namespace mxsmongo
 template<>
 bsoncxx::document::view element_as<bsoncxx::document::view>(const string& command,
                                                             const char* zKey,
-                                                            const bsoncxx::document::element& element)
+                                                            const bsoncxx::document::element& element,
+                                                            Conversion)
 {
     if (element.type() != bsoncxx::type::k_document)
     {
@@ -172,7 +174,8 @@ bsoncxx::document::view element_as<bsoncxx::document::view>(const string& comman
 template<>
 string element_as<string>(const string& command,
                           const char* zKey,
-                          const bsoncxx::document::element& element)
+                          const bsoncxx::document::element& element,
+                          Conversion)
 {
     if (element.type() != bsoncxx::type::k_utf8)
     {
@@ -185,6 +188,52 @@ string element_as<string>(const string& command,
 
     const auto& utf8 = element.get_utf8();
     return string(utf8.value.data(), utf8.value.size());
+}
+
+template<>
+bool element_as<bool>(const string& command,
+                      const char* zKey,
+                      const bsoncxx::document::element& element,
+                      Conversion conversion)
+{
+    bool rv = true;
+
+    if (conversion == Conversion::STRICT && element.type() != bsoncxx::type::k_bool)
+    {
+        stringstream ss;
+        ss << "BSON field '" << command << "." << zKey << "' is the wrong type '"
+           << bsoncxx::to_string(element.type()) << "', expected type 'bool'";
+
+        throw SoftError(ss.str(), error::TYPE_MISMATCH);
+    }
+
+    switch (element.type())
+    {
+    case bsoncxx::type::k_bool:
+        rv = element.get_bool();
+        break;
+
+    case bsoncxx::type::k_int32:
+        rv = element.get_int32() != 0;
+        break;
+
+    case bsoncxx::type::k_int64:
+        rv = element.get_int64() != 0;
+        break;
+
+    case bsoncxx::type::k_double:
+        rv = element.get_double() != 0;
+        break;
+
+    case bsoncxx::type::k_null:
+        rv = false;
+        break;
+
+    default:
+        rv = true;
+    }
+
+    return rv;
 }
 
 

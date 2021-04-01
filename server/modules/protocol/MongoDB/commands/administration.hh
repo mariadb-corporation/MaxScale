@@ -186,6 +186,121 @@ public:
 // https://docs.mongodb.com/manual/reference/command/killOp/
 
 // https://docs.mongodb.com/manual/reference/command/listCollections/
+class ListCollections : public Command
+{
+public:
+    using Command::Command;
+
+    GWBUF* execute() override
+    {
+        optional(key::NAMEONLY, &m_name_only, Conversion::RELAXED);
+
+        bsoncxx::document::view filter;
+        if (optional(key::FILTER, &filter))
+        {
+            MXS_WARNING("listCollections.filter is ignored.");
+        }
+
+        stringstream sql;
+        sql << "SHOW TABLES FROM `" << m_database.name() << "`";
+
+        send_downstream(sql.str());
+
+        return nullptr;
+    }
+
+    State translate(GWBUF& mariadb_response, GWBUF** ppResponse) override
+    {
+        ComResponse response(GWBUF_DATA(&mariadb_response));
+
+        DocumentBuilder doc;
+
+        switch (response.type())
+        {
+        case ComResponse::OK_PACKET:
+            mxb_assert(!true);
+            break;
+
+        case ComResponse::ERR_PACKET:
+            throw MariaDBError(ComERR(response));
+            break;
+
+        case ComResponse::LOCAL_INFILE_PACKET:
+            mxb_assert(!true);
+            break;
+
+        default:
+            {
+                uint8_t* pBuffer = gwbuf_link_data(&mariadb_response);
+
+                ComQueryResponse cqr(&pBuffer);
+                auto nFields = cqr.nFields();
+                mxb_assert(nFields == 1);
+
+                vector<enum_field_types> types;
+
+                for (size_t i = 0; i < nFields; ++i)
+                {
+                    ComQueryResponse::ColumnDef column_def(&pBuffer);
+
+                    types.push_back(column_def.type());
+                }
+
+                ComResponse eof(&pBuffer);
+                mxb_assert(eof.type() == ComResponse::EOF_PACKET);
+
+                ArrayBuilder firstBatch;
+
+                while (ComResponse(pBuffer).type() != ComResponse::EOF_PACKET)
+                {
+                    CQRTextResultsetRow row(&pBuffer, types); // Advances pBuffer
+                    auto it = row.begin();
+
+                    auto table = (*it++).as_string().to_string();
+                    mxb_assert(it == row.end());
+
+                    DocumentBuilder collection;
+                    collection.append(kvp("name", table));
+                    collection.append(kvp("type", "collection"));
+                    if (!m_name_only)
+                    {
+                        DocumentBuilder options;
+                        DocumentBuilder info;
+                        info.append(kvp("readOnly", false));
+                        //info.append(kvp("uuid", ...); // TODO: Could something meaningful be added here?
+                        // DocumentBuilder idIndex;
+                        // idIndex.append(kvp("v", ...));
+                        // idIndex.append(kvp("key", ...));
+                        // idIndex.append(kvp("name", ...));
+
+                        collection.append(kvp("options", options.extract()));
+                        collection.append(kvp("info", info.extract()));
+                        //collection.append(kvp("idIndex", idIndex.extract()));
+                    }
+
+                    firstBatch.append(collection.extract());
+                }
+
+                string ns = m_database.name() + ".$cmd.listCollections";
+
+                DocumentBuilder cursor;
+                cursor.append(kvp("id", int64_t(0)));
+                cursor.append(kvp("ns", ns));
+                cursor.append(kvp("firstBatch", firstBatch.extract()));
+
+                doc.append(kvp("cursor", cursor.extract()));
+                doc.append(kvp("ok", 1));
+            }
+        }
+
+        *ppResponse = create_response(doc.extract());
+        return READY;
+    }
+
+private:
+    bool m_name_only { false };
+};
+
 
 // https://docs.mongodb.com/manual/reference/command/listDatabases/
 class ListDatabases : public Command
