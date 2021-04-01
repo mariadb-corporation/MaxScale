@@ -230,6 +230,7 @@ const char LISTDATABASES[]           = "listDatabases";
 const char MULTI[]                   = "multi";
 const char NAMEONLY[]                = "nameOnly";
 const char ORDERED[]                 = "ordered";
+const char PING[]                    = "ping";
 const char PROJECTION[]              = "projection";
 const char Q[]                       = "q";
 const char QUERY[]                   = "query";

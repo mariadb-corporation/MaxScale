@@ -182,6 +182,20 @@ public:
 // https://docs.mongodb.com/manual/reference/command/netstat/
 
 // https://docs.mongodb.com/manual/reference/command/ping/
+class Ping : public Command
+{
+public:
+    using Command::Command;
+
+    GWBUF* execute() override
+    {
+        DocumentBuilder doc;
+
+        doc.append(kvp("ok", 1));
+
+        return create_response(doc.extract());
+    }
+};
 
 // https://docs.mongodb.com/manual/reference/command/profile/
 

@@ -143,6 +143,7 @@ struct ThisUnit
         { mxb::tolower(key::ISMASTER),                &create_command<command::IsMaster> },
         { mxb::tolower(key::LISTCOLLECTIONS),         &create_command<command::ListCollections> },
         { mxb::tolower(key::LISTDATABASES),           &create_command<command::ListDatabases> },
+        { mxb::tolower(key::PING),                    &create_command<command::Ping> },
         { mxb::tolower(key::UPDATE),                  &create_command<command::Update> },
         { mxb::tolower(key::REPLSETGETSTATUS),        &create_command<command::ReplSetGetStatus> },
         { mxb::tolower(key::WHATSMYURI),              &create_command<command::WhatsMyUri> },
