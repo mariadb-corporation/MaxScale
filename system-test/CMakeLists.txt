@@ -937,6 +937,15 @@ add_test_executable(mxs3339_stmt_close_hang.cc mxs3339_stmt_close_hang mxs3339_s
 # Also covers MXS-3365: Missing match setting in filter(s) results in no match at all
 add_test_executable(mxs3353_tee_lost_inserts.cc mxs3353_tee_lost_inserts mxs3353_tee_lost_inserts LABELS REPL_BACKEND readwritesplit)
 
+# MXS-3454: PS inside trx with transaction_replay fails
+add_test_executable(mxs3454_ps_in_trx.cc mxs3454_ps_in_trx mxs3454_ps_in_trx LABELS REPL_BACKEND readwritesplit)
+
+# MXS-3459: LOAD DATA LOCAL INFILE fails with binary data
+add_test_executable(mxs3459_binary_ldli.cc mxs3459_binary_ldli replication LABELS REPL_BACKEND)
+
+# MXS-3462: Service to service routing with `cluster` doesn't work
+add_test_executable(mxs3462_sts_update.cc mxs3462_sts_update mxs3462_sts_update LABELS REPL_BACKEND)
+
 ############################################
 # END: Normal tests                        #
 ############################################

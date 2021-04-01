@@ -339,16 +339,25 @@ Service* Service::create(const char* name, const char* router, const mxs::Config
         {
             Server* server = ServerManager::find_by_unique_name(a);
             mxb_assert(server);
-            service->m_data->targets.push_back(server);
+            service->add_target(server);
         }
     }
     else if (!targets.empty())
     {
         for (const auto& a : targets)
         {
-            mxs::Target* target = mxs::Target::find(a);
-            mxb_assert(target);
-            service->m_data->targets.push_back(target);
+            if (auto s = ServerManager::find_by_unique_name(a))
+            {
+                service->add_target(s);
+            }
+            else if (auto s = Service::find(mxb::trimmed_copy(a)))
+            {
+                service->add_target(s);
+            }
+            else
+            {
+                mxb_assert(!true);
+            }
         }
     }
     else if (!cluster.empty())
@@ -1696,17 +1705,42 @@ void Service::targets_updated()
     }
 }
 
-void Service::remove_target(mxs::Target* target)
+void Service::propagate_target_update()
+{
+    targets_updated();
+
+    for (Service* service : m_parents)
+    {
+        service->propagate_target_update();
+    }
+}
+
+void Service::remove_target(SERVER* target)
 {
     auto& targets = m_data->targets;
     targets.erase(std::remove(targets.begin(), targets.end(), target), targets.end());
-    targets_updated();
+    propagate_target_update();
 }
 
-void Service::add_target(mxs::Target* target)
+void Service::remove_target(Service* target)
+{
+    auto& targets = m_data->targets;
+    targets.erase(std::remove(targets.begin(), targets.end(), target), targets.end());
+    propagate_target_update();
+    target->remove_parent(this);
+}
+
+void Service::add_target(SERVER* target)
 {
     m_data->targets.push_back(target);
-    targets_updated();
+    propagate_target_update();
+}
+
+void Service::add_target(Service* target)
+{
+    m_data->targets.push_back(target);
+    target->add_parent(this);
+    propagate_target_update();
 }
 
 int64_t Service::replication_lag() const

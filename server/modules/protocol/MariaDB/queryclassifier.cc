@@ -485,6 +485,7 @@ uint32_t QueryClassifier::get_route_target(uint8_t command, uint32_t qtype)
     bool trx_active = session_data->is_trx_active();
     uint32_t target = TARGET_UNDEFINED;
     bool load_active = (m_route_info.load_data_state() != LOAD_DATA_INACTIVE);
+    mxb_assert(!load_active);
 
     /**
      * Prepared statements preparations should go to all servers
@@ -865,15 +866,6 @@ QueryClassifier::current_target_t QueryClassifier::handle_multi_temp_and_load(
 
     check_create_tmp_table(querybuf, *qtype);
 
-    /**
-     * Check if this is a LOAD DATA LOCAL INFILE query. If so, send all queries
-     * to the master until the last, empty packet arrives.
-     */
-    if (m_route_info.load_data_state() == QueryClassifier::LOAD_DATA_ACTIVE)
-    {
-        m_route_info.append_load_data_sent(querybuf);
-    }
-
     return rv;
 }
 
@@ -941,6 +933,7 @@ QueryClassifier::RouteInfo QueryClassifier::update_route_info(
     uint8_t command = 0xFF;
     uint32_t type_mask = QUERY_TYPE_UNKNOWN;
     uint32_t stmt_id = 0;
+    uint32_t len = gwbuf_length(pBuffer);
 
     // Stash the current state in case we need to roll it back
     m_prev_route_info = m_route_info;
@@ -968,7 +961,19 @@ QueryClassifier::RouteInfo QueryClassifier::update_route_info(
     bool in_read_only_trx =
         (current_target != QueryClassifier::CURRENT_TARGET_UNDEFINED) && protocol_data->is_trx_read_only();
 
-    if (gwbuf_length(pBuffer) > MYSQL_HEADER_LEN)
+    if (m_route_info.load_data_state() == QueryClassifier::LOAD_DATA_ACTIVE)
+    {
+        m_route_info.append_load_data_sent(pBuffer);
+
+        if (len == MYSQL_HEADER_LEN)
+        {
+            /** Empty packet signals end of LOAD DATA LOCAL INFILE, send it to master*/
+            m_route_info.set_load_data_state(QueryClassifier::LOAD_DATA_END);
+            MXS_INFO("> LOAD DATA LOCAL INFILE finished: %lu bytes sent.",
+                     m_route_info.load_data_sent());
+        }
+    }
+    else if (len > MYSQL_HEADER_LEN)
     {
         command = mxs_mysql_get_command(pBuffer);
 
@@ -1003,10 +1008,6 @@ QueryClassifier::RouteInfo QueryClassifier::update_route_info(
             }
         }
 
-        if (mxb_log_should_log(LOG_INFO) || mxb_log_get_session_trace())
-        {
-            log_transaction_status(pBuffer, type_mask);
-        }
         /**
          * Find out where to route the query. Result may not be clear; it is
          * possible to have a hint for routing to a named server which can
@@ -1081,14 +1082,10 @@ QueryClassifier::RouteInfo QueryClassifier::update_route_info(
             m_route_info.set_trx_still_read_only(false);
         }
     }
-    else if (m_route_info.load_data_state() == QueryClassifier::LOAD_DATA_ACTIVE)
+
+    if (mxs_log_is_priority_enabled(LOG_INFO) || mxb_log_get_session_trace())
     {
-        /** Empty packet signals end of LOAD DATA LOCAL INFILE, send it to master*/
-        mxb_assert(gwbuf_length(pBuffer) == 4);
-        session_set_load_active(m_pSession, false);
-        m_route_info.set_load_data_state(QueryClassifier::LOAD_DATA_INACTIVE);
-        m_route_info.append_load_data_sent(pBuffer);
-        MXS_INFO("> LOAD DATA LOCAL INFILE finished: %lu bytes sent.", m_route_info.load_data_sent());
+        log_transaction_status(pBuffer, type_mask);
     }
 
     m_route_info.set_target(route_target);

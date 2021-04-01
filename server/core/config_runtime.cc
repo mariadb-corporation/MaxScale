@@ -226,6 +226,36 @@ bool unlink_service_from_monitor(Service* service, mxs::Monitor* monitor)
     return ok;
 }
 
+bool check_link_target(Service* service, mxs::Target* target)
+{
+    bool rval = false;
+
+    if (service == target)
+    {
+        MXS_ERROR("Cannot link '%s' to itself", service->name());
+    }
+    else if (service->has_target(target))
+    {
+        MXS_ERROR("Service '%s' already uses target '%s'", service->name(), target->name());
+    }
+    else
+    {
+        auto cycle = get_cycle_name(service, target);
+
+        if (!cycle.empty())
+        {
+            MXS_ERROR("Linking '%s' to '%s' would result in a circular configuration: %s",
+                      target->name(), service->name(), cycle.c_str());
+        }
+        else
+        {
+            rval = true;
+        }
+    }
+
+    return rval;
+}
+
 bool runtime_link_target(const std::string& subject, const std::string& target)
 {
     bool rval = false;
@@ -242,30 +272,20 @@ bool runtime_link_target(const std::string& subject, const std::string& target)
                       "Servers cannot explicitly be added to the service.",
                       service->name(), cluster->name());
         }
-        else if (auto tgt = mxs::Target::find(subject))
+        else if (auto server = ServerManager::find_by_unique_name(subject))
         {
-            if (service == tgt)
+            if (check_link_target(service, server))
             {
-                MXS_ERROR("Cannot link '%s' to itself", service->name());
+                rval = true;
+                service->add_target(server);
             }
-            else if (service->has_target(tgt))
+        }
+        else if (auto other = Service::find(subject))
+        {
+            if (check_link_target(service, other))
             {
-                MXS_ERROR("Service '%s' already uses target '%s'", service->name(), subject.c_str());
-            }
-            else
-            {
-                auto cycle = get_cycle_name(service, tgt);
-
-                if (!cycle.empty())
-                {
-                    MXS_ERROR("Linking '%s' to '%s' would result in a circular configuration: %s",
-                              subject.c_str(), service->name(), cycle.c_str());
-                }
-                else
-                {
-                    rval = true;
-                    service->add_target(tgt);
-                }
+                rval = true;
+                service->add_target(other);
             }
         }
         else
@@ -339,10 +359,16 @@ bool runtime_unlink_target(const std::string& subject, const std::string& target
                       "Servers cannot explicitly be removed from the service.",
                       service->name(), cluster->name());
         }
-        else if (auto tgt = mxs::Target::find(subject))
+        else if (auto server = SERVER::find_by_unique_name(subject))
+        {
+            // TODO: Should we check that the service actually uses the server?
+            rval = true;
+            service->remove_target(server);
+        }
+        else if (auto other = Service::find(subject))
         {
             rval = true;
-            service->remove_target(tgt);
+            service->remove_target(other);
         }
         else
         {

@@ -172,10 +172,12 @@ public:
     }
 
     // Adds a routing target to this service
-    void add_target(mxs::Target* target);
+    void add_target(SERVER* target);
+    void add_target(Service* target);
 
     // Removes a target
-    void remove_target(mxs::Target* target);
+    void remove_target(SERVER* target);
+    void remove_target(Service* target);
 
     bool has_target(mxs::Target* target) const
     {
@@ -259,6 +261,18 @@ private:
     void wakeup_sessions_waiting_userdata();
     void set_start_user_account_manager(SAccountManager user_manager);
 
+    void propagate_target_update();
+
+    void add_parent(Service* parent)
+    {
+        m_parents.push_back(parent);
+    }
+
+    void remove_parent(Service* parent)
+    {
+        m_parents.erase(std::remove(m_parents.begin(), m_parents.end(), parent), m_parents.end());
+    }
+
     // Helper for calculating version values
     std::pair<uint64_t, uint64_t> get_versions(const std::vector<SERVER*>& servers) const;
 
@@ -269,6 +283,7 @@ private:
     std::atomic<int64_t>    m_refcount {1};
     bool                    m_active {true};
     mxs::Monitor*           m_monitor {nullptr};    /**< A possibly associated monitor */
+    std::vector<Service*>   m_parents;
 
     // User account manager. Can only be set once.
     SAccountManager m_usermanager;
