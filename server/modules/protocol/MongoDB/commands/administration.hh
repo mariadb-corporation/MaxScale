@@ -166,6 +166,66 @@ public:
 
 
 // https://docs.mongodb.com/manual/reference/command/dropDatabase/
+class DropDatabase : public Command
+{
+public:
+    using Command::Command;
+
+    GWBUF* execute() override
+    {
+        stringstream sql;
+
+        sql << "DROP DATABASE `" << m_database.name() << "`";
+
+        send_downstream(sql.str());
+
+        return nullptr;
+    }
+
+    State translate(GWBUF& mariadb_response, GWBUF** ppResponse) override
+    {
+        ComResponse response(GWBUF_DATA(&mariadb_response));
+
+        DocumentBuilder doc;
+        int32_t ok = 0;
+
+        switch (response.type())
+        {
+        case ComResponse::OK_PACKET:
+            doc.append(kvp("dropped", m_database.name()));
+            ok = 1;
+            break;
+
+        case ComResponse::ERR_PACKET:
+            {
+                ComERR err(response);
+
+                if (err.code() == ER_DB_DROP_EXISTS)
+                {
+                    // Report with "ok" == 1, but without "dropped".
+                }
+                else
+                {
+                    throw MariaDBError(err);
+                }
+            }
+            break;
+
+        case ComResponse::LOCAL_INFILE_PACKET:
+            mxb_assert(!true);
+            break;
+
+        default:
+            mxb_assert(!true);
+        }
+
+        doc.append(kvp("ok", ok));
+
+        *ppResponse = create_response(doc.extract());
+        return READY;
+    }
+};
+
 
 // https://docs.mongodb.com/manual/reference/command/dropConnections/
 
