@@ -19,6 +19,8 @@ namespace maxbase
 {
 namespace pam
 {
+extern const std::string EXP_PW_QUERY;      /* Expected normal password query */
+
 struct AuthResult
 {
     enum class Result
@@ -31,6 +33,11 @@ struct AuthResult
 
     Result      type {Result::MISC_ERROR};
     std::string error;
+
+    /**
+     * The username after authentication when user mapping is enabled. Can be different from the input
+     * username if a pam module changes username during authentication. */
+    std::string mapped_user;
 };
 
 enum class AuthMode
@@ -52,6 +59,17 @@ struct PwdData
 {
     std::string password;
     std::string two_fa_code;
+};
+
+struct AuthSettings
+{
+    std::string service;    /**< Pam service to log in */
+
+    /**
+     * Enable if the pam service may map the input username to something else. When true, MaxScale will
+     * fetch the mapped username and will not run 'pam_acct_mgmt' after authentication, as it would likely
+     * fail. */
+    bool mapping_on {false};
 };
 
 /**
@@ -82,12 +100,12 @@ authenticate(const std::string& user, const std::string& password, const std::st
  * @param mode Password mode
  * @param user Username & remote host
  * @param pwds Passwords given by user
- * @param service Which PAM service is the user logging to
+ * @param sett Pam service and other settings
  * @param exp_msgs Password queries expected from PAM api
  * @return A result struct with the result and an error message.
  */
 AuthResult
-authenticate(AuthMode mode, const UserData& user, const PwdData& pwds, const std::string& service,
+authenticate(AuthMode mode, const UserData& user, const PwdData& pwds, const AuthSettings& sett,
              const ExpectedMsgs& exp_msgs);
 
 /**

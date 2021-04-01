@@ -57,22 +57,31 @@ int main()
     cout << "PAM service:\n";
     std::getline(cin, service);
 
-    int rval = EXIT_FAILURE;
-    mxb::pam::AuthResult res;
-    if (twofa_pw.empty())
+    cout << "Username mapping enabled (Y/N, optional, default: N):\n";
+    string mapping_on_str;
+    std::getline(cin, mapping_on_str);
+    bool mapping_on = false;
+    if (mapping_on_str == "Y" || mapping_on_str == "y")
     {
-        res = mxb::pam::authenticate(username, password, service);
-    }
-    else
-    {
-        mxb::pam::UserData user = {username, ""};
-        mxb::pam::PwdData pwds = {password, twofa_pw};
-        res = mxb::pam::authenticate(mxb::pam::AuthMode::PW_2FA, user, pwds, service, {"", ""});
+        mapping_on = true;
     }
 
+    int rval = EXIT_FAILURE;
+    auto mode = twofa_pw.empty() ? mxb::pam::AuthMode::PW : mxb::pam::AuthMode::PW_2FA;
+    mxb::pam::UserData user = {username, ""};
+    mxb::pam::PwdData pwds = {password, twofa_pw};
+    mxb::pam::AuthSettings sett = {service, mapping_on};
+    mxb::pam::ExpectedMsgs exp = {"Password", ""};
+
+    auto res = mxb::pam::authenticate(mode, user, pwds, sett, exp);
     if (res.type == PamResult::SUCCESS)
     {
-        cout << "Authentication successful.\n";
+        cout << "Authentication successful.";
+        if (mapping_on)
+        {
+            cout << " Username mapped to '" << res.mapped_user << "'.";
+        }
+        cout << "\n";
         rval = EXIT_SUCCESS;
     }
     else if (res.error.empty())

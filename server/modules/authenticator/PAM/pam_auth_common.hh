@@ -24,7 +24,6 @@ extern const std::string DIALOG;    /* PAM client helper plugin name */
 extern const int DIALOG_SIZE;       /* The total storage required */
 extern const std::string CLEAR_PW;  /* Alternative plugin */
 extern const int CLEAR_PW_SIZE;
-extern const std::string EXP_PW_QUERY;      /* Expected normal password query */
 extern const std::string PASSWORD_QUERY;    /* Standard password query sent to client */
 extern const std::string TWO_FA_QUERY;      /* 2FA query sent to client */
 

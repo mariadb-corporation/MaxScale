@@ -45,6 +45,7 @@ private:
     uint8_t m_sequence {0};             /**< The next packet sequence number */
 
     const bool     m_cleartext_plugin {false};  /**< Is "pam_use_cleartext_plugin" enabled? */
+    const bool     m_mapping_on {false};        /**< Is user mapping on? */
     const AuthMode m_mode {AuthMode::PW};
 
     maxscale::Buffer create_2fa_prompt_packet() const;

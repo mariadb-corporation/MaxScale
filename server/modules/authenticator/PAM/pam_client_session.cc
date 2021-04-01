@@ -170,7 +170,7 @@ AuthRes PamClientAuthenticator::authenticate(const UserEntry* entry, MYSQL_sessi
     mxb::pam::UserData user = {session->user, session->remote};
     mxb::pam::PwdData pwds;
     pwds.password.assign((char*)session->auth_token.data(), session->auth_token.size());
-    mxb::pam::ExpectedMsgs expected_msgs = {EXP_PW_QUERY, ""};
+    mxb::pam::ExpectedMsgs expected_msgs = {mxb::pam::EXP_PW_QUERY, ""};
     if (m_mode == AuthMode::PW_2FA)
     {
         pwds.two_fa_code.assign((char*)session->auth_token_phase2.data(), session->auth_token_phase2.size());
@@ -178,9 +178,11 @@ AuthRes PamClientAuthenticator::authenticate(const UserEntry* entry, MYSQL_sessi
 
     // The server PAM plugin uses "mysql" as the default service when authenticating
     // a user with no service.
-    string pam_service = entry->auth_string.empty() ? "mysql" : entry->auth_string;
+    mxb::pam::AuthSettings sett;
+    sett.service = entry->auth_string.empty() ? "mysql" : entry->auth_string;
+    sett.mapping_on = m_mapping_on;
 
-    AuthResult res = mxb::pam::authenticate(m_mode, user, pwds, pam_service, expected_msgs);
+    AuthResult res = mxb::pam::authenticate(m_mode, user, pwds, sett, expected_msgs);
     if (res.type == AuthResult::Result::SUCCESS)
     {
         rval.status = AuthRes::Status::SUCCESS;

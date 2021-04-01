@@ -24,8 +24,6 @@ using std::string;
 namespace
 {
 
-const string password_query = "Password";
-
 /** Used by the PAM conversation function */
 struct ConversationData
 {
@@ -218,25 +216,28 @@ namespace maxbase
 {
 namespace pam
 {
+const std::string EXP_PW_QUERY = "Password";
 
 AuthResult
-authenticate(AuthMode mode, const UserData& user, const PwdData& pwds, const std::string& service,
+authenticate(AuthMode mode, const UserData& user, const PwdData& pwds, const AuthSettings& sett,
              const ExpectedMsgs& exp_msgs)
 {
     const char PAM_START_ERR_MSG[] = "Failed to start PAM authentication of user '%s': '%s'.";
     const char PAM_AUTH_ERR_MSG[] = "PAM authentication of user '%s' to service '%s' failed: '%s'.";
+    const char PAM_ITEM_ERR_MSG[] = "Failed to fetch mapped username of '%s': '%s'.";
     const char PAM_ACC_ERR_MSG[] = "PAM account check of user '%s' to service '%s' failed: '%s'.";
 
     ConversationData appdata(mode, &user, &pwds, &exp_msgs);
     pam_conv conv_struct = {conversation_func, &appdata};
 
     auto userc = user.username.c_str();
+    auto servicec = sett.service.c_str();
 
     AuthResult result;
     bool authenticated = false;
-    pam_handle_t* pam_handle = NULL;
+    pam_handle_t* pam_handle = nullptr;
 
-    int pam_status = pam_start(service.c_str(), userc, &conv_struct, &pam_handle);
+    int pam_status = pam_start(servicec, userc, &conv_struct, &pam_handle);
     if (pam_status == PAM_SUCCESS)
     {
         pam_status = pam_authenticate(pam_handle, 0);
@@ -245,20 +246,37 @@ authenticate(AuthMode mode, const UserData& user, const PwdData& pwds, const std
         case PAM_SUCCESS:
             authenticated = true;
             MXB_DEBUG("pam_authenticate returned success.");
+            if (sett.mapping_on)
+            {
+                // Fetch the final username. It may not be identical to the one doing the authentication.
+                const void* user_after_auth = nullptr;
+                int rc = pam_get_item(pam_handle, PAM_USER, &user_after_auth);
+                if (rc == PAM_SUCCESS)
+                {
+                    if (user_after_auth)
+                    {
+                        result.mapped_user = static_cast<const char*>(user_after_auth);
+                    }
+                }
+                else
+                {
+                    MXB_WARNING(PAM_ITEM_ERR_MSG, userc, pam_strerror(pam_handle, rc));
+                }
+            }
             break;
 
         case PAM_USER_UNKNOWN:
         case PAM_AUTH_ERR:
             // Normal failure, username or password was wrong.
             result.type = AuthResult::Result::WRONG_USER_PW;
-            result.error = mxb::string_printf(PAM_AUTH_ERR_MSG, userc, service.c_str(),
+            result.error = mxb::string_printf(PAM_AUTH_ERR_MSG, userc, servicec,
                                               pam_strerror(pam_handle, pam_status));
             break;
 
         default:
             // More exotic error
             result.type = AuthResult::Result::MISC_ERROR;
-            result.error = mxb::string_printf(PAM_AUTH_ERR_MSG, userc, service.c_str(),
+            result.error = mxb::string_printf(PAM_AUTH_ERR_MSG, userc, servicec,
                                               pam_strerror(pam_handle, pam_status));
             break;
         }
@@ -272,19 +290,25 @@ authenticate(AuthMode mode, const UserData& user, const PwdData& pwds, const std
 
     if (authenticated)
     {
-        pam_status = pam_acct_mgmt(pam_handle, 0);
-        switch (pam_status)
+        if (sett.mapping_on)
         {
-        case PAM_SUCCESS:
+            // Don't check account, since username may have changed.
             result.type = AuthResult::Result::SUCCESS;
-            break;
-
-        default:
-            // Credentials have already been checked to be ok, so this is a somewhat unexpected error.
-            result.type = AuthResult::Result::ACCOUNT_INVALID;
-            result.error = mxb::string_printf(PAM_ACC_ERR_MSG, userc, service.c_str(),
-                                              pam_strerror(pam_handle, pam_status));
-            break;
+        }
+        else
+        {
+            pam_status = pam_acct_mgmt(pam_handle, 0);
+            if (pam_status == PAM_SUCCESS)
+            {
+                result.type = AuthResult::Result::SUCCESS;
+            }
+            else
+            {
+                // Credentials have already been checked to be ok, so this is a somewhat unexpected error.
+                result.type = AuthResult::Result::ACCOUNT_INVALID;
+                result.error = mxb::string_printf(PAM_ACC_ERR_MSG, userc, servicec,
+                                                  pam_strerror(pam_handle, pam_status));
+            }
         }
     }
     pam_end(pam_handle, pam_status);
@@ -295,8 +319,9 @@ AuthResult authenticate(const string& user, const string& password, const string
 {
     UserData usr = {user, ""};
     PwdData pwds = {password, ""};
-    ExpectedMsgs exp_msg = {password_query, ""};
-    return authenticate(AuthMode::PW, usr, pwds, service, exp_msg);
+    AuthSettings sett = {service, false};
+    ExpectedMsgs exp_msg = {EXP_PW_QUERY, ""};
+    return authenticate(AuthMode::PW, usr, pwds, sett, exp_msg);
 }
 
 bool match_prompt(const char* prompt, const std::string& expected_start)

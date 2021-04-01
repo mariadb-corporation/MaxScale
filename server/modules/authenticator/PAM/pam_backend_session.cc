@@ -58,20 +58,20 @@ PamBackendAuthenticator::parse_password_prompt(mariadb::ByteVec& data)
         // If using normal password-only authentication, expect the server to only ask for "Password: ".
         if (m_mode == AuthMode::PW)
         {
-            if (mxb::pam::match_prompt(prompt, EXP_PW_QUERY))
+            if (mxb::pam::match_prompt(prompt, mxb::pam::EXP_PW_QUERY))
             {
                 pw_type = PromptType::PASSWORD;
             }
             else
             {
                 MXB_ERROR("'%s' asked for '%s' when authenticating %s. '%s' was expected.",
-                          server_name, prompt, m_clienthost.c_str(), EXP_PW_QUERY.c_str());
+                          server_name, prompt, m_clienthost.c_str(), mxb::pam::EXP_PW_QUERY.c_str());
             }
         }
         else
         {
             // In two-factor mode, any non "Password" prompt is assumed to ask for the 2FA-code.
-            pw_type = (mxb::pam::match_prompt(prompt, EXP_PW_QUERY)) ? PromptType::PASSWORD :
+            pw_type = (mxb::pam::match_prompt(prompt, mxb::pam::EXP_PW_QUERY)) ? PromptType::PASSWORD :
                 PromptType::TWO_FA;
         }
     }
