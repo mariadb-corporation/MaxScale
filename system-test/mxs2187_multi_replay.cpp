@@ -50,9 +50,7 @@ int main(int argc, char** argv)
     test.maxscales->connect_rwsplit();
 
     cout << "Start transaction, insert a value and read it" << endl;
-    ok("SET @a = 1");
     ok("START TRANSACTION");
-    ok("SELECT @a");
     ok("INSERT INTO test.t1 VALUES (1)");
     ok("SELECT * FROM test.t1 WHERE id = 1");
 
@@ -62,7 +60,6 @@ int main(int argc, char** argv)
     cout << "Insert value and read it" << endl;
     ok("INSERT INTO test.t1 VALUES (2)");
     ok("SELECT * FROM test.t1 WHERE id = 2");
-    ok("SELECT @a");
 
     cout << "Killing second master" << endl;
     kill_master();
@@ -70,14 +67,12 @@ int main(int argc, char** argv)
     cout << "Inserting value 3" << endl;
     ok("INSERT INTO test.t1 VALUES (3)");
     ok("SELECT * FROM test.t1 WHERE id = 3");
-    ok("SELECT @a");
 
     cout << "Killing third master" << endl;
     kill_master();
 
     cout << "Selecting final result" << endl;
     ok("SELECT SUM(id) FROM test.t1");
-    ok("SELECT @a");
 
     cout << "Killing fourth master" << endl;
     kill_master();
