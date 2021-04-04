@@ -936,8 +936,23 @@ bool RWSplitSession::handleError(mxs::ErrorType type, GWBUF* errmsgbuf, mxs::End
         }
         else
         {
-            // We were expecting a response but we aren't going to get one
-            mxb_assert(m_expected_responses == 1);
+            if (backend->is_replaying_history() && m_expected_responses == 0)
+            {
+                // This can happen if we're replaying an idle transaction and the connection fails either when
+                // it is trying to connect or if it's during the session command replay.
+                //
+                // In 2.6 this will be automatically detected by the explicit response states of the backends.
+                // There we can check the response stack to see if we eventually expected to see a result from
+                // the backend. Sadly in 2.5 this information is only implied by the combination of
+                // is_replaying_history() and m_expected_responses.
+                expected_response = false;
+            }
+            else
+            {
+                // We were expecting a response but we aren't going to get one
+                mxb_assert(m_expected_responses == 1);
+            }
+
             errmsg += " Lost connection to master server while waiting for a result.";
 
             if (can_retry_query())
@@ -954,7 +969,12 @@ bool RWSplitSession::handleError(mxs::ErrorType type, GWBUF* errmsgbuf, mxs::End
             }
         }
 
-        if (trx_is_open() && m_otrx_state == OTRX_INACTIVE && m_trx.target() == backend)
+        // If we have an open transaction, the replay can be done immediately. If there's no open transaction
+        // but a replay is in progress, we must still retry the replay. The target can be null if a replay
+        // fails during the reconnetion to the master.
+        if ((trx_is_open() || m_is_replay_active)
+            && m_otrx_state == OTRX_INACTIVE
+            && (!m_trx.target() || m_trx.target() == backend))
         {
             can_continue = start_trx_replay();
             errmsg += " A transaction is active and cannot be replayed.";
