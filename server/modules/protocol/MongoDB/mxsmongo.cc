@@ -15,7 +15,6 @@
 #include <sstream>
 #include <map>
 #include <bsoncxx/json.hpp>
-#include <bsoncxx/builder/stream/document.hpp>
 #include <maxscale/dcb.hh>
 #include <maxscale/session.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
@@ -29,6 +28,112 @@ namespace
 {
 
 uint32_t (*crc32_func)(const void *, size_t) = wiredtiger_crc32c_func();
+
+}
+
+namespace mxsmongo
+{
+
+template<>
+bsoncxx::document::view element_as<bsoncxx::document::view>(const string& command,
+                                                            const char* zKey,
+                                                            const bsoncxx::document::element& element,
+                                                            Conversion)
+{
+    if (element.type() != bsoncxx::type::k_document)
+    {
+        stringstream ss;
+        ss << "BSON field '" << command << "." << zKey << "' is the wrong type '"
+           << bsoncxx::to_string(element.type()) << "', expected type 'object'";
+
+        throw SoftError(ss.str(), error::TYPE_MISMATCH);
+    }
+
+    return element.get_document();
+}
+
+template<>
+bsoncxx::array::view element_as<bsoncxx::array::view>(const string& command,
+                                                      const char* zKey,
+                                                      const bsoncxx::document::element& element,
+                                                      Conversion)
+{
+    if (element.type() != bsoncxx::type::k_array)
+    {
+        stringstream ss;
+        ss << "BSON field '" << command << "." << zKey << "' is the wrong type '"
+           << bsoncxx::to_string(element.type()) << "', expected type 'array'";
+
+        throw SoftError(ss.str(), error::TYPE_MISMATCH);
+    }
+
+    return element.get_array();
+}
+
+template<>
+string element_as<string>(const string& command,
+                          const char* zKey,
+                          const bsoncxx::document::element& element,
+                          Conversion)
+{
+    if (element.type() != bsoncxx::type::k_utf8)
+    {
+        stringstream ss;
+        ss << "BSON field '" << command << "." << zKey << "' is the wrong type '"
+           << bsoncxx::to_string(element.type()) << "', expected type 'string'";
+
+        throw SoftError(ss.str(), error::TYPE_MISMATCH);
+    }
+
+    const auto& utf8 = element.get_utf8();
+    return string(utf8.value.data(), utf8.value.size());
+}
+
+template<>
+bool element_as<bool>(const string& command,
+                      const char* zKey,
+                      const bsoncxx::document::element& element,
+                      Conversion conversion)
+{
+    bool rv = true;
+
+    if (conversion == Conversion::STRICT && element.type() != bsoncxx::type::k_bool)
+    {
+        stringstream ss;
+        ss << "BSON field '" << command << "." << zKey << "' is the wrong type '"
+           << bsoncxx::to_string(element.type()) << "', expected type 'bool'";
+
+        throw SoftError(ss.str(), error::TYPE_MISMATCH);
+    }
+
+    switch (element.type())
+    {
+    case bsoncxx::type::k_bool:
+        rv = element.get_bool();
+        break;
+
+    case bsoncxx::type::k_int32:
+        rv = element.get_int32() != 0;
+        break;
+
+    case bsoncxx::type::k_int64:
+        rv = element.get_int64() != 0;
+        break;
+
+    case bsoncxx::type::k_double:
+        rv = element.get_double() != 0;
+        break;
+
+    case bsoncxx::type::k_null:
+        rv = false;
+        break;
+
+    default:
+        rv = true;
+    }
+
+    return rv;
+}
 
 }
 

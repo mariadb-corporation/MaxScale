@@ -27,42 +27,6 @@ namespace mxsmongo
 
 class Database;
 
-enum class Conversion
-{
-    STRICT,
-    RELAXED
-};
-
-template<class T>
-T element_as(const std::string& command,
-             const char* zKey,
-             const bsoncxx::document::element& element,
-             Conversion conversion = Conversion::STRICT);
-
-template<>
-bsoncxx::document::view element_as<bsoncxx::document::view>(const std::string& command,
-                                                            const char* zKey,
-                                                            const bsoncxx::document::element& element,
-                                                            Conversion conversion);
-
-template<>
-bsoncxx::array::view element_as<bsoncxx::array::view>(const std::string& command,
-                                                      const char* zKey,
-                                                      const bsoncxx::document::element& element,
-                                                      Conversion conversion);
-
-template<>
-std::string element_as<std::string>(const std::string& command,
-                                    const char* zKey,
-                                    const bsoncxx::document::element& element,
-                                    Conversion conversion);
-
-template<>
-bool element_as<bool>(const std::string& command,
-                      const char* zKey,
-                      const bsoncxx::document::element& element,
-                      Conversion conversion);
-
 class Command
 {
 public:
