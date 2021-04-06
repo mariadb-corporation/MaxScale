@@ -48,7 +48,7 @@ public:
      *
      * @return The connection. Success can be checked by 'is_open'.
      */
-    std::unique_ptr<mxt::MariaDB> try_open_connection();
+    std::unique_ptr<mxt::MariaDB> try_open_admin_connection();
     bool                          update_status();
     const Status&                 status() const;
     const std::string&            name() const;
@@ -250,9 +250,9 @@ public:
     /**
      * @brief Check if all slaves have "Slave_IO_Running" set to "Yes" and master has N-1 slaves
      * @param master Index of master node
-     * @return 0 if everything is ok
+     * @return True if everything is ok
      */
-    virtual int check_replication() = 0;
+    virtual bool check_replication() = 0;
 
     /**
      * @brief Get the server_id of the node
@@ -388,7 +388,6 @@ public:
 
     /** Whether to require GTID based replication, defaults to false */
     static void require_gtid(bool value);
-    static bool get_require_gtid();
 
     /**
      * @brief limit_nodes Restart replication for only new_N nodes

@@ -74,7 +74,6 @@ void restore_servers(TestConnections& test, bool events_added)
 
 int main(int argc, char* argv[])
 {
-    MariaDBCluster::require_gtid(true);
     TestConnections test(argc, argv);
     test.maxscales->connect_maxscale(0);
     test.repl->connect();

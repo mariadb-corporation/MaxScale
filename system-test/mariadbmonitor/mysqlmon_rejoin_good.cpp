@@ -17,7 +17,6 @@ using std::string;
 
 int main(int argc, char** argv)
 {
-    MariaDBCluster::require_gtid(true);
     TestConnections test(argc, argv);
     // Set up test table
     basic_test(test);

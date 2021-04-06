@@ -25,9 +25,6 @@ struct CmdResult
 
 using NetworkConfig = std::map<std::string, std::string>;
 
-using BoolFuncArray = std::vector<std::function<bool (void)>>;
-bool concurrent_run(const BoolFuncArray& funcs);
-
 class VMNode
 {
 public:
@@ -99,6 +96,7 @@ public:
 
 private:
     std::string get_nc_item(const mxt::NetworkConfig& nwconfig, const std::string& search_key);
+    bool        verbose() const;
 
     std::string m_ip4;          /**< IPv4-address */
     std::string m_ip6;          /**< IPv6-address */

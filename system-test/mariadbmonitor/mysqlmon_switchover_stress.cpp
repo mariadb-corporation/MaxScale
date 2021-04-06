@@ -636,7 +636,6 @@ void run(TestConnections& test)
 
 int main(int argc, char* argv[])
 {
-    MariaDBCluster::require_gtid(true);
     TestConnections test(argc, argv);
 
     run(test);

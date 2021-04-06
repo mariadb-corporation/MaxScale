@@ -27,7 +27,6 @@ const string type_galera = "galera";
 
 int GaleraCluster::start_replication()
 {
-    bool old_verbose = verbose();
     int local_result = 0;
     local_result += stop_nodes();
 
@@ -71,8 +70,7 @@ int GaleraCluster::start_replication()
         {
             cout << "Failed to start node" << i << endl;
             cout << "---------- BEGIN LOGS ----------" << endl;
-            m_shared.verbose = true;
-            ssh_node_f(0, true, "sudo journalctl -u mariadb | tail -n 50");
+            cout << ssh_output("sudo journalctl -u mariadb | tail -n 50", i, true).output;
             cout << "----------- END LOGS -----------" << endl;
         }
     }
@@ -91,13 +89,12 @@ int GaleraCluster::start_replication()
     local_result += execute_query(nodes[0], "%s", create_repl_user);
 
     close_connections();
-    m_shared.verbose = old_verbose;
     return local_result;
 }
 
-int GaleraCluster::check_replication()
+bool GaleraCluster::check_replication()
 {
-    int res = 1;
+    bool res = false;
 
     if (verbose())
     {
@@ -113,7 +110,7 @@ int GaleraCluster::check_replication()
         {
             if (r[1] == std::to_string(N))
             {
-                res = 0;
+                res = true;
             }
             else
             {

@@ -62,13 +62,33 @@ bool maxtest::MariaDB::cmd_f(const char* format, ...)
     return cmd(sql);
 }
 
-std::unique_ptr<mxq::QueryResult> maxtest::MariaDB::query(const std::string& query)
+std::unique_ptr<mxq::QueryResult> maxtest::MariaDB::query(const std::string& query, Expect expect)
 {
     auto ret = mxq::MariaDB::query(query);
     if (!ret && mxq::mysql_is_net_error(errornum()))
     {
         ret = mxq::MariaDB::query(query);
     }
-    m_log.expect(ret != nullptr, "%s", error());
+    if (expect == Expect::OK)
+    {
+        m_log.expect(ret != nullptr, "%s", error());
+    }
+    else if (expect == Expect::FAIL)
+    {
+        m_log.expect(ret == nullptr, "Query '%s' succeeded when failure was expected.", query.c_str());
+    }
+    else
+    {
+        if (!ret)
+        {
+            // Report query error, but don't classify it as a test error.
+            m_log.log_msgf("%s", error());
+        }
+    }
     return ret;
+}
+
+std::unique_ptr<mxq::QueryResult> maxtest::MariaDB::try_query(const std::string& query)
+{
+    return this->query(query, Expect::ANY);
 }

@@ -26,7 +26,7 @@ public:
     ReplicationCluster(SharedData* shared);
 
     int                start_replication() override;
-    int                check_replication() override;
+    bool               check_replication() override;
     void               sync_slaves(int node = 0) override;
     const std::string& type_string() const override;
 
@@ -77,8 +77,7 @@ public:
     void replicate_from(int slave, const std::string& host, uint16_t port, const char* type = "current_pos");
 
 private:
-    bool check_master_node(MYSQL* conn);
-    bool bad_slave_thread_status(MYSQL* conn, const char* field, int node);
-    bool wrong_replication_type(MYSQL* conn);
+    bool check_master_node(mxt::MariaDB* conn);
+    bool good_slave_thread_status(mxt::MariaDB* conn, int node);
 };
 }

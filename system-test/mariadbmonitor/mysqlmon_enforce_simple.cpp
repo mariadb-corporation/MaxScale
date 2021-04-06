@@ -35,9 +35,7 @@ int get_master_server_id(TestConnections& test)
 
 int main(int argc, char** argv)
 {
-    MariaDBCluster::require_gtid(true);
     TestConnections::skip_maxscale_start(true);
-
     TestConnections test(argc, argv);
 
     if (test.repl->N < 4)

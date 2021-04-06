@@ -18,7 +18,6 @@ int main(int argc, char** argv)
 {
     const char FAILOVER_CMD[] = "maxctrl call command mysqlmon failover MySQL-Monitor";
     // interactive = strcmp(argv[argc - 1], "interactive") == 0;
-    MariaDBCluster::require_gtid(true);
     TestConnections test(argc, argv);
     test.repl->connect();
     delete_slave_binlogs(test);

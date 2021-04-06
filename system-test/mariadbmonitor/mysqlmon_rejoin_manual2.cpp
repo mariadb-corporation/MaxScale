@@ -25,7 +25,6 @@ int main(int argc, char** argv)
 {
     char result_tmp[bufsize];
     interactive = strcmp(argv[argc - 1], "interactive") == 0;
-    MariaDBCluster::require_gtid(true);
     TestConnections test(argc, argv);
     MYSQL* maxconn = test.maxscales->open_rwsplit_connection(0);
 

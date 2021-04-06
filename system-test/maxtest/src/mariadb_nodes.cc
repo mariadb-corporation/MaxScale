@@ -33,10 +33,6 @@ using std::move;
 
 namespace
 {
-bool g_require_gtid = false;
-
-const string type_columnstore = "columnstore";
-
 /**
  * Tries to find MariaDB server version number in the output of 'mysqld --version'
  *
@@ -59,16 +55,6 @@ string extract_version_from_string(const string& version)
     }
     return version.substr(pos1, pos2 - pos1);
 }
-}
-
-void MariaDBCluster::require_gtid(bool value)
-{
-    g_require_gtid = value;
-}
-
-bool MariaDBCluster::get_require_gtid()
-{
-    return g_require_gtid;
 }
 
 MariaDBCluster::MariaDBCluster(mxt::SharedData* shared, const std::string& nwconf_prefix,
@@ -462,7 +448,7 @@ bool MariaDBCluster::fix_replication()
     bool rval = true;
     int attempts = 25;
 
-    if (check_replication())
+    if (!check_replication())
     {
         cout << prefix() << ": Replication is broken, fixing..." << endl;
         rval = false;
@@ -475,13 +461,13 @@ bool MariaDBCluster::fix_replication()
                 cout << "Starting replication" << endl;
                 start_replication();
 
-                while (check_replication() && (attempts > 0))
+                while (!check_replication() && (attempts > 0))
                 {
                     cout << "Replication is still broken, waiting" << endl;
                     sleep(10);
                     attempts--;
                 }
-                if (check_replication() == 0)
+                if (check_replication())
                 {
                     cout << "Replication is fixed" << endl;
                     rval = prepare_for_test();
@@ -824,7 +810,7 @@ bool MariaDBCluster::prepare_servers()
             };
         threads.push_back(move(func));
     }
-    return mxt::concurrent_run(threads);
+    return m_shared.concurrent_run(threads);
 }
 
 void MariaDBCluster::limit_nodes(int new_N)
@@ -1059,7 +1045,7 @@ const MariaDBServer::Status& MariaDBServer::status() const
 bool MariaDBServer::update_status()
 {
     bool rval = false;
-    auto con = try_open_connection();
+    auto con = try_open_admin_connection();
     if (con->is_open())
     {
         m_status.version_num = con->version_info().version;
@@ -1077,7 +1063,7 @@ bool MariaDBServer::update_status()
     return rval;
 }
 
-std::unique_ptr<mxt::MariaDB> MariaDBServer::try_open_connection()
+std::unique_ptr<mxt::MariaDB> MariaDBServer::try_open_admin_connection()
 {
     auto conn = std::make_unique<mxt::MariaDB>(m_vm.shared().log);
     auto& sett = conn->connection_settings();

@@ -23,7 +23,6 @@ int main(int argc, char** argv)
 {
     // Only in very recent server versions have the disks-plugin
     TestConnections::require_repl_version("10.3.6");
-    MariaDBCluster::require_gtid(true);
     TestConnections::skip_maxscale_start(true);
     TestConnections test(argc, argv);
 

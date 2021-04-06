@@ -33,7 +33,6 @@ void client_thr(TestConnections* test, int id)
 
 int main(int argc, char** argv)
 {
-    MariaDBCluster::require_gtid(true);
     TestConnections test(argc, argv);
 
     test.repl->connect();

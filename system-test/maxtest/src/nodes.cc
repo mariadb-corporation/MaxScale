@@ -73,7 +73,7 @@ bool Nodes::check_nodes_ssh()
             };
         f.push_back(move(func));
     }
-    return mxt::concurrent_run(f);
+    return m_shared.concurrent_run(f);
 }
 
 namespace maxtest
@@ -107,7 +107,6 @@ bool VMNode::init_ssh_master()
 
 int VMNode::run_cmd(const std::string& cmd, CmdPriv priv)
 {
-    bool verbose = m_shared.verbose;
     string opening_cmd;
     if (m_type == NodeType::LOCAL)
     {
@@ -116,12 +115,12 @@ int VMNode::run_cmd(const std::string& cmd, CmdPriv priv)
     else
     {
         opening_cmd = m_ssh_cmd_p1;
-        if (!verbose)
+        if (!verbose())
         {
             opening_cmd += " > /dev/null";
         }
     }
-    if (verbose)
+    if (verbose())
     {
         std::cout << opening_cmd << "\n";
     }
@@ -191,7 +190,7 @@ bool Nodes::init_ssh_masters()
         funcs.push_back(move(func));
     }
 
-    return mxt::concurrent_run(funcs);
+    return m_shared.concurrent_run(funcs);
 }
 
 int Nodes::ssh_node_f(int node, bool sudo, const char* format, ...)
@@ -226,7 +225,7 @@ bool mxt::VMNode::copy_to_node(const string& src, const string& dest)
                                  m_username.c_str(), m_ip4.c_str(), dest.c_str());
     }
 
-    if (m_shared.verbose)
+    if (verbose())
     {
         printf("%s\n", cmd.c_str());
     }
@@ -263,7 +262,7 @@ bool mxt::VMNode::copy_from_node(const string& src, const string& dest)
                                  src.c_str(), dest.c_str());
     }
 
-    if (m_shared.verbose)
+    if (verbose())
     {
         printf("%s\n", cmd.c_str());
     }
@@ -360,7 +359,7 @@ std::string VMNode::get_nc_item(const mxt::NetworkConfig& nwconfig, const string
         rval = it->second;
     }
 
-    if (m_shared.verbose)
+    if (verbose())
     {
         if (rval.empty())
         {
@@ -494,6 +493,11 @@ SharedData& VMNode::shared()
 {
     return m_shared;
 }
+
+bool VMNode::verbose() const
+{
+    return m_shared.settings.verbose;
+}
 }
 
 mxt::CmdResult Nodes::ssh_output(const std::string& cmd, int node, bool sudo)
@@ -543,7 +547,7 @@ const char* Nodes::ip4(int i) const
 
 bool Nodes::verbose() const
 {
-    return m_shared.verbose;
+    return m_shared.settings.verbose;
 }
 
 void Nodes::write_env_vars()
@@ -567,28 +571,4 @@ mxt::VMNode* Nodes::node(int i)
 const mxt::VMNode* Nodes::node(int i) const
 {
     return m_vms[i].get();
-}
-
-namespace maxtest
-{
-bool concurrent_run(const BoolFuncArray& funcs)
-{
-    std::vector<std::future<bool>> futures;
-    futures.reserve(funcs.size());
-
-    for (auto& func : funcs)
-    {
-        futures.emplace_back(std::async(std::launch::async, func));
-    }
-
-    bool rval = true;
-    for (auto& fut : futures)
-    {
-        if (!fut.get())
-        {
-            rval = false;
-        }
-    }
-    return rval;
-}
 }
