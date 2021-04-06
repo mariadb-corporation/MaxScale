@@ -135,10 +135,7 @@ public:
     {
         DocumentBuilder doc;
 
-        auto element = m_doc[key::GETLOG];
-
-        const auto& utf8 = element.get_utf8().value;
-        string value(utf8.data(), utf8.size());
+        auto value = value_as<string>();
 
         if (value == "*")
         {

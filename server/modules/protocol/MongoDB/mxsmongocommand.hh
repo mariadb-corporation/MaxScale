@@ -46,6 +46,12 @@ bsoncxx::document::view element_as<bsoncxx::document::view>(const std::string& c
                                                             Conversion conversion);
 
 template<>
+bsoncxx::array::view element_as<bsoncxx::array::view>(const std::string& command,
+                                                      const char* zKey,
+                                                      const bsoncxx::document::element& element,
+                                                      Conversion conversion);
+
+template<>
 std::string element_as<std::string>(const std::string& command,
                                     const char* zKey,
                                     const bsoncxx::document::element& element,
@@ -115,7 +121,7 @@ public:
 
 protected:
     template<class Type>
-    bool optional(const char* zKey, Type* pElement, Conversion conversion = Conversion::STRICT)
+    bool optional(const char* zKey, Type* pElement, Conversion conversion = Conversion::STRICT) const
     {
         bool rv = false;
 
@@ -131,7 +137,7 @@ protected:
     }
 
     template<class Type>
-    Type required(const char* zKey, Conversion conversion = Conversion::STRICT)
+    Type required(const char* zKey, Conversion conversion = Conversion::STRICT) const
     {
         auto element = m_doc[zKey];
 
@@ -153,6 +159,12 @@ protected:
      *         command object, otherwise an empty string.
      */
     std::string convert_skip_and_limit() const;
+
+    template<class T>
+    T value_as(Conversion conversion = Conversion::STRICT) const
+    {
+        return required<T>(m_name.c_str(), conversion);
+    }
 
     enum Quoted
     {

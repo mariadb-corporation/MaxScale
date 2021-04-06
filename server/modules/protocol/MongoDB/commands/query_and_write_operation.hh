@@ -43,22 +43,7 @@ public:
 public:
     GWBUF* execute() override final
     {
-        auto ordered = m_doc[key::ORDERED];
-
-        if (ordered)
-        {
-            if (ordered.type() != bsoncxx::type::k_bool)
-            {
-                stringstream ss;
-                ss << "BSON field '" << m_name << ".ordered' is the wrong type '"
-                   << bsoncxx::to_string(ordered.type())
-                   << "', expected type 'bool'";
-
-                throw SoftError(ss.str(), error::TYPE_MISMATCH);
-            }
-
-            m_ordered = ordered.get_bool();
-        }
+        optional(key::ORDERED, &m_ordered);
 
         auto it = m_arguments.find(m_key);
 
@@ -74,25 +59,7 @@ public:
         }
         else
         {
-            auto element = m_doc[m_key];
-
-            if (!element)
-            {
-                stringstream ss;
-                ss << "BSON field '" << m_name << "." << m_key << "' is missing but a required field";
-
-                throw SoftError(ss.str(), error::LOCATION40414);
-            }
-
-            if (element.type() != bsoncxx::type::k_array)
-            {
-                stringstream ss;
-                ss << "invalid parameter: expected an object (" << m_key << ")";
-
-                throw SoftError(ss.str(), error::LOCATION10065);
-            }
-
-            auto documents = static_cast<bsoncxx::array::view>(element.get_array());
+            auto documents = required<bsoncxx::array::view>(m_key.c_str());
             auto nDocuments = std::distance(documents.begin(), documents.end());
             check_write_batch_size(nDocuments);
 
@@ -441,11 +408,10 @@ public:
         stringstream sql;
         sql << "SELECT ";
 
-        auto projection = m_doc[key::PROJECTION];
-
-        if (projection)
+        bsoncxx::document::view projection;
+        if (optional(key::PROJECTION, &projection))
         {
-            m_extractions = projection_to_extractions(projection.get_document());
+            m_extractions = projection_to_extractions(projection);
 
             if (!m_extractions.empty())
             {
@@ -474,24 +440,19 @@ public:
 
         sql << " FROM " << table() << " ";
 
-        auto filter = m_doc[key::FILTER];
-
-        if (filter)
+        bsoncxx::document::view filter;
+        if (optional(key::FILTER, &filter))
         {
-            const auto& doc = filter.get_document();
-
-            sql << query_to_where_clause(doc);
+            sql << query_to_where_clause(filter);
         }
 
-        auto sort = m_doc[key::SORT];
-
-        if (sort)
+        bsoncxx::document::view sort;
+        if (optional(key::SORT, &sort))
         {
-            const auto& doc = sort.get_document();
-            string order_by = sort_to_order_by(doc);
+            string order_by = sort_to_order_by(sort);
 
             MXS_NOTICE("Sort '%s' converted to 'ORDER BY %s'.",
-                       bsoncxx::to_json(doc).c_str(),
+                       bsoncxx::to_json(sort).c_str(),
                        order_by.c_str());
 
             if (!order_by.empty())
@@ -600,21 +561,7 @@ public:
         }
         else
         {
-            auto element = m_doc[key::DOCUMENTS];
-
-            if (!element)
-            {
-                throw SoftError("BSON field 'insert.documents' is missing but a required field",
-                                error::LOCATION40414);
-            }
-
-            if (element.type() != bsoncxx::type::k_array)
-            {
-                throw SoftError("invalid parameter: expected an object (documents)",
-                                error::LOCATION10065);
-            }
-
-            auto documents = static_cast<bsoncxx::array::view>(element.get_array());
+            auto documents = required<bsoncxx::array::view>(key::DOCUMENTS);
             check_write_batch_size(std::distance(documents.begin(), documents.end()));
 
             bool first = true;

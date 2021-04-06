@@ -174,6 +174,24 @@ bsoncxx::document::view element_as<bsoncxx::document::view>(const string& comman
 }
 
 template<>
+bsoncxx::array::view element_as<bsoncxx::array::view>(const string& command,
+                                                      const char* zKey,
+                                                      const bsoncxx::document::element& element,
+                                                      Conversion)
+{
+    if (element.type() != bsoncxx::type::k_array)
+    {
+        stringstream ss;
+        ss << "BSON field '" << command << "." << zKey << "' is the wrong type '"
+           << bsoncxx::to_string(element.type()) << "', expected type 'array'";
+
+        throw SoftError(ss.str(), error::TYPE_MISMATCH);
+    }
+
+    return element.get_array();
+}
+
+template<>
 string element_as<string>(const string& command,
                           const char* zKey,
                           const bsoncxx::document::element& element,
