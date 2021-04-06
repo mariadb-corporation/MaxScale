@@ -11,27 +11,32 @@
  * Public License.
  */
 
-'use strict';
+"use strict";
 
-var maxctrl = require('./lib/core.js')
+var maxctrl = require("./lib/core.js");
+var utils = require("./lib/utils.js");
+var process = require("process");
 
 function print(out) {
-    if (out) {
-        console.log(out)
+  if (out) {
+    if (!process.stdout.isTTY) {
+      out = utils.strip_colors(out);
     }
+
+    console.log(out);
+  }
 }
 
 function err(out) {
-    print(out)
-    process.exit(1);
+  print(out);
+  process.exit(1);
 }
 
 // Mangle the arguments if we are being called from the command line
 if (process.argv[0] == process.execPath) {
-    process.argv.shift()
-    // The first argument is always the script
-    process.argv.shift()
+  process.argv.shift();
+  // The first argument is always the script
+  process.argv.shift();
 }
 
-maxctrl.execute(process.argv)
-    .then(print, err)
+maxctrl.execute(process.argv).then(print, err);

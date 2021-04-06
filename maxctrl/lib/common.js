@@ -18,6 +18,7 @@ var consoleLib = require("console");
 var os = require("os");
 var fs = require("fs");
 var readlineSync = require("readline-sync");
+var utils = require("./utils.js");
 
 function normalizeWhitespace(table) {
   table.forEach((v) => {
@@ -138,8 +139,7 @@ module.exports = function () {
     str = table.toString();
 
     if (this.argv.tsv) {
-      // Based on the regex found in: https://github.com/jonschlinkert/strip-color
-      str = str.replace(/\x1B\[[(?);]{0,2}(;?\d)*./g, "");
+      str = utils.strip_colors(str);
 
       // Trim trailing whitespace that cli-table generates
       str = str
