@@ -26,7 +26,7 @@ namespace command
 // https://docs.mongodb.com/manual/reference/command/aggregate/
 
 // https://docs.mongodb.com/manual/reference/command/count/
-class Count : public Command
+class Count final : public Command
 {
 public:
     using Command::Command;
@@ -144,7 +144,7 @@ private:
 };
 
 // https://docs.mongodb.com/manual/reference/command/distinct/
-class Distinct : public Command
+class Distinct final : public Command
 {
 public:
     using Command::Command;

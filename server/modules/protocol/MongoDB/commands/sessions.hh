@@ -28,7 +28,7 @@ namespace command
 // https://docs.mongodb.com/manual/reference/command/commitTransaction/
 
 // https://docs.mongodb.com/manual/reference/command/endSessions/
-class EndSessions : public Command
+class EndSessions final : public Command
 {
 public:
     using Command::Command;

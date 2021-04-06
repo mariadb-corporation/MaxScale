@@ -350,7 +350,7 @@ private:
 
 
 // https://docs.mongodb.com/manual/reference/command/delete/
-class Delete : public OrderedCommand
+class Delete final : public OrderedCommand
 {
 public:
     template<class ConcretePacket>
@@ -431,7 +431,7 @@ private:
 
 
 // https://docs.mongodb.com/manual/reference/command/find/
-class Find : public Command
+class Find final : public Command
 {
 public:
     using Command::Command;
@@ -564,7 +564,7 @@ private:
 // https://docs.mongodb.com/manual/reference/command/getMore/
 
 // https://docs.mongodb.com/manual/reference/command/insert/
-class Insert : public TableCreatingCommand
+class Insert final : public TableCreatingCommand
 {
 public:
     using TableCreatingCommand::TableCreatingCommand;
@@ -758,7 +758,7 @@ private:
 // https://docs.mongodb.com/manual/reference/command/resetError/
 
 // https://docs.mongodb.com/manual/reference/command/update/
-class Update : public OrderedCommand
+class Update final : public OrderedCommand
 {
 public:
     template<class ConcretePacket>

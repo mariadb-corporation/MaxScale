@@ -28,7 +28,7 @@ namespace command
 // https://docs.mongodb.com/manual/reference/command/availableQueryOptions/
 
 // https://docs.mongodb.com/manual/reference/command/buildInfo/
-class BuildInfo : public Command
+class BuildInfo final : public Command
 {
 public:
     using Command::Command;
@@ -97,7 +97,7 @@ public:
 // https://docs.mongodb.com/manual/reference/command/features/
 
 // https://docs.mongodb.com/manual/reference/command/getCmdLineOpts/
-class GetCmdLineOpts : public Command
+class GetCmdLineOpts final : public Command
 {
 public:
     using Command::Command;
@@ -126,7 +126,7 @@ public:
 
 
 // https://docs.mongodb.com/manual/reference/command/getLog/
-class GetLog : public Command
+class GetLog final : public Command
 {
 public:
     using Command::Command;
@@ -182,7 +182,7 @@ public:
 // https://docs.mongodb.com/manual/reference/command/netstat/
 
 // https://docs.mongodb.com/manual/reference/command/ping/
-class Ping : public Command
+class Ping final : public Command
 {
 public:
     using Command::Command;
@@ -208,7 +208,7 @@ public:
 // https://docs.mongodb.com/manual/reference/command/validate/
 
 // https://docs.mongodb.com/manual/reference/command/whatsmyuri/
-class WhatsMyUri : public Command
+class WhatsMyUri final : public Command
 {
 public:
     using Command::Command;

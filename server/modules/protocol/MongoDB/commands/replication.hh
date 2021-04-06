@@ -26,7 +26,7 @@ namespace command
 // https://docs.mongodb.com/manual/reference/command/applyOps/
 
 // https://docs.mongodb.com/manual/reference/command/isMaster/
-class IsMaster : public Command
+class IsMaster final : public Command
 {
 public:
     using Command::Command;
@@ -60,7 +60,7 @@ public:
 // https://docs.mongodb.com/manual/reference/command/replSetGetConfig/
 
 // https://docs.mongodb.com/manual/reference/command/replSetGetStatus/
-class ReplSetGetStatus : public Command
+class ReplSetGetStatus final : public Command
 {
 public:
     using Command::Command;

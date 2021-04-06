@@ -24,7 +24,7 @@ namespace command
 {
 
 // https://docs.mongodb.com/manual/reference/command/getFreeMonitoringStatus/
-class GetFreeMonitoringStatus : public Command
+class GetFreeMonitoringStatus final : public Command
 {
 public:
     using Command::Command;

@@ -34,7 +34,7 @@ namespace command
 // https://docs.mongodb.com/manual/reference/command/convertToCapped/
 
 // https://docs.mongodb.com/manual/reference/command/create/
-class Create : public Command
+class Create final : public Command
 {
 public:
     using Command::Command;
@@ -102,7 +102,7 @@ public:
 // https://docs.mongodb.com/manual/reference/command/currentOp/
 
 // https://docs.mongodb.com/manual/reference/command/drop/
-class Drop : public Command
+class Drop final : public Command
 {
 public:
     using Command::Command;
@@ -166,7 +166,7 @@ public:
 
 
 // https://docs.mongodb.com/manual/reference/command/dropDatabase/
-class DropDatabase : public Command
+class DropDatabase final : public Command
 {
 public:
     using Command::Command;
@@ -246,7 +246,7 @@ public:
 // https://docs.mongodb.com/manual/reference/command/killOp/
 
 // https://docs.mongodb.com/manual/reference/command/listCollections/
-class ListCollections : public Command
+class ListCollections final : public Command
 {
 public:
     using Command::Command;
@@ -363,7 +363,7 @@ private:
 
 
 // https://docs.mongodb.com/manual/reference/command/listDatabases/
-class ListDatabases : public Command
+class ListDatabases final : public Command
 {
 public:
     using Command::Command;
