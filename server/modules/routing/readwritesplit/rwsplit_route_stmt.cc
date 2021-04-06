@@ -178,6 +178,14 @@ bool RWSplitSession::handle_routing_failure(mxs::Buffer&& buffer, route_target_t
     if (should_migrate_trx(next_master))
     {
         ok = start_trx_migration(next_master, buffer.get());
+
+        // If the current master connection is still open, we must close it to prevent the transaction from
+        // being accidentally committed whenever a new transaction is started on it.
+        if (m_current_master && m_current_master->in_use())
+        {
+            m_current_master->close();
+            m_current_master->set_close_reason("Closed due to transaction migration");
+        }
     }
     else if (can_retry_query() || can_continue_trx_replay())
     {
@@ -902,20 +910,34 @@ void RWSplitSession::replace_master(RWBackend* target)
 
 bool RWSplitSession::should_migrate_trx(RWBackend* target)
 {
-    return m_config.transaction_replay
-           &&   // We have a target server and it's not the current master
-           target && target != m_current_master
-           &&   // Transaction replay is not active (replay is only attempted once)
-           !m_is_replay_active
-           &&   // We have an open transaction
-           trx_is_open()
-           &&   // The transaction can be replayed
-           m_can_replay_trx;
+    bool migrate = false;
+
+    if (m_config.transaction_replay
+        && !m_is_replay_active  // Transaction replay is not active
+        && trx_is_open()        // We have an open transaction
+        && m_can_replay_trx)    // The transaction can be replayed
+    {
+        if (target && target != m_current_master)
+        {
+            // We have a target server and it's not the current master
+            migrate = true;
+        }
+        else if (!target && (!m_current_master || !m_current_master->is_master()))
+        {
+            // We don't have a target but our current master is no longer usable
+            migrate = true;
+        }
+    }
+
+    return migrate;
 }
 
 bool RWSplitSession::start_trx_migration(RWBackend* target, GWBUF* querybuf)
 {
-    MXS_INFO("Starting transaction migration to '%s'", target->name());
+    if (target)
+    {
+        MXS_INFO("Starting transaction migration to '%s'", target->name());
+    }
 
     /**
      * Stash the current query so that the transaction replay treats
