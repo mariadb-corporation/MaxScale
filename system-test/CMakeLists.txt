@@ -946,6 +946,9 @@ add_test_executable(mxs3459_binary_ldli.cc mxs3459_binary_ldli replication LABEL
 # MXS-3462: Service to service routing with `cluster` doesn't work
 add_test_executable(mxs3462_sts_update.cc mxs3462_sts_update mxs3462_sts_update LABELS REPL_BACKEND)
 
+# MXS-3472: Transaction replay is not attempted again if session commands fail
+add_test_executable(mxs3472_trx_master_failure.cc mxs3472_trx_master_failure mxs3472_trx_master_failure LABELS REPL_BACKEND readwritesplit)
+
 ############################################
 # END: Normal tests                        #
 ############################################

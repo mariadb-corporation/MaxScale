@@ -884,6 +884,7 @@ bool RWSplitSession::handleError(mxs::ErrorType type, GWBUF* errmsgbuf, mxs::End
         {
             // We were expecting a response but we aren't going to get one
             mxb_assert(m_expected_responses >= 1);
+
             errmsg += " Lost connection to master server while waiting for a result.";
 
             if (m_expected_responses > 1)
@@ -905,7 +906,7 @@ bool RWSplitSession::handleError(mxs::ErrorType type, GWBUF* errmsgbuf, mxs::End
             }
         }
 
-        if (trx_is_open() && !in_optimistic_trx() && m_trx.target() == backend)
+        if (trx_is_open() && !in_optimistic_trx() && (!m_trx.target() || m_trx.target() == backend))
         {
             can_continue = start_trx_replay();
             errmsg += " A transaction is active and cannot be replayed.";
