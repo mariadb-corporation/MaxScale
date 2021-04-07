@@ -135,6 +135,5 @@ int main(int argc, char** argv)
         get_output(test);
     }
 
-    test.repl->fix_replication();
     return test.global_result;
 }

@@ -4,8 +4,6 @@
  * https://jira.mariadb.org/browse/MXS-2631
  */
 
-
-#include <iostream>
 #include <maxtest/testconnections.hh>
 
 int main(int argc, char* argv[])
@@ -19,7 +17,5 @@ int main(int argc, char* argv[])
 
     mysql_close(conn);
     test.stop_timeout();
-    sleep(1);
-    test.repl->fix_replication();
     return test.global_result;
 }

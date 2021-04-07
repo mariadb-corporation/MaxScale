@@ -106,7 +106,5 @@ int main(int argc, char** argv)
 
     test.tprintf("Stopping Kafka container");
     test.maxscales->ssh_output("sudo docker rm -vf kafka");
-    test.repl->fix_replication();
-
     return test.global_result;
 }

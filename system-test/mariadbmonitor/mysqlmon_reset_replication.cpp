@@ -136,10 +136,6 @@ int main(int argc, char** argv)
         expect_server_status(server_names[3], slave);
     }
 
-    if (test.global_result != 0)
-    {
-        test.repl->fix_replication();
-    }
     maxconn = test.maxscales->open_rwsplit_connection(0);
     test.try_query(maxconn, strict_mode, 0);
     test.try_query(maxconn, drop_query);

@@ -44,6 +44,5 @@ int main(int argc, char** argv)
     test.add_result(test.maxscales->get_server_status("server3") != running, "server3 is not only running");
     test.add_result(test.maxscales->get_server_status("server4") != running, "server4 is not only running");
 
-    test.repl->fix_replication();
     return test.global_result;
 }

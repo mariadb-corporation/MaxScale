@@ -58,7 +58,5 @@ int main(int argc, char* argv[])
                     res.c_str(), repl_ids[i].c_str());
     }
 
-    test.repl->fix_replication();
-
     return test.global_result;
 }

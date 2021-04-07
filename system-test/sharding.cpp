@@ -190,7 +190,5 @@ int main(int argc, char* argv[])
     }
 
     test.repl->execute_query_all_nodes("START SLAVE");
-    sleep(2);
-    test.repl->fix_replication();
     return test.global_result;
 }

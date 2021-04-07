@@ -135,7 +135,6 @@ int main(int argc, char* argv[])
     slave("server3");
 
     test.maxscales->stop();
-    test.repl->fix_replication();
 
     return test.global_result;
 }

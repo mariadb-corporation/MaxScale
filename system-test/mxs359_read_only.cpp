@@ -132,7 +132,6 @@ int main(int argc, char** argv)
 
     test.maxscales->connect();
     test.try_query(test.maxscales->conn_rwsplit[0], "DROP TABLE test.t1");
-    test.repl->fix_replication();
     test.maxscales->disconnect();
 
     return test.global_result;

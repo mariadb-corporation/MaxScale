@@ -66,7 +66,5 @@ int main(int argc, char* argv[])
         test.try_query(test.repl->nodes[i], "DROP DATABASE common");
     }
 
-    test.repl->fix_replication();
-
     return test.global_result;
 }
