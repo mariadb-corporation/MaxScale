@@ -479,6 +479,7 @@ bool MariaDBCluster::fix_replication()
         }
     }
 
+    disconnect();
     return rval;
 }
 

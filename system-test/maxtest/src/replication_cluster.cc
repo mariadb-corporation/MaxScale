@@ -113,12 +113,6 @@ bool ReplicationCluster::check_replication()
         logger().log_msgf("Checking Master-Slave cluster.");
     }
 
-    if (connect())
-    {
-        cout << "Failed to connect to all servers" << endl;
-        return false;
-    }
-
     if (!update_status())
     {
         cout << "Failed to update status" << endl;
@@ -172,9 +166,8 @@ bool ReplicationCluster::check_replication()
 
     if (verbose)
     {
-        printf("Replication check for %s gave code %d\n", prefix().c_str(), res);
+        logger().log_msgf("Master-Slave cluster %s.", res ? "replicating" : "not replicating.");
     }
-
     return res;
 }
 
