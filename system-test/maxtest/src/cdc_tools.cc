@@ -1,4 +1,4 @@
-#include <maxtest/maxinfo_func.hh>
+#include <maxtest/cdc_tools.hh>
 
 #include <cstdio>
 #include <cstdlib>

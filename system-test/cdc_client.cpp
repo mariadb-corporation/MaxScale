@@ -18,7 +18,7 @@
 #include <arpa/inet.h>
 #include <sys/epoll.h>
 
-#include <maxtest/maxinfo_func.hh>
+#include <maxtest/cdc_tools.hh>
 #include <maxtest/sql_t1.hh>
 #include <maxtest/testconnections.hh>
 
