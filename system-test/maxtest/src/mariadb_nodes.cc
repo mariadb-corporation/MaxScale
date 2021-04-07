@@ -59,7 +59,7 @@ string extract_version_from_string(const string& version)
 
 MariaDBCluster::MariaDBCluster(mxt::SharedData* shared, const std::string& cnf_server_prefix)
     : Nodes(shared)
-    , m_cnf_server_name(cnf_server_prefix)
+    , m_cnf_server_prefix(cnf_server_prefix)
 {
     m_test_dir = test_dir;
 }
@@ -183,7 +183,7 @@ int MariaDBCluster::read_nodes_info(const mxt::NetworkConfig& nwconfig)
         string node_name = mxb::string_printf("%s_%03d", prefixc, i);
         if (add_node(nwconfig, node_name))
         {
-            string cnf_name = m_cnf_server_name + std::to_string(i + 1);
+            string cnf_name = m_cnf_server_prefix + std::to_string(i + 1);
             auto srv = std::make_unique<mxt::MariaDBServer>(cnf_name, *node(i), *this, i);
             string key_port = node_name + "_port";
             port[i] = readenv_int(key_port.c_str(), 3306);
@@ -813,11 +813,12 @@ std::string MariaDBCluster::cnf_servers()
     bool use_ip6 = using_ipv6();
     for (int i = 0; i < N; i++)
     {
-        string one_server = mxb::string_printf("[%s%i]\n"
+        auto& name = m_backends[i]->cnf_name();
+        string one_server = mxb::string_printf("[%s]\n"
                                                "type=server\n"
                                                "address=%s\n"
                                                "port=%i\n\n",
-                                               m_cnf_server_name.c_str(), i + 1,
+                                               name.c_str(),
                                                use_ip6 ? ip6(i) : ip_private(i),
                                                port[i]);
         rval += one_server;
@@ -827,12 +828,14 @@ std::string MariaDBCluster::cnf_servers()
 
 std::string MariaDBCluster::cnf_servers_line()
 {
-    std::string s = m_cnf_server_name + std::to_string(1);
-    for (int i = 1; i < N; i++)
+    string rval;
+    string sep;
+    for (int i = 0; i < N; i++)
     {
-        s += std::string(",") + m_cnf_server_name + std::to_string(i + 1);
+        rval.append(sep).append(m_backends[i]->cnf_name());
+        sep = ",";
     }
-    return s;
+    return rval;
 }
 
 const char* MariaDBCluster::ip(int i) const
@@ -935,9 +938,9 @@ bool MariaDBCluster::using_ipv6() const
     return m_use_ipv6;
 }
 
-const std::string& MariaDBCluster::cnf_srv_name() const
+const std::string& MariaDBCluster::cnf_server_prefix() const
 {
-    return m_cnf_server_name;
+    return m_cnf_server_prefix;
 }
 
 bool MariaDBCluster::update_status()
@@ -1129,7 +1132,7 @@ std::string MariaDBServer::version_as_string()
     return mxb::string_printf("%i.%i.%i", major, minor, patch);
 }
 
-const string& MariaDBServer::name() const
+const string& MariaDBServer::cnf_name() const
 {
     return m_cnf_name;
 }

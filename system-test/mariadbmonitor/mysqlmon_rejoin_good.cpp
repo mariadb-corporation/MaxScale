@@ -48,15 +48,15 @@ int main(int argc, char** argv)
         string gtid_final_master;
         if (test.ok())
         {
-            test.tprintf("'%s' is new master.", new_master->name().c_str());
+            test.tprintf("'%s' is new master.", new_master->cnf_name().c_str());
             test.tprintf("Sending more inserts.");
             maxconn = test.maxscales->open_rwsplit_connection(0);
             generate_traffic_and_check(test, maxconn, 5);
             mxs.wait_monitor_ticks(1);
             auto status_before_rejoin = mxs.get_servers();
             status_before_rejoin.print();
-            gtid_final_master = status_before_rejoin.get(new_master->name()).gtid;
-            string gtid_old_master_before = status_before_rejoin.get(old_master->name()).gtid;
+            gtid_final_master = status_before_rejoin.get(new_master->cnf_name()).gtid;
+            string gtid_old_master_before = status_before_rejoin.get(old_master->cnf_name()).gtid;
             test.expect(gtid_final_master != gtid_old_master_before, "Old master is still replicating.");
         }
 
@@ -69,7 +69,7 @@ int main(int argc, char** argv)
         {
             auto status_after_rejoin = mxs.get_servers();
             status_after_rejoin.print();
-            string gtid_old_master_after = status_after_rejoin.get(old_master->name()).gtid;
+            string gtid_old_master_after = status_after_rejoin.get(old_master->cnf_name()).gtid;
             test.expect(gtid_final_master == gtid_old_master_after,
                         "Old master did not successfully rejoin the cluster.");
 

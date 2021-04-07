@@ -51,7 +51,7 @@ public:
     std::unique_ptr<mxt::MariaDB> try_open_admin_connection();
     bool                          update_status();
     const Status&                 status() const;
-    const std::string&            name() const;
+    const std::string&            cnf_name() const;
 
     VMNode& vm_node();
 
@@ -409,7 +409,7 @@ public:
 
     bool using_ipv6() const;
 
-    const std::string& cnf_srv_name() const;
+    const std::string& cnf_server_prefix() const;
 
     /**
      * Get cluster type as string. The returned value is given to create_user.sh and should match one
@@ -445,9 +445,10 @@ protected:
 
     mxt::TestLogger& logger();
 
-    std::string m_test_dir;         /**< path to test application */
-    std::string m_cnf_server_name;  /**< Prefix for backend server name ('server', 'gserver') */
-    std::string m_socket_cmd[N_MAX];/**< 'socket=$socket' line */
+    std::string m_test_dir;             /**< path to test application */
+    /**< Prefix for backend server name in MaxScale config. E.g. 'server', 'gserver' */
+    std::string m_cnf_server_prefix;
+    std::string m_socket_cmd[N_MAX];    /**< 'socket=$socket' line */
 
 private:
     bool m_use_ipv6 {false};    /**< Default to ipv6-addresses */
