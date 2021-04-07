@@ -57,11 +57,9 @@ string extract_version_from_string(const string& version)
 }
 }
 
-MariaDBCluster::MariaDBCluster(mxt::SharedData* shared, const std::string& nwconf_prefix,
-                               const std::string& cnf_server_prefix)
+MariaDBCluster::MariaDBCluster(mxt::SharedData* shared, const std::string& cnf_server_prefix)
     : Nodes(shared)
     , m_cnf_server_name(cnf_server_prefix)
-    , m_prefix(nwconf_prefix)
 {
     m_test_dir = test_dir;
 }
@@ -160,7 +158,7 @@ void MariaDBCluster::close_connections()
 
 int MariaDBCluster::read_nodes_info(const mxt::NetworkConfig& nwconfig)
 {
-    auto prefixc = m_prefix.c_str();
+    auto prefixc = nwconf_prefix().c_str();
 
     string key_user = mxb::string_printf("%s_user", prefixc);
     user_name = envvar_get_set(key_user.c_str(), "skysql");
@@ -222,14 +220,14 @@ int MariaDBCluster::read_nodes_info(const mxt::NetworkConfig& nwconfig)
 
 void MariaDBCluster::print_env()
 {
-    auto prefixc = prefix().c_str();
+    auto namec = name().c_str();
     for (int i = 0; i < N; i++)
     {
-        printf("%s node %d \t%s\tPort=%d\n", prefixc, i, ip4(i), port[i]);
-        printf("%s Access user %s\n", prefixc, access_user(i));
+        printf("%s node %d \t%s\tPort=%d\n", namec, i, ip4(i), port[i]);
+        printf("%s Access user %s\n", namec, access_user(i));
     }
-    printf("%s User name %s\n", prefixc, user_name.c_str());
-    printf("%s Password %s\n", prefixc, password.c_str());
+    printf("%s User name %s\n", namec, user_name.c_str());
+    printf("%s Password %s\n", namec, password.c_str());
 }
 
 int MariaDBCluster::stop_node(int node)
@@ -414,37 +412,29 @@ int MariaDBCluster::block_all_nodes()
 }
 
 
-int MariaDBCluster::unblock_all_nodes()
+bool MariaDBCluster::unblock_all_nodes()
 {
-    int rval = 0;
-    std::vector<std::thread> threads;
-
-    for (int i = 0; i < this->N; i++)
-    {
-        threads.emplace_back([&, i]() {
-                                 rval += this->unblock_node(i);
-                             });
-    }
-
-    for (auto& a : threads)
-    {
-        a.join();
-    }
-
-    return rval;
+    auto func = [this](int i) {
+            return unblock_node(i) == 0;
+        };
+    return run_on_every_backend(func);
 }
 
 bool MariaDBCluster::fix_replication()
 {
-    bool rval = true;
+    bool rval = false;
     int attempts = 25;
 
-    if (!check_replication())
+    if (check_replication())
     {
-        cout << prefix() << ": Replication is broken, fixing..." << endl;
-        rval = false;
+        logger().log_msgf("%s is replicating/synced.", name().c_str());
+        rval = true;
+    }
+    else
+    {
+        logger().log_msgf("%s is broken, fixing ...", name().c_str());
 
-        if (unblock_all_nodes() == 0)
+        if (unblock_all_nodes())
         {
             cout << "Prepare nodes" << endl;
             if (prepare_servers())
@@ -470,12 +460,12 @@ bool MariaDBCluster::fix_replication()
             }
             else
             {
-                logger().add_failure("Server preparation failed.");
+                logger().add_failure("Server preparation on %s failed.", name().c_str());
             }
         }
         else
         {
-            cout << "SSH access to nodes doesn't work" << endl;
+            logger().add_failure("Failed to unblock %s.", name().c_str());
         }
     }
 
@@ -875,11 +865,6 @@ const char* MariaDBCluster::access_sudo(int i) const
     return Nodes::access_sudo(i);
 }
 
-const string& MariaDBCluster::prefix() const
-{
-    return m_prefix;
-}
-
 const char* MariaDBCluster::ip4(int i) const
 {
     return Nodes::ip4(i);
@@ -988,7 +973,7 @@ bool MariaDBCluster::check_backend_versions(uint64_t min_vrs)
     }
     else
     {
-        logger().add_failure("Failed to update servers of cluster '%s'.", m_prefix.c_str());
+        logger().add_failure("Failed to update servers of %s.", name().c_str());
     }
     return rval;
 }
@@ -1050,6 +1035,21 @@ MariaDBCluster::ConnArray MariaDBCluster::admin_connect_to_all()
     }
     m_shared.concurrent_run(funcs);
     return rval;
+}
+
+bool MariaDBCluster::run_on_every_backend(const std::function<bool(int)>& func)
+{
+    mxt::BoolFuncArray funcs;
+    funcs.reserve(N);
+
+    for (int i = 0; i < N; i++)
+    {
+        auto wrapper_func = [&func, i]() {
+                return func(i);
+            };
+        funcs.push_back(std::move(wrapper_func));
+    }
+    return m_shared.concurrent_run(funcs);
 }
 
 namespace maxtest

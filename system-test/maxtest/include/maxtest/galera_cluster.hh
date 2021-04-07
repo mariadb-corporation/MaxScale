@@ -18,11 +18,7 @@
 class GaleraCluster : public MariaDBCluster
 {
 public:
-
-    GaleraCluster(mxt::SharedData* shared)
-        : MariaDBCluster(shared, "galera", "gserver")
-    {
-    }
+    GaleraCluster(mxt::SharedData* shared);
 
     const std::string& type_string() const override;
 
@@ -30,4 +26,7 @@ public:
     bool check_replication() override;
 
     std::string get_config_name(int node) override;
+
+    const std::string& nwconf_prefix() const override;
+    const std::string& name() const override;
 };

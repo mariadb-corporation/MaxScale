@@ -19,6 +19,13 @@ using std::string;
 namespace
 {
 const string type_xpand = "xpand";
+const string my_nwconf_prefix = "xpand";
+const string my_name = "Xpand-cluster";
+}
+
+XpandCluster::XpandCluster(mxt::SharedData* shared)
+    : MariaDBCluster(shared, "xpand_server")
+{
 }
 
 bool XpandCluster::prepare_server(int m)
@@ -275,4 +282,14 @@ const std::string& XpandCluster::type_string() const
 std::string XpandCluster::anonymous_users_query() const
 {
     return "SELECT CONCAT('\\'', user, '\\'@\\'', host, '\\'') FROM system.users WHERE user = ''";
+}
+
+const std::string& XpandCluster::nwconf_prefix() const
+{
+    return my_nwconf_prefix;
+}
+
+const std::string& XpandCluster::name() const
+{
+    return my_name;
 }

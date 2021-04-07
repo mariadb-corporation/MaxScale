@@ -77,6 +77,9 @@ public:
     // Replicates from a host and a port instead of a known server
     void replicate_from(int slave, const std::string& host, uint16_t port, const char* type = "current_pos");
 
+    const std::string& nwconf_prefix() const override;
+    const std::string& name() const override;
+
 private:
     bool check_master_node(mxt::MariaDB* conn);
     bool good_slave_thread_status(mxt::MariaDB* conn, int node);

@@ -23,6 +23,13 @@ using std::string;
 namespace
 {
 const string type_galera = "galera";
+const string my_nwconf_prefix = "galera";
+const string my_name = "Galera-cluster";
+}
+
+GaleraCluster::GaleraCluster(mxt::SharedData* shared)
+    : MariaDBCluster(shared, "gserver")
+{
 }
 
 int GaleraCluster::start_replication()
@@ -143,4 +150,14 @@ std::string GaleraCluster::get_config_name(int node)
 const std::string& GaleraCluster::type_string() const
 {
     return type_galera;
+}
+
+const std::string& GaleraCluster::nwconf_prefix() const
+{
+    return my_nwconf_prefix;
+}
+
+const std::string& GaleraCluster::name() const
+{
+    return my_name;
 }

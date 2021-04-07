@@ -100,7 +100,19 @@ public:
     const char* access_homedir(int i = 0) const;
     const char* access_sudo(int i = 0) const;
 
-    const std::string& prefix() const;
+    /**
+     * Return network config prefix of cluster items. Likely 'node', 'galera' or 'xpand'.
+     *
+     * @return Network config prefix
+     */
+    virtual const std::string& nwconf_prefix() const = 0;
+
+    /**
+     * Return readable cluster name. Used in log messages.
+     *
+     * @return Cluster name
+     */
+    virtual const std::string& name() const = 0;
 
     int N {0};
 
@@ -222,10 +234,11 @@ public:
     int block_all_nodes();
 
     /**
-     * @brief Unblock all nodes for this cluster
-     * @return 0 in case of success
+     * Unblock all nodes for this cluster.
+     *
+     * @return True on success
      */
-    int unblock_all_nodes();
+    bool unblock_all_nodes();
 
     /**
      * @brief clean_iptables removes all itables rules connected to MariaDB port to avoid duplicates
@@ -420,11 +433,9 @@ protected:
      * Constructor
      *
      * @param shared Global data
-     * @param nwconf_prefix Node prefix in network config file
      * @param cnf_server_prefix Node prefix in MaxScale config file
      */
-    MariaDBCluster(mxt::SharedData* shared, const std::string& nwconf_prefix,
-                   const std::string& cnf_server_prefix);
+    MariaDBCluster(mxt::SharedData* shared, const std::string& cnf_server_prefix);
 
     /**
      * @returns SELECT that returns anonymous users in such a way that each returned row
@@ -439,12 +450,12 @@ protected:
     std::string m_socket_cmd[N_MAX];/**< 'socket=$socket' line */
 
 private:
-    std::string m_prefix;               /**< Name of backend setup (e.g. 'repl' or 'galera') */
-    bool        m_use_ipv6 {false};     /**< Default to ipv6-addresses */
-    bool        m_blocked[N_MAX] {};    /**< List of blocked nodes */
+    bool m_use_ipv6 {false};    /**< Default to ipv6-addresses */
+    bool m_blocked[N_MAX] {};   /**< List of blocked nodes */
 
     std::vector<std::unique_ptr<mxt::MariaDBServer>> m_backends;
 
     int  read_nodes_info(const mxt::NetworkConfig& nwconfig);
     bool prepare_servers();
+    bool run_on_every_backend(const std::function<bool(int)>& func);
 };

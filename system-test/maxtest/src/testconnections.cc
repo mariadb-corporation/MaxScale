@@ -666,7 +666,7 @@ bool TestConnections::process_template(int m, const string& config_file_path, co
         if (cluster)
         {
             bool using_ip6 = cluster->using_ipv6();
-            auto& prefix = cluster->prefix();
+            auto& prefix = cluster->nwconf_prefix();
 
             for (int i = 0; i < cluster->N; i++)
             {
@@ -1999,7 +1999,7 @@ bool TestConnections::read_cmdline_options(int argc, char* argv[])
 
 bool TestConnections::initialize_nodes()
 {
-    const char errmsg[] = "Failed to initialize node group '%s'.";
+    const char errmsg[] = "Failed to initialize node group %s.";
     bool error = false;
     mxt::BoolFuncArray funcs;
 
@@ -2016,7 +2016,7 @@ bool TestConnections::initialize_nodes()
             else
             {
                 error = true;
-                add_failure(errmsg, new_cluster->prefix().c_str());
+                add_failure(errmsg, new_cluster->name().c_str());
             }
         };
 

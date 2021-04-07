@@ -27,10 +27,7 @@ class XpandCluster : public MariaDBCluster
 {
 public:
 
-    XpandCluster(mxt::SharedData* shared)
-        : MariaDBCluster(shared, "xpand", "xpand_server")
-    {
-    }
+    XpandCluster(mxt::SharedData* shared);
 
     const std::string& type_string() const override;
 
@@ -46,6 +43,9 @@ public:
 
     std::string block_command(int node) const override;
     std::string unblock_command(int node) const override;
+
+    const std::string& nwconf_prefix() const override;
+    const std::string& name() const override;
 
 private:
     std::string anonymous_users_query() const override;
