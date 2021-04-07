@@ -954,6 +954,10 @@ QueryClassifier::RouteInfo QueryClassifier::update_route_info(
     {
         m_route_info.set_load_data_state(QueryClassifier::LOAD_DATA_ACTIVE);
     }
+    else if (m_route_info.load_data_state() == QueryClassifier::LOAD_DATA_END)
+    {
+        m_route_info.set_load_data_state(QueryClassifier::LOAD_DATA_INACTIVE);
+    }
 
     // TODO: It may be sufficient to simply check whether we are in a read-only
     // TODO: transaction.
