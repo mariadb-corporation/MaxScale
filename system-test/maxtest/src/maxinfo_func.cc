@@ -3,7 +3,6 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <iostream>
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <fcntl.h>
@@ -11,13 +10,28 @@
 #include <sys/socket.h>
 #include <jansson.h>
 #include <openssl/sha.h>
-#include <maxtest/testconnections.hh>
 
-using namespace std;
+namespace
+{
+char hexconvtab[] = "0123456789abcdef";
 
-#define PORT      8080
-#define USERAGENT "HTMLGET 1.1"
+char* bin2hex(const unsigned char* old, size_t oldlen)
+{
+    char* result = (char*) malloc(oldlen * 2 + 1);
+    size_t i, j;
 
+    for (i = j = 0; i < oldlen; i++)
+    {
+        result[j++] = hexconvtab[old[i] >> 4];
+        result[j++] = hexconvtab[old[i] & 15];
+    }
+    result[j] = '\0';
+    return result;
+}
+}
+
+namespace maxtest
+{
 int create_tcp_socket()
 {
     int sock;
@@ -66,6 +80,7 @@ char* read_sc(int sock)
     }
     return result;
 }
+
 int send_so(int sock, char* data)
 {
     int tmpres;
@@ -82,33 +97,15 @@ int send_so(int sock, char* data)
     return 0;
 }
 
-static char* bin2hex(const unsigned char* old, const size_t oldlen)
-{
-    char* result = (char*) malloc(oldlen * 2 + 1);
-    size_t i, j;
-
-    for (i = j = 0; i < oldlen; i++)
-    {
-        result[j++] = hexconvtab[old[i] >> 4];
-        result[j++] = hexconvtab[old[i] & 15];
-    }
-    result[j] = '\0';
-    return result;
-}
-
 char* cdc_auth_srt(char* user, char* password)
 {
-    unsigned char sha1pass[20];
-    char* str;
-    str = (char*) malloc(42 + strlen(user) * 2 + 1);
-
-    unsigned char* password_u;
-    unsigned char* user_u;
-    password_u = (unsigned char*) malloc(strlen(password));
-    user_u = (unsigned char*) malloc(strlen(user));
+    auto* str = (char*)malloc(42 + strlen(user) * 2 + 1);
+    auto* password_u = (unsigned char*)malloc(strlen(password));
+    auto* user_u = (unsigned char*)malloc(strlen(user));
     memcpy((void*)password_u, (void*)password, strlen(password));
     memcpy((void*)user_u, (void*)user, strlen(user));
 
+    unsigned char sha1pass[20];
     SHA1(password_u, strlen(password), sha1pass);
 
     // char * sha1pass_hex = (char *) "454ac34c2999aacfebc6bf5fe9fa1db9b596f625";
@@ -149,7 +146,7 @@ int setnonblocking(int sock)
 }
 
 
-int get_x_fl_from_json(char* line, long long int* x1, long long int* fl)
+int get_x_fl_from_json(const char* line, long long int* x1, long long int* fl)
 {
     json_t* root;
     json_error_t error;
@@ -189,4 +186,5 @@ int get_x_fl_from_json(char* line, long long int* x1, long long int* fl)
     json_decref(fl_json);
     json_decref(root);
     return 0;
+}
 }
