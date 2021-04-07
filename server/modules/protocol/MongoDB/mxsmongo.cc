@@ -459,6 +459,8 @@ vector<string> mxsmongo::projection_to_extractions(const bsoncxx::document::view
 namespace
 {
 
+using namespace mxsmongo;
+
 string get_condition(const bsoncxx::document::view& doc);
 
 // https://docs.mongodb.com/manual/reference/operator/query/and/#op._S_and
@@ -803,6 +805,49 @@ string element_to_null(const bsoncxx::document::element& element)
     }
 }
 
+string elemMatch_to_condition(const string& field, const bsoncxx::document::element& element)
+{
+    string condition;
+
+    if (element.type() != bsoncxx::type::k_document)
+    {
+        throw SoftError("$elemMatch needs an Object", error::BAD_VALUE);
+    }
+
+    bsoncxx::document::view doc = element.get_document();
+
+    if (doc.empty())
+    {
+        condition = "true";
+    }
+    else
+    {
+        auto elemMatch = *doc.begin();
+        auto key = elemMatch.key();
+        string value;
+
+        if (key.compare("$eq") == 0)
+        {
+            value = "1";
+        }
+        else if (key.compare("$ne") == 0)
+        {
+            value = "0";
+        }
+        else
+        {
+            throw SoftError("$elemMatch supports only operators $eq and $ne (MaxScale)",
+                            error::BAD_VALUE);
+        }
+
+        condition = "(JSON_CONTAINS(doc, "
+            + element_to_value(elemMatch) + ", '$." + field + "') = " + value
+            + ")";
+    }
+
+    return condition;
+}
+
 const unordered_map<string, ElementValueInfo> converters =
 {
     { "$eq",     { "=",      &element_to_value } },
@@ -816,12 +861,18 @@ const unordered_map<string, ElementValueInfo> converters =
     { "$exists", { "IS",     &element_to_null } }
 };
 
-string get_comparison_op_and_value(const bsoncxx::document::view& doc)
+string get_comparison_condition(const string& field, const bsoncxx::document::view& doc)
 {
     string rv;
 
     for (auto it = doc.begin(); it != doc.end(); ++it)
     {
+        if (!rv.empty())
+        {
+            MXS_WARNING("Comparison object '%s' has more fields than one, only "
+                        "the last one will be applied.", bsoncxx::to_json(doc).c_str());
+        }
+
         const auto& element = *it;
         const auto op = static_cast<string>(element.key());
 
@@ -829,13 +880,12 @@ string get_comparison_op_and_value(const bsoncxx::document::view& doc)
 
         if (jt != converters.end())
         {
-            if (!rv.empty())
-            {
-                MXS_WARNING("Comparison object '%s' has more fields than one, only "
-                            "the last one will be applied.", bsoncxx::to_json(doc).c_str());
-            }
-
-            rv = " " + jt->second.op + " " + jt->second.converter(element);
+            rv = "( JSON_EXTRACT(doc, '$." + field + "') "
+                + jt->second.op + " " + jt->second.converter(element) + ")";
+        }
+        else if (op == "$elemMatch")
+        {
+            rv = elemMatch_to_condition(field, element);
         }
         else
         {
@@ -858,12 +908,7 @@ string get_comparison_condition(const bsoncxx::document::element& element)
 
     if (type == bsoncxx::type::k_document)
     {
-        string op_and_value = get_comparison_op_and_value(element.get_document());
-
-        if (!op_and_value.empty())
-        {
-            condition = "( JSON_EXTRACT(doc, '$." + field + "')" + op_and_value + ")";
-        }
+        condition = get_comparison_condition(field, element.get_document());
     }
     else
     {
