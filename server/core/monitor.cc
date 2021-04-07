@@ -1868,13 +1868,10 @@ void MonitorWorker::flush_server_status()
     bool status_changed = false;
     for (MonitorServer* pMs : servers())
     {
-        if (!pMs->server->is_in_maint())
+        if (pMs->pending_status != pMs->server->status())
         {
-            if (pMs->pending_status != pMs->server->status())
-            {
-                status_changed = true;
-                pMs->server->assign_status(pMs->pending_status);
-            }
+            status_changed = true;
+            pMs->server->assign_status(pMs->pending_status);
         }
     }
 
@@ -1913,54 +1910,51 @@ void MonitorWorkerSimple::tick()
 
     for (MonitorServer* pMs : servers())
     {
-        if (!pMs->server->is_in_maint())
+        pMs->mon_prev_status = pMs->server->status();
+        pMs->pending_status = pMs->server->status();
+
+        ConnectResult rval = pMs->ping_or_connect();
+
+        if (connection_is_ok(rval))
         {
-            pMs->mon_prev_status = pMs->server->status();
-            pMs->pending_status = pMs->server->status();
+            pMs->maybe_fetch_server_variables();
+            pMs->clear_pending_status(SERVER_AUTH_ERROR);
+            pMs->set_pending_status(SERVER_RUNNING);
 
-            ConnectResult rval = pMs->ping_or_connect();
-
-            if (connection_is_ok(rval))
+            if (should_update_disk_space && pMs->can_update_disk_space_status())
             {
-                pMs->maybe_fetch_server_variables();
-                pMs->clear_pending_status(SERVER_AUTH_ERROR);
-                pMs->set_pending_status(SERVER_RUNNING);
-
-                if (should_update_disk_space && pMs->can_update_disk_space_status())
-                {
-                    pMs->update_disk_space_status();
-                }
-
-                update_server_status(pMs);
-            }
-            else
-            {
-                /**
-                 * TODO: Move the bits that do not represent a state out of
-                 * the server state bits. This would allow clearing the state by
-                 * zeroing it out.
-                 */
-                pMs->clear_pending_status(MonitorServer::SERVER_DOWN_CLEAR_BITS);
-
-                if (rval == ConnectResult::ACCESS_DENIED)
-                {
-                    pMs->set_pending_status(SERVER_AUTH_ERROR);
-                }
-
-                if (pMs->status_changed() && pMs->should_print_fail_status())
-                {
-                    pMs->log_connect_error(rval);
-                }
+                pMs->update_disk_space_status();
             }
 
-            if (pMs->server->is_down())
+            update_server_status(pMs);
+        }
+        else
+        {
+            /**
+             * TODO: Move the bits that do not represent a state out of
+             * the server state bits. This would allow clearing the state by
+             * zeroing it out.
+             */
+            pMs->clear_pending_status(MonitorServer::SERVER_DOWN_CLEAR_BITS);
+
+            if (rval == ConnectResult::ACCESS_DENIED)
             {
-                pMs->mon_err_count += 1;
+                pMs->set_pending_status(SERVER_AUTH_ERROR);
             }
-            else
+
+            if (pMs->status_changed() && pMs->should_print_fail_status())
             {
-                pMs->mon_err_count = 0;
+                pMs->log_connect_error(rval);
             }
+        }
+
+        if (pMs->server->is_down())
+        {
+            pMs->mon_err_count += 1;
+        }
+        else
+        {
+            pMs->mon_err_count = 0;
         }
     }
 

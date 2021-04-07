@@ -48,15 +48,15 @@ public:
 
     ~GaleraMonitor();
     static GaleraMonitor* create(const std::string& name, const std::string& module);
-    json_t*               diagnostics() const;
+    json_t*               diagnostics() const override;
     json_t*               diagnostics(mxs::MonitorServer* server) const override;
 
 protected:
-    bool configure(const mxs::ConfigParameters* param);
-    bool has_sufficient_permissions();
-    void update_server_status(mxs::MonitorServer* monitored_server);
-    void pre_tick();
-    void post_tick();
+    bool configure(const mxs::ConfigParameters* param) override;
+    bool has_sufficient_permissions() override;
+    void update_server_status(mxs::MonitorServer* monitored_server) override;
+    void pre_tick() override;
+    void post_tick() override;
 
 private:
     int  m_disableMasterFailback;       /**< Monitor flag for Galera Cluster Master failback */
@@ -78,9 +78,6 @@ private:
 
     GaleraMonitor(const std::string& name, const std::string& module);
 
-    bool detect_cluster_size(const int n_nodes,
-                             const char* candidate_uuid,
-                             const int candidate_size);
     mxs::MonitorServer* get_candidate_master();
     void                set_galera_cluster();
     void                update_sst_donor_nodes(int is_cluster);

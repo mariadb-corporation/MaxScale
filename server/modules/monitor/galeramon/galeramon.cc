@@ -41,7 +41,6 @@ using maxscale::MonitorServer;
 static bool warn_erange_on_local_index = true;
 
 static MonitorServer* set_cluster_master(MonitorServer*, MonitorServer*, int);
-static void           disableMasterFailback(void*, int);
 static int            compare_node_index(const void*, const void*);
 static int            compare_node_priority(const void*, const void*);
 static bool           using_xtrabackup(MonitorServer* database, const char* server_string);
