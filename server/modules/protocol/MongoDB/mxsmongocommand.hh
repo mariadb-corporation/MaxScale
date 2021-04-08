@@ -200,4 +200,22 @@ private:
     mutable std::string m_unquoted_table;
 };
 
+/**
+ * @class ImmediateCommand
+ *
+ * A command that generates the response immediately, without any backend activity.
+ */
+class ImmediateCommand : public Command
+{
+public:
+    using Command::Command;
+
+    GWBUF* execute() override final;
+
+    void diagnose(DocumentBuilder& doc) const;
+
+protected:
+    virtual void generate(DocumentBuilder& doc) const = 0;
+};
+
 }

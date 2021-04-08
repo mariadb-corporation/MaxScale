@@ -28,16 +28,14 @@ namespace command
 // https://docs.mongodb.com/manual/reference/command/commitTransaction/
 
 // https://docs.mongodb.com/manual/reference/command/endSessions/
-class EndSessions final : public Command
+class EndSessions final : public ImmediateCommand
 {
 public:
-    using Command::Command;
+    using ImmediateCommand::ImmediateCommand;
 
-    GWBUF* execute() override
+    void generate(DocumentBuilder& doc) const override
     {
-        DocumentBuilder doc;
-
-        return create_response(doc.extract());
+        doc.append(kvp("ok", 1));
     }
 };
 

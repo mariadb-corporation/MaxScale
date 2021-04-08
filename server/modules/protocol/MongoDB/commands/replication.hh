@@ -26,15 +26,13 @@ namespace command
 // https://docs.mongodb.com/manual/reference/command/applyOps/
 
 // https://docs.mongodb.com/manual/reference/command/isMaster/
-class IsMaster final : public Command
+class IsMaster final : public ImmediateCommand
 {
 public:
-    using Command::Command;
+    using ImmediateCommand::ImmediateCommand;
 
-    GWBUF* execute() override
+    void generate(DocumentBuilder& doc) const override
     {
-        DocumentBuilder doc;
-
         doc.append(kvp("isMaster", true));
         doc.append(kvp("topologyVersion", topology_version()));
         doc.append(kvp("maxBsonObjectSize", mongo::MAX_BSON_OBJECT_SIZE));
@@ -47,8 +45,6 @@ public:
         doc.append(kvp("maxWireVersion", MAX_WIRE_VERSION));
         doc.append(kvp("readOnly", false));
         doc.append(kvp("ok", 1));
-
-        return create_response(doc.extract());
     }
 };
 
@@ -60,16 +56,15 @@ public:
 // https://docs.mongodb.com/manual/reference/command/replSetGetConfig/
 
 // https://docs.mongodb.com/manual/reference/command/replSetGetStatus/
-class ReplSetGetStatus final : public Command
+class ReplSetGetStatus final : public ImmediateCommand
 {
 public:
-    using Command::Command;
+    using ImmediateCommand::ImmediateCommand;
 
-    GWBUF* execute() override
+    void generate(DocumentBuilder& doc) const override
     {
         SoftError error("not running with --replSet", error::NO_REPLICATION_ENABLED);
-
-        return error.create_response(*this);
+        error.create_response(*this, doc);
     }
 };
 

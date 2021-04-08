@@ -182,11 +182,8 @@ command | document | A command as provided to `db.runCommand(...)`.
 The command returns a document that contains diagnostics of the command
 provided as argument. For example:
 ```
-{
-  "ok": 1,
-  "kind": "immediate",
-  "response": { ... }
-}
+> db.runCommand({mxsDiagnose: {ping:1}});
+{ "kind" : "immediate", "response" : { "ok" : 1 }, "ok" : 1 }
 
 {
   "ok": 1,

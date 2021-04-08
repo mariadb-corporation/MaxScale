@@ -24,19 +24,15 @@ namespace command
 {
 
 // https://docs.mongodb.com/manual/reference/command/getFreeMonitoringStatus/
-class GetFreeMonitoringStatus final : public Command
+class GetFreeMonitoringStatus final : public ImmediateCommand
 {
 public:
-    using Command::Command;
+    using ImmediateCommand::ImmediateCommand;
 
-    GWBUF* execute() override
+    void generate(DocumentBuilder& doc) const
     {
-        DocumentBuilder doc;
-
         doc.append(kvp("state", "undecided"));
         doc.append(kvp("ok", 1));
-
-        return create_response(doc.extract());
     }
 };
 

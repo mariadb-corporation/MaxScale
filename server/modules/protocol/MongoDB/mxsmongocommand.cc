@@ -706,5 +706,21 @@ string Command::create_entry(const string& extraction, const std::string& value)
     return entry;
 }
 
+GWBUF* ImmediateCommand::execute()
+{
+    DocumentBuilder doc;
+    generate(doc);
+    return create_response(doc.extract());
 }
 
+void ImmediateCommand::diagnose(DocumentBuilder& doc) const
+{
+    doc.append(kvp("kind", "immediate"));
+
+    DocumentBuilder response;
+    generate(response);
+
+    doc.append(kvp("response", response.extract()));
+}
+
+}

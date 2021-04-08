@@ -28,15 +28,13 @@ namespace command
 // https://docs.mongodb.com/manual/reference/command/availableQueryOptions/
 
 // https://docs.mongodb.com/manual/reference/command/buildInfo/
-class BuildInfo final : public Command
+class BuildInfo final : public ImmediateCommand
 {
 public:
-    using Command::Command;
+    using ImmediateCommand::ImmediateCommand;
 
-    GWBUF* execute() override
+    void generate(DocumentBuilder& doc) const override
     {
-        DocumentBuilder doc;
-
         ArrayBuilder versionArray;
         versionArray.append(MONGO_VERSION_MAJOR);
         versionArray.append(MONGO_VERSION_MINOR);
@@ -68,8 +66,6 @@ public:
         doc.append(kvp("ok", 1));
 
         doc.append(kvp("maxscale", MAXSCALE_VERSION));
-
-        return create_response(doc.extract());
     }
 };
 
@@ -97,15 +93,13 @@ public:
 // https://docs.mongodb.com/manual/reference/command/features/
 
 // https://docs.mongodb.com/manual/reference/command/getCmdLineOpts/
-class GetCmdLineOpts final : public Command
+class GetCmdLineOpts final : public ImmediateCommand
 {
 public:
-    using Command::Command;
+    using ImmediateCommand::ImmediateCommand;
 
-    GWBUF* execute() override
+    void generate(DocumentBuilder& doc) const override
     {
-        DocumentBuilder doc;
-
         auto& config = mxs::Config::get();
 
         ArrayBuilder argv;
@@ -119,22 +113,18 @@ public:
         doc.append(kvp("argv", argv.extract()));
         doc.append(kvp("parsed", parsed.extract()));
         doc.append(kvp("ok", 1));
-
-        return create_response(doc.extract());
     }
 };
 
 
 // https://docs.mongodb.com/manual/reference/command/getLog/
-class GetLog final : public Command
+class GetLog final : public ImmediateCommand
 {
 public:
-    using Command::Command;
+    using ImmediateCommand::ImmediateCommand;
 
-    GWBUF* execute() override
+    void generate(DocumentBuilder& doc) const override
     {
-        DocumentBuilder doc;
-
         auto value = value_as<string>();
 
         if (value == "*")
@@ -162,8 +152,6 @@ public:
             doc.append(kvp("ok", 0));
             doc.append(kvp("errmsg", value));
         }
-
-        return create_response(doc.extract());
     }
 };
 
@@ -179,18 +167,14 @@ public:
 // https://docs.mongodb.com/manual/reference/command/netstat/
 
 // https://docs.mongodb.com/manual/reference/command/ping/
-class Ping final : public Command
+class Ping final : public ImmediateCommand
 {
 public:
-    using Command::Command;
+    using ImmediateCommand::ImmediateCommand;
 
-    GWBUF* execute() override
+    void generate(DocumentBuilder& doc) const override
     {
-        DocumentBuilder doc;
-
         doc.append(kvp("ok", 1));
-
-        return create_response(doc.extract());
     }
 };
 
@@ -205,15 +189,13 @@ public:
 // https://docs.mongodb.com/manual/reference/command/validate/
 
 // https://docs.mongodb.com/manual/reference/command/whatsmyuri/
-class WhatsMyUri final : public Command
+class WhatsMyUri final : public ImmediateCommand
 {
 public:
-    using Command::Command;
+    using ImmediateCommand::ImmediateCommand;
 
-    GWBUF* execute() override
+    void generate(DocumentBuilder& doc) const override
     {
-        DocumentBuilder doc;
-
         ClientDCB* pDcb = m_database.context().client_connection().dcb();
 
         stringstream you;
@@ -221,8 +203,6 @@ public:
 
         doc.append(kvp("you", you.str()));
         doc.append(kvp("ok", 1));
-
-        return create_response(doc.extract());
     }
 };
 
