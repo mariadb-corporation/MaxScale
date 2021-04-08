@@ -351,7 +351,7 @@ module.exports = function () {
       if (err.response) {
         var extra = "";
         if (err.response.data) {
-          extra = JSON.stringify(err.response.data, null, 4);
+          extra = os.EOL + JSON.stringify(err.response.data, null, 4);
         }
 
         var host = err.config.url.replace(resource, "").replace("/v1/", "");
@@ -367,7 +367,8 @@ module.exports = function () {
             err.config.method.toUpperCase() +
             " " +
             resource +
-            "`"
+            "`" +
+            extra
         );
       } else if (err.code == "ECONNREFUSED") {
         return error("Could not connect to MaxScale");
