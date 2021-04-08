@@ -180,15 +180,10 @@ public:
      */
     virtual int start_replication() = 0;
 
-    // Create the default users used by all tests
-    void create_users(int node);
-
     /**
-     * Create the default users used by all tests on all nodes.
-     *
-     * @return 0 in case of success.
+     * Create the default users used by all tests
      */
-    int create_users();
+    void create_users(int node);
 
     /**
      * Blocks `src` from communicating with `dest`
@@ -201,18 +196,20 @@ public:
     void unblock_node_from_node(int src, int dest);
 
     /**
-     * @brif BlockNode setup firewall on a backend node to block MariaDB port
+     * Setup firewall on a backend node to block MariaDB port.
+     *
      * @param node Index of node to block
-     * @return 0 in case of success
+     * @return True on success
      */
-    int block_node(int node);
+    bool block_node(int node);
 
     /**
-     * @brief UnblockNode setup firewall on a backend node to unblock MariaDB port
+     * Setup firewall on a backend node to allow MariaDB port.
+     *
      * @param node Index of node to unblock
-     * @return 0 in case of success
+     * @return True on success
      */
-    int unblock_node(int node);
+    bool unblock_node(int node);
 
 
     /**
@@ -269,12 +266,14 @@ public:
     bool prepare_cluster_for_test();
 
     /**
-     * @brief Flush hosts, adjust settings, remove anonymous users, etc.
-     * @param conn Valid handle to some node.
-     * @return True in case of success, false otherwise.
+     * Flush hosts, adjust settings, remove anonymous users, etc.
+     *
+     * @param i Node to prepare
+     * @return True on success
      */
-    bool prepare_for_test(MYSQL* conn);
-    bool prepare_for_test();
+    bool prepare_for_test(int i);
+
+    bool prepare_servers_for_test();
 
     /**
      * @brief Execute query on all nodes
@@ -450,7 +449,7 @@ private:
     std::vector<std::unique_ptr<mxt::MariaDBServer>> m_backends;
 
     int  read_nodes_info(const mxt::NetworkConfig& nwconfig);
-    bool prepare_servers();
+    bool reset_and_prepare_servers();
     bool run_on_every_backend(const std::function<bool(int)>& func);
 
     /**

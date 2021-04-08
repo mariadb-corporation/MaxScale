@@ -296,22 +296,6 @@ void MariaDBCluster::create_users(int node)
                type_string().c_str());
 }
 
-int MariaDBCluster::create_users()
-{
-    for (int i = 0; i < N; i++)
-    {
-        if (start_node(i, (char*) ""))
-        {
-            printf("Start of node %d failed\n", i);
-            return 1;
-        }
-
-        create_users(i);
-    }
-
-    return 0;
-}
-
 int MariaDBCluster::clean_iptables(int node)
 {
     return ssh_node_f(node,
@@ -368,54 +352,36 @@ std::string MariaDBCluster::unblock_command(int node) const
     return command;
 }
 
-int MariaDBCluster::block_node(int node)
+bool MariaDBCluster::block_node(int node)
 {
     std::string command = block_command(node);
-
-    int local_result = 0;
-    local_result += ssh_node_f(node, true, "%s", command.c_str());
-
+    int res = ssh_node_f(node, true, "%s", command.c_str());
     m_blocked[node] = true;
-    return local_result;
+    return res == 0;
 }
 
-int MariaDBCluster::unblock_node(int node)
+bool MariaDBCluster::unblock_node(int node)
 {
-    std::string command = unblock_command(node);
-
-    int local_result = 0;
-    local_result += clean_iptables(node);
-    local_result += ssh_node_f(node, true, "%s", command.c_str());
-
+    string command = unblock_command(node);
+    int res = clean_iptables(node);
+    res += ssh_node_f(node, true, "%s", command.c_str());
     m_blocked[node] = false;
-    return local_result;
+    return res == 0;
 }
 
 int MariaDBCluster::block_all_nodes()
 {
-    int rval = 0;
-    std::vector<std::thread> threads;
-
-    for (int i = 0; i < this->N; i++)
-    {
-        threads.emplace_back([&, i]() {
-                                 rval += this->block_node(i);
-                             });
-    }
-
-    for (auto& a : threads)
-    {
-        a.join();
-    }
-
-    return rval;
+    auto func = [this](int i) {
+            return block_node(i);
+        };
+    return run_on_every_backend(func);
 }
 
 
 bool MariaDBCluster::unblock_all_nodes()
 {
     auto func = [this](int i) {
-            return unblock_node(i) == 0;
+            return unblock_node(i);
         };
     return run_on_every_backend(func);
 }
@@ -423,39 +389,51 @@ bool MariaDBCluster::unblock_all_nodes()
 bool MariaDBCluster::fix_replication()
 {
     bool rval = false;
-    int attempts = 25;
+    auto namec = name().c_str();
+    auto& log = logger();
 
     if (check_replication())
     {
-        logger().log_msgf("%s is replicating/synced.", name().c_str());
+        log.log_msgf("%s is replicating/synced.", namec);
         rval = true;
     }
     else
     {
-        logger().log_msgf("%s is broken, fixing ...", name().c_str());
+        log.log_msgf("%s is broken, fixing ...", namec);
 
         if (unblock_all_nodes())
         {
-            cout << "Prepare nodes" << endl;
-            if (prepare_servers())
+            log.log_msgf("Firewalls on %s open.", namec);
+            if (reset_and_prepare_servers())
             {
-                cout << "Starting replication" << endl;
+                log.log_msgf("%s prepared. Starting replication.", namec);
                 start_replication();
 
-                while (!check_replication() && (attempts > 0))
+                int attempts = 0;
+                bool cluster_ok = false;
+
+                while (!cluster_ok && attempts < 10)
                 {
-                    cout << "Replication is still broken, waiting" << endl;
-                    sleep(10);
-                    attempts--;
+                    if (attempts > 0)
+                    {
+                        log.log_msgf("Iteration %i, %s is still broken, waiting.", attempts, namec);
+                        sleep(10);
+                    }
+                    if (check_replication())
+                    {
+                        cluster_ok = true;
+                    }
+                    attempts++;
                 }
-                if (check_replication())
+
+                if (cluster_ok)
                 {
-                    cout << "Replication is fixed" << endl;
-                    rval = prepare_for_test();
+                    log.log_msgf("%s is replicating/synced.", namec);
+                    rval = prepare_servers_for_test();
                 }
                 else
                 {
-                    cout << "FATAL ERROR: Replication is still broken" << endl;
+                    log.add_failure("%s is still broken.", namec);
                 }
             }
             else
@@ -526,92 +504,42 @@ std::string MariaDBCluster::anonymous_users_query() const
     return "SELECT CONCAT('\\'', user, '\\'@\\'', host, '\\'') FROM mysql.user WHERE user = ''";
 }
 
-bool MariaDBCluster::prepare_for_test(MYSQL* conn)
+bool MariaDBCluster::prepare_for_test(int i)
 {
-    int local_result = 0;
-
-    if (mysql_query(conn, "FLUSH HOSTS"))
+    bool rval = false;
+    auto& srv = m_backends[i];
+    auto conn = srv->try_open_admin_connection();
+    if (conn->is_open())
     {
-        local_result++;
-    }
-
-    if (mysql_query(conn, "SET GLOBAL max_connections=10000"))
-    {
-        local_result++;
-    }
-
-    if (mysql_query(conn, "SET GLOBAL max_connect_errors=10000000"))
-    {
-        local_result++;
-    }
-
-    if (mysql_query(conn, anonymous_users_query().c_str()) == 0)
-    {
-        MYSQL_RES* res = mysql_store_result(conn);
-
-        if (res)
+        if (conn->cmd("FLUSH HOSTS;") && conn->cmd("SET GLOBAL max_connections=10000"))
         {
-            std::vector<std::string> users;
-            MYSQL_ROW row;
-
-            while ((row = mysql_fetch_row(res)))
+            conn->try_cmd("SET GLOBAL max_connect_errors=10000000");    // fails on Xpand
+            auto res = conn->query(anonymous_users_query());
+            if (res)
             {
-                users.push_back(row[0]);
-            }
-
-            mysql_free_result(res);
-
-            if (users.size() > 0)
-            {
-                printf("Detected anonymous users, dropping them.\n");
-
-                for (auto& s : users)
+                rval = true;
+                if (res->get_row_count() > 0)
                 {
-                    std::string query = "DROP USER ";
-                    query += s;
-                    printf("%s\n", query.c_str());
-                    mysql_query(conn, query.c_str());
+                    logger().log_msgf("Detected anonymous users on %s, dropping them.", name().c_str());
+                    while (res->next_row())
+                    {
+                        string user = res->get_string(0);
+                        string query = mxb::string_printf("DROP USER %s;", user.c_str());
+                        conn->try_cmd(query);
+                    }
                 }
             }
         }
     }
-    else
-    {
-        printf("Failed to query for anonymous users: %s\n", mysql_error(conn));
-        local_result++;
-    }
-
-    return local_result == 0;
+    return rval;
 }
 
-bool MariaDBCluster::prepare_for_test()
+bool MariaDBCluster::prepare_servers_for_test()
 {
-    if (this->nodes[0] == NULL && (this->connect() != 0))
-    {
-        return false;
-    }
-
-    bool all_ok = true;
-    std::vector<std::future<bool>> futures;
-
-    for (int i = 0; i < N; i++)
-    {
-        bool (MariaDBCluster::* function)(MYSQL*) = &MariaDBCluster::prepare_for_test;
-        std::packaged_task<bool(MariaDBCluster*, MYSQL*)> task(function);
-        futures.push_back(task.get_future());
-        std::thread(std::move(task), this, nodes[i]).detach();
-    }
-
-    for (auto& f : futures)
-    {
-        f.wait();
-        if (!f.get())
-        {
-            all_ok = false;
-        }
-    }
-
-    return all_ok;
+    auto func = [this](int i) {
+            return prepare_for_test(i);
+        };
+    return run_on_every_backend(func);
 }
 
 int MariaDBCluster::execute_query_all_nodes(const char* sql)
@@ -777,17 +705,12 @@ bool MariaDBCluster::prepare_server(int i)
     return rval;
 }
 
-bool MariaDBCluster::prepare_servers()
+bool MariaDBCluster::reset_and_prepare_servers()
 {
-    mxt::BoolFuncArray threads;
-    for (int i = 0; i < N; i++)
-    {
-        auto func = [this, i]() {
-                return prepare_server(i);
-            };
-        threads.push_back(move(func));
-    }
-    return m_shared.concurrent_run(threads);
+    auto func = [this](int i) {
+            return prepare_server(i);
+        };
+    return run_on_every_backend(func);
 }
 
 void MariaDBCluster::limit_nodes(int new_N)
@@ -1009,7 +932,7 @@ bool MariaDBCluster::prepare_cluster_for_test()
     if (Nodes::init_ssh_masters())
     {
         truncate_mariadb_logs();
-        prepare_for_test();
+        prepare_servers_for_test();
         close_active_connections();
         rval = true;
     }
