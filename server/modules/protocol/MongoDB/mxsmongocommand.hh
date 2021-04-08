@@ -86,11 +86,6 @@ public:
 
     GWBUF* create_empty_response() const;
 
-    GWBUF* create_hard_error(const std::string& message, int mongo_code) const;
-    GWBUF* create_soft_error(const std::string& message, int mongo_code) const;
-    GWBUF* create_mariadb_error(const std::string& message, int mongo_code,
-                                const std::string& mariadb_message, int mariadb_code) const;
-
     GWBUF* create_response(const bsoncxx::document::value& doc) const;
 
     static void check_write_batch_size(int size);

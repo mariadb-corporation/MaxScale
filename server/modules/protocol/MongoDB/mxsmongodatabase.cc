@@ -79,7 +79,7 @@ GWBUF* mxsmongo::Database::translate(GWBUF& mariadb_response)
     catch (const std::exception& x)
     {
         MXS_ERROR("std exception occurred when parsing MongoDB command: %s", x.what());
-        pResponse = m_sCommand->create_hard_error(x.what(), mxsmongo::error::COMMAND_FAILED);
+        pResponse = HardError(x.what(), mxsmongo::error::COMMAND_FAILED).create_response(*m_sCommand);
     }
 
     if (state == Command::READY)
@@ -109,13 +109,13 @@ GWBUF* mxsmongo::Database::execute(std::unique_ptr<Command> sCommand)
     catch (const bsoncxx::exception& x)
     {
         MXS_ERROR("bsoncxx exeception occurred when parsing MongoDB command: %s", x.what());
-        pResponse = sCommand->create_hard_error(x.what(), mxsmongo::error::FAILED_TO_PARSE);
+        pResponse = HardError(x.what(), mxsmongo::error::FAILED_TO_PARSE).create_response(*sCommand);
     }
     catch (const std::exception& x)
     {
         MXS_ERROR("std exception occurred when parsing MongoDB command: %s", x.what());
 
-        pResponse = sCommand->create_hard_error(x.what(), mxsmongo::error::FAILED_TO_PARSE);
+        pResponse = HardError(x.what(), mxsmongo::error::FAILED_TO_PARSE).create_response(*sCommand);
     }
 
     if (!pResponse)

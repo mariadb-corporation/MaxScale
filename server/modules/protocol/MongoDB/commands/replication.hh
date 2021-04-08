@@ -67,7 +67,9 @@ public:
 
     GWBUF* execute() override
     {
-        return create_soft_error("not running with --replSet", error::NO_REPLICATION_ENABLED);
+        SoftError error("not running with --replSet", error::NO_REPLICATION_ENABLED);
+
+        return error.create_response(*this);
     }
 };
 

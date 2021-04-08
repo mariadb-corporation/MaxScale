@@ -245,7 +245,7 @@ public:
                     ss << "Table " << table_name() << " does not exist, and 'auto_create_tables' "
                        << "is false.";
 
-                    pResponse = create_hard_error(ss.str(), error::COMMAND_FAILED);
+                    pResponse = HardError(ss.str(), error::COMMAND_FAILED).create_response(*this);
                     state = READY;
                 }
             }
@@ -278,7 +278,7 @@ public:
                     else
                     {
                         MXS_ERROR("Could not create table: (%d), %s", err.code(), err.message().c_str());
-                        pResponse = create_hard_error(err.message(), error::from_mariadb_code(code));
+                        pResponse = MariaDBError(err).create_response(*this);
                         state = READY;
                     }
                 }
@@ -287,8 +287,8 @@ public:
             default:
                 mxb_assert(!true);
                 MXS_ERROR("Expected OK or ERR packet, received something else.");
-                pResponse = create_hard_error("Unexpected response received from backend.",
-                                              error::COMMAND_FAILED);
+                pResponse = HardError("Unexpected response received from backend.",
+                                      error::COMMAND_FAILED).create_response(*this);
                 state = READY;
             }
         }
@@ -494,7 +494,7 @@ public:
                 {
                     MXS_WARNING("Mongo request to backend failed: (%d), %s", code, err.message().c_str());
 
-                    pResponse = create_hard_error(err.message(), error::from_mariadb_code(code));
+                    pResponse = MariaDBError(err).create_response(*this);
                 }
             }
             break;

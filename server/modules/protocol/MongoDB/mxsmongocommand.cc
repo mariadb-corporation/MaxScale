@@ -73,7 +73,7 @@ public:
         case Config::RETURN_ERROR:
             {
                 MXS_ERROR("%s", s.c_str());
-                pResponse = create_soft_error(s, mxsmongo::error::COMMAND_NOT_FOUND);
+                pResponse = mxsmongo::SoftError(s, mxsmongo::error::COMMAND_NOT_FOUND).create_response(*this);
             }
             break;
 
@@ -236,52 +236,6 @@ GWBUF* Command::create_empty_response() const
     bsoncxx::document::value doc_value = builder << bsoncxx::builder::stream::finalize;
 
     return create_response(doc_value);
-}
-
-GWBUF* Command::create_soft_error(const std::string& message, int code) const
-{
-    mxb_assert(*mxsmongo::error::name(code));
-
-    command::DocumentBuilder doc;
-
-    doc.append(command::kvp("ok", 0));
-    doc.append(command::kvp("errmsg", message.c_str()));
-    doc.append(command::kvp("code", code));
-    doc.append(command::kvp("codeName", mxsmongo::error::name(code)));
-
-    return create_response(doc.extract());
-}
-
-GWBUF* Command::create_hard_error(const std::string& message, int code) const
-{
-    mxb_assert(*mxsmongo::error::name(code));
-
-    command::DocumentBuilder doc;
-
-    doc.append(command::kvp("$err", message.c_str()));
-    doc.append(command::kvp("code", code));
-
-    return create_response(doc.extract());
-}
-
-GWBUF* Command::create_mariadb_error(const std::string& message, int mongo_code,
-                                     const std::string& mariadb_message, int mariadb_code) const
-{
-    string json = bsoncxx::to_json(m_doc);
-    string sql = m_last_statement;
-
-    command::DocumentBuilder mariadb;
-    mariadb.append(command::kvp("code", mariadb_code));
-    mariadb.append(command::kvp("message", mariadb_message));
-    mariadb.append(command::kvp("command", json));
-    mariadb.append(command::kvp("sql", sql));
-
-    command::DocumentBuilder error;
-    error.append(command::kvp("$err", message));
-    error.append(command::kvp("code", mongo_code));
-    error.append(command::kvp("mariadb", mariadb.extract()));
-
-    return create_response(error.extract());
 }
 
 //static
