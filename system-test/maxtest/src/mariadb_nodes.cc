@@ -702,22 +702,17 @@ void MariaDBCluster::add_server_setting(int node, const char* setting)
     ssh_node_f(node, true, "sudo sed -i '$a %s' /etc/my.cnf.d/*server*.cnf", setting);
 }
 
-std::string MariaDBCluster::get_config_name(int node)
-{
-    std::stringstream ss;
-    ss << "server" << node + 1 << ".cnf";
-    return ss.str();
-}
-
 void MariaDBCluster::reset_server_settings(int node)
 {
-    std::string cnfdir = m_test_dir + "/mdbci/cnf/";
-    std::string cnf = get_config_name(node);
+    string cnf_dir = m_test_dir + "/mdbci/cnf/";
+    string cnf_file = get_srv_cnf_filename(node);
+    string cnf_path = cnf_dir + cnf_file;
 
     // Note: This is a CentOS specific path
     ssh_node(node, "rm -rf /etc/my.cnf.d/*", true);
-    copy_to_node(node, (cnfdir + cnf).c_str(), "~/");
-    ssh_node_f(node, false, "sudo install -o root -g root -m 0644 ~/%s /etc/my.cnf.d/", cnf.c_str());
+
+    copy_to_node(node, cnf_path.c_str(), "~/");
+    ssh_node_f(node, false, "sudo install -o root -g root -m 0644 ~/%s /etc/my.cnf.d/", cnf_file.c_str());
 
     // Always configure the backend for SSL
     std::string ssl_dir = m_test_dir + "/ssl-cert";
@@ -730,7 +725,7 @@ void MariaDBCluster::reset_server_settings(int node)
     ssh_node_f(node, true, "chown mysql:mysql -R /etc/ssl-cert");
 }
 
-void MariaDBCluster::reset_server_settings()
+void MariaDBCluster::reset_all_servers_settings()
 {
     for (int node = 0; node < N; node++)
     {

@@ -22,11 +22,13 @@ public:
 
     const std::string& type_string() const override;
 
-    int  start_replication() override;
-    bool check_replication() override;
+    int start_replication() override;
 
-    std::string get_config_name(int node) override;
+    std::string get_srv_cnf_filename(int node) override;
 
     const std::string& nwconf_prefix() const override;
     const std::string& name() const override;
+
+private:
+    bool check_replication() override;
 };

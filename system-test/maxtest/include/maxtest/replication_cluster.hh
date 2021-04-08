@@ -25,8 +25,7 @@ class ReplicationCluster : public MariaDBCluster
 public:
     ReplicationCluster(SharedData* shared);
 
-    int  start_replication() override;
-    bool check_replication() override;
+    int start_replication() override;
 
     /**
      * Wait until slaves are up-to-date. Only considers the first gtid-triplet.
@@ -80,8 +79,11 @@ public:
     const std::string& nwconf_prefix() const override;
     const std::string& name() const override;
 
+    virtual std::string get_srv_cnf_filename(int node) override;
+
 private:
     bool check_master_node(mxt::MariaDB* conn);
     bool good_slave_thread_status(mxt::MariaDB* conn, int node);
+    bool check_replication() override;
 };
 }

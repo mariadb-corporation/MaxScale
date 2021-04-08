@@ -37,16 +37,18 @@ public:
      */
     int start_replication() override;
 
-    bool check_replication() override;
 
     bool prepare_server(int i) override;
-
-    std::string block_command(int node) const override;
-    std::string unblock_command(int node) const override;
 
     const std::string& nwconf_prefix() const override;
     const std::string& name() const override;
 
+    std::string get_srv_cnf_filename(int node) override;
+
 private:
+    bool check_replication() override;
+
     std::string anonymous_users_query() const override;
+    std::string block_command(int node) const override;
+    std::string unblock_command(int node) const override;
 };

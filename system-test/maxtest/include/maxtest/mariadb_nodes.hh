@@ -201,18 +201,6 @@ public:
     void unblock_node_from_node(int src, int dest);
 
     /**
-     * @param node Index of node to block.
-     * @return The command used for blocking a node.
-     */
-    virtual std::string block_command(int node) const;
-
-    /**
-     * @param node Index of node to unblock.
-     * @return The command used for unblocking a node.
-     */
-    virtual std::string unblock_command(int node) const;
-
-    /**
      * @brif BlockNode setup firewall on a backend node to block MariaDB port
      * @param node Index of node to block
      * @return 0 in case of success
@@ -261,13 +249,6 @@ public:
      * @return 0 if success
      */
     int start_node(int node, const char* param = "");
-
-    /**
-     * @brief Check if all slaves have "Slave_IO_Running" set to "Yes" and master has N-1 slaves
-     * @param master Index of master node
-     * @return True if everything is ok
-     */
-    virtual bool check_replication() = 0;
 
     /**
      * @brief Get the server_id of the node
@@ -366,18 +347,18 @@ public:
     void add_server_setting(int node, const char* setting);
 
     /**
-     * Get the configuration file name for a particular node
+     * Get the server configuration file name for a VM node. E.g. server1.cnf.
      *
      * @param node Node number for which the configuration is requested
-     *
      * @return The name of the configuration file
      */
-    virtual std::string get_config_name(int node);
+    virtual std::string get_srv_cnf_filename(int node) = 0;
 
     /**
-     * Restore the original configuration for all servers
+     * Restore the original configuration for all servers.
      */
-    void reset_server_settings();
+    void reset_all_servers_settings();
+
     // Same but for an individual server
     void reset_server_settings(int node);
 
@@ -443,6 +424,18 @@ protected:
      */
     virtual std::string anonymous_users_query() const;
 
+    /**
+     * @param node Index of node to block.
+     * @return The command used for blocking a node.
+     */
+    virtual std::string block_command(int node) const;
+
+    /**
+     * @param node Index of node to unblock.
+     * @return The command used for unblocking a node.
+     */
+    virtual std::string unblock_command(int node) const;
+
     mxt::TestLogger& logger();
 
     std::string m_test_dir;             /**< path to test application */
@@ -459,4 +452,11 @@ private:
     int  read_nodes_info(const mxt::NetworkConfig& nwconfig);
     bool prepare_servers();
     bool run_on_every_backend(const std::function<bool(int)>& func);
+
+    /**
+     * Check if the cluster is replicating or otherwise properly synced.
+     *
+     * @return True if cluster is ready for test
+     */
+    virtual bool check_replication() = 0;
 };

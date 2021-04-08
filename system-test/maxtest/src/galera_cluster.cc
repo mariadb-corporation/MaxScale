@@ -140,11 +140,9 @@ bool GaleraCluster::check_replication()
     return res;
 }
 
-std::string GaleraCluster::get_config_name(int node)
+std::string GaleraCluster::get_srv_cnf_filename(int node)
 {
-    std::stringstream ss;
-    ss << "galera_server" << node + 1 << ".cnf";
-    return ss.str();
+    return mxb::string_printf("galera_server%i.cnf", node + 1);
 }
 
 const std::string& GaleraCluster::type_string() const

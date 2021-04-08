@@ -564,4 +564,9 @@ const std::string& ReplicationCluster::name() const
 {
     return my_name;
 }
+
+std::string ReplicationCluster::get_srv_cnf_filename(int node)
+{
+    return mxb::string_printf("server%i.cnf", node + 1);
+}
 }

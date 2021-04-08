@@ -12,7 +12,7 @@ int main(int argc, char *argv[])
     TestConnections * Test = new TestConnections(argc, argv);
 
     // Reset server settings by replacing the config files
-    Test->repl->reset_server_settings();
+    Test->repl->reset_all_servers_settings();
 
     Test->set_timeout(10);
 

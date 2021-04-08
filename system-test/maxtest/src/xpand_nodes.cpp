@@ -13,6 +13,7 @@
 
 #include <maxtest/xpand_nodes.hh>
 #include <iostream>
+#include <cassert>
 
 using std::string;
 
@@ -292,4 +293,11 @@ const std::string& XpandCluster::nwconf_prefix() const
 const std::string& XpandCluster::name() const
 {
     return my_name;
+}
+
+std::string XpandCluster::get_srv_cnf_filename(int node)
+{
+    std::cout << "Error: Server configuration file not specified for Xpand." << std::endl;
+    assert(!true);
+    return "";
 }
