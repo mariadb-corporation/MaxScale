@@ -111,7 +111,7 @@ int main(int argc, char* argv[])
             sleep(2);
 
             mxs.alter_server("server1", "persistpoolmax", "100");
-            mxs.alter_service("RW-Split-Router", "idle_session_pool_time", "5");
+            mxs.alter_service("RW-Split-Router", "idle_session_pool_time", "5s");
             test.tprintf("Idle session pooling enabled.");
 
             // Generate connections, then wait for MaxScale to pool them.
