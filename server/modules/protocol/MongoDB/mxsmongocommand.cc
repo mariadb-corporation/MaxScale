@@ -40,6 +40,8 @@
 #include "commands/free_monitoring.hh"
 //#include "commands/system_events_auditing.hh"
 
+#include "commands/maxscale.hh"
+
 using namespace std;
 
 namespace
@@ -147,6 +149,8 @@ struct ThisUnit
         { mxb::tolower(key::UPDATE),                  &create_command<command::Update> },
         { mxb::tolower(key::REPLSETGETSTATUS),        &create_command<command::ReplSetGetStatus> },
         { mxb::tolower(key::WHATSMYURI),              &create_command<command::WhatsMyUri> },
+
+        { mxb::tolower(key::MXSDIAGNOSE),             &create_command<command::MxsDiagnose> },
     };
 } this_unit;
 

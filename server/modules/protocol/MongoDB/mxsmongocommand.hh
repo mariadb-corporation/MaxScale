@@ -17,6 +17,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <bsoncxx/builder/basic/array.hpp>
 #include <bsoncxx/builder/basic/document.hpp>
 #include <maxscale/buffer.hh>
 #include "../../filter/masking/mysql.hh"
@@ -89,6 +90,12 @@ public:
     GWBUF* create_response(const bsoncxx::document::value& doc) const;
 
     static void check_write_batch_size(int size);
+
+    virtual void diagnose(DocumentBuilder& doc) const
+    {
+        // TODO: To be made pure virtual.
+        mxb_assert(!true);
+    }
 
 protected:
     template<class Type>

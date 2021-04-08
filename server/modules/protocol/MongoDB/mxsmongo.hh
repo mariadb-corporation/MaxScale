@@ -275,6 +275,7 @@ const char KEY[]                     = "key";
 const char LIMIT[]                   = "limit";
 const char LISTCOLLECTIONS[]         = "listCollections";
 const char LISTDATABASES[]           = "listDatabases";
+const char MXSDIAGNOSE[]             = "mxsDiagnose";
 const char MULTI[]                   = "multi";
 const char NAMEONLY[]                = "nameOnly";
 const char ORDERED[]                 = "ordered";
