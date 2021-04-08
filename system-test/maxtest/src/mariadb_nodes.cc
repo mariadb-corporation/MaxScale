@@ -68,22 +68,13 @@ MariaDBCluster::MariaDBCluster(mxt::SharedData* shared, const std::string& nwcon
 
 bool MariaDBCluster::setup(const mxt::NetworkConfig& nwconfig, int n_min_expected)
 {
-    bool rval = false;
+    bool rval = true;
     int found = read_nodes_info(nwconfig);
     if (found < n_min_expected)
     {
         logger().add_failure("Found %i node(s) in network_config when at least %i was expected.",
                              found, n_min_expected);
-    }
-    else
-    {
-        if (Nodes::init_ssh_masters())
-        {
-            truncate_mariadb_logs();
-            prepare_for_test();
-            close_active_connections();
-            rval = true;
-        }
+        rval = false;
     }
     return rval;
 }
@@ -646,22 +637,22 @@ int MariaDBCluster::execute_query_all_nodes(const char* sql)
 
 int MariaDBCluster::truncate_mariadb_logs()
 {
-    std::vector<std::future<int>> results;
-
-    for (int node = 0; node < N; node++)
+    mxt::BoolFuncArray funcs;
+    for (int i = 0; i < N; i++)
     {
-        if (strcmp(ip4(node), "127.0.0.1") != 0)
+        auto server = m_backends[i].get();
+        if (server->m_vm.is_remote())
         {
-            auto f = std::async(std::launch::async, &Nodes::ssh_node_f, this, node, true,
-                                "truncate -s 0 /var/lib/mysql/*.err;"
-                                "truncate -s 0 /var/log/syslog;"
-                                "truncate -s 0 /var/log/messages;"
-                                "rm -f /etc/my.cnf.d/binlog_enc*;");
-            results.push_back(std::move(f));
+            auto truncate = [server]() {
+                    return server->m_vm.run_cmd_sudo("truncate -s 0 /var/lib/mysql/*.err;"
+                                                     "truncate -s 0 /var/log/syslog;"
+                                                     "truncate -s 0 /var/log/messages;"
+                                                     "rm -f /etc/my.cnf.d/binlog_enc*;");
+                };
+            funcs.push_back(move(truncate));
         }
     }
-
-    return std::count_if(results.begin(), results.end(), std::mem_fn(&std::future<int>::get));
+    return m_shared.concurrent_run(funcs);
 }
 
 void MariaDBCluster::close_active_connections()
@@ -1009,6 +1000,36 @@ mxt::TestLogger& MariaDBCluster::logger()
 mxt::MariaDBServer* MariaDBCluster::backend(int i)
 {
     return m_backends[i].get();
+}
+
+bool MariaDBCluster::check_create_test_db()
+{
+    bool rval = false;
+    if (!m_backends.empty())
+    {
+        auto conn = m_backends[0]->try_open_admin_connection();
+        if (conn->is_open())
+        {
+            if (conn->cmd("DROP DATABASE IF EXISTS test;") && conn->cmd("CREATE DATABASE test;"))
+            {
+                rval = true;
+            }
+        }
+    }
+    return rval;
+}
+
+bool MariaDBCluster::prepare_cluster_for_test()
+{
+    bool rval = true;
+    if (Nodes::init_ssh_masters())
+    {
+        truncate_mariadb_logs();
+        prepare_for_test();
+        close_active_connections();
+        rval = true;
+    }
+    return rval;
 }
 
 namespace maxtest

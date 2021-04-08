@@ -179,9 +179,6 @@ int TestConnections::prepare_for_test(int argc, char* argv[])
         return rc;
     }
 
-    maxscales->set_use_ipv6(m_use_ipv6);
-    maxscales->ssl = ssl;
-
     // Stop MaxScale to prevent it from interfering with the replication setup process
     if (!m_mxs_manual_debug)
     {
@@ -196,14 +193,19 @@ int TestConnections::prepare_for_test(int argc, char* argv[])
 
     if (m_check_nodes)
     {
-        if (repl && !repl->fix_replication())
-        {
-            rc = BROKEN_VM_FAIL;
-        }
-        if (galera && !galera->fix_replication())
-        {
-            rc = BROKEN_VM_FAIL;
-        }
+        auto check_node = [&rc](MariaDBCluster* cluster) {
+                if (cluster)
+                {
+                    if (!cluster->fix_replication() || !cluster->check_create_test_db())
+                    {
+                        rc = BROKEN_VM_FAIL;
+                    }
+                }
+            };
+
+        check_node(repl);
+        check_node(galera);
+        check_node(xpand);
     }
 
     if (rc == 0)
@@ -770,19 +772,6 @@ void TestConnections::init_maxscale(int m)
         tprintf("No MaxScale config files defined. MaxScale may not start.");
     }
 
-    // TODO: Do this somewhere better.
-    auto create_test_db = [](MariaDBCluster* cluster) {
-            if (cluster)
-            {
-                cluster->connect();
-                execute_query(cluster->nodes[0], "CREATE DATABASE IF NOT EXISTS test;");
-                cluster->close_connections();
-            }
-        };
-    create_test_db(repl);
-    create_test_db(galera);
-    create_test_db(xpand);
-
     if (maxscales->ssh_node_f(m, true, "test -d %s/certs", homedir))
     {
         tprintf("SSL certificates not found, copying to maxscale");
@@ -979,15 +968,12 @@ int TestConnections::copy_all_logs_periodic()
 
 void TestConnections::revert_replicate_from_master()
 {
-    char log_file[256] = "";
-
     repl->connect();
     execute_query(repl->nodes[0], "RESET MASTER");
-    find_field(repl->nodes[0], "show master status", "File", log_file);
 
     for (int i = 1; i < repl->N; i++)
     {
-        repl->set_slave(repl->nodes[i], repl->ip_private(0), repl->port[0], log_file, (char*)"4");
+        repl->set_slave(repl->nodes[i], repl->ip_private(0), repl->port[0]);
         execute_query(repl->nodes[i], "start slave");
     }
 }
@@ -995,10 +981,6 @@ void TestConnections::revert_replicate_from_master()
 int TestConnections::start_mm(int m)
 {
     int i;
-    char log_file1[256];
-    char log_pos1[256];
-    char log_file2[256];
-    char log_pos2[256];
 
     tprintf("Stopping maxscale\n");
     int global_result = maxscales->stop_maxscale(m);
@@ -1021,14 +1003,8 @@ int TestConnections::start_mm(int m)
 
     execute_query(repl->nodes[0], "SET GLOBAL READ_ONLY=ON");
 
-    find_field(repl->nodes[0], (char*) "show master status", (char*) "File", log_file1);
-    find_field(repl->nodes[0], (char*) "show master status", (char*) "Position", log_pos1);
-
-    find_field(repl->nodes[1], (char*) "show master status", (char*) "File", log_file2);
-    find_field(repl->nodes[1], (char*) "show master status", (char*) "Position", log_pos2);
-
-    repl->set_slave(repl->nodes[0], repl->ip_private(1), repl->port[1], log_file2, log_pos2);
-    repl->set_slave(repl->nodes[1], repl->ip_private(0), repl->port[0], log_file1, log_pos1);
+    repl->set_slave(repl->nodes[0], repl->ip_private(1), repl->port[1]);
+    repl->set_slave(repl->nodes[1], repl->ip_private(0), repl->port[0]);
 
     repl->close_connections();
 
@@ -2027,6 +2003,23 @@ bool TestConnections::initialize_nodes()
     bool error = false;
     mxt::BoolFuncArray funcs;
 
+    auto initialize_cluster = [&](MariaDBCluster* new_cluster, int n_min_expected, bool ipv6, bool be_ssl) {
+            if (new_cluster->setup(m_network_config, n_min_expected))
+            {
+                new_cluster->set_use_ipv6(ipv6);
+                new_cluster->ssl = be_ssl;
+                auto prepare_cluster = [new_cluster]() {
+                        return new_cluster->prepare_cluster_for_test();
+                    };
+                funcs.push_back(move(prepare_cluster));
+            }
+            else
+            {
+                error = true;
+                add_failure(errmsg, new_cluster->prefix().c_str());
+            }
+        };
+
     delete repl;
     repl = nullptr;
     bool use_repl = m_required_mdbci_labels.count(label_repl_be) > 0;
@@ -2035,20 +2028,7 @@ bool TestConnections::initialize_nodes()
         bool big_repl = m_required_mdbci_labels.count(label_big_be) > 0;
         int n_min_expected = big_repl ? 15 : 4;
         repl = new mxt::ReplicationCluster(&m_shared);
-        if (repl->setup(m_network_config, n_min_expected))
-        {
-            repl->set_use_ipv6(m_use_ipv6);
-            repl->ssl = backend_ssl;
-            auto check_ssh = [this]() {
-                    return repl->check_nodes_ssh();
-                };
-            funcs.push_back(move(check_ssh));
-        }
-        else
-        {
-            error = true;
-            add_failure(errmsg, repl->prefix().c_str());
-        }
+        initialize_cluster(repl, n_min_expected, m_use_ipv6, backend_ssl);
     }
 
     delete galera;
@@ -2057,20 +2037,7 @@ bool TestConnections::initialize_nodes()
     if (use_galera)
     {
         galera = new GaleraCluster(&m_shared);
-        if (galera->setup(m_network_config, 4))
-        {
-            galera->set_use_ipv6(false);
-            galera->ssl = backend_ssl;
-            auto check_ssh = [this]() {
-                    return galera->check_nodes_ssh();
-                };
-            funcs.push_back(move(check_ssh));
-        }
-        else
-        {
-            error = true;
-            add_failure(errmsg, galera->prefix().c_str());
-        }
+        initialize_cluster(galera, 4, false, backend_ssl);
     }
 
     delete xpand;
@@ -2079,21 +2046,7 @@ bool TestConnections::initialize_nodes()
     if (use_xpand)
     {
         xpand = new XpandCluster(&m_shared);
-        if (xpand->setup(m_network_config, 4))
-        {
-            xpand->set_use_ipv6(false);
-            xpand->ssl = backend_ssl;
-            xpand->fix_replication();
-            auto check_ssh = [this]() {
-                    return xpand->check_nodes_ssh();
-                };
-            funcs.push_back(move(check_ssh));
-        }
-        else
-        {
-            error = true;
-            add_failure(errmsg, xpand->prefix().c_str());
-        }
+        initialize_cluster(xpand, 4, false, backend_ssl);
     }
 
     delete maxscales;
@@ -2101,15 +2054,18 @@ bool TestConnections::initialize_nodes()
     int n_mxs_expected = (m_required_mdbci_labels.count(label_2nd_mxs) > 0) ? 2 : 1;
     if (maxscales->setup(m_network_config, n_mxs_expected))
     {
+        maxscales->set_use_ipv6(m_use_ipv6);
+        maxscales->ssl = ssl;
+
         m_maxscale = std::make_unique<mxt::MaxScale>(maxscales, m_shared, 0);
         if (n_mxs_expected > 1)
         {
             m_maxscale2 = std::make_unique<mxt::MaxScale>(maxscales, m_shared, 1);
         }
-        auto check_ssh = [this]() {
-                return maxscales->check_nodes_ssh();
+        auto prepare_maxscales = [this]() {
+                return maxscales->prepare_for_test();
             };
-        funcs.push_back(move(check_ssh));
+        funcs.push_back(move(prepare_maxscales));
     }
     else
     {

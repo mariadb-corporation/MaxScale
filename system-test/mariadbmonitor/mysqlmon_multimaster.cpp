@@ -41,8 +41,9 @@ int main(int argc, char* argv[])
     auto running_status = ServerInfo::RUNNING;
     auto grp_none = ServerInfo::GROUP_NONE;
 
-    const char reset_query[] = "STOP SLAVE; RESET SLAVE ALL; RESET MASTER; SET GLOBAL read_only='OFF'";
+    const char reset_query[] = "STOP SLAVE; RESET SLAVE ALL; SET GLOBAL read_only='OFF'";
     const char readonly_on_query[] = "SET GLOBAL read_only='ON'";
+    const char remove_delay[] = "STOP SLAVE '%s'; CHANGE MASTER '%s' TO master_delay=0; START SLAVE '%s';";
     const string flush = "FLUSH TABLES;";
     const string show = "SHOW DATABASES;";
 
@@ -114,6 +115,8 @@ int main(int argc, char* argv[])
     servers_info.check_servers_status({slave_status, mm_master_status, mm_slave_status, slave_status});
     servers_info.check_master_groups(phase3_4_groups);
     check_rlag(test, servers_info, 2, 1, max_rlag);
+    // Remove the delay on node 2 so it catches up.
+    test.try_query(test.repl->nodes[2], remove_delay, "", "", "");
 
     test.tprintf("Test 4 - Set node 1 into read-only mode");
 
@@ -186,7 +189,6 @@ int main(int argc, char* argv[])
 
     test.tprintf("Test 8 - Diamond topology with no delay");
 
-    const char remove_delay[] = "STOP SLAVE '%s'; CHANGE MASTER '%s' TO master_delay=0; START SLAVE '%s';";
     test.try_query(test.repl->nodes[0], remove_delay, "a", "a", "a");
     mxs.wait_monitor_ticks(2);
 
@@ -236,8 +238,8 @@ void
 change_master(TestConnections& test, int slave, int master, const string& conn_name, int replication_delay)
 {
     const char query[] = "CHANGE MASTER '%s' TO master_host='%s', master_port=%d, "
-                         "master_log_file='mar-bin.000001', master_log_pos=4, "
-                         "master_user='repl', master_password='repl', master_delay=%d; "
+                         "master_user='repl', master_password='repl', "
+                         "master_use_gtid=current_pos, master_delay=%d; "
                          "START SLAVE '%s';";
     test.try_query(test.repl->nodes[slave], query, conn_name.c_str(),
                    test.repl->ip_private(master), test.repl->port[master],

@@ -28,12 +28,9 @@ const char create_repl_user[] =
     "grant replication slave on *.* to repl@'%%' identified by 'repl'; "
     "FLUSH PRIVILEGES";
 const char setup_slave[] =
-    "change master to MASTER_HOST='%s', "
-    "MASTER_USER='repl', "
-    "MASTER_PASSWORD='repl', "
-    "MASTER_LOG_FILE='%s', "
-    "MASTER_LOG_POS=%s, "
-    "MASTER_PORT=%d; "
+    "change master to MASTER_HOST='%s', MASTER_PORT=%d, "
+    "MASTER_USER='repl', MASTER_PASSWORD='repl', "
+    "MASTER_USE_GTID=current_pos; "
     "start slave;";
 
 bool is_readonly(mxt::MariaDB* conn)
@@ -403,17 +400,13 @@ void ReplicationCluster::change_master(int NewMaster, int OldMaster)
     {
         execute_query(nodes[OldMaster], "RESET MASTER");
     }
-    char log_file[256];
-    char log_pos[256];
-    find_field(nodes[NewMaster], "show master status", "File", &log_file[0]);
-    find_field(nodes[NewMaster], "show master status", "Position", &log_pos[0]);
 
     for (int i = 0; i < N; i++)
     {
         if (i != NewMaster && mysql_ping(nodes[i]) == 0)
         {
             char str[1024];
-            sprintf(str, setup_slave, ip_private(NewMaster), log_file, log_pos, port[NewMaster]);
+            sprintf(str, setup_slave, ip_private(NewMaster), port[NewMaster]);
             execute_query(nodes[i], "%s", str);
         }
     }
@@ -431,12 +424,11 @@ int ReplicationCluster::set_repl_user()
     return global_result;
 }
 
-int ReplicationCluster::set_slave(MYSQL* conn, const char* master_host, int master_port,
-                                  const char* log_file, const char* log_pos)
+int ReplicationCluster::set_slave(MYSQL* conn, const char* master_host, int master_port)
 {
     char str[1024];
 
-    sprintf(str, setup_slave, master_host, log_file, log_pos, master_port);
+    sprintf(str, setup_slave, master_host, master_port);
     if (verbose())
     {
         printf("Setup slave SQL: %s\n", str);
