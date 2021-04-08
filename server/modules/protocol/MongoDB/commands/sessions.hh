@@ -33,7 +33,7 @@ class EndSessions final : public ImmediateCommand
 public:
     using ImmediateCommand::ImmediateCommand;
 
-    void generate(DocumentBuilder& doc) const override
+    void populate_response(DocumentBuilder& doc) override
     {
         doc.append(kvp("ok", 1));
     }

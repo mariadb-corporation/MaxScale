@@ -26,12 +26,12 @@ namespace command
 // https://docs.mongodb.com/manual/reference/command/aggregate/
 
 // https://docs.mongodb.com/manual/reference/command/count/
-class Count final : public Command
+class Count final : public SingleCommand
 {
 public:
-    using Command::Command;
+    using SingleCommand::SingleCommand;
 
-    GWBUF* execute() override
+    string generate_sql() override
     {
         stringstream sql;
 
@@ -58,9 +58,7 @@ public:
             sql << limit << ") AS t";
         }
 
-        send_downstream(sql.str());
-
-        return nullptr;
+        return sql.str();
     }
 
     State translate(GWBUF& mariadb_response, GWBUF** ppResponse) override
@@ -144,12 +142,12 @@ private:
 };
 
 // https://docs.mongodb.com/manual/reference/command/distinct/
-class Distinct final : public Command
+class Distinct final : public SingleCommand
 {
 public:
-    using Command::Command;
+    using SingleCommand::SingleCommand;
 
-    GWBUF* execute() override
+    string generate_sql() override
     {
         stringstream sql;
 
@@ -171,9 +169,7 @@ public:
 
         sql << extract << " IS NOT NULL";
 
-        send_downstream(sql.str());
-
-        return nullptr;
+        return sql.str();
     }
 
     State translate(GWBUF& mariadb_response, GWBUF** ppResponse) override

@@ -34,20 +34,18 @@ namespace command
 // https://docs.mongodb.com/manual/reference/command/convertToCapped/
 
 // https://docs.mongodb.com/manual/reference/command/create/
-class Create final : public Command
+class Create final : public SingleCommand
 {
 public:
-    using Command::Command;
+    using SingleCommand::SingleCommand;
 
-    GWBUF* execute() override
+    string generate_sql() override
     {
         stringstream sql;
 
         sql << "CREATE TABLE " << table() << " (id TEXT NOT NULL UNIQUE, doc JSON)";
 
-        send_downstream(sql.str());
-
-        return nullptr;
+        return sql.str();
     }
 
     State translate(GWBUF& mariadb_response, GWBUF** ppResponse) override
@@ -102,20 +100,18 @@ public:
 // https://docs.mongodb.com/manual/reference/command/currentOp/
 
 // https://docs.mongodb.com/manual/reference/command/drop/
-class Drop final : public Command
+class Drop final : public SingleCommand
 {
 public:
-    using Command::Command;
+    using SingleCommand::SingleCommand;
 
-    GWBUF* execute() override
+    string generate_sql() override
     {
         stringstream sql;
 
         sql << "DROP TABLE " << table();
 
-        send_downstream(sql.str());
-
-        return nullptr;
+        return sql.str();
     }
 
     State translate(GWBUF& mariadb_response, GWBUF** ppResponse) override
@@ -166,20 +162,18 @@ public:
 
 
 // https://docs.mongodb.com/manual/reference/command/dropDatabase/
-class DropDatabase final : public Command
+class DropDatabase final : public SingleCommand
 {
 public:
-    using Command::Command;
+    using SingleCommand::SingleCommand;
 
-    GWBUF* execute() override
+    string generate_sql() override
     {
         stringstream sql;
 
         sql << "DROP DATABASE `" << m_database.name() << "`";
 
-        send_downstream(sql.str());
-
-        return nullptr;
+        return sql.str();
     }
 
     State translate(GWBUF& mariadb_response, GWBUF** ppResponse) override
@@ -246,12 +240,12 @@ public:
 // https://docs.mongodb.com/manual/reference/command/killOp/
 
 // https://docs.mongodb.com/manual/reference/command/listCollections/
-class ListCollections final : public Command
+class ListCollections final : public SingleCommand
 {
 public:
-    using Command::Command;
+    using SingleCommand::SingleCommand;
 
-    GWBUF* execute() override
+    string generate_sql() override
     {
         optional(key::NAMEONLY, &m_name_only, Conversion::RELAXED);
 
@@ -264,9 +258,7 @@ public:
         stringstream sql;
         sql << "SHOW TABLES FROM `" << m_database.name() << "`";
 
-        send_downstream(sql.str());
-
-        return nullptr;
+        return sql.str();
     }
 
     State translate(GWBUF& mariadb_response, GWBUF** ppResponse) override
@@ -363,12 +355,12 @@ private:
 
 
 // https://docs.mongodb.com/manual/reference/command/listDatabases/
-class ListDatabases final : public Command
+class ListDatabases final : public SingleCommand
 {
 public:
-    using Command::Command;
+    using SingleCommand::SingleCommand;
 
-    GWBUF* execute() override
+    string generate_sql() override
     {
         if (m_database.name() != "admin")
         {
@@ -381,9 +373,7 @@ public:
             << "FROM information_schema.tables "
             << "WHERE table_schema NOT IN ('information_schema', 'performance_schema', 'mysql')";
 
-        send_downstream(sql.str());
-
-        return nullptr;
+        return sql.str();
     }
 
     State translate(GWBUF& mariadb_response, GWBUF** ppResponse) override

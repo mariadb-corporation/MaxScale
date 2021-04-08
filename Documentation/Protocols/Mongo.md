@@ -185,10 +185,11 @@ provided as argument. For example:
 > db.runCommand({mxsDiagnose: {ping:1}});
 { "kind" : "immediate", "response" : { "ok" : 1 }, "ok" : 1 }
 
+> db.runCommand({mxsDiagnose: {find:"person", filter: { name: "Bob"}}});
 {
-  "ok": 1,
-  "kind": "single",
-  "sql": "SELECT ...",
+  "kind" : "single",
+  "sql" : "SELECT doc FROM `test`.`person` WHERE ( JSON_EXTRACT(doc, '$.name') = 'Bob') ",
+  "ok" : 1
 }
 
 {

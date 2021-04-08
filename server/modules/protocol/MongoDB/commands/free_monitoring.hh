@@ -29,7 +29,7 @@ class GetFreeMonitoringStatus final : public ImmediateCommand
 public:
     using ImmediateCommand::ImmediateCommand;
 
-    void generate(DocumentBuilder& doc) const
+    void populate_response(DocumentBuilder& doc) override
     {
         doc.append(kvp("state", "undecided"));
         doc.append(kvp("ok", 1));

@@ -31,7 +31,7 @@ class IsMaster final : public ImmediateCommand
 public:
     using ImmediateCommand::ImmediateCommand;
 
-    void generate(DocumentBuilder& doc) const override
+    void populate_response(DocumentBuilder& doc) override
     {
         doc.append(kvp("isMaster", true));
         doc.append(kvp("topologyVersion", topology_version()));
@@ -61,7 +61,7 @@ class ReplSetGetStatus final : public ImmediateCommand
 public:
     using ImmediateCommand::ImmediateCommand;
 
-    void generate(DocumentBuilder& doc) const override
+    void populate_response(DocumentBuilder& doc) override
     {
         SoftError error("not running with --replSet", error::NO_REPLICATION_ENABLED);
         error.create_response(*this, doc);

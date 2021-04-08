@@ -33,7 +33,7 @@ class BuildInfo final : public ImmediateCommand
 public:
     using ImmediateCommand::ImmediateCommand;
 
-    void generate(DocumentBuilder& doc) const override
+    void populate_response(DocumentBuilder& doc) override
     {
         ArrayBuilder versionArray;
         versionArray.append(MONGO_VERSION_MAJOR);
@@ -98,7 +98,7 @@ class GetCmdLineOpts final : public ImmediateCommand
 public:
     using ImmediateCommand::ImmediateCommand;
 
-    void generate(DocumentBuilder& doc) const override
+    void populate_response(DocumentBuilder& doc) override
     {
         auto& config = mxs::Config::get();
 
@@ -123,7 +123,7 @@ class GetLog final : public ImmediateCommand
 public:
     using ImmediateCommand::ImmediateCommand;
 
-    void generate(DocumentBuilder& doc) const override
+    void populate_response(DocumentBuilder& doc) override
     {
         auto value = value_as<string>();
 
@@ -172,7 +172,7 @@ class Ping final : public ImmediateCommand
 public:
     using ImmediateCommand::ImmediateCommand;
 
-    void generate(DocumentBuilder& doc) const override
+    void populate_response(DocumentBuilder& doc) override
     {
         doc.append(kvp("ok", 1));
     }
@@ -194,7 +194,7 @@ class WhatsMyUri final : public ImmediateCommand
 public:
     using ImmediateCommand::ImmediateCommand;
 
-    void generate(DocumentBuilder& doc) const override
+    void populate_response(DocumentBuilder& doc) override
     {
         ClientDCB* pDcb = m_database.context().client_connection().dcb();
 

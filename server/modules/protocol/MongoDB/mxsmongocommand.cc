@@ -709,18 +709,30 @@ string Command::create_entry(const string& extraction, const std::string& value)
 GWBUF* ImmediateCommand::execute()
 {
     DocumentBuilder doc;
-    generate(doc);
+    populate_response(doc);
     return create_response(doc.extract());
 }
 
-void ImmediateCommand::diagnose(DocumentBuilder& doc) const
+void ImmediateCommand::diagnose(DocumentBuilder& doc)
 {
     doc.append(kvp("kind", "immediate"));
 
     DocumentBuilder response;
-    generate(response);
+    populate_response(response);
 
     doc.append(kvp("response", response.extract()));
+}
+
+GWBUF* SingleCommand::execute()
+{
+    send_downstream(generate_sql());
+    return nullptr;
+}
+
+void SingleCommand::diagnose(DocumentBuilder& doc)
+{
+    doc.append(kvp("kind", "single"));
+    doc.append(kvp("sql", generate_sql()));
 }
 
 }

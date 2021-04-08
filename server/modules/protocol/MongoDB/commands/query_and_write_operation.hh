@@ -398,12 +398,12 @@ private:
 
 
 // https://docs.mongodb.com/manual/reference/command/find/
-class Find final : public Command
+class Find final : public SingleCommand
 {
 public:
-    using Command::Command;
+    using SingleCommand::SingleCommand;
 
-    GWBUF* execute() override
+    string generate_sql() override
     {
         stringstream sql;
         sql << "SELECT ";
@@ -463,9 +463,7 @@ public:
 
         sql << convert_skip_and_limit();
 
-        send_downstream(sql.str());
-
-        return nullptr;
+        return sql.str();
     }
 
     State translate(GWBUF& mariadb_response, GWBUF** ppResponse) override

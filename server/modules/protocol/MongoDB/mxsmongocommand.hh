@@ -91,7 +91,7 @@ public:
 
     static void check_write_batch_size(int size);
 
-    virtual void diagnose(DocumentBuilder& doc) const
+    virtual void diagnose(DocumentBuilder& doc)
     {
         // TODO: To be made pure virtual.
         mxb_assert(!true);
@@ -212,10 +212,29 @@ public:
 
     GWBUF* execute() override final;
 
-    void diagnose(DocumentBuilder& doc) const;
+    void diagnose(DocumentBuilder& doc);
 
 protected:
-    virtual void generate(DocumentBuilder& doc) const = 0;
+    virtual void populate_response(DocumentBuilder& doc) = 0;
+};
+
+/**
+ * @class SingleCommand
+ *
+ * A command that executes a single SQL statement against the backend, in order
+ * to produce the response.
+ */
+class SingleCommand : public Command
+{
+public:
+    using Command::Command;
+
+    GWBUF* execute() override final;
+
+    void diagnose(DocumentBuilder& doc);
+
+protected:
+    virtual std::string generate_sql() = 0;
 };
 
 }
