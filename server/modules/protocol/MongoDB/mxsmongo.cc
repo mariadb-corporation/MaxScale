@@ -380,14 +380,34 @@ const char* mxsmongo::error::name(int mongo_code)
     }
 }
 
-GWBUF* mxsmongo::SoftError::create_response(const mxsmongo::Command& command) const
+GWBUF* mxsmongo::SoftError::create_response(const Command& command) const
 {
-    return command.create_soft_error(what(), m_code);
+    DocumentBuilder doc;
+    create_response(command, doc);
+
+    return command.create_response(doc.extract());
+}
+
+void mxsmongo::SoftError::create_response(const Command&, DocumentBuilder& doc) const
+{
+    doc.append(kvp("ok", 0));
+    doc.append(kvp("errmsg", what()));
+    doc.append(kvp("code", m_code));
+    doc.append(kvp("codeName", mxsmongo::error::name(m_code)));
 }
 
 GWBUF* mxsmongo::HardError::create_response(const mxsmongo::Command& command) const
 {
-    return command.create_hard_error(what(), m_code);
+    DocumentBuilder doc;
+    create_response(command, doc);
+
+    return command.create_response(doc.extract());
+}
+
+void mxsmongo::HardError::create_response(const Command&, DocumentBuilder& doc) const
+{
+    doc.append(kvp("$err", what()));
+    doc.append(kvp("code", m_code));
 }
 
 mxsmongo::MariaDBError::MariaDBError(const ComERR& err)
@@ -397,9 +417,28 @@ mxsmongo::MariaDBError::MariaDBError(const ComERR& err)
 {
 }
 
-GWBUF* mxsmongo::MariaDBError::create_response(const mxsmongo::Command& command) const
+GWBUF* mxsmongo::MariaDBError::create_response(const Command& command) const
 {
-    return command.create_mariadb_error(what(), m_code, m_mariadb_message, m_mariadb_code);
+    DocumentBuilder doc;
+    create_response(command, doc);
+
+    return command.create_response(doc.extract());
+}
+
+void mxsmongo::MariaDBError::create_response(const Command& command, DocumentBuilder& doc) const
+{
+    string json = bsoncxx::to_json(command.doc());
+    string sql = command.last_statement();
+
+    DocumentBuilder mariadb;
+    mariadb.append(kvp("code", m_mariadb_code));
+    mariadb.append(kvp("message", m_mariadb_message));
+    mariadb.append(kvp("command", json));
+    mariadb.append(kvp("sql", sql));
+
+    doc.append(kvp("$err", what()));
+    doc.append(kvp("code", error::from_mariadb_code(m_mariadb_code)));
+    doc.append(kvp("mariadb", mariadb.extract()));
 }
 
 vector<string> mxsmongo::projection_to_extractions(const bsoncxx::document::view& projection)

@@ -70,6 +70,16 @@ public:
 
     virtual ~Command();
 
+    const bsoncxx::document::view& doc() const
+    {
+        return m_doc;
+    }
+
+    const std::string& last_statement() const
+    {
+        return m_last_statement;
+    }
+
     virtual GWBUF* execute() = 0;
 
     virtual State translate(GWBUF& mariadb_response, GWBUF** ppMongo_response);
@@ -80,6 +90,8 @@ public:
     GWBUF* create_soft_error(const std::string& message, int mongo_code) const;
     GWBUF* create_mariadb_error(const std::string& message, int mongo_code,
                                 const std::string& mariadb_message, int mariadb_code) const;
+
+    GWBUF* create_response(const bsoncxx::document::value& doc) const;
 
     static void check_write_batch_size(int size);
 
@@ -141,8 +153,6 @@ protected:
     void free_request();
 
     void send_downstream(const std::string& sql);
-
-    GWBUF* create_response(const bsoncxx::document::value& doc) const;
 
     GWBUF* translate_resultset(std::vector<std::string>& extractions, GWBUF* pMariadb_response);
 

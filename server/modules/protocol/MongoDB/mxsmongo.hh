@@ -18,8 +18,10 @@
 #include <deque>
 #include <sstream>
 #include <stdexcept>
-#include <bsoncxx/json.hpp>
 #include <bsoncxx/array/view.hpp>
+#include <bsoncxx/builder/basic/array.hpp>
+#include <bsoncxx/builder/basic/document.hpp>
+#include <bsoncxx/json.hpp>
 #include <mongoc/mongoc.h>
 #include <maxscale/buffer.hh>
 #include <maxscale/protocol2.hh>
@@ -32,6 +34,12 @@ class ComERR;
 
 namespace mxsmongo
 {
+
+class Command;
+
+using DocumentBuilder = bsoncxx::builder::basic::document;
+using ArrayBuilder = bsoncxx::builder::basic::array;
+using bsoncxx::builder::basic::kvp;
 
 namespace mongo
 {
@@ -196,8 +204,6 @@ const char* name(int code);
 
 }
 
-class Command;
-
 class Exception : public std::runtime_error
 {
 public:
@@ -208,6 +214,7 @@ public:
     }
 
     virtual GWBUF* create_response(const Command& command) const = 0;
+    virtual void create_response(const Command& command, DocumentBuilder& doc) const = 0;
 
 protected:
     int m_code;
@@ -219,6 +226,7 @@ public:
     using Exception::Exception;
 
     GWBUF* create_response(const Command& command) const override final;
+    void create_response(const Command& command, DocumentBuilder& doc) const override final;
 };
 
 class HardError : public Exception
@@ -227,6 +235,7 @@ public:
     using Exception::Exception;
 
     GWBUF* create_response(const Command& command) const override final;
+    void create_response(const Command& command, DocumentBuilder& doc) const override final;
 };
 
 class MariaDBError : public Exception
@@ -235,6 +244,7 @@ public:
     MariaDBError(const ComERR& err);
 
     GWBUF* create_response(const Command& command) const override final;
+    void create_response(const Command& command, DocumentBuilder& doc) const override final;
 
 private:
     int         m_mariadb_code;
