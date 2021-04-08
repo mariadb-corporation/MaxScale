@@ -652,9 +652,27 @@ static json_t* module_json_data(const LOADED_MODULE* mod, const char* host)
         params = legacy_params_to_json(mod);
     }
 
+    json_t* core_params = nullptr;
+
     if (mod_info->modapi == mxs::ModuleType::ROUTER)
     {
-        json_t* core_params = Service::specification()->to_json();
+        core_params = Service::specification()->to_json();
+    }
+    else if (mod_info->modapi == mxs::ModuleType::PROTOCOL)
+    {
+        core_params = Listener::specification()->to_json();
+    }
+    else if (mod_info->modapi == mxs::ModuleType::FILTER)
+    {
+        core_params = FilterDef::specification()->to_json();
+    }
+    else if (mod_info->modapi == mxs::ModuleType::MONITOR)
+    {
+        // TODO: Use new config params in monitors
+    }
+
+    if (core_params)
+    {
         json_object_update(params, core_params);
         json_decref(core_params);
     }
@@ -689,6 +707,9 @@ json_t* module_to_json(const MXS_MODULE* module, const char* host)
 
 json_t* spec_module_json_data(const char* host, const mxs::config::Specification& spec)
 {
+    mxb_assert((spec.kind() == mxs::config::Specification::Kind::GLOBAL && spec.module() == "maxscale")
+               || (spec.kind() == mxs::config::Specification::Kind::SERVER && spec.module() == "servers"));
+
     json_t* commands = json_array();
     // TODO: The following data will now be somewhat different compared to
     // TODO: what the modules that do not use the new configuration mechanism
@@ -698,6 +719,7 @@ json_t* spec_module_json_data(const char* host, const mxs::config::Specification
     json_t* attr = json_object();
     json_object_set_new(attr, "module_type", json_string(spec.module().c_str()));
     json_object_set_new(attr, "version", json_string(MAXSCALE_VERSION));
+    // TODO: The description could be something other than than "maxscale" or "servers"
     json_object_set_new(attr, CN_DESCRIPTION, json_string(spec.module().c_str()));
     json_object_set_new(attr, "maturity", json_string("GA"));
     json_object_set_new(attr, "commands", commands);
@@ -728,16 +750,9 @@ json_t* module_list_to_json(const char* host)
 
     for (auto& elem : this_unit.loaded_modules)
     {
-        auto ptr = elem.second.get();
-        if (ptr->info->specification)
-        {
-            json_array_append_new(arr, spec_module_json_data(host, *ptr->info->specification));
-        }
-        else
-        {
-            json_array_append_new(arr, module_json_data(ptr, host));
-        }
+        json_array_append_new(arr, module_json_data(elem.second.get(), host));
     }
+
     return mxs_json_resource(host, MXS_JSON_API_MODULES, arr);
 }
 
