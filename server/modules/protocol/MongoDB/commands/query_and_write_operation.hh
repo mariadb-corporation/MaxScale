@@ -52,7 +52,7 @@ public:
         return nullptr;
     }
 
-    State translate(GWBUF& mariadb_response, GWBUF** ppResponse) override final
+    State translate(GWBUF& mariadb_response, GWBUF** ppResponse) override
     {
         // TODO: Update will be needed when DEPRECATE_EOF it turned on.
         GWBUF* pResponse = nullptr;
@@ -390,10 +390,21 @@ private:
 // https://docs.mongodb.com/manual/reference/command/getMore/
 
 // https://docs.mongodb.com/manual/reference/command/insert/
-class Insert final : public SingleCommand
+class Insert final : public OrderedCommand
 {
 public:
-    using SingleCommand::SingleCommand;
+    template<class ConcretePacket>
+    Insert(const std::string& name,
+           Database* pDatabase,
+           GWBUF* pRequest,
+           const ConcretePacket& req,
+           const bsoncxx::document::view& doc,
+           const DocumentArguments& arguments)
+        : OrderedCommand(name, pDatabase, pRequest, req, doc, arguments, key::DOCUMENTS)
+    {
+    }
+
+    using OrderedCommand::OrderedCommand;
 
     using Worker = mxb::Worker;
 
@@ -416,7 +427,7 @@ public:
         {
             if (!response.is_err() || ComERR(response).code() != ER_NO_SUCH_TABLE)
             {
-                state = translate(response, &pResponse);
+                state = OrderedCommand::translate(mariadb_response, &pResponse);
             }
             else
             {
@@ -457,14 +468,13 @@ public:
         else
         {
             mxb_assert(m_mode == TABLE_CREATING);
-            mxb_assert(!m_statement.empty());
 
             switch (response.type())
             {
             case ComResponse::OK_PACKET:
                 MXS_NOTICE("TABLE created, now executing statment.");
                 m_mode = NORMAL;
-                send_downstream(m_statement);
+                execute_one_statement();
                 break;
 
             case ComResponse::ERR_PACKET:
@@ -477,7 +487,7 @@ public:
                     {
                         MXS_NOTICE("TABLE created by someone else, now executing statment.");
                         m_mode = NORMAL;
-                        send_downstream(m_statement);
+                        execute_one_statement();
                     }
                     else
                     {
@@ -503,95 +513,11 @@ public:
     }
 
 protected:
-    string generate_sql() override final
+    string convert_document(const bsoncxx::document::view& doc) override
     {
         stringstream sql;
         sql << "INSERT INTO " << table() << " (id, doc) VALUES ";
 
-        auto it = m_arguments.find(key::DOCUMENTS);
-
-        if (it != m_arguments.end())
-        {
-            const auto& docs = it->second;
-            check_write_batch_size(docs.size());
-
-            bool first = true;
-            for (auto doc : docs)
-            {
-                ++m_nDocuments;
-
-                if (first)
-                {
-                    first = false;
-                }
-                else
-                {
-                    sql << ", ";
-                }
-
-                sql << convert_document(doc);
-            }
-        }
-        else
-        {
-            auto documents = required<bsoncxx::array::view>(key::DOCUMENTS);
-            check_write_batch_size(std::distance(documents.begin(), documents.end()));
-
-            bool first = true;
-            for (auto element : documents)
-            {
-                ++m_nDocuments;
-
-                if (first)
-                {
-                    first = false;
-                }
-                else
-                {
-                    sql << ", ";
-                }
-
-                sql << convert_document(element.get_document());
-            }
-        }
-
-        return sql.str();
-    }
-
-    State translate(ComResponse& response, GWBUF** ppResponse)
-    {
-        DocumentBuilder doc;
-
-        int32_t ok = response.is_ok() ? 1 : 0;
-        int32_t n = response.is_ok() ? m_nDocuments : 0;
-
-        doc.append(kvp("ok", ok));
-        doc.append(kvp("n", n));
-
-        switch (response.type())
-        {
-        case ComResponse::OK_PACKET:
-            break;
-
-        case ComResponse::ERR_PACKET:
-            add_error(doc, ComERR(response));
-            break;
-
-        case ComResponse::LOCAL_INFILE_PACKET:
-        default:
-            mxb_assert(!true);
-        }
-
-        GWBUF* pResponse = create_response(doc.extract());
-
-        *ppResponse = pResponse;
-        return READY;
-    }
-
-private:
-    static string convert_document(const bsoncxx::document::view& doc)
-    {
-        stringstream sql;
         sql << "(";
 
         auto id = get_id(doc["_id"]);
@@ -664,6 +590,11 @@ private:
         }
 
         return ss.str();
+    }
+
+    void interpret(const ComOK& response)
+    {
+        m_n += response.affected_rows();
     }
 
     enum Mode
