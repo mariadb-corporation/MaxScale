@@ -15,8 +15,6 @@
 
 #include <maxscale/paths.hh>
 
-#include <librdkafka/rdkafkacpp.h>
-
 namespace
 {
 
@@ -26,11 +24,10 @@ constexpr const uint32_t PATH_FLAGS = cfg::ParamPath::C | cfg::ParamPath::W;
 
 class KafkaSpecification : public cfg::Specification
 {
+public:
     using cfg::Specification::Specification;
 
 protected:
-    template<class Param>
-    bool do_post_validate(Param param) const;
     bool post_validate(const mxs::ConfigParameters& params) const;
     bool post_validate(json_t* json) const;
 };
@@ -59,89 +56,16 @@ cfg::ParamBool s_cooperative_replication(
     &s_spec, "cooperative_replication", "Cooperate with other instances replicating from the same cluster",
     false);
 
-cfg::ParamBool s_kafka_ssl(
-    &s_spec, "kafka_ssl", "Enable SSL for Kafka connections",
-    false);
-
-cfg::ParamPath s_kafka_ssl_ca(
-    &s_spec, "kafka_ssl_ca", "SSL Certificate Authority file in PEM format",
-    cfg::ParamPath::R, "");
-
-cfg::ParamPath s_kafka_ssl_cert(
-    &s_spec, "kafka_ssl_cert", "SSL public certificate file in PEM format",
-    cfg::ParamPath::R, "");
-
-cfg::ParamPath s_kafka_ssl_key(
-    &s_spec, "kafka_ssl_key", "SSL private key file in PEM format",
-    cfg::ParamPath::R, "");
-
-cfg::ParamString s_kafka_sasl_user(
-    &s_spec, "kafka_sasl_user", "SASL username used for authentication",
-    "");
-
-cfg::ParamString s_kafka_sasl_password(
-    &s_spec, "kafka_sasl_password", "SASL password for the user",
-    "");
-
-cfg::ParamEnum<SaslMech> s_kafka_sasl_mechanism(
-    &s_spec, "kafka_sasl_mechanism", "SASL mechanism to use",
-    {
-        {PLAIN, "PLAIN"},
-        {SCRAM_SHA_256, "SCRAM-SHA-256"},
-        {SCRAM_SHA_512, "SCRAM-SHA-512"},
-    },
-    PLAIN);
-
-template<class Param>
-bool KafkaSpecification::do_post_validate(Param param) const
-{
-    bool ok = true;
-
-    if (s_kafka_ssl_key.get(param).empty() != s_kafka_ssl_cert.get(param).empty())
-    {
-        MXS_ERROR("Both '%s' and '%s' must be defined",
-                  s_kafka_ssl_key.name().c_str(),
-                  s_kafka_ssl_cert.name().c_str());
-        ok = false;
-    }
-
-    if (s_kafka_sasl_user.get(param).empty() != s_kafka_sasl_password.get(param).empty())
-    {
-        MXS_ERROR("Both '%s' and '%s' must be defined",
-                  s_kafka_sasl_user.name().c_str(),
-                  s_kafka_sasl_password.name().c_str());
-        ok = false;
-    }
-
-    return ok;
-}
+KafkaCommonConfig s_kafka(&s_spec);
 
 bool KafkaSpecification::post_validate(const mxs::ConfigParameters& params) const
 {
-    return do_post_validate(params);
+    return s_kafka.post_validate(params);
 }
 
 bool KafkaSpecification::post_validate(json_t* json) const
 {
-    return do_post_validate(json);
-}
-
-std::string to_string(SaslMech mech)
-{
-    switch (mech)
-    {
-    case PLAIN:
-        return "PLAIN";
-
-    case SCRAM_SHA_256:
-        return "SCRAM-SHA-256";
-
-    case SCRAM_SHA_512:
-        return "SCRAM-SHA-512";
-    }
-
-    mxb_assert(!true);
-    return "";
+    return s_kafka.post_validate(json);
 }
 
 const char* roweventtype_to_string(RowEvent type)
@@ -165,28 +89,6 @@ const char* roweventtype_to_string(RowEvent type)
         return "unknown";
     }
 }
-
-class KafkaLogger : public RdKafka::EventCb
-{
-public:
-    void event_cb(RdKafka::Event& event) override
-    {
-        switch (event.type())
-        {
-        case RdKafka::Event::EVENT_LOG:
-            MXB_LOG_MESSAGE(event.severity(), "%s", event.str().c_str());
-            break;
-
-        case RdKafka::Event::EVENT_ERROR:
-            MXS_ERROR("%s", RdKafka::err2str(event.err()).c_str());
-            break;
-
-        default:
-            MXS_INFO("%s", event.str().c_str());
-            break;
-        }
-    }
-};
 
 static KafkaLogger kafka_logger;
 
@@ -496,13 +398,13 @@ KafkaCDC::Config::Config(const std::string& name, KafkaCDC* router)
     add_native(&Config::gtid, &s_gtid);
     add_native(&Config::server_id, &s_server_id);
     add_native(&Config::cooperative_replication, &s_cooperative_replication);
-    add_native(&Config::ssl, &s_kafka_ssl);
-    add_native(&Config::ssl_ca, &s_kafka_ssl_ca);
-    add_native(&Config::ssl_cert, &s_kafka_ssl_cert);
-    add_native(&Config::ssl_key, &s_kafka_ssl_key);
-    add_native(&Config::sasl_user, &s_kafka_sasl_user);
-    add_native(&Config::sasl_password, &s_kafka_sasl_password);
-    add_native(&Config::sasl_mechanism, &s_kafka_sasl_mechanism);
+    add_native(&Config::ssl, &s_kafka.kafka_ssl);
+    add_native(&Config::ssl_ca, &s_kafka.kafka_ssl_ca);
+    add_native(&Config::ssl_cert, &s_kafka.kafka_ssl_cert);
+    add_native(&Config::ssl_key, &s_kafka.kafka_ssl_key);
+    add_native(&Config::sasl_user, &s_kafka.kafka_sasl_user);
+    add_native(&Config::sasl_password, &s_kafka.kafka_sasl_password);
+    add_native(&Config::sasl_mechanism, &s_kafka.kafka_sasl_mechanism);
 }
 
 bool KafkaCDC::Config::post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params)

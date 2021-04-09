@@ -20,13 +20,7 @@
 #include <maxscale/paths.hh>
 
 #include "../replicator/replicator.hh"
-
-enum SaslMech
-{
-    PLAIN,
-    SCRAM_SHA_256,
-    SCRAM_SHA_512,
-};
+#include "kafka_common.hh"
 
 // Never used
 class KafkaCDCSession : public mxs::RouterSession
