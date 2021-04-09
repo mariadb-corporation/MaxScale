@@ -19,15 +19,13 @@ namespace mxsmongo
 namespace command
 {
 
-class MxsDiagnose final : public Command
+class MxsDiagnose final : public ImmediateCommand
 {
 public:
-    using Command::Command;
+    using ImmediateCommand::ImmediateCommand;
 
-    GWBUF* execute() override
+    void populate_response(DocumentBuilder& doc)
     {
-        DocumentBuilder doc;
-
         auto command = value_as<bsoncxx::document::view>();
 
         int32_t ok = 1;
@@ -76,8 +74,6 @@ public:
         }
 
         doc.append(kvp("ok", ok));
-
-        return create_response(doc.extract());
     }
 };
 
