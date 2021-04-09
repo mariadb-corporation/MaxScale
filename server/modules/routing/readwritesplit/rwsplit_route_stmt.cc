@@ -359,6 +359,12 @@ bool RWSplitSession::route_single_stmt(GWBUF* querybuf)
 
             if (!succp && should_migrate_trx(target))
             {
+                if (m_current_master && m_current_master->in_use())
+                {
+                    m_current_master->close();
+                    m_current_master->set_close_reason("The original master is not available");
+                }
+
                 return start_trx_migration(target, querybuf);
             }
         }
