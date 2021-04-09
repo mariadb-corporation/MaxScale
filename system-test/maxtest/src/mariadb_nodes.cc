@@ -241,25 +241,20 @@ int MariaDBCluster::start_node(int node, const char* param)
     return ssh_node(node, cmd, true);
 }
 
-int MariaDBCluster::stop_nodes()
+bool MariaDBCluster::stop_nodes()
 {
-    std::vector<std::thread> workers;
-    int local_result = 0;
-    connect();
+    auto func = [this](int i) {
+            return stop_node(i) == 0;
+        };
+    return run_on_every_backend(func);
+}
 
-    for (int i = 0; i < N; i++)
-    {
-        workers.emplace_back([&, i]() {
-                                 local_result += stop_node(i);
-                             });
-    }
-
-    for (auto& a : workers)
-    {
-        a.join();
-    }
-
-    return local_result;
+bool MariaDBCluster::start_nodes()
+{
+    auto func = [this](int i) {
+            return start_node(i) == 0;
+        };
+    return run_on_every_backend(func);
 }
 
 int MariaDBCluster::stop_slaves()

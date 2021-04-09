@@ -162,10 +162,18 @@ public:
     void print_env();
 
     /**
-     * @brief stop_nodes stops mysqld on all nodes
-     * @return  0 in case of success
+     * Start mysqld on all nodes.
+     *
+     * @return  True on success
      */
-    int stop_nodes();
+    bool start_nodes();
+
+    /**
+     * Stop mysqld on all nodes.
+     *
+     * @return  True on success
+     */
+    bool stop_nodes();
 
     /**
      * @brief stop_slaves isues 'stop slave;' to all nodes
@@ -264,14 +272,6 @@ public:
     std::vector<std::string> get_all_server_ids_str();
 
     bool prepare_cluster_for_test();
-
-    /**
-     * Flush hosts, adjust settings, remove anonymous users, etc.
-     *
-     * @param i Node to prepare
-     * @return True on success
-     */
-    bool prepare_for_test(int i);
 
     bool prepare_servers_for_test();
 
@@ -458,4 +458,12 @@ private:
      * @return True if cluster is ready for test
      */
     virtual bool check_replication() = 0;
+
+    /**
+     * Flush hosts, adjust settings, remove anonymous users, etc.
+     *
+     * @param i Node to prepare
+     * @return True on success
+     */
+    bool prepare_for_test(int i);
 };
