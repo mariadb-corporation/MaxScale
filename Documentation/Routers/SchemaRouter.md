@@ -103,13 +103,14 @@ MaxScale's hostname.
 
 ### `ignore_tables`
 
-List of full table names (e.g. db1.t1) to ignore when checking for duplicate tables.
+List of full table names (e.g. db1.t1) to ignore when checking for duplicate
+tables. By default no tables are ignored.
 
 ### `ignore_tables_regex`
 
-A
-[PCRE2 regular expression](../Getting-Started/Configuration-Guide.md#regular-expressions)
+A [PCRE2 regular expression](../Getting-Started/Configuration-Guide.md#regular-expressions)
 that is matched against database names when checking for duplicate databases.
+By default no tables are ignored.
 
 The following configuration ignores duplicate tables in the databases `db1` and `db2`,
 and all tables starting with "t" in `db3`.
@@ -178,23 +179,26 @@ value pairs.
 ### `max_sescmd_history`
 
 Set a limit on the number of session modifying commands a session can execute.
-This sets an effective cap on the memory consumption of the session.
+This sets an effective cap on the memory consumption of the session. By default
+there is no limit on the session command history.
 
 ### `disable_sescmd_history`
 
-Disable the session command history. This will prevent growing memory consumption
-of a long-running session and allows pooled connections to MariaDB MaxScale to be used.
-The drawback of this is the fact that if a server goes down, the session state
-will not be consistent anymore.
+Disable the session command history. The session command history is disabled by
+default. This will prevent growing memory consumption of a long-running session
+and allows pooled connections to MariaDB MaxScale to be used.  The drawback of
+this is the fact that if a server goes down, the session state will not be
+consistent anymore.
 
 ### `refresh_databases`
 
 Enable database map refreshing mid-session. These are triggered by a failure to
-change the database i.e. `USE ...` queries.
+change the database i.e. `USE ...` queries. This feature is enabled by default.
 
 ### `refresh_interval`
 
-The minimum interval between database map refreshes in seconds.
+The minimum interval between database map refreshes in seconds. The default
+value is 300 seconds.
 
 The interval is specified as documented
 [here](../Getting-Started/Configuration-Guide.md#durations). If no explicit unit
