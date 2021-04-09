@@ -183,10 +183,10 @@ protected:
     bsoncxx::builder::basic::array m_write_errors;
 };
 
-class TableCreatingCommand : public Command
+class TableCreatingCommand : public SingleCommand
 {
 public:
-    using Command::Command;
+    using SingleCommand::SingleCommand;
 
     using Worker = mxb::Worker;
 
@@ -196,18 +196,6 @@ public:
         {
             Worker::get_current()->cancel_delayed_call(m_dcid);
         }
-    }
-
-    GWBUF* execute() override final
-    {
-        if (m_statement.empty())
-        {
-            m_statement = create_statement();
-        }
-
-        send_downstream(m_statement);
-
-        return nullptr;
     }
 
     State translate(GWBUF& mariadb_response, GWBUF** ppResponse) override final
@@ -239,7 +227,7 @@ public:
 
                                 stringstream ss;
                                 ss << "CREATE TABLE "
-                                   << table_name()
+                                   << table()
                                    << " (id TEXT NOT NULL UNIQUE, doc JSON)";
 
                                 send_downstream(ss.str());
@@ -251,7 +239,7 @@ public:
                 else
                 {
                     stringstream ss;
-                    ss << "Table " << table_name() << " does not exist, and 'auto_create_tables' "
+                    ss << "Table " << table() << " does not exist, and 'auto_create_tables' "
                        << "is false.";
 
                     pResponse = HardError(ss.str(), error::COMMAND_FAILED).create_response(*this);
@@ -308,8 +296,6 @@ public:
     }
 
 protected:
-    virtual string create_statement() const = 0;
-    virtual string table_name() const = 0;
     virtual State translate(ComResponse& response, GWBUF** ppResponse) = 0;
 
 private:
@@ -320,7 +306,6 @@ private:
     };
 
     Mode     m_mode { NORMAL };
-    string   m_statement;
     uint32_t m_dcid { 0 };
 };
 
@@ -537,10 +522,10 @@ class Insert final : public TableCreatingCommand
 public:
     using TableCreatingCommand::TableCreatingCommand;
 
-    string create_statement() const override final
+    string generate_sql() override final
     {
         stringstream sql;
-        sql << "INSERT INTO " << table_name() << " (id, doc) VALUES ";
+        sql << "INSERT INTO " << table() << " (id, doc) VALUES ";
 
         auto it = m_arguments.find(key::DOCUMENTS);
 
@@ -590,11 +575,6 @@ public:
         }
 
         return sql.str();
-    }
-
-    string table_name() const override final
-    {
-        return table();
     }
 
     State translate(ComResponse& response, GWBUF** ppResponse) override final

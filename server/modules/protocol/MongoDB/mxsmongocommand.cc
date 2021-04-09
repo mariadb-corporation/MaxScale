@@ -725,7 +725,9 @@ void ImmediateCommand::diagnose(DocumentBuilder& doc)
 
 GWBUF* SingleCommand::execute()
 {
-    send_downstream(generate_sql());
+    m_statement = generate_sql();
+
+    send_downstream(m_statement);
     return nullptr;
 }
 

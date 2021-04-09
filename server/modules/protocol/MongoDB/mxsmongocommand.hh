@@ -235,6 +235,8 @@ public:
 
 protected:
     virtual std::string generate_sql() = 0;
+
+    std::string m_statement;
 };
 
 /**
