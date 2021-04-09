@@ -237,4 +237,22 @@ protected:
     virtual std::string generate_sql() = 0;
 };
 
+/**
+ * @class MultiCommand
+ *
+ * A command that may execute multiple SQL statements against the backend, in order
+ * to produce the response.
+ */
+class MultiCommand : public Command
+{
+public:
+    using Command::Command;
+
+    void diagnose(DocumentBuilder& doc);
+
+protected:
+    virtual std::vector<std::string> generate_sql() = 0;
+};
+
+
 }

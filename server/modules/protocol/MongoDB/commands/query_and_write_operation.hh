@@ -24,7 +24,7 @@ namespace mxsmongo
 namespace command
 {
 
-class OrderedCommand : public Command
+class OrderedCommand : public MultiCommand
 {
 public:
     template<class ConcretePacket>
@@ -35,7 +35,7 @@ public:
                    const bsoncxx::document::view& doc,
                    const DocumentArguments& arguments,
                    const std::string& array_key)
-        : Command(name, pDatabase, pRequest, req, doc, arguments)
+        : MultiCommand(name, pDatabase, pRequest, req, doc, arguments)
         , m_key(array_key)
     {
     }
@@ -43,43 +43,7 @@ public:
 public:
     GWBUF* execute() override final
     {
-        optional(key::ORDERED, &m_ordered);
-
-        auto it = m_arguments.find(m_key);
-
-        if (it != m_arguments.end())
-        {
-            const auto& documents = it->second;
-            check_write_batch_size(documents.size());
-
-            for (auto doc : documents)
-            {
-                m_statements.push_back(convert_document(doc));
-            }
-        }
-        else
-        {
-            auto documents = required<bsoncxx::array::view>(m_key.c_str());
-            auto nDocuments = std::distance(documents.begin(), documents.end());
-            check_write_batch_size(nDocuments);
-
-            int i = 0;
-            for (auto element : documents)
-            {
-                if (element.type() != bsoncxx::type::k_document)
-                {
-                    stringstream ss;
-                    ss << "BSON field '" << m_name << "." << m_key << "."
-                       << i << "' is the wrong type '"
-                       << bsoncxx::to_string(element.type())
-                       << "', expected type 'object'";
-
-                    throw SoftError(ss.str(), error::TYPE_MISMATCH);
-                }
-
-                m_statements.push_back(convert_document(element.get_document()));
-            }
-        }
+        m_statements = generate_sql();
 
         m_it = m_statements.begin();
 
@@ -151,6 +115,51 @@ public:
     }
 
 protected:
+    std::vector<std::string> generate_sql() override final
+    {
+        std::vector<std::string> statements;
+
+        optional(key::ORDERED, &m_ordered);
+
+        auto it = m_arguments.find(m_key);
+
+        if (it != m_arguments.end())
+        {
+            const auto& documents = it->second;
+            check_write_batch_size(documents.size());
+
+            for (auto doc : documents)
+            {
+                statements.push_back(convert_document(doc));
+            }
+        }
+        else
+        {
+            auto documents = required<bsoncxx::array::view>(m_key.c_str());
+            auto nDocuments = std::distance(documents.begin(), documents.end());
+            check_write_batch_size(nDocuments);
+
+            int i = 0;
+            for (auto element : documents)
+            {
+                if (element.type() != bsoncxx::type::k_document)
+                {
+                    stringstream ss;
+                    ss << "BSON field '" << m_name << "." << m_key << "."
+                       << i << "' is the wrong type '"
+                       << bsoncxx::to_string(element.type())
+                       << "', expected type 'object'";
+
+                    throw SoftError(ss.str(), error::TYPE_MISMATCH);
+                }
+
+                statements.push_back(convert_document(element.get_document()));
+            }
+        }
+
+        return statements;
+    }
+
     virtual string convert_document(const bsoncxx::document::view& doc) = 0;
 
     virtual void interpret(const ComOK& response) = 0;

@@ -192,10 +192,14 @@ provided as argument. For example:
   "ok" : 1
 }
 
+> db.runCommand({mxsDiagnose: {delete:"person", deletes: [{q: { name: "Bob"}, limit:0}, {q: {name: "Alice"}, limit:0}]}});
 {
-  "ok": 1,
-  "kind": "multi",
-  "sql": [ "INSERT ...", "INSERT ..." ]
+  "kind" : "single",
+  "sql" : [
+    "DELETE FROM `test`.`person` WHERE ( JSON_EXTRACT(doc, '$.name') = 'Bob') ",
+    "DELETE FROM `test`.`person` WHERE ( JSON_EXTRACT(doc, '$.name') = 'Alice') "
+  ],
+  "ok" : 1
 }
 ```
 `kind` specifies of what kind the command is; an _immediate_ command is one for

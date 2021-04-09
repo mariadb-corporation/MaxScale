@@ -735,4 +735,18 @@ void SingleCommand::diagnose(DocumentBuilder& doc)
     doc.append(kvp("sql", generate_sql()));
 }
 
+void MultiCommand::diagnose(DocumentBuilder& doc)
+{
+    doc.append(kvp("kind", "multi"));
+    auto statements = generate_sql();
+
+    ArrayBuilder sql;
+    for (const auto& statement : statements)
+    {
+        sql.append(statement);
+    }
+
+    doc.append(kvp("sql", sql.extract()));
+}
+
 }
