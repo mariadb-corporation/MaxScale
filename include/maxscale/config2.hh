@@ -2592,6 +2592,11 @@ using Service = ConcreteType<ParamService>;
 using String = ConcreteType<ParamString>;
 
 /**
+ * StringList
+ */
+using StringList = ConcreteType<ParamStringList>;
+
+/**
  * IMPLEMENTATION DETAILS
  */
 struct DurationSuffix
