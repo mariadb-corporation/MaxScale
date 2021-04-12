@@ -103,13 +103,14 @@ MaxScale's hostname.
 
 ### `ignore_tables`
 
-List of full table names (e.g. db1.t1) to ignore when checking for duplicate tables.
+List of full table names (e.g. db1.t1) to ignore when checking for duplicate
+tables. By default no tables are ignored.
 
 ### `ignore_tables_regex`
 
-A
-[PCRE2 regular expression](../Getting-Started/Configuration-Guide.md#regular-expressions)
+A [PCRE2 regular expression](../Getting-Started/Configuration-Guide.md#regular-expressions)
 that is matched against database names when checking for duplicate databases.
+By default no tables are ignored.
 
 The following configuration ignores duplicate tables in the databases `db1` and `db2`,
 and all tables starting with "t" in `db3`.
@@ -183,11 +184,12 @@ in MaxScale 2.6.0.
 ### `refresh_databases`
 
 Enable database map refreshing mid-session. These are triggered by a failure to
-change the database i.e. `USE ...` queries.
+change the database i.e. `USE ...` queries. This feature is enabled by default.
 
 ### `refresh_interval`
 
-The minimum interval between database map refreshes in seconds.
+The minimum interval between database map refreshes in seconds. The default
+value is 300 seconds.
 
 The interval is specified as documented
 [here](../Getting-Started/Configuration-Guide.md#durations). If no explicit unit
