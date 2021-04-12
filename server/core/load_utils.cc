@@ -619,6 +619,36 @@ json_t* legacy_params_to_json(const LOADED_MODULE* mod)
 
     return params;
 }
+
+const char* module_type_to_legacy_string(ModuleType type)
+{
+    // NOTE: The names are CamelCase on purpose to be backwards compatible with 2.5. This function should only
+    // be used to generate the module_type field of the modules endpoint response.
+    switch (type)
+    {
+    case ModuleType::PROTOCOL:
+        return "Protocol";
+
+    case ModuleType::ROUTER:
+        return "Router";
+
+    case ModuleType::MONITOR:
+        return "Monitor";
+
+    case ModuleType::FILTER:
+        return "Filter";
+
+    case ModuleType::AUTHENTICATOR:
+        return "Authenticator";
+
+    case ModuleType::QUERY_CLASSIFIER:
+        return "QueryClassifier";
+
+    default:
+        mxb_assert(!true);
+        return "unknown";
+    }
+}
 }
 
 static json_t* module_json_data(const LOADED_MODULE* mod, const char* host)
@@ -630,7 +660,7 @@ static json_t* module_json_data(const LOADED_MODULE* mod, const char* host)
     json_object_set_new(obj, CN_TYPE, json_string(CN_MODULES));
 
     json_t* attr = json_object();
-    auto mod_type = module_type_to_string(mod_info->modapi);
+    auto mod_type = module_type_to_legacy_string(mod_info->modapi);
     json_object_set_new(attr, "module_type", json_string(mod_type));
     json_object_set_new(attr, "version", json_string(mod_info->version));
     json_object_set_new(attr, CN_DESCRIPTION, json_string(mod_info->description));
