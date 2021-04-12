@@ -20,3 +20,10 @@ struct MXS_MODULE;
  * @return MariaDB-protocol module info
  */
 MXS_MODULE* mariadbprotocol_info();
+
+/**
+ * Should only be used by the main executable to generate module info object.
+ *
+ * @return MariaDB-protocol module info
+ */
+MXS_MODULE* mariadbauthenticator_info();

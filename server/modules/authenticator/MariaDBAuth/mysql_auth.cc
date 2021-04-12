@@ -11,11 +11,14 @@
  * Public License.
  */
 
-#include "mysql_auth.hh"
+#include <maxscale/protocol/mariadb/module_names.hh>
+#define MXS_MODULE_NAME MXS_MARIADBAUTH_AUTHENTICATOR_NAME
 
+#include "mysql_auth.hh"
 #include <maxbase/alloc.h>
 #include <maxbase/format.hh>
 #include <maxscale/authenticator.hh>
+#include <maxscale/built_in_modules.hh>
 #include <maxscale/config_common.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 
@@ -350,9 +353,12 @@ MariaDBBackendSession::MariaDBBackendSession(mariadb::BackendAuthData& shared_da
 {
 }
 
-extern "C"
-{
-MXS_MODULE* MXS_CREATE_MODULE()
+/**
+ * Get MariaDBAuth module info
+ *
+ * @return The module object
+ */
+MXS_MODULE* mariadbauthenticator_info()
 {
     static MXS_MODULE info =
     {
@@ -365,15 +371,14 @@ MXS_MODULE* MXS_CREATE_MODULE()
         "V2.1.0",
         MXS_NO_MODULE_CAPABILITIES,         // Authenticator capabilities are in the instance object
         &mxs::AuthenticatorApiGenerator<MariaDBAuthenticatorModule>::s_api,
-        NULL,           /* Process init. */
-        NULL,           /* Process finish. */
-        NULL,           /* Thread init. */
-        NULL,           /* Thread finish. */
+        NULL,
+        NULL,
+        NULL,
+        NULL,
         {
             {MXS_END_MODULE_PARAMS}
         }
     };
 
     return &info;
-}
 }

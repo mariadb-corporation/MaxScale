@@ -17,6 +17,7 @@
 #include <maxbase/maxbase.hh>
 #include <maxbase/stacktrace.hh>
 #include <maxbase/watchdognotifier.hh>
+#include <maxscale/built_in_modules.hh>
 #include <maxscale/cn_strings.hh>
 #include <maxscale/config.hh>
 #include <maxscale/dcb.hh>
@@ -29,7 +30,6 @@
 #include <maxscale/test.hh>
 
 #include <sys/stat.h>
-#include <maxscale/protocol/mariadb/module_info.hh>
 
 #include "../internal/poll.hh"
 #include "../internal/modules.hh"
@@ -134,9 +134,8 @@ void init_test_env(char* __attribute((unused))path = nullptr, uint32_t init_type
     mxs::set_libdir(old_libdir.c_str());
 
     add_built_in_module(mariadbprotocol_info());
+    add_built_in_module(mariadbauthenticator_info());
     preload_module("readconnroute", "server/modules/routing/readconnroute/", mxs::ModuleType::ROUTER);
-    preload_module("mariadbauth", "server/modules/authenticator/MariaDBAuth/",
-                   mxs::ModuleType::AUTHENTICATOR);
 }
 
 /**

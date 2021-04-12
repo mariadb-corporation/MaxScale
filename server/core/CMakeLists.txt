@@ -74,6 +74,7 @@ target_link_libraries(maxscale-common
   ${GNUTLS_LIBRARIES}
   ${LIBATOMIC_LIBRARIES}
   mariadbprotocol
+  mariadbauth
 )
 
 if(WITH_ASAN AND ASAN_FOUND)

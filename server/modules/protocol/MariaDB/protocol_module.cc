@@ -16,13 +16,10 @@
 #include "protocol_module.hh"
 #include <maxscale/protocol/mariadb/client_connection.hh>
 #include <maxscale/protocol/mariadb/backend_connection.hh>
-#include <maxscale/protocol/mariadb/module_info.hh>
-
+#include <maxscale/built_in_modules.hh>
 #include <maxscale/cn_strings.hh>
-#include <maxscale/config.hh>
 #include <maxscale/listener.hh>
 #include <maxscale/modutil.hh>
-#include <maxscale/service.hh>
 #include "user_data.hh"
 
 using std::string;

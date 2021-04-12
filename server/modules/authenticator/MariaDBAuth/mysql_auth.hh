@@ -12,11 +12,7 @@
  */
 #pragma once
 
-#include <maxscale/protocol/mariadb/module_names.hh>
-#define MXS_MODULE_NAME MXS_MARIADBAUTH_AUTHENTICATOR_NAME
-
 #include <maxscale/ccdefs.hh>
-
 #include <maxscale/buffer.hh>
 #include <maxscale/protocol/mariadb/authenticator.hh>
 #include <maxscale/protocol/mariadb/protocol_classes.hh>
