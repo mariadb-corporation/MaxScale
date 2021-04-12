@@ -70,8 +70,11 @@ void load(long int* new_inserts,
         // close connections
         Test->maxscales->close_rwsplit(0);
 
-        Test->tprintf("Waiting for the table to replicate\n");
-        nodes->sync_slaves();
+        if (nodes == Test->repl)
+        {
+            Test->tprintf("Waiting for the table to replicate\n");
+            Test->repl->sync_slaves();
+        }
 
         pthread_t thread1[threads_num];
         pthread_t thread2[threads_num];

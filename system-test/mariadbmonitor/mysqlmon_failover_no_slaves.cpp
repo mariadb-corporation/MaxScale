@@ -97,8 +97,6 @@ int main(int argc, char** argv)
     test.repl->restore_server_settings(2);
     test.repl->start_node(2, (char*) "");
     test.maxctrl("clear server " + server_name + " maintenance");
-
-    test.repl->fix_replication();
     return test.global_result;
 }
 

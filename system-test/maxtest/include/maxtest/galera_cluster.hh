@@ -30,9 +30,4 @@ public:
     bool check_replication() override;
 
     std::string get_config_name(int node) override;
-
-    virtual void sync_slaves(int node = 0) override
-    {
-        sleep(10);
-    }
 };

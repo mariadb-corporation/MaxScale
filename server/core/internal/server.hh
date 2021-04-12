@@ -257,6 +257,7 @@ public:
 
     void deactivate() override
     {
+        assign_status(0);
         m_active = false;
     }
 

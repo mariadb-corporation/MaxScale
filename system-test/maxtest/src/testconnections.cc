@@ -1118,7 +1118,7 @@ int TestConnections::check_maxscale_processes(int m, int expected)
         return -1;
     }
 
-    maxscale_num.output = cutoff_string(maxscale_num.output, '\n');
+    maxscale_num.output = mxt::cutoff_string(maxscale_num.output, '\n');
 
     if (atoi(maxscale_num.output.c_str()) != expected)
     {
@@ -2251,10 +2251,4 @@ mxt::MariaDBServer* TestConnections::get_repl_master()
         }
     }
     return rval;
-}
-
-std::string cutoff_string(const string& source, char cutoff)
-{
-    auto pos = source.find(cutoff);
-    return (pos != string::npos) ? source.substr(0, pos) : source;
 }

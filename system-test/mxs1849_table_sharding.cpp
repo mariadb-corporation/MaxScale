@@ -41,6 +41,5 @@ int main(int argc, char* argv[])
     test.repl->execute_query_all_nodes("DROP DATABASE IF EXISTS shard_db");
     test.repl->execute_query_all_nodes("START SLAVE");
     sleep(1);
-    test.repl->fix_replication();
     return test.global_result;
 }

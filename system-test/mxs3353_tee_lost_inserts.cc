@@ -47,7 +47,5 @@ int main(int argc, char** argv)
     test.tprintf("Node 1: %s rows Node 2: %s rows", res1.c_str(), res2.c_str());
     test.expect(res1 == res2, "Both should have the same amount of rows");
 
-    test.repl->fix_replication();
-
     return test.global_result;
 }

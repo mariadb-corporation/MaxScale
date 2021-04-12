@@ -54,7 +54,5 @@ int main(int argc, char* argv[])
     execute_query(test.repl->nodes[0], "DROP DATABASE db1");
     execute_query(test.repl->nodes[1], "DROP DATABASE db2");
 
-    test.repl->fix_replication();
-
     return test.global_result;
 }

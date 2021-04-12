@@ -12,10 +12,13 @@
  */
 
 #include <maxtest/replication_cluster.hh>
+
+#include <iostream>
+#include <thread>
+#include <maxbase/format.hh>
+#include <maxbase/stopwatch.hh>
 #include <maxtest/log.hh>
 #include <maxtest/mariadb_connector.hh>
-#include <iostream>
-#include <maxbase/format.hh>
 
 using std::string;
 using std::cout;
@@ -33,6 +36,9 @@ const char setup_slave[] =
     "MASTER_USE_GTID=current_pos; "
     "start slave;";
 
+const string sl_io = "Slave_IO_Running";
+const string sl_sql = "Slave_SQL_Running";
+
 bool is_readonly(mxt::MariaDB* conn)
 {
     bool rval = false;
@@ -42,37 +48,6 @@ bool is_readonly(mxt::MariaDB* conn)
         rval = true;
     }
     return rval;
-}
-
-void wait_until_pos(MYSQL* mysql, int filenum, int pos)
-{
-    int slave_filenum = 0;
-    int slave_pos = 0;
-
-    do
-    {
-        if (mysql_query(mysql, "SHOW SLAVE STATUS"))
-        {
-            printf("Failed to execute SHOW SLAVE STATUS: %s", mysql_error(mysql));
-            break;
-        }
-
-        MYSQL_RES* res = mysql_store_result(mysql);
-
-        if (res)
-        {
-            MYSQL_ROW row = mysql_fetch_row(res);
-
-            if (row && row[5] && strchr(row[5], '.') && row[21])
-            {
-                char* file_suffix = strchr(row[5], '.') + 1;
-                slave_filenum = atoi(file_suffix);
-                slave_pos = atoi(row[21]);
-            }
-            mysql_free_result(res);
-        }
-    }
-    while (slave_filenum < filenum || slave_pos < pos);
 }
 }
 
@@ -138,12 +113,6 @@ bool ReplicationCluster::check_replication()
         logger().log_msgf("Checking Master-Slave cluster.");
     }
 
-    if (connect())
-    {
-        cout << "Failed to connect to all servers" << endl;
-        return false;
-    }
-
     if (!update_status())
     {
         cout << "Failed to update status" << endl;
@@ -197,9 +166,8 @@ bool ReplicationCluster::check_replication()
 
     if (verbose)
     {
-        printf("Replication check for %s gave code %d\n", prefix().c_str(), res);
+        logger().log_msgf("Master-Slave cluster %s.", res ? "replicating" : "not replicating.");
     }
-
     return res;
 }
 
@@ -264,8 +232,8 @@ bool ReplicationCluster::good_slave_thread_status(mxt::MariaDB* conn, int node)
             else
             {
                 res->next_row();
-                io_running = res->get_string("Slave_IO_Running");
-                sql_running = res->get_string("Slave_SQL_Running");
+                io_running = res->get_string(sl_io);
+                sql_running = res->get_string(sl_sql);
                 if (!io_running.empty() && io_running != y && io_running != n)
                 {
                     // May not be final value, wait and try again.
@@ -309,41 +277,164 @@ bool ReplicationCluster::good_slave_thread_status(mxt::MariaDB* conn, int node)
     return rval;
 }
 
-void ReplicationCluster::sync_slaves(int node)
+bool ReplicationCluster::sync_slaves(int master_node_ind)
 {
-    if (this->nodes[node] == NULL)
+    struct Gtid
     {
-        this->connect();
-    }
+        int64_t domain {-1};
+        int64_t server_id {-1};
+        int64_t seq_no {-1};
+    };
 
-    if (mysql_query(this->nodes[node], "SHOW MASTER STATUS"))
+    struct ReplData
     {
-        printf("Failed to execute SHOW MASTER STATUS: %s", mysql_error(this->nodes[node]));
-    }
-    else
-    {
-        MYSQL_RES* res = mysql_store_result(this->nodes[node]);
+        Gtid gtid;
+        bool is_replicating {false};
+    };
 
-        if (res)
-        {
-            MYSQL_ROW row = mysql_fetch_row(res);
-            if (row && row[node] && row[1])
+    auto update_one_server = [](mxt::MariaDB* conn) {
+            ReplData rval;
+            if (conn->is_open())
             {
-                const char* file_suffix = strchr(row[node], '.') + 1;
-                int filenum = atoi(file_suffix);
-                int pos = atoi(row[1]);
-
-                for (int i = 0; i < this->N; i++)
+                auto res = conn->multiquery({"select @@gtid_current_pos;", "show all slaves status;"});
+                if (!res.empty())
                 {
-                    if (i != node)
+                    // Got results. When parsing gtid, only consider the first triplet. Typically that's all
+                    // there is.
+                    auto& res_gtid = res[0];
+                    if (res_gtid->next_row())
                     {
-                        wait_until_pos(this->nodes[i], filenum, pos);
+                        string gtid_current = res_gtid->get_string(0);
+                        gtid_current = cutoff_string(gtid_current, ',');
+                        auto elems = mxb::strtok(gtid_current, "-");
+                        if (elems.size() == 3)
+                        {
+                            mxb::get_long(elems[0], &rval.gtid.domain);
+                            mxb::get_long(elems[1], &rval.gtid.server_id);
+                            mxb::get_long(elems[2], &rval.gtid.seq_no);
+                        }
+                    }
+
+                    auto& slave_ss = res[1];
+                    if (slave_ss->next_row())
+                    {
+                        string io_state = slave_ss->get_string(sl_io);
+                        string sql_state = slave_ss->get_string(sl_sql);
+                        rval.is_replicating = (io_state != "No" && sql_state == "Yes");
                     }
                 }
             }
-            mysql_free_result(res);
+            return rval;
+        };
+
+    auto update_all = [this, &update_one_server](const ConnArray& conns) {
+            int n = conns.size();
+            std::vector<ReplData> rval;
+            rval.resize(n);
+
+            mxt::BoolFuncArray funcs;
+            funcs.reserve(n);
+
+            for (int i = 0; i < n; i++)
+            {
+                auto func = [&rval, &conns, i, &update_one_server]() {
+                        rval[i] = update_one_server(conns[i].get());
+                        return true;
+                    };
+                funcs.push_back(std::move(func));
+            }
+            m_shared.concurrent_run(funcs);
+            return rval;
+        };
+
+    auto master = backend(master_node_ind);
+    auto master_conn = master->try_open_admin_connection();
+    Gtid best_found = update_one_server(master_conn.get()).gtid;
+
+    bool rval = false;
+
+    if (best_found.server_id < 0)
+    {
+        m_shared.log.log_msgf("Could not read valid gtid:s when waiting for cluster sync.");
+    }
+    else
+    {
+        auto waiting_catchup = admin_connect_to_all();
+        int expected_catchups = waiting_catchup.size();
+        int successful_catchups = 0;
+        mxb::StopWatch timer;
+        auto limit = mxb::from_secs(10);    // Wait a maximum of 10 seconds for sync.
+
+        while (!waiting_catchup.empty() && timer.split() < limit)
+        {
+            auto repl_data = update_all(waiting_catchup);
+            if (verbose())
+            {
+                logger().log_msgf("Waiting for %zu servers to sync with master.",
+                                  waiting_catchup.size() - 1);
+            }
+
+            for (size_t i = 0; i < waiting_catchup.size();)
+            {
+                auto& elem = repl_data[i];
+                bool sync_possible = false;
+                bool in_sync = false;
+
+                if (elem.gtid.server_id < 0)
+                {
+                    // Query or connection failed.
+                }
+                else if (elem.gtid.domain != best_found.domain)
+                {
+                    // If a test uses complicated gtid:s, it needs to handle it on it's own.
+                    m_shared.log.log_msgf("Found different gtid domain id:s (%li and %li) when waiting "
+                                          "for cluster sync.", elem.gtid.domain, best_found.domain);
+                }
+                else if (elem.gtid.seq_no >= best_found.seq_no)
+                {
+                    in_sync = true;
+                }
+                else if (elem.is_replicating)
+                {
+                    sync_possible = true;
+                }
+
+                if (in_sync || !sync_possible)
+                {
+                    waiting_catchup.erase(waiting_catchup.begin() + i);
+                    repl_data.erase(repl_data.begin() + i);
+                    if (in_sync)
+                    {
+                        successful_catchups++;
+                    }
+                }
+                else
+                {
+                    i++;
+                }
+            }
+
+            if (!waiting_catchup.empty())
+            {
+                std::this_thread::sleep_for(std::chrono::milliseconds(500));
+            }
+        }
+
+        if (successful_catchups == expected_catchups)
+        {
+            rval = true;
+            if (verbose())
+            {
+                logger().log_msgf("Slave sync took %.1f seconds.", mxb::to_secs(timer.split()));
+            }
+        }
+        else
+        {
+            logger().log_msgf("Only %i out of %i servers in the cluster got in sync within %.1f seconds.",
+                              successful_catchups, expected_catchups, mxb::to_secs(timer.split()));
         }
     }
+    return rval;
 }
 
 int ReplicationCluster::find_master()

@@ -47,10 +47,6 @@ public:
     std::string block_command(int node) const override;
     std::string unblock_command(int node) const override;
 
-    void sync_slaves(int node = 0) override
-    {
-    }
-
 private:
     std::string anonymous_users_query() const override;
 };

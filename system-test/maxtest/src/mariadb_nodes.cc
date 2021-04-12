@@ -479,6 +479,7 @@ bool MariaDBCluster::fix_replication()
         }
     }
 
+    disconnect();
     return rval;
 }
 
@@ -1029,6 +1030,25 @@ bool MariaDBCluster::prepare_cluster_for_test()
         close_active_connections();
         rval = true;
     }
+    return rval;
+}
+
+MariaDBCluster::ConnArray MariaDBCluster::admin_connect_to_all()
+{
+    ConnArray rval;
+    rval.resize(N);
+
+    mxt::BoolFuncArray funcs;
+    funcs.reserve(rval.size());
+    for (size_t i = 0; i < rval.size(); i++)
+    {
+        auto add_connection = [this, &rval, i]() {
+                rval[i] = m_backends[i]->try_open_admin_connection();
+                return true;
+            };
+        funcs.push_back(std::move(add_connection));
+    }
+    m_shared.concurrent_run(funcs);
     return rval;
 }
 

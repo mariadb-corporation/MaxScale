@@ -82,6 +82,5 @@ int main(int argc, char** argv)
 
     test.galera->start_node(2);
     test.galera->start_node(3);
-    test.galera->fix_replication();
     return test.global_result;
 }

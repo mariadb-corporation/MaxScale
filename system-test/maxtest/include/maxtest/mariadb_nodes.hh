@@ -86,6 +86,8 @@ private:
 class MariaDBCluster : public Nodes
 {
 public:
+    using ConnArray = std::vector<std::unique_ptr<mxt::MariaDB>>;
+
     static constexpr int N_MAX = 32;
     virtual ~MariaDBCluster();
 
@@ -306,14 +308,6 @@ public:
     void disable_ssl();
 
     /**
-     * @brief Synchronize slaves with the master
-     *
-     * Only works with master-slave replication and should not be used with Galera clusters.
-     * The function expects that the first node, @c nodes[0], is the master.
-     */
-    virtual void sync_slaves(int node = 0) = 0;
-
-    /**
      * @brief Close all connections to this node
      *
      * This will kill all connections that have been created to this node.
@@ -382,15 +376,6 @@ public:
      */
     virtual bool prepare_server(int i);
 
-    bool prepare_servers();
-
-    /**
-     * Static functions
-     */
-
-    /** Whether to require GTID based replication, defaults to false */
-    static void require_gtid(bool value);
-
     /**
      * @brief limit_nodes Restart replication for only new_N nodes
      * @param new_N new number of nodes in replication
@@ -428,6 +413,8 @@ public:
 
     mxt::MariaDBServer* backend(int i);
 
+    ConnArray admin_connect_to_all();
+
 protected:
     /**
      * Constructor
@@ -458,5 +445,6 @@ private:
 
     std::vector<std::unique_ptr<mxt::MariaDBServer>> m_backends;
 
-    int read_nodes_info(const mxt::NetworkConfig& nwconfig);
+    int  read_nodes_info(const mxt::NetworkConfig& nwconfig);
+    bool prepare_servers();
 };

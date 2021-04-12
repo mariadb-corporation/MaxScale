@@ -223,7 +223,7 @@ string get_local_ip(TestConnections& test)
 string get_gateway_ip(TestConnections& test)
 {
     auto res = test.maxscales->ssh_output("echo $SSH_CLIENT", 0, false);
-    return cutoff_string(res.output, ' ');
+    return mxt::cutoff_string(res.output, ' ');
 }
 
 void start_maxscale_with_local_address(TestConnections& test,

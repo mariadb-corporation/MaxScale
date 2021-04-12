@@ -21,13 +21,15 @@ maxtest::MariaDB::MariaDB(TestLogger& log)
     : m_log(log)
 {
     // The test connector tries to automatically reconnect if a query fails.
-    connection_settings().auto_reconnect = true;
+    auto& sett = connection_settings();
+    sett.auto_reconnect = true;
+    sett.multiquery = true;
 }
 
 bool maxtest::MariaDB::open(const std::string& host, int port, const std::string& db)
 {
     auto ret = mxq::MariaDB::open(host, port, db);
-    m_log.expect(ret, "Connection to [%s]:%u failed. %s", host.c_str(), port, error());
+    m_log.expect(ret, "%s", error());
     return ret;
 }
 
@@ -36,7 +38,7 @@ bool maxtest::MariaDB::try_open(const std::string& host, int port, const std::st
     auto ret = mxq::MariaDB::open(host, port, db);
     if (!ret)
     {
-        m_log.log_msgf("Connection to [%s]:%u failed. %s", host.c_str(), port, error());
+        m_log.log_msgf("%s", error());
     }
     return ret;
 }

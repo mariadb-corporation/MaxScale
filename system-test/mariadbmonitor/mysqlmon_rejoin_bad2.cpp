@@ -148,6 +148,5 @@ int main(int argc, char** argv)
     expect(test, "server2", "Slave", "Running");
     expect(test, "server3", "Slave", "Running");
     expect(test, "server4", "Slave", "Running");
-    test.repl->fix_replication();
     return test.global_result;
 }

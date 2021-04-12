@@ -100,20 +100,6 @@ void get_input()
     }
 }
 
-void fix_replication_create_table(TestConnections& test)
-{
-    test.tprintf("Fix replication and recreate table.");
-    test.maxscales->close_maxscale_connections(0);
-    test.repl->fix_replication();
-    test.maxscales->connect_maxscale(0);
-    test.try_query(test.maxscales->conn_rwsplit[0], "CREATE OR REPLACE TABLE test.t1(id INT)");
-    test.repl->sync_slaves();
-    inserts = 0;
-
-    check(test);
-    get_output(test);
-}
-
 void delete_slave_binlogs(TestConnections& test)
 {
     const char RESET[] = "RESET MASTER;";
