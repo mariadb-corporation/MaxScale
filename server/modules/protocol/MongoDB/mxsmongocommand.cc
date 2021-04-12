@@ -531,10 +531,7 @@ void Command::add_error(bsoncxx::builder::basic::array& array, const ComERR& err
 
     bsoncxx::builder::basic::document error;
 
-    error.append(bsoncxx::builder::basic::kvp("index", index));
-    int32_t code = error::from_mariadb_code(err.code());
-    error.append(bsoncxx::builder::basic::kvp("code", code));
-    error.append(bsoncxx::builder::basic::kvp("errmsg", err.message()));
+    interpret_error(error, err, index);
     error.append(bsoncxx::builder::basic::kvp("mariadb", mariadb.extract()));
 
     array.append(error.extract());
@@ -547,6 +544,13 @@ void Command::add_error(bsoncxx::builder::basic::document& response, const ComER
     add_error(array, err, 0);
 
     response.append(bsoncxx::builder::basic::kvp("writeErrors", array.extract()));
+}
+
+void Command::interpret_error(bsoncxx::builder::basic::document& error, const ComERR& err, int index)
+{
+    error.append(bsoncxx::builder::basic::kvp("index", index));
+    error.append(bsoncxx::builder::basic::kvp("code", error::from_mariadb_code(err.code())));
+    error.append(bsoncxx::builder::basic::kvp("errmsg", err.message()));
 }
 
 pair<GWBUF*, uint8_t*> Command::create_reply_response_buffer(size_t size_of_documents, size_t nDocuments) const

@@ -161,6 +161,11 @@ protected:
     void add_error(bsoncxx::builder::basic::array& builder, const ComERR& err, int index);
     void add_error(bsoncxx::builder::basic::document& builder, const ComERR& err);
 
+    /**
+     * Add at least 'index', 'code' and 'errmsg'.
+    */
+    virtual void interpret_error(bsoncxx::builder::basic::document& error, const ComERR& err, int index);
+
     const std::string       m_name;
     Database&               m_database;
     GWBUF*                  m_pRequest;
