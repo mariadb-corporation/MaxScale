@@ -7,7 +7,7 @@
  */
 
 #include <sstream>
-#include <maxtest/maxinfo_func.hh>
+#include <maxtest/cdc_tools.hh>
 #include <maxtest/sql_t1.hh>
 #include <maxtest/testconnections.hh>
 
@@ -51,7 +51,7 @@ int main(int argc, char* argv[])
     {
         long long int x1, fl;
         test.set_timeout(20);
-        get_x_fl_from_json((char*)line.c_str(), &x1, &fl);
+        mxt::get_x_fl_from_json(line.c_str(), &x1, &fl);
 
         if (x1 != x1_exp || fl != fl_exp)
         {

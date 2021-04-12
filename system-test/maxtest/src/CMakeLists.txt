@@ -1,7 +1,7 @@
 add_library(maxtest SHARED
         big_load.cc
         blob_test.cc
-        xpand_nodes.cpp
+        cdc_tools.cc
         config_operations.cc
         different_size.cc
         envv.cc
@@ -14,7 +14,6 @@ add_library(maxtest SHARED
         mariadb_func.cc
         mariadb_connector.cc
         mariadb_nodes.cc
-        maxinfo_func.cc
         maxrest.cc
         maxscales.cc
         nodes.cc
@@ -23,6 +22,7 @@ add_library(maxtest SHARED
         sql_t1.cc
         tcp_connection.cc
         testconnections.cc
+        xpand_nodes.cpp
         ${CMAKE_CURRENT_BINARY_DIR}/test_info.cc)
 
 target_link_libraries(maxtest
