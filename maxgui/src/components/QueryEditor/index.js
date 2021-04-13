@@ -93,7 +93,6 @@ export default {
                     { token: 'keyword', foreground: '007020', fontStyle: 'bold' },
                     { token: 'operator.mariadb', foreground: '666666' },
                     { token: 'predefined.mariadb', foreground: 'FF00FF' },
-                    { token: 'builtinFunctions', foreground: 'eb5757' },
                 ],
                 //https://microsoft.github.io/monaco-editor/playground.html#customizing-the-appearence-exposed-colors
                 colors: {

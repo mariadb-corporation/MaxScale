@@ -48,7 +48,6 @@ export const languageTokens = {
         { open: '(', close: ')', token: 'delimiter.parenthesis' },
     ],
     keywords: reservedWords.map(w => w.keyword),
-    //TODO: below add mariadb builtin functions name
     builtinFunctions: [
         /*
          * Bit Functions and Operators
@@ -538,7 +537,7 @@ export const languageTokens = {
         ],
         whitespace: [[/\s+/, 'white']],
         comments: [
-            [/--+.*/, 'comment'],
+            [/--\s+.*/, 'comment'],
             [/#+.*/, 'comment'],
             [/\/\*/, { token: 'comment.quote', next: '@comment' }],
         ],
