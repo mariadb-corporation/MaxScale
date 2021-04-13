@@ -23,7 +23,6 @@ class SERVICE;
 class PamAuthenticatorModule : public mariadb::AuthenticatorModule
 {
 public:
-    using AuthMode = mxb::pam::AuthMode;
     PamAuthenticatorModule(const PamAuthenticatorModule& orig) = delete;
     PamAuthenticatorModule& operator=(const PamAuthenticatorModule&) = delete;
 
@@ -39,8 +38,15 @@ public:
     mariadb::SBackendAuth create_backend_authenticator(mariadb::BackendAuthData& auth_data) override;
 
 private:
-    PamAuthenticatorModule(bool cleartext_plugin, AuthMode auth_mode);
+    using AuthMode = mxb::pam::AuthMode;
+    enum BackendAuth
+    {
+        PAM, MARIADB
+    };
 
-    bool     m_cleartext_plugin {false};/**< Is "pam_use_cleartext_plugin" enabled? */
-    AuthMode m_mode {AuthMode::PW};     /**< Authentication mode */
+    PamAuthenticatorModule(bool cleartext_plugin, AuthMode auth_mode, BackendAuth be_auth);
+
+    bool        m_cleartext_plugin {false};     /**< Is "pam_use_cleartext_plugin" enabled? */
+    AuthMode    m_mode {AuthMode::PW};          /**< Authentication mode */
+    BackendAuth m_be_auth {BackendAuth::PAM};   /**< Backend authenticator */
 };
