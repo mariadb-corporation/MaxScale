@@ -56,6 +56,7 @@ add_library(maxscale-common SHARED
 target_link_libraries(maxscale-common
   maxbase
   maxsql
+  maxsimd
   ${MARIADB_CONNECTOR_LIBRARIES}
   ${LZMA_LINK_FLAGS}
   ${PCRE2_LIBRARIES}
@@ -94,7 +95,7 @@ endif()
 # reduces the cost of using thread-local variables in dynamic libraries.
 target_compile_options(maxscale-common PRIVATE "-ftls-model=initial-exec")
 
-add_dependencies(maxscale-common pcre2 connector-c libmicrohttpd jansson maxbase jwt-cpp)
+add_dependencies(maxscale-common pcre2 connector-c libmicrohttpd jansson maxbase maxsimd jwt-cpp)
 set_target_properties(maxscale-common PROPERTIES VERSION "1.0.0")
 install_module(maxscale-common core)
 

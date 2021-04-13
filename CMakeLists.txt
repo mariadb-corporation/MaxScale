@@ -179,6 +179,7 @@ include_directories(${CMAKE_BINARY_DIR}/include)
 include_directories(${CURL_INCLUDE_DIRS})
 include_directories(maxutils/maxbase/include)
 include_directories(maxutils/maxsql/include)
+include_directories(maxutils/maxsimd/include)
 
 add_subdirectory(maxutils)
 add_subdirectory(query_classifier)
