@@ -24,7 +24,7 @@ class PamClientAuthenticator : public mariadb::ClientAuthenticator
 {
 public:
     using AuthMode = mxb::pam::AuthMode;
-    PamClientAuthenticator(bool cleartext_plugin, AuthMode mode);
+    PamClientAuthenticator(bool cleartext_plugin, bool mapping_on, AuthMode mode);
 
     ExchRes exchange(GWBUF* read_buffer, MYSQL_session* session, mxs::Buffer* output_packet) override;
     AuthRes authenticate(const mariadb::UserEntry* entry, MYSQL_session* session) override;

@@ -186,6 +186,15 @@ AuthRes PamClientAuthenticator::authenticate(const UserEntry* entry, MYSQL_sessi
     if (res.type == AuthResult::Result::SUCCESS)
     {
         rval.status = AuthRes::Status::SUCCESS;
+        if (sett.mapping_on && !res.mapped_user.empty())
+        {
+            if (res.mapped_user != session->user)
+            {
+                MXB_INFO("Incoming user '%s' mapped to '%s'.",
+                         session->user.c_str(), res.mapped_user.c_str());
+                session->user = res.mapped_user; // TODO: Think if using a separate field would be better.
+            }
+        }
     }
     else
     {
@@ -200,8 +209,9 @@ AuthRes PamClientAuthenticator::authenticate(const UserEntry* entry, MYSQL_sessi
     return rval;
 }
 
-PamClientAuthenticator::PamClientAuthenticator(bool cleartext_plugin, AuthMode mode)
+PamClientAuthenticator::PamClientAuthenticator(bool cleartext_plugin, bool mapping_on, AuthMode mode)
     : m_cleartext_plugin(cleartext_plugin)
+    , m_mapping_on(mapping_on)
     , m_mode(mode)
 {
 }

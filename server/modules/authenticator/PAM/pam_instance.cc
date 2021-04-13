@@ -110,7 +110,9 @@ std::string PamAuthenticatorModule::supported_protocol() const
 
 mariadb::SClientAuth PamAuthenticatorModule::create_client_authenticator()
 {
-    return mariadb::SClientAuth(new(std::nothrow) PamClientAuthenticator(m_cleartext_plugin, m_mode));
+    bool mapping_on = (m_be_auth == BackendAuth::MARIADB);
+    return mariadb::SClientAuth(new(std::nothrow) PamClientAuthenticator(m_cleartext_plugin, mapping_on,
+                                                                         m_mode));
 }
 
 mariadb::SBackendAuth
