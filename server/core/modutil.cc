@@ -1159,8 +1159,7 @@ std::string get_canonical(GWBUF* querybuf)
                 *it_out++ = *it;
             }
         }
-        else if ((*it == '#' || *it == '-')
-                 && (is_next(it, end, "# ") || is_next(it, end, "-- ")))
+        else if (*it == '#' || (*it == '-' && is_next(it, end, "-- ")))
         {
             // End-of-line comment, jump to the next line if one exists
             while (it != end)
