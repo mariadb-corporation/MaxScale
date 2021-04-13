@@ -32,13 +32,16 @@ protected:
 KafkaSpecification s_spec(MXS_MODULE_NAME, cfg::Specification::ROUTER);
 
 cfg::ParamString s_bootstrap_servers(
-    &s_spec, "bootstrap_servers", "Kafka bootstrap servers in host:port format");
+    &s_spec, "bootstrap_servers", "Kafka bootstrap servers in host:port format",
+    cfg::Param::AT_RUNTIME);
 
 cfg::ParamStringList s_topics(
-    &s_spec, "topics", "The comma separated list of topics to subscribe to", ",");
+    &s_spec, "topics", "The comma separated list of topics to subscribe to",
+    ",", cfg::Param::AT_RUNTIME);
 
 cfg::ParamCount s_batch_size(
-    &s_spec, "batch_size", "Maximum number of uncommitted records", 100);
+    &s_spec, "batch_size", "Maximum number of uncommitted records",
+    100, cfg::Param::AT_RUNTIME);
 
 cfg::ParamEnum<IDType> s_table_name_in(
     &s_spec, "table_name_in",
@@ -46,11 +49,11 @@ cfg::ParamEnum<IDType> s_table_name_in(
     {
         {ID_FROM_TOPIC, "topic"},
         {ID_FROM_KEY, "key"},
-    }, ID_FROM_TOPIC);
+    }, ID_FROM_TOPIC, cfg::Param::AT_RUNTIME);
 
 cfg::ParamSeconds s_timeout(
     &s_spec, "timeout", "Connection and read timeout for network communication",
-    cfg::INTERPRET_AS_SECONDS, std::chrono::seconds(5));
+    cfg::INTERPRET_AS_SECONDS, std::chrono::seconds(5), cfg::Param::AT_RUNTIME);
 
 KafkaCommonConfig s_kafka(&s_spec);
 

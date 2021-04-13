@@ -35,26 +35,32 @@ protected:
 KafkaSpecification s_spec(MXS_MODULE_NAME, cfg::Specification::ROUTER);
 
 cfg::ParamString s_bootstrap_servers(
-    &s_spec, "bootstrap_servers", "Bootstrap servers in host:port format");
+    &s_spec, "bootstrap_servers", "Bootstrap servers in host:port format",
+    cfg::Param::AT_RUNTIME);
 
 cfg::ParamString s_topic(
-    &s_spec, "topic", "The topic where replicated events are sent");
+    &s_spec, "topic", "The topic where replicated events are sent",
+    cfg::Param::AT_RUNTIME);
 
 cfg::ParamBool s_enable_idempotence(
-    &s_spec, "enable_idempotence", "Enables idempotent Kafka producer", false);
+    &s_spec, "enable_idempotence", "Enables idempotent Kafka producer",
+    false, cfg::Param::AT_RUNTIME);
 
 cfg::ParamCount s_timeout(
-    &s_spec, "timeout", "Connection and read timeout for replication", 10);
+    &s_spec, "timeout", "Connection and read timeout for replication",
+    10, cfg::Param::AT_RUNTIME);
 
 cfg::ParamString s_gtid(
-    &s_spec, "gtid", "The GTID position to start from", "");
+    &s_spec, "gtid", "The GTID position to start from",
+    "", cfg::Param::AT_RUNTIME);
 
 cfg::ParamCount s_server_id(
-    &s_spec, "server_id", "Server ID for direct replication mode", 1234);
+    &s_spec, "server_id", "Server ID for direct replication mode",
+    1234, cfg::Param::AT_RUNTIME);
 
 cfg::ParamBool s_cooperative_replication(
     &s_spec, "cooperative_replication", "Cooperate with other instances replicating from the same cluster",
-    false);
+    false, cfg::Param::AT_RUNTIME);
 
 KafkaCommonConfig s_kafka(&s_spec);
 

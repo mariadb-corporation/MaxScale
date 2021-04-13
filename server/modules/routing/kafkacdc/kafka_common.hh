@@ -54,22 +54,22 @@ struct KafkaCommonConfig
     KafkaCommonConfig(mxs::config::Specification* spec)
         : kafka_ssl(
             spec, "kafka_ssl", "Enable SSL for Kafka connections",
-            false)
+            false, mxs::config::Param::AT_RUNTIME)
         , kafka_ssl_ca(
             spec, "kafka_ssl_ca", "SSL Certificate Authority file in PEM format",
-            mxs::config::ParamPath::R, "")
+            mxs::config::ParamPath::R, "", mxs::config::Param::AT_RUNTIME)
         , kafka_ssl_cert(
             spec, "kafka_ssl_cert", "SSL public certificate file in PEM format",
-            mxs::config::ParamPath::R, "")
+            mxs::config::ParamPath::R, "", mxs::config::Param::AT_RUNTIME)
         , kafka_ssl_key(
             spec, "kafka_ssl_key", "SSL private key file in PEM format",
-            mxs::config::ParamPath::R, "")
+            mxs::config::ParamPath::R, "", mxs::config::Param::AT_RUNTIME)
         , kafka_sasl_user(
             spec, "kafka_sasl_user", "SASL username used for authentication",
-            "")
+            "", mxs::config::Param::AT_RUNTIME)
         , kafka_sasl_password(
             spec, "kafka_sasl_password", "SASL password for the user",
-            "")
+            "", mxs::config::Param::AT_RUNTIME)
         , kafka_sasl_mechanism(
             spec, "kafka_sasl_mechanism", "SASL mechanism to use",
     {
@@ -77,7 +77,7 @@ struct KafkaCommonConfig
         {SCRAM_SHA_256, "SCRAM-SHA-256"},
         {SCRAM_SHA_512, "SCRAM-SHA-512"},
     },
-            PLAIN)
+            PLAIN, mxs::config::Param::AT_RUNTIME)
     {
     }
 
