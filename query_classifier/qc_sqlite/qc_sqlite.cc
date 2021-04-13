@@ -1400,7 +1400,7 @@ public:
     void update_names_from_srclist(QcAliases* pAliases,
                                    const SrcList* pSrc)
     {
-        if (pSrc) // TODO: Figure out in what contexts pSrc can be NULL.
+        if (pSrc)   // TODO: Figure out in what contexts pSrc can be NULL.
         {
             for (int i = 0; i < pSrc->nSrc; ++i)
             {
@@ -3477,35 +3477,35 @@ private:
 
 public:
     // TODO: Make these private once everything's been updated.
-    int32_t m_refs;                             // The reference count.
+    int32_t           m_refs;                   // The reference count.
     qc_parse_result_t m_status;                 // The validity of the information in this structure.
     qc_parse_result_t m_status_cap;             // The cap on 'm_status', it won't be set to higher than this.
-    uint32_t m_collect;                         // What information should be collected.
-    uint32_t m_collected;                       // What information has been collected.
-    const char* m_pQuery;                       // The query passed to sqlite.
-    size_t m_nQuery;                            // The length of the query.
+    uint32_t          m_collect;                // What information should be collected.
+    uint32_t          m_collected;              // What information has been collected.
+    const char*       m_pQuery;                 // The query passed to sqlite.
+    size_t            m_nQuery;                 // The length of the query.
 
-    uint32_t m_type_mask;                                   // The type mask of the query.
+    uint32_t      m_type_mask;                              // The type mask of the query.
     qc_query_op_t m_operation;                              // The operation in question.
-    bool m_has_clause;                                      // Has WHERE or HAVING.
+    bool          m_has_clause;                             // Has WHERE or HAVING.
     vector<char*> m_table_names;                            // Vector of table names used in the query.
     vector<char*> m_table_fullnames;                        // Vector of qualified table names used in the
                                                             // query.
-    char* m_zCreated_table_name;                            // The name of a created table.
-    bool m_is_drop_table;                                   // Is the query a DROP TABLE.
-    vector<char*> m_database_names;                         // Vector of database names used in the query.
-    int m_keyword_1;                                        // The first encountered keyword.
-    int m_keyword_2;                                        // The second encountered keyword.
-    char* m_zPrepare_name;                                  // The name of a prepared statement.
-    GWBUF* m_pPreparable_stmt;                              // The preparable statement.
-    vector<QC_FIELD_INFO> m_field_infos;                    // Vector of fields used by the statement.
-    vector<QC_FUNCTION_INFO> m_function_infos;              // Vector of functions used by the statement.
+    char*                         m_zCreated_table_name;    // The name of a created table.
+    bool                          m_is_drop_table;          // Is the query a DROP TABLE.
+    vector<char*>                 m_database_names;         // Vector of database names used in the query.
+    int                           m_keyword_1;              // The first encountered keyword.
+    int                           m_keyword_2;              // The second encountered keyword.
+    char*                         m_zPrepare_name;          // The name of a prepared statement.
+    GWBUF*                        m_pPreparable_stmt;       // The preparable statement.
+    vector<QC_FIELD_INFO>         m_field_infos;            // Vector of fields used by the statement.
+    vector<QC_FUNCTION_INFO>      m_function_infos;         // Vector of functions used by the statement.
     vector<vector<QC_FIELD_INFO>> m_function_field_usage;   // Vector of vector fields used by functions
                                                             // of the statement. Data referred to from
                                                             // m_function_infos
-    size_t m_function_infos_len;                            // The used entries in function_infos.
-    size_t m_function_infos_capacity;                       // The capacity of the function_infos array.
-    qc_sql_mode_t m_sql_mode;                               // The current sql_mode.
+    size_t           m_function_infos_len;                  // The used entries in function_infos.
+    size_t           m_function_infos_capacity;             // The capacity of the function_infos array.
+    qc_sql_mode_t    m_sql_mode;                            // The current sql_mode.
     QC_NAME_MAPPING* m_pFunction_name_mappings;             // How function names should be mapped.
 };
 
