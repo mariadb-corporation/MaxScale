@@ -64,7 +64,7 @@ include(cmake/BuildJwtCpp.cmake)
 include_directories(${JANSSON_INCLUDE_DIR})
 
 # Both of these modules require librdkafka
-if (BUILD_KAFKACDC OR BUILD_MIRROR OR BUILD_SYSTEM_TESTS)
+if (BUILD_KAFKACDC OR BUILD_KAFKACONSUMER OR BUILD_MIRROR OR BUILD_SYSTEM_TESTS)
   include(${CMAKE_SOURCE_DIR}/cmake/BuildRdkafka.cmake)
   include_directories(${RDKAFKA_INCLUDE_DIR})
 endif()

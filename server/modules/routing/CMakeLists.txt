@@ -11,6 +11,10 @@ if(BUILD_KAFKACDC)
   add_subdirectory(kafkacdc)
 endif()
 
+if (BUILD_KAFKACONSUMER)
+  add_subdirectory(kafkaconsumer)
+endif()
+
 add_subdirectory(cat)
 add_subdirectory(hintrouter)
 add_subdirectory(readconnroute)
