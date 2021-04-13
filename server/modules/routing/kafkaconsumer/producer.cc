@@ -16,6 +16,7 @@
 
 #include <maxbase/assert.h>
 #include <maxscale/service.hh>
+#include <maxscale/mainworker.hh>
 
 namespace kafkaconsumer
 {
@@ -23,28 +24,31 @@ namespace kafkaconsumer
 Producer::Producer(const Config& config, SERVICE* service)
     : m_config(config)
     , m_service(service)
-    , m_user(service->config()->user)
-    , m_password(service->config()->password)
 {
 }
 
-Producer::Producer(Producer&& rhs)
+Producer::Producer(Producer&& rhs) noexcept
     : m_config(rhs.m_config)
+    , m_service(rhs.m_service)
+    , m_mysql(rhs.m_mysql)
+    , m_tables(std::move(rhs.m_tables))
 {
-    *this = std::move(rhs);
+    rhs.m_mysql = nullptr;
 }
 
-Producer& Producer::operator=(Producer&& rhs)
+Producer& Producer::operator=(Producer&& rhs) noexcept
 {
     mxb_assert(&m_config == &rhs.m_config);
-    m_user = std::move(rhs.m_user);
-    m_password = std::move(rhs.m_password);
-    m_tables = std::move(rhs.m_tables);
-    m_service = std::move(rhs.m_service);
 
-    mysql_close(m_mysql);
-    m_mysql = rhs.m_mysql;
-    rhs.m_mysql = nullptr;
+    if (&rhs != this)
+    {
+        m_tables = std::move(rhs.m_tables);
+        m_service = std::move(rhs.m_service);
+
+        mysql_close(m_mysql);
+        m_mysql = rhs.m_mysql;
+        rhs.m_mysql = nullptr;
+    }
 
     return *this;
 }
@@ -61,17 +65,32 @@ bool Producer::is_connected() const
     return m_mysql != nullptr;
 }
 
-SERVER* Producer::find_master()
+Producer::ConnectionInfo Producer::find_master() const
 {
-    SERVER* rval = nullptr;
+    Producer::ConnectionInfo rval;
 
-    for (SERVER* s : m_service->reachable_servers())
-    {
-        if (s->is_master() && (!rval || s->rank() < rval->rank()))
-        {
-            rval = s;
-        }
-    }
+    mxs::MainWorker::get()->call(
+        [this, &rval]() {
+            SERVER* best = nullptr;
+            rval.user = m_service->config()->user;
+            rval.password = m_service->config()->password;
+
+            for (SERVER* s : m_service->reachable_servers())
+            {
+                if (s->is_master() && (!best || s->rank() < best->rank()))
+                {
+                    best = s;
+                }
+            }
+
+            if (best)
+            {
+                rval.ok = true;
+                rval.name = best->name();
+                rval.host = best->address();
+                rval.port = best->port();
+            }
+        }, mxb::Worker::EXECUTE_AUTO);
 
     return rval;
 }
@@ -82,15 +101,16 @@ bool Producer::connect()
 
     if (!is_connected())
     {
-        if (SERVER* best = find_master())
+        if (auto master = find_master())
         {
             m_mysql = mysql_init(nullptr);
 
-            if (!mysql_real_connect(m_mysql, best->address(), m_user.c_str(), m_password.c_str(),
-                                    nullptr, best->port(), nullptr, 0))
+            if (!mysql_real_connect(m_mysql, master.host.c_str(), master.user.c_str(),
+                                    master.password.c_str(),
+                                    nullptr, master.port, nullptr, 0))
             {
                 ok = false;
-                MXS_ERROR("Failed to connect to '%s': %s", best->name(), mysql_error(m_mysql));
+                MXS_ERROR("Failed to connect to '%s': %s", master.name.c_str(), mysql_error(m_mysql));
                 mysql_close(m_mysql);
                 m_mysql = nullptr;
             }

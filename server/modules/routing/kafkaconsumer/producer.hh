@@ -20,14 +20,14 @@
 
 namespace kafkaconsumer
 {
-class Producer
+class Producer final
 {
 public:
     Producer& operator=(const Producer&) = delete;
     Producer(const Producer&) = delete;
 
-    Producer& operator=(Producer&&);
-    Producer(Producer&&);
+    Producer& operator=(Producer&&) noexcept;
+    Producer(Producer&&) noexcept;
 
     Producer(const Config&, SERVICE* service);
     ~Producer();
@@ -36,15 +36,28 @@ public:
     bool flush();
 
 private:
-    SERVER* find_master();
-    bool    is_connected() const;
-    bool    connect();
+    struct ConnectionInfo
+    {
+        explicit operator bool() const
+        {
+            return ok;
+        }
+
+        bool        ok = false;
+        std::string user;
+        std::string password;
+        std::string name;
+        std::string host;
+        int         port;
+    };
+
+    ConnectionInfo find_master() const;
+    bool           is_connected() const;
+    bool           connect();
 
     const Config& m_config;
     SERVICE*      m_service;
     MYSQL*        m_mysql {nullptr};
-    std::string   m_user;
-    std::string   m_password;
 
     std::unordered_map<std::string, Table> m_tables;
 };
