@@ -12,6 +12,8 @@
  */
 #pragma once
 
+#define MXS_MODULE_NAME "kafkaconsumer"
+
 #include <maxscale/config2.hh>
 
 #include "../kafkacdc/kafka_common.hh"      // TODO: This file should be placed somewhere else

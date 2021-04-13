@@ -12,13 +12,12 @@
  */
 #pragma once
 
-#define MXS_MODULE_NAME "kafkaconsumer"
+#include "config.hh"
 
 #include <maxscale/ccdefs.hh>
 #include <maxscale/router.hh>
 #include <maxscale/service.hh>
 
-#include "config.hh"
 #include "consumer.hh"
 
 namespace kafkaconsumer

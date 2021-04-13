@@ -12,6 +12,8 @@
  */
 #pragma once
 
+#include "config.hh"
+
 #include <maxscale/ccdefs.hh>
 
 #include <memory>
@@ -19,7 +21,6 @@
 #include <vector>
 #include <thread>
 
-#include "config.hh"
 #include "producer.hh"
 
 namespace kafkaconsumer

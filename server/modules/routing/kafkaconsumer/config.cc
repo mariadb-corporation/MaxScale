@@ -13,6 +13,8 @@
 
 #include "config.hh"
 
+static_assert(MXS_MODULE_NAME != nullptr, "MXS_MODULE_NAME is null");
+
 namespace
 {
 

@@ -12,10 +12,11 @@
  */
 #pragma once
 
+#include "config.hh"
+
 #include <maxscale/ccdefs.hh>
 #include <unordered_map>
 
-#include "config.hh"
 #include "table.hh"
 
 namespace kafkaconsumer

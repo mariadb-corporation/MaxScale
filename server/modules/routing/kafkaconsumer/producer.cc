@@ -12,7 +12,6 @@
  */
 
 #include "producer.hh"
-#include "config.hh"
 
 #include <maxbase/assert.h>
 #include <maxscale/service.hh>
