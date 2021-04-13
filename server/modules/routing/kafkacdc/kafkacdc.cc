@@ -90,8 +90,6 @@ const char* roweventtype_to_string(RowEvent type)
     }
 }
 
-static KafkaLogger kafka_logger;
-
 class KafkaEventHandler : public RowEventHandler
 {
 public:
@@ -326,37 +324,11 @@ private:
         return err != RdKafka::ERR_NO_ERROR;
     }
 
-    static std::unique_ptr<RdKafka::Conf> create_config(const std::map<std::string, std::string>& values)
-    {
-        constexpr auto OK = RdKafka::Conf::ConfResult::CONF_OK;
-        std::string err;
-        std::unique_ptr<RdKafka::Conf> cnf(RdKafka::Conf::create(RdKafka::Conf::CONF_GLOBAL));
-
-        for (const auto& kv : values)
-        {
-            if (!kv.second.empty()      // Skipping empty values here makes the value assignment code simpler
-                && cnf->set(kv.first, kv.second, err) != OK)
-            {
-                MXS_ERROR("Failed to set `%s`: %s", kv.first.c_str(), err.c_str());
-                cnf.reset();
-                break;
-            }
-        }
-
-        if (cnf && cnf->set("event_cb", &kafka_logger, err) != OK)
-        {
-            MXS_ERROR("Failed to set Kafka event logger: %s", err.c_str());
-            cnf.reset();
-        }
-
-        return cnf;
-    }
-
     static std::unique_ptr<RdKafka::Conf> create_config(const KafkaCDC::Config& config)
     {
         // The configuration documentation for the connector:
         // https://github.com/edenhill/librdkafka/blob/master/CONFIGURATION.md
-        std::map<std::string, std::string> values;
+        std::unordered_map<std::string, std::string> values;
         values["bootstrap.servers"] = config.bootstrap_servers;
         values["group.id"] = "maxscale-kafkacdc";
 
@@ -382,7 +354,7 @@ private:
             values["sasl.password"] = config.sasl_password;
         }
 
-        return create_config(values);
+        return KafkaCommonConfig::create_config(values);
     }
 };
 }

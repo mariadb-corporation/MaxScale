@@ -18,11 +18,35 @@
 
 #include <librdkafka/rdkafkacpp.h>
 
+#include <unordered_map>
+
 enum SaslMech
 {
     PLAIN,
     SCRAM_SHA_256,
     SCRAM_SHA_512,
+};
+
+class KafkaLogger : public RdKafka::EventCb
+{
+public:
+    void event_cb(RdKafka::Event& event) override
+    {
+        switch (event.type())
+        {
+        case RdKafka::Event::EVENT_LOG:
+            MXB_LOG_MESSAGE(event.severity(), "%s", event.str().c_str());
+            break;
+
+        case RdKafka::Event::EVENT_ERROR:
+            MXS_ERROR("%s", RdKafka::err2str(event.err()).c_str());
+            break;
+
+        default:
+            MXS_INFO("%s", event.str().c_str());
+            break;
+        }
+    }
 };
 
 struct KafkaCommonConfig
@@ -81,6 +105,34 @@ struct KafkaCommonConfig
         return ok;
     }
 
+    static std::unique_ptr<RdKafka::Conf>
+    create_config(const std::unordered_map<std::string, std::string>& values)
+    {
+        const auto OK = RdKafka::Conf::ConfResult::CONF_OK;
+        std::string err;
+        std::unique_ptr<RdKafka::Conf> cnf(RdKafka::Conf::create(RdKafka::Conf::CONF_GLOBAL));
+
+        for (const auto& kv : values)
+        {
+            if (!kv.second.empty() && cnf->set(kv.first, kv.second, err) != OK)
+            {
+                MXS_ERROR("Failed to set `%s`: %s", kv.first.c_str(), err.c_str());
+                cnf.reset();
+                break;
+            }
+        }
+
+        static KafkaLogger kafka_logger;
+
+        if (cnf && cnf->set("event_cb", &kafka_logger, err) != OK)
+        {
+            MXS_ERROR("Failed to set Kafka event logger: %s", err.c_str());
+            cnf.reset();
+        }
+
+        return cnf;
+    }
+
     mxs::config::ParamBool           kafka_ssl;
     mxs::config::ParamPath           kafka_ssl_ca;
     mxs::config::ParamPath           kafka_ssl_cert;
@@ -88,28 +140,6 @@ struct KafkaCommonConfig
     mxs::config::ParamString         kafka_sasl_user;
     mxs::config::ParamString         kafka_sasl_password;
     mxs::config::ParamEnum<SaslMech> kafka_sasl_mechanism;
-};
-
-class KafkaLogger : public RdKafka::EventCb
-{
-public:
-    void event_cb(RdKafka::Event& event) override
-    {
-        switch (event.type())
-        {
-        case RdKafka::Event::EVENT_LOG:
-            MXB_LOG_MESSAGE(event.severity(), "%s", event.str().c_str());
-            break;
-
-        case RdKafka::Event::EVENT_ERROR:
-            MXS_ERROR("%s", RdKafka::err2str(event.err()).c_str());
-            break;
-
-        default:
-            MXS_INFO("%s", event.str().c_str());
-            break;
-        }
-    }
 };
 
 static inline std::string to_string(SaslMech mech)
