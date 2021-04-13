@@ -21,6 +21,27 @@
 
 using namespace std::string_literals;
 
+namespace
+{
+
+bool is_json_error(int errnum)
+{
+    switch (errnum)
+    {
+    case ER_JSON_BAD_CHR:
+    case ER_JSON_NOT_JSON_CHR:
+    case ER_JSON_EOS:
+    case ER_JSON_SYNTAX:
+    case ER_JSON_ESCAPING:
+    case ER_JSON_DEPTH:
+        return true;
+
+    default:
+        return false;
+    }
+}
+}
+
 namespace kafkaconsumer
 {
 
@@ -134,13 +155,17 @@ bool Table::flush()
             auto errnum = mysql_stmt_errno(m_stmt);
             auto error = mysql_stmt_error(m_stmt);
 
-            if (errnum == ER_JSON_SYNTAX)
+            if (is_json_error(errnum))
             {
                 MXS_INFO("Ignoring malformed JSON: %d, %s", errnum, error);
             }
             else if (errnum == ER_DUP_ENTRY)
             {
                 MXS_INFO("Ignoring record with duplicate value for key `_id`: %d, %s", errnum, error);
+            }
+            else if (errnum == ER_CONSTRAINT_FAILED)
+            {
+                MXS_INFO("Ignoring record due to constraint failure: %d, %s", errnum, error);
             }
             else
             {
