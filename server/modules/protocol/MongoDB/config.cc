@@ -49,6 +49,16 @@ mxs::config::ParamBool auto_create_tables(
     "it does not exist already.",
     true);
 
+mxs::config::ParamCount id_length(
+    &specification,
+    "id_length",
+    "The VARCHAR length of automatically created tables. A changed value only affects "
+    "tables created after the change; existing tables are not altered.",
+    Config::ID_LENGTH_DEFAULT,
+    Config::ID_LENGTH_MIN,
+    Config::ID_LENGTH_MAX
+    );
+
 }
 }
 
@@ -59,6 +69,7 @@ Config::Config()
     add_native(&Config::password, &mongodbclient::password);
     add_native(&Config::on_unknown_command, &mongodbclient::on_unknown_command);
     add_native(&Config::auto_create_tables, &mongodbclient::auto_create_tables);
+    add_native(&Config::id_length, &mongodbclient::id_length);
 }
 
 //static

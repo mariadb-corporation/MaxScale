@@ -446,7 +446,9 @@ public:
                                 stringstream ss;
                                 ss << "CREATE TABLE "
                                    << table()
-                                   << " (id TEXT NOT NULL UNIQUE, doc JSON)";
+                                   << " (id VARCHAR("
+                                   << m_database.config().id_length
+                                   << ") NOT NULL UNIQUE, doc JSON)";
 
                                 send_downstream(ss.str());
                             }

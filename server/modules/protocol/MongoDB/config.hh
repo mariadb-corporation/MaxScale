@@ -27,10 +27,18 @@ public:
         RETURN_EMPTY,
     };
 
+    enum
+    {
+        ID_LENGTH_DEFAULT = 24,
+        ID_LENGTH_MIN     = 24,
+        ID_LENGTH_MAX     = 2048,
+    };
+
     std::string      user;
     std::string      password;
     OnUnknownCommand on_unknown_command { RETURN_ERROR };
     bool             auto_create_tables { true };
+    int64_t          id_length          { ID_LENGTH_DEFAULT };
 
     static mxs::config::Specification& specification();
 };

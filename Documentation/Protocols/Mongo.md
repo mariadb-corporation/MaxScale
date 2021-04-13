@@ -37,6 +37,79 @@ port will use the same credentials when the MariaDB database is accessed;
 in that respect it is not possible to distinguish one MongoDB application
 from another.
 
+## Parameters
+
+### `user`
+
+   * Type: string
+
+Specifies the _user_ to be used when connecting to the backend. Note that the
+same _user_/_password_ combination will be used for all Mongo clients connecting
+to the same listener port.
+
+### `password`
+
+   * Type: string
+
+Specifies the _password_ to be used when connecting to the backend. Note that the
+same _user_/_password_ combination will be used for all Mongo clients connecting
+to the same listener port.
+
+### `on_unknown_command`
+
+   * Type: enumeration
+   * Values: `return_error|return_empty`
+   * Default: `return_error`
+
+Specifies what should happen in case a clients sends an unrecognized command.
+
+Enumeration values:
+
+   * `return_error`: An error document is returned.
+   * `return_empty`: An empty document is returned.
+
+### `auto_create_tables`
+
+    * Type: boolean
+    * Default: `true`
+
+Specifies whether tables should automatically be created, as needed.
+
+### `id_length`
+
+   * Type: count
+   * Range: `[24, 2048]`
+   * Default: `24`
+
+Specifies the length of the id column in tables that are automatically created.
+
+## Databases and Tables
+
+_Mongodbprotocol_ never creates databases, but they must be created manually.
+
+Each Mongo _collection_ corresponds to a MariaDB table with the same name.
+However, it is always possible to access a collection irrespective of whether
+the corresponding table exists or not; it will simply appear to be empty.
+
+Inserting documents into a collection, whose corresponding table does not
+exist, succeeds, provided `auto_create_tables` is `true`, as the table will
+in that case be created.
+
+When _mongodbprotocol_ creates a table, it uses a statement like
+```
+CREATE TABLE name (id VARCHAR(24) NOT NULL UNIQUE, doc JSON)
+```
+where the length of the `VARCHAR` is specified by the value of `id_length`.
+
+Note that _mongodbprotocol_ does not in any way verify that the table
+corresponding to a collection being accessed or modified does indeed
+have the expected columns `id` and `doc` of the expected types, but it
+simply uses the table, which will fail if the layout is not the expected
+one.
+
+To reduce the risk for confusion, the recommendation is to use a specific
+database for tables that contain documents.
+
 ## Commands
 
 The following lists all MongoDB commands that are supported.
