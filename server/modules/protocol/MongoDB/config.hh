@@ -41,4 +41,10 @@ public:
     int64_t          id_length          { ID_LENGTH_DEFAULT };
 
     static mxs::config::Specification& specification();
+
+    static mxs::config::ParamString                 s_user;
+    static mxs::config::ParamString                 s_password;
+    static mxs::config::ParamEnum<OnUnknownCommand> s_on_unknown_command;
+    static mxs::config::ParamBool                   s_auto_create_tables;
+    static mxs::config::ParamCount                  s_id_length;
 };

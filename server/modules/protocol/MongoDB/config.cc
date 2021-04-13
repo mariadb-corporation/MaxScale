@@ -20,18 +20,21 @@ namespace mongodbclient
 
 mxs::config::Specification specification(MXS_MODULE_NAME, mxs::config::Specification::PROTOCOL);
 
-mxs::config::ParamString user(
-    &specification,
+}
+}
+
+mxs::config::ParamString Config::s_user(
+    &mongodbclient::specification,
     "user",
     "The user to use when connecting to the backend.");
 
-mxs::config::ParamString password(
-    &specification,
+mxs::config::ParamString Config::s_password(
+    &mongodbclient::specification,
     "password",
     "The password to use when connecting to the backend.");
 
-mxs::config::ParamEnum<Config::OnUnknownCommand> on_unknown_command(
-    &specification,
+mxs::config::ParamEnum<Config::OnUnknownCommand> Config::s_on_unknown_command(
+    &mongodbclient::specification,
     "on_unknown_command",
     "Whether to return an error or an empty document in case an unknown Mongo "
     "command is encountered.",
@@ -41,16 +44,16 @@ mxs::config::ParamEnum<Config::OnUnknownCommand> on_unknown_command(
     },
     Config::RETURN_ERROR);
 
-mxs::config::ParamBool auto_create_tables(
-    &specification,
+mxs::config::ParamBool Config::s_auto_create_tables(
+    &mongodbclient::specification,
     "auto_create_tables",
     "Whether tables should be created automatically. If enabled, whenever a document is "
     "inserted to a collection the corresponding table will automatically be created if "
     "it does not exist already.",
     true);
 
-mxs::config::ParamCount id_length(
-    &specification,
+mxs::config::ParamCount Config::s_id_length(
+    &mongodbclient::specification,
     "id_length",
     "The VARCHAR length of automatically created tables. A changed value only affects "
     "tables created after the change; existing tables are not altered.",
@@ -59,17 +62,15 @@ mxs::config::ParamCount id_length(
     Config::ID_LENGTH_MAX
     );
 
-}
-}
 
 Config::Config()
     : mxs::config::Configuration(MXS_MODULE_NAME, &mongodbclient::specification)
 {
-    add_native(&Config::user, &mongodbclient::user);
-    add_native(&Config::password, &mongodbclient::password);
-    add_native(&Config::on_unknown_command, &mongodbclient::on_unknown_command);
-    add_native(&Config::auto_create_tables, &mongodbclient::auto_create_tables);
-    add_native(&Config::id_length, &mongodbclient::id_length);
+    add_native(&Config::user, &s_user);
+    add_native(&Config::password, &s_password);
+    add_native(&Config::on_unknown_command, &s_on_unknown_command);
+    add_native(&Config::auto_create_tables, &s_auto_create_tables);
+    add_native(&Config::id_length, &s_id_length);
 }
 
 //static
