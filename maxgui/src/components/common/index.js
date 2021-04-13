@@ -25,6 +25,7 @@ import CreateResource from './CreateResource'
 
 import DetailsPage from './DetailsPage'
 import Parameters from './Parameters'
+import SplitPane from './SplitPane'
 
 export default {
     'page-wrapper': PageWrapper,
@@ -39,4 +40,5 @@ export default {
     ...Parameters,
     'line-chart': LineChart,
     ...DetailsPage,
+    'split-pane': SplitPane,
 }
