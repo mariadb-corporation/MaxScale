@@ -1116,7 +1116,7 @@ string get_condition(const bsoncxx::document::view& doc)
 
 }
 
-string mxsmongo::to_string(const bsoncxx::document::element& element)
+string mxsmongo::to_value(const bsoncxx::document::element& element)
 {
     return element_to_value(element);
 }

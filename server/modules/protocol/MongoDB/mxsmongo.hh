@@ -308,7 +308,17 @@ bool get_integer(const bsoncxx::document::element& element, int64_t* pInt);
 bool get_number_as_integer(const bsoncxx::document::element& element, int64_t* pInt);
 bool get_number_as_double(const bsoncxx::document::element& element, double* pDouble);
 
-std::string to_string(const bsoncxx::document::element& element);
+/**
+ * Converts an element to a value that can be used in comparisons.
+ *
+ * @param element  The element to be converted.
+ *
+ * @return A value expressed as a string; a number will just be the number, but a
+ *         string will be enclosed in quotes.
+ *
+ * @throws SoftError(BAD_VALUE) if the element cannot be converted to a value.
+ */
+std::string to_value(const bsoncxx::document::element& element);
 
 std::vector<std::string> projection_to_extractions(const bsoncxx::document::view& projection);
 

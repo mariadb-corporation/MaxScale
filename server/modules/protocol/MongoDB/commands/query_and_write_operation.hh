@@ -841,7 +841,7 @@ private:
                 s += "'$.";
                 s += field.key().data();
                 s += "', ";
-                s += to_string(field);
+                s += mxsmongo::to_value(field);
             }
 
             rv += s;
