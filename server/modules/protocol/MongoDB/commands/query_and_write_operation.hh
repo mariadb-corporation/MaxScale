@@ -562,56 +562,7 @@ protected:
 
     static string get_id(const bsoncxx::document::element& element)
     {
-        stringstream ss;
-
-        mxb_assert(element);
-
-        switch (element.type())
-        {
-        case bsoncxx::type::k_utf8:
-            {
-                const auto& utf8 = element.get_utf8();
-                ss << "'" << string(utf8.value.data(), utf8.value.size()) << "'";
-            }
-            break;
-
-        case bsoncxx::type::k_oid:
-            ss << "'" << element.get_oid().value.to_string() << "'";
-            break;
-
-        case bsoncxx::type::k_int32:
-            ss << element.get_int32();
-            break;
-
-        case bsoncxx::type::k_int64:
-            ss << element.get_int64();
-            break;
-
-            // By design not using 'default' so that if a new type is introduced,
-            // an explicit decision regarding what to do with it, will be needed.
-        case bsoncxx::type::k_array:
-        case bsoncxx::type::k_binary:
-        case bsoncxx::type::k_bool:
-        case bsoncxx::type::k_code:
-        case bsoncxx::type::k_decimal128:
-        case bsoncxx::type::k_double:
-        case bsoncxx::type::k_codewscope:
-        case bsoncxx::type::k_date:
-        case bsoncxx::type::k_dbpointer:
-        case bsoncxx::type::k_document:
-        case bsoncxx::type::k_maxkey:
-        case bsoncxx::type::k_minkey:
-        case bsoncxx::type::k_null:
-        case bsoncxx::type::k_regex:
-        case bsoncxx::type::k_symbol:
-        case bsoncxx::type::k_timestamp:
-        case bsoncxx::type::k_undefined:
-            // Casual lower-case message is what Mongo returns.
-            ss << "can't use a " << bsoncxx::to_string(element.type()) << " for _id";
-            throw std::runtime_error(ss.str());
-        }
-
-        return ss.str();
+        return "'" + mxsmongo::to_string(element) + "'";
     }
 
     void interpret(const ComOK& response)

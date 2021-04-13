@@ -1121,6 +1121,99 @@ string mxsmongo::to_value(const bsoncxx::document::element& element)
     return element_to_value(element);
 }
 
+template<class document_element_or_array_item>
+string element_to_string(const document_element_or_array_item& x)
+{
+    stringstream ss;
+
+    switch (x.type())
+    {
+    case bsoncxx::type::k_array:
+        {
+            ss << "[";
+            bsoncxx::array::view array = x.get_array();
+            for (const auto& item : array)
+            {
+                ss << element_to_string(item);
+            }
+            ss << "]";
+        }
+        break;
+
+    case bsoncxx::type::k_bool:
+        ss << x.get_bool();
+        break;
+
+    case bsoncxx::type::k_code:
+        ss << x.get_code().code;
+        break;
+
+    case bsoncxx::type::k_date:
+        ss << x.get_date();
+        break;
+
+    case bsoncxx::type::k_decimal128:
+        ss << x.get_decimal128().value.to_string();
+        break;
+
+    case bsoncxx::type::k_document:
+        ss << bsoncxx::to_json(x.get_document());
+        break;
+
+    case bsoncxx::type::k_double:
+        ss << x.get_double();
+        break;
+
+    case bsoncxx::type::k_int32:
+        ss << x.get_int32();
+        break;
+
+    case bsoncxx::type::k_int64:
+        ss << x.get_int64();
+        break;
+
+    case bsoncxx::type::k_null:
+        ss << "null";
+        break;
+
+    case bsoncxx::type::k_oid:
+        ss << x.get_oid().value.to_string();
+        break;
+
+    case bsoncxx::type::k_regex:
+        ss << x.get_regex().regex;
+        break;
+
+    case bsoncxx::type::k_symbol:
+        ss << x.get_symbol().symbol;
+        break;
+
+    case bsoncxx::type::k_utf8:
+        ss << x.get_utf8().value;
+        break;
+
+    case bsoncxx::type::k_binary:
+    case bsoncxx::type::k_codewscope:
+    case bsoncxx::type::k_dbpointer:
+    case bsoncxx::type::k_maxkey:
+    case bsoncxx::type::k_minkey:
+    case bsoncxx::type::k_timestamp:
+    case bsoncxx::type::k_undefined:
+        {
+            ss << "A " << bsoncxx::to_string(x.type()) << " cannot be coverted to a string.";
+            throw SoftError(ss.str(), error::BAD_VALUE);
+        }
+        break;
+    }
+
+    return ss.str();
+}
+
+string mxsmongo::to_string(const bsoncxx::document::element& element)
+{
+    return element_to_string(element);
+}
+
 string mxsmongo::query_to_where_condition(const bsoncxx::document::view& query)
 {
     return get_condition(query);
