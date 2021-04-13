@@ -512,16 +512,42 @@ public:
         return state;
     }
 
+    void interpret_error(bsoncxx::builder::basic::document& error, const ComERR& err, int index) override
+    {
+        if (err.code() == ER_DUP_ENTRY)
+        {
+            error.append(kvp("code", error::DUPLICATE_KEY));
+            DocumentBuilder keyPattern;
+            keyPattern.append(kvp("_id", 1));
+            error.append(kvp("keyPattern", keyPattern.extract()));
+            DocumentBuilder keyValue_builder;
+            mxb_assert(index < (int)m_ids.size());
+            append(keyValue_builder, "_id", m_ids[index]);
+            auto keyValue = keyValue_builder.extract();
+            error.append(kvp("keyValue", keyValue));
+
+            stringstream ss;
+            ss << "E" << error::DUPLICATE_KEY << " duplicate key error collection: "
+               << m_database.name() << "." << value_as<string>()
+               << " index: _id_ dup key: " << bsoncxx::to_json(keyValue);
+
+            error.append(kvp("errmsg", ss.str()));
+        }
+        else
+        {
+            OrderedCommand::interpret_error(error, err, index);
+        }
+    }
+
 protected:
     string convert_document(const bsoncxx::document::view& doc) override
     {
         stringstream sql;
         sql << "INSERT INTO " << table() << " (id, doc) VALUES ";
 
-        sql << "(";
-
         string id;
         string json;
+
         auto element = doc["_id"];
 
         if (element)
@@ -544,18 +570,20 @@ protected:
                 append(builder, e.key(), element);
             }
 
-            auto doc_with_id = builder.extract();
+            // We need to keep the created document around, so that 'element'
+            // down below stays alive.
+            m_stashed_documents.emplace_back(builder.extract());
 
+            const auto& doc_with_id = m_stashed_documents.back();
+
+            element = doc_with_id.view()["_id"];
             id = "'" + oid.to_string() + "'";
             json = bsoncxx::to_json(doc_with_id);
         }
 
-        sql << id;
-        sql << ", '";
-        sql << json;
-        sql << "'";
+        m_ids.push_back(element);
 
-        sql << ")";
+        sql << "(" << id << ", '" << json << "')";
 
         return sql.str();
     }
@@ -576,9 +604,11 @@ protected:
         TABLE_CREATING,
     };
 
-    Mode            m_mode { NORMAL };
-    uint32_t        m_dcid { 0 };
-    mutable int64_t m_nDocuments { 0 };
+    Mode                                m_mode { NORMAL };
+    uint32_t                            m_dcid { 0 };
+    mutable int64_t                     m_nDocuments { 0 };
+    vector<bsoncxx::document::element>  m_ids;
+    vector<bsoncxx::document::value>    m_stashed_documents;
 };
 
 
