@@ -35,8 +35,10 @@ private:
     void run();
     bool running() const;
     void stop();
-    void consume();
+    bool consume();
     bool commit();
+
+    std::string offsets_to_string();
 
     const Config& m_config;
     Producer      m_producer;
