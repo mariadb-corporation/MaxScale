@@ -147,18 +147,6 @@ struct QUERY_CLASSIFIER
     int32_t (* qc_get_table_names)(GWBUF* stmt, int32_t full_names, std::vector<std::string>* names);
 
     /**
-     * The canonical version of a statement.
-     *
-     * @param stmt       A COM_QUERY or COM_STMT_PREPARE packet.
-     * @param canonical  On return, the canonical version of the statement, if @c QC_RESULT_OK
-     *                   is returned.
-     *
-     * @return QC_RESULT_OK, if the parsing was not aborted due to resource
-     *         exhaustion or equivalent.
-     */
-    int32_t (* qc_get_canonical)(GWBUF* stmt, char** canonical);
-
-    /**
      * Reports whether the statement has a where clause.
      *
      * @param stmt        A COM_QUERY or COM_STMT_PREPARE packet.

@@ -5133,20 +5133,6 @@ static int32_t qc_sqlite_get_table_names(GWBUF* pStmt, int32_t fullnames, std::v
     return rv;
 }
 
-static int32_t qc_sqlite_get_canonical(GWBUF* pStmt, char** pzCanonical)
-{
-    QC_TRACE();
-    int32_t rv = QC_RESULT_ERROR;
-    mxb_assert(this_unit.initialized);
-    mxb_assert(this_thread.initialized);
-
-    *pzCanonical = NULL;
-
-    MXS_ERROR("qc_get_canonical not implemented yet.");
-
-    return rv;
-}
-
 static int32_t qc_sqlite_query_has_clause(GWBUF* pStmt, int32_t* pHas_clause)
 {
     QC_TRACE();
@@ -5456,7 +5442,6 @@ MXS_MODULE* MXS_CREATE_MODULE()
         qc_sqlite_get_created_table_name,
         qc_sqlite_is_drop_table_query,
         qc_sqlite_get_table_names,
-        NULL,
         qc_sqlite_query_has_clause,
         qc_sqlite_get_database_names,
         qc_sqlite_get_prepare_name,

@@ -685,29 +685,6 @@ std::vector<std::string> qc_get_table_names(GWBUF* query, bool fullnames)
     return names;
 }
 
-char* qc_get_canonical(GWBUF* query)
-{
-    QC_TRACE();
-    mxb_assert(this_unit.classifier);
-
-    char* rval;
-
-    if (this_unit.classifier->qc_get_canonical)
-    {
-        this_unit.classifier->qc_get_canonical(query, &rval);
-    }
-    else
-    {
-        rval = modutil_get_canonical(query);
-    }
-
-    if (rval)
-    {
-        squeeze_whitespace(rval);
-    }
-
-    return rval;
-}
 
 bool qc_query_has_clause(GWBUF* query)
 {

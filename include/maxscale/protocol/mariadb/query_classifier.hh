@@ -450,16 +450,6 @@ enum qc_trx_parse_using_t
 uint32_t qc_get_trx_type_mask_using(GWBUF* stmt, qc_trx_parse_using_t use);
 
 /**
- * Returns the statement, with literals replaced with question marks.
- *
- * @param stmt  A buffer containing a COM_QUERY or COM_STMT_PREPARE packet.
- *
- * @return A statement in its canonical form, or NULL if a memory
- *         allocation fails. The string must be freed by the caller.
- */
-char* qc_get_canonical(GWBUF* stmt);
-
-/**
  * Gets the sql mode of the *calling* thread.
  *
  * @return The mode.

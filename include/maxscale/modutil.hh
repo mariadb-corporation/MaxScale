@@ -221,7 +221,6 @@ char* strnchr_esc(char* ptr, char c, int len);
 char* strnchr_esc_mysql(char* ptr, char c, int len);
 bool  is_mysql_statement_end(const char* start, int len);
 bool  is_mysql_sp_end(const char* start, int len);
-char* modutil_get_canonical(GWBUF* querybuf);
 
 // TODO: Move modutil out of the core
 const char* STRPACKETTYPE(int p);

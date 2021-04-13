@@ -1220,11 +1220,6 @@ std::string get_canonical(GWBUF* querybuf)
 }
 }
 
-char* modutil_get_canonical(GWBUF* querybuf)
-{
-    return MXS_STRDUP(maxscale::get_canonical(querybuf).c_str());
-}
-
 char* modutil_MySQL_bypass_whitespace(char* sql, size_t len)
 {
     char* i = sql;
