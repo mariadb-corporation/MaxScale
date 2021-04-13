@@ -160,6 +160,17 @@ enum class Conversion
     RELAXED
 };
 
+void append(DocumentBuilder& doc, const core::string_view& key, const bsoncxx::document::element& element);
+inline void append(DocumentBuilder& doc, const std::string& key, const bsoncxx::document::element& element)
+{
+    append(doc, core::string_view(key.data(), key.length()), element);
+}
+inline void append(DocumentBuilder& doc, const char* zKey, const bsoncxx::document::element& element)
+{
+    append(doc, core::string_view(zKey), element);
+}
+
+
 template<class T>
 T element_as(const std::string& command,
              const char* zKey,

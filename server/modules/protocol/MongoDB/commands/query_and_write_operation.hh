@@ -520,11 +520,39 @@ protected:
 
         sql << "(";
 
-        auto id = get_id(doc["_id"]);
+        string id;
+        string json;
+        auto element = doc["_id"];
+
+        if (element)
+        {
+            id = get_id(element);
+            json = bsoncxx::to_json(doc);
+        }
+        else
+        {
+            // Ok, as the document does not have an id, one must be generated. However,
+            // as an existing document is immutable, a new one must be created.
+
+            bsoncxx::oid oid;
+
+            DocumentBuilder builder;
+            builder.append(kvp("_id", oid));
+
+            for (const auto& e : doc)
+            {
+                append(builder, e.key(), element);
+            }
+
+            auto doc_with_id = builder.extract();
+
+            id = "'" + oid.to_string() + "'";
+            json = bsoncxx::to_json(doc_with_id);
+        }
 
         sql << id;
         sql << ", '";
-        sql << bsoncxx::to_json(doc);
+        sql << json;
         sql << "'";
 
         sql << ")";
@@ -536,57 +564,51 @@ protected:
     {
         stringstream ss;
 
-        if (element)
+        mxb_assert(element);
+
+        switch (element.type())
         {
-            switch (element.type())
+        case bsoncxx::type::k_utf8:
             {
-            case bsoncxx::type::k_utf8:
-                {
-                    const auto& utf8 = element.get_utf8();
-                    ss << "'" << string(utf8.value.data(), utf8.value.size()) << "'";
-                }
-                break;
-
-            case bsoncxx::type::k_oid:
-                ss << "'" << element.get_oid().value.to_string() << "'";
-                break;
-
-            case bsoncxx::type::k_int32:
-                ss << element.get_int32();
-                break;
-
-            case bsoncxx::type::k_int64:
-                ss << element.get_int64();
-                break;
-
-                // By design not using 'default' so that if a new type is introduced,
-                // an explicit decision regarding what to do with it, will be needed.
-            case bsoncxx::type::k_array:
-            case bsoncxx::type::k_binary:
-            case bsoncxx::type::k_bool:
-            case bsoncxx::type::k_code:
-            case bsoncxx::type::k_decimal128:
-            case bsoncxx::type::k_double:
-            case bsoncxx::type::k_codewscope:
-            case bsoncxx::type::k_date:
-            case bsoncxx::type::k_dbpointer:
-            case bsoncxx::type::k_document:
-            case bsoncxx::type::k_maxkey:
-            case bsoncxx::type::k_minkey:
-            case bsoncxx::type::k_null:
-            case bsoncxx::type::k_regex:
-            case bsoncxx::type::k_symbol:
-            case bsoncxx::type::k_timestamp:
-            case bsoncxx::type::k_undefined:
-                // Casual lower-case message is what Mongo returns.
-                ss << "can't use a " << bsoncxx::to_string(element.type()) << " for _id";
-                throw std::runtime_error(ss.str());
+                const auto& utf8 = element.get_utf8();
+                ss << "'" << string(utf8.value.data(), utf8.value.size()) << "'";
             }
-        }
-        else
-        {
-            // If the document does contain an _id, we generate one.
-            ss << "'" << bsoncxx::oid().to_string() << "'";
+            break;
+
+        case bsoncxx::type::k_oid:
+            ss << "'" << element.get_oid().value.to_string() << "'";
+            break;
+
+        case bsoncxx::type::k_int32:
+            ss << element.get_int32();
+            break;
+
+        case bsoncxx::type::k_int64:
+            ss << element.get_int64();
+            break;
+
+            // By design not using 'default' so that if a new type is introduced,
+            // an explicit decision regarding what to do with it, will be needed.
+        case bsoncxx::type::k_array:
+        case bsoncxx::type::k_binary:
+        case bsoncxx::type::k_bool:
+        case bsoncxx::type::k_code:
+        case bsoncxx::type::k_decimal128:
+        case bsoncxx::type::k_double:
+        case bsoncxx::type::k_codewscope:
+        case bsoncxx::type::k_date:
+        case bsoncxx::type::k_dbpointer:
+        case bsoncxx::type::k_document:
+        case bsoncxx::type::k_maxkey:
+        case bsoncxx::type::k_minkey:
+        case bsoncxx::type::k_null:
+        case bsoncxx::type::k_regex:
+        case bsoncxx::type::k_symbol:
+        case bsoncxx::type::k_timestamp:
+        case bsoncxx::type::k_undefined:
+            // Casual lower-case message is what Mongo returns.
+            ss << "can't use a " << bsoncxx::to_string(element.type()) << " for _id";
+            throw std::runtime_error(ss.str());
         }
 
         return ss.str();
