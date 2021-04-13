@@ -85,14 +85,15 @@ export default {
                 base: 'vs',
                 inherit: true, // false to completely replace the builtin rules
                 rules: [
-                    { token: '', foreground: '333333', background: 'fffffe' },
-                    { token: 'comment', foreground: '60a0b0' },
-                    { token: 'number', foreground: '40a070' },
-                    { token: 'delimiter', foreground: '000000' },
-                    { token: 'string.mariadb', foreground: '4070a0' },
-                    { token: 'keyword', foreground: '007020', fontStyle: 'bold' },
-                    { token: 'operator.mariadb', foreground: '666666' },
-                    { token: 'predefined.mariadb', foreground: 'FF00FF' },
+                    { token: '', foreground: '#333333', background: '#ffffff' },
+                    { token: 'comment.mariadb', foreground: '#60a0b0' },
+                    { token: 'number.mariadb', foreground: '#40a070' },
+                    { token: 'delimiter.mariadb', foreground: '#000000' },
+                    { token: 'string.mariadb', foreground: '#4070a0' },
+                    { token: 'string.double.mariadb', foreground: '#4070a0' },
+                    { token: 'keyword.mariadb', foreground: '#007020', fontStyle: 'bold' },
+                    { token: 'operator.mariadb', foreground: '#666666' },
+                    { token: 'predefined.mariadb', foreground: '#FF00FF' },
                 ],
                 //https://microsoft.github.io/monaco-editor/playground.html#customizing-the-appearence-exposed-colors
                 colors: {
