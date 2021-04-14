@@ -20,9 +20,7 @@
 #include <vector>
 #include <immintrin.h>
 
-namespace maxsimd
-{
-namespace simd256
+namespace maxsimd::simd256
 {
 
 const int SIMD_BYTES = 32;
@@ -163,6 +161,5 @@ inline Markers make_markers(const std::string& sql, __m256i ascii_bitmap)
     markers.shrink_to_fit();
 
     return markers;
-}
 }
 }
