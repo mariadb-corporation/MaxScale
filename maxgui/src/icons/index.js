@@ -22,6 +22,7 @@ import NotFound from 'icons/NotFound'
 import Paused from 'icons/Paused'
 import Reports from 'icons/Reports'
 import Restart from 'icons/Restart'
+import Reload from 'icons/Reload'
 import Running from 'icons/Running'
 import Search from 'icons/Search'
 import Settings from 'icons/Settings'
@@ -70,6 +71,9 @@ export default {
     },
     restart: {
         component: Restart,
+    },
+    reload: {
+        component: Reload,
     },
     running: {
         component: Running,
