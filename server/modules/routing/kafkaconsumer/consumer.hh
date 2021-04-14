@@ -43,7 +43,6 @@ private:
     const Config& m_config;
     Producer      m_producer;
 
-    std::vector<RdKafka::TopicPartition*>   m_partitions;
     std::unique_ptr<RdKafka::KafkaConsumer> m_consumer;
 
     int64_t                   m_records {0};

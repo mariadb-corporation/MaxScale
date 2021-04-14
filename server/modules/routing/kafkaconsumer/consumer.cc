@@ -45,22 +45,12 @@ Consumer::Consumer(const Config& config, Producer&& producer)
     , m_producer(std::move(producer))
     , m_batch_size(config.batch_size.get())
 {
-    for (auto t : config.topics.get())
-    {
-        m_partitions.push_back(RdKafka::TopicPartition::create(t, 0));
-    }
-
     m_thread = std::thread(&Consumer::run, this);
 }
 
 Consumer::~Consumer()
 {
     stop();
-
-    for (auto p : m_partitions)
-    {
-        delete p;
-    }
 }
 
 bool Consumer::running() const
@@ -167,17 +157,7 @@ bool Consumer::consume()
 
         if (m_consumer)
         {
-            auto kafka_err = m_consumer->committed(m_partitions, timeout);
-
-            if (kafka_err != RdKafka::ERR_NO_ERROR)
-            {
-                MXS_ERROR("Failed fetch committed offsets: %s", RdKafka::err2str(kafka_err).c_str());
-                return false;
-            }
-
-            m_consumer->assign(m_partitions);
-
-            MXS_INFO("Starting from committed offsets: %s", offsets_to_string().c_str());
+            m_consumer->subscribe(m_config.topics.get());
 
             while (running())
             {
