@@ -84,8 +84,12 @@ public:
 
     void populate_response(DocumentBuilder& doc)
     {
+        populate_response(doc, m_database.config());
+    }
+
+    static void populate_response(DocumentBuilder& doc, const Config& c)
+    {
         using C = GlobalConfig;
-        const auto& c = m_database.config();
 
         DocumentBuilder config;
         config.append(kvp(C::s_on_unknown_command.name(),
@@ -95,6 +99,54 @@ public:
 
         doc.append(kvp("config", config.extract()));
         doc.append(kvp("ok", 1));
+    }
+};
+
+class MxsSetConfig final : public ImmediateCommand
+{
+public:
+    using ImmediateCommand::ImmediateCommand;
+
+    void populate_response(DocumentBuilder& doc)
+    {
+        using C = GlobalConfig;
+        auto& c = m_database.config();
+
+        auto on_unknown_command = c.on_unknown_command;
+        auto auto_create_tables = c.auto_create_tables;
+        auto id_length = c.id_length;
+
+        const auto& config = value_as<bsoncxx::document::view>();
+
+        string s;
+        if (optional(config, C::s_on_unknown_command.name(), &s))
+        {
+            string message;
+            if (!C::s_on_unknown_command.from_string(s, &on_unknown_command, &message))
+            {
+                throw SoftError(message, error::BAD_VALUE);
+            }
+        }
+
+        optional(config, C::s_auto_create_tables.name(), &auto_create_tables);
+
+        if (optional(config, C::s_id_length.name(), &id_length, Conversion::RELAXED))
+        {
+            // TODO: Ass-backwards that we must turn it into a string before we can
+            // TODO: check whether it is valid *and* get a message descrbing the problem.
+
+            string message;
+            if (!C::s_id_length.from_string(std::to_string(id_length), &id_length, &message))
+            {
+                throw SoftError(message, error::BAD_VALUE);
+            }
+        }
+
+        c.on_unknown_command = on_unknown_command;
+        c.auto_create_tables = auto_create_tables;
+        c.id_length = id_length;
+
+        MxsGetConfig::populate_response(doc, c);
     }
 };
 

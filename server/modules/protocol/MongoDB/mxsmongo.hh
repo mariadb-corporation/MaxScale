@@ -196,6 +196,11 @@ std::string element_as<std::string>(const std::string& command,
                                     Conversion conversion);
 
 template<>
+int64_t element_as<int64_t>(const std::string& command,
+                            const char* zKey,
+                            const bsoncxx::document::element& element,
+                            Conversion conversion);
+template<>
 bool element_as<bool>(const std::string& command,
                       const char* zKey,
                       const bsoncxx::document::element& element,
@@ -265,6 +270,7 @@ private:
 namespace key
 {
 
+// Mongo Commands
 const char BUILDINFO[]               = "buildInfo";
 const char COUNT[]                   = "count";
 const char CREATE[]                  = "create";
@@ -286,8 +292,6 @@ const char KEY[]                     = "key";
 const char LIMIT[]                   = "limit";
 const char LISTCOLLECTIONS[]         = "listCollections";
 const char LISTDATABASES[]           = "listDatabases";
-const char MXSDIAGNOSE[]             = "mxsDiagnose";
-const char MXSGETCONFIG[]            = "mxsGetConfig";
 const char MULTI[]                   = "multi";
 const char NAMEONLY[]                = "nameOnly";
 const char ORDERED[]                 = "ordered";
@@ -302,6 +306,11 @@ const char U[]                       = "u";
 const char UPDATE[]                  = "update";
 const char UPDATES[]                 = "updates";
 const char WHATSMYURI[]              = "whatsmyuri";
+
+// MaxScale Commands
+const char MXSDIAGNOSE[]             = "mxsDiagnose";
+const char MXSGETCONFIG[]            = "mxsGetConfig";
+const char MXSSETCONFIG[]            = "mxsSetConfig";
 
 };
 
@@ -675,7 +684,7 @@ public:
 
     Mongo(mxs::ClientConnection* pClient_connection,
           mxs::Component* pDownstream,
-          const Config* pConfig);
+          Config* pConfig);
     ~Mongo();
 
     Mongo(const Mongo&) = delete;
@@ -715,7 +724,7 @@ private:
 
     State              m_state { READY };
     Context            m_context;
-    const Config&      m_config;
+    Config&            m_config;
     std::deque<GWBUF*> m_requests;
     SDatabase          m_sDatabase;
 };

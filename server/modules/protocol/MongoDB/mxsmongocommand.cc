@@ -152,6 +152,7 @@ struct ThisUnit
 
         { mxb::tolower(key::MXSDIAGNOSE),             &create_command<command::MxsDiagnose> },
         { mxb::tolower(key::MXSGETCONFIG),            &create_command<command::MxsGetConfig> },
+        { mxb::tolower(key::MXSSETCONFIG),            &create_command<command::MxsSetConfig> },
     };
 } this_unit;
 

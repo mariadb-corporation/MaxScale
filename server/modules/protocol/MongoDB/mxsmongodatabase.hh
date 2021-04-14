@@ -62,6 +62,11 @@ public:
         return m_config;
     }
 
+    Config& config()
+    {
+        return m_config;
+    }
+
     /**
      * Create a new instance.
      *
@@ -73,7 +78,7 @@ public:
      */
     static std::unique_ptr<Database> create(const std::string& name,
                                             Mongo::Context* pContext,
-                                            const Config* pConfig);
+                                            Config* pConfig);
 
     /**
      * Handle a Mongo query.
@@ -126,7 +131,7 @@ public:
 private:
     Database(const std::string& name,
              Mongo::Context* pContext,
-             const Config* pConfig);
+             Config* pConfig);
 
     bool is_pending() const
     {
@@ -161,7 +166,7 @@ private:
     State             m_state { READY };
     const std::string m_name;
     Mongo::Context&   m_context;
-    const Config&     m_config;
+    Config&           m_config;
     SCommand          m_sCommand;
 };
 }

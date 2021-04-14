@@ -21,7 +21,7 @@ using namespace std;
 
 mxsmongo::Database::Database(const std::string& name,
                              Mongo::Context* pContext,
-                             const Config* pConfig)
+                             Config* pConfig)
     : m_name(name)
     , m_context(*pContext)
     , m_config(*pConfig)
@@ -36,7 +36,7 @@ mxsmongo::Database::~Database()
 //static
 unique_ptr<mxsmongo::Database> mxsmongo::Database::create(const std::string& name,
                                                           Mongo::Context* pContext,
-                                                          const Config* pConfig)
+                                                          Config* pConfig)
 {
     return unique_ptr<Database>(new Database(name, pContext, pConfig));
 }

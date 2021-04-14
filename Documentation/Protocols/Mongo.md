@@ -320,6 +320,7 @@ mxsGetConfig | <any> | Ignored.
 The command returns a document that contains the current configuration of
 the session. For example:
 ```
+> db.runCommand({mxsGetConfig: 1});
 {
 	"config" : {
 		"on_unknown_command" : "return_error",
@@ -328,6 +329,68 @@ the session. For example:
 	},
 	"ok" : 1
 }
+```
+
+### mxsSetConfig
+
+#### Definition
+
+#### **mxsSetConfig**
+
+The `mxsSetConfig` command changes the configuration of the session.
+
+Note that the changes only affect the current session and are **not**
+persisted.
+
+#### Syntax
+
+The `mxsSetConfig` has the following syntax:
+```
+db.runCommand(
+    {
+        mxsSetConfig: document
+    });
+```
+##### Command Fields
+
+The command takes the following fields:
+
+Field | Type | Description
+--------------------------
+mxsSetConfig | document | A document specifying the configuration.
+
+The document takes the following fields:
+
+Field | Type | Description
+--------------------------
+on_unknown_command | string | Either `"return_error"` or `"return_empty"`
+auto_create_tables | boolean | Whether tables should be created as needed.
+id_length | integer | `id` column `VARCHAR` size in created tables.
+
+##### Returns
+
+The command returns a document that contains the changed configuration of
+the session. For example:
+```
+> db.runCommand({mxsGetConfig: 1});
+{
+	"config" : {
+		"on_unknown_command" : "return_error",
+		"auto_create_tables" : true,
+		"id_length" : 24
+	},
+	"ok" : 1
+}
+> db.runCommand({mxsSetConfig: { auto_create_tables: false}});
+{
+	"config" : {
+		"on_unknown_command" : "return_error",
+		"auto_create_tables" : false,
+		"id_length" : 24
+	},
+	"ok" : 1
+}
+
 ```
 
 ## Object Id

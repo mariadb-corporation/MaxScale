@@ -99,11 +99,12 @@ public:
 
 protected:
     template<class Type>
-    bool optional(const char* zKey, Type* pElement, Conversion conversion = Conversion::STRICT) const
+    bool optional(const bsoncxx::document::view& doc,
+                  const char* zKey, Type* pElement, Conversion conversion = Conversion::STRICT) const
     {
         bool rv = false;
 
-        auto element = m_doc[zKey];
+        auto element = doc[zKey];
 
         if (element)
         {
@@ -112,6 +113,25 @@ protected:
         }
 
         return rv;
+    }
+
+    template<class Type>
+    bool optional(const bsoncxx::document::view& doc,
+                  const std::string& key, Type* pElement, Conversion conversion = Conversion::STRICT) const
+    {
+        return optional(doc, key.c_str(), pElement, conversion);
+    }
+
+    template<class Type>
+    bool optional(const char* zKey, Type* pElement, Conversion conversion = Conversion::STRICT) const
+    {
+        return optional(m_doc, zKey, pElement, conversion);
+    }
+
+    template<class Type>
+    bool optional(const std::string& key, Type* pElement, Conversion conversion = Conversion::STRICT) const
+    {
+        return optional(m_doc, key.c_str(), pElement, conversion);
     }
 
     template<class Type>
