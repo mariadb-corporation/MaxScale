@@ -77,6 +77,27 @@ public:
     }
 };
 
+class MxsGetConfig final : public ImmediateCommand
+{
+public:
+    using ImmediateCommand::ImmediateCommand;
+
+    void populate_response(DocumentBuilder& doc)
+    {
+        using C = Config;
+        const auto& c = m_database.config();
+
+        DocumentBuilder config;
+        config.append(kvp(C::s_on_unknown_command.name(),
+                          C::s_on_unknown_command.to_string(c.on_unknown_command)));
+        config.append(kvp(C::s_auto_create_tables.name(), c.auto_create_tables));
+        config.append(kvp(C::s_id_length.name(), static_cast<int32_t>(c.id_length)));
+
+        doc.append(kvp("config", config.extract()));
+        doc.append(kvp("ok", 1));
+    }
+};
+
 }
 
 }

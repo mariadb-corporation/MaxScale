@@ -287,6 +287,7 @@ const char LIMIT[]                   = "limit";
 const char LISTCOLLECTIONS[]         = "listCollections";
 const char LISTDATABASES[]           = "listDatabases";
 const char MXSDIAGNOSE[]             = "mxsDiagnose";
+const char MXSGETCONFIG[]            = "mxsGetConfig";
 const char MULTI[]                   = "multi";
 const char NAMEONLY[]                = "nameOnly";
 const char ORDERED[]                 = "ordered";

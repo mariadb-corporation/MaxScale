@@ -248,7 +248,7 @@ The command takes the following fields:
 
 Field | Type | Description
 --------------------------
-command | document | A command as provided to `db.runCommand(...)`.
+mxsDiagnose | document | A command as provided to `db.runCommand(...)`.
 
 ##### Returns
 
@@ -289,6 +289,46 @@ of statements that would have been sent to the backend.
 
 If an error occurs while the command is being diagnosed, then `ok` will be `0`
 and there will be a field `error` whose value is an error object.
+
+### mxsGetConfig
+
+#### Definition
+
+#### **mxsGetConfig**
+
+The `mxsGetConfig` command returns the current configuration of the session.
+
+#### Syntax
+
+The `mxsGetConfig` has the following syntax:
+```
+db.runCommand(
+    {
+        mxsGetConfig: <any>
+    });
+```
+##### Command Fields
+
+The command takes the following fields:
+
+Field | Type | Description
+--------------------------
+mxsGetConfig | <any> | Ignored.
+
+##### Returns
+
+The command returns a document that contains the current configuration of
+the session. For example:
+```
+{
+	"config" : {
+		"on_unknown_command" : "return_error",
+		"auto_create_tables" : true,
+		"id_length" : 24
+	},
+	"ok" : 1
+}
+```
 
 ## Object Id
 

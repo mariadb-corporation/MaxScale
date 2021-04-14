@@ -151,6 +151,7 @@ struct ThisUnit
         { mxb::tolower(key::WHATSMYURI),              &create_command<command::WhatsMyUri> },
 
         { mxb::tolower(key::MXSDIAGNOSE),             &create_command<command::MxsDiagnose> },
+        { mxb::tolower(key::MXSGETCONFIG),            &create_command<command::MxsGetConfig> },
     };
 } this_unit;
 
