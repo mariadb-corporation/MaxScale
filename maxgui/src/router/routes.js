@@ -23,6 +23,7 @@ const ListenerDetail = () =>
     import(/* webpackChunkName: "listener-details-page" */ 'pages/ListenerDetail')
 const FilterDetail = () =>
     import(/* webpackChunkName: "filter-details-page" */ 'pages/FilterDetail')
+const QueryPage = () => import(/* webpackChunkName: "query-page" */ 'pages/QueryPage')
 const NotFound404 = () => import(/* webpackChunkName: "not-found-page" */ 'pages/NotFound404')
 
 export const routes = [
@@ -96,6 +97,16 @@ export const routes = [
             layout: 'app-layout',
         },
         name: 'filter',
+    },
+    {
+        //TODO: Depends on the design and database connection
+        path: '/dashboard/servers/:id/query',
+        component: QueryPage,
+        meta: {
+            requiresAuth: true,
+            layout: 'app-layout',
+        },
+        name: 'query',
     },
     {
         path: '/404',
