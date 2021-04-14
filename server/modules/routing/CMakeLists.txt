@@ -11,8 +11,8 @@ if(BUILD_KAFKACDC)
   add_subdirectory(kafkacdc)
 endif()
 
-if (BUILD_KAFKACONSUMER)
-  add_subdirectory(kafkaconsumer)
+if (BUILD_KAFKAIMPORTER)
+  add_subdirectory(kafkaimporter)
 endif()
 
 add_subdirectory(cat)

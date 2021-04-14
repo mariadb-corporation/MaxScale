@@ -42,7 +42,7 @@ bool is_json_error(int errnum)
 }
 }
 
-namespace kafkaconsumer
+namespace kafkaimporter
 {
 
 Table::Table(const std::string& table)

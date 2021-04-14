@@ -1,0 +1,5 @@
+add_library(kafkaimporter SHARED kafkaimporter.cc consumer.cc producer.cc table.cc config.cc)
+add_dependencies(kafkaimporter connector-c librdkafka)
+set_target_properties(kafkaimporter PROPERTIES VERSION "1.0.0"  LINK_FLAGS -Wl,-z,defs)
+target_link_libraries(kafkaimporter maxscale-common ${RDKAFKA_LIBRARIES})
+install_module(kafkaimporter core)

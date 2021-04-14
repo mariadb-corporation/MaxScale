@@ -23,7 +23,7 @@
 
 #include "producer.hh"
 
-namespace kafkaconsumer
+namespace kafkaimporter
 {
 class Consumer final
 {

@@ -17,7 +17,7 @@
 #include <maxscale/service.hh>
 #include <maxscale/mainworker.hh>
 
-namespace kafkaconsumer
+namespace kafkaimporter
 {
 
 Producer::Producer(const Config& config, SERVICE* service)

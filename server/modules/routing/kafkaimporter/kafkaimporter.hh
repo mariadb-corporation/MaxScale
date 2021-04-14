@@ -20,23 +20,23 @@
 
 #include "consumer.hh"
 
-namespace kafkaconsumer
+namespace kafkaimporter
 {
 
-class KafkaConsumer : public mxs::Router, public PostConfigurable
+class KafkaImporter : public mxs::Router, public PostConfigurable
 {
 public:
-    KafkaConsumer(const KafkaConsumer&) = delete;
-    KafkaConsumer& operator=(const KafkaConsumer&) = delete;
+    KafkaImporter(const KafkaImporter&) = delete;
+    KafkaImporter& operator=(const KafkaImporter&) = delete;
 
-    ~KafkaConsumer() = default;
+    ~KafkaImporter() = default;
 
     // Router capabilities
     static constexpr uint64_t CAPS = RCAP_TYPE_RUNTIME_CONFIG;
 
-    static KafkaConsumer* create(SERVICE* pService)
+    static KafkaImporter* create(SERVICE* pService)
     {
-        return new KafkaConsumer(pService);
+        return new KafkaImporter(pService);
     }
 
     mxs::RouterSession* newSession(MXS_SESSION* pSession, const mxs::Endpoints& endpoints)
@@ -62,7 +62,7 @@ public:
     bool post_configure() final;
 
 private:
-    KafkaConsumer(SERVICE* pService)
+    KafkaImporter(SERVICE* pService)
         : m_service(pService)
         , m_config(pService->name(), this)
     {

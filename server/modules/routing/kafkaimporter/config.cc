@@ -19,7 +19,7 @@ namespace
 {
 
 namespace cfg = maxscale::config;
-using namespace kafkaconsumer;
+using namespace kafkaimporter;
 
 class KafkaSpecification : public cfg::Specification
 {
@@ -70,7 +70,7 @@ bool KafkaSpecification::post_validate(json_t* json) const
 }
 }
 
-namespace kafkaconsumer
+namespace kafkaimporter
 {
 
 Config::Config(const std::string& name, PostConfigurable* router)

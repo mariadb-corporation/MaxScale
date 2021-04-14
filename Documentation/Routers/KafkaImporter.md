@@ -1,10 +1,10 @@
-# KafkaConsumer
+# KafkaImporter
 
 [TOC]
 
 ## Overview
 
-The KafkaConsumer module reads messages from Kafka and streams them into a
+The KafkaImporter module reads messages from Kafka and streams them into a
 MariaDB server. The messages are inserted into a table designated by either the
 topic name or the message key (see [table_name_in](#table_name_in) for
 details). The table will be automatically created with the following SQL:
@@ -30,7 +30,7 @@ same document multiple times whenever the connection to either Kafka or MariaDB
 is lost.
 
 The limitations on the data can be removed by either creating the table before
-the KafkaConsumer is started, in which case the `CREATE TABLE IF NOT EXISTS`
+the KafkaImporter is started, in which case the `CREATE TABLE IF NOT EXISTS`
 does nothing, or by altering the structure of the existing table. The minimum
 requirement that must be met is that the table contains the `data` field to
 which string values can be inserted into.
@@ -65,9 +65,9 @@ The comma separated list of topics to subscribe to.
 - **Mandatory**: No
 - **Dynamic**: Yes
 
-Maximum number of uncommitted records. The KafkaConsumer will buffer records
+Maximum number of uncommitted records. The KafkaImporter will buffer records
 into batches and commit them once either enough records are gathered (controlled
-by this parameter) or when the KafkaConsumer goes idle. Any uncommitted records
+by this parameter) or when the KafkaImporter goes idle. Any uncommitted records
 will be read again if a reconnection to either Kafka or MariaDB occurs.
 
 ### `kafka_sasl_mechanism`

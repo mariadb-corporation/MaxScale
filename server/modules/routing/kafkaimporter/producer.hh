@@ -19,7 +19,7 @@
 
 #include "table.hh"
 
-namespace kafkaconsumer
+namespace kafkaimporter
 {
 class Producer final
 {

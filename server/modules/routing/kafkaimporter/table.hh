@@ -17,7 +17,7 @@
 #include <mysql.h>
 #include <vector>
 
-namespace kafkaconsumer
+namespace kafkaimporter
 {
 
 class Table final

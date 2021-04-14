@@ -11,12 +11,12 @@
  * Public License.
  */
 
-#include "kafkaconsumer.hh"
+#include "kafkaimporter.hh"
 
-namespace kafkaconsumer
+namespace kafkaimporter
 {
 
-bool KafkaConsumer::post_configure()
+bool KafkaImporter::post_configure()
 {
     // Reset the consumer before we start a new one to make sure there's only one of them running
     m_consumer.reset();
@@ -36,14 +36,14 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         MXS_ROUTER_VERSION,
         "Stream Kafka messages into MariaDB",
         "1.0.0",
-        kafkaconsumer::KafkaConsumer::CAPS,
-        &mxs::RouterApi<kafkaconsumer::KafkaConsumer>::s_api,
+        kafkaimporter::KafkaImporter::CAPS,
+        &mxs::RouterApi<kafkaimporter::KafkaImporter>::s_api,
         nullptr,
         nullptr,
         nullptr,
         nullptr,
         {{nullptr}},
-        kafkaconsumer::Config::specification()
+        kafkaimporter::Config::specification()
     };
 
     return &info;

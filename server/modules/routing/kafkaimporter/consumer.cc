@@ -5,7 +5,7 @@ using std::chrono::milliseconds;
 
 namespace
 {
-using namespace kafkaconsumer;
+using namespace kafkaimporter;
 
 std::unique_ptr<RdKafka::Conf> create_config(const Config& config)
 {
@@ -13,7 +13,7 @@ std::unique_ptr<RdKafka::Conf> create_config(const Config& config)
     // https://github.com/edenhill/librdkafka/blob/master/CONFIGURATION.md
     std::unordered_map<std::string, std::string> values;
     values["bootstrap.servers"] = config.bootstrap_servers.get();
-    values["group.id"] = "maxscale-KafkaConsumer";
+    values["group.id"] = "maxscale-KafkaImporter";
     values["enable.auto.commit"] = "false";
     values["enable.auto.offset.store"] = "true";
 
@@ -37,7 +37,7 @@ std::unique_ptr<RdKafka::Conf> create_config(const Config& config)
 }
 }
 
-namespace kafkaconsumer
+namespace kafkaimporter
 {
 
 Consumer::Consumer(const Config& config, Producer&& producer)
