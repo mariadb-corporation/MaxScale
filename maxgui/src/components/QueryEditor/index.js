@@ -120,6 +120,9 @@ export default {
                 value: this.codeFormatter(this.value),
                 theme: 'mariadb-theme',
                 language: this.language,
+                automaticLayout: true,
+                fontSize: 12,
+                lineNumbersMinChars: 2,
             }
 
             this.editor = monaco.editor.create(this.$el, options)

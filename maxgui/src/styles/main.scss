@@ -24,7 +24,6 @@ html {
     padding: 0;
     //dashboard "responsive". preserve ratio
     overflow: auto;
-    min-width: 1366px !important;
 }
 
 //https://gs.statcounter.com/screen-resolution-stats top 2 for desktop screen resolution
@@ -143,6 +142,9 @@ input:-webkit-autofill:active {
 // vuetify input restyle
 
 .std.v-text-field--outlined > .v-input__control {
+    .v-input__slot {
+        min-height: 0 !important;
+    }
     fieldset {
         border-width: 1px;
     }
