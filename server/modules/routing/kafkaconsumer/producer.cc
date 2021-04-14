@@ -102,7 +102,12 @@ bool Producer::connect()
     {
         if (auto master = find_master())
         {
+            int timeout = m_config.timeout.get().count();
             m_mysql = mysql_init(nullptr);
+
+            mysql_optionsv(m_mysql, MYSQL_OPT_CONNECT_TIMEOUT, &timeout);
+            mysql_optionsv(m_mysql, MYSQL_OPT_READ_TIMEOUT, &timeout);
+            mysql_optionsv(m_mysql, MYSQL_OPT_WRITE_TIMEOUT, &timeout);
 
             if (!mysql_real_connect(m_mysql, master.host.c_str(), master.user.c_str(),
                                     master.password.c_str(),

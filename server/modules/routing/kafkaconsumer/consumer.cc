@@ -1,5 +1,8 @@
 #include "consumer.hh"
 
+using std::chrono::duration_cast;
+using std::chrono::milliseconds;
+
 namespace
 {
 using namespace kafkaconsumer;
@@ -157,14 +160,14 @@ bool Consumer::consume()
     if (auto cnf = create_config(m_config))
     {
         std::string err;
-        int timeout = 1000;
+        int timeout = duration_cast<milliseconds>(m_config.timeout.get()).count();
         bool use_key = m_config.table_name_in.get() == ID_FROM_KEY;
 
         m_consumer.reset(RdKafka::KafkaConsumer::create(cnf.get(), err));
 
         if (m_consumer)
         {
-            auto kafka_err = m_consumer->committed(m_partitions, timeout * 10);
+            auto kafka_err = m_consumer->committed(m_partitions, timeout);
 
             if (kafka_err != RdKafka::ERR_NO_ERROR)
             {
