@@ -41,8 +41,8 @@ public:
     AuthenticatorList create_authenticators(const mxs::ConfigParameters& params) override;
 
 private:
-    ProtocolModule(Config&& config);
+    ProtocolModule(GlobalConfig&& config);
 
 private:
-    Config m_config;
+    GlobalConfig m_config;
 };

@@ -23,28 +23,28 @@ mxs::config::Specification specification(MXS_MODULE_NAME, mxs::config::Specifica
 }
 }
 
-mxs::config::ParamString Config::s_user(
+mxs::config::ParamString GlobalConfig::s_user(
     &mongodbclient::specification,
     "user",
     "The user to use when connecting to the backend.");
 
-mxs::config::ParamString Config::s_password(
+mxs::config::ParamString GlobalConfig::s_password(
     &mongodbclient::specification,
     "password",
     "The password to use when connecting to the backend.");
 
-mxs::config::ParamEnum<Config::OnUnknownCommand> Config::s_on_unknown_command(
+mxs::config::ParamEnum<GlobalConfig::OnUnknownCommand> GlobalConfig::s_on_unknown_command(
     &mongodbclient::specification,
     "on_unknown_command",
     "Whether to return an error or an empty document in case an unknown Mongo "
     "command is encountered.",
     {
-        { Config::RETURN_ERROR, "return_error" },
-        { Config::RETURN_EMPTY, "return_empty" }
+        { GlobalConfig::RETURN_ERROR, "return_error" },
+        { GlobalConfig::RETURN_EMPTY, "return_empty" }
     },
-    Config::RETURN_ERROR);
+    GlobalConfig::RETURN_ERROR);
 
-mxs::config::ParamBool Config::s_auto_create_tables(
+mxs::config::ParamBool GlobalConfig::s_auto_create_tables(
     &mongodbclient::specification,
     "auto_create_tables",
     "Whether tables should be created automatically. If enabled, whenever a document is "
@@ -52,29 +52,29 @@ mxs::config::ParamBool Config::s_auto_create_tables(
     "it does not exist already.",
     true);
 
-mxs::config::ParamCount Config::s_id_length(
+mxs::config::ParamCount GlobalConfig::s_id_length(
     &mongodbclient::specification,
     "id_length",
     "The VARCHAR length of automatically created tables. A changed value only affects "
     "tables created after the change; existing tables are not altered.",
-    Config::ID_LENGTH_DEFAULT,
-    Config::ID_LENGTH_MIN,
-    Config::ID_LENGTH_MAX
+    GlobalConfig::ID_LENGTH_DEFAULT,
+    GlobalConfig::ID_LENGTH_MIN,
+    GlobalConfig::ID_LENGTH_MAX
     );
 
 
-Config::Config()
+GlobalConfig::GlobalConfig()
     : mxs::config::Configuration(MXS_MODULE_NAME, &mongodbclient::specification)
 {
-    add_native(&Config::user, &s_user);
-    add_native(&Config::password, &s_password);
-    add_native(&Config::on_unknown_command, &s_on_unknown_command);
-    add_native(&Config::auto_create_tables, &s_auto_create_tables);
-    add_native(&Config::id_length, &s_id_length);
+    add_native(&GlobalConfig::user, &s_user);
+    add_native(&GlobalConfig::password, &s_password);
+    add_native(&GlobalConfig::on_unknown_command, &s_on_unknown_command);
+    add_native(&GlobalConfig::auto_create_tables, &s_auto_create_tables);
+    add_native(&GlobalConfig::id_length, &s_id_length);
 }
 
 //static
-mxs::config::Specification& Config::specification()
+mxs::config::Specification& GlobalConfig::specification()
 {
     return mongodbclient::specification;
 }

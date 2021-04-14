@@ -72,14 +72,14 @@ public:
 
         switch (m_database.config().on_unknown_command)
         {
-        case Config::RETURN_ERROR:
+        case GlobalConfig::RETURN_ERROR:
             {
                 MXS_ERROR("%s", s.c_str());
                 pResponse = mxsmongo::SoftError(s, mxsmongo::error::COMMAND_NOT_FOUND).create_response(*this);
             }
             break;
 
-        case Config::RETURN_EMPTY:
+        case GlobalConfig::RETURN_EMPTY:
             MXS_WARNING("%s", s.c_str());
             pResponse = create_empty_response();
             break;

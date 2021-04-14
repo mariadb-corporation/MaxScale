@@ -15,11 +15,11 @@
 #include "mongodbclient.hh"
 #include <maxscale/config2.hh>
 
-class Config : public mxs::config::Configuration
+class GlobalConfig final : public mxs::config::Configuration
 {
 public:
-    Config();
-    Config(Config&&) = default;
+    GlobalConfig();
+    GlobalConfig(GlobalConfig&&) = default;
 
     enum OnUnknownCommand
     {
@@ -47,4 +47,23 @@ public:
     static mxs::config::ParamEnum<OnUnknownCommand> s_on_unknown_command;
     static mxs::config::ParamBool                   s_auto_create_tables;
     static mxs::config::ParamCount                  s_id_length;
+};
+
+class Config final
+{
+public:
+    Config(const GlobalConfig& config)
+        : user(config.user)
+        , password(config.password)
+        , on_unknown_command(config.on_unknown_command)
+        , auto_create_tables(config.auto_create_tables)
+        , id_length(config.id_length)
+    {
+    }
+
+    const std::string              user;
+    const std::string              password;
+    GlobalConfig::OnUnknownCommand on_unknown_command;
+    bool                           auto_create_tables;
+    int64_t                        id_length;
 };

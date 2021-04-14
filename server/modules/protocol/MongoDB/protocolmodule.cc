@@ -20,7 +20,7 @@
 
 using namespace std;
 
-ProtocolModule::ProtocolModule(Config&& config)
+ProtocolModule::ProtocolModule(GlobalConfig&& config)
     : m_config(std::move(config))
 {
 }
@@ -30,7 +30,7 @@ ProtocolModule* ProtocolModule::create(const mxs::ConfigParameters& params)
 {
     ProtocolModule* pThis = nullptr;
 
-    Config config;
+    GlobalConfig config;
 
     if (config.configure(params))
     {
@@ -49,7 +49,7 @@ ProtocolModule::create_client_protocol(MXS_SESSION* pSession, mxs::Component* pC
     sSession_data->set_client_protocol_capabilities(RCAP_TYPE_RESULTSET_OUTPUT);
     pSession->set_protocol_data(std::move(sSession_data));
 
-    return unique_ptr<mxs::ClientConnection>(new ClientConnection(&m_config, pSession, pComponent));
+    return unique_ptr<mxs::ClientConnection>(new ClientConnection(m_config, pSession, pComponent));
 }
 
 unique_ptr<mxs::BackendConnection>

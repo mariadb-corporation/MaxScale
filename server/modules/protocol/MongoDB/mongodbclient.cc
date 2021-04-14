@@ -67,7 +67,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         {
             {MXS_END_MODULE_PARAMS}
         },
-        &Config::specification()
+        &GlobalConfig::specification()
     };
 
     return &info;

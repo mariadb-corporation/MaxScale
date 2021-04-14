@@ -84,7 +84,7 @@ public:
 
     void populate_response(DocumentBuilder& doc)
     {
-        using C = Config;
+        using C = GlobalConfig;
         const auto& c = m_database.config();
 
         DocumentBuilder config;

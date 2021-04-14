@@ -28,11 +28,13 @@
 using namespace std;
 using namespace mxsmongo;
 
-ClientConnection::ClientConnection(const Config* pConfig, MXS_SESSION* pSession, mxs::Component* pDownstream)
-    : m_config(*pConfig)
+ClientConnection::ClientConnection(const GlobalConfig& config,
+                                   MXS_SESSION* pSession,
+                                   mxs::Component* pDownstream)
+    : m_config(config)
     , m_session(*pSession)
     , m_session_data(*static_cast<MYSQL_session*>(pSession->protocol_data()))
-    , m_mongo(this, pDownstream, pConfig)
+    , m_mongo(this, pDownstream, &m_config)
 {
 }
 
