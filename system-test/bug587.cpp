@@ -72,7 +72,6 @@ using namespace std;
 int main(int argc, char* argv[])
 {
     TestConnections* Test = new TestConnections(argc, argv);
-    Test->repl->limit_nodes(4);
     Test->set_timeout(10);
     Test->repl->connect();
     Test->maxscales->connect_maxscale(0);

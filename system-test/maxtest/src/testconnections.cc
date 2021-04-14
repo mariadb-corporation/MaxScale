@@ -308,6 +308,30 @@ int TestConnections::cleanup()
         }
     }
 
+    if (m_fix_clusters_after)
+    {
+        mxt::BoolFuncArray funcs;
+        if (repl)
+        {
+            funcs.push_back([this]() {
+                                return repl->fix_replication();
+                            });
+        }
+        if (galera)
+        {
+            funcs.push_back([this]() {
+                                return galera->fix_replication();
+                            });
+        }
+        if (xpand)
+        {
+            funcs.push_back([this]() {
+                                return xpand->fix_replication();
+                            });
+        }
+        m_shared.concurrent_run(funcs);
+    }
+
     m_stop_threads = true;
     if (m_timeout_thread.joinable())
     {
@@ -1903,6 +1927,7 @@ bool TestConnections::read_cmdline_options(int argc, char* argv[])
         {"local-maxscale",     optional_argument, 0, 'l'},
         {"reinstall-maxscale", no_argument,       0, 'm'},
         {"serial-run",         no_argument,       0, 'e'},
+        {"fix-clusters",       no_argument,       0, 'f'},
         {0,                    0,                 0, 0  }
     };
 
@@ -1910,7 +1935,7 @@ bool TestConnections::read_cmdline_options(int argc, char* argv[])
     int c;
     int option_index = 0;
 
-    while ((c = getopt_long(argc, argv, "hvnqsirgzlme::", long_options, &option_index)) != -1)
+    while ((c = getopt_long(argc, argv, "hvnqsirgzlmef::", long_options, &option_index)) != -1)
     {
         switch (c)
         {
@@ -1986,6 +2011,11 @@ bool TestConnections::read_cmdline_options(int argc, char* argv[])
         case 'e':
             printf("Preferring serial execution.\n");
             m_shared.settings.allow_concurrent_run = false;
+            break;
+
+        case 'f':
+            printf("Fixing clusters after test.\n");
+            m_fix_clusters_after = true;
             break;
 
         default:

@@ -441,6 +441,7 @@ private:
     bool m_init_maxscale {true};        /**< Is MaxScale initialized normally? */
     bool m_check_nodes {true};          /**< Check nodes when preparing for test? */
     bool m_mxs_manual_debug {false};    /**< Manually debugging MaxScale? */
+    bool m_fix_clusters_after {false};  /**< Fix clusters after test? */
 
     /* If true, logs from backends are not copied (needed if case of Aurora RDS backend or similar) */
     bool m_no_backend_log_copy {false};

@@ -708,17 +708,6 @@ bool MariaDBCluster::reset_and_prepare_servers()
     return run_on_every_backend(func);
 }
 
-void MariaDBCluster::limit_nodes(int new_N)
-{
-    if (N > new_N)
-    {
-        execute_query_all_nodes((char*) "stop slave;");
-        N = new_N;
-        fix_replication();
-        sleep(10);
-    }
-}
-
 std::string MariaDBCluster::cnf_servers()
 {
     string rval;

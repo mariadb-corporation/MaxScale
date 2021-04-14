@@ -370,12 +370,6 @@ public:
     virtual bool prepare_server(int i);
 
     /**
-     * @brief limit_nodes Restart replication for only new_N nodes
-     * @param new_N new number of nodes in replication
-     */
-    void limit_nodes(int new_N);
-
-    /**
      * @brief cnf_servers Generates backend servers description for maxscale.cnf
      * @return Servers description including IPs, ports
      */

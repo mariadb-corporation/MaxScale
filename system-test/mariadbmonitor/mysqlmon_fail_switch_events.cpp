@@ -358,10 +358,6 @@ int main(int argc, char** argv)
     }
 
     try_delete_event(test);
-    if (test.global_result != 0)
-    {
-        test.repl->fix_replication();
-    }
     return test.global_result;
 }
 
