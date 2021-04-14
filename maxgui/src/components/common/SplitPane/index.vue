@@ -1,17 +1,13 @@
 <template>
-    <div
-        :style="{ cursor, userSelect }"
-        class="split-pane-container"
-        @mouseup="onMouseUp"
-        @mousemove="onMouseMove"
-    >
+    <div class="split-pane-container" @mouseup="onMouseUp" @mousemove="onMouseMove">
         <pane isLeft :split="split" :style="leftPanelPos">
             <slot name="pane-left" />
         </pane>
         <resizer
-            :style="resizerPos"
+            :style="resizerStyle"
             :split="split"
             :active="active"
+            :disable="disable"
             @mousedown.native="onMouseDown"
         />
         <pane :split="split" :style="rightPanelPos">
@@ -47,6 +43,7 @@ export default {
             },
             required: true,
         },
+        disable: { type: Boolean, default: false },
     },
     data() {
         return {
@@ -58,13 +55,7 @@ export default {
         isVertSplit() {
             return this.split === 'vert'
         },
-        userSelect() {
-            return this.active ? 'none' : ''
-        },
-        cursor() {
-            if (!this.active) return ''
-            return this.isVertSplit ? 'col-resize' : 'row-resize'
-        },
+
         panePosType() {
             return this.isVertSplit ? 'width' : 'height'
         },
@@ -77,11 +68,18 @@ export default {
         rightPanelPos() {
             return { [this.panePosType]: `${100 - this.percent}%` }
         },
-        resizerPos() {
-            return { [this.resizerPosType]: `${this.percent}%` }
+        resizerStyle() {
+            return {
+                [this.resizerPosType]: `${this.percent}%`,
+                ...(this.disable && { cursor: 'unset', pointerEvents: 'none' }),
+            }
         },
     },
-
+    watch: {
+        defaultPercent(v) {
+            if (v !== this.percent) this.percent = v
+        },
+    },
     methods: {
         onMouseDown() {
             this.active = true
@@ -108,7 +106,7 @@ export default {
                 const { currentTarget: { offsetWidth, offsetHeight } = {} } = e
                 const targetOffset = this.isVertSplit ? offsetWidth : offsetHeight
                 const percent = Math.floor(((currPage - offset) / targetOffset) * 10000) / 100
-                if (percent > this.minPercent && percent < 100 - this.minPercent)
+                if (percent >= this.minPercent && percent <= 100 - this.minPercent)
                     this.percent = percent
                 this.$emit('on-resize', this.percent)
             }
