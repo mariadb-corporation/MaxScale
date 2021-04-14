@@ -345,29 +345,6 @@ bool mxs_mysql_is_ps_command(uint8_t cmd)
            || cmd == MXS_COM_STMT_RESET;
 }
 
-bool mxs_mysql_extract_ps_response(GWBUF* buffer, MXS_PS_RESPONSE* out)
-{
-    bool rval = false;
-    uint8_t id[MYSQL_PS_ID_SIZE];
-    uint8_t cols[MYSQL_PS_COLS_SIZE];
-    uint8_t params[MYSQL_PS_PARAMS_SIZE];
-    uint8_t warnings[MYSQL_PS_WARN_SIZE];
-
-    if (gwbuf_copy_data(buffer, MYSQL_PS_ID_OFFSET, sizeof(id), id) == sizeof(id)
-        && gwbuf_copy_data(buffer, MYSQL_PS_COLS_OFFSET, sizeof(cols), cols) == sizeof(cols)
-        && gwbuf_copy_data(buffer, MYSQL_PS_PARAMS_OFFSET, sizeof(params), params) == sizeof(params)
-        && gwbuf_copy_data(buffer, MYSQL_PS_WARN_OFFSET, sizeof(warnings), warnings) == sizeof(warnings))
-    {
-        out->id = mariadb::get_byte4(id);
-        out->columns = mariadb::get_byte2(cols);
-        out->parameters = mariadb::get_byte2(params);
-        out->warnings = mariadb::get_byte2(warnings);
-        rval = true;
-    }
-
-    return rval;
-}
-
 uint32_t mxs_mysql_extract_ps_id(GWBUF* buffer)
 {
     uint32_t rval = 0;
@@ -386,38 +363,6 @@ bool mxs_mysql_command_will_respond(uint8_t cmd)
     return cmd != MXS_COM_STMT_SEND_LONG_DATA
            && cmd != MXS_COM_QUIT
            && cmd != MXS_COM_STMT_CLOSE;
-}
-
-static inline bool complete_ps_response(GWBUF* buffer)
-{
-    mxb_assert(gwbuf_is_contiguous(buffer));
-    MXS_PS_RESPONSE resp;
-    bool rval = false;
-
-    if (mxs_mysql_extract_ps_response(buffer, &resp))
-    {
-        int expected_packets = 1;
-
-        if (resp.columns > 0)
-        {
-            // Column definition packets plus one for the EOF
-            expected_packets += resp.columns + 1;
-        }
-
-        if (resp.parameters > 0)
-        {
-            // Parameter definition packets plus one for the EOF
-            expected_packets += resp.parameters + 1;
-        }
-
-        int n_packets = modutil_count_packets(buffer);
-
-        MXS_DEBUG("Expecting %u packets, have %u", n_packets, expected_packets);
-
-        rval = n_packets == expected_packets;
-    }
-
-    return rval;
 }
 
 bool MYSQL_session::ssl_capable() const

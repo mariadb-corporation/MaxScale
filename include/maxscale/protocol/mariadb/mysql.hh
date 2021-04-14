@@ -351,14 +351,6 @@ enum mxs_mysql_cmd_t
  */
 static const char* const MXS_LAST_GTID = "last_gtid";
 
-struct MXS_PS_RESPONSE
-{
-    uint32_t id;
-    uint16_t columns;
-    uint16_t parameters;
-    uint16_t warnings;
-};
-
 static inline mxs_mysql_cmd_t MYSQL_GET_COMMAND(const uint8_t* header)
 {
     return (mxs_mysql_cmd_t)header[4];
@@ -501,17 +493,6 @@ static inline uint32_t mxs_mysql_get_packet_len(GWBUF* buffer)
     gwbuf_copy_data(buffer, 0, 3, buf);
     return gw_mysql_get_byte3(buf) + MYSQL_HEADER_LEN;
 }
-
-/**
- * @brief Extract PS response values
- *
- * @param buffer Buffer containing a complete response to a binary protocol
- *               preparation of a prepared statement
- * @param out    Destination where the values are extracted
- *
- * @return True if values were extracted successfully
- */
-bool mxs_mysql_extract_ps_response(GWBUF* buffer, MXS_PS_RESPONSE* out);
 
 /**
  * @brief Extract the ID from a COM_STMT command

@@ -209,18 +209,6 @@ bool MariaDBBackendConnection::reuse(MXS_SESSION* session, mxs::Component* upstr
 }
 
 /**
- * @brief Check if the response contain an error
- *
- * @param buffer Buffer with a complete response
- * @return True if the reponse contains an MySQL error packet
- */
-bool is_error_response(GWBUF* buffer)
-{
-    uint8_t cmd;
-    return gwbuf_copy_data(buffer, MYSQL_HEADER_LEN, 1, &cmd) && cmd == MYSQL_REPLY_ERR;
-}
-
-/**
  * @brief Log handshake failure
  *
  * @param dcb Backend DCB where authentication failed
@@ -483,58 +471,6 @@ bool MariaDBBackendConnection::session_ok_to_route(DCB* dcb)
         }
     }
 
-
-    return rval;
-}
-
-bool MariaDBBackendConnection::expecting_text_result()
-{
-    /**
-     * The addition of COM_STMT_FETCH to the list of commands that produce
-     * result sets is slightly wrong. The command can generate complete
-     * result sets but it can also generate incomplete ones if cursors
-     * are used. The use of cursors most likely needs to be detected on
-     * an upper level and the use of this function avoided in those cases.
-     *
-     * TODO: Revisit this to make sure it's needed.
-     */
-
-    uint8_t cmd = m_reply.command();
-    return cmd == MXS_COM_QUERY || cmd == MXS_COM_STMT_EXECUTE || cmd == MXS_COM_STMT_FETCH;
-}
-
-bool MariaDBBackendConnection::expecting_ps_response()
-{
-    return m_reply.command() == MXS_COM_STMT_PREPARE;
-}
-
-bool MariaDBBackendConnection::complete_ps_response(GWBUF* buffer)
-{
-    MXS_PS_RESPONSE resp;
-    bool rval = false;
-
-    if (mxs_mysql_extract_ps_response(buffer, &resp))
-    {
-        int expected_packets = 1;
-
-        if (resp.columns > 0)
-        {
-            // Column definition packets plus one for the EOF
-            expected_packets += resp.columns + 1;
-        }
-
-        if (resp.parameters > 0)
-        {
-            // Parameter definition packets plus one for the EOF
-            expected_packets += resp.parameters + 1;
-        }
-
-        int n_packets = modutil_count_packets(buffer);
-
-        MXS_DEBUG("Expecting %u packets, have %u", n_packets, expected_packets);
-
-        rval = n_packets == expected_packets;
-    }
 
     return rval;
 }
@@ -1193,40 +1129,6 @@ void MariaDBBackendConnection::hangup(DCB* event_dcb)
 }
 
 /**
- * This routine writes the delayq via dcb_write. The dcb->m_delayq contains data received
- * from the client before mysql backend authentication succeded
- *
- * @return The dcb_write status
- */
-bool MariaDBBackendConnection::backend_write_delayqueue(GWBUF* buffer)
-{
-    bool rval = false;
-    const uint8_t* data = GWBUF_DATA(buffer);
-    if (MYSQL_IS_CHANGE_USER(data))
-    {
-        /** Recreate the COM_CHANGE_USER packet with the scramble the backend sent to us */
-        rval = change_user(buffer);
-    }
-    else if (MYSQL_IS_COM_QUIT(data) && m_server.persistent_conns_enabled())
-    {
-        /** We need to keep the pooled connections alive so we just ignore the COM_QUIT packet */
-        gwbuf_free(buffer);
-        rval = true;
-    }
-    else
-    {
-        rval = m_dcb->writeq_append(buffer);
-    }
-
-    if (!rval)
-    {
-        do_handle_error(m_dcb, "Lost connection to backend server while writing delay queue.");
-    }
-
-    return rval;
-}
-
-/**
  * This routine handles the COM_CHANGE_USER command.
  *
  * @param queue         The GWBUF containing the COM_CHANGE_USER receveid
@@ -1552,38 +1454,6 @@ json_t* MariaDBBackendConnection::diagnostics() const
 {
     return json_pack("{sissss}", "connection_id", m_thread_id, "server", m_server.name(),
                      "cipher", m_dcb->ssl_cipher().c_str());
-}
-
-/**
- * @brief Check if a buffer contains a result set
- *
- * @param buffer Buffer to check
- * @return True if the @c buffer contains the start of a result set
- */
-bool MariaDBBackendConnection::mxs_mysql_is_result_set(GWBUF* buffer)
-{
-    bool rval = false;
-    uint8_t cmd;
-
-    if (gwbuf_copy_data(buffer, MYSQL_HEADER_LEN, 1, &cmd))
-    {
-        switch (cmd)
-        {
-
-        case MYSQL_REPLY_OK:
-        case MYSQL_REPLY_ERR:
-        case MYSQL_REPLY_LOCAL_INFILE:
-        case MYSQL_REPLY_EOF:
-            /** Not a result set */
-            break;
-
-        default:
-            rval = true;
-            break;
-        }
-    }
-
-    return rval;
 }
 
 /**

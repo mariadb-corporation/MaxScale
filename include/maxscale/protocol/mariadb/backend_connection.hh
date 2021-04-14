@@ -130,13 +130,10 @@ private:
     StateMachineRes read_history_response();
     bool            compare_responses();
 
-    bool backend_write_delayqueue(GWBUF* buffer);
-
     bool   change_user(GWBUF* queue);
     bool   send_change_user_to_backend();
     int    read_change_user();
     bool   send_proxy_protocol_header();
-    int    handle_persistent_connection(GWBUF* queue);
     GWBUF* create_change_user_packet();
     void   read_com_ping_response();
     void   do_handle_error(DCB* dcb, const std::string& errmsg,
@@ -144,16 +141,11 @@ private:
     void prepare_for_write(GWBUF* buffer);
 
     GWBUF* track_response(GWBUF** buffer);
-    bool   mxs_mysql_is_result_set(GWBUF* buffer);
     bool   read_backend_handshake(mxs::Buffer&& buffer);
     void   handle_error_response(DCB* plain_dcb, GWBUF* buffer);
     bool   session_ok_to_route(DCB* dcb);
-    bool   complete_ps_response(GWBUF* buffer);
     bool   handle_auth_change_response(GWBUF* reply, DCB* dcb);
     int    send_mysql_native_password_response(DCB* dcb, GWBUF* reply);
-    bool   expecting_text_result();
-    bool   expecting_ps_response();
-    void   mxs_mysql_parse_ok_packet(GWBUF* buff, size_t packet_offset, size_t packet_len);
     int    gw_decode_mysql_server_handshake(uint8_t* payload);
     GWBUF* gw_generate_auth_response(bool with_ssl, bool ssl_established, uint64_t service_capabilities);
 
@@ -167,7 +159,6 @@ private:
     void     process_ps_response(Iter it, Iter end);
     void     process_ok_packet(Iter it, Iter end);
     void     update_error(mxs::Buffer::iterator it, mxs::Buffer::iterator end);
-    bool     consume_fetched_rows(GWBUF* buffer);
     void     set_reply_state(mxs::ReplyState state);
 
     // Contains the necessary information required to track queries
@@ -199,11 +190,9 @@ private:
     bool        m_track_state {false};              /**< Track session state */
     bool        m_skip_next {false};
     uint64_t    m_num_coldefs {0};
-    uint32_t    m_num_eof_packets {0};  /**< Encountered eof packet number, used for check packet type */
     mxs::Buffer m_collectq;             /**< Used to collect results when resultset collection is requested */
     int64_t     m_ps_packets {0};
     bool        m_opening_cursor = false;   /**< Whether we are opening a cursor */
-    uint32_t    m_expected_rows = 0;        /**< Number of rows a COM_STMT_FETCH is retrieving */
     bool        m_large_query = false;
     mxs::Reply  m_reply;
 
