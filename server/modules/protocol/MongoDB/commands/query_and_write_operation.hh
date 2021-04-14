@@ -115,9 +115,9 @@ public:
     }
 
 protected:
-    std::vector<std::string> generate_sql() override final
+    vector<string> generate_sql() override final
     {
-        std::vector<std::string> statements;
+        vector<string> statements;
 
         optional(key::ORDERED, &m_ordered);
 
@@ -128,16 +128,15 @@ protected:
             const auto& documents = it->second;
             check_write_batch_size(documents.size());
 
-            for (auto doc : documents)
-            {
-                statements.push_back(convert_document(doc));
-            }
+            statements = generate_sql(documents);
         }
         else
         {
             auto documents = required<bsoncxx::array::view>(m_key.c_str());
             auto nDocuments = std::distance(documents.begin(), documents.end());
             check_write_batch_size(nDocuments);
+
+            vector<bsoncxx::document::view> documents2;
 
             int i = 0;
             for (auto element : documents)
@@ -153,8 +152,22 @@ protected:
                     throw SoftError(ss.str(), error::TYPE_MISMATCH);
                 }
 
-                statements.push_back(convert_document(element.get_document()));
+                documents2.push_back(element.get_document());
             }
+
+            statements = generate_sql(documents2);
+        }
+
+        return statements;
+    }
+
+    virtual vector<string> generate_sql(const vector<bsoncxx::document::view>& documents)
+    {
+        vector<string> statements;
+
+        for (const auto& doc : documents)
+        {
+            statements.push_back(convert_document(doc));
         }
 
         return statements;
@@ -518,20 +531,68 @@ public:
     {
         if (err.code() == ER_DUP_ENTRY)
         {
+            string duplicate;
+
+            if (m_database.config().insert_behavior == GlobalConfig::AS_MARIADB && m_ordered == true)
+            {
+                // Ok, so the documents were not inserted one by one, but everything
+                // in one go. As 'index' refers to the n:th statement being executed,
+                // it will be 0 as there is just one.
+                mxb_assert(index == 0);
+
+                // The duplicate can be found in the error message.
+                string message = err.message();
+
+                static const char PATTERN[] = "Duplicate entry '";
+                static const int PATTERN_LENGTH = sizeof(PATTERN) - 1;
+
+                auto i = message.find(PATTERN);
+                mxb_assert(i != string::npos);
+
+                if (i != string::npos)
+                {
+                    string s = message.substr(i + PATTERN_LENGTH);
+
+                    auto j = s.find("'");
+                    mxb_assert(j != string::npos);
+
+                    duplicate = s.substr(0, j);
+
+                    // Let's try finding the correct index.
+                    index = 0;
+                    for (const auto& element : m_ids)
+                    {
+                        if (mxsmongo::to_string(element) == duplicate)
+                        {
+                            break;
+                        }
+
+                        ++index;
+                    }
+                }
+            }
+
             error.append(kvp("code", error::DUPLICATE_KEY));
-            DocumentBuilder keyPattern;
-            keyPattern.append(kvp("_id", 1));
-            error.append(kvp("keyPattern", keyPattern.extract()));
-            DocumentBuilder keyValue_builder;
-            mxb_assert(index < (int)m_ids.size());
-            append(keyValue_builder, "_id", m_ids[index]);
-            auto keyValue = keyValue_builder.extract();
-            error.append(kvp("keyValue", keyValue));
+
+            // If we did not find the entry, we don't add any details.
+            if (index < (int)m_ids.size())
+            {
+                DocumentBuilder keyPattern;
+                keyPattern.append(kvp("_id", 1));
+                error.append(kvp("keyPattern", keyPattern.extract()));
+                DocumentBuilder keyValue_builder;
+                mxb_assert(index < (int)m_ids.size());
+                append(keyValue_builder, "_id", m_ids[index]);
+                auto keyValue = keyValue_builder.extract();
+                error.append(kvp("keyValue", keyValue));
+
+                duplicate = bsoncxx::to_json(keyValue);
+            }
 
             stringstream ss;
             ss << "E" << error::DUPLICATE_KEY << " duplicate key error collection: "
                << m_database.name() << "." << value_as<string>()
-               << " index: _id_ dup key: " << bsoncxx::to_json(keyValue);
+               << " index: _id_ dup key: " << duplicate;
 
             error.append(kvp("errmsg", ss.str()));
         }
@@ -542,10 +603,51 @@ public:
     }
 
 protected:
+    vector<string> generate_sql(const vector<bsoncxx::document::view>& documents) override
+    {
+        vector<string> statements;
+
+        if (m_database.config().insert_behavior == GlobalConfig::AS_MONGODB || m_ordered == false)
+        {
+            statements = OrderedCommand::generate_sql(documents);
+        }
+        else
+        {
+            stringstream sql;
+            sql << "INSERT INTO " << table() << " (id, doc) VALUES ";
+
+            bool first = true;
+            for (const auto& doc : documents)
+            {
+                if (first)
+                {
+                    first = false;
+                }
+                else
+                {
+                    sql << ", ";
+                }
+
+                sql << convert_document_data(doc);
+            }
+
+            statements.push_back(sql.str());
+        }
+
+        return statements;
+    }
+
     string convert_document(const bsoncxx::document::view& doc) override
     {
         stringstream sql;
-        sql << "INSERT INTO " << table() << " (id, doc) VALUES ";
+        sql << "INSERT INTO " << table() << " (id, doc) VALUES " << convert_document_data(doc);
+
+        return sql.str();
+    }
+
+    string convert_document_data(const bsoncxx::document::view& doc)
+    {
+        stringstream sql;
 
         string id;
         string json;

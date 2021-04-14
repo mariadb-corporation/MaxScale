@@ -186,22 +186,35 @@ if other fields are explicitly included.
 
 ### Insert - https://docs.mongodb.com/manual/reference/command/insert
 
+The `insert` command inserts one or more documents into the table whose
+name is the same as that of the collection. If the option `auto_create_tables`
+is `true`, then the table is created if it does not already exist. If the
+value is `false`, then the insert will fail unless the table already exists.
+
 The following fields are acted upon.
 
 Field | Type | Description
 --------------------------
-insert| string | The name of the target table.
-documents | array | An array of one or more documents to insert to the table.
+insert| string | The name of the target collection/table.
+documents | array | An array of one or more documents to be inserted to the named collection/table.
+ordered | boolean | Optional, with default being `true`. See below for description.
 
 All other fields are ignored.
 
-The assumption is that there exists a table with the specified name and that
-it has two columns; `id` of type `TEXT` and `doc` of type `JSON`.
-From each document the _id_ is extracted, whereafter the id and the document
-converted to JSON are inserted to the table.
+#### `ordered`
+The impact of `ordered` is dependent upon the value of `insert_behavior'.
 
-Currently all documents are inserted using a single statement, so either all
-documents will be inserted or none will be.
+##### `as_mongodb`
+In this case `ordered` has the same impact as in MongoDB. That is, if the value
+is `true`, then when an insert of a document fails, return without inserting any
+remaining documents listed in the inserts array. If `false`, then when an insert
+of a document fails, continue to insert the remaining documents.
+
+##### `as_mariadb`
+If `ordered` is `true`, then all documents will be inserted using a single
+INSERT command. That is, if the insertion of any document fails, for instance,
+due to a duplicate id, then no document will be inserted. If `ordered` is `false`,
+then the behavior is identical with that of `as_mongodb`.
 
 ### Delete - https://docs.mongodb.com/manual/reference/command/insert
 
