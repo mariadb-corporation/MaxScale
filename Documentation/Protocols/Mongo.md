@@ -42,6 +42,7 @@ from another.
 ### `user`
 
    * Type: string
+   * Mandatory: true
 
 Specifies the _user_ to be used when connecting to the backend. Note that the
 same _user_/_password_ combination will be used for all Mongo clients connecting
@@ -50,6 +51,7 @@ to the same listener port.
 ### `password`
 
    * Type: string
+   * Mandatory: true
 
 Specifies the _password_ to be used when connecting to the backend. Note that the
 same _user_/_password_ combination will be used for all Mongo clients connecting
@@ -58,7 +60,8 @@ to the same listener port.
 ### `on_unknown_command`
 
    * Type: enumeration
-   * Values: `return_error|return_empty`
+   * Mandatory: false
+   * Values: `return_error`, `return_empty`
    * Default: `return_error`
 
 Specifies what should happen in case a clients sends an unrecognized command.
@@ -70,18 +73,36 @@ Enumeration values:
 
 ### `auto_create_tables`
 
-    * Type: boolean
-    * Default: `true`
+   * Type: boolean
+   * Mandatory: false
+   * Default: `true`
 
 Specifies whether tables should automatically be created, as needed.
 
 ### `id_length`
 
    * Type: count
+   * Mandatory: false
    * Range: `[24, 2048]`
    * Default: `24`
 
 Specifies the length of the id column in tables that are automatically created.
+
+### `insert_behavior`
+
+   * Type: enumeration
+   * Mandatory: false
+   * Values: `as_mongodb`, `as_mariadb`
+   * Default: `as_mongodb`
+
+Enumeration values:
+
+   * `as_mongodb`: Each document is inserted using a _separate_ INSERT statement
+     and whether an error causes the remaining insertions to be aborted, depends
+     on the value of `ordered` specified in the command document.
+   * `as_mariadb`: If the value of `ordered` in the command document is `true`
+     (the default) then all documents are inserted using a _single_ INSERT statement,
+     that is, either all insertions succeed or none will.
 
 ## Databases and Tables
 

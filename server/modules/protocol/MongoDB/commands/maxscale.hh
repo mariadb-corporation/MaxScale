@@ -96,6 +96,8 @@ public:
                           C::s_on_unknown_command.to_string(c.on_unknown_command)));
         config.append(kvp(C::s_auto_create_tables.name(), c.auto_create_tables));
         config.append(kvp(C::s_id_length.name(), static_cast<int32_t>(c.id_length)));
+        config.append(kvp(C::s_insert_behavior.name(),
+                          C::s_insert_behavior.to_string(c.insert_behavior)));
 
         doc.append(kvp("config", config.extract()));
         doc.append(kvp("ok", 1));
@@ -115,6 +117,7 @@ public:
         auto on_unknown_command = c.on_unknown_command;
         auto auto_create_tables = c.auto_create_tables;
         auto id_length = c.id_length;
+        auto insert_behavior = c.insert_behavior;
 
         const auto& config = value_as<bsoncxx::document::view>();
 
@@ -142,9 +145,19 @@ public:
             }
         }
 
+        if (optional(config, C::s_insert_behavior.name(), &s))
+        {
+            string message;
+            if (!C::s_insert_behavior.from_string(s, &insert_behavior, &message))
+            {
+                throw SoftError(message, error::BAD_VALUE);
+            }
+        }
+
         c.on_unknown_command = on_unknown_command;
         c.auto_create_tables = auto_create_tables;
         c.id_length = id_length;
+        c.insert_behavior = insert_behavior;
 
         MxsGetConfig::populate_response(doc, c);
     }

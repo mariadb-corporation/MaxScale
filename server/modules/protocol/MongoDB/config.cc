@@ -62,6 +62,17 @@ mxs::config::ParamCount GlobalConfig::s_id_length(
     GlobalConfig::ID_LENGTH_MAX
     );
 
+mxs::config::ParamEnum<GlobalConfig::InsertBehavior> GlobalConfig::s_insert_behavior(
+    &mongodbclient::specification,
+    "insert_behavior",
+    "Whether documents will be inserted in a way true to how MongoDB behaves, "
+    "or in a way that is efficient from MariaDB's point of view.",
+    {
+        { GlobalConfig::AS_MONGODB, "as_mongodb" },
+        { GlobalConfig::AS_MARIADB, "as_mariadb" }
+    },
+    GlobalConfig::AS_MONGODB);
+
 
 GlobalConfig::GlobalConfig()
     : mxs::config::Configuration(MXS_MODULE_NAME, &mongodbclient::specification)
@@ -71,6 +82,7 @@ GlobalConfig::GlobalConfig()
     add_native(&GlobalConfig::on_unknown_command, &s_on_unknown_command);
     add_native(&GlobalConfig::auto_create_tables, &s_auto_create_tables);
     add_native(&GlobalConfig::id_length, &s_id_length);
+    add_native(&GlobalConfig::insert_behavior, &s_insert_behavior);
 }
 
 //static
