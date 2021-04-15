@@ -271,6 +271,9 @@ input:-webkit-autofill:active {
         }
     }
 }
+.mariadb-v-list.theme--light.v-list {
+    background: unset;
+}
 //-------------------------------------------------Typography
 h1 {
     font-size: map-deep-get($headings, 'h1', 'size');

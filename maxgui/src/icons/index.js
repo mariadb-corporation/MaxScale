@@ -15,6 +15,7 @@ import AlertSuccess from 'icons/AlertSuccess'
 import AlertError from 'icons/AlertError'
 import ArrowDown from 'icons/ArrowDown'
 import Close from 'icons/Close'
+import Database from 'icons/Database'
 import Delete from 'icons/Delete'
 import Drain from 'icons/Drain'
 import Edit from 'icons/Edit'
@@ -32,6 +33,7 @@ import StatusOk from 'icons/StatusOk'
 import StatusWarning from 'icons/StatusWarning'
 import Stopped from 'icons/Stopped'
 import Tachometer from 'icons/Tachometer'
+import Table from 'icons/Table'
 import Unlink from 'icons/Unlink'
 import User from 'icons/User'
 
@@ -50,6 +52,9 @@ export default {
     },
     close: {
         component: Close,
+    },
+    database: {
+        component: Database,
     },
     delete: {
         component: Delete,
@@ -101,6 +106,9 @@ export default {
     },
     tachometer: {
         component: Tachometer,
+    },
+    table: {
+        component: Table,
     },
     unlink: {
         component: Unlink,
