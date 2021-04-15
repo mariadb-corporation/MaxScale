@@ -258,7 +258,7 @@ std::string extract_error(GWBUF* buffer);
  *
  * @return The canonical form of the query
  */
-std::string get_canonical(GWBUF* buffer);
+std::string* get_canonical(std::string* pSql);
 
 /**
  * Truncate buffers at packet boundaries

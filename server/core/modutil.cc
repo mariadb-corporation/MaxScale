@@ -1066,14 +1066,14 @@ namespace maxscale
 #define likely(x)   __builtin_expect (!!(x), 1)
 #define unlikely(x) __builtin_expect (!!(x), 0)
 
-std::string get_canonical(GWBUF* querybuf)
+std::string* get_canonical(std::string* pSql)
 {
-    mxb_assert(gwbuf_is_contiguous(querybuf));
-    uint8_t* it = GWBUF_DATA(querybuf) + MYSQL_HEADER_LEN + 1;
-    uint8_t* end = GWBUF_DATA(querybuf) + gwbuf_length(querybuf);
+    auto& sql = *pSql;
 
-    std::string rval(end - it, 0);
-    auto it_out = (uint8_t*) &*rval.begin();
+    uint8_t* it = (uint8_t*) &*sql.begin();
+    uint8_t* end = (uint8_t*) &*sql.end();
+
+    auto it_out = (uint8_t*) &*sql.begin();
     uint8_t* it_out_begin = it_out;
     bool was_converted = false;
 
@@ -1213,9 +1213,9 @@ std::string get_canonical(GWBUF* querybuf)
     }
 
     // Shrink the buffer so that the internal bookkeeping of std::string remains up to date
-    rval.resize(it_out - it_out_begin);
+    sql.resize(it_out - it_out_begin);
 
-    return rval;
+    return pSql;
 }
 }
 

@@ -390,7 +390,9 @@ public:
     {
         if (use_cached_result() && has_not_been_parsed(m_pStmt))
         {
-            m_canonical = mxs::get_canonical(m_pStmt);
+            mxb_assert(gwbuf_is_contiguous(m_pStmt));
+            m_canonical = maxscale::extract_sql(pStmt);
+            mxs::get_canonical(&m_canonical);
 
             if (modutil_is_SQL_prepare(pStmt))
             {
