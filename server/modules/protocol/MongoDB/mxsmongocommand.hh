@@ -97,6 +97,21 @@ public:
         mxb_assert(!true);
     }
 
+    enum Quoted
+    {
+        NO,
+        YES
+    };
+
+    /**
+     * Returns the table name of the command. Meaningful only if the value of
+     * the command key, is the targeted collection/table.
+     *
+     * @returns The table name, with or without quotes.
+     * @throws SoftError, if the value of the command key is not a string.
+     */
+    const std::string& table(Quoted quoted = Quoted::YES) const;
+
 protected:
     template<class Type>
     bool optional(const bsoncxx::document::view& doc,
@@ -164,19 +179,9 @@ protected:
         return required<T>(m_name.c_str(), conversion);
     }
 
-    enum Quoted
-    {
-        NO,
-        YES
-    };
-
-    const std::string& table(Quoted quoted = Quoted::YES) const;
-
     void free_request();
 
     void send_downstream(const std::string& sql);
-
-    GWBUF* translate_resultset(std::vector<std::string>& extractions, GWBUF* pMariadb_response);
 
     void add_error(bsoncxx::builder::basic::array& builder, const ComERR& err, int index);
     void add_error(bsoncxx::builder::basic::document& builder, const ComERR& err);
@@ -213,12 +218,6 @@ private:
     GWBUF* create_reply_response(const bsoncxx::document::value& doc) const;
 
     GWBUF* create_msg_response(const bsoncxx::document::value& doc) const;
-
-    std::string create_leaf_entry(const std::string& extraction, const std::string& value) const;
-
-    std::string create_nested_entry(const std::string& extraction, const std::string& value) const;
-
-    std::string create_entry(const std::string& extraction, const std::string& value) const;
 
     bool                m_append_checksum { false };
     mutable std::string m_quoted_table;

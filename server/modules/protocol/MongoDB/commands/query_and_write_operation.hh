@@ -17,6 +17,7 @@
 
 #include "defs.hh"
 #include <maxbase/worker.hh>
+#include "../mxsmongocursor.hh"
 
 namespace mxsmongo
 {
@@ -285,12 +286,12 @@ public:
 
     void prepare()
     {
-        optional(key::BATCHSIZE, &m_batchSize, Conversion::RELAXED);
+        optional(key::BATCHSIZE, &m_batch_size, Conversion::RELAXED);
 
-        if (m_batchSize < 0)
+        if (m_batch_size < 0)
         {
             stringstream ss;
-            ss << "BatchSize value must be non-negative, bit received: " << m_batchSize;
+            ss << "BatchSize value must be non-negative, bit received: " << m_batch_size;
             throw SoftError(ss.str(), error::BAD_VALUE);
         }
     }
@@ -378,7 +379,8 @@ public:
 
                 if (code == ER_NO_SUCH_TABLE)
                 {
-                    pResponse = translate_resultset(m_extractions, nullptr);
+                    MongoCursor cursor;
+                    pResponse = cursor.create_first_batch(*this, 0);
                 }
                 else
                 {
@@ -395,8 +397,13 @@ public:
             break;
 
         default:
-            // Must be a result set.
-            pResponse = translate_resultset(m_extractions, mariadb_response.get());
+            {
+                // Must be a result set.
+                MongoCursor cursor(m_extractions, std::move(mariadb_response));
+
+                // TODO: Take m_batch_size into use.
+                pResponse = cursor.create_first_batch(*this, std::numeric_limits<int>::max());
+            }
         }
 
         *ppResponse = pResponse;
@@ -404,7 +411,7 @@ public:
     }
 
 private:
-    int32_t        m_batchSize { 101 }; // Documented to be that.
+    int32_t        m_batch_size { 101 }; // Documented to be that.
     vector<string> m_extractions;
 };
 

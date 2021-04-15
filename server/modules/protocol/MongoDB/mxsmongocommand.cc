@@ -73,7 +73,7 @@ public:
         case GlobalConfig::RETURN_ERROR:
             {
                 MXS_ERROR("%s", s.c_str());
-                throw mxsmongo::SoftError(s, mxsmongo::error::COMMAND_NOT_FOUND).create_response(*this);
+                throw mxsmongo::SoftError(s, mxsmongo::error::COMMAND_NOT_FOUND);
             }
             break;
 
@@ -373,119 +373,6 @@ GWBUF* Command::create_response(const bsoncxx::document::value& doc) const
     return pResponse;
 }
 
-GWBUF* Command::translate_resultset(vector<string>& extractions, GWBUF* pMariadb_response)
-{
-    mxb_assert(m_req.opcode() == Packet::MSG);
-
-    bsoncxx::builder::basic::array firstBatch_builder;
-
-    if (pMariadb_response)
-    {
-        uint8_t* pBuffer = GWBUF_DATA(pMariadb_response);
-
-        ComQueryResponse cqr(&pBuffer);
-
-        auto nFields = cqr.nFields();
-
-        // If there are no extractions, then we SELECTed the entire document and there should
-        // be just one field (the JSON document). Otherwise there should be as many fields
-        // (JSON_EXTRACT(doc, '$...')) as there are extractions.
-        mxb_assert((extractions.empty() && nFields == 1) || (extractions.size() == nFields));
-
-        vector<string> names;
-        vector<enum_field_types> types;
-
-        for (size_t i = 0; i < nFields; ++i)
-        {
-            // ... and then as many column definitions.
-            ComQueryResponse::ColumnDef column_def(&pBuffer);
-
-            names.push_back(column_def.name().to_string());
-            types.push_back(column_def.type());
-        }
-
-        // The there should be an EOF packet, which should be bypassed.
-        ComResponse eof(&pBuffer);
-        mxb_assert(eof.type() == ComResponse::EOF_PACKET);
-
-        // Then there will be an arbitrary number of rows. After all rows
-        // (of which there obviously may be 0), there will be an EOF packet.
-        int nRow = 0;
-        while (ComResponse(pBuffer).type() != ComResponse::EOF_PACKET)
-        {
-            ++nRow;
-
-            CQRTextResultsetRow row(&pBuffer, types); // Advances pBuffer
-
-            auto it = row.begin();
-
-            string json;
-
-            if (extractions.empty())
-            {
-                const auto& value = *it++;
-                mxb_assert(it == row.end());
-                // The value is now a JSON object.
-                json = value.as_string().to_string();
-            }
-            else
-            {
-                auto jt = extractions.begin();
-
-                bool first = true;
-                json += "{";
-                for (; it != row.end(); ++it, ++jt)
-                {
-                    if (first)
-                    {
-                        first = false;
-                    }
-                    else
-                    {
-                        json += ", ";
-                    }
-
-                    const auto& value = *it;
-                    auto extraction = *jt;
-
-                    json += create_entry(extraction, value.as_string().to_string());
-                }
-                json += "}";
-            }
-
-            try
-            {
-                auto doc = bsoncxx::from_json(json);
-
-                firstBatch_builder.append(doc);
-            }
-            catch (const std::exception& x)
-            {
-                stringstream ss;
-                ss << "Could not convert assumed JSON data to BSON: " << x.what();
-                MXS_ERROR("%s. Data: %s", ss.str().c_str(), json.c_str());
-                throw SoftError(ss.str(), error::COMMAND_FAILED);
-            }
-        }
-    }
-
-    GWBUF* pResponse = nullptr;
-
-    bsoncxx::builder::basic::document cursor_builder;
-    cursor_builder.append(bsoncxx::builder::basic::kvp("firstBatch", firstBatch_builder.extract()));
-    cursor_builder.append(bsoncxx::builder::basic::kvp("partialResultsReturned", false));
-    cursor_builder.append(bsoncxx::builder::basic::kvp("id", int64_t(0)));
-    cursor_builder.append(bsoncxx::builder::basic::kvp("ns", table(Quoted::NO)));
-
-    bsoncxx::builder::basic::document msg_builder;
-    msg_builder.append(bsoncxx::builder::basic::kvp("cursor", cursor_builder.extract()));
-    msg_builder.append(bsoncxx::builder::basic::kvp("ok", int32_t(1)));
-
-    pResponse = create_msg_response(msg_builder.extract());
-
-    return pResponse;
-}
-
 void Command::add_error(bsoncxx::builder::basic::array& array, const ComERR& err, int index)
 {
     MXS_WARNING("Mongo request to backend failed: (%d), %s", err.code(), err.message().c_str());
@@ -633,53 +520,6 @@ GWBUF* Command::create_msg_response(const bsoncxx::document::value& doc) const
     }
 
     return pResponse;
-}
-
-string Command::create_leaf_entry(const string& extraction, const std::string& value) const
-{
-    mxb_assert(extraction.find('.') == string::npos);
-
-    return "\"" + extraction + "\": " + value;
-}
-
-string Command::create_nested_entry(const string& extraction, const std::string& value) const
-{
-    string entry;
-    auto i = extraction.find('.');
-
-    if (i == string::npos)
-    {
-        entry = "{ "  + create_leaf_entry(extraction, value) + " }";
-    }
-    else
-    {
-        auto head = extraction.substr(0, i);
-        auto tail = extraction.substr(i + 1);
-
-        entry = "{ \"" + head + "\": " + create_nested_entry(tail, value) + "}";
-    }
-
-    return entry;
-}
-
-string Command::create_entry(const string& extraction, const std::string& value) const
-{
-    string entry;
-    auto i = extraction.find('.');
-
-    if (i == string::npos)
-    {
-        entry = create_leaf_entry(extraction, value);
-    }
-    else
-    {
-        auto head = extraction.substr(0, i);
-        auto tail = extraction.substr(i + 1);
-
-        entry = "\"" + head + "\": " + create_nested_entry(tail, value);;
-    }
-
-    return entry;
 }
 
 GWBUF* ImmediateCommand::execute()
