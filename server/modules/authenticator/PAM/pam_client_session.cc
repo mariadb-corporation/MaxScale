@@ -122,7 +122,7 @@ PamClientAuthenticator::exchange(GWBUF* buffer, MYSQL_session* session, mxs::Buf
 
     case State::ASKED_FOR_PW:
         // Client should have responded with password.
-        if (store_client_password(buffer, &session->auth_token))
+        if (store_client_password(buffer, &session->client_token))
         {
             if (m_mode == AuthMode::PW)
             {
@@ -141,7 +141,7 @@ PamClientAuthenticator::exchange(GWBUF* buffer, MYSQL_session* session, mxs::Buf
         break;
 
     case State::ASKED_FOR_2FA:
-        if (store_client_password(buffer, &session->auth_token_phase2))
+        if (store_client_password(buffer, &session->client_token_2fa))
         {
             m_state = State::PW_RECEIVED;
             rval = ExchRes::READY;
@@ -161,20 +161,24 @@ AuthRes PamClientAuthenticator::authenticate(const UserEntry* entry, MYSQL_sessi
     using mxb::pam::AuthResult;
     AuthRes rval;
     mxb_assert(m_state == State::PW_RECEIVED);
+    bool twofa = (m_mode == AuthMode::PW_2FA);
 
     /** We sent the authentication change packet + plugin name and the client
      * responded with the password. Try to continue authentication without more
      * messages to client. */
 
-    // take username from the session object, not the user entry. The entry may be anonymous.
+    const auto& tok1 = session->client_token;
+    const auto& tok2 = session->client_token_2fa;
+
+    // Take username from the session object, not the user entry. The entry may be anonymous.
     mxb::pam::UserData user = {session->user, session->remote};
     mxb::pam::PwdData pwds;
-    pwds.password.assign((char*)session->auth_token.data(), session->auth_token.size());
-    mxb::pam::ExpectedMsgs expected_msgs = {mxb::pam::EXP_PW_QUERY, ""};
-    if (m_mode == AuthMode::PW_2FA)
+    pwds.password.assign((const char*)tok1.data(), tok1.size());
+    if (twofa)
     {
-        pwds.two_fa_code.assign((char*)session->auth_token_phase2.data(), session->auth_token_phase2.size());
+        pwds.two_fa_code.assign((const char*)tok2.data(), tok2.size());
     }
+    mxb::pam::ExpectedMsgs expected_msgs = {mxb::pam::EXP_PW_QUERY, ""};
 
     // The server PAM plugin uses "mysql" as the default service when authenticating
     // a user with no service.
@@ -186,13 +190,19 @@ AuthRes PamClientAuthenticator::authenticate(const UserEntry* entry, MYSQL_sessi
     if (res.type == AuthResult::Result::SUCCESS)
     {
         rval.status = AuthRes::Status::SUCCESS;
+        session->backend_token = tok1;
+        if (twofa)
+        {
+            session->backend_token_2fa = tok2;
+        }
+
         if (sett.mapping_on && !res.mapped_user.empty())
         {
             if (res.mapped_user != session->user)
             {
                 MXB_INFO("Incoming user '%s' mapped to '%s'.",
                          session->user.c_str(), res.mapped_user.c_str());
-                session->user = res.mapped_user; // TODO: Think if using a separate field would be better.
+                session->user = res.mapped_user;    // TODO: Think if using a separate field would be better.
             }
         }
     }

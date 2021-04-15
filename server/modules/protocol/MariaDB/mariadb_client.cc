@@ -1734,7 +1734,7 @@ bool MariaDBClientConnection::parse_handshake_response_packet(GWBUF* buffer)
                 // Success, save data to session.
                 m_session_data->user = parse_res.username;
                 m_session->set_user(parse_res.username);
-                m_session_data->auth_token = move(parse_res.token_res.auth_token);
+                m_session_data->client_token = move(parse_res.token_res.auth_token);
                 m_session_data->db = parse_res.db;
                 m_session_data->current_db = parse_res.db;
                 m_session_data->plugin = move(parse_res.plugin);
@@ -1893,7 +1893,7 @@ bool MariaDBClientConnection::start_change_user(mxs::Buffer&& buffer)
                 m_change_user.session->current_db = parse_res.db;
                 m_change_user.session->plugin = parse_res.plugin;
                 m_change_user.session->client_info.m_charset = parse_res.charset;
-                m_change_user.session->auth_token = parse_res.token_res.auth_token;
+                m_change_user.session->client_token = parse_res.token_res.auth_token;
                 m_change_user.session->connect_attrs = parse_res.attr_res.attr_data;
 
                 // Keep track of the session command responses across COM_CHANGE_USER boundaries. This allows
@@ -2115,7 +2115,7 @@ void MariaDBClientConnection::send_authetication_error(AuthErrorType error, cons
     case AuthErrorType::ACCESS_DENIED:
         mariadb_msg = mxb::string_printf("Access denied for user '%s'@'%s' (using password: %s)",
                                          ses->user.c_str(), ses->remote.c_str(),
-                                         ses->auth_token.empty() ? "NO" : "YES");
+                                         ses->client_token.empty() ? "NO" : "YES");
         send_mysql_err_packet(ses->next_sequence, 0, 1045, "28000", mariadb_msg.c_str());
         break;
 

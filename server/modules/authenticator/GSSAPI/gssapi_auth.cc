@@ -135,8 +135,8 @@ bool GSSAPIClientAuthenticator::store_client_token(MYSQL_session* session, GWBUF
     if (gwbuf_copy_data(buffer, 0, MYSQL_HEADER_LEN, hdr) == MYSQL_HEADER_LEN)
     {
         size_t plen = gw_mysql_get_byte3(hdr);
-        session->auth_token.resize(plen);
-        gwbuf_copy_data(buffer, MYSQL_HEADER_LEN, plen, session->auth_token.data());
+        session->client_token.resize(plen);
+        gwbuf_copy_data(buffer, MYSQL_HEADER_LEN, plen, session->client_token.data());
         rval = true;
     }
 
@@ -328,10 +328,11 @@ AuthRes GSSAPIClientAuthenticator::authenticate(const mariadb::UserEntry* entry,
      * token that we must validate */
     char* princ = NULL;
 
-    if (validate_gssapi_token(session->auth_token.data(), session->auth_token.size(), &princ)
+    if (validate_gssapi_token(session->client_token.data(), session->client_token.size(), &princ)
         && validate_user(session, princ, entry))
     {
         rval.status = AuthRes::Status::SUCCESS;
+        session->backend_token = session->client_token;
     }
 
     MXS_FREE(princ);

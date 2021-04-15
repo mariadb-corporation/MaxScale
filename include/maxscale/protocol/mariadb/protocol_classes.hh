@@ -121,11 +121,16 @@ public:
     ClientInfo client_info;     /**< Client capabilities from handshake response packet */
 
     /**
-     * Authentication token storage. Used by different authenticators in different ways. So far, only
-     * MariaDBAuth uses both tokens, as it needs storage for an intermediary result.
+     * Authentication tokens are the passwords or password hashes used for authenticating to MaxScale and
+     * backends. The client tokens store the tokens sent by client. The backend tokens store tokens for
+     * backend authentication. The authenticator module calculates the backend tokens from the client tokens.
+     * Usually, just one pair of tokens are required. The second tokens are only used by pam 2FA.
      */
-    mariadb::ClientAuthenticator::ByteVec auth_token;
-    mariadb::ClientAuthenticator::ByteVec auth_token_phase2;
+
+    mariadb::ClientAuthenticator::ByteVec client_token;     /**< First client token */
+    mariadb::ClientAuthenticator::ByteVec client_token_2fa; /**< Second client token */
+    mariadb::ClientAuthenticator::ByteVec backend_token;    /**< First backend token */
+    mariadb::ClientAuthenticator::ByteVec backend_token_2fa;/**< Second backend token */
 
     // Authenticator module currently in use by the session. May change on COM_CHANGE_USER.
     mariadb::AuthenticatorModule* m_current_authenticator {nullptr};

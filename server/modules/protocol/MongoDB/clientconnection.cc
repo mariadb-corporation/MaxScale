@@ -200,12 +200,8 @@ bool ClientConnection::setup_session()
 
         gw_sha1_str(pPassword, nPassword, auth_token);
 
-        // This is actually not needed, but as MariaDBAuth (of which we only use the backend part)
-        // uses both of these, better to assign anyway in case someone assumes something to be present.
-        m_session_data.auth_token.assign(auth_token, auth_token + SHA_DIGEST_LENGTH);
-
         // This will be used when authenticating with the backend.
-        m_session_data.auth_token_phase2.assign(auth_token, auth_token + SHA_DIGEST_LENGTH);
+        m_session_data.backend_token.assign(auth_token, auth_token + SHA_DIGEST_LENGTH);
     }
 
     const auto& authenticators = m_session.listener_data()->m_authenticators;

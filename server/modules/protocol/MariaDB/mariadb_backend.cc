@@ -1181,7 +1181,7 @@ GWBUF* MariaDBBackendConnection::create_change_user_packet()
                               concat_hash);
 
                 // SHA1(password) was sent by client and is in binary form.
-                auto& hash1 = m_auth_data.client_data->auth_token_phase2;
+                auto& hash1 = m_auth_data.client_data->backend_token;
                 if (hash1.size() == SHA_DIGEST_LENGTH)
                 {
                     // Compute the XOR */
@@ -1519,7 +1519,7 @@ int MariaDBBackendConnection::send_mysql_native_password_response(DCB* dcb, GWBU
     gwbuf_copy_data(reply, MYSQL_HEADER_LEN + 1 + sizeof(default_plugin_name),
                     sizeof(m_auth_data.scramble), m_auth_data.scramble);
 
-    const auto& sha1_pw = m_auth_data.client_data->auth_token_phase2;
+    const auto& sha1_pw = m_auth_data.client_data->backend_token;
     const uint8_t* curr_passwd = sha1_pw.empty() ? null_client_sha1 : sha1_pw.data();
 
     GWBUF* buffer = gwbuf_alloc(MYSQL_HEADER_LEN + GW_MYSQL_SCRAMBLE_SIZE);
@@ -1637,9 +1637,9 @@ GWBUF* MariaDBBackendConnection::gw_generate_auth_response(bool with_ssl, bool s
     uint8_t client_capabilities[4] = {0, 0, 0, 0};
     const uint8_t* curr_passwd = NULL;
 
-    if (client_data->auth_token_phase2.size() == SHA_DIGEST_LENGTH)
+    if (client_data->backend_token.size() == SHA_DIGEST_LENGTH)
     {
-        curr_passwd = client_data->auth_token_phase2.data();
+        curr_passwd = client_data->backend_token.data();
     }
 
     uint32_t capabilities = create_capabilities(with_ssl, client_data->db[0], service_capabilities);
