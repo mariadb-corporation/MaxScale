@@ -41,62 +41,7 @@
                     placeholder="Filter schema objects"
                 />
             </div>
-            <div v-if="!isLeftPaneCollapsed" class="schema-list-wrapper">
-                <!-- TODO: Restyle and add more functionalities -->
-                <v-treeview
-                    :items="schemaList"
-                    :search="searchSchema"
-                    :filter="filter"
-                    :open.sync="activeNodes"
-                    hoverable
-                    dense
-                    open-on-click
-                    transition
-                >
-                    <template v-slot:label="{ item }">
-                        <!-- TODO:
-                        Create truncate-string component to truncate text and show its full text in a tooltip
-                        -->
-                        <div>
-                            <span class="inline-block text-truncate">
-                                {{ item.name }}
-                                <span v-if="item.dataType" class="ml-1 color text-field-text">
-                                    {{ item.dataType }}
-                                </span>
-                            </span>
-                        </div>
-                    </template>
-                    <template v-slot:append="{ item }">
-                        <v-menu
-                            transition="slide-y-transition"
-                            offset-y
-                            content-class="setting-menu"
-                        >
-                            <template v-slot:activator="{ on, attrs }">
-                                <!-- TODO: Only show option icon when hover on node -->
-                                <v-btn icon x-small v-bind="attrs" v-on="on" @click="openNodeMenu">
-                                    <v-icon size="12" color="deep-ocean">
-                                        more_horiz
-                                    </v-icon>
-                                </v-btn>
-                            </template>
-                            <v-list>
-                                <v-list-item
-                                    v-for="option in tableOptions"
-                                    :key="option"
-                                    dense
-                                    link
-                                >
-                                    <v-list-item-title
-                                        @click="() => optionHandler({ item, option })"
-                                        v-text="option"
-                                    />
-                                </v-list-item>
-                            </v-list>
-                        </v-menu>
-                    </template>
-                </v-treeview>
-            </div>
+            <db-list-tree v-if="!isLeftPaneCollapsed" class="schema-list-wrapper" />
         </div>
     </div>
 </template>
@@ -114,64 +59,26 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import DbListTree from './DbListTree'
 export default {
     name: 'db-list',
+    components: {
+        DbListTree,
+    },
     props: {
         connSchema: { type: Object, required: true },
         loadingSchema: { type: Boolean, required: true },
     },
+
     data() {
         return {
             searchSchema: '',
             isLeftPaneCollapsed: false,
-            activeNodes: [],
-            tableOptions: ['Preview Data', 'View Details', 'Place Name in SQL'],
         }
-    },
-    computed: {
-        schemaList() {
-            if (this.loadingSchema) return []
-            const { schemas = [] } = this.connSchema
-            let schemaList = schemas.map(({ name: schemaId, tables = [] }) => {
-                let schemaObj = {
-                    type: 'schema',
-                    name: schemaId,
-                    id: schemaId,
-                    children: [],
-                }
-                schemaObj.children = tables.map(({ name: tableName, columns = [] }) => {
-                    const tableId = `${schemaObj.id}.${tableName}`
-                    return {
-                        type: 'table',
-                        name: tableName,
-                        id: tableId,
-                        level: 1,
-                        children: columns.map(({ name: columnName, dataType }) => ({
-                            type: 'column',
-                            name: columnName,
-                            dataType: dataType,
-                            id: `${tableId}.${columnName}`,
-                            level: 2,
-                        })),
-                    }
-                })
-                return schemaObj
-            })
-            return schemaList
-        },
-        filter() {
-            return (item, search, textKey) => item[textKey].indexOf(search) > -1
-        },
     },
     watch: {
         isLeftPaneCollapsed(v) {
             this.$emit('is-collapsed', v)
-        },
-        schemaList: {
-            deep: true,
-            handler(v) {
-                if (v.length) this.activeNodes.push(v[0].id)
-            },
         },
     },
     methods: {
@@ -180,15 +87,6 @@ export default {
         },
         toggleExpand() {
             this.isLeftPaneCollapsed = !this.isLeftPaneCollapsed
-        },
-        openNodeMenu(e) {
-            e.stopPropagation()
-        },
-        optionHandler({ item, option }) {
-            /* eslint-disable no-console */
-            console.log(item)
-            console.log(option)
-            //TODO: emits event to parent
         },
     },
 }
