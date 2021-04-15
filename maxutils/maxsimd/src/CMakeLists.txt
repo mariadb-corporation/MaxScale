@@ -1,4 +1,5 @@
 add_library(maxsimd STATIC
+  generic_canonical.cc
   canonical.cc
   )
 
