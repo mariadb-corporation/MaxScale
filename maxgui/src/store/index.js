@@ -20,6 +20,7 @@ import monitor from './monitor'
 import filter from './filter'
 import session from './session'
 import listener from './listener'
+import query from './query'
 import { APP_CONFIG } from 'utils/constants'
 import router from 'router'
 import { refreshAxiosToken } from 'plugins/axios'
@@ -161,5 +162,6 @@ export default new Vuex.Store({
         service,
         session,
         user,
+        query,
     },
 })
