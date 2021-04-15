@@ -26,6 +26,7 @@
 #include <maxscale/buffer.hh>
 #include <maxscale/protocol2.hh>
 #include <maxscale/target.hh>
+#include "mxsmongocursor.hh"
 
 class DCB;
 
@@ -279,6 +280,7 @@ namespace key
 // Mongo Commands
 const char BATCHSIZE[]               = "batchSize";
 const char BUILDINFO[]               = "buildInfo";
+const char COLLECTION[]              = "collection";
 const char COUNT[]                   = "count";
 const char CREATE[]                  = "create";
 const char DELETE[]                  = "delete";
@@ -294,6 +296,7 @@ const char FIRSTBATCH[]              = "firstBatch";
 const char GETCMDLINEOPTS[]          = "getCmdLineOpts";
 const char GETFREEMONITORINGSTATUS[] = "getFreeMonitoringStatus";
 const char GETLOG[]                  = "getLog";
+const char GETMORE[]                 = "getMore";
 const char INSERT[]                  = "insert";
 const char ISMASTER[]                = "isMaster";
 const char KEY[]                     = "key";
@@ -676,11 +679,20 @@ public:
             return ++m_request_id;
         }
 
+        MongoCursor& get_cursor(const std::string& collection, int64_t id);
+        void remove_cursor(const MongoCursor& cursor);
+        void store_cursor(MongoCursor&& cursor);
+
     private:
+        using CursorsById = std::unordered_map<int64_t, MongoCursor>;
+        using CollectionCursors = std::unordered_map<std::string, CursorsById>;
+
+
         mxs::ClientConnection& m_client_connection;
         mxs::Component&        m_downstream;
         int32_t                m_request_id { 1 };
         int64_t                m_connection_id;
+        CollectionCursors      m_collection_cursors;
 
         static std::atomic_int64_t s_connection_id;
     };

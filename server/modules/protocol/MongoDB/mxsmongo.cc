@@ -1447,6 +1447,67 @@ bool mxsmongo::get_number_as_double(const bsoncxx::document::element& element, d
 
 std::atomic_int64_t mxsmongo::Mongo::Context::s_connection_id;
 
+namespace
+{
+
+void throw_cursor_not_found(int64_t id)
+{
+    stringstream ss;
+    ss << "cursor id " << id << " not found";
+    throw mxsmongo::SoftError(ss.str(), mxsmongo::error::CURSOR_NOT_FOUND);
+}
+
+}
+
+mxsmongo::MongoCursor& mxsmongo::Mongo::Context::get_cursor(const std::string& collection, int64_t id)
+{
+    auto it = m_collection_cursors.find(collection);
+
+    if (it == m_collection_cursors.end())
+    {
+        throw_cursor_not_found(id);
+    }
+
+    CursorsById& cursors = it->second;
+
+    auto jt = cursors.find(id);
+
+    if (jt == cursors.end())
+    {
+        throw_cursor_not_found(id);
+    }
+
+    return jt->second;
+}
+
+void mxsmongo::Mongo::Context::remove_cursor(const MongoCursor& cursor)
+{
+    auto it = m_collection_cursors.find(cursor.collection());
+    mxb_assert(it != m_collection_cursors.end());
+
+    if (it != m_collection_cursors.end())
+    {
+        CursorsById& cursors = it->second;
+
+        auto jt = cursors.find(cursor.id());
+        mxb_assert(jt != cursors.end());
+
+        if (jt != cursors.end())
+        {
+            cursors.erase(jt);
+        }
+    }
+}
+
+void mxsmongo::Mongo::Context::store_cursor(MongoCursor&& cursor)
+{
+    CursorsById& cursors = m_collection_cursors[cursor.collection()];
+
+    mxb_assert(cursors.find(cursor.id()) == cursors.end());
+
+    cursors.emplace(std::make_pair(cursor.id(), std::move(cursor)));
+}
+
 mxsmongo::Mongo::Mongo(mxs::ClientConnection* pClient_connection,
                        mxs::Component* pDownstream,
                        Config* pConfig)

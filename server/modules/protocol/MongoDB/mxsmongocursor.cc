@@ -83,13 +83,17 @@ namespace mxsmongo
 {
 
 MongoCursor::MongoCursor()
-    : m_id(next_id())
+    : m_id(0)
+    , m_exhausted(true)
 {
 }
 
-MongoCursor::MongoCursor(const vector<string>& extractions,
+MongoCursor::MongoCursor(const std::string& collection,
+                         const vector<string>& extractions,
                          mxs::Buffer&& mariadb_response)
-    : m_id(next_id())
+    : m_collection(collection)
+    , m_id(next_id())
+    , m_exhausted(false)
     , m_extractions(std::move(extractions))
     , m_mariadb_response(mariadb_response)
     , m_pBuffer(gwbuf_link_data(m_mariadb_response.get()))
@@ -97,17 +101,19 @@ MongoCursor::MongoCursor(const vector<string>& extractions,
     initialize();
 }
 
-GWBUF* MongoCursor::create_first_batch(const Command& command, int32_t nBatch)
+void MongoCursor::create_first_batch(bsoncxx::builder::basic::document& doc, int32_t nBatch)
 {
-    return create_batch(command, key::FIRSTBATCH, nBatch);
+    create_batch(doc, key::FIRSTBATCH, nBatch);
 }
 
-GWBUF* MongoCursor::create_next_batch(const Command& command, int32_t nBatch)
+void MongoCursor::create_next_batch(bsoncxx::builder::basic::document& doc, int32_t nBatch)
 {
-    return create_batch(command, key::NEXTBATCH, nBatch);
+    create_batch(doc, key::NEXTBATCH, nBatch);
 }
 
-GWBUF* MongoCursor::create_batch(const Command& command, const string& which_batch, int32_t nBatch)
+void MongoCursor::create_batch(bsoncxx::builder::basic::document& doc,
+                               const string& which_batch,
+                               int32_t nBatch)
 {
     ArrayBuilder batch;
 
@@ -125,13 +131,10 @@ GWBUF* MongoCursor::create_batch(const Command& command, const string& which_bat
     DocumentBuilder cursor;
     cursor.append(kvp(which_batch, batch.extract()));
     cursor.append(kvp("id", id));
-    cursor.append(kvp("ns", command.table(Command::Quoted::NO)));
+    cursor.append(kvp("ns", m_collection));
 
-    bsoncxx::builder::basic::document msg;
-    msg.append(kvp("cursor", cursor.extract()));
-    msg.append(kvp("ok", 1));
-
-    return command.create_response(msg.extract());
+    doc.append(kvp("cursor", cursor.extract()));
+    doc.append(kvp("ok", 1));
 }
 
 MongoCursor::Result MongoCursor::create_batch(bsoncxx::builder::basic::array& batch, int32_t nBatch)
@@ -199,6 +202,7 @@ MongoCursor::Result MongoCursor::create_batch(bsoncxx::builder::basic::array& ba
     if (at_end)
     {
         ComResponse response(&m_pBuffer);
+        m_exhausted = true;
     }
 
     return at_end ? Result::COMPLETE : Result::PARTIAL;

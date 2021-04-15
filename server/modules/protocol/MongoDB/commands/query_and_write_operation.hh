@@ -379,8 +379,11 @@ public:
 
                 if (code == ER_NO_SUCH_TABLE)
                 {
+                    DocumentBuilder doc;
                     MongoCursor cursor;
-                    pResponse = cursor.create_first_batch(*this, 0);
+                    cursor.create_first_batch(doc, 0);
+
+                    pResponse = create_response(doc.extract());
                 }
                 else
                 {
@@ -399,10 +402,17 @@ public:
         default:
             {
                 // Must be a result set.
-                MongoCursor cursor(m_extractions, std::move(mariadb_response));
+                MongoCursor cursor(table(Quoted::NO), m_extractions, std::move(mariadb_response));
 
-                // TODO: Take m_batch_size into use.
-                pResponse = cursor.create_first_batch(*this, std::numeric_limits<int>::max());
+                DocumentBuilder doc;
+                cursor.create_first_batch(doc, m_batch_size);
+
+                pResponse = create_response(doc.extract());
+
+                if (!cursor.exhausted())
+                {
+                    m_database.context().store_cursor(std::move(cursor));
+                }
             }
         }
 
@@ -421,6 +431,36 @@ private:
 // https://docs.mongodb.com/manual/reference/command/getLastError/
 
 // https://docs.mongodb.com/manual/reference/command/getMore/
+class GetMore final : public ImmediateCommand
+{
+public:
+    using ImmediateCommand::ImmediateCommand;
+
+    void populate_response(DocumentBuilder& doc) override
+    {
+        int64_t id = value_as<int64_t>();
+        string collection = m_database.name() + "." + required<string>(key::COLLECTION);
+        int32_t batch_size = 101;
+
+        optional(key::BATCHSIZE, &batch_size, Conversion::RELAXED);
+
+        if (batch_size < 0)
+        {
+            stringstream ss;
+            ss << "BatchSize value must be non-negative, bit received: " << batch_size;
+            throw SoftError(ss.str(), error::BAD_VALUE);
+        }
+
+        MongoCursor& cursor = m_database.context().get_cursor(collection, id);
+
+        cursor.create_next_batch(doc, batch_size);
+
+        if (cursor.exhausted())
+        {
+            m_database.context().remove_cursor(cursor);
+        }
+    }
+};
 
 // https://docs.mongodb.com/manual/reference/command/insert/
 class Insert final : public OrderedCommand
