@@ -473,8 +473,10 @@ GWBUF* Command::translate_resultset(vector<string>& extractions, GWBUF* pMariadb
             }
             catch (const std::exception& x)
             {
-                MXS_ERROR("Could not convert object to JSON: %s", x.what());
-                MXS_NOTICE("String: '%s'", json.c_str());
+                stringstream ss;
+                ss << "Could not convert assumed JSON data to BSON: " << x.what();
+                MXS_ERROR("%s. Data: %s", ss.str().c_str(), json.c_str());
+                throw SoftError(ss.str(), error::COMMAND_FAILED);
             }
         }
     }
