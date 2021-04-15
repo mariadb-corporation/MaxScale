@@ -16,6 +16,7 @@
 #include <endian.h>
 #include <atomic>
 #include <deque>
+#include <set>
 #include <sstream>
 #include <stdexcept>
 #include <bsoncxx/array/view.hpp>
@@ -300,6 +301,7 @@ const char GETMORE[]                 = "getMore";
 const char INSERT[]                  = "insert";
 const char ISMASTER[]                = "isMaster";
 const char KEY[]                     = "key";
+const char KILLCURSORS[]             = "killCursors";
 const char LIMIT[]                   = "limit";
 const char LISTCOLLECTIONS[]         = "listCollections";
 const char LISTDATABASES[]           = "listDatabases";
@@ -682,6 +684,7 @@ public:
         MongoCursor& get_cursor(const std::string& collection, int64_t id);
         void remove_cursor(const MongoCursor& cursor);
         void store_cursor(MongoCursor&& cursor);
+        std::set<int64_t> kill_cursors(const std::string& collection, const std::vector<int64_t>& ids);
 
     private:
         using CursorsById = std::unordered_map<int64_t, MongoCursor>;

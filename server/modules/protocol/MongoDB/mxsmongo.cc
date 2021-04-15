@@ -13,6 +13,7 @@
 
 #include "mxsmongo.hh"
 #include <sstream>
+#include <set>
 #include <map>
 #include <bsoncxx/json.hpp>
 #include <maxscale/dcb.hh>
@@ -1506,6 +1507,32 @@ void mxsmongo::Mongo::Context::store_cursor(MongoCursor&& cursor)
     mxb_assert(cursors.find(cursor.id()) == cursors.end());
 
     cursors.emplace(std::make_pair(cursor.id(), std::move(cursor)));
+}
+
+set<int64_t> mxsmongo::Mongo::Context::kill_cursors(const std::string& collection,
+                                                       const vector<int64_t>& ids)
+{
+    set<int64_t> removed;
+
+    auto it = m_collection_cursors.find(collection);
+
+    if (it != m_collection_cursors.end())
+    {
+        CursorsById& cursors = it->second;
+
+        for (auto id : ids)
+        {
+            auto jt = cursors.find(id);
+
+            if (jt != cursors.end())
+            {
+                cursors.erase(jt);
+                removed.insert(id);
+            }
+        }
+    }
+
+    return removed;
 }
 
 mxsmongo::Mongo::Mongo(mxs::ClientConnection* pClient_connection,

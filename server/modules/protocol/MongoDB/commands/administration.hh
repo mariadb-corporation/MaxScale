@@ -238,6 +238,58 @@ public:
 // https://docs.mongodb.com/manual/reference/command/killCursors/
 
 // https://docs.mongodb.com/manual/reference/command/killOp/
+class KillCursors final : public ImmediateCommand
+{
+public:
+    using ImmediateCommand::ImmediateCommand;
+
+    void populate_response(DocumentBuilder& doc) override
+    {
+        string collection = m_database.name() + "." + value_as<string>();
+        auto cursors = required<bsoncxx::array::view>("cursors");
+
+        vector<int64_t> ids;
+
+        int i = 0;
+        for (const auto& element : cursors)
+        {
+            if (element.type() != bsoncxx::type::k_int64)
+            {
+                stringstream ss;
+                ss << "Field 'cursors' contains an element that is not of type long: 0";
+                throw SoftError(ss.str(), error::FAILED_TO_PARSE);
+            }
+
+            ids.push_back(element.get_int64());
+            ++i;
+        }
+
+        set<int64_t> removed = m_database.context().kill_cursors(collection, ids);
+
+        ArrayBuilder cursorsKilled;
+        ArrayBuilder cursorsNotFound;
+        ArrayBuilder cursorsAlive;
+        ArrayBuilder cursorsUnknown;
+
+        for (const auto id : ids)
+        {
+            if (removed.find(id) != removed.end())
+            {
+                cursorsKilled.append(id);
+            }
+            else
+            {
+                cursorsNotFound.append(id);
+            }
+        }
+
+        doc.append(kvp("cursorsKilled", cursorsKilled.extract()));
+        doc.append(kvp("cursorsNotFound", cursorsNotFound.extract()));
+        doc.append(kvp("cursorsAlive", cursorsAlive.extract()));
+        doc.append(kvp("cursorsUnknown", cursorsUnknown.extract()));
+        doc.append(kvp("ok", 1));
+    }
+};
 
 // https://docs.mongodb.com/manual/reference/command/listCollections/
 class ListCollections final : public SingleCommand

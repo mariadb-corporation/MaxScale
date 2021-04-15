@@ -139,6 +139,7 @@ struct ThisUnit
         { mxb::tolower(key::GETMORE),                 &create_command<command::GetMore> },
         { mxb::tolower(key::INSERT),                  &create_command<command::Insert> },
         { mxb::tolower(key::ISMASTER),                &create_command<command::IsMaster> },
+        { mxb::tolower(key::KILLCURSORS),             &create_command<command::KillCursors> },
         { mxb::tolower(key::LISTCOLLECTIONS),         &create_command<command::ListCollections> },
         { mxb::tolower(key::LISTDATABASES),           &create_command<command::ListDatabases> },
         { mxb::tolower(key::PING),                    &create_command<command::Ping> },
