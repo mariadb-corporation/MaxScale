@@ -9,7 +9,13 @@
                 disable
             >
                 <template slot="pane-left">
-                    <db-list :dist="dist" class="db-tb-list" @is-collapsed="handleDbListCollapse" />
+                    <db-list
+                        :connSchema="conn_schema"
+                        :loadingSchema="loading_schema"
+                        class="db-tb-list"
+                        @is-collapsed="handleDbListCollapse"
+                        @reload-schema="loadSchema"
+                    />
                 </template>
                 <template slot="pane-right">
                     <split-pane split="horiz" :minPercent="10" :defaultPercent="70">
@@ -47,6 +53,8 @@ import QueryEditor from '@/components/QueryEditor'
 import PageHeader from './PageHeader'
 import DbList from './DbList'
 import QueryResult from './QueryResult'
+import { mapActions, mapState } from 'vuex'
+
 export default {
     name: 'query-view',
     components: {
@@ -57,7 +65,6 @@ export default {
     },
     data() {
         return {
-            //TODO: Get data from API
             dist: {}, // contains database name, table name and its columns
             //TODO: Remove this sample sql
             // eslint-disable-next-line vue/max-len
@@ -67,13 +74,26 @@ export default {
         }
     },
     computed: {
+        ...mapState({
+            conn_schema: state => state.query.conn_schema,
+            loading_schema: state => state.query.loading_schema,
+        }),
         distArr: function() {
             let result = []
-            //TODO: Flatten dist
+            //TODO: Flatten conn_schema
             return result
         },
     },
+    async created() {
+        await this.loadSchema()
+    },
     methods: {
+        ...mapActions({
+            fetchConnectionSchema: 'query/fetchConnectionSchema',
+        }),
+        async loadSchema() {
+            await this.fetchConnectionSchema()
+        },
         handleDbListCollapse(v) {
             if (v) this.dfDbPanePercent = 3
             else this.dfDbPanePercent = 20

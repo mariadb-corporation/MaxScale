@@ -123,6 +123,10 @@ export default {
                 automaticLayout: true,
                 fontSize: 12,
                 lineNumbersMinChars: 2,
+                scrollbar: {
+                    verticalScrollbarSize: 10,
+                    horizontalScrollbarSize: 10,
+                },
             }
 
             this.editor = monaco.editor.create(this.$el, options)
