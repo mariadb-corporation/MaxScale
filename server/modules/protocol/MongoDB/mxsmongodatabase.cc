@@ -59,7 +59,7 @@ GWBUF* mxsmongo::Database::handle_command(GWBUF* pRequest,
     return execute(pRequest, req, doc, req.arguments());
 }
 
-GWBUF* mxsmongo::Database::translate(GWBUF& mariadb_response)
+GWBUF* mxsmongo::Database::translate(mxs::Buffer&& mariadb_response)
 {
     mxb_assert(is_pending());
     mxb_assert(m_sCommand.get());
@@ -70,7 +70,7 @@ GWBUF* mxsmongo::Database::translate(GWBUF& mariadb_response)
 
     try
     {
-        state = m_sCommand->translate(mariadb_response, &pResponse);
+        state = m_sCommand->translate(std::move(mariadb_response), &pResponse);
     }
     catch (const mxsmongo::Exception& x)
     {

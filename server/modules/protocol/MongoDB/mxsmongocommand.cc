@@ -49,15 +49,13 @@ namespace
 
 uint32_t (*crc32_func)(const void *, size_t) = wiredtiger_crc32c_func();
 
-class Unknown : public mxsmongo::Command
+class Unknown : public mxsmongo::ImmediateCommand
 {
 public:
-    using mxsmongo::Command::Command;
+    using mxsmongo::ImmediateCommand::ImmediateCommand;
 
-    GWBUF* execute() override
+    void populate_response(mxsmongo::DocumentBuilder& doc) override
     {
-        GWBUF* pResponse = nullptr;
-
         string command;
         if (!m_doc.empty())
         {
@@ -75,17 +73,14 @@ public:
         case GlobalConfig::RETURN_ERROR:
             {
                 MXS_ERROR("%s", s.c_str());
-                pResponse = mxsmongo::SoftError(s, mxsmongo::error::COMMAND_NOT_FOUND).create_response(*this);
+                throw mxsmongo::SoftError(s, mxsmongo::error::COMMAND_NOT_FOUND).create_response(*this);
             }
             break;
 
         case GlobalConfig::RETURN_EMPTY:
             MXS_WARNING("%s", s.c_str());
-            pResponse = create_empty_response();
             break;
         }
-
-        return pResponse;
     }
 };
 
@@ -227,13 +222,6 @@ unique_ptr<Command> Command::get(mxsmongo::Database* pDatabase,
     CreatorFunction create = creator.second;
 
     return create(name, pDatabase, pRequest, nullptr, &msg, doc, arguments);
-}
-
-Command::State Command::translate(GWBUF& mariadb_response, GWBUF** ppMongo_response)
-{
-    mxb_assert(!true);
-    *ppMongo_response = nullptr;
-    return READY;
 }
 
 GWBUF* Command::create_empty_response() const
@@ -699,6 +687,14 @@ GWBUF* ImmediateCommand::execute()
     DocumentBuilder doc;
     populate_response(doc);
     return create_response(doc.extract());
+}
+
+Command::State ImmediateCommand::translate(mxs::Buffer&& mariadb_response, GWBUF** ppMongo_response)
+{
+    // This will never be called.
+    mxb_assert(!true);
+    *ppMongo_response = nullptr;
+    return READY;
 }
 
 void ImmediateCommand::diagnose(DocumentBuilder& doc)

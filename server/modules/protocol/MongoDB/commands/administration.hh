@@ -48,9 +48,9 @@ public:
         return sql.str();
     }
 
-    State translate(GWBUF& mariadb_response, GWBUF** ppResponse) override
+    State translate(mxs::Buffer&& mariadb_response, GWBUF** ppResponse) override
     {
-        ComResponse response(GWBUF_DATA(&mariadb_response));
+        ComResponse response(mariadb_response.data());
 
         int32_t ok = 0;
 
@@ -114,9 +114,9 @@ public:
         return sql.str();
     }
 
-    State translate(GWBUF& mariadb_response, GWBUF** ppResponse) override
+    State translate(mxs::Buffer&& mariadb_response, GWBUF** ppResponse) override
     {
-        ComResponse response(GWBUF_DATA(&mariadb_response));
+        ComResponse response(mariadb_response.data());
 
         int32_t ok = 0;
 
@@ -176,9 +176,9 @@ public:
         return sql.str();
     }
 
-    State translate(GWBUF& mariadb_response, GWBUF** ppResponse) override
+    State translate(mxs::Buffer&& mariadb_response, GWBUF** ppResponse) override
     {
-        ComResponse response(GWBUF_DATA(&mariadb_response));
+        ComResponse response(mariadb_response.data());
 
         DocumentBuilder doc;
         int32_t ok = 0;
@@ -261,9 +261,9 @@ public:
         return sql.str();
     }
 
-    State translate(GWBUF& mariadb_response, GWBUF** ppResponse) override
+    State translate(mxs::Buffer&& mariadb_response, GWBUF** ppResponse) override
     {
-        ComResponse response(GWBUF_DATA(&mariadb_response));
+        ComResponse response(mariadb_response.data());
 
         DocumentBuilder doc;
 
@@ -283,7 +283,7 @@ public:
 
         default:
             {
-                uint8_t* pBuffer = gwbuf_link_data(&mariadb_response);
+                uint8_t* pBuffer = gwbuf_link_data(mariadb_response.get());
 
                 ComQueryResponse cqr(&pBuffer);
                 auto nFields = cqr.nFields();
@@ -376,9 +376,9 @@ public:
         return sql.str();
     }
 
-    State translate(GWBUF& mariadb_response, GWBUF** ppResponse) override
+    State translate(mxs::Buffer&& mariadb_response, GWBUF** ppResponse) override
     {
-        ComResponse response(GWBUF_DATA(&mariadb_response));
+        ComResponse response(mariadb_response.data());
 
         DocumentBuilder doc;
 
@@ -398,7 +398,7 @@ public:
 
         default:
             {
-                uint8_t* pBuffer = gwbuf_link_data(&mariadb_response);
+                uint8_t* pBuffer = gwbuf_link_data(mariadb_response.get());
 
                 ComQueryResponse cqr(&pBuffer);
                 auto nFields = cqr.nFields();

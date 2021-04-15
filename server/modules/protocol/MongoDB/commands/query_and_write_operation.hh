@@ -52,12 +52,12 @@ public:
         return nullptr;
     }
 
-    State translate(GWBUF& mariadb_response, GWBUF** ppResponse) override
+    State translate(mxs::Buffer&& mariadb_response, GWBUF** ppResponse) override
     {
         // TODO: Update will be needed when DEPRECATE_EOF it turned on.
         GWBUF* pResponse = nullptr;
 
-        ComResponse response(GWBUF_DATA(&mariadb_response));
+        ComResponse response(mariadb_response.data());
 
         bool abort = false;
 
@@ -358,12 +358,12 @@ public:
         return sql.str();
     }
 
-    State translate(GWBUF& mariadb_response, GWBUF** ppResponse) override
+    State translate(mxs::Buffer&& mariadb_response, GWBUF** ppResponse) override
     {
         // TODO: Update will be needed when DEPRECATE_EOF it turned on.
         GWBUF* pResponse = nullptr;
 
-        ComResponse response(GWBUF_DATA(&mariadb_response));
+        ComResponse response(mariadb_response.data());
 
         switch (response.type())
         {
@@ -396,7 +396,7 @@ public:
 
         default:
             // Must be a result set.
-            pResponse = translate_resultset(m_extractions, &mariadb_response);
+            pResponse = translate_resultset(m_extractions, mariadb_response.get());
         }
 
         *ppResponse = pResponse;
@@ -442,18 +442,18 @@ public:
         }
     }
 
-    State translate(GWBUF& mariadb_response, GWBUF** ppResponse) override final
+    State translate(mxs::Buffer&& mariadb_response, GWBUF** ppResponse) override final
     {
         State state = BUSY;
         GWBUF* pResponse = nullptr;
 
-        ComResponse response(GWBUF_DATA(&mariadb_response));
+        ComResponse response(mariadb_response.data());
 
         if (m_mode == NORMAL)
         {
             if (!response.is_err() || ComERR(response).code() != ER_NO_SUCH_TABLE)
             {
-                state = OrderedCommand::translate(mariadb_response, &pResponse);
+                state = OrderedCommand::translate(std::move(mariadb_response), &pResponse);
             }
             else
             {
