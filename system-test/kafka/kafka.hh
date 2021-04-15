@@ -2,6 +2,7 @@
 #include <iostream>
 #include <librdkafka/rdkafkacpp.h>
 #include <maxtest/testconnections.hh>
+#include <maxbase/format.hh>
 
 using namespace std::literals::string_literals;
 
@@ -11,29 +12,94 @@ public:
     Kafka(TestConnections& test)
         : m_test(test)
     {
-        m_test.tprintf("Starting Kafka container");
-        auto res = m_test.maxscales->ssh_output(
-            "sudo docker run -d -e ADVERTISED_HOST="s + m_test.maxscales->ip4(0)
-            + " -p 9092:9092 -p 2182:2181 --network=host --name=kafka spotify/kafka");
-
-        if (res.rc != 0)
+        if (m_test.maxscales->ssh_node_f(0, false, "test -d kafka") != 0)
         {
-            // Try to remove all images in case stale images are left over from old runs. For some reason,
-            // sometimes the removal doesn't fully remove the container and a separate remove step is needed.
-            m_test.maxscales->ssh_output("sudo docker ps -aq | xargs sudo docker rm -vf");
-            res = m_test.maxscales->ssh_output(
-                "sudo docker run -d -e ADVERTISED_HOST="s + m_test.maxscales->ip4(0)
-                + " -p 9092:9092 -p 2182:2181 --network=host --name=kafka spotify/kafka");
+            if (!install_kafka())
+            {
+                m_test.add_failure("Failed to install Kafka");
+            }
         }
 
-        m_test.expect(res.rc == 0, "Failed to start docker container: %s", res.output.c_str());
+        if (!start_kafka())
+        {
+            m_test.add_failure("Failed to start Kafka");
+        }
     }
 
     ~Kafka()
     {
-        m_test.tprintf("Stopping Kafka container");
-        auto res = m_test.maxscales->ssh_output("sudo docker rm -vf kafka");
-        m_test.expect(res.rc == 0, "Failed to stop docker container: %s", res.output.c_str());
+        stop_kafka();
+    }
+
+private:
+    bool start_kafka()
+    {
+        // Stop any running instances of Kafka and clean out their data directories.
+        stop_kafka();
+
+        std::string zookeeper = "kafka/bin/zookeeper-server-start.sh "
+                                "-daemon kafka/config/zookeeper.properties;";
+        std::string kafka = mxb::string_printf(
+            "kafka/bin/kafka-server-start.sh"
+            " -daemon kafka/config/server.properties"
+            " --override listeners=PLAINTEXT://0.0.0.0:9092"
+            " --override advertised.listeners=PLAINTEXT://%s:9092;",
+            m_test.maxscales->ip4(0));
+
+        return m_test.maxscales->ssh_node_f(0, false, "%s", (zookeeper + kafka).c_str()) == 0;
+    }
+
+    void stop_kafka()
+    {
+        m_test.maxscales->ssh_node_f(
+            0, false,
+            "kafka/bin/kafka-server-stop.sh;"
+            "kafka/bin/zookeeper-server-stop.sh;"
+            "rm -rf /tmp/zookeeper /tmp/kafka-logs;");
+    }
+
+    bool install_kafka()
+    {
+        // The link can be updated by getting the closest mirror link from the Kafka download page and
+        // changing `file` to `filename` and adding `action=download` (these are options to closer.cgi).
+        std::string command =
+            R"EOF(
+wget -q "https://www.apache.org/dyn/closer.cgi?filename=/kafka/2.7.0/kafka_2.13-2.7.0.tgz&action=download" -O kafka_2.13-2.7.0.tgz;
+tar -axf kafka_2.13-2.7.0.tgz;
+rm kafka_2.13-2.7.0.tgz;
+mv kafka_2.13-2.7.0 kafka;
+        )EOF";
+
+        return m_test.maxscales->ssh_node_f(0, false, "%s", command.c_str()) == 0;
+    }
+
+    TestConnections& m_test;
+};
+
+class Logger : public RdKafka::EventCb
+{
+public:
+    Logger(TestConnections& test)
+        : m_test(test)
+    {
+    }
+
+    void event_cb(RdKafka::Event& event) override
+    {
+        switch (event.type())
+        {
+        case RdKafka::Event::EVENT_LOG:
+            m_test.tprintf("%s", event.str().c_str());
+            break;
+
+        case RdKafka::Event::EVENT_ERROR:
+            m_test.tprintf("%s", RdKafka::err2str(event.err()).c_str());
+            break;
+
+        default:
+            m_test.tprintf("%s", event.str().c_str());
+            break;
+        }
     }
 
 private:
@@ -45,11 +111,13 @@ class Consumer
 public:
 
     Consumer(TestConnections& test)
+        : m_logger(test)
     {
         std::string err;
         std::unique_ptr<RdKafka::Conf> cnf {RdKafka::Conf::create(RdKafka::Conf::CONF_GLOBAL)};
         cnf->set("bootstrap.servers", test.maxscales->ip4(0) + ":9092"s, err);
         cnf->set("group.id", "kafkacdc", err);
+        cnf->set("event_cb", &m_logger, err);
 
         m_consumer.reset(RdKafka::KafkaConsumer::create(cnf.get(), err));
         std::unique_ptr<RdKafka::TopicPartition> topic {RdKafka::TopicPartition::create("kafkacdc", 0)};
@@ -86,6 +154,7 @@ public:
 
 private:
     std::unique_ptr<RdKafka::KafkaConsumer> m_consumer;
+    Logger                                  m_logger;
 };
 
 class Producer
@@ -93,10 +162,13 @@ class Producer
 public:
 
     Producer(TestConnections& test)
+        : m_test(test)
+        , m_logger(test)
     {
         std::string err;
         std::unique_ptr<RdKafka::Conf> cnf {RdKafka::Conf::create(RdKafka::Conf::CONF_GLOBAL)};
         cnf->set("bootstrap.servers", test.maxscales->ip4(0) + ":9092"s, err);
+        cnf->set("event_cb", &m_logger, err);
         m_producer.reset(RdKafka::Producer::create(cnf.get(), err));
     }
 
@@ -117,7 +189,7 @@ public:
             }
             else if (err != RdKafka::ERR_NO_ERROR)
             {
-                std::cout << "Error: " << RdKafka::err2str(err) << std::endl;
+                m_test.logger().add_failure("Failed to produce message: %s", RdKafka::err2str(err).c_str());
                 ok = false;
                 break;
             }
@@ -127,6 +199,13 @@ public:
         return ok;
     }
 
+    void flush()
+    {
+        m_producer->flush(10000);
+    }
+
 private:
+    TestConnections&                   m_test;
     std::unique_ptr<RdKafka::Producer> m_producer;
+    Logger                             m_logger;
 };
