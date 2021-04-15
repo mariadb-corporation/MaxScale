@@ -186,9 +186,53 @@ int64_t element_as<int64_t>(const string& command,
                             const bsoncxx::document::element& element,
                             Conversion conversion)
 {
-    int32_t rv;
+    int64_t rv;
 
     if (conversion == Conversion::STRICT && element.type() != bsoncxx::type::k_int64)
+    {
+        stringstream ss;
+        ss << "BSON field '" << command << "." << zKey << "' is the wrong type '"
+           << bsoncxx::to_string(element.type()) << "', expected type 'int64'";
+
+        throw SoftError(ss.str(), error::TYPE_MISMATCH);
+    }
+
+    switch (element.type())
+    {
+    case bsoncxx::type::k_int32:
+        rv = element.get_int32();
+        break;
+
+    case bsoncxx::type::k_int64:
+        rv = element.get_int64();
+        break;
+
+    case bsoncxx::type::k_double:
+        rv = element.get_double();
+        break;
+
+    default:
+        {
+            stringstream ss;
+            ss << "BSON field '" << command << "." << zKey << "' is the wrong type '"
+               << bsoncxx::to_string(element.type()) << "', expected a number";
+
+            throw SoftError(ss.str(), error::TYPE_MISMATCH);
+        }
+    }
+
+    return rv;
+}
+
+template<>
+int32_t element_as<int32_t>(const string& command,
+                            const char* zKey,
+                            const bsoncxx::document::element& element,
+                            Conversion conversion)
+{
+    int32_t rv;
+
+    if (conversion == Conversion::STRICT && element.type() != bsoncxx::type::k_int32)
     {
         stringstream ss;
         ss << "BSON field '" << command << "." << zKey << "' is the wrong type '"

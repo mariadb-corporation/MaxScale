@@ -283,6 +283,18 @@ class Find final : public SingleCommand
 public:
     using SingleCommand::SingleCommand;
 
+    void prepare()
+    {
+        optional(key::BATCHSIZE, &m_batchSize, Conversion::RELAXED);
+
+        if (m_batchSize < 0)
+        {
+            stringstream ss;
+            ss << "BatchSize value must be non-negative, bit received: " << m_batchSize;
+            throw SoftError(ss.str(), error::BAD_VALUE);
+        }
+    }
+
     string generate_sql() override
     {
         stringstream sql;
@@ -392,6 +404,7 @@ public:
     }
 
 private:
+    int32_t        m_batchSize { 101 }; // Documented to be that.
     vector<string> m_extractions;
 };
 

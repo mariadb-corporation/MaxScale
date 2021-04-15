@@ -200,6 +200,12 @@ int64_t element_as<int64_t>(const std::string& command,
                             const char* zKey,
                             const bsoncxx::document::element& element,
                             Conversion conversion);
+
+template<>
+int32_t element_as<int32_t>(const std::string& command,
+                            const char* zKey,
+                            const bsoncxx::document::element& element,
+                            Conversion conversion);
 template<>
 bool element_as<bool>(const std::string& command,
                       const char* zKey,
@@ -271,6 +277,7 @@ namespace key
 {
 
 // Mongo Commands
+const char BATCHSIZE[]               = "batchSize";
 const char BUILDINFO[]               = "buildInfo";
 const char COUNT[]                   = "count";
 const char CREATE[]                  = "create";

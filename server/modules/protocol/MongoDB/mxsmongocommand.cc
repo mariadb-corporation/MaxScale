@@ -713,10 +713,16 @@ void ImmediateCommand::diagnose(DocumentBuilder& doc)
 
 GWBUF* SingleCommand::execute()
 {
+    prepare();
+
     m_statement = generate_sql();
 
     send_downstream(m_statement);
     return nullptr;
+}
+
+void SingleCommand::prepare()
+{
 }
 
 void SingleCommand::diagnose(DocumentBuilder& doc)
