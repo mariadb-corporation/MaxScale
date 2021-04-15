@@ -27,6 +27,9 @@ using std::endl;
 namespace
 {
 const string type_mariadb = "mariadb";
+const string my_nwconf_prefix = "node";
+const string my_name = "Master-Slave-cluster";
+
 const char create_repl_user[] =
     "grant replication slave on *.* to repl@'%%' identified by 'repl'; "
     "FLUSH PRIVILEGES";
@@ -54,7 +57,7 @@ bool is_readonly(mxt::MariaDB* conn)
 namespace maxtest
 {
 ReplicationCluster::ReplicationCluster(SharedData* shared)
-    : MariaDBCluster(shared, "node", "server")
+    : MariaDBCluster(shared, "server")
 {
 }
 
@@ -550,5 +553,20 @@ void ReplicationCluster::replicate_from(int slave, const std::string& host, uint
     execute_query(nodes[slave], "STOP SLAVE;");
     execute_query(nodes[slave], "%s", change_master.str().c_str());
     execute_query(nodes[slave], "START SLAVE;");
+}
+
+const std::string& ReplicationCluster::nwconf_prefix() const
+{
+    return my_nwconf_prefix;
+}
+
+const std::string& ReplicationCluster::name() const
+{
+    return my_name;
+}
+
+std::string ReplicationCluster::get_srv_cnf_filename(int node)
+{
+    return mxb::string_printf("server%i.cnf", node + 1);
 }
 }

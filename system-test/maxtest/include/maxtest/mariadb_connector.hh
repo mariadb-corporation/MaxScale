@@ -29,14 +29,15 @@ public:
 
     bool open(const std::string& host, int port, const std::string& db = "");
     bool try_open(const std::string& host, int port, const std::string& db = "");
-
-    bool cmd(const std::string& sql);
-    bool cmd_f(const char* format, ...) mxb_attribute((format (printf, 2, 3)));
-
     enum class Expect
     {
         OK, FAIL, ANY
     };
+
+    bool cmd(const std::string& sql, Expect expect = Expect::OK);
+    bool try_cmd(const std::string& sql);
+    bool cmd_f(const char* format, ...) mxb_attribute((format (printf, 2, 3)));
+
     std::unique_ptr<mxq::QueryResult> query(const std::string& query, Expect expect = Expect::OK);
     std::unique_ptr<mxq::QueryResult> try_query(const std::string& query);
 

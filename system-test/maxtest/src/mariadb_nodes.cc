@@ -57,11 +57,9 @@ string extract_version_from_string(const string& version)
 }
 }
 
-MariaDBCluster::MariaDBCluster(mxt::SharedData* shared, const std::string& nwconf_prefix,
-                               const std::string& cnf_server_prefix)
+MariaDBCluster::MariaDBCluster(mxt::SharedData* shared, const std::string& cnf_server_prefix)
     : Nodes(shared)
-    , m_cnf_server_name(cnf_server_prefix)
-    , m_prefix(nwconf_prefix)
+    , m_cnf_server_prefix(cnf_server_prefix)
 {
     m_test_dir = test_dir;
 }
@@ -160,7 +158,7 @@ void MariaDBCluster::close_connections()
 
 int MariaDBCluster::read_nodes_info(const mxt::NetworkConfig& nwconfig)
 {
-    auto prefixc = m_prefix.c_str();
+    auto prefixc = nwconf_prefix().c_str();
 
     string key_user = mxb::string_printf("%s_user", prefixc);
     user_name = envvar_get_set(key_user.c_str(), "skysql");
@@ -185,7 +183,7 @@ int MariaDBCluster::read_nodes_info(const mxt::NetworkConfig& nwconfig)
         string node_name = mxb::string_printf("%s_%03d", prefixc, i);
         if (add_node(nwconfig, node_name))
         {
-            string cnf_name = m_cnf_server_name + std::to_string(i + 1);
+            string cnf_name = m_cnf_server_prefix + std::to_string(i + 1);
             auto srv = std::make_unique<mxt::MariaDBServer>(cnf_name, *node(i), *this, i);
             string key_port = node_name + "_port";
             port[i] = readenv_int(key_port.c_str(), 3306);
@@ -222,14 +220,14 @@ int MariaDBCluster::read_nodes_info(const mxt::NetworkConfig& nwconfig)
 
 void MariaDBCluster::print_env()
 {
-    auto prefixc = prefix().c_str();
+    auto namec = name().c_str();
     for (int i = 0; i < N; i++)
     {
-        printf("%s node %d \t%s\tPort=%d\n", prefixc, i, ip4(i), port[i]);
-        printf("%s Access user %s\n", prefixc, access_user(i));
+        printf("%s node %d \t%s\tPort=%d\n", namec, i, ip4(i), port[i]);
+        printf("%s Access user %s\n", namec, access_user(i));
     }
-    printf("%s User name %s\n", prefixc, user_name.c_str());
-    printf("%s Password %s\n", prefixc, password.c_str());
+    printf("%s User name %s\n", namec, user_name.c_str());
+    printf("%s Password %s\n", namec, password.c_str());
 }
 
 int MariaDBCluster::stop_node(int node)
@@ -298,22 +296,6 @@ void MariaDBCluster::create_users(int node)
                type_string().c_str());
 }
 
-int MariaDBCluster::create_users()
-{
-    for (int i = 0; i < N; i++)
-    {
-        if (start_node(i, (char*) ""))
-        {
-            printf("Start of node %d failed\n", i);
-            return 1;
-        }
-
-        create_users(i);
-    }
-
-    return 0;
-}
-
 int MariaDBCluster::clean_iptables(int node)
 {
     return ssh_node_f(node,
@@ -370,112 +352,98 @@ std::string MariaDBCluster::unblock_command(int node) const
     return command;
 }
 
-int MariaDBCluster::block_node(int node)
+bool MariaDBCluster::block_node(int node)
 {
     std::string command = block_command(node);
-
-    int local_result = 0;
-    local_result += ssh_node_f(node, true, "%s", command.c_str());
-
+    int res = ssh_node_f(node, true, "%s", command.c_str());
     m_blocked[node] = true;
-    return local_result;
+    return res == 0;
 }
 
-int MariaDBCluster::unblock_node(int node)
+bool MariaDBCluster::unblock_node(int node)
 {
-    std::string command = unblock_command(node);
-
-    int local_result = 0;
-    local_result += clean_iptables(node);
-    local_result += ssh_node_f(node, true, "%s", command.c_str());
-
+    string command = unblock_command(node);
+    int res = clean_iptables(node);
+    res += ssh_node_f(node, true, "%s", command.c_str());
     m_blocked[node] = false;
-    return local_result;
+    return res == 0;
 }
 
 int MariaDBCluster::block_all_nodes()
 {
-    int rval = 0;
-    std::vector<std::thread> threads;
-
-    for (int i = 0; i < this->N; i++)
-    {
-        threads.emplace_back([&, i]() {
-                                 rval += this->block_node(i);
-                             });
-    }
-
-    for (auto& a : threads)
-    {
-        a.join();
-    }
-
-    return rval;
+    auto func = [this](int i) {
+            return block_node(i);
+        };
+    return run_on_every_backend(func);
 }
 
 
-int MariaDBCluster::unblock_all_nodes()
+bool MariaDBCluster::unblock_all_nodes()
 {
-    int rval = 0;
-    std::vector<std::thread> threads;
-
-    for (int i = 0; i < this->N; i++)
-    {
-        threads.emplace_back([&, i]() {
-                                 rval += this->unblock_node(i);
-                             });
-    }
-
-    for (auto& a : threads)
-    {
-        a.join();
-    }
-
-    return rval;
+    auto func = [this](int i) {
+            return unblock_node(i);
+        };
+    return run_on_every_backend(func);
 }
 
 bool MariaDBCluster::fix_replication()
 {
-    bool rval = true;
-    int attempts = 25;
+    bool rval = false;
+    auto namec = name().c_str();
+    auto& log = logger();
 
-    if (!check_replication())
+    if (check_replication())
     {
-        cout << prefix() << ": Replication is broken, fixing..." << endl;
-        rval = false;
+        log.log_msgf("%s is replicating/synced.", namec);
+        rval = true;
+    }
+    else
+    {
+        log.log_msgf("%s is broken, fixing ...", namec);
 
-        if (unblock_all_nodes() == 0)
+        if (unblock_all_nodes())
         {
-            cout << "Prepare nodes" << endl;
-            if (prepare_servers())
+            log.log_msgf("Firewalls on %s open.", namec);
+            if (reset_and_prepare_servers())
             {
-                cout << "Starting replication" << endl;
+                log.log_msgf("%s prepared. Starting replication.", namec);
                 start_replication();
 
-                while (!check_replication() && (attempts > 0))
+                int attempts = 0;
+                bool cluster_ok = false;
+
+                while (!cluster_ok && attempts < 10)
                 {
-                    cout << "Replication is still broken, waiting" << endl;
-                    sleep(10);
-                    attempts--;
+                    if (attempts > 0)
+                    {
+                        log.log_msgf("Iteration %i, %s is still broken, waiting.", attempts, namec);
+                        sleep(10);
+                    }
+                    if (check_replication())
+                    {
+                        cluster_ok = true;
+                    }
+                    attempts++;
                 }
-                if (check_replication())
+
+                if (cluster_ok)
                 {
-                    cout << "Replication is fixed" << endl;
-                    rval = prepare_for_test();
+                    log.log_msgf("%s is replicating/synced.", namec);
+                    rval = prepare_servers_for_test();
                 }
                 else
                 {
-                    cout << "FATAL ERROR: Replication is still broken" << endl;
+                    log.add_failure("%s is still broken.", namec);
                 }
             }
             else
             {
-                logger().add_failure("Server preparation failed.");
+                logger().add_failure("Server preparation on %s failed.", name().c_str());
             }
         }
         else
         {
-            cout << "SSH access to nodes doesn't work" << endl;
+            logger().add_failure("Failed to unblock %s.", name().c_str());
         }
     }
 
@@ -536,92 +504,42 @@ std::string MariaDBCluster::anonymous_users_query() const
     return "SELECT CONCAT('\\'', user, '\\'@\\'', host, '\\'') FROM mysql.user WHERE user = ''";
 }
 
-bool MariaDBCluster::prepare_for_test(MYSQL* conn)
+bool MariaDBCluster::prepare_for_test(int i)
 {
-    int local_result = 0;
-
-    if (mysql_query(conn, "FLUSH HOSTS"))
+    bool rval = false;
+    auto& srv = m_backends[i];
+    auto conn = srv->try_open_admin_connection();
+    if (conn->is_open())
     {
-        local_result++;
-    }
-
-    if (mysql_query(conn, "SET GLOBAL max_connections=10000"))
-    {
-        local_result++;
-    }
-
-    if (mysql_query(conn, "SET GLOBAL max_connect_errors=10000000"))
-    {
-        local_result++;
-    }
-
-    if (mysql_query(conn, anonymous_users_query().c_str()) == 0)
-    {
-        MYSQL_RES* res = mysql_store_result(conn);
-
-        if (res)
+        if (conn->cmd("FLUSH HOSTS;") && conn->cmd("SET GLOBAL max_connections=10000"))
         {
-            std::vector<std::string> users;
-            MYSQL_ROW row;
-
-            while ((row = mysql_fetch_row(res)))
+            conn->try_cmd("SET GLOBAL max_connect_errors=10000000");    // fails on Xpand
+            auto res = conn->query(anonymous_users_query());
+            if (res)
             {
-                users.push_back(row[0]);
-            }
-
-            mysql_free_result(res);
-
-            if (users.size() > 0)
-            {
-                printf("Detected anonymous users, dropping them.\n");
-
-                for (auto& s : users)
+                rval = true;
+                if (res->get_row_count() > 0)
                 {
-                    std::string query = "DROP USER ";
-                    query += s;
-                    printf("%s\n", query.c_str());
-                    mysql_query(conn, query.c_str());
+                    logger().log_msgf("Detected anonymous users on %s, dropping them.", name().c_str());
+                    while (res->next_row())
+                    {
+                        string user = res->get_string(0);
+                        string query = mxb::string_printf("DROP USER %s;", user.c_str());
+                        conn->try_cmd(query);
+                    }
                 }
             }
         }
     }
-    else
-    {
-        printf("Failed to query for anonymous users: %s\n", mysql_error(conn));
-        local_result++;
-    }
-
-    return local_result == 0;
+    return rval;
 }
 
-bool MariaDBCluster::prepare_for_test()
+bool MariaDBCluster::prepare_servers_for_test()
 {
-    if (this->nodes[0] == NULL && (this->connect() != 0))
-    {
-        return false;
-    }
-
-    bool all_ok = true;
-    std::vector<std::future<bool>> futures;
-
-    for (int i = 0; i < N; i++)
-    {
-        bool (MariaDBCluster::* function)(MYSQL*) = &MariaDBCluster::prepare_for_test;
-        std::packaged_task<bool(MariaDBCluster*, MYSQL*)> task(function);
-        futures.push_back(task.get_future());
-        std::thread(std::move(task), this, nodes[i]).detach();
-    }
-
-    for (auto& f : futures)
-    {
-        f.wait();
-        if (!f.get())
-        {
-            all_ok = false;
-        }
-    }
-
-    return all_ok;
+    auto func = [this](int i) {
+            return prepare_for_test(i);
+        };
+    return run_on_every_backend(func);
 }
 
 int MariaDBCluster::execute_query_all_nodes(const char* sql)
@@ -712,22 +630,17 @@ void MariaDBCluster::add_server_setting(int node, const char* setting)
     ssh_node_f(node, true, "sudo sed -i '$a %s' /etc/my.cnf.d/*server*.cnf", setting);
 }
 
-std::string MariaDBCluster::get_config_name(int node)
-{
-    std::stringstream ss;
-    ss << "server" << node + 1 << ".cnf";
-    return ss.str();
-}
-
 void MariaDBCluster::reset_server_settings(int node)
 {
-    std::string cnfdir = m_test_dir + "/mdbci/cnf/";
-    std::string cnf = get_config_name(node);
+    string cnf_dir = m_test_dir + "/mdbci/cnf/";
+    string cnf_file = get_srv_cnf_filename(node);
+    string cnf_path = cnf_dir + cnf_file;
 
     // Note: This is a CentOS specific path
     ssh_node(node, "rm -rf /etc/my.cnf.d/*", true);
-    copy_to_node(node, (cnfdir + cnf).c_str(), "~/");
-    ssh_node_f(node, false, "sudo install -o root -g root -m 0644 ~/%s /etc/my.cnf.d/", cnf.c_str());
+
+    copy_to_node(node, cnf_path.c_str(), "~/");
+    ssh_node_f(node, false, "sudo install -o root -g root -m 0644 ~/%s /etc/my.cnf.d/", cnf_file.c_str());
 
     // Always configure the backend for SSL
     std::string ssl_dir = m_test_dir + "/ssl-cert";
@@ -740,7 +653,7 @@ void MariaDBCluster::reset_server_settings(int node)
     ssh_node_f(node, true, "chown mysql:mysql -R /etc/ssl-cert");
 }
 
-void MariaDBCluster::reset_server_settings()
+void MariaDBCluster::reset_all_servers_settings()
 {
     for (int node = 0; node < N; node++)
     {
@@ -792,17 +705,12 @@ bool MariaDBCluster::prepare_server(int i)
     return rval;
 }
 
-bool MariaDBCluster::prepare_servers()
+bool MariaDBCluster::reset_and_prepare_servers()
 {
-    mxt::BoolFuncArray threads;
-    for (int i = 0; i < N; i++)
-    {
-        auto func = [this, i]() {
-                return prepare_server(i);
-            };
-        threads.push_back(move(func));
-    }
-    return m_shared.concurrent_run(threads);
+    auto func = [this](int i) {
+            return prepare_server(i);
+        };
+    return run_on_every_backend(func);
 }
 
 void MariaDBCluster::limit_nodes(int new_N)
@@ -823,11 +731,12 @@ std::string MariaDBCluster::cnf_servers()
     bool use_ip6 = using_ipv6();
     for (int i = 0; i < N; i++)
     {
-        string one_server = mxb::string_printf("[%s%i]\n"
+        auto& name = m_backends[i]->cnf_name();
+        string one_server = mxb::string_printf("[%s]\n"
                                                "type=server\n"
                                                "address=%s\n"
                                                "port=%i\n\n",
-                                               m_cnf_server_name.c_str(), i + 1,
+                                               name.c_str(),
                                                use_ip6 ? ip6(i) : ip_private(i),
                                                port[i]);
         rval += one_server;
@@ -837,12 +746,14 @@ std::string MariaDBCluster::cnf_servers()
 
 std::string MariaDBCluster::cnf_servers_line()
 {
-    std::string s = m_cnf_server_name + std::to_string(1);
-    for (int i = 1; i < N; i++)
+    string rval;
+    string sep;
+    for (int i = 0; i < N; i++)
     {
-        s += std::string(",") + m_cnf_server_name + std::to_string(i + 1);
+        rval.append(sep).append(m_backends[i]->cnf_name());
+        sep = ",";
     }
-    return s;
+    return rval;
 }
 
 const char* MariaDBCluster::ip(int i) const
@@ -873,11 +784,6 @@ const char* MariaDBCluster::access_homedir(int i) const
 const char* MariaDBCluster::access_sudo(int i) const
 {
     return Nodes::access_sudo(i);
-}
-
-const string& MariaDBCluster::prefix() const
-{
-    return m_prefix;
 }
 
 const char* MariaDBCluster::ip4(int i) const
@@ -950,9 +856,9 @@ bool MariaDBCluster::using_ipv6() const
     return m_use_ipv6;
 }
 
-const std::string& MariaDBCluster::cnf_srv_name() const
+const std::string& MariaDBCluster::cnf_server_prefix() const
 {
-    return m_cnf_server_name;
+    return m_cnf_server_prefix;
 }
 
 bool MariaDBCluster::update_status()
@@ -988,7 +894,7 @@ bool MariaDBCluster::check_backend_versions(uint64_t min_vrs)
     }
     else
     {
-        logger().add_failure("Failed to update servers of cluster '%s'.", m_prefix.c_str());
+        logger().add_failure("Failed to update servers of %s.", name().c_str());
     }
     return rval;
 }
@@ -1026,7 +932,7 @@ bool MariaDBCluster::prepare_cluster_for_test()
     if (Nodes::init_ssh_masters())
     {
         truncate_mariadb_logs();
-        prepare_for_test();
+        prepare_servers_for_test();
         close_active_connections();
         rval = true;
     }
@@ -1050,6 +956,21 @@ MariaDBCluster::ConnArray MariaDBCluster::admin_connect_to_all()
     }
     m_shared.concurrent_run(funcs);
     return rval;
+}
+
+bool MariaDBCluster::run_on_every_backend(const std::function<bool(int)>& func)
+{
+    mxt::BoolFuncArray funcs;
+    funcs.reserve(N);
+
+    for (int i = 0; i < N; i++)
+    {
+        auto wrapper_func = [&func, i]() {
+                return func(i);
+            };
+        funcs.push_back(std::move(wrapper_func));
+    }
+    return m_shared.concurrent_run(funcs);
 }
 
 namespace maxtest
@@ -1129,7 +1050,7 @@ std::string MariaDBServer::version_as_string()
     return mxb::string_printf("%i.%i.%i", major, minor, patch);
 }
 
-const string& MariaDBServer::name() const
+const string& MariaDBServer::cnf_name() const
 {
     return m_cnf_name;
 }

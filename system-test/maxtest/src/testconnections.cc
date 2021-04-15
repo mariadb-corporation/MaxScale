@@ -666,28 +666,31 @@ bool TestConnections::process_template(int m, const string& config_file_path, co
         if (cluster)
         {
             bool using_ip6 = cluster->using_ipv6();
-            auto& prefix = cluster->prefix();
+            auto& nw_conf_prefix = cluster->nwconf_prefix();
 
             for (int i = 0; i < cluster->N; i++)
             {
-                // The placeholders in the config template use the node name prefix, not the MaxScale config
-                // server name prefix.
-                string ip_ph = mxb::string_printf("###%s_server_IP_%0d###", prefix.c_str(), i + 1);
+                // These placeholders in the config template use the network config node name prefix,
+                // not the MaxScale config server name prefix.
+                string ip_ph = mxb::string_printf("###%s_server_IP_%0d###", nw_conf_prefix.c_str(), i + 1);
                 string ip_str = using_ip6 ? cluster->ip6(i) : cluster->ip_private(i);
                 replace_text(ip_ph, ip_str);
 
-                string port_ph = mxb::string_printf("###%s_server_port_%0d###", prefix.c_str(), i + 1);
+                string port_ph = mxb::string_printf("###%s_server_port_%0d###",
+                                                    nw_conf_prefix.c_str(), i + 1);
                 string port_str = std::to_string(cluster->port[i]);
                 replace_text(port_ph, port_str);
             }
 
-            // The following generates basic server definitions for all servers.
-            string all_servers_ph = mxb::string_printf("###%s###", cluster->cnf_srv_name().c_str());
+            // The following generates basic server definitions for all servers. These, confusingly,
+            // use the MaxScale config file name prefix in the placeholder.
+            string all_servers_ph = mxb::string_printf("###%s###", cluster->cnf_server_prefix().c_str());
             string all_servers_str = cluster->cnf_servers();
             replace_text(all_servers_ph, all_servers_str);
 
             // The following generates one line with server names. Used with monitors and services.
-            string all_servers_line_ph = mxb::string_printf("###%s_line###", cluster->cnf_srv_name().c_str());
+            string all_servers_line_ph = mxb::string_printf("###%s_line###",
+                                                            cluster->cnf_server_prefix().c_str());
             string all_server_line_str = cluster->cnf_servers_line();
             replace_text(all_servers_line_ph, all_server_line_str);
         }
@@ -1999,7 +2002,7 @@ bool TestConnections::read_cmdline_options(int argc, char* argv[])
 
 bool TestConnections::initialize_nodes()
 {
-    const char errmsg[] = "Failed to initialize node group '%s'.";
+    const char errmsg[] = "Failed to initialize node group %s.";
     bool error = false;
     mxt::BoolFuncArray funcs;
 
@@ -2016,7 +2019,7 @@ bool TestConnections::initialize_nodes()
             else
             {
                 error = true;
-                add_failure(errmsg, new_cluster->prefix().c_str());
+                add_failure(errmsg, new_cluster->name().c_str());
             }
         };
 

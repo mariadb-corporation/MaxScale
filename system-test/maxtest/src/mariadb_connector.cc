@@ -43,7 +43,7 @@ bool maxtest::MariaDB::try_open(const std::string& host, int port, const std::st
     return ret;
 }
 
-bool maxtest::MariaDB::cmd(const std::string& sql)
+bool maxtest::MariaDB::cmd(const std::string& sql, Expect expect)
 {
     // The test connector can do one retry in case connection was lost.
     auto ret = mxq::MariaDB::cmd(sql);
@@ -51,8 +51,29 @@ bool maxtest::MariaDB::cmd(const std::string& sql)
     {
         ret = mxq::MariaDB::cmd(sql);
     }
-    m_log.expect(ret, "%s", error());
+
+    if (expect == Expect::OK)
+    {
+        m_log.expect(ret, "%s", error());
+    }
+    else if (expect == Expect::FAIL)
+    {
+        m_log.expect(!ret, "Query '%s' succeeded when failure was expected.", sql.c_str());
+    }
+    else
+    {
+        if (!ret)
+        {
+            // Report query error, but don't classify it as a test error.
+            m_log.log_msgf("%s", error());
+        }
+    }
     return ret;
+}
+
+bool maxtest::MariaDB::try_cmd(const std::string& sql)
+{
+    return cmd(sql, Expect::ANY);
 }
 
 bool maxtest::MariaDB::cmd_f(const char* format, ...)

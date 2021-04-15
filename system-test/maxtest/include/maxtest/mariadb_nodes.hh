@@ -51,7 +51,7 @@ public:
     std::unique_ptr<mxt::MariaDB> try_open_admin_connection();
     bool                          update_status();
     const Status&                 status() const;
-    const std::string&            name() const;
+    const std::string&            cnf_name() const;
 
     VMNode& vm_node();
 
@@ -100,7 +100,19 @@ public:
     const char* access_homedir(int i = 0) const;
     const char* access_sudo(int i = 0) const;
 
-    const std::string& prefix() const;
+    /**
+     * Return network config prefix of cluster items. Likely 'node', 'galera' or 'xpand'.
+     *
+     * @return Network config prefix
+     */
+    virtual const std::string& nwconf_prefix() const = 0;
+
+    /**
+     * Return readable cluster name. Used in log messages.
+     *
+     * @return Cluster name
+     */
+    virtual const std::string& name() const = 0;
 
     int N {0};
 
@@ -168,15 +180,10 @@ public:
      */
     virtual int start_replication() = 0;
 
-    // Create the default users used by all tests
-    void create_users(int node);
-
     /**
-     * Create the default users used by all tests on all nodes.
-     *
-     * @return 0 in case of success.
+     * Create the default users used by all tests
      */
-    int create_users();
+    void create_users(int node);
 
     /**
      * Blocks `src` from communicating with `dest`
@@ -189,30 +196,20 @@ public:
     void unblock_node_from_node(int src, int dest);
 
     /**
-     * @param node Index of node to block.
-     * @return The command used for blocking a node.
-     */
-    virtual std::string block_command(int node) const;
-
-    /**
-     * @param node Index of node to unblock.
-     * @return The command used for unblocking a node.
-     */
-    virtual std::string unblock_command(int node) const;
-
-    /**
-     * @brif BlockNode setup firewall on a backend node to block MariaDB port
+     * Setup firewall on a backend node to block MariaDB port.
+     *
      * @param node Index of node to block
-     * @return 0 in case of success
+     * @return True on success
      */
-    int block_node(int node);
+    bool block_node(int node);
 
     /**
-     * @brief UnblockNode setup firewall on a backend node to unblock MariaDB port
+     * Setup firewall on a backend node to allow MariaDB port.
+     *
      * @param node Index of node to unblock
-     * @return 0 in case of success
+     * @return True on success
      */
-    int unblock_node(int node);
+    bool unblock_node(int node);
 
 
     /**
@@ -222,10 +219,11 @@ public:
     int block_all_nodes();
 
     /**
-     * @brief Unblock all nodes for this cluster
-     * @return 0 in case of success
+     * Unblock all nodes for this cluster.
+     *
+     * @return True on success
      */
-    int unblock_all_nodes();
+    bool unblock_all_nodes();
 
     /**
      * @brief clean_iptables removes all itables rules connected to MariaDB port to avoid duplicates
@@ -250,13 +248,6 @@ public:
     int start_node(int node, const char* param = "");
 
     /**
-     * @brief Check if all slaves have "Slave_IO_Running" set to "Yes" and master has N-1 slaves
-     * @param master Index of master node
-     * @return True if everything is ok
-     */
-    virtual bool check_replication() = 0;
-
-    /**
      * @brief Get the server_id of the node
      * @param index The index of the node whose server_id to retrieve
      * @return Node id of the server or -1 on error
@@ -275,12 +266,14 @@ public:
     bool prepare_cluster_for_test();
 
     /**
-     * @brief Flush hosts, adjust settings, remove anonymous users, etc.
-     * @param conn Valid handle to some node.
-     * @return True in case of success, false otherwise.
+     * Flush hosts, adjust settings, remove anonymous users, etc.
+     *
+     * @param i Node to prepare
+     * @return True on success
      */
-    bool prepare_for_test(MYSQL* conn);
-    bool prepare_for_test();
+    bool prepare_for_test(int i);
+
+    bool prepare_servers_for_test();
 
     /**
      * @brief Execute query on all nodes
@@ -353,18 +346,18 @@ public:
     void add_server_setting(int node, const char* setting);
 
     /**
-     * Get the configuration file name for a particular node
+     * Get the server configuration file name for a VM node. E.g. server1.cnf.
      *
      * @param node Node number for which the configuration is requested
-     *
      * @return The name of the configuration file
      */
-    virtual std::string get_config_name(int node);
+    virtual std::string get_srv_cnf_filename(int node) = 0;
 
     /**
-     * Restore the original configuration for all servers
+     * Restore the original configuration for all servers.
      */
-    void reset_server_settings();
+    void reset_all_servers_settings();
+
     // Same but for an individual server
     void reset_server_settings(int node);
 
@@ -396,7 +389,7 @@ public:
 
     bool using_ipv6() const;
 
-    const std::string& cnf_srv_name() const;
+    const std::string& cnf_server_prefix() const;
 
     /**
      * Get cluster type as string. The returned value is given to create_user.sh and should match one
@@ -420,11 +413,9 @@ protected:
      * Constructor
      *
      * @param shared Global data
-     * @param nwconf_prefix Node prefix in network config file
      * @param cnf_server_prefix Node prefix in MaxScale config file
      */
-    MariaDBCluster(mxt::SharedData* shared, const std::string& nwconf_prefix,
-                   const std::string& cnf_server_prefix);
+    MariaDBCluster(mxt::SharedData* shared, const std::string& cnf_server_prefix);
 
     /**
      * @returns SELECT that returns anonymous users in such a way that each returned row
@@ -432,19 +423,39 @@ protected:
      */
     virtual std::string anonymous_users_query() const;
 
+    /**
+     * @param node Index of node to block.
+     * @return The command used for blocking a node.
+     */
+    virtual std::string block_command(int node) const;
+
+    /**
+     * @param node Index of node to unblock.
+     * @return The command used for unblocking a node.
+     */
+    virtual std::string unblock_command(int node) const;
+
     mxt::TestLogger& logger();
 
-    std::string m_test_dir;         /**< path to test application */
-    std::string m_cnf_server_name;  /**< Prefix for backend server name ('server', 'gserver') */
-    std::string m_socket_cmd[N_MAX];/**< 'socket=$socket' line */
+    std::string m_test_dir;             /**< path to test application */
+    /**< Prefix for backend server name in MaxScale config. E.g. 'server', 'gserver' */
+    std::string m_cnf_server_prefix;
+    std::string m_socket_cmd[N_MAX];    /**< 'socket=$socket' line */
 
 private:
-    std::string m_prefix;               /**< Name of backend setup (e.g. 'repl' or 'galera') */
-    bool        m_use_ipv6 {false};     /**< Default to ipv6-addresses */
-    bool        m_blocked[N_MAX] {};    /**< List of blocked nodes */
+    bool m_use_ipv6 {false};    /**< Default to ipv6-addresses */
+    bool m_blocked[N_MAX] {};   /**< List of blocked nodes */
 
     std::vector<std::unique_ptr<mxt::MariaDBServer>> m_backends;
 
     int  read_nodes_info(const mxt::NetworkConfig& nwconfig);
-    bool prepare_servers();
+    bool reset_and_prepare_servers();
+    bool run_on_every_backend(const std::function<bool(int)>& func);
+
+    /**
+     * Check if the cluster is replicating or otherwise properly synced.
+     *
+     * @return True if cluster is ready for test
+     */
+    virtual bool check_replication() = 0;
 };
