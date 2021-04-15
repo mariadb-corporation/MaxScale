@@ -16,6 +16,7 @@ std::unique_ptr<RdKafka::Conf> create_config(const Config& config)
     values["group.id"] = "maxscale-KafkaImporter";
     values["enable.auto.commit"] = "false";
     values["enable.auto.offset.store"] = "true";
+    values["auto.offset.reset"] = "smallest";
 
     if (config.ssl.get())
     {
