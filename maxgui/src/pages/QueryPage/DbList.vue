@@ -12,13 +12,12 @@
                 </v-icon>
             </v-btn>
         </portal>
-        <!-- TODO: add width transition (sidebar transition) -->
         <div class="visible-when-expand fill-height">
             <div class="schema-list-tools">
                 <div class="d-flex align-center justify-end">
                     <span
                         v-if="!isLeftPaneCollapsed"
-                        class="color text-small-text db-tb-list__title"
+                        class="color text-small-text db-tb-list__title d-inline-block text-truncate"
                     >
                         SCHEMAS
                     </span>

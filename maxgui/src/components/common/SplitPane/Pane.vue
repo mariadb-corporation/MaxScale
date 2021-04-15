@@ -36,6 +36,7 @@ export default {
 <style lang="scss" scoped>
 .splitter-pane {
     position: absolute;
+    transition: width 0.4s;
     &--vert {
         height: 100%;
         &-left {
