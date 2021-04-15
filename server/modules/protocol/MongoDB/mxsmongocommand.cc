@@ -387,14 +387,9 @@ GWBUF* Command::create_response(const bsoncxx::document::value& doc) const
 
 GWBUF* Command::translate_resultset(vector<string>& extractions, GWBUF* pMariadb_response)
 {
-    bool is_msg_response = (m_req.opcode() == Packet::MSG);
+    mxb_assert(m_req.opcode() == Packet::MSG);
 
-    // msg response
     bsoncxx::builder::basic::array firstBatch_builder;
-
-    // reply response
-    vector<bsoncxx::document::value> documents;
-    uint32_t size_of_documents = 0;
 
     if (pMariadb_response)
     {
@@ -474,15 +469,7 @@ GWBUF* Command::translate_resultset(vector<string>& extractions, GWBUF* pMariadb
             {
                 auto doc = bsoncxx::from_json(json);
 
-                if (is_msg_response)
-                {
-                    firstBatch_builder.append(doc);
-                }
-                else
-                {
-                    size_of_documents += doc.view().length();
-                    documents.push_back(doc);
-                }
+                firstBatch_builder.append(doc);
             }
             catch (const std::exception& x)
             {
@@ -494,24 +481,17 @@ GWBUF* Command::translate_resultset(vector<string>& extractions, GWBUF* pMariadb
 
     GWBUF* pResponse = nullptr;
 
-    if (is_msg_response)
-    {
-        bsoncxx::builder::basic::document cursor_builder;
-        cursor_builder.append(bsoncxx::builder::basic::kvp("firstBatch", firstBatch_builder.extract()));
-        cursor_builder.append(bsoncxx::builder::basic::kvp("partialResultsReturned", false));
-        cursor_builder.append(bsoncxx::builder::basic::kvp("id", int64_t(0)));
-        cursor_builder.append(bsoncxx::builder::basic::kvp("ns", table(Quoted::NO)));
+    bsoncxx::builder::basic::document cursor_builder;
+    cursor_builder.append(bsoncxx::builder::basic::kvp("firstBatch", firstBatch_builder.extract()));
+    cursor_builder.append(bsoncxx::builder::basic::kvp("partialResultsReturned", false));
+    cursor_builder.append(bsoncxx::builder::basic::kvp("id", int64_t(0)));
+    cursor_builder.append(bsoncxx::builder::basic::kvp("ns", table(Quoted::NO)));
 
-        bsoncxx::builder::basic::document msg_builder;
-        msg_builder.append(bsoncxx::builder::basic::kvp("cursor", cursor_builder.extract()));
-        msg_builder.append(bsoncxx::builder::basic::kvp("ok", int32_t(1)));
+    bsoncxx::builder::basic::document msg_builder;
+    msg_builder.append(bsoncxx::builder::basic::kvp("cursor", cursor_builder.extract()));
+    msg_builder.append(bsoncxx::builder::basic::kvp("ok", int32_t(1)));
 
-        pResponse = create_msg_response(msg_builder.extract());
-    }
-    else
-    {
-        pResponse = create_reply_response(size_of_documents, documents);
-    }
+    pResponse = create_msg_response(msg_builder.extract());
 
     return pResponse;
 }
