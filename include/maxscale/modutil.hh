@@ -249,18 +249,6 @@ std::string extract_sql(const mxs::Buffer& buffer, size_t len = -1);
 std::string extract_error(GWBUF* buffer);
 
 /**
- * Get canonical form of a query
- *
- * The canonical form of a query has all constants replaced with question marks. This form is the "signature"
- * of the query and it can be used to group similar queries together.
- *
- * @param buffer Buffer containing a SQL statement
- *
- * @return The canonical form of the query
- */
-std::string* get_canonical(std::string* pSql);
-
-/**
  * Truncate buffers at packet boundaries
  *
  * @param b   Buffer to truncate

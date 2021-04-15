@@ -19,7 +19,10 @@
 #include <algorithm>
 #include <vector>
 
-static inline bool is_next(uint8_t* it, uint8_t* end, const std::string& str)
+namespace
+{
+
+inline bool is_next(uint8_t* it, uint8_t* end, const std::string& str)
 {
     mxb_assert(it != end);
     for (auto s_it = str.begin(); s_it != str.end(); ++s_it, ++it)
@@ -78,7 +81,7 @@ private:
 
 static LUT lut;
 
-static inline std::pair<bool, uint8_t*> probe_number(uint8_t* it, uint8_t* end)
+inline std::pair<bool, uint8_t*> probe_number(uint8_t* it, uint8_t* end)
 {
     mxb_assert(it != end);
     mxb_assert(lut(IS_DIGIT, *it));
@@ -152,7 +155,7 @@ static inline std::pair<bool, uint8_t*> probe_number(uint8_t* it, uint8_t* end)
     return rval;
 }
 
-static inline uint8_t* find_char(uint8_t* it, uint8_t* end, char c)
+inline uint8_t* find_char(uint8_t* it, uint8_t* end, char c)
 {
     for (; it != end; ++it)
     {
@@ -171,14 +174,15 @@ static inline uint8_t* find_char(uint8_t* it, uint8_t* end, char c)
 
     return it;
 }
+}
 
-namespace maxscale
+namespace maxsimd::generic
 {
 
 #define likely(x)   __builtin_expect (!!(x), 1)
 #define unlikely(x) __builtin_expect (!!(x), 0)
 
-std::string* get_canonical(std::string* pSql)
+std::string* get_canonical_impl(std::string* pSql)
 {
     auto& sql = *pSql;
 

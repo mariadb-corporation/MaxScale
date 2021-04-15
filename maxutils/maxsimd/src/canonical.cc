@@ -50,8 +50,7 @@ std::string* get_canonical(std::string* pSql)
     }
     else
     {
-        // TODO, next commit move regular get_canonical to this library
-        abort();
+        return maxsimd::generic::get_canonical_impl(pSql);
     }
 }
 }

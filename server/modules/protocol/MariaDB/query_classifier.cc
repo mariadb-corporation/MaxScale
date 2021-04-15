@@ -28,6 +28,7 @@
 #include <maxscale/routingworker.hh>
 #include <maxscale/utils.h>
 #include <maxscale/buffer.hh>
+#include <maxsimd/canonical.hh>
 
 #include "trxboundaryparser.hh"
 
@@ -392,7 +393,7 @@ public:
         {
             mxb_assert(gwbuf_is_contiguous(m_pStmt));
             m_canonical = maxscale::extract_sql(pStmt);
-            mxs::get_canonical(&m_canonical);
+            maxsimd::get_canonical(&m_canonical);
 
             if (modutil_is_SQL_prepare(pStmt))
             {
