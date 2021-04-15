@@ -13,18 +13,12 @@
 
 #include <maxscale/ccdefs.hh>
 
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
 #include <string.h>
 #include <fstream>
 #include <iostream>
 #include <string>
 
-#include <maxscale/query_classifier.hh>
-#include <maxscale/buffer.hh>
-#include <maxscale/paths.hh>
-#include <maxscale/utils.h>
+#include <maxsimd/canonical.hh>
 
 using std::cout;
 using std::endl;
@@ -42,50 +36,30 @@ int main(int argc, char** argv)
     mxs_log_init(NULL, NULL, MXS_LOG_TARGET_STDOUT);
     atexit(mxs_log_finish);
 
-    mxs::set_libdir("../../../../../../query_classifier/qc_sqlite/");
-    mxs::set_datadir("/tmp");
-    mxs::set_langdir(".");
-    mxs::set_process_datadir("/tmp");
+    std::ifstream infile(argv[1]);
+    std::ofstream outfile(argv[2]);
 
-    if (qc_init(NULL, QC_SQL_MODE_DEFAULT, "qc_sqlite", NULL))
+    if (infile && outfile)
     {
-        std::ifstream infile(argv[1]);
-        std::ofstream outfile(argv[2]);
-
-        if (infile && outfile)
+        for (std::string line; getline(infile, line);)
         {
-            for (std::string line; getline(infile, line);)
+            while (*line.rbegin() == '\n')
             {
-                while (*line.rbegin() == '\n')
-                {
-                    line.resize(line.size() - 1);
-                }
-
-                if (!line.empty())
-                {
-                    size_t psize = line.size() + 1;
-                    mxs::Buffer buf(psize + 4);
-                    auto it = buf.begin();
-                    *it++ = (uint8_t)psize;
-                    *it++ = (uint8_t)(psize >> 8);
-                    *it++ = (uint8_t)(psize >> 16);
-                    *it++ = 0;
-                    *it++ = 3;
-                    std::copy(line.begin(), line.end(), it);
-                    char* tok = qc_get_canonical(buf.get());
-                    outfile << tok << endl;
-                    free(tok);
-                }
+                line.resize(line.size() - 1);
             }
 
-            rc = EXIT_SUCCESS;
-        }
-        else
-        {
-            cout << "Opening files failed." << endl;
+            if (!line.empty())
+            {
+                maxsimd::get_canonical(&line);
+                outfile << line << endl;
+            }
         }
 
-        qc_end();
+        rc = EXIT_SUCCESS;
+    }
+    else
+    {
+        cout << "Opening files failed." << endl;
     }
 
     return rc;
