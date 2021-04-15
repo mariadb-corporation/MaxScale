@@ -1,5 +1,5 @@
 #include <maxtest/testconnections.hh>
-#include "consumer.hh"
+#include "kafka.hh"
 
 using namespace std::literals::string_literals;
 

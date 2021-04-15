@@ -87,3 +87,46 @@ public:
 private:
     std::unique_ptr<RdKafka::KafkaConsumer> m_consumer;
 };
+
+class Producer
+{
+public:
+
+    Producer(TestConnections& test)
+    {
+        std::string err;
+        std::unique_ptr<RdKafka::Conf> cnf {RdKafka::Conf::create(RdKafka::Conf::CONF_GLOBAL)};
+        cnf->set("bootstrap.servers", test.maxscales->ip4(0) + ":9092"s, err);
+        m_producer.reset(RdKafka::Producer::create(cnf.get(), err));
+    }
+
+    bool produce_message(const std::string& topic, const std::string& key, const std::string& value)
+    {
+        bool ok = true;
+        RdKafka::ErrorCode err;
+
+        do
+        {
+            err = m_producer->produce(
+                topic, RdKafka::Topic::PARTITION_UA, RdKafka::Producer::RK_MSG_COPY,
+                (void*)value.c_str(), value.length(), key.c_str(), key.length(), 0, nullptr);
+
+            if (err == RdKafka::ERR__QUEUE_FULL)
+            {
+                m_producer->poll(1000);
+            }
+            else if (err != RdKafka::ERR_NO_ERROR)
+            {
+                std::cout << "Error: " << RdKafka::err2str(err) << std::endl;
+                ok = false;
+                break;
+            }
+        }
+        while (err == RdKafka::ERR__QUEUE_FULL);
+
+        return ok;
+    }
+
+private:
+    std::unique_ptr<RdKafka::Producer> m_producer;
+};
