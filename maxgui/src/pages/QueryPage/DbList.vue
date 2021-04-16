@@ -113,7 +113,7 @@ $tools-height: 60px;
 .schema-list-tools {
     height: $tools-height;
 }
-::v-deep .schema-list-wrapper {
+.schema-list-wrapper {
     font-size: 12px;
     max-height: calc(100% - #{$tools-height});
     overflow-y: auto;

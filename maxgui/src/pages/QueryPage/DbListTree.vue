@@ -188,4 +188,12 @@ export default {
 }
 </script>
 
-<style lang="scss" scoped></style>
+<style lang="scss" scoped>
+::v-deep .v-treeview-node__toggle {
+    width: 16px;
+    height: 16px;
+}
+::v-deep .v-treeview-node__level {
+    width: 20px;
+}
+</style>
