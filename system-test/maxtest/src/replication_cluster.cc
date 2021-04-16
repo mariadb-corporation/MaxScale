@@ -109,11 +109,10 @@ int ReplicationCluster::start_replication()
 
 bool ReplicationCluster::check_replication()
 {
-    int res = true;
     const bool verbose = this->verbose();
     if (verbose)
     {
-        logger().log_msgf("Checking Master-Slave cluster.");
+        logger().log_msgf("Checking %s", my_name.c_str());
     }
 
     if (!update_status())
@@ -122,6 +121,7 @@ bool ReplicationCluster::check_replication()
         return false;
     }
 
+    bool res = true;
     int master_ind = 0;     // The first server should be master.
     for (int i = 0; i < N && res; i++)
     {
@@ -143,7 +143,15 @@ bool ReplicationCluster::check_replication()
             auto conn_ptr = conn.get();
             if (i == master_ind)
             {
-                if (!check_master_node(conn_ptr))
+                if (check_master_node(conn_ptr))
+                {
+                    // To ensure replication is working, add an event to the master, then check for sync.
+                    if (!conn->try_cmd("flush tables;"))
+                    {
+                        res = false;
+                    }
+                }
+                else
                 {
                     res = false;
                     logger().log_msgf("Master node check failed for node %d.", i);
@@ -165,6 +173,11 @@ bool ReplicationCluster::check_replication()
         {
             res = false;
         }
+    }
+
+    if (res && !sync_slaves(master_ind))
+    {
+        res = false;
     }
 
     if (verbose)
