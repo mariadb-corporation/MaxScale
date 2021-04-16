@@ -104,6 +104,15 @@ Enumeration values:
      (the default) then all documents are inserted using a _single_ INSERT statement,
      that is, either all insertions succeed or none will.
 
+### `cursor_timeout`
+
+   * Type: duration
+   * Mandatory: false
+   * Default: 60s
+
+Specifies how long a cursor can be idle, that is, not accessed, before it is
+automatically closed.
+
 ## Databases and Tables
 
 _Mongodbprotocol_ never creates databases, but they must be created manually.

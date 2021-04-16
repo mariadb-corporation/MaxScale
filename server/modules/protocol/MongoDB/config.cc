@@ -59,8 +59,7 @@ mxs::config::ParamCount GlobalConfig::s_id_length(
     "tables created after the change; existing tables are not altered.",
     GlobalConfig::ID_LENGTH_DEFAULT,
     GlobalConfig::ID_LENGTH_MIN,
-    GlobalConfig::ID_LENGTH_MAX
-    );
+    GlobalConfig::ID_LENGTH_MAX);
 
 mxs::config::ParamEnum<GlobalConfig::InsertBehavior> GlobalConfig::s_insert_behavior(
     &mongodbclient::specification,
@@ -73,6 +72,13 @@ mxs::config::ParamEnum<GlobalConfig::InsertBehavior> GlobalConfig::s_insert_beha
     },
     GlobalConfig::AS_MONGODB);
 
+mxs::config::ParamSeconds GlobalConfig::s_cursor_timeout(
+    &mongodbclient::specification,
+    "cursor_timeout",
+    "How long can a cursor be idle, that is, not accessed, before it is automatically closed.",
+    mxs::config::NO_INTERPRETATION,
+    std::chrono::seconds(GlobalConfig::CURSOR_TIMEOUT_DEFAULT));
+
 
 GlobalConfig::GlobalConfig()
     : mxs::config::Configuration(MXS_MODULE_NAME, &mongodbclient::specification)
@@ -83,6 +89,7 @@ GlobalConfig::GlobalConfig()
     add_native(&GlobalConfig::auto_create_tables, &s_auto_create_tables);
     add_native(&GlobalConfig::id_length, &s_id_length);
     add_native(&GlobalConfig::insert_behavior, &s_insert_behavior);
+    add_native(&GlobalConfig::cursor_timeout, &s_cursor_timeout);
 }
 
 //static

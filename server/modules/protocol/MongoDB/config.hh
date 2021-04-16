@@ -40,12 +40,18 @@ public:
         ID_LENGTH_MAX     = 2048,
     };
 
-    std::string      user;
-    std::string      password;
-    OnUnknownCommand on_unknown_command { RETURN_ERROR };
-    bool             auto_create_tables { true };
-    int64_t          id_length          { ID_LENGTH_DEFAULT };
-    InsertBehavior   insert_behavior   { AS_MONGODB };
+    enum
+    {
+        CURSOR_TIMEOUT_DEFAULT = 60 // seconds
+    };
+
+    std::string          user;
+    std::string          password;
+    OnUnknownCommand     on_unknown_command { RETURN_ERROR };
+    bool                 auto_create_tables { true };
+    int64_t              id_length          { ID_LENGTH_DEFAULT };
+    InsertBehavior       insert_behavior    { AS_MONGODB };
+    std::chrono::seconds cursor_timeout     { std::chrono::seconds(CURSOR_TIMEOUT_DEFAULT) };
 
     static mxs::config::Specification& specification();
 
@@ -54,7 +60,8 @@ public:
     static mxs::config::ParamEnum<OnUnknownCommand> s_on_unknown_command;
     static mxs::config::ParamBool                   s_auto_create_tables;
     static mxs::config::ParamCount                  s_id_length;
-    static mxs::config::ParamEnum<InsertBehavior>  s_insert_behavior;
+    static mxs::config::ParamEnum<InsertBehavior>   s_insert_behavior;
+    static mxs::config::ParamSeconds                s_cursor_timeout;
 };
 
 class Config final
@@ -67,6 +74,7 @@ public:
         , auto_create_tables(config.auto_create_tables)
         , id_length(config.id_length)
         , insert_behavior(config.insert_behavior)
+        , cursor_timeout(config.cursor_timeout)
     {
     }
 
@@ -76,4 +84,5 @@ public:
     bool                           auto_create_tables;
     int64_t                        id_length;
     GlobalConfig::InsertBehavior   insert_behavior;
+    std::chrono::seconds           cursor_timeout;
 };
