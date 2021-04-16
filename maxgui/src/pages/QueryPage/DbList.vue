@@ -1,5 +1,6 @@
 <template>
     <div :class="[isLeftPaneCollapsed ? 'pa-1' : 'pa-3']">
+        <!-- TODO: Option  to maximize/minimize query page-->
         <portal to="toggle-pane">
             <v-btn icon small @click="toggleExpand">
                 <v-icon

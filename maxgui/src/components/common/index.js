@@ -26,6 +26,7 @@ import CreateResource from './CreateResource'
 import DetailsPage from './DetailsPage'
 import Parameters from './Parameters'
 import SplitPane from './SplitPane'
+import MTreeVIew from './MTreeView'
 
 export default {
     'page-wrapper': PageWrapper,
@@ -41,4 +42,5 @@ export default {
     'line-chart': LineChart,
     ...DetailsPage,
     'split-pane': SplitPane,
+    'm-treeview': MTreeVIew,
 }

@@ -1,5 +1,5 @@
 <template>
-    <v-treeview
+    <m-treeview
         :items="schemaList"
         :search="$parent.searchSchema"
         :filter="filter"
@@ -17,13 +17,11 @@
                 content-class="shadow-drop"
             >
                 <template v-slot:activator="{ on }">
-                    <div v-on="on">
-                        <span class="inline-block text-truncate">
-                            <v-icon class="mr-1" size="12" color="deep-ocean">
-                                {{ iconSheet(item) }}
-                            </v-icon>
-                            {{ item.name }}
-                        </span>
+                    <div class="text-truncate" v-on="on">
+                        <v-icon class="mr-1" size="12" color="deep-ocean">
+                            {{ iconSheet(item) }}
+                        </v-icon>
+                        {{ item.name }}
                     </div>
                 </template>
                 <v-list class="mariadb-v-list" dense>
@@ -45,27 +43,40 @@
                 </v-list>
             </v-tooltip>
         </template>
-        <template v-slot:append="{ item }">
-            <v-menu transition="slide-y-transition" offset-y content-class="setting-menu">
-                <template v-slot:activator="{ on, attrs }">
-                    <!-- TODO: Only show option icon when hover on node -->
-                    <v-btn icon x-small v-bind="attrs" v-on="on" @click="openNodeMenu">
-                        <v-icon size="12" color="deep-ocean">
-                            more_horiz
-                        </v-icon>
-                    </v-btn>
-                </template>
-                <v-list>
-                    <v-list-item v-for="option in getOptions(item.type)" :key="option" dense link>
-                        <v-list-item-title
-                            @click="() => optionHandler({ item, option })"
-                            v-text="option"
-                        />
-                    </v-list-item>
-                </v-list>
-            </v-menu>
+        <template v-slot:append="{ hover, item }">
+            <div v-show="hover || shouldShowOptionMenu(item)">
+                <v-btn icon x-small @click="e => openNodeMenu({ e, item })">
+                    <v-icon size="12" color="deep-ocean">more_horiz</v-icon>
+                </v-btn>
+                <v-menu
+                    v-if="shouldShowOptionMenu(item)"
+                    v-model="showOptions"
+                    transition="slide-y-transition"
+                    left
+                    nudge-right="12"
+                    nudge-bottom="8"
+                    content-class="setting-menu"
+                    :position-x="menuCoord.x"
+                    :position-y="menuCoord.y"
+                >
+                    <v-list>
+                        <v-list-item
+                            v-for="option in getOptions(activeItem.type)"
+                            :key="option"
+                            dense
+                            link
+                        >
+                            <v-list-item-title
+                                class="color text-text"
+                                @click="() => optionHandler({ item: activeItem, option })"
+                                v-text="option"
+                            />
+                        </v-list-item>
+                    </v-list>
+                </v-menu>
+            </div>
         </template>
-    </v-treeview>
+    </m-treeview>
 </template>
 
 <script>
@@ -86,8 +97,14 @@ export default {
     data() {
         return {
             activeNodes: [],
-            tableOptions: ['Preview Data', 'View Details', 'Place Name in editor'],
-            otherTypeOptions: ['Place Name in editor'],
+            tableOptions: ['Preview Data', 'View Details', 'Place Schema in Editor'],
+            otherTypeOptions: ['Place Schema in Editor'],
+            menuCoord: {
+                x: 0,
+                y: 0,
+            },
+            showOptions: false,
+            activeItem: null,
         }
     },
     computed: {
@@ -124,6 +141,9 @@ export default {
         filter() {
             return (item, search, textKey) => item[textKey].indexOf(search) > -1
         },
+        shouldShowOptionMenu() {
+            return item => this.activeItem && item.id === this.activeItem.id
+        },
     },
     watch: {
         schemaList: {
@@ -132,15 +152,24 @@ export default {
                 if (v.length) this.activeNodes.push(v[0].id)
             },
         },
+        showOptions(v) {
+            if (!v) this.activeItem = null
+        },
     },
     methods: {
-        openNodeMenu(e) {
+        openNodeMenu({ e, item }) {
             e.stopPropagation()
+            this.showOptions = !this.showOptions
+            this.activeItem = item
+            this.menuCoord = {
+                x: e.clientX,
+                y: e.clientY,
+            }
         },
         optionHandler({ item, option }) {
             /* eslint-disable no-console */
-            console.log(item)
-            console.log(option)
+            console.log('item', item)
+            console.log('option', option)
             //TODO: emits event to parent
         },
         iconSheet(item) {
