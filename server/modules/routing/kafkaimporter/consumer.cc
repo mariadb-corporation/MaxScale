@@ -17,6 +17,8 @@ std::unique_ptr<RdKafka::Conf> create_config(const Config& config)
     values["enable.auto.commit"] = "false";
     values["enable.auto.offset.store"] = "true";
     values["auto.offset.reset"] = "smallest";
+    values["allow.auto.create.topics"] = "true";
+    values["topic.metadata.refresh.interval.ms"] = "10000";
 
     if (config.ssl.get())
     {
@@ -65,11 +67,7 @@ void Consumer::run()
     {
         if (!consume())
         {
-            // Something went wrong, sleep for a while before trying again.
-            for (int i = 0; i < 10 && running(); i++)
-            {
-                std::this_thread::sleep_for(std::chrono::seconds(1));
-            }
+            std::this_thread::sleep_for(m_config.timeout.get());
         }
     }
 }
@@ -206,8 +204,15 @@ bool Consumer::consume()
                         break;
                     }
                 }
+                else if (msg->err() == RdKafka::ERR_UNKNOWN_TOPIC_OR_PART)
+                {
+                    ok = false;
+                    MXS_WARNING("%s", msg->errstr().c_str());
+                    break;
+                }
                 else
                 {
+                    ok = false;
                     MXS_ERROR("%s", msg->errstr().c_str());
                     break;
                 }
