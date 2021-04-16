@@ -45,6 +45,15 @@ public:
 
     /**
      * Try to open a connection to the server. Failure is not a test error.
+     * Uses the "skysql"-user similar to many tests.
+     *
+     * @return The connection. Success can be checked by 'is_open'.
+     */
+    std::unique_ptr<mxt::MariaDB> try_open_connection();
+
+    /**
+     * Try to open a connection to the server. Failure is not a test error.
+     * Uses the "test-admin"-user.
      *
      * @return The connection. Success can be checked by 'is_open'.
      */

@@ -33,6 +33,10 @@ using std::move;
 
 namespace
 {
+// These need to match the values in create_user.sh.
+const string admin_user = "test-admin";
+const string admin_pw = "test-admin-pw";
+
 /**
  * Tries to find MariaDB server version number in the output of 'mysqld --version'
  *
@@ -519,6 +523,13 @@ bool MariaDBCluster::prepare_for_test(int i)
 {
     bool rval = false;
     auto& srv = m_backends[i];
+    // This is required until the system test code can modify users on its own.
+    auto standard_user_conn = srv->try_open_connection();
+    if (!standard_user_conn->is_open())
+    {
+        return false;
+    }
+
     auto conn = srv->try_open_admin_connection();
     if (conn->is_open())
     {
@@ -959,17 +970,11 @@ MariaDBCluster::ConnArray MariaDBCluster::admin_connect_to_all()
     ConnArray rval;
     rval.resize(N);
 
-    mxt::BoolFuncArray funcs;
-    funcs.reserve(rval.size());
-    for (size_t i = 0; i < rval.size(); i++)
-    {
-        auto add_connection = [this, &rval, i]() {
-                rval[i] = m_backends[i]->try_open_admin_connection();
-                return true;
-            };
-        funcs.push_back(std::move(add_connection));
-    }
-    m_shared.concurrent_run(funcs);
+    auto add_connection = [this, &rval](int i) {
+            rval[i] = m_backends[i]->try_open_admin_connection();
+            return true;
+        };
+    run_on_every_backend(add_connection);
     return rval;
 }
 
@@ -1040,7 +1045,7 @@ bool MariaDBServer::update_status()
     return rval;
 }
 
-std::unique_ptr<mxt::MariaDB> MariaDBServer::try_open_admin_connection()
+std::unique_ptr<mxt::MariaDB> MariaDBServer::try_open_connection()
 {
     auto conn = std::make_unique<mxt::MariaDB>(m_vm.shared().log);
     auto& sett = conn->connection_settings();
@@ -1052,6 +1057,20 @@ std::unique_ptr<mxt::MariaDB> MariaDBServer::try_open_admin_connection()
         sett.ssl.cert = mxb::string_printf("%s/ssl-cert/client-cert.pem", test_dir);
         sett.ssl.ca = mxb::string_printf("%s/ssl-cert/ca.pem", test_dir);
     }
+    sett.timeout = 10;
+    auto& ip = m_cluster.using_ipv6() ? m_vm.ip6s() : m_vm.ip4s();
+    conn->try_open(ip, m_cluster.port[m_ind]);
+    return conn;
+}
+
+std::unique_ptr<mxt::MariaDB> MariaDBServer::try_open_admin_connection()
+{
+    auto conn = std::make_unique<mxt::MariaDB>(m_vm.shared().log);
+    auto& sett = conn->connection_settings();
+    sett.user = admin_user;
+    sett.password = admin_pw;
+    sett.clear_sql_mode = true;
+    sett.timeout = 10;
     conn->try_open(m_vm.ip4s(), m_cluster.port[m_ind]);
     return conn;
 }

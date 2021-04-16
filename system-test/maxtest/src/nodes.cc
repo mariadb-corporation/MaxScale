@@ -58,20 +58,6 @@ bool Nodes::check_node_ssh(int node)
     return res;
 }
 
-bool Nodes::check_nodes_ssh()
-{
-    mxt::BoolFuncArray f;
-    f.reserve(m_vms.size());
-    for (size_t i = 0; i < m_vms.size(); i++)
-    {
-        auto func = [this, i]() {
-                return check_node_ssh(i);
-            };
-        f.push_back(move(func));
-    }
-    return m_shared.concurrent_run(f);
-}
-
 namespace maxtest
 {
 bool VMNode::init_ssh_master()
@@ -470,9 +456,9 @@ const string& VMNode::ip4s() const
     return m_ip4;
 }
 
-const char* VMNode::ip6() const
+const string& VMNode::ip6s() const
 {
-    return m_ip6.c_str();
+    return m_ip6;
 }
 
 const char* VMNode::priv_ip() const
@@ -541,7 +527,7 @@ const char* Nodes::ip_private(int i) const
 
 const char* Nodes::ip6(int i) const
 {
-    return m_vms[i]->ip6();
+    return m_vms[i]->ip6s().c_str();
 }
 
 const char* Nodes::hostname(int i) const
