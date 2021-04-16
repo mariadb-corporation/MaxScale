@@ -100,7 +100,7 @@ int Maxscales::connect_rwsplit(int m, const std::string& db)
 {
     mysql_close(conn_rwsplit[m]);
 
-    conn_rwsplit[m] = open_conn_db(rwsplit_port[m], ip(m), db, user_name, password, ssl);
+    conn_rwsplit[m] = open_conn_db(rwsplit_port[m], ip(m), db, user_name, password, m_ssl);
     routers[m][0] = conn_rwsplit[m];
 
     int rc = 0;
@@ -122,7 +122,7 @@ int Maxscales::connect_readconn_master(int m, const std::string& db)
 {
     mysql_close(conn_master[m]);
 
-    conn_master[m] = open_conn_db(readconn_master_port[m], ip(m), db, user_name, password, ssl);
+    conn_master[m] = open_conn_db(readconn_master_port[m], ip(m), db, user_name, password, m_ssl);
     routers[m][1] = conn_master[m];
 
     int rc = 0;
@@ -144,7 +144,7 @@ int Maxscales::connect_readconn_slave(int m, const std::string& db)
 {
     mysql_close(conn_slave[m]);
 
-    conn_slave[m] = open_conn_db(readconn_slave_port[m], ip(m), db, user_name, password, ssl);
+    conn_slave[m] = open_conn_db(readconn_slave_port[m], ip(m), db, user_name, password, m_ssl);
     routers[m][2] = conn_slave[m];
 
     int rc = 0;
@@ -313,6 +313,11 @@ void Maxscales::set_use_ipv6(bool use_ipv6)
     m_use_ipv6 = use_ipv6;
 }
 
+void Maxscales::set_ssl(bool ssl)
+{
+    m_ssl = ssl;
+}
+
 const char* Maxscales::hostname(int i) const
 {
     return Nodes::hostname(i);
@@ -412,6 +417,11 @@ bool Maxscales::prepare_for_test()
         rval = true;
     }
     return rval;
+}
+
+bool Maxscales::ssl() const
+{
+    return m_ssl;
 }
 
 namespace maxtest
@@ -722,7 +732,7 @@ std::unique_ptr<mxt::MariaDB> MaxScale::open_rwsplit_connection(const std::strin
     auto& sett = conn->connection_settings();
     sett.user = m_maxscales->user_name;
     sett.password = m_maxscales->password;
-    if (m_maxscales->ssl)
+    if (m_maxscales->ssl())
     {
         sett.ssl.key = mxb::string_printf("%s/ssl-cert/client-key.pem", test_dir);
         sett.ssl.cert = mxb::string_printf("%s/ssl-cert/client-cert.pem", test_dir);

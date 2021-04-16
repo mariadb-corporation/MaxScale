@@ -72,7 +72,7 @@ int main(int argc, char* argv[])
                                          test.maxscales->user_name,
                                          test.maxscales->password,
                                          CLIENT_FOUND_ROWS,
-                                         test.ssl);
+                                         test.maxscale_ssl);
 
     test.set_timeout(30);
     execute_query(test.maxscales->conn_rwsplit[0], "DROP TABLE IF EXISTS t1");

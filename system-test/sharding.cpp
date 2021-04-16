@@ -116,7 +116,7 @@ int main(int argc, char* argv[])
 
         test.tprintf(opening_fmt, user, pass, common_db);
         auto conn = open_conn_db(test.maxscales->rwsplit_port[0], mxs_ip,
-                                   common_db, user, pass, test.ssl);
+                                   common_db, user, pass, test.maxscale_ssl);
         if (test.try_query(conn, "CREATE TABLE %s (x1 int, fl int);", table) == 0)
         {
             test.tprintf("Table '%s.%s' for user '%s' created.", common_db, table, user);
@@ -133,7 +133,7 @@ int main(int argc, char* argv[])
         auto table = shard_tables[i];
         test.tprintf(opening_fmt, user, pass, common_db);
         auto conn = open_conn_db(test.maxscales->rwsplit_port[0], mxs_ip,
-                                 common_db, user, pass, test.ssl);
+                                 common_db, user, pass, test.maxscale_ssl);
 
         const char* query = "SHOW TABLES;";
         test.tprintf("Table should be %s\n", table);
@@ -161,7 +161,7 @@ int main(int argc, char* argv[])
         auto user = user_names[i];
         auto pass = user_pws[i];
         conn = open_conn_db(test.maxscales->rwsplit_port[0], mxs_ip,
-                            "", user, pass, test.ssl);
+                            "", user, pass, test.maxscale_ssl);
         test.expect(conn, "Connection failed for user '%s'.", user);
         mysql_close(conn);
     }

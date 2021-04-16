@@ -32,7 +32,6 @@ void replicate_from(TestConnections& test, int server_ind, int target_ind)
 int main(int argc, char* argv[])
 {
     TestConnections test(argc, argv);
-    test.maxscales->ssl = false;
 
     auto& mxs = test.maxscale();
     mxs.wait_monitor_ticks();

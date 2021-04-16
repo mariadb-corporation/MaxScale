@@ -53,7 +53,7 @@ int main(int argc, char* argv[])
         data_master[i].port = test.maxscales->rwsplit_port[0];
         data_master[i].user = test.maxscales->user_name;
         data_master[i].password = test.maxscales->password;
-        data_master[i].ssl = test.ssl;
+        data_master[i].ssl = test.maxscale_ssl;
         pthread_create(&thread_master[i], NULL, disconnect_thread, &data_master[i]);
     }
 

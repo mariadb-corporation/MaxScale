@@ -93,7 +93,7 @@ public:
     int& global_result;     /**< Result of test, 0 if PASSED */
     bool smoke {true};      /**< Run tests in quick mode. Only affects some long tests. */
 
-    int  ssl {false};           /**< Use SSL */
+    int  maxscale_ssl {false};  /**< Use SSL when connecting to MaxScale */
     bool backend_ssl {false};   /**< Add SSL-settings to backend server configurations */
 
     long int m_timeout {999999999};             /**< Seconds until test termination, default never */

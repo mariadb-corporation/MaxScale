@@ -32,7 +32,7 @@ int main(int argc, char* argv[])
 
     Test->tprintf("Trying first hostname, expecting failure");
     Test->set_timeout(15);
-    MYSQL* conn = open_conn(Test->maxscales->rwsplit_port[0], mxs_ip, "user", "pass1", Test->ssl);
+    MYSQL* conn = open_conn(Test->maxscales->rwsplit_port[0], mxs_ip, "user", "pass1", Test->maxscale_ssl);
     if (mysql_errno(conn) == 0)
     {
         Test->add_result(1, "MaxScale ignores host in authentication\n");
@@ -44,7 +44,7 @@ int main(int argc, char* argv[])
 
     Test->tprintf("Trying second hostname, expecting success");
     Test->set_timeout(15);
-    conn = open_conn(Test->maxscales->rwsplit_port[0], mxs_ip, "user", "pass2", Test->ssl);
+    conn = open_conn(Test->maxscales->rwsplit_port[0], mxs_ip, "user", "pass2", Test->maxscale_ssl);
     Test->add_result(mysql_errno(conn), "MaxScale can't connect: %s\n", mysql_error(conn));
     if (conn != NULL)
     {
@@ -53,7 +53,7 @@ int main(int argc, char* argv[])
 
     Test->tprintf("Trying third hostname, expecting failure");
     Test->set_timeout(15);
-    conn = open_conn(Test->maxscales->rwsplit_port[0], mxs_ip, "user", "pass3", Test->ssl);
+    conn = open_conn(Test->maxscales->rwsplit_port[0], mxs_ip, "user", "pass3", Test->maxscale_ssl);
     if (mysql_errno(conn) == 0)
     {
         Test->add_result(1, "MaxScale ignores host in authentication\n");

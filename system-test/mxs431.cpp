@@ -37,7 +37,7 @@ int main(int argc, char* argv[])
                                        str,
                                        test.maxscales->user_name,
                                        test.maxscales->password,
-                                       test.ssl);
+                                       test.maxscale_ssl);
             test.set_timeout(60);
             test.add_result(execute_query(conn, "SELECT 1"), "Trying DB %d failed at %d", i, j);
             mysql_close(conn);

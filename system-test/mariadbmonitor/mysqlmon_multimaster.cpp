@@ -49,7 +49,6 @@ int main(int argc, char* argv[])
 
     TestConnections::require_repl_version("10.2.3");    // Delayed replication needs this.
     TestConnections test(argc, argv);
-    test.maxscales->ssl = false;
 
     auto& mxs = test.maxscale();
 

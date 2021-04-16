@@ -57,7 +57,7 @@ int main(int argc, char* argv[])
                                    Test->maxscales->ip4(0),
                                    Test->maxscales->user_name,
                                    Test->maxscales->password,
-                                   Test->ssl);
+                                   Test->maxscale_ssl);
     mysql_close(conn_galera);
 
     int rval = Test->global_result;

@@ -23,7 +23,7 @@ int main(int argc, char* argv[])
                             "shard_db",
                             test.repl->user_name,
                             test.repl->password,
-                            test.ssl);
+                            test.maxscale_ssl);
         execute_query(conn, "CREATE TABLE table%d (x1 int, fl int)", i);
         mysql_close(conn);
     }

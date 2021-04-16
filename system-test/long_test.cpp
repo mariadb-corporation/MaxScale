@@ -183,7 +183,7 @@ void try_and_reconnect(MYSQL * conn, char * db, char * sql)
                                     Test->repl->user_name,
                                     Test->repl->password,
                                     20,
-                                    Test->ssl);
+                                    Test->maxscale_ssl);
     }
 }
 
@@ -199,7 +199,7 @@ void *query_thread(void *ptr )
                                 Test->repl->user_name,
                                 Test->repl->password,
                                 20,
-                                Test->ssl);
+                                Test->maxscale_ssl);
     while (!data->exit_flag)
     {
 
@@ -232,7 +232,7 @@ void *read_thread(void *ptr )
                                 Test->repl->user_name,
                                 Test->repl->password,
                                 20,
-                                Test->ssl);
+                                Test->maxscale_ssl);
     while (!data->exit_flag)
     {
         sprintf(sql, "SELECT * FROM t1 WHERE fl=%d", data->id);
@@ -255,7 +255,7 @@ void *transaction_thread(void *ptr )
                                 Test->repl->user_name,
                                 Test->repl->password,
                                 20,
-                                Test->ssl);
+                                Test->maxscale_ssl);
     while (!data->exit_flag)
     {
 
@@ -286,7 +286,7 @@ void *transaction_thread(void *ptr )
                                 Test->maxscales->user_name,
                                 Test->maxscales->password,
                                 20,
-                                Test->ssl);
+                                Test->maxscale_ssl);
     Test->try_query(conn, "DROP DATABASE test1");
     mysql_close(conn);
     return NULL;
@@ -304,7 +304,7 @@ void *short_session_thread(void *ptr )
                                     Test->repl->user_name,
                                     Test->repl->password,
                                     20,
-                                    Test->ssl);
+                                    Test->maxscale_ssl);
         mysql_close(conn);
     }
     return NULL;
@@ -322,7 +322,7 @@ void *prepared_stmt_thread(void *ptr )
                                 Test->repl->user_name,
                                 Test->repl->password,
                                 20,
-                                Test->ssl);
+                                Test->maxscale_ssl);
     while (!data->exit_flag)
     {
         sprintf(sql, "PREPARE stmt%d FROM 'SELECT * FROM t1 WHERE fl=@x;';", data->id);
@@ -345,7 +345,7 @@ void *prepared_stmt_thread(void *ptr )
                                 Test->maxscales->user_name,
                                 Test->maxscales->password,
                                 20,
-                                Test->ssl);
+                                Test->maxscale_ssl);
     Test->try_query(conn, "DROP DATABASE test2");
     mysql_close(conn);
     return NULL;

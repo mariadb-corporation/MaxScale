@@ -558,7 +558,7 @@ bool TestConnections::read_network_config()
 void TestConnections::read_basic_settings()
 {
     // The following settings can be overridden by cmdline settings, but not by mdbci.
-    ssl = readenv_bool("ssl", true);
+    maxscale_ssl = readenv_bool("ssl", false);
     m_use_ipv6 = readenv_bool("use_ipv6", false);
     backend_ssl = readenv_bool("backend_ssl", false);
     smoke = readenv_bool("smoke", true);
@@ -1309,7 +1309,7 @@ int TestConnections::create_connections(int m,
             }
 
             galera_conn[i] =
-                open_conn(4016, maxscales->ip4(m), maxscales->user_name, maxscales->password, ssl);
+                open_conn(4016, maxscales->ip4(m), maxscales->user_name, maxscales->password, maxscale_ssl);
             if (mysql_errno(galera_conn[i]) != 0)
             {
                 local_result++;
@@ -2086,7 +2086,7 @@ bool TestConnections::initialize_nodes()
     if (maxscales->setup(m_network_config, n_mxs_expected))
     {
         maxscales->set_use_ipv6(m_use_ipv6);
-        maxscales->ssl = ssl;
+        maxscales->set_ssl(maxscale_ssl);
 
         m_maxscale = std::make_unique<mxt::MaxScale>(maxscales, m_shared, 0);
         if (n_mxs_expected > 1)
