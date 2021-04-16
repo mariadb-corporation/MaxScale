@@ -10,7 +10,12 @@
         transition
     >
         <template v-slot:label="{ item }">
-            <v-tooltip right transition="slide-x-transition" content-class="shadow-drop">
+            <v-tooltip
+                right
+                :nudge-right="40"
+                transition="slide-x-transition"
+                content-class="shadow-drop"
+            >
                 <template v-slot:activator="{ on }">
                     <div v-on="on">
                         <span class="inline-block text-truncate">
@@ -51,7 +56,7 @@
                     </v-btn>
                 </template>
                 <v-list>
-                    <v-list-item v-for="option in tableOptions" :key="option" dense link>
+                    <v-list-item v-for="option in getOptions(item.type)" :key="option" dense link>
                         <v-list-item-title
                             @click="() => optionHandler({ item, option })"
                             v-text="option"
@@ -81,7 +86,8 @@ export default {
     data() {
         return {
             activeNodes: [],
-            tableOptions: ['Preview Data', 'View Details', 'Place Name in SQL'],
+            tableOptions: ['Preview Data', 'View Details', 'Place Name in editor'],
+            otherTypeOptions: ['Place Name in editor'],
         }
     },
     computed: {
@@ -144,6 +150,10 @@ export default {
                 case 'table':
                     return '$vuetify.icons.table'
             }
+        },
+        getOptions(type) {
+            if (type === 'table') return this.tableOptions
+            else return this.otherTypeOptions
         },
     },
 }
