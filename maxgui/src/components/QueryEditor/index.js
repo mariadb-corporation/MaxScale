@@ -31,6 +31,11 @@ export default {
             language: 'mariadb',
         }
     },
+    watch: {
+        value(v) {
+            if (this.editor && v !== this.getEditorValue()) this.setEditorValue(v)
+        },
+    },
     computed: {
         completionListLabels() {
             return this.completionList.map(item => item.label)
@@ -171,6 +176,9 @@ export default {
         },
         getEditorValue() {
             return this.editor.getValue()
+        },
+        setEditorValue(value) {
+            if (this.editor) return this.editor.setValue(value)
         },
     },
 

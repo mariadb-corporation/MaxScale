@@ -15,6 +15,9 @@
                         class="db-tb-list"
                         @is-collapsed="handleDbListCollapse"
                         @reload-schema="loadSchema"
+                        @preview-data="previewData"
+                        @view-details="viewDetails"
+                        @place-to-editor="placeToEditor"
                     />
                 </template>
                 <template slot="pane-right">
@@ -66,9 +69,7 @@ export default {
     data() {
         return {
             dist: {}, // contains database name, table name and its columns
-            //TODO: Remove this sample sql
-            // eslint-disable-next-line vue/max-len
-            value: `CREATE TABLE dbo.EmployeePhoto (\n   EmployeeId INT NOT NULL PRIMARY KEY,\n   Photo VARBINARY(MAX) FILESTREAM NULL,\n   MyRowGuidColumn UNIQUEIDENTIFIER NOT NULL ROWGUIDCOL UNIQUE DEFAULT NEWID()\n);\nGO\n/*\n text_of_comment\n /* nested comment */\n* / -- line comment\nEND PRINT 'Too much for the market to bear';\nMERGE INTO Sales.SalesReason AS [ Target ] USING (\n   VALUES\n      ('Recommendation', 'Other'),\n      ('Review', 'Marketing'),\n      ('Internet', 'Promotion')\n) AS [ Source ] ([ NewName ], NewReasonType) ON [ Target ].[ Name ] = [ Source ].[ NewName ]\nWHEN MATCHED THEN\nUPDATE\nSET\n   ReasonType = [ Source ].NewReasonType\n   WHEN NOT MATCHED BY TARGET THEN\nINSERT\n   ([ Name ], ReasonType)\nVALUES\n   ([ NewName ], NewReasonType) OUTPUT $ action INTO @SummaryOfChanges;\nSELECT\n   ProductID,\n   OrderQty,\n   SUM(LineTotal) AS Total\nFROM\n   Sales.SalesOrderDetail\nWHERE\n   UnitPrice < $ 5.00\nGROUP BY\n   ProductID,\n   OrderQty\nORDER BY\n   ProductID,\n   OrderQty OPTION (HASH GROUP, FAST 10);`,
+            value: '',
             dbPaneMinPercent: 20,
             dfDbPanePercent: 20,
         }
@@ -97,6 +98,23 @@ export default {
         handleDbListCollapse(v) {
             if (v) this.dfDbPanePercent = 3
             else this.dfDbPanePercent = 20
+        },
+
+        placeToEditor(schemaId) {
+            this.value = `${this.value} ${schemaId}`
+        },
+        // For table type only
+        previewData(schemaId) {
+            const query = `SELECT * FROM ${schemaId};`
+            //TODO: dispatch action to send query
+            /* eslint-disable no-console */
+            console.log('query', query)
+        },
+        viewDetails(schemaId) {
+            const query = `DESCRIBE ${schemaId};`
+            //TODO: dispatch action to send query
+            /* eslint-disable no-console */
+            console.log('query', query)
         },
     },
 }

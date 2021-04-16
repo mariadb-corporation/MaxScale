@@ -97,8 +97,13 @@ export default {
     data() {
         return {
             activeNodes: [],
-            tableOptions: ['Preview Data', 'View Details', 'Place Schema in Editor'],
-            otherTypeOptions: ['Place Schema in Editor'],
+            tableOptions: [
+                this.$t('previewData'),
+                this.$t('viewDetails'),
+                this.$t('placeSchemaInEditor'),
+            ],
+            schemaOptions: [this.$t('placeSchemaInEditor')],
+            columnOptions: [this.$t('placeColumnNameInEditor')],
             menuCoord: {
                 x: 0,
                 y: 0,
@@ -167,10 +172,21 @@ export default {
             }
         },
         optionHandler({ item, option }) {
-            /* eslint-disable no-console */
-            console.log('item', item)
-            console.log('option', option)
-            //TODO: emits event to parent
+            const schema = item.id
+            switch (option) {
+                case this.$t('previewData'):
+                    this.$emit('preview-data', schema)
+                    break
+                case this.$t('viewDetails'):
+                    this.$emit('view-details', schema)
+                    break
+                case this.$t('placeSchemaInEditor'):
+                    this.$emit('place-to-editor', schema)
+                    break
+                case this.$t('placeColumnNameInEditor'):
+                    this.$emit('place-to-editor', item.name)
+                    break
+            }
         },
         iconSheet(item) {
             switch (item.type) {
@@ -181,8 +197,7 @@ export default {
             }
         },
         getOptions(type) {
-            if (type === 'table') return this.tableOptions
-            else return this.otherTypeOptions
+            return this[`${type}Options`]
         },
     },
 }

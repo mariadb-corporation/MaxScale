@@ -98,6 +98,11 @@
     "protocol": "protocol | protocols",
     "module": "module | modules",
     "forceClosing": "Force closing",
+    "run": "Run",
+    "previewData": "Preview Data",
+    "viewDetails": "View Details",
+    "placeSchemaInEditor": "Place Schema in Editor",
+    "placeColumnNameInEditor": "Place Column Name in Editor",
     "errors": {
         "requiredInput": "{inputName} is required",
         "duplicatedValue": "{inputValue} already exists",

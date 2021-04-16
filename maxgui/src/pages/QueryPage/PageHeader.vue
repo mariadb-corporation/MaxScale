@@ -24,7 +24,7 @@
                 color="accent-dark"
                 @click.native="onCreate"
             >
-                Run
+                {{ $t('run') }}
             </v-btn>
         </portal>
     </div>

@@ -42,7 +42,11 @@
                     placeholder="Filter schema objects"
                 />
             </div>
-            <db-list-tree v-if="!isLeftPaneCollapsed" class="schema-list-wrapper" />
+            <db-list-tree
+                v-if="!isLeftPaneCollapsed"
+                class="schema-list-wrapper"
+                v-on="$listeners"
+            />
         </div>
     </div>
 </template>
