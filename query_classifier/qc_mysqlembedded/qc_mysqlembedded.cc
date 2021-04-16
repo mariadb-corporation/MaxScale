@@ -3819,7 +3819,6 @@ MXS_MODULE* MXS_CREATE_MODULE()
         qc_mysql_get_created_table_name,
         qc_mysql_is_drop_table_query,
         qc_mysql_get_table_names,
-        NULL,
         qc_mysql_query_has_clause,
         qc_mysql_get_database_names,
         qc_mysql_get_prepare_name,
