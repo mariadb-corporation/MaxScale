@@ -18,6 +18,7 @@
 #include <bsoncxx/builder/basic/array.hpp>
 #include <bsoncxx/builder/basic/document.hpp>
 #include <mysql.h>
+#include <maxbase/stopwatch.hh>
 #include <maxscale/buffer.hh>
 
 namespace mxsmongo
@@ -50,8 +51,15 @@ public:
     void create_first_batch(bsoncxx::builder::basic::document& doc, int32_t nBatch);
     void create_next_batch(bsoncxx::builder::basic::document& doc, int32_t nBatch);
 
+    const mxb::TimePoint& last_use() const
+    {
+        return m_used;
+    }
+
 private:
     void initialize();
+
+    void touch();
 
     enum class Result
     {
@@ -70,6 +78,7 @@ private:
     uint8_t*                      m_pBuffer { nullptr };
     std::vector<std::string>      m_names;
     std::vector<enum_field_types> m_types;
+    mxb::TimePoint                m_used;
 };
 
 }

@@ -1535,6 +1535,33 @@ set<int64_t> mxsmongo::Mongo::Context::kill_cursors(const std::string& collectio
     return removed;
 }
 
+void mxsmongo::Mongo::Context::kill_idle_cursors(const mxb::TimePoint& now,
+                                                 const std::chrono::seconds& timeout)
+{
+    for (auto& kv : m_collection_cursors)
+    {
+        CursorsById& cursors = kv.second;
+
+        auto it = cursors.begin();
+
+        while (it != cursors.end())
+        {
+            const MongoCursor& cursor = it->second;
+
+            auto idle = now - cursor.last_use();
+
+            if (idle > timeout)
+            {
+                it = cursors.erase(it);
+            }
+            else
+            {
+                ++it;
+            }
+        }
+    }
+}
+
 mxsmongo::Mongo::Mongo(mxs::ClientConnection* pClient_connection,
                        mxs::Component* pDownstream,
                        Config* pConfig)

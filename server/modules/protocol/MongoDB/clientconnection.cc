@@ -297,3 +297,10 @@ int32_t ClientConnection::clientReply(GWBUF* pBuffer, mxs::ReplyRoute& down, con
 
     return rv;
 }
+
+void ClientConnection::tick(std::chrono::seconds idle)
+{
+    m_mongo.context().kill_idle_cursors(m_session.worker()->epoll_tick_now(), m_config.cursor_timeout);
+
+    mxs::ClientConnection::tick(idle);
+}

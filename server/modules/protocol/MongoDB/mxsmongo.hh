@@ -24,6 +24,7 @@
 #include <bsoncxx/builder/basic/document.hpp>
 #include <bsoncxx/json.hpp>
 #include <mongoc/mongoc.h>
+#include <maxbase/stopwatch.hh>
 #include <maxscale/buffer.hh>
 #include <maxscale/protocol2.hh>
 #include <maxscale/target.hh>
@@ -685,6 +686,7 @@ public:
         void remove_cursor(const MongoCursor& cursor);
         void store_cursor(MongoCursor&& cursor);
         std::set<int64_t> kill_cursors(const std::string& collection, const std::vector<int64_t>& ids);
+        void kill_idle_cursors(const mxb::TimePoint& now, const std::chrono::seconds& timeout);
 
     private:
         using CursorsById = std::unordered_map<int64_t, MongoCursor>;

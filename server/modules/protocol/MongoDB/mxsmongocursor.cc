@@ -13,6 +13,7 @@
 
 #include "mxsmongocursor.hh"
 #include <sstream>
+#include <maxbase/worker.hh>
 #include "mxsmongocommand.hh"
 
 using std::string;
@@ -86,6 +87,7 @@ MongoCursor::MongoCursor()
     : m_id(0)
     , m_exhausted(true)
 {
+    touch();
 }
 
 MongoCursor::MongoCursor(const std::string& collection,
@@ -97,8 +99,10 @@ MongoCursor::MongoCursor(const std::string& collection,
     , m_extractions(std::move(extractions))
     , m_mariadb_response(mariadb_response)
     , m_pBuffer(gwbuf_link_data(m_mariadb_response.get()))
+    , m_used(mxb::Worker::get_current()->epoll_tick_now())
 {
     initialize();
+    touch();
 }
 
 void MongoCursor::create_first_batch(bsoncxx::builder::basic::document& doc, int32_t nBatch)
@@ -135,6 +139,8 @@ void MongoCursor::create_batch(bsoncxx::builder::basic::document& doc,
 
     doc.append(kvp("cursor", cursor.extract()));
     doc.append(kvp("ok", 1));
+
+    touch();
 }
 
 MongoCursor::Result MongoCursor::create_batch(bsoncxx::builder::basic::array& batch, int32_t nBatch)
@@ -233,6 +239,11 @@ void MongoCursor::initialize()
     mxb_assert(eof.type() == ComResponse::EOF_PACKET);
 
     // Now m_pBuffer points at the beginning of rows.
+}
+
+void MongoCursor::touch()
+{
+    m_used = mxb::Worker::get_current()->epoll_tick_now();
 }
 
 }
