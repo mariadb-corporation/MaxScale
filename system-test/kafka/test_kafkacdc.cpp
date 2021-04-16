@@ -5,7 +5,7 @@ using namespace std::literals::string_literals;
 
 void read_messages(TestConnections& test, Consumer& consumer, int n_expected)
 {
-    int i = consumer.consume_messages();
+    int i = consumer.try_consume_messages(n_expected);
     test.expect(i == n_expected, "Expected %d messages, got %d", n_expected, i);
 }
 

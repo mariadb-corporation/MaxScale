@@ -125,28 +125,54 @@ public:
         m_consumer->assign({topic.get()});
     }
 
+    RdKafka::ErrorCode consume_one_message()
+    {
+        std::unique_ptr<RdKafka::Message> msg(m_consumer->consume(10000));
+
+        if (msg->err() == RdKafka::ERR_NO_ERROR)
+        {
+            std::string key = msg->key() ? *msg->key() : "";
+            std::string payload((char*)msg->payload(), msg->len());
+            std::cout << "Message key: " << key << std::endl;
+            std::cout << "Message content: " << payload << std::endl;
+        }
+
+        return msg->err();
+    }
+
     int consume_messages()
     {
         int i = 0;
-        bool ok = true;
 
-        while (ok)
+        while (consume_one_message() == RdKafka::ERR_NO_ERROR)
         {
-            auto msg = m_consumer->consume(10000);
+            ++i;
+        }
 
-            if (msg->err() == RdKafka::ERR_NO_ERROR)
-            {
-                std::cout << "Message key: " << *msg->key() << std::endl;
-                std::cout << "Message content: "
-                          << std::string((char*)msg->payload(), msg->len()) << std::endl;
-                i++;
-            }
-            else
-            {
-                ok = false;
-            }
+        return i;
+    }
 
-            delete msg;
+
+    int try_consume_messages(int n_expected)
+    {
+        using Clock = std::chrono::steady_clock;
+        auto start = Clock::now();
+        const std::chrono::seconds limit{30};
+        int i = 0;
+
+        while (i < n_expected && Clock::now() - start < limit)
+        {
+            auto err = consume_one_message();
+
+            if (err == RdKafka::ERR_NO_ERROR)
+            {
+                ++i;
+            }
+            else if (err != RdKafka::ERR_REQUEST_TIMED_OUT || err != RdKafka::ERR__TIMED_OUT)
+            {
+                std::cout << "Error from Kafka: " << RdKafka::err2str(err) << std::endl;
+                break;
+            }
         }
 
         return i;
