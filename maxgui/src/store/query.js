@@ -11,12 +11,19 @@
  * Public License.
  */
 import dummy_schema_test from 'utils/dummy_schema_test'
+import { preview_data, data_details } from 'utils/dummy_result_test'
 
 export default {
     namespaced: true,
     state: {
         loading_schema: true,
         conn_schema: {},
+        loading_preview_data: false,
+        preview_data: {},
+        loading_data_details: false,
+        data_details: {},
+        loading_query_result: false,
+        query_result: {},
     },
     mutations: {
         SET_LOADING_SCHEMA(state, payload) {
@@ -24,6 +31,24 @@ export default {
         },
         SET_CONN_SCHEMA(state, payload) {
             state.conn_schema = payload
+        },
+        SET_LOADING_PREVIEW_DATA(state, payload) {
+            state.loading_preview_data = payload
+        },
+        SET_PREVIEW_DATA(state, payload) {
+            state.preview_data = payload
+        },
+        SET_LOADING_DATA_DETAILS(state, payload) {
+            state.loading_data_details = payload
+        },
+        SET_DATA_DETAILS(state, payload) {
+            state.data_details = payload
+        },
+        SET_LOADING_QUERY_RESULT(state, payload) {
+            state.loading_query_result = payload
+        },
+        SET_QUERY_RESULT(state, payload) {
+            state.query_result = payload
         },
     },
     actions: {
@@ -38,6 +63,70 @@ export default {
                 commit('SET_LOADING_SCHEMA', false)
             } catch (e) {
                 const logger = this.vue.$logger('store-query-fetchConnectionSchema')
+                logger.error(e)
+            }
+        },
+        async fetchPreviewData({ commit /* , dispatch, state */ }, query) {
+            try {
+                commit('SET_LOADING_PREVIEW_DATA', true)
+                /* eslint-disable no-console */
+                console.log('sending query', query)
+                // TODO: Replace with actual data
+                /*      dispatch('query/fetchQueryResult', query)
+                if (state.query_result) {
+                    commit('SET_PREVIEW_DATA', state.query_result)
+                    commit('SET_LOADING_PREVIEW_DATA', false)
+                }
+                */
+                await this.vue.$help.delay(400)
+                commit('SET_PREVIEW_DATA', preview_data.data)
+                commit('SET_LOADING_PREVIEW_DATA', false)
+            } catch (e) {
+                const logger = this.vue.$logger('store-query-fetchPreviewData')
+                logger.error(e)
+            }
+        },
+        async fetchDataDetails({ commit /* , dispatch, state*/ }, query) {
+            try {
+                commit('SET_LOADING_DATA_DETAILS', true)
+                /* eslint-disable no-console */
+                console.log('sending query', query)
+                // TODO: Replace with actual data
+                /*
+                    dispatch("query/fetchQueryResult",query)
+                if (state.query_result) {
+                    commit('SET_DATA_DETAILS', state.query_result)
+                    commit('SET_LOADING_DATA_DETAILS', false)
+                } */
+                await this.vue.$help.delay(400)
+                commit('SET_DATA_DETAILS', data_details.data)
+                commit('SET_LOADING_DATA_DETAILS', false)
+            } catch (e) {
+                const logger = this.vue.$logger('store-query-fetchDataDetails')
+                logger.error(e)
+            }
+        },
+        async fetchQueryResult({ commit }, query) {
+            try {
+                commit('SET_LOADING_QUERY_RESULT', true)
+                /* eslint-disable no-console */
+                console.log('sending query', query)
+                // TODO: Replace with actual data
+                /*    const body = {
+                    data: {
+                        sqlText: query,
+                    },
+                }
+                let res = await this.vue.$axios.post(`/query/`, body)
+                if (res.data.data) {
+                    commit('SET_QUERY_RESULT', res.data.data)
+                    commit('SET_LOADING_QUERY_RESULT', false)
+                } */
+                await this.vue.$help.delay(400)
+                commit('SET_QUERY_RESULT', {})
+                commit('SET_LOADING_QUERY_RESULT', false)
+            } catch (e) {
+                const logger = this.vue.$logger('store-query-fetchQueryResult')
                 logger.error(e)
             }
         },

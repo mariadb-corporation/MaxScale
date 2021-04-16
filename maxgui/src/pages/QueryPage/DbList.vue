@@ -70,11 +70,6 @@ export default {
     components: {
         DbListTree,
     },
-    props: {
-        connSchema: { type: Object, required: true },
-        loadingSchema: { type: Boolean, required: true },
-    },
-
     data() {
         return {
             searchSchema: '',

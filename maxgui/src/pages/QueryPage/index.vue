@@ -10,8 +10,6 @@
             >
                 <template slot="pane-left">
                     <db-list
-                        :connSchema="conn_schema"
-                        :loadingSchema="loading_schema"
                         class="db-tb-list"
                         @is-collapsed="handleDbListCollapse"
                         @reload-schema="loadSchema"
@@ -56,7 +54,7 @@ import QueryEditor from '@/components/QueryEditor'
 import PageHeader from './PageHeader'
 import DbList from './DbList'
 import QueryResult from './QueryResult'
-import { mapActions, mapState } from 'vuex'
+import { mapActions } from 'vuex'
 
 export default {
     name: 'query-view',
@@ -75,10 +73,6 @@ export default {
         }
     },
     computed: {
-        ...mapState({
-            conn_schema: state => state.query.conn_schema,
-            loading_schema: state => state.query.loading_schema,
-        }),
         distArr: function() {
             let result = []
             //TODO: Flatten conn_schema
@@ -91,6 +85,8 @@ export default {
     methods: {
         ...mapActions({
             fetchConnectionSchema: 'query/fetchConnectionSchema',
+            fetchPreviewData: 'query/fetchPreviewData',
+            fetchDataDetails: 'query/fetchDataDetails',
         }),
         async loadSchema() {
             await this.fetchConnectionSchema()
@@ -104,17 +100,13 @@ export default {
             this.value = `${this.value} ${schemaId}`
         },
         // For table type only
-        previewData(schemaId) {
+        async previewData(schemaId) {
             const query = `SELECT * FROM ${schemaId};`
-            //TODO: dispatch action to send query
-            /* eslint-disable no-console */
-            console.log('query', query)
+            await this.fetchPreviewData(query)
         },
-        viewDetails(schemaId) {
+        async viewDetails(schemaId) {
             const query = `DESCRIBE ${schemaId};`
-            //TODO: dispatch action to send query
-            /* eslint-disable no-console */
-            console.log('query', query)
+            await this.fetchDataDetails(query)
         },
     },
 }

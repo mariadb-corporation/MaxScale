@@ -92,6 +92,8 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import { mapState } from 'vuex'
+
 export default {
     name: 'db-list-tree',
     data() {
@@ -113,9 +115,13 @@ export default {
         }
     },
     computed: {
+        ...mapState({
+            conn_schema: state => state.query.conn_schema,
+            loading_schema: state => state.query.loading_schema,
+        }),
         schemaList() {
-            if (this.loadingSchema) return []
-            const { schemas = [] } = this.$parent.connSchema
+            if (this.loading_schema) return []
+            const { schemas = [] } = this.conn_schema
             let schemaList = schemas.map(({ name: schemaId, tables = [] }) => {
                 let schemaObj = {
                     type: 'schema',
