@@ -383,16 +383,28 @@ bool MariaDBCluster::unblock_all_nodes()
 
 bool MariaDBCluster::fix_replication()
 {
-    bool rval = false;
     auto namec = name().c_str();
     auto& log = logger();
 
-    if (check_replication())
+    close_active_connections();
+    bool need_fixing = false;
+    if (!prepare_servers_for_test())
     {
-        log.log_msgf("%s is replicating/synced.", namec);
-        rval = true;
+        need_fixing = true;
+        log.log_msgf("%s failed basic test preparation.", namec);
+    }
+    else if (!check_replication())
+    {
+        need_fixing = true;
+        log.log_msgf("%s failed basic replication test.", namec);
     }
     else
+    {
+        log.log_msgf("%s is replicating/synced.", namec);
+    }
+
+    bool rval = false;
+    if (need_fixing)
     {
         log.log_msgf("%s is broken, fixing ...", namec);
 
@@ -440,6 +452,10 @@ bool MariaDBCluster::fix_replication()
         {
             logger().add_failure("Failed to unblock %s.", name().c_str());
         }
+    }
+    else
+    {
+        rval = true;
     }
 
     disconnect();
@@ -910,17 +926,32 @@ bool MariaDBCluster::check_create_test_db()
     return rval;
 }
 
-bool MariaDBCluster::prepare_cluster_for_test()
+bool MariaDBCluster::basic_test_prepare()
 {
-    bool rval = true;
-    if (Nodes::init_ssh_masters())
-    {
-        truncate_mariadb_logs();
-        prepare_servers_for_test();
-        close_active_connections();
-        rval = true;
-    }
-    return rval;
+    auto prepare_one = [this](int i) {
+            auto srv = m_backends[i].get();
+            bool rval = false;
+            auto& vm = srv->m_vm;
+            if (vm.init_ssh_master())
+            {
+                rval = true;
+                if (vm.is_remote())
+                {
+                    const char truncate_cmd[] = "truncate -s 0 /var/lib/mysql/*.err;"
+                                                "truncate -s 0 /var/log/syslog;"
+                                                "truncate -s 0 /var/log/messages;"
+                                                "rm -f /etc/my.cnf.d/binlog_enc*;";
+                    auto ret = vm.run_cmd_sudo(truncate_cmd);
+                    if (ret != 0)
+                    {
+                        // Should this be a fatal error? Maybe some of the files don't exist.
+                        logger().log_msgf("Log truncation failed. '%s' returned %i.", truncate_cmd, ret);
+                    }
+                }
+            }
+            return rval;
+        };
+    return run_on_every_backend(prepare_one);
 }
 
 MariaDBCluster::ConnArray MariaDBCluster::admin_connect_to_all()

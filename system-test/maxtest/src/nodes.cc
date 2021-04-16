@@ -104,7 +104,7 @@ bool VMNode::init_ssh_master()
     }
 
     // Test the connection. If this doesn't work, continuing is pointless.
-    bool rval = true;
+    bool rval = false;
     if (init_ok)
     {
         if (run_cmd("ls > /dev/null") == 0)

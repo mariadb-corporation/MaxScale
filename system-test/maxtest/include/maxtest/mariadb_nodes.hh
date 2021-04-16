@@ -271,7 +271,13 @@ public:
     std::vector<int>         get_all_server_ids();
     std::vector<std::string> get_all_server_ids_str();
 
-    bool prepare_cluster_for_test();
+    /**
+     * Initializes and tests ssh-connection and removes some logs. If this fails, VMs are seriously wrong
+     * and continuing is pointless.
+     *
+     * @return True on success
+     */
+    bool basic_test_prepare();
 
     bool prepare_servers_for_test();
 

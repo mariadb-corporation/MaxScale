@@ -2040,7 +2040,7 @@ bool TestConnections::initialize_nodes()
                 new_cluster->set_use_ipv6(ipv6);
                 new_cluster->ssl = be_ssl;
                 auto prepare_cluster = [new_cluster]() {
-                        return new_cluster->prepare_cluster_for_test();
+                        return new_cluster->basic_test_prepare();
                     };
                 funcs.push_back(move(prepare_cluster));
             }
