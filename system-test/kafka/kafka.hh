@@ -34,6 +34,7 @@ public:
 private:
     bool start_kafka()
     {
+        bool ok = false;
         // Stop any running instances of Kafka and clean out their data directories.
         stop_kafka();
 
@@ -46,7 +47,27 @@ private:
             " --override advertised.listeners=PLAINTEXT://%s:9092;",
             m_test.maxscales->ip4(0));
 
-        return m_test.maxscales->ssh_node_f(0, false, "%s", (zookeeper + kafka).c_str()) == 0;
+        std::string check =
+            "kafka/bin/zookeeper-shell.sh localhost:2181"
+            " ls -R /brokers/ids|grep /brokers/ids/0";
+
+        if (m_test.maxscales->ssh_node_f(0, false, "%s", (zookeeper + kafka).c_str()) == 0)
+        {
+            for (int i = 0; i < 10; i++)
+            {
+                if (m_test.maxscales->ssh_node_f(0, false, "%s", check.c_str()) == 0)
+                {
+                    ok = true;
+                    break;
+                }
+                else
+                {
+                    sleep(1);
+                }
+            }
+        }
+
+        return ok;
     }
 
     void stop_kafka()
