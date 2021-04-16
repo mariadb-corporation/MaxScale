@@ -1898,23 +1898,32 @@ bool ParamStringList::from_json(const json_t* pJson,
                                 value_type* pValue,
                                 std::string* pMessage) const
 {
-    bool ok = json_is_array(pJson);
+    bool ok = false;
     value_type values;
-    values.reserve(json_array_size(pJson));
-    size_t i;
-    json_t* v;
 
-    json_array_foreach(pJson, i, v)
+    if (json_is_array(pJson))
     {
-        if (json_is_string(v))
+        ok = true;
+        values.reserve(json_array_size(pJson));
+        size_t i;
+        json_t* v;
+
+        json_array_foreach(pJson, i, v)
         {
-            values.push_back(json_string_value(v));
+            if (json_is_string(v))
+            {
+                values.push_back(json_string_value(v));
+            }
+            else
+            {
+                ok = false;
+                break;
+            }
         }
-        else
-        {
-            ok = false;
-            break;
-        }
+    }
+    else if (json_is_string(pJson))
+    {
+        ok = from_string(json_string_value(pJson), &values, pMessage);
     }
 
     if (ok)
