@@ -216,6 +216,15 @@ public:
     virtual void kill()
     {
     }
+
+    /**
+     * Will be called during idle processing.
+     *
+     * @param idle  The number of seconds the connection has been idle.
+     */
+    virtual void tick(std::chrono::seconds idle)
+    {
+    }
 };
 
 /**

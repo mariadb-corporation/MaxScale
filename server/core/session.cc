@@ -1383,6 +1383,8 @@ Session::create_backend_connection(Server* server, BackendDCB::Manager* manager,
 
 void Session::tick(int64_t idle)
 {
+    m_client_conn->tick(std::chrono::seconds(idle));
+
     const auto& svc_config = *service->config();
     if (auto timeout = svc_config.conn_idle_timeout.count())
     {
