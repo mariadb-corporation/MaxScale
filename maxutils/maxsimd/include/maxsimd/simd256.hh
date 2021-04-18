@@ -89,10 +89,13 @@ static const __m256i bitmask_lookup_const = _mm256_setr_epi8(
  *
  * @param  ascii_bitmap   Chars to classify, use make_ascii_bitmap() to create.
  * @param  input          __m256i, the 32 characters to be classified.
- * @return int32_t        The final mask in which a bit is set corresponding to
- *                        a classified character in the input.
+ * @return __m256i        The final mask. The high bit is set in bytes that are
+ *                        classified.
+ *                        Use _mm256_movemask_epi8(ret_value) to get an int32_t
+ *                        bitmask where a bit is set corresponding to a classified
+ *                        character in the input.
  */
-inline int32_t classify_ascii(__m256i ascii_bitmap, __m256i input)
+inline __m256i classify_ascii(__m256i ascii_bitmap, __m256i input)
 {
     // ascii_classification[i] = ascii_bitmap[input[i] & 0x1111)]
     const __m256i ascii_classification = _mm256_shuffle_epi8(ascii_bitmap, input);
@@ -114,27 +117,27 @@ inline int32_t classify_ascii(__m256i ascii_bitmap, __m256i input)
     //  _mm256_cmpneq_epi8_mask is AVX512VL + AVX512BW)
     mask = _mm256_or_si256(mask, classified);
 
-    return _mm256_movemask_epi8(mask);
+    return mask;
 }
 
 using Markers = std::vector<const char*>;
 
 /**
  * @brief  make_markers - create a vector of ptrs, pointing into the
- *         sql for every classified char.
+ *         argument string for every classified char.
  *
- * @param  sql
- * @return Pointers into argument sql for every classified character.
+ * @param  str      string
+ * @return Pointers into argument string for every classified character.
  */
-inline Markers make_markers(const std::string& sql, __m256i ascii_bitmap)
+inline Markers make_markers(const std::string& str, __m256i ascii_bitmap)
 {
-    const char* pBegin = &*sql.begin();
+    const char* pBegin = &*str.begin();
     const char* pSource = pBegin;
-    const char* pEnd = &*sql.end();
+    const char* pEnd = &*str.end();
 
     std::vector<const char*> markers;
     // safe size guess, no empirical data, probably much lower.
-    markers.reserve(sql.size() / 10);
+    markers.reserve(str.size() / 10);
     size_t index_offset = 0;
 
     for (; pSource < pEnd; pSource += SIMD_BYTES)
@@ -151,7 +154,7 @@ inline Markers make_markers(const std::string& sql, __m256i ascii_bitmap)
             chunk = _mm256_loadu_si256 ((const __m256i*)(pSource));
         }
 
-        auto bitmask = classify_ascii(ascii_bitmap, chunk);
+        auto bitmask = _mm256_movemask_epi8(classify_ascii(ascii_bitmap, chunk));
 
         while (bitmask)
         {
