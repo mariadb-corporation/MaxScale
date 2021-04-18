@@ -109,6 +109,11 @@ inline int32_t classify_ascii(__m256i ascii_bitmap, __m256i input)
     // To get a bitmask out, the msb must be set: set msb if non-zero
     __m256i mask = _mm256_cmpgt_epi8(classified, _mm256_set1_epi8(0x0));
 
+    // 'or' the high bit back if it was set (classified bits > 0)
+    // Is there a single instruction to set msb if byte!=0?
+    //  _mm256_cmpneq_epi8_mask is AVX512VL + AVX512BW)
+    mask = _mm256_or_si256(mask, classified);
+
     return _mm256_movemask_epi8(mask);
 }
 
