@@ -166,8 +166,6 @@ inline Markers make_markers(const std::string& str, __m256i ascii_bitmap)
         index_offset += SIMD_BYTES;
     }
 
-    markers.shrink_to_fit();
-
     return markers;
 }
 }
