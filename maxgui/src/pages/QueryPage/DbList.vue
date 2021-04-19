@@ -1,7 +1,11 @@
 <template>
     <div :class="[isLeftPaneCollapsed ? 'pa-1' : 'pa-3']">
-        <!-- TODO: Option  to maximize/minimize query page-->
         <portal to="toggle-pane">
+            <v-btn icon small @click="toggleFullScreen">
+                <v-icon size="18" color="deep-ocean">
+                    fullscreen{{ isFullscreen ? '_exit' : '' }}
+                </v-icon>
+            </v-btn>
             <v-btn icon small @click="toggleExpand">
                 <v-icon
                     size="16"
@@ -74,11 +78,15 @@ export default {
         return {
             searchSchema: '',
             isLeftPaneCollapsed: false,
+            isFullscreen: false,
         }
     },
     watch: {
         isLeftPaneCollapsed(v) {
             this.$emit('is-collapsed', v)
+        },
+        isFullscreen(v) {
+            this.$emit('is-fullscreen', v)
         },
     },
     methods: {
@@ -87,6 +95,9 @@ export default {
         },
         toggleExpand() {
             this.isLeftPaneCollapsed = !this.isLeftPaneCollapsed
+        },
+        toggleFullScreen() {
+            this.isFullscreen = !this.isFullscreen
         },
     },
 }

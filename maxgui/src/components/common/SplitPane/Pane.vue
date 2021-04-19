@@ -36,7 +36,7 @@ export default {
 <style lang="scss" scoped>
 .splitter-pane {
     position: absolute;
-    transition: width 0.4s;
+    transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     &--vert {
         height: 100%;
         &-left {

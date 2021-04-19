@@ -36,7 +36,7 @@ export default {
     components: { Resizer, Pane },
     props: {
         minPercent: { type: Number, default: 10 },
-        defaultPercent: { type: Number, default: 50 },
+        value: { type: Number, default: 50 },
         split: {
             validator(value) {
                 return ['vert', 'horiz'].indexOf(value) !== -1
@@ -48,7 +48,7 @@ export default {
     data() {
         return {
             active: false,
-            percent: this.defaultPercent,
+            percent: this.value,
         }
     },
     computed: {
@@ -76,7 +76,7 @@ export default {
         },
     },
     watch: {
-        defaultPercent(v) {
+        value(v) {
             if (v !== this.percent) this.percent = v
         },
     },
@@ -108,7 +108,7 @@ export default {
                 const percent = Math.floor(((currPage - offset) / targetOffset) * 10000) / 100
                 if (percent >= this.minPercent && percent <= 100 - this.minPercent)
                     this.percent = percent
-                this.$emit('on-resize', this.percent)
+                this.$emit('input', this.percent)
             }
         },
     },

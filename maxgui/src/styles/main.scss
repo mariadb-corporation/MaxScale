@@ -23,7 +23,7 @@ html {
     margin: 0;
     padding: 0;
     //dashboard "responsive". preserve ratio
-    overflow: auto;
+    overflow: auto !important;
 }
 
 //https://gs.statcounter.com/screen-resolution-stats top 2 for desktop screen resolution
