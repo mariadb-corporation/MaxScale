@@ -100,6 +100,12 @@ GWBUF* mxsmongo::Database::execute(std::unique_ptr<Command> sCommand)
 
     try
     {
+        if (sCommand->is_admin() && m_name != "admin")
+        {
+            throw SoftError(sCommand->name() + " may only be run against the admin database.",
+                            error::UNAUTHORIZED);
+        }
+
         pResponse = sCommand->execute();
     }
     catch (const mxsmongo::Exception& x)

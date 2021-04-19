@@ -407,15 +407,26 @@ private:
 
 
 // https://docs.mongodb.com/manual/reference/command/listDatabases/
+class ListDatabases;
+
+template<>
+struct IsAdmin<command::ListDatabases>
+{
+    static const bool is_admin { true };
+};
+
 class ListDatabases final : public SingleCommand
 {
 public:
     using SingleCommand::SingleCommand;
 
+    bool is_admin() const override
+    {
+        return IsAdmin<ListDatabases>::is_admin;
+    }
+
     string generate_sql() override
     {
-        require_admin_db();
-
         stringstream sql;
         sql << "SELECT table_schema, table_name, (data_length + index_length) `bytes` "
             << "FROM information_schema.tables "
@@ -506,7 +517,6 @@ public:
     }
 };
 
-
 // https://docs.mongodb.com/manual/reference/command/listIndexes/
 
 // https://docs.mongodb.com/manual/reference/command/logRotate/
@@ -514,10 +524,23 @@ public:
 // https://docs.mongodb.com/manual/reference/command/reIndex/
 
 // https://docs.mongodb.com/manual/reference/command/renameCollection/
+class RenameCollection;
+
+template<>
+struct IsAdmin<command::RenameCollection>
+{
+    static const bool is_admin { true };
+};
+
 class RenameCollection final : public SingleCommand
 {
 public:
     using SingleCommand::SingleCommand;
+
+    bool is_admin() const override
+    {
+        return IsAdmin<RenameCollection>::is_admin;
+    }
 
     string generate_sql() override
     {

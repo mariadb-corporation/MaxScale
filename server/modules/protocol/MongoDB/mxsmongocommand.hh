@@ -28,6 +28,17 @@ namespace mxsmongo
 
 class Database;
 
+namespace command
+{
+
+template<class ConcreteCommand>
+struct IsAdmin
+{
+    static const bool is_admin { false };
+};
+
+}
+
 class Command
 {
 public:
@@ -71,6 +82,11 @@ public:
 
     virtual ~Command();
 
+    const std::string& name() const
+    {
+        return m_name;
+    }
+
     const bsoncxx::document::view& doc() const
     {
         return m_doc;
@@ -111,6 +127,11 @@ public:
      * @throws SoftError, if the value of the command key is not a string.
      */
     const std::string& table(Quoted quoted = Quoted::YES) const;
+
+    virtual bool is_admin() const
+    {
+        return command::IsAdmin<Command>::is_admin;
+    }
 
 protected:
     void require_admin_db();

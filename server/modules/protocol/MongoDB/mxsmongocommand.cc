@@ -118,39 +118,64 @@ using CreatorFunction = unique_ptr<Command> (*)(const string& name,
                                                 const Msg* pMsg,
                                                 const bsoncxx::document::view& doc,
                                                 const Command::DocumentArguments& arguments);
-using CreatorsByName = const map<string, CreatorFunction>;
+
+struct CommandInfo
+{
+    CommandInfo()
+        : create(nullptr)
+        , is_admin(false)
+    {
+    }
+
+    CommandInfo(CreatorFunction create, bool is_admin)
+        : create(create)
+        , is_admin(is_admin)
+    {
+    }
+
+    CreatorFunction create;
+    bool            is_admin;
+};
+
+template<class ConcreteCommand>
+CommandInfo create_info()
+{
+    return CommandInfo(&create_command<ConcreteCommand>, command::IsAdmin<ConcreteCommand>::is_admin);
+}
+
+using InfosByName = const map<string, CommandInfo>;
 
 struct ThisUnit
 {
-    CreatorsByName creators_by_name =
+    InfosByName infos_by_name =
     {
-        { mxb::tolower(key::BUILDINFO),               &create_command<command::BuildInfo> },
-        { mxb::tolower(key::COUNT),                   &create_command<command::Count> },
-        { mxb::tolower(key::CREATE),                  &create_command<command::Create> },
-        { mxb::tolower(key::DELETE),                  &create_command<command::Delete> },
-        { mxb::tolower(key::DISTINCT),                &create_command<command::Distinct> },
-        { mxb::tolower(key::DROP),                    &create_command<command::Drop> },
-        { mxb::tolower(key::DROPDATABASE),            &create_command<command::DropDatabase> },
-        { mxb::tolower(key::ENDSESSIONS),             &create_command<command::EndSessions> },
-        { mxb::tolower(key::FIND),                    &create_command<command::Find> },
-        { mxb::tolower(key::GETCMDLINEOPTS),          &create_command<command::GetCmdLineOpts> },
-        { mxb::tolower(key::GETFREEMONITORINGSTATUS), &create_command<command::GetFreeMonitoringStatus> },
-        { mxb::tolower(key::GETLOG),                  &create_command<command::GetLog> },
-        { mxb::tolower(key::GETMORE),                 &create_command<command::GetMore> },
-        { mxb::tolower(key::INSERT),                  &create_command<command::Insert> },
-        { mxb::tolower(key::ISMASTER),                &create_command<command::IsMaster> },
-        { mxb::tolower(key::KILLCURSORS),             &create_command<command::KillCursors> },
-        { mxb::tolower(key::LISTCOLLECTIONS),         &create_command<command::ListCollections> },
-        { mxb::tolower(key::LISTDATABASES),           &create_command<command::ListDatabases> },
-        { mxb::tolower(key::PING),                    &create_command<command::Ping> },
-        { mxb::tolower(key::REPLSETGETSTATUS),        &create_command<command::ReplSetGetStatus> },
-        { mxb::tolower(key::RENAMECOLLECTION),        &create_command<command::RenameCollection> },
-        { mxb::tolower(key::UPDATE),                  &create_command<command::Update> },
-        { mxb::tolower(key::WHATSMYURI),              &create_command<command::WhatsMyUri> },
+        { mxb::tolower(key::BUILDINFO),               create_info<command::BuildInfo>() },
+        { mxb::tolower(key::COUNT),                   create_info<command::Count>() },
+        { mxb::tolower(key::CREATE),                  create_info<command::Create>() },
+        { mxb::tolower(key::DELETE),                  create_info<command::Delete>() },
+        { mxb::tolower(key::DISTINCT),                create_info<command::Distinct>() },
+        { mxb::tolower(key::DROP),                    create_info<command::Drop>() },
+        { mxb::tolower(key::DROPDATABASE),            create_info<command::DropDatabase>() },
+        { mxb::tolower(key::ENDSESSIONS),             create_info<command::EndSessions>() },
+        { mxb::tolower(key::FIND),                    create_info<command::Find>() },
+        { mxb::tolower(key::GETCMDLINEOPTS),          create_info<command::GetCmdLineOpts>() },
+        { mxb::tolower(key::GETFREEMONITORINGSTATUS), create_info<command::GetFreeMonitoringStatus>() },
+        { mxb::tolower(key::GETLOG),                  create_info<command::GetLog>() },
+        { mxb::tolower(key::GETMORE),                 create_info<command::GetMore>() },
+        { mxb::tolower(key::INSERT),                  create_info<command::Insert>() },
+        { mxb::tolower(key::ISMASTER),                create_info<command::IsMaster>() },
+        { mxb::tolower(key::KILLCURSORS),             create_info<command::KillCursors>() },
+        { mxb::tolower(key::LISTCOLLECTIONS),         create_info<command::ListCollections>() },
+        { mxb::tolower(key::LISTDATABASES),           create_info<command::ListDatabases>() },
+        { mxb::tolower(key::PING),                    create_info<command::Ping>() },
+        { mxb::tolower(key::REPLSETGETSTATUS),        create_info<command::ReplSetGetStatus>() },
+        { mxb::tolower(key::RENAMECOLLECTION),        create_info<command::RenameCollection>() },
+        { mxb::tolower(key::UPDATE),                  create_info<command::Update>() },
+        { mxb::tolower(key::WHATSMYURI),              create_info<command::WhatsMyUri>() },
 
-        { mxb::tolower(key::MXSDIAGNOSE),             &create_command<command::MxsDiagnose> },
-        { mxb::tolower(key::MXSGETCONFIG),            &create_command<command::MxsGetConfig> },
-        { mxb::tolower(key::MXSSETCONFIG),            &create_command<command::MxsSetConfig> },
+        { mxb::tolower(key::MXSDIAGNOSE),             create_info<command::MxsDiagnose>() },
+        { mxb::tolower(key::MXSGETCONFIG),            create_info<command::MxsGetConfig>() },
+        { mxb::tolower(key::MXSSETCONFIG),            create_info<command::MxsSetConfig>() },
     };
 } this_unit;
 
@@ -167,10 +192,10 @@ Command::~Command()
 namespace
 {
 
-pair<string, CreatorFunction> get_creator(const bsoncxx::document::view& doc)
+pair<string, CommandInfo> get_info(const bsoncxx::document::view& doc)
 {
-    CreatorFunction create = nullptr;
     string name;
+    CommandInfo info;
 
     if (!doc.empty())
     {
@@ -178,21 +203,22 @@ pair<string, CreatorFunction> get_creator(const bsoncxx::document::view& doc)
         auto element = *doc.begin();
         name.append(element.key().data(), element.key().length());
 
-        auto it = this_unit.creators_by_name.find(mxb::tolower(name));
+        auto it = this_unit.infos_by_name.find(mxb::tolower(name));
 
-        if (it != this_unit.creators_by_name.end())
+        if (it != this_unit.infos_by_name.end())
         {
-            create = it->second;
+            info = it->second;
         }
     }
 
-    if (!create)
+    if (!info.create)
     {
         name = "unknown";
-        create = &create_command<Unknown>;
+        info.create = &create_command<Unknown>;
+        info.is_admin = false;
     }
 
-    return make_pair(name, create);
+    return make_pair(name, info);
 }
 
 }
@@ -204,10 +230,10 @@ unique_ptr<Command> Command::get(mxsmongo::Database* pDatabase,
                                  const bsoncxx::document::view& doc,
                                  const DocumentArguments& arguments)
 {
-    auto creator = get_creator(doc);
+    auto p = get_info(doc);
 
-    const string& name = creator.first;
-    CreatorFunction create = creator.second;
+    const string& name = p.first;
+    CreatorFunction create = p.second.create;
 
     return create(name, pDatabase, pRequest, &query, nullptr, doc, arguments);
 }
@@ -219,10 +245,10 @@ unique_ptr<Command> Command::get(mxsmongo::Database* pDatabase,
                                  const bsoncxx::document::view& doc,
                                  const DocumentArguments& arguments)
 {
-    auto creator = get_creator(doc);
+    auto p = get_info(doc);
 
-    const string& name = creator.first;
-    CreatorFunction create = creator.second;
+    const string& name = p.first;
+    CreatorFunction create = p.second.create;
 
     return create(name, pDatabase, pRequest, nullptr, &msg, doc, arguments);
 }
