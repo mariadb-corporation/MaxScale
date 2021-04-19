@@ -22,9 +22,104 @@
 
 namespace maxsimd::simd256
 {
+namespace
+{
 
-// The characters that need to be classified
-static const __m256i sql_ascii_bit_map = make_ascii_bitmap(R"(0123456789"'`/#-\)");
+
+// The characters that need to be classified. Digits are handled
+// separately.
+static const __m256i sql_ascii_bit_map = make_ascii_bitmap(R"("'`/#-\)");
+
+// Characters that can start (and continue) an identifier.
+static const __m256i ident_begin_bit_map =
+    make_ascii_bitmap(R"(_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ)");
+
+const __m256i small_zeros = _mm256_set1_epi8('0' - 1);
+const __m256i large_nines = _mm256_set1_epi8('9' + 1);
+
+/** This is a copy of make_markers(), but that does extra work to
+ *  speed up get_canonical_impl().
+ *  Where there is a sequence of digits, only add a marker to the
+ *  leading digit. If the char preceding that digit is '_' or alpha,
+ *  discard the digit as it cannot be a number.
+ *  The shift language is how the chars naturally look, so a shift
+ *  right of the chars is a shift left of the bitmaps.
+ */
+inline Markers make_markers_sql_optimized(const std::string& sql)
+{
+    const char* pBegin = &*sql.begin();
+    const char* pSource = pBegin;
+    const char* pEnd = &*sql.end();
+
+    std::vector<const char*> markers;
+    markers.reserve(sql.size() / 10);
+    size_t index_offset = 0;
+
+    // By setting this initially to true there can be no digit marker
+    // for the first char, so the parsing does not need to check for it.
+    bool previous_rightmost_is_ident_char = true;
+
+    for (; pSource < pEnd; pSource += SIMD_BYTES)
+    {
+        __m256i chunk;
+
+        if (pEnd - pSource < SIMD_BYTES)
+        {
+            chunk = _mm256_set1_epi8(0);
+            std::memcpy((void*)&chunk, pSource, pEnd - pSource);
+        }
+        else
+        {
+            chunk = _mm256_loadu_si256 ((const __m256i*)(pSource));
+        }
+
+        auto ascii_bitmask = _mm256_movemask_epi8(classify_ascii(sql_ascii_bit_map, chunk));
+        auto ident_bitmask = _mm256_movemask_epi8(classify_ascii(ident_begin_bit_map, chunk));
+
+        // Make a bitmap where a sequence of digits is replaced with only
+        // the first, leading digit.
+        const __m256i greater_eq_0 = _mm256_cmpgt_epi8(chunk, small_zeros);
+        const __m256i less_eq_9 = _mm256_cmpgt_epi8(large_nines, chunk);
+        const __m256i all_digits = _mm256_and_si256(greater_eq_0, less_eq_9);
+
+        auto pDigs = reinterpret_cast<const unsigned char*>(&all_digits);
+        bool rightmost_is_ident_char = pDigs[SIMD_BYTES - 1] || (ident_bitmask & 0x80000000);
+
+        const __m256i rshifted = _mm256_slli_si256(all_digits, 1);
+        const __m256i xored = _mm256_xor_si256(all_digits, rshifted);
+        const __m256i leading_digits = _mm256_and_si256(all_digits, xored);
+
+        auto digit_bitmask = _mm256_movemask_epi8(leading_digits);
+
+        // If a leading digit is preceded by a char that can
+        // start or continue an identifier, drop the digit.
+        auto ident_shftr = ident_bitmask << 1;
+        auto not_a_number = digit_bitmask & ident_shftr;
+        digit_bitmask ^= not_a_number;
+
+        // Register boundary check.
+        // If the previous rightmost char was an identifier char,
+        // then if the current leftmost char is a digit, zero it out.
+        digit_bitmask &= ~int32_t(previous_rightmost_is_ident_char);
+
+        previous_rightmost_is_ident_char = rightmost_is_ident_char;
+
+        auto bitmask = ascii_bitmask | digit_bitmask;
+
+        while (bitmask)
+        {
+            auto i = __builtin_ctz(bitmask);
+            bitmask = bitmask & (bitmask - 1);      // clear the lowest bit
+            markers.push_back(pBegin + index_offset + i);
+        }
+
+        index_offset += SIMD_BYTES;
+    }
+
+    return markers;
+}
+
+// A make_markers version optimized for strings
 
 const char IS_SPACE = 0b00000001;
 const char IS_DIGIT = 0b00000010;
@@ -174,6 +269,7 @@ inline const char* probe_number(const char* it, const char* const pEnd)
     // If we got to the end, it's a number, else whatever rval was set to
     return it == pEnd ?  pEnd : rval;
 }
+}
 
 /** In-place canonical.
  *  Note that where the sql is invalid the output should also be invalid so it cannot
@@ -182,8 +278,8 @@ inline const char* probe_number(const char* it, const char* const pEnd)
 std::string* get_canonical_impl(std::string* pSql)
 {
     auto& sql = *pSql;
+    auto markers = make_markers_sql_optimized(sql);
 
-    auto markers = make_markers(sql, sql_ascii_bit_map);
     std::reverse(begin(markers), end(markers));     // for pop_back(), an index would likely be better.
 
     const char* read_begin = &*sql.begin();
@@ -258,24 +354,18 @@ std::string* get_canonical_impl(std::string* pSql)
         }
         else if (lut(IS_DIGIT, *pMarker))
         {
-            if (write_ptr != write_begin    // can't start sql with a number
-                && (!lut(IS_ALNUM, *(write_ptr - 1)) && *(write_ptr - 1) != '_'))
-            {
-                // Only the first digit of a series of digits needs to be in markers.
-                // TODO, possibly quite and improvement.
-                auto num_end = probe_number(read_ptr, read_end);
+            auto num_end = probe_number(read_ptr, read_end);
 
-                if (num_end)
+            if (num_end)
+            {
+                if (!was_converted && *(write_ptr - 1) == '-')
                 {
-                    if (!was_converted && *(write_ptr - 1) == '-')
-                    {
-                        // Remove the sign
-                        --write_ptr;
-                    }
-                    *write_ptr++ = '?';
-                    read_ptr = num_end;
-                    did_conversion = true;
+                    // Remove the sign
+                    --write_ptr;
                 }
+                *write_ptr++ = '?';
+                read_ptr = num_end;
+                did_conversion = true;
             }
         }
         else if (lut(IS_COMMENT, *pMarker))
