@@ -281,8 +281,15 @@ void Replicator::Imp::process_events()
         }
         else
         {
-            MXB_ERROR("Failed to read replicated event: %s", m_sql->error().c_str());
-            break;
+            // If we don't have an error, the server stopped the replication stream with an EOF packet.
+            if (m_sql->errnum())
+            {
+                MXB_ERROR("Failed to read replicated event: %d, %s", m_sql->errnum(), m_sql->error().c_str());
+            }
+
+            // Close the connection and reconnect after waiting for a while.
+            m_sql.reset();
+            std::this_thread::sleep_for(milliseconds(5000));
         }
 
         if (m_safe_to_stop)
