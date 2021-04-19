@@ -3,8 +3,6 @@
 #include <algorithm>
 #include <cstring>
 #include <future>
-#include <functional>
-#include <iostream>
 #include <string>
 #include <csignal>
 #include <maxbase/format.hh>
@@ -44,20 +42,6 @@ VMNode::~VMNode()
 }
 }
 
-
-bool Nodes::check_node_ssh(int node)
-{
-    bool res = true;
-
-    if (ssh_node(node, "ls > /dev/null", false) != 0)
-    {
-        std::cout << "Node " << node << " is not available" << std::endl;
-        res = false;
-    }
-
-    return res;
-}
-
 namespace maxtest
 {
 bool VMNode::init_ssh_master()
@@ -84,8 +68,8 @@ bool VMNode::init_ssh_master()
         }
         else
         {
-            shared().log.log_msgf("popen() failed on '%s' when forming master ssh connection.",
-                                  m_name.c_str());
+            log().log_msgf("popen() failed on '%s' when forming master ssh connection.",
+                           m_name.c_str());
         }
     }
 
@@ -99,7 +83,7 @@ bool VMNode::init_ssh_master()
         }
         else
         {
-            shared().log.log_msgf("SSH/Bash check on '%s' failed.", m_name.c_str());
+            log().log_msgf("SSH/Bash check on '%s' failed.", m_name.c_str());
         }
     }
     return rval;
@@ -130,12 +114,8 @@ int VMNode::run_cmd(const std::string& cmd, CmdPriv priv)
             opening_cmd += " > /dev/null";
         }
     }
-    if (verbose())
-    {
-        std::cout << opening_cmd << "\n";
-    }
 
-    // TODO: Is this 2-stage execution necessary? Could the command just be ran in one go?
+    // Run in two stages so that "sudo" applies to all commands in the string.
     int rc = -1;
     FILE* pipe = popen(opening_cmd.c_str(), "w");
     if (pipe)
@@ -157,7 +137,8 @@ int VMNode::run_cmd(const std::string& cmd, CmdPriv priv)
     }
     else
     {
-        std::cout << m_name << ": popen() failed";
+        log().add_failure("popen() failed when running command '%s' on %s.",
+                          opening_cmd.c_str(), m_name.c_str());
     }
 
     if (WIFEXITED(rc))
@@ -171,7 +152,8 @@ int VMNode::run_cmd(const std::string& cmd, CmdPriv priv)
     }
     else
     {
-        std::cout << strerror(errno) << "\n";
+        log().log_msgf("Command '%s' failed on %s. Error: %s",
+                       cmd.c_str(), m_name.c_str(), mxb_strerror(errno));
         rc = 256;
     }
     return rc;
@@ -235,12 +217,12 @@ bool mxt::VMNode::copy_to_node(const string& src, const string& dest)
                                  m_username.c_str(), m_ip4.c_str(), dest.c_str());
     }
 
-    if (verbose())
-    {
-        printf("%s\n", cmd.c_str());
-    }
-
     int rc = system(cmd.c_str());
+    if (rc != 0)
+    {
+        log().log_msgf("Copy to VM %s failed. Command '%s' returned %i.",
+                       m_name.c_str(), cmd.c_str(), rc);
+    }
     return rc == 0;
 }
 
@@ -272,12 +254,12 @@ bool mxt::VMNode::copy_from_node(const string& src, const string& dest)
                                  src.c_str(), dest.c_str());
     }
 
-    if (verbose())
-    {
-        printf("%s\n", cmd.c_str());
-    }
-
     int rc = system(cmd.c_str());
+    if (rc != 0)
+    {
+        log().log_msgf("Copy from VM %s failed. Command '%s' returned %i.",
+                       m_name.c_str(), cmd.c_str(), rc);
+    }
     return rc == 0;
 }
 
@@ -426,7 +408,8 @@ mxt::CmdResult VMNode::run_cmd_output(const string& cmd, CmdPriv priv)
     }
     else
     {
-        std::cout << m_name << ": popen() failed when running command " << total_cmd << "\n";
+        log().add_failure("popen() failed when running command '%s' on %s.",
+                          total_cmd.c_str(), m_name.c_str());
     }
     return rval;
 }
@@ -499,9 +482,9 @@ void VMNode::set_local()
     m_type = NodeType::LOCAL;
 }
 
-SharedData& VMNode::shared()
+TestLogger& VMNode::log()
 {
-    return m_shared;
+    return m_shared.log;
 }
 
 bool VMNode::verbose() const

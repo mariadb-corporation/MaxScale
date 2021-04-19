@@ -1047,7 +1047,7 @@ bool MariaDBServer::update_status()
 
 std::unique_ptr<mxt::MariaDB> MariaDBServer::try_open_connection()
 {
-    auto conn = std::make_unique<mxt::MariaDB>(m_vm.shared().log);
+    auto conn = std::make_unique<mxt::MariaDB>(m_vm.log());
     auto& sett = conn->connection_settings();
     sett.user = m_cluster.user_name;
     sett.password = m_cluster.password;
@@ -1065,7 +1065,7 @@ std::unique_ptr<mxt::MariaDB> MariaDBServer::try_open_connection()
 
 std::unique_ptr<mxt::MariaDB> MariaDBServer::try_open_admin_connection()
 {
-    auto conn = std::make_unique<mxt::MariaDB>(m_vm.shared().log);
+    auto conn = std::make_unique<mxt::MariaDB>(m_vm.log());
     auto& sett = conn->connection_settings();
     sett.user = admin_user;
     sett.password = admin_pw;
