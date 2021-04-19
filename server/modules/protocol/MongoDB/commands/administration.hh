@@ -37,6 +37,9 @@ namespace command
 class Create final : public SingleCommand
 {
 public:
+    static constexpr const char* const KEY = key::CREATE;
+    static constexpr const char* const HELP = "";
+
     using SingleCommand::SingleCommand;
 
     string generate_sql() override
@@ -103,6 +106,9 @@ public:
 class Drop final : public SingleCommand
 {
 public:
+    static constexpr const char* const KEY = key::DROP;
+    static constexpr const char* const HELP = "";
+
     using SingleCommand::SingleCommand;
 
     string generate_sql() override
@@ -165,6 +171,9 @@ public:
 class DropDatabase final : public SingleCommand
 {
 public:
+    static constexpr const char* const KEY = key::DROPDATABASE;
+    static constexpr const char* const HELP = "";
+
     using SingleCommand::SingleCommand;
 
     string generate_sql() override
@@ -239,6 +248,9 @@ public:
 class KillCursors final : public ImmediateCommand
 {
 public:
+    static constexpr const char* const KEY = key::KILLCURSORS;
+    static constexpr const char* const HELP = "";
+
     using ImmediateCommand::ImmediateCommand;
 
     void populate_response(DocumentBuilder& doc) override
@@ -295,6 +307,9 @@ public:
 class ListCollections final : public SingleCommand
 {
 public:
+    static constexpr const char* const KEY = key::LISTCOLLECTIONS;
+    static constexpr const char* const HELP = "";
+
     using SingleCommand::SingleCommand;
 
     string generate_sql() override
@@ -418,6 +433,9 @@ struct IsAdmin<command::ListDatabases>
 class ListDatabases final : public SingleCommand
 {
 public:
+    static constexpr const char* const KEY = key::LISTDATABASES;
+    static constexpr const char* const HELP = "";
+
     using SingleCommand::SingleCommand;
 
     bool is_admin() const override
@@ -535,6 +553,9 @@ struct IsAdmin<command::RenameCollection>
 class RenameCollection final : public SingleCommand
 {
 public:
+    static constexpr const char* const KEY = key::RENAMECOLLECTION;
+    static constexpr const char* const HELP = "";
+
     using SingleCommand::SingleCommand;
 
     bool is_admin() const override

@@ -201,6 +201,9 @@ protected:
 class Delete final : public OrderedCommand
 {
 public:
+    static constexpr const char* const KEY = key::DELETE;
+    static constexpr const char* const HELP = "";
+
     template<class ConcretePacket>
     Delete(const std::string& name,
            Database* pDatabase,
@@ -282,6 +285,9 @@ private:
 class Find final : public SingleCommand
 {
 public:
+    static constexpr const char* const KEY = key::FIND;
+    static constexpr const char* const HELP = "";
+
     using SingleCommand::SingleCommand;
 
     void prepare()
@@ -434,6 +440,9 @@ private:
 class GetMore final : public ImmediateCommand
 {
 public:
+    static constexpr const char* const KEY = key::GETMORE;
+    static constexpr const char* const HELP = "";
+
     using ImmediateCommand::ImmediateCommand;
 
     void populate_response(DocumentBuilder& doc) override
@@ -466,6 +475,9 @@ public:
 class Insert final : public OrderedCommand
 {
 public:
+    static constexpr const char* const KEY = key::INSERT;
+    static constexpr const char* const HELP = "";
+
     template<class ConcretePacket>
     Insert(const std::string& name,
            Database* pDatabase,
@@ -782,6 +794,9 @@ protected:
 class Update final : public OrderedCommand
 {
 public:
+    static constexpr const char* const KEY = key::UPDATE;
+    static constexpr const char* const HELP = "";
+
     template<class ConcretePacket>
     Update(const std::string& name,
            Database* pDatabase,

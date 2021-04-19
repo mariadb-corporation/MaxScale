@@ -133,6 +133,8 @@ public:
         return command::IsAdmin<Command>::is_admin;
     }
 
+    static void list_commands(DocumentBuilder& commands);
+
 protected:
     void require_admin_db();
 

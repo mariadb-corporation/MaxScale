@@ -27,6 +27,9 @@ namespace command
 class GetFreeMonitoringStatus final : public ImmediateCommand
 {
 public:
+    static constexpr const char* const KEY = key::GETFREEMONITORINGSTATUS;
+    static constexpr const char* const HELP = "";
+
     using ImmediateCommand::ImmediateCommand;
 
     void populate_response(DocumentBuilder& doc) override

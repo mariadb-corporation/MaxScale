@@ -31,6 +31,9 @@ namespace command
 class BuildInfo final : public ImmediateCommand
 {
 public:
+    static constexpr const char* const KEY = key::BUILDINFO;
+    static constexpr const char* const HELP = "";
+
     using ImmediateCommand::ImmediateCommand;
 
     void populate_response(DocumentBuilder& doc) override
@@ -96,6 +99,9 @@ public:
 class GetCmdLineOpts final : public ImmediateCommand
 {
 public:
+    static constexpr const char* const KEY = key::GETCMDLINEOPTS;
+    static constexpr const char* const HELP = "";
+
     using ImmediateCommand::ImmediateCommand;
 
     void populate_response(DocumentBuilder& doc) override
@@ -121,6 +127,9 @@ public:
 class GetLog final : public ImmediateCommand
 {
 public:
+    static constexpr const char* const KEY = key::GETLOG;
+    static constexpr const char* const HELP = "";
+
     using ImmediateCommand::ImmediateCommand;
 
     void populate_response(DocumentBuilder& doc) override
@@ -161,6 +170,24 @@ public:
 // https://docs.mongodb.com/manual/reference/command/isSelf/
 
 // https://docs.mongodb.com/manual/reference/command/listCommands/
+class ListCommands final : public ImmediateCommand
+{
+public:
+    static constexpr const char* const KEY = key::LISTCOMMANDS;
+    static constexpr const char* const HELP = "";
+
+    using ImmediateCommand::ImmediateCommand;
+
+    void populate_response(DocumentBuilder& doc) override
+    {
+        DocumentBuilder commands;
+
+        Command::list_commands(commands);
+
+        doc.append(kvp("commands", commands.extract()));
+        doc.append(kvp("ok", 1));
+    }
+};
 
 // https://docs.mongodb.com/manual/reference/command/lockInfo/
 
@@ -170,6 +197,9 @@ public:
 class Ping final : public ImmediateCommand
 {
 public:
+    static constexpr const char* const KEY = key::PING;
+    static constexpr const char* const HELP = "";
+
     using ImmediateCommand::ImmediateCommand;
 
     void populate_response(DocumentBuilder& doc) override
@@ -192,6 +222,9 @@ public:
 class WhatsMyUri final : public ImmediateCommand
 {
 public:
+    static constexpr const char* const KEY = key::WHATSMYURI;
+    static constexpr const char* const HELP = "";
+
     using ImmediateCommand::ImmediateCommand;
 
     void populate_response(DocumentBuilder& doc) override

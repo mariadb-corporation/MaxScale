@@ -31,6 +31,9 @@ namespace command
 class EndSessions final : public ImmediateCommand
 {
 public:
+    static constexpr const char* const KEY = key::ENDSESSIONS;
+    static constexpr const char* const HELP = "";
+
     using ImmediateCommand::ImmediateCommand;
 
     void populate_response(DocumentBuilder& doc) override

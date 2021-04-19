@@ -29,6 +29,9 @@ namespace command
 class IsMaster final : public ImmediateCommand
 {
 public:
+    static constexpr const char* const KEY = key::ISMASTER;
+    static constexpr const char* const HELP = "";
+
     using ImmediateCommand::ImmediateCommand;
 
     void populate_response(DocumentBuilder& doc) override
@@ -59,6 +62,9 @@ public:
 class ReplSetGetStatus final : public ImmediateCommand
 {
 public:
+    static constexpr const char* const KEY = key::REPLSETGETSTATUS;
+    static constexpr const char* const HELP = "";
+
     using ImmediateCommand::ImmediateCommand;
 
     void populate_response(DocumentBuilder& doc) override

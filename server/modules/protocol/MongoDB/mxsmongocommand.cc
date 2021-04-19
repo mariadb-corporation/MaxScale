@@ -122,17 +122,23 @@ using CreatorFunction = unique_ptr<Command> (*)(const string& name,
 struct CommandInfo
 {
     CommandInfo()
-        : create(nullptr)
+        : zKey(nullptr)
+        , zHelp(nullptr)
+        , create(nullptr)
         , is_admin(false)
     {
     }
 
-    CommandInfo(CreatorFunction create, bool is_admin)
-        : create(create)
+    CommandInfo(const char* zKey, const char* zHelp, CreatorFunction create, bool is_admin)
+        : zKey(zKey)
+        , zHelp(zHelp)
+        , create(create)
         , is_admin(is_admin)
     {
     }
 
+    const char*     zKey;
+    const char*     zHelp;
     CreatorFunction create;
     bool            is_admin;
 };
@@ -140,7 +146,10 @@ struct CommandInfo
 template<class ConcreteCommand>
 CommandInfo create_info()
 {
-    return CommandInfo(&create_command<ConcreteCommand>, command::IsAdmin<ConcreteCommand>::is_admin);
+    return CommandInfo(ConcreteCommand::KEY,
+                       ConcreteCommand::HELP,
+                       &create_command<ConcreteCommand>,
+                       command::IsAdmin<ConcreteCommand>::is_admin);
 }
 
 using InfosByName = const map<string, CommandInfo>;
@@ -165,6 +174,7 @@ struct ThisUnit
         { mxb::tolower(key::INSERT),                  create_info<command::Insert>() },
         { mxb::tolower(key::ISMASTER),                create_info<command::IsMaster>() },
         { mxb::tolower(key::KILLCURSORS),             create_info<command::KillCursors>() },
+        { mxb::tolower(key::LISTCOMMANDS),            create_info<command::ListCommands>() },
         { mxb::tolower(key::LISTCOLLECTIONS),         create_info<command::ListCollections>() },
         { mxb::tolower(key::LISTDATABASES),           create_info<command::ListDatabases>() },
         { mxb::tolower(key::PING),                    create_info<command::Ping>() },
@@ -270,6 +280,30 @@ void Command::check_write_batch_size(int size)
         ss << "Write batch sizes must be between 1 and " << mongo::MAX_WRITE_BATCH_SIZE
            << ". Got " << size << " operations.";
         throw mxsmongo::SoftError(ss.str(), mxsmongo::error::INVALID_LENGTH);
+    }
+}
+
+//static
+void Command::list_commands(DocumentBuilder& commands)
+{
+    for (const auto& kv : this_unit.infos_by_name)
+    {
+        const string& name = kv.first;
+        const CommandInfo& info = kv.second;
+
+        const char* zHelp = info.zHelp;
+        if (!*zHelp)
+        {
+            zHelp = "no help defined";
+        }
+
+        DocumentBuilder command;
+        command.append(kvp("help", zHelp));
+        command.append(kvp("adminOnly", info.is_admin));
+
+        // Yes, passing a literal string to kvp as first argument works, but
+        // passing a 'const char*' does not.
+        commands.append(kvp(string(info.zKey), command.extract()));
     }
 }
 

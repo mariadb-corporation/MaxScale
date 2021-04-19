@@ -22,6 +22,9 @@ namespace command
 class MxsDiagnose final : public ImmediateCommand
 {
 public:
+    static constexpr const char* const KEY = key::MXSDIAGNOSE;
+    static constexpr const char* const HELP = "";
+
     using ImmediateCommand::ImmediateCommand;
 
     void populate_response(DocumentBuilder& doc)
@@ -80,6 +83,9 @@ public:
 class MxsGetConfig final : public ImmediateCommand
 {
 public:
+    static constexpr const char* const KEY = key::MXSGETCONFIG;
+    static constexpr const char* const HELP = "";
+
     using ImmediateCommand::ImmediateCommand;
 
     void populate_response(DocumentBuilder& doc)
@@ -107,6 +113,9 @@ public:
 class MxsSetConfig final : public ImmediateCommand
 {
 public:
+    static constexpr const char* const KEY = key::MXSSETCONFIG;
+    static constexpr const char* const HELP = "";
+
     using ImmediateCommand::ImmediateCommand;
 
     void populate_response(DocumentBuilder& doc)

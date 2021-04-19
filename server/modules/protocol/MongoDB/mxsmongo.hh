@@ -304,6 +304,7 @@ const char ISMASTER[]                = "isMaster";
 const char KEY[]                     = "key";
 const char KILLCURSORS[]             = "killCursors";
 const char LIMIT[]                   = "limit";
+const char LISTCOMMANDS[]            = "listCommands";
 const char LISTCOLLECTIONS[]         = "listCollections";
 const char LISTDATABASES[]           = "listDatabases";
 const char MULTI[]                   = "multi";
