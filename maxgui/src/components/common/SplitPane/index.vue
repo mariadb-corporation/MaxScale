@@ -1,5 +1,10 @@
 <template>
-    <div class="split-pane-container" @mouseup="onMouseUp" @mousemove="onMouseMove">
+    <div
+        class="split-pane-container"
+        :style="{ userSelect: active ? 'none' : '' }"
+        @mouseup="onMouseUp"
+        @mousemove="onMouseMove"
+    >
         <pane isLeft :split="split" :style="leftPanelPos">
             <slot name="pane-left" />
         </pane>
@@ -13,6 +18,7 @@
         <pane :split="split" :style="rightPanelPos">
             <slot name="pane-right" />
         </pane>
+        <div v-if="active" class="split-pane-container__mask" />
     </div>
 </template>
 
@@ -48,14 +54,12 @@ export default {
     data() {
         return {
             active: false,
-            percent: this.value,
         }
     },
     computed: {
         isVertSplit() {
             return this.split === 'vert'
         },
-
         panePosType() {
             return this.isVertSplit ? 'width' : 'height'
         },
@@ -63,21 +67,16 @@ export default {
             return this.isVertSplit ? 'left' : 'top'
         },
         leftPanelPos() {
-            return { [this.panePosType]: `${this.percent}%` }
+            return { [this.panePosType]: `${this.value}%` }
         },
         rightPanelPos() {
-            return { [this.panePosType]: `${100 - this.percent}%` }
+            return { [this.panePosType]: `${100 - this.value}%` }
         },
         resizerStyle() {
             return {
-                [this.resizerPosType]: `${this.percent}%`,
+                [this.resizerPosType]: `${this.value}%`,
                 ...(this.disable && { cursor: 'unset', pointerEvents: 'none' }),
             }
-        },
-    },
-    watch: {
-        value(v) {
-            if (v !== this.percent) this.percent = v
         },
     },
     methods: {
@@ -107,8 +106,7 @@ export default {
                 const targetOffset = this.isVertSplit ? offsetWidth : offsetHeight
                 const percent = Math.floor(((currPage - offset) / targetOffset) * 10000) / 100
                 if (percent >= this.minPercent && percent <= 100 - this.minPercent)
-                    this.percent = percent
-                this.$emit('input', this.percent)
+                    this.$emit('input', percent)
             }
         },
     },
@@ -119,5 +117,13 @@ export default {
 .split-pane-container {
     height: 100%;
     position: relative;
+    &__mask {
+        z-index: 9999;
+        width: 100%;
+        height: 100%;
+        position: absolute;
+        top: 0;
+        left: 0;
+    }
 }
 </style>
