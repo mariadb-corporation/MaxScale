@@ -92,10 +92,11 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapState } from 'vuex'
-
 export default {
     name: 'db-list-tree',
+    props: {
+        schemaList: { type: Array, required: true },
+    },
     data() {
         return {
             activeNodes: [],
@@ -115,40 +116,6 @@ export default {
         }
     },
     computed: {
-        ...mapState({
-            conn_schema: state => state.query.conn_schema,
-            loading_schema: state => state.query.loading_schema,
-        }),
-        schemaList() {
-            if (this.loading_schema) return []
-            const { schemas = [] } = this.conn_schema
-            let schemaList = schemas.map(({ name: schemaId, tables = [] }) => {
-                let schemaObj = {
-                    type: 'schema',
-                    name: schemaId,
-                    id: schemaId,
-                    children: [],
-                }
-                schemaObj.children = tables.map(({ name: tableName, columns = [] }) => {
-                    const tableId = `${schemaObj.id}.${tableName}`
-                    return {
-                        type: 'table',
-                        name: tableName,
-                        id: tableId,
-                        level: 1,
-                        children: columns.map(({ name: columnName, dataType }) => ({
-                            type: 'column',
-                            name: columnName,
-                            dataType: dataType,
-                            id: `${tableId}.${columnName}`,
-                            level: 2,
-                        })),
-                    }
-                })
-                return schemaObj
-            })
-            return schemaList
-        },
         filter() {
             return (item, search, textKey) => item[textKey].indexOf(search) > -1
         },

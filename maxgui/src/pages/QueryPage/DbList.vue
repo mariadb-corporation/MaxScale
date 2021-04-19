@@ -48,6 +48,7 @@
             </div>
             <db-list-tree
                 v-if="!isLeftPaneCollapsed"
+                :schemaList="schemaList"
                 class="schema-list-wrapper"
                 v-on="$listeners"
             />
@@ -73,6 +74,9 @@ export default {
     name: 'db-list',
     components: {
         DbListTree,
+    },
+    props: {
+        schemaList: { type: Array, required: true },
     },
     data() {
         return {

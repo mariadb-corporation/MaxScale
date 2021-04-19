@@ -35,6 +35,12 @@ export default {
         value(v) {
             if (this.editor && v !== this.getEditorValue()) this.setEditorValue(v)
         },
+        tableDist: {
+            deep: true,
+            handler() {
+                this.createCompletionList()
+            },
+        },
     },
     computed: {
         completionListLabels() {
@@ -55,6 +61,7 @@ export default {
         createCompletionList() {
             const keywordList = reservedWords.map(w => ({
                 label: w.keyword,
+                detail: 'KEYWORD',
                 kind: this.monaco.languages.CompletionItemKind.Keyword,
                 insertText: w.keyword,
             }))
@@ -64,6 +71,7 @@ export default {
                 switch (item.type) {
                     case 'table':
                     case 'column':
+                    case 'schema':
                         item.kind = this.monaco.languages.CompletionItemKind.Text
                 }
             }

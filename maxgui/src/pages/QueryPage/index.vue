@@ -45,6 +45,7 @@
                     <template slot="pane-left">
                         <db-list
                             class="db-tb-list"
+                            :schemaList="schema.schemaList"
                             @is-fullscreen="isFullScreen = $event"
                             @is-collapsed="isCollapsed = $event"
                             @reload-schema="loadSchema"
@@ -89,7 +90,7 @@
 import QueryEditor from '@/components/QueryEditor'
 import DbList from './DbList'
 import QueryResult from './QueryResult'
-import { mapActions } from 'vuex'
+import { mapActions, mapState } from 'vuex'
 
 export default {
     name: 'query-view',
@@ -110,10 +111,61 @@ export default {
         }
     },
     computed: {
+        ...mapState({
+            conn_schema: state => state.query.conn_schema,
+            loading_schema: state => state.query.loading_schema,
+        }),
         distArr: function() {
-            let result = []
-            //TODO: Flatten conn_schema
-            return result
+            return this.schema.schemaFlatList
+        },
+        schema() {
+            let res = { schemaList: [], schemaFlatList: [] }
+            if (this.loading_schema) return res
+            const { schemas = [] } = this.conn_schema
+            res.schemaList = schemas.map(({ name: schemaId, tables = [] }) => {
+                res.schemaFlatList.push({
+                    label: schemaId,
+                    detail: 'SCHEMA',
+                    insertText: schemaId,
+                    type: 'schema',
+                })
+                return {
+                    type: 'schema',
+                    name: schemaId,
+                    id: schemaId,
+                    children: tables.map(({ name: tableName, columns = [] }) => {
+                        const tableId = `${schemaId}.${tableName}`
+                        res.schemaFlatList.push({
+                            label: tableName,
+                            detail: 'TABLE',
+                            insertText: tableName,
+                            type: 'table',
+                        })
+                        return {
+                            type: 'table',
+                            name: tableName,
+                            id: tableId,
+                            level: 1,
+                            children: columns.map(({ name: columnName, dataType }) => {
+                                res.schemaFlatList.push({
+                                    label: columnName,
+                                    insertText: columnName,
+                                    detail: 'COLUMN',
+                                    type: 'column',
+                                })
+                                return {
+                                    type: 'column',
+                                    name: columnName,
+                                    dataType: dataType,
+                                    id: `${tableId}.${columnName}`,
+                                    level: 2,
+                                }
+                            }),
+                        }
+                    }),
+                }
+            })
+            return res
         },
     },
     watch: {
