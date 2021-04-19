@@ -22,18 +22,19 @@
 #include <set>
 
 using namespace maxbase;
+using namespace std::string_literals;
 
 namespace
 {
 
 // Base path to cpu cache info, "/index" is followed by a digit/file-name.
-const std::string cache_base_path {"/sys/devices/system/cpu/cpu0/cache/index"};
+constexpr const char* const cache_base_path = "/sys/devices/system/cpu/cpu0/cache/index";
 
 // size of data cache-line in bytes
 int get_cache_line_size()
 {
     int sz = 0;
-    std::string file_name = cache_base_path + "0/coherency_line_size";
+    std::string file_name {cache_base_path + "0/coherency_line_size"s};
     std::ifstream is(file_name);
 
     if (is)
