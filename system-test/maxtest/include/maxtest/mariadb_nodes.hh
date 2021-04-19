@@ -28,6 +28,7 @@ class MariaDBServer
 {
     friend class ::MariaDBCluster;
 public:
+    using SMariaDB = std::unique_ptr<mxt::MariaDB>;
     MariaDBServer(const std::string& cnf_name, VMNode& vm, MariaDBCluster& cluster, int ind);
 
     bool start_database();
@@ -49,23 +50,21 @@ public:
      *
      * @return The connection. Success can be checked by 'is_open'.
      */
-    std::unique_ptr<mxt::MariaDB> try_open_connection();
+    SMariaDB try_open_connection();
 
-    /**
-     * Try to open a connection to the server. Failure is not a test error.
-     * Uses the "test-admin"-user.
-     *
-     * @return The connection. Success can be checked by 'is_open'.
-     */
-    std::unique_ptr<mxt::MariaDB> try_open_admin_connection();
-    bool                          update_status();
-    const Status&                 status() const;
-    const std::string&            cnf_name() const;
+    mxt::MariaDB* admin_connection();
+
+    bool ping_or_open_admin_connection();
+
+    bool               update_status();
+    const Status&      status() const;
+    const std::string& cnf_name() const;
 
     VMNode& vm_node();
 
 private:
-    Status m_status;
+    Status   m_status;
+    SMariaDB m_admin_conn;      /**< Admin-level connection to server. Usually kept open. */
 
     struct Settings
     {
@@ -298,12 +297,6 @@ public:
     int execute_query_all_nodes(const char* sql);
 
     /**
-     * @brief truncate_mariadb_logs clean ups MariaDB logs on backend nodes
-     * @return 0 if success
-     */
-    int truncate_mariadb_logs();
-
-    /**
      * Checks that an SSL connection can be created to the node
      *
      * @return True if an encrypted connection to the database was created
@@ -415,7 +408,12 @@ public:
 
     mxt::MariaDBServer* backend(int i);
 
-    ConnArray admin_connect_to_all();
+    /**
+     * Ping or open admin connections to all servers.
+     *
+     * @return Number of succesfull connections
+     */
+    int ping_or_open_admin_connections();
 
 protected:
     /**
