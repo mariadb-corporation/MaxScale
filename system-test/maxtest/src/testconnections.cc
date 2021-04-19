@@ -308,6 +308,30 @@ int TestConnections::cleanup()
         }
     }
 
+    if (m_fix_clusters_after)
+    {
+        mxt::BoolFuncArray funcs;
+        if (repl)
+        {
+            funcs.push_back([this]() {
+                                return repl->fix_replication();
+                            });
+        }
+        if (galera)
+        {
+            funcs.push_back([this]() {
+                                return galera->fix_replication();
+                            });
+        }
+        if (xpand)
+        {
+            funcs.push_back([this]() {
+                                return xpand->fix_replication();
+                            });
+        }
+        m_shared.concurrent_run(funcs);
+    }
+
     m_stop_threads = true;
     if (m_timeout_thread.joinable())
     {
@@ -983,22 +1007,20 @@ void TestConnections::revert_replicate_from_master()
 
 int TestConnections::start_mm(int m)
 {
-    int i;
-
     tprintf("Stopping maxscale\n");
-    int global_result = maxscales->stop_maxscale(m);
+    int rval = maxscales->stop_maxscale(m);
 
     tprintf("Stopping all backend nodes\n");
-    global_result += repl->stop_nodes();
+    rval += repl->stop_nodes() ? 0 : 1;
 
-    for (i = 0; i < 2; i++)
+    for (int i = 0; i < 2; i++)
     {
         tprintf("Starting back node %d\n", i);
-        global_result += repl->start_node(i, (char*) "");
+        rval += repl->start_node(i, (char*) "");
     }
 
     repl->connect();
-    for (i = 0; i < 2; i++)
+    for (int i = 0; i < 2; i++)
     {
         execute_query(repl->nodes[i], "stop slave");
         execute_query(repl->nodes[i], "reset master");
@@ -1012,9 +1034,9 @@ int TestConnections::start_mm(int m)
     repl->close_connections();
 
     tprintf("Starting back Maxscale\n");
-    global_result += maxscales->start_maxscale(m);
+    rval += maxscales->start_maxscale(m);
 
-    return global_result;
+    return rval;
 }
 
 bool TestConnections::log_matches(int m, const char* pattern)
@@ -1905,6 +1927,7 @@ bool TestConnections::read_cmdline_options(int argc, char* argv[])
         {"local-maxscale",     optional_argument, 0, 'l'},
         {"reinstall-maxscale", no_argument,       0, 'm'},
         {"serial-run",         no_argument,       0, 'e'},
+        {"fix-clusters",       no_argument,       0, 'f'},
         {0,                    0,                 0, 0  }
     };
 
@@ -1912,7 +1935,7 @@ bool TestConnections::read_cmdline_options(int argc, char* argv[])
     int c;
     int option_index = 0;
 
-    while ((c = getopt_long(argc, argv, "hvnqsirgzlme::", long_options, &option_index)) != -1)
+    while ((c = getopt_long(argc, argv, "hvnqsirgzlmef::", long_options, &option_index)) != -1)
     {
         switch (c)
         {
@@ -1988,6 +2011,11 @@ bool TestConnections::read_cmdline_options(int argc, char* argv[])
         case 'e':
             printf("Preferring serial execution.\n");
             m_shared.settings.allow_concurrent_run = false;
+            break;
+
+        case 'f':
+            printf("Fixing clusters after test.\n");
+            m_fix_clusters_after = true;
             break;
 
         default:

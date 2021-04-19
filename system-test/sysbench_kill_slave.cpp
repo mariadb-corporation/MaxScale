@@ -13,22 +13,18 @@
 
 TestConnections* Test;
 
-pthread_mutex_t mutex1 = PTHREAD_MUTEX_INITIALIZER;
 int exit_flag = 0;
-int start_flag = 0;
 int old_slave;
-void* kill_vm_thread(void* ptr);
+void* kill_vm_thread();
 
 int main(int argc, char* argv[])
 {
     Test = new TestConnections(argc, argv);
-    pthread_t kill_vm_thread1;
     char sys1[4096];
     int port[3];
 
     port[0] = Test->maxscales->rwsplit_port[0];
     port[1] = Test->maxscales->readconn_master_port[0];
-    // port[2] = Test->maxscales->readconn_slave_port[0];
 
     auto mxs_ip = Test->maxscales->ip4(0);
     Test->tprintf("Connecting to RWSplit %s\n", mxs_ip);
@@ -50,7 +46,7 @@ int main(int argc, char* argv[])
     for (int k = 0; k < 2; k++)
     {
         Test->tprintf("Trying test with port %d\n", port[k]);
-        pthread_create(&kill_vm_thread1, NULL, kill_vm_thread, NULL);
+        std::thread kill_vm_thread1(kill_vm_thread);
 
         if (Test->smoke)
         {
@@ -66,15 +62,13 @@ int main(int argc, char* argv[])
             Test->tprintf("Error executing sysbench test\n");
         }
 
+        kill_vm_thread1.join();     // Correct place to join?
+
         Test->tprintf("Starting VM back\n");
         if ((old_slave >= 1) && (old_slave <= Test->repl->N))
         {
             Test->repl->unblock_node(old_slave);
         }
-        sleep(60);
-        Test->tprintf("Restarting replication\n");
-        Test->repl->start_replication();
-        sleep(30);
     }
 
     Test->maxscales->connect_maxscale(0);
@@ -82,23 +76,14 @@ int main(int argc, char* argv[])
     printf("Dropping sysbanch tables!\n");
     fflush(stdout);
 
-    /*
-     *  Test->try_query(Test->maxscales->conn_rwsplit[0], (char *) "DROP TABLE sbtest1");
-     *  if (!Test->smoke)
-     *  {
-     *   Test->try_query(Test->maxscales->conn_rwsplit[0], (char *) "DROP TABLE sbtest2");
-     *   Test->try_query(Test->maxscales->conn_rwsplit[0], (char *) "DROP TABLE sbtest3");
-     *   Test->try_query(Test->maxscales->conn_rwsplit[0], (char *) "DROP TABLE sbtest4");
-     *  }
-     */
-    Test->global_result += execute_query(Test->maxscales->conn_rwsplit[0], (char*) "DROP TABLE sbtest1");
+    Test->global_result += execute_query(Test->maxscales->conn_rwsplit[0], "DROP TABLE sbtest1");
 
     printf("closing connections to MaxScale!\n");
     fflush(stdout);
 
     Test->maxscales->close_maxscale_connections(0);
 
-    Test->tprintf("Checxking if MaxScale is still alive!\n");
+    Test->tprintf("Checking if MaxScale is still alive!");
     fflush(stdout);
     Test->check_maxscale_alive(0);
 
@@ -108,9 +93,8 @@ int main(int argc, char* argv[])
 }
 
 
-void* kill_vm_thread(void* ptr)
+void* kill_vm_thread()
 {
-    // int global_result = 0;
     sleep(20);
     printf("Checking current slave\n");
     fflush(stdout);

@@ -162,10 +162,18 @@ public:
     void print_env();
 
     /**
-     * @brief stop_nodes stops mysqld on all nodes
-     * @return  0 in case of success
+     * Start mysqld on all nodes.
+     *
+     * @return  True on success
      */
-    int stop_nodes();
+    bool start_nodes();
+
+    /**
+     * Stop mysqld on all nodes.
+     *
+     * @return  True on success
+     */
+    bool stop_nodes();
 
     /**
      * @brief stop_slaves isues 'stop slave;' to all nodes
@@ -265,14 +273,6 @@ public:
 
     bool prepare_cluster_for_test();
 
-    /**
-     * Flush hosts, adjust settings, remove anonymous users, etc.
-     *
-     * @param i Node to prepare
-     * @return True on success
-     */
-    bool prepare_for_test(int i);
-
     bool prepare_servers_for_test();
 
     /**
@@ -370,12 +370,6 @@ public:
     virtual bool prepare_server(int i);
 
     /**
-     * @brief limit_nodes Restart replication for only new_N nodes
-     * @param new_N new number of nodes in replication
-     */
-    void limit_nodes(int new_N);
-
-    /**
      * @brief cnf_servers Generates backend servers description for maxscale.cnf
      * @return Servers description including IPs, ports
      */
@@ -458,4 +452,12 @@ private:
      * @return True if cluster is ready for test
      */
     virtual bool check_replication() = 0;
+
+    /**
+     * Flush hosts, adjust settings, remove anonymous users, etc.
+     *
+     * @param i Node to prepare
+     * @return True on success
+     */
+    bool prepare_for_test(int i);
 };

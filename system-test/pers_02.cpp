@@ -1,5 +1,5 @@
 /**
- * @file pers_02.cpp - Persistent connection tests - crash during Maxscale restart
+ * @file pers_02.cpp - Persistent connection test
  *
  * - Set max_connections to 20
  * - Open 75 connections to all Maxscale services
@@ -15,28 +15,26 @@
 
 int main(int argc, char* argv[])
 {
-    TestConnections* Test = new TestConnections(argc, argv);
+    TestConnections test(argc, argv);
 
-    Test->set_timeout(60);
-    Test->repl->execute_query_all_nodes((char*) "set global max_connections = 20;");
-    Test->create_connections(0, 75, true, true, true, false);
+    test.set_timeout(60);
+    test.repl->execute_query_all_nodes("set global max_connections = 20;");
+    test.create_connections(0, 75, true, true, true, false);
 
-    Test->stop_timeout();
-    Test->repl->stop_nodes();
-    Test->repl->start_replication();
-    Test->repl->close_connections();
-    Test->repl->sync_slaves();
+    test.stop_timeout();
+    test.repl->stop_nodes();
+    test.repl->start_nodes();
+    test.repl->disconnect();
+    test.repl->sync_slaves();
 
     // Increase connection limits and wait a few seconds for the server to catch up
-    Test->repl->execute_query_all_nodes((char*) "set global max_connections = 2000;");
+    test.repl->execute_query_all_nodes("set global max_connections = 2000;");
     sleep(10);
 
-    Test->set_timeout(60);
-    Test->add_result(Test->create_connections(0, 70, true, true, true, false),
-                     "Connections creation error \n");
+    test.set_timeout(60);
+    test.add_result(test.create_connections(0, 70, true, true, true, false),
+                    "Connections creation error \n");
 
-    Test->check_maxscale_alive(0);
-    int rval = Test->global_result;
-    delete Test;
-    return rval;
+    test.check_maxscale_alive(0);
+    return test.global_result;
 }

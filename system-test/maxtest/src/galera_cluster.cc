@@ -34,8 +34,7 @@ GaleraCluster::GaleraCluster(mxt::SharedData* shared)
 
 int GaleraCluster::start_replication()
 {
-    int local_result = 0;
-    local_result += stop_nodes();
+    int local_result = stop_nodes() ? 0 : 1;
 
     std::stringstream ss;
 

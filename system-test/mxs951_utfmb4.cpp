@@ -1,5 +1,5 @@
 /**
- * @file mxs951_utfmb4_galera.cpp Set utf8mb4 in the backend and restart Maxscale
+ * @file mxs951_utfmb4.cpp Set utf8mb4 in the backend and restart Maxscale
  * - add following to backend server configuration:
  *  @verbatim
  *  [mysqld]
@@ -11,52 +11,53 @@
  * - connect to Maxscale
  */
 
-
-#include <iostream>
-#include <unistd.h>
 #include <maxtest/testconnections.hh>
+#include <maxbase/format.hh>
 
-using namespace std;
+using std::string;
 
 int main(int argc, char* argv[])
 {
+    TestConnections test(argc, argv);
+    test.stop_timeout();
+    test.stop_maxscale();
 
-    TestConnections* Test = new TestConnections(argc, argv);
-    Test->stop_timeout();
+    auto repl = test.repl;
+    auto N = repl->N;
 
-    char cmd [1024];
-    sprintf(cmd, "%s/utf64.cnf", test_dir);
-    for (int i = 0; i < Test->repl->N; i++)
+    string source_file = mxb::string_printf("%s/utf64.cnf", test_dir);
+    for (int i = 0; i < N; i++)
     {
-        Test->repl->copy_to_node_legacy(cmd, (char*) "./", i);
-        Test->repl->ssh_node(i, (char*) "cp ./utf64.cnf /etc/my.cnf.d/", true);
+        repl->copy_to_node(i, source_file.c_str(), "./");
+        repl->ssh_node(i, "cp ./utf64.cnf /etc/my.cnf.d/", true);
     }
 
-    Test->repl->start_replication();
+    repl->stop_nodes();
+    repl->start_nodes();
+    test.start_maxscale();
+    test.maxscales->wait_for_monitor(1);
 
+    test.tprintf("Set utf8mb4 for backend");
+    repl->execute_query_all_nodes("SET GLOBAL character_set_server = 'utf8mb4';");
 
-    Test->tprintf("Set utf8mb4 for backend");
-    Test->repl->execute_query_all_nodes((char*) "SET GLOBAL character_set_server = 'utf8mb4';");
+    test.tprintf("Set names to utf8mb4 for backend");
+    repl->execute_query_all_nodes("SET NAMES 'utf8mb4';");
 
-    Test->tprintf("Set names to utf8mb4 for backend");
-    Test->repl->execute_query_all_nodes((char*) "SET NAMES 'utf8mb4';");
+    test.set_timeout(120);
 
-    Test->set_timeout(120);
+    test.tprintf("Restart Maxscale");
+    test.maxscales->restart_maxscale(0);
+    test.check_maxscale_alive(0);
 
-    Test->tprintf("Restart Maxscale");
-    Test->maxscales->restart_maxscale(0);
+    test.stop_timeout();
+    test.tprintf("Restore backend configuration\n");
 
-    Test->check_maxscale_alive(0);
-
-    Test->stop_timeout();
-    Test->tprintf("Restore backend configuration\n");
-    for (int i = 0; i < Test->repl->N; i++)
+    for (int i = 0; i < N; i++)
     {
-        Test->repl->ssh_node(i, (char*) "rm  /etc/my.cnf.d/utf64.cnf", true);
+        repl->ssh_node(i, "rm  /etc/my.cnf.d/utf64.cnf", true);
     }
-    Test->repl->start_replication();
+    repl->stop_nodes();
+    repl->start_nodes();
 
-    int rval = Test->global_result;
-    delete Test;
-    return rval;
+    return test.global_result;
 }

@@ -132,7 +132,6 @@
 using namespace std;
 
 
-pthread_mutex_t mutex1 = PTHREAD_MUTEX_INITIALIZER;
 int exit_flag = 0;
 int conn_N = 50;
 

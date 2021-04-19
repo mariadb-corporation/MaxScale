@@ -76,8 +76,6 @@ int main(int argc, char** argv)
 
     test.stop_timeout();
 
-    test.repl->fix_replication();
-
     test.repl->connect();
     execute_query_silent(test.repl->nodes[0], "DROP TABLE test.t1");
     execute_query_silent(test.repl->nodes[0], "DROP USER 'testuser'@'%'");

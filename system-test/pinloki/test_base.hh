@@ -45,7 +45,6 @@ public:
             post();
         }
 
-        teardown();
         return test.global_result;
     }
 
@@ -95,12 +94,6 @@ protected:
         slave.query("START SLAVE");
         sync(maxscale, slave);
         test.stop_timeout();
-    }
-
-    // Test teardown, fixes replication. Override if `setup` was overridden.
-    virtual void teardown()
-    {
-        test.repl->fix_replication();
     }
 
 protected:
