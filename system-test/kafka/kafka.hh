@@ -146,7 +146,7 @@ public:
         m_consumer->assign({topic.get()});
     }
 
-    RdKafka::ErrorCode consume_one_message()
+    std::unique_ptr<RdKafka::Message> consume_one_message()
     {
         std::unique_ptr<RdKafka::Message> msg(m_consumer->consume(10000));
 
@@ -158,14 +158,14 @@ public:
             std::cout << "Message content: " << payload << std::endl;
         }
 
-        return msg->err();
+        return msg;
     }
 
     int consume_messages()
     {
         int i = 0;
 
-        while (consume_one_message() == RdKafka::ERR_NO_ERROR)
+        while (consume_one_message()->err() == RdKafka::ERR_NO_ERROR)
         {
             ++i;
         }
@@ -183,11 +183,16 @@ public:
 
         while (i < n_expected && Clock::now() - start < limit)
         {
-            auto err = consume_one_message();
+            auto err = consume_one_message()->err();
 
             if (err == RdKafka::ERR_NO_ERROR)
             {
                 ++i;
+            }
+            else if (err == RdKafka::ERR_UNKNOWN_TOPIC_OR_PART)
+            {
+                // Topic doesn't exist yet, sleep for a few seconds
+                sleep(5);
             }
             else if (err != RdKafka::ERR_REQUEST_TIMED_OUT || err != RdKafka::ERR__TIMED_OUT)
             {

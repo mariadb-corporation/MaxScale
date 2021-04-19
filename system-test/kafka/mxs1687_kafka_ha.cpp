@@ -11,11 +11,15 @@ void read_messages(TestConnections& test, Consumer& consumer, int n_expected)
 
 int main(int argc, char** argv)
 {
+    TestConnections::skip_maxscale_start(true);
     TestConnections test(argc, argv);
     Kafka kafka(test);
 
     test.repl->stop_slaves();
     auto conn = test.repl->get_connection(0);
+    conn.connect();
+    conn.query("RESET MASTER");
+    test.maxscales->start();
 
     // Stop B-Monitor, A-Monitor will take ownership of the cluster
     test.maxctrl("stop monitor B-Monitor");
