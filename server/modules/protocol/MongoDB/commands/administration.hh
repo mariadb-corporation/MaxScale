@@ -236,8 +236,6 @@ public:
 // https://docs.mongodb.com/manual/reference/command/getParameter/
 
 // https://docs.mongodb.com/manual/reference/command/killCursors/
-
-// https://docs.mongodb.com/manual/reference/command/killOp/
 class KillCursors final : public ImmediateCommand
 {
 public:
@@ -290,6 +288,8 @@ public:
         doc.append(kvp("ok", 1));
     }
 };
+
+// https://docs.mongodb.com/manual/reference/command/killOp/
 
 // https://docs.mongodb.com/manual/reference/command/listCollections/
 class ListCollections final : public SingleCommand
@@ -414,11 +414,7 @@ public:
 
     string generate_sql() override
     {
-        if (m_database.name() != "admin")
-        {
-            throw SoftError("listDatabases may only be run against the admin database.",
-                            error::UNAUTHORIZED);
-        }
+        require_admin_db();
 
         stringstream sql;
         sql << "SELECT table_schema, table_name, (data_length + index_length) `bytes` "
@@ -518,6 +514,106 @@ public:
 // https://docs.mongodb.com/manual/reference/command/reIndex/
 
 // https://docs.mongodb.com/manual/reference/command/renameCollection/
+class RenameCollection final : public SingleCommand
+{
+public:
+    using SingleCommand::SingleCommand;
+
+    string generate_sql() override
+    {
+        require_admin_db();
+
+        m_from = value_as<string>();
+
+        auto i = m_from.find('.');
+
+        if (i == string::npos)
+        {
+            stringstream ss;
+            ss << "Invalid namespace specified '" << m_from << "'";
+            throw SoftError(ss.str(), error::INVALID_NAMESPACE);
+        }
+
+        m_to = required<string>("to");
+
+        auto j = m_to.find('.');
+
+        if (j == string::npos)
+        {
+            stringstream ss;
+            ss << "Invalid target namespace: '" << m_to << "'";
+            throw SoftError(ss.str(), error::INVALID_NAMESPACE);
+        }
+
+        return "RENAME TABLE " + m_from + " TO " + m_to;
+    };
+
+    State translate(mxs::Buffer&& mariadb_response, GWBUF** ppResponse) override
+    {
+        ComResponse response(mariadb_response.data());
+
+        int32_t ok = 0;
+
+        switch (response.type())
+        {
+        case ComResponse::OK_PACKET:
+            ok = 1;
+            break;
+
+        case ComResponse::ERR_PACKET:
+            {
+                ComERR err(response);
+
+                switch (err.code())
+                {
+                case ER_NO_SUCH_TABLE:
+                    {
+                        stringstream ss;
+                        ss << "Source collection " << m_from << " does not exist";
+                        throw SoftError(ss.str(), error::NAMESPACE_NOT_FOUND);
+                    }
+                    break;
+
+                case ER_ERROR_ON_RENAME:
+                    {
+                        stringstream ss;
+                        ss << "Rename failed, does target database exist?";
+                        throw SoftError(ss.str(), error::COMMAND_FAILED);
+                    }
+                    break;
+
+                case ER_TABLE_EXISTS_ERROR:
+                    {
+                        throw SoftError("target namespace exists", error::NAMESPACE_EXISTS);
+                    }
+                    break;
+
+                default:
+                    throw MariaDBError(err);
+                }
+            }
+            break;
+
+        case ComResponse::LOCAL_INFILE_PACKET:
+            mxb_assert(!true);
+            break;
+
+        default:
+            mxb_assert(!true);
+        }
+
+        DocumentBuilder doc;
+
+        doc.append(kvp("ok", ok));
+
+        *ppResponse = create_response(doc.extract());
+        return READY;
+    }
+
+private:
+    string m_from;
+    string m_to;
+};
 
 // https://docs.mongodb.com/manual/reference/command/setFeatureCompatibilityVersion/
 

@@ -617,7 +617,9 @@ void mxsmongo::MariaDBError::create_response(const Command& command, DocumentBui
     mariadb.append(kvp("sql", sql));
 
     doc.append(kvp("$err", what()));
-    doc.append(kvp("code", error::from_mariadb_code(m_mariadb_code)));
+    auto mongo_code = error::from_mariadb_code(m_mariadb_code);;
+    doc.append(kvp("code", mongo_code));
+    doc.append(kvp("codeName", mxsmongo::error::name(mongo_code)));
     doc.append(kvp("mariadb", mariadb.extract()));
 }
 

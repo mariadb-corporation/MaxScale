@@ -144,6 +144,7 @@ struct ThisUnit
         { mxb::tolower(key::LISTDATABASES),           &create_command<command::ListDatabases> },
         { mxb::tolower(key::PING),                    &create_command<command::Ping> },
         { mxb::tolower(key::REPLSETGETSTATUS),        &create_command<command::ReplSetGetStatus> },
+        { mxb::tolower(key::RENAMECOLLECTION),        &create_command<command::RenameCollection> },
         { mxb::tolower(key::UPDATE),                  &create_command<command::Update> },
         { mxb::tolower(key::WHATSMYURI),              &create_command<command::WhatsMyUri> },
 
@@ -243,6 +244,15 @@ void Command::check_write_batch_size(int size)
         ss << "Write batch sizes must be between 1 and " << mongo::MAX_WRITE_BATCH_SIZE
            << ". Got " << size << " operations.";
         throw mxsmongo::SoftError(ss.str(), mxsmongo::error::INVALID_LENGTH);
+    }
+}
+
+void Command::require_admin_db()
+{
+    if (m_database.name() != "admin")
+    {
+        throw SoftError(m_name + " may only be run against the admin database.",
+                        error::UNAUTHORIZED);
     }
 }
 

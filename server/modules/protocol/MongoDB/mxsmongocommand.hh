@@ -113,6 +113,8 @@ public:
     const std::string& table(Quoted quoted = Quoted::YES) const;
 
 protected:
+    void require_admin_db();
+
     template<class Type>
     bool optional(const bsoncxx::document::view& doc,
                   const char* zKey, Type* pElement, Conversion conversion = Conversion::STRICT) const

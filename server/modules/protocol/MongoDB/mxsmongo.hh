@@ -315,6 +315,7 @@ const char PROJECTION[]              = "projection";
 const char Q[]                       = "q";
 const char QUERY[]                   = "query";
 const char REPLSETGETSTATUS[]        = "replSetGetStatus";
+const char RENAMECOLLECTION[]        = "renameCollection";
 const char SKIP[]                    = "skip";
 const char SORT[]                    = "sort";
 const char U[]                       = "u";
