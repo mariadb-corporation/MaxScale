@@ -9,8 +9,9 @@
         open-on-click
         transition
     >
-        <template v-slot:label="{ item }">
+        <template v-slot:label="{ item, hover }">
             <v-tooltip
+                :value="hover"
                 right
                 :nudge-right="40"
                 transition="slide-x-transition"
