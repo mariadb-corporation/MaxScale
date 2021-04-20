@@ -28,4 +28,3 @@ set_target_properties(mongodbprotocol PROPERTIES VERSION "1.0.0" LINK_FLAGS -Wl,
 install_module(mongodbprotocol core)
 
 add_subdirectory(test)
-add_subdirectory(wire)
