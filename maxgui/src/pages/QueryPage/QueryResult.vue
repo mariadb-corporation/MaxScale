@@ -1,22 +1,28 @@
 <template>
     <div>
         <v-tabs v-model="activeTab" height="24" class="tab-navigation-wrapper ">
-            <v-tab color="primary">
+            <v-tab color="primary" :href="`#${SQL_QUERY_MODES.QUERY_VIEW}`">
                 <span>
                     Results
                 </span>
             </v-tab>
-            <v-tab color="primary">
+            <v-tab color="primary" :href="`#${SQL_QUERY_MODES.PREVIEW_DATA}`">
                 <span>
                     Data preview
                 </span>
             </v-tab>
             <v-tabs-items v-model="activeTab" class="ml-3">
-                <v-tab-item class="pt-2 query-result-fontStyle color text-small-text">
-                    Results
+                <v-tab-item
+                    :value="SQL_QUERY_MODES.QUERY_VIEW"
+                    class="pt-2 query-result-fontStyle color text-small-text"
+                >
+                    <result-view />
                 </v-tab-item>
-                <v-tab-item class="pt-2 query-result-fontStyle color text-small-text">
-                    <span class="schema-view-title "><b>View:</b> schema.table-names</span>
+                <v-tab-item
+                    :value="SQL_QUERY_MODES.PREVIEW_DATA"
+                    class="pt-2 query-result-fontStyle color text-small-text"
+                >
+                    <preview-data :previewDataSchemaId="previewDataSchemaId" />
                 </v-tab-item>
             </v-tabs-items>
         </v-tabs>
@@ -25,66 +31,35 @@
 
 <script>
 import { mapState } from 'vuex'
+import PreviewData from './PreviewData'
+import ResultView from './ResultView'
 export default {
     name: 'query-result',
+    components: {
+        PreviewData,
+        ResultView,
+    },
+    props: {
+        previewDataSchemaId: { type: String, require: true },
+    },
     data() {
         return {
-            activeTab: null,
+            activeTab: '',
         }
     },
     computed: {
         ...mapState({
-            preview_data: state => state.query.preview_data,
-            loading_preview_data: state => state.query.loading_preview_data,
-            data_details: state => state.query.data_details,
-            loading_data_details: state => state.query.loading_data_details,
             query_result: state => state.query.query_result,
             loading_query_result: state => state.query.loading_query_result,
+            SQL_QUERY_MODES: state => state.app_config.SQL_QUERY_MODES,
+            curr_sql_query_mode: state => state.query.curr_sql_query_mode,
         }),
     },
     watch: {
-        //TODO: handle these data
-        loading_preview_data: {
-            deep: true,
-            handler(v) {
-                /* eslint-disable no-console */
-                console.log('loading_preview_data', v)
-            },
-        },
-        preview_data: {
-            deep: true,
-            handler(v) {
-                /* eslint-disable no-console */
-                console.log('preview_data', v)
-            },
-        },
-        loading_data_details: {
-            deep: true,
-            handler(v) {
-                /* eslint-disable no-console */
-                console.log('loading_data_details', v)
-            },
-        },
-        data_details: {
-            deep: true,
-            handler(v) {
-                /* eslint-disable no-console */
-                console.log('data_details', v)
-            },
-        },
-        loading_query_result: {
-            deep: true,
-            handler(v) {
-                /* eslint-disable no-console */
-                console.log('loading_query_result', v)
-            },
-        },
-        query_result: {
-            deep: true,
-            handler(v) {
-                /* eslint-disable no-console */
-                console.log('query_result', v)
-            },
+        curr_sql_query_mode(v) {
+            if (v === this.SQL_QUERY_MODES.VIEW_DETAILS) {
+                this.activeTab = this.SQL_QUERY_MODES.PREVIEW_DATA
+            } else this.activeTab = v
         },
     },
 }

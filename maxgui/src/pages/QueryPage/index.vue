@@ -31,6 +31,7 @@
                         depressed
                         small
                         color="accent-dark"
+                        :disabled="!queryTxt"
                         @click="onRun"
                     >
                         {{ $t('run') }}
@@ -54,8 +55,8 @@
                             @is-fullscreen="isFullScreen = $event"
                             @is-collapsed="isCollapsed = $event"
                             @reload-schema="loadSchema"
-                            @preview-data="previewData"
-                            @view-details="viewDetails"
+                            @preview-data="onPreviewData"
+                            @view-details="onViewDetails"
                             @place-to-editor="placeToEditor"
                         />
                     </template>
@@ -69,7 +70,10 @@
                                 />
                             </template>
                             <template slot="pane-right">
-                                <query-result class="query-result pb-3" />
+                                <query-result
+                                    class="query-result pb-3"
+                                    :previewDataSchemaId="previewDataSchemaId"
+                                />
                             </template>
                         </split-pane>
                     </template>
@@ -112,12 +116,15 @@ export default {
             editorPanePct: 70,
             isFullScreen: false,
             isCollapsed: false,
+            previewDataSchemaId: '',
         }
     },
     computed: {
         ...mapState({
             conn_schema: state => state.query.conn_schema,
             loading_schema: state => state.query.loading_schema,
+            SQL_QUERY_MODES: state => state.app_config.SQL_QUERY_MODES,
+            curr_sql_query_mode: state => state.query.curr_sql_query_mode,
         }),
         distArr: function() {
             return this.schema.schemaFlatList
@@ -181,6 +188,9 @@ export default {
         isCollapsed(v) {
             this.$nextTick(() => this.handleSetSidebarPct({ isCollapsed: v }))
         },
+        curr_sql_query_mode: async function(v) {
+            await this.handleQueries(v)
+        },
     },
     async created() {
         await this.loadSchema()
@@ -191,6 +201,7 @@ export default {
             fetchPreviewData: 'query/fetchPreviewData',
             fetchDataDetails: 'query/fetchDataDetails',
             fetchQueryResult: 'query/fetchQueryResult',
+            switchSQLMode: 'query/switchSQLMode',
         }),
         async loadSchema() {
             await this.fetchConnectionSchema()
@@ -214,16 +225,35 @@ export default {
             this.handleSetSidebarPct({ isCollapsed: this.isCollapsed })
         },
         async onRun() {
-            await this.fetchQueryResult(this.queryTxt)
+            await this.switchSQLMode(this.SQL_QUERY_MODES.QUERY_VIEW)
         },
         // For table type only
-        async previewData(schemaId) {
-            const query = `SELECT * FROM ${schemaId};`
-            await this.fetchPreviewData(query)
+        async onPreviewData(schemaId) {
+            this.previewDataSchemaId = schemaId
+            await this.switchSQLMode(this.SQL_QUERY_MODES.PREVIEW_DATA)
         },
-        async viewDetails(schemaId) {
-            const query = `DESCRIBE ${schemaId};`
-            await this.fetchDataDetails(query)
+        async onViewDetails(schemaId) {
+            this.previewDataSchemaId = schemaId
+            await this.switchSQLMode(this.SQL_QUERY_MODES.VIEW_DETAILS)
+        },
+        async handleQueries(queryMode) {
+            switch (queryMode) {
+                case this.SQL_QUERY_MODES.QUERY_VIEW:
+                    await this.fetchQueryResult(this.queryTxt)
+                    break
+                case this.SQL_QUERY_MODES.PREVIEW_DATA:
+                    {
+                        const query = `SELECT * FROM ${this.previewDataSchemaId};`
+                        await this.fetchPreviewData(query)
+                    }
+                    break
+                case this.SQL_QUERY_MODES.VIEW_DETAILS:
+                    {
+                        const query = `DESCRIBE ${this.previewDataSchemaId};`
+                        await this.fetchDataDetails(query)
+                    }
+                    break
+            }
         },
     },
 }

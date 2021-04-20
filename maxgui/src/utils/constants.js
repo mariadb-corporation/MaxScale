@@ -22,4 +22,9 @@ export const APP_CONFIG = Object.freeze({
 |  |  |  |  /  _____  \\   /  .  \\  .----)   |   |  '----. /  _____  \\  |  '----.|  |____
 |__|  |__| /__/     \\__\\ /__/ \\__\\ |_______/     \\______|/__/     \\__\\ |_______||_______|
 `,
+    SQL_QUERY_MODES: Object.freeze({
+        PREVIEW_DATA: 'PREVIEW_DATA',
+        VIEW_DETAILS: 'VIEW_DETAILS',
+        QUERY_VIEW: 'QUERY_VIEW',
+    }),
 })

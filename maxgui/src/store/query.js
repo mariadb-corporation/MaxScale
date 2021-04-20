@@ -24,6 +24,7 @@ export default {
         data_details: {},
         loading_query_result: false,
         query_result: {},
+        curr_sql_query_mode: '',
     },
     mutations: {
         SET_LOADING_SCHEMA(state, payload) {
@@ -49,6 +50,9 @@ export default {
         },
         SET_QUERY_RESULT(state, payload) {
             state.query_result = payload
+        },
+        SET_CURR_SQL_QUERY_MODE(state, payload) {
+            state.curr_sql_query_mode = payload
         },
     },
     actions: {
@@ -127,6 +131,14 @@ export default {
                 commit('SET_LOADING_QUERY_RESULT', false)
             } catch (e) {
                 const logger = this.vue.$logger('store-query-fetchQueryResult')
+                logger.error(e)
+            }
+        },
+        async switchSQLMode({ commit }, mode) {
+            try {
+                commit('SET_CURR_SQL_QUERY_MODE', mode)
+            } catch (e) {
+                const logger = this.vue.$logger('store-query-switchSQLMode')
                 logger.error(e)
             }
         },
