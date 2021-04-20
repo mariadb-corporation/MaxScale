@@ -1181,6 +1181,11 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_normal
 
     case RoutingState::LARGE_PACKET:
         {
+            if (rcap_type_required(m_session->service->capabilities(), RCAP_TYPE_STMT_INPUT))
+            {
+                buffer.make_contiguous();
+            }
+
             // No command bytes, just continue routing large packet.
             bool is_large = large_query_continues(buffer);
             routed = m_downstream->routeQuery(buffer.release()) != 0;
