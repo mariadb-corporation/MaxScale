@@ -83,17 +83,18 @@ string create_entry(const string& extraction, const std::string& value)
 namespace mxsmongo
 {
 
-MongoCursor::MongoCursor()
-    : m_id(0)
-    , m_exhausted(true)
+MongoCursor::MongoCursor(const std::string& ns)
+    : m_ns(ns)
+    , m_id(0)
+    , m_exhausted(false)
 {
     touch();
 }
 
-MongoCursor::MongoCursor(const std::string& collection,
+MongoCursor::MongoCursor(const std::string& ns,
                          const vector<string>& extractions,
                          mxs::Buffer&& mariadb_response)
-    : m_collection(collection)
+    : m_ns(ns)
     , m_id(next_id())
     , m_exhausted(false)
     , m_extractions(std::move(extractions))
@@ -119,23 +120,28 @@ void MongoCursor::create_batch(bsoncxx::builder::basic::document& doc,
                                const string& which_batch,
                                int32_t nBatch)
 {
+    mxb_assert(!m_exhausted);
+
     ArrayBuilder batch;
 
-    int64_t id;
+    int64_t id = 0;
 
-    if (create_batch(batch, nBatch) == Result::PARTIAL)
+    if (m_pBuffer)
     {
-        id = m_id;
+        if (create_batch(batch, nBatch) == Result::PARTIAL)
+        {
+            id = m_id;
+        }
     }
     else
     {
-        id = 0;
+        m_exhausted = true;
     }
 
     DocumentBuilder cursor;
     cursor.append(kvp(which_batch, batch.extract()));
     cursor.append(kvp("id", id));
-    cursor.append(kvp("ns", m_collection));
+    cursor.append(kvp("ns", m_ns));
 
     doc.append(kvp("cursor", cursor.extract()));
     doc.append(kvp("ok", 1));

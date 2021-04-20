@@ -1485,7 +1485,7 @@ mxsmongo::MongoCursor& mxsmongo::Mongo::Context::get_cursor(const std::string& c
 
 void mxsmongo::Mongo::Context::remove_cursor(const MongoCursor& cursor)
 {
-    auto it = m_collection_cursors.find(cursor.collection());
+    auto it = m_collection_cursors.find(cursor.ns());
     mxb_assert(it != m_collection_cursors.end());
 
     if (it != m_collection_cursors.end())
@@ -1504,7 +1504,7 @@ void mxsmongo::Mongo::Context::remove_cursor(const MongoCursor& cursor)
 
 void mxsmongo::Mongo::Context::store_cursor(MongoCursor&& cursor)
 {
-    CursorsById& cursors = m_collection_cursors[cursor.collection()];
+    CursorsById& cursors = m_collection_cursors[cursor.ns()];
 
     mxb_assert(cursors.find(cursor.id()) == cursors.end());
 

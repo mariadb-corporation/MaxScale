@@ -27,15 +27,15 @@ namespace mxsmongo
 class MongoCursor
 {
 public:
-    MongoCursor();
+    MongoCursor(const std::string& ns);
     MongoCursor(MongoCursor&& rhs) = default;
-    MongoCursor(const std::string& collection,
+    MongoCursor(const std::string& ns,
                 const std::vector<std::string>& extractions,
                 mxs::Buffer&& mariadb_response);
 
-    const std::string& collection() const
+    const std::string& ns() const
     {
-        return m_collection;
+        return m_ns;
     }
 
     int64_t id() const
@@ -70,7 +70,7 @@ private:
     void create_batch(bsoncxx::builder::basic::document& doc, const std::string& which_batch, int32_t nBatch);
     Result create_batch(bsoncxx::builder::basic::array& batch, int32_t nBatch);
 
-    std::string                   m_collection;
+    std::string                   m_ns;
     int64_t                       m_id;
     bool                          m_exhausted;
     std::vector<std::string>      m_extractions;

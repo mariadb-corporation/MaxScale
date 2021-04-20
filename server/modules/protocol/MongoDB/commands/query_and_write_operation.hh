@@ -386,7 +386,7 @@ public:
                 if (code == ER_NO_SUCH_TABLE)
                 {
                     DocumentBuilder doc;
-                    MongoCursor cursor;
+                    MongoCursor cursor(table(Quoted::NO));
                     cursor.create_first_batch(doc, 0);
 
                     pResponse = create_response(doc.extract());
