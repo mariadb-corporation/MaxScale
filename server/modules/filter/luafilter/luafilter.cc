@@ -55,6 +55,7 @@ extern "C" {
 #include <maxscale/modutil.hh>
 #include <maxscale/protocol/mariadb/query_classifier.hh>
 #include <maxscale/session.hh>
+#include <maxsimd/canonical.hh>
 
 namespace
 {
@@ -135,9 +136,9 @@ static int lua_get_canonical(lua_State* state)
 
     if (buf)
     {
-        char* canon = modutil_get_canonical(buf);
-        lua_pushstring(state, canon);
-        MXS_FREE(canon);
+        std::string sql = mxs::extract_sql(buf);
+        maxsimd::get_canonical(&sql);
+        lua_pushstring(state, sql.c_str());
     }
     else
     {
