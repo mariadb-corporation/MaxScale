@@ -165,6 +165,8 @@ export default {
                     }),
                 }
             })
+            // remove duplicated labels
+            res.schemaFlatList = this.$help.lodash.uniqBy(res.schemaFlatList, 'label')
             return res
         },
     },

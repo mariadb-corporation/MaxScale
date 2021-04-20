@@ -20,6 +20,7 @@ export const uniqueId = require('lodash/uniqueId')
 export const get = require('lodash/get')
 export const unionBy = require('lodash/unionBy')
 export const pick = require('lodash/pick')
+export const uniqBy = require('lodash/uniqBy')
 export const lodash = {
     isEmpty,
     cloneDeep,
@@ -29,6 +30,7 @@ export const lodash = {
     objectGet: get,
     unionBy,
     pick,
+    uniqBy,
 }
 
 export function isNull(v) {
