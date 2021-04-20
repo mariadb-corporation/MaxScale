@@ -82,8 +82,10 @@ public:
     virtual std::string get_srv_cnf_filename(int node) override;
 
 private:
-    bool check_master_node(mxt::MariaDB* conn);
-    bool good_slave_thread_status(mxt::MariaDB* conn, int node);
+    bool remove_all_slave_conns(MariaDBServer* server);
+    bool good_slave_thread_status(MariaDBServer* slave, MariaDBServer* master);
     bool check_replication() override;
+
+    std::string gen_change_master_cmd(MariaDBServer* master);
 };
 }

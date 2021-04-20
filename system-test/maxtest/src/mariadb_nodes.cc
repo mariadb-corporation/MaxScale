@@ -256,7 +256,7 @@ bool MariaDBCluster::stop_nodes()
 bool MariaDBCluster::start_nodes()
 {
     auto func = [this](int i) {
-            return start_node(i) == 0;
+            return m_backends[i]->start_database();
         };
     return run_on_every_backend(func);
 }
@@ -390,21 +390,37 @@ bool MariaDBCluster::fix_replication()
     auto namec = name().c_str();
     auto& log = logger();
 
-    close_active_connections();
-    bool need_fixing = false;
-    if (!prepare_servers_for_test())
+    // First, check that all backends can be connected to. If not, try to start any failed ones.
+    bool dbs_running = false;
+    if (update_status())
     {
-        need_fixing = true;
-        log.log_msgf("%s failed basic test preparation.", namec);
-    }
-    else if (!check_replication())
-    {
-        need_fixing = true;
-        log.log_msgf("%s failed basic replication test.", namec);
+        dbs_running = true;
     }
     else
     {
-        log.log_msgf("%s is replicating/synced.", namec);
+        log.log_msgf("Some servers of %s could not be queried. Trying to restart and reconnect.",
+                     namec);
+        start_nodes();
+        sleep(1);
+        if (update_status())
+        {
+            dbs_running = true;
+            log.log_msgf("Reconnection to %s worked.", namec);
+        }
+        else
+        {
+            log.log_msgf("Reconnection to %s failed.", namec);
+        }
+    }
+
+    // close_active_connections(); TODO: readd
+    bool need_fixing = true;
+    if (dbs_running)
+    {
+        if (check_replication() && prepare_servers_for_test())
+        {
+            need_fixing = false;
+        }
     }
 
     bool rval = false;
@@ -1042,7 +1058,7 @@ MariaDBServer::SMariaDB MariaDBServer::try_open_connection()
     }
     sett.timeout = 10;
     auto& ip = m_cluster.using_ipv6() ? m_vm.ip6s() : m_vm.ip4s();
-    conn->try_open(ip, m_cluster.port[m_ind]);
+    conn->try_open(ip, port());
     return conn;
 }
 
@@ -1062,7 +1078,7 @@ bool MariaDBServer::ping_or_open_admin_connection()
         sett.password = admin_pw;
         sett.clear_sql_mode = true;
         sett.timeout = 10;
-        conn->try_open(m_vm.ip4s(), m_cluster.port[m_ind]);
+        conn->try_open(m_vm.ip4s(), port());
 
         m_admin_conn = move(conn);      // Saved even if not open, so that m_admin_conn is not left null.
         if (m_admin_conn->is_open())
@@ -1090,6 +1106,11 @@ const string& MariaDBServer::cnf_name() const
 VMNode& MariaDBServer::vm_node()
 {
     return m_vm;
+}
+
+int MariaDBServer::port()
+{
+    return m_cluster.port[m_ind];
 }
 
 mxt::MariaDB* MariaDBServer::admin_connection()

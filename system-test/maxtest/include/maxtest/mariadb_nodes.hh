@@ -61,6 +61,7 @@ public:
     const std::string& cnf_name() const;
 
     VMNode& vm_node();
+    int     port();
 
 private:
     Status   m_status;
@@ -281,7 +282,7 @@ public:
 
     /**
      * Initializes and tests ssh-connection and removes some logs. If this fails, VMs are seriously wrong
-     * and continuing is pointless.
+     * and continuing is pointless. Does not communicate with the server processes.
      *
      * @return True on success
      */
@@ -460,7 +461,8 @@ private:
     bool run_on_every_backend(const std::function<bool(int)>& func);
 
     /**
-     * Check if the cluster is replicating or otherwise properly synced.
+     * Check if the cluster is replicating or otherwise properly synced. May also attempt light fixes.
+     * Should not wipe out database contents etc.
      *
      * @return True if cluster is ready for test
      */
