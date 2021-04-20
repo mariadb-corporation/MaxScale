@@ -430,18 +430,27 @@ RWBackend* RWSplitSession::get_target(GWBUF* querybuf, route_target_t route_targ
  */
 bool RWSplitSession::route_session_write(GWBUF* querybuf, uint8_t command, uint32_t type)
 {
+    if (!have_open_connections())
+    {
+        if (command == MXS_COM_QUIT)
+        {
+            // We have no open connections and opening one just to close it is pointless.
+            gwbuf_free(querybuf);
+            return true;
+        }
+        else if (can_recover_servers())
+        {
+            // No connections are open, create one and execute the session command on it
+            create_one_connection_for_sescmd();
+        }
+    }
+
     /** The SessionCommand takes ownership of the buffer */
     auto sescmd = create_sescmd(querybuf);
     uint64_t id = sescmd->get_position();
     bool expecting_response = mxs_mysql_command_will_respond(command);
     int nsucc = 0;
     uint64_t lowest_pos = id;
-
-    // If no connections are open, create one and execute the session command on it
-    if (can_recover_servers() && !have_open_connections())
-    {
-        create_one_connection_for_sescmd();
-    }
 
     MXS_INFO("Session write, routing to all servers.");
     bool attempted_write = false;
