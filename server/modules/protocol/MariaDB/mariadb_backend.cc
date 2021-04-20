@@ -944,9 +944,10 @@ int32_t MariaDBBackendConnection::write(GWBUF* queue)
             bool was_large = m_large_query;
             m_large_query = mxs_mysql_get_packet_len(queue) == MYSQL_PACKET_LENGTH_MAX + MYSQL_HEADER_LEN;
 
-            if (was_large)
+            if (was_large || session_is_load_active(m_session))
             {
-                rc = m_dcb->writeq_append(queue);
+                // Not the start of a packet, don't analyze it.
+                return m_dcb->writeq_append(queue);
             }
             else if (mxs_mysql_is_ps_command(cmd))
             {
