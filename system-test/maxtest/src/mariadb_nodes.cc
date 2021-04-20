@@ -33,6 +33,10 @@ using std::move;
 
 namespace
 {
+// These need to match the values in create_user.sh.
+const string admin_user = "test-admin";
+const string admin_pw = "test-admin-pw";
+
 /**
  * Tries to find MariaDB server version number in the output of 'mysqld --version'
  *
@@ -383,16 +387,28 @@ bool MariaDBCluster::unblock_all_nodes()
 
 bool MariaDBCluster::fix_replication()
 {
-    bool rval = false;
     auto namec = name().c_str();
     auto& log = logger();
 
-    if (check_replication())
+    close_active_connections();
+    bool need_fixing = false;
+    if (!prepare_servers_for_test())
     {
-        log.log_msgf("%s is replicating/synced.", namec);
-        rval = true;
+        need_fixing = true;
+        log.log_msgf("%s failed basic test preparation.", namec);
+    }
+    else if (!check_replication())
+    {
+        need_fixing = true;
+        log.log_msgf("%s failed basic replication test.", namec);
     }
     else
+    {
+        log.log_msgf("%s is replicating/synced.", namec);
+    }
+
+    bool rval = false;
+    if (need_fixing)
     {
         log.log_msgf("%s is broken, fixing ...", namec);
 
@@ -440,6 +456,10 @@ bool MariaDBCluster::fix_replication()
         {
             logger().add_failure("Failed to unblock %s.", name().c_str());
         }
+    }
+    else
+    {
+        rval = true;
     }
 
     disconnect();
@@ -503,6 +523,13 @@ bool MariaDBCluster::prepare_for_test(int i)
 {
     bool rval = false;
     auto& srv = m_backends[i];
+    // This is required until the system test code can modify users on its own.
+    auto standard_user_conn = srv->try_open_connection();
+    if (!standard_user_conn->is_open())
+    {
+        return false;
+    }
+
     auto conn = srv->try_open_admin_connection();
     if (conn->is_open())
     {
@@ -910,17 +937,32 @@ bool MariaDBCluster::check_create_test_db()
     return rval;
 }
 
-bool MariaDBCluster::prepare_cluster_for_test()
+bool MariaDBCluster::basic_test_prepare()
 {
-    bool rval = true;
-    if (Nodes::init_ssh_masters())
-    {
-        truncate_mariadb_logs();
-        prepare_servers_for_test();
-        close_active_connections();
-        rval = true;
-    }
-    return rval;
+    auto prepare_one = [this](int i) {
+            auto srv = m_backends[i].get();
+            bool rval = false;
+            auto& vm = srv->m_vm;
+            if (vm.init_ssh_master())
+            {
+                rval = true;
+                if (vm.is_remote())
+                {
+                    const char truncate_cmd[] = "truncate -s 0 /var/lib/mysql/*.err;"
+                                                "truncate -s 0 /var/log/syslog;"
+                                                "truncate -s 0 /var/log/messages;"
+                                                "rm -f /etc/my.cnf.d/binlog_enc*;";
+                    auto ret = vm.run_cmd_sudo(truncate_cmd);
+                    if (ret != 0)
+                    {
+                        // Should this be a fatal error? Maybe some of the files don't exist.
+                        logger().log_msgf("Log truncation failed. '%s' returned %i.", truncate_cmd, ret);
+                    }
+                }
+            }
+            return rval;
+        };
+    return run_on_every_backend(prepare_one);
 }
 
 MariaDBCluster::ConnArray MariaDBCluster::admin_connect_to_all()
@@ -928,17 +970,11 @@ MariaDBCluster::ConnArray MariaDBCluster::admin_connect_to_all()
     ConnArray rval;
     rval.resize(N);
 
-    mxt::BoolFuncArray funcs;
-    funcs.reserve(rval.size());
-    for (size_t i = 0; i < rval.size(); i++)
-    {
-        auto add_connection = [this, &rval, i]() {
-                rval[i] = m_backends[i]->try_open_admin_connection();
-                return true;
-            };
-        funcs.push_back(std::move(add_connection));
-    }
-    m_shared.concurrent_run(funcs);
+    auto add_connection = [this, &rval](int i) {
+            rval[i] = m_backends[i]->try_open_admin_connection();
+            return true;
+        };
+    run_on_every_backend(add_connection);
     return rval;
 }
 
@@ -1009,7 +1045,7 @@ bool MariaDBServer::update_status()
     return rval;
 }
 
-std::unique_ptr<mxt::MariaDB> MariaDBServer::try_open_admin_connection()
+std::unique_ptr<mxt::MariaDB> MariaDBServer::try_open_connection()
 {
     auto conn = std::make_unique<mxt::MariaDB>(m_vm.shared().log);
     auto& sett = conn->connection_settings();
@@ -1021,6 +1057,20 @@ std::unique_ptr<mxt::MariaDB> MariaDBServer::try_open_admin_connection()
         sett.ssl.cert = mxb::string_printf("%s/ssl-cert/client-cert.pem", test_dir);
         sett.ssl.ca = mxb::string_printf("%s/ssl-cert/ca.pem", test_dir);
     }
+    sett.timeout = 10;
+    auto& ip = m_cluster.using_ipv6() ? m_vm.ip6s() : m_vm.ip4s();
+    conn->try_open(ip, m_cluster.port[m_ind]);
+    return conn;
+}
+
+std::unique_ptr<mxt::MariaDB> MariaDBServer::try_open_admin_connection()
+{
+    auto conn = std::make_unique<mxt::MariaDB>(m_vm.shared().log);
+    auto& sett = conn->connection_settings();
+    sett.user = admin_user;
+    sett.password = admin_pw;
+    sett.clear_sql_mode = true;
+    sett.timeout = 10;
     conn->try_open(m_vm.ip4s(), m_cluster.port[m_ind]);
     return conn;
 }

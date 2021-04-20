@@ -81,7 +81,6 @@ public:
     bool copy_from_node(const std::string& src, const std::string& dest);
 
     const char* ip4() const;
-    const char* ip6() const;
     const char* priv_ip() const;
     const char* hostname() const;
     const char* access_user() const;
@@ -90,6 +89,7 @@ public:
     const char* sshkey() const;
 
     const std::string& ip4s() const;
+    const std::string& ip6s() const;
 
     SharedData& shared();
     bool        is_remote() const;
@@ -169,13 +169,6 @@ public:
      */
     int copy_from_node_legacy(const char* src, const char* dest, int i);
     int copy_from_node(int i, const char* src, const char* dest);
-
-    /**
-     * @brief Check node via ssh and restart it if it is not resposible
-     * @param node Node index
-     * @return True if node is ok, false if start failed
-     */
-    bool check_nodes_ssh();
 
     void write_env_vars();
 

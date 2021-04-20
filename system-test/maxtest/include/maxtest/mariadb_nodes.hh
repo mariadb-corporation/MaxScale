@@ -45,6 +45,15 @@ public:
 
     /**
      * Try to open a connection to the server. Failure is not a test error.
+     * Uses the "skysql"-user similar to many tests.
+     *
+     * @return The connection. Success can be checked by 'is_open'.
+     */
+    std::unique_ptr<mxt::MariaDB> try_open_connection();
+
+    /**
+     * Try to open a connection to the server. Failure is not a test error.
+     * Uses the "test-admin"-user.
      *
      * @return The connection. Success can be checked by 'is_open'.
      */
@@ -271,7 +280,13 @@ public:
     std::vector<int>         get_all_server_ids();
     std::vector<std::string> get_all_server_ids_str();
 
-    bool prepare_cluster_for_test();
+    /**
+     * Initializes and tests ssh-connection and removes some logs. If this fails, VMs are seriously wrong
+     * and continuing is pointless.
+     *
+     * @return True on success
+     */
+    bool basic_test_prepare();
 
     bool prepare_servers_for_test();
 
