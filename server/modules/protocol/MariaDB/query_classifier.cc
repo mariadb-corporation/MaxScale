@@ -106,9 +106,10 @@ class QCInfoCache;
 
 static thread_local struct
 {
-    QCInfoCache* pInfo_cache;
-    uint32_t     options;
-    bool         use_cache;
+    QCInfoCache*     pInfo_cache;
+    uint32_t         options;
+    bool             use_cache;
+    maxsimd::Markers markers;
 } this_thread =
 {
     nullptr,
@@ -224,7 +225,7 @@ public:
 
     void get_stats(QC_CACHE_STATS* pStats)
     {
-        *pStats = m_stats;
+        * pStats = m_stats;
     }
 
     void get_state(std::map<std::string, QC_CACHE_ENTRY>& state) const
@@ -393,7 +394,7 @@ public:
         {
             mxb_assert(gwbuf_is_contiguous(m_pStmt));
             m_canonical = maxscale::extract_sql(pStmt);
-            maxsimd::get_canonical(&m_canonical);
+            maxsimd::get_canonical(&m_canonical, &this_thread.markers);
 
             if (modutil_is_SQL_prepare(pStmt))
             {

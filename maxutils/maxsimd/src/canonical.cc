@@ -25,15 +25,15 @@ namespace
 const maxbase::CpuInfo& cpu_info {maxbase::CpuInfo::instance()};
 }
 
-std::string* get_canonical(std::string* pSql)
+std::string* get_canonical(std::string* pSql, Markers* pMarkers)
 {
     if (cpu_info.has_avx2)
     {
-        return maxsimd::simd256::get_canonical_impl(pSql);
+        return maxsimd::simd256::get_canonical_impl(pSql, pMarkers);
     }
     else
     {
-        return maxsimd::generic::get_canonical_impl(pSql);
+        return maxsimd::generic::get_canonical_impl(pSql, pMarkers);
     }
 }
 }

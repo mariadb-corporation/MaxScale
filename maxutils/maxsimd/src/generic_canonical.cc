@@ -182,7 +182,7 @@ namespace maxsimd::generic
 #define likely(x)   __builtin_expect (!!(x), 1)
 #define unlikely(x) __builtin_expect (!!(x), 0)
 
-std::string* get_canonical_impl(std::string* pSql)
+std::string* get_canonical_impl(std::string* pSql, Markers* pMarkers)
 {
     auto& sql = *pSql;
 

@@ -45,14 +45,13 @@ const __m256i large_nines = _mm256_set1_epi8('9' + 1);
  *  The shift language is how the chars naturally look, so a shift
  *  right of the chars is a shift left of the bitmaps.
  */
-inline Markers make_markers_sql_optimized(const std::string& sql)
+inline Markers* make_markers_sql_optimized(const std::string& sql, Markers* pMarkers)
 {
     const char* pBegin = &*sql.begin();
     const char* pSource = pBegin;
     const char* pEnd = &*sql.end();
 
-    std::vector<const char*> markers;
-    markers.reserve(sql.size() / 10);
+    pMarkers->clear();
     size_t index_offset = 0;
 
     // By setting this initially to true there can be no digit marker
@@ -110,13 +109,13 @@ inline Markers make_markers_sql_optimized(const std::string& sql)
         {
             auto i = __builtin_ctz(bitmask);
             bitmask = bitmask & (bitmask - 1);      // clear the lowest bit
-            markers.push_back(pBegin + index_offset + i);
+            pMarkers->push_back(pBegin + index_offset + i);
         }
 
         index_offset += SIMD_BYTES;
     }
 
-    return markers;
+    return pMarkers;
 }
 
 // A make_markers version optimized for strings
@@ -172,16 +171,16 @@ private:
 
 static LUT lut;
 
-inline const char* find_matching_delimiter(Markers& markers, char ch)
+inline const char* find_matching_delimiter(Markers* pMarkers, char ch)
 {
-    while (!markers.empty())
+    while (!pMarkers->empty())
     {
-        auto pMarker = markers.back();
+        auto pMarker = pMarkers->back();
         if (*pMarker == ch)
         {
             // don't care if a quote is escaped with a double quote,
             // two questions marks instead of one.
-            markers.pop_back();
+            pMarkers->pop_back();
             return pMarker;
         }
         else if (*pMarker == '\\')
@@ -189,14 +188,14 @@ inline const char* find_matching_delimiter(Markers& markers, char ch)
             // pop if what we are looking for is escaped, or an escape is escaped.
             if (*++pMarker == ch || *pMarker == '\\')
             {
-                if (markers.size() > 1)     // branch here to avoid it outside
+                if (pMarkers->size() > 1)       // branch here to avoid it outside
                 {
-                    markers.pop_back();
+                    pMarkers->pop_back();
                 }
             }
         }
 
-        markers.pop_back();
+        pMarkers->pop_back();
     }
 
     return nullptr;
@@ -275,12 +274,12 @@ inline const char* probe_number(const char* it, const char* const pEnd)
  *  Note that where the sql is invalid the output should also be invalid so it cannot
  *  match a valid canonical TODO make sure.
  */
-std::string* get_canonical_impl(std::string* pSql)
+std::string* get_canonical_impl(std::string* pSql, Markers* pMarkers)
 {
     auto& sql = *pSql;
-    auto markers = make_markers_sql_optimized(sql);
+    auto markers = make_markers_sql_optimized(sql, pMarkers);
 
-    std::reverse(begin(markers), end(markers));     // for pop_back(), an index would likely be better.
+    std::reverse(begin(*pMarkers), end(*pMarkers));     // for pop_back(), an index would likely be better.
 
     const char* read_begin = &*sql.begin();
     const char* read_ptr = read_begin;
@@ -290,30 +289,30 @@ std::string* get_canonical_impl(std::string* pSql)
     auto write_ptr = &*sql.begin();
     bool was_converted = false;     // differentiates between a negative number and subtraction
 
-    if (!markers.empty())
+    if (!pMarkers->empty())
     {   // advance to the first marker
-        auto len = markers.back() - read_ptr;
+        auto len = pMarkers->back() - read_ptr;
         read_ptr += len;
         write_ptr += len;
     }
 
-    while (!markers.empty())
+    while (!pMarkers->empty())
     {
         bool did_conversion = false;
-        auto pMarker = markers.back();
-        markers.pop_back();
+        auto pMarker = pMarkers->back();
+        pMarkers->pop_back();
 
-        // The code further down can read passed markers. For example, a comment
+        // The code further down can read passed pmarkers-> For example, a comment
         // can contain multiple markers, but the code that handles comments reads
         // to the end of the comment.
         while (read_ptr > pMarker)
         {
-            if (markers.empty())
+            if (pMarkers->empty())
             {
                 goto break_out;
             }
-            pMarker = markers.back();
-            markers.pop_back();
+            pMarker = pMarkers->back();
+            pMarkers->pop_back();
         }
 
         // With "select 1 from T where id=42", the first marker would

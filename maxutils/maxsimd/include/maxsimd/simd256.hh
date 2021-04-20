@@ -127,17 +127,17 @@ using Markers = std::vector<const char*>;
  *         argument string for every classified char.
  *
  * @param  str      string
+ * @param  pMarkers Optimization. Pass in the markers, which can be static
+ *                   for the caller, reused for each call to make_markers()
  * @return Pointers into argument string for every classified character.
  */
-inline Markers make_markers(const std::string& str, __m256i ascii_bitmap)
+inline Markers* make_markers(const std::string& str, __m256i ascii_bitmap, Markers* pMarkers)
 {
     const char* pBegin = &*str.begin();
     const char* pSource = pBegin;
     const char* pEnd = &*str.end();
 
-    std::vector<const char*> markers;
-    // safe size guess, no empirical data, probably much lower.
-    markers.reserve(str.size() / 10);
+    pMarkers->clear();
     size_t index_offset = 0;
 
     for (; pSource < pEnd; pSource += SIMD_BYTES)
@@ -160,12 +160,12 @@ inline Markers make_markers(const std::string& str, __m256i ascii_bitmap)
         {
             auto i = __builtin_ctz(bitmask);
             bitmask = bitmask & (bitmask - 1);      // clear the lowest bit
-            markers.push_back(pBegin + index_offset + i);
+            pMarkers->push_back(pBegin + index_offset + i);
         }
 
         index_offset += SIMD_BYTES;
     }
 
-    return markers;
+    return pMarkers;
 }
 }

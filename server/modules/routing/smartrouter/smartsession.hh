@@ -18,6 +18,7 @@
 #include <maxbase/host.hh>
 #include <maxscale/packet_tracker.hh>
 #include <maxscale/protocol/mariadb/queryclassifier.hh>
+#include <maxsimd/canonical.hh>
 
 class SmartRouter;
 
@@ -102,5 +103,6 @@ private:
         maxbase::TimePoint start;
         std::string        canonical;
     };
-    Measurement m_measurement;
+    Measurement      m_measurement;
+    maxsimd::Markers m_markers;
 };

@@ -38,6 +38,7 @@ int main(int argc, char** argv)
 
     std::ifstream infile(argv[1]);
     std::ofstream outfile(argv[2]);
+    maxsimd::Markers markers;
 
     if (infile && outfile)
     {
@@ -50,7 +51,7 @@ int main(int argc, char** argv)
 
             if (!line.empty())
             {
-                maxsimd::get_canonical(&line);
+                maxsimd::get_canonical(&line, &markers);
                 outfile << line << endl;
             }
         }

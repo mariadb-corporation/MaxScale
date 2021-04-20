@@ -14,14 +14,15 @@
 #pragma once
 
 #include <string>
+#include <vector>
 
 /** The concrete implementations of get_canonical */
 namespace maxsimd::generic
 {
-std::string* get_canonical_impl(std::string* pSql);
+std::string* get_canonical_impl(std::string* pSql, std::vector<const char*>* pMarkers);
 }
 
 namespace maxsimd::simd256
 {
-std::string* get_canonical_impl(std::string* pSql);
+std::string* get_canonical_impl(std::string* pSql, std::vector<const char*>* pMarkers);
 }
