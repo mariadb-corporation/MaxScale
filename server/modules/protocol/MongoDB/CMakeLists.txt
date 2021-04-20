@@ -5,7 +5,7 @@ include_directories(${MONGO_C_INCLUDE_DIR})
 include_directories(${BSON_C_INCLUDE_DIR})
 include_directories(${BSON_CXX_INCLUDE_DIR})
 
-add_library(mongodbclient SHARED
+add_library(mongodbprotocol SHARED
   clientconnection.cc
   config.cc
   mxsmongo.cc
@@ -18,14 +18,14 @@ add_library(mongodbclient SHARED
   checksum.c
   crc32-x86.c
   )
-add_dependencies(mongodbclient mariadbprotocol mongo-c-driver mongo-cxx-driver)
-target_link_libraries(mongodbclient
+add_dependencies(mongodbprotocol mariadbprotocol mongo-c-driver mongo-cxx-driver)
+target_link_libraries(mongodbprotocol
   maxscale-common
   ${BSON_CXX_LIBRARIES}
   ${BSON_C_LIBRARIES}
   )
-set_target_properties(mongodbclient PROPERTIES VERSION "1.0.0" LINK_FLAGS -Wl,-z,defs)
-install_module(mongodbclient core)
+set_target_properties(mongodbprotocol PROPERTIES VERSION "1.0.0" LINK_FLAGS -Wl,-z,defs)
+install_module(mongodbprotocol core)
 
 add_subdirectory(test)
 add_subdirectory(wire)

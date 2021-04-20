@@ -7,7 +7,7 @@ if (BUILD_MONGO_CLIENT)
 
   target_link_libraries(mongodump
     maxscale-common
-    mongodbclient
+    mongodbprotocol
     ${MONGO_CXX_LIBRARIES}
     ${BSON_CXX_LIBRARIES}
     ${MONGO_C_LIBRARIES}
