@@ -38,6 +38,8 @@ export default {
             loading_preview_data: state => state.query.loading_preview_data,
             data_details: state => state.query.data_details,
             loading_data_details: state => state.query.loading_data_details,
+            query_result: state => state.query.query_result,
+            loading_query_result: state => state.query.loading_query_result,
         }),
     },
     watch: {
@@ -68,6 +70,20 @@ export default {
             handler(v) {
                 /* eslint-disable no-console */
                 console.log('data_details', v)
+            },
+        },
+        loading_query_result: {
+            deep: true,
+            handler(v) {
+                /* eslint-disable no-console */
+                console.log('loading_query_result', v)
+            },
+        },
+        query_result: {
+            deep: true,
+            handler(v) {
+                /* eslint-disable no-console */
+                console.log('query_result', v)
             },
         },
     },

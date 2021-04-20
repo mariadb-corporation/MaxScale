@@ -31,7 +31,7 @@
                         depressed
                         small
                         color="accent-dark"
-                        @click.native="onCreate"
+                        @click="onRun"
                     >
                         {{ $t('run') }}
                     </v-btn>
@@ -63,7 +63,7 @@
                         <split-pane v-model="editorPanePct" split="horiz" :minPercent="10">
                             <template slot="pane-left">
                                 <query-editor
-                                    v-model="value"
+                                    v-model="queryTxt"
                                     class="editor pt-2 pl-2"
                                     :tableDist="distArr"
                                 />
@@ -106,8 +106,7 @@ export default {
     },
     data() {
         return {
-            dist: {}, // contains database name, table name and its columns
-            value: '',
+            queryTxt: '',
             minSidebarPct: 0,
             sidebarPct: 0,
             editorPanePct: 70,
@@ -191,6 +190,7 @@ export default {
             fetchConnectionSchema: 'query/fetchConnectionSchema',
             fetchPreviewData: 'query/fetchPreviewData',
             fetchDataDetails: 'query/fetchDataDetails',
+            fetchQueryResult: 'query/fetchQueryResult',
         }),
         async loadSchema() {
             await this.fetchConnectionSchema()
@@ -208,10 +208,13 @@ export default {
             else this.sidebarPct = this.getSidebarBoundingPct({ isMin: false })
         },
         placeToEditor(schemaId) {
-            this.value = `${this.value} ${schemaId}`
+            this.queryTxt = `${this.queryTxt} ${schemaId}`
         },
         onResize() {
             this.handleSetSidebarPct({ isCollapsed: this.isCollapsed })
+        },
+        async onRun() {
+            await this.fetchQueryResult(this.queryTxt)
         },
         // For table type only
         async previewData(schemaId) {

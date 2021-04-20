@@ -123,7 +123,7 @@ export default {
                     commit('SET_LOADING_QUERY_RESULT', false)
                 } */
                 await this.vue.$help.delay(400)
-                commit('SET_QUERY_RESULT', {})
+                commit('SET_QUERY_RESULT', preview_data.data)
                 commit('SET_LOADING_QUERY_RESULT', false)
             } catch (e) {
                 const logger = this.vue.$logger('store-query-fetchQueryResult')

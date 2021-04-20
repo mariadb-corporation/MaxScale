@@ -13,7 +13,7 @@
             <v-tooltip
                 :value="hover"
                 right
-                :nudge-right="40"
+                :nudge-right="45"
                 transition="slide-x-transition"
                 content-class="shadow-drop"
             >
@@ -56,7 +56,7 @@
                     left
                     nudge-right="12"
                     nudge-bottom="8"
-                    content-class="setting-menu"
+                    content-class="mariadb-select-v-menu"
                     :position-x="menuCoord.x"
                     :position-y="menuCoord.y"
                 >
@@ -66,12 +66,9 @@
                             :key="option"
                             dense
                             link
+                            @click="() => optionHandler({ item: activeItem, option })"
                         >
-                            <v-list-item-title
-                                class="color text-text"
-                                @click="() => optionHandler({ item: activeItem, option })"
-                                v-text="option"
-                            />
+                            <v-list-item-title class="color text-text" v-text="option" />
                         </v-list-item>
                     </v-list>
                 </v-menu>
