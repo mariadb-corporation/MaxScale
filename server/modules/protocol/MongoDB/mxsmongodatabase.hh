@@ -13,7 +13,7 @@
 
 #pragma once
 
-#include "mongodbclient.hh"
+#include "mongodbprotocol.hh"
 #include <memory>
 #include <maxscale/target.hh>
 #include "mxsmongo.hh"

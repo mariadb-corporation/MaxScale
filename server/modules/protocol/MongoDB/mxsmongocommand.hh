@@ -13,7 +13,7 @@
 
 #pragma once
 
-#include "mongodbclient.hh"
+#include "mongodbprotocol.hh"
 #include <string>
 #include <utility>
 #include <vector>

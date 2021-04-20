@@ -12,7 +12,7 @@
  */
 #pragma once
 
-#include "mongodbclient.hh"
+#include "mongodbprotocol.hh"
 #include <endian.h>
 #include <atomic>
 #include <deque>

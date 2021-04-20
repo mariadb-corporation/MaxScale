@@ -12,7 +12,7 @@
  */
 #pragma once
 
-#include "mongodbclient.hh"
+#include "mongodbprotocol.hh"
 #include <maxscale/config2.hh>
 
 class GlobalConfig final : public mxs::config::Configuration

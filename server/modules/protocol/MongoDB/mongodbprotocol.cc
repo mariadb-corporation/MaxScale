@@ -11,7 +11,7 @@
  * Public License.
  */
 
-#include "mongodbclient.hh"
+#include "mongodbprotocol.hh"
 #include <bsoncxx/builder/stream/document.hpp>
 #include "mxsmongo.hh"
 #include "protocolmodule.hh"
@@ -42,7 +42,7 @@ bsoncxx::document::value& mxsmongo::topology_version()
 }
 
 /**
- * mongodbclient module entry point.
+ * mongodbprotocol module entry point.
  *
  * @return The module object
  */

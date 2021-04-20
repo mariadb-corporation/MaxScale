@@ -12,7 +12,7 @@
  */
 #pragma once
 
-#include "mongodbclient.hh"
+#include "mongodbprotocol.hh"
 #include <string>
 #include <vector>
 #include <bsoncxx/builder/basic/array.hpp>

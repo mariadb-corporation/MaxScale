@@ -12,7 +12,7 @@
  */
 #pragma once
 
-#define MXS_MODULE_NAME "mongodbclient"
+#define MXS_MODULE_NAME "mongodbprotocol"
 
 #include <maxscale/ccdefs.hh>
 #include <maxbase/assert.h>

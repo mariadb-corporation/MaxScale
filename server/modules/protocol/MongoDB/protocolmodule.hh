@@ -12,7 +12,7 @@
  */
 #pragma once
 
-#include "mongodbclient.hh"
+#include "mongodbprotocol.hh"
 #include <maxscale/protocol2.hh>
 #include "config.hh"
 

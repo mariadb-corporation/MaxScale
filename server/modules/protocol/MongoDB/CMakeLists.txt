@@ -12,7 +12,7 @@ add_library(mongodbprotocol SHARED
   mxsmongocommand.cc
   mxsmongocursor.cc
   mxsmongodatabase.cc
-  mongodbclient.cc
+  mongodbprotocol.cc
   protocolmodule.cc
 
   checksum.c
@@ -26,5 +26,3 @@ target_link_libraries(mongodbprotocol
   )
 set_target_properties(mongodbprotocol PROPERTIES VERSION "1.0.0" LINK_FLAGS -Wl,-z,defs)
 install_module(mongodbprotocol core)
-
-add_subdirectory(test)

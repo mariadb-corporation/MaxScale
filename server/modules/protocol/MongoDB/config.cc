@@ -15,7 +15,7 @@
 
 namespace
 {
-namespace mongodbclient
+namespace mongodbprotocol
 {
 
 mxs::config::Specification specification(MXS_MODULE_NAME, mxs::config::Specification::PROTOCOL);
@@ -24,17 +24,17 @@ mxs::config::Specification specification(MXS_MODULE_NAME, mxs::config::Specifica
 }
 
 mxs::config::ParamString GlobalConfig::s_user(
-    &mongodbclient::specification,
+    &mongodbprotocol::specification,
     "user",
     "The user to use when connecting to the backend.");
 
 mxs::config::ParamString GlobalConfig::s_password(
-    &mongodbclient::specification,
+    &mongodbprotocol::specification,
     "password",
     "The password to use when connecting to the backend.");
 
 mxs::config::ParamEnum<GlobalConfig::OnUnknownCommand> GlobalConfig::s_on_unknown_command(
-    &mongodbclient::specification,
+    &mongodbprotocol::specification,
     "on_unknown_command",
     "Whether to return an error or an empty document in case an unknown Mongo "
     "command is encountered.",
@@ -45,7 +45,7 @@ mxs::config::ParamEnum<GlobalConfig::OnUnknownCommand> GlobalConfig::s_on_unknow
     GlobalConfig::RETURN_ERROR);
 
 mxs::config::ParamBool GlobalConfig::s_auto_create_tables(
-    &mongodbclient::specification,
+    &mongodbprotocol::specification,
     "auto_create_tables",
     "Whether tables should be created automatically. If enabled, whenever a document is "
     "inserted to a collection the corresponding table will automatically be created if "
@@ -53,7 +53,7 @@ mxs::config::ParamBool GlobalConfig::s_auto_create_tables(
     true);
 
 mxs::config::ParamCount GlobalConfig::s_id_length(
-    &mongodbclient::specification,
+    &mongodbprotocol::specification,
     "id_length",
     "The VARCHAR length of automatically created tables. A changed value only affects "
     "tables created after the change; existing tables are not altered.",
@@ -62,7 +62,7 @@ mxs::config::ParamCount GlobalConfig::s_id_length(
     GlobalConfig::ID_LENGTH_MAX);
 
 mxs::config::ParamEnum<GlobalConfig::InsertBehavior> GlobalConfig::s_insert_behavior(
-    &mongodbclient::specification,
+    &mongodbprotocol::specification,
     "insert_behavior",
     "Whether documents will be inserted in a way true to how MongoDB behaves, "
     "or in a way that is efficient from MariaDB's point of view.",
@@ -73,7 +73,7 @@ mxs::config::ParamEnum<GlobalConfig::InsertBehavior> GlobalConfig::s_insert_beha
     GlobalConfig::AS_MONGODB);
 
 mxs::config::ParamSeconds GlobalConfig::s_cursor_timeout(
-    &mongodbclient::specification,
+    &mongodbprotocol::specification,
     "cursor_timeout",
     "How long can a cursor be idle, that is, not accessed, before it is automatically closed.",
     mxs::config::NO_INTERPRETATION,
@@ -81,7 +81,7 @@ mxs::config::ParamSeconds GlobalConfig::s_cursor_timeout(
 
 
 GlobalConfig::GlobalConfig()
-    : mxs::config::Configuration(MXS_MODULE_NAME, &mongodbclient::specification)
+    : mxs::config::Configuration(MXS_MODULE_NAME, &mongodbprotocol::specification)
 {
     add_native(&GlobalConfig::user, &s_user);
     add_native(&GlobalConfig::password, &s_password);
@@ -95,5 +95,5 @@ GlobalConfig::GlobalConfig()
 //static
 mxs::config::Specification& GlobalConfig::specification()
 {
-    return mongodbclient::specification;
+    return mongodbprotocol::specification;
 }
