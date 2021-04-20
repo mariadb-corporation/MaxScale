@@ -1,5 +1,10 @@
 <template>
-    <div ref="wrapperContainer" class="fill-height" :class="{ 'wrapper-container': !isFullScreen }">
+    <div
+        ref="wrapperContainer"
+        v-resize="onResize"
+        class="fill-height"
+        :class="{ 'wrapper-container': !isFullScreen }"
+    >
         <div class="query-page fill-height" :class="{ 'query-page--fullscreen': isFullScreen }">
             <div
                 class="page-header d-flex ml-n1"
@@ -180,8 +185,6 @@ export default {
     },
     async created() {
         await this.loadSchema()
-        this.minSidebarPct = this.getSidebarBoundingPct({ isMin: true })
-        this.sidebarPct = this.getSidebarBoundingPct({ isMin: false })
     },
     methods: {
         ...mapActions({
@@ -206,6 +209,9 @@ export default {
         },
         placeToEditor(schemaId) {
             this.value = `${this.value} ${schemaId}`
+        },
+        onResize() {
+            this.handleSetSidebarPct({ isCollapsed: this.isCollapsed })
         },
         // For table type only
         async previewData(schemaId) {
