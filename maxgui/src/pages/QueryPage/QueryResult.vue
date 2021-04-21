@@ -8,7 +8,6 @@
                 Data preview
             </span>
         </v-tab>
-        <!-- TODO: calc dynamic height for table in result-tab and preview.data-tab using dynHeight props -->
         <v-tabs-items v-model="activeTab" class="tab-items">
             <v-tab-item :value="SQL_QUERY_MODES.QUERY_VIEW" :class="tabItemClass">
                 <result-tab :dynHeight="dynTabItemHeight" />
@@ -24,7 +23,7 @@
 </template>
 
 <script>
-import { mapState } from 'vuex'
+import { mapState, mapActions } from 'vuex'
 import PreviewDataTab from './PreviewDataTab'
 import ResultTab from './ResultTab'
 export default {
@@ -56,11 +55,19 @@ export default {
         },
     },
     watch: {
+        activeTab(v) {
+            if (v !== this.curr_sql_query_mode) this.switchSQLMode(v)
+        },
         curr_sql_query_mode(v) {
             if (v === this.SQL_QUERY_MODES.VIEW_DETAILS) {
                 this.activeTab = this.SQL_QUERY_MODES.PREVIEW_DATA
             } else this.activeTab = v
         },
+    },
+    methods: {
+        ...mapActions({
+            switchSQLMode: 'query/switchSQLMode',
+        }),
     },
 }
 </script>
