@@ -32,7 +32,7 @@ GaleraCluster::GaleraCluster(mxt::SharedData* shared)
 {
 }
 
-int GaleraCluster::start_replication()
+bool GaleraCluster::start_replication()
 {
     int local_result = stop_nodes() ? 0 : 1;
 
@@ -95,7 +95,7 @@ int GaleraCluster::start_replication()
     local_result += execute_query(nodes[0], "%s", create_repl_user);
 
     close_connections();
-    return local_result;
+    return local_result == 0;
 }
 
 bool GaleraCluster::check_replication()

@@ -431,9 +431,9 @@ bool MariaDBCluster::fix_replication()
         if (unblock_all_nodes())
         {
             log.log_msgf("Firewalls on %s open.", namec);
-            if (reset_and_prepare_servers())
+            if (reset_servers())
             {
-                log.log_msgf("%s prepared. Starting replication.", namec);
+                log.log_msgf("%s reset. Starting replication.", namec);
                 start_replication();
 
                 int attempts = 0;
@@ -537,7 +537,6 @@ std::string MariaDBCluster::anonymous_users_query() const
 
 bool MariaDBCluster::prepare_for_test(int i)
 {
-    bool rval = false;
     auto& srv = m_backends[i];
     // This is required until the system test code can modify users on its own.
     auto standard_user_conn = srv->try_open_connection();
@@ -546,27 +545,17 @@ bool MariaDBCluster::prepare_for_test(int i)
         return false;
     }
 
+    bool rval = true;
     if (srv->ping_or_open_admin_connection())
     {
         auto conn = srv->admin_connection();
         if (conn->cmd("FLUSH HOSTS;") && conn->cmd("SET GLOBAL max_connections=10000"))
         {
             conn->try_cmd("SET GLOBAL max_connect_errors=10000000");    // fails on Xpand
-            auto res = conn->query(anonymous_users_query());
-            if (res)
-            {
-                rval = true;
-                if (res->get_row_count() > 0)
-                {
-                    logger().log_msgf("Detected anonymous users on %s, dropping them.", name().c_str());
-                    while (res->next_row())
-                    {
-                        string user = res->get_string(0);
-                        string query = mxb::string_printf("DROP USER %s;", user.c_str());
-                        conn->try_cmd(query);
-                    }
-                }
-            }
+        }
+        else
+        {
+            rval = false;
         }
     }
     return rval;
@@ -574,10 +563,42 @@ bool MariaDBCluster::prepare_for_test(int i)
 
 bool MariaDBCluster::prepare_servers_for_test()
 {
-    auto func = [this](int i) {
-            return prepare_for_test(i);
-        };
-    return run_on_every_backend(func);
+    // Remove anonymous users. TODO: Extend this to detect leftover users and create any missing users.
+    bool drop_ok = false;
+    auto master = m_backends[0].get();      // Assume that first server is a master for all cluster types.
+    if (master->ping_or_open_admin_connection())
+    {
+        auto conn = master->admin_connection();
+        auto res = conn->query(anonymous_users_query());
+        if (res)
+        {
+            drop_ok = true;
+            if (res->get_row_count() > 0)
+            {
+                logger().log_msgf("Detected anonymous users on %s, dropping them.", name().c_str());
+                while (res->next_row())
+                {
+                    string user = res->get_string(0);
+                    string query = mxb::string_printf("DROP USER %s;", user.c_str());
+                    if (!conn->try_cmd(query))
+                    {
+                        drop_ok = false;
+                    }
+                }
+            }
+        }
+    }
+
+    bool rval = false;
+    if (drop_ok)
+    {
+        auto func = [this](int i) {
+                return prepare_for_test(i);
+            };
+        rval = run_on_every_backend(func);
+    }
+
+    return rval;
 }
 
 int MariaDBCluster::execute_query_all_nodes(const char* sql)
@@ -679,12 +700,15 @@ void MariaDBCluster::reset_all_servers_settings()
     }
 }
 
-bool MariaDBCluster::prepare_server(int i)
+bool MariaDBCluster::reset_server(int i)
 {
     auto& srv = m_backends[i];
-    auto& vm = srv->vm_node();
+    srv->stop_database();
     srv->cleanup_database();
     reset_server_settings(i);
+
+    auto& vm = srv->vm_node();
+    auto namec = vm.m_name.c_str();
 
     // Note: These should be done by MDBCI
     vm.run_cmd_sudo("test -d /etc/apparmor.d/ && "
@@ -692,7 +716,7 @@ bool MariaDBCluster::prepare_server(int i)
                     "sudo service apparmor restart && "
                     "chmod a+r -R /etc/my.cnf.d/*");
 
-    bool rval = false;
+    bool reset_ok = false;
     const char vrs_cmd[] = "/usr/sbin/mysqld --version";
     auto res_version = vm.run_cmd_output(vrs_cmd);
 
@@ -701,9 +725,16 @@ bool MariaDBCluster::prepare_server(int i)
         string version_digits = extract_version_from_string(res_version.output);
         if (version_digits.compare(0, 3, "10.") == 0)
         {
-            cout << "Executing mysql_install_db on node" << i << endl;
-            vm.run_cmd_sudo("mysql_install_db; sudo chown -R mysql:mysql /var/lib/mysql");
-            rval = true;
+            const char reset_db_cmd[] = "mysql_install_db; sudo chown -R mysql:mysql /var/lib/mysql";
+            logger().log_msgf("Running '%s' on '%s'", reset_db_cmd, namec);
+            if (vm.run_cmd_sudo(reset_db_cmd) == 0)
+            {
+                reset_ok = true;
+            }
+            else
+            {
+                logger().add_failure("'%s' failed on '%s'.", reset_db_cmd, namec);
+            }
         }
         else
         {
@@ -715,18 +746,21 @@ bool MariaDBCluster::prepare_server(int i)
     }
     else
     {
-        logger().add_failure("'%s' failed.", vrs_cmd);
+        logger().add_failure("'%s' failed on '%s'.", vrs_cmd, vm.m_name.c_str());
     }
 
-    srv->stop_database();
-    srv->start_database();
-    return rval;
+    bool started = srv->start_database();
+    if (!started)
+    {
+        logger().add_failure("Database process start failed on '%s' after reset.", namec);
+    }
+    return reset_ok && started;
 }
 
-bool MariaDBCluster::reset_and_prepare_servers()
+bool MariaDBCluster::reset_servers()
 {
     auto func = [this](int i) {
-            return prepare_server(i);
+            return reset_server(i);
         };
     return run_on_every_backend(func);
 }

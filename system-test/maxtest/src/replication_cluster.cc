@@ -68,45 +68,52 @@ const std::string& ReplicationCluster::type_string() const
     return type_mariadb;
 }
 
-int ReplicationCluster::start_replication()
+bool ReplicationCluster::start_replication()
 {
-    int local_result = 0;
-
-    // Start all nodes
-    for (int i = 0; i < N; i++)
+    const int n = N;
+    // Generate users on all nodes.
+    // TODO: most users can be generated just on the master once replication is on.
+    for (int i = 0; i < n; i++)
     {
-        if (start_node(i, (char*) ""))
-        {
-            printf("Start of node %d failed\n", i);
-            return 1;
-        }
-
         create_users(i);
     }
 
-    robust_connect(10);
+    ping_or_open_admin_connections();
 
-    string change_master = mxb::string_printf(
-        "change master to master_host='%s', master_port=%i, master_user='repl', master_password='repl', "
-        "master_use_gtid=slave_pos;",
-        ip_private(0), port[0]);
-
-    for (int i = 0; i < N; i++)
+    // At this point, the servers have conflicting gtids but identical data. Set gtids manually so
+    // replication can start.
+    bool reset_ok = true;
+    for (int i = 0; i < n; i++)
     {
-        execute_query(nodes[i], "SET GLOBAL read_only=OFF");
-        execute_query(nodes[i], "STOP SLAVE;");
-        execute_query(nodes[i], "SET GLOBAL gtid_slave_pos='0-1-0'");
-
-        if (i != 0)
+        auto conn = backend(i)->admin_connection();
+        if (!conn->try_cmd("RESET MASTER;") || !conn->try_cmd("SET GLOBAL gtid_slave_pos='0-1-0'"))
         {
-            execute_query(nodes[i], "%s", change_master.c_str());
-            execute_query(nodes[i], "START SLAVE");
+            reset_ok = false;
         }
     }
 
-    disconnect();
+    bool rval = false;
+    if (reset_ok)
+    {
+        bool repl_ok = true;
+        // Finally, begin replication.
+        string change_master = gen_change_master_cmd(backend(0));
+        for (int i = 1; i < n; i++)
+        {
+            auto conn = backend(i)->admin_connection();
+            if (!conn->try_cmd(change_master) || !conn->try_cmd("START SLAVE;"))
+            {
+                repl_ok = false;
+            }
+        }
 
-    return local_result;
+        if (repl_ok)
+        {
+            rval = true;
+        }
+    }
+
+    return rval;
 }
 
 bool ReplicationCluster::check_replication()

@@ -54,16 +54,6 @@ echo maintenance=$maintenance
 echo
 
 ##
-## Default database
-##
-
-mysql --force $socket <<EOF
-
-DROP DATABASE IF EXISTS test;
-CREATE DATABASE test;
-EOF
-
-##
 ## "Legacy" users. The "test-admin"-user is used by the test system itself to manage clusters and should
 ## never require ssl. Tests should not remove or modify it.
 ##
@@ -94,7 +84,6 @@ DROP USER IF EXISTS 'maxuser'@'%';
 CREATE USER 'maxuser'@'%' IDENTIFIED BY 'maxpwd' $require_ssl;
 GRANT ALL ON *.* TO 'maxuser'@'%' WITH GRANT OPTION;
 
-RESET MASTER;
 EOF
 
 ##

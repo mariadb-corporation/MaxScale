@@ -22,7 +22,7 @@ public:
 
     const std::string& type_string() const override;
 
-    int start_replication() override;
+    bool start_replication() override;
 
     std::string get_srv_cnf_filename(int node) override;
 

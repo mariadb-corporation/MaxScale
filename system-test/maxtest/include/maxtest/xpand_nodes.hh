@@ -31,14 +31,9 @@ public:
 
     const std::string& type_string() const override;
 
-    /**
-     * @brief start_cluster Intstalls Xpand on all nodes, configure license, form cluster
-     * @return 0 in case of success
-     */
-    int start_replication() override;
+    bool start_replication() override;
 
-
-    bool prepare_server(int i) override;
+    bool reset_server(int i) override;
 
     const std::string& nwconf_prefix() const override;
     const std::string& name() const override;
