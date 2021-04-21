@@ -61,7 +61,8 @@ private:
         CONNECTION_INIT,    /**< Sending connection init file contents */
         SEND_DELAYQ,        /**< Sending contents of delay queue */
         ROUTING,            /**< Ready to route queries */
-        CHANGING_USER,      /**< Processing a COM_CHANGE_USER sent by the user */
+        SEND_CHANGE_USER,   /**< Sending a COM_CHANGE_USER */
+        READ_CHANGE_USER,   /**< Reading the response to a COM_CHANGE_USER */
         RESET_CONNECTION,   /**< Reset the connection with a COM_CHANGE_USER */
         PINGING,            /**< Pinging backend server */
         POOLED,             /**< The connection is in pool and should not route replies */
@@ -130,7 +131,6 @@ private:
     StateMachineRes read_history_response();
     bool            compare_responses();
 
-    bool   change_user(GWBUF* queue);
     bool   send_change_user_to_backend();
     int    read_change_user();
     bool   send_proxy_protocol_header();
@@ -148,6 +148,7 @@ private:
     int    send_mysql_native_password_response(DCB* dcb, GWBUF* reply);
     int    gw_decode_mysql_server_handshake(uint8_t* payload);
     GWBUF* gw_generate_auth_response(bool with_ssl, bool ssl_established, uint64_t service_capabilities);
+    bool   expecting_reply() const;
 
     std::string create_response_mismatch_error();
 

@@ -373,8 +373,18 @@ void MariaDBBackendConnection::ready_for_reading(DCB* event_dcb)
             break;
 
         case State::RESET_CONNECTION:
-        case State::CHANGING_USER:
+        case State::READ_CHANGE_USER:
             read_change_user();
+            break;
+
+        case State::SEND_CHANGE_USER:
+            normal_read();
+
+            if (!expecting_reply())
+            {
+                // No more replies expected, generate and send the COM_CHANGE_USER.
+                send_change_user_to_backend();
+            }
             break;
 
         case State::PINGING:
@@ -803,7 +813,7 @@ int MariaDBBackendConnection::read_change_user()
             // result processing code doesn't deal with the COM_CHANGE_USER responses.
             set_reply_state(ReplyState::DONE);
 
-            if (m_state == State::CHANGING_USER)
+            if (m_state == State::READ_CHANGE_USER)
             {
                 // Fix the packet sequence number to be the same what the client expects
                 MYSQL_session* client_data = static_cast<MYSQL_session*>(m_session->protocol_data());
@@ -930,14 +940,6 @@ int32_t MariaDBBackendConnection::write(GWBUF* queue)
 
     case State::ROUTING:
         {
-            auto cmd = static_cast<mxs_mysql_cmd_t>(mxs_mysql_get_command(queue));
-
-            MXS_DEBUG("write to dcb %p fd %d protocol state %s.",
-                      m_dcb, m_dcb->fd(), to_string(m_state).c_str());
-
-            queue = gwbuf_make_contiguous(queue);
-            prepare_for_write(queue);
-
             // If the buffer contains a large query, we have to ignore the command byte and just write it. The
             // state of m_large_query must be updated for each routed packet to accurately know whether the
             // command byte is accurate or not.
@@ -949,7 +951,30 @@ int32_t MariaDBBackendConnection::write(GWBUF* queue)
                 // Not the start of a packet, don't analyze it.
                 return m_dcb->writeq_append(queue);
             }
-            else if (mxs_mysql_is_ps_command(cmd))
+
+            queue = gwbuf_make_contiguous(queue);
+            uint8_t cmd = mxs_mysql_get_command(queue);
+
+            if (cmd == MXS_COM_CHANGE_USER)
+            {
+                // Discard the packet, we'll generate our own when we send it.
+                gwbuf_free(queue);
+
+                if (expecting_reply())
+                {
+                    // Busy with something else, wait for it to complete and then send the COM_CHANGE_USER.
+                    m_state = State::SEND_CHANGE_USER;
+                    return 1;
+                }
+                else
+                {
+                    return send_change_user_to_backend();
+                }
+            }
+
+            prepare_for_write(queue);
+
+            if (mxs_mysql_is_ps_command(cmd))
             {
                 uint32_t ps_id = mxs_mysql_extract_ps_id(queue);
                 auto it = m_ps_map.find(ps_id);
@@ -1004,11 +1029,7 @@ int32_t MariaDBBackendConnection::write(GWBUF* queue)
                 }
             }
 
-            if (m_reply.command() == MXS_COM_CHANGE_USER)
-            {
-                return change_user(queue);
-            }
-            else if (cmd == MXS_COM_QUIT && m_server.persistent_conns_enabled())
+            if (cmd == MXS_COM_QUIT && m_server.persistent_conns_enabled())
             {
                 /** We need to keep the pooled connections alive so we just ignore the COM_QUIT packet */
                 gwbuf_free(queue);
@@ -1130,18 +1151,6 @@ void MariaDBBackendConnection::hangup(DCB* event_dcb)
 }
 
 /**
- * This routine handles the COM_CHANGE_USER command.
- *
- * @param queue         The GWBUF containing the COM_CHANGE_USER receveid
- * @return True on success
- */
-bool MariaDBBackendConnection::change_user(GWBUF* queue)
-{
-    gwbuf_free(queue);
-    return send_change_user_to_backend();
-}
-
-/**
  * Create COM_CHANGE_USER packet and store it to GWBUF.
  *
  * @return GWBUF buffer consisting of COM_CHANGE_USER packet
@@ -1237,7 +1246,7 @@ bool MariaDBBackendConnection::send_change_user_to_backend()
     bool rval = false;
     if (m_dcb->writeq_append(buffer))
     {
-        m_state = State::CHANGING_USER;
+        m_state = State::READ_CHANGE_USER;
         rval = true;
     }
     return rval;
@@ -2242,7 +2251,8 @@ MariaDBBackendConnection::TrackedQuery::TrackedQuery(GWBUF* buffer)
 void MariaDBBackendConnection::track_query(const TrackedQuery& query)
 {
     mxb_assert(m_state == State::ROUTING || m_state == State::SEND_HISTORY
-               || m_state == State::READ_HISTORY || m_state == State::PREPARE_PS);
+               || m_state == State::READ_HISTORY || m_state == State::PREPARE_PS
+               || m_state == State::SEND_CHANGE_USER);
 
     if (session_is_load_active(m_session))
     {
@@ -2335,8 +2345,12 @@ std::string MariaDBBackendConnection::to_string(State auth_state)
         rval = "Resetting connection";
         break;
 
-    case State::CHANGING_USER:
-        rval = "Changing user";
+    case State::READ_CHANGE_USER:
+        rval = "Reading change user response";
+        break;
+
+    case State::SEND_CHANGE_USER:
+        rval = "Sending change user";
         break;
 
     case State::PINGING:
@@ -2685,4 +2699,9 @@ void MariaDBBackendConnection::set_to_pooled()
 mxs::Component* MariaDBBackendConnection::upstream() const
 {
     return m_upstream;
+}
+
+bool MariaDBBackendConnection::expecting_reply() const
+{
+    return !m_reply.is_complete() || !m_track_queue.empty();
 }
