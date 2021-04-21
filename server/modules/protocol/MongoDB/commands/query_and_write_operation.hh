@@ -755,7 +755,7 @@ protected:
 
             for (const auto& e : doc)
             {
-                append(builder, e.key(), element);
+                append(builder, e.key(), e);
             }
 
             // We need to keep the created document around, so that 'element'
