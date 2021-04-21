@@ -278,6 +278,12 @@ private:
     {
         m_n += response.affected_rows();
     }
+
+    void amend_response(DocumentBuilder&) final
+    {
+        m_database.context().reset_error(m_n);
+    }
+
 };
 
 
@@ -811,8 +817,7 @@ public:
 
     void populate_response(DocumentBuilder& doc) override
     {
-        m_database.context().reset_error();
-
+        // No action needed, the error is reset on each command but for getLastError.
         doc.append(kvp("ok", 1));
     }
 };
@@ -1056,6 +1061,8 @@ private:
     void amend_response(DocumentBuilder& doc)
     {
         doc.append(kvp("nModified", m_nModified));
+
+        m_database.context().reset_error(m_n);
     }
 
 

@@ -709,7 +709,7 @@ public:
         }
 
         void get_last_error(DocumentBuilder& doc);
-        void reset_error();
+        void reset_error(int32_t n = 0);
 
     private:
         using CursorsById = std::unordered_map<int64_t, MongoCursor>;

@@ -1532,18 +1532,26 @@ void throw_cursor_not_found(int64_t id)
 class NoError : public mxsmongo::LastError
 {
 public:
+    NoError(int32_t n = 0)
+        : m_n(n)
+    {
+    }
+
     void populate(mxsmongo::DocumentBuilder& doc)
     {
         mxsmongo::DocumentBuilder writeConcern;
         writeConcern.append(kvp("w", 1));
         writeConcern.append(kvp("wtimeout", 0));
 
-        doc.append(kvp("n", 0));
+        doc.append(kvp("n", m_n));
         doc.append(kvp("syncMillis", 0));
         doc.append(kvp("writtenTo", bsoncxx::types::b_null()));
         doc.append(kvp("writeConcern", writeConcern.extract()));
         doc.append(kvp("err", bsoncxx::types::b_null()));
     }
+
+private:
+    int32_t m_n;
 };
 
 }
@@ -1668,9 +1676,9 @@ void mxsmongo::Mongo::Context::get_last_error(DocumentBuilder& doc)
     doc.append(kvp("ok", 1));
 }
 
-void mxsmongo::Mongo::Context::reset_error()
+void mxsmongo::Mongo::Context::reset_error(int32_t n)
 {
-    m_sLast_error = std::make_unique<NoError>();
+    m_sLast_error = std::make_unique<NoError>(n);
 }
 
 mxsmongo::Mongo::Mongo(mxs::ClientConnection* pClient_connection,
