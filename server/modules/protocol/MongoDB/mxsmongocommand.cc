@@ -169,6 +169,7 @@ struct ThisUnit
         { mxb::tolower(key::FIND),                    create_info<command::Find>() },
         { mxb::tolower(key::GETCMDLINEOPTS),          create_info<command::GetCmdLineOpts>() },
         { mxb::tolower(key::GETFREEMONITORINGSTATUS), create_info<command::GetFreeMonitoringStatus>() },
+        { mxb::tolower(key::GETLASTERROR),            create_info<command::GetLastError>() },
         { mxb::tolower(key::GETLOG),                  create_info<command::GetLog>() },
         { mxb::tolower(key::GETMORE),                 create_info<command::GetMore>() },
         { mxb::tolower(key::INSERT),                  create_info<command::Insert>() },
@@ -180,6 +181,7 @@ struct ThisUnit
         { mxb::tolower(key::PING),                    create_info<command::Ping>() },
         { mxb::tolower(key::REPLSETGETSTATUS),        create_info<command::ReplSetGetStatus>() },
         { mxb::tolower(key::RENAMECOLLECTION),        create_info<command::RenameCollection>() },
+        { mxb::tolower(key::RESETERROR),              create_info<command::ResetError>() },
         { mxb::tolower(key::UPDATE),                  create_info<command::Update>() },
         { mxb::tolower(key::WHATSMYURI),              create_info<command::WhatsMyUri>() },
 

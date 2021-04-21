@@ -5,6 +5,8 @@ limitations, to MariaDB databases for unalterered MongoDB applications.
 
 TBW
 
+[TOC]
+
 # Client Library
 
 Currently the only supported client library is version 3.6 of
@@ -226,7 +228,7 @@ if other fields are explicitly included.
 
 ### [getLastError](https://docs.mongodb.com/manual/reference/command/getLastError/)
 
-TBI
+TBW
 
 ### [getMore](https://docs.mongodb.com/manual/reference/command/getMore/)
 
@@ -266,7 +268,7 @@ then the behavior is identical with that of `as_mongodb`.
 
 ### [resetError](https://docs.mongodb.com/manual/reference/command/getLastError/)
 
-TBI
+TBW
 
 ### [update](https://docs.mongodb.com/manual/reference/command/update)
 

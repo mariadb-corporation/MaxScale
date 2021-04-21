@@ -435,6 +435,19 @@ private:
 // https://docs.mongodb.com/manual/reference/command/findAndModify/
 
 // https://docs.mongodb.com/manual/reference/command/getLastError/
+class GetLastError final : public ImmediateCommand
+{
+public:
+    static constexpr const char* const KEY = key::GETLASTERROR;
+    static constexpr const char* const HELP = "";
+
+    using ImmediateCommand::ImmediateCommand;
+
+    void populate_response(DocumentBuilder& doc) override
+    {
+        m_database.context().get_last_error(doc);
+    }
+};
 
 // https://docs.mongodb.com/manual/reference/command/getMore/
 class GetMore final : public ImmediateCommand
@@ -789,6 +802,21 @@ protected:
 
 
 // https://docs.mongodb.com/manual/reference/command/resetError/
+class ResetError final : public ImmediateCommand
+{
+public:
+    static constexpr const char* const KEY = key::RESETERROR;
+    static constexpr const char* const HELP = "";
+
+    using ImmediateCommand::ImmediateCommand;
+
+    void populate_response(DocumentBuilder& doc) override
+    {
+        m_database.context().reset_error();
+
+        doc.append(kvp("ok", 1));
+    }
+};
 
 // https://docs.mongodb.com/manual/reference/command/update/
 class Update final : public OrderedCommand

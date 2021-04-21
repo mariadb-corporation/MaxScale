@@ -1460,6 +1460,23 @@ void throw_cursor_not_found(int64_t id)
     throw mxsmongo::SoftError(ss.str(), mxsmongo::error::CURSOR_NOT_FOUND);
 }
 
+class NoError : public mxsmongo::Mongo::LastError
+{
+public:
+    void populate(mxsmongo::DocumentBuilder& doc)
+    {
+        mxsmongo::DocumentBuilder writeConcern;
+        writeConcern.append(kvp("w", 1));
+        writeConcern.append(kvp("wtimeout", 0));
+
+        doc.append(kvp("n", 0));
+        doc.append(kvp("syncMillis", 0));
+        doc.append(kvp("writtenTo", bsoncxx::types::b_null()));
+        doc.append(kvp("writeConcern", writeConcern.extract()));
+        doc.append(kvp("err", bsoncxx::types::b_null()));
+    }
+};
+
 }
 
 mxsmongo::MongoCursor& mxsmongo::Mongo::Context::get_cursor(const std::string& collection, int64_t id)
@@ -1481,6 +1498,15 @@ mxsmongo::MongoCursor& mxsmongo::Mongo::Context::get_cursor(const std::string& c
     }
 
     return jt->second;
+}
+
+mxsmongo::Mongo::Context::Context(mxs::ClientConnection* pClient_connection,
+                                  mxs::Component* pDownstream)
+    : m_client_connection(*pClient_connection)
+    , m_downstream(*pDownstream)
+    , m_connection_id(++s_connection_id)
+    , m_sLast_error(std::make_unique<NoError>())
+{
 }
 
 void mxsmongo::Mongo::Context::remove_cursor(const MongoCursor& cursor)
@@ -1562,6 +1588,20 @@ void mxsmongo::Mongo::Context::kill_idle_cursors(const mxb::TimePoint& now,
             }
         }
     }
+}
+
+void mxsmongo::Mongo::Context::get_last_error(DocumentBuilder& doc)
+{
+    int32_t connection_id = m_connection_id; // Mongo returns this as a 32-bit integer.
+
+    doc.append(kvp("connectionId", connection_id));
+    m_sLast_error->populate(doc);
+    doc.append(kvp("ok", 1));
+}
+
+void mxsmongo::Mongo::Context::reset_error()
+{
+    m_sLast_error = std::make_unique<NoError>();
 }
 
 mxsmongo::Mongo::Mongo(mxs::ClientConnection* pClient_connection,

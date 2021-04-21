@@ -297,6 +297,7 @@ const char FIND[]                    = "find";
 const char FIRSTBATCH[]              = "firstBatch";
 const char GETCMDLINEOPTS[]          = "getCmdLineOpts";
 const char GETFREEMONITORINGSTATUS[] = "getFreeMonitoringStatus";
+const char GETLASTERROR[]            = "getLastError";
 const char GETLOG[]                  = "getLog";
 const char GETMORE[]                 = "getMore";
 const char INSERT[]                  = "insert";
@@ -317,6 +318,7 @@ const char Q[]                       = "q";
 const char QUERY[]                   = "query";
 const char REPLSETGETSTATUS[]        = "replSetGetStatus";
 const char RENAMECOLLECTION[]        = "renameCollection";
+const char RESETERROR[]              = "resetError";
 const char SKIP[]                    = "skip";
 const char SORT[]                    = "sort";
 const char U[]                       = "u";
@@ -645,6 +647,14 @@ class Database;
 class Mongo
 {
 public:
+    class LastError
+    {
+    public:
+        virtual ~LastError() {}
+
+        virtual void populate(DocumentBuilder& doc) = 0;
+    };
+
     class Context
     {
     public:
@@ -652,12 +662,7 @@ public:
         Context& operator = (const Context&) = delete;
 
         Context(mxs::ClientConnection* pClient_connection,
-                mxs::Component* pDownstream)
-            : m_client_connection(*pClient_connection)
-            , m_downstream(*pDownstream)
-            , m_connection_id(++s_connection_id)
-        {
-        }
+                mxs::Component* pDownstream);
 
         mxs::ClientConnection& client_connection()
         {
@@ -690,16 +695,25 @@ public:
         std::set<int64_t> kill_cursors(const std::string& collection, const std::vector<int64_t>& ids);
         void kill_idle_cursors(const mxb::TimePoint& now, const std::chrono::seconds& timeout);
 
+        void set_last_error(std::unique_ptr<LastError>&& sLast_error)
+        {
+            m_sLast_error = std::move(sLast_error);
+        }
+
+        void get_last_error(DocumentBuilder& doc);
+        void reset_error();
+
     private:
         using CursorsById = std::unordered_map<int64_t, MongoCursor>;
         using CollectionCursors = std::unordered_map<std::string, CursorsById>;
 
 
-        mxs::ClientConnection& m_client_connection;
-        mxs::Component&        m_downstream;
-        int32_t                m_request_id { 1 };
-        int64_t                m_connection_id;
-        CollectionCursors      m_collection_cursors;
+        mxs::ClientConnection&     m_client_connection;
+        mxs::Component&            m_downstream;
+        int32_t                    m_request_id { 1 };
+        int64_t                    m_connection_id;
+        CollectionCursors          m_collection_cursors;
+        std::unique_ptr<LastError> m_sLast_error;
 
         static std::atomic_int64_t s_connection_id;
     };
