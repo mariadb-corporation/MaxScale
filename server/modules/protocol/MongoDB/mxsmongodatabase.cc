@@ -112,6 +112,11 @@ GWBUF* mxsmongo::Database::execute(std::unique_ptr<Command> sCommand)
                             error::UNAUTHORIZED);
         }
 
+        if (sCommand->name() != key::GETLASTERROR)
+        {
+            m_context.reset_error();
+        }
+
         pResponse = sCommand->execute();
     }
     catch (const mxsmongo::Exception& x)
