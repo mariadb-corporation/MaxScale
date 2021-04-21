@@ -544,7 +544,6 @@ export default {
                 td {
                     padding: 0px 24px;
                     pointer-events: all !important;
-                    height: 45px;
                     white-space: nowrap;
                     &:last-child:not(.hide) {
                         border-right: thin solid $table-border;
@@ -563,19 +562,12 @@ export default {
                 &.last-row {
                     td {
                         border-bottom: thin solid $table-border;
-                        &:last-child {
-                            border-radius: 0 0 5px 0;
-                        }
-                        &:first-child {
-                            border-radius: 0 0 0 5px;
-                        }
                     }
                 }
             }
             .v-data-table__empty-wrapper {
                 td {
                     border-bottom: thin solid $table-border;
-                    border-radius: 0 0 5px 5px;
                 }
             }
             .v-data-table__editable-cell {
