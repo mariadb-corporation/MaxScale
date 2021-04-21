@@ -560,8 +560,7 @@ public:
                     ss << "Table " << table() << " does not exist, and 'auto_create_tables' "
                        << "is false.";
 
-                    pResponse = HardError(ss.str(), error::COMMAND_FAILED).create_response(*this);
-                    state = READY;
+                    throw HardError(ss.str(), error::COMMAND_FAILED);
                 }
             }
         }
@@ -601,9 +600,9 @@ public:
             default:
                 mxb_assert(!true);
                 MXS_ERROR("Expected OK or ERR packet, received something else.");
-                pResponse = HardError("Unexpected response received from backend.",
-                                      error::COMMAND_FAILED).create_response(*this);
-                state = READY;
+
+                throw HardError("Unexpected response received from backend.",
+                                error::COMMAND_FAILED).create_response(*this);
             }
         }
 

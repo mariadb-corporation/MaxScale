@@ -69,8 +69,7 @@ public:
 
     void populate_response(DocumentBuilder& doc) override
     {
-        SoftError error("not running with --replSet", error::NO_REPLICATION_ENABLED);
-        error.create_response(*this, doc);
+        throw SoftError("not running with --replSet", error::NO_REPLICATION_ENABLED);
     }
 };
 

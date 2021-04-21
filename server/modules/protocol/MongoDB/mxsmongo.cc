@@ -576,6 +576,36 @@ void mxsmongo::SoftError::create_response(const Command&, DocumentBuilder& doc) 
     doc.append(kvp("codeName", mxsmongo::error::name(m_code)));
 }
 
+namespace
+{
+    class ConcreteLastError: public mxsmongo::LastError
+    {
+    public:
+        ConcreteLastError(const std::string& err, int32_t code)
+            : m_err(err)
+            , m_code(code)
+        {
+        }
+
+        void populate(mxsmongo::DocumentBuilder& doc)
+        {
+            doc.append(mxsmongo::kvp("err", m_err));
+            doc.append(mxsmongo::kvp("code", m_code));
+            doc.append(mxsmongo::kvp("codeName", mxsmongo::error::name(m_code)));
+        }
+
+    private:
+        string  m_err;
+        int32_t m_code;
+        string  m_code_name;
+    };
+}
+
+unique_ptr<mxsmongo::LastError> mxsmongo::SoftError::create_last_error() const
+{
+    return std::make_unique<ConcreteLastError>(what(), m_code);
+}
+
 GWBUF* mxsmongo::HardError::create_response(const mxsmongo::Command& command) const
 {
     DocumentBuilder doc;
@@ -588,6 +618,11 @@ void mxsmongo::HardError::create_response(const Command&, DocumentBuilder& doc) 
 {
     doc.append(kvp("$err", what()));
     doc.append(kvp("code", m_code));
+}
+
+unique_ptr<mxsmongo::LastError> mxsmongo::HardError::create_last_error() const
+{
+    return std::make_unique<ConcreteLastError>(what(), m_code);
 }
 
 mxsmongo::MariaDBError::MariaDBError(const ComERR& err)
@@ -622,6 +657,40 @@ void mxsmongo::MariaDBError::create_response(const Command& command, DocumentBui
     doc.append(kvp("codeName", mxsmongo::error::name(mongo_code)));
     doc.append(kvp("mariadb", mariadb.extract()));
 }
+
+unique_ptr<mxsmongo::LastError> mxsmongo::MariaDBError::create_last_error() const
+{
+    class MariaDBLastError : public ConcreteLastError
+    {
+    public:
+        MariaDBLastError(const string& err,
+                         int32_t mariadb_code,
+                         const string& mariadb_message)
+            : ConcreteLastError(err, error::from_mariadb_code(mariadb_code))
+            , m_mariadb_code(mariadb_code)
+            , m_mariadb_message(mariadb_message)
+        {
+        }
+
+        void populate(DocumentBuilder& doc)
+        {
+            ConcreteLastError::populate(doc);
+
+            DocumentBuilder mariadb;
+            mariadb.append(kvp("code", m_mariadb_code));
+            mariadb.append(kvp("message", m_mariadb_message));
+
+            doc.append(kvp("mariadb", mariadb.extract()));
+        }
+
+    private:
+        int32_t m_mariadb_code;
+        string  m_mariadb_message;
+    };
+
+    return std::make_unique<ConcreteLastError>(what(), m_code);
+}
+
 
 vector<string> mxsmongo::projection_to_extractions(const bsoncxx::document::view& projection)
 {
@@ -1460,7 +1529,7 @@ void throw_cursor_not_found(int64_t id)
     throw mxsmongo::SoftError(ss.str(), mxsmongo::error::CURSOR_NOT_FOUND);
 }
 
-class NoError : public mxsmongo::Mongo::LastError
+class NoError : public mxsmongo::LastError
 {
 public:
     void populate(mxsmongo::DocumentBuilder& doc)

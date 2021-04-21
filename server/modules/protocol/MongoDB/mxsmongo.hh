@@ -229,6 +229,14 @@ const char* name(int code);
 
 }
 
+class LastError
+{
+public:
+    virtual ~LastError() {}
+
+    virtual void populate(DocumentBuilder& doc) = 0;
+};
+
 class Exception : public std::runtime_error
 {
 public:
@@ -241,6 +249,8 @@ public:
     virtual GWBUF* create_response(const Command& command) const = 0;
     virtual void create_response(const Command& command, DocumentBuilder& doc) const = 0;
 
+    virtual std::unique_ptr<LastError> create_last_error() const = 0;
+
 protected:
     int m_code;
 };
@@ -252,6 +262,8 @@ public:
 
     GWBUF* create_response(const Command& command) const override final;
     void create_response(const Command& command, DocumentBuilder& doc) const override final;
+
+    std::unique_ptr<LastError> create_last_error() const final;
 };
 
 class HardError : public Exception
@@ -261,6 +273,8 @@ public:
 
     GWBUF* create_response(const Command& command) const override final;
     void create_response(const Command& command, DocumentBuilder& doc) const override final;
+
+    std::unique_ptr<LastError> create_last_error() const final;
 };
 
 class MariaDBError : public Exception
@@ -270,6 +284,8 @@ public:
 
     GWBUF* create_response(const Command& command) const override final;
     void create_response(const Command& command, DocumentBuilder& doc) const override final;
+
+    std::unique_ptr<LastError> create_last_error() const final;
 
 private:
     int         m_mariadb_code;
@@ -647,14 +663,6 @@ class Database;
 class Mongo
 {
 public:
-    class LastError
-    {
-    public:
-        virtual ~LastError() {}
-
-        virtual void populate(DocumentBuilder& doc) = 0;
-    };
-
     class Context
     {
     public:

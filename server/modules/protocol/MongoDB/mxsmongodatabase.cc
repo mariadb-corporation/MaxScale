@@ -74,12 +74,18 @@ GWBUF* mxsmongo::Database::translate(mxs::Buffer&& mariadb_response)
     }
     catch (const mxsmongo::Exception& x)
     {
+        m_context.set_last_error(x.create_last_error());
+
         pResponse = x.create_response(*m_sCommand.get());
     }
     catch (const std::exception& x)
     {
         MXS_ERROR("std exception occurred when parsing MongoDB command: %s", x.what());
-        pResponse = HardError(x.what(), mxsmongo::error::COMMAND_FAILED).create_response(*m_sCommand);
+
+        HardError error(x.what(), mxsmongo::error::COMMAND_FAILED);
+        m_context.set_last_error(error.create_last_error());
+
+        pResponse = error.create_response(*m_sCommand);
     }
 
     if (state == Command::READY)
@@ -110,18 +116,27 @@ GWBUF* mxsmongo::Database::execute(std::unique_ptr<Command> sCommand)
     }
     catch (const mxsmongo::Exception& x)
     {
+        m_context.set_last_error(x.create_last_error());
+
         pResponse = x.create_response(*sCommand.get());
     }
     catch (const bsoncxx::exception& x)
     {
         MXS_ERROR("bsoncxx exeception occurred when parsing MongoDB command: %s", x.what());
-        pResponse = HardError(x.what(), mxsmongo::error::FAILED_TO_PARSE).create_response(*sCommand);
+
+        HardError error(x.what(), mxsmongo::error::FAILED_TO_PARSE);
+        m_context.set_last_error(error.create_last_error());
+
+        pResponse = error.create_response(*sCommand);
     }
     catch (const std::exception& x)
     {
         MXS_ERROR("std exception occurred when parsing MongoDB command: %s", x.what());
 
-        pResponse = HardError(x.what(), mxsmongo::error::FAILED_TO_PARSE).create_response(*sCommand);
+        HardError error(x.what(), mxsmongo::error::FAILED_TO_PARSE);
+        m_context.set_last_error(error.create_last_error());
+
+        pResponse = error.create_response(*sCommand);
     }
 
     if (!pResponse)
