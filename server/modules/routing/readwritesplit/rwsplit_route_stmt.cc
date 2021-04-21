@@ -718,7 +718,7 @@ RWBackend* RWSplitSession::handle_hinted_target(const GWBUF* querybuf, route_tar
             {
                 // Target may differ from the requested name if the routing target is locked, e.g. by a trx.
                 // Target is null only if not locked and named server was not found or was invalid.
-                if (mxb_log_is_priority_enabled(LOG_INFO))
+                if (mxb_log_should_log(LOG_INFO))
                 {
                     std::string status;
                     for (const auto& a : m_backends)

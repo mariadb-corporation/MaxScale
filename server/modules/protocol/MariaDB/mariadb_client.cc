@@ -315,7 +315,7 @@ int MariaDBClientConnection::ssl_authenticate_client()
                      remote, service);
             return SSL_ERROR_ACCEPT_FAILED;
         }
-        else if (mxs_log_is_priority_enabled(LOG_INFO))
+        else if (mxb_log_should_log(LOG_INFO))
         {
             if (return_code == 1)
             {

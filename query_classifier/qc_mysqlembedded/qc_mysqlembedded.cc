@@ -941,7 +941,7 @@ static uint32_t resolve_query_type(parsing_info_t* pi, THD* thd)
 
     if (skygw_stmt_causes_implicit_commit(lex, &set_autocommit_stmt))
     {
-        if (mxs_log_is_priority_enabled(LOG_INFO))
+        if (mxb_log_should_log(LOG_INFO))
         {
             if (sql_command_flags[lex->sql_command] & QC_CF_IMPLICIT_COMMIT_BEGIN)
             {
@@ -962,7 +962,7 @@ static uint32_t resolve_query_type(parsing_info_t* pi, THD* thd)
 
     if (set_autocommit_stmt == 0)
     {
-        if (mxs_log_is_priority_enabled(LOG_INFO))
+        if (mxb_log_should_log(LOG_INFO))
         {
             MXS_INFO("Disable autocommit : implicit START TRANSACTION"
                      " before executing the next command.");

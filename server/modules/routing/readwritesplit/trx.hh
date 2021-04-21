@@ -53,7 +53,7 @@ public:
     {
         mxb_assert_message(buf, "Trx::add_stmt: Buffer must not be empty");
 
-        if (mxs_log_is_priority_enabled(LOG_INFO))
+        if (mxb_log_should_log(LOG_INFO))
         {
             MXS_INFO("Adding to trx: %s", mxs::extract_sql(buf, 512).c_str());
         }

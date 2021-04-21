@@ -641,7 +641,9 @@ bool mxb_log_get_session_trace()
 
 bool mxb_log_should_log(int priority)
 {
-    return mxb_log_is_priority_enabled(priority) || (this_unit.should_log && this_unit.should_log(priority));
+    return mxb_log_is_priority_enabled(priority)
+           || (this_unit.should_log && this_unit.should_log(priority))
+           || mxb_log_get_session_trace();
 }
 
 bool mxb_log_rotate()
@@ -954,7 +956,8 @@ int mxb_log_message(int priority,
                 {
                     err = 0;
                 }
-                else if (mxb_log_should_log(level))
+                else if (mxb_log_is_priority_enabled(level)
+                         || (this_unit.should_log && this_unit.should_log(level)))
                 {
                     err = this_unit.sLogger->write(msg.c_str(), msg.length()) ? 0 : -1;
                 }

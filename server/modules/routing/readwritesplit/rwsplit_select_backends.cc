@@ -452,7 +452,7 @@ bool RWSplitSession::open_connections()
         return false;
     }
 
-    if (mxs_log_is_priority_enabled(LOG_INFO))
+    if (mxb_log_should_log(LOG_INFO))
     {
         log_server_connections(m_config.slave_selection_criteria, m_raw_backends);
     }

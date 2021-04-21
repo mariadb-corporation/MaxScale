@@ -5005,7 +5005,7 @@ static int32_t qc_sqlite_get_type_mask(GWBUF* pStmt, uint32_t* pType_mask)
         {
             rv = QC_RESULT_OK;
         }
-        else if (mxs_log_is_priority_enabled(LOG_INFO))
+        else if (mxb_log_should_log(LOG_INFO))
         {
             log_invalid_data(pStmt, "cannot report query type");
         }
@@ -5034,7 +5034,7 @@ static int32_t qc_sqlite_get_operation(GWBUF* pStmt, int32_t* pOp)
         {
             rv = QC_RESULT_OK;
         }
-        else if (mxs_log_is_priority_enabled(LOG_INFO))
+        else if (mxb_log_should_log(LOG_INFO))
         {
             log_invalid_data(pStmt, "cannot report query operation");
         }
@@ -5063,7 +5063,7 @@ static int32_t qc_sqlite_get_created_table_name(GWBUF* pStmt, char** pzCreated_t
         {
             rv = QC_RESULT_OK;
         }
-        else if (mxs_log_is_priority_enabled(LOG_INFO))
+        else if (mxb_log_should_log(LOG_INFO))
         {
             log_invalid_data(pStmt, "cannot report created tables");
         }
@@ -5092,7 +5092,7 @@ static int32_t qc_sqlite_is_drop_table_query(GWBUF* pStmt, int32_t* pIs_drop_tab
         {
             rv = QC_RESULT_OK;
         }
-        else if (mxs_log_is_priority_enabled(LOG_INFO))
+        else if (mxb_log_should_log(LOG_INFO))
         {
             log_invalid_data(pStmt, "cannot report whether query is drop table");
         }
@@ -5120,7 +5120,7 @@ static int32_t qc_sqlite_get_table_names(GWBUF* pStmt, int32_t fullnames, std::v
         {
             rv = QC_RESULT_OK;
         }
-        else if (mxs_log_is_priority_enabled(LOG_INFO))
+        else if (mxb_log_should_log(LOG_INFO))
         {
             log_invalid_data(pStmt, "cannot report what tables are accessed");
         }
@@ -5149,7 +5149,7 @@ static int32_t qc_sqlite_query_has_clause(GWBUF* pStmt, int32_t* pHas_clause)
         {
             rv = QC_RESULT_OK;
         }
-        else if (mxs_log_is_priority_enabled(LOG_INFO))
+        else if (mxb_log_should_log(LOG_INFO))
         {
             log_invalid_data(pStmt, "cannot report whether the query has a where clause");
         }
@@ -5177,7 +5177,7 @@ static int32_t qc_sqlite_get_database_names(GWBUF* pStmt, std::vector<std::strin
         {
             rv = QC_RESULT_OK;
         }
-        else if (mxs_log_is_priority_enabled(LOG_INFO))
+        else if (mxb_log_should_log(LOG_INFO))
         {
             log_invalid_data(pStmt, "cannot report what databases are accessed");
         }
@@ -5206,7 +5206,7 @@ static int32_t qc_sqlite_get_prepare_name(GWBUF* pStmt, char** pzPrepare_name)
         {
             rv = QC_RESULT_OK;
         }
-        else if (mxs_log_is_priority_enabled(LOG_INFO))
+        else if (mxb_log_should_log(LOG_INFO))
         {
             log_invalid_data(pStmt, "cannot report the name of a prepared statement");
         }
@@ -5237,7 +5237,7 @@ int32_t qc_sqlite_get_field_info(GWBUF* pStmt, const QC_FIELD_INFO** ppInfos, ui
         {
             rv = QC_RESULT_OK;
         }
-        else if (mxs_log_is_priority_enabled(LOG_INFO))
+        else if (mxb_log_should_log(LOG_INFO))
         {
             log_invalid_data(pStmt, "cannot report field info");
         }
@@ -5268,7 +5268,7 @@ int32_t qc_sqlite_get_function_info(GWBUF* pStmt, const QC_FUNCTION_INFO** ppInf
         {
             rv = QC_RESULT_OK;
         }
-        else if (mxs_log_is_priority_enabled(LOG_INFO))
+        else if (mxb_log_should_log(LOG_INFO))
         {
             log_invalid_data(pStmt, "cannot report function info");
         }
@@ -5298,7 +5298,7 @@ int32_t qc_sqlite_get_preparable_stmt(GWBUF* pStmt, GWBUF** pzPreparable_stmt)
         {
             rv = QC_RESULT_OK;
         }
-        else if (mxs_log_is_priority_enabled(LOG_INFO))
+        else if (mxb_log_should_log(LOG_INFO))
         {
             log_invalid_data(pStmt, "cannot report preperable statement");
         }

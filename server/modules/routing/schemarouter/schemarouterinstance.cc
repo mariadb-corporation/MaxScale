@@ -156,7 +156,7 @@ bool connect_backend_servers(SRBackendList& backends, MXS_SESSION* session)
     {
         succp = true;
 
-        if (mxs_log_is_priority_enabled(LOG_INFO))
+        if (mxb_log_should_log(LOG_INFO))
         {
             for (const auto& b : backends)
             {

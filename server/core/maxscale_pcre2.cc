@@ -169,7 +169,7 @@ void mxs_pcre2_print_error(int errorcode,
 {
     mxb_assert(filename);
     mxb_assert(func_name);
-    if (mxs_log_is_priority_enabled(LOG_ERR))
+    if (mxb_log_should_log(LOG_ERR))
     {
         // 120 should be enough to contain any error message according to pcre2 manual.
         const PCRE2_SIZE errbuf_len = 120;
@@ -201,7 +201,7 @@ bool mxs_pcre2_check_match_exclude(pcre2_code* re_match,
         if (result == PCRE2_ERROR_NOMATCH)
         {
             rval = false;   // Didn't match the "match"-regex
-            if (mxs_log_is_priority_enabled(LOG_INFO))
+            if (mxb_log_should_log(LOG_INFO))
             {
                 mxs_log_message(LOG_INFO,
                                 calling_module,
@@ -227,7 +227,7 @@ bool mxs_pcre2_check_match_exclude(pcre2_code* re_match,
         if (result >= 0)
         {
             rval = false;   // Matched the "exclude"-regex
-            if (mxs_log_is_priority_enabled(LOG_INFO))
+            if (mxb_log_should_log(LOG_INFO))
             {
                 mxs_log_message(LOG_INFO,
                                 calling_module,

@@ -173,6 +173,9 @@ const char* mxb_log_level_to_string(int level);
 /**
  * Query whether a particular syslog priority is enabled.
  *
+ * Don't use this to check whether a message at a particular level should be logged,
+ * use @c mxb_log_should_log instead.
+ *
  * @param priority  One of the LOG_ERR etc. constants from sys/syslog.h.
  *
  * @return True if enabled, false otherwise.
@@ -318,7 +321,7 @@ bool mxb_log_should_log(int priority);
  *            MXB_ERROR, MXB_WARNING, etc. macros instead.
  */
 #define MXB_LOG_MESSAGE(priority, format, ...) \
-    (mxb_log_should_log(priority) || mxb_log_get_session_trace()  \
+    (mxb_log_should_log(priority)  \
      ? mxb_log_message(priority, MXB_MODULE_NAME, __FILE__, __LINE__, __func__, format, ##__VA_ARGS__)  \
      : 0)
 

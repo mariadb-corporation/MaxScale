@@ -168,7 +168,7 @@ static void inspect_query(GWBUF* pPacket, uint32_t* type, qc_query_op_t* op, uin
         break;
     }
 
-    if (mxs_log_is_priority_enabled(LOG_INFO))
+    if (mxb_log_should_log(LOG_INFO))
     {
         char* sql;
         int sql_len;
