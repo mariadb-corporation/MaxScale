@@ -981,7 +981,7 @@ int32_t MariaDBBackendConnection::write(GWBUF* queue)
                     MXS_WARNING("%s", ss.str().c_str());
 
                     // Only send the error if the client expects a response. If an unknown COM_STMT_CLOSE is
-                    // sent, don't
+                    // sent, don't respond to it.
                     if (cmd != MXS_COM_STMT_CLOSE)
                     {
                         GWBUF* err = mysql_create_custom_error(
