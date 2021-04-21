@@ -1,50 +1,46 @@
 <template>
-    <div>
-        <v-tabs v-model="activeTab" height="24" class="tab-navigation-wrapper ">
-            <v-tab color="primary" :href="`#${SQL_QUERY_MODES.QUERY_VIEW}`">
-                <span>
-                    Results
-                </span>
-            </v-tab>
-            <v-tab color="primary" :href="`#${SQL_QUERY_MODES.PREVIEW_DATA}`">
-                <span>
-                    Data preview
-                </span>
-            </v-tab>
-            <v-tabs-items v-model="activeTab" class="ml-3">
-                <v-tab-item
-                    :value="SQL_QUERY_MODES.QUERY_VIEW"
-                    class="pt-2 query-result-fontStyle color text-small-text"
-                >
-                    <result-view />
-                </v-tab-item>
-                <v-tab-item
-                    :value="SQL_QUERY_MODES.PREVIEW_DATA"
-                    class="pt-2 query-result-fontStyle color text-small-text"
-                >
-                    <preview-data :previewDataSchemaId="previewDataSchemaId" />
-                </v-tab-item>
-            </v-tabs-items>
-        </v-tabs>
-    </div>
+    <v-tabs v-model="activeTab" class="tab-navigation-wrapper fill-height">
+        <v-tab color="primary" :href="`#${SQL_QUERY_MODES.QUERY_VIEW}`">
+            <span> Results </span>
+        </v-tab>
+        <v-tab color="primary" :href="`#${SQL_QUERY_MODES.PREVIEW_DATA}`">
+            <span>
+                Data preview
+            </span>
+        </v-tab>
+        <!-- TODO: calc dynamic height for table in result-tab and preview.data-tab using dynHeight props -->
+        <v-tabs-items v-model="activeTab" class="tab-items">
+            <v-tab-item :value="SQL_QUERY_MODES.QUERY_VIEW" :class="tabItemClass">
+                <result-tab :dynHeight="dynTabItemHeight" />
+            </v-tab-item>
+            <v-tab-item :value="SQL_QUERY_MODES.PREVIEW_DATA" :class="tabItemClass">
+                <preview-data-tab
+                    :dynHeight="dynTabItemHeight"
+                    :previewDataSchemaId="previewDataSchemaId"
+                />
+            </v-tab-item>
+        </v-tabs-items>
+    </v-tabs>
 </template>
 
 <script>
 import { mapState } from 'vuex'
-import PreviewData from './PreviewData'
-import ResultView from './ResultView'
+import PreviewDataTab from './PreviewDataTab'
+import ResultTab from './ResultTab'
 export default {
     name: 'query-result',
     components: {
-        PreviewData,
-        ResultView,
+        PreviewDataTab,
+        ResultTab,
     },
     props: {
         previewDataSchemaId: { type: String, require: true },
+        dynHeight: { type: Number, require: true },
     },
     data() {
         return {
             activeTab: '',
+            tabItemClass: 'pt-2 px-5 query-result-fontStyle color text-small-text fill-height',
         }
     },
     computed: {
@@ -54,6 +50,10 @@ export default {
             SQL_QUERY_MODES: state => state.app_config.SQL_QUERY_MODES,
             curr_sql_query_mode: state => state.query.curr_sql_query_mode,
         }),
+        dynTabItemHeight() {
+            // dynHeight - $tab-bar-height - pt-2 - border thickness
+            return this.dynHeight - 24 - 8 - 2
+        },
     },
     watch: {
         curr_sql_query_mode(v) {
@@ -68,5 +68,17 @@ export default {
 <style lang="scss" scoped>
 .query-result-fontStyle {
     font-size: 14px;
+}
+$tab-bar-height: 24px;
+::v-deep.tab-navigation-wrapper {
+    .v-tabs-bar {
+        height: $tab-bar-height;
+    }
+}
+::v-deep.tab-items {
+    height: calc(100% - #{$tab-bar-height});
+    .v-window__container {
+        height: 100%;
+    }
 }
 </style>

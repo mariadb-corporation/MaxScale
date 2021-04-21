@@ -42,13 +42,18 @@
                 class="fill-height"
                 :class="[!isFullScreen ? 'pt-6 pb-8' : 'panels--fullscreen']"
             >
+                <!-- Only show split-pane when minSidebarPct is calculated.
+                    This ensures @get-panes-dim event is calculated correctly
+                -->
                 <split-pane
+                    v-if="minSidebarPct"
                     v-model="sidebarPct"
                     :minPercent="minSidebarPct"
                     split="vert"
                     :disable="!isFullScreen || isCollapsed"
                 >
                     <template slot="pane-left">
+                        <!-- sidebar panel -->
                         <db-list
                             class="db-tb-list"
                             :schemaList="schema.schemaList"
@@ -61,7 +66,13 @@
                         />
                     </template>
                     <template slot="pane-right">
-                        <split-pane v-model="editorPanePct" split="horiz" :minPercent="10">
+                        <!-- Main panel -->
+                        <split-pane
+                            v-model="editorPanePct"
+                            split="horiz"
+                            :minPercent="10"
+                            @get-panes-dim="setMainPaneDim"
+                        >
                             <template slot="pane-left">
                                 <query-editor
                                     v-model="queryTxt"
@@ -71,7 +82,8 @@
                             </template>
                             <template slot="pane-right">
                                 <query-result
-                                    class="query-result pb-3"
+                                    :dynHeight="mainPaneDim.resultPane_height"
+                                    class="query-result"
                                     :previewDataSchemaId="previewDataSchemaId"
                                 />
                             </template>
@@ -117,6 +129,11 @@ export default {
             isFullScreen: false,
             isCollapsed: false,
             previewDataSchemaId: '',
+            mainPaneDim: {
+                mainPane_width: 0,
+                editorPane_height: 0,
+                resultPane_height: 0,
+            },
         }
     },
     computed: {
@@ -206,6 +223,7 @@ export default {
         async loadSchema() {
             await this.fetchConnectionSchema()
         },
+        //TODO: move all bounding pct calculation to another component
         getSidebarBoundingPct({ isMin }) {
             const maxContainerWidth = this.$refs.wrapperContainer.clientWidth
             let minWidth = isMin ? 200 : 273 // sidebar width in px
@@ -224,6 +242,14 @@ export default {
         onResize() {
             this.handleSetSidebarPct({ isCollapsed: this.isCollapsed })
         },
+        setMainPaneDim({ paneL_width, paneL_height, paneR_height }) {
+            this.mainPaneDim = {
+                mainPane_width: paneL_width, // equals to dim.paneR_width
+                editorPane_height: paneL_height,
+                resultPane_height: paneR_height,
+            }
+        },
+
         async onRun() {
             await this.switchSQLMode(this.SQL_QUERY_MODES.QUERY_VIEW)
         },

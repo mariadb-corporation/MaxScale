@@ -1,5 +1,5 @@
 <template>
-    <div>
+    <div class="fill-height">
         Results
         <!-- TODO: Show data table here -->
     </div>
@@ -9,7 +9,10 @@
 import { mapState } from 'vuex'
 
 export default {
-    name: 'result-view',
+    name: 'result-tab',
+    props: {
+        dynHeight: { type: Number, required: true },
+    },
     computed: {
         ...mapState({
             query_result: state => state.query.query_result,
