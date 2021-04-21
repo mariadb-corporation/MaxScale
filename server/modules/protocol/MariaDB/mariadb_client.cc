@@ -991,7 +991,8 @@ bool MariaDBClientConnection::record_for_history(mxs::Buffer& buffer, uint8_t cm
             m_pending_cmd = buffer;         // Keep a copy for the session command history
             should_record = true;
 
-            if (cmd == MXS_COM_STMT_PREPARE)
+            if (cmd == MXS_COM_STMT_PREPARE
+                || qc_query_is_type(info.type_mask(), QUERY_TYPE_PREPARE_NAMED_STMT))
             {
                 // This will silence the warnings about unknown PS IDs
                 m_qc.ps_store(buffer.get(), m_next_id);
