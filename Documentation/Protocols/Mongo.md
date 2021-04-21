@@ -5,12 +5,12 @@ limitations, to MariaDB databases for unalterered MongoDB applications.
 
 TBW
 
-## Client Library
+# Client Library
 
 Currently the only supported client library is version 3.6 of
 [MongoDB Node.JS Driver](http://mongodb.github.io/node-mongodb-native/).
 
-## Authentication
+# Authentication
 
 Currently no authentication is supported in the communication between
 the MongoDB application and MaxScale. That is, the connection string
@@ -37,9 +37,9 @@ port will use the same credentials when the MariaDB database is accessed;
 in that respect it is not possible to distinguish one MongoDB application
 from another.
 
-## Parameters
+# Parameters
 
-### `user`
+## `user`
 
    * Type: string
    * Mandatory: true
@@ -48,7 +48,7 @@ Specifies the _user_ to be used when connecting to the backend. Note that the
 same _user_/_password_ combination will be used for all Mongo clients connecting
 to the same listener port.
 
-### `password`
+## `password`
 
    * Type: string
    * Mandatory: true
@@ -57,7 +57,7 @@ Specifies the _password_ to be used when connecting to the backend. Note that th
 same _user_/_password_ combination will be used for all Mongo clients connecting
 to the same listener port.
 
-### `on_unknown_command`
+## `on_unknown_command`
 
    * Type: enumeration
    * Mandatory: false
@@ -71,7 +71,7 @@ Enumeration values:
    * `return_error`: An error document is returned.
    * `return_empty`: An empty document is returned.
 
-### `auto_create_tables`
+## `auto_create_tables`
 
    * Type: boolean
    * Mandatory: false
@@ -79,7 +79,7 @@ Enumeration values:
 
 Specifies whether tables should automatically be created, as needed.
 
-### `id_length`
+## `id_length`
 
    * Type: count
    * Mandatory: false
@@ -88,7 +88,7 @@ Specifies whether tables should automatically be created, as needed.
 
 Specifies the length of the id column in tables that are automatically created.
 
-### `insert_behavior`
+## `insert_behavior`
 
    * Type: enumeration
    * Mandatory: false
@@ -104,7 +104,7 @@ Enumeration values:
      (the default) then all documents are inserted using a _single_ INSERT statement,
      that is, either all insertions succeed or none will.
 
-### `cursor_timeout`
+## `cursor_timeout`
 
    * Type: duration
    * Mandatory: false
@@ -113,7 +113,7 @@ Enumeration values:
 Specifies how long a cursor can be idle, that is, not accessed, before it is
 automatically closed.
 
-## Databases and Tables
+# Databases and Tables
 
 _Mongodbprotocol_ never creates databases, but they must be created manually.
 
@@ -140,16 +140,47 @@ one.
 To reduce the risk for confusion, the recommendation is to use a specific
 database for tables that contain documents.
 
-## Commands
+# Database Commands
 
-The following lists all MongoDB commands that are supported.
+The following lists all implemented MongoDB commands and to what extent
+they are supported. Each heading links to the corresponding entry in the
+MongoDB documentation.
 
-### Find - https://docs.mongodb.com/manual/reference/command/find
+## [Aggregation Commands](https://docs.mongodb.com/manual/reference/command/nav-aggregation/)
+
+### [count](https://docs.mongodb.com/manual/reference/command/count/)
+
+TBW
+
+### [distinct](https://docs.mongodb.com/manual/reference/command/distinct/)
+
+TBW
+
+## [Geospatial Commands](https://docs.mongodb.com/manual/reference/command/nav-geospatial/)
+
+No commands from this group are currently supported.
+
+## [Query and Write Operation Commands](https://docs.mongodb.com/manual/reference/command/nav-crud/)
+
+### [delete](https://docs.mongodb.com/manual/reference/command/insert)
 
 The following fields are acted upon.
 
 Field | Type | Description
---------------------------
+------|------|------------
+insert| string | The name of the target table.
+deletes | array | An array of one document that describes what to delete.
+
+All other fields are ignored.
+
+**NOTE** Currently the `deletes` array can contain exactly one document.
+
+### [find](https://docs.mongodb.com/manual/reference/command/find)
+
+The following fields are acted upon.
+
+Field | Type | Description
+------|------|------------
 find| string | The name of the target table.
 projection | document | Optional. The projection specification to determine which fields to includein the returned documents.
 
@@ -167,7 +198,7 @@ If a `projection` document is not provided or if it is empty, the entire documen
 will be returned.
 
 Projection | Description
-------------------------
+-----------|------------
 `<field>: <1 or true>` | Specifies the inclusion of a field.
 `<field>: <0 or false>` | Specifies the exclusion of a field.
 
@@ -193,7 +224,15 @@ with the exception of the `_id` field:
 if other fields are explicitly included.
 *NOTE* Currently exclusion of other fields but `_id` is currently not supported.
 
-### Insert - https://docs.mongodb.com/manual/reference/command/insert
+### [getLastError](https://docs.mongodb.com/manual/reference/command/getLastError/)
+
+TBI
+
+### [getMore](https://docs.mongodb.com/manual/reference/command/getMore/)
+
+TBW
+
+### [insert](https://docs.mongodb.com/manual/reference/command/insert)
 
 The `insert` command inserts one or more documents into the table whose
 name is the same as that of the collection. If the option `auto_create_tables`
@@ -203,7 +242,7 @@ value is `false`, then the insert will fail unless the table already exists.
 The following fields are acted upon.
 
 Field | Type | Description
---------------------------
+------|------|------------
 insert| string | The name of the target collection/table.
 documents | array | An array of one or more documents to be inserted to the named collection/table.
 ordered | boolean | Optional, with default being `true`. See below for description.
@@ -225,25 +264,16 @@ INSERT command. That is, if the insertion of any document fails, for instance,
 due to a duplicate id, then no document will be inserted. If `ordered` is `false`,
 then the behavior is identical with that of `as_mongodb`.
 
-### Delete - https://docs.mongodb.com/manual/reference/command/insert
+### [resetError](https://docs.mongodb.com/manual/reference/command/getLastError/)
+
+TBI
+
+### [update](https://docs.mongodb.com/manual/reference/command/update)
 
 The following fields are acted upon.
 
 Field | Type | Description
---------------------------
-insert| string | The name of the target table.
-deletes | array | An array of one document that describes what to delete.
-
-All other fields are ignored.
-
-**NOTE** Currently the `deletes` array can contain exactly one document.
-
-### Update - https://docs.mongodb.com/manual/reference/command/update
-
-The following fields are acted upon.
-
-Field | Type | Description
---------------------------
+------|------|------------
 update | string | The name of the target table.
 updates | array | An array of documents that describe what to updated.
 
@@ -257,12 +287,110 @@ Each element of the updates array is an update statement document.
 Each document contains the following fields:
 
 Field | Type | Description
---------------------------
+------|------|------------
 q | document | The query that matches documents to update.
 u | document | The documents to apply. Currently _only_ a replacement document with only `<field1>: <value1>` pairs are supported.
 multi| boolean | Optional. If `true`, updates all documents that meet the query criteria. If `false liit the update to one document that meets the query criteria. Defaults to `false`.
 
 All other fields are ignored.
+
+## [Query Plan Cache Commands](https://docs.mongodb.com/manual/reference/command/nav-plan-cache/)
+
+No commands from this group are currently supported.
+
+## [Authenitcation Commands](https://docs.mongodb.com/manual/reference/command/nav-authentication/)
+
+No commands from this group are currently supported.
+
+## [User Management Commands](https://docs.mongodb.com/manual/reference/command/nav-user-management/)
+
+No commands from this group are currently supported.
+
+## [Role Management Commands](https://docs.mongodb.com/manual/reference/command/nav-role-management/)
+
+No commands from this group are currently supported.
+
+## [Replication Commands](https://docs.mongodb.com/manual/reference/command/nav-replication/)
+
+### [isMaster](https://docs.mongodb.com/manual/reference/command/isMaster/)
+
+TBW
+
+## [Sharding Commands](https://docs.mongodb.com/manual/reference/command/nav-sharding/)
+
+No commands from this group are currently supported.
+
+## [Sessions Commands](https://docs.mongodb.com/manual/reference/command/nav-sessions/)
+
+### [endSessions](https://docs.mongodb.com/manual/reference/command/endSessions/)
+
+TBW
+
+## [Administration Commands](https://docs.mongodb.com/manual/reference/command/nav-administration/)
+
+### [create](https://docs.mongodb.com/manual/reference/command/create/)
+
+TBW
+
+### [drop](https://docs.mongodb.com/manual/reference/command/drop/)
+
+TBW
+
+### [dropDatabase](https://docs.mongodb.com/manual/reference/command/dropDatabase/)
+
+TBW
+
+### [killCursors](https://docs.mongodb.com/manual/reference/command/killCursors/)
+
+TBW
+
+### [listCollections](https://docs.mongodb.com/manual/reference/command/listCollections/)
+
+TBW
+
+### [listDatabases](https://docs.mongodb.com/manual/reference/command/listDatabases/)
+
+TBW
+
+### [renameCollection](https://docs.mongodb.com/manual/reference/command/renameCollection/)
+
+TBW
+
+## [Diagnostic Commands](https://docs.mongodb.com/manual/reference/command/nav-diagnostic/)
+
+### [buildInfo](https://docs.mongodb.com/manual/reference/command/buildInfo/)
+
+TBW
+
+### [getCmdLineOpts](https://docs.mongodb.com/manual/reference/command/getCmdLineOpts/)
+
+TBW
+
+### [getLog](https://docs.mongodb.com/manual/reference/command/getLog/)
+
+TBW
+
+### [listCommands](https://docs.mongodb.com/manual/reference/command/listCommands/)
+
+TBW
+
+### [ping](https://docs.mongodb.com/manual/reference/command/ping/)
+
+TBW
+
+### [whatsmyuri](https://docs.mongodb.com/manual/reference/command/whatsmyuri/)
+
+TBW
+
+## [Free Monitoring Commands](https://docs.mongodb.com/manual/reference/command/nav-free-monitoring/)
+
+### [getFreeMonitoringStatus](https://docs.mongodb.com/manual/reference/command/getFreeMonitoringStatus/)
+
+TBW
+
+## [System Events Auditing Commands](https://docs.mongodb.com/manual/reference/command/nav-auditing/)
+
+No commands from this group are currently supported.
 
 ## MaxScale Specific Commands
 
@@ -290,7 +418,7 @@ db.runCommand(
 The command takes the following fields:
 
 Field | Type | Description
---------------------------
+------|------|------------
 mxsDiagnose | document | A command as provided to `db.runCommand(...)`.
 
 ##### Returns
@@ -355,7 +483,7 @@ db.runCommand(
 The command takes the following fields:
 
 Field | Type | Description
---------------------------
+------|------|------------
 mxsGetConfig | <any> | Ignored.
 
 ##### Returns
@@ -399,13 +527,13 @@ db.runCommand(
 The command takes the following fields:
 
 Field | Type | Description
---------------------------
+------|------|------------
 mxsSetConfig | document | A document specifying the configuration.
 
 The document takes the following fields:
 
 Field | Type | Description
---------------------------
+------|------|------------
 on_unknown_command | string | Either `"return_error"` or `"return_empty"`
 auto_create_tables | boolean | Whether tables should be created as needed.
 id_length | integer | `id` column `VARCHAR` size in created tables.
@@ -436,7 +564,7 @@ the session. For example:
 
 ```
 
-## Object Id
+# Object Id
 
 When a document is created, an id of type `ObjectId` will be autogenerated by
 the MongoDB client library. If the id is provided explicitly, by assigning a
