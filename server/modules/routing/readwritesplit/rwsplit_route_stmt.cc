@@ -807,7 +807,6 @@ RWBackend* RWSplitSession::handle_slave_is_target(uint8_t cmd, uint32_t stmt_id)
     if (target)
     {
         mxb::atomic::add(&m_router->stats().n_slave, 1, mxb::atomic::RELAXED);
-        m_server_stats[target->target()].inc_read();
         mxb_assert(target->in_use() || target->can_connect());
     }
     else
@@ -982,7 +981,6 @@ RWBackend* RWSplitSession::handle_master_is_target()
     if (target && target == m_current_master)
     {
         mxb::atomic::add(&m_router->stats().n_master, 1, mxb::atomic::RELAXED);
-        m_server_stats[target->target()].inc_write();
         rval = target;
     }
     else if (!m_config.delayed_retry || m_retry_duration >= m_config.delayed_retry_timeout)
@@ -1150,6 +1148,18 @@ bool RWSplitSession::handle_got_target(mxs::Buffer&& buffer, RWBackend* target, 
         mxb::atomic::add(&m_router->stats().n_queries, 1, mxb::atomic::RELAXED);
         mxb::atomic::add(&target->target()->stats().packets, 1, mxb::atomic::RELAXED);
         m_server_stats[target->target()].inc_total();
+
+        const uint32_t read_only_types = QUERY_TYPE_READ | QUERY_TYPE_LOCAL_READ
+            | QUERY_TYPE_USERVAR_READ | QUERY_TYPE_SYSVAR_READ | QUERY_TYPE_GSYSVAR_READ;
+
+        if ((m_qc.current_route_info().type_mask() & ~read_only_types) && !trx_is_read_only())
+        {
+            m_server_stats[target->target()].inc_write();
+        }
+        else
+        {
+            m_server_stats[target->target()].inc_read();
+        }
 
         if (TARGET_IS_SLAVE(m_qc.current_route_info().target())
             && (cmd == MXS_COM_QUERY || cmd == MXS_COM_STMT_EXECUTE))
