@@ -1,11 +1,12 @@
 <template>
     <div
+        ref="paneContainer"
         class="split-pane-container"
         :style="{ userSelect: active ? 'none' : '' }"
         @mouseup="onMouseUp"
         @mousemove="onMouseMove"
     >
-        <pane isLeft :split="split" :style="leftPanelPos">
+        <pane ref="paneLeft" isLeft :split="split" :style="leftPanelPos">
             <slot name="pane-left" />
         </pane>
         <resizer
@@ -54,6 +55,12 @@ export default {
     data() {
         return {
             active: false,
+            dim: {
+                paneL_width: '',
+                paneL_height: '',
+                paneR_width: '',
+                paneR_height: '',
+            },
         }
     },
     computed: {
@@ -79,7 +86,27 @@ export default {
             }
         },
     },
+    mounted() {
+        this.setInitDim()
+    },
     methods: {
+        setInitDim() {
+            const { clientHeight: contHeight, clientWidth: contWidth } = this.$refs.paneContainer
+            if (this.isVertSplit) {
+                const { clientWidth: paneL_width } = this.$refs.paneLeft.$el
+                this.dim.paneL_width = paneL_width
+                this.dim.paneL_height = contHeight
+                this.dim.paneR_width = contWidth - paneL_width
+                this.dim.paneR_height = contHeight
+            } else {
+                const { clientHeight: paneL_height } = this.$refs.paneLeft.$el
+                this.dim.paneL_width = contWidth
+                this.dim.paneL_height = paneL_height
+                this.dim.paneR_width = contWidth
+                this.dim.paneR_height = contHeight - paneL_height
+            }
+            this.$emit('get-panes-dim', this.dim)
+        },
         onMouseDown() {
             this.active = true
         },
@@ -105,8 +132,26 @@ export default {
                 const { currentTarget: { offsetWidth, offsetHeight } = {} } = e
                 const targetOffset = this.isVertSplit ? offsetWidth : offsetHeight
                 const percent = Math.floor(((currPage - offset) / targetOffset) * 10000) / 100
-                if (percent >= this.minPercent && percent <= 100 - this.minPercent)
+                if (percent >= this.minPercent && percent <= 100 - this.minPercent) {
                     this.$emit('input', percent)
+                    const {
+                        clientHeight: contHeight,
+                        clientWidth: contWidth,
+                    } = this.$refs.paneContainer
+
+                    if (this.isVertSplit) {
+                        this.dim.paneL_width = currPage - offset
+                        this.dim.paneL_height = contHeight
+                        this.dim.paneR_width = contWidth - this.dim.paneL_width
+                        this.dim.paneR_height = contHeight
+                    } else {
+                        this.dim.paneL_width = contWidth
+                        this.dim.paneL_height = currPage - offset
+                        this.dim.paneR_width = contWidth
+                        this.dim.paneR_height = contHeight - this.dim.paneL_height
+                    }
+                    this.$emit('get-panes-dim', this.dim)
+                }
             }
         },
     },
