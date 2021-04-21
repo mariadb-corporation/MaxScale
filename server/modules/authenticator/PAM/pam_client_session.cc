@@ -162,6 +162,7 @@ AuthRes PamClientAuthenticator::authenticate(const UserEntry* entry, MYSQL_sessi
     AuthRes rval;
     mxb_assert(m_state == State::PW_RECEIVED);
     bool twofa = (m_mode == AuthMode::PW_2FA);
+    bool map_to_mariadbauth = (m_be_mapping == BackendMapping::MARIADB);
 
     /** We sent the authentication change packet + plugin name and the client
      * responded with the password. Try to continue authentication without more
@@ -184,19 +185,24 @@ AuthRes PamClientAuthenticator::authenticate(const UserEntry* entry, MYSQL_sessi
     // a user with no service.
     mxb::pam::AuthSettings sett;
     sett.service = entry->auth_string.empty() ? "mysql" : entry->auth_string;
-    sett.mapping_on = m_mapping_on;
+    sett.mapping_on = map_to_mariadbauth;
 
     AuthResult res = mxb::pam::authenticate(m_mode, user, pwds, sett, expected_msgs);
     if (res.type == AuthResult::Result::SUCCESS)
     {
         rval.status = AuthRes::Status::SUCCESS;
-        session->backend_token = tok1;
-        if (twofa)
+        // Don't copy auth tokens when mapping is on so that backend authenticator will try to authenticate
+        // without a password.
+        if (!map_to_mariadbauth)
         {
-            session->backend_token_2fa = tok2;
+            session->backend_token = tok1;
+            if (twofa)
+            {
+                session->backend_token_2fa = tok2;
+            }
         }
 
-        if (sett.mapping_on && !res.mapped_user.empty())
+        if (map_to_mariadbauth && !res.mapped_user.empty())
         {
             if (res.mapped_user != session->user)
             {
@@ -219,10 +225,11 @@ AuthRes PamClientAuthenticator::authenticate(const UserEntry* entry, MYSQL_sessi
     return rval;
 }
 
-PamClientAuthenticator::PamClientAuthenticator(bool cleartext_plugin, bool mapping_on, AuthMode mode)
+PamClientAuthenticator::PamClientAuthenticator(bool cleartext_plugin, AuthMode mode,
+                                               BackendMapping be_mapping)
     : m_cleartext_plugin(cleartext_plugin)
-    , m_mapping_on(mapping_on)
     , m_mode(mode)
+    , m_be_mapping(be_mapping)
 {
 }
 

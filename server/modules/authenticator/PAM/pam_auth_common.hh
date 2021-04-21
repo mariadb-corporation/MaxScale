@@ -34,3 +34,10 @@ enum dialog_plugin_msg_types
     DIALOG_ECHO_ENABLED  = 2,
     DIALOG_ECHO_DISABLED = 4
 };
+
+/** Backend authenticator mapping. Only MariaDB is supported for now. */
+enum class BackendMapping
+{
+    NONE,       /**< No mapping, default */
+    MARIADB     /**< Mapped to a MariaDB user */
+};

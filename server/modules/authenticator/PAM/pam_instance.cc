@@ -30,9 +30,9 @@ const string opt_pam_mode = "pam_mode";
 const string pam_mode_pw = "password";
 const string pam_mode_pw_2fa = "password_2FA";
 
-const string opt_be_auth = "pam_backend_auth";
-const string be_auth_pam = "pam";
-const string be_auth_mariadb = "mariadb";
+const string opt_be_map = "pam_backend_mapping";
+const string be_map_none = "none";
+const string be_map_mariadb = "mariadb";
 }
 
 /**
@@ -71,21 +71,21 @@ PamAuthenticatorModule* PamAuthenticatorModule::create(mxs::ConfigParameters* op
         }
     }
 
-    auto be_auth = BackendAuth::PAM;
-    if (options->contains(opt_be_auth))
+    auto be_mapping = BackendMapping::NONE;
+    if (options->contains(opt_be_map))
     {
-        string user_be_auth = options->get_string(opt_be_auth);
-        options->remove(opt_be_auth);
+        string user_be_map = options->get_string(opt_be_map);
+        options->remove(opt_be_map);
 
-        if (user_be_auth == be_auth_mariadb)
+        if (user_be_map == be_map_mariadb)
         {
-            be_auth = BackendAuth::MARIADB;
+            be_mapping = BackendMapping::MARIADB;
         }
-        else if (user_be_auth != be_auth_pam)
+        else if (user_be_map != be_map_none)
         {
             MXB_ERROR(errmsg,
-                      user_be_auth.c_str(), opt_be_auth.c_str(),
-                      be_auth_pam.c_str(), be_auth_mariadb.c_str());
+                      user_be_map.c_str(), opt_be_map.c_str(),
+                      be_map_none.c_str(), be_map_mariadb.c_str());
             error = true;
         }
     }
@@ -93,7 +93,7 @@ PamAuthenticatorModule* PamAuthenticatorModule::create(mxs::ConfigParameters* op
     PamAuthenticatorModule* rval = nullptr;
     if (!error)
     {
-        rval = new PamAuthenticatorModule(cleartext_plugin, pam_mode, be_auth);
+        rval = new PamAuthenticatorModule(cleartext_plugin, pam_mode, be_mapping);
     }
     return rval;
 }
@@ -110,22 +110,20 @@ std::string PamAuthenticatorModule::supported_protocol() const
 
 mariadb::SClientAuth PamAuthenticatorModule::create_client_authenticator()
 {
-    bool mapping_on = (m_be_auth == BackendAuth::MARIADB);
-    return mariadb::SClientAuth(new(std::nothrow) PamClientAuthenticator(m_cleartext_plugin, mapping_on,
-                                                                         m_mode));
+    return std::make_unique<PamClientAuthenticator>(m_cleartext_plugin, m_mode, m_be_mapping);
 }
 
 mariadb::SBackendAuth
 PamAuthenticatorModule::create_backend_authenticator(mariadb::BackendAuthData& auth_data)
 {
     mariadb::SBackendAuth rval;
-    switch (m_be_auth)
+    switch (m_be_mapping)
     {
-    case PAM:
+    case BackendMapping::NONE:
         rval = std::make_unique<PamBackendAuthenticator>(auth_data, m_mode);
         break;
 
-    case MARIADB:
+    case BackendMapping::MARIADB:
         rval = std::make_unique<MariaDBBackendSession>(auth_data);
         break;
     }
@@ -144,10 +142,10 @@ const std::unordered_set<std::string>& PamAuthenticatorModule::supported_plugins
 }
 
 PamAuthenticatorModule::PamAuthenticatorModule(bool cleartext_plugin, AuthMode auth_mode,
-                                               BackendAuth be_auth)
+                                               BackendMapping be_mapping)
     : m_cleartext_plugin(cleartext_plugin)
     , m_mode(auth_mode)
-    , m_be_auth(be_auth)
+    , m_be_mapping(be_mapping)
 {
 }
 

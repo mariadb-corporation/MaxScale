@@ -39,14 +39,10 @@ public:
 
 private:
     using AuthMode = mxb::pam::AuthMode;
-    enum BackendAuth
-    {
-        PAM, MARIADB
-    };
 
-    PamAuthenticatorModule(bool cleartext_plugin, AuthMode auth_mode, BackendAuth be_auth);
+    PamAuthenticatorModule(bool cleartext_plugin, AuthMode auth_mode, BackendMapping be_mapping);
 
-    bool        m_cleartext_plugin {false};     /**< Is "pam_use_cleartext_plugin" enabled? */
-    AuthMode    m_mode {AuthMode::PW};          /**< Authentication mode */
-    BackendAuth m_be_auth {BackendAuth::PAM};   /**< Backend authenticator */
+    bool           m_cleartext_plugin {false};          /**< Is "pam_use_cleartext_plugin" enabled? */
+    AuthMode       m_mode {AuthMode::PW};               /**< Authentication mode */
+    BackendMapping m_be_mapping {BackendMapping::NONE}; /**< Backend authenticator mapping */
 };
