@@ -53,7 +53,6 @@ export default {
     },
     data() {
         return {
-            activeView: '',
             headerHeight: 0,
         }
     },
@@ -64,7 +63,7 @@ export default {
             data_details: state => state.query.data_details,
             loading_data_details: state => state.query.loading_data_details,
             SQL_QUERY_MODES: state => state.app_config.SQL_QUERY_MODES,
-            curr_sql_query_mode: state => state.query.curr_sql_query_mode,
+            curr_query_mode: state => state.query.curr_query_mode,
         }),
         tableHeaders() {
             switch (this.activeView) {
@@ -89,24 +88,31 @@ export default {
         isPrwDataLoading() {
             return this.loading_preview_data || this.loading_data_details
         },
+        activeView: {
+            get() {
+                return this.curr_query_mode
+            },
+            set(value) {
+                // v-btn-toggle return undefined when a btn is click twice
+                if (value) this.setCurrQueryMode(value)
+            },
+        },
     },
     watch: {
-        curr_sql_query_mode(v) {
-            this.activeView = v
+        activeView: async function(SQL_QUERY_MODE) {
+            // Wait until data is fetched
+            if (!this.isPrwDataLoading && this.previewDataSchemaId)
+                await this.handleFetch(SQL_QUERY_MODE)
         },
-        activeView(v) {
-            this.switchSQLMode(v)
-        },
-    },
-    created() {
-        this.activeView = this.curr_sql_query_mode
     },
     mounted() {
         this.setHeaderHeight()
     },
     methods: {
         ...mapActions({
-            switchSQLMode: 'query/switchSQLMode',
+            setCurrQueryMode: 'query/setCurrQueryMode',
+            fetchPreviewData: 'query/fetchPreviewData',
+            fetchDataDetails: 'query/fetchDataDetails',
         }),
         setHeaderHeight() {
             if (!this.$refs.header) return
@@ -128,6 +134,24 @@ export default {
                 }
                 return obj
             })
+        },
+        /**
+         * This function checks if there is no preview data or details data
+         * before dispatching action to fetch either preview data or details
+         * data based on SQL_QUERY_MODE value.
+         * @param {String} SQL_QUERY_MODE - query mode
+         */
+        async handleFetch(SQL_QUERY_MODE) {
+            switch (SQL_QUERY_MODE) {
+                case this.SQL_QUERY_MODES.PREVIEW_DATA:
+                    if (!this.preview_data.columns)
+                        await this.fetchPreviewData(this.previewDataSchemaId)
+                    break
+                case this.SQL_QUERY_MODES.VIEW_DETAILS:
+                    if (!this.data_details.columns)
+                        await this.fetchDataDetails(this.previewDataSchemaId)
+                    break
+            }
         },
     },
 }

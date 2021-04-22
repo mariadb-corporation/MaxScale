@@ -24,7 +24,7 @@ export default {
         data_details: {},
         loading_query_result: false,
         query_result: {},
-        curr_sql_query_mode: '',
+        curr_query_mode: '',
     },
     mutations: {
         SET_LOADING_SCHEMA(state, payload) {
@@ -51,8 +51,8 @@ export default {
         SET_QUERY_RESULT(state, payload) {
             state.query_result = payload
         },
-        SET_CURR_SQL_QUERY_MODE(state, payload) {
-            state.curr_sql_query_mode = payload
+        SET_CURR_QUERY_MODE(state, payload) {
+            state.curr_query_mode = payload
         },
     },
     actions: {
@@ -70,9 +70,10 @@ export default {
                 logger.error(e)
             }
         },
-        async fetchPreviewData({ commit /* , dispatch, state */ }, query) {
+        async fetchPreviewData({ commit /* , dispatch, state */ }, schemaId) {
             try {
                 commit('SET_LOADING_PREVIEW_DATA', true)
+                const query = `SELECT * FROM ${schemaId};`
                 /* eslint-disable no-console */
                 console.log('sending query', query)
                 // TODO: Replace with actual data
@@ -90,9 +91,10 @@ export default {
                 logger.error(e)
             }
         },
-        async fetchDataDetails({ commit /* , dispatch, state*/ }, query) {
+        async fetchDataDetails({ commit /* , dispatch, state*/ }, schemaId) {
             try {
                 commit('SET_LOADING_DATA_DETAILS', true)
+                const query = `DESCRIBE ${schemaId};`
                 /* eslint-disable no-console */
                 console.log('sending query', query)
                 // TODO: Replace with actual data
@@ -109,6 +111,15 @@ export default {
                 const logger = this.vue.$logger('store-query-fetchDataDetails')
                 logger.error(e)
             }
+        },
+        /**
+         * This action clears preview_data and data_details to empty object.
+         * Call this action when user selects option in the sidebar.
+         * This ensure sub-tabs in Data Preview tab are generated with fresh data
+         */
+        clearDataPreview({ commit }) {
+            commit('SET_PREVIEW_DATA', {})
+            commit('SET_DATA_DETAILS', {})
         },
         async fetchQueryResult({ commit }, query) {
             try {
@@ -134,11 +145,11 @@ export default {
                 logger.error(e)
             }
         },
-        async switchSQLMode({ commit }, mode) {
+        setCurrQueryMode({ commit }, mode) {
             try {
-                commit('SET_CURR_SQL_QUERY_MODE', mode)
+                commit('SET_CURR_QUERY_MODE', mode)
             } catch (e) {
-                const logger = this.vue.$logger('store-query-switchSQLMode')
+                const logger = this.vue.$logger('store-query-setCurrQueryMode')
                 logger.error(e)
             }
         },

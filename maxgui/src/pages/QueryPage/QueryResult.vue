@@ -38,7 +38,6 @@ export default {
     },
     data() {
         return {
-            activeTab: '',
             tabItemClass: 'pt-2 px-5 query-result-fontStyle color text-small-text fill-height',
         }
     },
@@ -47,26 +46,33 @@ export default {
             query_result: state => state.query.query_result,
             loading_query_result: state => state.query.loading_query_result,
             SQL_QUERY_MODES: state => state.app_config.SQL_QUERY_MODES,
-            curr_sql_query_mode: state => state.query.curr_sql_query_mode,
+            curr_query_mode: state => state.query.curr_query_mode,
         }),
         dynTabItemHeight() {
             // dynHeight - $tab-bar-height - pt-2 - border thickness
             return this.dynHeight - 24 - 8 - 2
         },
-    },
-    watch: {
-        activeTab(v) {
-            if (v !== this.curr_sql_query_mode) this.switchSQLMode(v)
-        },
-        curr_sql_query_mode(v) {
-            if (v === this.SQL_QUERY_MODES.VIEW_DETAILS) {
-                this.activeTab = this.SQL_QUERY_MODES.PREVIEW_DATA
-            } else this.activeTab = v
+        activeTab: {
+            get() {
+                /* There are only two tab mode in this component. So VIEW_DETAILS will be
+                 * equal to PREVIEW_DATA
+                 */
+                switch (this.curr_query_mode) {
+                    case this.SQL_QUERY_MODES.VIEW_DETAILS:
+                    case this.SQL_QUERY_MODES.PREVIEW_DATA:
+                        return this.SQL_QUERY_MODES.PREVIEW_DATA
+                    default:
+                        return this.curr_query_mode
+                }
+            },
+            set(value) {
+                this.setCurrQueryMode(value)
+            },
         },
     },
     methods: {
         ...mapActions({
-            switchSQLMode: 'query/switchSQLMode',
+            setCurrQueryMode: 'query/setCurrQueryMode',
         }),
     },
 }
