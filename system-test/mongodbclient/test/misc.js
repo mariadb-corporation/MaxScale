@@ -81,10 +81,7 @@ describe('MISCALLENOUS', function () {
             assert(false, "Exception should be thrown.");
         }
         catch (x) {
-            assert(x.writeErrors);
-            assert(x.writeErrors.length == 1);
-            assert(x.writeErrors[0].errmsg);
-            assert(x.writeErrors[0].errmsg.indexOf("Duplicate entry") == 0);
+            assert(x.code == 11000); // Duplicate
         }
     });
 
