@@ -47,19 +47,20 @@ cfg::ParamEnum<ExporterType> s_exporter(
         {ExporterType::EXPORT_FILE, "file"},
         {ExporterType::EXPORT_KAFKA, "kafka"},
         {ExporterType::EXPORT_LOG, "log"}
-    });
+    }, cfg::Param::AT_RUNTIME);
 
 cfg::ParamTarget s_main(
-    &s_spec, "main", "Server from which responses are returned");
+    &s_spec, "main", "Server from which responses are returned",
+    cfg::Param::Kind::MANDATORY, cfg::Param::AT_RUNTIME);
 
 cfg::ParamString s_file(
-    &s_spec, "file", "File where data is exported", "");
+    &s_spec, "file", "File where data is exported", "", cfg::Param::AT_RUNTIME);
 
 cfg::ParamString s_kafka_broker(
-    &s_spec, "kafka_broker", "Kafka broker to use", "");
+    &s_spec, "kafka_broker", "Kafka broker to use", "", cfg::Param::AT_RUNTIME);
 
 cfg::ParamString s_kafka_topic(
-    &s_spec, "kafka_topic", "Kafka topic where data is exported", "");
+    &s_spec, "kafka_topic", "Kafka topic where data is exported", "", cfg::Param::AT_RUNTIME);
 
 cfg::ParamEnum<ErrorAction> s_on_error(
     &s_spec, "on_error", "What to do when a non-main connection fails",
@@ -67,7 +68,7 @@ cfg::ParamEnum<ErrorAction> s_on_error(
         {ErrorAction::ERRACT_IGNORE, "ignore"},
         {ErrorAction::ERRACT_CLOSE, "close"},
     },
-    ErrorAction::ERRACT_IGNORE);
+    ErrorAction::ERRACT_IGNORE, cfg::Param::AT_RUNTIME);
 
 cfg::ParamEnum<ReportAction> s_report(
     &s_spec, "report", "When to generate the report for an SQL command",
@@ -75,7 +76,7 @@ cfg::ParamEnum<ReportAction> s_report(
         {ReportAction::REPORT_ALWAYS, "always"},
         {ReportAction::REPORT_ON_CONFLICT, "on_conflict"},
     },
-    ReportAction::REPORT_ALWAYS);
+    ReportAction::REPORT_ALWAYS, cfg::Param::AT_RUNTIME);
 
 template<class Params>
 bool MirrorSpec::do_post_validate(Params params) const
@@ -117,6 +118,8 @@ mxs::config::Specification* Config::spec()
 
 Config::Config(const char* name, Mirror* instance)
     : mxs::config::Configuration(name, &s_spec)
+    , on_error(this, &s_on_error)
+    , report(this, &s_report)
     , m_instance(instance)
 {
     add_native(&Config::exporter, &s_exporter);
@@ -124,8 +127,6 @@ Config::Config(const char* name, Mirror* instance)
     add_native(&Config::file, &s_file);
     add_native(&Config::kafka_broker, &s_kafka_broker);
     add_native(&Config::kafka_topic, &s_kafka_topic);
-    add_native(&Config::on_error, &s_on_error);
-    add_native(&Config::report, &s_report);
 }
 
 bool Config::post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params)

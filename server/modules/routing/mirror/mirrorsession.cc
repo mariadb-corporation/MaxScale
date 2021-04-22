@@ -189,14 +189,14 @@ bool MirrorSession::handleError(mxs::ErrorType type,
     backend->close();
 
     // We can continue as long as the main connection isn't dead
-    return m_router->config().on_error == ErrorAction::ERRACT_IGNORE && backend != m_main;
+    return m_router->config().on_error.get() == ErrorAction::ERRACT_IGNORE && backend != m_main;
 }
 
 bool MirrorSession::should_report() const
 {
     bool rval = true;
 
-    if (m_router->config().report == ReportAction::REPORT_ON_CONFLICT)
+    if (m_router->config().report.get() == ReportAction::REPORT_ON_CONFLICT)
     {
         rval = false;
         std::string checksum;

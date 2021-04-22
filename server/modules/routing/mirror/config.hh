@@ -47,8 +47,9 @@ struct Config : public mxs::config::Configuration
     std::string  file;
     std::string  kafka_broker;
     std::string  kafka_topic;
-    ErrorAction  on_error;
-    ReportAction report;
+
+    mxs::config::Enum<ErrorAction>  on_error;
+    mxs::config::Enum<ReportAction> report;
 
     static mxs::config::Specification* spec();
 
