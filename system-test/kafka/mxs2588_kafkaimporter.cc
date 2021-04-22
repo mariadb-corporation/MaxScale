@@ -1,5 +1,5 @@
 #include <maxtest/testconnections.hh>
-#include "kafka.hh"
+#include <maxtest/kafka.hh>
 
 bool read_rows(TestConnections& test, std::string table, int num_msg)
 {

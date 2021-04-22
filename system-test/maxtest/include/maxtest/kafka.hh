@@ -4,8 +4,6 @@
 #include <maxtest/testconnections.hh>
 #include <maxbase/format.hh>
 
-using namespace std::literals::string_literals;
-
 class Kafka
 {
 public:
@@ -136,7 +134,7 @@ public:
     {
         std::string err;
         std::unique_ptr<RdKafka::Conf> cnf {RdKafka::Conf::create(RdKafka::Conf::CONF_GLOBAL)};
-        cnf->set("bootstrap.servers", test.maxscales->ip4(0) + ":9092"s, err);
+        cnf->set("bootstrap.servers", test.maxscales->ip4(0) + std::string(":9092"), err);
         cnf->set("group.id", "kafkacdc", err);
         cnf->set("event_cb", &m_logger, err);
 
@@ -219,7 +217,7 @@ public:
     {
         std::string err;
         std::unique_ptr<RdKafka::Conf> cnf {RdKafka::Conf::create(RdKafka::Conf::CONF_GLOBAL)};
-        cnf->set("bootstrap.servers", test.maxscales->ip4(0) + ":9092"s, err);
+        cnf->set("bootstrap.servers", test.maxscales->ip4(0) + std::string(":9092"), err);
         cnf->set("event_cb", &m_logger, err);
         m_producer.reset(RdKafka::Producer::create(cnf.get(), err));
     }
