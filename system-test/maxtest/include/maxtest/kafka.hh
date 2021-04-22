@@ -146,17 +146,7 @@ public:
 
     std::unique_ptr<RdKafka::Message> consume_one_message()
     {
-        std::unique_ptr<RdKafka::Message> msg(m_consumer->consume(10000));
-
-        if (msg->err() == RdKafka::ERR_NO_ERROR)
-        {
-            std::string key = msg->key() ? *msg->key() : "";
-            std::string payload((char*)msg->payload(), msg->len());
-            std::cout << "Message key: " << key << std::endl;
-            std::cout << "Message content: " << payload << std::endl;
-        }
-
-        return msg;
+        return std::unique_ptr<RdKafka::Message>(m_consumer->consume(10000));
     }
 
     int consume_messages()
