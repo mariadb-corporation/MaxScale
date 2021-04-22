@@ -61,6 +61,7 @@ export default {
                 paneR_width: '',
                 paneR_height: '',
             },
+            currPct: 0,
         }
     },
     computed: {
@@ -74,17 +75,34 @@ export default {
             return this.isVertSplit ? 'left' : 'top'
         },
         leftPanelPos() {
-            return { [this.panePosType]: `${this.value}%` }
+            return { [this.panePosType]: `${this.currPct}%` }
         },
         rightPanelPos() {
-            return { [this.panePosType]: `${100 - this.value}%` }
+            return { [this.panePosType]: `${100 - this.currPct}%` }
         },
         resizerStyle() {
             return {
-                [this.resizerPosType]: `${this.value}%`,
+                [this.resizerPosType]: `${this.currPct}%`,
                 ...(this.disable && { cursor: 'unset', pointerEvents: 'none' }),
             }
         },
+    },
+    watch: {
+        active(v, oV) {
+            // active true when user resizing, false when finish it
+            if (oV && !v) {
+                // only emit when user finishes resizing
+                this.$emit('input', this.currPct)
+                this.$emit('get-panes-dim', this.dim)
+            }
+        },
+        value(v) {
+            // update current pecent when value change. e.g when pane is toggled
+            if (v !== this.currPct) this.currPct = v
+        },
+    },
+    created() {
+        this.currPct = this.value
     },
     mounted() {
         this.setInitDim()
@@ -133,7 +151,7 @@ export default {
                 const targetOffset = this.isVertSplit ? offsetWidth : offsetHeight
                 const percent = Math.floor(((currPage - offset) / targetOffset) * 10000) / 100
                 if (percent >= this.minPercent && percent <= 100 - this.minPercent) {
-                    this.$emit('input', percent)
+                    this.currPct = percent
                     const {
                         clientHeight: contHeight,
                         clientWidth: contWidth,
@@ -150,7 +168,6 @@ export default {
                         this.dim.paneR_width = contWidth
                         this.dim.paneR_height = contHeight - this.dim.paneL_height
                     }
-                    this.$emit('get-panes-dim', this.dim)
                 }
             }
         },

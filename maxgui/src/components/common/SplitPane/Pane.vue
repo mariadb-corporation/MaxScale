@@ -37,6 +37,7 @@ export default {
 .splitter-pane {
     position: absolute;
     transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
     &--vert {
         height: 100%;
         &-left {
