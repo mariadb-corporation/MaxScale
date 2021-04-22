@@ -95,6 +95,7 @@ EOF
 if [ "$type" != "xpand" ]
 then
     mysql --force $socket <<EOF
+DROP USER IF EXISTS 'maxservice'@'%';
 CREATE USER 'maxservice'@'%' IDENTIFIED BY 'maxservice' $require_ssl;
 GRANT SELECT ON mysql.user TO 'maxservice'@'%';
 GRANT SELECT ON mysql.db TO 'maxservice'@'%';
@@ -118,6 +119,7 @@ then
     echo Creating users specific for MariaDB.
 
     mysql --force $socket <<EOF
+    DROP USER IF EXISTS 'mariadbmon'@'%';
     CREATE USER 'mariadbmon'@'%' IDENTIFIED BY 'mariadbmon' $require_ssl;
 
     GRANT SUPER, FILE, RELOAD, PROCESS, SHOW DATABASES, EVENT ON *.* TO 'mariadbmon'@'%';
@@ -163,6 +165,7 @@ then
     # TODO: here as well if version >= 10.5.8.
 
     mysql --force $socket <<EOF
+    DROP USER IF EXISTS 'galeramon'@'%';
     CREATE USER 'galeramon'@'%' IDENTIFIED BY 'galeramon' $require_ssl;
     GRANT REPLICATION CLIENT ON *.* TO 'galeramon'@'%';
     GRANT SUPER ON *.* TO 'galeramon'@'%';
@@ -179,6 +182,7 @@ then
     echo Creating users specific for Columnstore.
 
     mysql --force $socket <<EOF
+    DROP USER IF EXISTS 'csmon'@'%';
     CREATE USER 'csmon'@'%' IDENTIFIED BY 'csmon'  $require_ssl;
     GRANT ALL ON infinidb_vtable.* TO 'csmon'@'%';
 
@@ -200,13 +204,14 @@ then
     echo Creating users specific for Xpand.
 
     mysql --force $socket <<EOF
-
+    DROP USER IF EXISTS 'xpandmon'@'%';
     CREATE USER 'xpandmon'@'%' IDENTIFIED BY 'xpandmon'  $require_ssl;
     GRANT SELECT ON system.membership TO 'xpandmon'@'%';
     GRANT SELECT ON system.nodeinfo TO 'xpandmon'@'%';
     GRANT SELECT ON system.softfailed_nodes TO 'xpandmon'@'%';
     GRANT SUPER ON *.* TO 'xpandmon'@'%';
 
+    DROP USER IF EXISTS 'maxservice'@'%';
     CREATE USER 'maxservice'@'%' IDENTIFIED BY 'maxservice' $require_ssl;
     GRANT SELECT ON system.users TO 'maxservice'@'%';
     GRANT SELECT ON system.user_acl TO 'maxservice'@'%';

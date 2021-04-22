@@ -30,7 +30,7 @@ int main(int argc, char* argv[])
                                  Test->repl->ip4(i),
                                  Test->repl->user_name,
                                  Test->repl->password,
-                                 Test->repl->ssl);
+                                 Test->repl->ssl());
         execute_query(backend_conn, "SET GLOBAL max_connections = 200;");
         mysql_close(backend_conn);
     }

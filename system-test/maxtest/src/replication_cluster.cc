@@ -182,18 +182,6 @@ bool ReplicationCluster::check_replication()
                 if (master->admin_connection()->try_cmd("flush tables;") && sync_slaves(0))
                 {
                     res = true;
-
-                    // TODO: Move elsewhere?
-                    if (ssl)
-                    {
-                        for (int i = 0; i < n && res; i++)
-                        {
-                            if (!check_ssl(i))
-                            {
-                                res = false;
-                            }
-                        }
-                    }
                 }
             }
         }

@@ -52,6 +52,9 @@ public:
      */
     SMariaDB try_open_connection();
 
+    enum class SslMode {ON, OFF};
+    SMariaDB try_open_connection(SslMode ssl);
+
     mxt::MariaDB* admin_connection();
 
     bool ping_or_open_admin_connection();
@@ -101,6 +104,7 @@ public:
     virtual ~MariaDBCluster();
 
     void set_use_ipv6(bool use_ipv6);
+    void set_use_ssl(bool use_ssl);
 
     const char* ip(int i = 0) const;
     const char* ip4(int i = 0) const;
@@ -131,8 +135,6 @@ public:
     std::string user_name;  /**< User name to access backend nodes */
     std::string password;   /**< Password to access backend nodes */
 
-    int ssl;                    /**< Use ssl? */
-
     int connect(int i, const std::string& db = "test");
     int connect(const std::string& db = "test");
 
@@ -141,7 +143,7 @@ public:
      */
     Connection get_connection(int i, const std::string& db = "test")
     {
-        return Connection(ip4(i), port[i], user_name, password, db, ssl);
+        return Connection(ip4(i), port[i], user_name, password, db, m_ssl);
     }
 
     /**
@@ -298,13 +300,6 @@ public:
     int execute_query_all_nodes(const char* sql);
 
     /**
-     * Checks that an SSL connection can be created to the node
-     *
-     * @return True if an encrypted connection to the database was created
-     */
-    bool check_ssl(int node);
-
-    /**
      * Disables the server SSL configuration
      */
     void disable_ssl();
@@ -416,6 +411,8 @@ public:
      */
     int ping_or_open_admin_connections();
 
+    bool ssl() const;
+
 protected:
     /**
      * Constructor
@@ -452,6 +449,7 @@ protected:
 
 private:
     bool m_use_ipv6 {false};    /**< Default to ipv6-addresses */
+    bool m_ssl {false};         /**< Use ssl? */
     bool m_blocked[N_MAX] {};   /**< List of blocked nodes */
 
     std::vector<std::unique_ptr<mxt::MariaDBServer>> m_backends;
@@ -468,11 +466,5 @@ private:
      */
     virtual bool check_replication() = 0;
 
-    /**
-     * Flush hosts, adjust settings, remove anonymous users, etc.
-     *
-     * @param i Node to prepare
-     * @return True on success
-     */
-    bool prepare_for_test(int i);
+    bool check_normal_conns();
 };
