@@ -27,7 +27,7 @@ int main(int argc, char** argv)
     test.maxctrl("start monitor B-Monitor");
 
     // Connect to Kafka
-    Consumer consumer(test);
+    Consumer consumer(test, "kafkacdc");
 
     test.tprintf("Inserting data");
     conn.connect();

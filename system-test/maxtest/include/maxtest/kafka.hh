@@ -129,7 +129,7 @@ class Consumer
 {
 public:
 
-    Consumer(TestConnections& test)
+    Consumer(TestConnections& test, const std::string& subscription)
         : m_logger(test)
     {
         std::string err;
@@ -139,7 +139,7 @@ public:
         cnf->set("event_cb", &m_logger, err);
 
         m_consumer.reset(RdKafka::KafkaConsumer::create(cnf.get(), err));
-        std::unique_ptr<RdKafka::TopicPartition> topic {RdKafka::TopicPartition::create("kafkacdc", 0)};
+        std::unique_ptr<RdKafka::TopicPartition> topic {RdKafka::TopicPartition::create(subscription, 0)};
         topic->set_offset(RdKafka::Topic::OFFSET_BEGINNING);
         m_consumer->assign({topic.get()});
     }
