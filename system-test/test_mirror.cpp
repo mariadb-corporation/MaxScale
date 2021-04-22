@@ -1,4 +1,5 @@
 #include <maxtest/testconnections.hh>
+#include <maxtest/kafka.hh>
 
 #include <maxbase/jansson.h>
 
@@ -25,6 +26,13 @@ struct TestCase
     uint32_t       id = 0;
 };
 
+std::vector<TestCase> test_cases =
+{
+    {"SELECT 1",                          MATCH,    "resultset"},
+    {"SELECT @@hostname",                 MISMATCH, "resultset"},
+    {"DO 1",                              MATCH,    "ok"       },
+    {"SELECT something that's not valid", MATCH,    "error"    },
+};
 
 void check_results(TestConnections& test, json_t* arr, const TestCase& t)
 {
@@ -91,18 +99,28 @@ void check_json(TestConnections& test, json_t* js, const TestCase& t)
     }
 }
 
-int main(int argc, char** argv)
+void check_json(TestConnections& test, std::string line, const TestCase& t)
 {
-    TestConnections test(argc, argv);
+    json_error_t err;
+    json_t* js = json_loads(line.c_str(), JSON_ALLOW_NUL, &err);
 
-    std::vector<TestCase> test_cases =
+    if (test.expect(js, "JSON should be valid (%s): `%s`", err.text, line.c_str()))
     {
-        {"SELECT 1",                          MATCH,    "resultset"},
-        {"SELECT @@hostname",                 MISMATCH, "resultset"},
-        {"DO 1",                              MATCH,    "ok"       },
-        {"SELECT something that's not valid", MATCH,    "error"    },
-    };
+        check_json(test, js, t);
 
+        if (!test.ok())
+        {
+            char* str = json_dumps(js, JSON_INDENT(2));
+            printf("%s\n", str);
+            free(str);
+        }
+
+        json_decref(js);
+    }
+}
+
+void run_sql(TestConnections& test)
+{
     for (auto& t : test_cases)
     {
         auto conn = test.maxscales->rwsplit();
@@ -111,10 +129,16 @@ int main(int argc, char** argv)
         conn.query(t.query);
         conn.disconnect();
     }
+}
+
+void test_file(TestConnections& test)
+{
+    run_sql(test);
 
     test.maxscales->stop();
     test.maxscales->copy_from_node(0, "/tmp/mirror.txt", "./mirror.txt");
     test.maxscales->ssh_node_f(0, true, "rm /tmp/mirror.txt");
+    test.maxscales->start();
 
     std::ifstream infile("mirror.txt");
     std::string line;
@@ -123,22 +147,7 @@ int main(int argc, char** argv)
     {
         if (std::getline(infile, line))
         {
-            json_error_t err;
-            json_t* js = json_loads(line.c_str(), JSON_ALLOW_NUL, &err);
-
-            if (test.expect(js, "JSON should be valid"))
-            {
-                check_json(test, js, t);
-            }
-
-            if (!test.ok())
-            {
-                char* str = json_dumps(js, JSON_INDENT(2));
-                printf("%s\n", str);
-                free(str);
-            }
-
-            json_decref(js);
+            check_json(test, line, t);
         }
         else
         {
@@ -147,6 +156,44 @@ int main(int argc, char** argv)
     }
 
     unlink("mirror.txt");
+}
+
+void test_kafka(TestConnections& test)
+{
+    test.check_maxctrl("alter service Mirror-Router"
+                       " exporter kafka"
+                       " kafka_broker 127.0.0.1:9092"
+                       " kafka_topic mirror-topic");
+
+    run_sql(test);
+    Consumer consumer(test, "mirror-topic");
+
+    for (const auto& t : test_cases)
+    {
+        auto msg = consumer.consume_one_message();
+
+        if (msg->err() == RdKafka::ERR_NO_ERROR)
+        {
+            std::string data((const char*)msg->payload(), msg->len());
+            check_json(test, data, t);
+        }
+        else
+        {
+            test.add_failure("Failed to consume message: %s", RdKafka::err2str(msg->err()).c_str());
+        }
+    }
+}
+
+int main(int argc, char** argv)
+{
+    TestConnections test(argc, argv);
+    Kafka kafka(test);
+
+    test.tprintf("Testing exporter=file");
+    test_file(test);
+
+    test.tprintf("Testing exporter=kafka");
+    test_kafka(test);
 
     return test.global_result;
 }
