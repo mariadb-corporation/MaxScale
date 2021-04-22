@@ -889,7 +889,9 @@ int mxb_log_message(int priority,
                     sprintf(suppression_text, SUPPRESSION, suppress_ms);
                 }
 
-                if (this_unit.do_syslog && LOG_PRI(priority) != LOG_DEBUG)
+                bool should_log = mxb_log_is_priority_enabled(level);
+
+                if (should_log && this_unit.do_syslog && LOG_PRI(priority) != LOG_DEBUG)
                 {
                     // Debug messages are never logged into syslog
                     syslog(priority, "%s", context_text);
@@ -922,9 +924,8 @@ int mxb_log_message(int priority,
                 {
                     err = 0;
                 }
-                else if (mxb_log_is_priority_enabled(level))
+                else if (should_log)
                 {
-
                     err = this_unit.sLogger->write(msg.c_str(), msg.length()) ? 0 : -1;
                 }
                 else

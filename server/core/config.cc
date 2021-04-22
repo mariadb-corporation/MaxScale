@@ -571,7 +571,7 @@ Config::Config()
                     }),
     session_trace(this, &s_session_trace, [](int32_t count) {
                       session_set_session_trace(count);
-                      mxb_log_set_session_trace(true);
+                      mxb_log_set_session_trace(count > 0 ? true : false);
                   }),
     ms_timestamp(this, &s_ms_timestamp, [](bool enable) {
                      mxs_log_set_highprecision_enabled(enable);
