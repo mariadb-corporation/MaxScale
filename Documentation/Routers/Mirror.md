@@ -39,6 +39,10 @@ the following fields:
 
 ### `main`
 
+- **Type**: target
+- **Mandatory**: Yes
+- **Dynamic**: Yes
+
 The main target from which results are returned to the client. This is a
 mandatory parameter and must define one of the targets configured in the
 `targets` parameter of the service.
@@ -49,6 +53,11 @@ not fatal errors and any open connections to them will be closed. The router
 does not create new connections after the initial connections are created.
 
 ### `exporter`
+
+- **Type**: enum
+- **Mandatory**: Yes
+- **Dynamic**: Yes
+- **Values**: `log`, `file`, `kafka`
 
 The exporter where the data is exported. This is a mandatory parameter. Possible
 values are:
@@ -69,6 +78,11 @@ values are:
 
 ### `file`
 
+- **Type**: string
+- **Default**: No default value
+- **Mandatory**: No
+- **Dynamic**: Yes
+
 The output file where the metrics will be written. The file must be writable by
 the user that is running MaxScale, usually the `maxscale` user.
 
@@ -81,6 +95,11 @@ This is a mandatory parameter when configured with `exporter=file`.
 
 ### `kafka_broker`
 
+- **Type**: string
+- **Default**: No default value
+- **Mandatory**: No
+- **Dynamic**: Yes
+
 The Kafka broker list. Must be given as a comma-separated list of broker hosts
 with optional ports in `host:port` format.
 
@@ -88,11 +107,22 @@ This is a mandatory parameter when configured with `exporter=kafka`.
 
 ### `kafka_topic`
 
+- **Type**: string
+- **Default**: No default value
+- **Mandatory**: No
+- **Dynamic**: Yes
+
 The kafka topic where the metrics are sent.
 
 This is a mandatory parameter when configured with `exporter=kafka`.
 
 ### `on_error`
+
+- **Type**: enum
+- **Default**: `ignore`
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Values**: `ignore`, `close`
 
 What to do when a backend network connection fails. Accepted values are:
 
@@ -105,12 +135,16 @@ What to do when a backend network connection fails. Accepted values are:
 
   * Close the client connection when the first backend fails.
 
-The default value is `ignore`.
-
 This parameter was added in MaxScale 2.6.0. Older versions always ignored
 failing backends.
 
 ### `report`
+
+- **Type**: enum
+- **Default**: `always`
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Values**: `always`, `on_conflict`
 
 When to report the result of the queries. Accepted values are:
 
@@ -121,8 +155,6 @@ When to report the result of the queries. Accepted values are:
 * `on_conflict`
 
   * Only report when one or more backends returns a conflicting result.
-
-The default value is `always`.
 
 This parameter was added in MaxScale 2.6.0. Older versions always reported the
 result.
