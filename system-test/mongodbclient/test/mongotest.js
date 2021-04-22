@@ -19,7 +19,8 @@ if (!process.env.maxscale_000_network) {
 var config = {
     host: process.env.maxscale_000_network,
     mariadb_port: 4008,
-    mongodb_port: 4711,
+    mxsmongodb_port: 4711,
+    mngmongodb_port: 27017,
     user: 'maxskysql',
     password: 'skysql'
 };
@@ -45,7 +46,16 @@ var MariaDB = {
 
 var MxsMongo = {
     createClient: async function () {
-        var uri = "mongodb://" + config.host + ":" + config.mongodb_port;
+        var uri = "mongodb://" + config.host + ":" + config.mxsmongodb_port;
+        client = new mongodb.MongoClient(uri, { useUnifiedTopology: true });
+        await client.connect();
+        return client;
+    }
+};
+
+var MngMongo = {
+    createClient: async function () {
+        var uri = "mongodb://" + config.host + ":" + config.mngmongodb_port;
         client = new mongodb.MongoClient(uri, { useUnifiedTopology: true });
         await client.connect();
         return client;
@@ -58,5 +68,6 @@ module.exports = {
     mongodb,
     assert,
     MariaDB,
-    MxsMongo
+    MxsMongo,
+    MngMongo
 };

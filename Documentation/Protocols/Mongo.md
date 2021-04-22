@@ -148,11 +148,22 @@ The following lists all implemented MongoDB commands and to what extent
 they are supported. Each heading links to the corresponding entry in the
 MongoDB documentation.
 
+For each command is listed which fields are relevant and acted upon.
+**All** other fields are ignored; their presence or absence have no
+impact, unless otherwise explicitly specified.
+
 ## [Aggregation Commands](https://docs.mongodb.com/manual/reference/command/nav-aggregation/)
 
 ### [count](https://docs.mongodb.com/manual/reference/command/count/)
 
-TBW
+The following fields are relevant.
+
+Field | Type | Description
+------|------|------------
+count| string | The name of the collection to count.
+query| document | Optional. A query that selects which documents to count in the collection
+limit| integer | Optional. The maximum number of matching documents to return.
+skip | integer | Optional. The number of matching documents to skip before returning results.
 
 ### [distinct](https://docs.mongodb.com/manual/reference/command/distinct/)
 

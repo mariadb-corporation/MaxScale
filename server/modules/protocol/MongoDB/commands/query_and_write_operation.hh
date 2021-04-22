@@ -91,10 +91,10 @@ public:
             DocumentBuilder doc;
 
             auto write_errors = m_write_errors.extract();
-            bool ok = write_errors.view().empty();
+            int32_t ok = write_errors.view().empty();
 
-            doc.append(kvp("ok", ok));
             doc.append(kvp("n", m_n));
+            doc.append(kvp("ok", ok));
 
             amend_response(doc);
 
