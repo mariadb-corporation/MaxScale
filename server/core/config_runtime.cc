@@ -951,7 +951,7 @@ bool runtime_alter_maxscale(const char* name, const char* value)
         if (*endptr == '\0' && intval >= 0)
         {
             session_set_session_trace(intval);
-            mxb_log_set_session_trace(true);
+            mxb_log_set_session_trace(intval > 0);
             rval = true;
         }
         else
