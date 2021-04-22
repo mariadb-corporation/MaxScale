@@ -504,10 +504,18 @@ bool RWSplitSession::route_session_write(GWBUF* querybuf, uint8_t command, uint3
     mxs::Buffer buffer(querybuf);
     bool ok = true;
 
-    // If no connections are open, create one and execute the session command on it
-    if (can_recover_servers() && !have_open_connections())
+    if (!have_open_connections())
     {
-        create_one_connection_for_sescmd();
+        if (command == MXS_COM_QUIT)
+        {
+            // We have no open connections and opening one just to close it is pointless.
+            return true;
+        }
+        else if (can_recover_servers())
+        {
+            // No connections are open, create one and execute the session command on it
+            create_one_connection_for_sescmd();
+        }
     }
 
     // Pick a new replier for each new session command. This allows the source server to change over
@@ -916,7 +924,7 @@ bool RWSplitSession::should_migrate_trx(RWBackend* target)
     bool migrate = false;
 
     if (m_config.transaction_replay
-        && m_state != TRX_REPLAY  // Transaction replay is not active
+        && m_state != TRX_REPLAY// Transaction replay is not active
         && trx_is_open()        // We have an open transaction
         && m_can_replay_trx)    // The transaction can be replayed
     {

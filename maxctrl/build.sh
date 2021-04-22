@@ -19,4 +19,4 @@ cd $PWD/maxctrl
 
 npm install --production
 npm install --production pkg@4.4.5
-node_modules/pkg/lib-es5/bin.js -t node10-linux-x64 .
+node_modules/pkg/lib-es5/bin.js -t node10-linux .
