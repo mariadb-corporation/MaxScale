@@ -63,6 +63,11 @@ public:
     {
     }
 
+    ~KafkaExporter()
+    {
+        m_producer->flush(10000);
+    }
+
     void ship(json_t* obj) final
     {
         char* json = json_dumps(obj, JSON_COMPACT);
