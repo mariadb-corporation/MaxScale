@@ -12,6 +12,8 @@
  */
 export const preview_data = {
     data: {
+        queryId: '019b179-0000-1523-0000-5789000140bla',
+        queryText: 'SELECT * FROM mysql.help_keyword_id;',
         columns: [
             {
                 name: 'help_keyword_id',
@@ -64,6 +66,8 @@ export const preview_data = {
 
 export const data_details = {
     data: {
+        queryId: '019bc179-0000-1523-0000-5789000140de',
+        queryText: 'DESCRIBE mysql.help_keyword_id;',
         columns: [
             {
                 name: 'Field',

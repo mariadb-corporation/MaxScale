@@ -1,35 +1,95 @@
 <template>
     <div class="fill-height">
-        Results
-        <!-- TODO: Show data table here -->
+        <div v-if="isMounted" ref="header" class="pb-4 result-header">
+            <span>
+                Click Run button to see query results
+            </span>
+        </div>
+        <div v-else class="result-table-wrapper">
+            <div ref="header" class="pb-4 result-header">
+                <!-- TODO: Show query Id and query text in v-menu -->
+                <span class="d-inline-block pointer color text-links  mr-2">
+                    Query ID
+                    <!-- : {{ query_result.queryId }} -->
+                </span>
+                <span class="d-inline-block pointer color text-links ">
+                    Query text
+                </span>
+            </div>
+            <v-skeleton-loader
+                v-if="loading_query_result"
+                :loading="loading_query_result"
+                type="table: table-thead, table-tbody"
+                :max-height="`${dynHeight - headerHeight}px`"
+            />
+            <result-data-table
+                v-else
+                :height="`${dynHeight - headerHeight}px`"
+                :headers="tableHeaders"
+                :rows="tableRows"
+            />
+        </div>
     </div>
 </template>
 
 <script>
+/*
+ * Copyright (c) 2020 MariaDB Corporation Ab
+ *
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
+ *
+ * Change Date: 2025-03-24
+ *
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
+ */
+import genQryResData from 'mixins/genQryResData'
 import { mapState } from 'vuex'
-
+import ResultDataTable from './ResultDataTable'
 export default {
     name: 'result-tab',
+    components: {
+        ResultDataTable,
+    },
+    mixins: [genQryResData],
     props: {
         dynHeight: { type: Number, required: true },
+        queryTxt: { type: String, require: true },
+    },
+    data() {
+        return {
+            headerHeight: 0,
+            isMounted: true,
+        }
     },
     computed: {
         ...mapState({
             query_result: state => state.query.query_result,
             loading_query_result: state => state.query.loading_query_result,
         }),
+        tableHeaders() {
+            return this.genHeaders(this.query_result)
+        },
+        tableRows() {
+            return this.genRows(this.query_result)
+        },
     },
     watch: {
-        /* TODO: handle these data
         loading_query_result(v) {
-            console.log('loading_query_result', v)
+            // After user clicks Run to send query, set isMounted to false to show skeleton-loader
+            if (v && this.isMounted) this.isMounted = false
         },
-        query_result: {
-            deep: true,
-            handler(v) {
-                console.log('query_result', v)
-            },
-        }, */
+    },
+    mounted() {
+        this.setHeaderHeight()
+    },
+    methods: {
+        setHeaderHeight() {
+            if (!this.$refs.header) return
+            this.headerHeight = this.$refs.header.clientHeight
+        },
     },
 }
 </script>

@@ -10,7 +10,7 @@
         </v-tab>
         <v-tabs-items v-model="activeTab" class="tab-items">
             <v-tab-item :value="SQL_QUERY_MODES.QUERY_VIEW" :class="tabItemClass">
-                <result-tab :dynHeight="dynTabItemHeight" />
+                <result-tab :dynHeight="dynTabItemHeight" :queryTxt="queryTxt" />
             </v-tab-item>
             <v-tab-item :value="SQL_QUERY_MODES.PREVIEW_DATA" :class="tabItemClass">
                 <preview-data-tab
@@ -23,6 +23,18 @@
 </template>
 
 <script>
+/*
+ * Copyright (c) 2020 MariaDB Corporation Ab
+ *
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
+ *
+ * Change Date: 2025-03-24
+ *
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
+ */
 import { mapState, mapActions } from 'vuex'
 import PreviewDataTab from './PreviewDataTab'
 import ResultTab from './ResultTab'
@@ -34,6 +46,7 @@ export default {
     },
     props: {
         previewDataSchemaId: { type: String, require: true },
+        queryTxt: { type: String, require: true },
         dynHeight: { type: Number, require: true },
     },
     data() {

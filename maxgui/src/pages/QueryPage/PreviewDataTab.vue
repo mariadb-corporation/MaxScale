@@ -30,7 +30,6 @@
             />
             <result-data-table
                 v-else
-                class=""
                 :height="`${dynHeight - headerHeight}px`"
                 :headers="tableHeaders"
                 :rows="tableRows"
@@ -40,6 +39,19 @@
 </template>
 
 <script>
+/*
+ * Copyright (c) 2020 MariaDB Corporation Ab
+ *
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
+ *
+ * Change Date: 2025-03-24
+ *
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
+ */
+import genQryResData from 'mixins/genQryResData'
 import { mapState, mapActions } from 'vuex'
 import ResultDataTable from './ResultDataTable'
 export default {
@@ -47,6 +59,7 @@ export default {
     components: {
         ResultDataTable,
     },
+    mixins: [genQryResData],
     props: {
         previewDataSchemaId: { type: String, require: true },
         dynHeight: { type: Number, required: true },
@@ -117,23 +130,6 @@ export default {
         setHeaderHeight() {
             if (!this.$refs.header) return
             this.headerHeight = this.$refs.header.clientHeight
-        },
-        genHeaders(data) {
-            if (!data.columns) return []
-            return data.columns.map((col, index) => ({
-                text: col.name,
-                value: `field_${index}`,
-            }))
-        },
-        genRows(data) {
-            if (!data.rowset) return []
-            return data.rowset.map(set => {
-                let obj = {}
-                for (const [i, v] of set.entries()) {
-                    obj = { ...obj, [`field_${i}`]: v }
-                }
-                return obj
-            })
         },
         /**
          * This function checks if there is no preview data or details data

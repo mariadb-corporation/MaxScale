@@ -97,6 +97,7 @@
                                     :dynHeight="mainPaneDim.resultPane_height"
                                     class="query-result"
                                     :previewDataSchemaId="previewDataSchemaId"
+                                    :queryTxt="queryTxt"
                                 />
                             </template>
                         </split-pane>
