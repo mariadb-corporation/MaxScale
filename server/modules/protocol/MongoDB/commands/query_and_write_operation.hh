@@ -69,12 +69,19 @@ public:
             break;
 
         case ComResponse::ERR_PACKET:
-            if (m_ordered)
             {
-                abort = true;
-            }
+                ComERR err(response);
 
-            add_error(m_write_errors, ComERR(response), m_it - m_statements.begin());
+                if (!is_acceptable_error(err))
+                {
+                    if (m_ordered)
+                    {
+                        abort = true;
+                    }
+
+                    add_error(m_write_errors, ComERR(response), m_it - m_statements.begin());
+                }
+            }
             break;
 
         case ComResponse::LOCAL_INFILE_PACKET:
@@ -116,6 +123,11 @@ public:
     }
 
 protected:
+    virtual bool is_acceptable_error(const ComERR&) const
+    {
+        return false;
+    }
+
     vector<string> generate_sql() override final
     {
         vector<string> statements;
@@ -216,6 +228,12 @@ public:
     }
 
 private:
+    bool is_acceptable_error(const ComERR& err) const override
+    {
+        // Deleting documents from a non-existent table should appear to succeed.
+        return err.code() == ER_NO_SUCH_TABLE;
+    }
+
     string convert_document(const bsoncxx::document::view& doc) override
     {
         stringstream sql;

@@ -184,18 +184,22 @@ No commands from this group are currently supported.
 
 ## [Query and Write Operation Commands](https://docs.mongodb.com/manual/reference/command/nav-crud/)
 
-### [delete](https://docs.mongodb.com/manual/reference/command/insert)
+### [delete](https://docs.mongodb.com/manual/reference/command/delete)
 
-The following fields are acted upon.
+The following fields are relevant.
 
 Field | Type | Description
 ------|------|------------
-insert| string | The name of the target table.
-deletes | array | An array of one document that describes what to delete.
+delete| string | The name of the target table.
+deletes | array | An array of one or more delete statements to perform in the named collection.
+ordered | boolean | Optional. If `true`, then when a delete statement fails, return without performing the remaining delete statements. If `false`, then when a delete statement fails, continue with the remaining delete statements, if any. Defaults to `true`.
 
-All other fields are ignored.
+Each element of the deletes array contains the following fields:
 
-**NOTE** Currently the `deletes` array can contain exactly one document.
+Field | Type | Description
+------|------|------------
+q | document | The query that matches documents to delete.
+limit | integer | The number of matching documents to delete. Specify either a 0 to delete all matching documents or 1 to delete a single document.
 
 ### [find](https://docs.mongodb.com/manual/reference/command/find)
 
