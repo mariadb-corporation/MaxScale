@@ -230,7 +230,6 @@ describe('ServiceDetail index', () => {
             })
             expect(sessionsTable.exists()).to.be.true
             const {
-                tableClass,
                 tdBorderLeft,
                 title,
                 titleInfo,
@@ -243,7 +242,6 @@ describe('ServiceDetail index', () => {
                 sessionsTableRows,
             } = wrapper.vm
 
-            expect(tableClass).to.be.equals('data-table-full--max-width-columns')
             expect(tdBorderLeft).to.be.false
             expect(title).to.be.equals('current sessions')
             expect(titleInfo).to.be.equals(sessionsTableRows.length)

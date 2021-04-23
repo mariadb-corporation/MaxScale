@@ -17,7 +17,7 @@
                 showAll
                 :isTree="isTree"
             >
-                <template v-for="(header, i) in tableHeaders" v-slot:[header.value]="cellProps">
+                <template v-for="header in tableHeaders" v-slot:[header.value]="cellProps">
                     <slot :name="header.value" :cellProps="cellProps"> </slot>
                 </template>
             </data-table>

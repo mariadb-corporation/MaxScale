@@ -25,12 +25,12 @@ chai.should()
 chai.use(sinonChai)
 
 const expectedTableHeaders = [
-    { text: 'Service', value: 'id' },
+    { text: 'Service', value: 'id', cellTruncated: true },
     { text: 'State', value: 'state' },
     { text: 'Router', value: 'router' },
-    { text: 'Current Sessions', value: 'connections' },
-    { text: 'Total Sessions', value: 'total_connections' },
-    { text: 'Servers', value: 'serverIds' },
+    { text: 'Current Sessions', value: 'connections', cellTruncated: true },
+    { text: 'Total Sessions', value: 'total_connections', cellTruncated: true },
+    { text: 'Servers', value: 'serverIds', cellTruncated: true },
 ]
 
 const expectedTableRows = [

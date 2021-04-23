@@ -56,7 +56,6 @@
                             <v-col class="py-0 ma-0" cols="8">
                                 <details-readonly-table
                                     ref="sessions-table"
-                                    tableClass="data-table-full--max-width-columns"
                                     :tdBorderLeft="false"
                                     :title="`${$tc('currentSessions', 2)}`"
                                     :titleInfo="sessionsTableRows.length"

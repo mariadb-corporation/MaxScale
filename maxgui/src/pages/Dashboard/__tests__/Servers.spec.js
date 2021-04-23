@@ -82,15 +82,15 @@ const all_servers_mockup = [
     },
 ]
 const expectedTableHeaders = [
-    { text: `Monitor`, value: 'groupId' },
+    { text: `Monitor`, value: 'groupId', cellTruncated: true },
     { text: 'State', value: 'monitorState' },
-    { text: 'Servers', value: 'id' },
-    { text: 'Address', value: 'serverAddress' },
+    { text: 'Servers', value: 'id', cellTruncated: true },
+    { text: 'Address', value: 'serverAddress', cellTruncated: true },
     { text: 'Port', value: 'serverPort' },
-    { text: 'Connections', value: 'serverConnections' },
+    { text: 'Connections', value: 'serverConnections', cellTruncated: true },
     { text: 'State', value: 'serverState' },
     { text: 'GTID', value: 'gtid' },
-    { text: 'Services', value: 'serviceIds' },
+    { text: 'Services', value: 'serviceIds', cellTruncated: true },
 ]
 
 const expectedTableRows = [

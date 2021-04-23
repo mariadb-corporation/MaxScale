@@ -61,11 +61,11 @@ export default {
     data() {
         return {
             tableHeaders: [
-                { text: 'Listener', value: 'id' },
+                { text: 'Listener', value: 'id', cellTruncated: true },
                 { text: 'Port', value: 'port' },
                 { text: 'Host', value: 'address' },
                 { text: 'State', value: 'state' },
-                { text: 'Service', value: 'serviceIds' },
+                { text: 'Service', value: 'serviceIds', cellTruncated: true },
             ],
             servicesLength: 0,
         }

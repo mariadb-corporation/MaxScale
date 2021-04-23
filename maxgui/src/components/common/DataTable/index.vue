@@ -520,10 +520,6 @@ export default {
                     &:last-child {
                         border-radius: 0 5px 0 0;
                     }
-
-                    &:not(:last-child) {
-                        width: 1px;
-                    }
                 }
                 &:not(.v-data-table__progress) {
                     th {
@@ -569,19 +565,6 @@ export default {
     }
     .v-data-footer {
         border-top: thin solid rgba(0, 0, 0, 0) !important;
-    }
-}
-.data-table-full--max-width-columns {
-    table {
-        thead {
-            tr {
-                th {
-                    &:not(:last-child) {
-                        width: unset;
-                    }
-                }
-            }
-        }
     }
 }
 </style>

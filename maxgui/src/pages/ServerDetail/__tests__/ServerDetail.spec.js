@@ -258,7 +258,6 @@ describe('ServerDetail index', () => {
         const {
             title,
             titleInfo,
-            tableClass,
             tdBorderLeft,
             noDataText,
             tableData,
@@ -270,7 +269,6 @@ describe('ServerDetail index', () => {
         expect(title).to.be.equals('current sessions')
         expect(titleInfo).to.be.equals(sessionsTableRow.length)
         expect(tdBorderLeft).to.be.false
-        expect(tableClass).to.be.equals('data-table-full--max-width-columns')
         expect(noDataText).to.be.equals('No sessions')
         expect(tableData).to.be.deep.equals(sessionsTableRow)
         expect(customTableHeaders).to.be.deep.equals(sessionsTableHeader)
