@@ -11,6 +11,12 @@ enum ChecksumResult
     MISMATCH,
 };
 
+enum class Mode
+{
+    ALL,
+    MISMATCHES,
+};
+
 struct TestCase
 {
     TestCase(const char* q, ChecksumResult r, const char* t)
@@ -131,8 +137,12 @@ void run_sql(TestConnections& test)
     }
 }
 
-void test_file(TestConnections& test)
+void test_file(TestConnections& test, Mode mode)
 {
+    test.check_maxctrl("alter service Mirror-Router"
+                       " exporter file"
+                       " file /tmp/mirror.txt");
+
     run_sql(test);
 
     test.maxscales->stop();
@@ -145,20 +155,23 @@ void test_file(TestConnections& test)
 
     for (const auto& t : test_cases)
     {
-        if (std::getline(infile, line))
+        if (mode == Mode::ALL || t.result == MISMATCH)
         {
-            check_json(test, line, t);
-        }
-        else
-        {
-            test.expect(false, "File should not be empty");
+            if (std::getline(infile, line))
+            {
+                check_json(test, line, t);
+            }
+            else
+            {
+                test.expect(false, "File should not be empty");
+            }
         }
     }
 
     unlink("mirror.txt");
 }
 
-void test_kafka(TestConnections& test)
+void test_kafka(TestConnections& test, Mode mode)
 {
     test.check_maxctrl("alter service Mirror-Router"
                        " exporter kafka"
@@ -170,18 +183,24 @@ void test_kafka(TestConnections& test)
 
     for (const auto& t : test_cases)
     {
-        auto msg = consumer.consume_one_message();
+        if (mode == Mode::ALL || t.result == MISMATCH)
+        {
+            auto msg = consumer.consume_one_message();
 
-        if (msg->err() == RdKafka::ERR_NO_ERROR)
-        {
-            std::string data((const char*)msg->payload(), msg->len());
-            check_json(test, data, t);
-        }
-        else
-        {
-            test.add_failure("Failed to consume message: %s", RdKafka::err2str(msg->err()).c_str());
+            if (msg->err() == RdKafka::ERR_NO_ERROR)
+            {
+                std::string data((const char*)msg->payload(), msg->len());
+                check_json(test, data, t);
+            }
+            else if (msg->err() != RdKafka::ERR__TIMED_OUT
+                     && msg->err() != RdKafka::ERR_REQUEST_TIMED_OUT)
+            {
+                test.add_failure("Failed to consume message: %s", RdKafka::err2str(msg->err()).c_str());
+            }
         }
     }
+
+    consumer.commit();
 }
 
 int main(int argc, char** argv)
@@ -189,11 +208,21 @@ int main(int argc, char** argv)
     TestConnections test(argc, argv);
     Kafka kafka(test);
 
-    test.tprintf("Testing exporter=file");
-    test_file(test);
+    test.tprintf("Testing exporter=file, report=always");
+    test.check_maxctrl("alter service Mirror-Router report always");
+    test_file(test, Mode::ALL);
 
-    test.tprintf("Testing exporter=kafka");
-    test_kafka(test);
+    test.tprintf("Testing exporter=file, report=on_conflict");
+    test.check_maxctrl("alter service Mirror-Router report on_conflict");
+    test_file(test, Mode::MISMATCHES);
+
+    test.tprintf("Testing exporter=kafka, report=always");
+    test.check_maxctrl("alter service Mirror-Router report always");
+    test_kafka(test, Mode::ALL);
+
+    test.tprintf("Testing exporter=kafka, report=on_conflict");
+    test.check_maxctrl("alter service Mirror-Router report on_conflict");
+    test_kafka(test, Mode::MISMATCHES);
 
     return test.global_result;
 }

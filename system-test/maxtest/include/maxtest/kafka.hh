@@ -136,12 +136,20 @@ public:
         std::unique_ptr<RdKafka::Conf> cnf {RdKafka::Conf::create(RdKafka::Conf::CONF_GLOBAL)};
         cnf->set("bootstrap.servers", test.maxscales->ip4(0) + std::string(":9092"), err);
         cnf->set("group.id", "kafkacdc", err);
+        cnf->set("enable.auto.commit", "false", err);
+        cnf->set("enable.auto.offset.store", "true", err);
+        cnf->set("auto.offset.reset", "smallest", err);
+        cnf->set("allow.auto.create.topics", "true", err);
+        cnf->set("topic.metadata.refresh.interval.ms", "10000", err);
         cnf->set("event_cb", &m_logger, err);
 
         m_consumer.reset(RdKafka::KafkaConsumer::create(cnf.get(), err));
-        std::unique_ptr<RdKafka::TopicPartition> topic {RdKafka::TopicPartition::create(subscription, 0)};
-        topic->set_offset(RdKafka::Topic::OFFSET_BEGINNING);
-        m_consumer->assign({topic.get()});
+        m_consumer->subscribe({subscription});
+    }
+
+    ~Consumer()
+    {
+        m_consumer->close();
     }
 
     std::unique_ptr<RdKafka::Message> consume_one_message()
@@ -190,6 +198,16 @@ public:
         }
 
         return i;
+    }
+
+    void commit()
+    {
+        auto err = m_consumer->commitSync();
+
+        if (err != RdKafka::ERR_NO_ERROR)
+        {
+            std::cout << "Failed to commit offsets: " << RdKafka::err2str(err) << std::endl;
+        }
     }
 
 private:
