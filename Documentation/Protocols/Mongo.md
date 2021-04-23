@@ -148,8 +148,11 @@ The following lists all implemented MongoDB commands and to what extent
 they are supported. Each heading links to the corresponding entry in the
 MongoDB documentation.
 
-For each command is listed which fields are relevant and acted upon.
-**All** other fields are ignored; their presence or absence have no
+The documentation of each command lists which fields are relevant for
+the command. The list is typically a subset of the fields specified in
+the MongoDB(R) documentation for the command.
+
+**All** non-listed fields are ignored; their presence or absence have no
 impact, unless otherwise explicitly specified.
 
 ## [Aggregation Commands](https://docs.mongodb.com/manual/reference/command/nav-aggregation/)
@@ -167,7 +170,13 @@ skip | integer | Optional. The number of matching documents to skip before retur
 
 ### [distinct](https://docs.mongodb.com/manual/reference/command/distinct/)
 
-TBW
+The following fields are relevant.
+
+Field | Type | Description
+------|------|------------
+distinct| string | The name of the collection to query for distinct values.
+key | string | The field for which to return distinct values.
+query| document | Optional. A query that selects which documents to count in the collection
 
 ## [Geospatial Commands](https://docs.mongodb.com/manual/reference/command/nav-geospatial/)
 

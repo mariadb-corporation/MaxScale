@@ -158,6 +158,18 @@ public:
         stringstream sql;
 
         string key = required<string>(key::KEY);
+
+        // TODO: Move these key checks somewhere more common.
+        if (key.size() == 0)
+        {
+            throw SoftError("FieldPath cannot be constructed with empty string", error::LOCATION40352);
+        }
+
+        if (key.back() == '.')
+        {
+            throw SoftError("FieldPath must not end with a '.'.", error::LOCATION40353);
+        }
+
         string extract = "JSON_EXTRACT(doc, '$." + key + "')";
 
         sql << "SELECT DISTINCT(" << extract << ") FROM " << table() << " ";
