@@ -61,9 +61,9 @@ export default {
                 commit('SET_LOADING_SCHEMA', true)
                 // TODO: Replace with actual data
                 /* let res = await this.vue.$axios.get(`/query/schema`)
-                if (res.data.data) commit('SET_CONN_SCHEMA', res.data.data) */
+                if (res.data.data) commit('SET_CONN_SCHEMA', Object.freeze(res.data.data)) */
                 await this.vue.$help.delay(400)
-                commit('SET_CONN_SCHEMA', dummy_schema_test)
+                commit('SET_CONN_SCHEMA', Object.freeze(dummy_schema_test))
                 commit('SET_LOADING_SCHEMA', false)
             } catch (e) {
                 const logger = this.vue.$logger('store-query-fetchConnectionSchema')
@@ -79,12 +79,12 @@ export default {
                 // TODO: Replace with actual data
                 /*      dispatch('query/fetchQueryResult', query)
                 if (state.query_result) {
-                    commit('SET_PREVIEW_DATA', state.query_result)
+                    commit('SET_PREVIEW_DATA', Object.freeze(state.query_result))
                     commit('SET_LOADING_PREVIEW_DATA', false)
                 }
                 */
                 await this.vue.$help.delay(400)
-                commit('SET_PREVIEW_DATA', preview_data.data)
+                commit('SET_PREVIEW_DATA', Object.freeze(preview_data.data))
                 commit('SET_LOADING_PREVIEW_DATA', false)
             } catch (e) {
                 const logger = this.vue.$logger('store-query-fetchPreviewData')
@@ -101,11 +101,11 @@ export default {
                 /*
                     dispatch("query/fetchQueryResult",query)
                 if (state.query_result) {
-                    commit('SET_DATA_DETAILS', state.query_result)
+                    commit('SET_DATA_DETAILS', Object.freeze(state.query_result))
                     commit('SET_LOADING_DATA_DETAILS', false)
                 } */
                 await this.vue.$help.delay(400)
-                commit('SET_DATA_DETAILS', data_details.data)
+                commit('SET_DATA_DETAILS', Object.freeze(data_details.data))
                 commit('SET_LOADING_DATA_DETAILS', false)
             } catch (e) {
                 const logger = this.vue.$logger('store-query-fetchDataDetails')
@@ -134,11 +134,11 @@ export default {
                 }
                 let res = await this.vue.$axios.post(`/query/`, body)
                 if (res.data.data) {
-                    commit('SET_QUERY_RESULT', res.data.data)
+                    commit('SET_QUERY_RESULT', Object.freeze(res.data.data))
                     commit('SET_LOADING_QUERY_RESULT', false)
                 } */
                 await this.vue.$help.delay(400)
-                commit('SET_QUERY_RESULT', preview_data.data)
+                commit('SET_QUERY_RESULT', Object.freeze(preview_data.data))
                 commit('SET_LOADING_QUERY_RESULT', false)
             } catch (e) {
                 const logger = this.vue.$logger('store-query-fetchQueryResult')
