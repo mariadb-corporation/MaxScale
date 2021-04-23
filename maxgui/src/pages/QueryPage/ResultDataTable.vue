@@ -1,17 +1,29 @@
 <template>
     <div>
-        <!-- TODO: add filter input (recalculate height of table after adding it)
-            Add resizable column feat
-         -->
+        <!-- TODO:Add resizable column feat -->
+        <div ref="tableTools" class="table-tools">
+            <v-text-field
+                v-model="search_keyword"
+                name="filter"
+                dense
+                outlined
+                height="28"
+                class="std filter-result pb-2"
+                placeholder="Filter result"
+                hide-details
+            />
+        </div>
         <data-table
-            tableClass="data-table-full--max-width-columns"
+            tableClass="query-result-data-table"
             :search="search_keyword"
             :headers="headers"
             :data="rows"
-            showAll
+            keepPrimitiveValue
             dense
             fixed-header
-            :height="height"
+            :height="tableHeight"
+            :showAll="shouldShowAll"
+            :itemsPerPage="itemsPerPage"
         />
     </div>
 </template>
@@ -34,12 +46,46 @@ export default {
     props: {
         headers: { type: Array, require: true },
         rows: { type: Array, require: true },
-        height: { type: String, require: true },
+        height: { type: Number, require: true },
     },
     data() {
         return {
             search_keyword: '',
+            tableToolsHeight: 0,
         }
+    },
+    computed: {
+        shouldShowAll() {
+            return this.rows.length <= 100
+        },
+        itemsPerPage() {
+            return this.shouldShowAll ? -1 : 100
+        },
+        tableHeight() {
+            let res = this.height - this.tableToolsHeight
+            if (!this.shouldShowAll) {
+                res -= 60 // footer height
+            } else res -= 8 // padding height
+            return `${res}px`
+        },
+    },
+    mounted() {
+        this.setTableToolsHeight()
+    },
+    methods: {
+        setTableToolsHeight() {
+            if (!this.$refs.tableTools) return
+            this.tableToolsHeight = this.$refs.tableTools.clientHeight
+        },
     },
 }
 </script>
+
+<style lang="scss" scoped>
+.std.filter-result {
+    width: 200px;
+}
+::v-deep .query-result-data-table .v-data-footer__select {
+    display: none;
+}
+</style>

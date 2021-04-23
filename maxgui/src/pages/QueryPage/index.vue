@@ -138,7 +138,7 @@ export default {
             queryTxt: '',
             minSidebarPct: 0,
             sidebarPct: 0,
-            editorPanePct: 70,
+            editorPanePct: 60,
             isFullScreen: false,
             isCollapsed: false,
             previewDataSchemaId: '',

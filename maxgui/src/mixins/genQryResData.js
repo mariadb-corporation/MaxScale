@@ -17,17 +17,23 @@ export default {
             return data.columns.map((col, index) => ({
                 text: col.name,
                 value: `field_${index}`,
+                cellTruncated: true,
             }))
         },
         genRows(data) {
             if (!data.rowset) return []
-            return data.rowset.map(set => {
+            let res = []
+            // use for loop to handle large datasets
+            for (let i = 0; i < data.rowset.length; ++i) {
+                let set = data.rowset[i]
                 let obj = {}
-                for (const [i, v] of set.entries()) {
-                    obj = { ...obj, [`field_${i}`]: v }
+                for (let n = 0; n < set.length; ++n) {
+                    // make index as id
+                    obj = { ...obj, id: i, [`field_${n}`]: set[n] }
                 }
-                return obj
-            })
+                res.push(obj)
+            }
+            return res
         },
     },
 }

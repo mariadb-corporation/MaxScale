@@ -1,12 +1,12 @@
 <template>
     <div class="fill-height">
-        <div v-if="isMounted" ref="header" class="pb-4 result-header">
+        <div v-if="isMounted" ref="header" class="pb-2 result-header">
             <span>
                 Click Run button to see query results
             </span>
         </div>
         <div v-else class="result-table-wrapper">
-            <div ref="header" class="pb-4 result-header">
+            <div ref="header" class="pb-2 result-header-nav">
                 <!-- TODO: Show query Id and query text in v-menu -->
                 <span class="d-inline-block pointer color text-links  mr-2">
                     Query ID
@@ -24,7 +24,7 @@
             />
             <result-data-table
                 v-else
-                :height="`${dynHeight - headerHeight}px`"
+                :height="dynHeight - headerHeight"
                 :headers="tableHeaders"
                 :rows="tableRows"
             />
@@ -93,9 +93,3 @@ export default {
     },
 }
 </script>
-
-<style lang="scss" scoped>
-.query-result-fontStyle {
-    font-size: 14px;
-}
-</style>

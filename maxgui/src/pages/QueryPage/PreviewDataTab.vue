@@ -1,6 +1,6 @@
 <template>
     <div class="fill-height">
-        <div ref="header" class="pb-4 result-header">
+        <div ref="header" class="pb-2 result-header">
             <div v-if="previewDataSchemaId" class="schema-view-title">
                 <span><b>Table:</b> {{ previewDataSchemaId }}</span>
                 <v-btn-toggle v-model="activeView" class="ml-4">
@@ -30,7 +30,7 @@
             />
             <result-data-table
                 v-else
-                :height="`${dynHeight - headerHeight}px`"
+                :height="dynHeight - headerHeight"
                 :headers="tableHeaders"
                 :rows="tableRows"
             />
